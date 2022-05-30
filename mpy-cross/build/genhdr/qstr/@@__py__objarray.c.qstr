@@ -1,0 +1,5 @@
+Q(append)
+Q(extend)
+Q(decode)
+Q(bytearray)
+Q(iterator)

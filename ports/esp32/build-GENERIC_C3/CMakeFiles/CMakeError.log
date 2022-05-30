@@ -1,0 +1,24 @@
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /Users/bwhitman/.espressif/tools/riscv32-esp-elf/esp-2021r1-8.4.0/riscv32-esp-elf/bin/riscv32-esp-elf-gcc 
+Build flags: -march=rv32imc
+Id flags:  
+
+The output was:
+1
+/Users/bwhitman/.espressif/tools/riscv32-esp-elf/esp-2021r1-8.4.0/riscv32-esp-elf/bin/../lib/gcc/riscv32-esp-elf/8.4.0/../../../../riscv32-esp-elf/bin/ld: /Users/bwhitman/.espressif/tools/riscv32-esp-elf/esp-2021r1-8.4.0/riscv32-esp-elf/bin/../lib/gcc/riscv32-esp-elf/8.4.0/../../../../riscv32-esp-elf/lib/rv32im/ilp32/libc.a(lib_a-errno.o): in function `__errno':
+/builds/idf/crosstool-NG/.build/HOST-x86_64-apple-darwin12/riscv32-esp-elf/src/newlib/newlib/libc/errno/errno.c:13: undefined reference to `__getreent'
+collect2: error: ld returned 1 exit status
+
+
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" failed.
+Compiler: /Users/bwhitman/.espressif/tools/riscv32-esp-elf/esp-2021r1-8.4.0/riscv32-esp-elf/bin/riscv32-esp-elf-g++ 
+Build flags: -march=rv32imc
+Id flags:  
+
+The output was:
+1
+/Users/bwhitman/.espressif/tools/riscv32-esp-elf/esp-2021r1-8.4.0/riscv32-esp-elf/bin/../lib/gcc/riscv32-esp-elf/8.4.0/../../../../riscv32-esp-elf/bin/ld: /Users/bwhitman/.espressif/tools/riscv32-esp-elf/esp-2021r1-8.4.0/riscv32-esp-elf/bin/../lib/gcc/riscv32-esp-elf/8.4.0/../../../../riscv32-esp-elf/lib/rv32im/ilp32/libc.a(lib_a-errno.o): in function `__errno':
+/builds/idf/crosstool-NG/.build/HOST-x86_64-apple-darwin12/riscv32-esp-elf/src/newlib/newlib/libc/errno/errno.c:13: undefined reference to `__getreent'
+collect2: error: ld returned 1 exit status
+
+

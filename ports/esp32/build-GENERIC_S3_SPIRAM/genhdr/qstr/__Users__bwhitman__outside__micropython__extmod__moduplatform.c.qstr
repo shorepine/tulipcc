@@ -1,0 +1,5 @@
+Q(__name__)
+Q(uplatform)
+Q(platform)
+Q(python_compiler)
+Q(libc_ver)

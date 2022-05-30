@@ -1,0 +1,3 @@
+micropython
+micropython-*
+*.gcov

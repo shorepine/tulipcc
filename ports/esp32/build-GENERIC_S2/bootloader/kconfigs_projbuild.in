@@ -1,0 +1,4 @@
+source "/Users/bwhitman/esp/esp-idf-44/components/bootloader/Kconfig.projbuild"
+source "/Users/bwhitman/esp/esp-idf-44/components/esp_rom/Kconfig.projbuild"
+source "/Users/bwhitman/esp/esp-idf-44/components/esptool_py/Kconfig.projbuild"
+source "/Users/bwhitman/esp/esp-idf-44/components/partition_table/Kconfig.projbuild"
