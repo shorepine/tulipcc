@@ -1,5 +1,0 @@
-Q(__init__)
-Q(__new__)
-Q(__setattr__)
-Q(__delattr__)
-Q(object)
