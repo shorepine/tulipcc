@@ -16,12 +16,14 @@
 
 char * text;
 char ** text_lines;
+uint16_t lines = 0; 
+uint16_t *len_lines;
 uint8_t *saved_tfb;
 uint8_t *saved_tfbf;
 uint16_t saved_tfb_y;
 uint16_t saved_tfb_x;
 uint8_t quit_flag = 0;
-
+uint16_t y_offset = 0;
 uint16_t file_y = 0;
 uint16_t file_x = 0;
 uint16_t cursor_x = 0;
@@ -37,6 +39,11 @@ uint8_t TFB[TFB_ROWS*TFB_COLS];
 uint8_t TFBf[TFB_ROWS*TFB_COLS];
 uint16_t tfb_y_row =0;
 uint16_t tfb_x_col = 0;
+uint8_t tfb_pal_color = 15; // ANSI_BOLD_WHITE
+#define FORMAT_INVERSE 0x80 
+#define FORMAT_UNDERLINE 0x40
+#define FORMAT_FLASH 0x20
+#define FORMAT_BOLD 0x10 
 FILE * elog;
 #define check_rx_char getch
 
@@ -83,12 +90,13 @@ void update_tfb() {
 			}
 		}
 	}
+	move(cursor_y,cursor_x);
 	refresh();
 }
 #endif
 
-
-void dbgprintf(const char *fmt, ...) {
+// Send debug out to uart on esp32 and a log file on local 
+void dbg(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
 #ifdef LOCALDEV
@@ -100,7 +108,12 @@ void dbgprintf(const char *fmt, ...) {
     va_end(args);
 }
 
-
+void move_cursor(uint16_t x, uint16_t y) {
+	// In localdev, the update_tfb physically moves the cursor
+    TFBf[y*TFB_COLS+x] = FORMAT_INVERSE|FORMAT_FLASH|tfb_pal_color;
+	cursor_x = x;
+	cursor_y = y;
+}
 
 void save_tfb() {
 	saved_tfb = malloc(TFB_ROWS*TFB_COLS);
@@ -139,26 +152,29 @@ void string_at_row(char * s, uint16_t len, uint16_t y) {
 }
 
 void open_file(const char *filename) {
-	uint16_t lines =0 ;
+	lines =0 ;
 	uint16_t c = 0;
-	dbgprintf("opening file %s\n", filename);
+	dbg("opening file %s\n", filename);
 	uint32_t fs = file_size(filename);
 	text = (char*) malloc(fs+2);
 	uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
-	//dbgprintf("%s\n", text);
 	text[fs-1] = 0;
 	if(bytes_read) lines =1; // at least one line
 	for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') lines++;
 	text_lines = (char**)malloc(sizeof(char*)*lines);
+	len_lines = (uint16_t*)malloc(sizeof(uint16_t)*lines);
 	text_lines[c++] = text;
 	uint16_t last = 0;
-	for(uint32_t i=0;i<bytes_read-1;i++) {
-		if(text[i]=='\n') {
+	char printstr[100];
+	for(uint32_t i=0;i<bytes_read;i++) {
+		if(text[i]=='\n' || i==bytes_read-1) {
 			string_at_row(text_lines[c-1], i-last, c-1 );
+			len_lines[c-1] = i-last;
 			last = i+1;
 			text_lines[c++] = &text[last];
 		}
 	}
+	dbg("lines is %d\n", lines);
 }
 
 void editor_quit() {
@@ -167,6 +183,14 @@ void editor_quit() {
 #ifdef LOCALDEV
 	endwin();
 #endif
+}
+
+void editor_linestart() {
+	move_cursor(0, cursor_y);
+}
+
+void editor_lineend() {
+	move_cursor(len_lines[cursor_y + y_offset], cursor_y);
 }
 
 void editor_backspace() {
@@ -184,18 +208,58 @@ void editor_yank() {
 void editor_unyank() {
 
 }
-void editor_left() {
 
-}
-void editor_right() {
 
-}
+
+
 void editor_up() {
-
+	if(cursor_y > 0) {
+		if(cursor_x < len_lines[cursor_y-1 + y_offset]) {
+			move_cursor(cursor_x, cursor_y-1);
+		} else {
+			move_cursor(len_lines[cursor_y-1 + y_offset], cursor_y-1);
+		}
+	} else {
+		// scroll
+	}
 }
 void editor_down() {
+	if(cursor_y + y_offset < lines) {
+		if(cursor_y < TFB_ROWS) {
+			if(cursor_x < len_lines[cursor_y+1+y_offset]) {
+				dbg("moving to %d %d\n", cursor_x, cursor_y+1);
+				move_cursor(cursor_x, cursor_y+1);
+			} else {
+				move_cursor(len_lines[cursor_y+1+y_offset], cursor_y+1);
+			}
+		} else { 
+			// scroll
+		}
 
+	}
 }
+
+void editor_right() {
+	// easiest, just go right
+	if(cursor_x < len_lines[cursor_y + y_offset]) {
+		move_cursor(cursor_x + 1, cursor_y);
+	} else {
+		editor_down();
+		editor_linestart();
+	}
+}
+void editor_left() {
+	// Easiest, if x is not zero, just move left
+	if(cursor_x > 0) {
+		move_cursor(cursor_x-1, cursor_y);
+	} else {
+		// If x is at the left, go up a line
+		editor_up();
+		// And move x cursor to the end of line
+		editor_lineend();
+	}
+}
+
 void editor_insert_character(int c) {
 
 }
@@ -221,9 +285,9 @@ void process_char(int c) {
 		// TODO save too
 		quit_flag = 1;
 	} else if(c == 1) { // control-A, start of line
-		// TODO
+		editor_linestart();
 	} else if(c == 5) { // control-E, end of line
-		// TODO
+		editor_lineend();
 	} else if(c==25) { // control Y, page up
 		for(uint8_t i=0;i<TFB_ROWS-10;i++) editor_up();
 	} else if(c==22) { // control V, page down 
@@ -245,6 +309,12 @@ void process_char(int c) {
 			editor_right();
 			editor_backspace();
 		}
+	// local mode high bit arrows & forward delete 
+	} else if(c == 259) { editor_up(); 
+	} else if(c == 258) { editor_down(); 
+	} else if(c == 260) { editor_left(); 
+	} else if(c == 261) { editor_right(); 
+	} else if(c == 330) { editor_right(); editor_backspace(); 
 	} else if(c>31 && c<127) {
 		editor_insert_character(c);
 	} else {
@@ -254,14 +324,14 @@ void process_char(int c) {
 
 void editor(const char * filename) {
 	save_tfb();
-	//display_tfb_str("Tulip Editor v2\n", strlen("Tulip Editor v2\n"), FORMAT_BOLD|1|ANSI_BOLD_WHITE);
 	if(filename != NULL) { 
-		dbgprintf("editor fn is %s\n", filename);
+		dbg("editor fn is %s\n", filename);
 		open_file(filename);
 	} else {
-		dbgprintf("no filename given\n");
+		dbg("no filename given\n");
 	}
-
+	move_cursor(0,0);
+	y_offset = 0;
 	while(quit_flag == 0) {
 		int c = check_rx_char();
 		if(c>=0) {
