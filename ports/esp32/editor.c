@@ -1,30 +1,44 @@
 // editor.c
 #include <stddef.h>
 #include <stdio.h>
-
-// for local dev
+#include <stdarg.h>
 #ifdef LOCALDEV
 #include <ncurses.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#else // esp32
+#include "tulip_helpers.h"
+#include "display.h"
+#endif
+
+// shared vars for editor
+
+char * text;
+char ** text_lines;
+uint8_t *saved_tfb;
+uint8_t *saved_tfbf;
+uint16_t saved_tfb_y;
+uint16_t saved_tfb_x;
+uint8_t quit_flag = 0;
+
+uint16_t file_y = 0;
+uint16_t file_x = 0;
+uint16_t cursor_x = 0;
+uint16_t cursor_y = 0;
+
+
+
+// for local dev of the editor
+#ifdef LOCALDEV
 #define TFB_ROWS 50 
 #define TFB_COLS 128 
 uint8_t TFB[TFB_ROWS*TFB_COLS];
 uint8_t TFBf[TFB_ROWS*TFB_COLS];
 uint16_t tfb_y_row =0;
 uint16_t tfb_x_col = 0;
-WINDOW * winA;
 FILE * elog;
 #define check_rx_char getch
-
-void dbgprintf(const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    vfprintf(elog, fmt, args);
-    fflush(elog);
-    va_end(args);
-}
 
 uint32_t file_size(const char *filename) {
 	FILE * f = fopen(filename, "r");
@@ -57,7 +71,6 @@ void setup_display() {
 	raw();
 	keypad(stdscr, TRUE);
 	noecho();
-    //winA = newwin(TFB_ROWS, TFB_COLS, 0, 0);	
 	memset(TFB, 0, TFB_ROWS*TFB_COLS);
 	memset(TFBf, 0, TFB_ROWS*TFB_COLS);
 }
@@ -72,26 +85,21 @@ void update_tfb() {
 	}
 	refresh();
 }
-
-
-
-#else
-#include "tulip_helpers.h"
-#include "display.h"
 #endif
 
-char * text;
-char ** text_lines;
-uint8_t *saved_tfb;
-uint8_t *saved_tfbf;
-uint16_t saved_tfb_y;
-uint16_t saved_tfb_x;
-uint8_t quit_flag = 0;
 
-uint16_t file_y = 0;
-uint16_t file_x = 0;
-uint16_t cursor_x = 0;
-uint16_t cursor_y = 0;
+void dbgprintf(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+#ifdef LOCALDEV
+    vfprintf(elog, fmt, args);
+    fflush(elog);
+#else
+    vfprintf(stderr, fmt, args);
+#endif
+    va_end(args);
+}
+
 
 
 void save_tfb() {
@@ -136,7 +144,7 @@ void open_file(const char *filename) {
 	dbgprintf("opening file %s\n", filename);
 	uint32_t fs = file_size(filename);
 	text = (char*) malloc(fs+2);
-	uint32_t bytes_read = read_file(filename, text, fs, 0);
+	uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
 	//dbgprintf("%s\n", text);
 	text[fs-1] = 0;
 	if(bytes_read) lines =1; // at least one line
@@ -253,7 +261,6 @@ void editor(const char * filename) {
 	} else {
 		dbgprintf("no filename given\n");
 	}
-	update_tfb();
 
 	while(quit_flag == 0) {
 		int c = check_rx_char();
