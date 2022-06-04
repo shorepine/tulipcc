@@ -13,6 +13,17 @@
 
 // Graphics
 
+STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
+    if(n_args==1) {
+        uint16_t mhz = mp_obj_get_int(args[0]);
+        display_set_clock(mhz);
+        return mp_const_none;
+    }
+    uint8_t mhz = display_get_clock();
+    return mp_obj_new_int(mhz);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_clock_obj, 0, 1, tulip_display_clock);
+
 
 STATIC mp_obj_t tulip_bg_pixel(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
@@ -294,6 +305,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_screenshot_obj, 1, 1, tulip_scr
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_tulip) },
+    { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_pixel), MP_ROM_PTR(&tulip_bg_pixel_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },

@@ -20,12 +20,10 @@ uint8_t flash_on = 0;
 
 // Python callback
 extern void tulip_frame_isr(); 
-
 // This gets called at vsync / frame done
 static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
     TaskHandle_t task_to_notify = (TaskHandle_t)user_ctx;
     BaseType_t high_task_wakeup;
-
     // Update the scroll
     for(uint16_t i=0;i<V_RES;i++) {
         x_offsets[i] = x_offsets[i] + x_speeds[i];
@@ -36,30 +34,30 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lc
     }
 
     if(py_callback) tulip_frame_isr();
+    vsync_count++;
     vTaskNotifyGiveFromISR(task_to_notify, &high_task_wakeup);
     return high_task_wakeup;
 }
 
 int64_t bounce_time = 0;
 uint32_t bounce_count = 0;
-
+int32_t desync = 0;
+//3ms between frame done and calling this on the 2nd line 
 // Gets called at N hsyncs, and fills in the next N line
 static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    int64_t tic=esp_timer_get_time();
-
     // Which pixel row and TFB row is this
+    int64_t tic=esp_timer_get_time();
     uint16_t starting_display_row_px = pos_px / H_RES;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
     uint8_t * b = (uint8_t*)bounce_buf;
-    //for(int32_t i=0;i<len_bytes;i++) b[i]=0;
-    uint8_t fg_color0 = 255;
-    uint8_t fg_color1 = 255;
 
     // Copy in the BG, line by line 
+    // 208uS per call at 6 lines
     for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
         memcpy(b+(H_RES*BYTES_PER_PIXEL*rows_relative_px), bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], H_RES*BYTES_PER_PIXEL); 
     }
+
     uint8_t test_bits[16]= {0x80,0x80,0x40,0x40,0x20,0x20,0x10,0x10,0x08,0x08,0x04,0x04,0x02,0x02,0x01,0x01};
     // Now per row (N pixel rows per call), do the TFB then sprites
     for(uint8_t bounce_row_px=0;bounce_row_px<bounce_total_rows_px;bounce_row_px++) {
@@ -70,13 +68,12 @@ static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, vo
         uint8_t tfb_col = 0;
         while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
             uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
-
-            //uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
-            //uint8_t fg_color0 = ansi_pal[(format & 0x0f)*BYTES_PER_PIXEL+0];
-            //uint8_t fg_color1 = ansi_pal[(format & 0x0f)*BYTES_PER_PIXEL+1];
+            uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
+            uint8_t fg_color0 = ansi_pal[(format & 0x0f)*BYTES_PER_PIXEL+0];
+            uint8_t fg_color1 = ansi_pal[(format & 0x0f)*BYTES_PER_PIXEL+1];
             // Skip drawing if flash is active
  
- /*
+            /*
             if(format & FORMAT_FLASH) {
                 if(vsync_count - flash_start > FLASH_FRAMES) {
                     flash_on = !flash_on;
@@ -84,9 +81,8 @@ static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, vo
                 }
                 if(!flash_on) { tfb_col++; continue; }
             }
-*/
-            uint32_t byte_start = bounce_row_px*H_RES*BYTES_PER_PIXEL + tfb_col*FONT_WIDTH*BYTES_PER_PIXEL;
-/*
+          */
+           uint32_t byte_start = bounce_row_px*H_RES*BYTES_PER_PIXEL + tfb_col*FONT_WIDTH*BYTES_PER_PIXEL;
             if(format & FORMAT_INVERSE) {
                 for(uint8_t k=0;k<16;k=k+2) {
                     if(!(data & test_bits[k])) {
@@ -95,19 +91,18 @@ static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, vo
                     }
                 }
             } else {
- */
                 for(uint8_t k=0;k<16;k=k+2) {
                     if(data & test_bits[k]) {
                         b[byte_start + k] = fg_color0;
                         b[byte_start + k + 1] = fg_color1;
                     }
                 }
- //           }
+            }
 
             tfb_col++;
 
         }
-/*
+
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
         for(uint8_t s=0;s<SPRITES;s++) {
@@ -131,10 +126,10 @@ static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, vo
                 } // end if this row has a sprite on it 
             } // end if sprite vis
         } // for each sprite
-      */  
+      
     } // per each row
-    
     bounce_time += (esp_timer_get_time() - tic)    ;
+
     bounce_count++;
     return false; 
 }
@@ -196,6 +191,20 @@ void display_start() {
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
 }
+
+uint8_t display_get_clock() {
+    return display_mhz;
+}
+void display_set_clock(uint8_t mhz) {  
+    if(mhz > 1 && mhz < 50) {
+        display_mhz = mhz;
+        display_stop();
+        panel_config.timings.pclk_hz = mhz*1000*1000;
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        display_start();
+    }
+}
+
 
 void display_get_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t * bitmap) {
     uint32_t c = 0;
@@ -313,7 +322,6 @@ void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_
 
 
 void display_tfb_new_row() {
-    //printf("new row. was %d %d\n", tfb_y_row, tfb_x_col);
     // Move the pointer to a new row, and scroll the view if necessary
     if(tfb_y_row == TFB_ROWS-1) {
         // We were in the last row, let's scroll the buffer up by moving the TFB up
@@ -334,7 +342,6 @@ void display_tfb_new_row() {
     }
     // No matter what, go back to 0 on cols
     tfb_x_col = 0;
-    //printf("new row. now %d %d\n", tfb_y_row, tfb_x_col);
 }
 
 
@@ -383,14 +390,14 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format) {
                         if(code==24) if(ansi_active_format | FORMAT_UNDERLINE) ansi_active_format =- FORMAT_UNDERLINE;
                         if(code==25) if(ansi_active_format | FORMAT_FLASH) ansi_active_format =- FORMAT_FLASH;
                         if(code==27) if(ansi_active_format | FORMAT_FLASH) ansi_active_format =- FORMAT_FLASH;
-                        if(code>=30 && code<=37)  ansi_active_format = (ansi_active_format | (code-30)); // color
+                        if(code>=30 && code<=37)  ansi_active_format = ((ansi_active_format & 0xf0) | (code-30)); // color
                         if(code==39) ansi_active_format = ((ansi_active_format & 0xf0) | tfb_pal_color);
                         // bg colors per char, not implemented yet
                         if(code>=40 && code<=47) ansi_active_bg_color = code-40; 
                         if(code==49) ansi_active_bg_color = FORMAT_BG_COLOR_NONE; // reset
                     } // end if found a ;/m
                 } // end if test each char 
-                i = len; // skip the rest
+                i = last_pos; // skip the rest
             }
         } else if(str[i] == 10) {
             // If an LF, start a new row
@@ -453,7 +460,7 @@ void display_run(void) {
     panel_config.data_gpio_nums[13] = PIN_NUM_DATA13;
     panel_config.data_gpio_nums[14] = PIN_NUM_DATA14;
     panel_config.data_gpio_nums[15] = PIN_NUM_DATA15;
-    panel_config.timings.pclk_hz = PIXEL_CLOCK_HZ;
+    panel_config.timings.pclk_hz = PIXEL_CLOCK_MHZ*1000*1000;
     panel_config.timings.h_res = H_RES;
     panel_config.timings.v_res = V_RES;
     panel_config.timings.hsync_back_porch = HSYNC_BACK_PORCH;
@@ -469,6 +476,7 @@ void display_run(void) {
     panel_config.user_ctx = xDisplayTask;
     panel_config.bounce_buffer_size_px = BOUNCE_BUFFER_SIZE_PX;
 
+    display_mhz = PIXEL_CLOCK_MHZ;
 
     // Create the background FB
     bg = (uint8_t*)heap_caps_aligned_calloc(64, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -494,6 +502,7 @@ void display_run(void) {
 
     ansi_pal = (uint8_t*)heap_caps_malloc(2*17*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     
+
     ansi_pal = (uint8_t[]){
         // normal
         0, 0,       // ANSI_BLACK
@@ -524,27 +533,38 @@ void display_run(void) {
     py_callback = 0;
     vsync_count = 1;
 
+
     // Start the RGB panel
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
     gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
 
+
     // Time the frame sync and stay running forever 
     int64_t free_time = 0;
     int64_t tic0 = esp_timer_get_time();
+    uint16_t loop_count =0;
     while(1)  { 
         int64_t tic1 = esp_timer_get_time();
         ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
         free_time += (esp_timer_get_time() - tic1);
-        if(vsync_count++ % 1000 == 0) {
-            printf("%2.2f FPS. free time %llduS bounce time per is %llduS \n", 
-                1000000.0 / ((esp_timer_get_time() - tic0) / vsync_count), 
-                free_time / vsync_count,
-                bounce_time / bounce_count
+        if(loop_count++ >= 100) {
+            printf("Past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). %d desyncs \n", 
+                loop_count,
+                1000000.0 / ((esp_timer_get_time() - tic0) / loop_count), 
+                free_time / loop_count,
+                bounce_time / bounce_count,
+                ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (1000000.0 / ((esp_timer_get_time() - tic0) / loop_count)))))*100.0,
+                (int) (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (1000000.0 / ((esp_timer_get_time() - tic0) / loop_count)))),
+                desync
             );
             bounce_count = 1;
-            vsync_count = 1;
+            bounce_time = 0;
+            loop_count = 0;
+            free_time = 0;
+            desync = 0;
+            tic0 = esp_timer_get_time();
         }        
     }
 

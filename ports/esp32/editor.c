@@ -1,11 +1,87 @@
 // editor.c
 #include <stddef.h>
 #include <stdio.h>
+
+// for local dev
+#ifdef LOCALDEV
+#include <ncurses.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+#define TFB_ROWS 50 
+#define TFB_COLS 128 
+uint8_t TFB[TFB_ROWS*TFB_COLS];
+uint8_t TFBf[TFB_ROWS*TFB_COLS];
+uint16_t tfb_y_row =0;
+uint16_t tfb_x_col = 0;
+WINDOW * winA;
+FILE * elog;
+#define check_rx_char getch
+
+void dbgprintf(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(elog, fmt, args);
+    fflush(elog);
+    va_end(args);
+}
+
+uint32_t file_size(const char *filename) {
+	FILE * f = fopen(filename, "r");
+	fseek (f, 0, SEEK_END);
+	uint32_t file_size = ftell (f);
+	fclose(f);
+	return file_size;
+
+}
+uint32_t read_file(const char * filename, char * data, int32_t file_size, uint8_t binary) {
+	// if file_size <0 read the whole thing 
+	FILE * f;
+	if(binary) {
+		f = fopen(filename,"rb");
+	} else {
+		f = fopen(filename, "r");
+	}
+	if(file_size < 0) {
+		fseek (f, 0, SEEK_END);
+		file_size = ftell (f);
+  		fseek (f, 0, SEEK_SET);
+  	}
+    uint32_t s = fread(data, 1, file_size, f);
+	fclose(f);
+	return s;
+}
+
+void setup_display() {
+	initscr();
+	raw();
+	keypad(stdscr, TRUE);
+	noecho();
+    //winA = newwin(TFB_ROWS, TFB_COLS, 0, 0);	
+	memset(TFB, 0, TFB_ROWS*TFB_COLS);
+	memset(TFBf, 0, TFB_ROWS*TFB_COLS);
+}
+
+void update_tfb() {
+	for(uint8_t y=0;y<TFB_ROWS;y++) {
+		for(uint8_t x=0;x<TFB_COLS;x++) {
+			if(TFB[y*TFB_COLS+x] > 32) {
+				mvaddch(y, x, TFB[y*TFB_COLS + x]);
+			}
+		}
+	}
+	refresh();
+}
+
+
+
+#else
 #include "tulip_helpers.h"
 #include "display.h"
+#endif
 
-uint8_t * text;
-
+char * text;
+char ** text_lines;
 uint8_t *saved_tfb;
 uint8_t *saved_tfbf;
 uint16_t saved_tfb_y;
@@ -14,6 +90,9 @@ uint8_t quit_flag = 0;
 
 uint16_t file_y = 0;
 uint16_t file_x = 0;
+uint16_t cursor_x = 0;
+uint16_t cursor_y = 0;
+
 
 void save_tfb() {
 	saved_tfb = malloc(TFB_ROWS*TFB_COLS);
@@ -40,18 +119,46 @@ void restore_tfb() {
 	tfb_x_col = saved_tfb_x;
 }
 
+void string_at_row(char * s, uint16_t len, uint16_t y) {
+	for(uint16_t i=0;i<len;i++) {
+		if(s[i] > 32) {
+			TFB[y*TFB_COLS+i] = s[i];
+		}
+	}
+#ifdef LOCALDEV
+	update_tfb();
+#endif
+}
+
 void open_file(const char *filename) {
-	printf("opening file %s\n", filename);
+	uint16_t lines =0 ;
+	uint16_t c = 0;
+	dbgprintf("opening file %s\n", filename);
 	uint32_t fs = file_size(filename);
-	text = (uint8_t*) malloc(fs+1);
+	text = (char*) malloc(fs+2);
 	uint32_t bytes_read = read_file(filename, text, fs, 0);
+	//dbgprintf("%s\n", text);
 	text[fs-1] = 0;
-	display_tfb_str((char*)text, bytes_read, tfb_pal_color);
+	if(bytes_read) lines =1; // at least one line
+	for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') lines++;
+	text_lines = (char**)malloc(sizeof(char*)*lines);
+	text_lines[c++] = text;
+	uint16_t last = 0;
+	for(uint32_t i=0;i<bytes_read-1;i++) {
+		if(text[i]=='\n') {
+			string_at_row(text_lines[c-1], i-last, c-1 );
+			last = i+1;
+			text_lines[c++] = &text[last];
+		}
+	}
 }
 
 void editor_quit() {
 	restore_tfb();
 	free(text);
+#ifdef LOCALDEV
+	endwin();
+#endif
 }
 
 void editor_backspace() {
@@ -86,7 +193,6 @@ void editor_insert_character(int c) {
 }
 
 void process_char(int c) {
-	printf("%d\n", c);
 	if(c==127) { // backspace
 		editor_backspace();
 	} else if(c == 9) { // tab, control-I
@@ -140,21 +246,36 @@ void process_char(int c) {
 
 void editor(const char * filename) {
 	save_tfb();
-	display_tfb_str("Tulip Editor v2\n", strlen("Tulip Editor v2\n"), FORMAT_BOLD|1|ANSI_BOLD_WHITE);
+	//display_tfb_str("Tulip Editor v2\n", strlen("Tulip Editor v2\n"), FORMAT_BOLD|1|ANSI_BOLD_WHITE);
 	if(filename != NULL) { 
-		printf("editor fn is %s\n", filename);
+		dbgprintf("editor fn is %s\n", filename);
 		open_file(filename);
 	} else {
-		printf("no filename given\n");
+		dbgprintf("no filename given\n");
 	}
-	
+	update_tfb();
+
 	while(quit_flag == 0) {
 		int c = check_rx_char();
 		if(c>=0) {
 			process_char(c);
 		}
+#ifdef LOCALDEV
+		update_tfb();
+#else
 		vPortYield();
+#endif
 	}	
 	editor_quit();
 }
+
+
+#ifdef LOCALDEV
+int main(int argc , char*argv[]) {
+	elog = fopen("edit.log", "a");
+	setup_display();
+	if(argc>1) editor(argv[1]);
+	return 0;
+}
+#endif
 

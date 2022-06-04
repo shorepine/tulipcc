@@ -35,6 +35,8 @@ void display_bg_bitmap(int x_start, int y_start, int x_end, int y_end, uint8_t* 
 void display_load_sprite(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_screenshot(char * filename);
 void display_tfb_str(char*str, uint16_t len, uint8_t format);
+uint8_t display_get_clock();
+void display_set_clock(uint8_t mhz);
 void display_tfb_new_row();
 void display_run();
 
@@ -50,12 +52,12 @@ extern const unsigned char font_8x12_r[256][12];
 
 
 
-// 10mhz is pretty stable
-// 18 mhz gets me 20fps but sometimes skitters 
+
 // 12 -- 15.5FPS, fine
+// 16 -- 18.7FPS, fine , some skips
 // 18 -- 24.1FPS skips during long lines of TFB text but otherwise fine
 
-#define PIXEL_CLOCK_HZ     (18 * 1000 * 1000)
+#define PIXEL_CLOCK_MHZ     12
 #define BK_LIGHT_ON_LEVEL  1
 #define BK_LIGHT_OFF_LEVEL !BK_LIGHT_ON_LEVEL
 #define PIN_NUM_BK_LIGHT       39 // was 19, was 14 white
@@ -118,7 +120,7 @@ extern uint32_t Cache_Start_DCache_Preload(uint32_t addr, uint32_t size, uint32_
 #define FONT_WIDTH 8
 #define TFB_ROWS (V_RES/FONT_HEIGHT)
 #define TFB_COLS (H_RES/FONT_WIDTH)
-#define BOUNCE_BUFFER_SIZE_PX (H_RES*6)
+#define BOUNCE_BUFFER_SIZE_PX (H_RES*FONT_HEIGHT*2)
 #define BOUNCE_BUFFER_SIZE_BYTES (BOUNCE_BUFFER_SIZE_PX*2)
 #define FLASH_FRAMES 12
 #define ALPHA0 0x55
@@ -155,8 +157,8 @@ uint8_t py_callback;
 uint8_t task_screenshot;
 uint8_t task_start;
 uint8_t task_stop;
-int64_t vsync_count;
-
+int32_t vsync_count;
+uint8_t display_mhz;
 
 uint16_t *sprite_x_px;//[SPRITES]; 
 uint16_t *sprite_y_px;//[SPRITES]; 
