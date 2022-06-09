@@ -18,6 +18,20 @@ uint8_t flash_on = 0;
 
 
 
+
+const char *bit_rep[16] = {
+    [ 0] = "0000", [ 1] = "0001", [ 2] = "0010", [ 3] = "0011",
+    [ 4] = "0100", [ 5] = "0101", [ 6] = "0110", [ 7] = "0111",
+    [ 8] = "1000", [ 9] = "1001", [10] = "1010", [11] = "1011",
+    [12] = "1100", [13] = "1101", [14] = "1110", [15] = "1111",
+};
+
+void print_byte(uint8_t byte)
+{
+    printf("%s%s", bit_rep[byte >> 4], bit_rep[byte & 0x0F]);
+}
+
+
 // Python callback
 extern void tulip_frame_isr(); 
 // This gets called at vsync / frame done
@@ -77,6 +91,9 @@ static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, vo
         while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
             uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
             uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
+
+            // If you're looking at this code just know the unrolled versions were 1.5x faster than loops
+            // I'm sure there's more to do but this is the best we could get it for now
 #ifdef RGB565
             uint8_t fg_color0 = ansi_pal[(format & 0x0f)*BYTES_PER_PIXEL+0];
             uint8_t fg_color1 = ansi_pal[(format & 0x0f)*BYTES_PER_PIXEL+1];
@@ -309,6 +326,7 @@ void display_bg_bitmap(int x_start, int y_start, int x_end, int y_end, uint8_t* 
         }
     }
 }
+
 
 //mem_len = sprite_load(bitmap, mem_pos, [x,y,w,h]) # returns mem_len (w*h*2)
 // load a bitmap into fast sprite ram

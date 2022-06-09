@@ -58,21 +58,26 @@ STATIC mp_obj_t tulip_bg_rect(size_t n_args, const mp_obj_t *args) {
     uint16_t y = mp_obj_get_int(args[1]);
     uint16_t w = mp_obj_get_int(args[2]);
     uint16_t h = mp_obj_get_int(args[3]);
+    uint8_t r,g,b;        
+    if(n_args == 5) {
+        unpack_rgb_332(mp_obj_get_int(args[4]), &r, &g, &b);
+    }
     if(n_args == 7) {
-        uint8_t r = mp_obj_get_int(args[4]);
-        uint8_t g = mp_obj_get_int(args[5]);
-        uint8_t b = mp_obj_get_int(args[6]);
+        r = mp_obj_get_int(args[4]);
+        g = mp_obj_get_int(args[5]);
+        b = mp_obj_get_int(args[6]);
+    }
+    if(n_args > 4) {
         // Set the rect with pixel color
         for(uint16_t y0=y;y0<y+h;y0++) {
             for(uint16_t x0=x;x0<x+w;x0++) {
                 display_set_bg_pixel(x0, y0, r, g, b);
             }
         }
-        return mp_const_none; 
     } else {
-        // return a list of list of tuples, like .. ret[x][y] == (12,2,100)... will i ever need this? punt for now
-        return mp_const_none; 
+        // return a bg rect
     }
+    return mp_const_none;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_rect_obj, 4, 7, tulip_bg_rect);
@@ -111,15 +116,15 @@ STATIC mp_obj_t tulip_bg_bitmap(size_t n_args, const mp_obj_t *args) {
     uint16_t h = mp_obj_get_int(args[3]);
     if(n_args == 5) {
         // Set the rect with bitmap pixels
-        //size_t len = w*h*2;
+        //size_t len = w*h*BYTES_PER_PIXEL;
         //const char * bitmap = mp_obj_str_get_data(&args[4], len);
         //draw_bitmap(x,y,x+w,y+h,(uint8_t*)bitmap);
         return mp_const_none; 
     } else {
         // return a bitmap
-        uint8_t bitmap[w*h*2];  
+        uint8_t bitmap[w*h*BYTES_PER_PIXEL];  
         display_get_bitmap(x,y,w,h, bitmap);
-        return mp_obj_new_bytes(bitmap, w*h*2);
+        return mp_obj_new_bytes(bitmap, w*h*BYTES_PER_PIXEL);
     }
 }
 
@@ -128,6 +133,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_bitmap_obj, 4, 5, tulip_bg_b
 
 
 // bytes, x, y
+// tulip_bg_png(bytes, x,y)
+// tulip_bg_png(filename, x,y)
 STATIC mp_obj_t tulip_bg_png(size_t n_args, const mp_obj_t *args) {
     unsigned error;
     unsigned char* image;
@@ -136,17 +143,30 @@ STATIC mp_obj_t tulip_bg_png(size_t n_args, const mp_obj_t *args) {
     uint16_t y = mp_obj_get_int(args[2]);
 
     mp_buffer_info_t bufinfo;
-    mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+    uint8_t file = 0;
+    if (mp_obj_get_type(args[0]) == &mp_type_bytes) {
+        mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+    } else {
+        uint32_t fs = file_size(mp_obj_str_get_str(args[0]));
+        bufinfo.buf = heap_caps_malloc(fs, MALLOC_CAP_SPIRAM);
+        bufinfo.len = fs;
+        read_file(mp_obj_str_get_str(args[0]), (uint8_t *)bufinfo.buf, -1, 1);
+        file = 1;
+    }
     error = lodepng_decode_memory(&image, &width, &height, (uint8_t*)bufinfo.buf, bufinfo.len, LCT_RGBA, 8);
     if(error) printf("error %u: %s\n", error, lodepng_error_text(error));
     display_bg_bitmap(x,y,x+width,y+height,image);
     heap_caps_free(image);
+    if(file) {
+        heap_caps_free(bufinfo.buf);
+    }
     return mp_const_none;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_png_obj, 3, 3, tulip_bg_png);
 
-
+//tulip.bg_scroll(line, x_offset, y_offset, x_speed, y_speed)
+//tulip.bg_scroll() # resets
 STATIC mp_obj_t tulip_bg_scroll(size_t n_args, const mp_obj_t *args) {
     if(n_args<5) {
         // Reset
@@ -218,21 +238,34 @@ STATIC mp_obj_t tulip_frame_callback(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_frame_callback_obj, 0, 2, tulip_frame_callback);
 
 
-//void load_sprite(uint32_t mem_pos, uint16_t w, uint16_t h, uint8_t* data) ;
-//mem_len = sprite_png(pngdata, mem_pos) 
+//(w,h,bytes) = sprite_png(pngdata, mem_pos) 
+//(w,h,bytes) = sprite_png("filename.png", mem_pos)
 STATIC mp_obj_t tulip_sprite_png(size_t n_args, const mp_obj_t *args) {
     unsigned error;
     unsigned char* image;
     unsigned width, height;
     uint16_t mem_pos = mp_obj_get_int(args[1]);
-
     mp_buffer_info_t bufinfo;
-    mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+    uint8_t file = 0;
+    if (mp_obj_get_type(args[0]) == &mp_type_bytes) {
+        mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+    } else {
+        uint32_t fs = file_size(mp_obj_str_get_str(args[0]));
+        bufinfo.buf = heap_caps_malloc(fs, MALLOC_CAP_SPIRAM);
+        bufinfo.len = fs;
+        read_file(mp_obj_str_get_str(args[0]), (uint8_t *)bufinfo.buf, -1, 1);
+        file = 1;
+    }
     error = lodepng_decode_memory(&image, &width, &height, (uint8_t*)bufinfo.buf, bufinfo.len, LCT_RGBA, 8);
     if(error) printf("error %u: %s\n", error, lodepng_error_text(error));
-    display_load_sprite(mem_pos, width*height*2, image);
+    display_load_sprite(mem_pos, width*height*BYTES_PER_PIXEL, image);
     heap_caps_free(image);
-    return mp_obj_new_int(width*height*2);
+    if(file) heap_caps_free(bufinfo.buf);
+    mp_obj_t tuple[3];
+    tuple[0] = mp_obj_new_int(width);
+    tuple[1] = mp_obj_new_int(height);
+    tuple[2] = mp_obj_new_int(width*height*BYTES_PER_PIXEL);
+    return mp_obj_new_tuple(3, tuple);
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_png_obj, 2, 2, tulip_sprite_png);

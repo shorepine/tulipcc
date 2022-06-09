@@ -70,14 +70,20 @@ extern const unsigned char font_8x12_r[256][12];
 
 #ifdef RGB332
 // TODO, wait, shouldn't i be connecitng these to B7,B6.. ??? 
-#define PIN_NUM_DATA0          21  // B4
-#define PIN_NUM_DATA1          12  // B3
-#define PIN_NUM_DATA2          46  // G5 
-#define PIN_NUM_DATA3          3 // G4
-#define PIN_NUM_DATA4          8 // G3
-#define PIN_NUM_DATA5         15 // R4
-#define PIN_NUM_DATA6         7 // R3
-#define PIN_NUM_DATA7         6 // R2
+// Yeah, try to find where the rest of the pins are and re-wire
+// https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html
+#define PIN_NUM_DATA0          12 // B3
+#define PIN_NUM_DATA1          21 // B4
+
+#define PIN_NUM_DATA2          8  // G3
+#define PIN_NUM_DATA3          3  // G4. 22..
+#define PIN_NUM_DATA4          46 // G5, pin 21 on the breakout... goes to G7... so i guess we've already done this
+
+#define PIN_NUM_DATA5         6   // R2
+#define PIN_NUM_DATA6         7   // R3
+#define PIN_NUM_DATA7         15  // R4
+
+
 //... We keep the rest as we have to drive them low while i have it plugged in
 #define PIN_NUM_DATA8          11 // B2
 #define PIN_NUM_DATA9          10 // B1
