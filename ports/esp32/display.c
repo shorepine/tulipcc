@@ -1,6 +1,9 @@
 #include "display.h"
 
 
+
+
+
 static const char *TAG = "display";
 static TaskHandle_t xDisplayTask = NULL;
 esp_lcd_panel_handle_t panel_handle;
@@ -12,9 +15,6 @@ uint8_t * bg;
 
 int64_t flash_start =0;
 uint8_t flash_on = 0;
-
-
-
 
 
 
@@ -42,24 +42,32 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lc
 int64_t bounce_time = 0;
 uint32_t bounce_count = 0;
 int32_t desync = 0;
+int32_t last_len_bytes =0;
+uint8_t last_total_rows = 0;
 //3ms between frame done and calling this on the 2nd line 
 // Gets called at N hsyncs, and fills in the next N line
 static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
     // Which pixel row and TFB row is this
-    int64_t tic=esp_timer_get_time();
+    int64_t tic=esp_timer_get_time(); // start the timer
     uint16_t starting_display_row_px = pos_px / H_RES;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
     uint8_t * b = (uint8_t*)bounce_buf;
 
     // Copy in the BG, line by line 
-    // 208uS per call at 6 lines
+    // 208uS per call at 6 lines RGB565
+    // 209uS per call at 12 lines RGB332
+    // 416uS per call at 12 lines RGB565
+    //for(uint16_t i=0;i<len_bytes;i++) b[i] = 0;
     for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
         memcpy(b+(H_RES*BYTES_PER_PIXEL*rows_relative_px), bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], H_RES*BYTES_PER_PIXEL); 
     }
 
-    uint8_t test_bits[16]= {0x80,0x80,0x40,0x40,0x20,0x20,0x10,0x10,0x08,0x08,0x04,0x04,0x02,0x02,0x01,0x01};
-    // Now per row (N pixel rows per call), do the TFB then sprites
+    last_len_bytes = len_bytes;
+    last_total_rows = bounce_total_rows_px;
+    
+
+    // Now per row (N (now 12) pixel rows per call), do the text frame buffer then sprites
     for(uint8_t bounce_row_px=0;bounce_row_px<bounce_total_rows_px;bounce_row_px++) {
         uint8_t tfb_row = (starting_display_row_px+bounce_row_px) / FONT_HEIGHT;
         uint8_t tfb_row_offset_px = (starting_display_row_px+bounce_row_px) % FONT_HEIGHT; 
@@ -69,40 +77,56 @@ static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, vo
         while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
             uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
             uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
+#ifdef RGB565
             uint8_t fg_color0 = ansi_pal[(format & 0x0f)*BYTES_PER_PIXEL+0];
             uint8_t fg_color1 = ansi_pal[(format & 0x0f)*BYTES_PER_PIXEL+1];
-            // Skip drawing if flash is active
- 
-            /*
-            if(format & FORMAT_FLASH) {
-                if(vsync_count - flash_start > FLASH_FRAMES) {
-                    flash_on = !flash_on;
-                    flash_start = vsync_count;
-                }
-                if(!flash_on) { tfb_col++; continue; }
-            }
-          */
-           uint32_t byte_start = bounce_row_px*H_RES*BYTES_PER_PIXEL + tfb_col*FONT_WIDTH*BYTES_PER_PIXEL;
+
+            uint8_t * bptr = b + (bounce_row_px*H_RES*BYTES_PER_PIXEL + tfb_col*FONT_WIDTH*BYTES_PER_PIXEL);
+
             if(format & FORMAT_INVERSE) {
-                for(uint8_t k=0;k<16;k=k+2) {
-                    if(!(data & test_bits[k])) {
-                        b[byte_start + k] = fg_color0;
-                        b[byte_start + k + 1] = fg_color1;
-                    }
-                }
+                if(!((data) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(!((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(!((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(!((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(!((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(!((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(!((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(!((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
             } else {
-                for(uint8_t k=0;k<16;k=k+2) {
-                    if(data & test_bits[k]) {
-                        b[byte_start + k] = fg_color0;
-                        b[byte_start + k + 1] = fg_color1;
-                    }
-                }
+                if(((data) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } bptr+=2;
+                if(((data <<=1) & 0x80)) { *(bptr) = fg_color0; *(bptr+1) = fg_color1; } 
             }
-
+#else // RGB332
+            uint8_t fg_color = ansi_pal[(format & 0x0f)];
+            uint8_t * bptr = b + (bounce_row_px*H_RES + tfb_col*FONT_WIDTH);
+            if(format & FORMAT_INVERSE) {
+                if(!((data) & 0x80)) *(bptr) = fg_color; 
+                bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+            } else {
+                if((data) & 0x80) *(bptr) = fg_color; 
+                bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+            }
+#endif
             tfb_col++;
-
         }
-
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
         for(uint8_t s=0;s<SPRITES;s++) {
@@ -115,22 +139,29 @@ static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, vo
                     for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
                         if(col_px < H_RES) {
                             uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
+#ifdef RGB565
                             uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] * BYTES_PER_PIXEL + relative_sprite_x_px * BYTES_PER_PIXEL + 0 ] ;
                             uint8_t b1 = sprite_data[relative_sprite_y_px * sprite_w_px[s] * BYTES_PER_PIXEL + relative_sprite_x_px * BYTES_PER_PIXEL + 1 ] ;
                             if(!(b0 == ALPHA0 && b1 == ALPHA1)) {
                                 b[bounce_row_px*H_RES*BYTES_PER_PIXEL + col_px*BYTES_PER_PIXEL + 0] = b0;
                                 b[bounce_row_px*H_RES*BYTES_PER_PIXEL + col_px*BYTES_PER_PIXEL + 1] = b1;
                             }
+#else
+                            uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
+                            if(b0 != ALPHA) {
+                                b[bounce_row_px*H_RES + col_px] = b0;
+                            }
+#endif
+
                         }
                     } // end for each column
                 } // end if this row has a sprite on it 
             } // end if sprite vis
         } // for each sprite
-      
     } // per each row
-    bounce_time += (esp_timer_get_time() - tic)    ;
-
+    bounce_time += (esp_timer_get_time() - tic); // stop timer
     bounce_count++;
+
     return false; 
 }
 
@@ -138,9 +169,11 @@ static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, vo
 
 void display_reset_bg() {
     bg_pal_color = TULIP_TEAL;
-    for(int i=0;i<(H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL;i=i+2) { 
+    for(int i=0;i<(H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL;i=i+BYTES_PER_PIXEL) { 
         (bg)[i+0] = ansi_pal[bg_pal_color*BYTES_PER_PIXEL+0]; 
+#ifdef RGB565
         (bg)[i+1] = ansi_pal[bg_pal_color*BYTES_PER_PIXEL+1]; 
+#endif        
     }
     
     // init the scroll pointer to the top left of the fb 
@@ -211,19 +244,35 @@ void display_get_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t 
     for (int j = y; j < y+h; j++) {
         for (int i = x; i < x+w; i++) {
             bitmap[c++] = (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)];
+#ifdef RGB565
             bitmap[c++] = (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 1)];
+#endif    
         }
     }
 }
 
-void unpack_rgb(uint8_t px0, uint8_t px1, uint8_t *r, uint8_t *g, uint8_t *b) {
+// RRRGGGBB
+void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
+    *r = px0 & 0xe0;
+    *g = (px0 << 3) & 0xe0;
+    *b = (px0 << 6) & 0xc0;
+}
+
+void unpack_rgb_565(uint8_t px0, uint8_t px1, uint8_t *r, uint8_t *g, uint8_t *b) {
     *r = px1 & 0xf8;
     *g = ((px1 << 5) | (px0 >> 5)) & 0xfc;
     *b = (px0 << 3) & 0xf8;
 }
-
+// RRRGGGBB
+uint8_t color_332(uint8_t red, uint8_t green, uint8_t blue) {
+    uint8_t ret = 0;
+    ret |= (red&0xe0);
+    ret |= (green&0xe0) >> 3;
+    ret |= (blue&0xc0) >> 6;
+    return ret;
+}
 // GGGBBBBB RRRRRGGG, this returns GGGBBBBB
-uint8_t color0(uint8_t red, uint8_t green, uint8_t blue) {
+uint8_t color0_565(uint8_t red, uint8_t green, uint8_t blue) {
     uint8_t ret = 0;
     ret |= (blue & 0xf8) >> 3;
     ret |= (green & 0x1c) << 3;
@@ -231,7 +280,7 @@ uint8_t color0(uint8_t red, uint8_t green, uint8_t blue) {
 }
 
 // GGGBBBBB RRRRRGGG, this returns RRRRRGGG
-uint8_t color1(uint8_t red, uint8_t green, uint8_t blue) {
+uint8_t color1_565(uint8_t red, uint8_t green, uint8_t blue) {
     uint8_t ret = 0;
     ret |= green >> 5;
     ret |= (red & 0xf8);
@@ -240,7 +289,6 @@ uint8_t color1(uint8_t red, uint8_t green, uint8_t blue) {
 
 // input is RGBA data, but we skip alpha
 void display_bg_bitmap(int x_start, int y_start, int x_end, int y_end, uint8_t* data) {
-    //GGGBBBBB RRRRRGGG
     x_start = MIN(x_start, H_RES+OFFSCREEN_X_PX);
     x_end = MIN(x_end, H_RES+OFFSCREEN_X_PX);
     y_start = MIN(y_start, V_RES+OFFSCREEN_Y_PX);
@@ -250,8 +298,12 @@ void display_bg_bitmap(int x_start, int y_start, int x_end, int y_end, uint8_t* 
             uint8_t r = *data++;
             uint8_t g = *data++;
             uint8_t b = *data++;
-            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = color0(r,g,b);
-            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 1)] = color1(r,g,b);
+#ifdef RGB565
+            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = color0_565(r,g,b);
+            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 1)] = color1_565(r,g,b);
+#else
+            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL))] = color_332(r,g,b);
+#endif
             // don't use alpha for bg bitmaps, so assign to to r so the compiler doesn't complain
             r = *data++;
         }
@@ -261,36 +313,51 @@ void display_bg_bitmap(int x_start, int y_start, int x_end, int y_end, uint8_t* 
 //mem_len = sprite_load(bitmap, mem_pos, [x,y,w,h]) # returns mem_len (w*h*2)
 // load a bitmap into fast sprite ram
 void display_load_sprite(uint32_t mem_pos, uint32_t len, uint8_t* data) {
-    for (int j = mem_pos; j < mem_pos + len; j=j+2) {
+    for (int j = mem_pos; j < mem_pos + len; j=j+BYTES_PER_PIXEL) {
         uint8_t r = *data++;
         uint8_t g = *data++;
         uint8_t b = *data++;
         uint8_t a = *data++;
+#ifdef RGB565
         if(a==0) { // only full transparent counts
             sprite_ram[j+0] = ALPHA0;
             sprite_ram[j+1] = ALPHA1;
         } else {
-            sprite_ram[j+0] = color0(r,g,b);
-            sprite_ram[j+1] = color1(r,g,b);
+            sprite_ram[j+0] = color0_565(r,g,b);
+            sprite_ram[j+1] = color1_565(r,g,b);
         }
+#else
+        if(a==0) { // only full transparent counts
+            sprite_ram[j] = ALPHA;
+        } else {
+            sprite_ram[j] = color_332(r,g,b);
+        }
+#endif
     }
+
 }
 
 
 void display_screenshot(char * screenshot_fn) {
     // this will pause rendering, maybe set a flag to pause the screen? 
+    display_stop();
     // but basically calls bounce_empty with my own bounce_buf and write it to a png file line by line
     uint8_t * screenshot_bb = (uint8_t *) heap_caps_malloc(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     int err= 0;
     uint8_t * full_pic = (uint8_t*) heap_caps_malloc(H_RES*V_RES*3,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     uint32_t c = 0;
+    uint8_t r=0;
+    uint8_t g=0;
+    uint8_t b=0;
+
     for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
         display_bounce_empty(screenshot_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
-        for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+2) {
-            uint8_t r=0;
-            uint8_t g=0;
-            uint8_t b=0;
-            unpack_rgb(screenshot_bb[x+0], screenshot_bb[x+1], &r, &g, &b);
+        for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
+#ifdef RGB565
+            unpack_rgb_565(screenshot_bb[x+0], screenshot_bb[x+1], &r, &g, &b);
+#else
+            unpack_rgb_332(screenshot_bb[x], &r, &g, &b);
+#endif
             full_pic[c++] = r;
             full_pic[c++] = g;
             full_pic[c++] = b;
@@ -305,19 +372,30 @@ void display_screenshot(char * screenshot_fn) {
     heap_caps_free(out);
     heap_caps_free(screenshot_bb);
     heap_caps_free(full_pic);
+    display_start();
 }
 
 
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
-    bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0] = color0(r,g,b);
-    bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 1] = color1(r,g,b);
+#ifdef RGB565
+    bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0] = color0_565(r,g,b);
+    bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 1] = color1_565(r,g,b);
+#else
+    bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL] = color_332(r,g,b);
+#endif    
 }
 
 
 void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_t *b) {
+#ifdef RGB565
     uint8_t px0 = bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0];
     uint8_t px1 = bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0];
-    unpack_rgb(px0, px1, r, g, b);
+    unpack_rgb_565(px0, px1, r, g, b);
+#else
+    uint8_t px0 = bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0];
+    unpack_rgb_332(px0, r, g, b);
+#endif    
+
 }
 
 
@@ -435,8 +513,11 @@ void display_run(void) {
     ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
 
     panel_handle = NULL;
-
+#ifdef RGB565
     panel_config.data_width = 16; // RGB565 in parallel mode, thus 16bit in width
+#else
+    panel_config.data_width = 8; // RGB332
+#endif    
     panel_config.psram_trans_align = 64;
     panel_config.clk_src = LCD_CLK_SRC_PLL160M;
     panel_config.disp_gpio_num = PIN_NUM_DISP_EN;
@@ -444,6 +525,7 @@ void display_run(void) {
     panel_config.vsync_gpio_num = PIN_NUM_VSYNC;
     panel_config.hsync_gpio_num = PIN_NUM_HSYNC;
     panel_config.de_gpio_num = PIN_NUM_DE;
+
     panel_config.data_gpio_nums[0] = PIN_NUM_DATA0;
     panel_config.data_gpio_nums[1] = PIN_NUM_DATA1;
     panel_config.data_gpio_nums[2] = PIN_NUM_DATA2;
@@ -452,6 +534,7 @@ void display_run(void) {
     panel_config.data_gpio_nums[5] = PIN_NUM_DATA5;
     panel_config.data_gpio_nums[6] = PIN_NUM_DATA6;
     panel_config.data_gpio_nums[7] = PIN_NUM_DATA7;
+    // Even though we'll only use 8 pins for RGB332 we keep the others to set them low
     panel_config.data_gpio_nums[8] = PIN_NUM_DATA8;
     panel_config.data_gpio_nums[9] = PIN_NUM_DATA9;
     panel_config.data_gpio_nums[10] = PIN_NUM_DATA10;
@@ -460,6 +543,7 @@ void display_run(void) {
     panel_config.data_gpio_nums[13] = PIN_NUM_DATA13;
     panel_config.data_gpio_nums[14] = PIN_NUM_DATA14;
     panel_config.data_gpio_nums[15] = PIN_NUM_DATA15;
+
     panel_config.timings.pclk_hz = PIXEL_CLOCK_MHZ*1000*1000;
     panel_config.timings.h_res = H_RES;
     panel_config.timings.v_res = V_RES;
@@ -499,10 +583,8 @@ void display_run(void) {
     y_speeds = (int16_t*)heap_caps_malloc(V_RES*sizeof(int16_t), MALLOC_CAP_INTERNAL);
 
     bg_lines = (uint32_t**)heap_caps_malloc(V_RES*sizeof(uint32_t*), MALLOC_CAP_INTERNAL);
-
-    ansi_pal = (uint8_t*)heap_caps_malloc(2*17*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
-    
-
+    ansi_pal = (uint8_t*)heap_caps_malloc(BYTES_PER_PIXEL*17*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
+#ifdef RGB565
     ansi_pal = (uint8_t[]){
         // normal
         0, 0,       // ANSI_BLACK
@@ -524,6 +606,32 @@ void display_run(void) {
         255, 255,   // ANSI_BOLD_WHITE
         8,   2      // TULIP_TEAL
     };
+#else
+    ansi_pal = (uint8_t[]){
+        // normal
+        color_332(0,0,0),       // ANSI_BLACK
+        color_332(128,0,0),     // ANSI_RED
+        color_332(0,128,0),      // ANSI_GREEN
+        color_332(128,128,0),    // ANSI_YELLOW
+        color_332(0,0,128),      // ANSI_BLUE
+        color_332(128,0,128),   // ANSI_MAGENTA
+        color_332(0,128,128), // CYAN
+        color_332(128,128,128), // WHITE
+        // bold
+        color_332(0,0,0), // BLACK
+        color_332(255,0,0), // red
+        color_332(0,255,0), // green
+        color_332(255,255,0), //yello
+        color_332(0,0,255), // blue
+        color_332(255,0,255), // magenta
+        color_332(0,255,255), // cyan
+        color_332(255,255,255), // white
+        color_332(0,128,128), // teal
+    };
+#endif
+
+
+
 
     // Init the BG, TFB and sprite layers
     display_reset_bg();
@@ -550,14 +658,17 @@ void display_run(void) {
         ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
         free_time += (esp_timer_get_time() - tic1);
         if(loop_count++ >= 100) {
-            printf("Past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). %d desyncs \n", 
+            printf("Past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). %d desyncs. last len %d last rows %d bc %d \n", 
                 loop_count,
                 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count), 
                 free_time / loop_count,
                 bounce_time / bounce_count,
                 ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (1000000.0 / ((esp_timer_get_time() - tic0) / loop_count)))))*100.0,
                 (int) (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (1000000.0 / ((esp_timer_get_time() - tic0) / loop_count)))),
-                desync
+                desync,
+                last_len_bytes,
+                last_total_rows,
+                bounce_count
             );
             bounce_count = 1;
             bounce_time = 0;

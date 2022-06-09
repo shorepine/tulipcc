@@ -17,10 +17,11 @@
 #include <time.h>
 #include <string.h>
 #include "esp_random.h"
-//#include "TinyPngOut.h"
 #include "tulip_helpers.h"
 #include "lodepng.h"
 
+//#define RGB565
+#define RGB332
 
 uint8_t bg_pal_color;
 uint8_t tfb_pal_color;
@@ -40,7 +41,8 @@ void display_set_clock(uint8_t mhz);
 void display_tfb_new_row();
 void display_run();
 
-void unpack_rgb(uint8_t px0, uint8_t px1, uint8_t *r, uint8_t *g, uint8_t *b);
+void unpack_rgb_565(uint8_t px0, uint8_t px1, uint8_t *r, uint8_t *g, uint8_t *b);
+void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
 
 
 extern const unsigned char font_8x12_r[256][12];
@@ -66,7 +68,29 @@ extern const unsigned char font_8x12_r[256][12];
 #define PIN_NUM_DE             42
 #define PIN_NUM_PCLK           14 // was 38, was 20, was 13 black
 
+#ifdef RGB332
+// TODO, wait, shouldn't i be connecitng these to B7,B6.. ??? 
+#define PIN_NUM_DATA0          21  // B4
+#define PIN_NUM_DATA1          12  // B3
+#define PIN_NUM_DATA2          46  // G5 
+#define PIN_NUM_DATA3          3 // G4
+#define PIN_NUM_DATA4          8 // G3
+#define PIN_NUM_DATA5         15 // R4
+#define PIN_NUM_DATA6         7 // R3
+#define PIN_NUM_DATA7         6 // R2
+//... We keep the rest as we have to drive them low while i have it plugged in
+#define PIN_NUM_DATA8          11 // B2
+#define PIN_NUM_DATA9          10 // B1
+#define PIN_NUM_DATA10         9 // B0
+#define PIN_NUM_DATA11         18 // G2
+#define PIN_NUM_DATA12         17 // G1
+#define PIN_NUM_DATA13         16 // G0
+#define PIN_NUM_DATA14         5 // R1
+#define PIN_NUM_DATA15         4 // R0
+#endif
 
+#ifdef RGB565
+// TODO, wait, shouldn't i be connecitng these to B7,B6.. ??? 
 #define PIN_NUM_DATA0          9  // B0
 #define PIN_NUM_DATA1          10  // B1
 #define PIN_NUM_DATA2          11 // B2
@@ -83,6 +107,7 @@ extern const unsigned char font_8x12_r[256][12];
 #define PIN_NUM_DATA13         6 // R2
 #define PIN_NUM_DATA14         7 // R3
 #define PIN_NUM_DATA15         15 // R4
+#endif
 
 #define PIN_NUM_DISP_EN        -1
 
@@ -115,16 +140,29 @@ extern uint32_t Cache_Start_DCache_Preload(uint32_t addr, uint32_t size, uint32_
 
 #define OFFSCREEN_Y_PX 150
 #define OFFSCREEN_X_PX 256
+
+#ifdef RGB332
+#define BYTES_PER_PIXEL 1
+#else
 #define BYTES_PER_PIXEL 2
+#endif
+
 #define FONT_HEIGHT 12
 #define FONT_WIDTH 8
 #define TFB_ROWS (V_RES/FONT_HEIGHT)
 #define TFB_COLS (H_RES/FONT_WIDTH)
-#define BOUNCE_BUFFER_SIZE_PX (H_RES*FONT_HEIGHT*2)
-#define BOUNCE_BUFFER_SIZE_BYTES (BOUNCE_BUFFER_SIZE_PX*2)
+#ifdef RGB565
+#define BOUNCE_BUFFER_SIZE_PX (H_RES*FONT_HEIGHT) 
+#define BOUNCE_BUFFER_SIZE_BYTES (BOUNCE_BUFFER_SIZE_PX*BYTES_PER_PIXEL)
+#else
+#define BOUNCE_BUFFER_SIZE_PX (H_RES*FONT_HEIGHT) 
+#define BOUNCE_BUFFER_SIZE_BYTES (BOUNCE_BUFFER_SIZE_PX)
+#endif
+
 #define FLASH_FRAMES 12
 #define ALPHA0 0x55
 #define ALPHA1 0x53
+#define ALPHA 0x55
 
 #define FORMAT_INVERSE 0x80 
 #define FORMAT_UNDERLINE 0x40

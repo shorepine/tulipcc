@@ -80,7 +80,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_rect_obj, 4, 7, tulip_bg_rec
 STATIC mp_obj_t tulip_bg_clear(size_t n_args, const mp_obj_t *args) {
     // Default to the default bg
     uint8_t r, g, b;
-    unpack_rgb(ansi_pal[bg_pal_color]*2+0, ansi_pal[bg_pal_color]*2+1, &r, &g, &b);
+#ifdef RGB565
+    unpack_rgb_565(ansi_pal[bg_pal_color]*2+0, ansi_pal[bg_pal_color]*2+1, &r, &g, &b);
+#endif
+#ifdef RGB332
+    unpack_rgb_332(ansi_pal[bg_pal_color], &r, &g, &b);
+#endif
     if(n_args == 3) {
         r = mp_obj_get_int(args[0]);
         g = mp_obj_get_int(args[1]);
