@@ -1,35 +1,12 @@
 #include "display.h"
 
-
-
-
-
-static const char *TAG = "display";
 static TaskHandle_t xDisplayTask = NULL;
 esp_lcd_panel_handle_t panel_handle;
 esp_lcd_rgb_panel_config_t panel_config;
 
 // RAM for sprites and background FB
-uint8_t *sprite_ram;//[SPRITE_RAM_BYTES];
-uint8_t * bg;
-
-int64_t flash_start =0;
-uint8_t flash_on = 0;
-
-
-
-
-const char *bit_rep[16] = {
-    [ 0] = "0000", [ 1] = "0001", [ 2] = "0010", [ 3] = "0011",
-    [ 4] = "0100", [ 5] = "0101", [ 6] = "0110", [ 7] = "0111",
-    [ 8] = "1000", [ 9] = "1001", [10] = "1010", [11] = "1011",
-    [12] = "1100", [13] = "1101", [14] = "1110", [15] = "1111",
-};
-
-void print_byte(uint8_t byte)
-{
-    printf("%s%s", bit_rep[byte >> 4], bit_rep[byte & 0x0F]);
-}
+uint8_t *sprite_ram; // in IRAM
+uint8_t * bg; // in SPIRAM
 
 
 // Python callback
@@ -53,16 +30,16 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lc
     return high_task_wakeup;
 }
 
+// Timers / counters for perf
 int64_t bounce_time = 0;
 uint32_t bounce_count = 0;
 int32_t desync = 0;
-int32_t last_len_bytes =0;
-uint8_t last_total_rows = 0;
-//3ms between frame done and calling this on the 2nd line 
-// Gets called at N hsyncs, and fills in the next N line
+// Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
+// Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
 static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    // Which pixel row and TFB row is this
     int64_t tic=esp_timer_get_time(); // start the timer
+
+    // Which pixel row and TFB row is this
     uint16_t starting_display_row_px = pos_px / H_RES;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
@@ -72,21 +49,15 @@ static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, vo
     // 208uS per call at 6 lines RGB565
     // 209uS per call at 12 lines RGB332
     // 416uS per call at 12 lines RGB565
-    //for(uint16_t i=0;i<len_bytes;i++) b[i] = 0;
     for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
         memcpy(b+(H_RES*BYTES_PER_PIXEL*rows_relative_px), bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], H_RES*BYTES_PER_PIXEL); 
     }
-
-    last_len_bytes = len_bytes;
-    last_total_rows = bounce_total_rows_px;
     
-
-    // Now per row (N (now 12) pixel rows per call), do the text frame buffer then sprites
+    // Now per row (N (now 12) pixel rows per call), draw the text frame buffer and sprites on top of the BG
     for(uint8_t bounce_row_px=0;bounce_row_px<bounce_total_rows_px;bounce_row_px++) {
         uint8_t tfb_row = (starting_display_row_px+bounce_row_px) / FONT_HEIGHT;
         uint8_t tfb_row_offset_px = (starting_display_row_px+bounce_row_px) % FONT_HEIGHT; 
 
-        // Add in the TFB
         uint8_t tfb_col = 0;
         while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
             uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
@@ -275,12 +246,30 @@ void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *b = (px0 << 6) & 0xc0;
 }
 
+// GGGBBBBB RRRRRGGG
 void unpack_rgb_565(uint8_t px0, uint8_t px1, uint8_t *r, uint8_t *g, uint8_t *b) {
     *r = px1 & 0xf8;
     *g = ((px1 << 5) | (px0 >> 5)) & 0xfc;
     *b = (px0 << 3) & 0xf8;
 }
-// RRRGGGBB
+
+// Given a single uint (0-255 for RGB332, 0-65535 for RGB565), return r, g, b
+void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b) {
+#ifdef RGB565
+    unpack_rgb_565(pal_idx & 0xff, (pal_idx >> 8) & 0xff, r, g, b);
+#else
+    unpack_rgb_332(pal_idx & 0xff, r, g, b);
+#endif
+}
+
+// Given an ansi pal index (0-16 right now), return r g b
+void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b) {
+    *r = ansi_pal_rgb[ansi_idx][0];
+    *g = ansi_pal_rgb[ansi_idx][1];
+    *b = ansi_pal_rgb[ansi_idx][2];
+}
+
+// Return a packed 8-bit number for RRRGGGBB
 uint8_t color_332(uint8_t red, uint8_t green, uint8_t blue) {
     uint8_t ret = 0;
     ret |= (red&0xe0);
@@ -356,41 +345,106 @@ void display_load_sprite(uint32_t mem_pos, uint32_t len, uint8_t* data) {
 }
 
 
-void display_screenshot(char * screenshot_fn) {
-    // this will pause rendering, maybe set a flag to pause the screen? 
+// Palletized version of screenshot. about 3x as fast, RGB332 only
+void display_screenshot_pal(char * screenshot_fn) {
+    // Blank the display
     display_stop();
-    // but basically calls bounce_empty with my own bounce_buf and write it to a png file line by line
+
+    // 778ms total without blanking, pretty good
     uint8_t * screenshot_bb = (uint8_t *) heap_caps_malloc(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    int err= 0;
+    uint8_t * full_pic = (uint8_t*) heap_caps_malloc(H_RES*V_RES*1,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    uint32_t c = 0;
+    uint8_t r,g,b,a;
+    // Generate the pal
+    LodePNGState state;
+    lodepng_state_init(&state);
+    a = 255; // todo, we could use BG alpha colors? but it doesn't matter
+    int err;
+    for(uint16_t i=0;i<256;i++) {
+        unpack_pal_idx(i, &r, &g, &b);
+        // You make the same entry in both the input image and the output image 
+        err = lodepng_palette_add(&state.info_png.color, r,g,b,a);
+        err = lodepng_palette_add(&state.info_raw, r,g,b,a);        
+    }
+    state.info_png.color.colortype = LCT_PALETTE; 
+    state.info_png.color.bitdepth = 8;
+    state.info_raw.colortype = LCT_PALETTE;
+    state.info_raw.bitdepth = 8;
+    state.encoder.auto_convert = 0;
+    int64_t tic = esp_timer_get_time();
+    for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
+        display_bounce_empty(screenshot_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
+        for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
+            full_pic[c++] = screenshot_bb[x];
+        }
+    }
+    // 45ms
+    printf("Took %lld uS to bounce entire screen\n", esp_timer_get_time() - tic);
+    tic = esp_timer_get_time();
+    uint32_t outsize = 0;
+    uint8_t *out;
+    err = lodepng_encode(&out, &outsize,full_pic, H_RES, V_RES, &state);
+    // 456ms , 4223 b frame
+    printf("Took %lld uS to encode as PNG to memory. err %d\n", esp_timer_get_time() - tic, err);
+    tic = esp_timer_get_time();
+    printf("PNG done encoding. writing %d bytes to file %s\n", outsize, screenshot_fn);
+    write_file(screenshot_fn, out, outsize, 1);
+    // 268ms 
+    printf("Took %lld uS to write to disk\n", esp_timer_get_time() - tic);
+    heap_caps_free(out);
+    heap_caps_free(screenshot_bb);
+    heap_caps_free(full_pic);
+    // Restart the display
+    display_start();
+}
+
+
+void display_screenshot(char * screenshot_fn) {
+#ifdef RGB332
+    // Use this faster version for RGB332
+    display_screenshot_pal(screenshot_fn);
+#else
+    // Blank the display
+    display_stop();
+
+    // basically calls bounce_empty with my own bounce_buf and write it to a png file line by line
+    uint8_t * screenshot_bb = (uint8_t *) heap_caps_malloc(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     uint8_t * full_pic = (uint8_t*) heap_caps_malloc(H_RES*V_RES*3,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     uint32_t c = 0;
     uint8_t r=0;
     uint8_t g=0;
     uint8_t b=0;
 
+    int64_t tic = esp_timer_get_time();
     for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
         display_bounce_empty(screenshot_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
         for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
-#ifdef RGB565
             unpack_rgb_565(screenshot_bb[x+0], screenshot_bb[x+1], &r, &g, &b);
-#else
-            unpack_rgb_332(screenshot_bb[x], &r, &g, &b);
-#endif
             full_pic[c++] = r;
             full_pic[c++] = g;
             full_pic[c++] = b;
         }
     }
+    // Takes 86ms
+    printf("Took %lld uS to bounce entire screen\n", esp_timer_get_time() - tic);
+    tic = esp_timer_get_time();
     uint32_t outsize = 0;
     uint8_t *out;
-    err= lodepng_encode_memory(&out, &outsize,full_pic, H_RES, V_RES, LCT_RGB, 8);
+    lodepng_encode_memory(&out, &outsize,full_pic, H_RES, V_RES, LCT_RGB, 8);
+    // Takes 1700ms 
+    printf("Took %lld uS to encode as PNG to memory\n", esp_timer_get_time() - tic);
 
+    tic = esp_timer_get_time();
     printf("PNG done encoding. writing %d bytes to file %s\n", outsize, screenshot_fn);
     write_file(screenshot_fn, out, outsize, 1);
+    printf("Took %lld uS to write to disk\n", esp_timer_get_time() - tic);
     heap_caps_free(out);
     heap_caps_free(screenshot_bb);
     heap_caps_free(full_pic);
+
+    // Restart the display
     display_start();
+#endif
 }
 
 
@@ -417,7 +471,27 @@ void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_
 }
 
 
+void display_tfb_cursor(uint16_t x, uint16_t y) {
+    // Put a space char in the TFB if there's nothing here; makes the system draw it
+    if(TFB[tfb_y_row*TFB_COLS+tfb_x_col] == 0) TFB[tfb_y_row*TFB_COLS+tfb_x_col] = 32;
+    uint8_t f = TFBf[tfb_y_row*TFB_COLS + tfb_x_col];
+    f = f | FORMAT_FLASH;
+    f = f | FORMAT_INVERSE;
+    f = f | tfb_pal_color;
+    TFBf[tfb_y_row*TFB_COLS + tfb_x_col] = f;
+}
+
+void display_tfb_uncursor(uint16_t x, uint16_t y) {
+    if(tfb_x_col < TFB_COLS) {
+        uint8_t f = TFBf[tfb_y_row*TFB_COLS + tfb_x_col];
+        if(f & FORMAT_FLASH) f = f - FORMAT_FLASH;
+        if(f & FORMAT_INVERSE) f = f - FORMAT_INVERSE;
+        TFBf[tfb_y_row*TFB_COLS + tfb_x_col] = f;
+    }
+}
+
 void display_tfb_new_row() {
+    display_tfb_uncursor(tfb_x_col, tfb_y_row);
     // Move the pointer to a new row, and scroll the view if necessary
     if(tfb_y_row == TFB_ROWS-1) {
         // We were in the last row, let's scroll the buffer up by moving the TFB up
@@ -427,19 +501,11 @@ void display_tfb_new_row() {
         for(uint8_t i=0;i<TFB_COLS;i++) { TFB[tfb_y_row*TFB_COLS+i] = 0; TFBf[tfb_y_row*TFB_COLS+i] = tfb_pal_color;}
     } else {
         // Still got space, just increase the row counter
-        // Also delete the previous cursor
-
-        // were we at the end? if so don't reset cursor, it was never shown
-        if(tfb_x_col != TFB_COLS) {
-            TFB[tfb_y_row*TFB_COLS+tfb_x_col] = 0;
-            TFBf[tfb_y_row*TFB_COLS+tfb_x_col] = tfb_pal_color;
-        }
         tfb_y_row++;
     }
     // No matter what, go back to 0 on cols
     tfb_x_col = 0;
 }
-
 
 void display_tfb_str(char*str, uint16_t len, uint8_t format) {
     //printf("str len %d format %d is ###", len, format);
@@ -448,6 +514,7 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format) {
     // For each character incoming from micropython
     for(uint16_t i=0;i<len;i++) {
         if(str[i] == 8)  { // backspace , go backwards (don't delete)
+            display_tfb_uncursor(tfb_x_col, tfb_y_row);
             if(tfb_x_col > 0) tfb_x_col--;
         } else if(str[i] == 27) { // ANSI
             if(str[len-1] == 'K') { // clear to end of the line
@@ -455,6 +522,7 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format) {
                 // We're done. set len to end 
                 i= len;
             } else if(str[len-1] == 'D') { // move cursor backwards str[i+1] spaces
+                display_tfb_uncursor(tfb_x_col, tfb_y_row);
                 uint8_t spaces = 0;
                 if(len==5) { // two digits
                     spaces = (str[2]-'0')*10 + (str[3]-'0');
@@ -507,20 +575,18 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format) {
             } else {
                 TFBf[tfb_y_row*TFB_COLS+tfb_x_col] = format;        
             }
-            tfb_x_col = (tfb_x_col + 1);
+            tfb_x_col++;
             if(tfb_x_col == TFB_COLS) {
                 display_tfb_new_row();
             }
         }
     }
-    // cursor
-    TFB[tfb_y_row*TFB_COLS+tfb_x_col] = 32;
-    TFBf[tfb_y_row*TFB_COLS+tfb_x_col] = FORMAT_INVERSE|FORMAT_FLASH|tfb_pal_color;
-    
+    // Update the cursor
+    display_tfb_cursor(tfb_x_col, tfb_y_row);    
 }
 
 
-
+// Task runner for the display, inits and then spins in a loop processing frame done ISRs
 void display_run(void) {
     // Backlight on GPIO for the 10.1 panel
     gpio_config_t bk_gpio_config = {
@@ -531,11 +597,7 @@ void display_run(void) {
     ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
 
     panel_handle = NULL;
-#ifdef RGB565
-    panel_config.data_width = 16; // RGB565 in parallel mode, thus 16bit in width
-#else
-    panel_config.data_width = 8; // RGB332
-#endif    
+    panel_config.data_width = BYTES_PER_PIXEL*8; 
     panel_config.psram_trans_align = 64;
     panel_config.clk_src = LCD_CLK_SRC_PLL160M;
     panel_config.disp_gpio_num = PIN_NUM_DISP_EN;
@@ -601,54 +663,16 @@ void display_run(void) {
     y_speeds = (int16_t*)heap_caps_malloc(V_RES*sizeof(int16_t), MALLOC_CAP_INTERNAL);
 
     bg_lines = (uint32_t**)heap_caps_malloc(V_RES*sizeof(uint32_t*), MALLOC_CAP_INTERNAL);
-    ansi_pal = (uint8_t*)heap_caps_malloc(BYTES_PER_PIXEL*17*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
+    ansi_pal = (uint8_t*)heap_caps_malloc(BYTES_PER_PIXEL*ANSI_PAL_COLORS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
+
+    for(uint8_t i=0;i<ANSI_PAL_COLORS;i++) {
 #ifdef RGB565
-    ansi_pal = (uint8_t[]){
-        // normal
-        0, 0,       // ANSI_BLACK
-        0, 168,     // ANSI_RED
-        64, 5,      // ANSI_GREEN
-        64, 173,    // ANSI_YELLOW
-        21, 0,      // ANSI_BLUE
-        21, 168,    // ANSI_MAGENTA
-        85, 5,      // ANSI_CYAN
-        85, 173,    // ANSI_WHITE
-        // bold
-        170, 82,    // ANSI_BOLD_BLACK
-        170, 250,   // ANSI_BOLD_RED
-        234, 87,    // ANSI_BOLD_GREEN
-        234, 255,   // ANSI_BOLD_YELLOW
-        191, 82,    // ANSI_BOLD_BLUE
-        191, 250,   // ANSI_BOLD_MAGENTA
-        255, 87,    // ANSI_BOLD_CYAN
-        255, 255,   // ANSI_BOLD_WHITE
-        8,   2      // TULIP_TEAL
-    };
+        ansi_pal[i*2+0] = color0_565(ansi_pal_rgb[i][0], ansi_pal_rgb[i][1], ansi_pal_rgb[i][2]);
+        ansi_pal[i*2+1] = color1_565(ansi_pal_rgb[i][0], ansi_pal_rgb[i][1], ansi_pal_rgb[i][2]);
 #else
-    ansi_pal = (uint8_t[]){
-        // normal
-        color_332(0,0,0),       // ANSI_BLACK
-        color_332(128,0,0),     // ANSI_RED
-        color_332(0,128,0),      // ANSI_GREEN
-        color_332(128,128,0),    // ANSI_YELLOW
-        color_332(0,0,128),      // ANSI_BLUE
-        color_332(128,0,128),   // ANSI_MAGENTA
-        color_332(0,128,128), // CYAN
-        color_332(128,128,128), // WHITE
-        // bold
-        color_332(0,0,0), // BLACK
-        color_332(255,0,0), // red
-        color_332(0,255,0), // green
-        color_332(255,255,0), //yello
-        color_332(0,0,255), // blue
-        color_332(255,0,255), // magenta
-        color_332(0,255,255), // cyan
-        color_332(255,255,255), // white
-        color_332(0,128,128), // teal
-    };
-#endif
-
-
+        ansi_pal[i    ] =  color_332(ansi_pal_rgb[i][0], ansi_pal_rgb[i][1], ansi_pal_rgb[i][2]);
+#endif        
+    }
 
 
     // Init the BG, TFB and sprite layers
@@ -676,7 +700,7 @@ void display_run(void) {
         ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
         free_time += (esp_timer_get_time() - tic1);
         if(loop_count++ >= 100) {
-            printf("Past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). %d desyncs. last len %d last rows %d bc %d \n", 
+            printf("Past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). %d desyncs [bc %d]\n", 
                 loop_count,
                 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count), 
                 free_time / loop_count,
@@ -684,8 +708,6 @@ void display_run(void) {
                 ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (1000000.0 / ((esp_timer_get_time() - tic0) / loop_count)))))*100.0,
                 (int) (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (1000000.0 / ((esp_timer_get_time() - tic0) / loop_count)))),
                 desync,
-                last_len_bytes,
-                last_total_rows,
                 bounce_count
             );
             bounce_count = 1;

@@ -23,10 +23,33 @@
 //#define RGB565
 #define RGB332
 
+
+#define ANSI_PAL_COLORS 17
+
 uint8_t bg_pal_color;
 uint8_t tfb_pal_color;
 uint8_t ansi_active_bg_color; 
 int16_t ansi_active_format;
+
+static const uint8_t ansi_pal_rgb[ANSI_PAL_COLORS][3] = {
+	{ 0, 0, 0}, 		// BLACK
+	{ 128, 0, 0},		// RED
+	{ 0, 128, 0},		// GREEN
+	{ 128, 128, 0},		// YELLOW
+	{ 0, 0, 128},		// BLUE
+	{ 128, 0, 128},		// MAGENTA
+	{ 0, 128, 128},		// CYAN
+	{ 128, 128, 128},   // WHITE
+	{ 0, 0, 0},			// BOLD BLACK
+	{ 255, 0, 0},		// BOLD RED
+	{ 0, 255, 0},		// BOLD GREEN
+	{ 255, 255, 0},		// BOLD YELLOW
+	{ 0, 0, 255},		// BOLD BLUE
+	{ 255, 0, 255},		// BOLD MAGENTA
+	{ 0, 255, 255},		// BOLD CYAN
+	{ 255, 255, 255},	// BOLD WHITE
+	{ 1, 77, 78}		// TULIP TEAL
+};
 
 
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b);
@@ -35,6 +58,7 @@ void display_get_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t 
 void display_bg_bitmap(int x_start, int y_start, int x_end, int y_end, uint8_t* data);
 void display_load_sprite(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_screenshot(char * filename);
+void display_screenshot_pal(char * filename);
 void display_tfb_str(char*str, uint16_t len, uint8_t format);
 uint8_t display_get_clock();
 void display_set_clock(uint8_t mhz);
@@ -43,6 +67,8 @@ void display_run();
 
 void unpack_rgb_565(uint8_t px0, uint8_t px1, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
+void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b);
+void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 
 
 extern const unsigned char font_8x12_r[256][12];
@@ -51,8 +77,6 @@ extern const unsigned char font_8x12_r[256][12];
 // USB: D- = 19, D+ = 20
 // 35, 36, 37 -- for quad psram
 // PCLK on 38 or 13 didn't work -- bad image
-
-
 
 
 // 12 -- 15.5FPS, fine
@@ -69,8 +93,7 @@ extern const unsigned char font_8x12_r[256][12];
 #define PIN_NUM_PCLK           14 // was 38, was 20, was 13 black
 
 #ifdef RGB332
-// TODO, wait, shouldn't i be connecitng these to B7,B6.. ??? 
-// Yeah, try to find where the rest of the pins are and re-wire
+// These are actually connected properly , what is "G5" here is going to G7 on the display (MSB), etc
 // https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html
 #define PIN_NUM_DATA0          12 // B3
 #define PIN_NUM_DATA1          21 // B4
@@ -82,7 +105,6 @@ extern const unsigned char font_8x12_r[256][12];
 #define PIN_NUM_DATA5         6   // R2
 #define PIN_NUM_DATA6         7   // R3
 #define PIN_NUM_DATA7         15  // R4
-
 
 //... We keep the rest as we have to drive them low while i have it plugged in
 #define PIN_NUM_DATA8          11 // B2
@@ -96,7 +118,6 @@ extern const unsigned char font_8x12_r[256][12];
 #endif
 
 #ifdef RGB565
-// TODO, wait, shouldn't i be connecitng these to B7,B6.. ??? 
 #define PIN_NUM_DATA0          9  // B0
 #define PIN_NUM_DATA1          10  // B1
 #define PIN_NUM_DATA2          11 // B2
@@ -118,7 +139,7 @@ extern const unsigned char font_8x12_r[256][12];
 #define PIN_NUM_DISP_EN        -1
 
 // We can address this many moving things on screen
-#define SPRITES 16
+#define SPRITES 32
 // We assume we can store 16 unique 32x32 sprite tiles, you can swap these out from RAM
 #define SPRITE_RAM_BYTES (32*32*2*16) // 32KB
 

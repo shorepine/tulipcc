@@ -13,6 +13,8 @@
 
 // Graphics
 
+// tulip.display_clock(18)
+// clock = tulip.display_clock()
 STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
     if(n_args==1) {
         uint16_t mhz = mp_obj_get_int(args[0]);
@@ -24,16 +26,22 @@ STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_clock_obj, 0, 1, tulip_display_clock);
 
-
+// tulip.bg_pixel(x,y, r,g,b)
+// tulip.bg_pixel(x,y, pal_idx)
+// (r,g,b) = tulip.bg_pixel(x,y)
 STATIC mp_obj_t tulip_bg_pixel(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
     uint16_t y = mp_obj_get_int(args[1]);
-
-    if(n_args == 5) {
-        uint8_t r = mp_obj_get_int(args[2]);
-        uint8_t g = mp_obj_get_int(args[3]);
-        uint8_t b = mp_obj_get_int(args[4]);
-
+    uint8_t r,g,b;
+    if(n_args == 5) { // r,g,b
+        r = mp_obj_get_int(args[2]);
+        g = mp_obj_get_int(args[3]);
+        b = mp_obj_get_int(args[4]);
+        // Set the pixel
+        display_set_bg_pixel(x,y,r,g,b);
+        return mp_const_none; 
+    } else  if(n_args == 3) { // pallete index
+        unpack_pal_idx(mp_obj_get_int(args[2]), &r, &g, &b);
         // Set the pixel
         display_set_bg_pixel(x,y,r,g,b);
         return mp_const_none; 
@@ -52,7 +60,8 @@ STATIC mp_obj_t tulip_bg_pixel(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_pixel_obj, 2, 5, tulip_bg_pixel);
 
-
+// tulip.bg_rect(x,y,w,h, r,g,b)
+// tulip.bg_rect(x,y,w,h, pal_idx)
 STATIC mp_obj_t tulip_bg_rect(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
     uint16_t y = mp_obj_get_int(args[1]);
@@ -60,41 +69,38 @@ STATIC mp_obj_t tulip_bg_rect(size_t n_args, const mp_obj_t *args) {
     uint16_t h = mp_obj_get_int(args[3]);
     uint8_t r,g,b;        
     if(n_args == 5) {
-        unpack_rgb_332(mp_obj_get_int(args[4]), &r, &g, &b);
+        unpack_pal_idx(mp_obj_get_int(args[4]), &r, &g, &b);
     }
     if(n_args == 7) {
         r = mp_obj_get_int(args[4]);
         g = mp_obj_get_int(args[5]);
         b = mp_obj_get_int(args[6]);
     }
-    if(n_args > 4) {
-        // Set the rect with pixel color
-        for(uint16_t y0=y;y0<y+h;y0++) {
-            for(uint16_t x0=x;x0<x+w;x0++) {
-                display_set_bg_pixel(x0, y0, r, g, b);
-            }
+    // Set the rect with pixel color
+    for(uint16_t y0=y;y0<y+h;y0++) {
+        for(uint16_t x0=x;x0<x+w;x0++) {
+            display_set_bg_pixel(x0, y0, r, g, b);
         }
-    } else {
-        // return a bg rect
     }
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_rect_obj, 4, 7, tulip_bg_rect);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_rect_obj, 5, 7, tulip_bg_rect);
 
+// tulip.bg_clear(r,g,b)
+// tulip.bg_clear(pal_idx)
+// tulip.bg_clear() # uses default
 STATIC mp_obj_t tulip_bg_clear(size_t n_args, const mp_obj_t *args) {
-    // Default to the default bg
     uint8_t r, g, b;
-#ifdef RGB565
-    unpack_rgb_565(ansi_pal[bg_pal_color]*2+0, ansi_pal[bg_pal_color]*2+1, &r, &g, &b);
-#endif
-#ifdef RGB332
-    unpack_rgb_332(ansi_pal[bg_pal_color], &r, &g, &b);
-#endif
-    if(n_args == 3) {
+    if(n_args == 1) {
+        unpack_pal_idx(mp_obj_get_int(args[0]), &r, &g, &b);
+    } else if(n_args == 3) {
         r = mp_obj_get_int(args[0]);
         g = mp_obj_get_int(args[1]);
         b = mp_obj_get_int(args[2]);
+    } else {
+        // Default to the default bg
+        unpack_ansi_idx(bg_pal_color, &r, &g, &b);
     }
     // Set the rect with pixel color
     for(uint16_t y0=0;y0<V_RES+OFFSCREEN_Y_PX;y0++) {
@@ -108,7 +114,7 @@ STATIC mp_obj_t tulip_bg_clear(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear_obj, 0, 3, tulip_bg_clear);
 
-//bg_bitmap(x, y, w, h, bitmap)  --> sets or gets bitmap to fb ram
+// tulip.bg_bitmap(x, y, w, h, bitmap)  --> sets or gets bitmap to fb ram
 STATIC mp_obj_t tulip_bg_bitmap(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
     uint16_t y = mp_obj_get_int(args[1]);
@@ -132,9 +138,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_bitmap_obj, 4, 5, tulip_bg_b
 
 
 
-// bytes, x, y
-// tulip_bg_png(bytes, x,y)
-// tulip_bg_png(filename, x,y)
+// tulip.bg_png(bytes, x,y)
+// tulip.bg_png(filename, x,y)
 STATIC mp_obj_t tulip_bg_png(size_t n_args, const mp_obj_t *args) {
     unsigned error;
     unsigned char* image;
@@ -193,7 +198,8 @@ STATIC mp_obj_t tulip_bg_scroll(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_scroll_obj, 0, 5, tulip_bg_scroll);
 
 
-
+// tulip.tfb_char(x,y, chr, [format])
+// (char, format) = tulip.tfb_char(x,y)
 STATIC mp_obj_t tulip_tfb_char(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
     uint16_t y = mp_obj_get_int(args[1]);
@@ -331,8 +337,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_edit_obj, 0, 1, tulip_edit);
 STATIC mp_obj_t tulip_screenshot(size_t n_args, const mp_obj_t *args) {
     char fn[50];
     strcpy(fn, mp_obj_str_get_str(args[0]));
-    // Wait a frame or two 
-    vTaskDelay(pdMS_TO_TICKS(100));
     display_screenshot(fn);
     return mp_const_none;
 

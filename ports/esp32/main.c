@@ -144,7 +144,7 @@ void mp_task(void *pvParameter) {
     // Try to use the entire external SPIRAM directly for the heap
     size_t esp_spiram_size = esp_spiram_get_size();
 
-    esp_err_t err = heap_caps_register_failed_alloc_callback(esp_alloc_failed);
+    heap_caps_register_failed_alloc_callback(esp_alloc_failed);
 
     // save ram for screen -- currently a 1280x750 buffer, so 1.92MB
     // Save another 2MB for working buffers for PNG decoding?!? 
