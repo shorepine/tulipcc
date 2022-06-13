@@ -15,6 +15,7 @@
 // shared vars for editor
 char ** text_lines;
 const char *fn;
+char * yank;
 uint16_t lines = 0; 
 uint8_t dirty = 0;
 uint8_t *saved_tfb;
@@ -26,6 +27,7 @@ uint16_t y_offset = 0;
 uint16_t cursor_x = 0;
 uint16_t cursor_y = 0;
 #define EDITOR_TAB_SPACES 4
+#define V_SCROLL_MARGIN 6
 
 
 // for local dev of the editor
@@ -47,6 +49,7 @@ FILE * elog;
 
 uint32_t file_size(const char *filename) {
 	FILE * f = fopen(filename, "r");
+	if(f==NULL) return 0;
 	fseek (f, 0, SEEK_END);
 	uint32_t file_size = ftell (f);
 	fclose(f);
@@ -96,7 +99,14 @@ void local_draw_tfb() {
 		clrtoeol();
 		for(uint8_t x=0;x<TFB_COLS;x++) {
 			if(TFB[y*TFB_COLS+x] > 31) {
+				if(TFBf[y*TFB_COLS+x] & FORMAT_INVERSE) {
+					attron(A_REVERSE);
+				}
 				mvaddch(y, x, TFB[y*TFB_COLS + x]);
+				if(TFBf[y*TFB_COLS+x] & FORMAT_INVERSE) {
+					attroff(A_REVERSE);
+				}
+
 			}
 		}
 	}
@@ -119,43 +129,78 @@ void dbg(const char *fmt, ...) {
 }
 
 void clear_row(uint16_t y) {
-	for(uint16_t i=0;i<TFB_COLS;i++) {
-		TFB[y*TFB_COLS+i] = 0;
-	}	
+	if(y < TFB_ROWS) {
+		for(uint16_t i=0;i<TFB_COLS;i++) {
+			TFB[y*TFB_COLS+i] = 0;
+		}	
+	}
 }
 void format_at_row(uint8_t format, int16_t len, uint16_t y) {
-	if(len <0) len = TFB_COLS;
-	for(uint16_t i=0;i<len;i++) {
-		TFBf[y*TFB_COLS+i] |= format;
+	if(y<TFB_ROWS) {
+		if(len <0) len = TFB_COLS;
+		for(uint16_t i=0;i<len;i++) {
+			TFBf[y*TFB_COLS+i] |= format;
+		}
 	}
 }
 void string_at_row(char * s, int16_t len, uint16_t y) {
 	if(len < 0) len=strlen(s);
-	for(uint16_t i=0;i<len;i++) {
-		TFB[y*TFB_COLS+i] = s[i];
-		TFBf[y*TFB_COLS+i] = tfb_pal_color;
-	}
-	for(uint16_t i=len;i<TFB_COLS;i++) {
-		TFB[y*TFB_COLS+i] = 0;
-	}
+	if(y<TFB_ROWS) {
+		for(uint16_t i=0;i<len;i++) {
+			TFB[y*TFB_COLS+i] = s[i];
+			TFBf[y*TFB_COLS+i] = tfb_pal_color;
+		}
+		for(uint16_t i=len;i<TFB_COLS;i++) {
+			TFB[y*TFB_COLS+i] = 0;
+		}
 #ifdef LOCALDEV
-	local_draw_tfb();
+		local_draw_tfb();
 #endif
+	}
 }
+
+
+// (Re) paints the entire TFB
+void paint_tfb(uint16_t start_at_y) {
+	for(uint16_t y=start_at_y;y<TFB_ROWS-1;y++) {
+		if(y_offset + y < lines) { 
+			string_at_row(text_lines[y_offset+y], -1, y);
+		} else {
+			clear_row(y);
+		}
+	}
+}
+
+
 
 // Move the cursor to pos x,y and scroll the viewport if needed
 void move_cursor(int16_t x, int16_t y) {
-
 	// In localdev, the local_draw_tfb physically moves the cursor
 	// Undo old cursor
 	TFBf[cursor_y*TFB_COLS+cursor_x] = tfb_pal_color;
+
+	// Move viewport up/down (TFB_ROWS-1) / 2
+	// Move cursor to next/prev line (which would now be in the middle of the screen)
 	if(y < 0) {
 		dbg("scroll up\n");
-	} else if(y == TFB_ROWS) {
+		uint16_t cursor_y_line_was = cursor_y + y_offset;
+		if(y_offset > ((TFB_ROWS-1)/2)) {
+			y_offset = y_offset - (TFB_ROWS-1)/2;
+		} else {
+			y_offset = 0;
+		}
+		cursor_y = (cursor_y_line_was-1) - y_offset;
+		paint_tfb(0);
+	} else if(y == TFB_ROWS-1) {
 		dbg("scroll down\n");
+		uint16_t cursor_y_line_was = cursor_y + y_offset;
+		y_offset = y_offset + (TFB_ROWS-1)/2;
+		cursor_y = (cursor_y_line_was+1) - y_offset;
+		paint_tfb(0);
 	} else {
 		cursor_y = y;
 	}
+	// X scrolling TODO or NI, not sure yet
 	if(x < 0) {
 		dbg("scroll left");
 	} else if(x == TFB_COLS) {
@@ -169,9 +214,34 @@ void move_cursor(int16_t x, int16_t y) {
 
 	// Update status bar
 	char status[TFB_COLS];
-	sprintf(status, "Tulip Editor v4.1      Row %2d Col %3d  File: %s ", cursor_y, cursor_x, fn);
+	// TODO, padding better 
+	float percent = ((float)(cursor_y+y_offset) / (float)lines) * 100.0;
+	sprintf(status, "Tulip Editor v4.1      Row %04d / %04d [%02.2f%%] Col %3d  File: %s ", cursor_y+y_offset, lines,  percent, cursor_x, fn);
 	string_at_row(status, strlen(status), TFB_ROWS-1);
 	format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
+
+}
+
+void editor_page_up() {
+	if(y_offset > (TFB_ROWS-V_SCROLL_MARGIN)) {
+		y_offset = y_offset - (TFB_ROWS-V_SCROLL_MARGIN);
+	} else {
+		y_offset = 0;
+	}
+	paint_tfb(0);
+	move_cursor(cursor_x, 0);
+}
+
+void editor_page_down() {
+	dbg("page down y_offset is %d lines is %d\n", y_offset, lines);
+	if(y_offset + (TFB_ROWS-V_SCROLL_MARGIN) < lines) {
+		y_offset = y_offset + (TFB_ROWS-V_SCROLL_MARGIN);
+		move_cursor(cursor_x, 0);
+	} else {
+		dbg("end of the file offset was %d\n", y_offset);
+		move_cursor(cursor_x, lines-y_offset);
+	}
+	paint_tfb(0);
 
 }
 
@@ -209,30 +279,42 @@ void open_file(const char *filename) {
 	fn = filename;
 	dbg("opening file %s\n", filename);
 	uint32_t fs = file_size(filename);
-	char * text = (char*) malloc(fs+2);
-	uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
-	text[fs-1] = 0;
-	if(bytes_read) lines =1; // at least one line
-	for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') lines++;
-	text_lines = (char**)malloc(sizeof(char*)*(lines+1));
-	uint16_t last = 0;
-	for(uint32_t i=0;i<bytes_read;i++) {
-		if(text[i]=='\n' || i==bytes_read-1) {
-			text_lines[c]  = malloc(i-last + 1);
-			uint16_t x;
-			for(x=0;x<i-last;x++) { 
-				text_lines[c][x] = text[last+x];
+	if(fs > 0) {
+		char * text = (char*) malloc(fs+2);
+		uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
+		text[fs-1] = 0;
+		if(bytes_read) lines =1; // at least one line
+		for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') lines++;
+		dbg("File %s has %d lines\n", filename, lines);
+		text_lines = (char**)malloc(sizeof(char*)*(lines+1));
+		uint32_t last = 0;
+		for(uint32_t i=0;i<bytes_read;i++) {
+			if(text[i]=='\n' || i==bytes_read-1) {
+				text_lines[c]  = malloc(i-last + 1);
+				uint16_t x;
+				for(x=0;x<i-last;x++) { 
+					text_lines[c][x] = text[last+x];
+				}
+				text_lines[c][x] = 0;
+				//dbg("Line %d is ###%s###\n", c, text_lines[c]);
+				//if(c < TFB_ROWS-1) string_at_row(text_lines[c], i-last, c );
+				last = i+1;
+				c++;
 			}
-			text_lines[c][x] = 0;
-			dbg("Line %d is ###%s###\n", c, text_lines[c]);
-			string_at_row(text_lines[c], i-last, c );
-			last = i+1;
-			c++;
 		}
+		text_lines[c] = malloc(1); 
+		text_lines[c][0] = 0;
+		free(text);
+		dbg("File read with %d lines.\n", lines);
+	} else {
+		dbg("Opening new file %s for writing", fn);
+		lines = 1;
+		text_lines = (char**)malloc(sizeof(char*)*(1));
+		text_lines[0] = malloc(1);
+		text_lines[0][0] = 0;
 	}
-	text_lines[c] = malloc(1); 
-	text_lines[c][0] = 0;
-	free(text);
+
+	paint_tfb(0);
 }
 
 void editor_quit() {
@@ -241,6 +323,9 @@ void editor_quit() {
 		dirty = 0;
 		string_at_row("Save file? [Y/N]", -1, TFB_ROWS-1);
 		format_at_row(FORMAT_INVERSE, strlen("Save file? [Y/N]"), TFB_ROWS-1);
+		#ifdef LOCALDEV
+		local_draw_tfb();
+		#endif
 		int c = mp_hal_stdin_rx_chr();
 		if(c=='y' || c=='Y') {
 			dbg("save !\n");
@@ -265,6 +350,7 @@ void editor_quit() {
 		free(text_lines[i]);
 	}
 	free(text_lines);
+	if(yank) free(yank);
 #ifdef LOCALDEV
 	endwin();
 #endif
@@ -317,19 +403,17 @@ void editor_backspace() {
 			uint16_t split = c;
 			for(uint16_t i=0;i<strlen(cur_line);i++) new_line[c++] = cur_line[i];
 			new_line[c] = 0;
-			dbg("setting line %d to ###%s###\n", cursor_y+y_offset-1, new_line);
 			free(text_lines[cursor_y+y_offset-1]);
 			text_lines[cursor_y+y_offset-1] = new_line;
-			string_at_row(text_lines[cursor_y+y_offset-1], -1, cursor_y-y_offset-1);
 			lines--;
+
 			// Don't need to realloc the line ptrs i don't think (???)
 			uint16_t editor_line;
 			for(editor_line=cursor_y+y_offset;editor_line<lines;editor_line++) {
 				text_lines[editor_line] = text_lines[editor_line+1];
-				string_at_row(text_lines[editor_line], -1, editor_line-y_offset);
 			}
-			// And clear the last line
-			clear_row(editor_line);
+			paint_tfb(cursor_y-1);
+
 			// Move the cursor up at the split
 			move_cursor(split, cursor_y-1);
 
@@ -345,7 +429,6 @@ void editor_crlf() {
 	dirty = 1;
 	char* cur_line = text_lines[cursor_y + y_offset];
 	char** dest_text_lines = malloc(sizeof(char*) * (lines + 1));
-	dbg("crlf at line %d which is ###%s### len %d cursor x %d\n", cursor_y+y_offset, cur_line, strlen(cur_line), cursor_x);
 	for(uint16_t i=0;i<cursor_y+y_offset+1;i++) {
 		dest_text_lines[i] = text_lines[i];
 	}
@@ -358,7 +441,6 @@ void editor_crlf() {
 		// Get the text on cur line that has to go below
 		uint16_t chars_to_copy = strlen(cur_line) - cursor_x;
 		dest_text_lines[cursor_y+y_offset+1] = malloc(chars_to_copy+1);
-		dbg("copying %d chars to y pos %d\n", chars_to_copy,cursor_y+y_offset+1 );
 		uint16_t i;
 		for(i=0;i<chars_to_copy;i++) {
 			dest_text_lines[cursor_y+y_offset+1][i] = dest_text_lines[cursor_y+y_offset][cursor_x+i];
@@ -366,7 +448,6 @@ void editor_crlf() {
 		dest_text_lines[cursor_y+y_offset+1][i] = 0;
 		// Chop the old line, no need to realloc, i think we're ok
 		dest_text_lines[cursor_y+y_offset][cursor_x] = 0;
-		dbg("Chopped line now ###%s###\n", dest_text_lines[cursor_y+y_offset]);
 	}
 	// Copy the remaining lines below that were not impacted
 	for(uint16_t i=cursor_y+y_offset+2;i<lines+1;i++) {
@@ -377,20 +458,46 @@ void editor_crlf() {
 	text_lines = dest_text_lines;
 
 	// Redraw everything from the split (going down, as scroll)
-	for(uint16_t y=cursor_y;y<y_offset+lines;y++) {
-		dbg("drawing screen line %d with text ###%s###\n", y, text_lines[y+y_offset]);
-		string_at_row(text_lines[y+y_offset], -1, y);
-	}
+	paint_tfb(cursor_y);
 	// Update cursor
 	move_cursor(0, cursor_y +1);
 }
 
-
 void editor_yank() {
 	dirty = 1;
+	if(yank) free(yank);
+	char * yanked_line = text_lines[cursor_y+y_offset];
+	yank = malloc(strlen(yanked_line)+1);
+	for(uint16_t i=0;i<strlen(yanked_line);i++) yank[i] = yanked_line[i];
+	yank[strlen(text_lines[cursor_y+y_offset])+1] = 0;
+	// Now remove this line from the text_lines
+	for(uint16_t i=cursor_y+y_offset;i<lines-1;i++) {
+		text_lines[i] = text_lines[i+1];
+	}
+	lines--;
+	free(yanked_line);
+	paint_tfb(cursor_y);
+	move_cursor(0, cursor_y);
 }
+
 void editor_unyank() {
-	dirty = 1;
+	if(yank) {
+		dirty = 1;
+		dbg("unyanking ###%s###\n", yank);
+		char** dest_text_lines = malloc(sizeof(char*) * (lines + 1));
+		for(uint16_t i=0;i<cursor_y+y_offset;i++) dest_text_lines[i] = text_lines[i];
+		dest_text_lines[cursor_y+y_offset] = malloc(strlen(yank)+1);
+		for(uint16_t i=0;i<strlen(yank);i++) dest_text_lines[cursor_y+y_offset][i] = yank[i];
+		dest_text_lines[cursor_y+y_offset][strlen(yank)] = 0;
+		for(uint16_t i=cursor_y+y_offset;i<lines;i++) {
+			dest_text_lines[i+1] = text_lines[i];
+		}
+		lines++;
+		free(text_lines);
+		text_lines = dest_text_lines;
+		paint_tfb(cursor_y);
+		move_cursor(0,cursor_y);
+	}
 }
 
 
@@ -460,9 +567,9 @@ void process_char(int c) {
 	} else if(c == 5) { // control-E, end of line
 		editor_lineend();
 	} else if(c==25) { // control Y, page up
-		for(uint8_t i=0;i<TFB_ROWS-10;i++) editor_up();
+		editor_page_up();
 	} else if(c==22) { // control V, page down 
-		for(uint8_t i=0;i<TFB_ROWS-10;i++) editor_down();
+		editor_page_down();
 	} else if(c==27) { // ansi code, up / down / left / right / forward delete
 		char s = (char)mp_hal_stdin_rx_chr(); // Skip the [
 		s = (char)mp_hal_stdin_rx_chr(); // Get the code
@@ -504,15 +611,15 @@ void editor(const char * filename) {
 	move_cursor(0,0);
 	y_offset = 0;
 	while(quit_flag == 0) {
-		int c = mp_hal_stdin_rx_chr();
-		if(c>=0) {
-			process_char(c);
-		}
-#ifdef LOCALDEV
+		#ifdef LOCALDEV
 		local_draw_tfb();
 #else
 		vPortYield();
 #endif
+		int c = mp_hal_stdin_rx_chr();
+		if(c>=0) {
+			process_char(c);
+		}
 	}	
 	editor_quit();
 }

@@ -13,6 +13,7 @@ uint32_t file_size(const char *filename) {
     mp_obj_t m_args[1];
     m_args[0] = mp_obj_new_str(filename, strlen(filename));
     mp_obj_t stats_tuple = mp_vfs_stat(m_args[0]);
+    // TODO , file not found response ??? 
     mp_obj_t *stats_items;
     mp_obj_get_array_fixed_n(stats_tuple, 10, &stats_items);
     return mp_obj_get_int(stats_items[6]);
