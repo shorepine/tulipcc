@@ -44,7 +44,7 @@ uint8_t tfb_pal_color = 15; // ANSI_BOLD_WHITE
 #define FORMAT_FLASH 0x20
 #define FORMAT_BOLD 0x10 
 FILE * elog;
-//#define check_rx_char getch
+#define check_rx_char getch
 #define mp_hal_stdin_rx_chr getch
 
 uint32_t file_size(const char *filename) {
@@ -114,6 +114,14 @@ void local_draw_tfb() {
 	refresh();
 }
 #endif
+
+void * editor_malloc(uint32_t size) {
+#ifdef LOCALDEV
+	return malloc(size);
+#else
+	return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+#endif
+}
 
 // Send debug out to uart on esp32 and a log file on local 
 void dbg(const char *fmt, ...) {
@@ -246,8 +254,8 @@ void editor_page_down() {
 }
 
 void save_tfb() {
-	saved_tfb = malloc(TFB_ROWS*TFB_COLS);
-	saved_tfbf= malloc(TFB_ROWS*TFB_COLS);
+	saved_tfb = (uint8_t*)editor_malloc(TFB_ROWS*TFB_COLS);
+	saved_tfbf= (uint8_t*)editor_malloc(TFB_ROWS*TFB_COLS);
 	for(uint16_t y=0;y<TFB_ROWS*TFB_COLS;y++) {
 		saved_tfb[y] = TFB[y];
 		saved_tfbf[y]= TFBf[y];
@@ -280,17 +288,17 @@ void open_file(const char *filename) {
 	dbg("opening file %s\n", filename);
 	uint32_t fs = file_size(filename);
 	if(fs > 0) {
-		char * text = (char*) malloc(fs+2);
+		char * text = (char*) editor_malloc(fs+2);
 		uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
 		text[fs-1] = 0;
 		if(bytes_read) lines =1; // at least one line
 		for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') lines++;
 		dbg("File %s has %d lines\n", filename, lines);
-		text_lines = (char**)malloc(sizeof(char*)*(lines+1));
+		text_lines = (char**)editor_malloc(sizeof(char*)*(lines+1));
 		uint32_t last = 0;
 		for(uint32_t i=0;i<bytes_read;i++) {
 			if(text[i]=='\n' || i==bytes_read-1) {
-				text_lines[c]  = malloc(i-last + 1);
+				text_lines[c]  = editor_malloc(i-last + 1);
 				uint16_t x;
 				for(x=0;x<i-last;x++) { 
 					text_lines[c][x] = text[last+x];
@@ -302,15 +310,15 @@ void open_file(const char *filename) {
 				c++;
 			}
 		}
-		text_lines[c] = malloc(1); 
+		text_lines[c] = (char*)editor_malloc(1); 
 		text_lines[c][0] = 0;
 		free(text);
 		dbg("File read with %d lines.\n", lines);
 	} else {
 		dbg("Opening new file %s for writing", fn);
 		lines = 1;
-		text_lines = (char**)malloc(sizeof(char*)*(1));
-		text_lines[0] = malloc(1);
+		text_lines = (char**)editor_malloc(sizeof(char*)*(1));
+		text_lines[0] = (char*)editor_malloc(1);
 		text_lines[0][0] = 0;
 	}
 
@@ -331,7 +339,7 @@ void editor_quit() {
 			dbg("save !\n");
 			uint32_t bytes = 0;
 			for(uint16_t i=0;i<lines;i++) { bytes = bytes + strlen(text_lines[i]) + 1; }
-			char * text = malloc(bytes);
+			char * text = (char*)editor_malloc(bytes);
 			uint32_t c = 0;
 			for(uint16_t i=0;i<lines;i++) { 
 				for(uint16_t j=0;j<strlen(text_lines[i]);j++) {
@@ -360,7 +368,7 @@ void editor_quit() {
 void editor_insert_character(int c) {
 	dirty = 1;
 	char * source_line = text_lines[cursor_y + y_offset];
-	char * dest_line = malloc(strlen(source_line) + 2);
+	char * dest_line = (char*)editor_malloc(strlen(source_line) + 2);
 	for(uint16_t i=0;i<cursor_x;i++) {
 		dest_line[i] = source_line[i];
 	}
@@ -397,7 +405,7 @@ void editor_backspace() {
 		if(cursor_y + y_offset > 0) {
 			// we will have 1 less line when this is done
 			char *above_line = text_lines[cursor_y+y_offset-1];
-			char *new_line = malloc(strlen(above_line) + strlen(cur_line) + 1);
+			char *new_line = (char*)editor_malloc(strlen(above_line) + strlen(cur_line) + 1);
 			uint16_t c = 0;
 			for(uint16_t i=0;i<strlen(above_line);i++) new_line[c++] = above_line[i];
 			uint16_t split = c;
@@ -428,19 +436,19 @@ void editor_tab() {
 void editor_crlf() {
 	dirty = 1;
 	char* cur_line = text_lines[cursor_y + y_offset];
-	char** dest_text_lines = malloc(sizeof(char*) * (lines + 1));
+	char** dest_text_lines = (char**)editor_malloc(sizeof(char*) * (lines + 1));
 	for(uint16_t i=0;i<cursor_y+y_offset+1;i++) {
 		dest_text_lines[i] = text_lines[i];
 	}
 	if(cursor_x == strlen(cur_line)) {
 		// We are at the end of the line, so just make an empty line underneath and move on
-		dest_text_lines[cursor_y+y_offset+1] = malloc(1);
+		dest_text_lines[cursor_y+y_offset+1] = (char*)editor_malloc(1);
 		dest_text_lines[cursor_y+y_offset+1][0] = 0;
 	} else {
 		// We are somewhere in the middle of the line, so split and copy
 		// Get the text on cur line that has to go below
 		uint16_t chars_to_copy = strlen(cur_line) - cursor_x;
-		dest_text_lines[cursor_y+y_offset+1] = malloc(chars_to_copy+1);
+		dest_text_lines[cursor_y+y_offset+1] = (char*)editor_malloc(chars_to_copy+1);
 		uint16_t i;
 		for(i=0;i<chars_to_copy;i++) {
 			dest_text_lines[cursor_y+y_offset+1][i] = dest_text_lines[cursor_y+y_offset][cursor_x+i];
@@ -463,11 +471,12 @@ void editor_crlf() {
 	move_cursor(0, cursor_y +1);
 }
 
+
 void editor_yank() {
 	dirty = 1;
 	if(yank) free(yank);
 	char * yanked_line = text_lines[cursor_y+y_offset];
-	yank = malloc(strlen(yanked_line)+1);
+	yank = (char*)editor_malloc(strlen(yanked_line)+1);
 	for(uint16_t i=0;i<strlen(yanked_line);i++) yank[i] = yanked_line[i];
 	yank[strlen(text_lines[cursor_y+y_offset])+1] = 0;
 	// Now remove this line from the text_lines
@@ -475,6 +484,7 @@ void editor_yank() {
 		text_lines[i] = text_lines[i+1];
 	}
 	lines--;
+	// Got a crash here when yanking twice without an unyank
 	free(yanked_line);
 	paint_tfb(cursor_y);
 	move_cursor(0, cursor_y);
@@ -484,9 +494,9 @@ void editor_unyank() {
 	if(yank) {
 		dirty = 1;
 		dbg("unyanking ###%s###\n", yank);
-		char** dest_text_lines = malloc(sizeof(char*) * (lines + 1));
+		char** dest_text_lines = (char**)editor_malloc(sizeof(char*) * (lines + 1));
 		for(uint16_t i=0;i<cursor_y+y_offset;i++) dest_text_lines[i] = text_lines[i];
-		dest_text_lines[cursor_y+y_offset] = malloc(strlen(yank)+1);
+		dest_text_lines[cursor_y+y_offset] = (char*)editor_malloc(strlen(yank)+1);
 		for(uint16_t i=0;i<strlen(yank);i++) dest_text_lines[cursor_y+y_offset][i] = yank[i];
 		dest_text_lines[cursor_y+y_offset][strlen(yank)] = 0;
 		for(uint16_t i=cursor_y+y_offset;i<lines;i++) {
@@ -545,6 +555,7 @@ void editor_left() {
 
 
 void process_char(int c) {
+	//dbg("Got char %d\n", c);
 	if(c==127 || c==8) { // backspace
 		editor_backspace();
 	} else if(c == 9) { // tab, control-I
@@ -616,7 +627,8 @@ void editor(const char * filename) {
 #else
 		vPortYield();
 #endif
-		int c = mp_hal_stdin_rx_chr();
+		int c = check_rx_char();
+		//int c = mp_hal_stdin_rx_chr();
 		if(c>=0) {
 			process_char(c);
 		}

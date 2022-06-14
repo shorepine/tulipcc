@@ -63,6 +63,7 @@
 #include "modnetwork.h"
 #include "mpthreadport.h"
 #include "display.h"
+#include "alles_tulip.h"
 
 #if MICROPY_BLUETOOTH_NIMBLE
 #include "extmod/modbluetooth.h"
@@ -74,13 +75,23 @@
 
 #define MP_TASK_PRIORITY        (ESP_TASK_PRIO_MIN + 1)
 #define DISPLAY_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 2)
-//#define DISPLAY_TASK_PRIORITY (configMAX_PRIORITIES-1)
+#define USB_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)
+#define ALLES_TASK_PRIORITY (ESP_TASK_PRIO_MIN+2)
 
 #define DISPLAY_TASK_COREID (0)
+#define USB_TASK_COREID (1)
+#define ALLES_TASK_COREID (1)
 
 // was 16*1024
 #define MP_TASK_STACK_SIZE      (16 * 1024)
 #define DISP_TASK_STACK_SIZE    (16 * 1024) // think about the bounce buffers, no that's heap ??
+#define USB_TASK_STACK_SIZE    (8 * 1024) 
+#define ALLES_TASK_STACK_SIZE    (4 * 1024) 
+
+TaskHandle_t display_main_task_handle;
+TaskHandle_t usb_main_task_handle;
+TaskHandle_t alles_main_task_handle;
+
 
 // Set the margin for detecting stack overflow, depending on the CPU architecture.
 #if CONFIG_IDF_TARGET_ESP32C3
@@ -89,6 +100,7 @@
 #define MP_TASK_STACK_LIMIT_MARGIN (1024)
 #endif
 
+extern void usb_keyboard_start();
 
 typedef void (*esp_alloc_failed_hook_t) (size_t size, uint32_t caps, const char * function_name);
 
@@ -238,7 +250,6 @@ soft_reset_exit:
     goto soft_reset;
 }
 
-TaskHandle_t display_main_task_handle;
 
 void boardctrl_startup(void) {
     esp_err_t ret = nvs_flash_init();
@@ -253,9 +264,19 @@ void app_main(void) {
     // This defaults to initialising NVS.
     MICROPY_BOARD_STARTUP();
 
+    printf("Starting USB keyboard host\n");
+    xTaskCreatePinnedToCore(usb_keyboard_start, "usb_task", (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &usb_main_task_handle, USB_TASK_COREID);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
+
     printf("Starting display\n");
     xTaskCreatePinnedToCore(display_run, "disp_task", (DISP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_main_task_handle, DISPLAY_TASK_COREID);
     vTaskDelay(pdMS_TO_TICKS(1000));
+
+    printf("Starting Alles\n");
+    xTaskCreatePinnedToCore(alles_start, "alles_task", (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_main_task_handle, ALLES_TASK_COREID);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+
 
     // Create and transfer control to the MicroPython task.
     xTaskCreatePinnedToCore(mp_task, "mp_task", (MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, MP_TASK_PRIORITY, &mp_main_task_handle, MP_TASK_COREID);

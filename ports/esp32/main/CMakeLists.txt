@@ -49,8 +49,19 @@ set(MICROPY_SOURCE_PORT
     ${PROJECT_DIR}/editor.c
     ${PROJECT_DIR}/tulip_helpers.c
     ${PROJECT_DIR}/smallfont.c
+    ${PROJECT_DIR}/usb_keyboard.c
     ${PROJECT_DIR}/TinyPngOut.c
     ${PROJECT_DIR}/lodepng.c
+    ${PROJECT_DIR}/alles_tulip.c
+    ${PROJECT_DIR}/sounds.c
+    ${PROJECT_DIR}/amy/dsps_biquad_f32_ae32.S
+    ${PROJECT_DIR}/amy/algorithms.c
+    ${PROJECT_DIR}/amy/amy.c
+    ${PROJECT_DIR}/amy/envelope.c
+    ${PROJECT_DIR}/amy/filters.c
+    ${PROJECT_DIR}/amy/oscillators.c
+    ${PROJECT_DIR}/amy/partials.c
+    ${PROJECT_DIR}/amy/pcm.c
     ${PROJECT_DIR}/uart.c
     ${PROJECT_DIR}/usb.c
     ${PROJECT_DIR}/usb_serial_jtag.c
@@ -90,6 +101,7 @@ set(MICROPY_SOURCE_PORT
     ${PROJECT_DIR}/machine_sdcard.c
 )
 
+
 set(MICROPY_SOURCE_QSTR
     ${MICROPY_SOURCE_PY}
     ${MICROPY_SOURCE_EXTMOD}
@@ -105,12 +117,12 @@ set(IDF_COMPONENTS
     app_update
     bootloader_support
     bt
+    bw_esp_lcd
     driver
     esp_adc_cal
     esp_common
     esp_eth
     esp_event
-    esp_lcd
     esp_ringbuf
     esp_rom
     esp_wifi
@@ -128,6 +140,7 @@ set(IDF_COMPONENTS
     spi_flash
     tcpip_adapter
     ulp
+    usb
     vfs
     xtensa
 )
@@ -154,10 +167,10 @@ elseif(IDF_TARGET STREQUAL "esp32c3")
     list(APPEND IDF_COMPONENTS riscv)
 elseif(IDF_TARGET STREQUAL "esp32s2")
     list(APPEND IDF_COMPONENTS esp32s2)
-    list(APPEND IDF_COMPONENTS tinyusb)
+    #list(APPEND IDF_COMPONENTS tinyusb)
 elseif(IDF_TARGET STREQUAL "esp32s3")
     list(APPEND IDF_COMPONENTS esp32s3)
-    list(APPEND IDF_COMPONENTS tinyusb)
+    #list(APPEND IDF_COMPONENTS tinyusb)
 endif()
 
 # Register the main IDF component.
@@ -202,6 +215,7 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-clobbered
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
+    -Wno-strict-aliasing
 )
 
 # Add additional extmod and usermod components.
@@ -214,14 +228,18 @@ foreach(comp ${IDF_COMPONENTS})
     micropy_gather_target_properties(__idf_${comp})
 endforeach()
 
+
+
 if(IDF_VERSION_MINOR GREATER_EQUAL 2 OR IDF_VERSION_MAJOR GREATER_EQUAL 5)
     # These paths cannot currently be found by the IDF_COMPONENTS search loop above,
     # so add them explicitly.
     list(APPEND MICROPY_CPP_INC_EXTRA ${IDF_PATH}/components/soc/soc/${IDF_TARGET}/include)
     list(APPEND MICROPY_CPP_INC_EXTRA ${IDF_PATH}/components/soc/soc/include)
     if(IDF_VERSION_MINOR GREATER_EQUAL 3)
-        list(APPEND MICROPY_CPP_INC_EXTRA ${IDF_PATH}/components/tinyusb/additions/include)
-        list(APPEND MICROPY_CPP_INC_EXTRA ${IDF_PATH}/components/tinyusb/tinyusb/src)
+        #list(APPEND MICROPY_CPP_INC_EXTRA ${IDF_PATH}/components/tinyusb/additions/include)
+        #list(APPEND MICROPY_CPP_INC_EXTRA ${IDF_PATH}/components/tinyusb/tinyusb/src)
+        #list(APPEND MICROPY_CPP_INC_EXTRA ${PROJECT_DIR}/components/esp32usb/include)
+        #list(APPEND MICROPY_CPP_INC_EXTRA ${PROJECT_DIR}/components/esp32usb/src/tinyusb/src)
     endif()
 endif()
 

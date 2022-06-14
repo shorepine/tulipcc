@@ -584,7 +584,38 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format) {
     // Update the cursor
     display_tfb_cursor(tfb_x_col, tfb_y_row);    
 }
+#include "driver/ledc.h"
 
+
+void display_pwm_setup() {
+    ledc_timer_config_t ledc_timer = {
+        .speed_mode       = LEDC_LOW_SPEED_MODE,
+        .timer_num        = LEDC_TIMER_1,
+        .duty_resolution  = LEDC_TIMER_13_BIT,
+        .freq_hz          = 300,  // Set output frequency at 300Hz
+        .clk_cfg          = LEDC_AUTO_CLK
+    };
+    ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
+
+    // Prepare and then apply the LEDC PWM channel configuration
+    ledc_channel_config_t ledc_channel = {
+        .speed_mode     = LEDC_LOW_SPEED_MODE,
+        .channel        = LEDC_CHANNEL_1,
+        .timer_sel      = LEDC_TIMER_1,
+        .intr_type      = LEDC_INTR_DISABLE,
+        .gpio_num       = PIN_NUM_BK_PWM,
+        .duty           = 4095, // Set duty to 50%
+        .hpoint         = 0
+    };
+    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+}
+
+
+void display_brightness(uint8_t amount) {
+    uint16_t duty = amount * 32;
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, duty);
+
+}
 
 // Task runner for the display, inits and then spins in a loop processing frame done ISRs
 void display_run(void) {
@@ -688,6 +719,7 @@ void display_run(void) {
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
+    display_pwm_setup();
     gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
 
 

@@ -9,7 +9,7 @@
 #include "extmod/vfs.h"
 #include "display.h"
 #include "py/stream.h"
-
+#include "alles_tulip.h"
 
 // Graphics
 
@@ -345,6 +345,24 @@ STATIC mp_obj_t tulip_screenshot(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_screenshot_obj, 1, 1, tulip_screenshot);
 
 
+STATIC mp_obj_t tulip_alles(size_t n_args, const mp_obj_t *args) {
+    alles_send_message(mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
+    return mp_const_none;
+
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_obj, 1, 1, tulip_alles);
+
+
+STATIC mp_obj_t tulip_brightness(size_t n_args, const mp_obj_t *args) {
+    display_brightness(mp_obj_get_int(args[0]));
+    return mp_const_none;
+
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_brightness_obj, 1, 1, tulip_brightness);
+
+
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_tulip) },
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
@@ -363,6 +381,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_sprite_off), MP_ROM_PTR(&tulip_sprite_off_obj) },
     { MP_ROM_QSTR(MP_QSTR_edit), MP_ROM_PTR(&tulip_edit_obj) },
     { MP_ROM_QSTR(MP_QSTR_screenshot), MP_ROM_PTR(&tulip_screenshot_obj) },
+    { MP_ROM_QSTR(MP_QSTR_alles), MP_ROM_PTR(&tulip_alles_obj) },
+    { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&tulip_brightness_obj) },
 
 };
 

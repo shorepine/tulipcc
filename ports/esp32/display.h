@@ -64,6 +64,7 @@ uint8_t display_get_clock();
 void display_set_clock(uint8_t mhz);
 void display_tfb_new_row();
 void display_run();
+void display_brightness(uint8_t amount);
 
 void unpack_rgb_565(uint8_t px0, uint8_t px1, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
@@ -82,6 +83,7 @@ extern const unsigned char font_8x12_r[256][12];
 // 12 -- 15.5FPS, fine
 // 16 -- 18.7FPS, fine , some skips
 // 18 -- 24.1FPS skips during long lines of TFB text but otherwise fine
+// https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/_images/ESP32-S3_DevKitC-1_pinlayout.jpg
 
 #define PIXEL_CLOCK_MHZ     12
 #define BK_LIGHT_ON_LEVEL  1
@@ -91,30 +93,31 @@ extern const unsigned char font_8x12_r[256][12];
 #define PIN_NUM_VSYNC          41
 #define PIN_NUM_DE             42
 #define PIN_NUM_PCLK           14 // was 38, was 20, was 13 black
+#define PIN_NUM_BK_PWM		   16
 
 #ifdef RGB332
 // These are actually connected properly , what is "G5" here is going to G7 on the display (MSB), etc
 // https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html
-#define PIN_NUM_DATA0          12 // B3
-#define PIN_NUM_DATA1          21 // B4
+#define PIN_NUM_DATA0          12 // B3 [actually B6, 14]
+#define PIN_NUM_DATA1          21 // B4 [actually B7, 13]
 
-#define PIN_NUM_DATA2          8  // G3
-#define PIN_NUM_DATA3          3  // G4. 22..
-#define PIN_NUM_DATA4          46 // G5, pin 21 on the breakout... goes to G7... so i guess we've already done this
+#define PIN_NUM_DATA2          8  // G3 [actually G5, 23]
+#define PIN_NUM_DATA3          3  // G4 [actually G6, 22]
+#define PIN_NUM_DATA4          46 // G5, [actually G7, 21] pin 21 on the breakout... goes to G7... so i guess we've already done this
 
-#define PIN_NUM_DATA5         6   // R2
-#define PIN_NUM_DATA6         7   // R3
-#define PIN_NUM_DATA7         15  // R4
+#define PIN_NUM_DATA5         6   // R2 [R5, 31]
+#define PIN_NUM_DATA6         7   // R3 [R6, 30]
+#define PIN_NUM_DATA7         15  // R4 [R7, 29]
 
-//... We keep the rest as we have to drive them low while i have it plugged in
-#define PIN_NUM_DATA8          11 // B2
-#define PIN_NUM_DATA9          10 // B1
-#define PIN_NUM_DATA10         9 // B0
-#define PIN_NUM_DATA11         18 // G2
-#define PIN_NUM_DATA12         17 // G1
-#define PIN_NUM_DATA13         16 // G0
+//... We keep the rest as we have to drive them low while i have it plugged in, but i'm wroking on that...
+#define PIN_NUM_DATA8          5 // B2
+#define PIN_NUM_DATA9          5 // B1
+#define PIN_NUM_DATA10         5 // B0
+#define PIN_NUM_DATA11         5 // G2
+#define PIN_NUM_DATA12         5 // G1
+#define PIN_NUM_DATA13         5 // G0
 #define PIN_NUM_DATA14         5 // R1
-#define PIN_NUM_DATA15         4 // R0
+#define PIN_NUM_DATA15         5 // R0
 #endif
 
 #ifdef RGB565

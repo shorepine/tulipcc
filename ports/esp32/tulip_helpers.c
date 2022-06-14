@@ -3,6 +3,10 @@
 #include "tulip_helpers.h"
 
 
+void tx_char(int c) {
+    ringbuf_put(&stdin_ringbuf, c);
+}
+
 int check_rx_char() {
     int c = -1;
     c = ringbuf_get(&stdin_ringbuf);
