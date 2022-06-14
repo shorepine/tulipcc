@@ -1,0 +1,3 @@
+[submodule "ports/esp32/components/esp32usb"]
+	path = ports/esp32/components/esp32usb
+	url = https://github.com/atanisoft/esp32usb.git
