@@ -1,188 +1,81 @@
-[![CI badge](https://github.com/micropython/micropython/workflows/unix%20port/badge.svg)](https://github.com/micropython/micropython/actions?query=branch%3Amaster+event%3Apush) [![codecov](https://codecov.io/gh/micropython/micropython/branch/master/graph/badge.svg?token=I92PfD05sD)](https://codecov.io/gh/micropython/micropython)
+# Tulip Creative Computer
 
-The MicroPython project
-=======================
-<p align="center">
-  <img src="https://raw.githubusercontent.com/micropython/micropython/master/logo/upython-with-micro.jpg" alt="MicroPython Logo"/>
-</p>
+This a repository for the Tulip Creative Computer (aka Tulip, aka Tulip CC, aka Tulip4), a personal "weird thing" I've spent a lot of time working on over the years. I'm making it available to the world, just in case there's someone out there with the same strange interests. 
 
-This is the MicroPython project, which aims to put an implementation
-of Python 3.x on microcontrollers and small embedded systems.
-You can find the official website at [micropython.org](http://www.micropython.org).
+Tulip is a self contained computer, with a display and keyboard and sound. It boots directly into a Python prompt. It is not a shell based on another operating system. Every byte of RAM, every cycle of the CPU is dedicated to your code, the display and music. 
 
-WARNING: this project is in beta stage and is subject to changes of the
-code-base, including project-wide name changes and API changes.
+The idea behind Tulip is a portable creative terminal. Without distractions or complications, you are able to dive right into making something. 
 
-MicroPython implements the entire Python 3.4 syntax (including exceptions,
-`with`, `yield from`, etc., and additionally `async`/`await` keywords from
-Python 3.5). The following core datatypes are provided: `str` (including
-basic Unicode support), `bytes`, `bytearray`, `tuple`, `list`, `dict`, `set`,
-`frozenset`, `array.array`, `collections.namedtuple`, classes and instances.
-Builtin modules include `sys`, `time`, and `struct`, etc. Select ports have
-support for `_thread` module (multithreading). Note that only a subset of
-Python 3 functionality is implemented for the data types and modules.
+You can use Tulip to make music, write code, make art, games, or just write. It does not have a web browser or social media, although it can connect to a network in a slow fashion.
 
-MicroPython can execute scripts in textual source form or from precompiled
-bytecode, in both cases either from an on-device filesystem or "frozen" into
-the MicroPython executable.
+You can build your own Tulip for about $25 plus the cost of a display and USB keyboard. 
 
-See the repository http://github.com/micropython/pyboard for the MicroPython
-board (PyBoard), the officially supported reference electronic circuit board.
+The hardware for revision 4 of Tulip is based on the ESP32-S3 dual core microcontroller running at 240MHz. 
+The display is a 1024 x 600 "dot clock RGB" display.
+The synth makes sound over I2S, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
 
-Major components in this repository:
-- py/ -- the core Python implementation, including compiler, runtime, and
-  core library.
-- mpy-cross/ -- the MicroPython cross-compiler which is used to turn scripts
-  into precompiled bytecode.
-- ports/unix/ -- a version of MicroPython that runs on Unix.
-- ports/stm32/ -- a version of MicroPython that runs on the PyBoard and similar
-  STM32 boards (using ST's Cube HAL drivers).
-- ports/minimal/ -- a minimal MicroPython port. Start with this if you want
-  to port MicroPython to another microcontroller.
-- tests/ -- test framework and test scripts.
-- docs/ -- user documentation in Sphinx reStructuredText format. Rendered
-  HTML documentation is available at http://docs.micropython.org.
+Tulip rev 4 supports:
+    - 8.5MB of RAM
+    - 8MB flash storage, as a filesystem accesible in Python
+    - The Alles 64-voice synthesizer engine, locally. You can also control an Alles mesh.
+    - Text frame buffer layer, 128 x 50, with 16 colors, inverse, bold, underline
+    - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
+    - A 1280x750 background frame buffer to draw arbitrary bitmaps to, which can scroll horizontally / vertically
+    - WiFi via Python sockets / curl / etc
+    - Adjustable display clock, defaults to 24 MHz / 30 FPS.
+    - 256 colors, can be set to 65535 with a hit to FPS
+    - Can load PNGs from disk to set sprites or background from code
+    - Built in code and text editor
+    - USB keyboard support
 
-Additional components:
-- ports/bare-arm/ -- a bare minimum version of MicroPython for ARM MCUs. Used
-  mostly to control code size.
-- ports/teensy/ -- a version of MicroPython that runs on the Teensy 3.1
-  (preliminary but functional).
-- ports/pic16bit/ -- a version of MicroPython for 16-bit PIC microcontrollers.
-- ports/cc3200/ -- a version of MicroPython that runs on the CC3200 from TI.
-- ports/esp8266/ -- a version of MicroPython that runs on Espressif's ESP8266 SoC.
-- ports/esp32/ -- a version of MicroPython that runs on Espressif's ESP32 SoC.
-- ports/nrf/ -- a version of MicroPython that runs on Nordic's nRF51 and nRF52 MCUs.
-- extmod/ -- additional (non-core) modules implemented in C.
-- tools/ -- various tools, including the pyboard.py module.
-- examples/ -- a few example Python scripts.
+Tulip's "OS" is heavily based on the great work of Micropython, which a lot of changes and additions to support the Python REPL on screen and integrated into the display system. Most of our code is in the ports/esp32/ directory. 
 
-The subdirectories above may include READMEs with additional info.
+Changes and features very welcome via pull request. 
 
-"make" is used to build the components, or "gmake" on BSD-based systems.
-You will also need bash, gcc, and Python 3.3+ available as the command `python3`
-(if your system only has Python 2.7 then invoke make with the additional option
-`PYTHON=python2`).
 
-The MicroPython cross-compiler, mpy-cross
------------------------------------------
+## DIY HOWTO
 
-Most ports require the MicroPython cross-compiler to be built first.  This
-program, called mpy-cross, is used to pre-compile Python scripts to .mpy
-files which can then be included (frozen) into the firmware/executable for
-a port.  To build mpy-cross use:
+To build your own Tulip:
+    - Get a ESP32-S3 NXR8 dev board. https://www.adafruit.com/product/5336 . There's lots of variants, but you need an S3 for sure, and the "NXR8" means 8MB of SPI RAM and XMB of non-volatile flash storage (they have 8 and 32). If you get this exact one (the ESP32-S3-WROOM-1 N8R8) you can follow my pin numberings / get my breakout board. 
+    - Get a RGB dot clock display. I am currently using this one https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html . You want to make sure it takes "RGB" input, usually with 8 pins each for R, G and B (and then HSYNC, VSYNC, DE). 
+    - For sound, get an I2S decoder. You can get ones that have line outs like https://www.adafruit.com/product/3678 or ones that have speaker amps built in like https://www.adafruit.com/product/3006 . I use the speaker amp model and hook it into a little 3W speaker.
+    - We are working on a breakout board that plugs into the back of a ESP32S3 dev board and has a USB female A jack, pins for the display breakout https://www.adafruit.com/product/4905 and pins for the i2s amp breakout. That makes things a lot simpler. In the meantime, here's the pin connections you'll want to make:
 
-    $ cd mpy-cross
-    $ make
+    | Label         | ESP32 S3 Pin | Position on ESP32-S3-WROOM-1 | Connect to     |
+    | ------------- | ------------ | ---------------------------- | -------------- |
+    | Backlight PWM | 16           | Left row, 9th pin down (L9)  | Display 6 (D6) |
+    | Data Enable   | 42           | Right row, 6th pin down (R6) | D7             |
+    | VSYNC         | 41           | R7                           | D8             |
+    | HSYNC         | 40           | R8                           | D9             |
+    | LCD BL EN     | 39           | R9                           | D10            |
+    | PCLK          | 14           | L20                          | D11            |
+    | B7            | 21           | R18                          | D13            |
+    | B6            | 12           | L18                          | D14            |
+    | G7            | 46           | L14                          | D21            |
+    | G6            | 3            | L13                          | D22            |
+    | G5            | 8            | L12                          | D23            |
+    | R7            | 15           | L8                           | D29            |
+    | R6            | 7            | L7                           | D30            |
+    | R5            | 6            | L7                           | D31            |
+    | 3v3           | 3v3          | L1                           | D37            |
+    | GND           | GND          | L22                          | D38            |
+    | 5V            | 5V           | L21                          | D39            |
+    | USB 5V        | 5V           | L21                          | USB 5V         |
+    | USB D+        | 20           | R19                          | USB D+         |       
+    | USB D-        | 19           | R20                          | USB D-         |       
+    | USB GND       | GND          | L22                          | USB GND        |
+    | Audio LRC     | 4            | L4                           | Audio LRC      |
+    | Audio BCLK    | 1            | R4                           | Audio BCLK     |
+    | Audio DIN     | 2            | R5                           | Audio DIN      |
+    | Audio GND     | GND          | L22                          | Audio GND      |
+    | Audio VIN     | 5V           | L21                          | Audio VIN      |
 
-The Unix version
-----------------
+    (Note: if you want to try RGB565 mode, also wire B5-B0, G4-G0, R4-R0. There's enough pins on the ESP32-S3 to support this, but we default to RGB332 to save memory and CPU time.)
 
-The "unix" port requires a standard Unix environment with gcc and GNU make.
-x86 and x64 architectures are supported (i.e. x86 32- and 64-bit), as well
-as ARM and MIPS. Making full-featured port to another architecture requires
-writing some assembly code for the exception handling and garbage collection.
-Alternatively, fallback implementation based on setjmp/longjmp can be used.
+    
 
-To build (see section below for required dependencies):
 
-    $ cd ports/unix
-    $ make submodules
-    $ make
 
-Then to give it a try:
 
-    $ ./micropython
-    >>> list(5 * x + y for x in range(10) for y in [4, 2, 1])
 
-Use `CTRL-D` (i.e. EOF) to exit the shell.
-Learn about command-line options (in particular, how to increase heap size
-which may be needed for larger applications):
 
-    $ ./micropython -h
-
-Run complete testsuite:
-
-    $ make test
-
-Unix version comes with a builtin package manager called upip, e.g.:
-
-    $ ./micropython -m upip install micropython-pystone
-    $ ./micropython -m pystone
-
-Browse available modules on
-[PyPI](https://pypi.python.org/pypi?%3Aaction=search&term=micropython).
-Standard library modules come from
-[micropython-lib](https://github.com/micropython/micropython-lib) project.
-
-External dependencies
----------------------
-
-Building MicroPython ports may require some dependencies installed.
-
-For Unix port, `libffi` library and `pkg-config` tool are required. On
-Debian/Ubuntu/Mint derivative Linux distros, install `build-essential`
-(includes toolchain and make), `libffi-dev`, and `pkg-config` packages.
-
-Other dependencies can be built together with MicroPython. This may
-be required to enable extra features or capabilities, and in recent
-versions of MicroPython, these may be enabled by default. To build
-these additional dependencies, in the port directory you're
-interested in (e.g. `ports/unix/`) first execute:
-
-    $ make submodules
-
-This will fetch all the relevant git submodules (sub repositories) that
-the port needs.  Use the same command to get the latest versions of
-submodules as they are updated from time to time. After that execute:
-
-    $ make deplibs
-
-This will build all available dependencies (regardless whether they
-are used or not). If you intend to build MicroPython with additional
-options (like cross-compiling), the same set of options should be passed
-to `make deplibs`. To actually enable/disable use of dependencies, edit
-`ports/unix/mpconfigport.mk` file, which has inline descriptions of the options.
-For example, to build SSL module (required for `upip` tool described above,
-and so enabled by default), `MICROPY_PY_USSL` should be set to 1.
-
-For some ports, building required dependences is transparent, and happens
-automatically.  But they still need to be fetched with the `make submodules`
-command.
-
-The STM32 version
------------------
-
-The "stm32" port requires an ARM compiler, arm-none-eabi-gcc, and associated
-bin-utils.  For those using Arch Linux, you need arm-none-eabi-binutils,
-arm-none-eabi-gcc and arm-none-eabi-newlib packages.  Otherwise, try here:
-https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-rm
-
-To build:
-
-    $ cd ports/stm32
-    $ make submodules
-    $ make
-
-You then need to get your board into DFU mode.  On the pyboard, connect the
-3V3 pin to the P1/DFU pin with a wire (on PYBv1.0 they are next to each other
-on the bottom left of the board, second row from the bottom).
-
-Then to flash the code via USB DFU to your device:
-
-    $ make deploy
-
-This will use the included `tools/pydfu.py` script.  If flashing the firmware
-does not work it may be because you don't have the correct permissions, and
-need to use `sudo make deploy`.
-See the README.md file in the ports/stm32/ directory for further details.
-
-Contributing
-------------
-
-MicroPython is an open-source project and welcomes contributions. To be
-productive, please be sure to follow the
-[Contributors' Guidelines](https://github.com/micropython/micropython/wiki/ContributorGuidelines)
-and the [Code Conventions](https://github.com/micropython/micropython/blob/master/CODECONVENTIONS.md).
-Note that MicroPython is licenced under the MIT license, and all contributions
-should follow this license.
