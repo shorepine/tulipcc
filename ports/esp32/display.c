@@ -612,10 +612,15 @@ void display_pwm_setup() {
 
 
 void display_brightness(uint8_t amount) {
-    uint16_t duty = amount * 32;
+    if(amount < 1) amount = 1;
+    if(amount > 9) amount = 9;
+    brightness = amount;
+    uint16_t duty = (9-brightness)*1000;
+    printf("Setting LEDC duty to %d\n", duty);
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, duty);
-
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1) ;
 }
+
 
 // Task runner for the display, inits and then spins in a loop processing frame done ISRs
 void display_run(void) {
@@ -672,6 +677,7 @@ void display_run(void) {
     panel_config.bounce_buffer_size_px = BOUNCE_BUFFER_SIZE_PX;
 
     display_mhz = PIXEL_CLOCK_MHZ;
+    brightness = DEFAULT_BRIGHTNESS;
 
     // Create the background FB
     bg = (uint8_t*)heap_caps_aligned_calloc(64, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -720,6 +726,7 @@ void display_run(void) {
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
     display_pwm_setup();
+    display_brightness(brightness); 
     gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
 
 

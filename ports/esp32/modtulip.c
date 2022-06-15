@@ -355,12 +355,16 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_obj, 1, 1, tulip_alles);
 
 
 STATIC mp_obj_t tulip_brightness(size_t n_args, const mp_obj_t *args) {
-    display_brightness(mp_obj_get_int(args[0]));
-    return mp_const_none;
+    if(n_args > 0) {
+        display_brightness(mp_obj_get_int(args[0]));
+        return mp_const_none;
+    } else {
+        return mp_obj_new_int(brightness);
+    }
 
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_brightness_obj, 1, 1, tulip_brightness);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_brightness_obj, 0, 1, tulip_brightness);
 
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {

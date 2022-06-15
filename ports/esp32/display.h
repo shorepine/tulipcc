@@ -85,8 +85,9 @@ extern const unsigned char font_8x12_r[256][12];
 // 18 -- 24.1FPS skips during long lines of TFB text but otherwise fine
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/_images/ESP32-S3_DevKitC-1_pinlayout.jpg
 
-#define PIXEL_CLOCK_MHZ     12
+#define PIXEL_CLOCK_MHZ     18
 #define BK_LIGHT_ON_LEVEL  1
+#define DEFAULT_BRIGHTNESS 5 // 9 is max, 1 is min
 #define BK_LIGHT_OFF_LEVEL !BK_LIGHT_ON_LEVEL
 #define PIN_NUM_BK_LIGHT       39 // was 19, was 14 white
 #define PIN_NUM_HSYNC          40
@@ -227,6 +228,7 @@ uint8_t task_start;
 uint8_t task_stop;
 int32_t vsync_count;
 uint8_t display_mhz;
+uint8_t brightness;
 
 uint16_t *sprite_x_px;//[SPRITES]; 
 uint16_t *sprite_y_px;//[SPRITES]; 
