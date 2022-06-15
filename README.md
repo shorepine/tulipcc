@@ -41,38 +41,38 @@ To build your own Tulip:
     - For sound, get an I2S decoder. You can get ones that have line outs like https://www.adafruit.com/product/3678 or ones that have speaker amps built in like https://www.adafruit.com/product/3006 . I use the speaker amp model and hook it into a little 3W speaker.
     - We are working on a breakout board that plugs into the back of a ESP32S3 dev board and has a USB female A jack, pins for the display breakout https://www.adafruit.com/product/4905 and pins for the i2s amp breakout. That makes things a lot simpler. In the meantime, here's the pin connections you'll want to make:
 
-    | Label         | ESP32 S3 Pin | Position on ESP32-S3-WROOM-1 | Connect to     |
-    | ------------- | ------------ | ---------------------------- | -------------- |
-    | Backlight PWM | 16           | Left row, 9th pin down (L9)  | Display 6 (D6) |
-    | Data Enable   | 42           | Right row, 6th pin down (R6) | D7             |
-    | VSYNC         | 41           | R7                           | D8             |
-    | HSYNC         | 40           | R8                           | D9             |
-    | LCD BL EN     | 39           | R9                           | D10            |
-    | PCLK          | 14           | L20                          | D11            |
-    | B7            | 21           | R18                          | D13            |
-    | B6            | 12           | L18                          | D14            |
-    | G7            | 46           | L14                          | D21            |
-    | G6            | 3            | L13                          | D22            |
-    | G5            | 8            | L12                          | D23            |
-    | R7            | 15           | L8                           | D29            |
-    | R6            | 7            | L7                           | D30            |
-    | R5            | 6            | L7                           | D31            |
-    | 3v3           | 3v3          | L1                           | D37            |
-    | GND           | GND          | L22                          | D38            |
-    | 5V            | 5V           | L21                          | D39            |
-    | USB 5V        | 5V           | L21                          | USB 5V         |
-    | USB D+        | 20           | R19                          | USB D+         |       
-    | USB D-        | 19           | R20                          | USB D-         |       
-    | USB GND       | GND          | L22                          | USB GND        |
-    | Audio LRC     | 4            | L4                           | Audio LRC      |
-    | Audio BCLK    | 1            | R4                           | Audio BCLK     |
-    | Audio DIN     | 2            | R5                           | Audio DIN      |
-    | Audio GND     | GND          | L22                          | Audio GND      |
-    | Audio VIN     | 5V           | L21                          | Audio VIN      |
+| Label         | ESP32 S3 Pin | Position on ESP32-S3-WROOM-1 | Connect to     |
+| ------------- | ------------ | ---------------------------- | -------------- |
+| Backlight PWM | 16           | Left row, 9th pin down (L9)  | Display 6 (D6) |
+| Data Enable   | 42           | Right row, 6th pin down (R6) | D7             |
+| VSYNC         | 41           | R7                           | D8             |
+| HSYNC         | 40           | R8                           | D9             |
+| LCD BL EN     | 39           | R9                           | D10            |
+| PCLK          | 14           | L20                          | D11            |
+| B7            | 21           | R18                          | D13            |
+| B6            | 12           | L18                          | D14            |
+| G7            | 46           | L14                          | D21            |
+| G6            | 3            | L13                          | D22            |
+| G5            | 8            | L12                          | D23            |
+| R7            | 15           | L8                           | D29            |
+| R6            | 7            | L7                           | D30            |
+| R5            | 6            | L7                           | D31            |
+| 3v3           | 3v3          | L1                           | D37            |
+| GND           | GND          | L22                          | D38            |
+| 5V            | 5V           | L21                          | D39            |
+| USB 5V        | 5V           | L21                          | USB 5V         |
+| USB D+        | 20           | R19                          | USB D+         |       
+| USB D-        | 19           | R20                          | USB D-         |       
+| USB GND       | GND          | L22                          | USB GND        |
+| Audio LRC     | 4            | L4                           | Audio LRC      |
+| Audio BCLK    | 1            | R4                           | Audio BCLK     |
+| Audio DIN     | 2            | R5                           | Audio DIN      |
+| Audio GND     | GND          | L22                          | Audio GND      |
+| Audio VIN     | 5V           | L21                          | Audio VIN      |
 
-    (Note: if you want to try RGB565 mode, also wire B5-B0, G4-G0, R4-R0. There's enough pins on the ESP32-S3 to support this, but we default to RGB332 to save memory and CPU time.)
+(Note: if you want to try RGB565 mode, also wire B5-B0, G4-G0, R4-R0. There's enough pins on the ESP32-S3 to support this, but we default to RGB332 to save memory and CPU time.)
 
-    
+
 
 
 
