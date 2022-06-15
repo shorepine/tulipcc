@@ -213,9 +213,7 @@ void display_start() {
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
 }
 
-uint8_t display_get_clock() {
-    return display_mhz;
-}
+
 void display_set_clock(uint8_t mhz) {  
     if(mhz > 1 && mhz < 50) {
         display_mhz = mhz;
@@ -719,7 +717,7 @@ void display_run(void) {
     
     py_callback = 0;
     vsync_count = 1;
-
+    reported_fps = 1;
 
     // Start the RGB panel
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
@@ -739,9 +737,10 @@ void display_run(void) {
         ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
         free_time += (esp_timer_get_time() - tic1);
         if(loop_count++ >= 100) {
+            reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);
             printf("Past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). %d desyncs [bc %d]\n", 
                 loop_count,
-                1000000.0 / ((esp_timer_get_time() - tic0) / loop_count), 
+                reported_fps, 
                 free_time / loop_count,
                 bounce_time / bounce_count,
                 ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (1000000.0 / ((esp_timer_get_time() - tic0) / loop_count)))))*100.0,

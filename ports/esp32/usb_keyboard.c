@@ -46,119 +46,6 @@ const size_t KEYBOARD_IN_BUFFER_SIZE = 8;
 usb_transfer_t *KeyboardIn = NULL;
 
 
-void show_dev_desc(const usb_device_desc_t *dev_desc)
-{
-	/*
-  printf("bLength: %d", dev_desc->bLength);
-  printf("bDescriptorType(device): %d", dev_desc->bDescriptorType);
-  printf("bcdUSB: 0x%x", dev_desc->bcdUSB);
-  printf("bDeviceClass: 0x%02x", dev_desc->bDeviceClass);
-  printf("bDeviceSubClass: 0x%02x", dev_desc->bDeviceSubClass);
-  printf("bDeviceProtocol: 0x%02x", dev_desc->bDeviceProtocol);
-  printf("bMaxPacketSize0: %d", dev_desc->bMaxPacketSize0);
-  printf("idVendor: 0x%x", dev_desc->idVendor);
-  printf("idProduct: 0x%x", dev_desc->idProduct);
-  printf("bcdDevice: 0x%x", dev_desc->bcdDevice);
-  printf("iManufacturer: %d", dev_desc->iManufacturer);
-  printf("iProduct: %d", dev_desc->iProduct);
-  printf("iSerialNumber: %d", dev_desc->iSerialNumber);
-  printf("bNumConfigurations: %d\n", dev_desc->bNumConfigurations);
-  */
-}
-
-void show_config_desc(const void *p)
-{
-	/*
-  const usb_config_desc_t *config_desc = (const usb_config_desc_t *)p;
-
-  printf("bLength: %d", config_desc->bLength);
-  printf("bDescriptorType(config): %d", config_desc->bDescriptorType);
-  printf("wTotalLength: %d", config_desc->wTotalLength);
-  printf("bNumInterfaces: %d", config_desc->bNumInterfaces);
-  printf("bConfigurationValue: %d", config_desc->bConfigurationValue);
-  printf("iConfiguration: %d", config_desc->iConfiguration);
-  printf("bmAttributes(%s%s%s): 0x%02x",
-      (config_desc->bmAttributes & USB_BM_ATTRIBUTES_SELFPOWER)?"Self Powered":"",
-      (config_desc->bmAttributes & USB_BM_ATTRIBUTES_WAKEUP)?", Remote Wakeup":"",
-      (config_desc->bmAttributes & USB_BM_ATTRIBUTES_BATTERY)?", Battery Powered":"",
-      config_desc->bmAttributes);
-  printf("bMaxPower: %d = %d mA\n", config_desc->bMaxPower, config_desc->bMaxPower*2);
-  */
-}
-
-uint8_t show_interface_desc(const void *p)
-{
-  const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
-	/*
-
-  printf("bLength: %d", intf->bLength);
-  printf("bDescriptorType (interface): %d", intf->bDescriptorType);
-  printf("bInterfaceNumber: %d", intf->bInterfaceNumber);
-  printf("bAlternateSetting: %d", intf->bAlternateSetting);
-  printf("bNumEndpoints: %d", intf->bNumEndpoints);
-  printf("bInterfaceClass: 0x%02x", intf->bInterfaceClass);
-  printf("bInterfaceSubClass: 0x%02x", intf->bInterfaceSubClass);
-  printf("bInterfaceProtocol: 0x%02x", intf->bInterfaceProtocol);
-  printf("iInterface: %d\n", intf->iInterface);
-  */
-  return intf->bInterfaceClass;
-}
-
-void show_endpoint_desc(const void *p)
-{
- /*
-  const usb_ep_desc_t *endpoint = (const usb_ep_desc_t *)p;
-  const char *XFER_TYPE_NAMES[] = {
-    "Control", "Isochronous", "Bulk", "Interrupt"
-  };
-  printf("bLength: %d", endpoint->bLength);
-  printf("bDescriptorType (endpoint): %d", endpoint->bDescriptorType);
-  printf("bEndpointAddress(%s): 0x%02x",
-    (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK)?"In":"Out",
-    endpoint->bEndpointAddress);
-  printf("bmAttributes(%s): 0x%02x",
-      XFER_TYPE_NAMES[endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK],
-      endpoint->bmAttributes);
-  printf("wMaxPacketSize: %d", endpoint->wMaxPacketSize);
-  printf("bInterval: %d\n", endpoint->bInterval);
-  */
-}
-
-void show_hid_desc(const void *p)
-{
-	/*
-  usb_hid_desc_t *hid = (usb_hid_desc_t *)p;
-  printf("bLength: %d", hid->bLength);
-  printf("bDescriptorType (HID): %d", hid->bDescriptorType);
-  printf("bcdHID: 0x%04x", hid->bcdHID);
-  printf("bCountryCode: %d", hid->bCountryCode);
-  printf("bNumDescriptor: %d", hid->bNumDescriptor);
-  printf("bDescriptorType: %d", hid->bHIDDescriptorType);
-  printf("wDescriptorLength: %d", hid->wHIDDescriptorLength);
-  if (hid->bNumDescriptor > 1) {
-    printf("bDescriptorTypeOpt: %d", hid->bHIDDescriptorTypeOpt);
-    printf("wDescriptorLengthOpt: %d\n", hid->wHIDDescriptorLengthOpt);
-  }
-  */
-}
-
-void show_interface_assoc(const void *p)
-{
-	/*
-  usb_iad_desc_t *iad = (usb_iad_desc_t *)p;
-  printf("bLength: %d", iad->bLength);
-  printf("bDescriptorType: %d", iad->bDescriptorType);
-  printf("bFirstInterface: %d", iad->bFirstInterface);
-  printf("bInterfaceCount: %d", iad->bInterfaceCount);
-  printf("bFunctionClass: 0x%02x", iad->bFunctionClass);
-  printf("bFunctionSubClass: 0x%02x", iad->bFunctionSubClass);
-  printf("bFunctionProtocol: 0x%02x", iad->bFunctionProtocol);
-  printf("iFunction: %d\n", iad->iFunction);
-  */
-}
-
-
-
 void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *arg)
 {
   esp_err_t err;
@@ -180,7 +67,6 @@ void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *
       const usb_device_desc_t *dev_desc;
       err = usb_host_get_device_descriptor(Device_Handle, &dev_desc);
       if (err != ESP_OK) printf("usb_host_get_device_desc: %x", err);
-      show_dev_desc(dev_desc);
 
       const usb_config_desc_t *config_desc;
       err = usb_host_get_active_config_descriptor(Device_Handle, &config_desc);
@@ -224,18 +110,14 @@ void usbh_setup(usb_host_enum_cb_t enumeration_cb)
 void usbh_task(void)
 {
   uint32_t event_flags;
-  static bool all_clients_gone = false;
-  static bool all_dev_free = false;
 
   esp_err_t err = usb_host_lib_handle_events(HOST_EVENT_TIMEOUT, &event_flags);
   if (err == ESP_OK) {
     if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
       printf("No more clients");
-      all_clients_gone = true;
     }
     if (event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE) {
       printf("No more devices");
-      all_dev_free = true;
     }
   }
   else {
@@ -362,8 +244,6 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
     if (transfer->status == 0) {
       if (transfer->actual_num_bytes == 8) {
         uint8_t *const p = transfer->data_buffer;
-        //printf("HID report: %02x %02x %02x %02x %02x %02x %02x %02x\n",
-        //    p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
         decode_report(p);
       }
       else {
@@ -436,35 +316,27 @@ void show_config_desc_full(const usb_config_desc_t *config_desc)
           printf("USB Device Descriptor should not appear in config");
           break;
         case USB_B_DESCRIPTOR_TYPE_CONFIGURATION:
-          show_config_desc(p);
           break;
         case USB_B_DESCRIPTOR_TYPE_STRING:
           printf("USB string desc TBD");
           break;
         case USB_B_DESCRIPTOR_TYPE_INTERFACE:
-          USB_Class = show_interface_desc(p);
           check_interface_desc_boot_keyboard(p);
           break;
         case USB_B_DESCRIPTOR_TYPE_ENDPOINT:
-          show_endpoint_desc(p);
           if (isKeyboard && KeyboardIn == NULL) prepare_endpoint(p);
           break;
         case USB_B_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
-          // Should not be config config?
           printf("USB device qual desc TBD");
           break;
         case USB_B_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION:
-          // Should not be config config?
           printf("USB Other Speed TBD");
           break;
         case USB_B_DESCRIPTOR_TYPE_INTERFACE_POWER:
-          // Should not be config config?
           printf("USB Interface Power TBD");
           break;
         case 0x21:
-          if (USB_Class == USB_CLASS_HID) {
-            show_hid_desc(p);
-          }
+          // HID 
           break;
         default:
           printf("Unknown USB Descriptor Type: 0x%x", bDescriptorType);
@@ -478,7 +350,6 @@ void show_config_desc_full(const usb_config_desc_t *config_desc)
   }
 }
 
-//#include "hal/usb_phy_ll.h"
 void usb_keyboard_start()
 {
   usbh_setup(show_config_desc_full);

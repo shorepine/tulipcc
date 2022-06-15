@@ -229,6 +229,7 @@ uint8_t task_stop;
 int32_t vsync_count;
 uint8_t display_mhz;
 uint8_t brightness;
+float reported_fps;
 
 uint16_t *sprite_x_px;//[SPRITES]; 
 uint16_t *sprite_y_px;//[SPRITES]; 
