@@ -204,6 +204,11 @@ extern uint32_t Cache_Start_DCache_Preload(uint32_t addr, uint32_t size, uint32_
 #define FORMAT_FLASH 0x20
 #define FORMAT_BOLD 0x10 
 
+#define SPRITE_IS_SPRITE 0x80
+#define SPRITE_IS_LINE 0x40
+#define SPRITE_IS_BEZIER 0x20
+#define SPRITE_IS_ELLIPSE 0x10
+
 
 #define ANSI_BLACK 0
 #define ANSI_RED 1
