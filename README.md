@@ -41,10 +41,14 @@ Tulip boots right into a Python prompt and all interaction with the system happe
 ### General
 
 ```python
-# Use the uos module to interact with the filesystem.
-uos.listdir('.')
-uos.chdir('directory') # changes dir
-uos.unlink('filename') # deletes
+# Interact with the filesystem.
+# Supported: ls, head, cat, newfile, cp, mv, rm, pwd, cd, mkdir, rmdir
+ls
+mkdir('directory')
+cd('directory')
+
+# Clears the REPL screen and formatting
+clear
 
 # Opens the Tulip editor to the given filename. 
 # Control-X exits and prompts to save if any changes. 
@@ -178,9 +182,14 @@ The TFB is a 128x50 character plane for fast drawing of text glyphs. It supports
 # Sets / gets a character and/or format to the text frame buffer (TFB), 128x50 
 # Format (0x00-0xFF) includes ANSI colors (0x00-0x0F) 
 # and ANSI codes for reverse (0x80), underline (0x40), flash (0x20), bold (0x10)
-# Note that the REPL and editor will overwrite the TFB
+# Note that the REPL and editor use the TFB
 tulip.tfb_char(x,y, chr, [format])
 (char, format) = tulip.tfb_char(x,y)
+
+# ANSI color and formatting codes have convenience functions
+print(tulip.Colors.LIGHT_RED + "this is red " + tulip.Colors.GREEN + tulip.Colors.INVERSE + " and then green inverse")
+# To reset ANSI formatting
+print(tulip.Colors.DEFAULT)
 ```
 
 ### Sprites
