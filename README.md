@@ -1,39 +1,39 @@
 # Tulip Creative Computer
 
-This a repository for the Tulip Creative Computer (aka Tulip, aka Tulip CC, aka Tulip4). 
+Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC, aka Tulip4). 
 
-Tulip is a self contained computer, with a display and keyboard and sound. It boots directly into a Python prompt. It is not a shell based on another operating system. Every byte of RAM, every cycle of the CPU is dedicated to your code, the display and music. 
+Tulip is a self contained portable computer, with a display and keyboard and sound. It boots directly into a Python prompt. It is not a shell based on another operating system. Every byte of RAM, every cycle of the CPU is dedicated to your code, the display and music. 
 
-The idea behind Tulip is a portable creative terminal. Without distractions or complications, you are able to dive right into making something. 
+Tulip is a portable creative terminal. You can dive right into making something without distractions or complications.
 
-You can use Tulip to make music, write code, make art, games, or just write. It does not have a web browser or social media, although it can connect to a network in a slow fashion.
+You can use Tulip to make music, write code, make art, games, or just write. It does not have a web browser, although it can connect to a network in a slow fashion.
 
 You can build your own Tulip for about $25 plus the cost of a display and USB keyboard. 
 
-The hardware for revision 4 of Tulip is based on the ESP32-S3 dual core microcontroller running at 240MHz.  
+The hardware for revision 4 of Tulip is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. 
 
-The display is a 10.1" 1024 x 600 color LCD. 
+The display is a 10.1" 1024 x 600 RGB dot clock color LCD. 
 
 The synth makes sound with a full featured 64-voice synthesizer over I2S, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
+
+I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests for the base system.
 
 Tulip rev 4 supports:
 - 8.5MB of RAM
 - 8MB flash storage, as a filesystem accesible in Python
-- The Alles 64-voice synthesizer engine, locally. You can also control an Alles mesh.
-- Text frame buffer layer, 128 x 50, with 16 colors, inverse, bold, underline
+- The [Alles](https://github.com/bwhitman/alles) 64-voice synthesizer engine running locally or as a control for an Alles mesh.
+- Text frame buffer layer, 128 x 50, with ANSI support for 16 colors, inverse, bold, underline
 - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
 - A 1280x750 background frame buffer to draw arbitrary bitmaps to, which can scroll horizontally / vertically
-- WiFi via Python sockets / curl / etc
+- WiFi, access http via Python requests or TCP / UDP sockets 
 - Adjustable display clock, defaults to 24 MHz / 30 FPS.
 - 256 colors, can be set to 65535 with a hit to FPS
-- Can load PNGs from disk to set sprites or background from code
+- Can load PNGs from disk to set sprites or background, or generate bitmap data from code
 - Built in code and text editor
 - USB keyboard support
 - 500mA power usage including display, at medium display brightness, can last for hours on USB battery pack 
 
-Tulip's "OS" is heavily based on the great work of Micropython, which a lot of changes and additions to support the Python REPL on screen and integrated into the display system. Most of our code is in the ports/esp32/ directory. 
-
-Changes and features very welcome via pull request. 
+Tulip's "OS" is heavily based on the great work of Micropython, which a lot of changes and additions to support the Python REPL on screen and integrated into the display and sound system. Most of our code is in the ports/esp32/ directory. 
 
 
 ## Usage 
@@ -133,7 +133,10 @@ tulip.bg_pixel(x,y,pal_idx) # pal_idx is 0-255 for 8-bit RGB332 mode and 0-65535
 pal_idx = tulip.color(r,g,b)
 (r,g,b) = tulip.rgb(pal_idx)
 
-# Set the contents of a PNG file on the background
+# Set the contents of a PNG file on the background.
+# To save RAM and disk space, I recommend converting your PNG to 255 colors before moving to Tulip
+# Imagemagick does this with: convert input.png -colors 255 output.png 
+# Or with dithering: convert input.png -dither FloydSteinberg -colors 255 output.png
 png_file_contents = open("file.png", "rb").read()
 tulip.bg_png(png_file_contents, x, y)
 # Or use the png filename directly 
@@ -193,14 +196,15 @@ You can have up to 32 sprites on screen at once, and have 32KB of bitmap data to
 (w, h, bytes) = tulip.sprite_png("filename.png", mem_pos)
 
 # Or load sprites in from a bitmap in memory (packed pallete indexes for RGB332 or RGB565)
-# The bitmap can be made from code you wrote, or from bg_bitmap to sample the background, or...
+# The bitmap can be made from code you wrote, or from bg_bitmap to sample the background
+# Use pal idx 0x55 to denote alpha when generating your own sprites 
 bytes = tulip.sprite_bitmap(bitmap, mem_pos)
 
-# You can also read bitmap data from sprite ram if you need to modify sprites or copy them to BG
+# Read bitmap data from sprite ram if you need to modify sprites or copy them to BG
 bitmap = tulip.sprite_bitmap(mem_pos, length)
 
 # "Register" a piece of sprite RAM into a sprite handle index for later use.
-# Creates / overwrites sprite handle #12 referencing sprite data starting at mem_pos and w,h pixels
+# Creates sprite handle #12 referencing sprite data starting at mem_pos and w,h pixels
 tulip.sprite_register(12, mem_pos, w, h)  
 
 # Turn on a sprite to draw on screen
