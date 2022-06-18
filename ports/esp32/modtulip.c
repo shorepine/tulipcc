@@ -213,23 +213,44 @@ STATIC mp_obj_t tulip_bg_scroll(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_scroll_obj, 0, 5, tulip_bg_scroll);
 
 
-// tulip.tfb_char(x,y, chr, [format])
-// (char, format) = tulip.tfb_char(x,y)
-STATIC mp_obj_t tulip_tfb_char(size_t n_args, const mp_obj_t *args) {
+// tulip.tfb_str(x,y, str, [format], [fg_color], [bg_color])
+// (str, format, fg, bg) = tulip.tfb_str(x,y)
+STATIC mp_obj_t tulip_tfb_str(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
     uint16_t y = mp_obj_get_int(args[1]);
-    if(n_args > 2) {
-        TFB[y*TFB_COLS+x] = mp_obj_get_int(args[2]);
-        if(n_args == 4) TFBf[y*TFB_COLS+x] = mp_obj_get_int(args[3]);
+    uint8_t set = 0;
+    if(n_args > 2) set = 1;
+    if(set) {
+        const char * str = mp_obj_str_get_str(args[2]);
+        for(uint16_t i=0;i<strlen(str);i++) {
+            TFB[y*TFB_COLS+x+i] = str[i];
+        }
+        if(n_args > 3) {
+            if(mp_obj_get_int(args[3])>=0) {
+                TFBf[y*TFB_COLS+x] = mp_obj_get_int(args[3]);
+            }
+        }
+        if(n_args > 4 ) {
+            if(mp_obj_get_int(args[4])>=0) {
+                TFBfg[y*TFB_COLS+x] = mp_obj_get_int(args[4]);
+            }
+        }
+        if(n_args > 5 ) {
+            if(mp_obj_get_int(args[5])>=0) {
+                TFBbg[y*TFB_COLS+x] = mp_obj_get_int(args[5]);
+            }
+        }
         return mp_const_none; 
     } else {
-        mp_obj_t tuple[2];
-        tuple[0] = mp_obj_new_int(TFB[y*TFB_COLS+x]);
+        mp_obj_t tuple[4];
+        tuple[0] = mp_obj_new_str((const char*)(TFB + (y*TFB_COLS+x)), 1);
         tuple[1] = mp_obj_new_int(TFBf[y*TFB_COLS+x]);
-        return mp_obj_new_tuple(2,tuple);
+        tuple[2] = mp_obj_new_int(TFBfg[y*TFB_COLS+x]);
+        tuple[3] = mp_obj_new_int(TFBbg[y*TFB_COLS+x]);
+        return mp_obj_new_tuple(4,tuple);
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_char_obj, 2, 4, tulip_tfb_char);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_str_obj, 2, 6, tulip_tfb_str);
 
 
 
@@ -338,7 +359,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_move_obj, 3, 3, tulip_sp
 
 STATIC mp_obj_t tulip_sprite_on(size_t n_args, const mp_obj_t *args) {
     uint16_t spriteno = mp_obj_get_int(args[0]);
-    sprite_vis[spriteno] = 1;
+    sprite_vis[spriteno] = SPRITE_IS_SPRITE;
     return mp_const_none;
 }
 
@@ -421,7 +442,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll), MP_ROM_PTR(&tulip_bg_scroll_obj) },
-    { MP_ROM_QSTR(MP_QSTR_tfb_char), MP_ROM_PTR(&tulip_tfb_char_obj) },
+    { MP_ROM_QSTR(MP_QSTR_tfb_str), MP_ROM_PTR(&tulip_tfb_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_rect), MP_ROM_PTR(&tulip_bg_rect_obj) },

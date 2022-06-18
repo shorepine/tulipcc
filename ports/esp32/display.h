@@ -19,36 +19,34 @@
 #include "esp_random.h"
 #include "tulip_helpers.h"
 #include "lodepng.h"
+#include "driver/ledc.h"
 
-//#define RGB565
+
 #define RGB332
 
 
-#define ANSI_PAL_COLORS 17
 
 uint8_t bg_pal_color;
-uint8_t tfb_pal_color;
+uint8_t tfb_fg_pal_color;
+uint8_t tfb_bg_pal_color;
 uint8_t ansi_active_bg_color; 
+uint8_t ansi_active_fg_color; 
 int16_t ansi_active_format;
 
-static const uint8_t ansi_pal_rgb[ANSI_PAL_COLORS][3] = {
-	{ 0, 0, 0}, 		// BLACK
-	{ 128, 0, 0},		// RED
-	{ 0, 128, 0},		// GREEN
-	{ 128, 128, 0},		// YELLOW
-	{ 0, 0, 128},		// BLUE
-	{ 128, 0, 128},		// MAGENTA
-	{ 0, 128, 128},		// CYAN
-	{ 128, 128, 128},   // WHITE
-	{ 0, 0, 0},			// BOLD BLACK
-	{ 255, 0, 0},		// BOLD RED
-	{ 0, 255, 0},		// BOLD GREEN
-	{ 255, 255, 0},		// BOLD YELLOW
-	{ 0, 0, 255},		// BOLD BLUE
-	{ 255, 0, 255},		// BOLD MAGENTA
-	{ 0, 255, 255},		// BOLD CYAN
-	{ 255, 255, 255},	// BOLD WHITE
-	{ 1, 77, 78}		// TULIP TEAL
+#define TULIP_TEAL 9
+static const uint8_t ansi_pal[256] = {
+0, 128, 16, 144, 2, 130, 18, 219, 146, 224, 28, 252, 3, 227, 31, 255, 0, 1, 2, 2, 3, 3, 8, 9, 10, 10, 
+11, 11, 16, 17, 18, 18, 19, 19, 20, 21, 22, 22, 23, 23, 24, 25, 26, 26, 27, 27, 28, 29, 30, 30, 31, 31, 
+64, 65, 66, 66, 67, 67, 72, 73, 74, 74, 75, 75, 80, 81, 82, 82, 83, 83, 84, 85, 86, 86, 87, 87, 88, 89, 
+90, 90, 91, 91, 92, 93, 94, 94, 95, 95, 128, 129, 130, 130, 131, 131, 136, 137, 138, 138, 139, 139, 144, 
+145, 146, 146, 147, 147, 148, 149, 150, 150, 151, 151, 152, 153, 154, 154, 155, 155, 156, 157, 158, 158, 
+159, 159, 160, 161, 162, 162, 163, 163, 168, 169, 170, 170, 171, 171, 176, 177, 178, 178, 179, 179, 180, 
+181, 182, 182, 183, 183, 184, 185, 186, 186, 187, 187, 188, 189, 190, 190, 191, 191, 192, 193, 194, 194, 
+195, 195, 200, 201, 202, 202, 203, 203, 208, 209, 210, 210, 211, 211, 212, 213, 214, 214, 215, 215, 216, 
+217, 218, 218, 219, 219, 220, 221, 222, 222, 223, 223, 224, 225, 226, 226, 227, 227, 232, 233, 234, 234, 
+235, 235, 240, 241, 242, 242, 243, 243, 244, 245, 246, 246, 247, 247, 248, 249, 250, 250, 251, 251, 252, 
+253, 254, 254, 255, 255, 0, 0, 0, 36, 36, 36, 73, 73, 73, 109, 109, 109, 146, 146, 146, 146, 182, 182, 
+182, 219, 219, 219, 255, 255
 };
 
 
@@ -63,14 +61,14 @@ void display_load_sprite_rgba(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_screenshot(char * filename);
 void display_screenshot_pal(char * filename);
-void display_tfb_str(char*str, uint16_t len, uint8_t format);
+void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color);
+
 uint8_t display_get_clock();
 void display_set_clock(uint8_t mhz);
 void display_tfb_new_row();
 void display_run();
 void display_brightness(uint8_t amount);
 
-void unpack_rgb_565(uint8_t px0, uint8_t px1, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
@@ -100,19 +98,18 @@ extern const unsigned char font_8x12_r[256][12];
 #define PIN_NUM_PCLK           14 // was 38, was 20, was 13 black
 #define PIN_NUM_BK_PWM		   16
 
-#ifdef RGB332
-// These are actually connected properly , what is "G5" here is going to G7 on the display (MSB), etc
+
 // https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html
-#define PIN_NUM_DATA0          12 // B3 [actually B6, 14]
-#define PIN_NUM_DATA1          21 // B4 [actually B7, 13]
+#define PIN_NUM_DATA0          12 //  B6, 14
+#define PIN_NUM_DATA1          21 //  B7, 13
 
-#define PIN_NUM_DATA2          8  // G3 [actually G5, 23]
-#define PIN_NUM_DATA3          3  // G4 [actually G6, 22]
-#define PIN_NUM_DATA4          46 // G5, [actually G7, 21] pin 21 on the breakout... goes to G7... so i guess we've already done this
+#define PIN_NUM_DATA2          8  //  G5, 23]
+#define PIN_NUM_DATA3          3  // G6, 22]
+#define PIN_NUM_DATA4          46 // G7, 21 pin 21 on the breakout... goes to G7...
 
-#define PIN_NUM_DATA5         6   // R2 [R5, 31]
-#define PIN_NUM_DATA6         7   // R3 [R6, 30]
-#define PIN_NUM_DATA7         15  // R4 [R7, 29]
+#define PIN_NUM_DATA5         6   // R5, 31
+#define PIN_NUM_DATA6         7   // R6, 30
+#define PIN_NUM_DATA7         15  // R7, 29
 
 //... We keep the rest as we have to drive them low while i have it plugged in, but i'm wroking on that...
 #define PIN_NUM_DATA8          5 // B2
@@ -123,26 +120,7 @@ extern const unsigned char font_8x12_r[256][12];
 #define PIN_NUM_DATA13         5 // G0
 #define PIN_NUM_DATA14         5 // R1
 #define PIN_NUM_DATA15         5 // R0
-#endif
 
-#ifdef RGB565
-#define PIN_NUM_DATA0          9  // B0
-#define PIN_NUM_DATA1          10  // B1
-#define PIN_NUM_DATA2          11 // B2
-#define PIN_NUM_DATA3          12  // B3
-#define PIN_NUM_DATA4          21  // B4
-#define PIN_NUM_DATA5          16  // G0 // this may be PSRAM CS? it's unclear 
-#define PIN_NUM_DATA6          17 // G1
-#define PIN_NUM_DATA7          18 // G2
-#define PIN_NUM_DATA8          8 // G3
-#define PIN_NUM_DATA9          3 // G4
-#define PIN_NUM_DATA10         46 // G5
-#define PIN_NUM_DATA11         4 // R0
-#define PIN_NUM_DATA12         5 // R1
-#define PIN_NUM_DATA13         6 // R2
-#define PIN_NUM_DATA14         7 // R3
-#define PIN_NUM_DATA15         15 // R4
-#endif
 
 #define PIN_NUM_DISP_EN        -1
 
@@ -186,13 +164,8 @@ extern uint32_t Cache_Start_DCache_Preload(uint32_t addr, uint32_t size, uint32_
 #define FONT_WIDTH 8
 #define TFB_ROWS (V_RES/FONT_HEIGHT)
 #define TFB_COLS (H_RES/FONT_WIDTH)
-#ifdef RGB565
-#define BOUNCE_BUFFER_SIZE_PX (H_RES*FONT_HEIGHT) 
-#define BOUNCE_BUFFER_SIZE_BYTES (BOUNCE_BUFFER_SIZE_PX*BYTES_PER_PIXEL)
-#else
 #define BOUNCE_BUFFER_SIZE_PX (H_RES*FONT_HEIGHT) 
 #define BOUNCE_BUFFER_SIZE_BYTES (BOUNCE_BUFFER_SIZE_PX)
-#endif
 
 #define FLASH_FRAMES 12
 #define ALPHA0 0x55
@@ -203,31 +176,13 @@ extern uint32_t Cache_Start_DCache_Preload(uint32_t addr, uint32_t size, uint32_
 #define FORMAT_UNDERLINE 0x40
 #define FORMAT_FLASH 0x20
 #define FORMAT_BOLD 0x10 
+#define FORMAT_STRIKE 0x08
 
 #define SPRITE_IS_SPRITE 0x80
 #define SPRITE_IS_LINE 0x40
 #define SPRITE_IS_BEZIER 0x20
 #define SPRITE_IS_ELLIPSE 0x10
 
-
-#define ANSI_BLACK 0
-#define ANSI_RED 1
-#define ANSI_GREEN 2
-#define ANSI_YELLOW 3
-#define ANSI_BLUE 4
-#define ANSI_MAGENTA 5
-#define ANSI_CYAN 6
-#define ANSI_WHITE 7
-#define ANSI_BOLD_BLACK 8
-#define ANSI_BOLD_RED 9
-#define ANSI_BOLD_GREEN 10
-#define ANSI_BOLD_YELLOW 11
-#define ANSI_BOLD_BLUE 12
-#define ANSI_BOLD_MAGENTA 13
-#define ANSI_BOLD_CYAN 14
-#define ANSI_BOLD_WHITE 15
-#define TULIP_TEAL 16
-#define FORMAT_BG_COLOR_NONE 16
 
 uint8_t tfb_y_row; 
 uint8_t tfb_x_col; 
@@ -254,6 +209,8 @@ uint8_t *sprite_vis;//[SPRITES];
 uint32_t *sprite_mem;//[SPRITES];
 
 uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
+uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
+uint8_t *TFBbg;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBf;//[TFB_ROWS][TFB_COLS];
 uint16_t *x_offsets;//[V_RES];
 uint16_t *y_offsets;//[V_RES];
@@ -261,6 +218,5 @@ int16_t *x_speeds;//[V_RES];
 int16_t *y_speeds;//[V_RES];
 
 uint32_t **bg_lines;//[V_RES];
-uint8_t *ansi_pal;
 
 #endif

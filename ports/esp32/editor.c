@@ -20,6 +20,8 @@ uint16_t lines = 0;
 uint8_t dirty = 0;
 uint8_t *saved_tfb;
 uint8_t *saved_tfbf;
+uint8_t *saved_tfbfg;
+uint8_t *saved_tfbbg;
 uint16_t saved_tfb_y;
 uint16_t saved_tfb_x;
 uint8_t quit_flag = 0;
@@ -36,6 +38,8 @@ uint16_t cursor_y = 0;
 #define TFB_COLS 128 
 uint8_t TFB[TFB_ROWS*TFB_COLS];
 uint8_t TFBf[TFB_ROWS*TFB_COLS];
+uint8_t TFBfg[TFB_ROWS*TFB_COLS];
+uint8_t TFBbg[TFB_ROWS*TFB_COLS];
 uint16_t tfb_y_row =0;
 uint16_t tfb_x_col = 0;
 uint8_t tfb_pal_color = 15; // ANSI_BOLD_WHITE
@@ -90,6 +94,8 @@ void setup_display() {
 	noecho();
 	memset(TFB, 0, TFB_ROWS*TFB_COLS);
 	memset(TFBf, 0, TFB_ROWS*TFB_COLS);
+	memset(TFBfg, 0, TFB_ROWS*TFB_COLS);
+	memset(TFBbg, 0, TFB_ROWS*TFB_COLS);
 }
 
 void local_draw_tfb() {
@@ -147,7 +153,9 @@ void format_at_row(uint8_t format, int16_t len, uint16_t y) {
 	if(y<TFB_ROWS) {
 		if(len <0) len = TFB_COLS;
 		for(uint16_t i=0;i<len;i++) {
-			TFBf[y*TFB_COLS+i] |= format;
+			TFBf[y*TFB_COLS+i] = format;
+			TFBfg[y*TFB_COLS+i] = tfb_fg_pal_color;
+			TFBbg[y*TFB_COLS+i] = tfb_bg_pal_color;
 		}
 	}
 }
@@ -156,7 +164,9 @@ void string_at_row(char * s, int16_t len, uint16_t y) {
 	if(y<TFB_ROWS) {
 		for(uint16_t i=0;i<len;i++) {
 			TFB[y*TFB_COLS+i] = s[i];
-			TFBf[y*TFB_COLS+i] = tfb_pal_color;
+			TFBf[y*TFB_COLS+i] = 0; ;
+			TFBfg[y*TFB_COLS+i] = tfb_fg_pal_color;
+			TFBbg[y*TFB_COLS+i] = tfb_bg_pal_color;
 		}
 		for(uint16_t i=len;i<TFB_COLS;i++) {
 			TFB[y*TFB_COLS+i] = 0;
@@ -185,7 +195,7 @@ void paint_tfb(uint16_t start_at_y) {
 void move_cursor(int16_t x, int16_t y) {
 	// In localdev, the local_draw_tfb physically moves the cursor
 	// Undo old cursor
-	TFBf[cursor_y*TFB_COLS+cursor_x] = tfb_pal_color;
+	TFBf[cursor_y*TFB_COLS+cursor_x] = 0; 
 
 	// Move viewport up/down (TFB_ROWS-1) / 2
 	// Move cursor to next/prev line (which would now be in the middle of the screen)
@@ -217,7 +227,10 @@ void move_cursor(int16_t x, int16_t y) {
 		cursor_x = x;
 	}
 	// Put in new cursor 
-    TFBf[cursor_y*TFB_COLS+cursor_x] = FORMAT_INVERSE|FORMAT_FLASH|tfb_pal_color;
+    TFBf[cursor_y*TFB_COLS+cursor_x] = FORMAT_INVERSE|FORMAT_FLASH;
+    TFBfg[cursor_y*TFB_COLS+cursor_x] = tfb_fg_pal_color;
+    TFBbg[cursor_y*TFB_COLS+cursor_x] = tfb_bg_pal_color;
+
     if(TFB[cursor_y*TFB_COLS+cursor_x]==0) TFB[cursor_y*TFB_COLS+cursor_x] = 32;
 
 	// Update status bar
@@ -256,11 +269,17 @@ void editor_page_down() {
 void save_tfb() {
 	saved_tfb = (uint8_t*)editor_malloc(TFB_ROWS*TFB_COLS);
 	saved_tfbf= (uint8_t*)editor_malloc(TFB_ROWS*TFB_COLS);
+	saved_tfbfg= (uint8_t*)editor_malloc(TFB_ROWS*TFB_COLS);
+	saved_tfbbg= (uint8_t*)editor_malloc(TFB_ROWS*TFB_COLS);
 	for(uint16_t y=0;y<TFB_ROWS*TFB_COLS;y++) {
 		saved_tfb[y] = TFB[y];
 		saved_tfbf[y]= TFBf[y];
+		saved_tfbfg[y]= TFBfg[y];
+		saved_tfbbg[y]= TFBbg[y];
 		TFB[y] = 0;
 		TFBf[y] = 0;
+		TFBfg[y] = tfb_fg_pal_color;
+		TFBbg[y] = tfb_bg_pal_color;
 	}
 	saved_tfb_y = tfb_y_row;
 	saved_tfb_x = tfb_x_col;
@@ -271,9 +290,13 @@ void restore_tfb() {
 	for(uint16_t y=0;y<TFB_ROWS*TFB_COLS;y++) {
 		TFB[y] = saved_tfb[y];
 		TFBf[y] = saved_tfbf[y];
+		TFBfg[y] = saved_tfbfg[y];
+		TFBbg[y] = saved_tfbbg[y];
 	}
 	free(saved_tfb);
 	free(saved_tfbf);
+	free(saved_tfbfg);
+	free(saved_tfbbg);
 	tfb_y_row = saved_tfb_y;
 	tfb_x_col = saved_tfb_x;
 }
