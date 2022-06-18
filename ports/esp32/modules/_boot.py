@@ -1,5 +1,6 @@
 import gc
 import uos
+import tulip, alles
 from flashbdev import bdev
 
 try:

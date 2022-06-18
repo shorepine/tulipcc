@@ -13,14 +13,24 @@ int check_rx_char() {
     return c;
 }
 
-uint32_t file_size(const char *filename) {
-    mp_obj_t m_args[1];
-    m_args[0] = mp_obj_new_str(filename, strlen(filename));
-    mp_obj_t stats_tuple = mp_vfs_stat(m_args[0]);
-    // TODO , file not found response ??? 
-    mp_obj_t *stats_items;
-    mp_obj_get_array_fixed_n(stats_tuple, 10, &stats_items);
-    return mp_obj_get_int(stats_items[6]);
+// Returns 0 if file doesn't exist, 2 if it's a file, XXX if it's a directory
+uint8_t file_exists(const char *filename) {
+    uint8_t response = mp_vfs_import_stat(filename);
+    return response;
+}
+
+int32_t file_size(const char *filename) {
+    if(file_exists(filename)) { 
+        mp_obj_t m_args[1];
+        m_args[0] = mp_obj_new_str(filename, strlen(filename));
+        mp_obj_t stats_tuple = mp_vfs_stat(m_args[0]);
+        // TODO , file not found response ??? 
+        mp_obj_t *stats_items;
+        mp_obj_get_array_fixed_n(stats_tuple, 10, &stats_items);
+        return mp_obj_get_int(stats_items[6]);
+    } else {
+        return -1;
+    }
 }
 
 // if len < 0, read the whole thing

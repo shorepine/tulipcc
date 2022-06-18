@@ -4,5 +4,5 @@ set(SDKCONFIG_DEFAULTS
     boards/sdkconfig.base
     boards/sdkconfig.usb
     boards/sdkconfig.spiram_sx
-    boards/GENERIC_S3_SPIRAM/sdkconfig.board
+    boards/TULIP4/sdkconfig.board
 )

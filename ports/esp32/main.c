@@ -84,7 +84,7 @@
 
 // was 16*1024
 #define MP_TASK_STACK_SIZE      (16 * 1024)
-#define DISP_TASK_STACK_SIZE    (16 * 1024) // think about the bounce buffers, no that's heap ??
+#define DISP_TASK_STACK_SIZE    (8 * 1024) // think about the bounce buffers, no that's heap ??
 #define USB_TASK_STACK_SIZE    (8 * 1024) 
 #define ALLES_TASK_STACK_SIZE    (4 * 1024) 
 
@@ -107,6 +107,8 @@ typedef void (*esp_alloc_failed_hook_t) (size_t size, uint32_t caps, const char 
 void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
     printf("alloc failed size %d caps %d function %s\n", size, caps, function_name);
 }
+
+
 
 int vprintf_null(const char *format, va_list ap) {
     // do nothing: this is used as a log target during raw repl mode
@@ -160,7 +162,7 @@ void mp_task(void *pvParameter) {
 
     // save ram for screen -- currently a 1280x750 buffer, so 1.92MB
     // Save another 2MB for working buffers for PNG decoding?!? 
-    esp_spiram_size = esp_spiram_size - (1024*1024*6);
+    esp_spiram_size = esp_spiram_size - (1024*1024*4);
 
     if (esp_spiram_size > 0) {
         mp_task_heap = (void *)SOC_EXTRAM_DATA_HIGH - esp_spiram_size;
@@ -266,16 +268,16 @@ void app_main(void) {
 
     printf("Starting USB keyboard host\n");
     xTaskCreatePinnedToCore(usb_keyboard_start, "usb_task", (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &usb_main_task_handle, USB_TASK_COREID);
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    //vTaskDelay(pdMS_TO_TICKS(1000));
 
 
     printf("Starting display\n");
     xTaskCreatePinnedToCore(display_run, "disp_task", (DISP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_main_task_handle, DISPLAY_TASK_COREID);
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    //vTaskDelay(pdMS_TO_TICKS(1000));
 
     printf("Starting Alles\n");
     xTaskCreatePinnedToCore(alles_start, "alles_task", (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_main_task_handle, ALLES_TASK_COREID);
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    //vTaskDelay(pdMS_TO_TICKS(1000));
 
 
     // Create and transfer control to the MicroPython task.

@@ -757,6 +757,8 @@ static void lcd_rgb_panel_restart_transmission(esp_rgb_panel_t *panel)
             }
         } else {
             //Catch de-synced framebuffer and reset if needed.
+            // TODO, not sure how but we should do something other than mis-align the top of the screen when this happens
+            
             if (panel->bounce_pos_px > (panel->bounce_buffer_size_bytes*2)) { desync++; panel->bounce_pos_px=0; }
             //Pre-fill bounce buffer 0, if the EOF ISR didn't do that already
             if (panel->bounce_pos_px < panel->bounce_buffer_size_bytes/2) {

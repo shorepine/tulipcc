@@ -54,9 +54,13 @@ static const uint8_t ansi_pal_rgb[ANSI_PAL_COLORS][3] = {
 
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b);
 void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_t *b);
-void display_get_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *);
-void display_bg_bitmap(int x_start, int y_start, int x_end, int y_end, uint8_t* data);
-void display_load_sprite(uint32_t mem_pos, uint32_t len, uint8_t* data);
+
+void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data);
+void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data);
+void display_set_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data);
+
+void display_load_sprite_rgba(uint32_t mem_pos, uint32_t len, uint8_t* data);
+void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_screenshot(char * filename);
 void display_screenshot_pal(char * filename);
 void display_tfb_str(char*str, uint16_t len, uint8_t format);
@@ -230,6 +234,12 @@ int32_t vsync_count;
 uint8_t display_mhz;
 uint8_t brightness;
 float reported_fps;
+float reported_gpu_usage;
+
+// RAM for sprites and background FB
+uint8_t *sprite_ram; // in IRAM
+uint8_t * bg; // in SPIRAM
+
 
 uint16_t *sprite_x_px;//[SPRITES]; 
 uint16_t *sprite_y_px;//[SPRITES]; 

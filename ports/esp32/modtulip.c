@@ -32,6 +32,12 @@ STATIC mp_obj_t tulip_fps(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_fps_obj, 0, 0, tulip_fps);
 
+// usage = tulip.gpu()
+STATIC mp_obj_t tulip_gpu(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_float_from_f(reported_gpu_usage);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_gpu_obj, 0, 0, tulip_gpu);
+
 
 // tulip.bg_pixel(x,y, r,g,b)
 // tulip.bg_pixel(x,y, pal_idx)
@@ -129,14 +135,16 @@ STATIC mp_obj_t tulip_bg_bitmap(size_t n_args, const mp_obj_t *args) {
     uint16_t h = mp_obj_get_int(args[3]);
     if(n_args == 5) {
         // Set the rect with bitmap pixels
-        //size_t len = w*h*BYTES_PER_PIXEL;
-        //const char * bitmap = mp_obj_str_get_data(&args[4], len);
-        //draw_bitmap(x,y,x+w,y+h,(uint8_t*)bitmap);
+        mp_buffer_info_t bufinfo;
+        if (mp_obj_get_type(args[4]) == &mp_type_bytes) {
+            mp_get_buffer(args[4], &bufinfo, MP_BUFFER_READ);
+            display_set_bg_bitmap_raw(x, y, w, h, (uint8_t*)bufinfo.buf);
+        }
         return mp_const_none; 
     } else {
         // return a bitmap
         uint8_t bitmap[w*h*BYTES_PER_PIXEL];  
-        display_get_bitmap(x,y,w,h, bitmap);
+        display_get_bg_bitmap_raw(x,y,w,h, bitmap);
         return mp_obj_new_bytes(bitmap, w*h*BYTES_PER_PIXEL);
     }
 }
@@ -167,7 +175,7 @@ STATIC mp_obj_t tulip_bg_png(size_t n_args, const mp_obj_t *args) {
     }
     error = lodepng_decode_memory(&image, &width, &height, (uint8_t*)bufinfo.buf, bufinfo.len, LCT_RGBA, 8);
     if(error) printf("error %u: %s\n", error, lodepng_error_text(error));
-    display_bg_bitmap(x,y,x+width,y+height,image);
+    display_set_bg_bitmap_rgba(x,y,width,height,image);
     heap_caps_free(image);
     if(file) {
         heap_caps_free(bufinfo.buf);
@@ -271,7 +279,7 @@ STATIC mp_obj_t tulip_sprite_png(size_t n_args, const mp_obj_t *args) {
     }
     error = lodepng_decode_memory(&image, &width, &height, (uint8_t*)bufinfo.buf, bufinfo.len, LCT_RGBA, 8);
     if(error) printf("error %u: %s\n", error, lodepng_error_text(error));
-    display_load_sprite(mem_pos, width*height*BYTES_PER_PIXEL, image);
+    display_load_sprite_rgba(mem_pos, width*height*BYTES_PER_PIXEL, image);
     heap_caps_free(image);
     if(file) heap_caps_free(bufinfo.buf);
     mp_obj_t tuple[3];
@@ -282,6 +290,24 @@ STATIC mp_obj_t tulip_sprite_png(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_png_obj, 2, 2, tulip_sprite_png);
+
+
+//bytes = sprite_bitmap(bitmap, mem_pos) 
+//buffer_of_bytes = sprite_bitmap(mem_pos, length)
+STATIC mp_obj_t tulip_sprite_bitmap(size_t n_args, const mp_obj_t *args) {
+    if (mp_obj_get_type(args[0]) == &mp_type_bytes) {
+        uint16_t mem_pos = mp_obj_get_int(args[1]);
+        mp_buffer_info_t bufinfo;
+        mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+        display_load_sprite_raw(mem_pos, bufinfo.len, bufinfo.buf);
+        return mp_obj_new_int(bufinfo.len);
+    } 
+    uint16_t mem_pos = mp_obj_get_int(args[0]);
+    uint16_t length = mp_obj_get_int(args[1]);
+    return mp_obj_new_bytes(sprite_ram+mem_pos, length);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_bitmap_obj, 2, 2, tulip_sprite_bitmap);
 
 //sprite_register(34, mem_pos, w,h) # 34 = sprite number, can be up to ...
 STATIC mp_obj_t tulip_sprite_register(size_t n_args, const mp_obj_t *args) {
@@ -373,11 +399,24 @@ STATIC mp_obj_t tulip_brightness(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_brightness_obj, 0, 1, tulip_brightness);
 
+extern uint8_t last_scan[8];
+STATIC mp_obj_t tulip_keys(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t tuple[7];
+    tuple[0] = mp_obj_new_int(last_scan[0]);
+    for(uint8_t i=0;i<6;i++) tuple[i+1] = mp_obj_new_int(last_scan[i+2]);
+    return mp_obj_new_tuple(7, tuple);
+
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_keys_obj, 0, 0, tulip_keys);
+
+
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
-    { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_tulip) },
+    { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_fps), MP_ROM_PTR(&tulip_fps_obj) },
+    { MP_ROM_QSTR(MP_QSTR_gpu), MP_ROM_PTR(&tulip_gpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_pixel), MP_ROM_PTR(&tulip_bg_pixel_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },
@@ -387,6 +426,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_rect), MP_ROM_PTR(&tulip_bg_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_png), MP_ROM_PTR(&tulip_sprite_png_obj) },
+    { MP_ROM_QSTR(MP_QSTR_sprite_bitmap), MP_ROM_PTR(&tulip_sprite_bitmap_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_register), MP_ROM_PTR(&tulip_sprite_register_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_move), MP_ROM_PTR(&tulip_sprite_move_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_on), MP_ROM_PTR(&tulip_sprite_on_obj) },
@@ -395,6 +435,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_screenshot), MP_ROM_PTR(&tulip_screenshot_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles), MP_ROM_PTR(&tulip_alles_obj) },
     { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&tulip_brightness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_keys), MP_ROM_PTR(&tulip_keys_obj) },
 
 };
 
@@ -406,4 +447,4 @@ const mp_obj_module_t tulip_module = {
 };
 
 
-MP_REGISTER_MODULE(MP_QSTR_tulip, tulip_module, 1); // MICROPY_PY_TULIP);
+MP_REGISTER_MODULE(MP_QSTR__tulip, tulip_module, 1); // MICROPY_PY_TULIP);

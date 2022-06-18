@@ -305,7 +305,6 @@ void show_config_desc_full(const usb_config_desc_t *config_desc)
 {
   // Full decode of config desc.
   const uint8_t *p = &config_desc->val[0];
-  static uint8_t USB_Class = 0;
   uint8_t bLength;
   for (int i = 0; i < config_desc->wTotalLength; i+=bLength, p+=bLength) {
     bLength = *p;

@@ -11,7 +11,7 @@
         "generic_s3.jpg"
     ],
     "mcu": "esp32s3",
-    "product": "Generic ESP32-S3 (SPIRAM)",
+    "product": "Tulip 4",
     "thumbnail": "",
     "url": "https://www.espressif.com/en/products/modules",
     "vendor": "Espressif"

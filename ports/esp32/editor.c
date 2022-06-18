@@ -286,7 +286,7 @@ void open_file(const char *filename) {
 	uint16_t c = 0;
 	fn = filename;
 	dbg("opening file %s\n", filename);
-	uint32_t fs = file_size(filename);
+	int32_t fs = file_size(filename);
 	if(fs > 0) {
 		char * text = (char*) editor_malloc(fs+2);
 		uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
@@ -315,7 +315,7 @@ void open_file(const char *filename) {
 		free(text);
 		dbg("File read with %d lines.\n", lines);
 	} else {
-		dbg("Opening new file %s for writing", fn);
+		dbg("Opening new file %s for writing\n", fn);
 		lines = 1;
 		text_lines = (char**)editor_malloc(sizeof(char*)*(1));
 		text_lines[0] = (char*)editor_malloc(1);

@@ -4,9 +4,6 @@ static TaskHandle_t xDisplayTask = NULL;
 esp_lcd_panel_handle_t panel_handle;
 esp_lcd_rgb_panel_config_t panel_config;
 
-// RAM for sprites and background FB
-uint8_t *sprite_ram; // in IRAM
-uint8_t * bg; // in SPIRAM
 
 
 // Python callback
@@ -225,17 +222,6 @@ void display_set_clock(uint8_t mhz) {
 }
 
 
-void display_get_bitmap(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t * bitmap) {
-    uint32_t c = 0;
-    for (int j = y; j < y+h; j++) {
-        for (int i = x; i < x+w; i++) {
-            bitmap[c++] = (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)];
-#ifdef RGB565
-            bitmap[c++] = (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 1)];
-#endif    
-        }
-    }
-}
 
 // RRRGGGBB
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
@@ -291,14 +277,10 @@ uint8_t color1_565(uint8_t red, uint8_t green, uint8_t blue) {
     return ret;    
 }
 
-// input is RGBA data, but we skip alpha
-void display_bg_bitmap(int x_start, int y_start, int x_end, int y_end, uint8_t* data) {
-    x_start = MIN(x_start, H_RES+OFFSCREEN_X_PX);
-    x_end = MIN(x_end, H_RES+OFFSCREEN_X_PX);
-    y_start = MIN(y_start, V_RES+OFFSCREEN_Y_PX);
-    y_end = MIN(y_end, V_RES+OFFSCREEN_Y_PX);
-    for (int j = y_start; j < y_end; j++) {
-        for (int i = x_start; i < x_end; i++) {
+
+void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data) {
+    for (int j = y; j < y+h; j++) {
+        for (int i = x; i < x+w; i++) {
             uint8_t r = *data++;
             uint8_t g = *data++;
             uint8_t b = *data++;
@@ -314,10 +296,36 @@ void display_bg_bitmap(int x_start, int y_start, int x_end, int y_end, uint8_t* 
     }
 }
 
+void display_set_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data) {
+    uint32_t c = 0;
+    for (int j = y; j < y+h; j++) {
+        for (int i = x; i < x+w; i++) {
+            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = data[c++];
+#ifdef RGB565
+            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 1)] = data[c++];
+#endif
+        }
+    }
+}
+
+void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t * data) {
+    uint32_t c = 0;
+    for (int j = y; j < y+h; j++) {
+        for (int i = x; i < x+w; i++) {
+            data[c++] = (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)];
+#ifdef RGB565
+            data[c++] = (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 1)];
+#endif    
+        }
+    }
+}
+
+
+
 
 //mem_len = sprite_load(bitmap, mem_pos, [x,y,w,h]) # returns mem_len (w*h*2)
 // load a bitmap into fast sprite ram
-void display_load_sprite(uint32_t mem_pos, uint32_t len, uint8_t* data) {
+void display_load_sprite_rgba(uint32_t mem_pos, uint32_t len, uint8_t* data) {
     for (int j = mem_pos; j < mem_pos + len; j=j+BYTES_PER_PIXEL) {
         uint8_t r = *data++;
         uint8_t g = *data++;
@@ -340,6 +348,15 @@ void display_load_sprite(uint32_t mem_pos, uint32_t len, uint8_t* data) {
 #endif
     }
 
+}
+
+void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data) {
+    for (int j = mem_pos; j < mem_pos + len; j=j+BYTES_PER_PIXEL) {
+        sprite_ram[j] = *data++;
+#ifdef RGB565
+        sprite_ram[j+1] = *data++;
+#endif
+    }
 }
 
 
@@ -718,6 +735,7 @@ void display_run(void) {
     py_callback = 0;
     vsync_count = 1;
     reported_fps = 1;
+    reported_gpu_usage = 0;
 
     // Start the RGB panel
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
@@ -738,16 +756,19 @@ void display_run(void) {
         free_time += (esp_timer_get_time() - tic1);
         if(loop_count++ >= 100) {
             reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);
-            printf("Past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). %d desyncs [bc %d]\n", 
-                loop_count,
-                reported_fps, 
-                free_time / loop_count,
-                bounce_time / bounce_count,
-                ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (1000000.0 / ((esp_timer_get_time() - tic0) / loop_count)))))*100.0,
-                (int) (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (1000000.0 / ((esp_timer_get_time() - tic0) / loop_count)))),
-                desync,
-                bounce_count
-            );
+            reported_gpu_usage = ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))))*100.0;
+            if(desync) {
+                printf("Desync warning: past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). %d desyncs [bc %d]\n", 
+                    loop_count,
+                    reported_fps, 
+                    free_time / loop_count,
+                    bounce_time / bounce_count,
+                    reported_gpu_usage,
+                    (int) (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))),
+                    desync,
+                    bounce_count
+                );
+            }
             bounce_count = 1;
             bounce_time = 0;
             loop_count = 0;
