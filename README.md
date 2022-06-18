@@ -176,20 +176,25 @@ tulip.bg_scroll() # resets to default
 
 ### Text frame buffer (TFB)
 
-The TFB is a 128x50 character plane for fast drawing of text glyphs. It supports the 16 ANSI colors and formatting. TFB is used by the text editor and Python REPL.
+The TFB is a 128x50 character plane for fast drawing of text glyphs. It supports 256 ANSI 
+colors for foreground and background, and supports formatting. TFB is used by the text 
+editor and Python REPL.
 
 ```python
-# Sets / gets a character and/or format to the text frame buffer (TFB), 128x50 
-# Format (0x00-0xFF) includes ANSI colors (0x00-0x0F) 
-# and ANSI codes for reverse (0x80), underline (0x40), flash (0x20), bold (0x10)
+# Sets a string / gets a character and/or format to the text frame buffer (TFB), 128x50 
+# Format has ANSI codes for reverse (0x80), underline (0x40), flash (0x20), bold (0x10)
+# fg color is palette index, 0-255, same for bg color
 # Note that the REPL and editor use the TFB
-tulip.tfb_char(x,y, chr, [format])
-(char, format) = tulip.tfb_char(x,y)
+tulip.tfb_char(x,y, "string", [format], [fg], [bg])
+(char, format, fg, bg) = tulip.tfb_str(x,y)
 
 # ANSI color and formatting codes have convenience functions
 print(tulip.Colors.LIGHT_RED + "this is red " + tulip.Colors.GREEN + tulip.Colors.INVERSE + " and then green inverse")
 # To reset ANSI formatting
 print(tulip.Colors.DEFAULT)
+
+# Tulip REPL supports ANSI 256 color modes as well,
+print(tulip.ansi_fg(56))
 ```
 
 ### Sprites
