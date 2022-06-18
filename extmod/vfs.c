@@ -489,6 +489,7 @@ mp_obj_t mp_vfs_stat(mp_obj_t path_in) {
     }
     return mp_vfs_proxy_call(vfs, MP_QSTR_stat, 1, &path_out);
 }
+
 MP_DEFINE_CONST_FUN_OBJ_1(mp_vfs_stat_obj, mp_vfs_stat);
 
 mp_obj_t mp_vfs_statvfs(mp_obj_t path_in) {

@@ -1,6 +1,6 @@
 # Tulip Creative Computer
 
-This a repository for the Tulip Creative Computer (aka Tulip, aka Tulip CC, aka Tulip4), a personal "weird thing" I've spent a lot of time working on over the years. I'm making it available to the world, just in case there's someone out there with the same strange interests. 
+This a repository for the Tulip Creative Computer (aka Tulip, aka Tulip CC, aka Tulip4). 
 
 Tulip is a self contained computer, with a display and keyboard and sound. It boots directly into a Python prompt. It is not a shell based on another operating system. Every byte of RAM, every cycle of the CPU is dedicated to your code, the display and music. 
 
@@ -14,7 +14,7 @@ The hardware for revision 4 of Tulip is based on the ESP32-S3 dual core microcon
 
 The display is a 10.1" 1024 x 600 color LCD. 
 
-The synth makes sound over I2S, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
+The synth makes sound with a full featured 64-voice synthesizer over I2S, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
 
 Tulip rev 4 supports:
 - 8.5MB of RAM
@@ -36,15 +36,206 @@ Tulip's "OS" is heavily based on the great work of Micropython, which a lot of c
 Changes and features very welcome via pull request. 
 
 
+## Usage 
+
+Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with its built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
+
+### General
+
+```python
+# Use the uos module to interact with the filesystem.
+uos.listdir('.')
+uos.chdir('directory') # changes dir
+uos.unlink('filename') # deletes
+
+# Opens the Tulip editor to the given filename. 
+# Control-X exits and prompts to save if any changes. 
+# Filename will be created on save if it doesn't exist.
+tulip.edit("game.py")
+
+# Run a saved Python file. Control-C stops it
+execfile("game.py")
+
+# If you want something to run when Tulip boots, add it to boot.py
+tulip.edit("boot.py")
+
+# Returns the current held keyboard scan codes, up to 6 and the modifier mask (ctrl, shift etc)
+(modifiers, scan0, scan1... scan5) = tulip.keys()
+
+# Join a wifi network
+tulip.wifi("ssid", "password")
+
+# Get IP address or check if connected
+ip_address = tulip.ip() # returns None if not connected
+
+# Save the contents of a URL to disk (needs wifi)
+bytes_read = tulip.url_save("https://url", "filename.ext")
+
+# Get the contents of a URL to memory (needs wifi, and be careful of RAM use)
+content = tulip.url_get("https://url")
+
+# Upload a text file to github gist for sharing (needs wifi)
+gist_url = tulip.share("file.py")
+
+# Set the time from an NTP server (needs wifi)
+tulip.set_time() 
+
+# Takes a screenshot and saves to disk. The screen will blank for a moment
+# If no filename given will upload to imgur and return a URL (needs wifi)
+tulip.screenshot("screenshot.png")
+imgur_url = tulip.screenshot()
+```
+
+### Graphics system
+
+The Tulip GPU runs at a fixed FPS depending on the display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. You can set a python callback for the frame done interrupt, for use in games or animations. 
+
+```python
+# returns current GPU usage computed on the last 100 frames, as a percentage of max
+usage = tulip.gpu()
+
+# returns current FPS, based on the display clock
+fps = tulip.fps() 
+
+# Get or set the display clock in MHz. Current default is 18, but 24, 28 work, so does 12. 
+# Affects FPS and #s of sprites on screen
+clock = tulip.display_clock() 
+tulip.display_clock(mhz)
+
+# Sets a frame callback python function to run every frame 
+game_data = {"frame_count": 0, "score": 0}
+def game_loop(data):
+	update_inputs(data)
+	check_collisions(data)
+	do_animation(data)
+	update_score(data) # etc
+	game_data["frame_count"] += 1
+
+tulip.frame_callback(game_loop, game_data) # starts calling the callback every frame
+tulip.frame_callback() # disables the callback
+
+# Sets the screen brightness, from 1-9 (9 max brightness). 5 is default.
+tulip.brightness(5)
+
+```
+
+### Graphics background plane
+
+The background plane (BG) is 1280 x 750, with the visible portion 1024x600. Use the extra for hardware scrolling. The BG is drawn first, with the TFB and sprite layers drawn on top.
+
+```python
+# Set or get a pixel on the BG
+(r,g,b) = tulip.bg_pixel(x,y)
+tulip.bg_pixel(x,y,r,g,b)
+tulip.bg_pixel(x,y,pal_idx) # pal_idx is 0-255 for 8-bit RGB332 mode and 0-65535 for RGB565 mode
+
+# Convert between packed palette color and r,g,b
+pal_idx = tulip.color(r,g,b)
+(r,g,b) = tulip.rgb(pal_idx)
+
+# Set the contents of a PNG file on the background
+png_file_contents = open("file.png", "rb").read()
+tulip.bg_png(png_file_contents, x, y)
+# Or use the png filename directly 
+tulip.bg_png(png_filename, x, y)
+
+# Sets or gets a rect of the BG with bitmap data (packed RGB332 or RGB565 pal_idxes) 
+tulip.bg_bitmap(x, y, w, h, bitmap) 
+bitmap = tulip.bg_bitmap(x, y, w, h)
+
+# Sets a rect of the BG with a solid color
+tulip.bg_rect(x,y,w,h, r,g,b)
+tulip.bg_rect(x,y,w,h, pal_idx)
+
+# Clear the BG with a color or default
+tulip.bg_clear(r,g,b) 
+tulip.bg_clear(pal_idx)
+tulip.bg_clear() # uses default
+
+"""
+	Set scrolling registers for the BG. 
+	line is visible line number (0-599). 
+	x_offset sets x position pixels to offset for that line (default is 0)
+	y_offset sets y position pixels to offset for that line (default is the line number)
+	x_speed is how many pixels a frame to add to x_offset (default is 0)
+	y_speed is how many pixels a frame to add to y_offset (default is 0)
+
+	For example, to scroll the BG up two pixels a frame
+	for i in range(600):
+		tulip.bg_scroll(i, 0, i, 0, -2) 
+
+"""
+tulip.bg_scroll(line, x_offset, y_offset, x_speed, y_speed)
+tulip.bg_scroll() # resets to default
+```
+
+### Text frame buffer (TFB)
+
+The TFB is a 128x50 character plane for fast drawing of text glyphs. It supports the 16 ANSI colors and formatting. TFB is used by the text editor and Python REPL.
+
+```python
+# Sets / gets a character and/or format to the text frame buffer (TFB), 128x50 
+# Format (0x00-0xFF) includes ANSI colors (0x00-0x0F) 
+# and ANSI codes for reverse (0x80), underline (0x40), flash (0x20), bold (0x10)
+# Note that the REPL and editor will overwrite the TFB
+tulip.tfb_char(x,y, chr, [format])
+(char, format) = tulip.tfb_char(x,y)
+```
+
+### Sprites
+You can have up to 32 sprites on screen at once, and have 32KB of bitmap data to store them in. 
+
+```python
+# Load the data from a PNG file into sprite RAM at the memory position (0-32767). 
+# Returns w, h, and number of bytes used
+# Alpha is used if given
+(w, h, bytes) = tulip.sprite_png(png_data, mem_pos)
+(w, h, bytes) = tulip.sprite_png("filename.png", mem_pos)
+
+# Or load sprites in from a bitmap in memory (packed pallete indexes for RGB332 or RGB565)
+# The bitmap can be made from code you wrote, or from bg_bitmap to sample the background, or...
+bytes = tulip.sprite_bitmap(bitmap, mem_pos)
+
+# You can also read bitmap data from sprite ram if you need to modify sprites or copy them to BG
+bitmap = tulip.sprite_bitmap(mem_pos, length)
+
+# "Register" a piece of sprite RAM into a sprite handle index for later use.
+# Creates / overwrites sprite handle #12 referencing sprite data starting at mem_pos and w,h pixels
+tulip.sprite_register(12, mem_pos, w, h)  
+
+# Turn on a sprite to draw on screen
+tulip.sprite_on(12)
+
+# And off
+tulip.sprite_off(12)
+
+# Set a sprite x and y position
+tulip.sprite_move(12, x, y)
+```
+
+### Music / sound
+
+Tulip comes with a local version of the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) or the [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information. Tulip can also (TBD) control an Alles mesh over Wi-Fi. 
+
+```python
+alles.drums() # plays a test song
+alles.reset() # stops all music / sounds playing
+alles.send(osc=2, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
+```
+
+
+
 ## DIY HOWTO
 
 ### Hardware 
 
 To build your own Tulip:
-- Get a ESP32-S3 NXR8 dev board. https://www.adafruit.com/product/5336 . There's lots of variants, but you need an S3 for sure, and the "NXR8" means 8MB of SPI RAM and XMB of non-volatile flash storage (they have 8 and 32). If you get this exact one (the ESP32-S3-WROOM-1 N8R8) you can follow my pin numberings / get my breakout board. 
-- Get a RGB dot clock display. I am currently using this one https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html . You want to make sure it takes "RGB" input, usually with 8 pins each for R, G and B (and then HSYNC, VSYNC, DE). If it is not 1024x600 you'll want to make changes in `display.h`. 
-- For sound, get an I2S decoder. You can get ones that have line outs like https://www.adafruit.com/product/3678 or ones that have speaker amps built in like https://www.adafruit.com/product/3006 . I use the speaker amp model and hook it into a little 3W speaker.
-- We are working on a breakout board that plugs into the back of a ESP32S3 dev board and has a USB female A jack, pins for the display breakout https://www.adafruit.com/product/4905 and pins for the i2s amp breakout. That makes things a lot simpler. In the meantime, here's the pin connections you'll want to make:
+- Get an [ESP32-S3 NXR8 dev board.](https://www.adafruit.com/product/5336). There's lots of variants, but you need an S3 for sure, and the "NXR8" means 8MB of SPI RAM and XMB of non-volatile flash storage (they have 8 and 32). If you get this exact one (the ESP32-S3-WROOM-1 N8R8) you can follow my pin numberings / get my breakout board. 
+- Get a RGB dot clock display. [I am currently using this one](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). You want to make sure it takes "RGB" input, usually with 8 pins each for R, G and B (and then HSYNC, VSYNC, DE). If it is not 1024x600 you'll want to make changes in `display.h`. 
+- For sound, get an I2S decoder. [You can get ones that have line outs like this](https://www.adafruit.com/product/3678) or ones that [have speaker amps built in like this](https://www.adafruit.com/product/3006). I use the speaker amp model and hook it into a little 3W speaker.
+- We are working on a breakout board that plugs into the back of a ESP32S3 dev board and has a USB female A jack for the keyboard, pins for [a display breakout]( https://www.adafruit.com/product/4905) and pins for the i2s amp breakout. That makes things a lot simpler. 
+
+In the meantime, here's the pin connections you'll want to make:
 
 | Label         | ESP32 S3 Pin | Position on ESP32-S3-WROOM-1 | Connect to     |
 | ------------- | ------------ | ---------------------------- | -------------- |
