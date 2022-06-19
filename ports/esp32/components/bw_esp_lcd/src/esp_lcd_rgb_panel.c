@@ -135,20 +135,6 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
 #endif
 
     // calculate the number of DMA descriptors
-
-    // Was
-    /*
-    size_t fb_size = 2 * (rgb_panel_config->timings.h_res * rgb_panel_config->timings.v_res * rgb_panel_config->data_width / 8);
-    size_t num_dma_nodes = 600; // fb_size / DMA_DESCRIPTOR_BUFFER_MAX_SIZE;
-    //if (fb_size > num_dma_nodes * DMA_DESCRIPTOR_BUFFER_MAX_SIZE) {
-    //    num_dma_nodes++;
-    //}
-    printf("%d dma nodes. fb_size %d max size %d\n", num_dma_nodes, fb_size, DMA_DESCRIPTOR_BUFFER_MAX_SIZE);
-    */
-
-    // Now
-
-        // calculate the number of DMA descriptors
     uint8_t bpp = rgb_panel_config->data_width / 8;
     size_t fb_size = rgb_panel_config->timings.h_res * rgb_panel_config->timings.v_res * bpp;
     size_t num_dma_nodes;
@@ -160,11 +146,8 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
         //The FB needs to be an integer multiple of the size of the two bounce buffers
         //combined (so we end on the end of the second bounce buffer). Adjust the size
         //of the bounce buffers if it is not.
-        printf("fb size %d bb size px %d\n", fb_size, rgb_panel_config->bounce_buffer_size_px);
         int no_pixels=rgb_panel_config->timings.h_res * rgb_panel_config->timings.v_res;
-        printf("no pixels %d\n", no_pixels);
         bounce_bytes=rgb_panel_config->bounce_buffer_size_px * bpp;
-        printf("bytes %d\n", bounce_bytes);
         if (no_pixels % (rgb_panel_config->bounce_buffer_size_px * bpp)) {
             printf("remainder of %d %% %d left\n", no_pixels, (rgb_panel_config->bounce_buffer_size_px * bpp));
             //Search for some value that does work. Yes, this is a stupidly simple algo, but it only
@@ -180,7 +163,6 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
                 }
             }
         }
-        printf("bounce_bytes now %d\n", bounce_bytes);
         // DMA descriptors need to fit both bounce buffers
         num_dma_nodes = (bounce_bytes + DMA_DESCRIPTOR_BUFFER_MAX_SIZE - 1) / DMA_DESCRIPTOR_BUFFER_MAX_SIZE;
         num_dma_nodes = num_dma_nodes * 2; //as we have two bounce buffers
@@ -192,7 +174,6 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
     rgb_panel->num_dma_nodes = num_dma_nodes;
     rgb_panel->panel_id = -1;
     rgb_panel->bounce_buffer_size_bytes = bounce_bytes;
-    printf("bounce bytes is %d\n", bounce_bytes);
     // register to platform
     int panel_id = lcd_com_register_device(LCD_COM_DEVICE_TYPE_RGB, rgb_panel);
     ESP_GOTO_ON_FALSE(panel_id >= 0, ESP_ERR_NOT_FOUND, err, TAG, "no free rgb panel slot");
@@ -241,8 +222,6 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
         rgb_panel->psram_trans_align = psram_trans_align;
         rgb_panel->sram_trans_align = sram_trans_align;
         rgb_panel->flags.fb_in_psram = alloc_from_psram;
-    } else {
-        printf("Using your own FB buffer\n");
     }
     if (rgb_panel->bounce_buffer_size_bytes) {
         //We need to allocate bounce buffers.
@@ -340,7 +319,15 @@ static esp_err_t rgb_panel_del(esp_lcd_panel_t *panel)
     esp_intr_free(rgb_panel->intr);
     periph_module_disable(lcd_periph_signals.panels[panel_id].module);
     lcd_com_remove_device(LCD_COM_DEVICE_TYPE_RGB, rgb_panel->panel_id);
-    free(rgb_panel->fb);
+
+    if(rgb_panel->fb) 
+        free(rgb_panel->fb);
+
+    if (rgb_panel->bounce_buffer_size_bytes) {
+        free(rgb_panel->bounce_buffer[0]);
+        free(rgb_panel->bounce_buffer[1]);
+    }
+
 
     if (rgb_panel->pm_lock) {
         esp_pm_lock_release(rgb_panel->pm_lock);

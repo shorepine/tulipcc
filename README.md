@@ -31,7 +31,7 @@ Tulip rev 4 supports:
 - USB keyboard support
 - 500mA power usage including display, at medium display brightness, can last for hours on USB battery pack 
 
-Tulip's "OS" is heavily based on the great work of Micropython, which a lot of changes and additions to support the Python REPL on screen and integrated into the display and sound system. Most of our code is in the ports/esp32/ directory. 
+Tulip's "OS" is heavily based on the great work of [Micropython](https://micropython.org), which a lot of additions to support the Python REPL on screen and integrated into the display and sound system. Most of our code is in the ports/esp32/ directory. 
 
 
 ## Usage 
@@ -71,13 +71,10 @@ tulip.wifi("ssid", "password")
 ip_address = tulip.ip() # returns None if not connected
 
 # Save the contents of a URL to disk (needs wifi)
-bytes_read = tulip.url_save("https://url", "filename.ext")
+NYI bytes_read = tulip.url_save("https://url", "filename.ext")
 
 # Get the contents of a URL to memory (needs wifi, and be careful of RAM use)
-content = tulip.url_get("https://url")
-
-# Upload a text file to github gist for sharing (needs wifi)
-gist_url = tulip.share("file.py")
+NYI content = tulip.url_get("https://url")
 
 # Set the time from an NTP server (needs wifi)
 tulip.set_time() 
@@ -85,7 +82,7 @@ tulip.set_time()
 # Takes a screenshot and saves to disk. The screen will blank for a moment
 # If no filename given will upload to imgur and return a URL (needs wifi)
 tulip.screenshot("screenshot.png")
-imgur_url = tulip.screenshot()
+NYI imgur_url = tulip.screenshot()
 ```
 
 ### Graphics system
@@ -99,8 +96,13 @@ usage = tulip.gpu()
 # returns current FPS, based on the display clock
 fps = tulip.fps() 
 
-# Get or set the display clock in MHz. Current default is 18, but 24, 28 work, so does 12. 
-# Affects FPS and #s of sprites on screen
+# returns CPU usage of the display, code and audio systems -- TBD why is display different from GPU 
+NYI (display, code, audio) = tulip.cpu()
+
+# Get or set the display clock in MHz. Current default is 18.
+# Try: 10 (11.5 FPS), 12 (15.5 FPS), 14 (18.6 FPS), 18 (23.2 FPS), 22 (30.9 FPS), 28 (46.4 FPS)
+# Higher clocks mean smoother animations, but less time for the CPU to prepare things to draw
+# For heavy text things, use a lower clock like 12, for games with sprites, use 18 or 22. 
 clock = tulip.display_clock() 
 tulip.display_clock(mhz)
 
