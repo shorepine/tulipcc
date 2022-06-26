@@ -20,12 +20,12 @@ Tulip rev 4 supports:
 - 8.5MB of RAM
 - 8MB flash storage, as a filesystem accesible in Python
 - The [Alles](https://github.com/bwhitman/alles) 64-voice synthesizer engine running locally or as a control for an Alles mesh.
-- Text frame buffer layer, 128 x 50, with ANSI support for 16 colors, inverse, bold, underline
+- Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
 - A 1280x750 background frame buffer to draw arbitrary bitmaps to, which can scroll horizontally / vertically
 - WiFi, access http via Python requests or TCP / UDP sockets 
 - Adjustable display clock, defaults to 24 MHz / 30 FPS.
-- 256 colors, can be set to 65535 with a hit to FPS
+- 256 colors
 - Can load PNGs from disk to set sprites or background, or generate bitmap data from code
 - Built in code and text editor
 - USB keyboard support
@@ -71,10 +71,10 @@ tulip.wifi("ssid", "password")
 ip_address = tulip.ip() # returns None if not connected
 
 # Save the contents of a URL to disk (needs wifi)
-NYI bytes_read = tulip.url_save("https://url", "filename.ext")
+bytes_read = tulip.url_save("https://url", "filename.ext")
 
 # Get the contents of a URL to memory (needs wifi, and be careful of RAM use)
-NYI content = tulip.url_get("https://url")
+content = tulip.url_get("https://url")
 
 # Set the time from an NTP server (needs wifi)
 tulip.set_time() 
@@ -82,7 +82,11 @@ tulip.set_time()
 # Takes a screenshot and saves to disk. The screen will blank for a moment
 # If no filename given will upload to imgur and return a URL (needs wifi)
 tulip.screenshot("screenshot.png")
-NYI imgur_url = tulip.screenshot()
+imgur_url = tulip.screenshot()
+
+# Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
+# Note that Python code is bound to one core, so Python-only usage tops out at 50%.
+usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 ```
 
 ### Graphics system
@@ -95,9 +99,6 @@ usage = tulip.gpu()
 
 # returns current FPS, based on the display clock
 fps = tulip.fps() 
-
-# returns CPU usage of the display, code and audio systems -- TBD why is display different from GPU 
-NYI (display, code, audio) = tulip.cpu()
 
 # Get or set the display clock in MHz. Current default is 18.
 # Try: 10 (11.5 FPS), 12 (15.5 FPS), 14 (18.6 FPS), 18 (23.2 FPS), 22 (30.9 FPS), 28 (46.4 FPS)
@@ -131,7 +132,7 @@ The background plane (BG) is 1280 x 750, with the visible portion 1024x600. Use 
 # Set or get a pixel on the BG
 (r,g,b) = tulip.bg_pixel(x,y)
 tulip.bg_pixel(x,y,r,g,b)
-tulip.bg_pixel(x,y,pal_idx) # pal_idx is 0-255 for 8-bit RGB332 mode and 0-65535 for RGB565 mode
+tulip.bg_pixel(x,y,pal_idx) # pal_idx is 0-255 for 8-bit RGB332 mode 
 
 # Convert between packed palette color and r,g,b
 pal_idx = tulip.color(r,g,b)
@@ -146,7 +147,7 @@ tulip.bg_png(png_file_contents, x, y)
 # Or use the png filename directly 
 tulip.bg_png(png_filename, x, y)
 
-# Sets or gets a rect of the BG with bitmap data (packed RGB332 or RGB565 pal_idxes) 
+# Sets or gets a rect of the BG with bitmap data (RGB332 pal_idxes) 
 tulip.bg_bitmap(x, y, w, h, bitmap) 
 bitmap = tulip.bg_bitmap(x, y, w, h)
 
@@ -209,7 +210,7 @@ You can have up to 32 sprites on screen at once, and have 32KB of bitmap data to
 (w, h, bytes) = tulip.sprite_png(png_data, mem_pos)
 (w, h, bytes) = tulip.sprite_png("filename.png", mem_pos)
 
-# Or load sprites in from a bitmap in memory (packed pallete indexes for RGB332 or RGB565)
+# Or load sprites in from a bitmap in memory (packed pallete indexes for RGB332)
 # The bitmap can be made from code you wrote, or from bg_bitmap to sample the background
 # Use pal idx 0x55 to denote alpha when generating your own sprites 
 bytes = tulip.sprite_bitmap(bitmap, mem_pos)
@@ -237,6 +238,7 @@ Tulip comes with a local version of the Alles synthesizer, a very full featured 
 
 ```python
 alles.drums() # plays a test song
+alles.volume(4) # change volume
 alles.reset() # stops all music / sounds playing
 alles.send(osc=2, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
 ```
@@ -265,12 +267,13 @@ In the meantime, here's the pin connections you'll want to make:
 | PCLK          | 14           | L20                          | D11            |
 | B7            | 21           | R18                          | D13            |
 | B6            | 12           | L18                          | D14            |
+| B5            | GND          | R22                          | D15            | 
 | G7            | 46           | L14                          | D21            |
 | G6            | 3            | L13                          | D22            |
 | G5            | 8            | L12                          | D23            |
 | R7            | 15           | L8                           | D29            |
 | R6            | 7            | L7                           | D30            |
-| R5            | 6            | L7                           | D31            |
+| R5            | 6            | L6                           | D31            |
 | 3v3           | 3v3          | L1                           | D37            |
 | GND           | GND          | L22                          | D38            |
 | 5V            | 5V           | L21                          | D39            |
@@ -284,7 +287,6 @@ In the meantime, here's the pin connections you'll want to make:
 | Audio GND     | GND          | L22                          | Audio GND      |
 | Audio VIN     | 5V           | L21                          | Audio VIN      |
 
-(Note: if you want to try RGB565 mode, also wire B5-B0, G4-G0, R4-R0. There's enough pins on the ESP32-S3 to support this, but we default to RGB332 to save memory and CPU time. Make sure to `#define RGB565` in `display.h`. 
 
 
 ### Software
