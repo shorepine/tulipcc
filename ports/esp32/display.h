@@ -91,6 +91,7 @@ extern const unsigned char font_8x12_r[256][12];
 #define BK_LIGHT_ON_LEVEL  1
 #define DEFAULT_BRIGHTNESS 5 // 9 is max, 1 is min
 #define BK_LIGHT_OFF_LEVEL !BK_LIGHT_ON_LEVEL
+
 #define PIN_NUM_BK_LIGHT       39 // was 19, was 14 white
 #define PIN_NUM_HSYNC          40
 #define PIN_NUM_VSYNC          41
@@ -103,13 +104,16 @@ extern const unsigned char font_8x12_r[256][12];
 #define PIN_NUM_DATA0          12 //  B6, 14
 #define PIN_NUM_DATA1          21 //  B7, 13
 
-#define PIN_NUM_DATA2          8  //  G5, 23]
-#define PIN_NUM_DATA3          3  // G6, 22]
-#define PIN_NUM_DATA4          46 // G7, 21 pin 21 on the breakout... goes to G7...
+#define PIN_NUM_DATA2          8  // G5, 23
+#define PIN_NUM_DATA3          3  // G6, 22
+#define PIN_NUM_DATA4          46 // G7, 21 
 
-#define PIN_NUM_DATA5         6   // R5, 31
-#define PIN_NUM_DATA6         7   // R6, 30
-#define PIN_NUM_DATA7         15  // R7, 29
+#define PIN_NUM_DATA5          6   // R5, 31
+#define PIN_NUM_DATA6          7   // R6, 30
+#define PIN_NUM_DATA7          15  // R7, 29
+
+
+
 
 //... We keep the rest as we have to drive them low while i have it plugged in, but i'm wroking on that...
 #define PIN_NUM_DATA8          5 // B2

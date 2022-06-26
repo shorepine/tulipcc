@@ -39,7 +39,6 @@ extern "C" {
 #define I2S_SAMPLE_TYPE I2S_BITS_PER_SAMPLE_16BIT
 typedef int16_t i2s_sample_type;
 
-#define MAX_TASKS 9
 
 // Pins & buttons
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/_images/ESP32-S3_DevKitC-1_pinlayout.jpg

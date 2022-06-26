@@ -69,9 +69,6 @@
 #include "extmod/modbluetooth.h"
 #endif
 
-// MicroPython runs as a task under FreeRTOS
-//#define MP_TASK_PRIORITY        (ESP_TASK_PRIO_MIN + 1)
-//#define DISPLAY_TASK_PRIORITY (MP_TASK_PRIORITY)
 
 #define MP_TASK_PRIORITY        (ESP_TASK_PRIO_MIN + 1)
 #define DISPLAY_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 2)
@@ -82,16 +79,26 @@
 #define USB_TASK_COREID (1)
 #define ALLES_TASK_COREID (1)
 
-// was 16*1024
 #define MP_TASK_STACK_SIZE      (16 * 1024)
-#define DISP_TASK_STACK_SIZE    (8 * 1024) // think about the bounce buffers, no that's heap ??
-#define USB_TASK_STACK_SIZE    (8 * 1024) 
+#define DISP_TASK_STACK_SIZE    (8 * 1024) 
+#define USB_TASK_STACK_SIZE    (4 * 1024) 
 #define ALLES_TASK_STACK_SIZE    (4 * 1024) 
+
+
+#define MAX_TASKS 15
 
 TaskHandle_t display_main_task_handle;
 TaskHandle_t usb_main_task_handle;
 TaskHandle_t alles_main_task_handle;
+TaskHandle_t idle_task_0 = NULL;
+TaskHandle_t idle_task_1 = NULL;
 
+// For CPU usage
+unsigned long last_task_counters[MAX_TASKS];
+
+
+
+// there's also mp_main_task_handle
 
 // Set the margin for detecting stack overflow, depending on the CPU architecture.
 #if CONFIG_IDF_TARGET_ESP32C3
@@ -105,10 +112,96 @@ extern void usb_keyboard_start();
 typedef void (*esp_alloc_failed_hook_t) (size_t size, uint32_t caps, const char * function_name);
 
 void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
-    printf("alloc failed size %d caps %d function %s\n", size, caps, function_name);
+    printf("alloc failed size %d function %s caps: ", size, function_name);
+    if(caps & MALLOC_CAP_SPIRAM) printf("spiram ");
+    if(caps & MALLOC_CAP_INTERNAL) printf("internal ");
+    if(caps & MALLOC_CAP_32BIT) printf("32bit ");
+    if(caps & MALLOC_CAP_DEFAULT) printf("default ");
+    if(caps & MALLOC_CAP_IRAM_8BIT) printf("iram8bit ");
+    if(caps & MALLOC_CAP_RTCRAM) printf("rtcram ");
+    if(caps & MALLOC_CAP_8BIT) printf("8bit ");
+    if(caps & MALLOC_CAP_EXEC) printf("exec ");
+    if(caps & MALLOC_CAP_DMA) printf("dma ");
+    printf("\n");
 }
 
 
+/*
+alles_task
+disp_task
+usb_task
+Tmr Svc
+sys_evt
+ipc1
+ipc0
+esp_timer
+fill_audio_buff
+render_task0
+mp_task
+*/
+
+
+float compute_cpu_usage(uint8_t debug) {
+    TaskStatus_t *pxTaskStatusArray;
+    volatile UBaseType_t uxArraySize, x, i;
+    const char* const tasks[] = {
+         "render_task0", "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "mp_task", "disp_task", 
+         "usb_task", "alles_task", "main", "fill_audio_buff", "wifi", "idle0", "idle1", 0 
+    }; 
+    uxArraySize = uxTaskGetNumberOfTasks();
+    pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
+    uxArraySize = uxTaskGetSystemState( pxTaskStatusArray, uxArraySize, NULL );
+    if(debug) {
+        printf("%d tasks running now\n", uxArraySize);
+        for(x=0; x<uxArraySize; x++) { // for each task
+            printf("_%s_ ", pxTaskStatusArray[x].pcTaskName);
+        }
+        printf("\n");
+    }
+    
+    unsigned long counter_since_last[MAX_TASKS];
+    unsigned long ulTotalRunTime = 0;
+    unsigned long freeTime = 0;
+    TaskStatus_t xTaskDetails;
+    // We have to check for the names we want to track
+    for(i=0;i<MAX_TASKS;i++) { // for each name
+        counter_since_last[i] = 0;
+        for(x=0; x<uxArraySize; x++) { // for each task
+            if(strcmp(pxTaskStatusArray[x].pcTaskName, tasks[i])==0) {
+                counter_since_last[i] = pxTaskStatusArray[x].ulRunTimeCounter - last_task_counters[i];
+                last_task_counters[i] = pxTaskStatusArray[x].ulRunTimeCounter;
+                ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
+            }
+        }
+        
+        // Have to get these specially as the task manager calls them both "IDLE" and swaps their orderings around
+        if(strcmp("idle0", tasks[i])==0) { 
+            vTaskGetInfo(idle_task_0, &xTaskDetails, pdFALSE, eRunning);
+            counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
+            freeTime = freeTime + xTaskDetails.ulRunTimeCounter - last_task_counters[i];
+            last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
+            ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
+        }
+        if(strcmp("idle1", tasks[i])==0) { 
+            vTaskGetInfo(idle_task_1, &xTaskDetails, pdFALSE, eRunning);
+            counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
+            freeTime = freeTime + xTaskDetails.ulRunTimeCounter - last_task_counters[i];
+            last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
+            ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
+        }
+        
+
+    }
+    if(debug) {
+        printf("------ CPU usage since last call to tulip.cpu()\n");
+        for(i=0;i<MAX_TASKS;i++) {
+            printf("%-15s\t%-15ld\t\t%2.2f%%\n", tasks[i], counter_since_last[i], (float)counter_since_last[i]/ulTotalRunTime * 100.0);
+        }   
+    }
+    vPortFree(pxTaskStatusArray);
+    return 100.0 - ((float)freeTime/ulTotalRunTime * 100.0);
+
+}
 
 int vprintf_null(const char *format, va_list ap) {
     // do nothing: this is used as a log target during raw repl mode
@@ -266,21 +359,22 @@ void app_main(void) {
     // This defaults to initialising NVS.
     MICROPY_BOARD_STARTUP();
 
+    for(uint8_t i=0;i<MAX_TASKS;i++) last_task_counters[i] = 0;
+
+    // Grab the idle tasks
+    idle_task_0 = xTaskGetIdleTaskHandleForCPU(0);
+    idle_task_1 = xTaskGetIdleTaskHandleForCPU(1);
+
     printf("Starting USB keyboard host\n");
     xTaskCreatePinnedToCore(usb_keyboard_start, "usb_task", (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &usb_main_task_handle, USB_TASK_COREID);
-    //vTaskDelay(pdMS_TO_TICKS(1000));
-
 
     printf("Starting display\n");
     xTaskCreatePinnedToCore(display_run, "disp_task", (DISP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_main_task_handle, DISPLAY_TASK_COREID);
-    //vTaskDelay(pdMS_TO_TICKS(1000));
 
     printf("Starting Alles\n");
     xTaskCreatePinnedToCore(alles_start, "alles_task", (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_main_task_handle, ALLES_TASK_COREID);
-    //vTaskDelay(pdMS_TO_TICKS(1000));
 
-
-    // Create and transfer control to the MicroPython task.
+    printf("Starting MicroPython\n");
     xTaskCreatePinnedToCore(mp_task, "mp_task", (MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, MP_TASK_PRIORITY, &mp_main_task_handle, MP_TASK_COREID);
     
 }

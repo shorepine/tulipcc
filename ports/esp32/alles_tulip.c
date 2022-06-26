@@ -7,8 +7,6 @@ uint8_t board_level;
 uint8_t status;
 
 
-// For CPU usage
-unsigned long last_task_counters[MAX_TASKS];
 
 // mutex that locks writes to the delta queue
 SemaphoreHandle_t xQueueSemaphore;
@@ -196,7 +194,6 @@ amy_err_t setup_i2s(void) {
 
 void alles_start() {
 
-    for(uint8_t i=0;i<MAX_TASKS;i++) last_task_counters[i] = 0;
     check_init(&esp_event_loop_create_default, "Event");
 
     check_init(&setup_i2s, "i2s");

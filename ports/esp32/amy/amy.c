@@ -893,10 +893,8 @@ void parse_breakpoint(struct event * e, char* message, uint8_t which_bpset) {
 
 void parse_task() {
     uint8_t mode = 0;
-    int16_t client = -1;
     int64_t sync = -1;
     int8_t sync_index = -1;
-    uint8_t ipv4 = 0; 
     uint16_t start = 0;
     uint16_t c = 0;
     char * message = message_start_pointer;
@@ -933,7 +931,7 @@ void parse_task() {
             if(mode=='B') parse_breakpoint(&e, message+start, 1);
             if(mode=='b') e.feedback=atof(message+start);
             if(mode=='C') parse_breakpoint(&e, message+start, 2);
-            if(mode=='c') client = atoi(message + start); 
+            //if(mode=='c') client = atoi(message + start); 
             if(mode=='d') e.duty=atof(message + start);
             if(mode=='D') {
                 uint8_t type = atoi(message + start);
@@ -953,7 +951,7 @@ void parse_task() {
             if(mode=='O') parse_algorithm(&e, message+start);
             if(mode=='p') e.patch=atoi(message + start);
             if(mode=='P') e.phase=atof(message + start);
-            if(mode=='r') ipv4=atoi(message + start);
+            //if(mode=='r') ipv4=atoi(message + start);
             if(mode=='R') e.resonance=atof(message + start);
             if(mode=='s') sync = atol(message + start); 
             if(mode=='S') { 

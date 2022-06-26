@@ -400,7 +400,7 @@ void editor_insert_character(int c) {
 		dest_line[i] = source_line[i-1];
 	}
 	dest_line[strlen(source_line)+1] = 0;
-	free(text_lines[cursor_y + y_offset]);
+	free(text_lines[cursor_y + y_offset]); // had a crash here
 	text_lines[cursor_y + y_offset] = dest_line;
 	string_at_row(dest_line, -1, cursor_y);
 	move_cursor(cursor_x+1, cursor_y);

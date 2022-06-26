@@ -3,8 +3,6 @@
 
 # Bring in all c-defined tulip functions
 from _tulip import * 
-import network
-import time, ntptime
 
 class Colors:
     """ ANSI color codes """
@@ -49,6 +47,33 @@ class Colors:
     STRIKE = CROSSED = "\033[9m"
     RESET = DEFAULT = END = "\033[0m"
 
+def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
+    import urequests
+    return urequests.get(url, headers = headers).save(filename,mode)
+
+def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
+    import urequests
+    c = urequests.get(url, headers = headers)
+    return c
+
+def screenshot(filename=None):
+    from upysh import rm
+    if(filename is not None):
+        int_screenshot(filename)
+        return None
+    if(ip() is not None):
+        int_screenshot("_temp_ss.png")
+        import urequests
+        url = "https://api.imgur.com/3/image"
+        auth = "Client-ID 3939c2d3f5a6f83"
+        ct = "multipart/form-data;"
+        data = open("_temp_ss.png","rb").read()
+        r = urequests.post(url, data=data, headers={"authorization":auth, "content-type":ct}).content
+        rm('_temp_ss.png')
+        return "https://i.imgur.com/%s.png" % (r.decode('ascii')[15:22])
+    return "Need wi-fi on"
+
+
 def ansi_fg(pal_idx):
     # ESC[38;5;{ID}m  
     return("\033[38;5;%dm" % (pal_idx))
@@ -71,6 +96,7 @@ def rgb(px0):
     return (r,g,b)
 
 def ip():
+    import network
     sta_if = network.WLAN(network.STA_IF)
     if(sta_if.isconnected()):
         return sta_if.ifconfig()[0]
@@ -78,6 +104,7 @@ def ip():
         return None
 
 def set_time():
+    import ntptime
     if(ip() is None):
         print("Need to be on wifi")
         return
@@ -85,6 +112,7 @@ def set_time():
 
 
 def wifi(ssid, passwd, wait_timeout=10):
+    import network, time 
     sta_if = network.WLAN(network.STA_IF)
     sta_if.active(True)
     sta_if.connect(ssid, passwd)

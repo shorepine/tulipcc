@@ -53,32 +53,32 @@ void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *
   {
     /**< A new device has been enumerated and added to the USB Host Library */
     case USB_HOST_CLIENT_EVENT_NEW_DEV:
-      printf("New device address: %d", event_msg->new_dev.address);
+      printf("New device address: %d\n", event_msg->new_dev.address);
       err = usb_host_device_open(Client_Handle, event_msg->new_dev.address, &Device_Handle);
-      if (err != ESP_OK) printf("usb_host_device_open: %x", err);
+      if (err != ESP_OK) printf("usb_host_device_open: %x\n", err);
 
       usb_device_info_t dev_info;
       err = usb_host_device_info(Device_Handle, &dev_info);
-      if (err != ESP_OK) printf("usb_host_device_info: %x", err);
-      printf("speed: %d dev_addr %d vMaxPacketSize0 %d bConfigurationValue %d",
+      if (err != ESP_OK) printf("usb_host_device_info: %x\n", err);
+      printf("speed: %d dev_addr %d vMaxPacketSize0 %d bConfigurationValue %d\n",
           dev_info.speed, dev_info.dev_addr, dev_info.bMaxPacketSize0,
           dev_info.bConfigurationValue);
 
       const usb_device_desc_t *dev_desc;
       err = usb_host_get_device_descriptor(Device_Handle, &dev_desc);
-      if (err != ESP_OK) printf("usb_host_get_device_desc: %x", err);
+      if (err != ESP_OK) printf("usb_host_get_device_desc: %x\n", err);
 
       const usb_config_desc_t *config_desc;
       err = usb_host_get_active_config_descriptor(Device_Handle, &config_desc);
-      if (err != ESP_OK) printf("usb_host_get_config_desc: %x", err);
+      if (err != ESP_OK) printf("usb_host_get_config_desc: %x\n", err);
       (*_USB_host_enumerate)(config_desc);
       break;
     /**< A device opened by the client is now gone */
     case USB_HOST_CLIENT_EVENT_DEV_GONE:
-      printf("Device Gone handle: %x", (uint32_t)event_msg->dev_gone.dev_hdl);
+      printf("Device Gone handle: %x\n", (uint32_t)event_msg->dev_gone.dev_hdl);
       break;
     default:
-      printf("Unknown value %d", event_msg->event);
+      printf("Unknown value %d\n", event_msg->event);
       break;
   }
 }
@@ -91,7 +91,7 @@ void usbh_setup(usb_host_enum_cb_t enumeration_cb)
     .intr_flags = ESP_INTR_FLAG_LEVEL1,
   };
   esp_err_t err = usb_host_install(&config);
-  printf("usb_host_install: %x", err);
+  printf("usb_host_install: %x\n", err);
 
   const usb_host_client_config_t client_config = {
     .is_synchronous = false,
@@ -102,7 +102,7 @@ void usbh_setup(usb_host_enum_cb_t enumeration_cb)
     }
   };
   err = usb_host_client_register(&client_config, &Client_Handle);
-  printf("usb_host_client_register: %x", err);
+  printf("usb_host_client_register: %x\n", err);
 
   _USB_host_enumerate = enumeration_cb;
 }
@@ -114,21 +114,21 @@ void usbh_task(void)
   esp_err_t err = usb_host_lib_handle_events(HOST_EVENT_TIMEOUT, &event_flags);
   if (err == ESP_OK) {
     if (event_flags & USB_HOST_LIB_EVENT_FLAGS_NO_CLIENTS) {
-      printf("No more clients");
+      printf("No more clients\n");
     }
     if (event_flags & USB_HOST_LIB_EVENT_FLAGS_ALL_FREE) {
-      printf("No more devices");
+      printf("No more devices\n");
     }
   }
   else {
     if (err != ESP_ERR_TIMEOUT) {
-      printf("usb_host_lib_handle_events: %x flags: %x", err, event_flags);
+      printf("usb_host_lib_handle_events: %x flags: %x\n", err, event_flags);
     }
   }
 
   err = usb_host_client_handle_events(Client_Handle, CLIENT_EVENT_TIMEOUT);
   if ((err != ESP_OK) && (err != ESP_ERR_TIMEOUT)) {
-    printf("usb_host_client_handle_events: %x", err);
+    printf("usb_host_client_handle_events: %x\n", err);
   }
 }
 
@@ -247,11 +247,11 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
         decode_report(p);
       }
       else {
-        printf("Keyboard boot hid transfer too short or long");
+        printf("Keyboard boot hid transfer too short or long\n");
       }
     }
     else {
-      printf("transfer->status %d", transfer->status);
+      printf("transfer->status %d\n", transfer->status);
     }
   }
 }
@@ -264,10 +264,9 @@ void check_interface_desc_boot_keyboard(const void *p)
       (intf->bInterfaceSubClass == 1) &&
       (intf->bInterfaceProtocol == 1)) {
     isKeyboard = true;
-    printf("Claiming a boot keyboard!");
     esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle,
         intf->bInterfaceNumber, intf->bAlternateSetting);
-    if (err != ESP_OK) printf("usb_host_interface_claim failed: %x", err);
+    if (err != ESP_OK) printf("usb_host_interface_claim failed: %x\n", err);
   }
 }
 
@@ -278,14 +277,14 @@ void prepare_endpoint(const void *p)
 
   // must be interrupt for HID
   if ((endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK) != USB_BM_ATTRIBUTES_XFER_INT) {
-    printf("Not interrupt endpoint: 0x%02x", endpoint->bmAttributes);
+    printf("Not interrupt endpoint: 0x%02x\n", endpoint->bmAttributes);
     return;
   }
   if (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK) {
     err = usb_host_transfer_alloc(KEYBOARD_IN_BUFFER_SIZE, 0, &KeyboardIn);
     if (err != ESP_OK) {
       KeyboardIn = NULL;
-      printf("usb_host_transfer_alloc In fail: %x", err);
+      printf("usb_host_transfer_alloc In fail: %x\n", err);
       return;
     }
     KeyboardIn->device_handle = Device_Handle;
@@ -294,10 +293,10 @@ void prepare_endpoint(const void *p)
     KeyboardIn->context = NULL;
     isKeyboardReady = true;
     KeyboardInterval = endpoint->bInterval;
-    printf("USB boot keyboard ready");
+    printf("USB boot keyboard ready\n");
   }
   else {
-    printf("Ignoring interrupt Out endpoint");
+    printf("Ignoring interrupt Out endpoint\n");
   }
 }
 
@@ -312,12 +311,12 @@ void show_config_desc_full(const usb_config_desc_t *config_desc)
       const uint8_t bDescriptorType = *(p + 1);
       switch (bDescriptorType) {
         case USB_B_DESCRIPTOR_TYPE_DEVICE:
-          printf("USB Device Descriptor should not appear in config");
+          printf("USB Device Descriptor should not appear in config\n");
           break;
         case USB_B_DESCRIPTOR_TYPE_CONFIGURATION:
           break;
         case USB_B_DESCRIPTOR_TYPE_STRING:
-          printf("USB string desc TBD");
+          printf("USB string desc TBD\n");
           break;
         case USB_B_DESCRIPTOR_TYPE_INTERFACE:
           check_interface_desc_boot_keyboard(p);
@@ -326,24 +325,24 @@ void show_config_desc_full(const usb_config_desc_t *config_desc)
           if (isKeyboard && KeyboardIn == NULL) prepare_endpoint(p);
           break;
         case USB_B_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
-          printf("USB device qual desc TBD");
+          printf("USB device qual desc TBD\n");
           break;
         case USB_B_DESCRIPTOR_TYPE_OTHER_SPEED_CONFIGURATION:
-          printf("USB Other Speed TBD");
+          printf("USB Other Speed TBD\n");
           break;
         case USB_B_DESCRIPTOR_TYPE_INTERFACE_POWER:
-          printf("USB Interface Power TBD");
+          printf("USB Interface Power TBD\n");
           break;
         case 0x21:
           // HID 
           break;
         default:
-          printf("Unknown USB Descriptor Type: 0x%x", bDescriptorType);
+          printf("Unknown USB Descriptor Type: 0x%x\n", bDescriptorType);
           break;
       }
     }
     else {
-      printf("USB Descriptor invalid");
+      printf("USB Descriptor invalid\n");
       return;
     }
   }
@@ -360,7 +359,7 @@ void usb_keyboard_start()
         KeyboardIn->num_bytes = 8;
         esp_err_t err = usb_host_transfer_submit(KeyboardIn);
         if (err != ESP_OK) {
-          printf("usb_host_transfer_submit In fail: %x", err);
+          printf("usb_host_transfer_submit In fail: %x\n", err);
         }
         isKeyboardPolling = true;
         KeyboardTimer = 0;
