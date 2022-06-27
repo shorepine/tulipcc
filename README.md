@@ -12,7 +12,7 @@ The hardware for revision 4 of Tulip is based on the ESP32-S3 dual core microcon
 
 The display is a 10.1" 1024 x 600 RGB dot clock color LCD. 
 
-The synth makes sound with a full featured 64-voice synthesizer over I2S, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
+Tulip's sound system is a full featured 32-voice synthesizer, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests for the base system.
 
@@ -126,7 +126,7 @@ tulip.brightness(5)
 
 ### Graphics background plane
 
-The background plane (BG) is 1280 x 750, with the visible portion 1024x600. Use the extra for hardware scrolling. The BG is drawn first, with the TFB and sprite layers drawn on top.
+The background plane (BG) is 1280 x 750, with the visible portion 1024x600. Use the extra for hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
 
 ```python
 # Set or get a pixel on the BG
@@ -147,6 +147,9 @@ tulip.bg_png(png_file_contents, x, y)
 # Or use the png filename directly 
 tulip.bg_png(png_filename, x, y)
 
+# Copy bitmap area from x,y of width,height to x1, y1
+tulip.blit(x,y,w,h,x1, y1)
+
 # Sets or gets a rect of the BG with bitmap data (RGB332 pal_idxes) 
 tulip.bg_bitmap(x, y, w, h, bitmap) 
 bitmap = tulip.bg_bitmap(x, y, w, h)
@@ -161,16 +164,16 @@ tulip.bg_clear(pal_idx)
 tulip.bg_clear() # uses default
 
 """
-	Set scrolling registers for the BG. 
-	line is visible line number (0-599). 
-	x_offset sets x position pixels to offset for that line (default is 0)
-	y_offset sets y position pixels to offset for that line (default is the line number)
-	x_speed is how many pixels a frame to add to x_offset (default is 0)
-	y_speed is how many pixels a frame to add to y_offset (default is 0)
+  Set scrolling registers for the BG. 
+  line is visible line number (0-599). 
+  x_offset sets x position pixels to offset for that line (default is 0)
+  y_offset sets y position pixels to offset for that line (default is the line number)
+  x_speed is how many pixels a frame to add to x_offset (default is 0)
+  y_speed is how many pixels a frame to add to y_offset (default is 0)
 
-	For example, to scroll the BG up two pixels a frame
-	for i in range(600):
-		tulip.bg_scroll(i, 0, i, 0, -2) 
+  For example, to scroll the BG up two pixels a frame
+  for i in range(600):
+    tulip.bg_scroll(i, 0, i, 0, -2) 
 
 """
 tulip.bg_scroll(line, x_offset, y_offset, x_speed, y_speed)
@@ -196,7 +199,7 @@ print(tulip.Colors.LIGHT_RED + "this is red " + tulip.Colors.GREEN + tulip.Color
 # To reset ANSI formatting
 print(tulip.Colors.DEFAULT)
 
-# Tulip REPL supports ANSI 256 color modes as well,
+# Tulip REPL supports ANSI 256 color modes as well
 print(tulip.ansi_fg(56))
 ```
 
