@@ -12,6 +12,17 @@ void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *b = (px0 << 6) & 0xc0;
 }
 
+// RRRGGGBB , but expand any non-zero colors with 1111s (won't matter for display as there's no wires there)
+void unpack_rgb_332_wide(uint8_t px0, uint16_t *r, uint16_t *g, uint16_t *b) {
+    *r = (px0 & 0xe0);
+    if(*r != 0) *r |= 0x1f;
+    *g = ((px0 << 3) & 0xe0);
+    if(*g != 0) *g |= 0x1f;
+    *b = ((px0 << 6) & 0xc0);
+    if(*b != 0) *b |= 0x3f;
+}
+
+
 // Given a single uint (0-255 for RGB332, 0-65535 for RGB565), return r, g, b
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b) {
     unpack_rgb_332(pal_idx & 0xff, r, g, b);
@@ -368,6 +379,9 @@ void display_screenshot(char * screenshot_fn) {
     display_start();
 }
 
+void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx) {
+    bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL] = pal_idx;    
+}
 
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
     bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL] = color_332(r,g,b);
@@ -758,14 +772,13 @@ void display_run(void) {
             reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);
             reported_gpu_usage = ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))))*100.0;
             if(desync) {
-                printf("Desync warning: past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). %d desyncs [bc %d]\n", 
+                printf("Desync warning: past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). bounce_count %d\n", 
                     loop_count,
                     reported_fps, 
                     free_time / loop_count,
                     bounce_time / bounce_count,
                     reported_gpu_usage,
                     (int) (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))),
-                    desync,
                     bounce_count
                 );
             }

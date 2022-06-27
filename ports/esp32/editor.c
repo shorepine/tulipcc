@@ -2,18 +2,42 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdarg.h>
-#ifdef LOCALDEV
+
+#define EDITOR_COLOR_FG 255
+#define EDITOR_COLOR_COMMENT 229
+#define EDITOR_COLOR_STRING 249
+#define EDITOR_COLOR_NUMBER 175
+#define EDITOR_COLOR_OPERATOR 240
+#define EDITOR_COLOR_SELECTION_BG 72
+#define EDITOR_COLOR_FUNCTION 188
+#define EDITOR_COLOR_BG 36
+
+
+
+#ifdef LOCALDEV // gcc -g -Wall -DLOCALDEV editor.c -o edit -lcurses
 #include <ncurses.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#define tfb_bg_pal_color 0
-#define tfb_fg_pal_color 0
+
 
 #else // esp32
 #include "tulip_helpers.h"
 #include "display.h"
 #endif
+
+
+
+/* palette from tulip editor v1 with tulip4 pal idxes
+255    {248, 248, 242}, //0 foregound, selection FG, class name, code
+229    {249, 38, 114},  //1 findscope, comments
+249    {230, 220, 109}, //2 monokai sampled string text
+175    {175, 125, 250}, //3 monokai sampled number text
+240    {253, 151, 31},  //4 deletion indication, operator
+72    {73, 72, 62},    //5 selection BG
+188    {166, 226, 46},  //6 function name, strings
+36    {39, 40, 34},    //7 BG
+*/
 
 // shared vars for editor
 char ** text_lines;
@@ -31,8 +55,23 @@ uint8_t quit_flag = 0;
 uint16_t y_offset = 0;
 uint16_t cursor_x = 0;
 uint16_t cursor_y = 0;
-#define EDITOR_TAB_SPACES 2
+#define EDITOR_TAB_SPACES 4
 #define V_SCROLL_MARGIN 6
+
+
+// Send debug out to uart on esp32 and a log file on local 
+void dbg(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+#ifdef LOCALDEV
+    vfprintf(elog, fmt, args);
+    fflush(elog);
+#else
+    vfprintf(stderr, fmt, args);
+#endif
+    va_end(args);
+}
+
 
 
 // for local dev of the editor
@@ -45,7 +84,6 @@ uint8_t TFBfg[TFB_ROWS*TFB_COLS];
 uint8_t TFBbg[TFB_ROWS*TFB_COLS];
 uint16_t tfb_y_row =0;
 uint16_t tfb_x_col = 0;
-uint8_t tfb_pal_color = 15; // ANSI_BOLD_WHITE
 #define FORMAT_INVERSE 0x80 
 #define FORMAT_UNDERLINE 0x40
 #define FORMAT_FLASH 0x20
@@ -90,6 +128,20 @@ uint32_t read_file(const char * filename, uint8_t * data, int32_t file_size, uin
 	return s;
 }
 
+
+
+// RRRGGGBB
+void unpack_rgb_332_wide(uint8_t px0, uint16_t *r, uint16_t *g, uint16_t *b) {
+    *r = (px0 & 0xe0);
+    if(*r != 0) *r |= 0x1f;
+    *g = ((px0 << 3) & 0xe0);
+    if(*g != 0) *g |= 0x1f;
+    *b = ((px0 << 6) & 0xc0);
+    if(*b != 0) *b |= 0x3f;
+
+}
+
+
 void setup_display() {
 	initscr();
 	raw();
@@ -99,6 +151,15 @@ void setup_display() {
 	memset(TFBf, 0, TFB_ROWS*TFB_COLS);
 	memset(TFBfg, 0, TFB_ROWS*TFB_COLS);
 	memset(TFBbg, 0, TFB_ROWS*TFB_COLS);
+    start_color();
+    for(uint16_t i=0;i<256;i++) {
+        // convert tulip pal idx to weird ncurses color space
+        uint16_t r,g,b;
+        unpack_rgb_332_wide(i, &r, &g, &b);
+        r=r*3.9; g=g*3.9; b=b*3.9;
+        init_color(i, r, g, b);
+        init_pair(i, i, EDITOR_COLOR_BG);
+    }
 }
 
 void local_draw_tfb() {
@@ -107,16 +168,24 @@ void local_draw_tfb() {
 		move(y,0);
 		clrtoeol();
 		for(uint8_t x=0;x<TFB_COLS;x++) {
-			if(TFB[y*TFB_COLS+x] > 31) {
-				if(TFBf[y*TFB_COLS+x] & FORMAT_INVERSE) {
-					attron(A_REVERSE);
-				}
-				mvaddch(y, x, TFB[y*TFB_COLS + x]);
-				if(TFBf[y*TFB_COLS+x] & FORMAT_INVERSE) {
-					attroff(A_REVERSE);
-				}
-
+			if(TFBf[y*TFB_COLS+x] & FORMAT_INVERSE) {
+				attron(A_REVERSE);
 			}
+            if(TFBfg[y*TFB_COLS+x] > 0) {
+                attron(COLOR_PAIR(TFBfg[y*TFB_COLS+x]));
+            } 
+            if(TFB[y*TFB_COLS + x]> 31) { 
+                mvaddch(y, x, TFB[y*TFB_COLS + x]); 
+            }  else {
+                mvaddch(y, x, 32);                     
+            }
+			if(TFBf[y*TFB_COLS+x] & FORMAT_INVERSE) {
+				attroff(A_REVERSE);
+			}
+            if(TFBfg[y*TFB_COLS+x] > 0) {
+                attroff(COLOR_PAIR(TFBfg[y*TFB_COLS+x]));
+            }
+
 		}
 	}
 	move(cursor_y,cursor_x);
@@ -141,17 +210,47 @@ void editor_free(void* ptr) {
     free(ptr);
 }
 
-// Send debug out to uart on esp32 and a log file on local 
-void dbg(const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-#ifdef LOCALDEV
-    vfprintf(elog, fmt, args);
-    fflush(elog);
-#else
-    vfprintf(stderr, fmt, args);
-#endif
-    va_end(args);
+
+
+void editor_highlight_at_row(uint16_t y) {
+    // {"False", "None", "True", "and", "as", "assert", "break", "class", "continue", "def", 
+    //  "del", "elif", "else", "except", "finally", "for", "from", "global", "if", "import", "in", "is", "lambda", "nonlocal", 
+    //  "not", "or", "pass", "raise", "return", "try", "while", "with", "yield"};
+    const char operators[]= ":;-/=+-()[]{}\'\".,\\|!@#$%^&*<>?"; // this + space is delims
+
+    uint8_t state = 0;
+    // TODO: keywords, function calls a = dog(), etc, kwargs?
+    for(int i=0;i<strlen(text_lines[y+y_offset]);i++) {
+        char c = text_lines[y+y_offset][i];
+        //dbg("char %c state %d row %d i %d\n", c, state, y, i);
+        if(!state) { 
+            if(c==34 || c==39) {
+                state = 1;
+                TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_STRING;
+            } else if (c==39) {
+                state = 2;
+                TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_STRING;
+            } else if(c==35) {
+                state = 3;
+                TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_COMMENT;
+            } else if(c>='0' && c<='9') {
+                TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_NUMBER;
+            } else {
+                TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_FG; 
+            }
+        } else {
+            // We are in a state
+            if(state == 1) {
+                if(c==34) state = 0;
+                TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_STRING;
+            } else if(state ==2) {
+                if(c==39) state = 0;
+                TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_STRING;
+            } else if(state == 3) {
+                TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_COMMENT;
+            } 
+        }
+    }
 }
 
 void clear_row(uint16_t y) {
@@ -166,8 +265,10 @@ void format_at_row(uint8_t format, int16_t len, uint16_t y) {
 		if(len <0) len = TFB_COLS;
 		for(uint16_t i=0;i<len;i++) {
 			TFBf[y*TFB_COLS+i] = format;
-			TFBfg[y*TFB_COLS+i] = tfb_fg_pal_color;
-			TFBbg[y*TFB_COLS+i] = tfb_bg_pal_color;
+			TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_FG;
+			TFBbg[y*TFB_COLS+i] = EDITOR_COLOR_BG;
+            // Fill in spaces if not given, for screen-wide banners
+            if(TFB[y*TFB_COLS+i]==0) TFB[y*TFB_COLS+i] = 32;
 		}
 	}
 }
@@ -177,12 +278,13 @@ void string_at_row(char * s, int16_t len, uint16_t y) {
 		for(uint16_t i=0;i<len;i++) {
 			TFB[y*TFB_COLS+i] = s[i];
 			TFBf[y*TFB_COLS+i] = 0; ;
-			TFBfg[y*TFB_COLS+i] = tfb_fg_pal_color;
-			TFBbg[y*TFB_COLS+i] = tfb_bg_pal_color;
+			TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_FG;
+			TFBbg[y*TFB_COLS+i] = EDITOR_COLOR_BG;
 		}
 		for(uint16_t i=len;i<TFB_COLS;i++) {
 			TFB[y*TFB_COLS+i] = 0;
 		}
+        if(y!=TFB_ROWS-1)editor_highlight_at_row(y);
 #ifdef LOCALDEV
 		local_draw_tfb();
 #endif
@@ -240,16 +342,14 @@ void move_cursor(int16_t x, int16_t y) {
 	}
 	// Put in new cursor 
     TFBf[cursor_y*TFB_COLS+cursor_x] = FORMAT_INVERSE|FORMAT_FLASH;
-    TFBfg[cursor_y*TFB_COLS+cursor_x] = tfb_fg_pal_color;
-    TFBbg[cursor_y*TFB_COLS+cursor_x] = tfb_bg_pal_color;
 
     if(TFB[cursor_y*TFB_COLS+cursor_x]==0) TFB[cursor_y*TFB_COLS+cursor_x] = 32;
 
 	// Update status bar
 	char status[TFB_COLS];
 	// TODO, padding better 
-	float percent = ((float)(cursor_y+y_offset) / (float)lines) * 100.0;
-	sprintf(status, "Tulip Editor v4.1      Row %04d / %04d [%02.2f%%] Col %3d  File: %s ", cursor_y+y_offset, lines,  percent, cursor_x, fn);
+	float percent = ((float)(cursor_y+y_offset+1) / (float)lines) * 100.0;
+	sprintf(status, "Tulip Editor v4.1      Row %04d / %04d [%02.2f%%] Col %3d  File: %s ", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
 	string_at_row(status, strlen(status), TFB_ROWS-1);
 	format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
 
@@ -290,14 +390,24 @@ void save_tfb() {
 		saved_tfbbg[y]= TFBbg[y];
 		TFB[y] = 0;
 		TFBf[y] = 0;
-		TFBfg[y] = tfb_fg_pal_color;
-		TFBbg[y] = tfb_bg_pal_color;
+		TFBfg[y] = EDITOR_COLOR_FG;
+		TFBbg[y] = EDITOR_COLOR_BG;
 	}
 	saved_tfb_y = tfb_y_row;
 	saved_tfb_x = tfb_x_col;
 	tfb_y_row = 0;
 	tfb_x_col = 0;
+#ifdef LOCALDEV
+    // nothing?
+#else
+    for(uint16_t y=0;y<V_RES+OFFSCREEN_Y_PX;y++) {
+        for(uint16_t x=0;x<H_RES+OFFSCREEN_X_PX;x++) {
+            display_set_bg_pixel_pal(x,y,EDITOR_COLOR_BG);
+        }
+    }
+#endif
 }
+
 void restore_tfb() {
 	for(uint16_t y=0;y<TFB_ROWS*TFB_COLS;y++) {
 		TFB[y] = saved_tfb[y];
@@ -311,6 +421,15 @@ void restore_tfb() {
 	editor_free(saved_tfbbg);
 	tfb_y_row = saved_tfb_y;
 	tfb_x_col = saved_tfb_x;
+#ifdef LOCALDEV
+    // nothing?
+#else
+    for(uint16_t y=0;y<V_RES+OFFSCREEN_Y_PX;y++) {
+        for(uint16_t x=0;x<H_RES+OFFSCREEN_X_PX;x++) {
+            display_set_bg_pixel_pal(x,y,bg_pal_color);
+        }
+    }
+#endif
 }
 
 
@@ -434,11 +553,29 @@ void editor_backspace() {
 	dirty = 1;
 	char* cur_line = text_lines[cursor_y + y_offset];
 	if(cursor_x > 0) {
-		for(uint16_t i=cursor_x-1;i<strlen(cur_line);i++) {
-			cur_line[i] = cur_line[i + 1];
-		}
-		string_at_row(cur_line, -1, cursor_y);
-		move_cursor(cursor_x-1, cursor_y);
+        // Check if there's a tab / N spaces before us
+        uint8_t no_tab = 1;
+        uint16_t space_count = 0;
+        if(cursor_x>=EDITOR_TAB_SPACES) {
+            no_tab = 0;
+            for(int16_t i=cursor_x-1;i>=0;i--) {
+                if(cur_line[i] != 32) { no_tab = 1; } else { space_count++; }
+            }
+        }
+        if(!no_tab && (space_count % EDITOR_TAB_SPACES == 0)) {
+            // delete N characters
+            for(uint16_t i=cursor_x-EDITOR_TAB_SPACES;i<strlen(cur_line);i++) {
+                cur_line[i] = cur_line[i + EDITOR_TAB_SPACES];
+            }
+            string_at_row(cur_line, -1, cursor_y);
+            move_cursor(cursor_x-EDITOR_TAB_SPACES, cursor_y);
+        } else {
+    		for(uint16_t i=cursor_x-1;i<strlen(cur_line);i++) {
+	       		cur_line[i] = cur_line[i + 1];
+    		}
+            string_at_row(cur_line, -1, cursor_y);
+            move_cursor(cursor_x-1, cursor_y);
+        }
 	} else {
 		// hard mode, move up
 		if(cursor_y + y_offset > 0) {
@@ -486,20 +623,43 @@ void editor_crlf() {
 	for(uint16_t i=0;i<cursor_y+y_offset+1;i++) {
 		dest_text_lines[i] = text_lines[i];
 	}
+    // Count tabs at the beginning of this line and add them to the line below
+    uint16_t space_count = 0;
+    for(uint16_t i=0;i<strlen(cur_line);i++) {
+        if(cur_line[i]==32) {
+            space_count++;
+        } else {
+            i = strlen(cur_line) + 1; // end loop
+        }
+    }
+    uint16_t tab_count = space_count / EDITOR_TAB_SPACES;
+
 	if(cursor_x == strlen(cur_line)) {
 		// We are at the end of the line, so just make an empty line underneath and move on
-		dest_text_lines[cursor_y+y_offset+1] = (char*)editor_malloc(1);
-		dest_text_lines[cursor_y+y_offset+1][0] = 0;
+		dest_text_lines[cursor_y+y_offset+1] = (char*)editor_malloc(1+(tab_count*EDITOR_TAB_SPACES));
+        uint16_t c =0;
+        for(uint16_t i=0;i<tab_count;i++) {
+            for(uint16_t j=0;j<EDITOR_TAB_SPACES;j++) {
+                dest_text_lines[cursor_y+y_offset+1][c++] = 32; 
+            }
+        }
+		dest_text_lines[cursor_y+y_offset+1][c] = 0;
 	} else {
 		// We are somewhere in the middle of the line, so split and copy
 		// Get the text on cur line that has to go below
 		uint16_t chars_to_copy = strlen(cur_line) - cursor_x;
-		dest_text_lines[cursor_y+y_offset+1] = (char*)editor_malloc(chars_to_copy+1);
+		dest_text_lines[cursor_y+y_offset+1] = (char*)editor_malloc(chars_to_copy+1+(tab_count*EDITOR_TAB_SPACES));
 		uint16_t i;
+        uint16_t c =0;
+        for(uint16_t i=0;i<tab_count;i++) {
+            for(uint16_t j=0;j<EDITOR_TAB_SPACES;j++) {
+                dest_text_lines[cursor_y+y_offset+1][c++] = 32; 
+            }
+        }        
 		for(i=0;i<chars_to_copy;i++) {
-			dest_text_lines[cursor_y+y_offset+1][i] = dest_text_lines[cursor_y+y_offset][cursor_x+i];
+			dest_text_lines[cursor_y+y_offset+1][c++] = dest_text_lines[cursor_y+y_offset][cursor_x+i];
 		}
-		dest_text_lines[cursor_y+y_offset+1][i] = 0;
+		dest_text_lines[cursor_y+y_offset+1][c] = 0;
 		// Chop the old line, no need to realloc, i think we're ok
 		dest_text_lines[cursor_y+y_offset][cursor_x] = 0;
 	}
@@ -514,7 +674,7 @@ void editor_crlf() {
 	// Redraw everything from the split (going down, as scroll)
 	paint_tfb(cursor_y);
 	// Update cursor
-	move_cursor(0, cursor_y +1);
+	move_cursor(tab_count*EDITOR_TAB_SPACES, cursor_y +1);
 }
 
 
@@ -541,8 +701,20 @@ void editor_down() {
 
 void editor_right() {
     // easiest, just go right
+    uint8_t tab = 0;
     if(cursor_x < strlen(text_lines[cursor_y + y_offset])) {
-        move_cursor(cursor_x + 1, cursor_y);
+        // count spaces ahead , see there is EDITOR_TAB_SPACES in a row, move that many instead
+        if(cursor_x + EDITOR_TAB_SPACES < strlen(text_lines[cursor_y + y_offset])) {
+            tab = 1;
+            for(uint16_t i=cursor_x+1;i<cursor_x+EDITOR_TAB_SPACES;i++) {
+                if(text_lines[cursor_y+y_offset][i] != 32) tab = 0;
+            }
+        }
+        if(tab) {
+            move_cursor(cursor_x + EDITOR_TAB_SPACES, cursor_y);
+        } else {
+            move_cursor(cursor_x + 1, cursor_y);
+        }
     } else {
         editor_down();
         editor_linestart();
@@ -550,8 +722,20 @@ void editor_right() {
 }
 void editor_left() {
     // Easiest, if x is not zero, just move left
+    uint8_t tab = 0;
     if(cursor_x > 0) {
-        move_cursor(cursor_x-1, cursor_y);
+        // count spaces behind , see there is EDITOR_TAB_SPACES in a row, move that many instead
+        if(cursor_x - EDITOR_TAB_SPACES >= 0) {
+            tab = 1;
+            for(int16_t i=cursor_x-1;i>=cursor_x-EDITOR_TAB_SPACES;i--) {
+                if(text_lines[cursor_y+y_offset][i] != 32) tab = 0;
+            }
+        }
+        if(tab) {
+            move_cursor(cursor_x - EDITOR_TAB_SPACES, cursor_y);
+        } else {
+            move_cursor(cursor_x - 1, cursor_y);
+        }
     } else {
         // If x is at the left, go up a line
         editor_up();

@@ -49,7 +49,9 @@ static const uint8_t ansi_pal[256] = {
 182, 219, 219, 219, 255, 255
 };
 
+void display_reset_sprites();
 
+void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx);
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b);
 void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_t *b);
 

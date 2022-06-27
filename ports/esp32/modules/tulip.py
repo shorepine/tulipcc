@@ -89,6 +89,7 @@ def color(r,g,b):
     ret |= (b&0xc0) >> 6
     return (ret & 0xff)
 
+# TODO, the wide version too??
 def rgb(px0):
     r = px0 & 0xe0;
     g = (px0 << 3) & 0xe0
