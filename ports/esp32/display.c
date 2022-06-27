@@ -240,7 +240,7 @@ void display_set_clock(uint8_t mhz) {
         display_mhz = mhz;
         display_stop();
         panel_config.timings.pclk_hz = mhz*1000*1000;
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        //vTaskDelay(pdMS_TO_TICKS(1000));
         display_start();
     }
 }
@@ -279,6 +279,15 @@ void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, u
     }
 }
 
+void display_bg_bitmap_blit(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1) {
+    for (uint16_t j = y1; j < y1+h; j++) {
+        for (uint16_t i = x1; i < x1+w; i++) {
+            uint16_t src_y = y+(j-y1);
+            uint16_t src_x = x+(i-x1);
+            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
+        }
+    }    
+}
 
 
 

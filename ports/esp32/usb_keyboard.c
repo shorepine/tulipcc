@@ -42,7 +42,7 @@ uint8_t KeyboardInterval;
 bool isKeyboardPolling = false;
 int64_t KeyboardTimer=0;
 
-const size_t KEYBOARD_IN_BUFFER_SIZE = 8;
+const size_t KEYBOARD_IN_BUFFER_SIZE = 16; // was 8
 usb_transfer_t *KeyboardIn = NULL;
 
 
@@ -226,7 +226,9 @@ void decode_report(uint8_t *p) {
 		        		if(c==260) tx_char('D');
 		        		if(c==261) tx_char('C');
 		        		if(c==262) { tx_char('3'); tx_char(126); }
-		        	} else {
+		        	} else if (c==mp_interrupt_char) {
+                        mp_sched_keyboard_interrupt();
+                    } else {
 		        		tx_char(c);
 		        	}
 				}
@@ -242,7 +244,12 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
   if (Device_Handle == transfer->device_handle) {
     isKeyboardPolling = false;
     if (transfer->status == 0) {
-      if (transfer->actual_num_bytes == 8) {
+        //printf("nb %d\n", transfer->actual_num_bytes);
+      if (transfer->actual_num_bytes == 8 || transfer->actual_num_bytes == 16) {
+        //for(uint8_t j=0;j<transfer->actual_num_bytes;j++) {
+        //    printf("%02x ", transfer->data_buffer[j]);
+        //}
+        //printf("\n");
         uint8_t *const p = transfer->data_buffer;
         decode_report(p);
       }
@@ -356,7 +363,7 @@ void usb_keyboard_start()
 
       KeyboardTimer = esp_timer_get_time() / 1000;
       if (isKeyboardReady && !isKeyboardPolling && (KeyboardTimer > KeyboardInterval)) {
-        KeyboardIn->num_bytes = 8;
+        KeyboardIn->num_bytes = 16; // was 8 -- need to check this works, maybe try both? 
         esp_err_t err = usb_host_transfer_submit(KeyboardIn);
         if (err != ESP_OK) {
           printf("usb_host_transfer_submit In fail: %x\n", err);

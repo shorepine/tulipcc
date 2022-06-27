@@ -7,6 +7,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#define tfb_bg_pal_color 0
+#define tfb_fg_pal_color 0
+
 #else // esp32
 #include "tulip_helpers.h"
 #include "display.h"
@@ -28,7 +31,7 @@ uint8_t quit_flag = 0;
 uint16_t y_offset = 0;
 uint16_t cursor_x = 0;
 uint16_t cursor_y = 0;
-#define EDITOR_TAB_SPACES 4
+#define EDITOR_TAB_SPACES 2
 #define V_SCROLL_MARGIN 6
 
 
@@ -121,12 +124,21 @@ void local_draw_tfb() {
 }
 #endif
 
+int mc=0;
+int fc=0;
 void * editor_malloc(uint32_t size) {
+    mc++;
 #ifdef LOCALDEV
 	return malloc(size);
 #else
 	return heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 #endif
+}
+
+
+void editor_free(void* ptr) {
+    fc++;
+    free(ptr);
 }
 
 // Send debug out to uart on esp32 and a log file on local 
@@ -293,10 +305,10 @@ void restore_tfb() {
 		TFBfg[y] = saved_tfbfg[y];
 		TFBbg[y] = saved_tfbbg[y];
 	}
-	free(saved_tfb);
-	free(saved_tfbf);
-	free(saved_tfbfg);
-	free(saved_tfbbg);
+	editor_free(saved_tfb);
+	editor_free(saved_tfbf);
+	editor_free(saved_tfbfg);
+	editor_free(saved_tfbbg);
 	tfb_y_row = saved_tfb_y;
 	tfb_x_col = saved_tfb_x;
 }
@@ -311,7 +323,7 @@ void open_file(const char *filename) {
 	dbg("opening file %s\n", filename);
 	int32_t fs = file_size(filename);
 	if(fs > 0) {
-		char * text = (char*) editor_malloc(fs+2);
+		char * text = (char*) editor_malloc(fs+2); 
 		uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
 		text[fs-1] = 0;
 		if(bytes_read) lines =1; // at least one line
@@ -333,9 +345,11 @@ void open_file(const char *filename) {
 				c++;
 			}
 		}
+        dbg("Adding end line at row %d\n", c);
 		text_lines[c] = (char*)editor_malloc(1); 
 		text_lines[c][0] = 0;
-		free(text);
+        lines++;
+		editor_free(text);
 		dbg("File read with %d lines.\n", lines);
 	} else {
 		dbg("Opening new file %s for writing\n", fn);
@@ -372,19 +386,21 @@ void editor_quit() {
 			}
 			write_file(fn, (uint8_t*)text, c, 0);
 			dbg("saved!\n");
+            editor_free(text);
 		}
 
 	}
 	restore_tfb();
 	for(uint16_t i=0;i<lines;i++) {
-		// TBD , check that this frees all the alloc'd lines
-		free(text_lines[i]);
+		editor_free(text_lines[i]);
 	}
-	free(text_lines);
-	if(yank) free(yank);
+	editor_free(text_lines);
+	if(yank) editor_free(yank);
+    yank = 0;
 #ifdef LOCALDEV
 	endwin();
 #endif
+    printf("mc %d fc %d\n", mc, fc);
 }
 
 
@@ -400,7 +416,7 @@ void editor_insert_character(int c) {
 		dest_line[i] = source_line[i-1];
 	}
 	dest_line[strlen(source_line)+1] = 0;
-	free(text_lines[cursor_y + y_offset]); // had a crash here
+	editor_free(source_line); // had a crash here
 	text_lines[cursor_y + y_offset] = dest_line;
 	string_at_row(dest_line, -1, cursor_y);
 	move_cursor(cursor_x+1, cursor_y);
@@ -428,21 +444,28 @@ void editor_backspace() {
 		if(cursor_y + y_offset > 0) {
 			// we will have 1 less line when this is done
 			char *above_line = text_lines[cursor_y+y_offset-1];
+            char *old_line = text_lines[cursor_y+y_offset];
 			char *new_line = (char*)editor_malloc(strlen(above_line) + strlen(cur_line) + 1);
 			uint16_t c = 0;
 			for(uint16_t i=0;i<strlen(above_line);i++) new_line[c++] = above_line[i];
 			uint16_t split = c;
 			for(uint16_t i=0;i<strlen(cur_line);i++) new_line[c++] = cur_line[i];
 			new_line[c] = 0;
-			free(text_lines[cursor_y+y_offset-1]);
+			editor_free(above_line);
 			text_lines[cursor_y+y_offset-1] = new_line;
 			lines--;
 
-			// Don't need to realloc the line ptrs i don't think (???)
-			uint16_t editor_line;
-			for(editor_line=cursor_y+y_offset;editor_line<lines;editor_line++) {
-				text_lines[editor_line] = text_lines[editor_line+1];
+
+            char** dest_text_lines = (char**)editor_malloc(sizeof(char*) * (lines));
+            for(uint16_t i=0;i<cursor_y+y_offset;i++) {
+                dest_text_lines[i] = text_lines[i];
+            }
+			for(uint16_t i=cursor_y+y_offset;i<lines;i++) {
+				dest_text_lines[i] = text_lines[i+1];
 			}
+            editor_free(text_lines);
+            editor_free(old_line);
+            text_lines = dest_text_lines;
 			paint_tfb(cursor_y-1);
 
 			// Move the cursor up at the split
@@ -485,7 +508,7 @@ void editor_crlf() {
 		dest_text_lines[i] = text_lines[i-1];
 	}
 	lines++;
-	free(text_lines);		
+	editor_free(text_lines);		
 	text_lines = dest_text_lines;
 
 	// Redraw everything from the split (going down, as scroll)
@@ -495,22 +518,70 @@ void editor_crlf() {
 }
 
 
+
+
+void editor_up() {
+    if(cursor_y+y_offset > 0) {
+        if(cursor_x < strlen(text_lines[cursor_y-1 + y_offset])) {
+            move_cursor(cursor_x, cursor_y-1);
+        } else {
+            move_cursor(strlen(text_lines[cursor_y-1 + y_offset]), cursor_y-1);
+        }
+    }
+}
+void editor_down() {
+    if(cursor_y + y_offset < lines-1) {
+        if(cursor_x < strlen(text_lines[cursor_y+1+y_offset])) {
+            move_cursor(cursor_x, cursor_y+1);
+        } else {
+            move_cursor(strlen(text_lines[cursor_y+1+y_offset]), cursor_y+1);
+        }
+    } 
+}
+
+void editor_right() {
+    // easiest, just go right
+    if(cursor_x < strlen(text_lines[cursor_y + y_offset])) {
+        move_cursor(cursor_x + 1, cursor_y);
+    } else {
+        editor_down();
+        editor_linestart();
+    }
+}
+void editor_left() {
+    // Easiest, if x is not zero, just move left
+    if(cursor_x > 0) {
+        move_cursor(cursor_x-1, cursor_y);
+    } else {
+        // If x is at the left, go up a line
+        editor_up();
+        // And move x cursor to the end of line
+        editor_lineend();
+    }
+}
+
+
 void editor_yank() {
-	dirty = 1;
-	if(yank) free(yank);
-	char * yanked_line = text_lines[cursor_y+y_offset];
-	yank = (char*)editor_malloc(strlen(yanked_line)+1);
-	for(uint16_t i=0;i<strlen(yanked_line);i++) yank[i] = yanked_line[i];
-	yank[strlen(text_lines[cursor_y+y_offset])+1] = 0;
-	// Now remove this line from the text_lines
-	for(uint16_t i=cursor_y+y_offset;i<lines-1;i++) {
-		text_lines[i] = text_lines[i+1];
-	}
-	lines--;
-	// Got a crash here when yanking twice without an unyank
-	free(yanked_line);
-	paint_tfb(cursor_y);
-	move_cursor(0, cursor_y);
+    char * yanked_line = text_lines[cursor_y+y_offset];
+    if(strlen(yanked_line)) {
+        dirty = 1;
+    	if(yank) editor_free(yank);
+    	yank = (char*)editor_malloc(strlen(yanked_line)+1);
+    	for(uint16_t i=0;i<strlen(yanked_line);i++) yank[i] = yanked_line[i];
+    	yank[strlen(yanked_line)] = 0;
+    	// Now remove this line from the text_lines
+    	for(uint16_t i=cursor_y+y_offset;i<lines-1;i++) {
+    		text_lines[i] = text_lines[i+1];
+    	}
+    	lines--;
+    	// Got a crash here when yanking twice without an unyank
+    	editor_free(yanked_line);
+    	paint_tfb(cursor_y);
+    	move_cursor(0, cursor_y);
+    } else {
+        editor_backspace();
+        editor_down();
+    }
 }
 
 void editor_unyank() {
@@ -526,55 +597,15 @@ void editor_unyank() {
 			dest_text_lines[i+1] = text_lines[i];
 		}
 		lines++;
-		free(text_lines);
+		editor_free(text_lines);
 		text_lines = dest_text_lines;
 		paint_tfb(cursor_y);
 		move_cursor(0,cursor_y);
+        editor_down();
 	}
 }
 
 
-
-
-void editor_up() {
-	if(cursor_y+y_offset > 0) {
-		if(cursor_x < strlen(text_lines[cursor_y-1 + y_offset])) {
-			move_cursor(cursor_x, cursor_y-1);
-		} else {
-			move_cursor(strlen(text_lines[cursor_y-1 + y_offset]), cursor_y-1);
-		}
-	}
-}
-void editor_down() {
-	if(cursor_y + y_offset < lines) {
-		if(cursor_x < strlen(text_lines[cursor_y+1+y_offset])) {
-			move_cursor(cursor_x, cursor_y+1);
-		} else {
-			move_cursor(strlen(text_lines[cursor_y+1+y_offset]), cursor_y+1);
-		}
-	}
-}
-
-void editor_right() {
-	// easiest, just go right
-	if(cursor_x < strlen(text_lines[cursor_y + y_offset])) {
-		move_cursor(cursor_x + 1, cursor_y);
-	} else {
-		editor_down();
-		editor_linestart();
-	}
-}
-void editor_left() {
-	// Easiest, if x is not zero, just move left
-	if(cursor_x > 0) {
-		move_cursor(cursor_x-1, cursor_y);
-	} else {
-		// If x is at the left, go up a line
-		editor_up();
-		// And move x cursor to the end of line
-		editor_lineend();
-	}
-}
 
 
 void process_char(int c) {
@@ -635,6 +666,7 @@ void process_char(int c) {
 }
 
 void editor(const char * filename) {
+    mc = 0; fc = 0;
 	save_tfb();
 	if(filename != NULL) { 
 		dbg("editor fn is %s\n", filename);

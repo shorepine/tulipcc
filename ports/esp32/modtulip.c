@@ -151,6 +151,20 @@ STATIC mp_obj_t tulip_bg_bitmap(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_bitmap_obj, 4, 5, tulip_bg_bitmap);
 
+// tulip.bg_blit(x, y, w, h, x1, y1)  --> copies bitmap ram
+STATIC mp_obj_t tulip_bg_blit(size_t n_args, const mp_obj_t *args) {
+    uint16_t x = mp_obj_get_int(args[0]);
+    uint16_t y = mp_obj_get_int(args[1]);
+    uint16_t w = mp_obj_get_int(args[2]);
+    uint16_t h = mp_obj_get_int(args[3]);
+    uint16_t x1 = mp_obj_get_int(args[4]);
+    uint16_t y1 = mp_obj_get_int(args[5]);
+    display_bg_bitmap_blit(x,y,w,h,x1,y1);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_blit_obj, 6, 6, tulip_bg_blit);
+
 
 
 // tulip.bg_png(bytes, x,y)
@@ -459,6 +473,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_tfb_str), MP_ROM_PTR(&tulip_tfb_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_blit), MP_ROM_PTR(&tulip_bg_blit_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_rect), MP_ROM_PTR(&tulip_bg_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_png), MP_ROM_PTR(&tulip_sprite_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_bitmap), MP_ROM_PTR(&tulip_sprite_bitmap_obj) },
