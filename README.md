@@ -53,13 +53,13 @@ clear
 # Opens the Tulip editor to the given filename. 
 # Control-X exits and prompts to save if any changes. 
 # Filename will be created on save if it doesn't exist.
-tulip.edit("game.py")
+edit("game.py")
 
 # Run a saved Python file. Control-C stops it
 execfile("game.py")
 
 # If you want something to run when Tulip boots, add it to boot.py
-tulip.edit("boot.py")
+edit("boot.py")
 
 # Returns the current held keyboard scan codes, up to 6 and the modifier mask (ctrl, shift etc)
 (modifiers, scan0, scan1... scan5) = tulip.keys()
@@ -106,6 +106,9 @@ fps = tulip.fps()
 # For heavy text things, use a lower clock like 12, for games with sprites, use 18 or 22. 
 clock = tulip.display_clock() 
 tulip.display_clock(mhz)
+
+# if the display gets in a strange state, you can restart it by just
+tulip.display_restart()
 
 # Sets a frame callback python function to run every frame 
 game_data = {"frame_count": 0, "score": 0}
@@ -233,6 +236,9 @@ tulip.sprite_off(12)
 
 # Set a sprite x and y position
 tulip.sprite_move(12, x, y)
+
+# Clear all sprite RAM, reset all sprite handles
+tulip.sprite_clear()
 ```
 
 ### Music / sound
