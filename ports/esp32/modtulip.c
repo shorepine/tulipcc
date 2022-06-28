@@ -73,7 +73,7 @@ STATIC mp_obj_t tulip_bg_pixel(size_t n_args, const mp_obj_t *args) {
         display_get_bg_pixel(x,y, &r,&g,&b); 
         tuple[0] = mp_obj_new_int(r); 
         tuple[1] = mp_obj_new_int(g);
-        tuple[1] = mp_obj_new_int(b);
+        tuple[2] = mp_obj_new_int(b);
         return mp_obj_new_tuple(3, tuple);
     }
 }

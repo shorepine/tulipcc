@@ -12,6 +12,11 @@
 
 const size_t USB_HID_DESC_SIZE = 9;
 
+// How long you hold down a key before it starts repeating
+#define KEY_REPEAT_TRIGGER_MS 500
+// How often (in ms) to repeat a key once held
+#define KEY_REPEAT_INTER_MS 90
+
 typedef union {
     struct {
         uint8_t bLength;                    /**< Size of the descriptor in bytes */
@@ -197,16 +202,39 @@ uint16_t scan_ascii(uint8_t code, uint8_t modifier) {
     return 0;
 }
 
-// TODO, a key_held function that returns 7 uints
+
+void send_key_to_micropython(uint16_t c) {
+    // Deal with the extended codes that need ANSI escape chars 
+    if(c>257 && c<263) { 
+        tx_char(27);
+        tx_char('[');
+        if(c==258) tx_char('B');
+        if(c==259) tx_char('A');
+        if(c==260) tx_char('D');
+        if(c==261) tx_char('C');
+        if(c==262) { tx_char('3'); tx_char(126); }
+    } else if (c==mp_interrupt_char) {
+        // Send a ctrl-C to Micropython if sent 
+        mp_sched_keyboard_interrupt();
+    } else {
+        tx_char(c);
+    }
+}
+
 
 // Keep track of which keys / scan codes are being held
 uint8_t last_scan[8] = {0,0,0,0,0,0,0,0};
+uint16_t current_held = 0;
+int64_t current_held_ms = 0;
+int64_t last_inter_trigger_ms = 0;
 
 void decode_report(uint8_t *p) {
     // First byte, modifier mask
     uint8_t modifier = p[0];
+    uint8_t new_key = 0;
     // Second byte, reserved
     // next 6 bytes, scan codes (for rollover)
+    //printf("decode report %d %d %d %d %d %d\n", p[2],p[3],p[4],p[5],p[6],p[7]);
     for(uint8_t i=2;i<8;i++) {
 		if(p[i]!=0) {
 			uint8_t skip = 0;
@@ -215,26 +243,21 @@ void decode_report(uint8_t *p) {
 			}
 			if(!skip) { // only process new keys
 		        uint16_t c = scan_ascii(p[i], modifier);
-		        // Check if c is already being held
 		        if(c) {
-		        	// Deal with the extended codes that need ANSI escape chars 
-		        	if(c>257 && c<263) { 
-		        		tx_char(27);
-		        		tx_char('[');
-		        		if(c==258) tx_char('B');
-		        		if(c==259) tx_char('A');
-		        		if(c==260) tx_char('D');
-		        		if(c==261) tx_char('C');
-		        		if(c==262) { tx_char('3'); tx_char(126); }
-		        	} else if (c==mp_interrupt_char) {
-                        mp_sched_keyboard_interrupt();
-                    } else {
-		        		tx_char(c);
-		        	}
+                    new_key = 1;
+                    current_held_ms = esp_timer_get_time()/1000;
+                    current_held = c; 
+                    send_key_to_micropython(c);
 				}
 			}
 			
 		} 
+    }
+    if(!new_key) {
+        // we got a message but no new keys. so is a release
+        current_held_ms = 0;
+        current_held = 0;
+        last_inter_trigger_ms = 0;
     }
     for(uint8_t i=0;i<8;i++) last_scan[i] = p[i];
 }
@@ -244,12 +267,7 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
   if (Device_Handle == transfer->device_handle) {
     isKeyboardPolling = false;
     if (transfer->status == 0) {
-        //printf("nb %d\n", transfer->actual_num_bytes);
       if (transfer->actual_num_bytes == 8 || transfer->actual_num_bytes == 16) {
-        //for(uint8_t j=0;j<transfer->actual_num_bytes;j++) {
-        //    printf("%02x ", transfer->data_buffer[j]);
-        //}
-        //printf("\n");
         uint8_t *const p = transfer->data_buffer;
         decode_report(p);
       }
@@ -360,8 +378,17 @@ void usb_keyboard_start()
   usbh_setup(show_config_desc_full);
   while(1) {
       usbh_task();
-
       KeyboardTimer = esp_timer_get_time() / 1000;
+
+      // Handle key repeat
+      if(current_held > 0) {
+        if(KeyboardTimer - current_held_ms > KEY_REPEAT_TRIGGER_MS) {
+            if(KeyboardTimer - last_inter_trigger_ms > KEY_REPEAT_INTER_MS) {
+                send_key_to_micropython(current_held);
+                last_inter_trigger_ms = KeyboardTimer;
+            }
+        }
+      }
       if (isKeyboardReady && !isKeyboardPolling && (KeyboardTimer > KeyboardInterval)) {
         KeyboardIn->num_bytes = 16; // was 8 -- need to check this works, maybe try both? 
         esp_err_t err = usb_host_transfer_submit(KeyboardIn);

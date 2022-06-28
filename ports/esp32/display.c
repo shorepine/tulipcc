@@ -265,9 +265,12 @@ void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, 
             uint8_t r = *data++;
             uint8_t g = *data++;
             uint8_t b = *data++;
-            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL))] = color_332(r,g,b);
-            // don't use alpha for bg bitmaps, so assign to to r so the compiler doesn't complain
-            r = *data++;
+            uint8_t a = *data++; 
+            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
+                if(a!=0) {
+                    (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL))] = color_332(r,g,b);
+                }
+            }
         }
     }
 }
@@ -276,7 +279,12 @@ void display_set_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, u
     uint32_t c = 0;
     for (int j = y; j < y+h; j++) {
         for (int i = x; i < x+w; i++) {
-            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = data[c++];
+            uint8_t pixel = data[c++];
+            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
+                if(pixel != ALPHA) {
+                    (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = pixel;
+                }
+            }
         }
     }
 }
@@ -295,7 +303,9 @@ void display_bg_bitmap_blit(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t
         for (uint16_t i = x1; i < x1+w; i++) {
             uint16_t src_y = y+(j-y1);
             uint16_t src_x = x+(i-x1);
-            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
+            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
+                (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
+            }
         }
     }    
 }
