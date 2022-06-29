@@ -52,6 +52,8 @@ clear
 
 # Opens the Tulip editor to the given filename. 
 # Control-X exits and prompts to save if any changes. 
+# Control-O is save as
+# Control-W searches
 # Filename will be created on save if it doesn't exist.
 edit("game.py")
 
@@ -61,9 +63,36 @@ execfile("game.py")
 # If you want something to run when Tulip boots, add it to boot.py
 edit("boot.py")
 
+
+# Takes a screenshot and saves to disk. The screen will blank for a moment
+# If no filename given will upload to imgur and return a URL (needs wifi)
+tulip.screenshot("screenshot.png")
+imgur_url = tulip.screenshot()
+
+# Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
+# Note that Python code is bound to one core, so Python-only usage tops out at 50%.
+usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
+```
+
+### Keyboard / USB
+
+```python
 # Returns the current held keyboard scan codes, up to 6 and the modifier mask (ctrl, shift etc)
 (modifiers, scan0, scan1... scan5) = tulip.keys()
 
+# Gets a key ascii code
+ch = tulip.key_wait() # waits for a key press 
+ch = tulip.key() # returns immediately, returns -1 if nothing held
+
+# If scanning key codes in a program, you may want to turn on "key scan" mode so that
+# keys are not sent to the underlying python process 
+tulip.key_scan(1)
+tulip.key_scan(0) # remember to turn it back off or you won't be able to type into the REPL
+```
+
+### Network
+
+```python
 # Join a wifi network
 tulip.wifi("ssid", "password")
 
@@ -78,18 +107,14 @@ content = tulip.url_get("https://url")
 
 # Set the time from an NTP server (needs wifi)
 tulip.set_time() 
-
-# Takes a screenshot and saves to disk. The screen will blank for a moment
-# If no filename given will upload to imgur and return a URL (needs wifi)
-tulip.screenshot("screenshot.png")
-imgur_url = tulip.screenshot()
-
-# Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
-# Note that Python code is bound to one core, so Python-only usage tops out at 50%.
-usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 ```
 
 ### Graphics system
+
+The Tulip GPU consists of 3 subsystems:
+ * A bitmap graphics plane (1280x750), with scrolling x- and y- speed registers
+ * A text frame buffer (TFB) that draws 8x12 fixed width text on top, with 256 colors
+ * A sprite layer on top
 
 The Tulip GPU runs at a fixed FPS depending on the display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. You can set a python callback for the frame done interrupt, for use in games or animations. 
 
@@ -100,6 +125,9 @@ usage = tulip.gpu()
 # returns current FPS, based on the display clock
 fps = tulip.fps() 
 
+# resets all 3 GPU systems back to their starting state, clears all BG and sprite ram and clears the TFB.
+tulip.gpu_reset()
+
 # Get or set the display clock in MHz. Current default is 18.
 # Try: 10 (11.5 FPS), 12 (15.5 FPS), 14 (18.6 FPS), 18 (23.2 FPS), 22 (30.9 FPS), 28 (46.4 FPS)
 # Higher clocks mean smoother animations, but less time for the CPU to prepare things to draw
@@ -107,8 +135,8 @@ fps = tulip.fps()
 clock = tulip.display_clock() 
 tulip.display_clock(mhz)
 
-# if the display gets in a strange state, you can restart it by just
-tulip.display_restart()
+# if the display clock gets in a strange state, you can restart it by just
+tulip.display_restart() # does not clear any data like gpu_reset()
 
 # Sets a frame callback python function to run every frame 
 game_data = {"frame_count": 0, "score": 0}
@@ -181,6 +209,12 @@ tulip.bg_clear() # uses default
 """
 tulip.bg_scroll(line, x_offset, y_offset, x_speed, y_speed)
 tulip.bg_scroll() # resets to default
+
+# Change individual registers
+tulip.bg_scroll_x_speed(line, x_speed)
+tulip.bg_scroll_y_speed(line, y_speed)
+tulip.bg_scroll_x_offset(line, x_offset)
+tulip.bg_scroll_y_offset(line, y_offset)
 ```
 
 ### Text frame buffer (TFB)
