@@ -2,9 +2,12 @@
 
 #include "tulip_helpers.h"
 
+extern uint8_t keyboard_send_keys_to_micropython;
 
 void tx_char(int c) {
-    ringbuf_put(&stdin_ringbuf, c);
+    if(keyboard_send_keys_to_micropython) {
+        ringbuf_put(&stdin_ringbuf, c);
+    }
 }
 
 int check_rx_char() {

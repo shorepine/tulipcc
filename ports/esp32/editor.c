@@ -41,7 +41,6 @@
 
 // shared vars for editor
 char ** text_lines;
-const char *fn;
 char * yank;
 uint16_t lines = 0; 
 uint8_t dirty = 0;
@@ -57,22 +56,9 @@ uint16_t cursor_x = 0;
 uint16_t cursor_y = 0;
 #define EDITOR_TAB_SPACES 4
 #define V_SCROLL_MARGIN 6
-
-
-// Send debug out to uart on esp32 and a log file on local 
-void dbg(const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-#ifdef LOCALDEV
-    vfprintf(elog, fmt, args);
-    fflush(elog);
-#else
-    vfprintf(stderr, fmt, args);
-#endif
-    va_end(args);
-}
-
-
+#define MAX_STRING_LEN 50 // for search string, filenames
+char fn[MAX_STRING_LEN]; 
+char last_search[MAX_STRING_LEN];
 
 // for local dev of the editor
 #ifdef LOCALDEV
@@ -91,6 +77,33 @@ uint16_t tfb_x_col = 0;
 FILE * elog;
 #define check_rx_char getch
 #define mp_hal_stdin_rx_chr getch
+#endif
+
+// Send debug out to uart on esp32 and a log file on local 
+void dbg(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+#ifdef LOCALDEV
+    vfprintf(elog, fmt, args);
+    fflush(elog);
+#else
+    vfprintf(stderr, fmt, args);
+#endif
+    va_end(args);
+}
+
+#ifdef LOCALDEV
+
+uint8_t file_exists(const char *fname)
+{
+    FILE *file;
+    if ((file = fopen(fname, "r")))
+    {
+        fclose(file);
+        return 1;
+    }
+    return 0;
+}
 
 uint32_t file_size(const char *filename) {
 	FILE * f = fopen(filename, "r");
@@ -314,7 +327,6 @@ void move_cursor(int16_t x, int16_t y) {
 	// Move viewport up/down (TFB_ROWS-1) / 2
 	// Move cursor to next/prev line (which would now be in the middle of the screen)
 	if(y < 0) {
-		dbg("scroll up\n");
 		uint16_t cursor_y_line_was = cursor_y + y_offset;
 		if(y_offset > ((TFB_ROWS-1)/2)) {
 			y_offset = y_offset - (TFB_ROWS-1)/2;
@@ -324,7 +336,6 @@ void move_cursor(int16_t x, int16_t y) {
 		cursor_y = (cursor_y_line_was-1) - y_offset;
 		paint_tfb(0);
 	} else if(y == TFB_ROWS-1) {
-		dbg("scroll down\n");
 		uint16_t cursor_y_line_was = cursor_y + y_offset;
 		y_offset = y_offset + (TFB_ROWS-1)/2;
 		cursor_y = (cursor_y_line_was+1) - y_offset;
@@ -334,9 +345,9 @@ void move_cursor(int16_t x, int16_t y) {
 	}
 	// X scrolling TODO or NI, not sure yet
 	if(x < 0) {
-		dbg("scroll left");
+		dbg("NYI scroll left");
 	} else if(x == TFB_COLS) {
-		dbg("scroll right");
+		dbg("NYI scroll right");
 	} else {
 		cursor_x = x;
 	}
@@ -366,12 +377,10 @@ void editor_page_up() {
 }
 
 void editor_page_down() {
-	dbg("page down y_offset is %d lines is %d\n", y_offset, lines);
 	if(y_offset + (TFB_ROWS-V_SCROLL_MARGIN) < lines) {
 		y_offset = y_offset + (TFB_ROWS-V_SCROLL_MARGIN);
 		move_cursor(cursor_x, 0);
 	} else {
-		dbg("end of the file offset was %d\n", y_offset);
 		move_cursor(cursor_x, lines-y_offset);
 	}
 	paint_tfb(0);
@@ -432,82 +441,157 @@ void restore_tfb() {
 #endif
 }
 
+void editor_new_file() {
+    text_lines = (char**)editor_malloc(sizeof(char**)*1);
+    text_lines[0] = (char*)editor_malloc(sizeof(char)*1);
+    text_lines[0][0]=0;
+    lines=1;
+}
 
 
-void open_file(const char *filename) {
-	lines =0;
-	dirty = 0;
+void editor_open_file(const char *filename) {
+    // A file may already be loaded, if so, insert the lines where we are
 	uint16_t c = 0;
-	fn = filename;
+    uint16_t new_lines = 0;
 	dbg("opening file %s\n", filename);
 	int32_t fs = file_size(filename);
 	if(fs > 0) {
 		char * text = (char*) editor_malloc(fs+2); 
 		uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
 		text[fs-1] = 0;
-		if(bytes_read) lines =1; // at least one line
-		for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') lines++;
-		dbg("File %s has %d lines\n", filename, lines);
-		text_lines = (char**)editor_malloc(sizeof(char*)*(lines+1));
+        new_lines = 1;
+		for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') new_lines++;
+		dbg("File %s has %d lines\n", filename, new_lines);
+		char ** incoming_text_lines = (char**)editor_malloc(sizeof(char*)*(new_lines));
+
 		uint32_t last = 0;
 		for(uint32_t i=0;i<bytes_read;i++) {
 			if(text[i]=='\n' || i==bytes_read-1) {
-				text_lines[c]  = editor_malloc(i-last + 1);
+				incoming_text_lines[c]  = editor_malloc(i-last + 1);
 				uint16_t x;
 				for(x=0;x<i-last;x++) { 
-					text_lines[c][x] = text[last+x];
+					incoming_text_lines[c][x] = text[last+x];
 				}
-				text_lines[c][x] = 0;
-				//dbg("Line %d is ###%s###\n", c, text_lines[c]);
-				//if(c < TFB_ROWS-1) string_at_row(text_lines[c], i-last, c );
+				incoming_text_lines[c][x] = 0;
 				last = i+1;
 				c++;
 			}
 		}
-        dbg("Adding end line at row %d\n", c);
-		text_lines[c] = (char*)editor_malloc(1); 
-		text_lines[c][0] = 0;
-        lines++;
 		editor_free(text);
-		dbg("File read with %d lines.\n", lines);
+		dbg("File read with %d lines. Inserting at position %d\n", new_lines, y_offset+cursor_y);
+
+        // Now insert the text lines at cursor_y+y_offset
+        char ** combined_text_lines = (char**)editor_malloc(sizeof(char*)*(new_lines+lines));
+        uint16_t line = 0;
+        for(uint16_t y=0;y<cursor_y+y_offset;y++) {
+            combined_text_lines[line++] = text_lines[y];
+        }
+        for(uint16_t y=0;y<new_lines;y++) {
+            combined_text_lines[line++] = incoming_text_lines[y];
+        }
+        for(uint16_t y=cursor_y+y_offset;y<lines;y++) {
+            combined_text_lines[line++] = text_lines[y];
+        }
+        if(lines) { 
+            editor_free(text_lines);
+        }
+
+        editor_free(incoming_text_lines);
+        text_lines = combined_text_lines;
+        lines = lines + new_lines;
+        dbg("We now have %d lines\n", lines);
 	} else {
-		dbg("Opening new file %s for writing\n", fn);
-		lines = 1;
-		text_lines = (char**)editor_malloc(sizeof(char*)*(1));
-		text_lines[0] = (char*)editor_malloc(1);
-		text_lines[0][0] = 0;
-	}
+        dbg("File doesn't exist\n");
+        editor_new_file();
+    }
 
 	paint_tfb(0);
+}
+
+int8_t prompt_for_char(char * prompt) {
+    string_at_row(prompt, -1, TFB_ROWS-1);
+    format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
+    #ifdef LOCALDEV
+        local_draw_tfb();
+    #endif
+    paint_tfb(TFB_ROWS-1);
+
+    return mp_hal_stdin_rx_chr();
+}
+
+void prompt_for_string(char * prompt, char * default_answer, char * output_string) {
+    char *expanded_prompt;
+    if(strlen(default_answer)) {
+        expanded_prompt = editor_malloc(strlen(prompt) + strlen(default_answer) + 4);
+        sprintf(expanded_prompt, "%s [%s]:", prompt, default_answer);
+    } else {
+        expanded_prompt = editor_malloc(strlen(prompt)+1);
+        sprintf(expanded_prompt, "%s:", prompt);        
+    }
+    string_at_row(expanded_prompt, -1, TFB_ROWS-1);
+    format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
+    #ifdef LOCALDEV
+        local_draw_tfb();
+    #endif
+    int c = -1;
+    uint8_t i = 0;
+    c = mp_hal_stdin_rx_chr();
+    while(c!=13 && c!=10) {
+        output_string[i++] = c;
+        TFB[(TFB_ROWS-1)*TFB_COLS+i+strlen(expanded_prompt)] = c;
+        paint_tfb(TFB_ROWS-1);
+        #ifdef LOCALDEV
+            local_draw_tfb();
+        #endif
+        c = mp_hal_stdin_rx_chr();
+    }
+    output_string[i] = 0;
+
+    if(i == 0) {
+        if(strlen(default_answer)) {
+            strcpy(output_string, default_answer);
+        }
+    } 
+    move_cursor(cursor_x, cursor_y);
+    editor_free(expanded_prompt);
+}
+
+
+void editor_save() {
+    if(strlen(fn)) {
+        dbg("save! lines is %d \n", lines);
+        uint32_t bytes = 0;
+        for(uint16_t i=0;i<lines;i++) { bytes = bytes + strlen(text_lines[i]) + 1; }
+        dbg("save! bytes is %d\n", bytes);
+        char * text = (char*)editor_malloc(bytes);
+        uint32_t c = 0;
+        for(uint16_t i=0;i<lines;i++) { 
+            for(uint16_t j=0;j<strlen(text_lines[i]);j++) {
+                text[c++] = text_lines[i][j];
+            }
+            text[c++] = '\n';
+        }
+        write_file(fn, (uint8_t*)text, c, 0);
+        dbg("saved to %s!\n", fn);
+        dirty = 0;
+        editor_free(text);
+    } else {
+        dbg("No filename given, not saving\n");
+    }
 }
 
 void editor_quit() {
 	quit_flag = 0;
 	if(dirty) {
-		dirty = 0;
-		string_at_row("Save file? [Y/N]", -1, TFB_ROWS-1);
-		format_at_row(FORMAT_INVERSE, strlen("Save file? [Y/N]"), TFB_ROWS-1);
-		#ifdef LOCALDEV
-		local_draw_tfb();
-		#endif
-		int c = mp_hal_stdin_rx_chr();
-		if(c=='y' || c=='Y') {
-			dbg("save !\n");
-			uint32_t bytes = 0;
-			for(uint16_t i=0;i<lines;i++) { bytes = bytes + strlen(text_lines[i]) + 1; }
-			char * text = (char*)editor_malloc(bytes);
-			uint32_t c = 0;
-			for(uint16_t i=0;i<lines;i++) { 
-				for(uint16_t j=0;j<strlen(text_lines[i]);j++) {
-					text[c++] = text_lines[i][j];
-				}
-				text[c++] = '\n';
-			}
-			write_file(fn, (uint8_t*)text, c, 0);
-			dbg("saved!\n");
-            editor_free(text);
-		}
-
+        if(strlen(fn)==0) {
+            prompt_for_string("Save as", "", fn);
+            editor_save(); // if no fn give, will skip
+        } else {
+            int8_t c = prompt_for_char("Save file? [Y/N]");
+            if(c=='Y' || c=='y') {
+    	    	editor_save();
+            }
+        }
 	}
 	restore_tfb();
 	for(uint16_t i=0;i<lines;i++) {
@@ -535,7 +619,7 @@ void editor_insert_character(int c) {
 		dest_line[i] = source_line[i-1];
 	}
 	dest_line[strlen(source_line)+1] = 0;
-	editor_free(source_line); // had a crash here
+    editor_free(source_line); 
 	text_lines[cursor_y + y_offset] = dest_line;
 	string_at_row(dest_line, -1, cursor_y);
 	move_cursor(cursor_x+1, cursor_y);
@@ -790,6 +874,82 @@ void editor_unyank() {
 }
 
 
+void editor_search() {
+    char search_string[MAX_STRING_LEN];
+    prompt_for_string("Search string", last_search, search_string);
+    if(strlen(search_string)) {
+        strcpy(last_search, search_string);
+        uint8_t found = 0;
+        dbg("starting search on line %d\n", y_offset + cursor_y);
+        for(uint16_t i=y_offset+cursor_y;i<lines+y_offset+cursor_y;i++) {
+            uint16_t actual_line = i % lines; // wrap around
+            dbg("wrap around actual line to search is %d\n", actual_line);
+            int16_t offset = 0;
+            if(strlen(text_lines[actual_line])) {
+                while(!found && offset < (strlen(text_lines[actual_line])-1)) {
+                    dbg("found was %d and offset %d was < %d\n", found, offset, (strlen(text_lines[actual_line])-1));
+                    char * ret = strstr(text_lines[actual_line]+offset, search_string);
+                    if(ret) {
+                        dbg("found match at line %d and col %d. offset %d\n", actual_line, ret - text_lines[actual_line] + offset, offset);
+                        // See if this is before our last search result
+                        if((y_offset + cursor_y == actual_line) && (ret-text_lines[actual_line]+offset <= cursor_x)) {
+                            dbg("skipping match because already seen. cursor line %d x %d\n", y_offset + cursor_y, cursor_x);
+                            // it was, keep looking on this line
+                            offset=(ret-text_lines[actual_line]+offset)+1;
+                        } else {
+                            // A new find, adjust the y_offset and cursor
+                            if(i > TFB_ROWS-1) { // adjust page a bit 
+                                y_offset = actual_line-10; // show some context
+                            } else {
+                                y_offset = 0;
+                            }
+                            dbg("new find, offset to %d\n", y_offset);
+                            move_cursor(ret-text_lines[actual_line]+offset, actual_line-y_offset);
+                            dbg("moved cursor to x %d y %d\n", ret-text_lines[actual_line]+offset, actual_line-y_offset);
+                            found = 1; // we're done
+                        }
+                    } else { //nothing found  on this line, go to the next
+                        offset = strlen(text_lines[actual_line])+2;
+                        dbg("setting offset to %d\n", offset);
+                    }
+                    if(found) i = lines+y_offset+cursor_y+1;
+                } // end found
+            } // end strlen
+        } // for each line
+        if(!found) {
+            dbg("nothing found\n");
+        }
+    } else {
+        dbg("no search string given\n");
+    }
+    
+}
+
+void editor_save_as() {
+    char save_as_fn[MAX_STRING_LEN];
+    prompt_for_string("Save as", fn, save_as_fn);
+    strcpy(fn, save_as_fn);
+    // save the file now
+    editor_save();
+    // Update the status
+    move_cursor(cursor_x, cursor_y);
+}
+
+void editor_read_into() {
+    char read_into_fn[MAX_STRING_LEN];
+    dirty=1;
+    prompt_for_string("Read file into buffer", "", read_into_fn);
+    dbg("I got fn of %s\n", read_into_fn);
+    if(file_exists(read_into_fn)) {
+        // now run open_file
+        editor_open_file(read_into_fn);
+    } else {
+        dbg("no such file %s\n", read_into_fn);
+    }
+
+}
+
+
 
 
 void process_char(int c) {
@@ -801,15 +961,19 @@ void process_char(int c) {
 	} else if(c==10 || c == 13) { // CRLF
 		editor_crlf();
 	} else if(c == 3) {  // control-C 
+        // we should trap this and ... what?
 	} else if(c ==11) { // control-K, yank
 		editor_yank();
 	} else if(c== 21) { // control-U, unyank
 		editor_unyank();
-	} else if(c==15) { // control-O, save as TODO
-		// TODO 
+	} else if(c==15) { // control-O, save as 
+        dbg("save-as\n");
+		editor_save_as();
+    } else if(c==18) { // control-R, read into
+        editor_read_into();
 	} else if(c==23) { // control-W, "where is" aka search TODO 
-		// TODO 
-	} else if(c==24) { // control-X, save 
+        editor_search();
+	} else if(c==24) { // control-X, quit 
 		quit_flag = 1;
 	} else if(c == 1) { // control-A, start of line
 		editor_linestart();
@@ -820,7 +984,7 @@ void process_char(int c) {
 	} else if(c==22) { // control V, page down 
 		editor_page_down();
 	} else if(c==27) { // ansi code, up / down / left / right / forward delete
-		char s = (char)mp_hal_stdin_rx_chr(); // Skip the [
+		char s = (char) mp_hal_stdin_rx_chr(); // Skip the [
 		s = (char)mp_hal_stdin_rx_chr(); // Get the code
 		if(s == 'D') { //left 
 			editor_left();
@@ -849,25 +1013,40 @@ void process_char(int c) {
 	}
 }
 
+void editor_init() {
+    lines =0;
+    dirty = 0;
+    y_offset = 0;
+    cursor_y = 0;
+    cursor_x = 0;
+    last_search[0] = 0;
+    fn[0] = 0;
+}
+
+
+
 void editor(const char * filename) {
     mc = 0; fc = 0;
 	save_tfb();
+    editor_init();
 	if(filename != NULL) { 
-		dbg("editor fn is %s\n", filename);
-		open_file(filename);
+        strcpy(fn, filename);
+		dbg("editor fn is %s\n", fn);
+		editor_open_file(fn);
 	} else {
 		dbg("no filename given\n");
+        // In this case, let's just make a first text_line
+        editor_new_file();
 	}
 	move_cursor(0,0);
 	y_offset = 0;
-	while(quit_flag == 0) {
+    while(quit_flag == 0) {
 		#ifdef LOCALDEV
 		local_draw_tfb();
 #else
 		vPortYield();
 #endif
-		int c = check_rx_char();
-		//int c = mp_hal_stdin_rx_chr();
+		int c = mp_hal_stdin_rx_chr();
 		if(c>=0) {
 			process_char(c);
 		}
@@ -880,7 +1059,7 @@ void editor(const char * filename) {
 int main(int argc , char*argv[]) {
 	elog = fopen("edit.log", "a");
 	setup_display();
-	if(argc>1) editor(argv[1]);
+	if(argc>1) { editor(argv[1]); } else {editor(NULL); }
 	return 0;
 }
 #endif

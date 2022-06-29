@@ -232,6 +232,46 @@ STATIC mp_obj_t tulip_bg_scroll(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_scroll_obj, 0, 5, tulip_bg_scroll);
 
+STATIC mp_obj_t tulip_bg_scroll_x_speed(size_t n_args, const mp_obj_t *args) {
+    uint16_t line_no = mp_obj_get_int(args[0]);
+    int16_t x_speed = mp_obj_get_int(args[1]);
+    x_speeds[line_no] = x_speed;
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_scroll_x_speed_obj, 2, 2, tulip_bg_scroll_x_speed);
+
+
+STATIC mp_obj_t tulip_bg_scroll_y_speed(size_t n_args, const mp_obj_t *args) {
+    uint16_t line_no = mp_obj_get_int(args[0]);
+    int16_t y_speed = mp_obj_get_int(args[1]);
+    y_speeds[line_no] = y_speed;
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_scroll_y_speed_obj, 2, 2, tulip_bg_scroll_y_speed);
+
+
+STATIC mp_obj_t tulip_bg_scroll_x_offset(size_t n_args, const mp_obj_t *args) {
+    uint16_t line_no = mp_obj_get_int(args[0]);
+    int16_t x_offset = mp_obj_get_int(args[1]);
+    x_offsets[line_no] = x_offset;
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_scroll_x_offset_obj, 2, 2, tulip_bg_scroll_x_offset);
+
+
+STATIC mp_obj_t tulip_bg_scroll_y_offset(size_t n_args, const mp_obj_t *args) {
+    uint16_t line_no = mp_obj_get_int(args[0]);
+    int16_t y_offset = mp_obj_get_int(args[1]);
+    y_offsets[line_no] = y_offset;
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_scroll_y_offset_obj, 2, 2, tulip_bg_scroll_y_offset);
+
+
 
 // tulip.tfb_str(x,y, str, [format], [fg_color], [bg_color])
 // (str, format, fg, bg) = tulip.tfb_str(x,y)
@@ -397,6 +437,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_off_obj, 1, 1, tulip_spr
 
 STATIC mp_obj_t tulip_sprite_clear(size_t n_args, const mp_obj_t *args) {
     display_reset_sprites();
+    py_callback = 0;
     return mp_const_none;
 }
 
@@ -414,6 +455,18 @@ STATIC mp_obj_t tulip_edit(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_edit_obj, 0, 1, tulip_edit);
+
+
+STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
+    display_reset_bg();
+    display_reset_sprites();
+    py_callback = 0;
+    display_reset_tfb();
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_gpu_reset_obj, 0, 0, tulip_gpu_reset);
+
 
 
 STATIC mp_obj_t tulip_int_screenshot(size_t n_args, const mp_obj_t *args) {
@@ -459,6 +512,29 @@ STATIC mp_obj_t tulip_keys(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_keys_obj, 0, 0, tulip_keys);
 
+STATIC mp_obj_t tulip_key_wait(size_t n_args, const mp_obj_t *args) {
+    int16_t ch = mp_hal_stdin_rx_chr();
+    return mp_obj_new_int(ch);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_wait_obj, 0, 0, tulip_key_wait);
+
+
+STATIC mp_obj_t tulip_key(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(check_rx_char());
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_obj, 0, 0, tulip_key);
+
+extern uint8_t keyboard_send_keys_to_micropython;
+STATIC mp_obj_t tulip_key_scan(size_t n_args, const mp_obj_t *args) {
+    keyboard_send_keys_to_micropython = !(mp_obj_get_int(args[0]));
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_scan_obj, 1, 1, tulip_key_scan);
+
+
 
 extern float compute_cpu_usage(uint8_t debug);
 STATIC mp_obj_t tulip_cpu(size_t n_args, const mp_obj_t *args) {
@@ -485,6 +561,10 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll), MP_ROM_PTR(&tulip_bg_scroll_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_scroll_x_speed), MP_ROM_PTR(&tulip_bg_scroll_x_speed_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_scroll_y_speed), MP_ROM_PTR(&tulip_bg_scroll_y_speed_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_scroll_x_offset), MP_ROM_PTR(&tulip_bg_scroll_x_offset_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_scroll_y_offset), MP_ROM_PTR(&tulip_bg_scroll_y_offset_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_str), MP_ROM_PTR(&tulip_tfb_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
@@ -502,7 +582,11 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_alles), MP_ROM_PTR(&tulip_alles_obj) },
     { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&tulip_brightness_obj) },
     { MP_ROM_QSTR(MP_QSTR_keys), MP_ROM_PTR(&tulip_keys_obj) },
+    { MP_ROM_QSTR(MP_QSTR_key_wait), MP_ROM_PTR(&tulip_key_wait_obj) },
+    { MP_ROM_QSTR(MP_QSTR_key), MP_ROM_PTR(&tulip_key_obj) },
+    { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
+    { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
 
 };
 

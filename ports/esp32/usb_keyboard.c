@@ -33,6 +33,8 @@ typedef union {
 } usb_hid_desc_t;
 
 
+uint8_t keyboard_send_keys_to_micropython = 1;
+
 
 const TickType_t HOST_EVENT_TIMEOUT = 1;
 const TickType_t CLIENT_EVENT_TIMEOUT = 1;
