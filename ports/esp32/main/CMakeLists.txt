@@ -55,16 +55,16 @@ set(MICROPY_SOURCE_PORT
     ${PROJECT_DIR}/main.c
     ${PROJECT_DIR}/esp32s3_display.c
     ${PROJECT_DIR}/usb_keyboard.c
-    ${PROJECT_DIR}/alles_tulip.c
-    ${PROJECT_DIR}/sounds.c
-    ${PROJECT_DIR}/amy/dsps_biquad_f32_ae32.S
-    ${PROJECT_DIR}/amy/algorithms.c
-    ${PROJECT_DIR}/amy/amy.c
-    ${PROJECT_DIR}/amy/envelope.c
-    ${PROJECT_DIR}/amy/filters.c
-    ${PROJECT_DIR}/amy/oscillators.c
-    ${PROJECT_DIR}/amy/partials.c
-    ${PROJECT_DIR}/amy/pcm.c
+    ${MICROPY_DIR}/extmod/tulip/alles_tulip.c
+    ${MICROPY_DIR}/extmod/tulip/sounds.c
+    ${MICROPY_DIR}/extmod/tulip/amy/dsps_biquad_f32_ae32.S
+    ${MICROPY_DIR}/extmod/tulip/amy/algorithms.c
+    ${MICROPY_DIR}/extmod/tulip/amy/amy.c
+    ${MICROPY_DIR}/extmod/tulip/amy/envelope.c
+    ${MICROPY_DIR}/extmod/tulip/amy/filters.c
+    ${MICROPY_DIR}/extmod/tulip/amy/oscillators.c
+    ${MICROPY_DIR}/extmod/tulip/amy/partials.c
+    ${MICROPY_DIR}/extmod/tulip/amy/pcm.c
     ${PROJECT_DIR}/uart.c
     ${PROJECT_DIR}/usb.c
     ${PROJECT_DIR}/usb_serial_jtag.c
@@ -211,6 +211,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     FFCONF_H=\"${MICROPY_OOFATFS_DIR}/ffconf.h\"
     LFS1_NO_MALLOC LFS1_NO_DEBUG LFS1_NO_WARN LFS1_NO_ERROR LFS1_NO_ASSERT
     LFS2_NO_MALLOC LFS2_NO_DEBUG LFS2_NO_WARN LFS2_NO_ERROR LFS2_NO_ASSERT
+    ESP_PLATFORM
 )
 
 # Disable some warnings to keep the build output clean.

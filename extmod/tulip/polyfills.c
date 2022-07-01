@@ -7,7 +7,7 @@
 
 
 
-#ifndef MICROPY_ESP_IDF_4
+#ifndef ESP_PLATFORM
 uint8_t keyboard_send_keys_to_micropython = 1;
 uint8_t last_scan[8] = {0,0,0,0,0,0,0,0};
 
@@ -22,7 +22,7 @@ float compute_cpu_usage(uint8_t debug) {
 
 
 void take_semaphore() {
-#ifdef MICROPY_ESP_IDF_4
+#ifdef ESP_PLATFORM
     ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
 #else
     // nothing? not sure yet
@@ -40,7 +40,7 @@ int64_t get_time_ms() {
 }
     
 void * malloc_caps(uint32_t size, uint32_t flags) {
-#ifdef MICROPY_ESP_IDF_4
+#ifdef ESP_PLATFORM
     return heap_caps_malloc(size, flags);
 #else
     // ignore flags
@@ -49,7 +49,7 @@ void * malloc_caps(uint32_t size, uint32_t flags) {
 }
 
 void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags) {
-#ifdef MICROPY_ESP_IDF_4
+#ifdef ESP_PLATFORM
     return heap_caps_aligned_calloc(align, count, size, flags); 
 #else
     return (void*)malloc(size*count);
@@ -57,7 +57,7 @@ void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags)
 }
 
 void *realloc_caps(void* ptr, uint32_t size, uint32_t caps) {
-#ifdef MICROPY_ESP_IDF_4
+#ifdef ESP_PLATFORM
   return heap_caps_realloc(ptr, size, caps);
 #else
   return (void*)realloc(ptr, size);
@@ -65,7 +65,7 @@ void *realloc_caps(void* ptr, uint32_t size, uint32_t caps) {
 }
 
 void free_caps(void *ptr) {
-#ifdef MICROPY_ESP_IDF_4
+#ifdef ESP_PLATFORM
     heap_caps_free(ptr);
 #else
     free(ptr);

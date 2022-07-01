@@ -3,10 +3,6 @@
 #ifndef __ALLES_H
 #define __ALLES_H
 
-#ifndef ESP_PLATFORM
-#define ESP_PLATFORM
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,7 +12,7 @@ extern "C" {
 #include <math.h>
 
 #ifdef ESP_PLATFORM
-#define configUSE_TASK_NOTIFICATIONS 1
+//#define configUSE_TASK_NOTIFICATIONS 1
 //#define configTASK_NOTIFICATION_ARRAY_ENTRIES 2
 #define MAX_WIFI_WAIT_S 120
 

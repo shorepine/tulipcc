@@ -7,19 +7,21 @@ uint8_t board_level;
 uint8_t status;
 
 
-
+#ifdef ESP_PLATFORM
 // mutex that locks writes to the delta queue
 SemaphoreHandle_t xQueueSemaphore;
 
 void delay_ms(uint32_t ms) {
     vTaskDelay(ms / portTICK_PERIOD_MS);
 }
+#endif
 
 uint8_t board_level = ALLES_BOARD_V2;
 uint8_t status = RUNNING;
 
 char githash[8];
 
+#ifdef ESP_PLATFORM
 // Button event
 extern xQueueHandle gpio_evt_queue;
 
@@ -32,13 +34,15 @@ static TaskHandle_t idleTask1 = NULL;
 // Battery status for V2 board. If no v2 board, will stay at 0
 uint8_t battery_mask = 0;
 
+#endif
+
 // AMY synth states
 extern struct state global;
 extern uint32_t event_counter;
 extern uint32_t message_counter;
 
 
-
+#ifdef ESP_PLATFORM
 // Wrap AMY's renderer into 2 FreeRTOS tasks, one per core
 void esp_render_task( void * pvParameters) {
     uint8_t which = *((uint8_t *)pvParameters);
@@ -53,7 +57,6 @@ void esp_render_task( void * pvParameters) {
     }
 }
 
-
 // Make AMY's FABT run forever , as a FreeRTOS task 
 void esp_fill_audio_buffer_task() {
     while(1) {
@@ -65,7 +68,7 @@ void esp_fill_audio_buffer_task() {
         }
     }
 }
-
+#endif
 
 
 extern char *message_start_pointer;
@@ -79,6 +82,7 @@ void alles_send_message(char * message, uint16_t len) {
     parse_task();
 }
 
+#ifdef ESP_PLATFORM
 // init AMY from the esp. wraps some amy funcs in a task to do multicore rendering on the ESP32 
 amy_err_t esp_amy_init() {
     start_amy();
@@ -102,10 +106,17 @@ amy_err_t esp_amy_init() {
     idleTask1 = xTaskGetIdleTaskHandleForCPU(1);
     return AMY_OK;
 }
+#else
+amy_err_t unix_amy_init() {
+    //sync_init();
+    start_amy();
+    live_start();
+    return AMY_OK;
+}
+#endif
 
 
-// Show a CPU usage counter. This shows the delta in use since the last time you called it
-
+#ifdef ESP_PLATFORM
 void esp_show_debug(uint8_t type) { 
     printf("debug\n");
     /*
@@ -187,17 +198,19 @@ amy_err_t setup_i2s(void) {
     return AMY_OK;
 }
 
-
+#endif
 
 
 
 
 void alles_start() {
-
+#ifdef ESP_PLATFORM
     check_init(&esp_event_loop_create_default, "Event");
-
     check_init(&setup_i2s, "i2s");
     esp_amy_init();
+#else
+    unix_amy_init();
+#endif
     reset_oscs();
 
 

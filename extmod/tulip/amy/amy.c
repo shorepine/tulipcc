@@ -7,8 +7,8 @@
 #include "clipping_lookup_table.h"
 
 // TODO -- refactor this to make this not so reliant, maybe a callback for rendering
-#ifdef ESP_PLATFORM
 #include "../alles_tulip.h"
+#ifdef ESP_PLATFORM
 extern SemaphoreHandle_t xQueueSemaphore;
 extern TaskHandle_t renderTask[2]; // one per core
 #else
@@ -120,6 +120,7 @@ struct event default_event() {
 
 void add_delta_to_queue(struct delta d) {
 #ifdef ESP_PLATFORM
+
     //  Take the queue mutex before starting
     xSemaphoreTake(xQueueSemaphore, portMAX_DELAY);
 #endif
@@ -549,7 +550,7 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
 
 // On all platforms, sysclock is based on total samples played, using audio out (i2s or etc) as system clock
 int64_t get_sysclock() {
-    return (total_samples / (float)SAMPLE_RATE) * 1000;
+    return (int64_t) ((total_samples / (float)SAMPLE_RATE) * 1000);
 }
 
 
@@ -844,7 +845,7 @@ int16_t * fill_audio_buffer_task() {
 }
 
 int32_t ms_to_samples(int32_t ms) {
-    return (((float)ms / 1000.0) * (float)SAMPLE_RATE);
+    return (int32_t)(((float)ms / 1000.0) * (float)SAMPLE_RATE);
 } 
 
 // Helper to parse the list of source voices for an algorithm

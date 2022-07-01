@@ -2,9 +2,6 @@
 #ifndef __AMY_H
 #define __AMY_H
 
-#ifndef ESP_PLATFORM
-#define ESP_PLATFORM
-#endif
 
 #include <stdio.h>
 #include <stddef.h>
@@ -281,7 +278,7 @@ extern void saw_mod_trigger(uint8_t osc);
 extern void triangle_mod_trigger(uint8_t osc);
 extern void pulse_mod_trigger(uint8_t osc);
 extern void pcm_mod_trigger(uint8_t osc);
-extern float get_random();
+extern float amy_get_random();
 
 // filters
 extern void filters_init();

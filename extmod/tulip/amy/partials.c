@@ -57,7 +57,7 @@ void render_partials(float *buf, uint8_t osc) {
     // If ratio is set (not 0 or -1), use it for a time stretch
     float time_ratio = 1;
     if(synth[osc].ratio > 0) time_ratio = synth[osc].ratio;
-    uint32_t ms_since_started = (((total_samples - synth[osc].note_on_clock) / (float)SAMPLE_RATE)*1000.0)*time_ratio;
+    uint32_t ms_since_started = (uint32_t) ((((total_samples - synth[osc].note_on_clock) / (float)SAMPLE_RATE)*1000.0)*time_ratio);
     if(synth[osc].step >= 0) {
         // do we either have no sustain, or are we past sustain? 
         // TODO: sustain is likely more complicated --we want to bounce between the closest bps for loopstart & loopend

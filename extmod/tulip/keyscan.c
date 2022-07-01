@@ -1,7 +1,7 @@
 // keyscan.c
 #include "keyscan.h"
 
-#ifndef MICROPY_ESP_IDF_4
+#ifndef ESP_PLATFORM
 #include <SDL2/SDL.h>
 #endif
 
