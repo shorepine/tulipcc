@@ -35,6 +35,8 @@ INC +=  -I.
 INC +=  -I$(TOP)
 INC += -I$(BUILD)
 
+INC += -I/opt/homebrew/include 
+
 # compiler settings
 CWARN = -Wall -Werror
 CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion
@@ -100,6 +102,7 @@ else
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections
 endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
+LDFLAGS += -L/opt/homebrew/lib -lSDL2
 
 # Flags to link with pthread library
 LIBPTHREAD = -lpthread
@@ -172,6 +175,7 @@ MICROPY_BLUETOOTH_BTSTACK_H4 ?= 1
 endif
 endif
 
+
 # BTstack is enabled.
 GIT_SUBMODULES += lib/btstack
 include $(TOP)/extmod/btstack/btstack.mk
@@ -187,6 +191,10 @@ include $(TOP)/extmod/nimble/nimble.mk
 endif
 
 endif
+
+
+include $(TOP)/extmod/tulip/tulip.mk
+
 
 ifeq ($(MICROPY_PY_FFI),1)
 
@@ -234,11 +242,14 @@ SRC_C += \
 	mpbtstackport_h4.c \
 	mpbtstackport_usb.c \
 	mpnimbleport.c \
+	unix_display.c \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
 
 SHARED_SRC_C += $(addprefix shared/,\
 	runtime/gchelper_generic.c \
+	runtime/pyexec.c \
+	runtime/interrupt_char.c \
 	timeutils/timeutils.c \
 	$(SHARED_SRC_C_EXTRA) \
 	)
@@ -254,7 +265,7 @@ OBJ += $(addprefix $(BUILD)/, $(EXTMOD_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
 
 # List of sources for qstr extraction
-SRC_QSTR += $(SRC_C) $(SRC_CXX) $(SHARED_SRC_C) $(EXTMOD_SRC_C)
+SRC_QSTR += $(SRC_C) $(SRC_CXX) $(SHARED_SRC_C) $(EXTMOD_SRC_C) 
 # Append any auto-generated sources that are needed by sources listed in
 # SRC_QSTR
 SRC_QSTR_AUTO_DEPS +=
@@ -268,7 +279,8 @@ CFLAGS += -DMPZ_DIG_SIZE=16 # force 16 bits to work on both 32 and 64 bit archs
 CFLAGS += -DMICROPY_MODULE_FROZEN_STR
 endif
 
-CXXFLAGS += $(filter-out -Wmissing-prototypes -Wold-style-definition -std=gnu99,$(CFLAGS) $(CXXFLAGS_MOD))
+CFLAGS += -Wno-double-promotion -Wno-unused-function
+CXXFLAGS += $(filter-out -Wno-double-promotion -Wmissing-prototypes -Wold-style-definition -std=gnu99,$(CFLAGS) $(CXXFLAGS_MOD))
 
 ifeq ($(MICROPY_FORCE_32BIT),1)
 RUN_TESTS_MPY_CROSS_FLAGS = --mpy-cross-flags='-march=x86'

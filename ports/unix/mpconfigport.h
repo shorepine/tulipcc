@@ -30,6 +30,8 @@
 // Variant-specific definitions.
 #include "mpconfigvariant.h"
 
+
+
 // The minimal variant's config covers everything.
 // If we're building the minimal variant, ignore the rest of this file.
 #ifndef MICROPY_UNIX_MINIMAL
@@ -142,6 +144,10 @@
 #define MICROPY_PY_SYS_PATH_ARGV_DEFAULTS (0)
 #define MICROPY_PY_SYS_EXIT         (1)
 #define MICROPY_PY_SYS_ATEXIT       (1)
+
+#define MICROPY_HW_BOARD_NAME "Tulip Desktop"
+#define MICROPY_HW_MCU_NAME "M1 Max"
+
 #if MICROPY_PY_SYS_SETTRACE
 #define MICROPY_PERSISTENT_CODE_SAVE (1)
 #define MICROPY_COMP_CONST (0)

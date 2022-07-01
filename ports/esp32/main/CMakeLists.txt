@@ -44,14 +44,17 @@ set(MICROPY_SOURCE_DRIVERS
 )
 
 set(MICROPY_SOURCE_PORT
+    ${MICROPY_DIR}/extmod/tulip/modtulip.c
+    ${MICROPY_DIR}/extmod/tulip/polyfills.c
+    ${MICROPY_DIR}/extmod/tulip/lodepng.c
+    ${MICROPY_DIR}/extmod/tulip/smallfont.c
+    ${MICROPY_DIR}/extmod/tulip/display.c
+    ${MICROPY_DIR}/extmod/tulip/tulip_helpers.c
+    ${MICROPY_DIR}/extmod/tulip/editor.c
+    ${MICROPY_DIR}/extmod/tulip/keyscan.c
     ${PROJECT_DIR}/main.c
-    ${PROJECT_DIR}/display.c
-    ${PROJECT_DIR}/editor.c
-    ${PROJECT_DIR}/tulip_helpers.c
-    ${PROJECT_DIR}/smallfont.c
+    ${PROJECT_DIR}/esp32s3_display.c
     ${PROJECT_DIR}/usb_keyboard.c
-    ${PROJECT_DIR}/TinyPngOut.c
-    ${PROJECT_DIR}/lodepng.c
     ${PROJECT_DIR}/alles_tulip.c
     ${PROJECT_DIR}/sounds.c
     ${PROJECT_DIR}/amy/dsps_biquad_f32_ae32.S
@@ -189,6 +192,8 @@ idf_component_register(
         ${MICROPY_PORT_DIR}
         ${MICROPY_BOARD_DIR}
         ${CMAKE_BINARY_DIR}
+        ${MICROPY_DIR}/extmod/tulip
+
     REQUIRES
         ${IDF_COMPONENTS}
 )
@@ -216,6 +221,7 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
     -Wno-strict-aliasing
+    -DESP_PLATFORM
 )
 
 # Add additional extmod and usermod components.

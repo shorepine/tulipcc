@@ -27,13 +27,19 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <time.h>
 #include <sys/time.h>
-
+#include "py/ringbuf.h"
 #include "py/mphal.h"
 #include "py/mpthread.h"
 #include "py/runtime.h"
 #include "extmod/misc.h"
+
+#include <sys/select.h>
+#include <termios.h>
+#include "display.h"
+
 
 #ifndef _WIN32
 #include <signal.h>
@@ -64,6 +70,10 @@ STATIC void sighandler(int signum) {
 }
 #endif
 
+STATIC uint8_t stdin_ringbuf_array[260];
+ringbuf_t stdin_ringbuf = {stdin_ringbuf_array, sizeof(stdin_ringbuf_array), 0, 0};
+
+/*
 void mp_hal_set_interrupt_char(char c) {
     // configure terminal settings to (not) let ctrl-C through
     if (c == CHAR_CTRL_C) {
@@ -86,7 +96,7 @@ void mp_hal_set_interrupt_char(char c) {
         #endif
     }
 }
-
+*/
 #if MICROPY_USE_READLINE == 1
 
 #include <termios.h>
@@ -146,6 +156,29 @@ static int call_dupterm_read(size_t idx) {
 }
 #endif
 
+
+/*
+uintptr_t mp_hal_stdio_poll(uintptr_t poll_flags) {
+    uintptr_t ret = 0;
+    if ((poll_flags & MP_STREAM_POLL_RD) && stdin_ringbuf.iget != stdin_ringbuf.iput) {
+        ret |= MP_STREAM_POLL_RD;
+    }
+    return ret;
+}
+*/
+
+int mp_hal_stdin_rx_chr(void) {
+    for (;;) {
+        int c = ringbuf_get(&stdin_ringbuf);
+        if (c != -1) {
+           return c;
+        }
+        MICROPY_EVENT_POLL_HOOK
+    }
+}
+
+/*
+
 int mp_hal_stdin_rx_chr(void) {
     #if MICROPY_PY_OS_DUPTERM
     // TODO only support dupterm one slot at the moment
@@ -164,7 +197,7 @@ int mp_hal_stdin_rx_chr(void) {
     }
 main_term:;
     #endif
-
+    
     unsigned char c;
     ssize_t ret;
     MP_HAL_RETRY_SYSCALL(ret, read(STDIN_FILENO, &c, 1), {});
@@ -175,11 +208,15 @@ main_term:;
     }
     return c;
 }
+*/
 
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
-    ssize_t ret;
-    MP_HAL_RETRY_SYSCALL(ret, write(STDOUT_FILENO, str, len), {});
-    mp_uos_dupterm_tx_strn(str, len);
+    //MP_HAL_RETRY_SYSCALL(ret, write(STDOUT_FILENO, str, len), {});
+    //mp_uos_dupterm_tx_strn(str, len);
+    if(len) {
+        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+    }
+
 }
 
 // cooked is same as uncooked because the terminal does some postprocessing
