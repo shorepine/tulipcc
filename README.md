@@ -298,6 +298,8 @@ To build your own Tulip:
 - For sound, get an I2S decoder. [You can get ones that have line outs like this](https://www.adafruit.com/product/3678) or ones that [have speaker amps built in like this](https://www.adafruit.com/product/3006). I use the speaker amp model and hook it into a little 3W speaker.
 - We are working on a breakout board that plugs into the back of a ESP32S3 dev board and has a USB female A jack for the keyboard, pins for [a display breakout]( https://www.adafruit.com/product/4905) and pins for the i2s amp breakout. That makes things a lot simpler. 
 
+A note, if you're using the Adafruit display adapter, these pin numbers for the display (D#) are to match the **side of the board with the FPC connector is on**, the side that reads FPC-40P 0.5MM. I have no idea why the pin numbers are inverted on the other side, but don't be like me and waste a board run because you wired it wrong! 
+
 In the meantime, here's the pin connections you'll want to make:
 
 | Label         | ESP32 S3 Pin | Position on ESP32-S3-WROOM-1 | Connect to     |
@@ -310,7 +312,7 @@ In the meantime, here's the pin connections you'll want to make:
 | PCLK          | 14           | L20                          | D11            |
 | B7            | 21           | R18                          | D13            |
 | B6            | 12           | L18                          | D14            |
-| B5            | GND          | R22                          | D15            | 
+| B5            | GND          | L22                          | D15            | 
 | G7            | 46           | L14                          | D21            |
 | G6            | 3            | L13                          | D22            |
 | G5            | 8            | L12                          | D23            |
