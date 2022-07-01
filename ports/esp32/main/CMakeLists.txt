@@ -96,7 +96,6 @@ set(MICROPY_SOURCE_PORT
     ${PROJECT_DIR}/esp32_rmt.c
     ${PROJECT_DIR}/esp32_ulp.c
     ${PROJECT_DIR}/modesp32.c
-    ${PROJECT_DIR}/modtulip.c
     ${PROJECT_DIR}/machine_hw_spi.c
     ${PROJECT_DIR}/machine_wdt.c
     ${PROJECT_DIR}/mpthreadport.c
@@ -113,7 +112,6 @@ set(MICROPY_SOURCE_QSTR
     ${MICROPY_SOURCE_LIB}
     ${MICROPY_SOURCE_PORT}
     ${MICROPY_SOURCE_BOARD}
-    ${PROJECT_DIR}/modtulip.c
 )
 
 set(IDF_COMPONENTS

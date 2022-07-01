@@ -1,13 +1,17 @@
-# 1 "../py/mpprint.c"
+# 1 "../extmod/uos_dupterm.c"
 # 1 "<built-in>" 1
 # 1 "<built-in>" 3
 # 401 "<built-in>" 3
 # 1 "<command line>" 1
 # 1 "<built-in>" 2
-# 1 "../py/mpprint.c" 2
-# 27 "../py/mpprint.c"
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 1 3 4
-# 42 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 3 4
+# 1 "../extmod/uos_dupterm.c" 2
+# 28 "../extmod/uos_dupterm.c"
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 1 3 4
+# 61 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types.h" 1 3 4
+# 27 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types.h" 1 3 4
+# 32 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types.h" 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h" 1 3 4
 # 659 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h" 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_symbol_aliasing.h" 1 3 4
@@ -15,80 +19,7 @@
 # 725 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h" 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_posix_availability.h" 1 3 4
 # 726 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/cdefs.h" 2 3 4
-# 43 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 2 3 4
-# 82 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 3 4
-void __assert_rtn(const char *, const char *, int, const char *) __attribute__((__noreturn__)) __attribute__((__cold__)) __attribute__((__disable_tail_calls__));
-# 28 "../py/mpprint.c" 2
-# 1 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdarg.h" 1 3
-# 14 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdarg.h" 3
-typedef __builtin_va_list va_list;
-# 32 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdarg.h" 3
-typedef __builtin_va_list __gnuc_va_list;
-# 29 "../py/mpprint.c" 2
-# 1 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdint.h" 1 3
-# 52 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdint.h" 3
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 1 3 4
-# 18 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h" 1 3 4
-# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h" 3 4
-typedef signed char int8_t;
-# 19 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h" 1 3 4
-# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h" 3 4
-typedef short int16_t;
-# 20 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h" 1 3 4
-# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h" 3 4
-typedef int int32_t;
-# 21 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h" 1 3 4
-# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h" 3 4
-typedef long long int64_t;
-# 22 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint8_t.h" 1 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint8_t.h" 3 4
-typedef unsigned char uint8_t;
-# 24 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint16_t.h" 1 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint16_t.h" 3 4
-typedef unsigned short uint16_t;
-# 25 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint32_t.h" 1 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint32_t.h" 3 4
-typedef unsigned int uint32_t;
-# 26 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint64_t.h" 1 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint64_t.h" 3 4
-typedef unsigned long long uint64_t;
-# 27 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-
-
-typedef int8_t int_least8_t;
-typedef int16_t int_least16_t;
-typedef int32_t int_least32_t;
-typedef int64_t int_least64_t;
-typedef uint8_t uint_least8_t;
-typedef uint16_t uint_least16_t;
-typedef uint32_t uint_least32_t;
-typedef uint64_t uint_least64_t;
-
-
-
-typedef int8_t int_fast8_t;
-typedef int16_t int_fast16_t;
-typedef int32_t int_fast32_t;
-typedef int64_t int_fast64_t;
-typedef uint8_t uint_fast8_t;
-typedef uint16_t uint_fast16_t;
-typedef uint32_t uint_fast32_t;
-typedef uint64_t uint_fast64_t;
-
-
-
-
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types.h" 1 3 4
-# 33 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types.h" 3 4
+# 33 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types.h" 2 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/_types.h" 1 3 4
 # 34 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/_types.h" 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/_types.h" 1 3 4
@@ -252,353 +183,31 @@ typedef struct _opaque_pthread_rwlock_t __darwin_pthread_rwlock_t;
 typedef struct _opaque_pthread_rwlockattr_t __darwin_pthread_rwlockattr_t;
 typedef struct _opaque_pthread_t *__darwin_pthread_t;
 # 81 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types.h" 2 3 4
-# 53 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h" 1 3 4
-# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/types.h" 1 3 4
-# 37 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/types.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 1 3 4
-# 60 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h" 1 3 4
-# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h" 3 4
-typedef unsigned char u_int8_t;
-# 61 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h" 1 3 4
-# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h" 3 4
-typedef unsigned short u_int16_t;
-# 62 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h" 1 3 4
-# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h" 3 4
-typedef unsigned int u_int32_t;
-# 63 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h" 1 3 4
-# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h" 3 4
-typedef unsigned long long u_int64_t;
-# 64 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+# 28 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types.h" 2 3 4
+# 40 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types.h" 3 4
+typedef int __darwin_nl_item;
+typedef int __darwin_wctrans_t;
 
+typedef __uint32_t __darwin_wctype_t;
+# 62 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 2 3 4
 
-typedef int64_t register_t;
-
-
-
-
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h" 1 3 4
-# 72 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h" 1 3 4
-# 34 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h" 3 4
-typedef unsigned long uintptr_t;
-# 73 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
-
-
-
-
-typedef u_int64_t user_addr_t;
-typedef u_int64_t user_size_t;
-typedef int64_t user_ssize_t;
-typedef int64_t user_long_t;
-typedef u_int64_t user_ulong_t;
-typedef int64_t user_time_t;
-typedef int64_t user_off_t;
-# 104 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 3 4
-typedef u_int64_t syscall_arg_t;
-# 38 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/types.h" 2 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h" 2 3 4
-
-typedef __darwin_intptr_t intptr_t;
-# 54 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-
-
-
-
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_intmax_t.h" 1 3 4
-# 32 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_intmax_t.h" 3 4
-typedef long int intmax_t;
-# 59 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uintmax_t.h" 1 3 4
-# 32 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uintmax_t.h" 3 4
-typedef long unsigned int uintmax_t;
-# 60 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
-# 53 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdint.h" 2 3
-# 30 "../py/mpprint.c" 2
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 1 3 4
-# 64 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 1 3 4
-# 69 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h" 1 3 4
 # 135 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h" 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityVersions.h" 1 3 4
 # 136 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h" 2 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/AvailabilityInternal.h" 1 3 4
 # 137 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/Availability.h" 2 3 4
-# 70 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 2 3 4
-
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types.h" 1 3 4
-# 40 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types.h" 3 4
-typedef int __darwin_nl_item;
-typedef int __darwin_wctrans_t;
-
-typedef __uint32_t __darwin_wctype_t;
-# 72 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 2 3 4
-
-
-
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_va_list.h" 1 3 4
-# 32 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_va_list.h" 3 4
-typedef __darwin_va_list va_list;
-# 76 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 2 3 4
+# 64 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 2 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_size_t.h" 1 3 4
 # 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_size_t.h" 3 4
 typedef __darwin_size_t size_t;
-# 77 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 2 3 4
+# 65 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 2 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_null.h" 1 3 4
-# 78 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 2 3 4
+# 66 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 2 3 4
 
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/stdio.h" 1 3 4
-# 47 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/stdio.h" 3 4
-int renameat(int, const char *, int, const char *) __attribute__((availability(macosx,introduced=10.10)));
 
 
 
-int renamex_np(const char *, const char *, unsigned int) __attribute__((availability(macosx,introduced=10.12))) __attribute__((availability(ios,introduced=10.0))) __attribute__((availability(tvos,introduced=10.0))) __attribute__((availability(watchos,introduced=3.0)));
-int renameatx_np(int, const char *, int, const char *, unsigned int) __attribute__((availability(macosx,introduced=10.12))) __attribute__((availability(ios,introduced=10.0))) __attribute__((availability(tvos,introduced=10.0))) __attribute__((availability(watchos,introduced=3.0)));
-# 80 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 2 3 4
-
-typedef __darwin_off_t fpos_t;
-# 92 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 3 4
-struct __sbuf {
- unsigned char *_base;
- int _size;
-};
-
-
-struct __sFILEX;
-# 126 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_stdio.h" 3 4
-typedef struct __sFILE {
- unsigned char *_p;
- int _r;
- int _w;
- short _flags;
- short _file;
- struct __sbuf _bf;
- int _lbfsize;
-
-
- void *_cookie;
- int (* _Nullable _close)(void *);
- int (* _Nullable _read) (void *, char *, int);
- fpos_t (* _Nullable _seek) (void *, fpos_t, int);
- int (* _Nullable _write)(void *, const char *, int);
-
-
- struct __sbuf _ub;
- struct __sFILEX *_extra;
- int _ur;
-
-
- unsigned char _ubuf[3];
- unsigned char _nbuf[1];
-
-
- struct __sbuf _lb;
-
-
- int _blksize;
- fpos_t _offset;
-} FILE;
-# 65 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 2 3 4
-
-
-extern FILE *__stdinp;
-extern FILE *__stdoutp;
-extern FILE *__stderrp;
-# 142 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-void clearerr(FILE *);
-int fclose(FILE *);
-int feof(FILE *);
-int ferror(FILE *);
-int fflush(FILE *);
-int fgetc(FILE *);
-int fgetpos(FILE * restrict, fpos_t *);
-char *fgets(char * restrict, int, FILE *);
-
-
-
-FILE *fopen(const char * restrict __filename, const char * restrict __mode) __asm("_" "fopen" );
-
-int fprintf(FILE * restrict, const char * restrict, ...) __attribute__((__format__ (__printf__, 2, 3)));
-int fputc(int, FILE *);
-int fputs(const char * restrict, FILE * restrict) __asm("_" "fputs" );
-size_t fread(void * restrict __ptr, size_t __size, size_t __nitems, FILE * restrict __stream);
-FILE *freopen(const char * restrict, const char * restrict,
-                 FILE * restrict) __asm("_" "freopen" );
-int fscanf(FILE * restrict, const char * restrict, ...) __attribute__((__format__ (__scanf__, 2, 3)));
-int fseek(FILE *, long, int);
-int fsetpos(FILE *, const fpos_t *);
-long ftell(FILE *);
-size_t fwrite(const void * restrict __ptr, size_t __size, size_t __nitems, FILE * restrict __stream) __asm("_" "fwrite" );
-int getc(FILE *);
-int getchar(void);
-char *gets(char *);
-void perror(const char *) __attribute__((__cold__));
-int printf(const char * restrict, ...) __attribute__((__format__ (__printf__, 1, 2)));
-int putc(int, FILE *);
-int putchar(int);
-int puts(const char *);
-int remove(const char *);
-int rename (const char *__old, const char *__new);
-void rewind(FILE *);
-int scanf(const char * restrict, ...) __attribute__((__format__ (__scanf__, 1, 2)));
-void setbuf(FILE * restrict, char * restrict);
-int setvbuf(FILE * restrict, char * restrict, int, size_t);
-int sprintf(char * restrict, const char * restrict, ...) __attribute__((__format__ (__printf__, 2, 3))) __attribute__((__availability__(swift, unavailable, message="Use snprintf instead.")));
-int sscanf(const char * restrict, const char * restrict, ...) __attribute__((__format__ (__scanf__, 2, 3)));
-FILE *tmpfile(void);
-
-__attribute__((__availability__(swift, unavailable, message="Use mkstemp(3) instead.")))
-
-__attribute__((__deprecated__("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of tmpnam(3), it is highly recommended that you use mkstemp(3) instead.")))
-
-char *tmpnam(char *);
-int ungetc(int, FILE *);
-int vfprintf(FILE * restrict, const char * restrict, va_list) __attribute__((__format__ (__printf__, 2, 0)));
-int vprintf(const char * restrict, va_list) __attribute__((__format__ (__printf__, 1, 0)));
-int vsprintf(char * restrict, const char * restrict, va_list) __attribute__((__format__ (__printf__, 2, 0))) __attribute__((__availability__(swift, unavailable, message="Use vsnprintf instead.")));
-# 205 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_ctermid.h" 1 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_ctermid.h" 3 4
-char *ctermid(char *);
-# 206 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 2 3 4
-
-
-
-
-FILE *fdopen(int, const char *) __asm("_" "fdopen" );
-
-int fileno(FILE *);
-# 223 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-int pclose(FILE *) __attribute__((__availability__(swift, unavailable, message="Use posix_spawn APIs or NSTask instead. (On iOS, process spawning is unavailable.)")));
-
-
-
-FILE *popen(const char *, const char *) __asm("_" "popen" ) __attribute__((__availability__(swift, unavailable, message="Use posix_spawn APIs or NSTask instead. (On iOS, process spawning is unavailable.)")));
-# 242 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-int __srget(FILE *);
-int __svfscanf(FILE *, const char *, va_list) __attribute__((__format__ (__scanf__, 2, 0)));
-int __swbuf(int, FILE *);
-# 253 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-inline __attribute__ ((__always_inline__)) int __sputc(int _c, FILE *_p) {
- if (--_p->_w >= 0 || (_p->_w >= _p->_lbfsize && (char)_c != '\n'))
-  return (*_p->_p++ = _c);
- else
-  return (__swbuf(_c, _p));
-}
-# 279 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-void flockfile(FILE *);
-int ftrylockfile(FILE *);
-void funlockfile(FILE *);
-int getc_unlocked(FILE *);
-int getchar_unlocked(void);
-int putc_unlocked(int, FILE *);
-int putchar_unlocked(int);
-
-
-
-int getw(FILE *);
-int putw(int, FILE *);
-
-
-__attribute__((__availability__(swift, unavailable, message="Use mkstemp(3) instead.")))
-
-__attribute__((__deprecated__("This function is provided for compatibility reasons only.  Due to security concerns inherent in the design of tempnam(3), it is highly recommended that you use mkstemp(3) instead.")))
-
-char *tempnam(const char *__dir, const char *__prefix) __asm("_" "tempnam" );
-# 317 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_off_t.h" 1 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_off_t.h" 3 4
-typedef __darwin_off_t off_t;
-# 318 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 2 3 4
-
-
-int fseeko(FILE * __stream, off_t __offset, int __whence);
-off_t ftello(FILE * __stream);
-
-
-
-
-
-int snprintf(char * restrict __str, size_t __size, const char * restrict __format, ...) __attribute__((__format__ (__printf__, 3, 4)));
-int vfscanf(FILE * restrict __stream, const char * restrict __format, va_list) __attribute__((__format__ (__scanf__, 2, 0)));
-int vscanf(const char * restrict __format, va_list) __attribute__((__format__ (__scanf__, 1, 0)));
-int vsnprintf(char * restrict __str, size_t __size, const char * restrict __format, va_list) __attribute__((__format__ (__printf__, 3, 0)));
-int vsscanf(const char * restrict __str, const char * restrict __format, va_list) __attribute__((__format__ (__scanf__, 2, 0)));
-# 342 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_ssize_t.h" 1 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_ssize_t.h" 3 4
-typedef __darwin_ssize_t ssize_t;
-# 343 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 2 3 4
-
-
-int dprintf(int, const char * restrict, ...) __attribute__((__format__ (__printf__, 2, 3))) __attribute__((availability(macosx,introduced=10.7)));
-int vdprintf(int, const char * restrict, va_list) __attribute__((__format__ (__printf__, 2, 0))) __attribute__((availability(macosx,introduced=10.7)));
-ssize_t getdelim(char ** restrict __linep, size_t * restrict __linecapp, int __delimiter, FILE * restrict __stream) __attribute__((availability(macosx,introduced=10.7)));
-ssize_t getline(char ** restrict __linep, size_t * restrict __linecapp, FILE * restrict __stream) __attribute__((availability(macosx,introduced=10.7)));
-FILE *fmemopen(void * restrict __buf, size_t __size, const char * restrict __mode) __attribute__((availability(macos,introduced=10.13))) __attribute__((availability(ios,introduced=11.0))) __attribute__((availability(tvos,introduced=11.0))) __attribute__((availability(watchos,introduced=4.0)));
-FILE *open_memstream(char **__bufp, size_t *__sizep) __attribute__((availability(macos,introduced=10.13))) __attribute__((availability(ios,introduced=11.0))) __attribute__((availability(tvos,introduced=11.0))) __attribute__((availability(watchos,introduced=4.0)));
-# 360 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-extern const int sys_nerr;
-extern const char *const sys_errlist[];
-
-int asprintf(char ** restrict, const char * restrict, ...) __attribute__((__format__ (__printf__, 2, 3)));
-char *ctermid_r(char *);
-char *fgetln(FILE *, size_t *);
-const char *fmtcheck(const char *, const char *);
-int fpurge(FILE *);
-void setbuffer(FILE *, char *, int);
-int setlinebuf(FILE *);
-int vasprintf(char ** restrict, const char * restrict, va_list) __attribute__((__format__ (__printf__, 2, 0)));
-
-
-
-
-
-FILE *funopen(const void *,
-                 int (* _Nullable)(void *, char *, int),
-                 int (* _Nullable)(void *, const char *, int),
-                 fpos_t (* _Nullable)(void *, fpos_t, int),
-                 int (* _Nullable)(void *));
-# 399 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_stdio.h" 1 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_stdio.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_common.h" 1 3 4
-# 32 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_stdio.h" 2 3 4
-# 42 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_stdio.h" 3 4
-extern int __sprintf_chk (char * restrict, int, size_t,
-     const char * restrict, ...);
-# 52 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_stdio.h" 3 4
-extern int __snprintf_chk (char * restrict, size_t, int, size_t,
-      const char * restrict, ...);
-
-
-
-
-
-
-
-extern int __vsprintf_chk (char * restrict, int, size_t,
-      const char * restrict, va_list);
-
-
-
-
-
-
-
-extern int __vsnprintf_chk (char * restrict, size_t, int, size_t,
-       const char * restrict, va_list);
-# 400 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdio.h" 2 3 4
-# 31 "../py/mpprint.c" 2
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 1 3 4
-# 70 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 3 4
 void *memchr(const void *__s, int __c, size_t __n);
 int memcmp(const void *__s1, const void *__s2, size_t __n);
 void *memcpy(void *__dst, const void *__src, size_t __n);
@@ -640,7 +249,77 @@ char *strsignal(int __sig);
 
 
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_rsize_t.h" 1 3 4
-# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_rsize_t.h" 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_rsize_t.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/types.h" 1 3 4
+# 37 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/types.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 1 3 4
+# 55 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h" 1 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int8_t.h" 3 4
+typedef signed char int8_t;
+# 56 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h" 1 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int16_t.h" 3 4
+typedef short int16_t;
+# 57 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h" 1 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int32_t.h" 3 4
+typedef int int32_t;
+# 58 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h" 1 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_int64_t.h" 3 4
+typedef long long int64_t;
+# 59 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h" 1 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int8_t.h" 3 4
+typedef unsigned char u_int8_t;
+# 61 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h" 1 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int16_t.h" 3 4
+typedef unsigned short u_int16_t;
+# 62 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h" 1 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h" 3 4
+typedef unsigned int u_int32_t;
+# 63 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h" 1 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h" 3 4
+typedef unsigned long long u_int64_t;
+# 64 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+
+
+typedef int64_t register_t;
+
+
+
+
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h" 1 3 4
+# 30 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/types.h" 1 3 4
+# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_intptr_t.h" 2 3 4
+
+typedef __darwin_intptr_t intptr_t;
+# 72 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h" 1 3 4
+# 34 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h" 3 4
+typedef unsigned long uintptr_t;
+# 73 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 2 3 4
+
+
+
+
+typedef u_int64_t user_addr_t;
+typedef u_int64_t user_size_t;
+typedef int64_t user_ssize_t;
+typedef int64_t user_long_t;
+typedef u_int64_t user_ulong_t;
+typedef int64_t user_time_t;
+typedef int64_t user_off_t;
+# 104 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/types.h" 3 4
+typedef u_int64_t syscall_arg_t;
+# 38 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/types.h" 2 3 4
+# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_rsize_t.h" 2 3 4
 typedef __darwin_size_t rsize_t;
 # 142 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 2 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_errno_t.h" 1 3 4
@@ -650,7 +329,18 @@ typedef int errno_t;
 
 
 errno_t memset_s(void *__s, rsize_t __smax, int __c, rsize_t __n) __attribute__((availability(macosx,introduced=10.9)));
-# 155 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 3 4
+
+
+
+
+
+
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_ssize_t.h" 1 3 4
+# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/_types/_ssize_t.h" 3 4
+typedef __darwin_ssize_t ssize_t;
+# 153 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 2 3 4
+
+
 void *memmem(const void *__big, size_t __big_len, const void *__little, size_t __little_len) __attribute__((availability(macosx,introduced=10.7)));
 void memset_pattern4(void *__b, const void *__pattern4, size_t __len) __attribute__((availability(macosx,introduced=10.5)));
 void memset_pattern8(void *__b, const void *__pattern8, size_t __len) __attribute__((availability(macosx,introduced=10.5)));
@@ -711,15 +401,15 @@ int flsll(long long) __attribute__((availability(macosx,introduced=10.9)));
 
 
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_strings.h" 1 3 4
+# 33 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_strings.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_common.h" 1 3 4
+# 34 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_strings.h" 2 3 4
 # 98 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/strings.h" 2 3 4
 # 185 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 2 3 4
 # 194 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 3 4
 # 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/secure/_string.h" 1 3 4
 # 195 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/string.h" 2 3 4
-# 32 "../py/mpprint.c" 2
-
-# 1 "../py/mphal.h" 1
-# 30 "../py/mphal.h"
+# 29 "../extmod/uos_dupterm.c" 2
 # 1 "../py/mpconfig.h" 1
 # 62 "../py/mpconfig.h"
 # 1 "./mpconfigport.h" 1
@@ -733,105 +423,71 @@ typedef long mp_off_t;
 # 32 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/alloca.h" 3 4
 void *alloca(size_t);
 # 130 "./mpconfigport.h" 2
+
+
+# 1 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdint.h" 1 3
+# 52 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdint.h" 3
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 1 3 4
+# 23 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint8_t.h" 1 3 4
+# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint8_t.h" 3 4
+typedef unsigned char uint8_t;
+# 24 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint16_t.h" 1 3 4
+# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint16_t.h" 3 4
+typedef unsigned short uint16_t;
+# 25 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint32_t.h" 1 3 4
+# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint32_t.h" 3 4
+typedef unsigned int uint32_t;
+# 26 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint64_t.h" 1 3 4
+# 31 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uint64_t.h" 3 4
+typedef unsigned long long uint64_t;
+# 27 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
+
+
+typedef int8_t int_least8_t;
+typedef int16_t int_least16_t;
+typedef int32_t int_least32_t;
+typedef int64_t int_least64_t;
+typedef uint8_t uint_least8_t;
+typedef uint16_t uint_least16_t;
+typedef uint32_t uint_least32_t;
+typedef uint64_t uint_least64_t;
+
+
+
+typedef int8_t int_fast8_t;
+typedef int16_t int_fast16_t;
+typedef int32_t int_fast32_t;
+typedef int64_t int_fast64_t;
+typedef uint8_t uint_fast8_t;
+typedef uint16_t uint_fast16_t;
+typedef uint32_t uint_fast32_t;
+typedef uint64_t uint_fast64_t;
+# 58 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_intmax_t.h" 1 3 4
+# 32 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_intmax_t.h" 3 4
+typedef long int intmax_t;
+# 59 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uintmax_t.h" 1 3 4
+# 32 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/_types/_uintmax_t.h" 3 4
+typedef long unsigned int uintmax_t;
+# 60 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h" 2 3 4
+# 53 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdint.h" 2 3
+# 133 "./mpconfigport.h" 2
 # 63 "../py/mpconfig.h" 2
 # 793 "../py/mpconfig.h"
 typedef double mp_float_t;
-# 31 "../py/mphal.h" 2
+# 30 "../extmod/uos_dupterm.c" 2
 
-
-
-
-# 1 "./mphalport.h" 1
-# 36 "../py/mphal.h" 2
-
-
-
-uintptr_t mp_hal_stdio_poll(uintptr_t poll_flags);
-
-
-
-int mp_hal_stdin_rx_chr(void);
-
-
-
-void mp_hal_stdout_tx_str(const char *str);
-
-
-
-void mp_hal_stdout_tx_strn(const char *str, size_t len);
-
-
-
-void mp_hal_stdout_tx_strn_cooked(const char *str, size_t len);
-
-
-
-void mp_hal_delay_ms(mp_uint_t ms);
-
-
-
-void mp_hal_delay_us(mp_uint_t us);
-
-
-
-mp_uint_t mp_hal_ticks_ms(void);
-
-
-
-mp_uint_t mp_hal_ticks_us(void);
-
-
-
-mp_uint_t mp_hal_ticks_cpu(void);
-
-
-
-
-uint64_t mp_hal_time_ns(void);
-# 34 "../py/mpprint.c" 2
-# 1 "../py/mpprint.h" 1
-# 48 "../py/mpprint.h"
-typedef void (*mp_print_strn_t)(void *data, const char *str, size_t len);
-
-typedef struct _mp_print_t {
-    void *data;
-    mp_print_strn_t print_strn;
-} mp_print_t;
-
-typedef struct _mp_print_ext_t {
-    mp_print_t base;
-    const char *item_separator;
-    const char *key_separator;
-}mp_print_ext_t;
-
-
-
-
-
-extern const mp_print_t mp_plat_print;
-
-
-
-
-
-int mp_print_str(const mp_print_t *print, const char *str);
-int mp_print_strn(const mp_print_t *print, const char *str, size_t len, int flags, char fill, int width);
-
-int mp_print_float(const mp_print_t *print, mp_float_t f, char fmt, int flags, char fill, int width, int prec);
-
-
-int mp_printf(const mp_print_t *print, const char *fmt, ...);
-
-int mp_vprintf(const mp_print_t *print, const char *fmt, va_list args);
-# 35 "../py/mpprint.c" 2
-# 1 "../py/obj.h" 1
-# 29 "../py/obj.h"
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 1 3 4
-# 82 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 3 4
-void __assert_rtn(const char *, const char *, int, const char *) __attribute__((__noreturn__)) __attribute__((__cold__)) __attribute__((__disable_tail_calls__));
-# 30 "../py/obj.h" 2
-
-
+# 1 "../py/runtime.h" 1
+# 29 "../py/runtime.h"
+# 1 "../py/mpstate.h" 1
+# 32 "../py/mpstate.h"
+# 1 "../py/mpthread.h" 1
+# 33 "../py/mpstate.h" 2
 # 1 "../py/misc.h" 1
 # 33 "../py/misc.h"
 # 1 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stdbool.h" 1 3
@@ -932,11 +588,7 @@ void vstr_cut_head_bytes(vstr_t *vstr, size_t bytes_to_cut);
 void vstr_cut_tail_bytes(vstr_t *vstr, size_t bytes_to_cut);
 void vstr_cut_out_bytes(vstr_t *vstr, size_t byte_pos, size_t bytes_to_cut);
 void vstr_printf(vstr_t *vstr, const char *fmt, ...);
-# 227 "../py/misc.h"
-void vstr_vprintf(vstr_t *vstr, const char *fmt, va_list ap);
-
-
-
+# 231 "../py/misc.h"
 int DEBUG_printf(const char *fmt, ...);
 
 extern mp_uint_t mp_verbose_flag;
@@ -962,7 +614,68 @@ typedef union _mp_float_union_t {
 } mp_float_union_t;
 # 321 "../py/misc.h"
 typedef const char *mp_rom_error_text_t;
-# 33 "../py/obj.h" 2
+# 34 "../py/mpstate.h" 2
+# 1 "../py/nlr.h" 1
+# 32 "../py/nlr.h"
+# 1 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/limits.h" 1 3
+# 21 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/limits.h" 3
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/limits.h" 1 3 4
+# 64 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/limits.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/limits.h" 1 3 4
+# 11 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/limits.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/limits.h" 1 3 4
+# 45 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/limits.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/_limits.h" 1 3 4
+# 46 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/limits.h" 2 3 4
+# 12 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/limits.h" 2 3 4
+# 65 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/limits.h" 2 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/syslimits.h" 1 3 4
+# 66 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/limits.h" 2 3 4
+# 22 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/limits.h" 2 3
+# 33 "../py/nlr.h" 2
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 1 3 4
+# 82 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 3 4
+void __assert_rtn(const char *, const char *, int, const char *) __attribute__((__noreturn__)) __attribute__((__cold__)) __attribute__((__disable_tail_calls__));
+# 34 "../py/nlr.h" 2
+# 98 "../py/nlr.h"
+typedef struct _nlr_buf_t nlr_buf_t;
+struct _nlr_buf_t {
+
+    nlr_buf_t *prev;
+    void *ret_val;
+
+
+
+
+    void *regs[((13))];
+
+
+
+
+
+};
+# 141 "../py/nlr.h"
+unsigned int nlr_push(nlr_buf_t *);
+
+
+unsigned int nlr_push_tail(nlr_buf_t *top);
+void nlr_pop(void);
+__attribute__((noreturn)) void nlr_jump(void *val);
+
+
+
+
+__attribute__((noreturn)) void nlr_jump_fail(void *val);
+# 35 "../py/mpstate.h" 2
+# 1 "../py/obj.h" 1
+# 29 "../py/obj.h"
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 1 3 4
+# 82 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 3 4
+void __assert_rtn(const char *, const char *, int, const char *) __attribute__((__noreturn__)) __attribute__((__cold__)) __attribute__((__disable_tail_calls__));
+# 30 "../py/obj.h" 2
+
+
+
 # 1 "../py/qstr.h" 1
 # 39 "../py/qstr.h"
 enum {
@@ -1021,7 +734,39 @@ const byte *qstr_data(qstr q, size_t *len);
 void qstr_pool_info(size_t *n_pool, size_t *n_qstr, size_t *n_str_data_bytes, size_t *n_total_bytes);
 void qstr_dump_data(void);
 # 34 "../py/obj.h" 2
+# 1 "../py/mpprint.h" 1
+# 48 "../py/mpprint.h"
+typedef void (*mp_print_strn_t)(void *data, const char *str, size_t len);
 
+typedef struct _mp_print_t {
+    void *data;
+    mp_print_strn_t print_strn;
+} mp_print_t;
+
+typedef struct _mp_print_ext_t {
+    mp_print_t base;
+    const char *item_separator;
+    const char *key_separator;
+}mp_print_ext_t;
+
+
+
+
+
+extern const mp_print_t mp_plat_print;
+
+
+
+
+
+int mp_print_str(const mp_print_t *print, const char *str);
+int mp_print_strn(const mp_print_t *print, const char *str, size_t len, int flags, char fill, int width);
+
+int mp_print_float(const mp_print_t *print, mp_float_t f, char fmt, int flags, char fill, int width, int prec);
+
+
+int mp_printf(const mp_print_t *print, const char *fmt, ...);
+# 35 "../py/obj.h" 2
 # 1 "../py/runtime0.h" 1
 # 65 "../py/runtime0.h"
 typedef enum {
@@ -1459,7 +1204,7 @@ mp_obj_t mp_obj_new_exception_msg(const mp_obj_type_t *exc_type, mp_rom_error_te
 mp_obj_t mp_obj_new_exception_msg_varg(const mp_obj_type_t *exc_type, mp_rom_error_text_t fmt, ...);
 
 
-mp_obj_t mp_obj_new_exception_msg_vlist(const mp_obj_type_t *exc_type, mp_rom_error_text_t fmt, va_list arg);
+
 
 mp_obj_t mp_obj_new_gen_wrap(mp_obj_t fun);
 mp_obj_t mp_obj_new_closure(mp_obj_t fun, size_t n_closed, const mp_obj_t *closed);
@@ -1693,171 +1438,7 @@ _Bool mp_seq_cmp_objs(mp_uint_t op, const mp_obj_t *items1, size_t len1, const m
 mp_obj_t mp_seq_index_obj(const mp_obj_t *items, size_t len, size_t n_args, const mp_obj_t *args);
 mp_obj_t mp_seq_count_obj(const mp_obj_t *items, size_t len, mp_obj_t value);
 mp_obj_t mp_seq_extract_slice(size_t len, const mp_obj_t *seq, mp_bound_slice_t *indexes);
-# 36 "../py/mpprint.c" 2
-# 1 "../py/objint.h" 1
-# 29 "../py/objint.h"
-# 1 "../py/mpz.h" 1
-# 64 "../py/mpz.h"
-typedef uint16_t mpz_dig_t;
-typedef uint32_t mpz_dbl_dig_t;
-typedef int32_t mpz_dbl_dig_signed_t;
-# 93 "../py/mpz.h"
-typedef struct _mpz_t {
-
-    size_t neg : 1;
-    size_t fixed_dig : 1;
-    size_t alloc : (8 * sizeof(size_t) - 2);
-    size_t len;
-    mpz_dig_t *dig;
-} mpz_t;
-
-
-
-
-void mpz_init_zero(mpz_t *z);
-void mpz_init_from_int(mpz_t *z, mp_int_t val);
-void mpz_init_fixed_from_int(mpz_t *z, mpz_dig_t *dig, size_t dig_alloc, mp_int_t val);
-void mpz_deinit(mpz_t *z);
-
-void mpz_set(mpz_t *dest, const mpz_t *src);
-void mpz_set_from_int(mpz_t *z, mp_int_t src);
-void mpz_set_from_ll(mpz_t *z, long long i, _Bool is_signed);
-
-void mpz_set_from_float(mpz_t *z, mp_float_t src);
-
-size_t mpz_set_from_str(mpz_t *z, const char *str, size_t len, _Bool neg, unsigned int base);
-void mpz_set_from_bytes(mpz_t *z, _Bool big_endian, size_t len, const byte *buf);
-
-static inline _Bool mpz_is_zero(const mpz_t *z) {
-    return z->len == 0;
-}
-static inline _Bool mpz_is_neg(const mpz_t *z) {
-    return z->neg != 0;
-}
-int mpz_cmp(const mpz_t *lhs, const mpz_t *rhs);
-
-void mpz_abs_inpl(mpz_t *dest, const mpz_t *z);
-void mpz_neg_inpl(mpz_t *dest, const mpz_t *z);
-void mpz_not_inpl(mpz_t *dest, const mpz_t *z);
-void mpz_shl_inpl(mpz_t *dest, const mpz_t *lhs, mp_uint_t rhs);
-void mpz_shr_inpl(mpz_t *dest, const mpz_t *lhs, mp_uint_t rhs);
-void mpz_add_inpl(mpz_t *dest, const mpz_t *lhs, const mpz_t *rhs);
-void mpz_sub_inpl(mpz_t *dest, const mpz_t *lhs, const mpz_t *rhs);
-void mpz_mul_inpl(mpz_t *dest, const mpz_t *lhs, const mpz_t *rhs);
-void mpz_pow_inpl(mpz_t *dest, const mpz_t *lhs, const mpz_t *rhs);
-void mpz_pow3_inpl(mpz_t *dest, const mpz_t *lhs, const mpz_t *rhs, const mpz_t *mod);
-void mpz_and_inpl(mpz_t *dest, const mpz_t *lhs, const mpz_t *rhs);
-void mpz_or_inpl(mpz_t *dest, const mpz_t *lhs, const mpz_t *rhs);
-void mpz_xor_inpl(mpz_t *dest, const mpz_t *lhs, const mpz_t *rhs);
-void mpz_divmod_inpl(mpz_t *dest_quo, mpz_t *dest_rem, const mpz_t *lhs, const mpz_t *rhs);
-
-static inline size_t mpz_max_num_bits(const mpz_t *z) {
-    return z->len * (16);
-}
-mp_int_t mpz_hash(const mpz_t *z);
-_Bool mpz_as_int_checked(const mpz_t *z, mp_int_t *value);
-_Bool mpz_as_uint_checked(const mpz_t *z, mp_uint_t *value);
-void mpz_as_bytes(const mpz_t *z, _Bool big_endian, size_t len, byte *buf);
-
-mp_float_t mpz_as_float(const mpz_t *z);
-
-size_t mpz_as_str_inpl(const mpz_t *z, unsigned int base, const char *prefix, char base_char, char comma, char *str);
-# 30 "../py/objint.h" 2
-
-
-typedef struct _mp_obj_int_t {
-    mp_obj_base_t base;
-
-
-
-    mpz_t mpz;
-
-} mp_obj_int_t;
-
-extern const mp_obj_int_t mp_sys_maxsize_obj;
-
-
-mp_float_t mp_obj_int_as_float_impl(mp_obj_t self_in);
-
-
-size_t mp_int_format_size(size_t num_bits, int base, const char *prefix, char comma);
-
-mp_obj_int_t *mp_obj_int_new_mpz(void);
-
-void mp_obj_int_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind);
-char *mp_obj_int_formatted(char **buf, size_t *buf_size, size_t *fmt_size, mp_const_obj_t self_in,
-    int base, const char *prefix, char base_char, char comma);
-char *mp_obj_int_formatted_impl(char **buf, size_t *buf_size, size_t *fmt_size, mp_const_obj_t self_in,
-    int base, const char *prefix, char base_char, char comma);
-mp_int_t mp_obj_int_hash(mp_obj_t self_in);
-mp_obj_t mp_obj_int_from_bytes_impl(_Bool big_endian, size_t len, const byte *buf);
-void mp_obj_int_to_bytes_impl(mp_obj_t self_in, _Bool big_endian, size_t len, byte *buf);
-int mp_obj_int_sign(mp_obj_t self_in);
-mp_obj_t mp_obj_int_unary_op(mp_unary_op_t op, mp_obj_t o_in);
-mp_obj_t mp_obj_int_binary_op(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t rhs_in);
-mp_obj_t mp_obj_int_binary_op_extra_cases(mp_binary_op_t op, mp_obj_t lhs_in, mp_obj_t rhs_in);
-mp_obj_t mp_obj_int_pow3(mp_obj_t base, mp_obj_t exponent, mp_obj_t modulus);
-# 37 "../py/mpprint.c" 2
-# 1 "../py/runtime.h" 1
-# 29 "../py/runtime.h"
-# 1 "../py/mpstate.h" 1
-# 32 "../py/mpstate.h"
-# 1 "../py/mpthread.h" 1
-# 33 "../py/mpstate.h" 2
-
-# 1 "../py/nlr.h" 1
-# 32 "../py/nlr.h"
-# 1 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/limits.h" 1 3
-# 21 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/limits.h" 3
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/limits.h" 1 3 4
-# 64 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/limits.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/limits.h" 1 3 4
-# 11 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/limits.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/limits.h" 1 3 4
-# 45 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/limits.h" 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/_limits.h" 1 3 4
-# 46 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/arm/limits.h" 2 3 4
-# 12 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/machine/limits.h" 2 3 4
-# 65 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/limits.h" 2 3 4
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/syslimits.h" 1 3 4
-# 66 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/limits.h" 2 3 4
-# 22 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/limits.h" 2 3
-# 33 "../py/nlr.h" 2
-# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 1 3 4
-# 82 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/assert.h" 3 4
-void __assert_rtn(const char *, const char *, int, const char *) __attribute__((__noreturn__)) __attribute__((__cold__)) __attribute__((__disable_tail_calls__));
-# 34 "../py/nlr.h" 2
-# 98 "../py/nlr.h"
-typedef struct _nlr_buf_t nlr_buf_t;
-struct _nlr_buf_t {
-
-    nlr_buf_t *prev;
-    void *ret_val;
-
-
-
-
-    void *regs[((13))];
-
-
-
-
-
-};
-# 141 "../py/nlr.h"
-unsigned int nlr_push(nlr_buf_t *);
-
-
-unsigned int nlr_push_tail(nlr_buf_t *top);
-void nlr_pop(void);
-__attribute__((noreturn)) void nlr_jump(void *val);
-
-
-
-
-__attribute__((noreturn)) void nlr_jump_fail(void *val);
-# 35 "../py/mpstate.h" 2
-
+# 36 "../py/mpstate.h" 2
 # 1 "../py/objlist.h" 1
 # 31 "../py/objlist.h"
 typedef struct _mp_obj_list_t {
@@ -2233,512 +1814,112 @@ mp_obj_t mp_native_to_obj(mp_uint_t val, mp_uint_t type);
 
 
 void mp_warning(const char *category, const char *msg, ...);
-# 38 "../py/mpprint.c" 2
+# 32 "../extmod/uos_dupterm.c" 2
+
+# 1 "../py/objarray.h" 1
+# 38 "../py/objarray.h"
+typedef struct _mp_obj_array_t {
+    mp_obj_base_t base;
+    size_t typecode : 8;
 
 
-# 1 "../py/formatfloat.h" 1
-# 32 "../py/formatfloat.h"
-int mp_format_float(mp_float_t f, char *buf, size_t bufSize, char fmt, int prec, char sign);
-# 41 "../py/mpprint.c" 2
 
 
-static const char pad_spaces[] = "                ";
-static const char pad_zeroes[] = "0000000000000000";
 
-static void plat_print_strn(void *env, const char *str, size_t len) {
-    (void)env;
-    (void)0;
+
+    size_t free : (8 * sizeof(size_t) - 8);
+    size_t len;
+    void *items;
+} mp_obj_array_t;
+# 34 "../extmod/uos_dupterm.c" 2
+# 1 "../py/stream.h" 1
+# 31 "../py/stream.h"
+# 1 "../py/mperrno.h" 1
+# 90 "../py/mperrno.h"
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/errno.h" 1 3 4
+# 23 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/errno.h" 3 4
+# 1 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/errno.h" 1 3 4
+# 80 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/sys/errno.h" 3 4
+extern int * __error(void);
+# 24 "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/errno.h" 2 3 4
+# 91 "../py/mperrno.h" 2
+# 32 "../py/stream.h" 2
+# 55 "../py/stream.h"
+struct mp_stream_seek_t {
+
+
+
+    mp_off_t offset;
+    int whence;
+};
+
+
+
+
+
+
+
+typedef struct _mp_stream_p_t {
+
+
+    mp_uint_t (*read)(mp_obj_t obj, void *buf, mp_uint_t size, int *errcode);
+    mp_uint_t (*write)(mp_obj_t obj, const void *buf, mp_uint_t size, int *errcode);
+    mp_uint_t (*ioctl)(mp_obj_t obj, mp_uint_t request, uintptr_t arg, int *errcode);
+    mp_uint_t is_text : 1;
+} mp_stream_p_t;
+
+extern const mp_obj_fun_builtin_var_t mp_stream_read_obj;
+extern const mp_obj_fun_builtin_var_t mp_stream_read1_obj;
+extern const mp_obj_fun_builtin_var_t mp_stream_readinto_obj;
+extern const mp_obj_fun_builtin_var_t mp_stream_unbuffered_readline_obj;
+extern const mp_obj_fun_builtin_fixed_t mp_stream_unbuffered_readlines_obj;
+extern const mp_obj_fun_builtin_var_t mp_stream_write_obj;
+extern const mp_obj_fun_builtin_fixed_t mp_stream_write1_obj;
+extern const mp_obj_fun_builtin_fixed_t mp_stream_close_obj;
+extern const mp_obj_fun_builtin_var_t mp_stream_seek_obj;
+extern const mp_obj_fun_builtin_fixed_t mp_stream_tell_obj;
+extern const mp_obj_fun_builtin_fixed_t mp_stream_flush_obj;
+extern const mp_obj_fun_builtin_var_t mp_stream_ioctl_obj;
+
+
+
+
+
+
+
+static inline const mp_stream_p_t *mp_get_stream(mp_const_obj_t self) {
+    return (const mp_stream_p_t *)((const mp_obj_base_t *)((void *)self))->type->protocol;
 }
 
-const mp_print_t mp_plat_print = {((void*)0), plat_print_strn};
+const mp_stream_p_t *mp_get_stream_raise(mp_obj_t self_in, int flags);
+mp_obj_t mp_stream_close(mp_obj_t stream);
 
 
-int mp_print_str(const mp_print_t *print, const char *str) {
-    size_t len = strlen(str);
-    if (len) {
-        print->print_strn(print->data, str, len);
+mp_obj_t mp_stream_unbuffered_iter(mp_obj_t self);
 
+mp_obj_t mp_stream_write(mp_obj_t self_in, const void *buf, size_t len, byte flags);
 
-    }
-    return len;
-}
 
-int mp_print_strn(const mp_print_t *print, const char *str, size_t len, int flags, char fill, int width) {
-    int left_pad = 0;
-    int right_pad = 0;
-    int pad = width - len;
-    int pad_size;
-    int total_chars_printed = 0;
-    const char *pad_chars;
-    if (!fill || fill == ' ') {
-        pad_chars = pad_spaces;
-        pad_size = sizeof(pad_spaces) - 1;
-    } else if (fill == '0') {
-        pad_chars = pad_zeroes;
-        pad_size = sizeof(pad_zeroes) - 1;
-    } else {
 
 
-        pad_chars = &fill;
-        pad_size = 1;
-    }
 
-    if (flags & (0x080)) {
-        left_pad = pad / 2;
-        right_pad = pad - left_pad;
-    } else if (flags & (0x001)) {
-        right_pad = pad;
-    } else {
-        left_pad = pad;
-    }
+mp_uint_t mp_stream_rw(mp_obj_t stream, void *buf, mp_uint_t size, int *errcode, byte flags);
 
-    if (left_pad > 0) {
-        total_chars_printed += left_pad;
-        while (left_pad > 0) {
-            int p = left_pad;
-            if (p > pad_size) {
-                p = pad_size;
-            }
-            print->print_strn(print->data, pad_chars, p);
-            left_pad -= p;
-        }
-    }
-    if (len) {
-        print->print_strn(print->data, str, len);
-        total_chars_printed += len;
-    }
-    if (right_pad > 0) {
-        total_chars_printed += right_pad;
-        while (right_pad > 0) {
-            int p = right_pad;
-            if (p > pad_size) {
-                p = pad_size;
-            }
-            print->print_strn(print->data, pad_chars, p);
-            right_pad -= p;
-        }
-    }
-    return total_chars_printed;
-}
-# 132 "../py/mpprint.c"
-static int mp_print_int(const mp_print_t *print, mp_uint_t x, int sgn, int base, int base_char, int flags, char fill, int width) {
-    char sign = 0;
-    if (sgn) {
-        if ((mp_int_t)x < 0) {
-            sign = '-';
-            x = -x;
-        } else if (flags & (0x002)) {
-            sign = '+';
-        } else if (flags & (0x004)) {
-            sign = ' ';
-        }
-    }
 
-    char buf[(sizeof(mp_int_t) * 4)];
-    char *b = buf + (sizeof(mp_int_t) * 4);
 
-    if (x == 0) {
-        *(--b) = '0';
-    } else {
-        do {
-            int c = x % base;
-            x /= base;
-            if (c >= 10) {
-                c += base_char - 10;
-            } else {
-                c += '0';
-            }
-            *(--b) = c;
-        } while (b > buf && x != 0);
-    }
-# 177 "../py/mpprint.c"
-    int len = 0;
-    if (flags & (0x040)) {
-        if (sign) {
-            len += mp_print_strn(print, &sign, 1, flags, fill, 1);
-            width--;
-        }
+void mp_stream_write_adaptor(void *self, const char *buf, size_t len);
+# 35 "../extmod/uos_dupterm.c" 2
+# 1 "../extmod/misc.h" 1
+# 32 "../extmod/misc.h"
+# 1 "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/13.1.6/include/stddef.h" 1 3
+# 33 "../extmod/misc.h" 2
 
 
+extern const mp_obj_fun_builtin_var_t mp_uos_dupterm_obj;
+# 36 "../extmod/uos_dupterm.c" 2
+# 1 "../shared/runtime/interrupt_char.h" 1
+# 29 "../shared/runtime/interrupt_char.h"
+extern int mp_interrupt_char;
+void mp_hal_set_interrupt_char(int c);
+# 37 "../extmod/uos_dupterm.c" 2
 
-
-
-
-
-    } else {
-
-
-
-
-
-
-        if (sign && b > buf) {
-            *(--b) = sign;
-        }
-    }
-
-    len += mp_print_strn(print, b, buf + (sizeof(mp_int_t) * 4) - b, flags, fill, width);
-    return len;
-}
-
-int mp_print_mp_int(const mp_print_t *print, mp_obj_t x, int base, int base_char, int flags, char fill, int width, int prec) {
-
-
-
-    (__builtin_expect(!(base == 2 || base == 8 || base == 10 || base == 16), 0) ? __assert_rtn(__func__, "mpprint.c", 210, "base == 2 || base == 8 || base == 10 || base == 16") : (void)0);
-
-    if (!(mp_obj_is_small_int(x) || (mp_obj_is_obj(x) && (((mp_obj_base_t *)((void *)x))->type == (&mp_type_int))))) {
-
-
-        x = ((mp_obj_t)((((mp_uint_t)(mp_obj_get_int(x))) << 1) | 1));
-    }
-
-    if ((flags & ((0x001) | (0x080))) == 0 && fill == '0') {
-        if (prec > width) {
-            width = prec;
-        }
-        prec = 0;
-    }
-    char prefix_buf[4];
-    char *prefix = prefix_buf;
-
-    if (mp_obj_int_sign(x) >= 0) {
-        if (flags & (0x002)) {
-            *prefix++ = '+';
-        } else if (flags & (0x004)) {
-            *prefix++ = ' ';
-        }
-    }
-
-    if (flags & (0x010)) {
-        if (base == 2) {
-            *prefix++ = '0';
-            *prefix++ = base_char + 'b' - 'a';
-        } else if (base == 8) {
-            *prefix++ = '0';
-            if (flags & (0x200)) {
-                *prefix++ = base_char + 'o' - 'a';
-            }
-        } else if (base == 16) {
-            *prefix++ = '0';
-            *prefix++ = base_char + 'x' - 'a';
-        }
-    }
-    *prefix = '\0';
-    int prefix_len = prefix - prefix_buf;
-    prefix = prefix_buf;
-
-    char comma = '\0';
-    if (flags & (0x020)) {
-        comma = ',';
-    }
-
-
-
-    char stack_buf[sizeof(mp_int_t) * 4];
-    char *buf = stack_buf;
-    size_t buf_size = sizeof(stack_buf);
-    size_t fmt_size = 0;
-    char *str;
-
-    if (prec > 1) {
-        flags |= (0x040);
-    }
-    char sign = '\0';
-    if (flags & (0x040)) {
-
-
-        str = mp_obj_int_formatted(&buf, &buf_size, &fmt_size,
-            x, base, ((void*)0), base_char, comma);
-        if (*str == '-') {
-            sign = *str++;
-            fmt_size--;
-        }
-    } else {
-        str = mp_obj_int_formatted(&buf, &buf_size, &fmt_size,
-            x, base, prefix, base_char, comma);
-    }
-
-    int spaces_before = 0;
-    int spaces_after = 0;
-
-    if (prec > 1) {
-
-
-
-
-        int prec_width = fmt_size;
-        if (prec_width < prec) {
-            prec_width = prec;
-        }
-        if (flags & (0x040)) {
-            if (sign) {
-                prec_width++;
-            }
-            prec_width += prefix_len;
-        }
-        if (prec_width < width) {
-            if (flags & (0x001)) {
-                spaces_after = width - prec_width;
-            } else {
-                spaces_before = width - prec_width;
-            }
-        }
-        fill = '0';
-        flags &= ~(0x001);
-    }
-
-    int len = 0;
-    if (spaces_before) {
-        len += mp_print_strn(print, "", 0, 0, ' ', spaces_before);
-    }
-    if (flags & (0x040)) {
-
-        if (sign) {
-            len += mp_print_strn(print, &sign, 1, 0, 0, 1);
-            width--;
-        }
-        if (prefix_len) {
-            len += mp_print_strn(print, prefix, prefix_len, 0, 0, 1);
-            width -= prefix_len;
-        }
-    }
-    if (prec > 1) {
-        width = prec;
-    }
-
-    len += mp_print_strn(print, str, fmt_size, flags, fill, width);
-
-    if (spaces_after) {
-        len += mp_print_strn(print, "", 0, 0, ' ', spaces_after);
-    }
-
-    if (buf != stack_buf) {
-        ((void)(buf_size), m_free(buf));
-    }
-    return len;
-}
-
-
-int mp_print_float(const mp_print_t *print, mp_float_t f, char fmt, int flags, char fill, int width, int prec) {
-    char buf[32];
-    char sign = '\0';
-    int chrs = 0;
-
-    if (flags & (0x002)) {
-        sign = '+';
-    } else
-    if (flags & (0x004)) {
-        sign = ' ';
-    }
-
-    int len = mp_format_float(f, buf, sizeof(buf), fmt, prec, sign);
-
-    char *s = buf;
-
-    if ((flags & (0x100)) && (size_t)(len + 1) < sizeof(buf)) {
-        buf[len++] = '%';
-        buf[len] = '\0';
-    }
-
-
-    if ((flags & (0x040)) && buf[0] < '0') {
-
-        s++;
-        chrs += mp_print_strn(print, &buf[0], 1, 0, 0, 1);
-        width--;
-        len--;
-    }
-
-    chrs += mp_print_strn(print, s, len, flags, fill, width);
-
-    return chrs;
-}
-
-
-int mp_printf(const mp_print_t *print, const char *fmt, ...) {
-    va_list ap;
-    __builtin_va_start(ap, fmt);
-    int ret = mp_vprintf(print, fmt, ap);
-    __builtin_va_end(ap);
-    return ret;
-}
-
-int mp_vprintf(const mp_print_t *print, const char *fmt, va_list args) {
-    int chrs = 0;
-    for (;;) {
-        {
-            const char *f = fmt;
-            while (*f != '\0' && *f != '%') {
-                ++f;
-            }
-            if (f > fmt) {
-                print->print_strn(print->data, fmt, f - fmt);
-                chrs += f - fmt;
-                fmt = f;
-            }
-        }
-
-        if (*fmt == '\0') {
-            break;
-        }
-
-
-        ++fmt;
-
-
-        int flags = 0;
-        char fill = ' ';
-        while (*fmt != '\0') {
-            if (*fmt == '-') {
-                flags |= (0x001);
-            } else if (*fmt == '+') {
-                flags |= (0x002);
-            } else if (*fmt == ' ') {
-                flags |= (0x004);
-            } else if (*fmt == '!') {
-                flags |= (0x008);
-            } else if (*fmt == '0') {
-                flags |= (0x040);
-                fill = '0';
-            } else {
-                break;
-            }
-            ++fmt;
-        }
-
-
-        int width = 0;
-        for (; '0' <= *fmt && *fmt <= '9'; ++fmt) {
-            width = width * 10 + *fmt - '0';
-        }
-
-
-        int prec = -1;
-        if (*fmt == '.') {
-            ++fmt;
-            if (*fmt == '*') {
-                ++fmt;
-                prec = __builtin_va_arg(args, int);
-            } else {
-                prec = 0;
-                for (; '0' <= *fmt && *fmt <= '9'; ++fmt) {
-                    prec = prec * 10 + *fmt - '0';
-                }
-            }
-            if (prec < 0) {
-                prec = 0;
-            }
-        }
-
-
-
-
-
-        _Bool long_arg = 0;
-        if (*fmt == 'l') {
-            ++fmt;
-
-            long_arg = 1;
-
-        }
-
-        if (*fmt == '\0') {
-            break;
-        }
-
-        switch (*fmt) {
-            case 'b':
-                if (__builtin_va_arg(args, int)) {
-                    chrs += mp_print_strn(print, "true", 4, flags, fill, width);
-                } else {
-                    chrs += mp_print_strn(print, "false", 5, flags, fill, width);
-                }
-                break;
-            case 'c': {
-                char str = __builtin_va_arg(args, int);
-                chrs += mp_print_strn(print, &str, 1, flags, fill, width);
-                break;
-            }
-            case 'q': {
-                qstr qst = __builtin_va_arg(args, qstr);
-                size_t len;
-                const char *str = (const char *)qstr_data(qst, &len);
-                if (prec >= 0 && (size_t)prec < len) {
-                    len = prec;
-                }
-                chrs += mp_print_strn(print, str, len, flags, fill, width);
-                break;
-            }
-            case 's': {
-                const char *str = __builtin_va_arg(args, const char *);
-
-
-                if (prec != 0 && str == ((void*)0)) {
-                    chrs += mp_print_strn(print, "(null)", 6, flags, fill, width);
-                    break;
-                }
-
-                size_t len = strlen(str);
-                if (prec >= 0 && (size_t)prec < len) {
-                    len = prec;
-                }
-                chrs += mp_print_strn(print, str, len, flags, fill, width);
-                break;
-            }
-            case 'd': {
-                mp_int_t val;
-                if (long_arg) {
-                    val = __builtin_va_arg(args, long int);
-                } else {
-                    val = __builtin_va_arg(args, int);
-                }
-                chrs += mp_print_int(print, val, 1, 10, 'a', flags, fill, width);
-                break;
-            }
-            case 'u':
-            case 'x':
-            case 'X': {
-                int base = 16 - ((*fmt + 1) & 6);
-                char fmt_c = (*fmt & 0xf0) - 'P' + 'A';
-                mp_uint_t val;
-                if (long_arg) {
-                    val = __builtin_va_arg(args, unsigned long int);
-                } else {
-                    val = __builtin_va_arg(args, unsigned int);
-                }
-                chrs += mp_print_int(print, val, 0, base, fmt_c, flags, fill, width);
-                break;
-            }
-            case 'p':
-            case 'P':
-
-                chrs += mp_print_int(print, __builtin_va_arg(args, unsigned long int), 0, 16, 'a', flags, fill, width);
-                break;
-
-            case 'e':
-            case 'E':
-            case 'f':
-            case 'F':
-            case 'g':
-            case 'G': {
-
-                mp_float_t f = (mp_float_t)__builtin_va_arg(args, double);
-                chrs += mp_print_float(print, f, *fmt, flags, fill, width, prec);
-
-
-
-                break;
-            }
-# 568 "../py/mpprint.c"
-            default:
-
-                (__builtin_expect(!(*fmt == '%' || !"unsupported fmt char"), 0) ? __assert_rtn(__func__, "mpprint.c", 570, "*fmt == '%' || !\"unsupported fmt char\"") : (void)0);
-                print->print_strn(print->data, fmt, 1);
-                chrs += 1;
-                break;
-        }
-        ++fmt;
-    }
-    return chrs;
-}
