@@ -102,7 +102,7 @@ else
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections
 endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -L/opt/homebrew/lib -lSDL2
+LDFLAGS += -L/opt/homebrew/lib -lSDL2 -lsoundio
 
 # Flags to link with pthread library
 LIBPTHREAD = -lpthread

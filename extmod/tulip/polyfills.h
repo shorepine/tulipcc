@@ -26,5 +26,6 @@ void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags)
 void *realloc_caps(void* ptr, uint32_t size, uint32_t caps);
 void free_caps(void *ptr);
 float compute_cpu_usage(uint8_t debug);
+void delay_ms(uint32_t ms);
 
 #endif

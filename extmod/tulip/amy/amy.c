@@ -561,7 +561,7 @@ int16_t channel = -1;
 int16_t device_id = -1;
 uint8_t file_write = 0;
 FILE * raw = NULL;
-extern char * raw_file;
+//extern char * raw_file;
 
 void print_devices() {
     struct SoundIo *soundio2 = soundio_create();
@@ -695,7 +695,7 @@ amy_err_t soundio_init() {
         return 1;
     } else {
         const char *all_str = (channel<0) ? " (all)" : "";
-        printf("Using device ID %d, device %s, channel %d %s\n", selected_device_index, device->name, channel, all_str);
+        fprintf(stderr,"Using device ID %d, device %s, channel %d %s\n", selected_device_index, device->name, channel, all_str);
     }
 
     if (device->probe_error) {
@@ -746,10 +746,10 @@ void *soundio_run(void *vargp) {
 
 void live_start() {
     // kick off a thread running soundio_run
-    if(strlen(raw_file) > 0) {
-        file_write = 1;
-        raw = fopen(raw_file, "wb");
-    }
+    //if(strlen(raw_file) > 0) {
+    //    file_write = 1;
+    //    raw = fopen(raw_file, "wb");
+    //}
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, soundio_run, NULL);
 }
@@ -923,7 +923,7 @@ void parse_task() {
                 // if we haven't yet synced our times, do it now
                 if(!computed_delta_set) {
                     computed_delta = e.time - sysclock;
-                    printf("setting computed delta to %lld (e.time is %lld sysclock %lld) max_drift_ms %d latency %d\n", computed_delta, e.time, sysclock, MAX_DRIFT_MS, LATENCY_MS);
+                    fprintf(stderr,"setting computed delta to %lld (e.time is %lld sysclock %lld) max_drift_ms %d latency %d\n", computed_delta, e.time, sysclock, MAX_DRIFT_MS, LATENCY_MS);
                     computed_delta_set = 1;
                 }
             }
@@ -988,9 +988,9 @@ void parse_task() {
             // OK, so check for potentially negative numbers here (or really big numbers-sysclock) 
             int64_t potential_time = (e.time - computed_delta) + LATENCY_MS;
             if(potential_time < 0 || (potential_time > sysclock + LATENCY_MS + MAX_DRIFT_MS)) {
-                printf("recomputing time base: message came in with %lld, mine is %lld, computed delta was %lld\n", e.time, sysclock, computed_delta);
+                fprintf(stderr,"recomputing time base: message came in with %lld, mine is %lld, computed delta was %lld\n", e.time, sysclock, computed_delta);
                 computed_delta = e.time - sysclock;
-                printf("computed delta now %lld\n", computed_delta);
+                fprintf(stderr,"computed delta now %lld\n", computed_delta);
             }
             e.time = (e.time - computed_delta) + LATENCY_MS;
 

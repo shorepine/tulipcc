@@ -72,7 +72,12 @@ extern void scale(uint8_t wave);
 
 void esp_show_debug(uint8_t type);
 void alles_send_message(char * message, uint16_t len);
-void alles_start(); 
+
+#ifdef ESP_PLATFORM
+void alles_start();
+#else
+void * alles_start(void *vargs);
+#endif
 
 
 #ifdef __cplusplus
