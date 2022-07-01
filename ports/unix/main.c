@@ -52,6 +52,13 @@
 #include "extmod/vfs_posix.h"
 #include "genhdr/mpversion.h"
 #include "input.h"
+#include <pthread.h>
+#include "shared/runtime/pyexec.h"
+
+#include "display.h"
+extern int unix_display_draw(); 
+extern void unix_display_init();
+
 
 // Command line options, with their defaults
 STATIC bool compile_only = false;
@@ -63,11 +70,18 @@ STATIC uint emit_opt = MP_EMIT_OPT_NONE;
 long heap_size = 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 #endif
 
+
+
 STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
     (void)env;
     ssize_t ret;
     MP_HAL_RETRY_SYSCALL(ret, write(STDERR_FILENO, str, len), {});
     mp_uos_dupterm_tx_strn(str, len);
+//    if(len) {
+//        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+//        unix_display_draw();
+//    }
+
 }
 
 const mp_print_t mp_stderr_print = {NULL, stderr_print_strn};
@@ -138,13 +152,15 @@ STATIC int execute_from_lexer(int source_kind, const void *source, mp_parse_inpu
             printf("----------------\n");
         }
         #endif
-
+        fprintf(stderr, "compiling\n");
         mp_obj_t module_fun = mp_compile(&parse_tree, source_name, is_repl);
+        fprintf(stderr, "compiling done\n");
 
         if (!compile_only) {
             // execute it
             mp_call_function_0(module_fun);
         }
+        fprintf(stderr, "execuiting done\n");
 
         mp_hal_set_interrupt_char(-1);
         mp_handle_pending(true);
@@ -177,13 +193,17 @@ STATIC char *strjoin(const char *s1, int sep_char, const char *s2) {
 }
 #endif
 
-STATIC int do_repl(void) {
+//void *unix_display_run(void *vargp) {
+
+extern int kbhit(void);
+extern int getch(void);
+STATIC int do_repl(void ) {
     mp_hal_stdout_tx_str(MICROPY_BANNER_NAME_AND_VERSION);
     mp_hal_stdout_tx_str("; " MICROPY_BANNER_MACHINE);
     mp_hal_stdout_tx_str("\nUse Ctrl-D to exit, Ctrl-E for paste mode\n");
+//    unix_display_draw();
 
     #if MICROPY_USE_READLINE == 1
-
     // use MicroPython supplied readline
 
     vstr_t line;
@@ -192,8 +212,12 @@ STATIC int do_repl(void) {
         mp_hal_stdio_mode_raw();
 
     input_restart:
+//        unix_display_draw();
+
         vstr_reset(&line);
+        fprintf(stderr, "a\n");
         int ret = readline(&line, mp_repl_get_ps1());
+        fprintf(stderr, "$$$ b %d $$$\n", ret);
         mp_parse_input_kind_t parse_input_kind = MP_PARSE_SINGLE_INPUT;
 
         if (ret == CHAR_CTRL_C) {
@@ -211,7 +235,11 @@ STATIC int do_repl(void) {
             mp_hal_stdout_tx_str("\npaste mode; Ctrl-C to cancel, Ctrl-D to finish\n=== ");
             vstr_reset(&line);
             for (;;) {
+                //while(!kbhit()) {
+                //    unix_display_draw();
+                //}
                 char c = mp_hal_stdin_rx_chr();
+                //char c = getch();
                 if (c == CHAR_CTRL_C) {
                     // cancel everything
                     mp_hal_stdout_tx_str("\n");
@@ -226,6 +254,7 @@ STATIC int do_repl(void) {
                     if (c == '\r') {
                         mp_hal_stdout_tx_str("\n=== ");
                     } else {
+                        fprintf(stderr, "printing char %c out\n", c);
                         mp_hal_stdout_tx_strn(&c, 1);
                     }
                 }
@@ -256,7 +285,7 @@ STATIC int do_repl(void) {
 
         ret = execute_from_lexer(LEX_SRC_VSTR, &line, parse_input_kind, true);
         if (ret & FORCED_EXIT) {
-            return ret;
+            return  ret;
         }
     }
 
@@ -265,6 +294,8 @@ STATIC int do_repl(void) {
     // use simple readline
 
     for (;;) {
+        //unix_display_draw();
+
         char *line = prompt((char *)mp_repl_get_ps1());
         if (line == NULL) {
             // EOF
@@ -423,22 +454,41 @@ STATIC void set_sys_argv(char *argv[], int argc, int start_arg) {
 #define PATHLIST_SEP_CHAR ':'
 #endif
 
-MP_NOINLINE int main_(int argc, char **argv);
+//MP_NOINLINE int main_(int argc, char **argv);
+void * main_(void *vargs);
 
 int main(int argc, char **argv) {
-    #if MICROPY_PY_THREAD
-    mp_thread_init();
-    #endif
+
     // We should capture stack top ASAP after start, and it should be
     // captured guaranteedly before any other stack variables are allocated.
     // For this, actual main (renamed main_) should not be inlined into
     // this function. main_() itself may have other functions inlined (with
     // their own stack variables), that's why we need this main/main_ split.
-    mp_stack_ctrl_init();
-    return main_(argc, argv);
+    //mp_stack_ctrl_init();
+
+    unix_display_init();
+
+    pthread_t thread_id;
+    pthread_create(&thread_id, NULL, main_, NULL);
+    int c = 0;
+    while(c>=0) {
+        c = unix_display_draw();
+    }
+    // join the thread
+
+    //return main_(argc, argv);
 }
 
-MP_NOINLINE int main_(int argc, char **argv) {
+
+//MP_NOINLINE int main_(int argc, char **argv) {
+void * main_(void *vargs) { //int argc, char **argv) {
+    #if MICROPY_PY_THREAD
+    fprintf(stderr, "threading\n");
+    mp_thread_init();
+    #endif
+
+    mp_stack_ctrl_init();
+
     #ifdef SIGPIPE
     // Do not raise SIGPIPE, instead return EPIPE. Otherwise, e.g. writing
     // to peer-closed socket will lead to sudden termination of MicroPython
@@ -461,7 +511,8 @@ MP_NOINLINE int main_(int argc, char **argv) {
     #endif
     mp_stack_set_limit(stack_limit);
 
-    pre_process_options(argc, argv);
+    //pre_process_options(argc, argv);
+
 
     #if MICROPY_ENABLE_GC
     char *heap = malloc(heap_size);
@@ -534,7 +585,7 @@ MP_NOINLINE int main_(int argc, char **argv) {
             p = p1 + 1;
         }
     }
-
+    /*
     mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_argv), 0);
 
     #if defined(MICROPY_UNIX_COVERAGE)
@@ -545,6 +596,7 @@ MP_NOINLINE int main_(int argc, char **argv) {
         mp_store_global(MP_QSTR_extra_cpp_coverage, MP_OBJ_FROM_PTR(&extra_cpp_coverage_obj));
     }
     #endif
+    */
 
     // Here is some example code to create a class and instance of that class.
     // First is the Python, then the C code.
@@ -565,14 +617,15 @@ MP_NOINLINE int main_(int argc, char **argv) {
     printf("    cur   %d\n", m_get_current_bytes_allocated());
     printf("    peak  %d\n", m_get_peak_bytes_allocated());
     */
-
+    /*
     const int NOTHING_EXECUTED = -2;
     int ret = NOTHING_EXECUTED;
-    bool inspect = false;
+    //bool inspect = false;
+    
     for (int a = 1; a < argc; a++) {
         if (argv[a][0] == '-') {
             if (strcmp(argv[a], "-i") == 0) {
-                inspect = true;
+                //inspect = true;
             } else if (strcmp(argv[a], "-c") == 0) {
                 if (a + 1 >= argc) {
                     return invalid_args();
@@ -669,17 +722,43 @@ MP_NOINLINE int main_(int argc, char **argv) {
 
     const char *inspect_env = getenv("MICROPYINSPECT");
     if (inspect_env && inspect_env[0] != '\0') {
-        inspect = true;
+        //inspect = true;
     }
+
     if (ret == NOTHING_EXECUTED || inspect) {
         if (isatty(0) || inspect) {
             prompt_read_history();
+            // thread this out
+            //pthread_t thread_id;
+            //pthread_create(&thread_id, NULL, do_repl, NULL);
             ret = do_repl();
+            //while(1) {
+            //    unix_display_draw();
+            //}
             prompt_write_history();
         } else {
             ret = execute_from_lexer(LEX_SRC_STDIN, NULL, MP_PARSE_FILE_INPUT, false);
         }
     }
+    */
+
+
+    for (;;) {
+        if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
+            //vprintf_like_t vprintf_log = esp_log_set_vprintf(vprintf_null);
+            if (pyexec_raw_repl() != 0) {
+                break;
+            }
+            //esp_log_set_vprintf(vprintf_log);
+        } else {
+            if (pyexec_friendly_repl() != 0) {
+                break;
+            }
+        }
+    }
+
+
+    fprintf(stderr,"f\n");
 
     #if MICROPY_PY_SYS_SETTRACE
     MP_STATE_THREAD(prof_trace_callback) = MP_OBJ_NULL;
@@ -720,7 +799,7 @@ MP_NOINLINE int main_(int argc, char **argv) {
     #endif
 
     // printf("total bytes = %d\n", m_get_total_bytes_allocated());
-    return ret & 0xff;
+    return 0; // ret & 0xff;
 }
 
 void nlr_jump_fail(void *val) {

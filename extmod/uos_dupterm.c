@@ -93,6 +93,7 @@ uintptr_t mp_uos_dupterm_poll(uintptr_t poll_flags) {
 }
 
 int mp_uos_dupterm_rx_chr(void) {
+    fprintf(stderr, "dupterm rx\n");
     for (size_t idx = 0; idx < MICROPY_PY_OS_DUPTERM; ++idx) {
         if (MP_STATE_VM(dupterm_objs[idx]) == MP_OBJ_NULL) {
             continue;
@@ -147,6 +148,10 @@ int mp_uos_dupterm_rx_chr(void) {
     return -1;
 }
 
+#include "display.h"
+extern void unix_display_draw();
+
+
 void mp_uos_dupterm_tx_strn(const char *str, size_t len) {
     for (size_t idx = 0; idx < MICROPY_PY_OS_DUPTERM; ++idx) {
         if (MP_STATE_VM(dupterm_objs[idx]) == MP_OBJ_NULL) {
@@ -170,6 +175,11 @@ void mp_uos_dupterm_tx_strn(const char *str, size_t len) {
             mp_uos_deactivate(idx, "dupterm: Exception in write() method, deactivating: ", MP_OBJ_FROM_PTR(nlr.ret_val));
         }
     }
+//    if(len) {
+//        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+//        unix_display_draw();
+//    }
+
 }
 
 STATIC mp_obj_t mp_uos_dupterm(size_t n_args, const mp_obj_t *args) {

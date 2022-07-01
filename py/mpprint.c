@@ -50,10 +50,13 @@ STATIC void plat_print_strn(void *env, const char *str, size_t len) {
 
 const mp_print_t mp_plat_print = {NULL, plat_print_strn};
 
+
 int mp_print_str(const mp_print_t *print, const char *str) {
     size_t len = strlen(str);
     if (len) {
         print->print_strn(print->data, str, len);
+        //TODO : some things are drawn here that we want drawn to the screen, but we can't link everything else to this file... figure out where print_strn is going...
+        //display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
     return len;
 }
@@ -65,7 +68,6 @@ int mp_print_strn(const mp_print_t *print, const char *str, size_t len, int flag
     int pad_size;
     int total_chars_printed = 0;
     const char *pad_chars;
-
     if (!fill || fill == ' ') {
         pad_chars = pad_spaces;
         pad_size = sizeof(pad_spaces) - 1;

@@ -32,7 +32,7 @@
 #define MICROPY_OPT_MATH_FACTORIAL              (0)
 #define MICROPY_MODULE_ATTR_DELEGATION          (0)
 #define MICROPY_MODULE_BUILTIN_INIT             (0)
-#define MICROPY_ENABLE_SCHEDULER                (0)
+#define MICROPY_ENABLE_SCHEDULER                (1)
 #define MICROPY_PY_BUILTINS_EXECFILE            (0)
 #define MICROPY_PY_MATH_CONSTANTS               (0)
 #define MICROPY_PY_MATH_FACTORIAL               (0)
