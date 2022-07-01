@@ -20,6 +20,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	amy/oscillators.c \
 	amy/partials.c \
 	amy/pcm.c \
+	sounds.c \
 	)
 
 INC += -I$(TOP)/$(TULIP_EXTMOD_DIR)

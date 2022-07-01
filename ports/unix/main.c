@@ -56,6 +56,7 @@
 #include "shared/runtime/pyexec.h"
 
 #include "display.h"
+#include "alles_tulip.h"
 extern int unix_display_draw(); 
 extern void unix_display_init();
 
@@ -466,17 +467,22 @@ int main(int argc, char **argv) {
     // their own stack variables), that's why we need this main/main_ split.
     //mp_stack_ctrl_init();
 
+    // Display has to run on main thread on macos
     unix_display_init();
 
-    pthread_t thread_id;
-    pthread_create(&thread_id, NULL, main_, NULL);
+    pthread_t alles_thread_id;
+    pthread_create(&alles_thread_id, NULL, alles_start, NULL);
+
+    pthread_t mp_thread_id;
+    pthread_create(&mp_thread_id, NULL, main_, NULL);
+
     int c = 0;
     while(c>=0) {
         c = unix_display_draw();
     }
-    // join the thread
 
-    //return main_(argc, argv);
+    // join the threads?
+
 }
 
 

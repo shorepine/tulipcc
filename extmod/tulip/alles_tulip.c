@@ -203,17 +203,12 @@ amy_err_t setup_i2s(void) {
 
 
 
-void alles_start() {
 #ifdef ESP_PLATFORM
+void alles_start() {
     check_init(&esp_event_loop_create_default, "Event");
     check_init(&setup_i2s, "i2s");
     esp_amy_init();
-#else
-    unix_amy_init();
-#endif
     reset_oscs();
-
-
     // Schedule a "turning on" sound
     bleep();
 
@@ -223,3 +218,18 @@ void alles_start() {
     }
 }
 
+#else
+
+void * alles_start(void *vargs) {
+    unix_amy_init();
+    reset_oscs();
+    // Schedule a "turning on" sound
+    bleep();
+    // Spin this core until the power off button is pressed, parsing events and making sounds
+    while(status & RUNNING) {
+        delay_ms(10);
+    }
+    return 0;
+}
+
+#endif

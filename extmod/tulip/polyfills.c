@@ -20,6 +20,10 @@ float compute_cpu_usage(uint8_t debug) {
 }
 #endif
 
+void delay_ms(uint32_t ms) {
+    mp_hal_delay_ms(ms);
+}
+
 
 void take_semaphore() {
 #ifdef ESP_PLATFORM
