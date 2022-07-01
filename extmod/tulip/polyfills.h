@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include "py/mphal.h"
 
-#ifdef MICROPY_ESP_IDF_4
+#ifdef ESP_PLATFORM
 
 // not sure, maybe esp includes?
 

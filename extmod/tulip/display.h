@@ -12,7 +12,7 @@
 
 #define RGB332
 
-#ifdef MICROPY_ESP_IDF_4
+#ifdef ESP_PLATFORM
 #include "esp32s3_display.h"
 #endif
 

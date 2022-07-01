@@ -9,7 +9,7 @@
 #include "display.h"
 #include "extmod/vfs.h"
 #include "py/stream.h"
-//#include "alles_tulip.h"
+#include "alles_tulip.h"
 
 // Graphics
 
@@ -481,7 +481,6 @@ STATIC mp_obj_t tulip_int_screenshot(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_int_screenshot_obj, 1, 1, tulip_int_screenshot);
 
-/*
 STATIC mp_obj_t tulip_alles(size_t n_args, const mp_obj_t *args) {
     alles_send_message((char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
     return mp_const_none;
@@ -489,7 +488,6 @@ STATIC mp_obj_t tulip_alles(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_obj, 1, 1, tulip_alles);
-*/
 
 STATIC mp_obj_t tulip_brightness(size_t n_args, const mp_obj_t *args) {
     if(n_args > 0) {
@@ -580,7 +578,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_sprite_clear), MP_ROM_PTR(&tulip_sprite_clear_obj) },
     { MP_ROM_QSTR(MP_QSTR_edit), MP_ROM_PTR(&tulip_edit_obj) },
     { MP_ROM_QSTR(MP_QSTR_int_screenshot), MP_ROM_PTR(&tulip_int_screenshot_obj) },
-    //{ MP_ROM_QSTR(MP_QSTR_alles), MP_ROM_PTR(&tulip_alles_obj) },
+    { MP_ROM_QSTR(MP_QSTR_alles), MP_ROM_PTR(&tulip_alles_obj) },
     { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&tulip_brightness_obj) },
     { MP_ROM_QSTR(MP_QSTR_keys), MP_ROM_PTR(&tulip_keys_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_wait), MP_ROM_PTR(&tulip_key_wait_obj) },

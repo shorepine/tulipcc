@@ -612,7 +612,7 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, u
 void display_set_clock(uint8_t mhz) {  
     if(mhz > 1 && mhz < 50) {
         display_mhz = mhz;
-#ifdef MICROPY_ESP_IDF_4
+#ifdef ESP_PLATFORM
         esp_display_set_clock(mhz);
 #endif
     }
