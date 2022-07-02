@@ -397,6 +397,9 @@ STATIC mp_obj_t mp_builtin_pow(size_t n_args, const mp_obj_t *args) {
 }
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_builtin_pow_obj, 2, 3, mp_builtin_pow);
 
+#undef MICROPY_PY_IO
+#define MICROPY_PY_IO 0
+
 STATIC mp_obj_t mp_builtin_print(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args) {
     enum { ARG_sep, ARG_end, ARG_file };
     static const mp_arg_t allowed_args[] = {

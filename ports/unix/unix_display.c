@@ -1,5 +1,5 @@
 // GPU driver via SDL2 FB 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include "polyfills.h"
 #include "display.h"
 #include "keyscan.h"

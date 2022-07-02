@@ -2,7 +2,7 @@
 #include "keyscan.h"
 
 #ifndef ESP_PLATFORM
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #endif
 
 extern int mp_interrupt_char;

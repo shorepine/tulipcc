@@ -13,7 +13,7 @@ extern SemaphoreHandle_t xQueueSemaphore;
 extern TaskHandle_t renderTask[2]; // one per core
 #else
 // Local rendering
-#include <soundio/soundio.h>
+#include <soundio.h>
 #include <pthread.h>
 struct SoundIo *soundio;
 #endif
