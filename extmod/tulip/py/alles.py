@@ -68,7 +68,7 @@ buffer_size = 0
 def millis():
     # Timestamp to send over to synths for global sync
     # This is a suggestion. I use ticks since boot on Tulip
-    return time.ticks_ms()
+    return tulip.ticks_ms()
 
 
 
