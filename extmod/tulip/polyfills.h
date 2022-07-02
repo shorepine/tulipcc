@@ -20,6 +20,7 @@
 
 void take_semaphore();
 int64_t get_time_ms();
+int64_t get_ticks_ms();
 int64_t get_time_us();
 void * malloc_caps(uint32_t size, uint32_t flags);
 void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags);

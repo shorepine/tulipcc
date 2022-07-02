@@ -42,9 +42,12 @@ int64_t get_time_us() {
     return mp_hal_ticks_us();
 }
 
-
+extern int64_t get_sysclock();
 int64_t get_time_ms() {
-    return mp_hal_ticks_ms();
+    return mp_hal_ticks_ms(); // a large number
+}
+int64_t get_ticks_ms() {
+    return get_sysclock(); // based on audio driver
 }
     
 void * malloc_caps(uint32_t size, uint32_t flags) {
