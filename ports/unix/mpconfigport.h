@@ -87,8 +87,9 @@
 #endif
 #define MICROPY_PY_MATH_ISCLOSE                 (MICROPY_PY_MATH_SPECIAL_FUNCTIONS)
 #define MICROPY_PY_CMATH                        (1)
-#define MICROPY_PY_IO_IOBASE                    (1)
-#define MICROPY_PY_IO_FILEIO                    (1)
+#define MICROPY_PY_IO (0)
+//#define MICROPY_PY_IO_IOBASE                    (1)
+//#define MICROPY_PY_IO_FILEIO                    (1)
 #define MICROPY_PY_SYS_MAXSIZE                  (1)
 #define MICROPY_PY_SYS_STDFILES                 (1)
 #define MICROPY_PY_UERRNO                       (1)
@@ -145,8 +146,8 @@
 #define MICROPY_PY_SYS_EXIT         (1)
 #define MICROPY_PY_SYS_ATEXIT       (1)
 
-#define MICROPY_HW_BOARD_NAME "Tulip Desktop"
-//#define MICROPY_HW_MCU_NAME "M1 Max"
+#define MICROPY_HW_BOARD_NAME "Tulip4"
+
 
 #if MICROPY_PY_SYS_SETTRACE
 #define MICROPY_PERSISTENT_CODE_SAVE (1)

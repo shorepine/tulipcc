@@ -74,10 +74,12 @@ long heap_size = 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 
 
 void display_print_strn(void *env, const char *str, size_t len) {
+    (void)env;
     if(len) {
         display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
 }
+
 
 STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
     (void)env;
@@ -86,8 +88,11 @@ STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
     mp_uos_dupterm_tx_strn(str, len);
 }
 
-const mp_print_t mp_stderr_print = {NULL, stderr_print_strn};
-const mp_print_t mp_dislay_print = {NULL, display_print_strn};
+const mp_print_t mp_stderr_print = {NULL, display_print_strn};
+const mp_print_t mp_stdout_print = {NULL, display_print_strn};
+const mp_print_t mp_display_print = {NULL, display_print_strn};
+
+
 
 
 #define FORCED_EXIT (0x100)
@@ -476,6 +481,7 @@ int main(int argc, char **argv) {
     // Display has to run on main thread on macos
     unix_display_init();
 
+    // So thread out alles and then micropython tasks
     pthread_t alles_thread_id;
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
 
@@ -484,6 +490,7 @@ int main(int argc, char **argv) {
 
     int c = 0;
     while(c>=0) {
+        // unix_display_draw returns -1 if the window was quit
         c = unix_display_draw();
     }
 
@@ -535,6 +542,9 @@ void * main_(void *vargs) { //int argc, char **argv) {
     static mp_obj_t pystack[1024];
     mp_pystack_init(pystack, &pystack[MP_ARRAY_SIZE(pystack)]);
     #endif
+
+    //mp_sys_stdout_print = mp_display_print;
+    //mp_plat_print = mp_display_print;
 
     mp_init();
 
@@ -755,20 +765,14 @@ void * main_(void *vargs) { //int argc, char **argv) {
     */
 
     // run boot-up scripts
-    fprintf(stderr, "exec _boot.py\n");
     pyexec_frozen_module("_boot.py");
-    fprintf(stderr, "exec boot.py\n");
-
     pyexec_file_if_exists("boot.py");
     if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
-    fprintf(stderr, "exec main.py\n");
         int ret = pyexec_file_if_exists("main.py");
         if (ret & PYEXEC_FORCED_EXIT) {
             goto soft_reset_exit;
         }
     }
-    fprintf(stderr, "done\n");
-
     for (;;) {
         if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
             //vprintf_like_t vprintf_log = esp_log_set_vprintf(vprintf_null);

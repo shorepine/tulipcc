@@ -35,7 +35,8 @@ INC +=  -I.
 INC +=  -I$(TOP)
 INC += -I$(BUILD)
 
-INC += -I/opt/homebrew/include 
+INC += -I/opt/homebrew/include/SDL2
+INC += -I/opt/homebrew/include/soundio
 
 # compiler settings
 CWARN = -Wall -Werror

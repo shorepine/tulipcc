@@ -40,7 +40,11 @@
 #define PF_FLAG_SHOW_OCTAL_LETTER (0x200)
 
 #if MICROPY_PY_IO && MICROPY_PY_SYS_STDFILES
+#ifdef ESP_PLATFORM
 #define MP_PYTHON_PRINTER &mp_sys_stdout_print
+#else
+#define MP_PYTHON_PRINTER &mp_display_print
+#endif
 #else
 #define MP_PYTHON_PRINTER &mp_plat_print
 #endif
@@ -51,6 +55,9 @@ typedef struct _mp_print_t {
     void *data;
     mp_print_strn_t print_strn;
 } mp_print_t;
+
+extern const mp_print_t mp_display_print;
+extern void display_print_strn(void *env, const char *str, size_t len);
 
 typedef struct _mp_print_ext_t {
     mp_print_t base;
