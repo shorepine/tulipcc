@@ -37,7 +37,8 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <signal.h>
-
+#include <sys/types.h>
+#include <sys/sysctl.h>
 #include "py/compile.h"
 #include "py/runtime.h"
 #include "py/builtin.h"
@@ -62,7 +63,7 @@ extern void unix_display_init();
 
 
 // Command line options, with their defaults
-STATIC bool compile_only = false;
+//STATIC bool compile_only = false;
 STATIC uint emit_opt = MP_EMIT_OPT_NONE;
 
 #if MICROPY_ENABLE_GC
@@ -72,20 +73,22 @@ long heap_size = 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 #endif
 
 
+void display_print_strn(void *env, const char *str, size_t len) {
+    if(len) {
+        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+    }
+}
 
 STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
     (void)env;
     ssize_t ret;
     MP_HAL_RETRY_SYSCALL(ret, write(STDERR_FILENO, str, len), {});
     mp_uos_dupterm_tx_strn(str, len);
-//    if(len) {
-//        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
-//        unix_display_draw();
-//    }
-
 }
 
 const mp_print_t mp_stderr_print = {NULL, stderr_print_strn};
+const mp_print_t mp_dislay_print = {NULL, display_print_strn};
+
 
 #define FORCED_EXIT (0x100)
 // If exc is SystemExit, return value where FORCED_EXIT bit set,
@@ -108,6 +111,7 @@ STATIC int handle_uncaught_exception(mp_obj_base_t *exc) {
     return 1;
 }
 
+/*
 #define LEX_SRC_STR (1)
 #define LEX_SRC_VSTR (2)
 #define LEX_SRC_FILENAME (3)
@@ -193,9 +197,12 @@ STATIC char *strjoin(const char *s1, int sep_char, const char *s2) {
     return s;
 }
 #endif
+*/
+
+
 
 //void *unix_display_run(void *vargp) {
-
+/*
 extern int kbhit(void);
 extern int getch(void);
 STATIC int do_repl(void ) {
@@ -448,7 +455,7 @@ STATIC void set_sys_argv(char *argv[], int argc, int start_arg) {
         mp_obj_list_append(mp_sys_argv, MP_OBJ_NEW_QSTR(qstr_from_str(argv[i])));
     }
 }
-
+*/
 #ifdef _WIN32
 #define PATHLIST_SEP_CHAR ';'
 #else
@@ -459,7 +466,6 @@ STATIC void set_sys_argv(char *argv[], int argc, int start_arg) {
 void * main_(void *vargs);
 
 int main(int argc, char **argv) {
-
     // We should capture stack top ASAP after start, and it should be
     // captured guaranteedly before any other stack variables are allocated.
     // For this, actual main (renamed main_) should not be inlined into
@@ -482,7 +488,6 @@ int main(int argc, char **argv) {
     }
 
     // join the threads?
-
 }
 
 
@@ -508,6 +513,7 @@ void * main_(void *vargs) { //int argc, char **argv) {
     // catch EPIPE themselves.
     signal(SIGPIPE, SIG_IGN);
     #endif
+
 
     // Define a reasonable stack limit to detect stack overflow.
     mp_uint_t stack_limit = 40000 * (sizeof(void *) / 4);
@@ -748,6 +754,20 @@ void * main_(void *vargs) { //int argc, char **argv) {
     }
     */
 
+    // run boot-up scripts
+    fprintf(stderr, "exec _boot.py\n");
+    pyexec_frozen_module("_boot.py");
+    fprintf(stderr, "exec boot.py\n");
+
+    pyexec_file_if_exists("boot.py");
+    if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
+    fprintf(stderr, "exec main.py\n");
+        int ret = pyexec_file_if_exists("main.py");
+        if (ret & PYEXEC_FORCED_EXIT) {
+            goto soft_reset_exit;
+        }
+    }
+    fprintf(stderr, "done\n");
 
     for (;;) {
         if (pyexec_mode_kind == PYEXEC_MODE_RAW_REPL) {
@@ -763,8 +783,7 @@ void * main_(void *vargs) { //int argc, char **argv) {
         }
     }
 
-
-    fprintf(stderr,"f\n");
+soft_reset_exit:
 
     #if MICROPY_PY_SYS_SETTRACE
     MP_STATE_THREAD(prof_trace_callback) = MP_OBJ_NULL;

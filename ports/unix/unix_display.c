@@ -12,14 +12,14 @@ uint8_t *frame_bb;
 
 void init_window(uint16_t w, uint16_t h) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
     } else {
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED, w, h,
                                 SDL_WINDOW_SHOWN);
     }
     if (window == NULL) {
-        printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
     } else {
         window_surface = SDL_GetWindowSurface(window);
         surface_332 = SDL_ConvertSurfaceFormat(window_surface, SDL_PIXELFORMAT_RGB332, 0);
@@ -43,12 +43,12 @@ int check_key() {
     while (SDL_PollEvent(&e) != 0) {
 
         if (e.type == SDL_QUIT) {
+            fprintf(stderr, "quit detected\n");
             return -1;
         }
         if(e.type == SDL_KEYDOWN) {
             last_held_mod = SDL_GetModState();
             SDL_KeyboardEvent key = e.key; 
-            //fprintf(stderr, "sending keyup is %d (%02x) last mod is %d\n",key.keysym.scancode, key.keysym.scancode,(uint32_t)last_held_mod);
             if(key.keysym.scancode >= 0x04 && key.keysym.scancode <= 0x94) {
                 send_key_to_micropython(scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod));
             }
