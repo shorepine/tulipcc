@@ -1,6 +1,10 @@
 # Select the variant to build for.
 VARIANT ?= standard
 
+# Set parallel flag to # of CPUs
+CPUS ?= $(shell sysctl -n hw.ncpu || echo 1)
+MAKEFLAGS += --jobs=$(CPUS)
+
 # If the build directory is not given, make it reflect the variant name.
 BUILD ?= build-$(VARIANT)
 

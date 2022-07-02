@@ -97,7 +97,10 @@ def rgb(px0):
     return (r,g,b)
 
 def ip():
-    import network
+    try:
+        import network
+    except ImportError:
+        return "127.0.0.1" # we are on local and it's ok 
     sta_if = network.WLAN(network.STA_IF)
     if(sta_if.isconnected()):
         return sta_if.ifconfig()[0]

@@ -87,6 +87,7 @@ STATIC mp_obj_t mp_uos_system(mp_obj_t cmd_in) {
     const char *cmd = mp_obj_str_get_str(cmd_in);
 
     MP_THREAD_GIL_EXIT();
+    // A return value would be nice
     int r = system(cmd);
     MP_THREAD_GIL_ENTER();
 
