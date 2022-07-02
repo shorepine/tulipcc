@@ -1727,7 +1727,7 @@ typedef double mp_float_t;
 // String used for the second part of the banner, and sys.implementation._machine
 #ifndef MICROPY_BANNER_MACHINE
 #ifdef MICROPY_HW_BOARD_NAME
-#define MICROPY_BANNER_MACHINE MICROPY_HW_BOARD_NAME " with " MICROPY_HW_MCU_NAME
+#define MICROPY_BANNER_MACHINE MICROPY_HW_BOARD_NAME " on " MICROPY_HW_MCU_NAME
 #else
 #define MICROPY_BANNER_MACHINE MICROPY_PY_SYS_PLATFORM " [" MICROPY_PLATFORM_COMPILER "] version"
 #endif

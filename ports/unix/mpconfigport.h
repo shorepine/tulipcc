@@ -264,6 +264,7 @@ extern const struct _mp_obj_module_t mp_module_jni;
 #define MICROPY_PY_USELECT_DEF
 #endif
 
+
 #define MICROPY_PORT_BUILTIN_MODULES \
     MICROPY_PY_FFI_DEF \
     MICROPY_PY_JNI_DEF \
