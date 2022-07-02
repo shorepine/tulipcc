@@ -21,7 +21,11 @@ float compute_cpu_usage(uint8_t debug) {
 #endif
 
 void delay_ms(uint32_t ms) {
-    mp_hal_delay_ms(ms);
+#ifdef ESP_PLATFORM
+    vTaskDelay(ms / portTICK_PERIOD_MS);
+#else
+    usleep(ms * 1000);
+#endif
 }
 
 

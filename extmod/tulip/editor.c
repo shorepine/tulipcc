@@ -604,7 +604,7 @@ void editor_quit() {
 #ifdef LOCALDEV
 	endwin();
 #endif
-    printf("mc %d fc %d\n", mc, fc);
+    fprintf(stderr,"mc %d fc %d\n", mc, fc);
 }
 
 

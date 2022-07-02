@@ -11,9 +11,6 @@ uint8_t status;
 // mutex that locks writes to the delta queue
 SemaphoreHandle_t xQueueSemaphore;
 
-void delay_ms(uint32_t ms) {
-    vTaskDelay(ms / portTICK_PERIOD_MS);
-}
 #endif
 
 uint8_t board_level = ALLES_BOARD_V2;
