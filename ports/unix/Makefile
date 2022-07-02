@@ -1,3 +1,13 @@
+WHICH_ARCH ?= $(shell arch)
+
+ifeq ($(WHICH_ARCH), arm64)
+	ARCHFLAGS = -target arm64-macos11
+	HOMEBREW = /opt/homebrew
+else
+	ARCHFLAGS = -target x86_64-apple-macos10.15
+	HOMEBREW = /usr/local/homebrew
+endif
+
 # Select the variant to build for.
 VARIANT ?= standard
 
@@ -21,7 +31,7 @@ include $(VARIANT_DIR)/mpconfigvariant.mk
 FROZEN_MANIFEST ?= variants/manifest.py
 
 # This should be configured by the mpconfigvariant.mk
-PROG ?= micropython
+PROG = tulip.$(WHICH_ARCH)
 
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = qstrdefsport.h
@@ -39,14 +49,16 @@ INC +=  -I.
 INC +=  -I$(TOP)
 INC += -I$(BUILD)
 
-INC += -I/opt/homebrew/include/SDL2
-INC += -I/opt/homebrew/include/soundio
+#INC += -I$(HOMEBREW)/include/SDL2
+INC += -I./SDL2.framework/Headers
+INC += -I$(HOMEBREW)/include/soundio
 
 # compiler settings
 CWARN = -Wall -Werror
 CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
 
+CFLAGS += $(ARCHFLAGS) 
 # Debugging/Optimization
 ifdef DEBUG
 COPT ?= -Og
@@ -104,10 +116,10 @@ endif
 LDFLAGS_ARCH = -Wl,-map,$@.map -Wl,-dead_strip
 else
 # Use gcc syntax for map file
-LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections
+LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
 endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -L/opt/homebrew/lib -lSDL2 -lsoundio
+LDFLAGS += -L$(HOMEBREW)/lib -F. -framework SDL2 -lsoundio $(ARCHFLAGS)
 
 # Flags to link with pthread library
 LIBPTHREAD = -lpthread
