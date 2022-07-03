@@ -6,6 +6,7 @@
 SDL_Window *window;
 SDL_Surface *window_surface;
 SDL_Surface *surface_332;
+SDL_Renderer *fixed_fps_renderer;
 uint8_t *pixels_332;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
@@ -17,19 +18,22 @@ void init_window(uint16_t w, uint16_t h) {
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED, w, h,
                                 SDL_WINDOW_SHOWN);
+
     }
     if (window == NULL) {
         fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
     } else {
+        // A non-vsynced renderer, to cap to usual Tulip CC frame rates
+        //fixed_fps_renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_ACCELERATED );
         window_surface = SDL_GetWindowSurface(window);
         surface_332 = SDL_ConvertSurfaceFormat(window_surface, SDL_PIXELFORMAT_RGB332, 0);
         pixels_332 = (uint8_t*) surface_332->pixels;
 
     }
     memset(pixels_332, 0, H_RES * V_RES);
+
     SDL_SetWindowTitle(window, "Tulip CC");
     SDL_StartTextInput();
-
 }
 
 void destrow_window() {
@@ -78,16 +82,28 @@ int check_key() {
 
 void start_draw() { 
     SDL_LockSurface(surface_332); 
+
 }
 
 void end_draw() {
+
     SDL_UnlockSurface(surface_332);
     SDL_BlitSurface(surface_332, NULL, window_surface, NULL);
+
+    //Update screen
+    //SDL_RenderPresent( fixed_fps_renderer );
+
+    //If frame finished early
+    //if( frameTicks < SCREEN_TICKS_PER_FRAME ) {
+    //    SDL_Delay( SCREEN_TICKS_PER_FRAME - frameTicks );
+    //}
+
+
     SDL_UpdateWindowSurface(window);
 }
 
 int unix_display_draw() {
-    //uint32_t start = SDL_GetTicks();
+    //Calculate and correct fps    
     int in_ch = check_key();
     if(in_ch >= 0) { // if not quit
         start_draw();
@@ -109,5 +125,6 @@ void unix_display_init() {
     init_window(H_RES,V_RES); 
     frame_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     fprintf(stderr, "display init done\n");
+
 
 }
