@@ -52,6 +52,7 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/tulip/tulip_helpers.c
     ${MICROPY_DIR}/extmod/tulip/editor.c
     ${MICROPY_DIR}/extmod/tulip/keyscan.c
+    ${MICROPY_DIR}/extmod/tulip/help.c
     ${PROJECT_DIR}/main.c
     ${PROJECT_DIR}/esp32s3_display.c
     ${PROJECT_DIR}/usb_keyboard.c

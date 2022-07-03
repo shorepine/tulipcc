@@ -9,6 +9,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	lodepng.c \
 	smallfont.c \
 	display.c \
+	help.c \
 	tulip_helpers.c \
 	editor.c \
 	keyscan.c \
