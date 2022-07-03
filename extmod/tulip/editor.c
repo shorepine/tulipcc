@@ -2,6 +2,8 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "tulip_helpers.h"
+#include "display.h"
 
 #define EDITOR_COLOR_FG 255
 #define EDITOR_COLOR_COMMENT 229
@@ -11,22 +13,6 @@
 #define EDITOR_COLOR_SELECTION_BG 72
 #define EDITOR_COLOR_FUNCTION 188
 #define EDITOR_COLOR_BG 36
-
-
-
-#ifdef LOCALDEV // gcc -g -Wall -DLOCALDEV editor.c -o edit -lcurses
-#include <ncurses.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdlib.h>
-
-
-#else // esp32
-#include "tulip_helpers.h"
-#include "display.h"
-#endif
-
-
 
 /* palette from tulip editor v1 with tulip4 pal idxes
 255    {248, 248, 242}, //0 foregound, selection FG, class name, code
@@ -60,151 +46,13 @@ uint16_t cursor_y = 0;
 char fn[MAX_STRING_LEN]; 
 char last_search[MAX_STRING_LEN];
 
-// for local dev of the editor
-#ifdef LOCALDEV
-#define TFB_ROWS 50 
-#define TFB_COLS 128 
-uint8_t TFB[TFB_ROWS*TFB_COLS];
-uint8_t TFBf[TFB_ROWS*TFB_COLS];
-uint8_t TFBfg[TFB_ROWS*TFB_COLS];
-uint8_t TFBbg[TFB_ROWS*TFB_COLS];
-uint16_t tfb_y_row =0;
-uint16_t tfb_x_col = 0;
-#define FORMAT_INVERSE 0x80 
-#define FORMAT_UNDERLINE 0x40
-#define FORMAT_FLASH 0x20
-#define FORMAT_BOLD 0x10 
-FILE * elog;
-#define check_rx_char getch
-#define mp_hal_stdin_rx_chr getch
-#endif
 
-// Send debug out to uart on esp32 and a log file on local 
 void dbg(const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
-#ifdef LOCALDEV
-    vfprintf(elog, fmt, args);
-    fflush(elog);
-#else
     vfprintf(stderr, fmt, args);
-#endif
     va_end(args);
 }
-
-#ifdef LOCALDEV
-
-uint8_t file_exists(const char *fname)
-{
-    FILE *file;
-    if ((file = fopen(fname, "r")))
-    {
-        fclose(file);
-        return 1;
-    }
-    return 0;
-}
-
-uint32_t file_size(const char *filename) {
-	FILE * f = fopen(filename, "r");
-	if(f==NULL) return 0;
-	fseek (f, 0, SEEK_END);
-	uint32_t file_size = ftell (f);
-	fclose(f);
-	return file_size;
-
-}
-
-uint32_t write_file(const char *filename, uint8_t *buf, uint32_t len, uint8_t binary) {
-	FILE *f;
-	f = fopen(filename, "w");
-	uint32_t s= fwrite(buf, len, 1, f);
-	fclose(f);
-	return s;
-}
-
-uint32_t read_file(const char * filename, uint8_t * data, int32_t file_size, uint8_t binary) {
-	// if file_size <0 read the whole thing 
-	FILE * f;
-	if(binary) {
-		f = fopen(filename,"rb");
-	} else {
-		f = fopen(filename, "r");
-	}
-	if(file_size < 0) {
-		fseek (f, 0, SEEK_END);
-		file_size = ftell (f);
-  		fseek (f, 0, SEEK_SET);
-  	}
-    uint32_t s = fread(data, 1, file_size, f);
-	fclose(f);
-	return s;
-}
-
-
-
-// RRRGGGBB
-void unpack_rgb_332_wide(uint8_t px0, uint16_t *r, uint16_t *g, uint16_t *b) {
-    *r = (px0 & 0xe0);
-    if(*r != 0) *r |= 0x1f;
-    *g = ((px0 << 3) & 0xe0);
-    if(*g != 0) *g |= 0x1f;
-    *b = ((px0 << 6) & 0xc0);
-    if(*b != 0) *b |= 0x3f;
-
-}
-
-
-void setup_display() {
-	initscr();
-	raw();
-	keypad(stdscr, TRUE);
-	noecho();
-	memset(TFB, 0, TFB_ROWS*TFB_COLS);
-	memset(TFBf, 0, TFB_ROWS*TFB_COLS);
-	memset(TFBfg, 0, TFB_ROWS*TFB_COLS);
-	memset(TFBbg, 0, TFB_ROWS*TFB_COLS);
-    start_color();
-    for(uint16_t i=0;i<256;i++) {
-        // convert tulip pal idx to weird ncurses color space
-        uint16_t r,g,b;
-        unpack_rgb_332_wide(i, &r, &g, &b);
-        r=r*3.9; g=g*3.9; b=b*3.9;
-        init_color(i, r, g, b);
-        init_pair(i, i, EDITOR_COLOR_BG);
-    }
-}
-
-void local_draw_tfb() {
-	for(uint8_t y=0;y<TFB_ROWS;y++) {
-		// clear line
-		move(y,0);
-		clrtoeol();
-		for(uint8_t x=0;x<TFB_COLS;x++) {
-			if(TFBf[y*TFB_COLS+x] & FORMAT_INVERSE) {
-				attron(A_REVERSE);
-			}
-            if(TFBfg[y*TFB_COLS+x] > 0) {
-                attron(COLOR_PAIR(TFBfg[y*TFB_COLS+x]));
-            } 
-            if(TFB[y*TFB_COLS + x]> 31) { 
-                mvaddch(y, x, TFB[y*TFB_COLS + x]); 
-            }  else {
-                mvaddch(y, x, 32);                     
-            }
-			if(TFBf[y*TFB_COLS+x] & FORMAT_INVERSE) {
-				attroff(A_REVERSE);
-			}
-            if(TFBfg[y*TFB_COLS+x] > 0) {
-                attroff(COLOR_PAIR(TFBfg[y*TFB_COLS+x]));
-            }
-
-		}
-	}
-	move(cursor_y,cursor_x);
-	refresh();
-}
-#endif
 
 int mc=0;
 int fc=0;
@@ -218,7 +66,6 @@ void editor_free(void* ptr) {
     fc++;
     free_caps(ptr);
 }
-
 
 
 void editor_highlight_at_row(uint16_t y) {
@@ -299,9 +146,6 @@ void string_at_row(char * s, int16_t len, uint16_t y) {
 			TFB[y*TFB_COLS+i] = 0;
 		}
         if(y!=TFB_ROWS-1)editor_highlight_at_row(y);
-#ifdef LOCALDEV
-		local_draw_tfb();
-#endif
 	}
 }
 
@@ -321,7 +165,6 @@ void paint_tfb(uint16_t start_at_y) {
 
 // Move the cursor to pos x,y and scroll the viewport if needed
 void move_cursor(int16_t x, int16_t y) {
-	// In localdev, the local_draw_tfb physically moves the cursor
 	// Undo old cursor
 	TFBf[cursor_y*TFB_COLS+cursor_x] = 0; 
 
@@ -407,15 +250,11 @@ void save_tfb() {
 	saved_tfb_x = tfb_x_col;
 	tfb_y_row = 0;
 	tfb_x_col = 0;
-#ifdef LOCALDEV
-    // nothing?
-#else
     for(uint16_t y=0;y<V_RES+OFFSCREEN_Y_PX;y++) {
         for(uint16_t x=0;x<H_RES+OFFSCREEN_X_PX;x++) {
             display_set_bg_pixel_pal(x,y,EDITOR_COLOR_BG);
         }
     }
-#endif
 }
 
 void restore_tfb() {
@@ -431,15 +270,11 @@ void restore_tfb() {
 	editor_free(saved_tfbbg);
 	tfb_y_row = saved_tfb_y;
 	tfb_x_col = saved_tfb_x;
-#ifdef LOCALDEV
-    // nothing?
-#else
     for(uint16_t y=0;y<V_RES+OFFSCREEN_Y_PX;y++) {
         for(uint16_t x=0;x<H_RES+OFFSCREEN_X_PX;x++) {
             display_set_bg_pixel_pal(x,y,bg_pal_color);
         }
     }
-#endif
 }
 
 void editor_new_file() {
@@ -512,9 +347,6 @@ void editor_open_file(const char *filename) {
 int8_t prompt_for_char(char * prompt) {
     string_at_row(prompt, -1, TFB_ROWS-1);
     format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
-    #ifdef LOCALDEV
-        local_draw_tfb();
-    #endif
     paint_tfb(TFB_ROWS-1);
 
     return mp_hal_stdin_rx_chr();
@@ -531,9 +363,6 @@ void prompt_for_string(char * prompt, char * default_answer, char * output_strin
     }
     string_at_row(expanded_prompt, -1, TFB_ROWS-1);
     format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
-    #ifdef LOCALDEV
-        local_draw_tfb();
-    #endif
     int c = -1;
     uint8_t i = 0;
     c = mp_hal_stdin_rx_chr();
@@ -541,9 +370,6 @@ void prompt_for_string(char * prompt, char * default_answer, char * output_strin
         output_string[i++] = c;
         TFB[(TFB_ROWS-1)*TFB_COLS+i+strlen(expanded_prompt)] = c;
         paint_tfb(TFB_ROWS-1);
-        #ifdef LOCALDEV
-            local_draw_tfb();
-        #endif
         c = mp_hal_stdin_rx_chr();
     }
     output_string[i] = 0;
@@ -601,9 +427,6 @@ void editor_quit() {
 	editor_free(text_lines);
 	if(yank) editor_free(yank);
     yank = 0;
-#ifdef LOCALDEV
-	endwin();
-#endif
     fprintf(stderr,"mc %d fc %d\n", mc, fc);
 }
 
@@ -1042,12 +865,8 @@ void editor(const char * filename) {
 	move_cursor(0,0);
 	y_offset = 0;
     while(quit_flag == 0) {
-#ifdef LOCALDEV
-		local_draw_tfb();
-#else
 #ifdef ESP_PLATFORM
 		vPortYield();
-#endif
 #endif
 		int c = mp_hal_stdin_rx_chr();
 		if(c>=0) {
@@ -1058,12 +877,4 @@ void editor(const char * filename) {
 }
 
 
-#ifdef LOCALDEV
-int main(int argc , char*argv[]) {
-	elog = fopen("edit.log", "a");
-	setup_display();
-	if(argc>1) { editor(argv[1]); } else {editor(NULL); }
-	return 0;
-}
-#endif
 
