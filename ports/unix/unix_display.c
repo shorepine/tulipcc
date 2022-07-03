@@ -52,10 +52,24 @@ int check_key() {
             if(key.keysym.scancode >= 0x04 && key.keysym.scancode <= 0x94) {
                 send_key_to_micropython(scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod));
             }
+            uint8_t skip = 0;
+            uint8_t pos = 10;
+            for(uint8_t i=2;i<8;i++) {
+                if(last_scan[i] == key.keysym.scancode) { skip = 1; }
+                if(pos == 10 && last_scan[i] == 0) { pos = i; }
+            }
+            if(!skip && pos < 8) {
+                last_scan[pos] = key.keysym.scancode;
+            }
             return 1;
         }
         if(e.type == SDL_KEYUP) {
-            // Not sure yet, but certainly need to fill in "last_scan" somewhere for feature parity
+            SDL_KeyboardEvent key = e.key; 
+            for(uint8_t i=2;i<8;i++) {
+                if(key.keysym.scancode == last_scan[i]) {
+                    last_scan[i] = 0;
+                }
+            }
         }
     }
     return 0;

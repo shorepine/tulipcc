@@ -1,16 +1,18 @@
 # Tulip Creative Computer
 
-Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC, aka Tulip4). 
+Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
 
-Tulip is a self contained portable creative computer, with a display and keyboard and sound. It boots directly into a Python prompt. You can dive right into making something without distractions or complications. It is not a shell based on another operating system. Every byte of RAM, every cycle of the CPU is dedicated to your code, the display and music. 
+Tulip is a self contained portable creative computer, with a display and keyboard and sound. It boots directly into a Python prompt. You can dive right into making something without distractions or complications. It is not a shell on top of another operating system. Every byte of RAM and every cycle of the CPU is dedicated to your code, the display and music. 
 
 You can use Tulip to make music, write code, make art, games, or just write. It does not have a web browser, although it can connect to a network in a slow fashion.
 
-You can build your own Tulip for about $25 plus the cost of a display and USB keyboard. 
+Tulip is available both as a hardware DIY project (Tulip CC) and a macOS app (Tulip Desktop.) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, give the computer version a go to learn about it.
 
-The hardware for revision 4 of Tulip is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. 
+You can build your own Tulip CC for about $25 plus the cost of a display and USB keyboard. 
 
-The display is a 10.1" 1024 x 600 RGB dot clock color LCD. 
+The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack for many hours.
+
+The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD. 
 
 Tulip's sound system is a full featured 32-voice synthesizer, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
 
@@ -19,19 +21,19 @@ I've been working on Tulip on and off for years over many hardware iterations an
 Tulip rev 4 supports:
 - 8.5MB of RAM
 - 8MB flash storage, as a filesystem accesible in Python
-- The [Alles](https://github.com/bwhitman/alles) 64-voice synthesizer engine running locally or as a control for an Alles mesh.
+- The [Alles](https://github.com/bwhitman/alles) 32-voice synthesizer engine running locally or as a control for an Alles mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
 - A 1280x750 background frame buffer to draw arbitrary bitmaps to, which can scroll horizontally / vertically
 - WiFi, access http via Python requests or TCP / UDP sockets 
-- Adjustable display clock, defaults to 24 MHz / 30 FPS.
+- Adjustable display clock, defaults to 30 FPS.
 - 256 colors
 - Can load PNGs from disk to set sprites or background, or generate bitmap data from code
 - Built in code and text editor
 - USB keyboard support
 - 500mA power usage including display, at medium display brightness, can last for hours on USB battery pack 
 
-Tulip's "OS" is heavily based on the great work of [Micropython](https://micropython.org), which a lot of additions to support the Python REPL on screen and integrated into the display and sound system. Most of our code is in the ports/esp32/ directory. 
+Tulip's "OS" is heavily based on the great work of [Micropython](https://micropython.org), which a lot of additions to support the Python REPL on screen and integrated into the display and sound system. 
 
 
 ## Usage 
@@ -93,7 +95,7 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 ### Network
 
 ```python
-# Join a wifi network
+# Join a wifi network (not needed on Tulip Desktop)
 tulip.wifi("ssid", "password")
 
 # Get IP address or check if connected
@@ -292,7 +294,7 @@ alles.send(osc=2, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
 
 ### Hardware 
 
-To build your own Tulip:
+To build your own Tulip CC:
 - Get an [ESP32-S3 NXR8 dev board.](https://www.adafruit.com/product/5336). There's lots of variants, but you need an S3 for sure, and the "NXR8" means 8MB of SPI RAM and XMB of non-volatile flash storage (they have 8 and 32). If you get this exact one (the ESP32-S3-WROOM-1 N8R8) you can follow my pin numberings / get my breakout board. 
 - Get a RGB dot clock display. [I am currently using this one](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). You want to make sure it takes "RGB" input, usually with 8 pins each for R, G and B (and then HSYNC, VSYNC, DE). If it is not 1024x600 you'll want to make changes in `display.h`. 
 - For sound, get an I2S decoder. [You can get ones that have line outs like this](https://www.adafruit.com/product/3678) or ones that [have speaker amps built in like this](https://www.adafruit.com/product/3006). I use the speaker amp model and hook it into a little 3W speaker.
@@ -334,11 +336,37 @@ In the meantime, here's the pin connections you'll want to make:
 
 
 
-### Software
+## How to compile and help develop Tulip
 
-TBD: Tulip / micropython build / flash intructions
+Tulip's firmware / desktop application is based on Micropython. We use their folder structure and "ports" for `esp32` and `unix` (for Tulip Desktop.) To compile your own firmware / desktop app, start by cloning this repository. 
 
-`idf.py -D MICROPY_BOARD=TULIP4 -p /dev/cu.usbserial-XXX flash`
+Local version:
+
+```
+cd ports/unix
+make
+./tulip
+```
+
+ESP32S3:
+
+```
+cd ports/esp32
+export ../../esp-idf/export.sh
+# Connect your esp32s3 board over USB (from the UART connector)
+ls /dev/cu* # see what port it is on
+idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND flash
+idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND monitor
+```
+
+Some development guidelines if you'd like to help contribute!
+
+ * Be nice and helpful!
+ * We're currently a hard fork of ESP-IDF and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. We can merge new features of libraries manually. No git submodules. Yes, there are many downsides to this approach but keeping the hardware & software in sync is much easier this way, especially with fast moving projects like ESP-IDF.
+ * Any change must be equivalent across Tulip Desktop and Tulip CC. Test on hardware before proposing a new feature / change.
+
+ 
+
 
 
 

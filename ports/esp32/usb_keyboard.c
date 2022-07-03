@@ -33,7 +33,6 @@ typedef union {
 } usb_hid_desc_t;
 
 
-uint8_t keyboard_send_keys_to_micropython = 1;
 
 
 const TickType_t HOST_EVENT_TIMEOUT = 1;
@@ -140,7 +139,6 @@ void usbh_task(void)
 }
 
 // Keep track of which keys / scan codes are being held
-uint8_t last_scan[8] = {0,0,0,0,0,0,0,0};
 uint16_t current_held = 0;
 int64_t current_held_ms = 0;
 int64_t last_inter_trigger_ms = 0;

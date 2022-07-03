@@ -1,5 +1,5 @@
 # package.sh
-# packages the Tulip Deskop binary into a macOS app, universal binary, notarizes / codesigns for distribution
+# packages the Tulip Deskop binary into a macOS app, universal binary, codesigns for distribution
 
 # Build for arm then intel
 make WHICH_ARCH=arm64 clean
@@ -25,4 +25,6 @@ codesign -s "Developer ID Application: Brian Whitman (Y6CQ3JU8G4)" Tulip\ CC.app
 codesign -s "Developer ID Application: Brian Whitman (Y6CQ3JU8G4)" Tulip\ CC.app/Contents/Frameworks/SDL2.framework/Versions/A/SDL2 -f
 codesign -s "Developer ID Application: Brian Whitman (Y6CQ3JU8G4)" Tulip\ CC.app/Contents/MacOS/tulip -f
 
+# I then run "AppWrapper 4.0" to notarize the package. I would love to convert that into a command line tool, i believe xcrun notarytool
+# TODO... 
 

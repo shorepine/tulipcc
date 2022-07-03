@@ -4,7 +4,7 @@ import tulip, alles
 from upysh import *
 from tulip import edit
 
-# This _boot runs both local and esp32s3, so we check for flashdev
+# This _boot runs both desktop and esp32s3, so we check for flashdev
 try:
     from flashbdev import bdev
     try:
@@ -14,6 +14,11 @@ try:
         import inisetup
         vfs = inisetup.setup()
 except ImportError:
-    pass
+    # Tulip Desktop
+    try:
+        mkdir(uos.getenv("HOME")+"/Documents/tulipcc")
+    except OSError: #exists
+        pass
+    cd(uos.getenv("HOME")+"/Documents/tulipcc")
 
 gc.collect()

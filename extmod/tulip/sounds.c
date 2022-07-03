@@ -1,6 +1,6 @@
 // sounds.c
 // various little "make a sound in firmware" methods
-#include "alles_tulip.h"
+#include "alles.h"
 
 void note_on(int8_t osc, int64_t time) {
     struct event e = default_event();

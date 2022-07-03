@@ -7,13 +7,13 @@
 #include "clipping_lookup_table.h"
 
 // TODO -- refactor this to make this not so reliant, maybe a callback for rendering
-#include "../alles_tulip.h"
 #ifdef ESP_PLATFORM
+#include "../alles.h"
 extern SemaphoreHandle_t xQueueSemaphore;
 extern TaskHandle_t renderTask[2]; // one per core
 #else
 // Local rendering
-#include <soundio.h>
+#include <soundio/soundio.h>
 #include <pthread.h>
 struct SoundIo *soundio;
 #endif
@@ -46,17 +46,17 @@ int64_t computed_delta; // can be negative no prob, but usually host is larger #
 uint8_t computed_delta_set; // have we set a delta yet?
 
 int8_t check_init(amy_err_t (*fn)(), char *name) {
-    printf("Starting %s: ", name);
+    fprintf(stderr,"Starting %s: ", name);
     const amy_err_t ret = (*fn)();
     if(ret != AMY_OK) {
 #ifdef ESP_PLATFORM
-        printf("[ERROR:%i (%s)]\n", ret, esp_err_to_name((esp_err_t)ret));
+        fprintf(stderr,"[ERROR:%i (%s)]\n", ret, esp_err_to_name((esp_err_t)ret));
 #else
-        printf("[ERROR:%i]\n", ret);
+        fprintf(stderr,"[ERROR:%i]\n", ret);
 #endif
         return -1;
     }
-    printf("[OK]\n");
+    fprintf(stderr,"[OK]\n");
     return 0;
 }
 
@@ -96,7 +96,6 @@ struct event default_event() {
     e.midi_note = -1;
     e.amp = -1; 
     e.freq = -1;
-    e.detune = -1;
     e.volume = -1;
     e.ratio = -1;
     e.filter_freq = -1;
@@ -120,7 +119,6 @@ struct event default_event() {
 
 void add_delta_to_queue(struct delta d) {
 #ifdef ESP_PLATFORM
-
     //  Take the queue mutex before starting
     xSemaphoreTake(xQueueSemaphore, portMAX_DELAY);
 #endif
@@ -185,7 +183,6 @@ void add_event(struct event e) {
     if(e.feedback>-1) { d.param=FEEDBACK; d.data = *(uint32_t *)&e.feedback; add_delta_to_queue(d); }
     if(e.freq>-1) { d.param=FREQ; d.data = *(uint32_t *)&e.freq; add_delta_to_queue(d); }
     if(e.phase>-1) { d.param=PHASE; d.data = *(uint32_t *)&e.phase; add_delta_to_queue(d); }
-    if(e.detune>-1) { d.param=DETUNE; d.data = *(uint32_t *)&e.detune; add_delta_to_queue(d); }
     if(e.volume>-1) { d.param=VOLUME; d.data = *(uint32_t *)&e.volume; add_delta_to_queue(d); }
     if(e.ratio>-1) { d.param=RATIO; d.data = *(uint32_t *)&e.ratio; add_delta_to_queue(d); }
     if(e.filter_freq>-1) { d.param=FILTER_FREQ; d.data = *(uint32_t *)&e.filter_freq; add_delta_to_queue(d); }
@@ -232,7 +229,6 @@ void reset_osc(uint8_t i ) {
     synth[i].amp = 1;
     msynth[i].amp = 1;
     synth[i].phase = 0;
-    synth[i].detune = 7;
     synth[i].volume = 0;
     synth[i].eq_l = 0;
     synth[i].eq_m = 0;
@@ -259,6 +255,7 @@ void reset_osc(uint8_t i ) {
     synth[i].algorithm = 0;
     for(uint8_t j=0;j<MAX_ALGO_OPS;j++) synth[i].algo_source[j] = -2;
     for(uint8_t j=0;j<MAX_BREAKPOINT_SETS;j++) { for(uint8_t k=0;k<MAX_BREAKPOINTS;k++) { synth[i].breakpoint_times[j][k] =-1; synth[i].breakpoint_values[j][k] = -1; } synth[i].breakpoint_target[j] = 0; }
+    for(uint8_t j=0;j<MAX_BREAKPOINT_SETS;j++) { synth[i].last_scale[j] = 0; }
     synth[i].last_two[0] = 0;
     synth[i].last_two[1] = 0;
 }
@@ -330,29 +327,29 @@ void show_debug(uint8_t type) {
         uint16_t q = global.event_qsize;
         if(q > 25) q = 25;
         for(uint16_t i=0;i<q;i++) {
-            printf("%d time %u osc %d param %d - %f %d\n", i, ptr->time, ptr->osc, ptr->param, *(float *)&ptr->data, *(int *)&ptr->data);
+            fprintf(stderr,"%d time %u osc %d param %d - %f %d\n", i, ptr->time, ptr->osc, ptr->param, *(float *)&ptr->data, *(int *)&ptr->data);
             ptr = ptr->next;
         }
     }
     if(type>2) {
         // print out all the osc data
         //printf("global: filter %f resonance %f volume %f status %d\n", global.filter_freq, global.resonance, global.volume, global.status);
-        printf("global: volume %f eq: %f %f %f \n", global.volume, global.eq[0], global.eq[1], global.eq[2]);
+        fprintf(stderr,"global: volume %f eq: %f %f %f \n", global.volume, global.eq[0], global.eq[1], global.eq[2]);
         //printf("mod global: filter %f resonance %f\n", mglobal.filter_freq, mglobal.resonance);
         for(uint8_t i=0;i<OSCS;i++) {
-            printf("osc %d: status %d amp %f wave %d freq %f duty %f mod_target %d mod source %d velocity %f filter_freq %f ratio %f feedback %f resonance %f step %f algo %d detune %f source %d,%d,%d,%d,%d,%d  \n",
+            fprintf(stderr,"osc %d: status %d amp %f wave %d freq %f duty %f mod_target %d mod source %d velocity %f filter_freq %f ratio %f feedback %f resonance %f step %f algo %d source %d,%d,%d,%d,%d,%d  \n",
                 i, synth[i].status, synth[i].amp, synth[i].wave, synth[i].freq, synth[i].duty, synth[i].mod_target, synth[i].mod_source, 
-                synth[i].velocity, synth[i].filter_freq, synth[i].ratio, synth[i].feedback, synth[i].resonance, synth[i].step, synth[i].algorithm, synth[i].detune,
+                synth[i].velocity, synth[i].filter_freq, synth[i].ratio, synth[i].feedback, synth[i].resonance, synth[i].step, synth[i].algorithm,
                 synth[i].algo_source[0], synth[i].algo_source[1], synth[i].algo_source[2], synth[i].algo_source[3], synth[i].algo_source[4], synth[i].algo_source[5] );
             if(type>3) { 
                 for(uint8_t j=0;j<MAX_BREAKPOINT_SETS;j++) {
-                    printf("bp%d (target %d): ", j, synth[i].breakpoint_target[j]);
+                    fprintf(stderr,"bp%d (target %d): ", j, synth[i].breakpoint_target[j]);
                     for(uint8_t k=0;k<MAX_BREAKPOINTS;k++) {
-                        printf("%d: %f ", synth[i].breakpoint_times[j][k], synth[i].breakpoint_values[j][k]);
+                        fprintf(stderr,"%d: %f ", synth[i].breakpoint_times[j][k], synth[i].breakpoint_values[j][k]);
                     }
-                    printf("\n");
+                    fprintf(stderr,"\n");
                 }
-                printf("mod osc %d: amp: %f, freq %f duty %f filter_freq %f resonance %f fb/bw %f \n", i, msynth[i].amp, msynth[i].freq, msynth[i].duty, msynth[i].filter_freq, msynth[i].resonance, msynth[i].feedback);
+                fprintf(stderr,"mod osc %d: amp: %f, freq %f duty %f filter_freq %f resonance %f fb/bw %f \n", i, msynth[i].amp, msynth[i].freq, msynth[i].duty, msynth[i].filter_freq, msynth[i].resonance, msynth[i].feedback);
             }
         }
     }
@@ -383,16 +380,15 @@ void play_event(struct delta d) {
     if(d.param == MIDI_NOTE) { synth[d.osc].midi_note = *(uint16_t *)&d.data; synth[d.osc].freq = freq_for_midi_note(*(uint16_t *)&d.data); } 
     if(d.param == WAVE) synth[d.osc].wave = *(int16_t *)&d.data; 
     if(d.param == PHASE) synth[d.osc].phase = *(float *)&d.data;
-    if(d.param == DETUNE) synth[d.osc].detune = *(float *)&d.data; 
     if(d.param == PATCH) synth[d.osc].patch = *(int16_t *)&d.data;
     if(d.param == DUTY) synth[d.osc].duty = *(float *)&d.data;
     if(d.param == FEEDBACK) synth[d.osc].feedback = *(float *)&d.data;
     if(d.param == AMP) synth[d.osc].amp = *(float *)&d.data; 
     if(d.param == FREQ) synth[d.osc].freq = *(float *)&d.data;
     
-    if(d.param == BP0_TARGET) { synth[d.osc].breakpoint_target[0] = *(int8_t *)&d.data; trig=1; }
-    if(d.param == BP1_TARGET) { synth[d.osc].breakpoint_target[1] = *(int8_t *)&d.data; trig=1; }
-    if(d.param == BP2_TARGET) { synth[d.osc].breakpoint_target[2] = *(int8_t *)&d.data; trig=1; }
+    if(d.param == BP0_TARGET) { synth[d.osc].breakpoint_target[0] = *(int16_t *)&d.data; trig=1; }
+    if(d.param == BP1_TARGET) { synth[d.osc].breakpoint_target[1] = *(int16_t *)&d.data; trig=1; }
+    if(d.param == BP2_TARGET) { synth[d.osc].breakpoint_target[2] = *(int16_t *)&d.data; trig=1; }
     // TODO, i really should clean this up
     if(d.param >= BP_START && d.param < BP_END) {
         uint8_t pos = d.param - BP_START;
@@ -449,7 +445,8 @@ void play_event(struct delta d) {
             if(synth[d.osc].filter_type != FILTER_NONE) update_filter(d.osc);
             // Restart the waveforms, adjusting for phase if given
             if(synth[d.osc].wave==SINE) sine_note_on(d.osc);
-            if(synth[d.osc].wave==SAW) saw_note_on(d.osc);
+            if(synth[d.osc].wave==SAW_DOWN) saw_down_note_on(d.osc);
+            if(synth[d.osc].wave==SAW_UP) saw_up_note_on(d.osc);
             if(synth[d.osc].wave==TRIANGLE) triangle_note_on(d.osc);
             if(synth[d.osc].wave==PULSE) pulse_note_on(d.osc);
             if(synth[d.osc].wave==PCM) pcm_note_on(d.osc);
@@ -459,7 +456,8 @@ void play_event(struct delta d) {
             // Trigger the MOD source, if we have one
             if(synth[d.osc].mod_source >= 0) {
                 if(synth[synth[d.osc].mod_source].wave==SINE) sine_mod_trigger(synth[d.osc].mod_source);
-                if(synth[synth[d.osc].mod_source].wave==SAW) saw_mod_trigger(synth[d.osc].mod_source);
+                if(synth[synth[d.osc].mod_source].wave==SAW_DOWN) saw_up_mod_trigger(synth[d.osc].mod_source);
+                if(synth[synth[d.osc].mod_source].wave==SAW_UP) saw_down_mod_trigger(synth[d.osc].mod_source);
                 if(synth[synth[d.osc].mod_source].wave==TRIANGLE) triangle_mod_trigger(synth[d.osc].mod_source);
                 if(synth[synth[d.osc].mod_source].wave==PULSE) pulse_mod_trigger(synth[d.osc].mod_source);
                 if(synth[synth[d.osc].mod_source].wave==PCM) pcm_mod_trigger(synth[d.osc].mod_source);
@@ -527,7 +525,8 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
             for(uint16_t i=0;i<BLOCK_SIZE;i++) { per_osc_fb[core][i] = 0; }
             hold_and_modify(osc); // apply bp / mod
             if(synth[osc].wave == NOISE) render_noise(per_osc_fb[core], osc);
-            if(synth[osc].wave == SAW) render_saw(per_osc_fb[core], osc);
+            if(synth[osc].wave == SAW_DOWN) render_saw_down(per_osc_fb[core], osc);
+            if(synth[osc].wave == SAW_UP) render_saw_up(per_osc_fb[core], osc);
             if(synth[osc].wave == PULSE) render_pulse(per_osc_fb[core], osc);
             if(synth[osc].wave == TRIANGLE) render_triangle(per_osc_fb[core], osc);
             if(synth[osc].wave == SINE) render_sine(per_osc_fb[core], osc);
@@ -550,7 +549,7 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
 
 // On all platforms, sysclock is based on total samples played, using audio out (i2s or etc) as system clock
 int64_t get_sysclock() {
-    return (int64_t) ((total_samples / (float)SAMPLE_RATE) * 1000);
+    return (int64_t)((total_samples / (float)SAMPLE_RATE) * 1000);
 }
 
 
@@ -561,7 +560,7 @@ int16_t channel = -1;
 int16_t device_id = -1;
 uint8_t file_write = 0;
 FILE * raw = NULL;
-//extern char * raw_file;
+extern char * raw_file;
 
 void print_devices() {
     struct SoundIo *soundio2 = soundio_create();
@@ -575,7 +574,7 @@ void print_devices() {
         const char *default_str = (i==default_output) ? " (default)" : "";
         const char *raw_str = device->is_raw ? " (raw)" : "";
         int chans = device->layouts[0].channel_count;
-        printf("[%d]\t%s%s%s\t%d output channels\n", i, device->name, default_str, raw_str, chans);
+        fprintf(stderr,"[%d]\t%s%s%s\t%d output channels\n", i, device->name, default_str, raw_str, chans);
         soundio_device_unref(device);
     }
 }
@@ -746,10 +745,10 @@ void *soundio_run(void *vargp) {
 
 void live_start() {
     // kick off a thread running soundio_run
-    //if(strlen(raw_file) > 0) {
-    //    file_write = 1;
-    //    raw = fopen(raw_file, "wb");
-    //}
+    if(strlen(raw_file) > 0) {
+        file_write = 1;
+        raw = fopen(raw_file, "wb");
+    }
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, soundio_run, NULL);
 }
@@ -795,11 +794,11 @@ int16_t * fill_audio_buffer_task() {
     //gpio_set_level(CPU_MONITOR_1, 1);
     // Tell the rendering threads to start rendering
     xTaskNotifyGive(renderTask[0]);
-    //xTaskNotifyGive(renderTask[1]);
+    xTaskNotifyGive(renderTask[1]);
 
     // And wait for each of them to come back
     ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
-    //ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+    ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
 #else
     render_task(0, OSCS, 0);        
 #endif
@@ -820,11 +819,11 @@ int16_t * fill_audio_buffer_task() {
     	} else {
             uintval = (int)(-fsample);
 	    }
-        if (uintval > LIN_MAX) {
-    	    if (uintval > NONLIN_MAX) {
+        if (uintval >= FIRST_NONLIN) {
+            if (uintval >= FIRST_HARDCLIP) {
                 uintval = SAMPLE_MAX;
             } else {
-                uintval = clipping_lookup_table[uintval - LIN_MAX];
+                uintval = clipping_lookup_table[uintval - FIRST_NONLIN];
             }
         }
 	    int16_t sample;
@@ -894,8 +893,10 @@ void parse_breakpoint(struct event * e, char* message, uint8_t which_bpset) {
 
 void parse_task() {
     uint8_t mode = 0;
+    int16_t client = -1;
     int64_t sync = -1;
     int8_t sync_index = -1;
+    uint8_t ipv4 = 0; 
     uint16_t start = 0;
     uint16_t c = 0;
     char * message = message_start_pointer;
@@ -912,7 +913,7 @@ void parse_task() {
     }
     length = new_length;
 
-    if(DEBUG)printf("received message ###%s### len %d\n", message, length);
+    if(DEBUG)fprintf(stderr,"received message ###%s### len %d\n", message, length);
 
     while(c < length+1) {
         uint8_t b = message[c];
@@ -932,7 +933,7 @@ void parse_task() {
             if(mode=='B') parse_breakpoint(&e, message+start, 1);
             if(mode=='b') e.feedback=atof(message+start);
             if(mode=='C') parse_breakpoint(&e, message+start, 2);
-            //if(mode=='c') client = atoi(message + start); 
+            if(mode=='c') client = atoi(message + start); 
             if(mode=='d') e.duty=atof(message + start);
             if(mode=='D') {
                 uint8_t type = atoi(message + start);
@@ -952,7 +953,7 @@ void parse_task() {
             if(mode=='O') parse_algorithm(&e, message+start);
             if(mode=='p') e.patch=atoi(message + start);
             if(mode=='P') e.phase=atof(message + start);
-            //if(mode=='r') ipv4=atoi(message + start);
+            if(mode=='r') ipv4=atoi(message + start);
             if(mode=='R') e.resonance=atof(message + start);
             if(mode=='s') sync = atol(message + start); 
             if(mode=='S') { 
@@ -960,7 +961,6 @@ void parse_task() {
                 if(osc > OSCS-1) { reset_oscs(); } else { reset_osc(osc); }
             }
             if(mode=='T') e.breakpoint_target[0] = atoi(message + start); 
-            if(mode=='u') e.detune=atof(message + start);
             if(mode=='W') e.breakpoint_target[1] = atoi(message + start); 
             if(mode=='v') e.osc=(atoi(message + start) % OSCS); // allow osc wraparound
             if(mode=='V') {  e.volume = atof(message + start); }
@@ -977,7 +977,7 @@ void parse_task() {
     }
     if(sync_response) {
         // If this is a sync response, let's update our local map of who is booted
-        //update_map(client, ipv4, sync);
+        update_map(client, ipv4, sync);
         length = 0; // don't need to do the rest
     }
     // Only do this if we got some data
@@ -1002,11 +1002,10 @@ void parse_task() {
         // TODO -- not that it matters, but the below could probably be one or two lines long instead
         // Don't add sync messages to the event queue
         if(sync >= 0 && sync_index >= 0) {
-            //handle_sync(sync, sync_index);
+            handle_sync(sync, sync_index);
         } else {
             // Assume it's for me
             uint8_t for_me = 1;
-            /*
             // But wait, they specified, so don't assume
             if(client >= 0) {
                 for_me = 0;
@@ -1025,7 +1024,6 @@ void parse_task() {
                     if(client_id % (client-255) == 0) for_me = 1;
                 }
             }
-            */
             if(for_me) add_event(e);
         }
     }

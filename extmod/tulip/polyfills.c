@@ -8,17 +8,15 @@
 
 
 #ifndef ESP_PLATFORM
-uint8_t keyboard_send_keys_to_micropython = 1;
-uint8_t last_scan[8] = {0,0,0,0,0,0,0,0};
 
 void display_brightness(uint8_t amount) {
-
 }
 
 float compute_cpu_usage(uint8_t debug) {
     return 0;
 }
 #endif
+
 
 void delay_ms(uint32_t ms) {
 #ifdef ESP_PLATFORM
