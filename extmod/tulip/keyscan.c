@@ -5,7 +5,10 @@
 #include <SDL.h>
 #endif
 
+uint8_t keyboard_send_keys_to_micropython = 1;
 extern int mp_interrupt_char;
+uint8_t last_scan[8] = {0,0,0,0,0,0,0,0};
+
 
 uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
 #ifndef ESP_PLATFORM

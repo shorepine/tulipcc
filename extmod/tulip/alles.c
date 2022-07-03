@@ -1,7 +1,7 @@
 // Alles multicast synthesizer
 // Brian Whitman
 // brian@variogr.am
-#include "alles_tulip.h"
+#include "alles.h"
 
 uint8_t board_level;
 uint8_t status;
@@ -39,6 +39,16 @@ extern uint32_t event_counter;
 extern uint32_t message_counter;
 
 
+// Stuff for Alles the speaker not in here(yet)
+uint8_t debug_on = 0;
+void update_map(uint8_t client, uint8_t ipv4, int64_t time) {}
+void handle_sync(int64_t time, int8_t index) {}
+int16_t client_id = 0;
+uint8_t alive =1;
+char raw_file[1] = "";
+
+
+
 #ifdef ESP_PLATFORM
 // Wrap AMY's renderer into 2 FreeRTOS tasks, one per core
 void esp_render_task( void * pvParameters) {
@@ -46,7 +56,7 @@ void esp_render_task( void * pvParameters) {
     uint8_t start = 0; // (OSCS/2); 
     uint8_t end = OSCS;
 //    if(which == 0) { start = 0; end = (OSCS/2); } 
-    printf("I'm renderer #%d on core #%d and i'm handling oscs %d up until %d\n", which, xPortGetCoreID(), start, end);
+    fprintf(stderr,"I'm renderer #%d on core #%d and i'm handling oscs %d up until %d\n", which, xPortGetCoreID(), start, end);
     while(1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         render_task(start, end, which);
@@ -61,7 +71,7 @@ void esp_fill_audio_buffer_task() {
         size_t written = 0;
         i2s_write((i2s_port_t)CONFIG_I2S_NUM, block, BLOCK_SIZE * BYTES_PER_SAMPLE, &written, portMAX_DELAY); 
         if(written != BLOCK_SIZE*BYTES_PER_SAMPLE) {
-            printf("i2s underrun: %d vs %d\n", written, BLOCK_SIZE*BYTES_PER_SAMPLE);
+            fprintf(stderr,"i2s underrun: %d vs %d\n", written, BLOCK_SIZE*BYTES_PER_SAMPLE);
         }
     }
 }
@@ -104,10 +114,14 @@ amy_err_t esp_amy_init() {
     return AMY_OK;
 }
 #else
+
+extern void *soundio_run(void *vargp);
+#include <pthread.h>
 amy_err_t unix_amy_init() {
     //sync_init();
     start_amy();
-    live_start();
+    pthread_t thread_id;
+    pthread_create(&thread_id, NULL, soundio_run, NULL);
     return AMY_OK;
 }
 #endif

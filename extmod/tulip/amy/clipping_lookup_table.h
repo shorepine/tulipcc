@@ -1,8 +1,13 @@
-// Automatically generated.
-// Clipping lookup table
-#define LIN_MAX 29491
+// Automatically generated, then edited by hand to use better names.
+// Clipping lookup table.
+
+// Sample value at which we start reading from table.
+#define FIRST_NONLIN 29491
+// Table length.
 #define NONLIN_RANGE 4915
-#define NONLIN_MAX (LIN_MAX + NONLIN_RANGE)
+// First sample value beyond end of table (just clip to max).
+#define FIRST_HARDCLIP (FIRST_NONLIN + NONLIN_RANGE)
+// The transition curve table.
 const uint16_t clipping_lookup_table[NONLIN_RANGE] = {
 29491,29491,29492,29493,29494,29495,29496,29497,
 29498,29499,29500,29501,29502,29503,29504,29505,
@@ -618,5 +623,5 @@ const uint16_t clipping_lookup_table[NONLIN_RANGE] = {
 32767,32767,32767,32767,32767,32767,32767,32767,
 32767,32767,32767,32767,32767,32767,32767,32767,
 32767,32767,32767,32767,32767,32767,32767,32767,
-32767,32767,32767,
+32767,32767,32767
 };

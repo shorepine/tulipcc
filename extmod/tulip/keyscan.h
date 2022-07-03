@@ -13,11 +13,14 @@
 #ifndef USB_HID_KEYS
 #define USB_HID_KEYS
 
+
 #include <stdint.h>
 #include "tulip_helpers.h"
 #include "py/runtime.h"
 #include "py/mphal.h"
 
+uint8_t keyboard_send_keys_to_micropython;
+uint8_t last_scan[8];
 
 uint16_t scan_ascii(uint8_t code, uint32_t modifier);
 void send_key_to_micropython(uint16_t c);

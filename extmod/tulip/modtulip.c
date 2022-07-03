@@ -9,7 +9,7 @@
 #include "display.h"
 #include "extmod/vfs.h"
 #include "py/stream.h"
-#include "alles_tulip.h"
+#include "alles.h"
 
 // Graphics
 

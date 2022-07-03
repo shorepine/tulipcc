@@ -2,7 +2,6 @@
 #ifndef __AMY_H
 #define __AMY_H
 
-
 #include <stdio.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -12,10 +11,10 @@
 #include <unistd.h>
 
 // Constants you can change if you want
-#define OSCS 32              // # of simultaneous oscs to keep track of 
+#define OSCS 64              // # of simultaneous oscs to keep track of 
 #define BLOCK_SIZE 256       // buffer block size in samples
 #if defined(ESP_PLATFORM) 
-#define LATENCY_MS 0 //1000      // fixed latency in milliseconds
+#define LATENCY_MS 0     // fixed latency in milliseconds
 #define EVENT_FIFO_LEN 3000  // number of events the queue can store
 #define MAX_DRIFT_MS 20000   // ms of time you can schedule ahead before synth recomputes time base
 #elif defined(DESKTOP_PLATFORM)
@@ -44,6 +43,8 @@ typedef int16_t i2s_sample_type;
 #define CLIP_D 0.1
 #define MAX_RECEIVE_LEN 512  // max length of each message
 #define MAX_VOLUME 11.0
+#define MINIMUM_SCALE 0.000190 // computed from TRUE_EXPONENTIAL's end point after a while 
+#define BREAKPOINT_EPS 0.0002
 
 
 #define LINEAR_INTERP        // use linear interp for oscs
@@ -57,14 +58,16 @@ typedef int16_t i2s_sample_type;
 #define EQ_CENTER_MED 2500.0
 #define EQ_CENTER_HIGH 7000.0
 
-// modulation/breakpoint target mask
+// modulation/breakpoint target mask (int16)
 #define TARGET_AMP 1
 #define TARGET_DUTY 2
 #define TARGET_FREQ 4
 #define TARGET_FILTER_FREQ 8
-#define TARGET_RESONANCE 16
-#define TARGET_FEEDBACK 32
-#define TARGET_LINEAR 64 // default exp, linear as an option
+#define TARGET_RESONANCE 0x10
+#define TARGET_FEEDBACK 0x20
+#define TARGET_LINEAR 0x40 // default exp, linear as an option
+#define TARGET_TRUE_EXPONENTIAL 0x80 // default exp, "true exp" for FM as an option
+#define TARGET_DX7_EXPONENTIAL 0x100 // Asymmetric attack/decay behavior per DX7.
 
 #define FILTER_LPF 1
 #define FILTER_BPF 2
@@ -72,15 +75,16 @@ typedef int16_t i2s_sample_type;
 #define FILTER_NONE 0
 #define SINE 0
 #define PULSE 1
-#define SAW 2
-#define TRIANGLE 3
-#define NOISE 4
-#define KS 5
-#define PCM 6
-#define ALGO 7
-#define PARTIAL 8
-#define PARTIALS 9
-#define OFF 10
+#define SAW_DOWN 2
+#define SAW_UP 3
+#define TRIANGLE 4
+#define NOISE 5
+#define KS 6
+#define PCM 7
+#define ALGO 8
+#define PARTIAL 9
+#define PARTIALS 10
+#define OFF 11
 
 #define EMPTY 0
 #define SCHEDULED 1
@@ -93,6 +97,9 @@ typedef int16_t i2s_sample_type;
 #define AMY_OK 0
 typedef int amy_err_t;
 
+#ifndef MAX
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
 
 enum params{
     WAVE, PATCH, MIDI_NOTE, AMP, DUTY, FEEDBACK, FREQ, VELOCITY, PHASE, DETUNE, VOLUME, FILTER_FREQ, RATIO, RESONANCE, 
@@ -147,10 +154,11 @@ struct event {
     // TODO -- this may be too much for Alles, to have per osc. Could have a fixed stack of EGs that get assigned to oscs, maybe 32 of them 
     int64_t note_on_clock;
     int64_t note_off_clock;
-    int8_t breakpoint_target[MAX_BREAKPOINT_SETS];
+    int16_t breakpoint_target[MAX_BREAKPOINT_SETS];
     int32_t breakpoint_times[MAX_BREAKPOINT_SETS][MAX_BREAKPOINTS];
     float breakpoint_values[MAX_BREAKPOINT_SETS][MAX_BREAKPOINTS];
-
+    float last_scale[MAX_BREAKPOINT_SETS];  // remembers current envelope level, to use as start point in release.
+  
     // State variable for the impulse-integrating oscs.
     float lpf_state;
     // Constant offset to add to sawtooth before integrating.
@@ -243,7 +251,8 @@ extern void render_ks(float * buf, uint8_t osc);
 extern void render_sine(float * buf, uint8_t osc); 
 extern void render_fm_sine(float *buf, uint8_t osc, float *mod, float feedback_level, uint8_t algo_osc);
 extern void render_pulse(float * buf, uint8_t osc); 
-extern void render_saw(float * buf, uint8_t osc);
+extern void render_saw_down(float * buf, uint8_t osc);
+extern void render_saw_up(float * buf, uint8_t osc);
 extern void render_triangle(float * buf, uint8_t osc); 
 extern void render_noise(float * buf, uint8_t osc); 
 extern void render_pcm(float * buf, uint8_t osc);
@@ -256,7 +265,8 @@ extern void render_partials(float *buf, uint8_t osc);
 extern float compute_mod_pulse(uint8_t osc);
 extern float compute_mod_noise(uint8_t osc);
 extern float compute_mod_sine(uint8_t osc);
-extern float compute_mod_saw(uint8_t osc);
+extern float compute_mod_saw_up(uint8_t osc);
+extern float compute_mod_saw_down(uint8_t osc);
 extern float compute_mod_triangle(uint8_t osc);
 extern float compute_mod_pcm(uint8_t osc);
 
@@ -264,7 +274,8 @@ extern void ks_note_on(uint8_t osc);
 extern void ks_note_off(uint8_t osc);
 extern void sine_note_on(uint8_t osc); 
 extern void fm_sine_note_on(uint8_t osc, uint8_t algo_osc); 
-extern void saw_note_on(uint8_t osc); 
+extern void saw_down_note_on(uint8_t osc); 
+extern void saw_up_note_on(uint8_t osc); 
 extern void triangle_note_on(uint8_t osc); 
 extern void pulse_note_on(uint8_t osc); 
 extern void pcm_note_on(uint8_t osc);
@@ -274,7 +285,8 @@ extern void partial_note_off(uint8_t osc);
 extern void algo_note_on(uint8_t osc);
 extern void algo_note_off(uint8_t osc) ;
 extern void sine_mod_trigger(uint8_t osc);
-extern void saw_mod_trigger(uint8_t osc);
+extern void saw_down_mod_trigger(uint8_t osc);
+extern void saw_up_mod_trigger(uint8_t osc);
 extern void triangle_mod_trigger(uint8_t osc);
 extern void pulse_mod_trigger(uint8_t osc);
 extern void pcm_mod_trigger(uint8_t osc);
