@@ -27,7 +27,7 @@ void init_window(uint16_t w, uint16_t h) {
 
     }
     memset(pixels_332, 0, H_RES * V_RES);
-    SDL_SetWindowTitle(window, "Tulip4");
+    SDL_SetWindowTitle(window, "Tulip CC");
     SDL_StartTextInput();
 
 }

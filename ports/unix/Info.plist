@@ -10,6 +10,8 @@
     <string>6.0</string>
     <key>CFBundleIconFile</key>
     <string>tulip.icns</string>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>English</string>
     <key>CFBundleName</key>
     <string>Tulip CC</string>
     <key>CFBundlePackageType</key>
