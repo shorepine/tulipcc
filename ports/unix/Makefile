@@ -51,7 +51,7 @@ INC += -I$(BUILD)
 
 #INC += -I$(HOMEBREW)/include/SDL2
 INC += -I./SDL2.framework/Headers
-INC += -I$(HOMEBREW)/include/soundio
+INC += -I./soundio
 
 # compiler settings
 CWARN = -Wall -Werror
@@ -119,7 +119,7 @@ else
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
 endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -L$(HOMEBREW)/lib -F. -framework SDL2 -lsoundio $(ARCHFLAGS)
+LDFLAGS += -L./libs -F. -framework SDL2 -lsoundio $(ARCHFLAGS)
 
 # Flags to link with pthread library
 LIBPTHREAD = -lpthread
