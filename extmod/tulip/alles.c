@@ -53,16 +53,17 @@ char raw_file[1] = "";
 // Wrap AMY's renderer into 2 FreeRTOS tasks, one per core
 void esp_render_task( void * pvParameters) {
     uint8_t which = *((uint8_t *)pvParameters);
-    uint8_t start = 0; // (OSCS/2); 
+    uint8_t start = (OSCS/2); 
     uint8_t end = OSCS;
-//    if(which == 0) { start = 0; end = (OSCS/2); } 
-    fprintf(stderr,"I'm renderer #%d on core #%d and i'm handling oscs %d up until %d\n", which, xPortGetCoreID(), start, end);
+    if(which == 0) { start = 0; end = (OSCS/2); } 
+    printf("I'm renderer #%d on core #%d and i'm handling oscs %d up until %d\n", which, xPortGetCoreID(), start, end);
     while(1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         render_task(start, end, which);
         xTaskNotifyGive(fillbufferTask);
     }
 }
+
 
 // Make AMY's FABT run forever , as a FreeRTOS task 
 void esp_fill_audio_buffer_task() {
@@ -98,9 +99,9 @@ amy_err_t esp_amy_init() {
 
     // Create rendering threads, one per core so we can deal with dan ellis float math
     static uint8_t zero = 0;
-    //static uint8_t one = 1;
+    static uint8_t one = 1;
     xTaskCreatePinnedToCore(&esp_render_task, "render_task0", 4096, &zero, 4, &renderTask[0], 0);
-    //xTaskCreatePinnedToCore(&esp_render_task, "render_task1", 4096, &one, 4, &renderTask[1], 1);
+    xTaskCreatePinnedToCore(&esp_render_task, "render_task1", 4096, &one, 4, &renderTask[1], 1);
 
     // Wait for the render tasks to get going before starting the i2s task
     delay_ms(100);
