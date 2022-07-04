@@ -1,5 +1,7 @@
 esp-idf
 
+.DS_Store
+
 # Prerequisites
 *.d
 
