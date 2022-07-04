@@ -32,7 +32,7 @@ void init_window(uint16_t w, uint16_t h) {
     }
     memset(pixels_332, 0, H_RES * V_RES);
 
-    SDL_SetWindowTitle(window, "Tulip CC");
+    SDL_SetWindowTitle(window, "Tulip Desktop");
     SDL_StartTextInput();
 }
 
@@ -92,7 +92,6 @@ void end_draw() {
 
     //Update screen
     //SDL_RenderPresent( fixed_fps_renderer );
-
     //If frame finished early
     //if( frameTicks < SCREEN_TICKS_PER_FRAME ) {
     //    SDL_Delay( SCREEN_TICKS_PER_FRAME - frameTicks );

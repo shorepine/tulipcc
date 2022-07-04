@@ -143,7 +143,10 @@ void algo_note_off(uint8_t osc) {
 void algo_setup_patch(uint8_t osc) {
     // Set up the voices from a DX7 patch.
     // 9 voices total - operators 1,2,3,4,5,6, the root voice (silent), and two LFOs (amp then pitch)
-    // so if we set a patch to osc 0, osc0 = root, osc1 = op6, osc2 = op5, osc3 = op4, osc4 = op3, osc5 = op2, osc6 = op1, osc7 = amp lfo, osc8 = pitch lfo
+    // so if we set a patch to osc 0, 
+    // osc0 = root control voice, 
+    // osc1 = op6, osc2 = op5, osc3 = op4, osc4 = op3, osc5 = op2, osc6 = op1, 
+    // osc7 = amp lfo, osc8 = pitch lfo
     algorithms_parameters_t p = fm_patches[synth[osc].patch % ALGO_PATCHES];
     synth[osc].algorithm = p.algo;
     synth[osc].feedback = p.feedback;
@@ -231,7 +234,8 @@ void render_algo(float * buf, uint8_t osc) {
     struct FmAlgorithm algo = algorithms[synth[osc].algorithm];
 
     // starts at op 6
-    float *in_buf, *out_buf;
+    float *in_buf;
+    float *out_buf = NULL;
 
     // TODO, i think i need at most 2 of these buffers, maybe 3?? 
     zero(scratch[0]);

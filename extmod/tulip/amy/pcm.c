@@ -1,7 +1,12 @@
 // pcm.c
 
 #include "amy.h"
-#include "pcm_samples.h"
+
+#ifdef PCM_PATCHES_SIZE_LARGE
+#include "pcm_samples_large.h"
+#else
+#include "pcm_samples_small.h"
+#endif
 
 typedef struct {
     uint32_t offset;
@@ -11,7 +16,12 @@ typedef struct {
     uint8_t midinote;
 } pcm_map_t;
 
-#include "pcm.h"
+
+#ifdef PCM_PATCHES_SIZE_LARGE
+#include "pcm_large.h"
+#else
+#include "pcm_small.h"
+#endif
 
 void pcm_init() {
 /*

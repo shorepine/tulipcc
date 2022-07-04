@@ -56,7 +56,7 @@ set(MICROPY_SOURCE_PORT
     ${PROJECT_DIR}/main.c
     ${PROJECT_DIR}/esp32s3_display.c
     ${PROJECT_DIR}/usb_keyboard.c
-    ${MICROPY_DIR}/extmod/tulip/alles_tulip.c
+    ${MICROPY_DIR}/extmod/tulip/alles.c
     ${MICROPY_DIR}/extmod/tulip/sounds.c
     ${MICROPY_DIR}/extmod/tulip/amy/dsps_biquad_f32_ae32.S
     ${MICROPY_DIR}/extmod/tulip/amy/algorithms.c
@@ -72,7 +72,6 @@ set(MICROPY_SOURCE_PORT
     ${PROJECT_DIR}/gccollect.c
     ${PROJECT_DIR}/mphalport.c
     ${PROJECT_DIR}/fatfs_port.c
-    ${PROJECT_DIR}/help.c
     ${PROJECT_DIR}/modutime.c
     ${PROJECT_DIR}/machine_bitstream.c
     ${PROJECT_DIR}/machine_timer.c
@@ -146,6 +145,8 @@ set(IDF_COMPONENTS
     vfs
     xtensa
 )
+
+
 
 if(IDF_VERSION_MINOR GREATER_EQUAL 1 OR IDF_VERSION_MAJOR GREATER_EQUAL 5)
     list(APPEND IDF_COMPONENTS esp_netif)
@@ -248,6 +249,8 @@ if(IDF_VERSION_MINOR GREATER_EQUAL 2 OR IDF_VERSION_MAJOR GREATER_EQUAL 5)
         #list(APPEND MICROPY_CPP_INC_EXTRA ${PROJECT_DIR}/components/esp32usb/src/tinyusb/src)
     endif()
 endif()
+
+
 
 # Include the main MicroPython cmake rules.
 include(${MICROPY_DIR}/py/mkrules.cmake)

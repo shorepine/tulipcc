@@ -363,7 +363,7 @@ Some development guidelines if you'd like to help contribute!
 
  * Be nice and helpful!
  * We're currently a hard fork of ESP-IDF and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. We can merge new features of libraries manually. No git submodules. Yes, there are many downsides to this approach but keeping the hardware & software in sync is much easier this way, especially with fast moving projects like ESP-IDF.
- * Any change must be equivalent across Tulip Desktop and Tulip CC. Test on hardware before proposing a new feature / change.
+ * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change.
 
  
 

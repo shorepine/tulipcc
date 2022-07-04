@@ -15,6 +15,7 @@ extern "C" {
 //#define configUSE_TASK_NOTIFICATIONS 1
 //#define configTASK_NOTIFICATION_ARRAY_ENTRIES 2
 #define MAX_WIFI_WAIT_S 120
+#define PCM_PATCHES_SIZE_SMALL 1
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -44,7 +45,10 @@ typedef int16_t i2s_sample_type;
 #define CONFIG_I2S_DIN 2//2//48 // SPICLK_N and LED, so move
 #define CONFIG_I2S_NUM 0 
 
-#endif // ESP_PLATFORM
+#else // ESP_PLATFORM
+#define PCM_PATCHES_SIZE_LARGE 1
+#endif
+
 
 #include "amy/amy.h"
 

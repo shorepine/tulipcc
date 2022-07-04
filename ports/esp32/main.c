@@ -63,7 +63,7 @@
 #include "modnetwork.h"
 #include "mpthreadport.h"
 #include "display.h"
-#include "alles_tulip.h"
+#include "alles.h"
 
 #if MICROPY_BLUETOOTH_NIMBLE
 #include "extmod/modbluetooth.h"
