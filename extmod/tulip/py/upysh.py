@@ -48,7 +48,7 @@ def head(f, n=10):
             l = f.readline()
             if not l:
                 break
-            sys.stdout.write(l)
+            print(l, end='')
 
 
 def cat(f):

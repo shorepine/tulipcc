@@ -55,6 +55,8 @@ extern struct _mp_dummy_t mp_sys_stderr_obj;
 const mp_print_t mp_sys_stdout_print = {&mp_sys_stdout_obj, mp_stream_write_adaptor};
 #endif
 
+//const mp_print_t mp_sys_stdout_print = {NULL, display_print_strn};
+
 // version - Python language version that this implementation conforms to, as a string
 STATIC const MP_DEFINE_STR_OBJ(mp_sys_version_obj, "3.4.0; " MICROPY_BANNER_NAME_AND_VERSION);
 

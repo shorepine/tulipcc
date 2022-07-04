@@ -91,7 +91,7 @@
 //#define MICROPY_PY_IO_IOBASE                    (1)
 //#define MICROPY_PY_IO_FILEIO                    (1)
 #define MICROPY_PY_SYS_MAXSIZE                  (1)
-#define MICROPY_PY_SYS_STDFILES                 (1)
+#define MICROPY_PY_SYS_STDFILES                 (0)
 #define MICROPY_PY_UERRNO                       (1)
 #define MICROPY_PY_UCTYPES                      (1)
 #define MICROPY_PY_UZLIB                        (1)

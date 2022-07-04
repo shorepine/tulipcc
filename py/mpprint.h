@@ -49,6 +49,7 @@
 #define MP_PYTHON_PRINTER &mp_plat_print
 #endif
 
+
 typedef void (*mp_print_strn_t)(void *data, const char *str, size_t len);
 
 typedef struct _mp_print_t {
@@ -74,6 +75,7 @@ extern const mp_print_t mp_plat_print;
 // 2) Wrapper for printing to sys.stdout.
 extern const mp_print_t mp_sys_stdout_print;
 #endif
+
 
 int mp_print_str(const mp_print_t *print, const char *str);
 int mp_print_strn(const mp_print_t *print, const char *str, size_t len, int flags, char fill, int width);

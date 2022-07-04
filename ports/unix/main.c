@@ -89,6 +89,7 @@ STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
 
 const mp_print_t mp_stderr_print = {NULL, display_print_strn};
 const mp_print_t mp_stdout_print = {NULL, display_print_strn};
+const mp_print_t mp_sys_stdout_print = {NULL, display_print_strn};
 const mp_print_t mp_display_print = {NULL, display_print_strn};
 
 #define FORCED_EXIT (0x100)
@@ -271,7 +272,6 @@ void * main_(void *vargs) {
         }
     }
     
-
     // run boot-up scripts
     pyexec_frozen_module("_boot.py");
     pyexec_file_if_exists("boot.py");
