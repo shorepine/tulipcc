@@ -121,7 +121,40 @@ STATIC int handle_uncaught_exception(mp_obj_base_t *exc) {
 //MP_NOINLINE int main_(int argc, char **argv);
 void * main_(void *vargs);
 
+#include <CoreFoundation/CFURL.h>
+#include <CoreFoundation/CFURLAccess.h>
+#include <CoreFoundation/CFBundle.h>
+char * MYCFStringCopyUTF8String(CFStringRef aString) {
+  if (aString == NULL) {
+    return NULL;
+  }
+
+  CFIndex length = CFStringGetLength(aString);
+  CFIndex maxSize =
+  CFStringGetMaximumSizeForEncoding(length, kCFStringEncodingUTF8) + 1;
+  char *buffer = (char *)malloc(maxSize);
+  if (CFStringGetCString(aString, buffer, maxSize,
+                         kCFStringEncodingUTF8)) {
+    return buffer;
+  }
+  free(buffer); // If we failed
+  return NULL;
+}
+
+char * get_tulip_home_path() {
+    char buffer[PATH_MAX];
+    CFBundleRef bundle = CFBundleGetBundleWithIdentifier(CFSTR("org.rosaline.tulipcc") );
+    if (bundle == NULL) return NULL;
+    CFURLRef bundleURL = CFBundleCopyBundleURL(bundle);
+    CFURLGetFileSystemRepresentation(bundleURL, TRUE, (UInt8*)buffer,PATH_MAX);
+    CFStringRef bundlePath = CFStringCreateWithCString(NULL,buffer, kCFStringEncodingUTF8);
+    CFMutableStringRef resourcesPath = CFStringCreateMutable(NULL,0);
+    CFStringAppend(resourcesPath,bundlePath);
+    return MYCFStringCopyUTF8String(resourcesPath);
+}
+
 int main(int argc, char **argv) {
+    // Get the resources folder loc
     // Display has to run on main thread on macos
     unix_display_init();
 
@@ -144,7 +177,6 @@ int main(int argc, char **argv) {
 
 void * main_(void *vargs) {
     #if MICROPY_PY_THREAD
-    fprintf(stderr, "threading aaa\n");
     mp_thread_init();
     #endif
 
