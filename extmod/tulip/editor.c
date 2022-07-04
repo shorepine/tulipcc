@@ -77,12 +77,13 @@ void editor_highlight_at_row(uint16_t y) {
     uint8_t state = 0;
     // TODO: keywords, function calls a = dog(), etc, kwargs?
     for(uint16_t i=0;i<strlen(text_lines[y+y_offset]);i++) {
+        uint8_t operator_hit = 0;
         char c = text_lines[y+y_offset][i];
         //dbg("char %c state %d row %d i %d\n", c, state, y, i);
         if(!state) { 
-            for(uint8_t i=0;i<strlen(operators);i++) {
-                if(c==operators[i]) {
-                    TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_OPERATOR;
+            for(uint8_t j=0;j<strlen(operators);j++) {
+                if(c==operators[j]) {
+                    operator_hit = 1;
                 }
             }
             if(c==34 || c==39) {
@@ -96,6 +97,8 @@ void editor_highlight_at_row(uint16_t y) {
                 TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_COMMENT;
             } else if(c>='0' && c<='9') {
                 TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_NUMBER;
+            } else if(operator_hit) {
+                TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_OPERATOR;
             } else {
                 TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_FG; 
             }
@@ -289,7 +292,7 @@ void editor_open_file(const char *filename) {
     // A file may already be loaded, if so, insert the lines where we are
 	uint16_t c = 0;
     uint16_t new_lines = 0;
-	dbg("opening file %s\n", filename);
+	//dbg("opening file %s\n", filename);
 	int32_t fs = file_size(filename);
 	if(fs > 0) {
 		char * text = (char*) editor_malloc(fs+2); 
@@ -297,7 +300,7 @@ void editor_open_file(const char *filename) {
 		text[fs-1] = 0;
         new_lines = 1;
 		for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') new_lines++;
-		dbg("File %s has %d lines\n", filename, new_lines);
+		//dbg("File %s has %d lines\n", filename, new_lines);
 		char ** incoming_text_lines = (char**)editor_malloc(sizeof(char*)*(new_lines));
 
 		uint32_t last = 0;
@@ -314,7 +317,7 @@ void editor_open_file(const char *filename) {
 			}
 		}
 		editor_free(text);
-		dbg("File read with %d lines. Inserting at position %d\n", new_lines, y_offset+cursor_y);
+		dbg("File %s read with %d lines. Inserting at position %d\n", filename, new_lines, y_offset+cursor_y);
 
         // Now insert the text lines at cursor_y+y_offset
         char ** combined_text_lines = (char**)editor_malloc(sizeof(char*)*(new_lines+lines));
@@ -335,7 +338,6 @@ void editor_open_file(const char *filename) {
         editor_free(incoming_text_lines);
         text_lines = combined_text_lines;
         lines = lines + new_lines;
-        dbg("We now have %d lines\n", lines);
 	} else {
         dbg("File doesn't exist\n");
         editor_new_file();
@@ -386,10 +388,8 @@ void prompt_for_string(char * prompt, char * default_answer, char * output_strin
 
 void editor_save() {
     if(strlen(fn)) {
-        dbg("save! lines is %d \n", lines);
         uint32_t bytes = 0;
         for(uint16_t i=0;i<lines;i++) { bytes = bytes + strlen(text_lines[i]) + 1; }
-        dbg("save! bytes is %d\n", bytes);
         char * text = (char*)editor_malloc(bytes);
         uint32_t c = 0;
         for(uint16_t i=0;i<lines;i++) { 
@@ -427,7 +427,7 @@ void editor_quit() {
 	editor_free(text_lines);
 	if(yank) editor_free(yank);
     yank = 0;
-    fprintf(stderr,"mc %d fc %d\n", mc, fc);
+    if(mc != fc) dbg("mc %d fc %d\n", mc, fc);
 }
 
 
@@ -679,7 +679,7 @@ void editor_yank() {
 void editor_unyank() {
 	if(yank) {
 		dirty = 1;
-		dbg("unyanking ###%s###\n", yank);
+		//dbg("unyanking ###%s###\n", yank);
 		char** dest_text_lines = (char**)editor_malloc(sizeof(char*) * (lines + 1));
 		for(uint16_t i=0;i<cursor_y+y_offset;i++) dest_text_lines[i] = text_lines[i];
 		dest_text_lines[cursor_y+y_offset] = (char*)editor_malloc(strlen(yank)+1);

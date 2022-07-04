@@ -40,6 +40,6 @@
 #define MICROPY_PY_SYS_STDIO_BUFFER             (0)
 #define MICROPY_PY_USELECT                      (0)
 #define MICROPY_PY_UASYNCIO                     (1)
-#define MICROPY_PY_URE_SUB                      (0)
-#define MICROPY_PY_URANDOM_EXTRA_FUNCS          (0)
+#define MICROPY_PY_URE_SUB                      (1)
+#define MICROPY_PY_URANDOM_EXTRA_FUNCS          (1)
 #define MICROPY_PY_FRAMEBUF                     (0)
