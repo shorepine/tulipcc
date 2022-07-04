@@ -16,6 +16,7 @@ rm -rf Tulip\ CC.app
 mkdir -p Tulip\ CC.app/Contents/{MacOS,Resources,Frameworks,libs}
 cp tulip Tulip\ CC.app/Contents/MacOS
 cp Info.plist Tulip\ CC.app/Contents/
+cp -rf ../../tulip_home Tulip\ CC.app/Contents/Resources/
 cp -a SDL2.framework Tulip\ CC.app/Contents/Frameworks/
 cp libs/libsoundio.2.0.0.dylib Tulip\ CC.app/Contents/libs/
 install_name_tool -add_rpath @executable_path/../Frameworks Tulip\ CC.app/Contents/MacOS/tulip

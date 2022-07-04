@@ -148,7 +148,6 @@
 #define MICROPY_PY_BUILTINS_HELP_TEXT           tulip_desktop_help_text
 #define MICROPY_HW_BOARD_NAME "Tulip4"
 
-
 #if MICROPY_PY_SYS_SETTRACE
 #define MICROPY_PERSISTENT_CODE_SAVE (1)
 #define MICROPY_COMP_CONST (0)

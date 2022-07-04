@@ -555,6 +555,21 @@ STATIC mp_obj_t tulip_cpu(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cpu_obj, 0, 1, tulip_cpu);
 
+#ifndef ESP_PLATFORM
+extern char* get_tulip_home_path();
+#endif
+STATIC mp_obj_t tulip_app_path(size_t n_args, const mp_obj_t *args) {
+#ifdef ESP_PLATFORM
+    return mp_const_none
+#else
+    char * path = get_tulip_home_path();
+    return mp_obj_new_str(path, strlen(path));
+#endif
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_app_path_obj, 0, 0, tulip_app_path);
+
+
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
@@ -593,6 +608,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
+    { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
 
 };
 

@@ -345,7 +345,9 @@ Local version:
 ```
 cd ports/unix
 make
-./tulip
+./tulip.{arm64,x86_64}
+
+./package.sh # makes .app bundle, not needed if you're just using it locally
 ```
 
 ESP32S3:
@@ -353,11 +355,15 @@ ESP32S3:
 ```
 cd ports/esp32
 export ../../esp-idf/export.sh
+pip3 install littlefs-python
 # Connect your esp32s3 board over USB (from the UART connector)
 ls /dev/cu* # see what port it is on
 idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND flash
+python tulip_fs_create.py # first run only, will erase flash
 idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND monitor
 ```
+
+On ESP32S3 The "GPU" hardware is mostly implemented in the `esp_lcd_bw` fork of `esp_lcd`. That's in our local components folder. 
 
 Some development guidelines if you'd like to help contribute!
 
