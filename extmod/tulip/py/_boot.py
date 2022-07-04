@@ -27,6 +27,7 @@ except ImportError:
         # If they don't have an ex & ex/g folders, make them and fill them in
         mkdir(tulipcc+"/ex")
         mkdir(tulipcc+"/ex/g")
+        print("Loading new examples into ex/ folder ... ")
         if(tulip.app_path().endswith("unix")): # running in dev mode
             tulip_home = tulip.app_path()+"/../../tulip_home"
         else: # running from an app bundle

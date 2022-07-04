@@ -101,9 +101,11 @@ void mp_hal_set_interrupt_char(char c) {
 
 #include <termios.h>
 
-static struct termios orig_termios;
+//static struct termios orig_termios;
+
 
 void mp_hal_stdio_mode_raw(void) {
+/*
     // save and set terminal settings
     tcgetattr(0, &orig_termios);
     static struct termios termios;
@@ -114,17 +116,21 @@ void mp_hal_stdio_mode_raw(void) {
     termios.c_cc[VMIN] = 1;
     termios.c_cc[VTIME] = 0;
     tcsetattr(0, TCSAFLUSH, &termios);
+*/
 }
 
 void mp_hal_stdio_mode_orig(void) {
+/*
     // restore terminal settings
     tcsetattr(0, TCSAFLUSH, &orig_termios);
+*/
 }
 
 #endif
 
 #if MICROPY_PY_OS_DUPTERM
 static int call_dupterm_read(size_t idx) {
+/*
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
         mp_obj_t read_m[3];
@@ -153,6 +159,7 @@ static int call_dupterm_read(size_t idx) {
     }
 
     return -1;
+    */
 }
 #endif
 
