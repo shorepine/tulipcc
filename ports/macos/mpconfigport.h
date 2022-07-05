@@ -170,7 +170,7 @@
 #define MICROPY_STACKLESS_STRICT    (0)
 #endif
 
-#define MICROPY_PY_UOS_INCLUDEFILE  "ports/unix/moduos.c"
+#define MICROPY_PY_UOS_INCLUDEFILE  "ports/macos/moduos.c"
 #define MICROPY_PY_UOS_ERRNO        (1)
 #define MICROPY_PY_UOS_GETENV_PUTENV_UNSETENV (1)
 #define MICROPY_PY_UOS_SEP          (1)
