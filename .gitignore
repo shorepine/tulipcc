@@ -1,6 +1,14 @@
 .DS_Store
 __pycache__
 
+ports/esp32s3/build
+ports/esp32s3/sdkconfig.old
+ports/macos/build-standard/
+ports/macos/tulip
+ports/macos/tulip.arm64
+ports/macos/tulip.x86_64
+ports/macos/dist
+
 # Prerequisites
 *.d
 
