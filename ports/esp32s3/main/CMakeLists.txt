@@ -43,6 +43,7 @@ set(MICROPY_SOURCE_DRIVERS
     ${MICROPY_DIR}/drivers/dht/dht.c
 )
 
+#TODO, we should have this import from extmod/tulip/tulip.mk instead
 set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/tulip/modtulip.c
     ${MICROPY_DIR}/extmod/tulip/polyfills.c
@@ -54,9 +55,6 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/tulip/editor.c
     ${MICROPY_DIR}/extmod/tulip/keyscan.c
     ${MICROPY_DIR}/extmod/tulip/help.c
-    ${PROJECT_DIR}/main.c
-    ${PROJECT_DIR}/esp32s3_display.c
-    ${PROJECT_DIR}/usb_keyboard.c
     ${MICROPY_DIR}/extmod/tulip/alles.c
     ${MICROPY_DIR}/extmod/tulip/sounds.c
     ${MICROPY_DIR}/extmod/tulip/amy/dsps_biquad_f32_ae32.S
@@ -67,6 +65,9 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/tulip/amy/oscillators.c
     ${MICROPY_DIR}/extmod/tulip/amy/partials.c
     ${MICROPY_DIR}/extmod/tulip/amy/pcm.c
+    ${PROJECT_DIR}/main.c
+    ${PROJECT_DIR}/esp32s3_display.c
+    ${PROJECT_DIR}/usb_keyboard.c
     ${PROJECT_DIR}/uart.c
     ${PROJECT_DIR}/usb.c
     ${PROJECT_DIR}/usb_serial_jtag.c
