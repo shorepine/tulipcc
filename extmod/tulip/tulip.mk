@@ -7,6 +7,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	modtulip.c \
 	polyfills.c \
 	lodepng.c \
+	bitmap_fonts.c \
 	smallfont.c \
 	display.c \
 	bresenham.c \
