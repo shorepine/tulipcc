@@ -7,6 +7,7 @@
 #include "py/mperrno.h"
 #include "py/mphal.h"
 #include "display.h"
+#include "bresenham.h"
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #include "alles.h"
@@ -84,33 +85,6 @@ STATIC mp_obj_t tulip_bg_pixel(size_t n_args, const mp_obj_t *args) {
     }
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_pixel_obj, 2, 5, tulip_bg_pixel);
-
-// tulip.bg_rect(x,y,w,h, r,g,b)
-// tulip.bg_rect(x,y,w,h, pal_idx)
-STATIC mp_obj_t tulip_bg_rect(size_t n_args, const mp_obj_t *args) {
-    uint16_t x = mp_obj_get_int(args[0]);
-    uint16_t y = mp_obj_get_int(args[1]);
-    uint16_t w = mp_obj_get_int(args[2]);
-    uint16_t h = mp_obj_get_int(args[3]);
-    uint8_t r,g,b;        
-    if(n_args == 5) {
-        unpack_pal_idx(mp_obj_get_int(args[4]), &r, &g, &b);
-    }
-    if(n_args == 7) {
-        r = mp_obj_get_int(args[4]);
-        g = mp_obj_get_int(args[5]);
-        b = mp_obj_get_int(args[6]);
-    }
-    // Set the rect with pixel color
-    for(uint16_t y0=y;y0<y+h;y0++) {
-        for(uint16_t x0=x;x0<x+w;x0++) {
-            display_set_bg_pixel(x0, y0, r, g, b);
-        }
-    }
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_rect_obj, 5, 7, tulip_bg_rect);
 
 // tulip.bg_clear(r,g,b)
 // tulip.bg_clear(pal_idx)
@@ -567,6 +541,114 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_app_path_obj, 0, 0, tulip_app_p
 
 
 
+
+STATIC mp_obj_t tulip_bezier(size_t n_args, const mp_obj_t *args) {
+    uint16_t x0 = mp_obj_get_int(args[0]);
+    uint16_t y0 = mp_obj_get_int(args[1]);
+    uint16_t x1 = mp_obj_get_int(args[2]);
+    uint16_t y1 = mp_obj_get_int(args[3]);
+    uint16_t x2 = mp_obj_get_int(args[4]);
+    uint16_t y2 = mp_obj_get_int(args[5]);
+    uint16_t pal_idx = mp_obj_get_int(args[6]);
+    plot_basic_bezier(x0,y0,x1,y1,x2,y2,pal_idx);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bezier_obj, 7, 7, tulip_bezier);
+
+
+
+STATIC mp_obj_t tulip_line(size_t n_args, const mp_obj_t *args) {
+    uint16_t x0 = mp_obj_get_int(args[0]);
+    uint16_t y0 = mp_obj_get_int(args[1]);
+    uint16_t x1 = mp_obj_get_int(args[2]);
+    uint16_t y1 = mp_obj_get_int(args[3]);
+    uint16_t pal_idx = mp_obj_get_int(args[4]);
+    tft_drawLine(x0,y0,x1,y1,pal_idx);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_line_obj, 5, 5, tulip_line);
+
+STATIC mp_obj_t tulip_roundrect(size_t n_args, const mp_obj_t *args) {
+    uint16_t x = mp_obj_get_int(args[0]);
+    uint16_t y = mp_obj_get_int(args[1]);
+    uint16_t w = mp_obj_get_int(args[2]);
+    uint16_t h = mp_obj_get_int(args[3]);
+    uint16_t r = mp_obj_get_int(args[4]);
+    uint16_t pal_idx = mp_obj_get_int(args[5]);
+    if(n_args > 6) {
+        if(mp_obj_get_int(args[6])>0) {
+            tft_fillRoundRect(x,y,w,h,r,pal_idx);
+            return mp_const_none;
+        }
+    }
+    tft_drawRoundRect(x,y,w,h,r,pal_idx);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_roundrect_obj, 6, 7, tulip_roundrect);
+
+
+STATIC mp_obj_t tulip_rect(size_t n_args, const mp_obj_t *args) {
+    uint16_t x = mp_obj_get_int(args[0]);
+    uint16_t y = mp_obj_get_int(args[1]);
+    uint16_t w = mp_obj_get_int(args[2]);
+    uint16_t h = mp_obj_get_int(args[3]);
+    uint16_t pal_idx = mp_obj_get_int(args[4]);
+    if(n_args > 5) {
+        if(mp_obj_get_int(args[5])>0) {
+            tft_fillRect(x,y,w,h,pal_idx);
+            return mp_const_none;
+        } 
+    }
+    tft_drawRect(x,y,w,h,pal_idx);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_rect_obj, 5, 6, tulip_rect);
+
+STATIC mp_obj_t tulip_circle(size_t n_args, const mp_obj_t *args) {
+    uint16_t x = mp_obj_get_int(args[0]);
+    uint16_t y = mp_obj_get_int(args[1]);
+    uint16_t r = mp_obj_get_int(args[2]);
+    uint16_t pal_idx = mp_obj_get_int(args[3]);
+    if(n_args > 4) {
+        if(mp_obj_get_int(args[4])>0) {
+            tft_fillCircle(x,y,r,pal_idx);
+            return mp_const_none;
+        } 
+    }
+    tft_drawCircle(x,y,r,pal_idx);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_circle_obj, 4, 5, tulip_circle);
+
+
+STATIC mp_obj_t tulip_triangle(size_t n_args, const mp_obj_t *args) {
+    uint16_t x0 = mp_obj_get_int(args[0]);
+    uint16_t y0 = mp_obj_get_int(args[1]);
+    uint16_t x1 = mp_obj_get_int(args[2]);
+    uint16_t y1 = mp_obj_get_int(args[3]);
+    uint16_t x2 = mp_obj_get_int(args[4]);
+    uint16_t y2 = mp_obj_get_int(args[5]);
+    uint16_t pal_idx = mp_obj_get_int(args[6]);
+    if(n_args > 7) {
+        if(mp_obj_get_int(args[7])>0) {
+            tft_fillTriangle(x0, y0, x1, y1, x2, y2, pal_idx);
+            return mp_const_none;
+        }
+    }
+    tft_drawTriangle(x0, y0, x1, y1, x2, y2, pal_idx);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_triangle_obj, 7, 8, tulip_triangle);
+
+
+
+
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
@@ -586,7 +668,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_blit), MP_ROM_PTR(&tulip_bg_blit_obj) },
-    { MP_ROM_QSTR(MP_QSTR_bg_rect), MP_ROM_PTR(&tulip_bg_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_png), MP_ROM_PTR(&tulip_sprite_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_bitmap), MP_ROM_PTR(&tulip_sprite_bitmap_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_register), MP_ROM_PTR(&tulip_sprite_register_obj) },
@@ -604,6 +685,13 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
+    { MP_ROM_QSTR(MP_QSTR_circle), MP_ROM_PTR(&tulip_circle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bezier), MP_ROM_PTR(&tulip_bezier_obj) },
+    { MP_ROM_QSTR(MP_QSTR_line), MP_ROM_PTR(&tulip_line_obj) },
+    { MP_ROM_QSTR(MP_QSTR_roundrect), MP_ROM_PTR(&tulip_roundrect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_triangle), MP_ROM_PTR(&tulip_triangle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
+
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
 #endif

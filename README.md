@@ -187,14 +187,19 @@ tulip.blit(x,y,w,h,x1, y1)
 tulip.bg_bitmap(x, y, w, h, bitmap) 
 bitmap = tulip.bg_bitmap(x, y, w, h)
 
-# Sets a rect of the BG with a solid color
-tulip.bg_rect(x,y,w,h, r,g,b)
-tulip.bg_rect(x,y,w,h, pal_idx)
-
 # Clear the BG with a color or default
 tulip.bg_clear(r,g,b) 
 tulip.bg_clear(pal_idx)
 tulip.bg_clear() # uses default
+
+# Drawing primitives. These all write to the BG. 
+# If you want to use them for sprites, you can use bg_bitmap after drawing offscreen.
+tulip.line(x0,y0, x1,y1)
+tulip.bezier(x0,y0, x1,y1, x2,y2, pal_idx)
+tulip.circle(x,y,r, pal_idx, [filled=1])
+tulip.roundrect(x0,y0, w,h, r, pal_idx, [filled=1])
+tulip.rect(x0,y0, w,h, pal_idx, [filled=1])
+tulip.triange(x0,y0, x1,y1, x2,y2, pal_idx, [filled=1])
 
 """
   Set scrolling registers for the BG. 

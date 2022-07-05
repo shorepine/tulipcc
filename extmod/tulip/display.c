@@ -376,6 +376,10 @@ void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_
     unpack_rgb_332(px0, r, g, b);
 }
 
+uint8_t display_get_bg_pixel_pal(uint16_t x, uint16_t y) {
+    return bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0];
+}
+
 
 void display_tfb_cursor(uint16_t x, uint16_t y) {
     // Put a space char in the TFB if there's nothing here; makes the system draw it

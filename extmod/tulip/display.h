@@ -48,6 +48,7 @@ void display_set_clock(uint8_t mhz) ;
 void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx);
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b);
 void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_t *b);
+uint8_t display_get_bg_pixel_pal(uint16_t x, uint16_t y);
 
 void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data);
 void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data);
