@@ -550,7 +550,7 @@ STATIC mp_obj_t tulip_bezier(size_t n_args, const mp_obj_t *args) {
     uint16_t x2 = mp_obj_get_int(args[4]);
     uint16_t y2 = mp_obj_get_int(args[5]);
     uint16_t pal_idx = mp_obj_get_int(args[6]);
-    plot_basic_bezier(x0,y0,x1,y1,x2,y2,pal_idx);
+    plotQuadBezier(x0,y0,x1,y1,x2,y2,pal_idx);
     return mp_const_none;
 }
 
@@ -559,11 +559,11 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bezier_obj, 7, 7, tulip_bezier)
 
 
 STATIC mp_obj_t tulip_line(size_t n_args, const mp_obj_t *args) {
-    uint16_t x0 = mp_obj_get_int(args[0]);
-    uint16_t y0 = mp_obj_get_int(args[1]);
-    uint16_t x1 = mp_obj_get_int(args[2]);
-    uint16_t y1 = mp_obj_get_int(args[3]);
-    uint16_t pal_idx = mp_obj_get_int(args[4]);
+    int16_t x0 = mp_obj_get_int(args[0]);
+    int16_t y0 = mp_obj_get_int(args[1]);
+    int16_t x1 = mp_obj_get_int(args[2]);
+    int16_t y1 = mp_obj_get_int(args[3]);
+    uint8_t pal_idx = mp_obj_get_int(args[4]);
     tft_drawLine(x0,y0,x1,y1,pal_idx);
     return mp_const_none;
 }
