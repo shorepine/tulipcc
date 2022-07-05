@@ -28,5 +28,8 @@ codesign -s "Developer ID Application: Brian Whitman (Y6CQ3JU8G4)" dist/Tulip\ C
 codesign -s "Developer ID Application: Brian Whitman (Y6CQ3JU8G4)" dist/Tulip\ CC.app/Contents/MacOS/tulip -f
 
 # I then run "AppWrapper 4.0" to notarize the package. I would love to convert that into a command line tool, i believe xcrun notarytool
-# TODO... 
+
+# TODO, see what AppWrapper is actually doing to notarize and put it in here...
+
+ 
 

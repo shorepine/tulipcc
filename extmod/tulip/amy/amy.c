@@ -68,6 +68,7 @@ int8_t global_init() {
     global.eq[0] = 0;
     global.eq[1] = 0;
     global.eq[2] = 0;
+    global.hpf_state = 0;
     return 0;
 }
 
@@ -808,16 +809,22 @@ int16_t * fill_audio_buffer_task() {
     for(int16_t i=0; i < BLOCK_SIZE; ++i) {
         // Mix all the oscillator buffers into one
         float fsample = volume_scale * (fbl[0][i] + fbl[1][i]) * 32767.0;
+    	// One-pole high-pass filter to remove large low-frequency excursions from
+	    // some FM patches. b = [1 -1]; a = [1 -0.995]
+    	float new_state = fsample + 0.995 * global.hpf_state;
+	    fsample = new_state - global.hpf_state;
+    	global.hpf_state = new_state;
+	
         // Soft clipping.
         int positive = 1; 
         if (fsample < 0) positive = 0;
     	// Using a uint gives us factor-of-2 headroom (up to 65535 not 32767).
       	uint16_t uintval;
-	    if (positive) {  // avoid fabs()
+        if (positive) {  // avoid fabs()
             uintval = (int)fsample;
     	} else {
             uintval = (int)(-fsample);
-	    }
+        }
         if (uintval >= FIRST_NONLIN) {
             if (uintval >= FIRST_HARDCLIP) {
                 uintval = SAMPLE_MAX;
@@ -825,12 +832,12 @@ int16_t * fill_audio_buffer_task() {
                 uintval = clipping_lookup_table[uintval - FIRST_NONLIN];
             }
         }
-	    int16_t sample;
+        int16_t sample;
     	if (positive) {
             sample = uintval;
-	    } else {
+        } else {
             sample = -uintval;
-    	}
+	    }
 #ifdef ESP_PLATFORM
         // ESP32's i2s driver has this bug
         block[i ^ 0x01] = sample;

@@ -150,17 +150,12 @@ void algo_setup_patch(uint8_t osc) {
     algorithms_parameters_t p = fm_patches[synth[osc].patch % ALGO_PATCHES];
     synth[osc].algorithm = p.algo;
     synth[osc].feedback = p.feedback;
-    synth[osc].breakpoint_target[1] = TARGET_FREQ+TARGET_DX7_EXPONENTIAL;
 
     synth[osc].mod_source = osc+8;
     synth[osc].mod_target = TARGET_FREQ;
     float time_ratio = 1;
     if(synth[osc].ratio >=0 ) time_ratio = synth[osc].ratio;
 
-    for(uint8_t i=0;i<NUM_ALGO_BPS;i++) {
-        synth[osc].breakpoint_values[1][i] = p.pitch_rate[i];
-        synth[osc].breakpoint_times[1][i] = ms_to_samples((int)((float)p.pitch_time[i]/time_ratio));
-    }
     // amp LFO
     synth[osc+7].freq = p.lfo_freq * time_ratio;
     synth[osc+7].wave = p.lfo_wave;
@@ -184,14 +179,11 @@ void algo_setup_patch(uint8_t osc) {
         synth[osc+i+1].ratio = op.freq_ratio;
         synth[osc+i+1].amp = op.amp;
         synth[osc+i+1].breakpoint_target[0] = TARGET_AMP+TARGET_DX7_EXPONENTIAL;
-        synth[osc+i+1].breakpoint_target[1] = TARGET_FREQ+TARGET_DX7_EXPONENTIAL;
         synth[osc+i+1].phase = 0.25;
         synth[osc+i+1].mod_target = op.lfo_target;
         for(uint8_t j=0;j<NUM_ALGO_BPS;j++) {
             synth[osc+i+1].breakpoint_values[0][j] = op.amp_rate[j];
             synth[osc+i+1].breakpoint_times[0][j] =  ms_to_samples((int)((float)op.amp_time[j]/time_ratio));
-            synth[osc+i+1].breakpoint_values[1][j] = p.pitch_rate[j];
-            synth[osc+i+1].breakpoint_times[1][j] =  ms_to_samples((int)((float)p.pitch_time[j]/time_ratio));
         }
         // Calculate the last release time for the root note's amp BP
         if(op.amp_time[4] > last_release_time) {
@@ -206,6 +198,14 @@ void algo_setup_patch(uint8_t osc) {
     synth[osc].breakpoint_times[0][1] = ms_to_samples((int)((float)last_release_time/time_ratio));    
     synth[osc].breakpoint_values[0][1] = last_release_value;
     synth[osc].breakpoint_target[0] = TARGET_AMP+TARGET_DX7_EXPONENTIAL;
+
+    // And the pitch BP for the root note
+    for(uint8_t i=0;i<NUM_ALGO_BPS;i++) {
+        synth[osc].breakpoint_values[1][i] = p.pitch_rate[i];
+        synth[osc].breakpoint_times[1][i] = ms_to_samples((int)((float)p.pitch_time[i]/time_ratio));
+    }
+    synth[osc].breakpoint_target[1] = TARGET_FREQ+TARGET_TRUE_EXPONENTIAL;
+
 }
 
 void algo_note_on(uint8_t osc) {    
