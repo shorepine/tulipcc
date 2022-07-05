@@ -1,8 +1,10 @@
 // bresenham.h
 #include "display.h"
+#include <math.h>
+
 #define swap(x,y) { x = x + y; y = x - y; x = x - y; }
 
-
+void plotQuadBezier(int x0, int y0, int x1, int y1, int x2, int y2, uint8_t pal_idx);
 void plot_basic_bezier (int x0, int y0, int x1, int y1, int x2, int y2, uint8_t pal_idx);
 void tft_fillRect(int16_t x, int16_t y, int16_t w, int16_t h,  uint16_t color);
 void tft_drawCircle(short x0, short y0, short r, unsigned short color);
