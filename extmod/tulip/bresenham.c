@@ -4,25 +4,24 @@
 
 
 
-void tft_drawPixel(int cx, int cy, uint8_t pal_idx) {
+void drawPixel(int cx, int cy, uint8_t pal_idx) {
     display_set_bg_pixel_pal(cx, cy, pal_idx);
 }
 
-
-void tft_drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) {
-    tft_drawLine(x, y, x + w - 1, y, color);
+void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) {
+    drawLine(x, y, x + w - 1, y, color);
 }
-void tft_drawFastVLine(short x0, short y0, short h, short color) {
-    tft_drawLine(x0, y0, x0, y0+h-1, color);
+void drawFastVLine(short x0, short y0, short h, short color) {
+    drawLine(x0, y0, x0, y0+h-1, color);
 }
 
-void tft_fillRect(int16_t x, int16_t y, int16_t w, int16_t h,  uint16_t color) {
+void fillRect(int16_t x, int16_t y, int16_t w, int16_t h,  uint16_t color) {
     for (int16_t i = x; i < x + w; i++) {
-        tft_drawFastVLine(i, y, h, color);
+        drawFastVLine(i, y, h, color);
     }
 }
 
-void tft_drawCircle(short x0, short y0, short r, unsigned short color) {
+void drawCircle(short x0, short y0, short r, unsigned short color) {
 /* Draw a circle outline with center (x0,y0) and radius r, with given color
  * Parameters:
  *      x0: x-coordinate of center of circle. The top-left of the screen
@@ -40,10 +39,10 @@ void tft_drawCircle(short x0, short y0, short r, unsigned short color) {
   short x = 0;
   short y = r;
 
-  tft_drawPixel(x0  , y0+r, color);
-  tft_drawPixel(x0  , y0-r, color);
-  tft_drawPixel(x0+r, y0  , color);
-  tft_drawPixel(x0-r, y0  , color);
+  drawPixel(x0  , y0+r, color);
+  drawPixel(x0  , y0-r, color);
+  drawPixel(x0+r, y0  , color);
+  drawPixel(x0-r, y0  , color);
 
   while (x<y) {
     if (f >= 0) {
@@ -55,18 +54,18 @@ void tft_drawCircle(short x0, short y0, short r, unsigned short color) {
     ddF_x += 2;
     f += ddF_x;
 
-    tft_drawPixel(x0 + x, y0 + y, color);
-    tft_drawPixel(x0 - x, y0 + y, color);
-    tft_drawPixel(x0 + x, y0 - y, color);
-    tft_drawPixel(x0 - x, y0 - y, color);
-    tft_drawPixel(x0 + y, y0 + x, color);
-    tft_drawPixel(x0 - y, y0 + x, color);
-    tft_drawPixel(x0 + y, y0 - x, color);
-    tft_drawPixel(x0 - y, y0 - x, color);
+    drawPixel(x0 + x, y0 + y, color);
+    drawPixel(x0 - x, y0 + y, color);
+    drawPixel(x0 + x, y0 - y, color);
+    drawPixel(x0 - x, y0 - y, color);
+    drawPixel(x0 + y, y0 + x, color);
+    drawPixel(x0 - y, y0 + x, color);
+    drawPixel(x0 + y, y0 - x, color);
+    drawPixel(x0 - y, y0 - x, color);
   }
 }
 
-void tft_drawCircleHelper( short x0, short y0,
+void drawCircleHelper( short x0, short y0,
                short r, unsigned char cornername, unsigned short color) {
 // Helper function for drawing circles and circular objects
   short f     = 1 - r;
@@ -85,25 +84,25 @@ void tft_drawCircleHelper( short x0, short y0,
     ddF_x += 2;
     f     += ddF_x;
     if (cornername & 0x4) {
-      tft_drawPixel(x0 + x, y0 + y, color);
-      tft_drawPixel(x0 + y, y0 + x, color);
+      drawPixel(x0 + x, y0 + y, color);
+      drawPixel(x0 + y, y0 + x, color);
     }
     if (cornername & 0x2) {
-      tft_drawPixel(x0 + x, y0 - y, color);
-      tft_drawPixel(x0 + y, y0 - x, color);
+      drawPixel(x0 + x, y0 - y, color);
+      drawPixel(x0 + y, y0 - x, color);
     }
     if (cornername & 0x8) {
-      tft_drawPixel(x0 - y, y0 + x, color);
-      tft_drawPixel(x0 - x, y0 + y, color);
+      drawPixel(x0 - y, y0 + x, color);
+      drawPixel(x0 - x, y0 + y, color);
     }
     if (cornername & 0x1) {
-      tft_drawPixel(x0 - y, y0 - x, color);
-      tft_drawPixel(x0 - x, y0 - y, color);
+      drawPixel(x0 - y, y0 - x, color);
+      drawPixel(x0 - x, y0 - y, color);
     }
   }
 }
 
-void tft_fillCircle(short x0, short y0, short r, unsigned short color) {
+void fillCircle(short x0, short y0, short r, unsigned short color) {
 /* Draw a filled circle with center (x0,y0) and radius r, with given color
  * Parameters:
  *      x0: x-coordinate of center of circle. The top-left of the screen
@@ -114,11 +113,11 @@ void tft_fillCircle(short x0, short y0, short r, unsigned short color) {
  *      color: 16-bit color value for the circle
  * Returns: Nothing
  */
-  tft_drawFastVLine(x0, y0-r, 2*r+1, color);
-  tft_fillCircleHelper(x0, y0, r, 3, 0, color);
+  drawFastVLine(x0, y0-r, 2*r+1, color);
+  fillCircleHelper(x0, y0, r, 3, 0, color);
 }
 
-void tft_fillCircleHelper(short x0, short y0, short r,
+void fillCircleHelper(short x0, short y0, short r,
     unsigned char cornername, short delta, unsigned short color) {
 // Helper function for drawing filled circles
   short f     = 1 - r;
@@ -138,18 +137,18 @@ void tft_fillCircleHelper(short x0, short y0, short r,
     f     += ddF_x;
 
     if (cornername & 0x1) {
-      tft_drawFastVLine(x0+x, y0-y, 2*y+1+delta, color);
-      tft_drawFastVLine(x0+y, y0-x, 2*x+1+delta, color);
+      drawFastVLine(x0+x, y0-y, 2*y+1+delta, color);
+      drawFastVLine(x0+y, y0-x, 2*x+1+delta, color);
     }
     if (cornername & 0x2) {
-      tft_drawFastVLine(x0-x, y0-y, 2*y+1+delta, color);
-      tft_drawFastVLine(x0-y, y0-x, 2*x+1+delta, color);
+      drawFastVLine(x0-x, y0-y, 2*y+1+delta, color);
+      drawFastVLine(x0-y, y0-x, 2*x+1+delta, color);
     }
   }
 }
 
 // Bresenham's algorithm - thx wikpedia
-void tft_drawLine(short x0, short y0,
+void drawLine(short x0, short y0,
                 short x1, short y1,
                 unsigned short color) {
 /* Draw a straight line from (x0,y0) to (x1,y1) with given color
@@ -190,9 +189,9 @@ void tft_drawLine(short x0, short y0,
 
   for (; x0<=x1; x0++) {
     if (steep) {
-      tft_drawPixel(y0, x0, color);
+      drawPixel(y0, x0, color);
     } else {
-      tft_drawPixel(x0, y0, color);
+      drawPixel(x0, y0, color);
     }
     err -= dy;
     if (err < 0) {
@@ -203,7 +202,7 @@ void tft_drawLine(short x0, short y0,
 }
 
 // Draw a rectangle
-void tft_drawRect(short x, short y, short w, short h, unsigned short color) {
+void drawRect(short x, short y, short w, short h, unsigned short color) {
 /* Draw a rectangle outline with top left vertex (x,y), width w
  * and height h at given color
  * Parameters:
@@ -216,14 +215,14 @@ void tft_drawRect(short x, short y, short w, short h, unsigned short color) {
  *      color:  16-bit color of the rectangle outline
  * Returns: Nothing
  */
-  tft_drawFastHLine(x, y, w, color);
-  tft_drawFastHLine(x, y+h-1, w, color);
-  tft_drawFastVLine(x, y, h, color);
-  tft_drawFastVLine(x+w-1, y, h, color);
+  drawFastHLine(x, y, w, color);
+  drawFastHLine(x, y+h-1, w, color);
+  drawFastVLine(x, y, h, color);
+  drawFastVLine(x+w-1, y, h, color);
 }
 
 // Draw a rounded rectangle
-void tft_drawRoundRect(short x, short y, short w, short h,
+void drawRoundRect(short x, short y, short w, short h,
         short r, unsigned short color) {
 /* Draw a rounded rectangle outline with top left vertex (x,y), width w,
  * height h and radius of curvature r at given color
@@ -238,30 +237,30 @@ void tft_drawRoundRect(short x, short y, short w, short h,
  * Returns: Nothing
  */
   // smarter version
-  tft_drawFastHLine(x+r  , y    , w-2*r, color); // Top
-  tft_drawFastHLine(x+r  , y+h-1, w-2*r, color); // Bottom
-  tft_drawFastVLine(x    , y+r  , h-2*r, color); // Left
-  tft_drawFastVLine(x+w-1, y+r  , h-2*r, color); // Right
+  drawFastHLine(x+r  , y    , w-2*r, color); // Top
+  drawFastHLine(x+r  , y+h-1, w-2*r, color); // Bottom
+  drawFastVLine(x    , y+r  , h-2*r, color); // Left
+  drawFastVLine(x+w-1, y+r  , h-2*r, color); // Right
   // draw four corners
-  tft_drawCircleHelper(x+r    , y+r    , r, 1, color);
-  tft_drawCircleHelper(x+w-r-1, y+r    , r, 2, color);
-  tft_drawCircleHelper(x+w-r-1, y+h-r-1, r, 4, color);
-  tft_drawCircleHelper(x+r    , y+h-r-1, r, 8, color);
+  drawCircleHelper(x+r    , y+r    , r, 1, color);
+  drawCircleHelper(x+w-r-1, y+r    , r, 2, color);
+  drawCircleHelper(x+w-r-1, y+h-r-1, r, 4, color);
+  drawCircleHelper(x+r    , y+h-r-1, r, 8, color);
 }
 
 // Fill a rounded rectangle
-void tft_fillRoundRect(short x, short y, short w,
+void fillRoundRect(short x, short y, short w,
                  short h, short r, unsigned short color) {
   // smarter version
-  tft_fillRect(x+r, y, w-2*r, h, color);
+  fillRect(x+r, y, w-2*r, h, color);
 
   // draw four corners
-  tft_fillCircleHelper(x+w-r-1, y+r, r, 1, h-2*r-1, color);
-  tft_fillCircleHelper(x+r    , y+r, r, 2, h-2*r-1, color);
+  fillCircleHelper(x+w-r-1, y+r, r, 1, h-2*r-1, color);
+  fillCircleHelper(x+r    , y+r, r, 2, h-2*r-1, color);
 }
 
 // Draw a triangle
-void tft_drawTriangle(short x0, short y0,
+void drawTriangle(short x0, short y0,
                 short x1, short y1,
                 short x2, short y2, unsigned short color) {
 /* Draw a triangle outline with vertices (x0,y0),(x1,y1),(x2,y2) with given color
@@ -275,13 +274,13 @@ void tft_drawTriangle(short x0, short y0,
  *      color: 16-bit color value for outline
  * Returns: Nothing
  */
-  tft_drawLine(x0, y0, x1, y1, color);
-  tft_drawLine(x1, y1, x2, y2, color);
-  tft_drawLine(x2, y2, x0, y0, color);
+  drawLine(x0, y0, x1, y1, color);
+  drawLine(x1, y1, x2, y2, color);
+  drawLine(x2, y2, x0, y0, color);
 }
 
 // Fill a triangle
-void tft_fillTriangle ( short x0, short y0,
+void fillTriangle ( short x0, short y0,
                   short x1, short y1,
                   short x2, short y2, unsigned short color) {
 /* Draw a filled triangle with vertices (x0,y0),(x1,y1),(x2,y2) with given color
@@ -314,7 +313,7 @@ void tft_fillTriangle ( short x0, short y0,
     else if(x1 > b) b = x1;
     if(x2 < a)      a = x2;
     else if(x2 > b) b = x2;
-    tft_drawFastHLine(a, y0, b-a+1, color);
+    drawFastHLine(a, y0, b-a+1, color);
     return;
   }
 
@@ -347,7 +346,7 @@ void tft_fillTriangle ( short x0, short y0,
     b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
     */
     if(a > b) swap(a,b);
-    tft_drawFastHLine(a, y, b-a+1, color);
+    drawFastHLine(a, y, b-a+1, color);
   }
 
   // For lower part of triangle, find scanline crossings for segments
@@ -364,7 +363,7 @@ void tft_fillTriangle ( short x0, short y0,
     b = x0 + (x2 - x0) * (y - y0) / (y2 - y0);
     */
     if(a > b) swap(a,b);
-    tft_drawFastHLine(a, y, b-a+1, color);
+    drawFastHLine(a, y, b-a+1, color);
   }
 }
 
@@ -389,7 +388,7 @@ void plotQuadBezierSeg(int x0, int y0, int x1, int y1, int x2, int y2, uint8_t p
     dy = 4.0*sx*cur*(y0-y1)+yy-xy;
     xx += xx; yy += yy; err = dx+dy+xy;                /* error 1st step */    
     do {                              
-      tft_drawPixel(x0,y0, pal_idx);                                     /* plot curve */
+      drawPixel(x0,y0, pal_idx);                                     /* plot curve */
       if (x0 == x2 && y0 == y2) return;  /* last pixel -> curve finished */
       y1 = 2*err < dx;                  /* save value for test of y step */
       if (2*err > dy) { x0 += sx; dx -= xy; err += dy += yy; } /* x step */
@@ -397,7 +396,7 @@ void plotQuadBezierSeg(int x0, int y0, int x1, int y1, int x2, int y2, uint8_t p
     } while (dy < dx );           /* gradient negates -> algorithm fails */
   }
   fprintf(stderr, "drawing line from %d,%d to %d,%d now\n", x0,y0,x2,y2);
-  tft_drawLine(x0,y0, x2,y2, pal_idx);                  /* plot remaining part to end */
+  drawLine(x0,y0, x2,y2, pal_idx);                  /* plot remaining part to end */
 }  
 
 void plotQuadBezier(int x0, int y0, int x1, int y1, int x2, int y2, uint8_t pal_idx)
@@ -447,7 +446,7 @@ void plot_basic_bezier (int x0, int y0, int x1, int y1, int x2, int y2, uint8_t 
                               /* sign of gradient must not change */
     assert ((x0 - x1) * (x2 - x1) <= 0 && (y0 - y1) * (y2 - y1) <= 0); 
     if (cur == 0)   { /* straight line */
-        tft_drawLine (x0, y0, x2, y2, pal_idx);
+        drawLine (x0, y0, x2, y2, pal_idx);
         return;
     }
     x *= 2 * x;
@@ -463,15 +462,15 @@ void plot_basic_bezier (int x0, int y0, int x1, int y1, int x2, int y2, uint8_t 
     }
     /* algorithm fails for almost straight line, check error values */
     if (dx >= -y || dy <= -x || ex <= -y || ey >= -x)  {        
-        tft_drawLine (x0, y0, x1, y1, pal_idx); /* simple approximation */
-        tft_drawLine (x1, y1, x2, y2, pal_idx);
+        drawLine (x0, y0, x1, y1, pal_idx); /* simple approximation */
+        drawLine (x1, y1, x2, y2, pal_idx);
         return;
     }
     dx -= xy;
     ex = dx + dy;
     dy -= xy; /* error of 1.step */
     for (;;) { /* plot curve */
-        tft_drawPixel (x0, y0, pal_idx);
+        drawPixel (x0, y0, pal_idx);
         ey = 2 * ex - dy; /* save value for test of y step */
         if (2 * ex >= dx)  { /* x step */
             if (x0 == x2) break;

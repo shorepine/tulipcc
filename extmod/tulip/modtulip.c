@@ -8,6 +8,7 @@
 #include "py/mphal.h"
 #include "display.h"
 #include "bresenham.h"
+#include "bitmap_fonts.h"
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #include "alles.h"
@@ -564,7 +565,7 @@ STATIC mp_obj_t tulip_line(size_t n_args, const mp_obj_t *args) {
     int16_t x1 = mp_obj_get_int(args[2]);
     int16_t y1 = mp_obj_get_int(args[3]);
     uint8_t pal_idx = mp_obj_get_int(args[4]);
-    tft_drawLine(x0,y0,x1,y1,pal_idx);
+    drawLine(x0,y0,x1,y1,pal_idx);
     return mp_const_none;
 }
 
@@ -579,11 +580,11 @@ STATIC mp_obj_t tulip_roundrect(size_t n_args, const mp_obj_t *args) {
     uint16_t pal_idx = mp_obj_get_int(args[5]);
     if(n_args > 6) {
         if(mp_obj_get_int(args[6])>0) {
-            tft_fillRoundRect(x,y,w,h,r,pal_idx);
+            fillRoundRect(x,y,w,h,r,pal_idx);
             return mp_const_none;
         }
     }
-    tft_drawRoundRect(x,y,w,h,r,pal_idx);
+    drawRoundRect(x,y,w,h,r,pal_idx);
     return mp_const_none;
 }
 
@@ -598,11 +599,11 @@ STATIC mp_obj_t tulip_rect(size_t n_args, const mp_obj_t *args) {
     uint16_t pal_idx = mp_obj_get_int(args[4]);
     if(n_args > 5) {
         if(mp_obj_get_int(args[5])>0) {
-            tft_fillRect(x,y,w,h,pal_idx);
+            fillRect(x,y,w,h,pal_idx);
             return mp_const_none;
         } 
     }
-    tft_drawRect(x,y,w,h,pal_idx);
+    drawRect(x,y,w,h,pal_idx);
     return mp_const_none;
 }
 
@@ -615,11 +616,11 @@ STATIC mp_obj_t tulip_circle(size_t n_args, const mp_obj_t *args) {
     uint16_t pal_idx = mp_obj_get_int(args[3]);
     if(n_args > 4) {
         if(mp_obj_get_int(args[4])>0) {
-            tft_fillCircle(x,y,r,pal_idx);
+            fillCircle(x,y,r,pal_idx);
             return mp_const_none;
         } 
     }
-    tft_drawCircle(x,y,r,pal_idx);
+    drawCircle(x,y,r,pal_idx);
     return mp_const_none;
 }
 
@@ -636,16 +637,27 @@ STATIC mp_obj_t tulip_triangle(size_t n_args, const mp_obj_t *args) {
     uint16_t pal_idx = mp_obj_get_int(args[6]);
     if(n_args > 7) {
         if(mp_obj_get_int(args[7])>0) {
-            tft_fillTriangle(x0, y0, x1, y1, x2, y2, pal_idx);
+            fillTriangle(x0, y0, x1, y1, x2, y2, pal_idx);
             return mp_const_none;
         }
     }
-    tft_drawTriangle(x0, y0, x1, y1, x2, y2, pal_idx);
+    drawTriangle(x0, y0, x1, y1, x2, y2, pal_idx);
     return mp_const_none;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_triangle_obj, 7, 8, tulip_triangle);
 
+//uint8_t draw_glyph(uint8_t c, uint16_t x, uint16_t y, uint8_t pal_idx) {
+STATIC mp_obj_t tulip_char(size_t n_args, const mp_obj_t *args) {
+    uint16_t c = mp_obj_get_int(args[0]);
+    uint16_t x = mp_obj_get_int(args[1]);
+    uint16_t y = mp_obj_get_int(args[2]);
+    uint16_t pal_idx = mp_obj_get_int(args[3]);
+    uint8_t advance = draw_glyph(c, x,y, pal_idx);
+    return mp_obj_new_int(advance);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_char_obj, 4, 4, tulip_char);
 
 
 
@@ -691,6 +703,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_roundrect), MP_ROM_PTR(&tulip_roundrect_obj) },
     { MP_ROM_QSTR(MP_QSTR_triangle), MP_ROM_PTR(&tulip_triangle_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_char), MP_ROM_PTR(&tulip_char_obj) },
 
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
