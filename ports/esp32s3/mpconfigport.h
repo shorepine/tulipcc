@@ -72,7 +72,7 @@
 #define MICROPY_PY_UHASHLIB_SHA256          (1)
 #define MICROPY_PY_UCRYPTOLIB               (1)
 #define MICROPY_PY_URANDOM_SEED_INIT_FUNC   (esp_random())
-#define MICROPY_PY_UOS_INCLUDEFILE          "ports/esp32/moduos.c"
+#define MICROPY_PY_UOS_INCLUDEFILE          "ports/esp32s3/moduos.c"
 #define MICROPY_PY_OS_DUPTERM               (1)
 #define MICROPY_PY_UOS_DUPTERM_NOTIFY       (1)
 #define MICROPY_PY_UOS_UNAME                (1)
@@ -85,7 +85,7 @@
 #define MICROPY_PY_MACHINE_PWM_INIT         (1)
 #define MICROPY_PY_MACHINE_PWM_DUTY         (1)
 #define MICROPY_PY_MACHINE_PWM_DUTY_U16_NS  (1)
-#define MICROPY_PY_MACHINE_PWM_INCLUDEFILE  "ports/esp32/machine_pwm.c"
+#define MICROPY_PY_MACHINE_PWM_INCLUDEFILE  "ports/esp32s3/machine_pwm.c"
 #define MICROPY_PY_MACHINE_I2C              (1)
 #define MICROPY_PY_MACHINE_SOFTI2C          (1)
 #define MICROPY_PY_MACHINE_SPI              (1)
