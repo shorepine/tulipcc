@@ -54,3 +54,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+mpy-cross/build/genhdr/mpversion.h
+
