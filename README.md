@@ -199,7 +199,8 @@ tulip.bezier(x0,y0, x1,y1, x2,y2, pal_idx)
 tulip.circle(x,y,r, pal_idx, [filled=1])
 tulip.roundrect(x0,y0, w,h, r, pal_idx, [filled=1])
 tulip.rect(x0,y0, w,h, pal_idx, [filled=1])
-tulip.triange(x0,y0, x1,y1, x2,y2, pal_idx, [filled=1])
+tulip.triangle(x0,y0, x1,y1, x2,y2, pal_idx, [filled=1])
+tulip.char(c, x, y, pal_idx) # proportional font, returns # of x pixels to advance for the next char
 
 """
   Set scrolling registers for the BG. 
