@@ -16,19 +16,10 @@
 // Constants you can change if you want
 #define OSCS 64              // # of simultaneous oscs to keep track of 
 #define BLOCK_SIZE 256       // buffer block size in samples
-#if defined(ESP_PLATFORM) 
-#define LATENCY_MS 1000      // fixed latency in milliseconds
+
+#define DEFAULT_LATENCY_MS 1000      // fixed latency in milliseconds
 #define EVENT_FIFO_LEN 3000  // number of events the queue can store
 #define MAX_DRIFT_MS 20000   // ms of time you can schedule ahead before synth recomputes time base
-#elif defined(DESKTOP_PLATFORM)
-#define LATENCY_MS 1000      
-#define EVENT_FIFO_LEN 3000  // number of events the queue can store
-#define MAX_DRIFT_MS 20000   // ms of time you can schedule ahead before synth recomputes time base
-#else
-#define LATENCY_MS 0          // no latency for local mode
-#define EVENT_FIFO_LEN 30000  // number of events the queue can store
-#define MAX_DRIFT_MS 60000
-#endif
 #define SAMPLE_RATE 44100    // playback sample rate
 #define SAMPLE_MAX 32767
 #define MAX_ALGO_OPS 6 // dx7
@@ -111,7 +102,7 @@ typedef int amy_err_t;
 
 enum params{
     WAVE, PATCH, MIDI_NOTE, AMP, DUTY, FEEDBACK, FREQ, VELOCITY, PHASE, DETUNE, VOLUME, FILTER_FREQ, RATIO, RESONANCE, 
-    MOD_SOURCE, MOD_TARGET, FILTER_TYPE, EQ_L, EQ_M, EQ_H, BP0_TARGET, BP1_TARGET, BP2_TARGET, ALGORITHM, 
+    MOD_SOURCE, MOD_TARGET, FILTER_TYPE, EQ_L, EQ_M, EQ_H, BP0_TARGET, BP1_TARGET, BP2_TARGET, ALGORITHM, LATENCY,
     ALGO_SOURCE_START=30, 
     ALGO_SOURCE_END=30+MAX_ALGO_OPS,
     BP_START=ALGO_SOURCE_END+1,   
@@ -150,6 +141,7 @@ struct event {
     float substep;
     float sample;
     float volume;
+    int16_t latency_ms;
     float filter_freq;
     float ratio;
     float resonance;
@@ -226,6 +218,7 @@ struct state {
     uint16_t event_qsize;
     int16_t next_event_write;
     struct delta * event_start; // start of the sorted list
+    int16_t latency_ms;
 };
 
 // Shared structures

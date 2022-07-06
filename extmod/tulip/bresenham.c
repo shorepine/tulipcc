@@ -16,9 +16,14 @@ void drawFastVLine(short x0, short y0, short h, short color) {
 }
 
 void fillRect(int16_t x, int16_t y, int16_t w, int16_t h,  uint16_t color) {
-    for (int16_t i = x; i < x + w; i++) {
-        drawFastVLine(i, y, h, color);
+    // do this H line by line instead
+
+    for(int16_t i = y; i < y+h; i++) {
+        drawFastHLine(x, i, w, color);
     }
+    //for (int16_t i = x; i < x + w; i++) {
+    //    drawFastVLine(i, y, h, color);
+    //}
 }
 
 void drawCircle(short x0, short y0, short r, unsigned short color) {

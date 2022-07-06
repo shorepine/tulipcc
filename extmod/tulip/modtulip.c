@@ -659,6 +659,20 @@ STATIC mp_obj_t tulip_char(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_char_obj, 4, 4, tulip_char);
 
+STATIC mp_obj_t tulip_str(size_t n_args, const mp_obj_t *args) {
+    const char *str =  mp_obj_str_get_str(args[0]);
+    uint16_t x = mp_obj_get_int(args[1]);
+    uint16_t y = mp_obj_get_int(args[2]);
+    uint16_t pal_idx = mp_obj_get_int(args[3]);
+    uint8_t advance = 0;
+    for(uint16_t i=0;i<strlen(str);i++) {
+        advance = draw_glyph(str[i], x,y, pal_idx);
+        x =x + advance;
+    }
+    return mp_obj_new_int(advance);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_str_obj, 4, 4, tulip_str);
 
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
@@ -704,6 +718,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_triangle), MP_ROM_PTR(&tulip_triangle_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_char), MP_ROM_PTR(&tulip_char_obj) },
+    { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
 
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },

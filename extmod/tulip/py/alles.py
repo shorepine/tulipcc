@@ -18,7 +18,7 @@ def preset(which,osc=0, **kwargs):
     if(which==0): # simple note
         send(osc=osc, wave=SINE, bp0="10,1,250,0.7,500,0", bp0_target=TARGET_AMP, **kwargs)
     if(which==1): # filter bass
-        send(osc=osc, filter_freq=2500, resonance=5, wave=SAW, filter_type=FILTER_LPF, bp0="100,0.5,25,0", bp0_target=TARGET_AMP+TARGET_FILTER_FREQ, **kwargs)
+        send(osc=osc, filter_freq=2500, resonance=5, wave=SAW_DOWN, filter_type=FILTER_LPF, bp0="100,0.5,25,0", bp0_target=TARGET_AMP+TARGET_FILTER_FREQ, **kwargs)
 
     # TODO -- this is a good one to test the whistle on the bps... 
     if(which==2): # long sine pad to test ADSR
@@ -56,15 +56,6 @@ def preset(which,osc=0, **kwargs):
     if(which==14): # filtered algo 
         send(wave=ALGO, vel=0, patch=62,filter_freq=2000,resonance=2.5,filter_type=FILTER_LPF, bp0_target=TARGET_FILTER_FREQ,bp0="1,1,500,0,0,0")
 
-
-# Buffer messages sent to the synths if you call buffer(). 
-# Calling buffer(0) turns off the buffering
-# flush() sends whatever is in the buffer now, and is called after buffer(0) as well 
-send_buffer = ""
-buffer_size = 0
-
-
-
 def millis():
     # Timestamp to send over to synths for global sync
     # This is a suggestion. I use ticks since boot on Tulip
@@ -79,44 +70,45 @@ def trunc(number):
 # Construct an AMY message
 def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1, feedback=-1, timestamp=None, reset=-1, phase=-1, \
         client=-1, retries=1, volume=-1, filter_freq = -1, resonance = -1, bp0="", bp1="", bp2="", bp0_target=-1, bp1_target=-1, bp2_target=-1, mod_target=-1, \
-        debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, detune = -1, algo_source=None):
+        debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, latency_ms = -1, algo_source=None):
 
     m = ""
     if(timestamp is None): timestamp = millis()
-    m = m + "t" + trunc(timestamp)
-    if(osc>=0): m = m + "v" + trunc(osc)
-    if(wave>=0): m = m + "w" + trunc(wave)
+    m = m + "t" + str(timestamp)
+    if(osc>=0): m = m + "v" + str(osc)
+    if(wave>=0): m = m + "w" + str(wave)
     if(duty>=0): m = m + "d" + trunc(duty)
     if(feedback>=0): m = m + "b" + trunc(feedback)
     if(freq>=0): m = m + "f" + trunc(freq)
-    if(note>=0): m = m + "n" + trunc(note)
-    if(patch>=0): m = m + "p" + trunc(patch)
+    if(note>=0): m = m + "n" + str(note)
+    if(patch>=0): m = m + "p" + str(patch)
     if(phase>=0): m = m + "P" + trunc(phase)
-    if(detune>=0): m = m + "u" + trunc(detune)
-    if(client>=0): m = m + "c" + trunc(client)
+    if(client>=0): m = m + "c" + str(client)
     if(amp>=0): m = m + "a" + trunc(amp)
     if(vel>=0): m = m + "l" + trunc(vel)
     if(volume>=0): m = m + "V" + trunc(volume)
+    if(latency_ms>=0): m = m + "N" + str(latency_ms)
     if(resonance>=0): m = m + "R" + trunc(resonance)
     if(filter_freq>=0): m = m + "F" + trunc(filter_freq)
     if(ratio>=0): m = m + "I" + trunc(ratio)
-    if(algorithm>=0): m = m + "o" + trunc(algorithm)
+    if(algorithm>=0): m = m + "o" + str(algorithm)
     if(len(bp0)): m = m +"A%s" % (bp0)
     if(len(bp1)): m = m +"B%s" % (bp1)
     if(len(bp2)): m = m +"C%s" % (bp2)
     if(algo_source is not None): m = m +"O%s" % (algo_source)
-    if(bp0_target>=0): m = m + "T" +trunc(bp0_target)
-    if(bp1_target>=0): m = m + "W" +trunc(bp1_target)
-    if(bp2_target>=0): m = m + "X" +trunc(bp2_target)
-    if(mod_target>=0): m = m + "g" + trunc(mod_target)
-    if(mod_source>=0): m = m + "L" + trunc(mod_source)
-    if(reset>=0): m = m + "S" + trunc(reset)
-    if(debug>=0): m = m + "D" + trunc(debug)
+    if(bp0_target>=0): m = m + "T" +str(bp0_target)
+    if(bp1_target>=0): m = m + "W" +str(bp1_target)
+    if(bp2_target>=0): m = m + "X" +str(bp2_target)
+    if(mod_target>=0): m = m + "g" + str(mod_target)
+    if(mod_source>=0): m = m + "L" + str(mod_source)
+    if(reset>=0): m = m + "S" + str(reset)
+    if(debug>=0): m = m + "D" + str(debug)
     if(eq_l>=0): m = m + "x" + trunc(eq_l)
     if(eq_m>=0): m = m + "y" + trunc(eq_m)
     if(eq_h>=0): m = m + "z" + trunc(eq_h)
-    if(filter_type>=0): m = m + "G" + trunc(filter_type)
+    if(filter_type>=0): m = m + "G" + str(filter_type)
     return m+'Z'
+
 
 def send(retries=1, **kwargs):
     m = message(**kwargs)
@@ -135,13 +127,15 @@ def reset(osc=None):
 def volume(volume, client = -1):
     send(client=client, volume=volume)
 
+def latency_ms(latency, client=-1):
+    send(client=client, latency_ms =latency)
 
 """
     Run a scale through all the synth's sounds
 """
 def test():
     while True:
-        for wave in [SINE, SAW, PULSE, TRIANGLE, NOISE]:
+        for wave in [SINE, SAW_DOWN, PULSE, TRIANGLE, NOISE]:
             for i in range(12):
                 send(osc=0, wave=wave, note=40+i, patch=i, vel=1)
                 time.sleep(0.5)
@@ -243,6 +237,20 @@ def c_major(octave=2,wave=SINE, **kwargs):
     send(osc=0, freq=220.5*octave, wave=wave, vel=1, **kwargs)
     send(osc=1, freq=138.5*octave, wave=wave, vel=1, **kwargs)
     send(osc=2, freq=164.5*octave, wave=wave, vel=1, **kwargs)
+
+
+
+
+
+# Buffer messages sent to the synths if you call buffer(). 
+# Calling buffer(0) turns off the buffering
+# flush() sends whatever is in the buffer now, and is called after buffer(0) as well 
+send_buffer = ""
+buffer_size = 0
+
+# For Tulip, start with latency at 0. if we swith to mesh we'll switch back.
+latency_ms(0)
+
 
 
 
