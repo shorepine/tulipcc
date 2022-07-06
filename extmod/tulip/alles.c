@@ -87,6 +87,7 @@ void alles_send_message(char * message, uint16_t len) {
     message_start_pointer = message;
     message_length = len;
     // tell the parse task, time to parse this message into deltas and add to the queue
+    fprintf(stderr, "got message ### %s ###\n", message);
     parse_task();
 }
 
@@ -100,8 +101,8 @@ amy_err_t esp_amy_init() {
     // Create rendering threads, one per core so we can deal with dan ellis float math
     static uint8_t zero = 0;
     static uint8_t one = 1;
-    xTaskCreatePinnedToCore(&esp_render_task, "render_task0", 4096, &zero, 4, &renderTask[0], 0);
-    xTaskCreatePinnedToCore(&esp_render_task, "render_task1", 4096, &one, 4, &renderTask[1], 1);
+    xTaskCreatePinnedToCore(&esp_render_task, "render_task0", 8192, &zero, 4, &renderTask[0], 1);
+    xTaskCreatePinnedToCore(&esp_render_task, "render_task1", 8192, &one, 4, &renderTask[1], 0);
 
     // Wait for the render tasks to get going before starting the i2s task
     delay_ms(100);

@@ -71,10 +71,11 @@
 
 
 #define MP_TASK_PRIORITY        (ESP_TASK_PRIO_MIN + 1)
-#define DISPLAY_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 2)
+#define DISPLAY_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 5)
 #define USB_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)
 #define ALLES_TASK_PRIORITY (ESP_TASK_PRIO_MIN+2)
 
+//#define MP_TASK_COREID (1)
 #define DISPLAY_TASK_COREID (0)
 #define USB_TASK_COREID (1)
 #define ALLES_TASK_COREID (1)
@@ -85,7 +86,7 @@
 #define ALLES_TASK_STACK_SIZE    (4 * 1024) 
 
 
-#define MAX_TASKS 15
+#define MAX_TASKS 16
 
 TaskHandle_t display_main_task_handle;
 TaskHandle_t usb_main_task_handle;
@@ -145,7 +146,7 @@ float compute_cpu_usage(uint8_t debug) {
     TaskStatus_t *pxTaskStatusArray;
     volatile UBaseType_t uxArraySize, x, i;
     const char* const tasks[] = {
-         "render_task0", "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "mp_task", "disp_task", 
+         "render_task0", "render_task1", "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "mp_task", "disp_task", 
          "usb_task", "alles_task", "main", "fill_audio_buff", "wifi", "idle0", "idle1", 0 
     }; 
     uxArraySize = uxTaskGetNumberOfTasks();
@@ -365,17 +366,18 @@ void app_main(void) {
     idle_task_0 = xTaskGetIdleTaskHandleForCPU(0);
     idle_task_1 = xTaskGetIdleTaskHandleForCPU(1);
 
-    printf("Starting USB keyboard host\n");
+    printf("Starting USB keyboard host on core %d\n", USB_TASK_COREID);
     xTaskCreatePinnedToCore(usb_keyboard_start, "usb_task", (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &usb_main_task_handle, USB_TASK_COREID);
 
-    printf("Starting display\n");
+    printf("Starting display on core %d\n", DISPLAY_TASK_COREID);
     xTaskCreatePinnedToCore(esp32s3_display_run, "disp_task", (DISP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_main_task_handle, DISPLAY_TASK_COREID);
 
-    printf("Starting Alles\n");
+    printf("Starting Alles on core %d (dual core)\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(alles_start, "alles_task", (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_main_task_handle, ALLES_TASK_COREID);
 
-    printf("Starting MicroPython\n");
-    xTaskCreatePinnedToCore(mp_task, "mp_task", (MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, MP_TASK_PRIORITY, &mp_main_task_handle, MP_TASK_COREID);
+    printf("Starting MicroPython on core %d\n", MP_TASK_COREID);
+    // Force MP core to 1
+    xTaskCreatePinnedToCore(mp_task, "mp_task", (MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, MP_TASK_PRIORITY, &mp_main_task_handle, 1);
     
 }
 

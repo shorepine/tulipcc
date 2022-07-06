@@ -65,6 +65,7 @@ int8_t global_init() {
     global.event_start = NULL;
     global.event_qsize = 0;
     global.volume = 1;
+    global.latency_ms = DEFAULT_LATENCY_MS;
     global.eq[0] = 0;
     global.eq[1] = 0;
     global.eq[2] = 0;
@@ -97,6 +98,7 @@ struct event default_event() {
     e.amp = -1; 
     e.freq = -1;
     e.volume = -1;
+    e.latency_ms = -1;
     e.ratio = -1;
     e.filter_freq = -1;
     e.resonance = -1;
@@ -184,6 +186,7 @@ void add_event(struct event e) {
     if(e.freq>-1) { d.param=FREQ; d.data = *(uint32_t *)&e.freq; add_delta_to_queue(d); }
     if(e.phase>-1) { d.param=PHASE; d.data = *(uint32_t *)&e.phase; add_delta_to_queue(d); }
     if(e.volume>-1) { d.param=VOLUME; d.data = *(uint32_t *)&e.volume; add_delta_to_queue(d); }
+    if(e.latency_ms>-1) { d.param=LATENCY; d.data = *(uint32_t *)&e.latency_ms; add_delta_to_queue(d); }
     if(e.ratio>-1) { d.param=RATIO; d.data = *(uint32_t *)&e.ratio; add_delta_to_queue(d); }
     if(e.filter_freq>-1) { d.param=FILTER_FREQ; d.data = *(uint32_t *)&e.filter_freq; add_delta_to_queue(d); }
     if(e.resonance>-1) { d.param=RESONANCE; d.data = *(uint32_t *)&e.resonance; add_delta_to_queue(d); }
@@ -229,6 +232,7 @@ void reset_osc(uint8_t i ) {
     synth[i].amp = 1;
     msynth[i].amp = 1;
     synth[i].phase = 0;
+    synth[i].latency_ms = 0;
     synth[i].volume = 0;
     synth[i].eq_l = 0;
     synth[i].eq_m = 0;
@@ -424,6 +428,7 @@ void play_event(struct delta d) {
 
     // For global changes, just make the change, no need to update the per-osc synth
     if(d.param == VOLUME) global.volume = *(float *)&d.data;
+    if(d.param == LATENCY) { global.latency_ms = *(int16_t *)&d.data; computed_delta_set = 0; }
     if(d.param == EQ_L) global.eq[0] = powf(10, *(float *)&d.data / 20.0);
     if(d.param == EQ_M) global.eq[1] = powf(10, *(float *)&d.data / 20.0);
     if(d.param == EQ_H) global.eq[2] = powf(10, *(float *)&d.data / 20.0);
@@ -930,7 +935,7 @@ void parse_task() {
                 // if we haven't yet synced our times, do it now
                 if(!computed_delta_set) {
                     computed_delta = e.time - sysclock;
-                    fprintf(stderr,"setting computed delta to %lld (e.time is %lld sysclock %lld) max_drift_ms %d latency %d\n", computed_delta, e.time, sysclock, MAX_DRIFT_MS, LATENCY_MS);
+                    fprintf(stderr,"setting computed delta to %lld (e.time is %lld sysclock %lld) max_drift_ms %d latency %d\n", computed_delta, e.time, sysclock, MAX_DRIFT_MS, global.latency_ms);
                     computed_delta_set = 1;
                 }
             }
@@ -954,6 +959,7 @@ void parse_task() {
             if(mode=='I') e.ratio = atof(message + start);
             if(mode=='l') e.velocity=atof(message + start);
             if(mode=='L') e.mod_source=atoi(message + start);
+            if(mode=='N') e.latency_ms = atoi(message + start); 
             if(mode=='n') e.midi_note=atoi(message + start);
             if(mode=='o') e.algorithm=atoi(message+start);
             if(mode=='O') parse_algorithm(&e, message+start);
@@ -990,18 +996,18 @@ void parse_task() {
     if(length >0) {
         // Now adjust time in some useful way:
         // if we have a delta & got a time in this message, use it schedule it properly
-        if(computed_delta_set && e.time > 0) {
+        if((computed_delta_set && e.time > 0)) {
             // OK, so check for potentially negative numbers here (or really big numbers-sysclock) 
-            int64_t potential_time = (e.time - computed_delta) + LATENCY_MS;
-            if(potential_time < 0 || (potential_time > sysclock + LATENCY_MS + MAX_DRIFT_MS)) {
+            int64_t potential_time = (e.time - computed_delta) + global.latency_ms;
+            if(potential_time < 0 || (potential_time > sysclock + global.latency_ms + MAX_DRIFT_MS)) {
                 fprintf(stderr,"recomputing time base: message came in with %lld, mine is %lld, computed delta was %lld\n", e.time, sysclock, computed_delta);
                 computed_delta = e.time - sysclock;
                 fprintf(stderr,"computed delta now %lld\n", computed_delta);
             }
-            e.time = (e.time - computed_delta) + LATENCY_MS;
+            e.time = (e.time - computed_delta) + global.latency_ms;
 
         } else { // else play it asap 
-            e.time = sysclock + LATENCY_MS;
+            e.time = sysclock + global.latency_ms;
         }
         e.status = SCHEDULED;
 
