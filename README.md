@@ -201,6 +201,7 @@ tulip.roundrect(x0,y0, w,h, r, pal_idx, [filled=1])
 tulip.rect(x0,y0, w,h, pal_idx, [filled=1])
 tulip.triangle(x0,y0, x1,y1, x2,y2, pal_idx, [filled=1])
 tulip.char(c, x, y, pal_idx) # proportional font, returns # of x pixels to advance for the next char
+tulip.str(string, x, y, pal_idx) # same as char, but with a string
 
 """
   Set scrolling registers for the BG. 
@@ -306,7 +307,7 @@ To build your own Tulip CC:
 - For sound, get an I2S decoder. [You can get ones that have line outs like this](https://www.adafruit.com/product/3678) or ones that [have speaker amps built in like this](https://www.adafruit.com/product/3006). I use the speaker amp model and hook it into a little 3W speaker.
 - We are working on a breakout board that plugs into the back of a ESP32S3 dev board and has a USB female A jack for the keyboard, pins for [a display breakout]( https://www.adafruit.com/product/4905) and pins for the i2s amp breakout. That makes things a lot simpler. 
 
-A note, if you're using the Adafruit display adapter, these pin numbers for the display (D#) are to match the **side of the board with the FPC connector is on**, the side that reads FPC-40P 0.5MM. I have no idea why the pin numbers are inverted on the other side, but don't be like me and waste a board run because you wired it wrong! 
+A note, if you're using the Adafruit display adapter, these pin numbers for the display (D#) are to match the numbers on the **side of the board the FPC connector is on**, the side that reads FPC-40P 0.5MM. 
 
 In the meantime, here's the pin connections you'll want to make:
 
@@ -346,30 +347,53 @@ In the meantime, here's the pin connections you'll want to make:
 
 Tulip's firmware / desktop application is based on Micropython. We use their folder structure and "ports" for `esp32` and `unix` (for Tulip Desktop.) To compile your own firmware / desktop app, start by cloning this repository. 
 
-Local version:
+Desktop version (macOS 10.5 (Catalina) and higher, Apple Silicon or x86_64):
 
 ```
-cd ports/unix
+# Make sure xcode is installed first, and you've run it at least once!
+cd ports/macos
 make
 ./tulip.{arm64,x86_64}
 
-./package.sh # makes .app bundle, not needed if you're just using it locally
+./package.sh # makes .app bundle, not necessary if you're just using it locally
 ```
 
 ESP32S3:
 
+First run setup:
+
 ```
-cd ports/esp32
-export ../../esp-idf/export.sh
-pip3 install littlefs-python
+# install homebrew first, skip this if you already have it...
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# then restart your terminal... 
+
+# and install esp-idf's requirements
+brew install cmake ninja dfu-util
+
+# and install our version of the ESP-IDF
+cd esp-idf
+./install.sh esp32s3
+source ./export.sh
+pip3 install littlefs-python # needed to flash the filesystem
+cd ../ports/esp32s3
 # Connect your esp32s3 board over USB (from the UART connector)
 ls /dev/cu* # see what port it is on
 idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND flash
-python tulip_fs_create.py # first run only, will erase flash
-idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND monitor
+python tulip_fs_create.py # first run only, will erase the Tulip filesystem
 ```
 
-On ESP32S3 The "GPU" hardware is mostly implemented in the `esp_lcd_bw` fork of `esp_lcd`. That's in our local components folder. 
+Then to build / debug going forward:
+
+```
+cd ports/esp32s3
+export ../../esp-idf/export.sh # do this once per terminal window
+idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND flash
+idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND monitor # shows debug
+```
+
+
+
 
 Some development guidelines if you'd like to help contribute!
 
