@@ -7,8 +7,8 @@ from littlefs import lfs
 import os
 import sys
 
-if(not os.getcwd().endswith("esp32")):
-    print("Run this from the tulipcc/ports/esp32 folder only")
+if(not os.getcwd().endswith("esp32s3")):
+    print("Run this from the tulipcc/ports/esp32s3 folder only")
     sys.exit()
 
 # Copy over only these extensions 

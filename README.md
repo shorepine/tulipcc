@@ -12,16 +12,16 @@ You can build your own Tulip CC for about $25 plus the cost of a display and USB
 
 The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack for many hours.
 
-The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD. 
+The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. 
 
-Tulip's sound system is a full featured 32-voice synthesizer, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
+Tulip's sound system is a full featured 64-voice synthesizer, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests for the base system.
 
-Tulip rev 4 supports:
+Tulip CC rev 4 supports:
 - 8.5MB of RAM
 - 8MB flash storage, as a filesystem accesible in Python
-- The [Alles](https://github.com/bwhitman/alles) 32-voice synthesizer engine running locally or as a control for an Alles mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
+- The [Alles](https://github.com/bwhitman/alles) 64-voice synthesizer engine running locally or as a control for an Alles mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
 - A 1280x750 background frame buffer to draw arbitrary bitmaps to, which can scroll horizontally / vertically
@@ -31,6 +31,8 @@ Tulip rev 4 supports:
 - Can load PNGs from disk to set sprites or background, or generate bitmap data from code
 - Built in code and text editor
 - USB keyboard support
+- Capactive touch support (mouse on Tulip Desktop)
+- MIDI input 
 - 500mA power usage including display, at medium display brightness, can last for hours on USB battery pack 
 
 Tulip's "OS" is heavily based on the great work of [Micropython](https://micropython.org), which a lot of additions to support the Python REPL on screen and integrated into the display and sound system. 
@@ -76,7 +78,7 @@ imgur_url = tulip.screenshot()
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 ```
 
-### Keyboard / USB
+### Inputs
 
 ```python
 # Returns the current held keyboard scan codes, up to 6 and the modifier mask (ctrl, shift etc)
@@ -90,6 +92,9 @@ ch = tulip.key() # returns immediately, returns -1 if nothing held
 # keys are not sent to the underlying python process 
 tulip.key_scan(1)
 tulip.key_scan(0) # remember to turn it back off or you won't be able to type into the REPL
+
+# Return the last touch panel coordinates, up to 3 fingers at once
+(x0, y0, x1, y1, x2, y2) = tulip.touch()
 ```
 
 ### Network
@@ -163,9 +168,8 @@ The background plane (BG) is 1280 x 750, with the visible portion 1024x600. Use 
 
 ```python
 # Set or get a pixel on the BG
-(r,g,b) = tulip.bg_pixel(x,y)
-tulip.bg_pixel(x,y,r,g,b)
-tulip.bg_pixel(x,y,pal_idx) # pal_idx is 0-255 for 8-bit RGB332 mode 
+pal_idx = tulip.bg_pixel(x,y)
+tulip.bg_pixel(x,y,pal_idx)  # pal_idx is 0-255 for 8-bit RGB332 mode 
 
 # Convert between packed palette color and r,g,b
 pal_idx = tulip.color(r,g,b)
@@ -188,7 +192,6 @@ tulip.bg_bitmap(x, y, w, h, bitmap)
 bitmap = tulip.bg_bitmap(x, y, w, h)
 
 # Clear the BG with a color or default
-tulip.bg_clear(r,g,b) 
 tulip.bg_clear(pal_idx)
 tulip.bg_clear() # uses default
 
@@ -296,7 +299,6 @@ alles.send(osc=2, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
 ```
 
 
-
 ## DIY HOWTO
 
 ### Hardware 
@@ -328,6 +330,9 @@ In the meantime, here's the pin connections you'll want to make:
 | R7            | 15           | L8                           | D29            |
 | R6            | 7            | L7                           | D30            |
 | R5            | 6            | L6                           | D31            |
+| SDA           | 18           | L11                          | D4             |
+| SCL           | 17           | L10                          | D3             |
+| CTP INT       | 5            | L5                           | D1             |
 | 3v3           | 3v3          | L1                           | D37            |
 | GND           | GND          | L22                          | D38            |
 | 5V            | 5V           | L21                          | D39            |
@@ -340,6 +345,15 @@ In the meantime, here's the pin connections you'll want to make:
 | Audio DIN     | 2            | R5                           | Audio DIN      |
 | Audio GND     | GND          | L22                          | Audio GND      |
 | Audio VIN     | 5V           | L21                          | Audio VIN      |
+
+Optionally ground the remaining color pins and etc of the display
+
+MIDI:
+1 midi out 11 / L17
+2 midi in 47 / R17
+3 3v3
+4 5v
+5 GND
 
 
 

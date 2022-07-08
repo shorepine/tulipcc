@@ -9,8 +9,8 @@ for i in range(10):
     tulip.bg_blit(0,200,272,160,272+(i*100),200)
 
 # Sample a pixel from the BG and make the top of the screen that color
-(r,g,b) = tulip.bg_pixel(0,200)
-tulip.bg_rect(0,0,1024,200,r,g,b)
+c = tulip.bg_pixel(0,200)
+tulip.rect(0,0,1024,200,c,1)
 
 # now load the mountain pics over the background
 # let's load the data to a var first as we'll load it three times
@@ -22,7 +22,7 @@ tulip.bg_png(mountain,1088,250)
 mountain = None # clear the ram
 
 # And put black under the mountains
-tulip.bg_rect(0,250+160,1024,190,0)
+tulip.rect(0,250+160,1024,190,0,1)
 
 # and some tiles
 tulip.bg_png('g/meadow.png',0,410)

@@ -75,6 +75,12 @@ int check_key() {
                 }
             }
         }
+        int x,y;
+        uint32_t button = SDL_GetMouseState(&x, &y);
+        if(button) {
+            last_touch_x[0] = (int16_t)x;
+            last_touch_y[0] = (int16_t)y;
+        }
     }
     return 0;
 }

@@ -39,6 +39,9 @@ static const uint8_t ansi_pal[256] = {
 182, 219, 219, 219, 255, 255
 };
 
+int16_t last_touch_x[3];
+int16_t last_touch_y[3];
+
 void display_reset_sprites();
 void display_reset_tfb();
 void display_reset_bg();

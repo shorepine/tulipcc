@@ -64,7 +64,7 @@
 #include "mpthreadport.h"
 #include "display.h"
 #include "alles.h"
-
+#include "touchscreen.h"
 #if MICROPY_BLUETOOTH_NIMBLE
 #include "extmod/modbluetooth.h"
 #endif
@@ -74,23 +74,26 @@
 #define DISPLAY_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 5)
 #define USB_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)
 #define ALLES_TASK_PRIORITY (ESP_TASK_PRIO_MIN+2)
+#define TOUCHSCREEN_TASK_PRIORITY (ESP_TASK_PRIO_MIN)
 
-//#define MP_TASK_COREID (1)
+//#define MP_TASK_COREID (1) // forced to 1 downstream
 #define DISPLAY_TASK_COREID (0)
 #define USB_TASK_COREID (1)
 #define ALLES_TASK_COREID (1)
+#define TOUCHSCREEN_TASK_COREID  (0)
 
 #define MP_TASK_STACK_SIZE      (16 * 1024)
 #define DISP_TASK_STACK_SIZE    (8 * 1024) 
 #define USB_TASK_STACK_SIZE    (4 * 1024) 
 #define ALLES_TASK_STACK_SIZE    (4 * 1024) 
+#define TOUCHSCREEN_TASK_STACK_SIZE (2 * 1024)
 
-
-#define MAX_TASKS 16
+#define MAX_TASKS 17
 
 TaskHandle_t display_main_task_handle;
 TaskHandle_t usb_main_task_handle;
 TaskHandle_t alles_main_task_handle;
+TaskHandle_t touch_main_task_handle;
 TaskHandle_t idle_task_0 = NULL;
 TaskHandle_t idle_task_1 = NULL;
 
@@ -147,7 +150,7 @@ float compute_cpu_usage(uint8_t debug) {
     volatile UBaseType_t uxArraySize, x, i;
     const char* const tasks[] = {
          "render_task0", "render_task1", "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "mp_task", "disp_task", 
-         "usb_task", "alles_task", "main", "fill_audio_buff", "wifi", "idle0", "idle1", 0 
+         "usb_task", "alles_task", "main", "fill_audio_buff", "wifi", "idle0", "idle1", "touch_task", 0 
     }; 
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
@@ -355,6 +358,10 @@ void boardctrl_startup(void) {
     }
 }
 
+extern void ft5x06_init();
+extern void ft5x06_test_task();
+extern void setup_midi_in();
+
 void app_main(void) {
     // Hook for a board to run code at start up.
     // This defaults to initialising NVS.
@@ -366,11 +373,18 @@ void app_main(void) {
     idle_task_0 = xTaskGetIdleTaskHandleForCPU(0);
     idle_task_1 = xTaskGetIdleTaskHandleForCPU(1);
 
+        printf("Starting MIDI\n");
+    setup_midi_in();
+
     printf("Starting USB keyboard host on core %d\n", USB_TASK_COREID);
     xTaskCreatePinnedToCore(usb_keyboard_start, "usb_task", (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &usb_main_task_handle, USB_TASK_COREID);
 
     printf("Starting display on core %d\n", DISPLAY_TASK_COREID);
     xTaskCreatePinnedToCore(esp32s3_display_run, "disp_task", (DISP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_main_task_handle, DISPLAY_TASK_COREID);
+
+    printf("Init touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
+    ft5x06_init();
+    xTaskCreatePinnedToCore(ft5x06_test_task, "touch_task", (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touch_main_task_handle, TOUCHSCREEN_TASK_COREID);
 
     printf("Starting Alles on core %d (dual core)\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(alles_start, "alles_task", (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_main_task_handle, ALLES_TASK_COREID);
@@ -379,6 +393,7 @@ void app_main(void) {
     // Force MP core to 1
     xTaskCreatePinnedToCore(mp_task, "mp_task", (MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, MP_TASK_PRIORITY, &mp_main_task_handle, 1);
     
+
 }
 
 void nlr_jump_fail(void *val) {

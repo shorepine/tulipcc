@@ -230,6 +230,12 @@ void display_reset_sprites() {
 }
 
 
+void display_reset_touch() {
+    for(uint8_t i=0;i<3;i++) {
+        last_touch_x[i] = -1;
+        last_touch_y[i] = -1;
+    }
+}
 
 
 void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data) {
@@ -654,11 +660,15 @@ void display_init(void) {
     display_reset_bg();
     display_reset_tfb();
     display_reset_sprites();
-    
+    display_reset_touch();
+
     py_callback = 0;
     vsync_count = 1;
     reported_fps = 1;
     reported_gpu_usage = 0;
+
+   
+
 
 }
 
