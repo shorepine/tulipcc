@@ -18,6 +18,7 @@ ports/macos/dist
 *.obj
 *.elf
 *.pyc
+*.P
 
 # Linker output
 *.ilk

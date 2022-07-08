@@ -361,12 +361,26 @@ MIDI:
 
 Tulip's firmware / desktop application is based on Micropython. We use their folder structure and "ports" for `esp32` and `unix` (for Tulip Desktop.) To compile your own firmware / desktop app, start by cloning this repository. 
 
+
+For both versions on a Mac host, start by installing homebrew:
+
+```
+# install homebrew first, skip this if you already have it...
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Then restart your terminal
+```
+
+
 Desktop version (macOS 10.5 (Catalina) and higher, Apple Silicon or x86_64):
 
 ```
-# Make sure xcode is installed first, and you've run it at least once!
 cd ports/macos
+brew install pkg-config libsoundio
 make
+# For local dev, copy the needed frameworks into your system. 
+# (For packaged apps, this is not needed)
+sudo cp -a SDL2.framework /Library/Frameworks
+
 ./tulip.{arm64,x86_64}
 
 ./package.sh # makes .app bundle, not necessary if you're just using it locally
@@ -374,22 +388,16 @@ make
 
 ESP32S3:
 
-First run setup:
-
 ```
-# install homebrew first, skip this if you already have it...
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# then restart your terminal... 
-
-# and install esp-idf's requirements
+# install esp-idf's requirements
 brew install cmake ninja dfu-util
 
 # and install our version of the ESP-IDF
 cd esp-idf
 ./install.sh esp32s3
 source ./export.sh
-pip3 install littlefs-python # needed to flash the filesystem
+
+pip3 install Cython littlefs-python # needed to flash the filesystem
 cd ../ports/esp32s3
 # Connect your esp32s3 board over USB (from the UART connector)
 ls /dev/cu* # see what port it is on
