@@ -30,7 +30,7 @@ ports/macos/dist
 
 # Libraries
 *.lib
-*.a
+#*.a
 *.la
 *.lo
 
