@@ -65,14 +65,14 @@ void esp_display_set_clock(uint8_t mhz) ;
 
 
 //... We keep the rest as we have to drive them low while i have it plugged in, but i'm wroking on that...
-#define PIN_NUM_DATA8          5 // B2
-#define PIN_NUM_DATA9          5 // B1
-#define PIN_NUM_DATA10         5 // B0
-#define PIN_NUM_DATA11         5 // G2
-#define PIN_NUM_DATA12         5 // G1
-#define PIN_NUM_DATA13         5 // G0
-#define PIN_NUM_DATA14         5 // R1
-#define PIN_NUM_DATA15         5 // R0
+#define PIN_NUM_DATA8          13 // B2
+#define PIN_NUM_DATA9          13 // B1
+#define PIN_NUM_DATA10         13 // B0
+#define PIN_NUM_DATA11         13 // G2
+#define PIN_NUM_DATA12         13 // G1
+#define PIN_NUM_DATA13         13 // G0
+#define PIN_NUM_DATA14         13 // R1
+#define PIN_NUM_DATA15         13 // R0
 
 
 #define PIN_NUM_DISP_EN        -1

@@ -25,6 +25,7 @@
  */
 
 #include "py/mpconfig.h"
+
 #if MICROPY_FLOAT_IMPL != MICROPY_FLOAT_IMPL_NONE
 
 #include <assert.h>
@@ -259,19 +260,37 @@ int mp_format_float(FPTYPE f, char *buf, size_t buf_size, char fmt, int prec, ch
         }
     } else {
         // Build positive exponent
-        for (e = 0, e1 = FPDECEXP; e1; e1 >>= 1, pos_pow++, neg_pow++) {
-            if (*pos_pow <= f) {
-                e += e1;
-                f *= *neg_pow;
+
+        // First block is only for numbers that could be integers exactly-represented in float32.
+        if (f < FPCONST(1e10)) {
+            // In this case, we *won't* normalize f down to lie in 1 <= f < 10 because the
+            // repeated scaling by 0.1 cumulates errors in the representation, meaning numbers
+            // that start as integers become non-integers.  Instead, we find the scale by
+            // increasing a reference value through repeated multiplications by 10.  This
+            // whole number in the range 1e0..1e10 will be exactly represented.
+            FPTYPE cumulated_power = FPCONST(1.0);
+            for (e = 0, e1 = FPDECEXP; e1; e1 >>= 1, pos_pow++) {
+                if ((cumulated_power * *pos_pow) <= f) {
+                    e += e1;
+                    cumulated_power *= *pos_pow;
+                }
+            }
+            // f is NOT normalized to be 1 <= f < 10; the mantissa printing is modified
+            // to handle this.
+        } else {
+            // Calculate the exponent and normalize f to lie in the range 1 <= f < 10.
+            for (e = 0, e1 = FPDECEXP; e1; e1 >>= 1, pos_pow++, neg_pow++) {
+                if (*pos_pow <= f) {
+                    e += e1;
+                    f *= *neg_pow;
+                }
+            }
+            // It can be that f was right on the edge of an entry in pos_pow needs to be reduced
+            if ((int)f >= 10) {
+                e += 1;
+                f *= FPCONST(0.1);
             }
         }
-
-        // It can be that f was right on the edge of an entry in pos_pow needs to be reduced
-        if ((int)f >= 10) {
-            e += 1;
-            f *= FPCONST(0.1);
-        }
-
         // If the user specified fixed format (fmt == 'f') and e makes the
         // number too big to fit into the available buffer, then we'll
         // switch to the 'e' format.
@@ -316,9 +335,15 @@ int mp_format_float(FPTYPE f, char *buf, size_t buf_size, char fmt, int prec, ch
         prec = 0;
     }
 
-    // We now have num.f as a floating point number between >= 1 and < 10
-    // (or equal to zero), and e contains the absolute value of the power of
-    // 10 exponent. and (dec + 1) == the number of dgits before the decimal.
+    // In the typical case, we now have num.f as a floating point number
+    // between >= 1 and < 10 (or equal to zero), and e contains the absolute
+    // value of the power of 10 exponent. and (dec + 1) == the number of dgits
+    // before the decimal.
+    //
+    // For numbers in the range 1e1 to 1e10 (which includes all whole-values
+    // that can be exactly represented in float32s), we do NOT normalize f
+    // to avoid the small departures from whole numbers the scaling would
+    // incur.
 
     // For e, prec is # digits after the decimal
     // For f, prec is # digits after the decimal
@@ -336,8 +361,58 @@ int mp_format_float(FPTYPE f, char *buf, size_t buf_size, char fmt, int prec, ch
         num_digits = prec;
     }
 
-    // Print the digits of the mantissa
-    for (int i = 0; i < num_digits; ++i, --dec) {
+    int num_digits_left = num_digits;
+    if (f >= FPCONST(10.0)) {
+        // Print any leading digits to bring f down to < 10.
+        // As above, we avoid modifying f to avoid distorting whole numbers.
+        // Instead, we construct a comparison value that is always a whole
+        // number (because it does not involve multiplying by any non-whole
+        // numbers) and subtract that as we print each digit.
+        for (int digit_index = e; digit_index > 0; --digit_index) {
+            // Construct the power-of-10 "unit" for this digit by multiplying
+            // up powers of 10 (so it remains a whole number as long as
+            // possible).  Because we start with the highest-value digit,
+            // and because dividing by 10 would spoil our guarantee of
+            // wholeness, we build it up from scratch every digit.
+            FPTYPE unit = FPCONST(1.0);
+            // Re-use the idiom from finding e to make unit = 10^digit_index.
+            const FPTYPE *pos_pow_2 = g_pos_pow;
+            for (int ee = digit_index, e2 = FPDECEXP; e2; e2 >>= 1, pos_pow_2++) {
+                if (ee >= e2) {
+                    ee -= e2;
+                    unit *= *pos_pow_2;
+                }
+            }
+            // Step through the 10 possible values of this digit until we
+            // find the one before going beyond f.
+            int d;
+            FPTYPE cumulated_units = FPCONST(0.0);
+            for (d = 0; d < 10; ++d) {
+                if (f < cumulated_units + unit) {
+                    break;
+                }
+                cumulated_units += unit;
+            }
+            *s++ = '0' + d;
+            f -= cumulated_units;
+            if (dec == 0 && prec > 0) {
+                *s++ = '.';
+            }
+            --dec;
+            --num_digits_left;
+            // Special case the last digit.
+            if (num_digits_left == 0) {
+                // We're going to fall through to the rounding code which expects
+                // f to be a residual in the range 1 <= f < 10, and will apply
+                // rounding if it's >= 5.  So now we need to construct that residual.
+                f *= (FPCONST(10.) / unit);
+                break;
+            }
+        }
+    }
+    // At this point, f is 0 or 1 <= f < 10.
+    // Print the remaining digits of the mantissa
+    for (int i = 0; i < num_digits_left; ++i, --dec) {
         int32_t d = (int32_t)f;
         if (d < 0) {
             *s++ = '0';

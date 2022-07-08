@@ -57,6 +57,7 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/tulip/keyscan.c
     ${MICROPY_DIR}/extmod/tulip/help.c
     ${MICROPY_DIR}/extmod/tulip/alles.c
+    ${MICROPY_DIR}/extmod/tulip/midi.c
     ${MICROPY_DIR}/extmod/tulip/sounds.c
     ${MICROPY_DIR}/extmod/tulip/amy/dsps_biquad_f32_ae32.S
     ${MICROPY_DIR}/extmod/tulip/amy/algorithms.c
@@ -71,6 +72,7 @@ set(MICROPY_SOURCE_PORT
     ${PROJECT_DIR}/usb_keyboard.c
     ${PROJECT_DIR}/uart.c
     ${PROJECT_DIR}/usb.c
+    ${PROJECT_DIR}/touchscreen.c
     ${PROJECT_DIR}/usb_serial_jtag.c
     ${PROJECT_DIR}/gccollect.c
     ${PROJECT_DIR}/mphalport.c

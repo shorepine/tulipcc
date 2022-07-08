@@ -53,66 +53,40 @@ STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ticks_ms_obj, 0, 0, tulip_ticks_ms);
 
 
-// tulip.bg_pixel(x,y, r,g,b)
 // tulip.bg_pixel(x,y, pal_idx)
 // (r,g,b) = tulip.bg_pixel(x,y)
 STATIC mp_obj_t tulip_bg_pixel(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
     uint16_t y = mp_obj_get_int(args[1]);
-    uint8_t r,g,b;
-    if(n_args == 5) { // r,g,b
-        r = mp_obj_get_int(args[2]);
-        g = mp_obj_get_int(args[3]);
-        b = mp_obj_get_int(args[4]);
+    if(n_args == 3) { // set
         // Set the pixel
-        display_set_bg_pixel(x,y,r,g,b);
+        uint8_t pal_idx = mp_obj_get_int(args[2]);
+        display_set_bg_pixel_pal(x,y,pal_idx);
         return mp_const_none; 
-    } else  if(n_args == 3) { // pallete index
-        unpack_pal_idx(mp_obj_get_int(args[2]), &r, &g, &b);
-        // Set the pixel
-        display_set_bg_pixel(x,y,r,g,b);
-        return mp_const_none; 
-    } else {
-        // return a tuple of (r,g,b) for x,y
-        uint8_t r = 0;
-        uint8_t g = 0;
-        uint8_t b = 0;
-        mp_obj_t tuple[3];
-        display_get_bg_pixel(x,y, &r,&g,&b); 
-        tuple[0] = mp_obj_new_int(r); 
-        tuple[1] = mp_obj_new_int(g);
-        tuple[2] = mp_obj_new_int(b);
-        return mp_obj_new_tuple(3, tuple);
+    } else { // get the pixel
+        return mp_obj_new_int( display_get_bg_pixel_pal(x,y)); 
     }
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_pixel_obj, 2, 5, tulip_bg_pixel);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_pixel_obj, 2, 3, tulip_bg_pixel);
 
-// tulip.bg_clear(r,g,b)
 // tulip.bg_clear(pal_idx)
 // tulip.bg_clear() # uses default
 STATIC mp_obj_t tulip_bg_clear(size_t n_args, const mp_obj_t *args) {
-    uint8_t r, g, b;
+    uint8_t pal_idx = bg_pal_color;
     if(n_args == 1) {
-        unpack_pal_idx(mp_obj_get_int(args[0]), &r, &g, &b);
-    } else if(n_args == 3) {
-        r = mp_obj_get_int(args[0]);
-        g = mp_obj_get_int(args[1]);
-        b = mp_obj_get_int(args[2]);
-    } else {
-        // Default to the default bg
-        unpack_ansi_idx(bg_pal_color, &r, &g, &b);
+        pal_idx = mp_obj_get_int(args[0]);
     }
     // Set the rect with pixel color
     for(uint16_t y0=0;y0<V_RES+OFFSCREEN_Y_PX;y0++) {
         for(uint16_t x0=0;x0<H_RES+OFFSCREEN_X_PX;x0++) {
-            display_set_bg_pixel(x0, y0, r, g, b);
+            display_set_bg_pixel_pal(x0, y0, pal_idx);
         }
     }
     return mp_const_none; 
 }
 
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear_obj, 0, 3, tulip_bg_clear);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear_obj, 0, 1, tulip_bg_clear);
 
 // tulip.bg_bitmap(x, y, w, h, bitmap)  --> sets or gets bitmap to fb ram
 STATIC mp_obj_t tulip_bg_bitmap(size_t n_args, const mp_obj_t *args) {
@@ -493,6 +467,22 @@ STATIC mp_obj_t tulip_keys(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_keys_obj, 0, 0, tulip_keys);
 
+
+extern int16_t last_touch_x[3];
+extern int16_t last_touch_y[3];
+STATIC mp_obj_t tulip_touch(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t tuple[6];
+    for(uint8_t i=0;i<3;i++) {
+        tuple[i*2] = mp_obj_new_int(last_touch_x[i]);
+        tuple[i*2+1] = mp_obj_new_int(last_touch_y[i]);
+    }
+    return mp_obj_new_tuple(6, tuple);
+
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_obj, 0, 0, tulip_touch);
+
+
 STATIC mp_obj_t tulip_key_wait(size_t n_args, const mp_obj_t *args) {
     int16_t ch = mp_hal_stdin_rx_chr();
     return mp_obj_new_int(ch);
@@ -706,6 +696,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_alles), MP_ROM_PTR(&tulip_alles_obj) },
     { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&tulip_brightness_obj) },
     { MP_ROM_QSTR(MP_QSTR_keys), MP_ROM_PTR(&tulip_keys_obj) },
+    { MP_ROM_QSTR(MP_QSTR_touch), MP_ROM_PTR(&tulip_touch_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_wait), MP_ROM_PTR(&tulip_key_wait_obj) },
     { MP_ROM_QSTR(MP_QSTR_key), MP_ROM_PTR(&tulip_key_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
@@ -719,6 +710,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_char), MP_ROM_PTR(&tulip_char_obj) },
     { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
+
 
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
