@@ -1,6 +1,12 @@
 #include "display.h"
 
 
+// Defaults for runtime display params
+uint16_t H_RES = DEFAULT_H_RES;
+uint16_t V_RES = DEFAULT_V_RES;
+uint16_t OFFSCREEN_X_PX = DEFAULT_OFFSCREEN_X_PX;
+uint16_t OFFSCREEN_Y_PX = DEFAULT_OFFSCREEN_Y_PX;
+
 // RRRGGGBB
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *r = px0 & 0xe0;
@@ -95,7 +101,7 @@ int32_t desync = 0;
             uint8_t fg_color = TFBfg[tfb_row*TFB_COLS+tfb_col];
             uint8_t bg_color = TFBbg[tfb_row*TFB_COLS+tfb_col];
 
-            // If you're looking at this code just know the unrolled versions were 1.5x faster than loops
+            // If you're looking at this code just know the unrolled versions were 1.5x faster than loops on esp32s3
             // I'm sure there's more to do but this is the best we could get it for now
             uint8_t * bptr = b + (bounce_row_px*H_RES + tfb_col*FONT_WIDTH);
             if(bg_color == ALPHA) {
@@ -628,9 +634,32 @@ void display_set_clock(uint8_t mhz) {
     }
 }
 
+void display_teardown(void) {
+    free_caps(bg);
+    free_caps(sprite_ram);
+    free_caps(sprite_x_px);
+    free_caps(sprite_y_px);
+    free_caps(sprite_w_px);
+    free_caps(sprite_h_px);
+    free_caps(sprite_vis);
+    free_caps(sprite_mem);
+    free_caps(TFB);
+    free_caps(TFBf);
+    free_caps(TFBfg);
+    free_caps(TFBbg);
+    free_caps(x_offsets);
+    free_caps(y_offsets);
+    free_caps(x_speeds);
+    free_caps(y_speeds);
+    free_caps(bg_lines);
+}
+
 
 void display_init(void) {
- 
+    TFB_ROWS = (V_RES/FONT_HEIGHT);
+    TFB_COLS = (H_RES/FONT_WIDTH);
+    BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
+
     // Create the background FB
     bg = (uint8_t*)calloc_caps(64, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 

@@ -75,6 +75,7 @@ void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
  bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
  bool display_frame_done_generic();
 
+void display_teardown(void);
 
 extern const unsigned char font_8x12_r[256][12];
 
@@ -84,9 +85,18 @@ extern const unsigned char font_8x12_r[256][12];
 // We assume we can store 16 unique 32x32 sprite tiles, you can swap these out from RAM
 #define SPRITE_RAM_BYTES (32*32*2*16) // 32KB
 
-//These are from MCUxpresso for the HOTMCU 10.1
-#define H_RES              1024
-#define V_RES              600
+#define DEFAULT_H_RES 1024
+#define DEFAULT_V_RES 600 
+#define DEFAULT_OFFSCREEN_X_PX 256
+#define DEFAULT_OFFSCREEN_Y_PX 150
+
+uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX;
+
+// Use this to set workable ... no, use a py func...
+//#define H_RES              800//1024
+//#define V_RES              480//600
+// and also the porchces..
+
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -95,8 +105,8 @@ extern const unsigned char font_8x12_r[256][12];
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 
 
-#define OFFSCREEN_Y_PX 150
-#define OFFSCREEN_X_PX 256
+//#define OFFSCREEN_Y_PX 150
+//#define OFFSCREEN_X_PX 256
 
 #ifdef RGB332
 #define BYTES_PER_PIXEL 1
@@ -106,10 +116,10 @@ extern const unsigned char font_8x12_r[256][12];
 
 #define FONT_HEIGHT 12
 #define FONT_WIDTH 8
-#define TFB_ROWS (V_RES/FONT_HEIGHT)
-#define TFB_COLS (H_RES/FONT_WIDTH)
-#define BOUNCE_BUFFER_SIZE_PX (H_RES*FONT_HEIGHT) 
-#define BOUNCE_BUFFER_SIZE_BYTES (BOUNCE_BUFFER_SIZE_PX)
+//#define TFB_ROWS (V_RES/FONT_HEIGHT)
+//#define TFB_COLS (H_RES/FONT_WIDTH)
+//#define BOUNCE_BUFFER_SIZE_PX (H_RES*FONT_HEIGHT) 
+//#define BOUNCE_BUFFER_SIZE_BYTES (BOUNCE_BUFFER_SIZE_PX)
 
 #define FLASH_FRAMES 12
 #define ALPHA0 0x55
