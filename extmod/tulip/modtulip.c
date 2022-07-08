@@ -12,7 +12,7 @@
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #include "alles.h"
-
+#include "tasks.h"
 // Graphics
 
 // tulip.display_clock(18)
@@ -419,6 +419,12 @@ STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
     display_reset_sprites();
     py_callback = 0;
     display_reset_tfb();
+#ifdef ESP_PLATFORM
+    esp32s3_display_timings(DEFAULT_H_RES, DEFAULT_V_RES, DEFAULT_OFFSCREEN_X_PX, DEFAULT_OFFSCREEN_Y_PX, DEFAULT_HSYNC_BACK_PORCH, \
+                    DEFAULT_HSYNC_FRONT_PORCH, DEFAULT_HSYNC_PULSE_WIDTH, DEFAULT_VSYNC_BACK_PORCH, DEFAULT_VSYNC_FRONT_PORCH, DEFAULT_VSYNC_PULSE_WIDTH);
+#else
+    unix_display_timings(DEFAULT_H_RES, DEFAULT_V_RES, DEFAULT_OFFSCREEN_X_PX, DEFAULT_OFFSCREEN_Y_PX);
+#endif
     return mp_const_none;
 }
 
@@ -665,6 +671,43 @@ STATIC mp_obj_t tulip_str(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_str_obj, 4, 4, tulip_str);
 
 
+STATIC mp_obj_t tulip_timing(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 0) {
+#ifdef ESP_PLATFORM
+        mp_obj_t tuple[10];
+        tuple[0] = mp_obj_new_int(H_RES);
+        tuple[1] = mp_obj_new_int(V_RES);
+        tuple[2] = mp_obj_new_int(OFFSCREEN_X_PX);
+        tuple[3] = mp_obj_new_int(OFFSCREEN_Y_PX);
+        tuple[4] = mp_obj_new_int(HSYNC_BACK_PORCH);
+        tuple[5] = mp_obj_new_int(HSYNC_FRONT_PORCH);
+        tuple[6] = mp_obj_new_int(HSYNC_PULSE_WIDTH);
+        tuple[7] = mp_obj_new_int(VSYNC_BACK_PORCH);
+        tuple[8] = mp_obj_new_int(VSYNC_FRONT_PORCH);
+        tuple[9] = mp_obj_new_int(VSYNC_PULSE_WIDTH);
+        return mp_obj_new_tuple(10, tuple);
+#else
+        mp_obj_t tuple[4];
+        tuple[0] = mp_obj_new_int(H_RES);
+        tuple[1] = mp_obj_new_int(V_RES);
+        tuple[2] = mp_obj_new_int(OFFSCREEN_X_PX);
+        tuple[3] = mp_obj_new_int(OFFSCREEN_Y_PX);
+        return mp_obj_new_tuple(4, tuple);
+#endif        
+    }
+
+#ifdef ESP_PLATFORM
+        esp32s3_display_timings(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), \
+                    mp_obj_get_int(args[5]), mp_obj_get_int(args[6]), mp_obj_get_int(args[7]), mp_obj_get_int(args[8]), mp_obj_get_int(args[9]));
+#else
+        unix_display_timings(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]));
+#endif
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_timing_obj, 0, 10, tulip_timing);
+
+
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
@@ -710,8 +753,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_char), MP_ROM_PTR(&tulip_char_obj) },
     { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
-
-
+    { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
 #endif

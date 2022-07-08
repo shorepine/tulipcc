@@ -5,6 +5,14 @@ esp_lcd_panel_handle_t panel_handle;
 esp_lcd_rgb_panel_config_t panel_config;
 
 
+// Defaults for esp32 display params
+uint16_t HSYNC_BACK_PORCH=DEFAULT_HSYNC_BACK_PORCH;
+uint16_t HSYNC_FRONT_PORCH=DEFAULT_HSYNC_FRONT_PORCH;
+uint16_t HSYNC_PULSE_WIDTH=DEFAULT_HSYNC_PULSE_WIDTH;
+uint16_t VSYNC_BACK_PORCH=DEFAULT_VSYNC_BACK_PORCH;
+uint16_t VSYNC_FRONT_PORCH=DEFAULT_VSYNC_FRONT_PORCH;
+uint16_t VSYNC_PULSE_WIDTH=DEFAULT_VSYNC_PULSE_WIDTH;
+
 
 // This gets called at vsync / frame done
 static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
@@ -16,6 +24,24 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lc
 }
 
 
+void esp32s3_display_timings(uint16_t t0,uint16_t t1,uint16_t t2,uint16_t t3,uint16_t t4,uint16_t t5,uint16_t t6,uint16_t t7,uint16_t t8,uint16_t t9) {
+    display_stop();
+    fprintf(stderr, "Stopping display task\n");
+    vTaskDelete(display_main_task_handle);
+    display_teardown();
+    H_RES = t0;
+    V_RES = t1; 
+    OFFSCREEN_X_PX = t2; 
+    OFFSCREEN_Y_PX = t3; 
+    HSYNC_BACK_PORCH = t4; 
+    HSYNC_FRONT_PORCH = t5; 
+    HSYNC_PULSE_WIDTH = t6; 
+    VSYNC_BACK_PORCH = t7; 
+    VSYNC_FRONT_PORCH = t8; 
+    VSYNC_PULSE_WIDTH = t9; 
+    fprintf(stderr, "Restarting display task\n");
+    xTaskCreatePinnedToCore(esp32s3_display_run, "disp_task", (DISP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_main_task_handle, DISPLAY_TASK_COREID);
+}
 
 void display_stop() {
     esp_lcd_panel_del(panel_handle);
@@ -33,7 +59,6 @@ void display_start() {
 void esp_display_set_clock(uint8_t mhz) {  
         display_stop();
         panel_config.timings.pclk_hz = mhz*1000*1000;
-        //vTaskDelay(pdMS_TO_TICKS(1000));
         display_start();
 }
 

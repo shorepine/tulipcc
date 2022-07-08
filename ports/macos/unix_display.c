@@ -11,6 +11,10 @@ uint8_t *pixels_332;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
 
+void unix_display_timings(uin16_t t0, uint16_t t1, uint16_t t2, uint16_t t3) {
+    // TODO
+}
+
 void init_window(uint16_t w, uint16_t h) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
