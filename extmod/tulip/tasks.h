@@ -1,3 +1,4 @@
+#ifdef ESP_PLATFORM
 #include "esp_task.h"
 #ifndef TASKS_H
 #define TASKS_H
@@ -30,4 +31,5 @@ TaskHandle_t idle_task_1;
 
 // For CPU usage
 unsigned long last_task_counters[MAX_TASKS];
+#endif
 #endif

@@ -11,7 +11,7 @@ uint8_t *pixels_332;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
 
-void unix_display_timings(uin16_t t0, uint16_t t1, uint16_t t2, uint16_t t3) {
+void unix_display_timings(uint16_t t0, uint16_t t1, uint16_t t2, uint16_t t3) {
     // TODO
 }
 
