@@ -419,12 +419,6 @@ STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
     display_reset_sprites();
     py_callback = 0;
     display_reset_tfb();
-#ifdef ESP_PLATFORM
-    esp32s3_display_timings(DEFAULT_H_RES, DEFAULT_V_RES, DEFAULT_OFFSCREEN_X_PX, DEFAULT_OFFSCREEN_Y_PX, DEFAULT_HSYNC_BACK_PORCH, \
-                    DEFAULT_HSYNC_FRONT_PORCH, DEFAULT_HSYNC_PULSE_WIDTH, DEFAULT_VSYNC_BACK_PORCH, DEFAULT_VSYNC_FRONT_PORCH, DEFAULT_VSYNC_PULSE_WIDTH);
-#else
-    unix_display_timings(DEFAULT_H_RES, DEFAULT_V_RES, DEFAULT_OFFSCREEN_X_PX, DEFAULT_OFFSCREEN_Y_PX);
-#endif
     return mp_const_none;
 }
 
