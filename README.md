@@ -375,15 +375,13 @@ Desktop version (macOS 10.5 (Catalina) and higher, Apple Silicon or x86_64):
 
 ```
 cd ports/macos
-brew install pkg-config libsoundio
-make
-# For local dev, copy the needed frameworks into your system. 
-# (For packaged apps, this is not needed)
-sudo cp -a SDL2.framework /Library/Frameworks
+brew install pkg-config
+# For local development (just your native arch, and shows stderr in terminal)
+./build.sh
+./dev/Tulip\ CC.app/Contents/MacOS/tulip
 
-./tulip.{arm64,x86_64}
-
-./package.sh # makes .app bundle, not necessary if you're just using it locally
+# Or package for distribution (creates a universal binary)
+./package.sh # makes .app bundle in dist, not necessary if you're just using it locally
 ```
 
 ESP32S3:
