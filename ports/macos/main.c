@@ -158,7 +158,6 @@ int main(int argc, char **argv) {
     // Get the resources folder loc
     // Display has to run on main thread on macos
     unix_display_init();
-
     // So thread out alles and then micropython tasks
     pthread_t alles_thread_id;
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
@@ -271,7 +270,7 @@ void * main_(void *vargs) {
             p = p1 + 1;
         }
     }
-    
+
     // run boot-up scripts
     pyexec_frozen_module("_boot.py");
     pyexec_file_if_exists("boot.py");
