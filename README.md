@@ -359,11 +359,11 @@ MIDI:
 
 ## How to compile and help develop Tulip
 
-Tulip's firmware / desktop application is based on Micropython. We use their folder structure and "ports" for `esp32` and `unix` (for Tulip Desktop.) To compile your own firmware / desktop app, start by cloning this repository. 
+Tulip's firmware / desktop application is based on Micropython. We use their folder structure and "ports" for `esp32s3` and `macos` (for Tulip Desktop.) 
 
+To compile your own firmware / desktop app, start by cloning this repository. 
 
-For both versions on a Mac host, start by installing homebrew:
-
+To build both versions on a macOS host, start by installing homebrew
 ```
 # install homebrew first, skip this if you already have it...
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -371,11 +371,12 @@ For both versions on a Mac host, start by installing homebrew:
 ```
 
 
-Desktop version (macOS 10.5 (Catalina) and higher, Apple Silicon or x86_64):
+To build Tulip Desktop (macOS 10.5 (Catalina) and higher, Apple Silicon or x86_64):
 
 ```
 cd ports/macos
 brew install pkg-config
+
 # For local development (just your native arch, and shows stderr in terminal)
 ./build.sh
 ./dev/Tulip\ CC.app/Contents/MacOS/tulip
@@ -384,7 +385,7 @@ brew install pkg-config
 ./package.sh # makes .app bundle in dist, not necessary if you're just using it locally
 ```
 
-ESP32S3:
+To build and flash the ESP32S3 Tulip CC:
 
 ```
 # install esp-idf's requirements
@@ -396,10 +397,10 @@ cd esp-idf
 source ./export.sh
 
 pip3 install Cython littlefs-python # needed to flash the filesystem
+
 cd ../ports/esp32s3
-# Connect your esp32s3 board over USB (from the UART connector)
-ls /dev/cu* # see what port it is on
-idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND flash
+# Connect your esp32s3 board over USB (to the UART connector on the dev board, not the USB connector)
+idf.py -D MICROPY_BOARD=TULIP4 flash
 python tulip_fs_create.py # first run only, will erase the Tulip filesystem
 ```
 
@@ -408,17 +409,19 @@ Then to build / debug going forward:
 ```
 cd ports/esp32s3
 export ../../esp-idf/export.sh # do this once per terminal window
-idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND flash
-idf.py -D MICROPY_BOARD=TULIP4 -p PORT_YOU_FOUND monitor # shows debug
+idf.py -D MICROPY_BOARD=TULIP4 flash
+idf.py -D MICROPY_BOARD=TULIP4 monitor # shows stderr, use control-] to quit
+
+# If you make changes to the underlying python libraries on micropython, you want to fully clean the build 
+idf.py -D MICROPY_BOARD=TULIP4 fullclean
+idf.py -D MICROPY_BOARD=TULIP4 flash
 ```
-
-
 
 
 Some development guidelines if you'd like to help contribute!
 
  * Be nice and helpful!
- * We're currently a hard fork of ESP-IDF and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. We can merge new features of libraries manually. No git submodules. Yes, there are many downsides to this approach but keeping the hardware & software in sync is much easier this way, especially with fast moving projects like ESP-IDF.
+ * We're currently a hard fork of ESP-IDF and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. No git submodules. 
  * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change.
 
  
