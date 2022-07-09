@@ -133,7 +133,7 @@ void unix_display_init() {
     display_init();
     init_window(H_RES,V_RES); 
     frame_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    fprintf(stderr, "display init done\n");
+    fprintf(stderr, "display init done!!!\n");
 
 
 }
