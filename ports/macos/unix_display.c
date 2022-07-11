@@ -12,6 +12,7 @@ uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
 int64_t frame_ticks = 0;
 uint8_t unix_display_restart_flag = 0;
+uint8_t unix_display_quit_flag = 0;
 
 void unix_set_fps_from_parameters() {
     // use the screen res and clock to discern a new FPS, based on real life measurements on tulip cc
@@ -150,10 +151,11 @@ void end_draw() {
 
     int64_t ticks_per_frame_ms = (int64_t) (1000.0 / reported_fps);
     //If frame finished early according to our FPS clock, pause a bit until it's time
-    if( get_ticks_ms()-frame_ticks < ticks_per_frame_ms ) {
-        SDL_Delay( ticks_per_frame_ms - (get_ticks_ms()-frame_ticks) );
+    while(get_ticks_ms() - frame_ticks < ticks_per_frame_ms) {
+        SDL_Delay(1);
+        int in_ch = check_key();
+        if(in_ch < 0) unix_display_quit_flag = 1;
     }
-
 }
 
 int unix_display_draw() {
@@ -179,8 +181,13 @@ int unix_display_draw() {
             SDL_Quit();
             display_teardown();
             return -2;
-        } 
-
+        }  else if(unix_display_quit_flag) {
+            unix_display_quit_flag = 0;
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+            display_teardown();
+            return -1;
+        }
         return 1; // fine
     }
     return -1; // quit
