@@ -11,7 +11,7 @@ uint8_t *pixels_332;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
 int64_t frame_ticks = 0;
-
+uint8_t unix_display_restart_flag = 0;
 
 void unix_set_fps_from_parameters() {
     // use the screen res and clock to discern a new FPS, based on real life measurements on tulip cc
@@ -49,17 +49,12 @@ void unix_display_set_clock(uint8_t mhz) {
 
 
 void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3) {
-    // TODO, but
     fprintf(stderr, "Stopping display task\n");
-    // send a flag to the main loop in main.c to stop
-    // unix_display_run_flag = 0
-    display_teardown();
     H_RES = t0;
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
     OFFSCREEN_Y_PX = t3; 
-    fprintf(stderr, "Restarting display task\n");
-    // Runs display_init() again too 
+    unix_display_restart_flag = 1;
 }
 
 
@@ -176,6 +171,16 @@ int unix_display_draw() {
         }
         end_draw();
         display_frame_done_generic();
+
+        // Are we restarting the display for a mode change? 
+        if(unix_display_restart_flag) {
+            unix_display_restart_flag = 0;
+            SDL_DestroyWindow(window);
+            SDL_Quit();
+            display_teardown();
+            return -2;
+        } 
+
         return 1; // fine
     }
     return -1; // quit

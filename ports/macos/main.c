@@ -156,22 +156,32 @@ char * get_tulip_home_path() {
 
 int main(int argc, char **argv) {
     // Get the resources folder loc
+    // So thread out alles and then micropython tasks
+
     // Display has to run on main thread on macos
     unix_display_init();
-    // So thread out alles and then micropython tasks
+
     pthread_t alles_thread_id;
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
 
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
-
     int c = 0;
+
+
+display_jump: 
     while(c>=0) {
         // unix_display_draw returns -1 if the window was quit
         c = unix_display_draw();
     }
+    if(c==-2) {
+        // signal to restart display after a timing change
+        unix_display_init();
+        c=0;
+        goto display_jump;
+    }
 
-    // join the threads?
+    // We're done. join the threads?
 }
 
 

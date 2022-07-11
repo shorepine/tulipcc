@@ -108,7 +108,8 @@ tulip.key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
 # Run in a loop forever. Catch ctrl-c 
 try:
     while d["run"]:
-        pass
+        # In an infinite loop , it's better to sleep than to say "pass", give the Tulip some time to breathe
+        time.sleep_ms(100)
 except KeyboardInterrupt:
     d["run"] = 0
 
