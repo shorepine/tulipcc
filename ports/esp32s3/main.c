@@ -346,6 +346,7 @@ void app_main(void) {
     idle_task_0 = xTaskGetIdleTaskHandleForCPU(0);
     idle_task_1 = xTaskGetIdleTaskHandleForCPU(1);
 
+    
     printf("Starting MIDI\n");
     setup_midi_in();
 
