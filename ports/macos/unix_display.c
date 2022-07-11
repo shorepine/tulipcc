@@ -11,9 +11,24 @@ uint8_t *pixels_332;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
 
-void unix_display_timings(uint16_t t0, uint16_t t1, uint16_t t2, uint16_t t3) {
-    // TODO
+void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3) {
+    // TODO, but
+    display_stop();
+    fprintf(stderr, "Stopping display task\n");
+    // send a flag to the main loop in main.c to stop
+    // unix_display_run_flag = 0
+    display_teardown();
+
+    H_RES = t0;
+    V_RES = t1; 
+    OFFSCREEN_X_PX = t2; 
+    OFFSCREEN_Y_PX = t3; 
+    fprintf(stderr, "Restarting display task\n");
+    // send a flag to the main loop in main.c to start again
+    // re-init hte unix display
+    // unix_display_run_flag = 1
 }
+
 
 void init_window(uint16_t w, uint16_t h) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {

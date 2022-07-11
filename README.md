@@ -32,7 +32,7 @@ Tulip CC rev 4 supports:
 - Built in code and text editor
 - USB keyboard support
 - Capactive touch support (mouse on Tulip Desktop)
-- MIDI input 
+- MIDI input and output 
 - 500mA power usage including display, at medium display brightness, can last for hours on USB battery pack 
 
 Tulip's "OS" is heavily based on the great work of [Micropython](https://micropython.org), which a lot of additions to support the Python REPL on screen and integrated into the display and sound system. 
@@ -78,7 +78,9 @@ imgur_url = tulip.screenshot()
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 ```
 
-### Inputs
+### Input
+
+Tulip supports USB keyboard input and touch input. (On Tulip Desktop, mouse clicks act as touch points.) 
 
 ```python
 # Returns the current held keyboard scan codes, up to 6 and the modifier mask (ctrl, shift etc)
@@ -119,11 +121,11 @@ tulip.set_time()
 ### Graphics system
 
 The Tulip GPU consists of 3 subsystems:
- * A bitmap graphics plane (1280x750), with scrolling x- and y- speed registers
+ * A bitmap graphics plane (default size: 1280x750), with scrolling x- and y- speed registers
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top, with 256 colors
  * A sprite layer on top
 
-The Tulip GPU runs at a fixed FPS depending on the display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. You can set a python callback for the frame done interrupt, for use in games or animations. 
+The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. You can set a python callback for the frame done interrupt, for use in games or animations. 
 
 ```python
 # returns current GPU usage computed on the last 100 frames, as a percentage of max
@@ -135,12 +137,20 @@ fps = tulip.fps()
 # resets all 3 GPU systems back to their starting state, clears all BG and sprite ram and clears the TFB.
 tulip.gpu_reset()
 
-# Get or set the display clock in MHz. Current default is 18.
-# Try: 10 (11.5 FPS), 12 (15.5 FPS), 14 (18.6 FPS), 18 (23.2 FPS), 22 (30.9 FPS), 28 (46.4 FPS)
+# Get or set the display clock in MHz. Current default is 22.
+# For full screen resolution (1024x600), you can compute FPS from display clock MHz like:
+# 10 (11.5 FPS), 12 (15.5 FPS), 14 (18.6 FPS), 18 (23.2 FPS), 22 (30.9 FPS), 28 (46.4 FPS)
+# For lower resolutions, (see timing()), clock will have increased FPS.
 # Higher clocks mean smoother animations, but less time for the CPU to prepare things to draw
-# For heavy text things, use a lower clock like 12, for games with sprites, use 18 or 22. 
 clock = tulip.display_clock() 
 tulip.display_clock(mhz)
+
+# You can also change the timing and resolution on the fly. 
+# This is helpful for getting higher FPS with lower resolution (less pixels)
+(h_res, v_res, h_offscreen_px, v_offscreen_px, 
+  hsync_back_porch, hsync_front_porch, hsync_pulse_width, 
+  vsync_back_porch, vsync_front_porch, vsync_pulse_width) = tulip.timing() # returns current
+tulip.timing(1024, 600, 256, 150, 139, 140, 20, 20, 12, 20) # sets, will erase all display RAM
 
 # if the display clock gets in a strange state, you can restart it by just
 tulip.display_restart() # does not clear any data like gpu_reset()
@@ -164,7 +174,7 @@ tulip.brightness(5)
 
 ### Graphics background plane
 
-The background plane (BG) is 1280 x 750, with the visible portion 1024x600. Use the extra for hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
+The default background plane (BG) is 1280 x 750, with the visible portion 1024x600. (You can change this with `tulip.timing()`.) Use the extra for hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
 
 ```python
 # Set or get a pixel on the BG
@@ -305,8 +315,9 @@ alles.send(osc=2, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
 
 To build your own Tulip CC:
 - Get an [ESP32-S3 NXR8 dev board.](https://www.adafruit.com/product/5336). There's lots of variants, but you need an S3 for sure, and the "NXR8" means 8MB of SPI RAM and XMB of non-volatile flash storage (they have 8 and 32). If you get this exact one (the ESP32-S3-WROOM-1 N8R8) you can follow my pin numberings / get my breakout board. 
-- Get a RGB dot clock display. [I am currently using this one](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). You want to make sure it takes "RGB" input, usually with 8 pins each for R, G and B (and then HSYNC, VSYNC, DE). If it is not 1024x600 you'll want to make changes in `display.h`. 
+- Get a RGB dot clock display. [I am currently using this one](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). You want to make sure it takes "RGB" input, usually with 8 pins each for R, G and B (and then HSYNC, VSYNC, DE). If it is not 1024x600 you'll want to make changes in `esp32s3_display.h`. 
 - For sound, get an I2S decoder. [You can get ones that have line outs like this](https://www.adafruit.com/product/3678) or ones that [have speaker amps built in like this](https://www.adafruit.com/product/3006). I use the speaker amp model and hook it into a little 3W speaker.
+- MIDI is optional but useful if you are making music. The [SparkFun MIDI shield](https://www.sparkfun.com/products/12898) is recommended, or you can [build it yourself](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/). 
 - We are working on a breakout board that plugs into the back of a ESP32S3 dev board and has a USB female A jack for the keyboard, pins for [a display breakout]( https://www.adafruit.com/product/4905) and pins for the i2s amp breakout. That makes things a lot simpler. 
 
 A note, if you're using the Adafruit display adapter, these pin numbers for the display (D#) are to match the numbers on the **side of the board the FPC connector is on**, the side that reads FPC-40P 0.5MM. 
@@ -330,14 +341,15 @@ In the meantime, here's the pin connections you'll want to make:
 | R7            | 15           | L8                           | D29            |
 | R6            | 7            | L7                           | D30            |
 | R5            | 6            | L6                           | D31            |
-| SDA           | 18           | L11                          | D4             |
-| SCL           | 17           | L10                          | D3             |
-| CTP INT       | 5            | L5                           | D1             |
 | 3v3           | 3v3          | L1                           | D37            |
 | GND           | GND          | L22                          | D38            |
 | 5V            | 5V           | L21                          | D39            |
+| 5V            | 5V           | L21                          | D40            |
+| Touch SDA     | 18           | L11                          | D4             |
+| Touch SCL     | 17           | L10                          | D3             |
+| Touch CTP INT | 5            | L5                           | D1             |
 | USB 5V        | 5V           | L21                          | USB 5V         |
-| USB D+        | 20           | R19                          | USB D+         |       
+| USB D+        | 20           | R19                          | USB D+         |
 | USB D-        | 19           | R20                          | USB D-         |       
 | USB GND       | GND          | L22                          | USB GND        |
 | Audio LRC     | 4            | L4                           | Audio LRC      |
@@ -345,31 +357,28 @@ In the meantime, here's the pin connections you'll want to make:
 | Audio DIN     | 2            | R5                           | Audio DIN      |
 | Audio GND     | GND          | L22                          | Audio GND      |
 | Audio VIN     | 5V           | L21                          | Audio VIN      |
+| MIDI in       | 47           | R17                          | MIDI TX        |
+| MIDI out      | 11           | L17                          | MIDI RX        |
+| MIDI 5V       | 5V           | L21                          | MIDI 5v        |
+| MIDI GND      | GND          | L22                          | MIDI GND       |
 
-Optionally ground the remaining color pins and etc of the display
-
-MIDI:
-1 midi out 11 / L17
-2 midi in 47 / R17
-3 3v3
-4 5v
-5 GND
-
+Also, you may want to ground all remaining display pins.
 
 
 ## How to compile and help develop Tulip
 
-Tulip's firmware / desktop application is based on Micropython. We use their folder structure and "ports" for `esp32s3` and `macos` (for Tulip Desktop.) 
+Tulip's firmware is based on Micropython. You'll find our platform independent code in `extmod/tulip` and our platform specific code in `ports/esp32s3` and `ports/macos`. 
+
+Tulip Desktop should build and run on macOS (10.15 and later, Apple Silicon & Intel supported.) It also should be fine on Linux but I haven't yet tried. Windows is possible but probably needs some help. Tulip CC on ESP32S3 should build on all platforms, although I've only tested macOS so far. Please let me know if you have any trouble!
 
 To compile your own firmware / desktop app, start by cloning this repository. 
 
-To build both versions on a macOS host, start by installing homebrew
+On macOS, start by installing homebrew
 ```
 # install homebrew first, skip this if you already have it...
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 # Then restart your terminal
 ```
-
 
 To build Tulip Desktop (macOS 10.5 (Catalina) and higher, Apple Silicon or x86_64):
 
@@ -391,7 +400,7 @@ To build and flash the ESP32S3 Tulip CC:
 # install esp-idf's requirements
 brew install cmake ninja dfu-util
 
-# and install our version of the ESP-IDF
+# and install our version of the ESP-IDF that comes with our repository
 cd esp-idf
 ./install.sh esp32s3
 source ./export.sh
@@ -401,7 +410,8 @@ pip3 install Cython littlefs-python # needed to flash the filesystem
 cd ../ports/esp32s3
 # Connect your esp32s3 board over USB (to the UART connector on the dev board, not the USB connector)
 idf.py -D MICROPY_BOARD=TULIP4 flash
-python tulip_fs_create.py # first run only, will erase the Tulip filesystem
+
+python tulip_fs_create.py # first run only, or after each change to tulip_home, will erase the Tulip filesystem
 ```
 
 Then to build / debug going forward:

@@ -8,16 +8,16 @@
 #define ALLES_TASK_PRIORITY (ESP_TASK_PRIO_MIN+2)
 #define TOUCHSCREEN_TASK_PRIORITY (ESP_TASK_PRIO_MIN)
 
-//#define MP_TASK_COREID (1) // forced to 1 downstream
 #define DISPLAY_TASK_COREID (0)
 #define USB_TASK_COREID (1)
 #define ALLES_TASK_COREID (1)
 #define TOUCHSCREEN_TASK_COREID  (0)
+#define TULIP_MP_TASK_COREID (1)
 
 #define MP_TASK_STACK_SIZE      (16 * 1024)
 #define DISP_TASK_STACK_SIZE    (8 * 1024) 
 #define USB_TASK_STACK_SIZE    (2 * 1024) 
-#define ALLES_TASK_STACK_SIZE    (2 * 1024) 
+#define ALLES_TASK_STACK_SIZE    (2 * 1024) // most of alles is set in the renderer tasks 
 #define TOUCHSCREEN_TASK_STACK_SIZE (2 * 1024)
 
 #define MAX_TASKS 17

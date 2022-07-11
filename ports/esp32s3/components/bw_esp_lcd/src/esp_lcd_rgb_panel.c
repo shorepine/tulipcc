@@ -149,7 +149,7 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
         int no_pixels=rgb_panel_config->timings.h_res * rgb_panel_config->timings.v_res;
         bounce_bytes=rgb_panel_config->bounce_buffer_size_px * bpp;
         if (no_pixels % (rgb_panel_config->bounce_buffer_size_px * bpp)) {
-            printf("remainder of %d %% %d left\n", no_pixels, (rgb_panel_config->bounce_buffer_size_px * bpp));
+            fprintf(stderr, "remainder of %d %% %d left\n", no_pixels, (rgb_panel_config->bounce_buffer_size_px * bpp));
             //Search for some value that does work. Yes, this is a stupidly simple algo, but it only
             //needs to run on startup.
             for (int a=rgb_panel_config->bounce_buffer_size_px; a>0; a--) {
@@ -174,6 +174,7 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
     rgb_panel->num_dma_nodes = num_dma_nodes;
     rgb_panel->panel_id = -1;
     rgb_panel->bounce_buffer_size_bytes = bounce_bytes;
+    fprintf(stderr, "%d dma nodes bb is %d\n", num_dma_nodes, bounce_bytes);
     // register to platform
     int panel_id = lcd_com_register_device(LCD_COM_DEVICE_TYPE_RGB, rgb_panel);
     ESP_GOTO_ON_FALSE(panel_id >= 0, ESP_ERR_NOT_FOUND, err, TAG, "no free rgb panel slot");
@@ -366,10 +367,12 @@ static esp_err_t rgb_panel_init(esp_lcd_panel_t *panel)
     lcd_ll_set_data_width(rgb_panel->hal.dev, rgb_panel->data_width);
     lcd_ll_set_phase_cycles(rgb_panel->hal.dev, 0, 0, 1); // enable data phase only
     // number of data cycles is controlled by DMA buffer size
-    lcd_ll_enable_output_always_on(rgb_panel->hal.dev, true);
+    lcd_ll_enable_output_always_on(rgb_panel->hal.dev, false);
     // configure HSYNC, VSYNC, DE signal idle state level
     lcd_ll_set_idle_level(rgb_panel->hal.dev, !rgb_panel->timings.flags.hsync_idle_low,
                           !rgb_panel->timings.flags.vsync_idle_low, rgb_panel->timings.flags.de_idle_high);
+
+
     // configure blank region timing
     lcd_ll_set_blank_cycles(rgb_panel->hal.dev, 1, 1); // RGB panel always has a front and back blank (porch region)
     lcd_ll_set_horizontal_timing(rgb_panel->hal.dev, rgb_panel->timings.hsync_pulse_width,
@@ -379,7 +382,9 @@ static esp_err_t rgb_panel_init(esp_lcd_panel_t *panel)
                                rgb_panel->timings.vsync_back_porch, rgb_panel->timings.v_res,
                                rgb_panel->timings.vsync_front_porch);
     // output hsync even in porch region
-    lcd_ll_enable_output_hsync_in_porch_region(rgb_panel->hal.dev, true);
+    lcd_ll_enable_output_hsync_in_porch_region(rgb_panel->hal.dev, false); //true);
+
+
     // generate the hsync at the very begining of line
     lcd_ll_set_hsync_position(rgb_panel->hal.dev, 0);
     // restart flush by hardware has some limitation, instead, the driver will restart the flush in the VSYNC end interrupt by software
@@ -744,9 +749,7 @@ static void lcd_rgb_panel_restart_transmission(esp_rgb_panel_t *panel)
                 lcd_rgb_panel_fill_bounce_buffer(panel, panel->bounce_buffer[0]);
             }
         } else {
-            //Catch de-synced framebuffer and reset if needed.
-            // TODO, not sure how but we should do something other than mis-align the top of the screen when this happens
-            
+            //Catch de-synced framebuffer and reset if needed.            
             if (panel->bounce_pos_px > (panel->bounce_buffer_size_bytes*2)) { 
                 // restart display (don't worry, it's quick)
                 display_stop();

@@ -23,7 +23,7 @@ STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
         display_set_clock(mhz);
         return mp_const_none;
     }
-    return mp_obj_new_int(display_mhz);
+    return mp_obj_new_int(PIXEL_CLOCK_MHZ);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_clock_obj, 0, 1, tulip_display_clock);
 
