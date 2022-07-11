@@ -1,7 +1,7 @@
 # build.sh
 # Just builds locally
 
-make 
+make DEBUG=1
 mkdir -p dev
 rm -rf dev/Tulip\ CC.app
 mkdir -p dev/Tulip\ CC.app/Contents/{MacOS,Resources,Frameworks,libs}

@@ -149,7 +149,7 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
         int no_pixels=rgb_panel_config->timings.h_res * rgb_panel_config->timings.v_res;
         bounce_bytes=rgb_panel_config->bounce_buffer_size_px * bpp;
         if (no_pixels % (rgb_panel_config->bounce_buffer_size_px * bpp)) {
-            fprintf(stderr, "remainder of %d %% %d left\n", no_pixels, (rgb_panel_config->bounce_buffer_size_px * bpp));
+            //fprintf(stderr, "remainder of %d %% %d left\n", no_pixels, (rgb_panel_config->bounce_buffer_size_px * bpp));
             //Search for some value that does work. Yes, this is a stupidly simple algo, but it only
             //needs to run on startup.
             for (int a=rgb_panel_config->bounce_buffer_size_px; a>0; a--) {
@@ -174,7 +174,7 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
     rgb_panel->num_dma_nodes = num_dma_nodes;
     rgb_panel->panel_id = -1;
     rgb_panel->bounce_buffer_size_bytes = bounce_bytes;
-    fprintf(stderr, "%d dma nodes bb is %d\n", num_dma_nodes, bounce_bytes);
+    //fprintf(stderr, "%d dma nodes bb is %d\n", num_dma_nodes, bounce_bytes);
     // register to platform
     int panel_id = lcd_com_register_device(LCD_COM_DEVICE_TYPE_RGB, rgb_panel);
     ESP_GOTO_ON_FALSE(panel_id >= 0, ESP_ERR_NOT_FOUND, err, TAG, "no free rgb panel slot");

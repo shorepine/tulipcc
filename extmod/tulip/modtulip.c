@@ -12,11 +12,16 @@
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #include "alles.h"
+#ifdef ESP_PLATFORM
 #include "tasks.h"
+#endif
+
+
 // Graphics
 
 // tulip.display_clock(18)
 // clock = tulip.display_clock()
+extern float unix_display_set_clock();
 STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
     if(n_args==1) {
         uint16_t mhz = mp_obj_get_int(args[0]);
@@ -28,7 +33,7 @@ STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_clock_obj, 0, 1, tulip_display_clock);
 
 STATIC mp_obj_t tulip_display_restart(size_t n_args, const mp_obj_t *args) {
-    display_set_clock(display_mhz);
+    display_set_clock(PIXEL_CLOCK_MHZ);
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_restart_obj, 0, 0, tulip_display_restart);

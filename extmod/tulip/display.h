@@ -89,8 +89,10 @@ extern const unsigned char font_8x12_r[256][12];
 #define DEFAULT_V_RES 600 
 #define DEFAULT_OFFSCREEN_X_PX 256
 #define DEFAULT_OFFSCREEN_Y_PX 150
+#define DEFAULT_PIXEL_CLOCK_MHZ 22
 
-uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX;
+
+uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, PIXEL_CLOCK_MHZ;
 
 // Use this to set workable ... no, use a py func...
 //#define H_RES              800//1024
@@ -145,7 +147,6 @@ uint8_t task_screenshot;
 uint8_t task_start;
 uint8_t task_stop;
 int32_t vsync_count;
-uint8_t display_mhz;
 uint8_t brightness;
 float reported_fps;
 float reported_gpu_usage;

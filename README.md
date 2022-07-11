@@ -2,21 +2,23 @@
 
 Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
 
-Tulip is a self contained portable creative computer, with a display and keyboard and sound. It boots directly into a Python prompt. You can dive right into making something without distractions or complications. It is not a shell on top of another operating system. Every byte of RAM and every cycle of the CPU is dedicated to your code, the display and music. 
+Tulip is a self contained portable creative computer, with a display and keyboard and sound. It boots instantaneously into a Python prompt. Dive right into making something without distractions or complications. 
 
-You can use Tulip to make music, write code, make art, games, or just write. It does not have a web browser, although it can connect to a network in a slow fashion.
+Tulip is not a shell on top of another operating system. Every byte of RAM and every cycle of the CPU is dedicated to your code, the display and music. 
 
-Tulip is available both as a hardware DIY project (Tulip CC) and a macOS app (Tulip Desktop.) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, give the computer version a go to learn about it.
+You can use Tulip to make music, code, make art, games, or just write. It cannot run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
 
-You can build your own Tulip CC for about $25 plus the cost of a display and USB keyboard. 
+Tulip is available both as a hardware DIY project (Tulip CC) and a macOS app (Tulip Desktop.) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, give the desktop version a go to learn about it.
+
+You can build your own Tulip CC for about $25 plus the cost of a display ($50) and USB keyboard.
 
 The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack for many hours.
 
 The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. 
 
-Tulip's sound system is a full featured 64-voice synthesizer, we use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
+Tulip's sound system is a full featured 64-voice synthesizer. We use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
 
-I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests for the base system.
+I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
 Tulip CC rev 4 supports:
 - 8.5MB of RAM
@@ -34,8 +36,6 @@ Tulip CC rev 4 supports:
 - Capactive touch support (mouse on Tulip Desktop)
 - MIDI input and output 
 - 500mA power usage including display, at medium display brightness, can last for hours on USB battery pack 
-
-Tulip's "OS" is heavily based on the great work of [Micropython](https://micropython.org), which a lot of additions to support the Python REPL on screen and integrated into the display and sound system. 
 
 
 ## Usage 
@@ -125,7 +125,34 @@ The Tulip GPU consists of 3 subsystems:
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top, with 256 colors
  * A sprite layer on top
 
-The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. You can set a python callback for the frame done interrupt, for use in games or animations. 
+The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. 
+Some example display clocks and resolutions:
+
+| H_RES   | V_RES   | Clock  |  FPS   |
+| ------- | ------- | ------ | ------ |
+| 1024    | 600     | 10     | 14.98  |
+| 1024    | 600     | 14     | 18.55  |
+| 1024    | 600     | 18     | 23.19  |
+| 1024    | 600     | 22     | 30.91  |
+| 1024    | 600     | 28     | 46.37  |
+| 1024    | 300     | 10     | 21.47  |
+| 1024    | 300     | 14     | 34.36  |
+| 1024    | 300     | 18     | 42.95  |
+| 1024    | 300     | 22     | 57.26  |
+| 1024    | 300     | 28     | 85.90  |
+| 512     | 600     | 10     | 19.91  |
+| 512     | 600     | 14     | 30.26  |
+| 512     | 600     | 18     | 37.82  |
+| 512     | 600     | 22     | 50.43  |
+| 512     | 600     | 28     | 75.65  |
+| 512     | 300     | 10     | 35.03  |
+| 512     | 300     | 14     | 56.05  |
+| 512     | 300     | 18     | 70.07  |
+| 512     | 300     | 22     | 93.45  |
+| 512     | 300     | 28     | 140.13 |
+
+
+You can set a python callback for the frame done interrupt, for use in games or animations. 
 
 ```python
 # returns current GPU usage computed on the last 100 frames, as a percentage of max
@@ -138,9 +165,6 @@ fps = tulip.fps()
 tulip.gpu_reset()
 
 # Get or set the display clock in MHz. Current default is 22.
-# For full screen resolution (1024x600), you can compute FPS from display clock MHz like:
-# 10 (11.5 FPS), 12 (15.5 FPS), 14 (18.6 FPS), 18 (23.2 FPS), 22 (30.9 FPS), 28 (46.4 FPS)
-# For lower resolutions, (see timing()), clock will have increased FPS.
 # Higher clocks mean smoother animations, but less time for the CPU to prepare things to draw
 clock = tulip.display_clock() 
 tulip.display_clock(mhz)
@@ -207,12 +231,13 @@ tulip.bg_clear() # uses default
 
 # Drawing primitives. These all write to the BG. 
 # If you want to use them for sprites, you can use bg_bitmap after drawing offscreen.
-tulip.line(x0,y0, x1,y1)
+# set filled to 1 if you want the shape filled, 0 or omit otherwise
+tulip.line(x0,y0, x1,y1, pal_idx)
 tulip.bezier(x0,y0, x1,y1, x2,y2, pal_idx)
-tulip.circle(x,y,r, pal_idx, [filled=1])
-tulip.roundrect(x0,y0, w,h, r, pal_idx, [filled=1])
-tulip.rect(x0,y0, w,h, pal_idx, [filled=1])
-tulip.triangle(x0,y0, x1,y1, x2,y2, pal_idx, [filled=1])
+tulip.circle(x,y,r, pal_idx, filled)
+tulip.roundrect(x0,y0, w,h, r, pal_idx, filled)
+tulip.rect(x0,y0, w,h, pal_idx, filled)
+tulip.triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
 tulip.char(c, x, y, pal_idx) # proportional font, returns # of x pixels to advance for the next char
 tulip.str(string, x, y, pal_idx) # same as char, but with a string
 
@@ -430,11 +455,9 @@ idf.py -D MICROPY_BOARD=TULIP4 flash
 
 Some development guidelines if you'd like to help contribute!
 
- * Be nice and helpful!
- * We're currently a hard fork of ESP-IDF and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. No git submodules. 
- * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change.
-
- 
+e * Be nice and helpful and don't be afraid to ask questions! We're all doing this for fun and to learn. 
+ * We're currently a hard fork of ESP-IDF, Alles and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. No git submodules. 
+ * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change. 
 
 
 

@@ -6,6 +6,7 @@ uint16_t H_RES = DEFAULT_H_RES;
 uint16_t V_RES = DEFAULT_V_RES;
 uint16_t OFFSCREEN_X_PX = DEFAULT_OFFSCREEN_X_PX;
 uint16_t OFFSCREEN_Y_PX = DEFAULT_OFFSCREEN_Y_PX;
+uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
 
 // RRRGGGBB
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
@@ -624,12 +625,13 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, u
 }
 
 
-
+extern float unix_display_set_clock();
 void display_set_clock(uint8_t mhz) {  
     if(mhz > 1 && mhz < 50) {
-        display_mhz = mhz;
 #ifdef ESP_PLATFORM
         esp_display_set_clock(mhz);
+#else
+        unix_display_set_clock(mhz);
 #endif
     }
 }

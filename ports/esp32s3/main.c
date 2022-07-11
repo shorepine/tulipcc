@@ -346,7 +346,7 @@ void app_main(void) {
     idle_task_0 = xTaskGetIdleTaskHandleForCPU(0);
     idle_task_1 = xTaskGetIdleTaskHandleForCPU(1);
 
-        printf("Starting MIDI\n");
+    printf("Starting MIDI\n");
     setup_midi_in();
 
     printf("Starting USB keyboard host on core %d\n", USB_TASK_COREID);
