@@ -207,10 +207,8 @@ static inline void lcd_ll_set_horizontal_timing(lcd_cam_dev_t *dev, uint32_t hsw
     dev->lcd_ctrl1.lcd_ha_width = active_width - 1;
     dev->lcd_ctrl1.lcd_ht_width = hsw + hbp + active_width + hfp - 1;
 }
-#include <stdio.h>
 static inline void lcd_ll_set_vertical_timing(lcd_cam_dev_t *dev, uint32_t vsw, uint32_t vbp, uint32_t active_height, uint32_t vfp)
 {
-    fprintf(stderr, "Setting width %d vb_front to %d va_height %d vt_height %d\n", vsw-1,  vbp + vsw - 1,  active_height - 1,  vsw + vbp + active_height + vfp - 1);
     dev->lcd_ctrl2.lcd_vsync_width = vsw - 1;
     HAL_FORCE_MODIFY_U32_REG_FIELD(dev->lcd_ctrl1, lcd_vb_front, vbp + vsw - 1);
     dev->lcd_ctrl.lcd_va_height = active_height - 1;

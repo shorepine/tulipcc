@@ -18,7 +18,7 @@
 #define DISP_TASK_STACK_SIZE    (8 * 1024) 
 #define USB_TASK_STACK_SIZE    (2 * 1024) 
 #define ALLES_TASK_STACK_SIZE    (2 * 1024) // most of alles is set in the renderer tasks 
-#define TOUCHSCREEN_TASK_STACK_SIZE (2 * 1024)
+#define TOUCHSCREEN_TASK_STACK_SIZE (4 * 1024)
 
 #define MAX_TASKS 17
 
