@@ -21,7 +21,7 @@
 #include "tasks.h"
 
 void esp32s3_display_run();
-void esp32s3_display_timings(uint16_t t0,uint16_t t1,uint16_t t2,uint16_t t3,uint16_t t4,uint16_t t5,uint16_t t6,uint16_t t7,uint16_t t8,uint16_t t9);
+void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9);
 void display_brightness(uint8_t amount);
 void esp_display_set_clock(uint8_t mhz) ;
 
@@ -46,13 +46,12 @@ void display_start();
 #define DEFAULT_VSYNC_BACK_PORCH 20
 #define DEFAULT_VSYNC_FRONT_PORCH 12
 #define DEFAULT_VSYNC_PULSE_WIDTH 20
+#define DEFAULT_PIXEL_CLOCK_MHZ 22
 
 
-uint16_t HSYNC_BACK_PORCH, HSYNC_FRONT_PORCH, HSYNC_PULSE_WIDTH, VSYNC_BACK_PORCH, VSYNC_FRONT_PORCH, VSYNC_PULSE_WIDTH;
+uint32_t HSYNC_BACK_PORCH, HSYNC_FRONT_PORCH, HSYNC_PULSE_WIDTH, VSYNC_BACK_PORCH, VSYNC_FRONT_PORCH, VSYNC_PULSE_WIDTH, PIXEL_CLOCK_MHZ;
 
 
-
-#define PIXEL_CLOCK_MHZ     22
 #define BK_LIGHT_ON_LEVEL  1
 #define DEFAULT_BRIGHTNESS 5 // 9 is max, 1 is min
 #define BK_LIGHT_OFF_LEVEL !BK_LIGHT_ON_LEVEL

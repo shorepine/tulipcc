@@ -356,15 +356,13 @@ void app_main(void) {
     xTaskCreatePinnedToCore(esp32s3_display_run, "disp_task", (DISP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_main_task_handle, DISPLAY_TASK_COREID);
 
     printf("Init touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
-    //ft5x06_init();
     xTaskCreatePinnedToCore(ft5x06_test_task, "touch_task", (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touch_main_task_handle, TOUCHSCREEN_TASK_COREID);
 
     printf("Starting Alles on core %d (dual core)\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(alles_start, "alles_task", (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_main_task_handle, ALLES_TASK_COREID);
 
-    printf("Starting MicroPython on core %d\n", MP_TASK_COREID);
-    // Force MP core to 1
-    xTaskCreatePinnedToCore(mp_task, "mp_task", (MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, MP_TASK_PRIORITY, &mp_main_task_handle, 1);
+    printf("Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
+    xTaskCreatePinnedToCore(mp_task, "mp_task", (MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, MP_TASK_PRIORITY, &mp_main_task_handle, TULIP_MP_TASK_COREID);
     
 
 }

@@ -6,12 +6,13 @@ esp_lcd_rgb_panel_config_t panel_config;
 
 
 // Defaults for esp32 display params
-uint16_t HSYNC_BACK_PORCH=DEFAULT_HSYNC_BACK_PORCH;
-uint16_t HSYNC_FRONT_PORCH=DEFAULT_HSYNC_FRONT_PORCH;
-uint16_t HSYNC_PULSE_WIDTH=DEFAULT_HSYNC_PULSE_WIDTH;
-uint16_t VSYNC_BACK_PORCH=DEFAULT_VSYNC_BACK_PORCH;
-uint16_t VSYNC_FRONT_PORCH=DEFAULT_VSYNC_FRONT_PORCH;
-uint16_t VSYNC_PULSE_WIDTH=DEFAULT_VSYNC_PULSE_WIDTH;
+uint32_t HSYNC_BACK_PORCH=DEFAULT_HSYNC_BACK_PORCH;
+uint32_t HSYNC_FRONT_PORCH=DEFAULT_HSYNC_FRONT_PORCH;
+uint32_t HSYNC_PULSE_WIDTH=DEFAULT_HSYNC_PULSE_WIDTH;
+uint32_t VSYNC_BACK_PORCH=DEFAULT_VSYNC_BACK_PORCH;
+uint32_t VSYNC_FRONT_PORCH=DEFAULT_VSYNC_FRONT_PORCH;
+uint32_t VSYNC_PULSE_WIDTH=DEFAULT_VSYNC_PULSE_WIDTH;
+uint32_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
 
 
 // This gets called at vsync / frame done
@@ -24,7 +25,7 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lc
 }
 
 
-void esp32s3_display_timings(uint16_t t0,uint16_t t1,uint16_t t2,uint16_t t3,uint16_t t4,uint16_t t5,uint16_t t6,uint16_t t7,uint16_t t8,uint16_t t9) {
+void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9) {
     display_stop();
     fprintf(stderr, "Stopping display task\n");
     vTaskDelete(display_main_task_handle);
@@ -58,7 +59,8 @@ void display_start() {
 
 void esp_display_set_clock(uint8_t mhz) {  
         display_stop();
-        panel_config.timings.pclk_hz = mhz*1000*1000;
+        PIXEL_CLOCK_MHZ = mhz;
+        panel_config.timings.pclk_hz = PIXEL_CLOCK_MHZ*1000*1000;
         display_start();
 }
 
@@ -159,7 +161,6 @@ void esp32s3_display_run(void) {
     panel_config.user_ctx = xDisplayTask;
     panel_config.bounce_buffer_size_px = BOUNCE_BUFFER_SIZE_PX;
 
-    display_mhz = PIXEL_CLOCK_MHZ;
     brightness = DEFAULT_BRIGHTNESS;
 
     // Start the RGB panel
