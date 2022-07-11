@@ -315,10 +315,10 @@ alles.send(osc=2, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
 
 To build your own Tulip CC:
 - Get an [ESP32-S3 NXR8 dev board.](https://www.adafruit.com/product/5336). There's lots of variants, but you need an S3 for sure, and the "NXR8" means 8MB of SPI RAM and XMB of non-volatile flash storage (they have 8 and 32). If you get this exact one (the ESP32-S3-WROOM-1 N8R8) you can follow my pin numberings / get my breakout board. 
-- Get a RGB dot clock display. [I am currently using this one](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). You want to make sure it takes "RGB" input, usually with 8 pins each for R, G and B (and then HSYNC, VSYNC, DE). If it is not 1024x600 you'll want to make changes in `esp32s3_display.h`. 
+- Get a RGB dot clock display. [I am currently using this US$58 one](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). You want to make sure it takes "RGB" input, usually with 8 pins each for R, G and B (and then HSYNC, VSYNC, DE). If it is not 1024x600 you'll want to make changes in `esp32s3_display.h`. 
 - For sound, get an I2S decoder. [You can get ones that have line outs like this](https://www.adafruit.com/product/3678) or ones that [have speaker amps built in like this](https://www.adafruit.com/product/3006). I use the speaker amp model and hook it into a little 3W speaker.
 - MIDI is optional but useful if you are making music. The [SparkFun MIDI shield](https://www.sparkfun.com/products/12898) is recommended, or you can [build it yourself](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/). 
-- We are working on a breakout board that plugs into the back of a ESP32S3 dev board and has a USB female A jack for the keyboard, pins for [a display breakout]( https://www.adafruit.com/product/4905) and pins for the i2s amp breakout. That makes things a lot simpler. 
+- We are working on a [breakout board](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_breakout_v2) that plugs into the back of a ESP32S3 dev board and has a USB female A jack for the keyboard, pins for [a display breakout]( https://www.adafruit.com/product/4905), MIDI in and out, and pins for the i2s amp breakout. That makes things a lot simpler. 
 
 A note, if you're using the Adafruit display adapter, these pin numbers for the display (D#) are to match the numbers on the **side of the board the FPC connector is on**, the side that reads FPC-40P 0.5MM. 
 
