@@ -128,29 +128,18 @@ The Tulip GPU consists of 3 subsystems:
 The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. 
 Some example display clocks and resolutions:
 
-| H_RES   | V_RES   | Clock  |  FPS   |
-| ------- | ------- | ------ | ------ |
-| 1024    | 600     | 10     | 14.98  |
-| 1024    | 600     | 14     | 18.55  |
-| 1024    | 600     | 18     | 23.19  |
-| 1024    | 600     | 22     | 30.91  |
-| 1024    | 600     | 28     | 46.37  |
-| 1024    | 300     | 10     | 21.47  |
-| 1024    | 300     | 14     | 34.36  |
-| 1024    | 300     | 18     | 42.95  |
-| 1024    | 300     | 22     | 57.26  |
-| 1024    | 300     | 28     | 85.90  |
-| 512     | 600     | 10     | 19.91  |
-| 512     | 600     | 14     | 30.26  |
-| 512     | 600     | 18     | 37.82  |
-| 512     | 600     | 22     | 50.43  |
-| 512     | 600     | 28     | 75.65  |
-| 512     | 300     | 10     | 35.03  |
-| 512     | 300     | 14     | 56.05  |
-| 512     | 300     | 18     | 70.07  |
-| 512     | 300     | 22     | 93.45  |
-| 512     | 300     | 28     | 140.13 |
-
+| H_RES   | V_RES   | Clock  |  FPS   | H_RES   | V_RES   | Clock  |  FPS   |
+| ------- | ------- | ------ | ------ | ------- | ------- | ------ | ------ |
+| 1024    | 600     | 10     | 14.98  | 512     | 600     | 10     | 19.91  |
+| 1024    | 600     | 14     | 18.55  | 512     | 600     | 14     | 30.26  |
+| 1024    | 600     | 18     | 23.19  | 512     | 600     | 18     | 37.82  |
+| 1024    | 600     | 22     | 30.91  | 512     | 600     | 22     | 50.43  |
+| 1024    | 600     | 28     | 46.37  | 512     | 600     | 28     | 75.65  |
+| 1024    | 300     | 10     | 21.47  | 512     | 300     | 10     | 35.03  |
+| 1024    | 300     | 14     | 34.36  | 512     | 300     | 14     | 56.05  |
+| 1024    | 300     | 18     | 42.95  | 512     | 300     | 18     | 70.07  |
+| 1024    | 300     | 22     | 57.26  | 512     | 300     | 22     | 93.45  |
+| 1024    | 300     | 28     | 85.90  | 512     | 300     | 28     | 140.13 |
 
 You can set a python callback for the frame done interrupt, for use in games or animations. 
 
@@ -455,7 +444,7 @@ idf.py -D MICROPY_BOARD=TULIP4 flash
 
 Some development guidelines if you'd like to help contribute!
 
-e * Be nice and helpful and don't be afraid to ask questions! We're all doing this for fun and to learn. 
+ * Be nice and helpful and don't be afraid to ask questions! We're all doing this for fun and to learn. 
  * We're currently a hard fork of ESP-IDF, Alles and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. No git submodules. 
  * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change. 
 
