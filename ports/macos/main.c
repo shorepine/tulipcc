@@ -180,7 +180,6 @@ display_jump:
         c=0;
         goto display_jump;
     }
-
     // We're done. join the threads?
 }
 
