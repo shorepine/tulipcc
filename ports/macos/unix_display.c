@@ -11,8 +11,8 @@ uint8_t *pixels_332;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
 int64_t frame_ticks = 0;
-uint8_t unix_display_restart_flag = 0;
-uint8_t unix_display_quit_flag = 0;
+int8_t unix_display_flag = 0;
+SDL_Keymod last_held_mod;
 
 void unix_set_fps_from_parameters() {
     // use the screen res and clock to discern a new FPS, based on real life measurements on tulip cc
@@ -55,7 +55,7 @@ void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3) {
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
     OFFSCREEN_Y_PX = t3; 
-    unix_display_restart_flag = 1;
+    unix_display_flag = -2;
 }
 
 
@@ -87,16 +87,13 @@ void destrow_window() {
     SDL_Quit();    
 }
 
-SDL_Keymod last_held_mod;
-int check_key() {
+void check_key() {
     SDL_Event e;
     while (SDL_PollEvent(&e) != 0) {
-
         if (e.type == SDL_QUIT) {
             fprintf(stderr, "quit detected\n");
-            return -1;
-        }
-        if(e.type == SDL_KEYDOWN) {
+            unix_display_flag = -1;
+        } else if(e.type == SDL_KEYDOWN) {
             last_held_mod = SDL_GetModState();
             SDL_KeyboardEvent key = e.key; 
             if(key.keysym.scancode >= 0x04 && key.keysym.scancode <= 0x94) {
@@ -111,7 +108,6 @@ int check_key() {
             if(!skip && pos < 8) {
                 last_scan[pos] = key.keysym.scancode;
             }
-            return 1;
         }
         if(e.type == SDL_KEYUP) {
             SDL_KeyboardEvent key = e.key; 
@@ -128,7 +124,6 @@ int check_key() {
             last_touch_y[0] = (int16_t)y;
         }
     }
-    return 0;
 }
 
 
@@ -150,48 +145,44 @@ void end_draw() {
     SDL_UpdateWindowSurface(window);
 
     int64_t ticks_per_frame_ms = (int64_t) (1000.0 / reported_fps);
-    //If frame finished early according to our FPS clock, pause a bit until it's time
+
+    //If frame finished early according to our FPS clock, pause a bit (still processing keys) until it's time
     while(get_ticks_ms() - frame_ticks < ticks_per_frame_ms) {
         SDL_Delay(1);
-        int in_ch = check_key();
-        if(in_ch < 0) unix_display_quit_flag = 1;
+        check_key();
     }
 }
 
 int unix_display_draw() {
-    // Start a timer here to count FPS
     frame_ticks = get_ticks_ms();
-    int in_ch = check_key();
-    if(in_ch >= 0) { // if not quit
-        start_draw();
-        uint32_t c = 0;
-        for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
-            display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
-            for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
-                pixels_332[c++] = frame_bb[x];
-            }
+    check_key();
+    start_draw();
+    uint32_t c = 0;
+    for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
+        display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
+        for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
+            pixels_332[c++] = frame_bb[x];
         }
-        end_draw();
-        display_frame_done_generic();
+    }
+    end_draw();
+    display_frame_done_generic();
 
-        // Are we restarting the display for a mode change? 
-        if(unix_display_restart_flag) {
-            unix_display_restart_flag = 0;
-            SDL_DestroyWindow(window);
-            SDL_Quit();
-            display_teardown();
+    // Are we restarting the display for a mode change, or quitting
+    if(unix_display_flag < 0) {
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        display_teardown();
+        if(unix_display_flag==-2) {
+            unix_display_flag = 0;
             return -2;
-        }  else if(unix_display_quit_flag) {
-            unix_display_quit_flag = 0;
-            SDL_DestroyWindow(window);
-            SDL_Quit();
-            display_teardown();
+        } else {
+            unix_display_flag = 0;
             return -1;
         }
-        return 1; // fine
-    }
-    return -1; // quit
+    }    
+    return 1;
 }
+
 void unix_display_init() {
     display_init();
     unix_set_fps_from_parameters();
