@@ -84,8 +84,6 @@
 #define MP_TASK_STACK_LIMIT_MARGIN (1024)
 #endif
 
-extern void usb_keyboard_start();
-
 typedef void (*esp_alloc_failed_hook_t) (size_t size, uint32_t caps, const char * function_name);
 
 void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
@@ -103,28 +101,14 @@ void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
 }
 
 
-/*
-alles_task
-disp_task
-usb_task
-Tmr Svc
-sys_evt
-ipc1
-ipc0
-esp_timer
-fill_audio_buff
-render_task0
-mp_task
-*/
-
-
 float compute_cpu_usage(uint8_t debug) {
     TaskStatus_t *pxTaskStatusArray;
     volatile UBaseType_t uxArraySize, x, i;
     const char* const tasks[] = {
-         "render_task0", "render_task1", "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "mp_task", "disp_task", 
-         "usb_task", "alles_task", "main", "fill_audio_buff", "wifi", "idle0", "idle1", "touch_task", 0 
-    }; 
+         "render_task0", "render_task1", "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "idle0", "idle1",
+         DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
+         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, 0
+    };
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
     uxArraySize = uxTaskGetSystemState( pxTaskStatusArray, uxArraySize, NULL );
@@ -153,14 +137,14 @@ float compute_cpu_usage(uint8_t debug) {
         
         // Have to get these specially as the task manager calls them both "IDLE" and swaps their orderings around
         if(strcmp("idle0", tasks[i])==0) { 
-            vTaskGetInfo(idle_task_0, &xTaskDetails, pdFALSE, eRunning);
+            vTaskGetInfo(idle_0_handle, &xTaskDetails, pdFALSE, eRunning);
             counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
             freeTime = freeTime + xTaskDetails.ulRunTimeCounter - last_task_counters[i];
             last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
             ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
         }
         if(strcmp("idle1", tasks[i])==0) { 
-            vTaskGetInfo(idle_task_1, &xTaskDetails, pdFALSE, eRunning);
+            vTaskGetInfo(idle_1_handle, &xTaskDetails, pdFALSE, eRunning);
             counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
             freeTime = freeTime + xTaskDetails.ulRunTimeCounter - last_task_counters[i];
             last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
@@ -188,7 +172,7 @@ int vprintf_null(const char *format, va_list ap) {
 void mp_task(void *pvParameter) {
     volatile uint32_t sp = (uint32_t)get_sp();
     #if MICROPY_PY_THREAD
-    mp_thread_init(pxTaskGetStackStart(NULL), MP_TASK_STACK_SIZE / sizeof(uintptr_t));
+    mp_thread_init(pxTaskGetStackStart(NULL), TULIP_MP_TASK_STACK_SIZE / sizeof(uintptr_t));
     #endif
     #if CONFIG_USB_ENABLED
     usb_init();
@@ -257,7 +241,7 @@ void mp_task(void *pvParameter) {
 soft_reset:
     // initialise the stack pointer for the main thread
     mp_stack_set_top((void *)sp);
-    mp_stack_set_limit(MP_TASK_STACK_SIZE - MP_TASK_STACK_LIMIT_MARGIN);
+    mp_stack_set_limit(TULIP_MP_TASK_STACK_SIZE - MP_TASK_STACK_LIMIT_MARGIN);
     gc_init(mp_task_heap, mp_task_heap + mp_task_heap_size);
     mp_init();
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
@@ -331,9 +315,9 @@ void boardctrl_startup(void) {
     }
 }
 
-extern void ft5x06_init();
-extern void ft5x06_test_task();
-extern void setup_midi_in();
+extern void run_ft5x06();
+extern void run_midi();
+extern void run_usb();
 
 void app_main(void) {
     // Hook for a board to run code at start up.
@@ -343,28 +327,26 @@ void app_main(void) {
     for(uint8_t i=0;i<MAX_TASKS;i++) last_task_counters[i] = 0;
 
     // Grab the idle tasks
-    idle_task_0 = xTaskGetIdleTaskHandleForCPU(0);
-    idle_task_1 = xTaskGetIdleTaskHandleForCPU(1);
+    idle_0_handle = xTaskGetIdleTaskHandleForCPU(0);
+    idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
-    
-    printf("Starting MIDI\n");
-    setup_midi_in();
+    printf("Starting MIDI on core %d\n", MIDI_TASK_COREID);
+    xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
 
-    printf("Starting USB keyboard host on core %d\n", USB_TASK_COREID);
-    xTaskCreatePinnedToCore(usb_keyboard_start, "usb_task", (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &usb_main_task_handle, USB_TASK_COREID);
+    printf("Starting USB host on core %d\n", USB_TASK_COREID);
+    xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
 
     printf("Starting display on core %d\n", DISPLAY_TASK_COREID);
-    xTaskCreatePinnedToCore(esp32s3_display_run, "disp_task", (DISP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_main_task_handle, DISPLAY_TASK_COREID);
+    xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
 
-    printf("Init touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
-    xTaskCreatePinnedToCore(ft5x06_test_task, "touch_task", (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touch_main_task_handle, TOUCHSCREEN_TASK_COREID);
+    printf("Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
+    xTaskCreatePinnedToCore(run_ft5x06, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
 
-    printf("Starting Alles on core %d (dual core)\n", ALLES_TASK_COREID);
-    xTaskCreatePinnedToCore(alles_start, "alles_task", (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_main_task_handle, ALLES_TASK_COREID);
+    printf("Starting Alles on core %d\n", ALLES_TASK_COREID);
+    xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
 
     printf("Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
-    xTaskCreatePinnedToCore(mp_task, "mp_task", (MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, MP_TASK_PRIORITY, &mp_main_task_handle, TULIP_MP_TASK_COREID);
-    
+    xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
 
 }
 

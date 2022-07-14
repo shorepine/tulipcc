@@ -9,7 +9,7 @@
 // TODO -- refactor this to make this not so reliant, maybe a callback for rendering
 #ifdef ESP_PLATFORM
 extern SemaphoreHandle_t xQueueSemaphore;
-extern TaskHandle_t renderTask[2]; // one per core
+extern TaskHandle_t renderTask[AMY_CORES]; // one per core
 #else
 // Local rendering
 #include <soundio/soundio.h>
@@ -30,7 +30,7 @@ struct mod_event * msynth;
 
 // Two float mixing blocks, one per core of rendering
 float ** fbl;
-float per_osc_fb[2][BLOCK_SIZE];
+float per_osc_fb[AMY_CORES][BLOCK_SIZE];
 
 // block -- what gets sent to the DAC -- -32768...32767 (wave file, int16 LE)
 i2s_sample_type * block;
@@ -323,9 +323,6 @@ int8_t oscs_init() {
 
 
 void show_debug(uint8_t type) { 
-#ifdef ESP_PLATFORM
-    esp_show_debug(type);
-#endif
     if(type>1) {
         struct delta * ptr = global.event_start;
         uint16_t q = global.event_qsize;
@@ -364,8 +361,7 @@ void show_debug(uint8_t type) {
 void oscs_deinit() {
     //for(uint8_t i=0;i<I2S_BUFFERS;i++) free(dbl_block[i]); 
     free(block);
-    free(fbl[0]);
-    free(fbl[1]);
+    for(uint8_t i=0;i<AMY_CORES;i++) free(fbl[i]);
     free(fbl);
     free(synth);
     free(msynth);
@@ -798,12 +794,10 @@ int16_t * fill_audio_buffer_task() {
 
     //gpio_set_level(CPU_MONITOR_1, 1);
     // Tell the rendering threads to start rendering
-    xTaskNotifyGive(renderTask[0]);
-    xTaskNotifyGive(renderTask[1]);
+    for(uint8_t i=0;i<AMY_CORES;i++) xTaskNotifyGive(alles_render_handle);
 
     // And wait for each of them to come back
-    ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
-    ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+    for(uint8_t i=0;i<AMY_CORES;i++) ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
 #else
     render_task(0, OSCS, 0);        
 #endif
@@ -813,7 +807,12 @@ int16_t * fill_audio_buffer_task() {
     //uint8_t nonzero = 0;
     for(int16_t i=0; i < BLOCK_SIZE; ++i) {
         // Mix all the oscillator buffers into one
-        float fsample = volume_scale * (fbl[0][i] + fbl[1][i]) * 32767.0;
+        float fsample;
+        if(AMY_CORES == 2) {
+            fsample = volume_scale * (fbl[0][i] + fbl[1][i]) * 32767.0;
+        } else {
+            fsample = volume_scale * fbl[0][i] * 32767.0;
+        }
     	// One-pole high-pass filter to remove large low-frequency excursions from
 	    // some FM patches. b = [1 -1]; a = [1 -0.995]
     	float new_state = fsample + 0.995 * global.hpf_state;

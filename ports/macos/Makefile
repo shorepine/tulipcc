@@ -260,6 +260,7 @@ SRC_C += \
 	mpbtstackport_usb.c \
 	mpnimbleport.c \
 	unix_display.c \
+	multicast.c \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
 

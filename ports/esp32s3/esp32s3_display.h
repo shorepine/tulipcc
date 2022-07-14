@@ -20,7 +20,7 @@
 #include "driver/ledc.h"
 #include "tasks.h"
 
-void esp32s3_display_run();
+void run_esp32s3_display();
 void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9);
 void display_brightness(uint8_t amount);
 void esp_display_set_clock(uint8_t mhz) ;

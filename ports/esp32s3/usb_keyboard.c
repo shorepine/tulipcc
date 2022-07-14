@@ -288,7 +288,7 @@ void show_config_desc_full(const usb_config_desc_t *config_desc)
   }
 }
 
-void usb_keyboard_start()
+void run_usb()
 {
   usbh_setup(show_config_desc_full);
   while(1) {

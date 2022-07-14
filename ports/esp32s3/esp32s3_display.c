@@ -28,7 +28,7 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lc
 void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9) {
     display_stop();
     fprintf(stderr, "Stopping display task\n");
-    vTaskDelete(display_main_task_handle);
+    vTaskDelete(display_handle);
     display_teardown();
     H_RES = t0;
     V_RES = t1; 
@@ -41,7 +41,7 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
     VSYNC_FRONT_PORCH = t8; 
     VSYNC_PULSE_WIDTH = t9; 
     fprintf(stderr, "Restarting display task\n");
-    xTaskCreatePinnedToCore(esp32s3_display_run, "disp_task", (DISP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_main_task_handle, DISPLAY_TASK_COREID);
+    xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
 }
 
 void display_stop() {
@@ -105,7 +105,7 @@ extern uint32_t bounce_count ;
 extern int32_t desync;
 
 // Task runner for the display, inits and then spins in a loop processing frame done ISRs
-void esp32s3_display_run(void) {
+void run_esp32s3_display(void) {
     // First set up the memory
     display_init();
     

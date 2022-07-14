@@ -11,6 +11,8 @@ uint8_t status;
 // mutex that locks writes to the delta queue
 SemaphoreHandle_t xQueueSemaphore;
 
+#else
+extern int get_first_ip_address(char*);
 #endif
 
 uint8_t board_level = ALLES_BOARD_V2;
@@ -18,49 +20,36 @@ uint8_t status = RUNNING;
 
 char githash[8];
 
-#ifdef ESP_PLATFORM
-// Button event
-extern xQueueHandle gpio_evt_queue;
-
-// Task handles for the renderers, multicast listener and main
-TaskHandle_t renderTask[2]; // one per core
-static TaskHandle_t fillbufferTask = NULL;
-static TaskHandle_t idleTask0 = NULL;
-static TaskHandle_t idleTask1 = NULL;
-
-// Battery status for V2 board. If no v2 board, will stay at 0
-uint8_t battery_mask = 0;
-
-#endif
-
 // AMY synth states
 extern struct state global;
 extern uint32_t event_counter;
 extern uint32_t message_counter;
+extern void mcast_send(char*, uint16_t);
 
-
-// Stuff for Alles the speaker not in here(yet)
 uint8_t debug_on = 0;
-void update_map(uint8_t client, uint8_t ipv4, int64_t time) {}
-void handle_sync(int64_t time, int8_t index) {}
-int16_t client_id = 0;
-uint8_t alive =1;
 char raw_file[1] = "";
-
+char * alles_local_ip;
 
 
 #ifdef ESP_PLATFORM
+
+extern void mcast_listen_task(void *pvParameters);
+
 // Wrap AMY's renderer into 2 FreeRTOS tasks, one per core
 void esp_render_task( void * pvParameters) {
     uint8_t which = *((uint8_t *)pvParameters);
-    uint8_t start = (OSCS/2); 
+    uint8_t start = 0; 
     uint8_t end = OSCS;
-    if(which == 0) { start = 0; end = (OSCS/2); } 
-    printf("I'm renderer #%d on core #%d and i'm handling oscs %d up until %d\n", which, xPortGetCoreID(), start, end);
+    if (AMY_CORES == 2) {
+        start = (OSCS/2); 
+        end = OSCS;
+        if(which == 0) { start = 0; end = (OSCS/2); } 
+    }
+    fprintf(stderr,"I'm renderer #%d on core #%d and i'm handling oscs %d up until %d\n", which, xPortGetCoreID(), start, end);
     while(1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         render_task(start, end, which);
-        xTaskNotifyGive(fillbufferTask);
+        xTaskNotifyGive(alles_fill_buffer_handle);
     }
 }
 
@@ -76,6 +65,8 @@ void esp_fill_audio_buffer_task() {
         }
     }
 }
+#else
+void *mcast_listen_task(void *vargp);
 #endif
 
 
@@ -87,7 +78,6 @@ void alles_send_message(char * message, uint16_t len) {
     message_start_pointer = message;
     message_length = len;
     // tell the parse task, time to parse this message into deltas and add to the queue
-    fprintf(stderr, "got message ### %s ###\n", message);
     parse_task();
 }
 
@@ -100,19 +90,12 @@ amy_err_t esp_amy_init() {
 
     // Create rendering threads, one per core so we can deal with dan ellis float math
     static uint8_t zero = 0;
-    static uint8_t one = 1;
-    xTaskCreatePinnedToCore(&esp_render_task, "render_task0", 8192, &zero, 4, &renderTask[0], 1);
-    xTaskCreatePinnedToCore(&esp_render_task, "render_task1", 8192, &one, 4, &renderTask[1], 0);
-
+    xTaskCreatePinnedToCore(&esp_render_task, ALLES_RENDER_TASK_NAME, ALLES_RENDER_TASK_STACK_SIZE, &zero, ALLES_RENDER_TASK_PRIORITY, &alles_render_handle, ALLES_RENDER_TASK_COREID);
     // Wait for the render tasks to get going before starting the i2s task
     delay_ms(100);
 
     // And the fill audio buffer thread, combines, does volume & filters
-    xTaskCreatePinnedToCore(&esp_fill_audio_buffer_task, "fill_audio_buff", 4096, NULL, 22, &fillbufferTask, 0);
-
-    // Grab the idle handles while we're here, we use them for CPU usage reporting
-    idleTask0 = xTaskGetIdleTaskHandleForCPU(0);
-    idleTask1 = xTaskGetIdleTaskHandleForCPU(1);
+    xTaskCreatePinnedToCore(&esp_fill_audio_buffer_task, ALLES_FILL_BUFFER_TASK_NAME, ALLES_FILL_BUFFER_TASK_STACK_SIZE, NULL, ALLES_FILL_BUFFER_TASK_PRIORITY, &alles_fill_buffer_handle, ALLES_FILL_BUFFER_TASK_COREID);
     return AMY_OK;
 }
 #else
@@ -130,57 +113,6 @@ amy_err_t unix_amy_init() {
 
 
 #ifdef ESP_PLATFORM
-void esp_show_debug(uint8_t type) { 
-    printf("debug\n");
-    /*
-    TaskStatus_t *pxTaskStatusArray;
-    volatile UBaseType_t uxArraySize, x, i;
-    const char* const tasks[] = { "render_task0", "render_task1", "mcast_task", "parse_task", "main", "fill_audio_buff", "wifi", "idle0", "idle1", 0 }; 
-    uxArraySize = uxTaskGetNumberOfTasks();
-    pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
-    uxArraySize = uxTaskGetSystemState( pxTaskStatusArray, uxArraySize, NULL );
-    unsigned long counter_since_last[MAX_TASKS];
-    unsigned long ulTotalRunTime = 0;
-    TaskStatus_t xTaskDetails;
-    // We have to check for the names we want to track
-    for(i=0;i<MAX_TASKS;i++) { // for each name
-        counter_since_last[i] = 0;
-        for(x=0; x<uxArraySize; x++) { // for each task
-            if(strcmp(pxTaskStatusArray[x].pcTaskName, tasks[i])==0) {
-                counter_since_last[i] = pxTaskStatusArray[x].ulRunTimeCounter - last_task_counters[i];
-                last_task_counters[i] = pxTaskStatusArray[x].ulRunTimeCounter;
-                ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
-            }
-        }
-        
-        // Have to get these specially as the task manager calls them both "IDLE" and swaps their orderings around
-        if(strcmp("idle0", tasks[i])==0) { 
-            vTaskGetInfo(idleTask0, &xTaskDetails, pdFALSE, eRunning);
-            counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
-            last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
-            ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
-        }
-        if(strcmp("idle1", tasks[i])==0) { 
-            vTaskGetInfo(idleTask1, &xTaskDetails, pdFALSE, eRunning);
-            counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
-            last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
-            ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
-        }
-        
-
-    }
-    printf("------ CPU usage since last call to debug()\n");
-    for(i=0;i<MAX_TASKS;i++) {
-        printf("%-15s\t%-15ld\t\t%2.2f%%\n", tasks[i], counter_since_last[i], (float)counter_since_last[i]/ulTotalRunTime * 100.0);
-    }   
-    printf("------\nEvent queue size %d / %d. Received %d events and %d messages\n", global.event_qsize, EVENT_FIFO_LEN, event_counter, message_counter);
-    event_counter = 0;
-    message_counter = 0;
-    vPortFree(pxTaskStatusArray);
-    */
-}
-
-   
 
 // Setup I2S
 amy_err_t setup_i2s(void) {
@@ -217,7 +149,7 @@ amy_err_t setup_i2s(void) {
 
 
 #ifdef ESP_PLATFORM
-void alles_start() {
+void run_alles() {
     check_init(&esp_event_loop_create_default, "Event");
     check_init(&setup_i2s, "i2s");
     esp_amy_init();
@@ -234,6 +166,8 @@ void alles_start() {
 #else
 
 void * alles_start(void *vargs) {
+    alles_local_ip = malloc(256);
+    alles_local_ip[0] = 0;
     unix_amy_init();
     reset_oscs();
     // Schedule a "turning on" sound
@@ -246,3 +180,130 @@ void * alles_start(void *vargs) {
 }
 
 #endif
+
+#ifdef ESP_PLATFORM
+// Make AMY's parse task run forever, as a FreeRTOS task (with notifications)
+void esp_parse_task() {
+    while(1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        parse_task();
+        xTaskNotifyGive(alles_receive_handle);
+    }
+}
+
+#include "esp_wifi.h"
+#endif
+
+void alles_init_multicast() {
+#ifdef ESP_PLATFORM
+    fprintf(stderr, "creating socket\n");
+    create_multicast_ipv4_socket();
+    fprintf(stderr, "power save off\n");
+    esp_wifi_set_ps(WIFI_PS_NONE);
+    fprintf(stderr, "creating mcast task\n");
+    xTaskCreatePinnedToCore(&mcast_listen_task, ALLES_RECEIVE_TASK_NAME, ALLES_RECEIVE_TASK_STACK_SIZE, NULL, ALLES_RECEIVE_TASK_PRIORITY, &alles_receive_handle, ALLES_RECEIVE_TASK_COREID);
+    fprintf(stderr, "creating parse task\n");
+    xTaskCreatePinnedToCore(&esp_parse_task, ALLES_PARSE_TASK_NAME, ALLES_PARSE_TASK_STACK_SIZE, NULL, ALLES_PARSE_TASK_PRIORITY, &alles_parse_handle, ALLES_PARSE_TASK_COREID);
+#else
+    if(alles_local_ip[0]==0) {
+        get_first_ip_address(alles_local_ip);
+    }
+    fprintf(stderr, "creating socket to ip %s\n", alles_local_ip);
+    create_multicast_ipv4_socket();
+    fprintf(stderr, "creating mcast task\n");
+    pthread_t thread_id;
+    pthread_create(&thread_id, NULL, mcast_listen_task, NULL);
+#endif
+}
+
+
+// sync.c -- keep track of mulitple synths
+//extern uint8_t battery_mask;
+extern uint8_t ipv4_quartet;
+extern char githash[8];
+int16_t client_id;
+int64_t clocks[255];
+int64_t ping_times[255];
+uint8_t alive = 1;
+
+extern int64_t computed_delta ; // can be negative no prob, but usually host is larger # than client
+extern uint8_t computed_delta_set ; // have we set a delta yet?
+extern int64_t last_ping_time;
+
+amy_err_t sync_init() {
+    client_id = -1; // for now
+    for(uint8_t i=0;i<255;i++) { clocks[i] = 0; ping_times[i] = 0; }
+    return AMY_OK;
+}
+
+
+
+void update_map(uint8_t client, uint8_t ipv4, int64_t time) {
+    // I'm called when I get a sync response or a regular ping packet
+    // I update a map of booted devices.
+
+    //printf("[%d %d] Got a sync response client %d ipv4 %d time %lld\n",  ipv4_quartet, client_id, client , ipv4, time);
+    clocks[ipv4] = time;
+    int64_t my_sysclock = get_sysclock();
+    ping_times[ipv4] = my_sysclock;
+
+    // Now I basically see what index I would be in the list of booted synths (clocks[i] > 0)
+    // And I set my client_id to that index
+    uint8_t last_alive = alive;
+    uint8_t my_new_client_id = 255;
+    alive = 0;
+    for(uint8_t i=0;i<255;i++) {
+        if(clocks[i] > 0) { 
+            if(my_sysclock < (ping_times[i] + (PING_TIME_MS * 2))) { // alive
+                //printf("[%d %d] Checking my time %lld against ipv4 %d's of %lld, client_id now %d ping_time[%d] = %lld\n", 
+                //    ipv4_quartet, client_id, my_sysclock, i, clocks[i], my_new_client_id, i, ping_times[i]);
+                alive++;
+            } else {
+                //printf("[ipv4 %d client %d] clock %d is dead, ping time was %lld time now is %lld.\n", ipv4_quartet, client_id, i, ping_times[i], my_sysclock);
+                clocks[i] = 0;
+                ping_times[i] = 0;
+            }
+            // If this is not me....
+            if(i != ipv4_quartet) {
+                // predicted time is what we think the alive node should be at by now
+                int64_t predicted_time = (my_sysclock - ping_times[i]) + clocks[i];
+                if(my_sysclock >= predicted_time) my_new_client_id--;
+            } else {
+                my_new_client_id--;
+            }
+        } else {
+            // if clocks[] is 0, no need to check
+            my_new_client_id--;
+        }
+    }
+    if(client_id != my_new_client_id || last_alive != alive) {
+        fprintf(stderr,"[%d] my client_id is now %d. %d alive\n", ipv4_quartet, my_new_client_id, alive);
+        client_id = my_new_client_id;
+    }
+}
+
+void handle_sync(int64_t time, int8_t index) {
+    // I am called when I get an s message, which comes along with host time and index
+    int64_t sysclock = get_sysclock();
+    char message[100];
+    // Before I send, i want to update the map locally
+    update_map(client_id, ipv4_quartet, sysclock);
+    // Send back sync message with my time and received sync index and my client id & battery status (if any)
+    sprintf(message, "_s%lldi%dc%dr%dy%dZ", sysclock, index, client_id, ipv4_quartet, 0);
+    mcast_send(message, strlen(message));
+    // Update computed delta (i could average these out, but I don't think that'll help too much)
+    //int64_t old_cd = computed_delta;
+    computed_delta = time - sysclock;
+    computed_delta_set = 1;
+    //if(old_cd != computed_delta) printf("Changed computed_delta from %lld to %lld on sync\n", old_cd, computed_delta);
+}
+
+void ping(int64_t sysclock) {
+    char message[100];
+    //printf("[%d %d] pinging with %lld\n", ipv4_quartet, client_id, sysclock);
+    sprintf(message, "_s%lldi-1c%dr%dy%dZ", sysclock, client_id, ipv4_quartet, 0);
+    update_map(client_id, ipv4_quartet, sysclock);
+    mcast_send(message, strlen(message));
+    last_ping_time = sysclock;
+}
+

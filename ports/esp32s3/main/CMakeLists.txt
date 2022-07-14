@@ -73,6 +73,7 @@ set(MICROPY_SOURCE_PORT
     ${PROJECT_DIR}/uart.c
     ${PROJECT_DIR}/usb.c
     ${PROJECT_DIR}/touchscreen.c
+    ${PROJECT_DIR}/multicast.c
     ${PROJECT_DIR}/usb_serial_jtag.c
     ${PROJECT_DIR}/gccollect.c
     ${PROJECT_DIR}/mphalport.c
