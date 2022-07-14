@@ -69,29 +69,8 @@ void callback_midi_message_received(uint8_t source, uint16_t timestamp, uint8_t 
 
 
 
-void read_midi_uart() {
-    printf("UART MIDI running on core %d\n", xPortGetCoreID());
-    const int uart_num = UART_NUM_1;
-    uint8_t data[128];
-    size_t length = 0;
-    while(1) {
-        // Sleep 5ms to wait to get more MIDI data and avoid starving audio thread
-        // I increased RTOS clock rate from 100hz to 500hz to go down to a 5ms delay here
-        // https://www.esp32.com/viewtopic.php?t=7554
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
-        if(length) {
-            length = uart_read_bytes(uart_num, data, length, 100);
-            //fprintf(stderr, "got bytes %d\n", length);
-            if(length > 1) {
-                callback_midi_message_received(1,esp_timer_get_time() / 1000, data[0], data+1, length-1);
-            }
-        }  // end was there any bytes at all 
-    } // end loop forever
-}
 
-
-void setup_midi_in() {
+void run_midi() {
     // Setup UART2 to listen for MIDI messages 
     const int uart_num = UART_NUM_1;
     uart_config_t uart_config = {
@@ -113,7 +92,25 @@ void setup_midi_in() {
     ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, uart_buffer_size, \
                                           uart_buffer_size, 10, &uart_queue, 0));
 
-    xTaskCreatePinnedToCore(&read_midi_uart, "read_midi_task", 4096, NULL, 1, NULL, 0);
+
+    printf("UART MIDI running on core %d\n", xPortGetCoreID());
+
+    uint8_t data[128];
+    size_t length = 0;
+    while(1) {
+        // Sleep 5ms to wait to get more MIDI data and avoid starving audio thread
+        // I increased RTOS clock rate from 100hz to 500hz to go down to a 5ms delay here
+        // https://www.esp32.com/viewtopic.php?t=7554
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+        ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
+        if(length) {
+            length = uart_read_bytes(uart_num, data, length, 100);
+            //fprintf(stderr, "got bytes %d\n", length);
+            if(length > 1) {
+                callback_midi_message_received(1,esp_timer_get_time() / 1000, data[0], data+1, length-1);
+            }
+        }  // end was there any bytes at all 
+    } // end loop forever
 
 
 }

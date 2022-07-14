@@ -16,7 +16,6 @@ extern "C" {
 //#define configTASK_NOTIFICATION_ARRAY_ENTRIES 2
 #define MAX_WIFI_WAIT_S 120
 #define PCM_PATCHES_SIZE_SMALL 1
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -32,6 +31,9 @@ extern "C" {
 #include "driver/uart.h"
 #include "driver/i2s.h"
 #include "nvs_flash.h"
+
+#include "tasks.h"
+
 // This can be 32 bit, int32_t -- helpful for digital output to a i2s->USB teensy3 board
 #define I2S_SAMPLE_TYPE I2S_BITS_PER_SAMPLE_16BIT
 typedef int16_t i2s_sample_type;
@@ -44,13 +46,19 @@ typedef int16_t i2s_sample_type;
 #define CONFIG_I2S_BCLK 1//2//1//47 // SPICLK_P 
 #define CONFIG_I2S_DIN 2//2//48 // SPICLK_N and LED, so move
 #define CONFIG_I2S_NUM 0 
-
+#define AMY_CORES 1
+#define OSCS 32
 #else // ESP_PLATFORM
 #define PCM_PATCHES_SIZE_LARGE 1
 #endif
 
 
 #include "amy/amy.h"
+
+#define UDP_PORT 9294        // port to listen on
+#define MULTICAST_TTL 255     // hops multicast packets can take
+#define MULTICAST_IPV4_ADDR "232.10.11.12"
+#define PING_TIME_MS 10000   // ms between boards pinging each other
 
 
 // enums
@@ -73,12 +81,17 @@ extern void upgrade_tone();
 extern void wifi_tone();
 extern void scale(uint8_t wave);
 
+// multicast
+extern void mcast_send(char*, uint16_t len);
+extern void create_multicast_ipv4_socket();
+
+void alles_init_multicast();
 
 void esp_show_debug(uint8_t type);
 void alles_send_message(char * message, uint16_t len);
 
 #ifdef ESP_PLATFORM
-void alles_start();
+void run_alles();
 #else
 void * alles_start(void *vargs);
 #endif

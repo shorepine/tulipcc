@@ -7,6 +7,7 @@ MAX_QUEUE = 400
 [SINE, PULSE, SAW_DOWN, SAW_UP, TRIANGLE, NOISE, KS, PCM, ALGO, PARTIAL, PARTIALS, OFF] = range(12)
 TARGET_AMP, TARGET_DUTY, TARGET_FREQ, TARGET_FILTER_FREQ, TARGET_RESONANCE, TARGET_FEEDBACK, TARGET_LINEAR, TARGET_TRUE_EXPONENTIAL, TARGET_DX7_EXPONENTIAL = (1, 2, 4, 8, 16, 32, 64, 128, 256)
 FILTER_NONE, FILTER_LPF, FILTER_BPF, FILTER_HPF = range(4)
+mesh_flag = 0
 
 """
     A bunch of useful presets
@@ -59,7 +60,8 @@ def preset(which,osc=0, **kwargs):
 def millis():
     # Timestamp to send over to synths for global sync
     # This is a suggestion. I use ticks since boot on Tulip
-    return tulip.ticks_ms()
+    # I am adding 20 seconds here because i'm curious if <0 deltas are a problem
+    return tulip.ticks_ms() + 20000
 
 
 
@@ -111,8 +113,9 @@ def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1,
 
 
 def send(retries=1, **kwargs):
+    global mesh_flag
     m = message(**kwargs)
-    tulip.alles(m)
+    tulip.alles(m, mesh_flag)
 
 """
     Convenience functions
@@ -240,6 +243,22 @@ def c_major(octave=2,wave=SINE, **kwargs):
 
 
 
+def mesh(local_ip=None):
+    global mesh_flag
+    if(tulip.ip() is None):
+        print("Need to be on wifi. Use tulip.wifi('ssid', 'password').")
+        return
+    latency_ms(1000)
+    mesh_flag = 1
+    if(local_ip is not None):
+        tulip.multicast_start(local_ip)
+    tulip.multicast_start()
+
+def local():
+    global mesh_flag
+    # the default
+    mesh_flag = 0
+    latency_ms(0)
 
 
 # Buffer messages sent to the synths if you call buffer(). 
@@ -249,7 +268,8 @@ send_buffer = ""
 buffer_size = 0
 
 # For Tulip, start with latency at 0. if we swith to mesh we'll switch back.
-latency_ms(0)
+local()
+
 
 
 

@@ -246,7 +246,7 @@ void ft5x06_init()
 #define TOUCH_BOTTOM_Y 591
 
 
-void ft5x06_test_task(void *param)
+void run_ft5x06(void *param)
 {
     ft5x06_init();
     int i = 0;
@@ -268,9 +268,9 @@ void ft5x06_test_task(void *param)
             vTaskDelay(20/portTICK_PERIOD_MS);
             flag = 0;
         } else {
-            fprintf(stderr,"B release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
+            //fprintf(stderr,"B release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
             if(flag == 0) {
-                fprintf(stderr,"release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
+                //fprintf(stderr,"release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
             }
             flag = 1;
             vTaskDelay(10/portTICK_PERIOD_MS);

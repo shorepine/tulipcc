@@ -14,7 +14,12 @@
 
 
 // Constants you can change if you want
+#ifndef OSCS
 #define OSCS 64              // # of simultaneous oscs to keep track of 
+#endif
+#ifndef AMY_CORES
+#define AMY_CORES 2
+#endif
 #define BLOCK_SIZE 256       // buffer block size in samples
 
 #define DEFAULT_LATENCY_MS 1000      // fixed latency in milliseconds
