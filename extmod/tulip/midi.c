@@ -1,76 +1,29 @@
 // midi.c
-#include "alles.h"
-#ifdef ESP_PLATFORM // for now
-QueueHandle_t uart_queue;
-uint8_t midi_voice = 0;
-uint8_t program_bank = 0;
-uint8_t program = 0;
-uint8_t note_map[OSCS];
+#include "midi.h"
 
 
-void callback_midi_message_received(uint8_t source, uint16_t timestamp, uint8_t midi_status, uint8_t *remaining_message, size_t len) {
-    // uart is 1 if this came in through uart, 0 if ble
-    //printf("got midi message source %d ts %d status %d -- ", source, timestamp, midi_status);
-    //for(int i=0;i<len;i++) fprintf(stderr, "MIDI %d ", remaining_message[i]);
-    //printf("\n");
-    uint8_t channel = midi_status & 0x0F;
-    uint8_t message = midi_status & 0xF0;
-    if(len > 0) {
-        uint8_t data1 = remaining_message[0];
-        if(message == 0x90) {  // note on 
-            uint8_t data2 = remaining_message[1];
-            struct event e = default_event();
-            e.time = get_sysclock();
-            if(program_bank > 0) {
-                e.wave = ALGO;
-                e.patch = ((program_bank-1) * 128) + program;
-            } else {
-                e.wave = program;
-            }
-            e.osc = midi_voice;
-            e.midi_note = data1;
-            e.velocity = data2;
-            e.amp = 0.1; // for now
-            note_map[midi_voice] = data1;
-            if(channel == 0) {
-                add_event(e);
-            }
-            midi_voice = (midi_voice + 1) % (OSCS);
-        } else if (message == 0x80) { 
-            // note off
-            uint8_t data2 = remaining_message[1];
-            // for now, only handle broadcast note offs... will have to refactor if i go down this path farther
-            for(uint8_t v=0;v<OSCS;v++) {
-                if(note_map[v] == data1) {
-                    struct event e = default_event();
-                    e.amp = 0;
-                    e.osc = v;
-                    e.time = get_sysclock();
-                    e.velocity = data2; // note off velocity, not used... yet
-                    add_event(e);
-                }
-            }                        
-        } else if(message == 0xC0) { // program change 
-            program = data1;
-        } else if(message == 0xB0) {
-            // control change
-            uint8_t data2 = remaining_message[1];
-            // Bank select for program change
-            if(data1 == 0x00) { 
-                program_bank = data2;
-            }
-            // feedback
-            // duty cycle
-            // pitch bend (?) 
-            // amplitude / volume
+void callback_midi_message_received(uint8_t *data, size_t len) {
+    //fprintf(stderr,"got midi message len %d status %d -- ", (uint32_t)len, midi_status);
+    for(uint32_t i=0;i<(uint32_t)len;i++) {
+        if(i<MAX_MIDI_BYTES_PER_MESSAGE) {
+            last_midi[i] = data[i];
         }
     }
+    last_midi_len = (uint16_t)len;
+    if(py_midi_callback) tulip_midi_isr();
 }
 
+#ifdef ESP_PLATFORM
 
-
+void midi_out(uint8_t * bytes, uint16_t len) {
+    int ret = uart_write_bytes(UART_NUM_1, bytes, len);
+}
 
 void run_midi() {
+    py_midi_callback = 0;
+    
+    last_midi_len = 0;
+
     // Setup UART2 to listen for MIDI messages 
     const int uart_num = UART_NUM_1;
     uart_config_t uart_config = {
@@ -105,13 +58,16 @@ void run_midi() {
         ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
         if(length) {
             length = uart_read_bytes(uart_num, data, length, 100);
-            //fprintf(stderr, "got bytes %d\n", length);
             if(length > 1) {
-                callback_midi_message_received(1,esp_timer_get_time() / 1000, data[0], data+1, length-1);
+                callback_midi_message_received(data, length);
             }
         }  // end was there any bytes at all 
     } // end loop forever
 
 
 }
+#else
+
+
+
 #endif
