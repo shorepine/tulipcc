@@ -58,6 +58,8 @@
 
 #include "display.h"
 #include "alles.h"
+#include "midi.h"
+
 extern int unix_display_draw(); 
 extern void unix_display_init();
 
@@ -154,6 +156,7 @@ char * get_tulip_home_path() {
     return MYCFStringCopyUTF8String(resourcesPath);
 }
 
+
 int main(int argc, char **argv) {
     // Get the resources folder loc
     // So thread out alles and then micropython tasks
@@ -163,6 +166,9 @@ int main(int argc, char **argv) {
 
     pthread_t alles_thread_id;
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
+
+    pthread_t midi_thread_id;
+    pthread_create(&midi_thread_id, NULL, run_midi, NULL);
 
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);

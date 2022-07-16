@@ -12,6 +12,7 @@
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #include "alles.h"
+#include "midi.h"
 #ifdef ESP_PLATFORM
 #include "tasks.h"
 #endif
@@ -276,6 +277,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_str_obj, 2, 6, tulip_tfb_st
 
 mp_obj_t frame_callback = NULL; 
 mp_obj_t frame_arg = NULL; 
+mp_obj_t midi_callback = NULL; 
+
+//extern uint8_t py_midi_callback;
+
 void tulip_frame_isr() {
     // Schedule the python callback given to run asap
     mp_sched_schedule(frame_callback, frame_arg);
@@ -284,14 +289,18 @@ void tulip_frame_isr() {
 #endif
 }
 
+void tulip_midi_isr() {
+    mp_sched_schedule(midi_callback, mp_const_none); 
+}
+
 // tulip.frame_callback(cb, arg)
 // tulip.frame_callback() -- stops 
 STATIC mp_obj_t tulip_frame_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        py_callback = 0;
+        py_frame_callback = 0;
     } else {
         frame_callback = args[0];
-        py_callback = 1;
+        py_frame_callback = 1;
     }
     if(n_args > 1) {
         frame_arg = args[1];
@@ -300,6 +309,52 @@ STATIC mp_obj_t tulip_frame_callback(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_frame_callback_obj, 0, 2, tulip_frame_callback);
+
+
+// tulip.midi_callback(cb)
+// tulip.midi_callback() -- stops 
+STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 0) {
+        py_midi_callback = 0;
+    } else {
+        midi_callback = args[0];
+        py_midi_callback = 1;
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 0, 2, tulip_midi_callback);
+
+STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
+    if(last_midi_len > 0) {
+        return mp_obj_new_bytes(last_midi, last_midi_len);
+    } 
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_in_obj, 0, 0, tulip_midi_in);
+
+
+STATIC mp_obj_t tulip_midi_out(size_t n_args, const mp_obj_t *args) {
+    if(mp_obj_get_type(args[0]) == &mp_type_bytes) {
+        mp_buffer_info_t bufinfo;
+        mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+        midi_out((uint8_t*)bufinfo.buf, bufinfo.len);
+    } else {
+        mp_obj_t *items;
+        size_t len;
+        mp_obj_get_array(args[0], &len, &items);
+        uint8_t *b = malloc_caps(len, MALLOC_CAP_INTERNAL);
+        for(uint16_t i=0;i<(uint16_t)len;i++) {
+            b[i] = mp_obj_get_int(items[i]);
+        }
+        midi_out(b, len);
+        free_caps(b);
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_out_obj, 1, 1, tulip_midi_out);
 
 
 //(w,h,bytes) = sprite_png(pngdata, mem_pos) 
@@ -399,7 +454,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_off_obj, 1, 1, tulip_spr
 
 STATIC mp_obj_t tulip_sprite_clear(size_t n_args, const mp_obj_t *args) {
     display_reset_sprites();
-    py_callback = 0;
+    py_frame_callback = 0;
     return mp_const_none;
 }
 
@@ -422,7 +477,7 @@ extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t);
 STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
     display_reset_bg();
     display_reset_sprites();
-    py_callback = 0;
+    py_frame_callback = 0;
     display_reset_tfb();
     return mp_const_none;
 }
@@ -727,6 +782,7 @@ STATIC mp_obj_t tulip_timing(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_timing_obj, 0, 10, tulip_timing);
 
 
+
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
@@ -744,6 +800,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_scroll_y_offset), MP_ROM_PTR(&tulip_bg_scroll_y_offset_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_str), MP_ROM_PTR(&tulip_tfb_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_blit), MP_ROM_PTR(&tulip_bg_blit_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_png), MP_ROM_PTR(&tulip_sprite_png_obj) },

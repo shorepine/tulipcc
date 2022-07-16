@@ -315,6 +315,7 @@ void boardctrl_startup(void) {
     }
 }
 
+extern void ft5x06_init();
 extern void run_ft5x06();
 extern void run_midi();
 extern void run_usb();
@@ -339,6 +340,7 @@ void app_main(void) {
     printf("Starting display on core %d\n", DISPLAY_TASK_COREID);
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
 
+    ft5x06_init();
     printf("Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
     xTaskCreatePinnedToCore(run_ft5x06, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
 

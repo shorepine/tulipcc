@@ -119,7 +119,12 @@ else
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
 endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -Llibs -F. -framework SDL2 -framework CoreFoundation -lsoundio $(ARCHFLAGS)
+LDFLAGS += -Llibs -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework Cocoa -lstdc++ -lsoundio $(ARCHFLAGS)
+CFLAGS += -DVIRTUAL_MIDI
+
+%.o: %.m $(HEADERS)
+	clang $(CFLAGS) -c $< -o $@
+
 
 # Flags to link with pthread library
 LIBPTHREAD = -lpthread
@@ -275,8 +280,11 @@ SHARED_SRC_C += $(addprefix shared/,\
 SRC_CXX += \
 	$(SRC_MOD_CXX)
 
+SRC_M = virtualmidi.m
+
 OBJ = $(PY_O)
 OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
+OBJ += $(addprefix $(BUILD)/, $(SRC_M:.m=.o))
 OBJ += $(addprefix $(BUILD)/, $(SRC_CXX:.cpp=.o))
 OBJ += $(addprefix $(BUILD)/, $(SHARED_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(EXTMOD_SRC_C:.c=.o))
@@ -318,6 +326,10 @@ MICROPY_ROM_TEXT_COMPRESSION = 0
 endif
 
 include $(TOP)/py/mkrules.mk
+
+$(BUILD)/%.o: %.m
+	$(ECHO) "M $<"
+	clang  -I$(INC) -mmacosx-version-min=11.0 -c -o $@ $<
 
 .PHONY: test test_full
 

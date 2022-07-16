@@ -248,7 +248,6 @@ void ft5x06_init()
 
 void run_ft5x06(void *param)
 {
-    ft5x06_init();
     int i = 0;
     touch_info_t touch_info;
     int flag = 0;

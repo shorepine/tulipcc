@@ -15,6 +15,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	tulip_helpers.c \
 	editor.c \
 	keyscan.c \
+	midi.c \
 	alles.c \
 	amy/amy.c \
 	amy/algorithms.c \

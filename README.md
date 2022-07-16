@@ -28,7 +28,7 @@ Tulip CC rev 4 supports:
 - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
 - A 1280x750 background frame buffer to draw arbitrary bitmaps to, which can scroll horizontally / vertically
 - WiFi, access http via Python requests or TCP / UDP sockets 
-- Adjustable display clock, defaults to 30 FPS.
+- Adjustable display clock and resolution, defaults to 30 FPS at 1024x600.
 - 256 colors
 - Can load PNGs from disk to set sprites or background, or generate bitmap data from code
 - Built in code and text editor
@@ -313,30 +313,73 @@ tulip.sprite_clear()
 
 ### Music / sound
 
-Tulip comes with a local version of the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) or the [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information. Tulip can also (TBD) control an Alles mesh over Wi-Fi. 
+Tulip comes with a local version of the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) or the [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information. 
+
+Tulip can also control or respond to an Alles mesh over Wi-Fi. Connect any number of Alles speakers to the wifi to have instant surround sound!
 
 ```python
 alles.drums() # plays a test song
 alles.volume(4) # change volume
 alles.reset() # stops all music / sounds playing
 alles.send(osc=2, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
+
+# start mesh mode (control multiple speakers over wifi)
+alles.mesh() # after turning on wifi
+alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1) # all Alles speakers in a mesh will respond
+alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=2) # just a certain client
+alles.local() # turns off mesh mode and goes back to local mode
 ```
+
+### MIDI
+
+Tulip supports MIDI in and out. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
+
+On Tulip Desktop, MIDI works on macOS using the "IAC" MIDI bus. This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online."
+
+```python
+def callback(x): # for now you have to define a callback with a dummy parameter
+    # tulip.midi_in() returns the last midi buffer received
+    m = tulip.midi_in()
+    if(m[0]==144):
+        print("Note on, note # %d velocity # %d" % (m[1], m[2]))
+
+tulip.midi_callback(callback)
+tulip.midi_callback() # turns off callbacks
+
+m = tulip.midi_in() # returns bytes
+tulip.midi_out((144,60,127)) # sends a note on
+tulip.midi_out(bytes) # Can send bytes or list
+```
+
 
 
 ## DIY HOWTO
 
-### Hardware 
+Tulip CC can be easily built with minimal / or no soldering by connecting breakout boards of the main chips. With a breadboard and a lot of jumper wires, you can put together Tulip in less than an hour.
 
-To build your own Tulip CC:
-- Get an [ESP32-S3 NXR8 dev board.](https://www.adafruit.com/product/5336). There's lots of variants, but you need an S3 for sure, and the "NXR8" means 8MB of SPI RAM and XMB of non-volatile flash storage (they have 8 and 32). If you get this exact one (the ESP32-S3-WROOM-1 N8R8) you can follow my pin numberings / get my breakout board. 
-- Get a RGB dot clock display. [I am currently using this US$58 one](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). You want to make sure it takes "RGB" input, usually with 8 pins each for R, G and B (and then HSYNC, VSYNC, DE). If it is not 1024x600 you'll want to make changes in `esp32s3_display.h`. 
-- For sound, get an I2S decoder. [You can get ones that have line outs like this](https://www.adafruit.com/product/3678) or ones that [have speaker amps built in like this](https://www.adafruit.com/product/3006). I use the speaker amp model and hook it into a little 3W speaker.
-- MIDI is optional but useful if you are making music. The [SparkFun MIDI shield](https://www.sparkfun.com/products/12898) is recommended, or you can [build it yourself](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/). 
-- We are working on a [breakout board](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_breakout_v2) that plugs into the back of a ESP32S3 dev board and has a USB female A jack for the keyboard, pins for [a display breakout]( https://www.adafruit.com/product/4905), MIDI in and out, and pins for the i2s amp breakout. That makes things a lot simpler. 
+The easier path is to buy [the breakout PCB I designed fron Aisler.net](https://aisler.net/p/YZIXPKRR). It's $12 for 3 (this money goes all to Aisler to manufacture the boards, I don't receive anything), and takes about a week to ship. It's simpler, will be more reliable and will fit inside a case better than a breadboard. The PCB is simply a way to connect the breakout boards without any jumper wires. The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_breakout_v2)
 
-A note, if you're using the Adafruit display adapter, these pin numbers for the display (D#) are to match the numbers on the **side of the board the FPC connector is on**, the side that reads FPC-40P 0.5MM. 
+Either way, you'll need:
 
-In the meantime, here's the pin connections you'll want to make:
+- [ESP32-S3 WROOM-1 N8R8 dev board.](https://www.adafruit.com/product/5336). If you can find the ESP32-S3 WROOM-2 N32R8 (32MB of flash), it will _probably_ also work fine and you'll have more storage space.
+- [This $58 RGB dot-clock 10.1" display with capacitive touch.](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). Note other RGB dot clock displays of different sizes and resolutions can also work, but the pin numberings will be different and you'll have to update the resolution in our code. 
+- [A 40-pin FPC header for the display](https://www.adafruit.com/product/4905). 
+- [This I2S speaker board](https://www.adafruit.com/product/3006). 
+- _Almost_ any USB keyboard should work. If yours doesn't, please file an issue here and I can investigate with you. I can only test the ones I have here! I do recommend the [Keychron series of mechanical keyboards](https://www.keychron.com/products/keychron-k7-ultra-slim-wireless-mechanical-keyboard?variant=39396239048793), they're inspiringly clicky. 
+- Connectors and random parts: 
+   - [Female headers are recommended, so you don't solder the ESP, display and audio jack directly to the PCB.](https://www.adafruit.com/product/598) 
+   - I'd also get this [2x20 shrouded header](https://www.adafruit.com/product/1993) for the display FPC breakout. 
+   - [1 USB female A connector](https://www.amazon.com/Uxcell-a13081900ux0112-Female-Socket-Connector/dp/B00H51E7B0)
+   - [2 female 5-pin DIN MIDI jacks](https://www.adafruit.com/product/1134)
+   - [1 6N138 optoisolator](https://www.amazon.com/Optocoupler-Single-Channel-Darlington-Output/dp/B07DLTSXC1) and an [8-pin socket](https://www.adafruit.com/product/2202)
+   - [7 resistors](https://www.amazon.com/BOJACK-Values-Resistor-Resistors-Assortment/dp/B08FD1XVL6): `R1`: 4.7K, `R2`: 4.7K, `R3`: 4.7K, `R4`: 220, `R5`: 470, `R6`: 33, `R7`: 10. `R4` through `R7` don't have to be precisely those numbers, find the closest number that you have. 
+   - 1 diode: [1N4001](https://www.adafruit.com/product/755)
+   - [1 3W speaker](https://www.adafruit.com/product/4445)
+- If you are using a breadboard instead of our PCB, [you'll want to see how to wire the MIDI in and out.](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/). 
+
+The assembly for our PCB is simple. Solder the headers to the DISPLAY, ESP32S3L, ESP32S3R, and AUDIO rows. Solder the 8-pin socket where the 6N138 goes. Solder the resistors in their correct spots, and the diode (note the polarity.) Solder the USB connector. Solder the MIDI connectors. Then place the ESP32-S3 breakout in, the FPC connector in (facing down, with the FPC cable going away from the board), the I2S board in, the 6N138 in, and connect a USB keyboard and the display to the FPC connector (to the displays' "RGB" input, the blue side facing up on both sides of the connector.) Then skip ahead to how to flash Tulip for the first time. That's it!
+
+If you're breadboarding, here's the pin connections you'll need to make. A note, if you're using the Adafruit FPC display adapter, these pin numbers for the display (D#) are to match the numbers on the **side of the board the FPC connector is on**, the side that reads FPC-40P 0.5MM. 
 
 | Label         | ESP32 S3 Pin | Position on ESP32-S3-WROOM-1 | Connect to     |
 | ------------- | ------------ | ---------------------------- | -------------- |
@@ -376,14 +419,16 @@ In the meantime, here's the pin connections you'll want to make:
 | MIDI 5V       | 5V           | L21                          | MIDI 5v        |
 | MIDI GND      | GND          | L22                          | MIDI GND       |
 
-Also, you may want to ground all remaining display pins.
+Also, you may want to ground all remaining display pins if you're seeing flickering. 
 
 
 ## How to compile and help develop Tulip
 
 Tulip's firmware is based on Micropython. You'll find our platform independent code in `extmod/tulip` and our platform specific code in `ports/esp32s3` and `ports/macos`. 
 
-Tulip Desktop should build and run on macOS (10.15 and later, Apple Silicon & Intel supported.) It also should be fine on Linux but I haven't yet tried. Windows is possible but probably needs some help. Tulip CC on ESP32S3 should build on all platforms, although I've only tested macOS so far. Please let me know if you have any trouble!
+Tulip Desktop should build and run on macOS (11 / "Big Sur" and later, Apple Silicon & Intel supported.) It also should be fine on Linux but I haven't yet tried. Windows is possible but probably needs some help. 
+
+Tulip CC on ESP32S3 should build on all platforms, although I've only tested macOS so far. Please let me know if you have any trouble!
 
 To compile your own firmware / desktop app, start by cloning this repository. 
 
@@ -394,7 +439,7 @@ On macOS, start by installing homebrew
 # Then restart your terminal
 ```
 
-To build Tulip Desktop (macOS 10.5 (Catalina) and higher, Apple Silicon or x86_64):
+To build Tulip Desktop (macOS 11 (Big Sur) and higher, Apple Silicon or x86_64):
 
 ```
 cd ports/macos
