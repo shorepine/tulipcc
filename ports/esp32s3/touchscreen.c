@@ -53,7 +53,7 @@ i2c_bus_handle_t iot_i2c_bus_create(i2c_port_t port, i2c_config_t* conf)
     i2c_bus_t* bus = (i2c_bus_t*) calloc(1, sizeof(i2c_bus_t));
     bus->i2c_conf = *conf;
     bus->i2c_port = port;
-    /*esp_err_t ret = i2c_param_config(bus->i2c_port, &bus->i2c_conf);
+    esp_err_t ret = i2c_param_config(bus->i2c_port, &bus->i2c_conf);
     if(ret != ESP_OK) {
         goto error;
     }
@@ -61,15 +61,13 @@ i2c_bus_handle_t iot_i2c_bus_create(i2c_port_t port, i2c_config_t* conf)
     if(ret != ESP_OK) {
         goto error;
     }
-    */
     return (i2c_bus_handle_t) bus;
-    /*
     error:
     if(bus) {
         free(bus);
     }
 
-    return NULL;*/
+    return NULL;
 }
 
 esp_err_t iot_i2c_bus_delete(i2c_bus_handle_t bus)
