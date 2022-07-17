@@ -2,7 +2,7 @@
 
 #ifndef _TULIPI2C_H_
 #define _TULIPI2C_H_
-static const char *TAG = "TULIP_I2C";
+//static const char *TAG = "TULIP_I2C";
 
 
 #include <stdio.h>
@@ -18,7 +18,7 @@ static const char *TAG = "TULIP_I2C";
 
 
 typedef void* i2c_bus_handle_t;
-static uint16_t volume;
+//static uint16_t volume;
 typedef enum {
     TOUCH_EVT_RELEASE = 0x0,
     TOUCH_EVT_PRESS   = 0x1,
