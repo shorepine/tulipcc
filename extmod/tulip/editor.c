@@ -388,9 +388,12 @@ void prompt_for_string(char * prompt, char * default_answer, char * output_strin
 
 void editor_save() {
     if(strlen(fn)) {
+        fprintf(stderr,"1\n");
         uint32_t bytes = 0;
         for(uint16_t i=0;i<lines;i++) { bytes = bytes + strlen(text_lines[i]) + 1; }
+        fprintf(stderr,"2\n");
         char * text = (char*)editor_malloc(bytes);
+        fprintf(stderr,"3\n");
         uint32_t c = 0;
         for(uint16_t i=0;i<lines;i++) { 
             for(uint16_t j=0;j<strlen(text_lines[i]);j++) {
@@ -398,8 +401,10 @@ void editor_save() {
             }
             text[c++] = '\n';
         }
+        fprintf(stderr,"4\n");
         write_file(fn, (uint8_t*)text, c, 0);
         dbg("saved to %s!\n", fn);
+        fprintf(stderr,"5\n");
         dirty = 0;
         editor_free(text);
     } else {

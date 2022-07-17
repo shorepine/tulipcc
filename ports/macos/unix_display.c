@@ -55,7 +55,7 @@ void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3) {
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
     OFFSCREEN_Y_PX = t3; 
-    unix_display_flag = -2;
+    unix_display_flag = -2; // restart display with new timings
 }
 
 
@@ -91,8 +91,7 @@ void check_key() {
     SDL_Event e;
     while (SDL_PollEvent(&e) != 0) {
         if (e.type == SDL_QUIT) {
-            fprintf(stderr, "quit detected\n");
-            unix_display_flag = -1;
+            unix_display_flag = -1; // tell main to quit
         } else if(e.type == SDL_KEYDOWN) {
             last_held_mod = SDL_GetModState();
             SDL_KeyboardEvent key = e.key; 
@@ -132,10 +131,11 @@ void start_draw() {
 
 }
 
+
+// Using our non-vsync software renderer, blit the surface into a texture and then out to the window
 void end_draw() {
     SDL_UnlockSurface(surface_332);
 
-    // Using our non-vsync software renderer, blit the surface into a texture and then out to the window
     SDL_Texture *blit_texture = SDL_CreateTextureFromSurface(fixed_fps_renderer, surface_332);
     SDL_RenderCopy(fixed_fps_renderer, blit_texture, NULL, NULL);
     SDL_RenderPresent(fixed_fps_renderer);
@@ -158,6 +158,7 @@ int unix_display_draw() {
     check_key();
     start_draw();
     uint32_t c = 0;
+    // bounce the entire screen at once to the 332 color framebuffer
     for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
         display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
         for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
@@ -188,5 +189,4 @@ void unix_display_init() {
     unix_set_fps_from_parameters();
     init_window(H_RES,V_RES); 
     frame_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    fprintf(stderr, "display init done!!!\n");
 }
