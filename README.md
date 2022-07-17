@@ -334,7 +334,7 @@ alles.local() # turns off mesh mode and goes back to local mode
 
 Tulip supports MIDI in and out. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
 
-On Tulip Desktop, MIDI works on macOS using the "IAC" MIDI bus. This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online."
+On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later using the "IAC" MIDI bus. This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." At this time, MIDI will not function (but the rest of Tulip will run) on macOS 10.15 (Catalina, released 2019.)
 
 ```python
 def callback(x): # for now you have to define a callback with a dummy parameter
@@ -364,7 +364,7 @@ Either way, you'll need:
 - [ESP32-S3 WROOM-1 N8R8 dev board.](https://www.adafruit.com/product/5336). If you can find the ESP32-S3 WROOM-2 N32R8 (32MB of flash), it will _probably_ also work fine and you'll have more storage space.
 - [This $58 RGB dot-clock 10.1" display with capacitive touch.](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). Note other RGB dot clock displays of different sizes and resolutions can also work, but the pin numberings will be different and you'll have to update the resolution in our code. 
 - [A 40-pin FPC header for the display](https://www.adafruit.com/product/4905). 
-- [This I2S speaker board](https://www.adafruit.com/product/3006). 
+- One of two choices for sound: either [this mono I2S speaker amp board](https://www.adafruit.com/product/3006) or [this stereo one with speaker & line-out/headphone output.](https://www.amazon.com/Audio-Supports-encoding-Recording-Interface/dp/B07H6FNFDD). It depends on what you want to build. The PCB has a header for the mono speaker version; for the WM8960 you'll have to do your own wiring (and compile with `TULIP_AUDIO_BOARD_WM8960`)
 - _Almost_ any USB keyboard should work. If yours doesn't, please file an issue here and I can investigate with you. I can only test the ones I have here! I do recommend the [Keychron series of mechanical keyboards](https://www.keychron.com/products/keychron-k7-ultra-slim-wireless-mechanical-keyboard?variant=39396239048793), they're inspiringly clicky. 
 - Connectors and random parts: 
    - [Female headers are recommended, so you don't solder the ESP, display and audio jack directly to the PCB.](https://www.adafruit.com/product/598) 
@@ -426,7 +426,7 @@ Also, you may want to ground all remaining display pins if you're seeing flicker
 
 Tulip's firmware is based on Micropython. You'll find our platform independent code in `extmod/tulip` and our platform specific code in `ports/esp32s3` and `ports/macos`. 
 
-Tulip Desktop should build and run on macOS (11 / "Big Sur" and later, Apple Silicon & Intel supported.) It also should be fine on Linux but I haven't yet tried. Windows is possible but probably needs some help. 
+Tulip Desktop should build and run on macOS 10.15 (Catalina, released 2019) and later, Apple Silicon & Intel supported. It also should be fine on Linux but I haven't yet tried. Windows is possible but probably needs some help. 
 
 Tulip CC on ESP32S3 should build on all platforms, although I've only tested macOS so far. Please let me know if you have any trouble!
 
@@ -439,7 +439,7 @@ On macOS, start by installing homebrew
 # Then restart your terminal
 ```
 
-To build Tulip Desktop (macOS 11 (Big Sur) and higher, Apple Silicon or x86_64):
+To build Tulip Desktop (macOS 10.15 (Catalina) and higher, Apple Silicon or x86_64):
 
 ```
 cd ports/macos

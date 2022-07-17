@@ -53,7 +53,7 @@ i2c_bus_handle_t iot_i2c_bus_create(i2c_port_t port, i2c_config_t* conf)
     i2c_bus_t* bus = (i2c_bus_t*) calloc(1, sizeof(i2c_bus_t));
     bus->i2c_conf = *conf;
     bus->i2c_port = port;
-    esp_err_t ret = i2c_param_config(bus->i2c_port, &bus->i2c_conf);
+    /*esp_err_t ret = i2c_param_config(bus->i2c_port, &bus->i2c_conf);
     if(ret != ESP_OK) {
         goto error;
     }
@@ -61,13 +61,15 @@ i2c_bus_handle_t iot_i2c_bus_create(i2c_port_t port, i2c_config_t* conf)
     if(ret != ESP_OK) {
         goto error;
     }
+    */
     return (i2c_bus_handle_t) bus;
-
+    /*
     error:
     if(bus) {
         free(bus);
     }
-    return NULL;
+
+    return NULL;*/
 }
 
 esp_err_t iot_i2c_bus_delete(i2c_bus_handle_t bus)
@@ -100,7 +102,7 @@ esp_err_t iot_ft5x06_read(ft5x06_handle_t dev, uint8_t start_addr,
         i2c_master_write_byte(cmd, (device->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
         i2c_master_write_byte(cmd, start_addr, ACK_CHECK_EN);
         i2c_master_stop(cmd);
-        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
+        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 50 / portTICK_RATE_MS);
         i2c_cmd_link_delete(cmd);
         if(ret != ESP_OK) {
             return ESP_FAIL;
@@ -113,7 +115,7 @@ esp_err_t iot_ft5x06_read(ft5x06_handle_t dev, uint8_t start_addr,
         }
         i2c_master_read_byte(cmd, &data_buf[read_num-1], NACK_VAL);
         i2c_master_stop(cmd);
-        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
+        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 50 / portTICK_RATE_MS);
         i2c_cmd_link_delete(cmd);
     }
     return ret;
@@ -221,12 +223,13 @@ static void i2c_bus_init()
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = I2C_FREQ_HZ,
     };
+
     i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
 }
 
 void ft5x06_init()
 {
-    i2c_bus_init();
+    i2c_bus_init(); 
     gpio_set_direction(TOUCH_INT_IO, GPIO_MODE_INPUT);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, 2);
     dev = iot_ft5x06_create(i2c_bus, FT5X06_ADDR_DEF);
@@ -274,6 +277,7 @@ void run_ft5x06(void *param)
             flag = 1;
             vTaskDelay(10/portTICK_PERIOD_MS);
         }
+        vTaskDelay(20/portTICK_PERIOD_MS);
     }
     vTaskDelete(NULL);
 }

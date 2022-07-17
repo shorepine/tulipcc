@@ -329,7 +329,7 @@ include $(TOP)/py/mkrules.mk
 
 $(BUILD)/%.o: %.m
 	$(ECHO) "M $<"
-	clang  -I$(INC) -mmacosx-version-min=11.0 -c -o $@ $<
+	clang  -I$(INC) -mmacosx-version-min=10.15 -c -o $@ $<
 
 .PHONY: test test_full
 

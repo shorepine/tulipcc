@@ -59,18 +59,23 @@ uint32_t read_file(const char *filename, uint8_t *buf, int32_t len, uint8_t bina
 // overwrites if exists
 uint32_t write_file(const char *filename, uint8_t *buf, uint32_t len, uint8_t binary) {
     mp_obj_t m_args[2];
-    
+    fprintf(stderr, "a\n");
     m_args[0] = mp_obj_new_str(filename, strlen(filename)+1);
+    fprintf(stderr, "b\n");
     if(binary) {
 	    m_args[1] = mp_obj_new_str("wb\0",3);
 	} else {
 	    m_args[1] = mp_obj_new_str("w\0",2);		
 	}
+    fprintf(stderr, "c\n");
     mp_obj_t file = mp_vfs_open(2, &m_args[0], (mp_map_t *)&mp_const_empty_map);
+    fprintf(stderr, "d\n");
     int errcode;
     size_t bytes_written = mp_stream_rw(file, buf, len, &errcode, MP_STREAM_RW_WRITE | MP_STREAM_RW_ONCE);
+    fprintf(stderr, "e\n");
     fprintf(stderr,"Wrote file %s with %d bytes, error %d\n",filename, (uint32_t)bytes_written, errcode);
     mp_stream_close(file);
+    fprintf(stderr, "f\n");
     return bytes_written;
 }
 
