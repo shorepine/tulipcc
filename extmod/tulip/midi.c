@@ -16,7 +16,7 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
 #ifdef ESP_PLATFORM
 
 void midi_out(uint8_t * bytes, uint16_t len) {
-    int ret = uart_write_bytes(UART_NUM_1, bytes, len);
+    uart_write_bytes(UART_NUM_1, bytes, len);
 }
 
 void run_midi() {

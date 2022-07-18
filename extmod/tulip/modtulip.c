@@ -781,7 +781,7 @@ STATIC mp_obj_t tulip_timing(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_timing_obj, 0, 10, tulip_timing);
-
+/*
 STATIC mp_obj_t tulip_speaker_volume(size_t n_args, const mp_obj_t *args) {
 #ifndef ESP_PLATFORM
     return mp_const_none;
@@ -796,7 +796,7 @@ STATIC mp_obj_t tulip_speaker_volume(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_speaker_volume_obj, 0, 2, tulip_speaker_volume);
 
-
+*/
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
@@ -848,7 +848,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_char), MP_ROM_PTR(&tulip_char_obj) },
     { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
-    { MP_ROM_QSTR(MP_QSTR_speaker_volume), MP_ROM_PTR(&tulip_speaker_volume_obj) },
+    //{ MP_ROM_QSTR(MP_QSTR_speaker_volume), MP_ROM_PTR(&tulip_speaker_volume_obj) },
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
 #endif
