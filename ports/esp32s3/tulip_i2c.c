@@ -2,6 +2,8 @@
 
 #include "tulip_i2c.h"
 
+// idea here is the same i2c setup for touchscreen + wm8960 audio control
+// but for now we're not linking it as wm8960 is not yet working
 
 
 const uint16_t wm8960_reg_defaults[] = {
