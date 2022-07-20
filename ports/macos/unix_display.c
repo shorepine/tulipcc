@@ -3,6 +3,7 @@
 #include "polyfills.h"
 #include "display.h"
 #include "keyscan.h"
+#include "ui.h"
 SDL_Window *window;
 SDL_Surface *window_surface;
 SDL_Surface *surface_332;
@@ -121,6 +122,11 @@ void check_key() {
         if(button) {
             last_touch_x[0] = (int16_t)x;
             last_touch_y[0] = (int16_t)y;
+            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0);
+        } else { // release
+            last_touch_x[0] = (int16_t)x;
+            last_touch_y[0] = (int16_t)y;
+            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
         }
     }
 }

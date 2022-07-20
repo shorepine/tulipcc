@@ -11,6 +11,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	smallfont.c \
 	display.c \
 	bresenham.c \
+	ui.c \
 	help.c \
 	tulip_helpers.c \
 	editor.c \

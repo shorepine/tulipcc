@@ -245,6 +245,16 @@ void display_reset_touch() {
 }
 
 
+void display_invert_bg(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+    for (int j = y; j < y+h; j++) {
+        for (int i = x; i < x+w; i++) {
+            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
+                (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = 255 - (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)];
+            }
+        }
+    }
+}
+
 void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data) {
     for (int j = y; j < y+h; j++) {
         for (int i = x; i < x+w; i++) {
@@ -697,8 +707,7 @@ void display_init(void) {
     vsync_count = 1;
     reported_fps = 1;
     reported_gpu_usage = 0;
-
-   
+    touch_held = 0;
 
 
 }

@@ -19,8 +19,8 @@
 //#include "iot_ft5x06.h"
 #include "esp_log.h"
 #include "string.h"
-//#include "unity.h"
 #include "display.h"
+#include "ui.h"
 
 #define I2C_SCL                     17//11//47//17 //(3)
 #define I2C_SDA                     18//12//21//18//(1)
@@ -265,11 +265,14 @@ void run_ft5x06(void *param)
                 }
                //fprintf(stderr,"touch point %d  x:%d  y:%d became %d %d\n", i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
             }
+            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0);
+
             vTaskDelay(20/portTICK_PERIOD_MS);
             flag = 0;
         } else {
             //fprintf(stderr,"B release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
             if(flag == 0) {
+                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
                 //fprintf(stderr,"release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
             }
             flag = 1;
