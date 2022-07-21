@@ -697,11 +697,12 @@ void display_init(void) {
     bg_lines = (uint32_t**)malloc_caps(V_RES*sizeof(uint32_t*), MALLOC_CAP_INTERNAL);
 
 
-    // Init the BG, TFB and sprite layers
+    // Init the BG, TFB and sprite and UI layers
     display_reset_bg();
     display_reset_tfb();
     display_reset_sprites();
     display_reset_touch();
+    ui_init();
 
     py_frame_callback = 0;
     vsync_count = 1;
