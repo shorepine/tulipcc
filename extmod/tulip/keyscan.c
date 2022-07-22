@@ -81,6 +81,7 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
 }
 
 
+
 void send_key_to_micropython(uint16_t c) {
     // Deal with the extended codes that need ANSI escape chars 
     if(c>257 && c<263) { 

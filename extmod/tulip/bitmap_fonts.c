@@ -202,6 +202,12 @@ const GFXfont FreeSans9pt7b  = {(uint8_t *)FreeSans9pt7bBitmaps,
                                        0x7E, 22};
 
 
+void width_height_glyph(uint8_t c, uint8_t *w, uint8_t *h) {
+    GFXglyph g= FreeSans9pt7b.glyph[c-32];
+    *w = g.xAdvance;
+    *h = g.height; 
+}
+
 // only draw the on bits, like the TFB
 uint8_t draw_glyph(uint8_t c, uint16_t x, uint16_t y, uint8_t pal_idx) {
     uint8_t cursor_advance = 0;

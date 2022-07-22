@@ -1,5 +1,7 @@
 // bitmap_fonts.h
 #include "display.h"
+#ifndef BITMAP_FONTS_H
+#define BITMAP_FONTS_H
 
 /// Font data stored PER GLYPH
 typedef struct {
@@ -23,3 +25,7 @@ typedef struct {
 //#include "Fonts/FreeSans9pt7b.h"
 
 uint8_t draw_glyph(uint8_t c, uint16_t x, uint16_t y, uint8_t pal_idx);
+void width_height_glyph(uint8_t c, uint8_t *w, uint8_t *h);
+
+#endif
+

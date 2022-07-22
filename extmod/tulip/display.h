@@ -9,6 +9,7 @@
 #include "lodepng.h"
 #include "tulip_helpers.h"
 #include "polyfills.h"
+#include "ui.h"
 
 #define RGB332
 
@@ -41,6 +42,7 @@ static const uint8_t ansi_pal[256] = {
 
 int16_t last_touch_x[3];
 int16_t last_touch_y[3];
+uint8_t touch_held;
 
 void display_reset_sprites();
 void display_reset_tfb();
@@ -52,6 +54,7 @@ void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx);
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b);
 void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_t *b);
 uint8_t display_get_bg_pixel_pal(uint16_t x, uint16_t y);
+void display_invert_bg(uint16_t x, uint16_t y, uint16_t w, uint16_t h) ;
 
 void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t *data);
 void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data);
