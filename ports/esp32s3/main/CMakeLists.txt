@@ -57,6 +57,7 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/tulip/keyscan.c
     ${MICROPY_DIR}/extmod/tulip/help.c
     ${MICROPY_DIR}/extmod/tulip/alles.c
+    ${MICROPY_DIR}/extmod/tulip/ui.c
     ${MICROPY_DIR}/extmod/tulip/midi.c
     ${MICROPY_DIR}/extmod/tulip/sounds.c
     ${MICROPY_DIR}/extmod/tulip/amy/dsps_biquad_f32_ae32.S
