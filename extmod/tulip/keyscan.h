@@ -24,6 +24,8 @@ uint8_t last_scan[8];
 
 uint16_t scan_ascii(uint8_t code, uint32_t modifier);
 void send_key_to_micropython(uint16_t c);
+void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up);
+
 
 /**
  * Modifier masks - used for the first byte in the HID report.
