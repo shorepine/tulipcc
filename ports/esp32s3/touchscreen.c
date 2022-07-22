@@ -251,8 +251,9 @@ void run_ft5x06(void *param)
 {
     int i = 0;
     touch_info_t touch_info;
-    int flag = 0;
+    uint8_t got_primary_touch;
     while (1) {
+        got_primary_touch = 0;
         if(gpio_get_level(TOUCH_INT_IO) == 0 && iot_ft5x06_touch_report(dev, &touch_info) == ESP_OK) {
             for(i = 0; i < touch_info.touch_point; i++) {
                 if(i<4) {
@@ -263,22 +264,23 @@ void run_ft5x06(void *param)
                     }
                     last_touch_y[i] = (touch_info.cury[i]-TOUCH_TOP_Y) * ((float)V_RES / (float) (TOUCH_BOTTOM_Y-TOUCH_TOP_Y));
                 }
+                if(i==0) got_primary_touch = 1;
                //fprintf(stderr,"touch point %d  x:%d  y:%d became %d %d\n", i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
             }
-            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0);
-
             vTaskDelay(20/portTICK_PERIOD_MS);
-            flag = 0;
         } else {
-            //fprintf(stderr,"B release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
-            if(flag == 0) {
-                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
-                //fprintf(stderr,"release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
-            }
-            flag = 1;
-            vTaskDelay(10/portTICK_PERIOD_MS);
+            fprintf(stderr,"B release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
+            vTaskDelay(20/portTICK_PERIOD_MS);
         }
+        if(got_primary_touch) { 
+            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0); 
+        } else {
+            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
+        }
+
+
         vTaskDelay(20/portTICK_PERIOD_MS);
+
     }
     vTaskDelete(NULL);
 }
