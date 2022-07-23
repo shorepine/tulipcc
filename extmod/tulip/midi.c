@@ -10,7 +10,7 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
         }
     }
     last_midi_len = (uint16_t)len;
-    if(py_midi_callback) tulip_midi_isr();
+    tulip_midi_isr();
 }
 
 #ifdef ESP_PLATFORM
@@ -20,8 +20,6 @@ void midi_out(uint8_t * bytes, uint16_t len) {
 }
 
 void run_midi() {
-    py_midi_callback = 0;
-    
     last_midi_len = 0;
 
     // Setup UART2 to listen for MIDI messages 

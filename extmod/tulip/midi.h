@@ -7,7 +7,6 @@ QueueHandle_t uart_queue;
 #endif
 
 
-uint8_t py_midi_callback;
 void tulip_midi_isr();
 #define MAX_MIDI_BYTES_PER_MESSAGE 18
 uint8_t last_midi[MAX_MIDI_BYTES_PER_MESSAGE];

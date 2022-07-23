@@ -145,7 +145,6 @@ uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX
 
 uint8_t tfb_y_row; 
 uint8_t tfb_x_col; 
-uint8_t py_frame_callback;
 uint8_t task_screenshot;
 uint8_t task_start;
 uint8_t task_stop;

@@ -285,19 +285,23 @@ mp_obj_t ui_callback = NULL;
 
 
 void tulip_frame_isr() {
-    // Schedule the python callback given to run asap
-    mp_sched_schedule(frame_callback, frame_arg);
+    if(frame_callback != NULL) {
+        // Schedule the python callback given to run asap
+        mp_sched_schedule(frame_callback, frame_arg);
 #ifdef ESP_PLATFORM
-    mp_hal_wake_main_task_from_isr();
+        mp_hal_wake_main_task_from_isr();
 #endif
+    }
 }
 
 void tulip_midi_isr() {
-    mp_sched_schedule(midi_callback, mp_const_none); 
+    if(midi_callback != NULL)
+        mp_sched_schedule(midi_callback, mp_const_none); 
 }
 
 void tulip_ui_isr(uint8_t ui_id) {
-    mp_sched_schedule(ui_callback, mp_obj_new_int(ui_id)); 
+    if(ui_callback != NULL)
+        mp_sched_schedule(ui_callback, mp_obj_new_int(ui_id)); 
 }
 
 
@@ -305,10 +309,9 @@ void tulip_ui_isr(uint8_t ui_id) {
 // tulip.frame_callback() -- stops 
 STATIC mp_obj_t tulip_frame_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        py_frame_callback = 0;
+        frame_callback = NULL;
     } else {
         frame_callback = args[0];
-        py_frame_callback = 1;
     }
     if(n_args > 1) {
         frame_arg = args[1];
@@ -323,10 +326,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_frame_callback_obj, 0, 2, tulip
 // tulip.midi_callback() -- stops 
 STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        py_midi_callback = 0;
+        midi_callback = NULL;
     } else {
         midi_callback = args[0];
-        py_midi_callback = 1;
     }
     return mp_const_none;
 }
@@ -339,10 +341,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 0, 2, tulip_
 // tulip.ui_callback() -- stops 
 STATIC mp_obj_t tulip_ui_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        py_ui_callback = 0;
+        ui_callback = NULL;
     } else {
         ui_callback = args[0];
-        py_ui_callback = 1;
     }
     return mp_const_none;
 }
@@ -479,7 +480,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_off_obj, 1, 1, tulip_spr
 
 STATIC mp_obj_t tulip_sprite_clear(size_t n_args, const mp_obj_t *args) {
     display_reset_sprites();
-    py_frame_callback = 0;
     return mp_const_none;
 }
 
@@ -502,7 +502,6 @@ extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t);
 STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
     display_reset_bg();
     display_reset_sprites();
-    py_frame_callback = 0;
     display_reset_tfb();
     return mp_const_none;
 }
@@ -825,10 +824,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_speaker_volume_obj, 0, 2, tulip
 //tulip.button(id, "text", x,y,w,h,r,fg_color,btn_color,filled)
 STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
-    if(n_args < 10) { 
-        ui_element_remove(ui_id);
-    } else {
-        ui_button_new(ui_id, 
+    ui_button_new(ui_id, 
             mp_obj_str_get_str(args[1]), // text
             mp_obj_get_int(args[2]), // x
             mp_obj_get_int(args[3]), // y
@@ -839,16 +835,15 @@ STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
             mp_obj_get_int(args[8]), // btn_color
             mp_obj_get_int(args[9]) // filled 
             );
-    }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 1, 10, tulip_button);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 10, 10, tulip_button);
 
-//tulip.slider(id, x,y,w,h,orientation,min,max,bar_color,handle_color)
+
 STATIC mp_obj_t tulip_slider(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
-    if(n_args < 10) { 
-        ui_element_remove(ui_id);
+    if(n_args < 9) { 
+        return mp_obj_new_float(ui_slider_get_val(ui_id));
     } else {
         ui_slider_new(ui_id, 
             mp_obj_get_int(args[1]), // x
@@ -856,15 +851,23 @@ STATIC mp_obj_t tulip_slider(size_t n_args, const mp_obj_t *args) {
             mp_obj_get_int(args[3]), // w
             mp_obj_get_int(args[4]), // h
             mp_obj_get_int(args[5]), // orientation
-            mp_obj_get_int(args[6]), // min
-            mp_obj_get_int(args[7]), // max
-            mp_obj_get_int(args[8]), // bar_color
-            mp_obj_get_int(args[9]) // handle_color
+            mp_obj_get_float(args[6]), // val        
+            mp_obj_get_int(args[7]), // bar_color
+            mp_obj_get_int(args[8]) // handle_color
             );
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_slider_obj, 1, 10, tulip_slider);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_slider_obj, 1, 9, tulip_slider);
+
+
+STATIC mp_obj_t tulip_ui_del(size_t n_args, const mp_obj_t *args) {
+    uint8_t ui_id = mp_obj_get_int(args[0]);
+    ui_element_del(ui_id);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_del_obj, 1, 1, tulip_ui_del);
+
 
 
 
@@ -922,6 +925,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
     { MP_ROM_QSTR(MP_QSTR_button), MP_ROM_PTR(&tulip_button_obj) },
     { MP_ROM_QSTR(MP_QSTR_slider), MP_ROM_PTR(&tulip_slider_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ui_del), MP_ROM_PTR(&tulip_ui_del_obj) },
     //{ MP_ROM_QSTR(MP_QSTR_speaker_volume), MP_ROM_PTR(&tulip_speaker_volume_obj) },
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
