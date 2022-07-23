@@ -61,7 +61,7 @@ extern void tulip_frame_isr();
         bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL*y_offsets[i] + x_offsets[i]*BYTES_PER_PIXEL];
     }
 
-    if(py_frame_callback) tulip_frame_isr();
+    tulip_frame_isr();
     vsync_count++; 
     return true;
 }
@@ -704,7 +704,6 @@ void display_init(void) {
     display_reset_touch();
     ui_init();
 
-    py_frame_callback = 0;
     vsync_count = 1;
     reported_fps = 1;
     reported_gpu_usage = 0;
