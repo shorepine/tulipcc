@@ -78,11 +78,22 @@ imgur_url = tulip.screenshot()
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 ```
 
-### Input
+### Input and user interface
 
-Tulip supports USB keyboard input and touch input. (On Tulip Desktop, mouse clicks act as touch points.) 
+Tulip supports USB keyboard input and touch input. (On Tulip Desktop, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications.
 
 ```python
+# Create a callback to activate when UI elements are triggered
+def ui_callback(x):
+    # x is the element ID that was triggered
+    print("Item %d was fired" % (x))
+    if(x==1): # slider
+        print("Slider value is now %f" % (tulip.slider(1)))
+
+tulip.ui_callback(ui_callback)
+tulip.button(ui_element_id, "Button text", x, y, w, h, radius, bg_pal_idx, fg_pal_idx, filled)
+tulip.slider(ui_element_id, x, y, w, h, orientation, default_value, bg_pal_idx, handle_pal_idx)
+
 # Returns the current held keyboard scan codes, up to 6 and the modifier mask (ctrl, shift etc)
 (modifiers, scan0, scan1... scan5) = tulip.keys()
 
@@ -490,7 +501,7 @@ idf.py -D MICROPY_BOARD=TULIP4 flash
 Some development guidelines if you'd like to help contribute!
 
  * Be nice and helpful and don't be afraid to ask questions! We're all doing this for fun and to learn. 
- * We're currently a hard fork of ESP-IDF, Alles and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. No git submodules. 
+ * We're currently a hard fork of ESP-IDF, Alles/AMY and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. 
  * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change. 
 
 
