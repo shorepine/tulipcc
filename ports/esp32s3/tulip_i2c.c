@@ -60,6 +60,7 @@ const uint16_t wm8960_reg_defaults[] = {
  0x37, 0x00e9,
 };
 
+int16_t volume ; 
 
 void i2c_init()
 {
@@ -69,8 +70,9 @@ void i2c_init()
     i2c_conf.mode = I2C_MODE_MASTER;
     i2c_conf.sda_io_num = SDA_PIN;
     i2c_conf.scl_io_num = SCL_PIN;
-    //i2c_conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    //i2c_conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    // Disable i2c pullups -- we have them on board
+    i2c_conf.sda_pullup_en = GPIO_PULLUP_DISABLE;
+    i2c_conf.scl_pullup_en = GPIO_PULLUP_DISABLE;
     i2c_conf.master.clk_speed = 100 * 1000;
     fprintf(stderr, "Configuring I2C\n");
     rc = i2c_param_config(I2C_BUS_NO, &i2c_conf);
