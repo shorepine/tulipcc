@@ -844,7 +844,13 @@ int16_t * fill_audio_buffer_task() {
 	    }
 #ifdef ESP_PLATFORM
         // ESP32's i2s driver has this bug
+
+#ifdef WM8960
+        block[i] = sample;
+#else
         block[i ^ 0x01] = sample;
+#endif
+
 #else
         block[i] = sample;
 #endif

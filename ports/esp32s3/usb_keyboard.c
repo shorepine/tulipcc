@@ -48,7 +48,12 @@ uint8_t KeyboardInterval;
 bool isKeyboardPolling = false;
 int64_t KeyboardTimer=0;
 
-const size_t KEYBOARD_IN_BUFFER_SIZE = 8; // 16; // was 8
+
+// vortex 8
+// keychron 16
+#define KEYBOARD_BYTES 16
+
+const size_t KEYBOARD_IN_BUFFER_SIZE = KEYBOARD_BYTES; 
 usb_transfer_t *KeyboardIn = NULL;
 
 
@@ -305,7 +310,9 @@ void run_usb()
         }
       }
       if (isKeyboardReady && !isKeyboardPolling && (KeyboardTimer > KeyboardInterval)) {
-        KeyboardIn->num_bytes = 8; // 16; // was 8 -- need to check this works, maybe try both? 
+        // vortex is 8
+        // keychron is 16
+        KeyboardIn->num_bytes = KEYBOARD_BYTES; 
         esp_err_t err = usb_host_transfer_submit(KeyboardIn);
         if (err != ESP_OK) {
           printf("usb_host_transfer_submit In fail: %x\n", err);

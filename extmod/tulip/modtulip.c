@@ -289,7 +289,7 @@ void tulip_frame_isr() {
         // Schedule the python callback given to run asap
         mp_sched_schedule(frame_callback, frame_arg);
 #ifdef ESP_PLATFORM
-        mp_hal_wake_main_task_from_isr();
+        //mp_hal_wake_main_task_from_isr();
 #endif
     }
 }
@@ -804,11 +804,9 @@ STATIC mp_obj_t tulip_timing(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_timing_obj, 0, 10, tulip_timing);
-/*
+
+#ifdef ESP_PLATFORM
 STATIC mp_obj_t tulip_speaker_volume(size_t n_args, const mp_obj_t *args) {
-#ifndef ESP_PLATFORM
-    return mp_const_none;
-#endif
     if(n_args == 0) {
         return mp_obj_new_int(wm8960_get_vol());
     } else {
@@ -818,8 +816,8 @@ STATIC mp_obj_t tulip_speaker_volume(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_speaker_volume_obj, 0, 2, tulip_speaker_volume);
+#endif
 
-*/
 
 //tulip.button(id, "text", x,y,w,h,r,fg_color,btn_color,filled)
 STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
@@ -926,7 +924,12 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_button), MP_ROM_PTR(&tulip_button_obj) },
     { MP_ROM_QSTR(MP_QSTR_slider), MP_ROM_PTR(&tulip_slider_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_del), MP_ROM_PTR(&tulip_ui_del_obj) },
-    //{ MP_ROM_QSTR(MP_QSTR_speaker_volume), MP_ROM_PTR(&tulip_speaker_volume_obj) },
+
+// Special platform specific things
+#ifdef ESP_PLATFORM
+    { MP_ROM_QSTR(MP_QSTR_speaker_volume), MP_ROM_PTR(&tulip_speaker_volume_obj) },
+#endif
+
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
 #endif

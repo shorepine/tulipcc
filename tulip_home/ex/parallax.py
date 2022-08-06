@@ -1,4 +1,5 @@
 # A simple game demo that shows off BG and sprites and the GPU callback
+import time
 
 tulip.gpu_reset() # clear everything
 

@@ -133,7 +133,6 @@ void ui_init() {
 }
 
 
-// problem here: if i hold and mouse up outside of a button it stays lit
 void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
     // respond to finger down / up
     if(touch_held && up) { // this is a finger up / click relea
