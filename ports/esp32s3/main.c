@@ -12,36 +12,7 @@
 #include "tasks.h"
 #include "alles.h"
 
-#ifdef TEST_I2C
-extern void run_i2c();
-extern void wm8960_set_vol(uint16_t vol, uint8_t module);
-void app_main(void) {
-    fprintf(stderr, "hello from the test board\n");
-    fprintf(stderr, "starting i2c\n");
-    run_i2c();
 
-    fprintf(stderr, "Starting Alles on core %d\n", ALLES_TASK_COREID);
-    xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
-    uint16_t v =50;
-    while (1) {
-        vTaskDelay(2000/portTICK_PERIOD_MS);
-        fprintf(stderr,"setting vol %d to headphone and speaker\n", v);
-        wm8960_set_vol(v,1);
-        wm8960_set_vol(v,2);
-        bleep();
-        //vTaskDelay(2000/portTICK_PERIOD_MS);
-        //fprintf(stderr,"setting vol %d to speaker\n", v);
-        //wm8960_set_vol(v,2);
-        v=v+2;
-        if(v>=100) v = 50;
-//        v =(v + 1) % 255;
-
-    }
-
-}
-
-
-#else
 /*
  * This file is part of the MicroPython project, http://micropython.org/
  *
@@ -420,4 +391,3 @@ void *esp_native_code_commit(void *buf, size_t len, void *reloc) {
     memcpy(p, buf, len);
     return p;
 }
-#endif
