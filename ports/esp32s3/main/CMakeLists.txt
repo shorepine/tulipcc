@@ -73,7 +73,6 @@ set(MICROPY_SOURCE_PORT
     ${PROJECT_DIR}/usb_keyboard.c
     ${PROJECT_DIR}/uart.c
     ${PROJECT_DIR}/usb.c
-    ${PROJECT_DIR}/tulip_i2c.c
     ${PROJECT_DIR}/touchscreen.c
     ${PROJECT_DIR}/multicast.c
     ${PROJECT_DIR}/usb_serial_jtag.c
