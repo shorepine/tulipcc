@@ -25,7 +25,7 @@
 #define DEFAULT_LATENCY_MS 1000      // fixed latency in milliseconds
 #define EVENT_FIFO_LEN 3000  // number of events the queue can store
 #define MAX_DRIFT_MS 20000   // ms of time you can schedule ahead before synth recomputes time base
-#define SAMPLE_RATE 48000    // playback sample rate
+#define SAMPLE_RATE 44100    // playback sample rate
 #define SAMPLE_MAX 32767
 #define MAX_ALGO_OPS 6 // dx7
 #define MAX_BREAKPOINTS 8

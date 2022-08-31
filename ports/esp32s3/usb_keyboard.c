@@ -11,6 +11,9 @@
 #include "tulip_helpers.h"
 
 const size_t USB_HID_DESC_SIZE = 9;
+// vortex 8
+// keychron 16
+#define KEYBOARD_BYTES 8
 
 // How long you hold down a key before it starts repeating
 #define KEY_REPEAT_TRIGGER_MS 500
@@ -49,9 +52,6 @@ bool isKeyboardPolling = false;
 int64_t KeyboardTimer=0;
 
 
-// vortex 8
-// keychron 16
-#define KEYBOARD_BYTES 16
 
 const size_t KEYBOARD_IN_BUFFER_SIZE = KEYBOARD_BYTES; 
 usb_transfer_t *KeyboardIn = NULL;
