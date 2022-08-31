@@ -1,6 +1,8 @@
 .DS_Store
 __pycache__
 
+esp-idf/components/bootloader/subproject/dependencies.lock
+dependencies.lock
 ports/esp32s3/build
 ports/esp32s3/sdkconfig.old
 ports/macos/build-standard/
