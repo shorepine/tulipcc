@@ -59,6 +59,7 @@ portBASE_TYPE ticks_to_wait);
 
 #define FT5X06_ADDR_DEF    (0x38)
 
+// TODO -- maybe this fixes the weird math
 #define SCREEN_XSIZE       (479)
 #define SCREEN_YSIZE       (799)
 

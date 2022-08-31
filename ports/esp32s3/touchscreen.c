@@ -254,7 +254,10 @@ void run_ft5x06(void *param)
     uint8_t got_primary_touch;
     while (1) {
         got_primary_touch = 0;
-        if(gpio_get_level(TOUCH_INT_IO) == 0 && iot_ft5x06_touch_report(dev, &touch_info) == ESP_OK) {
+        int8_t p0 = gpio_get_level(TOUCH_INT_IO);
+        int8_t p1 = iot_ft5x06_touch_report(dev, &touch_info);
+        if(p0 == 0 && p1 == ESP_OK) {
+        //if(gpio_get_level(TOUCH_INT_IO) == 0 && iot_ft5x06_touch_report(dev, &touch_info) == ESP_OK) {
             for(i = 0; i < touch_info.touch_point; i++) {
                 if(i<4) {
                     if(touch_info.curx[i] > 64000) { // right half of screen 
@@ -265,11 +268,11 @@ void run_ft5x06(void *param)
                     last_touch_y[i] = (touch_info.cury[i]-TOUCH_TOP_Y) * ((float)V_RES / (float) (TOUCH_BOTTOM_Y-TOUCH_TOP_Y));
                 }
                 if(i==0) got_primary_touch = 1;
-               //fprintf(stderr,"touch point %d  x:%d  y:%d became %d %d\n", i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
+               fprintf(stderr,"touch point %d  x:%d  y:%d became %d %d\n", i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
             }
             vTaskDelay(20/portTICK_PERIOD_MS);
         } else {
-            fprintf(stderr,"B release %d 0 %d 0 %d\n",i, touch_info.curx[0], touch_info.cury[0]);
+            fprintf(stderr,"B release p%d x%d y%d p0 %d p1 %d\n",i, touch_info.curx[0], touch_info.cury[0], p0, p1);
             vTaskDelay(20/portTICK_PERIOD_MS);
         }
         if(got_primary_touch) { 
