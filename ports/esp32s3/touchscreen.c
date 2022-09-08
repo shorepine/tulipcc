@@ -268,11 +268,11 @@ void run_ft5x06(void *param)
                     last_touch_y[i] = (touch_info.cury[i]-TOUCH_TOP_Y) * ((float)V_RES / (float) (TOUCH_BOTTOM_Y-TOUCH_TOP_Y));
                 }
                 if(i==0) got_primary_touch = 1;
-               fprintf(stderr,"touch point %d  x:%d  y:%d became %d %d\n", i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
+               //fprintf(stderr,"touch point %d  x:%d  y:%d became %d %d\n", i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
             }
             vTaskDelay(20/portTICK_PERIOD_MS);
         } else {
-            fprintf(stderr,"B release p%d x%d y%d p0 %d p1 %d\n",i, touch_info.curx[0], touch_info.cury[0], p0, p1);
+            //fprintf(stderr,"B release p%d x%d y%d p0 %d p1 %d\n",i, touch_info.curx[0], touch_info.cury[0], p0, p1);
             vTaskDelay(20/portTICK_PERIOD_MS);
         }
         if(got_primary_touch) { 
