@@ -689,8 +689,8 @@ void display_init(void) {
     TFBfg = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBbg = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
 
-    x_offsets = (uint16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
-    y_offsets = (uint16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
+    x_offsets = (int16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
+    y_offsets = (int16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
     x_speeds = (int16_t*)malloc_caps(V_RES*sizeof(int16_t), MALLOC_CAP_INTERNAL);
     y_speeds = (int16_t*)malloc_caps(V_RES*sizeof(int16_t), MALLOC_CAP_INTERNAL);
 

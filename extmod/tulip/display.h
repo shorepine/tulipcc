@@ -169,8 +169,8 @@ uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBbg;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBf;//[TFB_ROWS][TFB_COLS];
-uint16_t *x_offsets;//[V_RES];
-uint16_t *y_offsets;//[V_RES];
+int16_t *x_offsets;//[V_RES];
+int16_t *y_offsets;//[V_RES];
 int16_t *x_speeds;//[V_RES];
 int16_t *y_speeds;//[V_RES];
 
