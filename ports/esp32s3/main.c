@@ -334,7 +334,7 @@ extern void ft5x06_init();
 extern void run_ft5x06();
 extern void run_midi();
 extern void run_usb();
-extern void run_i2c();
+//extern void run_i2c();
 
 void app_main(void) {
     // Hook for a board to run code at start up.

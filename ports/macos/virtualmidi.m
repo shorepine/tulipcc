@@ -35,7 +35,7 @@ void midi_out(uint8_t * bytes, uint16_t len) {
 void* run_midi(void*argp){
     if (@available(macOS 11, *))  {
         @autoreleasepool {
-            py_midi_callback = 0;
+            //py_midi_callback = 0;
             last_midi_len = 0;
 
             OSStatus status = MIDIClientCreate((__bridge CFStringRef)@"Tulip", NotifyProc, NULL, &midi_client);
@@ -51,12 +51,12 @@ void* run_midi(void*argp){
 
             eventSource = CGEventSourceCreate(kCGEventSourceStatePrivate);
             ItemCount number_sources = MIDIGetNumberOfSources();
-            for (int i = 0; i < number_sources; i++) {
+            for (unsigned long i = 0; i < number_sources; i++) {
                 MIDIEndpointRef source = MIDIGetSource(i);
                 MIDIPortRef in_port;
-                status = MIDIInputPortCreateWithProtocol(midi_client, (__bridge CFStringRef)[NSString stringWithFormat:@"Tulip Input %d", i], kMIDIProtocol_1_0, &in_port, ^(const MIDIEventList *evtlist, void *srcConnRefCon) {
+                status = MIDIInputPortCreateWithProtocol(midi_client, (__bridge CFStringRef)[NSString stringWithFormat:@"Tulip Input %lu", i], kMIDIProtocol_1_0, &in_port, ^(const MIDIEventList *evtlist, void *srcConnRefCon) {
                     const MIDIEventPacket* packet = &evtlist->packet[0];
-                    for (int i = 0; i < evtlist->numPackets; i++) {
+                    for (uint32_t i = 0; i < evtlist->numPackets; i++) {
                         if(packet->wordCount == 1){
                             const unsigned char *bytes = (unsigned char*)(&packet->words[0]);
                             if(bytes[3] == 0x20) { //  TODO, non-3 packets, then what? 
@@ -64,7 +64,7 @@ void* run_midi(void*argp){
                                 last_midi[1] = bytes[1];
                                 last_midi[2] = bytes[0];
                                 last_midi_len = 3;
-                                if(py_midi_callback) tulip_midi_isr();
+                                tulip_midi_isr();
                                 packet = MIDIEventPacketNext(packet);
                             }
                         }

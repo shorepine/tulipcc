@@ -122,10 +122,6 @@ LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
 LDFLAGS += -Llibs -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework Cocoa -lstdc++ -lsoundio $(ARCHFLAGS)
 CFLAGS += -DVIRTUAL_MIDI
 
-%.o: %.m $(HEADERS)
-	clang $(CFLAGS) -c $< -o $@
-
-
 # Flags to link with pthread library
 LIBPTHREAD = -lpthread
 
@@ -329,7 +325,8 @@ include $(TOP)/py/mkrules.mk
 
 $(BUILD)/%.o: %.m
 	$(ECHO) "M $<"
-	clang  -I$(INC) -mmacosx-version-min=10.15 -c -o $@ $<
+	#clang  -I$(INC) -mmacosx-version-min=10.15 -c -o $@ $<
+	clang  -I$(INC) $(CFLAGS) -c -o $@ $<
 
 .PHONY: test test_full
 
