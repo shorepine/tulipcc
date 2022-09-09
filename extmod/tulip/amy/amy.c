@@ -794,10 +794,13 @@ int16_t * fill_audio_buffer_task() {
 
     //gpio_set_level(CPU_MONITOR_1, 1);
     // Tell the rendering threads to start rendering
-    for(uint8_t i=0;i<AMY_CORES;i++) xTaskNotifyGive(alles_render_handle);
+    xTaskNotifyGive(alles_render_0_handle);
+    if(AMY_CORES>1) xTaskNotifyGive(alles_render_1_handle);
 
     // And wait for each of them to come back
-    for(uint8_t i=0;i<AMY_CORES;i++) ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+    ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+    if(AMY_CORES>1) ulTaskNotifyTake(pdFALSE, portMAX_DELAY);
+
 #else
     render_task(0, OSCS, 0);        
 #endif

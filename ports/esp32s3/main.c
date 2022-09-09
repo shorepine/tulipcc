@@ -120,9 +120,9 @@ float compute_cpu_usage(uint8_t debug) {
     TaskStatus_t *pxTaskStatusArray;
     volatile UBaseType_t uxArraySize, x, i;
     const char* const tasks[] = {
-         "render_task0", "render_task1", "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "idle0", "idle1",
+         "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "idle0", "idle1",
          DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
-         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, 0
+         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_0_TASK_NAME, ALLES_RENDER_1_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, 0
     };
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
@@ -165,13 +165,13 @@ float compute_cpu_usage(uint8_t debug) {
             last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
             ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
         }
-        
+    
 
     }
     if(debug) {
         printf("------ CPU usage since last call to tulip.cpu()\n");
         for(i=0;i<MAX_TASKS;i++) {
-            printf("%-15s\t%-15ld\t\t%2.2f%%\n", tasks[i], counter_since_last[i], (float)counter_since_last[i]/ulTotalRunTime * 100.0);
+            printf("%-15s\t%-15ld\t\t%2.2f%%\n", tasks[i], counter_since_last[i], ((float)counter_since_last[i]*2.0)/ulTotalRunTime * 100.0);
         }   
     }
     vPortFree(pxTaskStatusArray);

@@ -46,8 +46,8 @@ typedef int16_t i2s_sample_type;
 #define CONFIG_I2S_BCLK 1//2//1//47 // SPICLK_P 
 #define CONFIG_I2S_DIN 2//2//48 // SPICLK_N and LED, so move
 #define CONFIG_I2S_NUM 0 
-#define AMY_CORES 1
-#define OSCS 32
+#define AMY_CORES 2
+#define OSCS 64
 #else // ESP_PLATFORM
 #define PCM_PATCHES_SIZE_LARGE 1
 #endif

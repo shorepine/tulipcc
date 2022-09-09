@@ -1,4 +1,5 @@
 # make some buttons
+import tulip
 def cb(x):
     if(x<2):
         print("button %d pressed" % (x))
