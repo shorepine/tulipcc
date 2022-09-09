@@ -64,6 +64,17 @@ const float *choose_from_lutset(float period, lut_entry *lutset, int16_t *plut_s
 // step == scaled_phase
 // skip == step (scaled_step)
 
+typedef union _float_union_t {
+    float f;
+    uint32_t i;
+} float_union_t;
+
+static inline float div2(float f) {
+  float_union_t u = {f};
+  u.i -= 0x00800000;
+  return u.f;
+}
+
 // TODO - A-4 and A-6, chained feedback
 float render_lut_fm_osc(float * buf, float phase, float step, float incoming_amp, float ending_amp, const float* lut, int16_t lut_size, float * mod, float feedback_level, float * last_two) { 
     int lut_mask = lut_size - 1;
@@ -71,7 +82,7 @@ float render_lut_fm_osc(float * buf, float phase, float step, float incoming_amp
     float past1 = last_two[1];
     for(uint16_t i=0;i<BLOCK_SIZE;i++) {
         float scaled_phase = lut_size *
-	  (phase + mod[i] + feedback_level * ((past1 + past0) / 2.0));
+	  (phase + mod[i] + feedback_level * (past1 + past0));
         int base_index = (int)scaled_phase;
         float frac = scaled_phase - base_index;
         float b = lut[base_index & lut_mask];
@@ -82,7 +93,7 @@ float render_lut_fm_osc(float * buf, float phase, float step, float incoming_amp
         phase += step;
         phase -= (int)phase;
         past1 = past0;
-        past0 = sample;
+        past0 = div2(sample);
     }
     last_two[0] = past0;
     last_two[1] = past1;

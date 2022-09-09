@@ -91,7 +91,9 @@ amy_err_t esp_amy_init() {
 
     // Create rendering threads, one per core so we can deal with dan ellis float math
     static uint8_t zero = 0;
-    xTaskCreatePinnedToCore(&esp_render_task, ALLES_RENDER_TASK_NAME, ALLES_RENDER_TASK_STACK_SIZE, &zero, ALLES_RENDER_TASK_PRIORITY, &alles_render_handle, ALLES_RENDER_TASK_COREID);
+    static uint8_t one = 1;
+    xTaskCreatePinnedToCore(&esp_render_task, ALLES_RENDER_0_TASK_NAME, ALLES_RENDER_TASK_STACK_SIZE, &zero, ALLES_RENDER_TASK_PRIORITY, &alles_render_0_handle, ALLES_RENDER_0_TASK_COREID);
+    if(AMY_CORES>1) xTaskCreatePinnedToCore(&esp_render_task, ALLES_RENDER_1_TASK_NAME, ALLES_RENDER_TASK_STACK_SIZE, &one, ALLES_RENDER_TASK_PRIORITY, &alles_render_1_handle, ALLES_RENDER_1_TASK_COREID);
     // Wait for the render tasks to get going before starting the i2s task
     delay_ms(100);
 

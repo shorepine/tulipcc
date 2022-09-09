@@ -17,6 +17,7 @@
 #define ALLES_RENDER_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)
 #define ALLES_FILL_BUFFER_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 4)
 
+// Since display is on core0, things on core0 will be slower than things on core1
 #define DISPLAY_TASK_COREID (0)
 #define USB_TASK_COREID (1)
 #define TOUCHSCREEN_TASK_COREID  (1)
@@ -25,7 +26,8 @@
 #define ALLES_TASK_COREID (1)
 #define ALLES_PARSE_TASK_COREID (0)
 #define ALLES_RECEIVE_TASK_COREID (1)
-#define ALLES_RENDER_TASK_COREID (1)
+#define ALLES_RENDER_0_TASK_COREID (1)
+#define ALLES_RENDER_1_TASK_COREID (0)
 #define ALLES_FILL_BUFFER_TASK_COREID (1)
 
 #define DISPLAY_TASK_STACK_SIZE    (4 * 1024) 
@@ -39,18 +41,19 @@
 #define ALLES_RENDER_TASK_STACK_SIZE (8 * 1024)
 #define ALLES_FILL_BUFFER_TASK_STACK_SIZE (4 * 1024)
 
-#define DISPLAY_TASK_NAME "display_task"
-#define USB_TASK_NAME  "usb_task"
-#define TOUCHSCREEN_TASK_NAME "touchscreen_task"
-#define TULIP_MP_TASK_NAME "tulip_mp_task"
-#define MIDI_TASK_NAME "midi_task"
-#define ALLES_TASK_NAME  "alles_task"
-#define ALLES_PARSE_TASK_NAME "alles_parse_task"
-#define ALLES_RECEIVE_TASK_NAME "alles_receive_task"
-#define ALLES_RENDER_TASK_NAME "alles_render_task"
-#define ALLES_FILL_BUFFER_TASK_NAME "alles_fill_buffer_task"
+#define DISPLAY_TASK_NAME           "display_task"
+#define USB_TASK_NAME               "usb_task"
+#define TOUCHSCREEN_TASK_NAME       "tscreen_task"
+#define TULIP_MP_TASK_NAME          "tulip_mp_task"
+#define MIDI_TASK_NAME              "midi_task"
+#define ALLES_TASK_NAME             "alles_task"
+#define ALLES_PARSE_TASK_NAME       "alles_par_task"
+#define ALLES_RECEIVE_TASK_NAME     "alles_rec_task"
+#define ALLES_RENDER_0_TASK_NAME      "alles_r0_task"
+#define ALLES_RENDER_1_TASK_NAME      "alles_r1_task"
+#define ALLES_FILL_BUFFER_TASK_NAME "alles_fb_task"
 
-#define MAX_TASKS 22 // includes system tasks
+#define MAX_TASKS 20 // includes system tasks
 
 TaskHandle_t display_handle;
 TaskHandle_t usb_handle;
@@ -60,7 +63,8 @@ TaskHandle_t midi_handle;
 TaskHandle_t alles_handle;
 TaskHandle_t alles_parse_handle;
 TaskHandle_t alles_receive_handle;
-TaskHandle_t alles_render_handle;
+TaskHandle_t alles_render_0_handle;
+TaskHandle_t alles_render_1_handle;
 TaskHandle_t alles_fill_buffer_handle;
 TaskHandle_t idle_0_handle;
 TaskHandle_t idle_1_handle;
