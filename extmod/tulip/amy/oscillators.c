@@ -59,24 +59,24 @@ const float *choose_from_lutset(float period, lut_entry *lutset, int16_t *plut_s
 }
 
 
-// dictionary:
-// oldC -- python
-// step == scaled_phase
-// skip == step (scaled_step)
 
+// Dan way to make /2.0 a lot faster
 typedef union _float_union_t {
     float f;
     uint32_t i;
 } float_union_t;
 
-static inline float div2(float f) {
+static inline float fdiv2(float f) {
   float_union_t u = {f};
   if(u.i) u.i -= 0x00800000;
   return u.f;
 }
 
+// dictionary:
+// oldC -- python
+// step == scaled_phase
+// skip == step (scaled_step)
 
-// TODO - A-4 and A-6, chained feedback
 float render_lut_fm_osc(float * buf, float phase, float step, float incoming_amp, float ending_amp, const float* lut, int16_t lut_size, float * mod, float feedback_level, float * last_two) { 
     int lut_mask = lut_size - 1;
     float past0 = last_two[0];
@@ -89,12 +89,13 @@ float render_lut_fm_osc(float * buf, float phase, float step, float incoming_amp
         float b = lut[base_index & lut_mask];
         float c = lut[(base_index+1) & lut_mask];
         float sample = b + ((c - b) * frac);
+        // TODO : #define BLOCK_SLICE (1.0/BLOCK_SIZE) (compute it once), test speed 
         float scaled_amp = incoming_amp + (ending_amp - incoming_amp)*((float)i/(float)BLOCK_SIZE);
         buf[i] += sample * scaled_amp;
         phase += step;
         phase -= (int)phase;
         past1 = past0;
-        past0 = div2(sample);
+        past0 = fdiv2(sample);
     }
     last_two[0] = past0;
     last_two[1] = past1;
