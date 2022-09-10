@@ -71,9 +71,10 @@ typedef union _float_union_t {
 
 static inline float div2(float f) {
   float_union_t u = {f};
-  u.i -= 0x00800000;
+  if(u.i) u.i -= 0x00800000;
   return u.f;
 }
+
 
 // TODO - A-4 and A-6, chained feedback
 float render_lut_fm_osc(float * buf, float phase, float step, float incoming_amp, float ending_amp, const float* lut, int16_t lut_size, float * mod, float feedback_level, float * last_two) { 
