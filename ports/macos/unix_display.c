@@ -78,7 +78,8 @@ void init_window(uint16_t w, uint16_t h) {
         pixels_332 = (uint8_t*) surface_332->pixels;
     }
     memset(pixels_332, 0, H_RES * V_RES);
-
+    // If this is not set it prevents sleep on a mac (at least)
+    SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
     SDL_StartTextInput();
 }

@@ -76,26 +76,28 @@ static inline float fdiv2(float f) {
 // oldC -- python
 // step == scaled_phase
 // skip == step (scaled_step)
-
+//#define BLOCK_SLICE .00390625
 float render_lut_fm_osc(float * buf, float phase, float step, float incoming_amp, float ending_amp, const float* lut, int16_t lut_size, float * mod, float feedback_level, float * last_two) { 
+    //float block_slice = .00390625;
     int lut_mask = lut_size - 1;
     float past0 = last_two[0];
     float past1 = last_two[1];
     for(uint16_t i=0;i<BLOCK_SIZE;i++) {
         float scaled_phase = lut_size *
-	  (phase + mod[i] + feedback_level * (past1 + past0));
+	  (phase + mod[i] + feedback_level * (past1 + past0) /2.0f);
         int base_index = (int)scaled_phase;
         float frac = scaled_phase - base_index;
         float b = lut[base_index & lut_mask];
         float c = lut[(base_index+1) & lut_mask];
         float sample = b + ((c - b) * frac);
-        // TODO : #define BLOCK_SLICE (1.0/BLOCK_SIZE) (compute it once), test speed 
+
         float scaled_amp = incoming_amp + (ending_amp - incoming_amp)*((float)i/(float)BLOCK_SIZE);
+        //float scaled_amp = incoming_amp + (ending_amp - incoming_amp)*((float)i * block_slice);
         buf[i] += sample * scaled_amp;
         phase += step;
         phase -= (int)phase;
         past1 = past0;
-        past0 = fdiv2(sample);
+        past0 = sample; //fdiv2(sample);
     }
     last_two[0] = past0;
     last_two[1] = past1;
@@ -128,7 +130,7 @@ float render_lut(float * buf, float step, float skip, float incoming_amp, float 
         //    + (frac + 1) * frac * (frac - 1) / 6.0 * d;
         // Miller's optimization - https://github.com/pure-data/pure-data/blob/master/src/d_array.c#L440
         float cminusb = c - b;
-        float sample = b + frac * (cminusb - 0.1666667f * (1.-frac) * ((d - a - 3.0f * cminusb) * frac + (d + 2.0f*a - 3.0f*b)));
+        float sample = b + frac * (cminusb - 0.1666667f * (1.0f-frac) * ((d - a - 3.0f * cminusb) * frac + (d + 2.0f*a - 3.0f*b)));
 #endif /* LINEAR_INTERP */
         float scaled_amp = incoming_amp + (ending_amp - incoming_amp)*((float)i/(float)BLOCK_SIZE);
         buf[i] += sample * scaled_amp;
@@ -147,8 +149,8 @@ float render_am_lut(float * buf, float step, float skip, float incoming_amp, flo
         float b = lut[(base_index + 0) & lut_mask];
         float c = lut[(base_index + 1) & lut_mask];
         float sample = b + ((c - b) * frac);
-        float mod_sample = mod[i]; // * (1.0 / bandwidth);
-        float am = dsps_sqrtf_f32_ansi(1.0-bandwidth) + (mod_sample * dsps_sqrtf_f32_ansi(2.0*bandwidth));
+        float mod_sample = mod[i]; // * (1.0f / bandwidth);
+        float am = dsps_sqrtf_f32_ansi(1.0f-bandwidth) + (mod_sample * dsps_sqrtf_f32_ansi(2.0f*bandwidth));
         float scaled_amp = incoming_amp + (ending_amp - incoming_amp)*((float)i/(float)BLOCK_SIZE);
         buf[i] += sample * scaled_amp * am ;
         step += skip;
@@ -177,20 +179,20 @@ void pulse_note_on(uint8_t osc) {
     synth[osc].step = (float)synth[osc].lut_size * synth[osc].phase;
     // Tune the initial integrator state to compensate for mid-sample alignment of table.
     float skip = synth[osc].lut_size / period_samples;
-    float amp = synth[osc].amp * skip * 4.0 / synth[osc].lut_size;
+    float amp = synth[osc].amp * skip * 4.0f / synth[osc].lut_size;
     synth[osc].lpf_state = -0.5 * amp * synth[osc].lut[0];
 }
 
 void render_pulse(float * buf, uint8_t osc) {
     // LPF time constant should be ~ 10x osc period, so droop is minimal.
     float period_samples = (float)SAMPLE_RATE / msynth[osc].freq;
-    synth[osc].lpf_alpha = 1.0 - 1.0 / (10.0 * period_samples);
+    synth[osc].lpf_alpha = 1.0f - 1.0f / (10.0f * period_samples);
     float duty = msynth[osc].duty;
-    if (duty < 0.01) duty = 0.01;
-    if (duty > 0.99) duty = 0.99;
+    if (duty < 0.01f) duty = 0.01f;
+    if (duty > 0.99f) duty = 0.99f;
     float skip = synth[osc].lut_size / period_samples;
     // Scale the impulse proportional to the skip so its integral remains ~constant.
-    float amp = msynth[osc].amp * skip * 4.0 / synth[osc].lut_size;
+    float amp = msynth[osc].amp * skip * 4.0f / synth[osc].lut_size;
     float pwm_step = synth[osc].step + duty * synth[osc].lut_size;
     if (pwm_step >= synth[osc].lut_size)  pwm_step -= synth[osc].lut_size;
     synth[osc].step = render_lut(buf, synth[osc].step, skip, synth[osc].last_amp, amp, synth[osc].lut, synth[osc].lut_size);
@@ -209,7 +211,7 @@ void pulse_mod_trigger(uint8_t osc) {
 float compute_mod_pulse(uint8_t osc) {
     // do BW pulse gen at SR=44100/64
     float mod_sr = (float)SAMPLE_RATE / (float)BLOCK_SIZE;
-    if(msynth[osc].duty < 0.001 || msynth[osc].duty > 0.999) msynth[osc].duty = 0.5;
+    if(msynth[osc].duty < 0.001f || msynth[osc].duty > 0.999) msynth[osc].duty = 0.5;
     float period = 1. / (msynth[osc].freq/(float)mod_sr);
     float period2 = msynth[osc].duty * period; // if duty is 0.5, square wave
     if(synth[osc].step >= period || synth[osc].step == 0)  {
@@ -236,7 +238,7 @@ void saw_note_on(uint8_t osc, int8_t direction) {
     synth[osc].lpf_state = 0;
     // Tune the initial integrator state to compensate for mid-sample alignment of table.
     float skip = synth[osc].lut_size / period_samples;
-    float amp = ((float)direction*synth[osc].amp) * skip * 4.0  / synth[osc].lut_size;
+    float amp = ((float)direction*synth[osc].amp) * skip * 4.0f  / synth[osc].lut_size;
     synth[osc].lpf_state = -0.5 * amp * synth[osc].lut[0];
     // Calculate the mean of the LUT.
     float lut_sum = 0;
@@ -256,10 +258,10 @@ void saw_up_note_on(uint8_t osc) {
 
 void render_saw(float * buf, uint8_t osc, int8_t direction) {
     float period_samples = (float)SAMPLE_RATE / msynth[osc].freq;
-    synth[osc].lpf_alpha = 1.0 - 1.0 / (10.0 * period_samples);
+    synth[osc].lpf_alpha = 1.0f - 1.0f / (10.0f * period_samples);
     float skip = synth[osc].lut_size / period_samples;
     // Scale the impulse proportional to the skip so its integral remains ~constant.
-    float amp = ((float)direction*msynth[osc].amp) * skip * 4.0 / synth[osc].lut_size;
+    float amp = ((float)direction*msynth[osc].amp) * skip * 4.0f / synth[osc].lut_size;
     synth[osc].step = render_lut(
           buf, synth[osc].step, skip, synth[osc].last_amp, amp, synth[osc].lut, synth[osc].lut_size);
     // Give the impulse train a negative bias so that it integrates to zero mean.
@@ -300,7 +302,7 @@ float compute_mod_saw(uint8_t osc, int8_t direction) {
         synth[osc].sample = -1;
         synth[osc].step = 0; // reset the period counter
     } else {
-        synth[osc].sample = -1 + (synth[osc].step * (2.0 / period));
+        synth[osc].sample = -1 + (synth[osc].step * (2.0f / period));
     }
     synth[osc].step++;
     return (synth[osc].sample * ((float)direction*msynth[osc].amp)); 
@@ -347,7 +349,7 @@ float compute_mod_triangle(uint8_t osc) {
         synth[osc].sample = -1;
         synth[osc].step = 0; // reset the period counter
     } else {
-        if(synth[osc].step < (period/2.0)) {
+        if(synth[osc].step < (period/2.0f)) {
             synth[osc].sample = -1 + (synth[osc].step * (2 / period * 2));
         } else {
             synth[osc].sample = 1 - ((synth[osc].step-(period/2)) * (2 / period * 2));
@@ -396,8 +398,8 @@ void sine_note_on(uint8_t osc) {
 void render_partial(float * buf, uint8_t osc) {
     if(msynth[osc].feedback > 0) {
         float scratch[2][BLOCK_SIZE];
-        for(uint16_t i=0;i<BLOCK_SIZE;i++) scratch[0][i] = amy_get_random() *  20.0;
-        dsps_biquad_gen_lpf_f32(coeffs[osc], 100.0/SAMPLE_RATE, 0.707);
+        for(uint16_t i=0;i<BLOCK_SIZE;i++) scratch[0][i] = amy_get_random() *  20.0f;
+        dsps_biquad_gen_lpf_f32(coeffs[osc], 100.0f/SAMPLE_RATE, 0.707);
         #ifdef ESP_PLATFORM
             dsps_biquad_f32_ae32(scratch[0], scratch[1], BLOCK_SIZE, coeffs[osc], delay[osc]);
         #else
@@ -484,9 +486,9 @@ void sine_mod_trigger(uint8_t osc) {
 // returns a # between -1 and 1
 float amy_get_random() {
 #ifdef ESP_PLATFORM
-    return (((float)esp_random() / UINT32_MAX) * 2.0) - 1.0;
+    return (((float)esp_random() / UINT32_MAX) * 2.0f) - 1.0f;
 #else
-    return (rand() / (float)RAND_MAX * 2.0) - 1.0;
+    return (rand() / (float)RAND_MAX * 2.0f) - 1.0f;
 #endif
 }
 
@@ -510,7 +512,7 @@ void render_ks(float * buf, uint8_t osc) {
         for(uint16_t i=0;i<BLOCK_SIZE;i++) {
             uint16_t index = (uint16_t)(synth[osc].step);
             synth[osc].sample = ks_buffer[ks_polyphony_index][index];
-            ks_buffer[ks_polyphony_index][index] = (ks_buffer[ks_polyphony_index][index] + ks_buffer[ks_polyphony_index][(index + 1) % buflen]) * 0.5 * synth[osc].feedback;
+            ks_buffer[ks_polyphony_index][index] = (ks_buffer[ks_polyphony_index][index] + ks_buffer[ks_polyphony_index][(index + 1) % buflen]) * 0.5f * synth[osc].feedback;
             synth[osc].step = (index + 1) % buflen;
             buf[i] = synth[osc].sample * msynth[osc].amp;
         }
