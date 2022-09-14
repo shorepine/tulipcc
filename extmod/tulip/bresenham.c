@@ -7,12 +7,98 @@
 void drawPixel(int cx, int cy, uint8_t pal_idx) {
     display_set_bg_pixel_pal(cx, cy, pal_idx);
 }
+uint8_t getPixel(int cx, int cy) {
+    return display_get_bg_pixel_pal(cx,cy);
+}
 
 void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color) {
     drawLine(x, y, x + w - 1, y, color);
 }
 void drawFastVLine(short x0, short y0, short h, short color) {
     drawLine(x0, y0, x0, y0+h-1, color);
+}
+
+//stack friendly and fast floodfill algorithm, using recursive function calls
+void floodFillScanline(int x, int y, int newColor, int oldColor)
+{
+  if(oldColor == newColor) return;
+  if(getPixel(x,y) != oldColor) return;
+
+  int x1;
+
+  //draw current scanline from start position to the right
+  x1 = x;
+  while(x1 < DEFAULT_H_RES && getPixel(x1,y) == oldColor)
+  {
+    drawPixel(x1,y,newColor);
+    x1++;
+  }
+
+  //draw current scanline from start position to the left
+  x1 = x - 1;
+  while(x1 >= 0 && getPixel(x1,y) == oldColor)
+  {
+    drawPixel(x1,y,newColor);
+    x1--;
+  }
+
+  //test for new scanlines above
+  x1 = x;
+  while(x1 < DEFAULT_H_RES && getPixel(x1,y) == newColor)
+  {
+    if(y > 0 && getPixel(x1,y-1) == oldColor)
+    {
+      floodFillScanline(x1, y - 1, newColor, oldColor);
+    }
+    x1++;
+  }
+  x1 = x - 1;
+  while(x1 >= 0 && getPixel(x1,y) == newColor)
+  {
+    if(y > 0 && getPixel(x1,y-1) == oldColor)
+    {
+      floodFillScanline(x1, y - 1, newColor, oldColor);
+    }
+    x1--;
+  }
+
+  //test for new scanlines below
+  x1 = x;
+  while(x1 < DEFAULT_H_RES && getPixel(x1,y) == newColor)
+  {
+    if(y < DEFAULT_V_RES - 1 && getPixel(x1,y+1) == oldColor)
+    {
+      floodFillScanline(x1, y + 1, newColor, oldColor);
+    }
+    x1++;
+  }
+  x1 = x - 1;
+  while(x1 >= 0 && getPixel(x1,y) == newColor)
+  {
+    if(y < DEFAULT_V_RES - 1 && getPixel(x1,y+1) == oldColor)
+    {
+      floodFillScanline(x1, y + 1, newColor, oldColor);
+    }
+    x1--;
+  }
+}
+
+void floodFill(int16_t x, int16_t y, uint8_t color, uint8_t old_color) {   
+    if ( 0 <= x && x < DEFAULT_H_RES  && 0 <= y && y < DEFAULT_V_RES) {
+        if(display_get_bg_pixel_pal(x,y) == old_color) {
+            display_set_bg_pixel_pal(x,y, color);
+            floodFill(x-1,y,color,old_color);
+            floodFill(x+1,y,color,old_color);
+            floodFill(x,y-1,color,old_color);
+            floodFill(x,y+1,color,old_color);
+        }
+    }
+}
+
+
+void fill(int16_t x, int16_t y, uint8_t color) {   
+    uint8_t old_color = display_get_bg_pixel_pal(x,y);  
+    floodFillScanline(x,y,color, old_color);
 }
 
 void fillRect(int16_t x, int16_t y, int16_t w, int16_t h,  uint16_t color) {

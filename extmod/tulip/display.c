@@ -153,29 +153,21 @@ int32_t desync = 0;
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
         for(uint8_t s=0;s<SPRITES;s++) {
             if(sprite_vis[s]) {
-                if(sprite_vis[s] & SPRITE_IS_SPRITE) {
-                    if(row_px >= sprite_y_px[s] && row_px < sprite_y_px[s]+sprite_h_px[s]) {
-                        // this sprite is on this line 
-                        // compute x and y (relative to the sprite!)
-                        uint8_t * sprite_data = &sprite_ram[sprite_mem[s]];
-                        uint16_t relative_sprite_y_px = row_px - sprite_y_px[s];
-                        for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
-                            if(col_px < H_RES) {
-                                uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
-                                uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
-                                if(b0 != ALPHA) {
-                                    b[bounce_row_px*H_RES + col_px] = b0;
-                                }
+                if(row_px >= sprite_y_px[s] && row_px < sprite_y_px[s]+sprite_h_px[s]) {
+                    // this sprite is on this line 
+                    // compute x and y (relative to the sprite!)
+                    uint8_t * sprite_data = &sprite_ram[sprite_mem[s]];
+                    uint16_t relative_sprite_y_px = row_px - sprite_y_px[s];
+                    for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
+                        if(col_px < H_RES) {
+                            uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
+                            uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
+                            if(b0 != ALPHA) {
+                                b[bounce_row_px*H_RES + col_px] = b0;
                             }
-                        } // end for each column
-                    } // end if this row has a sprite on it 
-                } else if(sprite_vis[s] & SPRITE_IS_LINE) {
-                    // draw a line using sprite data; sprite_w contains the # of points
-                } else if(sprite_vis[s] & SPRITE_IS_BEZIER) {
-                    // draw a bezier using sprite data; sprite_w contains the # of points
-                } else if(sprite_vis[s] & SPRITE_IS_ELLIPSE) {
-                    // draw an ellipse
-                }
+                        }
+                    } // end for each column
+                } // end if this row has a sprite on it 
             } // end if sprite vis
         } // for each sprite
     } // per each row
