@@ -238,6 +238,7 @@ tulip.circle(x,y,r, pal_idx, filled)
 tulip.roundrect(x0,y0, w,h, r, pal_idx, filled)
 tulip.rect(x0,y0, w,h, pal_idx, filled)
 tulip.triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
+tulip.fill(x0,y0,pal_idx) # Flood fill starting at x,y
 tulip.char(c, x, y, pal_idx) # proportional font, returns # of x pixels to advance for the next char
 tulip.str(string, x, y, pal_idx) # same as char, but with a string
 
@@ -324,15 +325,15 @@ tulip.sprite_clear()
 
 ### Music / sound
 
-Tulip comes with a local version of the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) or the [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information. 
+Tulip has the AMY synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information.
 
-Tulip can also control or respond to an Alles mesh over Wi-Fi. Connect any number of Alles speakers to the wifi to have instant surround sound!
+Tulip can also control or respond to an [Alles mesh](https://github.com/bwhitman/alles/blob/main/README.md) over Wi-Fi. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information. 
 
 ```python
-alles.drums() # plays a test song
-alles.volume(4) # change volume
-alles.reset() # stops all music / sounds playing
-alles.send(osc=2, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
+amy.drums() # plays a test song
+amy.volume(4) # change volume
+amy.reset() # stops all music / sounds playing
+amy.send(osc=0, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
 
 # start mesh mode (control multiple speakers over wifi)
 alles.mesh() # after turning on wifi
@@ -345,11 +346,10 @@ alles.local() # turns off mesh mode and goes back to local mode
 
 Tulip supports MIDI in and out. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
 
-On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later using the "IAC" MIDI bus. This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." At this time, MIDI will not function (but the rest of Tulip will run) on macOS 10.15 (Catalina, released 2019.)
+On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later using the "IAC" MIDI bus. This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." At this time, MIDI will not function (but the rest of Tulip will run fine) on macOS versions before 11.0.
 
 ```python
 def callback(x): # for now you have to define a callback with a dummy parameter
-    # tulip.midi_in() returns the last midi buffer received
     m = tulip.midi_in()
     if(m[0]==144):
         print("Note on, note # %d velocity # %d" % (m[1], m[2]))
@@ -357,8 +357,8 @@ def callback(x): # for now you have to define a callback with a dummy parameter
 tulip.midi_callback(callback)
 tulip.midi_callback() # turns off callbacks
 
-m = tulip.midi_in() # returns bytes
-tulip.midi_out((144,60,127)) # sends a note on
+m = tulip.midi_in() # returns bytes of the last MIDI message received
+tulip.midi_out((144,60,127)) # sends a note on message
 tulip.midi_out(bytes) # Can send bytes or list
 ```
 
@@ -366,26 +366,25 @@ tulip.midi_out(bytes) # Can send bytes or list
 
 ## DIY HOWTO
 
-Tulip CC can be easily built with minimal / or no soldering by connecting breakout boards of the main chips. With a breadboard and a lot of jumper wires, you can put together Tulip in less than an hour.
+Tulip CC can be easily built with minimal / or no soldering by connecting an ESP32S3 breakout board to a display and audio board. With a breadboard and a lot of jumper wires, you can put together Tulip in less than an hour.
 
-The easier path is to buy [the breakout PCB I designed fron Aisler.net](https://aisler.net/p/YZIXPKRR). It's $12 for 3 (this money goes all to Aisler to manufacture the boards, I don't receive anything), and takes about a week to ship. It's simpler, will be more reliable and will fit inside a case better than a breadboard. The PCB is simply a way to connect the breakout boards without any jumper wires. The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_breakout_v2)
+The easier path is to buy [the breakout PCB I designed fron OSH Park](https://oshpark.com/shared_projects/vFYFPIyu). It's $30 for 3 (this money goes all to OSH Park to manufacture the boards, I don't receive anything), and takes about a week to ship. It's simpler, will be more reliable and will fit inside a case better than a breadboard. The PCB is simply a way to connect the breakout boards without any jumper wires. The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_breakout_v2)
 
 Either way, you'll need:
 
 - [ESP32-S3 WROOM-1 N8R8 dev board.](https://www.adafruit.com/product/5336). If you can find the ESP32-S3 WROOM-2 N32R8 (32MB of flash), it will _probably_ also work fine and you'll have more storage space.
 - [This $58 RGB dot-clock 10.1" display with capacitive touch.](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). Note other RGB dot clock displays of different sizes and resolutions can also work, but the pin numberings will be different and you'll have to update the resolution in our code. 
 - [A 40-pin FPC header for the display](https://www.adafruit.com/product/4905). 
-- One of two choices for sound: either [this mono I2S speaker amp board](https://www.adafruit.com/product/3006) or [this WM8960 stereo board with speaker & line-out/headphone output.](https://www.amazon.com/Audio-Supports-encoding-Recording-Interface/dp/B07H6FNFDD). (There's also a bigger Raspberry Pi "HAT" version that works, but with wasted space.) It depends on what you want to build. The PCB currently has a header for the mono speaker version; for the WM8960 you'll have to do your own wiring. It's a TODO for me to add a header for the WM8960 pins as well, probably on the bottom. 
+- One of two choices for sound: either [this mono I2S speaker amp board](https://www.adafruit.com/product/3006) (you'll also need a 3W speaker) or this stereo line-out / headphone jack [UDA1334 DAC](https://www.aliexpress.com/item/3256803337983466.html?gatewayAdapt=4itemAdapt). 
 - _Almost_ any USB keyboard should work. If yours doesn't, please file an issue here and I can investigate with you. I can only test the ones I have here! I do recommend the [Keychron series of mechanical keyboards](https://www.keychron.com/products/keychron-k7-ultra-slim-wireless-mechanical-keyboard?variant=39396239048793), they're inspiringly clicky. 
 - Connectors and random parts: 
-   - [Female headers are recommended, so you don't solder the ESP, display and audio jack directly to the PCB.](https://www.adafruit.com/product/598) 
+   - [Female headers are recommended, so you don't solder the ESP and audio jack directly to the PCB.](https://www.adafruit.com/product/598) 
    - I'd also get this [2x20 shrouded header](https://www.adafruit.com/product/1993) for the display FPC breakout. 
    - [1 USB female A connector](https://www.amazon.com/Uxcell-a13081900ux0112-Female-Socket-Connector/dp/B00H51E7B0)
    - [2 female 5-pin DIN MIDI jacks](https://www.adafruit.com/product/1134)
    - [1 6N138 optoisolator](https://www.amazon.com/Optocoupler-Single-Channel-Darlington-Output/dp/B07DLTSXC1) and an [8-pin socket](https://www.adafruit.com/product/2202)
    - [7 resistors](https://www.amazon.com/BOJACK-Values-Resistor-Resistors-Assortment/dp/B08FD1XVL6): `R1`: 4.7K, `R2`: 4.7K, `R3`: 4.7K, `R4`: 220, `R5`: 470, `R6`: 33, `R7`: 10. `R4` through `R7` don't have to be precisely those numbers, find the closest number that you have. 
    - 1 diode: [1N4001](https://www.adafruit.com/product/755)
-   - [1 3W speaker](https://www.adafruit.com/product/4445)
 - If you are using a breadboard instead of our PCB, [you'll want to see how to wire the MIDI in and out.](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/). 
 
 The assembly for our PCB is simple. Solder the headers to the DISPLAY, ESP32S3L, ESP32S3R, and AUDIO rows. Solder the 8-pin socket where the 6N138 goes. Solder the resistors in their correct spots, and the diode (note the polarity.) Solder the USB connector. Solder the MIDI connectors. Then place the ESP32-S3 breakout in, the FPC connector in (facing down, with the FPC cable going away from the board), the I2S board in, the 6N138 in, and connect a USB keyboard and the display to the FPC connector (to the displays' "RGB" input, the blue side facing up on both sides of the connector.) Then skip ahead to how to flash Tulip for the first time. That's it!
@@ -416,6 +415,7 @@ If you're breadboarding, here's the pin connections you'll need to make. A note,
 | Touch SDA     | 18           | L11                          | D4             |
 | Touch SCL     | 17           | L10                          | D3             |
 | Touch CTP INT | 5            | L5                           | D1             |
+| Touch CTP RST | N/C          | N/C                          | D2             |
 | USB 5V        | 5V           | L21                          | USB 5V         |
 | USB D+        | 20           | R19                          | USB D+         |
 | USB D-        | 19           | R20                          | USB D-         |       
@@ -430,7 +430,7 @@ If you're breadboarding, here's the pin connections you'll need to make. A note,
 | MIDI 5V       | 5V           | L21                          | MIDI 5v        |
 | MIDI GND      | GND          | L22                          | MIDI GND       |
 
-Also, you may want to ground all remaining display pins if you're seeing flickering. 
+Also, you may want to ground all remaining display pins if you're seeing flickering. But make sure not to connect anything to `D2`, it stays not connected.
 
 
 ## How to compile and help develop Tulip
