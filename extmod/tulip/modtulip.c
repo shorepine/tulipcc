@@ -740,6 +740,17 @@ STATIC mp_obj_t tulip_triangle(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_triangle_obj, 7, 8, tulip_triangle);
 
+STATIC mp_obj_t tulip_fill(size_t n_args, const mp_obj_t *args) {
+    uint16_t x0 = mp_obj_get_int(args[0]);
+    uint16_t y0 = mp_obj_get_int(args[1]);
+    uint16_t pal_idx = mp_obj_get_int(args[2]);
+    fill(x0,y0,pal_idx);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_fill_obj, 3, 3, tulip_fill);
+
+
 //uint8_t draw_glyph(uint8_t c, uint16_t x, uint16_t y, uint8_t pal_idx) {
 STATIC mp_obj_t tulip_char(size_t n_args, const mp_obj_t *args) {
     uint16_t c = mp_obj_get_int(args[0]);
@@ -903,6 +914,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_line), MP_ROM_PTR(&tulip_line_obj) },
     { MP_ROM_QSTR(MP_QSTR_roundrect), MP_ROM_PTR(&tulip_roundrect_obj) },
     { MP_ROM_QSTR(MP_QSTR_triangle), MP_ROM_PTR(&tulip_triangle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&tulip_fill_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_char), MP_ROM_PTR(&tulip_char_obj) },
     { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },

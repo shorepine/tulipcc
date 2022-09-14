@@ -17,5 +17,5 @@ void drawRoundRect(short x, short y, short w, short h, short r, unsigned short c
 void fillRoundRect(short x, short y, short w, short h, short r, unsigned short color);
 void drawTriangle(short x0, short y0, short x1, short y1, short x2, short y2, unsigned short color);
 void fillTriangle ( short x0, short y0, short x1, short y1, short x2, short y2, unsigned short color);
-
+void fill(int16_t x, int16_t y, uint8_t color);
 
