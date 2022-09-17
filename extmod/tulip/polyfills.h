@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include "py/mphal.h"
-
+#include "amy.h"
 #ifdef ESP_PLATFORM
 
 // not sure, maybe esp includes?

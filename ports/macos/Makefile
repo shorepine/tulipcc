@@ -262,6 +262,7 @@ SRC_C += \
 	mpnimbleport.c \
 	unix_display.c \
 	multicast.c \
+	../../extmod/amy/src/libsoundio-audio.c \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
 

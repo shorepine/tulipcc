@@ -214,14 +214,14 @@ void *mcast_listen_task(void *vargp) {
                             udp_message_counter++;
                             message_start_pointer = udp_message + start;
                             message_length = i - start;
-                            parse_task();
+                            alles_parse_message(message_start_pointer, message_length);
                             start = i+1;
                         }
                     }
                 }
             } 
             // Do a ping every so often
-            int64_t sysclock = get_sysclock();
+            int64_t sysclock = amy_sysclock();
             if(sysclock > (last_ping_time+PING_TIME_MS)) {
                 ping(sysclock);
             }
