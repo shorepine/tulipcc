@@ -3,6 +3,8 @@
 #ifndef __ALLES_H
 #define __ALLES_H
 
+#include "amy.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -59,7 +61,7 @@ typedef int16_t i2s_sample_type;
 #define MULTICAST_TTL 255     // hops multicast packets can take
 #define MULTICAST_IPV4_ADDR "232.10.11.12"
 #define PING_TIME_MS 10000   // ms between boards pinging each other
-
+#define MAX_RECEIVE_LEN 4095
 
 // enums
 #define DEVBOARD 0
@@ -80,6 +82,12 @@ extern void debleep();
 extern void upgrade_tone();
 extern void wifi_tone();
 extern void scale(uint8_t wave);
+
+void alles_parse_message(char *message, uint16_t length);
+void update_map(uint8_t client, uint8_t ipv4, int64_t time);
+void handle_sync(int64_t time, int8_t index);
+void ping(int64_t sysclock);
+
 
 // multicast
 extern void mcast_send(char*, uint16_t len);
