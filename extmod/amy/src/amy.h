@@ -10,11 +10,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#define OSCS 64              // # of simultaneous oscs to keep track of 
+#define OSCS 32              // # of simultaneous oscs to keep track of 
 #define AMY_CORES 2         
 #define PCM_LARGE 2
 #define PCM_SMALL 1
-#define PCM_PATCHES_SIZE PCM_LARGE
+#define PCM_PATCHES_SIZE PCM_SMALL
 #define BLOCK_SIZE 256       // buffer block size in samples
 #define KS_OSCS 1            // # of Karplus-strong oscillators allowed at once, they're big RAM users so keep it small on esp
 #define EVENT_FIFO_LEN 3000  // number of events the queue can store
