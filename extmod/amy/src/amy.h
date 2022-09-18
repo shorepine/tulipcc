@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #define OSCS 32              // # of simultaneous oscs to keep track of 
-#define AMY_CORES 2         
+#define AMY_CORES 1
 #define PCM_LARGE 2
 #define PCM_SMALL 1
 #define PCM_PATCHES_SIZE PCM_SMALL
@@ -60,7 +60,7 @@ typedef int16_t output_sample_type;
 #define TARGET_TRUE_EXPONENTIAL 0x80 // default exp, "true exp" for FM as an option
 #define TARGET_DX7_EXPONENTIAL 0x100 // Asymmetric attack/decay behavior per DX7.
 
-#define MAX_MESSAGE_LEN 4096
+#define MAX_MESSAGE_LEN 255
 
 #define FILTER_LPF 1
 #define FILTER_BPF 2

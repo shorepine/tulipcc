@@ -58,7 +58,7 @@ typedef int16_t i2s_sample_type;
 #define MULTICAST_TTL 255     // hops multicast packets can take
 #define MULTICAST_IPV4_ADDR "232.10.11.12"
 #define PING_TIME_MS 10000   // ms between boards pinging each other
-#define MAX_RECEIVE_LEN 4095
+#define MAX_RECEIVE_LEN 255
 
 // enums
 #define DEVBOARD 0
