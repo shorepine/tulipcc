@@ -60,14 +60,14 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/tulip/ui.c
     ${MICROPY_DIR}/extmod/tulip/midi.c
     ${MICROPY_DIR}/extmod/tulip/sounds.c
-    ${MICROPY_DIR}/extmod/tulip/amy/dsps_biquad_f32_ae32.S
-    ${MICROPY_DIR}/extmod/tulip/amy/algorithms.c
-    ${MICROPY_DIR}/extmod/tulip/amy/amy.c
-    ${MICROPY_DIR}/extmod/tulip/amy/envelope.c
-    ${MICROPY_DIR}/extmod/tulip/amy/filters.c
-    ${MICROPY_DIR}/extmod/tulip/amy/oscillators.c
-    ${MICROPY_DIR}/extmod/tulip/amy/partials.c
-    ${MICROPY_DIR}/extmod/tulip/amy/pcm.c
+    ${MICROPY_DIR}/extmod/amy/src/dsps_biquad_f32_ae32.S
+    ${MICROPY_DIR}/extmod/amy/src/algorithms.c
+    ${MICROPY_DIR}/extmod/amy/src/amy.c
+    ${MICROPY_DIR}/extmod/amy/src/envelope.c
+    ${MICROPY_DIR}/extmod/amy/src/filters.c
+    ${MICROPY_DIR}/extmod/amy/src/oscillators.c
+    ${MICROPY_DIR}/extmod/amy/src/partials.c
+    ${MICROPY_DIR}/extmod/amy/src/pcm.c
     ${PROJECT_DIR}/main.c
     ${PROJECT_DIR}/esp32s3_display.c
     ${PROJECT_DIR}/usb_keyboard.c
@@ -200,6 +200,7 @@ idf_component_register(
         ${MICROPY_BOARD_DIR}
         ${CMAKE_BINARY_DIR}
         ${MICROPY_DIR}/extmod/tulip
+        ${MICROPY_DIR}/extmod/amy/src
 
     REQUIRES
         ${IDF_COMPONENTS}
