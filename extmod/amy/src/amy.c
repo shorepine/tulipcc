@@ -285,11 +285,13 @@ int8_t oscs_init() {
     filters_init();
     algo_init();
     pcm_init();
-    events = (struct delta*)malloc(sizeof(struct delta) * EVENT_FIFO_LEN);
-    synth = (struct event*) malloc(sizeof(struct event) * OSCS);
-    msynth = (struct mod_event*) malloc(sizeof(struct mod_event) * OSCS);
+    // For Tulip, we may want to alloc these in SPIRAM
+    events = (struct delta*)malloc_caps(sizeof(struct delta) * EVENT_FIFO_LEN, MALLOC_CAP_SPIRAM);
+    synth = (struct event*) malloc_caps(sizeof(struct event) * OSCS, MALLOC_CAP_SPIRAM);
+    msynth = (struct mod_event*) malloc_caps(sizeof(struct mod_event) * OSCS, MALLOC_CAP_SPIRAM);
 
-    block = (output_sample_type *) malloc(sizeof(output_sample_type) * BLOCK_SIZE);//dbl_block[0];
+    // Maybe not this
+    block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);//dbl_block[0];
     // Set all oscillators to their default values
     amy_reset_oscs();
 
@@ -311,11 +313,14 @@ int8_t oscs_init() {
         events[i].data = 0;
         events[i].param = NO_PARAM;
     }
-    fbl = (float**) malloc(sizeof(float*) * 2); // one per core, just core 0 used off esp32
-    fbl[0]= (float*)malloc(sizeof(float) * BLOCK_SIZE);
-    fbl[1]= (float*)malloc(sizeof(float) * BLOCK_SIZE);
+    fbl = (float**) malloc_caps(sizeof(float*) * AMY_CORES, MALLOC_CAP_INTERNAL); // one per core, just core 0 used off esp32
+    fbl[0]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
+    if(AMY_CORES>1)fbl[1]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
     // Clear out both as local mode won't use fbl[1] 
-    for(uint16_t i=0;i<BLOCK_SIZE;i++) { fbl[0][i] =0; fbl[1][i] = 0;}
+    for(uint16_t i=0;i<BLOCK_SIZE;i++) { 
+        fbl[0][i] =0; 
+        if(AMY_CORES>1)fbl[1][i] = 0;
+    }
     total_samples = 0;
     computed_delta = 0;
     computed_delta_set = 0;
@@ -364,7 +369,7 @@ void show_debug(uint8_t type) {
 void oscs_deinit() {
     free(block);
     free(fbl[0]);
-    free(fbl[1]);
+    if(AMY_CORES>1)free(fbl[1]);
     free(fbl);
     free(synth);
     free(msynth);
@@ -605,10 +610,14 @@ int16_t * fill_audio_buffer_task() {
     //uint8_t nonzero = 0;
     for(int16_t i=0; i < BLOCK_SIZE; ++i) {
         // Mix all the oscillator buffers into one
-        float fsample = volume_scale * (fbl[0][i] + fbl[1][i]) * 32767.0;
+#if AMY_CORES == 2
+        float fsample = volume_scale * (fbl[0][i] + fbl[1][i]) * 32767.0f;
+#else
+        float fsample = volume_scale * (fbl[0][i]) * 32767.0f;
+#endif
         // One-pole high-pass filter to remove large low-frequency excursions from
         // some FM patches. b = [1 -1]; a = [1 -0.995]
-        float new_state = fsample + 0.995 * global.hpf_state;
+        float new_state = fsample + 0.995f * global.hpf_state;
         fsample = new_state - global.hpf_state;
         global.hpf_state = new_state;
     

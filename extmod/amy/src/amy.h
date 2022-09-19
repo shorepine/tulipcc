@@ -9,9 +9,10 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include "polyfills.h"
 
-#define OSCS 32              // # of simultaneous oscs to keep track of 
-#define AMY_CORES 1
+#define OSCS 64              // # of simultaneous oscs to keep track of 
+#define AMY_CORES 2
 #define PCM_LARGE 2
 #define PCM_SMALL 1
 #define PCM_PATCHES_SIZE PCM_SMALL
