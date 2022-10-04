@@ -13,7 +13,7 @@
 const size_t USB_HID_DESC_SIZE = 9;
 // vortex 8
 // keychron 16
-#define KEYBOARD_BYTES 8
+#define KEYBOARD_BYTES 16
 
 // How long you hold down a key before it starts repeating
 #define KEY_REPEAT_TRIGGER_MS 500
