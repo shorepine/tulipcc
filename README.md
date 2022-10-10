@@ -12,11 +12,11 @@ Tulip is available both as a hardware DIY project (Tulip CC) and a macOS app (Tu
 
 You can build your own Tulip CC for about $25 plus the cost of a display ($50) and USB keyboard.
 
-The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack for many hours.
+The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours.
 
 The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. 
 
-Tulip's sound system is a full featured 32-voice synthesizer. We use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
+Tulip's sound system is a full featured 32-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
