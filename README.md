@@ -6,7 +6,7 @@ Tulip is a self contained portable creative computer, with a display and keyboar
 
 Tulip is not a shell on top of another operating system. Every byte of RAM and every cycle of the CPU is dedicated to your code, the display and music. 
 
-You can use Tulip to make music, code, make art, games, or just write. It cannot run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
+You can use Tulip to make music, code, art, games, or just write. It cannot run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
 
 Tulip is available both as a hardware DIY project (Tulip CC) and a macOS app (Tulip Desktop.) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, give the desktop version a go to learn about it.
 
@@ -16,26 +16,26 @@ The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core micro
 
 The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. 
 
-Tulip's sound system is a full featured 64-voice synthesizer. We use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
+Tulip's sound system is a full featured 32-voice synthesizer. We use a powered mono amplifier breakout to a speaker. You can use headphones or other connectors instead.
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
 Tulip CC rev 4 supports:
 - 8.5MB of RAM
 - 8MB flash storage, as a filesystem accesible in Python
-- The [Alles](https://github.com/bwhitman/alles) 64-voice synthesizer engine running locally or as a control for an Alles mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
+- An [AMY](https://github.com/bwhitman/amy) 32-voice synthesizer engine running locally or as a wireless controller for an [Alles](https://github.com/bwhitman/alles) mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
-- A 1280x750 background frame buffer to draw arbitrary bitmaps to, which can scroll horizontally / vertically
+- A 1280x750 background frame buffer to draw arbitrary bitmaps to, or use as RAM, and which can scroll horizontally / vertically
 - WiFi, access http via Python requests or TCP / UDP sockets 
 - Adjustable display clock and resolution, defaults to 30 FPS at 1024x600.
 - 256 colors
 - Can load PNGs from disk to set sprites or background, or generate bitmap data from code
 - Built in code and text editor
 - USB keyboard support
-- Capactive touch support (mouse on Tulip Desktop)
+- Capactive multi-touch support (mouse on Tulip Desktop)
 - MIDI input and output 
-- 500mA power usage including display, at medium display brightness, can last for hours on USB battery pack 
+- 500mA power usage including display, at medium display brightness, can last for hours on LiPo or USB battery pack 
 
 
 ## Usage 
@@ -132,9 +132,9 @@ tulip.set_time()
 ### Graphics system
 
 The Tulip GPU consists of 3 subsystems:
- * A bitmap graphics plane (default size: 1280x750), with scrolling x- and y- speed registers
+ * A bitmap graphics plane (BG) (default size: 1280x750), with scrolling x- and y- speed registers. Drawing shape primitives draw to the BG.
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top, with 256 colors
- * A sprite layer on top
+ * A sprite layer on top of the TFB
 
 The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. 
 Some example display clocks and resolutions:
@@ -144,7 +144,7 @@ Some example display clocks and resolutions:
 | 1024    | 600     | 10     | 14.98  | 512     | 600     | 10     | 19.91  |
 | 1024    | 600     | 14     | 18.55  | 512     | 600     | 14     | 30.26  |
 | 1024    | 600     | 18     | 23.19  | 512     | 600     | 18     | 37.82  |
-| 1024    | 600     | 22     | 30.91  | 512     | 600     | 22     | 50.43  |
+| **1024**    | **600**     | **22**     | 30.91  | 512     | 600     | 22     | 50.43  |
 | 1024    | 600     | 28     | 46.37  | 512     | 600     | 28     | 75.65  |
 | 1024    | 300     | 10     | 21.47  | 512     | 300     | 10     | 35.03  |
 | 1024    | 300     | 14     | 34.36  | 512     | 300     | 14     | 56.05  |
@@ -186,7 +186,7 @@ def game_loop(data):
 	check_collisions(data)
 	do_animation(data)
 	update_score(data) # etc
-	game_data["frame_count"] += 1
+	data["frame_count"] += 1
 
 tulip.frame_callback(game_loop, game_data) # starts calling the callback every frame
 tulip.frame_callback() # disables the callback
@@ -368,7 +368,7 @@ tulip.midi_out(bytes) # Can send bytes or list
 
 Tulip CC can be easily built with minimal / or no soldering by connecting an ESP32S3 breakout board to a display and audio board. With a breadboard and a lot of jumper wires, you can put together Tulip in less than an hour.
 
-The easier path is to buy [the breakout PCB I designed fron OSH Park](https://oshpark.com/shared_projects/vFYFPIyu). It's $30 for 3 (this money goes all to OSH Park to manufacture the boards, I don't receive anything), and takes about a week to ship. It's simpler, will be more reliable and will fit inside a case better than a breadboard. The PCB is simply a way to connect the breakout boards without any jumper wires. The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_breakout_v2)
+The easier path is to buy [the breakout PCB I designed fron OSH Park](https://oshpark.com/shared_projects/vFYFPIyu). It's $30 for 3 (this money goes all to OSH Park to manufacture the boards, I don't receive anything), and takes about a week to ship. It's simpler, will be more reliable and will fit inside a case better than a breadboard. The PCB is simply a way to connect the breakout boards without any jumper wires. The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_breakout_v4)
 
 Either way, you'll need:
 
