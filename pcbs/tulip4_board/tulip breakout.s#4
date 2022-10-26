@@ -2865,6 +2865,7 @@ W = angled&lt;p&gt;
 <part name="R7" library="microbuilder" deviceset="RESISTOR" device="_0603_NOOUT" value="10k"/>
 <part name="U$6" library="MBT3904DW1T1G" deviceset="MBT3904DW1T1G" device=""/>
 <part name="C4" library="microbuilder" deviceset="CAP_CERAMIC" device="0805-NOOUTLINE" value="4.7uF"/>
+<part name="C5" library="microbuilder" deviceset="CAP_CERAMIC" device="0805-NOOUTLINE" value="4.7uF"/>
 </parts>
 <sheets>
 <sheet>
@@ -3224,6 +3225,10 @@ W = angled&lt;p&gt;
 <attribute name="NAME" x="200.91" y="-153.69" size="1.27" layer="95" font="vector" rot="R90" align="center"/>
 <attribute name="VALUE" x="205.5" y="-153.69" size="1.27" layer="96" font="vector" rot="R90" align="center"/>
 </instance>
+<instance part="C5" gate="G$1" x="180.34" y="-78.74" smashed="yes">
+<attribute name="NAME" x="178.05" y="-77.49" size="1.27" layer="95" font="vector" rot="R90" align="center"/>
+<attribute name="VALUE" x="182.64" y="-77.49" size="1.27" layer="96" font="vector" rot="R90" align="center"/>
+</instance>
 </instances>
 <busses>
 </busses>
@@ -3431,6 +3436,11 @@ W = angled&lt;p&gt;
 <pinref part="C4" gate="G$1" pin="2"/>
 <wire x1="203.2" y1="-157.48" x2="203.2" y2="-162.56" width="0.1524" layer="91"/>
 <label x="200.66" y="-162.56" size="1.778" layer="95"/>
+</segment>
+<segment>
+<label x="190.5" y="-93.98" size="1.778" layer="95"/>
+<pinref part="C5" gate="G$1" pin="2"/>
+<wire x1="180.34" y1="-81.28" x2="190.5" y2="-91.44" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="5V" class="0">
@@ -3733,6 +3743,11 @@ W = angled&lt;p&gt;
 <pinref part="R7" gate="G$1" pin="1"/>
 <wire x1="172.72" y1="-180.34" x2="172.72" y2="-185.42" width="0.1524" layer="91"/>
 <label x="172.72" y="-185.42" size="1.778" layer="95"/>
+</segment>
+<segment>
+<wire x1="190.5" y1="-63.5" x2="180.34" y2="-73.66" width="0.1524" layer="91"/>
+<label x="187.96" y="-63.5" size="1.778" layer="95"/>
+<pinref part="C5" gate="G$1" pin="1"/>
 </segment>
 </net>
 <net name="INT" class="0">
