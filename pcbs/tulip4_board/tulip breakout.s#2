@@ -3531,32 +3531,30 @@ W = angled&lt;p&gt;
 <net name="N$30" class="0">
 <segment>
 <wire x1="104.14" y1="66.04" x2="104.14" y2="63.5" width="0.1524" layer="91"/>
-<wire x1="104.14" y1="60.96" x2="104.14" y2="63.5" width="0.1524" layer="91"/>
 <pinref part="U2" gate="G$1" pin="A"/>
 <wire x1="104.14" y1="63.5" x2="121.92" y2="63.5" width="0.1524" layer="91"/>
-<junction x="104.14" y="63.5"/>
 <pinref part="R15" gate="G$1" pin="1"/>
 <wire x1="83.82" y1="66.04" x2="104.14" y2="66.04" width="0.1524" layer="91"/>
 <pinref part="D2" gate="G$1" pin="C"/>
+<wire x1="104.14" y1="60.96" x2="104.14" y2="63.5" width="0.1524" layer="91"/>
+<junction x="104.14" y="63.5"/>
 </segment>
 </net>
 <net name="MIDI_IN_SINK" class="0">
 <segment>
-<wire x1="104.14" y1="55.88" x2="104.14" y2="50.8" width="0.1524" layer="91"/>
-<wire x1="104.14" y1="50.8" x2="104.14" y2="48.26" width="0.1524" layer="91"/>
 <wire x1="35.56" y1="53.34" x2="35.56" y2="38.1" width="0.1524" layer="91"/>
 <wire x1="35.56" y1="38.1" x2="78.74" y2="38.1" width="0.1524" layer="91"/>
 <wire x1="78.74" y1="38.1" x2="78.74" y2="50.8" width="0.1524" layer="91"/>
 <wire x1="78.74" y1="50.8" x2="99.06" y2="50.8" width="0.1524" layer="91"/>
 <wire x1="99.06" y1="50.8" x2="99.06" y2="48.26" width="0.1524" layer="91"/>
 <wire x1="99.06" y1="48.26" x2="104.14" y2="48.26" width="0.1524" layer="91"/>
-<wire x1="104.14" y1="48.26" x2="116.84" y2="48.26" width="0.1524" layer="91"/>
-<junction x="104.14" y="48.26"/>
 <label x="35.56" y="50.8" size="1.778" layer="95"/>
 <pinref part="U2" gate="G$1" pin="C"/>
+<wire x1="104.14" y1="48.26" x2="116.84" y2="48.26" width="0.1524" layer="91"/>
 <wire x1="116.84" y1="48.26" x2="121.92" y2="53.34" width="0.1524" layer="91"/>
 <pinref part="D2" gate="G$1" pin="A"/>
-<junction x="104.14" y="50.8"/>
+<wire x1="104.14" y1="48.26" x2="104.14" y2="50.8" width="0.1524" layer="91"/>
+<junction x="104.14" y="48.26"/>
 </segment>
 <segment>
 <pinref part="CONNHEADER" gate="G$1" pin="6"/>
@@ -4141,13 +4139,6 @@ W = angled&lt;p&gt;
 <label x="162.56" y="-167.64" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="GPIO38" class="0">
-<segment>
-<pinref part="U1" gate="G$1" pin="IO38"/>
-<wire x1="238.76" y1="-71.12" x2="243.84" y2="-71.12" width="0.1524" layer="91"/>
-<label x="238.76" y="-71.12" size="1.778" layer="95"/>
-</segment>
-</net>
 <net name="GPIO10" class="0">
 <segment>
 <pinref part="U1" gate="G$1" pin="IO10"/>
@@ -4202,13 +4193,6 @@ W = angled&lt;p&gt;
 <label x="325.12" y="50.8" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="USBC_VBUS" class="0">
-<segment>
-<wire x1="210.82" y1="25.4" x2="195.58" y2="25.4" width="0.1524" layer="91"/>
-<pinref part="X1" gate="G$1" pin="VBUS"/>
-<label x="195.58" y="25.4" size="1.778" layer="95"/>
-</segment>
-</net>
 <net name="USBC_D+" class="0">
 <segment>
 <pinref part="X1" gate="G$1" pin="D+"/>
@@ -4249,20 +4233,6 @@ W = angled&lt;p&gt;
 <wire x1="195.58" y1="15.24" x2="246.38" y2="15.24" width="0.1524" layer="91"/>
 <pinref part="R10" gate="G$1" pin="2"/>
 <wire x1="246.38" y1="15.24" x2="246.38" y2="5.08" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="SBU1" class="0">
-<segment>
-<pinref part="X1" gate="G$1" pin="SBU1"/>
-<wire x1="195.58" y1="12.7" x2="210.82" y2="12.7" width="0.1524" layer="91"/>
-<label x="195.58" y="12.7" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="SBU2" class="0">
-<segment>
-<pinref part="X1" gate="G$1" pin="SBU2"/>
-<wire x1="195.58" y1="10.16" x2="210.82" y2="10.16" width="0.1524" layer="91"/>
-<label x="195.58" y="10.16" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="N$5" class="0">
@@ -4398,6 +4368,11 @@ W = angled&lt;p&gt;
 <wire x1="335.28" y1="2.54" x2="335.28" y2="0" width="0.1524" layer="91"/>
 <label x="335.28" y="2.54" size="1.778" layer="95"/>
 <pinref part="R2" gate="G$1" pin="2"/>
+</segment>
+<segment>
+<wire x1="210.82" y1="25.4" x2="195.58" y2="25.4" width="0.1524" layer="91"/>
+<pinref part="X1" gate="G$1" pin="VBUS"/>
+<label x="195.58" y="25.4" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="!RTS" class="0">

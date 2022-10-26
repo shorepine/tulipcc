@@ -4057,10 +4057,11 @@ W = angled&lt;p&gt;
 <pinref part="R1" gate="G$1" pin="1"/>
 </segment>
 </net>
-<net name="N$14" class="0">
+<net name="IO0" class="0">
 <segment>
 <pinref part="U1" gate="G$1" pin="IO0"/>
 <wire x1="208.28" y1="-55.88" x2="203.2" y2="-55.88" width="0.1524" layer="91"/>
+<label x="203.2" y="-55.88" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="N$18" class="0">

@@ -2811,9 +2811,6 @@ W = angled&lt;p&gt;
 <part name="X1" library="microbuilder" deviceset="USB_C" device=""/>
 <part name="R10" library="microbuilder" deviceset="RESISTOR" device="_0603_NOOUT" value="5.1K"/>
 <part name="R11" library="microbuilder" deviceset="RESISTOR" device="_0603_NOOUT" value="5.1K"/>
-<part name="U$1" library="microbuilder" deviceset="GND" device=""/>
-<part name="U$2" library="microbuilder" deviceset="GND" device=""/>
-<part name="U$3" library="microbuilder" deviceset="GND" device=""/>
 <part name="IC1" library="CP2102N-A02-GQFN24" deviceset="CP2102N-A02-GQFN24" device=""/>
 <part name="X3" library="microbuilder" deviceset="AUDIO_3.5MMJACK" device="" value="19269"/>
 <part name="X5" library="microbuilder" deviceset="AUDIO_3.5MMJACK" device="" value="19269"/>
@@ -3024,15 +3021,6 @@ W = angled&lt;p&gt;
 <instance part="R11" gate="G$1" x="251.46" y="0" smashed="yes" rot="R90">
 <attribute name="NAME" x="248.92" y="0" size="1.27" layer="95" font="vector" rot="R90" align="center"/>
 <attribute name="VALUE" x="251.46" y="0" size="1.016" layer="96" font="vector" ratio="15" rot="R90" align="center"/>
-</instance>
-<instance part="U$1" gate="G$1" x="246.38" y="-10.16" smashed="yes">
-<attribute name="VALUE" x="244.856" y="-12.7" size="1.27" layer="96"/>
-</instance>
-<instance part="U$2" gate="G$1" x="251.46" y="-10.16" smashed="yes">
-<attribute name="VALUE" x="249.936" y="-12.7" size="1.27" layer="96"/>
-</instance>
-<instance part="U$3" gate="G$1" x="210.82" y="0" smashed="yes">
-<attribute name="VALUE" x="209.296" y="-2.54" size="1.27" layer="96"/>
 </instance>
 <instance part="IC1" gate="G$1" x="299.72" y="35.56" smashed="yes">
 <attribute name="NAME" x="283.21" y="66.04" size="1.778" layer="95" align="center-left"/>
@@ -3362,15 +3350,6 @@ W = angled&lt;p&gt;
 <label x="81.28" y="-48.26" size="1.778" layer="95"/>
 </segment>
 <segment>
-<wire x1="170.18" y1="50.8" x2="170.18" y2="40.64" width="0.1524" layer="91"/>
-<pinref part="GND1" gate="1" pin="GND"/>
-<wire x1="170.18" y1="53.34" x2="170.18" y2="50.8" width="0.1524" layer="91"/>
-<wire x1="170.18" y1="50.8" x2="149.86" y2="50.8" width="0.1524" layer="91"/>
-<pinref part="U2" gate="G$1" pin="GND"/>
-<wire x1="149.86" y1="50.8" x2="147.32" y2="53.34" width="0.1524" layer="91"/>
-<pinref part="R12" gate="G$1" pin="1"/>
-</segment>
-<segment>
 <pinref part="U1" gate="G$1" pin="GND"/>
 <wire x1="238.76" y1="-101.6" x2="246.38" y2="-101.6" width="0.1524" layer="91"/>
 <label x="243.84" y="-101.6" size="1.778" layer="95"/>
@@ -3441,6 +3420,61 @@ W = angled&lt;p&gt;
 <label x="190.5" y="-93.98" size="1.778" layer="95"/>
 <pinref part="C5" gate="G$1" pin="2"/>
 <wire x1="180.34" y1="-81.28" x2="190.5" y2="-91.44" width="0.1524" layer="91"/>
+</segment>
+<segment>
+<pinref part="X1" gate="G$1" pin="GND"/>
+<wire x1="195.58" y1="5.08" x2="203.2" y2="5.08" width="0.1524" layer="91"/>
+<label x="198.12" y="5.08" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="R10" gate="G$1" pin="1"/>
+<wire x1="246.38" y1="-5.08" x2="246.38" y2="-7.62" width="0.1524" layer="91"/>
+<label x="243.84" y="-7.62" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="R11" gate="G$1" pin="1"/>
+<wire x1="251.46" y1="-7.62" x2="251.46" y2="-5.08" width="0.1524" layer="91"/>
+<label x="251.46" y="-7.62" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="U4" gate="G$1" pin="MUTE"/>
+<wire x1="345.44" y1="-96.52" x2="340.36" y2="-96.52" width="0.1524" layer="91"/>
+<label x="340.36" y="-96.52" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="U4" gate="G$1" pin="DEEM/CLKOUT"/>
+<wire x1="345.44" y1="-99.06" x2="340.36" y2="-99.06" width="0.1524" layer="91"/>
+<label x="340.36" y="-99.06" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="U4" gate="G$1" pin="SFOR1"/>
+<wire x1="345.44" y1="-88.9" x2="337.82" y2="-88.9" width="0.1524" layer="91"/>
+<label x="337.82" y="-88.9" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="U4" gate="G$1" pin="SFOR0"/>
+<wire x1="345.44" y1="-91.44" x2="337.82" y2="-91.44" width="0.1524" layer="91"/>
+<label x="337.82" y="-91.44" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="U4" gate="G$1" pin="SYSCLK/PLL1"/>
+<wire x1="345.44" y1="-76.2" x2="340.36" y2="-76.2" width="0.1524" layer="91"/>
+<label x="340.36" y="-76.2" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="U4" gate="G$1" pin="PLL0"/>
+<wire x1="345.44" y1="-101.6" x2="340.36" y2="-101.6" width="0.1524" layer="91"/>
+<label x="340.36" y="-101.6" size="1.778" layer="95"/>
+</segment>
+<segment>
+<wire x1="170.18" y1="53.34" x2="170.18" y2="50.8" width="0.1524" layer="91"/>
+<wire x1="170.18" y1="50.8" x2="149.86" y2="50.8" width="0.1524" layer="91"/>
+<pinref part="U2" gate="G$1" pin="GND"/>
+<wire x1="149.86" y1="50.8" x2="147.32" y2="53.34" width="0.1524" layer="91"/>
+<pinref part="R12" gate="G$1" pin="1"/>
+<pinref part="GND1" gate="1" pin="GND"/>
+<wire x1="170.18" y1="50.8" x2="170.18" y2="40.64" width="0.1524" layer="91"/>
+<junction x="170.18" y="50.8"/>
 </segment>
 </net>
 <net name="5V" class="0">
@@ -4107,12 +4141,6 @@ W = angled&lt;p&gt;
 <label x="162.56" y="-167.64" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="N$18" class="0">
-<segment>
-<pinref part="X2" gate="-2" pin="1"/>
-<wire x1="157.48" y1="-22.86" x2="152.4" y2="-22.86" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="GPIO38" class="0">
 <segment>
 <pinref part="U1" gate="G$1" pin="IO38"/>
@@ -4172,25 +4200,6 @@ W = angled&lt;p&gt;
 <pinref part="IC1" gate="G$1" pin="TXD"/>
 <wire x1="322.58" y1="50.8" x2="330.2" y2="50.8" width="0.1524" layer="91"/>
 <label x="325.12" y="50.8" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="USBC_GND" class="0">
-<segment>
-<wire x1="210.82" y1="5.08" x2="195.58" y2="5.08" width="0.1524" layer="91"/>
-<pinref part="X1" gate="G$1" pin="GND"/>
-<label x="195.58" y="5.08" size="1.778" layer="95"/>
-<pinref part="U$3" gate="G$1" pin="GND"/>
-<wire x1="210.82" y1="5.08" x2="210.82" y2="2.54" width="0.1524" layer="91"/>
-</segment>
-<segment>
-<pinref part="R10" gate="G$1" pin="1"/>
-<pinref part="U$1" gate="G$1" pin="GND"/>
-<wire x1="246.38" y1="-5.08" x2="246.38" y2="-7.62" width="0.1524" layer="91"/>
-</segment>
-<segment>
-<pinref part="R11" gate="G$1" pin="1"/>
-<pinref part="U$2" gate="G$1" pin="GND"/>
-<wire x1="251.46" y1="-7.62" x2="251.46" y2="-5.08" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="USBC_VBUS" class="0">
@@ -4441,12 +4450,6 @@ W = angled&lt;p&gt;
 </nets>
 </sheet>
 </sheets>
-<errors>
-<approved hash="113,1,142.111,-30.2539,ESP32S3L,,,,,"/>
-<approved hash="113,1,167.726,-30.2539,ESP32S3R,,,,,"/>
-<approved hash="113,1,126.534,-121.338,X1,,,,,"/>
-<approved hash="113,1,45.72,-45.4304,DISPLAY1,,,,,"/>
-</errors>
 </schematic>
 </drawing>
 <compatibility>

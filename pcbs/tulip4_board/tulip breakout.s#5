@@ -4376,24 +4376,7 @@ W = angled&lt;p&gt;
 <pinref part="R2" gate="G$1" pin="2"/>
 </segment>
 </net>
-<net name="DTR" class="0">
-<segment>
-<pinref part="IC1" gate="G$1" pin="DTR"/>
-<wire x1="322.58" y1="38.1" x2="330.2" y2="38.1" width="0.1524" layer="91"/>
-<label x="325.12" y="38.1" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="R1" gate="G$1" pin="2"/>
-<wire x1="157.48" y1="-152.4" x2="152.4" y2="-152.4" width="0.1524" layer="91"/>
-<label x="152.4" y="-152.4" size="1.778" layer="95"/>
-</segment>
-<segment>
-<pinref part="U$6" gate="G$1" pin="4"/>
-<wire x1="187.96" y1="-165.1" x2="187.96" y2="-172.72" width="0.1524" layer="91"/>
-<label x="187.96" y="-172.72" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="RTS" class="0">
+<net name="!RTS" class="0">
 <segment>
 <pinref part="IC1" gate="G$1" pin="RTS"/>
 <wire x1="322.58" y1="43.18" x2="330.2" y2="43.18" width="0.1524" layer="91"/>
@@ -4421,6 +4404,23 @@ W = angled&lt;p&gt;
 <segment>
 <pinref part="U$6" gate="G$1" pin="5"/>
 <pinref part="R6" gate="G$1" pin="2"/>
+</segment>
+</net>
+<net name="!DTR" class="0">
+<segment>
+<pinref part="R1" gate="G$1" pin="2"/>
+<wire x1="157.48" y1="-152.4" x2="152.4" y2="-152.4" width="0.1524" layer="91"/>
+<label x="152.4" y="-152.4" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="IC1" gate="G$1" pin="DTR"/>
+<wire x1="322.58" y1="38.1" x2="330.2" y2="38.1" width="0.1524" layer="91"/>
+<label x="325.12" y="38.1" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="U$6" gate="G$1" pin="4"/>
+<wire x1="187.96" y1="-165.1" x2="187.96" y2="-172.72" width="0.1524" layer="91"/>
+<label x="187.96" y="-172.72" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>
