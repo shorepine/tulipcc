@@ -617,22 +617,6 @@ Source: Data sheet</description>
 &lt;p&gt;THIS SOFTWARE IS PROVIDED ''AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE INSTITUTE OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 &lt;/p&gt;</description>
 <packages>
-<package name="0603-NO">
-<wire x1="-1.473" y1="0.729" x2="1.473" y2="0.729" width="0.0508" layer="39"/>
-<wire x1="1.473" y1="0.729" x2="1.473" y2="-0.729" width="0.0508" layer="39"/>
-<wire x1="1.473" y1="-0.729" x2="-1.473" y2="-0.729" width="0.0508" layer="39"/>
-<wire x1="-1.473" y1="-0.729" x2="-1.473" y2="0.729" width="0.0508" layer="39"/>
-<wire x1="-0.356" y1="0.432" x2="0.356" y2="0.432" width="0.1016" layer="51"/>
-<wire x1="-0.356" y1="-0.419" x2="0.356" y2="-0.419" width="0.1016" layer="51"/>
-<smd name="1" x="-0.85" y="0" dx="1.075" dy="1" layer="1"/>
-<smd name="2" x="0.85" y="0" dx="1.075" dy="1" layer="1"/>
-<text x="1.778" y="-0.127" size="0.8128" layer="25" font="vector" ratio="18">&gt;NAME</text>
-<text x="1.778" y="-0.762" size="0.4064" layer="27" font="vector" ratio="10">&gt;VALUE</text>
-<rectangle x1="-0.8382" y1="-0.4699" x2="-0.3381" y2="0.4801" layer="51"/>
-<rectangle x1="0.3302" y1="-0.4699" x2="0.8303" y2="0.4801" layer="51"/>
-<rectangle x1="-0.1999" y1="-0.3" x2="0.1999" y2="0.3" layer="35"/>
-<wire x1="0" y1="0.4" x2="0" y2="-0.4" width="0.3048" layer="21"/>
-</package>
 <package name="SSOP16_4.4MM">
 <wire x1="-2.828" y1="-2.536" x2="2.828" y2="-2.536" width="0.2032" layer="21"/>
 <wire x1="2.828" y1="-2.536" x2="2.828" y2="2.536" width="0.2032" layer="21"/>
@@ -1032,6 +1016,27 @@ W = angled&lt;p&gt;
 </package>
 </packages>
 </library>
+<library name="adafruit">
+<packages>
+<package name="R0805">
+<description>&lt;b&gt;RESISTOR&lt;/b&gt;&lt;p&gt;
+chip</description>
+<wire x1="-0.41" y1="0.635" x2="0.41" y2="0.635" width="0.1524" layer="51"/>
+<wire x1="-0.41" y1="-0.635" x2="0.41" y2="-0.635" width="0.1524" layer="51"/>
+<wire x1="-1.973" y1="0.983" x2="1.973" y2="0.983" width="0.0508" layer="39"/>
+<wire x1="1.973" y1="0.983" x2="1.973" y2="-0.983" width="0.0508" layer="39"/>
+<wire x1="1.973" y1="-0.983" x2="-1.973" y2="-0.983" width="0.0508" layer="39"/>
+<wire x1="-1.973" y1="-0.983" x2="-1.973" y2="0.983" width="0.0508" layer="39"/>
+<smd name="1" x="-1" y="0" dx="1.1" dy="1.4" layer="1"/>
+<smd name="2" x="1" y="0" dx="1.1" dy="1.4" layer="1"/>
+<text x="-0.762" y="1.016" size="1.27" layer="25">&gt;NAME</text>
+<text x="-0.762" y="-2.286" size="1.27" layer="27">&gt;VALUE</text>
+<rectangle x1="0.4064" y1="-0.6985" x2="1.0564" y2="0.7015" layer="21"/>
+<rectangle x1="-1.0668" y1="-0.6985" x2="-0.4168" y2="0.7015" layer="21"/>
+<rectangle x1="-0.1999" y1="-0.5001" x2="0.1999" y2="0.5001" layer="35"/>
+</package>
+</packages>
+</library>
 </libraries>
 <attributes>
 </attributes>
@@ -1124,7 +1129,7 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 </designrules>
 <autorouter>
 <pass name="Default">
-<param name="RoutingGrid" value="12.5mil"/>
+<param name="RoutingGrid" value="0.125mm"/>
 <param name="AutoGrid" value="1"/>
 <param name="Efforts" value="2"/>
 <param name="TopRouterVariant" value="1"/>
@@ -1257,35 +1262,35 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <attribute name="POPULARITY" value="1" x="51.6" y="33.7" size="1.778" layer="27" rot="R180" display="off"/>
 <attribute name="VALUE" x="61.76" y="38.399" size="1.27" layer="27" ratio="10" rot="R180"/>
 </element>
-<element name="6N138" library="6N138SDM" package="COUPL_6N138SDM" value="6N138SDM" x="87.2" y="38.2" smashed="yes">
-<attribute name="AVAILABILITY" value="In Stock" x="87.2" y="38.2" size="1.778" layer="27" display="off"/>
-<attribute name="DESCRIPTION" value=" Optoisolator Darlington with Base Output 5000Vrms 1 Channel 8-SMD " x="87.2" y="38.2" size="1.778" layer="27" display="off"/>
-<attribute name="MF" value="ON Semiconductor" x="87.2" y="38.2" size="1.778" layer="27" display="off"/>
-<attribute name="MP" value="6N138SDM" x="87.2" y="38.2" size="1.778" layer="27" display="off"/>
-<attribute name="NAME" x="82.2" y="43.7" size="1.27" layer="25" ratio="10"/>
-<attribute name="PACKAGE" value="PDIP GW-8 ON Semiconductor" x="87.2" y="38.2" size="1.778" layer="27" display="off"/>
-<attribute name="PRICE" value="None" x="87.2" y="38.2" size="1.778" layer="27" display="off"/>
-<attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/6N138SDM/?ref=eda" x="87.2" y="38.2" size="1.778" layer="27" display="off"/>
-<attribute name="VALUE" x="82.2" y="32.7" size="1.27" layer="27" align="top-left"/>
+<element name="6N138" library="6N138SDM" package="COUPL_6N138SDM" value="6N138SDM" x="87.6" y="38.9" smashed="yes">
+<attribute name="AVAILABILITY" value="In Stock" x="87.6" y="38.9" size="1.778" layer="27" display="off"/>
+<attribute name="DESCRIPTION" value=" Optoisolator Darlington with Base Output 5000Vrms 1 Channel 8-SMD " x="87.6" y="38.9" size="1.778" layer="27" display="off"/>
+<attribute name="MF" value="ON Semiconductor" x="87.6" y="38.9" size="1.778" layer="27" display="off"/>
+<attribute name="MP" value="6N138SDM" x="87.6" y="38.9" size="1.778" layer="27" display="off"/>
+<attribute name="NAME" x="82.6" y="44.4" size="1.27" layer="25" ratio="10"/>
+<attribute name="PACKAGE" value="PDIP GW-8 ON Semiconductor" x="87.6" y="38.9" size="1.778" layer="27" display="off"/>
+<attribute name="PRICE" value="None" x="87.6" y="38.9" size="1.778" layer="27" display="off"/>
+<attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/6N138SDM/?ref=eda" x="87.6" y="38.9" size="1.778" layer="27" display="off"/>
+<attribute name="VALUE" x="82.6" y="33.4" size="1.27" layer="27" align="top-left"/>
 </element>
-<element name="R10" library="microbuilder" package="0603-NO" value="5.1K" x="42.6" y="25.1" smashed="yes">
-<attribute name="NAME" x="44.378" y="24.973" size="0.8128" layer="25" font="vector" ratio="18"/>
-<attribute name="VALUE" x="44.378" y="24.338" size="0.4064" layer="27" font="vector" ratio="10"/>
+<element name="R10" library="adafruit" package="R0805" value="5.1K" x="43" y="26" smashed="yes">
+<attribute name="NAME" x="44.778" y="25.873" size="0.8128" layer="25" font="vector" ratio="18"/>
+<attribute name="VALUE" x="44.778" y="25.238" size="0.4064" layer="27" font="vector" ratio="10"/>
 </element>
-<element name="R11" library="microbuilder" package="0603-NO" value="5.1K" x="42.6" y="23.1" smashed="yes">
-<attribute name="NAME" x="44.378" y="22.973" size="0.8128" layer="25" font="vector" ratio="18"/>
-<attribute name="VALUE" x="44.378" y="22.338" size="0.4064" layer="27" font="vector" ratio="10"/>
+<element name="R11" library="adafruit" package="R0805" value="5.1K" x="43.1" y="23" smashed="yes">
+<attribute name="NAME" x="44.878" y="22.873" size="0.8128" layer="25" font="vector" ratio="18"/>
+<attribute name="VALUE" x="44.878" y="22.238" size="0.4064" layer="27" font="vector" ratio="10"/>
 </element>
-<element name="CP2102" library="CP2102N-A02-GQFN24" package="QFN50P400X400X80-25N" value="CP2102N-A02-GQFN24" x="18.8" y="17.3" smashed="yes" rot="R180">
-<attribute name="AVAILABILITY" value="In Stock" x="25.2" y="26.3" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="DESCRIPTION" value=" USB Bridge, USB to UART USB 2.0 UART Interface 24-QFN (4x4) " x="25.2" y="26.3" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="MF" value="Silicon Labs" x="25.2" y="26.3" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="MP" value="CP2102N-A02-GQFN24" x="25.2" y="26.3" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="NAME" x="18.8" y="17.3" size="1.27" layer="25" rot="R180" align="center"/>
-<attribute name="PACKAGE" value="WFQFN-24 Silicon Labs" x="25.2" y="26.3" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="PRICE" value="None" x="25.2" y="26.3" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/CP2102N-A02-GQFN24/?ref=eda" x="25.2" y="26.3" size="1.778" layer="27" rot="R180" display="off"/>
-<attribute name="VALUE" x="18.8" y="17.3" size="1.27" layer="27" rot="R180" align="center"/>
+<element name="CP2102" library="CP2102N-A02-GQFN24" package="QFN50P400X400X80-25N" value="CP2102N-A02-GQFN24" x="18.7" y="14.3" smashed="yes" rot="R180">
+<attribute name="AVAILABILITY" value="In Stock" x="25.1" y="23.3" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="DESCRIPTION" value=" USB Bridge, USB to UART USB 2.0 UART Interface 24-QFN (4x4) " x="25.1" y="23.3" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="MF" value="Silicon Labs" x="25.1" y="23.3" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="MP" value="CP2102N-A02-GQFN24" x="25.1" y="23.3" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="NAME" x="18.7" y="14.3" size="1.27" layer="25" rot="R180" align="center"/>
+<attribute name="PACKAGE" value="WFQFN-24 Silicon Labs" x="25.1" y="23.3" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="PRICE" value="None" x="25.1" y="23.3" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/CP2102N-A02-GQFN24/?ref=eda" x="25.1" y="23.3" size="1.778" layer="27" rot="R180" display="off"/>
+<attribute name="VALUE" x="18.7" y="14.3" size="1.27" layer="27" rot="R180" align="center"/>
 </element>
 <element name="MIDI_OUT_CONN" library="microbuilder" package="4UCONN_19269" value="19269" x="94.7" y="26.8" smashed="yes" rot="R180">
 <attribute name="NAME" x="88.35" y="22.99" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
@@ -1299,152 +1304,152 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <attribute name="NAME" x="88.35" y="2.99" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
 <attribute name="VALUE" x="90.255" y="11.245" size="0.4064" layer="27" font="vector" ratio="10" rot="R180"/>
 </element>
-<element name="UDA1334" library="microbuilder" package="SSOP16_4.4MM" value="UDA1334ATS" x="73.3" y="20.4" smashed="yes">
-<attribute name="NAME" x="71.933" y="21.0604" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="71.9711" y="20.019" size="0.4064" layer="27" ratio="10"/>
+<element name="UDA1334" library="microbuilder" package="SSOP16_4.4MM" value="UDA1334ATS" x="74" y="20.4" smashed="yes">
+<attribute name="NAME" x="72.633" y="21.0604" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="72.6711" y="20.019" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C11" library="microbuilder" package="0805-NO" value="0.1uF" x="63.8" y="23.6" smashed="yes">
-<attribute name="NAME" x="65.832" y="23.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="65.832" y="22.838" size="0.4064" layer="27" ratio="10"/>
+<element name="C11" library="microbuilder" package="0805-NO" value="0.1uF" x="64.6" y="26.2" smashed="yes">
+<attribute name="NAME" x="66.632" y="26.073" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="66.632" y="25.438" size="0.4064" layer="27" ratio="10"/>
 </element>
 <element name="C12" library="microbuilder" package="0805-NO" value="0.1uF" x="57.8" y="14.6" smashed="yes">
 <attribute name="NAME" x="59.832" y="14.473" size="0.8128" layer="25" ratio="18"/>
 <attribute name="VALUE" x="59.832" y="13.838" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C13" library="microbuilder" package="0805-NO" value="0.01uF" x="63.8" y="17.6" smashed="yes">
-<attribute name="NAME" x="65.832" y="17.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="65.832" y="16.838" size="0.4064" layer="27" ratio="10"/>
+<element name="C13" library="microbuilder" package="0805-NO" value="0.01uF" x="64.6" y="20.2" smashed="yes">
+<attribute name="NAME" x="66.632" y="20.073" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="66.632" y="19.438" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C14" library="microbuilder" package="0805-NO" value="0.01uF" x="60.8" y="8.6" smashed="yes">
-<attribute name="NAME" x="62.832" y="8.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="62.832" y="7.838" size="0.4064" layer="27" ratio="10"/>
+<element name="C14" library="microbuilder" package="0805-NO" value="0.01uF" x="64.6" y="11.2" smashed="yes">
+<attribute name="NAME" x="66.632" y="11.073" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="66.632" y="10.438" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="R8" library="microbuilder" package="0805-NO" value="220k" x="57.8" y="17.6" smashed="yes">
-<attribute name="NAME" x="59.832" y="17.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="59.832" y="16.838" size="0.4064" layer="27" ratio="10"/>
+<element name="R8" library="adafruit" package="R0805" value="220k" x="58" y="17" smashed="yes">
+<attribute name="NAME" x="60.032" y="16.873" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="60.032" y="16.238" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="R9" library="microbuilder" package="0805-NO" value="100" x="57.8" y="21.6" smashed="yes">
-<attribute name="NAME" x="59.832" y="21.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="59.832" y="20.838" size="0.4064" layer="27" ratio="10"/>
+<element name="R9" library="adafruit" package="R0805" value="100" x="58.1" y="23" smashed="yes">
+<attribute name="NAME" x="60.132" y="22.873" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="60.132" y="22.238" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="R22" library="microbuilder" package="0805-NO" value="220k" x="57.8" y="19.6" smashed="yes">
-<attribute name="NAME" x="59.832" y="19.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="59.832" y="18.838" size="0.4064" layer="27" ratio="10"/>
+<element name="R22" library="adafruit" package="R0805" value="220k" x="58" y="20" smashed="yes">
+<attribute name="NAME" x="60.032" y="19.873" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="60.032" y="19.238" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="R23" library="microbuilder" package="0805-NO" value="100" x="57.8" y="23.6" smashed="yes">
-<attribute name="NAME" x="59.832" y="23.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="59.832" y="22.838" size="0.4064" layer="27" ratio="10"/>
+<element name="R23" library="adafruit" package="R0805" value="100" x="58" y="26" smashed="yes">
+<attribute name="NAME" x="60.032" y="25.873" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="60.032" y="25.238" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C15" library="microbuilder" package="0805-NO" value="0.1uF" x="63.8" y="11.6" smashed="yes">
-<attribute name="NAME" x="65.832" y="11.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="65.832" y="10.838" size="0.4064" layer="27" ratio="10"/>
+<element name="C15" library="microbuilder" package="0805-NO" value="0.1uF" x="64.6" y="14.2" smashed="yes">
+<attribute name="NAME" x="66.632" y="14.073" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="66.632" y="13.438" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C16" library="microbuilder" package="PANASONIC_C" value="47uF" x="67" y="37.8" smashed="yes">
-<attribute name="NAME" x="64.46" y="40.594" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="64.46" y="34.117" size="0.4064" layer="27" ratio="10"/>
+<element name="C16" library="microbuilder" package="PANASONIC_C" value="47uF" x="66.8" y="37.3" smashed="yes">
+<attribute name="NAME" x="64.26" y="40.094" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="64.26" y="33.617" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C17" library="microbuilder" package="PANASONIC_C" value="47uF" x="67" y="30.4" smashed="yes">
-<attribute name="NAME" x="64.46" y="33.194" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="64.46" y="26.717" size="0.4064" layer="27" ratio="10"/>
+<element name="C17" library="microbuilder" package="PANASONIC_C" value="47uF" x="66.8" y="30.4" smashed="yes">
+<attribute name="NAME" x="64.26" y="33.194" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="64.26" y="26.717" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C18" library="microbuilder" package="0805-NO" value="10uF" x="63.8" y="20.6" smashed="yes">
-<attribute name="NAME" x="65.832" y="20.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="65.832" y="19.838" size="0.4064" layer="27" ratio="10"/>
+<element name="C18" library="microbuilder" package="0805-NO" value="10uF" x="64.6" y="23.2" smashed="yes">
+<attribute name="NAME" x="66.632" y="23.073" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="66.632" y="22.438" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C19" library="microbuilder" package="0805-NO" value="10uF" x="57.8" y="11.6" smashed="yes">
-<attribute name="NAME" x="59.832" y="11.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="59.832" y="10.838" size="0.4064" layer="27" ratio="10"/>
+<element name="C19" library="microbuilder" package="0805-NO" value="10uF" x="57.6" y="11.2" smashed="yes">
+<attribute name="NAME" x="59.632" y="11.073" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="59.632" y="10.438" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C20" library="microbuilder" package="0805-NO" value="10uF" x="63.8" y="14.6" smashed="yes">
-<attribute name="NAME" x="65.832" y="14.473" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="65.832" y="13.838" size="0.4064" layer="27" ratio="10"/>
+<element name="C20" library="microbuilder" package="0805-NO" value="10uF" x="64.6" y="17.2" smashed="yes">
+<attribute name="NAME" x="66.632" y="17.073" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="66.632" y="16.438" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="FB3" library="microbuilder" package="0805" value="Ferrite" x="70.1" y="10.2" smashed="yes">
-<attribute name="NAME" x="72.132" y="10.073" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="72.132" y="9.438" size="0.4064" layer="27" ratio="10"/>
+<element name="FB3" library="microbuilder" package="0805" value="Ferrite" x="73" y="8.9" smashed="yes">
+<attribute name="NAME" x="75.032" y="8.773" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="75.032" y="8.138" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="FB4" library="microbuilder" package="0805" value="Ferrite" x="70.1" y="13.3" smashed="yes">
-<attribute name="NAME" x="72.132" y="13.173" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="72.132" y="12.538" size="0.4064" layer="27" ratio="10"/>
+<element name="FB4" library="microbuilder" package="0805" value="Ferrite" x="73.1" y="12.9" smashed="yes">
+<attribute name="NAME" x="75.132" y="12.773" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="75.132" y="12.138" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="R12" library="microbuilder" package="0603-NO" value="4.7K" x="74.5" y="42.2" smashed="yes">
-<attribute name="NAME" x="76.278" y="42.073" size="0.8128" layer="25" font="vector" ratio="18"/>
-<attribute name="VALUE" x="76.278" y="41.438" size="0.4064" layer="27" font="vector" ratio="10"/>
+<element name="R12" library="adafruit" package="R0805" value="4.7K" x="75.1" y="43.9" smashed="yes">
+<attribute name="NAME" x="76.878" y="43.773" size="0.8128" layer="25" font="vector" ratio="18"/>
+<attribute name="VALUE" x="76.878" y="43.138" size="0.4064" layer="27" font="vector" ratio="10"/>
 </element>
-<element name="R13" library="microbuilder" package="0603-NO" value="4.7K" x="26.5" y="23.2" smashed="yes">
-<attribute name="NAME" x="28.278" y="23.073" size="0.8128" layer="25" font="vector" ratio="18"/>
-<attribute name="VALUE" x="28.278" y="22.438" size="0.4064" layer="27" font="vector" ratio="10"/>
+<element name="R13" library="adafruit" package="R0805" value="4.7K" x="28" y="22.9" smashed="yes">
+<attribute name="NAME" x="29.778" y="22.773" size="0.8128" layer="25" font="vector" ratio="18"/>
+<attribute name="VALUE" x="29.778" y="22.138" size="0.4064" layer="27" font="vector" ratio="10"/>
 </element>
-<element name="R14" library="microbuilder" package="0603-NO" value="4.7K" x="21.5" y="23.2" smashed="yes">
-<attribute name="NAME" x="23.278" y="23.073" size="0.8128" layer="25" font="vector" ratio="18"/>
-<attribute name="VALUE" x="23.278" y="22.438" size="0.4064" layer="27" font="vector" ratio="10"/>
+<element name="R14" library="adafruit" package="R0805" value="4.7K" x="22" y="22.9" smashed="yes">
+<attribute name="NAME" x="23.778" y="22.773" size="0.8128" layer="25" font="vector" ratio="18"/>
+<attribute name="VALUE" x="23.778" y="22.138" size="0.4064" layer="27" font="vector" ratio="10"/>
 </element>
-<element name="R15" library="microbuilder" package="0603-NO" value="220" x="74.5" y="44.2" smashed="yes">
-<attribute name="NAME" x="76.278" y="44.073" size="0.8128" layer="25" font="vector" ratio="18"/>
-<attribute name="VALUE" x="76.278" y="43.438" size="0.4064" layer="27" font="vector" ratio="10"/>
+<element name="R15" library="adafruit" package="R0805" value="220" x="67.1" y="43.8" smashed="yes">
+<attribute name="NAME" x="68.878" y="43.673" size="0.8128" layer="25" font="vector" ratio="18"/>
+<attribute name="VALUE" x="68.878" y="43.038" size="0.4064" layer="27" font="vector" ratio="10"/>
 </element>
-<element name="R16" library="microbuilder" package="0603-NO" value="470" x="74.5" y="40.2" smashed="yes">
-<attribute name="NAME" x="76.278" y="40.073" size="0.8128" layer="25" font="vector" ratio="18"/>
-<attribute name="VALUE" x="76.278" y="39.438" size="0.4064" layer="27" font="vector" ratio="10"/>
+<element name="R16" library="adafruit" package="R0805" value="470" x="75" y="41" smashed="yes">
+<attribute name="NAME" x="76.778" y="40.873" size="0.8128" layer="25" font="vector" ratio="18"/>
+<attribute name="VALUE" x="76.778" y="40.238" size="0.4064" layer="27" font="vector" ratio="10"/>
 </element>
-<element name="R17" library="microbuilder" package="0603-NO" value="33" x="74.5" y="38.2" smashed="yes">
-<attribute name="NAME" x="76.278" y="38.073" size="0.8128" layer="25" font="vector" ratio="18"/>
-<attribute name="VALUE" x="76.278" y="37.438" size="0.4064" layer="27" font="vector" ratio="10"/>
+<element name="R17" library="adafruit" package="R0805" value="33" x="75" y="38" smashed="yes">
+<attribute name="NAME" x="76.778" y="37.873" size="0.8128" layer="25" font="vector" ratio="18"/>
+<attribute name="VALUE" x="76.778" y="37.238" size="0.4064" layer="27" font="vector" ratio="10"/>
 </element>
-<element name="R18" library="microbuilder" package="0603-NO" value="10" x="74.5" y="36.2" smashed="yes">
-<attribute name="NAME" x="76.278" y="36.073" size="0.8128" layer="25" font="vector" ratio="18"/>
-<attribute name="VALUE" x="76.278" y="35.438" size="0.4064" layer="27" font="vector" ratio="10"/>
+<element name="R18" library="adafruit" package="R0805" value="10" x="75" y="35" smashed="yes">
+<attribute name="NAME" x="76.778" y="34.873" size="0.8128" layer="25" font="vector" ratio="18"/>
+<attribute name="VALUE" x="76.778" y="34.238" size="0.4064" layer="27" font="vector" ratio="10"/>
 </element>
-<element name="D2" library="EGF1A" package="DIOM449X264X300L114X135N" value="EGF1A" x="75.9" y="32.3" smashed="yes">
-<attribute name="AVAILABILITY" value="In Stock" x="75.9" y="32.3" size="1.778" layer="27" display="off"/>
-<attribute name="DESCRIPTION" value=" Diode Standard 50 V 1A Surface Mount DO-214AC (SMA) " x="75.9" y="32.3" size="1.778" layer="27" display="off"/>
-<attribute name="MF" value="ON Semiconductor" x="75.9" y="32.3" size="1.778" layer="27" display="off"/>
-<attribute name="MP" value="EGF1A" x="75.9" y="32.3" size="1.778" layer="27" display="off"/>
-<attribute name="NAME" x="72.141290625" y="34.05406875" size="0.8146875" layer="25"/>
-<attribute name="PACKAGE" value="SMA-2 ON Semiconductor" x="75.9" y="32.3" size="1.778" layer="27" display="off"/>
-<attribute name="PRICE" value="None" x="75.9" y="32.3" size="1.778" layer="27" display="off"/>
-<attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/EGF1A/?ref=eda" x="75.9" y="32.3" size="1.778" layer="27" display="off"/>
-<attribute name="VALUE" x="72.138859375" y="29.54183125" size="0.8152125" layer="27"/>
+<element name="D2" library="EGF1A" package="DIOM449X264X300L114X135N" value="EGF1A" x="75.3" y="30.2" smashed="yes">
+<attribute name="AVAILABILITY" value="In Stock" x="75.3" y="30.2" size="1.778" layer="27" display="off"/>
+<attribute name="DESCRIPTION" value=" Diode Standard 50 V 1A Surface Mount DO-214AC (SMA) " x="75.3" y="30.2" size="1.778" layer="27" display="off"/>
+<attribute name="MF" value="ON Semiconductor" x="75.3" y="30.2" size="1.778" layer="27" display="off"/>
+<attribute name="MP" value="EGF1A" x="75.3" y="30.2" size="1.778" layer="27" display="off"/>
+<attribute name="NAME" x="71.541290625" y="31.95406875" size="0.8146875" layer="25"/>
+<attribute name="PACKAGE" value="SMA-2 ON Semiconductor" x="75.3" y="30.2" size="1.778" layer="27" display="off"/>
+<attribute name="PRICE" value="None" x="75.3" y="30.2" size="1.778" layer="27" display="off"/>
+<attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/EGF1A/?ref=eda" x="75.3" y="30.2" size="1.778" layer="27" display="off"/>
+<attribute name="VALUE" x="71.538859375" y="27.44183125" size="0.8152125" layer="27"/>
 </element>
-<element name="C1" library="microbuilder" package="0805-NO" value="0.1uF" x="48.7" y="22.1" smashed="yes">
-<attribute name="NAME" x="50.732" y="21.973" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="50.732" y="21.338" size="0.4064" layer="27" ratio="10"/>
+<element name="C1" library="microbuilder" package="0805-NO" value="0.1uF" x="15.7" y="32.3" smashed="yes" rot="R90">
+<attribute name="NAME" x="15.827" y="34.332" size="0.8128" layer="25" ratio="18" rot="R90"/>
+<attribute name="VALUE" x="16.462" y="34.332" size="0.4064" layer="27" ratio="10" rot="R90"/>
 </element>
-<element name="C2" library="microbuilder" package="0805-NO" value="0.1uF" x="48.7" y="19.1" smashed="yes">
-<attribute name="NAME" x="50.732" y="18.973" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="50.732" y="18.338" size="0.4064" layer="27" ratio="10"/>
+<element name="C2" library="microbuilder" package="0805-NO" value="0.1uF" x="15.8" y="27.5" smashed="yes" rot="R90">
+<attribute name="NAME" x="15.927" y="29.532" size="0.8128" layer="25" ratio="18" rot="R90"/>
+<attribute name="VALUE" x="16.562" y="29.532" size="0.4064" layer="27" ratio="10" rot="R90"/>
 </element>
-<element name="C3" library="microbuilder" package="0805-NO" value="4.7uF" x="48.7" y="16.2" smashed="yes">
-<attribute name="NAME" x="50.732" y="16.073" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="50.732" y="15.438" size="0.4064" layer="27" ratio="10"/>
+<element name="C3" library="microbuilder" package="0805-NO" value="4.7uF" x="15.8" y="22.4" smashed="yes" rot="R90">
+<attribute name="NAME" x="15.927" y="24.432" size="0.8128" layer="25" ratio="18" rot="R90"/>
+<attribute name="VALUE" x="16.562" y="24.432" size="0.4064" layer="27" ratio="10" rot="R90"/>
 </element>
-<element name="R2" library="microbuilder" package="0805-NO" value="22.1k" x="42.7" y="21.1" smashed="yes">
-<attribute name="NAME" x="44.732" y="20.973" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="44.732" y="20.338" size="0.4064" layer="27" ratio="10"/>
+<element name="R2" library="adafruit" package="R0805" value="22.1k" x="43" y="20" smashed="yes">
+<attribute name="NAME" x="45.032" y="19.873" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="45.032" y="19.238" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="R3" library="microbuilder" package="0805-NO" value="47.5k" x="42.7" y="19.1" smashed="yes">
-<attribute name="NAME" x="44.732" y="18.973" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="44.732" y="18.338" size="0.4064" layer="27" ratio="10"/>
+<element name="R3" library="adafruit" package="R0805" value="47.5k" x="43" y="17" smashed="yes">
+<attribute name="NAME" x="45.032" y="16.873" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="45.032" y="16.238" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="R4" library="microbuilder" package="0805-NO" value="10k" x="42.7" y="17.1" smashed="yes">
-<attribute name="NAME" x="44.732" y="16.973" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="44.732" y="16.338" size="0.4064" layer="27" ratio="10"/>
+<element name="R4" library="adafruit" package="R0805" value="10k" x="43" y="14" smashed="yes">
+<attribute name="NAME" x="45.032" y="13.873" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="45.032" y="13.238" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="R1" library="microbuilder" package="0603-NO" value="100k" x="19.2" y="3" smashed="yes" rot="R180">
-<attribute name="NAME" x="17.422" y="3.127" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
-<attribute name="VALUE" x="17.422" y="3.762" size="0.4064" layer="27" font="vector" ratio="10" rot="R180"/>
+<element name="R1" library="adafruit" package="R0805" value="100k" x="23.1" y="4.9" smashed="yes" rot="R180">
+<attribute name="NAME" x="21.322" y="5.027" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
+<attribute name="VALUE" x="21.322" y="5.662" size="0.4064" layer="27" font="vector" ratio="10" rot="R180"/>
 </element>
-<element name="R5" library="microbuilder" package="0603-NO" value="10k" x="19.2" y="7" smashed="yes" rot="R180">
-<attribute name="NAME" x="17.422" y="7.127" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
-<attribute name="VALUE" x="17.422" y="7.762" size="0.4064" layer="27" font="vector" ratio="10" rot="R180"/>
+<element name="R5" library="adafruit" package="R0805" value="10k" x="18" y="7.9" smashed="yes" rot="R180">
+<attribute name="NAME" x="16.222" y="8.027" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
+<attribute name="VALUE" x="16.222" y="8.662" size="0.4064" layer="27" font="vector" ratio="10" rot="R180"/>
 </element>
-<element name="R6" library="microbuilder" package="0603-NO" value="100k" x="19.2" y="9" smashed="yes" rot="R180">
-<attribute name="NAME" x="17.422" y="9.127" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
-<attribute name="VALUE" x="17.422" y="9.762" size="0.4064" layer="27" font="vector" ratio="10" rot="R180"/>
+<element name="R6" library="adafruit" package="R0805" value="100k" x="23.1" y="7.9" smashed="yes" rot="R180">
+<attribute name="NAME" x="21.322" y="8.027" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
+<attribute name="VALUE" x="21.322" y="8.662" size="0.4064" layer="27" font="vector" ratio="10" rot="R180"/>
 </element>
-<element name="R7" library="microbuilder" package="0603-NO" value="10k" x="19.2" y="5" smashed="yes" rot="R180">
-<attribute name="NAME" x="17.422" y="5.127" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
-<attribute name="VALUE" x="17.422" y="5.762" size="0.4064" layer="27" font="vector" ratio="10" rot="R180"/>
+<element name="R7" library="adafruit" package="R0805" value="10k" x="18" y="4.9" smashed="yes" rot="R180">
+<attribute name="NAME" x="16.222" y="5.027" size="0.8128" layer="25" font="vector" ratio="18" rot="R180"/>
+<attribute name="VALUE" x="16.222" y="5.662" size="0.4064" layer="27" font="vector" ratio="10" rot="R180"/>
 </element>
 <element name="RESET" library="MBT3904DW1T1G" package="SOT236" value="MBT3904DW1T1G" x="33.3" y="22.6" smashed="yes" rot="R180">
 <attribute name="AVAILABILITY" value="In Stock" x="33.3" y="22.6" size="1.778" layer="27" rot="R180" display="off"/>
@@ -1455,13 +1460,13 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <attribute name="PRICE" value="None" x="33.3" y="22.6" size="1.778" layer="27" rot="R180" display="off"/>
 <attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/MBT3904DW1T1G/?ref=eda" x="33.3" y="22.6" size="1.778" layer="27" rot="R180" display="off"/>
 </element>
-<element name="C4" library="microbuilder" package="0805-NO" value="4.7uF" x="48.7" y="25.1" smashed="yes">
-<attribute name="NAME" x="50.732" y="24.973" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="50.732" y="24.338" size="0.4064" layer="27" ratio="10"/>
+<element name="C4" library="microbuilder" package="0805-NO" value="4.7uF" x="15.8" y="37.4" smashed="yes" rot="R90">
+<attribute name="NAME" x="15.927" y="39.432" size="0.8128" layer="25" ratio="18" rot="R90"/>
+<attribute name="VALUE" x="16.562" y="39.432" size="0.4064" layer="27" ratio="10" rot="R90"/>
 </element>
-<element name="C5" library="microbuilder" package="0805-NO" value="4.7uF" x="16" y="42.6" smashed="yes" rot="R90">
-<attribute name="NAME" x="16.127" y="44.632" size="0.8128" layer="25" ratio="18" rot="R90"/>
-<attribute name="VALUE" x="16.762" y="44.632" size="0.4064" layer="27" ratio="10" rot="R90"/>
+<element name="C5" library="microbuilder" package="0805-NO" value="4.7uF" x="15.8" y="42.4" smashed="yes" rot="R90">
+<attribute name="NAME" x="15.927" y="44.432" size="0.8128" layer="25" ratio="18" rot="R90"/>
+<attribute name="VALUE" x="16.562" y="44.432" size="0.4064" layer="27" ratio="10" rot="R90"/>
 </element>
 <element name="REG" library="TS1117BCW33_RPG" package="VREG_TS1117BCW33_RPG" value="TS1117BCW33_RPG" x="30.6" y="14.8" smashed="yes">
 <attribute name="AVAILABILITY" value="In Stock" x="30.6" y="14.8" size="1.778" layer="27" display="off"/>
@@ -1474,16 +1479,16 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/TS1117BCW33 RPG/?ref=eda" x="30.6" y="14.8" size="1.778" layer="27" display="off"/>
 <attribute name="VALUE" x="26.345" y="10.3" size="1.27" layer="27" align="top-left"/>
 </element>
-<element name="J1" library="CSP-USC16-TR" package="VALCON_CSP-USC16-TR" value="CSP-USC16-TR" x="28.1" y="7.6" smashed="yes">
-<attribute name="AVAILABILITY" value="In Stock" x="28.1" y="7.6" size="1.778" layer="27" display="off"/>
-<attribute name="DESCRIPTION" value=" CSP-USC16-TR Valcon USB Type C Surface Mount PCB Socket " x="28.1" y="7.6" size="1.778" layer="27" display="off"/>
-<attribute name="MF" value="Valcon" x="28.1" y="7.6" size="1.778" layer="27" display="off"/>
-<attribute name="MP" value="CSP-USC16-TR" x="28.1" y="7.6" size="1.778" layer="27" display="off"/>
-<attribute name="NAME" x="23.03" y="9.42" size="1.27" layer="25"/>
-<attribute name="PACKAGE" value="None" x="28.1" y="7.6" size="1.778" layer="27" display="off"/>
-<attribute name="PRICE" value="None" x="28.1" y="7.6" size="1.778" layer="27" display="off"/>
-<attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/CSP-USC16-TR/?ref=eda" x="28.1" y="7.6" size="1.778" layer="27" display="off"/>
-<attribute name="VALUE" x="23.03" y="-1" size="1.27" layer="27" align="top-left"/>
+<element name="J1" library="CSP-USC16-TR" package="VALCON_CSP-USC16-TR" value="CSP-USC16-TR" x="30.9" y="7.1" smashed="yes">
+<attribute name="AVAILABILITY" value="In Stock" x="30.9" y="7.1" size="1.778" layer="27" display="off"/>
+<attribute name="DESCRIPTION" value=" CSP-USC16-TR Valcon USB Type C Surface Mount PCB Socket " x="30.9" y="7.1" size="1.778" layer="27" display="off"/>
+<attribute name="MF" value="Valcon" x="30.9" y="7.1" size="1.778" layer="27" display="off"/>
+<attribute name="MP" value="CSP-USC16-TR" x="30.9" y="7.1" size="1.778" layer="27" display="off"/>
+<attribute name="NAME" x="25.83" y="8.92" size="1.27" layer="25"/>
+<attribute name="PACKAGE" value="None" x="30.9" y="7.1" size="1.778" layer="27" display="off"/>
+<attribute name="PRICE" value="None" x="30.9" y="7.1" size="1.778" layer="27" display="off"/>
+<attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/CSP-USC16-TR/?ref=eda" x="30.9" y="7.1" size="1.778" layer="27" display="off"/>
+<attribute name="VALUE" x="25.83" y="-1.5" size="1.27" layer="27" align="top-left"/>
 </element>
 </elements>
 <signals>
@@ -1560,27 +1565,24 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="J1" pad="S4"/>
 <contactref element="J1" pad="S3"/>
 <contactref element="J1" pad="S1"/>
-<wire x1="92.2" y1="30.3" x2="91.705" y2="34.39" width="0" layer="19" extent="1-1"/>
+<wire x1="92.2" y1="30.3" x2="92.105" y2="35.09" width="0" layer="19" extent="1-1"/>
 <wire x1="92.2" y1="20.3" x2="92.2" y2="30.3" width="0" layer="19" extent="1-1"/>
-<wire x1="75.575" y1="17.48" x2="92.2" y2="20.3" width="0" layer="19" extent="1-1"/>
-<wire x1="74.925" y1="17.48" x2="75.575" y2="17.48" width="0" layer="19" extent="1-1"/>
-<wire x1="74.275" y1="17.48" x2="74.925" y2="17.48" width="0" layer="19" extent="1-1"/>
-<wire x1="73.625" y1="17.48" x2="74.275" y2="17.48" width="0" layer="19" extent="1-1"/>
-<wire x1="71.05" y1="13.3" x2="73.625" y2="17.48" width="0" layer="19" extent="1-1"/>
-<wire x1="75.575" y1="23.32" x2="75.575" y2="17.48" width="0" layer="19" extent="1-1"/>
-<wire x1="74.925" y1="23.32" x2="75.575" y2="23.32" width="0" layer="19" extent="1-1"/>
-<wire x1="74.275" y1="23.32" x2="74.925" y2="23.32" width="0" layer="19" extent="1-1"/>
-<wire x1="58.75" y1="14.6" x2="71.05" y2="13.3" width="0" layer="19" extent="1-1"/>
-<wire x1="58.75" y1="11.6" x2="58.75" y2="14.6" width="0" layer="19" extent="1-1"/>
-<wire x1="49.65" y1="16.2" x2="58.75" y2="14.6" width="0" layer="19" extent="1-1"/>
-<wire x1="49.65" y1="19.1" x2="49.65" y2="16.2" width="0" layer="19" extent="1-1"/>
-<wire x1="47.75" y1="22.1" x2="49.65" y2="19.1" width="0" layer="19" extent="1-1"/>
-<wire x1="49.65" y1="25.1" x2="47.75" y2="22.1" width="0" layer="19" extent="1-1"/>
-<wire x1="41.75" y1="23.1" x2="47.75" y2="22.1" width="0" layer="19" extent="1-1"/>
-<wire x1="41.75" y1="25.1" x2="41.75" y2="23.1" width="0" layer="19" extent="1-1"/>
-<wire x1="41.75" y1="19.1" x2="41.75" y2="23.1" width="0" layer="19" extent="1-1"/>
-<wire x1="52.87" y1="32.43" x2="49.65" y2="25.1" width="0" layer="19" extent="1-1"/>
-<wire x1="45.25" y1="32.43" x2="52.87" y2="32.43" width="0" layer="19" extent="1-1"/>
+<wire x1="76.275" y1="17.48" x2="92.2" y2="20.3" width="0" layer="19" extent="1-1"/>
+<wire x1="75.625" y1="17.48" x2="76.275" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="74.975" y1="17.48" x2="75.625" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="74.325" y1="17.48" x2="74.975" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="74.05" y1="12.9" x2="74.975" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="76.275" y1="23.32" x2="76.275" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="75.625" y1="23.32" x2="76.275" y2="23.32" width="0" layer="19" extent="1-1"/>
+<wire x1="74.975" y1="23.32" x2="75.625" y2="23.32" width="0" layer="19" extent="1-1"/>
+<wire x1="58.75" y1="14.6" x2="74.325" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="58.55" y1="11.2" x2="58.75" y2="14.6" width="0" layer="19" extent="1-1"/>
+<wire x1="50.39" y1="6.92" x2="58.55" y2="11.2" width="0" layer="19" extent="1-1"/>
+<wire x1="42" y1="17" x2="50.39" y2="6.92" width="0" layer="19" extent="1-1"/>
+<wire x1="42.1" y1="23" x2="42" y2="17" width="0" layer="19" extent="1-1"/>
+<wire x1="42" y1="26" x2="42.1" y2="23" width="0" layer="19" extent="1-1"/>
+<wire x1="45.25" y1="32.43" x2="42" y2="26" width="0" layer="19" extent="1-1"/>
+<wire x1="52.87" y1="32.43" x2="45.25" y2="32.43" width="0" layer="19" extent="1-1"/>
 <wire x1="53.25" y1="40.35" x2="52.87" y2="32.43" width="0" layer="19" extent="1-1"/>
 <wire x1="53.75" y1="40.35" x2="53.25" y2="40.35" width="0" layer="19" extent="1-1"/>
 <wire x1="54.25" y1="40.35" x2="53.75" y2="40.35" width="0" layer="19" extent="1-1"/>
@@ -1602,7 +1604,6 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <wire x1="59.25" y1="40.35" x2="55.75" y2="40.35" width="0" layer="19" extent="1-1"/>
 <wire x1="60.49" y1="34.97" x2="59.25" y2="40.35" width="0" layer="19" extent="1-1"/>
 <wire x1="36.55" y1="45.06" x2="42.75" y2="40.35" width="0" layer="19" extent="1-1"/>
-<wire x1="50.39" y1="6.92" x2="49.65" y2="16.2" width="0" layer="19" extent="1-1"/>
 <wire x1="27.94" y1="41.21" x2="36.55" y2="45.06" width="0" layer="19" extent="1-1"/>
 <wire x1="27.94" y1="39.71" x2="27.94" y2="41.21" width="0" layer="19" extent="1-1"/>
 <wire x1="27.94" y1="38.21" x2="27.94" y2="39.71" width="0" layer="19" extent="1-1"/>
@@ -1613,35 +1614,39 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <wire x1="24.94" y1="38.21" x2="26.44" y2="38.21" width="0" layer="19" extent="1-1"/>
 <wire x1="24.94" y1="39.71" x2="24.94" y2="41.21" width="0" layer="19" extent="1-1"/>
 <wire x1="19.05" y1="45.06" x2="24.94" y2="41.21" width="0" layer="19" extent="1-1"/>
-<wire x1="16" y1="43.55" x2="19.05" y2="45.06" width="0" layer="19" extent="1-1"/>
-<wire x1="27.4" y1="17.1" x2="41.75" y2="19.1" width="0" layer="19" extent="1-1"/>
-<wire x1="20.75" y1="16.55" x2="27.4" y2="17.1" width="0" layer="19" extent="1-1"/>
-<wire x1="18.8" y1="17.3" x2="20.75" y2="16.55" width="0" layer="19" extent="1-1"/>
-<wire x1="24.75" y1="7.6" x2="20.75" y2="16.55" width="0" layer="19" extent="1-1"/>
-<wire x1="25.05" y1="7.6" x2="24.75" y2="7.6" width="0" layer="19" extent="1-1"/>
-<wire x1="23.775" y1="7.01" x2="24.75" y2="7.6" width="0" layer="19" extent="1-1"/>
-<wire x1="23.775" y1="2.83" x2="23.775" y2="7.01" width="0" layer="19" extent="1-1"/>
-<wire x1="31.15" y1="7.6" x2="25.05" y2="7.6" width="0" layer="19" extent="1-1"/>
-<wire x1="31.45" y1="7.6" x2="31.15" y2="7.6" width="0" layer="19" extent="1-1"/>
-<wire x1="32.425" y1="7.01" x2="31.45" y2="7.6" width="0" layer="19" extent="1-1"/>
-<wire x1="32.425" y1="2.83" x2="32.425" y2="7.01" width="0" layer="19" extent="1-1"/>
-<wire x1="73.65" y1="42.2" x2="59.25" y2="40.35" width="0" layer="19" extent="1-1"/>
+<wire x1="15.8" y1="43.35" x2="19.05" y2="45.06" width="0" layer="19" extent="1-1"/>
+<wire x1="15.8" y1="38.35" x2="15.8" y2="43.35" width="0" layer="19" extent="1-1"/>
+<wire x1="15.7" y1="31.35" x2="15.8" y2="38.35" width="0" layer="19" extent="1-1"/>
+<wire x1="15.8" y1="28.45" x2="15.7" y2="31.35" width="0" layer="19" extent="1-1"/>
+<wire x1="15.8" y1="23.35" x2="15.8" y2="28.45" width="0" layer="19" extent="1-1"/>
+<wire x1="18.7" y1="14.3" x2="15.8" y2="23.35" width="0" layer="19" extent="1-1"/>
+<wire x1="20.65" y1="13.55" x2="18.7" y2="14.3" width="0" layer="19" extent="1-1"/>
+<wire x1="27.4" y1="17.1" x2="20.65" y2="13.55" width="0" layer="19" extent="1-1"/>
+<wire x1="27.55" y1="7.1" x2="20.65" y2="13.55" width="0" layer="19" extent="1-1"/>
+<wire x1="27.85" y1="7.1" x2="27.55" y2="7.1" width="0" layer="19" extent="1-1"/>
+<wire x1="26.575" y1="6.51" x2="27.55" y2="7.1" width="0" layer="19" extent="1-1"/>
+<wire x1="26.575" y1="2.33" x2="26.575" y2="6.51" width="0" layer="19" extent="1-1"/>
+<wire x1="33.95" y1="7.1" x2="27.85" y2="7.1" width="0" layer="19" extent="1-1"/>
+<wire x1="34.25" y1="7.1" x2="33.95" y2="7.1" width="0" layer="19" extent="1-1"/>
+<wire x1="35.225" y1="6.51" x2="34.25" y2="7.1" width="0" layer="19" extent="1-1"/>
+<wire x1="35.225" y1="2.33" x2="35.225" y2="6.51" width="0" layer="19" extent="1-1"/>
+<wire x1="74.1" y1="43.9" x2="59.25" y2="40.35" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="MIDI_IN_SOURCE">
 <contactref element="CONNHEADER" pad="4"/>
 <contactref element="MIDI_IN_CONN" pad="3"/>
 <contactref element="MIDI_IN_CONN" pad="5"/>
 <contactref element="R15" pad="2"/>
-<wire x1="57.95" y1="34.97" x2="75.35" y2="44.2" width="0" layer="19" extent="1-1"/>
-<wire x1="90.4" y1="13.3" x2="75.35" y2="44.2" width="0" layer="19" extent="1-1"/>
+<wire x1="57.95" y1="34.97" x2="68.1" y2="43.8" width="0" layer="19" extent="1-1"/>
+<wire x1="90.4" y1="13.3" x2="68.1" y2="43.8" width="0" layer="19" extent="1-1"/>
 <wire x1="93.2" y1="13.3" x2="90.4" y2="13.3" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$30">
 <contactref element="6N138" pad="2"/>
 <contactref element="R15" pad="1"/>
 <contactref element="D2" pad="C"/>
-<wire x1="73.65" y1="44.2" x2="82.695" y2="39.47" width="0" layer="19" extent="1-1"/>
-<wire x1="74.105" y1="32.3" x2="82.695" y2="39.47" width="0" layer="19" extent="1-1"/>
+<wire x1="66.1" y1="43.8" x2="83.095" y2="40.17" width="0" layer="19" extent="1-1"/>
+<wire x1="73.505" y1="30.2" x2="83.095" y2="40.17" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="MIDI_IN_SINK">
 <contactref element="CONNHEADER" pad="6"/>
@@ -1649,15 +1654,15 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="MIDI_IN_CONN" pad="2"/>
 <contactref element="MIDI_IN_CONN" pad="4"/>
 <contactref element="D2" pad="A"/>
-<wire x1="77.695" y1="32.3" x2="82.695" y2="36.93" width="0" layer="19" extent="1-1"/>
-<wire x1="83" y1="20.3" x2="77.695" y2="32.3" width="0" layer="19" extent="1-1"/>
+<wire x1="77.095" y1="30.2" x2="83.095" y2="37.63" width="0" layer="19" extent="1-1"/>
+<wire x1="83" y1="20.3" x2="77.095" y2="30.2" width="0" layer="19" extent="1-1"/>
 <wire x1="78.9" y1="16.05" x2="83" y2="20.3" width="0" layer="19" extent="1-1"/>
-<wire x1="55.41" y1="34.97" x2="77.695" y2="32.3" width="0" layer="19" extent="1-1"/>
+<wire x1="55.41" y1="34.97" x2="77.095" y2="30.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$32">
 <contactref element="6N138" pad="7"/>
 <contactref element="R12" pad="2"/>
-<wire x1="75.35" y1="42.2" x2="91.705" y2="39.47" width="0" layer="19" extent="1-1"/>
+<wire x1="76.1" y1="43.9" x2="92.105" y2="40.17" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="MIDI_OUT_SINK">
 <contactref element="CONNHEADER" pad="11"/>
@@ -1665,8 +1670,8 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="MIDI_OUT_CONN" pad="4"/>
 <contactref element="R18" pad="1"/>
 <wire x1="78.9" y1="26.05" x2="83" y2="30.3" width="0" layer="19" extent="1-1"/>
-<wire x1="73.65" y1="36.2" x2="83" y2="30.3" width="0" layer="19" extent="1-1"/>
-<wire x1="47.79" y1="32.43" x2="73.65" y2="36.2" width="0" layer="19" extent="1-1"/>
+<wire x1="74" y1="35" x2="83" y2="30.3" width="0" layer="19" extent="1-1"/>
+<wire x1="47.79" y1="32.43" x2="74" y2="35" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="MIDI_OUT_SOURCE">
 <contactref element="CONNHEADER" pad="9"/>
@@ -1674,23 +1679,23 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="MIDI_OUT_CONN" pad="5"/>
 <contactref element="R17" pad="2"/>
 <wire x1="90.4" y1="23.3" x2="93.2" y2="23.3" width="0" layer="19" extent="1-1"/>
-<wire x1="75.35" y1="38.2" x2="90.4" y2="23.3" width="0" layer="19" extent="1-1"/>
-<wire x1="50.33" y1="32.43" x2="75.35" y2="38.2" width="0" layer="19" extent="1-1"/>
+<wire x1="76" y1="38" x2="90.4" y2="23.3" width="0" layer="19" extent="1-1"/>
+<wire x1="50.33" y1="32.43" x2="76" y2="38" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="DIN">
 <contactref element="U1" pad="38"/>
 <contactref element="UDA1334" pad="3"/>
-<wire x1="36.55" y1="42.52" x2="72.325" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="36.55" y1="42.52" x2="73.025" y2="17.48" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="LRC">
 <contactref element="U1" pad="4"/>
 <contactref element="UDA1334" pad="2"/>
-<wire x1="19.05" y1="41.25" x2="71.675" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="19.05" y1="41.25" x2="72.375" y2="17.48" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="BCLK">
 <contactref element="U1" pad="39"/>
 <contactref element="UDA1334" pad="1"/>
-<wire x1="36.55" y1="43.79" x2="71.025" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="36.55" y1="43.79" x2="71.725" y2="17.48" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="SCL">
 <contactref element="U1" pad="10"/>
@@ -1698,8 +1703,8 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="CONNHEADER" pad="16"/>
 <contactref element="R14" pad="2"/>
 <wire x1="42.71" y1="34.97" x2="60.25" y2="40.35" width="0" layer="19" extent="1-1"/>
-<wire x1="22.35" y1="23.2" x2="42.71" y2="34.97" width="0" layer="19" extent="1-1"/>
-<wire x1="19.05" y1="33.63" x2="22.35" y2="23.2" width="0" layer="19" extent="1-1"/>
+<wire x1="23" y1="22.9" x2="42.71" y2="34.97" width="0" layer="19" extent="1-1"/>
+<wire x1="19.05" y1="33.63" x2="23" y2="22.9" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="SDA">
 <contactref element="U1" pad="11"/>
@@ -1707,8 +1712,8 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="CONNHEADER" pad="14"/>
 <contactref element="R13" pad="2"/>
 <wire x1="45.25" y1="34.97" x2="59.75" y2="40.35" width="0" layer="19" extent="1-1"/>
-<wire x1="27.35" y1="23.2" x2="45.25" y2="34.97" width="0" layer="19" extent="1-1"/>
-<wire x1="19.05" y1="32.36" x2="27.35" y2="23.2" width="0" layer="19" extent="1-1"/>
+<wire x1="29" y1="22.9" x2="45.25" y2="34.97" width="0" layer="19" extent="1-1"/>
+<wire x1="19.05" y1="32.36" x2="29" y2="22.9" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="3V3">
 <contactref element="X2" pad="37"/>
@@ -1727,21 +1732,21 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="C5" pad="1"/>
 <contactref element="REG" pad="2"/>
 <contactref element="REG" pad="4"/>
-<wire x1="73.65" y1="38.2" x2="75.35" y2="40.2" width="0" layer="19" extent="1-1"/>
-<wire x1="72.975" y1="17.48" x2="73.65" y2="38.2" width="0" layer="19" extent="1-1"/>
-<wire x1="71.05" y1="10.2" x2="72.975" y2="17.48" width="0" layer="19" extent="1-1"/>
-<wire x1="56.85" y1="11.6" x2="71.05" y2="10.2" width="0" layer="19" extent="1-1"/>
-<wire x1="56.85" y1="14.6" x2="56.85" y2="11.6" width="0" layer="19" extent="1-1"/>
+<wire x1="74" y1="38" x2="76" y2="41" width="0" layer="19" extent="1-1"/>
+<wire x1="73.675" y1="17.48" x2="74" y2="38" width="0" layer="19" extent="1-1"/>
+<wire x1="73.95" y1="8.9" x2="73.675" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="56.85" y1="14.6" x2="73.675" y2="17.48" width="0" layer="19" extent="1-1"/>
+<wire x1="56.65" y1="11.2" x2="56.85" y2="14.6" width="0" layer="19" extent="1-1"/>
 <wire x1="50.33" y1="34.97" x2="56.85" y2="14.6" width="0" layer="19" extent="1-1"/>
 <wire x1="43.25" y1="40.35" x2="50.33" y2="34.97" width="0" layer="19" extent="1-1"/>
 <wire x1="33.8" y1="14.8" x2="56.85" y2="14.6" width="0" layer="19" extent="1-1"/>
 <wire x1="27.4" y1="14.8" x2="33.8" y2="14.8" width="0" layer="19" extent="1-1"/>
-<wire x1="25.65" y1="23.2" x2="27.4" y2="14.8" width="0" layer="19" extent="1-1"/>
-<wire x1="20.65" y1="23.2" x2="25.65" y2="23.2" width="0" layer="19" extent="1-1"/>
-<wire x1="18.35" y1="7" x2="27.4" y2="14.8" width="0" layer="19" extent="1-1"/>
-<wire x1="20.05" y1="5" x2="18.35" y2="7" width="0" layer="19" extent="1-1"/>
-<wire x1="16" y1="41.65" x2="20.65" y2="23.2" width="0" layer="19" extent="1-1"/>
-<wire x1="19.05" y1="43.79" x2="16" y2="41.65" width="0" layer="19" extent="1-1"/>
+<wire x1="27" y1="22.9" x2="27.4" y2="14.8" width="0" layer="19" extent="1-1"/>
+<wire x1="21" y1="22.9" x2="27" y2="22.9" width="0" layer="19" extent="1-1"/>
+<wire x1="17" y1="7.9" x2="27.4" y2="14.8" width="0" layer="19" extent="1-1"/>
+<wire x1="19" y1="4.9" x2="17" y2="7.9" width="0" layer="19" extent="1-1"/>
+<wire x1="15.8" y1="41.45" x2="21" y2="22.9" width="0" layer="19" extent="1-1"/>
+<wire x1="19.05" y1="43.79" x2="15.8" y2="41.45" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="INT">
 <contactref element="U1" pad="5"/>
@@ -1752,8 +1757,8 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="U1" pad="24"/>
 <contactref element="6N138" pad="6"/>
 <contactref element="R16" pad="1"/>
-<wire x1="73.65" y1="40.2" x2="91.705" y2="36.93" width="0" layer="19" extent="1-1"/>
-<wire x1="32.245" y1="27.3" x2="73.65" y2="40.2" width="0" layer="19" extent="1-1"/>
+<wire x1="74" y1="41" x2="92.105" y2="37.63" width="0" layer="19" extent="1-1"/>
+<wire x1="32.245" y1="27.3" x2="74" y2="41" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="D+">
 <contactref element="USB_KEYBOARD" pad="3"/>
@@ -1768,7 +1773,7 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <signal name="MIDI_OUT">
 <contactref element="U1" pad="19"/>
 <contactref element="R18" pad="2"/>
-<wire x1="25.895" y1="27.3" x2="75.35" y2="36.2" width="0" layer="19" extent="1-1"/>
+<wire x1="25.895" y1="27.3" x2="76" y2="35" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="PWM">
 <contactref element="U1" pad="9"/>
@@ -1842,9 +1847,9 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="R9" pad="2"/>
 <contactref element="C13" pad="1"/>
 <wire x1="78.9" y1="6.05" x2="83" y2="10.3" width="0" layer="19" extent="1-1"/>
-<wire x1="62.85" y1="17.6" x2="78.9" y2="6.05" width="0" layer="19" extent="1-1"/>
-<wire x1="58.75" y1="21.6" x2="62.85" y2="17.6" width="0" layer="19" extent="1-1"/>
-<wire x1="57.95" y1="32.43" x2="58.75" y2="21.6" width="0" layer="19" extent="1-1"/>
+<wire x1="63.65" y1="20.2" x2="78.9" y2="6.05" width="0" layer="19" extent="1-1"/>
+<wire x1="59.1" y1="23" x2="63.65" y2="20.2" width="0" layer="19" extent="1-1"/>
+<wire x1="57.95" y1="32.43" x2="59.1" y2="23" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="AGND">
 <contactref element="CONNHEADER" pad="1"/>
@@ -1859,17 +1864,17 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="C13" pad="2"/>
 <contactref element="C14" pad="2"/>
 <contactref element="R22" pad="1"/>
-<wire x1="69.15" y1="13.3" x2="92.2" y2="10.3" width="0" layer="19" extent="1-1"/>
-<wire x1="64.75" y1="14.6" x2="69.15" y2="13.3" width="0" layer="19" extent="1-1"/>
-<wire x1="64.75" y1="17.6" x2="64.75" y2="14.6" width="0" layer="19" extent="1-1"/>
-<wire x1="64.75" y1="20.6" x2="64.75" y2="17.6" width="0" layer="19" extent="1-1"/>
-<wire x1="64.75" y1="23.6" x2="64.75" y2="20.6" width="0" layer="19" extent="1-1"/>
-<wire x1="64.75" y1="11.6" x2="64.75" y2="14.6" width="0" layer="19" extent="1-1"/>
-<wire x1="61.75" y1="8.6" x2="64.75" y2="11.6" width="0" layer="19" extent="1-1"/>
-<wire x1="71.675" y1="23.32" x2="64.75" y2="23.6" width="0" layer="19" extent="1-1"/>
-<wire x1="56.85" y1="17.6" x2="64.75" y2="17.6" width="0" layer="19" extent="1-1"/>
-<wire x1="56.85" y1="19.6" x2="56.85" y2="17.6" width="0" layer="19" extent="1-1"/>
-<wire x1="60.49" y1="32.43" x2="64.75" y2="23.6" width="0" layer="19" extent="1-1"/>
+<wire x1="72.15" y1="12.9" x2="92.2" y2="10.3" width="0" layer="19" extent="1-1"/>
+<wire x1="65.55" y1="14.2" x2="72.15" y2="12.9" width="0" layer="19" extent="1-1"/>
+<wire x1="65.55" y1="17.2" x2="65.55" y2="14.2" width="0" layer="19" extent="1-1"/>
+<wire x1="65.55" y1="20.2" x2="65.55" y2="17.2" width="0" layer="19" extent="1-1"/>
+<wire x1="65.55" y1="23.2" x2="65.55" y2="20.2" width="0" layer="19" extent="1-1"/>
+<wire x1="65.55" y1="26.2" x2="65.55" y2="23.2" width="0" layer="19" extent="1-1"/>
+<wire x1="65.55" y1="11.2" x2="65.55" y2="14.2" width="0" layer="19" extent="1-1"/>
+<wire x1="72.375" y1="23.32" x2="65.55" y2="26.2" width="0" layer="19" extent="1-1"/>
+<wire x1="57" y1="17" x2="65.55" y2="20.2" width="0" layer="19" extent="1-1"/>
+<wire x1="57" y1="20" x2="57" y2="17" width="0" layer="19" extent="1-1"/>
+<wire x1="60.49" y1="32.43" x2="65.55" y2="26.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="ROUT">
 <contactref element="CONNHEADER" pad="5"/>
@@ -1878,9 +1883,9 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="R23" pad="2"/>
 <contactref element="C14" pad="1"/>
 <wire x1="90.4" y1="3.3" x2="93.2" y2="3.3" width="0" layer="19" extent="1-1"/>
-<wire x1="59.85" y1="8.6" x2="90.4" y2="3.3" width="0" layer="19" extent="1-1"/>
-<wire x1="58.75" y1="23.6" x2="59.85" y2="8.6" width="0" layer="19" extent="1-1"/>
-<wire x1="55.41" y1="32.43" x2="58.75" y2="23.6" width="0" layer="19" extent="1-1"/>
+<wire x1="63.65" y1="11.2" x2="90.4" y2="3.3" width="0" layer="19" extent="1-1"/>
+<wire x1="59" y1="26" x2="63.65" y2="11.2" width="0" layer="19" extent="1-1"/>
+<wire x1="55.41" y1="32.43" x2="59" y2="26" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="PWR">
 <contactref element="U1" pad="17"/>
@@ -1892,17 +1897,17 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="RESET" pad="3"/>
 <contactref element="R7" pad="2"/>
 <wire x1="32.64" y1="23.69" x2="36.55" y2="28.55" width="0" layer="19" extent="1-1"/>
-<wire x1="18.35" y1="5" x2="32.64" y2="23.69" width="0" layer="19" extent="1-1"/>
+<wire x1="17" y1="4.9" x2="32.64" y2="23.69" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="USBC_D+">
 <contactref element="CP2102" pad="3"/>
 <contactref element="J1" pad="A6"/>
-<wire x1="27.85" y1="7.6" x2="20.75" y2="17.05" width="0" layer="19" extent="1-1"/>
+<wire x1="30.65" y1="7.1" x2="20.65" y2="14.05" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="USBC_D-">
 <contactref element="CP2102" pad="4"/>
 <contactref element="J1" pad="A7"/>
-<wire x1="28.35" y1="7.6" x2="20.75" y2="17.55" width="0" layer="19" extent="1-1"/>
+<wire x1="31.15" y1="7.1" x2="20.65" y2="14.55" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="GPIO10">
 <contactref element="U1" pad="18"/>
@@ -1914,71 +1919,71 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="RESET" pad="6"/>
 <contactref element="R5" pad="1"/>
 <contactref element="C4" pad="1"/>
-<wire x1="33.96" y1="21.51" x2="47.75" y2="25.1" width="0" layer="19" extent="1-1"/>
-<wire x1="20.05" y1="7" x2="33.96" y2="21.51" width="0" layer="19" extent="1-1"/>
-<wire x1="19.05" y1="42.52" x2="33.96" y2="21.51" width="0" layer="19" extent="1-1"/>
+<wire x1="15.8" y1="36.45" x2="19.05" y2="42.52" width="0" layer="19" extent="1-1"/>
+<wire x1="33.96" y1="21.51" x2="15.8" y2="36.45" width="0" layer="19" extent="1-1"/>
+<wire x1="19" y1="7.9" x2="33.96" y2="21.51" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="UART0_TXD">
 <contactref element="U1" pad="37"/>
 <contactref element="CP2102" pad="20"/>
-<wire x1="18.05" y1="15.35" x2="36.55" y2="41.25" width="0" layer="19" extent="1-1"/>
+<wire x1="17.95" y1="12.35" x2="36.55" y2="41.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="UART0_RXD">
 <contactref element="U1" pad="36"/>
 <contactref element="CP2102" pad="21"/>
-<wire x1="18.55" y1="15.35" x2="36.55" y2="39.98" width="0" layer="19" extent="1-1"/>
+<wire x1="18.45" y1="12.35" x2="36.55" y2="39.98" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$5">
 <contactref element="UDA1334" pad="13"/>
 <contactref element="C11" pad="1"/>
 <contactref element="C18" pad="1"/>
 <contactref element="FB3" pad="1"/>
-<wire x1="62.85" y1="23.6" x2="72.975" y2="23.32" width="0" layer="19" extent="1-1"/>
-<wire x1="62.85" y1="20.6" x2="62.85" y2="23.6" width="0" layer="19" extent="1-1"/>
-<wire x1="69.15" y1="10.2" x2="62.85" y2="20.6" width="0" layer="19" extent="1-1"/>
+<wire x1="63.65" y1="26.2" x2="73.675" y2="23.32" width="0" layer="19" extent="1-1"/>
+<wire x1="63.65" y1="23.2" x2="63.65" y2="26.2" width="0" layer="19" extent="1-1"/>
+<wire x1="72.05" y1="8.9" x2="73.675" y2="23.32" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$6">
 <contactref element="R9" pad="1"/>
 <contactref element="R8" pad="2"/>
 <contactref element="C16" pad="-"/>
-<wire x1="56.85" y1="21.6" x2="64.95" y2="37.8" width="0" layer="19" extent="1-1"/>
-<wire x1="58.75" y1="17.6" x2="56.85" y2="21.6" width="0" layer="19" extent="1-1"/>
+<wire x1="57.1" y1="23" x2="64.75" y2="37.3" width="0" layer="19" extent="1-1"/>
+<wire x1="59" y1="17" x2="57.1" y2="23" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$9">
 <contactref element="R23" pad="1"/>
 <contactref element="R22" pad="2"/>
 <contactref element="C17" pad="-"/>
-<wire x1="56.85" y1="23.6" x2="64.95" y2="30.4" width="0" layer="19" extent="1-1"/>
-<wire x1="58.75" y1="19.6" x2="56.85" y2="23.6" width="0" layer="19" extent="1-1"/>
+<wire x1="57" y1="26" x2="64.75" y2="30.4" width="0" layer="19" extent="1-1"/>
+<wire x1="59" y1="20" x2="57" y2="26" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$10">
 <contactref element="UDA1334" pad="12"/>
 <contactref element="C15" pad="1"/>
 <contactref element="C20" pad="1"/>
-<wire x1="62.85" y1="14.6" x2="73.625" y2="23.32" width="0" layer="19" extent="1-1"/>
-<wire x1="62.85" y1="11.6" x2="62.85" y2="14.6" width="0" layer="19" extent="1-1"/>
+<wire x1="63.65" y1="17.2" x2="74.325" y2="23.32" width="0" layer="19" extent="1-1"/>
+<wire x1="63.65" y1="14.2" x2="63.65" y2="17.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$11">
 <contactref element="C17" pad="+"/>
 <contactref element="UDA1334" pad="16"/>
-<wire x1="71.025" y1="23.32" x2="69.05" y2="30.4" width="0" layer="19" extent="1-1"/>
+<wire x1="71.725" y1="23.32" x2="68.85" y2="30.4" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$12">
 <contactref element="UDA1334" pad="14"/>
 <contactref element="C16" pad="+"/>
-<wire x1="72.325" y1="23.32" x2="69.05" y2="37.8" width="0" layer="19" extent="1-1"/>
+<wire x1="73.025" y1="23.32" x2="68.85" y2="37.3" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="USB_RESET">
 <contactref element="CP2102" pad="9"/>
 <contactref element="R4" pad="1"/>
-<wire x1="19.05" y1="19.25" x2="41.75" y2="17.1" width="0" layer="19" extent="1-1"/>
+<wire x1="18.95" y1="16.25" x2="42" y2="14" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="USB_VBUS">
 <contactref element="CP2102" pad="8"/>
 <contactref element="R2" pad="1"/>
 <contactref element="R3" pad="2"/>
-<wire x1="43.65" y1="19.1" x2="41.75" y2="21.1" width="0" layer="19" extent="1-1"/>
-<wire x1="19.55" y1="19.25" x2="41.75" y2="21.1" width="0" layer="19" extent="1-1"/>
+<wire x1="44" y1="17" x2="42" y2="20" width="0" layer="19" extent="1-1"/>
+<wire x1="19.45" y1="16.25" x2="42" y2="20" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="3V3_USB">
 <contactref element="CP2102" pad="5"/>
@@ -1986,10 +1991,10 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="C2" pad="1"/>
 <contactref element="C3" pad="1"/>
 <contactref element="R4" pad="2"/>
-<wire x1="47.75" y1="16.2" x2="47.75" y2="19.1" width="0" layer="19" extent="1-1"/>
-<wire x1="43.65" y1="17.1" x2="47.75" y2="16.2" width="0" layer="19" extent="1-1"/>
-<wire x1="20.75" y1="18.05" x2="43.65" y2="17.1" width="0" layer="19" extent="1-1"/>
-<wire x1="20.75" y1="18.55" x2="20.75" y2="18.05" width="0" layer="19" extent="1-1"/>
+<wire x1="20.65" y1="15.05" x2="44" y2="14" width="0" layer="19" extent="1-1"/>
+<wire x1="20.65" y1="15.55" x2="20.65" y2="15.05" width="0" layer="19" extent="1-1"/>
+<wire x1="15.8" y1="21.45" x2="20.65" y2="15.55" width="0" layer="19" extent="1-1"/>
+<wire x1="15.8" y1="26.55" x2="15.8" y2="21.45" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="5V_USB">
 <contactref element="CP2102" pad="7"/>
@@ -2005,52 +2010,52 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="J1" pad="A9"/>
 <contactref element="J1" pad="B4"/>
 <contactref element="J1" pad="B9"/>
-<wire x1="52.87" y1="34.97" x2="91.705" y2="42.01" width="0" layer="19" extent="1-1"/>
+<wire x1="52.87" y1="34.97" x2="92.105" y2="42.71" width="0" layer="19" extent="1-1"/>
 <wire x1="42.25" y1="40.35" x2="52.87" y2="34.97" width="0" layer="19" extent="1-1"/>
 <wire x1="41.75" y1="40.35" x2="42.25" y2="40.35" width="0" layer="19" extent="1-1"/>
-<wire x1="49.65" y1="22.1" x2="52.87" y2="34.97" width="0" layer="19" extent="1-1"/>
-<wire x1="43.65" y1="21.1" x2="49.65" y2="22.1" width="0" layer="19" extent="1-1"/>
-<wire x1="43.39" y1="6.92" x2="43.65" y2="21.1" width="0" layer="19" extent="1-1"/>
-<wire x1="30.65" y1="7.6" x2="43.39" y2="6.92" width="0" layer="19" extent="1-1"/>
-<wire x1="30.35" y1="7.6" x2="30.65" y2="7.6" width="0" layer="19" extent="1-1"/>
-<wire x1="25.85" y1="7.6" x2="30.35" y2="7.6" width="0" layer="19" extent="1-1"/>
-<wire x1="25.55" y1="7.6" x2="25.85" y2="7.6" width="0" layer="19" extent="1-1"/>
-<wire x1="27.4" y1="12.5" x2="25.85" y2="7.6" width="0" layer="19" extent="1-1"/>
-<wire x1="20.05" y1="19.25" x2="27.4" y2="12.5" width="0" layer="19" extent="1-1"/>
+<wire x1="44" y1="20" x2="52.87" y2="34.97" width="0" layer="19" extent="1-1"/>
+<wire x1="43.39" y1="6.92" x2="44" y2="20" width="0" layer="19" extent="1-1"/>
+<wire x1="33.45" y1="7.1" x2="43.39" y2="6.92" width="0" layer="19" extent="1-1"/>
+<wire x1="33.15" y1="7.1" x2="33.45" y2="7.1" width="0" layer="19" extent="1-1"/>
+<wire x1="28.65" y1="7.1" x2="33.15" y2="7.1" width="0" layer="19" extent="1-1"/>
+<wire x1="28.35" y1="7.1" x2="28.65" y2="7.1" width="0" layer="19" extent="1-1"/>
+<wire x1="27.4" y1="12.5" x2="28.65" y2="7.1" width="0" layer="19" extent="1-1"/>
+<wire x1="19.95" y1="16.25" x2="27.4" y2="12.5" width="0" layer="19" extent="1-1"/>
+<wire x1="15.7" y1="33.25" x2="19.95" y2="16.25" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="!RTS">
 <contactref element="CP2102" pad="19"/>
 <contactref element="RESET" pad="1"/>
 <contactref element="R6" pad="1"/>
-<wire x1="17.55" y1="15.35" x2="33.96" y2="23.69" width="0" layer="19" extent="1-1"/>
-<wire x1="20.05" y1="9" x2="17.55" y2="15.35" width="0" layer="19" extent="1-1"/>
+<wire x1="17.45" y1="12.35" x2="33.96" y2="23.69" width="0" layer="19" extent="1-1"/>
+<wire x1="24.1" y1="7.9" x2="17.45" y2="12.35" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$1">
 <contactref element="RESET" pad="2"/>
 <contactref element="R1" pad="1"/>
-<wire x1="20.05" y1="3" x2="33.3" y2="23.69" width="0" layer="19" extent="1-1"/>
+<wire x1="24.1" y1="4.9" x2="33.3" y2="23.69" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$2">
 <contactref element="RESET" pad="5"/>
 <contactref element="R6" pad="2"/>
-<wire x1="18.35" y1="9" x2="33.3" y2="21.51" width="0" layer="19" extent="1-1"/>
+<wire x1="22.1" y1="7.9" x2="33.3" y2="21.51" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="!DTR">
 <contactref element="R1" pad="2"/>
 <contactref element="CP2102" pad="23"/>
 <contactref element="RESET" pad="4"/>
-<wire x1="19.55" y1="15.35" x2="32.64" y2="21.51" width="0" layer="19" extent="1-1"/>
-<wire x1="18.35" y1="3" x2="19.55" y2="15.35" width="0" layer="19" extent="1-1"/>
+<wire x1="19.45" y1="12.35" x2="32.64" y2="21.51" width="0" layer="19" extent="1-1"/>
+<wire x1="22.1" y1="4.9" x2="19.45" y2="12.35" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$3">
 <contactref element="R11" pad="2"/>
 <contactref element="J1" pad="B5"/>
-<wire x1="29.85" y1="7.6" x2="43.45" y2="23.1" width="0" layer="19" extent="1-1"/>
+<wire x1="32.65" y1="7.1" x2="44.1" y2="23" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$4">
 <contactref element="J1" pad="A5"/>
 <contactref element="R10" pad="2"/>
-<wire x1="26.85" y1="7.6" x2="43.45" y2="25.1" width="0" layer="19" extent="1-1"/>
+<wire x1="29.65" y1="7.1" x2="44" y2="26" width="0" layer="19" extent="1-1"/>
 </signal>
 </signals>
 <mfgpreviewcolors>
