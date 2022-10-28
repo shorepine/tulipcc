@@ -5909,7 +5909,8 @@ Opto-Isolator capable of 10 MBd.</description>
 </segment>
 <segment>
 <pinref part="U3" gate="A" pin="AVDD"/>
-<wire x1="345.44" y1="-160.02" x2="353.06" y2="-160.02" width="0.1524" layer="91"/>
+<wire x1="345.44" y1="-160.02" x2="350.52" y2="-160.02" width="0.1524" layer="91"/>
+<wire x1="350.52" y1="-160.02" x2="353.06" y2="-160.02" width="0.1524" layer="91"/>
 <wire x1="353.06" y1="-160.02" x2="353.06" y2="-162.56" width="0.1524" layer="91"/>
 <wire x1="353.06" y1="-162.56" x2="355.6" y2="-165.1" width="0.1524" layer="91"/>
 <pinref part="C9" gate="G$1" pin="2"/>
@@ -5919,6 +5920,12 @@ Opto-Isolator capable of 10 MBd.</description>
 <wire x1="365.76" y1="-165.1" x2="373.38" y2="-165.1" width="0.1524" layer="91"/>
 <junction x="365.76" y="-165.1"/>
 <label x="370.84" y="-165.1" size="1.778" layer="95"/>
+<pinref part="U3" gate="A" pin="XSMT"/>
+<wire x1="289.56" y1="-170.18" x2="281.94" y2="-170.18" width="0.1524" layer="91"/>
+<wire x1="281.94" y1="-170.18" x2="281.94" y2="-147.32" width="0.1524" layer="91"/>
+<wire x1="281.94" y1="-147.32" x2="350.52" y2="-147.32" width="0.1524" layer="91"/>
+<wire x1="350.52" y1="-147.32" x2="350.52" y2="-160.02" width="0.1524" layer="91"/>
+<junction x="350.52" y="-160.02"/>
 </segment>
 <segment>
 <pinref part="U3" gate="A" pin="CPVDD"/>

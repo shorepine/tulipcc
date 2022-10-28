@@ -5056,6 +5056,7 @@ Opto-Isolator capable of 10 MBd.</description>
 <part name="R20" library="adafruit" deviceset="R-US_" device="R0805" value="470"/>
 <part name="C32" library="microbuilder" deviceset="CAP_CERAMIC" device="0805-NOOUTLINE" value="2.2nF"/>
 <part name="C33" library="microbuilder" deviceset="CAP_CERAMIC" device="0805-NOOUTLINE" value="2.2nF"/>
+<part name="R4" library="adafruit" deviceset="R-US_" device="R0805" value="10k"/>
 </parts>
 <sheets>
 <sheet>
@@ -5370,6 +5371,10 @@ Opto-Isolator capable of 10 MBd.</description>
 <instance part="C33" gate="G$1" x="419.1" y="-157.48" smashed="yes">
 <attribute name="NAME" x="416.81" y="-156.23" size="1.27" layer="95" font="vector" rot="R90" align="center"/>
 <attribute name="VALUE" x="421.4" y="-156.23" size="1.27" layer="96" font="vector" rot="R90" align="center"/>
+</instance>
+<instance part="R4" gate="G$1" x="307.34" y="12.7" smashed="yes" rot="R90">
+<attribute name="NAME" x="304.8" y="12.7" size="1.27" layer="95" font="vector" rot="R90" align="center"/>
+<attribute name="VALUE" x="307.34" y="12.7" size="1.016" layer="96" font="vector" ratio="15" rot="R90" align="center"/>
 </instance>
 </instances>
 <busses>
@@ -5939,6 +5944,19 @@ Opto-Isolator capable of 10 MBd.</description>
 <junction x="375.92" y="-190.5"/>
 <label x="383.54" y="-190.5" size="1.778" layer="95"/>
 </segment>
+<segment>
+<wire x1="312.42" y1="-5.08" x2="312.42" y2="-7.62" width="0.1524" layer="91"/>
+<label x="309.88" y="-5.08" size="1.778" layer="95"/>
+<pinref part="C2" gate="G$1" pin="1"/>
+<pinref part="C3" gate="G$1" pin="1"/>
+<wire x1="325.12" y1="-7.62" x2="312.42" y2="-7.62" width="0.1524" layer="91"/>
+<junction x="312.42" y="-7.62"/>
+</segment>
+<segment>
+<pinref part="R4" gate="G$1" pin="2"/>
+<wire x1="307.34" y1="20.32" x2="307.34" y2="17.78" width="0.1524" layer="91"/>
+<label x="307.34" y="17.78" size="1.778" layer="95" rot="R90"/>
+</segment>
 </net>
 <net name="INT" class="0">
 <segment>
@@ -6384,16 +6402,6 @@ Opto-Isolator capable of 10 MBd.</description>
 <label x="236.22" y="76.2" size="1.778" layer="95" rot="R90"/>
 </segment>
 </net>
-<net name="3V3_USB" class="0">
-<segment>
-<wire x1="312.42" y1="-5.08" x2="312.42" y2="-7.62" width="0.1524" layer="91"/>
-<label x="309.88" y="-5.08" size="1.778" layer="95"/>
-<pinref part="C2" gate="G$1" pin="1"/>
-<pinref part="C3" gate="G$1" pin="1"/>
-<wire x1="325.12" y1="-7.62" x2="312.42" y2="-7.62" width="0.1524" layer="91"/>
-<junction x="312.42" y="-7.62"/>
-</segment>
-</net>
 <net name="5V_USB" class="0">
 <segment>
 <pinref part="C1" gate="G$1" pin="2"/>
@@ -6571,6 +6579,19 @@ Opto-Isolator capable of 10 MBd.</description>
 <wire x1="393.7" y1="-162.56" x2="398.78" y2="-162.56" width="0.1524" layer="91"/>
 <pinref part="R20" gate="G$1" pin="2"/>
 <label x="393.7" y="-152.4" size="1.778" layer="95"/>
+</segment>
+</net>
+<net name="USB_RESET" class="0">
+<segment>
+<pinref part="U2" gate="G$1" pin="!RST"/>
+<wire x1="238.76" y1="88.9" x2="238.76" y2="83.82" width="0.1524" layer="91"/>
+<label x="238.76" y="73.66" size="1.778" layer="95" rot="R90"/>
+</segment>
+<segment>
+<pinref part="R4" gate="G$1" pin="1"/>
+<wire x1="307.34" y1="7.62" x2="307.34" y2="5.08" width="0.1524" layer="91"/>
+<wire x1="307.34" y1="5.08" x2="299.72" y2="5.08" width="0.1524" layer="91"/>
+<label x="292.1" y="5.08" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>

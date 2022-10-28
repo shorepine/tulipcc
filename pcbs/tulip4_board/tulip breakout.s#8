@@ -3515,6 +3515,11 @@ W = angled&lt;p&gt;
 <wire x1="215.9" y1="43.18" x2="210.82" y2="43.18" width="0.1524" layer="91"/>
 <label x="205.74" y="43.18" size="1.778" layer="95"/>
 </segment>
+<segment>
+<pinref part="J1" gate="G$1" pin="GND_B"/>
+<wire x1="251.46" y1="43.18" x2="254" y2="43.18" width="0.1524" layer="91"/>
+<label x="251.46" y="43.18" size="1.778" layer="95"/>
+</segment>
 </net>
 <net name="MIDI_IN_SOURCE" class="0">
 <segment>
@@ -4234,16 +4239,6 @@ W = angled&lt;p&gt;
 <label x="203.2" y="48.26" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="CC1" class="0">
-<segment>
-<pinref part="J1" gate="G$1" pin="CC1"/>
-<wire x1="203.2" y1="53.34" x2="215.9" y2="53.34" width="0.1524" layer="91"/>
-<pinref part="R10" gate="G$1" pin="2"/>
-<wire x1="231.14" y1="27.94" x2="231.14" y2="17.78" width="0.1524" layer="91"/>
-<wire x1="203.2" y1="53.34" x2="203.2" y2="27.94" width="0.1524" layer="91"/>
-<wire x1="203.2" y1="27.94" x2="231.14" y2="27.94" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="N$5" class="0">
 <segment>
 <pinref part="UDA1334" gate="G$1" pin="VDDA"/>
@@ -4413,6 +4408,11 @@ W = angled&lt;p&gt;
 <wire x1="215.9" y1="55.88" x2="210.82" y2="55.88" width="0.1524" layer="91"/>
 <label x="205.74" y="55.88" size="1.778" layer="95"/>
 </segment>
+<segment>
+<pinref part="J1" gate="G$1" pin="VBUS_B"/>
+<wire x1="251.46" y1="55.88" x2="256.54" y2="55.88" width="0.1524" layer="91"/>
+<label x="254" y="55.88" size="1.778" layer="95"/>
+</segment>
 </net>
 <net name="!RTS" class="0">
 <segment>
@@ -4469,6 +4469,15 @@ W = angled&lt;p&gt;
 <wire x1="256.54" y1="30.48" x2="256.54" y2="45.72" width="0.1524" layer="91"/>
 <pinref part="J1" gate="G$1" pin="CC2"/>
 <wire x1="256.54" y1="45.72" x2="251.46" y2="45.72" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$4" class="0">
+<segment>
+<pinref part="J1" gate="G$1" pin="CC1"/>
+<wire x1="215.9" y1="53.34" x2="200.66" y2="53.34" width="0.1524" layer="91"/>
+<wire x1="200.66" y1="53.34" x2="200.66" y2="17.78" width="0.1524" layer="91"/>
+<pinref part="R10" gate="G$1" pin="2"/>
+<wire x1="200.66" y1="17.78" x2="231.14" y2="17.78" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
