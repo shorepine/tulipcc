@@ -3519,6 +3519,9 @@ W = angled&lt;p&gt;
 <pinref part="J1" gate="G$1" pin="GND_B"/>
 <wire x1="251.46" y1="43.18" x2="254" y2="43.18" width="0.1524" layer="91"/>
 <label x="251.46" y="43.18" size="1.778" layer="95"/>
+<pinref part="J1" gate="G$1" pin="SHELL_GND"/>
+<wire x1="251.46" y1="38.1" x2="251.46" y2="43.18" width="0.1524" layer="91"/>
+<junction x="251.46" y="43.18"/>
 </segment>
 </net>
 <net name="MIDI_IN_SOURCE" class="0">

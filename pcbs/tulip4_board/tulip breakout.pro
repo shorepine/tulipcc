@@ -2,24 +2,24 @@ EAGLE AutoRouter Statistics:
 
 Job           : /Users/bwhitman/outside/tulipcc/pcbs/tulip4_board/tulip breakout.brd
 
-Start at      : 14:24:20 (10/27/22)
-End at        : 14:24:41 (10/27/22)
-Elapsed time  : 00:00:19
+Start at      : 16:56:59 (10/27/22)
+End at        : 16:57:05 (10/27/22)
+Elapsed time  : 00:00:05
 
-Signals       :    58   RoutingGrid: 4.92126 mil  Layers: 2
-Connections   :   189   predefined:  0 ( 0 Vias )
+Signals       :    58   RoutingGrid: 9.84252 mil  Layers: 2
+Connections   :   192   predefined:  0 ( 0 Vias )
 
-Router memory :   5052880
+Router memory :   1283040
 
 Passname          :    Busses     Route Optimize1 Optimize2 Optimize3 Optimize4
 
-Time per pass     :  00:00:00  00:00:06  00:00:03  00:00:04  00:00:03  00:00:03
-Number of Ripups  :         0        12         0         0         0         0
-max. Level        :         0         2         0         0         0         0
+Time per pass     :  00:00:00  00:00:01  00:00:01  00:00:01  00:00:01  00:00:01
+Number of Ripups  :         0         6         0         0         0         0
+max. Level        :         0         1         0         0         0         0
 max. Total        :         0        66         0         0         0         0
 
-Routed            :        13       189       189       189       189       189
-Vias              :         0       327       197       166       154       145
-Resolution        :     6.9 %   100.0 %   100.0 %   100.0 %   100.0 %   100.0 %
+Routed            :         8       192       192       192       192       192
+Vias              :         0       322       187       164       155       151
+Resolution        :     4.2 %   100.0 %   100.0 %   100.0 %   100.0 %   100.0 %
 
 Final             : 100.0% finished
