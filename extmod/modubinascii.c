@@ -87,8 +87,8 @@ STATIC mp_obj_t mod_binascii_unhexlify(mp_obj_t data) {
     byte hex_byte = 0;
     for (mp_uint_t i = bufinfo.len; i--;) {
         byte hex_ch = *in++;
-        if (unichar_isxdigit(hex_ch)) {
-            hex_byte += unichar_xdigit_value(hex_ch);
+        if (unichar_mp_isxdigit(hex_ch)) {
+            hex_byte += unichar_mp_xdigit_value(hex_ch);
         } else {
             mp_raise_ValueError(MP_ERROR_TEXT("non-hex digit found"));
         }

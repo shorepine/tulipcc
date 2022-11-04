@@ -50,7 +50,7 @@ STATIC bool str_startswith_word(const char *str, const char *head) {
             return false;
         }
     }
-    return head[i] == '\0' && (str[i] == '\0' || !unichar_isident(str[i]));
+    return head[i] == '\0' && (str[i] == '\0' || !unichar_mp_isident(str[i]));
 }
 
 bool mp_repl_continue_with_input(const char *input) {
@@ -246,7 +246,7 @@ size_t mp_repl_autocomplete(const char *str, size_t len, const mp_print_t *print
     const char *org_str = str;
     const char *top = str + len;
     for (const char *s = top; --s >= str;) {
-        if (!(unichar_isalpha(*s) || unichar_isdigit(*s) || *s == '_' || *s == '.')) {
+        if (!(unichar_mp_isalpha(*s) || unichar_mp_isdigit(*s) || *s == '_' || *s == '.')) {
             ++s;
             str = s;
             break;

@@ -50,14 +50,14 @@ STATIC void uni_print_quoted(const mp_print_t *print, const byte *str_data, uint
             has_double_quote = true;
         }
     }
-    unichar quote_char = '\'';
+    unichar_mp quote_char = '\'';
     if (has_single_quote && !has_double_quote) {
         quote_char = '"';
     }
     mp_printf(print, "%c", quote_char);
     const byte *s = str_data, *top = str_data + str_len;
     while (s < top) {
-        unichar ch;
+        unichar_mp ch;
         ch = utf8_get_char(s);
         s = utf8_next_char(s);
         if (ch == quote_char) {

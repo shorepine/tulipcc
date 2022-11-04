@@ -59,7 +59,7 @@ mp_obj_t mp_parse_num_integer(const char *restrict str_, size_t len, int base, m
     }
 
     // skip leading space
-    for (; str < top && unichar_isspace(*str); str++) {
+    for (; str < top && unichar_mp_isspace(*str); str++) {
     }
 
     // parse optional sign
@@ -123,7 +123,7 @@ have_ret_val:
     }
 
     // skip trailing space
-    for (; str < top && unichar_isspace(*str); str++) {
+    for (; str < top && unichar_mp_isspace(*str); str++) {
     }
 
     // check we reached the end of the string
@@ -199,7 +199,7 @@ mp_obj_t mp_parse_num_decimal(const char *str, size_t len, bool allow_imag, bool
     bool imag = false;
 
     // skip leading space
-    for (; str < top && unichar_isspace(*str); str++) {
+    for (; str < top && unichar_mp_isspace(*str); str++) {
     }
 
     // parse optional sign
@@ -327,7 +327,7 @@ mp_obj_t mp_parse_num_decimal(const char *str, size_t len, bool allow_imag, bool
     }
 
     // skip trailing space
-    for (; str < top && unichar_isspace(*str); str++) {
+    for (; str < top && unichar_mp_isspace(*str); str++) {
     }
 
     // check we reached the end of the string
