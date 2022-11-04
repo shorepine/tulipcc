@@ -74,7 +74,7 @@ STATIC char get_fmt_type(const char **fmt) {
 STATIC mp_uint_t get_fmt_num(const char **p) {
     const char *num = *p;
     uint len = 1;
-    while (unichar_isdigit(*++num)) {
+    while (unichar_mp_isdigit(*++num)) {
         len++;
     }
     mp_uint_t val = (mp_uint_t)MP_OBJ_SMALL_INT_VALUE(mp_parse_num_integer(*p, len, 10, NULL));
@@ -88,7 +88,7 @@ STATIC size_t calc_size_items(const char *fmt, size_t *total_sz) {
     size_t size;
     for (size = 0; *fmt; fmt++) {
         mp_uint_t cnt = 1;
-        if (unichar_isdigit(*fmt)) {
+        if (unichar_mp_isdigit(*fmt)) {
             cnt = get_fmt_num(&fmt);
         }
 
@@ -155,7 +155,7 @@ STATIC mp_obj_t struct_unpack_from(size_t n_args, const mp_obj_t *args) {
 
     for (size_t i = 0; i < num_items;) {
         mp_uint_t cnt = 1;
-        if (unichar_isdigit(*fmt)) {
+        if (unichar_mp_isdigit(*fmt)) {
             cnt = get_fmt_num(&fmt);
         }
         mp_obj_t item;
@@ -188,7 +188,7 @@ STATIC void struct_pack_into_internal(mp_obj_t fmt_in, byte *p, size_t n_args, c
             // more arguments given than used by format string; CPython raises struct.error here
             break;
         }
-        if (unichar_isdigit(*fmt)) {
+        if (unichar_mp_isdigit(*fmt)) {
             cnt = get_fmt_num(&fmt);
         }
 

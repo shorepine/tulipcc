@@ -262,7 +262,7 @@ STATIC mp_obj_t mod_ujson_load(mp_obj_t stream_obj) {
                     cur = S_CUR(s);
                     if (cur == '.' || cur == 'E' || cur == 'e') {
                         flt = true;
-                    } else if (cur == '+' || cur == '-' || unichar_isdigit(cur)) {
+                    } else if (cur == '+' || cur == '-' || unichar_mp_isdigit(cur)) {
                         // pass
                     } else {
                         break;
@@ -338,7 +338,7 @@ STATIC mp_obj_t mod_ujson_load(mp_obj_t stream_obj) {
     }
 success:
     // eat trailing whitespace
-    while (unichar_isspace(S_CUR(s))) {
+    while (unichar_mp_isspace(S_CUR(s))) {
         S_NEXT(s);
     }
     if (!S_END(s)) {
