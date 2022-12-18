@@ -228,6 +228,12 @@ LIBFFI_CFLAGS_MOD := $(shell pkg-config --cflags libffi)
 LIBFFI_LDFLAGS_MOD := $(shell pkg-config --libs libffi)
 endif
 
+
+# libffi is installed in system on 10.12, so force use of homebrew version 
+LIBFFI_LDFLAGS_MOD = /opt/homebrew/opt/libffi/lib/libffi.a
+LIBFFI_CFLAGS_MOD := "-I/opt/homebrew/opt/libffi/include"
+
+
 ifeq ($(UNAME_S),Linux)
 LIBFFI_LDFLAGS_MOD += -ldl
 endif
