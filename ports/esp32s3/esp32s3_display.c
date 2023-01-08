@@ -95,6 +95,7 @@ void display_brightness(uint8_t amount) {
     if(amount > 9) amount = 9;
     brightness = amount;
     uint16_t duty = (9-brightness)*1000;
+    fprintf(stderr, "setting duty to %d\n", duty);
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, duty);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1) ;
 }
