@@ -5483,7 +5483,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <part name="U6" library="SparkFun-IC-Comms" deviceset="CH340C" device=""/>
 <part name="R9" library="adafruit" deviceset="R-US_" device="R0805" value="5.1K"/>
 <part name="R10" library="adafruit" deviceset="R-US_" device="R0805" value="5.1K"/>
-<part name="C11" library="microbuilder" deviceset="CAP_CERAMIC" device="0805-NOOUTLINE" value="10nF"/>
+<part name="C11" library="microbuilder" deviceset="CAP_CERAMIC" device="0805-NOOUTLINE" value="10uF"/>
 <part name="POWER" library="500ASSP1SM6QE" deviceset="500ASSP1SM6QE" device=""/>
 <part name="J3" library="TSM-106-02-L-DH-A" deviceset="TSM-106-02-L-DH-A" device=""/>
 <part name="H1" library="holes" library_urn="urn:adsk.eagle:library:237" deviceset="MOUNT-HOLE" device="2.8" package3d_urn="urn:adsk.eagle:package:14271/1"/>
@@ -6331,11 +6331,6 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <label x="360.68" y="86.36" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="U6" gate="U1" pin="VCC"/>
-<wire x1="294.64" y1="22.86" x2="287.02" y2="22.86" width="0.1524" layer="91"/>
-<label x="287.02" y="22.86" size="1.778" layer="95"/>
-</segment>
-<segment>
 <pinref part="J3" gate="G$1" pin="03"/>
 <wire x1="215.9" y1="86.36" x2="210.82" y2="86.36" width="0.1524" layer="91"/>
 <label x="210.82" y="86.36" size="1.778" layer="95"/>
@@ -6739,6 +6734,11 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <pinref part="J3" gate="G$1" pin="10"/>
 <wire x1="241.3" y1="78.74" x2="246.38" y2="78.74" width="0.1524" layer="91"/>
 <label x="243.84" y="78.74" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="U6" gate="U1" pin="VCC"/>
+<wire x1="294.64" y1="22.86" x2="287.02" y2="22.86" width="0.1524" layer="91"/>
+<label x="287.02" y="22.86" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="!RTS" class="0">
