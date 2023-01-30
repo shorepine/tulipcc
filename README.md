@@ -364,140 +364,23 @@ tulip.midi_out(bytes) # Can send bytes or list
 
 
 
-## DIY HOWTO
+## Tulip hardware HOWTOs
 
-Tulip CC can be easily built with minimal / or no soldering by connecting an ESP32S3 breakout board to a display and audio board. With a breadboard and a lot of jumper wires, you can put together Tulip in less than an hour.
+There are four ways to start building and using your own Tulip Creative Computer. 
 
-The easier path is to buy [the breakout PCB I designed fron OSH Park](https://oshpark.com/shared_projects/vFYFPIyu). It's $30 for 3 (this money goes all to OSH Park to manufacture the boards, I don't receive anything), and takes about a week to ship. It's simpler, will be more reliable and will fit inside a case better than a breadboard. The PCB is simply a way to connect the breakout boards without any jumper wires. The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_breakout_v4)
+ * [No hardware for me, I want to just run Tulip Desktop on my desktop computer for now](tulip_desktop.md). Use this option if you're just curious about Tulip and want to try it out. If you get into it, you can then upgrade to real hardware!
+ * [I'm not great at soldering and want to build a Tulip with hookup wires and a breadboard](tulip_breadboard.md). Do this if you aren't great at soldering or just want to quickly throw a Tulip together. It won't be very stable and will be hard to move or use portably, as there's many wires. But it'll work!
+ * [I can solder through-hole just fine and want to build a more reliable Tulip.](tulip_breakout.md) Do this if you are competent at thru-hole soldering and want to make a reliable Tulip by soldering together other breakout boards. It's more bulky than our integrated Tulip board, but works just the same. 
+ * [I want to build a single board Tulip and know how to solder SMT or use a service that assembles one for me.](tulip_board.md) This is the deluxe option: a fully integrated Tulip board with connectors for a display, audio, MIDI and keyboard. Like a Raspberry Pi but it's Tulip. But you'll need either good soldering skills (many small SMT parts and the FPC connector) or use a service like JLC or Aisler to assemble the board for you. 
 
-Either way, you'll need:
-
-- [ESP32-S3 WROOM-1 N8R8 dev board.](https://www.adafruit.com/product/5336). If you can find the ESP32-S3 WROOM-2 N32R8 (32MB of flash), it will _probably_ also work fine and you'll have more storage space.
-- [This $58 RGB dot-clock 10.1" display with capacitive touch.](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). Note other RGB dot clock displays of different sizes and resolutions can also work, but the pin numberings will be different and you'll have to update the resolution in our code. 
-- [A 40-pin FPC header for the display](https://www.adafruit.com/product/4905). 
-- One of two choices for sound: either [this mono I2S speaker amp board](https://www.adafruit.com/product/3006) (you'll also need a 3W speaker) or this stereo line-out / headphone jack [UDA1334 DAC](https://www.aliexpress.com/item/3256803337983466.html?gatewayAdapt=4itemAdapt). 
-- _Almost_ any USB keyboard should work. If yours doesn't, please file an issue here and I can investigate with you. I can only test the ones I have here! I do recommend the [Keychron series of mechanical keyboards](https://www.keychron.com/products/keychron-k7-ultra-slim-wireless-mechanical-keyboard?variant=39396239048793), they're inspiringly clicky. 
-- Connectors and random parts: 
-   - [Female headers are recommended, so you don't solder the ESP and audio jack directly to the PCB.](https://www.adafruit.com/product/598) 
-   - I'd also get this [2x20 shrouded header](https://www.adafruit.com/product/1993) for the display FPC breakout. 
-   - [1 USB female A connector](https://www.amazon.com/Uxcell-a13081900ux0112-Female-Socket-Connector/dp/B00H51E7B0)
-   - [2 female 5-pin DIN MIDI jacks](https://www.adafruit.com/product/1134)
-   - [1 6N138 optoisolator](https://www.amazon.com/Optocoupler-Single-Channel-Darlington-Output/dp/B07DLTSXC1) and an [8-pin socket](https://www.adafruit.com/product/2202)
-   - [7 resistors](https://www.amazon.com/BOJACK-Values-Resistor-Resistors-Assortment/dp/B08FD1XVL6): `R1`: 4.7K, `R2`: 4.7K, `R3`: 4.7K, `R4`: 220, `R5`: 470, `R6`: 33, `R7`: 10. `R4` through `R7` don't have to be precisely those numbers, find the closest number that you have. 
-   - 1 diode: [1N4001](https://www.adafruit.com/product/755)
-- If you are using a breadboard instead of our PCB, [you'll want to see how to wire the MIDI in and out.](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/). 
-
-The assembly for our PCB is simple. Solder the headers to the DISPLAY, ESP32S3L, ESP32S3R, and AUDIO rows. Solder the 8-pin socket where the 6N138 goes. Solder the resistors in their correct spots, and the diode (note the polarity.) Solder the USB connector. Solder the MIDI connectors. Then place the ESP32-S3 breakout in, the FPC connector in (facing down, with the FPC cable going away from the board), the I2S board in, the 6N138 in, and connect a USB keyboard and the display to the FPC connector (to the displays' "RGB" input, the blue side facing up on both sides of the connector.) Then skip ahead to how to flash Tulip for the first time. That's it!
-
-If you're breadboarding, here's the pin connections you'll need to make. A note, if you're using the Adafruit FPC display adapter, these pin numbers for the display (D#) are to match the numbers on the **side of the board the FPC connector is on**, the side that reads FPC-40P 0.5MM. 
-
-| Label         | ESP32 S3 Pin | Position on ESP32-S3-WROOM-1 | Connect to     |
-| ------------- | ------------ | ---------------------------- | -------------- |
-| Backlight PWM | 16           | Left row, 9th pin down (L9)  | Display 6 (D6) |
-| Data Enable   | 42           | Right row, 6th pin down (R6) | D7             |
-| VSYNC         | 41           | R7                           | D8             |
-| HSYNC         | 40           | R8                           | D9             |
-| LCD BL EN     | 39           | R9                           | D10            |
-| PCLK          | 14           | L20                          | D11            |
-| B7            | 21           | R18                          | D13            |
-| B6            | 12           | L18                          | D14            |
-| B5            | GND          | L22                          | D15            | 
-| G7            | 46           | L14                          | D21            |
-| G6            | 3            | L13                          | D22            |
-| G5            | 8            | L12                          | D23            |
-| R7            | 15           | L8                           | D29            |
-| R6            | 7            | L7                           | D30            |
-| R5            | 6            | L6                           | D31            |
-| 3v3           | 3v3          | L1                           | D37            |
-| GND           | GND          | L22                          | D38            |
-| 5V            | 5V           | L21                          | D39            |
-| 5V            | 5V           | L21                          | D40            |
-| Touch SDA     | 18           | L11                          | D4             |
-| Touch SCL     | 17           | L10                          | D3             |
-| Touch CTP INT | 5            | L5                           | D1             |
-| Touch CTP RST | N/C          | N/C                          | D2             |
-| USB 5V        | 5V           | L21                          | USB 5V         |
-| USB D+        | 20           | R19                          | USB D+         |
-| USB D-        | 19           | R20                          | USB D-         |       
-| USB GND       | GND          | L22                          | USB GND        |
-| Audio LRC     | 4            | L4                           | Audio LRC      |
-| Audio BCLK    | 1            | R4                           | Audio BCLK     |
-| Audio DIN     | 2            | R5                           | Audio DIN      |
-| Audio GND     | GND          | L22                          | Audio GND      |
-| Audio VIN     | 5V           | L21                          | Audio VIN      |
-| MIDI in       | 47           | R17                          | MIDI TX        |
-| MIDI out      | 11           | L17                          | MIDI RX        |
-| MIDI 5V       | 5V           | L21                          | MIDI 5v        |
-| MIDI GND      | GND          | L22                          | MIDI GND       |
-
-Also, you may want to ground all remaining display pins if you're seeing flickering. But make sure not to connect anything to `D2`, it stays not connected.
 
 
 ## How to compile and help develop Tulip
 
-Tulip's firmware is based on Micropython. You'll find our platform independent code in `extmod/tulip` and our platform specific code in `ports/esp32s3` and `ports/macos`. 
+ * [How to compile and flash Tulip hardware](tulip_flashing.md)
+ * [How to run or compile Tulip Desktop](tulip_desktop.md)
 
-Tulip Desktop should build and run on macOS 10.15 (Catalina, released 2019) and later, Apple Silicon & Intel supported. It also should be fine on Linux but I haven't yet tried. Windows is possible but probably needs some help. 
-
-Tulip CC on ESP32S3 should build on all platforms, although I've only tested macOS so far. Please let me know if you have any trouble!
-
-To compile your own firmware / desktop app, start by cloning this repository. 
-
-On macOS, start by installing homebrew
-```
-# install homebrew first, skip this if you already have it...
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-# Then restart your terminal
-```
-
-To build Tulip Desktop (macOS 10.15 (Catalina) and higher, Apple Silicon or x86_64):
-
-```
-cd ports/macos
-brew install pkg-config
-
-# For local development (just your native arch, and shows stderr in terminal)
-./build.sh
-./dev/Tulip\ CC.app/Contents/MacOS/tulip
-
-# Or package for distribution (creates a universal binary)
-./package.sh # makes .app bundle in dist, not necessary if you're just using it locally
-```
-
-To build and flash the ESP32S3 Tulip CC:
-
-```
-# install esp-idf's requirements
-brew install cmake ninja dfu-util
-
-# and install our version of the ESP-IDF that comes with our repository
-cd esp-idf
-./install.sh esp32s3
-source ./export.sh
-
-pip3 install Cython littlefs-python # needed to flash the filesystem
-
-cd ../ports/esp32s3
-# Connect your esp32s3 board over USB (to the UART connector on the dev board, not the USB connector)
-idf.py -D MICROPY_BOARD=TULIP4 flash
-
-python tulip_fs_create.py # first run only, or after each change to tulip_home, will erase the Tulip filesystem
-```
-
-Then to build / debug going forward:
-
-```
-cd ports/esp32s3
-export ../../esp-idf/export.sh # do this once per terminal window
-idf.py -D MICROPY_BOARD=TULIP4 flash
-idf.py -D MICROPY_BOARD=TULIP4 monitor # shows stderr, use control-] to quit
-
-# If you make changes to the underlying python libraries on micropython, you want to fully clean the build 
-idf.py -D MICROPY_BOARD=TULIP4 fullclean
-idf.py -D MICROPY_BOARD=TULIP4 flash
-```
-
-
+ 
 Some development guidelines if you'd like to help contribute!
 
  * Be nice and helpful and don't be afraid to ask questions! We're all doing this for fun and to learn. 
