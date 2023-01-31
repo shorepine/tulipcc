@@ -10,7 +10,7 @@ Tulip is not a shell on top of another operating system. Every byte of RAM and e
 
 You can use Tulip to make music, code, art, games, or just write. It cannot run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
 
-Tulip is available both as a hardware DIY project (Tulip CC) and a macOS app (Tulip Desktop.) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, give the desktop version a go to learn about it.
+Tulip is available both as a hardware DIY project (Tulip CC) and a macOS app (Tulip Desktop.) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](tulip_desktop.md)
 
 [![Tulip Desktop](https://github.com/bwhitman/tulipcc/raw/main/pics/desktop.png)](tulip_desktop.md)
 
@@ -355,6 +355,7 @@ chord = music.Chord("F:min7")
 for i,note in enumerate(chord.midinotes()):
   alles.send(wave=alles.ALGO,osc=i*9,note=note,vel=0.25,patch=101,ratio=0.1)
 ```
+
 
 
 ### MIDI
