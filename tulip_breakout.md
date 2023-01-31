@@ -1,5 +1,8 @@
 # Tulip Breakout Board Edition
 
+![Tulip Breakout](https://github.com/bwhitman/tulipcc/raw/main/pics/breakout.jpg)
+
+
 The easier path is to buy [the breakout PCB I designed fron OSH Park](https://oshpark.com/shared_projects/vFYFPIyu). It's $30 for 3 (this money goes all to OSH Park to manufacture the boards, I don't receive anything), and takes about a week to ship. It's simpler, will be more reliable and will fit inside a case better than a breadboard. The PCB is simply a way to connect the breakout boards without any jumper wires. The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_breakout_v4)
 
 You'll need:
