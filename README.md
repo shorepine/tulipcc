@@ -1,5 +1,7 @@
 # Tulip Creative Computer
 
+![Tulip](https://github.com/bwhitman/tulipcc/raw/main/pics/flat_tiles.jpg)
+
 Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
 
 Tulip is a self contained portable creative computer, with a display and keyboard and sound. It boots instantaneously into a Python prompt. Dive right into making something without distractions or complications. 
