@@ -12,6 +12,9 @@ You can use Tulip to make music, code, art, games, or just write. It cannot run 
 
 Tulip is available both as a hardware DIY project (Tulip CC) and a macOS app (Tulip Desktop.) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, give the desktop version a go to learn about it.
 
+![Tulip Desktop](https://github.com/bwhitman/tulipcc/raw/main/pics/desktop.png)
+
+
 You can build your own Tulip CC for about $25 plus the cost of a display ($50) and USB keyboard.
 
 The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours.
