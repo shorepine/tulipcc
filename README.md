@@ -134,6 +134,62 @@ content = tulip.url_get("https://url")
 tulip.set_time() 
 ```
 
+
+### Music / sound
+
+Tulip has the AMY synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information.
+
+Tulip can also control or respond to an [Alles mesh](https://github.com/bwhitman/alles/blob/main/README.md) over Wi-Fi. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information. 
+
+```python
+amy.drums() # plays a test song
+amy.volume(4) # change volume
+amy.reset() # stops all music / sounds playing
+amy.send(osc=0, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
+
+# start mesh mode (control multiple speakers over wifi)
+alles.mesh() # after turning on wifi
+alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1) # all Alles speakers in a mesh will respond
+alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=2) # just a certain client
+alles.local() # turns off mesh mode and goes back to local mode
+```
+
+Tulip also ships with our own `music.py`, which lets you create chords and scales through code:
+
+```python
+import music
+chord = music.Chord("F:min7")
+for i,note in enumerate(chord.midinotes()):
+  alles.send(wave=alles.ALGO,osc=i*9,note=note,vel=0.25,patch=101,ratio=0.1)
+```
+
+
+https://user-images.githubusercontent.com/76612/215893940-658144b7-0c6f-42e2-9836-bd271597aab3.mov
+
+
+
+### MIDI
+
+Tulip supports MIDI in and out. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
+
+On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later using the "IAC" MIDI bus. This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." At this time, MIDI will not function (but the rest of Tulip will run fine) on macOS versions before 11.0.
+
+```python
+def callback(x): # for now you have to define a callback with a dummy parameter
+    m = tulip.midi_in()
+    if(m[0]==144):
+        print("Note on, note # %d velocity # %d" % (m[1], m[2]))
+
+tulip.midi_callback(callback)
+tulip.midi_callback() # turns off callbacks
+
+m = tulip.midi_in() # returns bytes of the last MIDI message received
+tulip.midi_out((144,60,127)) # sends a note on message
+tulip.midi_out(bytes) # Can send bytes or list
+```
+
+
+
 ### Graphics system
 
 The Tulip GPU consists of 3 subsystems:
@@ -327,60 +383,6 @@ tulip.sprite_move(12, x, y)
 # Clear all sprite RAM, reset all sprite handles
 tulip.sprite_clear()
 ```
-
-### Music / sound
-
-Tulip has the AMY synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information.
-
-Tulip can also control or respond to an [Alles mesh](https://github.com/bwhitman/alles/blob/main/README.md) over Wi-Fi. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information. 
-
-```python
-amy.drums() # plays a test song
-amy.volume(4) # change volume
-amy.reset() # stops all music / sounds playing
-amy.send(osc=0, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
-
-# start mesh mode (control multiple speakers over wifi)
-alles.mesh() # after turning on wifi
-alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1) # all Alles speakers in a mesh will respond
-alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=2) # just a certain client
-alles.local() # turns off mesh mode and goes back to local mode
-```
-
-Tulip also ships with our own `music.py`, which lets you create chords and scales through code:
-
-```python
-import music
-chord = music.Chord("F:min7")
-for i,note in enumerate(chord.midinotes()):
-  alles.send(wave=alles.ALGO,osc=i*9,note=note,vel=0.25,patch=101,ratio=0.1)
-```
-
-
-https://user-images.githubusercontent.com/76612/215893940-658144b7-0c6f-42e2-9836-bd271597aab3.mov
-
-
-
-### MIDI
-
-Tulip supports MIDI in and out. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
-
-On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later using the "IAC" MIDI bus. This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." At this time, MIDI will not function (but the rest of Tulip will run fine) on macOS versions before 11.0.
-
-```python
-def callback(x): # for now you have to define a callback with a dummy parameter
-    m = tulip.midi_in()
-    if(m[0]==144):
-        print("Note on, note # %d velocity # %d" % (m[1], m[2]))
-
-tulip.midi_callback(callback)
-tulip.midi_callback() # turns off callbacks
-
-m = tulip.midi_in() # returns bytes of the last MIDI message received
-tulip.midi_out((144,60,127)) # sends a note on message
-tulip.midi_out(bytes) # Can send bytes or list
-```
-
 
 
 ## Tulip hardware HOWTOs
