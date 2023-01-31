@@ -347,6 +347,16 @@ alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
+Tulip also ships with our own `music.py`, which lets you create chords and scales through code:
+
+```python
+import music
+chord = music.Chord("F:min7")
+for i,note in enumerate(chord.midinotes()):
+  alles.send(wave=alles.ALGO,osc=i*9,note=note,vel=0.25,patch=101,ratio=0.1)
+```
+
+
 ### MIDI
 
 Tulip supports MIDI in and out. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
