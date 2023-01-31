@@ -391,6 +391,10 @@ tulip.sprite_clear()
 ```
 
 
+https://user-images.githubusercontent.com/76612/215896311-fc0823aa-44bc-4305-85db-a6773db11a98.mov
+
+
+
 ## Tulip hardware HOWTOs
 
 ![Custom Tulip laptop](https://github.com/bwhitman/tulipcc/raw/main/pics/hinge.jpg)
