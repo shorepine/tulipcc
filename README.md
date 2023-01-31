@@ -357,6 +357,10 @@ for i,note in enumerate(chord.midinotes()):
 ```
 
 
+https://user-images.githubusercontent.com/76612/215893940-658144b7-0c6f-42e2-9836-bd271597aab3.mov
+
+
+
 ### MIDI
 
 Tulip supports MIDI in and out. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
