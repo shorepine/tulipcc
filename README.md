@@ -326,6 +326,12 @@ tulip.bg_scroll_x_offset(line, x_offset)
 tulip.bg_scroll_y_offset(line, y_offset)
 ```
 
+
+
+https://user-images.githubusercontent.com/76612/215895305-7b02ad27-b02a-429a-92ef-f13136e9f9d2.mov
+
+
+
 ### Text frame buffer (TFB)
 
 The TFB is a 128x50 character plane for fast drawing of text glyphs. It supports 256 ANSI 
