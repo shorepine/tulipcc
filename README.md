@@ -69,6 +69,8 @@ usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UAR
 
 ### The Tulip Editor
 
+Tulip ships with a text editor, based on pico/nano. It supports syntax highlighting, search, save/save-as. 
+
 ```python
 # Opens the Tulip editor to the given filename. 
 # Control-X exits and prompts to save if any changes. 
@@ -80,7 +82,6 @@ edit("game.py")
 
 ![Editor](https://github.com/bwhitman/tulipcc/raw/main/pics/editor.png)
 
-```
 
 ### Input and user interface
 
