@@ -358,6 +358,9 @@ print(tulip.Colors.DEFAULT)
 print(tulip.ansi_fg(56))
 ```
 
+![TFB](https://github.com/bwhitman/tulipcc/raw/main/pics/tfb.png)
+
+
 ### Sprites
 You can have up to 32 sprites on screen at once, and have 32KB of bitmap data to store them in. 
 
