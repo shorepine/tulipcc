@@ -12,6 +12,18 @@ If you're comfortable with surface mount soldering, you can put together your ow
 
 [EAGLE files are here](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_board_v4r6). 
 
+## Assembly tips
+
+I've found assembling a Tulip with a hot plate and stencil the easiest way to go. You can get stencils from OSH Park when you're ordering the boards. 
+
+I wait to attach the FPC connector until after I've done a round on the hot plate. I do it manually with a hot gun and flux. 
+
+The only through hole component, the legs of the USB-C connector, need to be hand soldered from the bottom after the hot plate. 
+
+The silkscreen currently omits a polarity for the only diode (D2). The white line on the diode is meant to be pointing down. 
+
+The RESET chip should be oriented so that you can read M A, and there will be two small dots on the bottom left corner. 
+
 ## Power and header
 
 The board has a header row for power and I2C. Its pins are (from top to bottom, the left column is lower pin and right column is higher pin):
@@ -20,7 +32,7 @@ The board has a header row for power and I2C. Its pins are (from top to bottom, 
 | ------------| ---------- | 
 | 5V_IN | 5V_USB | 
 | 3V3 | GND | 
-| I2S SDA | I2S SCL |
+| I2C SDA | I2C SCL |
 | 5V | GND |
 | Jumper: | USB powered |
 | Jumper: | 5V_IN powered |
