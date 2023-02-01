@@ -35,6 +35,9 @@ Tulip CC rev 4 supports:
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
+![Tulip](https://github.com/bwhitman/tulipcc/raw/main/pics/tulip4.png)
+
+
 ## Usage and the Tulip API 
 
 Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
