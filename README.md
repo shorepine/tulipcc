@@ -6,7 +6,7 @@ Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.)
 
 Tulip is a self contained portable creative computer, with a display and keyboard and sound. It boots instantaneously into a Python prompt. Dive right into making something without distractions or complications. 
 
-Tulip is not a shell on top of another operating system. Every byte of RAM and every cycle of the CPU is dedicated to your code, the display and music. 
+Tulip is not a shell on top of another operating system. The entire system is dedicated to your code, the display and sound. 
 
 You can use Tulip to make music, code, art, games, or just write. It cannot run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
 
@@ -14,20 +14,11 @@ Tulip is available both as a hardware DIY project (Tulip CC) and a macOS app (Tu
 
 [![Tulip Desktop](https://github.com/bwhitman/tulipcc/raw/main/pics/desktop.png)](tulip_desktop.md)
 
-
-You can build your own Tulip CC for about $25 plus the cost of a display ($50) and USB keyboard.
-
-The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours.
-
-The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. 
-
-Tulip's sound system is a full featured 32-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
-
-I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
+You can build your own Tulip CC for about $25 plus the cost of a display ($50) and USB keyboard. The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. Tulip's sound system is a full featured 32-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
 
 Tulip CC rev 4 supports:
 - 8.5MB of RAM
-- 8MB flash storage, as a filesystem accesible in Python
+- 8MB or 32MB flash storage, as a filesystem accesible in Python
 - An [AMY](https://github.com/bwhitman/amy) 32-voice synthesizer engine running locally or as a wireless controller for an [Alles](https://github.com/bwhitman/alles) mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
@@ -42,10 +33,11 @@ Tulip CC rev 4 supports:
 - MIDI input and output 
 - 575mA power usage @ 5V including display, at medium display brightness, can last for hours on LiPo, 18650s, or USB battery pack 
 
+I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
 ## Usage and the Tulip API 
 
-Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with its built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
+Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
 
 ### General
 
@@ -117,6 +109,8 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 
 ### Network
 
+Tulip CC has the capability to connect to a Wi-Fi network, and Python's native requests library will work to access TCP and UDP. We ship a few convenience functions to grab data from URLs as well. 
+
 ```python
 # Join a wifi network (not needed on Tulip Desktop)
 tulip.wifi("ssid", "password")
@@ -137,7 +131,7 @@ tulip.set_time()
 
 ### Music / sound
 
-Tulip has the AMY synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information.
+Tulip comes with the AMY synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information.
 
 Tulip can also control or respond to an [Alles mesh](https://github.com/bwhitman/alles/blob/main/README.md) over Wi-Fi. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information. 
 
@@ -154,7 +148,7 @@ alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
-Tulip also ships with our own `music.py`, which lets you create chords and scales through code:
+Tulip also ships with our own `music.py`, which lets you create chords, progressions and scales through code:
 
 ```python
 import music
@@ -163,14 +157,12 @@ for i,note in enumerate(chord.midinotes()):
   alles.send(wave=alles.ALGO,osc=i*9,note=note,vel=0.25,patch=101,ratio=0.1)
 ```
 
-
 https://user-images.githubusercontent.com/76612/215893940-658144b7-0c6f-42e2-9836-bd271597aab3.mov
-
 
 
 ### MIDI
 
-Tulip supports MIDI in and out. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
+Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
 
 On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later using the "IAC" MIDI bus. This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." At this time, MIDI will not function (but the rest of Tulip will run fine) on macOS versions before 11.0.
 
@@ -189,15 +181,15 @@ tulip.midi_out(bytes) # Can send bytes or list
 ```
 
 
-
 ### Graphics system
 
-The Tulip GPU consists of 3 subsystems:
+The Tulip GPU consists of 3 subsystems, in drawing order:
  * A bitmap graphics plane (BG) (default size: 1280x750), with scrolling x- and y- speed registers. Drawing shape primitives draw to the BG.
- * A text frame buffer (TFB) that draws 8x12 fixed width text on top, with 256 colors
- * A sprite layer on top of the TFB
+ * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
+ * A sprite layer on top of the TFB (which is on top of the BG)
 
 The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. 
+
 Some example display clocks and resolutions:
 
 | H_RES   | V_RES   | Clock  |  FPS   | H_RES   | V_RES   | Clock  |  FPS   |
