@@ -51,19 +51,11 @@ cd('directory')
 # Clears the REPL screen and formatting
 clear
 
-# Opens the Tulip editor to the given filename. 
-# Control-X exits and prompts to save if any changes. 
-# Control-O is save as
-# Control-W searches
-# Filename will be created on save if it doesn't exist.
-edit("game.py")
-
 # Run a saved Python file. Control-C stops it
 execfile("game.py")
 
 # If you want something to run when Tulip boots, add it to boot.py
 edit("boot.py")
-
 
 # Takes a screenshot and saves to disk. The screen will blank for a moment
 # If no filename given will upload to imgur and return a URL (needs wifi)
@@ -73,6 +65,21 @@ imgur_url = tulip.screenshot()
 # Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
 # Note that Python code is bound to one core, so Python-only usage tops out at 50%.
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
+```
+
+### The Tulip Editor
+
+```python
+# Opens the Tulip editor to the given filename. 
+# Control-X exits and prompts to save if any changes. 
+# Control-O is save as
+# Control-W searches
+# Filename will be created on save if it doesn't exist.
+edit("game.py")
+```
+
+![Editor](https://github.com/bwhitman/tulipcc/raw/main/pics/editor.png)
+
 ```
 
 ### Input and user interface
