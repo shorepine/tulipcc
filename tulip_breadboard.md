@@ -4,6 +4,9 @@
 
 Tulip CC can be easily built with no soldering by connecting an ESP32S3 breakout board to a display and audio board. With a breadboard and a lot of jumper wires, you can put together Tulip in less than an hour.
 
+If you'd rather make something more permanent, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [a fully integrated surface mount board](tulip_board.md).
+
+
 You'll need
 
 - A breadboard

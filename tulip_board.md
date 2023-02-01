@@ -6,6 +6,8 @@ We've designed our own integrated Tulip CC board. It's the nicest way to experie
 
 If you're comfortable with surface mount soldering, you can put together your own board relatively easily. You can order the PCBs from OSH Park: [shared project here](https://oshpark.com/shared_projects/Xv9QDKgz). 
 
+If this looks too hard, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [with no soldering and a breadboard](tulip_breadboard.md).
+
 ![Tulip Board](https://github.com/bwhitman/tulipcc/raw/main/pics/board_unpop.png)
 
 [The BOM for the latest revision is here](https://github.com/bwhitman/tulipcc/raw/main/pcbs/tulip4_board_v4r6/tulip%20board.xlsx). Please note I haven't yet optimized this BOM for price. But everything is at least in stock, mostly at Digikey. 
