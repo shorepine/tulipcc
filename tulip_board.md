@@ -26,7 +26,7 @@ The silkscreen currently omits a polarity for the only diode (D2). The white lin
 
 The RESET chip is not on the silkscreen. It's the small 6 pin chip on the top to the right of the ESP. It should be oriented so that you can read M A, and there will be two small dots on the bottom left corner. 
 
-![Schematic](https://raw.githubusercontent.com/bwhitman/tulipcc/main/pcbs/tulip4_board_v4r6/schematic.png)
+![Schematic](https://github.com/bwhitman/tulipcc/raw/main/pcbs/tulip4_board_v4r6/schematic.png)
 
 ## Power and header
 
