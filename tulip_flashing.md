@@ -1,8 +1,6 @@
 # Compiling and flashing Tulip CC
 
-Tulip's firmware is based on Micropython. You'll find our platform independent code in `extmod/tulip` and our platform specific code in `ports/esp32s3` and `ports/macos`. 
-
-Tulip CC on ESP32S3 should build on all platforms, although I've only tested macOS so far. Please let me know if you have any trouble!
+[Tulip CC](README.md) should build on all platforms, although I've only tested macOS so far. Please let me know if you have any trouble!
 
 ## macOS build and flash
 

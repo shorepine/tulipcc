@@ -2,7 +2,7 @@
 
 ![Tulip Board](https://github.com/bwhitman/tulipcc/raw/main/pics/board.jpg)
 
-We've designed our own integrated Tulip CC board. It's the nicest way to experience Tulip: a small 66x56mm PCB with a display FPC connector, USB-C connector for charging, power and flashing, USB keyboard connector, 3 3.5mm jacks for audio out, MIDI in, and MIDI out, a power switch, and headers for external power and I2C access. 
+We've designed our own integrated [Tulip CC](README.md) board. It's the nicest way to experience Tulip: a small 66x56mm PCB with a display FPC connector, USB-C connector for charging, power and flashing, USB keyboard connector, 3 3.5mm jacks for audio out, MIDI in, and MIDI out, a power switch, and headers for external power and I2C access. 
 
 If you're comfortable with surface mount soldering, you can put together your own board relatively easily. You can order the PCBs from OSH Park: [shared project here](https://oshpark.com/shared_projects/Xv9QDKgz). 
 
