@@ -203,8 +203,8 @@ The Tulip GPU runs at a fixed FPS depending on the resolution and display clock.
 
 Some example display clocks and resolutions:
 
-| H_RES   | V_RES   | Clock  |  FPS   | | H_RES   | V_RES   | Clock  |  FPS   |
-| ------- | ------- | ------ | ------ | | ------- | ------- | ------ | ------ |
+| H_RES   | V_RES   | Clock  |  FPS   | - | H_RES   | V_RES   | Clock  |  FPS   |
+| ------- | ------- | ------ | ------ | --| ------- | ------- | ------ | ------ |
 | 1024    | 600     | 10     | 14.98  | |512     | 600     | 10     | 19.91  |
 | 1024    | 600     | 14     | 18.55  | |512     | 600     | 14     | 30.26  |
 | 1024    | 600     | 18     | 23.19  | |512     | 600     | 18     | 37.82  |
