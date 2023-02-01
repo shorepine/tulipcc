@@ -12,6 +12,8 @@ If you're comfortable with surface mount soldering, you can put together your ow
 
 [EAGLE files are here](https://github.com/bwhitman/tulipcc/tree/main/pcbs/tulip4_board_v4r6). 
 
+## Power and header
+
 The board has a header row for power and I2C. Its pins are (from top to bottom, the left column is lower pin and right column is higher pin):
 
 | Lower pin   | Higher pin | 
@@ -30,5 +32,12 @@ This lets you use an external charger / boost circuit like the ubiquitous 18650 
 Please be careful using unprotected batteries like this. Don't leave them unattended while you're setting them up. Tulip's board has no protection for inverted polarity or low (or high) voltage. 
 
 ![Battery setup](https://github.com/bwhitman/tulipcc/raw/main/pics/battery.jpg)
+
+## MIDI
+
+The 3.5mm MIDI jacks are for Type A TRS MIDI connectors. If you want to wire them to full size MIDI connectors, you should get [Type A converters.](https://www.amazon.com/ZAWDIO-Breakout-LittleBits-Female-Electribe/dp/B08WHSP7ZL/). You can also get Type-A to Type-B converter cables if your equipment is mostly Type B. 
+
+
+## Flash and startup
 
 After you're done assembling, [read about how to compile and flash Tulip](tulip_flashing.md).
