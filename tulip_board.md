@@ -22,7 +22,7 @@ The only through hole component, the legs of the USB-C connector, need to be han
 
 The silkscreen currently omits a polarity for the only diode (D2). The white line on the diode is meant to be pointing down. 
 
-The RESET chip is not on the silscreen. It's the small 6 pin chip on the top to the right of the ESP. It should be oriented so that you can read M A, and there will be two small dots on the bottom left corner. 
+The RESET chip is not on the silkscreen. It's the small 6 pin chip on the top to the right of the ESP. It should be oriented so that you can read M A, and there will be two small dots on the bottom left corner. 
 
 ## Power and header
 

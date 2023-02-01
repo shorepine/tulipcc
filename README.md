@@ -107,6 +107,9 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 ```
 
+![UI demo](https://github.com/bwhitman/tulipcc/raw/main/pics/sliders.png)
+
+
 ### Network
 
 Tulip CC has the capability to connect to a Wi-Fi network, and Python's native requests library will work to access TCP and UDP. We ship a few convenience functions to grab data from URLs as well. 
