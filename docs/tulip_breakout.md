@@ -1,6 +1,6 @@
 # Tulip Breakout Board Edition
 
-![Tulip Breakout](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/breakout.jpg)
+![Tulip Breakout](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/breakout.jpg)
 
 
 If you'd like a permament version of [Tulip CC](../README.md) and can do through hole soldering, you can buy [this breakout PCB I designed fron OSH Park](https://oshpark.com/shared_projects/L1xtM8pM). 
@@ -11,7 +11,7 @@ Our [breakout board PCB is $30 for 3](https://oshpark.com/shared_projects/L1xtM8
 
 The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_breakout_v3)
 
-![Tulip Breakout](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/breakout_bare.png)
+![Tulip Breakout](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/breakout_bare.png)
 
 
 You'll need:
