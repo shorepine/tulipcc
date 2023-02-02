@@ -7,7 +7,12 @@ If you'd like a permament version of [Tulip CC](../README.md) and can do through
 
 If you'd rather make something more all-in-one, you can make [a fully integrated surface mount board](tulip_board.md) instead, or if you'd rather try something temporary or don't want to solder, [build a Tulip on a breadboard.](tulip_breadboard.md)
 
-Our breakout board PCB is $30 for 3 (this money goes all to OSH Park to manufacture the boards, I don't receive anything), and takes about a week to ship. The PCB is simply a way to connect the breakout boards without any jumper wires. The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_breakout_v3)
+Our [breakout board PCB is $30 for 3](https://oshpark.com/shared_projects/L1xtM8pM) (this money goes all to OSH Park to manufacture the boards, I don't receive anything), and takes about a week to ship. The PCB is simply a way to connect the breakout boards without any jumper wires. 
+
+The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_breakout_v3)
+
+![Tulip Breakout](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/breakout_bare.png)
+
 
 You'll need:
 
