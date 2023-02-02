@@ -230,8 +230,8 @@ endif
 
 
 # libffi is installed in system on 10.12, so force use of homebrew version 
-LIBFFI_LDFLAGS_MOD = /opt/homebrew/opt/libffi/lib/libffi.a
-LIBFFI_CFLAGS_MOD := "-I/opt/homebrew/opt/libffi/include"
+LIBFFI_LDFLAGS_MOD = $(HOMEBREW)/opt/libffi/lib/libffi.a
+LIBFFI_CFLAGS_MOD := "-I$(HOMEBREW)/opt/libffi/include"
 
 
 ifeq ($(UNAME_S),Linux)
@@ -268,7 +268,7 @@ SRC_C += \
 	mpnimbleport.c \
 	unix_display.c \
 	multicast.c \
-	../../extmod/amy/src/libsoundio-audio.c \
+	libsoundio-audio.c \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
 

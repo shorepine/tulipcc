@@ -6,7 +6,7 @@ Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.)
 
 Tulip is a self contained portable creative computer, with a display and keyboard and sound. It boots instantaneously into a Python prompt. Dive right into making something without distractions or complications. 
 
-Tulip is not a shell on top of another operating system. The entire system is dedicated to your code, the display and sound, running in real time, on dedicated hardware. 
+Tulip is not a shell on top of another operating system. The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. 
 
 You can use Tulip to make music, code, art, games, or just write. It's a great environment for live coding performances. It doesn't run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
 

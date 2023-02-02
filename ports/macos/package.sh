@@ -1,6 +1,10 @@
 # package.sh
 # packages the Tulip Deskop binary into a macOS app, universal binary, codesigns for distribution
 
+# Note : on mac you need both types of homebrew, intel and AS
+# https://medium.com/mkdir-awesome/how-to-install-x86-64-homebrew-packages-on-apple-m1-macbook-54ba295230f
+# arch -x86_64 /usr/local/homebrew/bin/brew install libffi 
+
 # Build for arm then intel
 make WHICH_ARCH=arm64 clean
 make WHICH_ARCH=arm64
