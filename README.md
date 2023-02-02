@@ -6,11 +6,11 @@ Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.)
 
 Tulip is a self contained portable creative computer, with a display and keyboard and sound. It boots instantaneously into a Python prompt. Dive right into making something without distractions or complications. 
 
-Tulip is not a shell on top of another operating system. The entire system is dedicated to your code, the display and sound. 
+Tulip is not a shell on top of another operating system. The entire system is dedicated to your code, the display and sound, running in real time, on dedicated hardware. 
 
-You can use Tulip to make music, code, art, games, or just write. It cannot run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
+You can use Tulip to make music, code, art, games, or just write. It's a great environment for live coding performances. It doesn't run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
 
-Tulip is available both as a [hardware DIY project (Tulip CC)](https://github.com/bwhitman/tulipcc#tulip-hardware-howtos) and a [desktop app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](docs/tulip_desktop.md)
+Tulip is available both as a [hardware DIY project (Tulip CC)](https://github.com/bwhitman/tulipcc#tulip-hardware-howtos) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](docs/tulip_desktop.md)
 
 [![Tulip Desktop](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
