@@ -1,6 +1,6 @@
 # Tulip Desktop
 
-![Tulip Desktop](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/desktop.png)
+![Tulip Desktop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/desktop.png)
 
 Tulip Desktop is the desktop computer version of [Tulip CC](../README.md) itself. It supports everything Tulip CC does, and simulates the display and hardware to the best of its ability. It's a great way to learn how to use Tulip or develop for Tulip itself without having to have access to hardware or wait for long flash cycles. 
 
