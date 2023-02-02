@@ -56,7 +56,8 @@ cd('directory')
 clear
 
 # Run a saved Python file. Control-C stops it
-execfile("game.py")
+cd('ex') # The ex folder has a few examples and graphics in it
+execfile("parallax.py")
 
 # If you want something to run when Tulip boots, add it to boot.py
 edit("boot.py")
