@@ -147,7 +147,9 @@ tulip.set_time()
 
 Tulip comes with the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) for more information.
 
-Tulip can also control or respond to an [Alles mesh](https://github.com/bwhitman/alles/blob/main/README.md) over Wi-Fi. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information. 
+Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh](https://github.com/bwhitman/alles/blob/main/README.md). Connect any number of Alles speakers to the wifi to have instant surround sound! 
+
+See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information and for more music examples.
 
 ```python
 alles.drums() # plays a test song
@@ -162,7 +164,7 @@ alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
-Tulip also ships with our own `music.py`, which lets you create chords, progressions and scales through code:
+Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/extmod/tulip/py/music.py), which lets you create chords, progressions and scales through code:
 
 ```python
 import music
