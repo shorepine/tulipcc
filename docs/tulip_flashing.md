@@ -6,8 +6,9 @@
 
 To compile your own firmware, start by cloning this repository. 
 
-On macOS, start by installing homebrew
-```
+On macOS, install homebrew if you haven't already:
+
+```bash
 # install homebrew first, skip this if you already have it...
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 # Then restart your terminal
@@ -15,7 +16,7 @@ On macOS, start by installing homebrew
 
 Do some one-time only setup commmands: 
 
-```
+```bash
 # install esp-idf's requirements
 brew install cmake ninja dfu-util
 
@@ -26,7 +27,11 @@ source ./export.sh
 
 pip3 install Cython littlefs-python # needed to flash the filesystem
 cd ../ports/esp32s3
-# Connect your esp32s3 board over USB (to the UART connector on the dev board, not the USB connector)
+```
+
+Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. If using our Tulip board, use the USB-C connector. 
+
+```bash
 idf.py -D MICROPY_BOARD=TULIP4 flash
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
 # to the flash memory. Run this only once, or each time you modify `tulip_home` if you're developing Tulip itself.
@@ -37,7 +42,7 @@ Tulip should now just turn on whenever you connect USB or power it on.
 
 To build / debug going forward:
 
-```
+```bash
 cd ports/esp32s3
 export ../../esp-idf/export.sh # do this once per terminal window
 idf.py -D MICROPY_BOARD=TULIP4 flash
