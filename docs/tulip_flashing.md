@@ -1,6 +1,6 @@
 # Compiling and flashing Tulip CC
 
-[Tulip CC](README.md) should build on all platforms, although I've only tested macOS so far. Please let me know if you have any trouble!
+[Tulip CC](../README.md) should build on all platforms, although I've only tested macOS so far. Please let me know if you have any trouble!
 
 ## macOS build and flash
 
