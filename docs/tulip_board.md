@@ -43,7 +43,7 @@ The board has a header row for power and I2C. Its pins are (from top to bottom, 
 
 The board can be powered over USB-C or via an external battery power source. There's a jumper along the bottom two rows of the header. If you have it across the bottom pair of pins, Tulip will expect 5V to come from the 5V_IN pin. If the second from the bottom, the USB-C connector. 
 
-This lets you use an external charger / boost circuit like the ubiquitous 18650 [charging J5019 PCB](https://www.amazon.com/dp/B08GWTBD3T?th=1). Connect a [battery pack](https://www.amazon.com/dp/B07FRYPYTK?th=1) to the J5019, and then connect 5V out of the J5019 to 5V_IN of Tulip. Connect 5V_USB of Tulip to power in of the J5019. And connect GND to GND. Make sure the jumper is on the bottom pair. This will let the USB-C connector of Tuliip charge the battery while it is plugged in (and still let you communicate with Tulip over USB.)
+This lets you use an external charger / boost circuit like the ubiquitous [J5019 PCB](https://www.amazon.com/dp/B08GWTBD3T?th=1). Connect a [battery pack](https://www.amazon.com/dp/B07FRYPYTK?th=1) to the J5019, and then connect 5V out of the J5019 to 5V_IN of Tulip. Connect 5V_USB of Tulip to power in of the J5019. And connect GND to GND. Make sure the jumper is on the bottom pair. This will let the USB-C connector of Tuliip charge the battery while it is plugged in (and still let you communicate with Tulip over USB.)
 
 Please be careful using unprotected batteries like this. Don't leave them unattended while you're setting them up. Tulip's board has no protection for inverted polarity or low (or high) voltage. 
 
