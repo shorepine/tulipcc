@@ -1,9 +1,9 @@
 # Tulip Breakout Board Edition
 
-![Tulip Breakout](https://github.com/bwhitman/tulipcc/raw/main/pics/breakout.jpg)
+![Tulip Breakout](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/breakout.jpg)
 
 
-If you'd like a permament version of [Tulip CC](README.md) and can do through hole soldering, you can buy buy [the breakout PCB I designed fron OSH Park](https://oshpark.com/shared_projects/L1xtM8pM). 
+If you'd like a permament version of [Tulip CC](../README.md) and can do through hole soldering, you can buy buy [the breakout PCB I designed fron OSH Park](https://oshpark.com/shared_projects/L1xtM8pM). 
 
 If you'd rather make something more all-in-one, you can make [a fully integrated surface mount board](tulip_board.md) instead, or if you'd rather try something temporary or don't want to solder, [build a Tulip on a breadboard.](tulip_breadboard.md)
 

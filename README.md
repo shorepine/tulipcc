@@ -1,6 +1,6 @@
 # Tulip Creative Computer
 
-![Tulip](https://github.com/bwhitman/tulipcc/raw/main/pics/flat_tiles.jpg)
+![Tulip](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/flat_tiles.jpg)
 
 Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
 
@@ -10,9 +10,9 @@ Tulip is not a shell on top of another operating system. The entire system is de
 
 You can use Tulip to make music, code, art, games, or just write. It cannot run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
 
-Tulip is available both as a [hardware DIY project (Tulip CC)](https://github.com/bwhitman/tulipcc#tulip-hardware-howtos) and a [desktop app (Tulip Desktop.)](tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](tulip_desktop.md)
+Tulip is available both as a [hardware DIY project (Tulip CC)](https://github.com/bwhitman/tulipcc#tulip-hardware-howtos) and a [desktop app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](docs/tulip_desktop.md)
 
-[![Tulip Desktop](https://github.com/bwhitman/tulipcc/raw/main/pics/desktop.png)](tulip_desktop.md)
+[![Tulip Desktop](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
 You can [build your own Tulip CC](https://github.com/bwhitman/tulipcc#tulip-hardware-howtos) for about $25 plus the cost of a display ($50) and USB keyboard. The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. Tulip's sound system is a full featured 32-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
 
@@ -35,7 +35,7 @@ Tulip CC rev 4 supports:
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
-![Tulip](https://github.com/bwhitman/tulipcc/raw/main/pics/tulip4.png)
+![Tulip](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/tulip4.png)
 
 
 ## Usage and the Tulip API 
@@ -83,7 +83,7 @@ Tulip ships with a text editor, based on pico/nano. It supports syntax highlight
 edit("game.py")
 ```
 
-![Editor](https://github.com/bwhitman/tulipcc/raw/main/pics/editor.png)
+![Editor](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/editor.png)
 
 
 ### Input and user interface
@@ -118,7 +118,7 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 ```
 
-![UI demo](https://github.com/bwhitman/tulipcc/raw/main/pics/sliders.png)
+![UI demo](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/sliders.png)
 
 
 ### Network
@@ -361,7 +361,7 @@ print(tulip.Colors.DEFAULT)
 print(tulip.ansi_fg(56))
 ```
 
-![TFB](https://github.com/bwhitman/tulipcc/raw/main/pics/tfb.png)
+![TFB](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/tfb.png)
 
 
 ### Sprites
@@ -406,20 +406,20 @@ https://user-images.githubusercontent.com/76612/215896311-fc0823aa-44bc-4305-85d
 
 ## Tulip hardware HOWTOs
 
-![Custom Tulip laptop](https://github.com/bwhitman/tulipcc/raw/main/pics/hinge.jpg)
+![Custom Tulip laptop](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/hinge.jpg)
 
 There are four ways to start building and using your own Tulip Creative Computer. 
 
- * [No hardware for me, I want to just run Tulip Desktop on my desktop computer for now](tulip_desktop.md). Use this option if you're just curious about Tulip and want to try it out. If you get into it, you can then upgrade to real hardware!
- * [I just want to build a temporary Tulip with hookup wires and a breadboard](tulip_breadboard.md). Do this if you aren't great at soldering or just want to quickly throw a Tulip together. It won't be very stable and will be hard to move or use portably, as there's many wires. But it'll work!
- * [I can solder through-hole just fine and want to build a more reliable Tulip with your breakout board PCB.](tulip_breakout.md) Do this if you are competent at thru-hole soldering and want to make a reliable Tulip by soldering together other breakout boards. You can buy a cheap PCB that bridges together all the things you need. It's more bulky than our integrated Tulip board, but works just the same. 
- * [I want to build a single board Tulip and know how to solder SMT or use a service that assembles one for me.](tulip_board.md) This is the deluxe option: a fully integrated Tulip board with connectors for a display, audio, MIDI and keyboard. Like a Raspberry Pi but it's Tulip. But you'll need either good soldering skills (many small SMT parts and the FPC connector) or use a service like JLC or Aisler to assemble the board for you. 
+ * [No hardware for me, I want to just run Tulip Desktop on my desktop computer for now](docs/tulip_desktop.md). Use this option if you're just curious about Tulip and want to try it out. If you get into it, you can then upgrade to real hardware!
+ * [I just want to build a temporary Tulip with hookup wires and a breadboard](docs/tulip_breadboard.md). Do this if you aren't great at soldering or just want to quickly throw a Tulip together. It won't be very stable and will be hard to move or use portably, as there's many wires. But it'll work!
+ * [I can solder through-hole just fine and want to build a more reliable Tulip with your breakout board PCB.](docs/tulip_breakout.md) Do this if you are competent at thru-hole soldering and want to make a reliable Tulip by soldering together other breakout boards. You can buy a cheap PCB that bridges together all the things you need. It's more bulky than our integrated Tulip board, but works just the same. 
+ * [I want to build a single board Tulip and know how to solder SMT or use a service that assembles one for me.](docs/tulip_board.md) This is the deluxe option: a fully integrated Tulip board with connectors for a display, audio, MIDI and keyboard. Like a Raspberry Pi but it's Tulip. But you'll need either good soldering skills (many small SMT parts and the FPC connector) or use a service like JLC or Aisler to assemble the board for you. 
 
 
 ## How to compile and help develop Tulip
 
- * [How to compile and flash Tulip hardware](tulip_flashing.md)
- * [How to run or compile Tulip Desktop](tulip_desktop.md)
+ * [How to compile and flash Tulip hardware](docs/tulip_flashing.md)
+ * [How to run or compile Tulip Desktop](docs/tulip_desktop.md)
 
 Some development guidelines if you'd like to help contribute!
 
