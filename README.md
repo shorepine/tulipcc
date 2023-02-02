@@ -1,6 +1,7 @@
 # Tulip Creative Computer
 
-![Tulip](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/flat_tiles.jpg)
+
+![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/flat_tiles.jpg)
 
 Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
 
@@ -35,7 +36,7 @@ Tulip CC rev 4 supports:
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
-![Tulip](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/tulip4.png)
+![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/tulip4.png)
 
 
 ## Usage and the Tulip API 
@@ -83,7 +84,7 @@ Tulip ships with a text editor, based on pico/nano. It supports syntax highlight
 edit("game.py")
 ```
 
-![Editor](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/editor.png)
+![Editor](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/editor.png)
 
 
 ### Input and user interface
@@ -118,7 +119,7 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 ```
 
-![UI demo](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/sliders.png)
+![UI demo](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/sliders.png)
 
 
 ### Network
@@ -363,7 +364,7 @@ print(tulip.Colors.DEFAULT)
 print(tulip.ansi_fg(56))
 ```
 
-![TFB](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/tfb.png)
+![TFB](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/tfb.png)
 
 
 ### Sprites
@@ -408,7 +409,7 @@ https://user-images.githubusercontent.com/76612/215896311-fc0823aa-44bc-4305-85d
 
 ## Tulip hardware HOWTOs
 
-![Custom Tulip laptop](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/hinge.jpg)
+![Custom Tulip laptop](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/hinge.jpg)
 
 There are four ways to start building and using your own Tulip Creative Computer. 
 

@@ -1,6 +1,6 @@
 # Tulip Breadboard edition
 
-![Tulip Breadboard](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/breadboard_display.jpg)
+![Tulip Breadboard](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/breadboard_display.jpg)
 
 [Tulip CC](../README.md) can be easily built with no soldering by connecting an ESP32S3 breakout board to a display and audio board. With a breadboard and a lot of jumper wires, you can put together Tulip in less than an hour.
 
@@ -68,7 +68,7 @@ Also, you may want to ground all remaining display pins if you're seeing flicker
 
 After you're done assembling, [read about how to compile and flash Tulip](tulip_flashing.md).
 
-![Tulip Breadboard](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/breadboard_close.jpg)
+![Tulip Breadboard](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/breadboard_close.jpg)
 
 
 
