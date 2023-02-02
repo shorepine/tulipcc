@@ -1,6 +1,6 @@
 # The Tulip Creative Computer Board
 
-![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/board.jpg)
+![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/board.jpg)
 
 We've designed our own integrated [Tulip CC](../README.md) board. It's the nicest way to experience Tulip: a small 66x56mm PCB with a display FPC connector, USB-C connector for charging, power and flashing, USB keyboard connector, 3 3.5mm jacks for audio out, MIDI in, and MIDI out, a power switch, and headers for external power and I2C access. 
 
@@ -8,7 +8,7 @@ If you're comfortable with surface mount soldering, you can put together your ow
 
 If this looks too hard, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [with no soldering and a breadboard](tulip_breadboard.md).
 
-![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/board_unpop.png)
+![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/board_unpop.png)
 
 [The BOM for the latest revision is here](https://github.com/bwhitman/tulipcc/raw/main/docs/pcbs/tulip4_board_v4r6/tulip%20board.xlsx). Please note I haven't yet optimized this BOM for price. But everything is at least in stock, mostly at Digikey. 
 
@@ -26,7 +26,7 @@ The silkscreen currently omits a polarity for the only diode (D2). The white lin
 
 The RESET chip is not on the silkscreen. It's the small 6 pin chip on the top to the right of the ESP. It should be oriented so that you can read M A, and there will be two small dots on the bottom left corner. 
 
-![Schematic](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pcbs/tulip4_board_v4r6/schematic.png)
+![Schematic](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pcbs/tulip4_board_v4r6/schematic.png)
 
 ## Power and header
 
@@ -47,7 +47,7 @@ This lets you use an external charger / boost circuit like the ubiquitous [J5019
 
 Please be careful using unprotected batteries like this. Don't leave them unattended while you're setting them up. Tulip's board has no protection for inverted polarity or low (or high) voltage. 
 
-![Battery setup](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/battery.jpg)
+![Battery setup](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/battery.jpg)
 
 ## MIDI
 

@@ -1,7 +1,7 @@
 # Tulip Creative Computer
 
 
-![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/flat_tiles.jpg)
+![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/flat_tiles.jpg)
 
 Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
 
@@ -13,7 +13,7 @@ You can use Tulip to make music, code, art, games, or just write. It's a great e
 
 Tulip is available both as a [hardware DIY project (Tulip CC)](https://github.com/bwhitman/tulipcc#tulip-hardware-howtos) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](docs/tulip_desktop.md)
 
-[![Tulip Desktop](https://github.com/bwhitman/tulipcc/raw/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
+[![Tulip Desktop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
 You can [build your own Tulip CC](https://github.com/bwhitman/tulipcc#tulip-hardware-howtos) for about $25 plus the cost of a display ($50) and USB keyboard. The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. Tulip's sound system is a full featured 32-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
 
@@ -36,7 +36,7 @@ Tulip CC rev 4 supports:
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
-![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/tulip4.png)
+![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4.png)
 
 
 ## Usage and the Tulip API 
@@ -84,7 +84,7 @@ Tulip ships with a text editor, based on pico/nano. It supports syntax highlight
 edit("game.py")
 ```
 
-![Editor](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/editor.png)
+![Editor](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/editor.png)
 
 
 ### Input and user interface
@@ -119,7 +119,7 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 ```
 
-![UI demo](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/sliders.png)
+![UI demo](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/sliders.png)
 
 
 ### Network
@@ -364,7 +364,7 @@ print(tulip.Colors.DEFAULT)
 print(tulip.ansi_fg(56))
 ```
 
-![TFB](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/tfb.png)
+![TFB](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tfb.png)
 
 
 ### Sprites
@@ -409,7 +409,7 @@ https://user-images.githubusercontent.com/76612/215896311-fc0823aa-44bc-4305-85d
 
 ## Tulip hardware HOWTOs
 
-![Custom Tulip laptop](https://raw.githubusercontent.com/bwhitman/tulipcc/raw/main/docs/pics/hinge.jpg)
+![Custom Tulip laptop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/hinge.jpg)
 
 There are four ways to start building and using your own Tulip Creative Computer. 
 
