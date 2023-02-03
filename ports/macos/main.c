@@ -191,6 +191,7 @@ display_jump:
 
 
 void * main_(void *vargs) {
+soft_reset:
     #if MICROPY_PY_THREAD
     mp_thread_init();
     #endif
@@ -201,7 +202,6 @@ void * main_(void *vargs) {
     signal(SIGPIPE, SIG_IGN);
     #endif
 
-
     // Define a reasonable stack limit to detect stack overflow.
     mp_uint_t stack_limit = 40000 * (sizeof(void *) / 4);
     #if defined(__arm__) && !defined(__thumb2__)
@@ -211,7 +211,6 @@ void * main_(void *vargs) {
     mp_stack_set_limit(stack_limit);
 
     //pre_process_options(argc, argv);
-
 
     #if MICROPY_ENABLE_GC
     char *heap = malloc(heap_size);
@@ -348,6 +347,7 @@ soft_reset_exit:
     // process, but doing so helps to find memory leaks.
     free(heap);
     #endif
+    goto soft_reset;
 
     // printf("total bytes = %d\n", m_get_total_bytes_allocated());
     return 0; // ret & 0xff;

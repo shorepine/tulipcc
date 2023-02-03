@@ -95,6 +95,8 @@ void send_key_to_micropython(uint16_t c) {
     } else if (c==mp_interrupt_char) {
         // Send a ctrl-C to Micropython if sent 
         mp_sched_keyboard_interrupt();
+    } else if (c==4) { // control-D
+        tx_char(c);
     } else {
         tx_char(c);
     }

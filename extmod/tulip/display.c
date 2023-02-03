@@ -464,7 +464,7 @@ uint8_t ansi_parse_digits(char*str, uint16_t j, uint16_t k, uint16_t * digits) {
 uint8_t supress_lf = 0;
 void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color) {
     //fprintf(stderr,"str len %d format %d is ### ", len, format);
-    //for(uint16_t i=0;i<len;i++) fprintf(stderr, "%c", str[i]);
+    //for(uint16_t i=0;i<len;i++) fprintf(stderr, "[%c] [%d] ", str[i], str[i]);
     //fprintf(stderr, "###\n");
     // For each character incoming from micropython
     for(uint16_t i=0;i<len;i++) {
