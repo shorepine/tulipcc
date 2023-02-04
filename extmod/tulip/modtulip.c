@@ -250,17 +250,23 @@ STATIC mp_obj_t tulip_tfb_str(size_t n_args, const mp_obj_t *args) {
         }
         if(n_args > 3) {
             if(mp_obj_get_int(args[3])>=0) {
-                TFBf[y*TFB_COLS+x] = mp_obj_get_int(args[3]);
+                for(uint16_t i=0;i<strlen(str);i++) {
+                    TFBf[y*TFB_COLS+x+i] = mp_obj_get_int(args[3]);
+                }
             }
         }
         if(n_args > 4 ) {
             if(mp_obj_get_int(args[4])>=0) {
-                TFBfg[y*TFB_COLS+x] = mp_obj_get_int(args[4]);
+                for(uint16_t i=0;i<strlen(str);i++) {
+                    TFBfg[y*TFB_COLS+x+i] = mp_obj_get_int(args[4]);
+                }
             }
         }
         if(n_args > 5 ) {
             if(mp_obj_get_int(args[5])>=0) {
-                TFBbg[y*TFB_COLS+x] = mp_obj_get_int(args[5]);
+                for(uint16_t i=0;i<strlen(str);i++) {
+                    TFBbg[y*TFB_COLS+x+i] = mp_obj_get_int(args[5]);
+                }
             }
         }
         return mp_const_none; 

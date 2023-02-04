@@ -52,19 +52,18 @@ def sync():
     end = data.json()['messages']['end']
     for e in data.json()['messages']['chunk']:
         if(e['type']=='m.room.message'):
-            m.append({"body":e['content']['body'], "ts":e['origin_server_ts']})
+            m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})
     return (m, end)
 
 # given a end from a sync or the last check, see if there's new messages. 
 def check(end):
     m = []
-    # 6.3.6   GET /_matrix/client/r0/rooms/{roomId}/messages
     url = "https://%s/_matrix/client/r0/rooms/%s/messages?from=%s&dir=f&limit=128" % (host, room_id, end)
     data = matrix_get(url)
     end = data.json()['end']
     for e in data.json()['chunk']:
         if(e['type']=='m.room.message'):
-            m.append({"body":e['content']['body'], "ts":e['origin_server_ts']})    
+            m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})    
     return (m,end)
 
 def register_callback(cb):
@@ -74,6 +73,34 @@ def message_received(message):
     if callback is not None:
         callback(message)
 
+def nice_time(age_s):
+    if(age_s < 60):
+        return "%d seconds ago" % (age_s)
+    if(age_s < 60*60):
+        return "%d minutes ago" % (age_s / 60)
+    if(age_s < 60*60*24):
+        return "%d hours ago" % (age_s / 60 / 60)
+    return "%d days ago" % (age_s / 60 / 60 / 24)
+
+def world_ui():
+    import tulip, time
+    if(tulip.ip() is None):
+        print("need wifi.")
+        return
+    tulip.gpu_reset()
+    print(tulip.Colors.INVERSE + "Welcome to T U L I P ~ W O R L D")
+    print("please enter your name: ")
+    print(tulip.Colors.DEFAULT)
+    name = input()
+    print("OK, hey " + name + ", i'll load it up")
+    (m,e) = sync()
+    for i in m:
+        print(nice_time(i["age_s"]) + " - " + i["body"])
+    while(True):
+        time.sleep(5)
+        (m, e) = check(e)
+        for i in m:
+            print(nice_time(i["age_s"]) + " - " + i["body"])
 
 
 

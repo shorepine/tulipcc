@@ -353,7 +353,7 @@ editor and Python REPL.
 # Format has ANSI codes for reverse (0x80), underline (0x40), flash (0x20), bold (0x10)
 # fg color is palette index, 0-255, same for bg color
 # Note that the REPL and editor use the TFB
-tulip.tfb_char(x,y, "string", [format], [fg], [bg])
+tulip.tfb_str(x,y, "string", [format], [fg], [bg])
 (char, format, fg, bg) = tulip.tfb_str(x,y)
 
 # ANSI color and formatting codes have convenience functions
