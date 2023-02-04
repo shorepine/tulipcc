@@ -47,12 +47,10 @@ def send(message):
 
 def sync():
     m = []
-    # TODO, should i use sync instead? unclear if this is from start of time or just the last 128 events 
-    # or 6.3.1   GET /_matrix/client/r0/rooms/{roomId}/initialSync ? 
-    url = "https://%s/_matrix/client/r0/initialSync?limit=128" % (host)
+    url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=128" % (host,room_id)
     data = matrix_get(url)
-    end = data.json()['end']
-    for e in data.json()['rooms'][0]['messages']['chunk']:
+    end = data.json()['messages']['end']
+    for e in data.json()['messages']['chunk']:
         if(e['type']=='m.room.message'):
             m.append({"body":e['content']['body'], "ts":e['origin_server_ts']})
     return (m, end)
