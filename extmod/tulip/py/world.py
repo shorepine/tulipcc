@@ -108,7 +108,7 @@ def frame_callback(data):
             data["read"] = False
 
 # sets up the UI for world
-def world_ui():
+def world():
     if(tulip.ip() is None):
         print("need wifi.")
         return
