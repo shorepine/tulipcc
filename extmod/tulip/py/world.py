@@ -1,5 +1,6 @@
-# world.py
 # T U L I P ~ W O R L D
+# a Tulip only chat room and file transfer service
+
 import os
 import ubinascii as ub
 import urequests
@@ -88,18 +89,22 @@ def nice_time(age_s):
     c = c + " ago"
     return "% 8s" % c
 
+def put_message(m):
+    print("~~~~ " + nice_time(m["age_s"]) + ": " + m["body"])
+
 # gets called every screen frame 
 def frame_callback(data):
-    # Check if we've waited long enough to read again 
-    # TODO: see if we're already in a read, i can imagine that getting bad
     data["count"] += 1
-    if(data["read"] is False):
-        if(data["count"] > (data["fps"] * data["update_s"])):
-            data["count"] = 0
+    # Check if we've waited long enough to read again 
+    if(data["count"] > (data["fps"] * data["update_s"])):
+        data["count"] = 0 # reset the counter even if we're still reading, will just wait another 10s
+        # Check that we're not still reading 
+        if(data["read"] is False):
             data["read"] = True # semaphore! ! lol 
             (m,data["end"]) = check(data["end"])
             for i in m:
-                print("~~~~ " + nice_time(i["age_s"]) + ": " + i["body"])
+                # do something with the message
+                put_message(i)
             data["read"] = False
 
 # sets up the UI for world
@@ -133,6 +138,6 @@ def world_ui():
 def quit():
     tulip.frame_callback()
     tulip.gpu_reset()
-    
+
 
 
