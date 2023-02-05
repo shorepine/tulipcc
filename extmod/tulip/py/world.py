@@ -4,12 +4,14 @@ import os
 import ubinascii as ub
 import urequests
 import json
+import tulip
 
+# TODO: i should verify Tulip-ness some other way . I can revoke this token easily enough but why not do it per user?
 world_token = "syt_dHVsaXA_lPADiXCwKdCJvreALSul_0ody9J"
-room_id = "!rGPkdYQOECXDlTVoGe:duraflame.rosaline.org"
 host = "duraflame.rosaline.org"
-callback = None
+room_id = "!rGPkdYQOECXDlTVoGe:%s" % (host)
 
+# micropython version of uuid from micropython-lib
 class UUID:
     def __init__(self, bytes):
         if len(bytes) != 16:
@@ -34,20 +36,25 @@ def uuid4():
     random[8] = (random[8] & 0x3F) | 0x80
     return UUID(bytes=random)
 
+
+# PUT call to matrix CS api using auth
 def matrix_put(url, data):
     return urequests.put(url, data=bytes(json.dumps(data).encode('utf-8')), headers={"Authorization":"Bearer %s" %(world_token)})
 
+# GET call to matrix CS api using auth
 def matrix_get(url):
     return urequests.get(url, headers={"Authorization":"Bearer %s" %(world_token)})
 
+# Send a m.room.message to the tulip room
 def send(message):
     data={"msgtype":"m.text","body":message}
     url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, room_id, "m.room.message", str(uuid4()))
     matrix_put(url, data)
 
-def sync():
+# Do the initial sync of the room 
+def sync(limit=100):
     m = []
-    url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=128" % (host,room_id)
+    url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,room_id,limit)
     data = matrix_get(url)
     end = data.json()['messages']['end']
     for e in data.json()['messages']['chunk']:
@@ -56,9 +63,9 @@ def sync():
     return (m, end)
 
 # given a end from a sync or the last check, see if there's new messages. 
-def check(end):
+def check(end,limit=100):
     m = []
-    url = "https://%s/_matrix/client/r0/rooms/%s/messages?from=%s&dir=f&limit=128" % (host, room_id, end)
+    url = "https://%s/_matrix/client/r0/rooms/%s/messages?from=%s&dir=f&limit=%d" % (host, room_id, end, limit)
     data = matrix_get(url)
     end = data.json()['end']
     for e in data.json()['chunk']:
@@ -66,24 +73,37 @@ def check(end):
             m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})    
     return (m,end)
 
-def register_callback(cb):
-    callback = cb
-
-def message_received(message):
-    if callback is not None:
-        callback(message)
-
+# covert age from matrix to something readable
 def nice_time(age_s):
     if(age_s < 60):
-        return "%d seconds ago" % (age_s)
-    if(age_s < 60*60):
-        return "%d minutes ago" % (age_s / 60)
-    if(age_s < 60*60*24):
-        return "%d hours ago" % (age_s / 60 / 60)
-    return "%d days ago" % (age_s / 60 / 60 / 24)
+        c = "%ds" % (age_s)
+    elif(age_s < 60*60):
+        c = "%dm" % (age_s/60)
+    elif(age_s < 60*60*24):
+        c = "%dh" % (age_s/60/60)
+    elif(age_s < 60*60*24*100):
+        c = "%dd" % (age_s/60/60/24)
+    else: 
+        c= "~"
+    c = c + " ago"
+    return "% 8s" % c
 
+# gets called every screen frame 
+def frame_callback(data):
+    # Check if we've waited long enough to read again 
+    # TODO: see if we're already in a read, i can imagine that getting bad
+    data["count"] += 1
+    if(data["read"] is False):
+        if(data["count"] > (data["fps"] * data["update_s"])):
+            data["count"] = 0
+            data["read"] = True # semaphore! ! lol 
+            (m,data["end"]) = check(data["end"])
+            for i in m:
+                print("~~~~ " + nice_time(i["age_s"]) + ": " + i["body"])
+            data["read"] = False
+
+# sets up the UI for world
 def world_ui():
-    import tulip, time
     if(tulip.ip() is None):
         print("need wifi.")
         return
@@ -93,14 +113,26 @@ def world_ui():
     print(tulip.Colors.DEFAULT)
     name = input()
     print("OK, hey " + name + ", i'll load it up")
+
+    # Get the initial set of n last messages
     (m,e) = sync()
     for i in m:
         print(nice_time(i["age_s"]) + " - " + i["body"])
-    while(True):
-        time.sleep(5)
-        (m, e) = check(e)
-        for i in m:
-            print(nice_time(i["age_s"]) + " - " + i["body"])
 
+    # And set up a timer callback (on the GPU) to read more every so often
+    data = {}
+    data["count"] = 0
+    data["fps"] = tulip.fps()
+    data["update_s"] = 10 # 10sec
+    data["end"] = e
+    data["read"] = False
+    tulip.frame_callback(frame_callback, data)
+    # And return ... immediately to the REPL? No, probably should show a UI with a text entry field, etc
+
+# stops the frame callback, returns to repl
+def quit():
+    tulip.frame_callback()
+    tulip.gpu_reset()
+    
 
 
