@@ -27,7 +27,7 @@ void unix_set_fps_from_parameters() {
         for(uint8_t v_res_i = 0;v_res_i < 2;v_res_i++) {
             for(uint8_t clock_i = 0;clock_i < 5;clock_i++) {
                 if(H_RES==h_reses[h_res_i] && V_RES==v_reses[v_res_i] && PIXEL_CLOCK_MHZ==clocks[clock_i]) {
-                    fprintf(stderr, "Returning %2.2f FPS for res %d %d clock %d\n", fps_map[fps_i], H_RES, V_RES, PIXEL_CLOCK_MHZ);
+                    //fprintf(stderr, "Returning %2.2f FPS for res %d %d clock %d\n", fps_map[fps_i], H_RES, V_RES, PIXEL_CLOCK_MHZ);
                     reported_fps = fps_map[fps_i];
                     // get out of search 
                     clock_i = 10; v_res_i = 10; h_res_i = 10; 
