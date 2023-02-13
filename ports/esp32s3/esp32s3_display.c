@@ -185,8 +185,9 @@ void run_esp32s3_display(void) {
             reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);
             reported_gpu_usage = ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))))*100.0;
             if(desync) {
-                printf("Desync warning: past %d frames: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). bounce_count %d\n", 
+                printf("Desync warning: past %d frames desync %d: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). bounce_count %d\n", 
                     loop_count,
+                    desync,
                     reported_fps, 
                     free_time / loop_count,
                     bounce_time / bounce_count,
