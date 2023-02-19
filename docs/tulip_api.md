@@ -37,6 +37,8 @@ imgur_url = tulip.screenshot()
 # Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
 # Note that Python code is bound to one core, so Python-only usage tops out at 50%.
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
+
+ms = tulip.ticks_ms() # returns the milliseconds since boot, aka Arduino millis() 
 ```
 
 ## The Tulip Editor
@@ -68,6 +70,8 @@ def ui_callback(x):
 tulip.ui_callback(ui_callback)
 tulip.button(ui_element_id, "Button text", x, y, w, h, radius, bg_pal_idx, fg_pal_idx, filled)
 tulip.slider(ui_element_id, x, y, w, h, orientation, default_value, bg_pal_idx, handle_pal_idx)
+
+tulip.ui_del(ui_element_id) # deletes a UI compoent 
 
 # Returns the current held keyboard scan codes, up to 6 and the modifier mask (ctrl, shift etc)
 (modifiers, scan0, scan1... scan5) = tulip.keys()
