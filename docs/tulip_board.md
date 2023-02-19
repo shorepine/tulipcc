@@ -6,25 +6,24 @@ We've designed our own integrated [Tulip CC](../README.md) board. It's the nices
 
 If you're comfortable with surface mount soldering, you can put together your own board relatively easily. You can order the PCBs from [OSH Park here.](https://oshpark.com/shared_projects/Xv9QDKgz) (OSH Park charges only to manufacture the boards, I do not receive anything.)
 
+[The BOM for the latest revision is here.](https://github.com/bwhitman/tulipcc/blob/main/docs/pcbs/tulip4_board_v4r6/tulip_board_bom.csv). Please note I haven't yet optimized this BOM for price. But everything is at least in stock, mostly at Digikey. [Make sure to use my public Digikey list to order the parts from Digikey quickly.](https://www.digikey.com/en/mylists/list/90SZQTXF6W). [EAGLE board and schematic files are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_board_v4r6) 
+
 If this looks too hard, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [with no soldering and a breadboard.](tulip_breadboard.md)
 
 ![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/board_unpop.png)
 
-[The BOM for the latest revision is here.](https://github.com/bwhitman/tulipcc/raw/main/docs/pcbs/tulip4_board_v4r6/tulip%20board.xlsx) Please note I haven't yet optimized this BOM for price. But everything is at least in stock, mostly at Digikey. 
-
-[EAGLE files are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_board_v4r6) 
 
 ## Assembly tips
 
 I've found assembling a Tulip with a hot plate and stencil the easiest way to go. You can get stencils from OSH Park when you're ordering the boards. 
 
-I wait to attach the FPC connector until after I've done a round on the hot plate. I do it manually with a hot gun and flux. 
+I wait to attach the FPC connector until after I've done a round on the hot plate. I do it manually with a fine tip iron and flux. You need to apply pressure to the FPC pins as you solder them down. 
 
 The only through hole component, the legs of the USB-C connector, need to be hand soldered from the bottom after the hot plate. 
 
 The silkscreen currently omits a polarity for the only diode (D2). The white line on the diode is meant to be pointing down. 
 
-The RESET chip is not on the silkscreen. It's the small 6 pin chip on the top to the right of the ESP. It should be oriented so that you can read M A, and there will be two small dots on the bottom left corner. 
+The RESET transistor chip is not labeled on the silkscreen. It's the small 6 pin chip on the top to the right of the ESP. It should be oriented so that you can read M A, and there will be two small dots on the bottom left corner. 
 
 ![Schematic](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pcbs/tulip4_board_v4r6/schematic.png)
 
@@ -43,9 +42,9 @@ The board has a header row for power and I2C. Its pins are (from top to bottom, 
 
 The board can be powered over USB-C or via an external battery power source. There's a jumper along the bottom two rows of the header. If you have it across the bottom pair of pins, Tulip will expect 5V to come from the 5V_IN pin. If the second from the bottom, the USB-C connector. 
 
-This lets you use an external charger / boost circuit like the ubiquitous [J5019 PCB.](https://www.amazon.com/dp/B08GWTBD3T?th=1) Connect a [battery pack](https://www.amazon.com/dp/B07FRYPYTK?th=1) to the J5019, and then connect 5V out of the J5019 to 5V_IN of Tulip. Connect 5V_USB of Tulip to power in of the J5019. And connect GND to GND. Make sure the jumper is on the bottom pair. This will let the USB-C connector of Tuliip charge the battery while it is plugged in (and still let you communicate with Tulip over USB.)
+This lets you use an external charger / boost circuit like the ubiquitous [J5019 PCB.](https://www.amazon.com/dp/B08GWTBD3T?th=1) Connect a [battery pack](https://www.amazon.com/dp/B07FRYPYTK?th=1) (these are two cells wired in parallel) to the J5019, and then connect 5V out of the J5019 to 5V_IN of Tulip. Connect 5V_USB of Tulip to power in of the J5019. And connect GND to GND. Make sure the jumper is on the bottom pair. This will let the USB-C connector of Tuliip charge the battery while it is plugged in (and still let you communicate with Tulip over USB.)
 
-Please be careful using unprotected batteries like this. Don't leave them unattended while you're setting them up. Tulip's board has no protection for inverted polarity or low (or high) voltage. 
+Please be careful using unprotected batteries like this. Don't leave them unattended while you're setting them up. Tulip's board has no protection for inverted polarity or out of spec voltages.
 
 ![Battery setup](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/battery.jpg)
 
