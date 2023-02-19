@@ -69,6 +69,7 @@ def request(method, url, data=None, json=None, headers={}, stream=None):
 
     ai = usocket.getaddrinfo(host, port, 0, usocket.SOCK_STREAM)
     ai = ai[0]
+    r_count = 0
 
     s = usocket.socket(ai[0], ai[1], ai[2])
     try:
@@ -107,7 +108,6 @@ def request(method, url, data=None, json=None, headers={}, stream=None):
             l = s.readline()
             if not l or l == b"\r\n":
                 break
-            #print(l)
             if l.startswith(b"Transfer-Encoding:"):
                 if b"chunked" in l:
                     raise ValueError("Unsupported " + l)
@@ -116,7 +116,6 @@ def request(method, url, data=None, json=None, headers={}, stream=None):
     except OSError:
         s.close()
         raise
-
     resp = Response(s)
     resp.status_code = status
     resp.reason = reason

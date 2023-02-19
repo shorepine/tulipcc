@@ -3,6 +3,7 @@
 
 # Bring in all c-defined tulip functions
 from _tulip import * 
+from world import world
 
 class Colors:
     """ ANSI color codes """

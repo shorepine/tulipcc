@@ -6,6 +6,7 @@ import ubinascii as ub
 import urequests
 import json
 import tulip
+import time 
 
 # TODO: i should verify Tulip-ness some other way . I can revoke this token easily enough but why not do it per user?
 world_token = "syt_dHVsaXA_lPADiXCwKdCJvreALSul_0ody9J"
@@ -90,7 +91,12 @@ def nice_time(age_s):
     return "% 8s" % c
 
 def put_message(m):
-    print("~~~~ " + nice_time(m["age_s"]) + ": " + m["body"])
+    row = "     " + nice_time(m["age_s"]) + ": " + m["body"]
+    print(row[:100])
+    if(len(row) > 100):
+        # word wrap
+        for i in range(int(len(row)/100)- 1):
+            print("               " + row[(i+1)*100:(i+2)*100])
 
 # gets called every screen frame 
 def frame_callback(data):
@@ -102,27 +108,32 @@ def frame_callback(data):
         if(data["read"] is False):
             data["read"] = True # semaphore! ! lol 
             (m,data["end"]) = check(data["end"])
+            tulip.display_restart() # for Tulip CC
             for i in m:
                 # do something with the message
                 put_message(i)
             data["read"] = False
+
+def world_ui():
+    tulip.gpu_reset()
+    print(tulip.Colors.INVERSE + "Welcome to T U L I P ~ W O R L D")
+    print(tulip.Colors.DEFAULT)
+    tulip.roundrect(20,20,950,500,20,145)
+    tulip.roundrect(20,520,950,80,20,145)
 
 # sets up the UI for world
 def world():
     if(tulip.ip() is None):
         print("need wifi.")
         return
-    tulip.gpu_reset()
-    print(tulip.Colors.INVERSE + "Welcome to T U L I P ~ W O R L D")
-    print("please enter your name: ")
-    print(tulip.Colors.DEFAULT)
-    name = input()
-    print("OK, hey " + name + ", i'll load it up")
+
+    world_ui() # set up the world UI
 
     # Get the initial set of n last messages
     (m,e) = sync()
     for i in m:
-        print(nice_time(i["age_s"]) + " - " + i["body"])
+        put_message(i)
+
 
     # And set up a timer callback (on the GPU) to read more every so often
     data = {}
@@ -132,6 +143,7 @@ def world():
     data["end"] = e
     data["read"] = False
     tulip.frame_callback(frame_callback, data)
+
     # And return ... immediately to the REPL? No, probably should show a UI with a text entry field, etc
 
 # stops the frame callback, returns to repl

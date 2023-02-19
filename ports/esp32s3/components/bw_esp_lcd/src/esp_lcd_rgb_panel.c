@@ -738,6 +738,8 @@ err:
 extern int32_t desync;
 extern void display_start();
 extern void display_stop();
+
+// TODO: this is not always catching a desync 
 static void lcd_rgb_panel_restart_transmission(esp_rgb_panel_t *panel)
 {
     if (panel->bounce_buffer_size_bytes != 0) {

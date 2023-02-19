@@ -13,6 +13,8 @@ You can use Tulip to make music, code, art, games, or just write. It's a great e
 
 Tulip is available both as a [hardware DIY project (Tulip CC)](https://github.com/bwhitman/tulipcc#tulip-hardware-howtos) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](docs/tulip_desktop.md)
 
+**[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** Or read on for the API and build instructions.
+
 [![Tulip Desktop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
 You can [build your own Tulip CC](https://github.com/bwhitman/tulipcc#tulip-hardware-howtos) for about $25 plus the cost of a display ($50) and USB keyboard. The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. Tulip's sound system is a full featured 32-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
@@ -29,6 +31,7 @@ Tulip CC rev 4 supports:
 - 256 colors
 - Can load PNGs from disk to set sprites or background, or generate bitmap data from code
 - Built in code and text editor
+- Built in BBS chat room called **T U L I P ~ W O R L D**
 - USB keyboard support
 - Capactive multi-touch support (mouse on Tulip Desktop)
 - MIDI input and output 
@@ -405,6 +408,27 @@ tulip.sprite_clear()
 
 
 https://user-images.githubusercontent.com/76612/215896311-fc0823aa-44bc-4305-85db-a6773db11a98.mov
+
+
+### Tulip World
+
+Still very much early days, but Tulip supports a native chat room called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. We're hoping to build this out to eventually support file transfer and other BBS-style features. But for now, you're able to pull down the latest messages and send messages yourself. 
+
+```python
+# Starts the UI for Tulip World (needs wifi)
+tulip.world()
+```
+
+You can also call the underlying Tulip World APIs directly:
+
+```python
+import world
+(m, token) = world.sync() # returns a list of latest messages, and a token to check for new messages
+(m, token) = world.check(token) # checks for new messages since the last token
+world.send("hello!!") # Sends a message to Tulip World
+```
+
+Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
 
 
 ## Tulip hardware HOWTOs
