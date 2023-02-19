@@ -116,7 +116,7 @@ tulip.set_time()
 
 Tulip comes with the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) for more information.
 
-Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh](https://github.com/bwhitman/alles/blob/main/README.md). Connect any number of Alles speakers to the wifi to have instant surround sound! 
+Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/bwhitman/alles/blob/main/README.md) Connect any number of Alles speakers to the wifi to have instant surround sound! 
 
 See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information and for more music examples.
 
@@ -229,7 +229,7 @@ def game_loop(data):
 tulip.frame_callback(game_loop, game_data) # starts calling the callback every frame
 tulip.frame_callback() # disables the callback
 
-# Sets the screen brightness, from 1-9 (9 max brightness). 5 is default.
+# Sets the screen brightness, from 1-9 (9 max brightness.) 5 is default.
 tulip.brightness(5)
 
 ```
@@ -401,7 +401,7 @@ Status: live, but needs UI help.
 
 ## Tulip Music Editor
 
-A synth / patch editor for the AMY and Alles synth inside Tulip. [Like the YRM102](https://www.msx.org/wiki/Yamaha_YRM-102). 
+A synth / patch editor for the AMY and Alles synth inside Tulip. [Like the YRM102.](https://www.msx.org/wiki/Yamaha_YRM-102) 
 
 Status: building locally, will share first alpha when ready
 
