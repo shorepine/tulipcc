@@ -52,8 +52,6 @@ Tulip ships with a text editor, based on pico/nano. It supports syntax highlight
 edit("game.py")
 ```
 
-![Editor](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/editor.png)
-
 
 ## Input and user interface
 
@@ -86,8 +84,6 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 # Return the last touch panel coordinates, up to 3 fingers at once
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 ```
-
-![UI demo](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/sliders.png)
 
 
 ## Network
@@ -142,7 +138,6 @@ for i,note in enumerate(chord.midinotes()):
   alles.send(wave=alles.ALGO,osc=i*9,note=note,vel=0.25,patch=101,ratio=0.1)
 ```
 
-https://user-images.githubusercontent.com/76612/215893940-658144b7-0c6f-42e2-9836-bd271597aab3.mov
 
 
 ## MIDI
@@ -304,11 +299,6 @@ tulip.bg_scroll_y_offset(line, y_offset)
 ```
 
 
-
-https://user-images.githubusercontent.com/76612/215895305-7b02ad27-b02a-429a-92ef-f13136e9f9d2.mov
-
-
-
 ## Text frame buffer (TFB)
 
 The TFB is a 128x50 character plane for fast drawing of text glyphs. It supports 256 ANSI 
@@ -331,8 +321,6 @@ print(tulip.Colors.DEFAULT)
 # Tulip REPL supports ANSI 256 color modes as well
 print(tulip.ansi_fg(56))
 ```
-
-![TFB](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tfb.png)
 
 
 ## Sprites
@@ -370,8 +358,6 @@ tulip.sprite_move(12, x, y)
 tulip.sprite_clear()
 ```
 
-
-https://user-images.githubusercontent.com/76612/215896311-fc0823aa-44bc-4305-85db-a6773db11a98.mov
 
 
 # In progress or planned features
