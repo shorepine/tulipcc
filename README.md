@@ -66,10 +66,6 @@ Tulip ships with a text editor, based on pico/nano. It supports syntax highlight
 
 ```python
 # Opens the Tulip editor to the given filename. 
-# Control-X exits and prompts to save if any changes. 
-# Control-O is save as
-# Control-W searches
-# Filename will be created on save if it doesn't exist.
 edit("game.py")
 ```
 
@@ -109,7 +105,7 @@ bytes_read = tulip.url_save("https://url", "filename.ext")
 
 ### Music / sound
 
-Tulip comes with the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. More in the [full API](docs/tulip_api.md).
+Tulip comes with the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. We also provide a useful "music computer" for scales, chords and progressions. More in the [full API](docs/tulip_api.md).
 
 ```python
 alles.drums() # plays a test song
@@ -147,13 +143,12 @@ tulip.bg_scroll(line, x_offset, y_offset, x_speed, y_speed)
 https://user-images.githubusercontent.com/76612/215895305-7b02ad27-b02a-429a-92ef-f13136e9f9d2.mov
 
 
-Hardware sprites are supported, that draw over the background and text layer per scanline per frame:
+Hardware sprites are supported. They draw over the background and text layer per scanline per frame:
 
 ```python
 (w, h, bytes) = tulip.sprite_png("filename.png", mem_pos)
 
-# Turn on a sprite to draw on screen
-tulip.sprite_on(12)
+...
 
 # Set a sprite x and y position
 tulip.sprite_move(12, x, y)
@@ -166,16 +161,13 @@ https://user-images.githubusercontent.com/76612/215896311-fc0823aa-44bc-4305-85d
 
 Still very much early days, but Tulip supports a native chat room called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. We're hoping to build this out to eventually support file transfer and other BBS-style features. But for now, you're able to pull down the latest messages and send messages yourself. 
 
-### Full API docs
+```python
+tulip.world() # opens the Tulip World UI
+```
 
-[**See the full Tulip API**](docs/tulip_api.md)
+## How to build, compile and help develop Tulip
 
-## Tulip hardware HOWTOs
-
-[See our new page that describes how to build your own Tulip Creative Computer](docs/tulip_build.md) with FOUR different options.
-
-## How to compile and help develop Tulip
-
+ * [See our new page that describes how to build your own Tulip Creative Computer](docs/tulip_build.md) with FOUR different options.
  * [How to compile and flash Tulip hardware](docs/tulip_flashing.md)
  * [How to run or compile Tulip Desktop](docs/tulip_desktop.md)
  * [The full Tulip API](docs/tulip_api.md)
@@ -185,6 +177,10 @@ Some development guidelines if you'd like to help contribute!
  * Be nice and helpful and don't be afraid to ask questions! We're all doing this for fun and to learn. 
  * We're currently a hard fork of ESP-IDF, Alles/AMY and [Micropython](https://github.com/bwhitman/tulipcc/issues/7); we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. 
  * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change. 
+
+Have fun!
+
+![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4.png)
 
 
 
