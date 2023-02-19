@@ -11,13 +11,12 @@ Tulip is not a shell on top of another operating system. The entire system is de
 
 You can use Tulip to make music, code, art, games, or just write. It's a great environment for live coding performances. It doesn't run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
 
-[**See the full Tulip API**](docs/tulip_api.md)
+ * [**See the full Tulip API**](docs/tulip_api.md)
+ * [**Build your own Tulip**](docs/tulip_build.md)
+ * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
 
-[**Build your own Tulip**](docs/tulip_build.md)
 
 Tulip is available both as a [hardware DIY project (Tulip CC)](docs/tulip_build.md) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](docs/tulip_desktop.md)
-
-**[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
 
 [![Tulip Desktop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
