@@ -394,7 +394,7 @@ Status: building locally, will share first alpha when ready
 
 ## Scanline bresenham drawing on the sprite layer
 
-We plan to support line drawing on the sprite layer using sprite RAM (not modifiyng the BG layer) for wireframe animations.
+We plan to support line drawing on the sprite layer using sprite RAM (not modifyng the BG layer) for wireframe animations.
 
 Status: early research phase
 
