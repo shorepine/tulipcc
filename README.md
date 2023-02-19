@@ -13,6 +13,8 @@ You can use Tulip to make music, code, art, games, or just write. It's a great e
 
 [**See the full Tulip API**](docs/tulip_api.md)
 
+[**Build your own Tulip**](docs/tulip_build.md)
+
 Tulip is available both as a [hardware DIY project (Tulip CC)](docs/tulip_build.md) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](docs/tulip_desktop.md)
 
 **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
@@ -54,10 +56,6 @@ Below are a few getting started tips and small examples. The [full API](docs/tul
 
 
 ```python
-# Interact with the filesystem.
-# Supported: ls, head, cat, newfile, cp, mv, rm, pwd, cd, mkdir, rmdir
-ls
-
 # Run a saved Python file. Control-C stops it
 cd('ex') # The ex folder has a few examples and graphics in it
 execfile("parallax.py")
@@ -81,7 +79,7 @@ edit("game.py")
 
 ### Input and user interface
 
-Tulip supports USB keyboard input and touch input. (On Tulip Desktop, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications.
+Tulip supports USB keyboard input and touch input. (On Tulip Desktop, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications. More in the [full API](docs/tulip_api.md).
 
 ```python
 tulip.ui_callback(ui_callback)
@@ -96,7 +94,7 @@ tulip.slider(ui_element_id, x, y, w, h, orientation, default_value, bg_pal_idx, 
 
 ### Network
 
-Tulip CC has the capability to connect to a Wi-Fi network, and Python's native requests library will work to access TCP and UDP. We ship a few convenience functions to grab data from URLs as well. 
+Tulip CC has the capability to connect to a Wi-Fi network, and Python's native requests library will work to access TCP and UDP. We ship a few convenience functions to grab data from URLs as well. More in the [full API](docs/tulip_api.md).
 
 ```python
 # Join a wifi network (not needed on Tulip Desktop)
@@ -112,9 +110,7 @@ bytes_read = tulip.url_save("https://url", "filename.ext")
 
 ### Music / sound
 
-Tulip comes with the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) for more information.
-
-Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh](https://github.com/bwhitman/alles/blob/main/README.md). Connect any number of Alles speakers to the wifi to have instant surround sound! 
+Tulip comes with the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. More in the [full API](docs/tulip_api.md).
 
 ```python
 alles.drums() # plays a test song
@@ -127,7 +123,7 @@ https://user-images.githubusercontent.com/76612/215893940-658144b7-0c6f-42e2-983
 
 ### MIDI
 
-Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
+Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. More in the [full API](docs/tulip_api.md).
 
 ```python
 m = tulip.midi_in() # returns bytes of the last MIDI message received
@@ -135,10 +131,9 @@ tulip.midi_out((144,60,127)) # sends a note on message
 tulip.midi_out(bytes) # Can send bytes or list
 ```
 
-
 ### Graphics system
 
-The Tulip GPU supports a scrolling background layer, hardware sprites and a text layer. 
+The Tulip GPU supports a scrolling background layer, hardware sprites and a text layer. Much more in the [full API](docs/tulip_api.md).
 
 ```python
 # Set or get a pixel on the BG
@@ -153,13 +148,7 @@ tulip.bg_scroll(line, x_offset, y_offset, x_speed, y_speed)
 https://user-images.githubusercontent.com/76612/215895305-7b02ad27-b02a-429a-92ef-f13136e9f9d2.mov
 
 
-```python
-# ANSI color and formatting codes have convenience functions
-print(tulip.Colors.LIGHT_RED + "this is red " + tulip.Colors.GREEN + tulip.Colors.INVERSE + " and then green inverse")
-```
-
-![TFB](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tfb.png)
-
+Hardware sprites are supported, that draw over the background and text layer per scanline per frame:
 
 ```python
 (w, h, bytes) = tulip.sprite_png("filename.png", mem_pos)
@@ -190,6 +179,7 @@ Still very much early days, but Tulip supports a native chat room called **T U L
 
  * [How to compile and flash Tulip hardware](docs/tulip_flashing.md)
  * [How to run or compile Tulip Desktop](docs/tulip_desktop.md)
+ * [The full Tulip API](docs/tulip_api.md)
 
 Some development guidelines if you'd like to help contribute!
 
