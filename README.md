@@ -172,7 +172,7 @@ Still very much early days, but Tulip supports a native chat room called **T U L
 
 ## Tulip hardware HOWTOs
 
-[See our new page that describes how to build your own Tulip Creative Computer](docs/tulip_build.md) with three different otpions.
+[See our new page that describes how to build your own Tulip Creative Computer](docs/tulip_build.md) with FOUR different options.
 
 ## How to compile and help develop Tulip
 
@@ -183,7 +183,7 @@ Still very much early days, but Tulip supports a native chat room called **T U L
 Some development guidelines if you'd like to help contribute!
 
  * Be nice and helpful and don't be afraid to ask questions! We're all doing this for fun and to learn. 
- * We're currently a hard fork of ESP-IDF, Alles/AMY and Micropython; we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. 
+ * We're currently a hard fork of ESP-IDF, Alles/AMY and [Micropython](https://github.com/bwhitman/tulipcc/issues/7); we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. 
  * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change. 
 
 

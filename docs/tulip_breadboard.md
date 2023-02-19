@@ -4,16 +4,16 @@
 
 [Tulip CC](../README.md) can be easily built with no soldering by connecting an ESP32S3 breakout board to a display and audio board. With a breadboard and a lot of jumper wires, you can put together Tulip in less than an hour.
 
-If you'd rather make something more permanent, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [a fully integrated surface mount board](tulip_board.md).
+If you'd rather make something more permanent, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [a fully integrated surface mount board.](tulip_board.md)
 
 
 You'll need
 
 - A breadboard
-- [ESP32-S3 WROOM-1 N8R8 dev board.](https://www.adafruit.com/product/5336). If you can find the ESP32-S3 WROOM-2 N32R8 (32MB of flash), it will also work fine and you'll have more storage space.
-- [This $58 RGB dot-clock 10.1" display with capacitive touch.](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html). Note other RGB dot clock displays of different sizes and resolutions can also work, but the pin numberings will be different and you'll have to update the resolution in our code. 
-- [A 40-pin FPC header for the display](https://www.adafruit.com/product/4905). 
-- One of two choices for sound: either [this mono I2S speaker amp board](https://www.adafruit.com/product/3006) (you'll also need a 3W speaker) or this stereo line-out / headphone jack [UDA1334 DAC](https://www.aliexpress.com/item/3256803337983466.html?gatewayAdapt=4itemAdapt). 
+- [ESP32-S3 WROOM-1 N8R8 dev board.](https://www.adafruit.com/product/5336) If you can find the ESP32-S3 WROOM-2 N32R8 (32MB of flash), it will also work fine and you'll have more storage space.
+- [This $58 RGB dot-clock 10.1" display with capacitive touch.](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html) Note other RGB dot clock displays of different sizes and resolutions can also work, but the pin numberings will be different and you'll have to update the resolution in our code. 
+- [A 40-pin FPC header for the display.](https://www.adafruit.com/product/4905)
+- One of two choices for sound: either [this mono I2S speaker amp board](https://www.adafruit.com/product/3006) (you'll also need a 3W speaker) or this stereo line-out / headphone jack [UDA1334 DAC.](https://www.aliexpress.com/item/3256803337983466.html?gatewayAdapt=4itemAdapt) 
 - _Almost_ any USB keyboard should work. If yours doesn't, please file an issue here and I can investigate with you. I can only test the ones I have here! I do recommend the [Keychron series of mechanical keyboards](https://www.keychron.com/products/keychron-k7-ultra-slim-wireless-mechanical-keyboard?variant=39396239048793), they're inspiringly clicky. 
 - Connectors and random parts: 
    - [1 USB female A screw terminal](https://www.amazon.com/Poyiccot-Terminal-Connector-Converter-Breakout/dp/B08Y8NKGHL)
@@ -21,7 +21,7 @@ You'll need
    - [1 6N138 optoisolator](https://www.amazon.com/Optocoupler-Single-Channel-Darlington-Output/dp/B07DLTSXC1) and an [8-pin socket](https://www.adafruit.com/product/2202)
    - [7 resistors](https://www.amazon.com/BOJACK-Values-Resistor-Resistors-Assortment/dp/B08FD1XVL6): `R1`: 4.7K, `R2`: 4.7K, `R3`: 4.7K, `R4`: 220, `R5`: 470, `R6`: 33, `R7`: 10. `R4` through `R7` don't have to be precisely those numbers, find the closest number that you have. 
    - 1 diode: [1N4001](https://www.adafruit.com/product/755)
-- [You'll want to see how to wire the MIDI in and out.](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/). 
+- [You'll want to see how to wire the MIDI in and out.](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/) 
 
 Here's the pin connections you'll need to make. A note, These pin numbers for the display (D#) are to match the numbers on the **side of the board the FPC connector is on**, the side that reads FPC-40P 0.5MM. 
 
@@ -66,7 +66,7 @@ Here's the pin connections you'll need to make. A note, These pin numbers for th
 
 Also, you may want to ground all remaining display pins if you're seeing flickering. But make sure not to connect anything to `D2`, it stays not connected.
 
-After you're done assembling, [read about how to compile and flash Tulip](tulip_flashing.md).
+After you're done assembling, [read about how to compile and flash Tulip.](tulip_flashing.md)
 
 ![Tulip Breadboard](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/breadboard_close.jpg)
 
