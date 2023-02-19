@@ -2,8 +2,9 @@
 
 Here you can see the API [Tulip](../README.md) currently ships with.
 
-**NOTE**: Our own builds of [Tulip Desktop](tulip_desktop.md) may lag behind some of the APIs listed here. This page represents the APIs in the latest commit of our _main_ branch. If something isn't working properly, try building from scratch.
+# Current API
 
+**NOTE**: Our own builds of [Tulip Desktop](tulip_desktop.md) may lag behind some of the APIs listed here. This page represents the APIs in the latest commit of our _main_ branch. If something isn't working properly, try building from scratch.
 
 ## General
 
@@ -369,6 +370,63 @@ tulip.sprite_clear()
 
 
 https://user-images.githubusercontent.com/76612/215896311-fc0823aa-44bc-4305-85db-a6773db11a98.mov
+
+
+# In progress or planned features
+
+## Tulip World
+
+Still very much early days, but Tulip supports a native chat room called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. We're hoping to build this out to eventually support file transfer and other BBS-style features. But for now, you're able to pull down the latest messages and send messages yourself. 
+
+```python
+# Starts the UI for Tulip World (needs wifi)
+tulip.world()
+```
+
+You can also call the underlying Tulip World APIs directly:
+
+```python
+import world
+(m, token) = world.sync() # returns a list of latest messages, and a token to check for new messages
+(m, token) = world.check(token) # checks for new messages since the last token
+world.send("hello!!") # Sends a message to Tulip World
+```
+
+Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
+
+Status: live, but needs UI help.
+
+
+
+## Tulip Music Editor
+
+A synth / patch editor for the AMY and Alles synth inside Tulip. [Like the YRM102](https://www.msx.org/wiki/Yamaha_YRM-102). 
+
+Status: building locally, will share first alpha when ready
+
+
+## Scanline bresenham drawing on the sprite layer
+
+We plan to support line drawing on the sprite layer using sprite RAM (not modifiyng the BG layer) for wireframe animations.
+
+Status: early research phase
+
+
+# Can you help? 
+
+Things we've thought of we'd love your help on:
+
+ * Sprite editor in Tulip
+ * Tile / Map editor in Tulip
+ * More UI types: radio button / scroll bar / text entry 
+
+
+
+
+
+
+
+
 
 
 
