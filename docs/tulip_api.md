@@ -6,6 +6,8 @@ Here you can see the API [Tulip](../README.md) currently ships with.
 
 **NOTE**: Our own builds of [Tulip Desktop](tulip_desktop.md) may lag behind some of the APIs listed here. This page represents the APIs in the latest commit of our _main_ branch. If something isn't working properly, try building from scratch.
 
+![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4.png)
+
 ## General
 
 [Tulip](../README.md) boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
@@ -395,7 +397,6 @@ world.send("hello!!") # Sends a message to Tulip World
 Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
 
 Status: live, but needs UI help.
-
 
 
 ## Tulip Music Editor
