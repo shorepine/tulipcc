@@ -13,7 +13,7 @@ You can use Tulip to make music, code, art, games, or just write. It's a great e
 
 Tulip is available both as a [hardware DIY project (Tulip CC)](docs/tulip_build.md) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](docs/tulip_desktop.md)
 
-**[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** Or read on for the API and build instructions.
+**[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** Or read on for the API.
 
 [![Tulip Desktop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
@@ -429,7 +429,6 @@ world.send("hello!!") # Sends a message to Tulip World
 ```
 
 Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
-
 
 ## Tulip hardware HOWTOs
 
