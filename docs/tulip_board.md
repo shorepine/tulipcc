@@ -56,3 +56,16 @@ The 3.5mm MIDI jacks are for Type A TRS MIDI connectors. If you want to wire the
 ## Flash and startup
 
 After you're done assembling, [read about how to compile and flash Tulip.](tulip_flashing.md)
+
+
+## Help wanted
+
+I would love hands on help to make the board better -- routing, placement, part selection, BOM optimization, charging/boost on board, porting to a different EDA program. Please file a GitHub pull request or issue to start contributing!
+
+
+
+
+
+
+
+
