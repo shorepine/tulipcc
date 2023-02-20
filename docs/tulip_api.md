@@ -411,6 +411,7 @@ Things we've thought of we'd love your help on:
  * Tile / Map editor in Tulip
  * More UI types: radio button / scroll bar / text entry 
 
+Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
 
 
 
