@@ -60,7 +60,7 @@ After you're done assembling, [read about how to compile and flash Tulip.](tulip
 
 ## Help wanted
 
-I would love hands on help to make the board better -- routing, placement, part selection, BOM optimization, charging/boost on board, porting to a different EDA program. Please file a GitHub pull request or issue to start contributing!
+I would love hands on help to make the board better -- routing, placement, part selection, BOM optimization, charging/boost on board, porting to a different EDA program. Please file a GitHub pull request or [chat with us on our discussions page](https://github.com/bwhitman/tulipcc/discussions) to start contributing!
 
 
 

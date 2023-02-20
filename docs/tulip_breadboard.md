@@ -68,6 +68,8 @@ Also, you may want to ground all remaining display pins if you're seeing flicker
 
 After you're done assembling, [read about how to compile and flash Tulip.](tulip_flashing.md)
 
+Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
+
 ![Tulip Breadboard](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/breadboard_close.jpg)
 
 

@@ -33,3 +33,5 @@ You'll need:
 The assembly for our breakout PCB is simple. Solder the headers to the DISPLAY, ESP32S3L, ESP32S3R, and AUDIO rows. Solder the 8-pin socket where the 6N138 goes. Solder the resistors in their correct spots, and the diode (note the polarity.) Solder the USB connector. Solder the MIDI connectors. Then place the ESP32-S3 breakout in, the FPC connector in (facing down, with the FPC cable going away from the board), the I2S board in, the 6N138 in, and connect a USB keyboard and the display to the FPC connector (to the displays' "RGB" input, the blue side facing up on both sides of the connector.) That's it!
 
 After you're done assembling, [read about how to compile and flash Tulip.](tulip_flashing.md)
+
+Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
