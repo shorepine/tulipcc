@@ -14,7 +14,7 @@ You can use Tulip to make music, code, art, games, or just write. It's a great e
  * [**See the full Tulip API**](docs/tulip_api.md)
  * [**Build your own Tulip**](docs/tulip_build.md)
  * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
-
+ * Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
 
 Tulip is available both as a [hardware DIY project (Tulip CC)](docs/tulip_build.md) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download the desktop version!](docs/tulip_desktop.md)
 
@@ -52,6 +52,8 @@ Once you've [built a Tulip](docs/tulip_build.md) or [installed Tulip Desktop](do
 [**See the full Tulip API**](docs/tulip_api.md) for more details on all the graphics, sound and input functions.
 
 Below are a few getting started tips and small examples. The [full API](docs/tulip_api.md) page has more detail on everything you can do on a Tulip.
+
+Any big challenges getting this going? Please [chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
 
 
 ```python
@@ -171,11 +173,13 @@ tulip.world() # opens the Tulip World UI
  * [How to compile and flash Tulip hardware](docs/tulip_flashing.md)
  * [How to run or compile Tulip Desktop](docs/tulip_desktop.md)
  * [The full Tulip API](docs/tulip_api.md)
+ * Please [chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
+ * [File any code issues or pull requests!](https://github.com/bwhitman/tulipcc/issues)
 
 Some development guidelines if you'd like to help contribute!
 
  * Be nice and helpful and don't be afraid to ask questions! We're all doing this for fun and to learn. 
- * We're currently a hard fork of ESP-IDF, Alles/AMY and [Micropython](https://github.com/bwhitman/tulipcc/issues/7); we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. 
+ * We're currently a hard fork of ESP-IDF, Alles/AMY and [Micropython](https://github.com/bwhitman/tulipcc/discussions/9); we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. 
  * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change. 
 
 Have fun!
