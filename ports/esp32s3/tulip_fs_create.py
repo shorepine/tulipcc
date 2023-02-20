@@ -44,7 +44,7 @@ print("... done.")
 
 # Now overwrite the user flash partition
 os.system('parttool.py write_partition --partition-name=vfs --input=tulip-lfs.bin')
-os.system('rm tulip-lfs.bin')
+os.system('mv tulip-lfs.bin build/')
 
 
 
