@@ -1,5 +1,4 @@
-# Tulip Creative Computer 
-## A portable Python device for music, graphics and writing
+# Tulip Creative Computer - a portable Python device for music, graphics and writing
 
 
 ![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/flat_tiles.jpg)
