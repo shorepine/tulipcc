@@ -10,6 +10,7 @@ ports/macos/tulip
 ports/macos/tulip.arm64
 ports/macos/tulip.x86_64
 ports/macos/dist
+ports/web/build
 
 # Prerequisites
 *.d
