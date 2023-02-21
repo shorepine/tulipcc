@@ -1,0 +1,5 @@
+Q(__name__)
+Q(uio)
+Q(open)
+Q(StringIO)
+Q(BytesIO)
