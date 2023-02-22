@@ -13,7 +13,7 @@
 const size_t USB_HID_DESC_SIZE = 9;
 // vortex 8
 // keychron 16
-#define KEYBOARD_BYTES 16
+#define KEYBOARD_BYTES 8
 
 // How long you hold down a key before it starts repeating
 #define KEY_REPEAT_TRIGGER_MS 500
@@ -53,7 +53,7 @@ int64_t KeyboardTimer=0;
 
 
 
-const size_t KEYBOARD_IN_BUFFER_SIZE = KEYBOARD_BYTES; 
+//const size_t KEYBOARD_IN_BUFFER_SIZE = KEYBOARD_BYTES; 
 usb_transfer_t *KeyboardIn = NULL;
 
 
@@ -226,7 +226,7 @@ void prepare_endpoint(const void *p)
     return;
   }
   if (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK) {
-    err = usb_host_transfer_alloc(KEYBOARD_IN_BUFFER_SIZE, 0, &KeyboardIn);
+    err = usb_host_transfer_alloc(KEYBOARD_BYTES, 0, &KeyboardIn);
     if (err != ESP_OK) {
       KeyboardIn = NULL;
       printf("usb_host_transfer_alloc In fail: %x\n", err);
@@ -311,7 +311,9 @@ void run_usb()
       }
       if (isKeyboardReady && !isKeyboardPolling && (KeyboardTimer > KeyboardInterval)) {
         // vortex is 8
+        // nuphy is 8 
         // keychron is 16
+        // We need to discern this from the descriptor instead of hardcoding it
         KeyboardIn->num_bytes = KEYBOARD_BYTES; 
         esp_err_t err = usb_host_transfer_submit(KeyboardIn);
         if (err != ESP_OK) {
