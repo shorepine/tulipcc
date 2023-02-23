@@ -28,7 +28,7 @@ To build Tulip Desktop (macOS 10.15 (Catalina) and higher, Apple Silicon or x86_
 
 ```
 cd ports/macos
-brew install pkg-config
+brew install pkg-config libffi
 
 # For local development (just your native arch, and shows stderr in terminal)
 ./build.sh
