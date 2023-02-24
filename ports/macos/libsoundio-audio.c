@@ -29,7 +29,12 @@ void amy_print_devices() {
         const char *default_str = (i==default_output) ? " (default)" : "";
         const char *raw_str = device->is_raw ? " (raw)" : "";
         int chans = device->layouts[0].channel_count;
-        fprintf(stderr,"[%d]\t%s%s%s\t%d output channels\n", i, device->name, default_str, raw_str, chans);
+        fprintf(stderr,"[%d]\t%s%s%s %d outputs, formats: ", i, device->name, default_str, raw_str, chans);
+        for (int j = 0; j < device->format_count; j += 1) {
+            const char *comma = (j == device->format_count - 1) ? "" : ", ";
+            fprintf(stderr, "%s%s", soundio_format_string(device->formats[j]), comma);
+        }
+        fprintf(stderr,"\n");
         soundio_device_unref(device);
     }
 }
@@ -117,10 +122,15 @@ amy_err_t soundio_init() {
         fprintf(stderr, "out of memory\n");
         return 1;
     }
+#ifdef __linux__
+    int err;
+    err = soundio_connect_backend(soundio, SoundIoBackendPulseAudio);
+#else
     int err = soundio_connect(soundio);
+#endif
     if (err) {
         fprintf(stderr, "Unable to connect to backend: %s\n", soundio_strerror(err));
-        return 1;
+        exit(1);
     }
 
     soundio_flush_events(soundio);

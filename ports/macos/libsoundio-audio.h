@@ -6,9 +6,9 @@
 #include <soundio/soundio.h>
 #include <pthread.h>
 
-int16_t amy_channel;
-int16_t amy_device_id;
-uint8_t amy_running;
+extern int16_t amy_channel;
+extern int16_t amy_device_id;
+extern uint8_t amy_running;
 
 void amy_print_devices();
 void amy_live_start();
