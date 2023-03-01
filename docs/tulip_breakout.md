@@ -16,7 +16,7 @@ The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tu
 
 You'll need:
 
-- [ESP32-S3 WROOM-1 N8R8 dev board.](https://www.adafruit.com/product/5336) If you can find the ESP32-S3 WROOM-2 N32R8 (32MB of flash), it will also work fine and you'll have more storage space.
+- [ESP32-S3 WROOM-1 N8R8 dev board](https://www.adafruit.com/product/5336) or the [ESP32-S3 WROOM-2 N32R8 board](https://www.adafruit.com/product/5364). The N32R8 has 32MB of flash, the N8R8 has 8MB of flash.
 - [This $58 RGB dot-clock 10.1" display with capacitive touch.](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html) Note other RGB dot clock displays of different sizes and resolutions can also work, but the pin numberings will be different and you'll have to update the resolution in our code. 
 - [A 40-pin FPC header for the display.](https://www.adafruit.com/product/4905) 
 - This stereo line-out / headphone jack [UDA1334 DAC.](https://www.aliexpress.com/item/3256803337983466.html?gatewayAdapt=4itemAdapt) 
