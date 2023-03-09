@@ -25,7 +25,8 @@ cd esp-idf
 ./install.sh esp32s3
 source ./export.sh
 
-pip3 install Cython littlefs-python # needed to flash the filesystem
+pip3 install Cython
+pip3 install littlefs-python # needed to flash the filesystem
 cd ../ports/esp32s3
 ```
 
