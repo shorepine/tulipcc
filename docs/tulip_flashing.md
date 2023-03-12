@@ -32,10 +32,8 @@ cd ../ports/esp32s3
 
 Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. If using our Tulip board, use the USB-C connector. 
 
-**If you are using our integrated board, or the WROOM-2 N32R8 board, use `-DMICROPY_BOARD=TULIP4_N32R8` below. If using a WROOM-1 N8R8 board, use `-DMICROPY_BOARD=TULIP4` below.**
-
 ```bash
-idf.py -D MICROPY_BOARD=TULIP4 flash # or -DMICROPY_BOARD=TULIP4_N32R8
+idf.py -D MICROPY_BOARD=TULIP4 flash 
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
 # to the flash memory. Run this only once, or each time you modify `tulip_home` if you're developing Tulip itself.
 python tulip_fs_create.py
@@ -43,7 +41,7 @@ python tulip_fs_create.py
 
 Tulip should now just turn on whenever you connect USB or power it on. 
 
-To build / debug going forward (and remember to use the right `-DMICROPY_BOARD` value for your board)
+To build / debug going forward
 
 ```bash
 cd ports/esp32s3
