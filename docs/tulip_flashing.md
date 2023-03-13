@@ -58,6 +58,14 @@ cd ../ports/esp32s3
 
 Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. If using our Tulip board, use the USB-C connector. 
 
+**ONLY if you are using the ESP32-S3-DevKitC-1-N8R8, turn off octal flash here:**
+
+```
+idf.py menuconfig
+Go to Serial Flasher Config -> check off "Enable Octal Flash"
+Hit q, save
+```
+
 ```bash
 idf.py -D MICROPY_BOARD=TULIP4 flash 
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
