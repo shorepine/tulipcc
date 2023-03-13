@@ -5,11 +5,11 @@
 **Please note, we don't recommend doing this yet.** Tulip is fast moving and it's really better if you figure out how to get the build environment going. It's not that hard. But if you want to try flashing your board without having to build Tulip, here's how:
 
  * Install [`esptool`](https://docs.espressif.com/projects/esptool/en/latest/esp32/installation.html) if you don't already have it
- * Make sure you have the serial port driver for your board installed. You should see a new /dev/\*usbmodem\* or COM port when attaching it. If you don't, find the drivers for it and install them.
+ * Make sure you have the serial port driver for your board installed. You should see a new /dev/\*USB\* or COM port when attaching it. If you don't, find the drivers for it and install them.
  * Download the 4 bin files in the [latest ESP32-S3 release](https://github.com/bwhitman/tulipcc/releases) and put them all in a folder
  * Connect your board / chip to USB
  * From the folder you have the .bin files in, run `esptool.py write_flash 0x0 bootloader.bin 0x10000 micropython.bin 0x8000 partition-table.bin 0x300000 tulip-lfs.bin`
- * Turn on and off the power to Tulip to start it 
+ * Turn off and on the power to Tulip to start it 
 
 ## Compile TulipCC for ESP32-S3
 
