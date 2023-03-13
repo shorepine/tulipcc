@@ -64,6 +64,8 @@ Here's the pin connections you'll need to make. A note, These pin numbers for th
 | MIDI 5V       | 5V           | L21                          | MIDI 5v        |
 | MIDI GND      | GND          | L22                          | MIDI GND       |
 
+Wire the FPC cable to the displays "RGB" port. The included cable with the display works fine. The blue side should be facing up on both ends. 
+
 Also, you may want to ground all remaining display pins if you're seeing flickering. But make sure not to connect anything to `D2`, it stays not connected.
 
 After you're done assembling, [read about how to compile and flash Tulip.](tulip_flashing.md)
