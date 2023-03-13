@@ -21,7 +21,6 @@ You'll need
    - [1 6N138 optoisolator](https://www.amazon.com/Optocoupler-Single-Channel-Darlington-Output/dp/B07DLTSXC1) and an [8-pin socket](https://www.adafruit.com/product/2202)
    - [7 resistors](https://www.amazon.com/BOJACK-Values-Resistor-Resistors-Assortment/dp/B08FD1XVL6): `R1`: 4.7K, `R2`: 4.7K, `R3`: 4.7K, `R4`: 220, `R5`: 470, `R6`: 33, `R7`: 10. `R4` through `R7` don't have to be precisely those numbers, find the closest number that you have. 
    - 1 diode: [1N4001](https://www.adafruit.com/product/755)
-- [You'll want to see how to wire the MIDI in and out.](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/) 
 
 Here's the pin connections you'll need to make. A note, These pin numbers for the display (D#) are to match the numbers on the **side of the board the FPC connector is on**, the side that reads FPC-40P 0.5MM. 
 
@@ -67,6 +66,10 @@ Here's the pin connections you'll need to make. A note, These pin numbers for th
 Wire the FPC cable to the displays "RGB" port. The included cable with the display works fine. The blue side should be facing up on both ends. 
 
 Also, you may want to ground all remaining display pins if you're seeing flickering. But make sure not to connect anything to `D2`, it stays not connected.
+
+[You'll want to see how to wire the MIDI in and out.](https://diyelectromusic.wordpress.com/2021/02/15/midi-in-for-3-3v-microcontrollers/) That's `R3`, `R4`, `R5`, `R6` and `R7` along with the 6N138 and diode. ([You can save some time buying a MIDI in/out breakout board like this one on Adafruit.](https://www.adafruit.com/product/4740) and just wire it to MIDI in and out from the ESP directly.) 
+
+Touch SDA and Touch SCL need to be pulled up via 4.7K resistor to 3.3V. So run two resistors `R1` and `R2` from those pins on the ESP to 3.3V somewhere on the board. 
 
 After you're done assembling, [read about how to compile and flash Tulip.](tulip_flashing.md)
 
