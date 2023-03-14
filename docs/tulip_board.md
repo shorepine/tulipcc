@@ -21,6 +21,8 @@ I wait to attach the FPC connector until after I've done a round on the hot plat
 
 **FPC NOTE**: As of v4r6, the FPC connector is for an A-B cable to support a flat cable going under a hinge to the display connector. If we didn't do this, the cable would have to be twisted. This is different from the breadboard and breakout versions of Tulip, as well as **the cable that comes with the display**, which use an A-A cable. So **don't use the included FPC cable the display came with**. [Here's some of the right type on Amazon](https://www.amazon.com/ITROLLE-Length-Flexible-Ribbon-Cables/dp/B0928Q1N2Z/). An A-B cable is "swapped" on each end -- the silver pins "up" on one side and "down" on the other. When buying FPC cables (shorter is better!) make sure you see which type you're getting. 
 
+Attach the FPC cable to the RGB port on the display.
+
 The only through hole component, the legs of the USB-C connector, need to be hand soldered from the bottom after the hot plate. 
 
 The silkscreen currently omits a polarity for the only diode (D2). The white line on the diode is meant to be pointing down. 
