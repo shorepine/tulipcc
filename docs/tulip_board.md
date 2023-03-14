@@ -19,10 +19,6 @@ I've found assembling a Tulip with a hot plate and stencil the easiest way to go
 
 I wait to attach the FPC connector until after I've done a round on the hot plate. I do it manually with a fine tip iron and flux. You need to apply pressure to the FPC pins as you solder them down. 
 
-**FPC NOTE**: As of v4r6, the FPC connector is for an A-B cable to support a flat cable going under a hinge to the display connector. If we didn't do this, the cable would have to be twisted. This is different from the breadboard and breakout versions of Tulip, as well as **the cable that comes with the display**, which use an A-A cable. So **don't use the included FPC cable the display came with**. [Here's some of the right type on Amazon](https://www.amazon.com/ITROLLE-Length-Flexible-Ribbon-Cables/dp/B0928Q1N2Z/). An A-B cable is "swapped" on each end -- the silver pins "up" on one side and "down" on the other. When buying FPC cables (shorter is better!) make sure you see which type you're getting. 
-
-Attach the FPC cable to the RGB port on the display.
-
 The only through hole component, the legs of the USB-C connector, need to be hand soldered from the bottom after the hot plate. 
 
 The silkscreen currently omits a polarity for the only diode (D2). The white line on the diode is meant to be pointing down. 
@@ -30,6 +26,13 @@ The silkscreen currently omits a polarity for the only diode (D2). The white lin
 The RESET transistor chip is not labeled on the silkscreen. It's the small 6 pin chip on the top to the right of the ESP. It should be oriented so that you can read M A, and there will be two small dots on the bottom left corner. 
 
 ![Schematic](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pcbs/tulip4_board_v4r6/schematic.png)
+
+
+## 🚨🚨🚨 FPC NOTE 🚨🚨🚨
+As of v4r6, the FPC connector is for an A-B cable to support a flat cable going under a hinge to the display connector. If we didn't do this, the cable would have to be twisted. This is different from the breadboard and breakout versions of Tulip, as well as **the cable that comes with the display**, which use an A-A cable. So **don't use the included FPC cable the display came with**. [Here's some of the right type on Amazon](https://www.amazon.com/ITROLLE-Length-Flexible-Ribbon-Cables/dp/B0928Q1N2Z/). An A-B cable is "swapped" on each end -- the silver pins "up" on one side and "down" on the other. When buying FPC cables (shorter is better!) make sure you see which type you're getting. 
+
+Attach the FPC cable to the RGB port on the display.
+
 
 ## Power and header
 
