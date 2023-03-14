@@ -60,6 +60,7 @@ Now connect your Tulip to your computer over USB. If using a breakout board, con
 
 **ONLY if you are using the ESP32-S3-DevKitC-1-N8R8, turn off octal flash. Run `idf.py menuconfig` and go to Serial Flasher Config -> check off "Enable Octal Flash". Then hit q, save.**
 
+
 For all boards, now build and flash the firmware:
 
 ```bash
