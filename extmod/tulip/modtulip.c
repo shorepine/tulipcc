@@ -41,6 +41,19 @@ STATIC mp_obj_t tulip_display_restart(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_restart_obj, 0, 0, tulip_display_restart);
 
+STATIC mp_obj_t tulip_display_stop(size_t n_args, const mp_obj_t *args) {
+    display_stop();
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_stop_obj, 0, 0, tulip_display_stop);
+
+
+STATIC mp_obj_t tulip_display_start(size_t n_args, const mp_obj_t *args) {
+    display_start();
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_start_obj, 0, 0, tulip_display_start);
+
 
 // fps = tulip.fps()
 STATIC mp_obj_t tulip_fps(size_t n_args, const mp_obj_t *args) {
@@ -877,6 +890,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_restart), MP_ROM_PTR(&tulip_display_restart_obj) },
+    { MP_ROM_QSTR(MP_QSTR_display_stop), MP_ROM_PTR(&tulip_display_stop_obj) },
+    { MP_ROM_QSTR(MP_QSTR_display_start), MP_ROM_PTR(&tulip_display_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_fps), MP_ROM_PTR(&tulip_fps_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu), MP_ROM_PTR(&tulip_gpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_ticks_ms), MP_ROM_PTR(&tulip_ticks_ms_obj) },
