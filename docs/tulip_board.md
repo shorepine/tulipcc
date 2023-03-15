@@ -61,6 +61,8 @@ The 3.5mm MIDI jacks are for Type A TRS MIDI connectors. If you want to wire the
 
 ## Flash and startup
 
+Rev6 of the board has a bug where the USBC cables can only be put in one direction. Sorry about that! If you're not seeing a serial port, flip your cable upside down. We'll fix this on the next rev.
+
 After you're done assembling, [read about how to compile and flash Tulip.](tulip_flashing.md)
 
 
