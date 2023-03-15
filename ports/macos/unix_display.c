@@ -15,6 +15,15 @@ int64_t frame_ticks = 0;
 int8_t unix_display_flag = 0;
 SDL_Keymod last_held_mod;
 
+
+void display_start() {
+
+}
+
+void display_stop() {
+
+}
+
 void unix_set_fps_from_parameters() {
     // use the screen res and clock to discern a new FPS, based on real life measurements on tulip cc
     float fps_map[20] = {14.98, 18.55, 23.19, 30.91, 46.37, 21.47, 34.36, 42.95, 57.26, 85.90,
