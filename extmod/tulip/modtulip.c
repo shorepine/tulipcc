@@ -25,6 +25,9 @@
 // tulip.display_clock(18)
 // clock = tulip.display_clock()
 extern float unix_display_set_clock();
+extern void display_start();
+extern void display_stop();
+
 STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
     if(n_args==1) {
         uint16_t mhz = mp_obj_get_int(args[0]);
