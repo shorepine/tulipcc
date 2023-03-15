@@ -102,6 +102,7 @@ tulip.wifi("ssid", "password")
 ip_address = tulip.ip() # returns None if not connected
 
 # Save the contents of a URL to disk (needs wifi)
+# Note: the screen will blank during this operation 
 bytes_read = tulip.url_save("https://url", "filename.ext")
 
 # Get the contents of a URL to memory (needs wifi, and be careful of RAM use)
@@ -215,6 +216,11 @@ tulip.timing(1024, 600, 256, 150, 139, 140, 20, 20, 12, 20) # sets, will erase a
 
 # if the display clock gets in a strange state, you can restart it by just
 tulip.display_restart() # does not clear any data like gpu_reset()
+
+# You can also manually stop and start the display. This is useful if you want to do something intensive
+# that requires the resources of the GPU as well as the CPU, or want to do faster disk access
+tulip.display_stop() # Tulip will still run 
+tulip.display_start()
 
 # Sets a frame callback python function to run every frame 
 game_data = {"frame_count": 0, "score": 0}
