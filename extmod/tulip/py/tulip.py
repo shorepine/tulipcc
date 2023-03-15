@@ -51,7 +51,10 @@ class Colors:
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests
-    return urequests.get(url, headers = headers).save(filename,mode)
+    display_stop()
+    d = urequests.get(url, headers = headers).save(filename,mode)
+    display_start()
+    return d
 
 def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
     import urequests
