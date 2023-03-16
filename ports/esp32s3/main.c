@@ -334,6 +334,7 @@ extern void ft5x06_init();
 extern void run_ft5x06();
 extern void run_midi();
 extern void run_usb();
+extern void init_esp_joy();
 //extern void run_i2c();
 
 void app_main(void) {
@@ -366,6 +367,9 @@ void app_main(void) {
 
     printf("Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
+
+    printf("Starting joystick\n");
+    init_esp_joy();
 
 }
 
