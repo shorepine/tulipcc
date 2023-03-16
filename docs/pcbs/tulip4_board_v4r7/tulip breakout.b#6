@@ -1288,7 +1288,7 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 </designrules>
 <autorouter>
 <pass name="Default">
-<param name="RoutingGrid" value="0.5mm"/>
+<param name="RoutingGrid" value="0.125mm"/>
 <param name="AutoGrid" value="1"/>
 <param name="Efforts" value="2"/>
 <param name="TopRouterVariant" value="1"/>
@@ -1647,6 +1647,7 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <signal name="PCLK">
 <contactref element="ESP32S3" pad="22"/>
 <contactref element="J3" pad="11"/>
+<wire x1="13.805" y1="33.5" x2="46.25" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="GND">
 <contactref element="ESP32S3" pad="41_4"/>
@@ -1713,60 +1714,144 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="J3" pad="16"/>
 <contactref element="J3" pad="15"/>
 <contactref element="EXP" pad="3"/>
+<wire x1="60.69" y1="40.025" x2="64.87" y2="40.025" width="0" layer="19" extent="1-1"/>
+<wire x1="60.1" y1="39.05" x2="60.69" y2="40.025" width="0" layer="19" extent="1-1"/>
+<wire x1="60.1" y1="38.75" x2="60.1" y2="39.05" width="0" layer="19" extent="1-1"/>
+<wire x1="57.4" y1="39.2" x2="60.1" y2="39.05" width="0" layer="19" extent="1-1"/>
+<wire x1="60.1" y1="32.65" x2="60.1" y2="38.75" width="0" layer="19" extent="1-1"/>
+<wire x1="60.1" y1="32.35" x2="60.1" y2="32.65" width="0" layer="19" extent="1-1"/>
+<wire x1="60.69" y1="31.375" x2="60.1" y2="32.35" width="0" layer="19" extent="1-1"/>
+<wire x1="57.2" y1="32.2" x2="60.1" y2="32.35" width="0" layer="19" extent="1-1"/>
+<wire x1="64.87" y1="31.375" x2="60.69" y2="31.375" width="0" layer="19" extent="1-1"/>
+<wire x1="64.5" y1="29" x2="64.87" y2="31.375" width="0" layer="19" extent="1-1"/>
+<wire x1="64.5" y1="18.9" x2="64.5" y2="29" width="0" layer="19" extent="1-1"/>
+<wire x1="46.221" y1="32.075" x2="57.2" y2="32.2" width="0" layer="19" extent="1-1"/>
+<wire x1="46.221" y1="30.124996875" x2="46.221" y2="32.075" width="0" layer="19" extent="1-1"/>
+<wire x1="46.221" y1="27.524996875" x2="46.221" y2="30.124996875" width="0" layer="19" extent="1-1"/>
+<wire x1="46.221" y1="26.875" x2="46.221" y2="27.524996875" width="0" layer="19" extent="1-1"/>
+<wire x1="43.65" y1="36.8" x2="46.221" y2="32.075" width="0" layer="19" extent="1-1"/>
+<wire x1="42.8" y1="42.095" x2="43.65" y2="36.8" width="0" layer="19" extent="1-1"/>
+<wire x1="40.379" y1="26.875003125" x2="46.221" y2="26.875" width="0" layer="19" extent="1-1"/>
+<wire x1="36.9" y1="28.65" x2="40.379" y2="26.875003125" width="0" layer="19" extent="1-1"/>
+<wire x1="32.65" y1="33" x2="36.9" y2="28.65" width="0" layer="19" extent="1-1"/>
+<wire x1="30.65" y1="36.4" x2="32.65" y2="33" width="0" layer="19" extent="1-1"/>
+<wire x1="30.55" y1="39.2" x2="30.65" y2="36.4" width="0" layer="19" extent="1-1"/>
+<wire x1="39.1" y1="20.2" x2="40.379" y2="26.875003125" width="0" layer="19" extent="1-1"/>
+<wire x1="27.6" y1="27.22" x2="32.65" y2="33" width="0" layer="19" extent="1-1"/>
+<wire x1="43.25" y1="50.06" x2="42.8" y2="42.095" width="0" layer="19" extent="1-16"/>
+<wire x1="43.75" y1="50.06" x2="43.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="44.25" y1="50.06" x2="43.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="42.75" y1="50.06" x2="43.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="42.25" y1="50.06" x2="42.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="41.75" y1="50.06" x2="42.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="45.75" y1="50.06" x2="44.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="39.75" y1="50.06" x2="41.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="39.25" y1="50.06" x2="39.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="38.75" y1="50.06" x2="39.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="38.25" y1="50.06" x2="38.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="37.75" y1="50.06" x2="38.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="35.75" y1="50.06" x2="37.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="35.25" y1="50.06" x2="35.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="34.75" y1="50.06" x2="35.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="34.25" y1="50.06" x2="34.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="33.75" y1="50.06" x2="34.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="32.75" y1="50.06" x2="33.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="37.59" y1="52.8" x2="37.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="49.25" y1="50.06" x2="45.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="44.45" y1="11.8" x2="39.1" y2="20.2" width="0" layer="19" extent="1-1"/>
+<wire x1="47.784" y1="2.736" x2="44.45" y2="11.8" width="0" layer="19" extent="1-1"/>
+<wire x1="20.65" y1="51.26" x2="32.75" y2="50.06" width="0" layer="19" extent="1-16"/>
+<wire x1="12.04" y1="47.41" x2="20.65" y2="51.26" width="0" layer="19" extent="1-1"/>
+<wire x1="12.04" y1="45.91" x2="12.04" y2="47.41" width="0" layer="19" extent="1-1"/>
+<wire x1="10.54" y1="45.91" x2="12.04" y2="45.91" width="0" layer="19" extent="1-1"/>
+<wire x1="10.54" y1="47.41" x2="12.04" y2="47.41" width="0" layer="19" extent="1-1"/>
+<wire x1="9.04" y1="47.41" x2="10.54" y2="47.41" width="0" layer="19" extent="1-1"/>
+<wire x1="12.04" y1="44.41" x2="12.04" y2="45.91" width="0" layer="19" extent="1-1"/>
+<wire x1="9.04" y1="45.91" x2="10.54" y2="45.91" width="0" layer="19" extent="1-1"/>
+<wire x1="10.54" y1="44.41" x2="10.54" y2="45.91" width="0" layer="19" extent="1-1"/>
+<wire x1="9.04" y1="44.41" x2="9.04" y2="45.91" width="0" layer="19" extent="1-1"/>
+<wire x1="3.15" y1="51.26" x2="9.04" y2="47.41" width="0" layer="19" extent="1-1"/>
+<wire x1="14.45" y1="28.3" x2="27.6" y2="27.22" width="0" layer="19" extent="1-1"/>
+<wire x1="7.5" y1="29" x2="14.45" y2="28.3" width="0" layer="19" extent="1-1"/>
+<wire x1="12.8" y1="15.95" x2="14.45" y2="28.3" width="0" layer="19" extent="1-1"/>
+<wire x1="15.05" y1="5.2" x2="12.8" y2="15.95" width="0" layer="19" extent="1-1"/>
+<wire x1="12.8" y1="1.45" x2="15.05" y2="5.2" width="0" layer="19" extent="1-1"/>
+<wire x1="27.155" y1="10.9" x2="15.05" y2="5.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="MIDI_IN_SOURCE">
 <contactref element="MIDI_IN_CONN" pad="3"/>
 <contactref element="MIDI_IN_CONN" pad="5"/>
 <contactref element="R15" pad="2"/>
+<wire x1="62.7" y1="11.9" x2="65.5" y2="11.9" width="0" layer="19" extent="1-1"/>
+<wire x1="32.7" y1="45.5" x2="62.7" y2="11.9" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$30">
 <contactref element="R15" pad="1"/>
 <contactref element="D2" pad="C"/>
 <contactref element="OPTO" pad="2"/>
+<wire x1="37.2" y1="44.635" x2="52.6" y2="36.005" width="0" layer="19" extent="1-1"/>
+<wire x1="30.7" y1="45.5" x2="37.2" y2="44.635" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="MIDI_IN_SINK">
 <contactref element="MIDI_IN_CONN" pad="2"/>
 <contactref element="MIDI_IN_CONN" pad="4"/>
 <contactref element="D2" pad="A"/>
 <contactref element="OPTO" pad="3"/>
+<wire x1="37.2" y1="43.365" x2="52.6" y2="39.595" width="0" layer="19" extent="1-1"/>
+<wire x1="55.3" y1="18.9" x2="52.6" y2="39.595" width="0" layer="19" extent="1-1"/>
+<wire x1="51.2" y1="14.65" x2="55.3" y2="18.9" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$32">
 <contactref element="R12" pad="2"/>
 <contactref element="OPTO" pad="7"/>
+<wire x1="41.1" y1="20.2" x2="42.8" y2="44.635" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="MIDI_OUT_SINK">
 <contactref element="MIDI_OUT_CONN" pad="2"/>
 <contactref element="MIDI_OUT_CONN" pad="4"/>
 <contactref element="R18" pad="1"/>
+<wire x1="51.2" y1="24.75" x2="55.3" y2="29" width="0" layer="19" extent="1-1"/>
+<wire x1="33" y1="20.1" x2="51.2" y2="24.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="MIDI_OUT_SOURCE">
 <contactref element="MIDI_OUT_CONN" pad="3"/>
 <contactref element="MIDI_OUT_CONN" pad="5"/>
 <contactref element="R17" pad="2"/>
+<wire x1="62.7" y1="22" x2="65.5" y2="22" width="0" layer="19" extent="1-1"/>
+<wire x1="35.1" y1="23" x2="62.7" y2="22" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="DIN">
 <contactref element="ESP32S3" pad="38"/>
 <contactref element="PCM" pad="14"/>
+<wire x1="20.65" y1="48.72" x2="46.221" y2="28.824996875" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="LRC">
 <contactref element="ESP32S3" pad="4"/>
 <contactref element="PCM" pad="15"/>
+<wire x1="3.15" y1="47.45" x2="46.221" y2="29.475" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="BCLK">
 <contactref element="ESP32S3" pad="39"/>
 <contactref element="PCM" pad="13"/>
+<wire x1="20.65" y1="49.99" x2="46.221" y2="28.175" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="SCL">
 <contactref element="ESP32S3" pad="10"/>
 <contactref element="R14" pad="2"/>
 <contactref element="J3" pad="3"/>
 <contactref element="EXP" pad="5"/>
+<wire x1="42.67" y1="52.8" x2="50.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="27.1" y1="33.1" x2="42.67" y2="52.8" width="0" layer="19" extent="1-1"/>
+<wire x1="3.15" y1="39.83" x2="27.1" y2="33.1" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="SDA">
 <contactref element="ESP32S3" pad="11"/>
 <contactref element="R13" pad="2"/>
 <contactref element="J3" pad="4"/>
 <contactref element="EXP" pad="4"/>
+<wire x1="40.13" y1="52.8" x2="49.75" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="27" y1="45.5" x2="40.13" y2="52.8" width="0" layer="19" extent="1-1"/>
+<wire x1="3.15" y1="38.56" x2="27" y2="45.5" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="3V3">
 <contactref element="ESP32S3" pad="2"/>
@@ -1790,85 +1875,127 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="REG" pad="2"/>
 <contactref element="J3" pad="37"/>
 <contactref element="EXP" pad="2"/>
+<wire x1="33.25" y1="50.06" x2="35.05" y2="52.8" width="0" layer="19" extent="16-16"/>
+<wire x1="32.7" y1="42.2" x2="33.25" y2="50.06" width="0" layer="19" extent="1-16"/>
+<wire x1="25" y1="45.5" x2="32.7" y2="42.2" width="0" layer="19" extent="1-1"/>
+<wire x1="25.2" y1="36.4" x2="25" y2="45.5" width="0" layer="19" extent="1-1"/>
+<wire x1="25.1" y1="33.1" x2="25.2" y2="36.4" width="0" layer="19" extent="1-1"/>
+<wire x1="30.75" y1="33" x2="25.1" y2="33.1" width="0" layer="19" extent="1-1"/>
+<wire x1="33.8" y1="28.8" x2="30.75" y2="33" width="0" layer="19" extent="1-1"/>
+<wire x1="33.1" y1="23" x2="33.8" y2="28.8" width="0" layer="19" extent="1-1"/>
+<wire x1="29.88" y1="20.6" x2="33.1" y2="23" width="0" layer="19" extent="1-1"/>
+<wire x1="40.379" y1="28.175003125" x2="33.8" y2="28.8" width="0" layer="19" extent="1-1"/>
+<wire x1="40.379" y1="32.725" x2="40.379" y2="28.175003125" width="0" layer="19" extent="1-1"/>
+<wire x1="40.05" y1="36.8" x2="40.379" y2="32.725" width="0" layer="19" extent="1-1"/>
+<wire x1="46.221" y1="32.724996875" x2="40.379" y2="32.725" width="0" layer="19" extent="1-1"/>
+<wire x1="46.221" y1="30.775" x2="46.221" y2="32.724996875" width="0" layer="19" extent="1-1"/>
+<wire x1="47.75" y1="36.8" x2="46.221" y2="32.724996875" width="0" layer="19" extent="1-1"/>
+<wire x1="40.95" y1="17.2" x2="33.1" y2="23" width="0" layer="19" extent="1-1"/>
+<wire x1="40.85" y1="14.6" x2="40.95" y2="17.2" width="0" layer="19" extent="1-1"/>
+<wire x1="46.35" y1="11.8" x2="40.85" y2="14.6" width="0" layer="19" extent="1-1"/>
+<wire x1="18.65" y1="21.8" x2="29.88" y2="20.6" width="0" layer="19" extent="1-1"/>
+<wire x1="3.15" y1="49.99" x2="25" y2="45.5" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="INT">
 <contactref element="ESP32S3" pad="5"/>
 <contactref element="J3" pad="1"/>
+<wire x1="3.15" y1="46.18" x2="51.25" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="MIDI_IN">
 <contactref element="ESP32S3" pad="24"/>
 <contactref element="R16" pad="1"/>
 <contactref element="OPTO" pad="6"/>
+<wire x1="33.8" y1="26.8" x2="42.8" y2="43.365" width="0" layer="19" extent="1-1"/>
+<wire x1="16.345" y1="33.5" x2="33.8" y2="26.8" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="D+">
 <contactref element="ESP32S3" pad="14"/>
 <contactref element="USBKB" pad="03"/>
+<wire x1="15.05" y1="7.7" x2="3.15" y2="34.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="D-">
 <contactref element="ESP32S3" pad="13"/>
 <contactref element="USBKB" pad="02"/>
+<wire x1="15.05" y1="9.7" x2="3.15" y2="36.02" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="MIDI_OUT">
 <contactref element="ESP32S3" pad="19"/>
 <contactref element="R18" pad="2"/>
+<wire x1="9.995" y1="33.5" x2="35" y2="20.1" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="PWM">
 <contactref element="ESP32S3" pad="9"/>
 <contactref element="J3" pad="6"/>
+<wire x1="3.15" y1="41.1" x2="48.75" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="G6">
 <contactref element="ESP32S3" pad="15"/>
 <contactref element="J3" pad="22"/>
+<wire x1="4.915" y1="33.5" x2="40.75" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="R5">
 <contactref element="ESP32S3" pad="6"/>
 <contactref element="J3" pad="31"/>
+<wire x1="3.15" y1="44.91" x2="36.25" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="R7">
 <contactref element="ESP32S3" pad="8"/>
 <contactref element="J3" pad="29"/>
+<wire x1="3.15" y1="42.37" x2="37.25" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="G5">
 <contactref element="ESP32S3" pad="12"/>
 <contactref element="J3" pad="23"/>
+<wire x1="3.15" y1="37.29" x2="40.25" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="G7">
 <contactref element="ESP32S3" pad="16"/>
 <contactref element="J3" pad="21"/>
+<wire x1="6.185" y1="33.5" x2="41.25" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="B7">
 <contactref element="ESP32S3" pad="23"/>
 <contactref element="J3" pad="13"/>
+<wire x1="15.075" y1="33.5" x2="45.25" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="HSYNC">
 <contactref element="ESP32S3" pad="33"/>
 <contactref element="J3" pad="9"/>
+<wire x1="20.65" y1="42.37" x2="47.25" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="DE">
 <contactref element="ESP32S3" pad="35"/>
 <contactref element="J3" pad="7"/>
+<wire x1="20.65" y1="44.91" x2="48.25" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="VSYNC">
 <contactref element="ESP32S3" pad="34"/>
 <contactref element="J3" pad="8"/>
+<wire x1="20.65" y1="43.64" x2="47.75" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="BLEN">
 <contactref element="ESP32S3" pad="32"/>
 <contactref element="J3" pad="10"/>
+<wire x1="20.65" y1="41.1" x2="46.75" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="B6">
 <contactref element="ESP32S3" pad="20"/>
 <contactref element="J3" pad="14"/>
+<wire x1="11.265" y1="33.5" x2="44.75" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="R6">
 <contactref element="ESP32S3" pad="7"/>
 <contactref element="J3" pad="30"/>
+<wire x1="3.15" y1="43.64" x2="36.75" y2="50.06" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="LOUT">
 <contactref element="AUDIO_CONN" pad="2"/>
 <contactref element="AUDIO_CONN" pad="4"/>
 <contactref element="R20" pad="1"/>
 <contactref element="C33" pad="1"/>
+<wire x1="51.2" y1="4.45" x2="55.3" y2="8.7" width="0" layer="19" extent="1-1"/>
+<wire x1="44.55" y1="17.4" x2="55.3" y2="8.7" width="0" layer="19" extent="1-1"/>
+<wire x1="39.2" y1="23.1" x2="44.55" y2="17.4" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="AGND">
 <contactref element="AUDIO_CONN" pad="1"/>
@@ -1881,22 +2008,38 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="C23" pad="2"/>
 <contactref element="C21" pad="1"/>
 <contactref element="C31" pad="-"/>
+<wire x1="46.45" y1="14.7" x2="64.5" y2="8.7" width="0" layer="19" extent="1-1"/>
+<wire x1="46.45" y1="17.4" x2="46.45" y2="14.7" width="0" layer="19" extent="1-1"/>
+<wire x1="46.35" y1="20.3" x2="46.45" y2="17.4" width="0" layer="19" extent="1-1"/>
+<wire x1="39.05" y1="17.2" x2="46.45" y2="17.4" width="0" layer="19" extent="1-1"/>
+<wire x1="38.95" y1="14.6" x2="39.05" y2="17.2" width="0" layer="19" extent="1-1"/>
+<wire x1="40.379" y1="27.525" x2="46.35" y2="20.3" width="0" layer="19" extent="1-1"/>
+<wire x1="40.379" y1="31.425" x2="40.379" y2="27.525" width="0" layer="19" extent="1-1"/>
+<wire x1="35.95" y1="36.8" x2="40.379" y2="31.425" width="0" layer="19" extent="1-1"/>
+<wire x1="14.55" y1="21.8" x2="39.05" y2="17.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="ROUT">
 <contactref element="AUDIO_CONN" pad="3"/>
 <contactref element="AUDIO_CONN" pad="5"/>
 <contactref element="R19" pad="1"/>
 <contactref element="C32" pad="1"/>
+<wire x1="62.7" y1="1.7" x2="65.5" y2="1.7" width="0" layer="19" extent="1-1"/>
+<wire x1="39.2" y1="11.7" x2="62.7" y2="1.7" width="0" layer="19" extent="1-1"/>
+<wire x1="44.45" y1="20.3" x2="39.2" y2="11.7" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="IO9">
 <contactref element="ESP32S3" pad="17"/>
 <contactref element="EXP" pad="8"/>
+<wire x1="7.455" y1="33.5" x2="50.29" y2="52.8" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="IO0">
 <contactref element="ESP32S3" pad="27"/>
 <contactref element="RESET" pad="3"/>
 <contactref element="R7" pad="2"/>
 <contactref element="EXP" pad="7"/>
+<wire x1="30.7" y1="42.2" x2="47.75" y2="52.8" width="0" layer="19" extent="1-1"/>
+<wire x1="26.26" y1="50.01" x2="30.7" y2="42.2" width="0" layer="19" extent="1-1"/>
+<wire x1="20.65" y1="34.75" x2="30.7" y2="42.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="GPIO10">
 <contactref element="ESP32S3" pad="18"/>
@@ -1906,14 +2049,19 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="RESET" pad="6"/>
 <contactref element="R5" pad="1"/>
 <contactref element="C4" pad="1"/>
+<wire x1="27.2" y1="36.4" x2="24.94" y2="52.19" width="0" layer="19" extent="1-1"/>
+<wire x1="32.55" y1="36.4" x2="27.2" y2="36.4" width="0" layer="19" extent="1-1"/>
+<wire x1="3.15" y1="48.72" x2="24.94" y2="52.19" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="UART0_TXD">
 <contactref element="ESP32S3" pad="37"/>
 <contactref element="SERIAL" pad="3"/>
+<wire x1="29.695" y1="10.9" x2="20.65" y2="47.45" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="UART0_RXD">
 <contactref element="ESP32S3" pad="36"/>
 <contactref element="SERIAL" pad="2"/>
+<wire x1="28.425" y1="10.9" x2="20.65" y2="46.18" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="5V_USB">
 <contactref element="INPUT" pad="A9"/>
@@ -1923,71 +2071,97 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="SERIAL" pad="16"/>
 <contactref element="SELECT" pad="1"/>
 <contactref element="PWR" pad="2"/>
+<wire x1="60.1" y1="37.95" x2="60.1" y2="38.25" width="0" layer="19" extent="1-1"/>
+<wire x1="60.1" y1="33.45" x2="60.1" y2="37.95" width="0" layer="19" extent="1-1"/>
+<wire x1="60.1" y1="33.15" x2="60.1" y2="33.45" width="0" layer="19" extent="1-1"/>
+<wire x1="27.155" y1="16.5" x2="60.1" y2="33.15" width="0" layer="19" extent="1-1"/>
+<wire x1="8.64" y1="20.3" x2="27.155" y2="16.5" width="0" layer="19" extent="1-1"/>
+<wire x1="7.5" y1="26.993" x2="8.64" y2="20.3" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="!RTS">
 <contactref element="RESET" pad="1"/>
 <contactref element="R6" pad="1"/>
 <contactref element="SERIAL" pad="14"/>
+<wire x1="27.2" y1="39.3" x2="24.94" y2="50.01" width="0" layer="19" extent="1-1"/>
+<wire x1="29.695" y1="16.5" x2="27.2" y2="39.3" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$1">
 <contactref element="RESET" pad="2"/>
 <contactref element="R1" pad="1"/>
+<wire x1="27.1" y1="42.4" x2="25.6" y2="50.01" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$2">
 <contactref element="RESET" pad="5"/>
 <contactref element="R6" pad="2"/>
+<wire x1="25.2" y1="39.3" x2="25.6" y2="52.19" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="!DTR">
 <contactref element="R1" pad="2"/>
 <contactref element="RESET" pad="4"/>
 <contactref element="SERIAL" pad="13"/>
+<wire x1="25.1" y1="42.4" x2="26.26" y2="52.19" width="0" layer="19" extent="1-1"/>
+<wire x1="30.965" y1="16.5" x2="25.1" y2="42.4" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$7">
 <contactref element="PCM" pad="18"/>
 <contactref element="C8" pad="1"/>
 <contactref element="C28" pad="+"/>
+<wire x1="36.9" y1="26.75" x2="46.221" y2="31.424996875" width="0" layer="19" extent="1-1"/>
+<wire x1="18.55" y1="28.3" x2="36.9" y2="26.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$8">
 <contactref element="PCM" pad="7"/>
 <contactref element="R19" pad="2"/>
+<wire x1="41.2" y1="11.7" x2="40.379" y2="28.825" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$16">
 <contactref element="PCM" pad="4"/>
 <contactref element="C22" pad="1"/>
+<wire x1="44.55" y1="23.1" x2="40.379" y2="30.775" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$18">
 <contactref element="C22" pad="2"/>
 <contactref element="PCM" pad="2"/>
+<wire x1="40.379" y1="32.075" x2="46.45" y2="23.1" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="VNEG">
 <contactref element="PCM" pad="5"/>
 <contactref element="C23" pad="1"/>
+<wire x1="44.55" y1="14.7" x2="40.379" y2="30.125" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="OUTL">
 <contactref element="PCM" pad="6"/>
 <contactref element="R20" pad="2"/>
+<wire x1="41.2" y1="23.1" x2="40.379" y2="29.475003125" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$38">
 <contactref element="SERIAL" pad="4"/>
 <contactref element="C11" pad="2"/>
+<wire x1="30.965" y1="10.9" x2="32.45" y2="39.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$42">
 <contactref element="INPUT" pad="A5"/>
 <contactref element="R9" pad="1"/>
+<wire x1="57.4" y1="37.2" x2="60.1" y2="34.45" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="DP1">
 <contactref element="INPUT" pad="A6"/>
 <contactref element="SERIAL" pad="5"/>
 <contactref element="INPUT" pad="B6"/>
+<wire x1="60.1" y1="35.45" x2="60.1" y2="36.45" width="0" layer="19" extent="1-1"/>
+<wire x1="32.235" y1="10.9" x2="60.1" y2="35.45" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="DN1">
 <contactref element="INPUT" pad="A7"/>
 <contactref element="SERIAL" pad="6"/>
 <contactref element="INPUT" pad="B7"/>
+<wire x1="60.1" y1="34.95" x2="60.1" y2="35.95" width="0" layer="19" extent="1-1"/>
+<wire x1="33.505" y1="10.9" x2="60.1" y2="34.95" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$3">
 <contactref element="INPUT" pad="B5"/>
 <contactref element="R10" pad="2"/>
+<wire x1="57.2" y1="34.2" x2="60.1" y2="37.45" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="5V">
 <contactref element="REG" pad="1"/>
@@ -1998,32 +2172,45 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="J3" pad="40"/>
 <contactref element="J3" pad="39"/>
 <contactref element="EXP" pad="1"/>
+<wire x1="42.8" y1="45.905" x2="56.465" y2="44.515" width="0" layer="19" extent="1-1"/>
+<wire x1="32.25" y1="50.06" x2="42.8" y2="45.905" width="0" layer="19" extent="1-16"/>
+<wire x1="31.75" y1="50.06" x2="32.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="32.51" y1="52.8" x2="32.25" y2="50.06" width="0" layer="19" extent="16-16"/>
+<wire x1="25.32" y1="20.6" x2="31.75" y2="50.06" width="0" layer="19" extent="1-16"/>
+<wire x1="15.05" y1="12.2" x2="25.32" y2="20.6" width="0" layer="19" extent="1-1"/>
+<wire x1="20.9" y1="2.736" x2="15.05" y2="12.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="SELECT">
 <contactref element="POWER" pad="2"/>
 <contactref element="SELECT" pad="2"/>
+<wire x1="6.1" y1="20.3" x2="56.465" y2="48.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="5V_IN">
 <contactref element="SELECT" pad="3"/>
 <contactref element="PWR" pad="3"/>
+<wire x1="3.56" y1="20.3" x2="7.5" y2="24.987" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="JOY_CLK">
 <contactref element="SNES" pad="CLOCK"/>
 <contactref element="ESP32S3" pad="21"/>
+<wire x1="24.964" y1="2.736" x2="12.535" y2="33.5" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="JOY_LATCH">
 <contactref element="SNES" pad="LATCH"/>
 <contactref element="ESP32S3" pad="25"/>
+<wire x1="29.028" y1="2.736" x2="17.615" y2="33.5" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="JOY_D0">
 <contactref element="SNES" pad="D0"/>
 <contactref element="ESP32S3" pad="26"/>
+<wire x1="33.092" y1="2.736" x2="18.885" y2="33.5" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$4">
 </signal>
 <signal name="IO38">
 <contactref element="ESP32S3" pad="31"/>
 <contactref element="EXP" pad="6"/>
+<wire x1="20.65" y1="39.83" x2="45.21" y2="52.8" width="0" layer="19" extent="1-1"/>
 </signal>
 </signals>
 <mfgpreviewcolors>
