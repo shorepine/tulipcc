@@ -38,6 +38,7 @@ Tulip CC rev 4 supports:
 - USB keyboard support
 - Capactive multi-touch support (mouse on Tulip Desktop)
 - MIDI input and output 
+- Joystick support for NES/SNES style gamepads
 - 575mA power usage @ 5V including display, at medium display brightness, can last for hours on LiPo, 18650s, or USB battery pack 
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
