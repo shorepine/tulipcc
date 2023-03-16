@@ -166,7 +166,7 @@ STATIC void machine_timer_isr(void *self_in) {
     #endif
 
     mp_sched_schedule(self->callback, self);
-    mp_hal_wake_main_task_from_isr();
+    //mp_hal_wake_main_task_from_isr();
 }
 
 STATIC void machine_timer_enable(machine_timer_obj_t *self) {
