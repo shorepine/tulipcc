@@ -1,15 +1,15 @@
 EAGLE AutoRouter Statistics:
 
-Job           : /Users/bwhitman/outside/tulipcc/pcbs/tulip4_board_ch340e/tulip breakout.brd
+Job           : /Users/bwhitman/outside/tulipcc/docs/pcbs/tulip4_board_v4r7/tulip breakout.brd
 
-Start at      : 15:57:21 (12/4/22)
+Start at      : 06:39:47 (3/16/23)
 End at        : 19:00:00 (12/31/69)
 Elapsed time  : 00:00:00
 
-Signals       :    63   RoutingGrid: 6 mil  Layers: 2
-Connections   :   204   predefined:  0 ( 0 Vias )
+Signals       :    65   RoutingGrid: 6 mil  Layers: 2
+Connections   :   187   predefined:  0 ( 0 Vias )
 
-Router memory :   7832376
+Router memory :   7201216
 
 Passname          : TopRouter
 
