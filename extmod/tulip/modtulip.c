@@ -581,6 +581,16 @@ STATIC mp_obj_t tulip_brightness(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_brightness_obj, 0, 1, tulip_brightness);
 
+#ifdef ESP_PLATFORM
+extern uint16_t check_esp_joy();
+STATIC mp_obj_t tulip_joy(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(check_esp_joy());
+
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_joy_obj, 0, 0, tulip_joy);
+#endif
+
+
 extern uint8_t last_scan[8];
 STATIC mp_obj_t tulip_keys(size_t n_args, const mp_obj_t *args) {
     mp_obj_t tuple[7];
@@ -950,8 +960,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 // Special platform specific things
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
+#else
+    { MP_ROM_QSTR(MP_QSTR_joy), MP_ROM_PTR(&tulip_joy_obj) },
 #endif
-
 };
 
 STATIC MP_DEFINE_CONST_DICT(tulip_module_globals, tulip_module_globals_table);

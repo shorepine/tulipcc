@@ -70,6 +70,7 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/amy/src/pcm.c
     ${PROJECT_DIR}/main.c
     ${PROJECT_DIR}/esp32s3_display.c
+    ${PROJECT_DIR}/esp32s3_joy.c
     ${PROJECT_DIR}/usb_keyboard.c
     ${PROJECT_DIR}/uart.c
     ${PROJECT_DIR}/usb.c
