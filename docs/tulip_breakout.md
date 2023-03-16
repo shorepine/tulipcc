@@ -11,6 +11,8 @@ Our [breakout board PCB is $30 for 3](https://oshpark.com/shared_projects/L1xtM8
 
 The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_breakout_v3)
 
+**NOTE**: the current version of the breakout board Tulip does not have support for the joystick port. We'll add it soon! If you really want that, build the breadboard or (r7+) integrated board version instead. 
+
 ![Tulip Breakout](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/breakout_bare.png)
 
 
