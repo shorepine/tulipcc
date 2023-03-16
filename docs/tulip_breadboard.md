@@ -15,6 +15,7 @@ You'll need
 - [A 40-pin FPC header for the display.](https://www.adafruit.com/product/4905)
 - One of two choices for sound: either [this mono I2S speaker amp board](https://www.adafruit.com/product/3006) (you'll also need a 3W speaker) or this stereo line-out / headphone jack [UDA1334 DAC.](https://www.aliexpress.com/item/3256803337983466.html?gatewayAdapt=4itemAdapt) 
 - _Almost_ any USB keyboard should work. If yours doesn't, please file an issue here and I can investigate with you. I can only test the ones I have here! I do recommend the [Keychron series of mechanical keyboards](https://www.keychron.com/products/keychron-k7-ultra-slim-wireless-mechanical-keyboard?variant=39396239048793), they're inspiringly clicky. 
+- If you want to support an optional NES or SNES joytstick, [get the right connector.](https://www.zedlabz.com/collections/retro-nintendo-snes/products/zedlabz-7-pin-90-degree-female-controller-connector-port-for-nintendo-snes-console-2-pack-grey)
 - Connectors and random parts: 
    - [1 USB female A screw terminal](https://www.amazon.com/Poyiccot-Terminal-Connector-Converter-Breakout/dp/B08Y8NKGHL)
    - [2 female 5-pin DIN MIDI jacks](https://www.adafruit.com/product/1134)
@@ -62,6 +63,11 @@ Here's the pin connections you'll need to make. A note, These pin numbers for th
 | MIDI out      | 11           | L17                          | MIDI RX        |
 | MIDI 5V       | 5V           | L21                          | MIDI 5v        |
 | MIDI GND      | GND          | L22                          | MIDI GND       |
+| Joy CLOCK     | 13           | L19                          | Joy CLOCK      |
+| Joy LATCH     | 48           | R16                          | Joy LATCH      |
+| Joy DATA      | 45           | R15                          | Joy DATA       |
+| Joy 5V        | 5V           | L21                          | Joy 5V         |
+| Joy GND       | GND          | L22                          | Joy GND        |          
 
 Wire the FPC cable to the displays "RGB" port. The included cable with the display works fine. The blue side should be facing up on both ends. 
 
