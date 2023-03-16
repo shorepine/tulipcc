@@ -7078,32 +7078,6 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <label x="213.36" y="109.22" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="JOY_IO" class="0">
-<segment>
-<pinref part="J2" gate="G$1" pin="SSRX+"/>
-<wire x1="220.98" y1="106.68" x2="213.36" y2="106.68" width="0.1524" layer="91"/>
-<label x="213.36" y="106.68" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="N$13" class="0">
-<segment>
-<pinref part="J2" gate="G$1" pin="GND_DRAIN"/>
-<wire x1="220.98" y1="104.14" x2="213.36" y2="104.14" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="JOY_D1" class="0">
-<segment>
-<pinref part="J2" gate="G$1" pin="SSTX-"/>
-<wire x1="220.98" y1="101.6" x2="213.36" y2="101.6" width="0.1524" layer="91"/>
-<label x="213.36" y="101.6" size="1.778" layer="95"/>
-</segment>
-</net>
-<net name="N$15" class="0">
-<segment>
-<pinref part="J2" gate="G$1" pin="SSTX+"/>
-<wire x1="220.98" y1="99.06" x2="213.36" y2="99.06" width="0.1524" layer="91"/>
-</segment>
-</net>
 </nets>
 </sheet>
 </sheets>
