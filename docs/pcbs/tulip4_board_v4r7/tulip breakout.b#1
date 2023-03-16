@@ -1521,9 +1521,9 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <attribute name="NAME" x="47.532" y="14.573" size="0.8128" layer="25" ratio="18"/>
 <attribute name="VALUE" x="47.532" y="13.938" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C28" library="microbuilder" package="PANASONIC_C" value="10uF" x="16.5" y="28.3" smashed="yes">
-<attribute name="NAME" x="13.96" y="31.094" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="13.96" y="24.617" size="0.4064" layer="27" ratio="10"/>
+<element name="C28" library="microbuilder" package="PANASONIC_C" value="10uF" x="14" y="20.8" smashed="yes">
+<attribute name="NAME" x="11.46" y="23.594" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="11.46" y="17.117" size="0.4064" layer="27" ratio="10"/>
 </element>
 <element name="C29" library="microbuilder" package="PANASONIC_C" value="10uF" x="45.7" y="36.8" smashed="yes">
 <attribute name="NAME" x="43.16" y="39.594" size="0.8128" layer="25" ratio="18"/>
@@ -1533,9 +1533,9 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <attribute name="NAME" x="35.46" y="39.594" size="0.8128" layer="25" ratio="18"/>
 <attribute name="VALUE" x="35.46" y="33.117" size="0.4064" layer="27" ratio="10"/>
 </element>
-<element name="C31" library="microbuilder" package="PANASONIC_C" value="10uF" x="16.6" y="21.8" smashed="yes">
-<attribute name="NAME" x="14.06" y="24.594" size="0.8128" layer="25" ratio="18"/>
-<attribute name="VALUE" x="14.06" y="18.117" size="0.4064" layer="27" ratio="10"/>
+<element name="C31" library="microbuilder" package="PANASONIC_C" value="10uF" x="5.7" y="19.1" smashed="yes">
+<attribute name="NAME" x="3.16" y="21.894" size="0.8128" layer="25" ratio="18"/>
+<attribute name="VALUE" x="3.16" y="15.417" size="0.4064" layer="27" ratio="10"/>
 </element>
 <element name="R19" library="adafruit" package="R0805" value="470" x="40.2" y="11.7" smashed="yes">
 <attribute name="NAME" x="39.438" y="12.716" size="1.27" layer="25"/>
@@ -1617,9 +1617,9 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <attribute name="PURCHASE-URL" value="https://pricing.snapeda.com/search/part/VO0601T/?ref=eda" x="40" y="44" size="1.778" layer="27" display="off"/>
 <attribute name="VALUE" x="36.695840625" y="39.69458125" size="1.2716" layer="27"/>
 </element>
-<element name="SELECT" library="adafruit" package="1X03" value="" x="6.1" y="20.3" smashed="yes" rot="R180">
-<attribute name="NAME" x="9.9862" y="18.4712" size="1.27" layer="25" ratio="10" rot="R180"/>
-<attribute name="VALUE" x="9.91" y="23.475" size="1.27" layer="27" rot="R180"/>
+<element name="EXT-USB" library="adafruit" package="1X03" value="" x="20.1" y="28" smashed="yes" rot="R270">
+<attribute name="NAME" x="21.9288" y="31.8862" size="1.27" layer="25" ratio="10" rot="R270"/>
+<attribute name="VALUE" x="16.925" y="31.81" size="1.27" layer="27" rot="R270"/>
 </element>
 <element name="SNES" library="gamepad-conn" package="SNESCONN" value="SNESCONN" x="20.9" y="6.8" smashed="yes" rot="MR180"/>
 <element name="PWR" library="440055-3" package="TE_440055-3" value="440055-3" x="7.5" y="29" smashed="yes" rot="R270">
@@ -1770,9 +1770,9 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <wire x1="10.54" y1="44.41" x2="10.54" y2="45.91" width="0" layer="19" extent="1-1"/>
 <wire x1="9.04" y1="44.41" x2="9.04" y2="45.91" width="0" layer="19" extent="1-1"/>
 <wire x1="3.15" y1="51.26" x2="9.04" y2="47.41" width="0" layer="19" extent="1-1"/>
-<wire x1="14.45" y1="28.3" x2="27.6" y2="27.22" width="0" layer="19" extent="1-1"/>
-<wire x1="7.5" y1="29" x2="14.45" y2="28.3" width="0" layer="19" extent="1-1"/>
-<wire x1="12.8" y1="15.95" x2="14.45" y2="28.3" width="0" layer="19" extent="1-1"/>
+<wire x1="11.95" y1="20.8" x2="27.6" y2="27.22" width="0" layer="19" extent="1-1"/>
+<wire x1="7.5" y1="29" x2="11.95" y2="20.8" width="0" layer="19" extent="1-1"/>
+<wire x1="12.8" y1="15.95" x2="11.95" y2="20.8" width="0" layer="19" extent="1-1"/>
 <wire x1="15.05" y1="5.2" x2="12.8" y2="15.95" width="0" layer="19" extent="1-1"/>
 <wire x1="12.8" y1="1.45" x2="15.05" y2="5.2" width="0" layer="19" extent="1-1"/>
 <wire x1="27.155" y1="10.9" x2="15.05" y2="5.2" width="0" layer="19" extent="1-1"/>
@@ -1892,7 +1892,7 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <wire x1="40.95" y1="17.2" x2="33.1" y2="23" width="0" layer="19" extent="1-1"/>
 <wire x1="40.85" y1="14.6" x2="40.95" y2="17.2" width="0" layer="19" extent="1-1"/>
 <wire x1="46.35" y1="11.8" x2="40.85" y2="14.6" width="0" layer="19" extent="1-1"/>
-<wire x1="18.65" y1="21.8" x2="29.88" y2="20.6" width="0" layer="19" extent="1-1"/>
+<wire x1="7.75" y1="19.1" x2="29.88" y2="20.6" width="0" layer="19" extent="1-1"/>
 <wire x1="29.05" y1="7.4" x2="29.88" y2="20.6" width="0" layer="19" extent="1-1"/>
 <wire x1="3.15" y1="49.99" x2="25" y2="45.5" width="0" layer="19" extent="1-1"/>
 </signal>
@@ -2016,7 +2016,7 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <wire x1="40.379" y1="27.525" x2="46.35" y2="20.3" width="0" layer="19" extent="1-1"/>
 <wire x1="40.379" y1="31.425" x2="40.379" y2="27.525" width="0" layer="19" extent="1-1"/>
 <wire x1="35.95" y1="36.8" x2="40.379" y2="31.425" width="0" layer="19" extent="1-1"/>
-<wire x1="14.55" y1="21.8" x2="39.05" y2="17.2" width="0" layer="19" extent="1-1"/>
+<wire x1="3.65" y1="19.1" x2="39.05" y2="17.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="ROUT">
 <contactref element="AUDIO_CONN" pad="3"/>
@@ -2069,14 +2069,14 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="INPUT" pad="B4"/>
 <contactref element="INPUT" pad="B9"/>
 <contactref element="SERIAL" pad="16"/>
-<contactref element="SELECT" pad="1"/>
+<contactref element="EXT-USB" pad="1"/>
 <contactref element="PWR" pad="2"/>
 <wire x1="60.1" y1="37.95" x2="60.1" y2="38.25" width="0" layer="19" extent="1-1"/>
 <wire x1="60.1" y1="33.45" x2="60.1" y2="37.95" width="0" layer="19" extent="1-1"/>
 <wire x1="60.1" y1="33.15" x2="60.1" y2="33.45" width="0" layer="19" extent="1-1"/>
 <wire x1="27.155" y1="16.5" x2="60.1" y2="33.15" width="0" layer="19" extent="1-1"/>
-<wire x1="8.64" y1="20.3" x2="27.155" y2="16.5" width="0" layer="19" extent="1-1"/>
-<wire x1="7.5" y1="26.993" x2="8.64" y2="20.3" width="0" layer="19" extent="1-1"/>
+<wire x1="20.1" y1="30.54" x2="27.155" y2="16.5" width="0" layer="19" extent="1-1"/>
+<wire x1="7.5" y1="26.993" x2="20.1" y2="30.54" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="!RTS">
 <contactref element="RESET" pad="1"/>
@@ -2107,7 +2107,7 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <contactref element="C8" pad="1"/>
 <contactref element="C28" pad="+"/>
 <wire x1="36.9" y1="26.75" x2="46.221" y2="31.424996875" width="0" layer="19" extent="1-1"/>
-<wire x1="18.55" y1="28.3" x2="36.9" y2="26.75" width="0" layer="19" extent="1-1"/>
+<wire x1="16.05" y1="20.8" x2="36.9" y2="26.75" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$8">
 <contactref element="PCM" pad="7"/>
@@ -2180,15 +2180,15 @@ Note, that not all DRC settings must be set by the manufacturer. Several can be 
 <wire x1="20.9" y1="2.736" x2="26.51" y2="7.4" width="0" layer="19" extent="1-1"/>
 <wire x1="15.05" y1="12.2" x2="20.9" y2="2.736" width="0" layer="19" extent="1-1"/>
 </signal>
-<signal name="SELECT">
+<signal name="EXT-USB">
 <contactref element="POWER" pad="2"/>
-<contactref element="SELECT" pad="2"/>
-<wire x1="6.1" y1="20.3" x2="56.465" y2="48.2" width="0" layer="19" extent="1-1"/>
+<contactref element="EXT-USB" pad="2"/>
+<wire x1="20.1" y1="28" x2="56.465" y2="48.2" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="5V_IN">
-<contactref element="SELECT" pad="3"/>
+<contactref element="EXT-USB" pad="3"/>
 <contactref element="PWR" pad="3"/>
-<wire x1="3.56" y1="20.3" x2="7.5" y2="24.987" width="0" layer="19" extent="1-1"/>
+<wire x1="20.1" y1="25.46" x2="7.5" y2="24.987" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="JOY_CLK">
 <contactref element="SNES" pad="CLOCK"/>
