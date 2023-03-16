@@ -6285,7 +6285,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <part name="H1" library="holes" library_urn="urn:adsk.eagle:library:237" deviceset="MOUNT-HOLE" device="2.8" package3d_urn="urn:adsk.eagle:package:14271/1"/>
 <part name="H2" library="holes" library_urn="urn:adsk.eagle:library:237" deviceset="MOUNT-HOLE" device="2.8" package3d_urn="urn:adsk.eagle:package:14271/1"/>
 <part name="OPTO" library="VO0601T" deviceset="VO0601T" device=""/>
-<part name="SELECT" library="adafruit" deviceset="PINHD-1X3" device=""/>
+<part name="EXT-USB" library="adafruit" deviceset="PINHD-1X3" device=""/>
 <part name="SNES" library="gamepad-conn" deviceset="SNESCONN" device=""/>
 <part name="PWR" library="440055-3" deviceset="440055-3" device=""/>
 <part name="J3" library="adafruit" deviceset="40PINFPC" device="15-1F-REV"/>
@@ -6481,7 +6481,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <attribute name="NAME" x="43.17196875" y="122.7073" size="1.780809375" layer="95"/>
 <attribute name="VALUE" x="43.1712" y="88.8692" size="1.78108125" layer="96"/>
 </instance>
-<instance part="SELECT" gate="A" x="172.72" y="53.34" smashed="yes">
+<instance part="EXT-USB" gate="A" x="172.72" y="53.34" smashed="yes">
 <attribute name="NAME" x="166.37" y="59.055" size="1.778" layer="95"/>
 <attribute name="VALUE" x="166.37" y="45.72" size="1.778" layer="96"/>
 </instance>
@@ -7571,7 +7571,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <label x="287.02" y="22.86" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="SELECT" gate="A" pin="1"/>
+<pinref part="EXT-USB" gate="A" pin="1"/>
 <wire x1="170.18" y1="55.88" x2="180.34" y2="55.88" width="0.1524" layer="91"/>
 <label x="177.8" y="55.88" size="1.778" layer="95"/>
 </segment>
@@ -7786,7 +7786,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 </net>
 <net name="5V_IN" class="0">
 <segment>
-<pinref part="SELECT" gate="A" pin="3"/>
+<pinref part="EXT-USB" gate="A" pin="3"/>
 <wire x1="170.18" y1="50.8" x2="180.34" y2="50.8" width="0.1524" layer="91"/>
 <label x="177.8" y="50.8" size="1.778" layer="95"/>
 </segment>
@@ -7796,11 +7796,11 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <label x="106.68" y="15.24" size="1.778" layer="95"/>
 </segment>
 </net>
-<net name="SELECT" class="0">
+<net name="EXT-USB" class="0">
 <segment>
 <pinref part="POWER" gate="G$1" pin="COM"/>
 <wire x1="210.82" y1="60.96" x2="213.36" y2="60.96" width="0.1524" layer="91"/>
-<pinref part="SELECT" gate="A" pin="2"/>
+<pinref part="EXT-USB" gate="A" pin="2"/>
 <wire x1="170.18" y1="53.34" x2="210.82" y2="53.34" width="0.1524" layer="91"/>
 <wire x1="210.82" y1="53.34" x2="210.82" y2="60.96" width="0.1524" layer="91"/>
 </segment>

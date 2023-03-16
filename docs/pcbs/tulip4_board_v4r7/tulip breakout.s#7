@@ -5483,7 +5483,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <part name="U6" library="SparkFun-IC-Comms" deviceset="CH340C" device=""/>
 <part name="R9" library="adafruit" deviceset="R-US_" device="R0805" value="5.1K"/>
 <part name="R10" library="adafruit" deviceset="R-US_" device="R0805" value="5.1K"/>
-<part name="C11" library="microbuilder" deviceset="CAP_CERAMIC" device="0805-NOOUTLINE" value="10nF"/>
+<part name="C11" library="microbuilder" deviceset="CAP_CERAMIC" device="0805-NOOUTLINE" value="10uF"/>
 <part name="POWER" library="500ASSP1SM6QE" deviceset="500ASSP1SM6QE" device=""/>
 <part name="J3" library="TSM-106-02-L-DH-A" deviceset="TSM-106-02-L-DH-A" device=""/>
 <part name="H1" library="holes" library_urn="urn:adsk.eagle:library:237" deviceset="MOUNT-HOLE" device="2.8" package3d_urn="urn:adsk.eagle:package:14271/1"/>
