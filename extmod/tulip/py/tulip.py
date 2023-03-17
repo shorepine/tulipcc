@@ -50,6 +50,9 @@ class Colors:
     SORTED_HUE = [0,73,146,219,251,178,105,210,242,137,169,201,233,32,64,96,128,160,192,224,228,196,237,164,205,132,232,246,173,100,200,241,168,236,214,141,209,68,136,204,240,245,172,250,177,104,208,244,213,140,249,176,212,248,255,182,109,218,254,145,181,217,253,36,72,108,144,180,216,252,220,184,221,148,185,112,188,222,149,76,152,189,116,156,186,113,153,40,80,120,124,157,84,190,117,44,88,92,121,48,125,52,56,60,223,150,77,154,158,81,85,89,93,4,8,12,16,20,24,28,61,57,126,53,29,122,49,25,94,21,191,118,45,90,62,17,30,58,159,86,13,26,127,54,95,22,63,31,187,114,155,41,82,123,91,50,59,9,18,27,23,55,87,14,119,46,19,51,151,78,83,5,10,15,47,115,42,11,79,6,43,7,183,110,147,37,74,111,75,38,39,1,2,3,35,71,107,34,143,70,67,103,179,106,139,33,66,99,135,175,102,131,171,98,167,163,215,142,211,69,138,207,203,134,199,65,130,195,227,231,235,162,239,166,243,170,97,194,198,226,247,174,101,202,230,129,234,161,206,133,193,225,238,165,197,229]
 
 class Joy:
+    # These are the mask bits for the joystick / keyboard
+    # TODO: test NES (not just SNES)
+    # Use like (tulip.joy & tulip.Joy.SELECT)
     R1 = 2
     L1 = 4
     X = 8
@@ -62,6 +65,26 @@ class Joy:
     SELECT = 1024
     Y = 2048
     B = 4096
+
+# like joy, but also scans the keyboard. lets you use either
+# Z = B, X = A, A = Y, S = X, enter = START, ' = SELECT, Q = L1, W = R1, arrows = DPAD
+def joyk():
+    jmask = joy()
+    key_scans = keys()[1:5] # get up to four keys held at once
+    for k in key_scans:
+        if(k == 79): jmask = jmask | Joy.RIGHT
+        if(k == 80): jmask = jmask | Joy.LEFT
+        if(k == 82): jmask = jmask | Joy.UP
+        if(k == 81): jmask = jmask | Joy.DOWN
+        if(k == 29): jmask = jmask | Joy.B
+        if(k == 27): jmask = jmask | Joy.A
+        if(k == 4):  jmask = jmask | Joy.Y
+        if(k == 22): jmask = jmask | Joy.X
+        if(k == 40): jmask = jmask | Joy.START
+        if(k == 52): jmask = jmask | Joy.SELECT
+        if(k == 20): jmask = jmask | Joy.L1
+        if(k == 26): jmask = jmask | Joy.R1
+    return jmask
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests

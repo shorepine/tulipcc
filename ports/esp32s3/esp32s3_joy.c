@@ -8,6 +8,9 @@
 #define JOY_CLOCK_PIN 13
 #define JOY_LATCH_PIN 48
 #define JOY_DATA_PIN 45
+
+// TODO, i wonder if setting this up as a task and constantly reading with a timer is a better approach
+
 unsigned long IRAM_ATTR micros()
 {
     return (unsigned long)(esp_timer_get_time());
@@ -45,13 +48,14 @@ void init_esp_joy() {
     gpio_set_direction(JOY_DATA_PIN, GPIO_MODE_INPUT);  
 }
 
-uint16_t check_esp_joy() {
+uint16_t check_joy() {
     // Latch for 12us
     gpio_set_level(JOY_LATCH_PIN, 1);
     delayMicroseconds(12);
     gpio_set_level(JOY_LATCH_PIN, 0);
     delayMicroseconds(6);
     uint16_t mask = 0;
+    // One of my SNES controllers does not want to read R1 with this setup. Very strange
     for(int i = 0; i < 16; i++){
         gpio_set_level(JOY_CLOCK_PIN, 0);
         delayMicroseconds(6);

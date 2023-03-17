@@ -98,6 +98,49 @@ void destrow_window() {
     SDL_Quit();    
 }
 
+uint16_t last_held_joy_mask = 0;
+
+void update_joy() {
+    SDL_Event e;
+    while (SDL_PollEvent(&e) != 0) {   
+        if(e.type == SDL_CONTROLLERBUTTONDOWN) {
+            SDL_ControllerButtonEvent cbutton = e.cbutton;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) last_held_joy_mask |= 2;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSHOULDER) last_held_joy_mask |= 4;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_X) last_held_joy_mask |= 8;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_A) last_held_joy_mask |= 16;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) last_held_joy_mask |= 32;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_LEFT) last_held_joy_mask |= 64;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) last_held_joy_mask |= 128;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP) last_held_joy_mask |= 256;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_START) last_held_joy_mask |= 512;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE) last_held_joy_mask |= 1024; /* ???? */
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_Y) last_held_joy_mask |= 2048;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_B) last_held_joy_mask |= 4096;
+        }
+        if(e.type == SDL_CONTROLLERBUTTONUP) {
+            SDL_ControllerButtonEvent cbutton = e.cbutton;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) last_held_joy_mask -= 2;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSHOULDER) last_held_joy_mask -= 4;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_X) last_held_joy_mask -= 8;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_A) last_held_joy_mask -= 16;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) last_held_joy_mask -= 32;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_LEFT) last_held_joy_mask -= 64;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) last_held_joy_mask -= 128;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP) last_held_joy_mask -= 256;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_START) last_held_joy_mask -= 512;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE) last_held_joy_mask -= 1024; /* ???? */
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_Y) last_held_joy_mask -= 2048;
+            if(cbutton.button == SDL_CONTROLLER_BUTTON_B) last_held_joy_mask -= 4096;
+        }
+    }
+}
+
+uint16_t check_joy() {
+    return last_held_joy_mask;
+}
+
+
 void check_key() {
     SDL_Event e;
     while (SDL_PollEvent(&e) != 0) {
@@ -172,6 +215,7 @@ void end_draw() {
 int unix_display_draw() {
     frame_ticks = get_ticks_ms();
     check_key();
+    update_joy();
     start_draw();
     uint32_t c = 0;
     // bounce the entire screen at once to the 332 color framebuffer
