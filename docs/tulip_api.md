@@ -73,10 +73,14 @@ tulip.slider(ui_element_id, x, y, w, h, orientation, default_value, bg_pal_idx, 
 
 tulip.ui_del(ui_element_id) # deletes a UI compoent 
 
-tulip.joy() # returns a mask of joystick presses
+tulip.joy() # returns a mask of hardware joystick presses
 
-# test for joystick presses. Try UP, DOWN, LEFT, RIGHT, X, Y, A, B, SELECT, START, R1, L1
-if(tulip.joy() & tulip.Joy.UP):
+# like joy, but also scans the arrow keys, Z, X, A, S, Q, W, enter and '
+# use this in games etc so people can use either joystick or keyboard!
+tulip.joyk()
+
+# test for joystick or key presses. Try UP, DOWN, LEFT, RIGHT, X, Y, A, B, SELECT, START, R1, L1
+if(tulip.joyk() & tulip.Joy.UP):
     print("up")
 
 # Returns the current held keyboard scan codes, up to 6 and the modifier mask (ctrl, shift etc)
