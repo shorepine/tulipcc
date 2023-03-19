@@ -9,7 +9,7 @@ We've designed our own integrated [Tulip CC](../README.md) board. It's the nices
 
 If you're comfortable with surface mount soldering, you can put together your own board relatively easily. You can order the PCBs from [OSH Park here.](UPDATE_THIS) (OSH Park charges only to manufacture the boards, I do not receive anything.)
 
-[The BOM for the latest revision is here.](https://github.com/bwhitman/tulipcc/blob/main/docs/pcbs/tulip4_board_v4r7/tulip_board_bom.csv) Please note I haven't yet optimized this BOM for price. But everything is at least in stock, mostly at Digikey. [Make sure to use my public Digikey list to order the parts from Digikey quickly.](UPDATE_THIS) [EAGLE board and schematic files are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_board_v4r7) 
+[The BOM for the latest revision is here.](https://github.com/bwhitman/tulipcc/blob/main/docs/pcbs/tulip4_board_v4r7/tulip_board_bom.csv) Please note I haven't yet optimized this BOM for price. But everything is at least in stock, mostly at Digikey. [Make sure to use my public Digikey list to order the parts from Digikey quickly.](https://www.digikey.com/en/mylists/list/ZB5IAQSM2O) [EAGLE board and schematic files are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_board_v4r7) 
 
 If this looks too hard, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [with no soldering and a breadboard.](tulip_breadboard.md)
 
@@ -47,7 +47,7 @@ The 3.5mm MIDI jacks are for Type A TRS MIDI connectors. If you want to wire the
 
 ## Joystick
 
-You can optionally install a SNES gamepad connector on the bottom of the board. You can also use the CLOCK, DATA and LATCH pins to connect your own controller of any similar type (NES will work as well.) 
+You can optionally install a [SNES gamepad connector](https://www.zedlabz.com/products/zedlabz-7-pin-90-degree-female-controller-connector-port-for-nintendo-snes-console-2-pack-grey?_pos=2&_sid=c482be32b&_ss=r) on the bottom of the board. You can also use the CLOCK, DATA and LATCH pins to connect your own controller of any similar type (NES will work as well.) 
 
 
 ## Flash and startup
