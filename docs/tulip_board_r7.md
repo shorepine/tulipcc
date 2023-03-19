@@ -33,7 +33,7 @@ Attach the FPC cable to the RGB port on the display. You can use the cable that 
 
 The board can be powered from USB-C or via an external battery charge board. The external batteries connect via the 3-pin JST connector. If powering from USB-C only, set the EXT-USB jumper to USB. If powering from the external JST connector, set it to EXT.
 
-For example, the [J5019 PCB](https://www.amazon.com/dp/B08GWTBD3T?th=1) works great with Tulip and 2 18650 batteries, wired in parallel. Wire the JST cable to the VOUT-, VOUT+, and VIN+ of the J5019. Make sure you've used the trim pot on the J5019 to get as close to 5V as possible. This will let the USBC input charge the battery, and the battery will power the Tulip.
+For example, the [J5019 PCB](https://www.amazon.com/dp/B08GWTBD3T?th=1) works great with Tulip and 2 18650 batteries, wired in parallel. Wire the JST cable to the VOUT-, VIN+, and VOUT+ of the J5019. (That's in order, looking from top to bottom of the Tulip PCB.) Make sure you've used the trim pot on the J5019 to get as close to 5V as possible. This will let the USBC input charge the battery, and the battery will power the Tulip.
 
 For both jumper settings the USBC connection will allow you to see the serial monitor on a computer.
 
