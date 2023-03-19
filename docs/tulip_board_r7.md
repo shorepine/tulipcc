@@ -41,6 +41,10 @@ Please be careful using unprotected batteries like this. Don't leave them unatte
 
 ![Battery setup](UPDATE_THIS)
 
+## Expansion headers
+
+The 8 pin EXP header is, from left to right on the board face: `5V`, `3V3`, `GND`, `SDA`, `SCL`, `IO38`, `IO0`, `IO9`. If you want more GPIO and don't want a hardware joystick, the 7 pins on the SNES header are (left to right, from the board face:) `5V`, `CLOCK` = `IO13`, LATCH = `IO48`, DATA = `IO45`, `NC`, `NC`, `GND`.
+
 ## MIDI
 
 The 3.5mm MIDI jacks are for Type A TRS MIDI connectors. If you want to wire them to full size MIDI connectors, you should get [Type A converters.](https://www.amazon.com/ZAWDIO-Breakout-LittleBits-Female-Electribe/dp/B08WHSP7ZL/) You can also get Type-A to Type-B converter cables if your equipment is mostly Type B. 
