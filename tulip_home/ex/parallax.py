@@ -27,12 +27,14 @@ tulip.rect(0,250+160,1024,190,0,1)
 
 # and some tiles
 tulip.bg_png('g/meadow.png',0,410)
-tulip.bg_png('g/meadow.png',0,442)
-tulip.bg_png('g/meadow.png',0,474)
-tulip.bg_png('g/meadow.png',0,506)
+# copy it three times underneath
+tulip.bg_blit(0,410,32,32,0,442)
+tulip.bg_blit(0,410,32,32,0,474)
+tulip.bg_blit(0,410,32,32,0,506)
 tulip.bg_png('g/brick.png',0,538)
 tulip.bg_png('g/water.png',0,572)
 
+# Copy this column across the screen
 for i in range(1280/32):
     tulip.bg_blit(0,410,32,190,i*32,410)
 
@@ -77,13 +79,14 @@ def game_loop(d):
                 tulip.bg_scroll_x_speed(536+i, rabbit_speed)
         else:
             d["rx"] += rabbit_speed
-    elif(tulip.joyk() & tulip.Joy.LEFT):
-        d["rx"] -= rabbit_speed
-        tulip.sprite_register(0,(rabbit_w*rabbit_h)*((d["f"]%4)+4), rabbit_w, rabbit_h)
     else:
-        # not moving L or R
         for i in range(64):
             tulip.bg_scroll_x_speed(536+i, 0) # stop scrolling
+
+    if(tulip.joyk() & tulip.Joy.LEFT):
+        d["rx"] -= rabbit_speed
+        tulip.sprite_register(0,(rabbit_w*rabbit_h)*((d["f"]%4)+4), rabbit_w, rabbit_h)
+
     if(tulip.joyk() & tulip.Joy.B):
         if(d["jump"]==0):
             d["jump"] = d["f"]
