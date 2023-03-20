@@ -61,7 +61,7 @@ tulip.sprite_register(0, 0, rabbit_w, rabbit_h)
 tulip.sprite_on(0)
 
 # Now run the game loop. First setup some variables for the game state. rabbit x and y, frame counter etc
-d = {"dir":0, "f":0, "rx":50, "ry":510, "jump":0, "run":1} 
+d = {"dir":0, "f":0, "rx":50, "ry":510, "jump":0, "run":1, "scroll":0} 
 
 rabbit_speed = 10
 
@@ -75,13 +75,17 @@ def game_loop(d):
         tulip.sprite_register(0,(rabbit_w*rabbit_h)*(d["f"]%4), rabbit_w, rabbit_h)
         # If we're beyond the middle of the screen, scroll the bricks instead
         if(d["rx"] > 512):
-            for i in range(64): # lower 2 tile rows
-                tulip.bg_scroll_x_speed(536+i, rabbit_speed)
+            if(d["scroll"]==0):
+                d["scroll"] = 1
+                for i in range(64): # lower 2 tile rows
+                    tulip.bg_scroll_x_speed(536+i, rabbit_speed)
         else:
             d["rx"] += rabbit_speed
     else:
-        for i in range(64):
-            tulip.bg_scroll_x_speed(536+i, 0) # stop scrolling
+        if(d["scroll"] == 1):
+            d["scroll"] = 0
+            for i in range(64):
+                tulip.bg_scroll_x_speed(536+i, 0) # stop scrolling
 
     if(tulip.joyk() & tulip.Joy.LEFT):
         d["rx"] -= rabbit_speed
