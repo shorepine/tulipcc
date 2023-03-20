@@ -57,7 +57,7 @@ edit("game.py")
 
 ## Input and user interface
 
-Tulip supports USB keyboard input, joystick and touch input. (On Tulip Desktop, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications.
+Tulip supports USB keyboard input, joystick and touch input. (On Tulip Desktop, mouse clicks act as touch points, your computers' keyboard works, and any connected gamepad will work.) It also comes with UI elements like buttons and sliders to use in your applications.
 
 ```python
 # Create a callback to activate when UI elements are triggered
