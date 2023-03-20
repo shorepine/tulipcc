@@ -68,8 +68,7 @@ def game_loop(d):
     # Increment the frame counter
     d["f"] = d["f"] + 1
     # Move the rabbit if direction is set
-    d0, d1 = tulip.keys()[1:3]
-    if(d0==0x4f or d1==0x4f):
+    if(tulip.joyk() & tulip.Joy.RIGHT):
         # Update the frame animation if we're moving (right facing rabbit)
         tulip.sprite_register(0,(rabbit_w*rabbit_h)*(d["f"]%4), rabbit_w, rabbit_h)
         # If we're beyond the middle of the screen, scroll the bricks instead
@@ -78,14 +77,14 @@ def game_loop(d):
                 tulip.bg_scroll_x_speed(536+i, rabbit_speed)
         else:
             d["rx"] += rabbit_speed
-    elif(d0==0x50 or d1==0x50):
+    elif(tulip.joyk() & tulip.Joy.LEFT):
         d["rx"] -= rabbit_speed
         tulip.sprite_register(0,(rabbit_w*rabbit_h)*((d["f"]%4)+4), rabbit_w, rabbit_h)
     else:
         # not moving L or R
         for i in range(64):
             tulip.bg_scroll_x_speed(536+i, 0) # stop scrolling
-    if(d0==0x2c or d1==0x2c):
+    if(tulip.joyk() & tulip.Joy.B):
         if(d["jump"]==0):
             d["jump"] = d["f"]
     else:
@@ -96,9 +95,11 @@ def game_loop(d):
         d["ry"] = 510-(d["f"]-d["jump"])*rabbit_speed
     else:
         d["ry"] = 510
-    if(d0==0x29): # esc
+    if(tulip.keys()[1]==0x29): # esc
         d["run"] = 0
     # Update the sprite position
+    if(d["rx"] < 0):
+        d["rx"] = 0
     tulip.sprite_move(0,d["rx"], d["ry"])
 
 # Register the frame callback and data
