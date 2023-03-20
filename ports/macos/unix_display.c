@@ -8,6 +8,7 @@ SDL_Window *window;
 SDL_Surface *window_surface;
 SDL_Surface *surface_332;
 SDL_Renderer *fixed_fps_renderer;
+SDL_GameController *gp;
 uint8_t *pixels_332;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
@@ -70,7 +71,7 @@ void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3) {
 
 
 void init_window(uint16_t w, uint16_t h) {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
         fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
     } else {
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
@@ -100,40 +101,26 @@ void destrow_window() {
 
 uint16_t last_held_joy_mask = 0;
 
-void update_joy() {
-    SDL_Event e;
-    while (SDL_PollEvent(&e) != 0) {   
-        if(e.type == SDL_CONTROLLERBUTTONDOWN) {
-            SDL_ControllerButtonEvent cbutton = e.cbutton;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) last_held_joy_mask |= 2;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSHOULDER) last_held_joy_mask |= 4;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_X) last_held_joy_mask |= 8;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_A) last_held_joy_mask |= 16;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) last_held_joy_mask |= 32;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_LEFT) last_held_joy_mask |= 64;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) last_held_joy_mask |= 128;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP) last_held_joy_mask |= 256;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_START) last_held_joy_mask |= 512;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE) last_held_joy_mask |= 1024; /* ???? */
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_Y) last_held_joy_mask |= 2048;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_B) last_held_joy_mask |= 4096;
+void update_joy(SDL_Event e) {
+    if(e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) {
+        last_held_joy_mask = 0;
+        for(uint8_t b=0;b<SDL_CONTROLLER_BUTTON_MAX;b++) {
+            if(SDL_GameControllerGetButton(gp, b)) {
+                if(b == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) last_held_joy_mask |= 2;
+                if(b == SDL_CONTROLLER_BUTTON_LEFTSHOULDER) last_held_joy_mask |= 4;
+                if(b == SDL_CONTROLLER_BUTTON_X) last_held_joy_mask |= 8;
+                if(b == SDL_CONTROLLER_BUTTON_A) last_held_joy_mask |= 16;
+                if(b == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) last_held_joy_mask |= 32;
+                if(b == SDL_CONTROLLER_BUTTON_DPAD_LEFT) last_held_joy_mask |= 64;
+                if(b == SDL_CONTROLLER_BUTTON_DPAD_DOWN) last_held_joy_mask |= 128;
+                if(b == SDL_CONTROLLER_BUTTON_DPAD_UP) last_held_joy_mask |= 256;
+                if(b == SDL_CONTROLLER_BUTTON_START) last_held_joy_mask |= 512;
+                if(b == SDL_CONTROLLER_BUTTON_BACK) last_held_joy_mask |= 1024;
+                if(b == SDL_CONTROLLER_BUTTON_Y) last_held_joy_mask |= 2048;
+                if(b == SDL_CONTROLLER_BUTTON_B) last_held_joy_mask |= 4096;
+            }
         }
-        if(e.type == SDL_CONTROLLERBUTTONUP) {
-            SDL_ControllerButtonEvent cbutton = e.cbutton;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) last_held_joy_mask -= 2;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_LEFTSHOULDER) last_held_joy_mask -= 4;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_X) last_held_joy_mask -= 8;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_A) last_held_joy_mask -= 16;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) last_held_joy_mask -= 32;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_LEFT) last_held_joy_mask -= 64;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_DOWN) last_held_joy_mask -= 128;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP) last_held_joy_mask -= 256;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_START) last_held_joy_mask -= 512;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_GUIDE) last_held_joy_mask -= 1024; /* ???? */
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_Y) last_held_joy_mask -= 2048;
-            if(cbutton.button == SDL_CONTROLLER_BUTTON_B) last_held_joy_mask -= 4096;
-        }
-    }
+    }    
 }
 
 uint16_t check_joy() {
@@ -181,6 +168,7 @@ void check_key() {
             last_touch_y[0] = (int16_t)y;
             send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
         }
+        update_joy(e);
     }
 }
 
@@ -215,7 +203,6 @@ void end_draw() {
 int unix_display_draw() {
     frame_ticks = get_ticks_ms();
     check_key();
-    update_joy();
     start_draw();
     uint32_t c = 0;
     // bounce the entire screen at once to the 332 color framebuffer
@@ -249,4 +236,11 @@ void unix_display_init() {
     unix_set_fps_from_parameters();
     init_window(H_RES,V_RES); 
     frame_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
+    gp = SDL_GameControllerOpen(0);
+    if(!gp) {
+        fprintf(stderr, "No gamepad detected. That's ok\n");
+    } else {
+        fprintf(stderr, "Gamepad detected\n");
+    }
 }
