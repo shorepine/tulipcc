@@ -291,7 +291,7 @@ int8_t oscs_init() {
     msynth = (struct mod_event*) malloc_caps(sizeof(struct mod_event) * OSCS, MALLOC_CAP_SPIRAM);
 
     // Maybe not this
-    block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);//dbl_block[0];
+    block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE * NCHANS, MALLOC_CAP_INTERNAL);//dbl_block[0];
     // Set all oscillators to their default values
     amy_reset_oscs();
 
@@ -644,11 +644,16 @@ int16_t * fill_audio_buffer_task() {
         } else {
             sample = -uintval;
         }
-#ifdef ESP_PLATFORM
+#if NCHANS == 1
+  #ifdef ESP_PLATFORM
         // ESP32's i2s driver has this bug
         block[i ^ 0x01] = sample;
-#else
+  #else
         block[i] = sample;
+  #endif
+#else // Stereo
+        block[2 * i] = sample;
+        block[2 * i + 1] = 0;
 #endif
     }
     total_samples += BLOCK_SIZE;

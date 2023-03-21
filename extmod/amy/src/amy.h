@@ -27,6 +27,9 @@
 #define MAX_BREAKPOINT_SETS 3
 #define THREAD_USLEEP 500
 #define BYTES_PER_SAMPLE 2
+// Stereo
+#define NCHANS 2
+
 
 typedef int16_t output_sample_type;
 
