@@ -27,8 +27,9 @@
 #define MAX_BREAKPOINT_SETS 3
 #define THREAD_USLEEP 500
 #define BYTES_PER_SAMPLE 2
-// Stereo
-#define NCHANS 2
+
+//#define NCHANS 1             // Mono output, 'Q' (pan) ignored, saves memory.
+#define NCHANS 2             // Enable 2-channel output, pan, etc.
 
 
 typedef int16_t output_sample_type;
@@ -103,7 +104,8 @@ typedef int amy_err_t;
 
 
 enum params{
-    WAVE, PATCH, MIDI_NOTE, AMP, DUTY, FEEDBACK, FREQ, VELOCITY, PHASE, DETUNE, VOLUME, FILTER_FREQ, RATIO, RESONANCE, 
+    WAVE, PATCH, MIDI_NOTE, AMP, DUTY, FEEDBACK, FREQ, VELOCITY, PHASE, DETUNE, VOLUME, GAIN_L, GAIN_R, FILTER_FREQ,
+    RATIO, RESONANCE, 
     MOD_SOURCE, MOD_TARGET, FILTER_TYPE, EQ_L, EQ_M, EQ_H, BP0_TARGET, BP1_TARGET, BP2_TARGET, ALGORITHM, LATENCY,
     ALGO_SOURCE_START=30, 
     ALGO_SOURCE_END=30+MAX_ALGO_OPS,
@@ -143,6 +145,8 @@ struct event {
     float substep;
     float sample;
     float volume;
+    float gain_l;   // Pan parameters.
+    float gain_r;
     int16_t latency_ms;
     float filter_freq;
     float ratio;

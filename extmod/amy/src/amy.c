@@ -102,6 +102,8 @@ struct event amy_default_event() {
     e.amp = -1; 
     e.freq = -1;
     e.volume = -1;
+    e.gain_l = -1;
+    e.gain_r = -1;
     e.latency_ms = -1;
     e.ratio = -1;
     e.filter_freq = -1;
@@ -190,6 +192,8 @@ void amy_add_event(struct event e) {
     if(e.freq>-1) { d.param=FREQ; d.data = *(uint32_t *)&e.freq; add_delta_to_queue(d); }
     if(e.phase>-1) { d.param=PHASE; d.data = *(uint32_t *)&e.phase; add_delta_to_queue(d); }
     if(e.volume>-1) { d.param=VOLUME; d.data = *(uint32_t *)&e.volume; add_delta_to_queue(d); }
+    if(e.gain_l>-1) { fprintf(stderr, "gain_l=%f\n", e.gain_l); d.param=GAIN_L; d.data = *(uint32_t *)&e.gain_l; add_delta_to_queue(d); }
+    if(e.gain_r>-1) { fprintf(stderr, "gain_r=%f\n", e.gain_r); d.param=GAIN_R; d.data = *(uint32_t *)&e.gain_r; add_delta_to_queue(d); }
     if(e.latency_ms>-1) { d.param=LATENCY; d.data = *(uint32_t *)&e.latency_ms; add_delta_to_queue(d); }
     if(e.ratio>-1) { d.param=RATIO; d.data = *(uint32_t *)&e.ratio; add_delta_to_queue(d); }
     if(e.filter_freq>-1) { d.param=FILTER_FREQ; d.data = *(uint32_t *)&e.filter_freq; add_delta_to_queue(d); }
@@ -238,6 +242,8 @@ void reset_osc(uint8_t i ) {
     synth[i].phase = 0;
     synth[i].latency_ms = 0;
     synth[i].volume = 0;
+    synth[i].gain_l = 1.0;
+    synth[i].gain_r = 1.0;
     synth[i].eq_l = 0;
     synth[i].eq_m = 0;
     synth[i].eq_h = 0;
@@ -314,12 +320,14 @@ int8_t oscs_init() {
         events[i].param = NO_PARAM;
     }
     fbl = (float**) malloc_caps(sizeof(float*) * AMY_CORES, MALLOC_CAP_INTERNAL); // one per core, just core 0 used off esp32
-    fbl[0]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
-    if(AMY_CORES>1)fbl[1]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
+    fbl[0]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE * NCHANS, MALLOC_CAP_INTERNAL);
+    if(AMY_CORES>1)fbl[1]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE * NCHANS, MALLOC_CAP_INTERNAL);
     // Clear out both as local mode won't use fbl[1] 
-    for(uint16_t i=0;i<BLOCK_SIZE;i++) { 
-        fbl[0][i] =0; 
-        if(AMY_CORES>1)fbl[1][i] = 0;
+    for(uint16_t c=0;c<NCHANS;++c) {
+        for(uint16_t i=0;i<BLOCK_SIZE;i++) { 
+            fbl[0][BLOCK_SIZE*c + i] =0; 
+            if(AMY_CORES>1)fbl[1][BLOCK_SIZE*c + i] = 0;
+        }
     }
     total_samples = 0;
     computed_delta = 0;
@@ -388,6 +396,8 @@ void play_event(struct delta d) {
     if(d.param == MIDI_NOTE) { synth[d.osc].midi_note = *(uint16_t *)&d.data; synth[d.osc].freq = freq_for_midi_note(*(uint16_t *)&d.data); } 
     if(d.param == WAVE) synth[d.osc].wave = *(int16_t *)&d.data; 
     if(d.param == PHASE) synth[d.osc].phase = *(float *)&d.data;
+    if(d.param == GAIN_L) synth[d.osc].gain_l = *(float *)&d.data;
+    if(d.param == GAIN_R) synth[d.osc].gain_r = *(float *)&d.data;
     if(d.param == PATCH) synth[d.osc].patch = *(int16_t *)&d.data;
     if(d.param == DUTY) synth[d.osc].duty = *(float *)&d.data;
     if(d.param == FEEDBACK) synth[d.osc].feedback = *(float *)&d.data;
@@ -440,6 +450,7 @@ void play_event(struct delta d) {
     // Triggers / envelopes 
     // The only way a sound is made is if velocity (note on) is >0.
     if(d.param == VELOCITY && *(float *)&d.data > 0) { // New note on (even if something is already playing on this osc)
+        fprintf(stderr, "VEL event, gain_l=%f, gain_r=%f\n", synth[d.osc].gain_l, synth[d.osc].gain_r);
         synth[d.osc].amp = *(float *)&d.data; // these could be decoupled, later
         synth[d.osc].velocity = *(float *)&d.data;
         synth[d.osc].status = AUDIBLE;
@@ -527,8 +538,24 @@ void hold_and_modify(uint8_t osc) {
 }
 
 
+void mix_with_pan(float *stereo_dest, float *mono_src, float gain_l, float gain_r) {
+    /* Copy a BLOCK_SIZE of mono samples into an interleaved stereo buffer, applying pan */
+#if NCHANS == 1
+    // Actually dest is mono, pan is ignored.
+    for(uint16_t i=0;i<BLOCK_SIZE;i++) { stereo_dest[i] += mono_src[i]; }
+#else
+    // Stereo
+    for(uint16_t i=0;i<BLOCK_SIZE;i++) {
+        stereo_dest[i] += gain_l * mono_src[i];
+        stereo_dest[BLOCK_SIZE + i] += gain_r * mono_src[i];
+    }
+#endif
+}
+    
+
 void render_task(uint8_t start, uint8_t end, uint8_t core) {
-    for(uint16_t i=0;i<BLOCK_SIZE;i++) { fbl[core][i] = 0; per_osc_fb[core][i] = 0; }
+    for(uint16_t i=0;i<BLOCK_SIZE*NCHANS;i++) { fbl[core][i] = 0; }
+    //for(uint16_t i=0;i<BLOCK_SIZE;i++) { per_osc_fb[core][i] = 0; }
     for(uint8_t osc=start; osc<end; osc++) {
         if(synth[osc].status==AUDIBLE) { // skip oscs that are silent or mod sources from playback
             for(uint16_t i=0;i<BLOCK_SIZE;i++) { per_osc_fb[core][i] = 0; }
@@ -548,12 +575,17 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
             if(synth[osc].wave != OFF) {
                 // Apply filter to osc if set
                 if(synth[osc].filter_type != FILTER_NONE) filter_process(per_osc_fb[core], osc);
-                for(uint16_t i=0;i<BLOCK_SIZE;i++) { fbl[core][i] += per_osc_fb[core][i]; }
+                //for(uint16_t i=0;i<BLOCK_SIZE;i++) { fbl[core][i] += per_osc_fb[core][i]; }
+                mix_with_pan(fbl[core], per_osc_fb[core], synth[osc].gain_l, synth[osc].gain_r);
             }
         }
     }
     // apply the EQ filters if set
-    if(global.eq[0] != 0 || global.eq[1] != 0 || global.eq[2] != 0) parametric_eq_process(fbl[core]);
+    if(global.eq[0] != 0 || global.eq[1] != 0 || global.eq[2] != 0) {
+        for (int16_t c=0; c < NCHANS; ++c) {
+            parametric_eq_process(fbl[core] + c * BLOCK_SIZE);
+        }
+    }
 }
 
 // On all platforms, sysclock is based on total samples played, using audio out (i2s or etc) as system clock
@@ -609,51 +641,52 @@ int16_t * fill_audio_buffer_task() {
     float volume_scale = 0.1 * global.volume;
     //uint8_t nonzero = 0;
     for(int16_t i=0; i < BLOCK_SIZE; ++i) {
-        // Mix all the oscillator buffers into one
+        for (int16_t c=0; c < NCHANS; ++c) {
+            // Mix all the oscillator buffers into one
 #if AMY_CORES == 2
-        float fsample = volume_scale * (fbl[0][i] + fbl[1][i]) * 32767.0f;
+            float fsample = volume_scale * (fbl[0][c * BLOCK_SIZE + i] + fbl[1][c * BLOCK_SIZE + i]) * 32767.0f;
 #else
-        float fsample = volume_scale * (fbl[0][i]) * 32767.0f;
+            float fsample = volume_scale * (fbl[0][c * BLOCK_SIZE + i]) * 32767.0f;
 #endif
-        // One-pole high-pass filter to remove large low-frequency excursions from
-        // some FM patches. b = [1 -1]; a = [1 -0.995]
-        float new_state = fsample + 0.995f * global.hpf_state;
-        fsample = new_state - global.hpf_state;
-        global.hpf_state = new_state;
+            // One-pole high-pass filter to remove large low-frequency excursions from
+            // some FM patches. b = [1 -1]; a = [1 -0.995]
+            float new_state = fsample + 0.995f * global.hpf_state;
+            fsample = new_state - global.hpf_state;
+            global.hpf_state = new_state;
     
-        // Soft clipping.
-        int positive = 1; 
-        if (fsample < 0) positive = 0;
-        // Using a uint gives us factor-of-2 headroom (up to 65535 not 32767).
-        uint16_t uintval;
-        if (positive) {  // avoid fabs()
-            uintval = (int)fsample;
-        } else {
-            uintval = (int)(-fsample);
-        }
-        if (uintval >= FIRST_NONLIN) {
-            if (uintval >= FIRST_HARDCLIP) {
-                uintval = SAMPLE_MAX;
+            // Soft clipping.
+            int positive = 1; 
+            if (fsample < 0) positive = 0;
+            // Using a uint gives us factor-of-2 headroom (up to 65535 not 32767).
+            uint16_t uintval;
+            if (positive) {  // avoid fabs()
+                uintval = (int)fsample;
             } else {
-                uintval = clipping_lookup_table[uintval - FIRST_NONLIN];
+                uintval = (int)(-fsample);
             }
-        }
-        int16_t sample;
-        if (positive) {
-            sample = uintval;
-        } else {
-            sample = -uintval;
-        }
+            if (uintval >= FIRST_NONLIN) {
+                if (uintval >= FIRST_HARDCLIP) {
+                    uintval = SAMPLE_MAX;
+                } else {
+                    uintval = clipping_lookup_table[uintval - FIRST_NONLIN];
+                }
+            }
+            int16_t sample;
+            if (positive) {
+                sample = uintval;
+            } else {
+                sample = -uintval;
+            }
 #if NCHANS == 1
   #ifdef ESP_PLATFORM
-        // ESP32's i2s driver has this bug
-        block[i ^ 0x01] = sample;
+            // ESP32's i2s driver has this bug
+            block[i ^ 0x01] = sample;
   #else
-        block[i] = sample;
+            block[i] = sample;
   #endif
 #else // Stereo
-        block[(NCHANS * i)] = sample;
-        block[(NCHANS * i) + 1] = 0;
+            block[(NCHANS * i) + c] = sample;
+        }
 #endif
     }
     total_samples += BLOCK_SIZE;
@@ -717,7 +750,8 @@ struct event amy_parse_message(char * message) {
     int16_t length = strlen(message);
     struct event e = amy_default_event();
     int64_t sysclock = amy_sysclock();
-
+    float pan;
+    
     // Cut the OSC cruft Max etc add, they put a 0 and then more things after the 0
     int new_length = length; 
     for(int d=0;d<length;d++) {
@@ -761,6 +795,7 @@ struct event amy_parse_message(char * message) {
                         case 'O': parse_algorithm(&e, message+start); break; 
                         case 'p': e.patch=atoi(message + start); break; 
                         case 'P': e.phase=atof(message + start); break; 
+                    case 'Q': pan = atof(message + start); fprintf(stderr, "pan=%f\n", pan); e.gain_l = dsps_sqrtf_f32_ansi(pan); e.gain_r = dsps_sqrtf_f32_ansi(1.0f - pan); break;
                         case 'R': e.resonance=atof(message + start); break; 
                         case 'S': osc = atoi(message + start); if(osc > OSCS-1) { amy_reset_oscs(); } else { reset_osc(osc); } break; 
                         case 'T': e.breakpoint_target[0] = atoi(message + start);  break; 
