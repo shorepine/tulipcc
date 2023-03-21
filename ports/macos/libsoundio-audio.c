@@ -8,9 +8,9 @@
 struct SoundIo *soundio;
 struct SoundIoDevice *device;
  struct SoundIoOutStream *outstream;
-int16_t leftover_buf[BLOCK_SIZE]; 
+int16_t leftover_buf[BLOCK_SIZE * NCHANS]; 
 uint16_t leftover_samples = 0;
-int16_t amy_channel = -1;
+int16_t amy_channel = 0;  // -1 for L -> mono output.
 int16_t amy_device_id = -1;
 uint8_t amy_running = 0;
 pthread_t amy_live_thread;
@@ -39,6 +39,17 @@ void amy_print_devices() {
     }
 }
 
+inline static void set_chan(int16_t *chan_ptr, int16_t *buf, int chan, int frame, int amy_channel) {
+    if(amy_channel < 0) {
+        *chan_ptr = buf[NCHANS * frame];
+        //*chan_ptr = buf[frame];
+    } else if(chan >= amy_channel && chan < amy_channel + NCHANS) {
+        *chan_ptr = buf[NCHANS * frame + (chan - amy_channel)];
+    } else {
+        *chan_ptr = 0;
+    }
+}
+
 static void soundio_callback(struct SoundIoOutStream *outstream, int frame_count_min, int frame_count_max) {
     const struct SoundIoChannelLayout *layout = &outstream->layout;
     struct SoundIoChannelArea *areas;
@@ -58,11 +69,7 @@ static void soundio_callback(struct SoundIoOutStream *outstream, int frame_count
     // First send over the leftover samples, if any
     for(uint16_t frame=0;frame<leftover_samples;frame++) {
         for(uint8_t c=0;c<layout->channel_count;c++) {
-            if(c==amy_channel || amy_channel<0) {
-                *((int16_t*)areas[c].ptr) = leftover_buf[frame];
-            } else {
-                *((int16_t*)areas[c].ptr) = 0;
-            }
+            set_chan((int16_t*)areas[c].ptr, leftover_buf, c, frame, amy_channel);
             areas[c].ptr += areas[c].step;
         }
     }
@@ -74,11 +81,7 @@ static void soundio_callback(struct SoundIoOutStream *outstream, int frame_count
         int16_t *buf = fill_audio_buffer_task();
         for(uint16_t frame=0;frame<BLOCK_SIZE;frame++) {
             for(uint8_t c=0;c<layout->channel_count;c++) {
-                if(c==amy_channel || amy_channel < 0) {
-                    *((int16_t*)areas[c].ptr) = buf[frame];
-                } else {
-                    *((int16_t*)areas[c].ptr) = 0;
-                }
+                set_chan((int16_t*)areas[c].ptr, buf, c, frame, amy_channel);
                 areas[c].ptr += areas[c].step;
             }
         }
@@ -90,15 +93,11 @@ static void soundio_callback(struct SoundIoOutStream *outstream, int frame_count
         int16_t * buf = fill_audio_buffer_task();
         for(uint16_t frame=0;frame<still_need;frame++) {
             for(uint8_t c=0;c<layout->channel_count;c++) {
-                if(c==amy_channel || amy_channel < 0) {
-                    *((int16_t*)areas[c].ptr) = buf[frame];
-                } else {
-                    *((int16_t*)areas[c].ptr) = 0;
-                }
+                set_chan((int16_t*)areas[c].ptr, buf, c, frame, amy_channel);
                 areas[c].ptr += areas[c].step;
             }
         }
-        memcpy(leftover_buf, buf+still_need, (BLOCK_SIZE - still_need)*2);
+        memcpy(leftover_buf, buf + NCHANS * still_need, (BLOCK_SIZE - still_need) * NCHANS * sizeof(int16_t));
         leftover_samples = BLOCK_SIZE - still_need;
     }
     if ((err = soundio_outstream_end_write(outstream))) {
@@ -148,6 +147,7 @@ amy_err_t soundio_init() {
     }
 
     device = soundio_get_output_device(soundio, selected_device_index);
+    fprintf(stderr, "sound channels: %d\n", device->layouts[0].channel_count);
     if(amy_channel > device->layouts[0].channel_count-1) {
         printf("Requested channel number more than available, setting to -1\n");
         amy_channel = -1;

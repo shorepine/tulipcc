@@ -652,8 +652,8 @@ int16_t * fill_audio_buffer_task() {
         block[i] = sample;
   #endif
 #else // Stereo
-        block[2 * i] = sample;
-        block[2 * i + 1] = 0;
+        block[(NCHANS * i)] = sample;
+        block[(NCHANS * i) + 1] = 0;
 #endif
     }
     total_samples += BLOCK_SIZE;
