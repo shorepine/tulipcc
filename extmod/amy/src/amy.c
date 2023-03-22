@@ -192,8 +192,8 @@ void amy_add_event(struct event e) {
     if(e.freq>-1) { d.param=FREQ; d.data = *(uint32_t *)&e.freq; add_delta_to_queue(d); }
     if(e.phase>-1) { d.param=PHASE; d.data = *(uint32_t *)&e.phase; add_delta_to_queue(d); }
     if(e.volume>-1) { d.param=VOLUME; d.data = *(uint32_t *)&e.volume; add_delta_to_queue(d); }
-    if(e.gain_l>-1) { fprintf(stderr, "gain_l=%f\n", e.gain_l); d.param=GAIN_L; d.data = *(uint32_t *)&e.gain_l; add_delta_to_queue(d); }
-    if(e.gain_r>-1) { fprintf(stderr, "gain_r=%f\n", e.gain_r); d.param=GAIN_R; d.data = *(uint32_t *)&e.gain_r; add_delta_to_queue(d); }
+    if(e.gain_l>-1) { d.param=GAIN_L; d.data = *(uint32_t *)&e.gain_l; add_delta_to_queue(d); }
+    if(e.gain_r>-1) { d.param=GAIN_R; d.data = *(uint32_t *)&e.gain_r; add_delta_to_queue(d); }
     if(e.latency_ms>-1) { d.param=LATENCY; d.data = *(uint32_t *)&e.latency_ms; add_delta_to_queue(d); }
     if(e.ratio>-1) { d.param=RATIO; d.data = *(uint32_t *)&e.ratio; add_delta_to_queue(d); }
     if(e.filter_freq>-1) { d.param=FILTER_FREQ; d.data = *(uint32_t *)&e.filter_freq; add_delta_to_queue(d); }
@@ -450,7 +450,6 @@ void play_event(struct delta d) {
     // Triggers / envelopes 
     // The only way a sound is made is if velocity (note on) is >0.
     if(d.param == VELOCITY && *(float *)&d.data > 0) { // New note on (even if something is already playing on this osc)
-        fprintf(stderr, "VEL event, gain_l=%f, gain_r=%f\n", synth[d.osc].gain_l, synth[d.osc].gain_r);
         synth[d.osc].amp = *(float *)&d.data; // these could be decoupled, later
         synth[d.osc].velocity = *(float *)&d.data;
         synth[d.osc].status = AUDIBLE;
@@ -686,8 +685,8 @@ int16_t * fill_audio_buffer_task() {
   #endif
 #else // Stereo
             block[(NCHANS * i) + c] = sample;
-        }
 #endif
+        }
     }
     total_samples += BLOCK_SIZE;
     return block;
@@ -795,7 +794,7 @@ struct event amy_parse_message(char * message) {
                         case 'O': parse_algorithm(&e, message+start); break; 
                         case 'p': e.patch=atoi(message + start); break; 
                         case 'P': e.phase=atof(message + start); break; 
-                    case 'Q': pan = atof(message + start); fprintf(stderr, "pan=%f\n", pan); e.gain_l = dsps_sqrtf_f32_ansi(pan); e.gain_r = dsps_sqrtf_f32_ansi(1.0f - pan); break;
+                        case 'Q': pan = atof(message + start); e.gain_l = dsps_sqrtf_f32_ansi(pan); e.gain_r = dsps_sqrtf_f32_ansi(1.0f - pan); break;
                         case 'R': e.resonance=atof(message + start); break; 
                         case 'S': osc = atoi(message + start); if(osc > OSCS-1) { amy_reset_oscs(); } else { reset_osc(osc); } break; 
                         case 'T': e.breakpoint_target[0] = atoi(message + start);  break; 
