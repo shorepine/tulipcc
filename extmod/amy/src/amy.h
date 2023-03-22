@@ -28,8 +28,8 @@
 #define THREAD_USLEEP 500
 #define BYTES_PER_SAMPLE 2
 
-#define NCHANS 1             // Mono output, 'Q' (pan) ignored, saves memory.
-//#define NCHANS 2             // Enable 2-channel output, pan, etc.
+//#define NCHANS 1             // Mono output, 'Q' (pan) ignored, saves memory.
+#define NCHANS 2             // Enable 2-channel output, pan, etc.
 
 
 typedef int16_t output_sample_type;

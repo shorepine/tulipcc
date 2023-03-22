@@ -207,8 +207,8 @@ def sweep(speed=0.100, res=0.5, loops = -1):
 def drums(bpm=120, loops=-1, **kwargs):
     preset(13, osc=0, **kwargs) # sample bass drum
     preset(8, osc=3, **kwargs) # sample hat
-    preset(9, osc=4, **kwargs) # sample cow
-    preset(10, osc=5, **kwargs) # sample hi cow
+    preset(9, osc=4, pan=1, **kwargs) # sample cow
+    preset(10, osc=5, pan=0, **kwargs) # sample hi cow
     preset(11, osc=2, **kwargs) # sample snare
     preset(1, osc=7, **kwargs) # filter bass
     [bass, snare, hat, cow, hicow, silent] = [1, 2, 4, 8, 16, 32]
