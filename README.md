@@ -25,7 +25,7 @@ You can [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the co
 Tulip CC rev 4 supports:
 - 8.5MB of RAM
 - 8MB or 32MB flash storage, as a filesystem accesible in Python
-- An [AMY](https://github.com/bwhitman/amy) 32-voice synthesizer engine running locally or as a wireless controller for an [Alles](https://github.com/bwhitman/alles) mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
+- An [AMY](https://github.com/bwhitman/amy) stereo 64-voice synthesizer engine running locally or as a wireless controller for an [Alles](https://github.com/bwhitman/alles) mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
 - A 1280x750 background frame buffer to draw arbitrary bitmaps to, or use as RAM, and which can scroll horizontally / vertically
@@ -108,7 +108,7 @@ bytes_read = tulip.url_save("https://url", "filename.ext")
 
 ### Music / sound
 
-Tulip comes with the Alles synthesizer, a very full featured 32-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. We also provide a useful "music computer" for scales, chords and progressions. More in the [full API](docs/tulip_api.md).
+Tulip comes with the Alles synthesizer, a very full featured 64-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. We also provide a useful "music computer" for scales, chords and progressions. More in the [full API](docs/tulip_api.md). Tulip's version of AMY comes with stereo sound, which you can set per oscillator with the `pan` parameter.
 
 ```python
 alles.drums() # plays a test song
