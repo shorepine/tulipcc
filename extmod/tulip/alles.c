@@ -132,7 +132,7 @@ amy_err_t setup_i2s(void) {
          .communication_format = I2S_COMM_FORMAT_STAND_MSB,
          .intr_alloc_flags = 0, //ESP_INTR_FLAG_LEVEL1, // high interrupt priority
          .dma_buf_count = 2, //I2S_BUFFERS,
-         .dma_buf_len = BLOCK_SIZE * BYTES_PER_SAMPLE,
+         .dma_buf_len = 512, // note: this is a fixed number, not entirely related (but should be multiple) of BLOCK_SIZE
          .tx_desc_auto_clear = true,
         };
         
