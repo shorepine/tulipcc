@@ -70,7 +70,7 @@ def trunc(number):
     return ('%.10f' % number).rstrip('0').rstrip('.')
 
 # Construct an AMY message
-def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1, feedback=-1, timestamp=None, reset=-1, phase=-1, \
+def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1, feedback=-1, timestamp=None, reset=-1, phase=-1, pan=-1, \
         client=-1, retries=1, volume=-1, filter_freq = -1, resonance = -1, bp0="", bp1="", bp2="", bp0_target=-1, bp1_target=-1, bp2_target=-1, mod_target=-1, \
         debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, latency_ms = -1, algo_source=None):
 
@@ -85,6 +85,7 @@ def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1,
     if(note>=0): m = m + "n" + str(note)
     if(patch>=0): m = m + "p" + str(patch)
     if(phase>=0): m = m + "P" + trunc(phase)
+    if(pan>=0): m = m + "Q" + trunc(pan)
     if(client>=0): m = m + "c" + str(client)
     if(amp>=0): m = m + "a" + trunc(amp)
     if(vel>=0): m = m + "l" + trunc(vel)
@@ -206,8 +207,8 @@ def sweep(speed=0.100, res=0.5, loops = -1):
 def drums(bpm=120, loops=-1, **kwargs):
     preset(13, osc=0, **kwargs) # sample bass drum
     preset(8, osc=3, **kwargs) # sample hat
-    preset(9, osc=4, **kwargs) # sample cow
-    preset(10, osc=5, **kwargs) # sample hi cow
+    preset(9, osc=4, pan=1, **kwargs) # sample cow
+    preset(10, osc=5, pan=0, **kwargs) # sample hi cow
     preset(11, osc=2, **kwargs) # sample snare
     preset(1, osc=7, **kwargs) # filter bass
     [bass, snare, hat, cow, hicow, silent] = [1, 2, 4, 8, 16, 32]

@@ -135,6 +135,7 @@ Here's the full list:
 | O    | algo_source | string | which oscillators to use for the algorithm. list of six, use -1 for not used, e.g 0,1,2,-1,-1-1 |
 | p    | patch | uint | choose a preloaded PCM sample, partial patch or FM patch number for ALGO waveforms. |
 | P    | phase | float 0-1 | where in the oscillator's cycle to start sampling from (also works on the PCM buffer). default 0 |
+| Q    | pan   | float 0-1 | panning index (for stereo output), 0=right, 1=left. default both. |
 | R    | resonance | float | q factor of biquad filter. in practice, 0-10.0. default 0.7 | 
 | S    | reset  | uint | resets given oscillator. set to > OSCS to reset all oscillators, gain and EQ |  
 | T    | bp0_target | uint mask | Which parameter bp0 controls. 1=amp, 2=duty, 4=freq, 8=filter freq, 16=resonance, 32=feedback (can be added together). Can add 64 for linear ramp, otherwise exponential | 

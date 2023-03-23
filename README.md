@@ -108,7 +108,7 @@ bytes_read = tulip.url_save("https://url", "filename.ext")
 
 ### Music / sound
 
-Tulip comes with the Alles synthesizer, a very full featured 64-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. We also provide a useful "music computer" for scales, chords and progressions. More in the [full API](docs/tulip_api.md).
+Tulip comes with the Alles synthesizer, a very full featured 64-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. We also provide a useful "music computer" for scales, chords and progressions. More in the [full API](docs/tulip_api.md). Tulip's version of AMY comes with stereo sound, which you can set per oscillator with the `pan` parameter.
 
 ```python
 alles.drums() # plays a test song
