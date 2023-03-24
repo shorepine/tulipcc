@@ -146,6 +146,15 @@ alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
+The Alles synth output runs through a stereo chorus unit which has a set of control parameters:
+
+```python
+tulip.chorus(lfo_frequency_hz, lfo_depth, chorus_mix_level, chorus_feedback_level)
+```
+
+The default values are ```lfo_frequency_hz=4.0```, ```lfo_depth=0.01```, ```chorus_mix_level=0.5```, and ```chorus_feedback_level=0.1```.
+
+
 Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/extmod/tulip/py/music.py), which lets you create chords, progressions and scales through code:
 
 ```python
