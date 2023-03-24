@@ -6,6 +6,7 @@ TULIP_EXTMOD_DIR = $(EXTMOD_DIR)/tulip
 EXTMOD_SRC_C += $(addprefix $(EXTMOD_DIR)/amy/src/, \
 	amy.c \
 	algorithms.c \
+	delay.c \
 	envelope.c \
 	filters.c \
 	oscillators.c \

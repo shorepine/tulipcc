@@ -380,6 +380,10 @@ void sine_note_on(uint8_t osc) {
     synth[osc].step = (float)synth[osc].lut_size * synth[osc].phase;
 }
 
+const float* find_sine_lutable(void) {
+    return sine_lutable_0;
+}
+
 void render_partial(float * buf, uint8_t osc) {
     if(msynth[osc].feedback > 0) {
         float scratch[2][BLOCK_SIZE];
