@@ -63,6 +63,7 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/amy/src/dsps_biquad_f32_ae32.S
     ${MICROPY_DIR}/extmod/amy/src/algorithms.c
     ${MICROPY_DIR}/extmod/amy/src/amy.c
+    ${MICROPY_DIR}/extmod/amy/src/delay.c
     ${MICROPY_DIR}/extmod/amy/src/envelope.c
     ${MICROPY_DIR}/extmod/amy/src/filters.c
     ${MICROPY_DIR}/extmod/amy/src/oscillators.c

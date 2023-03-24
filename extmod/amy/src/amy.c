@@ -35,12 +35,29 @@ float per_osc_fb[AMY_CORES][BLOCK_SIZE];
 #define DELAY_LINE_DELAY 512 // 11 ms @ 44 kHz
 delay_line_t *delay_lines[AMY_CORES][NCHANS];
 float *delay_line_mod = NULL;
+
 // Faking it
 float *delay_mod_buf;
 float delay_mod_phase = 0;
 float render_lut(float * buf, float step, float skip, float incoming_amp, float ending_amp, const float* lut, int32_t lut_size);
 extern const float* find_sine_lutable();
 
+typedef struct chorus_config {
+    float frequency;   // LFO of delay line modulation.
+    int delay;         // Mean delay in samples, typ 1024.  Must be smaller than DELAY_LINE_LEN - BLOCK_SIZE by enough margin for the peak delay (i.e., margin needs to increase as depth increases).
+    float depth;       // scales max excursion of delay modulation, typ 0.01.
+    float level;       // How much of the delayed signal to mix in to the output, typ 0.5.
+    float feedback;    // How much of the delay to feedback into input, typ 0.1.
+} chorus_config_t;
+
+chorus_config_t chorus = {4.0f, DELAY_LINE_DELAY, 0.01f, 0.5f, 0.1f};
+
+void config_chorus(float freq, float depth, float level, float feedback) {
+    chorus.frequency = freq;
+    chorus.depth = depth;
+    chorus.level = level;
+    chorus.feedback = feedback;
+}
 
 // block -- what gets sent to the DAC -- -32768...32767 (int16 LE)
 output_sample_type * block;
@@ -339,7 +356,7 @@ int8_t oscs_init() {
             for(uint16_t i=0;i<BLOCK_SIZE;i++) { 
                 fbl[core][BLOCK_SIZE*c + i] = 0; 
             }
-            delay_lines[core][c] = new_delay_line(DELAY_LINE_LEN, DELAY_LINE_DELAY);
+            delay_lines[core][c] = new_delay_line(DELAY_LINE_LEN, chorus.delay);
         }
     }
     delay_mod_buf = (float *)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
@@ -602,24 +619,17 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
     }
     // apply variable delay line if set
     if(delay_lines[0][0] != NULL) {
-        // Update the fake modulator.
-        // 4 Hz - complete 256 steps in 44100 samples but actually do it 4 times.
-        //float skip = 256/44100.0f * 4.0f;
-        //delay_mod_phase = render_lut(delay_mod_buf, delay_mod_phase, skip, /* start_amp */ 0.4, 0.4, 
-        //                             sine_lutable_0, 256);
-        const float *sintab = find_sine_lutable();
-        for (int i=0; i < BLOCK_SIZE; ++i) {
-            delay_mod_buf[i] = sintab[(int)delay_mod_phase];
-            delay_mod_phase += (256/44100.0f * 4.0f);
-            if (delay_mod_phase >= 256) delay_mod_phase -= 256;
-        }
-        float scale = 0.01;
+        // Update the chorus modulator.
+        for(int i=0; i < BLOCK_SIZE; ++i) delay_mod_buf[i] = 0;
+        delay_mod_phase = render_lut(delay_mod_buf, delay_mod_phase, chorus.frequency * 256.f/SAMPLE_RATE, 1.0, 1.0,
+                                     find_sine_lutable(), 256);
+        // Apply time-varying delays to both chans.
+        float scale = 1.0f;
         for (int16_t c=0; c < NCHANS; ++c) {
-            apply_variable_delay(fbl[core] + c * BLOCK_SIZE, delay_lines[core][c], delay_mod_buf, scale);
+            apply_variable_delay(fbl[core] + c * BLOCK_SIZE, delay_lines[core][c], delay_mod_buf,
+                                 scale * chorus.depth, chorus.level, chorus.feedback);
+            // Flip delay direction for alternating channels.
             scale = -scale;
-            //for (int16_t i=0; i < BLOCK_SIZE; ++i) {
-            //    fbl[core][i] *= (1.0 + delay_mod_buf[i]);
-            //}
         }
     }
 }
