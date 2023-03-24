@@ -17,6 +17,7 @@ delay_line_t *new_delay_line(int len, float initial_delay) {
     delay_line_t *delay_line = (delay_line_t*)malloc_caps(sizeof(delay_line_t), MALLOC_CAP_INTERNAL); 
     delay_line->samples = (float*)malloc_caps(len * sizeof(float), MALLOC_CAP_INTERNAL);
     delay_line->len = len;
+    delay_line->feedback_delay = (int)initial_delay;
     delay_line->next_in = 0;
     delay_line->next_out = len - initial_delay;
     for (int i = 0; i < len; ++i) {
@@ -26,18 +27,20 @@ delay_line_t *new_delay_line(int len, float initial_delay) {
 }
 
 
-void delay_line_in(float *in, int n_samples, delay_line_t *delay_line) {
+void delay_line_in(float *in, int n_samples, delay_line_t *delay_line, float feedback_level) {
     // Store new samples in circular buffer.
     int index = delay_line->next_in;
     int index_mask = delay_line->len - 1; // will be all 1s because len is guaranteed 2**n.
+    int feedback_index = (index - delay_line->feedback_delay) & index_mask;
     while(n_samples-- > 0) {
-        delay_line->samples[index++] = *in++;
+        delay_line->samples[index++] = *in++ + feedback_level * delay_line->samples[feedback_index++];
         index &= index_mask;
+        feedback_index &= index_mask;
     }
     delay_line->next_in = index;
 }
 
-void delay_line_out(float *out, int n_samples, float* inc_delta, float delta_scale, delay_line_t *delay_line) {
+void delay_line_out(float *out, int n_samples, float* inc_delta, float delta_scale, delay_line_t *delay_line, float mix_level) {
     // Read a block of samples out from the delay line.
     // "step" is a real-valued read-from sample index; "inc" is a real-valued step, so the resampling
     // can be non-constant delay.  Function returns the final value of step (to re-use in the next
@@ -62,7 +65,7 @@ void delay_line_out(float *out, int n_samples, float* inc_delta, float delta_sca
         float cminusb = c - b;
         float sample = b + frac * (cminusb - 0.1666667f * (1.0f-frac) * ((d - a - 3.0f * cminusb) * frac + (d + 2.0f*a - 3.0f*b)));
 #endif /* LINEAR_INTERP */
-        *out++ = sample;
+        *out++ += mix_level * sample;  // mix delayed + original.
         step += 1.0 + delta_scale * *inc_delta++;
         if(step >= delay_len) step -= delay_len;
     }
@@ -70,7 +73,7 @@ void delay_line_out(float *out, int n_samples, float* inc_delta, float delta_sca
 }
 
 
-void apply_variable_delay(float *block, delay_line_t *delay_line, float *delay_mod, float delay_scale) {
-    delay_line_in(block, BLOCK_SIZE, delay_line);
-    delay_line_out(block, BLOCK_SIZE, delay_mod, delay_scale, delay_line);
+void apply_variable_delay(float *block, delay_line_t *delay_line, float *delay_mod, float delay_scale, float mix_level, float feedback_level) {
+    delay_line_in(block, BLOCK_SIZE, delay_line, feedback_level);
+    delay_line_out(block, BLOCK_SIZE, delay_mod, delay_scale, delay_line, mix_level);
 }
