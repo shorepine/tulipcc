@@ -152,7 +152,7 @@ The Alles synth output runs through a stereo chorus unit which has a set of cont
 tulip.chorus(lfo_frequency_hz, max_delay_samples, lfo_depth, chorus_mix_level, chorus_feedback_level)
 ```
 
-The default values are ```lfo_frequency_hz=0.25```, ```max_delay_samples=512```, ```lfo_depth=0.9```, ```chorus_mix_level=0.0```, and ```chorus_feedback_level=0.0```.  Set the ```chorus_mix_level``` to something like 0.5 to be able to hear the chorus effect.
+The default values are ```lfo_frequency_hz=0.5```, ```max_delay_samples=320```, ```lfo_depth=0.5```, ```chorus_mix_level=0.0```, and ```chorus_feedback_level=0.0``` which should be close to the classic Juno chorus.  Set the ```chorus_mix_level``` to something like 0.5 to be able to hear the effect.
 
 
 Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/extmod/tulip/py/music.py), which lets you create chords, progressions and scales through code:
