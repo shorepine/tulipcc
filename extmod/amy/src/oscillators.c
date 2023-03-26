@@ -89,34 +89,40 @@ float render_lut_fm_osc(float * buf, float phase, float step, float incoming_amp
     return phase;// - (int)phase;
 }
 
+static float FRACTIONAL_SAMPLE(float step, const float *lut, int lut_mask) {
+    // Interpolate a value at a real-valued index <step> in a circular buffer <lut> with <lut_mask> + 1 points.
+    // Floor is very slow on the esp32, so we just cast. Dan told me to add this comment. -- baw
+    //uint16_t base_index = (uint16_t)floor(step);
+    uint32_t base_index = (uint32_t)step;
+    float frac = step - (float)base_index;
+    float b = lut[(base_index + 0) & lut_mask];
+    float c = lut[(base_index + 1) & lut_mask];
+#ifdef LINEAR_INTERP
+    // linear interpolation.
+    float sample = b + ((c - b) * frac);
+#else /* !LINEAR_INTERP => CUBIC_INTERP */
+    float a = lut[(base_index - 1) & lut_mask];
+    float d = lut[(base_index + 2) & lut_mask];
+    // cubic interpolation (TTEM p.46).
+    //      float sample = 
+    //    - frac * (frac - 1) * (frac - 2) / 6.0 * a
+    //    + (frac + 1) * (frac - 1) * (frac - 2) / 2.0 * b
+    //    - (frac + 1) * frac * (frac - 2) / 2.0 * c
+    //    + (frac + 1) * frac * (frac - 1) / 6.0 * d;
+    // Miller's optimization - https://github.com/pure-data/pure-data/blob/master/src/d_array.c#L440
+    float cminusb = c - b;
+    float sample = b + frac * (cminusb - 0.1666667f * (1.0f-frac) * ((d - a - 3.0f * cminusb) * frac + (d + 2.0f*a - 3.0f*b)));
+#endif /* LINEAR_INTERP */
+    return sample;
+}
+
 // TODO -- move this render_LUT to use the "New terminology" that render_lut_fm_osc uses
 // pass in unscaled phase, use step instead of skip, etc
 float render_lut(float * buf, float step, float skip, float incoming_amp, float ending_amp, const float* lut, int32_t lut_size) { 
     // We assume lut_size == 2^R for some R, so (lut_size - 1) consists of R '1's in binary.
     int lut_mask = lut_size - 1;
     for(uint16_t i=0;i<BLOCK_SIZE;i++) {
-        // Floor is very slow on the esp32, so we just cast. Dan told me to add this comment. -- baw
-        //uint16_t base_index = (uint16_t)floor(step);
-        uint32_t base_index = (uint32_t)step;
-        float frac = step - (float)base_index;
-        float b = lut[(base_index + 0) & lut_mask];
-        float c = lut[(base_index + 1) & lut_mask];
-#ifdef LINEAR_INTERP
-        // linear interpolation.
-        float sample = b + ((c - b) * frac);
-#else /* !LINEAR_INTERP => CUBIC_INTERP */
-        float a = lut[(base_index - 1) & lut_mask];
-        float d = lut[(base_index + 2) & lut_mask];
-        // cubic interpolation (TTEM p.46).
-        //      float sample = 
-        //    - frac * (frac - 1) * (frac - 2) / 6.0 * a
-        //    + (frac + 1) * (frac - 1) * (frac - 2) / 2.0 * b
-        //    - (frac + 1) * frac * (frac - 2) / 2.0 * c
-        //    + (frac + 1) * frac * (frac - 1) / 6.0 * d;
-        // Miller's optimization - https://github.com/pure-data/pure-data/blob/master/src/d_array.c#L440
-        float cminusb = c - b;
-        float sample = b + frac * (cminusb - 0.1666667f * (1.0f-frac) * ((d - a - 3.0f * cminusb) * frac + (d + 2.0f*a - 3.0f*b)));
-#endif /* LINEAR_INTERP */
+        float sample = FRACTIONAL_SAMPLE(step, lut, lut_mask);
         float scaled_amp = incoming_amp + (ending_amp - incoming_amp)*((float)i/(float)BLOCK_SIZE);
         buf[i] += sample * scaled_amp;
 
