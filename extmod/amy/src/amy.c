@@ -33,37 +33,39 @@ float per_osc_fb[AMY_CORES][BLOCK_SIZE];
 // Final output delay lines.
 #define DELAY_LINE_LEN 512  // 11 ms @ 44 kHz
 delay_line_t *delay_lines[AMY_CORES][NCHANS];
-float *delay_line_mod = NULL;
+float delay_mod_val = 0.f;
 
-// Faking it
-float *delay_mod_buf;
-float delay_mod_phase = 0;
-float render_lut_nosum_noamp(float * buf, float step, float skip, const float* lut, int32_t lut_size);
-//extern const float* find_sine_lutable();
-extern const float* find_triangle_lutable();
+// Chorus control modulator is hardcoded to OSC 63 (NOSCS - 1)
+#define CHORUS_MOD_SOURCE (OSCS - 1)
 
 typedef struct chorus_config {
-    float frequency;   // LFO of delay line modulation.
-    float max_delay;   // Max delay when modulating.  Must be <= DELAY_LINE_LEN
-    float depth;       // scales max excursion of delay modulation as a proportion of max_delay/2.
-    float level;       // How much of the delayed signal to mix in to the output, typ 0.5.
-    float feedback;    // How much of the delay to feedback into input, typ 0.1.
+    float level;     // How much of the delayed signal to mix in to the output, typ 0.5.
+    int max_delay;   // Max delay when modulating.  Must be <= DELAY_LINE_LEN
 } chorus_config_t;
 
 // 0.5 Hz modulation at 50% depth of 320 samples (i.e., 80..240 samples = 2..6 ms), mix at 0 (inaudible), no feedback.
-chorus_config_t chorus = {0.5f, 320, 0.5f, 0.0f, 0.0f};
+chorus_config_t chorus = {0.0, 320};
 
-void config_chorus(float freq, float delay, float depth, float level, float feedback) {
-    chorus.frequency = freq;
-    chorus.max_delay = delay;
-    chorus.depth = depth;
+void alloc_delay_lines(void) {
+    for(uint16_t core=0;core<AMY_CORES;++core) {
+        for(uint16_t c=0;c<NCHANS;++c) {
+            delay_lines[core][c] = new_delay_line(DELAY_LINE_LEN, DELAY_LINE_LEN / 2);
+        }
+    }
+}
+
+void config_chorus(float level, int max_delay) {
+    // We just config mix level and max_delay here.  Modulation freq/amp/shape comes from OSC 63.
+    if (delay_lines[0][0] == NULL) {
+        alloc_delay_lines();
+    }
     chorus.level = level;
-    chorus.feedback = feedback;
+    chorus.max_delay = max_delay;
     // Apply max_delay.
     for (int core=0; core<AMY_CORES; ++core) {
         for (int chan=0; chan<NCHANS; ++chan) {
-            delay_lines[core][chan]->max_delay = delay;
-            delay_lines[core][chan]->feedback_delay = (int)delay / 2;
+            delay_lines[core][chan]->max_delay = max_delay;
+            delay_lines[core][chan]->feedback_delay = (int)max_delay / 2;
         }
     }
 }
@@ -365,10 +367,10 @@ int8_t oscs_init() {
             for(uint16_t i=0;i<BLOCK_SIZE;i++) { 
                 fbl[core][BLOCK_SIZE*c + i] = 0; 
             }
-            delay_lines[core][c] = new_delay_line(DELAY_LINE_LEN, DELAY_LINE_LEN / 2);
+            // We only alloc delay lines if the chorus is turned on.
+            delay_lines[core][c] = NULL;
         }
     }
-    delay_mod_buf = (float *)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
     
     total_samples = 0;
     computed_delta = 0;
@@ -628,11 +630,12 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
     }
     // apply variable delay line if set
     if(chorus.level > 0 && delay_lines[core][0] != NULL) {
-        // Apply time-varying delays to both chans.  delay_mod_buf was setup before we were called.
+        // Apply time-varying delays to both chans.
+        // delay_mod_val, the modulated delay amount, is set up before calling render_*.
         float scale = 1.0f;
         for (int16_t c=0; c < NCHANS; ++c) {
-            apply_variable_delay(fbl[core] + c * BLOCK_SIZE, delay_lines[core][c], delay_mod_buf,
-                                 scale * chorus.depth, chorus.level, chorus.feedback);
+            apply_fixed_delay(fbl[core] + c * BLOCK_SIZE, delay_lines[core][c], delay_mod_val,
+                              scale, chorus.level);
             // Flip delay direction for alternating channels.
             scale = -scale;
         }
@@ -676,11 +679,12 @@ int16_t * fill_audio_buffer_task() {
     // Give the mutex back
     xSemaphoreGive(xQueueSemaphore);
 #endif
-    
-    // Update the chorus modulator envelope before calling render_task on each core.
-    delay_mod_phase = render_lut_nosum_noamp(delay_mod_buf, delay_mod_phase, chorus.frequency * 512.f/SAMPLE_RATE,
-                                             find_triangle_lutable(), 512);
 
+    // Here's a little fragment of hold_and_modify() for you.
+    msynth[CHORUS_MOD_SOURCE].amp = synth[CHORUS_MOD_SOURCE].amp;
+    msynth[CHORUS_MOD_SOURCE].duty = synth[CHORUS_MOD_SOURCE].duty;
+    msynth[CHORUS_MOD_SOURCE].freq = synth[CHORUS_MOD_SOURCE].freq;
+    delay_mod_val = compute_mod_value(CHORUS_MOD_SOURCE);
 #ifdef ESP_PALATFORM
     // Tell the rendering threads to start rendering
     xTaskNotifyGive(amy_render_handle[0]);
@@ -844,8 +848,10 @@ struct event amy_parse_message(char * message) {
                         case 'G': e.filter_type=atoi(message + start); break; 
                         case 'g': e.mod_target = atoi(message + start);  break; 
                         case 'I': e.ratio = atof(message + start); break; 
+                        case 'k': config_chorus(atof(message + start), chorus.max_delay); break;
                         case 'l': e.velocity=atof(message + start); break; 
                         case 'L': e.mod_source=atoi(message + start); break; 
+                        case 'm': config_chorus(chorus.level, atoi(message + start)); break;
                         case 'N': e.latency_ms = atoi(message + start);  break; 
                         case 'n': e.midi_note=atoi(message + start); break; 
                         case 'o': e.algorithm=atoi(message+start); break; 

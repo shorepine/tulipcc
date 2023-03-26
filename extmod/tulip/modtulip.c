@@ -893,19 +893,6 @@ STATIC mp_obj_t tulip_ui_del(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_del_obj, 1, 1, tulip_ui_del);
 
 
-STATIC mp_obj_t tulip_chorus(size_t n_args, const mp_obj_t *args) {
-    float lfo_freq_hz = mp_obj_get_float(args[0]);
-    float max_delay_samples = mp_obj_get_float(args[1]);
-    float lfo_depth = mp_obj_get_float(args[2]);
-    float mix_level = mp_obj_get_float(args[3]);
-    float feedback_level = mp_obj_get_float(args[4]);
-    config_chorus(lfo_freq_hz, max_delay_samples, lfo_depth, mix_level, feedback_level);
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_chorus_obj, 5, 5, tulip_chorus);
-
-
-
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
@@ -965,7 +952,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_slider), MP_ROM_PTR(&tulip_slider_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_del), MP_ROM_PTR(&tulip_ui_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_joy), MP_ROM_PTR(&tulip_joy_obj) },
-    { MP_ROM_QSTR(MP_QSTR_chorus), MP_ROM_PTR(&tulip_chorus_obj) },
 
 
 // Special platform specific things
