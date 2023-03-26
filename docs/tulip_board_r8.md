@@ -1,19 +1,19 @@
 # The Tulip Creative Computer Board
 
-##  🌈🌈 Revision 7 🌈🌈
-This page is for **revision 7**. 
+##  🌈🌈 Revision 8 🌈🌈
+This page is for **revision 8**.  Revision 8 is not yet designed. We'll update this page as we work on it, and then swap out the main page once it's ready.
 
-![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip_board_r7.jpg)
+![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip_board_r8.jpg)
 
 We've designed our own integrated [Tulip CC](../README.md) board. It's the nicest way to experience Tulip: a small 66x56mm PCB with a display FPC connector, USB-C connector for charging, power and flashing, joystick connector, USB keyboard connector, 3 3.5mm jacks for audio out, MIDI in, and MIDI out, a power switch, and connector for external power. 
 
 If you're comfortable with surface mount soldering, you can put together your own board relatively easily. You can order the PCBs from [OSH Park here.](UPDATE_THIS) (OSH Park charges only to manufacture the boards, I do not receive anything.)
 
-[The BOM for the latest revision is here.](https://github.com/bwhitman/tulipcc/blob/main/docs/pcbs/tulip4_board_v4r7/tulip_board_bom.csv) Please note I haven't yet optimized this BOM for price. But everything is at least in stock, mostly at Digikey. [Make sure to use my public Digikey list to order the parts from Digikey quickly.](https://www.digikey.com/en/mylists/list/ZB5IAQSM2O) [EAGLE board and schematic files are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_board_v4r7) 
+[The BOM for the latest revision is here.](https://github.com/bwhitman/tulipcc/blob/main/docs/pcbs/tulip4_board_v4r8/tulip_board_bom.csv) Please note I haven't yet optimized this BOM for price. But everything is at least in stock, mostly at Digikey. [Make sure to use my public Digikey list to order the parts from Digikey quickly.](https://www.digikey.com/en/mylists/list/ZB5IAQSM2O) [EAGLE board and schematic files are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_board_v4r8) 
 
 If this looks too hard, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [with no soldering and a breadboard.](tulip_breadboard.md)
 
-![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/board_r7.png)
+![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/board_r8.png)
 
 
 ## Assembly tips
@@ -39,7 +39,7 @@ For both jumper settings the USBC connection will allow you to see the serial mo
 
 Please be careful using unprotected batteries like this. Don't leave them unattended while you're setting them up. Tulip's board has no protection for inverted polarity or out of spec voltages.
 
-![Battery setup](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip_board_r7_battery.jpg)
+![Battery setup](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip_board_r8_battery.jpg)
 
 ## Expansion headers
 
@@ -64,7 +64,7 @@ After you're done assembling, [read about how to compile and flash Tulip.](tulip
 I would love hands on help to make the board better -- routing, placement, part selection, BOM optimization, charging/boost on board, porting to a different EDA program. Please file a GitHub pull request or [chat with us on our discussions page](https://github.com/bwhitman/tulipcc/discussions) to start contributing!
 
 
-![Schematic](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pcbs/tulip4_board_v4r7/schematic.png)
+![Schematic](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pcbs/tulip4_board_v4r8/schematic.png)
 
 
 
