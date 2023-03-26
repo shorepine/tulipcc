@@ -3,7 +3,7 @@
 ##  🌈🌈 Revision 7 🌈🌈
 This page is for **revision 7**. We are currently assembling and testing r7. This page will be in flux as we verify the design! 
 
-![Tulip Board](UPDATE_THIS)
+![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip_board_r7.jpg)
 
 We've designed our own integrated [Tulip CC](../README.md) board. It's the nicest way to experience Tulip: a small 66x56mm PCB with a display FPC connector, USB-C connector for charging, power and flashing, joystick connector, USB keyboard connector, 3 3.5mm jacks for audio out, MIDI in, and MIDI out, a power switch, and connector for external power. 
 
@@ -39,7 +39,7 @@ For both jumper settings the USBC connection will allow you to see the serial mo
 
 Please be careful using unprotected batteries like this. Don't leave them unattended while you're setting them up. Tulip's board has no protection for inverted polarity or out of spec voltages.
 
-![Battery setup](UPDATE_THIS)
+![Battery setup](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip_board_r7_battery.jpg)
 
 ## Expansion headers
 
