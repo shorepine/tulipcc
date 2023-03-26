@@ -634,8 +634,8 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
         // delay_mod_val, the modulated delay amount, is set up before calling render_*.
         float scale = 1.0f;
         for (int16_t c=0; c < NCHANS; ++c) {
-            apply_fixed_delay(fbl[core] + c * BLOCK_SIZE, delay_lines[core][c], delay_mod_val,
-                              scale, chorus.level);
+            apply_fixed_delay(fbl[core] + c * BLOCK_SIZE, delay_lines[core][c],
+                              scale * delay_mod_val, chorus.level);
             // Flip delay direction for alternating channels.
             scale = -scale;
         }
