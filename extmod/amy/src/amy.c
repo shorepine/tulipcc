@@ -39,7 +39,8 @@ float *delay_line_mod = NULL;
 float *delay_mod_buf;
 float delay_mod_phase = 0;
 float render_lut(float * buf, float step, float skip, float incoming_amp, float ending_amp, const float* lut, int32_t lut_size);
-extern const float* find_sine_lutable();
+//extern const float* find_sine_lutable();
+extern const float* find_triangle_lutable();
 
 typedef struct chorus_config {
     float frequency;   // LFO of delay line modulation.
@@ -49,8 +50,8 @@ typedef struct chorus_config {
     float feedback;    // How much of the delay to feedback into input, typ 0.1.
 } chorus_config_t;
 
-// 0.25 Hz modulation out to 90% the max (512 samples = 11 ms), mix at 0 (inaudible), no feedback.
-chorus_config_t chorus = {0.25f, DELAY_LINE_LEN, 0.9f, 0.0f, 0.0f};
+// 0.5 Hz modulation at 50% depth of 320 samples (i.e., 80..240 samples = 2..6 ms), mix at 0 (inaudible), no feedback.
+chorus_config_t chorus = {0.5f, 320, 0.5f, 0.0f, 0.0f};
 
 void config_chorus(float freq, float delay, float depth, float level, float feedback) {
     chorus.frequency = freq;
@@ -630,7 +631,7 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
         // Update the chorus modulator.
         for(int i=0; i < BLOCK_SIZE; ++i) delay_mod_buf[i] = 0;
         delay_mod_phase = render_lut(delay_mod_buf, delay_mod_phase, chorus.frequency * 256.f/SAMPLE_RATE, 1.0, 1.0,
-                                     find_sine_lutable(), 256);
+                                     find_triangle_lutable(), 512);
         // Apply time-varying delays to both chans.
         float scale = 1.0f;
         for (int16_t c=0; c < NCHANS; ++c) {
