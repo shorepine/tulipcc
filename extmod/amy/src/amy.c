@@ -38,7 +38,7 @@ float *delay_line_mod = NULL;
 // Faking it
 float *delay_mod_buf;
 float delay_mod_phase = 0;
-float render_lut(float * buf, float step, float skip, float incoming_amp, float ending_amp, const float* lut, int32_t lut_size);
+float render_lut_nosum_noamp(float * buf, float step, float skip, const float* lut, int32_t lut_size);
 //extern const float* find_sine_lutable();
 extern const float* find_triangle_lutable();
 
@@ -627,12 +627,8 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
         }
     }
     // apply variable delay line if set
-    if(delay_lines[0][0] != NULL) {
-        // Update the chorus modulator.
-        for(int i=0; i < BLOCK_SIZE; ++i) delay_mod_buf[i] = 0;
-        delay_mod_phase = render_lut(delay_mod_buf, delay_mod_phase, chorus.frequency * 256.f/SAMPLE_RATE, 1.0, 1.0,
-                                     find_triangle_lutable(), 512);
-        // Apply time-varying delays to both chans.
+    if(chorus.level > 0 && delay_lines[core][0] != NULL) {
+        // Apply time-varying delays to both chans.  delay_mod_buf was setup before we were called.
         float scale = 1.0f;
         for (int16_t c=0; c < NCHANS; ++c) {
             apply_variable_delay(fbl[core] + c * BLOCK_SIZE, delay_lines[core][c], delay_mod_buf,
@@ -679,7 +675,13 @@ int16_t * fill_audio_buffer_task() {
 #ifdef ESP_PLATFORM
     // Give the mutex back
     xSemaphoreGive(xQueueSemaphore);
+#endif
+    
+    // Update the chorus modulator envelope before calling render_task on each core.
+    delay_mod_phase = render_lut_nosum_noamp(delay_mod_buf, delay_mod_phase, chorus.frequency * 512.f/SAMPLE_RATE,
+                                             find_triangle_lutable(), 512);
 
+#ifdef ESP_PALATFORM
     // Tell the rendering threads to start rendering
     xTaskNotifyGive(amy_render_handle[0]);
     if(AMY_CORES == 2) xTaskNotifyGive(amy_render_handle[1]);

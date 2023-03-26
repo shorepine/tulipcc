@@ -132,6 +132,17 @@ float render_lut(float * buf, float step, float skip, float incoming_amp, float 
     return step;
 }
 
+float render_lut_nosum_noamp(float * buf, float step, float skip, const float* lut, int32_t lut_size) { 
+    // Like render_lut, but the output is overwritten, not summed up, and there's no amp scaling.
+    int lut_mask = lut_size - 1;
+    for(uint16_t i=0;i<BLOCK_SIZE;i++) {
+        *buf++ = FRACTIONAL_SAMPLE(step, lut, lut_mask);
+        step += skip;
+        if(step >= lut_size) step -= lut_size;
+    }
+    return step;
+}
+
 float render_am_lut(float * buf, float step, float skip, float incoming_amp, float ending_amp, const float* lut, int16_t lut_size, float *mod, float bandwidth) { 
     int lut_mask = lut_size - 1;
     for(uint16_t i=0;i<BLOCK_SIZE;i++) {
