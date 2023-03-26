@@ -79,7 +79,37 @@ void delay_line_in_out(float *in, float *out, int n_samples, float* mod_in, floa
     delay_line->next_in = index_in;
 }
 
+void delay_line_in_out_fixed_delay(float *in, float *out, int n_samples, float mod_val, float mod_scale, delay_line_t *delay_line, float mix_level) {
+    // Read a block of samples out from the delay line.
+    // "step" is a real-valued read-from sample index; "inc" is a real-valued step, so the resampling
+    // can be non-constant delay.  Function returns the final value of step (to re-use in the next
+    // block).
+    int delay_len = delay_line->len;
+    int index_mask = delay_len - 1; // will be all 1s because len is guaranteed 2**n.
+
+    int index_in = delay_line->next_in;
+
+    float *delay = delay_line->samples;
+    float total_delay = delay_line->max_delay * (1.f + mod_scale * mod_val) / 2.f;
+    while(n_samples-- > 0) {
+        float next_in = *in++;
+
+        float index_out = index_in - total_delay;
+        //if(index_out >= delay_len) index_out -= delay_len;
+        if(index_out < 0) index_out += delay_len;
+        float sample = FRACTIONAL_SAMPLE(index_out, delay, index_mask);
+        *out++ += mix_level * sample;  // mix delayed + original.
+        delay[index_in++] = next_in;
+        index_in &= index_mask;
+    }
+    delay_line->next_in = index_in;
+}
+
 
 void apply_variable_delay(float *block, delay_line_t *delay_line, float *delay_mod, float delay_scale, float mix_level, float feedback_level) {
     delay_line_in_out(block, block, BLOCK_SIZE, delay_mod, delay_scale, delay_line, mix_level, feedback_level);
+}
+
+void apply_fixed_delay(float *block, delay_line_t *delay_line, float delay_mod_val, float delay_scale, float mix_level) {
+    delay_line_in_out_fixed_delay(block, block, BLOCK_SIZE, delay_mod_val, delay_scale, delay_line, mix_level);
 }

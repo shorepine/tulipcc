@@ -7,6 +7,20 @@ extern struct event* synth;
 extern struct mod_event* msynth;
 extern struct mod_state mglobal;
 
+float compute_mod_value(uint8_t mod_osc) {
+    // Return the modulation-rate value for the specified oscillator.
+    // i.e., this oscillator is acting as modulation for something, so
+    // just calculate that modulation rate (without knowing what it
+    // modulates).
+    if(synth[mod_osc].wave == NOISE) return compute_mod_noise(mod_osc);
+    if(synth[mod_osc].wave == SAW_DOWN) return compute_mod_saw_down(mod_osc);
+    if(synth[mod_osc].wave == SAW_UP) return compute_mod_saw_up(mod_osc);
+    if(synth[mod_osc].wave == PULSE) return compute_mod_pulse(mod_osc);
+    if(synth[mod_osc].wave == TRIANGLE) return compute_mod_triangle(mod_osc);
+    if(synth[mod_osc].wave == SINE) return compute_mod_sine(mod_osc);
+    if(synth[mod_osc].wave == PCM) return compute_mod_pcm(mod_osc);
+    return 0.f;
+}
 
 float compute_mod_scale(uint8_t osc) {
     int8_t source = synth[osc].mod_source;
@@ -18,17 +32,12 @@ float compute_mod_scale(uint8_t osc) {
             msynth[source].filter_freq = synth[source].filter_freq;
             msynth[source].feedback = synth[source].feedback;
             msynth[source].resonance = synth[source].resonance;
-            if(synth[source].wave == NOISE) return compute_mod_noise(source);
-            if(synth[source].wave == SAW_DOWN) return compute_mod_saw_down(source);
-            if(synth[source].wave == SAW_UP) return compute_mod_saw_up(source);
-            if(synth[source].wave == PULSE) return compute_mod_pulse(source);
-            if(synth[source].wave == TRIANGLE) return compute_mod_triangle(source);
-            if(synth[source].wave == SINE) return compute_mod_sine(source);
-            if(synth[source].wave == PCM) return compute_mod_pcm(source);
+            return compute_mod_value(source);
         }
     }
     return 0; // 0 is no change, unlike bp scale
 }
+
 float compute_breakpoint_scale(uint8_t osc, uint8_t bp_set) {
     // given a breakpoint list, compute the scale
     // we first see how many BPs are defined, and where we are in them?

@@ -358,8 +358,7 @@ float compute_mod_triangle(uint8_t osc) {
         }
     }
     synth[osc].step++;
-    return (synth[osc].sample * msynth[osc].amp); // -1 .. 1
-    
+    return (synth[osc].sample * msynth[osc].amp); // -1 .. 1    
 }
 
 extern int64_t total_samples;

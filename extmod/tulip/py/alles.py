@@ -8,6 +8,7 @@ MAX_QUEUE = 400
 TARGET_AMP, TARGET_DUTY, TARGET_FREQ, TARGET_FILTER_FREQ, TARGET_RESONANCE, TARGET_FEEDBACK, TARGET_LINEAR, TARGET_TRUE_EXPONENTIAL, TARGET_DX7_EXPONENTIAL = (1, 2, 4, 8, 16, 32, 64, 128, 256)
 FILTER_NONE, FILTER_LPF, FILTER_BPF, FILTER_HPF = range(4)
 mesh_flag = 0
+CHORUS_OSC = 63
 
 """
     A bunch of useful presets
@@ -72,7 +73,7 @@ def trunc(number):
 # Construct an AMY message
 def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1, feedback=-1, timestamp=None, reset=-1, phase=-1, pan=-1, \
         client=-1, retries=1, volume=-1, filter_freq = -1, resonance = -1, bp0="", bp1="", bp2="", bp0_target=-1, bp1_target=-1, bp2_target=-1, mod_target=-1, \
-        debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, latency_ms = -1, algo_source=None):
+            debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, latency_ms = -1, algo_source=None, chorus_level=-1, chorus_delay=-1):
 
     m = ""
     if(timestamp is None): timestamp = millis()
@@ -110,6 +111,8 @@ def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1,
     if(eq_m>=0): m = m + "y" + trunc(eq_m)
     if(eq_h>=0): m = m + "z" + trunc(eq_h)
     if(filter_type>=0): m = m + "G" + str(filter_type)
+    if(chorus_level>=0): m = m + "k" + str(chorus_level)
+    if(chorus_delay>=0): m = m + "m" + str(chorus_delay)
     return m+'Z'
 
 
@@ -241,6 +244,27 @@ def c_major(octave=2,wave=SINE, **kwargs):
     send(osc=0, freq=220.5*octave, wave=wave, vel=1, **kwargs)
     send(osc=1, freq=138.5*octave, wave=wave, vel=1, **kwargs)
     send(osc=2, freq=164.5*octave, wave=wave, vel=1, **kwargs)
+
+"""
+    Chorus control
+"""
+def chorus(level=-1, max_delay=-1, freq=-1, amp=-1, wave=-1):
+    args = {}
+    if (freq >= 0):
+        args['freq'] = freq
+    if (amp >= 0):
+        args['amp'] = amp
+    if (wave >= 0):
+        args['wave'] = wave
+    if len(args) > 0:
+        # We are sending oscillator commands.
+        args['osc'] = CHORUS_OSC
+    # These ones don't relate to CHORUS_OSC.
+    if (level >= 0):
+        args['chorus_level'] = level
+    if (max_delay >= 0):
+        args['chorus_delay'] = max_delay
+    send(**args)
 
 
 
