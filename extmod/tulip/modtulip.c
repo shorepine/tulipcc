@@ -895,13 +895,14 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_del_obj, 1, 1, tulip_ui_del)
 
 STATIC mp_obj_t tulip_chorus(size_t n_args, const mp_obj_t *args) {
     float lfo_freq_hz = mp_obj_get_float(args[0]);
-    float lfo_depth = mp_obj_get_float(args[1]);
-    float mix_level = mp_obj_get_float(args[2]);
-    float feedback_level = mp_obj_get_float(args[3]);
-    config_chorus(lfo_freq_hz, lfo_depth, mix_level, feedback_level);
+    float max_delay_samples = mp_obj_get_float(args[1]);
+    float lfo_depth = mp_obj_get_float(args[2]);
+    float mix_level = mp_obj_get_float(args[3]);
+    float feedback_level = mp_obj_get_float(args[4]);
+    config_chorus(lfo_freq_hz, max_delay_samples, lfo_depth, mix_level, feedback_level);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_chorus_obj, 4, 4, tulip_chorus);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_chorus_obj, 5, 5, tulip_chorus);
 
 
 

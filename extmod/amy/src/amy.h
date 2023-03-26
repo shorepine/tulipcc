@@ -320,7 +320,7 @@ extern float compute_mod_scale(uint8_t osc);
 extern void retrigger_mod_source(uint8_t osc);
 
 // chorus
-extern void config_chorus(float freq, float depth, float level, float feedback);
+extern void config_chorus(float freq, float delay, float depth, float level, float feedback);
 
 
 #endif

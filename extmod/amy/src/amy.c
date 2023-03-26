@@ -31,8 +31,7 @@ float ** fbl;
 float per_osc_fb[AMY_CORES][BLOCK_SIZE];
 
 // Final output delay lines.
-#define DELAY_LINE_LEN 2048  // 22 ms @ 44 kHz
-#define DELAY_LINE_DELAY 512 // 11 ms @ 44 kHz
+#define DELAY_LINE_LEN 512  // 11 ms @ 44 kHz
 delay_line_t *delay_lines[AMY_CORES][NCHANS];
 float *delay_line_mod = NULL;
 
@@ -44,19 +43,28 @@ extern const float* find_sine_lutable();
 
 typedef struct chorus_config {
     float frequency;   // LFO of delay line modulation.
-    int delay;         // Mean delay in samples, typ 1024.  Must be smaller than DELAY_LINE_LEN - BLOCK_SIZE by enough margin for the peak delay (i.e., margin needs to increase as depth increases).
-    float depth;       // scales max excursion of delay modulation, typ 0.01.
+    float max_delay;   // Max delay when modulating.  Must be <= DELAY_LINE_LEN
+    float depth;       // scales max excursion of delay modulation as a proportion of max_delay/2.
     float level;       // How much of the delayed signal to mix in to the output, typ 0.5.
     float feedback;    // How much of the delay to feedback into input, typ 0.1.
 } chorus_config_t;
 
-chorus_config_t chorus = {4.0f, DELAY_LINE_DELAY, 0.01f, 0.5f, 0.1f};
+// 0.25 Hz modulation out to 90% the max (512 samples = 11 ms), mix at 0 (inaudible), no feedback.
+chorus_config_t chorus = {0.25f, DELAY_LINE_LEN, 0.9f, 0.0f, 0.0f};
 
-void config_chorus(float freq, float depth, float level, float feedback) {
+void config_chorus(float freq, float delay, float depth, float level, float feedback) {
     chorus.frequency = freq;
+    chorus.max_delay = delay;
     chorus.depth = depth;
     chorus.level = level;
     chorus.feedback = feedback;
+    // Apply max_delay.
+    for (int core=0; core<AMY_CORES; ++core) {
+        for (int chan=0; chan<NCHANS; ++chan) {
+            delay_lines[core][chan]->max_delay = delay;
+            delay_lines[core][chan]->feedback_delay = (int)delay / 2;
+        }
+    }
 }
 
 // block -- what gets sent to the DAC -- -32768...32767 (int16 LE)
@@ -356,7 +364,7 @@ int8_t oscs_init() {
             for(uint16_t i=0;i<BLOCK_SIZE;i++) { 
                 fbl[core][BLOCK_SIZE*c + i] = 0; 
             }
-            delay_lines[core][c] = new_delay_line(DELAY_LINE_LEN, chorus.delay);
+            delay_lines[core][c] = new_delay_line(DELAY_LINE_LEN, DELAY_LINE_LEN / 2);
         }
     }
     delay_mod_buf = (float *)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
