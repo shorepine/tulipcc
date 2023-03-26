@@ -43,7 +43,9 @@ typedef struct chorus_config {
     int max_delay;   // Max delay when modulating.  Must be <= DELAY_LINE_LEN
 } chorus_config_t;
 
-// 0.5 Hz modulation at 50% depth of 320 samples (i.e., 80..240 samples = 2..6 ms), mix at 0 (inaudible), no feedback.
+// 0.5 Hz modulation at 50% depth of 320 samples (i.e., 80..240 samples = 2..6 ms), mix at 0 (inaudible).
+#define CHORUS_DEFAULT_LFO_FREQ 0.5
+#define CHORUS_DEFAULT_MOD_DEPTH 0.5
 chorus_config_t chorus = {0.0, 320};
 
 void alloc_delay_lines(void) {
@@ -58,6 +60,10 @@ void config_chorus(float level, int max_delay) {
     // We just config mix level and max_delay here.  Modulation freq/amp/shape comes from OSC 63.
     if (delay_lines[0][0] == NULL) {
         alloc_delay_lines();
+        // Make sure OSC63 is running with defaults.
+        //char init_chorus_osc_msg[64];
+        //sprintf(init_chorus_osc_msg, "v%df%.1fa%.1fw%d", CHORUS_MOD_SOURCE, CHORUS_DEFAULT_LFO_FREQ, CHORUS_DEFAULT_MOD_DEPTH, TRIANGLE);
+        //amy_play_message(init_chorus_osc_msg);
     }
     chorus.level = level;
     chorus.max_delay = max_delay;
@@ -321,6 +327,10 @@ void amy_reset_oscs() {
     global.eq[0] = 0;
     global.eq[1] = 0;
     global.eq[2] = 0;
+    // Also reset chorus oscillator.
+    synth[CHORUS_MOD_SOURCE].freq = CHORUS_DEFAULT_LFO_FREQ;
+    synth[CHORUS_MOD_SOURCE].amp = CHORUS_DEFAULT_MOD_DEPTH;
+    synth[CHORUS_MOD_SOURCE].wave = TRIANGLE;
 }
 
 
