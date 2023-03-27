@@ -46,7 +46,9 @@ typedef struct chorus_config {
 // 0.5 Hz modulation at 50% depth of 320 samples (i.e., 80..240 samples = 2..6 ms), mix at 0 (inaudible).
 #define CHORUS_DEFAULT_LFO_FREQ 0.5
 #define CHORUS_DEFAULT_MOD_DEPTH 0.5
-chorus_config_t chorus = {0.0, 320};
+#define CHORUS_DEFAULT_VOLUME 0
+#define CHORUS_DEFAULT_MAX_DELAY 320
+chorus_config_t chorus = {CHORUS_DEFAULT_VOLUME, CHORUS_DEFAULT_MAX_DELAY};
 
 void alloc_delay_lines(void) {
     for(uint16_t core=0;core<AMY_CORES;++core) {
@@ -58,20 +60,19 @@ void alloc_delay_lines(void) {
 
 void config_chorus(float level, int max_delay) {
     // We just config mix level and max_delay here.  Modulation freq/amp/shape comes from OSC 63.
-    if (delay_lines[0][0] == NULL) {
-        alloc_delay_lines();
-        // Make sure OSC63 is running with defaults.
-        //char init_chorus_osc_msg[64];
-        //sprintf(init_chorus_osc_msg, "v%df%.1fa%.1fw%d", CHORUS_MOD_SOURCE, CHORUS_DEFAULT_LFO_FREQ, CHORUS_DEFAULT_MOD_DEPTH, TRIANGLE);
-        //amy_play_message(init_chorus_osc_msg);
-    }
     chorus.level = level;
     chorus.max_delay = max_delay;
-    // Apply max_delay.
-    for (int core=0; core<AMY_CORES; ++core) {
-        for (int chan=0; chan<NCHANS; ++chan) {
-            delay_lines[core][chan]->max_delay = max_delay;
-            delay_lines[core][chan]->feedback_delay = (int)max_delay / 2;
+    if (level > 0) {
+        // Only allocate delay lines if chorus is more than inaudible.
+        if (delay_lines[0][0] == NULL) {
+            alloc_delay_lines();
+        }
+        // Apply max_delay.
+        for (int core=0; core<AMY_CORES; ++core) {
+            for (int chan=0; chan<NCHANS; ++chan) {
+                delay_lines[core][chan]->max_delay = max_delay;
+                delay_lines[core][chan]->feedback_delay = (int)max_delay / 2;
+            }
         }
     }
 }
@@ -331,6 +332,8 @@ void amy_reset_oscs() {
     synth[CHORUS_MOD_SOURCE].freq = CHORUS_DEFAULT_LFO_FREQ;
     synth[CHORUS_MOD_SOURCE].amp = CHORUS_DEFAULT_MOD_DEPTH;
     synth[CHORUS_MOD_SOURCE].wave = TRIANGLE;
+    // And the chorus params
+    config_chorus(CHORUS_DEFAULT_VOLUME, CHORUS_DEFAULT_MAX_DELAY);
 }
 
 
@@ -729,11 +732,11 @@ int16_t * fill_audio_buffer_task() {
             int positive = 1; 
             if (fsample < 0) positive = 0;
             // Using a uint gives us factor-of-2 headroom (up to 65535 not 32767).
-            uint32_t uintval;
+            int32_t uintval;
             if (positive) {  // avoid fabs()
-                uintval = (int)fsample;
+                uintval = (int32_t)fsample;
             } else {
-                uintval = (int)(-fsample);
+                uintval = (int32_t)(-fsample);
             }
             if (uintval >= FIRST_NONLIN) {
                 if (uintval >= FIRST_HARDCLIP) {
