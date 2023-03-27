@@ -729,7 +729,7 @@ int16_t * fill_audio_buffer_task() {
             int positive = 1; 
             if (fsample < 0) positive = 0;
             // Using a uint gives us factor-of-2 headroom (up to 65535 not 32767).
-            uint16_t uintval;
+            uint32_t uintval;
             if (positive) {  // avoid fabs()
                 uintval = (int)fsample;
             } else {
