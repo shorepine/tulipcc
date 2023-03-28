@@ -33,7 +33,16 @@ float per_osc_fb[AMY_CORES][BLOCK_SIZE];
 // Final output delay lines.
 #define DELAY_LINE_LEN 512  // 11 ms @ 44 kHz
 delay_line_t *delay_lines[AMY_CORES][NCHANS];
+// CHORUS_ARATE means that chorus delay is updated at full audio rate and
+// the chorus delay lines have per-sample variable delays.  Otherwise,
+// the chorus oscillator is only evalated once per block (~11ms) and the
+// delay is constant within each block.
+#define CHORUS_ARATE
+#ifdef CHORUS_ARATE
+float *delay_mod = NULL;
+#else
 float delay_mod_val = 0.f;
+#endif // CHORUS_ARATE
 
 // Chorus control modulator is hardcoded to OSC 63 (NOSCS - 1)
 #define CHORUS_MOD_SOURCE (OSCS - 1)
@@ -55,17 +64,26 @@ void alloc_delay_lines(void) {
         for(uint16_t c=0;c<NCHANS;++c) {
             delay_lines[core][c] = new_delay_line(DELAY_LINE_LEN, DELAY_LINE_LEN / 2);
         }
+#ifdef CHORUS_ARATE
+        delay_mod = (float*)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
+#endif
     }
 }
 
+void osc_note_on(uint8_t osc);
+
 void config_chorus(float level, int max_delay) {
     // We just config mix level and max_delay here.  Modulation freq/amp/shape comes from OSC 63.
-    chorus.level = level;
-    chorus.max_delay = max_delay;
     if (level > 0) {
         // Only allocate delay lines if chorus is more than inaudible.
         if (delay_lines[0][0] == NULL) {
             alloc_delay_lines();
+        }
+        // If we're turning on for the first time, start the oscillator.
+        if (chorus.level == 0) {
+#ifdef CHORUS_ARATE
+            osc_note_on(CHORUS_MOD_SOURCE);
+#endif
         }
         // Apply max_delay.
         for (int core=0; core<AMY_CORES; ++core) {
@@ -75,6 +93,8 @@ void config_chorus(float level, int max_delay) {
             }
         }
     }
+    chorus.max_delay = max_delay;
+    chorus.level = level;
 }
 
 // block -- what gets sent to the DAC -- -32768...32767 (int16 LE)
@@ -444,6 +464,17 @@ void oscs_deinit() {
 }
 
 
+void osc_note_on(uint8_t osc) {
+    if(synth[osc].wave==SINE) sine_note_on(osc);
+    if(synth[osc].wave==SAW_DOWN) saw_down_note_on(osc);
+    if(synth[osc].wave==SAW_UP) saw_up_note_on(osc);
+    if(synth[osc].wave==TRIANGLE) triangle_note_on(osc);
+    if(synth[osc].wave==PULSE) pulse_note_on(osc);
+    if(synth[osc].wave==PCM) pcm_note_on(osc);
+    if(synth[osc].wave==ALGO) algo_note_on(osc);
+    if(synth[osc].wave==PARTIAL) partial_note_on(osc);
+    if(synth[osc].wave==PARTIALS) partials_note_on(osc);
+}
 
 // Play an event, now -- tell the audio loop to start making noise
 void play_event(struct delta d) {
@@ -519,15 +550,7 @@ void play_event(struct delta d) {
             // If there was a filter active for this voice, reset it
             if(synth[d.osc].filter_type != FILTER_NONE) update_filter(d.osc);
             // Restart the waveforms, adjusting for phase if given
-            if(synth[d.osc].wave==SINE) sine_note_on(d.osc);
-            if(synth[d.osc].wave==SAW_DOWN) saw_down_note_on(d.osc);
-            if(synth[d.osc].wave==SAW_UP) saw_up_note_on(d.osc);
-            if(synth[d.osc].wave==TRIANGLE) triangle_note_on(d.osc);
-            if(synth[d.osc].wave==PULSE) pulse_note_on(d.osc);
-            if(synth[d.osc].wave==PCM) pcm_note_on(d.osc);
-            if(synth[d.osc].wave==ALGO) algo_note_on(d.osc);
-            if(synth[d.osc].wave==PARTIAL) partial_note_on(d.osc);
-            if(synth[d.osc].wave==PARTIALS) partials_note_on(d.osc);
+            osc_note_on(d.osc);
             // Trigger the MOD source, if we have one
             if(synth[d.osc].mod_source >= 0) {
                 if(synth[synth[d.osc].mod_source].wave==SINE) sine_mod_trigger(synth[d.osc].mod_source);
@@ -606,26 +629,30 @@ void mix_with_pan(float *stereo_dest, float *mono_src, float gain_l, float gain_
     }
 #endif
 }
-    
+
+void render_osc_wave(uint8_t osc, float* buf) {
+    // Fill buf with next BLOCK_SIZE of samples for specified osc.
+    for(uint16_t i=0;i<BLOCK_SIZE;i++) { buf[i] = 0; }
+    hold_and_modify(osc); // apply bp / mod
+    if(synth[osc].wave == NOISE) render_noise(buf, osc);
+    if(synth[osc].wave == SAW_DOWN) render_saw_down(buf, osc);
+    if(synth[osc].wave == SAW_UP) render_saw_up(buf, osc);
+    if(synth[osc].wave == PULSE) render_pulse(buf, osc);
+    if(synth[osc].wave == TRIANGLE) render_triangle(buf, osc);
+    if(synth[osc].wave == SINE) render_sine(buf, osc);
+    if(synth[osc].wave == KS) render_ks(buf, osc);
+    if(synth[osc].wave == PCM) render_pcm(buf, osc);
+    if(synth[osc].wave == ALGO) render_algo(buf, osc);
+    if(synth[osc].wave == PARTIAL) render_partial(buf, osc);
+    if(synth[osc].wave == PARTIALS) render_partials(buf, osc);
+}
 
 void render_task(uint8_t start, uint8_t end, uint8_t core) {
     for(uint16_t i=0;i<BLOCK_SIZE*NCHANS;i++) { fbl[core][i] = 0; }
     //for(uint16_t i=0;i<BLOCK_SIZE;i++) { per_osc_fb[core][i] = 0; }
     for(uint8_t osc=start; osc<end; osc++) {
         if(synth[osc].status==AUDIBLE) { // skip oscs that are silent or mod sources from playback
-            for(uint16_t i=0;i<BLOCK_SIZE;i++) { per_osc_fb[core][i] = 0; }
-            hold_and_modify(osc); // apply bp / mod
-            if(synth[osc].wave == NOISE) render_noise(per_osc_fb[core], osc);
-            if(synth[osc].wave == SAW_DOWN) render_saw_down(per_osc_fb[core], osc);
-            if(synth[osc].wave == SAW_UP) render_saw_up(per_osc_fb[core], osc);
-            if(synth[osc].wave == PULSE) render_pulse(per_osc_fb[core], osc);
-            if(synth[osc].wave == TRIANGLE) render_triangle(per_osc_fb[core], osc);
-            if(synth[osc].wave == SINE) render_sine(per_osc_fb[core], osc);
-            if(synth[osc].wave == KS) render_ks(per_osc_fb[core], osc);
-            if(synth[osc].wave == PCM) render_pcm(per_osc_fb[core], osc);
-            if(synth[osc].wave == ALGO) render_algo(per_osc_fb[core], osc);
-            if(synth[osc].wave == PARTIAL) render_partial(per_osc_fb[core], osc);
-            if(synth[osc].wave == PARTIALS) render_partials(per_osc_fb[core], osc);
+            render_osc_wave(osc, per_osc_fb[core]);
             // Check it's not off, just in case. TODO, why do i care?
             if(synth[osc].wave != OFF) {
                 // Apply filter to osc if set
@@ -647,8 +674,13 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
         // delay_mod_val, the modulated delay amount, is set up before calling render_*.
         float scale = 1.0f;
         for (int16_t c=0; c < NCHANS; ++c) {
+#ifdef CHORUS_ARATE
+            apply_variable_delay(fbl[core] + c * BLOCK_SIZE, delay_lines[core][c],
+                                 delay_mod, scale, chorus.level, 0.f);
+#else
             apply_fixed_delay(fbl[core] + c * BLOCK_SIZE, delay_lines[core][c],
                               scale * delay_mod_val, chorus.level);
+#endif // CHORUS_ARATE
             // Flip delay direction for alternating channels.
             scale = -scale;
         }
@@ -697,7 +729,11 @@ int16_t * fill_audio_buffer_task() {
     msynth[CHORUS_MOD_SOURCE].amp = synth[CHORUS_MOD_SOURCE].amp;
     msynth[CHORUS_MOD_SOURCE].duty = synth[CHORUS_MOD_SOURCE].duty;
     msynth[CHORUS_MOD_SOURCE].freq = synth[CHORUS_MOD_SOURCE].freq;
+#ifdef CHORUS_ARATE
+    if(delay_mod)  render_osc_wave(CHORUS_MOD_SOURCE, delay_mod);
+#else
     delay_mod_val = compute_mod_value(CHORUS_MOD_SOURCE);
+#endif // CHORUS_ARATE
 #ifdef ESP_PALATFORM
     // Tell the rendering threads to start rendering
     xTaskNotifyGive(amy_render_handle[0]);
