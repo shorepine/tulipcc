@@ -127,8 +127,10 @@ Here's the full list:
 | g    | mod_target | uint mask | Which parameter modulation/LFO controls. 1=amp, 2=duty, 4=freq, 8=filter freq, 16=resonance, 32=feedback. Can handle any combo, add them together |
 | G    | filter_type | 0-3 |  0 = none (default.) 1 = low pass, 2 = band pass, 3 = hi pass. |
 | I    | ratio  | float | for ALGO types, where the base note frequency controls the modulators, or for the ALGO base note and PARTIALS base note, where the ratio controls the speed of the playback |
+| k    | chorus_level | float 0-1 | Gain applied to chorus when mixing into output.  Set to 0 to turn off chorus. |
 | L    | mod_source | 0 to OSCS-1 | Which oscillator is used as an modulation/LFO source for this oscillator. Source oscillator will be silent. |
-| l    | vel | float 0-1+ | velocity - >0 to trigger note on, 0 to trigger note off. sets amplitude | 
+| l    | vel | float 0-1+ | velocity - >0 to trigger note on, 0 to trigger note off. sets amplitude |
+| m    | chorus_delay | uint 1-512 | Maximum delay in chorus delay lines, in samples. Default 320. |
 | N    | latency_ms | uint | sets latency in ms. default 0 | 
 | n    | note | uint 0-127 | midi note, sets frequency | 
 | o    | algorithm | uint 1-32 | DX7 algorith to use for ALGO type | 
