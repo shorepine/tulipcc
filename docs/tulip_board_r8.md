@@ -11,6 +11,8 @@ If you're comfortable with surface mount soldering, you can put together your ow
 
 [The BOM for the latest revision is here.](https://github.com/bwhitman/tulipcc/blob/main/docs/pcbs/tulip4_board_v4r8/tulip_board_bom.csv) Please note I haven't yet optimized this BOM for price. But everything is at least in stock, mostly at Digikey. [Make sure to use my public Digikey list to order the parts from Digikey quickly.](https://www.digikey.com/en/mylists/list/ZB5IAQSM2O) [EAGLE board and schematic files are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_board_v4r8) 
 
+Almost_ any USB keyboard should work. Please ensure it's just a keyboard -- if it has a trackpad, or extra USB ports on it, or anything else, it likely [won't work as we only support single root USB devices.](https://github.com/bwhitman/tulipcc/issues/40).
+
 If this looks too hard, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [with no soldering and a breadboard.](tulip_breadboard.md)
 
 ![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/board_r8.png)
