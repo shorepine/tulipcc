@@ -146,6 +146,15 @@ alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
+Tuilp's Alles synth includes a stereo chorus unit which has a set of control parameters:
+
+```python
+alles.chorus(mix_level, max_delay_samples, lfo_freq, lfo_depth_amp, lfo_wave_shape)
+```
+
+The Roland Juno-6 stereo chorus is approximated by ```alles.chorus(level=1.0, max_delay=320, freq=0.5, amp=0.5, wave=alles.TRIANGLE)```.  The chorus can be turned on and off with ```alles.chorus(1)``` and ```alles.chorus(0)``` respectively.
+
+
 Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/extmod/tulip/py/music.py), which lets you create chords, progressions and scales through code:
 
 ```python
