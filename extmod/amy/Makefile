@@ -11,7 +11,7 @@ default: $(TARGET)
 all: default
 
 OBJECTS = $(patsubst %.c, %.o, src/amy-example.c src/algorithms.c src/amy.c src/envelope.c \
-	src/filters.c src/oscillators.c src/pcm.c src/partials.c src/libsoundio-audio.c src/amy-example-esp32.c)
+	src/filters.c src/oscillators.c src/pcm.c src/partials.c src/delay.c src/libsoundio-audio.c src/amy-example-esp32.c)
 HEADERS = $(wildcard src/*.h)
 
 UNAME_S := $(shell uname -s)
