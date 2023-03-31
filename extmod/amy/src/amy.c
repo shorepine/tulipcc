@@ -169,8 +169,7 @@ struct event amy_default_event() {
     e.amp = -1; 
     e.freq = -1;
     e.volume = -1;
-    e.gain_l = -1;
-    e.gain_r = -1;
+    e.pan = -1;
     e.latency_ms = -1;
     e.ratio = -1;
     e.filter_freq = -1;
@@ -259,8 +258,7 @@ void amy_add_event(struct event e) {
     if(e.freq>-1) { d.param=FREQ; d.data = *(uint32_t *)&e.freq; add_delta_to_queue(d); }
     if(e.phase>-1) { d.param=PHASE; d.data = *(uint32_t *)&e.phase; add_delta_to_queue(d); }
     if(e.volume>-1) { d.param=VOLUME; d.data = *(uint32_t *)&e.volume; add_delta_to_queue(d); }
-    if(e.gain_l>-1) { d.param=GAIN_L; d.data = *(uint32_t *)&e.gain_l; add_delta_to_queue(d); }
-    if(e.gain_r>-1) { d.param=GAIN_R; d.data = *(uint32_t *)&e.gain_r; add_delta_to_queue(d); }
+    if(e.pan>-1) { d.param=PAN; d.data = *(uint32_t *)&e.pan; add_delta_to_queue(d); }
     if(e.latency_ms>-1) { d.param=LATENCY; d.data = *(uint32_t *)&e.latency_ms; add_delta_to_queue(d); }
     if(e.ratio>-1) { d.param=RATIO; d.data = *(uint32_t *)&e.ratio; add_delta_to_queue(d); }
     if(e.filter_freq>-1) { d.param=FILTER_FREQ; d.data = *(uint32_t *)&e.filter_freq; add_delta_to_queue(d); }
@@ -309,8 +307,8 @@ void reset_osc(uint8_t i ) {
     synth[i].phase = 0;
     synth[i].latency_ms = 0;
     synth[i].volume = 0;
-    synth[i].gain_l = 1.0;
-    synth[i].gain_r = 1.0;
+    synth[i].pan = 0.5;
+    msynth[i].pan = 0.5;
     synth[i].eq_l = 0;
     synth[i].eq_m = 0;
     synth[i].eq_h = 0;
@@ -442,7 +440,7 @@ void show_debug(uint8_t type) {
                     }
                     fprintf(stderr,"\n");
                 }
-                fprintf(stderr,"mod osc %d: amp: %f, freq %f duty %f filter_freq %f resonance %f fb/bw %f \n", i, msynth[i].amp, msynth[i].freq, msynth[i].duty, msynth[i].filter_freq, msynth[i].resonance, msynth[i].feedback);
+                fprintf(stderr,"mod osc %d: amp: %f, freq %f duty %f filter_freq %f resonance %f fb/bw %f pan %f \n", i, msynth[i].amp, msynth[i].freq, msynth[i].duty, msynth[i].filter_freq, msynth[i].resonance, msynth[i].feedback, msynth[i].pan);
             }
         }
     }
@@ -483,8 +481,7 @@ void play_event(struct delta d) {
     if(d.param == MIDI_NOTE) { synth[d.osc].midi_note = *(uint16_t *)&d.data; synth[d.osc].freq = freq_for_midi_note(*(uint16_t *)&d.data); } 
     if(d.param == WAVE) synth[d.osc].wave = *(int16_t *)&d.data; 
     if(d.param == PHASE) synth[d.osc].phase = *(float *)&d.data;
-    if(d.param == GAIN_L) synth[d.osc].gain_l = *(float *)&d.data;
-    if(d.param == GAIN_R) synth[d.osc].gain_r = *(float *)&d.data;
+    if(d.param == PAN) synth[d.osc].pan = *(float *)&d.data;
     if(d.param == PATCH) synth[d.osc].patch = *(int16_t *)&d.data;
     if(d.param == DUTY) synth[d.osc].duty = *(float *)&d.data;
     if(d.param == FEEDBACK) synth[d.osc].feedback = *(float *)&d.data;
@@ -511,7 +508,7 @@ void play_event(struct delta d) {
 
     // TODO: event-only side effect, remove
     if(d.param == MOD_SOURCE) { synth[d.osc].mod_source = *(int8_t *)&d.data; synth[*(int8_t *)&d.data].status = IS_MOD_SOURCE; }
-    if(d.param == MOD_TARGET) synth[d.osc].mod_target = *(int8_t *)&d.data; 
+    if(d.param == MOD_TARGET) synth[d.osc].mod_target = *(int16_t *)&d.data; 
 
     if(d.param == RATIO) synth[d.osc].ratio = *(float *)&d.data;
 
@@ -582,6 +579,7 @@ void play_event(struct delta d) {
 void hold_and_modify(uint8_t osc) {
     // Copy all the modifier variables
     msynth[osc].amp = synth[osc].amp;
+    msynth[osc].pan = synth[osc].pan;
     msynth[osc].duty = synth[osc].duty;
     msynth[osc].freq = synth[osc].freq;
     msynth[osc].feedback = synth[osc].feedback;
@@ -593,6 +591,7 @@ void hold_and_modify(uint8_t osc) {
     for(uint8_t i=0;i<MAX_BREAKPOINT_SETS;i++) {
         float scale = compute_breakpoint_scale(osc, i);
         if(synth[osc].breakpoint_target[i] & TARGET_AMP) msynth[osc].amp = msynth[osc].amp * scale;
+        if(synth[osc].breakpoint_target[i] & TARGET_PAN) msynth[osc].pan = msynth[osc].pan * scale;
         if(synth[osc].breakpoint_target[i] & TARGET_DUTY) msynth[osc].duty = msynth[osc].duty * scale;
         if(synth[osc].breakpoint_target[i] & TARGET_FREQ) msynth[osc].freq = msynth[osc].freq * scale;
         if(synth[osc].breakpoint_target[i] & TARGET_FEEDBACK) msynth[osc].feedback = msynth[osc].feedback * scale;
@@ -608,21 +607,27 @@ void hold_and_modify(uint8_t osc) {
     // And the mod -- mod scale is (original + (original * scale))
     float scale = compute_mod_scale(osc);
     if(synth[osc].mod_target & TARGET_AMP) msynth[osc].amp = msynth[osc].amp + (msynth[osc].amp * scale);
+    if(synth[osc].mod_target & TARGET_PAN) msynth[osc].pan = msynth[osc].pan + (msynth[osc].pan * scale); 
     if(synth[osc].mod_target & TARGET_DUTY) msynth[osc].duty = msynth[osc].duty + (msynth[osc].duty * scale);
     if(synth[osc].mod_target & TARGET_FREQ) msynth[osc].freq = msynth[osc].freq + (msynth[osc].freq * scale);
     if(synth[osc].mod_target & TARGET_FEEDBACK) msynth[osc].feedback = msynth[osc].feedback + (msynth[osc].feedback * scale);
     if(synth[osc].mod_target & TARGET_FILTER_FREQ) msynth[osc].filter_freq = msynth[osc].filter_freq + (msynth[osc].filter_freq * scale);
-    if(synth[osc].mod_target & RESONANCE) msynth[osc].resonance = msynth[osc].resonance + (msynth[osc].resonance * scale);
+    if(synth[osc].mod_target & TARGET_RESONANCE) msynth[osc].resonance = msynth[osc].resonance + (msynth[osc].resonance * scale);
 }
 
 
-void mix_with_pan(float *stereo_dest, float *mono_src, float gain_l, float gain_r) {
+void mix_with_pan(float *stereo_dest, float *mono_src, float pan) {
     /* Copy a BLOCK_SIZE of mono samples into an interleaved stereo buffer, applying pan */
 #if NCHANS == 1
     // Actually dest is mono, pan is ignored.
     for(uint16_t i=0;i<BLOCK_SIZE;i++) { stereo_dest[i] += mono_src[i]; }
 #else
+    if(pan>1) pan =1;
+    if(pan<0) pan =0;
+    float gain_l = dsps_sqrtf_f32_ansi(pan); 
+    float gain_r = dsps_sqrtf_f32_ansi(1.0f - pan);
     // Stereo
+    //fprintf(stderr, "pan %f l %f r %f\n", pan, gain_l, gain_r);
     for(uint16_t i=0;i<BLOCK_SIZE;i++) {
         stereo_dest[i] += gain_l * mono_src[i];
         stereo_dest[BLOCK_SIZE + i] += gain_r * mono_src[i];
@@ -658,7 +663,7 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
                 // Apply filter to osc if set
                 if(synth[osc].filter_type != FILTER_NONE) filter_process(per_osc_fb[core], osc);
                 //for(uint16_t i=0;i<BLOCK_SIZE;i++) { fbl[core][i] += per_osc_fb[core][i]; }
-                mix_with_pan(fbl[core], per_osc_fb[core], synth[osc].gain_l, synth[osc].gain_r);
+                mix_with_pan(fbl[core], per_osc_fb[core], msynth[osc].pan);
             }
         }
     }
@@ -860,7 +865,6 @@ struct event amy_parse_message(char * message) {
     int16_t length = strlen(message);
     struct event e = amy_default_event();
     int64_t sysclock = amy_sysclock();
-    float pan;
     
     // Cut the OSC cruft Max etc add, they put a 0 and then more things after the 0
     int new_length = length; 
@@ -907,7 +911,7 @@ struct event amy_parse_message(char * message) {
                         case 'O': parse_algorithm(&e, message+start); break; 
                         case 'p': e.patch=atoi(message + start); break; 
                         case 'P': e.phase=atof(message + start); break; 
-                        case 'Q': pan = atof(message + start); e.gain_l = dsps_sqrtf_f32_ansi(pan); e.gain_r = dsps_sqrtf_f32_ansi(1.0f - pan); break;
+                        case 'Q': e.pan = atof(message + start); break;
                         case 'R': e.resonance=atof(message + start); break; 
                         case 'S': osc = atoi(message + start); if(osc > OSCS-1) { amy_reset_oscs(); } else { reset_osc(osc); } break; 
                         case 'T': e.breakpoint_target[0] = atoi(message + start);  break; 
