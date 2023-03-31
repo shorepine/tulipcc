@@ -51,7 +51,6 @@ uint32_t read_file(const char *filename, uint8_t *buf, int32_t len, uint8_t bina
     mp_obj_t file = mp_vfs_open(2, &m_args[0], (mp_map_t *)&mp_const_empty_map);
     int errcode;
     size_t bytes_read = mp_stream_rw(file, buf, len, &errcode, MP_STREAM_RW_READ | MP_STREAM_RW_ONCE);
-    fprintf(stderr,"Loaded file %s with %d bytes, error %d\n", filename, (uint32_t)bytes_read, errcode);
     mp_stream_close(file);
     return bytes_read;
 }
@@ -59,23 +58,16 @@ uint32_t read_file(const char *filename, uint8_t *buf, int32_t len, uint8_t bina
 // overwrites if exists
 uint32_t write_file(const char *filename, uint8_t *buf, uint32_t len, uint8_t binary) {
     mp_obj_t m_args[2];
-    fprintf(stderr, "a\n");
     m_args[0] = mp_obj_new_str(filename, strlen(filename)+1);
-    fprintf(stderr, "b\n");
     if(binary) {
 	    m_args[1] = mp_obj_new_str("wb\0",3);
 	} else {
 	    m_args[1] = mp_obj_new_str("w\0",2);		
 	}
-    fprintf(stderr, "c\n");
     mp_obj_t file = mp_vfs_open(2, &m_args[0], (mp_map_t *)&mp_const_empty_map);
-    fprintf(stderr, "d\n");
     int errcode;
     size_t bytes_written = mp_stream_rw(file, buf, len, &errcode, MP_STREAM_RW_WRITE | MP_STREAM_RW_ONCE);
-    fprintf(stderr, "e\n");
-    fprintf(stderr,"Wrote file %s with %d bytes, error %d\n",filename, (uint32_t)bytes_written, errcode);
     mp_stream_close(file);
-    fprintf(stderr, "f\n");
     return bytes_written;
 }
 
@@ -85,7 +77,6 @@ void tulip_fclose(mp_obj_t file) {
 
 mp_obj_t tulip_fopen(const char *filename, const char *mode) {
     mp_obj_t m_args[2];
-    fprintf(stderr,"fopen filename %s mode %s\n", filename, mode);
     m_args[0] = mp_obj_new_str(filename, strlen(filename));
     m_args[1] = mp_obj_new_str(mode,strlen(mode));
     mp_obj_t file = mp_vfs_open(2, &m_args[0], (mp_map_t *)&mp_const_empty_map);
