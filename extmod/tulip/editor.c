@@ -155,14 +155,14 @@ void string_at_row(char * s, int16_t len, uint16_t y) {
 
 // (Re) paints the entire TFB
 void paint_tfb(uint16_t start_at_y) {
-	for(uint16_t y=start_at_y;y<TFB_ROWS-1;y++) {
-        delay_ms(1);
-		if(y_offset + y < lines) { 
-			string_at_row(text_lines[y_offset+y], -1, y);
-		} else {
-			clear_row(y);
-		}
-	}
+    for(uint16_t y=start_at_y;y<TFB_ROWS-1;y++) {
+        delay_ms(1); // this helps Tulip not lose sync of the screen
+        if(y_offset + y < lines) { 
+	       string_at_row(text_lines[y_offset+y], -1, y);
+        } else {
+            clear_row(y);
+        }
+    }
 }
 
 
