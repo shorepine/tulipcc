@@ -156,6 +156,7 @@ void string_at_row(char * s, int16_t len, uint16_t y) {
 // (Re) paints the entire TFB
 void paint_tfb(uint16_t start_at_y) {
 	for(uint16_t y=start_at_y;y<TFB_ROWS-1;y++) {
+        delay_ms(1);
 		if(y_offset + y < lines) { 
 			string_at_row(text_lines[y_offset+y], -1, y);
 		} else {
@@ -317,7 +318,7 @@ void editor_open_file(const char *filename) {
 			}
 		}
 		editor_free(text);
-		dbg("File %s read with %d lines. Inserting at position %d\n", filename, new_lines, y_offset+cursor_y);
+		//dbg("File %s read with %d lines. Inserting at position %d\n", filename, new_lines, y_offset+cursor_y);
 
         // Now insert the text lines at cursor_y+y_offset
         char ** combined_text_lines = (char**)editor_malloc(sizeof(char*)*(new_lines+lines));
@@ -339,7 +340,7 @@ void editor_open_file(const char *filename) {
         text_lines = combined_text_lines;
         lines = lines + new_lines;
 	} else {
-        dbg("File doesn't exist\n");
+        //dbg("File doesn't exist\n");
         editor_new_file();
     }
 
@@ -388,12 +389,9 @@ void prompt_for_string(char * prompt, char * default_answer, char * output_strin
 
 void editor_save() {
     if(strlen(fn)) {
-        fprintf(stderr,"1\n");
         uint32_t bytes = 0;
         for(uint16_t i=0;i<lines;i++) { bytes = bytes + strlen(text_lines[i]) + 1; }
-        fprintf(stderr,"2\n");
         char * text = (char*)editor_malloc(bytes);
-        fprintf(stderr,"3\n");
         uint32_t c = 0;
         for(uint16_t i=0;i<lines;i++) { 
             for(uint16_t j=0;j<strlen(text_lines[i]);j++) {
@@ -401,14 +399,11 @@ void editor_save() {
             }
             text[c++] = '\n';
         }
-        fprintf(stderr,"4\n");
         write_file(fn, (uint8_t*)text, c, 0);
-        dbg("saved to %s!\n", fn);
-        fprintf(stderr,"5\n");
         dirty = 0;
         editor_free(text);
     } else {
-        dbg("No filename given, not saving\n");
+        //dbg("No filename given, not saving\n");
     }
 }
 
@@ -709,20 +704,20 @@ void editor_search() {
     if(strlen(search_string)) {
         strcpy(last_search, search_string);
         uint8_t found = 0;
-        dbg("starting search on line %d\n", y_offset + cursor_y);
+        //dbg("starting search on line %d\n", y_offset + cursor_y);
         for(uint16_t i=y_offset+cursor_y;i<lines+y_offset+cursor_y;i++) {
             uint16_t actual_line = i % lines; // wrap around
-            dbg("wrap around actual line to search is %d\n", actual_line);
+            //dbg("wrap around actual line to search is %d\n", actual_line);
             int16_t offset = 0;
             if(strlen(text_lines[actual_line])) {
                 while(!found && offset < (uint16_t)(strlen(text_lines[actual_line])-1)) {
-                    dbg("found was %d and offset %d was < %d\n", found, offset, (strlen(text_lines[actual_line])-1));
+                    //dbg("found was %d and offset %d was < %d\n", found, offset, (strlen(text_lines[actual_line])-1));
                     char * ret = strstr(text_lines[actual_line]+offset, search_string);
                     if(ret) {
-                        dbg("found match at line %d and col %d. offset %d\n", actual_line, ret - text_lines[actual_line] + offset, offset);
+                        //dbg("found match at line %d and col %d. offset %d\n", actual_line, ret - text_lines[actual_line] + offset, offset);
                         // See if this is before our last search result
                         if((y_offset + cursor_y == actual_line) && (ret-text_lines[actual_line]+offset <= cursor_x)) {
-                            dbg("skipping match because already seen. cursor line %d x %d\n", y_offset + cursor_y, cursor_x);
+                            //dbg("skipping match because already seen. cursor line %d x %d\n", y_offset + cursor_y, cursor_x);
                             // it was, keep looking on this line
                             offset=(ret-text_lines[actual_line]+offset)+1;
                         } else {
@@ -732,24 +727,24 @@ void editor_search() {
                             } else {
                                 y_offset = 0;
                             }
-                            dbg("new find, offset to %d\n", y_offset);
+                            //dbg("new find, offset to %d\n", y_offset);
                             move_cursor(ret-text_lines[actual_line]+offset, actual_line-y_offset);
-                            dbg("moved cursor to x %d y %d\n", ret-text_lines[actual_line]+offset, actual_line-y_offset);
+                            //dbg("moved cursor to x %d y %d\n", ret-text_lines[actual_line]+offset, actual_line-y_offset);
                             found = 1; // we're done
                         }
                     } else { //nothing found  on this line, go to the next
                         offset = strlen(text_lines[actual_line])+2;
-                        dbg("setting offset to %d\n", offset);
+                        //dbg("setting offset to %d\n", offset);
                     }
                     if(found) i = lines+y_offset+cursor_y+1;
                 } // end found
             } // end strlen
         } // for each line
         if(!found) {
-            dbg("nothing found\n");
+            //dbg("nothing found\n");
         }
     } else {
-        dbg("no search string given\n");
+        //dbg("no search string given\n");
     }
     
 }
@@ -768,12 +763,12 @@ void editor_read_into() {
     char read_into_fn[MAX_STRING_LEN];
     dirty=1;
     prompt_for_string("Read file into buffer", "", read_into_fn);
-    dbg("I got fn of %s\n", read_into_fn);
+    //dbg("I got fn of %s\n", read_into_fn);
     if(file_exists(read_into_fn)) {
         // now run open_file
         editor_open_file(read_into_fn);
     } else {
-        dbg("no such file %s\n", read_into_fn);
+        //dbg("no such file %s\n", read_into_fn);
     }
 
 }
@@ -796,7 +791,7 @@ void process_char(int c) {
 	} else if(c== 21) { // control-U, unyank
 		editor_unyank();
 	} else if(c==15) { // control-O, save as 
-        dbg("save-as\n");
+        //dbg("save-as\n");
 		editor_save_as();
     } else if(c==18) { // control-R, read into
         editor_read_into();
@@ -860,10 +855,10 @@ void editor(const char * filename) {
     editor_init();
 	if(filename != NULL) { 
         strcpy(fn, filename);
-		dbg("editor fn is %s\n", fn);
+		//dbg("editor fn is %s\n", fn);
 		editor_open_file(fn);
 	} else {
-		dbg("no filename given\n");
+		//dbg("no filename given\n");
         // In this case, let's just make a first text_line
         editor_new_file();
 	}
