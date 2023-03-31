@@ -51,10 +51,12 @@ static float FRACTIONAL_SAMPLE(float step, const float *delay, int index_mask) {
 }
 
 void delay_line_in_out(float *in, float *out, int n_samples, float* mod_in, float mod_scale, delay_line_t *delay_line, float mix_level, float feedback_level) {
-    // Read a block of samples out from the delay line.
-    // "step" is a real-valued read-from sample index; "inc" is a real-valued step, so the resampling
-    // can be non-constant delay.  Function returns the final value of step (to re-use in the next
-    // block).
+    // Read and write the next n_samples from/to the delay line.
+    // mod_in is a per-sample modulation of the maximum delay, where 1 gives 
+    // the max delay, -1 gives no delay, and 0 gives max_delay/2.
+    // mod_scale is a constant scale factor applied to each value in mod_in, 
+    // used e.g. to flip the sign of the delay.
+    // Also supports input feedback from a non-modulated feedback delay output.
     int delay_len = delay_line->len;
     int index_mask = delay_len - 1; // will be all 1s because len is guaranteed 2**n.
 
@@ -80,10 +82,9 @@ void delay_line_in_out(float *in, float *out, int n_samples, float* mod_in, floa
 }
 
 void delay_line_in_out_fixed_delay(float *in, float *out, int n_samples, float mod_val, delay_line_t *delay_line, float mix_level) {
-    // Read a block of samples out from the delay line.
-    // "step" is a real-valued read-from sample index; "inc" is a real-valued step, so the resampling
-    // can be non-constant delay.  Function returns the final value of step (to re-use in the next
-    // block).
+    // Read and write the next n_samples from/to the delay line.
+    // Simplified version of delay_line_in_out() that uses a single, fixed (but fractional)
+    // mod_val for the whole block.
     int delay_len = delay_line->len;
     int index_mask = delay_len - 1; // will be all 1s because len is guaranteed 2**n.
 
