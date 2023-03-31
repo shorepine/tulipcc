@@ -76,7 +76,7 @@ To build / debug going forward:
 
 ```bash
 cd ports/esp32s3
-export ../../esp-idf/export.sh # do this once per terminal window
+source ../../esp-idf/export.sh # do this once per terminal window
 idf.py -D MICROPY_BOARD=TULIP4 flash
 idf.py -D MICROPY_BOARD=TULIP4 monitor # shows stderr, use control-] to quit
 
