@@ -267,6 +267,7 @@ void restore_tfb() {
 		TFBf[y] = saved_tfbf[y];
 		TFBfg[y] = saved_tfbfg[y];
 		TFBbg[y] = saved_tfbbg[y];
+        if(y%TFB_COLS==0) delay_ms(1);
 	}
 	editor_free(saved_tfb);
 	editor_free(saved_tfbf);
@@ -422,6 +423,7 @@ void editor_quit() {
 	}
 	restore_tfb();
 	for(uint16_t i=0;i<lines;i++) {
+        delay_ms(1);
 		editor_free(text_lines[i]);
 	}
 	editor_free(text_lines);
