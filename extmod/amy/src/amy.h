@@ -186,6 +186,7 @@ struct event {
 struct mod_event {
     float amp;
     float pan;
+    float last_pan;   // Pan history for interpolation.
     float duty;
     float freq;
     float filter_freq;
