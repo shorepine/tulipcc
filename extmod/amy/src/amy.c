@@ -579,6 +579,7 @@ void play_event(struct delta d) {
 void hold_and_modify(uint8_t osc) {
     // Copy all the modifier variables
     msynth[osc].amp = synth[osc].amp;
+    msynth[osc].last_pan = msynth[osc].pan;
     msynth[osc].pan = synth[osc].pan;
     msynth[osc].duty = synth[osc].duty;
     msynth[osc].freq = synth[osc].freq;
@@ -616,21 +617,35 @@ void hold_and_modify(uint8_t osc) {
 }
 
 
-void mix_with_pan(float *stereo_dest, float *mono_src, float pan) {
+static inline float LGAIN_OF_PAN(float pan) {
+    if(pan > 1)  pan = 1;
+    if(pan < 0)  pan = 0;
+    return dsps_sqrtf_f32_ansi(pan);
+}
+
+static inline float RGAIN_OF_PAN(float pan) {
+    if(pan > 1)  pan = 1;
+    if(pan < 0)  pan = 0;
+    return dsps_sqrtf_f32_ansi(1.f - pan);
+}
+
+
+void mix_with_pan(float *stereo_dest, float *mono_src, float pan_start, float pan_end) {
     /* Copy a BLOCK_SIZE of mono samples into an interleaved stereo buffer, applying pan */
 #if NCHANS == 1
     // Actually dest is mono, pan is ignored.
     for(uint16_t i=0;i<BLOCK_SIZE;i++) { stereo_dest[i] += mono_src[i]; }
 #else
-    if(pan>1) pan =1;
-    if(pan<0) pan =0;
-    float gain_l = dsps_sqrtf_f32_ansi(pan); 
-    float gain_r = dsps_sqrtf_f32_ansi(1.0f - pan);
-    // Stereo
-    //fprintf(stderr, "pan %f l %f r %f\n", pan, gain_l, gain_r);
+    // Stereo 
+    float gain_l = LGAIN_OF_PAN(pan_start);
+    float gain_r = RGAIN_OF_PAN(pan_start);
+    float d_gain_l = (LGAIN_OF_PAN(pan_end) - gain_l) / BLOCK_SIZE;
+    float d_gain_r = (RGAIN_OF_PAN(pan_end) - gain_r) / BLOCK_SIZE;
     for(uint16_t i=0;i<BLOCK_SIZE;i++) {
         stereo_dest[i] += gain_l * mono_src[i];
         stereo_dest[BLOCK_SIZE + i] += gain_r * mono_src[i];
+        gain_l += d_gain_l;
+        gain_r += d_gain_r;
     }
 #endif
 }
@@ -663,7 +678,7 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
                 // Apply filter to osc if set
                 if(synth[osc].filter_type != FILTER_NONE) filter_process(per_osc_fb[core], osc);
                 //for(uint16_t i=0;i<BLOCK_SIZE;i++) { fbl[core][i] += per_osc_fb[core][i]; }
-                mix_with_pan(fbl[core], per_osc_fb[core], msynth[osc].pan);
+                mix_with_pan(fbl[core], per_osc_fb[core], msynth[osc].last_pan, msynth[osc].pan);
             }
         }
     }
