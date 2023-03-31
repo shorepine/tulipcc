@@ -60,20 +60,17 @@ void bleep() {
     e.freq = 220;
     amy_add_event(e);
     e.velocity = 1;
-    e.gain_l = 0.9;
-    e.gain_r = 0.1;
+    e.pan = 0.9;
     amy_add_event(e);
     e.time = sysclock + 150;
     e.freq = 440;
-    e.gain_l = 0.1;
-    e.gain_r = 0.9;
+    e.pan = 0.1;
     amy_add_event(e);
     e.time = sysclock + 300;
     e.velocity = 0;
     e.amp = 0;
     e.freq = 0;
-    e.gain_l = 1.0;  // Restore default pan to osc 0.
-    e.gain_r = 1.0;
+    e.pan = 0.5;  // Restore default pan to osc 0.
     amy_add_event(e);
 }
 

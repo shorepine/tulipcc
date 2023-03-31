@@ -64,6 +64,7 @@ typedef int16_t output_sample_type;
 #define TARGET_LINEAR 0x40 // default exp, linear as an option
 #define TARGET_TRUE_EXPONENTIAL 0x80 // default exp, "true exp" for FM as an option
 #define TARGET_DX7_EXPONENTIAL 0x100 // Asymmetric attack/decay behavior per DX7.
+#define TARGET_PAN 0x200
 
 #define MAX_MESSAGE_LEN 255
 
@@ -104,7 +105,7 @@ typedef int amy_err_t;
 
 
 enum params{
-    WAVE, PATCH, MIDI_NOTE, AMP, DUTY, FEEDBACK, FREQ, VELOCITY, PHASE, DETUNE, VOLUME, GAIN_L, GAIN_R, FILTER_FREQ,
+    WAVE, PATCH, MIDI_NOTE, AMP, DUTY, FEEDBACK, FREQ, VELOCITY, PHASE, DETUNE, VOLUME, PAN, FILTER_FREQ,
     RATIO, RESONANCE, 
     MOD_SOURCE, MOD_TARGET, FILTER_TYPE, EQ_L, EQ_M, EQ_H, BP0_TARGET, BP1_TARGET, BP2_TARGET, ALGORITHM, LATENCY,
     ALGO_SOURCE_START=30, 
@@ -145,14 +146,13 @@ struct event {
     float substep;
     float sample;
     float volume;
-    float gain_l;   // Pan parameters.
-    float gain_r;
+    float pan;   // Pan parameters.
     int16_t latency_ms;
     float filter_freq;
     float ratio;
     float resonance;
     int8_t mod_source;
-    int8_t mod_target;
+    int16_t mod_target;
     int8_t algorithm;
     int8_t filter_type;
     int8_t algo_source[MAX_ALGO_OPS];
@@ -185,6 +185,7 @@ struct event {
 // events, but only the things that mods/env can change. one per osc
 struct mod_event {
     float amp;
+    float pan;
     float duty;
     float freq;
     float filter_freq;
