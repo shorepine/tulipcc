@@ -864,10 +864,10 @@ STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 10, 10, tulip_button);
 
 
-//tulip.text(id, "text", x,y,w,h,r,fg_color,btn_color,filled)
+//tulip.text(id, "text", x,y,w,h,r,text_color,box_color)
 STATIC mp_obj_t tulip_text(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
-    if(n_args < 10) { 
+    if(n_args < 8) { 
         char * t = ui_text_get_val(ui_id);
         return mp_obj_new_str(t, strlen(t));
     } else {
@@ -877,15 +877,13 @@ STATIC mp_obj_t tulip_text(size_t n_args, const mp_obj_t *args) {
                 mp_obj_get_int(args[3]), // y
                 mp_obj_get_int(args[4]), // w
                 mp_obj_get_int(args[5]), // h
-                mp_obj_get_int(args[6]), // r
-                mp_obj_get_int(args[7]), // fg_color
-                mp_obj_get_int(args[8]), // btn_color
-                mp_obj_get_int(args[9]) // filled 
+                mp_obj_get_int(args[6]), // text_color
+                mp_obj_get_int(args[7]) // box_color
                 );
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_text_obj, 1, 10, tulip_text);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_text_obj, 1, 8, tulip_text);
 
 
 STATIC mp_obj_t tulip_slider(size_t n_args, const mp_obj_t *args) {

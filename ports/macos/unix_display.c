@@ -130,6 +130,8 @@ uint16_t check_joy() {
 
 void check_key() {
     SDL_Event e;
+    uint8_t was_touch = 0;
+
     while (SDL_PollEvent(&e) != 0) {
         if (e.type == SDL_QUIT) {
             unix_display_flag = -1; // tell main to quit
@@ -162,13 +164,16 @@ void check_key() {
         if(button) {
             last_touch_x[0] = (int16_t)x;
             last_touch_y[0] = (int16_t)y;
-            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0);
+            was_touch = 1;
         } else { // release
             last_touch_x[0] = (int16_t)x;
             last_touch_y[0] = (int16_t)y;
-            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
+            was_touch = 2;
         }
         update_joy(e);
+    }
+    if(was_touch) {
+        send_touch_to_micropython(last_touch_x[0], last_touch_y[0], was_touch-1);
     }
 }
 

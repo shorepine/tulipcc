@@ -1,12 +1,17 @@
 // tulip_helpers.c
 
 #include "tulip_helpers.h"
-
+#include "ui.h"
 extern uint8_t keyboard_send_keys_to_micropython;
+extern int8_t keyboard_grab_ui_focus;
 
 void tx_char(int c) {
-    if(keyboard_send_keys_to_micropython) {
-        ringbuf_put(&stdin_ringbuf, c);
+    if(keyboard_grab_ui_focus>-1) {
+        ui_text_entry_update(keyboard_grab_ui_focus, c);
+    } else {
+        if(keyboard_send_keys_to_micropython) {
+            ringbuf_put(&stdin_ringbuf, c);
+        } 
     }
 }
 
