@@ -754,7 +754,7 @@ int16_t * fill_audio_buffer_task() {
 #else
     delay_mod_val = compute_mod_value(CHORUS_MOD_SOURCE);
 #endif // CHORUS_ARATE
-#ifdef ESP_PALATFORM
+#ifdef ESP_PLATFORM
     // Tell the rendering threads to start rendering
     xTaskNotifyGive(amy_render_handle[0]);
     if(AMY_CORES == 2) xTaskNotifyGive(amy_render_handle[1]);
