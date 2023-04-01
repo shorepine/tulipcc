@@ -19,6 +19,7 @@ void ui_button_flip(uint8_t ui_id) {
     }
 }
 
+
 void ui_element_new(uint8_t ui_id) {
     if(elements[ui_id] == NULL) {
         elements[ui_id] = (struct ui_element*)malloc_caps(sizeof(struct ui_element), MALLOC_CAP_INTERNAL);
@@ -29,44 +30,98 @@ void ui_element_del(uint8_t ui_id) {
     if(elements[ui_id] == NULL) {
         // nothing?
     } else {
+        if(elements[ui_id]->cval != NULL) {
+            free_caps(elements[ui_id]->cval);
+        }
         free_caps(elements[ui_id]);
         elements[ui_id] = NULL;
     }
 }
 
-void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t r, uint8_t fgc, uint8_t bc, uint8_t filled) {
+void ui_text_entry_update(uint8_t ui_id, uint8_t ch) {
+    struct ui_element *e = elements[ui_id];
+    uint8_t len = strlen(e->cval);
+    if(ch != 13) {
+        if(ch == 8) {
+            // backspace, special case
+            if(len>0) {
+                e->cval[len-1] = 0;
+            }
+        } else {
+            e->cval[len] = ch;
+            e->cval[len+1] = 0;
+        }
+        ui_text_draw(ui_id, 1);
+        drawRect(e->x,e->y,e->w,e->h, e->c0);
+    } else {
+        // Stop 
+        ui_text_draw(ui_id, 0);
+        keyboard_grab_ui_focus = -1;
+    }
+}
+void ui_text_entry_start(uint8_t ui_id) {
+    // first, clear out the text inside the button
+    struct ui_element *e = elements[ui_id];
+    e->cval[0] = 0;
+    ui_text_draw(ui_id, 1);
+    // now, wait for key ups and fill them in?
+    keyboard_grab_ui_focus = ui_id;
+}
+
+
+void ui_text_draw(uint8_t ui_id, uint8_t entry_mode) {
+    struct ui_element *e = elements[ui_id];
+    fillRect(e->x,e->y,e->w,e->h,e->c1);
+
+    uint16_t width = 0;
+    uint8_t fw, fh;
+    if(strlen(e->cval) >0) {
+        if(!entry_mode) {
+            // Compute width of text for centering
+            for(uint16_t i=0;i<strlen(e->cval);i++) {
+                width_height_glyph(e->cval[i], &fw, &fh);
+                width += fw;
+            }
+            uint16_t start_x = e->x;
+            uint16_t start_y = e->y + ((e->h+fh)/2);
+            if(width < e->w) {
+                start_x = e->x + (e->w - width)/2;
+            }
+            for(uint16_t i=0;i<strlen(e->cval);i++) {
+                uint8_t advance = draw_glyph(e->cval[i], start_x,start_y, e->c0);
+                start_x =start_x + advance;
+            }
+        } else {
+            width_height_glyph('Q', &fw, &fh);
+            uint16_t start_x = e->x + 1;
+            uint16_t start_y = e->y + ((e->h+fh)/2);
+            for(uint16_t i=0;i<strlen(e->cval);i++) {
+                uint8_t advance = draw_glyph(e->cval[i], start_x,start_y, e->c0);
+                start_x =start_x + advance;
+            }
+        }
+    }
+    if(entry_mode) {
+        // Draw a focus handle
+        drawRect(e->x,e->y,e->w,e->h, e->c0);
+    }
+}
+
+
+void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t text_color, uint8_t box_color) {
     ui_element_new(ui_id);
     elements[ui_id]->type = UI_TEXT;
     elements[ui_id]->x = x;
     elements[ui_id]->y = y;
     elements[ui_id]->w = w;
     elements[ui_id]->h = h;
-    elements[ui_id]->c0 = fgc;
-    elements[ui_id]->c1 = bc;
+    elements[ui_id]->c0 = text_color;
+    elements[ui_id]->c1 = box_color;
+    // malloc space for the text. 
+    elements[ui_id]->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_INTERNAL);
+    strcpy(elements[ui_id]->cval, str);
 
-    // Buttons don't need a separate draw meth
-    if(filled) {
-        fillRoundRect(x,y,w,h,r,bc);
-    } else {
-        drawRoundRect(x,y,w,h,r,bc);
-    }
-    uint16_t width = 0;
-    uint8_t fw, fh;
-
-    // Compute width of text for centering
-    for(uint16_t i=0;i<strlen(str);i++) {
-        width_height_glyph(str[i], &fw, &fh);
-        width += fw;
-    }
-    uint16_t start_x = x;
-    uint16_t start_y = y + ((h+fh)/2);
-    if(width < w) {
-        start_x = x + (w - width)/2;
-    }
-    for(uint16_t i=0;i<strlen(str);i++) {
-        uint8_t advance = draw_glyph(str[i], start_x,start_y, fgc);
-        start_x =start_x + advance;
-    }
+    ui_text_draw(ui_id, 0);
 
 }
 
@@ -180,9 +235,15 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
         touch_held = 0;
         int8_t ui_id = ui_bounds(touch_x, touch_y);
         if(ui_id >= 0) { 
-            // We've lifted up on an element. tell the isr
-            tulip_ui_isr(ui_id);
-            ui_button_flip(ui_id);
+            // Is this a text input?
+            if(elements[ui_id]->type == UI_TEXT) {
+                // start taking in text input to replace the text of the button
+                ui_text_entry_start(ui_id);
+            } else {
+                // We've lifted up on an element. tell the isr
+                tulip_ui_isr(ui_id);
+                ui_button_flip(ui_id);
+            }
         } else {
             // In case the pointer moved out of bounds before going up
             if(ui_id_held >= 0) {

@@ -20,6 +20,8 @@
 #include "py/mphal.h"
 
 uint8_t keyboard_send_keys_to_micropython;
+int8_t keyboard_grab_ui_focus;
+
 uint8_t last_scan[8];
 
 uint16_t scan_ascii(uint8_t code, uint32_t modifier);

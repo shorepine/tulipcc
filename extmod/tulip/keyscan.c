@@ -6,6 +6,8 @@
 #endif
 
 uint8_t keyboard_send_keys_to_micropython = 1;
+int8_t keyboard_grab_ui_focus = -1;
+
 extern int mp_interrupt_char;
 uint8_t last_scan[8] = {0,0,0,0,0,0,0,0};
 
