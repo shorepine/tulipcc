@@ -228,15 +228,25 @@ void ui_init() {
 }
 
 
+// for text inputs:
+// a click inside an editing box should confirm the edit -- same as hitting enter
+// a click outside an editing box should confirm the edit -- same as hitting enter
+// a click to another box should start editing that box and confirm the edit on the old one
+
 void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
     // respond to finger down / up
-    if(touch_held && up) { // this is a finger up / click relea
+    if(touch_held && up) { // this is a finger up / click release
         //fprintf(stderr, "up\n") ;
         touch_held = 0;
         int8_t ui_id = ui_bounds(touch_x, touch_y);
         if(ui_id >= 0) { 
             // Is this a text input?
             if(elements[ui_id]->type == UI_TEXT) {
+                // Was there another one being edited? 
+                if(keyboard_grab_ui_focus > -1) {
+                    // if it's me or someone else -- doesn't matter -- confirm
+                    ui_text_entry_update(keyboard_grab_ui_focus, 13);
+                }
                 // start taking in text input to replace the text of the button
                 ui_text_entry_start(ui_id);
             } else {
@@ -248,6 +258,10 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
             // In case the pointer moved out of bounds before going up
             if(ui_id_held >= 0) {
                 ui_button_flip(ui_id_held);
+            }
+            // was there an active editing box?
+            if(keyboard_grab_ui_focus > -1) {
+                ui_text_entry_update(keyboard_grab_ui_focus, 13);
             }
         }
         ui_id_held = -1;
