@@ -34,6 +34,46 @@ void ui_element_del(uint8_t ui_id) {
     }
 }
 
+void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t r, uint8_t fgc, uint8_t bc, uint8_t filled) {
+    ui_element_new(ui_id);
+    elements[ui_id]->type = UI_TEXT;
+    elements[ui_id]->x = x;
+    elements[ui_id]->y = y;
+    elements[ui_id]->w = w;
+    elements[ui_id]->h = h;
+    elements[ui_id]->c0 = fgc;
+    elements[ui_id]->c1 = bc;
+
+    // Buttons don't need a separate draw meth
+    if(filled) {
+        fillRoundRect(x,y,w,h,r,bc);
+    } else {
+        drawRoundRect(x,y,w,h,r,bc);
+    }
+    uint16_t width = 0;
+    uint8_t fw, fh;
+
+    // Compute width of text for centering
+    for(uint16_t i=0;i<strlen(str);i++) {
+        width_height_glyph(str[i], &fw, &fh);
+        width += fw;
+    }
+    uint16_t start_x = x;
+    uint16_t start_y = y + ((h+fh)/2);
+    if(width < w) {
+        start_x = x + (w - width)/2;
+    }
+    for(uint16_t i=0;i<strlen(str);i++) {
+        uint8_t advance = draw_glyph(str[i], start_x,start_y, fgc);
+        start_x =start_x + advance;
+    }
+
+}
+
+char* ui_text_get_val(uint8_t ui_id) {
+    return elements[ui_id]->cval;
+}
+
 
 void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t r, uint8_t fgc, uint8_t bc, uint8_t filled) {
     ui_element_new(ui_id);

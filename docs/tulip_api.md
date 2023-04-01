@@ -154,6 +154,13 @@ alles.chorus(mix_level, max_delay_samples, lfo_freq, lfo_depth_amp, lfo_wave_sha
 
 The Roland Juno-6 stereo chorus is approximated by ```alles.chorus(level=1.0, max_delay=320, freq=0.5, amp=0.5, wave=alles.TRIANGLE)```.  The chorus can be turned on and off with ```alles.chorus(1)``` and ```alles.chorus(0)``` respectively.
 
+It also supports reverb:
+
+```python
+alles.reverb(level, liveness, damping, xover_hz, do_early):
+```
+
+It can be turned on and off like `chorus` with `alles.reverb(1)` and `alles.reverb(0)`. 
 
 Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/extmod/tulip/py/music.py), which lets you create chords, progressions and scales through code:
 
