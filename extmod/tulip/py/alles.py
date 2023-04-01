@@ -73,7 +73,7 @@ def trunc(number):
 # Construct an AMY message
 def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1, feedback=-1, timestamp=None, reset=-1, phase=-1, pan=-1, \
         client=-1, retries=1, volume=-1, filter_freq = -1, resonance = -1, bp0="", bp1="", bp2="", bp0_target=-1, bp1_target=-1, bp2_target=-1, mod_target=-1, \
-            debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, latency_ms = -1, algo_source=None, chorus_level=-1, chorus_delay=-1, reverb_level=-1, reverb_liveness=-1, reverb_damping=-1, reverb_xover=-1):
+            debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, latency_ms = -1, algo_source=None, chorus_level=-1, chorus_delay=-1, reverb_level=-1, reverb_liveness=-1, reverb_damping=-1, reverb_xover=-1, reverb_do_early=-1):
 
     m = ""
     if(timestamp is None): timestamp = millis()
@@ -115,8 +115,9 @@ def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1,
     if(chorus_delay>=0): m = m + "m" + str(chorus_delay)
     if(reverb_level>=0): m = m + "u" + str(reverb_level)
     if(reverb_liveness>=0): m = m + "h" + str(reverb_liveness)
-    if(reverb_damping>=0): m = m + "q" + str(reverb_damping)
-    if(reverb_xover>=0): m = m + "j" + str(reverb_xover)
+    if(reverb_do_early>=0): m = m + "H" + str(reverb_do_early)
+    if(reverb_damping>=0): m = m + "j" + str(reverb_damping)
+    if(reverb_xover>=0): m = m + "J" + str(reverb_xover)
     return m+'Z'
 
 
@@ -273,7 +274,7 @@ def chorus(level=-1, max_delay=-1, freq=-1, amp=-1, wave=-1):
 """
     Reverb control
 """
-def reverb(level=-1, liveness=-1, damping=-1, xover_hz=-1):
+def reverb(level=-1, liveness=-1, damping=-1, xover_hz=-1, do_early=-1):
     args = {}
     if (level >= 0):
         args['reverb_level'] = level
@@ -283,6 +284,8 @@ def reverb(level=-1, liveness=-1, damping=-1, xover_hz=-1):
         args['reverb_damping'] = damping
     if (xover_hz >= 0):
         args['reverb_xover'] = xover_hz
+    if (do_early >= 0):
+        args['reverb_do_early'] = do_early
     send(**args)
 
 

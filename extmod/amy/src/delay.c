@@ -137,20 +137,26 @@ static inline float LPF(float samp, float state, float lpcoef, float lpgain, flo
 
 float f1state = 0, f2state = 0, f3state = 0, f4state = 0;
 
-delay_line_t *delay_1 = NULL, *delay_2 = NULL, *delay_3 = NULL, *delay_4 = NULL;
+delay_line_t *delay_1 = NULL, *delay_2 = NULL, *delay_3 = NULL,
+    *delay_4 = NULL;
+delay_line_t *ref_1 = NULL, *ref_2 = NULL, *ref_3= NULL,
+    *ref_4 = NULL, *ref_5 = NULL, *ref_6 = NULL;
 
+float xover_hz = 3000.0;
 float lpfcoef = 0.4;
 float lpfgain = 0.5;
 float liveness = 0.85;
+uint8_t do_early = 1;
 
-void config_stereo_reverb(float a_liveness, float crossover_hz, float damping) {
+void config_stereo_reverb(float a_liveness, float crossover_hz, float damping, uint8_t a_do_early) {
     // liveness (0..1) controls how much energy is preserved (larger = longer reverb).
     liveness = a_liveness;
     // crossover_hz is 3dB point of 1-pole lowpass freq.
     lpfcoef = 6.2832f * crossover_hz / SAMPLE_RATE;
     if (lpfcoef > 1.f)  lpfcoef = 1.f;
     if (lpfcoef < 0.f)  lpfcoef = 0.f;
-    lpfgain = damping;
+    lpfgain = 1.f - damping;
+    do_early = a_do_early;
 }
 
 // Delay 1 is 58.6435 ms
@@ -165,6 +171,14 @@ void config_stereo_reverb(float a_liveness, float crossover_hz, float damping) {
 // Power of 2 that encloses all the delays.
 #define DELAY_POW2 4096
 
+// Early reflections delays
+#define REF1SAMPS 3319  // 75.2546 ms
+#define REF2SAMPS 1920  // 43.5337 ms
+#define REF3SAMPS 1138  // 25.796 ms
+#define REF4SAMPS 855   // 19.392 ms
+#define REF5SAMPS 722   // 16.364 ms
+#define REF6SAMPS 602   // 13.645 ms
+
 // Reverb delays go into SPIRAM.
 #define DELAYRAM MALLOC_CAP_SPIRAM
 
@@ -174,7 +188,15 @@ void init_stereo_reverb(void) {
         delay_2 = new_delay_line(DELAY_POW2, DELAY2SAMPS, DELAYRAM);
         delay_3 = new_delay_line(DELAY_POW2, DELAY3SAMPS, DELAYRAM);
         delay_4 = new_delay_line(DELAY_POW2, DELAY4SAMPS, DELAYRAM);
-        config_stereo_reverb(0.85f, 3000.0f, 0.5);
+
+        ref_1 = new_delay_line(4096, REF1SAMPS, DELAYRAM);
+        ref_2 = new_delay_line(2048, REF2SAMPS, DELAYRAM);
+        ref_3 = new_delay_line(2048, REF3SAMPS, DELAYRAM);
+        ref_4 = new_delay_line(1024, REF4SAMPS, DELAYRAM);
+        ref_5 = new_delay_line(1024, REF5SAMPS, DELAYRAM);
+        ref_6 = new_delay_line(1024, REF6SAMPS, DELAYRAM);
+        
+        config_stereo_reverb(liveness, xover_hz, 1 - lpfgain, do_early);
     }
 }
 
@@ -186,15 +208,58 @@ void stereo_reverb(float *r_in, float *l_in, float *r_out, float *l_out, int n_s
     // an instance of the Stautner-Puckette multichannel reverberator from
     // https://www.ee.columbia.edu/~dpwe/e4896/papers/StautP82-reverb.pdf
     while(n_samples--) {
+        // Early echo reflections.
+        float in_r = *r_in++;
+        float in_l;
+        if (l_in)   in_l = *l_in++;
+        else   in_l = in_r;
+        float r_acc, l_acc;
+        if (!do_early) {
+            r_acc = in_r;
+            l_acc = in_l;
+        } else {
+            r_acc = 0.0625f * in_r;
+            l_acc = 0.0625f * in_l;
+
+            DEL_IN(ref_1, l_acc);
+            float d_out = DEL_OUT(ref_1);
+            l_acc = r_acc - d_out;
+            r_acc += d_out;
+
+            DEL_IN(ref_2, l_acc);
+            d_out = DEL_OUT(ref_2);
+            l_acc = r_acc - d_out;
+            r_acc += d_out;
+
+            DEL_IN(ref_3, l_acc);
+            d_out = DEL_OUT(ref_3);
+            l_acc = r_acc - d_out;
+            r_acc += d_out;
+
+            DEL_IN(ref_4, l_acc);
+            d_out = DEL_OUT(ref_4);
+            l_acc = r_acc - d_out;
+            r_acc += d_out;
+
+            DEL_IN(ref_5, l_acc);
+            d_out = DEL_OUT(ref_5);
+            l_acc = r_acc - d_out;
+            r_acc += d_out;
+
+            DEL_IN(ref_6, l_acc);
+            l_acc = DEL_OUT(ref_6);
+        }
+        
+        // Reverb delays & matrix.
         float d1 = DEL_OUT(delay_1);
         d1 = LPF(d1, f1state, lpfcoef, lpfgain, liveness);
-        d1 += *r_in;
-        *r_out++ = *r_in++ + level * d1;
+        d1 += r_acc;
+        *r_out++ = in_r + level * d1;
 
         float d2 = DEL_OUT(delay_2);
         d2 = LPF(d2, f2state, lpfcoef, lpfgain, liveness);
-        if (l_in != NULL)  d2 += *l_in;
-        if (l_out != NULL)  *l_out++ = *l_in++ + level * d2;
+        d2 += l_acc;
+        if (l_out != NULL)  *l_out++ = in_l + level * d2;
 
         float d3 = DEL_OUT(delay_3);
         d3 = LPF(d3, f3state, lpfcoef, lpfgain, liveness);
