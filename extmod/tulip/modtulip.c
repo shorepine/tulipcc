@@ -864,6 +864,30 @@ STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 10, 10, tulip_button);
 
 
+//tulip.text(id, "text", x,y,w,h,r,fg_color,btn_color,filled)
+STATIC mp_obj_t tulip_text(size_t n_args, const mp_obj_t *args) {
+    uint8_t ui_id = mp_obj_get_int(args[0]);
+    if(n_args < 10) { 
+        char * t = ui_text_get_val(ui_id);
+        return mp_obj_new_str(t, strlen(t));
+    } else {
+        ui_text_new(ui_id, 
+                mp_obj_str_get_str(args[1]), // text
+                mp_obj_get_int(args[2]), // x
+                mp_obj_get_int(args[3]), // y
+                mp_obj_get_int(args[4]), // w
+                mp_obj_get_int(args[5]), // h
+                mp_obj_get_int(args[6]), // r
+                mp_obj_get_int(args[7]), // fg_color
+                mp_obj_get_int(args[8]), // btn_color
+                mp_obj_get_int(args[9]) // filled 
+                );
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_text_obj, 1, 10, tulip_text);
+
+
 STATIC mp_obj_t tulip_slider(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
     if(n_args < 9) { 
@@ -949,6 +973,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
     { MP_ROM_QSTR(MP_QSTR_button), MP_ROM_PTR(&tulip_button_obj) },
+    { MP_ROM_QSTR(MP_QSTR_text), MP_ROM_PTR(&tulip_text_obj) },
     { MP_ROM_QSTR(MP_QSTR_slider), MP_ROM_PTR(&tulip_slider_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_del), MP_ROM_PTR(&tulip_ui_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_joy), MP_ROM_PTR(&tulip_joy_obj) },

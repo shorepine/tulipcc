@@ -745,7 +745,12 @@ static void lcd_rgb_panel_restart_transmission(esp_rgb_panel_t *panel)
     if (panel->bounce_buffer_size_bytes != 0) {
         if(panel->data_width == 16) {
             //Catch de-synced framebuffer and reset if needed.
-            if (panel->bounce_pos_px > (panel->bounce_buffer_size_bytes)) { desync++; panel->bounce_pos_px=0; }
+            if (panel->bounce_pos_px > (panel->bounce_buffer_size_bytes)) { 
+                display_stop();
+                display_start();
+                desync++; 
+                panel->bounce_pos_px=0; 
+            }
             //Pre-fill bounce buffer 0, if the EOF ISR didn't do that already
             if (panel->bounce_pos_px < panel->bounce_buffer_size_bytes/2) {
                 lcd_rgb_panel_fill_bounce_buffer(panel, panel->bounce_buffer[0]);
