@@ -627,7 +627,7 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, u
 }
 
 
-extern float unix_display_set_clock();
+extern float unix_display_set_clock(uint8_t mhz);
 void display_set_clock(uint8_t mhz) {  
     if(mhz > 1 && mhz < 50) {
 #ifdef ESP_PLATFORM
