@@ -57,6 +57,8 @@ void ui_text_entry_update(uint8_t ui_id, uint8_t ch) {
         // Stop 
         ui_text_draw(ui_id, 0);
         keyboard_grab_ui_focus = -1;
+        tulip_ui_isr(ui_id);
+
     }
 }
 void ui_text_entry_start(uint8_t ui_id) {
