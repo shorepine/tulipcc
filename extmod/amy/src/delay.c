@@ -11,13 +11,13 @@ int is_power_of_two(int val) {
 }
 
 
-delay_line_t *new_delay_line(int len, int feedback_delay) {
+delay_line_t *new_delay_line(int len, int fixed_delay, int ram_type) {
     // Check that len is a power of 2.
     if (!is_power_of_two(len)) { fprintf(stderr, "delay line len must be power of 2, not %d\n", len); abort(); }
-    delay_line_t *delay_line = (delay_line_t*)malloc_caps(sizeof(delay_line_t), MALLOC_CAP_INTERNAL); 
-    delay_line->samples = (float*)malloc_caps(len * sizeof(float), MALLOC_CAP_INTERNAL);
+    delay_line_t *delay_line = (delay_line_t*)malloc_caps(sizeof(delay_line_t), ram_type); 
+    delay_line->samples = (float*)malloc_caps(len * sizeof(float), ram_type);
     delay_line->len = len;
-    delay_line->feedback_delay = feedback_delay;
+    delay_line->fixed_delay = fixed_delay;
     delay_line->next_in = 0;
     delay_line->max_delay = len;
     for (int i = 0; i < len; ++i) {
@@ -61,7 +61,7 @@ void delay_line_in_out(float *in, float *out, int n_samples, float* mod_in, floa
     int index_mask = delay_len - 1; // will be all 1s because len is guaranteed 2**n.
 
     int index_in = delay_line->next_in;
-    int index_feedback = (index_in - delay_line->feedback_delay) & index_mask;
+    int index_feedback = (index_in - delay_line->fixed_delay) & index_mask;
 
     float *delay = delay_line->samples;
     float max_delay_on_two = delay_line->max_delay / 2.f;
@@ -113,4 +113,99 @@ void apply_variable_delay(float *block, delay_line_t *delay_line, float *delay_m
 
 void apply_fixed_delay(float *block, delay_line_t *delay_line, float delay_mod_val, float mix_level) {
     delay_line_in_out_fixed_delay(block, block, BLOCK_SIZE, delay_mod_val, delay_line, mix_level);
+}
+
+
+static inline float DEL_OUT(delay_line_t *delay_line) {
+    int out_index =
+        (delay_line->next_in - delay_line->fixed_delay) & (delay_line->len - 1);
+    return delay_line->samples[out_index];
+}
+
+static inline void DEL_IN(delay_line_t *delay_line, float val) {
+    delay_line->samples[delay_line->next_in++] = val;
+    delay_line->next_in &= (delay_line->len - 1);
+}
+
+static inline float LPF(float samp, float state, float lpcoef, float lpgain, float gain) {
+    // 1-pole lowpass filter (exponential smoothing).
+    // Smoothing. lpcoef=1 => no smoothing; lpcoef=0.001 => much smoothing.
+    state += lpcoef * (samp - state);
+    // Cross-fade between smoothed and original.  lpgain=0 => all smoothed, 1 => all dry.
+    return 0.5f * gain * (state + lpgain * (samp - state));
+}
+
+float f1state = 0, f2state = 0, f3state = 0, f4state = 0;
+
+delay_line_t *delay_1 = NULL, *delay_2 = NULL, *delay_3 = NULL, *delay_4 = NULL;
+
+float lpfcoef = 0.4;
+float lpfgain = 0.5;
+float liveness = 0.85;
+
+void config_stereo_reverb(float a_liveness, float crossover_hz, float damping) {
+    // liveness (0..1) controls how much energy is preserved (larger = longer reverb).
+    liveness = a_liveness;
+    // crossover_hz is 3dB point of 1-pole lowpass freq.
+    lpfcoef = 6.2832f * crossover_hz / SAMPLE_RATE;
+    if (lpfcoef > 1.f)  lpfcoef = 1.f;
+    if (lpfcoef < 0.f)  lpfcoef = 0.f;
+    lpfgain = damping;
+}
+
+// Delay 1 is 58.6435 ms
+#define DELAY1SAMPS 2586
+// Delay 2 is 69.4325 ms
+#define DELAY2SAMPS 3062
+// Delay 3 is 74.5234 ms
+#define DELAY3SAMPS 3286
+// Delay 4 is 86.1244 ms
+#define DELAY4SAMPS 3798
+
+// Power of 2 that encloses all the delays.
+#define DELAY_POW2 4096
+
+// Reverb delays go into SPIRAM.
+#define DELAYRAM MALLOC_CAP_SPIRAM
+
+void init_stereo_reverb(void) {
+    if (delay_1 == NULL) {
+        delay_1 = new_delay_line(DELAY_POW2, DELAY1SAMPS, DELAYRAM);
+        delay_2 = new_delay_line(DELAY_POW2, DELAY2SAMPS, DELAYRAM);
+        delay_3 = new_delay_line(DELAY_POW2, DELAY3SAMPS, DELAYRAM);
+        delay_4 = new_delay_line(DELAY_POW2, DELAY4SAMPS, DELAYRAM);
+        config_stereo_reverb(0.85f, 3000.0f, 0.5);
+    }
+}
+
+void stereo_reverb(float *r_in, float *l_in, float *r_out, float *l_out, int n_samples, float level) {
+    // Stereo reverb.  *{r,l}_in each point to n_samples input samples.
+    // n_samples are written to {r,l}_out.
+    // Recreate
+    // https://github.com/duvtedudug/Pure-Data/blob/master/extra/rev2%7E.pd
+    // an instance of the Stautner-Puckette multichannel reverberator from
+    // https://www.ee.columbia.edu/~dpwe/e4896/papers/StautP82-reverb.pdf
+    while(n_samples--) {
+        float d1 = DEL_OUT(delay_1);
+        d1 = LPF(d1, f1state, lpfcoef, lpfgain, liveness);
+        d1 += *r_in;
+        *r_out++ = *r_in++ + level * d1;
+
+        float d2 = DEL_OUT(delay_2);
+        d2 = LPF(d2, f2state, lpfcoef, lpfgain, liveness);
+        if (l_in != NULL)  d2 += *l_in;
+        if (l_out != NULL)  *l_out++ = *l_in++ + level * d2;
+
+        float d3 = DEL_OUT(delay_3);
+        d3 = LPF(d3, f3state, lpfcoef, lpfgain, liveness);
+
+        float d4 = DEL_OUT(delay_4);
+        d4 = LPF(d4, f3state, lpfcoef, lpfgain, liveness);
+
+        // Mixing and feedback.
+        DEL_IN(delay_1, d1 + d2 + d3 + d4);
+        DEL_IN(delay_2, d1 - d2 + d3 - d4);
+        DEL_IN(delay_3, d1 + d2 - d3 - d4);
+        DEL_IN(delay_4, d1 - d2 - d3 + d4);
+    }
 }
