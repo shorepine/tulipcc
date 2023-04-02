@@ -18,6 +18,20 @@ void drawFastVLine(short x0, short y0, short h, short color) {
     drawLine(x0, y0, x0, y0+h-1, color);
 }
 
+uint16_t draw_new_char(const char c, uint16_t x, uint16_t y, uint8_t fg, uint8_t font_no) {
+  u8g2_font_t font;
+  u8g2_SetFont(&font, tulip_fonts[font_no]);
+  u8g2_SetForegroundColor(&font, fg);
+  return u8g2_DrawGlyph(&font, x,y,c);
+}
+
+uint16_t draw_new_str(const char * str, uint16_t x, uint16_t y, uint8_t fg, uint8_t font_no) {
+  u8g2_font_t font;
+  u8g2_SetFont(&font, tulip_fonts[font_no]);
+  u8g2_SetForegroundColor(&font, fg);
+  return u8g2_DrawStr(&font, x,y,str);
+}
+
 //stack friendly and fast floodfill algorithm, using recursive function calls
 void floodFillScanline(int x, int y, int newColor, int oldColor)
 {

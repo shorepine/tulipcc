@@ -51,7 +51,8 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/tulip/smallfont.c
     ${MICROPY_DIR}/extmod/tulip/display.c
     ${MICROPY_DIR}/extmod/tulip/bresenham.c
-    ${MICROPY_DIR}/extmod/tulip/bitmap_fonts.c    
+    ${MICROPY_DIR}/extmod/tulip/u8g2_fonts.c    
+    ${MICROPY_DIR}/extmod/tulip/u8fontdata.c    
     ${MICROPY_DIR}/extmod/tulip/tulip_helpers.c
     ${MICROPY_DIR}/extmod/tulip/editor.c
     ${MICROPY_DIR}/extmod/tulip/keyscan.c

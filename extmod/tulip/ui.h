@@ -4,7 +4,6 @@
 #include "polyfills.h"
 #include "display.h"
 #include "bresenham.h"
-#include "bitmap_fonts.h"
 #include "keyscan.h"
 #define MAX_UI_ELEMENTS 255
 
@@ -27,6 +26,7 @@ struct ui_element {
     char *cval;
     uint8_t c0;
     uint8_t c1;
+    uint8_t c2;
     uint8_t type;
 };
 
@@ -39,7 +39,7 @@ void tulip_ui_isr(uint8_t ui_id);
 void tulip_touch_isr(uint8_t up);
 void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up);
 
-void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t fgc, uint8_t bc, uint8_t filled);
+void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t fgc, uint8_t bc, uint8_t filled, uint8_t font_no);
 void ui_button_draw(uint8_t ui_id);
 
 void ui_slider_new(uint8_t ui_id, float val, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t bc, uint8_t hc);
@@ -50,7 +50,7 @@ void ui_slider_draw(uint8_t ui_id);
 char* ui_text_get_val(uint8_t ui_id);
 void ui_text_draw(uint8_t ui_id, uint8_t entry_mode);
 void ui_text_entry(uint8_t ui_id);
-void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t text_color, uint8_t box_color);
+void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t text_color, uint8_t box_color, uint8_t font_no);
 void ui_text_entry_update(uint8_t ui_id, uint8_t ch);
 
 void ui_check_draw(uint8_t ui_id) ;

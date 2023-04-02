@@ -8,7 +8,6 @@
 #include "py/mphal.h"
 #include "display.h"
 #include "bresenham.h"
-#include "bitmap_fonts.h"
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #include "alles.h"
@@ -802,32 +801,28 @@ STATIC mp_obj_t tulip_fill(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_fill_obj, 3, 3, tulip_fill);
 
 
-//uint8_t draw_glyph(uint8_t c, uint16_t x, uint16_t y, uint8_t pal_idx) {
 STATIC mp_obj_t tulip_char(size_t n_args, const mp_obj_t *args) {
     uint16_t c = mp_obj_get_int(args[0]);
     uint16_t x = mp_obj_get_int(args[1]);
     uint16_t y = mp_obj_get_int(args[2]);
     uint16_t pal_idx = mp_obj_get_int(args[3]);
-    uint8_t advance = draw_glyph(c, x,y, pal_idx);
-    return mp_obj_new_int(advance);
+    uint16_t font_no = mp_obj_get_int(args[4]);
+    return mp_obj_new_int(draw_new_char(c, x, y, pal_idx, font_no));
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_char_obj, 4, 4, tulip_char);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_char_obj, 5, 5, tulip_char);
 
 STATIC mp_obj_t tulip_str(size_t n_args, const mp_obj_t *args) {
     const char *str =  mp_obj_str_get_str(args[0]);
     uint16_t x = mp_obj_get_int(args[1]);
     uint16_t y = mp_obj_get_int(args[2]);
     uint16_t pal_idx = mp_obj_get_int(args[3]);
-    uint8_t advance = 0;
-    for(uint16_t i=0;i<strlen(str);i++) {
-        advance = draw_glyph(str[i], x,y, pal_idx);
-        x =x + advance;
-    }
-    return mp_obj_new_int(advance);
+    uint16_t font_no = mp_obj_get_int(args[4]);
+    return mp_obj_new_int(draw_new_str(str, x, y, pal_idx, font_no));
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_str_obj, 4, 4, tulip_str);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_str_obj, 5, 5, tulip_str);
+
 
 
 STATIC mp_obj_t tulip_timing(size_t n_args, const mp_obj_t *args) {
@@ -878,11 +873,13 @@ STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
             mp_obj_get_int(args[5]), // h
             mp_obj_get_int(args[6]), // fg_color
             mp_obj_get_int(args[7]), // btn_color
-            mp_obj_get_int(args[8]) // filled 
+            mp_obj_get_int(args[8]), // filled 
+            mp_obj_get_int(args[9]) // font 
+
             );
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 9, 9, tulip_button);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 10, 10, tulip_button);
 
 
 //tulip.checkbox(id,val,x,y,w,x_color,box_color)
@@ -926,12 +923,13 @@ STATIC mp_obj_t tulip_text(size_t n_args, const mp_obj_t *args) {
                 mp_obj_get_int(args[4]), // w
                 mp_obj_get_int(args[5]), // h
                 mp_obj_get_int(args[6]), // text_color
-                mp_obj_get_int(args[7]) // box_color
+                mp_obj_get_int(args[7]), // box_color
+                mp_obj_get_int(args[8]) // font_no
                 );
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_text_obj, 1, 8, tulip_text);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_text_obj, 1, 9, tulip_text);
 
 
 STATIC mp_obj_t tulip_slider(size_t n_args, const mp_obj_t *args) {
@@ -1029,6 +1027,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&tulip_fill_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_char), MP_ROM_PTR(&tulip_char_obj) },
+//    { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
     { MP_ROM_QSTR(MP_QSTR_button), MP_ROM_PTR(&tulip_button_obj) },
