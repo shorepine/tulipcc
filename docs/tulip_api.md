@@ -72,7 +72,7 @@ def ui_callback(x):
 tulip.ui_callback(ui_callback)
 
 # You can set up to 255 UI elements
-tulip.button(ui_element_id, "Button text", x, y, w, h, radius, bg_pal_idx, fg_pal_idx, filled)
+tulip.button(ui_element_id, "Button text", x, y, w, h, radius, bg_pal_idx, fg_pal_idx, filled, font_number)
 
 # Sliders -- if w > h, it will be a horizontal slider, vertical otherwise
 tulip.slider(ui_element_id, default_value, x, y, w, h, bar_color, handle_color)
@@ -82,7 +82,7 @@ val = tulip.slider(ui_element_id)
 tulip.slider(ui_element_id, val)
 
 # This text entry box UI element is limited to 32 characters. It will wait for you to hit return to finish input
-tulip.text(ui_element_id, default_value, x, y, w, h, text_color, box_color)
+tulip.text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
 
 # Checkboxes - 0 is unchecked, 1 is checked
 tulip.checkbox(ui_element_id, val, x, y, w, x_color, box_color)
@@ -342,8 +342,8 @@ tulip.roundrect(x0,y0, w,h, r, pal_idx, filled)
 tulip.rect(x0,y0, w,h, pal_idx, filled)
 tulip.triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
 tulip.fill(x0,y0,pal_idx) # Flood fill starting at x,y
-tulip.char(c, x, y, pal_idx) # proportional font, returns # of x pixels to advance for the next char
-tulip.str(string, x, y, pal_idx) # same as char, but with a string
+tulip.char(c, x, y, pal_idx, font_number) # proportional font, returns # of x pixels to advance for the next char
+tulip.str(string, x, y, pal_idx, font_number) # same as char, but with a string
 
 """
   Set scrolling registers for the BG. 
