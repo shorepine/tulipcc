@@ -7,11 +7,10 @@
 // i could save the metadata of the button (really, just str, and radius, and colors)... and redraw... 
 // or i could just comptuationally invert the bitmap BG of the text ...  maybe that's better
 void ui_button_flip(uint8_t ui_id) {
-    if(elements[ui_id]->type == UI_BUTTON) {
+    struct ui_element *e = elements[ui_id];
+    if(e->type == UI_BUTTON) {
         // I think just invert the pixels of the text line
-        uint8_t fh = 0;
-        // Just get the height of the font
-        width_height_glyph('Q', &fh, &fh);
+        uint8_t fh = u8g2_a_height(e->c2);
         uint16_t start_y = elements[ui_id]->y + (elements[ui_id]->h/2)-(fh);
         display_invert_bg(elements[ui_id]->x+1, start_y, elements[ui_id]->w-2, fh*2);
     } else if(elements[ui_id]->type == UI_SLIDER) {
@@ -99,27 +98,22 @@ void ui_text_draw(uint8_t ui_id, uint8_t entry_mode) {
         if(!entry_mode) {
             // Compute width and height of text for centering
             for(uint16_t i=0;i<strlen(e->cval);i++) {
-                width_height_glyph(e->cval[i], &fw, &fh);
+                fw = u8g2_glyph_width(e->c2, e->cval[i]);
                 width += fw;
             }
+            fh = u8g2_a_height(e->c2);
             uint16_t start_x = e->x;
             uint16_t start_y = e->y + ((e->h+fh)/2);
             if(width < e->w) {
                 start_x = e->x + (e->w - width)/2;
             }
-            for(uint16_t i=0;i<strlen(e->cval);i++) {
-                uint8_t advance = draw_glyph(e->cval[i], start_x,start_y, e->c0);
-                start_x =start_x + advance;
-            }
+            draw_new_str(e->cval, start_x, start_y, e->c0, e->c2);
         } else {
             // If we're in entry mode, fill in chars from the left side, will center later
-            width_height_glyph('Q', &fw, &fh);
+            fh = u8g2_a_height(e->c2);
             uint16_t start_x = e->x + 1;
             uint16_t start_y = e->y + ((e->h+fh)/2);
-            for(uint16_t i=0;i<strlen(e->cval);i++) {
-                uint8_t advance = draw_glyph(e->cval[i], start_x,start_y, e->c0);
-                start_x =start_x + advance;
-            }
+            draw_new_str(e->cval, start_x, start_y, e->c0, e->c2);
         }
     }
     if(entry_mode) {
@@ -129,15 +123,19 @@ void ui_text_draw(uint8_t ui_id, uint8_t entry_mode) {
 }
 
 
-void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t text_color, uint8_t box_color) {
+void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t text_color, uint8_t box_color, uint8_t font_no) {
     ui_element_new(ui_id);
-    elements[ui_id]->type = UI_TEXT;
-    elements[ui_id]->x = x;
-    elements[ui_id]->y = y;
-    elements[ui_id]->w = w;
-    elements[ui_id]->h = h;
-    elements[ui_id]->c0 = text_color;
-    elements[ui_id]->c1 = box_color;
+    struct ui_element *e = elements[ui_id];
+
+    e->type = UI_TEXT;
+    e->x = x;
+    e->y = y;
+    e->w = w;
+    e->h = h;
+    e->c0 = text_color;
+    e->c1 = box_color;
+    e->c2 = font_no;
+
     // malloc space for the text. 
     elements[ui_id]->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_SPIRAM);
     strcpy(elements[ui_id]->cval, str);
@@ -191,21 +189,19 @@ void ui_button_draw(uint8_t ui_id) {
 
     // Compute width of text for centering
     for(uint16_t i=0;i<strlen(e->cval);i++) {
-        width_height_glyph(e->cval[i], &fw, &fh);
+        fw = u8g2_glyph_width(e->c2, e->cval[i]);
         width += fw;
     }
+    fh = u8g2_a_height(e->c2);
     uint16_t start_x = e->x;
     uint16_t start_y = e->y + ((e->h+fh)/2);
     if(width < e->w) {
         start_x = e->x + (e->w - width)/2;
     }
-    for(uint16_t i=0;i<strlen(e->cval);i++) {
-        uint8_t advance = draw_glyph(e->cval[i], start_x,start_y, e->c0);
-        start_x =start_x + advance;
-    }
+    draw_new_str(e->cval, start_x, start_y, e->c0, e->c2);
 }
 
-void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t fgc, uint8_t bc, uint8_t filled) {
+void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t fgc, uint8_t bc, uint8_t filled, uint8_t font_no) {
     ui_element_new(ui_id);
     struct ui_element *e = elements[ui_id];
     e->type = UI_BUTTON;
@@ -216,6 +212,7 @@ void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint
     e->c0 = fgc;
     e->c1 = bc;
     e->val = filled;
+    e->c2 = font_no;
     e->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_SPIRAM);
     strcpy(e->cval, str);
 

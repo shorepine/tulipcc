@@ -2,7 +2,6 @@
 
 #ifndef __DISPLAYH__
 #define __DISPLAYH__
-
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
@@ -95,8 +94,7 @@ extern const unsigned char font_8x12_r[256][12];
 #define DEFAULT_PIXEL_CLOCK_MHZ 22
 
 
-uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, PIXEL_CLOCK_MHZ;
-
+extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, PIXEL_CLOCK_MHZ;
 // Use this to set workable ... no, use a py func...
 //#define H_RES              800//1024
 //#define V_RES              480//600

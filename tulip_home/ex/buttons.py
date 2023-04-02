@@ -12,12 +12,12 @@ def cb(x):
 
 tulip.bg_clear()
 tulip.ui_callback(cb)
-tulip.button(0,"hey there",600,200,150,60,255,200,0)
-tulip.button(1,"here again", 700, 400, 150, 60, 255, 200, 1)
+tulip.button(0,"hey there",600,200,150,60,255,200,0,0)
+tulip.button(1,"here again", 700, 400, 150, 60, 255, 200, 1,1)
 tulip.slider(2, 0.5, 200,400,30,150, 151,188)
 tulip.slider(3, 0.5, 200,300,150,30, 151,188)
-tulip.text(4,"12", 200,200,100,40,255,0)
-tulip.text(5,"Hello there", 400,200,100,40,255,0)
+tulip.text(4,"12", 200,200,100,40,255,0,2)
+tulip.text(5,"Hello there", 400,200,100,40,255,0,3)
 tulip.checkbox(6, 0, 400, 400, 50, 255, 0)
 tulip.checkbox(7, 1, 475, 400, 50, 255, 0)
 

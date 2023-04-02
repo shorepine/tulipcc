@@ -7,7 +7,8 @@ uint16_t V_RES = DEFAULT_V_RES;
 uint16_t OFFSCREEN_X_PX = DEFAULT_OFFSCREEN_X_PX;
 uint16_t OFFSCREEN_Y_PX = DEFAULT_OFFSCREEN_Y_PX;
 uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
-
+uint16_t BOUNCE_BUFFER_SIZE_PX;
+uint16_t TFB_ROWS, TFB_COLS;
 // RRRGGGBB
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *r = px0 & 0xe0;
