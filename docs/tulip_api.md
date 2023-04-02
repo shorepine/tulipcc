@@ -373,11 +373,15 @@ tulip.bg_scroll_y_speed(line, y_speed)
 tulip.bg_scroll_x_offset(line, x_offset)
 tulip.bg_scroll_y_offset(line, y_offset)
 ```
+We currently ship 19 fonts with Tulip to use for the BG. Here they are:
+
+![IMG_3339](https://user-images.githubusercontent.com/76612/229381546-46ec4c50-4c4a-4f3a-9aec-c77d439081b2.jpeg)
+
 
 
 ## Text frame buffer (TFB)
 
-The TFB is a 128x50 character plane for fast drawing of text glyphs. It supports 256 ANSI 
+The TFB is a 128x50 character plane for fast drawing of 8x12 text glyphs. It supports 256 ANSI 
 colors for foreground and background, and supports formatting. TFB is used by the text 
 editor and Python REPL.
 
