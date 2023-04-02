@@ -303,6 +303,12 @@ tulip.brightness(5)
 
 The default background plane (BG) is 1280 x 750, with the visible portion 1024x600. (You can change this with `tulip.timing()`.) Use the extra for hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
 
+Tulip uses RGB332, with 256 colors. Here's the palette: 
+
+![tulip_pal](https://user-images.githubusercontent.com/76612/229381451-17a47367-6338-4ed2-9be3-7ec631513e6b.jpg)
+
+
+
 ```python
 # Set or get a pixel on the BG
 pal_idx = tulip.bg_pixel(x,y)
