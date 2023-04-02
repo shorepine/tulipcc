@@ -303,6 +303,7 @@ mp_obj_t frame_callback = NULL;
 mp_obj_t frame_arg = NULL; 
 mp_obj_t midi_callback = NULL; 
 mp_obj_t ui_callback = NULL; 
+mp_obj_t touch_callback = NULL; 
 
 
 void tulip_frame_isr() {
@@ -324,6 +325,13 @@ void tulip_ui_isr(uint8_t ui_id) {
     if(ui_callback != NULL)
         mp_sched_schedule(ui_callback, mp_obj_new_int(ui_id)); 
 }
+
+void tulip_touch_isr(uint8_t up) {
+    if(touch_callback != NULL) {
+        mp_sched_schedule(touch_callback, mp_obj_new_int(up)); 
+    }
+}
+
 
 
 // tulip.frame_callback(cb, arg)
@@ -370,6 +378,20 @@ STATIC mp_obj_t tulip_ui_callback(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_callback_obj, 0, 1, tulip_ui_callback);
+
+
+// tulip.ui_callback(cb)
+// tulip.ui_callback() -- stops 
+STATIC mp_obj_t tulip_touch_callback(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 0) {
+        touch_callback = NULL;
+    } else {
+        touch_callback = args[0];
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_callback_obj, 0, 1, tulip_touch_callback);
 
 
 STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
@@ -854,14 +876,40 @@ STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
             mp_obj_get_int(args[3]), // y
             mp_obj_get_int(args[4]), // w
             mp_obj_get_int(args[5]), // h
-            mp_obj_get_int(args[6]), // r
-            mp_obj_get_int(args[7]), // fg_color
-            mp_obj_get_int(args[8]), // btn_color
-            mp_obj_get_int(args[9]) // filled 
+            mp_obj_get_int(args[6]), // fg_color
+            mp_obj_get_int(args[7]), // btn_color
+            mp_obj_get_int(args[8]) // filled 
             );
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 10, 10, tulip_button);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 9, 9, tulip_button);
+
+
+//tulip.checkbox(id,val,x,y,w,x_color,box_color)
+// val = tulip.checkbox(id)
+// tulip.checkbox(id, val)
+STATIC mp_obj_t tulip_checkbox(size_t n_args, const mp_obj_t *args) {
+    uint8_t ui_id = mp_obj_get_int(args[0]);
+    if(n_args == 1) { 
+        uint8_t c = ui_check_get_val(ui_id);
+        return mp_obj_new_int(c);
+    } else if(n_args==2) {
+        uint8_t v = mp_obj_get_int(args[1]);
+        ui_check_set_val(ui_id, v);
+    } else {
+        ui_check_new(ui_id, 
+            mp_obj_get_int(args[1]), // val
+            mp_obj_get_int(args[2]), // x
+            mp_obj_get_int(args[3]), // y
+            mp_obj_get_int(args[4]), // w
+            mp_obj_get_int(args[5]), // x_color
+            mp_obj_get_int(args[6]) // box_color
+            );
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_checkbox_obj, 0, 7, tulip_checkbox);
+
 
 
 //tulip.text(id, "text", x,y,w,h,r,text_color,box_color)
@@ -888,23 +936,24 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_text_obj, 1, 8, tulip_text);
 
 STATIC mp_obj_t tulip_slider(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
-    if(n_args < 9) { 
+    if(n_args == 1) { 
         return mp_obj_new_float(ui_slider_get_val(ui_id));
+    } else if(n_args == 2) {
+        ui_slider_set_val(ui_id,mp_obj_get_float(args[1]) );
     } else {
         ui_slider_new(ui_id, 
-            mp_obj_get_int(args[1]), // x
-            mp_obj_get_int(args[2]), // y
-            mp_obj_get_int(args[3]), // w
-            mp_obj_get_int(args[4]), // h
-            mp_obj_get_int(args[5]), // orientation
-            mp_obj_get_float(args[6]), // val        
-            mp_obj_get_int(args[7]), // bar_color
-            mp_obj_get_int(args[8]) // handle_color
+            mp_obj_get_float(args[1]), // val        
+            mp_obj_get_int(args[2]), // x
+            mp_obj_get_int(args[3]), // y
+            mp_obj_get_int(args[4]), // w
+            mp_obj_get_int(args[5]), // h
+            mp_obj_get_int(args[6]), // bar_color
+            mp_obj_get_int(args[7]) // handle_color
             );
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_slider_obj, 1, 9, tulip_slider);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_slider_obj, 1, 8, tulip_slider);
 
 
 STATIC mp_obj_t tulip_ui_del(size_t n_args, const mp_obj_t *args) {
@@ -913,6 +962,17 @@ STATIC mp_obj_t tulip_ui_del(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_del_obj, 1, 1, tulip_ui_del);
+
+
+
+STATIC mp_obj_t tulip_ui_active(size_t n_args, const mp_obj_t *args) {
+    uint8_t ui_id = mp_obj_get_int(args[0]);
+    uint8_t active = mp_obj_get_int(args[1]);
+    ui_element_active(ui_id, active);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_active_obj, 2, 2, tulip_ui_active);
+
 
 
 
@@ -937,6 +997,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_callback), MP_ROM_PTR(&tulip_ui_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_touch_callback), MP_ROM_PTR(&tulip_touch_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
@@ -973,7 +1034,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_button), MP_ROM_PTR(&tulip_button_obj) },
     { MP_ROM_QSTR(MP_QSTR_text), MP_ROM_PTR(&tulip_text_obj) },
     { MP_ROM_QSTR(MP_QSTR_slider), MP_ROM_PTR(&tulip_slider_obj) },
+    { MP_ROM_QSTR(MP_QSTR_checkbox), MP_ROM_PTR(&tulip_checkbox_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_del), MP_ROM_PTR(&tulip_ui_del_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ui_active), MP_ROM_PTR(&tulip_ui_active_obj) },
     { MP_ROM_QSTR(MP_QSTR_joy), MP_ROM_PTR(&tulip_joy_obj) },
 
 

@@ -22,9 +22,24 @@ void ui_button_flip(uint8_t ui_id) {
 
 void ui_element_new(uint8_t ui_id) {
     if(elements[ui_id] == NULL) {
-        elements[ui_id] = (struct ui_element*)malloc_caps(sizeof(struct ui_element), MALLOC_CAP_INTERNAL);
+        elements[ui_id] = (struct ui_element*)malloc_caps(sizeof(struct ui_element), MALLOC_CAP_SPIRAM);
+        elements[ui_id]->active = 0;
     }
 }
+
+void ui_element_active(uint8_t ui_id,  uint8_t active) {
+    struct ui_element *e = elements[ui_id];
+
+    e->active = active;
+    if(active) {
+        // draw 
+        if(e->type==UI_BUTTON) ui_button_draw(ui_id);
+        if(e->type==UI_SLIDER) ui_slider_draw(ui_id);
+        if(e->type==UI_TEXT) ui_text_draw(ui_id,0);
+        if(e->type==UI_CHECKBOX) ui_check_draw(ui_id);
+    }
+}
+
 
 void ui_element_del(uint8_t ui_id) {
     if(elements[ui_id] == NULL) {
@@ -38,6 +53,9 @@ void ui_element_del(uint8_t ui_id) {
     }
 }
 
+// when a text button is touched, the OS diverts all key scans to this function
+// it stops when enter is hit here.
+// if a tap is registered , enter is sent to this function as well
 void ui_text_entry_update(uint8_t ui_id, uint8_t ch) {
     struct ui_element *e = elements[ui_id];
     uint8_t len = strlen(e->cval);
@@ -66,7 +84,7 @@ void ui_text_entry_start(uint8_t ui_id) {
     struct ui_element *e = elements[ui_id];
     e->cval[0] = 0;
     ui_text_draw(ui_id, 1);
-    // now, wait for key ups and fill them in?
+    // now, wait for keys and fill them in
     keyboard_grab_ui_focus = ui_id;
 }
 
@@ -79,7 +97,7 @@ void ui_text_draw(uint8_t ui_id, uint8_t entry_mode) {
     uint8_t fw, fh;
     if(strlen(e->cval) >0) {
         if(!entry_mode) {
-            // Compute width of text for centering
+            // Compute width and height of text for centering
             for(uint16_t i=0;i<strlen(e->cval);i++) {
                 width_height_glyph(e->cval[i], &fw, &fh);
                 width += fw;
@@ -94,6 +112,7 @@ void ui_text_draw(uint8_t ui_id, uint8_t entry_mode) {
                 start_x =start_x + advance;
             }
         } else {
+            // If we're in entry mode, fill in chars from the left side, will center later
             width_height_glyph('Q', &fw, &fh);
             uint16_t start_x = e->x + 1;
             uint16_t start_y = e->y + ((e->h+fh)/2);
@@ -120,10 +139,8 @@ void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16
     elements[ui_id]->c0 = text_color;
     elements[ui_id]->c1 = box_color;
     // malloc space for the text. 
-    elements[ui_id]->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_INTERNAL);
+    elements[ui_id]->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_SPIRAM);
     strcpy(elements[ui_id]->cval, str);
-
-    ui_text_draw(ui_id, 0);
 
 }
 
@@ -132,60 +149,114 @@ char* ui_text_get_val(uint8_t ui_id) {
 }
 
 
-void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t r, uint8_t fgc, uint8_t bc, uint8_t filled) {
-    ui_element_new(ui_id);
-    elements[ui_id]->type = UI_BUTTON;
-    elements[ui_id]->x = x;
-    elements[ui_id]->y = y;
-    elements[ui_id]->w = w;
-    elements[ui_id]->h = h;
-    elements[ui_id]->c0 = fgc;
-    elements[ui_id]->c1 = bc;
+void ui_check_draw(uint8_t ui_id) {
+    struct ui_element *e = elements[ui_id];
+    fillRect(e->x, e->y, e->w, e->w, e->c1);
+    if(e->val > 0) {
+        drawLine(e->x+1, e->y+1, e->x+e->w-1, e->y+e->w-1, e->c0);
+        drawLine(e->x+e->w-1, e->y+1, e->x+1, e->y+e->w-1, e->c0);
+    }
+}
+uint8_t ui_check_get_val(uint8_t ui_id) {
+    return (uint8_t)elements[ui_id]->val;
+}
+void ui_check_set_val(uint8_t ui_id, uint8_t v) {
+    elements[ui_id]->val = v;
+    ui_check_draw(ui_id);
+}
 
-    // Buttons don't need a separate draw meth
-    if(filled) {
-        fillRoundRect(x,y,w,h,r,bc);
+void ui_check_new(uint8_t ui_id,uint8_t val, uint16_t x, uint16_t y, uint16_t w, uint8_t x_color,uint8_t box_color) {
+    ui_element_new(ui_id);
+    struct ui_element *e = elements[ui_id];
+    e->type = UI_CHECKBOX;
+    e->x = x;
+    e->y = y;
+    e->w = w;
+    e->h = w;
+    e->c0 = x_color;
+    e->c1 = box_color;
+    e->val = val;
+}
+
+void ui_button_draw(uint8_t ui_id) {
+    struct ui_element *e = elements[ui_id];
+
+    if((uint8_t)e->val) {
+        fillRoundRect(e->x,e->y,e->w,e->h,10,e->c1);
     } else {
-        drawRoundRect(x,y,w,h,r,bc);
+        drawRoundRect(e->x,e->y,e->w,e->h,10,e->c1);
     }
     uint16_t width = 0;
     uint8_t fw, fh;
 
     // Compute width of text for centering
-    for(uint16_t i=0;i<strlen(str);i++) {
-        width_height_glyph(str[i], &fw, &fh);
+    for(uint16_t i=0;i<strlen(e->cval);i++) {
+        width_height_glyph(e->cval[i], &fw, &fh);
         width += fw;
     }
-    uint16_t start_x = x;
-    uint16_t start_y = y + ((h+fh)/2);
-    if(width < w) {
-        start_x = x + (w - width)/2;
+    uint16_t start_x = e->x;
+    uint16_t start_y = e->y + ((e->h+fh)/2);
+    if(width < e->w) {
+        start_x = e->x + (e->w - width)/2;
     }
-    for(uint16_t i=0;i<strlen(str);i++) {
-        uint8_t advance = draw_glyph(str[i], start_x,start_y, fgc);
+    for(uint16_t i=0;i<strlen(e->cval);i++) {
+        uint8_t advance = draw_glyph(e->cval[i], start_x,start_y, e->c0);
         start_x =start_x + advance;
     }
+}
+
+void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t fgc, uint8_t bc, uint8_t filled) {
+    ui_element_new(ui_id);
+    struct ui_element *e = elements[ui_id];
+    e->type = UI_BUTTON;
+    e->x = x;
+    e->y = y;
+    e->w = w;
+    e->h = h;
+    e->c0 = fgc;
+    e->c1 = bc;
+    e->val = filled;
+    e->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_SPIRAM);
+    strcpy(e->cval, str);
 
 }
 
 void ui_slider_draw(uint8_t ui_id) {
     // draw two boxes
-    uint16_t slider_height = 20;
-    struct ui_element * e = elements[ui_id];
-    // Make the frame
-    fillRect(e->x,e->y,e->w,e->h,e->c0);
-    // Compute position of slider
-    // val should come in 0-1 float, which is all we need to set position
-    // Make the handle
-    uint16_t slider_pos_relative = (uint16_t) ((1.0 - e->val) * (float)(e->h-slider_height));
-
-    fillRect(e->x, e->y+slider_pos_relative, e->w, slider_height, e->c1);
-}
-void ui_slider_set_val(uint8_t ui_id, uint16_t x, uint16_t y) {
-    // given an x and y, update the val, then draw
-    // just y for now
     struct ui_element *e = elements[ui_id];
-    e->val = (1.0 - ((float)(y-e->y) / (float)(e->h)));
+    if(e->w > e->h) { // horizontal slider
+        uint16_t slider_width = 20;
+        // Make the frame
+        fillRect(e->x,e->y,e->w,e->h,e->c0);
+        // Compute position of slider
+        uint16_t slider_pos_x_relative = (uint16_t) ((e->val) * (float)(e->w-slider_width));
+        // Make the handle
+        fillRect(e->x+slider_pos_x_relative,e->y, slider_width, e->h, e->c1);
+    }  else {
+        uint16_t slider_height = 20;
+        // Make the frame
+        fillRect(e->x,e->y,e->w,e->h,e->c0);
+        // Compute position of slider
+        uint16_t slider_pos_y_relative = (uint16_t) ((1.0 - e->val) * (float)(e->h-slider_height));
+        // Make the handle
+        fillRect(e->x, e->y+slider_pos_y_relative, e->w, slider_height, e->c1);
+    }
+}
+
+void ui_slider_set_val(uint8_t ui_id, float val) {
+    struct ui_element *e = elements[ui_id];
+    e->val = val;
+    ui_slider_draw(ui_id);
+}
+
+void ui_slider_set_val_xy(uint8_t ui_id, uint16_t x, uint16_t y) {
+    // given an x and y, update the val, then draw
+    struct ui_element *e = elements[ui_id];
+    if(e->w > e->h) { // horizontal slider
+        e->val = (((float)(x-e->x) / (float)(e->w)));
+    } else { // vertical slider
+        e->val = (1.0 - ((float)(y-e->y) / (float)(e->h)));
+    }
     ui_slider_draw(ui_id);
 }
 
@@ -193,17 +264,17 @@ float ui_slider_get_val(uint8_t ui_id) {
     return elements[ui_id]->val;
 }
 
-void ui_slider_new(uint8_t ui_id, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t o, float val, uint8_t bc, uint8_t hc) {
+void ui_slider_new(uint8_t ui_id, float val, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t bc, uint8_t hc) {
     ui_element_new(ui_id);
-    elements[ui_id]->type = UI_SLIDER;
-    elements[ui_id]->x = x;
-    elements[ui_id]->y = y;
-    elements[ui_id]->w = w;
-    elements[ui_id]->h = h;
-    elements[ui_id]->val = val;
-    elements[ui_id]->c0 = bc;
-    elements[ui_id]->c1 = hc;
-    ui_slider_draw(ui_id);
+    struct ui_element *e = elements[ui_id];
+    e->type = UI_SLIDER;
+    e->x = x;
+    e->y = y;
+    e->w = w;
+    e->h = h;
+    e->val = val;
+    e->c0 = bc;
+    e->c1 = hc;
 }
 
 int8_t ui_bounds(uint16_t x, uint16_t y) {
@@ -212,8 +283,10 @@ int8_t ui_bounds(uint16_t x, uint16_t y) {
     for(uint8_t i=0;i<MAX_UI_ELEMENTS;i++) {
         struct ui_element * e = elements[i];
         if(e != NULL) {
-            if((x >= e->x) && (y >= e->y) && (x <= e->w + e->x) && (y <= e->y + e->h)) {
-                return i;
+            if(e->active) {
+                if((x >= e->x) && (y >= e->y) && (x <= e->w + e->x) && (y <= e->y + e->h)) {
+                    return i;
+                }
             }
         }
     }
@@ -222,7 +295,7 @@ int8_t ui_bounds(uint16_t x, uint16_t y) {
 }
 
 void ui_init() {
-    elements = (struct ui_element **) malloc_caps(sizeof(struct ui_element*) * MAX_UI_ELEMENTS, MALLOC_CAP_INTERNAL);
+    elements = (struct ui_element **) malloc_caps(sizeof(struct ui_element*) * MAX_UI_ELEMENTS, MALLOC_CAP_SPIRAM);
     for(uint8_t i=0;i<MAX_UI_ELEMENTS;i++) {
         elements[i] = NULL;
     }
@@ -238,45 +311,48 @@ void ui_init() {
 void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
     // respond to finger down / up
     if(touch_held && up) { // this is a finger up / click release
-        //fprintf(stderr, "up\n") ;
+        // If there's any text entry happening, in all cases, a touch up stops it
+        if(keyboard_grab_ui_focus > -1) {
+            ui_text_entry_update(keyboard_grab_ui_focus, 13);
+        }
         touch_held = 0;
         int8_t ui_id = ui_bounds(touch_x, touch_y);
         if(ui_id >= 0) { 
             // Is this a text input?
             if(elements[ui_id]->type == UI_TEXT) {
-                // Was there another one being edited? 
-                if(keyboard_grab_ui_focus > -1) {
-                    // if it's me or someone else -- doesn't matter -- confirm
-                    ui_text_entry_update(keyboard_grab_ui_focus, 13);
-                }
                 // start taking in text input to replace the text of the button
                 ui_text_entry_start(ui_id);
-            } else {
+            } else if(elements[ui_id]->type == UI_CHECKBOX) {
+                if((uint8_t)elements[ui_id]->val) {
+                    elements[ui_id]->val = 0;
+                } else {
+                    elements[ui_id]->val = 1;
+                }
+                ui_check_draw(ui_id);
+                tulip_ui_isr(ui_id);
+            } else { // buttons, sliders
                 // We've lifted up on an element. tell the isr
                 tulip_ui_isr(ui_id);
                 ui_button_flip(ui_id);
             }
-        } else {
+        } else { // no element was touched on up
             // In case the pointer moved out of bounds before going up
             if(ui_id_held >= 0) {
                 ui_button_flip(ui_id_held);
             }
-            // was there an active editing box?
-            if(keyboard_grab_ui_focus > -1) {
-                ui_text_entry_update(keyboard_grab_ui_focus, 13);
-            }
         }
+        tulip_touch_isr(up);
         ui_id_held = -1;
     } else if(touch_held && !up) { // this is a continuous hold -- update sliders, etc 
         //fprintf(stderr, "down hold\n") ;
         int8_t ui_id = ui_bounds(touch_x, touch_y);
         if(ui_id >= 0) {
             if(elements[ui_id]->type == UI_SLIDER) {
-                ui_slider_set_val(ui_id, touch_x, touch_y);
+                ui_slider_set_val_xy(ui_id, touch_x, touch_y);
                 tulip_ui_isr(ui_id);
             }
         }
-
+        tulip_touch_isr(up);
     } else if(!touch_held && !up) { // this is a new touch down 
         //fprintf(stderr, "down\n") ;
         touch_held = 1;
@@ -284,11 +360,12 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
         if(ui_id >= 0) {
             ui_button_flip(ui_id);
             if(elements[ui_id]->type == UI_SLIDER) {
-                ui_slider_set_val(ui_id, touch_x, touch_y);
+                ui_slider_set_val_xy(ui_id, touch_x, touch_y);
             }
             ui_id_held = ui_id;
             // make element active
         }
+        tulip_touch_isr(up);
     } else if(!touch_held && up) { // just moving the mouse around on desktop 
         //fprintf(stderr, "touch not held and up event\n");
     }
