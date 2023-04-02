@@ -70,12 +70,33 @@ def ui_callback(x):
         print("Text box now says %s" % (tulip.text(2)))
 
 tulip.ui_callback(ui_callback)
+
+# You can set up to 255 UI elements
 tulip.button(ui_element_id, "Button text", x, y, w, h, radius, bg_pal_idx, fg_pal_idx, filled)
-tulip.slider(ui_element_id, x, y, w, h, orientation, default_value, bg_pal_idx, handle_pal_idx)
-# This text entry box UI element is limited to 32 characters. 
+
+# Sliders -- if w > h, it will be a horizontal slider, vertical otherwise
+tulip.slider(ui_element_id, default_value, x, y, w, h, bar_color, handle_color)
+# Gets a slider val
+val = tulip.slider(ui_element_id)
+# Set a slider val
+tulip.slider(ui_element_id, val)
+
+# This text entry box UI element is limited to 32 characters. It will wait for you to hit return to finish input
 tulip.text(ui_element_id, default_value, x, y, w, h, text_color, box_color)
 
-tulip.ui_del(ui_element_id) # deletes a UI compoent 
+# Checkboxes - 0 is unchecked, 1 is checked
+tulip.checkbox(ui_element_id, val, x, y, w, x_color, box_color)
+val = tulip.checkbox(ui_element_id)
+# set value
+tulip.checkbox(ui_element_id, val)
+
+# No UI elements will be drawn or receive events until you set them to be active
+tulip.ui_active(ui_element_id, 1)
+# You can deactivate them too -- useful for many elements across pages / tabs that you "hide"
+# Deactivating does not remove the graphics on the BG layer. You have to clear it yourself.
+tulip.ui_active(ui_element_id, 0)
+
+tulip.ui_del(ui_element_id) # deletes the memory for a UI component (the graphics will stay on the BG)
 
 tulip.joy() # returns a mask of hardware joystick presses
 
@@ -101,6 +122,13 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 
 # Return the last touch panel coordinates, up to 3 fingers at once
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
+
+# Set up a callback to receive raw touch events. up == 1 when finger / mouse lifted up
+def touch_callback(up):
+    t = tulip.touch()
+    print("up %d points x1 %d y1 %d" % (up, t[0], t[1]))
+
+tulip.touch_callback(cb)
 ```
 
 
