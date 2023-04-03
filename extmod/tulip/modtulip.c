@@ -904,7 +904,8 @@ STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 10, 10, tulip_button);
 
 
-//tulip.checkbox(id,val,x,y,w,x_color,box_color)
+// style == 0 - filled, 1 - x, 2 - circle
+//tulip.checkbox(id,val,x,y,w,mark_color,box_color, style)
 // val = tulip.checkbox(id)
 // tulip.checkbox(id, val)
 STATIC mp_obj_t tulip_checkbox(size_t n_args, const mp_obj_t *args) {
@@ -921,13 +922,14 @@ STATIC mp_obj_t tulip_checkbox(size_t n_args, const mp_obj_t *args) {
             mp_obj_get_int(args[2]), // x
             mp_obj_get_int(args[3]), // y
             mp_obj_get_int(args[4]), // w
-            mp_obj_get_int(args[5]), // x_color
-            mp_obj_get_int(args[6]) // box_color
+            mp_obj_get_int(args[5]), // mark_color
+            mp_obj_get_int(args[6]), // box_color
+            mp_obj_get_int(args[7]) // style
             );
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_checkbox_obj, 0, 7, tulip_checkbox);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_checkbox_obj, 0, 8, tulip_checkbox);
 
 
 
