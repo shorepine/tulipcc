@@ -635,6 +635,25 @@ STATIC mp_obj_t tulip_touch(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_obj, 0, 0, tulip_touch);
 
+#ifdef ESP_PLATFORM
+#include "touchscreen.h"
+STATIC mp_obj_t tulip_touch_delta(size_t n_args, const mp_obj_t *args) {
+    if(n_args > 0) {
+        touch_x_delta = mp_obj_get_int(args[0]);
+        touch_y_delta = mp_obj_get_int(args[1]);
+    } else {
+        mp_obj_t tuple[2];
+        tuple[0] = mp_obj_new_int(touch_x_delta);
+        tuple[1] = mp_obj_new_int(touch_y_delta);
+        return mp_obj_new_tuple(2, tuple);
+    }
+    return mp_const_none;
+
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_delta_obj, 0, 2, tulip_touch_delta);
+#endif
+
 
 STATIC mp_obj_t tulip_key_wait(size_t n_args, const mp_obj_t *args) {
     int16_t ch = mp_hal_stdin_rx_chr();
@@ -1027,7 +1046,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&tulip_fill_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_char), MP_ROM_PTR(&tulip_char_obj) },
-//    { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
     { MP_ROM_QSTR(MP_QSTR_button), MP_ROM_PTR(&tulip_button_obj) },
@@ -1042,7 +1060,10 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 // Special platform specific things
 #ifndef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
+#else
+    { MP_ROM_QSTR(MP_QSTR_touch_delta), MP_ROM_PTR(&tulip_touch_delta_obj) },
 #endif
+
 };
 
 STATIC MP_DEFINE_CONST_DICT(tulip_module_globals, tulip_module_globals_table);
