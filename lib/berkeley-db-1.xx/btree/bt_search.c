@@ -63,10 +63,11 @@ static int __bt_sprev __P((BTREE *, PAGE *, const DBT *, int *));
  *	the bt_cur field of the tree.  A pointer to the field is returned.
  */
 EPG *
-__bt_search(t, key, exactp)
-	BTREE *t;
-	const DBT *key;
-	int *exactp;
+__bt_search(
+            BTREE *t,
+            const DBT *key,
+            int *exactp
+            )
 {
 	PAGE *h;
 	indx_t base, index, lim;
@@ -148,11 +149,12 @@ next:		BT_PUSH(t, h->pgno, index);
  *	If an exact match found.
  */
 static int
-__bt_snext(t, h, key, exactp)
-	BTREE *t;
-	PAGE *h;
-	const DBT *key;
-	int *exactp;
+__bt_snext(
+           BTREE *t,
+           PAGE *h,
+           const DBT *key,
+           int *exactp
+           )
 {
 	EPG e;
 
@@ -187,11 +189,12 @@ __bt_snext(t, h, key, exactp)
  *	If an exact match found.
  */
 static int
-__bt_sprev(t, h, key, exactp)
-	BTREE *t;
-	PAGE *h;
-	const DBT *key;
-	int *exactp;
+__bt_sprev(
+           BTREE *t,
+           PAGE *h,
+           const DBT *key,
+           int *exactp
+           )
 {
 	EPG e;
 
