@@ -124,6 +124,7 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 
 # Modify the touch screen calibration if needed (on Tulip CC only)
+# Run ex/calibrate.py to determine this for your panel 
 tulip.touch_delta(-20, 0) # -20 x, 0 y
 tulip.touch_delta() # returns current delta
 
@@ -193,7 +194,7 @@ The Roland Juno-6 stereo chorus is approximated by ```alles.chorus(level=1.0, ma
 It also supports reverb:
 
 ```python
-alles.reverb(level, liveness, damping, xover_hz, do_early):
+alles.reverb(level, liveness, damping, xover_hz):
 ```
 
 It can be turned on and off like `chorus` with `alles.reverb(1)` and `alles.reverb(0)`. 
