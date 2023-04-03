@@ -126,8 +126,8 @@ Here's the full list:
 | F    | filter_freq | float  | center frequency for biquad filter |
 | g    | mod_target | uint mask | Which parameter modulation/LFO controls. 1=amp, 2=duty, 4=freq, 8=filter freq, 16=resonance, 32=feedback. Can handle any combo, add them together |
 | G    | filter_type | 0-3 |  0 = none (default.) 1 = low pass, 2 = band pass, 3 = hi pass. |
-| h    | reverb_liveness | float 0-1 | Reverb decay time, 1 = longest, default = 0.85. |
-| H    | reverb_do_early | int 0, 1  | Apply early echo in reverb 1 = yes, default = 1. |
+| H    | reverb_liveness | float 0-1 | Reverb decay time, 1 = longest, default = 0.85. |
+| h    | reverb_level | float | Level at which reverb is mixed in to final output.  Default 0, typically 1. |
 | I    | ratio  | float | for ALGO types, where the base note frequency controls the modulators, or for the ALGO base note and PARTIALS base note, where the ratio controls the speed of the playback |
 | j    | reverb_damping  | float 0-1 | Reverb extra decay of high frequencies, default = 0.5. |
 | J    | reverb_xover_hz | float  | Crossover frequency (in Hz) for damping decay, default = 3000. |
@@ -146,7 +146,6 @@ Here's the full list:
 | S    | reset  | uint | resets given oscillator. set to > OSCS to reset all oscillators, gain and EQ |  
 | T    | bp0_target | uint mask | Which parameter bp0 controls. 1=amp, 2=duty, 4=freq, 8=filter freq, 16=resonance, 32=feedback (can be added together). Can add 64 for linear ramp, otherwise exponential | 
 | t    | timestamp | uint | ms of expected playback since some fixed start point on your host. you should always give this if you can. |
-| u    | reverb_level | float | Level at which reverb is mixed in to final output.  Default 0, typically 1. |
 | v    | osc | uint 0 to OSCS-1 | which oscillator to control | 
 | V    | volume | float 0-10 | volume knob for entire synth, default 1.0 | 
 | w    | wave | uint 0-11 | waveform: [0=SINE, PULSE, SAW_DOWN, SAW_UP, TRIANGLE, NOISE, KS, PCM, ALGO, PARTIAL, PARTIALS, OFF]. default: 0/SINE |
