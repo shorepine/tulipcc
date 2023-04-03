@@ -19,17 +19,32 @@ void drawFastVLine(short x0, short y0, short h, short color) {
 }
 
 uint16_t draw_new_char(const char c, uint16_t x, uint16_t y, uint8_t fg, uint8_t font_no) {
-  u8g2_font_t font;
-  u8g2_SetFont(&font, tulip_fonts[font_no]);
-  u8g2_SetForegroundColor(&font, fg);
-  return u8g2_DrawGlyph(&font, x,y,c);
+  u8g2_font_t ufont;
+  ufont.font = NULL; 
+  ufont.font_decode.fg_color = 1; 
+  ufont.font_decode.is_transparent = 1; 
+  ufont.font_decode.dir = 0;
+  
+  //fprintf(stderr, "setting up new char font %d char %c x %d y %d\n", font_no, c, x, y);
+  u8g2_SetFont(&ufont, tulip_fonts[font_no]);
+  u8g2_SetForegroundColor(&ufont, fg);
+  //fprintf(stderr, "drawing new char font %d char %c x %d y %d\n", font_no, c, x, y);
+  return u8g2_DrawGlyph(&ufont, x,y,c);
 }
 
 uint16_t draw_new_str(const char * str, uint16_t x, uint16_t y, uint8_t fg, uint8_t font_no) {
-  u8g2_font_t font;
-  u8g2_SetFont(&font, tulip_fonts[font_no]);
-  u8g2_SetForegroundColor(&font, fg);
-  return u8g2_DrawStr(&font, x,y,str);
+  u8g2_font_t ufont;
+  ufont.font = NULL; 
+  ufont.font_decode.fg_color = 1; 
+  ufont.font_decode.is_transparent = 1; 
+  ufont.font_decode.dir = 0;
+
+  //fprintf(stderr, "setting up new str font %d str %s x %d y %d\n", font_no, str, x, y);
+  
+  u8g2_SetFont(&ufont, tulip_fonts[font_no]);
+  u8g2_SetForegroundColor(&ufont, fg);
+  //fprintf(stderr, "drawing new str font %d str %s x %d y %d\n", font_no, str, x, y);
+  return u8g2_DrawStr(&ufont, x,y,str);
 }
 
 //stack friendly and fast floodfill algorithm, using recursive function calls
@@ -500,7 +515,7 @@ void plotQuadBezierSeg(int x0, int y0, int x1, int y1, int x2, int y2, uint8_t p
       if (    y1    ) { y0 += sy; dy -= xy; err += dx += xx; } /* y step */
     } while (dy < dx );           /* gradient negates -> algorithm fails */
   }
-  fprintf(stderr, "drawing line from %d,%d to %d,%d now\n", x0,y0,x2,y2);
+  //fprintf(stderr, "drawing line from %d,%d to %d,%d now\n", x0,y0,x2,y2);
   drawLine(x0,y0, x2,y2, pal_idx);                  /* plot remaining part to end */
 }  
 

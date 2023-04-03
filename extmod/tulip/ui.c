@@ -23,6 +23,7 @@ void ui_element_new(uint8_t ui_id) {
     if(elements[ui_id] == NULL) {
         elements[ui_id] = (struct ui_element*)malloc_caps(sizeof(struct ui_element), MALLOC_CAP_SPIRAM);
         elements[ui_id]->active = 0;
+        elements[ui_id]->cval = NULL;
     }
 }
 
@@ -137,7 +138,7 @@ void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16
     e->c2 = font_no;
 
     // malloc space for the text. 
-    elements[ui_id]->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_SPIRAM);
+    if(e->cval == NULL) e->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_SPIRAM);
     strcpy(elements[ui_id]->cval, str);
 
 }
@@ -192,16 +193,14 @@ void ui_button_draw(uint8_t ui_id) {
         fw = u8g2_glyph_width(e->c2, e->cval[i]);
         width += fw;
     }
+    //fprintf(stderr, "total computed widh for %s is %d\n", e->cval, width);
     fh = u8g2_a_height(e->c2);
     uint16_t start_x = e->x;
     uint16_t start_y = e->y + ((e->h+fh)/2);
     if(width < e->w) {
         start_x = e->x + (e->w - width)/2;
     }
-    // This delay is v weird. I need to figure out why it's necessary. 
-    delay_ms(50);
     draw_new_str(e->cval, start_x, start_y, e->c0, e->c2);
-    //delay_ms(10);
 }
 
 
@@ -217,7 +216,11 @@ void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint
     e->c1 = bc;
     e->val = filled;
     e->c2 = font_no;
-    e->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_SPIRAM);
+    //fprintf(stderr, "set up new button ui_id %d str ##%s##\n", ui_id, str);
+    if(e->cval == NULL) {
+        //fprintf(stderr, "malloc ui_id %d for string\n", ui_id);
+        e->cval = malloc_caps(UI_TEXT_MAX_LEN, MALLOC_CAP_SPIRAM);
+    }
     strcpy(e->cval, str);
 
 }

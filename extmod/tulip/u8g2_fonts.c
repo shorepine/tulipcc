@@ -155,17 +155,29 @@ uint8_t u8g2_GetFontCapitalAHeight(u8g2_font_t *u8g2)
 }
 
 uint8_t u8g2_a_height(uint8_t font_no) {
-    u8g2_font_t font;
-    font.font = NULL;
-    u8g2_SetFont(&font, tulip_fonts[font_no]);
-    return u8g2_GetFontCapitalAHeight(&font);
+    u8g2_font_t ufont;
+    ufont.font = NULL; 
+    ufont.font_decode.fg_color = 1; 
+    ufont.font_decode.is_transparent = 1; 
+    ufont.font_decode.dir = 0;
+    //fprintf(stderr, "getting height for %d\n", font_no);
+    u8g2_SetFont(&ufont, tulip_fonts[font_no]);
+    uint8_t height = u8g2_GetFontCapitalAHeight(&ufont);
+    //fprintf(stderr, "height for %d is %d\n", font_no, height);
+    return height;
 }
 
 uint8_t u8g2_glyph_width(uint8_t font_no, uint16_t glyph) {
-    u8g2_font_t font;
-    font.font = NULL;
-    u8g2_SetFont(&font, tulip_fonts[font_no]);
-    return u8g2_GetGlyphWidth(&font, glyph);
+    u8g2_font_t ufont;
+    ufont.font = NULL; 
+    ufont.font_decode.fg_color = 1; 
+    ufont.font_decode.is_transparent = 1; 
+    ufont.font_decode.dir = 0;
+    //fprintf(stderr, "getting width for %d %c\n", font_no, glyph);
+    u8g2_SetFont(&ufont, tulip_fonts[font_no]);
+    uint8_t width = u8g2_GetGlyphWidth(&ufont, glyph);
+    //fprintf(stderr, "width for %d %c is %d\n", font_no, glyph, width);
+    return width;
 }
 
 
