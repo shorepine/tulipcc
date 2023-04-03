@@ -12,6 +12,8 @@ def cb(x):
 
 tulip.bg_clear()
 tulip.ui_callback(cb)
+
+    
 tulip.button(0,"hey there",600,200,150,60,255,200,0,0)
 tulip.button(1,"here again", 700, 400, 150, 60, 255, 200, 1,1)
 tulip.slider(2, 0.5, 200,400,30,150, 151,188)
