@@ -114,11 +114,12 @@ static FILEVTABLE bt_fd_fvtable = {
  *
  */
 DB *
-__bt_open(file, vtable, openinfo, dflags)
-	virt_fd_t file;
-	const FILEVTABLE *vtable;
-	int dflags;
-	const BTREEINFO *openinfo;
+__bt_open(
+          virt_fd_t file,
+          const FILEVTABLE *vtable,
+          const BTREEINFO *openinfo,
+          int dflags
+          )
 {
 	BTMETA m;
 	BTREE *t;
@@ -343,8 +344,7 @@ err:	if (t) {
  *	RET_ERROR, RET_SUCCESS
  */
 static int
-nroot(t)
-	BTREE *t;
+nroot(BTREE *t)
 {
 	PAGE *meta, *root;
 	pgno_t npg;
@@ -395,8 +395,7 @@ byteorder()
 }
 
 int
-__bt_fd(dbp)
-        const DB *dbp;
+__bt_fd(const DB *dbp)
 {
 	BTREE *t;
 
