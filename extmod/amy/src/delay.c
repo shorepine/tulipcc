@@ -146,9 +146,8 @@ float xover_hz = 3000.0;
 float lpfcoef = 0.4;
 float lpfgain = 0.5;
 float liveness = 0.85;
-uint8_t do_early = 1;
 
-void config_stereo_reverb(float a_liveness, float crossover_hz, float damping, uint8_t a_do_early) {
+void config_stereo_reverb(float a_liveness, float crossover_hz, float damping) {
     // liveness (0..1) controls how much energy is preserved (larger = longer reverb).
     liveness = a_liveness;
     // crossover_hz is 3dB point of 1-pole lowpass freq.
@@ -156,7 +155,6 @@ void config_stereo_reverb(float a_liveness, float crossover_hz, float damping, u
     if (lpfcoef > 1.f)  lpfcoef = 1.f;
     if (lpfcoef < 0.f)  lpfcoef = 0.f;
     lpfgain = 1.f - damping;
-    do_early = a_do_early;
 }
 
 // Delay 1 is 58.6435 ms
@@ -196,7 +194,7 @@ void init_stereo_reverb(void) {
         ref_5 = new_delay_line(1024, REF5SAMPS, DELAYRAM);
         ref_6 = new_delay_line(1024, REF6SAMPS, DELAYRAM);
         
-        config_stereo_reverb(liveness, xover_hz, 1 - lpfgain, do_early);
+        config_stereo_reverb(liveness, xover_hz, 1 - lpfgain);
     }
 }
 
@@ -214,41 +212,37 @@ void stereo_reverb(float *r_in, float *l_in, float *r_out, float *l_out, int n_s
         if (l_in)   in_l = *l_in++;
         else   in_l = in_r;
         float r_acc, l_acc;
-        if (!do_early) {
-            r_acc = in_r;
-            l_acc = in_l;
-        } else {
-            r_acc = 0.0625f * in_r;
-            l_acc = 0.0625f * in_l;
+        r_acc = 0.0625f * in_r;
+        l_acc = 0.0625f * in_l;
 
-            DEL_IN(ref_1, l_acc);
-            float d_out = DEL_OUT(ref_1);
-            l_acc = r_acc - d_out;
-            r_acc += d_out;
+        DEL_IN(ref_1, l_acc);
+        float d_out = DEL_OUT(ref_1);
+        l_acc = r_acc - d_out;
+        r_acc += d_out;
 
-            DEL_IN(ref_2, l_acc);
-            d_out = DEL_OUT(ref_2);
-            l_acc = r_acc - d_out;
-            r_acc += d_out;
+        DEL_IN(ref_2, l_acc);
+        d_out = DEL_OUT(ref_2);
+        l_acc = r_acc - d_out;
+        r_acc += d_out;
 
-            DEL_IN(ref_3, l_acc);
-            d_out = DEL_OUT(ref_3);
-            l_acc = r_acc - d_out;
-            r_acc += d_out;
+        DEL_IN(ref_3, l_acc);
+        d_out = DEL_OUT(ref_3);
+        l_acc = r_acc - d_out;
+        r_acc += d_out;
 
-            DEL_IN(ref_4, l_acc);
-            d_out = DEL_OUT(ref_4);
-            l_acc = r_acc - d_out;
-            r_acc += d_out;
+        DEL_IN(ref_4, l_acc);
+        d_out = DEL_OUT(ref_4);
+        l_acc = r_acc - d_out;
+        r_acc += d_out;
 
-            DEL_IN(ref_5, l_acc);
-            d_out = DEL_OUT(ref_5);
-            l_acc = r_acc - d_out;
-            r_acc += d_out;
+        DEL_IN(ref_5, l_acc);
+        d_out = DEL_OUT(ref_5);
+        l_acc = r_acc - d_out;
+        r_acc += d_out;
 
-            DEL_IN(ref_6, l_acc);
-            l_acc = DEL_OUT(ref_6);
-        }
+        DEL_IN(ref_6, l_acc);
+        l_acc = DEL_OUT(ref_6);
+        
         
         // Reverb delays & matrix.
         float d1 = DEL_OUT(delay_1);

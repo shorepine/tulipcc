@@ -100,24 +100,22 @@ void config_chorus(float level, int max_delay) {
 #define REVERB_DEFAULT_LIVENESS 0.85f
 #define REVERB_DEFAULT_DAMPING 0.5f
 #define REVERB_DEFAULT_XOVER_HZ 3000.0f
-#define REVERB_DEFAULT_DO_EARLY 1
 
 typedef struct reverb_state {
     float level;
     float liveness;
     float damping;
     float xover_hz;
-    uint8_t do_early;
 } reverb_state_t;
 
-reverb_state_t reverb = {REVERB_DEFAULT_LEVEL, REVERB_DEFAULT_LIVENESS, REVERB_DEFAULT_DAMPING, REVERB_DEFAULT_XOVER_HZ, REVERB_DEFAULT_DO_EARLY};
+reverb_state_t reverb = {REVERB_DEFAULT_LEVEL, REVERB_DEFAULT_LIVENESS, REVERB_DEFAULT_DAMPING, REVERB_DEFAULT_XOVER_HZ};
 
-void config_reverb(float level, float liveness, float damping, float xover_hz, uint8_t do_early) {
+void config_reverb(float level, float liveness, float damping, float xover_hz) {
     if (level > 0) {
         if (reverb.level == 0) init_stereo_reverb();  // In case it's the first time
-        config_stereo_reverb(liveness, xover_hz, damping, do_early);
+        config_stereo_reverb(liveness, xover_hz, damping);
     }
-    reverb.level = level; reverb.liveness = liveness; reverb.damping = damping; reverb.xover_hz = xover_hz; reverb.do_early = do_early;
+    reverb.level = level; reverb.liveness = liveness; reverb.damping = damping; reverb.xover_hz = xover_hz; 
 }
 
 // block -- what gets sent to the dac -- -32768...32767 (int16 le)
@@ -375,7 +373,7 @@ void amy_reset_oscs() {
     synth[CHORUS_MOD_SOURCE].wave = TRIANGLE;
     // and the chorus params
     config_chorus(CHORUS_DEFAULT_LEVEL, CHORUS_DEFAULT_MAX_DELAY);
-    config_reverb(REVERB_DEFAULT_LEVEL, REVERB_DEFAULT_LIVENESS, REVERB_DEFAULT_DAMPING, REVERB_DEFAULT_XOVER_HZ, REVERB_DEFAULT_DO_EARLY);
+    config_reverb(REVERB_DEFAULT_LEVEL, REVERB_DEFAULT_LIVENESS, REVERB_DEFAULT_DAMPING, REVERB_DEFAULT_XOVER_HZ);
 }
 
 
@@ -952,11 +950,11 @@ struct event amy_parse_message(char * message) {
                         case 'F': e.filter_freq=atof(message + start); break; 
                         case 'G': e.filter_type=atoi(message + start); break; 
                         case 'g': e.mod_target = atoi(message + start);  break; 
-                        case 'h': config_reverb(reverb.level, atof(message + start), reverb.damping, reverb.xover_hz, reverb.do_early); break;
-                        case 'H': config_reverb(reverb.level, reverb.liveness, reverb.damping, reverb.xover_hz, atoi(message + start)); break;
+                        case 'H': config_reverb(reverb.level, atof(message + start), reverb.damping, reverb.xover_hz); break;
+                        case 'h': config_reverb(atof(message + start), reverb.liveness, reverb.damping, reverb.xover_hz); break;
                         case 'I': e.ratio = atof(message + start); break;
-                        case 'j': config_reverb(reverb.level, reverb.liveness, atof(message + start), reverb.xover_hz, reverb.do_early); break;
-                        case 'J': config_reverb(reverb.level, reverb.liveness, reverb.damping, atof(message + start), reverb.do_early); break;
+                        case 'j': config_reverb(reverb.level, reverb.liveness, atof(message + start), reverb.xover_hz); break;
+                        case 'J': config_reverb(reverb.level, reverb.liveness, reverb.damping, atof(message + start)); break;
                         case 'k': config_chorus(atof(message + start), chorus.max_delay); break;
                         case 'l': e.velocity=atof(message + start); break; 
                         case 'L': e.mod_source=atoi(message + start); break; 
@@ -971,7 +969,6 @@ struct event amy_parse_message(char * message) {
                         case 'R': e.resonance=atof(message + start); break; 
                         case 'S': osc = atoi(message + start); if(osc > OSCS-1) { amy_reset_oscs(); } else { reset_osc(osc); } break; 
                         case 'T': e.breakpoint_target[0] = atoi(message + start);  break; 
-                        case 'u': config_reverb(atof(message + start), reverb.liveness, reverb.damping, reverb.xover_hz, reverb.do_early); break;
                         case 'W': e.breakpoint_target[1] = atoi(message + start);  break; 
                         case 'v': e.osc=(atoi(message + start) % OSCS);  break; // allow osc wraparound
                         case 'V': e.volume = atof(message + start); break; 
