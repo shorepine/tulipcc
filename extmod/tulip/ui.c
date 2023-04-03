@@ -198,8 +198,12 @@ void ui_button_draw(uint8_t ui_id) {
     if(width < e->w) {
         start_x = e->x + (e->w - width)/2;
     }
+    // This delay is v weird. I need to figure out why it's necessary. 
+    delay_ms(50);
     draw_new_str(e->cval, start_x, start_y, e->c0, e->c2);
+    //delay_ms(10);
 }
+
 
 void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t fgc, uint8_t bc, uint8_t filled, uint8_t font_no) {
     ui_element_new(ui_id);
@@ -319,15 +323,7 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
             if(elements[ui_id]->type == UI_TEXT) {
                 // start taking in text input to replace the text of the button
                 ui_text_entry_start(ui_id);
-            } else if(elements[ui_id]->type == UI_CHECKBOX) {
-                if((uint8_t)elements[ui_id]->val) {
-                    elements[ui_id]->val = 0;
-                } else {
-                    elements[ui_id]->val = 1;
-                }
-                ui_check_draw(ui_id);
-                tulip_ui_isr(ui_id);
-            } else { // buttons, sliders
+            } else if(elements[ui_id]->type == UI_BUTTON || elements[ui_id]->type == UI_SLIDER) {
                 // We've lifted up on an element. tell the isr
                 tulip_ui_isr(ui_id);
                 ui_button_flip(ui_id);
@@ -351,13 +347,20 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
         }
         tulip_touch_isr(up);
     } else if(!touch_held && !up) { // this is a new touch down 
-        //fprintf(stderr, "down\n") ;
         touch_held = 1;
         int8_t ui_id = ui_bounds(touch_x, touch_y);
         if(ui_id >= 0) {
             ui_button_flip(ui_id);
             if(elements[ui_id]->type == UI_SLIDER) {
                 ui_slider_set_val_xy(ui_id, touch_x, touch_y);
+            } else if(elements[ui_id]->type == UI_CHECKBOX) {
+                if((uint8_t)elements[ui_id]->val) {
+                    elements[ui_id]->val = 0;
+                } else {
+                    elements[ui_id]->val = 1;
+                }
+                ui_check_draw(ui_id);
+                tulip_ui_isr(ui_id);
             }
             ui_id_held = ui_id;
             // make element active
