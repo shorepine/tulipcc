@@ -123,6 +123,10 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 # Return the last touch panel coordinates, up to 3 fingers at once
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 
+# Modify the touch screen calibration if needed (on Tulip CC only)
+tulip.touch_delta(-20, 0) # -20 x, 0 y
+tulip.touch_delta() # returns current delta
+
 # Set up a callback to receive raw touch events. up == 1 when finger / mouse lifted up
 def touch_callback(up):
     t = tulip.touch()
