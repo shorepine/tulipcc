@@ -30,7 +30,7 @@ for (x,y) in test_pos:
     tulip.circle(x,y,20, 194, 1)
     while(got[0] < 0):
         time.sleep_ms(50)
-    deltas.append( (got[0] - x, got[1] - y) )
+    deltas.append( (x- got[0], y-got[1]) )
 
 x_mean = 0
 y_mean = 0
