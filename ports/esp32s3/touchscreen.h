@@ -17,6 +17,7 @@
 
 #include "driver/i2c.h"
 
+extern int16_t touch_x_delta, touch_y_delta;
 typedef void* i2c_bus_handle_t;
 
 void touch_start();

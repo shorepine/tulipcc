@@ -246,7 +246,8 @@ void ft5x06_init()
 #define TOUCH_MIDDLE_X 65535
 #define TOUCH_BOTTOM_Y 591
 
-
+int16_t touch_x_delta = 0;
+int16_t touch_y_delta = 0;
 void run_ft5x06(void *param)
 {
     int i = 0;
@@ -266,6 +267,9 @@ void run_ft5x06(void *param)
                         last_touch_x[i] = (TOUCH_LEFT_X - touch_info.curx[i]) * ((float)(H_RES/2) / (float)(TOUCH_LEFT_X));
                     }
                     last_touch_y[i] = (touch_info.cury[i]-TOUCH_TOP_Y) * ((float)V_RES / (float) (TOUCH_BOTTOM_Y-TOUCH_TOP_Y));
+                    last_touch_x[i] += touch_x_delta;
+                    last_touch_y[i] += touch_y_delta;
+
                 }
                 if(i==0) got_primary_touch = 1;
                //fprintf(stderr,"touch point %d  x:%d  y:%d became %d %d\n", i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
