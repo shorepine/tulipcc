@@ -56,7 +56,7 @@ void ui_text_entry_update(uint8_t ui_id, uint8_t ch);
 void ui_check_draw(uint8_t ui_id) ;
 uint8_t ui_check_get_val(uint8_t ui_id);
 void ui_check_set_val(uint8_t ui_id, uint8_t v);
-void ui_check_new(uint8_t ui_id,uint8_t val, uint16_t x, uint16_t y, uint16_t w, uint8_t x_color,uint8_t box_color);
+void ui_check_new(uint8_t ui_id,uint8_t val, uint16_t x, uint16_t y, uint16_t w, uint8_t mark_color,uint8_t box_color, uint8_t style);
 
 void ui_element_del(uint8_t ui_id) ;
 void ui_element_active(uint8_t ui_id, uint8_t active) ;

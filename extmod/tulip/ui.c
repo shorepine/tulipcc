@@ -152,8 +152,14 @@ void ui_check_draw(uint8_t ui_id) {
     struct ui_element *e = elements[ui_id];
     fillRect(e->x, e->y, e->w, e->w, e->c1);
     if(e->val > 0) {
-        drawLine(e->x+1, e->y+1, e->x+e->w-1, e->y+e->w-1, e->c0);
-        drawLine(e->x+e->w-1, e->y+1, e->x+1, e->y+e->w-1, e->c0);
+        if(e->c2 == 0) { // square
+            fillRect(e->x+2, e->y+2, e->w-4, e->w-4, e->c0);
+        } else if(e->c2 == 1) { // X
+            drawLine(e->x+1, e->y+1, e->x+e->w-1, e->y+e->w-1, e->c0);
+            drawLine(e->x+e->w-1, e->y+1, e->x+1, e->y+e->w-1, e->c0);
+        } else { // circle
+            fillCircle(e->x + e->w/2, e->y + e->w/2, (e->w/2)-4, e->c0);
+        }
     }
 }
 uint8_t ui_check_get_val(uint8_t ui_id) {
@@ -164,7 +170,7 @@ void ui_check_set_val(uint8_t ui_id, uint8_t v) {
     ui_check_draw(ui_id);
 }
 
-void ui_check_new(uint8_t ui_id,uint8_t val, uint16_t x, uint16_t y, uint16_t w, uint8_t x_color,uint8_t box_color) {
+void ui_check_new(uint8_t ui_id,uint8_t val, uint16_t x, uint16_t y, uint16_t w, uint8_t mark_color,uint8_t box_color, uint8_t style) {
     ui_element_new(ui_id);
     struct ui_element *e = elements[ui_id];
     e->type = UI_CHECKBOX;
@@ -172,8 +178,9 @@ void ui_check_new(uint8_t ui_id,uint8_t val, uint16_t x, uint16_t y, uint16_t w,
     e->y = y;
     e->w = w;
     e->h = w;
-    e->c0 = x_color;
+    e->c0 = mark_color;
     e->c1 = box_color;
+    e->c2 = style;
     e->val = val;
 }
 
