@@ -5,7 +5,7 @@ ifeq ($(WHICH_ARCH), arm64)
 	HOMEBREW = /opt/homebrew
 else
 	ARCHFLAGS = -target x86_64-apple-macos10.15
-	HOMEBREW = /usr/local/homebrew
+	HOMEBREW = /usr/local
 endif
 
 # Select the variant to build for.
@@ -231,7 +231,7 @@ endif
 
 # libffi is installed in system on 10.12, so force use of homebrew version 
 LIBFFI_LDFLAGS_MOD = $(HOMEBREW)/opt/libffi/lib/libffi.a
-LIBFFI_CFLAGS_MOD := "-I$(HOMEBREW)/opt/libffi/include"
+LIBFFI_CFLAGS_MOD := -I$(HOMEBREW)/opt/libffi/include
 
 
 ifeq ($(UNAME_S),Linux)
