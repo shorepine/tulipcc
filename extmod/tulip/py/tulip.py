@@ -2,7 +2,7 @@
 
 
 # Bring in all c-defined tulip functions
-from _tulip import * 
+from _tulip import *
 from world import world
 
 class Colors:
@@ -117,11 +117,11 @@ def screenshot(filename=None):
 
 
 def ansi_fg(pal_idx):
-    # ESC[38;5;{ID}m  
+    # ESC[38;5;{ID}m
     return("\033[38;5;%dm" % (pal_idx))
 
 def ansi_bg(pal_idx):
-    # ESC[48;5;{ID}m  
+    # ESC[48;5;{ID}m
     return("\033[48;5;%dm" % (pal_idx))
 
 def color(r,g,b):
@@ -142,7 +142,7 @@ def ip():
     try:
         import network
     except ImportError:
-        return "127.0.0.1" # we are on local and it's ok 
+        return "127.0.0.1" # we are on local and it's ok
     sta_if = network.WLAN(network.STA_IF)
     if(sta_if.isconnected()):
         return sta_if.ifconfig()[0]
@@ -158,7 +158,7 @@ def set_time():
 
 
 def wifi(ssid, passwd, wait_timeout=10):
-    import network, time 
+    import network, time
     sta_if = network.WLAN(network.STA_IF)
     sta_if.active(True)
     sta_if.connect(ssid, passwd)
@@ -169,4 +169,6 @@ def wifi(ssid, passwd, wait_timeout=10):
     return ip()
 
 
-
+def screen_size():
+    s_s = timing()
+    return (s_s[0], s_s[1])
