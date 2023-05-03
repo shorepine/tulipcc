@@ -85,9 +85,9 @@ STATIC mp_obj_t tulip_bg_pixel(size_t n_args, const mp_obj_t *args) {
         // Set the pixel
         uint8_t pal_idx = mp_obj_get_int(args[2]);
         display_set_bg_pixel_pal(x,y,pal_idx);
-        return mp_const_none; 
+        return mp_const_none;
     } else { // get the pixel
-        return mp_obj_new_int( display_get_bg_pixel_pal(x,y)); 
+        return mp_obj_new_int( display_get_bg_pixel_pal(x,y));
     }
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_pixel_obj, 2, 3, tulip_bg_pixel);
@@ -105,7 +105,7 @@ STATIC mp_obj_t tulip_bg_clear(size_t n_args, const mp_obj_t *args) {
             display_set_bg_pixel_pal(x0, y0, pal_idx);
         }
     }
-    return mp_const_none; 
+    return mp_const_none;
 }
 
 
@@ -124,16 +124,36 @@ STATIC mp_obj_t tulip_bg_bitmap(size_t n_args, const mp_obj_t *args) {
             mp_get_buffer(args[4], &bufinfo, MP_BUFFER_READ);
             display_set_bg_bitmap_raw(x, y, w, h, (uint8_t*)bufinfo.buf);
         }
-        return mp_const_none; 
+        return mp_const_none;
     } else {
         // return a bitmap
-        uint8_t bitmap[w*h*BYTES_PER_PIXEL];  
+        uint8_t bitmap[w*h*BYTES_PER_PIXEL];
         display_get_bg_bitmap_raw(x,y,w,h, bitmap);
         return mp_obj_new_bytes(bitmap, w*h*BYTES_PER_PIXEL);
     }
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_bitmap_obj, 4, 5, tulip_bg_bitmap);
+
+// tulip.bg_bitmap(x, y, w, h, bitmap)  --> sets or gets bitmap to fb ram
+STATIC mp_obj_t tulip_bg_noise(size_t n_args, const mp_obj_t *args) {
+  //uint8_t pal_idx = bg_pal_color;
+  //if(n_args == 1) {
+  //    pal_idx = mp_obj_get_int(args[0]);
+  //}
+  // Set the rect with pixel color
+  for(uint16_t y0=0;y0<V_RES+OFFSCREEN_Y_PX;y0++) {
+      for(uint16_t x0=0;x0<H_RES+OFFSCREEN_X_PX;x0++) {
+        if(rand() < RAND_MAX / 2)
+          display_set_bg_pixel_pal(x0, y0, 0);
+        else
+          display_set_bg_pixel_pal(x0, y0, 255);
+      }
+  }
+  return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_noise_obj, 0, 1, tulip_bg_noise);
 
 // tulip.bg_blit(x, y, w, h, x1, y1)  --> copies bitmap ram
 STATIC mp_obj_t tulip_bg_blit(size_t n_args, const mp_obj_t *args) {
@@ -284,7 +304,7 @@ STATIC mp_obj_t tulip_tfb_str(size_t n_args, const mp_obj_t *args) {
                 }
             }
         }
-        return mp_const_none; 
+        return mp_const_none;
     } else {
         mp_obj_t tuple[4];
         tuple[0] = mp_obj_new_str((const char*)(TFB + (y*TFB_COLS+x)), 1);
@@ -298,11 +318,11 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_str_obj, 2, 6, tulip_tfb_st
 
 
 
-mp_obj_t frame_callback = NULL; 
-mp_obj_t frame_arg = NULL; 
-mp_obj_t midi_callback = NULL; 
-mp_obj_t ui_callback = NULL; 
-mp_obj_t touch_callback = NULL; 
+mp_obj_t frame_callback = NULL;
+mp_obj_t frame_arg = NULL;
+mp_obj_t midi_callback = NULL;
+mp_obj_t ui_callback = NULL;
+mp_obj_t touch_callback = NULL;
 
 
 void tulip_frame_isr() {
@@ -317,24 +337,24 @@ void tulip_frame_isr() {
 
 void tulip_midi_isr() {
     if(midi_callback != NULL)
-        mp_sched_schedule(midi_callback, mp_const_none); 
+        mp_sched_schedule(midi_callback, mp_const_none);
 }
 
 void tulip_ui_isr(uint8_t ui_id) {
     if(ui_callback != NULL)
-        mp_sched_schedule(ui_callback, mp_obj_new_int(ui_id)); 
+        mp_sched_schedule(ui_callback, mp_obj_new_int(ui_id));
 }
 
 void tulip_touch_isr(uint8_t up) {
     if(touch_callback != NULL) {
-        mp_sched_schedule(touch_callback, mp_obj_new_int(up)); 
+        mp_sched_schedule(touch_callback, mp_obj_new_int(up));
     }
 }
 
 
 
 // tulip.frame_callback(cb, arg)
-// tulip.frame_callback() -- stops 
+// tulip.frame_callback() -- stops
 STATIC mp_obj_t tulip_frame_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
         frame_callback = NULL;
@@ -351,7 +371,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_frame_callback_obj, 0, 2, tulip
 
 
 // tulip.midi_callback(cb)
-// tulip.midi_callback() -- stops 
+// tulip.midi_callback() -- stops
 STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
         midi_callback = NULL;
@@ -366,7 +386,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 0, 2, tulip_
 
 
 // tulip.ui_callback(cb)
-// tulip.ui_callback() -- stops 
+// tulip.ui_callback() -- stops
 STATIC mp_obj_t tulip_ui_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
         ui_callback = NULL;
@@ -380,7 +400,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_callback_obj, 0, 1, tulip_ui
 
 
 // tulip.ui_callback(cb)
-// tulip.ui_callback() -- stops 
+// tulip.ui_callback() -- stops
 STATIC mp_obj_t tulip_touch_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
         touch_callback = NULL;
@@ -396,7 +416,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_callback_obj, 0, 1, tulip
 STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
     if(last_midi_len > 0) {
         return mp_obj_new_bytes(last_midi, last_midi_len);
-    } 
+    }
     return mp_const_none;
 }
 
@@ -425,7 +445,7 @@ STATIC mp_obj_t tulip_midi_out(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_out_obj, 1, 1, tulip_midi_out);
 
 
-//(w,h,bytes) = sprite_png(pngdata, mem_pos) 
+//(w,h,bytes) = sprite_png(pngdata, mem_pos)
 //(w,h,bytes) = sprite_png("filename.png", mem_pos)
 STATIC mp_obj_t tulip_sprite_png(size_t n_args, const mp_obj_t *args) {
     unsigned error;
@@ -458,7 +478,7 @@ STATIC mp_obj_t tulip_sprite_png(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_png_obj, 2, 2, tulip_sprite_png);
 
 
-//bytes = sprite_bitmap(bitmap, mem_pos) 
+//bytes = sprite_bitmap(bitmap, mem_pos)
 //buffer_of_bytes = sprite_bitmap(mem_pos, length)
 STATIC mp_obj_t tulip_sprite_bitmap(size_t n_args, const mp_obj_t *args) {
     if (mp_obj_get_type(args[0]) == &mp_type_bytes) {
@@ -467,7 +487,7 @@ STATIC mp_obj_t tulip_sprite_bitmap(size_t n_args, const mp_obj_t *args) {
         mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
         display_load_sprite_raw(mem_pos, bufinfo.len, bufinfo.buf);
         return mp_obj_new_int(bufinfo.len);
-    } 
+    }
     uint16_t mem_pos = mp_obj_get_int(args[0]);
     uint16_t length = mp_obj_get_int(args[1]);
     return mp_obj_new_bytes(sprite_ram+mem_pos, length);
@@ -686,7 +706,7 @@ STATIC mp_obj_t tulip_cpu(size_t n_args, const mp_obj_t *args) {
     // for now just printf to uart
     float idle;
     if(n_args > 0) {
-        idle = compute_cpu_usage(1);        
+        idle = compute_cpu_usage(1);
     } else {
         idle = compute_cpu_usage(0);
     }
@@ -766,7 +786,7 @@ STATIC mp_obj_t tulip_rect(size_t n_args, const mp_obj_t *args) {
         if(mp_obj_get_int(args[5])>0) {
             fillRect(x,y,w,h,pal_idx);
             return mp_const_none;
-        } 
+        }
     }
     drawRect(x,y,w,h,pal_idx);
     return mp_const_none;
@@ -783,7 +803,7 @@ STATIC mp_obj_t tulip_circle(size_t n_args, const mp_obj_t *args) {
         if(mp_obj_get_int(args[4])>0) {
             fillCircle(x,y,r,pal_idx);
             return mp_const_none;
-        } 
+        }
     }
     drawCircle(x,y,r,pal_idx);
     return mp_const_none;
@@ -869,7 +889,7 @@ STATIC mp_obj_t tulip_timing(size_t n_args, const mp_obj_t *args) {
         tuple[2] = mp_obj_new_int(OFFSCREEN_X_PX);
         tuple[3] = mp_obj_new_int(OFFSCREEN_Y_PX);
         return mp_obj_new_tuple(4, tuple);
-#endif        
+#endif
     }
 
 #ifdef ESP_PLATFORM
@@ -887,7 +907,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_timing_obj, 0, 10, tulip_timing
 //tulip.button(id, "text", x,y,w,h,r,fg_color,btn_color,filled)
 STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
-    ui_button_new(ui_id, 
+    ui_button_new(ui_id,
             mp_obj_str_get_str(args[1]), // text
             mp_obj_get_int(args[2]), // x
             mp_obj_get_int(args[3]), // y
@@ -895,8 +915,8 @@ STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
             mp_obj_get_int(args[5]), // h
             mp_obj_get_int(args[6]), // fg_color
             mp_obj_get_int(args[7]), // btn_color
-            mp_obj_get_int(args[8]), // filled 
-            mp_obj_get_int(args[9]) // font 
+            mp_obj_get_int(args[8]), // filled
+            mp_obj_get_int(args[9]) // font
 
             );
     return mp_const_none;
@@ -910,14 +930,14 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 10, 10, tulip_butto
 // tulip.checkbox(id, val)
 STATIC mp_obj_t tulip_checkbox(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
-    if(n_args == 1) { 
+    if(n_args == 1) {
         uint8_t c = ui_check_get_val(ui_id);
         return mp_obj_new_int(c);
     } else if(n_args==2) {
         uint8_t v = mp_obj_get_int(args[1]);
         ui_check_set_val(ui_id, v);
     } else {
-        ui_check_new(ui_id, 
+        ui_check_new(ui_id,
             mp_obj_get_int(args[1]), // val
             mp_obj_get_int(args[2]), // x
             mp_obj_get_int(args[3]), // y
@@ -936,11 +956,11 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_checkbox_obj, 0, 8, tulip_check
 //tulip.text(id, "text", x,y,w,h,r,text_color,box_color)
 STATIC mp_obj_t tulip_text(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
-    if(n_args < 8) { 
+    if(n_args < 8) {
         char * t = ui_text_get_val(ui_id);
         return mp_obj_new_str(t, strlen(t));
     } else {
-        ui_text_new(ui_id, 
+        ui_text_new(ui_id,
                 mp_obj_str_get_str(args[1]), // text
                 mp_obj_get_int(args[2]), // x
                 mp_obj_get_int(args[3]), // y
@@ -958,13 +978,13 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_text_obj, 1, 9, tulip_text);
 
 STATIC mp_obj_t tulip_slider(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
-    if(n_args == 1) { 
+    if(n_args == 1) {
         return mp_obj_new_float(ui_slider_get_val(ui_id));
     } else if(n_args == 2) {
         ui_slider_set_val(ui_id,mp_obj_get_float(args[1]) );
     } else {
-        ui_slider_new(ui_id, 
-            mp_obj_get_float(args[1]), // val        
+        ui_slider_new(ui_id,
+            mp_obj_get_float(args[1]), // val
             mp_obj_get_int(args[2]), // x
             mp_obj_get_int(args[3]), // y
             mp_obj_get_int(args[4]), // w
@@ -1023,6 +1043,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_noise), MP_ROM_PTR(&tulip_bg_noise_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_blit), MP_ROM_PTR(&tulip_bg_blit_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_png), MP_ROM_PTR(&tulip_sprite_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_bitmap), MP_ROM_PTR(&tulip_sprite_bitmap_obj) },
