@@ -135,25 +135,59 @@ STATIC mp_obj_t tulip_bg_bitmap(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_bitmap_obj, 4, 5, tulip_bg_bitmap);
 
-// tulip.bg_bitmap(x, y, w, h, bitmap)  --> sets or gets bitmap to fb ram
+// tulip.bg_noise(block_size, c0, c1, c2, c3)  --> fills background with noise
+// if there are no colors then we choose random color each pixel
+// if there is one color we randomly choose a 2nd
+// block_size is how large each noise pixel is
 STATIC mp_obj_t tulip_bg_noise(size_t n_args, const mp_obj_t *args) {
-  //uint8_t pal_idx = bg_pal_color;
-  //if(n_args == 1) {
-  //    pal_idx = mp_obj_get_int(args[0]);
-  //}
-  // Set the rect with pixel color
-  for(uint16_t y0=0;y0<V_RES+OFFSCREEN_Y_PX;y0++) {
-      for(uint16_t x0=0;x0<H_RES+OFFSCREEN_X_PX;x0++) {
-        if(rand() < RAND_MAX / 2)
-          display_set_bg_pixel_pal(x0, y0, 0);
+
+  uint8_t block_size = mp_obj_get_int(args[0]);
+  uint8_t colors[4];
+  uint8_t num_colors = n_args - 1;
+
+  if (num_colors == 1){
+    colors[0] = mp_obj_get_int(args[1]);
+    colors[1] = rand() % 255;
+    num_colors = 2;
+  }
+  else if (num_colors == 2){
+    colors[0] = mp_obj_get_int(args[1]);
+    colors[1] = mp_obj_get_int(args[2]);
+  }
+  else if (num_colors == 3){
+    colors[0] = mp_obj_get_int(args[1]);
+    colors[1] = mp_obj_get_int(args[2]);
+    colors[2] = mp_obj_get_int(args[3]);
+  }
+  else if (num_colors == 4){
+    colors[0] = mp_obj_get_int(args[1]);
+    colors[1] = mp_obj_get_int(args[2]);
+    colors[2] = mp_obj_get_int(args[3]);
+    colors[3] = mp_obj_get_int(args[4]);
+  }
+
+  for(uint16_t y0=0;y0<V_RES+OFFSCREEN_Y_PX;y0+=block_size) {
+      for(uint16_t x0=0;x0<H_RES+OFFSCREEN_X_PX;x0+=block_size) {
+
+        uint8_t curr_color = 0;
+
+        if (num_colors == 0)
+          curr_color = rand() % 255;
         else
-          display_set_bg_pixel_pal(x0, y0, 255);
+          curr_color = colors[rand() % num_colors];
+
+        for(uint16_t y00=y0;y00<y0 + block_size;y00++) {
+          for(uint16_t x00=x0;x00<x0 + block_size;x00++) {
+            if (x00 < H_RES && y00 < V_RES) // we crash if we write offscreen!
+              display_set_bg_pixel_pal(x00, y00, curr_color);
+          }
+        }
       }
   }
   return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_noise_obj, 0, 1, tulip_bg_noise);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_noise_obj, 1, 5, tulip_bg_noise);
 
 // tulip.bg_blit(x, y, w, h, x1, y1)  --> copies bitmap ram
 STATIC mp_obj_t tulip_bg_blit(size_t n_args, const mp_obj_t *args) {
