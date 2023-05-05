@@ -135,6 +135,7 @@ STATIC mp_obj_t tulip_bg_bitmap(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_bitmap_obj, 4, 5, tulip_bg_bitmap);
 
+
 // tulip.bg_blit(x, y, w, h, x1, y1)  --> copies bitmap ram
 STATIC mp_obj_t tulip_bg_blit(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
@@ -143,11 +144,15 @@ STATIC mp_obj_t tulip_bg_blit(size_t n_args, const mp_obj_t *args) {
     uint16_t h = mp_obj_get_int(args[3]);
     uint16_t x1 = mp_obj_get_int(args[4]);
     uint16_t y1 = mp_obj_get_int(args[5]);
-    display_bg_bitmap_blit(x,y,w,h,x1,y1);
+    if(n_args > 6) {
+        display_bg_bitmap_blit_alpha(x,y,w,h,x1,y1);
+    } else {
+        display_bg_bitmap_blit(x,y,w,h,x1,y1);
+    }
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_blit_obj, 6, 6, tulip_bg_blit);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_blit_obj, 6, 7, tulip_bg_blit);
 
 
 

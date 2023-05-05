@@ -299,6 +299,21 @@ void display_bg_bitmap_blit(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t
     }    
 }
 
+void display_bg_bitmap_blit_alpha(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1) {
+    for (uint16_t j = y1; j < y1+h; j++) {
+        for (uint16_t i = x1; i < x1+w; i++) {
+            uint16_t src_y = y+(j-y1);
+            uint16_t src_x = x+(i-x1);
+            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
+                uint8_t c = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
+                if(c != ALPHA) {
+                    (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
+                }
+            }
+        }
+    }    
+}
+
 
 
 //mem_len = sprite_load(bitmap, mem_pos, [x,y,w,h]) # returns mem_len (w*h*2)
