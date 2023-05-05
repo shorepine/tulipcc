@@ -59,6 +59,7 @@ void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, u
 void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data);
 void display_set_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data);
 void display_bg_bitmap_blit(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1);
+void display_bg_bitmap_blit_alpha(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1);
 
 void display_load_sprite_rgba(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data);
@@ -89,8 +90,8 @@ extern const unsigned char font_8x12_r[256][12];
 
 #define DEFAULT_H_RES 1024 
 #define DEFAULT_V_RES 600 
-#define DEFAULT_OFFSCREEN_X_PX 256
-#define DEFAULT_OFFSCREEN_Y_PX 150
+#define DEFAULT_OFFSCREEN_X_PX 1024
+#define DEFAULT_OFFSCREEN_Y_PX 0
 #define DEFAULT_PIXEL_CLOCK_MHZ 22
 
 
