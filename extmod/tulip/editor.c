@@ -193,9 +193,9 @@ void move_cursor(int16_t x, int16_t y) {
 	}
 	// X scrolling TODO or NI, not sure yet
 	if(x < 0) {
-		dbg("NYI scroll left");
+		dbg("NYI scroll left\n");
 	} else if(x == TFB_COLS) {
-		dbg("NYI scroll right");
+		dbg("NYI scroll right\n");
 	} else {
 		cursor_x = x;
 	}

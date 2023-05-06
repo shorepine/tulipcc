@@ -6,7 +6,7 @@ tulip.gpu_reset() # clear everything
 # Load the background image
 tulip.bg_png("g/mountain-bg.png",0,200)
 # Copy the background over a bunch to make it repeat, but overlap to avoid double moons
-for i in range(10):
+for i in range(20):
     tulip.bg_blit(0,200,272,160,272+(i*100),200)
 
 # Sample a pixel from the BG and make the top of the screen that color
@@ -17,11 +17,9 @@ tulip.rect(0,0,1024,200,c,1)
 # let's load the data to a var first as we'll load it three times
 # why not blit? because it can't copy the alpha that way, we composite on placement for BG
 mountain = open('g/mountain.png','rb').read()
-tulip.bg_png(mountain,0,250)
-tulip.bg_png(mountain,544,250)
-tulip.bg_png(mountain,1088,250)
-mountain = None # clear the ram
-
+for i in range(5):
+    tulip.bg_png(mountain,544*i,250)
+mountain = None
 # And put black under the mountains
 tulip.rect(0,250+160,1024,190,0,1)
 
@@ -35,7 +33,7 @@ tulip.bg_png('g/brick.png',0,538)
 tulip.bg_png('g/water.png',0,572)
 
 # Copy this column across the screen
-for i in range(1280/32):
+for i in range(2048/32):
     tulip.bg_blit(0,410,32,190,i*32,410)
 
 # put some empty spots along the brick
