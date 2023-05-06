@@ -13,7 +13,6 @@ typedef struct {
     int8_t lfo_target;
 } operator_parameters_t;
 
-
 typedef struct  {
     uint8_t algo;
     float feedback;
