@@ -130,11 +130,11 @@ def send(retries=1, **kwargs):
     Convenience functions
 """
 
-def reset(osc=None):
+def reset(osc=None, **kwargs):
     if(osc is not None):
-        send(reset=osc)
+        send(reset=osc, **kwargs)
     else:
-        send(reset=100) # reset > ALLES_OSCS resets all oscs
+        send(reset=100, **kwargs) # reset > ALLES_OSCS resets all oscs
 
 def volume(volume, client = -1):
     send(client=client, volume=volume)

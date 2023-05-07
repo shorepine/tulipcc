@@ -952,7 +952,7 @@ struct event amy_parse_message(char * message) {
                 // if we haven't yet synced our times, do it now
                 if(!computed_delta_set) {
                     computed_delta = e.time - sysclock;
-                    //fprintf(stderr,"setting computed delta to %lld (e.time is %lld sysclock %lld) max_drift_ms %d latency %d\n", computed_delta, e.time, sysclock, MAX_DRIFT_MS, global.latency_ms);
+                    fprintf(stderr,"setting computed delta to %lld (e.time is %lld sysclock %lld) max_drift_ms %d latency %d\n", computed_delta, e.time, sysclock, MAX_DRIFT_MS, global.latency_ms);
                     computed_delta_set = 1;
                 }
             } else {
@@ -1021,9 +1021,9 @@ struct event amy_parse_message(char * message) {
             // OK, so check for potentially negative numbers here (or really big numbers-sysclock) 
             int64_t potential_time = (e.time - computed_delta) + global.latency_ms;
             if(potential_time < 0 || (potential_time > sysclock + global.latency_ms + MAX_DRIFT_MS)) {
-                //fprintf(stderr,"recomputing time base: message came in with %lld, mine is %lld, computed delta was %lld\n", e.time, sysclock, computed_delta);
+                fprintf(stderr,"recomputing time base: message came in with %lld, mine is %lld, computed delta was %lld\n", e.time, sysclock, computed_delta);
                 computed_delta = e.time - sysclock;
-                //fprintf(stderr,"computed delta now %lld\n", computed_delta);
+                fprintf(stderr,"computed delta now %lld\n", computed_delta);
             }
             e.time = (e.time - computed_delta) + global.latency_ms;
         } else { // else play it asap 
