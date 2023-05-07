@@ -12,6 +12,7 @@ import time
 world_token = "syt_dHVsaXA_lPADiXCwKdCJvreALSul_0ody9J"
 host = "duraflame.rosaline.org"
 room_id = "!rGPkdYQOECXDlTVoGe:%s" % (host)
+last_message = None
 
 # micropython version of uuid from micropython-lib
 class UUID:
@@ -39,6 +40,7 @@ def uuid4():
     return UUID(bytes=random)
 
 
+
 # PUT call to matrix CS api using auth
 def matrix_put(url, data):
     return urequests.put(url, data=bytes(json.dumps(data).encode('utf-8')), headers={"Authorization":"Bearer %s" %(world_token)})
@@ -47,33 +49,51 @@ def matrix_put(url, data):
 def matrix_get(url):
     return urequests.get(url, headers={"Authorization":"Bearer %s" %(world_token)})
 
+def matrix_post(url, data, content_type="application/octet-stream"):
+    return urequests.post(url, data=data, headers={"Authorization":"Bearer %s" %(world_token), "Content-Type":content_type})
+
+# Uploads a file from Tulip to Tulip World
+def upload(filename):
+    url = "https://%s/_matrix/media/v3/upload?filename=%s" % (host, filename)
+    contents = open(filename,"rb").read()
+    uri = matrix_post(url, contents, content_type=content_type).json()["content_uri"]
+    # Now make an event / message
+    data={"info":{"mimetype":content_type},"msgtype":"m.file","body":filename,"url":uri}
+    url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, room_id, "m.room.message", str(uuid4()))
+    matrix_put(url, data)
+    return uri
+
+# Given an mxc_url like mxc://duraflame.rosaline.... , download it to filename on Tulip
+def download(mxc_url, filename):
+    mxc_id = mxc_url[6:]
+    url = "https://%s/_matrix/media/r0/download/%s" % (host, mxc_id)
+    r = matrix_get(url)
+    r.save(filename)
+
 # Send a m.room.message to the tulip room
 def send(message):
     data={"msgtype":"m.text","body":message}
     url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, room_id, "m.room.message", str(uuid4()))
     matrix_put(url, data)
 
-# Do the initial sync of the room 
-def sync(limit=100):
-    m = []
-    url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,room_id,limit)
+# Return new messages and files since the last check
+def check(limit=100):
+    global last_message
+    if(last_message is None):
+        url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,room_id,limit)
+    else:
+        url = "https://%s/_matrix/client/r0/rooms/%s/messages?from=%s&dir=f&limit=%d" % (host, room_id, last_message, limit)
     data = matrix_get(url)
-    end = data.json()['messages']['end']
+    last_message = data.json()['messages']['end']
+    m = []
+    f = []
     for e in data.json()['messages']['chunk']:
         if(e['type']=='m.room.message'):
-            m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})
-    return (m, end)
-
-# given a end from a sync or the last check, see if there's new messages. 
-def check(end,limit=100):
-    m = []
-    url = "https://%s/_matrix/client/r0/rooms/%s/messages?from=%s&dir=f&limit=%d" % (host, room_id, end, limit)
-    data = matrix_get(url)
-    end = data.json()['end']
-    for e in data.json()['chunk']:
-        if(e['type']=='m.room.message'):
-            m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})    
-    return (m,end)
+            if('url' in e['content']):
+                f.append({"url":e["content"]["url"], "filename":e["content"]["body"], "age_s":int(e['age']/1000)})
+            else:
+                m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})
+    return (m,f)
 
 # covert age from matrix to something readable
 def nice_time(age_s):
@@ -98,6 +118,10 @@ def put_message(m):
         for i in range(int(len(row)/100)- 1):
             print("               " + row[(i+1)*100:(i+2)*100])
 
+def put_file(f):
+    row = "     " + nice_time(f["age_s"]) + ": A file called " + f["filename"] + " is available"
+    print(row)
+
 # gets called every screen frame 
 def frame_callback(data):
     data["count"] += 1
@@ -107,11 +131,12 @@ def frame_callback(data):
         # Check that we're not still reading 
         if(data["read"] is False):
             data["read"] = True # semaphore! ! lol 
-            (m,data["end"]) = check(data["end"])
+            (m,f) = check()
             tulip.display_restart() # for Tulip CC
             for i in m:
-                # do something with the message
                 put_message(i)
+            for i in f:
+                put_file(i)
             data["read"] = False
 
 def world_ui():
@@ -130,17 +155,17 @@ def world():
     world_ui() # set up the world UI
 
     # Get the initial set of n last messages
-    (m,e) = sync()
+    (m,f) = check()
     for i in m:
         put_message(i)
-
+    for i in f:
+        put_file(i)
 
     # And set up a timer callback (on the GPU) to read more every so often
     data = {}
     data["count"] = 0
     data["fps"] = tulip.fps()
     data["update_s"] = 10 # 10sec
-    data["end"] = e
     data["read"] = False
     tulip.frame_callback(frame_callback, data)
 
