@@ -171,3 +171,26 @@ def wifi(ssid, passwd, wait_timeout=10):
 def screen_size():
     s_s = timing()
     return (s_s[0], s_s[1])
+
+
+def tar_extract(file_name):
+    import os
+    import upip_utarfile as utarfile
+
+    tar = utarfile.TarFile(file_name)
+    print("extracting", file_name)
+    for i in tar:
+        if i.type == utarfile.DIRTYPE:
+            if i.name != './':
+                try:
+                    os.mkdir(i.name.strip('/'))
+                except OSError as error:
+                    print("Warning: directory",i.name,"already exists")
+                    print(error)
+        else:
+            sub_file = tar.extractfile(i)
+            data = sub_file.read()
+            with open(i.name, "wb") as dest:
+                print("writing", i.name)
+                dest.write(data)
+                dest.close()
