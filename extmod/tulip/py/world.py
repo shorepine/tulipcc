@@ -48,7 +48,7 @@ def nice_time(age_s):
         c = "%dm" % (age_s/60)
     elif(age_s < 60*60*24):
         c = "%dh" % (age_s/60/60)
-    elif(age_s < 60*60*24*100):
+    elif(age_s < 60*60*24*365):
         c = "%dd" % (age_s/60/60/24)
     else: 
         c= "~"
@@ -90,13 +90,14 @@ def files(limit=5000):
     return f
 
 # Convenience function that just grabs the __last__ file named filename from Tulip World. Does full initial sync to find it
+# Or, you can give it an item from files(), if you want a specific file and not look it up by filename
 def download(filename, limit=5000):
     grab_url = None
-    if(type(filename)==dict):
+    if(type(filename)==dict): # this is a item in the files() list
         grab_url = filename["url"]
         age_nice = nice_time(filename["age_ms"]/1000)
         filename = filename["filename"]
-    else:
+    else: # was a filename search 
         for file in files(limit=limit):
             if(file["filename"] == filename):
                 age_nice = nice_time(file["age_ms"]/1000)
