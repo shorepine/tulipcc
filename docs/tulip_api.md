@@ -464,9 +464,10 @@ You can also call the underlying Tulip World APIs directly:
 
 ```python
 import world
-(m, token) = world.sync() # returns a list of latest messages, and a token to check for new messages
-(m, token) = world.check(token) # checks for new messages since the last token
+(m, f) = world.check() # returns a list of latest messages and files since your last call
 world.send("hello!!") # Sends a message to Tulip World
+world.upload(filename) # Uploads a file to Tulip World 
+world.download(file) # Downloads a file object (from world.check()) 
 ```
 
 Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
