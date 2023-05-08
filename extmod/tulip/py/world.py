@@ -84,15 +84,16 @@ def check(limit=100):
     else:
         url = "https://%s/_matrix/client/r0/rooms/%s/messages?from=%s&dir=f&limit=%d" % (host, room_id, last_message, limit)
     data = matrix_get(url)
-    last_message = data.json()['messages']['end']
     m = []
     f = []
-    for e in data.json()['messages']['chunk']:
-        if(e['type']=='m.room.message'):
-            if('url' in e['content']):
-                f.append({"url":e["content"]["url"], "filename":e["content"]["body"], "age_s":int(e['age']/1000)})
-            else:
-                m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})
+    if 'messages' in data.json():
+        last_message = data.json()['messages']['end']
+        for e in data.json()['messages']['chunk']:
+            if(e['type']=='m.room.message'):
+                if('url' in e['content']):
+                    f.append({"url":e["content"]["url"], "filename":e["content"]["body"], "age_s":int(e['age']/1000)})
+                else:
+                    m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})
     return (m,f)
 
 # covert age from matrix to something readable
@@ -161,20 +162,7 @@ def world():
     for i in f:
         put_file(i)
 
-    # And set up a timer callback (on the GPU) to read more every so often
-    data = {}
-    data["count"] = 0
-    data["fps"] = tulip.fps()
-    data["update_s"] = 10 # 10sec
-    data["read"] = False
-    tulip.frame_callback(frame_callback, data)
 
-    # And return ... immediately to the REPL? No, probably should show a UI with a text entry field, etc
-
-# stops the frame callback, returns to repl
-def quit():
-    tulip.frame_callback()
-    tulip.gpu_reset()
 
 
 
