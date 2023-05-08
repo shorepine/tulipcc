@@ -456,21 +456,19 @@ tulip.sprite_clear()
 Still very much early days, but Tulip supports a native chat room called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. We're hoping to build this out to support file transfer and other BBS-style features. But for now, you're able to pull down the latest messages and files and send messages and files yourself. 
 
 ```python
-# Starts the UI for Tulip World (needs wifi)
+# Starts the UI for Tulip World (under construction!)
 tulip.world()
 ```
 
-You can also call the underlying Tulip World APIs directly:
+You can call the underlying Tulip World APIs:
 
 ```python
 import world
-(m, f) = world.check() # returns a list of latest messages and files since your last call
+messages = world.check() # returns a list of latest messages since your last call
 world.send("hello!!") # Sends a message to Tulip World
 
 world.upload(filename) # Uploads a file to Tulip World 
-world.grab(filename) # Downloads the latest file named filename from Tulip World
-
-world.download(uri, filename) # Downloads a specific URI to filename (get this from check())
+world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
 ```
 
 Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
