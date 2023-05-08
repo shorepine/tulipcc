@@ -119,7 +119,7 @@ def send(message):
     matrix_put(url, data)
 
 # Return new messages since the last check
-def check(limit=100):
+def check(limit=1000):
     global last_message
     if(last_message is None):
         url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,room_id,limit)
