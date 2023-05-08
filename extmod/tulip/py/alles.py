@@ -62,7 +62,7 @@ def millis():
     # Timestamp to send over to synths for global sync
     # This is a suggestion. I use ticks since boot on Tulip
     # I am adding 20 seconds here because i'm curious if <0 deltas are a problem
-    return tulip.ticks_ms() + 20000
+    return tulip.ticks_ms()
 
 
 
