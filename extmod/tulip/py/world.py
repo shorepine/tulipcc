@@ -53,7 +53,7 @@ def matrix_post(url, data, content_type="application/octet-stream"):
     return urequests.post(url, data=data, headers={"Authorization":"Bearer %s" %(world_token), "Content-Type":content_type})
 
 # Uploads a file from Tulip to Tulip World
-def upload(filename):
+def upload(filename, content_type="application/octet-stream"):
     url = "https://%s/_matrix/media/v3/upload?filename=%s" % (host, filename)
     contents = open(filename,"rb").read()
     uri = matrix_post(url, contents, content_type=content_type).json()["content_uri"]
@@ -61,7 +61,7 @@ def upload(filename):
     data={"info":{"mimetype":content_type},"msgtype":"m.file","body":filename,"url":uri}
     url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, room_id, "m.room.message", str(uuid4()))
     matrix_put(url, data)
-    return uri
+    print("Uploaded %s to Tulip World." % (filename))
 
 # Given an mxc_url like mxc://duraflame.rosaline.... , download it to filename on Tulip
 def download(mxc_url, filename):
@@ -69,6 +69,23 @@ def download(mxc_url, filename):
     url = "https://%s/_matrix/media/r0/download/%s" % (host, mxc_id)
     r = matrix_get(url)
     r.save(filename)
+
+# Convenience function that just grabs the __last__ file named filename from Tulip World. Does full initial sync to find it
+# todo: different room for files maybe
+def grab(filename, limit=5000): 
+    url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,room_id,limit)
+    data = matrix_get(url)
+    grab_url = None
+    for e in data.json()['messages']['chunk']:
+        if(e['type']=='m.room.message'):
+            if('url' in e['content']):
+                if(e["content"]["body"] == filename):
+                    grab_url = e["content"]["url"] # will get the latest one
+    if(grab_url is not None):
+        download(grab_url, filename)
+        print("Saved %s from Tulip World." % (filename))
+    else:
+        print("Could not find %s on Tulip World" % (filename))
 
 # Send a m.room.message to the tulip room
 def send(message):
