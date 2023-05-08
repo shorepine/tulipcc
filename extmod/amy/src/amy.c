@@ -550,7 +550,7 @@ void play_event(struct delta d) {
 
     // for global changes, just make the change, no need to update the per-osc synth
     if(d.param == VOLUME) global.volume = *(float *)&d.data;
-    if(d.param == LATENCY) { global.latency_ms = *(int16_t *)&d.data; computed_delta_set = 0; }
+    if(d.param == LATENCY) { global.latency_ms = *(int16_t *)&d.data; computed_delta_set = 0; computed_delta = 0; }
     if(d.param == EQ_L) global.eq[0] = powf(10, *(float *)&d.data / 20.0);
     if(d.param == EQ_M) global.eq[1] = powf(10, *(float *)&d.data / 20.0);
     if(d.param == EQ_H) global.eq[2] = powf(10, *(float *)&d.data / 20.0);
@@ -949,11 +949,13 @@ struct event amy_parse_message(char * message) {
         if( ((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')) || b == 0) {  // new mode or end
             if(mode=='t') {
                 e.time=atol(message + start);
-                // if we haven't yet synced our times, do it now
-                if(!computed_delta_set) {
-                    computed_delta = e.time - sysclock;
-                    fprintf(stderr,"setting computed delta to %lld (e.time is %lld sysclock %lld) max_drift_ms %d latency %d\n", computed_delta, e.time, sysclock, MAX_DRIFT_MS, global.latency_ms);
-                    computed_delta_set = 1;
+                // if we have set latency AND haven't yet synced our times, do it now
+                if(global.latency_ms != 0) {
+                    if(!computed_delta_set) {
+                        computed_delta = e.time - sysclock;
+                        fprintf(stderr,"setting computed delta to %lld (e.time is %lld sysclock %lld) max_drift_ms %d latency %d\n", computed_delta, e.time, sysclock, MAX_DRIFT_MS, global.latency_ms);
+                        computed_delta_set = 1;
+                    }
                 }
             } else {
                 if(mode >= 'A' && mode <= 'z') {
@@ -1016,8 +1018,8 @@ struct event amy_parse_message(char * message) {
         // TODO -- should time adjustment happen during parsing or playback?
 
         // Now adjust time in some useful way:
-        // if we have a delta & got a time in this message, use it schedule it properly
-        if((computed_delta_set && e.time > 0)) {
+        // if we have a delta OR latency is 0 , AND got a time in this message, use it schedule it properly
+        if(( (computed_delta_set || global.latency_ms==0) && e.time > 0)) {
             // OK, so check for potentially negative numbers here (or really big numbers-sysclock) 
             int64_t potential_time = (e.time - computed_delta) + global.latency_ms;
             if(potential_time < 0 || (potential_time > sysclock + global.latency_ms + MAX_DRIFT_MS)) {
