@@ -40,7 +40,20 @@ def uuid4():
     random[8] = (random[8] & 0x3F) | 0x80
     return UUID(bytes=random)
 
-
+# covert age from matrix to something readable
+def nice_time(age_s):
+    if(age_s < 60):
+        c = "%ds" % (age_s)
+    elif(age_s < 60*60):
+        c = "%dm" % (age_s/60)
+    elif(age_s < 60*60*24):
+        c = "%dh" % (age_s/60/60)
+    elif(age_s < 60*60*24*100):
+        c = "%dd" % (age_s/60/60/24)
+    else: 
+        c= "~"
+    c = c + " ago"
+    return "% 8s" % c
 
 # PUT call to matrix CS api using auth
 def matrix_put(url, data):
@@ -64,22 +77,37 @@ def upload(filename, content_type="application/octet-stream"):
     matrix_put(url, data)
     print("Uploaded %s to Tulip World." % (filename))
 
-# Convenience function that just grabs the __last__ file named filename from Tulip World. Does full initial sync to find it
-def download(filename, limit=5000): 
+# returns all the files within limit
+def files(limit=5000): 
+    f = []
     url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,files_room_id,limit)
     data = matrix_get(url)
     grab_url = None
     for e in data.json()['messages']['chunk']:
         if(e['type']=='m.room.message'):
             if('url' in e['content']):
-                if(e["content"]["body"] == filename):
-                    grab_url = e["content"]["url"] # will get the latest one
+                f.append({'url':e["content"]["url"], 'age_ms':e['age'], 'filename':e['content']['body']})
+    return f
+
+# Convenience function that just grabs the __last__ file named filename from Tulip World. Does full initial sync to find it
+def download(filename, limit=5000):
+    grab_url = None
+    if(type(filename)==dict):
+        grab_url = filename["url"]
+        age_nice = nice_time(filename["age_ms"]/1000)
+        filename = filename["filename"]
+    else:
+        for file in files(limit=limit):
+            if(file["filename"] == filename):
+                age_nice = nice_time(file["age_ms"]/1000)
+                grab_url = file["url"] # Will get the latest (most recent) file with that name
+
     if(grab_url is not None):
         mxc_id = grab_url[6:]
         url = "https://%s/_matrix/media/r0/download/%s" % (host, mxc_id)
         r = matrix_get(url)
         b = r.save(filename)
-        print("Saved %s [%d bytes] from Tulip World." % (filename, b))
+        print("Downloaded %s [%d bytes, last updated %s] from Tulip World." % (filename, b, age_nice.lstrip()))
     else:
         print("Could not find %s on Tulip World" % (filename))
 
@@ -105,20 +133,7 @@ def check(limit=100):
                 m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})
     return (m,f)
 
-# covert age from matrix to something readable
-def nice_time(age_s):
-    if(age_s < 60):
-        c = "%ds" % (age_s)
-    elif(age_s < 60*60):
-        c = "%dm" % (age_s/60)
-    elif(age_s < 60*60*24):
-        c = "%dh" % (age_s/60/60)
-    elif(age_s < 60*60*24*100):
-        c = "%dd" % (age_s/60/60/24)
-    else: 
-        c= "~"
-    c = c + " ago"
-    return "% 8s" % c
+
 
 def put_message(m):
     row = "     " + nice_time(m["age_s"]) + ": " + m["body"]
