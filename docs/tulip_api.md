@@ -26,6 +26,9 @@ clear
 cd('ex') # The ex folder has a few examples and graphics in it
 execfile("parallax.py")
 
+Extract a .tar file. tar_create() coming soon!
+tulip.tar_extract(filename)
+
 # If you want something to run when Tulip boots, add it to boot.py
 edit("boot.py")
 
