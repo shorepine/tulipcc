@@ -238,7 +238,7 @@ tulip.midi_out(bytes) # Can send bytes or list
 ## Graphics system
 
 The Tulip GPU consists of 3 subsystems, in drawing order:
- * A bitmap graphics plane (BG) (default size: 2048x600), with scrolling x- and y- speed registers. Drawing shape primitives draw to the BG.
+ * A bitmap graphics plane (BG) (default size: 2048x750), with scrolling x- and y- speed registers. Drawing shape primitives draw to the BG.
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
  * A sprite layer on top of the TFB (which is on top of the BG)
 
@@ -310,7 +310,7 @@ tulip.brightness(5)
 
 ## Graphics background plane
 
-The default background plane (BG) is 2048 x 600, with the visible portion 1024x600. (You can change this with `tulip.timing()`.) Use the extra for double buffering, hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
+The default background plane (BG) is 2048 x 750, with the visible portion 1024x600. (You can change this with `tulip.timing()`.) Use the extra for double buffering, hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
 
 Tulip uses RGB332, with 256 colors. Here's the palette: 
 

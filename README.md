@@ -28,7 +28,7 @@ Tulip CC rev 4 supports:
 - An [AMY](https://github.com/bwhitman/amy) stereo 64-voice synthesizer engine running locally or as a wireless controller for an [Alles](https://github.com/bwhitman/alles) mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, from a total of 32KB of bitmap memory (1 byte per pixel)
-- A 2048x600 background frame buffer to draw arbitrary bitmaps to, or use as RAM, and which can scroll horizontally / vertically
+- A 2048x750 background frame buffer to draw arbitrary bitmaps to, or use as RAM, and which can scroll horizontally / vertically
 - WiFi, access http via Python requests or TCP / UDP sockets 
 - Adjustable display clock and resolution, defaults to 30 FPS at 1024x600.
 - 256 colors
