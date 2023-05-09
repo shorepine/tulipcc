@@ -18,6 +18,14 @@ float compute_cpu_usage(uint8_t debug) {
 #endif
 
 
+uint8_t rand_uint8() {
+#ifdef ESP_PLATFORM
+    return rand() % 255; // i thought esp_random() would be faster but it's not 
+#else
+    return rand() % 255;
+#endif
+}
+
 void delay_ms(uint32_t ms) {
 #ifdef ESP_PLATFORM
     vTaskDelay(ms / portTICK_PERIOD_MS);

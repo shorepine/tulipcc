@@ -90,6 +90,7 @@ int32_t desync = 0;
     for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
         memcpy(b+(H_RES*BYTES_PER_PIXEL*rows_relative_px), bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], H_RES*BYTES_PER_PIXEL); 
     }
+
     
     // Now per row (N (now 12) pixel rows per call), draw the text frame buffer and sprites on top of the BG
     for(uint8_t bounce_row_px=0;bounce_row_px<bounce_total_rows_px;bounce_row_px++) {
