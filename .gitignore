@@ -11,6 +11,7 @@ ports/macos/tulip.arm64
 ports/macos/tulip.x86_64
 ports/macos/dist
 ports/web/build
+mpy-cross/build
 
 # Prerequisites
 *.d
