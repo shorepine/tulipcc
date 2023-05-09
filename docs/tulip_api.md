@@ -283,6 +283,10 @@ tulip.display_clock(mhz)
   vsync_back_porch, vsync_front_porch, vsync_pulse_width) = tulip.timing() # returns current
 tulip.timing(1024, 600, 256, 150, 139, 140, 20, 20, 12, 20) # sets, will erase all display RAM
 
+# Convenience function for getting the screen width and height,
+# which are just the first two values returned by tulip.timing()
+(WIDTH, HEIGHT) = tulip.screen_size()
+
 # if the display clock gets in a strange state, you can restart it by just
 tulip.display_restart() # does not clear any data like gpu_reset()
 
