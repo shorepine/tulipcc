@@ -17,7 +17,7 @@
 #endif
 
 
-
+uint8_t rand_uint8();
 void take_semaphore();
 int64_t get_time_ms();
 int64_t get_ticks_ms();
