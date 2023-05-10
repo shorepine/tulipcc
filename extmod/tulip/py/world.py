@@ -89,6 +89,19 @@ def files(limit=5000):
                 f.append({'url':e["content"]["url"], 'age_ms':e['age'], 'filename':e['content']['body']})
     return f
 
+def ls(count=10): # lists latest files
+    already = {}
+    i = 0
+    all_files = files()
+    all_files.reverse()
+    for f in all_files:
+        fn = f["filename"]
+        if(not fn in already):
+            already[fn] = True
+            print("\t% 20s %s" % (fn, nice_time(f["age_ms"]/1000)))
+            i+=1
+        if(i==count): break 
+
 # Convenience function that just grabs the __last__ file named filename from Tulip World. Does full initial sync to find it
 # Or, you can give it an item from files(), if you want a specific file and not look it up by filename
 def download(filename, limit=5000):
