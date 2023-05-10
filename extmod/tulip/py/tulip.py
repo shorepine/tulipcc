@@ -172,7 +172,6 @@ def screen_size():
     s_s = timing()
     return (s_s[0], s_s[1])
 
-
 def tar_extract(file_name):
     import os
     import upip_utarfile as utarfile
@@ -187,10 +186,19 @@ def tar_extract(file_name):
                 except OSError as error:
                     print("Warning: directory",i.name,"already exists")
                     print(error)
+            print("making:", i.name)
         else:
-            sub_file = tar.extractfile(i)
-            data = sub_file.read()
-            with open(i.name, "wb") as dest:
-                print("writing", i.name)
-                dest.write(data)
-                dest.close()
+            if i.name.startswith(".") or "._" in i.name:
+                print("ignoring", i.name)
+            else:
+                print("extracting:", i.name)
+                sub_file = tar.extractfile(i)
+                data = sub_file.read()
+                try:
+                    with open(i.name, "wb") as dest:
+                        print("writing", i.name)
+                        dest.write(data)
+                        dest.close()
+                except OSError as error:
+                    print("borked on:", i.name)
+                    print(error)
