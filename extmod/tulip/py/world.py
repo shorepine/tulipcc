@@ -131,8 +131,9 @@ def check(limit=1000):
         last_message = data.json()['messages']['end']
         for e in data.json()['messages']['chunk']:
             if(e['type']=='m.room.message'):
-                m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})
-    return (m,f)
+                if('body' in e['content']):
+                    m.append({"body":e['content']['body'], "age_s":int(e['age']/1000)})
+    return m
 
 
 
@@ -161,11 +162,9 @@ def world():
     world_ui() # set up the world UI
 
     # Get the initial set of n last messages
-    (m,f) = check()
+    m = check()
     for i in m:
         put_message(i)
-    for i in f:
-        put_file(i)
 
 
 
