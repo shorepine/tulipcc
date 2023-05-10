@@ -69,8 +69,10 @@ def matrix_post(url, data, content_type="application/octet-stream"):
 # Uploads a file from Tulip to Tulip World
 def upload(filename, content_type="application/octet-stream"):
     url = "https://%s/_matrix/media/v3/upload?filename=%s" % (host, filename)
+    tulip.display_stop()
     contents = open(filename,"rb").read()
     uri = matrix_post(url, contents, content_type=content_type).json()["content_uri"]
+    tulip.display_start()
     # Now make an event / message
     data={"info":{"mimetype":content_type},"msgtype":"m.file","body":filename,"url":uri}
     url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, files_room_id, "m.room.message", str(uuid4()))
@@ -89,7 +91,7 @@ def files(limit=5000):
                 f.append({'url':e["content"]["url"], 'age_ms':e['age'], 'filename':e['content']['body']})
     return f
 
-def ls(count=10): # lists latest files
+def ls(count=10): # lists latest count files
     already = {}
     i = 0
     all_files = files()
@@ -119,8 +121,12 @@ def download(filename, limit=5000):
     if(grab_url is not None):
         mxc_id = grab_url[6:]
         url = "https://%s/_matrix/media/r0/download/%s" % (host, mxc_id)
+
+        tulip.display_stop()
         r = matrix_get(url)
         b = r.save(filename)
+        tulip.display_start()
+
         print("Downloaded %s [%d bytes, last updated %s] from Tulip World." % (filename, b, age_nice.lstrip()))
         if(filename.endswith('.tar')):
             print("Unpacking %s" % (filename))

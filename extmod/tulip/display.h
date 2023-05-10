@@ -138,7 +138,7 @@ extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCRE
 #define SPRITE_IS_BEZIER 0x20
 #define SPRITE_IS_ELLIPSE 0x10
 
-
+uint8_t tfb_active;
 uint8_t tfb_y_row; 
 uint8_t tfb_x_col; 
 uint8_t task_screenshot;
