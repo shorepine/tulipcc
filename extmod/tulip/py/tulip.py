@@ -172,33 +172,33 @@ def screen_size():
     s_s = timing()
     return (s_s[0], s_s[1])
 
-def tar_extract(file_name):
+def tar_extract(file_name, show_progress=True):
     import os
     import upip_utarfile as utarfile
 
     tar = utarfile.TarFile(file_name)
-    print("extracting", file_name)
+    if(show_progress): print("extracting", file_name)
     for i in tar:
         if i.type == utarfile.DIRTYPE:
             if i.name != './':
                 try:
                     os.mkdir(i.name.strip('/'))
                 except OSError as error:
-                    print("Warning: directory",i.name,"already exists")
-                    print(error)
-            print("making:", i.name)
+                    if(show_progress): print("Warning: directory",i.name,"already exists")
+                    #print(error)
+            if(show_progress): print("making:", i.name)
         else:
             if i.name.startswith(".") or "._" in i.name:
-                print("ignoring", i.name)
+                if(show_progress): print("ignoring", i.name)
             else:
-                print("extracting:", i.name)
+                if(show_progress): print("extracting:", i.name)
                 sub_file = tar.extractfile(i)
                 data = sub_file.read()
                 try:
                     with open(i.name, "wb") as dest:
-                        print("writing", i.name)
+                        #print("writing", i.name)
                         dest.write(data)
                         dest.close()
                 except OSError as error:
-                    print("borked on:", i.name)
-                    print(error)
+                    if(show_progress): print("borked on:", i.name)
+                    #print(error)

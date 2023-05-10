@@ -122,6 +122,10 @@ def download(filename, limit=5000):
         r = matrix_get(url)
         b = r.save(filename)
         print("Downloaded %s [%d bytes, last updated %s] from Tulip World." % (filename, b, age_nice.lstrip()))
+        if(filename.endswith('.tar')):
+            print("Unpacking %s" % (filename))
+            tulip.tar_extract(filename, show_progress=False)
+
     else:
         print("Could not find %s on Tulip World" % (filename))
 
