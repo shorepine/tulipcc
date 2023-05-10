@@ -295,6 +295,10 @@ tulip.display_restart() # does not clear any data like gpu_reset()
 tulip.display_stop() # Tulip will still run 
 tulip.display_start()
 
+# You can also stop or start the TFB. It will maintain what is on screen in memory
+tulip.tfb_stop()
+tulip.tfb_start()
+
 # Sets a frame callback python function to run every frame 
 game_data = {"frame_count": 0, "score": 0}
 def game_loop(data):

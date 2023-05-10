@@ -175,6 +175,7 @@ def screen_size():
 def tar_extract(file_name, show_progress=True):
     import os
     import upip_utarfile as utarfile
+    display_stop()
 
     tar = utarfile.TarFile(file_name)
     if(show_progress): print("extracting", file_name)
@@ -202,3 +203,4 @@ def tar_extract(file_name, show_progress=True):
                 except OSError as error:
                     if(show_progress): print("borked on:", i.name)
                     #print(error)
+    display_start()

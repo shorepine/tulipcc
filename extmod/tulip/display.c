@@ -9,6 +9,8 @@ uint16_t OFFSCREEN_Y_PX = DEFAULT_OFFSCREEN_Y_PX;
 uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
 uint16_t BOUNCE_BUFFER_SIZE_PX;
 uint16_t TFB_ROWS, TFB_COLS;
+uint8_t tfb_active = 1;
+
 // RRRGGGBB
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *r = px0 & 0xe0;
@@ -91,65 +93,66 @@ int32_t desync = 0;
         memcpy(b+(H_RES*BYTES_PER_PIXEL*rows_relative_px), bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], H_RES*BYTES_PER_PIXEL); 
     }
 
-    
     // Now per row (N (now 12) pixel rows per call), draw the text frame buffer and sprites on top of the BG
     for(uint8_t bounce_row_px=0;bounce_row_px<bounce_total_rows_px;bounce_row_px++) {
-        uint8_t tfb_row = (starting_display_row_px+bounce_row_px) / FONT_HEIGHT;
-        uint8_t tfb_row_offset_px = (starting_display_row_px+bounce_row_px) % FONT_HEIGHT; 
+        if(tfb_active) {
+            uint8_t tfb_row = (starting_display_row_px+bounce_row_px) / FONT_HEIGHT;
+            uint8_t tfb_row_offset_px = (starting_display_row_px+bounce_row_px) % FONT_HEIGHT; 
 
-        uint8_t tfb_col = 0;
-        while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
-            uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
-            uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
-            uint8_t fg_color = TFBfg[tfb_row*TFB_COLS+tfb_col];
-            uint8_t bg_color = TFBbg[tfb_row*TFB_COLS+tfb_col];
+            uint8_t tfb_col = 0;
+            while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
+                uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
+                uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
+                uint8_t fg_color = TFBfg[tfb_row*TFB_COLS+tfb_col];
+                uint8_t bg_color = TFBbg[tfb_row*TFB_COLS+tfb_col];
 
-            // If you're looking at this code just know the unrolled versions were 1.5x faster than loops on esp32s3
-            // I'm sure there's more to do but this is the best we could get it for now
-            uint8_t * bptr = b + (bounce_row_px*H_RES + tfb_col*FONT_WIDTH);
-            if(bg_color == ALPHA) {
-                if(format & FORMAT_INVERSE) {
-                    if(!((data) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                // If you're looking at this code just know the unrolled versions were 1.5x faster than loops on esp32s3
+                // I'm sure there's more to do but this is the best we could get it for now
+                uint8_t * bptr = b + (bounce_row_px*H_RES + tfb_col*FONT_WIDTH);
+                if(bg_color == ALPHA) {
+                    if(format & FORMAT_INVERSE) {
+                        if(!((data) & 0x80)) *(bptr) = fg_color; 
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                    } else {
+                        if((data) & 0x80) *(bptr) = fg_color; 
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                    }
                 } else {
-                    if((data) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                }
-            } else {
-                if(format & FORMAT_INVERSE) {
-                    if(!((data) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                } else {
-                    if((data) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                }
+                    if(format & FORMAT_INVERSE) {
+                        if(!((data) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    } else {
+                        if((data) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    }
 
+                }
+                tfb_col++;
             }
-            tfb_col++;
         }
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
@@ -202,7 +205,6 @@ void display_reset_tfb() {
     // Clear out the TFB
     tfb_fg_pal_color = color_332(255,255,255);
     tfb_bg_pal_color = ALPHA;
-
     for(uint i=0;i<TFB_ROWS*TFB_COLS;i++) {
         TFB[i]=0;
         TFBfg[i]=tfb_fg_pal_color;
@@ -214,6 +216,8 @@ void display_reset_tfb() {
     ansi_active_format = -1; // no override
     ansi_active_fg_color = tfb_fg_pal_color; 
     ansi_active_bg_color = tfb_bg_pal_color;
+    tfb_active = 1;
+
 
 }
 
