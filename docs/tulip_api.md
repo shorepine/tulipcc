@@ -479,6 +479,8 @@ world.download(filename) # Downloads the latest file named filename from Tulip W
 
 files = world.files(limit=5000) # returns the most recent N files (including versions with the same name) for selective download
 world.download(files[0]) # download a specific file instead
+
+world.ls() # lists most recent unique filenames
 ```
 
 Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
