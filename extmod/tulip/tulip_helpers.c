@@ -41,6 +41,7 @@ int32_t file_size(const char *filename) {
     }
 }
 
+
 // if len < 0, read the whole thing
 uint32_t read_file(const char *filename, uint8_t *buf, int32_t len, uint8_t binary) {
     if(len<0) {
@@ -76,6 +77,13 @@ uint32_t write_file(const char *filename, uint8_t *buf, uint32_t len, uint8_t bi
     return bytes_written;
 }
 
+/*
+ssize_t mp_stream_posix_write(void *stream, const void *buf, size_t len);
+ssize_t mp_stream_posix_read(void *stream, void *buf, size_t len);
+off_t mp_stream_posix_lseek(void *stream, off_t offset, int whence);
+int mp_stream_posix_fsync(void *stream);
+*/
+
 void tulip_fclose(mp_obj_t file) {
     mp_stream_close(file);
 }
@@ -93,3 +101,10 @@ uint32_t tulip_fwrite(mp_obj_t file, uint8_t * buf, uint32_t len) {
     size_t bytes_written = mp_stream_rw(file, buf, len, &errcode, MP_STREAM_RW_WRITE | MP_STREAM_RW_ONCE);
     return bytes_written;
 }
+
+uint32_t tulip_fread(mp_obj_t file, uint8_t * buf, uint32_t len) {
+    int errcode;
+    size_t bytes_read = mp_stream_rw(file, buf, len, &errcode, MP_STREAM_RW_READ | MP_STREAM_RW_ONCE);
+    return bytes_read;
+}
+

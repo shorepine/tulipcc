@@ -4,6 +4,7 @@
 # Bring in all c-defined tulip functions
 from _tulip import *
 from world import world
+from upysh import cd
 
 class Colors:
     """ ANSI color codes """
@@ -85,6 +86,24 @@ def joyk():
         if(k == 20): jmask = jmask | Joy.L1
         if(k == 26): jmask = jmask | Joy.R1
     return jmask
+
+# runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside with a run() function
+# TODO - pass args
+def run(module):
+    import gc
+    gc.enable()
+    cd(module)
+    exec('import %s' % (module))
+    try:
+        exec('%s.run()' % (module))
+    except KeyboardInterrupt:
+        pass
+    exec("%s = None" % (module))
+    exec("del %s" % (module))
+    gc.collect()
+    gc.disable()
+    cd('..')
+
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests
