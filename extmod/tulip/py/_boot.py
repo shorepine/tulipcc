@@ -2,7 +2,7 @@ import gc
 import uos
 import tulip, alles
 from upysh import *
-from tulip import edit
+from tulip import edit, run
 
 
 # This _boot runs both desktop and esp32s3, so we check for flashdev
