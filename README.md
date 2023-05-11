@@ -61,6 +61,8 @@ Any big challenges getting this going? Please [chat with us on our discussions p
 # Run a saved Python file. Control-C stops it
 cd('ex') # The ex folder has a few examples and graphics in it
 execfile("parallax.py")
+# If you want to run a Tulip package (folder with other files in it)
+run("game")
 ```
 
 ### The Tulip Editor
