@@ -25,8 +25,9 @@ clear
 # Run a saved Python file. Control-C stops it
 cd('ex') # The ex folder has a few examples and graphics in it
 execfile("parallax.py")
+run('game') # Runs a package, see below
 
-Extract a .tar file. tar_create() coming soon!
+# Extract a .tar file. tar_create() coming soon!
 tulip.tar_extract(filename)
 
 # If you want something to run when Tulip boots, add it to boot.py
@@ -43,6 +44,17 @@ usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UAR
 
 ms = tulip.ticks_ms() # returns the milliseconds since boot, aka Arduino millis() 
 ```
+
+If you have a program that relies on mulitple files (graphics, or multiple Python files) you'll want to create a Tulip Package. A package is just a folder with your files in it, like:
+
+```
+rabbit_game/
+... rabbit_game.py # has a run() method which starts the program
+... rabbit_pic.png
+... rabbit_pic1.png
+```
+
+The main Python script must be the name of the package and have a `run()` method. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS will support uploading and downloading packages as tar files.
 
 ## The Tulip Editor
 
