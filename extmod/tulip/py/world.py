@@ -66,10 +66,19 @@ def matrix_get(url):
 def matrix_post(url, data, content_type="application/octet-stream"):
     return urequests.post(url, data=data, headers={"Authorization":"Bearer %s" %(world_token), "Content-Type":content_type})
 
-# Uploads a file from Tulip to Tulip World
+def _isdir(filename):
+    return (os.stat(filename)[0] & 0o40000) > 0
+
+# Uploads a file or folder from Tulip to Tulip World
 def upload(filename, content_type="application/octet-stream"):
+    tar = False
     url = "https://%s/_matrix/media/v3/upload?filename=%s" % (host, filename)
     tulip.display_stop()
+    if(_isdir(filename)):
+        tar = True
+        print("Packing" % (filename))
+        filename = filename + ".tar"
+        tulip.tar_create(filename)
     contents = open(filename,"rb").read()
     uri = matrix_post(url, contents, content_type=content_type).json()["content_uri"]
     tulip.display_start()
@@ -78,6 +87,8 @@ def upload(filename, content_type="application/octet-stream"):
     url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, files_room_id, "m.room.message", str(uuid4()))
     matrix_put(url, data)
     print("Uploaded %s to Tulip World." % (filename))
+    if(tar):
+        os.remove(filename)
 
 # returns all the files within limit
 def files(limit=5000): 
@@ -131,6 +142,7 @@ def download(filename, limit=5000):
         if(filename.endswith('.tar')):
             print("Unpacking %s" % (filename))
             tulip.tar_extract(filename, show_progress=False)
+            os.remove(filename)
 
     else:
         print("Could not find %s on Tulip World" % (filename))
