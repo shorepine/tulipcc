@@ -48,7 +48,6 @@ set(MICROPY_SOURCE_PORT
     ${MICROPY_DIR}/extmod/tulip/modtulip.c
     ${MICROPY_DIR}/extmod/tulip/polyfills.c
     ${MICROPY_DIR}/extmod/tulip/lodepng.c
-    ${MICROPY_DIR}/extmod/tulip/microtar.c
     ${MICROPY_DIR}/extmod/tulip/smallfont.c
     ${MICROPY_DIR}/extmod/tulip/display.c
     ${MICROPY_DIR}/extmod/tulip/bresenham.c

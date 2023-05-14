@@ -13,7 +13,6 @@
 #include "alles.h"
 #include "midi.h"
 #include "ui.h"
-#include "microtar.h"
 
 #ifdef ESP_PLATFORM
 #include "tasks.h"
@@ -90,31 +89,6 @@ STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
     return mp_obj_new_int(get_ticks_ms());
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ticks_ms_obj, 0, 0, tulip_ticks_ms);
-
-
-STATIC mp_obj_t tulip_tar_create(size_t n_args, const mp_obj_t *args) {
-    mtar_t tar;
-    const char *str1 = "Hello world";
-    const char *str2 = "Goodbye world";
-
-    /* Open archive for writing */
-    mtar_open(&tar, "test.tar", "w");
-
-    /* Write strings to files `test1.txt` and `test2.txt` */
-    mtar_write_file_header(&tar, "test1.txt", strlen(str1));
-    mtar_write_data(&tar, str1, strlen(str1));
-    mtar_write_file_header(&tar, "test2.txt", strlen(str2));
-    mtar_write_data(&tar, str2, strlen(str2));
-
-    /* Finalize -- this needs to be the last thing done before closing */
-    mtar_finalize(&tar);
-
-    /* Close archive */
-    mtar_close(&tar);
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tar_create_obj, 0, 0, tulip_tar_create);
-
 
 // tulip.bg_pixel(x,y, pal_idx)
 // (r,g,b) = tulip.bg_pixel(x,y)
@@ -1054,7 +1028,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_fps), MP_ROM_PTR(&tulip_fps_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu), MP_ROM_PTR(&tulip_gpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_ticks_ms), MP_ROM_PTR(&tulip_ticks_ms_obj) },
-    { MP_ROM_QSTR(MP_QSTR_tar_create), MP_ROM_PTR(&tulip_tar_create_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_pixel), MP_ROM_PTR(&tulip_bg_pixel_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },
