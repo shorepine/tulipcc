@@ -58,7 +58,7 @@ rabbit_game/
 ... rabbit_pic1.png
 ```
 
-The main Python script must be the name of the package. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package')`. 
+The main Python script must be the name of the package. This script needs to explicitly `import tulip,alles` if you are using those. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package')`. 
 
 
 ## Tulip World
