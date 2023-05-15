@@ -133,10 +133,11 @@ STATIC mp_obj_t mp_sys_print_exception(size_t n_args, const mp_obj_t *args) {
     if (n_args > 1) {
         mp_get_stream_raise(args[1], MP_STREAM_OP_WRITE);
         stream_obj = MP_OBJ_TO_PTR(args[1]);
+        mp_print_t print = {stream_obj, mp_stream_write_adaptor};
+        mp_obj_print_exception(&print, args[0]);
+    } else {
+        mp_obj_print_exception(&mp_plat_print, args[0]);
     }
-
-    mp_print_t print = {stream_obj, mp_stream_write_adaptor};
-    mp_obj_print_exception(&print, args[0]);
     #else
     (void)n_args;
     mp_obj_print_exception(&mp_plat_print, args[0]);

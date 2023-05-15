@@ -93,9 +93,12 @@ def run(module):
     import gc, sys
     cd(module)
     try:
-        exec('import %s' %  (module))
+        exec('import %s' % (module))
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        print("Error running %s:"% (module))
+        sys.print_exception(e)
     exec('del sys.modules["%s"]' % (module))
     gc.collect()
     gc.disable()
