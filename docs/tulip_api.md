@@ -27,8 +27,11 @@ cd('ex') # The ex folder has a few examples and graphics in it
 execfile("parallax.py")
 run('game') # Runs a package, see below
 
-# Extract a .tar file. tar_create() coming soon!
+# Extract a .tar file.
 tulip.tar_extract(filename)
+
+# Create a tar file from a directory (and everything in it)
+tulip.tar_create(directory)
 
 # If you want something to run when Tulip boots, add it to boot.py
 edit("boot.py")
@@ -55,7 +58,7 @@ rabbit_game/
 ... rabbit_pic1.png
 ```
 
-The main Python script must be the name of the package. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package.tar')`. 
+The main Python script must be the name of the package. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package')`. 
 
 ## The Tulip Editor
 
@@ -472,17 +475,9 @@ tulip.sprite_clear()
 ```
 
 
-
-# In progress or planned features
-
 ## Tulip World
 
-Still very much early days, but Tulip supports a native chat room called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. We're hoping to build this out to support file transfer and other BBS-style features. But for now, you're able to pull down the latest messages and files and send messages and files yourself. 
-
-```python
-# Starts the UI for Tulip World (under construction!)
-tulip.world()
-```
+Still very much early days, but Tulip supports a native chat room called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
 
 You can call the underlying Tulip World APIs:
 
@@ -504,8 +499,8 @@ world.ls() # lists most recent unique filenames
 
 Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
 
-Status: live, but needs UI help.
 
+# In progress or planned features
 
 ## Tulip Music Editor
 
