@@ -101,7 +101,6 @@ def run(module):
         sys.print_exception(e)
     exec('del sys.modules["%s"]' % (module))
     gc.collect()
-    gc.disable()
     cd('..')
 
 
