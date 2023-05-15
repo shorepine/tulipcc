@@ -76,9 +76,9 @@ def upload(filename, content_type="application/octet-stream"):
     tulip.display_stop()
     if(_isdir(filename)):
         tar = True
-        print("Packing" % (filename))
-        filename = filename + ".tar"
+        print("Packing %s" % (filename))
         tulip.tar_create(filename)
+        filename += ".tar"
     contents = open(filename,"rb").read()
     uri = matrix_post(url, contents, content_type=content_type).json()["content_uri"]
     tulip.display_start()
