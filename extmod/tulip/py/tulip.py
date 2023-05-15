@@ -90,15 +90,13 @@ def joyk():
 # runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
 # TODO - pass args
 def run(module):
-    import gc
-    gc.enable()
+    import gc, sys
     cd(module)
     try:
-        exec('import %s' % (module))
+        exec('import %s' %  (module))
     except KeyboardInterrupt:
         pass
-    exec("%s = None" % (module))
-    exec("del %s" % (module))
+    exec('del sys.modules["%s"]' % (module))
     gc.collect()
     gc.disable()
     cd('..')
