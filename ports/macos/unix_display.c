@@ -129,9 +129,9 @@ uint16_t check_joy() {
 
 
 void check_key() {
+#ifndef MONITOR_APPLE 
     SDL_Event e;
     uint8_t was_touch = 0;
-#ifndef MONITOR_APPLE 
     while (SDL_PollEvent(&e) != 0) {
         if (e.type == SDL_QUIT) {
             unix_display_flag = -1; // tell main to quit
