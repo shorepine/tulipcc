@@ -124,6 +124,9 @@ def download(filename, limit=5000):
         age_nice = nice_time(filename["age_ms"]/1000)
         filename = filename["filename"]
     else: # was a filename search 
+        # Check for an extension
+        if('.' not in filename[-5:]):
+            filename = filename + ".tar"
         for file in files(limit=limit):
             if(file["filename"] == filename):
                 age_nice = nice_time(file["age_ms"]/1000)
@@ -140,7 +143,7 @@ def download(filename, limit=5000):
 
         print("Downloaded %s [%d bytes, last updated %s] from Tulip World." % (filename, b, age_nice.lstrip()))
         if(filename.endswith('.tar')):
-            print("Unpacking %s" % (filename))
+            print("Unpacking %s. Run it with run('%s')!" % (filename, filename[:-4]))
             tulip.tar_extract(filename, show_progress=False)
             os.remove(filename)
 
