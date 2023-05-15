@@ -49,12 +49,13 @@ If you have a program that relies on mulitple files (graphics, or multiple Pytho
 
 ```
 rabbit_game/
-... rabbit_game.py # has a run() method which starts the program
+... rabbit_game.py # starts the program when imported
+... extra.py # can put any other python files in here
 ... rabbit_pic.png
 ... rabbit_pic1.png
 ```
 
-The main Python script must be the name of the package and have a `run()` method. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS will support uploading and downloading packages as tar files.
+The main Python script must be the name of the package. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package.tar')`. 
 
 ## The Tulip Editor
 
@@ -491,7 +492,9 @@ messages = world.check() # returns a list of latest messages since your last cal
 world.send("hello!!") # Sends a message to Tulip World
 
 world.upload(filename) # Uploads a file to Tulip World 
+world.upload(folder) # Packages a folder and uploads it to Tulip World
 world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
+world.download(filename.tar) # Downloads a package and extracts it
 
 files = world.files(limit=5000) # returns the most recent N files (including versions with the same name) for selective download
 world.download(files[0]) # download a specific file instead
