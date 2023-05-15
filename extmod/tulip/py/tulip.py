@@ -87,15 +87,14 @@ def joyk():
         if(k == 26): jmask = jmask | Joy.R1
     return jmask
 
-# runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside with a run() function
+# runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
 # TODO - pass args
 def run(module):
     import gc
     gc.enable()
     cd(module)
-    exec('import %s' % (module))
     try:
-        exec('%s.run()' % (module))
+        exec('import %s' % (module))
     except KeyboardInterrupt:
         pass
     exec("%s = None" % (module))
