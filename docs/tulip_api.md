@@ -492,9 +492,9 @@ messages = world.check() # returns a list of latest messages since your last cal
 world.send("hello!!") # Sends a message to Tulip World
 
 world.upload(filename) # Uploads a file to Tulip World 
-world.upload(folder) # Packages a folder and uploads it to Tulip World
+world.upload(folder) # Packages a folder and uploads it to Tulip World as a package
 world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
-world.download(filename.tar) # Downloads a package and extracts it
+world.download(package_name) # Downloads a package and extracts it
 
 files = world.files(limit=5000) # returns the most recent N files (including versions with the same name) for selective download
 world.download(files[0]) # download a specific file instead
