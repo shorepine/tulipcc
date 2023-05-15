@@ -60,6 +60,32 @@ rabbit_game/
 
 The main Python script must be the name of the package. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package')`. 
 
+
+## Tulip World
+
+Still very much early days, but Tulip supports a native chat and file sharing BBS called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
+
+You can call the underlying Tulip World APIs:
+
+```python
+import world
+messages = world.check() # returns a list of latest messages since your last call
+world.send("hello!!") # Sends a message to Tulip World
+
+world.upload(filename) # Uploads a file to Tulip World 
+world.upload(folder) # Packages a folder and uploads it to Tulip World as a package
+world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
+world.download(package_name) # Downloads a package and extracts it
+
+files = world.files(limit=5000) # returns the most recent N files (including versions with the same name) for selective download
+world.download(files[0]) # download a specific file instead
+
+world.ls() # lists most recent unique filenames
+```
+
+Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
+
+
 ## The Tulip Editor
 
 Tulip ships with a text editor, based on pico/nano. It supports syntax highlighting, search, save/save-as. 
@@ -474,30 +500,6 @@ tulip.sprite_move(12, x, y)
 tulip.sprite_clear()
 ```
 
-
-## Tulip World
-
-Still very much early days, but Tulip supports a native chat room called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
-
-You can call the underlying Tulip World APIs:
-
-```python
-import world
-messages = world.check() # returns a list of latest messages since your last call
-world.send("hello!!") # Sends a message to Tulip World
-
-world.upload(filename) # Uploads a file to Tulip World 
-world.upload(folder) # Packages a folder and uploads it to Tulip World as a package
-world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
-world.download(package_name) # Downloads a package and extracts it
-
-files = world.files(limit=5000) # returns the most recent N files (including versions with the same name) for selective download
-world.download(files[0]) # download a specific file instead
-
-world.ls() # lists most recent unique filenames
-```
-
-Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
 
 
 # In progress or planned features

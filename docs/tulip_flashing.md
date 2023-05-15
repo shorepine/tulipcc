@@ -1,16 +1,5 @@
 # Compiling and flashing Tulip CC
 
-## Flash a Tulip without compiling
-
-**Please note, we don't recommend doing this yet.** Tulip is fast moving and it's really better if you figure out how to get the build environment going. It's not that hard. But if you want to try flashing your board without having to build Tulip, here's how:
-
- * Install [`esptool`](https://docs.espressif.com/projects/esptool/en/latest/esp32/installation.html) if you don't already have it
- * Make sure you have the serial port driver for your board installed. You should see a new /dev/\*USB\* or COM port when attaching it. If you don't, find the drivers for it and install them.
- * Download the 4 bin files in the [latest ESP32-S3 release](https://github.com/bwhitman/tulipcc/releases) and put them all in a folder
- * Connect your board / chip to USB
- * From the folder you have the .bin files in, run `esptool.py write_flash 0x0 bootloader.bin 0x10000 micropython.bin 0x8000 partition-table.bin 0x300000 tulip-lfs.bin`
- * Turn off and on the power to Tulip to start it 
-
 ## Compile TulipCC for ESP32-S3
 
 [Tulip CC](../README.md) should build on all platforms, although I've only tested macOS and Linux so far. Please let me know if you have any trouble!
@@ -84,6 +73,18 @@ idf.py -D MICROPY_BOARD=TULIP4 monitor # shows stderr, use control-] to quit
 idf.py -D MICROPY_BOARD=TULIP4 fullclean
 idf.py -D MICROPY_BOARD=TULIP4 flash
 ```
+
+## Flash a Tulip without compiling
+
+**Please note, we don't recommend doing this yet.** Tulip is fast moving and it's really better if you figure out how to get the build environment going. It's not that hard. But if you want to try flashing your board without having to build Tulip, here's how:
+
+ * Install [`esptool`](https://docs.espressif.com/projects/esptool/en/latest/esp32/installation.html) if you don't already have it
+ * Make sure you have the serial port driver for your board installed. You should see a new /dev/\*USB\* or COM port when attaching it. If you don't, find the drivers for it and install them.
+ * Download the 4 bin files in the [latest ESP32-S3 release](https://github.com/bwhitman/tulipcc/releases) and put them all in a folder
+ * Connect your board / chip to USB
+ * From the folder you have the .bin files in, run `esptool.py write_flash 0x0 bootloader.bin 0x10000 micropython.bin 0x8000 partition-table.bin 0x300000 tulip-lfs.bin`
+ * Turn off and on the power to Tulip to start it 
+
 
 
 ## Windows build and flash
