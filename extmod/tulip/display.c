@@ -11,6 +11,18 @@ uint16_t BOUNCE_BUFFER_SIZE_PX;
 uint16_t TFB_ROWS, TFB_COLS;
 uint8_t tfb_active = 1;
 
+
+uint8_t check_dim_xy(uint16_t x, uint16_t y) {
+    if(x >= OFFSCREEN_X_PX + H_RES || y >= OFFSCREEN_Y_PX+V_RES) return 0;
+    return 1;
+}
+
+uint8_t check_dim_xywh(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+    if(!check_dim_xy(x,y)) return 0;
+    if(!check_dim_xy(x+w-1, y+h-1)) return 0;
+    return 1;
+}
+
 // RRRGGGBB
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *r = px0 & 0xe0;
@@ -244,79 +256,91 @@ void display_reset_touch() {
 
 
 void display_invert_bg(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-    for (int j = y; j < y+h; j++) {
-        for (int i = x; i < x+w; i++) {
-            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
-                (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = 255 - (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)];
+    if(check_dim_xywh(x,y,w,h)) {
+        for (int j = y; j < y+h; j++) {
+            for (int i = x; i < x+w; i++) {
+                if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
+                    (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = 255 - (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)];
+                }
             }
         }
-    }
+    } else { fprintf(stderr, "invert_bg %d %d %d %d\n", x,y,w,h); }
 }
 
 void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data) {
-    for (int j = y; j < y+h; j++) {
-        for (int i = x; i < x+w; i++) {
-            uint8_t r = *data++;
-            uint8_t g = *data++;
-            uint8_t b = *data++;
-            uint8_t a = *data++; 
-            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
-                if(a!=0) {
-                    (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL))] = color_332(r,g,b);
+    if(check_dim_xywh(x,y,w,h)) {
+        for (int j = y; j < y+h; j++) {
+            for (int i = x; i < x+w; i++) {
+                uint8_t r = *data++;
+                uint8_t g = *data++;
+                uint8_t b = *data++;
+                uint8_t a = *data++; 
+                if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
+                    if(a!=0) {
+                        (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL))] = color_332(r,g,b);
+                    }
                 }
             }
         }
-    }
+    } else { fprintf(stderr, "bg_bitmap_rgba %d %d %d %d\n", x,y,w,h); }
 }
 
 void display_set_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data) {
-    uint32_t c = 0;
-    for (int j = y; j < y+h; j++) {
-        for (int i = x; i < x+w; i++) {
-            uint8_t pixel = data[c++];
-            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
-                if(pixel != ALPHA) {
-                    (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = pixel;
+    if(check_dim_xywh(x,y,w,h)) {
+        uint32_t c = 0;
+        for (int j = y; j < y+h; j++) {
+            for (int i = x; i < x+w; i++) {
+                uint8_t pixel = data[c++];
+                if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
+                    if(pixel != ALPHA) {
+                        (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = pixel;
+                    }
                 }
             }
         }
-    }
+    } else { fprintf(stderr, "bg_bitmap_raw %d %d %d %d\n", x,y,w,h); }
 }
 
 void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t * data) {
-    uint32_t c = 0;
-    for (int j = y; j < y+h; j++) {
-        for (int i = x; i < x+w; i++) {
-            data[c++] = (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)];
+    if(check_dim_xywh(x,y,w,h)) {
+        uint32_t c = 0;
+        for (int j = y; j < y+h; j++) {
+            for (int i = x; i < x+w; i++) {
+                data[c++] = (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)];
+            }
         }
-    }
+    } else { fprintf(stderr, "get_bitmap_raw %d %d %d %d\n", x,y,w,h); }
 }
 
 void display_bg_bitmap_blit(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1) {
-    for (uint16_t j = y1; j < y1+h; j++) {
-        for (uint16_t i = x1; i < x1+w; i++) {
-            uint16_t src_y = y+(j-y1);
-            uint16_t src_x = x+(i-x1);
-            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
-                (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
-            }
-        }
-    }    
-}
-
-void display_bg_bitmap_blit_alpha(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1) {
-    for (uint16_t j = y1; j < y1+h; j++) {
-        for (uint16_t i = x1; i < x1+w; i++) {
-            uint16_t src_y = y+(j-y1);
-            uint16_t src_x = x+(i-x1);
-            if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
-                uint8_t c = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
-                if(c != ALPHA) {
+    if(check_dim_xywh(x,y,w,h) && check_dim_xywh(x1,y1, w, h)) {
+        for (uint16_t j = y1; j < y1+h; j++) {
+            for (uint16_t i = x1; i < x1+w; i++) {
+                uint16_t src_y = y+(j-y1);
+                uint16_t src_x = x+(i-x1);
+                if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
                     (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
                 }
             }
-        }
-    }    
+        }    
+    } else { fprintf(stderr, "bg_bitmap_blit %d %d %d %d %d %d\n", x,y,w,h, x1, y1); }
+}
+
+void display_bg_bitmap_blit_alpha(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1) {
+    if(check_dim_xywh(x,y,w,h) && check_dim_xywh(x1,y1, w, h)) {
+        for (uint16_t j = y1; j < y1+h; j++) {
+            for (uint16_t i = x1; i < x1+w; i++) {
+                uint16_t src_y = y+(j-y1);
+                uint16_t src_x = x+(i-x1);
+                if(j<V_RES+OFFSCREEN_Y_PX && i < H_RES+OFFSCREEN_X_PX) {
+                    uint8_t c = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
+                    if(c != ALPHA) {
+                        (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = (bg)[(((src_y*(H_RES+OFFSCREEN_X_PX) + src_x)*BYTES_PER_PIXEL) + 0)];
+                    }
+                }
+            }
+        }    
+    } else { fprintf(stderr, "bg_bitmap_blit_alpha %d %d %d %d %d %d\n", x,y,w,h, x1, y1); }
 }
 
 
@@ -324,23 +348,26 @@ void display_bg_bitmap_blit_alpha(uint16_t x,uint16_t y,uint16_t w,uint16_t h,ui
 //mem_len = sprite_load(bitmap, mem_pos, [x,y,w,h]) # returns mem_len (w*h*2)
 // load a bitmap into fast sprite ram
 void display_load_sprite_rgba(uint32_t mem_pos, uint32_t len, uint8_t* data) {
-    for (uint32_t j = mem_pos; j < mem_pos + len; j=j+BYTES_PER_PIXEL) {
-        uint8_t r = *data++;
-        uint8_t g = *data++;
-        uint8_t b = *data++;
-        uint8_t a = *data++;
-        if(a==0) { // only full transparent counts
-            sprite_ram[j] = ALPHA;
-        } else {
-            sprite_ram[j] = color_332(r,g,b);
+    if(mem_pos < SPRITE_RAM_BYTES && mem_pos+len < SPRITE_RAM_BYTES) {
+        for (uint32_t j = mem_pos; j < mem_pos + len; j=j+BYTES_PER_PIXEL) {
+            uint8_t r = *data++;
+            uint8_t g = *data++;
+            uint8_t b = *data++;
+            uint8_t a = *data++;
+            if(a==0) { // only full transparent counts
+                sprite_ram[j] = ALPHA;
+            } else {
+                sprite_ram[j] = color_332(r,g,b);
+            }
         }
     }
-
 }
 
 void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data) {
-    for (uint32_t j = mem_pos; j < mem_pos + len; j=j+BYTES_PER_PIXEL) {
-        sprite_ram[j] = *data++;
+    if(mem_pos < SPRITE_RAM_BYTES && mem_pos+len < SPRITE_RAM_BYTES) {
+        for (uint32_t j = mem_pos; j < mem_pos + len; j=j+BYTES_PER_PIXEL) {
+            sprite_ram[j] = *data++;
+        }
     }
 }
 
@@ -399,21 +426,32 @@ void display_screenshot(char * screenshot_fn) {
 }
 
 void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx) {
-    bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL] = pal_idx;    
+    if(check_dim_xy(x,y)) {
+        bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL] = pal_idx;    
+    }
 }
 
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b) {
-    bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL] = color_332(r,g,b);
+    if(check_dim_xy(x,y)) {
+        bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL] = color_332(r,g,b);
+    }
 }
 
 
 void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_t *b) {
-    uint8_t px0 = bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0];
-    unpack_rgb_332(px0, r, g, b);
+    if(check_dim_xy(x,y)) {
+        uint8_t px0 = bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0];
+        unpack_rgb_332(px0, r, g, b);
+    } else {
+        *r = 0; *g =0; *b = 0;
+    }
 }
 
 uint8_t display_get_bg_pixel_pal(uint16_t x, uint16_t y) {
-    return bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0];
+    if(check_dim_xy(x,y)) {
+        return bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0];
+    }
+    return 0;
 }
 
 
