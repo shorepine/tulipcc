@@ -80,6 +80,9 @@ void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 
 void display_teardown(void);
 
+uint8_t check_dim_xy(uint16_t x, uint16_t y);
+uint8_t check_dim_xywh(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+
 extern const unsigned char font_8x12_r[256][12];
 
 

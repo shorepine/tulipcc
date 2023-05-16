@@ -500,9 +500,13 @@ STATIC mp_obj_t tulip_sprite_register(size_t n_args, const mp_obj_t *args) {
     uint32_t mem_pos = mp_obj_get_int(args[1]);
     uint16_t width = mp_obj_get_int(args[2]);
     uint16_t height = mp_obj_get_int(args[3]);
-    sprite_mem[spriteno] = mem_pos;
-    sprite_w_px[spriteno] = width;
-    sprite_h_px[spriteno] = height;
+    if(spriteno < SPRITES) {
+        sprite_mem[spriteno] = mem_pos;
+        sprite_w_px[spriteno] = width;
+        sprite_h_px[spriteno] = height;
+    } else {
+        fprintf(stderr, "register bad spriteno %d\n", spriteno);
+    }
     return mp_const_none;
 }
 
@@ -514,8 +518,16 @@ STATIC mp_obj_t tulip_sprite_move(size_t n_args, const mp_obj_t *args) {
     uint16_t spriteno = mp_obj_get_int(args[0]);
     uint16_t x = mp_obj_get_int(args[1]);
     uint16_t y = mp_obj_get_int(args[2]);
-    sprite_x_px[spriteno] = x;
-    sprite_y_px[spriteno] = y;
+    if(spriteno < SPRITES) {
+        if(check_dim_xy(x,y)) {
+            sprite_x_px[spriteno] = x;
+            sprite_y_px[spriteno] = y;
+        } else {
+            fprintf(stderr, "bad sprite xy %d %d\n", x,y);
+        }
+    } else {
+        fprintf(stderr, "move bad spriteno %d\n", spriteno);
+    }
     return mp_const_none;
 }
 
@@ -523,7 +535,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_move_obj, 3, 3, tulip_sp
 
 STATIC mp_obj_t tulip_sprite_on(size_t n_args, const mp_obj_t *args) {
     uint16_t spriteno = mp_obj_get_int(args[0]);
-    sprite_vis[spriteno] = SPRITE_IS_SPRITE;
+    if(spriteno < SPRITES) sprite_vis[spriteno] = SPRITE_IS_SPRITE;
     return mp_const_none;
 }
 
@@ -532,7 +544,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_on_obj, 1, 1, tulip_spri
 
 STATIC mp_obj_t tulip_sprite_off(size_t n_args, const mp_obj_t *args) {
     uint16_t spriteno = mp_obj_get_int(args[0]);
-    sprite_vis[spriteno] = 0;
+    if(spriteno < SPRITES) sprite_vis[spriteno] = 0;
     return mp_const_none;
 }
 
