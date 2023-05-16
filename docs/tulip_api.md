@@ -284,7 +284,7 @@ The Tulip GPU consists of 3 subsystems, in drawing order:
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
  * A sprite layer on top of the TFB (which is on top of the BG)
 
-The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. 
+The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 18Mhz, which is 23FPS. This is a great balance of speed and stability for text -- the editor and REPL. When you're writing a game or animation, increase `tulip_clock` to at least 22 for 30FPS and higher. 
 
 Some example display clocks and resolutions:
 
@@ -292,8 +292,8 @@ Some example display clocks and resolutions:
 | ------- | ------- | ------ | ------ | --| ------- | ------- | ------ | ------ |
 | 1024    | 600     | 10     | 14.98  | |512     | 600     | 10     | 19.91  |
 | 1024    | 600     | 14     | 18.55  | |512     | 600     | 14     | 30.26  |
-| 1024    | 600     | 18     | 23.19  | |512     | 600     | 18     | 37.82  |
-| **1024** | **600**| **22** | 30.91  | |512     | 600     | 22     | 50.43  |
+| **1024**| **600** | **18** | 23.19  | |512     | 600     | 18     | 37.82  |
+| 1024    | 600     | 22     | 30.91  | |512     | 600     | 22     | 50.43  |
 | 1024    | 600     | 28     | 46.37  | |512     | 600     | 28     | 75.65  |
 | 1024    | 300     | 10     | 21.47  | |512     | 300     | 10     | 35.03  |
 | 1024    | 300     | 14     | 34.36  | |512     | 300     | 14     | 56.05  |
@@ -313,7 +313,7 @@ fps = tulip.fps()
 # resets all 3 GPU systems back to their starting state, clears all BG and sprite ram and clears the TFB.
 tulip.gpu_reset()
 
-# Get or set the display clock in MHz. Current default is 22.
+# Get or set the display clock in MHz. Current default is 18.
 # Higher clocks mean smoother animations, but less time for the CPU to prepare things to draw
 clock = tulip.display_clock() 
 tulip.display_clock(mhz)
