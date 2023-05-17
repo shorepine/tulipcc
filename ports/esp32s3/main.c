@@ -81,6 +81,7 @@
 #include "alles.h"
 #include "touchscreen.h"
 #include "tasks.h"
+#include "usb_keyboard.h"
 #if MICROPY_BLUETOOTH_NIMBLE
 #include "extmod/modbluetooth.h"
 #endif
@@ -333,9 +334,11 @@ void boardctrl_startup(void) {
 extern void ft5x06_init();
 extern void run_ft5x06();
 extern void run_midi();
-extern void run_usb();
 extern void init_esp_joy();
-//extern void run_i2c();
+
+
+
+
 
 void app_main(void) {
     // Hook for a board to run code at start up.
@@ -351,15 +354,14 @@ void app_main(void) {
     xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
 
     printf("Starting USB host on core %d\n", USB_TASK_COREID);
+    usbh_setup(show_config_desc_full);
     xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
 
     printf("Starting display on core %d\n", DISPLAY_TASK_COREID);
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
 
-    //run_i2c();
-
-    ft5x06_init();
     printf("Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
+    ft5x06_init();
     xTaskCreatePinnedToCore(run_ft5x06, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
 
     printf("Starting Alles on core %d\n", ALLES_TASK_COREID);
