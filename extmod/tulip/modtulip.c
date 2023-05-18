@@ -125,6 +125,28 @@ STATIC mp_obj_t tulip_bg_clear(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear_obj, 0, 1, tulip_bg_clear);
 
+// tulip.bg_clear2(pal_idx)
+// tulip.bg_clear2() # uses default
+STATIC mp_obj_t tulip_bg_clear2(size_t n_args, const mp_obj_t *args) {
+    uint8_t pal_idx = bg_pal_color;
+    if(n_args == 1) {
+        pal_idx = mp_obj_get_int(args[0]);
+    }
+    // Set a single pixel
+    display_set_bg_pixel_pal(0,0,pal_idx);
+    // Copy that pixel
+    for (uint16_t j = 0; j < V_RES+OFFSCREEN_Y_PX; j++) {
+        for (uint16_t i = 0; i < H_RES+OFFSCREEN_X_PX; i++) {
+            (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)] = (bg)[0];
+        }
+    }    
+    return mp_const_none; 
+}
+
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear2_obj, 0, 1, tulip_bg_clear2);
+
+
 // tulip.bg_bitmap(x, y, w, h, bitmap)  --> sets or gets bitmap to fb ram
 STATIC mp_obj_t tulip_bg_bitmap(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
@@ -1043,6 +1065,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_pixel), MP_ROM_PTR(&tulip_bg_pixel_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_clear2), MP_ROM_PTR(&tulip_bg_clear2_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll), MP_ROM_PTR(&tulip_bg_scroll_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll_x_speed), MP_ROM_PTR(&tulip_bg_scroll_x_speed_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll_y_speed), MP_ROM_PTR(&tulip_bg_scroll_y_speed_obj) },
