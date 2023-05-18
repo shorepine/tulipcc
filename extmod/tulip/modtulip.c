@@ -106,28 +106,11 @@ STATIC mp_obj_t tulip_bg_pixel(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_pixel_obj, 2, 3, tulip_bg_pixel);
 
+
+// This version of bg_clear is 2.5x as fast as the old one, as it's just copying within SPIRAM.
 // tulip.bg_clear(pal_idx)
 // tulip.bg_clear() # uses default
 STATIC mp_obj_t tulip_bg_clear(size_t n_args, const mp_obj_t *args) {
-    uint8_t pal_idx = bg_pal_color;
-    if(n_args == 1) {
-        pal_idx = mp_obj_get_int(args[0]);
-    }
-    // Set the rect with pixel color
-    for(uint16_t y0=0;y0<V_RES+OFFSCREEN_Y_PX;y0++) {
-        for(uint16_t x0=0;x0<H_RES+OFFSCREEN_X_PX;x0++) {
-            display_set_bg_pixel_pal(x0, y0, pal_idx);
-        }
-    }
-    return mp_const_none; 
-}
-
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear_obj, 0, 1, tulip_bg_clear);
-
-// tulip.bg_clear2(pal_idx)
-// tulip.bg_clear2() # uses default
-STATIC mp_obj_t tulip_bg_clear2(size_t n_args, const mp_obj_t *args) {
     uint8_t pal_idx = bg_pal_color;
     if(n_args == 1) {
         pal_idx = mp_obj_get_int(args[0]);
@@ -144,7 +127,7 @@ STATIC mp_obj_t tulip_bg_clear2(size_t n_args, const mp_obj_t *args) {
 }
 
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear2_obj, 0, 1, tulip_bg_clear2);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear_obj, 0, 1, tulip_bg_clear);
 
 
 // tulip.bg_bitmap(x, y, w, h, bitmap)  --> sets or gets bitmap to fb ram
@@ -1065,7 +1048,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_pixel), MP_ROM_PTR(&tulip_bg_pixel_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },
-    { MP_ROM_QSTR(MP_QSTR_bg_clear2), MP_ROM_PTR(&tulip_bg_clear2_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll), MP_ROM_PTR(&tulip_bg_scroll_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll_x_speed), MP_ROM_PTR(&tulip_bg_scroll_x_speed_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll_y_speed), MP_ROM_PTR(&tulip_bg_scroll_y_speed_obj) },
