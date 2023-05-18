@@ -18,6 +18,21 @@ float compute_cpu_usage(uint8_t debug) {
 #endif
 
 
+
+void display_start() {
+#ifdef ESP_PLATFORM
+    esp32s3_display_start();
+#endif
+}
+
+
+void display_stop() {
+#ifdef ESP_PLATFORM
+    esp32s3_display_stop();
+#endif
+}
+
+
 uint8_t rand_uint8() {
 #ifdef ESP_PLATFORM
     return rand() % 255; // i thought esp_random() would be faster but it's not 

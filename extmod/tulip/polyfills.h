@@ -4,8 +4,9 @@
 #include "py/mphal.h"
 #include "amy.h"
 #ifdef ESP_PLATFORM
-
 // not sure, maybe esp includes?
+extern void esp32s3_display_start();
+extern void esp32s3_display_stop();
 
 
 #else
@@ -28,5 +29,6 @@ void *realloc_caps(void* ptr, uint32_t size, uint32_t caps);
 void free_caps(void *ptr);
 float compute_cpu_usage(uint8_t debug);
 void delay_ms(uint32_t ms);
-
+void display_start();
+void display_stop();
 #endif

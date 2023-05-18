@@ -25,8 +25,8 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
 void display_brightness(uint8_t amount);
 void esp_display_set_clock(uint8_t mhz) ;
 
-void display_stop();
-void display_start();
+void esp32s3_display_stop();
+void esp32s3_display_start();
 
 
 // can't use

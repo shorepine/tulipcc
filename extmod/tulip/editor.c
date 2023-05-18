@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include "tulip_helpers.h"
 #include "display.h"
+#include "polyfills.h"
 
 #define EDITOR_COLOR_FG 255
 #define EDITOR_COLOR_COMMENT 229
