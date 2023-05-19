@@ -436,6 +436,7 @@ tulip.bg_scroll_x_offset(line, x_offset)
 tulip.bg_scroll_y_offset(line, y_offset)
 
 # "Swap" the visible BG with the one to its right, using the scrolling registers
+# This would make 1024,0 the top left BG pixel after the first call to swap, and 0,0 after the second call to swap
 tulip.swap()
 ```
 
