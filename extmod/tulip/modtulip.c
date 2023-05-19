@@ -894,27 +894,27 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_str_obj, 5, 5, tulip_str);
 
 STATIC mp_obj_t tulip_timing(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-#ifdef ESP_PLATFORM
         mp_obj_t tuple[10];
         tuple[0] = mp_obj_new_int(H_RES);
         tuple[1] = mp_obj_new_int(V_RES);
         tuple[2] = mp_obj_new_int(OFFSCREEN_X_PX);
         tuple[3] = mp_obj_new_int(OFFSCREEN_Y_PX);
+#ifdef ESP_PLATFORM
         tuple[4] = mp_obj_new_int(HSYNC_BACK_PORCH);
         tuple[5] = mp_obj_new_int(HSYNC_FRONT_PORCH);
         tuple[6] = mp_obj_new_int(HSYNC_PULSE_WIDTH);
         tuple[7] = mp_obj_new_int(VSYNC_BACK_PORCH);
         tuple[8] = mp_obj_new_int(VSYNC_FRONT_PORCH);
         tuple[9] = mp_obj_new_int(VSYNC_PULSE_WIDTH);
-        return mp_obj_new_tuple(10, tuple);
 #else
-        mp_obj_t tuple[4];
-        tuple[0] = mp_obj_new_int(H_RES);
-        tuple[1] = mp_obj_new_int(V_RES);
-        tuple[2] = mp_obj_new_int(OFFSCREEN_X_PX);
-        tuple[3] = mp_obj_new_int(OFFSCREEN_Y_PX);
-        return mp_obj_new_tuple(4, tuple);
-#endif        
+        tuple[4] = mp_obj_new_int(-1);
+        tuple[5] = mp_obj_new_int(-1);
+        tuple[6] = mp_obj_new_int(-1);
+        tuple[7] = mp_obj_new_int(-1);
+        tuple[8] = mp_obj_new_int(-1);
+        tuple[9] = mp_obj_new_int(-1);
+#endif
+        return mp_obj_new_tuple(10, tuple);
     }
 
 #ifdef ESP_PLATFORM
