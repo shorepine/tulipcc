@@ -57,7 +57,7 @@ void floodFillScanline(int x, int y, int newColor, int oldColor)
 
   //draw current scanline from start position to the right
   x1 = x;
-  while(x1 < DEFAULT_H_RES && getPixel(x1,y) == oldColor)
+  while(x1 < (H_RES + OFFSCREEN_X_PX) && getPixel(x1,y) == oldColor)
   {
     drawPixel(x1,y,newColor);
     x1++;
@@ -73,7 +73,7 @@ void floodFillScanline(int x, int y, int newColor, int oldColor)
 
   //test for new scanlines above
   x1 = x;
-  while(x1 < DEFAULT_H_RES && getPixel(x1,y) == newColor)
+  while(x1 < (H_RES + OFFSCREEN_X_PX) && getPixel(x1,y) == newColor)
   {
     if(y > 0 && getPixel(x1,y-1) == oldColor)
     {
@@ -93,9 +93,9 @@ void floodFillScanline(int x, int y, int newColor, int oldColor)
 
   //test for new scanlines below
   x1 = x;
-  while(x1 < DEFAULT_H_RES && getPixel(x1,y) == newColor)
+  while(x1 < (H_RES + OFFSCREEN_X_PX) && getPixel(x1,y) == newColor)
   {
-    if(y < DEFAULT_V_RES - 1 && getPixel(x1,y+1) == oldColor)
+    if(y < (V_RES + OFFSCREEN_Y_PX) - 1 && getPixel(x1,y+1) == oldColor)
     {
       floodFillScanline(x1, y + 1, newColor, oldColor);
     }
@@ -104,7 +104,7 @@ void floodFillScanline(int x, int y, int newColor, int oldColor)
   x1 = x - 1;
   while(x1 >= 0 && getPixel(x1,y) == newColor)
   {
-    if(y < DEFAULT_V_RES - 1 && getPixel(x1,y+1) == oldColor)
+    if(y < (V_RES + OFFSCREEN_Y_PX) - 1 && getPixel(x1,y+1) == oldColor)
     {
       floodFillScanline(x1, y + 1, newColor, oldColor);
     }
@@ -113,7 +113,7 @@ void floodFillScanline(int x, int y, int newColor, int oldColor)
 }
 
 void floodFill(int16_t x, int16_t y, uint8_t color, uint8_t old_color) {   
-    if ( 0 <= x && x < DEFAULT_H_RES  && 0 <= y && y < DEFAULT_V_RES) {
+    if ( 0 <= x && x < (H_RES + OFFSCREEN_X_PX)  && 0 <= y && y < V_RES+OFFSCREEN_Y_PX) {
         if(display_get_bg_pixel_pal(x,y) == old_color) {
             display_set_bg_pixel_pal(x,y, color);
             floodFill(x-1,y,color,old_color);
