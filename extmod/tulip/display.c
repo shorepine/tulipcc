@@ -66,7 +66,7 @@ uint8_t color_332(uint8_t red, uint8_t green, uint8_t blue) {
 extern void tulip_frame_isr(); 
 
 
- bool display_frame_done_generic() {
+bool display_frame_done_generic() {
     // Update the scroll
     for(uint16_t i=0;i<V_RES;i++) {
         x_offsets[i] = x_offsets[i] + x_speeds[i];
@@ -79,6 +79,10 @@ extern void tulip_frame_isr();
     tulip_frame_isr();
     vsync_count++; 
     return true;
+}
+
+void display_swap() {
+    for(uint16_t i=0;i<V_RES;i++) x_offsets[i] = (x_offsets[i] + H_RES) % (H_RES+OFFSCREEN_X_PX);
 }
 
 

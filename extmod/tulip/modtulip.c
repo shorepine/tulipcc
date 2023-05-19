@@ -85,6 +85,15 @@ STATIC mp_obj_t tulip_gpu(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_gpu_obj, 0, 0, tulip_gpu);
 
 
+//tulip.swap()
+STATIC mp_obj_t tulip_swap(size_t n_args, const mp_obj_t *args) {
+    display_swap();
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_swap_obj, 0, 0, tulip_swap);
+
+
+
 STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
     return mp_obj_new_int(get_ticks_ms());
 }
@@ -1040,6 +1049,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_display_restart), MP_ROM_PTR(&tulip_display_restart_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_stop), MP_ROM_PTR(&tulip_display_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_start), MP_ROM_PTR(&tulip_display_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_swap), MP_ROM_PTR(&tulip_swap_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_stop), MP_ROM_PTR(&tulip_tfb_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_start), MP_ROM_PTR(&tulip_tfb_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_fps), MP_ROM_PTR(&tulip_fps_obj) },

@@ -434,7 +434,11 @@ tulip.bg_scroll_x_speed(line, x_speed)
 tulip.bg_scroll_y_speed(line, y_speed)
 tulip.bg_scroll_x_offset(line, x_offset)
 tulip.bg_scroll_y_offset(line, y_offset)
+
+# "Swap" the visible BG with the one to its right, using the scrolling registers
+tulip.swap()
 ```
+
 We currently ship 19 fonts with Tulip to use for the BG. Here they are:
 
 ![IMG_3339](https://user-images.githubusercontent.com/76612/229381546-46ec4c50-4c4a-4f3a-9aec-c77d439081b2.jpeg)
