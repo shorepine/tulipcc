@@ -574,9 +574,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_clear_obj, 0, 0, tulip_s
 
 
 STATIC mp_obj_t tulip_collisions(size_t n_args, const mp_obj_t *args) {
-    // somehow return the collisions obj
     mp_obj_t list = mp_obj_new_list(0, NULL);
-
     for(uint8_t i=0;i<COLLISIONS;i++) {
         if(collisions[i].a != 255) {
             mp_obj_t tuple[4];
