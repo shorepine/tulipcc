@@ -141,6 +141,7 @@ extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCRE
 #define SPRITE_IS_LINE 0x40
 #define SPRITE_IS_BEZIER 0x20
 #define SPRITE_IS_ELLIPSE 0x10
+#define COLLISIONS 32
 
 uint8_t tfb_active;
 uint8_t tfb_y_row; 
@@ -153,6 +154,16 @@ uint8_t brightness;
 float reported_fps;
 float reported_gpu_usage;
 
+struct _collision {
+    uint8_t a;
+    uint8_t b;
+    uint16_t x;
+    uint16_t y;
+};
+typedef struct _collision collision;
+
+collision * collisions;
+uint8_t *collision_bitfield;
 // RAM for sprites and background FB
 uint8_t *sprite_ram; // in IRAM
 uint8_t * bg; // in SPIRAM

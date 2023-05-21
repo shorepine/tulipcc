@@ -573,6 +573,27 @@ STATIC mp_obj_t tulip_sprite_clear(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_clear_obj, 0, 0, tulip_sprite_clear);
 
 
+STATIC mp_obj_t tulip_collisions(size_t n_args, const mp_obj_t *args) {
+    // somehow return the collisions obj
+    mp_obj_t list = mp_obj_new_list(0, NULL);
+
+    for(uint8_t i=0;i<COLLISIONS;i++) {
+        if(collisions[i].a != 255) {
+            mp_obj_t tuple[4];
+            tuple[0] = mp_obj_new_int(collisions[i].a);
+            tuple[1] = mp_obj_new_int(collisions[i].b);
+            tuple[2] = mp_obj_new_int(collisions[i].x);
+            tuple[3] = mp_obj_new_int(collisions[i].y);
+            mp_obj_list_append(list, mp_obj_new_tuple(4, tuple));
+        }
+    }
+    return list;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_collisions_obj, 0, 0, tulip_collisions);
+
+
+
 extern void editor(const char * filename);
 STATIC mp_obj_t tulip_edit(size_t n_args, const mp_obj_t *args) {
     if(n_args) {
@@ -1079,6 +1100,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_sprite_on), MP_ROM_PTR(&tulip_sprite_on_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_off), MP_ROM_PTR(&tulip_sprite_off_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_clear), MP_ROM_PTR(&tulip_sprite_clear_obj) },
+    { MP_ROM_QSTR(MP_QSTR_collisions), MP_ROM_PTR(&tulip_collisions_obj) },
     { MP_ROM_QSTR(MP_QSTR_edit), MP_ROM_PTR(&tulip_edit_obj) },
     { MP_ROM_QSTR(MP_QSTR_int_screenshot), MP_ROM_PTR(&tulip_int_screenshot_obj) },
     { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
