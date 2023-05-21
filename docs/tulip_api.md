@@ -471,7 +471,7 @@ print(tulip.ansi_fg(56))
 
 
 ## Sprites
-You can have up to 32 sprites on screen at once, and have 32KB of bitmap data to store them in. 
+You can have up to 32 sprites on screen at once, and have 32KB of bitmap data to store them in. Sprites have collision detection built in.
 
 ```python
 # Load the data from a PNG file into sprite RAM at the memory position (0-32767). 
@@ -500,6 +500,10 @@ tulip.sprite_off(12)
 
 # Set a sprite x and y position
 tulip.sprite_move(12, x, y)
+
+# Every frame, we update a collision list of things that collided that frame
+for c in tulip.collisions():
+    (a,b,x,y) = c # a and b are sprite #s that collided. x and y is where the first collision was
 
 # Clear all sprite RAM, reset all sprite handles
 tulip.sprite_clear()
