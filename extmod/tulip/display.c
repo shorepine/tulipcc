@@ -87,7 +87,7 @@ void display_swap() {
 }
 
 
-
+// Thanks dan for this code... packs a 32x32 hit matrix into 62 bytes
 uint8_t collide_mask_get(uint8_t a, uint8_t b) {
     uint16_t field = 0;
     if(a==b) return 1;
