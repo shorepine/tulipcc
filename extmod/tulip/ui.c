@@ -290,7 +290,6 @@ void ui_slider_new(uint8_t ui_id, float val, uint16_t x, uint16_t y, uint16_t w,
 
 int8_t ui_bounds(uint16_t x, uint16_t y) {
     // find out if x&y are within bounds of any of the active elements, return the ID if so. return -1 if not
-    int8_t ui_id = -1;
     for(uint8_t i=0;i<MAX_UI_ELEMENTS;i++) {
         struct ui_element * e = elements[i];
         if(e != NULL) {
@@ -301,8 +300,7 @@ int8_t ui_bounds(uint16_t x, uint16_t y) {
             }
         }
     }
-    return ui_id;
-
+    return -1; // i want to thank dan ellis for his helpful bug fix
 }
 
 void ui_init() {

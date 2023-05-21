@@ -75,14 +75,38 @@ bool display_frame_done_generic() {
         y_offsets[i] = y_offsets[i] % (V_RES+OFFSCREEN_Y_PX);
         bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL*y_offsets[i] + x_offsets[i]*BYTES_PER_PIXEL];
     }
-
     tulip_frame_isr();
     vsync_count++; 
+    // clear collision
+    for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
     return true;
 }
 
 void display_swap() {
     for(uint16_t i=0;i<V_RES;i++) x_offsets[i] = (x_offsets[i] + H_RES) % (H_RES+OFFSCREEN_X_PX);
+}
+
+
+
+uint8_t collide_mask_get(uint8_t a, uint8_t b) {
+    uint16_t field = 0;
+    if(a==b) return 1;
+    if(a>b) {
+         field = a * (a - 1) / 2 + b;
+    } else {
+         field = b * (b - 1) / 2 + a;
+    }
+    return collision_bitfield[field / 8] & 1 << (field % 8) ;
+}
+void collide_mask_set(uint8_t a, uint8_t b) {
+    uint16_t field = 0;
+    if(a==b) return;
+    if(a>b) {
+         field = a * (a - 1) / 2 + b;
+    } else {
+         field = b * (b - 1) / 2 + a;
+    }
+    collision_bitfield[field / 8] |= 1 << (field % 8);
 }
 
 
@@ -100,6 +124,7 @@ int32_t desync = 0;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
     uint8_t * b = (uint8_t*)bounce_buf;
+    uint8_t collision_c = 0;
 
     // Copy in the BG, line by line 
     // 208uS per call at 6 lines RGB565
@@ -170,6 +195,8 @@ int32_t desync = 0;
                 tfb_col++;
             }
         }
+        uint8_t sprite_ids_x[H_RES];
+        for(uint16_t i=0;i<H_RES;i++) sprite_ids_x[i] = 255;
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
         for(uint8_t s=0;s<SPRITES;s++) {
@@ -181,6 +208,19 @@ int32_t desync = 0;
                     uint16_t relative_sprite_y_px = row_px - sprite_y_px[s];
                     for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
                         if(col_px < H_RES) {
+                            if(sprite_ids_x[col_px]!=255) { // sprite already here!
+                                // already done?
+                                if(!collide_mask_get(sprite_ids_x[col_px], s)) {
+                                    collisions[collision_c].a = sprite_ids_x[col_px];
+                                    collisions[collision_c].b = s;
+                                    collisions[collision_c].x = col_px;
+                                    collisions[collision_c].y = row_px;
+                                    collide_mask_set(sprite_ids_x[col_px], s);
+                                    collision_c = (collision_c+1) % COLLISIONS;
+                                }
+                            } else {
+                                sprite_ids_x[col_px] = s;
+                            }
                             uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
                             uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
                             if(b0 != ALPHA) {
@@ -198,7 +238,16 @@ int32_t desync = 0;
     return false; 
 }
 
+/*
+a = 23
+b = 3
+bit_idx = (a * 32 + b)
+bit_idx2 =(b * 32 + a)
 
+bitfield
+
+need to make this symmetric w/o wasting ram and cpu
+*/
 
 void display_reset_bg() {
     bg_pal_color = TULIP_TEAL;
@@ -247,6 +296,13 @@ void display_reset_sprites() {
         sprite_h_px[i] = 0; 
         sprite_vis[i] = 0;
     }
+    for(int i=0;i<COLLISIONS;i++) {
+        collisions[i].a = 255;
+        collisions[i].b = 255;
+        collisions[i].x = 0;
+        collisions[i].y = 0;
+    }
+    for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
     for(uint32_t i=0;i<SPRITE_RAM_BYTES;i++) sprite_ram[i] = 0;
 }
 
@@ -738,6 +794,9 @@ void display_init(void) {
     sprite_h_px = (uint16_t*)malloc_caps(SPRITES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
     sprite_vis = (uint8_t*)malloc_caps(SPRITES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     sprite_mem = (uint32_t*)malloc_caps(SPRITES*sizeof(uint32_t), MALLOC_CAP_INTERNAL);
+
+    collisions = (collision*)malloc_caps(COLLISIONS*sizeof(collision), MALLOC_CAP_INTERNAL);
+    collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
