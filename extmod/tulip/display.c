@@ -199,6 +199,12 @@ int32_t desync = 0;
         for(uint16_t i=0;i<H_RES;i++) sprite_ids_x[i] = 255;
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
+
+        // Add touch in as a fake colliison, if it exists
+        if(touch_held && last_touch_y[0] == row_px) {
+            sprite_ids_x[last_touch_x[0]] = SPRITES-1;
+        }
+
         for(uint8_t s=0;s<SPRITES;s++) {
             if(sprite_vis[s]) {
                 if(row_px >= sprite_y_px[s] && row_px < sprite_y_px[s]+sprite_h_px[s]) {
@@ -208,23 +214,23 @@ int32_t desync = 0;
                     uint16_t relative_sprite_y_px = row_px - sprite_y_px[s];
                     for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
                         if(col_px < H_RES) {
-                            if(sprite_ids_x[col_px]!=255) { // sprite already here!
-                                // already done?
-                                if(!collide_mask_get(sprite_ids_x[col_px], s)) {
-                                    collisions[collision_c].a = sprite_ids_x[col_px];
-                                    collisions[collision_c].b = s;
-                                    collisions[collision_c].x = col_px;
-                                    collisions[collision_c].y = row_px;
-                                    collide_mask_set(sprite_ids_x[col_px], s);
-                                    collision_c = (collision_c+1) % COLLISIONS;
-                                }
-                            } else {
-                                sprite_ids_x[col_px] = s;
-                            }
                             uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
                             uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
                             if(b0 != ALPHA) {
                                 b[bounce_row_px*H_RES + col_px] = b0;
+                                // Only update collisions on non-alpha pixels
+                                if(sprite_ids_x[col_px]!=255) { // sprite already here!
+                                    if(!collide_mask_get(sprite_ids_x[col_px], s)) {
+                                        collisions[collision_c].a = sprite_ids_x[col_px];
+                                        collisions[collision_c].b = s;
+                                        collisions[collision_c].x = col_px;
+                                        collisions[collision_c].y = row_px;
+                                        collide_mask_set(sprite_ids_x[col_px], s);
+                                        collision_c = (collision_c+1) % COLLISIONS;
+                                    }
+                                } else {
+                                    sprite_ids_x[col_px] = s;
+                                }
                             }
                         }
                     } // end for each column
