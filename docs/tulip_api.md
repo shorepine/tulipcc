@@ -502,7 +502,8 @@ tulip.sprite_off(12)
 tulip.sprite_move(12, x, y)
 
 # Every frame, we update a collision list of things that collided that frame
-# See world.download("collide")
+# Collisions are evaluated every scanline, and only on pixels that are written to the screen (not ALPHA, and must be visible)
+# See world.download("collide") for an example
 for c in tulip.collisions():
     (a,b,x,y) = c # a and b are sprite #s that collided. x and y is where the first collision was
 
