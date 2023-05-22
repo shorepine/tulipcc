@@ -65,7 +65,7 @@ uint8_t color_332(uint8_t red, uint8_t green, uint8_t blue) {
 // Python callback
 extern void tulip_frame_isr(); 
 
-
+uint8_t collision_c = 0;
 bool display_frame_done_generic() {
     // Update the scroll
     for(uint16_t i=0;i<V_RES;i++) {
@@ -81,6 +81,7 @@ bool display_frame_done_generic() {
     // TODO -- divine 62 a better way 
     for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
     for(uint8_t i=0;i<COLLISIONS;i++) { collisions[i].a = 255; collisions[i].b = 255; }
+    collision_c = 0;
     return true;
 }
 
@@ -126,7 +127,6 @@ int32_t desync = 0;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
     uint8_t * b = (uint8_t*)bounce_buf;
-    uint8_t collision_c = 0;
 
     // Copy in the BG, line by line 
     // 208uS per call at 6 lines RGB565
