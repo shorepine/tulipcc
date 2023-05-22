@@ -76,7 +76,7 @@ void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
  bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
- bool display_frame_done_generic();
+bool display_frame_done_generic();
 void display_swap();
 
 void display_teardown(void);
@@ -153,6 +153,7 @@ int32_t vsync_count;
 uint8_t brightness;
 float reported_fps;
 float reported_gpu_usage;
+uint8_t collision_c;
 
 struct _collision {
     uint8_t a;
