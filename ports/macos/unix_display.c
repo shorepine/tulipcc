@@ -188,6 +188,7 @@ void end_draw() {
     // Clean up and show
     SDL_DestroyTexture(blit_texture);
     SDL_UpdateWindowSurface(window);
+    display_frame_done_generic();
 
     int64_t ticks_per_frame_ms = (int64_t) (1000.0 / reported_fps);
 
@@ -211,7 +212,6 @@ int unix_display_draw() {
         }
     }
     end_draw();
-    display_frame_done_generic();
 
     // Are we restarting the display for a mode change, or quitting
     if(unix_display_flag < 0) {

@@ -66,6 +66,7 @@ uint8_t color_332(uint8_t red, uint8_t green, uint8_t blue) {
 extern void tulip_frame_isr(); 
 
 uint8_t collision_c = 0;
+
 bool display_frame_done_generic() {
     // Update the scroll
     for(uint16_t i=0;i<V_RES;i++) {
@@ -77,11 +78,6 @@ bool display_frame_done_generic() {
     }
     tulip_frame_isr();
     vsync_count++; 
-    // clear collision
-    // TODO -- divine 62 a better way 
-    for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
-    for(uint8_t i=0;i<COLLISIONS;i++) { collisions[i].a = 255; collisions[i].b = 255; }
-    collision_c = 0;
     return true;
 }
 

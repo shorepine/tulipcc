@@ -577,6 +577,7 @@ STATIC mp_obj_t tulip_collisions(size_t n_args, const mp_obj_t *args) {
     mp_obj_t list = mp_obj_new_list(0, NULL);
     for(uint8_t i=0;i<COLLISIONS;i++) {
         if(collisions[i].a != 255) {
+            //fprintf(stderr, "returning collision %d %d %d %d\n",collisions[i].a, collisions[i].b, collisions[i].x, collisions[i].y);
             mp_obj_t tuple[4];
             tuple[0] = mp_obj_new_int(collisions[i].a);
             tuple[1] = mp_obj_new_int(collisions[i].b);
@@ -585,6 +586,12 @@ STATIC mp_obj_t tulip_collisions(size_t n_args, const mp_obj_t *args) {
             mp_obj_list_append(list, mp_obj_new_tuple(4, tuple));
         }
     }
+    // clear collision
+    // TODO -- divine 62 a better way 
+    for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
+    for(uint8_t i=0;i<COLLISIONS;i++) { collisions[i].a = 255; collisions[i].b = 255; }
+    collision_c = 0;
+
     return list;
 }
 
