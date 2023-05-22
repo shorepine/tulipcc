@@ -78,7 +78,9 @@ bool display_frame_done_generic() {
     tulip_frame_isr();
     vsync_count++; 
     // clear collision
+    // TODO -- divine 62 a better way 
     for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
+    for(uint8_t i=0;i<COLLISIONS;i++) { collisions[i].a = 255; collisions[i].b = 255; }
     return true;
 }
 
@@ -221,6 +223,7 @@ int32_t desync = 0;
                                 // Only update collisions on non-alpha pixels
                                 if(sprite_ids_x[col_px]!=255) { // sprite already here!
                                     if(!collide_mask_get(sprite_ids_x[col_px], s)) {
+                                        //fprintf(stderr, "collison %d a %d b %d x %d y %d\n", collision_c, sprite_ids_x[col_px], s, col_px, row_px);
                                         collisions[collision_c].a = sprite_ids_x[col_px];
                                         collisions[collision_c].b = s;
                                         collisions[collision_c].x = col_px;
