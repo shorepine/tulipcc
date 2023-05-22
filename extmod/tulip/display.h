@@ -141,7 +141,7 @@ extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCRE
 #define SPRITE_IS_LINE 0x40
 #define SPRITE_IS_BEZIER 0x20
 #define SPRITE_IS_ELLIPSE 0x10
-#define COLLISIONS 32
+#define COLLISIONS 8
 
 uint8_t tfb_active;
 uint8_t tfb_y_row; 
