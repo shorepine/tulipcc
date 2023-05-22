@@ -88,7 +88,7 @@ extern const unsigned char font_8x12_r[256][12];
 
 
 // We can address this many moving things on screen
-#define SPRITES 32
+#define SPRITES 16
 // We assume we can store 16 unique 32x32 sprite tiles, you can swap these out from RAM
 #define SPRITE_RAM_BYTES (32*32*2*16) // 32KB
 
@@ -169,7 +169,7 @@ uint8_t *collision_bitfield;
 uint8_t *sprite_ram; // in IRAM
 uint8_t * bg; // in SPIRAM
 
-
+uint8_t *sprite_ids; 
 uint16_t *sprite_x_px;//[SPRITES]; 
 uint16_t *sprite_y_px;//[SPRITES]; 
 uint16_t *sprite_w_px;//[SPRITES]; 

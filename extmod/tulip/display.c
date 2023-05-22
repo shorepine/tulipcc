@@ -113,10 +113,12 @@ void collide_mask_set(uint8_t a, uint8_t b) {
 int64_t bounce_time = 0;
 uint32_t bounce_count = 0;
 int32_t desync = 0;
+
 // Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
  bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
     int64_t tic=get_time_us(); // start the timer
+    uint8_t sprite_ids[H_RES];
 
     // Which pixel row and TFB row is this
     uint16_t starting_display_row_px = pos_px / H_RES;
@@ -193,15 +195,14 @@ int32_t desync = 0;
                 tfb_col++;
             }
         }
-        uint8_t sprite_ids_x[H_RES];
-        for(uint16_t i=0;i<H_RES;i++) sprite_ids_x[i] = 255;
+        //for(uint16_t i=0;i<H_RES;i++) sprite_ids[i] = 255;
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
 
         // Add touch in as a fake colliison, if it exists
-        if(touch_held && last_touch_y[0] == row_px) {
-            sprite_ids_x[last_touch_x[0]] = SPRITES-1;
-        }
+        //if(touch_held && last_touch_y[0] == row_px) {
+        //    sprite_ids_x[last_touch_x[0]] = SPRITES-1;
+        //}
 
         for(uint8_t s=0;s<SPRITES;s++) {
             if(sprite_vis[s]) {
@@ -216,19 +217,20 @@ int32_t desync = 0;
                             uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
                             if(b0 != ALPHA) {
                                 b[bounce_row_px*H_RES + col_px] = b0;
+                                
                                 // Only update collisions on non-alpha pixels
-                                if(sprite_ids_x[col_px]!=255) { // sprite already here!
-                                    if(!collide_mask_get(sprite_ids_x[col_px], s)) {
+                                if(sprite_ids[col_px]!=255) { // sprite already here!
+                                    if(!collide_mask_get(sprite_ids[col_px], s)) {
                                         //fprintf(stderr, "collison %d a %d b %d x %d y %d\n", collision_c, sprite_ids_x[col_px], s, col_px, row_px);
-                                        collisions[collision_c].a = sprite_ids_x[col_px];
+                                        collisions[collision_c].a = sprite_ids[col_px];
                                         collisions[collision_c].b = s;
                                         collisions[collision_c].x = col_px;
                                         collisions[collision_c].y = row_px;
-                                        collide_mask_set(sprite_ids_x[col_px], s);
+                                        collide_mask_set(sprite_ids[col_px], s);
                                         collision_c = (collision_c+1) % COLLISIONS;
                                     }
                                 } else {
-                                    sprite_ids_x[col_px] = s;
+                                    sprite_ids[col_px] = s;
                                 }
                             }
                         }
@@ -236,6 +238,7 @@ int32_t desync = 0;
                 } // end if this row has a sprite on it 
             } // end if sprite vis
         } // for each sprite
+        for(uint16_t i=0;i<H_RES;i++) sprite_ids[i] = 255;
     } // per each row
     bounce_time += (get_time_us() - tic); // stop timer
     bounce_count++;
@@ -771,6 +774,8 @@ void display_teardown(void) {
     free_caps(sprite_h_px);
     free_caps(sprite_vis);
     free_caps(sprite_mem);
+    free_caps(collisions);
+    free_caps(collision_bitfield);
     free_caps(TFB);
     free_caps(TFBf);
     free_caps(TFBfg);
@@ -801,7 +806,7 @@ void display_init(void) {
     sprite_mem = (uint32_t*)malloc_caps(SPRITES*sizeof(uint32_t), MALLOC_CAP_INTERNAL);
 
     collisions = (collision*)malloc_caps(COLLISIONS*sizeof(collision), MALLOC_CAP_INTERNAL);
-    collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
+    collision_bitfield = (uint8_t*)malloc_caps(62, MALLOC_CAP_INTERNAL);
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
