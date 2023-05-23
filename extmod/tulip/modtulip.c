@@ -579,8 +579,13 @@ STATIC mp_obj_t tulip_collisions(size_t n_args, const mp_obj_t *args) {
         if(collisions[i].a != 255) {
             //fprintf(stderr, "returning collision %d %d %d %d\n",collisions[i].a, collisions[i].b, collisions[i].x, collisions[i].y);
             mp_obj_t tuple[4];
-            tuple[0] = mp_obj_new_int(collisions[i].a);
-            tuple[1] = mp_obj_new_int(collisions[i].b);
+            if(collisions[i].a > collisions[i].b) {
+                tuple[0] = mp_obj_new_int(collisions[i].b);
+                tuple[1] = mp_obj_new_int(collisions[i].a);
+            } else {
+                tuple[0] = mp_obj_new_int(collisions[i].a);
+                tuple[1] = mp_obj_new_int(collisions[i].b);
+            }
             tuple[2] = mp_obj_new_int(collisions[i].x);
             tuple[3] = mp_obj_new_int(collisions[i].y);
             mp_obj_list_append(list, mp_obj_new_tuple(4, tuple));
