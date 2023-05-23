@@ -342,6 +342,7 @@ tulip.tfb_stop()
 tulip.tfb_start()
 
 # Sets a frame callback python function to run every frame 
+# See the Game class below for an easier way to make games
 game_data = {"frame_count": 0, "score": 0}
 def game_loop(data):
     update_inputs(data)
@@ -516,7 +517,62 @@ for c in tulip.collisions():
 tulip.sprite_clear()
 ```
 
+## Convenience classes for sprites and games
 
+We provide a few classes to make it easier to make games and work with sprites, `Sprite`, `Player`, and `Game`.
+
+```python
+def game_loop(game):
+    # game.X available
+
+# make your game a subclass of Game. This will set up the display, reset the sprites, etc, and provide a quit()
+class MyGame(Game):
+    def __init__(self):
+        # debug=True will keep the TFB on the screen for error messages
+        super().init(debug=False)
+        # .. game setup stuff
+        tulip.frame_callback(game_loop, self)
+
+game = MyGame()
+try:
+    while game.run:
+        time.sleep_ms(100)
+except KeyboardInterrupt:
+    game.quit() # will clean up 
+
+```
+
+You can access sprites using the `tulip_sprite_X` commands, or use our convenience `Sprite` class to manage memory and IDs for you:
+
+```python
+class Bullet(tulip.Sprite):
+    def __init__(self, copy_from=None):
+        super().__init__(copy_from=copy_from)
+        self.load("bullet.png", 32, 32)
+        b.on()
+        b.move_to(20,20)
+
+b = Bullet()
+b.off() # turn off
+b.on() # turns on
+b.x = 1025
+b.clamp() # ensure it is within screen range
+b.move() # move to its most recent position
+b.move_to(x,y) # sets x and y and moves
+
+b2 = Bullet(copy_from=b) # will use the image data from b but make a new sprite handle
+b2.move_to(25,25) # Can have many sprites of the same image data on screen this way
+```
+
+A `Player` class comes with a quick way to move a sprite from the joystick/keyboard:
+
+```python
+p = tulip.Player(speed=5) # 5px per movement
+p.load("me.png", 32, 32)
+p.joy_move() # will update the position based on the joystick
+```
+
+See `world.download('planet_boing')` for a fleshed out example of using the `Game` and `Sprite` classes.
 
 # In progress or planned features
 
