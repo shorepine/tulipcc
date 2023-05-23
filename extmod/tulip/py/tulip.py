@@ -29,14 +29,14 @@ class Game():
         # Done. Clean up a bit
         frame_callback()
         display_clock(18)
-        gpu_reset()
-        display_restart()
         Sprite.reset()  # resets sprite counter
         collisions() # resets collision
         if(not self.debug):
+            gpu_reset()
             key_scan(0)
             tfb_start()
-
+        display_restart()
+    
 
 class Sprite():
     mem_pointer = 0
