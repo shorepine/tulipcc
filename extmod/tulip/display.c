@@ -95,6 +95,10 @@ uint8_t collide_mask_get(uint8_t a, uint8_t b) {
     } else {
          field = b * (b - 1) / 2 + a;
     }
+    if(field/8 > 61) {
+        fprintf(stderr, "get bad field %d a %d b %d \n", field, a, b);
+        return 0;
+    }
     return collision_bitfield[field / 8] & 1 << (field % 8) ;
 }
 void collide_mask_set(uint8_t a, uint8_t b) {
@@ -105,7 +109,11 @@ void collide_mask_set(uint8_t a, uint8_t b) {
     } else {
          field = b * (b - 1) / 2 + a;
     }
-    collision_bitfield[field / 8] |= 1 << (field % 8);
+    if(field/8 > 61) {
+        fprintf(stderr, "set bad field %d a %d b %d \n", field, a, b);
+    } else {
+        collision_bitfield[field / 8] |= 1 << (field % 8);
+    }
 }
 
 
@@ -117,12 +125,17 @@ int32_t desync = 0;
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
  bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
     int64_t tic=get_time_us(); // start the timer
-
+    uint8_t sprite_ids[H_RES];
+    for(uint16_t i=0;i<H_RES;i++) sprite_ids[i] = 255;
     // Which pixel row and TFB row is this
     uint16_t starting_display_row_px = pos_px / H_RES;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
     uint8_t * b = (uint8_t*)bounce_buf;
+    
+    uint16_t touch_x = last_touch_x[0];
+    uint16_t touch_y = last_touch_y[0];
+    uint8_t touch_held_local = touch_held;
 
     // Copy in the BG, line by line 
     // 208uS per call at 6 lines RGB565
@@ -193,14 +206,14 @@ int32_t desync = 0;
                 tfb_col++;
             }
         }
-        uint8_t sprite_ids_x[H_RES];
-        for(uint16_t i=0;i<H_RES;i++) sprite_ids_x[i] = 255;
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
 
         // Add touch in as a fake colliison, if it exists
-        if(touch_held && last_touch_y[0] == row_px) {
-            sprite_ids_x[last_touch_x[0]] = SPRITES-1;
+        if(touch_held_local && touch_y == row_px) {
+            if(touch_x >= 0 && touch_x < H_RES) {
+                sprite_ids[touch_x] = SPRITES-1;
+            }
         }
 
         for(uint8_t s=0;s<SPRITES;s++) {
@@ -242,17 +255,6 @@ int32_t desync = 0;
 
     return false; 
 }
-
-/*
-a = 23
-b = 3
-bit_idx = (a * 32 + b)
-bit_idx2 =(b * 32 + a)
-
-bitfield
-
-need to make this symmetric w/o wasting ram and cpu
-*/
 
 void display_reset_bg() {
     bg_pal_color = TULIP_TEAL;
