@@ -95,6 +95,10 @@ uint8_t collide_mask_get(uint8_t a, uint8_t b) {
     } else {
          field = b * (b - 1) / 2 + a;
     }
+    if(field/8 > 61) {
+        fprintf(stderr, "get bad field %d a %d b %d \n", field, a, b);
+        return 0;
+    }
     return collision_bitfield[field / 8] & 1 << (field % 8) ;
 }
 void collide_mask_set(uint8_t a, uint8_t b) {
@@ -105,7 +109,11 @@ void collide_mask_set(uint8_t a, uint8_t b) {
     } else {
          field = b * (b - 1) / 2 + a;
     }
-    collision_bitfield[field / 8] |= 1 << (field % 8);
+    if(field/8 > 61) {
+        fprintf(stderr, "set bad field %d a %d b %d \n", field, a, b);
+    } else {
+        collision_bitfield[field / 8] |= 1 << (field % 8);
+    }
 }
 
 
@@ -119,7 +127,7 @@ int32_t desync = 0;
  bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
     int64_t tic=get_time_us(); // start the timer
     uint8_t sprite_ids[H_RES];
-
+    for(uint16_t i=0;i<H_RES;i++) sprite_ids[i] = 255;
     // Which pixel row and TFB row is this
     uint16_t starting_display_row_px = pos_px / H_RES;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
@@ -238,7 +246,6 @@ int32_t desync = 0;
                 } // end if this row has a sprite on it 
             } // end if sprite vis
         } // for each sprite
-        for(uint16_t i=0;i<H_RES;i++) sprite_ids[i] = 255;
     } // per each row
     bounce_time += (get_time_us() - tic); // stop timer
     bounce_count++;
