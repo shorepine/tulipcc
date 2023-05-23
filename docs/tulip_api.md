@@ -511,9 +511,9 @@ for c in tulip.collisions():
     (a,b,x,y) = c # a and b are sprite #s that collided. x and y is where the first collision was found
     # a will always < b. 
 
-# Check if a touch or mouse click hit a sprite by looking for sprite #31
-if(b==31):
-    print("Touch/click on sprite %d %d at %d %d" % (a,b,x,y))
+    # Check if a touch or mouse click hit a sprite by looking for sprite #31
+    if(b==31): 
+        print("Touch/click on sprite %d at %d %d" % (a,x,y))
 
 # Clear all sprite RAM, reset all sprite handles
 tulip.sprite_clear()
