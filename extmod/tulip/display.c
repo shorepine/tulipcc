@@ -133,6 +133,10 @@ int32_t desync = 0;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
     uint8_t * b = (uint8_t*)bounce_buf;
+    
+    uint16_t touch_x = last_touch_x[0];
+    uint16_t touch_y = last_touch_y[0];
+    uint8_t touch_held_local = touch_held;
 
     // Copy in the BG, line by line 
     // 208uS per call at 6 lines RGB565
@@ -203,14 +207,15 @@ int32_t desync = 0;
                 tfb_col++;
             }
         }
-        //for(uint16_t i=0;i<H_RES;i++) sprite_ids[i] = 255;
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
 
         // Add touch in as a fake colliison, if it exists
-        //if(touch_held && last_touch_y[0] == row_px) {
-        //    sprite_ids_x[last_touch_x[0]] = SPRITES-1;
-        //}
+        if(touch_held_local && touch_y == row_px) {
+            if(touch_x >= 0 && touch_x < H_RES) {
+                sprite_ids[touch_x] = SPRITES-1;
+            }
+        }
 
         for(uint8_t s=0;s<SPRITES;s++) {
             if(sprite_vis[s]) {
@@ -252,17 +257,6 @@ int32_t desync = 0;
 
     return false; 
 }
-
-/*
-a = 23
-b = 3
-bit_idx = (a * 32 + b)
-bit_idx2 =(b * 32 + a)
-
-bitfield
-
-need to make this symmetric w/o wasting ram and cpu
-*/
 
 void display_reset_bg() {
     bg_pal_color = TULIP_TEAL;
