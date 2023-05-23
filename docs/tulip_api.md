@@ -506,14 +506,11 @@ tulip.sprite_move(12, x, y)
 # and only on pixels that are written to the screen (not ALPHA, and must be visible)
 # See world.download("collide") for an example
 # Calling collisions() clears the memory of collisions we've kept up to that point. 
-# We store a limited number (now 8) of collisions in total. New ones will overwrite old.
 for c in tulip.collisions():
-    (a,b,x,y) = c # a and b are sprite #s that collided. x and y is where the first collision was found
-    # a will always < b. 
-
+    (a,b) = c # a and b are sprite #s that collided. a will always < b. 
     # Check if a touch or mouse click hit a sprite by looking for sprite #31
     if(b==31): 
-        print("Touch/click on sprite %d at %d %d" % (a,x,y))
+        print("Touch/click on sprite %d" % (a))
 
 # Clear all sprite RAM, reset all sprite handles
 tulip.sprite_clear()
