@@ -124,7 +124,7 @@ def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1,
 def send(retries=1, **kwargs):
     global mesh_flag
     m = message(**kwargs)
-    tulip.alles(m, mesh_flag)
+    tulip.alles_send(m, mesh_flag)
 
 """
     Convenience functions

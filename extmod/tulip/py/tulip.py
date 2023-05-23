@@ -5,11 +5,37 @@
 from _tulip import *
 from world import world
 from upysh import cd
-
+import alles
 
 def screen_size():
     s_s = timing()
     return (s_s[0], s_s[1])
+
+
+class Game():
+    def __init__(self, debug=False):
+        self.debug = debug
+        if(not self.debug):
+            tfb_stop()
+            key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
+        Sprite.reset()  # resets sprite counter
+        collisions() # resets collision
+        alles.reset()
+        display_clock(22)
+        self.run = 1
+
+    def quit(self):
+        self.run = 0
+        # Done. Clean up a bit
+        frame_callback()
+        display_clock(18)
+        gpu_reset()
+        display_restart()
+        Sprite.reset()  # resets sprite counter
+        collisions() # resets collision
+        if(not self.debug):
+            key_scan(0)
+            tfb_start()
 
 
 class Sprite():
