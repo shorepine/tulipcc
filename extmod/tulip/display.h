@@ -83,6 +83,7 @@ void display_teardown(void);
 
 uint8_t check_dim_xy(uint16_t x, uint16_t y);
 uint8_t check_dim_xywh(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+uint8_t collide_mask_get(uint8_t a, uint8_t b);
 
 extern const unsigned char font_8x12_r[256][12];
 
@@ -141,7 +142,6 @@ extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCRE
 #define SPRITE_IS_LINE 0x40
 #define SPRITE_IS_BEZIER 0x20
 #define SPRITE_IS_ELLIPSE 0x10
-#define COLLISIONS 8
 
 uint8_t tfb_active;
 uint8_t tfb_y_row; 
@@ -153,17 +153,7 @@ int32_t vsync_count;
 uint8_t brightness;
 float reported_fps;
 float reported_gpu_usage;
-uint8_t collision_c;
 
-struct _collision {
-    uint8_t a;
-    uint8_t b;
-    uint16_t x;
-    uint16_t y;
-};
-typedef struct _collision collision;
-
-collision * collisions;
 uint8_t *collision_bitfield;
 // RAM for sprites and background FB
 uint8_t *sprite_ram; // in IRAM

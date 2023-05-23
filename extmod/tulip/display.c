@@ -65,7 +65,6 @@ uint8_t color_332(uint8_t red, uint8_t green, uint8_t blue) {
 // Python callback
 extern void tulip_frame_isr(); 
 
-uint8_t collision_c = 0;
 
 bool display_frame_done_generic() {
     // Update the scroll
@@ -101,42 +100,25 @@ uint8_t collide_mask_get(uint8_t a, uint8_t b) {
     }
     return collision_bitfield[field / 8] & 1 << (field % 8) ;
 }
-void collide_mask_set(uint8_t a, uint8_t b) {
-    uint16_t field = 0;
-    if(a==b) return;
-    if(a>b) {
-         field = a * (a - 1) / 2 + b;
-    } else {
-         field = b * (b - 1) / 2 + a;
-    }
-    if(field/8 > 61) {
-        fprintf(stderr, "set bad field %d a %d b %d \n", field, a, b);
-    } else {
-        collision_bitfield[field / 8] |= 1 << (field % 8);
-    }
-}
-
 
 // Timers / counters for perf
 int64_t bounce_time = 0;
 uint32_t bounce_count = 0;
 int32_t desync = 0;
+uint8_t sprite_ids[1024];
+
 // Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
  bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
     int64_t tic=get_time_us(); // start the timer
-    uint8_t sprite_ids[H_RES];
-    for(uint16_t i=0;i<H_RES;i++) sprite_ids[i] = 255;
     // Which pixel row and TFB row is this
     uint16_t starting_display_row_px = pos_px / H_RES;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
     uint8_t * b = (uint8_t*)bounce_buf;
-    
-    uint16_t touch_x = last_touch_x[0];
-    uint16_t touch_y = last_touch_y[0];
+    int16_t touch_x = last_touch_x[0];
+    int16_t touch_y = last_touch_y[0];
     uint8_t touch_held_local = touch_held;
-
     // Copy in the BG, line by line 
     // 208uS per call at 6 lines RGB565
     // 209uS per call at 12 lines RGB332
@@ -147,6 +129,7 @@ int32_t desync = 0;
 
     // Now per row (N (now 12) pixel rows per call), draw the text frame buffer and sprites on top of the BG
     for(uint8_t bounce_row_px=0;bounce_row_px<bounce_total_rows_px;bounce_row_px++) {
+        memset(sprite_ids, 255, H_RES);
         if(tfb_active) {
             uint8_t tfb_row = (starting_display_row_px+bounce_row_px) / FONT_HEIGHT;
             uint8_t tfb_row_offset_px = (starting_display_row_px+bounce_row_px) % FONT_HEIGHT; 
@@ -208,7 +191,6 @@ int32_t desync = 0;
         }
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
-
         // Add touch in as a fake colliison, if it exists
         if(touch_held_local && touch_y == row_px) {
             if(touch_x >= 0 && touch_x < H_RES) {
@@ -230,18 +212,12 @@ int32_t desync = 0;
                             if(b0 != ALPHA) {
                                 b[bounce_row_px*H_RES + col_px] = b0;
                                 // Only update collisions on non-alpha pixels
-                                if(sprite_ids_x[col_px]!=255) { // sprite already here!
-                                    if(!collide_mask_get(sprite_ids_x[col_px], s)) {
-                                        //fprintf(stderr, "collison %d a %d b %d x %d y %d\n", collision_c, sprite_ids_x[col_px], s, col_px, row_px);
-                                        collisions[collision_c].a = sprite_ids_x[col_px];
-                                        collisions[collision_c].b = s;
-                                        collisions[collision_c].x = col_px;
-                                        collisions[collision_c].y = row_px;
-                                        collide_mask_set(sprite_ids_x[col_px], s);
-                                        collision_c = (collision_c+1) % COLLISIONS;
-                                    }
+                                uint8_t overlap_sprite = sprite_ids[col_px];
+                                if(overlap_sprite!=255) { // sprite already here!
+                                    uint16_t field = s * (s - 1) / 2 + overlap_sprite;
+                                    collision_bitfield[field / 8] |= 1 << (field % 8);
                                 } else {
-                                    sprite_ids_x[col_px] = s;
+                                    sprite_ids[col_px] = s;
                                 }
                             }
                         }
@@ -302,12 +278,6 @@ void display_reset_sprites() {
         sprite_w_px[i] = 0; 
         sprite_h_px[i] = 0; 
         sprite_vis[i] = 0;
-    }
-    for(int i=0;i<COLLISIONS;i++) {
-        collisions[i].a = 255;
-        collisions[i].b = 255;
-        collisions[i].x = 0;
-        collisions[i].y = 0;
     }
     for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
     for(uint32_t i=0;i<SPRITE_RAM_BYTES;i++) sprite_ram[i] = 0;
@@ -802,7 +772,6 @@ void display_init(void) {
     sprite_vis = (uint8_t*)malloc_caps(SPRITES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     sprite_mem = (uint32_t*)malloc_caps(SPRITES*sizeof(uint32_t), MALLOC_CAP_INTERNAL);
 
-    collisions = (collision*)malloc_caps(COLLISIONS*sizeof(collision), MALLOC_CAP_INTERNAL);
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);

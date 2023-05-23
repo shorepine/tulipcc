@@ -575,28 +575,20 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_clear_obj, 0, 0, tulip_s
 
 STATIC mp_obj_t tulip_collisions(size_t n_args, const mp_obj_t *args) {
     mp_obj_t list = mp_obj_new_list(0, NULL);
-    for(uint8_t i=0;i<COLLISIONS;i++) {
-        if(collisions[i].a != 255) {
-            //fprintf(stderr, "returning collision %d %d %d %d\n",collisions[i].a, collisions[i].b, collisions[i].x, collisions[i].y);
-            mp_obj_t tuple[4];
-            if(collisions[i].a > collisions[i].b) {
-                tuple[0] = mp_obj_new_int(collisions[i].b);
-                tuple[1] = mp_obj_new_int(collisions[i].a);
-            } else {
-                tuple[0] = mp_obj_new_int(collisions[i].a);
-                tuple[1] = mp_obj_new_int(collisions[i].b);
+    // iterate through all fields
+    for(uint8_t a=0;a<32;a++) {
+        for(uint8_t b=a+1;b<32;b++) {
+            if(collide_mask_get(a,b)) {
+                mp_obj_t tuple[2];
+                tuple[0] = mp_obj_new_int(a);
+                tuple[1] = mp_obj_new_int(b);
+                mp_obj_list_append(list, mp_obj_new_tuple(2, tuple));
             }
-            tuple[2] = mp_obj_new_int(collisions[i].x);
-            tuple[3] = mp_obj_new_int(collisions[i].y);
-            mp_obj_list_append(list, mp_obj_new_tuple(4, tuple));
         }
     }
     // clear collision
     // TODO -- divine 62 a better way 
     for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
-    for(uint8_t i=0;i<COLLISIONS;i++) { collisions[i].a = 255; collisions[i].b = 255; }
-    collision_c = 0;
-
     return list;
 }
 
