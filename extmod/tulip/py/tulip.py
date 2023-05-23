@@ -6,6 +6,108 @@ from _tulip import *
 from world import world
 from upysh import cd
 
+
+def screen_size():
+    s_s = timing()
+    return (s_s[0], s_s[1])
+
+
+class Sprite():
+    mem_pointer = 0
+    num_sprites = 0
+    SPRITE_RAM_BYTES = 32*1024
+    SPRITES = 32
+    SCREEN_WIDTH, SCREEN_HEIGHT = screen_size()
+
+    def reset():
+        Sprite.mem_pointer = 0
+        Sprite.num_sprites = 0
+
+    def __init__(self, sprite_id=None, copy_of=None):
+        if(sprite_id is None):
+            self.sprite_id = Sprite.num_sprites
+            Sprite.num_sprites += 1
+        else:
+            self.sprite_id = sprite_id
+
+        # Lets you init a new sprite but using existing bitmap data (for multiple copies of a sprite on screen)
+        if(copy_of is not None):
+            self.mem_pos = copy_of.mem_pos
+            self.width = copy_of.width
+            self.height = copy_of.height
+        else:
+            self.mem_pos = None
+            self.width = None
+            self.height = None
+        self.x = 0.0
+        self.y = 0.0
+        self.x_v = 0.0
+        self.y_v = 0.0
+
+    def clamp(self):
+        # Modifies x,y to be within the visible screen area
+        if(self.x < 0):
+            self.x = 0
+        if(self.x >= Sprite.SCREEN_WIDTH-self.width):
+            self.x = Sprite.SCREEN_WIDTH - (self.width + 1)
+        if(self.y < 0):
+            self.y = 0
+        if(self.y >= Sprite.SCREEN_HEIGHT-self.height):
+            self.y = Sprite.SCREEN_HEIGHT - (self.height + 1)
+
+    # Load a sprite into Tulip and keep track of memory
+    def load(self, filename, width, height):
+        if(self.sprite_id >= Sprite.SPRITES):
+            raise Exception("No more sprite handles.")
+        else:
+            if(self.mem_pos is not None):
+                sprite_register(self.sprite_id,self.mem_pos, self.width, self.height)
+            else:
+                self.width = width
+                self.height = height
+                if((Sprite.mem_pointer + (height*width)) > Sprite.SPRITE_RAM_BYTES):
+                    raise Exception("No more sprite RAM. Current pointer %d, you want to add %d" % (Sprite.mem_pointer, (height*width)))
+                else:
+                    self.mem_pos = Sprite.mem_pointer
+                    sprite_png(filename, Sprite.mem_pointer)
+                    sprite_register(self.sprite_id,self.mem_pos, self.width, self.height)
+                    Sprite.mem_pointer += width*height
+
+    def off(self):
+        sprite_off(self.sprite_id)
+
+    def on(self):
+        sprite_on(self.sprite_id)
+
+    def moveto(self,x,y):
+        # convenience -- set x and y and move there
+        self.x = x
+        self.y = y
+        self.move()
+
+    def move(self):
+        sprite_move(self.sprite_id, int(self.x), int(self.y))
+    
+
+
+class Player(Sprite):
+    def __init__(self, speed=10):
+        super().__init__()
+        self.x_v = speed
+        self.y_v = speed
+
+    def joy_move(self):
+        # Move the player based on joyk
+        if(joyk() & Joy.RIGHT):
+            self.x += self.x_v
+        if(joyk() & Joy.LEFT):
+            self.x -= self.x_v
+        if(joyk() & Joy.UP):
+            self.y -= self.y_v
+        if(joyk() & Joy.DOWN):
+            self.y += self.y_v
+        self.clamp() # Make sure we're on screen
+
 class Colors:
     """ ANSI color codes """
     BLACK = "\033[0;30m"
@@ -186,9 +288,6 @@ def wifi(ssid, passwd, wait_timeout=10):
         time.sleep(1)
     return ip()
 
-def screen_size():
-    s_s = timing()
-    return (s_s[0], s_s[1])
 
 def tar_create(directory):
     from upip import tarfile
