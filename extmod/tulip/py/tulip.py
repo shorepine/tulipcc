@@ -11,7 +11,7 @@ def screen_size():
     s_s = timing()
     return (s_s[0], s_s[1])
 
-
+# A class for making a game. Clears and sets up the screen for a game
 class Game():
     def __init__(self, debug=False):
         self.debug = debug
@@ -37,7 +37,7 @@ class Game():
             tfb_start()
         display_restart()
     
-
+# Class to handle sprites, takes care of memory
 class Sprite():
     mem_pointer = 0
     num_sprites = 0
@@ -115,7 +115,7 @@ class Sprite():
         sprite_move(self.sprite_id, int(self.x), int(self.y))
     
 
-
+# A sprite who can move from the joystick/keyboard
 class Player(Sprite):
     def __init__(self, speed=10):
         super().__init__()
