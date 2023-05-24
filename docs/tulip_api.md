@@ -117,24 +117,24 @@ def ui_callback(x):
 tulip.ui_callback(ui_callback)
 
 # You can set up to 255 UI elements
-tulip.button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
+tulip.ui_button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
 
 # Sliders -- if w > h, it will be a horizontal slider, vertical otherwise
-tulip.slider(ui_element_id, default_value, x, y, w, h, bar_color, handle_color)
+tulip.ui_slider(ui_element_id, default_value, x, y, w, h, bar_color, handle_color)
 # Gets a slider val
-val = tulip.slider(ui_element_id)
+val = tulip.ui_slider(ui_element_id)
 # Set a slider val
-tulip.slider(ui_element_id, val)
+tulip.ui_slider(ui_element_id, val)
 
 # This text entry box UI element is limited to 32 characters. It will wait for you to hit return to finish input
-tulip.text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
+tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
 
 # Checkboxes - val -- 0 is unchecked, 1 is checked
 # style -- 0 is filled box, 1 is X, 2 is filled circle
-tulip.checkbox(ui_element_id, val, x, y, w, mark_color, box_color, style)
-val = tulip.checkbox(ui_element_id)
+tulip.ui_checkbox(ui_element_id, val, x, y, w, mark_color, box_color, style)
+val = tulip.ui_checkbox(ui_element_id)
 # set value
-tulip.checkbox(ui_element_id, val)
+tulip.ui_checkbox(ui_element_id, val)
 
 # No UI elements will be drawn or receive events until you set them to be active
 tulip.ui_active(ui_element_id, 1)
@@ -400,13 +400,13 @@ tulip.bg_clear() # uses default
 # Drawing primitives. These all write to the BG. 
 # If you want to use them for sprites, you can use bg_bitmap after drawing offscreen.
 # set filled to 1 if you want the shape filled, 0 or omit otherwise
-tulip.line(x0,y0, x1,y1, pal_idx)
-tulip.bezier(x0,y0, x1,y1, x2,y2, pal_idx)
-tulip.circle(x,y,r, pal_idx, filled)
-tulip.roundrect(x0,y0, w,h, r, pal_idx, filled)
-tulip.rect(x0,y0, w,h, pal_idx, filled)
-tulip.triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
-tulip.fill(x0,y0,pal_idx) # Flood fill starting at x,y
+tulip.bg_line(x0,y0, x1,y1, pal_idx)
+tulip.bg_bezier(x0,y0, x1,y1, x2,y2, pal_idx)
+tulip.bg_circle(x,y,r, pal_idx, filled)
+tulip.bg_roundrect(x0,y0, w,h, r, pal_idx, filled)
+tulip.bg_rect(x0,y0, w,h, pal_idx, filled)
+tulip.bg_triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
+tulip.bg_fill(x0,y0,pal_idx) # Flood fill starting at x,y
 tulip.bg_char(c, x, y, pal_idx, font_number) # proportional font, returns # of x pixels to advance for the next char
 tulip.bg_str(string, x, y, pal_idx, font_number) # same as char, but with a string. x and y are the bottom left
 tulip.bg_str(string, x, y, pal_idx, font_number, w, h) # Will center the text inside w,h
