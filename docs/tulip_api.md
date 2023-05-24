@@ -533,7 +533,7 @@ def game_loop(game):
 # make your game a subclass of Game. This will set up the display, reset the sprites, etc, and provide a quit()
 class MyGame(Game):
     def __init__(self):
-        # debug=True will keep the TFB on the screen for error messages
+        # debug=True will keep the TFB on the screen and not remove sprites/BG after finishing
         super().init(debug=False)
         # .. game setup stuff
         tulip.frame_callback(game_loop, self)
