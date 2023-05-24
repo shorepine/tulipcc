@@ -15,9 +15,8 @@ def screen_size():
 class Game():
     def __init__(self, debug=False):
         self.debug = debug
-        if(not self.debug):
-            tfb_stop()
-            key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
+        tfb_save()
+        key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
         Sprite.reset()  # resets sprite counter and RAM
         collisions() # resets collision
         alles.reset()
@@ -33,8 +32,8 @@ class Game():
         if(not self.debug):
             Sprite.reset()  # resets sprite counter
             gpu_reset()
-            key_scan(0)
-            tfb_start()
+        key_scan(0)
+        tfb_restore()
         display_restart()
     
 # Class to handle sprites, takes care of memory
