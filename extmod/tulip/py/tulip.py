@@ -18,8 +18,7 @@ class Game():
         if(not self.debug):
             tfb_stop()
             key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
-        gpu_reset()
-        Sprite.reset()  # resets sprite counter
+        Sprite.reset()  # resets sprite counter and RAM
         collisions() # resets collision
         alles.reset()
         display_clock(22)
@@ -30,9 +29,9 @@ class Game():
         # Done. Clean up a bit
         frame_callback()
         display_clock(18)
-        Sprite.reset()  # resets sprite counter
         collisions() # resets collision
         if(not self.debug):
+            Sprite.reset()  # resets sprite counter
             gpu_reset()
             key_scan(0)
             tfb_start()
@@ -49,6 +48,7 @@ class Sprite():
     def reset():
         Sprite.mem_pointer = 0
         Sprite.num_sprites = 0
+        sprite_clear()
 
     def __init__(self, sprite_id=None, copy_of=None):
         if(sprite_id is None):
