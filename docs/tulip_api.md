@@ -337,9 +337,14 @@ tulip.display_restart() # does not clear any data like gpu_reset()
 tulip.display_stop() # Tulip will still run 
 tulip.display_start()
 
-# You can also stop or start the TFB. It will maintain what is on screen in memory
+# You can also stop or start the TFB. It will maintain what is on screen in memory, and you can still read/write it
 tulip.tfb_stop()
 tulip.tfb_start()
+
+# If you want to keep the existing TFB around, you can save it to a temporary buffer and recall it
+# This is used in the Game() class to keep the REPL around after running a game, and the editor
+tulip.tfb_save()
+tulip.tfb_restore()
 
 # Sets a frame callback python function to run every frame 
 # See the Game class below for an easier way to make games
