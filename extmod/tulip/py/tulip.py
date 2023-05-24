@@ -32,6 +32,7 @@ class Game():
         if(not self.debug):
             Sprite.reset()  # resets sprite counter
             gpu_reset()
+        tfb_restore()
         key_scan(0)
         display_restart()
     
