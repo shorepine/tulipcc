@@ -904,7 +904,7 @@ STATIC mp_obj_t tulip_fill(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_fill_obj, 3, 3, tulip_fill);
 
 
-STATIC mp_obj_t tulip_char(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_bg_char(size_t n_args, const mp_obj_t *args) {
     uint16_t c = mp_obj_get_int(args[0]);
     uint16_t x = mp_obj_get_int(args[1]);
     uint16_t y = mp_obj_get_int(args[2]);
@@ -913,18 +913,23 @@ STATIC mp_obj_t tulip_char(size_t n_args, const mp_obj_t *args) {
     return mp_obj_new_int(draw_new_char(c, x, y, pal_idx, font_no));
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_char_obj, 5, 5, tulip_char);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_char_obj, 5, 5, tulip_bg_char);
 
-STATIC mp_obj_t tulip_str(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_bg_str(size_t n_args, const mp_obj_t *args) {
     const char *str =  mp_obj_str_get_str(args[0]);
     uint16_t x = mp_obj_get_int(args[1]);
     uint16_t y = mp_obj_get_int(args[2]);
     uint16_t pal_idx = mp_obj_get_int(args[3]);
     uint16_t font_no = mp_obj_get_int(args[4]);
-    return mp_obj_new_int(draw_new_str(str, x, y, pal_idx, font_no));
+    if(n_args>5) {
+        uint16_t w = mp_obj_get_int(args[5]);
+        uint16_t h = mp_obj_get_int(args[6]);        
+        return mp_obj_new_int(draw_new_str(str, x, y, pal_idx, font_no, w, h, 1));
+    }
+    return mp_obj_new_int(draw_new_str(str, x, y, pal_idx, font_no, 0, 0, 0));
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_str_obj, 5, 5, tulip_str);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_str_obj, 5, 7, tulip_bg_str);
 
 
 
@@ -1138,8 +1143,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_triangle), MP_ROM_PTR(&tulip_triangle_obj) },
     { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&tulip_fill_obj) },
     { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
-    { MP_ROM_QSTR(MP_QSTR_char), MP_ROM_PTR(&tulip_char_obj) },
-    { MP_ROM_QSTR(MP_QSTR_str), MP_ROM_PTR(&tulip_str_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_char), MP_ROM_PTR(&tulip_bg_char_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_str), MP_ROM_PTR(&tulip_bg_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
     { MP_ROM_QSTR(MP_QSTR_button), MP_ROM_PTR(&tulip_button_obj) },
     { MP_ROM_QSTR(MP_QSTR_text), MP_ROM_PTR(&tulip_text_obj) },

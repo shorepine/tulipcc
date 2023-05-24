@@ -93,28 +93,15 @@ void ui_text_draw(uint8_t ui_id, uint8_t entry_mode) {
     struct ui_element *e = elements[ui_id];
     fillRect(e->x,e->y,e->w,e->h,e->c1);
 
-    uint16_t width = 0;
-    uint8_t fw, fh;
     if(strlen(e->cval) >0) {
         if(!entry_mode) {
-            // Compute width and height of text for centering
-            for(uint16_t i=0;i<strlen(e->cval);i++) {
-                fw = u8g2_glyph_width(e->c2, e->cval[i]);
-                width += fw;
-            }
-            fh = u8g2_a_height(e->c2);
-            uint16_t start_x = e->x;
-            uint16_t start_y = e->y + ((e->h+fh)/2);
-            if(width < e->w) {
-                start_x = e->x + (e->w - width)/2;
-            }
-            draw_new_str(e->cval, start_x, start_y, e->c0, e->c2);
+            draw_new_str(e->cval, e->x, e->y, e->c0, e->c2, e->w, e->h, 1);
         } else {
             // If we're in entry mode, fill in chars from the left side, will center later
-            fh = u8g2_a_height(e->c2);
+            uint16_t fh = u8g2_a_height(e->c2);
             uint16_t start_x = e->x + 1;
             uint16_t start_y = e->y + ((e->h+fh)/2);
-            draw_new_str(e->cval, start_x, start_y, e->c0, e->c2);
+            draw_new_str(e->cval, start_x, start_y, e->c0, e->c2, 0, 0, 0);
         }
     }
     if(entry_mode) {
@@ -192,22 +179,7 @@ void ui_button_draw(uint8_t ui_id) {
     } else {
         drawRoundRect(e->x,e->y,e->w,e->h,10,e->c1);
     }
-    uint16_t width = 0;
-    uint8_t fw, fh;
-
-    // Compute width of text for centering
-    for(uint16_t i=0;i<strlen(e->cval);i++) {
-        fw = u8g2_glyph_width(e->c2, e->cval[i]);
-        width += fw;
-    }
-    //fprintf(stderr, "total computed widh for %s is %d\n", e->cval, width);
-    fh = u8g2_a_height(e->c2);
-    uint16_t start_x = e->x;
-    uint16_t start_y = e->y + ((e->h+fh)/2);
-    if(width < e->w) {
-        start_x = e->x + (e->w - width)/2;
-    }
-    draw_new_str(e->cval, start_x, start_y, e->c0, e->c2);
+    draw_new_str(e->cval, e->x,  e->y, e->c0, e->c2, e->w, e->h, 1);
 }
 
 
