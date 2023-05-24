@@ -21,17 +21,17 @@ pos_map = {
 held = {}
 
 for(k,v) in pos_map.items():
-    tulip.circle(v[0], v[1], r, v[2], 0)
+    tulip.bg_circle(v[0], v[1], r, v[2], 0)
     held[k] = False
 
 while(True):
     mask = tulip.joyk()
     for k,v in pos_map.items():
         if(mask & k):
-            tulip.circle(v[0], v[1], r, v[2], 1)
+            tulip.bg_circle(v[0], v[1], r, v[2], 1)
             held[k] = True
         else:
             if(held.get(k,False) == True):
-                tulip.circle(v[0], v[1], r, 9, 1)
-                tulip.circle(v[0], v[1], r, v[2], 0)
+                tulip.bg_circle(v[0], v[1], r, 9, 1)
+                tulip.bg_circle(v[0], v[1], r, v[2], 0)
                 held[k] = False

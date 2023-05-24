@@ -17,9 +17,9 @@ def anim_loop(data):
         data["run"] = True
         c = random.randint(1,255)
         data["which"] = (data["which"] + 1) % 3
-        if(data['which'] == 0): tulip.fill(lx+75,ly+200, c)
-        if(data['which'] == 1): tulip.fill(lx+175,ly+200,c)
-        if(data['which'] == 2): tulip.fill(lx+320,ly+200,c)
+        if(data['which'] == 0): tulip.bg_fill(lx+75,ly+200, c)
+        if(data['which'] == 1): tulip.bg_fill(lx+175,ly+200,c)
+        if(data['which'] == 2): tulip.bg_fill(lx+320,ly+200,c)
         data["run"] = False
     data["tic"] += 1
 

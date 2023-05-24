@@ -9,6 +9,6 @@ for row in range(13):
         if(color < 256):
             x = col*50
             y = 25 + (row*44)
-            tulip.str(str(color), x+18, y, 255)
-            tulip.rect(x+20, y+4, 25, 25, color, 1)
+            tulip.bg_str(str(color), x+18, y, 255)
+            tulip.bg_rect(x+20, y+4, 25, 25, color, 1)
             color += 1
