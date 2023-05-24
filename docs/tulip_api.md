@@ -402,11 +402,11 @@ tulip.bg_clear() # uses default
 # set filled to 1 if you want the shape filled, 0 or omit otherwise
 tulip.bg_line(x0,y0, x1,y1, pal_idx)
 tulip.bg_bezier(x0,y0, x1,y1, x2,y2, pal_idx)
-tulip.bg_circle(x,y,r, pal_idx, filled)
-tulip.bg_roundrect(x0,y0, w,h, r, pal_idx, filled)
-tulip.bg_rect(x0,y0, w,h, pal_idx, filled)
+tulip.bg_circle(x,y,r, pal_idx, filled) # x and y are the center
+tulip.bg_roundrect(x,y, w,h, r, pal_idx, filled)
+tulip.bg_rect(x,y, w,h, pal_idx, filled)
 tulip.bg_triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
-tulip.bg_fill(x0,y0,pal_idx) # Flood fill starting at x,y
+tulip.bg_fill(x,y,pal_idx) # Flood fill starting at x,y
 tulip.bg_char(c, x, y, pal_idx, font_number) # proportional font, returns # of x pixels to advance for the next char
 tulip.bg_str(string, x, y, pal_idx, font_number) # same as char, but with a string. x and y are the bottom left
 tulip.bg_str(string, x, y, pal_idx, font_number, w, h) # Will center the text inside w,h
