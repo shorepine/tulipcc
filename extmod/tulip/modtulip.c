@@ -789,7 +789,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_app_path_obj, 0, 0, tulip_app_p
 
 
 
-STATIC mp_obj_t tulip_bezier(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_bg_bezier(size_t n_args, const mp_obj_t *args) {
     uint16_t x0 = mp_obj_get_int(args[0]);
     uint16_t y0 = mp_obj_get_int(args[1]);
     uint16_t x1 = mp_obj_get_int(args[2]);
@@ -801,11 +801,11 @@ STATIC mp_obj_t tulip_bezier(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bezier_obj, 7, 7, tulip_bezier);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_bezier_obj, 7, 7, tulip_bg_bezier);
 
 
 
-STATIC mp_obj_t tulip_line(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_bg_line(size_t n_args, const mp_obj_t *args) {
     int16_t x0 = mp_obj_get_int(args[0]);
     int16_t y0 = mp_obj_get_int(args[1]);
     int16_t x1 = mp_obj_get_int(args[2]);
@@ -815,9 +815,9 @@ STATIC mp_obj_t tulip_line(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_line_obj, 5, 5, tulip_line);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_line_obj, 5, 5, tulip_bg_line);
 
-STATIC mp_obj_t tulip_roundrect(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_bg_roundrect(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
     uint16_t y = mp_obj_get_int(args[1]);
     uint16_t w = mp_obj_get_int(args[2]);
@@ -834,10 +834,10 @@ STATIC mp_obj_t tulip_roundrect(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_roundrect_obj, 6, 7, tulip_roundrect);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_roundrect_obj, 6, 7, tulip_bg_roundrect);
 
 
-STATIC mp_obj_t tulip_rect(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_bg_rect(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
     uint16_t y = mp_obj_get_int(args[1]);
     uint16_t w = mp_obj_get_int(args[2]);
@@ -853,9 +853,9 @@ STATIC mp_obj_t tulip_rect(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_rect_obj, 5, 6, tulip_rect);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_rect_obj, 5, 6, tulip_bg_rect);
 
-STATIC mp_obj_t tulip_circle(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_bg_circle(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);
     uint16_t y = mp_obj_get_int(args[1]);
     uint16_t r = mp_obj_get_int(args[2]);
@@ -870,10 +870,10 @@ STATIC mp_obj_t tulip_circle(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_circle_obj, 4, 5, tulip_circle);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_circle_obj, 4, 5, tulip_bg_circle);
 
 
-STATIC mp_obj_t tulip_triangle(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_bg_triangle(size_t n_args, const mp_obj_t *args) {
     uint16_t x0 = mp_obj_get_int(args[0]);
     uint16_t y0 = mp_obj_get_int(args[1]);
     uint16_t x1 = mp_obj_get_int(args[2]);
@@ -891,9 +891,9 @@ STATIC mp_obj_t tulip_triangle(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_triangle_obj, 7, 8, tulip_triangle);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_triangle_obj, 7, 8, tulip_bg_triangle);
 
-STATIC mp_obj_t tulip_fill(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_bg_fill(size_t n_args, const mp_obj_t *args) {
     uint16_t x0 = mp_obj_get_int(args[0]);
     uint16_t y0 = mp_obj_get_int(args[1]);
     uint16_t pal_idx = mp_obj_get_int(args[2]);
@@ -901,7 +901,7 @@ STATIC mp_obj_t tulip_fill(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_fill_obj, 3, 3, tulip_fill);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_fill_obj, 3, 3, tulip_bg_fill);
 
 
 STATIC mp_obj_t tulip_bg_char(size_t n_args, const mp_obj_t *args) {
@@ -971,7 +971,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_timing_obj, 0, 10, tulip_timing
 
 
 //tulip.button(id, "text", x,y,w,h,r,fg_color,btn_color,filled)
-STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_ui_button(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
     ui_button_new(ui_id, 
             mp_obj_str_get_str(args[1]), // text
@@ -987,14 +987,14 @@ STATIC mp_obj_t tulip_button(size_t n_args, const mp_obj_t *args) {
             );
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_button_obj, 10, 10, tulip_button);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_button_obj, 10, 10, tulip_ui_button);
 
 
 // style == 0 - filled, 1 - x, 2 - circle
 //tulip.checkbox(id,val,x,y,w,mark_color,box_color, style)
 // val = tulip.checkbox(id)
 // tulip.checkbox(id, val)
-STATIC mp_obj_t tulip_checkbox(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_ui_checkbox(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
     if(n_args == 1) { 
         uint8_t c = ui_check_get_val(ui_id);
@@ -1015,12 +1015,12 @@ STATIC mp_obj_t tulip_checkbox(size_t n_args, const mp_obj_t *args) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_checkbox_obj, 0, 8, tulip_checkbox);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_checkbox_obj, 0, 8, tulip_ui_checkbox);
 
 
 
 //tulip.text(id, "text", x,y,w,h,r,text_color,box_color)
-STATIC mp_obj_t tulip_text(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_ui_text(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
     if(n_args < 8) { 
         char * t = ui_text_get_val(ui_id);
@@ -1039,10 +1039,10 @@ STATIC mp_obj_t tulip_text(size_t n_args, const mp_obj_t *args) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_text_obj, 1, 9, tulip_text);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_text_obj, 1, 9, tulip_ui_text);
 
 
-STATIC mp_obj_t tulip_slider(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_ui_slider(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
     if(n_args == 1) { 
         return mp_obj_new_float(ui_slider_get_val(ui_id));
@@ -1061,7 +1061,7 @@ STATIC mp_obj_t tulip_slider(size_t n_args, const mp_obj_t *args) {
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_slider_obj, 1, 8, tulip_slider);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_slider_obj, 1, 8, tulip_ui_slider);
 
 
 STATIC mp_obj_t tulip_ui_del(size_t n_args, const mp_obj_t *args) {
@@ -1136,20 +1136,20 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
-    { MP_ROM_QSTR(MP_QSTR_circle), MP_ROM_PTR(&tulip_circle_obj) },
-    { MP_ROM_QSTR(MP_QSTR_bezier), MP_ROM_PTR(&tulip_bezier_obj) },
-    { MP_ROM_QSTR(MP_QSTR_line), MP_ROM_PTR(&tulip_line_obj) },
-    { MP_ROM_QSTR(MP_QSTR_roundrect), MP_ROM_PTR(&tulip_roundrect_obj) },
-    { MP_ROM_QSTR(MP_QSTR_triangle), MP_ROM_PTR(&tulip_triangle_obj) },
-    { MP_ROM_QSTR(MP_QSTR_fill), MP_ROM_PTR(&tulip_fill_obj) },
-    { MP_ROM_QSTR(MP_QSTR_rect), MP_ROM_PTR(&tulip_rect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_circle), MP_ROM_PTR(&tulip_bg_circle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_bezier), MP_ROM_PTR(&tulip_bg_bezier_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_line), MP_ROM_PTR(&tulip_bg_line_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_roundrect), MP_ROM_PTR(&tulip_bg_roundrect_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_triangle), MP_ROM_PTR(&tulip_bg_triangle_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_fill), MP_ROM_PTR(&tulip_bg_fill_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_rect), MP_ROM_PTR(&tulip_bg_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_char), MP_ROM_PTR(&tulip_bg_char_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_str), MP_ROM_PTR(&tulip_bg_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
-    { MP_ROM_QSTR(MP_QSTR_button), MP_ROM_PTR(&tulip_button_obj) },
-    { MP_ROM_QSTR(MP_QSTR_text), MP_ROM_PTR(&tulip_text_obj) },
-    { MP_ROM_QSTR(MP_QSTR_slider), MP_ROM_PTR(&tulip_slider_obj) },
-    { MP_ROM_QSTR(MP_QSTR_checkbox), MP_ROM_PTR(&tulip_checkbox_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ui_button), MP_ROM_PTR(&tulip_ui_button_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ui_text), MP_ROM_PTR(&tulip_ui_text_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ui_slider), MP_ROM_PTR(&tulip_ui_slider_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ui_checkbox), MP_ROM_PTR(&tulip_ui_checkbox_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_del), MP_ROM_PTR(&tulip_ui_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_active), MP_ROM_PTR(&tulip_ui_active_obj) },
     { MP_ROM_QSTR(MP_QSTR_joy), MP_ROM_PTR(&tulip_joy_obj) },
