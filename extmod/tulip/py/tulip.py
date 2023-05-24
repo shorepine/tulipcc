@@ -18,6 +18,7 @@ class Game():
         if(not self.debug):
             tfb_stop()
             key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
+        gpu_reset()
         Sprite.reset()  # resets sprite counter
         collisions() # resets collision
         alles.reset()
