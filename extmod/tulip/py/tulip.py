@@ -33,7 +33,6 @@ class Game():
             Sprite.reset()  # resets sprite counter
             gpu_reset()
         key_scan(0)
-        tfb_restore()
         display_restart()
     
 # Class to handle sprites, takes care of memory
