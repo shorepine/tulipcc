@@ -157,11 +157,50 @@ char * get_tulip_home_path() {
 }
 
 
+extern  int16_t amy_channel;  // -1 for L -> mono output.
+extern int16_t amy_device_id;
+
 int main(int argc, char **argv) {
     // Get the resources folder loc
     // So thread out alles and then micropython tasks
 
     // Display has to run on main thread on macos
+
+    int opt;
+    while((opt = getopt(argc, argv, ":d:c:lh")) != -1) 
+    { 
+        switch(opt) 
+        { 
+            case 'd': 
+                amy_device_id = atoi(optarg);
+                break;
+            case 'c': 
+                amy_channel = atoi(optarg);
+                break; 
+            case 'l':
+                amy_print_devices();
+                exit(0);
+                break;
+            case 'h':
+                fprintf(stderr,"usage: tulip\n");
+                fprintf(stderr,"\t[-d sound device id, use -l to list, default, autodetect]\n");
+                fprintf(stderr,"\t[-c sound channel, default -1 for all channels on device]\n");
+                fprintf(stderr,"\t[-l list all sound devices and exit]\n");
+                fprintf(stderr,"\t[-h show this help and exit]\n");
+                exit(0);
+                break;
+            case ':': 
+                fprintf(stderr,"option needs a value\n"); 
+                exit(0);
+                break; 
+            case '?': 
+                fprintf(stderr,"unknown option: %c\n", optopt);
+                exit(0);
+                break; 
+        } 
+    }
+
+
     unix_display_init();
 
     pthread_t alles_thread_id;
