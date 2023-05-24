@@ -388,10 +388,10 @@ tulip.bg_png(png_file_contents, x, y)
 tulip.bg_png(png_filename, x, y)
 
 # Copy bitmap area from x,y of width,height to x1, y1
-tulip.blit(x,y,w,h,x1, y1)
+tulip.bg_blit(x,y,w,h,x1, y1)
 
 # If you give blit an extra parameter it will not copy over alpha color (0x55), good for blending BG images
-tulip.blit(x,y,w,h,x1, y1, 1)
+tulip.bg_blit(x,y,w,h,x1, y1, 1)
 
 # Sets or gets a rect of the BG with bitmap data (RGB332 pal_idxes) 
 tulip.bg_bitmap(x, y, w, h, bitmap) 
