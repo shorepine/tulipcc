@@ -32,18 +32,29 @@ uint16_t draw_new_char(const char c, uint16_t x, uint16_t y, uint8_t fg, uint8_t
   return u8g2_DrawGlyph(&ufont, x,y,c);
 }
 
-uint16_t draw_new_str(const char * str, uint16_t x, uint16_t y, uint8_t fg, uint8_t font_no) {
+uint16_t draw_new_str(const char * str, uint16_t x, uint16_t y, uint8_t fg, uint8_t font_no, uint16_t w, uint16_t h, uint8_t centered) {
   u8g2_font_t ufont;
   ufont.font = NULL; 
   ufont.font_decode.fg_color = 1; 
   ufont.font_decode.is_transparent = 1; 
   ufont.font_decode.dir = 0;
 
-  //fprintf(stderr, "setting up new str font %d str %s x %d y %d\n", font_no, str, x, y);
-  
   u8g2_SetFont(&ufont, tulip_fonts[font_no]);
   u8g2_SetForegroundColor(&ufont, fg);
-  //fprintf(stderr, "drawing new str font %d str %s x %d y %d\n", font_no, str, x, y);
+  if(centered) {
+    uint16_t width = 0;
+    // Compute width of text for centering
+    for(uint16_t i=0;i<strlen(str);i++) {
+        width += u8g2_glyph_width(font_no, str[i]);
+    }
+
+    uint16_t height = u8g2_a_height(font_no);
+    y = y + ((h+height)/2);
+    if(width < w) {
+        x = x + (w - width)/2;
+    }
+
+  }
   return u8g2_DrawStr(&ufont, x,y,str);
 }
 

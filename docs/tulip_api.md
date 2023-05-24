@@ -407,8 +407,9 @@ tulip.roundrect(x0,y0, w,h, r, pal_idx, filled)
 tulip.rect(x0,y0, w,h, pal_idx, filled)
 tulip.triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
 tulip.fill(x0,y0,pal_idx) # Flood fill starting at x,y
-tulip.char(c, x, y, pal_idx, font_number) # proportional font, returns # of x pixels to advance for the next char
-tulip.str(string, x, y, pal_idx, font_number) # same as char, but with a string
+tulip.bg_char(c, x, y, pal_idx, font_number) # proportional font, returns # of x pixels to advance for the next char
+tulip.bg_str(string, x, y, pal_idx, font_number) # same as char, but with a string. x and y are the bottom left
+tulip.bg_str(string, x, y, pal_idx, font_number, w, h) # Will center the text inside w,h
 
 """
   Set scrolling registers for the BG. 
