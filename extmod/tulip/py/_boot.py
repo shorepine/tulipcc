@@ -1,6 +1,6 @@
 import gc
 import uos
-import tulip, alles
+import tulip, alles, world
 from upysh import *
 from tulip import edit, run
 
