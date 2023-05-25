@@ -259,7 +259,7 @@ void alles_parse_message(char *message, uint16_t length) {
     // Parse the AMY stuff out of the message first
     struct event e = amy_parse_message(message);
     uint8_t sync_response = 0;
-
+    //fprintf(stderr, "message is %s len is %d\n", message, length);
     // Then pull out any alles-specific modes in this message - c,i,r,s, _
     while(c < length+1) {
         uint8_t b = message[c];

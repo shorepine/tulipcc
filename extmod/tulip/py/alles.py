@@ -118,6 +118,7 @@ def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1,
     if(reverb_liveness>=0): m = m + "H" + str(reverb_liveness)
     if(reverb_damping>=0): m = m + "j" + str(reverb_damping)
     if(reverb_xover>=0): m = m + "J" + str(reverb_xover)
+    #print("message " + m)
     return m+'Z'
 
 
