@@ -10,7 +10,7 @@ uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
 uint16_t BOUNCE_BUFFER_SIZE_PX;
 uint16_t TFB_ROWS, TFB_COLS;
 uint8_t tfb_active = 1;
-
+uint8_t tfb_log = 0;
 
 uint8_t check_dim_xy(uint16_t x, uint16_t y) {
     if(x >= OFFSCREEN_X_PX + H_RES || y >= OFFSCREEN_Y_PX+V_RES) return 0;
@@ -559,6 +559,9 @@ uint8_t ansi_parse_digits(char*str, uint16_t j, uint16_t k, uint16_t * digits) {
 
 uint8_t supress_lf = 0;
 void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color) {
+    if(tfb_log) {
+        fprintf(stderr, "%.*s", len, str);
+    }
     //fprintf(stderr,"str len %d format %d is ### ", len, format);
     //for(uint16_t i=0;i<len;i++) fprintf(stderr, "[%c] [%d] ", str[i], str[i]);
     //fprintf(stderr, "###\n");
