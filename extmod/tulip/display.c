@@ -561,6 +561,7 @@ uint8_t supress_lf = 0;
 void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color) {
     if(tfb_log) {
         fprintf(stderr, "%.*s", len, str);
+        fflush(stderr);
     }
     //fprintf(stderr,"str len %d format %d is ### ", len, format);
     //for(uint16_t i=0;i<len;i++) fprintf(stderr, "[%c] [%d] ", str[i], str[i]);
