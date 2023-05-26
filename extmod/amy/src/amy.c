@@ -644,13 +644,13 @@ void hold_and_modify(uint8_t osc) {
 static inline float lgain_of_pan(float pan) {
     if(pan > 1.f)  pan = 1.f;
     if(pan < 0)  pan = 0;
-    return dsps_sqrtf_f32_ansi(pan);
+    return dsps_sqrtf_f32_ansi(1.f - pan);
 }
 
 static inline float rgain_of_pan(float pan) {
     if(pan > 1.f)  pan = 1.f;
     if(pan < 0)  pan = 0;
-    return dsps_sqrtf_f32_ansi(1.f - pan);
+    return dsps_sqrtf_f32_ansi(pan);
 }
 
 
