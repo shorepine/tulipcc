@@ -894,8 +894,18 @@ float atoff(const char *s) {
         // Step over dp
         ++s;
         // Extract fractional part.
-        frac = (float)atoi(s);
         int fraclen = strspn(s, "0123456789");
+        char fracpart[8];
+        // atoi() will overflow for values larger than 2^31, so only decode a prefix.
+        if (fraclen > 6) {
+            for(int i = 0; i < 7; ++i) {
+                fracpart[i] = s[i];
+            }
+            fracpart[7] = '\0';
+            s = fracpart;
+            fraclen = 7;
+        }
+        frac = (float)atoi(s);
         frac /= powf(10.f, (float)fraclen);
     }
     //fprintf(stderr, "input was %s output is %f + %f = %f\n", s_in, whole, frac, whole+frac);
