@@ -280,7 +280,7 @@ tulip.midi_out(bytes) # Can send bytes or list
 ## Graphics system
 
 The Tulip GPU consists of 3 subsystems, in drawing order:
- * A bitmap graphics plane (BG) (default size: 2048x750), with scrolling x- and y- speed registers. Drawing shape primitives draw to the BG.
+ * A bitmap graphics plane (BG) (default size: 2048x750), with scrolling x- and y- speed registers. Drawing shape primitives and UI elements draw to the BG.
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
  * A sprite layer on top of the TFB (which is on top of the BG)
 
