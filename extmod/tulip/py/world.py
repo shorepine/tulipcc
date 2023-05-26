@@ -145,7 +145,7 @@ def download(filename, limit=5000):
 
         print("Downloaded %s [%d bytes, last updated %s] from Tulip World." % (filename, b, age_nice.lstrip()))
         if(filename.endswith('.tar')):
-            print("Unpacking %s. Run it with run('%s')!" % (filename, filename[:-4]))
+            print("Unpacking %s. Run it with run('%s')" % (filename, filename[:-4]))
             tulip.tar_extract(filename, show_progress=False)
             os.remove(filename)
 
