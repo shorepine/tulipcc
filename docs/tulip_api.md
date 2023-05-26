@@ -476,7 +476,8 @@ tulip.tfb_save()
 tulip.tfb_restore()
 
 # You can copy what the TFB prints to your local terminal or ESP monitor for debugging
-tulip.tfb_log() # toggles copying TFB to local stderr
+tulip.tfb_log_start() # starts copying TFB to local stderr
+tulip.tfb_log_stop() # stops
 ```
 
 
