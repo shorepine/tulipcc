@@ -474,6 +474,9 @@ tulip.tfb_start()
 # This is used in the Game() class to keep the REPL around after running a game, and the editor
 tulip.tfb_save()
 tulip.tfb_restore()
+
+# You can copy what the TFB prints to your local terminal or ESP monitor for debugging
+tulip.tfb_log() # toggles copying TFB to local stderr
 ```
 
 
