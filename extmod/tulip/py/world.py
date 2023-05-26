@@ -111,7 +111,9 @@ def ls(count=10): # lists latest count files
         fn = f["filename"]
         if(not fn in already):
             already[fn] = True
-            print("\t% 20s %s" % (fn, nice_time(f["age_ms"]/1000)))
+            if(fn.endswith(".tar")):
+                fn = "< %s >" % (fn[:-4])
+            print("\t% 40s %s" % (fn, nice_time(f["age_ms"]/1000)))
             i+=1
         if(i==count): break 
 
