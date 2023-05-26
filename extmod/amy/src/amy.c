@@ -879,7 +879,7 @@ void parse_algorithm(struct event * e, char *message) {
     }
 
 }
-/*
+
 float atoff(const char *s) {
     // Returns float value corresponding to parseable prefix of s.
     // Unlike atof(), it does not recognize scientific format ('e' or 'E')
@@ -887,20 +887,31 @@ float atoff(const char *s) {
     // 'e' as a command prefix.
     float frac = 0;
     float whole = (float)atoi(s);
+    //const char *s_in = s;  // for debug message.
     s += strspn(s, "0123456789");
     if (*s == '.') {
         // Float with a decimal part.
         // Step over dp
         ++s;
         // Extract fractional part.
-        frac = (float)atoi(s);
         int fraclen = strspn(s, "0123456789");
+        char fracpart[8];
+        // atoi() will overflow for values larger than 2^31, so only decode a prefix.
+        if (fraclen > 6) {
+            for(int i = 0; i < 7; ++i) {
+                fracpart[i] = s[i];
+            }
+            fracpart[7] = '\0';
+            s = fracpart;
+            fraclen = 7;
+        }
+        frac = (float)atoi(s);
         frac /= powf(10.f, (float)fraclen);
     }
-    fprintf(stderr, "input was %s output is %f + %f = %f\n", s, whole, frac, whole+frac);
+    //fprintf(stderr, "input was %s output is %f + %f = %f\n", s_in, whole, frac, whole+frac);
     return whole + frac;
 }
-*/
+
 // helper to parse the special bp string
 void parse_breakpoint(struct event * e, char* message, uint8_t which_bpset) {
     uint8_t idx = 0;
@@ -919,7 +930,7 @@ void parse_breakpoint(struct event * e, char* message, uint8_t which_bpset) {
             if(idx % 2 == 0) {
                 e->breakpoint_times[which_bpset][idx/2] = ms_to_samples(atoi(message+c));
             } else {
-                e->breakpoint_values[which_bpset][(idx-1) / 2] = atof(message+c);
+                e->breakpoint_values[which_bpset][(idx-1) / 2] = atoff(message+c);
             }
         }
         while(message[c]!=',' && message[c]!=0 && c < MAX_MESSAGE_LEN) c++;
@@ -961,25 +972,25 @@ struct event amy_parse_message(char * message) {
             } else {
                 if(mode >= 'A' && mode <= 'z') {
                     switch(mode) {
-                        case 'a': e.amp=atof(message+start); break;
+                        case 'a': e.amp=atoff(message+start); break;
                         case 'A': parse_breakpoint(&e, message+start, 0); break;
                         case 'B': parse_breakpoint(&e, message+start, 1); break;
-                        case 'b': e.feedback=atof(message+start); break; 
+                        case 'b': e.feedback=atoff(message+start); break; 
                         case 'C': parse_breakpoint(&e, message+start, 2); break; 
-                        case 'd': e.duty=atof(message + start); break; 
+                        case 'd': e.duty=atoff(message + start); break; 
                         case 'D': show_debug(atoi(message + start)); break; 
                         // reminder: don't use "E" or "e", lol 
-                        case 'f': e.freq=atof(message + start);  break; 
-                        case 'F': e.filter_freq=atof(message + start); break; 
+                        case 'f': e.freq=atoff(message + start);  break; 
+                        case 'F': e.filter_freq=atoff(message + start); break; 
                         case 'G': e.filter_type=atoi(message + start); break; 
                         case 'g': e.mod_target = atoi(message + start);  break; 
-                        case 'H': config_reverb(reverb.level, atof(message + start), reverb.damping, reverb.xover_hz); break;
-                        case 'h': config_reverb(atof(message + start), reverb.liveness, reverb.damping, reverb.xover_hz); break;
-                        case 'I': e.ratio = atof(message + start); break;
-                        case 'j': config_reverb(reverb.level, reverb.liveness, atof(message + start), reverb.xover_hz); break;
-                        case 'J': config_reverb(reverb.level, reverb.liveness, reverb.damping, atof(message + start)); break;
-                        case 'k': config_chorus(atof(message + start), chorus.max_delay); break;
-                        case 'l': e.velocity=atof(message + start); break; 
+                        case 'H': config_reverb(reverb.level, atoff(message + start), reverb.damping, reverb.xover_hz); break;
+                        case 'h': config_reverb(atoff(message + start), reverb.liveness, reverb.damping, reverb.xover_hz); break;
+                        case 'I': e.ratio = atoff(message + start); break;
+                        case 'j': config_reverb(reverb.level, reverb.liveness, atoff(message + start), reverb.xover_hz); break;
+                        case 'J': config_reverb(reverb.level, reverb.liveness, reverb.damping, atoff(message + start)); break;
+                        case 'k': config_chorus(atoff(message + start), chorus.max_delay); break;
+                        case 'l': e.velocity=atoff(message + start); break; 
                         case 'L': e.mod_source=atoi(message + start); break; 
                         case 'm': config_chorus(chorus.level, atoi(message + start)); break;
                         case 'N': e.latency_ms = atoi(message + start);  break; 
@@ -987,19 +998,19 @@ struct event amy_parse_message(char * message) {
                         case 'o': e.algorithm=atoi(message+start); break; 
                         case 'O': parse_algorithm(&e, message+start); break; 
                         case 'p': e.patch=atoi(message + start); break; 
-                        case 'P': e.phase=atof(message + start); break; 
-                        case 'Q': e.pan = atof(message + start); break;
-                        case 'R': e.resonance=atof(message + start); break; 
+                        case 'P': e.phase=atoff(message + start); break; 
+                        case 'Q': e.pan = atoff(message + start); break;
+                        case 'R': e.resonance=atoff(message + start); break; 
                         case 'S': osc = atoi(message + start); if(osc > OSCS-1) { amy_reset_oscs(); } else { reset_osc(osc); } break; 
                         case 'T': e.breakpoint_target[0] = atoi(message + start);  break; 
                         case 'W': e.breakpoint_target[1] = atoi(message + start);  break; 
                         case 'v': e.osc=(atoi(message + start) % OSCS);  break; // allow osc wraparound
-                        case 'V': e.volume = atof(message + start); break; 
+                        case 'V': e.volume = atoff(message + start); break; 
                         case 'X': e.breakpoint_target[2] = atoi(message + start); break; 
                         case 'w': e.wave=atoi(message + start); break; 
-                        case 'x': e.eq_l = atof(message+start); break; 
-                        case 'y': e.eq_m = atof(message+start); break; 
-                        case 'z': e.eq_h = atof(message+start); break; 
+                        case 'x': e.eq_l = atoff(message+start); break; 
+                        case 'y': e.eq_m = atoff(message+start); break; 
+                        case 'z': e.eq_h = atoff(message+start); break; 
                         default:
                             break;
                             // If a parse callback function is declared, call it to see if there's something else to parse

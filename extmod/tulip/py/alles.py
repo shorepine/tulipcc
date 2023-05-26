@@ -68,7 +68,7 @@ def millis():
 
 # Removes trailing 0s and x.0000s 
 def trunc(number):
-    return ('%.10f' % number).rstrip('0').rstrip('.')
+    return ('%.6f' % number).rstrip('0').rstrip('.')
 
 # Construct an AMY message
 def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1, feedback=-1, timestamp=None, reset=-1, phase=-1, pan=-1, \
