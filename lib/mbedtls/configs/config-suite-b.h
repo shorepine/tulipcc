@@ -5,13 +5,7 @@
  */
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
- *
- *  This file is provided under the Apache License 2.0, or the
- *  GNU General Public License v2.0 or later.
- *
- *  **********
- *  Apache License 2.0:
+ *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use this file except in compliance with the License.
@@ -24,27 +18,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  **********
- *
- *  **********
- *  GNU General Public License v2.0 or later:
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  **********
  */
 /*
  * Minimal configuration for TLS NSA Suite B Profile (RFC 6460)
@@ -107,8 +80,7 @@
 #define MBEDTLS_AES_ROM_TABLES
 
 /* Save RAM by adjusting to our exact needs */
-#define MBEDTLS_ECP_MAX_BITS   384
-#define MBEDTLS_MPI_MAX_SIZE    48 // 384 bits is 48 bytes
+#define MBEDTLS_MPI_MAX_SIZE    48 // 48 bytes for a 384-bit elliptic curve
 
 /* Save RAM at the expense of speed, see ecp.h */
 #define MBEDTLS_ECP_WINDOW_SIZE        2
@@ -131,11 +103,26 @@
 
 /*
  * Save RAM at the expense of interoperability: do this only if you control
- * both ends of the connection!  (See coments in "mbedtls/ssl.h".)
+ * both ends of the connection!  (See comments in "mbedtls/ssl.h".)
  * The minimum size here depends on the certificate chain used as well as the
  * typical size of records.
  */
 #define MBEDTLS_SSL_MAX_CONTENT_LEN             1024
+
+/* These defines are present so that the config modifying scripts can enable
+ * them during tests/scripts/test-ref-configs.pl */
+//#define MBEDTLS_USE_PSA_CRYPTO
+//#define MBEDTLS_PSA_CRYPTO_C
+
+/* With USE_PSA_CRYPTO, some PK operations also need PK_WRITE */
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#define MBEDTLS_PK_WRITE_C
+#endif
+
+/* Error messages and TLS debugging traces
+ * (huge code size increase, needed for tests/ssl-opt.sh) */
+//#define MBEDTLS_DEBUG_C
+//#define MBEDTLS_ERROR_C
 
 #include "mbedtls/check_config.h"
 

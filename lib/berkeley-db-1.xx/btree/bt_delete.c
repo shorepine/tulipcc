@@ -60,11 +60,10 @@ static int __bt_stkacq __P((BTREE *, PAGE **, CURSOR *));
  * Return RET_SPECIAL if the key is not found.
  */
 int
-__bt_delete(
-            const DB *dbp,
-            const DBT *key,
-            u_int flags
-            )
+__bt_delete(dbp, key, flags)
+	const DB *dbp;
+	const DBT *key;
+	u_int flags;
 {
 	BTREE *t;
 	CURSOR *c;
@@ -142,11 +141,10 @@ __bt_delete(
  *	0 on success, 1 on failure
  */
 static int
-__bt_stkacq(
-            BTREE *t,
-            PAGE **hp,
-            CURSOR *c
-            )
+__bt_stkacq(t, hp, c)
+	BTREE *t;
+	PAGE **hp;
+	CURSOR *c;
 {
 	BINTERNAL *bi;
 	EPG *e;
@@ -290,10 +288,9 @@ ret:	mpool_put(t->bt_mp, h, 0);
  *	RET_ERROR, RET_SUCCESS and RET_SPECIAL if the key not found.
  */
 static int
-__bt_bdelete(
-             BTREE *t,
-             const DBT *key
-             )
+__bt_bdelete(t, key)
+	BTREE *t;
+	const DBT *key;
 {
 	EPG *e;
 	PAGE *h;
@@ -378,10 +375,9 @@ loop:	if ((e = __bt_search(t, key, &exact)) == NULL)
  *	mpool_put's the page
  */
 static int
-__bt_pdelete(
-             BTREE *t,
-             PAGE *h
-             )
+__bt_pdelete(t, h)
+	BTREE *t;
+	PAGE *h;
 {
 	BINTERNAL *bi;
 	PAGE *pg;
@@ -475,12 +471,11 @@ __bt_pdelete(
  *	RET_SUCCESS, RET_ERROR.
  */
 int
-__bt_dleaf(
-           BTREE *t,
-           const DBT *key,
-           PAGE *h,
-           u_int index
-           )
+__bt_dleaf(t, key, h, index)
+	BTREE *t;
+	const DBT *key;
+	PAGE *h;
+	u_int index;
 {
 	BLEAF *bl;
 	indx_t cnt, *ip, offset;
@@ -541,12 +536,11 @@ __bt_dleaf(
  *	RET_SUCCESS, RET_ERROR.
  */
 static int
-__bt_curdel(
-            BTREE *t,
-            const DBT *key,
-            PAGE *h,
-            u_int index
-            )
+__bt_curdel(t, key, h, index)
+	BTREE *t;
+	const DBT *key;
+	PAGE *h;
+	u_int index;
 {
 	CURSOR *c;
 	EPG e;
@@ -641,10 +635,9 @@ dup2:				c->pg.pgno = e.page->pgno;
  *	h:	page to be deleted
  */
 static int
-__bt_relink(
-            BTREE *t,
-            PAGE *h
-            )
+__bt_relink(t, h)
+	BTREE *t;
+	PAGE *h;
 {
 	PAGE *pg;
 

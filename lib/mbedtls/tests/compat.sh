@@ -3,13 +3,7 @@
 # compat.sh
 #
 # Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-#
-# This file is provided under the Apache License 2.0, or the
-# GNU General Public License v2.0 or later.
-#
-# **********
-# Apache License 2.0:
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License.
@@ -22,27 +16,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# **********
-#
-# **********
-# GNU General Public License v2.0 or later:
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-#
-# **********
 #
 # Purpose
 #
@@ -66,9 +39,20 @@ SRVMEM=0
 # default commands, can be overridden by the environment
 : ${M_SRV:=../programs/ssl/ssl_server2}
 : ${M_CLI:=../programs/ssl/ssl_client2}
-: ${OPENSSL_CMD:=openssl} # OPENSSL would conflict with the build system
+: ${OPENSSL:=openssl}
 : ${GNUTLS_CLI:=gnutls-cli}
 : ${GNUTLS_SERV:=gnutls-serv}
+
+# The OPENSSL variable used to be OPENSSL_CMD for historical reasons.
+# To help the migration, error out if the old variable is set,
+# but only if it has a different value than the new one.
+if [ "${OPENSSL_CMD+set}" = set ]; then
+    # the variable is set, we can now check its value
+    if [ "$OPENSSL_CMD" != "$OPENSSL" ]; then
+        echo "Please use OPENSSL instead of OPENSSL_CMD." >&2
+        exit 125
+    fi
+fi
 
 # do we have a recent enough GnuTLS?
 if ( which $GNUTLS_CLI && which $GNUTLS_SERV ) >/dev/null 2>&1; then
@@ -94,17 +78,19 @@ else
 fi
 
 # default values for options
-MODES="tls1 tls1_1 tls1_2 dtls1 dtls1_2"
+# /!\ keep this synchronised with:
+# - basic-build-test.sh
+# - all.sh (multiple components)
+MODES="tls1 tls1_1 tls12 dtls1 dtls12" # ssl3 not in default config
 VERIFIES="NO YES"
 TYPES="ECDSA RSA PSK"
 FILTER=""
 # exclude:
-# - NULL: excluded from our default config
+# - NULL: excluded from our default config + requires OpenSSL legacy
 # - RC4, single-DES: requires legacy OpenSSL/GnuTLS versions
-#   avoid plain DES but keep 3DES-EDE-CBC (mbedTLS), DES-CBC3 (OpenSSL)
+# - 3DES: not in default config
 # - ARIA: not in default config.h + requires OpenSSL >= 1.1.1
 # - ChachaPoly: requires OpenSSL >= 1.1.0
-# - 3DES: not in default config
 EXCLUDE='NULL\|DES\|RC4\|ARCFOUR\|ARIA\|CHACHA20-POLY1305'
 VERBOSE=""
 MEMCHECK=0
@@ -183,7 +169,7 @@ log() {
 # is_dtls <mode>
 is_dtls()
 {
-    test "$1" = "dtls1" -o "$1" = "dtls1_2"
+    test "$1" = "dtls1" -o "$1" = "dtls12"
 }
 
 # minor_ver <mode>
@@ -199,7 +185,7 @@ minor_ver()
         tls1_1|dtls1)
             echo 2
             ;;
-        tls1_2|dtls1_2)
+        tls12|dtls12)
             echo 3
             ;;
         *)
@@ -229,17 +215,6 @@ filter()
   echo "$NEW_LIST" | sed -e 's/[[:space:]][[:space:]]*/ /g' -e 's/^ //' -e 's/ $//'
 }
 
-# OpenSSL 1.0.1h with -Verify wants a ClientCertificate message even for
-# PSK ciphersuites with DTLS, which is incorrect, so disable them for now
-check_openssl_server_bug()
-{
-    if test "X$VERIFY" = "XYES" && is_dtls "$MODE" && \
-        echo "$1" | grep "^TLS-PSK" >/dev/null;
-    then
-        SKIP_NEXT="YES"
-    fi
-}
-
 filter_ciphersuites()
 {
     if [ "X" != "X$FILTER" -o "X" != "X$EXCLUDE" ];
@@ -254,18 +229,9 @@ filter_ciphersuites()
         G_CIPHERS=$( filter "$G_CIPHERS" )
     fi
 
-    # OpenSSL <1.0.2 doesn't support DTLS 1.2. Check what OpenSSL
-    # supports from the s_server help. (The s_client help isn't
-    # accurate as of 1.0.2g: it supports DTLS 1.2 but doesn't list it.
-    # But the s_server help seems to be accurate.)
-    if ! $OPENSSL_CMD s_server -help 2>&1 | grep -q "^ *-$MODE "; then
-        M_CIPHERS=""
-        O_CIPHERS=""
-    fi
-
     # For GnuTLS client -> mbed TLS server,
     # we need to force IPv4 by connecting to 127.0.0.1 but then auth fails
-    if [ "X$VERIFY" = "XYES" ] && is_dtls "$MODE"; then
+    if is_dtls "$MODE" && [ "X$VERIFY" = "XYES" ]; then
         G_CIPHERS=""
     fi
 }
@@ -482,7 +448,7 @@ add_common_ciphersuites()
 #
 # NOTE: for some reason RSA-PSK doesn't work with OpenSSL,
 # so RSA-PSK ciphersuites need to go in other sections, see
-# https://github.com/ARMmbed/mbedtls/issues/1419
+# https://github.com/Mbed-TLS/mbedtls/issues/1419
 #
 # ChachaPoly suites are here rather than in "common", as they were added in
 # GnuTLS in 3.5.0 and the CI only has 3.4.x so far.
@@ -895,27 +861,44 @@ add_mbedtls_ciphersuites()
     esac
 }
 
+# o_check_ciphersuite CIPHER_SUITE_NAME
+o_check_ciphersuite()
+{
+    if [ "${O_SUPPORT_ECDH}" = "NO" ]; then
+        case "$1" in
+            *ECDH-*) SKIP_NEXT="YES"
+        esac
+    fi
+}
+
 setup_arguments()
 {
+    O_MODE=""
     G_MODE=""
     case "$MODE" in
         "ssl3")
+            O_MODE="ssl3"
             G_PRIO_MODE="+VERS-SSL3.0"
             ;;
         "tls1")
+            O_MODE="tls1"
             G_PRIO_MODE="+VERS-TLS1.0"
             ;;
         "tls1_1")
+            O_MODE="tls1_1"
             G_PRIO_MODE="+VERS-TLS1.1"
             ;;
-        "tls1_2")
+        "tls12")
+            O_MODE="tls1_2"
             G_PRIO_MODE="+VERS-TLS1.2"
             ;;
         "dtls1")
+            O_MODE="dtls1"
             G_PRIO_MODE="+VERS-DTLS1.0"
             G_MODE="-u"
             ;;
-        "dtls1_2")
+        "dtls12")
+            O_MODE="dtls1_2"
             G_PRIO_MODE="+VERS-DTLS1.2"
             G_MODE="-u"
             ;;
@@ -932,7 +915,7 @@ setup_arguments()
     fi
 
     M_SERVER_ARGS="server_port=$PORT server_addr=0.0.0.0 force_version=$MODE arc4=1"
-    O_SERVER_ARGS="-accept $PORT -cipher NULL,ALL -$MODE"
+    O_SERVER_ARGS="-accept $PORT -cipher NULL,ALL -$O_MODE"
     G_SERVER_ARGS="-p $PORT --http $G_MODE"
     G_SERVER_PRIO="NORMAL:${G_PRIO_CCM}+ARCFOUR-128:+NULL:+MD5:+PSK:+DHE-PSK:+ECDHE-PSK:+SHA256:+SHA384:+RSA-PSK:-VERS-TLS-ALL:$G_PRIO_MODE"
 
@@ -943,7 +926,7 @@ setup_arguments()
     # Mbed TLS wants >=1024, so force that for older versions. Don't force
     # it for newer versions, which reject a 1024-bit prime. Indifferently
     # force it or not for intermediate versions.
-    case $($OPENSSL_CMD version) in
+    case $($OPENSSL version) in
         "OpenSSL 1.0"*)
             O_SERVER_ARGS="$O_SERVER_ARGS -dhparam data_files/dhparams.pem"
             ;;
@@ -957,9 +940,27 @@ setup_arguments()
     fi
 
     M_CLIENT_ARGS="server_port=$PORT server_addr=127.0.0.1 force_version=$MODE"
-    O_CLIENT_ARGS="-connect localhost:$PORT -$MODE"
+    O_CLIENT_ARGS="-connect localhost:$PORT -$O_MODE"
     G_CLIENT_ARGS="-p $PORT --debug 3 $G_MODE"
-    G_CLIENT_PRIO="NONE:$G_PRIO_MODE:+COMP-NULL:+CURVE-ALL:+SIGN-ALL"
+
+    # Newer versions of OpenSSL have a syntax to enable all "ciphers", even
+    # low-security ones. This covers not just cipher suites but also protocol
+    # versions. It is necessary, for example, to use (D)TLS 1.0/1.1 on
+    # OpenSSL 1.1.1f from Ubuntu 20.04. The syntax was only introduced in
+    # OpenSSL 1.1.0 (21e0c1d23afff48601eb93135defddae51f7e2e3) and I can't find
+    # a way to discover it from -help, so check the openssl version.
+    case $($OPENSSL version) in
+        "OpenSSL 0"*|"OpenSSL 1.0"*) :;;
+        *)
+            O_CLIENT_ARGS="$O_CLIENT_ARGS -cipher ALL@SECLEVEL=0"
+            O_SERVER_ARGS="$O_SERVER_ARGS -cipher ALL@SECLEVEL=0"
+            ;;
+    esac
+
+    case $($OPENSSL ciphers ALL) in
+        *ECDH-ECDSA*|*ECDH-RSA*) O_SUPPORT_ECDH="YES";;
+        *) O_SUPPORT_ECDH="NO";;
+    esac
 
     if [ "X$VERIFY" = "XYES" ];
     then
@@ -1072,7 +1073,7 @@ fi
 start_server() {
     case $1 in
         [Oo]pen*)
-            SERVER_CMD="$OPENSSL_CMD s_server $O_SERVER_ARGS"
+            SERVER_CMD="$OPENSSL s_server $O_SERVER_ARGS"
             ;;
         [Gg]nu*)
             SERVER_CMD="$GNUTLS_SERV $G_SERVER_ARGS --priority $G_SERVER_PRIO"
@@ -1094,15 +1095,17 @@ start_server() {
     echo "$SERVER_CMD" > $SRV_OUT
     # for servers without -www or equivalent
     while :; do echo bla; sleep 1; done | $SERVER_CMD >> $SRV_OUT 2>&1 &
-    PROCESS_ID=$!
+    SRV_PID=$!
 
-    wait_server_start "$PORT" "$PROCESS_ID"
+    wait_server_start "$PORT" "$SRV_PID"
 }
 
 # terminate the running server
 stop_server() {
-    kill $PROCESS_ID 2>/dev/null
-    wait $PROCESS_ID 2>/dev/null
+    # For Ubuntu 22.04, `Terminated` message is outputed by wait command.
+    # To remove it from stdout, redirect stdout/stderr to SRV_OUT
+    kill $SRV_PID >/dev/null 2>&1
+    wait $SRV_PID >> $SRV_OUT 2>&1
 
     if [ "$MEMCHECK" -gt 0 ]; then
         if is_mbedtls "$SERVER_CMD" && has_mem_err $SRV_OUT; then
@@ -1118,7 +1121,7 @@ stop_server() {
 # kill the running server (used when killed by signal)
 cleanup() {
     rm -f $SRV_OUT $CLI_OUT
-    kill $PROCESS_ID >/dev/null 2>&1
+    kill $SRV_PID >/dev/null 2>&1
     kill $WATCHDOG_PID >/dev/null 2>&1
     exit 1
 }
@@ -1131,11 +1134,13 @@ wait_client_done() {
     ( sleep "$DOG_DELAY"; echo "TIMEOUT" >> $CLI_OUT; kill $CLI_PID ) &
     WATCHDOG_PID=$!
 
-    wait $CLI_PID
+    # For Ubuntu 22.04, `Terminated` message is outputed by wait command.
+    # To remove it from stdout, redirect stdout/stderr to CLI_OUT
+    wait $CLI_PID >> $CLI_OUT 2>&1
     EXIT=$?
 
-    kill $WATCHDOG_PID
-    wait $WATCHDOG_PID
+    kill $WATCHDOG_PID >/dev/null 2>&1
+    wait $WATCHDOG_PID >> $CLI_OUT 2>&1
 
     echo "EXIT: $EXIT" >> $CLI_OUT
 }
@@ -1144,7 +1149,6 @@ wait_client_done() {
 run_client() {
     # announce what we're going to do
     TESTS=$(( $TESTS + 1 ))
-    VERIF=$(echo $VERIFY | tr '[:upper:]' '[:lower:]')
     TITLE="`echo $1 | head -c1`->`echo $SERVER_NAME | head -c1`"
     TITLE="$TITLE $MODE,$VERIF $2"
     printf "%s " "$TITLE"
@@ -1162,7 +1166,7 @@ run_client() {
     # run the command and interpret result
     case $1 in
         [Oo]pen*)
-            CLIENT_CMD="$OPENSSL_CMD s_client $O_CLIENT_ARGS -cipher $2"
+            CLIENT_CMD="$OPENSSL s_client $O_CLIENT_ARGS -cipher $2"
             log "$CLIENT_CMD"
             echo "$CLIENT_CMD" > $CLI_OUT
             printf 'GET HTTP/1.0\r\n\r\n' | $CLIENT_CMD >> $CLI_OUT 2>&1 &
@@ -1171,7 +1175,7 @@ run_client() {
             if [ $EXIT -eq 0 ]; then
                 RESULT=0
             else
-                # If the cipher isn't supported...
+                # If it is NULL cipher ...
                 if grep 'Cipher is (NONE)' $CLI_OUT >/dev/null; then
                     RESULT=1
                 else
@@ -1297,8 +1301,8 @@ if [ ! -x "$M_CLI" ]; then
 fi
 
 if echo "$PEERS" | grep -i openssl > /dev/null; then
-    if which "$OPENSSL_CMD" >/dev/null 2>&1; then :; else
-        echo "Command '$OPENSSL_CMD' not found" >&2
+    if which "$OPENSSL" >/dev/null 2>&1; then :; else
+        echo "Command '$OPENSSL' not found" >&2
         exit 1
     fi
 fi
@@ -1341,9 +1345,20 @@ SKIP_NEXT="NO"
 
 trap cleanup INT TERM HUP
 
-for VERIFY in $VERIFIES; do
-    for MODE in $MODES; do
-        for TYPE in $TYPES; do
+for MODE in $MODES; do
+    for TYPE in $TYPES; do
+
+        # PSK cipher suites do not allow client certificate verification.
+        # This means PSK test cases with VERIFY=YES should be replaced by
+        # VERIFY=NO or be ignored. SUB_VERIFIES variable is used to constrain
+        # verification option for PSK test cases.
+        SUB_VERIFIES=$VERIFIES
+        if [ "$TYPE" = "PSK" ]; then
+            SUB_VERIFIES="NO"
+        fi
+
+        for VERIFY in $SUB_VERIFIES; do
+            VERIF=$(echo $VERIFY | tr '[:upper:]' '[:lower:]')
             for PEER in $PEERS; do
 
             setup_arguments
@@ -1356,6 +1371,15 @@ for VERIFY in $VERIFIES; do
                         continue;
                     fi
 
+                    # OpenSSL <1.0.2 doesn't support DTLS 1.2. Check if OpenSSL
+                    # supports $O_MODE from the s_server help. (The s_client
+                    # help isn't accurate as of 1.0.2g: it supports DTLS 1.2
+                    # but doesn't list it. But the s_server help seems to be
+                    # accurate.)
+                    if ! $OPENSSL s_server -help 2>&1 | grep -q "^ *-$O_MODE "; then
+                        continue;
+                    fi
+
                     reset_ciphersuites
                     add_common_ciphersuites
                     add_openssl_ciphersuites
@@ -1364,7 +1388,7 @@ for VERIFY in $VERIFIES; do
                     if [ "X" != "X$M_CIPHERS" ]; then
                         start_server "OpenSSL"
                         for i in $M_CIPHERS; do
-                            check_openssl_server_bug $i
+                            o_check_ciphersuite "$i"
                             run_client mbedTLS $i
                         done
                         stop_server
@@ -1373,6 +1397,7 @@ for VERIFY in $VERIFIES; do
                     if [ "X" != "X$O_CIPHERS" ]; then
                         start_server "mbedTLS"
                         for i in $O_CIPHERS; do
+                            o_check_ciphersuite "$i"
                             run_client OpenSSL $i
                         done
                         stop_server
@@ -1438,8 +1463,7 @@ done
 
 echo "------------------------------------------------------------------------"
 
-if [ $FAILED -ne 0 -o $SRVMEM -ne 0 ];
-then
+if [ $FAILED -ne 0 -o $SRVMEM -ne 0 ]; then
     printf "FAILED"
 else
     printf "PASSED"
@@ -1455,4 +1479,9 @@ PASSED=$(( $TESTS - $FAILED ))
 echo " ($PASSED / $TESTS tests ($SKIPPED skipped$MEMREPORT))"
 
 FAILED=$(( $FAILED + $SRVMEM ))
+if [ $FAILED -gt 255 ]; then
+    # Clamp at 255 as caller gets exit code & 0xFF
+    # (so 256 would be 0, or success, etc)
+    FAILED=255
+fi
 exit $FAILED

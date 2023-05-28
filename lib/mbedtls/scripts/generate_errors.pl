@@ -6,13 +6,7 @@
 # or generate_errors.pl include_dir data_dir error_file
 #
 # Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-#
-# This file is provided under the Apache License 2.0, or the
-# GNU General Public License v2.0 or later.
-#
-# **********
-# Apache License 2.0:
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License.
@@ -25,27 +19,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# **********
-#
-# **********
-# GNU General Public License v2.0 or later:
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-#
-# **********
 
 use strict;
 use warnings;
@@ -74,7 +47,7 @@ my $error_format_file = $data_dir.'/error.fmt';
 
 my @low_level_modules = qw( AES ARC4 ARIA ASN1 BASE64 BIGNUM BLOWFISH
                             CAMELLIA CCM CHACHA20 CHACHAPOLY CMAC CTR_DRBG DES
-                            ENTROPY GCM HKDF HMAC_DRBG MD2 MD4 MD5
+                            ENTROPY ERROR GCM HKDF HMAC_DRBG MD2 MD4 MD5
                             NET OID PADLOCK PBKDF2 PLATFORM POLY1305 RIPEMD160
                             SHA1 SHA256 SHA512 THREADING XTEA );
 my @high_level_modules = qw( CIPHER DHM ECP MD
@@ -87,11 +60,11 @@ open(FORMAT_FILE, "$error_format_file") or die "Opening error format file '$erro
 my $error_format = <FORMAT_FILE>;
 close(FORMAT_FILE);
 
-my @files = <$include_dir/*.h>;
+my @files = glob qq("$include_dir/*.h");
 my @necessary_include_files;
 my @matches;
 foreach my $file (@files) {
-    open(FILE, "$file");
+    open(FILE, '<:crlf', $file) or die("$0: $file: $!");
     my $content = <FILE>;
     close FILE;
     my $found = 0;
@@ -189,7 +162,7 @@ foreach my $match (@matches)
     {
         $code_check = \$ll_code_check;
         $old_define = \$ll_old_define;
-        $white_space = '    ';
+        $white_space = '        ';
     }
     else
     {
@@ -230,19 +203,8 @@ foreach my $match (@matches)
         ${$old_define} = $define_name;
     }
 
-    if ($error_name eq "MBEDTLS_ERR_SSL_FATAL_ALERT_MESSAGE")
-    {
-        ${$code_check} .= "${white_space}if( use_ret == -($error_name) )\n".
-                          "${white_space}\{\n".
-                          "${white_space}    mbedtls_snprintf( buf, buflen, \"$module_name - $description\" );\n".
-                          "${white_space}    return;\n".
-                          "${white_space}}\n"
-    }
-    else
-    {
-        ${$code_check} .= "${white_space}if( use_ret == -($error_name) )\n".
-                          "${white_space}    mbedtls_snprintf( buf, buflen, \"$module_name - $description\" );\n"
-    }
+    ${$code_check} .= "${white_space}case -($error_name):\n".
+                      "${white_space}    return( \"$module_name - $description\" );\n"
 };
 
 if ($ll_old_define ne "")

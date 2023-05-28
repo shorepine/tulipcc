@@ -1,4 +1,4 @@
-import io, os, re, serial, struct, time
+import io, os, re, struct, time
 from errno import EPERM
 from .console import VT_ENABLED
 
@@ -142,6 +142,15 @@ class RemoteFile(uio.IOBase):
 
     def __exit__(self, a, b, c):
         self.close()
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        l = self.readline()
+        if not l:
+            raise StopIteration
+        return l
 
     def ioctl(self, request, arg):
         if request == 1:  # FLUSH
@@ -428,12 +437,11 @@ class PyboardCommand:
         path = self.root + self.rd_str()
         try:
             self.path_check(path)
+            self.data_ilistdir[0] = path
+            self.data_ilistdir[1] = os.listdir(path)
             self.wr_s8(0)
         except OSError as er:
             self.wr_s8(-abs(er.errno))
-        else:
-            self.data_ilistdir[0] = path
-            self.data_ilistdir[1] = os.listdir(path)
 
     def do_ilistdir_next(self):
         if self.data_ilistdir[1]:
@@ -441,7 +449,7 @@ class PyboardCommand:
             try:
                 stat = os.lstat(self.data_ilistdir[0] + "/" + entry)
                 mode = stat.st_mode & 0xC000
-            except OSError as er:
+            except OSError:
                 mode = 0
             self.wr_str(entry)
             self.wr_u32(mode)

@@ -2,13 +2,7 @@
  *  Certificate request reading application
  *
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
- *
- *  This file is provided under the Apache License 2.0, or the
- *  GNU General Public License v2.0 or later.
- *
- *  **********
- *  Apache License 2.0:
+ *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use this file except in compliance with the License.
@@ -21,27 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  **********
- *
- *  **********
- *  GNU General Public License v2.0 or later:
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  **********
  */
 
 #if !defined(MBEDTLS_CONFIG_FILE)
@@ -50,24 +23,15 @@
 #include MBEDTLS_CONFIG_FILE
 #endif
 
-#if defined(MBEDTLS_PLATFORM_C)
 #include "mbedtls/platform.h"
-#else
-#include <stdio.h>
-#include <stdlib.h>
-#define mbedtls_printf          printf
-#define mbedtls_exit            exit
-#define MBEDTLS_EXIT_SUCCESS    EXIT_SUCCESS
-#define MBEDTLS_EXIT_FAILURE    EXIT_FAILURE
-#endif /* MBEDTLS_PLATFORM_C */
 
 #if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_RSA_C) ||  \
     !defined(MBEDTLS_X509_CSR_PARSE_C) || !defined(MBEDTLS_FS_IO)
-int main( void )
+int main(void)
 {
     mbedtls_printf("MBEDTLS_BIGNUM_C and/or MBEDTLS_RSA_C and/or "
-           "MBEDTLS_X509_CSR_PARSE_C and/or MBEDTLS_FS_IO not defined.\n");
-    mbedtls_exit( 0 );
+                   "MBEDTLS_X509_CSR_PARSE_C and/or MBEDTLS_FS_IO not defined.\n");
+    mbedtls_exit(0);
 }
 #else
 
@@ -90,12 +54,11 @@ int main( void )
 /*
  * global options
  */
-struct options
-{
+struct options {
     const char *filename;       /* filename of the certificate request  */
 } opt;
 
-int main( int argc, char *argv[] )
+int main(int argc, char *argv[])
 {
     int ret = 1;
     int exit_code = MBEDTLS_EXIT_FAILURE;
@@ -107,72 +70,70 @@ int main( int argc, char *argv[] )
     /*
      * Set to sane values
      */
-    mbedtls_x509_csr_init( &csr );
+    mbedtls_x509_csr_init(&csr);
 
-    if( argc == 0 )
-    {
-    usage:
-        mbedtls_printf( USAGE );
+    if (argc < 2) {
+usage:
+        mbedtls_printf(USAGE);
         goto exit;
     }
 
     opt.filename            = DFL_FILENAME;
 
-    for( i = 1; i < argc; i++ )
-    {
+    for (i = 1; i < argc; i++) {
         p = argv[i];
-        if( ( q = strchr( p, '=' ) ) == NULL )
+        if ((q = strchr(p, '=')) == NULL) {
             goto usage;
+        }
         *q++ = '\0';
 
-        if( strcmp( p, "filename" ) == 0 )
+        if (strcmp(p, "filename") == 0) {
             opt.filename = q;
-        else
+        } else {
             goto usage;
+        }
     }
 
     /*
      * 1.1. Load the CSR
      */
-    mbedtls_printf( "\n  . Loading the CSR ..." );
-    fflush( stdout );
+    mbedtls_printf("\n  . Loading the CSR ...");
+    fflush(stdout);
 
-    ret = mbedtls_x509_csr_parse_file( &csr, opt.filename );
+    ret = mbedtls_x509_csr_parse_file(&csr, opt.filename);
 
-    if( ret != 0 )
-    {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_csr_parse_file returned %d\n\n", ret );
-        mbedtls_x509_csr_free( &csr );
+    if (ret != 0) {
+        mbedtls_printf(" failed\n  !  mbedtls_x509_csr_parse_file returned %d\n\n", ret);
+        mbedtls_x509_csr_free(&csr);
         goto exit;
     }
 
-    mbedtls_printf( " ok\n" );
+    mbedtls_printf(" ok\n");
 
     /*
      * 1.2 Print the CSR
      */
-    mbedtls_printf( "  . CSR information    ...\n" );
-    ret = mbedtls_x509_csr_info( (char *) buf, sizeof( buf ) - 1, "      ", &csr );
-    if( ret == -1 )
-    {
-        mbedtls_printf( " failed\n  !  mbedtls_x509_csr_info returned %d\n\n", ret );
-        mbedtls_x509_csr_free( &csr );
+    mbedtls_printf("  . CSR information    ...\n");
+    ret = mbedtls_x509_csr_info((char *) buf, sizeof(buf) - 1, "      ", &csr);
+    if (ret == -1) {
+        mbedtls_printf(" failed\n  !  mbedtls_x509_csr_info returned %d\n\n", ret);
+        mbedtls_x509_csr_free(&csr);
         goto exit;
     }
 
-    mbedtls_printf( "%s\n", buf );
+    mbedtls_printf("%s\n", buf);
 
     exit_code = MBEDTLS_EXIT_SUCCESS;
 
 exit:
-    mbedtls_x509_csr_free( &csr );
+    mbedtls_x509_csr_free(&csr);
 
 #if defined(_WIN32)
-    mbedtls_printf( "  + Press Enter to exit this program.\n" );
-    fflush( stdout ); getchar();
+    mbedtls_printf("  + Press Enter to exit this program.\n");
+    fflush(stdout); getchar();
 #endif
 
-    mbedtls_exit( exit_code );
+    mbedtls_exit(exit_code);
 }
 #endif /* MBEDTLS_BIGNUM_C && MBEDTLS_RSA_C && MBEDTLS_X509_CSR_PARSE_C &&
           MBEDTLS_FS_IO */

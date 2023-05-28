@@ -12,13 +12,7 @@
  */
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
- *
- *  This file is provided under the Apache License 2.0, or the
- *  GNU General Public License v2.0 or later.
- *
- *  **********
- *  Apache License 2.0:
+ *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use this file except in compliance with the License.
@@ -31,33 +25,12 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  **********
- *
- *  **********
- *  GNU General Public License v2.0 or later:
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  **********
  */
 #ifndef MBEDTLS_SHA1_H
 #define MBEDTLS_SHA1_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -87,8 +60,7 @@ extern "C" {
  *                 stronger message digests instead.
  *
  */
-typedef struct mbedtls_sha1_context
-{
+typedef struct mbedtls_sha1_context {
     uint32_t total[2];          /*!< The number of Bytes processed.  */
     uint32_t state[5];          /*!< The intermediate digest state.  */
     unsigned char buffer[64];   /*!< The data block being processed. */
@@ -110,7 +82,7 @@ mbedtls_sha1_context;
  *                 This must not be \c NULL.
  *
  */
-void mbedtls_sha1_init( mbedtls_sha1_context *ctx );
+void mbedtls_sha1_init(mbedtls_sha1_context *ctx);
 
 /**
  * \brief          This function clears a SHA-1 context.
@@ -125,7 +97,7 @@ void mbedtls_sha1_init( mbedtls_sha1_context *ctx );
  *                 SHA-1 context.
  *
  */
-void mbedtls_sha1_free( mbedtls_sha1_context *ctx );
+void mbedtls_sha1_free(mbedtls_sha1_context *ctx);
 
 /**
  * \brief          This function clones the state of a SHA-1 context.
@@ -138,8 +110,8 @@ void mbedtls_sha1_free( mbedtls_sha1_context *ctx );
  * \param src      The SHA-1 context to clone from. This must be initialized.
  *
  */
-void mbedtls_sha1_clone( mbedtls_sha1_context *dst,
-                         const mbedtls_sha1_context *src );
+void mbedtls_sha1_clone(mbedtls_sha1_context *dst,
+                        const mbedtls_sha1_context *src);
 
 /**
  * \brief          This function starts a SHA-1 checksum calculation.
@@ -154,7 +126,7 @@ void mbedtls_sha1_clone( mbedtls_sha1_context *dst,
  * \return         A negative error code on failure.
  *
  */
-int mbedtls_sha1_starts_ret( mbedtls_sha1_context *ctx );
+int mbedtls_sha1_starts_ret(mbedtls_sha1_context *ctx);
 
 /**
  * \brief          This function feeds an input buffer into an ongoing SHA-1
@@ -173,9 +145,9 @@ int mbedtls_sha1_starts_ret( mbedtls_sha1_context *ctx );
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int mbedtls_sha1_update_ret( mbedtls_sha1_context *ctx,
-                             const unsigned char *input,
-                             size_t ilen );
+int mbedtls_sha1_update_ret(mbedtls_sha1_context *ctx,
+                            const unsigned char *input,
+                            size_t ilen);
 
 /**
  * \brief          This function finishes the SHA-1 operation, and writes
@@ -193,8 +165,8 @@ int mbedtls_sha1_update_ret( mbedtls_sha1_context *ctx,
  * \return         \c 0 on success.
  * \return         A negative error code on failure.
  */
-int mbedtls_sha1_finish_ret( mbedtls_sha1_context *ctx,
-                             unsigned char output[20] );
+int mbedtls_sha1_finish_ret(mbedtls_sha1_context *ctx,
+                            unsigned char output[20]);
 
 /**
  * \brief          SHA-1 process data block (internal use only).
@@ -211,8 +183,8 @@ int mbedtls_sha1_finish_ret( mbedtls_sha1_context *ctx,
  * \return         A negative error code on failure.
  *
  */
-int mbedtls_internal_sha1_process( mbedtls_sha1_context *ctx,
-                                   const unsigned char data[64] );
+int mbedtls_internal_sha1_process(mbedtls_sha1_context *ctx,
+                                  const unsigned char data[64]);
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 #if defined(MBEDTLS_DEPRECATED_WARNING)
@@ -232,7 +204,7 @@ int mbedtls_internal_sha1_process( mbedtls_sha1_context *ctx,
  * \param ctx      The SHA-1 context to initialize. This must be initialized.
  *
  */
-MBEDTLS_DEPRECATED void mbedtls_sha1_starts( mbedtls_sha1_context *ctx );
+MBEDTLS_DEPRECATED void mbedtls_sha1_starts(mbedtls_sha1_context *ctx);
 
 /**
  * \brief          This function feeds an input buffer into an ongoing SHA-1
@@ -251,9 +223,9 @@ MBEDTLS_DEPRECATED void mbedtls_sha1_starts( mbedtls_sha1_context *ctx );
  * \param ilen     The length of the input data \p input in Bytes.
  *
  */
-MBEDTLS_DEPRECATED void mbedtls_sha1_update( mbedtls_sha1_context *ctx,
-                                             const unsigned char *input,
-                                             size_t ilen );
+MBEDTLS_DEPRECATED void mbedtls_sha1_update(mbedtls_sha1_context *ctx,
+                                            const unsigned char *input,
+                                            size_t ilen);
 
 /**
  * \brief          This function finishes the SHA-1 operation, and writes
@@ -270,8 +242,8 @@ MBEDTLS_DEPRECATED void mbedtls_sha1_update( mbedtls_sha1_context *ctx,
  * \param output   The SHA-1 checksum result.
  *                 This must be a writable buffer of length \c 20 Bytes.
  */
-MBEDTLS_DEPRECATED void mbedtls_sha1_finish( mbedtls_sha1_context *ctx,
-                                             unsigned char output[20] );
+MBEDTLS_DEPRECATED void mbedtls_sha1_finish(mbedtls_sha1_context *ctx,
+                                            unsigned char output[20]);
 
 /**
  * \brief          SHA-1 process data block (internal use only).
@@ -287,8 +259,8 @@ MBEDTLS_DEPRECATED void mbedtls_sha1_finish( mbedtls_sha1_context *ctx,
  *                 This must be a readable buffer of length \c 64 bytes.
  *
  */
-MBEDTLS_DEPRECATED void mbedtls_sha1_process( mbedtls_sha1_context *ctx,
-                                              const unsigned char data[64] );
+MBEDTLS_DEPRECATED void mbedtls_sha1_process(mbedtls_sha1_context *ctx,
+                                             const unsigned char data[64]);
 
 #undef MBEDTLS_DEPRECATED
 #endif /* !MBEDTLS_DEPRECATED_REMOVED */
@@ -316,9 +288,9 @@ MBEDTLS_DEPRECATED void mbedtls_sha1_process( mbedtls_sha1_context *ctx,
  * \return         A negative error code on failure.
  *
  */
-int mbedtls_sha1_ret( const unsigned char *input,
-                      size_t ilen,
-                      unsigned char output[20] );
+int mbedtls_sha1_ret(const unsigned char *input,
+                     size_t ilen,
+                     unsigned char output[20]);
 
 #if !defined(MBEDTLS_DEPRECATED_REMOVED)
 #if defined(MBEDTLS_DEPRECATED_WARNING)
@@ -348,9 +320,9 @@ int mbedtls_sha1_ret( const unsigned char *input,
  *                 buffer of size \c 20 Bytes.
  *
  */
-MBEDTLS_DEPRECATED void mbedtls_sha1( const unsigned char *input,
-                                      size_t ilen,
-                                      unsigned char output[20] );
+MBEDTLS_DEPRECATED void mbedtls_sha1(const unsigned char *input,
+                                     size_t ilen,
+                                     unsigned char output[20]);
 
 #undef MBEDTLS_DEPRECATED
 #endif /* !MBEDTLS_DEPRECATED_REMOVED */
@@ -368,7 +340,7 @@ MBEDTLS_DEPRECATED void mbedtls_sha1( const unsigned char *input,
  * \return         \c 1 on failure.
  *
  */
-int mbedtls_sha1_self_test( int verbose );
+int mbedtls_sha1_self_test(int verbose);
 
 #endif /* MBEDTLS_SELF_TEST */
 

@@ -1186,4 +1186,4 @@ const mp_obj_module_t tulip_module = {
 };
 
 
-MP_REGISTER_MODULE(MP_QSTR__tulip, tulip_module, 1); // MICROPY_PY_TULIP);
+MP_REGISTER_MODULE(MP_QSTR__tulip, tulip_module); // MICROPY_PY_TULIP);

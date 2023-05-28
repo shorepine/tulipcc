@@ -39,7 +39,7 @@
 #if MICROPY_PY_WEBREPL
 
 #if 0 // print debugging info
-#define DEBUG_printf printf //DEBUG_printf
+#define DEBUG_printf DEBUG_printf
 #else // don't print debugging info
 #define DEBUG_printf(...) (void)0
 #endif
@@ -92,10 +92,11 @@ STATIC void write_webrepl_resp(mp_obj_t websock, uint16_t code) {
     char buf[4] = {'W', 'B', code & 0xff, code >> 8};
     write_webrepl(websock, buf, sizeof(buf));
 }
+
 STATIC mp_obj_t webrepl_make_new(const mp_obj_type_t *type, size_t n_args, size_t n_kw, const mp_obj_t *args) {
     mp_arg_check_num(n_args, n_kw, 1, 2, false);
     mp_get_stream_raise(args[0], MP_STREAM_OP_READ | MP_STREAM_OP_WRITE | MP_STREAM_OP_IOCTL);
-    DEBUG_printf("sizeof(struct webrepl_file) = %u\n", sizeof(struct webrepl_file));
+    DEBUG_printf("sizeof(struct webrepl_file) = %lu\n", sizeof(struct webrepl_file));
     mp_obj_webrepl_t *o = mp_obj_malloc(mp_obj_webrepl_t, type);
     o->sock = args[0];
     o->hdr_to_recv = sizeof(struct webrepl_file);
@@ -261,15 +262,12 @@ STATIC mp_uint_t _webrepl_read(mp_obj_t self_in, void *buf, mp_uint_t size, int 
         }
 
         if (self->hdr.type == PUT_FILE) {
-            DEBUG_printf("webrepl: Writing %u bytes to file\n", buf_sz);
+            DEBUG_printf("webrepl: Writing %lu bytes to file\n", buf_sz);
             int err;
             mp_uint_t res = mp_stream_write_exactly(self->cur_file, filebuf, buf_sz, &err);
-            DEBUG_printf("webrepl2: res was %u\n", res);
-
             if (err != 0 || res != buf_sz) {
                 assert(0);
             }
-            DEBUG_printf("past assert: err was %u\n", err);
         } else if (self->hdr.type == GET_FILE) {
             assert(buf_sz == 1);
             assert(self->data_to_recv == 0);
@@ -279,22 +277,16 @@ STATIC mp_uint_t _webrepl_read(mp_obj_t self_in, void *buf, mp_uint_t size, int 
                 self->data_to_recv = 1;
             }
         }
-        DEBUG_printf("check op\n");
 
         check_file_op_finished(self);
-        DEBUG_printf("check op done\n");
 
         #ifdef MICROPY_PY_WEBREPL_DELAY
         // Some platforms may have broken drivers and easily gets
         // overloaded with modest traffic WebREPL file transfers
         // generate. The basic workaround is a crude rate control
         // done in such way.
-                DEBUG_printf("delay\n");
-
         mp_hal_delay_ms(MICROPY_PY_WEBREPL_DELAY);
         #endif
-                DEBUG_printf("done\n");
-
     }
 
     return -2;
@@ -350,13 +342,14 @@ STATIC const mp_stream_p_t webrepl_stream_p = {
     .ioctl = webrepl_ioctl,
 };
 
-STATIC const mp_obj_type_t webrepl_type = {
-    { &mp_type_type },
-    .name = MP_QSTR__webrepl,
-    .make_new = webrepl_make_new,
-    .protocol = &webrepl_stream_p,
-    .locals_dict = (mp_obj_dict_t *)&webrepl_locals_dict,
-};
+STATIC MP_DEFINE_CONST_OBJ_TYPE(
+    webrepl_type,
+    MP_QSTR__webrepl,
+    MP_TYPE_FLAG_NONE,
+    make_new, webrepl_make_new,
+    protocol, &webrepl_stream_p,
+    locals_dict, &webrepl_locals_dict
+    );
 
 STATIC const mp_rom_map_elem_t webrepl_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__webrepl) },
@@ -370,5 +363,7 @@ const mp_obj_module_t mp_module_webrepl = {
     .base = { &mp_type_module },
     .globals = (mp_obj_dict_t *)&webrepl_module_globals,
 };
+
+MP_REGISTER_MODULE(MP_QSTR__webrepl, mp_module_webrepl);
 
 #endif // MICROPY_PY_WEBREPL
