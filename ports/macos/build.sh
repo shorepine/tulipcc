@@ -5,7 +5,7 @@ make DEBUG=1
 mkdir -p dev
 rm -rf dev/Tulip\ CC.app
 mkdir -p dev/Tulip\ CC.app/Contents/{MacOS,Resources,Frameworks,libs}
-cp tulip.$(arch) dev/Tulip\ CC.app/Contents/MacOS/tulip
+cp build-standard/tulip.$(arch) dev/Tulip\ CC.app/Contents/MacOS/tulip
 cp Info.plist dev/Tulip\ CC.app/Contents/
 cp -rf ../../tulip_home dev/Tulip\ CC.app/Contents/Resources/
 cp -a SDL2.framework dev/Tulip\ CC.app/Contents/Frameworks/

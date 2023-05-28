@@ -25,28 +25,24 @@
  * THE SOFTWARE.
  */
 
-#include <fcntl.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "py/runtime.h"
 #include "py/mphal.h"
 
-#if defined(__GLIBC__) && defined(__GLIBC_PREREQ)
-#if __GLIBC_PREREQ(2, 25)
-#include <sys/random.h>
-#define _HAVE_GETRANDOM
-#endif
-#endif
-
-STATIC mp_obj_t mp_uos_getenv(mp_obj_t var_in) {
-    const char *s = getenv(mp_obj_str_get_str(var_in));
+STATIC mp_obj_t mp_uos_getenv(size_t n_args, const mp_obj_t *args) {
+    const char *s = getenv(mp_obj_str_get_str(args[0]));
     if (s == NULL) {
+        if (n_args == 2) {
+            return args[1];
+        }
         return mp_const_none;
     }
     return mp_obj_new_str(s, strlen(s));
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_uos_getenv_obj, mp_uos_getenv);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(mp_uos_getenv_obj, 1, 2, mp_uos_getenv);
 
 STATIC mp_obj_t mp_uos_putenv(mp_obj_t key_in, mp_obj_t value_in) {
     const char *key = mp_obj_str_get_str(key_in);
@@ -87,7 +83,6 @@ STATIC mp_obj_t mp_uos_system(mp_obj_t cmd_in) {
     const char *cmd = mp_obj_str_get_str(cmd_in);
 
     MP_THREAD_GIL_EXIT();
-    // A return value would be nice
     int r = system(cmd);
     MP_THREAD_GIL_ENTER();
 
@@ -101,15 +96,8 @@ STATIC mp_obj_t mp_uos_urandom(mp_obj_t num) {
     mp_int_t n = mp_obj_get_int(num);
     vstr_t vstr;
     vstr_init_len(&vstr, n);
-    #ifdef _HAVE_GETRANDOM
-    RAISE_ERRNO(getrandom(vstr.buf, n, 0), errno);
-    #else
-    int fd = open("/dev/urandom", O_RDONLY);
-    RAISE_ERRNO(fd, errno);
-    RAISE_ERRNO(read(fd, vstr.buf, n), errno);
-    close(fd);
-    #endif
-    return mp_obj_new_str_from_vstr(&mp_type_bytes, &vstr);
+    mp_hal_get_random(n, vstr.buf);
+    return mp_obj_new_bytes_from_vstr(&vstr);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_uos_urandom_obj, mp_uos_urandom);
 

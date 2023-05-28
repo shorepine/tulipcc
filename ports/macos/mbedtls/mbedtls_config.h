@@ -3,7 +3,7 @@
  *
  * The MIT License (MIT)
  *
- * Copyright (c) 2013-2016 Damien P. George
+ * Copyright (c) 2018-2019 Damien P. George
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,22 +23,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#ifndef MICROPY_INCLUDED_MBEDTLS_CONFIG_H
+#define MICROPY_INCLUDED_MBEDTLS_CONFIG_H
 
-// This config enables almost all possible features such that it can be used
-// for coverage testing.
+// Set mbedtls configuration
+#define MBEDTLS_CIPHER_MODE_CTR // needed for MICROPY_PY_UCRYPTOLIB_CTR
 
-// Set base feature level.
-#define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_EVERYTHING)
+// Enable mbedtls modules
+#define MBEDTLS_HAVEGE_C
+#define MBEDTLS_TIMING_C
 
-// Enable extra Unix features.
-#include "../mpconfigvariant_common.h"
+// Include common mbedtls configuration.
+#include "extmod/mbedtls/mbedtls_config_common.h"
 
-// Enable testing of split heap.
-#define MICROPY_GC_SPLIT_HEAP          (1)
-#define MICROPY_GC_SPLIT_HEAP_N_HEAPS  (4)
-
-// Enable additional features.
-#define MICROPY_DEBUG_PARSE_RULE_NAME  (1)
-#define MICROPY_TRACKED_ALLOC          (1)
-#define MICROPY_WARNINGS_CATEGORY      (1)
-#define MICROPY_PY_UCRYPTOLIB_CTR      (1)
+#endif /* MICROPY_INCLUDED_MBEDTLS_CONFIG_H */

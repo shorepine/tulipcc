@@ -27,19 +27,23 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <time.h>
 #include <sys/time.h>
+#include <fcntl.h>
 #include "py/ringbuf.h"
+
+#include "display.h"
 #include "py/mphal.h"
 #include "py/mpthread.h"
 #include "py/runtime.h"
 #include "extmod/misc.h"
 
-#include <sys/select.h>
-#include <termios.h>
-#include "display.h"
-
+#if defined(__GLIBC__) && defined(__GLIBC_PREREQ)
+#if __GLIBC_PREREQ(2, 25)
+#include <sys/random.h>
+#define _HAVE_GETRANDOM
+#endif
+#endif
 
 #ifndef _WIN32
 #include <signal.h>
@@ -70,8 +74,10 @@ STATIC void sighandler(int signum) {
 }
 #endif
 
+
 STATIC uint8_t stdin_ringbuf_array[260];
 ringbuf_t stdin_ringbuf = {stdin_ringbuf_array, sizeof(stdin_ringbuf_array), 0, 0};
+
 
 /*
 void mp_hal_set_interrupt_char(char c) {
@@ -97,15 +103,15 @@ void mp_hal_set_interrupt_char(char c) {
     }
 }
 */
+
 #if MICROPY_USE_READLINE == 1
 
 #include <termios.h>
 
 //static struct termios orig_termios;
 
-
 void mp_hal_stdio_mode_raw(void) {
-/*
+    /*
     // save and set terminal settings
     tcgetattr(0, &orig_termios);
     static struct termios termios;
@@ -116,22 +122,19 @@ void mp_hal_stdio_mode_raw(void) {
     termios.c_cc[VMIN] = 1;
     termios.c_cc[VTIME] = 0;
     tcsetattr(0, TCSAFLUSH, &termios);
-*/
+    */
 }
 
 void mp_hal_stdio_mode_orig(void) {
-/*
     // restore terminal settings
-    tcsetattr(0, TCSAFLUSH, &orig_termios);
-*/
+    //tcsetattr(0, TCSAFLUSH, &orig_termios);
 }
 
 #endif
 
 #if MICROPY_PY_OS_DUPTERM
 static int call_dupterm_read(size_t idx) {
-/*
-    nlr_buf_t nlr;
+/*    nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
         mp_obj_t read_m[3];
         mp_load_method(MP_STATE_VM(dupterm_objs[idx]), MP_QSTR_read, read_m);
@@ -163,17 +166,6 @@ static int call_dupterm_read(size_t idx) {
 }
 #endif
 
-
-/*
-uintptr_t mp_hal_stdio_poll(uintptr_t poll_flags) {
-    uintptr_t ret = 0;
-    if ((poll_flags & MP_STREAM_POLL_RD) && stdin_ringbuf.iget != stdin_ringbuf.iput) {
-        ret |= MP_STREAM_POLL_RD;
-    }
-    return ret;
-}
-*/
-
 int mp_hal_stdin_rx_chr(void) {
     for (;;) {
         int c = ringbuf_get(&stdin_ringbuf);
@@ -185,7 +177,6 @@ int mp_hal_stdin_rx_chr(void) {
 }
 
 /*
-
 int mp_hal_stdin_rx_chr(void) {
     #if MICROPY_PY_OS_DUPTERM
     // TODO only support dupterm one slot at the moment
@@ -204,7 +195,7 @@ int mp_hal_stdin_rx_chr(void) {
     }
 main_term:;
     #endif
-    
+
     unsigned char c;
     ssize_t ret;
     MP_HAL_RETRY_SYSCALL(ret, read(STDIN_FILENO, &c, 1), {});
@@ -216,6 +207,14 @@ main_term:;
     return c;
 }
 */
+/*
+void mp_hal_stdout_tx_strn(const char *str, size_t len) {
+    ssize_t ret;
+    MP_HAL_RETRY_SYSCALL(ret, write(STDOUT_FILENO, str, len), {});
+    mp_uos_dupterm_tx_strn(str, len);
+}
+*/
+
 
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
     //MP_HAL_RETRY_SYSCALL(ret, write(STDOUT_FILENO, str, len), {});
@@ -235,6 +234,7 @@ void mp_hal_stdout_tx_str(const char *str) {
     mp_hal_stdout_tx_strn(str, strlen(str));
 }
 
+#ifndef mp_hal_ticks_ms
 mp_uint_t mp_hal_ticks_ms(void) {
     #if (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0) && defined(_POSIX_MONOTONIC_CLOCK)
     struct timespec tv;
@@ -246,7 +246,9 @@ mp_uint_t mp_hal_ticks_ms(void) {
     return tv.tv_sec * 1000 + tv.tv_usec / 1000;
     #endif
 }
+#endif
 
+#ifndef mp_hal_ticks_us
 mp_uint_t mp_hal_ticks_us(void) {
     #if (defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0) && defined(_POSIX_MONOTONIC_CLOCK)
     struct timespec tv;
@@ -258,23 +260,39 @@ mp_uint_t mp_hal_ticks_us(void) {
     return tv.tv_sec * 1000000 + tv.tv_usec;
     #endif
 }
+#endif
 
+#ifndef mp_hal_time_ns
 uint64_t mp_hal_time_ns(void) {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return (uint64_t)tv.tv_sec * 1000000000ULL + (uint64_t)tv.tv_usec * 1000ULL;
 }
+#endif
 
+#ifndef mp_hal_delay_ms
 void mp_hal_delay_ms(mp_uint_t ms) {
     #ifdef MICROPY_EVENT_POLL_HOOK
     mp_uint_t start = mp_hal_ticks_ms();
     while (mp_hal_ticks_ms() - start < ms) {
-        // MICROPY_EVENT_POLL_HOOK does mp_hal_delay_us(500) (i.e. usleep(500)).
+        // MICROPY_EVENT_POLL_HOOK does usleep(500).
         MICROPY_EVENT_POLL_HOOK
     }
     #else
     // TODO: POSIX et al. define usleep() as guaranteedly capable only of 1s sleep:
     // "The useconds argument shall be less than one million."
     usleep(ms * 1000);
+    #endif
+}
+#endif
+
+void mp_hal_get_random(size_t n, void *buf) {
+    #ifdef _HAVE_GETRANDOM
+    RAISE_ERRNO(getrandom(buf, n, 0), errno);
+    #else
+    int fd = open("/dev/urandom", O_RDONLY);
+    RAISE_ERRNO(fd, errno);
+    RAISE_ERRNO(read(fd, buf, n), errno);
+    close(fd);
     #endif
 }

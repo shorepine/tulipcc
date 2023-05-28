@@ -42,6 +42,7 @@ UNAME_S := $(shell uname -s)
 
 # include py core make definitions
 include $(TOP)/py/py.mk
+include $(TOP)/extmod/extmod.mk
 
 GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi
 
@@ -257,7 +258,6 @@ SRC_C += \
 	mpthreadport.c \
 	input.c \
 	modmachine.c \
-	modtime.c \
 	moduselect.c \
 	alloc.c \
 	fatfs_port.c \
@@ -272,11 +272,12 @@ SRC_C += \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
 
+
 SHARED_SRC_C += $(addprefix shared/,\
 	runtime/gchelper_generic.c \
-	runtime/pyexec.c \
 	runtime/interrupt_char.c \
 	timeutils/timeutils.c \
+	runtime/pyexec.c \
 	$(SHARED_SRC_C_EXTRA) \
 	)
 
