@@ -87,7 +87,7 @@
 #define MICROPY_PY_SYS_EXC_INFO        (1)
 
 // Configure the "os" module with extra unix features.
-#define MICROPY_PY_UOS_INCLUDEFILE     "ports/unix/moduos.c"
+#define MICROPY_PY_UOS_INCLUDEFILE     "ports/macos/moduos.c"
 #define MICROPY_PY_UOS_ERRNO           (1)
 #define MICROPY_PY_UOS_GETENV_PUTENV_UNSETENV (1)
 #define MICROPY_PY_UOS_SEP             (1)
@@ -98,7 +98,7 @@
 #define MICROPY_PY_UTIME               (1)
 #define MICROPY_PY_UTIME_TIME_TIME_NS  (1)
 #define MICROPY_PY_UTIME_CUSTOM_SLEEP  (1)
-#define MICROPY_PY_UTIME_INCLUDEFILE   "ports/unix/modutime.c"
+#define MICROPY_PY_UTIME_INCLUDEFILE   "ports/macos/modutime.c"
 
 // Enable the utimeq module used by the previous (v2) version of uasyncio.
 #define MICROPY_PY_UTIMEQ              (1)
