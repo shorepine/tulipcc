@@ -40,15 +40,10 @@
 #define PF_FLAG_SHOW_OCTAL_LETTER (0x200)
 
 #if MICROPY_PY_IO && MICROPY_PY_SYS_STDFILES
-#ifdef ESP_PLATFORM
 #define MP_PYTHON_PRINTER &mp_sys_stdout_print
-#else
-#define MP_PYTHON_PRINTER &mp_display_print
-#endif
 #else
 #define MP_PYTHON_PRINTER &mp_plat_print
 #endif
-
 
 typedef void (*mp_print_strn_t)(void *data, const char *str, size_t len);
 
@@ -57,14 +52,11 @@ typedef struct _mp_print_t {
     mp_print_strn_t print_strn;
 } mp_print_t;
 
-extern const mp_print_t mp_display_print;
-extern void display_print_strn(void *env, const char *str, size_t len);
-
 typedef struct _mp_print_ext_t {
     mp_print_t base;
     const char *item_separator;
     const char *key_separator;
-}mp_print_ext_t;
+} mp_print_ext_t;
 
 #define MP_PRINT_GET_EXT(print) ((mp_print_ext_t *)print)
 
@@ -75,7 +67,6 @@ extern const mp_print_t mp_plat_print;
 // 2) Wrapper for printing to sys.stdout.
 extern const mp_print_t mp_sys_stdout_print;
 #endif
-
 
 int mp_print_str(const mp_print_t *print, const char *str);
 int mp_print_strn(const mp_print_t *print, const char *str, size_t len, int flags, char fill, int width);

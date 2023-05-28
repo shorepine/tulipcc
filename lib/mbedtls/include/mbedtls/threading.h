@@ -5,13 +5,7 @@
  */
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
- *
- *  This file is provided under the Apache License 2.0, or the
- *  GNU General Public License v2.0 or later.
- *
- *  **********
- *  Apache License 2.0:
+ *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use this file except in compliance with the License.
@@ -24,33 +18,12 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  **********
- *
- *  **********
- *  GNU General Public License v2.0 or later:
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  **********
  */
 #ifndef MBEDTLS_THREADING_H
 #define MBEDTLS_THREADING_H
 
 #if !defined(MBEDTLS_CONFIG_FILE)
-#include "config.h"
+#include "mbedtls/config.h"
 #else
 #include MBEDTLS_CONFIG_FILE
 #endif
@@ -73,8 +46,7 @@ extern "C" {
 
 #if defined(MBEDTLS_THREADING_PTHREAD)
 #include <pthread.h>
-typedef struct mbedtls_threading_mutex_t
-{
+typedef struct mbedtls_threading_mutex_t {
     pthread_mutex_t mutex;
     /* is_valid is 0 after a failed init or a free, and nonzero after a
      * successful init. This field is not considered part of the public
@@ -105,15 +77,15 @@ typedef struct mbedtls_threading_mutex_t
  * \param mutex_lock    the lock function implementation
  * \param mutex_unlock  the unlock function implementation
  */
-void mbedtls_threading_set_alt( void (*mutex_init)( mbedtls_threading_mutex_t * ),
-                       void (*mutex_free)( mbedtls_threading_mutex_t * ),
-                       int (*mutex_lock)( mbedtls_threading_mutex_t * ),
-                       int (*mutex_unlock)( mbedtls_threading_mutex_t * ) );
+void mbedtls_threading_set_alt(void (*mutex_init)(mbedtls_threading_mutex_t *),
+                               void (*mutex_free)(mbedtls_threading_mutex_t *),
+                               int (*mutex_lock)(mbedtls_threading_mutex_t *),
+                               int (*mutex_unlock)(mbedtls_threading_mutex_t *));
 
 /**
  * \brief               Free global mutexes.
  */
-void mbedtls_threading_free_alt( void );
+void mbedtls_threading_free_alt(void);
 #endif /* MBEDTLS_THREADING_ALT */
 
 #if defined(MBEDTLS_THREADING_C)
@@ -122,10 +94,10 @@ void mbedtls_threading_free_alt( void );
  *
  * All these functions are expected to work or the result will be undefined.
  */
-extern void (*mbedtls_mutex_init)( mbedtls_threading_mutex_t *mutex );
-extern void (*mbedtls_mutex_free)( mbedtls_threading_mutex_t *mutex );
-extern int (*mbedtls_mutex_lock)( mbedtls_threading_mutex_t *mutex );
-extern int (*mbedtls_mutex_unlock)( mbedtls_threading_mutex_t *mutex );
+extern void (*mbedtls_mutex_init)(mbedtls_threading_mutex_t *mutex);
+extern void (*mbedtls_mutex_free)(mbedtls_threading_mutex_t *mutex);
+extern int (*mbedtls_mutex_lock)(mbedtls_threading_mutex_t *mutex);
+extern int (*mbedtls_mutex_unlock)(mbedtls_threading_mutex_t *mutex);
 
 /*
  * Global mutexes
