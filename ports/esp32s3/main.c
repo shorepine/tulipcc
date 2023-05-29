@@ -1,18 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdarg.h>
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_system.h"
-#include "nvs_flash.h"
-#include "esp_task.h"
-#include "soc/cpu.h"
-#include "esp_log.h"
-#include "tasks.h"
-#include "alles.h"
-
-
 /*
  * This file is part of the MicroPython project, http://micropython.org/
  *
@@ -82,16 +67,18 @@
 #include "touchscreen.h"
 #include "tasks.h"
 #include "usb_keyboard.h"
+
 #if MICROPY_BLUETOOTH_NIMBLE
 #include "extmod/modbluetooth.h"
 #endif
 
+#if MICROPY_ESPNOW
+#include "modespnow.h"
+#endif
 
-
-
-
-
-// there's also mp_main_task_handle
+// MicroPython runs as a task under FreeRTOS
+#define MP_TASK_PRIORITY        (ESP_TASK_PRIO_MIN + 1)
+#define MP_TASK_STACK_SIZE      (16 * 1024)
 
 // Set the margin for detecting stack overflow, depending on the CPU architecture.
 #if CONFIG_IDF_TARGET_ESP32C3
@@ -180,10 +167,13 @@ float compute_cpu_usage(uint8_t debug) {
 
 }
 
+
 int vprintf_null(const char *format, va_list ap) {
     // do nothing: this is used as a log target during raw repl mode
     return 0;
 }
+
+
 
 void mp_task(void *pvParameter) {
     volatile uint32_t sp = (uint32_t)get_sp();
@@ -215,7 +205,6 @@ void mp_task(void *pvParameter) {
             break;
         case ESP_SPIRAM_SIZE_32MBITS:
         case ESP_SPIRAM_SIZE_64MBITS:
-            printf("64mbit ram\n");
             mp_task_heap_size = 4 * 1024 * 1024;
             break;
         default:
@@ -224,16 +213,11 @@ void mp_task(void *pvParameter) {
             break;
     }
     #elif CONFIG_ESP32S2_SPIRAM_SUPPORT || CONFIG_ESP32S3_SPIRAM_SUPPORT
-
     // Try to use the entire external SPIRAM directly for the heap
     size_t esp_spiram_size = esp_spiram_get_size();
-
     heap_caps_register_failed_alloc_callback(esp_alloc_failed);
-
-    // save ram for screen -- currently a 1280x750 buffer, so 1.92MB
-    // Save another 2MB for working buffers for PNG decoding?!? 
+    // 2048x750
     esp_spiram_size = esp_spiram_size - (1024*1024*4);
-
     if (esp_spiram_size > 0) {
         mp_task_heap = (void *)SOC_EXTRAM_DATA_HIGH - esp_spiram_size;
         mp_task_heap_size = esp_spiram_size;
@@ -241,7 +225,6 @@ void mp_task(void *pvParameter) {
     #endif
 
     if (mp_task_heap == NULL) {
-
         // Allocate the uPy heap using malloc and get the largest available region,
         // limiting to 1/2 total available memory to leave memory for the OS.
         #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 1, 0)
@@ -254,6 +237,7 @@ void mp_task(void *pvParameter) {
         mp_task_heap_size = MIN(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT), heap_total / 2);
         mp_task_heap = malloc(mp_task_heap_size);
     }
+
 soft_reset:
     // initialise the stack pointer for the main thread
     mp_stack_set_top((void *)sp);
@@ -263,15 +247,16 @@ soft_reset:
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
     readline_init0();
 
+    MP_STATE_PORT(native_code_pointers) = MP_OBJ_NULL;
+
     // initialise peripherals
     machine_pins_init();
-
     #if MICROPY_PY_MACHINE_I2S
     machine_i2s_init0();
     #endif
 
     // run boot-up scripts
-    pyexec_frozen_module("_boot.py");
+    pyexec_frozen_module("_boot.py", false);
     pyexec_file_if_exists("boot.py");
     if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
         int ret = pyexec_file_if_exists("main.py");
@@ -300,11 +285,26 @@ soft_reset_exit:
     mp_bluetooth_deinit();
     #endif
 
+    #if MICROPY_ESPNOW
+    espnow_deinit(mp_const_none);
+    MP_STATE_PORT(espnow_singleton) = NULL;
+    #endif
+
     machine_timer_deinit_all();
 
     #if MICROPY_PY_THREAD
     mp_thread_deinit();
     #endif
+
+    // Free any native code pointers that point to iRAM.
+    if (MP_STATE_PORT(native_code_pointers) != MP_OBJ_NULL) {
+        size_t len;
+        mp_obj_t *items;
+        mp_obj_list_get(MP_STATE_PORT(native_code_pointers), &len, &items);
+        for (size_t i = 0; i < len; ++i) {
+            heap_caps_free(MP_OBJ_TO_PTR(items[i]));
+        }
+    }
 
     gc_sweep_all();
 
@@ -315,13 +315,14 @@ soft_reset_exit:
     // TODO: machine_rmt_deinit_all();
     machine_pins_deinit();
     machine_deinit();
+    #if MICROPY_PY_USOCKET_EVENTS
     usocket_events_deinit();
+    #endif
 
     mp_deinit();
     fflush(stdout);
     goto soft_reset;
 }
-
 
 void boardctrl_startup(void) {
     esp_err_t ret = nvs_flash_init();
@@ -335,10 +336,6 @@ extern void ft5x06_init();
 extern void run_ft5x06();
 extern void run_midi();
 extern void init_esp_joy();
-
-
-
-
 
 void app_main(void) {
     // Hook for a board to run code at start up.
@@ -372,7 +369,6 @@ void app_main(void) {
 
     printf("Starting joystick\n");
     init_esp_joy();
-
 }
 
 void nlr_jump_fail(void *val) {
@@ -391,9 +387,15 @@ void *esp_native_code_commit(void *buf, size_t len, void *reloc) {
     if (p == NULL) {
         m_malloc_fail(len);
     }
+    if (MP_STATE_PORT(native_code_pointers) == MP_OBJ_NULL) {
+        MP_STATE_PORT(native_code_pointers) = mp_obj_new_list(0, NULL);
+    }
+    mp_obj_list_append(MP_STATE_PORT(native_code_pointers), MP_OBJ_TO_PTR(p));
     if (reloc) {
         mp_native_relocate(reloc, buf, (uintptr_t)p);
     }
     memcpy(p, buf, len);
     return p;
 }
+
+MP_REGISTER_ROOT_POINTER(mp_obj_t native_code_pointers);

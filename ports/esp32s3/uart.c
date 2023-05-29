@@ -35,6 +35,7 @@
 #include "py/mphal.h"
 #include "uart.h"
 #include "display.h"
+
 STATIC void uart_irq_handler(void *arg);
 
 void uart_stdout_init(void) {
@@ -46,6 +47,10 @@ void uart_stdout_init(void) {
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .rx_flow_ctrl_thresh = 0
     };
+    #if SOC_UART_SUPPORT_XTAL_CLK
+    // works independently of APB frequency
+    uartcfg.source_clk = UART_SCLK_XTAL; // ESP32C3, ESP32S3
+    #endif
     uart_param_config(MICROPY_HW_UART_REPL, &uartcfg);
 
     const uint32_t rxbuf = 129; // IDF requires > 128 min
@@ -59,20 +64,17 @@ void uart_stdout_init(void) {
     uart_enable_rx_intr(MICROPY_HW_UART_REPL);
 }
 
-
 int uart_stdout_tx_strn(const char *str, size_t len) {
     if(len) {
         display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
     ulTaskNotifyTake(pdFALSE, 1);
     return 0;
-}
-/*
+    /*
     size_t remaining = len;
     // TODO add a timeout
     for (;;) {
         int ret = uart_tx_chars(MICROPY_HW_UART_REPL, str, remaining);
-        //int ret = 0; 
         if (ret == -1) {
             return -1;
         }
@@ -84,8 +86,9 @@ int uart_stdout_tx_strn(const char *str, size_t len) {
         ulTaskNotifyTake(pdFALSE, 1);
     }
     return len - remaining;
+    */
 }
-*/
+
 // all code executed in ISR must be in IRAM, and any const data must be in DRAM
 STATIC void IRAM_ATTR uart_irq_handler(void *arg) {
     volatile uart_dev_t *uart = &UART0;

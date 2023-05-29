@@ -60,7 +60,7 @@ static void usb_serial_jtag_isr_handler(void *arg) {
                 ringbuf_put(&stdin_ringbuf, rx_buf[i]);
             }
         }
-        //mp_hal_wake_main_task_from_isr();
+        mp_hal_wake_main_task_from_isr();
     }
 }
 

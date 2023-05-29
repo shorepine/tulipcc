@@ -68,6 +68,7 @@
 /*
  * List definitions.
  */
+#ifndef LIST_HEAD
 #define LIST_HEAD(name, type)						\
 struct name {								\
 	struct type *lh_first;	/* first element */			\
@@ -242,4 +243,5 @@ struct {								\
 		(elm)->field.cqe_prev->field.cqe_next =			\
 		    (elm)->field.cqe_next;				\
 }
+#endif
 #endif	/* !_QUEUE_H_ */
