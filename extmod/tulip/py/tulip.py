@@ -317,20 +317,20 @@ def wifi(ssid, passwd, wait_timeout=10):
 
 
 def tar_create(directory):
-    from upip import tarfile
-    t = tarfile.TarFile(directory+".tar", 'w')
+    import utarfile
+    t = utarfile.TarFile(directory+".tar", 'w')
     t.add(directory)
     t.close()
 
 def tar_extract(file_name, show_progress=True):
     import os
-    from upip import tarfile
+    import utarfile
     display_stop()
 
-    tar = tarfile.TarFile(file_name, 'r')
+    tar = utarfile.TarFile(file_name, 'r')
     if(show_progress): print("extracting", file_name)
     for i in tar:
-        if i.type == tarfile.DIRTYPE:
+        if i.type == utarfile.DIRTYPE:
             if i.name != './':
                 try:
                     os.mkdir(i.name.strip('/'))
