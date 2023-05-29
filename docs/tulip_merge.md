@@ -1,6 +1,8 @@
 # Merging in Micropython and ESP-IDF guide
 
-This is a very informal guide to making Tulip CC work with clean copies of Micropython and ESP-IDF. You should never need to do this work, unless you're interested in getting Tulip to run on a version of ESP-IDF or Micropython that we haven't supported yet. These are my notes from doing the work in May 2023 after upgrading to newer versions of MP and ESP-IDF (last updated a year ago!)
+This is a very informal guide to making Tulip CC work with clean copies of Micropython and ESP-IDF. You should never need to do this work, unless you're interested in getting Tulip to run on a version of ESP-IDF or Micropython that we haven't supported yet. These are my notes from doing the work in May 2023 after upgrading to newer versions of MP and ESP-IDF (last updated May 2022!)
+
+Can you help? I'd **love** to make this process easier, and act less like a "fork" of MP. I don't know the best way to do this, so any help is quite welcome.
 
 ## Start with Desktop
 
@@ -25,6 +27,8 @@ From Tulip, copy over the following from ports/macos:
     * libsoundio*
     * soundio*
 
+And copy `extmod/tulip` and `extmod/amy` over.
+
 We have to patch only one thing in Micropython itself, and I would love to stop doing this (suggestions welcome.) Something in MacOS conflicts with MP, `unichar`. I do a global find/replace in the MP repo for `unichar` and replace it with `mp_unichar`. This works fine. I think we could eventually do some `undef` magic to get the conflict to stop.
 
 Now, manually cherry-pick merge in our changes in ports/macos for these files:
@@ -33,9 +37,13 @@ Now, manually cherry-pick merge in our changes in ports/macos for these files:
  * unix_mphal.c
  * mpconfigport.h
 
+There will be small API changes in MP that you'll have to fix, probably in `modtulip.c`, but it should be straigthforward. 
+
 This is all you need to get Desktop working on a fresh MP.
 
 ## ESP-IDF
+
+This assumes you've alread done the Desktop merging.
 
 ESP-IDF's main branch is rarely what you want. You should first check what the latest ESP-IDF version MP supports. As of now, that's 4.4.4. So download their combined zip from their github release page and put it in `esp-idf` in our Tulip root. Run ./install.sh in it to make sure it grabs the latest toolchain.
 

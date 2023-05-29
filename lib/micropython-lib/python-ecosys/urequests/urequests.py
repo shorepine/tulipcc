@@ -13,6 +13,22 @@ class Response:
             self.raw = None
         self._cached = None
 
+    def save(self, filename, mode="wb", chunk_size=4096):
+        # Directly save a file from the response socket without putting all of it in RAM
+        f = open(filename, mode)
+        b = 0
+        while True:
+            chunk = self.raw.read(chunk_size)
+            b = b + len(chunk)
+            if len(chunk)==0:
+                break # EOF
+            f.write(chunk)
+        f.close()
+        self.raw.close()
+        self.raw = None
+        self._cached = None
+        return b # number of bytes saved
+
     @property
     def content(self):
         if self._cached is None:
