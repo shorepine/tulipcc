@@ -6,7 +6,7 @@
 # Includes information which is not shown in "xtensa-esp32-elf-size",
 # or easy to parse from "xtensa-esp32-elf-objdump" or raw map files.
 #
-# SPDX-FileCopyrightText: 2017-2021 Espressif Systems (Shanghai) CO LTD
+# SPDX-FileCopyrightText: 2017-2022 Espressif Systems (Shanghai) CO LTD
 # SPDX-License-Identifier: Apache-2.0
 #
 from __future__ import division, print_function, unicode_literals
@@ -173,13 +173,15 @@ class LinkingSections(object):
         '''
 
         def get_memory_name(split_name: List) -> Tuple[str, str]:
-            memory_name = f'.{split_name[1]}'
+            memory_name = '.{}'.format(split_name[1])
             display_name = section
             for seg_name in ['iram','dram','flash']:
                 if seg_name in split_name[1]:
-                    memory_name = f'.{seg_name}'
+                    memory_name = '.{}'.format(seg_name)
                     seg_name = seg_name.upper() if seg_name != 'flash' else seg_name.capitalize()
-                    display_name = seg_name + ('' if seg_name != 'IRAM' else split_name[1].replace('iram', '')) + f' .{split_name[2]}'
+                    display_name = ''.join([seg_name,
+                                            split_name[1].replace('iram', '') if seg_name == 'IRAM' else '',
+                                            ' .{}'.format(split_name[2]) if len(split_name) > 2 else ''])
             return memory_name, display_name
 
         ordered_name_list = sorted(section_name_list)
@@ -198,7 +200,7 @@ class LinkingSections(object):
             split_name = section.split('.')
             if len(split_name) > 1:
                 # If the section has a memory type, update the type and try to display the type properly
-                assert len(split_name) == 3 and split_name[0] == '', 'Unexpected section name'
+                assert split_name[0] == '', 'Unexpected section name "{}"'.format(section)
                 memory_name, display_name_list[i] = get_memory_name(split_name)
                 continue
 
@@ -228,11 +230,10 @@ def load_map_data(map_file: TextIO) -> Tuple[str, Dict, Dict]:
     detected_chip = detect_target_chip(map_file)
     sections = load_sections(map_file)
 
-    # Exclude the .dummy section, which usually means shared region among I/D buses
-    dummy_keys = [key for key in sections if key.endswith(('.dummy'))]
-    if dummy_keys:
-        sections.pop(*dummy_keys)
-
+    # Exclude the dummy and .text_end section, which usually means shared region among I/D buses
+    for key in list(sections.keys()):
+        if key.endswith(('dummy', '.text_end')):
+            sections.pop(key)
     return detected_chip, segments, sections
 
 
@@ -317,7 +318,10 @@ def load_sections(map_file: TextIO) -> Dict:
     RE_FULL_LINE = re.compile(r'\s*(?P<sym_name>\S*) +0x(?P<address>[\da-f]+) +0x(?P<size>[\da-f]+)\s*(?P<file>.*)$')
 
     # Extract archive and object_file from the file_info field
-    RE_FILE = re.compile(r'((?P<archive>[^ ]+\.a)?\(?(?P<object_file>[^ ]+\.(o|obj))\)?)')
+    # The object file extention (.obj or .o) is optional including the dot. This is necessary for some third-party
+    # libraries. Since the dot is optional and the search gready the parsing of the object name must stop at ). Hence
+    # the [^ )] part of the regex.
+    RE_FILE = re.compile(r'((?P<archive>[^ ]+\.a)?\(?(?P<object_file>[^ )]+(\.(o|obj))?)\)?)')
 
     def dump_src_line(src: Dict) -> str:
         return '%s(%s) addr: 0x%08x, size: 0x%x+%d' % (src['sym_name'], src['file'], src['address'], src['size'], src['fill'])
@@ -388,7 +392,7 @@ def load_sections(map_file: TextIO) -> Dict:
 
             # Extract archive and file information
             match_arch_and_file = RE_FILE.match(match_line.group('file'))
-            assert match_arch_and_file
+            assert match_arch_and_file, 'Archive and file information not found for "{}"'.format(match_line.group('file'))
 
             archive = match_arch_and_file.group('archive')
             if archive is None:
@@ -569,8 +573,6 @@ class StructureForSummary(object):
         r.dram_total = get_size(dram_filter)
         iram_filter = filter(in_iram, segments)
         r.iram_total = get_size(iram_filter)
-        if r.diram_total == 0:
-            r.diram_total = r.dram_total + r.iram_total
 
         def filter_in_section(sections: Iterable[MemRegions.Region], section_to_check: str) -> List[MemRegions.Region]:
             return list(filter(lambda x: LinkingSections.in_section(x.section, section_to_check), sections))  # type: ignore
@@ -578,8 +580,6 @@ class StructureForSummary(object):
         dram_sections = list(filter(in_dram, sections))
         iram_sections = list(filter(in_iram, sections))
         diram_sections = list(filter(in_diram, sections))
-        if not diram_sections:
-            diram_sections = dram_sections + iram_sections
         flash_sections = filter_in_section(sections, 'flash')
 
         dram_data_list = filter_in_section(dram_sections, 'data')

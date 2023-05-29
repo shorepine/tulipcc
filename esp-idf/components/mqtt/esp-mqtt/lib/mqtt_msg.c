@@ -272,6 +272,18 @@ char *mqtt_get_publish_data(uint8_t *buffer, size_t *length)
     return (char *)(buffer + i);
 }
 
+char *mqtt_get_suback_data(uint8_t *buffer, size_t *length)
+{
+    // SUBACK payload length = total length - (fixed header (2 bytes) + variable header (2 bytes))
+    // This requires the remaining length to be encoded in 1 byte.
+    if (*length > 4) {
+        *length -= 4;
+        return (char *)(buffer + 4);
+    }
+    *length = 0;
+    return NULL;
+}
+
 uint16_t mqtt_get_id(uint8_t *buffer, size_t length)
 {
     if (length < 1) {
@@ -349,7 +361,7 @@ mqtt_message_t *mqtt_msg_connect(mqtt_connection_t *connection, mqtt_connect_inf
     if (connection->message.length + header_len > connection->buffer_length) {
         return fail_message(connection);
     }
-    char* variable_header = (void *)(connection->buffer + connection->message.length);
+    char *variable_header = (char *)(connection->buffer + connection->message.length);
     connection->message.length += header_len;
 
     int header_idx = 0;
@@ -382,7 +394,9 @@ mqtt_message_t *mqtt_msg_connect(mqtt_connection_t *connection, mqtt_connect_inf
             return fail_message(connection);
         }
     } else {
-        return fail_message(connection);
+        if (append_string(connection, "", 0) < 0) {
+            return fail_message(connection);
+        }
     }
 
     if (info->will_topic != NULL && info->will_topic[0] != '\0') {
@@ -444,7 +458,7 @@ mqtt_message_t *mqtt_msg_publish(mqtt_connection_t *connection, const char *topi
     }
 
     if (data == NULL && data_length > 0) {
-       return fail_message(connection);
+        return fail_message(connection);
     }
 
     if (qos > 0) {
@@ -462,8 +476,7 @@ mqtt_message_t *mqtt_msg_publish(mqtt_connection_t *connection, const char *topi
         connection->message.length = connection->buffer_length;
         connection->message.fragmented_msg_total_length = data_length + connection->message.fragmented_msg_data_offset;
     } else {
-        if (data != NULL)
-        {
+        if (data != NULL) {
             memcpy(connection->buffer + connection->message.length, data, data_length);
             connection->message.length += data_length;
         }

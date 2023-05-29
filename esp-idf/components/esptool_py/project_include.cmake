@@ -6,13 +6,26 @@ idf_build_get_property(python PYTHON)
 idf_build_get_property(idf_path IDF_PATH)
 
 set(chip_model ${target})
+if(target STREQUAL "esp32h2")
+    set(chip_model esp32h2beta1)
+endif()
 
 set(ESPTOOLPY ${python} "$ENV{ESPTOOL_WRAPPER}" "${CMAKE_CURRENT_LIST_DIR}/esptool/esptool.py" --chip ${chip_model})
 set(ESPSECUREPY ${python} "${CMAKE_CURRENT_LIST_DIR}/esptool/espsecure.py")
 set(ESPEFUSEPY ${python} "${CMAKE_CURRENT_LIST_DIR}/esptool/espefuse.py")
 set(ESPMONITOR ${python} "${idf_path}/tools/idf_monitor.py")
 
-set(ESPFLASHMODE ${CONFIG_ESPTOOLPY_FLASHMODE})
+if(CONFIG_SPI_FLASH_HPM_ENABLE)
+# When set flash frequency to 120M, must keep 1st bootloader work under ``DOUT`` mode
+# because on some flash chips, 120M will modify the status register,
+# which will make ROM won't work.
+# This change intends to be for esptool only and the bootloader should keep use
+# ``DOUT`` mode.
+    set(ESPFLASHMODE "dout")
+    message("Note: HPM is enabled for the flash, force the ROM bootloader into DOUT mode for stable boot on")
+else()
+    set(ESPFLASHMODE ${CONFIG_ESPTOOLPY_FLASHMODE})
+endif()
 set(ESPFLASHFREQ ${CONFIG_ESPTOOLPY_FLASHFREQ})
 set(ESPFLASHSIZE ${CONFIG_ESPTOOLPY_FLASHSIZE})
 
@@ -109,6 +122,8 @@ endif()
 if(NOT BOOTLOADER_BUILD AND CONFIG_SECURE_SIGNED_APPS)
     if(CONFIG_SECURE_BOOT_BUILD_SIGNED_BINARIES)
         # for locally signed secure boot image, add a signing step to get from unsigned app to signed app
+        get_filename_component(secure_boot_signing_key "${CONFIG_SECURE_BOOT_SIGNING_KEY}"
+            ABSOLUTE BASE_DIR "${project_dir}")
         add_custom_command(OUTPUT "${build_dir}/.signed_bin_timestamp"
             COMMAND ${ESPSECUREPY} sign_data --version ${secure_boot_version} --keyfile ${secure_boot_signing_key}
                 -o "${build_dir}/${PROJECT_BIN}" "${build_dir}/${unsigned_project_binary}"

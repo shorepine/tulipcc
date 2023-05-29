@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2015-2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -20,6 +20,7 @@ extern "C" {
 #define I2C_MST_ANA_CONF0_REG  0x6000E040
 #define I2C_MST_BBPLL_STOP_FORCE_HIGH  (BIT(2))
 #define I2C_MST_BBPLL_STOP_FORCE_LOW  (BIT(3))
+#define I2C_MST_BBPLL_CAL_DONE  (BIT(24))
 
 #define ANA_CONFIG_REG  0x6000E044
 #define ANA_CONFIG_S    (8)
@@ -63,6 +64,10 @@ uint8_t regi2c_ctrl_read_reg_mask(uint8_t block, uint8_t host_id, uint8_t reg_ad
 void regi2c_ctrl_write_reg(uint8_t block, uint8_t host_id, uint8_t reg_add, uint8_t data);
 void regi2c_ctrl_write_reg_mask(uint8_t block, uint8_t host_id, uint8_t reg_add, uint8_t msb, uint8_t lsb, uint8_t data);
 
+/* enter the critical section that protects internal registers. Don't use it in SDK. Use the functions above. */
+void regi2c_enter_critical(void);
+void regi2c_exit_critical(void);
+
 #endif // BOOTLOADER_BUILD
 
 /* Convenience macros for the above functions, these use register definitions
@@ -80,6 +85,15 @@ void regi2c_ctrl_write_reg_mask(uint8_t block, uint8_t host_id, uint8_t reg_add,
 #define REGI2C_READ(block, reg_add) \
       regi2c_ctrl_read_reg(block, block##_HOSTID,  reg_add)
 
+
+/**
+ * Restore regi2c analog calibration related configuration registers.
+ * This is a workaround, and is fixed on later chips
+ */
+#if REGI2C_ANA_CALI_PD_WORKAROUND
+void regi2c_analog_cali_reg_read(void);
+void regi2c_analog_cali_reg_write(void);
+#endif   //#if ADC_CALI_PD_WORKAROUND
 
 #ifdef __cplusplus
 }

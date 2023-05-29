@@ -2,7 +2,9 @@ idf_build_get_property(target IDF_TARGET)
 
 set(srcs "wdt_hal_iram.c"
          "mpu_hal.c"
-         "cpu_hal.c")
+         "cpu_hal.c"
+         "efuse_hal.c"
+         "${target}/efuse_hal.c")
 
 set(includes "${target}/include" "include" "platform_port/include")
 
@@ -63,7 +65,6 @@ if(NOT BOOTLOADER_BUILD)
                     "usb_hal.c"
                     "usb_phy_hal.c"
                     "xt_wdt_hal.c"
-                    "esp32s2/adc_hal.c"
                     "esp32s2/brownout_hal.c"
                     "esp32s2/cp_dma_hal.c"
                     "esp32s2/touch_sensor_hal.c"

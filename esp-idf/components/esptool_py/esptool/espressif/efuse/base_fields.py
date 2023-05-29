@@ -1,27 +1,17 @@
 #!/usr/bin/env python
 # This file describes the common eFuses structures for chips
 #
-# Copyright (C) 2020 Espressif Systems (Shanghai) PTE LTD
+# SPDX-FileCopyrightText: 2020-2022 Espressif Systems (Shanghai) CO LTD
 #
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
-# Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 from __future__ import division, print_function
 
-import argparse
 import binascii
 import re
 import sys
 
-from bitstring import BitArray, BitString
+from bitstring import BitArray, BitString, CreationError
 
 import esptool
 
@@ -38,8 +28,8 @@ class CheckArgValue(object):
             if efuse.efuse_type.startswith("bool"):
                 new_value = 1 if new_value is None else int(new_value, 0)
                 if new_value != 1:
-                    raise argparse.ArgumentTypeError("New value is not accepted for efuse '{}' (will always burn 0->1), given value={}"
-                                                     .format(efuse.name, new_value))
+                    raise esptool.FatalError("New value is not accepted for efuse '{}' (will always burn 0->1), given value={}"
+                                             .format(efuse.name, new_value))
             elif efuse.efuse_type.startswith(('int', 'uint')):
                 if efuse.efuse_class == "bitcount":
                     if new_value is None:
@@ -54,18 +44,18 @@ class CheckArgValue(object):
                         new_value = int(new_value, 0)
                 else:
                     if new_value is None:
-                        raise argparse.ArgumentTypeError("New value required for efuse '{}' (given None)".format(efuse.name))
+                        raise esptool.FatalError("New value required for efuse '{}' (given None)".format(efuse.name))
                     new_value = int(new_value, 0)
                     if new_value == 0:
-                        raise argparse.ArgumentTypeError("New value should not be 0 for '{}' (given value= {})".format(efuse.name, new_value))
+                        raise esptool.FatalError("New value should not be 0 for '{}' (given value= {})".format(efuse.name, new_value))
             elif efuse.efuse_type.startswith("bytes"):
                 if new_value is None:
-                    raise argparse.ArgumentTypeError("New value required for efuse '{}' (given None)".format(efuse.name))
+                    raise esptool.FatalError("New value required for efuse '{}' (given None)".format(efuse.name))
                 if len(new_value) * 8 != efuse.bitarray.len:
-                    raise argparse.ArgumentTypeError("The length of efuse '{}' ({} bits) (given len of the new value= {} bits)"
-                                                     .format(efuse.name, efuse.bitarray.len, len(new_value) * 8))
+                    raise esptool.FatalError("The length of efuse '{}' ({} bits) (given len of the new value= {} bits)"
+                                             .format(efuse.name, efuse.bitarray.len, len(new_value) * 8))
             else:
-                raise argparse.ArgumentTypeError("The '{}' type for the '{}' efuse is not supported yet.".format(efuse.efuse_type, efuse.name))
+                raise esptool.FatalError("The '{}' type for the '{}' efuse is not supported yet.".format(efuse.efuse_type, efuse.name))
             return new_value
 
         efuse = self.efuses[self.name]
@@ -75,12 +65,22 @@ class CheckArgValue(object):
 
 class EfuseProtectBase(object):
     # This class is used by EfuseBlockBase and EfuseFieldBase
+
+    def get_read_disable_mask(self):
+        mask = 0
+        if isinstance(self.read_disable_bit, list):
+            for i in self.read_disable_bit:
+                mask |= (1 << i)
+        else:
+            mask = (1 << self.read_disable_bit)
+        return mask
+
     def is_readable(self):
         """ Return true if the efuse is readable by software """
         num_bit = self.read_disable_bit
         if num_bit is None:
             return True  # read cannot be disabled
-        return (self.parent["RD_DIS"].get() & (1 << num_bit)) == 0
+        return (self.parent["RD_DIS"].get() & (self.get_read_disable_mask())) == 0
 
     def disable_read(self):
         num_bit = self.read_disable_bit
@@ -88,7 +88,7 @@ class EfuseProtectBase(object):
             raise esptool.FatalError("This efuse cannot be read-disabled")
         if not self.parent["RD_DIS"].is_writeable():
             raise esptool.FatalError("This efuse cannot be read-disabled due the to RD_DIS field is already write-disabled")
-        self.parent["RD_DIS"].save(1 << num_bit)
+        self.parent["RD_DIS"].save(self.get_read_disable_mask())
 
     def is_writeable(self):
         num_bit = self.write_disable_bit
@@ -337,6 +337,7 @@ class EspEfusesBase(object):
     efuses  = []
     coding_scheme = None
     force_write_always = None
+    batch_mode_cnt = 0
 
     def __iter__(self):
         return self.efuses.__iter__()
@@ -374,7 +375,11 @@ class EspEfusesBase(object):
         for efuse in self.efuses:
             efuse.update(self.blocks[efuse.block].bitarray)
 
-    def burn_all(self):
+    def burn_all(self, check_batch_mode=False):
+        if check_batch_mode:
+            if self.batch_mode_cnt != 0:
+                print("\nBatch mode is enabled, the burn will be done at the end of the command.")
+                return False
         print("\nCheck all blocks for burn...")
         print("idx, BLOCK_NAME,          Conclusion")
         have_wr_data_for_burn = False
@@ -398,6 +403,7 @@ class EspEfusesBase(object):
         self.read_coding_scheme()
         self.read_blocks()
         self.update_efuses()
+        return True
 
     @staticmethod
     def confirm(action, do_not_confirm):
@@ -481,7 +487,15 @@ class EfuseFieldBase(EfuseProtectBase):
                 # *[x] - means a byte.
                 return BitArray(bytes=new_value[::-1], length=len(new_value) * 8)
             else:
-                return BitArray(self.efuse_type + "={}".format(new_value))
+                try:
+                    return BitArray(self.efuse_type + "={}".format(new_value))
+                except CreationError as err:
+                    print(
+                        "New value '{}' is not suitable for {} ({})".format(
+                            new_value, self.name, self.efuse_type
+                        )
+                    )
+                    raise esptool.FatalError(err)
 
     def check_new_value(self, bitarray_new_value):
         bitarray_old_value = self.get_bitstring() | self.get_bitstring(from_read=False)

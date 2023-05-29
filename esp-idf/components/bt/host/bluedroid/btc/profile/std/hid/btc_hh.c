@@ -66,7 +66,7 @@ static bdstr_t bdstr;
 
 static inline void btc_hh_cb_to_app(esp_hidh_cb_event_t event, esp_hidh_cb_param_t *param)
 {
-    esp_hh_cb_t *btc_hh_cb = (esp_hh_cb_t *)btc_profile_cb_get(BTC_PID_HH);
+    esp_hh_cb_t btc_hh_cb = (esp_hh_cb_t)btc_profile_cb_get(BTC_PID_HH);
     if (btc_hh_cb) {
         btc_hh_cb(event, param);
     }
@@ -237,7 +237,7 @@ void btc_hh_timer_timeout(void *data)
     p_data.dev_status.handle = p_dev->dev_handle;
 
     /* switch context to btif task context */
-    status = btc_transfer_context(&msg, &p_data, sizeof(tBTA_HH), NULL);
+    status = btc_transfer_context(&msg, &p_data, sizeof(tBTA_HH), NULL, NULL);
     if (status != BT_STATUS_SUCCESS) {
         BTC_TRACE_ERROR("%s context transfer failed", __func__);
     }
@@ -433,7 +433,7 @@ static void bte_hh_evt(tBTA_HH_EVT event, tBTA_HH *p_data)
     msg.pid = BTC_PID_HH;
     msg.act = event;
 
-    status = btc_transfer_context(&msg, p_data, param_len, bte_hh_arg_deep_copy);
+    status = btc_transfer_context(&msg, p_data, param_len, bte_hh_arg_deep_copy, btc_hh_cb_arg_deep_free);
     assert(status == BT_STATUS_SUCCESS);
 }
 
@@ -1161,7 +1161,7 @@ void btc_hh_call_handler(btc_msg_t *msg)
     btc_hh_call_arg_deep_free(msg);
 }
 
-static void btc_hh_cb_arg_deep_free(btc_msg_t *msg)
+void btc_hh_cb_arg_deep_free(btc_msg_t *msg)
 {
     tBTA_HH *arg = (tBTA_HH *)msg->arg;
 

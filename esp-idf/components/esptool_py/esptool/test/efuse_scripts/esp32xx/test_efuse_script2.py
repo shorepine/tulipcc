@@ -1,5 +1,5 @@
 # flake8: noqa
-espefuse(esp, efuses, args, 'burn_efuse DIS_FORCE_DOWNLOAD 1 DIS_CAN 1 DIS_USB 1')
+espefuse(esp, efuses, args, 'burn_efuse DIS_FORCE_DOWNLOAD 1 DIS_CAN 1 DIS_DOWNLOAD_MODE 1')
 if efuses["DIS_FORCE_DOWNLOAD"].get() != 0:
     raise esptool.FatalError("Burn should be at the end")
 
@@ -16,7 +16,7 @@ espefuse(esp, efuses, args, 'burn_block_data BLOCK_KEY5 ../../images/efuse/256bi
 if efuses["BLOCK_KEY5"].get_meaning() != "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00":
     raise esptool.FatalError("Burn should be at the end")
 
-espefuse(esp, efuses, args, 'burn_key BLOCK_KEY0 ../../images/efuse/256bit XTS_AES_256_KEY_1 --no-read-protect')
+espefuse(esp, efuses, args, 'burn_key BLOCK_KEY0 ../../images/efuse/256bit XTS_AES_128_KEY --no-read-protect')
 if efuses["BLOCK_KEY0"].get_meaning() != "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00":
     raise esptool.FatalError("Burn should be at the end")
 if not efuses["BLOCK_KEY0"].is_readable() or not efuses["BLOCK_KEY0"].is_writeable():

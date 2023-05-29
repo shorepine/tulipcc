@@ -292,6 +292,20 @@ ble_hs_hci_wait_for_ack(void)
 }
 
 int
+ble_hs_hci_cmd_tx_no_rsp(uint16_t opcode, const void *cmd, uint8_t cmd_len)
+{
+    int rc;
+
+    ble_hs_hci_lock();
+
+    rc = ble_hs_hci_cmd_send_buf(opcode, cmd, cmd_len);
+
+    ble_hs_hci_unlock();
+
+    return rc;
+}
+
+int
 ble_hs_hci_cmd_tx(uint16_t opcode, const void *cmd, uint8_t cmd_len,
                   void *rsp, uint8_t rsp_len)
 {

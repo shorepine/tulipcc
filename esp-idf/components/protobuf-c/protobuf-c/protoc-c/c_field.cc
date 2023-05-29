@@ -67,7 +67,7 @@
 #include <protoc-c/c_enum_field.h>
 #include <protoc-c/c_message_field.h>
 #include <protoc-c/c_helpers.h>
-#include <google/protobuf/descriptor.pb.h>
+#include <protobuf-c/protobuf-c.pb.h>
 #include <google/protobuf/stubs/common.h>
 #include <google/protobuf/io/printer.h>
 
@@ -103,19 +103,23 @@ static bool is_packable_type(FieldDescriptor::Type type)
 
 void FieldGenerator::GenerateDescriptorInitializerGeneric(io::Printer* printer,
 							  bool optional_uses_has,
-							  const string &type_macro,
-							  const string &descriptor_addr) const
+							  const std::string &type_macro,
+							  const std::string &descriptor_addr) const
 {
-  std::map<string, string> variables;
+  std::map<std::string, std::string> variables;
+  const OneofDescriptor *oneof = descriptor_->containing_oneof();
+  const ProtobufCFileOptions opt = descriptor_->file()->options().GetExtension(pb_c_file);
   variables["TYPE"] = type_macro;
-  variables["classname"] = FullNameToC(FieldScope(descriptor_)->full_name());
+  variables["classname"] = FullNameToC(FieldScope(descriptor_)->full_name(), FieldScope(descriptor_)->file());
   variables["name"] = FieldName(descriptor_);
-  variables["proto_name"] = descriptor_->name();
+  if (opt.use_oneof_field_name())
+    variables["proto_name"] = oneof->name();
+  else
+    variables["proto_name"] = descriptor_->name();
   variables["descriptor_addr"] = descriptor_addr;
   variables["value"] = SimpleItoa(descriptor_->number());
-  const OneofDescriptor *oneof = descriptor_->containing_oneof();
   if (oneof != NULL)
-    variables["oneofname"] = FullNameToLower(oneof->name());
+    variables["oneofname"] = CamelToLower(oneof->name());
 
   if (FieldSyntax(descriptor_) == 3 &&
     descriptor_->label() == FieldDescriptor::LABEL_OPTIONAL) {
@@ -126,8 +130,8 @@ void FieldGenerator::GenerateDescriptorInitializerGeneric(io::Printer* printer,
   }
 
   if (descriptor_->has_default_value()) {
-    variables["default_value"] = string("&")
-                               + FullNameToLower(descriptor_->full_name())
+    variables["default_value"] = std::string("&")
+                               + FullNameToLower(descriptor_->full_name(), descriptor_->file())
 			       + "__default_value";
   } else if (FieldSyntax(descriptor_) == 3 &&
     descriptor_->type() == FieldDescriptor::TYPE_STRING) {
@@ -140,8 +144,14 @@ void FieldGenerator::GenerateDescriptorInitializerGeneric(io::Printer* printer,
 
   if (descriptor_->label() == FieldDescriptor::LABEL_REPEATED
    && is_packable_type (descriptor_->type())
-   && descriptor_->options().packed())
+   && descriptor_->options().packed()) {
     variables["flags"] += " | PROTOBUF_C_FIELD_FLAG_PACKED";
+  } else if (descriptor_->label() == FieldDescriptor::LABEL_REPEATED
+   && is_packable_type (descriptor_->type())
+   && FieldSyntax(descriptor_) == 3
+   && !descriptor_->options().has_packed()) {
+    variables["flags"] += " | PROTOBUF_C_FIELD_FLAG_PACKED";
+  }
 
   if (descriptor_->options().deprecated())
     variables["flags"] += " | PROTOBUF_C_FIELD_FLAG_DEPRECATED";
@@ -189,7 +199,7 @@ void FieldGenerator::GenerateDescriptorInitializerGeneric(io::Printer* printer,
 FieldGeneratorMap::FieldGeneratorMap(const Descriptor* descriptor)
   : descriptor_(descriptor),
     field_generators_(
-      new scoped_ptr<FieldGenerator>[descriptor->field_count()]) {
+      new std::unique_ptr<FieldGenerator>[descriptor->field_count()]) {
   // Construct all the FieldGenerators.
   for (int i = 0; i < descriptor->field_count(); i++) {
     field_generators_[i].reset(MakeGenerator(descriptor->field(i)));
@@ -197,11 +207,15 @@ FieldGeneratorMap::FieldGeneratorMap(const Descriptor* descriptor)
 }
 
 FieldGenerator* FieldGeneratorMap::MakeGenerator(const FieldDescriptor* field) {
+  const ProtobufCFieldOptions opt = field->options().GetExtension(pb_c_field);
   switch (field->type()) {
     case FieldDescriptor::TYPE_MESSAGE:
       return new MessageFieldGenerator(field);
     case FieldDescriptor::TYPE_STRING:
-      return new StringFieldGenerator(field);
+      if (opt.string_as_bytes())
+        return new BytesFieldGenerator(field);
+      else
+        return new StringFieldGenerator(field);
     case FieldDescriptor::TYPE_BYTES:
       return new BytesFieldGenerator(field);
     case FieldDescriptor::TYPE_ENUM:

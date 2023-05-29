@@ -1,16 +1,8 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 /*****************************************************************************
  *
@@ -163,7 +155,7 @@ static const btc_sm_handler_t btc_av_state_handlers[] = {
     btc_av_state_closing_handler
 };
 
-static void btc_av_event_free_data(btc_sm_event_t event, void *p_data);
+static void btc_av_event_free_data(btc_msg_t *msg);
 
 /*************************************************************************
 ** Extern functions
@@ -681,6 +673,9 @@ static BOOLEAN btc_av_state_opened_handler(btc_sm_event_t event, void *p_data)
             /* pending start flag will be cleared when exit current state */
         }
 #endif /* BTC_AV_SRC_INCLUDED */
+        /* wait for audio path to open */
+        btc_a2dp_control_datapath_ctrl(BTC_AV_DATAPATH_OPEN_EVT);
+
         btc_sm_change_state(btc_av_cb.sm_handle, BTC_AV_STATE_STARTED);
 
     } break;
@@ -965,11 +960,11 @@ void btc_av_event_deep_copy(btc_msg_t *msg, void *p_dest, void *p_src)
     }
 }
 
-static void btc_av_event_free_data(btc_sm_event_t event, void *p_data)
+static void btc_av_event_free_data(btc_msg_t *msg)
 {
-    switch (event) {
+    switch (msg->act) {
     case BTA_AV_META_MSG_EVT: {
-        tBTA_AV *av = (tBTA_AV *)p_data;
+        tBTA_AV *av = (tBTA_AV *)msg->arg;
         if (av->meta_msg.p_data) {
             osi_free(av->meta_msg.p_data);
         }
@@ -1219,7 +1214,7 @@ void btc_dispatch_sm_event(btc_av_sm_event_t event, void *p_data, int len)
     msg.sig = BTC_SIG_API_CALL;
     msg.pid = BTC_PID_A2DP;
     msg.act = event;
-    btc_transfer_context(&msg, p_data, len, NULL);
+    btc_transfer_context(&msg, p_data, len, NULL, NULL);
 }
 
 static void bte_av_callback(tBTA_AV_EVT event, tBTA_AV *p_data)
@@ -1230,7 +1225,8 @@ static void bte_av_callback(tBTA_AV_EVT event, tBTA_AV *p_data)
     msg.sig = BTC_SIG_API_CB;
     msg.pid = BTC_PID_A2DP;
     msg.act = (uint8_t) event;
-    stat = btc_transfer_context(&msg, p_data, sizeof(tBTA_AV), btc_av_event_deep_copy);
+    stat = btc_transfer_context(&msg, p_data, sizeof(tBTA_AV),
+                                    btc_av_event_deep_copy, btc_av_event_free_data);
 
     if (stat) {
         BTC_TRACE_ERROR("%s transfer failed\n", __func__);
@@ -1273,7 +1269,7 @@ static void bte_av_media_callback(tBTA_AV_EVT event, tBTA_AV_MEDIA *p_data)
             memset(&arg, 0, sizeof(btc_av_args_t));
             arg.mcc.type = ESP_A2D_MCT_SBC;
             memcpy(arg.mcc.cie.sbc, (uint8_t *)p_data + 3, ESP_A2D_CIE_LEN_SBC);
-            btc_transfer_context(&msg, &arg, sizeof(btc_av_args_t), NULL);
+            btc_transfer_context(&msg, &arg, sizeof(btc_av_args_t), NULL, NULL);
         } else {
             BTC_TRACE_ERROR("ERROR dump_codec_info A2D_ParsSbcInfo fail:%d\n", a2d_status);
         }
@@ -1509,10 +1505,6 @@ void btc_a2dp_call_handler(btc_msg_t *msg)
         btc_a2dp_control_media_ctrl(arg->ctrl);
         break;
     }
-    case BTC_AV_DATAPATH_CTRL_EVT: {
-        btc_a2dp_control_datapath_ctrl(arg->dp_evt);
-        break;
-    }
     case BTC_AV_CONNECT_REQ_EVT:
         btc_sm_dispatch(btc_av_cb.sm_handle, msg->act, (char *)msg->arg);
         break;
@@ -1531,7 +1523,7 @@ void btc_a2dp_call_handler(btc_msg_t *msg)
 void btc_a2dp_cb_handler(btc_msg_t *msg)
 {
     btc_sm_dispatch(btc_av_cb.sm_handle, msg->act, (void *)(msg->arg));
-    btc_av_event_free_data(msg->act, msg->arg);
+    btc_av_event_free_data(msg);
 }
 
 #if BTC_AV_SINK_INCLUDED

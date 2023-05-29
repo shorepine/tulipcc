@@ -128,6 +128,7 @@ bool mqtt_header_complete(uint8_t *buffer, size_t buffer_length);
 size_t mqtt_get_total_length(const uint8_t *buffer, size_t length, int *fixed_size_len);
 char *mqtt_get_publish_topic(uint8_t *buffer, size_t *length);
 char *mqtt_get_publish_data(uint8_t *buffer, size_t *length);
+char *mqtt_get_suback_data(uint8_t *buffer, size_t *length);
 uint16_t mqtt_get_id(uint8_t *buffer, size_t length);
 int mqtt_has_valid_msg_hdr(uint8_t *buffer, size_t length);
 

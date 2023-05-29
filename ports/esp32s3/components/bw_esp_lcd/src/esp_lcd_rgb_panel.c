@@ -40,6 +40,27 @@
 #include "soc/lcd_periph.h"
 #include "hal/lcd_hal.h"
 #include "hal/lcd_ll.h"
+#define LCD_LL_CLOCK_PRESCALE_MAX (64)
+
+static inline void lcd_ll_set_group_clock_src(lcd_cam_dev_t *dev, lcd_clock_source_t src, int div_num, int div_a, int div_b)
+{
+    // lcd_clk = module_clock_src / (div_num + div_b / div_a)
+    HAL_ASSERT(div_num >= 2);
+    HAL_FORCE_MODIFY_U32_REG_FIELD(dev->lcd_clock, lcd_clkm_div_num, div_num);
+    dev->lcd_clock.lcd_clkm_div_a = div_a;
+    dev->lcd_clock.lcd_clkm_div_b = div_b;
+    switch (src) {
+    case LCD_CLK_SRC_PLL160M:
+        dev->lcd_clock.lcd_clk_sel = 3;
+        break;
+    case LCD_CLK_SRC_XTAL:
+        dev->lcd_clock.lcd_clk_sel = 1;
+        break;
+    default:
+        HAL_ASSERT(false && "unsupported clock source");
+        break;
+    }
+}
 
 // If this is on, it doesn't play nice with micropython / flash reading/writing
 

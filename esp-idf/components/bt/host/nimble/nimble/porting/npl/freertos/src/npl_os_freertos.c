@@ -372,7 +372,7 @@ npl_freertos_callout_deinit(struct ble_npl_callout *co)
 {
 #if CONFIG_BT_NIMBLE_USE_ESP_TIMER
     if(esp_timer_stop(co->handle))
-	ESP_LOGW(TAG, "Timer not stopped");
+	ESP_LOGD(TAG, "Timer not stopped");
 
     if(esp_timer_delete(co->handle))
 	ESP_LOGW(TAG, "Timer not deleted");

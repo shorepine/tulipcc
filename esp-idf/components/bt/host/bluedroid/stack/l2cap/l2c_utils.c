@@ -288,6 +288,37 @@ void l2cu_release_lcb (tL2C_LCB *p_lcb)
 #endif  ///BLE_INCLUDED == TRUE
 }
 
+/*******************************************************************************
+**
+** Function         l2cu_find_link_role_by_bd_addr
+**
+** Description      Look through all active Link Role for a match based on the
+**                  remote BD address.
+**
+** Returns          Link Role, or HCI_ROLE_UNKNOWN if no match
+**
+*******************************************************************************/
+UINT8  l2cu_find_link_role_by_bd_addr (BD_ADDR p_bd_addr, tBT_TRANSPORT transport)
+{
+    list_node_t *p_node = NULL;
+    tL2C_LCB    *p_lcb  = NULL;
+    UINT8        link_role = HCI_ROLE_UNKNOWN;
+
+    for (p_node = list_begin(l2cb.p_lcb_pool); p_node; p_node = list_next(p_node)) {
+        p_lcb = list_node(p_node);
+        if ((p_lcb) &&
+#if BLE_INCLUDED == TRUE
+                p_lcb->transport == transport &&
+#endif
+                (!memcmp (p_lcb->remote_bd_addr, p_bd_addr, BD_ADDR_LEN))) {
+            link_role = p_lcb->link_role;
+        }
+    }
+
+    /* If here, no match found */
+    return link_role;
+}
+
 
 /*******************************************************************************
 **
@@ -2383,7 +2414,7 @@ BOOLEAN l2cu_create_conn_after_switch (tL2C_LCB *p_lcb)
         clock_offset = (UINT16)(p_inq_info->results.clock_offset);
     } else {
         /* No info known. Use default settings */
-        page_scan_rep_mode = HCI_PAGE_SCAN_REP_MODE_R1;
+        page_scan_rep_mode = HCI_PAGE_SCAN_REP_MODE_R2;
         page_scan_mode = HCI_MANDATARY_PAGE_SCAN_MODE;
 
         clock_offset = (p_dev_rec) ? p_dev_rec->clock_offset : 0;

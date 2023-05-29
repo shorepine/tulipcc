@@ -69,6 +69,10 @@ def action_extensions(base_actions, project_path):
             subprocess.check_output(GENERATORS[args.generator]['dry_run'] + [target_name], cwd=args.build_dir)
 
         except Exception:
+            if target_name in ['clang-check', 'clang-html-report']:
+                raise FatalError('command "{}" requires an additional plugin "pyclang". '
+                                 'Please install it via "pip install --upgrade pyclang"'.format(target_name))
+
             raise FatalError(
                 'command "%s" is not known to idf.py and is not a %s target' % (target_name, args.generator))
 
@@ -449,28 +453,6 @@ def action_extensions(base_actions, project_path):
                 'hidden': True,
                 'help': 'Build only partition table.',
                 'order_dependencies': ['reconfigure'],
-                'options': global_options,
-            },
-            'erase_otadata': {
-                'callback': build_target,
-                'hidden': True,
-                'help': 'Erase otadata partition.',
-                'options': global_options,
-            },
-            'erase-otadata': {
-                'callback': build_target,
-                'help': 'Erase otadata partition. Deprecated alias: "erase_otadata".',
-                'options': global_options,
-            },
-            'read_otadata': {
-                'callback': build_target,
-                'hidden': True,
-                'help': 'Read otadata partition.',
-                'options': global_options,
-            },
-            'read-otadata': {
-                'callback': build_target,
-                'help': 'Read otadata partition. Deprecated alias: "read_otadata".',
                 'options': global_options,
             },
             'build-system-targets': {

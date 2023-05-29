@@ -1,16 +1,8 @@
-// Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 #include "nvs_storage.hpp"
 
 #ifndef ESP_PLATFORM
@@ -118,14 +110,23 @@ esp_err_t Storage::init(uint32_t baseSector, uint32_t sectorCount)
             }
 
             item.getKey(entry->mName, sizeof(entry->mName));
-            item.getValue(entry->mIndex);
+            err = item.getValue(entry->mIndex);
+            if (err != ESP_OK) {
+                return err;
+            }
             mNamespaces.push_back(entry);
-            mNamespaceUsage.set(entry->mIndex, true);
+            if (mNamespaceUsage.set(entry->mIndex, true) != ESP_OK) {
+                return ESP_FAIL;
+            }
             itemIndex += item.span;
         }
     }
-    mNamespaceUsage.set(0, true);
-    mNamespaceUsage.set(255, true);
+    if (mNamespaceUsage.set(0, true) != ESP_OK) {
+        return ESP_FAIL;
+    }
+    if (mNamespaceUsage.set(255, true) != ESP_OK) {
+        return ESP_FAIL;
+    }
     mState = StorageState::ACTIVE;
 
     // Populate list of multi-page index entries.
@@ -212,15 +213,17 @@ esp_err_t Storage::writeMultiPageBlob(uint8_t nsIndex, const char* key, const vo
         }
 
         /* Split the blob into two and store the chunk of available size onto the current page */
-        assert(tailroom != 0);
+        NVS_ASSERT_OR_RETURN(tailroom != 0, ESP_FAIL);
+
         chunkSize = (remainingSize > tailroom)? tailroom : remainingSize;
         remainingSize -= chunkSize;
 
         err = page.writeItem(nsIndex, ItemType::BLOB_DATA, key,
                 static_cast<const uint8_t*> (data) + offset, chunkSize, static_cast<uint8_t> (chunkStart) + chunkCount);
         chunkCount++;
-        assert(err != ESP_ERR_NVS_PAGE_FULL);
+
         if (err != ESP_OK) {
+            NVS_ASSERT_OR_RETURN(err != ESP_ERR_NVS_PAGE_FULL, err);
             break;
         } else {
             UsedPageNode* node = new (std::nothrow) UsedPageNode();
@@ -253,7 +256,7 @@ esp_err_t Storage::writeMultiPageBlob(uint8_t nsIndex, const char* key, const vo
             item.blobIndex.chunkStart = chunkStart;
 
             err = getCurrentPage().writeItem(nsIndex, ItemType::BLOB_IDX, key, item.data, sizeof(item.data));
-            assert(err != ESP_ERR_NVS_PAGE_FULL);
+            NVS_ASSERT_OR_RETURN(err != ESP_ERR_NVS_PAGE_FULL, err);
             break;
         }
     } while (1);
@@ -306,7 +309,8 @@ esp_err_t Storage::writeItem(uint8_t nsIndex, ItemType datatype, const char* key
             }
             /* Get the version of the previous index with same <ns,key> */
             prevStart = item.blobIndex.chunkStart;
-            assert(prevStart == VerOffset::VER_0_OFFSET || prevStart == VerOffset::VER_1_OFFSET);
+            NVS_ASSERT_OR_RETURN(prevStart == VerOffset::VER_0_OFFSET || prevStart == VerOffset::VER_1_OFFSET, ESP_FAIL);
+
 
             /* Toggle the version by changing the offset */
             nextStart
@@ -409,8 +413,12 @@ esp_err_t Storage::createOrOpenNamespace(const char* nsName, bool canCreate, uin
         }
 
         uint8_t ns;
+        bool ns_state;
         for (ns = 1; ns < 255; ++ns) {
-            if (mNamespaceUsage.get(ns) == false) {
+            if (mNamespaceUsage.get(ns, &ns_state) != ESP_OK) {
+                return ESP_FAIL;
+            }
+            if (!ns_state) {
                 break;
             }
         }
@@ -419,17 +427,19 @@ esp_err_t Storage::createOrOpenNamespace(const char* nsName, bool canCreate, uin
             return ESP_ERR_NVS_NOT_ENOUGH_SPACE;
         }
 
-        NamespaceEntry* entry = new (std::nothrow) NamespaceEntry;
-        if (!entry) {
-            return ESP_ERR_NO_MEM;
-        }
-
         auto err = writeItem(Page::NS_INDEX, ItemType::U8, nsName, &ns, sizeof(ns));
         if (err != ESP_OK) {
             return err;
         }
-        mNamespaceUsage.set(ns, true);
+        if (mNamespaceUsage.set(ns, true) != ESP_OK) {
+            return ESP_FAIL;
+        }
         nsIndex = ns;
+
+        NamespaceEntry* entry = new (std::nothrow) NamespaceEntry;
+        if (!entry) {
+            return ESP_ERR_NO_MEM;
+        }
 
         entry->mIndex = ns;
         strncpy(entry->mName, nsName, sizeof(entry->mName) - 1);
@@ -457,7 +467,7 @@ esp_err_t Storage::readMultiPageBlob(uint8_t nsIndex, const char* key, void* dat
     VerOffset chunkStart = item.blobIndex.chunkStart;
     size_t offset = 0;
 
-    assert(dataSize == item.blobIndex.dataSize);
+    NVS_ASSERT_OR_RETURN(dataSize == item.blobIndex.dataSize, ESP_FAIL);
 
     /* Now read corresponding chunks */
     for (uint8_t chunkNum = 0; chunkNum < chunkCount; chunkNum++) {
@@ -472,12 +482,12 @@ esp_err_t Storage::readMultiPageBlob(uint8_t nsIndex, const char* key, void* dat
         if (err != ESP_OK) {
             return err;
         }
-        assert(static_cast<uint8_t> (chunkStart) + chunkNum == item.chunkIndex);
+        NVS_ASSERT_OR_RETURN(static_cast<uint8_t> (chunkStart) + chunkNum == item.chunkIndex, ESP_FAIL);
+
         offset += item.varLength.dataSize;
     }
-    if (err == ESP_OK) {
-        assert(offset == dataSize);
-    }
+    NVS_ASSERT_OR_RETURN(offset == dataSize, ESP_FAIL);
+
     if (err == ESP_ERR_NVS_NOT_FOUND) {
         eraseMultiPageBlob(nsIndex, key); // cleanup if a chunk is not found
     }
@@ -517,12 +527,12 @@ esp_err_t Storage::cmpMultiPageBlob(uint8_t nsIndex, const char* key, const void
         if (err != ESP_OK) {
             return err;
         }
-        assert(static_cast<uint8_t> (chunkStart) + chunkNum == item.chunkIndex);
+        NVS_ASSERT_OR_RETURN(static_cast<uint8_t> (chunkStart) + chunkNum == item.chunkIndex, ESP_FAIL);
+
         offset += item.varLength.dataSize;
     }
-    if (err == ESP_OK) {
-        assert(offset == dataSize);
-    }
+    NVS_ASSERT_OR_RETURN(offset == dataSize, ESP_FAIL);
+
     return err;
 }
 
@@ -572,7 +582,7 @@ esp_err_t Storage::eraseMultiPageBlob(uint8_t nsIndex, const char* key, VerOffse
     if (chunkStart == VerOffset::VER_ANY) {
         chunkStart = item.blobIndex.chunkStart;
     } else {
-        assert(chunkStart == item.blobIndex.chunkStart);
+        NVS_ASSERT_OR_RETURN(chunkStart == item.blobIndex.chunkStart, ESP_FAIL);
     }
 
     /* Now erase corresponding chunks*/
@@ -734,11 +744,13 @@ esp_err_t Storage::calcEntriesInNamespace(uint8_t nsIndex, size_t& usedEntries)
 void Storage::fillEntryInfo(Item &item, nvs_entry_info_t &info)
 {
     info.type = static_cast<nvs_type_t>(item.datatype);
-    strncpy(info.key, item.key, sizeof(info.key));
+    strncpy(info.key, item.key, sizeof(info.key) - 1);
+    info.key[sizeof(info.key) - 1] = '\0';
 
     for (auto &name : mNamespaces) {
         if(item.nsIndex == name.mIndex) {
-            strncpy(info.namespace_name, name.mName, sizeof(info.namespace_name));
+            strncpy(info.namespace_name, name.mName, sizeof(info.namespace_name) - 1);
+            info.namespace_name[sizeof(info.namespace_name) -1] = '\0';
             break;
         }
     }

@@ -6,6 +6,7 @@
 #pragma once
 
 #include <inttypes.h>
+#include "esp_assert.h"
 
 /**
  * @brief ESP chip ID
@@ -21,7 +22,7 @@ typedef enum {
 } __attribute__((packed)) esp_chip_id_t;
 
 /** @cond */
-_Static_assert(sizeof(esp_chip_id_t) == 2, "esp_chip_id_t should be 16 bit");
+ESP_STATIC_ASSERT(sizeof(esp_chip_id_t) == 2, "esp_chip_id_t should be 16 bit");
 /** @endcond */
 
 /**
@@ -55,6 +56,9 @@ typedef enum {
     ESP_IMAGE_FLASH_SIZE_4MB,       /*!< SPI flash size 4 MB */
     ESP_IMAGE_FLASH_SIZE_8MB,       /*!< SPI flash size 8 MB */
     ESP_IMAGE_FLASH_SIZE_16MB,      /*!< SPI flash size 16 MB */
+    ESP_IMAGE_FLASH_SIZE_32MB,      /*!< SPI flash size 32 MB */
+    ESP_IMAGE_FLASH_SIZE_64MB,      /*!< SPI flash size 64 MB */
+    ESP_IMAGE_FLASH_SIZE_128MB,     /*!< SPI flash size 128 MB */
     ESP_IMAGE_FLASH_SIZE_MAX        /*!< SPI flash size MAX */
 } esp_image_flash_size_t;
 
@@ -85,7 +89,7 @@ typedef struct {
 } __attribute__((packed))  esp_image_header_t;
 
 /** @cond */
-_Static_assert(sizeof(esp_image_header_t) == 24, "binary image header should be 24 bytes");
+ESP_STATIC_ASSERT(sizeof(esp_image_header_t) == 24, "binary image header should be 24 bytes");
 /** @endcond */
 
 

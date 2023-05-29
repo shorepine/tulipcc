@@ -144,7 +144,7 @@ static void blufi_profile_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
         msg.act = ESP_BLUFI_EVENT_DEINIT_FINISH;
         param.deinit_finish.state = ESP_BLUFI_DEINIT_OK;
 
-        btc_transfer_context(&msg, &param, sizeof(esp_blufi_cb_param_t), NULL);
+        btc_transfer_context(&msg, &param, sizeof(esp_blufi_cb_param_t), NULL, NULL);
 
         break;
     }
@@ -283,7 +283,7 @@ static void blufi_profile_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
         msg.act = ESP_BLUFI_EVENT_INIT_FINISH;
         param.init_finish.state = ESP_BLUFI_INIT_OK;
 
-        btc_transfer_context(&msg, &param, sizeof(esp_blufi_cb_param_t), NULL);
+        btc_transfer_context(&msg, &param, sizeof(esp_blufi_cb_param_t), NULL, NULL);
         break;
     }
     case BTA_GATTS_CONNECT_EVT: {
@@ -295,7 +295,7 @@ static void blufi_profile_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
                         BT_BD_ADDR_HEX(p_data->conn.remote_bda), p_data->conn.server_if,
                         p_data->conn.reason, p_data->conn.conn_id);
 
-        memcpy(blufi_env.remote_bda, p_data->conn.remote_bda, sizeof(esp_bd_addr_t));
+        memcpy(blufi_env.remote_bda, p_data->conn.remote_bda, ESP_BLUFI_BD_ADDR_LEN);
         blufi_env.conn_id = p_data->conn.conn_id;
         blufi_env.is_connected = true;
         blufi_env.recv_seq = blufi_env.send_seq = 0;
@@ -303,11 +303,11 @@ static void blufi_profile_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
         msg.sig = BTC_SIG_API_CB;
         msg.pid = BTC_PID_BLUFI;
         msg.act = ESP_BLUFI_EVENT_BLE_CONNECT;
-        memcpy(param.connect.remote_bda, p_data->conn.remote_bda, sizeof(esp_bd_addr_t));
+        memcpy(param.connect.remote_bda, p_data->conn.remote_bda, ESP_BLUFI_BD_ADDR_LEN);
         param.connect.conn_id = BTC_GATT_GET_CONN_ID(p_data->conn.conn_id);
         conn_id = param.connect.conn_id;
         server_if = p_data->conn.server_if;
-        btc_transfer_context(&msg, &param, sizeof(esp_blufi_cb_param_t), NULL);
+        btc_transfer_context(&msg, &param, sizeof(esp_blufi_cb_param_t), NULL, NULL);
         break;
     }
     case BTA_GATTS_DISCONNECT_EVT: {
@@ -320,7 +320,7 @@ static void blufi_profile_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
                         BT_BD_ADDR_HEX(p_data->conn.remote_bda), p_data->conn.server_if,
                         p_data->conn.reason, p_data->conn.conn_id);
 
-        memcpy(blufi_env.remote_bda, p_data->conn.remote_bda, sizeof(esp_bd_addr_t));
+        memcpy(blufi_env.remote_bda, p_data->conn.remote_bda, ESP_BLUFI_BD_ADDR_LEN);
         blufi_env.conn_id = p_data->conn.conn_id;
         blufi_env.recv_seq = blufi_env.send_seq = 0;
         blufi_env.sec_mode = 0x0;
@@ -334,8 +334,8 @@ static void blufi_profile_cb(tBTA_GATTS_EVT event, tBTA_GATTS *p_data)
         msg.sig = BTC_SIG_API_CB;
         msg.pid = BTC_PID_BLUFI;
         msg.act = ESP_BLUFI_EVENT_BLE_DISCONNECT;
-        memcpy(param.disconnect.remote_bda, p_data->conn.remote_bda, sizeof(esp_bd_addr_t));
-        btc_transfer_context(&msg, &param, sizeof(esp_blufi_cb_param_t), NULL);
+        memcpy(param.disconnect.remote_bda, p_data->conn.remote_bda, ESP_BLUFI_BD_ADDR_LEN);
+        btc_transfer_context(&msg, &param, sizeof(esp_blufi_cb_param_t), NULL, NULL);
         break;
     }
     case BTA_GATTS_OPEN_EVT:
@@ -410,7 +410,7 @@ esp_err_t esp_blufi_close(esp_gatt_if_t gatts_if, uint16_t conn_id)
     msg.pid = BTC_PID_GATTS;
     msg.act = BTC_GATTS_ACT_CLOSE;
     arg.close.conn_id = BTC_GATT_CREATE_CONN_ID(gatts_if, conn_id);
-    return (btc_transfer_context(&msg, &arg, sizeof(btc_ble_gatts_args_t), NULL)
+    return (btc_transfer_context(&msg, &arg, sizeof(btc_ble_gatts_args_t), NULL, NULL)
             == BT_STATUS_SUCCESS ? ESP_OK : ESP_FAIL);
 }
 

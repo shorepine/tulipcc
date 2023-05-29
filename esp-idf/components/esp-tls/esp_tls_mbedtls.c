@@ -23,10 +23,6 @@
 #endif
 
 #ifdef CONFIG_ESP_TLS_USE_SECURE_ELEMENT
-
-#define ATECC608A_TNG_SLAVE_ADDR        0x6A
-#define ATECC608A_TFLEX_SLAVE_ADDR      0x6C
-#define ATECC608A_TCUSTOM_SLAVE_ADDR    0xC0
 /* cryptoauthlib includes */
 #include "mbedtls/atca_mbedtls_wrap.h"
 #include "tng_atca.h"
@@ -155,6 +151,14 @@ esp_tls_client_session_t *esp_mbedtls_get_client_session(esp_tls_t *tls)
 
     return client_session;
 }
+
+void esp_mbedtls_free_client_session(esp_tls_client_session_t *client_session)
+{
+    if (client_session) {
+        mbedtls_ssl_session_free(&(client_session->saved_session));
+        free(client_session);
+    }
+}
 #endif /* CONFIG_ESP_TLS_CLIENT_SESSION_TICKETS */
 
 int esp_mbedtls_handshake(esp_tls_t *tls, const esp_tls_cfg_t *cfg)
@@ -250,8 +254,11 @@ void esp_mbedtls_conn_delete(esp_tls_t *tls)
     if (tls != NULL) {
         esp_mbedtls_cleanup(tls);
         if (tls->is_tls) {
-            mbedtls_net_free(&tls->server_fd);
-            tls->sockfd = tls->server_fd.fd;
+            if (tls->server_fd.fd != -1) {
+                mbedtls_net_free(&tls->server_fd);
+                /* Socket is already closed by `mbedtls_net_free` and hence also change assignment of its copy to an invalid value */
+                tls->sockfd = -1;
+            }
         }
     }
 }
@@ -500,7 +507,11 @@ esp_err_t set_server_config(esp_tls_cfg_server_t *cfg, esp_tls_t *tls)
             return esp_ret;
         }
     } else {
+#ifdef CONFIG_ESP_TLS_SERVER_MIN_AUTH_MODE_OPTIONAL
         mbedtls_ssl_conf_authmode(&tls->conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+#else
+        mbedtls_ssl_conf_authmode(&tls->conf, MBEDTLS_SSL_VERIFY_NONE);
+#endif
     }
 
     if (cfg->servercert_buf != NULL && cfg->serverkey_buf != NULL) {
@@ -837,12 +848,12 @@ static esp_err_t esp_set_atecc608a_pki_context(esp_tls_t *tls, esp_tls_cfg_t *cf
     (void)cert_def;
 #if defined(CONFIG_ATECC608A_TNG) || defined(CONFIG_ATECC608A_TFLEX)
 #ifdef CONFIG_ATECC608A_TNG
-    esp_ret = esp_init_atecc608a(ATECC608A_TNG_SLAVE_ADDR);
+    esp_ret = esp_init_atecc608a(CONFIG_ATCA_I2C_ADDRESS);
     if (ret != ESP_OK) {
         return ESP_ERR_ESP_TLS_SE_FAILED;
     }
 #elif CONFIG_ATECC608A_TFLEX /* CONFIG_ATECC608A_TNG */
-    esp_ret = esp_init_atecc608a(ATECC608A_TFLEX_SLAVE_ADDR);
+    esp_ret = esp_init_atecc608a(CONFIG_ATCA_I2C_ADDRESS);
     if (ret != ESP_OK) {
         return ESP_ERR_ESP_TLS_SE_FAILED;
     }
@@ -862,7 +873,7 @@ static esp_err_t esp_set_atecc608a_pki_context(esp_tls_t *tls, esp_tls_cfg_t *cf
         return ESP_ERR_ESP_TLS_SE_FAILED;
     }
 #elif CONFIG_ATECC608A_TCUSTOM
-    esp_ret = esp_init_atecc608a(ATECC608A_TCUSTOM_SLAVE_ADDR);
+    esp_ret = esp_init_atecc608a(CONFIG_ATCA_I2C_ADDRESS);
     if (ret != ESP_OK) {
         return ESP_ERR_ESP_TLS_SE_FAILED;
     }
@@ -911,14 +922,17 @@ static esp_err_t esp_mbedtls_init_pk_ctx_for_ds(const void *pki)
                                         esp_ds_get_keylen )) != 0) {
         ESP_LOGE(TAG, "Error in mbedtls_pk_setup_rsa_alt, returned -0x%04X", -ret);
         mbedtls_print_error_msg(ret);
-        return ESP_FAIL;
+        ret = ESP_FAIL;
+        goto exit;
     }
     ret = esp_ds_init_data_ctx(((const esp_tls_pki_t*)pki)->esp_ds_data);
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize DS parameters from nvs");
-        return ESP_FAIL;
+        goto exit;
     }
     ESP_LOGD(TAG, "DS peripheral params initialized.");
-    return ESP_OK;
+exit:
+    mbedtls_rsa_free(&rsakey);
+    return ret;
 }
 #endif /* CONFIG_ESP_TLS_USE_DS_PERIPHERAL */

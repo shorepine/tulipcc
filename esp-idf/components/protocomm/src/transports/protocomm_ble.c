@@ -25,7 +25,6 @@ static const uint16_t primary_service_uuid       = ESP_GATT_UUID_PRI_SERVICE;
 static const uint16_t character_declaration_uuid = ESP_GATT_UUID_CHAR_DECLARE;
 static const uint16_t character_user_description = ESP_GATT_UUID_CHAR_DESCRIPTION;
 static const uint8_t  character_prop_read_write  = ESP_GATT_CHAR_PROP_BIT_READ | ESP_GATT_CHAR_PROP_BIT_WRITE;
-static const uint8_t  ble_advertisement_flags    = ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT;
 
 typedef struct {
     uint8_t type;
@@ -52,13 +51,32 @@ typedef struct _protocomm_ble {
     ssize_t g_nu_lookup_count;
     uint16_t gatt_mtu;
     uint8_t *service_uuid;
-    uint8_t *raw_adv_data_p;
-    uint8_t raw_adv_data_len;
-    uint8_t *raw_scan_rsp_data_p;
-    uint8_t raw_scan_rsp_data_len;
 } _protocomm_ble_internal_t;
 
 static _protocomm_ble_internal_t *protoble_internal;
+
+// config adv data
+static esp_ble_adv_data_t adv_config = {
+    .set_scan_rsp = false,
+    .include_txpower = true,
+    .min_interval = 0x0006, //slave connection min interval, Time = min_interval * 1.25 msec
+    .max_interval = 0x0010, //slave connection max interval, Time = max_interval * 1.25 msec
+    .appearance = 0x00,
+    .manufacturer_len = 0,
+    .p_manufacturer_data =  NULL,
+    .service_data_len = 0,
+    .p_service_data = NULL,
+    .service_uuid_len = 0,  // Filled later
+    .p_service_uuid = NULL, // Filled later
+    .flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT),
+};
+// config scan response data
+static esp_ble_adv_data_t scan_rsp_config = {
+    .set_scan_rsp = true,
+    .include_name = true,
+    .manufacturer_len = 0,          // Filled later
+    .p_manufacturer_data = NULL,    // Filler later
+};
 
 static esp_ble_adv_params_t adv_params = {
     .adv_int_min         = 0x100,
@@ -300,6 +318,15 @@ static void transport_simple_ble_disconnect(esp_gatts_cb_event_t event, esp_gatt
 {
     esp_err_t ret;
     ESP_LOGD(TAG, "Inside disconnect w/ session - %d", param->disconnect.conn_id);
+
+#ifdef CONFIG_WIFI_PROV_KEEP_BLE_ON_AFTER_PROV
+    /* Ignore BLE events received after protocomm layer is stopped */
+    if (protoble_internal == NULL) {
+        ESP_LOGI(TAG,"Protocomm layer has already stopped");
+        return;
+    }
+#endif
+
     if (protoble_internal->pc_ble->sec &&
             protoble_internal->pc_ble->sec->close_transport_session) {
         ret = protoble_internal->pc_ble->sec->close_transport_session(protoble_internal->pc_ble->sec_inst,
@@ -387,8 +414,10 @@ static ssize_t populate_gatt_db(esp_gatts_attr_db_t **gatt_db_generated)
             (*gatt_db_generated)[i].att_desc.value        = (uint8_t *) &character_prop_read_write;
         } else if (i % 3 == 2) {
             /* Characteristic Value */
-            (*gatt_db_generated)[i].att_desc.perm         = ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE | \
-                    ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED;
+            (*gatt_db_generated)[i].att_desc.perm         = ESP_GATT_PERM_READ | ESP_GATT_PERM_WRITE ;
+#if CONFIG_WIFI_PROV_BLE_FORCE_ENCRYPTION
+            (*gatt_db_generated)[i].att_desc.perm        |= ESP_GATT_PERM_READ_ENCRYPTED | ESP_GATT_PERM_WRITE_ENCRYPTED;
+#endif
             (*gatt_db_generated)[i].att_desc.uuid_length  = ESP_UUID_LEN_128;
             (*gatt_db_generated)[i].att_desc.uuid_p       = protoble_internal->g_nu_lookup[i / 3].uuid128;
             (*gatt_db_generated)[i].att_desc.max_length   = CHAR_VAL_LEN_MAX;
@@ -418,8 +447,6 @@ static void protocomm_ble_cleanup(void)
             }
             free(protoble_internal->g_nu_lookup);
         }
-        free(protoble_internal->raw_adv_data_p);
-        free(protoble_internal->raw_scan_rsp_data_p);
         free(protoble_internal);
         protoble_internal = NULL;
     }
@@ -492,133 +519,14 @@ esp_err_t protocomm_ble_start(protocomm_t *pc, const protocomm_ble_config_t *con
     protoble_internal->pc_ble = pc;
     protoble_internal->gatt_mtu = ESP_GATT_DEF_BLE_MTU_SIZE;
 
-    /* The BLE advertisement data (max 31 bytes) consists of:
-     * 1) Flags -
-     *      Size : length (1 byte) + type (1 byte) + value (1 byte) = 3 bytes
-     * 2) Complete 128 bit UUID of the service -
-     *      Size : length (1 byte) + type (1 byte) + value (16 bytes) = 18 bytes
-     *
-     * Remaining 31 - (3 + 18) = 10 bytes could be used for manufacturer data
-     * or something else in the future.
-     */
-    raw_data_info_t adv_data[] = {
-        {   /* Flags */
-            .type   = ESP_BLE_AD_TYPE_FLAG,
-            .length = sizeof(ble_advertisement_flags),
-            .data_p = (uint8_t *) &ble_advertisement_flags
-        },
-        {   /* 128 bit Service UUID */
-            .type   = ESP_BLE_AD_TYPE_128SRV_CMPL,
-            .length = ESP_UUID_LEN_128,
-            .data_p = (uint8_t *) config->service_uuid
-        },
-    };
+    // Config adv data
+    adv_config.service_uuid_len = ESP_UUID_LEN_128;
+    adv_config.p_service_uuid = (uint8_t *) config->service_uuid;
+    protoble_internal->service_uuid = (uint8_t *) config->service_uuid;
 
-    /* Get the total raw data length required for above entries */
-    uint8_t adv_data_len = 0;
-    for (uint8_t i = 0; i < (sizeof(adv_data) / sizeof(adv_data[0])); i++) {
-        /* Add extra bytes required per entry, i.e.
-         * length (1 byte) + type (1 byte) = 2 bytes */
-        adv_data_len += adv_data[i].length + 2;
-    }
-    if (adv_data_len > ESP_BLE_ADV_DATA_LEN_MAX) {
-        ESP_LOGE(TAG, "Advertisement data too long = %d bytes", adv_data_len);
-        protocomm_ble_cleanup();
-        return ESP_ERR_NO_MEM;
-    }
-
-    /* Allocate memory for the raw advertisement data */
-    protoble_internal->raw_adv_data_len = adv_data_len;
-    protoble_internal->raw_adv_data_p = malloc(adv_data_len);
-    if (protoble_internal->raw_adv_data_p == NULL) {
-        ESP_LOGE(TAG, "Error allocating memory for raw advertisement data");
-        protocomm_ble_cleanup();
-        return ESP_ERR_NO_MEM;
-    }
-
-    /* Form the raw advertisement data using above entries */
-    for (uint8_t i = 0, len = 0; i < (sizeof(adv_data) / sizeof(adv_data[0])); i++) {
-        protoble_internal->raw_adv_data_p[len++] = adv_data[i].length + 1; // + 1 byte for type
-        protoble_internal->raw_adv_data_p[len++] = adv_data[i].type;
-        memcpy(&protoble_internal->raw_adv_data_p[len],
-               adv_data[i].data_p, adv_data[i].length);
-
-        if (adv_data[i].type == ESP_BLE_AD_TYPE_128SRV_CMPL) {
-            /* Remember where the primary service UUID is kept in the
-             * raw advertisement data, so that it can be used while
-             * populating the GATT database
-             */
-            protoble_internal->service_uuid = &protoble_internal->raw_adv_data_p[len];
-        }
-
-        len += adv_data[i].length;
-    }
-
-    size_t ble_devname_len = strlen(protocomm_ble_device_name);
-    /* The BLE scan response (31 bytes) consists of:
-     * 1) Device name (complete / incomplete) -
-     *      Size : The maximum supported name length
-     *              will be 31 - 2 (length + type) = 29 bytes
-     *
-     * Any remaining space may be used for accommodating
-     * other fields in the future
-     *
-     * 2) Manufacturer Data (To be truncated depending upon available size)
-     *      Size : The maximum supported manufacturer data size
-     *              will be 31 - 2 (length + type) - ble_devname_len - 2 (length + type)
-     */
-
-    raw_data_info_t scan_resp_data[] = {
-        {   /* If full device name can fit in the scan response then indicate
-             * that by setting type to "Complete Name", else set it to "Short Name"
-             * so that client can fetch full device name - after connecting - by
-             * reading the device name characteristic under GAP service */
-            .type   = (ble_devname_len > (ESP_BLE_SCAN_RSP_DATA_LEN_MAX - 2) ?
-                       ESP_BLE_AD_TYPE_NAME_SHORT : ESP_BLE_AD_TYPE_NAME_CMPL),
-            .length = MIN(ble_devname_len, (ESP_BLE_SCAN_RSP_DATA_LEN_MAX - 2)),
-            .data_p = (uint8_t *) protocomm_ble_device_name
-        },
-        {
-            0,
-        },
-    };
-
-    if (protocomm_ble_mfg_data_len > 0) {
-        scan_resp_data[1].type = ESP_BLE_AD_MANUFACTURER_SPECIFIC_TYPE;
-        scan_resp_data[1].length = protocomm_ble_mfg_data_len;
-        scan_resp_data[1].data_p = (uint8_t *) protocomm_ble_mfg_data;
-    }
-
-    /* Get the total raw scan response data length required for above entries */
-    uint8_t scan_resp_data_len = 0;
-    for (int i = 0; i < (sizeof(scan_resp_data) / sizeof(scan_resp_data[0])); i++) {
-        /* Add extra bytes required per entry, i.e.
-         * length (1 byte) + type (1 byte) = 2 bytes */
-        scan_resp_data_len += scan_resp_data[i].length + 2;
-    }
-    if (scan_resp_data_len > ESP_BLE_SCAN_RSP_DATA_LEN_MAX) {
-        ESP_LOGE(TAG, "Scan response data too long = %d bytes", scan_resp_data_len);
-        protocomm_ble_cleanup();
-        return ESP_ERR_NO_MEM;
-    }
-
-    /* Allocate memory for the raw scan response data */
-    protoble_internal->raw_scan_rsp_data_len = scan_resp_data_len;
-    protoble_internal->raw_scan_rsp_data_p = malloc(scan_resp_data_len);
-    if (protoble_internal->raw_scan_rsp_data_p == NULL) {
-        ESP_LOGE(TAG, "Error allocating memory for raw response data");
-        protocomm_ble_cleanup();
-        return ESP_ERR_NO_MEM;
-    }
-
-    /* Form the raw scan response data using above entries */
-    for (uint8_t i = 0, len = 0; i < (sizeof(scan_resp_data) / sizeof(scan_resp_data[0])); i++) {
-        protoble_internal->raw_scan_rsp_data_p[len++] = scan_resp_data[i].length + 1; // + 1 byte for type
-        protoble_internal->raw_scan_rsp_data_p[len++] = scan_resp_data[i].type;
-        memcpy(&protoble_internal->raw_scan_rsp_data_p[len],
-               scan_resp_data[i].data_p, scan_resp_data[i].length);
-        len += scan_resp_data[i].length;
-    }
+    // Config scan response data
+    scan_rsp_config.manufacturer_len = protocomm_ble_mfg_data_len;
+    scan_rsp_config.p_manufacturer_data = (uint8_t *) protocomm_ble_mfg_data;
 
     simple_ble_cfg_t *ble_config = simple_ble_init();
     if (ble_config == NULL) {
@@ -638,15 +546,14 @@ esp_err_t protocomm_ble_start(protocomm_t *pc, const protocomm_ble_config_t *con
     /* Set parameters required for advertising */
     ble_config->adv_params      = adv_params;
 
-    ble_config->raw_adv_data_p        = protoble_internal->raw_adv_data_p;
-    ble_config->raw_adv_data_len      = protoble_internal->raw_adv_data_len;
-    ble_config->raw_scan_rsp_data_p   = protoble_internal->raw_scan_rsp_data_p;
-    ble_config->raw_scan_rsp_data_len = protoble_internal->raw_scan_rsp_data_len;
+    ble_config->adv_data_p      = &adv_config;
+    ble_config->scan_rsp_data_p = &scan_rsp_config;
 
     ble_config->device_name     = protocomm_ble_device_name;
     ble_config->gatt_db_count   = populate_gatt_db(&ble_config->gatt_db);
 
     ble_config->ble_bonding = config->ble_bonding;
+    ble_config->ble_sm_sc   = config->ble_sm_sc;
 
     if (ble_config->gatt_db_count == -1) {
         ESP_LOGE(TAG, "Invalid GATT database count");
@@ -674,11 +581,24 @@ esp_err_t protocomm_ble_stop(protocomm_t *pc)
             (protoble_internal != NULL ) &&
             (pc == protoble_internal->pc_ble)) {
         esp_err_t ret = ESP_OK;
+
+#ifndef CONFIG_WIFI_PROV_KEEP_BLE_ON_AFTER_PROV
+	/* If flag is not enabled, stop the stack. */
         ret = simple_ble_stop();
         if (ret) {
             ESP_LOGE(TAG, "BLE stop failed");
         }
-        simple_ble_deinit();
+#else
+#ifdef CONFIG_WIFI_PROV_DISCONNECT_AFTER_PROV
+        /* Keep BT stack on, but terminate the connection after provisioning */
+	ret = simple_ble_disconnect();
+	if (ret) {
+	    ESP_LOGE(TAG, "BLE disconnect failed");
+	}
+	simple_ble_deinit();
+#endif  // CONFIG_WIFI_PROV_DISCONNECT_AFTER_PROV
+#endif  // CONFIG_WIFI_PROV_KEEP_BLE_ON_AFTER_PROV
+
         protocomm_ble_cleanup();
         return ret;
     }

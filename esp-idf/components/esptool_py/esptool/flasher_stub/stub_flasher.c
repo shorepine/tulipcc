@@ -1,20 +1,9 @@
 /*
- * Copyright (c) 2016-2021 Espressif Systems (Shanghai) CO LTD & Cesanta Software Limited
- * All rights reserved
+ * SPDX-FileCopyrightText: 2016 Cesanta Software Limited
  *
- * This file is part of the esptool.py binary flasher stub.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 2 of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
- * Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-FileContributor: 2016-2022 Espressif Systems (Shanghai) CO LTD
  */
 
 /*
@@ -167,7 +156,7 @@ void cmd_loop() {
          * ended. */
       }
       break;
-    #if ESP32S2_OR_LATER
+    #if ESP32S2_OR_LATER && !ESP32H2BETA2
     case ESP_GET_SECURITY_INFO:
       error = verify_data_len(command, 0) || handle_get_security_info();
       break;
@@ -396,7 +385,12 @@ void stub_main()
 
         spi_flash_attach();
 #else
+#if !ESP32C2
         uint32_t spiconfig = ets_efuse_get_spiconfig();
+#else
+        // ESP32C2 doesn't support get spiconfig.
+        uint32_t spiconfig = 0;
+#endif
         uint32_t strapping = READ_REG(GPIO_STRAP_REG);
         /* If GPIO1 (U0TXD) is pulled low and no other boot mode is
            set in efuse, assume HSPI flash mode (same as normal boot)

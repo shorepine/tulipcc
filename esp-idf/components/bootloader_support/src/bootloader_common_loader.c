@@ -22,6 +22,7 @@
 #include "soc/gpio_periph.h"
 #include "soc/rtc.h"
 #include "soc/efuse_reg.h"
+#include "hal/efuse_hal.h"
 #include "soc/soc_memory_types.h"
 #include "hal/gpio_ll.h"
 #include "esp_image_format.h"
@@ -69,7 +70,13 @@ esp_err_t bootloader_common_check_chip_validity(const esp_image_header_t* img_hd
     }
 
 #ifndef CONFIG_IDF_ENV_FPGA
-    uint8_t revision = bootloader_common_get_chip_revision();
+#if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32H2)
+    uint8_t revision = efuse_hal_get_major_chip_version();
+    // min_chip_rev keeps the MAJOR wafer version for these chips
+#else
+    uint8_t revision = efuse_hal_get_minor_chip_version();
+    // min_chip_rev keeps the MINOR wafer version for these chips
+#endif
     if (revision < img_hdr->min_chip_rev) {
         /* To fix this error, please update mininum supported chip revision from configuration,
          * located in TARGET (e.g. ESP32) specific options under "Component config" menu */
@@ -139,6 +146,8 @@ esp_err_t bootloader_common_get_partition_description(const esp_partition_pos_t 
 
 #define RTC_RETAIN_MEM_ADDR (SOC_RTC_DRAM_HIGH - sizeof(rtc_retain_mem_t))
 
+_Static_assert(RTC_RETAIN_MEM_ADDR >= SOC_RTC_DRAM_LOW, "rtc_retain_mem_t structure size is bigger than the RTC memory size. Consider reducing RTC reserved memory size.");
+
 rtc_retain_mem_t *const rtc_retain_mem = (rtc_retain_mem_t *)RTC_RETAIN_MEM_ADDR;
 
 #ifndef BOOTLOADER_BUILD
@@ -151,14 +160,25 @@ rtc_retain_mem_t *const rtc_retain_mem = (rtc_retain_mem_t *)RTC_RETAIN_MEM_ADDR
 SOC_RESERVE_MEMORY_REGION(RTC_RETAIN_MEM_ADDR, RTC_RETAIN_MEM_ADDR + sizeof(rtc_retain_mem_t), rtc_retain_mem);
 #endif
 
+static uint32_t rtc_retain_mem_size(void) {
+#ifdef CONFIG_BOOTLOADER_CUSTOM_RESERVE_RTC
+    /* A custom memory has been reserved by the user, do not consider this memory into CRC calculation as it may change without
+     * the have the user updating the CRC. Return the offset of the custom field, which is equivalent to size of the structure
+     * minus the size of everything after (including) `custom` */
+    return offsetof(rtc_retain_mem_t, custom);
+#else
+    return sizeof(rtc_retain_mem_t) - sizeof(rtc_retain_mem->crc);
+#endif
+}
+
 static bool check_rtc_retain_mem(void)
 {
-    return esp_rom_crc32_le(UINT32_MAX, (uint8_t*)rtc_retain_mem, sizeof(rtc_retain_mem_t) - sizeof(rtc_retain_mem->crc)) == rtc_retain_mem->crc && rtc_retain_mem->crc != UINT32_MAX;
+    return esp_rom_crc32_le(UINT32_MAX, (uint8_t*)rtc_retain_mem, rtc_retain_mem_size()) == rtc_retain_mem->crc && rtc_retain_mem->crc != UINT32_MAX;
 }
 
 static void update_rtc_retain_mem_crc(void)
 {
-    rtc_retain_mem->crc = esp_rom_crc32_le(UINT32_MAX, (uint8_t*)rtc_retain_mem, sizeof(rtc_retain_mem_t) - sizeof(rtc_retain_mem->crc));
+    rtc_retain_mem->crc = esp_rom_crc32_le(UINT32_MAX, (uint8_t*)rtc_retain_mem, rtc_retain_mem_size());
 }
 
 void bootloader_common_reset_rtc_retain_mem(void)

@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/protobuf-c/protobuf-c.png?branch=master)](https://travis-ci.org/protobuf-c/protobuf-c) [![Coverage Status](https://coveralls.io/repos/protobuf-c/protobuf-c/badge.png)](https://coveralls.io/r/protobuf-c/protobuf-c)
+[![Build Status](https://github.com/protobuf-c/protobuf-c/actions/workflows/build.yml/badge.svg)](https://github.com/protobuf-c/protobuf-c/actions) [![Coverage Status](https://coveralls.io/repos/protobuf-c/protobuf-c/badge.png)](https://coveralls.io/r/protobuf-c/protobuf-c)
 
 ## Overview
 
@@ -20,9 +20,15 @@ If building from a git checkout, the `autotools` (`autoconf`, `automake`, `libto
 
     ./autogen.sh && ./configure && make && make install
 
+## Test
+
+If you want to execute test cases individually, please run the following command after running `./configure` once:
+
+     make check
+	 
 ## Documentation
 
-See the [online Doxygen documentation here](http://lib.protobuf-c.io) or [the Wiki](https://github.com/protobuf-c/protobuf-c/wiki) for a detailed reference. The Doxygen documentation can be built from the source tree by running:
+See the [online Doxygen documentation here](https://protobuf-c.github.io/protobuf-c) or [the Wiki](https://github.com/protobuf-c/protobuf-c/wiki) for a detailed reference. The Doxygen documentation can be built from the source tree by running:
 
     make html
 

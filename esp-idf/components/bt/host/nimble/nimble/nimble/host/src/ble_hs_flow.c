@@ -92,7 +92,7 @@ ble_hs_flow_tx_num_comp_pkts(void)
              * response from the controller, so don't use the normal blocking
              * HCI API when sending it.
              */
-            rc = ble_hs_hci_cmd_send_buf(
+            rc = ble_hs_hci_cmd_tx_no_rsp(
                 BLE_HCI_OP(BLE_HCI_OGF_CTLR_BASEBAND,
                            BLE_HCI_OCF_CB_HOST_NUM_COMP_PKTS),
                 buf, sizeof(buf));

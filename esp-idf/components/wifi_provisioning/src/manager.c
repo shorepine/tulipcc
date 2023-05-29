@@ -1,16 +1,8 @@
-// Copyright 2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2019-2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <string.h>
 #include <sys/param.h>
@@ -623,8 +615,10 @@ static bool wifi_prov_mgr_stop_service(bool blocking)
          * released - some duration after - returning from a call to
          * wifi_prov_mgr_stop_provisioning(), like when it is called
          * inside a protocomm handler */
-        assert(xTaskCreate(prov_stop_task, "prov_stop_task", 4096, (void *)1,
-                           tskIDLE_PRIORITY, NULL) == pdPASS);
+        if (xTaskCreate(prov_stop_task, "prov_stop_task", 4096, (void *)1, tskIDLE_PRIORITY, NULL) != pdPASS) {
+            ESP_LOGE(TAG, "Failed to create prov_stop_task!");
+            abort();
+        }
         ESP_LOGD(TAG, "Provisioning scheduled for stopping");
     }
     return true;
@@ -708,16 +702,17 @@ static esp_err_t update_wifi_scan_results(void)
         goto exit;
     }
 
-    prov_ctx->ap_list[curr_channel] = (wifi_ap_record_t *) calloc(count, sizeof(wifi_ap_record_t));
+    uint16_t get_count = MIN(count, MAX_SCAN_RESULTS);
+    prov_ctx->ap_list[curr_channel] = (wifi_ap_record_t *) calloc(get_count, sizeof(wifi_ap_record_t));
     if (!prov_ctx->ap_list[curr_channel]) {
         ESP_LOGE(TAG, "Failed to allocate memory for AP list");
         goto exit;
     }
-    if (esp_wifi_scan_get_ap_records(&count, prov_ctx->ap_list[curr_channel]) != ESP_OK) {
+    if (esp_wifi_scan_get_ap_records(&get_count, prov_ctx->ap_list[curr_channel]) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to get scanned AP records");
         goto exit;
     }
-    prov_ctx->ap_list_len[curr_channel] = count;
+    prov_ctx->ap_list_len[curr_channel] = get_count;
 
     if (prov_ctx->channels_per_group) {
         ESP_LOGD(TAG, "Scan results for channel %d :", curr_channel);
@@ -740,7 +735,7 @@ static esp_err_t update_wifi_scan_results(void)
 
     /* Store results in sorted list */
     {
-        int rc = MIN(count, MAX_SCAN_RESULTS);
+        int rc = get_count;
         int is = MAX_SCAN_RESULTS - rc - 1;
         while (rc > 0 && is >= 0) {
             if (prov_ctx->ap_list_sorted[is]) {
@@ -869,7 +864,6 @@ static void wifi_prov_mgr_event_handler_internal(
         case WIFI_REASON_AUTH_EXPIRE:
         case WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT:
         case WIFI_REASON_AUTH_FAIL:
-        case WIFI_REASON_ASSOC_EXPIRE:
         case WIFI_REASON_HANDSHAKE_TIMEOUT:
         case WIFI_REASON_MIC_FAILURE:
             ESP_LOGE(TAG, "STA Auth Error");

@@ -14,17 +14,18 @@ Coding Standards
 
 Making a Contribution
 ---------------------
-1. [Check for open issues](https://github.com/ARMmbed/mbedtls/issues) or [start a discussion](https://lists.trustedfirmware.org/mailman/listinfo/mbed-tls) around a feature idea or a bug.
-1. Fork the [Mbed TLS repository on GitHub](https://github.com/ARMmbed/mbedtls) to start making your changes. As a general rule, you should use the ["development" branch](https://github.com/ARMmbed/mbedtls/tree/development) as a basis.
+1. [Check for open issues](https://github.com/Mbed-TLS/mbedtls/issues) or [start a discussion](https://lists.trustedfirmware.org/mailman3/lists/mbed-tls.lists.trustedfirmware.org) around a feature idea or a bug.
+1. Fork the [Mbed TLS repository on GitHub](https://github.com/Mbed-TLS/mbedtls) to start making your changes. As a general rule, you should use the ["development" branch](https://github.com/Mbed-TLS/mbedtls/tree/development) as a basis.
 1. Write a test which shows that the bug was fixed or that the feature works as expected.
 1. Send a pull request (PR) and work with us until it gets merged and published. Contributions may need some modifications, so a few rounds of review and fixing may be necessary. We will include your name in the ChangeLog :)
 1. For quick merging, the contribution should be short, and concentrated on a single feature or topic. The larger the contribution is, the longer it would take to review it and merge it.
 1. All new files should include the [Apache-2.0](https://spdx.org/licenses/Apache-2.0.html) standard license header where possible.
 1. Ensure that each commit has at least one `Signed-off-by:` line from the committer. If anyone else contributes to the commit, they should also add their own `Signed-off-by:` line. By adding this line, contributor(s) certify that the contribution is made under the terms of the [Developer Certificate of Origin](dco.txt). The contribution licensing is described in the [License section of the README](README.md#License).
 
-API/ABI Compatibility
----------------------
-The project aims to minimise the impact on users upgrading to newer versions of the library and it should not be necessary for a user to make any changes to their own code to work with a newer version of the library. Unless the user has made an active decision to use newer features, a newer generation of the library or a change has been necessary due to a security issue or other significant software defect, no modifications to their own code should be necessary. To achieve this, API compatibility is maintained between different versions of Mbed TLS on the main development branch and in LTS (Long Term Support) branches.
+Backwards Compatibility
+-----------------------
+
+The project aims to minimise the impact on users upgrading to newer versions of the library and it should not be necessary for a user to make any changes to their own code to work with a newer version of the library. Unless the user has made an active decision to use newer features, a newer generation of the library or a change has been necessary due to a security issue or other significant software defect, no modifications to their own code should be necessary. To achieve this, API compatibility is maintained between different versions of Mbed TLS on the main development branch and in LTS (Long Term Support) branches, as described in [BRANCHES.md](BRANCHES.md).
 
 To minimise such disruption to users, where a change to the interface is required, all changes to the ABI or API, even on the main development branch where new features are added, need to be justifiable by either being a significant enhancement, new feature or bug fix which is best resolved by an interface change.
 
@@ -46,12 +47,10 @@ When backporting to these branches please observe the following rules:
 1. All bug fixes that correct a defect that is also present in an LTS branch must be backported to that LTS branch. If a bug fix introduces a change to the API such as a new function, the fix should be reworked to avoid the API change. API changes without very strong justification are unlikely to be accepted.
 1. If a contribution is a new feature or enhancement, no backporting is required. Exceptions to this may be additional test cases or quality improvements such as changes to build or test scripts.
 
-It would be highly appreciated if contributions are backported to LTS branches in addition to the [development branch](https://github.com/ARMmbed/mbedtls/tree/development) by contributors.
+It would be highly appreciated if contributions are backported to LTS branches in addition to the [development branch](https://github.com/Mbed-TLS/mbedtls/tree/development) by contributors.
 
-Currently maintained LTS branches are:
-1. [mbedtls-2.7](https://github.com/ARMmbed/mbedtls/tree/mbedtls-2.7)
-1. [mbedtls-2.16](https://github.com/ARMmbed/mbedtls/tree/mbedtls-2.16)
-
+The list of maintained branches can be found in the [Current Branches section
+of BRANCHES.md](BRANCHES.md#current-branches).
 
 Tests
 -----
@@ -69,7 +68,7 @@ Continuous Integration Tests
 ----------------------------
 Once a PR has been made, the Continuous Integration (CI) tests are triggered and run. You should follow the result of the CI tests, and fix failures.
 
-It is advised to enable the [githooks scripts](https://github.com/ARMmbed/mbedtls/tree/development/tests/git-scripts) prior to pushing your changes, for catching some of the issues as early as possible.
+It is advised to enable the [githooks scripts](https://github.com/Mbed-TLS/mbedtls/tree/development/tests/git-scripts) prior to pushing your changes, for catching some of the issues as early as possible.
 
 Documentation
 -------------
@@ -79,4 +78,4 @@ Mbed TLS is well documented, but if you think documentation is needed, speak out
 1. Complex parts in the code should include comments.
 1. If needed, a Readme file is advised.
 1. If a [Knowledge Base (KB)](https://tls.mbed.org/kb) article should be added, write this as a comment in the PR description.
-1. A [ChangeLog](https://github.com/ARMmbed/mbedtls/blob/development/ChangeLog.d/00README.md) entry should be added for this contribution.
+1. A [ChangeLog](https://github.com/Mbed-TLS/mbedtls/blob/development/ChangeLog.d/00README.md) entry should be added for this contribution.

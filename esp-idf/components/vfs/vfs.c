@@ -415,7 +415,7 @@ int esp_vfs_open(struct _reent *r, const char * path, int flags, int mode)
         __errno_r(r) = ENOMEM;
         return -1;
     }
-    __errno_r(r) = ENOENT;
+    __errno_r(r) = errno;
     return -1;
 }
 
@@ -787,6 +787,20 @@ int esp_vfs_truncate(const char *path, off_t length)
     return ret;
 }
 
+int esp_vfs_ftruncate(int fd, off_t length)
+{
+    const vfs_entry_t* vfs = get_vfs_for_fd(fd);
+    int local_fd = get_local_fd(vfs, fd);
+    struct _reent* r = __getreent();
+    if (vfs == NULL || local_fd < 0) {
+        __errno_r(r) = EBADF;
+        return -1;
+    }
+    int ret;
+    CHECK_AND_CALL(ret, r, vfs, ftruncate, local_fd, length);
+    return ret;
+}
+
 #endif // CONFIG_VFS_SUPPORT_DIR
 
 #ifdef CONFIG_VFS_SUPPORT_SELECT
@@ -1039,8 +1053,16 @@ int esp_vfs_select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *errorfds
     if (ret >= 0) {
         ret += set_global_fd_sets(vfs_fds_triple, vfs_count, readfds, writefds, errorfds);
     }
-    if (sel_sem.is_sem_local && sel_sem.sem) {
-        vSemaphoreDelete(sel_sem.sem);
+    if (sel_sem.sem) { // Cleanup the select semaphore
+        if (sel_sem.is_sem_local) {
+            vSemaphoreDelete(sel_sem.sem);
+        } else if (socket_select) {
+            SemaphoreHandle_t *s = sel_sem.sem;
+            /* Select might have been triggered from both lwip and vfs fds at the same time, and
+             * we have to make sure that the lwip semaphore is cleared when we exit select().
+             * It is safe, as the semaphore belongs to the calling thread. */
+            xSemaphoreTake(*s, 0);
+        }
         sel_sem.sem = NULL;
     }
     _lock_acquire(&s_fd_table_lock);
@@ -1251,6 +1273,8 @@ int _rename_r(struct _reent *r, const char *src, const char *dst)
     __attribute__((alias("esp_vfs_rename")));
 int truncate(const char *path, off_t length)
     __attribute__((alias("esp_vfs_truncate")));
+int ftruncate(int fd, off_t length)
+    __attribute__((alias("esp_vfs_ftruncate")));
 int access(const char *path, int amode)
     __attribute__((alias("esp_vfs_access")));
 int utime(const char *path, const struct utimbuf *times)

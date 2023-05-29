@@ -1,19 +1,10 @@
 #!/usr/bin/env python
 # This file describes eFuses fields and registers for ESP32-C3 chip
 #
-# Copyright (C) 2020 Espressif Systems (Shanghai) PTE LTD
+# SPDX-FileCopyrightText: 2020-2022 Espressif Systems (Shanghai) CO LTD
 #
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
-# Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 from __future__ import division, print_function
 
 from ..mem_definition_base import EfuseBlocksBase, EfuseFieldsBase, EfuseRegistersBase
@@ -49,19 +40,35 @@ class EfuseDefineRegisters(EfuseRegistersBase):
     EFUSE_PGM_CMD           = 0x2
     EFUSE_READ_CMD          = 0x1
 
-    BLOCK_ERRORS = [
-        # error_reg,               err_num_mask, err_num_offs,     fail_bit
-        (EFUSE_RD_REPEAT_ERR0_REG, None,         None,             None),  # BLOCK0
-        (EFUSE_RD_RS_ERR0_REG,     0x7,          4,                7),     # MAC_SPI_8M_0
-        (EFUSE_RD_RS_ERR0_REG,     0x7,          8,                11),    # BLOCK_SYS_DATA
-        (EFUSE_RD_RS_ERR0_REG,     0x7,          12,               15),    # BLOCK_USR_DATA
-        (EFUSE_RD_RS_ERR0_REG,     0x7,          16,               19),    # BLOCK_KEY0
-        (EFUSE_RD_RS_ERR0_REG,     0x7,          20,               23),    # BLOCK_KEY1
-        (EFUSE_RD_RS_ERR0_REG,     0x7,          24,               27),    # BLOCK_KEY2
-        (EFUSE_RD_RS_ERR0_REG,     0x7,          28,               31),    # BLOCK_KEY3
-        (EFUSE_RD_RS_ERR1_REG,     0x7,          0,                3),     # BLOCK_KEY4
-        (EFUSE_RD_RS_ERR1_REG,     0x7,          4,                7),     # BLOCK_KEY5
-        (EFUSE_RD_RS_ERR1_REG,     None,         None,             None),  # BLOCK_SYS_DATA2
+    # this chip has a design error so fail_bit is shifted by one block but err_num is in the correct place
+    BLOCK_FAIL_BIT = [
+        # error_reg,                fail_bit
+        (EFUSE_RD_REPEAT_ERR0_REG,  None),  # BLOCK0
+        (EFUSE_RD_RS_ERR0_REG,      7),     # MAC_SPI_8M_0
+        (EFUSE_RD_RS_ERR0_REG,      11),    # BLOCK_SYS_DATA
+        (EFUSE_RD_RS_ERR0_REG,      15),    # BLOCK_USR_DATA
+        (EFUSE_RD_RS_ERR0_REG,      19),    # BLOCK_KEY0
+        (EFUSE_RD_RS_ERR0_REG,      23),    # BLOCK_KEY1
+        (EFUSE_RD_RS_ERR0_REG,      27),    # BLOCK_KEY2
+        (EFUSE_RD_RS_ERR0_REG,      31),    # BLOCK_KEY3
+        (EFUSE_RD_RS_ERR1_REG,      3),     # BLOCK_KEY4
+        (EFUSE_RD_RS_ERR1_REG,      7),     # BLOCK_KEY5
+        (EFUSE_RD_RS_ERR1_REG,      None),  # BLOCK_SYS_DATA2
+    ]
+
+    BLOCK_NUM_ERRORS = [
+        # error_reg,               err_num_mask, err_num_offs
+        (EFUSE_RD_REPEAT_ERR0_REG, None,         None),  # BLOCK0
+        (EFUSE_RD_RS_ERR0_REG,     0x7,          0),     # MAC_SPI_8M_0
+        (EFUSE_RD_RS_ERR0_REG,     0x7,          4),     # BLOCK_SYS_DATA
+        (EFUSE_RD_RS_ERR0_REG,     0x7,          8),     # BLOCK_USR_DATA
+        (EFUSE_RD_RS_ERR0_REG,     0x7,          12),    # BLOCK_KEY0
+        (EFUSE_RD_RS_ERR0_REG,     0x7,          16),    # BLOCK_KEY1
+        (EFUSE_RD_RS_ERR0_REG,     0x7,          20),    # BLOCK_KEY2
+        (EFUSE_RD_RS_ERR0_REG,     0x7,          24),    # BLOCK_KEY3
+        (EFUSE_RD_RS_ERR0_REG,     0x7,          28),    # BLOCK_KEY4
+        (EFUSE_RD_RS_ERR1_REG,     0x7,          0),     # BLOCK_KEY5
+        (EFUSE_RD_RS_ERR1_REG,     0x7,          4),     # BLOCK_SYS_DATA2
     ]
 
     # EFUSE_WR_TIM_CONF2_REG
@@ -116,12 +123,7 @@ class EfuseDefineFields(EfuseFieldsBase):
         ("DIS_DOWNLOAD_ICACHE",          "config",   0,  1,  10, "bool",     2,    None, None,         "Disables Icache when SoC is in Download mode", None),
         ("DIS_USB_DEVICE",           "usb config",   0,  1,  11, "bool",     2,    None, None,         "Disables USB DEVICE", None),
         ("DIS_FORCE_DOWNLOAD",           "config",   0,  1,  12, "bool",     2,    None, None,         "Disables forcing chip into Download mode", None),
-        ("DIS_USB",                  "usb config",   0,  1,  13, "bool",     2,    None, None,         "Disables the USB OTG hardware", None),
         ("DIS_CAN",                      "config",   0,  1,  14, "bool",     2,    None, None,         "Disables the TWAI Controller hardware", None),
-        ("JTAG_SEL_ENABLE",         "jtag config",   0,  1,  15, "bool",     2,    None, None,         "Set this bit to enable selection between "
-                                                                                                       "usb_to_jtag and pad_to_jtag through strapping "
-                                                                                                       "gpio10 when both reg_dis_usb_jtag and "
-                                                                                                       "reg_dis_pad_jtag are equal to 0.", None),
         ("SOFT_DIS_JTAG",           "jtag config",   0,  1,  16, "uint:3",   2,    None, None,         "Software disables JTAG. When software disabled, "
                                                                                                        "JTAG can be activated temporarily by HMAC peripheral",
                                                                                                        None),
@@ -158,14 +160,10 @@ class EfuseDefineFields(EfuseFieldsBase):
                                                                                                        "unit is (ms/2). When the value is 15, delay is 7.5 ms",
                                                                                                        None),
         ("DIS_DOWNLOAD_MODE",            "security", 0,  4, 0,   "bool",     18,   None, None,         "Disables all Download boot modes", None),
-        ("DIS_LEGACY_SPI_BOOT",          "config",   0,  4, 1,   "bool",     18,   None, None,         "Disables Legacy SPI boot mode", None),
-        ("UART_PRINT_CHANNEL",           "config",   0,  4, 2,   "bool",     18,   None, None,         "Selects the default UART for printing boot msg",
-         {0: "UART0",
-          1: "UART1"}),
-        ("FLASH_ECC_MODE",         "flash config",   0,  4, 3,   "bool",     18,   None, None,         "Set this bit to set flsah ecc mode.",
-         {0: "flash ecc 16to18 byte mode",
-          1: "flash ecc 16to17 byte mode"}),
-        ("DIS_USB_DOWNLOAD_MODE",    "usb config",   0,  4, 4,   "bool",     18,   None, None,         "Disables use of USB in UART download boot mode", None),
+        ("DIS_DIRECT_BOOT",              "config",   0,  4, 1,   "bool",     18,   None, None,         "Disables direct boot mode", None),
+        ("DIS_USB_SERIAL_JTAG_ROM_PRINT", "config",  0,  4, 2,   "bool",     18,   None, None,         "Disables USB-Serial-JTAG ROM printing", None),
+        ("DIS_USB_SERIAL_JTAG_DOWNLOAD_MODE", "usb config", 0, 4, 4, "bool", 18,   None, None,         "Disables USB-Serial-JTAG download feature in "
+                                                                                                       "UART download boot mode", None),
         ("ENABLE_SECURITY_DOWNLOAD",   "security",   0,  4, 5,   "bool",     18,   None, None,         "Enables secure UART download mode "
                                                                                                        "(read/write flash only)", None),
         ("UART_PRINT_CONTROL",           "config",   0,  4, 6,   "uint:2",   18,   None, None,         "Sets the default UART boot message output mode",
@@ -173,18 +171,13 @@ class EfuseDefineFields(EfuseFieldsBase):
           1: "Enable when GPIO8 is low at reset",
           2: "Enable when GPIO8 is high at reset",
           3: "Disabled"}),
-        ("PIN_POWER_SELECTION",  "VDD_SPI config",   0,  4, 8,   "bool",     18,   None, None,         "GPIO33-GPIO37 power supply selection in ROM code",
-         {0: "VDD3P3_CPU",
-          1: "VDD_SPI"}),
-        ("FLASH_TYPE",             "flash config",   0,  4, 9,   "bool",     18,   None, None,         "Selects SPI flash type",
-         {0: "4 data lines",
-          1: "8 data lines"}),
-        ("FLASH_PAGE_SIZE",        "flash config",   0,  4, 10,  "uint:2",   18,   None, None,         "Flash page size", None),
-        ("FLASH_ECC_EN",           "flash config",   0,  4, 12,  "bool",     18,   None, None,         "Enable ECC for flash boot", None),
         ("FORCE_SEND_RESUME",            "config",   0,  4, 13,  "bool",     18,   None, None,         "Force ROM code to send a resume command during SPI boot"
                                                                                                        "during SPI boot", None),
         ("SECURE_VERSION",             "identity",   0,  4, 14,  "uint:16",  18,   None, "bitcount",   "Secure version (used by ESP-IDF anti-rollback feature)",
                                                                                                        None),
+        ("ERR_RST_ENABLE",               "config",   0,  4, 31,  "bool",     19,   None, None,         "Use BLOCK0 to check error record registers",
+         {0: "without check",
+          1: "with check"}),
         #
         # Table 53: Parameters in BLOCK1-10
         # Name                          Category  Block Word Pos  Type:len WR_DIS RD_DIS Class         Description                Dictionary

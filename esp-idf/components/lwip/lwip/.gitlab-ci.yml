@@ -21,8 +21,14 @@ run_lwip_unittests:
     - host_test
   dependencies: []
   script:
+    # Add gitlab ssh key
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo -n $GITLAB_KEY > ~/.ssh/id_rsa_base64
+    - base64 --decode --ignore-garbage ~/.ssh/id_rsa_base64 > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - echo -e "Host gitlab.espressif.cn\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
     # have to clone lwip-contrib repo, as it contains unit test infrastructure
-    - cit_add_ssh_key "${GITLAB_KEY}" "$(cit_parse_url_host ${LWIP_CONTRIB_MIRROR})" "$(cit_parse_url_port ${LWIP_CONTRIB_MIRROR})"
     - git clone "${LWIP_CONTRIB_MIRROR}" lwip-contrib && cd lwip-contrib && git checkout tags/${LWIP_CONTRIB_TAG}
     - cd ports/unix/check/
     # updating environment

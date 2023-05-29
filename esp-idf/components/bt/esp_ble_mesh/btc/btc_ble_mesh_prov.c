@@ -120,7 +120,7 @@ void btc_ble_mesh_prov_arg_deep_copy(btc_msg_t *msg, void *p_dest, void *p_src)
     }
 }
 
-static void btc_ble_mesh_prov_arg_deep_free(btc_msg_t *msg)
+void btc_ble_mesh_prov_arg_deep_free(btc_msg_t *msg)
 {
     btc_ble_mesh_prov_args_t *arg = NULL;
 
@@ -196,7 +196,7 @@ void btc_ble_mesh_model_arg_deep_copy(btc_msg_t *msg, void *p_dest, void *p_src)
     }
 }
 
-static void btc_ble_mesh_model_arg_deep_free(btc_msg_t *msg)
+void btc_ble_mesh_model_arg_deep_free(btc_msg_t *msg)
 {
     btc_ble_mesh_model_args_t *arg = NULL;
 
@@ -368,8 +368,8 @@ static bt_status_t btc_ble_mesh_model_callback(esp_ble_mesh_model_cb_param_t *pa
     msg.pid = BTC_PID_MODEL;
     msg.act = act;
 
-    ret = btc_transfer_context(&msg, param, sizeof(esp_ble_mesh_model_cb_param_t),
-                               btc_ble_mesh_model_copy_req_data);
+    ret = btc_transfer_context(&msg, param, param == NULL ? 0 : sizeof(esp_ble_mesh_model_cb_param_t),
+                               btc_ble_mesh_model_copy_req_data, btc_ble_mesh_model_free_req_data);
     if (ret != BT_STATUS_SUCCESS) {
         BT_ERR("btc_transfer_context failed");
     }
@@ -528,7 +528,7 @@ static bt_status_t btc_ble_mesh_prov_callback(esp_ble_mesh_prov_cb_param_t *para
     msg.pid = BTC_PID_PROV;
     msg.act = act;
 
-    ret = btc_transfer_context(&msg, param, sizeof(esp_ble_mesh_prov_cb_param_t), NULL);
+    ret = btc_transfer_context(&msg, param, param == NULL ? 0 : sizeof(esp_ble_mesh_prov_cb_param_t), NULL, NULL);
     if (ret != BT_STATUS_SUCCESS) {
         BT_ERR("btc_transfer_context failed");
     }
@@ -1001,6 +1001,41 @@ static void btc_ble_mesh_proxy_client_filter_status_recv_cb(uint8_t conn_handle,
     return;
 }
 #endif /* CONFIG_BLE_MESH_GATT_PROXY_CLIENT */
+
+#if CONFIG_BLE_MESH_GATT_PROXY_SERVER
+static void btc_ble_mesh_proxy_server_connect_cb(uint8_t conn_handle)
+{
+    esp_ble_mesh_prov_cb_param_t mesh_param = {0};
+
+    if (conn_handle >= BLE_MESH_MAX_CONN) {
+        BT_ERR("%s, Invalid parameter", __func__);
+        return;
+    }
+
+    BT_DBG("%s", __func__);
+
+    mesh_param.proxy_server_connected.conn_handle = conn_handle;
+
+    btc_ble_mesh_prov_callback(&mesh_param, ESP_BLE_MESH_PROXY_SERVER_CONNECTED_EVT);
+}
+
+static void btc_ble_mesh_proxy_server_disconnect_cb(uint8_t conn_handle, uint8_t reason)
+{
+    esp_ble_mesh_prov_cb_param_t mesh_param = {0};
+
+    if (conn_handle >= BLE_MESH_MAX_CONN) {
+        BT_ERR("%s, Invalid parameter", __func__);
+        return;
+    }
+
+    BT_DBG("%s", __func__);
+
+    mesh_param.proxy_server_disconnected.conn_handle = conn_handle;
+    mesh_param.proxy_server_disconnected.reason = reason;
+
+    btc_ble_mesh_prov_callback(&mesh_param, ESP_BLE_MESH_PROXY_SERVER_DISCONNECTED_EVT);
+}
+#endif /* CONFIG_BLE_MESH_GATT_PROXY_SERVER */
 
 int btc_ble_mesh_client_model_init(esp_ble_mesh_model_t *model)
 {
@@ -1769,6 +1804,10 @@ void btc_ble_mesh_prov_call_handler(btc_msg_t *msg)
         bt_mesh_proxy_client_set_disconn_cb(btc_ble_mesh_proxy_client_disconnect_cb);
         bt_mesh_proxy_client_set_filter_status_cb(btc_ble_mesh_proxy_client_filter_status_recv_cb);
 #endif /* CONFIG_BLE_MESH_GATT_PROXY_CLIENT */
+#if CONFIG_BLE_MESH_GATT_PROXY_SERVER
+        bt_mesh_proxy_server_set_conn_cb(btc_ble_mesh_proxy_server_connect_cb);
+        bt_mesh_proxy_server_set_disconn_cb(btc_ble_mesh_proxy_server_disconnect_cb);
+#endif /* CONFIG_BLE_MESH_GATT_PROXY_SERVER */
         int err_code = bt_mesh_init((struct bt_mesh_prov *)arg->mesh_init.prov,
                                     (struct bt_mesh_comp *)arg->mesh_init.comp);
         /* Give the semaphore when BLE Mesh initialization is finished. */

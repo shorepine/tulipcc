@@ -63,7 +63,7 @@ typedef struct {
     portMUX_TYPE rmt_spinlock; // Mutex lock for protecting concurrent register/unregister of RMT channels' ISR
     rmt_isr_handle_t rmt_driver_intr_handle;
     rmt_tx_end_callback_t rmt_tx_end_callback;// Event called when transmission is ended
-    uint8_t rmt_driver_channels; // Bitmask of installed drivers' channels
+    uint8_t rmt_driver_channels; // Bitmask of installed drivers' channels, used to protect concurrent register/unregister of RMT channels' ISR
     bool rmt_module_enabled;
     uint32_t synchro_channel_mask; // Bitmap of channels already added in the synchronous group
 } rmt_contex_t;
@@ -795,16 +795,19 @@ static void IRAM_ATTR rmt_driver_isr_default(void *arg)
             }
             const rmt_item32_t *pdata = p_rmt->tx_data;
             size_t len_rem = p_rmt->tx_len_rem;
+            rmt_idle_level_t idle_level = rmt_ll_tx_get_idle_level(hal->regs, channel);
+            rmt_item32_t stop_data = (rmt_item32_t) {
+                .level0 = idle_level,
+                .duration0 = 0,
+            };
             if (len_rem >= p_rmt->tx_sub_len) {
                 rmt_fill_memory(channel, pdata, p_rmt->tx_sub_len, p_rmt->tx_offset);
                 p_rmt->tx_data += p_rmt->tx_sub_len;
                 p_rmt->tx_len_rem -= p_rmt->tx_sub_len;
             } else if (len_rem == 0) {
-                rmt_item32_t stop_data = {0};
                 rmt_ll_write_memory(rmt_contex.hal.mem, channel, &stop_data, 1, p_rmt->tx_offset);
             } else {
                 rmt_fill_memory(channel, pdata, len_rem, p_rmt->tx_offset);
-                rmt_item32_t stop_data = {0};
                 rmt_ll_write_memory(rmt_contex.hal.mem, channel, &stop_data, 1, p_rmt->tx_offset + len_rem);
                 p_rmt->tx_data += len_rem;
                 p_rmt->tx_len_rem -= len_rem;
@@ -948,7 +951,7 @@ esp_err_t rmt_driver_uninstall(rmt_channel_t channel)
 {
     esp_err_t err = ESP_OK;
     ESP_RETURN_ON_FALSE(channel < RMT_CHANNEL_MAX, ESP_ERR_INVALID_ARG, TAG, RMT_CHANNEL_ERROR_STR);
-    ESP_RETURN_ON_FALSE(rmt_contex.rmt_driver_channels & BIT(channel), ESP_ERR_INVALID_STATE, TAG, "No RMT driver for this channel");
+    // we allow to call this uninstall function on the same channel for multiple times
     if (p_rmt_obj[channel] == NULL) {
         return ESP_OK;
     }
@@ -974,17 +977,13 @@ esp_err_t rmt_driver_uninstall(rmt_channel_t channel)
 
     _lock_acquire_recursive(&(rmt_contex.rmt_driver_isr_lock));
     rmt_contex.rmt_driver_channels &= ~BIT(channel);
-    if (rmt_contex.rmt_driver_channels == 0) {
+    if (rmt_contex.rmt_driver_channels == 0 && rmt_contex.rmt_driver_intr_handle) {
         rmt_module_disable();
         // all channels have driver disabled
         err = rmt_isr_deregister(rmt_contex.rmt_driver_intr_handle);
         rmt_contex.rmt_driver_intr_handle = NULL;
     }
     _lock_release_recursive(&(rmt_contex.rmt_driver_isr_lock));
-
-    if (err != ESP_OK) {
-        return err;
-    }
 
     if (p_rmt_obj[channel]->tx_sem) {
         vSemaphoreDelete(p_rmt_obj[channel]->tx_sem);
@@ -1011,13 +1010,12 @@ esp_err_t rmt_driver_uninstall(rmt_channel_t channel)
 
     free(p_rmt_obj[channel]);
     p_rmt_obj[channel] = NULL;
-    return ESP_OK;
+    return err;
 }
 
 esp_err_t rmt_driver_install(rmt_channel_t channel, size_t rx_buf_size, int intr_alloc_flags)
 {
     ESP_RETURN_ON_FALSE(channel < RMT_CHANNEL_MAX, ESP_ERR_INVALID_ARG, TAG, RMT_CHANNEL_ERROR_STR);
-    ESP_RETURN_ON_FALSE((rmt_contex.rmt_driver_channels & BIT(channel)) == 0, ESP_ERR_INVALID_STATE, TAG, "RMT driver already installed for channel");
 
     esp_err_t err = ESP_OK;
 
@@ -1025,6 +1023,13 @@ esp_err_t rmt_driver_install(rmt_channel_t channel, size_t rx_buf_size, int intr
         ESP_LOGD(TAG, "RMT driver already installed");
         return ESP_ERR_INVALID_STATE;
     }
+
+#if CONFIG_RINGBUF_PLACE_ISR_FUNCTIONS_INTO_FLASH
+            if (intr_alloc_flags & ESP_INTR_FLAG_IRAM ) {
+                ESP_LOGE(TAG, "ringbuf ISR functions in flash, but used in IRAM interrupt");
+                return ESP_ERR_INVALID_ARG;
+            }
+#endif
 
 #if !CONFIG_SPIRAM_USE_MALLOC
     p_rmt_obj[channel] = calloc(1, sizeof(rmt_obj_t));
@@ -1140,7 +1145,11 @@ esp_err_t rmt_write_items(rmt_channel_t channel, const rmt_item32_t *rmt_item, i
         p_rmt->tx_sub_len = item_sub_len;
     } else {
         rmt_fill_memory(channel, rmt_item, len_rem, 0);
-        rmt_item32_t stop_data = {0};
+        rmt_idle_level_t idle_level = rmt_ll_tx_get_idle_level(rmt_contex.hal.regs, channel);
+        rmt_item32_t stop_data = (rmt_item32_t) {
+            .level0 = idle_level,
+            .duration0 = 0,
+        };
         rmt_ll_write_memory(rmt_contex.hal.mem, channel, &stop_data, 1, len_rem);
         p_rmt->tx_len_rem = 0;
     }
@@ -1276,7 +1285,11 @@ esp_err_t rmt_write_sample(rmt_channel_t channel, const uint8_t *src, size_t src
         p_rmt->tx_sub_len = item_sub_len;
         p_rmt->translator = true;
     } else {
-        rmt_item32_t stop_data = {0};
+        rmt_idle_level_t idle_level = rmt_ll_tx_get_idle_level(rmt_contex.hal.regs, channel);
+        rmt_item32_t stop_data = (rmt_item32_t) {
+            .level0 = idle_level,
+            .duration0 = 0,
+        };
         rmt_ll_write_memory(rmt_contex.hal.mem, channel, &stop_data, 1, p_rmt->tx_len_rem);
         p_rmt->tx_len_rem = 0;
         p_rmt->sample_cur = NULL;

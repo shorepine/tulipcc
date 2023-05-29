@@ -54,6 +54,12 @@
 
 #if LWIP_IPV6 && LWIP_IPV6_REASS  /* don't build if not configured for use in lwipopts.h */
 
+#include "lwip/timeouts.h"
+
+#if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
+#include "stdbool.h"
+static bool is_tmr_start = false;
+#endif /* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
 
 /** Setting this to 0, you can turn off checking the fragments for overlapping
  * regions. The code gets a little smaller. Only use this if you know that
@@ -109,10 +115,24 @@ static void ip6_reass_free_complete_datagram(struct ip6_reassdata *ipr);
 static void ip6_reass_remove_oldest_datagram(struct ip6_reassdata *ipr, int pbufs_needed);
 #endif /* IP_REASS_FREE_OLDEST */
 
+#if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
+/**
+ * Wrapper function with matching prototype which calls the actual callback
+ */
+static void ip6_reass_timeout_cb(void *arg)
+{
+  LWIP_UNUSED_ARG(arg);
+  ip6_reass_tmr();
+}
+#endif /* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
+
 void
 ip6_reass_tmr(void)
 {
   struct ip6_reassdata *r, *tmp;
+#if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
+  bool tmr_restart = false;
+#endif /* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
 
 #if !IPV6_FRAG_COPYHEADER
   LWIP_ASSERT("sizeof(struct ip6_reass_helper) <= IP6_FRAG_HLEN, set IPV6_FRAG_COPYHEADER to 1",
@@ -126,6 +146,9 @@ ip6_reass_tmr(void)
     if (r->timer > 0) {
       r->timer--;
       r = r->next;
+#if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
+      tmr_restart = true;
+#endif /* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
     } else {
       /* reassembly timed out */
       tmp = r;
@@ -135,6 +158,14 @@ ip6_reass_tmr(void)
       ip6_reass_free_complete_datagram(tmp);
      }
    }
+#if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
+  if (tmr_restart) {
+    sys_timeout(IP6_REASS_TMR_INTERVAL, ip6_reass_timeout_cb, NULL);
+  } else {
+    sys_untimeout(ip6_reass_timeout_cb, NULL);
+    is_tmr_start = false;
+  }
+#endif/* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
 }
 
 /**
@@ -357,7 +388,6 @@ ip6_reass(struct pbuf *p)
     /* enqueue the new structure to the front of the list */
     ipr->next = reassdatagrams;
     reassdatagrams = ipr;
-
     /* Use the current IPv6 header for src/dest address reference.
      * Eventually, we will replace it when we get the first fragment
      * (it might be this one, in any case, it is done later). */
@@ -660,6 +690,12 @@ ip6_reass(struct pbuf *p)
     /* Return the pbuf chain */
     return p;
   }
+#if ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND
+  if (!is_tmr_start) {
+    sys_timeout(IP6_REASS_TMR_INTERVAL, ip6_reass_timeout_cb, NULL);
+    is_tmr_start = true;
+  }
+#endif /* ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND */
   /* the datagram is not (yet?) reassembled completely */
   return NULL;
 

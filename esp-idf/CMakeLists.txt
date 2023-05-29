@@ -7,11 +7,8 @@ if(CMAKE_CURRENT_LIST_DIR STREQUAL CMAKE_SOURCE_DIR)
     "again.")
 endif()
 
-unset(compile_options)
-unset(c_compile_options)
-unset(cxx_compile_options)
-unset(compile_definitions)
-unset(link_options)
+# Variables compile_options, c_compile_options, cxx_compile_options, compile_definitions, link_options shall
+# not be unset as they may already contain flags, set by toolchain-TARGET.cmake files.
 
 # Add the following build specifications here, since these seem to be dependent
 # on config values on the root Kconfig.
@@ -119,6 +116,9 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang")
     # Multiple cases of attributes unknown to clang, for example
     # __attribute__((optimize("-O3")))
     list(APPEND compile_options "-Wno-unknown-attributes")
+    # Disable Clang warnings for atomic operations with access size
+    # more then 4 bytes
+    list(APPEND compile_options "-Wno-atomic-alignment")
     # Clang also produces many -Wunused-function warnings which GCC doesn't.
     # However these aren't treated as errors.
 endif()
@@ -181,6 +181,7 @@ endif()
 idf_build_set_property(COMPILE_OPTIONS "${compile_options}" APPEND)
 idf_build_set_property(C_COMPILE_OPTIONS "${c_compile_options}" APPEND)
 idf_build_set_property(CXX_COMPILE_OPTIONS "${cxx_compile_options}" APPEND)
+idf_build_set_property(ASM_COMPILE_OPTIONS "${asm_compile_options}" APPEND)
 idf_build_set_property(COMPILE_DEFINITIONS "${compile_definitions}" APPEND)
 idf_build_set_property(LINK_OPTIONS "${link_options}" APPEND)
 

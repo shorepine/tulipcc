@@ -575,11 +575,13 @@ ble_hs_enqueue_hci_event(uint8_t *hci_evt)
     struct ble_npl_event *ev;
 
     ev = os_memblock_get(&ble_hs_hci_ev_pool);
-    if (ev == NULL) {
-        ble_hci_trans_buf_free(hci_evt);
-    } else {
+    if (ev && ble_hs_evq->q ) {
         ble_npl_event_init(ev, ble_hs_event_rx_hci_ev, hci_evt);
         ble_npl_eventq_put(ble_hs_evq, ev);
+    }
+    else {
+        /* Either ev is NULL or queue doesn't exist */
+        ble_hci_trans_buf_free(hci_evt);
     }
 }
 
@@ -824,6 +826,8 @@ ble_hs_deinit(void)
     ble_gatts_stop();
 
     ble_npl_callout_deinit(&ble_hs_timer);
+
+    ble_hci_trans_cfg_hs(NULL, NULL, NULL, NULL);
 
     ble_npl_mutex_deinit(&ble_hs_mutex);
 

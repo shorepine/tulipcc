@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-/// Type of hold a GPIO in low state
+// Type of hold a GPIO in low state
 typedef enum {
     GPIO_LONG_HOLD  = 1,    /*!< The long hold GPIO */
     GPIO_SHORT_HOLD = -1,   /*!< The short hold GPIO */
@@ -186,13 +186,6 @@ int bootloader_common_select_otadata(const esp_ota_select_entry_t *two_otadata, 
  *  - ESP_FAIL:              mapping is fail.
  */
 esp_err_t bootloader_common_get_partition_description(const esp_partition_pos_t *partition, esp_app_desc_t *app_desc);
-
-/**
- * @brief Get chip revision
- *
- * @return Chip revision number
- */
-uint8_t bootloader_common_get_chip_revision(void);
 
 /**
  * @brief Get chip package

@@ -11,7 +11,7 @@ dnl   Copyright (c) 2000      Clark Cooper <coopercc@users.sourceforge.net>
 dnl   Copyright (c) 2000-2005 Fred L. Drake, Jr. <fdrake@users.sourceforge.net>
 dnl   Copyright (c) 2001-2003 Greg Stein <gstein@users.sourceforge.net>
 dnl   Copyright (c) 2006-2012 Karl Waclawek <karl@waclawek.net>
-dnl   Copyright (c) 2016-2021 Sebastian Pipping <sebastian@pipping.org>
+dnl   Copyright (c) 2016-2022 Sebastian Pipping <sebastian@pipping.org>
 dnl   Copyright (c) 2017      S. P. Zeidler <spz@netbsd.org>
 dnl   Copyright (c) 2017      Stephen Groat <stephen@groat.us>
 dnl   Copyright (c) 2017-2020 Joe Orton <jorton@redhat.com>
@@ -81,11 +81,14 @@ dnl
 dnl If the API changes incompatibly set LIBAGE back to 0
 dnl
 
-LIBCURRENT=9   # sync
-LIBREVISION=1  # with
-LIBAGE=8       # CMakeLists.txt!
+LIBCURRENT=9    # sync
+LIBREVISION=10  # with
+LIBAGE=8        # CMakeLists.txt!
 
 AC_CONFIG_HEADERS([expat_config.h])
+AH_TOP([#ifndef EXPAT_CONFIG_H
+#define EXPAT_CONFIG_H 1])
+AH_BOTTOM([#endif // ndef EXPAT_CONFIG_H])
 
 AM_PROG_AR
 AC_PROG_INSTALL
@@ -134,8 +137,9 @@ AS_CASE(["$LD"],[*clang*],
      [*linux*],[archive_cmds='$CC -shared $pic_flag $libobjs $deplibs $compiler_flags $wl-soname $wl$soname -o $lib'])])
 
 EXPATCFG_COMPILER_SUPPORTS_VISIBILITY([
-  AX_APPEND_FLAG([-fvisibility=hidden],       [AM_CFLAGS])
-  AX_APPEND_FLAG([-DXML_ENABLE_VISIBILITY=1], [AM_CPPFLAGS])])
+  AX_APPEND_FLAG([-fvisibility=hidden],              [AM_CFLAGS])
+  AS_IF([test "${enable_shared}" = yes],
+        [AX_APPEND_FLAG([-DXML_ENABLE_VISIBILITY=1], [AM_CPPFLAGS])])])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 
@@ -186,6 +190,7 @@ AM_CONDITIONAL([_INTERNAL_UNICODE_WCHAR_T], [echo -- "${CPPFLAGS}${CFLAGS}" | ${
 AM_CONDITIONAL([_INTERNAL_MIN_SIZE], [echo -- "${CPPFLAGS}${CFLAGS}" | ${FGREP} XML_MIN_SIZE >/dev/null])
 AM_CONDITIONAL([_INTERNAL_LARGE_SIZE], [echo -- "${CPPFLAGS}${CFLAGS}" | ${FGREP} XML_LARGE_SIZE >/dev/null])
 
+LT_LIB_M
 
 AC_ARG_WITH([libbsd],
   [AS_HELP_STRING([--with-libbsd], [utilize libbsd (for arc4random_buf)])],
@@ -394,12 +399,17 @@ AC_SUBST([AM_CFLAGS])
 AC_SUBST([AM_CXXFLAGS])
 AC_SUBST([AM_LDFLAGS])
 
-dnl updating _EXPAT_OUTPUT_NAME variable to effect the package name in expat.pc file (issue #361)
-AC_SUBST(_EXPAT_OUTPUT_NAME, ["$PACKAGE_NAME"])
+dnl Emulate the use of CMAKE_SHARED_LIBRARY_PREFIX under CMake
+AC_MSG_CHECKING([for shared library name prefix])
+AS_CASE("${host_os}",
+  [cygwin*], [CMAKE_SHARED_LIBRARY_PREFIX=cyg],
+  [CMAKE_SHARED_LIBRARY_PREFIX=lib])
+AC_MSG_RESULT([${CMAKE_SHARED_LIBRARY_PREFIX}])
+AC_SUBST([CMAKE_SHARED_LIBRARY_PREFIX])
 
 AS_CASE("${host_os}",
   [darwin*], [CMAKE_NOCONFIG_SOURCE=cmake/autotools/expat-noconfig__macos.cmake.in],
-  [mingw*], [CMAKE_NOCONFIG_SOURCE=cmake/autotools/expat-noconfig__windows.cmake.in],
+  [mingw*|cygwin*], [CMAKE_NOCONFIG_SOURCE=cmake/autotools/expat-noconfig__windows.cmake.in],
   [CMAKE_NOCONFIG_SOURCE=cmake/autotools/expat-noconfig__linux.cmake.in])
 AC_CONFIG_FILES([Makefile]
   [expat.pc]

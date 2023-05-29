@@ -49,6 +49,32 @@ default_baudrate = 115200
 serialport = None
 trace_enabled = False
 
+
+# Decorator to allow retrying tests
+def with_retry(run_test_func):
+    def run_with_retry(*args, **kwargs):
+        attempts = 5
+        result = args[1]
+        failuresBefore = len(result.failures)  # Check how many tests are marked as failed before starting
+        errorsBefore = len(result.errors)  # Check how many tests are marked as error before starting
+
+        for i in range(1, attempts + 1):
+            run_test_func(*args, **kwargs)  # Run the test
+
+            failure = failuresBefore < len(result.failures)
+            error = errorsBefore < len(result.errors)
+            if failure or error:  # If last test failed / errored
+                if i == attempts:
+                    print("\nTest failed after {} attempts".format(attempts))
+                    break
+                result.failures.pop() if failure else result.errors.pop()  # Remove last result
+                print("\nTest failed, retrying with {} attempts left".format(attempts - i))
+            else:
+                break  # Test passed
+
+    return run_with_retry
+
+
 try:
     if sys.argv[1] == "--trace":
         trace_enabled = True
@@ -280,12 +306,6 @@ class TestFlashing(EsptoolTestCase):
 
     def test_highspeed_flash(self):
         self.run_esptool("write_flash 0x0 images/fifty_kb.bin", baud=921600)
-        self.verify_readback(0, 50 * 1024, "images/fifty_kb.bin")
-
-    def test_highspeed_flash_virtual_port(self):
-        with ESPRFC2217Server() as server:
-            rfc2217_port = 'rfc2217://localhost:' + str(server.port) + '?ign_set_control'
-            self.run_esptool("write_flash 0x0 images/fifty_kb.bin", baud=921600, rfc2217_port=rfc2217_port)
         self.verify_readback(0, 50 * 1024, "images/fifty_kb.bin")
 
     def test_adjacent_flash(self):
@@ -608,7 +628,7 @@ class TestKeepImageSettings(EsptoolTestCase):
             "esp32s3": "images/bootloader_esp32s3.bin",
             "esp32c3": "images/bootloader_esp32c3.bin",
         }[chip]
-        self.flash_offset = 0x1000 if chip in ("esp32", "esp32s2", "esp32s3") else 0  # bootloader offset
+        self.flash_offset = 0x1000 if chip in ("esp32", "esp32s2") else 0  # bootloader offset
         with open(self.BL_IMAGE, "rb") as f:
             self.header = f.read(8)
 
@@ -697,7 +717,7 @@ class TestDeepSleepFlash(EsptoolTestCase):
 
 
 class TestBootloaderHeaderRewriteCases(EsptoolTestCase):
-    BL_OFFSET = 0x1000 if chip in ("esp32", "esp32s2", "esp32s3") else 0
+    BL_OFFSET = 0x1000 if chip in ("esp32", "esp32s2") else 0
 
     def test_flash_header_rewrite(self):
         bl_image = {"esp8266": "images/esp8266_sdk/boot_v1.4(b1).bin",
@@ -737,11 +757,23 @@ class TestAutoDetect(EsptoolTestCase):
         output = self.run_esptool("chip_id", chip_name=None)
         self._check_output(output)
 
+
+class TestVirtualPort(TestAutoDetect):
+    @with_retry
+    def run(self, result=None):
+        super(EsptoolTestCase, self).run(result)
+
     def test_auto_detect_virtual_port(self):
         with ESPRFC2217Server() as server:
             output = self.run_esptool("chip_id", chip_name=None,
                                       rfc2217_port='rfc2217://localhost:' + str(server.port) + '?ign_set_control')
             self._check_output(output)
+
+    def test_highspeed_flash_virtual_port(self):
+        with ESPRFC2217Server() as server:
+            rfc2217_port = 'rfc2217://localhost:' + str(server.port) + '?ign_set_control'
+            self.run_esptool("write_flash 0x0 images/fifty_kb.bin", baud=921600, rfc2217_port=rfc2217_port)
+        self.verify_readback(0, 50 * 1024, "images/fifty_kb.bin")
 
 
 class TestReadWriteMemory(EsptoolTestCase):

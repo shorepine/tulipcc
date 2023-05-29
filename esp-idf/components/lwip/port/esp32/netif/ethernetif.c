@@ -91,6 +91,12 @@ static void ethernet_low_level_init(struct netif *netif)
     netif->flags |= NETIF_FLAG_IGMP;
 #endif
 #endif
+
+#if ESP_IPV6
+#if LWIP_IPV6 && LWIP_IPV6_MLD
+    netif->flags |= NETIF_FLAG_MLD6;
+#endif
+#endif
 }
 
 /**
@@ -134,11 +140,12 @@ static err_t ethernet_low_level_output(struct netif *netif, struct pbuf *p)
         pbuf_free(q);
     }
     /* Check error */
-    if (unlikely(ret != ESP_OK)) {
-        return ERR_ABRT;
-    } else {
+    if (likely(ret == ESP_OK)) {
         return ERR_OK;
+    } else if (ret == ESP_ERR_NO_MEM) {
+        return ERR_MEM;
     }
+    return ERR_IF;
 }
 
 /**

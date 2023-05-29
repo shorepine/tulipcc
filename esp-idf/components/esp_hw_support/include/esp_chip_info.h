@@ -33,6 +33,7 @@ typedef enum {
 #define CHIP_FEATURE_BLE            BIT(4)      //!< Chip has Bluetooth LE
 #define CHIP_FEATURE_BT             BIT(5)      //!< Chip has Bluetooth Classic
 #define CHIP_FEATURE_IEEE802154     BIT(6)      //!< Chip has IEEE 802.15.4
+#define CHIP_FEATURE_EMB_PSRAM      BIT(7)      //!< Chip has embedded psram
 
 /**
  * @brief The structure represents information about the chip
@@ -40,6 +41,7 @@ typedef enum {
 typedef struct {
     esp_chip_model_t model;  //!< chip model, one of esp_chip_model_t
     uint32_t features;       //!< bit mask of CHIP_FEATURE_x feature flags
+    uint16_t full_revision;  //!< chip revision number (in format MXX; where M - wafer major version, XX - wafer minor version)
     uint8_t cores;           //!< number of CPU cores
     uint8_t revision;        //!< chip revision number
 } esp_chip_info_t;

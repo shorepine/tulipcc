@@ -432,6 +432,39 @@ static void test_required_SubMess (void)
 #undef DO_TEST
 }
 
+static size_t foo__test_mess_optional__get_packed_size
+                     (const Foo__TestMessOptional *message)
+{
+  assert(message->base.descriptor == &foo__test_mess_optional__descriptor);
+  return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
+}
+static size_t foo__test_mess_optional__pack
+                     (const Foo__TestMessOptional *message,
+                      uint8_t       *out)
+{
+  assert(message->base.descriptor == &foo__test_mess_optional__descriptor);
+  return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
+}
+static Foo__TestMessOptional *
+       foo__test_mess_optional__unpack
+                     (ProtobufCAllocator  *allocator,
+                      size_t               len,
+                      const uint8_t       *data)
+{
+  return (Foo__TestMessOptional *)
+     protobuf_c_message_unpack (&foo__test_mess_optional__descriptor,
+                                allocator, len, data);
+}
+static void   foo__test_mess_optional__free_unpacked
+                     (Foo__TestMessOptional *message,
+                      ProtobufCAllocator *allocator)
+{
+  if(!message)
+    return;
+  assert(message->base.descriptor == &foo__test_mess_optional__descriptor);
+  protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
+}
+
 /* === Optional type fields === */
 static void test_empty_optional (void)
 {
@@ -964,6 +997,15 @@ static void test_oneof_SubMess (void)
   DO_TEST (&submess, test_optional_submess_42);
 #undef DO_TEST
 }
+
+static void test_oneof_message_check(void)
+{
+	Foo__TestMessOneof msg = FOO__TEST_MESS_ONEOF__INIT;
+	msg.test_oneof_case = FOO__TEST_MESS_ONEOF__TEST_ONEOF_TEST_STRING;
+	msg.test_string = "Hello, world!";
+	assert(protobuf_c_message_check((ProtobufCMessage *)&msg));
+}
+
 static void test_oneof_merge (void)
 {
   Foo__TestMessOneof *msg;
@@ -1232,7 +1274,7 @@ static void test_repeated_string (void)
 {
 
 #define DO_TEST(static_array, example_packed_data) \
-  DO_TEST_REPEATED(test_string, (char **), \
+  DO_TEST_REPEATED(test_string, (const char **), \
                    static_array, example_packed_data, \
                    STRING_EQUALS)
 
@@ -1674,7 +1716,7 @@ assert_required_default_values_are_default (Foo__DefaultRequiredValues *mess)
   assert (mess->v_float == 2.5);
   assert (mess->v_double == 4.5);
   assert (strcmp (mess->v_string, "hi mom\n") == 0);
-  assert (mess->v_bytes.len = /* a */ 1
+  assert (mess->v_bytes.len == /* a */ 1
                                + /* space */ 1
                                + /* NUL */ 1
                                + /* space */ 1
@@ -1713,7 +1755,7 @@ assert_optional_default_values_are_default (Foo__DefaultOptionalValues *mess)
   assert (mess->v_double == 4.5);
   assert (strcmp (mess->v_string, "hi mom\n") == 0);
   assert (!mess->has_v_bytes);
-  assert (mess->v_bytes.len = /* a */ 1
+  assert (mess->v_bytes.len == /* a */ 1
                                + /* space */ 1
                                + /* NUL */ 1
                                + /* space */ 1
@@ -2067,8 +2109,8 @@ test_message_check(void)
   Foo__TestMessageCheck__SubMessage sm = FOO__TEST_MESSAGE_CHECK__SUB_MESSAGE__INIT;
   Foo__TestMessageCheck__SubMessage sm2 = FOO__TEST_MESSAGE_CHECK__SUB_MESSAGE__INIT;
   Foo__TestMessageCheck m = FOO__TEST_MESSAGE_CHECK__INIT;
-  char *null = NULL;
-  char *str = "";
+  const char *null = NULL;
+  const char *str = "";
   Foo__TestMessageCheck__SubMessage *sm_p;
   ProtobufCBinaryData bd;
 
@@ -2260,6 +2302,7 @@ static Test tests[] =
   { "test oneof string", test_oneof_string },
   { "test oneof bytes", test_oneof_bytes },
   { "test oneof SubMess", test_oneof_SubMess },
+  { "test oneof message check", test_oneof_message_check },
   { "test merged oneof unpack", test_oneof_merge },
 
   { "test empty repeated" ,test_empty_repeated },

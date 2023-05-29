@@ -9,7 +9,7 @@
 
 This example demonstrates basic usage of [iperf](https://iperf.fr/) protocol to measure the throughout/bandwidth of Ethernet.
 
-The cli environment in the example is based on the [console component](https://docs.espressif.com/projects/esp-idf/en/latest/api-guides/console.html).
+The cli environment in the example is based on the [console component](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/console.html).
 
 ## How to use example
 
@@ -149,7 +149,7 @@ I (2534456) iperf: want recv=16384
 ## Suggestions of getting higher bandwidth
 
 1. Higher MCU working frequency will get higher bandwidth.
-2. Put frequency invoked function into IRAM via macro `IRAM_ATTR` in code.
+2. Put frequently invoked functions into IRAM via macro `IRAM_ATTR` in code. Note that the lwIP IRAM optimization is already enabled by default.
 3. Priority of iperf task may also have effect.
 
 ## Troubleshooting

@@ -129,6 +129,7 @@ esp_err_t temp_sensor_stop(void)
         vSemaphoreDelete(rtc_tsens_mux);
         rtc_tsens_mux = NULL;
     }
+    tsens_hw_state = TSENS_HW_STATE_CONFIGURED;
     return ESP_OK;
 }
 

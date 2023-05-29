@@ -1,16 +1,8 @@
-// Copyright 2017-2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2017-2021 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include "sys/queue.h"
 #include "esp_hidh_private.h"
@@ -26,10 +18,7 @@ ESP_EVENT_DEFINE_BASE(ESP_HIDH_EVENTS);
 static const char *TAG = "ESP_HIDH";
 
 static esp_hidh_dev_head_t s_esp_hidh_devices;
-static esp_timer_handle_t s_esp_hidh_timer;
-static xSemaphoreHandle s_esp_hidh_devices_semaphore = NULL;
-
-static void esp_hidh_dev_delay_free(void *arg);
+static SemaphoreHandle_t s_esp_hidh_devices_semaphore = NULL;
 
 static inline void lock_devices(void)
 {
@@ -82,17 +71,6 @@ esp_err_t esp_hidh_init(const esp_hidh_config_t *config)
 
     TAILQ_INIT(&s_esp_hidh_devices);
 
-    esp_timer_create_args_t timer_config = {
-        .callback = &esp_hidh_dev_delay_free,
-        .arg = NULL,
-        .name = "hidh_timer"
-    };
-
-    if ((err = esp_timer_create(&timer_config, &s_esp_hidh_timer)) != ESP_OK) {
-        ESP_LOGE(TAG, "%s create timer failed!", __func__);
-        return err;
-    }
-
     s_esp_hidh_devices_semaphore = xSemaphoreCreateMutex();
     if (s_esp_hidh_devices_semaphore == NULL) {
         ESP_LOGE(TAG, "xSemaphoreCreateMutex failed!");
@@ -116,8 +94,6 @@ esp_err_t esp_hidh_init(const esp_hidh_config_t *config)
     if (err != ESP_OK) {
         vSemaphoreDelete(s_esp_hidh_devices_semaphore);
         s_esp_hidh_devices_semaphore = NULL;
-        esp_timer_delete(s_esp_hidh_timer);
-        s_esp_hidh_timer = NULL;
     }
 
     return err;
@@ -129,11 +105,6 @@ esp_err_t esp_hidh_deinit(void)
     if (s_esp_hidh_devices_semaphore == NULL) {
         ESP_LOGE(TAG, "Already uninitialized");
         return err;
-    }
-
-    if (esp_timer_is_active(s_esp_hidh_timer)) {
-        ESP_LOGE(TAG, "Busy, try again later!");
-        return ESP_ERR_NOT_FINISHED;
     }
 
     if (!TAILQ_EMPTY(&s_esp_hidh_devices)) {
@@ -159,8 +130,6 @@ esp_err_t esp_hidh_deinit(void)
         TAILQ_INIT(&s_esp_hidh_devices);
         vSemaphoreDelete(s_esp_hidh_devices_semaphore);
         s_esp_hidh_devices_semaphore = NULL;
-        esp_timer_delete(s_esp_hidh_timer);
-        s_esp_hidh_timer = NULL;
     }
     return err;
 }
@@ -591,7 +560,7 @@ esp_hidh_dev_report_t *esp_hidh_dev_get_input_report_by_id_and_proto(esp_hidh_de
 {
     esp_hidh_dev_report_t *r = dev->reports;
     while (r) {
-        if (r->report_id == report_id && (r->report_type & 1) && r->protocol_mode == protocol_mode) {
+        if (r->report_id == report_id && (r->report_type & ESP_HID_REPORT_TYPE_INPUT) && r->protocol_mode == protocol_mode) {
             return r;
         }
         r = r->next;
@@ -603,7 +572,7 @@ esp_hidh_dev_report_t *esp_hidh_dev_get_input_report_by_len_and_proto(esp_hidh_d
 {
     esp_hidh_dev_report_t *r = dev->reports;
     while (r) {
-        if (r->value_len == len && (r->report_type & 1) && r->protocol_mode == protocol_mode) {
+        if (r->value_len == len && (r->report_type & ESP_HID_REPORT_TYPE_INPUT) && r->protocol_mode == protocol_mode) {
             return r;
         }
         r = r->next;
@@ -623,7 +592,7 @@ esp_hidh_dev_report_t *esp_hidh_dev_get_input_report_by_proto_and_data(esp_hidh_
     *has_report_id = false;
     // first, assume data not include report id
     while (r) {
-        if (r->value_len == len && r->report_id == 0 && (r->report_type & 1) &&
+        if (r->value_len == len && r->report_id == 0 && (r->report_type & ESP_HID_REPORT_TYPE_INPUT) &&
             r->protocol_mode == protocol_mode) {
             *has_report_id = false;
             break;
@@ -639,7 +608,7 @@ esp_hidh_dev_report_t *esp_hidh_dev_get_input_report_by_proto_and_data(esp_hidh_
         }
         r = dev->reports;
         while (r) {
-            if (r->value_len == len + 1 && r->report_id == *data && (r->report_type & 1) &&
+            if (r->value_len == len - 1 && r->report_id == *data && (r->report_type & ESP_HID_REPORT_TYPE_INPUT) &&
                 r->protocol_mode == protocol_mode) {
                 *has_report_id = true;
                 break;
@@ -665,7 +634,10 @@ static void esp_hidh_dev_resources_free(esp_hidh_dev_t *dev)
     free((void *)dev->config.manufacturer_name);
     free((void *)dev->config.serial_number);
     for (uint8_t d = 0; d < dev->config.report_maps_len; d++) {
-        free((void *)dev->config.report_maps[d].data);
+        /* data of report map maybe is NULL */
+        if (dev->config.report_maps[d].data) {
+            free((void *)dev->config.report_maps[d].data);
+        }
     }
     free((void *)dev->config.report_maps);
     esp_hidh_dev_report_t *r;
@@ -747,20 +719,6 @@ esp_err_t esp_hidh_dev_free_inner(esp_hidh_dev_t *dev)
     return ret;
 }
 
-static void esp_hidh_dev_delay_free(void *arg)
-{
-    esp_hidh_dev_t *d = NULL;
-    esp_hidh_dev_t *next = NULL;
-    lock_devices();
-    TAILQ_FOREACH_SAFE(d, &s_esp_hidh_devices, devices, next) {
-        if (!d->in_use) {
-            TAILQ_REMOVE(&s_esp_hidh_devices, d, devices);
-            esp_hidh_dev_resources_free(d);
-        }
-    }
-    unlock_devices();
-}
-
 #if CONFIG_BLUEDROID_ENABLED
 esp_hidh_dev_t *esp_hidh_dev_get_by_bda(esp_bd_addr_t bda)
 {
@@ -810,10 +768,10 @@ esp_hidh_dev_t *esp_hidh_dev_get_by_conn_id(uint16_t conn_id)
 
 /**
  * The deep copy data append the end of the esp_hidh_event_data_t, move the data pointer to the correct address. This is
- * a workaround way, it's better to use flexiable array in the interface.
+ * a workaround way, it's better to use flexible array in the interface.
  */
-void esp_hidh_process_event_data_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id,
-                                         void *event_data)
+void esp_hidh_preprocess_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id,
+                                       void *event_data)
 {
     esp_hidh_event_t event = (esp_hidh_event_t)event_id;
     esp_hidh_event_data_t *param = (esp_hidh_event_data_t *)event_data;
@@ -829,19 +787,25 @@ void esp_hidh_process_event_data_handler(void *event_handler_arg, esp_event_base
             param->feature.data = (uint8_t *)param + sizeof(esp_hidh_event_data_t);
         }
         break;
+    default:
+        break;
+    }
+}
+
+void esp_hidh_post_process_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id,
+                                         void *event_data)
+{
+    esp_hidh_event_t event = (esp_hidh_event_t)event_id;
+    esp_hidh_event_data_t *param = (esp_hidh_event_data_t *)event_data;
+
+    switch (event) {
     case ESP_HIDH_OPEN_EVENT:
         if (param->open.status != ESP_OK) {
-            if (s_esp_hidh_timer && !esp_timer_is_active(s_esp_hidh_timer) &&
-                esp_timer_start_once(s_esp_hidh_timer, ESP_HIDH_DELAY_FREE_TO) != ESP_OK) {
-                ESP_LOGE(TAG, "%s set hidh timer failed!", __func__);
-            }
+            esp_hidh_dev_free_inner(param->open.dev);
         }
         break;
     case ESP_HIDH_CLOSE_EVENT:
-        if (s_esp_hidh_timer && !esp_timer_is_active(s_esp_hidh_timer) &&
-            esp_timer_start_once(s_esp_hidh_timer, ESP_HIDH_DELAY_FREE_TO) != ESP_OK) {
-            ESP_LOGE(TAG, "%s set hidh timer failed!", __func__);
-        }
+        esp_hidh_dev_free_inner(param->close.dev);
         break;
     default:
         break;
