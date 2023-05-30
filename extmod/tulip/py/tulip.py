@@ -203,7 +203,13 @@ def version():
 
 # how do i get version? / date?
 def upgrade():
-    import world
+    import world, time, machine
+    try:
+        import esp32
+    except ImportError:
+        print("Upgrading only works on Tulip CC for now. Visit tulip.computer to download the latest Tulip Desktop.")
+        return
+    parts = esp.Partition.find() # app types by default
     # Checks for a new firmware from Tulip World, asks if you want to upgrade to it
     # Probably should use a different room! 
     prefix = "tulipcc-"
@@ -212,8 +218,31 @@ def upgrade():
     if(len(all_firmwares)):
         f = all_firmwares[0]
         v = f["filename"][len(prefix):-4]
-        print("Latest firmware is version %s, %s" % (v, world.nice_time(f["age_ms"]/1000)))
-    print("You have version %s" % version())
+        print("Latest available: %s   %s" % (v, world.nice_time(f["age_ms"]/1000)))
+        print("You have version: %s" % version())
+        print("Upgrade? (Yy/Nn)")
+        a = input()
+        if(a=='Y' or a=='y'):
+            print("Downloading %s..." % (f["filename"]))
+            size = world.download(f)
+            partition = esp32.Partition(Partition.RUNNING).get_next_update()
+            print("Flashing OTA partition %d..." % (partition))
+            block_c = 0
+            for chunk in world.read_in_chunks(open(f["filename"], "rb")):
+                partition.writeblocks(block_c, chunk)
+                if(block_c % 200 == 0):
+                    print("%d blocks, %d bytes flashed (of %d)", block_c, block_c*4096, size)
+                block_c = block_c + 1
+            print("Setting boot partition to %d..." % (partition))
+            partition.set_boot()
+            print("Removing firmware download...")
+            rm(f["filename"])
+            print("Rebooting in 5 seconds...")
+            time.sleep(5)
+            machine.reset()
+
+            # classmethod Partition.mark_app_valid_cancel_rollback ??? 
+
 
 
 
