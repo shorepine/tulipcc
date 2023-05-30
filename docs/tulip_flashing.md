@@ -49,10 +49,19 @@ Now connect your Tulip to your computer over USB. If using a breakout board, con
 
 Make sure you're using the right `MICROPY_BOARD` spec for your chip. If you're using the `N8R8` (8MB flash), make sure to use `-DMICROPY_BOARD=TULIP4_N8R8`. For all others (16MB minimum), including the Tulip CC integrated board, use `-DMICROPY_BOARD=TULIP4`.
 
-For all boards, now build and flash the firmware:
+For example, for the N8R8 chip only:
 
 ```bash
-idf.py -D MICROPY_BOARD=TULIP4 flash # change this if using N8R8!
+idf.py -D MICROPY_BOARD=TULIP4_N8R8 flash 
+# With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
+# to the flash memory. Run this only once, or each time you modify `tulip_home` if you're developing Tulip itself.
+python tulip_fs_create.py N8R8
+```
+
+For all other boards/chips:
+
+```bash
+idf.py -D MICROPY_BOARD=TULIP4 flash 
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
 # to the flash memory. Run this only once, or each time you modify `tulip_home` if you're developing Tulip itself.
 python tulip_fs_create.py
