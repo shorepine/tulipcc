@@ -1,17 +1,8 @@
 #!/usr/bin/env python3
-
-# This script should still be compatible with Python 2 in Mbed TLS 2.16.x.
-
 # Test suites code generator.
 #
 # Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-#
-# This file is provided under the Apache License 2.0, or the
-# GNU General Public License v2.0 or later.
-#
-# **********
-# Apache License 2.0:
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License.
@@ -24,27 +15,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# **********
-#
-# **********
-# GNU General Public License v2.0 or later:
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-#
-# **********
 
 """
 This script is a key part of Mbed TLS test suites framework. For
@@ -136,10 +106,6 @@ Platform file:
 Platform file contains platform specific setup code and test case
 dispatch code. For example, host_test.function reads test data
 file from host's file system and dispatches tests.
-In case of on-target target_test.function tests are not dispatched
-on target. Target code is kept minimum and only test functions are
-dispatched. Test case dispatch is done on the host using tools like
-Greentea.
 
 Template file:
 ---------
@@ -160,33 +126,39 @@ code that is generated or read from helpers and platform files.
 This script replaces following fields in the template and generates
 the test source file:
 
-$test_common_helpers        <-- All common code from helpers.function
-                                is substituted here.
-$functions_code             <-- Test functions are substituted here
-                                from the input test_suit_xyz.function
-                                file. C preprocessor checks are generated
-                                for the build dependencies specified
-                                in the input file. This script also
-                                generates wrappers for the test
-                                functions with code to expand the
-                                string parameters read from the data
-                                file.
-$expression_code            <-- This script enumerates the
-                                expressions in the .data file and
-                                generates code to handle enumerated
-                                expression Ids and return the values.
-$dep_check_code             <-- This script enumerates all
-                                build dependencies and generate
-                                code to handle enumerated build
-                                dependency Id and return status: if
-                                the dependency is defined or not.
-$dispatch_code              <-- This script enumerates the functions
-                                specified in the input test data file
-                                and generates the initializer for the
-                                function table in the template
-                                file.
-$platform_code              <-- Platform specific setup and test
-                                dispatch code.
+__MBEDTLS_TEST_TEMPLATE__TEST_COMMON_HELPERS
+            All common code from helpers.function
+            is substituted here.
+__MBEDTLS_TEST_TEMPLATE__FUNCTIONS_CODE
+            Test functions are substituted here
+            from the input test_suit_xyz.function
+            file. C preprocessor checks are generated
+            for the build dependencies specified
+            in the input file. This script also
+            generates wrappers for the test
+            functions with code to expand the
+            string parameters read from the data
+            file.
+__MBEDTLS_TEST_TEMPLATE__EXPRESSION_CODE
+            This script enumerates the
+            expressions in the .data file and
+            generates code to handle enumerated
+            expression Ids and return the values.
+__MBEDTLS_TEST_TEMPLATE__DEP_CHECK_CODE
+            This script enumerates all
+            build dependencies and generate
+            code to handle enumerated build
+            dependency Id and return status: if
+            the dependency is defined or not.
+__MBEDTLS_TEST_TEMPLATE__DISPATCH_CODE
+            This script enumerates the functions
+            specified in the input test data file
+            and generates the initializer for the
+            function table in the template
+            file.
+__MBEDTLS_TEST_TEMPLATE__PLATFORM_CODE
+            Platform specific setup and test
+            dispatch code.
 
 """
 
@@ -248,34 +220,23 @@ class FileWrapper(io.FileIO):
 
         :param file_name: File path to open.
         """
-        super(FileWrapper, self).__init__(file_name, 'r')
+        super().__init__(file_name, 'r')
         self._line_no = 0
 
-    def next(self):
+    def __next__(self):
         """
-        Python 2 iterator method. This method overrides base class's
-        next method and extends the next method to count the line
-        numbers as each line is read.
-
-        It works for both Python 2 and Python 3 by checking iterator
-        method name in the base iterator object.
+        This method overrides base class's __next__ method and extends it
+        method to count the line numbers as each line is read.
 
         :return: Line read from file.
         """
-        parent = super(FileWrapper, self)
-        if hasattr(parent, '__next__'):
-            line = parent.__next__()  # Python 3
-        else:
-            line = parent.next()  # Python 2 # pylint: disable=no-member
+        line = super().__next__()
         if line is not None:
             self._line_no += 1
             # Convert byte array to string with correct encoding and
             # strip any whitespaces added in the decoding process.
             return line.decode(sys.getdefaultencoding()).rstrip() + '\n'
         return None
-
-    # Python 3 iterator method
-    __next__ = next
 
     def get_line_no(self):
         """
@@ -558,6 +519,50 @@ def generate_function_code(name, code, local_vars, args_dispatch,
         gen_dependencies(dependencies)
     return preprocessor_check_start + code + preprocessor_check_end
 
+COMMENT_START_REGEX = re.compile(r'/[*/]')
+
+def skip_comments(line, stream):
+    """Remove comments in line.
+
+    If the line contains an unfinished comment, read more lines from stream
+    until the line that contains the comment.
+
+    :return: The original line with inner comments replaced by spaces.
+             Trailing comments and whitespace may be removed completely.
+    """
+    pos = 0
+    while True:
+        opening = COMMENT_START_REGEX.search(line, pos)
+        if not opening:
+            break
+        if line[opening.start(0) + 1] == '/': # //...
+            continuation = line
+            # Count the number of line breaks, to keep line numbers aligned
+            # in the output.
+            line_count = 1
+            while continuation.endswith('\\\n'):
+                # This errors out if the file ends with an unfinished line
+                # comment. That's acceptable to not complicate the code further.
+                continuation = next(stream)
+                line_count += 1
+            return line[:opening.start(0)].rstrip() + '\n' * line_count
+        # Parsing /*...*/, looking for the end
+        closing = line.find('*/', opening.end(0))
+        while closing == -1:
+            # This errors out if the file ends with an unfinished block
+            # comment. That's acceptable to not complicate the code further.
+            line += next(stream)
+            closing = line.find('*/', opening.end(0))
+        pos = closing + 2
+        # Replace inner comment by spaces. There needs to be at least one space
+        # for things like 'int/*ihatespaces*/foo'. Go further and preserve the
+        # width of the comment and line breaks, this way positions in error
+        # messages remain correct.
+        line = (line[:opening.start(0)] +
+                re.sub(r'.', r' ', line[opening.start(0):pos]) +
+                line[pos:])
+    # Strip whitespace at the end of lines (it's irrelevant to error messages).
+    return re.sub(r' +(\n|\Z)', r'\1', line)
 
 def parse_function_code(funcs_f, dependencies, suite_dependencies):
     """
@@ -577,6 +582,7 @@ def parse_function_code(funcs_f, dependencies, suite_dependencies):
         # across multiple lines. Here we try to find the start of
         # arguments list, then remove '\n's and apply the regex to
         # detect function start.
+        line = skip_comments(line, funcs_f)
         up_to_arg_list_start = code + line[:line.find('(') + 1]
         match = re.match(TEST_FUNCTION_VALIDATION_REGEX,
                          up_to_arg_list_start.replace('\n', ' '), re.I)
@@ -585,7 +591,7 @@ def parse_function_code(funcs_f, dependencies, suite_dependencies):
             name = match.group('func_name')
             if not re.match(FUNCTION_ARG_LIST_END_REGEX, line):
                 for lin in funcs_f:
-                    line += lin
+                    line += skip_comments(lin, funcs_f)
                     if re.search(FUNCTION_ARG_LIST_END_REGEX, line):
                         break
             args, local_vars, args_dispatch = parse_function_arguments(
@@ -1008,11 +1014,27 @@ def write_test_source_file(template_file, c_file, snippets):
     :param snippets: Generated and code snippets
     :return:
     """
+
+    # Create a placeholder pattern with the correct named capture groups
+    # to override the default provided with Template.
+    # Match nothing (no way of escaping placeholders).
+    escaped = "(?P<escaped>(?!))"
+    # Match the "__MBEDTLS_TEST_TEMPLATE__PLACEHOLDER_NAME" pattern.
+    named = "__MBEDTLS_TEST_TEMPLATE__(?P<named>[A-Z][_A-Z0-9]*)"
+    # Match nothing (no braced placeholder syntax).
+    braced = "(?P<braced>(?!))"
+    # If not already matched, a "__MBEDTLS_TEST_TEMPLATE__" prefix is invalid.
+    invalid = "(?P<invalid>__MBEDTLS_TEST_TEMPLATE__)"
+    placeholder_pattern = re.compile("|".join([escaped, named, braced, invalid]))
+
     with open(template_file, 'r') as template_f, open(c_file, 'w') as c_f:
         for line_no, line in enumerate(template_f.readlines(), 1):
             # Update line number. +1 as #line directive sets next line number
             snippets['line_no'] = line_no + 1
-            code = string.Template(line).substitute(**snippets)
+            template = string.Template(line)
+            template.pattern = placeholder_pattern
+            snippets = {k.upper():v for (k, v) in snippets.items()}
+            code = template.substitute(**snippets)
             c_f.write(code)
 
 

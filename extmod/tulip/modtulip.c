@@ -13,6 +13,7 @@
 #include "alles.h"
 #include "midi.h"
 #include "ui.h"
+#include "genhdr/mpversion.h"
 
 #ifdef ESP_PLATFORM
 #include "tasks.h"
@@ -1096,6 +1097,14 @@ STATIC mp_obj_t tulip_ui_active(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_active_obj, 2, 2, tulip_ui_active);
 
 
+STATIC mp_obj_t tulip_build_strings(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t tuple[3];
+    tuple[0] = mp_obj_new_str(MICROPY_GIT_TAG, strlen(MICROPY_GIT_TAG));
+    tuple[1] = mp_obj_new_str(MICROPY_GIT_HASH, strlen(MICROPY_GIT_HASH));
+    tuple[2] = mp_obj_new_str(MICROPY_BUILD_DATE, strlen(MICROPY_BUILD_DATE));
+    return mp_obj_new_tuple(3, tuple);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_build_strings_obj, 0,0, tulip_build_strings);
 
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
@@ -1169,6 +1178,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ui_del), MP_ROM_PTR(&tulip_ui_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_active), MP_ROM_PTR(&tulip_ui_active_obj) },
     { MP_ROM_QSTR(MP_QSTR_joy), MP_ROM_PTR(&tulip_joy_obj) },
+    { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
 
 
 // Special platform specific things
@@ -1186,4 +1196,4 @@ const mp_obj_module_t tulip_module = {
 };
 
 
-MP_REGISTER_MODULE(MP_QSTR__tulip, tulip_module, 1); // MICROPY_PY_TULIP);
+MP_REGISTER_MODULE(MP_QSTR__tulip, tulip_module); // MICROPY_PY_TULIP);

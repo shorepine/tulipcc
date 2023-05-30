@@ -15,6 +15,10 @@ try:
         print(str(e))
         import inisetup
         vfs = inisetup.setup()
+    from esp32 import Partition
+    currentPartition = Partition(Partition.RUNNING)
+    currentPartition.mark_app_valid_cancel_rollback()
+    
 except ImportError:
     # Tulip Desktop
     tulipcc = uos.getenv("HOME")+"/Documents/tulipcc"

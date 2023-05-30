@@ -32,6 +32,7 @@
 
 #include "py/obj.h"
 #include "py/mphal.h"
+
 #if MICROPY_PY_BUILTINS_FLOAT
 #include "py/formatfloat.h"
 #endif
@@ -59,13 +60,13 @@ int snprintf(char *str, size_t size, const char *fmt, ...);
 int printf(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    int ret = mp_vprintf(&mp_plat_print, fmt, ap);
+    int ret = mp_vprintf(MICROPY_INTERNAL_PRINTF_PRINTER, fmt, ap);
     va_end(ap);
     return ret;
 }
 
 int vprintf(const char *fmt, va_list ap) {
-    return mp_vprintf(&mp_plat_print, fmt, ap);
+    return mp_vprintf(MICROPY_INTERNAL_PRINTF_PRINTER, fmt, ap);
 }
 
 // need this because gcc optimises printf("%c", c) -> putchar(c), and printf("a") -> putchar('a')
@@ -104,7 +105,6 @@ STATIC void strn_print_strn(void *data, const char *str, size_t len) {
 // GCC 9 gives a warning about missing attributes so it's excluded until
 // uClibc+GCC9 support is needed.
 int __GI_vsnprintf(char *str, size_t size, const char *fmt, va_list ap) __attribute__((weak, alias("vsnprintf")));
-
 #endif
 
 int vsnprintf(char *str, size_t size, const char *fmt, va_list ap) {

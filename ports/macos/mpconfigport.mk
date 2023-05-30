@@ -1,6 +1,5 @@
 # Enable/disable modules and 3rd-party libs to be included in interpreter
 
-
 # Build 32-bit binaries on a 64-bit host
 MICROPY_FORCE_32BIT = 0
 
@@ -21,8 +20,6 @@ MICROPY_PY_TERMIOS = 1
 # Subset of CPython socket module
 MICROPY_PY_SOCKET = 1
 
-MICROPY_PY_NETWORK = 1
-
 # ffi module requires libffi (libffi-dev Debian package)
 MICROPY_PY_FFI = 1
 
@@ -41,3 +38,9 @@ MICROPY_PY_JNI = 0
 # Avoid using system libraries, use copies bundled with MicroPython
 # as submodules (currently affects only libffi).
 MICROPY_STANDALONE = 0
+
+MICROPY_ROM_TEXT_COMPRESSION = 1
+
+MICROPY_VFS_FAT = 1
+MICROPY_VFS_LFS1 = 1
+MICROPY_VFS_LFS2 = 1

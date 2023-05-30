@@ -54,7 +54,7 @@ STATIC mp_obj_t math_generic_2(mp_obj_t x_obj, mp_obj_t y_obj, mp_float_t (*f)(m
     mp_float_t x = mp_obj_get_float(x_obj);
     mp_float_t y = mp_obj_get_float(y_obj);
     mp_float_t ans = f(x, y);
-    if ((isnan(ans) && !isnan(x) && !isnan(y)) || (isinf(ans) && !isinf(x))) {
+    if ((isnan(ans) && !isnan(x) && !isnan(y)) || (isinf(ans) && !isinf(x) && !isinf(y))) {
         math_error();
     }
     return mp_obj_new_float(ans);
@@ -434,5 +434,7 @@ const mp_obj_module_t mp_module_math = {
     .base = { &mp_type_module },
     .globals = (mp_obj_dict_t *)&mp_module_math_globals,
 };
+
+MP_REGISTER_MODULE(MP_QSTR_math, mp_module_math);
 
 #endif // MICROPY_PY_BUILTINS_FLOAT && MICROPY_PY_MATH

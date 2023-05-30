@@ -79,15 +79,13 @@ u_long	bt_rootsplit, bt_split, bt_sortsplit, bt_pfxsaved;
  *	RET_ERROR, RET_SUCCESS
  */
 int
-__bt_split(
-           BTREE *t,
-           PAGE *sp,
-           const DBT *key,
-           const DBT *data,
-           int flags,
-           size_t ilen,
-           u_int32_t argskip
-           )
+__bt_split(t, sp, key, data, flags, ilen, argskip)
+	BTREE *t;
+	PAGE *sp;
+	const DBT *key, *data;
+	int flags;
+	size_t ilen;
+	u_int32_t argskip;
 {
 	BINTERNAL *bi = NULL;
 	BLEAF *bl = NULL, *tbl;
@@ -346,14 +344,11 @@ err2:	mpool_put(t->bt_mp, l, 0);
  *	Pointer to page in which to insert or NULL on error.
  */
 static PAGE *
-bt_page(
-	BTREE *t,
-	PAGE *h,
-        PAGE **lp,
-        PAGE **rp,
-	indx_t *skip,
-	size_t ilen
-        )
+bt_page(t, h, lp, rp, skip, ilen)
+	BTREE *t;
+	PAGE *h, **lp, **rp;
+	indx_t *skip;
+	size_t ilen;
 {
 	PAGE *l, *r, *tp;
 	pgno_t npg;
@@ -454,14 +449,11 @@ bt_page(
  *	Pointer to page in which to insert or NULL on error.
  */
 static PAGE *
-bt_root(
-	BTREE *t,
-	PAGE *h,
-        PAGE **lp,
-        PAGE **rp,
-	indx_t *skip,
-	size_t ilen
-        )
+bt_root(t, h, lp, rp, skip, ilen)
+	BTREE *t;
+	PAGE *h, **lp, **rp;
+	indx_t *skip;
+	size_t ilen;
 {
 	PAGE *l, *r, *tp;
 	pgno_t lnpg, rnpg;
@@ -504,12 +496,9 @@ bt_root(
  *	RET_ERROR, RET_SUCCESS
  */
 static int
-bt_rroot(
-         BTREE *t,
-         PAGE *h,
-         PAGE *l,
-         PAGE *r
-         )
+bt_rroot(t, h, l, r)
+	BTREE *t;
+	PAGE *h, *l, *r;
 {
 	char *dest;
 
@@ -547,12 +536,9 @@ bt_rroot(
  *	RET_ERROR, RET_SUCCESS
  */
 static int
-bt_broot(
-         BTREE *t,
-         PAGE *h,
-         PAGE *l,
-         PAGE *r
-         )
+bt_broot(t, h, l, r)
+	BTREE *t;
+	PAGE *h, *l, *r;
 {
 	BINTERNAL *bi;
 	BLEAF *bl;
@@ -630,14 +616,11 @@ bt_broot(
  *	Pointer to page in which to insert.
  */
 static PAGE *
-bt_psplit(
-          BTREE *t,
-          PAGE *h,
-          PAGE *l,
-          PAGE *r,
-          indx_t *pskip,
-          size_t ilen
-          )
+bt_psplit(t, h, l, r, pskip, ilen)
+	BTREE *t;
+	PAGE *h, *l, *r;
+	indx_t *pskip;
+	size_t ilen;
 {
 	BINTERNAL *bi;
 	BLEAF *bl;
@@ -811,10 +794,9 @@ bt_psplit(
  *	RET_SUCCESS, RET_ERROR.
  */
 static int
-bt_preserve(
-            BTREE *t,
-            pgno_t pg
-            )
+bt_preserve(t, pg)
+	BTREE *t;
+	pgno_t pg;
 {
 	PAGE *h;
 
@@ -840,7 +822,8 @@ bt_preserve(
  * all the way back to bt_split/bt_rroot and it's not very clean.
  */
 static recno_t
-rec_total(PAGE *h)
+rec_total(h)
+	PAGE *h;
 {
 	recno_t recs;
 	indx_t nxt, top;

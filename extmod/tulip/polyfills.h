@@ -7,8 +7,6 @@
 // not sure, maybe esp includes?
 extern void esp32s3_display_start();
 extern void esp32s3_display_stop();
-
-
 #else
 #include <sys/time.h>
 #include <stdlib.h>

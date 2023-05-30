@@ -17,7 +17,7 @@ good_exts = [".txt", ".png", ".py"]
 folders = ['ex','ex/g']
 
 TULIP_HOME="../../tulip_home"
-TULIP_VFS_SIZE = 0x500000
+TULIP_VFS_SIZE = 0x919000 #0x1A10000 #0x500000
 cfg = lfs.LFSConfig(block_size=4096, block_count = TULIP_VFS_SIZE / 4096)
 fs = lfs.LFSFilesystem()
 lfs.format(fs, cfg)

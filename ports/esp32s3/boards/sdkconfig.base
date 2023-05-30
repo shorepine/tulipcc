@@ -1,13 +1,6 @@
 # MicroPython on ESP32, ESP IDF configuration
 # The following options override the defaults
 
-CONFIG_SOC_GDMA_SUPPORTED=y
-CONFIG_SOC_GDMA_GROUPS=y
-CONFIG_SOC_GDMA_PAIRS_PER_GROUP=5
-CONFIG_SOC_GDMA_SUPPORT_PSRAM=y
-CONFIG_SOC_GDMA_PSRAM_MIN_ALIGN=16
-
-
 CONFIG_IDF_FIRMWARE_CHIP_ID=0x0000
 
 # Compiler options: use -O2 and disable assertions to improve performance
@@ -56,6 +49,7 @@ CONFIG_MBEDTLS_ASYMMETRIC_CONTENT_LEN=y
 
 # ULP coprocessor support
 CONFIG_ESP32_ULP_COPROC_ENABLED=y
+CONFIG_ESP32_ULP_COPROC_RESERVE_MEM=2040
 
 # For cmake build
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y

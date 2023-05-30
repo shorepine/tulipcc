@@ -196,6 +196,74 @@ class Joy:
     Y = 2048
     B = 4096
 
+def version():
+    # Returns current tulip version (aka git hash and compiled date)
+    me = build_strings()
+    return me[2].replace("-", "") + "-" + me[1].replace("-dirty", "")
+
+def free_disk_bytes():
+    import os
+    st = os.statvfs('.')
+    return st[1] * st[3]
+
+
+# tales 3m:10s for download then flash. download: 2:15 with bigger buffer
+# try: download direct to flash (scary! but should work?)
+# yes, takes, 2:30
+def upgrade():
+    import world, time, sys, os
+    try:
+        import esp32, machine
+    except ImportError:
+        print("Upgrading only works on Tulip CC for now. Visit tulip.computer to download the latest Tulip Desktop.")
+        return
+    # Checks for a new firmware from Tulip World, asks if you want to upgrade to it
+    sec_size = 4096
+    screen_blank = "The screen will blank for 2-3 minutes. See status in monitor."
+    prefix = "tulipcc-"
+    all_firmwares = world.files(limit=1000,room_id=world.firmware_room_id)
+    all_firmwares.reverse()
+    if(len(all_firmwares)):
+        f = all_firmwares[0]
+        v = f["filename"][len(prefix):-4]
+        print("Latest available: %s   %s" % (v, world.nice_time(f["age_ms"]/1000)))
+        print("You have version: %s" % version())
+        print()
+        print("Install it?       (Yy/Nn) ",end='')
+        a = input()
+        if(a=='Y' or a=='y'):
+            tfb_log_start()
+            print("Flashing %s... [%s]" % (f["filename"], screen_blank))
+            time.sleep(5)
+            display_stop()
+            try:
+                partition = esp32.Partition(esp32.Partition.RUNNING).get_next_update()
+                print("Flashing OTA partition %s..." % (partition.info()[4]))
+                url = "https://%s/_matrix/media/r0/download/%s" % (world.host, f["url"][6:])
+                # Download the file directly to flash, don't save it first
+                r = world.matrix_get(url)
+                block_c = 0
+                for chunk in r.generate(chunk_size=sec_size):
+                    if len(chunk) < sec_size:
+                        print("Last chunk, adding padding")
+                        chunk = chunk + bytes(b'\xff'*(sec_size - len(chunk)))
+                    partition.writeblocks(block_c, chunk)
+                    if(block_c % 100 == 0):
+                        print("%d blocks, %d bytes flashed" % (block_c, block_c*sec_size))
+                    block_c = block_c + 1
+                print("Setting boot partition to %s..." % (partition.info()[4]))
+                partition.set_boot()
+                print("Rebooting...")
+                # Partition.mark_app_valid_cancel_rollback is set in _boot.py. So if Tulip reboots properly, the partition will be marked OK
+                machine.reset()
+            except Exception as e:
+                display_start()
+                sys.print_exception(e)
+            tfb_log_stop()
+
+
+
+
 # like joy, but also scans the keyboard. lets you use either
 # Z = B, X = A, A = Y, S = X, enter = START, ' = SELECT, Q = L1, W = R1, arrows = DPAD
 def joyk():
@@ -317,20 +385,20 @@ def wifi(ssid, passwd, wait_timeout=10):
 
 
 def tar_create(directory):
-    from upip import tarfile
-    t = tarfile.TarFile(directory+".tar", 'w')
+    import utarfile
+    t = utarfile.TarFile(directory+".tar", 'w')
     t.add(directory)
     t.close()
 
 def tar_extract(file_name, show_progress=True):
     import os
-    from upip import tarfile
+    import utarfile
     display_stop()
 
-    tar = tarfile.TarFile(file_name, 'r')
+    tar = utarfile.TarFile(file_name, 'r')
     if(show_progress): print("extracting", file_name)
     for i in tar:
-        if i.type == tarfile.DIRTYPE:
+        if i.type == utarfile.DIRTYPE:
             if i.name != './':
                 try:
                     os.mkdir(i.name.strip('/'))
