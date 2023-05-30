@@ -67,6 +67,8 @@ STATIC uint emit_opt = MP_EMIT_OPT_NONE;
 #if MICROPY_ENABLE_GC
 // Heap size of GC heap (if enabled)
 // Make it larger on a 64 bit machine, because pointers are larger.
+
+// TODO - make this equivalent always with Tulip CC
 long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 #endif
 
@@ -209,7 +211,7 @@ STATIC char *strjoin(const char *s1, int sep_char, const char *s2) {
 STATIC int do_repl(void) {
     mp_hal_stdout_tx_str(MICROPY_BANNER_NAME_AND_VERSION);
     mp_hal_stdout_tx_str("; " MICROPY_BANNER_MACHINE);
-    mp_hal_stdout_tx_str("\nUse Ctrl-D to exit, Ctrl-E for paste mode\n");
+    mp_hal_stdout_tx_str("\nType \"help()\" for more information.\n");
 
     #if MICROPY_USE_READLINE == 1
 

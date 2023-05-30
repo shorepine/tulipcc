@@ -131,7 +131,7 @@ def ls(count=10): # lists latest count files
 
 # Convenience function that just grabs the __last__ file named filename from Tulip World. Does full initial sync to find it
 # Or, you can give it an item from files(), if you want a specific file and not look it up by filename
-def download(filename, limit=5000):
+def download(filename, limit=5000, chunk_size=4096):
     grab_url = None
     if(type(filename)==dict): # this is a item in the files() list
         grab_url = filename["url"]
@@ -152,7 +152,7 @@ def download(filename, limit=5000):
 
         tulip.display_stop()
         r = matrix_get(url)
-        b = r.save(filename)
+        b = r.save(filename, chunk_size=chunk_size)
         tulip.display_start()
 
         print("Downloaded %s [%d bytes, last updated %s] from Tulip World." % (filename, b, age_nice.lstrip()))

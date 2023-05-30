@@ -13,6 +13,14 @@ class Response:
             self.raw = None
         self._cached = None
 
+    # read in chunks as a generator
+    def generate(self, chunk_size=4096):
+        while True:
+            data = self.raw.read(chunk_size)
+            if not data:
+                break
+            yield data
+
     def save(self, filename, mode="wb", chunk_size=4096):
         # Directly save a file from the response socket without putting all of it in RAM
         f = open(filename, mode)
