@@ -196,6 +196,27 @@ class Joy:
     Y = 2048
     B = 4096
 
+def version():
+    # Returns current tulip version (aka git hash and compiled date)
+    me = build_strings()
+    return me[2].replace("-", "") + "-" + me[1].replace("-dirty", "")
+
+# how do i get version? / date?
+def upgrade():
+    import world
+    # Checks for a new firmware from Tulip World, asks if you want to upgrade to it
+    # Probably should use a different room! 
+    prefix = "tulipcc-"
+    all_firmwares = world.files(limit=1000,room_id=world.firmware_room_id)
+    all_firmwares.reverse()
+    if(len(all_firmwares)):
+        f = all_firmwares[0]
+        v = f["filename"][len(prefix):-4]
+        print("Latest firmware is version %s, %s" % (v, world.nice_time(f["age_ms"]/1000)))
+    print("You have version %s" % version())
+
+
+
 # like joy, but also scans the keyboard. lets you use either
 # Z = B, X = A, A = Y, S = X, enter = START, ' = SELECT, Q = L1, W = R1, arrows = DPAD
 def joyk():
