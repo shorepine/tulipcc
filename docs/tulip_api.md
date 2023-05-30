@@ -36,6 +36,9 @@ tulip.tar_create(directory)
 # If you want something to run when Tulip boots, add it to boot.py
 edit("boot.py")
 
+# On Tulip CC with 16MB of flash or more, you can upgrade the firmware over-the-air over wifi
+tulip.upgrade()
+
 # Takes a screenshot and saves to disk. The screen will blank for a moment
 # If no filename given will upload to imgur and return a URL (needs wifi)
 tulip.screenshot("screenshot.png")
