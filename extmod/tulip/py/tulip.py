@@ -217,6 +217,13 @@ def upgrade():
     except ImportError:
         print("Upgrading only works on Tulip CC for now. Visit tulip.computer to download the latest Tulip Desktop.")
         return
+
+    # Ensures we are on a OTA partition
+    partition = esp32.Partition(esp32.Partition.RUNNING).get_next_update()
+    if(partition is None or (not partition.info()[4].startswith('ota'))):
+        print("You are not using OTA partitions, likely because of your flash size (N8R8.)")
+        return
+
     # Checks for a new firmware from Tulip World, asks if you want to upgrade to it
     sec_size = 4096
     screen_blank = "The screen will blank for 2-3 minutes. See status in monitor."
@@ -237,7 +244,6 @@ def upgrade():
             time.sleep(5)
             display_stop()
             try:
-                partition = esp32.Partition(esp32.Partition.RUNNING).get_next_update()
                 print("Flashing OTA partition %s..." % (partition.info()[4]))
                 url = "https://%s/_matrix/media/r0/download/%s" % (world.host, f["url"][6:])
                 # Download the file directly to flash, don't save it first
