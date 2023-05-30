@@ -2,7 +2,7 @@
 
 This is a very informal guide to making Tulip CC work with clean copies of Micropython (MP) and ESP-IDF (IDF). You should never need to do this work, unless you're interested in getting Tulip to run on a version of IDF or MP that we haven't supported yet. These are my notes from doing the work in May 2023 after upgrading to newer versions of MP and IDF (last updated May 2022!)
 
-Can you help? I'd **love** to make this process easier, and act less like a "fork" of MP. It would be great if Tulip's build system pulls down the IDF and MP versions we need before building, so we don't have to ship our repo with all the forked code. I don't know the best way to do this, so any help is quite welcome.
+Can you help? I'd **love** to make this process easier, and act less like a "fork" of MP. It would be great if Tulip's build system pulls down the IDF and MP versions we need before building, so we don't have to ship our repo with all the forked code. We have made changes (and pull requests!) to a few MP libraries, so we do have to keep our versions around or merge them in while we wait for the PRs to come through. I don't know the best way to do all this, so any help is quite welcome.
 
 ## MP and Desktop
 

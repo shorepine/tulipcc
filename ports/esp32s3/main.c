@@ -193,6 +193,8 @@ void mp_task(void *pvParameter) {
     size_t mp_task_heap_size;
     void *mp_task_heap = NULL;
 
+    // TODO - fix this, we are just 4MB heap  in Tulip 
+
     #if CONFIG_SPIRAM_USE_MALLOC
     // SPIRAM is issued using MALLOC, fallback to normal allocation rules
     mp_task_heap = NULL;

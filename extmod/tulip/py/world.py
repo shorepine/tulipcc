@@ -70,6 +70,13 @@ def matrix_post(url, data, content_type="application/octet-stream"):
 def _isdir(filename):
     return (os.stat(filename)[0] & 0o40000) > 0
 
+def read_in_chunks(file_object, chunk_size=4096):
+    while True:
+        data = file_object.read(chunk_size)
+        if not data:
+            break
+        yield data
+
 # Uploads a file or folder from Tulip to Tulip World
 def upload(filename, content_type="application/octet-stream", room_id=files_room_id):
     tar = False
@@ -80,8 +87,12 @@ def upload(filename, content_type="application/octet-stream", room_id=files_room
         print("Packing %s" % (filename))
         tulip.tar_create(filename)
         filename += ".tar"
-    contents = open(filename,"rb").read()
-    uri = matrix_post(url, contents, content_type=content_type).json()["content_uri"]
+    #contents = open(filename,"rb").read()
+    #uri = matrix_post(url, contents, content_type=content_type).json()["content_uri"]
+
+    file = open(filename, "rb")
+    uri = matrix_post(url, read_in_chunks(file), content_type=content_type).json()["content_uri"]
+
     tulip.display_start()
     # Now make an event / message
     data={"info":{"mimetype":content_type},"msgtype":"m.file","body":filename,"url":uri}
