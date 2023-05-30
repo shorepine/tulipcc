@@ -1,7 +1,7 @@
 AC_PREREQ(2.63)
 
 AC_INIT([protobuf-c],
-        [1.3.0],
+        [1.4.0],
         [https://github.com/protobuf-c/protobuf-c/issues],
         [protobuf-c],
         [https://github.com/protobuf-c/protobuf-c])
@@ -75,6 +75,8 @@ AC_ARG_ENABLE([protoc],
   AS_HELP_STRING([--disable-protoc], [Disable building protoc_c (also disables tests)]))
 if test "x$enable_protoc" != "xno"; then
   AC_LANG_PUSH([C++])
+
+  AX_CXX_COMPILE_STDCXX(11, noext, mandatory)
 
   PKG_CHECK_MODULES([protobuf], [protobuf >= 3.0.0],
     [proto3_supported=yes],

@@ -1,6 +1,13 @@
+/*
+ * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 #include "esp_log.h"
 #include "esp_app_trace_membufs_proto.h"
 #include "esp_app_trace_port.h"
+#include "riscv/semihosting.h"
 
 /** RISCV HW transport data */
 typedef struct {
@@ -19,8 +26,6 @@ typedef struct {
     uint32_t                    stat;
     esp_apptrace_mem_block_t *  mem_blocks;
 } esp_apptrace_riscv_ctrl_block_t;
-
-#define RISCV_APPTRACE_SYSNR    0x64
 
 #define ESP_APPTRACE_RISCV_BLOCK_LEN_MSK         0x7FFFUL
 #define ESP_APPTRACE_RISCV_BLOCK_LEN(_l_)        ((_l_) & ESP_APPTRACE_RISCV_BLOCK_LEN_MSK)
@@ -94,25 +99,10 @@ esp_apptrace_hw_t *esp_apptrace_jtag_hw_get(void **data)
    e.g. OpenOCD flasher stub use own implementation of it. */
 __attribute__((weak)) int esp_apptrace_advertise_ctrl_block(void *ctrl_block_addr)
 {
-    register int sys_nr = RISCV_APPTRACE_SYSNR;
-    register int host_ret = 0;
-
     if (!esp_cpu_in_ocd_debug_mode()) {
         return 0;
     }
-    __asm__ volatile ( \
-        ".option push\n" \
-        ".option norvc\n" \
-        "mv a0, %[sys_nr]\n" \
-        "mv a1, %[arg1]\n" \
-        "slli    zero,zero,0x1f\n" \
-        "ebreak\n" \
-        "srai    zero,zero,0x7\n" \
-        "mv %[host_ret], a0\n" \
-    	".option pop\n" \
-        :[host_ret]"=r"(host_ret)
-        :[sys_nr]"r"(sys_nr),[arg1]"r"(ctrl_block_addr):"a0","a1");
-    return host_ret;
+    return (int) semihosting_call_noerrno(ESP_SEMIHOSTING_SYS_APPTRACE_INIT, (long*)ctrl_block_addr);
 }
 
 /* Returns up buffers config.

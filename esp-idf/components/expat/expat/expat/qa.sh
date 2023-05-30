@@ -6,7 +6,7 @@
 #                      \___/_/\_\ .__/ \__,_|\__|
 #                               |_| XML parser
 #
-# Copyright (c) 2016-2021 Sebastian Pipping <sebastian@pipping.org>
+# Copyright (c) 2016-2022 Sebastian Pipping <sebastian@pipping.org>
 # Copyright (c) 2019      Philippe Antoine <contact@catenacyber.fr>
 # Copyright (c) 2019      Hanno Böck <hanno@gentoo.org>
 # Licensed under the MIT license:
@@ -154,14 +154,14 @@ run_tests() {
     esac
 
     if [[ ${CC} =~ mingw ]]; then
-        # NOTE: Filenames are hardcoded for Travis' Ubuntu Bionic, as of now
         for i in tests xmlwf ; do
-            mingw32_dir="$(ls -1d /usr/lib/gcc/i686-w64-mingw32/* | head -n1)"
+            mingw32_dir="$(dirname "$(ls -1 /usr/lib*/gcc/i686-w64-mingw32/*/{libgcc_s_sjlj-1.dll,libstdc++-6.dll} | head -n1)")"
             RUN ln -s \
                     /usr/i686-w64-mingw32/lib/libwinpthread-1.dll \
+                    "${mingw32_dir}"/libgcc_s_dw2-1.dll \
                     "${mingw32_dir}"/libgcc_s_sjlj-1.dll \
                     "${mingw32_dir}"/libstdc++-6.dll \
-                    "$PWD"/libexpat{,w}.dll \
+                    "$PWD"/libexpat{,w}-*.dll \
                     ${i}/
         done
     fi

@@ -142,6 +142,14 @@ esp_err_t outbox_set_pending(outbox_handle_t outbox, int msg_id, pending_state_t
     return ESP_FAIL;
 }
 
+pending_state_t outbox_item_get_pending(outbox_item_handle_t item)
+{
+    if (item) {
+        return item->pending;
+    }
+    return QUEUED;
+}
+
 esp_err_t outbox_set_tick(outbox_handle_t outbox, int msg_id, outbox_tick_t tick)
 {
     outbox_item_handle_t item = outbox_get(outbox, msg_id);

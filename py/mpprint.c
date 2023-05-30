@@ -65,6 +65,7 @@ int mp_print_strn(const mp_print_t *print, const char *str, size_t len, int flag
     int pad_size;
     int total_chars_printed = 0;
     const char *pad_chars;
+
     if (!fill || fill == ' ') {
         pad_chars = pad_spaces;
         pad_size = sizeof(pad_spaces) - 1;

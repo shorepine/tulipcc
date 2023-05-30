@@ -52,6 +52,13 @@
 #include <string.h>
 
 #if IP_REASSEMBLY
+
+#include "lwip/timeouts.h"
+#if ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND
+#include "stdbool.h"
+static bool is_tmr_start = false;
+#endif /* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
+
 /**
  * The IP reassembly code currently has the following limitations:
  * - IP header options are not supported
@@ -119,6 +126,15 @@ static void ip_reass_dequeue_datagram(struct ip_reassdata *ipr, struct ip_reassd
 static int ip_reass_free_complete_datagram(struct ip_reassdata *ipr, struct ip_reassdata *prev);
 
 /**
+ * Wrapper function with matching prototype which calls the actual callback
+ */
+static void ip_reass_timeout_cb(void *arg)
+{
+  LWIP_UNUSED_ARG(arg);
+  ip_reass_tmr();
+}
+
+/**
  * Reassembly timer base function
  * for both NO_SYS == 0 and 1 (!).
  *
@@ -128,6 +144,9 @@ void
 ip_reass_tmr(void)
 {
   struct ip_reassdata *r, *prev = NULL;
+#if ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND
+  bool tmr_restart = false;
+#endif /* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
 
   r = reassdatagrams;
   while (r != NULL) {
@@ -138,6 +157,9 @@ ip_reass_tmr(void)
       LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_reass_tmr: timer dec %"U16_F"\n", (u16_t)r->timer));
       prev = r;
       r = r->next;
+#if ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND
+      tmr_restart = true;
+#endif /* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
     } else {
       /* reassembly timed out */
       struct ip_reassdata *tmp;
@@ -149,6 +171,14 @@ ip_reass_tmr(void)
       ip_reass_free_complete_datagram(tmp, prev);
     }
   }
+#if ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND
+  if (tmr_restart) {
+    sys_timeout(IP_TMR_INTERVAL, ip_reass_timeout_cb, NULL);
+  } else {
+    sys_untimeout(ip_reass_timeout_cb, NULL);
+    is_tmr_start = false;
+  }
+#endif/* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
 }
 
 /**
@@ -672,6 +702,12 @@ ip4_reass(struct pbuf *p)
     /* Return the pbuf chain */
     return p;
   }
+#if ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND 
+  if (!is_tmr_start) {
+    sys_timeout(IP_TMR_INTERVAL, ip_reass_timeout_cb, NULL);
+    is_tmr_start = true;
+  }
+#endif /* ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND */
   /* the datagram is not (yet?) reassembled completely */
   LWIP_DEBUGF(IP_REASS_DEBUG, ("ip_reass_pbufcount: %d out\n", ip_reass_pbufcount));
   return NULL;

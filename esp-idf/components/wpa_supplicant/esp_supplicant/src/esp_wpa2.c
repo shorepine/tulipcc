@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2019-2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2019-2022 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -43,6 +43,15 @@
 #define DATA_MUTEX_TAKE() xSemaphoreTakeRecursive(s_wpa2_data_lock,portMAX_DELAY)
 #define DATA_MUTEX_GIVE() xSemaphoreGiveRecursive(s_wpa2_data_lock)
 
+//length of the string "fast_provisioning={0/1/2} "
+#define FAST_PROVISIONING_CONFIG_STR_LEN 20
+//length of the string "fast_max_pac_list_len=(int < 100) "
+#define FAST_MAX_PAC_LIST_CONFIG_STR_LEN 25
+//length of the string "fast_pac_format=binary"
+#define FAST_PAC_FORMAT_STR_LEN 22
+//Total
+#define PHASE1_PARAM_STRING_LEN FAST_PROVISIONING_CONFIG_STR_LEN + FAST_MAX_PAC_LIST_CONFIG_STR_LEN + FAST_PAC_FORMAT_STR_LEN
+
 static void *s_wpa2_data_lock = NULL;
 
 static struct eap_sm *gEapSm = NULL;
@@ -55,7 +64,7 @@ static int wpa2_start_eapol_internal(void);
 int wpa2_post(uint32_t sig, uint32_t par);
 
 #ifdef USE_WPA2_TASK
-static void *s_wpa2_task_hdl = NULL;
+static TaskHandle_t s_wpa2_task_hdl = NULL;
 static void *s_wpa2_queue = NULL;
 static wpa2_state_t s_wpa2_state = WPA2_STATE_DISABLED;
 static void *s_wpa2_api_lock = NULL;
@@ -404,7 +413,8 @@ int eap_sm_process_request(struct eap_sm *sm, struct wpabuf *reqData)
         return ESP_FAIL;
     }
 
-    if (ehdr->identifier == sm->current_identifier) {
+    if (ehdr->identifier == sm->current_identifier &&
+        sm->lastRespData != NULL) {
         /*Retransmit*/
         resp = sm->lastRespData;
         goto send_resp;
@@ -442,6 +452,15 @@ int eap_sm_process_request(struct eap_sm *sm, struct wpabuf *reqData)
         if (m == NULL) {
             goto build_nak;
         }
+
+        if (!eap_sm_allowMethod(sm, reqVendor, reqVendorMethod)) {
+            wpa_printf(MSG_DEBUG, "EAP: vendor %u method %u not allowed",
+                    reqVendor, reqVendorMethod);
+            wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_PROPOSED_METHOD
+                    "vendor=%u method=%u -> NAK",
+                    reqVendor, reqVendorMethod);
+            goto build_nak;
+        }
         if (sm->m) {
             eap_deinit_prev_method(sm, "GET_METHOD");
         }
@@ -476,7 +495,10 @@ build_nak:
 send_resp:
     if (resp == NULL) {
         wpa_printf(MSG_ERROR, "Response build fail, return.");
-        return ESP_FAIL;
+        wpabuf_free(sm->lastRespData);
+        sm->lastRespData = resp;
+        wpa2_set_eap_state(WPA2_ENT_EAP_STATE_FAIL);
+        return WPA2_ENT_EAP_STATE_FAIL;
     }
     ret = eap_sm_send_eapol(sm, resp);
     if (resp != sm->lastRespData) {
@@ -771,7 +793,7 @@ static int eap_peer_sm_init(void)
     gEapSm = sm;
 #ifdef USE_WPA2_TASK
     s_wpa2_queue = xQueueCreate(SIG_WPA2_MAX, sizeof(s_wpa2_queue));
-    ret = xTaskCreate(wpa2_task, "wpa2T", WPA2_TASK_STACK_SIZE, NULL, 2, s_wpa2_task_hdl);
+    ret = xTaskCreate(wpa2_task, "wpa2T", WPA2_TASK_STACK_SIZE, NULL, 2, &s_wpa2_task_hdl);
     if (ret != pdPASS) {
         wpa_printf(MSG_ERROR, "wps enable: failed to create task");
         ret = ESP_FAIL;
@@ -974,6 +996,9 @@ void esp_wifi_sta_wpa2_ent_clear_cert_key(void)
     g_wpa_private_key_len = 0;
     g_wpa_private_key_passwd = NULL;
     g_wpa_private_key_passwd_len = 0;
+    os_free(g_wpa_pac_file);
+    g_wpa_pac_file = NULL;
+    g_wpa_pac_file_len = 0;
 }
 
 esp_err_t esp_wifi_sta_wpa2_ent_set_ca_cert(const unsigned char *ca_cert, int ca_cert_len)
@@ -1170,4 +1195,58 @@ esp_err_t esp_wifi_sta_wpa2_set_suiteb_192bit_certification(bool enable)
 #else
     return ESP_FAIL;
 #endif
+}
+
+esp_err_t esp_wifi_sta_wpa2_ent_set_pac_file(const unsigned char *pac_file, int pac_file_len)
+{
+    if (pac_file && pac_file_len > -1) {
+        if (pac_file_len < 512) { // The file contains less than 1 pac and is to be rewritten later
+            g_wpa_pac_file = (u8 *)os_zalloc(512);
+            if (g_wpa_pac_file == NULL) {
+                return ESP_ERR_NO_MEM;
+            }
+            g_wpa_pac_file_len = 0;
+        } else { // The file contains pac data
+            g_wpa_pac_file = (u8 *)os_zalloc(pac_file_len);
+            if (g_wpa_pac_file == NULL) {
+                return ESP_ERR_NO_MEM;
+            }
+            os_memcpy(g_wpa_pac_file, pac_file, pac_file_len);
+            g_wpa_pac_file_len = pac_file_len;
+        }
+    } else {
+        return ESP_FAIL;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t esp_wifi_sta_wpa2_ent_set_fast_phase1_params(esp_eap_fast_config config)
+{
+    char config_for_supplicant[PHASE1_PARAM_STRING_LEN] = "";
+    if ((config.fast_provisioning > -1) && (config.fast_provisioning <= 2)) {
+        os_sprintf((char *) &config_for_supplicant, "fast_provisioning=%d ", config.fast_provisioning);
+    } else {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (config.fast_max_pac_list_len && config.fast_max_pac_list_len < 100) {
+        os_sprintf((char *) &config_for_supplicant + strlen(config_for_supplicant), "fast_max_pac_list_len=%d ", config.fast_max_pac_list_len);
+    } else if (config.fast_max_pac_list_len >= 100) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (config.fast_pac_format_binary) {
+        os_strcat((char *) &config_for_supplicant, (const char *) "fast_pac_format=binary");
+    }
+
+    // Free the old buffer if it already exists
+    if (g_wpa_phase1_options != NULL) {
+        os_free(g_wpa_phase1_options);
+    }
+    g_wpa_phase1_options = (char *)os_zalloc(sizeof(config_for_supplicant));
+    if (g_wpa_phase1_options == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+    os_memcpy(g_wpa_phase1_options, &config_for_supplicant, sizeof(config_for_supplicant));
+    return ESP_OK;
+
 }

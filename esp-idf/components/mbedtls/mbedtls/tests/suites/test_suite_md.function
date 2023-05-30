@@ -16,11 +16,12 @@ void mbedtls_md_process(  )
     unsigned char buf[150];
 
     mbedtls_md_init( &ctx );
+    memset( buf, 0, sizeof( buf ) );
 
     /*
      * Very minimal testing of mbedtls_md_process, just make sure the various
      * xxx_process_wrap() function pointers are valid. (Testing that they
-     * indeed do the right thing whould require messing with the internal
+     * indeed do the right thing would require messing with the internal
      * state of the underlying mbedtls_md/sha context.)
      *
      * Also tests that mbedtls_md_list() only returns valid MDs.
@@ -30,6 +31,7 @@ void mbedtls_md_process(  )
         info = mbedtls_md_info_from_type( *md_type_ptr );
         TEST_ASSERT( info != NULL );
         TEST_ASSERT( mbedtls_md_setup( &ctx, info, 0 ) == 0 );
+        TEST_ASSERT( mbedtls_md_starts( &ctx ) == 0 );
         TEST_ASSERT( mbedtls_md_process( &ctx, buf ) == 0 );
         mbedtls_md_free( &ctx );
     }

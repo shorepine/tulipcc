@@ -270,7 +270,6 @@ typedef struct {
 } tBTA_GATTC_ATTR_REC;
 
 
-#define BTA_GATTC_MAX_CACHE_CHAR    40
 #define BTA_GATTC_ATTR_LIST_SIZE    (BTA_GATTC_MAX_CACHE_CHAR * sizeof(tBTA_GATTC_ATTR_REC))
 
 #ifndef BTA_GATTC_CACHE_SRVR_SIZE
@@ -305,10 +304,10 @@ typedef struct {
 
     tBTA_GATTC_ATTR_REC *p_srvc_list;
     UINT8               cur_srvc_idx;
-    UINT8               cur_char_idx;
-    UINT8               next_avail_idx;
+    UINT16               cur_char_idx;
+    UINT16               next_avail_idx;
     UINT8               total_srvc;
-    UINT8               total_char;
+    UINT16               total_char;
     UINT16              total_attr;
     UINT8               srvc_hdl_chg;   /* service handle change indication pending */
     UINT16              attr_index;     /* cahce NV saving/loading attribute index */
@@ -318,7 +317,7 @@ typedef struct {
 } tBTA_GATTC_SERV;
 
 #ifndef BTA_GATTC_NOTIF_REG_MAX
-#define BTA_GATTC_NOTIF_REG_MAX     7//15
+#define BTA_GATTC_NOTIF_REG_MAX     BTA_GATTC_CONN_MAX
 #endif
 
 typedef struct {
@@ -477,7 +476,7 @@ extern void bta_gattc_send_open_cback( tBTA_GATTC_RCB *p_clreg, tBTA_GATT_STATUS
                                        BD_ADDR remote_bda, UINT16 conn_id, tBTA_TRANSPORT transport,  UINT16 mtu);
 extern void bta_gattc_send_connect_cback( tBTA_GATTC_RCB *p_clreg, BD_ADDR remote_bda, UINT16 conn_id, tBTA_GATT_CONN_PARAMS conn_params, UINT8 link_role);
 extern void bta_gattc_send_disconnect_cback( tBTA_GATTC_RCB *p_clreg, tGATT_DISCONN_REASON reason,
-                                BD_ADDR remote_bda, UINT16 conn_id);
+                                BD_ADDR remote_bda, UINT16 conn_id, UINT8 link_role);
 extern void bta_gattc_process_api_refresh(tBTA_GATTC_CB *p_cb, tBTA_GATTC_DATA *p_msg);
 extern void bta_gattc_process_api_cache_clean(tBTA_GATTC_CB *p_cb, tBTA_GATTC_DATA *p_msg);
 extern void bta_gattc_process_api_cache_assoc(tBTA_GATTC_CB *p_cb, tBTA_GATTC_DATA *p_msg);

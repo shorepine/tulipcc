@@ -73,6 +73,7 @@ static uint16_t proxy_ccc_val;
 #if defined(CONFIG_BLE_MESH_PB_GATT)
 static uint16_t prov_ccc_val;
 static bool prov_fast_adv;
+static uint32_t prov_start_time;
 #endif
 
 static struct bt_mesh_proxy_client {
@@ -92,13 +93,7 @@ static struct bt_mesh_proxy_client {
 #endif
     struct k_delayed_work sar_timer;
     struct net_buf_simple buf;
-} clients[BLE_MESH_MAX_CONN] = {
-    [0 ... (BLE_MESH_MAX_CONN - 1)] = {
-#if defined(CONFIG_BLE_MESH_GATT_PROXY_SERVER)
-        .send_beacons = _K_WORK_INITIALIZER(proxy_send_beacons),
-#endif
-    },
-};
+} clients[BLE_MESH_MAX_CONN];
 
 static uint8_t client_buf_data[CLIENT_BUF_SIZE * BLE_MESH_MAX_CONN];
 
@@ -159,6 +154,23 @@ static void proxy_sar_timeout(struct k_work *work)
 }
 
 #if defined(CONFIG_BLE_MESH_GATT_PROXY_SERVER)
+/**
+ * The following callbacks are used to notify proper information
+ * to the application layer.
+ */
+static proxy_server_connect_cb_t proxy_server_connect_cb;
+static proxy_server_disconnect_cb_t proxy_server_disconnect_cb;
+
+void bt_mesh_proxy_server_set_conn_cb(proxy_server_connect_cb_t cb)
+{
+    proxy_server_connect_cb = cb;
+}
+
+void bt_mesh_proxy_server_set_disconn_cb(proxy_server_disconnect_cb_t cb)
+{
+    proxy_server_disconnect_cb = cb;
+}
+
 /* Next subnet in queue to be advertised */
 static int next_idx;
 
@@ -605,6 +617,10 @@ static void proxy_connected(struct bt_mesh_conn *conn, uint8_t err)
     client->filter_type = NONE;
 #if defined(CONFIG_BLE_MESH_GATT_PROXY_SERVER)
     (void)memset(client->filter, 0, sizeof(client->filter));
+
+    if (proxy_server_connect_cb) {
+        proxy_server_connect_cb(conn->handle);
+    }
 #endif
     net_buf_simple_reset(&client->buf);
 }
@@ -621,6 +637,11 @@ static void proxy_disconnected(struct bt_mesh_conn *conn, uint8_t reason)
         struct bt_mesh_proxy_client *client = &clients[i];
 
         if (client->conn == conn) {
+#if CONFIG_BLE_MESH_GATT_PROXY_SERVER
+            if (proxy_server_disconnect_cb) {
+                proxy_server_disconnect_cb(conn->handle, reason);
+            }
+#endif
             if (IS_ENABLED(CONFIG_BLE_MESH_PB_GATT) &&
                     client->filter_type == PROV) {
                 bt_mesh_pb_gatt_close(conn);
@@ -1357,12 +1378,16 @@ int32_t bt_mesh_proxy_server_adv_start(void)
     }
 
 #if defined(CONFIG_BLE_MESH_PB_GATT)
+    if (prov_fast_adv) {
+        prov_start_time = k_uptime_get_32();
+    }
+
     if (!bt_mesh_is_provisioned()) {
         const struct bt_mesh_adv_param *param;
         struct bt_mesh_adv_data prov_sd[2];
         size_t prov_sd_len;
 
-        if (prov_fast_adv) {
+        if (k_uptime_get_32() - prov_start_time < K_SECONDS(60)) {
             param = &fast_adv_param;
         } else {
             param = &slow_adv_param;
@@ -1433,7 +1458,9 @@ int bt_mesh_proxy_server_init(void)
 
         client->buf.size = CLIENT_BUF_SIZE;
         client->buf.__buf = client_buf_data + (i * CLIENT_BUF_SIZE);
-
+#if defined(CONFIG_BLE_MESH_GATT_PROXY_SERVER)
+        k_work_init(&client->send_beacons, proxy_send_beacons);
+#endif
         k_delayed_work_init(&client->sar_timer, proxy_sar_timeout);
     }
 

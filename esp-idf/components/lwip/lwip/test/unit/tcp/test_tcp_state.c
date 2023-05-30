@@ -150,15 +150,19 @@ START_TEST(test_tcp_new_max_num)
 }
 END_TEST
 
-
-/* pcbs in FIN_WAIT_1 state will be deleted when creating new pcb reach the max number */
 #if ESP_LWIP
+/* 
+ * ESP_LWIP: 
+ * If pcb lists are full when allocating a new pcb,
+ * try to remove one pcb in TIME_WAIT,LAST_ACK, FIN_WAIT_1,CLOSING,FIN_WAIT_1 state.
+ */
 START_TEST(test_tcp_new_max_num_remove_FIN_WAIT_1)
 {
   struct tcp_pcb* pcb;
   struct tcp_pcb* pcb_list[MEMP_NUM_TCP_PCB + 1];
   err_t err;
   int i;
+  uint16_t base_bind_port = 2222;
   LWIP_UNUSED_ARG(_i);
 
   /* create a pcb in FIN_WAIT_1 state */
@@ -175,22 +179,17 @@ START_TEST(test_tcp_new_max_num_remove_FIN_WAIT_1)
   for(i = 0;i < MEMP_NUM_TCP_PCB-1; i++) {
     pcb_list[i] = tcp_new();
     EXPECT(MEMP_STATS_GET(used, MEMP_TCP_PCB) == (i + 2));
+    /* must bind pcb, otherwise, it will not be calculated in tcp_active_pcbs */
+    err = tcp_bind(pcb_list[i], &test_netif.ip_addr, base_bind_port+i);
+    EXPECT(err == ERR_OK);
   }
   EXPECT(MEMP_STATS_GET(used, MEMP_TCP_PCB) == MEMP_NUM_TCP_PCB);
   /* Create one more pcb */
   pcb_list[MEMP_NUM_TCP_PCB-1] = tcp_new();
 
-/** TODO: Check ESP-LWIP port for potential bug in TCP state machine
- * The FIN_WAIT_1 pcb should be removed when pcb full in ESP_LWIP.
- */
-#if 0
-  /* the FIN_WAIT_1 pcb can not be removed, because new pcbs are not in tcp_active_pcbs */
+  /* the FIN_WAIT_1 pcb was removed */
   EXPECT_RET(pcb_list[MEMP_NUM_TCP_PCB-1] != NULL);
   EXPECT_RET(MEMP_STATS_GET(used, MEMP_TCP_PCB) == MEMP_NUM_TCP_PCB);
-#else
-  EXPECT(pcb_list[MEMP_NUM_TCP_PCB-1] == NULL);
-  tcp_abort(pcb);
-#endif
 
   for (i = 0; i <= MEMP_NUM_TCP_PCB-1; i++)
   {

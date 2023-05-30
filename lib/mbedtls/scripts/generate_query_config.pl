@@ -17,13 +17,7 @@
 # Usage: ./scripts/generate_query_config.pl without arguments
 #
 # Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-#
-# This file is provided under the Apache License 2.0, or the
-# GNU General Public License v2.0 or later.
-#
-# **********
-# Apache License 2.0:
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License.
@@ -36,34 +30,13 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# **********
-#
-# **********
-# GNU General Public License v2.0 or later:
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-#
-# **********
 
 use strict;
 
 my $config_file = "./include/mbedtls/config.h";
 
 my $query_config_format_file = "./scripts/data_files/query_config.fmt";
-my $query_config_file = "./programs/ssl/query_config.c";
+my $query_config_file = "./programs/test/query_config.c";
 
 # Excluded macros from the generated query_config.c. For example, macros that
 # have commas or function-like macros cannot be transformed into strings easily
@@ -80,6 +53,7 @@ open(CONFIG_FILE, "$config_file") or die "Opening config file '$config_file': $!
 # This variable will contain the string to replace in the CHECK_CONFIG of the
 # format file
 my $config_check = "";
+my $list_config = "";
 
 while (my $line = <CONFIG_FILE>) {
     if ($line =~ /^(\/\/)?\s*#\s*define\s+(MBEDTLS_\w+).*/) {
@@ -99,6 +73,11 @@ while (my $line = <CONFIG_FILE>) {
         $config_check .= "    }\n";
         $config_check .= "#endif /* $name */\n";
         $config_check .= "\n";
+
+        $list_config .= "#if defined($name)\n";
+        $list_config .= "    OUTPUT_MACRO_NAME_VALUE($name);\n";
+        $list_config .= "#endif /* $name */\n";
+        $list_config .= "\n";
     }
 }
 
@@ -110,6 +89,7 @@ close(FORMAT_FILE);
 
 # Replace the body of the query_config() function with the code we just wrote
 $query_config_format =~ s/CHECK_CONFIG/$config_check/g;
+$query_config_format =~ s/LIST_CONFIG/$list_config/g;
 
 # Rewrite the query_config.c file
 open(QUERY_CONFIG_FILE, ">$query_config_file") or die "Opening destination file '$query_config_file': $!";

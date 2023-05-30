@@ -68,7 +68,7 @@
 #include <protoc-c/c_helpers.h>
 #include <protoc-c/c_message.h>
 #include <google/protobuf/io/printer.h>
-#include <google/protobuf/descriptor.pb.h>
+#include <protobuf-c/protobuf-c.pb.h>
 
 #include "protobuf-c.h"
 
@@ -80,16 +80,16 @@ namespace c {
 // ===================================================================
 
 FileGenerator::FileGenerator(const FileDescriptor* file,
-                             const string& dllexport_decl)
+                             const std::string& dllexport_decl)
   : file_(file),
     message_generators_(
-      new scoped_ptr<MessageGenerator>[file->message_type_count()]),
+      new std::unique_ptr<MessageGenerator>[file->message_type_count()]),
     enum_generators_(
-      new scoped_ptr<EnumGenerator>[file->enum_type_count()]),
+      new std::unique_ptr<EnumGenerator>[file->enum_type_count()]),
     service_generators_(
-      new scoped_ptr<ServiceGenerator>[file->service_count()]),
+      new std::unique_ptr<ServiceGenerator>[file->service_count()]),
     extension_generators_(
-      new scoped_ptr<ExtensionGenerator>[file->extension_count()]) {
+      new std::unique_ptr<ExtensionGenerator>[file->extension_count()]) {
 
   for (int i = 0; i < file->message_type_count(); i++) {
     message_generators_[i].reset(
@@ -110,19 +110,19 @@ FileGenerator::FileGenerator(const FileDescriptor* file,
     extension_generators_[i].reset(
       new ExtensionGenerator(file->extension(i), dllexport_decl));
   }
-
-  SplitStringUsing(file_->package(), ".", &package_parts_);
 }
 
 FileGenerator::~FileGenerator() {}
 
 void FileGenerator::GenerateHeader(io::Printer* printer) {
-  string filename_identifier = FilenameIdentifier(file_->name());
+  std::string filename_identifier = FilenameIdentifier(file_->name());
 
   int min_header_version = 1000000;
+#if defined(HAVE_PROTO3)
   if (file_->syntax() == FileDescriptor::SYNTAX_PROTO3) {
     min_header_version = 1003000;
   }
+#endif
 
   // Generate top of header.
   printer->Print(
@@ -155,9 +155,13 @@ void FileGenerator::GenerateHeader(io::Printer* printer) {
     "protoc_version", SimpleItoa(PROTOBUF_C_VERSION_NUMBER));
 
   for (int i = 0; i < file_->dependency_count(); i++) {
-    printer->Print(
-      "#include \"$dependency$.pb-c.h\"\n",
-      "dependency", StripProto(file_->dependency(i)->name()));
+    const ProtobufCFileOptions opt =
+	    file_->dependency(i)->options().GetExtension(pb_c_file);
+    if (!opt.no_generate()) {
+      printer->Print(
+        "#include \"$dependency$.pb-c.h\"\n",
+	"dependency", StripProto(file_->dependency(i)->name()));
+    }
   }
 
   printer->Print("\n");
@@ -185,7 +189,13 @@ void FileGenerator::GenerateHeader(io::Printer* printer) {
   }
 
   for (int i = 0; i < file_->message_type_count(); i++) {
-    message_generators_[i]->GenerateHelperFunctionDeclarations(printer, false);
+    const ProtobufCFileOptions opt = file_->options().GetExtension(pb_c_file);
+
+    message_generators_[i]->GenerateHelperFunctionDeclarations(
+						printer,
+						opt.has_gen_pack_helpers(),
+						opt.gen_pack_helpers(),
+						opt.gen_init_helpers());
   }
 
   printer->Print("/* --- per-message closures --- */\n\n");
@@ -236,34 +246,18 @@ void FileGenerator::GenerateSource(io::Printer* printer) {
     "filename", file_->name(),
     "basename", StripProto(file_->name()));
 
-#if 0
-  // For each dependency, write a prototype for that dependency's
-  // BuildDescriptors() function.  We don't expose these in the header because
-  // they are internal implementation details, and since this is generated code
-  // we don't have the usual risks involved with declaring external functions
-  // within a .cc file.
-  for (int i = 0; i < file_->dependency_count(); i++) {
-    const FileDescriptor* dependency = file_->dependency(i);
-    // Open the dependency's namespace.
-    vector<string> dependency_package_parts;
-    SplitStringUsing(dependency->package(), ".", &dependency_package_parts);
-    // Declare its BuildDescriptors() function.
-    printer->Print(
-      "void $function$();",
-      "function", GlobalBuildDescriptorsName(dependency->name()));
-    // Close the namespace.
-    for (int i = 0; i < dependency_package_parts.size(); i++) {
-      printer->Print(" }");
-    }
-    printer->Print("\n");
-  }
-#endif
+  const ProtobufCFileOptions opt = file_->options().GetExtension(pb_c_file);
 
   for (int i = 0; i < file_->message_type_count(); i++) {
-    message_generators_[i]->GenerateHelperFunctionDefinitions(printer, false);
+    message_generators_[i]->GenerateHelperFunctionDefinitions(
+						printer,
+						opt.has_gen_pack_helpers(),
+						opt.gen_pack_helpers(),
+						opt.gen_init_helpers());
   }
   for (int i = 0; i < file_->message_type_count(); i++) {
-    message_generators_[i]->GenerateMessageDescriptor(printer);
+    message_generators_[i]->GenerateMessageDescriptor(printer,
+						      opt.gen_init_helpers());
   }
   for (int i = 0; i < file_->enum_type_count(); i++) {
     enum_generators_[i]->GenerateEnumDescriptor(printer);

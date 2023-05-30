@@ -7,7 +7,7 @@
 #                               |_| XML parser
 #
 # Copyright (c) 2017      José Gutiérrez de la Concha <jose@zeroc.com>
-# Copyright (c) 2017-2021 Sebastian Pipping <sebastian@pipping.org>
+# Copyright (c) 2017-2022 Sebastian Pipping <sebastian@pipping.org>
 # Copyright (c) 2017      Franek Korta <fkorta@gmail.com>
 # Licensed under the MIT license:
 #
@@ -104,6 +104,33 @@ environment:
       CMAKE_ARGS: -DEXPAT_CHAR_TYPE=wchar_t
       EXPAT_DLL: libexpatwd.dll
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
+
+    # Visual Studio 2022 Win32
+    - GENERATOR: Visual Studio 17 2022
+      PLATFORM: Win32
+      CMAKE_ARGS: -A Win32
+      EXPAT_DLL: libexpatd.dll
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+
+    # Visual Studio 2022 Win32 XML_UNICODE_WCHAR_T
+    - GENERATOR: Visual Studio 17 2022
+      PLATFORM: Win32
+      CMAKE_ARGS: -A Win32 -DEXPAT_CHAR_TYPE=wchar_t
+      EXPAT_DLL: libexpatwd.dll
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+
+    # Visual Studio 2022 x64
+    - GENERATOR: Visual Studio 17 2022
+      PLATFORM: x64
+      EXPAT_DLL: libexpatd.dll
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
+
+    # Visual Studio 2022 x64 XML_UNICODE_WCHAR_T
+    - GENERATOR: Visual Studio 17 2022
+      PLATFORM: x64
+      CMAKE_ARGS: -DEXPAT_CHAR_TYPE=wchar_t
+      EXPAT_DLL: libexpatwd.dll
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2022
 
 before_build:
   - echo Running cmake...

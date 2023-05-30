@@ -14,14 +14,12 @@
 #include "soc/rtc_cntl_reg.h"
 #include "esp_private/panic_internal.h"
 #include "esp_rom_uart.h"
+#if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE
 #if CONFIG_IDF_TARGET_ESP32S2
 #include "esp32s2/memprot.h"
-#elif CONFIG_IDF_TARGET_ESP32S3
-#include "esp32s3/memprot.h"
-#elif CONFIG_IDF_TARGET_ESP32C3
-#include "esp32c3/memprot.h"
-#elif CONFIG_IDF_TARGET_ESP32H2
-#include "esp32h2/memprot.h"
+#else
+#include "esp_memprot.h"
+#endif
 #endif
 
 #define SHUTDOWN_HANDLERS_NO 5
@@ -38,10 +36,19 @@ void IRAM_ATTR esp_restart_noos_dig(void)
     // switch to XTAL (otherwise we will keep running from the PLL)
     rtc_clk_cpu_freq_set_xtal();
 
-#if CONFIG_IDF_TARGET_ESP32
-    esp_cpu_unstall(PRO_CPU_NUM);
+    // esp_restart_noos_dig() will generates a core reset, which does not reset the
+    // registers of the RTC domain, so the CPU's stall state remains after the reset,
+    // we need to release them here
+#if !CONFIG_FREERTOS_UNICORE
+    // Unstall all other cores
+    int core_id = cpu_hal_get_core_id();
+    for (uint32_t i = 0; i < SOC_CPU_CORES_NUM; i++) {
+        if (i != core_id) {
+            esp_cpu_unstall(i);
+        }
+    }
 #endif
-    // reset the digital part
+    // generate core reset
     SET_PERI_REG_MASK(RTC_CNTL_OPTIONS0_REG, RTC_CNTL_SW_SYS_RST);
     while (true) {
         ;
@@ -86,9 +93,18 @@ void IRAM_ATTR esp_restart(void)
 
     bool digital_reset_needed = false;
 #if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE
+#if CONFIG_IDF_TARGET_ESP32S2
     if (esp_memprot_is_intr_ena_any() || esp_memprot_is_locked_any()) {
         digital_reset_needed = true;
     }
+#else
+    bool is_on = false;
+    if (esp_mprot_is_intr_ena_any(&is_on) != ESP_OK || is_on) {
+        digital_reset_needed = true;
+    } else if (esp_mprot_is_conf_locked_any(&is_on) != ESP_OK || is_on) {
+        digital_reset_needed = true;
+    }
+#endif
 #endif
     if (digital_reset_needed) {
         esp_restart_noos_dig();

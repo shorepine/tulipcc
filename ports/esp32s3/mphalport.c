@@ -88,6 +88,9 @@ uintptr_t mp_hal_stdio_poll(uintptr_t poll_flags) {
     if ((poll_flags & MP_STREAM_POLL_RD) && stdin_ringbuf.iget != stdin_ringbuf.iput) {
         ret |= MP_STREAM_POLL_RD;
     }
+    if (poll_flags & MP_STREAM_POLL_WR) {
+        ret |= MP_STREAM_POLL_WR;
+    }
     return ret;
 }
 
@@ -103,8 +106,6 @@ int mp_hal_stdin_rx_chr(void) {
 
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
     // Only release the GIL if many characters are being sent
-    //printf("hi\n");
-    //printf(str);
     bool release_gil = len > 20;
     if (release_gil) {
         MP_THREAD_GIL_EXIT();
@@ -132,7 +133,7 @@ uint32_t mp_hal_ticks_us(void) {
 }
 
 void mp_hal_delay_ms(uint32_t ms) {
-    uint64_t us = ms * 1000;
+    uint64_t us = (uint64_t)ms * 1000ULL;
     uint64_t dt;
     uint64_t t0 = esp_timer_get_time();
     for (;;) {
@@ -141,7 +142,7 @@ void mp_hal_delay_ms(uint32_t ms) {
         MP_THREAD_GIL_EXIT();
         uint64_t t1 = esp_timer_get_time();
         dt = t1 - t0;
-        if (dt + portTICK_PERIOD_MS * 1000 >= us) {
+        if (dt + portTICK_PERIOD_MS * 1000ULL >= us) {
             // doing a vTaskDelay would take us beyond requested delay time
             taskYIELD();
             MP_THREAD_GIL_ENTER();

@@ -3,13 +3,7 @@
 # depends-hashes.pl
 #
 # Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-#
-# This file is provided under the Apache License 2.0, or the
-# GNU General Public License v2.0 or later.
-#
-# **********
-# Apache License 2.0:
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License.
@@ -22,27 +16,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# **********
-#
-# **********
-# GNU General Public License v2.0 or later:
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-#
-# **********
 #
 # Purpose
 #
@@ -73,15 +46,25 @@ my $config_h = 'include/mbedtls/config.h';
 
 # as many SSL options depend on specific hashes,
 # and SSL is not in the test suites anyways,
-# disable it to avoid dependcies issues
+# disable it to avoid dependency issues
 my $ssl_sed_cmd = 's/^#define \(MBEDTLS_SSL.*\)/\1/p';
 my @ssl = split( /\s+/, `sed -n -e '$ssl_sed_cmd' $config_h` );
 
 # for md we want to catch MD5_C but not MD_C, hence the extra dot
 my $mdx_sed_cmd = 's/^#define \(MBEDTLS_MD..*_C\)/\1/p';
 my $sha_sed_cmd = 's/^#define \(MBEDTLS_SHA.*_C\)/\1/p';
-my @hashes = split( /\s+/,
+my @hash_modules = split( /\s+/,
                     `sed -n -e '$mdx_sed_cmd' -e '$sha_sed_cmd' $config_h` );
+
+# there are also negative options for truncated variants, disabled by default
+my $sha_trunc_sed_cmd = 's/^\/\/#define \(MBEDTLS_SHA..._NO_.*\)/\1/p';
+my @hash_negatives = split( /\s+/,
+                    `sed -n -e '$sha_trunc_sed_cmd' $config_h` );
+
+# list hash options with corresponding actions
+my @hashes = ((map { "unset $_" } @hash_modules),
+              (map { "set $_" } @hash_negatives));
+
 system( "cp $config_h $config_h.bak" ) and die;
 sub abort {
     system( "mv $config_h.bak $config_h" ) and warn "$config_h not restored\n";
@@ -95,14 +78,15 @@ for my $hash (@hashes) {
     system( "make clean" ) and die;
 
     print "\n******************************************\n";
-    print "* Testing without hash: $hash\n";
+    print "* Testing hash option: $hash\n";
     print "******************************************\n";
+    $ENV{MBEDTLS_TEST_CONFIGURATION} = "-$hash";
 
-    system( "scripts/config.pl unset $hash" )
-        and abort "Failed to disable $hash\n";
+    system( "scripts/config.py $hash" )
+        and abort "Failed to $hash\n";
 
     for my $opt (@ssl) {
-        system( "scripts/config.pl unset $opt" )
+        system( "scripts/config.py unset $opt" )
             and abort "Failed to disable $opt\n";
     }
 

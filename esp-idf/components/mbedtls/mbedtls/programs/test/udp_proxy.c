@@ -1,14 +1,8 @@
 /*
- *  UDP proxy: emulate an unreliable UDP connexion for DTLS testing
+ *  UDP proxy: emulate an unreliable UDP connection for DTLS testing
  *
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
- *
- *  This file is provided under the Apache License 2.0, or the
- *  GNU General Public License v2.0 or later.
- *
- *  **********
- *  Apache License 2.0:
+ *  SPDX-License-Identifier: Apache-2.0
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may
  *  not use this file except in compliance with the License.
@@ -21,27 +15,6 @@
  *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
- *  **********
- *
- *  **********
- *  GNU General Public License v2.0 or later:
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License along
- *  with this program; if not, write to the Free Software Foundation, Inc.,
- *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- *
- *  **********
  */
 
 /*
@@ -61,9 +34,11 @@
 #else
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(MBEDTLS_HAVE_TIME)
 #include <time.h>
 #define mbedtls_time            time
 #define mbedtls_time_t          time_t
+#endif
 #define mbedtls_printf          printf
 #define mbedtls_calloc          calloc
 #define mbedtls_free            free
@@ -100,7 +75,9 @@ int main( void )
 #endif
 #endif /* _MSC_VER */
 #else /* ( _WIN32 || _WIN32_WCE ) && !EFIX64 && !EFI32 */
+#if defined(MBEDTLS_HAVE_TIME)
 #include <sys/time.h>
+#endif
 #include <sys/types.h>
 #include <unistd.h>
 #endif /* ( _WIN32 || _WIN32_WCE ) && !EFIX64 && !EFI32 */
@@ -154,6 +131,9 @@ int main( void )
     "    mtu=%%d              default: 0 (unlimited)\n"                     \
     "                        drop packets larger than N bytes\n"            \
     "    bad_ad=0/1          default: 0 (don't add bad ApplicationData)\n"  \
+    "    bad_cid=%%d          default: 0 (don't corrupt Connection IDs)\n"   \
+    "                        duplicate 1:N packets containing a CID,\n" \
+    "                        modifying CID in first instance of the packet.\n" \
     "    protect_hvr=0/1     default: 0 (don't protect HelloVerifyRequest)\n" \
     "    protect_len=%%d      default: (don't protect packets of this size)\n" \
     "    inject_clihlo=0/1   default: 0 (don't inject fake ClientHello)\n"  \
@@ -187,6 +167,7 @@ static struct options
     int drop;                   /* drop 1 packet in N (none if 0)           */
     int mtu;                    /* drop packets larger than this            */
     int bad_ad;                 /* inject corrupted ApplicationData record  */
+    unsigned bad_cid;           /* inject corrupted CID record              */
     int protect_hvr;            /* never drop or delay HelloVerifyRequest   */
     int protect_len;            /* never drop/delay packet of the given size*/
     int inject_clihlo;          /* inject fake ClientHello after handshake  */
@@ -203,7 +184,7 @@ static void exit_usage( const char *name, const char *value )
         mbedtls_printf( " option %s: illegal value: %s\n", name, value );
 
     mbedtls_printf( USAGE );
-    exit( 1 );
+    mbedtls_exit( 1 );
 }
 
 static void get_options( int argc, char *argv[] )
@@ -320,6 +301,12 @@ static void get_options( int argc, char *argv[] )
             if( opt.bad_ad < 0 || opt.bad_ad > 1 )
                 exit_usage( p, q );
         }
+#if defined(MBEDTLS_SSL_DTLS_CONNECTION_ID)
+        else if( strcmp( p, "bad_cid" ) == 0 )
+        {
+            opt.bad_cid = (unsigned) atoi( q );
+        }
+#endif /* MBEDTLS_SSL_DTLS_CONNECTION_ID */
         else if( strcmp( p, "protect_hvr" ) == 0 )
         {
             opt.protect_hvr = atoi( q );
@@ -357,6 +344,7 @@ static const char *msg_type( unsigned char *msg, size_t len )
         case MBEDTLS_SSL_MSG_CHANGE_CIPHER_SPEC:    return( "ChangeCipherSpec" );
         case MBEDTLS_SSL_MSG_ALERT:                 return( "Alert" );
         case MBEDTLS_SSL_MSG_APPLICATION_DATA:      return( "ApplicationData" );
+        case MBEDTLS_SSL_MSG_CID:                   return( "CID" );
         case MBEDTLS_SSL_MSG_HANDSHAKE:             break; /* See below */
         default:                            return( "Unknown" );
     }
@@ -470,7 +458,10 @@ static int ctx_buffer_append( ctx_buffer *buf,
     if( sizeof( buf->data ) - buf->len < len )
     {
         if( ( ret = ctx_buffer_flush( buf ) ) <= 0 )
+        {
+            mbedtls_printf( "ctx_buffer_flush failed with -%#04x", (unsigned int) -ret );
             return( ret );
+        }
     }
 
     memcpy( buf->data + buf->len, data, len );
@@ -487,6 +478,7 @@ static int dispatch_data( mbedtls_net_context *ctx,
                           const unsigned char * data,
                           size_t len )
 {
+    int ret;
 #if defined(MBEDTLS_TIMING_C)
     ctx_buffer *buf = NULL;
     if( opt.pack > 0 )
@@ -503,7 +495,12 @@ static int dispatch_data( mbedtls_net_context *ctx,
     }
 #endif /* MBEDTLS_TIMING_C */
 
-    return( mbedtls_net_send( ctx, data, len ) );
+    ret = mbedtls_net_send( ctx, data, len );
+    if( ret < 0 )
+    {
+        mbedtls_printf( "net_send returned -%#04x\n", (unsigned int) -ret );
+    }
+    return( ret );
 }
 
 typedef struct
@@ -570,6 +567,25 @@ int send_packet( const packet *p, const char *why )
     {
         memcpy( &initial_clihlo, p, sizeof( packet ) );
         inject_clihlo_state = ICH_CACHED;
+    }
+
+    /* insert corrupted CID record? */
+    if( opt.bad_cid != 0 &&
+        strcmp( p->type, "CID" ) == 0 &&
+        ( rand() % opt.bad_cid ) == 0 )
+    {
+        unsigned char buf[MAX_MSG_SIZE];
+        memcpy( buf, p->buf, p->len );
+
+        /* The CID resides at offset 11 in the DTLS record header. */
+        buf[11] ^= 1;
+        print_packet( p, "modified CID" );
+
+        if( ( ret = dispatch_data( dst, buf, p->len ) ) <= 0 )
+        {
+            mbedtls_printf( "  ! dispatch returned %d\n", ret );
+            return( ret );
+        }
     }
 
     /* insert corrupted ApplicationData record? */
@@ -749,6 +765,7 @@ int handle_message( const char *way,
     if( ( opt.mtu != 0 &&
           cur.len > (unsigned) opt.mtu ) ||
         ( opt.drop != 0 &&
+          strcmp( cur.type, "CID" ) != 0             &&
           strcmp( cur.type, "ApplicationData" ) != 0 &&
           ! ( opt.protect_hvr &&
               strcmp( cur.type, "HelloVerifyRequest" ) == 0 ) &&
@@ -761,6 +778,7 @@ int handle_message( const char *way,
     else if( ( opt.delay_ccs == 1 &&
                strcmp( cur.type, "ChangeCipherSpec" ) == 0 ) ||
              ( opt.delay != 0 &&
+               strcmp( cur.type, "CID" ) != 0             &&
                strcmp( cur.type, "ApplicationData" ) != 0 &&
                ! ( opt.protect_hvr &&
                    strcmp( cur.type, "HelloVerifyRequest" ) == 0 ) &&
@@ -819,7 +837,11 @@ int main( int argc, char *argv[] )
      */
     if( opt.seed == 0 )
     {
-        opt.seed = (unsigned int) time( NULL );
+#if defined(MBEDTLS_HAVE_TIME)
+        opt.seed = (unsigned int) mbedtls_time( NULL );
+#else
+        opt.seed = 1;
+#endif /* MBEDTLS_HAVE_TIME */
         mbedtls_printf( "  . Pseudo-random seed: %u\n", opt.seed );
     }
 
@@ -980,7 +1002,7 @@ exit:
     {
         char error_buf[100];
         mbedtls_strerror( ret, error_buf, 100 );
-        mbedtls_printf( "Last error was: -0x%04X - %s\n\n", - ret, error_buf );
+        mbedtls_printf( "Last error was: -0x%04X - %s\n\n", (unsigned int) -ret, error_buf );
         fflush( stdout );
     }
 #endif

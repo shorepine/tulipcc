@@ -501,9 +501,10 @@ void refreshShowHints(struct abuf *ab, struct linenoiseState *l, int plen) {
             int hintmaxlen = l->cols-(plen+l->len);
             if (hintlen > hintmaxlen) hintlen = hintmaxlen;
             if (bold == 1 && color == -1) color = 37;
-            if (color != -1 || bold != 0)
+            if (color != -1 || bold != 0) {
                 snprintf(seq,64,"\033[%d;%d;49m",bold,color);
-            abAppend(ab,seq,strlen(seq));
+                abAppend(ab,seq,strlen(seq));
+            }
             abAppend(ab,hint,hintlen);
             if (color != -1 || bold != 0)
                 abAppend(ab,"\033[0m",4);
@@ -865,7 +866,7 @@ static int linenoiseEdit(char *buf, size_t buflen, const char *prompt)
         nread = read(in_fd, &c, 1);
         if (nread <= 0) return l.len;
 
-        if ( (getMillis() - t1) < LINENOISE_PASTE_KEY_DELAY ) {
+        if ( (getMillis() - t1) < LINENOISE_PASTE_KEY_DELAY && c != ENTER) {
             /* Pasting data, insert characters without formatting.
              * This can only be performed when the cursor is at the end of the
              * line. */
@@ -1055,6 +1056,10 @@ int linenoiseProbe(void) {
         int cb = read(stdin_fileno, &c, 1);
         if (cb < 0) {
             continue;
+        }
+        if (read_bytes == 0 && c != '\x1b') {
+            /* invalid response */
+            break;
         }
         read_bytes += cb;
     }

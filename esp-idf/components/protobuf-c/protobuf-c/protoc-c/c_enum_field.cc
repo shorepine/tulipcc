@@ -75,12 +75,12 @@ using internal::WireFormat;
 // TODO(kenton):  Factor out a "SetCommonFieldVariables()" to get rid of
 //   repeat code between this and the other field types.
 void SetEnumVariables(const FieldDescriptor* descriptor,
-                      std::map<string, string>* variables) {
+                      std::map<std::string, std::string>* variables) {
 
   (*variables)["name"] = FieldName(descriptor);
-  (*variables)["type"] = FullNameToC(descriptor->enum_type()->full_name());
+  (*variables)["type"] = FullNameToC(descriptor->enum_type()->full_name(), descriptor->enum_type()->file());
   const EnumValueDescriptor* default_value = descriptor->default_value_enum();
-  (*variables)["default"] = FullNameToUpper(default_value->type()->full_name())
+  (*variables)["default"] = FullNameToUpper(default_value->type()->full_name(), default_value->type()->file())
                           + "__" + default_value->name();
   (*variables)["deprecated"] = FieldDeprecated(descriptor);
 }
@@ -114,7 +114,7 @@ void EnumFieldGenerator::GenerateStructMembers(io::Printer* printer) const
   }
 }
 
-string EnumFieldGenerator::GetDefaultValue(void) const
+std::string EnumFieldGenerator::GetDefaultValue(void) const
 {
   return variables_.find("default")->second;
 }
@@ -138,7 +138,7 @@ void EnumFieldGenerator::GenerateStaticInit(io::Printer* printer) const
 
 void EnumFieldGenerator::GenerateDescriptorInitializer(io::Printer* printer) const
 {
-  string addr = "&" + FullNameToLower(descriptor_->enum_type()->full_name()) + "__descriptor";
+  std::string addr = "&" + FullNameToLower(descriptor_->enum_type()->full_name(), descriptor_->enum_type()->file()) + "__descriptor";
   GenerateDescriptorInitializerGeneric(printer, true, "ENUM", addr);
 }
 

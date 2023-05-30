@@ -35,6 +35,9 @@
 
 export PATH="$IDF_PATH/tools:$PATH"  # for idf.py
 
+# Some tests assume that ccache is not enabled
+unset IDF_CCACHE_ENABLE
+
 function run_tests()
 {
     FAILURES=
@@ -351,6 +354,24 @@ function run_tests()
     rm sdkconfig
     rm sdkconfig.defaults
 
+    print_status "Compiler flags on build command line are taken into account"
+    clean_build_dir
+    # Backup original source file
+    cp main/main.c main/main.c.bak
+    # Alter source file to check user flag
+    echo -e "\n#ifndef USER_FLAG \n \
+#error \"USER_FLAG is not defined!\" \n \
+#endif\n" >> main/main.c
+    idf.py build -DCMAKE_C_FLAGS=-DUSER_FLAG || failure "User flags should have been taken into account"
+    # Restore original file
+    mv main/main.c.bak main/main.c
+
+    print_status "Compiler flags cannot be overwritten"
+    clean_build_dir
+    # If the compiler flags are overriden, the following build command will
+    # cause issues at link time.
+    idf.py build -DCMAKE_C_FLAGS= -DCMAKE_CXX_FLAGS= || failure "CMake compiler flags have been overriden"
+
     # the next tests use the esp32s2 target
     export other_target=esp32s2
 
@@ -477,6 +498,19 @@ function run_tests()
     (set -euo pipefail && source build.sh)
     popd
     rm -r $IDF_PATH/examples/build_system/cmake/idf_as_lib/build
+
+    print_status "Test build ESP-IDF as a library to a custom CMake projects for all targets"
+    IDF_AS_LIB=$IDF_PATH/examples/build_system/cmake/idf_as_lib
+    # note: we just need to run cmake
+    for TARGET in "esp32" "esp32s2" "esp32s3" "esp32c3" "esp32h2"
+    do
+      echo "Build idf_as_lib for $TARGET target"
+      rm -rf build
+      mkdir -p build && cd build
+      cmake $IDF_AS_LIB -DCMAKE_TOOLCHAIN_FILE=$IDF_PATH/tools/cmake/toolchain-$TARGET.cmake -DTARGET=$TARGET || failure "Failed to generate idf_as_lib build files for target $TARGET"
+      cmake --build . || failure "Failed to build idf_as_lib for target $TARGET"
+      cd ..
+    done
 
     print_status "Building a project with CMake library imported and PSRAM workaround, all files compile with workaround"
     # Test for libraries compiled within ESP-IDF
@@ -766,6 +800,13 @@ endmenu\n" >> ${IDF_PATH}/Kconfig
 
     print_status "Loadable ELF build works"
     echo "CONFIG_APP_BUILD_TYPE_ELF_RAM=y" > sdkconfig
+
+    # Set recommend configs to reduce memory footprint
+    echo "CONFIG_VFS_SUPPORT_TERMIOS=n" >> sdkconfig
+    echo "CONFIG_NEWLIB_NANO_FORMAT=y" >> sdkconfig
+    echo "CONFIG_ESP_SYSTEM_PANIC_PRINT_HALT=y" >> sdkconfig
+    echo "CONFIG_ESP_ERR_TO_NAME_LOOKUP=n" >> sdkconfig
+
     idf.py reconfigure || failure "Couldn't configure for loadable ELF file"
     test -f build/flasher_args.json && failure "flasher_args.json should not be generated in a loadable ELF build"
     idf.py build || failure "Couldn't build a loadable ELF file"
@@ -809,28 +850,35 @@ endmenu\n" >> ${IDF_PATH}/Kconfig
     mv CMakeLists.bak CMakeLists.txt # revert previous modifications
     rm -rf extra_dir components
 
+    print_status "Components in EXCLUDE_COMPONENTS not passed to idf_component_manager"
+    clean_build_dir
+    idf.py create-component -C components/ to_be_excluded || failure "Failed to create a component"
+    echo "invalid syntax..." > components/to_be_excluded/idf_component.yml
+    ! idf.py reconfigure || failure "Build should have failed due to invalid syntax in idf_component.yml"
+    idf.py -DEXCLUDE_COMPONENTS=to_be_excluded reconfigure || failure "Build should have succeeded when the component is excluded"
+    rm -rf components/to_be_excluded
+
     print_status "Create project using idf.py and build it"
     echo "Trying to create project."
     (idf.py -C projects create-project temp_test_project) || failure "Failed to create the project."
-    cd "$IDF_PATH/projects/temp_test_project"
+    pushd "$PWD/projects/temp_test_project"
     echo "Building the project temp_test_project . . ."
     idf.py build || failure "Failed to build the project."
-    cd "$IDF_PATH"
-    rm -rf "$IDF_PATH/projects/temp_test_project"
+    popd
+    rm -rf "$PWD/projects/temp_test_project"
 
     print_status "Create component using idf.py, create project using idf.py."
     print_status "Add the component to the created project and build the project."
     echo "Trying to create project . . ."
     (idf.py -C projects create-project temp_test_project) || failure "Failed to create the project."
+    pushd "$PWD/projects/temp_test_project"
     echo "Trying to create component . . ."
     (idf.py -C components create-component temp_test_component) || failure "Failed to create the component."
-    ${SED} -i '5i\\tfunc();' "$IDF_PATH/projects/temp_test_project/main/temp_test_project.c"
-    ${SED} -i '5i#include "temp_test_component.h"' "$IDF_PATH/projects/temp_test_project/main/temp_test_project.c"
-    cd "$IDF_PATH/projects/temp_test_project"
+    ${SED} -i '5i\\tfunc();' "main/temp_test_project.c"
+    ${SED} -i '5i#include "temp_test_component.h"' "main/temp_test_project.c"
     idf.py build || failure "Failed to build the project."
-    cd "$IDF_PATH"
-    rm -rf "$IDF_PATH/projects/temp_test_project"
-    rm -rf "$IDF_PATH/components/temp_test_component"
+    popd
+    rm -rf "$PWD/projects/temp_test_project"
 
     print_status "Check that command for creating new project will fail if the target folder is not empty."
     mkdir "$IDF_PATH/example_proj/"

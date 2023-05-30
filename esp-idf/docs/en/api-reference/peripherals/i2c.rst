@@ -196,6 +196,12 @@ Explanations for :cpp:member:`i2c_config_t::clk_flags` are as follows:
 
     The clock frequency of SCL in master mode should not be lager than max frequency for SCL mentioned in the table above.
 
+.. note::
+
+    The clock frequency of SCL will be influenced by the pull-up resistors and wire capacitance (or might slave capacitance) together. Therefore, users need to choose correct pull-up resistors by themselves to make the frequency accurate. It is recommended by I2C protocol that the pull-up resistors commonly range from 1KOhms to 10KOhms, but different frequencies need different resistors.
+
+    Generally speaking, the higher frequency is selected, the smaller resistor should be used (but not less than 1KOhms). This is because high resistor will decline the current, which will lengthen the rising time and reduce the frequency. Usually, range 2KOhms to 5KOhms is what we recommend, but users also might need to make some adjustment depends on their reality.
+
 .. _i2c-api-install-driver:
 
 Install Driver
@@ -316,7 +322,7 @@ To delete an interrupt handler, call :cpp:func:`i2c_isr_free`.
 Customized Configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-As mentioned at the end of Section :ref:`i2c-api-configure-driver`, when the function :cpp:func:`i2c_param_config` initializes the driver configuration for an I2C port, it also sets several I2C communication parameters to default values defined in the `I2C specification <https://www.nxp.com/docs/en/user-guide/UM10204.pdf>`_. Some other related parameters are pre-configured in registers of the I2C controller.
+As mentioned at the end of Section :ref:`i2c-api-configure-driver`, when the function :cpp:func:`i2c_param_config` initializes the driver configuration for an I2C port, it also sets several I2C communication parameters to default values defined in the I2C specification. Some other related parameters are pre-configured in registers of the I2C controller.
 
 All these parameters can be changed to user-defined values by calling dedicated functions given in the table below. Please note that the timing values are defined in APB clock cycles. The frequency of APB is specified in :cpp:type:`I2C_APB_CLK_FREQ`.
 
@@ -348,7 +354,7 @@ You can also select different pins for SDA and SCL signals and alter the configu
 
 .. note::
 
-    {IDF_TARGET_NAME}'s internal pull-ups are in the range of tens of kOhm, which is, in most cases, insufficient for use as I2C pull-ups. Users are advised to use external pull-ups with values described in the `I2C specification <https://www.nxp.com/docs/en/user-guide/UM10204.pdf>`_.
+    {IDF_TARGET_NAME}'s internal pull-ups are in the range of tens of kOhm, which is, in most cases, insufficient for use as I2C pull-ups. Users are advised to use external pull-ups with values described in the I2C specification. For help with calculating the resistor values see `TI Application Note <https://www.ti.com/lit/an/slva689/slva689.pdf>`_
 
 
 .. _i2c-api-error-handling:

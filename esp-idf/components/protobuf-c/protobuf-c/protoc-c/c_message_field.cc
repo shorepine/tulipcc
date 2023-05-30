@@ -83,9 +83,9 @@ MessageFieldGenerator::~MessageFieldGenerator() {}
 
 void MessageFieldGenerator::GenerateStructMembers(io::Printer* printer) const
 {
-  std::map<string, string> vars;
+  std::map<std::string, std::string> vars;
   vars["name"] = FieldName(descriptor_);
-  vars["type"] = FullNameToC(descriptor_->message_type()->full_name());
+  vars["type"] = FullNameToC(descriptor_->message_type()->full_name(), descriptor_->message_type()->file());
   vars["deprecated"] = FieldDeprecated(descriptor_);
   switch (descriptor_->label()) {
     case FieldDescriptor::LABEL_REQUIRED:
@@ -98,7 +98,7 @@ void MessageFieldGenerator::GenerateStructMembers(io::Printer* printer) const
       break;
   }
 }
-string MessageFieldGenerator::GetDefaultValue(void) const
+std::string MessageFieldGenerator::GetDefaultValue(void) const
 {
   /* XXX: update when protobuf gets support
    *   for default-values of message fields.
@@ -119,7 +119,7 @@ void MessageFieldGenerator::GenerateStaticInit(io::Printer* printer) const
 }
 void MessageFieldGenerator::GenerateDescriptorInitializer(io::Printer* printer) const
 {
-  string addr = "&" + FullNameToLower(descriptor_->message_type()->full_name()) + "__descriptor";
+  std::string addr = "&" + FullNameToLower(descriptor_->message_type()->full_name(), descriptor_->message_type()->file()) + "__descriptor";
   GenerateDescriptorInitializerGeneric(printer, false, "MESSAGE", addr);
 }
 

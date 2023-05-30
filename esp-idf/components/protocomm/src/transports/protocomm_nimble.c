@@ -27,6 +27,7 @@ static const char *TAG = "protocomm_nimble";
 int ble_uuid_flat(const ble_uuid_t *, void *);
 static uint8_t ble_uuid_base[BLE_UUID128_VAL_LENGTH];
 static int num_chr_dsc;
+static uint16_t s_cached_conn_handle;
 
 /*  Standard 16 bit UUID for characteristic User Description*/
 #define BLE_GATT_UUID_CHAR_DSC              0x2901
@@ -121,8 +122,10 @@ typedef struct {
     simple_ble_cb_t *connect_fn;
     /** MTU set callback */
     simple_ble_cb_t *set_mtu_fn;
-    /* BLE bonding */
-     unsigned ble_bonding:1;
+    /** BLE bonding */
+    unsigned ble_bonding:1;
+    /** BLE Secure Connection flag */
+    unsigned ble_sm_sc:1;
 } simple_ble_cfg_t;
 
 static simple_ble_cfg_t *ble_cfg_p;
@@ -225,6 +228,7 @@ simple_ble_gap_event(struct ble_gap_event *event, void *arg)
                 ESP_LOGE(TAG, "No open connection with the specified handle");
                 return rc;
             }
+	    s_cached_conn_handle = event->connect.conn_handle;
         } else {
             /* Connection failed; resume advertising. */
             simple_ble_advertise();
@@ -234,7 +238,7 @@ simple_ble_gap_event(struct ble_gap_event *event, void *arg)
     case BLE_GAP_EVENT_DISCONNECT:
         ESP_LOGD(TAG, "disconnect; reason=%d ", event->disconnect.reason);
         transport_simple_ble_disconnect(event, arg);
-
+        s_cached_conn_handle = 0; /* Clear conn_handle value */
         /* Connection terminated; resume advertising. */
         simple_ble_advertise();
         return 0;
@@ -492,7 +496,7 @@ static int simple_ble_start(const simple_ble_cfg_t *cfg)
     ble_hs_cfg.sm_io_cap = BLE_SM_IO_CAP_NO_IO; /* Just Works */
     ble_hs_cfg.sm_bonding = cfg->ble_bonding;
     ble_hs_cfg.sm_mitm = 1;
-    ble_hs_cfg.sm_sc = 1; /* Enable secure connection by default */
+    ble_hs_cfg.sm_sc = cfg->ble_sm_sc;
 
     /* Distribute LTK and IRK */
     ble_hs_cfg.sm_our_key_dist = BLE_SM_PAIR_KEY_DIST_ENC | BLE_SM_PAIR_KEY_DIST_ID;
@@ -537,6 +541,14 @@ static void transport_simple_ble_disconnect(struct ble_gap_event *event, void *a
     esp_err_t ret;
     ESP_LOGD(TAG, "Inside disconnect w/ session - %d",
              event->disconnect.conn.conn_handle);
+
+#ifdef CONFIG_WIFI_PROV_KEEP_BLE_ON_AFTER_PROV
+    /* Ignore BLE events received after protocomm layer is stopped */
+    if (protoble_internal == NULL) {
+        ESP_LOGI(TAG,"Protocomm layer has already stopped");
+        return;
+    }
+#endif
     if (protoble_internal->pc_ble->sec &&
             protoble_internal->pc_ble->sec->close_transport_session) {
         ret =
@@ -636,9 +648,13 @@ ble_gatt_add_characteristics(struct ble_gatt_chr_def *characteristics, int idx)
     memcpy(&temp_uuid128_name.value[12], &protoble_internal->g_nu_lookup[idx].uuid, 2);
 
     (characteristics + idx)->flags = BLE_GATT_CHR_F_READ |
-                                     BLE_GATT_CHR_F_WRITE |
-                                     BLE_GATT_CHR_F_READ_ENC |
-                                     BLE_GATT_CHR_F_WRITE_ENC;
+                                     BLE_GATT_CHR_F_WRITE ;
+
+#if defined(CONFIG_WIFI_PROV_BLE_FORCE_ENCRYPTION)
+    (characteristics + idx)->flags |= BLE_GATT_CHR_F_READ_ENC |
+                                      BLE_GATT_CHR_F_WRITE_ENC;
+#endif
+
     (characteristics + idx)->access_cb = gatt_svr_chr_access;
 
     /* Out of 128 bit UUID, 16 bits from g_nu_lookup table. Currently
@@ -909,6 +925,7 @@ esp_err_t protocomm_ble_start(protocomm_t *pc, const protocomm_ble_config_t *con
 
     ble_config->device_name     = protocomm_ble_device_name;
     ble_config->ble_bonding     = config->ble_bonding;
+    ble_config->ble_sm_sc       = config->ble_sm_sc;
 
     if (populate_gatt_db(&ble_config->gatt_db, config) != 0) {
         ESP_LOGE(TAG, "Error populating GATT Database");
@@ -944,6 +961,8 @@ esp_err_t protocomm_ble_stop(protocomm_t *pc)
                      rc);
         }
 
+#ifndef CONFIG_WIFI_PROV_KEEP_BLE_ON_AFTER_PROV
+	/* If flag is enabled, don't stop the stack. User application can start a new advertising to perform its BT activities */
         ret = nimble_port_stop();
         if (ret == 0) {
             nimble_port_deinit();
@@ -952,8 +971,17 @@ esp_err_t protocomm_ble_stop(protocomm_t *pc)
                 ESP_LOGE(TAG, "esp_nimble_hci_and_controller_deinit() failed with error: %d", ret);
             }
         }
+#else
+#ifdef CONFIG_WIFI_PROV_DISCONNECT_AFTER_PROV
+	/* Keep BT stack on, but terminate the connection after provisioning */
+	rc = ble_gap_terminate(s_cached_conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+	if (rc) {
+	    ESP_LOGI(TAG, "Error in terminating connection rc = %d",rc);
+	}
+	free_gatt_ble_misc_memory(ble_cfg_p);
+#endif // CONFIG_WIFI_PROV_DISCONNECT_AFTER_PROV
+#endif // CONFIG_WIFI_PROV_KEEP_BLE_ON_AFTER_PROV
 
-        free_gatt_ble_misc_memory(ble_cfg_p);
         protocomm_ble_cleanup();
         return ret;
     }

@@ -1,16 +1,8 @@
-// Copyright 2015-2019 Espressif Systems (Shanghai) PTE LTD
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+ * SPDX-FileCopyrightText: 2015-2022 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 // The LL layer for I2C register operations
 
@@ -125,9 +117,28 @@ static inline void i2c_ll_cal_bus_clk(uint32_t source_clk, uint32_t bus_freq, i2
  */
 static inline void i2c_ll_set_bus_timing(i2c_dev_t *hw, i2c_clk_cal_t *bus_cfg)
 {
-    //scl period
-    hw->scl_low_period.period = bus_cfg->scl_low;
-    hw->scl_high_period.period = bus_cfg->scl_high;
+    /* SCL period. According to the TRM, we should always subtract 1 to SCL low period */
+    assert(bus_cfg->scl_low > 0);
+    hw->scl_low_period.period = bus_cfg->scl_low - 1;
+    /* Still according to the TRM, if filter is not enbled, we have to subtract 7,
+     * if SCL filter is enabled, we have to subtract:
+     *   8 if SCL filter is between 0 and 2 (included)
+     *   6 + SCL threshold if SCL filter is between 3 and 7 (included)
+     * to SCL high period */
+    uint16_t scl_high = bus_cfg->scl_high;
+    /* In the "worst" case, we will subtract 13, make sure the result will still be correct */
+    assert(scl_high > 13);
+    if (hw->scl_filter_cfg.en) {
+        if (hw->scl_filter_cfg.thres <= 2) {
+            scl_high -= 8;
+        } else {
+            assert(hw->scl_filter_cfg.thres <= 7);
+            scl_high -= hw->scl_filter_cfg.thres + 6;
+        }
+    } else {
+        scl_high -= 7;
+    }
+    hw->scl_high_period.period = scl_high;
     //sda sample
     hw->sda_hold.time = bus_cfg->sda_hold;
     hw->sda_sample.time = bus_cfg->sda_sample;
@@ -227,6 +238,7 @@ static inline void i2c_ll_disable_intr_mask(i2c_dev_t *hw, uint32_t mask)
  *
  * @return I2C interrupt status
  */
+__attribute__((always_inline))
 static inline uint32_t i2c_ll_get_intsts_mask(i2c_dev_t *hw)
 {
     return hw->int_status.val;
@@ -282,6 +294,7 @@ static inline void i2c_ll_set_slave_addr(i2c_dev_t *hw, uint16_t slave_addr, boo
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_write_cmd_reg(i2c_dev_t *hw, i2c_hw_cmd_t cmd, int cmd_idx)
 {
     hw->command[cmd_idx].val = cmd.val;
@@ -446,6 +459,7 @@ static inline bool i2c_ll_is_master_mode(i2c_dev_t *hw)
  *
  * @return RxFIFO readable length
  */
+__attribute__((always_inline))
 static inline uint32_t i2c_ll_get_rxfifo_cnt(i2c_dev_t *hw)
 {
     return hw->status_reg.rx_fifo_cnt;
@@ -458,6 +472,7 @@ static inline uint32_t i2c_ll_get_rxfifo_cnt(i2c_dev_t *hw)
  *
  * @return TxFIFO writable length
  */
+__attribute__((always_inline))
 static inline uint32_t i2c_ll_get_txfifo_len(i2c_dev_t *hw)
 {
     return SOC_I2C_FIFO_LEN - hw->status_reg.tx_fifo_cnt;
@@ -482,6 +497,7 @@ static inline uint32_t i2c_ll_get_tout(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_trans_start(i2c_dev_t *hw)
 {
     hw->ctr.trans_start = 1;
@@ -541,6 +557,7 @@ static inline void i2c_ll_get_scl_timing(i2c_dev_t *hw, int *high_period, int *l
  *
  * @return None.
  */
+__attribute__((always_inline))
 static inline void i2c_ll_write_txfifo(i2c_dev_t *hw, uint8_t *ptr, uint8_t len)
 {
     uint32_t fifo_addr = (hw == &I2C0) ? 0x6001301c : 0x6002701c;
@@ -558,6 +575,7 @@ static inline void i2c_ll_write_txfifo(i2c_dev_t *hw, uint8_t *ptr, uint8_t len)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_read_rxfifo(i2c_dev_t *hw, uint8_t *ptr, uint8_t len)
 {
     for(int i = 0; i < len; i++) {
@@ -606,6 +624,7 @@ static inline uint8_t i2c_ll_get_filter(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_master_enable_tx_it(i2c_dev_t *hw)
 {
     hw->int_clr.val = ~0;
@@ -619,6 +638,7 @@ static inline void i2c_ll_master_enable_tx_it(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_master_enable_rx_it(i2c_dev_t *hw)
 {
     hw->int_clr.val = ~0;
@@ -632,6 +652,7 @@ static inline void i2c_ll_master_enable_rx_it(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_master_disable_tx_it(i2c_dev_t *hw)
 {
     hw->int_ena.val &= (~I2C_LL_MASTER_TX_INT);
@@ -644,6 +665,7 @@ static inline void i2c_ll_master_disable_tx_it(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_master_disable_rx_it(i2c_dev_t *hw)
 {
     hw->int_ena.val &= (~I2C_LL_MASTER_RX_INT);
@@ -656,6 +678,7 @@ static inline void i2c_ll_master_disable_rx_it(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_master_clr_tx_it(i2c_dev_t *hw)
 {
     hw->int_clr.val = I2C_LL_MASTER_TX_INT;
@@ -668,6 +691,7 @@ static inline void i2c_ll_master_clr_tx_it(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_master_clr_rx_it(i2c_dev_t *hw)
 {
     hw->int_clr.val = I2C_LL_MASTER_RX_INT;
@@ -704,6 +728,7 @@ static inline void i2c_ll_slave_enable_rx_it(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_slave_disable_tx_it(i2c_dev_t *hw)
 {
     hw->int_ena.val &= (~I2C_LL_SLAVE_TX_INT);
@@ -728,6 +753,7 @@ static inline void i2c_ll_slave_disable_rx_it(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_slave_clr_tx_it(i2c_dev_t *hw)
 {
     hw->int_clr.val = I2C_LL_SLAVE_TX_INT;
@@ -793,6 +819,7 @@ static inline void i2c_ll_set_source_clk(i2c_dev_t *hw, i2c_sclk_t src_clk)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_master_get_event(i2c_dev_t *hw, i2c_intr_event_t *event)
 {
     typeof(hw->int_status) int_sts = hw->int_status;
@@ -819,6 +846,7 @@ static inline void i2c_ll_master_get_event(i2c_dev_t *hw, i2c_intr_event_t *even
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_slave_get_event(i2c_dev_t *hw, i2c_intr_event_t *event)
 {
     typeof(hw->int_status) int_sts = hw->int_status;
@@ -874,9 +902,43 @@ static inline void i2c_ll_slave_init(i2c_dev_t *hw)
  *
  * @return None
  */
+__attribute__((always_inline))
 static inline void i2c_ll_update(i2c_dev_t *hw)
 {
     ;// ESP32 do not support
+}
+
+/**
+ * @brief  Configure I2C SCL timing
+ *
+ * @param  hw Beginning address of the peripheral registers
+ * @param  high_period The I2C SCL hight period (in core clock cycle, hight_period > 2)
+ * @param  low_period The I2C SCL low period (in core clock cycle, low_period > 1)
+ * @param  wait_high_period The I2C SCL wait rising edge period.
+ *
+ * @return None.
+ */
+static inline void i2c_ll_set_scl_clk_timing(i2c_dev_t *hw, int high_period, int low_period, int wait_high_period)
+{
+    (void)wait_high_period;
+    hw->scl_low_period.period = low_period;
+    hw->scl_high_period.period = high_period;
+}
+
+/**
+ * @brief  Get I2C SCL timing configuration
+ *
+ * @param  hw Beginning address of the peripheral registers
+ * @param  high_period Pointer to accept the SCL high period
+ * @param  low_period Pointer to accept the SCL low period
+ *
+ * @return None
+ */
+static inline void i2c_ll_get_scl_clk_timing(i2c_dev_t *hw, int *high_period, int *low_period, int *wait_high_period)
+{
+    *wait_high_period = 0; // Useless
+    *high_period = hw->scl_high_period.period;
+    *low_period = hw->scl_low_period.period;
 }
 
 #ifdef __cplusplus

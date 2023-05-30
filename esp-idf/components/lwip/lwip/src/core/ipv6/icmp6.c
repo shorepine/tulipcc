@@ -57,9 +57,9 @@
 
 #include <string.h>
 
-#if LWIP_ICMP6_DATASIZE == 0
+#if !LWIP_ICMP6_DATASIZE || (LWIP_ICMP6_DATASIZE > (IP6_MIN_MTU_LENGTH - IP6_HLEN - ICMP6_HLEN))
 #undef LWIP_ICMP6_DATASIZE
-#define LWIP_ICMP6_DATASIZE   8
+#define LWIP_ICMP6_DATASIZE   (IP6_MIN_MTU_LENGTH - IP6_HLEN - ICMP6_HLEN)
 #endif
 
 /* Forward declarations */
@@ -387,26 +387,35 @@ icmp6_send_response_with_addrs_and_netif(struct pbuf *p, u8_t code, u32_t data, 
 {
   struct pbuf *q;
   struct icmp6_hdr *icmp6hdr;
+  u16_t datalen = LWIP_MIN(p->tot_len, LWIP_ICMP6_DATASIZE);
+  u16_t offset;
 
-  /* ICMPv6 header + IPv6 header + data */
-  q = pbuf_alloc(PBUF_IP, sizeof(struct icmp6_hdr) + IP6_HLEN + LWIP_ICMP6_DATASIZE,
+  /* ICMPv6 header + datalen (as much of the offending packet as possible) */
+  q = pbuf_alloc(PBUF_IP, sizeof(struct icmp6_hdr) + datalen,
                  PBUF_RAM);
   if (q == NULL) {
     LWIP_DEBUGF(ICMP_DEBUG, ("icmp_time_exceeded: failed to allocate pbuf for ICMPv6 packet.\n"));
     ICMP6_STATS_INC(icmp6.memerr);
     return;
   }
-  LWIP_ASSERT("check that first pbuf can hold icmp 6message",
-             (q->len >= (sizeof(struct icmp6_hdr) + IP6_HLEN + LWIP_ICMP6_DATASIZE)));
+  LWIP_ASSERT("check that first pbuf can hold icmp6 header",
+             (q->len >= (sizeof(struct icmp6_hdr))));
 
   icmp6hdr = (struct icmp6_hdr *)q->payload;
   icmp6hdr->type = type;
   icmp6hdr->code = code;
   icmp6hdr->data = lwip_htonl(data);
 
-  /* copy fields from original packet */
-  SMEMCPY((u8_t *)q->payload + sizeof(struct icmp6_hdr), (u8_t *)p->payload,
-          IP6_HLEN + LWIP_ICMP6_DATASIZE);
+  /* copy fields from original packet (which may be a chain of pbufs) */
+  offset = sizeof(struct icmp6_hdr);
+  while (p && datalen) {
+    u16_t len = LWIP_MIN(datalen, p->len);
+    err_t res = pbuf_take_at(q, p->payload, len, offset);
+    if (res != ERR_OK) break;
+    datalen -= len;
+    offset += len;
+    p = p->next;
+  }
 
   /* calculate checksum */
   icmp6hdr->chksum = 0;

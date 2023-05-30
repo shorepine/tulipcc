@@ -1,19 +1,10 @@
 #!/usr/bin/env python
 # This file describes eFuses for ESP32 chip
 #
-# Copyright (C) 2020 Espressif Systems (Shanghai) PTE LTD
+# SPDX-FileCopyrightText: 2020-2022 Espressif Systems (Shanghai) CO LTD
 #
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
-# Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 from __future__ import division, print_function
 
 import binascii
@@ -222,7 +213,7 @@ class EfuseMacField(EfuseField):
 
     def check_format(self, new_value_str):
         if new_value_str is None:
-            raise esptool.FatalError("Required MAC Address in AB:CD:EF:01:02:03 format!")
+            raise esptool.FatalError("Required MAC Address in AA:CD:EF:01:02:03 format!")
         if new_value_str.count(":") != 5:
             raise esptool.FatalError("MAC Address needs to be a 6-byte hexadecimal format separated by colons (:)!")
         hexad = new_value_str.replace(":", "")

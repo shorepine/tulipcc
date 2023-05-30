@@ -1,19 +1,10 @@
 #!/usr/bin/env python
 # This file includes the common operations with eFuses for chips
 #
-# Copyright (C) 2020 Espressif Systems (Shanghai) PTE LTD
+# SPDX-FileCopyrightText: 2020-2022 Espressif Systems (Shanghai) CO LTD
 #
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
-# Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 from __future__ import division, print_function
 
 import argparse
@@ -107,8 +98,12 @@ def add_common_commands(subparsers, efuses):
 
     execute_scripts = subparsers.add_parser('execute_scripts', help='Executes scripts to burn at one time.')
     execute_scripts.add_argument('scripts', help='The special format of python scripts.', nargs="+", type=argparse.FileType('r'))
+    execute_scripts.add_argument('--index', help='integer index. '
+                                 'It allows to retrieve unique data per chip from configfiles and then burn them (ex. CUSTOM_MAC, UNIQUE_ID).', type=int)
+    execute_scripts.add_argument('--configfiles', help='List of configfiles with data', nargs="?", action='append', type=argparse.FileType('r'))
 
-    subparsers.add_parser('check_error', help='Checks eFuse errors')
+    check_error_cmd = subparsers.add_parser('check_error', help='Checks eFuse errors')
+    check_error_cmd.add_argument('--recovery', help="Recovery of BLOCKs after encoding errors", action='store_true')
 
 
 def add_force_write_always(p):
@@ -232,9 +227,8 @@ def burn_efuse(esp, efuses, args):
     for efuse, new_value in zip(burn_efuses_list, new_value_list):
         print("\n    - '{}' ({}) {} -> {}".format(efuse.name, efuse.description, efuse.get_bitstring(), efuse.convert_to_bitstring(new_value)))
         efuse.save(new_value)
-    if args.only_burn_at_end:
+    if not efuses.burn_all(check_batch_mode=True):
         return
-    efuses.burn_all()
 
     print("Checking efuses...")
     raise_error = False
@@ -267,6 +261,11 @@ def read_protect_efuse(esp, efuses, args):
                         raise esptool.FatalError("Secure Boot V2 is on (ABS_DONE_1 = True), BLOCK2 must be readable, stop this operation!")
                     else:
                         print("In case using Secure Boot V2, the BLOCK2 must be readable, please stop this operation!")
+            elif esp.CHIP_NAME == "ESP32-C2":
+                error = not efuses['XTS_KEY_LENGTH_256'].get() and efuse_name == 'BLOCK_KEY0'
+                error |= efuses['SECURE_BOOT_EN'].get() and efuse_name in ['BLOCK_KEY0', 'BLOCK_KEY0_HI_128']
+                if error:
+                    raise esptool.FatalError("%s must be readable, stop this operation!" % efuse_name)
             else:
                 for block in efuses.Blocks.BLOCKS:
                     block = efuses.Blocks.get(block)
@@ -280,9 +279,8 @@ def read_protect_efuse(esp, efuses, args):
             print("Permanently read-disabling efuse%s %s" % ("s" if len(all_disabling) > 1 else "", names))
             efuse.disable_read()
 
-    if args.only_burn_at_end:
+    if not efuses.burn_all(check_batch_mode=True):
         return
-    efuses.burn_all()
 
     print("Checking efuses...")
     raise_error = False
@@ -310,9 +308,8 @@ def write_protect_efuse(esp, efuses, args):
             print("Permanently write-disabling efuse%s %s" % ("s" if len(all_disabling) > 1 else "", names))
             efuse.disable_write()
 
-    if args.only_burn_at_end:
+    if not efuses.burn_all(check_batch_mode=True):
         return
-    efuses.burn_all()
 
     print("Checking efuses...")
     raise_error = False
@@ -360,9 +357,8 @@ def burn_block_data(esp, efuses, args):
         print("[{:02}] {:20} size={:02} bytes, offset={:02} - > [{}].".format(block.id, block.name, len(data), offset, util.hexify(data, " ")))
         block.save(data)
 
-    if args.only_burn_at_end:
+    if not efuses.burn_all(check_batch_mode=True):
         return
-    efuses.burn_all()
     print("Successful")
 
 
@@ -382,13 +378,28 @@ def burn_bit(esp, efuses, args):
     block.print_block(data_block, "regs_to_write", debug=True)
     block.save(data_block.bytes[::-1])
 
-    if args.only_burn_at_end:
+    if not efuses.burn_all(check_batch_mode=True):
         return
-    efuses.burn_all()
     print("Successful")
 
 
 def check_error(esp, efuses, args):
-    if efuses.get_coding_scheme_warnings():
-        raise esptool.FatalError("Error(s) were detected in eFuses")
+    error_in_blocks = efuses.get_coding_scheme_warnings()
+    if args.recovery:
+        if error_in_blocks:
+            confirmed = False
+            for block in efuses.blocks:
+                if block.fail or block.num_errors > 0:
+                    if not block.get_bitstring().all(False):
+                        block.save(block.get_bitstring().bytes[::-1])
+                        if not confirmed:
+                            confirmed = True
+                            efuses.confirm("Recovery of block coding errors", args.do_not_confirm)
+                        block.burn()
+            # Reset the recovery flag to run check_error() without it, just to check the new state of eFuse blocks.
+            args.recovery = False
+            check_error(esp, efuses, args)
+    else:
+        if error_in_blocks:
+            raise esptool.FatalError("Error(s) were detected in eFuses")
     print("No errors detected")

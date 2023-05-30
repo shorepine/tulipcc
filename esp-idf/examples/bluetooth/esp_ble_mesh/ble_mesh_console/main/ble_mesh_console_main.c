@@ -19,15 +19,10 @@
 #include "esp_vfs_dev.h"
 #include "nvs.h"
 #include "nvs_flash.h"
-
 #include "esp_vfs_fat.h"
-
 #include "esp_console.h"
-
 #include "ble_mesh_console_decl.h"
 #include "ble_mesh_example_init.h"
-
-#define TAG "ble_mesh_test"
 
 #if CONFIG_STORE_HISTORY
 
@@ -70,8 +65,17 @@ void app_main(void)
     initialize_filesystem();
     repl_config.history_save_path = HISTORY_PATH;
 #endif
+
+#if CONFIG_IDF_TARGET_ESP32C3
+    repl_config.prompt = "esp32c3>";
+#elif CONFIG_IDF_TARGET_ESP32S3
+    repl_config.prompt = "esp32s3>";
+#else
     repl_config.prompt = "esp32>";
+#endif
+
     // init console REPL environment
+    repl_config.max_history_len = 1;
     ESP_ERROR_CHECK(esp_console_new_repl_uart(&uart_config, &repl_config, &repl));
 
     /* Register commands */
@@ -86,7 +90,7 @@ void app_main(void)
 #if (CONFIG_BLE_MESH_CFG_CLI)
     ble_mesh_register_configuration_client_model();
 #endif
-
+    printf("!!!ready!!!\n");
     // start console REPL
     ESP_ERROR_CHECK(esp_console_start_repl(repl));
 }

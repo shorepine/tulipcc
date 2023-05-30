@@ -34,10 +34,32 @@
 #endif
 #include "esp_flash.h"
 #include "hal/spi_flash_hal.h"
+#include "soc/soc_caps.h"
+#include "spi_flash_override.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// Type of MSPI IO
+typedef enum {
+    ESP_MSPI_IO_CLK = 0,
+    ESP_MSPI_IO_Q,
+    ESP_MSPI_IO_D,
+    ESP_MSPI_IO_CS0, /* cs for spi flash */
+    ESP_MSPI_IO_HD,
+    ESP_MSPI_IO_WP,
+#if SOC_SPI_MEM_SUPPORT_OPI_MODE
+    ESP_MSPI_IO_DQS,
+    ESP_MSPI_IO_D4,
+    ESP_MSPI_IO_D5,
+    ESP_MSPI_IO_D6,
+    ESP_MSPI_IO_D7,
+#endif // SOC_SPI_MEM_SUPPORT_OPI_MODE
+#if CONFIG_SPIRAM
+    ESP_MSPI_IO_CS1 /* cs for spi ram */
+#endif
+} esp_mspi_io_t;
 
 /**
  * @brief To setup Flash chip
@@ -81,6 +103,15 @@ void spi_timing_psram_tuning(void);
 void esp_mspi_pin_init(void);
 
 /**
+ * @brief Get the number of the GPIO corresponding to the given MSPI io
+ *
+ * @param[in] io  MSPI io
+ *
+ * @return MSPI IO number
+ */
+uint8_t esp_mspi_get_io(esp_mspi_io_t io);
+
+/**
  * @brief Set SPI1 registers to make ROM functions work
  * @note This function is used for setting SPI1 registers to the state that ROM SPI functions work
  */
@@ -108,6 +139,28 @@ bool spi_timing_is_tuned(void);
  */
 void spi_flash_set_vendor_required_regs(void);
 
+/**
+ * @brief Enable SPI flash high performance mode.
+ *
+ * @return ESP_OK if success.
+ */
+esp_err_t spi_flash_enable_high_performance_mode(void);
+
+/**
+ * @brief Get the flash dummy through this function
+ *        This can be used when one flash has several dummy configurations to enable the high performance mode.
+ * @note Don't forget to subtract one when assign to the register of mspi e.g. if the value you get is 4, (4-1=3) should be assigned to the register.
+ *
+ * @return Pointer to spi_flash_hpm_dummy_conf_t.
+ */
+const spi_flash_hpm_dummy_conf_t *spi_flash_hpm_get_dummy(void);
+
+/**
+ * @brief Used to judge whether flash works under HPM mode with dummy adjustment.
+ *
+ * @return true Yes, and work under HPM with adjusting dummy. Otherwise, false.
+ */
+bool spi_flash_hpm_dummy_adjust(void);
 
 #ifdef __cplusplus
 }

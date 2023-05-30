@@ -1,19 +1,10 @@
 #!/usr/bin/env python
 # This file describes eFuses for ESP32S2 chip
 #
-# Copyright (C) 2020 Espressif Systems (Shanghai) PTE LTD
+# SPDX-FileCopyrightText: 2020-2022 Espressif Systems (Shanghai) CO LTD
 #
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public License as published by the Free Software
-# Foundation; either version 2 of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
-# Street, Fifth Floor, Boston, MA 02110-1301 USA.
+# SPDX-License-Identifier: GPL-2.0-or-later
+
 from __future__ import division, print_function
 
 import binascii
@@ -81,6 +72,11 @@ class EspEfuses(base_fields.EspEfusesBase):
         self.do_not_confirm = do_not_confirm
         if esp.CHIP_NAME != "ESP32-S2":
             raise esptool.FatalError("Expected the 'esp' param for ESP32-S2 chip but got for '%s'." % (esp.CHIP_NAME))
+        if not skip_connect:
+            flags = self._esp.get_security_info()['flags']
+            GET_SECURITY_INFO_FLAG_SECURE_DOWNLOAD_ENABLE = (1 << 2)
+            if flags & GET_SECURITY_INFO_FLAG_SECURE_DOWNLOAD_ENABLE:
+                raise esptool.FatalError("Secure Download Mode is enabled. The tool can not read eFuses.")
         self.blocks = [EfuseBlock(self, self.Blocks.get(block), skip_read=skip_connect) for block in self.Blocks.BLOCKS]
         if not skip_connect:
             self.get_coding_scheme_warnings()
@@ -267,7 +263,7 @@ class EfuseAdcPointCalibration(EfuseField):
 class EfuseMacField(EfuseField):
     def check_format(self, new_value_str):
         if new_value_str is None:
-            raise esptool.FatalError("Required MAC Address in AB:CD:EF:01:02:03 format!")
+            raise esptool.FatalError("Required MAC Address in AA:CD:EF:01:02:03 format!")
         if new_value_str.count(":") != 5:
             raise esptool.FatalError("MAC Address needs to be a 6-byte hexadecimal format separated by colons (:)!")
         hexad = new_value_str.replace(":", "")
@@ -336,6 +332,11 @@ class EfuseKeyPurposeField(EfuseField):
             if purpose_name[0] == new_value_str:
                 raw_val = str(purpose_name[1])
                 break
+        if raw_val.isdigit():
+            if int(raw_val) not in [p[1] for p in self.KEY_PURPOSES if p[1] > 0]:
+                raise esptool.FatalError("'%s' can not be set (value out of range)" % raw_val)
+        else:
+            raise esptool.FatalError("'%s' unknown name" % raw_val)
         return raw_val
 
     def need_reverse(self, new_key_purpose):
@@ -349,15 +350,11 @@ class EfuseKeyPurposeField(EfuseField):
                 return key[4] == "need_rd_protect"
 
     def get(self, from_read=True):
-        try:
-            return self.KEY_PURPOSES[self.get_raw(from_read)][0]
-        except IndexError:
-            return " "
+        for p in self.KEY_PURPOSES:
+            if p[1] == self.get_raw(from_read):
+                return p[0]
+        return "FORBIDDEN_STATE"
 
     def save(self, new_value):
-        raw_val = new_value
-        for purpose_name in self.KEY_PURPOSES:
-            if purpose_name[0] == new_value:
-                raw_val = purpose_name[1]
-                break
+        raw_val = int(self.check_format(str(new_value)))
         return super(EfuseKeyPurposeField, self).save(raw_val)

@@ -13,6 +13,7 @@ world_token = "syt_dHVsaXA_lPADiXCwKdCJvreALSul_0ody9J"
 host = "duraflame.rosaline.org"
 room_id = "!rGPkdYQOECXDlTVoGe:%s" % (host)
 files_room_id = "!MuceoboBAfueEttdFw:%s" % (host)
+firmware_room_id = "!eMmMZLncsdKrMOFTMM:%s" % (host)
 last_message = None
 
 # micropython version of uuid from micropython-lib
@@ -69,8 +70,15 @@ def matrix_post(url, data, content_type="application/octet-stream"):
 def _isdir(filename):
     return (os.stat(filename)[0] & 0o40000) > 0
 
+def read_in_chunks(file_object, chunk_size=4096):
+    while True:
+        data = file_object.read(chunk_size)
+        if not data:
+            break
+        yield data
+
 # Uploads a file or folder from Tulip to Tulip World
-def upload(filename, content_type="application/octet-stream"):
+def upload(filename, content_type="application/octet-stream", room_id=files_room_id):
     tar = False
     url = "https://%s/_matrix/media/v3/upload?filename=%s" % (host, filename)
     tulip.display_stop()
@@ -79,21 +87,25 @@ def upload(filename, content_type="application/octet-stream"):
         print("Packing %s" % (filename))
         tulip.tar_create(filename)
         filename += ".tar"
-    contents = open(filename,"rb").read()
-    uri = matrix_post(url, contents, content_type=content_type).json()["content_uri"]
+    #contents = open(filename,"rb").read()
+    #uri = matrix_post(url, contents, content_type=content_type).json()["content_uri"]
+
+    file = open(filename, "rb")
+    uri = matrix_post(url, read_in_chunks(file), content_type=content_type).json()["content_uri"]
+
     tulip.display_start()
     # Now make an event / message
     data={"info":{"mimetype":content_type},"msgtype":"m.file","body":filename,"url":uri}
-    url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, files_room_id, "m.room.message", str(uuid4()))
+    url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, room_id, "m.room.message", str(uuid4()))
     matrix_put(url, data)
     print("Uploaded %s to Tulip World." % (filename))
     if(tar):
         os.remove(filename)
 
 # returns all the files within limit
-def files(limit=5000): 
+def files(limit=5000, room_id=files_room_id): 
     f = []
-    url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,files_room_id,limit)
+    url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,room_id,limit)
     data = matrix_get(url)
     grab_url = None
     for e in data.json()['messages']['chunk']:
@@ -119,7 +131,7 @@ def ls(count=10): # lists latest count files
 
 # Convenience function that just grabs the __last__ file named filename from Tulip World. Does full initial sync to find it
 # Or, you can give it an item from files(), if you want a specific file and not look it up by filename
-def download(filename, limit=5000):
+def download(filename, limit=5000, chunk_size=4096):
     grab_url = None
     if(type(filename)==dict): # this is a item in the files() list
         grab_url = filename["url"]
@@ -140,7 +152,7 @@ def download(filename, limit=5000):
 
         tulip.display_stop()
         r = matrix_get(url)
-        b = r.save(filename)
+        b = r.save(filename, chunk_size=chunk_size)
         tulip.display_start()
 
         print("Downloaded %s [%d bytes, last updated %s] from Tulip World." % (filename, b, age_nice.lstrip()))
@@ -148,6 +160,7 @@ def download(filename, limit=5000):
             print("Unpacking %s. Run it with run('%s')" % (filename, filename[:-4]))
             tulip.tar_extract(filename, show_progress=False)
             os.remove(filename)
+        return b
 
     else:
         print("Could not find %s on Tulip World" % (filename))

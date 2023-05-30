@@ -139,6 +139,17 @@ stats_display_sys(struct stats_sys *sys)
 }
 #endif /* SYS_STATS */
 
+#if IP_NAPT_STATS
+void stats_display_ip_napt(struct stats_ip_napt *napt)
+{
+  LWIP_PLATFORM_DIAG(("\nIP NAPT\n\t"));
+  LWIP_PLATFORM_DIAG(("nr_active_tcp:        %"STAT_COUNTER_F"\n\t", napt->nr_active_tcp));
+  LWIP_PLATFORM_DIAG(("nr_active_udp:        %"STAT_COUNTER_F"\n\t", napt->nr_active_udp));
+  LWIP_PLATFORM_DIAG(("nr_active_icmp:       %"STAT_COUNTER_F"\n\t", napt->nr_active_icmp));
+  LWIP_PLATFORM_DIAG(("nr_forced_evictions:  %"STAT_COUNTER_F"\n\t", napt->nr_forced_evictions));
+}
+#endif /* IP_NAPT_STATS */
+
 void
 stats_display(void)
 {
@@ -162,6 +173,7 @@ stats_display(void)
     MEMP_STATS_DISPLAY(i);
   }
   SYS_STATS_DISPLAY();
+  IP_NAPT_STATS_DISPLAY();
 }
 #endif /* LWIP_STATS_DISPLAY */
 

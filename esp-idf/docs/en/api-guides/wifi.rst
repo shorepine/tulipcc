@@ -5,8 +5,9 @@ Wi-Fi Driver
 
 {IDF_TARGET_NAME} Wi-Fi Feature List
 ------------------------------------
-- Support Station-only mode, AP-only mode, Station/AP-coexistence mode
-- Support IEEE 802.11B, IEEE 802.11G, IEEE 802.11N and APIs to configure the protocol mode
+- Support 4 virtual WiFi interfaces, which are STA, AP, Sniffer and reserved. 
+- Support station-only mode, AP-only mode, station/AP-coexistence mode
+- Support IEEE 802.11b, IEEE 802.11g, IEEE 802.11n, and APIs to configure the protocol mode
 - Support WPA/WPA2/WPA3/WPA2-Enterprise and WPS
 - Support AMPDU, HT40, QoS and other key features
 - Support Modem-sleep
@@ -58,9 +59,9 @@ Whether the error is critical or not depends on the API and the application scen
 
 **The primary principle to write a robust application with Wi-Fi API is to always check the error code and write the error-handling code.** Generally, the error-handling code can be used:
 
- - for recoverable errors, in which case you can write a recoverable-error code. For example, when :cpp:func:`esp_wifi_start` returns ESP_ERR_NO_MEM, the recoverable-error code vTaskDelay can be called, in order to get a microseconds' delay for another try.
- - for non-recoverable, yet non-critical, errors, in which case printing the error code is a good method for error handling.
- - for non-recoverable, critical errors, in which case "assert" may be a good method for error handling. For example, if :cpp:func:`esp_wifi_set_mode` returns ESP_ERR_WIFI_NOT_INIT, it means that the Wi-Fi driver is not initialized by :cpp:func:`esp_wifi_init` successfully. You can detect this kind of error very quickly in the application development phase.
+ - For recoverable errors, in which case you can write a recoverable-error code. For example, when :cpp:func:`esp_wifi_start()` returns ESP_ERR_NO_MEM, the recoverable-error code vTaskDelay can be called in order to get a microseconds' delay for another try.
+ - For non-recoverable, yet non-critical errors, in which case printing the error code is a good method for error handling.
+ - For non-recoverable and also critical errors, in which case "assert" may be a good method for error handling. For example, if :cpp:func:`esp_wifi_set_mode()` returns ESP_ERR_WIFI_NOT_INIT, it means that the Wi-Fi driver is not initialized by :cpp:func:`esp_wifi_init()` successfully. You can detect this kind of error very quickly in the application development phase.
 
 In esp_err.h, ESP_ERROR_CHECK checks the return values. It is a rather commonplace error-handling code and can be used
 as the default error-handling code in the application development phase. However, we strongly recommend that API users write their own error-handling code.
@@ -123,9 +124,9 @@ The {IDF_TARGET_NAME} Wi-Fi programming model is depicted as follows:
     }
 
 
-The Wi-Fi driver can be considered a black box that knows nothing about high-layer code, such as the TCP/IP stack, application task, event task, etc. The application task (code) generally calls :doc:`Wi-Fi driver APIs <../api-reference/network/esp_wifi>` to initialize Wi-Fi and handles Wi-Fi events when necessary. Wi-Fi driver receives API calls, handles them, and post events to the application.
+The Wi-Fi driver can be considered a black box that knows nothing about high-layer code, such as the TCP/IP stack, application task, and event task. The application task (code) generally calls :doc:`Wi-Fi driver APIs <../api-reference/network/esp_wifi>` to initialize Wi-Fi and handles Wi-Fi events when necessary. Wi-Fi driver receives API calls, handles them, and posts events to the application.
 
-Wi-Fi event handling is based on the :doc:`esp_event library <../api-reference/system/esp_event>`. Events are sent by the Wi-Fi driver to the :ref:`default event loop <esp-event-default-loops>`. Application may handle these events in callbacks registered using :cpp:func:`esp_event_handler_register`. Wi-Fi events are also handled by :doc:`esp_netif component <../api-reference/network/esp_netif>` to provide a set of default behaviors. For example, when Wi-Fi station connects to an AP, esp_netif will automatically start the DHCP client (by default).
+Wi-Fi event handling is based on the :doc:`esp_event library <../api-reference/system/esp_event>`. Events are sent by the Wi-Fi driver to the :ref:`default event loop <esp-event-default-loops>`. Application may handle these events in callbacks registered using :cpp:func:`esp_event_handler_register()`. Wi-Fi events are also handled by :doc:`esp_netif component <../api-reference/network/esp_netif>` to provide a set of default behaviors. For example, when Wi-Fi station connects to an AP, esp_netif will automatically start the DHCP client by default.
 
 {IDF_TARGET_NAME} Wi-Fi Event Description
 -----------------------------------------
@@ -204,11 +205,11 @@ IP_EVENT_GOT_IP6
 ++++++++++++++++++++++++++++++++++++
 This event arises when the IPV6 SLAAC support auto-configures an address for the {IDF_TARGET_NAME}, or when this address changes. The event means that everything is ready and the application can begin its tasks (e.g., creating sockets).
 
-IP_STA_LOST_IP
+IP_EVENT_STA_LOST_IP
 ++++++++++++++++++++++++++++++++++++
 This event arises when the IPV4 address become invalid.
 
-IP_STA_LOST_IP doesn't arise immediately after the Wi-Fi disconnects, instead it starts an IPV4 address lost timer, if the IPV4 address is got before ip lost timer expires, IP_EVENT_STA_LOST_IP doesn't happen. Otherwise, the event arises when IPV4 address lost timer expires.
+IP_EVENT_STA_LOST_IP doesn't arise immediately after the Wi-Fi disconnects, instead it starts an IPV4 address lost timer, if the IPV4 address is got before ip lost timer expires, IP_EVENT_STA_LOST_IP doesn't happen. Otherwise, the event arises when IPV4 address lost timer expires.
 
 Generally the application don't need to care about this event, it is just a debug event to let the application know that the IPV4 address is lost.
 
@@ -228,8 +229,8 @@ WIFI_EVENT_AP_STADISCONNECTED
 ++++++++++++++++++++++++++++++++++++
 This event can happen in the following scenarios:
 
-  - The application calls :cpp:func:`esp_wifi_disconnect()`, or esp_wifi_deauth_sta(), to manually disconnect the station.
-  - The Wi-Fi driver kicks off the station, e.g. because the AP has not received any packets in the past five minutes, etc. The time can be modified by :cpp:func:`esp_wifi_set_inactive_time`.
+  - The application calls :cpp:func:`esp_wifi_disconnect()`, or :cpp:func:`esp_wifi_deauth_sta()`, to manually disconnect the station.
+  - The Wi-Fi driver kicks off the station, e.g., because the AP has not received any packets in the past five minutes. The time can be modified by :cpp:func:`esp_wifi_set_inactive_time()`.
   - The station kicks off the AP.
 
 When this event happens, the event task will do nothing, but the application event callback needs to do something, e.g., close the socket which is related to this station, etc.
@@ -239,6 +240,11 @@ WIFI_EVENT_AP_PROBEREQRECVED
 
 This event is disabled by default. The application can enable it via API :cpp:func:`esp_wifi_set_event_mask()`.
 When this event is enabled, it will be raised each time the AP receives a probe request.
+
+WIFI_EVENT_STA_BEACON_TIMEOUT
+++++++++++++++++++++++++++++++++++++
+
+If the station does not receive the beacon of the connected AP within the inactive time, the beacon timeout happens, the `WIFI_EVENT_STA_BEACON_TIMEOUT`_ will arise. The application can set inactive time via API :cpp:func:`esp_wifi_set_inactive_time()`.
 
 {IDF_TARGET_NAME} Wi-Fi Station General Scenario
 ------------------------------------------------
@@ -302,7 +308,7 @@ Below is a "big scenario" which describes some small scenarios in Station mode:
 ++++++++++++++++++++++++++++++
  - s1.1: The main task calls :cpp:func:`esp_netif_init()` to create an LwIP core task and initialize LwIP-related work.
 
- - s1.2: The main task calls :cpp:func:`esp_event_loop_create` to create a system Event task and initialize an application event's callback function. In the scenario above, the application event's callback function does nothing but relaying the event to the application task.
+ - s1.2: The main task calls :cpp:func:`esp_event_loop_create()` to create a system Event task and initialize an application event's callback function. In the scenario above, the application event's callback function does nothing but relaying the event to the application task.
 
  - s1.3: The main task calls :cpp:func:`esp_netif_create_default_wifi_ap()` or :cpp:func:`esp_netif_create_default_wifi_sta()` to create default network interface instance binding station or AP with TCP/IP stack.
 
@@ -316,7 +322,7 @@ Step 1.1 ~ 1.5 is a recommended sequence that initializes a Wi-Fi-/LwIP-based ap
 +++++++++++++++++++++++++++++++
 Once the Wi-Fi driver is initialized, you can start configuring the Wi-Fi driver. In this scenario, the mode is Station, so you may need to call :cpp:func:`esp_wifi_set_mode` (WIFI_MODE_STA) to configure the Wi-Fi mode as Station. You can call other esp_wifi_set_xxx APIs to configure more settings, such as the protocol mode, country code, bandwidth, etc. Refer to `{IDF_TARGET_NAME} Wi-Fi Configuration`_.
 
-Generally, we configure the Wi-Fi driver before setting up the Wi-Fi connection, but this is **NOT** mandatory, which means that you can configure the Wi-Fi connection anytime, provided that the Wi-Fi driver is initialized successfully. However, if the configuration does not need to change after the Wi-Fi connection is set up, you should configure the Wi-Fi driver at this stage, because the configuration APIs (such as :cpp:func:`esp_wifi_set_protocol`) will cause the Wi-Fi to reconnect, which may not be desirable.
+Generally, the Wi-Fi driver should be configured before the Wi-Fi connection is set up. But this is **NOT** mandatory, which means that you can configure the Wi-Fi connection anytime, provided that the Wi-Fi driver is initialized successfully. However, if the configuration does not need to change after the Wi-Fi connection is set up, you should configure the Wi-Fi driver at this stage, because the configuration APIs (such as :cpp:func:`esp_wifi_set_protocol()`) will cause the Wi-Fi to reconnect, which may not be desirable.
 
 If the Wi-Fi NVS flash is enabled by menuconfig, all Wi-Fi configuration in this phase, or later phases, will be stored into flash. When the board powers on/reboots, you do not need to configure the Wi-Fi driver from scratch. You only need to call esp_wifi_get_xxx APIs to fetch the configuration stored in flash previously. You can also configure the Wi-Fi driver if the previous configuration is not what you want.
 
@@ -468,7 +474,7 @@ The scan modes in above table can be combined arbitrarily, so we totally have 8 
 Scan Configuration
 +++++++++++++++++++++++++++++++++++++++
 
-The scan type and other per-scan attributes are configured by :cpp:func:`esp_wifi_scan_start`. The table below provides a detailed description of wifi_scan_config_t.
+The scan type and other per-scan attributes are configured by :cpp:func:`esp_wifi_scan_start()`. The table below provides a detailed description of wifi_scan_config_t.
 
 +------------------+--------------------------------------------------------------+
 | Field            | Description                                                  |
@@ -516,7 +522,7 @@ The scan type and other per-scan attributes are configured by :cpp:func:`esp_wif
 |                  |                                                              |
 +------------------+--------------------------------------------------------------+
 
-There are also some global scan attributes which are configured by API :cpp:func:`esp_wifi_set_config`, refer to `Station Basic Configuration`_
+There are also some global scan attributes which are configured by API :cpp:func:`esp_wifi_set_config()`, refer to `Station Basic Configuration`_
 
 Scan All APs on All Channels (Foreground)
 +++++++++++++++++++++++++++++++++++++++++++++
@@ -772,254 +778,401 @@ Four-way Handshake Phase
 Wi-Fi Reason Code
 +++++++++++++++++++++
 
-The table below shows the reason-code defined in {IDF_TARGET_NAME}. The first column is the macro name defined in esp_wifi_types.h. The common prefix *WIFI_REASON* is removed, which means that *UNSPECIFIED* actually stands for *WIFI_REASON_UNSPECIFIED* and so on. The second column is the value of the reason. The third column is the standard value to which this reason is mapped in section 8.4.1.7 of IEEE 802.11-2012. (For more information, refer to the standard mentioned above.) The last column is a description of the reason.
+The table below shows the reason-code defined in {IDF_TARGET_NAME}. The first column is the macro name defined in esp_wifi_types.h. The common prefix *WIFI_REASON* is removed, which means that *UNSPECIFIED* actually stands for *WIFI_REASON_UNSPECIFIED* and so on. The second column is the value of the reason. The third column is the standard value to which this reason is mapped in section 9.4.1.7 of IEEE 802.11-2020. (For more information, refer to the standard mentioned above.) The last column describes the reason.
 
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| Reason code               | Value |Mapped To| Description                                                 |
-+===========================+=======+=========+=============================================================+
-| UNSPECIFIED               |   1   |    1    | Generally, it means an internal failure, e.g., the memory   |
-|                           |       |         | runs out, the internal TX fails, or the reason is received  |
-|                           |       |         | from the remote side, etc.                                  |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| AUTH_EXPIRE               |   2   |    2    | The previous authentication is no longer valid.             |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - auth is timed out.                                       |
-|                           |       |         |  - the reason is received from the AP.                      |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP AP, this reason is reported when:               |
-|                           |       |         |                                                             |
-|                           |       |         |  - the AP has not received any packets from the station     |
-|                           |       |         |    in the past five minutes.                                |
-|                           |       |         |  - the AP is stopped by calling :cpp:func:`esp_wifi_stop()`.|
-|                           |       |         |  - the station is de-authed by calling                      |
-|                           |       |         |    :cpp:func:`esp_wifi_deauth_sta()`.                       |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| AUTH_LEAVE                |   3   |    3    | De-authenticated, because the sending STA is                |
-|                           |       |         | leaving (or has left).                                      |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| ASSOC_EXPIRE              |   4   |    4    | Disassociated due to inactivity.                            |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP AP, this reason is reported when:               |
-|                           |       |         |                                                             |
-|                           |       |         |  - the AP has not received any packets from the             |
-|                           |       |         |    station in the past five minutes.                        |
-|                           |       |         |  - the AP is stopped by calling :cpp:func:`esp_wifi_stop()` |
-|                           |       |         |  - the station is de-authed by calling                      |
-|                           |       |         |    :cpp:func:`esp_wifi_deauth_sta()`                        |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| ASSOC_TOOMANY             |   5   |    5    | Disassociated, because the AP is unable to handle           |
-|                           |       |         | all currently associated STAs at the same time.             |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP AP, this reason is reported when:               |
-|                           |       |         |                                                             |
-|                           |       |         |  - the stations associated with the AP reach the            |
-|                           |       |         |    maximum number that the AP can support.                  |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| NOT_AUTHED                |   6   |    6    | Class-2 frame received from a non-authenticated STA.        |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP AP, this reason is reported when:               |
-|                           |       |         |                                                             |
-|                           |       |         |  - the AP receives a packet with data from a                |
-|                           |       |         |    non-authenticated station.                               |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| NOT_ASSOCED               |   7   |    7    | Class-3 frame received from a non-associated STA.           |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP AP, this reason is reported when:               |
-|                           |       |         |                                                             |
-|                           |       |         |  - the AP receives a packet with data from a                |
-|                           |       |         |    non-associated station.                                  |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| ASSOC_LEAVE               |   8   |    8    | Disassociated, because the sending STA is leaving (or has   |
-|                           |       |         | left) BSS.                                                  |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |  - the station is disconnected by                           |
-|                           |       |         |    :cpp:func:`esp_wifi_disconnect()` and other APIs.        |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| ASSOC_NOT_AUTHED          |   9   |    9    | STA requesting (re)association is not authenticated by the  |
-|                           |       |         | responding STA.                                             |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP AP, this reason is reported when:               |
-|                           |       |         |                                                             |
-|                           |       |         |  - the AP receives packets with data from an                |
-|                           |       |         |    associated, yet not authenticated, station.              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| DISASSOC_PWRCAP_BAD       |   10  |    10   | Disassociated, because the information in the Power         |
-|                           |       |         | Capability element is unacceptable.                         |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| DISASSOC_SUPCHAN_BAD      |   11  |    11   | Disassociated, because the information in the Supported     |
-|                           |       |         | Channels element is unacceptable.                           |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| IE_INVALID                |   13  |    13   | Invalid element, i.e. an element whose content does not meet|
-|                           |       |         | the specifications of the Standard in frame formats clause. |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP AP, this reason is reported when:               |
-|                           |       |         |                                                             |
-|                           |       |         |  - the AP parses a wrong WPA or RSN IE.                     |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| MIC_FAILURE               |   14  |    14   | Message integrity code (MIC) failure.                       |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| 4WAY_HANDSHAKE_TIMEOUT    |   15  |    15   | Four-way handshake times out. For legacy reasons, in ESP    |
-|                           |       |         | this reason-code is replaced with                           |
-|                           |       |         | WIFI_REASON_HANDSHAKE_TIMEOUT.                              |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - the handshake times out.                                 |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| GROUP_KEY_UPDATE_TIMEOUT  |   16  |    16   | Group-Key Handshake times out.                              |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| IE_IN_4WAY_DIFFERS        |   17  |    17   | The element in the four-way handshake is different from the |
-|                           |       |         | (Re-)Association Request/Probe and Response/Beacon frame.   |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |  - the station finds that the four-way handshake IE differs |
-|                           |       |         |    from the IE in the (Re-)Association Request/Probe and    |
-|                           |       |         |    Response/Beacon frame.                                   |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| GROUP_CIPHER_INVALID      |   18  |    18   | Invalid group cipher.                                       |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| PAIRWISE_CIPHER_INVALID   |   19  |    19   | Invalid pairwise cipher.                                    |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| AKMP_INVALID              |   20  |    20   | Invalid AKMP.                                               |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| UNSUPP_RSN_IE_VERSION     |   21  |    21   | Unsupported RSNE version.                                   |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| INVALID_RSN_IE_CAP        |   22  |    22   | Invalid RSNE capabilities.                                  |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| 802_1X_AUTH_FAILED        |   23  |    23   | IEEE 802.1X. authentication failed.                         |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP AP, this reason is reported when:               |
-|                           |       |         |                                                             |
-|                           |       |         |  - 802.1 x authentication fails.                            |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| CIPHER_SUITE_REJECTED     |   24  |    24   | Cipher suite rejected due to security policies.             |
-|                           |       |         |                                                             |
-|                           |       |         | For the ESP Station, this reason is reported when:          |
-|                           |       |         |                                                             |
-|                           |       |         |  - it is received from the AP.                              |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| BEACON_TIMEOUT            |  200  |reserved | Espressif-specific Wi-Fi reason-code: when the station      |
-|                           |       |         | loses N beacons continuously, it will disrupt the connection|
-|                           |       |         | and report this reason.                                     |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| NO_AP_FOUND               |  201  |reserved | Espressif-specific Wi-Fi reason-code: when the station      |
-|                           |       |         | fails to scan the target AP, this reason code will be       |
-|                           |       |         | reported.                                                   |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| AUTH_FAIL                 |  202  |reserved | Espressif-specific Wi-Fi reason-code: the                   |
-|                           |       |         | authentication fails, but not because of a timeout.         |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| ASSOC_FAIL                |  203  |reserved | Espressif-specific Wi-Fi reason-code: the association       |
-|                           |       |         | fails, but not because of ASSOC_EXPIRE or ASSOC_TOOMANY.    |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| HANDSHAKE_TIMEOUT         |  204  |reserved | Espressif-specific Wi-Fi reason-code: the                   |
-|                           |       |         | handshake fails for the same reason as that in              |
-|                           |       |         | WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT.                         |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
-| CONNECTION_FAIL           |  205  |reserved | Espressif-specific Wi-Fi reason-code: the                   |
-|                           |       |         | connection to the AP has failed.                            |
-|                           |       |         |                                                             |
-+---------------------------+-------+---------+-------------------------------------------------------------+
+.. list-table::
+   :header-rows: 1
+   :widths: 5 10 12 40
+
+   * - Reason code
+     - Value
+     - Mapped To
+     - Description
+   * - UNSPECIFIED
+     - 1
+     - 1
+     - Generally, it means an internal failure, e.g., the memory runs out, the internal TX fails, or the reason is received from the remote side.
+   * - AUTH_EXPIRE
+     - 2
+     - 2
+     - The previous authentication is no longer valid.
+
+       For the ESP station, this reason is reported when:
+
+       - auth is timed out.
+       - the reason is received from the AP.
+
+       For the ESP AP, this reason is reported when:
+
+       - the AP has not received any packets from the station in the past five minutes.
+       - the AP is stopped by calling :cpp:func:`esp_wifi_stop()`.
+       - the station is de-authed by calling :cpp:func:`esp_wifi_deauth_sta()`.
+   * - AUTH_LEAVE
+     - 3
+     - 3
+     - De-authenticated, because the sending station is leaving (or has left).
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - ASSOC_EXPIRE
+     - 4
+     - 4
+     - Disassociated due to inactivity.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+
+       For the ESP AP, this reason is reported when:
+
+       - the AP has not received any packets from the station in the past five minutes.
+       - the AP is stopped by calling :cpp:func:`esp_wifi_stop()`.
+       - the station is de-authed by calling :cpp:func:`esp_wifi_deauth_sta()`.
+   * - ASSOC_TOOMANY
+     - 5
+     - 5
+     - Disassociated, because the AP is unable to handle all currently associated STAs at the same time.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+
+       For the ESP AP, this reason is reported when:
+
+       - the stations associated with the AP reach the maximum number that the AP can support.
+   * - NOT_AUTHED
+     - 6
+     - 6
+     - Class-2 frame received from a non-authenticated STA.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+
+       For the ESP AP, this reason is reported when:
+
+       - the AP receives a packet with data from a non-authenticated station.
+   * - NOT_ASSOCED
+     - 7
+     - 7
+     - Class-3 frame received from a non-associated STA.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+
+       For the ESP AP, this reason is reported when:
+
+       - the AP receives a packet with data from a non-associated station.
+   * - ASSOC_LEAVE
+     - 8
+     - 8
+     - Disassociated, because the sending station is leaving (or has left) BSS.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+       - the station is disconnected by :cpp:func:`esp_wifi_disconnect()` and other APIs.
+   * - ASSOC_NOT_AUTHED
+     - 9
+     - 9
+     - station requesting (re)association is not authenticated by the responding STA.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+
+       For the ESP AP, this reason is reported when:
+
+       - the AP receives packets with data from an associated, yet not authenticated, station.
+   * - DISASSOC_PWRCAP_BAD
+     - 10
+     - 10
+     - Disassociated, because the information in the Power Capability element is unacceptable.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - DISASSOC_SUPCHAN_BAD
+     - 11
+     - 11
+     - Disassociated, because the information in the Supported Channels element is unacceptable.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - IE_INVALID
+     - 13
+     - 13
+     - Invalid element, i.e., an element whose content does not meet the specifications of the Standard in frame formats clause.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+
+       For the ESP AP, this reason is reported when:
+
+       - the AP parses a wrong WPA or RSN IE.
+   * - MIC_FAILURE
+     - 14
+     - 14
+     - Message integrity code (MIC) failure.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - 4WAY_HANDSHAKE_TIMEOUT
+     - 15
+     - 15
+     - Four-way handshake times out. For legacy reasons, in ESP this reason code is replaced with WIFI_REASON_HANDSHAKE_TIMEOUT.
+
+       For the ESP station, this reason is reported when:
+
+       - the handshake times out.
+       - it is received from the AP.
+   * - GROUP_KEY_UPDATE_TIMEOUT
+     - 16
+     - 16
+     - Group-Key Handshake times out.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - IE_IN_4WAY_DIFFERS
+     - 17
+     - 17
+     - The element in the four-way handshake is different from the (Re-)Association Request/Probe and Response/Beacon frame.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+       - the station finds that the four-way handshake IE differs from the IE in the (Re-)Association Request/Probe and Response/Beacon frame.
+   * - GROUP_CIPHER_INVALID
+     - 18
+     - 18
+     - Invalid group cipher.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - PAIRWISE_CIPHER_INVALID
+     - 19
+     - 19
+     - Invalid pairwise cipher.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - AKMP_INVALID
+     - 20
+     - 20
+     - Invalid AKMP.
+
+       For the ESP station, this reason is reported when:
+       - it is received from the AP.
+   * - UNSUPP_RSN_IE_VERSION
+     - 21
+     - 21
+     - Unsupported RSNE version.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - INVALID_RSN_IE_CAP
+     - 22
+     - 22
+     - Invalid RSNE capabilities.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - 802_1X_AUTH_FAILED
+     - 23
+     - 23
+     - IEEE 802.1X. authentication failed.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+
+       For the ESP AP, this reason is reported when:
+
+       - IEEE 802.1X. authentication fails.
+   * - CIPHER_SUITE_REJECTED
+     - 24
+     - 24
+     - Cipher suite rejected due to security policies.
+
+       For the ESP station, this reason is reported when:
+
+       - it is received from the AP.
+   * - TDLS_PEER_UNREACHABLE
+     - 25
+     - 25
+     - TDLS direct-link teardown due to TDLS peer STA unreachable via the TDLS direct link.
+   * - TDLS_UNSPECIFIED
+     - 26
+     - 26
+     - TDLS direct-link teardown for unspecified reason.
+   * - SSP_REQUESTED_DISASSOC
+     - 27
+     - 27
+     - Disassociated because session terminated by SSP request.
+   * - NO_SSP_ROAMING_AGREEMENT
+     - 28
+     - 28
+     - Disassociated because of lack of SSP roaming agreement.
+   * - BAD_CIPHER_OR_AKM
+     - 29
+     - 29
+     - Requested service rejected because of SSP cipher suite or AKM requirement.
+   * - NOT_AUTHORIZED_THIS_LOCATION
+     - 30
+     - 30
+     - Requested service not authorized in this location.
+   * - SERVICE_CHANGE_PRECLUDES_TS
+     - 31
+     - 31
+     - TS deleted because QoS AP lacks sufficient bandwidth for this QoS STA due to a change in BSS service characteristics or operational mode (e.g., an HT BSS change from 40 MHz channel to 20 MHz channel).
+   * - UNSPECIFIED_QOS
+     - 32
+     - 32
+     - Disassociated for unspecified, QoS-related reason.
+   * - NOT_ENOUGH_BANDWIDTH
+     - 33
+     - 33
+     - Disassociated because QoS AP lacks sufficient bandwidth for this QoS STA.
+   * - MISSING_ACKS
+     - 34
+     - 34
+     - Disassociated because excessive number of frames need to be acknowledged, but are not acknowledged due to AP transmissions and/or poor channel conditions.
+   * - EXCEEDED_TXOP
+     - 35
+     - 35
+     - Disassociated because STA is transmitting outside the limits of its TXOPs.
+   * - STA_LEAVING
+     - 36
+     - 36
+     - Requesting STA is leaving the BSS (or resetting).
+   * - END_BA
+     - 37
+     - 37
+     - Requesting STA is no longer using the stream or session.
+   * - UNKNOWN_BA
+     - 38
+     - 38
+     - Requesting STA received frames using a mechanism for which a setup has not been completed.
+   * - TIMEOUT
+     - 39
+     - 39
+     - Requested from peer STA due to timeout
+   * - Reserved
+     - 40 ~ 45
+     - 40 ~ 45
+     - 
+   * - PEER_INITIATED
+     - 46
+     - 46
+     - In a Disassociation frame: Disassociated because authorized access limit reached.
+   * - AP_INITIATED
+     - 47
+     - 47
+     - In a Disassociation frame: Disassociated due to external service requirements.
+   * - INVALID_FT_ACTION_FRAME_COUNT
+     - 48
+     - 48
+     - Invalid FT Action frame count.
+   * - INVALID_PMKID
+     - 49
+     - 49
+     - Invalid pairwise master key identifier (PMKID).
+   * - INVALID_MDE
+     - 50
+     - 50
+     - Invalid MDE.
+   * - INVALID_FTE
+     - 51
+     - 51
+     - Invalid FTE
+   * - TRANSMISSION_LINK_ESTABLISHMENT_FAILED
+     - 67
+     - 67
+     - Transmission link establishment in alternative channel failed.
+   * - ALTERATIVE_CHANNEL_OCCUPIED
+     - 68
+     - 68
+     - The alternative channel is occupied.
+   * - BEACON_TIMEOUT
+     - 200
+     - reserved
+     - Espressif-specific Wi-Fi reason code: when the station loses N beacons continuously, it will disrupt the connection and report this reason.
+   * - NO_AP_FOUND
+     - 201
+     - reserved
+     - Espressif-specific Wi-Fi reason code: when the station fails to scan the target AP, this reason code will be reported.
+   * - AUTH_FAIL
+     - 202
+     - reserved
+     - Espressif-specific Wi-Fi reason code: the authentication fails, but not because of a timeout.
+   * - ASSOC_FAIL
+     - 203
+     - reserved
+     - Espressif-specific Wi-Fi reason code: the association fails, but not because of ASSOC_EXPIRE or ASSOC_TOOMANY.
+   * - HANDSHAKE_TIMEOUT
+     - 204
+     - reserved
+     - Espressif-specific Wi-Fi reason code: the handshake fails for the same reason as that in WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT.
+   * - CONNECTION_FAIL
+     - 205
+     - reserved
+     - Espressif-specific Wi-Fi reason code: the connection to the AP has failed.
+
+
+Wi-Fi Reason code related to wrong password
+++++++++++++++++++++++++++++++++++++++++++++++
+
+The table below shows the Wi-Fi reason-code may related to wrong password.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 5 10 40
+
+   * - Reason code
+     - Value
+     - Description
+   * - 4WAY_HANDSHAKE_TIMEOUT
+     - 15
+     - Four-way handshake times out. Setting wrong password when STA connecting to an encrpyted AP.
+   * - NO_AP_FOUND
+     - 201
+     - This may related to wrong password in the two scenarios:
+
+       - Setting password when STA connecting to an unencrypted AP.
+       - Doesn't setting password when STA connecting to an encrypted AP.
+   * - HANDSHAKE_TIMEOUT
+     - 204
+     - Four-way handshake fails.
+
+Wi-Fi Reason code related to low RSSI
+++++++++++++++++++++++++++++++++++++++++++++++
+
+The table below shows the Wi-Fi reason-code may related to low RSSI.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 5 10 40
+
+   * - Reason code
+     - Value
+     - Description
+   * - NO_AP_FOUND
+     - 201
+     - The station fails to scan the target AP due to low RSSI
+   * - HANDSHAKE_TIMEOUT
+     - 204
+     - Four-way handshake fails.
+
 
 {IDF_TARGET_NAME} Wi-Fi Station Connecting When Multiple APs Are Found
 ----------------------------------------------------------------------
@@ -1042,9 +1195,11 @@ Another thing we need to consider is the reconnect may not connect the same AP i
 Wi-Fi Beacon Timeout
 ---------------------------
 
-The beacon timeout mechanism is used by {IDF_TARGET_NAME} station to detect whether the AP is alive or not. If the station continuously loses 60 beacons of the connected AP, the beacon timeout happens.
+The beacon timeout mechanism is used by {IDF_TARGET_NAME} station to detect whether the AP is alive or not. If the station does not receive the beacon of the connected AP within the inactive time, the beacon timeout happens. The application can set inactive time via API :cpp:func:`esp_wifi_set_inactive_time()`.
 
 After the beacon timeout happens, the station sends 5 probe requests to AP, it disconnects the AP and raises the event `WIFI_EVENT_STA_DISCONNECTED`_ if still no probe response or beacon is received from AP.
+
+It should be considered that the timer used for beacon timeout will be reset during the scanning process. It means that the scan process will affect the triggering of the event `WIFI_EVENT_STA_BEACON_TIMEOUT`_.
 
 {IDF_TARGET_NAME} Wi-Fi Configuration
 -------------------------------------
@@ -1089,7 +1244,7 @@ Call :cpp:func:`esp_wifi_set_mode()` to set the Wi-Fi mode.
 Station Basic Configuration
 +++++++++++++++++++++++++++++++++++++
 
-API esp_wifi_set_config() can be used to configure the station. The table below describes the fields in detail.
+API :cpp:func:`esp_wifi_set_config()` can be used to configure the station. And the configuration will be stored in NVS. The table below describes the fields in detail.
 
 +------------------+--------------------------------------------------------------+
 | Field            | Description                                                  |
@@ -1157,82 +1312,88 @@ API esp_wifi_set_config() can be used to configure the station. The table below 
 AP Basic Configuration
 +++++++++++++++++++++++++++++++++++++
 
-API esp_wifi_set_config() can be used to configure the AP. The table below describes the fields in detail.
+API :cpp:func:`esp_wifi_set_config()` can be used to configure the AP. And the configuration will be stored in NVS. The table below describes the fields in detail.
 
-+------------------+--------------------------------------------------------------+
-| Field            | Description                                                  |
-+==================+==============================================================+
-| ssid             | SSID of AP; if the ssid[0] is 0xFF and ssid[1] is 0xFF,      |
-|                  | the AP defaults the SSID to ESP_aabbcc, where "aabbcc"       |
-|                  | is the last three bytes of the AP MAC.                       |
-|                  |                                                              |
-+------------------+--------------------------------------------------------------+
-| password         | Password of AP; if the auth mode is WIFI_AUTH_OPEN,          |
-|                  | this field will be ignored.                                  |
-|                  |                                                              |
-+------------------+--------------------------------------------------------------+
-| ssid_len         | Length of SSID; if ssid_len is 0, check the SSID until there |
-|                  | is a termination character. If ssid_len > 32, change it to   |
-|                  | 32; otherwise, set the SSID length according to ssid_len.    |
-|                  |                                                              |
-+------------------+--------------------------------------------------------------+
-| channel          | Channel of AP; if the channel is out of range, the Wi-Fi     |
-|                  | driver defaults the channel to channel 1. So, please make    |
-|                  | sure the channel is within the required range.               |
-|                  | For more details, refer to `Wi-Fi Country Code`_.            |
-+------------------+--------------------------------------------------------------+
-| authmode         | Auth mode of ESP AP; currently, ESP Wi-Fi does not           |
-|                  | support AUTH_WEP. If the authmode is an invalid value,       |
-|                  | AP defaults the value to WIFI_AUTH_OPEN.                     |
-|                  |                                                              |
-+------------------+--------------------------------------------------------------+
-| ssid_hidden      | If ssid_hidden is 1, AP does not broadcast the SSID;         |
-|                  | otherwise, it does broadcast the SSID.                       |
-|                  |                                                              |
-+------------------+--------------------------------------------------------------+
-| max_connection   | Currently, ESP Wi-Fi supports up to 10 Wi-Fi connections.    |
-|                  | If max_connection > 10, AP defaults the value to 10.         |
-|                  |                                                              |
-+------------------+--------------------------------------------------------------+
-| beacon_interval  | Beacon interval; the value is 100 ~ 60000 ms, with default   |
-|                  | value being 100 ms. If the value is out of range,            |
-|                  | AP defaults it to 100 ms.                                    |
-+------------------+--------------------------------------------------------------+
+.. only:: esp32 or esp32s2 or esp32s3
+
+    .. list-table::
+      :header-rows: 1
+      :widths: 15 55
+
+      * - Field
+        - Description
+      * - ssid
+        - SSID of AP; if the ssid[0] is 0xFF and ssid[1] is 0xFF, the AP defaults the SSID to ESP_aabbcc, where “aabbcc” is the last three bytes of the AP MAC.
+      * - password
+        - Password of AP; if the auth mode is WIFI_AUTH_OPEN, this field will be ignored.
+      * - ssid_len
+        - Length of SSID; if ssid_len is 0, check the SSID until there is a termination character. If ssid_len > 32, change it to 32; otherwise, set the SSID length according to ssid_len.
+      * - channel
+        - Channel of AP; if the channel is out of range, the Wi-Fi driver defaults the channel to channel 1. So, please make sure the channel is within the required range. For more details, refer to `Wi-Fi Country Code`_.
+      * - authmode
+        - Auth mode of ESP AP; currently, ESP AP does not support AUTH_WEP. If the authmode is an invalid value, AP defaults the value to WIFI_AUTH_OPEN.
+      * - ssid_hidden
+        - If ssid_hidden is 1, AP does not broadcast the SSID; otherwise, it does broadcast the SSID.
+      * - max_connection
+        - The max number of stations allowed to connect in, default value is 10. Currently, ESP Wi-Fi supports up to 15 (ESP_WIFI_MAX_CONN_NUM) Wi-Fi connections. Please note that ESP AP and ESP-NOW share the same encryption hardware keys, so the max_connection parameter will be affected by the :ref:`CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM`. The total num of encryption hardware keys is 17, if :ref:`CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM` <= 2, the max_connection can be set up to 15, otherwise the max_connection can be set up to (17 - :ref:`CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM`).
+      * - beacon_interval
+        - Beacon interval; the value is 100 ~ 60000 ms, with default value being 100 ms. If the value is out of range, AP defaults it to 100 ms.
+
+
+.. only:: esp32c3
+
+    .. list-table::
+      :header-rows: 1
+      :widths: 15 55
+
+      * - Field
+        - Description
+      * - ssid
+        - SSID of AP; if the ssid[0] is 0xFF and ssid[1] is 0xFF, the AP defaults the SSID to ESP_aabbcc, where “aabbcc” is the last three bytes of the AP MAC.
+      * - password
+        - Password of AP; if the auth mode is WIFI_AUTH_OPEN, this field will be ignored.
+      * - ssid_len
+        - Length of SSID; if ssid_len is 0, check the SSID until there is a termination character. If ssid_len > 32, change it to 32; otherwise, set the SSID length according to ssid_len.
+      * - channel
+        - Channel of AP; if the channel is out of range, the Wi-Fi driver defaults the channel to channel 1. So, please make sure the channel is within the required range. For more details, refer to `Wi-Fi Country Code`_.
+      * - authmode
+        - Auth mode of ESP AP; currently, ESP AP does not support AUTH_WEP. If the authmode is an invalid value, AP defaults the value to WIFI_AUTH_OPEN.
+      * - ssid_hidden
+        - If ssid_hidden is 1, AP does not broadcast the SSID; otherwise, it does broadcast the SSID.
+      * - max_connection
+        - The max number of stations allowed to connect in, default value is 10. Currently, ESP Wi-Fi supports up to 10 (ESP_WIFI_MAX_CONN_NUM) Wi-Fi connections. Please note that ESP AP and ESP-NOW share the same encryption hardware keys, so the max_connection parameter will be affected by the :ref:`CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM`. The total num of encryption hardware keys is 17, if :ref:`CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM` <= 7, the max_connection can be set up to 10, otherwise the max_connection can be set up to (17 - :ref:`CONFIG_ESP_WIFI_ESPNOW_MAX_ENCRYPT_NUM`).
+      * - beacon_interval
+        - Beacon interval; the value is 100 ~ 60000 ms, with default value being 100 ms. If the value is out of range, AP defaults it to 100 ms.
+
 
 Wi-Fi Protocol Mode
 +++++++++++++++++++++++++
 
-Currently, the IDF supports the following protocol modes:
+Currently, the ESP-IDF supports the following protocol modes:
 
-+--------------------+------------------------------------------------------------+
-| Protocol Mode      | Description                                                |
-+====================+============================================================+
-| 802.11 B           | Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B) to set  |
-|                    | the station/AP to 802.11B-only mode.                       |
-|                    |                                                            |
-+--------------------+------------------------------------------------------------+
-| 802.11 BG          | Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B|WIFI_    |
-|                    | PROTOCOL_11G) to set the station/AP to 802.11BG mode.      |
-|                    |                                                            |
-+--------------------+------------------------------------------------------------+
-| 802.11 BGN         | Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B|         |
-|                    | WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N) to set the station/   |
-|                    | AP to BGN mode.                                            |
-|                    |                                                            |
-+--------------------+------------------------------------------------------------+
-| 802.11 BGNLR       | Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B|         |
-|                    | WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR)      |
-|                    | to set the station/AP to BGN and the                       |
-|                    | Espressif-specific mode.                                   |
-+--------------------+------------------------------------------------------------+
-| 802.11 LR          | Call esp_wifi_set_protocol (ifx, WIFI_PROTOCOL_LR) to set  |
-|                    | the station/AP only to the Espressif-specific mode.        |
-|                    |                                                            |
-|                    | **This mode is an Espressif-patented mode which can achieve|
-|                    | a one-kilometer line of sight range. Please, make sure both|
-|                    | the station and the AP are connected to an                 |
-|                    | ESP device**                                               |
-+--------------------+------------------------------------------------------------+
+.. list-table::
+   :header-rows: 1
+   :widths: 15 55
+
+   * - Protocol Mode
+     - Description
+   * - 802.11b
+     - Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B) to set the station/AP to 802.11b-only mode.
+   * - 802.11bg
+     - Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G) to set the station/AP to 802.11bg mode.
+   * - 802.11g
+     - Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G) and esp_wifi_config_11b_rate(ifx, true) to set the station/AP to 802.11g mode.
+   * - 802.11bgn
+     - Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N) to set the station/ AP to BGN mode.
+   * - 802.11gn
+     - Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N) and esp_wifi_config_11b_rate(ifx, true) to set the station/AP to 802.11gn mode.
+   * - 802.11 BGNLR
+     - Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_11B| WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) to set the station/AP to BGN and the LR mode.
+   * - 802.11 LR
+     - Call esp_wifi_set_protocol(ifx, WIFI_PROTOCOL_LR) to set the station/AP only to the LR mode.
+
+       **This mode is an Espressif-patented mode which can achieve a one-kilometer line of sight range. Please make sure both the station and the AP are connected to an ESP device.**
+
 
 Long Range (LR)
 +++++++++++++++++++++++++
@@ -1292,105 +1453,118 @@ The reception sensitivity of LR has about 4 dB gain than the traditional 802.11B
 LR Throughput
 *************************
 
-The LR rate has very limited throughput because the raw PHY data rate LR is 1/2 Mbits and 1/4 Mbits.
+The LR rate has very limited throughput, because the raw PHY data rates is 1/2 Mbps and 1/4 Mbps.
 
 When to Use LR
 *************************
 
 The general conditions for using LR are:
 
- - Both the AP and station are devices.
+ - Both the AP and station are Espressif devices.
  - Long distance Wi-Fi connection and data transmission is required.
  - Data throughput requirements are very small, such as remote device control, etc.
 
 Wi-Fi Country Code
 +++++++++++++++++++++++++
 
-Call :cpp:func:`esp_wifi_set_country()` to set the country info.
-The table below describes the fields in detail,  please consult local 2.4 GHz RF operating regulations before configuring these fields.
+Call :cpp:func:`esp_wifi_set_country()` to set the country info. The table below describes the fields in detail. Please consult local 2.4 GHz RF operating regulations before configuring these fields.
 
-+------------------+-----------------------------------------------------------------------------------+
-| Field            | Description                                                                       |
-+==================+===================================================================================+
-| cc[3]            | Country code string, this attributes identify the country or noncountry entity    |
-|                  | in which the station/AP is operating. If it's a country, the first two            |
-|                  | octets of this string is the two character country info as described in document  |
-|                  | ISO/IEC3166-1. The third octect is one of the following:                          |
-|                  |                                                                                   |
-|                  |  - an ASCII space character, if the regulations under which the station/AP is     |
-|                  |    operating encompass all environments for the current frequency band in the     |
-|                  |    country.                                                                       |
-|                  |  - an ASCII 'O' character if the regulations under which the station/AP is        |
-|                  |    operating are for an outdoor environment only.                                 |
-|                  |  - an ASCII 'I' character if the regulations under which the station/AP is        |
-|                  |    operating are for an indoor environment only.                                  |
-|                  |  - an ASCII 'X' character if the station/AP is operating under a noncountry       |
-|                  |    entity. The first two octets of the noncountry entity is two ASCII 'XX'        |
-|                  |    characters.                                                                    |
-|                  |  - the binary representation of the Operating Class table number currently in use.|
-|                  |    Refer to Annex E, IEEE Std 802.11-2012.                                        |
-|                  |                                                                                   |
-+------------------+-----------------------------------------------------------------------------------+
-| schan            | Start channel, it's the minimum channel number of the regulations under which the |
-|                  | station/AP can operate.                                                           |
-|                  |                                                                                   |
-+------------------+-----------------------------------------------------------------------------------+
-| nchan            | Total number of channels as per the regulations, e.g. if the schan=1, nchan=13,   |
-|                  | it means the station/AP can send data from channel 1 to 13.                       |
-|                  |                                                                                   |
-+------------------+-----------------------------------------------------------------------------------+
-| policy           | Country policy, this field control which country info will be used if the         |
-|                  | configured country info is conflict with the connected AP's. More description     |
-|                  | about policy is provided in following section.                                    |
-|                  |                                                                                   |
-+------------------+-----------------------------------------------------------------------------------+
+.. list-table::
+   :header-rows: 1
+   :widths: 15 55
 
-The default country info is {.cc="CN", .schan=1, .nchan=13, policy=WIFI_COUNTRY_POLICY_AUTO}, if the Wi-Fi Mode is station/AP coexist mode, they share the same configured country info. Sometimes, the country info of AP, to which the station is connected, is different from the country info of configured. For example, the configured station has country info {.cc="JP", .schan=1, .nchan=14, policy=WIFI_COUNTRY_POLICY_AUTO}, but the connected AP has country info {.cc="CN", .schan=1, .nchan=13}, then country info of connected AP's is used.
-Following table depicts which country info is used in different Wi-Fi Mode and different country policy, also describe the impact to active scan.
+   * - Field
+     - Description
+   * - cc[3]
+     - Country code string. This attribute identifies the country or noncountry entity in which the station/AP is operating. If it is a country, the first two octets of this string is the two-character country info as described in the document ISO/IEC3166-1. The third octect is one of the following:
 
-+-----------+----------------------------+----------------------------------------------------------------+
-| WiFi Mode | Policy                     | Description                                                    |
-+===========+============================+================================================================+
-| Station   | WIFI_COUNTRY_POLICY_AUTO   | If the connected AP has country IE in its beacon, the country  |
-|           |                            | info equals to the country info in beacon, otherwise, use      |
-|           |                            | default country info.                                          |
-|           |                            |                                                                |
-|           |                            | For scan:                                                      |
-|           |                            |                                                                |
-|           |                            |   -If schan+nchan-1 >11 :                                      |
-|           |                            |    Use active scan from schan to 11 and use passive scan       |
-|           |                            |    from 12 to schan+nchan-1.                                   |
-|           |                            |                                                                |
-|           |                            |   -If schan+nchan-1 <= 11 :                                    |
-|           |                            |    Use active scan from schan to schan+nchan-1.                |
-|           |                            |                                                                |
-|           |                            | Always keep in mind that if an AP with hidden SSID             |
-|           |                            | is set to a passive scan channel, the passive scan will not    |
-|           |                            | find it. In other words, if the application hopes to find the  |
-|           |                            | AP with hidden SSID in every channel, the policy of            |
-|           |                            | country info should be configured to                           |
-|           |                            | WIFI_COUNTRY_POLICY_MANUAL.                                    |
-|           |                            |                                                                |
-+-----------+----------------------------+----------------------------------------------------------------+
-| Station   | WIFI_COUNTRY_POLICY_MANUAL | Always use the configured country info.                        |
-|           |                            |                                                                |
-|           |                            | For scan, scans channel "schan" to "schan+nchan-1" with active |
-|           |                            | scan.                                                          |
-|           |                            |                                                                |
-+-----------+----------------------------+----------------------------------------------------------------+
-| AP        | WIFI_COUNTRY_POLICY_AUTO   | Always use the configured country info.                        |
-|           |                            |                                                                |
-+-----------+----------------------------+----------------------------------------------------------------+
-| AP        | WIFI_COUNTRY_POLICY_MANUAL | Always use the configured country info.                        |
-|           |                            |                                                                |
-+-----------+----------------------------+----------------------------------------------------------------+
-|Station/AP-| WIFI_COUNTRY_POLICY_AUTO   | If the station doesn't connects to any AP, the AP use the      |
-|           |                            | configured country info.                                       |
-|coexistence|                            | If the station connects to an AP, the AP has the same          |
-|           |                            | country info as the station.                                   |
-|           |                            |                                                                |
-|           |                            | Same as station mode with policy WIFI_COUNTRY_POLICY_AUTO.     |
-+-----------+----------------------------+----------------------------------------------------------------+
+       - an ASCII space character, which means the regulations under which the station/AP is operating encompass all environments for the current frequency band in the country.
+       - an ASCII ‘O’ character, which means the regulations under which the station/AP is operating are for an outdoor environment only.
+       - an ASCII ‘I’ character, which means the regulations under which the station/AP is operating are for an indoor environment only.
+       - an ASCII ‘X’ character, which means the station/AP is operating under a noncountry entity. The first two octets of the noncountry entity is two ASCII ‘XX’ characters.
+       - the binary representation of the Operating Class table number currently in use. Refer to Annex E of IEEE Std 802.11-2020.
+
+   * - schan
+     - Start channel. It is the minimum channel number of the regulations under which the station/AP can operate.
+   * - nchan
+     - Total number of channels as per the regulations. For example, if the schan=1, nchan=13, then the station/AP can send data from channel 1 to 13.
+   * - policy
+     - Country policy. This field controls which country info will be used if the configured country info is in conflict with the connected AP’s. For more details on related policies, see the following section.
+
+
+The default country info is::
+
+    wifi_country_t config = {
+        .cc = "CN",
+        .schan = 1,
+        .nchan = 13,
+        .policy = WIFI_COUNTRY_POLICY_AUTO,
+    };
+
+If the Wi-Fi Mode is station/AP coexist mode, they share the same configured country info. Sometimes, the country info of AP, to which the station is connected, is different from the country info of configured. For example, the configured station has country info::
+
+    wifi_country_t config = {
+        .cc = "JP",
+        .schan = 1,
+        .nchan = 14,
+        .policy = WIFI_COUNTRY_POLICY_AUTO,
+    };
+
+but the connected AP has country info::
+
+    wifi_country_t config = {
+        .cc = "CN",
+        .schan = 1,
+        .nchan = 13,
+    };
+
+then country info of connected AP's is used.
+
+The following table depicts which country info is used in different Wi-Fi modes and different country policies, and it also describes the impact on active scan.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 15 15 35
+
+   * - Wi-Fi Mode
+     - Policy
+     - Description
+   * - Station
+     - WIFI_COUNTRY_POLICY_AUTO
+     - If the connected AP has country IE in its beacon, the country info equals to the country info in beacon. Otherwise, use the default country info.
+
+       For scan:
+
+         Use active scan from 1 to 11 and use passive scan from 12 to 14.
+
+       Always keep in mind that if an AP with hidden SSID and station is set to a passive scan channel, the passive scan will not find it. In other words, if the application hopes to find the AP with hidden SSID in every channel, the policy of country info should be configured to WIFI_COUNTRY_POLICY_MANUAL.
+
+   * - Station
+     - WIFI_COUNTRY_POLICY_MANUAL
+     - Always use the configured country info.
+
+       For scan:
+
+         Use active scan from schan to schan+nchan-1.
+
+   * - AP
+     - WIFI_COUNTRY_POLICY_AUTO
+     - Always use the configured country info.
+
+   * - AP
+     - WIFI_COUNTRY_POLICY_MANUAL
+     - Always use the configured country info.
+
+   * - Station/AP-coexistence
+     - WIFI_COUNTRY_POLICY_AUTO
+     - Station: Same as station mode with policy WIFI_COUNTRY_POLICY_AUTO.
+       AP: If the station does not connect to any external AP, the AP uses the configured country info. If the station connects to an external AP, the AP has the same country info as the station.
+
+   * - Station/AP-coexistence
+     - WIFI_COUNTRY_POLICY_MANUAL
+     - Station: Same as station mode with policy WIFI_COUNTRY_POLICY_MANUAL.
+       AP: Same as AP mode with policy WIFI_COUNTRY_POLICY_MANUAL.
+
 
 Home Channel
 *************************
@@ -1477,9 +1651,9 @@ Currently, {IDF_TARGET_NAME} Wi-Fi supports the Modem-sleep mode which refers to
 
 Modem-sleep mode includes minimum and maximum power save modes. In minimum power save mode, station wakes up every DTIM to receive beacon. Broadcast data will not be lost because it is transmitted after DTIM. However, it can not save much more power if DTIM is short for DTIM is determined by AP.
 
-In maximum power save mode, station wakes up every listen interval to receive beacon. This listen interval can be set longer than the AP DTIM period. Broadcast data may be lost because station may be in sleep state at DTIM time. If listen interval is longer, more power is saved but broadcast data is more easy to lose. Listen interval can be configured by calling API :cpp:func:`esp_wifi_set_config` before connecting to AP.
+In maximum power-saving mode, station wakes up in every listen interval to receive beacon. This listen interval can be set to be longer than the AP DTIM period. Broadcast data may be lost because station may be in sleep state at DTIM time. If listen interval is longer, more power is saved, but broadcast data is more easy to lose. Listen interval can be configured by calling API :cpp:func:`esp_wifi_set_config()` before connecting to AP.
 
-Call ``esp_wifi_set_ps(WIFI_PS_MIN_MODEM)`` to enable Modem-sleep minimum power save mode or ``esp_wifi_set_ps(WIFI_PS_MAX_MODEM)`` to enable Modem-sleep maximum power save mode after calling :cpp:func:`esp_wifi_init`. When station connects to AP, Modem-sleep will start. When station disconnects from AP, Modem-sleep will stop.
+Call ``esp_wifi_set_ps(WIFI_PS_MIN_MODEM)`` to enable Modem-sleep minimum power-saving mode or ``esp_wifi_set_ps(WIFI_PS_MAX_MODEM)`` to enable Modem-sleep maximum power-saving mode after calling :cpp:func:`esp_wifi_init()`. When station connects to AP, Modem-sleep will start. When station disconnects from AP, Modem-sleep will stop.
 
 Call ``esp_wifi_set_ps(WIFI_PS_NONE)`` to disable modem sleep entirely. This has much higher power consumption, but provides minimum latency for receiving Wi-Fi data in real time. When modem sleep is enabled, received Wi-Fi data can be delayed for as long as the DTIM period (minimum power save mode) or the listen interval (maximum power save mode). Disabling modem sleep entirely is not possible for Wi-Fi and Bluetooth coexist mode.
 
@@ -1607,113 +1781,68 @@ The table below shows the best throughput results we got in Espressif's lab and 
 Wi-Fi 80211 Packet Send
 ---------------------------
 
-The :cpp:func:`esp_wifi_80211_tx` API can be used to:
+The :cpp:func:`esp_wifi_80211_tx()` API can be used to:
 
  - Send the beacon, probe request, probe response, action frame.
  - Send the non-QoS data frame.
 
 It cannot be used for sending encrypted or QoS frames.
 
-Preconditions of Using :cpp:func:`esp_wifi_80211_tx`
+Preconditions of Using :cpp:func:`esp_wifi_80211_tx()`
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
- - The Wi-Fi mode is Station, or AP, or Station+AP.
- - Either esp_wifi_set_promiscuous(true), or :cpp:func:`esp_wifi_start()`, or both of these APIs return ESP_OK. This is because we need to make sure that Wi-Fi hardware is initialized before :cpp:func:`esp_wifi_80211_tx` is called. In {IDF_TARGET_NAME}, both esp_wifi_set_promiscuous(true) and :cpp:func:`esp_wifi_start()` can trigger the initialization of Wi-Fi hardware.
- - The parameters of :cpp:func:`esp_wifi_80211_tx` are hereby correctly provided.
+ - The Wi-Fi mode is station, or AP, or station/AP.
+ - Either esp_wifi_set_promiscuous(true), or :cpp:func:`esp_wifi_start()`, or both of these APIs return ESP_OK. This is because Wi-Fi hardware must be initialized before :cpp:func:`esp_wifi_80211_tx()` is called. In {IDF_TARGET_NAME}, both esp_wifi_set_promiscuous(true) and :cpp:func:`esp_wifi_start()` can trigger the initialization of Wi-Fi hardware.
+ - The parameters of :cpp:func:`esp_wifi_80211_tx()` are hereby correctly provided.
 
 Data rate
 +++++++++++++++++++++++++++++++++++++++++++++++
 
- - If there is no Wi-Fi connection, the data rate is 1 Mbps.
- - If there is Wi-Fi connection and the packet is from station to AP or from AP to station, the data rate is same as the Wi-Fi connection. Otherwise the data rate is 1 Mbps.
+ - The default data rate is 1 Mbps.
+ - Can set any rate through :cpp:func:`esp_wifi_config_80211_tx_rate()` API.
+ - Can set any bandwidth through :cpp:func:`esp_wifi_set_bandwidth()` API.
 
 Side-Effects to Avoid in Different Scenarios
 +++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Theoretically, if we do not consider the side-effects the API imposes on the Wi-Fi driver or other stations/APs, we can send a raw 802.11 packet over the air, with any destination MAC, any source MAC, any BSSID, or any other type of packet. However,robust/useful applications should avoid such side-effects. The table below provides some tips/recommendations on how to avoid the side-effects of :cpp:func:`esp_wifi_80211_tx` in different scenarios.
+Theoretically, if the side-effects the API imposes on the Wi-Fi driver or other stations/APs are not considered, a raw 802.11 packet can be sent over the air with any destination MAC, any source MAC, any BSSID, or any other types of packet. However, robust or useful applications should avoid such side-effects. The table below provides some tips and recommendations on how to avoid the side-effects of :cpp:func:`esp_wifi_80211_tx()` in different scenarios.
 
-+-----------------------------+---------------------------------------------------+
-| Scenario                    | Description                                       |
-+=============================+===================================================+
-| No WiFi connection          | In this scenario, no Wi-Fi connection is set up,  |
-|                             | so there are no side-effects on the Wi-Fi driver. |
-|                             | If en_sys_seq==true, the Wi-Fi driver is          |
-|                             | responsible for the sequence control. If          |
-|                             | en_sys_seq==false, the application needs to ensure|
-|                             | that the buffer has the correct sequence.         |
-|                             |                                                   |
-|                             | Theoretically, the MAC address can be any address.|
-|                             | However, this may impact other stations/APs       |
-|                             | with the same MAC/BSSID.                          |
-|                             |                                                   |
-|                             | Side-effect example#1                             |
-|                             | The application calls esp_wifi_80211_tx to send   |
-|                             | a beacon with BSSID == mac_x in AP mode, but      |
-|                             | the mac_x is not the MAC of the AP interface.     |
-|                             | Moreover, there is another AP, say                |
-|                             | "other-AP", whose bssid is mac_x. If this         |
-|                             | happens, an "unexpected behavior" may occur,      |
-|                             | because the stations which connect to the         |
-|                             | "other-AP" cannot figure out whether the beacon is|
-|                             | from the "other-AP" or the esp_wifi_80211_tx.     |
-|                             |                                                   |
-|                             | To avoid the above-mentioned side-effects, we     |
-|                             | recommend that:                                   |
-|                             |                                                   |
-|                             |  - If esp_wifi_80211_tx is called in Station mode,|
-|                             |    the first MAC should be a multicast MAC or the |
-|                             |    exact target-device's MAC, while the second MAC|
-|                             |    should be that of the station interface.       |
-|                             |  - If esp_wifi_80211_tx is called in AP mode,     |
-|                             |    the first MAC should be a multicast MAC or the |
-|                             |    exact target-device's MAC, while the second MAC|
-|                             |    should be that of the AP interface.            |
-|                             |                                                   |
-|                             | The recommendations above are only for avoiding   |
-|                             | side-effects and can be ignored when there are    |
-|                             | good reasons for doing this.                      |
-+-----------------------------+---------------------------------------------------+
-| Have WiFi connection        | When the Wi-Fi connection is already set up, and  |
-|                             | the sequence is controlled by the application, the|
-|                             | latter may impact the sequence control of the     |
-|                             | Wi-Fi connection, as a whole. So, the             |
-|                             | en_sys_seq need to be true, otherwise             |
-|                             | ESP_ERR_WIFI_ARG is returned.                     |
-|                             |                                                   |
-|                             | The MAC-address recommendations in the            |
-|                             | "No WiFi connection" scenario also apply to this  |
-|                             | scenario.                                         |
-|                             |                                                   |
-|                             | If the WiFi mode is station mode and the MAC      |
-|                             | address1 is the MAC of AP to which the station is |
-|                             | connected, the MAC address2 is the MAC of station |
-|                             | interface, we say the packets is from the station |
-|                             | to AP. On the other hand, if the WiFi mode is     |
-|                             | AP mode and the MAC address1 is the MAC of        |
-|                             | the station who connects to this AP, the MAC      |
-|                             | address2 is the MAC of AP interface, we say       |
-|                             | the packet is from the AP to station.             |
-|                             | To avoid conflicting with WiFi connections, the   |
-|                             | following checks are applied:                     |
-|                             |                                                   |
-|                             |  - If the packet type is data and is from the     |
-|                             |    station to AP, the ToDS bit in IEEE 80211      |
-|                             |    frame control should be 1, the FromDS bit      |
-|                             |    should be 0, otherwise the packet will be      |
-|                             |    discarded by WiFi driver.                      |
-|                             |  - If the packet type is data and is from the     |
-|                             |    AP to station, the ToDS bit in IEEE 80211      |
-|                             |    frame control should be 0, the FromDS bit      |
-|                             |    should be 1, otherwise the packet will be      |
-|                             |    discarded by WiFi driver.                      |
-|                             |  - If the packet is from station to AP or         |
-|                             |    from AP to station, the Power Management,      |
-|                             |    More Data, Re-Transmission bits should be 0,   |
-|                             |    otherwise the packet will be discarded by WiFi |
-|                             |    driver.                                        |
-|                             |                                                   |
-|                             | ESP_ERR_WIFI_ARG is returned if any check fails.  |
-+-----------------------------+---------------------------------------------------+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 50
+
+   * - Scenario
+     - Description
+   * - No Wi-Fi connection
+     - In this scenario, no Wi-Fi connection is set up, so there are no side-effects on the Wi-Fi driver. If en_sys_seq==true, the Wi-Fi driver is responsible for the sequence control. If en_sys_seq==false, the application needs to ensure that the buffer has the correct sequence.
+
+       Theoretically, the MAC address can be any address. However, this may impact other stations/APs with the same MAC/BSSID.
+
+       Side-effect example#1 The application calls :cpp:func:`esp_wifi_80211_tx()` to send a beacon with BSSID == mac_x in AP mode, but the mac_x is not the MAC of the AP interface. Moreover, there is another AP, e.g., “other-AP”, whose BSSID is mac_x. If this happens, an “unexpected behavior” may occur, because the stations which connect to the “other-AP” cannot figure out whether the beacon is from the “other-AP” or the :cpp:func:`esp_wifi_80211_tx()`.
+
+       To avoid the above-mentioned side-effects, it is recommended that:
+
+       - If esp_wifi_80211_tx is called in station mode, the first MAC should be a multicast MAC or the exact target-device’s MAC, while the second MAC should be that of the station interface.
+
+       - If esp_wifi_80211_tx is called in AP mode, the first MAC should be a multicast MAC or the exact target-device’s MAC, while the second MAC should be that of the AP interface.
+
+       The recommendations above are only for avoiding side-effects and can be ignored when there are good reasons.
+
+   * - Have Wi-Fi connection
+     - When the Wi-Fi connection is already set up, and the sequence is controlled by the application, the latter may impact the sequence control of the Wi-Fi connection as a whole. So, the en_sys_seq need to be true, otherwise ESP_ERR_WIFI_ARG is returned.
+
+       The MAC-address recommendations in the “No Wi-Fi connection” scenario also apply to this scenario.
+
+       If the Wi-Fi mode is station mode, the MAC address1 is the MAC of AP to which the station is connected, and the MAC address2 is the MAC of station interface, it is said that the packet is sent from the station to AP. Otherwise, if the Wi-Fi is in AP mode, the MAC address1 is the MAC of the station that connects to this AP, and the MAC address2 is the MAC of AP interface, it is said that the packet is sent from the AP to station. To avoid conflicting with Wi-Fi connections, the following checks are applied:
+
+       - If the packet type is data and is sent from the station to AP, the ToDS bit in IEEE 80211 frame control should be 1 and the FromDS bit should be 0. Otherwise, the packet will be discarded by Wi-Fi driver.
+
+       - If the packet type is data and is sent from the AP to station, the ToDS bit in IEEE 80211 frame control should be 0 and the FromDS bit should be 1. Otherwise, the packet will be discarded by Wi-Fi driver.
+
+       - If the packet is sent from station to AP or from AP to station, the Power Management, More Data, and Re-Transmission bits should be 0. Otherwise, the packet will be discarded by Wi-Fi driver.
+
+       ESP_ERR_WIFI_ARG is returned if any check fails.
+
 
 Wi-Fi Sniffer Mode
 ---------------------------
@@ -1754,7 +1883,9 @@ The Wi-Fi multiple antennas selecting can be depicted as following picture::
 
 Up to four GPIOs are connected to the four active high antenna_select pins. {IDF_TARGET_NAME} can select the antenna by control the GPIO[0:3]. The API :cpp:func:`esp_wifi_set_ant_gpio()` is used to configure which GPIOs are connected to antenna_selects. If GPIO[x] is connected to antenna_select[x], then gpio_config->gpio_cfg[x].gpio_select should be set to 1 and gpio_config->gpio_cfg[x].gpio_num should be provided.
 
-Although up to sixteen anteenas are supported, only one or two antennas can be simultaneously enabled for RX/TX. The API :cpp:func:`esp_wifi_set_ant()` is used to configure which antennas are enabled.
+For the specific implementation of the antenna switch, there may be illegal values in `antenna_select[0:3]`. It means that {IDF_TARGET_NAME} may support less than sixteen antennas through the switch. For example, ESP32-WROOM-DA which uses RTC6603SP as the antenna switch, supports two antennas. Two GPIOs are connected to two active high antenna selection inputs. The value '0b01' means the antenna 0 is selected, the value '0b10' means the antenna 1 is selected. Values '0b00' and '0b11' are illegal.
+
+Although up to sixteen antennas are supported, only one or two antennas can be simultaneously enabled for RX/TX. The API :cpp:func:`esp_wifi_set_ant()` is used to configure which antennas are enabled.
 
 The enabled antennas selecting algorithm is also configured by :cpp:func:`esp_wifi_set_ant()`. The RX/TX antenna mode can be WIFI_ANT_MODE_ANT0, WIFI_ANT_MODE_ANT1 or WIFI_ANT_MODE_AUTO. If the antenna mode is WIFI_ANT_MODE_ANT0, the enabled antenna 0 is selected for RX/TX data. If the antenna mode is WIFI_ANT_MODE_ANT1, the enabled antenna 1 is selected for RX/TX data. Otherwise, Wi-Fi automatically selects the antenna that has better signal from the enabled antennas.
 
@@ -1827,27 +1958,40 @@ All of the information in the table can be found in the structure wifi_csi_info_
     - If first_word_invalid field of wifi_csi_info_t is true, it means that the first four bytes of CSI data is invalid due to a hardware limitation in {IDF_TARGET_NAME}.
     - More information like RSSI, noise floor of RF, receiving time and antenna is in the rx_ctrl field.
 
+When imaginary part and real part data of sub-carrier are used, please refer to the table below.
+
++----------------+-------------------+------------------------------+-------------------------+
+| PHY standard   | Sub-carrier range | Pilot sub-carrier            | Sub-carrier(total/data) |
++================+===================+==============================+=========================+
+| 802.11a/g      | -26 to +26        | -21, -7, +7, +21             | 52 total, 48 usable     |
++----------------+-------------------+------------------------------+-------------------------+
+| 802.11n, 20MHz | -28 to +28        | -21, -7, +7, +21             | 56 total, 52 usable     |
++----------------+-------------------+------------------------------+-------------------------+
+| 802.11n, 40MHz | -57 to +57        | -53, -25, -11, +11, +25, +53 | 114 total, 108 usable   |
++----------------+-------------------+------------------------------+-------------------------+
+
 .. note::
 
     - For STBC packet, CSI is provided for every space-time stream without CSD (cyclic shift delay). As each cyclic shift on the additional chains shall be -200 ns, only the CSD angle of first space-time stream is recorded in sub-carrier 0 of HT-LTF and STBC-HT-LTF for there is no channel frequency response in sub-carrier 0. CSD[10:0] is 11 bits, ranging from -pi to pi.
-    - If LLTF, HT-LTF or STBC-HT-LTF is not enabled by calling API :cpp:func:`esp_wifi_set_csi_config`, the total bytes of CSI data will be fewer than that in the table. For example, if LLTF and HT-LTF is not enabled and STBC-HT-LTF is enabled, when a packet is received with the condition above/HT/40MHz/STBC, the total bytes of CSI data is 244 ((61 + 60) * 2 + 2 = 244, the result is aligned to four bytes and the last two bytes is invalid).
+
+    - If LLTF, HT-LTF, or STBC-HT-LTF is not enabled by calling API :cpp:func:`esp_wifi_set_csi_config()`, the total bytes of CSI data will be fewer than that in the table. For example, if LLTF and HT-LTF is not enabled and STBC-HT-LTF is enabled, when a packet is received with the condition above/HT/40MHz/STBC, the total bytes of CSI data is 244 ((61 + 60) * 2 + 2 = 244. The result is aligned to four bytes, and the last two bytes are invalid).
 
 Wi-Fi Channel State Information Configure
 -------------------------------------------
 
 To use Wi-Fi CSI, the following steps need to be done.
 
-    - Select Wi-Fi CSI in menuconfig. It is "Menuconfig --> Components config --> Wi-Fi --> WiFi CSI(Channel State Information)".
-    - Set CSI receiving callback function by calling API :cpp:func:`esp_wifi_set_csi_rx_cb`.
-    - Configure CSI by calling API :cpp:func:`esp_wifi_set_csi_config`.
-    - Enable CSI by calling API :cpp:func:`esp_wifi_set_csi`.
+    - Select Wi-Fi CSI in menuconfig. Go to ``Menuconfig`` > ``Components config`` > ``Wi-Fi`` > ``Wi-Fi CSI (Channel State Information)``.
+    - Set CSI receiving callback function by calling API :cpp:func:`esp_wifi_set_csi_rx_cb()`.
+    - Configure CSI by calling API :cpp:func:`esp_wifi_set_csi_config()`.
+    - Enable CSI by calling API :cpp:func:`esp_wifi_set_csi()`.
 
-The CSI receiving callback function runs from Wi-Fi task. So, do not do lengthy operations in the callback function. Instead, post necessary data to a queue and handle it from a lower priority task. Because station does not receive any packet when it is disconnected and only receives packets from AP when it is connected, it is suggested to enable sniffer mode to receive more CSI data by calling :cpp:func:`esp_wifi_set_promiscuous`.
+The CSI receiving callback function runs from Wi-Fi task. So, do not do lengthy operations in the callback function. Instead, post necessary data to a queue and handle it from a lower priority task. Because station does not receive any packet when it is disconnected and only receives packets from AP when it is connected, it is suggested to enable sniffer mode to receive more CSI data by calling :cpp:func:`esp_wifi_set_promiscuous()`.
 
 Wi-Fi HT20/40
 -------------------------
 
-{IDF_TARGET_NAME} supports Wi-Fi bandwidth HT20 or HT40, it doesn't support HT20/40 coexist. :cpp:func:`esp_wifi_set_bandwidth` can be used to change the default bandwidth of station or AP. The default bandwidth for {IDF_TARGET_NAME} station and AP is HT40.
+{IDF_TARGET_NAME} supports Wi-Fi bandwidth HT20 or HT40 and does not support HT20/40 coexist. :cpp:func:`esp_wifi_set_bandwidth()` can be used to change the default bandwidth of station or AP. The default bandwidth for {IDF_TARGET_NAME} station and AP is HT40.
 
 In station mode, the actual bandwidth is firstly negotiated during the Wi-Fi connection. It is HT40 only if both the station and the connected AP support HT40, otherwise it's HT20. If the bandwidth of connected AP is changes, the actual bandwidth is negotiated again without Wi-Fi disconnecting.
 

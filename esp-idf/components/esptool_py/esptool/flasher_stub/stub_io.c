@@ -1,19 +1,9 @@
 /*
- * Copyright (c) 2016 Cesanta Software Limited and 2016-2020 Espressif Systems (Shanghai) PTE LTD
+ * SPDX-FileCopyrightText: 2016 Cesanta Software Limited
  *
- * All rights reserved
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 2 of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
- * Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-FileContributor: 2016-2022 Espressif Systems (Shanghai) CO LTD
  */
 
 #include <stdlib.h>
@@ -134,6 +124,26 @@ static bool stub_uses_usb_otg(void)
   return uart->buff_uart_no == UART_USB_OTG;
 }
 
+#ifdef ESP32S3
+static void usb_dw_isr_handler_wrapper(void *arg)
+{
+    /* ISR handler wrapper added as a workaround for the failure of compressed flashing using USB OTG.
+     *
+     * LoadStoreException happens inside the first call of tinfl_decompress() where the a13 register gets corrupted by
+     * the address of usb_dw_isr_handler(). The corruption probably still happens with this workaround but because of
+     * the nested call another register window is used.
+     *
+     * Other possible workarounds:
+     * - wait at least 25 ms before the tinfl_decompress() so usb_dw_isr_handler() would finish and not corrupt the
+     *   pointer inside of tinfl_decompress(), or
+     * - disable the USB interrupt during tinfl_decompress().
+     */
+    usb_dw_isr_handler(arg);
+}
+#else
+#define usb_dw_isr_handler_wrapper usb_dw_isr_handler
+#endif //ESP32S3
+
 static void stub_configure_rx_usb(void)
 {
   cdc_acm_line_ctrl_get(uart_acm_dev, LINE_CTRL_RTS, &s_cdcacm_old_rts);
@@ -142,7 +152,7 @@ static void stub_configure_rx_usb(void)
   #elif ESP32S3
     WRITE_REG(INTERRUPT_CORE0_USB_INTR_MAP_REG, ETS_USB_INUM);
   #endif
-  ets_isr_attach(ETS_USB_INUM, usb_dw_isr_handler, NULL);
+  ets_isr_attach(ETS_USB_INUM, usb_dw_isr_handler_wrapper, NULL);
   ets_isr_unmask(1 << ETS_USB_INUM);
   cdc_acm_irq_callback_set(uart_acm_dev, &stub_cdcacm_cb);
   cdc_acm_irq_rx_enable(uart_acm_dev);

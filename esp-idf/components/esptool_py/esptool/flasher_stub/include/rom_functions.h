@@ -1,21 +1,10 @@
-/* Declarations for functions in ESP8266 ROM code
+/*
+ * SPDX-FileCopyrightText: 2016 Cesanta Software Limited
  *
- * Copyright (c) 2016-2019 Espressif Systems (Shanghai) PTE LTD & Cesanta Software Limited
- * All rights reserved
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 2 of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
- * Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-FileContributor: 2016-2022 Espressif Systems (Shanghai) CO LTD
  */
-
 
 /* ROM function prototypes for functions in ROM which are
    called by the flasher stubs.
@@ -66,15 +55,31 @@ void ets_set_user_start(void (*user_start_fn)());
 void software_reset();
 void software_reset_cpu(int cpu_no);
 
+#ifdef ESP32C2  // ESP32C2 ROM uses mbedtls_md5
+struct MD5Context {  // Called mbedtls_md5_context in ROM
+    uint32_t total[2];        // number of bytes processed
+    uint32_t state[4];        // intermediate digest state
+    unsigned char buffer[64]; // data block being processed
+};
+
+int mbedtls_md5_starts_ret(struct MD5Context *ctx);
+int mbedtls_md5_update_ret(struct MD5Context *ctx, const unsigned char *input, size_t ilen);
+int mbedtls_md5_finish_ret(struct MD5Context *ctx, unsigned char digest[16]);
+
+#define MD5Init(ctx) mbedtls_md5_starts_ret(ctx)
+#define MD5Update(ctx, buf, n) mbedtls_md5_update_ret(ctx, buf, n)
+#define MD5Final(digest, ctx) mbedtls_md5_finish_ret(ctx, digest)
+#else  // not ESP32C2
 struct MD5Context {
-  uint32_t buf[4];
-  uint32_t bits[2];
-  uint8_t in[64];
+    uint32_t buf[4];
+    uint32_t bits[2];
+    uint8_t in[64];
 };
 
 void MD5Init(struct MD5Context *ctx);
 void MD5Update(struct MD5Context *ctx, void *buf, uint32_t len);
 void MD5Final(uint8_t digest[16], struct MD5Context *ctx);
+#endif // not ESP32C2
 
 typedef struct {
     uint32_t device_id;

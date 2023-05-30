@@ -6,7 +6,7 @@
 #                      \___/_/\_\ .__/ \__,_|\__|
 #                               |_| XML parser
 #
-# Copyright (c) 2017-2021 Sebastian Pipping <sebastian@pipping.org>
+# Copyright (c) 2017-2022 Sebastian Pipping <sebastian@pipping.org>
 # Copyright (c) 2017      Tomasz Kłoczko <kloczek@fedoraproject.org>
 # Copyright (c) 2019      David Loffredo <loffredo@steptools.com>
 # Licensed under the MIT license:
@@ -40,6 +40,7 @@ noinst_LTLIBRARIES = libexpatinternal.la
 
 libexpat_la_LDFLAGS = \
     @AM_LDFLAGS@ \
+    @LIBM@ \
     -no-undefined \
     -version-info @LIBCURRENT@:@LIBREVISION@:@LIBAGE@
 
@@ -73,8 +74,7 @@ EXTRA_DIST = \
     iasciitab.h \
     internal.h \
     latin1tab.h \
-    libexpat.def \
-    libexpatw.def \
+    libexpat.def.cmake \
     nametab.h \
     siphash.h \
     utf8tab.h \

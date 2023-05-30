@@ -22,7 +22,8 @@ else()
     if(CONFIG_IDF_TARGET_ESP32S3)
         list(APPEND srcs
             "esp32s3/spi_timing_config.c"
-            "spi_flash_timing_tuning.c")
+            "spi_flash_timing_tuning.c"
+            "spi_flash_hpm_enable.c")
     endif()
 
     # New implementation after IDF v4.0
@@ -35,6 +36,7 @@ else()
         "spi_flash_chip_winbond.c"
         "spi_flash_chip_boya.c"
         "spi_flash_chip_mxic_opi.c"
+        "spi_flash_chip_th.c"
         "memspi_host_driver.c")
 
     list(APPEND cache_srcs

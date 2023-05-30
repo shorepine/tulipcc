@@ -73,7 +73,7 @@ namespace compiler {
 namespace c {
 
 EnumGenerator::EnumGenerator(const EnumDescriptor* descriptor,
-                             const string& dllexport_decl)
+                             const std::string& dllexport_decl)
   : descriptor_(descriptor),
     dllexport_decl_(dllexport_decl) {
 }
@@ -81,10 +81,10 @@ EnumGenerator::EnumGenerator(const EnumDescriptor* descriptor,
 EnumGenerator::~EnumGenerator() {}
 
 void EnumGenerator::GenerateDefinition(io::Printer* printer) {
-  std::map<string, string> vars;
-  vars["classname"] = FullNameToC(descriptor_->full_name());
+  std::map<std::string, std::string> vars;
+  vars["classname"] = FullNameToC(descriptor_->full_name(), descriptor_->file());
   vars["shortname"] = descriptor_->name();
-  vars["uc_name"] = FullNameToUpper(descriptor_->full_name());
+  vars["uc_name"] = FullNameToUpper(descriptor_->full_name(), descriptor_->file());
 
   SourceLocation sourceLoc;
   descriptor_->GetSourceLocation(&sourceLoc);
@@ -98,7 +98,7 @@ void EnumGenerator::GenerateDefinition(io::Printer* printer) {
 
 
   vars["opt_comma"] = ",";
-  vars["prefix"] = FullNameToUpper(descriptor_->full_name()) + "__";
+  vars["prefix"] = FullNameToUpper(descriptor_->full_name(), descriptor_->file()) + "__";
   for (int i = 0; i < descriptor_->value_count(); i++) {
     vars["name"] = descriptor_->value(i)->name();
     vars["number"] = SimpleItoa(descriptor_->value(i)->number());
@@ -126,14 +126,14 @@ void EnumGenerator::GenerateDefinition(io::Printer* printer) {
 }
 
 void EnumGenerator::GenerateDescriptorDeclarations(io::Printer* printer) {
-  std::map<string, string> vars;
+  std::map<std::string, std::string> vars;
   if (dllexport_decl_.empty()) {
     vars["dllexport"] = "";
   } else {
     vars["dllexport"] = dllexport_decl_ + " ";
   }
-  vars["classname"] = FullNameToC(descriptor_->full_name());
-  vars["lcclassname"] = FullNameToLower(descriptor_->full_name());
+  vars["classname"] = FullNameToC(descriptor_->full_name(), descriptor_->file());
+  vars["lcclassname"] = FullNameToLower(descriptor_->full_name(), descriptor_->file());
 
   printer->Print(vars,
     "extern $dllexport$const ProtobufCEnumDescriptor    $lcclassname$__descriptor;\n");
@@ -149,12 +149,12 @@ struct ValueIndex
 void EnumGenerator::GenerateValueInitializer(io::Printer *printer, int index)
 {
   const EnumValueDescriptor *vd = descriptor_->value(index);
-  std::map<string, string> vars;
+  std::map<std::string, std::string> vars;
   bool optimize_code_size = descriptor_->file()->options().has_optimize_for() &&
     descriptor_->file()->options().optimize_for() ==
     FileOptions_OptimizeMode_CODE_SIZE;
   vars["enum_value_name"] = vd->name();
-  vars["c_enum_value_name"] = FullNameToUpper(descriptor_->full_name()) + "__" + vd->name();
+  vars["c_enum_value_name"] = FullNameToUpper(descriptor_->full_name(), descriptor_->file()) + "__" + vd->name();
   vars["value"] = SimpleItoa(vd->number());
   if (optimize_code_size)
     printer->Print(vars, "  { NULL, NULL, $value$ }, /* CODE_SIZE */\n");
@@ -182,10 +182,10 @@ static int compare_value_indices_by_name(const void *a, const void *b)
 }
 
 void EnumGenerator::GenerateEnumDescriptor(io::Printer* printer) {
-  std::map<string, string> vars;
+  std::map<std::string, std::string> vars;
   vars["fullname"] = descriptor_->full_name();
-  vars["lcclassname"] = FullNameToLower(descriptor_->full_name());
-  vars["cname"] = FullNameToC(descriptor_->full_name());
+  vars["lcclassname"] = FullNameToLower(descriptor_->full_name(), descriptor_->file());
+  vars["cname"] = FullNameToC(descriptor_->full_name(), descriptor_->file());
   vars["shortname"] = descriptor_->name();
   vars["packagename"] = descriptor_->file()->package();
   vars["value_count"] = SimpleItoa(descriptor_->value_count());

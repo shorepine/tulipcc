@@ -8,6 +8,7 @@
 #
 # Copyright (c) 2017-2021 Sebastian Pipping <sebastian@pipping.org>
 # Copyright (c) 2018      KangLin <kl222@126.com>
+# Copyright (c) 2022      Johnny Jazeix <jazeix@gmail.com>
 # Licensed under the MIT license:
 #
 # Permission is  hereby granted,  free of charge,  to any  person obtaining
@@ -75,13 +76,15 @@ _EXTRA_DIST_CMAKE = \
     CMakeLists.txt \
     CMake.README \
     ConfigureChecks.cmake \
+    expat.pc.cmake \
     expat_config.h.cmake
 
 _EXTRA_DIST_WINDOWS = \
     win32/build_expat_iss.bat \
     win32/expat.iss \
     win32/MANIFEST.txt \
-    win32/README.txt
+    win32/README.txt \
+    win32/version.rc
 
 EXTRA_DIST = \
     $(_EXTRA_DIST_CMAKE) \
@@ -90,9 +93,13 @@ EXTRA_DIST = \
     conftools/expat.m4 \
     conftools/get-version.sh \
     \
+    fuzz/xml_parsebuffer_fuzzer.c \
+    fuzz/xml_parse_fuzzer.c \
+    \
     xmlwf/xmlwf_helpgen.py \
     xmlwf/xmlwf_helpgen.sh \
     \
+    buildconf.sh \
     Changes \
     README.md \
     \

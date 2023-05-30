@@ -33,13 +33,11 @@
 #include "esp32s2/rom/cache.h"
 #include "esp32s2/spiram.h"
 #include "esp32s2/dport_access.h"
-#include "esp32s2/memprot.h"
 #elif CONFIG_IDF_TARGET_ESP32S3
 #include "esp32s3/rtc.h"
 #include "esp32s3/rom/cache.h"
 #include "esp32s3/spiram.h"
 #include "esp32s3/dport_access.h"
-#include "esp32s3/memprot.h"
 #include "soc/assist_debug_reg.h"
 #include "soc/cache_memory.h"
 #include "soc/system_reg.h"
@@ -48,12 +46,18 @@
 #include "esp32c3/rtc.h"
 #include "esp32c3/rom/cache.h"
 #include "soc/cache_memory.h"
-#include "esp32c3/memprot.h"
 #elif CONFIG_IDF_TARGET_ESP32H2
 #include "esp32h2/rtc.h"
 #include "esp32h2/rom/cache.h"
 #include "soc/cache_memory.h"
-#include "esp32h2/memprot.h"
+#endif
+
+#if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE
+#if CONFIG_IDF_TARGET_ESP32S2
+#include "esp32s2/memprot.h"
+#else
+#include "esp_memprot.h"
+#endif
 #endif
 
 #include "esp_private/spi_flash_os.h"
@@ -72,7 +76,7 @@
 #include "soc/rtc.h"
 #include "soc/spinlock.h"
 
-#if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX
+#if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX || CONFIG_ESP32S3_TRAX
 #include "trax.h"
 #endif
 
@@ -91,18 +95,6 @@
 #include "esp32h2/rom/spi_flash.h"
 #endif
 #endif // CONFIG_APP_BUILD_TYPE_ELF_RAM
-
-// Set efuse ROM_LOG_MODE on first boot
-//
-// For CONFIG_BOOT_ROM_LOG_ALWAYS_ON (default) or undefined (ESP32), leave
-// ROM_LOG_MODE undefined (no need to call this function during startup)
-#if CONFIG_BOOT_ROM_LOG_ALWAYS_OFF
-#define ROM_LOG_MODE ESP_EFUSE_ROM_LOG_ALWAYS_OFF
-#elif CONFIG_BOOT_ROM_LOG_ON_GPIO_LOW
-#define ROM_LOG_MODE ESP_EFUSE_ROM_LOG_ON_GPIO_LOW
-#elif CONFIG_BOOT_ROM_LOG_ON_GPIO_HIGH
-#define ROM_LOG_MODE ESP_EFUSE_ROM_LOG_ON_GPIO_HIGH
-#endif
 
 
 #include "esp_private/startup_internal.h"
@@ -186,10 +178,9 @@ void IRAM_ATTR call_start_cpu1(void)
     //has started, but it isn't active *on this CPU* yet.
     esp_cache_err_int_init();
 
-#if CONFIG_IDF_TARGET_ESP32
-#if CONFIG_ESP32_TRAX_TWOBANKS
+#if (CONFIG_IDF_TARGET_ESP32 && CONFIG_ESP32_TRAX_TWOBANKS) || \
+    (CONFIG_IDF_TARGET_ESP32S3 && CONFIG_ESP32S3_TRAX_TWOBANKS)
     trax_start_trace(TRAX_DOWNCOUNT_WORDS);
-#endif
 #endif
 
     s_cpu_inited[1] = true;
@@ -350,6 +341,10 @@ void IRAM_ATTR call_start_cpu0(void)
     Cache_Resume_DCache(0);
 #endif // CONFIG_IDF_TARGET_ESP32S3
 
+    if (esp_efuse_check_errors() != ESP_OK) {
+        esp_restart();
+    }
+
 #if CONFIG_IDF_TARGET_ESP32S3 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32H2
     /* Configure the Cache MMU size for instruction and rodata in flash. */
     extern uint32_t Cache_Set_IDROM_MMU_Size(uint32_t irom_size, uint32_t drom_size);
@@ -359,7 +354,7 @@ void IRAM_ATTR call_start_cpu0(void)
 
 #if CONFIG_IDF_TARGET_ESP32S3
     extern int _rodata_reserved_end;
-    uint32_t cache_mmu_drom_size = (((uint32_t)&_rodata_reserved_end - rodata_reserved_start_align + MMU_PAGE_SIZE - 1)/MMU_PAGE_SIZE)*sizeof(uint32_t);
+    uint32_t cache_mmu_drom_size = (((uint32_t)&_rodata_reserved_end - rodata_reserved_start_align + MMU_PAGE_SIZE - 1) / MMU_PAGE_SIZE) * sizeof(uint32_t);
 #endif
 
     Cache_Set_IDROM_MMU_Size(cache_mmu_irom_size, CACHE_DROM_MMU_MAX_END - cache_mmu_irom_size);
@@ -476,12 +471,12 @@ void IRAM_ATTR call_start_cpu0(void)
 #endif
 
     extern void Cache_Set_IDROM_MMU_Info(uint32_t instr_page_num, uint32_t rodata_page_num, uint32_t rodata_start, uint32_t rodata_end, int i_off, int ro_off);
-    Cache_Set_IDROM_MMU_Info(cache_mmu_irom_size/sizeof(uint32_t), \
-                            cache_mmu_drom_size/sizeof(uint32_t), \
-                            (uint32_t)&_rodata_reserved_start, \
-                            (uint32_t)&_rodata_reserved_end, \
-                            s_instr_flash2spiram_off, \
-                            s_rodata_flash2spiram_off);
+    Cache_Set_IDROM_MMU_Info(cache_mmu_irom_size / sizeof(uint32_t), \
+                             cache_mmu_drom_size / sizeof(uint32_t), \
+                             (uint32_t)&_rodata_reserved_start, \
+                             (uint32_t)&_rodata_reserved_end, \
+                             s_instr_flash2spiram_off, \
+                             s_rodata_flash2spiram_off);
 #endif
 
 #if CONFIG_ESP32S2_INSTRUCTION_CACHE_WRAP || CONFIG_ESP32S2_DATA_CACHE_WRAP || \
@@ -507,9 +502,9 @@ void IRAM_ATTR call_start_cpu0(void)
 #endif
 
 //Enable trace memory and immediately start trace.
-#if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX
-#if CONFIG_IDF_TARGET_ESP32
-#if CONFIG_ESP32_TRAX_TWOBANKS
+#if CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX || CONFIG_ESP32S3_TRAX
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_ESP32_TRAX_TWOBANKS || CONFIG_ESP32S3_TRAX_TWOBANKS
     trax_enable(TRAX_ENA_PRO_APP);
 #else
     trax_enable(TRAX_ENA_PRO);
@@ -518,7 +513,7 @@ void IRAM_ATTR call_start_cpu0(void)
     trax_enable(TRAX_ENA_PRO);
 #endif
     trax_start_trace(TRAX_DOWNCOUNT_WORDS);
-#endif // CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX
+#endif // CONFIG_ESP32_TRAX || CONFIG_ESP32S2_TRAX || CONFIG_ESP32S3_TRAX
 
     esp_clk_init();
     esp_perip_clk_init();
@@ -549,32 +544,41 @@ void IRAM_ATTR call_start_cpu0(void)
 
     esp_cache_err_int_init();
 
-#if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE
+#if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE && !CONFIG_ESP_SYSTEM_MEMPROT_TEST
     // Memprot cannot be locked during OS startup as the lock-on prevents any PMS changes until a next reboot
     // If such a situation appears, it is likely an malicious attempt to bypass the system safety setup -> print error & reset
+
+#if CONFIG_IDF_TARGET_ESP32S2
     if (esp_memprot_is_locked_any()) {
+#else
+    bool is_locked = false;
+    if (esp_mprot_is_conf_locked_any(&is_locked) != ESP_OK || is_locked) {
+#endif
         ESP_EARLY_LOGE(TAG, "Memprot feature locked after the system reset! Potential safety corruption, rebooting.");
         esp_restart_noos_dig();
     }
+
+    //default configuration of PMS Memprot
     esp_err_t memp_err = ESP_OK;
+#if CONFIG_IDF_TARGET_ESP32S2 //specific for ESP32S2 unless IDF-3024 is merged
 #if CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK
-#if CONFIG_IDF_TARGET_ESP32S2 //specific for ESP32S2 unless IDF-3024 is merged
-    memp_err = esp_memprot_set_prot(true, true, NULL);
+    memp_err = esp_memprot_set_prot(PANIC_HNDL_ON, MEMPROT_LOCK, NULL);
 #else
-    esp_memprot_set_prot(true, true, NULL);
+    memp_err = esp_memprot_set_prot(PANIC_HNDL_ON, MEMPROT_UNLOCK, NULL);
 #endif
-#else
-#if CONFIG_IDF_TARGET_ESP32S2 //specific for ESP32S2 unless IDF-3024 is merged
-    memp_err = esp_memprot_set_prot(true, false, NULL);
-#else
-    esp_memprot_set_prot(true, false, NULL);
+#else //CONFIG_IDF_TARGET_ESP32S2 specific end
+    esp_memp_config_t memp_cfg = ESP_MEMPROT_DEFAULT_CONFIG();
+#if !CONFIG_ESP_SYSTEM_MEMPROT_FEATURE_LOCK
+    memp_cfg.lock_feature = false;
 #endif
-#endif
+    memp_err = esp_mprot_set_prot(&memp_cfg);
+#endif //other IDF_TARGETS end
+
     if (memp_err != ESP_OK) {
-        ESP_EARLY_LOGE(TAG, "Failed to set Memprot feature (error 0x%08X), rebooting.", memp_err);
+        ESP_EARLY_LOGE(TAG, "Failed to set Memprot feature (0x%08X: %s), rebooting.", memp_err, esp_err_to_name(memp_err));
         esp_restart_noos_dig();
     }
-#endif
+#endif //CONFIG_ESP_SYSTEM_MEMPROT_FEATURE && !CONFIG_ESP_SYSTEM_MEMPROT_TEST
 
     // Read the application binary image header. This will also decrypt the header if the image is encrypted.
     __attribute__((unused)) esp_image_header_t fhdr = {0};
@@ -605,7 +609,7 @@ void IRAM_ATTR call_start_cpu0(void)
 #if CONFIG_SPI_FLASH_SIZE_OVERRIDE
     int app_flash_size = esp_image_get_flash_size(fhdr.spi_size);
     if (app_flash_size < 1 * 1024 * 1024) {
-        ESP_LOGE(TAG, "Invalid flash size in app image header.");
+        ESP_EARLY_LOGE(TAG, "Invalid flash size in app image header.");
         abort();
     }
     bootloader_flash_update_size(app_flash_size);
@@ -623,10 +627,6 @@ void IRAM_ATTR call_start_cpu0(void)
         }
         esp_rom_delay_us(100);
     }
-#endif
-
-#ifdef ROM_LOG_MODE
-    esp_efuse_set_rom_log_scheme(ROM_LOG_MODE);
 #endif
 
     SYS_STARTUP_FN();

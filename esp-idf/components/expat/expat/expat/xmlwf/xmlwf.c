@@ -10,13 +10,14 @@
    Copyright (c) 2000      Clark Cooper <coopercc@users.sourceforge.net>
    Copyright (c) 2001-2003 Fred L. Drake, Jr. <fdrake@users.sourceforge.net>
    Copyright (c) 2004-2009 Karl Waclawek <karl@waclawek.net>
-   Copyright (c) 2005-2007 Steven Solie <ssolie@users.sourceforge.net>
-   Copyright (c) 2016-2021 Sebastian Pipping <sebastian@pipping.org>
+   Copyright (c) 2005-2007 Steven Solie <steven@solie.ca>
+   Copyright (c) 2016-2022 Sebastian Pipping <sebastian@pipping.org>
    Copyright (c) 2017      Rhodri James <rhodri@wildebeest.org.uk>
    Copyright (c) 2019      David Loffredo <loffredo@steptools.com>
    Copyright (c) 2020      Joe Orton <jorton@redhat.com>
    Copyright (c) 2020      Kleber Tarcísio <klebertarcisio@yahoo.com.br>
    Copyright (c) 2021      Tim Bray <tbray@textuality.com>
+   Copyright (c) 2022      Martin Ettl <ettl.martin78@googlemail.com>
    Licensed under the MIT license:
 
    Permission is  hereby granted,  free of charge,  to any  person obtaining
@@ -217,7 +218,7 @@ nsattcmp(const void *p1, const void *p2) {
   const XML_Char *att1 = *(const XML_Char **)p1;
   const XML_Char *att2 = *(const XML_Char **)p2;
   int sep1 = (tcsrchr(att1, NSSEP) != 0);
-  int sep2 = (tcsrchr(att1, NSSEP) != 0);
+  int sep2 = (tcsrchr(att2, NSSEP) != 0);
   if (sep1 != sep2)
     return sep1 - sep2;
   return tcscmp(att1, att2);
@@ -1128,6 +1129,8 @@ tmain(int argc, XML_Char **argv) {
 #ifdef XML_DTD
       XML_SetBillionLaughsAttackProtectionActivationThreshold(
           parser, attackThresholdBytes);
+#else
+      (void)attackThresholdBytes; // silence -Wunused-but-set-variable
 #endif
     }
 
@@ -1173,9 +1176,9 @@ tmain(int argc, XML_Char **argv) {
       if (! userData.fp) {
         tperror(outName);
         exitCode = XMLWF_EXIT_OUTPUT_ERROR;
+        free(outName);
+        XML_ParserFree(parser);
         if (continueOnError) {
-          free(outName);
-          cleanupUserData(&userData);
           continue;
         } else {
           break;

@@ -41,17 +41,17 @@ void ccm_lengths( int msg_len, int iv_len, int add_len, int tag_len, int res )
     unsigned char key[16];
     unsigned char msg[10];
     unsigned char iv[14];
-    unsigned char add[10];
+    unsigned char *add = NULL;
     unsigned char out[10];
     unsigned char tag[18];
     int decrypt_ret;
 
     mbedtls_ccm_init( &ctx );
 
+    ASSERT_ALLOC_WEAK( add, add_len );
     memset( key, 0, sizeof( key ) );
     memset( msg, 0, sizeof( msg ) );
     memset( iv, 0, sizeof( iv ) );
-    memset( add, 0, sizeof( add ) );
     memset( out, 0, sizeof( out ) );
     memset( tag, 0, sizeof( tag ) );
 
@@ -70,6 +70,7 @@ void ccm_lengths( int msg_len, int iv_len, int add_len, int tag_len, int res )
         TEST_ASSERT( decrypt_ret == res );
 
 exit:
+    mbedtls_free( add );
     mbedtls_ccm_free( &ctx );
 }
 /* END_CASE */
@@ -283,8 +284,8 @@ void mbedtls_ccm_star_auth_decrypt( int cipher_id,
 
     /* Check we didn't write past the end (where the original tag is) */
     TEST_ASSERT( ( msg->len + 2 ) <= sizeof( result ) );
-    TEST_ASSERT( result[msg->len] == '+' );
-    TEST_ASSERT( result[msg->len + 1] == '+' );
+    TEST_EQUAL( result[msg->len], '+' );
+    TEST_EQUAL( result[msg->len + 1], '+' );
 
 exit:
     mbedtls_ccm_free( &ctx );

@@ -19,6 +19,7 @@
 #include "soc/soc_memory_types.h"
 #include "soc/dport_access.h"
 #include "sdkconfig.h"
+#include "esp_freertos_hooks.h"
 
 #if CONFIG_IDF_TARGET_ESP32
 #include "esp32/spiram.h"
@@ -81,13 +82,24 @@ void esp_startup_start_app_common(void)
     (void)res;
 }
 
+#if !CONFIG_FREERTOS_UNICORE
+static volatile bool s_other_cpu_startup_done = false;
+static bool other_cpu_startup_idle_hook_cb(void)
+{
+    s_other_cpu_startup_done = true;
+    return true;
+}
+#endif
+
 static void main_task(void* args)
 {
 #if !CONFIG_FREERTOS_UNICORE
-    // Wait for FreeRTOS initialization to finish on APP CPU, before replacing its startup stack
-    while (port_xSchedulerRunning[1] == 0) {
+    // Wait for FreeRTOS initialization to finish on other core, before replacing its startup stack
+    esp_register_freertos_idle_hook_for_cpu(other_cpu_startup_idle_hook_cb, !xPortGetCoreID());
+    while (!s_other_cpu_startup_done) {
         ;
     }
+    esp_deregister_freertos_idle_hook_for_cpu(other_cpu_startup_idle_hook_cb, !xPortGetCoreID());
 #endif
 
     // [refactor-todo] check if there is a way to move the following block to esp_system startup
@@ -161,9 +173,24 @@ void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
 {
     StaticTask_t *pxTCBBufferTemp;
     StackType_t *pxStackBufferTemp;
-    //Allocate TCB and stack buffer in internal memory
-    pxTCBBufferTemp = pvPortMallocTcbMem(sizeof(StaticTask_t));
-    pxStackBufferTemp = pvPortMallocStackMem(configIDLE_TASK_STACK_SIZE);
+
+    /* If the stack grows down then allocate the stack then the TCB so the stack
+     * does not grow into the TCB.  Likewise if the stack grows up then allocate
+     * the TCB then the stack. */
+    #if (portSTACK_GROWTH > 0)
+    {
+        //Allocate TCB and stack buffer in internal memory
+        pxTCBBufferTemp = pvPortMallocTcbMem(sizeof(StaticTask_t));
+        pxStackBufferTemp = pvPortMallocStackMem(configIDLE_TASK_STACK_SIZE);
+    }
+    #else /* portSTACK_GROWTH */
+    {
+        //Allocate TCB and stack buffer in internal memory
+        pxStackBufferTemp = pvPortMallocStackMem(configIDLE_TASK_STACK_SIZE);
+        pxTCBBufferTemp = pvPortMallocTcbMem(sizeof(StaticTask_t));
+    }
+    #endif /* portSTACK_GROWTH */
+
     assert(pxTCBBufferTemp != NULL);
     assert(pxStackBufferTemp != NULL);
     //Write back pointers
@@ -186,9 +213,24 @@ void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
 {
     StaticTask_t *pxTCBBufferTemp;
     StackType_t *pxStackBufferTemp;
-    //Allocate TCB and stack buffer in internal memory
-    pxTCBBufferTemp = pvPortMallocTcbMem(sizeof(StaticTask_t));
-    pxStackBufferTemp = pvPortMallocStackMem(configTIMER_TASK_STACK_DEPTH);
+
+    /* If the stack grows down then allocate the stack then the TCB so the stack
+     * does not grow into the TCB.  Likewise if the stack grows up then allocate
+     * the TCB then the stack. */
+    #if (portSTACK_GROWTH > 0)
+    {
+        //Allocate TCB and stack buffer in internal memory
+        pxTCBBufferTemp = pvPortMallocTcbMem(sizeof(StaticTask_t));
+        pxStackBufferTemp = pvPortMallocStackMem(configTIMER_TASK_STACK_DEPTH);
+    }
+    #else /* portSTACK_GROWTH */
+    {
+        //Allocate TCB and stack buffer in internal memory
+        pxStackBufferTemp = pvPortMallocStackMem(configTIMER_TASK_STACK_DEPTH);
+        pxTCBBufferTemp = pvPortMallocTcbMem(sizeof(StaticTask_t));
+    }
+    #endif /* portSTACK_GROWTH */
+
     assert(pxTCBBufferTemp != NULL);
     assert(pxStackBufferTemp != NULL);
     //Write back pointers

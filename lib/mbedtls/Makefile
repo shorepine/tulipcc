@@ -1,29 +1,33 @@
-
 DESTDIR=/usr/local
 PREFIX=mbedtls_
 
 .SILENT:
 
-.PHONY: all no_test programs lib tests install uninstall clean test check covtest lcov apidoc apidoc_clean
+.PHONY: all no_test programs lib tests install uninstall clean test check lcov apidoc apidoc_clean
 
 all: programs tests
 	$(MAKE) post_build
 
 no_test: programs
 
-programs: lib
+programs: lib mbedtls_test
 	$(MAKE) -C programs
 
 lib:
 	$(MAKE) -C library
 
-tests: lib
+tests: lib mbedtls_test
 	$(MAKE) -C tests
+
+mbedtls_test:
+	$(MAKE) -C tests mbedtls_test
 
 ifndef WINDOWS
 install: no_test
 	mkdir -p $(DESTDIR)/include/mbedtls
 	cp -rp include/mbedtls $(DESTDIR)/include
+	mkdir -p $(DESTDIR)/include/psa
+	cp -rp include/psa $(DESTDIR)/include
 
 	mkdir -p $(DESTDIR)/lib
 	cp -RP library/libmbedtls.*    $(DESTDIR)/lib
@@ -41,6 +45,7 @@ install: no_test
 
 uninstall:
 	rm -rf $(DESTDIR)/include/mbedtls
+	rm -rf $(DESTDIR)/include/psa
 	rm -f $(DESTDIR)/lib/libmbedtls.*
 	rm -f $(DESTDIR)/lib/libmbedx509.*
 	rm -f $(DESTDIR)/lib/libmbedcrypto.*
@@ -73,11 +78,11 @@ post_build:
 ifndef WINDOWS
 
 	# If 128-bit keys are configured for CTR_DRBG, display an appropriate warning
-	-scripts/config.pl get MBEDTLS_CTR_DRBG_USE_128_BIT_KEY && ([ $$? -eq 0 ]) && \
+	-scripts/config.py get MBEDTLS_CTR_DRBG_USE_128_BIT_KEY && ([ $$? -eq 0 ]) && \
 	    echo '$(CTR_DRBG_128_BIT_KEY_WARNING)'
 
 	# If NULL Entropy is configured, display an appropriate warning
-	-scripts/config.pl get MBEDTLS_TEST_NULL_ENTROPY && ([ $$? -eq 0 ]) && \
+	-scripts/config.py get MBEDTLS_TEST_NULL_ENTROPY && ([ $$? -eq 0 ]) && \
 	    echo '$(NULL_ENTROPY_WARNING)'
 endif
 
@@ -95,23 +100,15 @@ check: lib tests
 test: check
 
 ifndef WINDOWS
-# note: for coverage testing, build with:
-# make CFLAGS='--coverage -g3 -O0'
-covtest:
-	$(MAKE) check
-	programs/test/selftest
-	tests/compat.sh
-	tests/ssl-opt.sh
-
+# For coverage testing:
+# 1. Build with:
+#         make CFLAGS='--coverage -g3 -O0' LDFLAGS='--coverage'
+# 2. Run the relevant tests for the part of the code you're interested in.
+#    For the reference coverage measurement, see
+#    tests/scripts/basic-build-test.sh
+# 3. Run scripts/lcov.sh to generate an HTML report.
 lcov:
-	rm -rf Coverage
-	lcov --capture --initial --directory library -o files.info
-	lcov --rc lcov_branch_coverage=1 --capture --directory library -o tests.info
-	lcov --rc lcov_branch_coverage=1 --add-tracefile files.info --add-tracefile tests.info -o all.info
-	lcov --rc lcov_branch_coverage=1 --remove all.info -o final.info '*.h'
-	gendesc tests/Descriptions.txt -o descriptions
-	genhtml --title "mbed TLS" --description-file descriptions --keep-descriptions --legend --branch-coverage -o Coverage final.info
-	rm -f files.info tests.info all.info final.info descriptions
+	scripts/lcov.sh
 
 apidoc:
 	mkdir -p apidoc
@@ -122,7 +119,16 @@ apidoc_clean:
 endif
 
 ## Editor navigation files
-C_SOURCE_FILES = $(wildcard include/*/*.h library/*.[hc] programs/*/*.[hc] tests/suites/*.function)
+C_SOURCE_FILES = $(wildcard \
+	3rdparty/*/include/*/*.h 3rdparty/*/include/*/*/*.h 3rdparty/*/include/*/*/*/*.h \
+	3rdparty/*/*.c 3rdparty/*/*/*.c 3rdparty/*/*/*/*.c 3rdparty/*/*/*/*/*.c \
+	include/*/*.h \
+	library/*.[hc] \
+	programs/*/*.[hc] \
+	tests/include/*/*.h tests/include/*/*/*.h \
+	tests/src/*.c tests/src/*/*.c \
+	tests/suites/*.function \
+)
 # Exuberant-ctags invocation. Other ctags implementations may require different options.
 CTAGS = ctags --langmap=c:+.h.function --line-directives=no -o
 tags: $(C_SOURCE_FILES)

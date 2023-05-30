@@ -68,6 +68,10 @@
 #define LWIP_MDNS_RESPONDER             1
 #define LWIP_NUM_NETIF_CLIENT_DATA      (LWIP_MDNS_RESPONDER)
 
+/* Enable PPP and PPPOS support for PPPOS test suites */
+#define PPP_SUPPORT                     1
+#define PPPOS_SUPPORT                   1
+
 /* Minimal changes to opt.h required for etharp unit tests: */
 #define ETHARP_SUPPORT_STATIC_ENTRIES   1
 
@@ -98,6 +102,10 @@
 #define ESP_PPP                                 1
 #define ESP_LWIP_IGMP_TIMERS_ONDEMAND           1
 #define ESP_LWIP_MLD6_TIMERS_ONDEMAND           1
+#define ESP_LWIP_DNS_TIMERS_ONDEMAND            1
+#define ESP_LWIP_IP6_REASSEMBLY_TIMERS_ONDEMAND 1
+#define ESP_LWIP_IP4_REASSEMBLY_TIMERS_ONDEMAND 1
+#define ESP_LWIP_DHCP_FINE_TIMERS_ONDEMAND      1
 #define ESP_GRATUITOUS_ARP                      1
 #define ESP_LWIP_SELECT                         1
 #define ESP_LWIP_LOCK                           1
@@ -106,6 +114,13 @@
 #define ESP_THREAD_PROTECTION                   0
 #define ESP_DHCP_DISABLE_CLIENT_ID              0
 #define ESP_DHCP_DISABLE_VENDOR_CLASS_IDENTIFIER 0
+#define ESP_IP_FORWARD                          1
+
+/* DHCP options*/
+#define DHCP_DEFINE_CUSTOM_TIMEOUTS             1
+#define DHCP_REQUEST_TIMEOUT_SEQUENCE(state, tries)   (state == DHCP_STATE_REQUESTING ? \
+                                                       (uint16_t)(1 * 1000) : \
+                                                       (uint16_t)(((tries) < 6 ? 1 << (tries) : 60) * 250))
 
 #ifdef IP_NAPT
 #define IP_NAPT_MAX                     16

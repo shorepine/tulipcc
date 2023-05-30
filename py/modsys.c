@@ -55,8 +55,6 @@ extern struct _mp_dummy_t mp_sys_stderr_obj;
 const mp_print_t mp_sys_stdout_print = {&mp_sys_stdout_obj, mp_stream_write_adaptor};
 #endif
 
-//const mp_print_t mp_sys_stdout_print = {NULL, display_print_strn};
-
 // version - Python language version that this implementation conforms to, as a string
 STATIC const MP_DEFINE_STR_OBJ(mp_sys_version_obj, "3.4.0; " MICROPY_BANNER_NAME_AND_VERSION);
 
@@ -117,6 +115,12 @@ STATIC const mp_rom_obj_tuple_t mp_sys_implementation_obj = {
 STATIC const MP_DEFINE_STR_OBJ(mp_sys_platform_obj, MICROPY_PY_SYS_PLATFORM);
 #endif
 
+#ifdef MICROPY_PY_SYS_EXECUTABLE
+// executable - the path to the micropython binary
+// This object is non-const and is populated at startup in main()
+MP_DEFINE_STR_OBJ(mp_sys_executable_obj, "");
+#endif
+
 // exit([retval]): raise SystemExit, with optional argument given to the exception
 STATIC mp_obj_t mp_sys_exit(size_t n_args, const mp_obj_t *args) {
     if (n_args == 0) {
@@ -133,11 +137,10 @@ STATIC mp_obj_t mp_sys_print_exception(size_t n_args, const mp_obj_t *args) {
     if (n_args > 1) {
         mp_get_stream_raise(args[1], MP_STREAM_OP_WRITE);
         stream_obj = MP_OBJ_TO_PTR(args[1]);
-        mp_print_t print = {stream_obj, mp_stream_write_adaptor};
-        mp_obj_print_exception(&print, args[0]);
-    } else {
-        mp_obj_print_exception(&mp_plat_print, args[0]);
     }
+
+    mp_print_t print = {stream_obj, mp_stream_write_adaptor};
+    mp_obj_print_exception(&print, args[0]);
     #else
     (void)n_args;
     mp_obj_print_exception(&mp_plat_print, args[0]);
@@ -265,6 +268,10 @@ STATIC const mp_rom_map_elem_t mp_module_sys_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_getsizeof), MP_ROM_PTR(&mp_sys_getsizeof_obj) },
     #endif
 
+    #if MICROPY_PY_SYS_EXECUTABLE
+    { MP_ROM_QSTR(MP_QSTR_executable), MP_ROM_PTR(&mp_sys_executable_obj) },
+    #endif
+
     /*
      * Extensions to CPython
      */
@@ -287,4 +294,26 @@ const mp_obj_module_t mp_module_sys = {
     .globals = (mp_obj_dict_t *)&mp_module_sys_globals,
 };
 
+MP_REGISTER_MODULE(MP_QSTR_usys, mp_module_sys);
+
+// If MICROPY_PY_SYS_PATH_ARGV_DEFAULTS is not enabled then these two lists
+// must be initialised after the call to mp_init.
+MP_REGISTER_ROOT_POINTER(mp_obj_list_t mp_sys_path_obj);
+MP_REGISTER_ROOT_POINTER(mp_obj_list_t mp_sys_argv_obj);
+
+#if MICROPY_PY_SYS_EXC_INFO
+// current exception being handled, for sys.exc_info()
+MP_REGISTER_ROOT_POINTER(mp_obj_base_t * cur_exception);
 #endif
+
+#if MICROPY_PY_SYS_ATEXIT
+// exposed through sys.atexit function
+MP_REGISTER_ROOT_POINTER(mp_obj_t sys_exitfunc);
+#endif
+
+#if MICROPY_PY_SYS_ATTR_DELEGATION
+// Contains mutable sys attributes.
+MP_REGISTER_ROOT_POINTER(mp_obj_t sys_mutable[MP_SYS_MUTABLE_NUM]);
+#endif
+
+#endif // MICROPY_PY_SYS

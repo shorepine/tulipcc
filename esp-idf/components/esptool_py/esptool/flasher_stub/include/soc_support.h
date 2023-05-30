@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2016-2019 Espressif Systems (Shanghai) PTE LTD
- * All rights reserved
+ * SPDX-FileCopyrightText: 2016-2022 Espressif Systems (Shanghai) CO LTD
  *
- * This file is part of the esptool.py binary flasher stub.
- *
- * This program is free software; you can redistribute it and/or modify it under
- * the terms of the GNU General Public License as published by the Free Software
- * Foundation; either version 2 of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
- * Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
 /* SoC-level support for ESP8266/ESP32.
@@ -37,12 +24,9 @@
 #define REG_SET_MASK(reg, mask) WRITE_REG((reg), (READ_REG(reg)|(mask)))
 #define REG_CLR_MASK(reg, mask) WRITE_REG((reg), (READ_REG(reg)&(~(mask))))
 
-#define ESP32_OR_LATER (ESP32 || ESP32S2 || ESP32S3 || ESP32C3 || ESP32C6 || ESP32H2)
-#define ESP32S2_OR_LATER (ESP32S2 || ESP32S3 || ESP32C3 || ESP32C6 || ESP32H2)
-#define ESP32S3_OR_LATER (ESP32S3 || ESP32C3 || ESP32C6 || ESP32H2)
-#define ESP32C3_OR_LATER (ESP32C3 || ESP32C6 || ESP32H2)
-#define ESP32C6_OR_LATER (ESP32C6 || ESP32H2)
-#define ESP32H2_OR_LATER (ESP32H2)
+#define ESP32_OR_LATER   !(ESP8266)
+#define ESP32S2_OR_LATER !(ESP8266 || ESP32)
+#define ESP32S3_OR_LATER !(ESP8266 || ESP32 || ESP32S2)
 
 /**********************************************************
  * Per-SOC capabilities
@@ -120,6 +104,13 @@
 #define RTCCNTL_BASE_REG    0x60008000
 #endif
 
+#ifdef ESP32C2
+#define UART_BASE_REG      0x60000000 /* UART0 */
+#define SPI_BASE_REG       0x60002000 /* SPI peripheral 1, used for SPI flash */
+#define SPI0_BASE_REG      0x60003000 /* SPI peripheral 0, inner state machine */
+#define GPIO_BASE_REG      0x60004000
+#define RTCCNTL_BASE_REG   0x60008000
+#endif
 /**********************************************************
  * UART peripheral
  *
@@ -141,7 +132,7 @@
 #define UART_INT_CLR(X)    (UART_BASE_REG + 0x10)
 #define UART_STATUS(X)     (UART_BASE_REG + 0x1C)
 
-#if defined(ESP32S2) || defined(ESP32S3)
+#if ESP32S2_OR_LATER
 #define UART_RXFIFO_CNT_M 0x3FF
 #else
 #define UART_RXFIFO_CNT_M 0xFF
@@ -213,7 +204,7 @@
 /**********************************************************
  * GPIO peripheral
  *
- * We only need to read the strapping register on ESP32 & ESP32S2 & ESP32S3
+ * We only need to read the strapping register on ESP32 or later
  */
 #define GPIO_STRAP_REG    (GPIO_BASE_REG + 0x38)
 

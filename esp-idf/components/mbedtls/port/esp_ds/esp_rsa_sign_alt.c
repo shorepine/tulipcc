@@ -14,6 +14,7 @@
 
 #include "esp_ds.h"
 #include "rsa_sign_alt.h"
+#include "soc/soc_memory_types.h"
 
 #ifdef CONFIG_IDF_TARGET_ESP32S2
 #include "esp32s2/rom/digital_signature.h"
@@ -70,7 +71,7 @@ void esp_ds_set_session_timeout(int timeout)
     }
 }
 
-esp_err_t  esp_ds_init_data_ctx(esp_ds_data_ctx_t *ds_data)
+esp_err_t esp_ds_init_data_ctx(esp_ds_data_ctx_t *ds_data)
 {
     if (ds_data == NULL || ds_data->esp_ds_data == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -82,8 +83,22 @@ esp_err_t  esp_ds_init_data_ctx(esp_ds_data_ctx_t *ds_data)
     }
     s_ds_data = ds_data->esp_ds_data;
     s_esp_ds_hmac_key_id = (hmac_key_id_t) ds_data->efuse_key_id;
-    /* calculate the rsa_length in terms of esp_digital_signature_length_t which is required for the internal DS API */
-    s_ds_data->rsa_length = (ds_data->rsa_length_bits / 32) - 1;
+
+    const unsigned rsa_length_int = (ds_data->rsa_length_bits / 32) - 1;
+    if (esp_ptr_byte_accessible(s_ds_data)) {
+        /* calculate the rsa_length in terms of esp_digital_signature_length_t which is required for the internal DS API */
+        s_ds_data->rsa_length = rsa_length_int;
+    } else if (s_ds_data->rsa_length != rsa_length_int) {
+        /*
+         * Configuration data is most likely from DROM segment and it
+         * is not properly formatted for all parameters consideration.
+         * Moreover, we can not modify as it is read-only and hence
+         * the error.
+         */
+        ESP_LOGE(TAG, "RSA length mismatch %u, %u", s_ds_data->rsa_length, rsa_length_int);
+        return ESP_ERR_INVALID_ARG;
+    }
+
     return ESP_OK;
 }
 
@@ -228,7 +243,7 @@ int esp_ds_rsa_sign( void *ctx,
     }
 
     if ((ret = (rsa_rsassa_pkcs1_v15_encode( md_alg, hashlen, hash, ((s_ds_data->rsa_length + 1) * FACTOR_KEYLEN_IN_BYTES), sig ))) != 0) {
-        ESP_LOGE(TAG, "Error in pkcs1_v15 encoding, returned %02x", ret);
+        ESP_LOGE(TAG, "Error in pkcs1_v15 encoding, returned %d", ret);
         heap_caps_free(signature);
         return -1;
     }
@@ -242,14 +257,14 @@ int esp_ds_rsa_sign( void *ctx,
                              s_esp_ds_hmac_key_id,
                              &esp_ds_ctx);
     if (ds_r != ESP_OK) {
-        ESP_LOGE(TAG, "Error in esp_ds_start_sign, returned %02x ", ds_r);
+        ESP_LOGE(TAG, "Error in esp_ds_start_sign, returned %d ", ds_r);
         heap_caps_free(signature);
         return -1;
     }
 
     ds_r = esp_ds_finish_sign((void *)signature, esp_ds_ctx);
     if (ds_r != ESP_OK) {
-        ESP_LOGE(TAG, "Error in esp_ds_finish sign, returned %02X ", ds_r);
+        ESP_LOGE(TAG, "Error in esp_ds_finish sign, returned %d ", ds_r);
         heap_caps_free(signature);
         return -1;
     }

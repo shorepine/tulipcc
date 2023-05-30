@@ -1,13 +1,7 @@
 #!/usr/bin/env python3
 
 # Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-#
-# This file is provided under the Apache License 2.0, or the
-# GNU General Public License v2.0 or later.
-#
-# **********
-# Apache License 2.0:
+# SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License.
@@ -20,27 +14,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# **********
-#
-# **********
-# GNU General Public License v2.0 or later:
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-#
-# **********
 
 """
 This script checks the current state of the source code for minor issues,
@@ -56,6 +29,10 @@ import codecs
 import re
 import subprocess
 import sys
+try:
+    from typing import FrozenSet, Optional, Pattern # pylint: disable=unused-import
+except ImportError:
+    pass
 
 
 class FileIssueTracker:
@@ -75,8 +52,8 @@ class FileIssueTracker:
     ``heading``: human-readable description of the issue
     """
 
-    suffix_exemptions = frozenset()
-    path_exemptions = None
+    suffix_exemptions = frozenset() #type: FrozenSet[str]
+    path_exemptions = None #type: Optional[Pattern[str]]
     # heading must be defined in derived classes.
     # pylint: disable=no-member
 
@@ -188,10 +165,61 @@ class PermissionIssueTracker(FileIssueTracker):
 
     heading = "Incorrect permissions:"
 
+    # .py files can be either full scripts or modules, so they may or may
+    # not be executable.
+    suffix_exemptions = frozenset({".py"})
+
     def check_file_for_issue(self, filepath):
         is_executable = os.access(filepath, os.X_OK)
-        should_be_executable = filepath.endswith((".sh", ".pl", ".py"))
+        should_be_executable = filepath.endswith((".sh", ".pl"))
         if is_executable != should_be_executable:
+            self.files_with_issues[filepath] = None
+
+
+class ShebangIssueTracker(FileIssueTracker):
+    """Track files with a bad, missing or extraneous shebang line.
+
+    Executable scripts must start with a valid shebang (#!) line.
+    """
+
+    heading = "Invalid shebang line:"
+
+    # Allow either /bin/sh, /bin/bash, or /usr/bin/env.
+    # Allow at most one argument (this is a Linux limitation).
+    # For sh and bash, the argument if present must be options.
+    # For env, the argument must be the base name of the interpreter.
+    _shebang_re = re.compile(rb'^#! ?(?:/bin/(bash|sh)(?: -[^\n ]*)?'
+                             rb'|/usr/bin/env ([^\n /]+))$')
+    _extensions = {
+        b'bash': 'sh',
+        b'perl': 'pl',
+        b'python3': 'py',
+        b'sh': 'sh',
+    }
+
+    def is_valid_shebang(self, first_line, filepath):
+        m = re.match(self._shebang_re, first_line)
+        if not m:
+            return False
+        interpreter = m.group(1) or m.group(2)
+        if interpreter not in self._extensions:
+            return False
+        if not filepath.endswith('.' + self._extensions[interpreter]):
+            return False
+        return True
+
+    def check_file_for_issue(self, filepath):
+        is_executable = os.access(filepath, os.X_OK)
+        with open(filepath, "rb") as f:
+            first_line = f.readline()
+        if first_line.startswith(b'#!'):
+            if not is_executable:
+                # Shebang on a non-executable file
+                self.files_with_issues[filepath] = None
+            elif not self.is_valid_shebang(first_line, filepath):
+                self.files_with_issues[filepath] = [1]
+        elif is_executable:
+            # Executable without a shebang
             self.files_with_issues[filepath] = None
 
 
@@ -277,6 +305,7 @@ class TabIssueTracker(LineIssueTracker):
         ".pem", # some openssl dumps have tabs
         ".sln",
         "/Makefile",
+        "/Makefile.inc",
         "/generate_visualc_files.pl",
     ])
 
@@ -314,6 +343,7 @@ class IntegrityChecker:
         self.setup_logger(log_file)
         self.issues_to_check = [
             PermissionIssueTracker(),
+            ShebangIssueTracker(),
             EndOfFileNewlineIssueTracker(),
             Utf8BomIssueTracker(),
             UnixLineEndingIssueTracker(),

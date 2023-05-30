@@ -184,7 +184,8 @@ static void btc_gattc_cback(tBTA_GATTC_EVT event, tBTA_GATTC *p_data)
     msg.sig = BTC_SIG_API_CB;
     msg.pid = BTC_PID_GATTC;
     msg.act = (uint8_t) event;
-    ret = btc_transfer_context(&msg, p_data, sizeof(tBTA_GATTC), btc_gattc_copy_req_data);
+    ret = btc_transfer_context(&msg, p_data, sizeof(tBTA_GATTC),
+                                btc_gattc_copy_req_data, btc_gattc_free_req_data);
 
     if (ret) {
         BTC_TRACE_ERROR("%s transfer failed\n", __func__);
@@ -932,6 +933,7 @@ void btc_gattc_cb_handler(btc_msg_t *msg)
 
         gattc_if = disconnect->client_if;
         param.disconnect.reason = disconnect->reason;
+        param.disconnect.link_role = disconnect->link_role;
         param.disconnect.conn_id = BTC_GATT_GET_CONN_ID(disconnect->conn_id);
         memcpy(param.disconnect.remote_bda, disconnect->remote_bda, sizeof(esp_bd_addr_t));
         btc_gattc_cb_to_app(ESP_GATTC_DISCONNECT_EVT, gattc_if, &param);

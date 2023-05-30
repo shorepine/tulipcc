@@ -33,6 +33,12 @@ static u32_t last_dst_addr = 0;
 static u16_t last_src_port = 0;
 
 #if IP_NAPT
+typedef enum {
+    PACKET_PBUF_RAM,
+    PACKET_PBUF_REF
+} packet_type_t;
+
+unsigned char *packet_buffer[1518];
 static int random_mock = -1;
 /* Mock the esp-random to return 0 for easier result checking */
 uint32_t esp_random(void) 
@@ -137,9 +143,11 @@ ap_tx_func(struct netif *netif, struct pbuf *p)
 #if IP_NAPT
 static struct pbuf*
 test_create_tcp_packet(u32_t src_ip4, u32_t dst_ip4,
-                   u16_t src_port, u16_t dst_port,
-                   u32_t seqno, u32_t ackno, u8_t headerflags, u16_t wnd)
+                   u16_t src_port, u16_t dst_port, u8_t headerflags,
+                   packet_type_t packet_type)
 {
+  u32_t seqno = 0, ackno = 0;
+  u16_t wnd = 0;
   struct pbuf *p, *q;
   ip_addr_t src_ip;
   ip_addr_t dst_ip;
@@ -150,7 +158,12 @@ test_create_tcp_packet(u32_t src_ip4, u32_t dst_ip4,
   src_ip.u_addr.ip4.addr = src_ip4;
   dst_ip.u_addr.ip4.addr = dst_ip4;
 
-  p = pbuf_alloc(PBUF_RAW, pbuf_len, PBUF_POOL);
+  if (packet_type == PACKET_PBUF_RAM) {
+      p = pbuf_alloc(PBUF_RAW, pbuf_len, PBUF_RAM);
+  } else {
+      p = pbuf_alloc(PBUF_RAW, pbuf_len, PBUF_REF);
+      p->payload = packet_buffer;
+  }
   EXPECT_RETNULL(p != NULL);
   /* first pbuf must be big enough to hold the headers */
   EXPECT_RETNULL(p->len >= (sizeof(struct ip_hdr) + sizeof(struct tcp_hdr)));
@@ -170,10 +183,8 @@ test_create_tcp_packet(u32_t src_ip4, u32_t dst_ip4,
   iphdr->_proto = IP_PROTO_TCP;
   IPH_CHKSUM_SET(iphdr, inet_chksum(iphdr, IP_HLEN));
 
-  /* let p point to TCP header */
-  pbuf_header(p, -(s16_t)sizeof(struct ip_hdr));
-
-  tcphdr = (struct tcp_hdr*)p->payload;
+  /* let tcphdr point to TCP header */
+  tcphdr = (struct tcp_hdr*)((char*)p->payload + sizeof(struct ip_hdr));
   tcphdr->src   = htons(src_port);
   tcphdr->dest  = htons(dst_port);
   tcphdr->seqno = htonl(seqno);
@@ -185,8 +196,6 @@ test_create_tcp_packet(u32_t src_ip4, u32_t dst_ip4,
   /* calculate checksum */
   tcphdr->chksum = ip_chksum_pseudo(p,
           IP_PROTO_TCP, p->tot_len, &src_ip, &dst_ip);
-
-  pbuf_header(p, sizeof(struct ip_hdr));
 
   return p;
 }
@@ -398,14 +407,12 @@ START_TEST(test_ip4_route_netif_napt_udp)
 }
 END_TEST
 
-START_TEST(test_ip4_route_netif_napt_tcp)
+static void test_ip4_route_netif_napt_tcp_with_params(u16_t tcp_port, packet_type_t packet_type)
 {
-#define TCP_PORT 2222
   ip4_addr_t addr, src_addr, sta_addr;
   ip4_addr_t netmask;
   ip4_addr_t gw;
   struct pbuf *p;
-  LWIP_UNUSED_ARG(_i);
 
   /* setup station */
   IP4_ADDR(&sta_addr, 1, 2, 4, 4);
@@ -425,8 +432,8 @@ START_TEST(test_ip4_route_netif_napt_tcp)
   /* create packet and send it to the AP */
   IP4_ADDR(&addr, 1, 2, 4, 100);
   IP4_ADDR(&src_addr, 10, 0, 0, 2);
-  p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT, TCP_PORT, 0, 0, TCP_SYN, 0);
- 
+  p = test_create_tcp_packet(src_addr.addr, addr.addr, tcp_port, tcp_port, TCP_SYN, packet_type);
+
   random_mock = 2;
   send_to_netif(&ap, p);
 
@@ -436,12 +443,12 @@ START_TEST(test_ip4_route_netif_napt_tcp)
   fail_unless(ap_cnt == 0);
   fail_unless(sta_cnt == 1);
 
-  p = test_create_tcp_packet(addr.addr, sta_addr.addr, TCP_PORT, IP_NAPT_PORT_RANGE_START+random_mock, 0, 0, TCP_SYN|TCP_ACK, 0);
+  p = test_create_tcp_packet(addr.addr, sta_addr.addr, tcp_port, IP_NAPT_PORT_RANGE_START+random_mock, TCP_SYN|TCP_ACK, packet_type);
   send_to_netif(&sta, p);
   fail_unless(ap_cnt == 1);
   fail_unless(sta_cnt == 1);
   /* expect to see a random port and translated source address to be station address */
-  fail_unless(last_src_port == lwip_ntohs(TCP_PORT));
+  fail_unless(last_src_port == lwip_ntohs(tcp_port));
   fail_unless(last_dst_addr == src_addr.addr);
 
   /* cleanup */
@@ -450,14 +457,25 @@ START_TEST(test_ip4_route_netif_napt_tcp)
   netif_remove(&ap);
   netif_set_down(&sta);
   netif_remove(&sta);
+}
 
-#undef TCP_PORT
+START_TEST(test_ip4_route_netif_napt_tcp)
+{
+    test_ip4_route_netif_napt_tcp_with_params(2222, PACKET_PBUF_RAM);
+}
+END_TEST
+
+START_TEST(test_ip4_route_netif_napt_tcp_PBUF_REF)
+{
+    test_ip4_route_netif_napt_tcp_with_params(4567, PACKET_PBUF_REF);
 }
 END_TEST
 
 START_TEST(test_ip4_route_netif_max_napt)
 {
 #define TCP_PORT 2222
+  int i;
+  packet_type_t packet_type = PACKET_PBUF_RAM;
   ip4_addr_t addr, src_addr, sta_addr;
   ip4_addr_t netmask;
   ip4_addr_t gw;
@@ -482,9 +500,9 @@ START_TEST(test_ip4_route_netif_max_napt)
   /* create packet and send it to the AP */
   IP4_ADDR(&addr, 1, 2, 4, 100);
   IP4_ADDR(&src_addr, 10, 0, 0, 2);
-  for (int i=0; i<IP_NAPT_MAX*2; ++i) {
+  for (i=0; i<IP_NAPT_MAX*2; ++i) {
     random_mock = i;
-    p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT + i, TCP_PORT + i, 0, 0, TCP_SYN, 0);
+    p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT + i, TCP_PORT + i, TCP_SYN, packet_type);
     send_to_netif(&ap, p);
 
     if (i<IP_NAPT_MAX) {
@@ -492,7 +510,7 @@ START_TEST(test_ip4_route_netif_max_napt)
       fail_unless(last_src_port == lwip_ntohs(IP_NAPT_PORT_RANGE_START+random_mock));
       fail_unless(last_src_addr == sta_addr.addr);
       fail_unless(sta_cnt == 1+i);
-      p = test_create_tcp_packet(addr.addr, sta_addr.addr, TCP_PORT+i, IP_NAPT_PORT_RANGE_START+random_mock, 0, 0, TCP_SYN | TCP_ACK, 0);
+      p = test_create_tcp_packet(addr.addr, sta_addr.addr, TCP_PORT+i, IP_NAPT_PORT_RANGE_START+random_mock, TCP_SYN | TCP_ACK, packet_type);
       send_to_netif(&sta, p);
 
     } else {
@@ -503,26 +521,26 @@ START_TEST(test_ip4_route_netif_max_napt)
 
   /* moves time forward to test releasing: */
   lwip_sys_now += IP_NAPT_TIMEOUT_MS_TCP_DISCON + 1;
-  p = test_create_tcp_packet(addr.addr, sta_addr.addr, TCP_PORT, IP_NAPT_PORT_RANGE_START+0, 0, 0, TCP_PSH, 0);
+  p = test_create_tcp_packet(addr.addr, sta_addr.addr, TCP_PORT, IP_NAPT_PORT_RANGE_START+0, TCP_PSH, packet_type);
   send_to_netif(&sta, p);
-  p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT + IP_NAPT_MAX*2, TCP_PORT + IP_NAPT_MAX*2, 0, 0, TCP_PSH | TCP_ACK, 0);
+  p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT + IP_NAPT_MAX*2, TCP_PORT + IP_NAPT_MAX*2, TCP_PSH | TCP_ACK, packet_type);
   sta_cnt = 0;
   send_to_netif(&ap, p);
   /* should not be released yet, since all the TCP connections are active */
   fail_unless(sta_cnt == 0);  /* expect no packet forwarded */
 
   /* FIN the first connection so it could be released */
-  p = test_create_tcp_packet(addr.addr, sta_addr.addr, TCP_PORT+0, IP_NAPT_PORT_RANGE_START+0, 0, 0, TCP_FIN, 0);
+  p = test_create_tcp_packet(addr.addr, sta_addr.addr, TCP_PORT+0, IP_NAPT_PORT_RANGE_START+0, TCP_FIN, packet_type);
   send_to_netif(&sta, p);
-  p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT+0, TCP_PORT + 0, 0, 0, TCP_FIN | TCP_ACK, 0);
+  p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT+0, TCP_PORT + 0, TCP_FIN | TCP_ACK, packet_type);
   send_to_netif(&ap, p);
-  p = test_create_tcp_packet(addr.addr, sta_addr.addr, TCP_PORT+0, IP_NAPT_PORT_RANGE_START+0, 0, 0, TCP_ACK, 0);
+  p = test_create_tcp_packet(addr.addr, sta_addr.addr, TCP_PORT+0, IP_NAPT_PORT_RANGE_START+0, TCP_ACK, packet_type);
   send_to_netif(&sta, p);
   /* moves time forward to test releasing: */
   lwip_sys_now += IP_NAPT_TIMEOUT_MS_TCP_DISCON + 1;
 
   /* now sending a new packet with max port, that should be forwarded */  
-  p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT + IP_NAPT_MAX*2, TCP_PORT + IP_NAPT_MAX*2, 0, 0, TCP_SYN, 0);
+  p = test_create_tcp_packet(src_addr.addr, addr.addr, TCP_PORT + IP_NAPT_MAX*2, TCP_PORT + IP_NAPT_MAX*2, TCP_SYN, packet_type);
   random_mock = 0;
   sta_cnt = 0;
   send_to_netif(&ap, p);
@@ -552,6 +570,7 @@ ip4route_suite(void)
 #if IP_NAPT
     TESTFUNC(test_ip4_route_netif_napt_udp),
     TESTFUNC(test_ip4_route_netif_napt_tcp),
+    TESTFUNC(test_ip4_route_netif_napt_tcp_PBUF_REF),
     TESTFUNC(test_ip4_route_netif_max_napt),
     
 #endif

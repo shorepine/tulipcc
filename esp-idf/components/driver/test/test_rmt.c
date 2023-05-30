@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021 Espressif Systems (Shanghai) CO LTD
+ * SPDX-FileCopyrightText: 2021-2022 Espressif Systems (Shanghai) CO LTD
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -22,7 +22,7 @@
 #define RMT_TX_CHANNEL_ENCODING_END   (SOC_RMT_TX_CANDIDATES_PER_GROUP-1)
 
 // CI ONLY: Don't connect any other signals to this GPIO
-#define RMT_DATA_IO (4) // bind signal RMT_SIG_OUT0_IDX and RMT_SIG_IN0_IDX on the same GPIO
+#define RMT_DATA_IO (0) // bind signal RMT_SIG_OUT0_IDX and RMT_SIG_IN0_IDX on the same GPIO
 
 #define RMT_TESTBENCH_FLAGS_ALWAYS_ON (1<<0)
 #define RMT_TESTBENCH_FLAGS_CARRIER_ON (1<<1)
@@ -211,11 +211,14 @@ TEST_CASE("RMT multiple channels", "[rmt]")
 TEST_CASE("RMT install/uninstall test", "[rmt]")
 {
     rmt_config_t tx_cfg = RMT_DEFAULT_CONFIG_TX(RMT_DATA_IO, RMT_TX_CHANNEL_ENCODING_END);
+    // uninstall function is allowed to be called at any time
+    TEST_ESP_OK(rmt_driver_uninstall(tx_cfg.channel));
     TEST_ESP_OK(rmt_config(&tx_cfg));
     for (int i = 0; i < 100; i++) {
         TEST_ESP_OK(rmt_driver_install(tx_cfg.channel, 1000, 0));
         TEST_ESP_OK(rmt_driver_uninstall(tx_cfg.channel));
     }
+    TEST_ESP_OK(rmt_driver_uninstall(tx_cfg.channel));
     rmt_config_t rx_cfg = RMT_DEFAULT_CONFIG_RX(RMT_DATA_IO, RMT_RX_CHANNEL_ENCODING_START);
     TEST_ESP_OK(rmt_config(&rx_cfg));
     for (int i = 0; i < 100; i++) {
