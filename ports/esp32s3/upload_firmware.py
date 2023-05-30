@@ -63,3 +63,4 @@ fn = "tulipcc-" + bd_p + "-" + info[1].replace("-dirty", "") + ".bin"
 print(fn)
 os.system("cp build/micropython.bin %s" % (fn))
 upload(fn)
+os.remove(fn)
