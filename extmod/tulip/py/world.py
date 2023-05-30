@@ -13,6 +13,7 @@ world_token = "syt_dHVsaXA_lPADiXCwKdCJvreALSul_0ody9J"
 host = "duraflame.rosaline.org"
 room_id = "!rGPkdYQOECXDlTVoGe:%s" % (host)
 files_room_id = "!MuceoboBAfueEttdFw:%s" % (host)
+firmware_room_id = "!eMmMZLncsdKrMOFTMM:%s" % (host)
 last_message = None
 
 # micropython version of uuid from micropython-lib
@@ -70,7 +71,7 @@ def _isdir(filename):
     return (os.stat(filename)[0] & 0o40000) > 0
 
 # Uploads a file or folder from Tulip to Tulip World
-def upload(filename, content_type="application/octet-stream"):
+def upload(filename, content_type="application/octet-stream", room_id=files_room_id):
     tar = False
     url = "https://%s/_matrix/media/v3/upload?filename=%s" % (host, filename)
     tulip.display_stop()
@@ -84,16 +85,16 @@ def upload(filename, content_type="application/octet-stream"):
     tulip.display_start()
     # Now make an event / message
     data={"info":{"mimetype":content_type},"msgtype":"m.file","body":filename,"url":uri}
-    url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, files_room_id, "m.room.message", str(uuid4()))
+    url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, room_id, "m.room.message", str(uuid4()))
     matrix_put(url, data)
     print("Uploaded %s to Tulip World." % (filename))
     if(tar):
         os.remove(filename)
 
 # returns all the files within limit
-def files(limit=5000): 
+def files(limit=5000, room_id=files_room_id): 
     f = []
-    url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,files_room_id,limit)
+    url = "https://%s/_matrix/client/r0/rooms/%s/initialSync?limit=%d" % (host,room_id,limit)
     data = matrix_get(url)
     grab_url = None
     for e in data.json()['messages']['chunk']:
