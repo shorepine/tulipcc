@@ -487,6 +487,7 @@ tulip.tfb_log_stop() # stops
 
 ## Sprites
 You can have up to 32 sprites on screen at once, and have 32KB of bitmap data to store them in. Sprites have collision detection built in.
+Sprites are drawn in order of sprite index, so sprite index 5 will draw on top of sprite index 3 if they share pixel space.
 
 ```python
 # Load the data from a PNG file into sprite RAM at the memory position (0-32767). 
