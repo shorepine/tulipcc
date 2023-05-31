@@ -216,9 +216,8 @@ uint8_t sprite_ids[1024];
                                 if(overlap_sprite!=255) { // sprite already here!
                                     uint16_t field = s * (s - 1) / 2 + overlap_sprite;
                                     collision_bitfield[field / 8] |= 1 << (field % 8);
-                                } else {
-                                    sprite_ids[col_px] = s;
                                 }
+                                sprite_ids[col_px] = s;
                             }
                         }
                     } // end for each column
