@@ -386,11 +386,11 @@ int8_t oscs_init() {
     pcm_init();
     // for tulip, we may want to alloc these in spiram
     events = (struct delta*)malloc_caps(sizeof(struct delta) * EVENT_FIFO_LEN, MALLOC_CAP_SPIRAM);
-    synth = (struct event*) malloc_caps(sizeof(struct event) * OSCS, MALLOC_CAP_SPIRAM);
-    msynth = (struct mod_event*) malloc_caps(sizeof(struct mod_event) * OSCS, MALLOC_CAP_SPIRAM);
+    synth = (struct event*) malloc_caps(sizeof(struct event) * OSCS, MALLOC_CAP_INTERNAL);
+    msynth = (struct mod_event*) malloc_caps(sizeof(struct mod_event) * OSCS, MALLOC_CAP_INTERNAL);
 
     // maybe not this
-    block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE * NCHANS, MALLOC_CAP_INTERNAL);//dbl_block[0];
+    block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE * NCHANS, MALLOC_CAP_SPIRAM);//dbl_block[0];
     // set all oscillators to their default values
     amy_reset_oscs();
 
@@ -412,10 +412,10 @@ int8_t oscs_init() {
         events[i].data = 0;
         events[i].param = NO_PARAM;
     }
-    fbl = (float**) malloc_caps(sizeof(float*) * AMY_CORES, MALLOC_CAP_INTERNAL); // one per core, just core 0 used off esp32
+    fbl = (float**) malloc_caps(sizeof(float*) * AMY_CORES, MALLOC_CAP_SPIRAM); // one per core, just core 0 used off esp32
     // clear out both as local mode won't use fbl[1] 
     for(uint16_t core=0;core<AMY_CORES;++core) {
-        fbl[core]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE * NCHANS, MALLOC_CAP_INTERNAL);
+        fbl[core]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE * NCHANS, MALLOC_CAP_SPIRAM);
         for(uint16_t c=0;c<NCHANS;++c) {
             for(uint16_t i=0;i<BLOCK_SIZE;i++) { 
                 fbl[core][BLOCK_SIZE*c + i] = 0; 
@@ -498,12 +498,23 @@ void osc_note_on(uint8_t osc) {
     if(synth[osc].wave==PARTIALS) partials_note_on(osc);
 }
 
+extern const float sine_lutable_0[256];
+
 // play an event, now -- tell the audio loop to start making noise
 void play_event(struct delta d) {
     uint8_t trig=0;
     // todo: event-only side effect, remove
     if(d.param == MIDI_NOTE) { synth[d.osc].midi_note = *(uint16_t *)&d.data; synth[d.osc].freq = freq_for_midi_note(*(uint16_t *)&d.data); } 
-    if(d.param == WAVE) synth[d.osc].wave = *(int16_t *)&d.data; 
+
+    if(d.param == WAVE) {
+        synth[d.osc].wave = *(int16_t *)&d.data; 
+        // todo: event-only side effect, remove
+        // we do this because we need to set up LUTs for FM oscs. it's a TODO to make this cleaner 
+        if(synth[d.osc].wave == SINE) {
+            synth[d.osc].lut = sine_lutable_0;
+            synth[d.osc].lut_size = 256;
+        }
+    }
     if(d.param == PHASE) synth[d.osc].phase = *(float *)&d.data;
     if(d.param == PAN) { synth[d.osc].pan = *(float *)&d.data; /*fprintf(stderr, "pan osc %d is now %f\n", d.osc, synth[d.osc].pan);*/ }
     if(d.param == PATCH) synth[d.osc].patch = *(int16_t *)&d.data;

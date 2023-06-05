@@ -381,6 +381,9 @@ void render_fm_sine(float *buf, uint8_t osc, float *mod, float feedback_level, u
     }
     float step = msynth[osc].freq / (float)SAMPLE_RATE;
     float amp = msynth[osc].amp;
+    //if(synth[osc].lut_size != 256) { 
+    //    fprintf(stderr, "xx osc %d algo_osc %d lut_size %d\n", osc, algo_osc, synth[osc].lut_size);
+    //}
     synth[osc].phase = render_lut_fm_osc(buf, synth[osc].phase, step, synth[osc].last_amp, amp, 
                  synth[osc].lut, synth[osc].lut_size, mod, feedback_level, synth[osc].last_two);
     synth[osc].last_amp = amp;
