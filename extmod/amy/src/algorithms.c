@@ -78,7 +78,8 @@ struct FmAlgorithm algorithms[33] = {
 };
 // End of MSFA stuff
 
-float zeros[BLOCK_SIZE];
+//float zeros0[BLOCK_SIZE];
+//float zeros1[BLOCK_SIZE];
 
 
 // a = 0
@@ -212,16 +213,17 @@ void algo_note_on(uint8_t osc) {
     }            
 }
 
+
 void algo_init() {
-    for(uint16_t i=0;i<BLOCK_SIZE;i++) zeros[i] = 0;
+//    for(uint16_t i=0;i<BLOCK_SIZE;i++) zeros0[i] = 0;
+//    for(uint16_t i=0;i<BLOCK_SIZE;i++) zeros1[i] = 0;
 }
 
 
 
 
 void render_algo(float * buf, uint8_t osc) { 
-    float scratch[5][BLOCK_SIZE];
-
+    float scratch[6][BLOCK_SIZE];
     struct FmAlgorithm algo = algorithms[synth[osc].algorithm];
 
     // starts at op 6
@@ -229,14 +231,13 @@ void render_algo(float * buf, uint8_t osc) {
     float *out_buf = NULL;
 
     // TODO, i think i need at most 2 of these buffers, maybe 3?? 
-    zero(scratch[0]);
-    zero(scratch[1]);
-    zero(scratch[2]);
-    zero(scratch[3]);
-    zero(scratch[4]);
+    for(uint8_t i=0;i<6;i++) {
+        zero(scratch[i]);
+    }
     uint8_t ops_used = 0;
     for(uint8_t op=0;op<MAX_ALGO_OPS;op++) {
         if(synth[osc].algo_source[op] >=0 && synth[synth[osc].algo_source[op]].status == IS_ALGO_SOURCE) {
+
             ops_used++;
             float feedback_level = 0;
             if(algo.ops[op] & FB_IN) { 
@@ -249,7 +250,8 @@ void render_algo(float * buf, uint8_t osc) {
                 in_buf = scratch[1]; 
             } else {
                 // no in_buf
-                in_buf = zeros;
+                in_buf = scratch[5];
+                //if(osc>31) { in_buf = zeros1; } else { in_buf = zeros0; }
             }
 
             if(!(algo.ops[op] & OUT_BUS_ADD)) {

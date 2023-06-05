@@ -181,7 +181,7 @@ void mp_task(void *pvParameter) {
     mp_thread_init(pxTaskGetStackStart(NULL), TULIP_MP_TASK_STACK_SIZE / sizeof(uintptr_t));
     #endif
     #if CONFIG_USB_ENABLED
-    usb_init();
+    //usb_init();
     #elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     //usb_serial_jtag_init();
     #endif
@@ -349,28 +349,42 @@ void app_main(void) {
     idle_0_handle = xTaskGetIdleTaskHandleForCPU(0);
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
-    printf("Starting MIDI on core %d\n", MIDI_TASK_COREID);
+    fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
     xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
+    fflush(stderr);
+    delay_ms(10);
 
-    printf("Starting USB host on core %d\n", USB_TASK_COREID);
+    fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
     usbh_setup(show_config_desc_full);
     xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
+    fflush(stderr);
+    delay_ms(10);
 
-    printf("Starting display on core %d\n", DISPLAY_TASK_COREID);
+    fprintf(stderr,"Starting display on core %d\n", DISPLAY_TASK_COREID);
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
+    fflush(stderr);
+    delay_ms(10);
 
-    printf("Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
+    fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
     ft5x06_init();
     xTaskCreatePinnedToCore(run_ft5x06, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
+    fflush(stderr);
+    delay_ms(10);
 
-    printf("Starting Alles on core %d\n", ALLES_TASK_COREID);
+    fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
+    fflush(stderr);
+    delay_ms(100);
 
-    printf("Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
+    fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
+    fflush(stderr);
+    delay_ms(10);
 
-    printf("Starting joystick\n");
+    fprintf(stderr,"Starting joystick\n");
     init_esp_joy();
+    fflush(stderr);
+    delay_ms(10);
 }
 
 void nlr_jump_fail(void *val) {

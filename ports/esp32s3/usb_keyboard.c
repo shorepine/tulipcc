@@ -48,16 +48,16 @@ void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *
   {
     /**< A new device has been enumerated and added to the USB Host Library */
     case USB_HOST_CLIENT_EVENT_NEW_DEV:
-      printf("New device address: %d\n", event_msg->new_dev.address);
+      //printf("New device address: %d\n", event_msg->new_dev.address);
       err = usb_host_device_open(Client_Handle, event_msg->new_dev.address, &Device_Handle);
       if (err != ESP_OK) printf("usb_host_device_open: %x\n", err);
 
       usb_device_info_t dev_info;
       err = usb_host_device_info(Device_Handle, &dev_info);
       if (err != ESP_OK) printf("usb_host_device_info: %x\n", err);
-      printf("speed: %d dev_addr %d vMaxPacketSize0 %d bConfigurationValue %d\n",
-          dev_info.speed, dev_info.dev_addr, dev_info.bMaxPacketSize0,
-          dev_info.bConfigurationValue);
+      //printf("speed: %d dev_addr %d vMaxPacketSize0 %d bConfigurationValue %d\n",
+      //    dev_info.speed, dev_info.dev_addr, dev_info.bMaxPacketSize0,
+      //    dev_info.bConfigurationValue);
 
       const usb_device_desc_t *dev_desc;
       err = usb_host_get_device_descriptor(Device_Handle, &dev_desc);
@@ -222,7 +222,7 @@ void prepare_endpoint(const void *p)
     KeyboardIn->context = NULL;
     isKeyboardReady = true;
     KeyboardInterval = endpoint->bInterval;
-    printf("USB boot keyboard ready\n");
+    //printf("USB boot keyboard ready\n");
   }
   else {
     printf("Ignoring interrupt Out endpoint\n");
