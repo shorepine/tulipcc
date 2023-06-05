@@ -34,6 +34,7 @@ bool isKeyboardReady = false;
 uint8_t KeyboardInterval;
 bool isKeyboardPolling = false;
 int64_t KeyboardTimer=0;
+int64_t KeyRepeatTimer=0;
 
 
 
@@ -138,7 +139,7 @@ void decode_report(uint8_t *p) {
     uint8_t new_key = 0;
     // Second byte, reserved
     // next 6 bytes, scan codes (for rollover)
-    //printf("decode report %d %d %d %d %d %d\n", p[2],p[3],p[4],p[5],p[6],p[7]);
+    //fprintf(stderr,"decode report %d %d %d %d %d %d\n", p[2],p[3],p[4],p[5],p[6],p[7]);
     for(uint8_t i=2;i<8;i++) {
 		if(p[i]!=0) {
 			uint8_t skip = 0;
@@ -151,14 +152,15 @@ void decode_report(uint8_t *p) {
                     new_key = 1;
                     current_held_ms = esp_timer_get_time()/1000;
                     current_held = c; 
+                    //fprintf(stderr, "sending new key %d to MP at time %lld\n", c, current_held_ms);
                     send_key_to_micropython(c);
-				}
-			}
-			
+                }
+            }	
 		} 
     }
     if(!new_key) {
         // we got a message but no new keys. so is a release
+        //fprintf(stderr, "turning off key\n");
         current_held_ms = 0;
         current_held = 0;
         last_inter_trigger_ms = 0;
@@ -171,6 +173,7 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
   if (Device_Handle == transfer->device_handle) {
     isKeyboardPolling = false;
     if (transfer->status == 0) {
+        //fprintf(stderr, "nb is %d\n", transfer->actual_num_bytes);
       if (transfer->actual_num_bytes == 8 || transfer->actual_num_bytes == 16) {
         uint8_t *const p = transfer->data_buffer;
         decode_report(p);
@@ -283,13 +286,14 @@ void run_usb()
   while(1) {
       usbh_task();
       KeyboardTimer = esp_timer_get_time() / 1000;
+      KeyRepeatTimer = esp_timer_get_time() / 1000;
 
       // Handle key repeat
       if(current_held > 0) {
-        if(KeyboardTimer - current_held_ms > KEY_REPEAT_TRIGGER_MS) {
-            if(KeyboardTimer - last_inter_trigger_ms > KEY_REPEAT_INTER_MS) {
+        if(KeyRepeatTimer - current_held_ms > KEY_REPEAT_TRIGGER_MS) {
+            if(KeyRepeatTimer - last_inter_trigger_ms > KEY_REPEAT_INTER_MS) {
                 send_key_to_micropython(current_held);
-                last_inter_trigger_ms = KeyboardTimer;
+                last_inter_trigger_ms = KeyRepeatTimer;
             }
         }
       }
