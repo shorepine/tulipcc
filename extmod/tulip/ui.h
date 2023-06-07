@@ -5,7 +5,7 @@
 #include "display.h"
 #include "bresenham.h"
 #include "keyscan.h"
-#define MAX_UI_ELEMENTS 255
+#define MAX_UI_ELEMENTS 254
 
 #define UI_NONE 0
 #define UI_BUTTON 1
@@ -32,7 +32,7 @@ struct ui_element {
 
 struct ui_element ** elements;
 
-int8_t ui_id_held;
+uint8_t ui_id_held;
 
 
 void tulip_ui_isr(uint8_t ui_id);

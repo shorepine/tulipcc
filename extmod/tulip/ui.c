@@ -280,7 +280,7 @@ void ui_init() {
     for(uint8_t i=0;i<MAX_UI_ELEMENTS;i++) {
         elements[i] = NULL;
     }
-    ui_id_held = -1;
+    ui_id_held = 255;
 }
 
 
@@ -310,12 +310,12 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
             }
         } else { // no element was touched on up
             // In case the pointer moved out of bounds before going up
-            if(ui_id_held >= 0) {
+            if(ui_id_held != 255) {
                 ui_button_flip(ui_id_held);
             }
         }
         tulip_touch_isr(up);
-        ui_id_held = -1;
+        ui_id_held = 255;
     } else if(touch_held && !up) { // this is a continuous hold -- update sliders, etc 
         //fprintf(stderr, "down hold\n") ;
         int8_t ui_id = ui_bounds(touch_x, touch_y);
