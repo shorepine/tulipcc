@@ -119,7 +119,7 @@ def ui_callback(x):
 
 tulip.ui_callback(ui_callback)
 
-# You can set up to 255 UI elements
+# You can set up to 254 UI elements
 tulip.ui_button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
 
 # Sliders -- if w > h, it will be a horizontal slider, vertical otherwise
