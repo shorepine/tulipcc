@@ -15,7 +15,8 @@
 #define UI_TEXT 5
 
 #define UI_TEXT_MAX_LEN 32
-// TODO - put this in PSRAM instead
+
+
 struct ui_element {
     uint8_t active;
     uint16_t x;
@@ -30,13 +31,28 @@ struct ui_element {
     uint8_t type;
 };
 
+struct bg_element {
+    uint16_t x;
+    uint16_t y;
+    uint16_t w;
+    uint16_t h;
+    uint8_t up;
+};
+
+
 struct ui_element ** elements;
+struct bg_element ** bg_elements;
 
 uint8_t ui_id_held;
 
+uint8_t bg_touch_up(uint8_t ui_id);
+void bg_touch_register(uint8_t ui_id, uint16_t x, uint16_t y, uint16_t w, uint16_t h);
+void bg_touch_deregister(uint8_t ui_id);
 
 void tulip_ui_isr(uint8_t ui_id);
 void tulip_touch_isr(uint8_t up);
+void tulip_bg_touch_isr(uint8_t id);
+
 void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up);
 
 void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t fgc, uint8_t bc, uint8_t filled, uint8_t font_no);

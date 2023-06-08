@@ -364,6 +364,7 @@ mp_obj_t frame_arg = NULL;
 mp_obj_t midi_callback = NULL; 
 mp_obj_t ui_callback = NULL; 
 mp_obj_t touch_callback = NULL; 
+mp_obj_t bg_touch_callback = NULL; 
 
 
 void tulip_frame_isr() {
@@ -389,6 +390,12 @@ void tulip_ui_isr(uint8_t ui_id) {
 void tulip_touch_isr(uint8_t up) {
     if(touch_callback != NULL) {
         mp_sched_schedule(touch_callback, mp_obj_new_int(up)); 
+    }
+}
+
+void tulip_bg_touch_isr(uint8_t id) {
+    if(bg_touch_callback != NULL) {
+        mp_sched_schedule(bg_touch_callback, mp_obj_new_int(id)); 
     }
 }
 
@@ -450,8 +457,20 @@ STATIC mp_obj_t tulip_touch_callback(size_t n_args, const mp_obj_t *args) {
     }
     return mp_const_none;
 }
-
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_callback_obj, 0, 1, tulip_touch_callback);
+
+// tulip.bg_touch_callback(cb)
+// tulip.bg_touch_callback() -- stops 
+STATIC mp_obj_t tulip_bg_touch_callback(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 0) {
+        bg_touch_callback = NULL;
+    } else {
+        bg_touch_callback = args[0];
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_touch_callback_obj, 0, 1, tulip_bg_touch_callback);
 
 
 STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
@@ -802,6 +821,36 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_app_path_obj, 0, 0, tulip_app_p
 #endif
 
 
+//void bg_touch_register(uint8_t ui_id, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+//void bg_touch_deregister(uint8_t ui_id) {
+
+STATIC mp_obj_t tulip_bg_touch_up(size_t n_args, const mp_obj_t *args) {
+    uint8_t id = mp_obj_get_int(args[0]);
+    return mp_obj_new_int(bg_touch_up(id));
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_touch_up_obj, 1, 1, tulip_bg_touch_up);
+
+
+STATIC mp_obj_t tulip_bg_touch_register(size_t n_args, const mp_obj_t *args) {
+    uint8_t id = mp_obj_get_int(args[0]);
+    uint16_t x = mp_obj_get_int(args[1]);
+    uint16_t y = mp_obj_get_int(args[2]);
+    uint16_t w = mp_obj_get_int(args[3]);
+    uint16_t h = mp_obj_get_int(args[4]);
+    bg_touch_register(id,x,y,w,h);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_touch_register_obj, 5, 5, tulip_bg_touch_register);
+
+STATIC mp_obj_t tulip_bg_touch_del(size_t n_args, const mp_obj_t *args) {
+    uint8_t id = mp_obj_get_int(args[0]);
+    bg_touch_deregister(id);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_touch_del_obj, 1, 1, tulip_bg_touch_del);
 
 
 STATIC mp_obj_t tulip_bg_bezier(size_t n_args, const mp_obj_t *args) {
@@ -1136,6 +1185,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_callback), MP_ROM_PTR(&tulip_ui_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch_callback), MP_ROM_PTR(&tulip_touch_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_touch_callback), MP_ROM_PTR(&tulip_bg_touch_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
@@ -1161,6 +1211,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_touch_register), MP_ROM_PTR(&tulip_bg_touch_register_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_touch_up), MP_ROM_PTR(&tulip_bg_touch_up_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_touch_del), MP_ROM_PTR(&tulip_bg_touch_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_circle), MP_ROM_PTR(&tulip_bg_circle_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bezier), MP_ROM_PTR(&tulip_bg_bezier_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_line), MP_ROM_PTR(&tulip_bg_line_obj) },

@@ -260,7 +260,21 @@ void ui_slider_new(uint8_t ui_id, float val, uint16_t x, uint16_t y, uint16_t w,
     e->c1 = hc;
 }
 
-int8_t ui_bounds(uint16_t x, uint16_t y) {
+uint8_t bg_bounds(uint16_t x, uint16_t y) {
+    // find out if x&y are within bounds of any of the active elements, return the ID if so. return -1 if not
+    for(uint8_t i=0;i<MAX_UI_ELEMENTS;i++) {
+        struct bg_element * e = bg_elements[i];
+        if(e != NULL) {
+            if((x >= e->x) && (y >= e->y) && (x <= e->w + e->x) && (y <= e->y + e->h)) {
+                return i;
+            }
+        }
+    }
+    return 255; 
+}
+
+
+uint8_t ui_bounds(uint16_t x, uint16_t y) {
     // find out if x&y are within bounds of any of the active elements, return the ID if so. return -1 if not
     for(uint8_t i=0;i<MAX_UI_ELEMENTS;i++) {
         struct ui_element * e = elements[i];
@@ -272,15 +286,34 @@ int8_t ui_bounds(uint16_t x, uint16_t y) {
             }
         }
     }
-    return -1; // i want to thank dan ellis for his helpful bug fix
+    return 255; 
 }
 
 void ui_init() {
     elements = (struct ui_element **) malloc_caps(sizeof(struct ui_element*) * MAX_UI_ELEMENTS, MALLOC_CAP_SPIRAM);
+    bg_elements = (struct bg_element **) malloc_caps(sizeof(struct bg_element*) * MAX_UI_ELEMENTS, MALLOC_CAP_SPIRAM);
     for(uint8_t i=0;i<MAX_UI_ELEMENTS;i++) {
         elements[i] = NULL;
+        bg_elements[i] = NULL;
     }
     ui_id_held = 255;
+}
+
+uint8_t bg_touch_up(uint8_t ui_id) {
+    return bg_elements[ui_id]->up;
+}
+
+void bg_touch_register(uint8_t ui_id, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+    bg_elements[ui_id] = malloc_caps(sizeof(struct bg_element), MALLOC_CAP_SPIRAM);
+    bg_elements[ui_id]->x = x;
+    bg_elements[ui_id]->y = y;
+    bg_elements[ui_id]->w = w;
+    bg_elements[ui_id]->h = h;
+    bg_elements[ui_id]->up = 0;
+}
+void bg_touch_deregister(uint8_t ui_id) {
+    free_caps(bg_elements[ui_id]);
+    bg_elements[ui_id] = NULL;
 }
 
 
@@ -297,8 +330,8 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
             ui_text_entry_update(keyboard_grab_ui_focus, 13);
         }
         touch_held = 0;
-        int8_t ui_id = ui_bounds(touch_x, touch_y);
-        if(ui_id >= 0) { 
+        uint8_t ui_id = ui_bounds(touch_x, touch_y);
+        if(ui_id != 255) { 
             // Is this a text input?
             if(elements[ui_id]->type == UI_TEXT) {
                 // start taking in text input to replace the text of the button
@@ -316,6 +349,14 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
         }
         tulip_touch_isr(up);
         ui_id_held = 255;
+
+
+        // Check BG
+        uint8_t bg_id = bg_bounds(touch_x, touch_y);
+        if(bg_id != 255) {
+            bg_elements[bg_id]->up = 1;
+            tulip_bg_touch_isr(bg_id); // up
+        }
     } else if(touch_held && !up) { // this is a continuous hold -- update sliders, etc 
         //fprintf(stderr, "down hold\n") ;
         int8_t ui_id = ui_bounds(touch_x, touch_y);
@@ -328,8 +369,8 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
         tulip_touch_isr(up);
     } else if(!touch_held && !up) { // this is a new touch down 
         touch_held = 1;
-        int8_t ui_id = ui_bounds(touch_x, touch_y);
-        if(ui_id >= 0) {
+        uint8_t ui_id = ui_bounds(touch_x, touch_y);
+        if(ui_id != 255) {
             ui_button_flip(ui_id);
             if(elements[ui_id]->type == UI_SLIDER) {
                 ui_slider_set_val_xy(ui_id, touch_x, touch_y);
@@ -346,6 +387,15 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
             // make element active
         }
         tulip_touch_isr(up);
+
+        // Check BG
+        uint8_t bg_id = bg_bounds(touch_x, touch_y);
+        if(bg_id != 255) {
+            bg_elements[bg_id]->up = 0;
+
+            tulip_bg_touch_isr(bg_id); // down
+        }
+
     } else if(!touch_held && up) { // just moving the mouse around on desktop 
         //fprintf(stderr, "touch not held and up event\n");
     }
