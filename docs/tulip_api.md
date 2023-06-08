@@ -183,6 +183,16 @@ def touch_callback(up):
     print("up %d points x1 %d y1 %d" % (up, t[0], t[1]))
 
 tulip.touch_callback(cb)
+
+# Make your own elements on the BG with your own styling and set up your own callbacks to process them
+tulip.bg_rect(200,200,50,50,23,1)
+tulip.bg_touch_register(12, 200, 200, 50, 50) # 12 is an ID -- from 0-254
+def bgt(id):
+    print("Got a click on id %d. up was %d" % (id, tulip.bg_touch_up(id)) # bg_touch_up returns 1 for touch up
+
+tulip.bg_touch_callback(bgt)
+tulip.bg_touch_callback() # turns off
+tulip.bg_touch_del(12) # removes
 ```
 
 
