@@ -139,14 +139,16 @@ void decode_report(uint8_t *p) {
     // First byte, modifier mask
     uint8_t modifier = p[0];
     uint8_t new_key = 0;
+    uint8_t key_held_this_session = 0;
     // Second byte, reserved
     // next 6 bytes, scan codes (for rollover)
     //fprintf(stderr,"decode report %d %d %d %d %d %d\n", p[2],p[3],p[4],p[5],p[6],p[7]);
-    uint8_t skip = 0;
     for(uint8_t i=2;i<8;i++) {
-		  if(p[i]!=0) {
-			  for(uint8_t j=2;j<8;j++) {
-				  if(last_scan[j] == p[i]) skip = 1;
+        if(p[i]!=0) {
+            key_held_this_session = 1;
+            uint8_t skip = 0;
+            for(uint8_t j=2;j<8;j++) {
+        		if(last_scan[j] == p[i]) skip = 1;
   			}
 	  		if(!skip) { // only process new keys
 		        uint16_t c = scan_ascii(p[i], modifier);
@@ -158,9 +160,9 @@ void decode_report(uint8_t *p) {
                     send_key_to_micropython(c);
                 }
             }	
-		  } 
+		} 
     }
-    if(!new_key && !skip) {
+    if(!new_key && !key_held_this_session) {
         // we got a message but no new keys. so is a release
         //fprintf(stderr, "turning off key\n");
         current_held_ms = 0;
