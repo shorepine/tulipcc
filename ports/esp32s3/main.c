@@ -349,13 +349,13 @@ void app_main(void) {
     idle_0_handle = xTaskGetIdleTaskHandleForCPU(0);
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
+
     fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
     xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
 
     fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
-    usbh_setup(show_config_desc_full);
     xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
@@ -381,10 +381,13 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(10);
 
+
     fprintf(stderr,"Starting joystick\n");
     init_esp_joy();
     fflush(stderr);
     delay_ms(10);
+
+
 }
 
 void nlr_jump_fail(void *val) {
