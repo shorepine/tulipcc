@@ -144,6 +144,7 @@ STATIC mp_obj_t tulip_bg_pixel(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_pixel_obj, 2, 3, tulip_bg_pixel);
 
 
+
 // This version of bg_clear is 2.5x as fast as the old one, as it's just copying within SPIRAM.
 // tulip.bg_clear(pal_idx)
 // tulip.bg_clear() # uses default
