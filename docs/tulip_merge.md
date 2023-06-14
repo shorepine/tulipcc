@@ -51,7 +51,7 @@ So download their combined zip from their github release page and put it in `esp
 
 Run ./install.sh in it to make sure it grabs the latest toolchain. 
 
-It would be great to use 5.X to get a few key IDF features but until MP has ported their `esp32` port to it, it's going to be hard for us to do the same. 
+It would be great to use 5.X to get a few key IDF features but until MP has ported their `esp32` port to it, it's going to be hard for us to do the same. [They are tracking that progress here.](https://github.com/micropython/micropython/issues/11078)
 
 First, make sure the MP latest you got in the earlier step compiles fine in its `esp32` port. Just go into the `esp32` folder and do `source ../../esp-idf/export.sh`, then `make submodules`, `idf.py build`. That should make a working MP-only (no Tulip) bin to flash to a ESP. 
 
