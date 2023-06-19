@@ -18,6 +18,10 @@ If you're comfortable with surface mount soldering, you can put together your ow
 
 Almost_ any USB keyboard should work. Please ensure it's just a keyboard -- if it has a trackpad, or extra USB ports on it, or anything else, it likely [won't work as we only support single root USB devices.](https://github.com/bwhitman/tulipcc/issues/40).
 
+The keyboard USB connector can also be used to connect a USB-MIDI (piano-style) keyboard, which should then be accessible via the [Tulip API](tulip_api.md) ```tulip.midi_in()``` command.
+
+Hot-swapping between a QWERTY keyboard and a MIDI keyboard probably doesn't work - just power off the Tulip before changing the device.
+
 If this looks too hard, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [with no soldering and a breadboard.](tulip_breadboard.md)
 
 ![Tulip Board](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/board_r7.png)
