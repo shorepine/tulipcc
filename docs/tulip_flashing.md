@@ -41,7 +41,7 @@ cd esp-idf
 source ./export.sh
 
 pip3 install Cython
-pip3 install littlefs-python # needed to flash the filesystem
+pip3 install littlefs-python==0.4.0 # needed to flash the filesystem
 cd ../ports/esp32s3
 ```
 
