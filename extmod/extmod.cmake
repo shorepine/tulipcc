@@ -6,6 +6,7 @@ set(MICROPY_OOFATFS_DIR "${MICROPY_DIR}/lib/oofatfs")
 set(MICROPY_SOURCE_EXTMOD
     ${MICROPY_DIR}/shared/libc/abort_.c
     ${MICROPY_DIR}/shared/libc/printf.c
+    ${MICROPY_EXTMOD_DIR}/btstack/modbluetooth_btstack.c
     ${MICROPY_EXTMOD_DIR}/machine_bitstream.c
     ${MICROPY_EXTMOD_DIR}/machine_i2c.c
     ${MICROPY_EXTMOD_DIR}/machine_mem.c
@@ -19,30 +20,29 @@ set(MICROPY_SOURCE_EXTMOD
     ${MICROPY_EXTMOD_DIR}/modnetwork.c
     ${MICROPY_EXTMOD_DIR}/modonewire.c
     ${MICROPY_EXTMOD_DIR}/moduasyncio.c
-    ${MICROPY_EXTMOD_DIR}/modubinascii.c
-    ${MICROPY_EXTMOD_DIR}/moducryptolib.c
+    ${MICROPY_EXTMOD_DIR}/modbinascii.c
+    ${MICROPY_EXTMOD_DIR}/modcryptolib.c
     ${MICROPY_EXTMOD_DIR}/moductypes.c
-    ${MICROPY_EXTMOD_DIR}/moduhashlib.c
-    ${MICROPY_EXTMOD_DIR}/moduheapq.c
-    ${MICROPY_EXTMOD_DIR}/modujson.c
-    ${MICROPY_EXTMOD_DIR}/moduos.c
-    ${MICROPY_EXTMOD_DIR}/moduplatform.c
-    ${MICROPY_EXTMOD_DIR}/modurandom.c
-    ${MICROPY_EXTMOD_DIR}/modure.c
-    ${MICROPY_EXTMOD_DIR}/moduselect.c
-    ${MICROPY_EXTMOD_DIR}/modusocket.c
-    ${MICROPY_EXTMOD_DIR}/modussl_axtls.c
-    ${MICROPY_EXTMOD_DIR}/modussl_mbedtls.c
-    ${MICROPY_EXTMOD_DIR}/modutime.c
-    ${MICROPY_EXTMOD_DIR}/modutimeq.c
-    ${MICROPY_EXTMOD_DIR}/moduwebsocket.c
-    ${MICROPY_EXTMOD_DIR}/moduzlib.c
+    ${MICROPY_EXTMOD_DIR}/modhashlib.c
+    ${MICROPY_EXTMOD_DIR}/modheapq.c
+    ${MICROPY_EXTMOD_DIR}/modjson.c
+    ${MICROPY_EXTMOD_DIR}/modos.c
+    ${MICROPY_EXTMOD_DIR}/modplatform.c
+    ${MICROPY_EXTMOD_DIR}/modrandom.c
+    ${MICROPY_EXTMOD_DIR}/modre.c
+    ${MICROPY_EXTMOD_DIR}/modselect.c
+    ${MICROPY_EXTMOD_DIR}/modsocket.c
+    ${MICROPY_EXTMOD_DIR}/modssl_axtls.c
+    ${MICROPY_EXTMOD_DIR}/modssl_mbedtls.c
+    ${MICROPY_EXTMOD_DIR}/modtime.c
+    ${MICROPY_EXTMOD_DIR}/modwebsocket.c
+    ${MICROPY_EXTMOD_DIR}/modzlib.c
     ${MICROPY_EXTMOD_DIR}/modwebrepl.c
     ${MICROPY_EXTMOD_DIR}/network_cyw43.c
     ${MICROPY_EXTMOD_DIR}/network_lwip.c
     ${MICROPY_EXTMOD_DIR}/network_ninaw10.c
     ${MICROPY_EXTMOD_DIR}/network_wiznet5k.c
-    ${MICROPY_EXTMOD_DIR}/uos_dupterm.c
+    ${MICROPY_EXTMOD_DIR}/os_dupterm.c
     ${MICROPY_EXTMOD_DIR}/vfs.c
     ${MICROPY_EXTMOD_DIR}/vfs_blockdev.c
     ${MICROPY_EXTMOD_DIR}/vfs_fat.c
@@ -54,6 +54,31 @@ set(MICROPY_SOURCE_EXTMOD
     ${MICROPY_EXTMOD_DIR}/vfs_reader.c
     ${MICROPY_EXTMOD_DIR}/virtpin.c
     ${MICROPY_EXTMOD_DIR}/nimble/modbluetooth_nimble.c
+    ${MICROPY_EXTMOD_DIR}/tulip/modtulip.c
+    ${MICROPY_EXTMOD_DIR}/tulip/polyfills.c
+    ${MICROPY_EXTMOD_DIR}/tulip/lodepng.c
+    ${MICROPY_EXTMOD_DIR}/tulip/smallfont.c
+    ${MICROPY_EXTMOD_DIR}/tulip/display.c
+    ${MICROPY_EXTMOD_DIR}/tulip/bresenham.c
+    ${MICROPY_EXTMOD_DIR}/tulip/u8g2_fonts.c    
+    ${MICROPY_EXTMOD_DIR}/tulip/u8fontdata.c    
+    ${MICROPY_EXTMOD_DIR}/tulip/tulip_helpers.c
+    ${MICROPY_EXTMOD_DIR}/tulip/editor.c
+    ${MICROPY_EXTMOD_DIR}/tulip/keyscan.c
+    ${MICROPY_EXTMOD_DIR}/tulip/help.c
+    ${MICROPY_EXTMOD_DIR}/tulip/alles.c
+    ${MICROPY_EXTMOD_DIR}/tulip/ui.c
+    ${MICROPY_EXTMOD_DIR}/tulip/midi.c
+    ${MICROPY_EXTMOD_DIR}/tulip/sounds.c
+    ${MICROPY_EXTMOD_DIR}/amy/src/dsps_biquad_f32_ae32.S
+    ${MICROPY_EXTMOD_DIR}/amy/src/algorithms.c
+    ${MICROPY_EXTMOD_DIR}/amy/src/amy.c
+    ${MICROPY_EXTMOD_DIR}/amy/src/delay.c
+    ${MICROPY_EXTMOD_DIR}/amy/src/envelope.c
+    ${MICROPY_EXTMOD_DIR}/amy/src/filters.c
+    ${MICROPY_EXTMOD_DIR}/amy/src/oscillators.c
+    ${MICROPY_EXTMOD_DIR}/amy/src/partials.c
+    ${MICROPY_EXTMOD_DIR}/amy/src/pcm.c
 )
 
 # Library for btree module and associated code

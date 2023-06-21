@@ -1,5 +1,7 @@
 // midi.c
 #include "midi.h"
+uint8_t last_midi[MAX_MIDI_BYTES_PER_MESSAGE];
+uint8_t last_midi_len;
 
 
 void callback_midi_message_received(uint8_t *data, size_t len) {
@@ -14,6 +16,7 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
 }
 
 #ifdef ESP_PLATFORM
+QueueHandle_t uart_queue;
 
 void midi_out(uint8_t * bytes, uint16_t len) {
     uart_write_bytes(UART_NUM_1, bytes, len);
@@ -31,6 +34,7 @@ void run_midi() {
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .rx_flow_ctrl_thresh = 122,
+        .source_clk = UART_SCLK_DEFAULT
     };
 
     // Configure UART parameters

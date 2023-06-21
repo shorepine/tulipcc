@@ -20,6 +20,7 @@
 #include "esp_log.h"
 #include "string.h"
 #include "display.h"
+#include "soc/io_mux_reg.h"
 #include "ui.h"
 
 #define I2C_SCL                     17//11//47//17 //(3)
@@ -100,7 +101,7 @@ esp_err_t iot_ft5x06_read(ft5x06_handle_t dev, uint8_t start_addr,
         i2c_master_write_byte(cmd, (device->dev_addr << 1) | WRITE_BIT, ACK_CHECK_EN);
         i2c_master_write_byte(cmd, start_addr, ACK_CHECK_EN);
         i2c_master_stop(cmd);
-        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 50 / portTICK_RATE_MS);
+        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 50 / portTICK_PERIOD_MS);
         i2c_cmd_link_delete(cmd);
         if(ret != ESP_OK) {
             return ESP_FAIL;
@@ -113,7 +114,7 @@ esp_err_t iot_ft5x06_read(ft5x06_handle_t dev, uint8_t start_addr,
         }
         i2c_master_read_byte(cmd, &data_buf[read_num-1], NACK_VAL);
         i2c_master_stop(cmd);
-        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 50 / portTICK_RATE_MS);
+        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 50 / portTICK_PERIOD_MS);
         i2c_cmd_link_delete(cmd);
     }
     return ret;
@@ -131,7 +132,7 @@ esp_err_t iot_ft5x06_write(ft5x06_handle_t dev, uint8_t start_addr,
         i2c_master_write_byte(cmd, start_addr, ACK_CHECK_EN);
         i2c_master_write(cmd, data_buf, write_num, ACK_CHECK_EN);
         i2c_master_stop(cmd);
-        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_RATE_MS);
+        ret = iot_i2c_bus_cmd_begin(device->bus, cmd, 1000 / portTICK_PERIOD_MS);
         i2c_cmd_link_delete(cmd);
     }
     return ret;

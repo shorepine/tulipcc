@@ -125,7 +125,7 @@ STATIC size_t cursor_count_word(int forward) {
             break;
         }
 
-        if (unichar_mp_isalnum(line_buf[pos + (forward - 1)])) {
+        if (unichar_isalnum(line_buf[pos + (forward - 1)])) {
             in_word = true;
         } else if (in_word) {
             break;
@@ -244,7 +244,7 @@ int readline_process_char(int c) {
             // tab magic
             const char *compl_str;
             size_t compl_len;
-            if (vstr_len(rl.line) != 0 && unichar_mp_isspace(vstr_str(rl.line)[rl.cursor_pos - 1])) {
+            if (vstr_len(rl.line) != 0 && unichar_isspace(vstr_str(rl.line)[rl.cursor_pos - 1])) {
                 // expand tab to 4 spaces if it follows whitespace:
                 //  - includes the case of additional indenting
                 //  - includes the case of indenting the start of a line that's not the first line,

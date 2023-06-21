@@ -1,8 +1,9 @@
 #include "esp32s3_display.h"
 
-static TaskHandle_t xDisplayTask = NULL;
+//static TaskHandle_t xDisplayTask = NULL;
 esp_lcd_panel_handle_t panel_handle;
 esp_lcd_rgb_panel_config_t panel_config;
+esp_lcd_rgb_panel_event_callbacks_t panel_callbacks;
 
 
 // Defaults for esp32 display params
@@ -14,9 +15,8 @@ uint32_t VSYNC_FRONT_PORCH=DEFAULT_VSYNC_FRONT_PORCH;
 uint32_t VSYNC_PULSE_WIDTH=DEFAULT_VSYNC_PULSE_WIDTH;
 
 
-
 // This gets called at vsync / frame done
-static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
+static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
     TaskHandle_t task_to_notify = (TaskHandle_t)user_ctx;
     BaseType_t high_task_wakeup;
     display_frame_done_generic();
@@ -25,21 +25,29 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, esp_lc
 }
 
 
-void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9) {
-    display_stop();
+bool esp32s3_display_bounce_empty(esp_lcd_panel_handle_t panel_io, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
+    return display_bounce_empty(bounce_buf, pos_px, len_bytes, user_ctx);
+}
+
+
+void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9,uint32_t t10,uint32_t t11) {
     fprintf(stderr, "Stopping display task\n");
+    ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
+    display_stop();
     vTaskDelete(display_handle);
     display_teardown();
     H_RES = t0;
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
     OFFSCREEN_Y_PX = t3; 
-    HSYNC_BACK_PORCH = t4; 
-    HSYNC_FRONT_PORCH = t5; 
-    HSYNC_PULSE_WIDTH = t6; 
-    VSYNC_BACK_PORCH = t7; 
-    VSYNC_FRONT_PORCH = t8; 
-    VSYNC_PULSE_WIDTH = t9; 
+    H_RES_D = t4;
+    V_RES_D = t5;
+    HSYNC_BACK_PORCH = t6; 
+    HSYNC_FRONT_PORCH = t7; 
+    HSYNC_PULSE_WIDTH = t8; 
+    VSYNC_BACK_PORCH = t9; 
+    VSYNC_FRONT_PORCH = t10; 
+    VSYNC_PULSE_WIDTH = t11; 
     fprintf(stderr, "Restarting display task\n");
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
 }
@@ -51,6 +59,7 @@ void esp32s3_display_stop() {
 
 void esp32s3_display_start() {
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
 }
@@ -103,7 +112,6 @@ void display_brightness(uint8_t amount) {
 
 extern int64_t bounce_time;
 extern uint32_t bounce_count ;
-extern int32_t desync;
 
 // Task runner for the display, inits and then spins in a loop processing frame done ISRs
 void run_esp32s3_display(void) {
@@ -115,13 +123,13 @@ void run_esp32s3_display(void) {
         .mode = GPIO_MODE_OUTPUT,
         .pin_bit_mask = 1ULL << PIN_NUM_BK_LIGHT
     };
-    xDisplayTask = xTaskGetCurrentTaskHandle();
+    //xDisplayTask = xTaskGetCurrentTaskHandle();
     ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
 
     panel_handle = NULL;
     panel_config.data_width = BYTES_PER_PIXEL*8; 
     panel_config.psram_trans_align = 64;
-    panel_config.clk_src = LCD_CLK_SRC_PLL160M;
+    panel_config.clk_src = LCD_CLK_SRC_PLL240M;
     panel_config.disp_gpio_num = PIN_NUM_DISP_EN;
     panel_config.pclk_gpio_num = PIN_NUM_PCLK;
     panel_config.vsync_gpio_num = PIN_NUM_VSYNC;
@@ -155,17 +163,22 @@ void run_esp32s3_display(void) {
     panel_config.timings.vsync_back_porch = VSYNC_BACK_PORCH;
     panel_config.timings.vsync_front_porch = VSYNC_FRONT_PORCH;
     panel_config.timings.vsync_pulse_width = VSYNC_PULSE_WIDTH;
-    panel_config.flags.relax_on_idle = 0;
-    panel_config.flags.fb_in_psram = 0;
-    panel_config.on_frame_trans_done = display_frame_done;
-    panel_config.on_bounce_empty = display_bounce_empty;
-    panel_config.user_ctx = xDisplayTask;
-    panel_config.bounce_buffer_size_px = BOUNCE_BUFFER_SIZE_PX;
 
+    panel_config.num_fbs = 0; // we do this ourselves
+    panel_config.flags.fb_in_psram = 0;
+    panel_config.flags.no_fb = 1;
+    
+    panel_config.flags.bb_invalidate_cache = 0;
+
+    panel_config.bounce_buffer_size_px = BOUNCE_BUFFER_SIZE_PX;
     brightness = DEFAULT_BRIGHTNESS;
+
+    panel_callbacks.on_vsync = display_frame_done;
+    panel_callbacks.on_bounce_empty = esp32s3_display_bounce_empty;
 
     // Start the RGB panel
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
+    ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
     display_pwm_setup();
@@ -184,10 +197,9 @@ void run_esp32s3_display(void) {
         if(loop_count++ >= 100) {
             reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);
             reported_gpu_usage = ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))))*100.0;
-            if(desync) {
-                printf("Desync warning: past %d frames desync %d: %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). bounce_count %d\n", 
+            if(gpu_log) {
+                printf("past %d frames %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). bounce_count %ld\n", 
                     loop_count,
-                    desync,
                     reported_fps, 
                     free_time / loop_count,
                     bounce_time / bounce_count,
@@ -200,7 +212,6 @@ void run_esp32s3_display(void) {
             bounce_time = 0;
             loop_count = 0;
             free_time = 0;
-            desync = 0;
             tic0 = esp_timer_get_time();
         }        
     }

@@ -1,9 +1,57 @@
 #include "display.h"
 
+uint8_t bg_pal_color;
+uint8_t tfb_fg_pal_color;
+uint8_t tfb_bg_pal_color;
+uint8_t ansi_active_bg_color; 
+uint8_t ansi_active_fg_color; 
+int16_t ansi_active_format;
+
+int16_t last_touch_x[3];
+int16_t last_touch_y[3];
+uint8_t touch_held;
+uint8_t tfb_log;
+
+uint8_t tfb_active;
+uint8_t tfb_y_row; 
+uint8_t tfb_x_col; 
+uint8_t task_screenshot;
+uint8_t task_start;
+uint8_t task_stop;
+int32_t vsync_count;
+uint8_t brightness;
+float reported_fps;
+float reported_gpu_usage;
+
+uint8_t *collision_bitfield;
+// RAM for sprites and background FB
+uint8_t *sprite_ram; // in IRAM
+uint8_t * bg; // in SPIRAM
+
+
+uint16_t *sprite_x_px;//[SPRITES]; 
+uint16_t *sprite_y_px;//[SPRITES]; 
+uint16_t *sprite_w_px;//[SPRITES]; 
+uint16_t *sprite_h_px;//[SPRITES]; 
+uint8_t *sprite_vis;//[SPRITES];
+uint32_t *sprite_mem;//[SPRITES];
+
+uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
+uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
+uint8_t *TFBbg;//[TFB_ROWS][TFB_COLS];
+uint8_t *TFBf;//[TFB_ROWS][TFB_COLS];
+int16_t *x_offsets;//[V_RES];
+int16_t *y_offsets;//[V_RES];
+int16_t *x_speeds;//[V_RES];
+int16_t *y_speeds;//[V_RES];
+
+uint32_t **bg_lines;//[V_RES];
 
 // Defaults for runtime display params
 uint16_t H_RES = DEFAULT_H_RES;
 uint16_t V_RES = DEFAULT_V_RES;
+uint16_t H_RES_D = DEFAULT_H_RES;
+uint16_t V_RES_D = DEFAULT_V_RES;
 uint16_t OFFSCREEN_X_PX = DEFAULT_OFFSCREEN_X_PX;
 uint16_t OFFSCREEN_Y_PX = DEFAULT_OFFSCREEN_Y_PX;
 uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
@@ -11,6 +59,8 @@ uint16_t BOUNCE_BUFFER_SIZE_PX;
 uint16_t TFB_ROWS, TFB_COLS;
 uint8_t tfb_active = 1;
 uint8_t tfb_log = 0;
+uint8_t gpu_log = 0;
+
 
 uint8_t check_dim_xy(uint16_t x, uint16_t y) {
     if(x >= OFFSCREEN_X_PX + H_RES || y >= OFFSCREEN_Y_PX+V_RES) return 0;
@@ -109,9 +159,11 @@ uint8_t sprite_ids[1024];
 
 // Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
+
  bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
     int64_t tic=get_time_us(); // start the timer
     // Which pixel row and TFB row is this
+
     uint16_t starting_display_row_px = pos_px / H_RES;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
@@ -119,12 +171,39 @@ uint8_t sprite_ids[1024];
     int16_t touch_x = last_touch_x[0];
     int16_t touch_y = last_touch_y[0];
     uint8_t touch_held_local = touch_held;
+    uint16_t start_col_px = 0;
+
+    // We want to (first vertically) center our visible window.
+    // compute starting row given V_RES_D..
+    if(V_RES != V_RES_D) {
+        if(starting_display_row_px < ((V_RES-V_RES_D)/2)) {
+            // not yet in the window
+            memset(bounce_buf, 0, len_bytes); 
+            goto bounce_end;
+        } else if(starting_display_row_px >= ((V_RES-V_RES_D)/2)+V_RES_D) {
+            // past the window
+            memset(bounce_buf, 0, len_bytes); 
+            goto bounce_end;            
+        } else {
+            // it's me. adjust starting row px
+            starting_display_row_px = starting_display_row_px - ((V_RES-V_RES_D)/2);
+            // Also update touch_y
+            touch_y =- ((V_RES-V_RES_D)/2);
+        }
+    }
+
+    // And likewise, center horizontally 
+    if(H_RES != H_RES_D) {
+        start_col_px = ((H_RES-H_RES_D)/2);
+    }
+
+
     // Copy in the BG, line by line 
     // 208uS per call at 6 lines RGB565
     // 209uS per call at 12 lines RGB332
     // 416uS per call at 12 lines RGB565
     for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
-        memcpy(b+(H_RES*BYTES_PER_PIXEL*rows_relative_px), bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], H_RES*BYTES_PER_PIXEL); 
+        memcpy(b+start_col_px+(H_RES*BYTES_PER_PIXEL*rows_relative_px), bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], H_RES_D*BYTES_PER_PIXEL); 
     }
 
     // Now per row (N (now 12) pixel rows per call), draw the text frame buffer and sprites on top of the BG
@@ -143,7 +222,7 @@ uint8_t sprite_ids[1024];
 
                 // If you're looking at this code just know the unrolled versions were 1.5x faster than loops on esp32s3
                 // I'm sure there's more to do but this is the best we could get it for now
-                uint8_t * bptr = b + (bounce_row_px*H_RES + tfb_col*FONT_WIDTH);
+                uint8_t * bptr = b + start_col_px + (bounce_row_px*H_RES + tfb_col*FONT_WIDTH);
                 if(bg_color == ALPHA) {
                     if(format & FORMAT_INVERSE) {
                         if(!((data) & 0x80)) *(bptr) = fg_color; 
@@ -206,11 +285,11 @@ uint8_t sprite_ids[1024];
                     uint8_t * sprite_data = &sprite_ram[sprite_mem[s]];
                     uint16_t relative_sprite_y_px = row_px - sprite_y_px[s];
                     for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
-                        if(col_px < H_RES) {
+                        if(col_px < H_RES_D) {
                             uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
                             uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
                             if(b0 != ALPHA) {
-                                b[bounce_row_px*H_RES + col_px] = b0;
+                                b[bounce_row_px*H_RES + col_px + start_col_px] = b0;
                                 // Only update collisions on non-alpha pixels
                                 uint8_t overlap_sprite = sprite_ids[col_px];
                                 if(overlap_sprite!=255) { // sprite already here!
@@ -225,21 +304,22 @@ uint8_t sprite_ids[1024];
             } // end if sprite vis
         } // for each sprite
     } // per each row
-    bounce_time += (get_time_us() - tic); // stop timer
-    bounce_count++;
+    bounce_end:
+        bounce_time += (get_time_us() - tic); // stop timer
+        bounce_count++;
 
-    return false; 
+        return false; 
 }
 
 void display_reset_bg() {
     bg_pal_color = TULIP_TEAL;
-    for(int i=0;i<(H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL;i=i+BYTES_PER_PIXEL) { 
-        (bg)[i+0] = bg_pal_color; 
+    for(int i=0;i<(H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX);i++) { 
+        bg[i] = bg_pal_color; 
     }
     
     // init the scroll pointer to the top left of the fb 
     for(int i=0;i<V_RES;i++) {
-        bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL*i];
+        bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*i];
         x_offsets[i] = 0;
         y_offsets[i] = i;
         x_speeds[i] = 0;
@@ -450,7 +530,7 @@ void display_screenshot(char * screenshot_fn) {
     // 456ms , 4223 b frame
     fprintf(stderr,"Took %lld uS to encode as PNG to memory. err %d\n", get_time_us() - tic, err);
     tic = get_time_us();
-    fprintf(stderr,"PNG done encoding. writing %d bytes to file %s\n", outsize, screenshot_fn);
+    fprintf(stderr,"PNG done encoding. writing %ld bytes to file %s\n", outsize, screenshot_fn);
     write_file(screenshot_fn, out, outsize, 1);
     // 268ms 
     fprintf(stderr,"Took %lld uS to write to disk\n", get_time_us() - tic);
@@ -738,33 +818,36 @@ void display_set_clock(uint8_t mhz) {
 }
 
 void display_teardown(void) {
-    free_caps(bg);
-    free_caps(sprite_ram);
-    free_caps(sprite_x_px);
-    free_caps(sprite_y_px);
-    free_caps(sprite_w_px);
-    free_caps(sprite_h_px);
-    free_caps(sprite_vis);
-    free_caps(sprite_mem);
-    free_caps(TFB);
-    free_caps(TFBf);
-    free_caps(TFBfg);
-    free_caps(TFBbg);
-    free_caps(x_offsets);
-    free_caps(y_offsets);
-    free_caps(x_speeds);
-    free_caps(y_speeds);
-    free_caps(bg_lines);
+    fprintf(stderr, "freeing bg\n");
+    free_caps(bg); bg = NULL;
+    free_caps(sprite_ram); sprite_ram = NULL; 
+    free_caps(sprite_x_px); sprite_x_px = NULL;
+    free_caps(sprite_y_px); sprite_y_px = NULL;
+    free_caps(sprite_w_px); sprite_w_px = NULL;
+    free_caps(sprite_h_px); sprite_h_px = NULL;
+    free_caps(sprite_vis); sprite_vis = NULL;
+    free_caps(sprite_mem); sprite_mem = NULL;
+    free_caps(collision_bitfield); collision_bitfield = NULL;
+    free_caps(TFB); TFB = NULL;
+    free_caps(TFBf); TFBf = NULL; 
+    free_caps(TFBfg); TFBfg = NULL;
+    free_caps(TFBbg); TFBbg = NULL;
+    free_caps(x_offsets); x_offsets = NULL;
+    free_caps(y_offsets); y_offsets = NULL;
+    free_caps(x_speeds); x_speeds = NULL;
+    free_caps(y_speeds); y_speeds = NULL;
+    free_caps(bg_lines); bg_lines = NULL;
 }
 
 
 void display_init(void) {
-    TFB_ROWS = (V_RES/FONT_HEIGHT);
-    TFB_COLS = (H_RES/FONT_WIDTH);
+    TFB_ROWS = (V_RES_D/FONT_HEIGHT);
+    TFB_COLS = (H_RES_D/FONT_WIDTH);
     BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
 
     // Create the background FB
-    bg = (uint8_t*)calloc_caps(64, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    //bg = (uint8_t*)calloc_caps(64, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    bg = (uint8_t*)malloc_caps((H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX), MALLOC_CAP_SPIRAM);
 
     // And various ptrs
     sprite_ram = (uint8_t*)malloc_caps(SPRITE_RAM_BYTES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);

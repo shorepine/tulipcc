@@ -39,7 +39,7 @@
 // TODO seems that CPython allows NULL byte in the input stream
 // don't know if that's intentional or not, but we don't allow it
 
-#define MP_LEXER_EOF ((unichar_mp)MP_READER_EOF)
+#define MP_LEXER_EOF ((unichar)MP_READER_EOF)
 #define CUR_CHAR(lex) ((lex)->chr0)
 
 STATIC bool is_end(mp_lexer_t *lex) {
@@ -85,23 +85,23 @@ STATIC bool is_char_and(mp_lexer_t *lex, byte c1, byte c2) {
 }
 
 STATIC bool is_whitespace(mp_lexer_t *lex) {
-    return unichar_mp_isspace(lex->chr0);
+    return unichar_isspace(lex->chr0);
 }
 
 STATIC bool is_letter(mp_lexer_t *lex) {
-    return unichar_mp_isalpha(lex->chr0);
+    return unichar_isalpha(lex->chr0);
 }
 
 STATIC bool is_digit(mp_lexer_t *lex) {
-    return unichar_mp_isdigit(lex->chr0);
+    return unichar_isdigit(lex->chr0);
 }
 
 STATIC bool is_following_digit(mp_lexer_t *lex) {
-    return unichar_mp_isdigit(lex->chr1);
+    return unichar_isdigit(lex->chr1);
 }
 
 STATIC bool is_following_base_char(mp_lexer_t *lex) {
-    const unichar_mp chr1 = lex->chr1 | 0x20;
+    const unichar chr1 = lex->chr1 | 0x20;
     return chr1 == 'b' || chr1 == 'o' || chr1 == 'x';
 }
 
@@ -300,11 +300,11 @@ STATIC bool get_hex(mp_lexer_t *lex, size_t num_digits, mp_uint_t *result) {
     mp_uint_t num = 0;
     while (num_digits-- != 0) {
         next_char(lex);
-        unichar_mp c = CUR_CHAR(lex);
-        if (!unichar_mp_isxdigit(c)) {
+        unichar c = CUR_CHAR(lex);
+        if (!unichar_isxdigit(c)) {
             return false;
         }
-        num = (num << 4) + unichar_mp_xdigit_value(c);
+        num = (num << 4) + unichar_xdigit_value(c);
     }
     *result = num;
     return true;
@@ -361,14 +361,26 @@ STATIC void parse_string_literal(mp_lexer_t *lex, bool is_raw, bool is_fstring) 
                     vstr_add_byte(&lex->fstring_args, '(');
                     // remember the start of this argument (if we need it for f'{a=}').
                     size_t i = lex->fstring_args.len;
-                    // extract characters inside the { until we reach the
-                    // format specifier or closing }.
-                    // (MicroPython limitation) note: this is completely unaware of
-                    // Python syntax and will not handle any expression containing '}' or ':'.
-                    // e.g. f'{"}"}' or f'{foo({})}'.
+                    // Extract characters inside the { until the bracket level
+                    // is zero and we reach the conversion specifier '!',
+                    // format specifier ':', or closing '}'. The conversion
+                    // and format specifiers are left unchanged in the format
+                    // string to be handled by str.format.
+                    // (MicroPython limitation) note: this is completely
+                    // unaware of Python syntax and will not handle any
+                    // expression containing '}' or ':'. e.g. f'{"}"}' or f'
+                    // {foo({})}'. However, detection of the '!' will
+                    // specifically ensure that it's followed by [rs] and
+                    // then either the format specifier or the closing
+                    // brace. This allows the use of e.g. != in expressions.
                     unsigned int nested_bracket_level = 0;
-                    while (!is_end(lex) && (nested_bracket_level != 0 || !is_char_or(lex, ':', '}'))) {
-                        unichar_mp c = CUR_CHAR(lex);
+                    while (!is_end(lex) && (nested_bracket_level != 0
+                                            || !(is_char_or(lex, ':', '}')
+                                                 || (is_char(lex, '!')
+                                                     && is_char_following_or(lex, 'r', 's')
+                                                     && is_char_following_following_or(lex, ':', '}'))))
+                           ) {
+                        unichar c = CUR_CHAR(lex);
                         if (c == '[' || c == '{') {
                             nested_bracket_level += 1;
                         } else if (c == ']' || c == '}') {
@@ -396,7 +408,7 @@ STATIC void parse_string_literal(mp_lexer_t *lex, bool is_raw, bool is_fstring) 
 
             if (is_char(lex, '\\')) {
                 next_char(lex);
-                unichar_mp c = CUR_CHAR(lex);
+                unichar c = CUR_CHAR(lex);
                 if (is_raw) {
                     // raw strings allow escaping of quotes, but the backslash is also emitted
                     vstr_add_char(&lex->vstr, '\\');
@@ -906,9 +918,9 @@ void mp_lexer_show_token(const mp_lexer_t *lex) {
         const byte *j = (const byte *)i + lex->vstr.len;
         printf(" ");
         while (i < j) {
-            unichar_mp c = utf8_get_char(i);
+            unichar c = utf8_get_char(i);
             i = utf8_next_char(i);
-            if (unichar_mp_isprint(c)) {
+            if (unichar_isprint(c)) {
                 printf("%c", (int)c);
             } else {
                 printf("?");
