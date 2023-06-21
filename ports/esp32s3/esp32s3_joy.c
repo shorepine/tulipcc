@@ -4,6 +4,7 @@
 #include "touchscreen.h"
 #include "esp_log.h"
 #include "string.h"
+#include "esp_timer.h"
 
 #define JOY_CLOCK_PIN 13
 #define JOY_LATCH_PIN 48

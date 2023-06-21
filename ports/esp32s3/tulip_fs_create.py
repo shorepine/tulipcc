@@ -7,6 +7,13 @@ from littlefs import lfs
 import os
 import sys
 
+idf_path = os.environ["IDF_PATH"]  # get value of IDF_PATH from environment
+parttool_dir = os.path.join(idf_path, "components", "partition_table")  # parttool.py lives in $IDF_PATH/components/partition_table
+
+sys.path.append(parttool_dir)  # this enables Python to find parttool module
+from parttool import *  # import all names inside parttool module
+
+
 if(not os.getcwd().endswith("esp32s3")):
     print("Run this from the tulipcc/ports/esp32s3 folder only")
     sys.exit()
@@ -20,7 +27,7 @@ TULIP_HOME="../../tulip_home"
 if(len(sys.argv)>1 and sys.argv[1]=='N8R8'):
     TULIP_VFS_SIZE = 0x480000
 else:
-    TULIP_VFS_SIZE = 0x919000 
+    TULIP_VFS_SIZE = 0x1832000 # 0x1232000 # 0x919000 
 
 cfg = lfs.LFSConfig(block_size=4096, block_count = TULIP_VFS_SIZE / 4096)
 fs = lfs.LFSFilesystem()
@@ -46,8 +53,14 @@ with open("tulip-lfs.bin","wb") as fh:
     fh.write(cfg.user_context.buffer)
 print("... done.")
 
+
+target = ParttoolTarget()
+#target.erase_partition(PartitionName("vfs"))
+target.write_partition(PartitionName("vfs"), "tulip-lfs.bin")
+
+
 # Now overwrite the user flash partition
-os.system('parttool.py write_partition --partition-name=vfs --input=tulip-lfs.bin')
+#os.system('parttool.py write_partition --partition-name=vfs --input=tulip-lfs.bin')
 os.system('mv tulip-lfs.bin build/')
 
 

@@ -4141,6 +4141,7 @@ static int lfs2_rawmount(lfs2_t *lfs2, const struct lfs2_config *cfg) {
             // check version
             uint16_t major_version = (0xffff & (superblock.version >> 16));
             uint16_t minor_version = (0xffff & (superblock.version >>  0));
+            
             if ((major_version != LFS2_DISK_VERSION_MAJOR ||
                  minor_version > LFS2_DISK_VERSION_MINOR)) {
                 LFS2_ERROR("Invalid version v%"PRIu16".%"PRIu16,
@@ -4148,6 +4149,7 @@ static int lfs2_rawmount(lfs2_t *lfs2, const struct lfs2_config *cfg) {
                 err = LFS2_ERR_INVAL;
                 goto cleanup;
             }
+            
 
             // check superblock configuration
             if (superblock.name_max) {
@@ -5326,12 +5328,13 @@ int lfs2_format(lfs2_t *lfs2, const struct lfs2_config *cfg) {
     return err;
 }
 #endif
-
+#include <stdio.h>
 int lfs2_mount(lfs2_t *lfs2, const struct lfs2_config *cfg) {
     int err = LFS2_LOCK(cfg);
     if (err) {
         return err;
     }
+
     LFS2_TRACE("lfs2_mount(%p, %p {.context=%p, "
                 ".read=%p, .prog=%p, .erase=%p, .sync=%p, "
                 ".read_size=%"PRIu32", .prog_size=%"PRIu32", "

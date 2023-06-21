@@ -40,10 +40,9 @@ struct bg_element {
 };
 
 
-struct ui_element ** elements;
-struct bg_element ** bg_elements;
-
-uint8_t ui_id_held;
+extern struct ui_element ** elements;
+extern struct bg_element ** bg_elements;
+extern uint8_t ui_id_held;
 
 uint8_t bg_touch_up(uint8_t ui_id);
 void bg_touch_register(uint8_t ui_id, uint16_t x, uint16_t y, uint16_t w, uint16_t h);

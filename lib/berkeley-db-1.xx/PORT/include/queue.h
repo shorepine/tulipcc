@@ -68,7 +68,25 @@
 /*
  * List definitions.
  */
-#ifndef LIST_HEAD
+
+/*
+ * Circular queue definitions.
+ */
+#define CIRCLEQ_HEAD(name, type)                    \
+struct name {                               \
+    struct type *cqh_first;     /* first element */     \
+    struct type *cqh_last;      /* last element */      \
+}
+
+#define CIRCLEQ_ENTRY(type)                     \
+struct {                                \
+    struct type *cqe_next;      /* next element */      \
+    struct type *cqe_prev;      /* previous element */      \
+}
+
+
+#ifndef LIST_INIT
+
 #define LIST_HEAD(name, type)						\
 struct name {								\
 	struct type *lh_first;	/* first element */			\
@@ -168,20 +186,6 @@ struct {								\
 	*(elm)->field.tqe_prev = (elm)->field.tqe_next;			\
 }
 
-/*
- * Circular queue definitions.
- */
-#define CIRCLEQ_HEAD(name, type)					\
-struct name {								\
-	struct type *cqh_first;		/* first element */		\
-	struct type *cqh_last;		/* last element */		\
-}
-
-#define CIRCLEQ_ENTRY(type)						\
-struct {								\
-	struct type *cqe_next;		/* next element */		\
-	struct type *cqe_prev;		/* previous element */		\
-}
 
 /*
  * Circular queue functions.
@@ -243,5 +247,6 @@ struct {								\
 		(elm)->field.cqe_prev->field.cqe_next =			\
 		    (elm)->field.cqe_next;				\
 }
-#endif
 #endif	/* !_QUEUE_H_ */
+
+#endif

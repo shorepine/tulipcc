@@ -79,9 +79,9 @@ static void* lodepng_malloc(size_t size) {
   if(size==0) return NULL; 
   void* thing = malloc_caps(size,  MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   if(thing==NULL) {
-    printf("lodepng problem with malloc sz %d \n", (uint32_t)size);
+    printf("lodepng problem with malloc sz %ld \n", (uint32_t)size);
   } else {
-    //printf("lodepng OK with malloc sz %d \n", size);    
+    //printf("lodepng OK with malloc sz %ld \n", size);    
   }
   return thing;
   //return malloc(size);

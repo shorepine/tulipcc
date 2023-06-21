@@ -1,6 +1,10 @@
 // ui.c
 // user interface components
 #include "ui.h"
+struct ui_element ** elements;
+struct bg_element ** bg_elements;
+
+uint8_t ui_id_held;
 
 
 // Now, how do i go and change this? I want to higlight it when it's in focus 

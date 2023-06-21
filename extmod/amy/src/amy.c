@@ -62,10 +62,10 @@ chorus_config_t chorus = {CHORUS_DEFAULT_LEVEL, CHORUS_DEFAULT_MAX_DELAY};
 
 void alloc_delay_lines(void) {
     for(uint16_t c=0;c<NCHANS;++c) {
-        delay_lines[c] = new_delay_line(DELAY_LINE_LEN, DELAY_LINE_LEN / 2, MALLOC_CAP_INTERNAL);
+        delay_lines[c] = new_delay_line(DELAY_LINE_LEN, DELAY_LINE_LEN / 2, MALLOC_CAP_SPIRAM);
     }
 #ifdef CHORUS_ARATE
-    delay_mod = (float*)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
+    delay_mod = (float*)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_SPIRAM);
 #endif
 }
 
@@ -152,7 +152,7 @@ void default_amy_parse_callback(char mode, char * message) {
 
 int8_t global_init() {
     // function pointers
-    amy_parse_callback = &default_amy_parse_callback;
+    //amy_parse_callback = &default_amy_parse_callback;
     global.next_event_write = 0;
     global.event_start = NULL;
     global.event_qsize = 0;
@@ -386,8 +386,8 @@ int8_t oscs_init() {
     pcm_init();
     // for tulip, we may want to alloc these in spiram
     events = (struct delta*)malloc_caps(sizeof(struct delta) * EVENT_FIFO_LEN, MALLOC_CAP_SPIRAM);
-    synth = (struct event*) malloc_caps(sizeof(struct event) * OSCS, MALLOC_CAP_INTERNAL);
-    msynth = (struct mod_event*) malloc_caps(sizeof(struct mod_event) * OSCS, MALLOC_CAP_INTERNAL);
+    synth = (struct event*) malloc_caps(sizeof(struct event) * OSCS, MALLOC_CAP_SPIRAM);
+    msynth = (struct mod_event*) malloc_caps(sizeof(struct mod_event) * OSCS, MALLOC_CAP_SPIRAM);
 
     // maybe not this
     block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE * NCHANS, MALLOC_CAP_SPIRAM);//dbl_block[0];
@@ -442,7 +442,7 @@ void show_debug(uint8_t type) {
         uint16_t q = global.event_qsize;
         if(q > 25) q = 25;
         for(uint16_t i=0;i<q;i++) {
-            fprintf(stderr,"%d time %u osc %d param %d - %f %d\n", i, ptr->time, ptr->osc, ptr->param, *(float *)&ptr->data, *(int *)&ptr->data);
+            fprintf(stderr,"%d time %lu osc %d param %d - %f %d\n", i, ptr->time, ptr->osc, ptr->param, *(float *)&ptr->data, *(int *)&ptr->data);
             ptr = ptr->next;
         }
     }
@@ -460,7 +460,7 @@ void show_debug(uint8_t type) {
                 for(uint8_t j=0;j<MAX_BREAKPOINT_SETS;j++) {
                     fprintf(stderr,"bp%d (target %d): ", j, synth[i].breakpoint_target[j]);
                     for(uint8_t k=0;k<MAX_BREAKPOINTS;k++) {
-                        fprintf(stderr,"%d: %f ", synth[i].breakpoint_times[j][k], synth[i].breakpoint_values[j][k]);
+                        fprintf(stderr,"%ld: %f ", synth[i].breakpoint_times[j][k], synth[i].breakpoint_values[j][k]);
                     }
                     fprintf(stderr,"\n");
                 }

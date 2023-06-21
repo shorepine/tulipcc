@@ -65,6 +65,7 @@ Next, copy `ports/esp32` into `esp32s3`. Copy across the following files from Tu
   * touchscreen*
   * tasks.h
   * tulip_fs_create.py
+  * upload_firmware.py
 
 [Note: we are hoping to move away from `bw_esp_lcd`, but the bounce buffer support is 5.X only, and MP is stuck to 4.4x right now.]
 
@@ -79,7 +80,7 @@ Now merge in Tulip files:
  * uart.c -- we redirect stdout/in for Tulip this way. 
 
 Now, set up the menuconfig / board. 
- * Copy `boards/ESP32S3_SPIRAM_OCT` to `boards/TULIP4`. 
+ * Copy `boards/GENERIC_ESP32S3_SPIRAM_OCT` to `boards/TULIP4`. 
  * Rename the directory names in `boards.json` and `mpconfigboard...` to point to `TULIP4`. 
  * Change the partitions file name to `partitions.csv`.
 
@@ -88,6 +89,14 @@ Now, set up the menuconfig / board.
 Merge in `boards/manifest.py` from Tulip. This changes a lot -- some modules will be in different places.
 
 Remove `_boot.py` from `modules`. We have our own in `extmod/tulip/py`.
+(new - change main_esp32s3/CKameLists.txt to update dir
+
+component config -> esp psram -> spiram config -> spi ram access method -> make spiram allocatable using heap_caps_malloc
+component config -> esp psram -> spiram config -> spi ram access method -> try to allocate wifi and lwip
+component config -> esp system settings -> cpu freq -> 240
+component config -> freefros -> kernel -> configUSE_TRAEC_FACILITY
+
+)
 
 Now, `idf.py -DMICROPY_BOARD=TULIP4 menuconfig`. Make the following changes:
  * Component config -> ESP32S3 specific -> CPU frequency - 240MHz

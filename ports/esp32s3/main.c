@@ -35,16 +35,9 @@
 #include "esp_system.h"
 #include "nvs_flash.h"
 #include "esp_task.h"
-#include "soc/cpu.h"
+#include "esp_event.h"
 #include "esp_log.h"
-
-#if CONFIG_IDF_TARGET_ESP32
-#include "esp32/spiram.h"
-#elif CONFIG_IDF_TARGET_ESP32S2
-#include "esp32s2/spiram.h"
-#elif CONFIG_IDF_TARGET_ESP32S3
-#include "esp32s3/spiram.h"
-#endif
+#include "esp_psram.h"
 
 #include "py/stackctrl.h"
 #include "py/nlr.h"
@@ -62,11 +55,6 @@
 #include "modmachine.h"
 #include "modnetwork.h"
 #include "mpthreadport.h"
-#include "display.h"
-#include "alles.h"
-#include "touchscreen.h"
-#include "tasks.h"
-#include "usb_keyboard.h"
 
 #if MICROPY_BLUETOOTH_NIMBLE
 #include "extmod/modbluetooth.h"
@@ -74,6 +62,15 @@
 
 #if MICROPY_ESPNOW
 #include "modespnow.h"
+#endif
+
+// Settings for memory-mapped location of SPIRAM.
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32S2
+#define IDF_TARGET_PSRAM_ADDR_START (SOC_EXTRAM_DATA_LOW)
+#define IDF_TARGET_PSRAM_SIZE (SOC_EXTRAM_DATA_SIZE)
+#elif CONFIG_IDF_TARGET_ESP32S3
+#define IDF_TARGET_PSRAM_ADDR_START (SOC_DROM_HIGH)
+#define IDF_TARGET_PSRAM_SIZE (SOC_EXTRAM_DATA_HIGH - IDF_TARGET_PSRAM_ADDR_START)
 #endif
 
 // MicroPython runs as a task under FreeRTOS
@@ -86,6 +83,30 @@
 #else
 #define MP_TASK_STACK_LIMIT_MARGIN (1024)
 #endif
+
+#include "display.h"
+#include "alles.h"
+#include "touchscreen.h"
+#include "tasks.h"
+#include "usb_keyboard.h"
+
+
+TaskHandle_t display_handle;
+TaskHandle_t usb_handle;
+TaskHandle_t touchscreen_handle;
+TaskHandle_t tulip_mp_handle;
+TaskHandle_t midi_handle;
+TaskHandle_t alles_handle;
+TaskHandle_t alles_parse_handle;
+TaskHandle_t alles_receive_handle;
+TaskHandle_t amy_render_handle[AMY_CORES];
+TaskHandle_t alles_fill_buffer_handle;
+TaskHandle_t idle_0_handle;
+TaskHandle_t idle_1_handle;
+
+// For CPU usage
+unsigned long last_task_counters[MAX_TASKS];
+
 
 typedef void (*esp_alloc_failed_hook_t) (size_t size, uint32_t caps, const char * function_name);
 
@@ -176,7 +197,8 @@ int vprintf_null(const char *format, va_list ap) {
 
 
 void mp_task(void *pvParameter) {
-    volatile uint32_t sp = (uint32_t)get_sp();
+    volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
+    //volatile uint32_t sp = (uint32_t)get_sp();
     #if MICROPY_PY_THREAD
     mp_thread_init(pxTaskGetStackStart(NULL), TULIP_MP_TASK_STACK_SIZE / sizeof(uintptr_t));
     #endif
@@ -190,55 +212,15 @@ void mp_task(void *pvParameter) {
     #endif
     machine_init();
 
-    size_t mp_task_heap_size;
-    void *mp_task_heap = NULL;
+    //esp_err_t err = esp_event_loop_create_default();
+    //if (err != ESP_OK) {
+    //    ESP_LOGE("esp_init", "can't create event loop: 0x%x\n", err);
+    //}
 
-    // TODO - fix this, we are just 4MB heap  in Tulip 
-
-    #if CONFIG_SPIRAM_USE_MALLOC
-    // SPIRAM is issued using MALLOC, fallback to normal allocation rules
-    mp_task_heap = NULL;
-    #elif CONFIG_ESP32_SPIRAM_SUPPORT
-    // Try to use the entire external SPIRAM directly for the heap
-    mp_task_heap = (void *)SOC_EXTRAM_DATA_LOW;
-    switch (esp_spiram_get_chip_size()) {
-        case ESP_SPIRAM_SIZE_16MBITS:
-            mp_task_heap_size = 2 * 1024 * 1024;
-            break;
-        case ESP_SPIRAM_SIZE_32MBITS:
-        case ESP_SPIRAM_SIZE_64MBITS:
-            mp_task_heap_size = 4 * 1024 * 1024;
-            break;
-        default:
-            // No SPIRAM, fallback to normal allocation
-            mp_task_heap = NULL;
-            break;
-    }
-    #elif CONFIG_ESP32S2_SPIRAM_SUPPORT || CONFIG_ESP32S3_SPIRAM_SUPPORT
-    // Try to use the entire external SPIRAM directly for the heap
-    size_t esp_spiram_size = esp_spiram_get_size();
-    heap_caps_register_failed_alloc_callback(esp_alloc_failed);
-    // 2048x750
-    esp_spiram_size = esp_spiram_size - (1024*1024*4);
-    if (esp_spiram_size > 0) {
-        mp_task_heap = (void *)SOC_EXTRAM_DATA_HIGH - esp_spiram_size;
-        mp_task_heap_size = esp_spiram_size;
-    }
-    #endif
-
-    if (mp_task_heap == NULL) {
-        // Allocate the uPy heap using malloc and get the largest available region,
-        // limiting to 1/2 total available memory to leave memory for the OS.
-        #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 1, 0)
-        size_t heap_total = heap_caps_get_total_size(MALLOC_CAP_8BIT);
-        #else
-        multi_heap_info_t info;
-        heap_caps_get_info(&info, MALLOC_CAP_8BIT);
-        size_t heap_total = info.total_free_bytes + info.total_allocated_bytes;
-        #endif
-        mp_task_heap_size = MIN(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT), heap_total / 2);
-        mp_task_heap = malloc(mp_task_heap_size);
-    }
+    uint32_t caps = MALLOC_CAP_8BIT;
+    //size_t heap_total = heap_caps_get_total_size(caps);
+    size_t mp_task_heap_size = 2 * 1024 * 1024; // MIN(heap_caps_get_largest_free_block(caps), heap_total / 2);
+    void *mp_task_heap = heap_caps_malloc(mp_task_heap_size, caps);
 
 soft_reset:
     // initialise the stack pointer for the main thread

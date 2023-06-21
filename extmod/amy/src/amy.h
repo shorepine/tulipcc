@@ -195,7 +195,7 @@ struct mod_event {
 };
 
 // Callbacks, override if you'd like after calling amy_start()
-void (*amy_parse_callback)(char,char*);
+//void (*amy_parse_callback)(char,char*);
 
 struct event amy_default_event();
 void amy_add_event(struct event e);
