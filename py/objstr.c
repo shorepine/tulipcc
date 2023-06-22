@@ -566,19 +566,19 @@ mp_obj_t mp_obj_str_split(size_t n_args, const mp_obj_t *args) {
         // sep not given, so separate on whitespace
 
         // Initial whitespace is not counted as split, so we pre-do it
-        while (s < top && unichar_isspace(*s)) {
+        while (s < top && mp_unichar_isspace(*s)) {
             s++;
         }
         while (s < top && splits != 0) {
             const byte *start = s;
-            while (s < top && !unichar_isspace(*s)) {
+            while (s < top && !mp_unichar_isspace(*s)) {
                 s++;
             }
             mp_obj_list_append(res, mp_obj_new_str_of_type(self_type, start, s - start));
             if (s >= top) {
                 break;
             }
-            while (s < top && unichar_isspace(*s)) {
+            while (s < top && mp_unichar_isspace(*s)) {
                 s++;
             }
             if (splits > 0) {
@@ -1099,7 +1099,7 @@ STATIC vstr_t mp_obj_str_format_helper(const char *str, const char *top, int *ar
 
         if (field_name) {
             int index = 0;
-            if (MP_LIKELY(unichar_isdigit(*field_name))) {
+            if (MP_LIKELY(mp_unichar_isdigit(*field_name))) {
                 if (*arg_i > 0) {
                     #if MICROPY_ERROR_REPORTING <= MICROPY_ERROR_REPORTING_TERSE
                     terse_str_format_value_error();
@@ -1858,7 +1858,7 @@ MP_DEFINE_CONST_FUN_OBJ_2(str_rpartition_obj, str_rpartition);
 #endif
 
 // Supposedly not too critical operations, so optimize for code size
-STATIC mp_obj_t str_caseconv(unichar (*op)(unichar), mp_obj_t self_in) {
+STATIC mp_obj_t str_caseconv(mp_unichar (*op)(mp_unichar), mp_obj_t self_in) {
     GET_STR_DATA_LEN(self_in, self_data, self_len);
     vstr_t vstr;
     vstr_init_len(&vstr, self_len);
@@ -1870,23 +1870,23 @@ STATIC mp_obj_t str_caseconv(unichar (*op)(unichar), mp_obj_t self_in) {
 }
 
 STATIC mp_obj_t str_lower(mp_obj_t self_in) {
-    return str_caseconv(unichar_tolower, self_in);
+    return str_caseconv(mp_unichar_tolower, self_in);
 }
 MP_DEFINE_CONST_FUN_OBJ_1(str_lower_obj, str_lower);
 
 STATIC mp_obj_t str_upper(mp_obj_t self_in) {
-    return str_caseconv(unichar_toupper, self_in);
+    return str_caseconv(mp_unichar_toupper, self_in);
 }
 MP_DEFINE_CONST_FUN_OBJ_1(str_upper_obj, str_upper);
 
-STATIC mp_obj_t str_uni_istype(bool (*f)(unichar), mp_obj_t self_in) {
+STATIC mp_obj_t str_uni_istype(bool (*f)(mp_unichar), mp_obj_t self_in) {
     GET_STR_DATA_LEN(self_in, self_data, self_len);
 
     if (self_len == 0) {
         return mp_const_false; // default to False for empty str
     }
 
-    if (f != unichar_isupper && f != unichar_islower) {
+    if (f != mp_unichar_isupper && f != mp_unichar_islower) {
         for (size_t i = 0; i < self_len; i++) {
             if (!f(*self_data++)) {
                 return mp_const_false;
@@ -1896,7 +1896,7 @@ STATIC mp_obj_t str_uni_istype(bool (*f)(unichar), mp_obj_t self_in) {
         bool contains_alpha = false;
 
         for (size_t i = 0; i < self_len; i++) { // only check alphanumeric characters
-            if (unichar_isalpha(*self_data++)) {
+            if (mp_unichar_isalpha(*self_data++)) {
                 contains_alpha = true;
                 if (!f(*(self_data - 1))) { // -1 because we already incremented above
                     return mp_const_false;
@@ -1913,27 +1913,27 @@ STATIC mp_obj_t str_uni_istype(bool (*f)(unichar), mp_obj_t self_in) {
 }
 
 STATIC mp_obj_t str_isspace(mp_obj_t self_in) {
-    return str_uni_istype(unichar_isspace, self_in);
+    return str_uni_istype(mp_unichar_isspace, self_in);
 }
 MP_DEFINE_CONST_FUN_OBJ_1(str_isspace_obj, str_isspace);
 
 STATIC mp_obj_t str_isalpha(mp_obj_t self_in) {
-    return str_uni_istype(unichar_isalpha, self_in);
+    return str_uni_istype(mp_unichar_isalpha, self_in);
 }
 MP_DEFINE_CONST_FUN_OBJ_1(str_isalpha_obj, str_isalpha);
 
 STATIC mp_obj_t str_isdigit(mp_obj_t self_in) {
-    return str_uni_istype(unichar_isdigit, self_in);
+    return str_uni_istype(mp_unichar_isdigit, self_in);
 }
 MP_DEFINE_CONST_FUN_OBJ_1(str_isdigit_obj, str_isdigit);
 
 STATIC mp_obj_t str_isupper(mp_obj_t self_in) {
-    return str_uni_istype(unichar_isupper, self_in);
+    return str_uni_istype(mp_unichar_isupper, self_in);
 }
 MP_DEFINE_CONST_FUN_OBJ_1(str_isupper_obj, str_isupper);
 
 STATIC mp_obj_t str_islower(mp_obj_t self_in) {
-    return str_uni_istype(unichar_islower, self_in);
+    return str_uni_istype(mp_unichar_islower, self_in);
 }
 MP_DEFINE_CONST_FUN_OBJ_1(str_islower_obj, str_islower);
 
@@ -2021,8 +2021,8 @@ mp_obj_t mp_obj_bytes_fromhex(mp_obj_t type_in, mp_obj_t data) {
     byte hex_byte = 0;
     for (mp_uint_t i = bufinfo.len; i--;) {
         byte hex_ch = *in++;
-        if (unichar_isxdigit(hex_ch)) {
-            hex_byte += unichar_xdigit_value(hex_ch);
+        if (mp_unichar_isxdigit(hex_ch)) {
+            hex_byte += mp_unichar_xdigit_value(hex_ch);
         } else {
             mp_raise_ValueError(MP_ERROR_TEXT("non-hex digit found"));
         }

@@ -32,6 +32,7 @@ Rename this file to lodepng.cpp to use it for C++, or to lodepng.c to use it for
 #include "polyfills.h"
 #ifdef LODEPNG_COMPILE_DISK
 #include <limits.h> /* LONG_MAX */
+#include <inttypes.h>
 #include <stdio.h> /* file handling */
 #endif /* LODEPNG_COMPILE_DISK */
 
@@ -79,7 +80,7 @@ static void* lodepng_malloc(size_t size) {
   if(size==0) return NULL; 
   void* thing = malloc_caps(size,  MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   if(thing==NULL) {
-    printf("lodepng problem with malloc sz %ld \n", (uint32_t)size);
+    printf("lodepng problem with malloc sz %" PRIu32 "\n", (uint32_t)size);
   } else {
     //printf("lodepng OK with malloc sz %ld \n", size);    
   }

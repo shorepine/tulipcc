@@ -672,7 +672,7 @@ STATIC mp_obj_t tulip_edit(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_edit_obj, 0, 1, tulip_edit);
 
-extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t);
+extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t, uint16_t, uint16_t);
 STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
     display_reset_bg();
     display_reset_sprites();

@@ -161,9 +161,9 @@ typedef struct _mp_lexer_t {
     qstr source_name;           // name of source
     mp_reader_t reader;         // stream source
 
-    unichar chr0, chr1, chr2;   // current cached characters from source
+    mp_unichar chr0, chr1, chr2;   // current cached characters from source
     #if MICROPY_PY_FSTRINGS
-    unichar chr0_saved, chr1_saved, chr2_saved; // current cached characters from alt source
+    mp_unichar chr0_saved, chr1_saved, chr2_saved; // current cached characters from alt source
     #endif
 
     size_t line;                // current source line

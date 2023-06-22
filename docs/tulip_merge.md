@@ -29,7 +29,7 @@ From Tulip, copy over the following from ports/macos:
 
 And copy `extmod/tulip` and `extmod/amy` over.
 
-We have to patch only one thing in MP itself, and I would love to stop doing this (suggestions welcome.) Something in MacOS conflicts with MP, `unichar`. I do a global find/replace in the MP repo for `unichar` and replace it with `mp_unichar`. This works fine. I think we could eventually do some `undef` magic to get the conflict to stop.
+We have to patch only one thing in MP itself, and I would love to stop doing this (suggestions welcome.) Something in MacOS conflicts with MP, `mp_unichar`. I do a global find/replace in the MP repo for `mp_unichar` and replace it with `mp_mp_unichar`. This works fine. I think we could eventually do some `undef` magic to get the conflict to stop.
 
 Now, manually cherry-pick merge in our changes in ports/macos for these files. This part is hard to automate. Sometimes the APIs change so that we can't simply just paste in (or link from another file) the key bits we need to make Tulip boot. `main.c` is usually complicated due to how we thread out the services, and link to SDL. `unix_mphal` is easier -- we just overwrite the printing function to point to our own print. 
 

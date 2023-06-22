@@ -9,7 +9,7 @@
 #include "tulip_helpers.h"
 #include "polyfills.h"
 #include "ui.h"
-
+#include <inttypes.h>
 #define RGB332
 
 #ifdef ESP_PLATFORM

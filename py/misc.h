@@ -130,23 +130,23 @@ size_t m_get_peak_bytes_allocated(void);
 // align ptr to the nearest multiple of "alignment"
 #define MP_ALIGN(ptr, alignment) (void *)(((uintptr_t)(ptr) + ((alignment) - 1)) & ~((alignment) - 1))
 
-/** unichar / UTF-8 *********************************************/
+/** mp_unichar / UTF-8 *********************************************/
 
 #if MICROPY_PY_BUILTINS_STR_UNICODE
 // with unicode enabled we need a type which can fit chars up to 0x10ffff
-typedef uint32_t unichar;
+typedef uint32_t mp_unichar;
 #else
 // without unicode enabled we can only need to fit chars up to 0xff
 // (on 16-bit archs uint is 16-bits and more efficient than uint32_t)
-typedef uint unichar;
+typedef uint mp_unichar;
 #endif
 
 #if MICROPY_PY_BUILTINS_STR_UNICODE
-unichar utf8_get_char(const byte *s);
+mp_unichar utf8_get_char(const byte *s);
 const byte *utf8_next_char(const byte *s);
 size_t utf8_charlen(const byte *str, size_t len);
 #else
-static inline unichar utf8_get_char(const byte *s) {
+static inline mp_unichar utf8_get_char(const byte *s) {
     return *s;
 }
 static inline const byte *utf8_next_char(const byte *s) {
@@ -158,18 +158,18 @@ static inline size_t utf8_charlen(const byte *str, size_t len) {
 }
 #endif
 
-bool unichar_isspace(unichar c);
-bool unichar_isalpha(unichar c);
-bool unichar_isprint(unichar c);
-bool unichar_isdigit(unichar c);
-bool unichar_isxdigit(unichar c);
-bool unichar_isident(unichar c);
-bool unichar_isalnum(unichar c);
-bool unichar_isupper(unichar c);
-bool unichar_islower(unichar c);
-unichar unichar_tolower(unichar c);
-unichar unichar_toupper(unichar c);
-mp_uint_t unichar_xdigit_value(unichar c);
+bool mp_unichar_isspace(mp_unichar c);
+bool mp_unichar_isalpha(mp_unichar c);
+bool mp_unichar_isprint(mp_unichar c);
+bool mp_unichar_isdigit(mp_unichar c);
+bool mp_unichar_isxdigit(mp_unichar c);
+bool mp_unichar_isident(mp_unichar c);
+bool mp_unichar_isalnum(mp_unichar c);
+bool mp_unichar_isupper(mp_unichar c);
+bool mp_unichar_islower(mp_unichar c);
+mp_unichar mp_unichar_tolower(mp_unichar c);
+mp_unichar mp_unichar_toupper(mp_unichar c);
+mp_uint_t mp_unichar_xdigit_value(mp_unichar c);
 #define UTF8_IS_NONASCII(ch) ((ch) & 0x80)
 #define UTF8_IS_CONT(ch) (((ch) & 0xC0) == 0x80)
 
@@ -207,11 +207,11 @@ char *vstr_extend(vstr_t *vstr, size_t size);
 char *vstr_add_len(vstr_t *vstr, size_t len);
 char *vstr_null_terminated_str(vstr_t *vstr);
 void vstr_add_byte(vstr_t *vstr, byte v);
-void vstr_add_char(vstr_t *vstr, unichar chr);
+void vstr_add_char(vstr_t *vstr, mp_unichar chr);
 void vstr_add_str(vstr_t *vstr, const char *str);
 void vstr_add_strn(vstr_t *vstr, const char *str, size_t len);
 void vstr_ins_byte(vstr_t *vstr, size_t byte_pos, byte b);
-void vstr_ins_char(vstr_t *vstr, size_t char_pos, unichar chr);
+void vstr_ins_char(vstr_t *vstr, size_t char_pos, mp_unichar chr);
 void vstr_cut_head_bytes(vstr_t *vstr, size_t bytes_to_cut);
 void vstr_cut_tail_bytes(vstr_t *vstr, size_t bytes_to_cut);
 void vstr_cut_out_bytes(vstr_t *vstr, size_t byte_pos, size_t bytes_to_cut);

@@ -188,7 +188,7 @@ uint8_t sprite_ids[1024];
             // it's me. adjust starting row px
             starting_display_row_px = starting_display_row_px - ((V_RES-V_RES_D)/2);
             // Also update touch_y
-            touch_y =- ((V_RES-V_RES_D)/2);
+            touch_y = touch_y - ((V_RES-V_RES_D)/2);
         }
     }
 
@@ -530,7 +530,7 @@ void display_screenshot(char * screenshot_fn) {
     // 456ms , 4223 b frame
     fprintf(stderr,"Took %lld uS to encode as PNG to memory. err %d\n", get_time_us() - tic, err);
     tic = get_time_us();
-    fprintf(stderr,"PNG done encoding. writing %ld bytes to file %s\n", outsize, screenshot_fn);
+    fprintf(stderr,"PNG done encoding. writing %" PRIu32" bytes to file %s\n", outsize, screenshot_fn);
     write_file(screenshot_fn, out, outsize, 1);
     // 268ms 
     fprintf(stderr,"Took %lld uS to write to disk\n", get_time_us() - tic);
@@ -638,7 +638,6 @@ uint8_t ansi_parse_digits(char*str, uint16_t j, uint16_t k, uint16_t * digits) {
 
 uint8_t supress_lf = 0;
 void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color) {
-    heap_caps_check_integrity_all(true);
     if(tfb_log) {
         fprintf(stderr, "%.*s", len, str);
         fflush(stderr);
