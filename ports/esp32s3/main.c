@@ -75,7 +75,6 @@
 
 // MicroPython runs as a task under FreeRTOS
 #define MP_TASK_PRIORITY        (ESP_TASK_PRIO_MIN + 1)
-#define MP_TASK_STACK_SIZE      (16 * 1024)
 
 // Set the margin for detecting stack overflow, depending on the CPU architecture.
 #if CONFIG_IDF_TARGET_ESP32C3
@@ -217,9 +216,10 @@ void mp_task(void *pvParameter) {
     //    ESP_LOGE("esp_init", "can't create event loop: 0x%x\n", err);
     //}
 
-    uint32_t caps = MALLOC_CAP_8BIT;
+    heap_caps_register_failed_alloc_callback(esp_alloc_failed);
+    uint32_t caps = MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM;
     //size_t heap_total = heap_caps_get_total_size(caps);
-    size_t mp_task_heap_size = 2 * 1024 * 1024; // MIN(heap_caps_get_largest_free_block(caps), heap_total / 2);
+    size_t mp_task_heap_size = 4 * 1024 * 1024; // MIN(heap_caps_get_largest_free_block(caps), heap_total / 2);
     void *mp_task_heap = heap_caps_malloc(mp_task_heap_size, caps);
 
 soft_reset:
@@ -320,6 +320,8 @@ extern void ft5x06_init();
 extern void run_ft5x06();
 extern void run_midi();
 extern void init_esp_joy();
+uint8_t * xStack;
+StaticTask_t static_mp_handle;
 
 void app_main(void) {
     // Hook for a board to run code at start up.
@@ -346,6 +348,7 @@ void app_main(void) {
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
+    
 
     fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
     ft5x06_init();
@@ -356,18 +359,22 @@ void app_main(void) {
     fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
-    delay_ms(100);
+    delay_ms(500);
+    
+    //xStack = (uint8_t*)heap_caps_calloc(1, TULIP_MP_TASK_STACK_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT | MALLOC_CAP_32BIT);
+    //xTaskCreateStaticPinnedToCore(mp_task, TULIP_MP_TASK_NAME, TULIP_MP_TASK_STACK_SIZE, NULL, TULIP_MP_TASK_PRIORITY, xStack, &static_mp_handle, TULIP_MP_TASK_COREID);
 
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
 
-
+    
     fprintf(stderr,"Starting joystick\n");
     init_esp_joy();
     fflush(stderr);
     delay_ms(10);
+
 
 
 }

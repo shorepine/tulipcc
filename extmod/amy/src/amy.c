@@ -390,7 +390,7 @@ int8_t oscs_init() {
     msynth = (struct mod_event*) malloc_caps(sizeof(struct mod_event) * OSCS, MALLOC_CAP_SPIRAM);
 
     // maybe not this
-    block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE * NCHANS, MALLOC_CAP_SPIRAM);//dbl_block[0];
+    block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE * NCHANS, MALLOC_CAP_INTERNAL);//dbl_block[0];
     // set all oscillators to their default values
     amy_reset_oscs();
 
@@ -412,10 +412,10 @@ int8_t oscs_init() {
         events[i].data = 0;
         events[i].param = NO_PARAM;
     }
-    fbl = (float**) malloc_caps(sizeof(float*) * AMY_CORES, MALLOC_CAP_SPIRAM); // one per core, just core 0 used off esp32
+    fbl = (float**) malloc_caps(sizeof(float*) * AMY_CORES, MALLOC_CAP_INTERNAL); // one per core, just core 0 used off esp32
     // clear out both as local mode won't use fbl[1] 
     for(uint16_t core=0;core<AMY_CORES;++core) {
-        fbl[core]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE * NCHANS, MALLOC_CAP_SPIRAM);
+        fbl[core]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE * NCHANS, MALLOC_CAP_INTERNAL);
         for(uint16_t c=0;c<NCHANS;++c) {
             for(uint16_t i=0;i<BLOCK_SIZE;i++) { 
                 fbl[core][BLOCK_SIZE*c + i] = 0; 
@@ -704,7 +704,6 @@ void render_osc_wave(uint8_t osc, float* buf) {
 
 void render_task(uint8_t start, uint8_t end, uint8_t core) {
     for(uint16_t i=0;i<BLOCK_SIZE*NCHANS;i++) { fbl[core][i] = 0; }
-    //for(uint16_t i=0;i<BLOCK_SIZE;i++) { per_osc_fb[core][i] = 0; }
     for(uint8_t osc=start; osc<end; osc++) {
         if(synth[osc].status==AUDIBLE) { // skip oscs that are silent or mod sources from playback
             render_osc_wave(osc, per_osc_fb[core]);
@@ -712,7 +711,6 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
             if(synth[osc].wave != OFF) {
                 // apply filter to osc if set
                 if(synth[osc].filter_type != FILTER_NONE) filter_process(per_osc_fb[core], osc);
-                //for(uint16_t i=0;i<BLOCK_SIZE;i++) { fbl[core][i] += per_osc_fb[core][i]; }
                 mix_with_pan(fbl[core], per_osc_fb[core], msynth[osc].last_pan, msynth[osc].pan);
             }
         }
@@ -758,6 +756,7 @@ int16_t * fill_audio_buffer_task() {
         global.event_qsize--;
         global.event_start = global.event_start->next;
     }
+
 #ifdef ESP_PLATFORM
     // give the mutex back
     xSemaphoreGive(xQueueSemaphore);
@@ -767,11 +766,13 @@ int16_t * fill_audio_buffer_task() {
     msynth[CHORUS_MOD_SOURCE].amp = synth[CHORUS_MOD_SOURCE].amp;
     msynth[CHORUS_MOD_SOURCE].duty = synth[CHORUS_MOD_SOURCE].duty;
     msynth[CHORUS_MOD_SOURCE].freq = synth[CHORUS_MOD_SOURCE].freq;
+
 #ifdef CHORUS_ARATE
     if(delay_mod)  render_osc_wave(CHORUS_MOD_SOURCE, delay_mod);
 #else
     delay_mod_val = compute_mod_value(CHORUS_MOD_SOURCE);
 #endif // CHORUS_ARATE
+
 #ifdef ESP_PLATFORM
     // Tell the rendering threads to start rendering
     xTaskNotifyGive(amy_render_handle[0]);
@@ -816,7 +817,6 @@ int16_t * fill_audio_buffer_task() {
         stereo_reverb(fbl[0], fbl[0] + BLOCK_SIZE, fbl[0], fbl[0] + BLOCK_SIZE, BLOCK_SIZE, reverb.level);
 #endif
     }
-    
     // global volume is supposed to max out at 10, so scale by 0.1.
     float volume_scale = 0.1 * global.volume;
     //uint8_t nonzero = 0;

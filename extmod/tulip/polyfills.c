@@ -73,6 +73,7 @@ int64_t get_ticks_ms() {
     
 void * malloc_caps(uint32_t size, uint32_t flags) {
 #ifdef ESP_PLATFORM
+    //fprintf(stderr, "allocing size %ld flags %ld\n", size, flags);
     return heap_caps_malloc(size, flags);
 #else
     // ignore flags
@@ -82,6 +83,7 @@ void * malloc_caps(uint32_t size, uint32_t flags) {
 
 void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags) {
 #ifdef ESP_PLATFORM
+    //fprintf(stderr, "callocing count %ld size %ld flags %ld\n", count, size, flags);
     return heap_caps_aligned_calloc(align, count, size, flags); 
 #else
     return (void*)malloc(size*count);
@@ -90,6 +92,7 @@ void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags)
 
 void *realloc_caps(void* ptr, uint32_t size, uint32_t caps) {
 #ifdef ESP_PLATFORM
+  //fprintf(stderr, "re-allocing size %ld flags %ld\n", size, caps);
   return heap_caps_realloc(ptr, size, caps);
 #else
   return (void*)realloc(ptr, size);

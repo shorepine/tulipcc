@@ -29,13 +29,12 @@ bool esp32s3_display_bounce_empty(esp_lcd_panel_handle_t panel_io, void *bounce_
     return display_bounce_empty(bounce_buf, pos_px, len_bytes, user_ctx);
 }
 
-
+#include "tasks.h"
 void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9,uint32_t t10,uint32_t t11) {
     fprintf(stderr, "Stopping display task\n");
-    ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
     display_stop();
-    vTaskDelete(display_handle);
-    display_teardown();
+    //vTaskDelete(display_handle);
+    //display_teardown();
     H_RES = t0;
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
@@ -48,8 +47,25 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
     VSYNC_BACK_PORCH = t9; 
     VSYNC_FRONT_PORCH = t10; 
     VSYNC_PULSE_WIDTH = t11; 
+
+    TFB_ROWS = (V_RES_D/FONT_HEIGHT);
+    TFB_COLS = (H_RES_D/FONT_WIDTH);
+    BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
+
+    // Init the BG, TFB and sprite and UI layers
+    display_reset_bg();
+    display_reset_tfb();
+    display_reset_sprites();
+
+    vsync_count = 1;
+    reported_fps = 1;
+    reported_gpu_usage = 0;
+    touch_held = 0;
     fprintf(stderr, "Restarting display task\n");
-    xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
+    //xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
+    display_start();
+    // Wait for it to come back
+//    delay_ms(5000);
 }
 
 void esp32s3_display_stop() {
@@ -185,7 +201,7 @@ void run_esp32s3_display(void) {
     display_brightness(brightness); 
     gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
 
-
+    
     // Time the frame sync and stay running forever 
     int64_t free_time = 0;
     int64_t tic0 = esp_timer_get_time();
