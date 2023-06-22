@@ -144,7 +144,7 @@ void vstr_add_byte(vstr_t *vstr, byte b) {
     buf[0] = b;
 }
 
-void vstr_add_char(vstr_t *vstr, unichar c) {
+void vstr_add_char(vstr_t *vstr, mp_unichar c) {
     #if MICROPY_PY_BUILTINS_STR_UNICODE
     // TODO: Can this be simplified and deduplicated?
     // Is it worth just calling vstr_add_len(vstr, 4)?
@@ -204,7 +204,7 @@ void vstr_ins_byte(vstr_t *vstr, size_t byte_pos, byte b) {
     *s = b;
 }
 
-void vstr_ins_char(vstr_t *vstr, size_t char_pos, unichar chr) {
+void vstr_ins_char(vstr_t *vstr, size_t char_pos, mp_unichar chr) {
     // TODO UNICODE
     char *s = vstr_ins_blank_bytes(vstr, char_pos, 1);
     *s = chr;

@@ -19,7 +19,7 @@ set(MICROPY_SOURCE_EXTMOD
     ${MICROPY_EXTMOD_DIR}/modlwip.c
     ${MICROPY_EXTMOD_DIR}/modnetwork.c
     ${MICROPY_EXTMOD_DIR}/modonewire.c
-    ${MICROPY_EXTMOD_DIR}/moduasyncio.c
+    ${MICROPY_EXTMOD_DIR}/modasyncio.c
     ${MICROPY_EXTMOD_DIR}/modbinascii.c
     ${MICROPY_EXTMOD_DIR}/modcryptolib.c
     ${MICROPY_EXTMOD_DIR}/moductypes.c
@@ -54,31 +54,6 @@ set(MICROPY_SOURCE_EXTMOD
     ${MICROPY_EXTMOD_DIR}/vfs_reader.c
     ${MICROPY_EXTMOD_DIR}/virtpin.c
     ${MICROPY_EXTMOD_DIR}/nimble/modbluetooth_nimble.c
-    ${MICROPY_EXTMOD_DIR}/tulip/modtulip.c
-    ${MICROPY_EXTMOD_DIR}/tulip/polyfills.c
-    ${MICROPY_EXTMOD_DIR}/tulip/lodepng.c
-    ${MICROPY_EXTMOD_DIR}/tulip/smallfont.c
-    ${MICROPY_EXTMOD_DIR}/tulip/display.c
-    ${MICROPY_EXTMOD_DIR}/tulip/bresenham.c
-    ${MICROPY_EXTMOD_DIR}/tulip/u8g2_fonts.c    
-    ${MICROPY_EXTMOD_DIR}/tulip/u8fontdata.c    
-    ${MICROPY_EXTMOD_DIR}/tulip/tulip_helpers.c
-    ${MICROPY_EXTMOD_DIR}/tulip/editor.c
-    ${MICROPY_EXTMOD_DIR}/tulip/keyscan.c
-    ${MICROPY_EXTMOD_DIR}/tulip/help.c
-    ${MICROPY_EXTMOD_DIR}/tulip/alles.c
-    ${MICROPY_EXTMOD_DIR}/tulip/ui.c
-    ${MICROPY_EXTMOD_DIR}/tulip/midi.c
-    ${MICROPY_EXTMOD_DIR}/tulip/sounds.c
-    ${MICROPY_EXTMOD_DIR}/amy/src/dsps_biquad_f32_ae32.S
-    ${MICROPY_EXTMOD_DIR}/amy/src/algorithms.c
-    ${MICROPY_EXTMOD_DIR}/amy/src/amy.c
-    ${MICROPY_EXTMOD_DIR}/amy/src/delay.c
-    ${MICROPY_EXTMOD_DIR}/amy/src/envelope.c
-    ${MICROPY_EXTMOD_DIR}/amy/src/filters.c
-    ${MICROPY_EXTMOD_DIR}/amy/src/oscillators.c
-    ${MICROPY_EXTMOD_DIR}/amy/src/partials.c
-    ${MICROPY_EXTMOD_DIR}/amy/src/pcm.c
 )
 
 # Library for btree module and associated code

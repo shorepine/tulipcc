@@ -442,7 +442,7 @@ void show_debug(uint8_t type) {
         uint16_t q = global.event_qsize;
         if(q > 25) q = 25;
         for(uint16_t i=0;i<q;i++) {
-            fprintf(stderr,"%d time %lu osc %d param %d - %f %d\n", i, ptr->time, ptr->osc, ptr->param, *(float *)&ptr->data, *(int *)&ptr->data);
+            fprintf(stderr,"%d time %" PRIu32 " osc %d param %d - %f %d\n", i, ptr->time, ptr->osc, ptr->param, *(float *)&ptr->data, *(int *)&ptr->data);
             ptr = ptr->next;
         }
     }
@@ -460,7 +460,7 @@ void show_debug(uint8_t type) {
                 for(uint8_t j=0;j<MAX_BREAKPOINT_SETS;j++) {
                     fprintf(stderr,"bp%d (target %d): ", j, synth[i].breakpoint_target[j]);
                     for(uint8_t k=0;k<MAX_BREAKPOINTS;k++) {
-                        fprintf(stderr,"%ld: %f ", synth[i].breakpoint_times[j][k], synth[i].breakpoint_values[j][k]);
+                        fprintf(stderr,"%" PRIi32 ": %f ", synth[i].breakpoint_times[j][k], synth[i].breakpoint_values[j][k]);
                     }
                     fprintf(stderr,"\n");
                 }

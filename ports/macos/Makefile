@@ -258,7 +258,6 @@ SRC_C += \
 	mpthreadport.c \
 	input.c \
 	modmachine.c \
-	moduselect.c \
 	alloc.c \
 	fatfs_port.c \
 	mpbthciport.c \
