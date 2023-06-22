@@ -638,6 +638,7 @@ uint8_t ansi_parse_digits(char*str, uint16_t j, uint16_t k, uint16_t * digits) {
 
 uint8_t supress_lf = 0;
 void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color) {
+    heap_caps_check_integrity_all(true);
     if(tfb_log) {
         fprintf(stderr, "%.*s", len, str);
         fflush(stderr);
