@@ -187,7 +187,7 @@ world.ls() # lists most recent unique filenames
 Some development guidelines if you'd like to help contribute!
 
  * Be nice and helpful and don't be afraid to ask questions! We're all doing this for fun and to learn. 
- * We're currently a hard fork of ESP-IDF, Alles/AMY and [Micropython](https://github.com/bwhitman/tulipcc/discussions/9); we aim to have no external libraries. Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. 
+ * We're currently a hard fork of Alles/AMY and [Micropython](https://github.com/bwhitman/tulipcc/discussions/9). Keep everything needed to build for both Tulip Desktop and CC in this repository when possible. While we work on early versions of Tulip, we can merge new features of libraries manually. 
  * Any change or feature must be equivalent across Tulip Desktop and Tulip CC. There are of course limited exceptions to this rule, but please test on hardware before proposing a new feature / change. 
 
 Have fun!
