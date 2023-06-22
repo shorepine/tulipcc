@@ -9,19 +9,19 @@
 #include "tulip_helpers.h"
 #include "polyfills.h"
 #include "ui.h"
-
+#include <inttypes.h>
 #define RGB332
 
 #ifdef ESP_PLATFORM
 #include "esp32s3_display.h"
 #endif
 
-uint8_t bg_pal_color;
-uint8_t tfb_fg_pal_color;
-uint8_t tfb_bg_pal_color;
-uint8_t ansi_active_bg_color; 
-uint8_t ansi_active_fg_color; 
-int16_t ansi_active_format;
+extern uint8_t bg_pal_color;
+extern uint8_t tfb_fg_pal_color;
+extern uint8_t tfb_bg_pal_color;
+extern uint8_t ansi_active_bg_color; 
+extern uint8_t ansi_active_fg_color; 
+extern int16_t ansi_active_format;
 
 #define TULIP_TEAL 9
 static const uint8_t ansi_pal[256] = {
@@ -39,10 +39,10 @@ static const uint8_t ansi_pal[256] = {
 182, 219, 219, 219, 255, 255
 };
 
-int16_t last_touch_x[3];
-int16_t last_touch_y[3];
-uint8_t touch_held;
-uint8_t tfb_log;
+extern int16_t last_touch_x[3];
+extern int16_t last_touch_y[3];
+extern uint8_t touch_held;
+extern uint8_t tfb_log;
 
 void display_reset_sprites();
 void display_reset_tfb();
@@ -101,7 +101,7 @@ extern const unsigned char font_8x12_r[256][12];
 #define DEFAULT_PIXEL_CLOCK_MHZ 22
 
 
-extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, PIXEL_CLOCK_MHZ;
+extern uint16_t H_RES, V_RES, H_RES_D, V_RES_D, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, PIXEL_CLOCK_MHZ;
 // Use this to set workable ... no, use a py func...
 //#define H_RES              800//1024
 //#define V_RES              480//600
@@ -123,11 +123,6 @@ extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCRE
 
 #define FONT_HEIGHT 12
 #define FONT_WIDTH 8
-//#define TFB_ROWS (V_RES/FONT_HEIGHT)
-//#define TFB_COLS (H_RES/FONT_WIDTH)
-//#define BOUNCE_BUFFER_SIZE_PX (H_RES*FONT_HEIGHT) 
-//#define BOUNCE_BUFFER_SIZE_BYTES (BOUNCE_BUFFER_SIZE_PX)
-
 #define FLASH_FRAMES 12
 #define ALPHA0 0x55
 #define ALPHA1 0x53
@@ -144,39 +139,36 @@ extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCRE
 #define SPRITE_IS_BEZIER 0x20
 #define SPRITE_IS_ELLIPSE 0x10
 
-uint8_t tfb_active;
-uint8_t tfb_y_row; 
-uint8_t tfb_x_col; 
-uint8_t task_screenshot;
-uint8_t task_start;
-uint8_t task_stop;
-int32_t vsync_count;
-uint8_t brightness;
-float reported_fps;
-float reported_gpu_usage;
+extern uint8_t gpu_log;
+extern uint8_t tfb_active;
+extern uint8_t tfb_y_row; 
+extern uint8_t tfb_x_col; 
+extern uint8_t task_screenshot;
+extern uint8_t task_start;
+extern uint8_t task_stop;
+extern int32_t vsync_count;
+extern uint8_t brightness;
+extern float reported_fps;
+extern float reported_gpu_usage;
+extern uint8_t *collision_bitfield;
 
-uint8_t *collision_bitfield;
 // RAM for sprites and background FB
-uint8_t *sprite_ram; // in IRAM
-uint8_t * bg; // in SPIRAM
-
-
-uint16_t *sprite_x_px;//[SPRITES]; 
-uint16_t *sprite_y_px;//[SPRITES]; 
-uint16_t *sprite_w_px;//[SPRITES]; 
-uint16_t *sprite_h_px;//[SPRITES]; 
-uint8_t *sprite_vis;//[SPRITES];
-uint32_t *sprite_mem;//[SPRITES];
-
-uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
-uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
-uint8_t *TFBbg;//[TFB_ROWS][TFB_COLS];
-uint8_t *TFBf;//[TFB_ROWS][TFB_COLS];
-int16_t *x_offsets;//[V_RES];
-int16_t *y_offsets;//[V_RES];
-int16_t *x_speeds;//[V_RES];
-int16_t *y_speeds;//[V_RES];
-
-uint32_t **bg_lines;//[V_RES];
+extern uint8_t *sprite_ram; // in IRAM
+extern uint8_t * bg; // in SPIRAM
+extern uint16_t *sprite_x_px;//[SPRITES]; 
+extern uint16_t *sprite_y_px;//[SPRITES]; 
+extern uint16_t *sprite_w_px;//[SPRITES]; 
+extern uint16_t *sprite_h_px;//[SPRITES]; 
+extern uint8_t *sprite_vis;//[SPRITES];
+extern uint32_t *sprite_mem;//[SPRITES];
+extern uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
+extern uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
+extern uint8_t *TFBbg;//[TFB_ROWS][TFB_COLS];
+extern uint8_t *TFBf;//[TFB_ROWS][TFB_COLS];
+extern int16_t *x_offsets;//[V_RES];
+extern int16_t *y_offsets;//[V_RES];
+extern int16_t *x_speeds;//[V_RES];
+extern int16_t *y_speeds;//[V_RES];
+extern uint32_t **bg_lines;//[V_RES];
 
 #endif

@@ -28,18 +28,18 @@
 #define ALLES_RECEIVE_TASK_COREID (1)
 #define ALLES_RENDER_0_TASK_COREID (1)
 #define ALLES_RENDER_1_TASK_COREID (0)
-#define ALLES_FILL_BUFFER_TASK_COREID (1)
+#define ALLES_FILL_BUFFER_TASK_COREID (0)
 
 #define DISPLAY_TASK_STACK_SIZE    (4 * 1024) 
-#define USB_TASK_STACK_SIZE    (2 * 1024) 
+#define USB_TASK_STACK_SIZE    (4 * 1024) 
 #define TOUCHSCREEN_TASK_STACK_SIZE (4 * 1024)
-#define TULIP_MP_TASK_STACK_SIZE      (32 * 1024)
+#define TULIP_MP_TASK_STACK_SIZE      (16 * 1024)
 #define MIDI_TASK_STACK_SIZE (4 * 1024)
-#define ALLES_TASK_STACK_SIZE    (2 * 1024) 
+#define ALLES_TASK_STACK_SIZE    (4 * 1024) 
 #define ALLES_PARSE_TASK_STACK_SIZE (4 * 1024)
 #define ALLES_RECEIVE_TASK_STACK_SIZE (2 * 1024)
 #define ALLES_RENDER_TASK_STACK_SIZE (8 * 1024)
-#define ALLES_FILL_BUFFER_TASK_STACK_SIZE (4 * 1024)
+#define ALLES_FILL_BUFFER_TASK_STACK_SIZE (8 * 1024)
 
 #define DISPLAY_TASK_NAME           "display_task"
 #define USB_TASK_NAME               "usb_task"
@@ -55,20 +55,20 @@
 
 #define MAX_TASKS 20 // includes system tasks
 
-TaskHandle_t display_handle;
-TaskHandle_t usb_handle;
-TaskHandle_t touchscreen_handle;
-TaskHandle_t tulip_mp_handle;
-TaskHandle_t midi_handle;
-TaskHandle_t alles_handle;
-TaskHandle_t alles_parse_handle;
-TaskHandle_t alles_receive_handle;
-TaskHandle_t amy_render_handle[AMY_CORES];
-TaskHandle_t alles_fill_buffer_handle;
-TaskHandle_t idle_0_handle;
-TaskHandle_t idle_1_handle;
-
+extern TaskHandle_t display_handle;
+extern TaskHandle_t usb_handle;
+extern TaskHandle_t touchscreen_handle;
+extern TaskHandle_t tulip_mp_handle;
+extern TaskHandle_t midi_handle;
+extern TaskHandle_t alles_handle;
+extern TaskHandle_t alles_parse_handle;
+extern TaskHandle_t alles_receive_handle;
+extern TaskHandle_t amy_render_handle[AMY_CORES];
+extern TaskHandle_t alles_fill_buffer_handle;
+extern TaskHandle_t idle_0_handle;
+extern TaskHandle_t idle_1_handle;
 // For CPU usage
-unsigned long last_task_counters[MAX_TASKS];
+extern unsigned long last_task_counters[MAX_TASKS];
 #endif
+
 #endif

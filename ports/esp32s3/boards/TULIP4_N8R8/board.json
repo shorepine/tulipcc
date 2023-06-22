@@ -11,7 +11,7 @@
         "generic_s3.jpg"
     ],
     "mcu": "esp32s3",
-    "product": "Tulip CC (N8R8)",
+    "product": "Tulip CC",
     "thumbnail": "",
     "url": "https://www.espressif.com/en/products/modules",
     "vendor": "Espressif"

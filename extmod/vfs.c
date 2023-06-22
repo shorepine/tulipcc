@@ -179,17 +179,23 @@ STATIC mp_obj_t mp_vfs_autodetect(mp_obj_t bdev_obj) {
             }
             #endif
             #if MICROPY_VFS_LFS2
+
             if (memcmp(&buf[0], "littlefs", 8) == 0) {
                 // LFS2
                 mp_obj_t vfs = MP_OBJ_TYPE_GET_SLOT(&mp_type_vfs_lfs2, make_new)(&mp_type_vfs_lfs2, 1, 0, &bdev_obj);
                 nlr_pop();
                 return vfs;
+
             }
+
             #endif
+
         }
+
         nlr_pop();
     } else {
         // Ignore exception (eg block device doesn't support extended readblocks)
+
     }
     #endif
 
@@ -207,7 +213,6 @@ mp_obj_t mp_vfs_mount(size_t n_args, const mp_obj_t *pos_args, mp_map_t *kw_args
         { MP_QSTR_readonly, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_FALSE} },
         { MP_QSTR_mkfs, MP_ARG_KW_ONLY | MP_ARG_OBJ, {.u_rom_obj = MP_ROM_FALSE} },
     };
-
     // parse args
     mp_arg_val_t args[MP_ARRAY_SIZE(allowed_args)];
     mp_arg_parse_all(n_args - 2, pos_args + 2, kw_args, MP_ARRAY_SIZE(allowed_args), allowed_args, args);

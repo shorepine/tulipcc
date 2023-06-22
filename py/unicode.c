@@ -69,13 +69,13 @@ STATIC const uint8_t attr[] = {
 
 #if MICROPY_PY_BUILTINS_STR_UNICODE
 
-unichar_mp utf8_get_char(const byte *s) {
-    unichar_mp ord = *s++;
+mp_unichar utf8_get_char(const byte *s) {
+    mp_unichar ord = *s++;
     if (!UTF8_IS_NONASCII(ord)) {
         return ord;
     }
     ord &= 0x7F;
-    for (unichar_mp mask = 0x40; ord & mask; mask >>= 1) {
+    for (mp_unichar mask = 0x40; ord & mask; mask >>= 1) {
         ord &= ~mask;
     }
     while (UTF8_IS_CONT(*s)) {
@@ -115,60 +115,60 @@ size_t utf8_charlen(const byte *str, size_t len) {
 
 #endif
 
-// Be aware: These unichar_mp_is* functions are actually ASCII-only!
-bool unichar_mp_isspace(unichar_mp c) {
+// Be aware: These mp_unichar_is* functions are actually ASCII-only!
+bool mp_unichar_isspace(mp_unichar c) {
     return c < 128 && (attr[c] & FL_SPACE) != 0;
 }
 
-bool unichar_mp_isalpha(unichar_mp c) {
+bool mp_unichar_isalpha(mp_unichar c) {
     return c < 128 && (attr[c] & FL_ALPHA) != 0;
 }
 
 /* unused
-bool unichar_mp_isprint(unichar_mp c) {
+bool mp_unichar_isprint(mp_unichar c) {
     return c < 128 && (attr[c] & FL_PRINT) != 0;
 }
 */
 
-bool unichar_mp_isdigit(unichar_mp c) {
+bool mp_unichar_isdigit(mp_unichar c) {
     return c < 128 && (attr[c] & FL_DIGIT) != 0;
 }
 
-bool unichar_mp_isxdigit(unichar_mp c) {
+bool mp_unichar_isxdigit(mp_unichar c) {
     return c < 128 && (attr[c] & FL_XDIGIT) != 0;
 }
 
-bool unichar_mp_isident(unichar_mp c) {
+bool mp_unichar_isident(mp_unichar c) {
     return c < 128 && ((attr[c] & (FL_ALPHA | FL_DIGIT)) != 0 || c == '_');
 }
 
-bool unichar_mp_isalnum(unichar_mp c) {
+bool mp_unichar_isalnum(mp_unichar c) {
     return c < 128 && ((attr[c] & (FL_ALPHA | FL_DIGIT)) != 0);
 }
 
-bool unichar_mp_isupper(unichar_mp c) {
+bool mp_unichar_isupper(mp_unichar c) {
     return c < 128 && (attr[c] & FL_UPPER) != 0;
 }
 
-bool unichar_mp_islower(unichar_mp c) {
+bool mp_unichar_islower(mp_unichar c) {
     return c < 128 && (attr[c] & FL_LOWER) != 0;
 }
 
-unichar_mp unichar_mp_tolower(unichar_mp c) {
-    if (unichar_mp_isupper(c)) {
+mp_unichar mp_unichar_tolower(mp_unichar c) {
+    if (mp_unichar_isupper(c)) {
         return c + 0x20;
     }
     return c;
 }
 
-unichar_mp unichar_mp_toupper(unichar_mp c) {
-    if (unichar_mp_islower(c)) {
+mp_unichar mp_unichar_toupper(mp_unichar c) {
+    if (mp_unichar_islower(c)) {
         return c - 0x20;
     }
     return c;
 }
 
-mp_uint_t unichar_mp_xdigit_value(unichar_mp c) {
+mp_uint_t mp_unichar_xdigit_value(mp_unichar c) {
     // c is assumed to be hex digit
     mp_uint_t n = c - '0';
     if (n > 9) {
