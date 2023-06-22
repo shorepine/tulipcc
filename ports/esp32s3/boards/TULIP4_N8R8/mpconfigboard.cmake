@@ -4,5 +4,6 @@ set(SDKCONFIG_DEFAULTS
     boards/sdkconfig.base
     boards/sdkconfig.usb
     boards/sdkconfig.ble
-    boards/GENERIC_S3/sdkconfig.board
+    boards/sdkconfig.240mhz
+    boards/TULIP4_N8R8/sdkconfig.board
 )

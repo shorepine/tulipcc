@@ -11,7 +11,7 @@
         "generic_s3.jpg"
     ],
     "mcu": "esp32s3",
-    "product": "ESP32-S3",
+    "product": "Tulip CC",
     "thumbnail": "",
     "url": "https://www.espressif.com/en/products/modules",
     "vendor": "Espressif"

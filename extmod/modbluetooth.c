@@ -127,10 +127,10 @@ STATIC mp_obj_t bluetooth_uuid_make_new(const mp_obj_type_t *type, size_t n_args
                 if (c == '-') {
                     continue;
                 }
-                if (!unichar_isxdigit(c)) {
+                if (!mp_unichar_isxdigit(c)) {
                     mp_raise_ValueError(MP_ERROR_TEXT("invalid char in UUID"));
                 }
-                c = unichar_xdigit_value(c);
+                c = mp_unichar_xdigit_value(c);
                 uuid_i--;
                 if (uuid_i < 0) {
                     mp_raise_ValueError(MP_ERROR_TEXT("UUID too long"));
