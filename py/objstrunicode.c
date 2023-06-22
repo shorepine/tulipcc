@@ -50,14 +50,14 @@ STATIC void uni_print_quoted(const mp_print_t *print, const byte *str_data, uint
             has_double_quote = true;
         }
     }
-    unichar_mp quote_char = '\'';
+    mp_unichar quote_char = '\'';
     if (has_single_quote && !has_double_quote) {
         quote_char = '"';
     }
     mp_printf(print, "%c", quote_char);
     const byte *s = str_data, *top = str_data + str_len;
     while (s < top) {
-        unichar_mp ch;
+        mp_unichar ch;
         ch = utf8_get_char(s);
         s = utf8_next_char(s);
         if (ch == quote_char) {
@@ -85,7 +85,7 @@ STATIC void uni_print_quoted(const mp_print_t *print, const byte *str_data, uint
 
 STATIC void uni_print(const mp_print_t *print, mp_obj_t self_in, mp_print_kind_t kind) {
     GET_STR_DATA_LEN(self_in, str_data, str_len);
-    #if MICROPY_PY_UJSON
+    #if MICROPY_PY_JSON
     if (kind == PRINT_JSON) {
         mp_str_print_json(print, str_data, str_len);
         return;

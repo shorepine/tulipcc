@@ -88,6 +88,22 @@ STATIC mp_obj_t tulip_tfb_log_stop(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_log_stop_obj, 0, 0, tulip_tfb_log_stop);
 
 
+
+STATIC mp_obj_t tulip_gpu_log_start(size_t n_args, const mp_obj_t *args) {
+    gpu_log = 1;
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_gpu_log_start_obj, 0, 0, tulip_gpu_log_start);
+
+
+STATIC mp_obj_t tulip_gpu_log_stop(size_t n_args, const mp_obj_t *args) {
+    gpu_log = 0;
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_gpu_log_stop_obj, 0, 0, tulip_gpu_log_stop);
+
+
+
 STATIC mp_obj_t tulip_tfb_save(size_t n_args, const mp_obj_t *args) {
     save_tfb();
     return mp_const_none;
@@ -656,7 +672,7 @@ STATIC mp_obj_t tulip_edit(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_edit_obj, 0, 1, tulip_edit);
 
-extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t);
+extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t, uint16_t, uint16_t);
 STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
     display_reset_bg();
     display_reset_sprites();
@@ -684,7 +700,7 @@ extern void mcast_send(char*, uint16_t len);
 STATIC mp_obj_t tulip_alles_send(size_t n_args, const mp_obj_t *args) {
     if(n_args > 1) {
         if(mp_obj_get_int(args[1])) { // mesh
-            mcast_send( (char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
+            //mcast_send( (char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
             return mp_const_none;
         }
     }
@@ -699,7 +715,7 @@ STATIC mp_obj_t tulip_multicast_start(size_t n_args, const mp_obj_t *args) {
     if(n_args>0) {
         strcpy(alles_local_ip, mp_obj_str_get_str(args[0]));
     }
-    alles_init_multicast();
+    //alles_init_multicast();
     return mp_const_none;
 
 }
@@ -1000,39 +1016,64 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_str_obj, 5, 7, tulip_bg_str)
 
 STATIC mp_obj_t tulip_timing(size_t n_args, const mp_obj_t *args) {
     if(n_args == 0) {
-        mp_obj_t tuple[10];
+        mp_obj_t tuple[12];
         tuple[0] = mp_obj_new_int(H_RES);
         tuple[1] = mp_obj_new_int(V_RES);
         tuple[2] = mp_obj_new_int(OFFSCREEN_X_PX);
         tuple[3] = mp_obj_new_int(OFFSCREEN_Y_PX);
+        tuple[4] = mp_obj_new_int(H_RES_D);
+        tuple[5] = mp_obj_new_int(V_RES_D);
 #ifdef ESP_PLATFORM
-        tuple[4] = mp_obj_new_int(HSYNC_BACK_PORCH);
-        tuple[5] = mp_obj_new_int(HSYNC_FRONT_PORCH);
-        tuple[6] = mp_obj_new_int(HSYNC_PULSE_WIDTH);
-        tuple[7] = mp_obj_new_int(VSYNC_BACK_PORCH);
-        tuple[8] = mp_obj_new_int(VSYNC_FRONT_PORCH);
-        tuple[9] = mp_obj_new_int(VSYNC_PULSE_WIDTH);
+        tuple[6] = mp_obj_new_int(HSYNC_BACK_PORCH);
+        tuple[7] = mp_obj_new_int(HSYNC_FRONT_PORCH);
+        tuple[8] = mp_obj_new_int(HSYNC_PULSE_WIDTH);
+        tuple[9] = mp_obj_new_int(VSYNC_BACK_PORCH);
+        tuple[10] = mp_obj_new_int(VSYNC_FRONT_PORCH);
+        tuple[11] = mp_obj_new_int(VSYNC_PULSE_WIDTH);
 #else
-        tuple[4] = mp_obj_new_int(-1);
-        tuple[5] = mp_obj_new_int(-1);
         tuple[6] = mp_obj_new_int(-1);
         tuple[7] = mp_obj_new_int(-1);
         tuple[8] = mp_obj_new_int(-1);
         tuple[9] = mp_obj_new_int(-1);
+        tuple[10] = mp_obj_new_int(-1);
+        tuple[11] = mp_obj_new_int(-1);
 #endif
-        return mp_obj_new_tuple(10, tuple);
+        return mp_obj_new_tuple(12, tuple);
     }
 
 #ifdef ESP_PLATFORM
         esp32s3_display_timings(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), \
-                    mp_obj_get_int(args[5]), mp_obj_get_int(args[6]), mp_obj_get_int(args[7]), mp_obj_get_int(args[8]), mp_obj_get_int(args[9]));
+                    mp_obj_get_int(args[5]), mp_obj_get_int(args[6]), mp_obj_get_int(args[7]), mp_obj_get_int(args[8]), mp_obj_get_int(args[9]), mp_obj_get_int(args[10]), mp_obj_get_int(args[11]));
 #else
-        unix_display_timings(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]));
+        unix_display_timings(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), mp_obj_get_int(args[5]));
 #endif
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_timing_obj, 0, 10, tulip_timing);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_timing_obj, 0, 12, tulip_timing);
+
+
+
+
+STATIC mp_obj_t tulip_window(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 0) {
+        mp_obj_t tuple[2];
+        tuple[0] = mp_obj_new_int(H_RES_D);
+        tuple[1] = mp_obj_new_int(V_RES_D);
+        return mp_obj_new_tuple(2, tuple);
+    }
+
+#ifdef ESP_PLATFORM
+        esp32s3_display_timings(H_RES, V_RES, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), \
+            HSYNC_BACK_PORCH, HSYNC_FRONT_PORCH, HSYNC_PULSE_WIDTH, VSYNC_BACK_PORCH, VSYNC_FRONT_PORCH, VSYNC_PULSE_WIDTH);
+
+#else
+        unix_display_timings(H_RES, V_RES, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, mp_obj_get_int(args[0]), mp_obj_get_int(args[1]));
+#endif
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_window_obj, 0, 2, tulip_window);
 
 
 //tulip.button(id, "text", x,y,w,h,r,fg_color,btn_color,filled)
@@ -1225,6 +1266,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_char), MP_ROM_PTR(&tulip_bg_char_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_str), MP_ROM_PTR(&tulip_bg_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
+    { MP_ROM_QSTR(MP_QSTR_window), MP_ROM_PTR(&tulip_window_obj) },
+    { MP_ROM_QSTR(MP_QSTR_gpu_log_start), MP_ROM_PTR(&tulip_gpu_log_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_gpu_log_stop), MP_ROM_PTR(&tulip_gpu_log_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_button), MP_ROM_PTR(&tulip_ui_button_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_text), MP_ROM_PTR(&tulip_ui_text_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_slider), MP_ROM_PTR(&tulip_ui_slider_obj) },

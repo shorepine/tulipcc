@@ -297,7 +297,7 @@ The Tulip GPU consists of 3 subsystems, in drawing order:
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
  * A sprite layer on top of the TFB (which is on top of the BG)
 
-The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 18Mhz, which is 23FPS. This is a great balance of speed and stability for text -- the editor and REPL. When you're writing a game or animation, increase `tulip_clock` to at least 22 for 30FPS and higher. 
+The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 22Mhz, which is 25FPS. This is a great balance of speed and stability for text -- the editor and REPL. If you're writing a game or animation, increase `tulip_clock` to at least 28 for 30FPS and higher. 
 
 Some example display clocks and resolutions:
 
@@ -305,8 +305,8 @@ Some example display clocks and resolutions:
 | ------- | ------- | ------ | ------ | --| ------- | ------- | ------ | ------ |
 | 1024    | 600     | 10     | 14.98  | |512     | 600     | 10     | 19.91  |
 | 1024    | 600     | 14     | 18.55  | |512     | 600     | 14     | 30.26  |
-| **1024**| **600** | **18** | 23.19  | |512     | 600     | 18     | 37.82  |
-| 1024    | 600     | 22     | 30.91  | |512     | 600     | 22     | 50.43  |
+| 1024    | 600     | 18     | 23.19  | |512     | 600     | 18     | 37.82  |
+| 1024    | 600     | 22     | 25.91  | |512     | 600     | 22     | 50.43  |
 | 1024    | 600     | 28     | 46.37  | |512     | 600     | 28     | 75.65  |
 | 1024    | 300     | 10     | 21.47  | |512     | 300     | 10     | 35.03  |
 | 1024    | 300     | 14     | 34.36  | |512     | 300     | 14     | 56.05  |
@@ -333,10 +333,17 @@ tulip.display_clock(mhz)
 
 # You can also change the timing and resolution on the fly. 
 # This is helpful for getting higher FPS with lower resolution (less pixels)
-(h_res, v_res, h_offscreen_px, v_offscreen_px, 
+# If h_visible or v_visible is smaller than the resolution of the display, we will draw the whole h_res and v_res
+# to the display but center your visible res in a window. This is helpful for the Tulip CC display which cannot 
+# easily change native resolution. Your FPS will stay the same but you will have more GPU time to draw in the window.
+(h_res, v_res, h_offscreen_px, v_offscreen_px, h_visible_res, v_visible_res,
   hsync_back_porch, hsync_front_porch, hsync_pulse_width, 
   vsync_back_porch, vsync_front_porch, vsync_pulse_width) = tulip.timing() # returns current
 tulip.timing(1024, 600, 256, 150, 139, 140, 20, 20, 12, 20) # sets, will erase all display RAM
+
+# You can set the visible window on its own with
+tulip.window(1024, 512)
+(w,h) = tulip.window()
 
 # Convenience function for getting the screen width and height,
 # which are just the first two values returned by tulip.timing()
@@ -366,6 +373,9 @@ tulip.frame_callback() # disables the callback
 # Sets the screen brightness, from 1-9 (9 max brightness.) 5 is default.
 tulip.brightness(5)
 
+# Show a log of the GPU usage (frames per second, time spent in GPU) to the stderr log
+tulip.gpu_log_start()
+tulip.gpu_log_stop()
 ```
 
 ## Graphics background plane

@@ -34,20 +34,23 @@ sudo apt install cmake ninja-build dfu-util virtualenv
 
 On either macOS or Linux:
 
+First, download the supported version of ESP-IDF. That is currently 5.1-rc2. [You can download it directly here.](https://dl.espressif.com/github_assets/espressif/esp-idf/releases/download/v5.1-rc2/esp-idf-v5.1-rc2.zip) Unpack it to a folder. I like to keep them in `~/esp/`, as you'll likely want to use different versions eventually. So we'll assume it's in `~/esp/esp-idf-v5.1-rc2`.
+
+Also, clone this repository. We'll assume it's in `~/tulipcc`.
+
 ```
-# install our version of the ESP-IDF that comes with our repository
-cd esp-idf
-./install.sh esp32s3
-source ./export.sh
+# install ESP-IDF that comes with our repository
+~/esp/esp-idf-v5.1-rc2/install.sh esp32s3
+source ~/esp/esp-idf-v5.1-rc2/export.sh
 
 pip3 install Cython
-pip3 install littlefs-python # needed to flash the filesystem
-cd ../ports/esp32s3
+pip3 install littlefs-python==0.4.0 # needed to flash the filesystem
+cd ~/tulipcc/ports/esp32s3
 ```
 
 Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. If using our Tulip board, use the USB-C connector. 
 
-Make sure you're using the right `MICROPY_BOARD` spec for your chip. If you're using the `N8R8` (8MB flash), make sure to use `-DMICROPY_BOARD=TULIP4_N8R8`. For all others (16MB minimum), including the Tulip CC integrated board, use `-DMICROPY_BOARD=TULIP4`.
+Make sure you're using the right `MICROPY_BOARD` spec for your chip. If you're using the `N8R8` (8MB flash), make sure to use `-DMICROPY_BOARD=TULIP4_N8R8`. For the 32MB (N32R8), including the Tulip CC integrated board, use `-DMICROPY_BOARD=TULIP4`.
 
 For example, for the N8R8 chip only:
 
@@ -73,7 +76,7 @@ To build / debug going forward:
 
 ```bash
 cd ports/esp32s3
-source ../../esp-idf/export.sh # do this once per terminal window
+source ~/esp/esp-idf-v5.1-rc2/export.sh # do this once per terminal window
 idf.py -D MICROPY_BOARD=TULIP4 flash
 idf.py -D MICROPY_BOARD=TULIP4 monitor # shows stderr, use control-] to quit
 

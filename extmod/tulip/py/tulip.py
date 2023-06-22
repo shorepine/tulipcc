@@ -21,14 +21,12 @@ class Game():
         Sprite.reset()  # resets sprite counter and RAM
         collisions() # resets collision
         alles.reset()
-        display_clock(22)
         self.run = 1
 
     def quit(self):
         self.run = 0
         # Done. Clean up a bit
         frame_callback()
-        display_clock(18)
         collisions() # resets collision
         if(not self.debug):
             Sprite.reset()  # resets sprite counter

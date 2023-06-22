@@ -1,6 +1,6 @@
 # Merging in Micropython and ESP-IDF guide
 
-This is a very informal guide to making Tulip CC work with clean copies of Micropython (MP) and ESP-IDF (IDF). You should never need to do this work, unless you're interested in getting Tulip to run on a version of IDF or MP that we haven't supported yet. These are my notes from doing the work in May 2023 after upgrading to newer versions of MP and IDF (last updated May 2022!)
+This is a very informal guide to making Tulip CC work with clean copies of Micropython (MP). You should never need to do this work, unless you're interested in getting Tulip to run on a version of MP that we haven't supported yet. These are my notes from doing the work in May 2023 after upgrading to newer versions of MP and IDF.
 
 Can you help? I'd **love** to make this process easier, and act less like a "fork" of MP. It would be great if Tulip's build system pulls down the IDF and MP versions we need before building, so we don't have to ship our repo with all the forked code. We have made changes (and pull requests!) to a few MP libraries, so we do have to keep our versions around or merge them in while we wait for the PRs to come through. I don't know the best way to do all this, so any help is quite welcome.
 
@@ -41,19 +41,17 @@ There will be small API changes in MP that you'll have to fix, probably in `modt
 
 This is all you need to get Desktop working on a fresh MP.
 
-## ESP-IDF
+## esp32s3
 
 This assumes you've already done the Desktop merging.
 
-IDF's main branch is rarely what you want. You should first check what the latest IDF version MP supports. As of now, that's 4.4.4. 
+IDF's main branch is rarely what you want. You should first check what the latest IDF version MP supports. As of now, that's 5.1-rc2 
 
-So download their combined zip from their github release page and put it in `esp-idf` in our Tulip root. 
+So download their combined zip from their github release page and put it in `esp`
 
 Run ./install.sh in it to make sure it grabs the latest toolchain. 
 
-It would be great to use 5.X to get a few key IDF features but until MP has ported their `esp32` port to it, it's going to be hard for us to do the same. [They are tracking that progress here.](https://github.com/micropython/micropython/issues/11078)
-
-First, make sure the MP latest you got in the earlier step compiles fine in its `esp32` port. Just go into the `esp32` folder and do `source ../../esp-idf/export.sh`, then `make submodules`, `idf.py build`. That should make a working MP-only (no Tulip) bin to flash to a ESP. 
+First, make sure the MP latest you got in the earlier step compiles fine in its `esp32` port. Just go into the `esp32` folder and do `source ~/esp/esp-idf-v5.1-rc2/export.sh`, then `make submodules`, `idf.py build`. That should make a working MP-only (no Tulip) bin to flash to a ESP. 
 
 Next, copy `ports/esp32` into `esp32s3`. Copy across the following files from Tulip:
 
@@ -61,16 +59,14 @@ Next, copy `ports/esp32` into `esp32s3`. Copy across the following files from Tu
   * esp32s3_display*
   * esp32s3_joy*
   * usb_keyboard*
-  * components/bw_esp_lcd*
   * touchscreen*
   * tasks.h
   * tulip_fs_create.py
-
-[Note: we are hoping to move away from `bw_esp_lcd`, but the bounce buffer support is 5.X only, and MP is stuck to 4.4x right now.]
+  * upload_firmware.py
+  * boards/TULIP4*
+  * tulip-partitions-*
 
 In `mpconfigport.h` change all the `esp32` directory names to `esp32s3`.
-
-I also had to change `lib/berkeleydb-1.xx/PORT/include/queue.h` to test `#ifndef LIST_INT` as it was conflicting with something. 
 
 Now merge in Tulip files:
 
@@ -78,28 +74,11 @@ Now merge in Tulip files:
  * main.c -- is more straightforward than Desktop. Just have main() kick off the tasks for the subsystems. We probably could put this code somewhere else and link to it. 
  * uart.c -- we redirect stdout/in for Tulip this way. 
 
-Now, set up the menuconfig / board. 
- * Copy `boards/ESP32S3_SPIRAM_OCT` to `boards/TULIP4`. 
- * Rename the directory names in `boards.json` and `mpconfigboard...` to point to `TULIP4`. 
- * Change the partitions file name to `partitions.csv`.
-
-(TBD -- an 8MB partition and `TULIP4_N8R8` board spec without OTA and octal flash) 
-
 Merge in `boards/manifest.py` from Tulip. This changes a lot -- some modules will be in different places.
 
 Remove `_boot.py` from `modules`. We have our own in `extmod/tulip/py`.
 
-Now, `idf.py -DMICROPY_BOARD=TULIP4 menuconfig`. Make the following changes:
- * Component config -> ESP32S3 specific -> CPU frequency - 240MHz
- * Component config -> ESP32S3 specific -> SPIRAM -> Make SPIRAM allocatable by heap_caps...
- * Component config -> ESP32S3 specific -> SPIRAM -> Try to allocate memories of Wifi and LWIP...
- * Component config -> FreeRTOS -> Enable FreeRTOS trace facility
- * Serial Flasher -> 16MB size (even if you have 32, as of right now there's a bug with 32 and IDF 4.4.4.)
- * Serial Flash -> Enable octal flash
-
-Save it, and copy it `cp build/sdkconfig boards/TULIP4/sdkconfig.board`
-
-Update the partitions.csv if need be. Also update `tulip_fs_create` with a new FS size if need be. 
+Update CMakeLists.txt in main_esp32s3 to have `esp32s3`. 
 
 That should be it. `idf.py -DMICROPY_BOARD=TULIP4 flash` should build and flash.
 

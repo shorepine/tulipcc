@@ -1,7 +1,7 @@
 // midi.h
 #include "alles.h"
 #ifdef ESP_PLATFORM 
-QueueHandle_t uart_queue;
+extern QueueHandle_t uart_queue;
 #else
 // virtualmidi Cocoa stubs
 #endif
@@ -9,8 +9,8 @@ QueueHandle_t uart_queue;
 
 void tulip_midi_isr();
 #define MAX_MIDI_BYTES_PER_MESSAGE 18
-uint8_t last_midi[MAX_MIDI_BYTES_PER_MESSAGE];
-uint8_t last_midi_len;
+extern uint8_t last_midi[MAX_MIDI_BYTES_PER_MESSAGE];
+extern uint8_t last_midi_len;
 
 void midi_out(uint8_t * bytes, uint16_t len);
 #ifdef ESP_PLATFORM

@@ -1,1 +1,0 @@
-.. include:: ../../../en/api-reference/protocols/esp_sdio_slave_protocol.rst

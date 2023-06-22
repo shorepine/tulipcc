@@ -9,6 +9,7 @@
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include "polyfills.h"
 
 #define OSCS 64              // # of simultaneous oscs to keep track of 
@@ -18,7 +19,7 @@
 #define PCM_PATCHES_SIZE PCM_SMALL
 #define BLOCK_SIZE 256       // buffer block size in samples
 #define KS_OSCS 1            // # of Karplus-strong oscillators allowed at once, they're big RAM users so keep it small on esp
-#define EVENT_FIFO_LEN 3000  // number of events the queue can store
+#define EVENT_FIFO_LEN 1000  // number of events the queue can store
 #define MAX_DRIFT_MS 20000   // ms of time you can schedule ahead before synth recomputes time base
 #define SAMPLE_RATE 44100    // playback sample rate
 #define SAMPLE_MAX 32767
@@ -195,7 +196,7 @@ struct mod_event {
 };
 
 // Callbacks, override if you'd like after calling amy_start()
-void (*amy_parse_callback)(char,char*);
+//void (*amy_parse_callback)(char,char*);
 
 struct event amy_default_event();
 void amy_add_event(struct event e);
