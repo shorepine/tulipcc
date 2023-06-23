@@ -18,16 +18,24 @@ if(not os.getcwd().endswith("esp32s3")):
     print("Run this from the tulipcc/ports/esp32s3 folder only")
     sys.exit()
 
+TULIP_HOME="../../tulip_home"
+
 # Copy over only these extensions 
 good_exts = [".txt", ".png", ".py"]
 # And these folders
-folders = ['ex','ex/g']
+source_folders = ['ex','images', 'test', 'sounds']
 
-TULIP_HOME="../../tulip_home"
+cur_dir = os.getcwd()
+os.chdir(TULIP_HOME)
+folders = source_folders
+# Expand the folders
+for folder in source_folders:
+    folders = folders + [ f.path for f in os.scandir(folder) if f.is_dir() ]
+
 if(len(sys.argv)>1 and sys.argv[1]=='N8R8'):
     TULIP_VFS_SIZE = 0x480000
 else:
-    TULIP_VFS_SIZE = 0x1832000 # 0x1232000 # 0x919000 
+    TULIP_VFS_SIZE = 0x1832000 
 
 cfg = lfs.LFSConfig(block_size=4096, block_count = TULIP_VFS_SIZE / 4096)
 fs = lfs.LFSFilesystem()
@@ -42,11 +50,14 @@ def copy_to_lfs(source, dest):
     lfs.file_close(fs, fh)
 
 for folder in folders:
+
     lfs.mkdir(fs,folder)
-    for file in os.listdir(TULIP_HOME+'/'+folder):
+    for file in os.listdir(folder):
         file_part, ext = os.path.splitext(file)
         if(ext in good_exts):
-            copy_to_lfs(TULIP_HOME+'/'+folder+'/'+file, folder+'/'+file)
+            copy_to_lfs(folder+'/'+file, folder+'/'+file)
+
+os.chdir(cur_dir)
 
 print("writing .bin file...")
 with open("tulip-lfs.bin","wb") as fh:
@@ -55,12 +66,7 @@ print("... done.")
 
 
 target = ParttoolTarget()
-#target.erase_partition(PartitionName("vfs"))
 target.write_partition(PartitionName("vfs"), "tulip-lfs.bin")
-
-
-# Now overwrite the user flash partition
-#os.system('parttool.py write_partition --partition-name=vfs --input=tulip-lfs.bin')
 os.system('mv tulip-lfs.bin build/')
 
 
