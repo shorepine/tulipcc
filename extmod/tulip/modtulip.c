@@ -700,7 +700,7 @@ extern void mcast_send(char*, uint16_t len);
 STATIC mp_obj_t tulip_alles_send(size_t n_args, const mp_obj_t *args) {
     if(n_args > 1) {
         if(mp_obj_get_int(args[1])) { // mesh
-            //mcast_send( (char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
+            mcast_send( (char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
             return mp_const_none;
         }
     }
@@ -715,7 +715,7 @@ STATIC mp_obj_t tulip_multicast_start(size_t n_args, const mp_obj_t *args) {
     if(n_args>0) {
         strcpy(alles_local_ip, mp_obj_str_get_str(args[0]));
     }
-    //alles_init_multicast();
+    alles_init_multicast();
     return mp_const_none;
 
 }

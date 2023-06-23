@@ -21,7 +21,6 @@
 
 uint8_t ipv4_quartet = 0;
 
-#if 0 
 static const char *TAG = "multicast";
 static const char *V4TAG = "mcast-ipv4";
 
@@ -38,13 +37,16 @@ uint32_t udp_message_counter = 0;
 
 int64_t last_ping_time = PING_TIME_MS; // do the first ping at 10s in to wait for other synths to announce themselves
 
+// Since we're not using WiFI manager here, we have to get our own ip addresses. 
+// This is different than Alles
+
 static int socket_add_ipv4_multicast_group(bool assign_source_if) {
     struct ip_mreq imreq = { 0 };
     struct in_addr iaddr = { 0 };
     int err = 0;
     // Configure source interface
-    tcpip_adapter_ip_info_t ip_info = { 0 };
-    tcpip_adapter_get_ip_info(WIFI_IF_STA, &ip_info);
+    esp_netif_ip_info_t ip_info = { 0 };
+    esp_netif_get_ip_info(WIFI_IF_STA, &ip_info);
     inet_addr_from_ip4addr(&iaddr, &ip_info.ip);
     // Configure multicast address to listen to
     err = inet_aton(MULTICAST_IPV4_ADDR, &imreq.imr_multiaddr.s_addr);
@@ -159,8 +161,8 @@ void mcast_listen_task(void *pvParameters) {
     };
     
     //ipv4_quartet = esp_ip4_addr4(&wifi_manager_ip4);
-    tcpip_adapter_ip_info_t ip_info = { 0 };
-    tcpip_adapter_get_ip_info(WIFI_IF_STA, &ip_info);
+    esp_netif_ip_info_t ip_info = { 0 };
+    esp_netif_get_ip_info(WIFI_IF_STA, &ip_info);
     ipv4_quartet = ip4_addr4(&ip_info.ip);
 
     int16_t full_message_length;
@@ -233,5 +235,4 @@ void mcast_listen_task(void *pvParameters) {
 
 }
 
-#endif
 

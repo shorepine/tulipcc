@@ -24,7 +24,7 @@ char githash[8];
 extern struct state global;
 extern uint32_t event_counter;
 extern uint32_t message_counter;
-//extern void mcast_send(char*, uint16_t);
+extern void mcast_send(char*, uint16_t);
 
 uint8_t debug_on = 0;
 char raw_file[1] = "";
@@ -37,7 +37,7 @@ char * alles_local_ip;
 i2s_chan_handle_t tx_handle;
 
 
-//extern void mcast_listen_task(void *pvParameters);
+extern void mcast_listen_task(void *pvParameters);
 
 // Wrap AMY's renderer into 2 FreeRTOS tasks, one per core
 void esp_render_task( void * pvParameters) {
@@ -72,7 +72,7 @@ void esp_fill_audio_buffer_task() {
 }
 
 #else
-//void *mcast_listen_task(void *vargp);
+void *mcast_listen_task(void *vargp);
 #endif
 
 
@@ -147,42 +147,6 @@ amy_err_t setup_i2s(void) {
 }
 
 
-// Setup I2S
-#if 0
-amy_err_t setup_i2s(void) {
-    //i2s configuration
-    i2s_config_t i2s_config = {
-         .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
-         .sample_rate = SAMPLE_RATE,
-         .bits_per_sample = I2S_SAMPLE_TYPE,
-#if NCHANS == 2
-         .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
-#else
-         .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
-#endif
-         //.communication_format = (i2s_comm_format_t)(I2S_COMM_FORMAT_STAND_I2S),
-         .communication_format = I2S_COMM_FORMAT_STAND_MSB,
-         .intr_alloc_flags = 0, //ESP_INTR_FLAG_LEVEL1, // high interrupt priority
-         .dma_buf_count = 2, //I2S_BUFFERS,
-         .dma_buf_len = 512, // note: this is a fixed number, not entirely related (but should be multiple) of BLOCK_SIZE
-         .tx_desc_auto_clear = true,
-        };
-        
-    i2s_pin_config_t pin_config = {
-        .bck_io_num = CONFIG_I2S_BCLK, 
-        .ws_io_num = CONFIG_I2S_LRCLK,  
-        .data_out_num = CONFIG_I2S_DIN, 
-        .data_in_num = -1   //Not used
-    };
-    //SET_PERI_REG_BITS(I2S_TX_TIMING_REG(0), 0x1, 1, I2S_TX_DSYNC_SW_S);
-
-    i2s_driver_install((i2s_port_t)CONFIG_I2S_NUM, &i2s_config, 0, NULL);
-    i2s_set_pin((i2s_port_t)CONFIG_I2S_NUM, &pin_config);
-    i2s_set_sample_rates((i2s_port_t)CONFIG_I2S_NUM, SAMPLE_RATE);
-    return AMY_OK;
-}
-#endif
-
 #endif
 
 
@@ -221,8 +185,6 @@ void * alles_start(void *vargs) {
 
 #endif
 
-#if 0
-
 #ifdef ESP_PLATFORM
 // Make AMY's parse task run forever, as a FreeRTOS task (with notifications)
 void esp_parse_task() {
@@ -243,7 +205,7 @@ void alles_init_multicast() {
     fprintf(stderr, "power save off\n");
     esp_wifi_set_ps(WIFI_PS_NONE);
     fprintf(stderr, "creating mcast task\n");
-//    xTaskCreatePinnedToCore(&mcast_listen_task, ALLES_RECEIVE_TASK_NAME, ALLES_RECEIVE_TASK_STACK_SIZE, NULL, ALLES_RECEIVE_TASK_PRIORITY, &alles_receive_handle, ALLES_RECEIVE_TASK_COREID);
+    xTaskCreatePinnedToCore(&mcast_listen_task, ALLES_RECEIVE_TASK_NAME, ALLES_RECEIVE_TASK_STACK_SIZE, NULL, ALLES_RECEIVE_TASK_PRIORITY, &alles_receive_handle, ALLES_RECEIVE_TASK_COREID);
     fprintf(stderr, "creating parse task\n");
     xTaskCreatePinnedToCore(&esp_parse_task, ALLES_PARSE_TASK_NAME, ALLES_PARSE_TASK_STACK_SIZE, NULL, ALLES_PARSE_TASK_PRIORITY, &alles_parse_handle, ALLES_PARSE_TASK_COREID);
 #else
@@ -254,11 +216,10 @@ void alles_init_multicast() {
     create_multicast_ipv4_socket();
     fprintf(stderr, "creating mcast task\n");
     pthread_t thread_id;
-//    pthread_create(&thread_id, NULL, mcast_listen_task, NULL);
+    pthread_create(&thread_id, NULL, mcast_listen_task, NULL);
 #endif
 }
 
-#endif
 
 
 // sync.c -- keep track of mulitple synths
