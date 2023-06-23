@@ -19,11 +19,12 @@ class LS:
                     print("% 9d %s" % (f[3], f[0]))
                 else:
                     print("          %s" % f[0])
-        try:
-            st = os.statvfs(path)
-            print("\n{:,d}k free".format(st[1] * st[3] // 1024))
-        except:
-            pass
+        # Don't get free space in ls... takes too long
+        #try:
+        #    st = os.statvfs(path)
+        #    print("\n{:,d}k free".format(st[1] * st[3] // 1024))
+        #except:
+        #    pass
 
 
 class PWD:
