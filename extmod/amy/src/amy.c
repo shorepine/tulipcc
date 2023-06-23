@@ -965,6 +965,7 @@ struct event amy_parse_message(char * message) {
         if(message[d] == 0) { new_length = d; d = length + 1;  } 
     }
     length = new_length;
+    //fprintf(stderr, "%s\n", message);
 
     while(c < length+1) {
         uint8_t b = message[c];

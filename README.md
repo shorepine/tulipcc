@@ -37,7 +37,7 @@ Tulip CC rev 4 supports:
 - Built in BBS chat room and file transfer area called **T U L I P ~ W O R L D**
 - USB keyboard support
 - Capactive multi-touch support (mouse on Tulip Desktop)
-- MIDI input and output 
+- MIDI input and output
 - Joystick support for NES/SNES style gamepads (or any connected gamepad on Tulip Desktop)
 - 575mA power usage @ 5V including display, at medium display brightness, can last for hours on LiPo, 18650s, or USB battery pack 
 

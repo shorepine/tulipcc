@@ -32,6 +32,10 @@ char * alles_local_ip;
 
 
 #ifdef ESP_PLATFORM
+#include "driver/i2s_std.h"
+#include "driver/gpio.h"
+i2s_chan_handle_t tx_handle;
+
 
 //extern void mcast_listen_task(void *pvParameters);
 
@@ -59,7 +63,8 @@ void esp_fill_audio_buffer_task() {
     while(1) {
         int16_t *block = fill_audio_buffer_task();
         size_t written = 0;
-        i2s_write((i2s_port_t)CONFIG_I2S_NUM, block, BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS, &written, portMAX_DELAY); 
+        //i2s_write((i2s_port_t)CONFIG_I2S_NUM, block, BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS, &written, portMAX_DELAY); 
+        i2s_channel_write(tx_handle, block, BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS, &written, portMAX_DELAY);
         if(written != BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS) {
             fprintf(stderr,"i2s underrun: %d vs %d\n", written, BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS);
         }
@@ -114,9 +119,36 @@ amy_err_t unix_amy_init() {
 
 #ifdef ESP_PLATFORM
 
+amy_err_t setup_i2s(void) {
+    i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
+    i2s_new_channel(&chan_cfg, &tx_handle, NULL);
+    i2s_std_config_t std_cfg = {
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
+        .slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
+        .gpio_cfg = {
+            .mclk = I2S_GPIO_UNUSED,
+            .bclk = CONFIG_I2S_BCLK,
+            .ws = CONFIG_I2S_LRCLK,
+            .dout = CONFIG_I2S_DIN,
+            .din = I2S_GPIO_UNUSED,
+            .invert_flags = {
+                .mclk_inv = false,
+                .bclk_inv = false,
+                .ws_inv = false,
+            },
+        },
+    };
+    /* Initialize the channel */
+    i2s_channel_init_std_mode(tx_handle, &std_cfg);
+
+    /* Before writing data, start the TX channel first */
+    i2s_channel_enable(tx_handle);
+    return AMY_OK;
+}
 
 
 // Setup I2S
+#if 0
 amy_err_t setup_i2s(void) {
     //i2s configuration
     i2s_config_t i2s_config = {
@@ -149,6 +181,7 @@ amy_err_t setup_i2s(void) {
     i2s_set_sample_rates((i2s_port_t)CONFIG_I2S_NUM, SAMPLE_RATE);
     return AMY_OK;
 }
+#endif
 
 #endif
 
@@ -188,6 +221,7 @@ void * alles_start(void *vargs) {
 
 #endif
 
+#if 0
 
 #ifdef ESP_PLATFORM
 // Make AMY's parse task run forever, as a FreeRTOS task (with notifications)
@@ -202,7 +236,6 @@ void esp_parse_task() {
 #include "esp_wifi.h"
 #endif
 
-#if 0
 void alles_init_multicast() {
 #ifdef ESP_PLATFORM
     fprintf(stderr, "creating socket\n");
@@ -258,7 +291,8 @@ void alles_parse_message(char *message, uint16_t length) {
     uint8_t ipv4 = 0;
     uint16_t start = 0;
     uint16_t c = 0;
-
+    //char local_message[MAX_RECEIVE_LEN];
+    //strncpy(local_message, message, length);
     // Parse the AMY stuff out of the message first
     struct event e = amy_parse_message(message);
     uint8_t sync_response = 0;

@@ -24,6 +24,7 @@
  * THE SOFTWARE.
  */
 
+#if 0
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -844,3 +845,4 @@ MP_DEFINE_CONST_OBJ_TYPE(
 MP_REGISTER_ROOT_POINTER(struct _machine_i2s_obj_t *machine_i2s_obj[I2S_NUM_AUTO]);
 
 #endif // MICROPY_PY_MACHINE_I2S
+#endif

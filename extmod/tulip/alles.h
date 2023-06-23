@@ -30,13 +30,13 @@ extern "C" {
 #include "esp_err.h"
 #include "esp_sleep.h"
 #include "driver/uart.h"
-#include "driver/i2s.h"
+//#include "driver/i2s.h"
 #include "nvs_flash.h"
 
 #include "tasks.h"
 
 // This can be 32 bit, int32_t -- helpful for digital output to a i2s->USB teensy3 board
-#define I2S_SAMPLE_TYPE I2S_BITS_PER_SAMPLE_16BIT
+//#define I2S_SAMPLE_TYPE I2S_BITS_PER_SAMPLE_16BIT
 typedef int16_t i2s_sample_type;
 
 

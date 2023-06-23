@@ -9,7 +9,7 @@
 #include "esp_random.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
-#include "driver/i2s.h"
+//#include "driver/i2s.h"
 #include "esp_wifi_types.h"
 
 #ifndef MICROPY_CONFIG_ROM_LEVEL
@@ -110,7 +110,7 @@
 #define MICROPY_PY_MACHINE_DAC              (1)
 #endif
 #ifndef MICROPY_PY_MACHINE_I2S
-#define MICROPY_PY_MACHINE_I2S              (1)
+#define MICROPY_PY_MACHINE_I2S              (0)
 #endif
 #define MICROPY_PY_NETWORK (1)
 #ifndef MICROPY_PY_NETWORK_HOSTNAME_DEFAULT
