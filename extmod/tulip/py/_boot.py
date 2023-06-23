@@ -29,6 +29,8 @@ except ImportError:
         # already exists, that's fine
         pass
     try:
+        # TODO: clean this up , this is not relevant anymore
+        
         # If they don't have an ex & ex/g folders, make them and fill them in
         mkdir(tulipcc+"/ex")
         mkdir(tulipcc+"/ex/g")

@@ -205,9 +205,7 @@ def free_disk_bytes():
     return st[1] * st[3]
 
 
-# tales 3m:10s for download then flash. download: 2:15 with bigger buffer
-# try: download direct to flash (scary! but should work?)
-# yes, takes, 2:30
+# takes 2:30
 def upgrade():
     import world, time, sys, os
     try:
