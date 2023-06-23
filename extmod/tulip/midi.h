@@ -6,6 +6,7 @@ extern QueueHandle_t uart_queue;
 // virtualmidi Cocoa stubs
 #endif
 
+void callback_midi_message_received(uint8_t *data, size_t len);
 
 void tulip_midi_isr();
 #define MAX_MIDI_BYTES_PER_MESSAGE 18

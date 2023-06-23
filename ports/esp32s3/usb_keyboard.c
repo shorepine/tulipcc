@@ -1,6 +1,6 @@
 // usb_keyboard.c
 #include "usb_keyboard.h"
-
+#include "midi.h"  // from extmod/tulip/
 
 
 typedef union {
@@ -18,8 +18,75 @@ typedef union {
     uint8_t val[9];
 } usb_hid_desc_t;
 
+#ifdef DEBUG_USB
+// from show_desc.hpp
+// from https://github.com/touchgadget/esp32-usb-host-demos
 
+void show_config_desc(const void *p)
+{
+  printf("*** show_config_desc:\n");
+  const usb_config_desc_t *config_desc = (const usb_config_desc_t *)p;
 
+  printf("bLength: %d\n", config_desc->bLength);
+  printf("bDescriptorType(config): %d\n", config_desc->bDescriptorType);
+  printf("wTotalLength: %d\n", config_desc->wTotalLength);
+  printf("bNumInterfaces: %d\n", config_desc->bNumInterfaces);
+  printf("bConfigurationValue: %d\n", config_desc->bConfigurationValue);
+  printf("iConfiguration: %d\n", config_desc->iConfiguration);
+  printf("bmAttributes(%s%s%s): 0x%02x\n",
+      (config_desc->bmAttributes & USB_BM_ATTRIBUTES_SELFPOWER)?"Self Powered":"",
+      (config_desc->bmAttributes & USB_BM_ATTRIBUTES_WAKEUP)?", Remote Wakeup":"",
+      (config_desc->bmAttributes & USB_BM_ATTRIBUTES_BATTERY)?", Battery Powered":"",
+      config_desc->bmAttributes);
+  printf("bMaxPower: %d = %d mA\n", config_desc->bMaxPower, config_desc->bMaxPower*2);
+  printf("***\n");
+}
+
+uint8_t show_interface_desc(const void *p)
+{
+  printf("*** show_interface_desc:\n");
+  const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
+
+  printf("bLength: %d\n", intf->bLength);
+  printf("bDescriptorType (interface): %d\n", intf->bDescriptorType);
+  printf("bInterfaceNumber: %d\n", intf->bInterfaceNumber);
+  printf("bAlternateSetting: %d\n", intf->bAlternateSetting);
+  printf("bNumEndpoints: %d\n", intf->bNumEndpoints);
+  printf("bInterfaceClass: 0x%02x\n", intf->bInterfaceClass);
+  printf("bInterfaceSubClass: 0x%02x\n", intf->bInterfaceSubClass);
+  printf("bInterfaceProtocol: 0x%02x\n", intf->bInterfaceProtocol);
+  printf("iInterface: %d\n", intf->iInterface);
+  printf("***\n");
+  return intf->bInterfaceClass;
+}
+
+void show_endpoint_desc(const void *p)
+{
+  printf("*** show_endpoint_desc:\n");
+  const usb_ep_desc_t *endpoint = (const usb_ep_desc_t *)p;
+  const char *XFER_TYPE_NAMES[] = {
+    "Control", "Isochronous", "Bulk", "Interrupt"
+  };
+  printf("bLength: %d\n", endpoint->bLength);
+  printf("bDescriptorType (endpoint): %d\n", endpoint->bDescriptorType);
+  printf("bEndpointAddress(%s): 0x%02x\n",
+    (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK)?"In":"Out",
+    endpoint->bEndpointAddress);
+  printf("bmAttributes(%s): 0x%02x\n",
+      XFER_TYPE_NAMES[endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK],
+      endpoint->bmAttributes);
+  printf("wMaxPacketSize: %d\n", endpoint->wMaxPacketSize);
+  printf("bInterval: %d\n", endpoint->bInterval);
+  printf("***\n");
+}
+
+// end of show_desc.hpp
+#else  // !DEBUG_USB
+#define show_config_desc(p)  /* nothing */
+#define show_interface_desc(p)  /* nothing */
+#define show_endpoint_desc(p)  /* nothing */
+
+#endif // DEBUG_USB
 
 const TickType_t HOST_EVENT_TIMEOUT = 1;
 const TickType_t CLIENT_EVENT_TIMEOUT = 1;
@@ -40,6 +107,115 @@ int64_t KeyRepeatTimer=0;
 
 //const size_t KEYBOARD_IN_BUFFER_SIZE = KEYBOARD_BYTES; 
 usb_transfer_t *KeyboardIn = NULL;
+
+// ---------------------------------
+// from usbhmidi.ino
+bool isMIDI = false;
+bool isMIDIReady = false;
+
+//const size_t MIDI_IN_BUFFERS = 8;
+//const size_t MIDI_OUT_BUFFERS = 8;
+#define MIDI_IN_BUFFERS 8
+#define MIDI_OUT_BUFFERS 8
+usb_transfer_t *MIDIOut = NULL;
+usb_transfer_t *MIDIIn[MIDI_IN_BUFFERS] = { NULL };
+
+// USB MIDI Event Packet Format (always 4 bytes)
+//
+// Byte 0 |Byte 1 |Byte 2 |Byte 3
+// -------|-------|-------|------
+// CN+CIN |MIDI_0 |MIDI_1 |MIDI_2
+//
+// CN = Cable Number ((0x0..0xf)<<4) specifies virtual MIDI jack/cable
+// CIN = Code Index Number (0x0..0xf) classifies the 3 MIDI bytes.
+// See Table 4-1 in the MIDI 1.0 spec at usb.org.
+//
+
+static void midi_transfer_cb(usb_transfer_t *transfer) {
+  //printf("**midi_transfer_cb context: %p\n", transfer->context);
+  if (Device_Handle == transfer->device_handle) {
+    int in_xfer = transfer->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK;
+    if ((transfer->status == 0) && in_xfer) {
+      uint8_t *const p = transfer->data_buffer;
+      for (int i = 0; i < transfer->actual_num_bytes; i += 4) {
+        if ((p[i] + p[i + 1] + p[i + 2] + p[i + 3]) == 0) break;
+        printf("midi: %02x %02x %02x %02x\n",
+                 p[i], p[i + 1], p[i + 2], p[i + 3]);
+        // Strip the first byte which is the USB-MIDI virtual wire ID,
+        // rest is MIDI message (at least for 3-byte messages).
+        callback_midi_message_received(p + i + 1, 3);
+      }
+      esp_err_t err = usb_host_transfer_submit(transfer);
+      if (err != ESP_OK) {
+        printf("usb_host_transfer_submit In fail: %x\n", err);
+      }
+    } else {
+      printf("transfer->status %d\n", transfer->status);
+    }
+  }
+}
+
+bool check_interface_desc_MIDI(const void *p) {
+  const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
+
+  // USB MIDI
+  if ((intf->bInterfaceClass == USB_CLASS_AUDIO) && (intf->bInterfaceSubClass == 3) && (intf->bInterfaceProtocol == 0)) {
+    isMIDI = true;
+    printf("Claiming a MIDI device!\n");
+    esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle,
+                                             intf->bInterfaceNumber, intf->bAlternateSetting);
+    if (err != ESP_OK) printf("usb_host_interface_claim failed: %x\n", err);
+    return true;
+  }
+  return false;
+}
+
+void prepare_endpoint_midi(const void *p) {
+  const usb_ep_desc_t *endpoint = (const usb_ep_desc_t *)p;
+  esp_err_t err;
+
+  // must be bulk for MIDI
+  if ((endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK) != USB_BM_ATTRIBUTES_XFER_BULK) {
+    printf("Not bulk endpoint: 0x%02x\n", endpoint->bmAttributes);
+    return;
+  }
+  if (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK) {
+    for (int i = 0; i < MIDI_IN_BUFFERS; i++) {
+      err = usb_host_transfer_alloc(endpoint->wMaxPacketSize, 0, &MIDIIn[i]);
+      if (err != ESP_OK) {
+        MIDIIn[i] = NULL;
+        printf("usb_host_transfer_alloc In fail: %x\n", err);
+      } else {
+        MIDIIn[i]->device_handle = Device_Handle;
+        MIDIIn[i]->bEndpointAddress = endpoint->bEndpointAddress;
+        MIDIIn[i]->callback = midi_transfer_cb;
+        MIDIIn[i]->context = (void *)i;
+        MIDIIn[i]->num_bytes = endpoint->wMaxPacketSize;
+        esp_err_t err = usb_host_transfer_submit(MIDIIn[i]);
+        if (err != ESP_OK) {
+          printf("usb_host_transfer_submit In fail: %x\n", err);
+        }
+      }
+    }
+  } else {
+    err = usb_host_transfer_alloc(endpoint->wMaxPacketSize, 0, &MIDIOut);
+    if (err != ESP_OK) {
+      MIDIOut = NULL;
+      printf("usb_host_transfer_alloc Out fail: %x\n", err);
+      return;
+    }
+    printf("Out data_buffer_size: %d\n", MIDIOut->data_buffer_size);
+    MIDIOut->device_handle = Device_Handle;
+    MIDIOut->bEndpointAddress = endpoint->bEndpointAddress;
+    MIDIOut->callback = midi_transfer_cb;
+    MIDIOut->context = NULL;
+    //    MIDIOut->flags |= USB_TRANSFER_FLAG_ZERO_PACK;
+  }
+  isMIDIReady = ((MIDIOut != NULL) && (MIDIIn[0] != NULL));
+}
+
+// end of usbhmidi.ino
+// ---------------------------------
 
 
 void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *arg)
@@ -192,7 +368,7 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
   }
 }
 
-void check_interface_desc_boot_keyboard(const void *p)
+bool check_interface_desc_boot_keyboard(const void *p)
 {
   const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
 
@@ -203,10 +379,12 @@ void check_interface_desc_boot_keyboard(const void *p)
     esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle,
         intf->bInterfaceNumber, intf->bAlternateSetting);
     if (err != ESP_OK) printf("usb_host_interface_claim failed: %x\n", err);
+    return true;
   }
+  return false;
 }
 
-void prepare_endpoint(const void *p)
+void prepare_endpoint_hid(const void *p)
 {
   const usb_ep_desc_t *endpoint = (const usb_ep_desc_t *)p;
   esp_err_t err;
@@ -250,15 +428,29 @@ void show_config_desc_full(const usb_config_desc_t *config_desc)
           printf("USB Device Descriptor should not appear in config\n");
           break;
         case USB_B_DESCRIPTOR_TYPE_CONFIGURATION:
+          show_config_desc(p);
           break;
         case USB_B_DESCRIPTOR_TYPE_STRING:
           printf("USB string desc TBD\n");
           break;
         case USB_B_DESCRIPTOR_TYPE_INTERFACE:
-          check_interface_desc_boot_keyboard(p);
+          show_interface_desc(p);
+          if (!isMIDI && !isKeyboard) {
+              if (!check_interface_desc_MIDI(p)) {
+                  check_interface_desc_boot_keyboard(p);
+              }
+          }
+          if (!isMIDI && !isKeyboard) {
+              printf("Interface was neither keyboard nor midi.\n");
+          }
           break;
         case USB_B_DESCRIPTOR_TYPE_ENDPOINT:
-          if (isKeyboard && KeyboardIn == NULL) prepare_endpoint(p);
+          show_endpoint_desc(p);
+          if (isKeyboard && KeyboardIn == NULL) {
+              prepare_endpoint_hid(p);
+          } else if (isMIDI && !isMIDIReady) {
+            prepare_endpoint_midi(p);
+          }
           break;
         case USB_B_DESCRIPTOR_TYPE_DEVICE_QUALIFIER:
           printf("USB device qual desc TBD\n");
@@ -271,6 +463,12 @@ void show_config_desc_full(const usb_config_desc_t *config_desc)
           break;
         case 0x21:
           // HID 
+          break;
+        case 0x24:
+          // UAS PIPE mode - see this for MIDI keyboard.
+          break;
+        case 0x25:
+          // Also see this for MIDI keyboard.
           break;
         default:
           printf("Unknown USB Descriptor Type: 0x%x\n", bDescriptorType);
