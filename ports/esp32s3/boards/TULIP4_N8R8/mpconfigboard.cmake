@@ -5,7 +5,5 @@ set(SDKCONFIG_DEFAULTS
     boards/sdkconfig.usb
     boards/sdkconfig.ble
     boards/sdkconfig.240mhz
-    boards/sdkconfig.spiram_sx
-    boards/sdkconfig.spiram_oct
     boards/TULIP4_N8R8/sdkconfig.board
 )

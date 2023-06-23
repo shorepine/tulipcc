@@ -61,7 +61,7 @@ STATIC mp_obj_t machine_wdt_make_new(const mp_obj_type_t *type_in, size_t n_args
         mp_raise_ValueError(MP_ERROR_TEXT("WDT timeout too short"));
     }
 
-    mp_int_t rs_code = esp_task_wdt_init(args[ARG_timeout].u_int, true);
+    mp_int_t rs_code = ESP_OK;// TODO esp_task_wdt_init(args[ARG_timeout].u_int, true);
     if (rs_code != ESP_OK) {
         mp_raise_OSError(rs_code);
     }

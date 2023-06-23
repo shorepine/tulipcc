@@ -1,3 +1,0 @@
-config ESP_SYSTEM_MEMPROT_TEST
-    bool
-    default y

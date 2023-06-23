@@ -128,14 +128,19 @@ STATIC mp_obj_t MP_VFS_LFSx(make_new)(const mp_obj_type_t * type, size_t n_args,
     self->base.type = type;
     vstr_init(&self->cur_dir, 16);
     vstr_add_byte(&self->cur_dir, '/');
+
     #if LFS_BUILD_VERSION == 2
     self->enable_mtime = args[LFS_MAKE_ARG_mtime].u_bool;
+
     #endif
     MP_VFS_LFSx(init_config)(self, args[LFS_MAKE_ARG_bdev].u_obj,
         args[LFS_MAKE_ARG_readsize].u_int, args[LFS_MAKE_ARG_progsize].u_int, args[LFS_MAKE_ARG_lookahead].u_int);
+
     int ret = LFSx_API(mount)(&self->lfs, &self->config);
+
     if (ret < 0) {
         mp_raise_OSError(-ret);
+
     }
     return MP_OBJ_FROM_PTR(self);
 }

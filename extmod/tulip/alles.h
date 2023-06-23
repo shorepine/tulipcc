@@ -22,7 +22,7 @@ extern "C" {
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "esp_system.h"
-#include "esp_spi_flash.h"
+//#include "esp_spi_flash.h"
 #include "esp_intr_alloc.h"
 #include "esp_attr.h"
 #include "esp_event.h"

@@ -62,10 +62,10 @@ chorus_config_t chorus = {CHORUS_DEFAULT_LEVEL, CHORUS_DEFAULT_MAX_DELAY};
 
 void alloc_delay_lines(void) {
     for(uint16_t c=0;c<NCHANS;++c) {
-        delay_lines[c] = new_delay_line(DELAY_LINE_LEN, DELAY_LINE_LEN / 2, MALLOC_CAP_INTERNAL);
+        delay_lines[c] = new_delay_line(DELAY_LINE_LEN, DELAY_LINE_LEN / 2, MALLOC_CAP_SPIRAM);
     }
 #ifdef CHORUS_ARATE
-    delay_mod = (float*)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_INTERNAL);
+    delay_mod = (float*)malloc_caps(sizeof(float) * BLOCK_SIZE, MALLOC_CAP_SPIRAM);
 #endif
 }
 
@@ -152,7 +152,7 @@ void default_amy_parse_callback(char mode, char * message) {
 
 int8_t global_init() {
     // function pointers
-    amy_parse_callback = &default_amy_parse_callback;
+    //amy_parse_callback = &default_amy_parse_callback;
     global.next_event_write = 0;
     global.event_start = NULL;
     global.event_qsize = 0;
@@ -386,11 +386,11 @@ int8_t oscs_init() {
     pcm_init();
     // for tulip, we may want to alloc these in spiram
     events = (struct delta*)malloc_caps(sizeof(struct delta) * EVENT_FIFO_LEN, MALLOC_CAP_SPIRAM);
-    synth = (struct event*) malloc_caps(sizeof(struct event) * OSCS, MALLOC_CAP_INTERNAL);
-    msynth = (struct mod_event*) malloc_caps(sizeof(struct mod_event) * OSCS, MALLOC_CAP_INTERNAL);
+    synth = (struct event*) malloc_caps(sizeof(struct event) * OSCS, MALLOC_CAP_SPIRAM);
+    msynth = (struct mod_event*) malloc_caps(sizeof(struct mod_event) * OSCS, MALLOC_CAP_SPIRAM);
 
     // maybe not this
-    block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE * NCHANS, MALLOC_CAP_SPIRAM);//dbl_block[0];
+    block = (output_sample_type *) malloc_caps(sizeof(output_sample_type) * BLOCK_SIZE * NCHANS, MALLOC_CAP_INTERNAL);//dbl_block[0];
     // set all oscillators to their default values
     amy_reset_oscs();
 
@@ -412,10 +412,10 @@ int8_t oscs_init() {
         events[i].data = 0;
         events[i].param = NO_PARAM;
     }
-    fbl = (float**) malloc_caps(sizeof(float*) * AMY_CORES, MALLOC_CAP_SPIRAM); // one per core, just core 0 used off esp32
+    fbl = (float**) malloc_caps(sizeof(float*) * AMY_CORES, MALLOC_CAP_INTERNAL); // one per core, just core 0 used off esp32
     // clear out both as local mode won't use fbl[1] 
     for(uint16_t core=0;core<AMY_CORES;++core) {
-        fbl[core]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE * NCHANS, MALLOC_CAP_SPIRAM);
+        fbl[core]= (float*)malloc_caps(sizeof(float) * BLOCK_SIZE * NCHANS, MALLOC_CAP_INTERNAL);
         for(uint16_t c=0;c<NCHANS;++c) {
             for(uint16_t i=0;i<BLOCK_SIZE;i++) { 
                 fbl[core][BLOCK_SIZE*c + i] = 0; 
@@ -442,7 +442,7 @@ void show_debug(uint8_t type) {
         uint16_t q = global.event_qsize;
         if(q > 25) q = 25;
         for(uint16_t i=0;i<q;i++) {
-            fprintf(stderr,"%d time %u osc %d param %d - %f %d\n", i, ptr->time, ptr->osc, ptr->param, *(float *)&ptr->data, *(int *)&ptr->data);
+            fprintf(stderr,"%d time %" PRIu32 " osc %d param %d - %f %d\n", i, ptr->time, ptr->osc, ptr->param, *(float *)&ptr->data, *(int *)&ptr->data);
             ptr = ptr->next;
         }
     }
@@ -460,7 +460,7 @@ void show_debug(uint8_t type) {
                 for(uint8_t j=0;j<MAX_BREAKPOINT_SETS;j++) {
                     fprintf(stderr,"bp%d (target %d): ", j, synth[i].breakpoint_target[j]);
                     for(uint8_t k=0;k<MAX_BREAKPOINTS;k++) {
-                        fprintf(stderr,"%d: %f ", synth[i].breakpoint_times[j][k], synth[i].breakpoint_values[j][k]);
+                        fprintf(stderr,"%" PRIi32 ": %f ", synth[i].breakpoint_times[j][k], synth[i].breakpoint_values[j][k]);
                     }
                     fprintf(stderr,"\n");
                 }
@@ -704,7 +704,6 @@ void render_osc_wave(uint8_t osc, float* buf) {
 
 void render_task(uint8_t start, uint8_t end, uint8_t core) {
     for(uint16_t i=0;i<BLOCK_SIZE*NCHANS;i++) { fbl[core][i] = 0; }
-    //for(uint16_t i=0;i<BLOCK_SIZE;i++) { per_osc_fb[core][i] = 0; }
     for(uint8_t osc=start; osc<end; osc++) {
         if(synth[osc].status==AUDIBLE) { // skip oscs that are silent or mod sources from playback
             render_osc_wave(osc, per_osc_fb[core]);
@@ -712,7 +711,6 @@ void render_task(uint8_t start, uint8_t end, uint8_t core) {
             if(synth[osc].wave != OFF) {
                 // apply filter to osc if set
                 if(synth[osc].filter_type != FILTER_NONE) filter_process(per_osc_fb[core], osc);
-                //for(uint16_t i=0;i<BLOCK_SIZE;i++) { fbl[core][i] += per_osc_fb[core][i]; }
                 mix_with_pan(fbl[core], per_osc_fb[core], msynth[osc].last_pan, msynth[osc].pan);
             }
         }
@@ -758,6 +756,7 @@ int16_t * fill_audio_buffer_task() {
         global.event_qsize--;
         global.event_start = global.event_start->next;
     }
+
 #ifdef ESP_PLATFORM
     // give the mutex back
     xSemaphoreGive(xQueueSemaphore);
@@ -767,11 +766,13 @@ int16_t * fill_audio_buffer_task() {
     msynth[CHORUS_MOD_SOURCE].amp = synth[CHORUS_MOD_SOURCE].amp;
     msynth[CHORUS_MOD_SOURCE].duty = synth[CHORUS_MOD_SOURCE].duty;
     msynth[CHORUS_MOD_SOURCE].freq = synth[CHORUS_MOD_SOURCE].freq;
+
 #ifdef CHORUS_ARATE
     if(delay_mod)  render_osc_wave(CHORUS_MOD_SOURCE, delay_mod);
 #else
     delay_mod_val = compute_mod_value(CHORUS_MOD_SOURCE);
 #endif // CHORUS_ARATE
+
 #ifdef ESP_PLATFORM
     // Tell the rendering threads to start rendering
     xTaskNotifyGive(amy_render_handle[0]);
@@ -816,7 +817,6 @@ int16_t * fill_audio_buffer_task() {
         stereo_reverb(fbl[0], fbl[0] + BLOCK_SIZE, fbl[0], fbl[0] + BLOCK_SIZE, BLOCK_SIZE, reverb.level);
 #endif
     }
-    
     // global volume is supposed to max out at 10, so scale by 0.1.
     float volume_scale = 0.1 * global.volume;
     //uint8_t nonzero = 0;

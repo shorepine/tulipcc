@@ -193,6 +193,7 @@ STATIC mp_obj_t ppp_connect_py(size_t n_args, const mp_obj_t *args, mp_map_t *kw
             mp_raise_ValueError(MP_ERROR_TEXT("invalid auth"));
     }
 
+    #if 0 // TODO
     if (parsed_args[ARG_authmode].u_int != PPPAUTHTYPE_NONE) {
         const char *username_str = mp_obj_str_get_str(parsed_args[ARG_username].u_obj);
         const char *password_str = mp_obj_str_get_str(parsed_args[ARG_password].u_obj);
@@ -207,6 +208,7 @@ STATIC mp_obj_t ppp_connect_py(size_t n_args, const mp_obj_t *args, mp_map_t *kw
     if (pppapi_connect(self->pcb, 0) != ESP_OK) {
         mp_raise_msg(&mp_type_OSError, MP_ERROR_TEXT("connect failed"));
     }
+    #endif
 
     if (xTaskCreatePinnedToCore(pppos_client_task, "ppp", 2048, self, 1, (TaskHandle_t *)&self->client_task_handle, MP_TASK_COREID) != pdPASS) {
         mp_raise_msg(&mp_type_RuntimeError, MP_ERROR_TEXT("failed to create worker task"));
