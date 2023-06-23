@@ -1,4 +1,5 @@
 #include "amy.h"
+#pragma GCC diagnostic ignored "-Wuninitialized"
 
 
 // Filters tend to get weird under this ratio -- this corresponds to 4.4Hz 

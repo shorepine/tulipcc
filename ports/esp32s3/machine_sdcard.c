@@ -275,12 +275,9 @@ STATIC mp_obj_t sd_deinit(mp_obj_t self_in) {
     DEBUG_printf("De-init host\n");
 
     if (self->flags & SDCARD_CARD_FLAGS_HOST_INIT_DONE) {
-        #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(4, 2, 0)
         if (self->host.flags & SDMMC_HOST_FLAG_DEINIT_ARG) {
             self->host.deinit_p(self->host.slot);
-        } else
-        #endif
-        {
+        } else {
             self->host.deinit();
         }
         if (self->host.flags & SDMMC_HOST_FLAG_SPI) {

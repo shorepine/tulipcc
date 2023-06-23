@@ -8,7 +8,6 @@
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "esp_system.h"
-#include "esp_spi_flash.h"
 #include "esp_intr_alloc.h"
 #include "esp_attr.h"
 #include "esp_event.h"
@@ -16,16 +15,19 @@
 #include "esp_err.h"
 #include "nvs_flash.h"
 #include "lwip/netdb.h"
-
+#include "esp_timer.h"
 #include "alles.h"
+#include "esp_netif.h"
 
+uint8_t ipv4_quartet = 0;
+
+#if 0 
 static const char *TAG = "multicast";
 static const char *V4TAG = "mcast-ipv4";
 
 int sock= -1;
 
 extern void deserialize_event(char * message, uint16_t length);
-uint8_t ipv4_quartet;
 char udp_message[MAX_RECEIVE_LEN];
 extern char *message_start_pointer;
 extern int16_t message_length;
@@ -231,5 +233,5 @@ void mcast_listen_task(void *pvParameters) {
 
 }
 
-
+#endif
 

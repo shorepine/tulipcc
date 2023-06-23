@@ -24,7 +24,7 @@ char githash[8];
 extern struct state global;
 extern uint32_t event_counter;
 extern uint32_t message_counter;
-extern void mcast_send(char*, uint16_t);
+//extern void mcast_send(char*, uint16_t);
 
 uint8_t debug_on = 0;
 char raw_file[1] = "";
@@ -33,7 +33,7 @@ char * alles_local_ip;
 
 #ifdef ESP_PLATFORM
 
-extern void mcast_listen_task(void *pvParameters);
+//extern void mcast_listen_task(void *pvParameters);
 
 // Wrap AMY's renderer into 2 FreeRTOS tasks, one per core
 void esp_render_task( void * pvParameters) {
@@ -67,7 +67,7 @@ void esp_fill_audio_buffer_task() {
 }
 
 #else
-void *mcast_listen_task(void *vargp);
+//void *mcast_listen_task(void *vargp);
 #endif
 
 
@@ -202,6 +202,7 @@ void esp_parse_task() {
 #include "esp_wifi.h"
 #endif
 
+#if 0
 void alles_init_multicast() {
 #ifdef ESP_PLATFORM
     fprintf(stderr, "creating socket\n");
@@ -209,7 +210,7 @@ void alles_init_multicast() {
     fprintf(stderr, "power save off\n");
     esp_wifi_set_ps(WIFI_PS_NONE);
     fprintf(stderr, "creating mcast task\n");
-    xTaskCreatePinnedToCore(&mcast_listen_task, ALLES_RECEIVE_TASK_NAME, ALLES_RECEIVE_TASK_STACK_SIZE, NULL, ALLES_RECEIVE_TASK_PRIORITY, &alles_receive_handle, ALLES_RECEIVE_TASK_COREID);
+//    xTaskCreatePinnedToCore(&mcast_listen_task, ALLES_RECEIVE_TASK_NAME, ALLES_RECEIVE_TASK_STACK_SIZE, NULL, ALLES_RECEIVE_TASK_PRIORITY, &alles_receive_handle, ALLES_RECEIVE_TASK_COREID);
     fprintf(stderr, "creating parse task\n");
     xTaskCreatePinnedToCore(&esp_parse_task, ALLES_PARSE_TASK_NAME, ALLES_PARSE_TASK_STACK_SIZE, NULL, ALLES_PARSE_TASK_PRIORITY, &alles_parse_handle, ALLES_PARSE_TASK_COREID);
 #else
@@ -220,9 +221,11 @@ void alles_init_multicast() {
     create_multicast_ipv4_socket();
     fprintf(stderr, "creating mcast task\n");
     pthread_t thread_id;
-    pthread_create(&thread_id, NULL, mcast_listen_task, NULL);
+//    pthread_create(&thread_id, NULL, mcast_listen_task, NULL);
 #endif
 }
+
+#endif
 
 
 // sync.c -- keep track of mulitple synths
@@ -363,7 +366,7 @@ void handle_sync(int64_t time, int8_t index) {
     update_map(client_id, ipv4_quartet, sysclock);
     // Send back sync message with my time and received sync index and my client id & battery status (if any)
     sprintf(message, "_s%lldi%dc%dr%dy%dZ", sysclock, index, client_id, ipv4_quartet, 0);
-    mcast_send(message, strlen(message));
+    //mcast_send(message, strlen(message));
     // Update computed delta (i could average these out, but I don't think that'll help too much)
     //int64_t old_cd = computed_delta;
     computed_delta = time - sysclock;
@@ -376,7 +379,7 @@ void ping(int64_t sysclock) {
     //printf("[%d %d] pinging with %lld\n", ipv4_quartet, client_id, sysclock);
     sprintf(message, "_s%lldi-1c%dr%dy%dZ", sysclock, client_id, ipv4_quartet, 0);
     update_map(client_id, ipv4_quartet, sysclock);
-    mcast_send(message, strlen(message));
+    //mcast_send(message, strlen(message));
     last_ping_time = sysclock;
 }
 

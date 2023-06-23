@@ -48,7 +48,7 @@
 #include "py/mphal.h"
 #include "py/mpthread.h"
 #include "extmod/misc.h"
-#include "extmod/moduplatform.h"
+#include "extmod/modplatform.h"
 #include "extmod/vfs.h"
 #include "extmod/vfs_posix.h"
 #include "genhdr/mpversion.h"
@@ -78,6 +78,15 @@ long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 #endif
 
 
+#if !MICROPY_PY_SYS_PATH
+#error "The unix port requires MICROPY_PY_SYS_PATH=1"
+#endif
+
+#if !MICROPY_PY_SYS_ARGV
+#error "The unix port requires MICROPY_PY_SYS_ARGV=1"
+#endif
+
+
 
 extern int unix_display_draw(); 
 extern void unix_display_init();
@@ -89,6 +98,7 @@ void display_print_strn(void *env, const char *str, size_t len) {
         display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
 }
+extern void mp_uos_dupterm_tx_strn(const char *str, size_t len);
 
 STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
     (void)env;
@@ -479,10 +489,10 @@ STATIC void sys_set_excecutable(char *argv0) {
 #endif
 
 
-
 #include <CoreFoundation/CFURL.h>
 #include <CoreFoundation/CFURLAccess.h>
 #include <CoreFoundation/CFBundle.h>
+
 char * MYCFStringCopyUTF8String(CFStringRef aString) {
   if (aString == NULL) {
     return NULL;
@@ -615,47 +625,43 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
         MP_STATE_VM(vfs_cur) = MP_STATE_VM(vfs_mount_table);
     }
     #endif
-    char *home = getenv("HOME");
-    char *path = getenv("MICROPYPATH");
-    if (path == NULL) {
-        path = MICROPY_PY_SYS_PATH_DEFAULT;
-    }
-    size_t path_num = 1; // [0] is for current dir (or base dir of the script)
-    if (*path == PATHLIST_SEP_CHAR) {
-        path_num++;
-    }
-    for (char *p = path; p != NULL; p = strchr(p, PATHLIST_SEP_CHAR)) {
-        path_num++;
-        if (p != NULL) {
-            p++;
-        }
-    }
-    mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_path), path_num);
-    mp_obj_t *path_items;
-    mp_obj_list_get(mp_sys_path, &path_num, &path_items);
-    path_items[0] = MP_OBJ_NEW_QSTR(MP_QSTR_);
     {
-        char *p = path;
-        for (mp_uint_t i = 1; i < path_num; i++) {
-            char *p1 = strchr(p, PATHLIST_SEP_CHAR);
-            if (p1 == NULL) {
-                p1 = p + strlen(p);
+        // sys.path starts as [""]
+        mp_sys_path = mp_obj_new_list(0, NULL);
+        mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR_));
+
+        // Add colon-separated entries from MICROPYPATH.
+        char *home = getenv("HOME");
+        char *path = getenv("MICROPYPATH");
+        if (path == NULL) {
+            path = MICROPY_PY_SYS_PATH_DEFAULT;
+        }
+        if (*path == PATHLIST_SEP_CHAR) {
+            // First entry is empty. We've already added an empty entry to sys.path, so skip it.
+            ++path;
+        }
+        bool path_remaining = *path;
+        while (path_remaining) {
+            char *path_entry_end = strchr(path, PATHLIST_SEP_CHAR);
+            if (path_entry_end == NULL) {
+                path_entry_end = path + strlen(path);
+                path_remaining = false;
             }
-            if (p[0] == '~' && p[1] == '/' && home != NULL) {
+            if (path[0] == '~' && path[1] == '/' && home != NULL) {
                 // Expand standalone ~ to $HOME
                 int home_l = strlen(home);
                 vstr_t vstr;
-                vstr_init(&vstr, home_l + (p1 - p - 1) + 1);
+                vstr_init(&vstr, home_l + (path_entry_end - path - 1) + 1);
                 vstr_add_strn(&vstr, home, home_l);
-                vstr_add_strn(&vstr, p + 1, p1 - p - 1);
-                path_items[i] = mp_obj_new_str_from_vstr(&vstr);
+                vstr_add_strn(&vstr, path + 1, path_entry_end - path - 1);
+                mp_obj_list_append(mp_sys_path, mp_obj_new_str_from_vstr(&vstr));
             } else {
-                path_items[i] = mp_obj_new_str_via_qstr(p, p1 - p);
+                mp_obj_list_append(mp_sys_path, mp_obj_new_str_via_qstr(path, path_entry_end - path));
             }
-            p = p1 + 1;
+            path = path_entry_end + 1;
         }
     }
-
+    
     mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_argv), 0);
 
     #if defined(MICROPY_UNIX_COVERAGE)
@@ -762,7 +768,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
                 mp_verbose_flag++;
             #endif
             } else if (strncmp(argv[a], "-O", 2) == 0) {
-                if (unichar_mp_isdigit(argv[a][2])) {
+                if (mp_unichar_mp_isdigit(argv[a][2])) {
                     MP_STATE_VM(mp_optimise_value) = argv[a][2] & 0xf;
                 } else {
                     MP_STATE_VM(mp_optimise_value) = 0;

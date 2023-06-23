@@ -87,12 +87,12 @@
 #define MICROPY_PY_SYS_EXC_INFO        (1)
 
 // Configure the "os" module with extra unix features.
-#define MICROPY_PY_UOS_INCLUDEFILE     "ports/macos/moduos.c"
-#define MICROPY_PY_UOS_ERRNO           (1)
-#define MICROPY_PY_UOS_GETENV_PUTENV_UNSETENV (1)
-#define MICROPY_PY_UOS_SEP             (1)
-#define MICROPY_PY_UOS_SYSTEM          (1)
-#define MICROPY_PY_UOS_URANDOM         (1)
+#define MICROPY_PY_OS_INCLUDEFILE     "ports/macos/modos.c"
+#define MICROPY_PY_OS_ERRNO           (1)
+#define MICROPY_PY_OS_GETENV_PUTENV_UNSETENV (1)
+#define MICROPY_PY_OS_SEP             (1)
+#define MICROPY_PY_OS_SYSTEM          (1)
+#define MICROPY_PY_OS_URANDOM         (1)
 
 // Enable the unix-specific "time" module.
 #define MICROPY_PY_UTIME               (1)
@@ -103,7 +103,7 @@
 // Enable the utimeq module used by the previous (v2) version of uasyncio.
 #define MICROPY_PY_UTIMEQ              (1)
 
-#if MICROPY_PY_USSL
+#if MICROPY_PY_SSL
 #define MICROPY_PY_UHASHLIB_MD5        (1)
 #define MICROPY_PY_UHASHLIB_SHA1       (1)
 #define MICROPY_PY_UCRYPTOLIB          (1)

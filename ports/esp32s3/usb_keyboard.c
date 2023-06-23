@@ -247,7 +247,7 @@ void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *
       break;
     /**< A device opened by the client is now gone */
     case USB_HOST_CLIENT_EVENT_DEV_GONE:
-      printf("Device Gone handle: %x\n", (uint32_t)event_msg->dev_gone.dev_hdl);
+      printf("Device Gone handle: %lx\n", (uint32_t)event_msg->dev_gone.dev_hdl);
       break;
     default:
       printf("Unknown value %d\n", event_msg->event);
@@ -294,7 +294,7 @@ void usbh_task(void)
   }
   else {
     if (err != ESP_ERR_TIMEOUT) {
-      printf("usb_host_lib_handle_events: %x flags: %x\n", err, event_flags);
+      printf("usb_host_lib_handle_events: %x flags: %lx\n", err, event_flags);
     }
   }
 

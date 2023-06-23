@@ -52,12 +52,18 @@ void unix_display_set_clock(uint8_t mhz) {
 }
 
 
-void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3) {
+void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3, uint32_t t4, uint32_t t5) {
     fprintf(stderr, "Stopping display task\n");
     H_RES = t0;
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
     OFFSCREEN_Y_PX = t3; 
+    H_RES_D = t4;
+    V_RES_D = t5;
+    TFB_ROWS = (V_RES_D/FONT_HEIGHT);
+    TFB_COLS = (H_RES_D/FONT_WIDTH);
+    BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
+
     unix_display_flag = -2; // restart display with new timings
 }
 
