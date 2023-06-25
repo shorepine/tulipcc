@@ -241,7 +241,7 @@ void saw_note_on(uint8_t osc, int8_t direction) {
     synth[osc].step = (float)synth[osc].lut_size * synth[osc].phase;
     synth[osc].lpf_state = 0;
     // Tune the initial integrator state to compensate for mid-sample alignment of table.
-    float skip = synth[osc].lut_size / period_samples;
+    //float skip = synth[osc].lut_size / period_samples;
     //float amp = ((float)direction*synth[osc].amp) * skip * 4.0f  / synth[osc].lut_size;
     synth[osc].last_amp = 0; //amp;
     synth[osc].lpf_state = 0; //-0.5f * amp * synth[osc].lut[0];
