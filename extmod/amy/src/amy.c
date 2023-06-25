@@ -822,7 +822,7 @@ int16_t * fill_audio_buffer_task() {
     //uint8_t nonzero = 0;
     for(int16_t i=0; i < BLOCK_SIZE; ++i) {
         for (int16_t c=0; c < NCHANS; ++c) {
-            // mix all the oscillator buffers into one
+            // Convert the mixed sample into the int16 range, applying overall gain.
             float fsample = volume_scale * (fbl[0][c * BLOCK_SIZE + i]) * 32767.0f;
             // one-pole high-pass filter to remove large low-frequency excursions from
             // some fm patches. b = [1 -1]; a = [1 -0.995]
@@ -833,7 +833,7 @@ int16_t * fill_audio_buffer_task() {
             // soft clipping.
             int positive = 1; 
             if (fsample < 0) positive = 0;
-            // using a uint gives us factor-of-2 headroom (up to 65535 not 32767).
+            // using an int32 gives us tons of headroom for the clipping.
             int32_t uintval;
             if (positive) {  // avoid fabs()
                 uintval = (int32_t)fsample;
@@ -848,10 +848,14 @@ int16_t * fill_audio_buffer_task() {
                 }
             }
             int16_t sample;
+            // For some reason, have to drop a bit to stop hard wrapping on esp?
+#ifdef ESP_PLATFORM
+            uintval >>= 1;
+#endif
             if (positive) {
-                sample = uintval;
+              sample = uintval;
             } else {
-                sample = -uintval;
+              sample = -uintval;
             }
 #if NCHANS == 1
   #ifdef ESP_PLATFORM
