@@ -105,13 +105,13 @@ amy_err_t esp_amy_init() {
 }
 #else
 
-extern void *soundio_run(void *vargp);
+extern void *miniaudio_run(void *vargp);
 #include <pthread.h>
 amy_err_t unix_amy_init() {
     //sync_init();
     amy_start();
     pthread_t thread_id;
-    pthread_create(&thread_id, NULL, soundio_run, NULL);
+    pthread_create(&thread_id, NULL, miniaudio_run, NULL);
     return AMY_OK;
 }
 #endif

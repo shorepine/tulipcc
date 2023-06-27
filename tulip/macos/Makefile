@@ -18,23 +18,24 @@ MAKEFLAGS += --jobs=$(CPUS)
 # If the build directory is not given, make it reflect the variant name.
 BUILD ?= build-$(VARIANT)
 
-VARIANT_DIR ?= variants/$(VARIANT)
+VARIANT_DIR ?= ../../micropython/ports/unix/variants/$(VARIANT)
 ifeq ($(wildcard $(VARIANT_DIR)/.),)
 $(error Invalid VARIANT specified: $(VARIANT_DIR))
 endif
 
-include ../../py/mkenv.mk
--include mpconfigport.mk
+TOP = ../../micropython
+include $(TOP)/py/mkenv.mk
+include mpconfigport.mk
 include $(VARIANT_DIR)/mpconfigvariant.mk
 
 # Use the default frozen manifest, variants may override this.
-FROZEN_MANIFEST ?= variants/manifest.py
+FROZEN_MANIFEST ?= manifest.py
 
 # This should be configured by the mpconfigvariant.mk
 PROG = tulip.$(WHICH_ARCH)
 
 # qstr definitions (must come before including py.mk)
-QSTR_DEFS = qstrdefsport.h
+QSTR_DEFS = $(TOP)/ports/unix/qstrdefsport.h
 QSTR_GLOBAL_DEPENDENCIES = $(VARIANT_DIR)/mpconfigvariant.h
 
 # OS name, for simple autoconfig
@@ -49,10 +50,13 @@ GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi
 INC +=  -I.
 INC +=  -I$(TOP)
 INC += -I$(BUILD)
+INC += -I$(TOP)/ports/unix
+INC += -I../shared/
+INC += -I../../amy/src/
+INC += -I$(TOP)/lib/mbedtls/include
 
 #INC += -I$(HOMEBREW)/include/SDL2
 INC += -I./SDL2.framework/Headers
-INC += -I./soundio
 
 # compiler settings
 CWARN = -Wall -Werror
@@ -120,7 +124,7 @@ else
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
 endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -Llibs -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework Cocoa -lstdc++ -lsoundio $(ARCHFLAGS)
+LDFLAGS += -Llibs -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework Cocoa -lstdc++  $(ARCHFLAGS)
 CFLAGS += -DVIRTUAL_MIDI
 
 # Flags to link with pthread library
@@ -143,11 +147,11 @@ SHARED_SRC_C_EXTRA += readline/readline.c
 endif
 ifeq ($(MICROPY_PY_TERMIOS),1)
 CFLAGS_MOD += -DMICROPY_PY_TERMIOS=1
-SRC_MOD += modtermios.c
+SRC_MOD += $(MICROPY_PORT_DIR)/modtermios.c
 endif
 ifeq ($(MICROPY_PY_SOCKET),1)
 CFLAGS_MOD += -DMICROPY_PY_SOCKET=1
-SRC_MOD += modusocket.c
+SRC_MOD += $(MICROPY_PORT_DIR)/modsocket.c
 endif
 ifeq ($(MICROPY_PY_THREAD),1)
 CFLAGS_MOD += -DMICROPY_PY_THREAD=1 -DMICROPY_PY_THREAD_GIL=0
@@ -212,8 +216,9 @@ endif
 endif
 
 
-include $(TOP)/extmod/tulip/tulip.mk
+include ../shared/tulip.mk
 
+MICROPY_PORT_DIR=../../micropython/ports/unix
 
 ifeq ($(MICROPY_PY_FFI),1)
 
@@ -241,38 +246,39 @@ endif
 
 CFLAGS_MOD += $(LIBFFI_CFLAGS_MOD) -DMICROPY_PY_FFI=1
 LDFLAGS_MOD += $(LIBFFI_LDFLAGS_MOD)
-SRC_MOD += modffi.c
+SRC_MOD += $(MICROPY_PORT_DIR)/modffi.c
 endif
 
 ifeq ($(MICROPY_PY_JNI),1)
 # Path for 64-bit OpenJDK, should be adjusted for other JDKs
 CFLAGS_MOD += -I/usr/lib/jvm/java-7-openjdk-amd64/include -DMICROPY_PY_JNI=1
-SRC_MOD += modjni.c
+SRC_MOD += $(MICROPY_PORT_DIR)/modjni.c
 endif
+
 
 # source files
 SRC_C += \
 	main.c \
-	gccollect.c \
 	unix_mphal.c \
-	mpthreadport.c \
-	input.c \
-	modmachine.c \
-	alloc.c \
-	fatfs_port.c \
-	mpbthciport.c \
-	mpbtstackport_common.c \
-	mpbtstackport_h4.c \
-	mpbtstackport_usb.c \
-	mpnimbleport.c \
 	unix_display.c \
 	multicast.c \
-	libsoundio-audio.c \
+	mpthreadport.c \
+	../../amy/src/libminiaudio-audio.c \
+	$(MICROPY_PORT_DIR)/gccollect.c \
+	$(MICROPY_PORT_DIR)/input.c \
+	$(MICROPY_PORT_DIR)/modmachine.c \
+	$(MICROPY_PORT_DIR)/alloc.c \
+	$(MICROPY_PORT_DIR)/fatfs_port.c \
+	$(MICROPY_PORT_DIR)/mpbthciport.c \
+	$(MICROPY_PORT_DIR)/mpbtstackport_common.c \
+	$(MICROPY_PORT_DIR)/mpbtstackport_h4.c \
+	$(MICROPY_PORT_DIR)/mpbtstackport_usb.c \
+	$(MICROPY_PORT_DIR)/mpnimbleport.c \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
 
 
-SHARED_SRC_C += $(addprefix shared/,\
+SHARED_SRC_C += $(addprefix ../../micropython/shared/,\
 	runtime/gchelper_generic.c \
 	runtime/interrupt_char.c \
 	timeutils/timeutils.c \

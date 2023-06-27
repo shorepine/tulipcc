@@ -34,12 +34,14 @@
 
 // Variant-specific definitions.
 #include "mpconfigvariant.h"
+#define MICROPY_PY_NETWORK_HOSTNAME_DEFAULT "tulip"
 
 // Tulip stuff -- move to mpconfigtulip.h ? 
 #define MICROPY_PY_IO (1)
 #define MICROPY_PY_SYS_STDFILES                 (0)
 #define MICROPY_PY_BUILTINS_HELP_TEXT           tulip_desktop_help_text
 #define MICROPY_HW_BOARD_NAME "Tulip4"
+
 
 
 #ifndef MICROPY_CONFIG_ROM_LEVEL
@@ -75,6 +77,18 @@
 // autodetected thumb2 emitter have priority.
 #if !defined(MICROPY_EMIT_ARM) && defined(__arm__) && !defined(__thumb2__)
     #define MICROPY_EMIT_ARM        (1)
+#endif
+
+
+// If enabled, configure how to seed random on init.
+#ifdef MICROPY_PY_RANDOM_SEED_INIT_FUNC
+#include <stddef.h>
+void mp_hal_get_random(size_t n, void *buf);
+static inline unsigned long mp_random_seed_init(void) {
+    unsigned long r;
+    mp_hal_get_random(sizeof(r), &r);
+    return r;
+}
 #endif
 
 // Type definitions for the specific machine based on the word size.
