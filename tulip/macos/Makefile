@@ -1,5 +1,6 @@
 WHICH_ARCH ?= $(shell arch)
 
+
 ifeq ($(WHICH_ARCH), arm64)
 	ARCHFLAGS = -target arm64-macos11
 	HOMEBREW = /opt/homebrew
@@ -18,12 +19,19 @@ MAKEFLAGS += --jobs=$(CPUS)
 # If the build directory is not given, make it reflect the variant name.
 BUILD ?= build-$(VARIANT)
 
+TOP = ../../micropython
+
 VARIANT_DIR ?= ../../micropython/ports/unix/variants/$(VARIANT)
 ifeq ($(wildcard $(VARIANT_DIR)/.),)
-$(error Invalid VARIANT specified: $(VARIANT_DIR))
+$(shell echo Fetching submodules...)
+$(shell cd ../../; git submodule update --init amy)
+$(shell cd ../../; git submodule update --init micropython)
+$(shell cd $(TOP); git submodule update --init lib/axtls)
+$(shell cd $(TOP); git submodule update --init lib/berkeley-db-1.xx)
+$(shell cd $(TOP); git submodule update --init lib/libffi)
+$(shell cd $(TOP); git submodule update --init lib/mbedtls)
 endif
 
-TOP = ../../micropython
 include $(TOP)/py/mkenv.mk
 include mpconfigport.mk
 include $(VARIANT_DIR)/mpconfigvariant.mk
