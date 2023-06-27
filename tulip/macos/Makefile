@@ -276,6 +276,21 @@ endif
 
 include $(TOP)/py/mkrules.mk
 
+#undefine compile_c
+
+define compile_c
+$(ECHO) "CC $<"
+$(ECHO) "O: $@"
+$(Q)$(CC) $(CFLAGS) -c -MD -o $@ $< || (echo -e $(HELP_BUILD_ERROR); false)
+@# The following fixes the dependency file.
+@# See http://make.paulandlesley.org/autodep.html for details.
+@# Regex adjusted from the above to play better with Windows paths, etc.
+@$(CP) $(@:.o=.d) $(@:.o=.P); \
+  $(SED) -e 's/#.*//' -e 's/^.*:  *//' -e 's/ *\\$$//' \
+      -e '/^$$/ d' -e 's/$$/ :/' < $(@:.o=.d) >> $(@:.o=.P); \
+  $(RM) -f $(@:.o=.d)
+endef
+
 $(BUILD)/%.o: %.m
 	$(ECHO) "M $<"
 	clang  -I$(INC) $(CFLAGS) -c -o $@ $<
