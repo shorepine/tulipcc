@@ -71,15 +71,6 @@ int64_t get_ticks_ms() {
     return amy_sysclock(); // based on audio driver
 }
     
-void * malloc_caps(uint32_t size, uint32_t flags) {
-#ifdef ESP_PLATFORM
-    //fprintf(stderr, "allocing size %ld flags %ld\n", size, flags);
-    return heap_caps_malloc(size, flags);
-#else
-    // ignore flags
-    return malloc(size);
-#endif
-}
 
 void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags) {
 #ifdef ESP_PLATFORM

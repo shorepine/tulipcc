@@ -1,12 +1,29 @@
 # Set location of base MicroPython directory.
 if(NOT MICROPY_DIR)
-    get_filename_component(MICROPY_DIR ${CMAKE_CURRENT_LIST_DIR}/../.. ABSOLUTE)
+    get_filename_component(MICROPY_DIR ${CMAKE_CURRENT_LIST_DIR}/../../micropython ABSOLUTE)
 endif()
 
 # Set location of the ESP32 port directory.
 if(NOT MICROPY_PORT_DIR)
     get_filename_component(MICROPY_PORT_DIR ${MICROPY_DIR}/ports/esp32 ABSOLUTE)
 endif()
+
+
+# Set location of the tulip shared directory.
+if(NOT TULIP_SHARED_DIR)
+    get_filename_component(TULIP_SHARED_DIR ${CMAKE_CURRENT_LIST_DIR}/../shared ABSOLUTE)
+endif()
+
+# Set location of the amy directory.
+if(NOT AMY_DIR)
+    get_filename_component(AMY_DIR ${CMAKE_CURRENT_LIST_DIR}/../../amy ABSOLUTE)
+endif()
+
+# Set location of the tulip esp32s3 directory.
+if(NOT TULIP_ESP32S3_DIR)
+    get_filename_component(TULIP_ESP32S3_DIR ${CMAKE_CURRENT_LIST_DIR} ABSOLUTE)
+endif()
+
 
 # Include core source components.
 include(${MICROPY_DIR}/py/py.cmake)
@@ -50,17 +67,15 @@ list(APPEND MICROPY_SOURCE_DRIVERS
 )
 
 list(APPEND MICROPY_SOURCE_PORT
-    esp32s3_display.c
-    esp32s3_joy.c
-    usb_keyboard.c
-    touchscreen.c
-    multicast.c
-    main.c
-    uart.c
-    usb.c
+    ../../../tulip/esp32s3/esp32s3_display.c
+    ../../../tulip/esp32s3/esp32s3_joy.c
+    ../../../tulip/esp32s3/usb_keyboard.c
+    ../../../tulip/esp32s3/touchscreen.c
+    ../../../tulip/esp32s3/multicast.c
+    ../../../tulip/esp32s3/main.c
+    ../../../tulip/esp32s3/uart.c
     usb_serial_jtag.c
     gccollect.c
-    mphalport.c
     fatfs_port.c
     help.c
     machine_bitstream.c
@@ -75,8 +90,10 @@ list(APPEND MICROPY_SOURCE_PORT
     modmachine.c
     network_common.c
     network_lan.c
-    network_ppp.c
     network_wlan.c
+    network_ppp.c
+    ppp_set_auth.c
+    mphalport.c
     mpnimbleport.c
     modsocket.c
     modesp.c
@@ -91,8 +108,37 @@ list(APPEND MICROPY_SOURCE_PORT
     machine_rtc.c
     machine_sdcard.c
     modespnow.c
+    usb.c
 )
 list(TRANSFORM MICROPY_SOURCE_PORT PREPEND ${MICROPY_PORT_DIR}/)
+
+list(APPEND MICROPY_SOURCE_EXTMOD 
+    ${TULIP_SHARED_DIR}/modtulip.c
+    ${TULIP_SHARED_DIR}/polyfills.c
+    ${TULIP_SHARED_DIR}/lodepng.c
+    ${TULIP_SHARED_DIR}/smallfont.c
+    ${TULIP_SHARED_DIR}/display.c
+    ${TULIP_SHARED_DIR}/bresenham.c
+    ${TULIP_SHARED_DIR}/u8g2_fonts.c    
+    ${TULIP_SHARED_DIR}/u8fontdata.c    
+    ${TULIP_SHARED_DIR}/tulip_helpers.c
+    ${TULIP_SHARED_DIR}/editor.c
+    ${TULIP_SHARED_DIR}/keyscan.c
+    ${TULIP_SHARED_DIR}/help.c
+    ${TULIP_SHARED_DIR}/alles.c
+    ${TULIP_SHARED_DIR}/ui.c
+    ${TULIP_SHARED_DIR}/midi.c
+    ${TULIP_SHARED_DIR}/sounds.c
+    ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
+    ${AMY_DIR}/src/algorithms.c
+    ${AMY_DIR}/src/amy.c
+    ${AMY_DIR}/src/delay.c
+    ${AMY_DIR}/src/envelope.c
+    ${AMY_DIR}/src/filters.c
+    ${AMY_DIR}/src/oscillators.c
+    ${AMY_DIR}/src/partials.c
+    ${AMY_DIR}/src/pcm.c
+)
 
 list(APPEND MICROPY_SOURCE_QSTR
     ${MICROPY_SOURCE_PY}
@@ -153,13 +199,14 @@ idf_component_register(
         ${MICROPY_SOURCE_PORT}
         ${MICROPY_SOURCE_BOARD}
     INCLUDE_DIRS
+        ../../tulip/esp32s3
         ${MICROPY_INC_CORE}
         ${MICROPY_INC_USERMOD}
         ${MICROPY_PORT_DIR}
         ${MICROPY_BOARD_DIR}
         ${CMAKE_BINARY_DIR}
-        ${MICROPY_DIR}/extmod/tulip
-        ${MICROPY_DIR}/extmod/amy/src
+        ../../tulip/shared
+        ../../amy/src
     REQUIRES
         ${IDF_COMPONENTS}
 )

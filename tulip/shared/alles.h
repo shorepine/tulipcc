@@ -3,7 +3,24 @@
 #ifndef __ALLES_H
 #define __ALLES_H
 
+// Your AMY configuration goes here
+#define AMY_OSCS 64              // # of simultaneous oscs to keep track of 
+#define AMY_CORES 2              // If using a multi-core capable device, how many cores to render from
+#define AMY_PCM_PATCHES_SIZE 1   // 1 == small PCM, 2 == large PCM samples stored in the program
+#define AMY_KS_OSCS 1
+#define AMY_EVENT_FIFO_LEN 1000  // number of events the queue can store
+#define AMY_MAX_DRIFT_MS 20000   // ms of time you can schedule ahead before synth recomputes time base
+#define AMY_SAMPLE_RATE 44100    // playback sample rate
+#define AMY_NCHANS 2             // 1 = mono output, 'Q' (pan) ignored. 2 = Enable 2-channel output, pan, etc.
+#define AMY_HAS_CHORUS 1         // 1 = Make chorus available (uses RAM)
+#define AMY_HAS_REVERB 1         // 1 = Make reverb available (uses RAM)
+
+#ifdef ESP_PLATFORM
+#include <esp_heap_caps.h>
+#endif
+
 #include "amy.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,7 +69,6 @@ typedef int16_t i2s_sample_type;
 #endif
 
 
-#include "amy.h"
 
 #define UDP_PORT 9294        // port to listen on
 #define MULTICAST_TTL 255     // hops multicast packets can take

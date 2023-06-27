@@ -18,6 +18,7 @@
 #include "esp_timer.h"
 #include "alles.h"
 #include "esp_netif.h"
+#include "esp_wifi.h"
 
 uint8_t ipv4_quartet = 0;
 

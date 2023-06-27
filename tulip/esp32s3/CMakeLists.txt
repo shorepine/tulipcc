@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.12)
 
 # Set the board if it's not already set.
 if(NOT MICROPY_BOARD)
-    set(MICROPY_BOARD GENERIC)
+    set(MICROPY_BOARD TULIP4)
 endif()
 
 # Set the board directory and check that it exists.
@@ -47,7 +47,7 @@ set(SDKCONFIG_DEFAULTS ${CMAKE_BINARY_DIR}/sdkconfig.combined)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 # Set the location of the main component for the project (one per target).
-set(EXTRA_COMPONENT_DIRS main_${IDF_TARGET})
+set(EXTRA_COMPONENT_DIRS main)
 
 # Define the project.
 project(micropython)

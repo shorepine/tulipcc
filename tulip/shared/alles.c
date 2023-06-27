@@ -43,11 +43,11 @@ extern void mcast_listen_task(void *pvParameters);
 void esp_render_task( void * pvParameters) {
     uint8_t which = *((uint8_t *)pvParameters);
     uint8_t start = 0; 
-    uint8_t end = OSCS;
+    uint8_t end = AMY_OSCS;
     if (AMY_CORES == 2) {
-        start = (OSCS/2); 
-        end = OSCS;
-        if(which == 0) { start = 0; end = (OSCS/2); } 
+        start = (AMY_OSCS/2); 
+        end = AMY_OSCS;
+        if(which == 0) { start = 0; end = (AMY_OSCS/2); } 
     }
     fprintf(stderr,"I'm renderer #%d on core #%d and i'm handling oscs %d up until %d\n", which, xPortGetCoreID(), start, end);
     while(1) {
@@ -64,9 +64,9 @@ void esp_fill_audio_buffer_task() {
         int16_t *block = fill_audio_buffer_task();
         size_t written = 0;
         //i2s_write((i2s_port_t)CONFIG_I2S_NUM, block, BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS, &written, portMAX_DELAY); 
-        i2s_channel_write(tx_handle, block, BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS, &written, portMAX_DELAY);
-        if(written != BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS) {
-            fprintf(stderr,"i2s underrun: %d vs %d\n", written, BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS);
+        i2s_channel_write(tx_handle, block, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS, &written, portMAX_DELAY);
+        if(written != AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS) {
+            fprintf(stderr,"i2s underrun: %d vs %d\n", written, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS);
         }
     }
 }
@@ -123,7 +123,7 @@ amy_err_t setup_i2s(void) {
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
     i2s_new_channel(&chan_cfg, &tx_handle, NULL);
     i2s_std_config_t std_cfg = {
-        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(AMY_SAMPLE_RATE),
         .slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
         .gpio_cfg = {
             .mclk = I2S_GPIO_UNUSED,

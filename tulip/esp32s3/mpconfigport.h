@@ -63,7 +63,7 @@
 #define MICROPY_PY_IO_BUFFEREDWRITER        (1)
 #define MICROPY_PY_TIME_GMTIME_LOCALTIME_MKTIME (1)
 #define MICROPY_PY_TIME_TIME_TIME_NS        (1)
-#define MICROPY_PY_TIME_INCLUDEFILE         "ports/esp32s3/modtime.c"
+#define MICROPY_PY_TIME_INCLUDEFILE         "ports/esp32/modtime.c"
 #define MICROPY_PY_THREAD                   (1)
 #define MICROPY_PY_THREAD_GIL               (1)
 #define MICROPY_PY_THREAD_GIL_VM_DIVISOR    (32)
@@ -86,7 +86,7 @@
 #define MICROPY_PY_HASHLIB_SHA256           (1)
 #define MICROPY_PY_CRYPTOLIB                (1)
 #define MICROPY_PY_RANDOM_SEED_INIT_FUNC    (esp_random())
-#define MICROPY_PY_OS_INCLUDEFILE           "ports/esp32s3/modos.c"
+#define MICROPY_PY_OS_INCLUDEFILE           "ports/esp32/modos.c"
 #define MICROPY_PY_OS_DUPTERM               (1)
 #define MICROPY_PY_OS_DUPTERM_NOTIFY        (1)
 #define MICROPY_PY_OS_SYNC                  (1)
@@ -98,7 +98,7 @@
 #define MICROPY_PY_MACHINE_PULSE            (1)
 #define MICROPY_PY_MACHINE_PWM              (1)
 #define MICROPY_PY_MACHINE_PWM_DUTY         (1)
-#define MICROPY_PY_MACHINE_PWM_INCLUDEFILE  "ports/esp32s3/machine_pwm.c"
+#define MICROPY_PY_MACHINE_PWM_INCLUDEFILE  "ports/esp32/machine_pwm.c"
 #define MICROPY_PY_MACHINE_I2C              (1)
 #define MICROPY_PY_MACHINE_I2C_TRANSFER_WRITE1 (1)
 #define MICROPY_PY_MACHINE_SOFTI2C          (1)
@@ -124,8 +124,8 @@
 #define MICROPY_PY_NETWORK_HOSTNAME_DEFAULT "mpy-esp32c3"
 #endif
 #endif
-#define MICROPY_PY_NETWORK_INCLUDEFILE      "ports/esp32s3/modnetwork.h"
-#define MICROPY_PY_NETWORK_MODULE_GLOBALS_INCLUDEFILE "ports/esp32s3/modnetwork_globals.h"
+#define MICROPY_PY_NETWORK_INCLUDEFILE      "ports/esp32/modnetwork.h"
+#define MICROPY_PY_NETWORK_MODULE_GLOBALS_INCLUDEFILE "ports/esp32/modnetwork_globals.h"
 #ifndef MICROPY_PY_NETWORK_WLAN
 #define MICROPY_PY_NETWORK_WLAN             (1)
 #endif
