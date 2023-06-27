@@ -45,12 +45,12 @@ source ~/esp/esp-idf-v5.1-rc2/export.sh
 
 pip3 install Cython
 pip3 install littlefs-python==0.4.0 # needed to flash the filesystem
-cd ~/tulipcc/ports/esp32s3
+cd ~/tulipcc/tulip/esp32s3
 ```
 
 Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. If using our Tulip board, use the USB-C connector. 
 
-Make sure you're using the right `MICROPY_BOARD` spec for your chip. If you're using the `N8R8` (8MB flash), make sure to use `-DMICROPY_BOARD=TULIP4_N8R8`. For the 32MB (N32R8), including the Tulip CC integrated board, use `-DMICROPY_BOARD=TULIP4`.
+If you're using the `N8R8` (8MB flash), make sure to use `-DMICROPY_BOARD=TULIP4_N8R8`. For the 32MB (N32R8), including the Tulip CC integrated board, you can omit specifying it.
 
 For example, for the N8R8 chip only:
 
@@ -64,7 +64,7 @@ python tulip_fs_create.py N8R8
 For all other boards/chips:
 
 ```bash
-idf.py -D MICROPY_BOARD=TULIP4 flash 
+idf.py -D flash 
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
 # to the flash memory. Run this only once, or each time you modify `fs` if you're developing Tulip itself.
 python tulip_fs_create.py
@@ -77,12 +77,12 @@ To build / debug going forward:
 ```bash
 cd ports/esp32s3
 source ~/esp/esp-idf-v5.1-rc2/export.sh # do this once per terminal window
-idf.py -D MICROPY_BOARD=TULIP4 flash
-idf.py -D MICROPY_BOARD=TULIP4 monitor # shows stderr, use control-] to quit
+idf.py flash
+idf.py monitor # shows stderr, use control-] to quit
 
 # If you make changes to the underlying python libraries on micropython, you want to fully clean the build 
-idf.py -D MICROPY_BOARD=TULIP4 fullclean
-idf.py -D MICROPY_BOARD=TULIP4 flash
+idf.py fullclean
+idf.py flash
 ```
 
 ## Flash a Tulip without compiling
