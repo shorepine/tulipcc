@@ -211,6 +211,7 @@ idf_component_register(
         ${IDF_COMPONENTS}
 )
 
+                    
 # Set the MicroPython target as the current (main) IDF component target.
 set(MICROPY_TARGET ${COMPONENT_TARGET})
 

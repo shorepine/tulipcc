@@ -3,6 +3,7 @@
 # grab_submodules.sh
 
 # Do the first run submodule init if needed
+echo `pwd`
 pushd ../../ > /dev/null
 if test -f ".submodules_ok"; then
     echo "Submodules already loaded";
