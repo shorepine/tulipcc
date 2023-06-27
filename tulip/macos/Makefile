@@ -6,7 +6,15 @@ ifeq ($(WHICH_ARCH), arm64)
 	HOMEBREW = /opt/homebrew
 else
 	ARCHFLAGS = -target x86_64-apple-macos10.15
-	HOMEBREW = /usr/local
+	# On x86, homebrew FFI seems to have two locations
+	# /usr/local/homebrew/opt/libffi/include/ffi.h
+	# /usr/local/opt/libffi/include/ffi.h
+	# Check which it is
+	ifneq ("$(wildcard /usr/local/opt/libffi/include/ffi.h)","")
+		HOMEBREW = /usr/local
+	else
+		HOMEBREW = /usr/local/homebrew
+	endif
 endif
 
 # Select the variant to build for.
