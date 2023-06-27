@@ -5,7 +5,9 @@ cmake_minimum_required(VERSION 3.12)
 execute_process(COMMAND bash -c "../shared/grab_submodules.sh"
                     WORKING_DIRECTORY ".."
                     OUTPUT_VARIABLE GIT_SUBMOD_RESULT)
-file(WRITE "submod" "${GIT_SUBMOD_RESULT}")
+
+# Turn this on for debugging submodules
+#file(WRITE "submod" "${GIT_SUBMOD_RESULT}")
 
 
 # Set the board if it's not already set.

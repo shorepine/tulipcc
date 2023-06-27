@@ -59,7 +59,6 @@
 #include "alles.h"
 #include "midi.h"
 
-FILE * tlog;
 
 // Command line options, with their defaults
 STATIC bool compile_only = false;
@@ -885,9 +884,6 @@ int main(int argc, char **argv) {
     // So thread out alles and then micropython tasks
 
     // Display has to run on main thread on macos
-
-    tlog = fopen("/tmp/tuliplog", "w");
-
     int opt;
     while((opt = getopt(argc, argv, ":d:c:lh")) != -1) 
     { 
