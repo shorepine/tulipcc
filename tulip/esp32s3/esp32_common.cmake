@@ -74,10 +74,10 @@ list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/multicast.c
     ../../../tulip/esp32s3/main.c
     ../../../tulip/esp32s3/uart.c
+    ../../../tulip/esp32s3/help.c
     usb_serial_jtag.c
     gccollect.c
     fatfs_port.c
-    help.c
     machine_bitstream.c
     machine_timer.c
     machine_pin.c
