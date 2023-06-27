@@ -9,6 +9,7 @@ tulip/macos/tulip
 tulip/macos/tulip.arm64
 tulip/macos/tulip.x86_64
 tulip/macos/dist
+.submodules_ok
 
 # Prerequisites
 *.d
