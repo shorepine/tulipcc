@@ -3,15 +3,13 @@ __pycache__
 
 esp-idf/components/bootloader/subproject/dependencies.lock
 dependencies.lock
-ports/esp32s3/build
-ports/esp32s3/sdkconfig.old
-ports/macos/build-standard/
-ports/macos/tulip
-ports/macos/tulip.arm64
-ports/macos/tulip.x86_64
-ports/macos/dist
-ports/web/build
-mpy-cross/build
+tulip/esp32s3/build
+tulip/macos/build-standard/
+tulip/macos/tulip
+tulip/macos/tulip.arm64
+tulip/macos/tulip.x86_64
+tulip/macos/dist
+.submodules_ok
 
 # Prerequisites
 *.d
