@@ -18,7 +18,7 @@ if(not os.getcwd().endswith("esp32s3")):
     print("Run this from the tulipcc/ports/esp32s3 folder only")
     sys.exit()
 
-TULIP_HOME="../../tulip_home"
+TULIP_HOME = "../fs"
 
 # Copy over only these extensions 
 good_exts = [".txt", ".png", ".py"]
