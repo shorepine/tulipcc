@@ -23,13 +23,14 @@ TOP = ../../micropython
 
 VARIANT_DIR ?= ../../micropython/ports/unix/variants/$(VARIANT)
 ifeq ($(wildcard $(VARIANT_DIR)/.),)
-$(shell echo Fetching submodules...)
+$(echo "Fetching submodules...")
 $(shell cd ../../; git submodule update --init amy)
 $(shell cd ../../; git submodule update --init micropython)
 $(shell cd $(TOP); git submodule update --init lib/axtls)
 $(shell cd $(TOP); git submodule update --init lib/berkeley-db-1.xx)
 $(shell cd $(TOP); git submodule update --init lib/libffi)
 $(shell cd $(TOP); git submodule update --init lib/mbedtls)
+$(shell cd $(TOP); git submodule update --init lib/micropython-lib)
 endif
 
 include $(TOP)/py/mkenv.mk
