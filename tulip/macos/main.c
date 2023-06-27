@@ -54,7 +54,7 @@
 #include "genhdr/mpversion.h"
 #include "input.h"
 #include "shared/runtime/pyexec.h"
-
+#include "mpthreadport.h"
 #include "display.h"
 #include "alles.h"
 #include "midi.h"
@@ -523,7 +523,6 @@ char * get_tulip_home_path() {
 }
 
 
-extern  int16_t amy_channel;  // -1 for L -> mono output.
 extern int16_t amy_device_id;
 
 
@@ -888,9 +887,6 @@ int main(int argc, char **argv) {
             case 'd': 
                 amy_device_id = atoi(optarg);
                 break;
-            case 'c': 
-                amy_channel = atoi(optarg);
-                break; 
             case 'l':
                 amy_print_devices();
                 exit(0);
@@ -898,7 +894,6 @@ int main(int argc, char **argv) {
             case 'h':
                 fprintf(stderr,"usage: tulip\n");
                 fprintf(stderr,"\t[-d sound device id, use -l to list, default, autodetect]\n");
-                fprintf(stderr,"\t[-c sound channel, default -1 for all channels on device]\n");
                 fprintf(stderr,"\t[-l list all sound devices and exit]\n");
                 fprintf(stderr,"\t[-h show this help and exit]\n");
                 exit(0);
