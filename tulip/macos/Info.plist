@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>English</string>
+    <key>CFBundleExecutable</key>
+    <string>tulip</string>
+    <key>CFBundleIconFile</key>
+    <string>tulip.icns</string>
+    <key>CFBundleIdentifier</key>
+    <string>org.rosaline.tulipcc</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Tulip CC</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>4</string>
+    <key>CFBundleSignature</key>
+    <string>????</string>
+    <key>CFBundleSupportedPlatforms</key>
+    <array>
+        <string>MacOSX</string>
+    </array>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.music</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15</string>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>Tulip can store your files in the Desktop Folder.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>Tulip can store your files in the Documents Folder.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>Tulip can store your files in the Downloads Folder.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>©2022 Brian Whitman
+All rights reserved</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Tulip can access the Alles synthesizer mesh over UDP. </string>
+    <key>NSNetworkVolumesUsageDescription</key>
+    <string>Tulip can store your files on Network Disks.</string>
+    <key>NSRemovableVolumesUsageDescription</key>
+    <string>Tulip can store your files on Removable Disks.</string>
+    <key>NSUserNotificationAlertStyle</key>
+    <string>none</string>
+    <key>OWARPublisherName</key>
+    <string>Brian Whitman</string>
+    <key>OWARPublisherSupportEmail</key>
+    <string>brian@variogr.am</string>
+    <key>OWARPublisherSupportURL</key>
+    <string>https://github.com/bwhitman/tulipcc/</string>
+    <key>OWARPublisherURL</key>
+    <string>https://tulip.computer/</string>
+</dict>
+</plist>
