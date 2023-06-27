@@ -45,7 +45,7 @@ UNAME_S := $(shell uname -s)
 include $(TOP)/py/py.mk
 include $(TOP)/extmod/extmod.mk
 
-GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi
+GIT_SUBMODULES += $(TOP)/lib/axtls $(TOP)/lib/berkeley-db-1.xx $(TOP)lib/libffi ../../amy
 
 INC +=  -I.
 INC +=  -I$(TOP)
@@ -55,7 +55,6 @@ INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
 
-#INC += -I$(HOMEBREW)/include/SDL2
 INC += -I./SDL2.framework/Headers
 
 # compiler settings
@@ -124,7 +123,7 @@ else
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
 endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -Llibs -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework Cocoa -lstdc++  $(ARCHFLAGS)
+LDFLAGS += -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework Cocoa -lstdc++  $(ARCHFLAGS)
 CFLAGS += -DVIRTUAL_MIDI
 
 # Flags to link with pthread library
@@ -157,64 +156,6 @@ ifeq ($(MICROPY_PY_THREAD),1)
 CFLAGS_MOD += -DMICROPY_PY_THREAD=1 -DMICROPY_PY_THREAD_GIL=0
 LDFLAGS_MOD += $(LIBPTHREAD)
 endif
-
-# If the variant enables it, enable modbluetooth.
-ifeq ($(MICROPY_PY_BLUETOOTH),1)
-
-HAVE_LIBUSB := $(shell (which pkg-config > /dev/null && pkg-config --exists libusb-1.0) 2>/dev/null && echo '1')
-
-# Only one stack can be enabled.
-ifeq ($(MICROPY_BLUETOOTH_NIMBLE),1)
-ifeq ($(MICROPY_BLUETOOTH_BTSTACK),1)
-$(error Cannot enable both NimBLE and BTstack at the same time)
-endif
-endif
-
-# Default to btstack, but a variant (or make command line) can set NimBLE
-# explicitly (which is always via H4 UART).
-ifneq ($(MICROPY_BLUETOOTH_NIMBLE),1)
-ifneq ($(MICROPY_BLUETOOTH_BTSTACK),1)
-MICROPY_BLUETOOTH_BTSTACK ?= 1
-endif
-endif
-
-CFLAGS_MOD += -DMICROPY_PY_BLUETOOTH=1
-CFLAGS_MOD += -DMICROPY_PY_BLUETOOTH_ENABLE_CENTRAL_MODE=1
-
-ifeq ($(MICROPY_BLUETOOTH_BTSTACK),1)
-
-# Figure out which BTstack transport to use.
-ifeq ($(MICROPY_BLUETOOTH_BTSTACK_H4),1)
-ifeq ($(MICROPY_BLUETOOTH_BTSTACK_USB),1)
-$(error Cannot enable BTstack support for USB and H4 UART at the same time)
-endif
-else
-ifeq ($(HAVE_LIBUSB),1)
-# Default to btstack-over-usb.
-MICROPY_BLUETOOTH_BTSTACK_USB ?= 1
-else
-# Fallback to HCI controller via a H4 UART (e.g. Zephyr on nRF) over a /dev/tty serial port.
-MICROPY_BLUETOOTH_BTSTACK_H4 ?= 1
-endif
-endif
-
-
-# BTstack is enabled.
-GIT_SUBMODULES += lib/btstack
-include $(TOP)/extmod/btstack/btstack.mk
-SRC_BTSTACK += lib/btstack/platform/embedded/btstack_run_loop_embedded.c
-
-else
-
-# NimBLE is enabled.
-GIT_SUBMODULES += lib/mynewt-nimble
-CFLAGS_MOD += -DMICROPY_PY_BLUETOOTH_ENABLE_L2CAP_CHANNELS=1
-include $(TOP)/extmod/nimble/nimble.mk
-
-endif
-
-endif
-
 
 include ../shared/tulip.mk
 
@@ -386,7 +327,12 @@ axtls: $(TOP)/lib/axtls/README
 
 $(TOP)/lib/axtls/README:
 	@echo "You cloned without --recursive, fetching submodules for you."
-	(cd $(TOP); git submodule update --init --recursive)
+	(cd ../../; git submodule update amy)
+	(cd ../../; git submodule update micropython)
+	(cd $(TOP); git submodule update lib/axtls)
+	(cd $(TOP); git submodule update lib/berkeley-db-1.xx)
+	(cd $(TOP); git submodule update lib/libffi)
+
 
 PREFIX = /usr/local
 BINDIR = $(DESTDIR)$(PREFIX)/bin
