@@ -642,6 +642,7 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, u
         fprintf(stderr, "%.*s", len, str);
         fflush(stderr);
     }
+
     //fprintf(stderr,"str len %d format %d is ### ", len, format);
     //for(uint16_t i=0;i<len;i++) fprintf(stderr, "[%c] [%d] ", str[i], str[i]);
     //fprintf(stderr, "###\n");

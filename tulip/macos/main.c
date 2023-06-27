@@ -59,6 +59,7 @@
 #include "alles.h"
 #include "midi.h"
 
+FILE * tlog;
 
 // Command line options, with their defaults
 STATIC bool compile_only = false;
@@ -578,6 +579,8 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     #endif
     mp_stack_set_limit(stack_limit);
 
+
+
    // pre_process_options(argc, argv);
 
     #if MICROPY_ENABLE_GC
@@ -604,7 +607,10 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     mp_pystack_init(pystack, &pystack[MP_ARRAY_SIZE(pystack)]);
     #endif
 
+
     mp_init();
+
+
 
     #if MICROPY_EMIT_NATIVE
     // Set default emitter options
@@ -799,10 +805,11 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
         }
     }
     */
-    const char *inspect_env = getenv("MICROPYINSPECT");
-    if (inspect_env && inspect_env[0] != '\0') {
-        inspect = true;
-    }
+    //const char *inspect_env = getenv("MICROPYINSPECT");
+    //if (inspect_env && inspect_env[0] != '\0') {
+    //    inspect = true;
+    //}
+    inspect = true;
     pyexec_frozen_module("_boot.py", false);
     pyexec_file_if_exists("boot.py");
     if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
@@ -811,6 +818,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
             goto soft_reset_exit;
         }
     }
+
     if (ret == NOTHING_EXECUTED || inspect) {
         if (isatty(0) || inspect) {
             prompt_read_history();
@@ -820,6 +828,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
             ret = execute_from_lexer(LEX_SRC_STDIN, NULL, MP_PARSE_FILE_INPUT, false);
         }
     }
+
 soft_reset_exit:
 
     #if MICROPY_PY_SYS_SETTRACE
@@ -871,13 +880,13 @@ soft_reset_exit:
     return 0;
 }
 
-
 int main(int argc, char **argv) {
     // Get the resources folder loc
     // So thread out alles and then micropython tasks
 
     // Display has to run on main thread on macos
 
+    tlog = fopen("/tmp/tuliplog", "w");
 
     int opt;
     while((opt = getopt(argc, argv, ":d:c:lh")) != -1) 
@@ -908,10 +917,7 @@ int main(int argc, char **argv) {
                 break; 
         } 
     }
-
-
     unix_display_init();
-
     pthread_t alles_thread_id;
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
 

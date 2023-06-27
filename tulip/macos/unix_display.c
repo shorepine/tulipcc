@@ -182,7 +182,6 @@ void start_draw() {
 
 }
 
-
 // Using our non-vsync software renderer, blit the surface into a texture and then out to the window
 void end_draw() {
     SDL_UnlockSurface(surface_332);

@@ -12,6 +12,8 @@ cp build-standard/tulip/obj/tulip.arm64 .
 rm -rf build-standard
 make WHICH_ARCH=x86_64
 cp build-standard/tulip/obj/tulip.x86_64 .
+rm -rf build-standard
+
 # lipo them together
 lipo -create -output tulip tulip.x86_64 tulip.arm64
 rm tulip.x86_64
