@@ -13,7 +13,7 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>Tulip CC</string>
+    <string>Tulip Desktop</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -37,7 +37,7 @@
     <key>NSDownloadsFolderUsageDescription</key>
     <string>Tulip can store your files in the Downloads Folder.</string>
     <key>NSHumanReadableCopyright</key>
-    <string>©2022 Brian Whitman
+    <string>©2023 Brian Whitman
 All rights reserved</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>Tulip can access the Alles synthesizer mesh over UDP. </string>
