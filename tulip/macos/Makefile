@@ -22,16 +22,6 @@ BUILD ?= build-$(VARIANT)
 TOP = ../../micropython
 
 VARIANT_DIR ?= ../../micropython/ports/unix/variants/$(VARIANT)
-ifeq ($(wildcard $(VARIANT_DIR)/.),)
-$(echo "Fetching submodules...")
-$(shell cd ../../; git submodule update --init amy)
-$(shell cd ../../; git submodule update --init micropython)
-$(shell cd $(TOP); git submodule update --init lib/axtls)
-$(shell cd $(TOP); git submodule update --init lib/berkeley-db-1.xx)
-$(shell cd $(TOP); git submodule update --init lib/libffi)
-$(shell cd $(TOP); git submodule update --init lib/mbedtls)
-$(shell cd $(TOP); git submodule update --init lib/micropython-lib)
-endif
 
 include $(TOP)/py/mkenv.mk
 include mpconfigport.mk
@@ -54,7 +44,7 @@ UNAME_S := $(shell uname -s)
 include $(TOP)/py/py.mk
 include $(TOP)/extmod/extmod.mk
 
-GIT_SUBMODULES += $(TOP)/lib/axtls $(TOP)/lib/berkeley-db-1.xx $(TOP)lib/libffi ../../amy
+#GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi lib/mbedtls lib/micropython-lib 
 
 INC +=  -I.
 INC +=  -I$(TOP)
@@ -288,27 +278,7 @@ include $(TOP)/py/mkrules.mk
 
 $(BUILD)/%.o: %.m
 	$(ECHO) "M $<"
-	#clang  -I$(INC) -mmacosx-version-min=10.15 -c -o $@ $<
 	clang  -I$(INC) $(CFLAGS) -c -o $@ $<
-
-.PHONY: test test_full
-
-test: $(PROG) $(TOP)/tests/run-tests.py
-	$(eval DIRNAME=ports/$(notdir $(CURDIR)))
-	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(PROG) ./run-tests.py
-
-test_full: $(PROG) $(TOP)/tests/run-tests.py
-	$(eval DIRNAME=ports/$(notdir $(CURDIR)))
-	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(PROG) ./run-tests.py
-	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(PROG) ./run-tests.py -d thread
-	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(PROG) ./run-tests.py --emit native
-	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(PROG) ./run-tests.py --via-mpy $(RUN_TESTS_MPY_CROSS_FLAGS) -d basics float micropython
-	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(PROG) ./run-tests.py --via-mpy $(RUN_TESTS_MPY_CROSS_FLAGS) --emit native -d basics float micropython
-	cat $(TOP)/tests/basics/0prelim.py | ./$(PROG) | grep -q 'abc'
-
-test_gcov: test_full
-	gcov -o $(BUILD)/py $(TOP)/py/*.c
-	gcov -o $(BUILD)/extmod $(TOP)/extmod/*.c
 
 # Value of configure's --host= option (required for cross-compilation).
 # Deduce it from CROSS_COMPILE by default, but can be overridden.
@@ -331,17 +301,6 @@ $(BUILD)/lib/libffi/include/ffi.h: $(TOP)/lib/libffi/configure
 	mkdir -p $(BUILD)/lib/libffi; cd $(BUILD)/lib/libffi; \
 	$(abspath $(TOP))/lib/libffi/configure $(CROSS_COMPILE_HOST) --prefix=$$PWD/out --disable-structs CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="-Os -fomit-frame-pointer -fstrict-aliasing -ffast-math -fno-exceptions"; \
 	$(MAKE) install-exec-recursive; $(MAKE) -C include install-data-am
-
-axtls: $(TOP)/lib/axtls/README
-
-$(TOP)/lib/axtls/README:
-	@echo "You cloned without --recursive, fetching submodules for you."
-	(cd ../../; git submodule update amy)
-	(cd ../../; git submodule update micropython)
-	(cd $(TOP); git submodule update lib/axtls)
-	(cd $(TOP); git submodule update lib/berkeley-db-1.xx)
-	(cd $(TOP); git submodule update lib/libffi)
-
 
 PREFIX = /usr/local
 BINDIR = $(DESTDIR)$(PREFIX)/bin
