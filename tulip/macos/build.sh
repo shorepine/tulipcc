@@ -1,15 +1,10 @@
+#!/bin/bash
 # build.sh
 # Just builds locally
 
-cd ../../
-git submodule update --init amy
-git submodule update --init micropython
-cd micropython
-git submodule update --init lib/axtls 
-git submodule update --init lib/libffi 
-git submodule update --init lib/mbedtls
-git submodule update --init lib/micropython-lib 
-cd ../tulip/macos
+source ../shared/grab_submodules.sh
+
+# Make debug and set up app bundle on mac
 make DEBUG=1
 mkdir -p dev
 rm -rf dev/Tulip\ CC.app
