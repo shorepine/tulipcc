@@ -17,7 +17,7 @@ CPUS ?= $(shell sysctl -n hw.ncpu || echo 1)
 MAKEFLAGS += --jobs=$(CPUS)
 
 # If the build directory is not given, make it reflect the variant name.
-BUILD ?= build-$(VARIANT)
+BUILD ?= build-$(VARIANT)/tulip/obj
 
 TOP = ../../micropython
 
@@ -280,7 +280,6 @@ include $(TOP)/py/mkrules.mk
 
 define compile_c
 $(ECHO) "CC $<"
-$(ECHO) "O: $@"
 $(Q)$(CC) $(CFLAGS) -c -MD -o $@ $< || (echo -e $(HELP_BUILD_ERROR); false)
 @# The following fixes the dependency file.
 @# See http://make.paulandlesley.org/autodep.html for details.

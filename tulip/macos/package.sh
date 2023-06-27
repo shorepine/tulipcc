@@ -8,8 +8,10 @@
 # Build for arm then intel
 make WHICH_ARCH=arm64 clean
 make WHICH_ARCH=arm64
+cp build-standard/tulip/obj/tulip.arm64 .
 make WHICH_ARCH=x86_64 clean
 make WHICH_ARCH=x86_64
+cp build-standard/tulip/obj/tulip.x86_64 .
 # lipo them together
 lipo -create -output tulip tulip.x86_64 tulip.arm64
 rm tulip.x86_64
@@ -21,11 +23,9 @@ rm -rf dist/Tulip\ CC.app
 mkdir -p dist/Tulip\ CC.app/Contents/{MacOS,Resources,Frameworks,libs}
 cp tulip dist/Tulip\ CC.app/Contents/MacOS
 cp Info.plist dist/Tulip\ CC.app/Contents/
-cp -rf ../../tulip_home dist/Tulip\ CC.app/Contents/Resources/
+cp -rf ../fs dist/Tulip\ CC.app/Contents/Resources/
 cp -a SDL2.framework dist/Tulip\ CC.app/Contents/Frameworks/
-cp libs/libsoundio.2.0.0.dylib dist/Tulip\ CC.app/Contents/libs/
 install_name_tool -add_rpath @executable_path/../Frameworks dist/Tulip\ CC.app/Contents/MacOS/tulip
-install_name_tool -change "@@HOMEBREW_PREFIX@@/opt/libsoundio/lib/libsoundio.2.dylib" "@executable_path/../libs/libsoundio.2.0.0.dylib" "dist/Tulip CC.app/Contents/MacOS/tulip"
 cp tulip.icns dist/Tulip\ CC.app/Contents/Resources/
 codesign -s "Developer ID Application: Brian Whitman (Y6CQ3JU8G4)" dist/Tulip\ CC.app/Contents/libs/libsoundio.2.0.0.dylib -f
 codesign -s "Developer ID Application: Brian Whitman (Y6CQ3JU8G4)" dist/Tulip\ CC.app/Contents/Frameworks/SDL2.framework/Versions/A/SDL2 -f
