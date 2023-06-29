@@ -28,6 +28,7 @@ Also, download or clone this Tulip repository. We'll assume it's in `~/tulipcc`.
 ```bash
 cd ~
 mkdir esp
+cd esp
 curl -O https://dl.espressif.com/github_assets/espressif/esp-idf/releases/download/v5.1-rc2/esp-idf-v5.1-rc2.zip
 unzip esp-idf-v5.1-rc2.zip
 esp-idf-v5.1-rc2/install.sh esp32s3
