@@ -27,7 +27,7 @@ for (x,y) in test_pos:
     tulip.bg_clear()
     time.sleep_ms(500)
     got = [-1, -1]
-    tulip.circle(x,y,20, 194, 1)
+    tulip.bg_circle(x,y,20, 194, 1)
     while(got[0] < 0):
         time.sleep_ms(50)
     deltas.append( (x- got[0], y-got[1]) )
