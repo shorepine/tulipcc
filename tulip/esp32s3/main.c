@@ -218,7 +218,6 @@ void mp_task(void *pvParameter) {
 
     heap_caps_register_failed_alloc_callback(esp_alloc_failed);
     uint32_t caps = MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM;
-    //size_t heap_total = heap_caps_get_total_size(caps);
     size_t mp_task_heap_size = 4 * 1024 * 1024; // MIN(heap_caps_get_largest_free_block(caps), heap_total / 2);
     void *mp_task_heap = heap_caps_malloc(mp_task_heap_size, caps);
 
@@ -236,7 +235,7 @@ soft_reset:
     // initialise peripherals
     machine_pins_init();
     #if MICROPY_PY_MACHINE_I2S
-    //machine_i2s_init0();
+    machine_i2s_init0();
     #endif
 
     // run boot-up scripts

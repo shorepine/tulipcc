@@ -51,6 +51,7 @@ STATIC void uart_irq_handler(void *arg);
 #define RXFIFO_RX_TIMEOUT (10)
 
 void uart_stdout_init(void) {
+    fprintf(stderr, "uart_stdout_init\n");
     uart_hal_context_t repl_hal = REPL_HAL_DEFN();
     uint32_t sclk_freq;
 
