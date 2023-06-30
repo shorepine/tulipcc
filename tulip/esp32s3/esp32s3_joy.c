@@ -5,7 +5,8 @@
 #include "esp_log.h"
 #include "string.h"
 #include "esp_timer.h"
-
+#include "esp_attr.h"
+#include "driver/gpio.h"
 #define JOY_CLOCK_PIN 13
 #define JOY_LATCH_PIN 48
 #define JOY_DATA_PIN 45

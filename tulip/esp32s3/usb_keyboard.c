@@ -2,6 +2,7 @@
 #include "usb_keyboard.h"
 #include "midi.h"  // from extmod/tulip/
 
+uint16_t keyboard_bytes = KEYBOARD_BYTES;
 
 typedef union {
     struct {
@@ -18,7 +19,7 @@ typedef union {
     uint8_t val[9];
 } usb_hid_desc_t;
 
-#ifdef DEBUG_USB
+#if DEBUG_USB
 // from show_desc.hpp
 // from https://github.com/touchgadget/esp32-usb-host-demos
 
@@ -27,57 +28,57 @@ void show_config_desc(const void *p)
   printf("*** show_config_desc:\n");
   const usb_config_desc_t *config_desc = (const usb_config_desc_t *)p;
 
-  printf("bLength: %d\n", config_desc->bLength);
-  printf("bDescriptorType(config): %d\n", config_desc->bDescriptorType);
-  printf("wTotalLength: %d\n", config_desc->wTotalLength);
-  printf("bNumInterfaces: %d\n", config_desc->bNumInterfaces);
-  printf("bConfigurationValue: %d\n", config_desc->bConfigurationValue);
-  printf("iConfiguration: %d\n", config_desc->iConfiguration);
-  printf("bmAttributes(%s%s%s): 0x%02x\n",
+  fprintf(stderr,"bLength: %d\n", config_desc->bLength);
+  fprintf(stderr,"bDescriptorType(config): %d\n", config_desc->bDescriptorType);
+  fprintf(stderr,"wTotalLength: %d\n", config_desc->wTotalLength);
+  fprintf(stderr,"bNumInterfaces: %d\n", config_desc->bNumInterfaces);
+  fprintf(stderr,"bConfigurationValue: %d\n", config_desc->bConfigurationValue);
+  fprintf(stderr,"iConfiguration: %d\n", config_desc->iConfiguration);
+  fprintf(stderr,"bmAttributes(%s%s%s): 0x%02x\n",
       (config_desc->bmAttributes & USB_BM_ATTRIBUTES_SELFPOWER)?"Self Powered":"",
       (config_desc->bmAttributes & USB_BM_ATTRIBUTES_WAKEUP)?", Remote Wakeup":"",
       (config_desc->bmAttributes & USB_BM_ATTRIBUTES_BATTERY)?", Battery Powered":"",
       config_desc->bmAttributes);
-  printf("bMaxPower: %d = %d mA\n", config_desc->bMaxPower, config_desc->bMaxPower*2);
-  printf("***\n");
+  fprintf(stderr,"bMaxPower: %d = %d mA\n", config_desc->bMaxPower, config_desc->bMaxPower*2);
+  fprintf(stderr,"***\n");
 }
 
 uint8_t show_interface_desc(const void *p)
 {
-  printf("*** show_interface_desc:\n");
+  fprintf(stderr,"*** show_interface_desc:\n");
   const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
 
-  printf("bLength: %d\n", intf->bLength);
-  printf("bDescriptorType (interface): %d\n", intf->bDescriptorType);
-  printf("bInterfaceNumber: %d\n", intf->bInterfaceNumber);
-  printf("bAlternateSetting: %d\n", intf->bAlternateSetting);
-  printf("bNumEndpoints: %d\n", intf->bNumEndpoints);
-  printf("bInterfaceClass: 0x%02x\n", intf->bInterfaceClass);
-  printf("bInterfaceSubClass: 0x%02x\n", intf->bInterfaceSubClass);
-  printf("bInterfaceProtocol: 0x%02x\n", intf->bInterfaceProtocol);
-  printf("iInterface: %d\n", intf->iInterface);
-  printf("***\n");
+  fprintf(stderr,"bLength: %d\n", intf->bLength);
+  fprintf(stderr,"bDescriptorType (interface): %d\n", intf->bDescriptorType);
+  fprintf(stderr,"bInterfaceNumber: %d\n", intf->bInterfaceNumber);
+  fprintf(stderr,"bAlternateSetting: %d\n", intf->bAlternateSetting);
+  fprintf(stderr,"bNumEndpoints: %d\n", intf->bNumEndpoints);
+  fprintf(stderr,"bInterfaceClass: 0x%02x\n", intf->bInterfaceClass);
+  fprintf(stderr,"bInterfaceSubClass: 0x%02x\n", intf->bInterfaceSubClass);
+  fprintf(stderr,"bInterfaceProtocol: 0x%02x\n", intf->bInterfaceProtocol);
+  fprintf(stderr,"iInterface: %d\n", intf->iInterface);
+  fprintf(stderr,"***\n");
   return intf->bInterfaceClass;
 }
 
 void show_endpoint_desc(const void *p)
 {
-  printf("*** show_endpoint_desc:\n");
+  fprintf(stderr, "*** show_endpoint_desc:\n");
   const usb_ep_desc_t *endpoint = (const usb_ep_desc_t *)p;
   const char *XFER_TYPE_NAMES[] = {
     "Control", "Isochronous", "Bulk", "Interrupt"
   };
-  printf("bLength: %d\n", endpoint->bLength);
-  printf("bDescriptorType (endpoint): %d\n", endpoint->bDescriptorType);
-  printf("bEndpointAddress(%s): 0x%02x\n",
+  fprintf(stderr, "bLength: %d\n", endpoint->bLength);
+  fprintf(stderr, "bDescriptorType (endpoint): %d\n", endpoint->bDescriptorType);
+  fprintf(stderr, "bEndpointAddress(%s): 0x%02x\n",
     (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK)?"In":"Out",
     endpoint->bEndpointAddress);
-  printf("bmAttributes(%s): 0x%02x\n",
+  fprintf(stderr, "bmAttributes(%s): 0x%02x\n",
       XFER_TYPE_NAMES[endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK],
       endpoint->bmAttributes);
-  printf("wMaxPacketSize: %d\n", endpoint->wMaxPacketSize);
-  printf("bInterval: %d\n", endpoint->bInterval);
-  printf("***\n");
+  fprintf(stderr, "wMaxPacketSize: %d\n", endpoint->wMaxPacketSize);
+  fprintf(stderr, "bInterval: %d\n", endpoint->bInterval);
+  fprintf(stderr, "***\n");
 }
 
 // end of show_desc.hpp
@@ -388,6 +389,8 @@ void prepare_endpoint_hid(const void *p)
 {
   const usb_ep_desc_t *endpoint = (const usb_ep_desc_t *)p;
   esp_err_t err;
+  keyboard_bytes = usb_round_up_to_mps(KEYBOARD_BYTES, endpoint->wMaxPacketSize);
+  fprintf(stderr, "Setting KB to %d from MPS %d\n", keyboard_bytes, endpoint->wMaxPacketSize);
 
   // must be interrupt for HID
   if ((endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK) != USB_BM_ATTRIBUTES_XFER_INT) {
@@ -395,7 +398,7 @@ void prepare_endpoint_hid(const void *p)
     return;
   }
   if (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK) {
-    err = usb_host_transfer_alloc(KEYBOARD_BYTES, 0, &KeyboardIn);
+    err = usb_host_transfer_alloc(keyboard_bytes, 0, &KeyboardIn);
     if (err != ESP_OK) {
       KeyboardIn = NULL;
       printf("usb_host_transfer_alloc In fail: %x\n", err);
@@ -504,7 +507,7 @@ void run_usb()
         // nuphy is 8 
         // keychron is 16
         // We need to discern this from the descriptor instead of hardcoding it
-        KeyboardIn->num_bytes = KEYBOARD_BYTES; 
+        KeyboardIn->num_bytes = keyboard_bytes; 
         esp_err_t err = usb_host_transfer_submit(KeyboardIn);
         if (err != ESP_OK) {
           printf("usb_host_transfer_submit In fail: %x\n", err);

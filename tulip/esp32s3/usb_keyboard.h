@@ -16,6 +16,7 @@
 // vortex 8
 // keychron 16
 #define KEYBOARD_BYTES 8
+extern uint16_t keyboard_bytes;
 
 // How long you hold down a key before it starts repeating
 #define KEY_REPEAT_TRIGGER_MS 500

@@ -1,3 +1,66 @@
+
+#if 0
+#include "display.h"
+int16_t touch_x_delta = 0;
+int16_t touch_y_delta = 0;
+
+
+#include "esp_lcd_touch.h"
+
+void touch_init() {
+    i2c_config_t i2c_conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = 18,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = 17,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 100000,
+    };
+
+    i2c_bus_handle_t i2c_bus = i2c_bus_create(I2C_NUM_0, &i2c_conf);
+
+    touch_panel_config_t touch_cfg = {
+        .interface_i2c = {
+            .i2c_bus = i2c_bus,
+            .clk_freq = 100000,
+            .i2c_addr = 0x38,
+        },
+        .interface_type = TOUCH_PANEL_IFACE_I2C,
+        .pin_num_int = 0,
+        .direction = TOUCH_DIR_LRTB,
+        .width = H_RES,
+        .height = V_RES,
+    };
+
+    /* Initialize touch panel controller FT5x06 */
+    touch_panel_find_driver(TOUCH_PANEL_CONTROLLER_FT5X06, &touch);
+    touch.init(&touch_cfg);
+
+    /* start to run calibration */
+    touch.calibration_run(&lcd, false);
+}
+
+
+void run_ft5x06(void *param)
+{
+    touch_init();
+    touch_info_t touch_info;
+    uint8_t got_primary_touch;
+    while (1) {
+        got_primary_touch = 0;
+        touch_panel_points_t points;
+        touch.read_point_data(&points);
+        int32_t x = points.curx[0];
+        int32_t y = points.cury[0];
+        if(TOUCH_EVT_PRESS == points.event) {
+            ESP_LOGI(TAG, "Pressed, Touch point at (%d, %d)", x, y);
+        }
+        vTaskDelay(20/portTICK_PERIOD_MS);
+    }
+}
+#endif
+
+
 // touchscreen.c
 // Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
 //
@@ -32,7 +95,8 @@
 #define I2C_MASTER_RX_BUF_DISABLE   0
 #define I2C_FREQ_HZ                 (100000)
 
-
+int16_t touch_x_delta = 0;
+int16_t touch_y_delta = 0;
 
 typedef struct {
     i2c_config_t i2c_conf;   /*!<I2C bus parameters*/
@@ -237,7 +301,7 @@ void ft5x06_init()
         fprintf(stderr, "%s:%d (%s)- assert failed!\n", __FILE__, __LINE__, __FUNCTION__);
         abort();
     }
-    fprintf(stderr,"ft5x06 device create successed\n");
+    fprintf(stderr,"ft5x06 device created\n");
 }
 
 // todo, calibrate function
@@ -247,10 +311,10 @@ void ft5x06_init()
 #define TOUCH_MIDDLE_X 65535
 #define TOUCH_BOTTOM_Y 591
 
-int16_t touch_x_delta = 0;
-int16_t touch_y_delta = 0;
+
 void run_ft5x06(void *param)
 {
+    ft5x06_init();
     int i = 0;
     touch_info_t touch_info;
     uint8_t got_primary_touch;
@@ -292,7 +356,6 @@ void run_ft5x06(void *param)
     }
     vTaskDelete(NULL);
 }
-
 
 
 

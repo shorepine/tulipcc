@@ -1,3 +1,7 @@
+#if 0
+extern int16_t touch_x_delta, touch_y_delta;
+#endif
+
 // touchscreen.h
 // Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
 //
@@ -16,8 +20,8 @@
 #define _IOT_BME280_H_
 
 #include "driver/i2c.h"
-
 extern int16_t touch_x_delta, touch_y_delta;
+
 typedef void* i2c_bus_handle_t;
 
 void touch_start();
@@ -206,6 +210,7 @@ ft5x06_handle_t iot_ft5x06_create(i2c_bus_handle_t bus, uint16_t dev_addr);
  *     - ESP_FAIL Fail
  */
 esp_err_t iot_ft5x06_init(ft5x06_handle_t dev, ft5x06_cfg_t * cfg);
+
 
 
 #endif
