@@ -1,4 +1,9 @@
-// Your AMY configuration goes here
+/*
+AMY configuration for Tulip.
+Stereo, reverb, chorus, etc
+Small PCM samples
+*/
+
 #define AMY_OSCS 64              // # of simultaneous oscs to keep track of 
 #define AMY_CORES 2              // If using a multi-core capable device, how many cores to render from
 #define AMY_PCM_PATCHES_SIZE 1   // 1 == small PCM, 2 == large PCM samples stored in the program
