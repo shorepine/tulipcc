@@ -23,7 +23,7 @@ sudo apt install cmake ninja-build dfu-util virtualenv
 
 For both macOS & Linux, next, download the supported version of ESP-IDF. That is currently 5.1-rc2. [You can download it directly here.](https://dl.espressif.com/github_assets/espressif/esp-idf/releases/download/v5.1-rc2/esp-idf-v5.1-rc2.zip) Unpack it to a folder. I like to keep them in `~/esp/`, as you'll likely want to use different versions eventually. So we'll assume it's in `~/esp/esp-idf-v5.1-rc2`.
 
-Also, download or clone this Tulip repository. We'll assume it's in `~/tulipcc`.
+Also, clone this Tulip repository. We'll assume it's in `~/tulipcc`.
 
 ```bash
 cd ~
