@@ -1,7 +1,9 @@
 // midi.c
 #include "midi.h"
-uint8_t last_midi[MAX_MIDI_BYTES_PER_MESSAGE];
-uint8_t last_midi_len;
+uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
+uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
+int16_t midi_queue_head = 0;
+int16_t midi_queue_tail = 0;
 
 
 void callback_midi_message_received(uint8_t *data, size_t len) {
@@ -9,11 +11,17 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
     for(uint32_t i=0;i<(uint32_t)len;i++) {
         if(i<MAX_MIDI_BYTES_PER_MESSAGE) {
             //fprintf(stderr, "%d ", data[i]);
-            last_midi[i] = data[i];
+            last_midi[midi_queue_tail][i] = data[i];
         }
     }
     //fprintf(stderr, " ## done\n");
-    last_midi_len = (uint16_t)len;
+    last_midi_len[midi_queue_tail] = (uint16_t)len;
+    midi_queue_tail = (midi_queue_tail + 1) % MIDI_QUEUE_DEPTH;
+    if (midi_queue_tail == midi_queue_head) {
+        // Queue wrap, drop oldest item.
+        midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
+        fprintf(stderr, "dropped midi message\n");
+    }
     tulip_midi_isr();
 }
 
@@ -25,8 +33,6 @@ void midi_out(uint8_t * bytes, uint16_t len) {
 }
 
 void run_midi() {
-    last_midi_len = 0;
-
     // Setup UART2 to listen for MIDI messages 
     const int uart_num = UART_NUM_1;
     uart_config_t uart_config = {
@@ -66,7 +72,6 @@ void run_midi() {
 
 }
 #else
-
 
 
 #endif
