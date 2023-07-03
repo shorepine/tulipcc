@@ -32,7 +32,7 @@ brew install pkg-config libffi
 
 # For local development (just your native arch, and shows stderr in terminal)
 ./build.sh
-./dev/Tulip\ CC.app/Contents/MacOS/tulip
+./dev/Tulip\ Desktop.app/Contents/MacOS/tulip
 
 # Or package for distribution (creates a universal binary)
 ./package.sh # makes .app bundle in dist, not necessary if you're just using it locally
