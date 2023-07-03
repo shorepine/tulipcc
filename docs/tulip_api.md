@@ -221,7 +221,7 @@ tulip.set_time()
 
 ## Music / sound
 
-Tulip comes with the Alles synthesizer, a very full featured 64-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) for more information, and the [AMY Readme](../extmod/amy/README.md) for full details of the synthesizer API. Tulip's version of AMY comes with stereo sound, which you can set per oscillator with the `pan` parameter.
+Tulip comes with the Alles synthesizer, a very full featured 64-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) for more information, and the [AMY Readme](https://github.com/bwhitman/amy/blob/main/README.md) for full details of the synthesizer API. Tulip's version of AMY comes with stereo sound, which you can set per oscillator with the `pan` parameter.
 
 Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/bwhitman/alles/blob/main/README.md) Connect any number of Alles speakers to the wifi to have instant surround sound! 
 
