@@ -55,7 +55,7 @@ void run_midi() {
         // Sleep 5ms to wait to get more MIDI data and avoid starving audio thread
         // I increased RTOS clock rate from 100hz to 500hz to go down to a 5ms delay here
         // https://www.esp32.com/viewtopic.php?t=7554
-        vTaskDelay(5 / portTICK_PERIOD_MS);
+        vTaskDelay(10 / portTICK_PERIOD_MS);
         ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
         if(length) {
             uart_read_bytes(uart_num, data, length, 0);

@@ -235,7 +235,7 @@ soft_reset:
     // initialise peripherals
     machine_pins_init();
     #if MICROPY_PY_MACHINE_I2S
-    machine_i2s_init0();
+    //machine_i2s_init0();
     #endif
 
     // run boot-up scripts
@@ -347,7 +347,7 @@ void app_main(void) {
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
-    
+    esp32s3_display_stop();
 
     fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
     xTaskCreatePinnedToCore(run_ft5x06, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
@@ -357,7 +357,7 @@ void app_main(void) {
     fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
-    delay_ms(500);
+    delay_ms(50);
     
     //xStack = (uint8_t*)heap_caps_calloc(1, TULIP_MP_TASK_STACK_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT | MALLOC_CAP_32BIT);
     //xTaskCreateStaticPinnedToCore(mp_task, TULIP_MP_TASK_NAME, TULIP_MP_TASK_STACK_SIZE, NULL, TULIP_MP_TASK_PRIORITY, xStack, &static_mp_handle, TULIP_MP_TASK_COREID);
@@ -373,6 +373,8 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(10);
 
+
+    esp32s3_display_start();
 
 
 }

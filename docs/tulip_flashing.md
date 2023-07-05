@@ -35,7 +35,7 @@ esp-idf-v5.1-rc2/install.sh esp32s3
 source ~/esp/esp-idf-v5.1-rc2/export.sh
 
 cd ~
-git clone https://github.com/bwhitman/tulipcc.git # or download https://github.com/bwhitman/tulipcc/archive/refs/heads/main.zip
+git clone https://github.com/bwhitman/tulipcc.git 
 pip3 install Cython
 pip3 install littlefs-python==0.4.0 # needed to flash the filesystem
 cd ~/tulipcc/tulip/esp32s3
