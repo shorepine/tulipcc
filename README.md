@@ -24,7 +24,7 @@ You can [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the co
 
 Tulip CC rev 4 supports:
 - 8.5MB of RAM
-- 8MB or 32MB flash storage, as a filesystem accesible in Python
+- 32MB flash storage, as a filesystem accesible in Python (24MB left over after OS in ROM)
 - An [AMY](https://github.com/bwhitman/amy) stereo 64-voice synthesizer engine running locally or as a wireless controller for an [Alles](https://github.com/bwhitman/alles) mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, with collision detection, from a total of 32KB of bitmap memory (1 byte per pixel)
