@@ -491,8 +491,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_touch_callback_obj, 0, 1, tu
 
 
 STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
-    if(last_midi_len > 0) {
-        return mp_obj_new_bytes(last_midi, last_midi_len);
+    if(midi_queue_head != midi_queue_tail) {
+        int16_t prev_head = midi_queue_head;
+        // Step on the head, hope no-one notices before we pop it.
+        midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
+        return mp_obj_new_bytes(last_midi[prev_head],
+                                last_midi_len[prev_head]);
     } 
     return mp_const_none;
 }
