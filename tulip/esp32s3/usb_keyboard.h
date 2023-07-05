@@ -22,11 +22,8 @@ extern uint16_t keyboard_bytes;
 #define KEY_REPEAT_TRIGGER_MS 500
 // How often (in ms) to repeat a key once held
 #define KEY_REPEAT_INTER_MS 90
-typedef void (*usb_host_enum_cb_t)(const usb_config_desc_t *config_desc);
 
-
-void show_config_desc_full(const usb_config_desc_t *config_desc);
-void usbh_setup(usb_host_enum_cb_t enumeration_cb);
+void usbh_setup();
 void run_usb();
 
 #endif
