@@ -8,20 +8,7 @@ int16_t midi_queue_tail = 0;
 
 void callback_midi_message_received(uint8_t *data, size_t len) {
     //fprintf(stderr,"got midi message len %ld status %d -- ", (uint32_t)len, data[0]);
-    for(uint32_t i=0;i<(uint32_t)len;i++) {
-        if(i<MAX_MIDI_BYTES_PER_MESSAGE) {
-            //fprintf(stderr, "%d ", data[i]);
-            last_midi[midi_queue_tail][i] = data[i];
-        }
-    }
-    //fprintf(stderr, " ## done\n");
-    last_midi_len[midi_queue_tail] = (uint16_t)len;
-    midi_queue_tail = (midi_queue_tail + 1) % MIDI_QUEUE_DEPTH;
-    if (midi_queue_tail == midi_queue_head) {
-        // Queue wrap, drop oldest item.
-        midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
-        fprintf(stderr, "dropped midi message\n");
-    }
+    push_midi_message_into_fifo(data, len);
     tulip_midi_isr();
 }
 

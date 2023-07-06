@@ -36,7 +36,6 @@ void* run_midi(void*argp){
     if (@available(macOS 11, *))  {
         @autoreleasepool {
             //py_midi_callback = 0;
-            last_midi_len = 0;
 
             OSStatus status = MIDIClientCreate((__bridge CFStringRef)@"Tulip", NotifyProc, NULL, &midi_client);
             if (status != noErr) {
@@ -60,10 +59,11 @@ void* run_midi(void*argp){
                         if(packet->wordCount == 1){
                             const unsigned char *bytes = (unsigned char*)(&packet->words[0]);
                             if(bytes[3] == 0x20) { //  TODO, non-3 packets, then what? 
-                                last_midi[0] = bytes[2];
-                                last_midi[1] = bytes[1];
-                                last_midi[2] = bytes[0];
-                                last_midi_len = 3;
+                                uint8_t data[3];
+                                data[0] = bytes[2];
+                                data[1] = bytes[1];
+                                data[2] = bytes[0];
+                                push_midi_message_into_fifo(data, 3);
                                 tulip_midi_isr();
                                 packet = MIDIEventPacketNext(packet);
                             }
