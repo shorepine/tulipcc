@@ -313,15 +313,15 @@ void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *
 }
 
 // Reference: esp-idf/examples/peripherals/usb/host/usb_host_lib/main/usb_host_lib_main.c
-
 void usbh_setup()
 {
   const usb_host_config_t config = {
     .intr_flags = ESP_INTR_FLAG_LEVEL1,
   };
   esp_err_t err = usb_host_install(&config);
+  (void)err;
   DBGPRINTF1("usb_host_install: 0x%x\n", err);
-
+  
   const usb_host_client_config_t client_config = {
     .is_synchronous = false,
     .max_num_event_msg = 5,
