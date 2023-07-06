@@ -320,6 +320,7 @@ void usbh_setup()
     .intr_flags = ESP_INTR_FLAG_LEVEL1,
   };
   esp_err_t err = usb_host_install(&config);
+  (void)err;
   DBGPRINTF1("usb_host_install: 0x%x\n", err);
 
   const usb_host_client_config_t client_config = {
