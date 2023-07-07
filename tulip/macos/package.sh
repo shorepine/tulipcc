@@ -1,5 +1,7 @@
+#!/bin/bash
+
 # package.sh
-# packages the Tulip Deskop binary into a macOS app, universal binary, codesigns for distribution
+# packages the Tulip Deskop binary into a macOS app, universal binary
 
 # Note : on mac you need both types of homebrew, intel and AS
 # https://medium.com/mkdir-awesome/how-to-install-x86-64-homebrew-packages-on-apple-m1-macbook-54ba295230f
@@ -22,6 +24,7 @@ mkdir -p dist
 
 # Now make the app bundle
 rm -rf dist/Tulip\ Desktop.app
+rm -rf dist/Tulip\ Desktop.zip
 mkdir -p dist/Tulip\ Desktop.app/Contents/{MacOS,Resources,Frameworks,libs}
 cp tulip dist/Tulip\ Desktop.app/Contents/MacOS
 cp Info.plist dist/Tulip\ Desktop.app/Contents/
@@ -29,11 +32,6 @@ cp -rf ../fs dist/Tulip\ Desktop.app/Contents/Resources/
 cp -a SDL2.framework dist/Tulip\ Desktop.app/Contents/Frameworks/
 install_name_tool -add_rpath @executable_path/../Frameworks dist/Tulip\ Desktop.app/Contents/MacOS/tulip
 cp tulip.icns dist/Tulip\ Desktop.app/Contents/Resources/
-codesign -s "Developer ID Application: Brian Whitman (Y6CQ3JU8G4)" dist/Tulip\ Desktop.app/Contents/Frameworks/SDL2.framework/Versions/A/SDL2 -f
-codesign -s "Developer ID Application: Brian Whitman (Y6CQ3JU8G4)" dist/Tulip\ Desktop.app/Contents/MacOS/tulip -f
+# I then run SD Notary2 on this .app file. It creates a .dmg file
 
-# I then run "AppWrapper 4.0" to notarize the package. I would love to convert that into a command line tool, i believe xcrun notarytool
-# TODO: https://github.com/mitchellh/gon
-
- 
 
