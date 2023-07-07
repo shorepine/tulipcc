@@ -35,9 +35,9 @@ include $(TOP)/extmod/extmod.mk
 INC +=  -I.
 INC +=  -I$(TOP)
 INC += -I$(BUILD)
+INC += -I../shared_unix/
 INC += -I$(TOP)/ports/unix
 INC += -I../shared/
-INC += -I../shared_unix/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
 INC += -I/usr/include/SDL2
