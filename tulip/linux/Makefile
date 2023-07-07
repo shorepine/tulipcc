@@ -43,7 +43,7 @@ INC += -I$(TOP)/lib/mbedtls/include
 INC += -I/usr/include/SDL2
 
 # compiler settings
-CWARN = -Wall -Werror
+CWARN = -Wall 
 CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion 
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
 
@@ -98,7 +98,7 @@ endif
 
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -lstdc++  $(ARCHFLAGS)
+#LDFLAGS += -lstdc++  $(ARCHFLAGS)
 
 # Flags to link with pthread library
 LIBPTHREAD = -lpthread
