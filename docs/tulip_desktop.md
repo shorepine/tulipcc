@@ -6,7 +6,7 @@ Tulip Desktop is the desktop computer version of [Tulip CC](../README.md) itself
 
 You can download Tulip Desktop here:
 
- * [macOS universal build (Apple Silicon & Intel), 10.15 or later](https://github.com/bwhitman/tulipcc/releases/download/v0.1/Tulip.CC.4.zip)
+ * [macOS universal build (Apple Silicon & Intel), 10.15 or later](https://github.com/bwhitman/tulipcc/releases/download/v0.2/Tulip.Desktop.zip)
  * Windows build is forthcoming
  * For Linux, see the build instructions below
 
