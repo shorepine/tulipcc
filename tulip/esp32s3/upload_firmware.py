@@ -1,7 +1,7 @@
 # upload_firmware.py
 # uploads the most recent build to Tulip World
 import sys, os
-sys.path.append('../../py')
+sys.path.append('../../micropython/py')
 import makeversionhdr
 import datetime
 import requests
