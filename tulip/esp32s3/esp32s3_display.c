@@ -145,7 +145,7 @@ void run_esp32s3_display(void) {
     panel_handle = NULL;
     panel_config.data_width = BYTES_PER_PIXEL*8; 
     panel_config.psram_trans_align = 64;
-    panel_config.clk_src = LCD_CLK_SRC_PLL240M;
+    panel_config.clk_src = LCD_CLK_SRC_PLL160M;
     panel_config.disp_gpio_num = PIN_NUM_DISP_EN;
     panel_config.pclk_gpio_num = PIN_NUM_PCLK;
     panel_config.vsync_gpio_num = PIN_NUM_VSYNC;
@@ -183,7 +183,7 @@ void run_esp32s3_display(void) {
     panel_config.num_fbs = 0; // we do this ourselves
     panel_config.flags.fb_in_psram = 0;
     panel_config.flags.no_fb = 1;
-    
+    panel_config.flags.refresh_on_demand = 0;
     panel_config.flags.bb_invalidate_cache = 0;
 
     panel_config.bounce_buffer_size_px = BOUNCE_BUFFER_SIZE_PX;

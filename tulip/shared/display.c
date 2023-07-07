@@ -847,8 +847,7 @@ void display_init(void) {
     BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
 
     // Create the background FB
-    //bg = (uint8_t*)calloc_caps(64, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    bg = (uint8_t*)malloc_caps((H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX), MALLOC_CAP_SPIRAM);
+    bg = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
     // And various ptrs
     sprite_ram = (uint8_t*)malloc_caps(SPRITE_RAM_BYTES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);

@@ -180,7 +180,6 @@ STATIC mp_obj_t tulip_bg_clear(size_t n_args, const mp_obj_t *args) {
     return mp_const_none; 
 }
 
-
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear_obj, 0, 1, tulip_bg_clear);
 
 

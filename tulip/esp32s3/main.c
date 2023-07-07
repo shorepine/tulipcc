@@ -350,29 +350,25 @@ void app_main(void) {
     esp32s3_display_stop();
 
     fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
+    ft5x06_init();
     xTaskCreatePinnedToCore(run_ft5x06, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
     fflush(stderr);
-    delay_ms(10);
+    delay_ms(100);
 
     fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
-    delay_ms(50);
+    delay_ms(250);
     
-    //xStack = (uint8_t*)heap_caps_calloc(1, TULIP_MP_TASK_STACK_SIZE, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT | MALLOC_CAP_32BIT);
-    //xTaskCreateStaticPinnedToCore(mp_task, TULIP_MP_TASK_NAME, TULIP_MP_TASK_STACK_SIZE, NULL, TULIP_MP_TASK_PRIORITY, xStack, &static_mp_handle, TULIP_MP_TASK_COREID);
-
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
-
     
     fprintf(stderr,"Starting joystick\n");
     init_esp_joy();
     fflush(stderr);
-    delay_ms(10);
-
+    delay_ms(100);
 
     esp32s3_display_start();
 
