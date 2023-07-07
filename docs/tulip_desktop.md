@@ -40,7 +40,19 @@ brew install pkg-config libffi
 
 ## Linux build of Tulip Desktop
 
-TODO
+Install SDL2:
+
+```
+sudo apt install libsdl2-dev
+```
+
+Build and run:
+
+```
+cd tulip/linux
+./build.sh
+./dev/tulip
+```
 
 ## Windows build of Tulip Desktop
 
