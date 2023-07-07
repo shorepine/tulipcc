@@ -509,12 +509,13 @@ void display_screenshot(char * screenshot_fn) {
         err = lodepng_palette_add(&state.info_png.color, r,g,b,a);
         err = lodepng_palette_add(&state.info_raw, r,g,b,a);        
     }
+    (void)err;
     state.info_png.color.colortype = LCT_PALETTE; 
     state.info_png.color.bitdepth = 8;
     state.info_raw.colortype = LCT_PALETTE;
     state.info_raw.bitdepth = 8;
     state.encoder.auto_convert = 0;
-    int64_t tic = get_time_us();
+    //int64_t tic = get_time_us();
     for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
         display_bounce_empty(screenshot_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
         for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
@@ -522,18 +523,18 @@ void display_screenshot(char * screenshot_fn) {
         }
     }
     // 45ms
-    fprintf(stderr,"Took %lld uS to bounce entire screen\n", get_time_us() - tic);
-    tic = get_time_us();
+    //fprintf(stderr,"Took %lld uS to bounce entire screen\n", get_time_us() - tic);
+    //tic = get_time_us();
     uint32_t outsize = 0;
     uint8_t *out;
     err = lodepng_encode(&out, (size_t*)&outsize,full_pic, H_RES, V_RES, &state);
     // 456ms , 4223 b frame
-    fprintf(stderr,"Took %lld uS to encode as PNG to memory. err %d\n", get_time_us() - tic, err);
-    tic = get_time_us();
-    fprintf(stderr,"PNG done encoding. writing %" PRIu32" bytes to file %s\n", outsize, screenshot_fn);
+    //fprintf(stderr,"Took %lld uS to encode as PNG to memory. err %d\n", get_time_us() - tic, err);
+    //tic = get_time_us();
+    //fprintf(stderr,"PNG done encoding. writing %" PRIu32" bytes to file %s\n", outsize, screenshot_fn);
     write_file(screenshot_fn, out, outsize, 1);
     // 268ms 
-    fprintf(stderr,"Took %lld uS to write to disk\n", get_time_us() - tic);
+    //fprintf(stderr,"Took %lld uS to write to disk\n", get_time_us() - tic);
     free_caps(out);
     free_caps(screenshot_bb);
     free_caps(full_pic);

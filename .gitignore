@@ -9,6 +9,8 @@ tulip/macos/tulip
 tulip/macos/tulip.arm64
 tulip/macos/tulip.x86_64
 tulip/macos/dist
+tulip/linux/build-standard/
+tulip/linux/dev
 .submodules_ok
 
 # Prerequisites

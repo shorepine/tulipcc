@@ -58,7 +58,9 @@ void run_midi() {
 
 
 }
-#else
-
+#elif __linux__
+void midi_out(uint8_t * bytes, uint16_t len) {
+    // nothing yet
+}
 
 #endif
