@@ -43,7 +43,11 @@ brew install pkg-config libffi
 Install SDL2:
 
 ```
-sudo apt install libsdl2-dev
+# Ubuntu etc
+sudo apt install libsdl2-dev libffi-devel
+
+# Fedora etc
+sudo yum install SDL2-devel libffi-devel
 ```
 
 Build and run:
