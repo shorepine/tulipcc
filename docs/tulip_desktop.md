@@ -44,7 +44,7 @@ Install SDL2:
 
 ```
 # Ubuntu etc
-sudo apt install libsdl2-dev libffi-devel
+sudo apt install libsdl2-dev libffi-dev
 
 # Fedora etc
 sudo yum install SDL2-devel libffi-devel
