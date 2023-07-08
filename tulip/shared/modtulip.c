@@ -180,7 +180,6 @@ STATIC mp_obj_t tulip_bg_clear(size_t n_args, const mp_obj_t *args) {
     return mp_const_none; 
 }
 
-
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_clear_obj, 0, 1, tulip_bg_clear);
 
 
@@ -834,8 +833,12 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cpu_obj, 0, 1, tulip_cpu);
 #ifndef ESP_PLATFORM
 extern char* get_tulip_home_path();
 STATIC mp_obj_t tulip_app_path(size_t n_args, const mp_obj_t *args) {
+#ifndef __linux__
     char * path = get_tulip_home_path();
     return mp_obj_new_str(path, strlen(path));
+#else
+    return mp_obj_new_str("~/tulip_home", strlen("~/tulip_home"));
+#endif
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_app_path_obj, 0, 0, tulip_app_path);

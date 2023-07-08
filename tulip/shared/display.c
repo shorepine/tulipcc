@@ -509,12 +509,13 @@ void display_screenshot(char * screenshot_fn) {
         err = lodepng_palette_add(&state.info_png.color, r,g,b,a);
         err = lodepng_palette_add(&state.info_raw, r,g,b,a);        
     }
+    (void)err;
     state.info_png.color.colortype = LCT_PALETTE; 
     state.info_png.color.bitdepth = 8;
     state.info_raw.colortype = LCT_PALETTE;
     state.info_raw.bitdepth = 8;
     state.encoder.auto_convert = 0;
-    int64_t tic = get_time_us();
+    //int64_t tic = get_time_us();
     for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
         display_bounce_empty(screenshot_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
         for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
@@ -522,18 +523,18 @@ void display_screenshot(char * screenshot_fn) {
         }
     }
     // 45ms
-    fprintf(stderr,"Took %lld uS to bounce entire screen\n", get_time_us() - tic);
-    tic = get_time_us();
+    //fprintf(stderr,"Took %lld uS to bounce entire screen\n", get_time_us() - tic);
+    //tic = get_time_us();
     uint32_t outsize = 0;
     uint8_t *out;
     err = lodepng_encode(&out, (size_t*)&outsize,full_pic, H_RES, V_RES, &state);
     // 456ms , 4223 b frame
-    fprintf(stderr,"Took %lld uS to encode as PNG to memory. err %d\n", get_time_us() - tic, err);
-    tic = get_time_us();
-    fprintf(stderr,"PNG done encoding. writing %" PRIu32" bytes to file %s\n", outsize, screenshot_fn);
+    //fprintf(stderr,"Took %lld uS to encode as PNG to memory. err %d\n", get_time_us() - tic, err);
+    //tic = get_time_us();
+    //fprintf(stderr,"PNG done encoding. writing %" PRIu32" bytes to file %s\n", outsize, screenshot_fn);
     write_file(screenshot_fn, out, outsize, 1);
     // 268ms 
-    fprintf(stderr,"Took %lld uS to write to disk\n", get_time_us() - tic);
+    //fprintf(stderr,"Took %lld uS to write to disk\n", get_time_us() - tic);
     free_caps(out);
     free_caps(screenshot_bb);
     free_caps(full_pic);
@@ -847,8 +848,7 @@ void display_init(void) {
     BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
 
     // Create the background FB
-    //bg = (uint8_t*)calloc_caps(64, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    bg = (uint8_t*)malloc_caps((H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX), MALLOC_CAP_SPIRAM);
+    bg = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
     // And various ptrs
     sprite_ram = (uint8_t*)malloc_caps(SPRITE_RAM_BYTES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);

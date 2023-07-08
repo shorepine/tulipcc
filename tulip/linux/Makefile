@@ -1,28 +1,6 @@
-WHICH_ARCH ?= $(shell arch)
-
-
-ifeq ($(WHICH_ARCH), arm64)
-	ARCHFLAGS = -target arm64-macos11
-	HOMEBREW = /opt/homebrew
-else
-	ARCHFLAGS = -target x86_64-apple-macos10.15
-	# On x86, homebrew FFI seems to have two locations
-	# /usr/local/homebrew/opt/libffi/include/ffi.h
-	# /usr/local/opt/libffi/include/ffi.h
-	# Check which it is
-	ifneq ("$(wildcard /usr/local/opt/libffi/include/ffi.h)","")
-		HOMEBREW = /usr/local
-	else
-		HOMEBREW = /usr/local/homebrew
-	endif
-endif
-
 # Select the variant to build for.
 VARIANT ?= standard
-
-# Set parallel flag to # of CPUs
-CPUS ?= $(shell sysctl -n hw.ncpu || echo 1)
-MAKEFLAGS += --jobs=$(CPUS)
+MAKEFLAGS += --jobs=4
 
 # If the build directory is not given, make it reflect the variant name.
 BUILD ?= build-$(VARIANT)/tulip/obj
@@ -39,7 +17,7 @@ include $(VARIANT_DIR)/mpconfigvariant.mk
 FROZEN_MANIFEST ?= manifest.py
 
 # This should be configured by the mpconfigvariant.mk
-PROG = tulip.$(WHICH_ARCH)
+PROG = tulip
 
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = $(TOP)/ports/unix/qstrdefsport.h
@@ -62,12 +40,11 @@ INC += -I$(TOP)/ports/unix
 INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
-
-INC += -I./SDL2.framework/Headers
+INC += -I/usr/include/SDL2
 
 # compiler settings
-CWARN = -Wall -Werror
-CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion
+CWARN = -Wall 
+CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion 
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
 
 CFLAGS += $(ARCHFLAGS) 
@@ -118,21 +95,10 @@ endif
 # The unix port of MicroPython on OSX must be compiled with clang,
 # while cross-compile ports require gcc, so we test here for OSX and
 # if necessary override the value of 'CC' set in py/mkenv.mk
-ifeq ($(UNAME_S),Darwin)
-ifeq ($(MICROPY_FORCE_32BIT),1)
-CC = clang -m32
-else
-CC = clang
-endif
-# Use clang syntax for map file
-LDFLAGS_ARCH = -Wl,-map,$@.map -Wl,-dead_strip
-else
-# Use gcc syntax for map file
+
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
-endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework Cocoa -lstdc++  $(ARCHFLAGS)
-CFLAGS += -DVIRTUAL_MIDI
+#LDFLAGS += -lstdc++  $(ARCHFLAGS)
 
 # Flags to link with pthread library
 LIBPTHREAD = -lpthread
@@ -184,13 +150,8 @@ LIBFFI_LDFLAGS_MOD := $(shell pkg-config --libs libffi)
 endif
 
 
-# libffi is installed in system on 10.12, so force use of homebrew version 
-LIBFFI_LDFLAGS_MOD = $(HOMEBREW)/opt/libffi/lib/libffi.a
-LIBFFI_CFLAGS_MOD := -I$(HOMEBREW)/opt/libffi/include
-
-
 ifeq ($(UNAME_S),Linux)
-LIBFFI_LDFLAGS_MOD += -ldl
+LIBFFI_LDFLAGS_MOD += -ldl -lSDL2
 endif
 
 CFLAGS_MOD += $(LIBFFI_CFLAGS_MOD) -DMICROPY_PY_FFI=1
@@ -238,7 +199,6 @@ SHARED_SRC_C += $(addprefix ../../micropython/shared/,\
 SRC_CXX += \
 	$(SRC_MOD_CXX)
 
-SRC_M = virtualmidi.m
 
 OBJ = $(PY_O)
 OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
@@ -263,7 +223,7 @@ CFLAGS += -DMPZ_DIG_SIZE=16 # force 16 bits to work on both 32 and 64 bit archs
 CFLAGS += -DMICROPY_MODULE_FROZEN_STR
 endif
 
-CPU_BRAND_NAME=`sysctl -n machdep.cpu.brand_string`
+CPU_BRAND_NAME=linux
 CFLAGS += -DMICROPY_HW_MCU_NAME="\"$(CPU_BRAND_NAME)\""
 CFLAGS += -Wno-double-promotion -Wno-unused-function
 CXXFLAGS += $(filter-out -Wno-double-promotion -Wmissing-prototypes -Wold-style-definition -std=gnu99,$(CFLAGS) $(CXXFLAGS_MOD))

@@ -58,7 +58,7 @@ void run_ft5x06(void *param)
         vTaskDelay(20/portTICK_PERIOD_MS);
     }
 }
-#endif
+#else
 
 
 // touchscreen.c
@@ -88,7 +88,7 @@ void run_ft5x06(void *param)
 
 #define I2C_SCL                     17//11//47//17 //(3)
 #define I2C_SDA                     18//12//21//18//(1)
-#define TOUCH_INT_IO                (0)
+#define TOUCH_INT_IO                (5)
 #define TOUCH_INT_IO_MUX            (PERIPHS_IO_MUX_GPIO5_U)
 #define I2C_MASTER_NUM              I2C_NUM_0
 #define I2C_MASTER_TX_BUF_DISABLE   0
@@ -294,7 +294,6 @@ void ft5x06_init()
 {
     i2c_bus_init(); 
     gpio_set_direction(TOUCH_INT_IO, GPIO_MODE_INPUT);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO5_U, 2);
     dev = iot_ft5x06_create(i2c_bus, FT5X06_ADDR_DEF);
     if(dev == NULL) {
         fprintf(stderr,"ft5x06 device create fail\n");
@@ -314,16 +313,14 @@ void ft5x06_init()
 
 void run_ft5x06(void *param)
 {
-    ft5x06_init();
     int i = 0;
     touch_info_t touch_info;
-    uint8_t got_primary_touch;
+    uint8_t got_primary_touch = 0;
     while (1) {
-        got_primary_touch = 0;
         int8_t p0 = gpio_get_level(TOUCH_INT_IO);
         int8_t p1 = iot_ft5x06_touch_report(dev, &touch_info);
         if(p0 == 0 && p1 == ESP_OK) {
-        //if(gpio_get_level(TOUCH_INT_IO) == 0 && iot_ft5x06_touch_report(dev, &touch_info) == ESP_OK) {
+            got_primary_touch = 0;
             for(i = 0; i < touch_info.touch_point; i++) {
                 if(i<4) {
                     if(touch_info.curx[i] > 64000) { // right half of screen 
@@ -334,28 +331,21 @@ void run_ft5x06(void *param)
                     last_touch_y[i] = (touch_info.cury[i]-TOUCH_TOP_Y) * ((float)V_RES / (float) (TOUCH_BOTTOM_Y-TOUCH_TOP_Y));
                     last_touch_x[i] += touch_x_delta;
                     last_touch_y[i] += touch_y_delta;
-
                 }
                 if(i==0) got_primary_touch = 1;
-               //fprintf(stderr,"touch point %d  x:%d  y:%d became %d %d\n", i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
+                //fprintf(stderr,"evt %d touch point %d  x:%d  y:%d became %d %d\n", touch_info.touch_event, i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
             }
-            vTaskDelay(20/portTICK_PERIOD_MS);
+            if(got_primary_touch) {
+                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0); 
+            } else {
+                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);                 
+            }
         } else {
-            //fprintf(stderr,"B release p%d x%d y%d p0 %d p1 %d\n",i, touch_info.curx[0], touch_info.cury[0], p0, p1);
-            vTaskDelay(20/portTICK_PERIOD_MS);
         }
-        if(got_primary_touch) { 
-            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0); 
-        } else {
-            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
-        }
-
-
         vTaskDelay(20/portTICK_PERIOD_MS);
-
     }
     vTaskDelete(NULL);
 }
 
 
-
+#endif

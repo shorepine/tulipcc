@@ -362,7 +362,6 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up) {
             tulip_bg_touch_isr(bg_id); // up
         }
     } else if(touch_held && !up) { // this is a continuous hold -- update sliders, etc 
-        //fprintf(stderr, "down hold\n") ;
         int8_t ui_id = ui_bounds(touch_x, touch_y);
         if(ui_id >= 0) {
             if(elements[ui_id]->type == UI_SLIDER) {

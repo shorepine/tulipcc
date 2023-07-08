@@ -1,6 +1,6 @@
 .DS_Store
 __pycache__
-
+tulip/macos/gon_config.json
 esp-idf/components/bootloader/subproject/dependencies.lock
 dependencies.lock
 tulip/esp32s3/build
@@ -9,6 +9,8 @@ tulip/macos/tulip
 tulip/macos/tulip.arm64
 tulip/macos/tulip.x86_64
 tulip/macos/dist
+tulip/linux/build-standard/
+tulip/linux/dev
 .submodules_ok
 
 # Prerequisites

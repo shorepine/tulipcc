@@ -6,7 +6,7 @@ Tulip Desktop is the desktop computer version of [Tulip CC](../README.md) itself
 
 You can download Tulip Desktop here:
 
- * [macOS universal build (Apple Silicon & Intel), 10.15 or later](https://github.com/bwhitman/tulipcc/releases/download/v0.1/Tulip.CC.4.zip)
+ * [macOS universal build (Apple Silicon & Intel), 10.15 or later](https://github.com/bwhitman/tulipcc/releases/download/v0.2/Tulip_Desktop.dmg)
  * Windows build is forthcoming
  * For Linux, see the build instructions below
 
@@ -40,7 +40,23 @@ brew install pkg-config libffi
 
 ## Linux build of Tulip Desktop
 
-TODO
+Install SDL2:
+
+```
+# Ubuntu etc
+sudo apt install libsdl2-dev libffi-dev
+
+# Fedora etc
+sudo yum install SDL2-devel libffi-devel
+```
+
+Build and run:
+
+```
+cd tulip/linux
+./build.sh
+./dev/tulip
+```
 
 ## Windows build of Tulip Desktop
 

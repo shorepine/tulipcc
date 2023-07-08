@@ -617,7 +617,7 @@ void editor_right() {
     uint8_t tab = 0;
     if(cursor_x < strlen(text_lines[cursor_y + y_offset])) {
         // count spaces ahead , see there is EDITOR_TAB_SPACES in a row, move that many instead
-        if(cursor_x + EDITOR_TAB_SPACES < strlen(text_lines[cursor_y + y_offset])) {
+        if(cursor_x + EDITOR_TAB_SPACES < (uint16_t)strlen(text_lines[cursor_y + y_offset])) {
             tab = 1;
             for(uint16_t i=cursor_x+1;i<cursor_x+EDITOR_TAB_SPACES;i++) {
                 if(text_lines[cursor_y+y_offset][i] != 32) tab = 0;
