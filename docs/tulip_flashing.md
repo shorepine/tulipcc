@@ -59,7 +59,7 @@ python tulip_fs_create.py N8R8
 For all other boards/chips:
 
 ```bash
-idf.py -D flash 
+idf.py flash 
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
 # to the flash memory. Run this only once, or each time you modify `fs` if you're developing Tulip itself.
 python tulip_fs_create.py
