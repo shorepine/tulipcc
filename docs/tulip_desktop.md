@@ -7,8 +7,8 @@ Tulip Desktop is the desktop computer version of [Tulip CC](../README.md) itself
 You can download Tulip Desktop here:
 
  * [macOS universal build (Apple Silicon & Intel), 10.15 or later](https://github.com/bwhitman/tulipcc/releases/download/v0.2/Tulip_Desktop.dmg)
- * Windows build is forthcoming
  * For Linux, see the build instructions below
+ * Windows-native build is forthcoming, but it works under WSL using the Linux instructions!
 
 You don't need to compile your own Tulip Desktop unless you're a developer and want to work on Tulip (or on a platform we haven't uploaded a build for.) We regularly upload latest builds of Tulip Desktop for macOS.
 
@@ -60,7 +60,7 @@ cd tulip/linux
 
 ## Windows build of Tulip Desktop
 
-TODO 
+We've heard this works fine under WSL using the Linux instructions. We'd love a native build! 
 
 ## Questions
 
