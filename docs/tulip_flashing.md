@@ -75,7 +75,8 @@ source ~/esp/esp-idf-v5.1-rc2/export.sh # do this once per terminal window
 idf.py flash
 idf.py monitor # shows stderr, use control-] to quit
 
-# If you make changes to the underlying python libraries on micropython, you want to fully clean the build 
+# If you (or we!) make changes to the underlying libraries on AMY or micropython, you want to fully clean the build 
+rm ../../.submodules_ok # this forces the submodules to re-init
 idf.py fullclean
 idf.py flash
 ```
