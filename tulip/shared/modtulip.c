@@ -698,6 +698,17 @@ STATIC mp_obj_t tulip_int_screenshot(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_int_screenshot_obj, 1, 1, tulip_int_screenshot);
 
 
+STATIC mp_obj_t tulip_algo_setup(size_t n_args, const mp_obj_t *args) {
+    uint8_t target_oscs[8];
+    for(uint8_t i=0;i<8;i++) target_oscs[i] = mp_obj_get_int(args[i+1]);
+    algo_custom_setup_patch(mp_obj_get_int(args[0]), target_oscs);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_algo_setup_obj, 9, 9, tulip_algo_setup);
+
+
+
 extern void mcast_send(char*, uint16_t len);
 
 STATIC mp_obj_t tulip_alles_send(size_t n_args, const mp_obj_t *args) {
@@ -1249,6 +1260,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_collisions), MP_ROM_PTR(&tulip_collisions_obj) },
     { MP_ROM_QSTR(MP_QSTR_edit), MP_ROM_PTR(&tulip_edit_obj) },
     { MP_ROM_QSTR(MP_QSTR_int_screenshot), MP_ROM_PTR(&tulip_int_screenshot_obj) },
+    { MP_ROM_QSTR(MP_QSTR_algo_setup), MP_ROM_PTR(&tulip_algo_setup_obj) },
     { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&tulip_brightness_obj) },
