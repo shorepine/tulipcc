@@ -197,8 +197,8 @@ void run_esp32s3_display(void) {
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
-    display_pwm_setup();
-    display_brightness(brightness); 
+    //display_pwm_setup();
+    //display_brightness(brightness); 
     gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
 
     
