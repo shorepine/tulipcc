@@ -258,7 +258,7 @@ alles.reverb(level, liveness, damping, xover_hz):
 
 It can be turned on and off like `chorus` with `alles.reverb(1)` and `alles.reverb(0)`. 
 
-Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/extmod/tulip/py/music.py), which lets you create chords, progressions and scales through code:
+Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/music.py), which lets you create chords, progressions and scales through code:
 
 ```python
 import music
