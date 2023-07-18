@@ -81,6 +81,7 @@ extern int16_t message_length;
 
 
 void alles_send_message(char * message, uint16_t len) {
+    //fprintf(stderr, "LOG: alles_send_message at time %lld\n", amy_sysclock());
     alles_parse_message(message, len);
 }
 
@@ -304,6 +305,7 @@ void alles_parse_message(char *message, uint16_t length) {
                     if(client_id % (client-255) == 0) for_me = 1;
                 }
             }
+            //fprintf(stderr, "LOG: AMY message for time %lld received at time %lld (latency %lld ms)\n", e.time, amy_sysclock(), amy_sysclock()-e.time);
             if(for_me) amy_add_event(e);
         }
     }

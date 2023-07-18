@@ -394,8 +394,10 @@ void tulip_frame_isr() {
 }
 
 void tulip_midi_isr() {
-    if(midi_callback != NULL)
+    if(midi_callback != NULL) {
+        //fprintf(stderr, "LOG: midi_callback at time %lld\n", get_ticks_ms());
         mp_sched_schedule(midi_callback, mp_const_none); 
+    }
 }
 
 void tulip_ui_isr(uint8_t ui_id) {
