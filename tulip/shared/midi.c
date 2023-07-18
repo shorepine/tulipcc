@@ -6,10 +6,17 @@ uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
 int16_t midi_queue_head = 0;
 int16_t midi_queue_tail = 0;
 
+#define DEBUG_MIDI 0
 
 void callback_midi_message_received(uint8_t *data, size_t len) {
-    //fprintf(stderr,"got midi message len %ld status %d -- ", (uint32_t)len, data[0]);
-    //fprintf(stderr, "LOG: midi message received at time %lld\n", get_ticks_ms());
+
+#if DEBUG_MIDI==1
+    fprintf(stderr,"got midi message len %ld ", (uint32_t)len); 
+    for(size_t i=0;i<len;i++) {
+        fprintf(stderr, "0x%02x ", data[i]);
+    }
+    fprintf(stderr, "\n");
+#endif
     push_midi_message_into_fifo(data, len);
     tulip_midi_isr();
 }
