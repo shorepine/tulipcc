@@ -39,15 +39,30 @@ void run_midi() {
         //.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
     };
 
+
     // Configure UART parameters
     ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
     // TX, RX, CTS/RTS -- Only care about RX here, pin 47 for now
     ESP_ERROR_CHECK(uart_set_pin(uart_num, 11, 47, 10, 9));
 
-    const int uart_buffer_size = (512);
+    const int uart_buffer_size = (1024);
     // Install UART driver using an event queue here
     ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, \
-                                          uart_buffer_size, 10, &uart_queue, 0));
+                                          0, 0, NULL, 0));
+
+    uart_intr_config_t uart_intr = {
+          .intr_enable_mask = UART_RXFIFO_FULL_INT_ENA_M
+                              | UART_RXFIFO_TOUT_INT_ENA_M
+                              | UART_FRM_ERR_INT_ENA_M
+                              | UART_RXFIFO_OVF_INT_ENA_M
+                              | UART_BRK_DET_INT_ENA_M
+                              | UART_PARITY_ERR_INT_ENA_M,
+          .rxfifo_full_thresh = 3,
+          .rx_timeout_thresh = 1,
+          .txfifo_empty_intr_thresh = 10
+    };
+
+    uart_intr_config(uart_num, &uart_intr);
 
     printf("UART MIDI running on core %d\n", xPortGetCoreID());
 
