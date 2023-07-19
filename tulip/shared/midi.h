@@ -1,7 +1,7 @@
 // midi.h
 #include "alles.h"
-#include "soc/uart_reg.h"
 #ifdef ESP_PLATFORM 
+#include "soc/uart_reg.h"
 extern QueueHandle_t uart_queue;
 #else
 // virtualmidi Cocoa stubs
