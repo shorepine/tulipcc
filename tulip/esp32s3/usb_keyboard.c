@@ -164,7 +164,7 @@ static void midi_transfer_cb(usb_transfer_t *transfer) {
                    p[i], p[i + 1], p[i + 2], p[i + 3]);
         // Strip the first byte which is the USB-MIDI virtual wire ID,
         // rest is MIDI message (at least for 3-byte messages).
-        callback_midi_message_received(p + i + 1, 3);
+        convert_midi_bytes_to_messages(p + i + 1, 3);
       }
       esp_err_t err = usb_host_transfer_submit(transfer);
       if (err != ESP_OK) {

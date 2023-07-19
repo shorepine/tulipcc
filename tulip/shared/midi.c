@@ -8,18 +8,72 @@ int16_t midi_queue_tail = 0;
 
 #define DEBUG_MIDI 0
 
-void callback_midi_message_received(uint8_t *data, size_t len) {
 
-#if DEBUG_MIDI==1
-    fprintf(stderr,"got midi message len %" PRIu32 " [time %" PRIu64 "] ", (uint32_t)len, amy_sysclock()); 
-    for(size_t i=0;i<len;i++) {
-        fprintf(stderr, "0x%02x ", data[i]);
+static inline void push_midi_message_into_fifo(uint8_t *data, int len) {
+    for(uint32_t i = 0; i < (uint32_t)len; i++) {
+        if(i < MAX_MIDI_BYTES_PER_MESSAGE) {
+            last_midi[midi_queue_tail][i] = data[i];
+        }
     }
-    fprintf(stderr, "\n");
-#endif
+    last_midi_len[midi_queue_tail] = (uint16_t)len;
+    midi_queue_tail = (midi_queue_tail + 1) % MIDI_QUEUE_DEPTH;
+    if (midi_queue_tail == midi_queue_head) {
+        // Queue wrap, drop oldest item.
+        midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
+        fprintf(stderr, "dropped midi message\n");
+    }
+}
+
+void callback_midi_message_received(uint8_t *data, size_t len) {
     push_midi_message_into_fifo(data, len);
     tulip_midi_isr();
 }
+
+
+uint8_t current_midi_status = 0;
+uint8_t midi_message[3];
+uint8_t midi_message_i = 0;
+void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
+    // i take any amount of bytes and add messages to the fifo
+    for(size_t i=0;i<len;i++) {
+        uint8_t byte = data[i];
+        if(byte & 0x80) { // status byte 
+            if(current_midi_status != 0) {
+                // this means we got a new status byte before sending the last message. i guess this is fine... 
+            }
+            current_midi_status = byte;
+            midi_message_i = 1;
+            midi_message[0] = byte;
+            if(byte == 0xF6 || byte == 0xF8 || byte == 0xFA || byte == 0xFB || byte == 0xFC || byte == 0xFF) {
+                callback_midi_message_received(midi_message, 1);
+            } else {
+                // skip.. sysex... 
+            }
+        } else { // data byte 
+            uint8_t status = current_midi_status & 0xF0;
+            if(status == 0x80 || status == 0x90 || status == 0xA0 || status == 0xB0 || status == 0xE0) {
+                midi_message[midi_message_i++] = byte;
+                if(midi_message_i >= 3) { 
+                    callback_midi_message_received(midi_message, 3);
+                    current_midi_status = 0;
+                    midi_message_i = 0;
+                }
+            } else if(status == 0xC0 || status == 0xD0) {
+                midi_message[midi_message_i++] = byte;
+                if(midi_message_i >= 2) { 
+                    callback_midi_message_received(midi_message, 2);
+                    current_midi_status = 0;
+                    midi_message_i = 0;
+                }
+            } else {
+                // fs or a 0 -- skip. the only F that has data we don't care about right now
+                // the 0 would happen if dan passed a 3 byte message for a 2 byte message from the USB MIDI 
+            }
+        }
+    }
+}
+
+
 
 #ifdef ESP_PLATFORM
 QueueHandle_t uart_queue;
@@ -57,8 +111,8 @@ void run_midi() {
                               | UART_RXFIFO_OVF_INT_ENA_M
                               | UART_BRK_DET_INT_ENA_M
                               | UART_PARITY_ERR_INT_ENA_M,
-          .rxfifo_full_thresh = 3,
-          .rx_timeout_thresh = 1,
+          .rxfifo_full_thresh = 1,
+          .rx_timeout_thresh = 0,
           .txfifo_empty_intr_thresh = 10
     };
 
@@ -69,12 +123,10 @@ void run_midi() {
     uint8_t data[128];
     size_t length = 0;
     while(1) {
-        //vTaskDelay(1 / portTICK_PERIOD_MS);
-        //ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
         length = uart_read_bytes(uart_num, data, MAX_MIDI_BYTES_PER_MESSAGE, 1/portTICK_PERIOD_MS);
         if(length > 0) {
-            uart_flush(uart_num);
-            callback_midi_message_received(data, length);
+            //uart_flush(uart_num);
+            convert_midi_bytes_to_messages(data,length);
         }
     } // end loop forever
 }
