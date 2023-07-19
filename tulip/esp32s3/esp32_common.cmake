@@ -72,6 +72,7 @@ list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/usb_keyboard.c
     ../../../tulip/esp32s3/touchscreen.c
     ../../../tulip/esp32s3/multicast.c
+    ../../../tulip/esp32s3/mphalport.c
     ../../../tulip/esp32s3/main.c
     ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/help.c
@@ -93,7 +94,6 @@ list(APPEND MICROPY_SOURCE_PORT
     network_wlan.c
     network_ppp.c
     ppp_set_auth.c
-    mphalport.c
     mpnimbleport.c
     modsocket.c
     modesp.c

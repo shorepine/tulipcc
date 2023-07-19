@@ -28,7 +28,7 @@
  */
 
 #include <stdio.h>
-
+#include "mphalport.h"
 #include "hal/uart_hal.h"
 #include "display.h"
 #include "py/runtime.h"
@@ -40,9 +40,11 @@
 //#define UART_NUM_0 0
 
 STATIC void uart_irq_handler(void *arg);
+//STATIC void uart_midi_irq_handler(void *arg);
 
 // Declaring the HAL structure on the stack saves a tiny amount of static RAM
 #define REPL_HAL_DEFN() { .dev = UART_LL_GET_HW(MICROPY_HW_UART_REPL) }
+//#define MIDI_HAL_DEFN() { .dev = UART_LL_GET_HW(MICROPY_HW_UART_MIDI) }
 
 // RXFIFO Full interrupt threshold. Set the same as the ESP-IDF UART driver
 #define RXFIFO_FULL_THR (SOC_UART_FIFO_LEN - 8)
@@ -102,6 +104,59 @@ STATIC void IRAM_ATTR uart_irq_handler(void *arg) {
     }
 }
 
+/*
+
+
+void uart_midi_init(void) {
+    uart_hal_context_t midi_hal = MIDI_HAL_DEFN();
+    uint32_t sclk_freq;
+
+    #if UART_SCLK_DEFAULT == SOC_MOD_CLK_APB
+    sclk_freq = APB_CLK_FREQ; // Assumes no frequency scaling
+    #else
+    // ESP32-H2 and ESP32-C2, I think
+    #error "This SoC uses a different default UART SCLK source, code needs updating."
+    #endif
+
+    uart_hal_init(&midi_hal, MICROPY_HW_UART_MIDI); // Sets defaults: 8n1, no flow control
+    uart_hal_set_baudrate(&midi_hal, MICROPY_HW_UART_MIDI_BAUD, sclk_freq);
+    uart_hal_rxfifo_rst(&midi_hal);
+    uart_hal_txfifo_rst(&midi_hal);
+
+    ESP_ERROR_CHECK(
+        esp_intr_alloc(uart_periph_signal[MICROPY_HW_UART_MIDI].irq,
+            ESP_INTR_FLAG_LOWMED | ESP_INTR_FLAG_IRAM,
+            uart_midi_irq_handler,
+            NULL,
+            NULL)
+        );
+
+    // Enable RX interrupts
+    uart_hal_set_rxfifo_full_thr(&midi_hal, RXFIFO_FULL_THR);
+    uart_hal_set_rx_timeout(&midi_hal, RXFIFO_RX_TIMEOUT);
+    uart_hal_ena_intr_mask(&midi_hal, UART_INTR_RXFIFO_FULL | UART_INTR_RXFIFO_TOUT);
+}
+
+
+#include "midi.h"
+// all code executed in ISR must be in IRAM, and any const data must be in DRAM
+STATIC void IRAM_ATTR uart_midi_irq_handler(void *arg) {
+    uint8_t rbuf[SOC_UART_FIFO_LEN];
+    int len;
+    uart_hal_context_t midi_hal = MIDI_HAL_DEFN();
+
+    uart_hal_clr_intsts_mask(&midi_hal, UART_INTR_RXFIFO_FULL | UART_INTR_RXFIFO_TOUT | UART_INTR_FRAM_ERR);
+
+    len = uart_hal_get_rxfifo_len(&midi_hal);
+
+    uart_hal_read_rxfifo(&midi_hal, rbuf, &len);
+    
+    for (int i = 0; i < len; i++) {
+        ringbuf_put(&midi_ringbuf, rbuf[i]);
+    }
+
+}
+*/
 
 int uart_stdout_tx_strn(const char *str, size_t len) {
     if(len) {

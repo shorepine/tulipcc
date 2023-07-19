@@ -11,7 +11,7 @@ int16_t midi_queue_tail = 0;
 void callback_midi_message_received(uint8_t *data, size_t len) {
 
 #if DEBUG_MIDI==1
-    fprintf(stderr,"got midi message len %ld ", (uint32_t)len); 
+    fprintf(stderr,"got midi message len %" PRIu32 " [time %" PRIu64 "] ", (uint32_t)len, amy_sysclock()); 
     for(size_t i=0;i<len;i++) {
         fprintf(stderr, "0x%02x ", data[i]);
     }
@@ -54,18 +54,14 @@ void run_midi() {
     uint8_t data[128];
     size_t length = 0;
     while(1) {
-        // Sleep 5ms to wait to get more MIDI data and avoid starving audio thread
-        // I increased RTOS clock rate from 100hz to 500hz to go down to a 5ms delay here
-        // https://www.esp32.com/viewtopic.php?t=7554
-        vTaskDelay(10 / portTICK_PERIOD_MS);
-        ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
-        if(length) {
-            uart_read_bytes(uart_num, data, length, 0);
+        //vTaskDelay(1 / portTICK_PERIOD_MS);
+        //ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, (size_t*)&length));
+        length = uart_read_bytes(uart_num, data, MAX_MIDI_BYTES_PER_MESSAGE, 1/portTICK_PERIOD_MS);
+        if(length > 0) {
+            uart_flush(uart_num);
             callback_midi_message_received(data, length);
         }
     } // end loop forever
-
-
 }
 #elif __linux__
 void midi_out(uint8_t * bytes, uint16_t len) {

@@ -37,11 +37,21 @@
 #define MICROPY_HW_UART_REPL (0)
 #endif
 
+//#ifndef MICROPY_HW_UART_MIDI
+//#define MICROPY_HW_UART_MIDI (1)
+//#endif
+
 #ifndef MICROPY_HW_UART_REPL_BAUD
 #define MICROPY_HW_UART_REPL_BAUD (115200)
 #endif
 
+//#ifndef MICROPY_HW_UART_MIDI_BAUD
+//#define MICROPY_HW_UART_MIDI_BAUD (31250)
+//#endif
+
 void uart_stdout_init(void);
+//void uart_midi_init(void);
+
 int uart_stdout_tx_strn(const char *str, size_t len);
 
 #endif // MICROPY_INCLUDED_ESP32_UART_H
