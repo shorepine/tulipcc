@@ -10,7 +10,7 @@ TOP = ../../micropython
 VARIANT_DIR ?= ../../micropython/ports/unix/variants/$(VARIANT)
 
 include $(TOP)/py/mkenv.mk
-include ../shared_unix/mpconfigport.mk
+include ../shared_desktop/mpconfigport.mk
 include $(VARIANT_DIR)/mpconfigvariant.mk
 
 # Use the default frozen manifest, variants may override this.
@@ -35,7 +35,7 @@ include $(TOP)/extmod/extmod.mk
 INC +=  -I.
 INC +=  -I$(TOP)
 INC += -I$(BUILD)
-INC += -I../shared_unix/
+INC += -I../shared_desktop/
 INC += -I$(TOP)/ports/unix
 INC += -I../shared/
 INC += -I../../amy/src/
@@ -169,10 +169,10 @@ endif
 # source files
 SRC_C += \
 	main.c \
-	../shared_unix/unix_mphal.c \
-	../shared_unix/unix_display.c \
-	../shared_unix/multicast.c \
-	../shared_unix/mpthreadport.c \
+	../shared_desktop/unix_mphal.c \
+	../shared_desktop/unix_display.c \
+	../shared_desktop/multicast.c \
+	../shared_desktop/mpthreadport.c \
 	../../amy/src/libminiaudio-audio.c \
 	$(MICROPY_PORT_DIR)/gccollect.c \
 	$(MICROPY_PORT_DIR)/input.c \

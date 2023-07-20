@@ -8,7 +8,7 @@ linux - all Tulip Desktop for Linux specific files
 macos - all Tulip Desktop for macOS specific files
 shared - code shared between all Tulip ports (hardware & Desktop)
 shared/py - Python modules that get loaded into Tulip
-shared_unix - code shared between UNIX-based Tulip ports (macOS, iOS, Linux)
+shared_desktop - code shared between Tulip Desktop ports (macOS, iOS, Linux)
 ```
 
 
