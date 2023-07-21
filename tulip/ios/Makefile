@@ -1,21 +1,5 @@
-WHICH_ARCH ?= $(shell arch)
-
-
-ifeq ($(WHICH_ARCH), arm64)
-	ARCHFLAGS = -target arm64-macos11
-	HOMEBREW = /opt/homebrew
-else
-	ARCHFLAGS = -target x86_64-apple-macos10.15
-	# On x86, homebrew FFI seems to have two locations
-	# /usr/local/homebrew/opt/libffi/include/ffi.h
-	# /usr/local/opt/libffi/include/ffi.h
-	# Check which it is
-	ifneq ("$(wildcard /usr/local/opt/libffi/include/ffi.h)","")
-		HOMEBREW = /usr/local
-	else
-		HOMEBREW = /usr/local/homebrew
-	endif
-endif
+ARCHFLAGS = -target arm64-apple-darwin11
+HOMEBREW = /opt/homebrew
 
 # Select the variant to build for.
 VARIANT ?= standard
@@ -32,18 +16,18 @@ TOP = ../../micropython
 VARIANT_DIR ?= ../../micropython/ports/unix/variants/$(VARIANT)
 
 include $(TOP)/py/mkenv.mk
-include ../shared_desktop/mpconfigport.mk
-include $(VARIANT_DIR)/mpconfigvariant.mk
+include mpconfigport.mk
+include mpconfigvariant.mk
 
 # Use the default frozen manifest, variants may override this.
 FROZEN_MANIFEST ?= manifest.py
 
 # This should be configured by the mpconfigvariant.mk
-PROG = tulip.$(WHICH_ARCH)
+PROG = tulip.ios
 
 # qstr definitions (must come before including py.mk)
 QSTR_DEFS = $(TOP)/ports/unix/qstrdefsport.h
-QSTR_GLOBAL_DEPENDENCIES = $(VARIANT_DIR)/mpconfigvariant.h
+QSTR_GLOBAL_DEPENDENCIES = mpconfigvariant.h
 
 # OS name, for simple autoconfig
 UNAME_S := $(shell uname -s)
@@ -51,8 +35,6 @@ UNAME_S := $(shell uname -s)
 # include py core make definitions
 include $(TOP)/py/py.mk
 include $(TOP)/extmod/extmod.mk
-
-#GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi lib/mbedtls lib/micropython-lib 
 
 INC +=  -I.
 INC +=  -I$(TOP)
@@ -62,12 +44,13 @@ INC += -I$(TOP)/ports/unix
 INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
+#INC += -I./SDL2.framework/Headers
 
-INC += -I./SDL2.framework/Headers
+INC += -I/Users/bwhitman/ioslib/SDL-release-2.28.1/include
 
 # compiler settings
 CWARN = -Wall -Werror
-CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion
+CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion #-Wfloat-conversion
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
 
 CFLAGS += $(ARCHFLAGS) 
@@ -87,42 +70,16 @@ COPT += -fdata-sections -ffunction-sections
 CFLAGS += -g
 
 ifndef DEBUG
-# _FORTIFY_SOURCE is a feature in gcc/glibc which is intended to provide extra
-# security for detecting buffer overflows. Some distros (Ubuntu at the very least)
-# have it enabled by default.
-#
-# gcc already optimizes some printf calls to call puts and/or putchar. When
-# _FORTIFY_SOURCE is enabled and compiling with -O1 or greater, then some
-# printf calls will also be optimized to call __printf_chk (in glibc). Any
-# printfs which get redirected to __printf_chk are then no longer synchronized
-# with printfs that go through mp_printf.
-#
-# In MicroPython, we don't want to use the runtime library's printf but rather
-# go through mp_printf, so that stdout is properly tied into streams, etc.
-# This means that we either need to turn off _FORTIFY_SOURCE or provide our
-# own implementation of __printf_chk. We've chosen to turn off _FORTIFY_SOURCE.
-# It should also be noted that the use of printf in MicroPython is typically
-# quite limited anyways (primarily for debug and some error reporting, etc
-# in the unix version).
-#
-# Information about _FORTIFY_SOURCE seems to be rather scarce. The best I could
-# find was this: https://securityblog.redhat.com/2014/03/26/fortify-and-you/
-# Original patchset was introduced by
-# https://gcc.gnu.org/ml/gcc-patches/2004-09/msg02055.html .
-#
-# Turning off _FORTIFY_SOURCE is only required when compiling with -O1 or greater
 CFLAGS += -U _FORTIFY_SOURCE
 endif
 
-# On OSX, 'gcc' is a symlink to clang unless a real gcc is installed.
-# The unix port of MicroPython on OSX must be compiled with clang,
-# while cross-compile ports require gcc, so we test here for OSX and
-# if necessary override the value of 'CC' set in py/mkenv.mk
 ifeq ($(UNAME_S),Darwin)
 ifeq ($(MICROPY_FORCE_32BIT),1)
 CC = clang -m32
 else
-CC = clang
+CC = xcrun --sdk iphoneos --toolchain iphoneos clang 
+COBJC = xcrun --sdk iphoneos --toolchain iphoneos clang -x objective-c
+
 endif
 # Use clang syntax for map file
 LDFLAGS_ARCH = -Wl,-map,$@.map -Wl,-dead_strip
@@ -131,7 +88,7 @@ else
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
 endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework Cocoa -lstdc++  $(ARCHFLAGS)
+LDFLAGS += -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework AVFAudio -framework AudioToolbox -framework UserNotifications -framework Foundation -lstdc++  $(ARCHFLAGS)
 CFLAGS += -DVIRTUAL_MIDI
 
 # Flags to link with pthread library
@@ -185,17 +142,17 @@ endif
 
 
 # libffi is installed in system on 10.12, so force use of homebrew version 
-LIBFFI_LDFLAGS_MOD = $(HOMEBREW)/opt/libffi/lib/libffi.a
-LIBFFI_CFLAGS_MOD := -I$(HOMEBREW)/opt/libffi/include
+#LIBFFI_LDFLAGS_MOD = $(HOMEBREW)/opt/libffi/lib/libffi.a
+#LIBFFI_CFLAGS_MOD := -I$(HOMEBREW)/opt/libffi/include
 
 
 ifeq ($(UNAME_S),Linux)
 LIBFFI_LDFLAGS_MOD += -ldl
 endif
 
-CFLAGS_MOD += $(LIBFFI_CFLAGS_MOD) -DMICROPY_PY_FFI=1
+CFLAGS_MOD += $(LIBFFI_CFLAGS_MOD) # -DMICROPY_PY_FFI=1
 LDFLAGS_MOD += $(LIBFFI_LDFLAGS_MOD)
-SRC_MOD += $(MICROPY_PORT_DIR)/modffi.c
+#SRC_MOD += $(MICROPY_PORT_DIR)/modffi.c
 endif
 
 ifeq ($(MICROPY_PY_JNI),1)
@@ -212,7 +169,6 @@ SRC_C += \
 	../shared_desktop/unix_display.c \
 	../shared_desktop/multicast.c \
 	../shared_desktop/mpthreadport.c \
-	../../amy/src/libminiaudio-audio.c \
 	$(MICROPY_PORT_DIR)/gccollect.c \
 	$(MICROPY_PORT_DIR)/input.c \
 	$(MICROPY_PORT_DIR)/modmachine.c \
@@ -226,7 +182,6 @@ SRC_C += \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
 
-
 SHARED_SRC_C += $(addprefix ../../micropython/shared/,\
 	runtime/gchelper_generic.c \
 	runtime/interrupt_char.c \
@@ -238,7 +193,9 @@ SHARED_SRC_C += $(addprefix ../../micropython/shared/,\
 SRC_CXX += \
 	$(SRC_MOD_CXX)
 
-SRC_M = virtualmidi.m
+SRC_M = \
+	libminiaudio.m
+
 
 OBJ = $(PY_O)
 OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
@@ -247,6 +204,7 @@ OBJ += $(addprefix $(BUILD)/, $(SRC_CXX:.cpp=.o))
 OBJ += $(addprefix $(BUILD)/, $(SHARED_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(EXTMOD_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
+
 
 # List of sources for qstr extraction
 SRC_QSTR += $(SRC_C) $(SRC_CXX) $(SHARED_SRC_C) $(EXTMOD_SRC_C) 
@@ -301,7 +259,7 @@ endef
 
 $(BUILD)/%.o: %.m
 	$(ECHO) "M $<"
-	clang  -I$(INC) $(CFLAGS) -c -o $@ $<
+	$(CC) -I$(INC) $(CFLAGS) -c -o $@ $<
 
 # Value of configure's --host= option (required for cross-compilation).
 # Deduce it from CROSS_COMPILE by default, but can be overridden.

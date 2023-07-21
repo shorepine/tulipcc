@@ -63,8 +63,7 @@ void* run_midi(void*argp){
                                 data[0] = bytes[2];
                                 data[1] = bytes[1];
                                 data[2] = bytes[0];
-                                push_midi_message_into_fifo(data, 3);
-                                tulip_midi_isr();
+                                convert_midi_bytes_to_messages(data, 3);
                                 packet = MIDIEventPacketNext(packet);
                             }
                         }

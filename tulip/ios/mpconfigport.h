@@ -42,8 +42,6 @@
 #define MICROPY_PY_BUILTINS_HELP_TEXT           tulip_desktop_help_text
 #define MICROPY_HW_BOARD_NAME "Tulip4"
 
-
-
 #ifndef MICROPY_CONFIG_ROM_LEVEL
 #define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_CORE_FEATURES)
 #endif

@@ -130,7 +130,7 @@ void run_midi() {
         }
     } // end loop forever
 }
-#elif __linux__
+#else
 void midi_out(uint8_t * bytes, uint16_t len) {
     // nothing yet
 }
