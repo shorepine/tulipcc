@@ -1,6 +1,0 @@
-Q(__name__)
-Q(heapq)
-Q(heappush)
-Q(heappop)
-Q(heapify)
-Q(heapq)

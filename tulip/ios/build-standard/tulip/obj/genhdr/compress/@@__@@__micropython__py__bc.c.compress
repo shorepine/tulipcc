@@ -1,6 +1,0 @@
-%q() takes %d positional arguments but %d were given
-function got multiple values for argument '%q'
-unexpected keyword argument '%q'
-function missing required positional argument #%d
-function missing required keyword argument '%q'
-function missing keyword-only argument

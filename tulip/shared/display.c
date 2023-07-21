@@ -28,7 +28,7 @@ uint8_t *collision_bitfield;
 uint8_t *sprite_ram; // in IRAM
 uint8_t * bg; // in SPIRAM
 
-
+uint8_t * sprite_ids;
 uint16_t *sprite_x_px;//[SPRITES]; 
 uint16_t *sprite_y_px;//[SPRITES]; 
 uint16_t *sprite_w_px;//[SPRITES]; 
@@ -155,7 +155,6 @@ uint8_t collide_mask_get(uint8_t a, uint8_t b) {
 int64_t bounce_time = 0;
 uint32_t bounce_count = 0;
 int32_t desync = 0;
-uint8_t sprite_ids[1024];
 
 // Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
@@ -175,6 +174,7 @@ uint8_t sprite_ids[1024];
 
     // We want to (first vertically) center our visible window.
     // compute starting row given V_RES_D..
+    // TODO -- this cuts off the top by half a line with ipad pro resolution
     if(V_RES != V_RES_D) {
         if(starting_display_row_px < ((V_RES-V_RES_D)/2)) {
             // not yet in the window
@@ -822,6 +822,7 @@ void display_set_clock(uint8_t mhz) {
 void display_teardown(void) {
     fprintf(stderr, "freeing bg\n");
     free_caps(bg); bg = NULL;
+    free_caps(sprite_ids);
     free_caps(sprite_ram); sprite_ram = NULL; 
     free_caps(sprite_x_px); sprite_x_px = NULL;
     free_caps(sprite_y_px); sprite_y_px = NULL;
@@ -850,7 +851,9 @@ void display_init(void) {
     // Create the background FB
     bg = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
+
     // And various ptrs
+    sprite_ids = (uint8_t*)malloc_caps(H_RES_D *  sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     sprite_ram = (uint8_t*)malloc_caps(SPRITE_RAM_BYTES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     sprite_x_px = (uint16_t*)malloc_caps(SPRITES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
     sprite_y_px = (uint16_t*)malloc_caps(SPRITES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);

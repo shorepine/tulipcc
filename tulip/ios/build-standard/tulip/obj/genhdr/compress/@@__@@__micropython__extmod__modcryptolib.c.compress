@@ -1,7 +1,0 @@
-mode
-key
-IV
-IV
-blksize % 16
-output too small
-can't encrypt & decrypt

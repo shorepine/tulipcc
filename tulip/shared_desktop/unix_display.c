@@ -39,8 +39,8 @@ void unix_set_fps_from_parameters() {
         }
     }
     if(fps_i == 20) {
-        fprintf(stderr, "Problem: could not find matching fps from res %d, %d clock %d. returning 60fps.\n", H_RES, V_RES, PIXEL_CLOCK_MHZ);
-        reported_fps = 60;
+        fprintf(stderr, "Problem: could not find matching fps from res %d, %d clock %d. returning 30fps.\n", H_RES, V_RES, PIXEL_CLOCK_MHZ);
+        reported_fps = 30;
     }
 
 
@@ -72,20 +72,29 @@ void init_window(uint16_t w, uint16_t h) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
         fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
     } else {
+#ifdef __TULIP_IOS__
+        window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
+                                SDL_WINDOWPOS_UNDEFINED, w, h,
+                                SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+#else
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED, w, h,
                                 SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
 
+#endif
     }
     if (window == NULL) {
         fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
     } else {
+        int mh, mw;
+        SDL_GL_GetDrawableSize(window, &mw, &mh);
+        fprintf(stderr, "drawable area is %d %d\n", mw, mh);
         window_surface = SDL_GetWindowSurface(window);
         surface_332 = SDL_ConvertSurfaceFormat(window_surface, SDL_PIXELFORMAT_RGB332, 0);
         fixed_fps_renderer = SDL_CreateSoftwareRenderer( window_surface);
         pixels_332 = (uint8_t*) surface_332->pixels;
     }
-    memset(pixels_332, 0, H_RES * V_RES);
+    memset(pixels_332, 0, surface_332->pitch * V_RES);
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
@@ -208,16 +217,19 @@ int unix_display_draw() {
     frame_ticks = get_ticks_ms();
     check_key();
     start_draw();
-    uint32_t c = 0;
+
     // bounce the entire screen at once to the 332 color framebuffer
     for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
-        display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
-        for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
-            pixels_332[c++] = frame_bb[x];
+        if(y+FONT_HEIGHT <= V_RES) {
+            display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT, NULL);
+            for (uint16_t row=0;row<FONT_HEIGHT;row++) {
+                for(uint16_t x=0;x<H_RES;x++) {
+                    pixels_332[((y+row)*surface_332->pitch)+x] = frame_bb[H_RES*row + x];
+                }
+            }
         }
     }
     end_draw();
-
     // Are we restarting the display for a mode change, or quitting
     if(unix_display_flag < 0) {
         SDL_DestroyWindow(window);

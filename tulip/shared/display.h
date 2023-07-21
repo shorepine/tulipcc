@@ -153,6 +153,7 @@ extern float reported_gpu_usage;
 extern uint8_t *collision_bitfield;
 
 // RAM for sprites and background FB
+extern uint8_t *sprite_ids;  // IRAM
 extern uint8_t *sprite_ram; // in IRAM
 extern uint8_t * bg; // in SPIRAM
 extern uint16_t *sprite_x_px;//[SPRITES]; 

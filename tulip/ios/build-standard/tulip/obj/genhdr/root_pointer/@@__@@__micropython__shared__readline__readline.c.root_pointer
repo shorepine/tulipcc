@@ -1,1 +1,0 @@
-MP_REGISTER_ROOT_POINTER(const char *readline_hist[(50)]);

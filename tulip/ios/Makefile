@@ -67,13 +67,13 @@ COPT += -fdata-sections -ffunction-sections
 
 # Always enable symbols -- They're occasionally useful, and don't make it into the
 # final .bin/.hex/.dfu so the extra size doesn't matter.
-CFLAGS += -g
+CFLAGS += -g -D__TULIP_IOS__
 
 ifndef DEBUG
 CFLAGS += -U _FORTIFY_SOURCE
 endif
-TOOLCHAIN = iphonesimulator
-#TOOLCHAIN = iphoneos
+#TOOLCHAIN = iphonesimulator
+TOOLCHAIN = iphoneos
 CC = xcrun --sdk $(TOOLCHAIN) --toolchain $(TOOLCHAIN) clang 
 COBJC = xcrun --sdk $(TOOLCHAIN) --toolchain $(TOOLCHAIN) clang -x objective-c
 # Use clang syntax for map file
