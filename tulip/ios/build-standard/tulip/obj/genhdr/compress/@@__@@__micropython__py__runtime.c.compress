@@ -1,0 +1,23 @@
+name '%q' isn't defined
+unsupported type for %q: '%s'
+negative shift count
+negative shift count
+unsupported types for %q: '%s', '%s'
+divide by zero
+'%s' object isn't callable
+need more than %d values to unpack
+too many values to unpack (expected %d)
+need more than %d values to unpack
+argument should be a '%q' not a '%q'
+type object '%q' has no attribute '%q'
+'%s' object has no attribute '%q'
+'%s' object has no attribute '%q'
+'%s' object isn't iterable
+'%s' object isn't an iterator
+'%s' object isn't an iterator
+generator raised StopIteration
+exceptions must derive from BaseException
+can't import name %q
+memory allocation failed, heap is locked
+memory allocation failed, allocating %u bytes
+can't convert %s to int

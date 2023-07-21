@@ -1,0 +1,5 @@
+string argument without an encoding
+only slices with step=1 (aka None) are supported
+lhs and rhs should be compatible
+array/bytes required on right side
+memoryview offset too large

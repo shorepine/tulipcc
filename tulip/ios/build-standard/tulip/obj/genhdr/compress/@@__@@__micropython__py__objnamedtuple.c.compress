@@ -1,0 +1,4 @@
+can't set attribute
+%q() takes %d positional arguments but %d were given
+unexpected keyword argument '%q'
+function got multiple values for argument '%q'

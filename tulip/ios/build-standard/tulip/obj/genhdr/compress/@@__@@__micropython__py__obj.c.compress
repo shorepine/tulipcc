@@ -1,0 +1,11 @@
+can't convert %s to float
+can't convert %s to complex
+object '%s' isn't a tuple or list
+requested length %d but object has length %d
+%q indices must be integers, not %s
+%q index out of range
+object of type '%s' has no len()
+'%s' object doesn't support item deletion
+'%s' object isn't subscriptable
+'%s' object doesn't support item assignment
+object with buffer protocol required

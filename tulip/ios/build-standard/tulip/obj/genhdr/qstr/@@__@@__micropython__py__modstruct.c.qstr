@@ -1,0 +1,8 @@
+Q(__name__)
+Q(struct)
+Q(calcsize)
+Q(pack)
+Q(pack_into)
+Q(unpack)
+Q(unpack_from)
+Q(struct)

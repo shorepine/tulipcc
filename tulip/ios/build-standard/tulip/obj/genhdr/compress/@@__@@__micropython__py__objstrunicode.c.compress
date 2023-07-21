@@ -1,0 +1,4 @@
+string indices must be integers, not %s
+string index out of range
+string index out of range
+only slices with step=1 (aka None) are supported

@@ -1,0 +1,39 @@
+string argument without an encoding
+bytes value out of range
+wrong number of arguments
+only slices with step=1 (aka None) are supported
+join expects a list of str/bytes objects consistent with self object
+empty separator
+rsplit(None,n)
+empty separator
+substring not found
+start/end indices
+single '}' encountered in format string
+end of format while looking for conversion specifier
+unknown conversion specifier %c
+unmatched '{' in format
+expected ':' after format specifier
+can't switch from automatic field numbering to manual field specification
+tuple index out of range
+attributes not supported
+can't switch from manual field specification to automatic field numbering
+tuple index out of range
+invalid format specifier
+sign not allowed in string format specifier
+sign not allowed with integer format specifier 'c'
+unknown format code '%c' for object of type '%s'
+unknown format code '%c' for object of type '%s'
+'=' alignment not allowed in string format specifier
+unknown format code '%c' for object of type '%s'
+format needs a dict
+incomplete format key
+incomplete format
+format string needs more arguments
+%c needs int or char
+integer needed
+unsupported format character '%c' (0x%x) at index %d
+format string didn't convert all arguments
+empty separator
+odd-length string
+non-hex digit found
+can't convert '%q' object to %q implicitly

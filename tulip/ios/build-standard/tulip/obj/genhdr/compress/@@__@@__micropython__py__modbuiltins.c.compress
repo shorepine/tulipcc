@@ -1,0 +1,4 @@
+chr() arg not in range(0x110000)
+arg is an empty sequence
+ord() expected a character, but string of length %d found
+must use keyword argument for key function

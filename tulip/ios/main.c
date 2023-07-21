@@ -547,6 +547,8 @@ int main(int argc, char **argv) {
 }
 */
 
+mp_state_ctx_t mp_state_ctx;
+#include "SDL_main.h"
 
 MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
 #if MICROPY_PY_THREAD
@@ -882,7 +884,6 @@ soft_reset_exit:
     //return ret & 0xff;
     return 0;
 }
-
 int main(int argc, char **argv) {
     // Get the resources folder loc
     // So thread out alles and then micropython tasks
@@ -941,8 +942,8 @@ display_jump:
         goto display_jump;
     }
     // We're done. join the threads?
+    return 0;
 }
-
 
 void nlr_jump_fail(void *val) {
     #if MICROPY_USE_READLINE == 1

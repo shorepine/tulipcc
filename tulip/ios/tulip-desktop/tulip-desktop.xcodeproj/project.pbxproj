@@ -1,0 +1,590 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		9A9928892A6AD5730099DBC7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A9928882A6AD5730099DBC7 /* Assets.xcassets */; };
+		9A99288C2A6AD5730099DBC7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9A99288A2A6AD5730099DBC7 /* LaunchScreen.storyboard */; };
+		9A9928BA2A6AD5EE0099DBC7 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928A52A6AD59E0099DBC7 /* SDL2.framework */; };
+		9A9928BB2A6AD5EE0099DBC7 /* SDL2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928A52A6AD59E0099DBC7 /* SDL2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9A9928BE2A6AD6460099DBC7 /* SDL_uikit_main.c in Sources */ = {isa = PBXBuildFile; fileRef = 9A9928BD2A6AD6460099DBC7 /* SDL_uikit_main.c */; };
+		9A9928D92A6AE3ED0099DBC7 /* AVFAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928D82A6AE3ED0099DBC7 /* AVFAudio.framework */; };
+		9A9928DB2A6AE3F40099DBC7 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928DA2A6AE3F40099DBC7 /* AudioToolbox.framework */; };
+		9A9928DD2A6AE4070099DBC7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928DC2A6AE4070099DBC7 /* Foundation.framework */; };
+		9A9928DF2A6AE40C0099DBC7 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928DE2A6AE40C0099DBC7 /* UserNotifications.framework */; };
+		9A9928E12A6AE4110099DBC7 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928E02A6AE4110099DBC7 /* CoreFoundation.framework */; };
+		9A9928E32A6AE4160099DBC7 /* CoreMIDI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928E22A6AE4160099DBC7 /* CoreMIDI.framework */; };
+		9A9928E72A6AE88F0099DBC7 /* libmicropython.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928E62A6AE88F0099DBC7 /* libmicropython.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9A9928A22A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = BECDF66C0761BA81005FE872;
+			remoteInfo = Framework;
+		};
+		9A9928A42A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = A7D88B5423E2437C00DCD162;
+			remoteInfo = "Framework-iOS";
+		};
+		9A9928A62A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = A7D88D1523E24BED00DCD162;
+			remoteInfo = "Framework-tvOS";
+		};
+		9A9928A82A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = E2D187CF28A5673500D2B4F1;
+			remoteInfo = "xcFramework-iOS";
+		};
+		9A9928AA2A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = BECDF6B30761BA81005FE872;
+			remoteInfo = "Static Library";
+		};
+		9A9928AC2A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = A7D88E5423E24D3B00DCD162;
+			remoteInfo = "Static Library-iOS";
+		};
+		9A9928AE2A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = A769B23D23E259AE00872273;
+			remoteInfo = "Static Library-tvOS";
+		};
+		9A9928B02A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = DB31407717554B71006C0E22;
+			remoteInfo = "Shared Library";
+		};
+		9A9928B22A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = A75FCEB323E25AB700529352;
+			remoteInfo = "Shared Library-iOS";
+		};
+		9A9928B42A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = A75FD06C23E25AC700529352;
+			remoteInfo = "Shared Library-tvOS";
+		};
+		9A9928B62A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = BECDF6BE0761BA81005FE872;
+			remoteInfo = "Standard DMG";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9A9928BC2A6AD5EE0099DBC7 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				9A9928BB2A6AD5EE0099DBC7 /* SDL2.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		9A9928762A6AD5730099DBC7 /* tulip-desktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "tulip-desktop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		9A9928882A6AD5730099DBC7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9A99288B2A6AD5730099DBC7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SDL.xcodeproj; path = "../../../../../ioslib/SDL-release-2.28.1/Xcode/SDL/SDL.xcodeproj"; sourceTree = "<group>"; };
+		9A9928BD2A6AD6460099DBC7 /* SDL_uikit_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_uikit_main.c; path = "../../../../../../ioslib/SDL-release-2.28.1/src/main/uikit/SDL_uikit_main.c"; sourceTree = "<group>"; };
+		9A9928D82A6AE3ED0099DBC7 /* AVFAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFAudio.framework; path = System/Library/Frameworks/AVFAudio.framework; sourceTree = SDKROOT; };
+		9A9928DA2A6AE3F40099DBC7 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		9A9928DC2A6AE4070099DBC7 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		9A9928DE2A6AE40C0099DBC7 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
+		9A9928E02A6AE4110099DBC7 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		9A9928E22A6AE4160099DBC7 /* CoreMIDI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMIDI.framework; path = System/Library/Frameworks/CoreMIDI.framework; sourceTree = SDKROOT; };
+		9A9928E62A6AE88F0099DBC7 /* libmicropython.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmicropython.a; path = "../build-standard/tulip/obj/libmicropython.a"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		9A9928732A6AD5730099DBC7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A9928E72A6AE88F0099DBC7 /* libmicropython.a in Frameworks */,
+				9A9928E32A6AE4160099DBC7 /* CoreMIDI.framework in Frameworks */,
+				9A9928E12A6AE4110099DBC7 /* CoreFoundation.framework in Frameworks */,
+				9A9928DF2A6AE40C0099DBC7 /* UserNotifications.framework in Frameworks */,
+				9A9928DD2A6AE4070099DBC7 /* Foundation.framework in Frameworks */,
+				9A9928DB2A6AE3F40099DBC7 /* AudioToolbox.framework in Frameworks */,
+				9A9928D92A6AE3ED0099DBC7 /* AVFAudio.framework in Frameworks */,
+				9A9928BA2A6AD5EE0099DBC7 /* SDL2.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		9A99286D2A6AD5730099DBC7 = {
+			isa = PBXGroup;
+			children = (
+				9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */,
+				9A9928782A6AD5730099DBC7 /* tulip-desktop */,
+				9A9928772A6AD5730099DBC7 /* Products */,
+				9A9928B82A6AD5E10099DBC7 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		9A9928772A6AD5730099DBC7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9A9928762A6AD5730099DBC7 /* tulip-desktop.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9A9928782A6AD5730099DBC7 /* tulip-desktop */ = {
+			isa = PBXGroup;
+			children = (
+				9A9928BD2A6AD6460099DBC7 /* SDL_uikit_main.c */,
+				9A9928882A6AD5730099DBC7 /* Assets.xcassets */,
+				9A99288A2A6AD5730099DBC7 /* LaunchScreen.storyboard */,
+			);
+			path = "tulip-desktop";
+			sourceTree = "<group>";
+		};
+		9A9928952A6AD59D0099DBC7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9A9928A32A6AD59E0099DBC7 /* SDL2.framework */,
+				9A9928A52A6AD59E0099DBC7 /* SDL2.framework */,
+				9A9928A72A6AD59E0099DBC7 /* SDL2.framework */,
+				9A9928A92A6AD59E0099DBC7 /* SDL2.framework */,
+				9A9928AB2A6AD59E0099DBC7 /* libSDL2.a */,
+				9A9928AD2A6AD59E0099DBC7 /* libSDL2.a */,
+				9A9928AF2A6AD59E0099DBC7 /* libSDL2.a */,
+				9A9928B12A6AD59E0099DBC7 /* libSDL2.dylib */,
+				9A9928B32A6AD59E0099DBC7 /* libSDL2.dylib */,
+				9A9928B52A6AD59E0099DBC7 /* libSDL2.dylib */,
+				9A9928B72A6AD59E0099DBC7 /* SDL2 */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9A9928B82A6AD5E10099DBC7 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9A9928E62A6AE88F0099DBC7 /* libmicropython.a */,
+				9A9928E22A6AE4160099DBC7 /* CoreMIDI.framework */,
+				9A9928E02A6AE4110099DBC7 /* CoreFoundation.framework */,
+				9A9928DE2A6AE40C0099DBC7 /* UserNotifications.framework */,
+				9A9928DC2A6AE4070099DBC7 /* Foundation.framework */,
+				9A9928DA2A6AE3F40099DBC7 /* AudioToolbox.framework */,
+				9A9928D82A6AE3ED0099DBC7 /* AVFAudio.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		9A9928752A6AD5730099DBC7 /* tulip-desktop */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9A9928912A6AD5730099DBC7 /* Build configuration list for PBXNativeTarget "tulip-desktop" */;
+			buildPhases = (
+				9A9928722A6AD5730099DBC7 /* Sources */,
+				9A9928732A6AD5730099DBC7 /* Frameworks */,
+				9A9928742A6AD5730099DBC7 /* Resources */,
+				9A9928BC2A6AD5EE0099DBC7 /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "tulip-desktop";
+			productName = "tulip-desktop";
+			productReference = 9A9928762A6AD5730099DBC7 /* tulip-desktop.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		9A99286E2A6AD5730099DBC7 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					9A9928752A6AD5730099DBC7 = {
+						CreatedOnToolsVersion = 14.3.1;
+					};
+				};
+			};
+			buildConfigurationList = 9A9928712A6AD5730099DBC7 /* Build configuration list for PBXProject "tulip-desktop" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 9A99286D2A6AD5730099DBC7;
+			productRefGroup = 9A9928772A6AD5730099DBC7 /* Products */;
+			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 9A9928952A6AD59D0099DBC7 /* Products */;
+					ProjectRef = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+				},
+			);
+			projectRoot = "";
+			targets = (
+				9A9928752A6AD5730099DBC7 /* tulip-desktop */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		9A9928A32A6AD59E0099DBC7 /* SDL2.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = SDL2.framework;
+			remoteRef = 9A9928A22A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928A52A6AD59E0099DBC7 /* SDL2.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = SDL2.framework;
+			remoteRef = 9A9928A42A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928A72A6AD59E0099DBC7 /* SDL2.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = SDL2.framework;
+			remoteRef = 9A9928A62A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928A92A6AD59E0099DBC7 /* SDL2.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = SDL2.framework;
+			remoteRef = 9A9928A82A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928AB2A6AD59E0099DBC7 /* libSDL2.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libSDL2.a;
+			remoteRef = 9A9928AA2A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928AD2A6AD59E0099DBC7 /* libSDL2.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libSDL2.a;
+			remoteRef = 9A9928AC2A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928AF2A6AD59E0099DBC7 /* libSDL2.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = libSDL2.a;
+			remoteRef = 9A9928AE2A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928B12A6AD59E0099DBC7 /* libSDL2.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = libSDL2.dylib;
+			remoteRef = 9A9928B02A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928B32A6AD59E0099DBC7 /* libSDL2.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = libSDL2.dylib;
+			remoteRef = 9A9928B22A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928B52A6AD59E0099DBC7 /* libSDL2.dylib */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.dylib";
+			path = libSDL2.dylib;
+			remoteRef = 9A9928B42A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		9A9928B72A6AD59E0099DBC7 /* SDL2 */ = {
+			isa = PBXReferenceProxy;
+			fileType = "compiled.mach-o.executable";
+			path = SDL2;
+			remoteRef = 9A9928B62A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
+/* Begin PBXResourcesBuildPhase section */
+		9A9928742A6AD5730099DBC7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A99288C2A6AD5730099DBC7 /* LaunchScreen.storyboard in Resources */,
+				9A9928892A6AD5730099DBC7 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9A9928722A6AD5730099DBC7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A9928BE2A6AD6460099DBC7 /* SDL_uikit_main.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		9A99288A2A6AD5730099DBC7 /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9A99288B2A6AD5730099DBC7 /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		9A99288F2A6AD5730099DBC7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		9A9928902A6AD5730099DBC7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		9A9928922A6AD5730099DBC7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y6CQ3JU8G4;
+				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_MASTER_OBJECT_FILE = NO;
+				"HEADER_SEARCH_PATHS[arch=*]" = "\"$(SRCROOT)/../../../../../ioslib/SDL-release-2.28.1/include\"";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = metal;
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_MAP_FILE_PATH = "/Users/bwhitman/outside/tulipcc/tulip/ios/build-standard/tulip/obj/tulip.ios.map";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../build-standard/tulip/obj/\"";
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-lstdc++",
+					"-lpthread",
+				);
+				"PRELINK_LIBS[arch=*]" = "-lmicropython";
+				PRODUCT_BUNDLE_IDENTIFIER = "org.rosaline.tulip-desktop";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9A9928932A6AD5730099DBC7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Y6CQ3JU8G4;
+				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_MASTER_OBJECT_FILE = NO;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = metal;
+				INFOPLIST_KEY_UIStatusBarHidden = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_MAP_FILE_PATH = "/Users/bwhitman/outside/tulipcc/tulip/ios/build-standard/tulip/obj/tulip.ios.map";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../build-standard/tulip/obj/\"";
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"-lstdc++",
+					"-lpthread",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.rosaline.tulip-desktop";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9A9928712A6AD5730099DBC7 /* Build configuration list for PBXProject "tulip-desktop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A99288F2A6AD5730099DBC7 /* Debug */,
+				9A9928902A6AD5730099DBC7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9A9928912A6AD5730099DBC7 /* Build configuration list for PBXNativeTarget "tulip-desktop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A9928922A6AD5730099DBC7 /* Debug */,
+				9A9928932A6AD5730099DBC7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 9A99286E2A6AD5730099DBC7 /* Project object */;
+}

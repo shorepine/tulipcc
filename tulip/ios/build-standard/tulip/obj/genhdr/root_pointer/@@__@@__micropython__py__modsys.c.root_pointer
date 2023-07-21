@@ -1,0 +1,4 @@
+MP_REGISTER_ROOT_POINTER(mp_obj_list_t mp_sys_argv_obj);
+MP_REGISTER_ROOT_POINTER(mp_obj_base_t * cur_exception);
+MP_REGISTER_ROOT_POINTER(mp_obj_t sys_exitfunc);
+MP_REGISTER_ROOT_POINTER(mp_obj_t sys_mutable[MP_SYS_MUTABLE_NUM]);

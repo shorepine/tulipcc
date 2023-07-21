@@ -1,0 +1,65 @@
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_array, mp_module_array);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_binascii, mp_module_binascii);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_collections, mp_module_collections);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_cryptolib, mp_module_cryptolib);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_errno, mp_module_errno);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_hashlib, mp_module_hashlib);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_heapq, mp_module_heapq);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_io, mp_module_io);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_json, mp_module_json);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_machine, mp_module_machine);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_os, mp_module_os);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_random, mp_module_random);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_re, mp_module_re);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_socket, mp_module_socket);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_ssl, mp_module_ssl);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_struct, mp_module_struct);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_time, mp_module_time);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_websocket, mp_module_websocket);
+
+MP_REGISTER_EXTENSIBLE_MODULE(MP_QSTR_zlib, mp_module_zlib);
+
+MP_REGISTER_MODULE(MP_QSTR___main__, mp_module___main__);
+
+MP_REGISTER_MODULE(MP_QSTR__asyncio, mp_module_asyncio);
+
+MP_REGISTER_MODULE(MP_QSTR__tulip, tulip_module);
+
+MP_REGISTER_MODULE(MP_QSTR_btree, mp_module_btree);
+
+MP_REGISTER_MODULE(MP_QSTR_builtins, mp_module_builtins);
+
+MP_REGISTER_MODULE(MP_QSTR_cmath, mp_module_cmath);
+
+MP_REGISTER_MODULE(MP_QSTR_framebuf, mp_module_framebuf);
+
+MP_REGISTER_MODULE(MP_QSTR_gc, mp_module_gc);
+
+MP_REGISTER_MODULE(MP_QSTR_math, mp_module_math);
+
+MP_REGISTER_MODULE(MP_QSTR_micropython, mp_module_micropython);
+
+MP_REGISTER_MODULE(MP_QSTR_sys, mp_module_sys);
+
+MP_REGISTER_MODULE(MP_QSTR_termios, mp_module_termios);
+
+MP_REGISTER_MODULE(MP_QSTR_uctypes, mp_module_uctypes);
+
+MP_REGISTER_MODULE_DELEGATION(mp_module_sys, mp_module_sys_attr);

@@ -1,0 +1,9 @@
+function doesn't take keyword arguments
+function takes %d positional arguments but %d were given
+function missing %d required positional arguments
+function expected at most %d arguments, got %d
+'%q' argument required
+extra positional arguments given
+extra keyword arguments given
+argument num/types mismatch
+keyword argument(s) not implemented - use normal args instead

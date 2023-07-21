@@ -1,0 +1,483 @@
+%c needs int or char
+
+%q index out of range
+
+%q indices must be integers, not %s
+
+%q() takes %d positional arguments but %d were given
+
+%q() takes %d positional arguments but %d were given
+
+'%q' argument required
+
+'%s' object doesn't support item assignment
+
+'%s' object doesn't support item deletion
+
+'%s' object has no attribute '%q'
+
+'%s' object has no attribute '%q'
+
+'%s' object isn't an iterator
+
+'%s' object isn't an iterator
+
+'%s' object isn't callable
+
+'%s' object isn't callable
+
+'%s' object isn't iterable
+
+'%s' object isn't subscriptable
+
+'=' alignment not allowed in string format specifier
+
+'await' outside function
+
+'break'/'continue' outside loop
+
+'return' outside function
+
+'yield' outside function
+
+* arg after **
+
+*x must be assignment target
+
+0.0 to a complex power
+
+I/O operation on closed file
+
+I/O operation on closed file
+
+IV
+
+IV
+
+LHS of keyword arg must be an id
+
+[addrinfo error %d]
+
+__init__() should return None, not '%s'
+
+abort() called
+
+address %08x is not aligned to %d bytes
+
+arg is an empty sequence
+
+arg must be user-type
+
+arg must be user-type
+
+arg must be user-type
+
+argument name reused
+
+argument num/types mismatch
+
+argument should be a '%q' not a '%q'
+
+array/bytes required on right side
+
+async for/with outside async function
+
+attributes not supported
+
+bad compile mode
+
+bad typecode
+
+bits must be 32 or less
+
+blksize % 16
+
+buffer too small
+
+buffer too small
+
+buffer too small
+
+buffer too small
+
+bytecode overflow
+
+bytes value out of range
+
+can't add special method to already-subclassed class
+
+can't assign to expression
+
+can't assign to expression
+
+can't assign to expression
+
+can't cancel self
+
+can't convert %s to complex
+
+can't convert %s to float
+
+can't convert %s to int
+
+can't convert '%q' object to %q implicitly
+
+can't convert NaN to int
+
+can't convert inf to int
+
+can't create '%q' instances
+
+can't declare nonlocal in outer code
+
+can't delete expression
+
+can't encrypt & decrypt
+
+can't import name %q
+
+can't perform relative import
+
+can't send non-None value to a just-started generator
+
+can't set attribute
+
+can't switch from automatic field numbering to manual field specification
+
+can't switch from manual field specification to automatic field numbering
+
+can't truncate-divide a complex number
+
+can't unambiguously get sizeof scalar
+
+can't wait
+
+chr() arg not in range(0x110000)
+
+complex divide by zero
+
+compression header
+
+default 'except' must be last
+
+dict update sequence has wrong length
+
+divide by zero
+
+divide by zero
+
+divide by zero
+
+divide by zero
+
+empty
+
+empty heap
+
+empty heap
+
+empty separator
+
+empty separator
+
+empty separator
+
+end of format while looking for conversion specifier
+
+error in regex
+
+exceptions must derive from BaseException
+
+expected ':' after format specifier
+
+expecting just a value for set
+
+expecting key:value for dict
+
+extra keyword arguments given
+
+extra positional arguments given
+
+format needs a dict
+
+format string didn't convert all arguments
+
+format string needs more arguments
+
+full
+
+function doesn't take keyword arguments
+
+function expected at most %d arguments, got %d
+
+function got multiple values for argument '%q'
+
+function got multiple values for argument '%q'
+
+function missing %d required positional arguments
+
+function missing keyword-only argument
+
+function missing required keyword argument '%q'
+
+function missing required positional argument #%d
+
+function takes %d positional arguments but %d were given
+
+generator already executing
+
+generator already executing
+
+generator ignored GeneratorExit
+
+generator raised StopIteration
+
+generator raised StopIteration
+
+hash is final
+
+heap must be a list
+
+identifier redefined as global
+
+identifier redefined as nonlocal
+
+import * not at module level
+
+incompatible .mpy arch
+
+incompatible .mpy file
+
+incompatible .mpy file
+
+incomplete format
+
+incomplete format key
+
+incorrect padding
+
+int() arg 2 must be >= 2 and <= 36
+
+integer needed
+
+invalid cert
+
+invalid format
+
+invalid format specifier
+
+invalid key
+
+invalid micropython decorator
+
+invalid micropython decorator
+
+invalid mktime usage
+
+invalid syntax
+
+invalid syntax
+
+invalid syntax
+
+invalid syntax for number
+
+issubclass() arg 1 must be a class
+
+issubclass() arg 2 must be a class or a tuple of classes
+
+join expects a list of str/bytes objects consistent with self object
+
+key
+
+keyword argument(s) not implemented - use normal args instead
+
+lhs and rhs should be compatible
+
+local variable referenced before assignment
+
+malformed f-string
+
+math domain error
+
+memory allocation failed, allocating %u bytes
+
+memory allocation failed, heap is locked
+
+memoryview offset too large
+
+mktime needs a tuple of length 8 or 9
+
+mode
+
+multiple *x in assignment
+
+multiple bases have instance lay-out conflict
+
+must use keyword argument for key function
+
+name '%q' isn't defined
+
+name too long
+
+native code in .mpy unsupported
+
+need more than %d values to unpack
+
+need more than %d values to unpack
+
+negative factorial
+
+negative shift count
+
+negative shift count
+
+negative shift count
+
+no active exception to reraise
+
+no binding for nonlocal found
+
+no module named '%q'
+
+no such attribute
+
+non-default argument follows default argument
+
+non-hex digit found
+
+not a constant
+
+object '%s' isn't a tuple or list
+
+object not in sequence
+
+object of type '%s' has no len()
+
+object with buffer protocol required
+
+odd-length string
+
+only slices with step=1 (aka None) are supported
+
+only slices with step=1 (aka None) are supported
+
+only slices with step=1 (aka None) are supported
+
+only slices with step=1 (aka None) are supported
+
+opcode
+
+ord() expected a character, but string of length %d found
+
+output too small
+
+overflow converting long int to machine word
+
+overflow converting long int to machine word
+
+pop from an empty set
+
+pop from empty list
+
+popitem(): dictionary is empty
+
+positional arg after **
+
+positional arg after keyword arg
+
+pow() with 3 arguments requires integers
+
+raw f-strings are not supported
+
+requested length %d but object has length %d
+
+rsplit(None,n)
+
+schedule queue full
+
+sign not allowed in string format specifier
+
+sign not allowed with integer format specifier 'c'
+
+single '}' encountered in format string
+
+slice step can't be zero
+
+splitting with sub-captures
+
+start/end indices
+
+stream operation not supported
+
+string argument without an encoding
+
+string argument without an encoding
+
+string index out of range
+
+string index out of range
+
+string indices must be integers, not %s
+
+struct: can't index
+
+struct: index out of range
+
+struct: no fields
+
+substring not found
+
+super() can't find self
+
+syntax error in JSON
+
+syntax error in uctypes descriptor
+
+ticks interval overflow
+
+too many args
+
+too many values to unpack (expected %d)
+
+tuple index out of range
+
+tuple index out of range
+
+type '%q' isn't an acceptable base type
+
+type object '%q' has no attribute '%q'
+
+type takes 1 or 3 arguments
+
+unexpected indent
+
+unexpected keyword argument '%q'
+
+unexpected keyword argument '%q'
+
+unicode name escapes
+
+unindent doesn't match any outer indent level
+
+unknown conversion specifier %c
+
+unknown format code '%c' for object of type '%s'
+
+unknown format code '%c' for object of type '%s'
+
+unknown format code '%c' for object of type '%s'
+
+unmatched '{' in format
+
+unreadable attribute
+
+unsupported format character '%c' (0x%x) at index %d
+
+unsupported type for %q: '%s'
+
+unsupported types for %q: '%s', '%s'
+
+wrong number of arguments
+
+zero step

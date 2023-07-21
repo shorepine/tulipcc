@@ -1,0 +1,5 @@
+syntax error in uctypes descriptor
+can't unambiguously get sizeof scalar
+struct: no fields
+struct: can't index
+struct: index out of range

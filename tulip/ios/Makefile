@@ -72,21 +72,12 @@ CFLAGS += -g
 ifndef DEBUG
 CFLAGS += -U _FORTIFY_SOURCE
 endif
-
-ifeq ($(UNAME_S),Darwin)
-ifeq ($(MICROPY_FORCE_32BIT),1)
-CC = clang -m32
-else
-CC = xcrun --sdk iphoneos --toolchain iphoneos clang 
-COBJC = xcrun --sdk iphoneos --toolchain iphoneos clang -x objective-c
-
-endif
+TOOLCHAIN = iphonesimulator
+#TOOLCHAIN = iphoneos
+CC = xcrun --sdk $(TOOLCHAIN) --toolchain $(TOOLCHAIN) clang 
+COBJC = xcrun --sdk $(TOOLCHAIN) --toolchain $(TOOLCHAIN) clang -x objective-c
 # Use clang syntax for map file
 LDFLAGS_ARCH = -Wl,-map,$@.map -Wl,-dead_strip
-else
-# Use gcc syntax for map file
-LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
-endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
 LDFLAGS += -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework AVFAudio -framework AudioToolbox -framework UserNotifications -framework Foundation -lstdc++  $(ARCHFLAGS)
 CFLAGS += -DVIRTUAL_MIDI
@@ -261,27 +252,9 @@ $(BUILD)/%.o: %.m
 	$(ECHO) "M $<"
 	$(CC) -I$(INC) $(CFLAGS) -c -o $@ $<
 
-# Value of configure's --host= option (required for cross-compilation).
-# Deduce it from CROSS_COMPILE by default, but can be overridden.
-ifneq ($(CROSS_COMPILE),)
-CROSS_COMPILE_HOST = --host=$(patsubst %-,%,$(CROSS_COMPILE))
-else
-CROSS_COMPILE_HOST =
-endif
 
-deplibs: libffi axtls
 
-libffi: $(BUILD)/lib/libffi/include/ffi.h
-
-$(TOP)/lib/libffi/configure: $(TOP)/lib/libffi/autogen.sh
-	cd $(TOP)/lib/libffi; ./autogen.sh
-
-# install-exec-recursive & install-data-am targets are used to avoid building
-# docs and depending on makeinfo
-$(BUILD)/lib/libffi/include/ffi.h: $(TOP)/lib/libffi/configure
-	mkdir -p $(BUILD)/lib/libffi; cd $(BUILD)/lib/libffi; \
-	$(abspath $(TOP))/lib/libffi/configure $(CROSS_COMPILE_HOST) --prefix=$$PWD/out --disable-structs CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="-Os -fomit-frame-pointer -fstrict-aliasing -ffast-math -fno-exceptions"; \
-	$(MAKE) install-exec-recursive; $(MAKE) -C include install-data-am
+deplibs: axtls
 
 PREFIX = /usr/local
 BINDIR = $(DESTDIR)$(PREFIX)/bin
