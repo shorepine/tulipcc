@@ -522,9 +522,11 @@ char * get_tulip_home_path() {
     return MYCFStringCopyUTF8String(resourcesPath);
 }
 */
-
+char documents[255];
 char * get_tulip_home_path() {
-    return "dog";
+    char *home = getenv("HOME");
+    sprintf(documents, "%s/Documents", home);
+    return documents;
 }
 
 extern int16_t amy_device_id;

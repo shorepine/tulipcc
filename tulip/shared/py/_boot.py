@@ -36,7 +36,7 @@ except ImportError:
             mkdir(tulipcc+"/ex")
             mkdir(tulipcc+"/ex/g")
             print("Loading new examples into ex/ folder ... ")
-            if(tulip.app_path().endswith("unix")): # running in dev mode
+            if(tulip.app_path().endswith("macos")): # running in dev mode
                 tulip_home = tulip.app_path()+"/../../tulip_home"
             else: # running from an app bundle
                 tulip_home = tulip.app_path()+"/Contents/Resources/tulip_home"
@@ -53,5 +53,6 @@ except ImportError:
     except:
         # Probably iOS
         print("TODO: we will load in the filesystem")
+        cd(tulip.app_path())
 
 gc.collect()
