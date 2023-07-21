@@ -75,7 +75,7 @@ void init_window(uint16_t w, uint16_t h) {
 #ifdef __TULIP_IOS__
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED, w, h,
-                                SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+                                SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP);
 #else
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED, w, h,
@@ -91,6 +91,7 @@ void init_window(uint16_t w, uint16_t h) {
         fprintf(stderr, "drawable area is %d %d\n", mw, mh);
         window_surface = SDL_GetWindowSurface(window);
         surface_332 = SDL_ConvertSurfaceFormat(window_surface, SDL_PIXELFORMAT_RGB332, 0);
+        fprintf(stderr, "surface is %d %d\n", surface_332->w, surface_332->h);
         fixed_fps_renderer = SDL_CreateSoftwareRenderer( window_surface);
         pixels_332 = (uint8_t*) surface_332->pixels;
     }
