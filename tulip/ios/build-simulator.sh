@@ -8,12 +8,12 @@ source ../shared/grab_submodules.sh
 SCHEME=Debug
 
 #iPad 10
-IOS_SIM_UDID=F3633360-AAFB-4BE8-9F1A-FAD58D475A0F
-IOS_SIM_STRING='iOS Simulator,name=iPad (10th generation),OS=16.4'
+#IOS_SIM_UDID=F3633360-AAFB-4BE8-9F1A-FAD58D475A0F
+#IOS_SIM_STRING='iOS Simulator,name=iPad (10th generation),OS=16.4'
 
 #iPhone 14 Pro
-#IOS_SIM_UDID=782C52DA-FBD4-4027-BA54-CCC62344A7EA
-#IOS_SIM_STRING="iOS Simulator,name=iPhone 14 Pro,OS=16.4"
+IOS_SIM_UDID=782C52DA-FBD4-4027-BA54-CCC62344A7EA
+IOS_SIM_STRING="iOS Simulator,name=iPhone 14 Pro,OS=16.4"
 
 
 SDL_URL=https://github.com/libsdl-org/SDL/releases/download/release-2.28.1/SDL2-2.28.1.zip

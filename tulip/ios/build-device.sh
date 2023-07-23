@@ -1,5 +1,6 @@
 #!/bin/bash
 # Just builds for device locally
+set -e
 
 source ../shared/grab_submodules.sh
 SCHEME=Debug

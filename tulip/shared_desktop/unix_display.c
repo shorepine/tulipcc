@@ -6,9 +6,13 @@
 #include "ui.h"
 SDL_Window *window;
 SDL_Surface *window_surface;
-SDL_Surface *surface_332;
+//SDL_Surface *surface_332;
 SDL_Renderer *fixed_fps_renderer;
 SDL_GameController *gp;
+SDL_Rect tulip_rect;
+SDL_Rect screen_rect;
+SDL_Texture *framebuffer;
+
 uint8_t *pixels_332;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
@@ -86,23 +90,49 @@ void init_window(uint16_t w, uint16_t h) {
     if (window == NULL) {
         fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
     } else {
-        int mh, mw;
+        int mh, mw, rw, rh;
+        /*
+        1180 820
+        surface is 2360 1640
+        */
         SDL_GL_GetDrawableSize(window, &mw, &mh);
         fprintf(stderr, "drawable area is %d %d\n", mw, mh);
         window_surface = SDL_GetWindowSurface(window);
-        surface_332 = SDL_ConvertSurfaceFormat(window_surface, SDL_PIXELFORMAT_RGB332, 0);
-        fprintf(stderr, "surface is %d %d\n", surface_332->w, surface_332->h);
+        //surface_332 = SDL_ConvertSurfaceFormat(window_surface, SDL_PIXELFORMAT_RGB332, 0);
+        //fprintf(stderr, "surface is %d %d\n", surface_332->w, surface_332->h);
         fixed_fps_renderer = SDL_CreateSoftwareRenderer( window_surface);
-        pixels_332 = (uint8_t*) surface_332->pixels;
+        SDL_GetRendererOutputSize(fixed_fps_renderer, &rw, &rh);
+
+        tulip_rect.x = 0; 
+        tulip_rect.y = 0; 
+        tulip_rect.w = w; 
+        tulip_rect.h = h; 
+
+        screen_rect.x = 0; 
+        screen_rect.y = 0; 
+        screen_rect.w = rw; 
+        screen_rect.h = rh; 
+
+        framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, w,h);
+
+        if(rw != w) {
+            //float ws = (float)rw / (float)w;
+            //float hs = (float)rh / (float)h;
+            //fprintf(stderr, "Setting render scale to %f %f\n", ws, hs);
+            //SDL_RenderSetScale(fixed_fps_renderer, ws, hs);
+        }
+        //pixels_332 = (uint8_t*) surface_332->pixels;
     }
-    memset(pixels_332, 0, surface_332->pitch * V_RES);
+    //memset(pixels_332, 0, surface_332->pitch * V_RES);
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
     SDL_StartTextInput();
 }
 
-void destrow_window() {
+
+
+void destroy_window() {
     SDL_DestroyWindow(window);
     SDL_Quit();    
 }
@@ -188,20 +218,21 @@ void check_key() {
 
 
 void start_draw() { 
-    SDL_LockSurface(surface_332); 
+    //SDL_LockSurface(surface_332); 
 
 }
 
 // Using our non-vsync software renderer, blit the surface into a texture and then out to the window
 void end_draw() {
-    SDL_UnlockSurface(surface_332);
+    //SDL_UnlockSurface(surface_332);
 
-    SDL_Texture *blit_texture = SDL_CreateTextureFromSurface(fixed_fps_renderer, surface_332);
-    SDL_RenderCopy(fixed_fps_renderer, blit_texture, NULL, NULL);
+    //SDL_Texture *blit_texture = SDL_CreateTextureFromSurface(fixed_fps_renderer, surface_332);
+    //SDL_RenderCopy(fixed_fps_renderer, blit_texture, &tulip_rect, NULL);//&tulip_rect);
+    SDL_RenderCopy(fixed_fps_renderer, framebuffer, &tulip_rect, NULL);//&tulip_rect);
     SDL_RenderPresent(fixed_fps_renderer);
 
     // Clean up and show
-    SDL_DestroyTexture(blit_texture);
+    //SDL_DestroyTexture(blit_texture);
     SDL_UpdateWindowSurface(window);
     display_frame_done_generic();
 
@@ -218,6 +249,9 @@ int unix_display_draw() {
     frame_ticks = get_ticks_ms();
     check_key();
     start_draw();
+    uint8_t *pixels;
+    int pitch;
+    SDL_LockTexture(framebuffer, NULL, (void**)&pixels, &pitch);
 
     // bounce the entire screen at once to the 332 color framebuffer
     for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
@@ -225,11 +259,15 @@ int unix_display_draw() {
             display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT, NULL);
             for (uint16_t row=0;row<FONT_HEIGHT;row++) {
                 for(uint16_t x=0;x<H_RES;x++) {
-                    pixels_332[((y+row)*surface_332->pitch)+x] = frame_bb[H_RES*row + x];
+                    pixels[((y+row)*pitch)+x] = frame_bb[H_RES*row + x];
+                    //pixels_332[((y+row)*surface_332->pitch)+x] = frame_bb[H_RES*row + x];
                 }
             }
         }
     }
+    SDL_UnlockTexture(framebuffer);
+
+    // Now copy framebuffer 
     end_draw();
     // Are we restarting the display for a mode change, or quitting
     if(unix_display_flag < 0) {

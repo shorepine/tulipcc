@@ -923,6 +923,8 @@ int main(int argc, char **argv) {
         } 
     }
     // Defaults for ipad/ios
+
+/*
     SDL_Window *window = NULL;
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
@@ -945,6 +947,8 @@ int main(int argc, char **argv) {
         SDL_DestroyWindow(window);
         SDL_Quit();
     }
+    */
+    
     fprintf(stderr,"display init\n");
     unix_display_init();
     fprintf(stderr,"display init done\n");
