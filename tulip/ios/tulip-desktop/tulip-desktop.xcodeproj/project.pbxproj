@@ -9,9 +9,6 @@
 /* Begin PBXBuildFile section */
 		9A9928892A6AD5730099DBC7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A9928882A6AD5730099DBC7 /* Assets.xcassets */; };
 		9A99288C2A6AD5730099DBC7 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9A99288A2A6AD5730099DBC7 /* LaunchScreen.storyboard */; };
-		9A9928BA2A6AD5EE0099DBC7 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928A52A6AD59E0099DBC7 /* SDL2.framework */; };
-		9A9928BB2A6AD5EE0099DBC7 /* SDL2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928A52A6AD59E0099DBC7 /* SDL2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		9A9928BE2A6AD6460099DBC7 /* SDL_uikit_main.c in Sources */ = {isa = PBXBuildFile; fileRef = 9A9928BD2A6AD6460099DBC7 /* SDL_uikit_main.c */; };
 		9A9928D92A6AE3ED0099DBC7 /* AVFAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928D82A6AE3ED0099DBC7 /* AVFAudio.framework */; };
 		9A9928DB2A6AE3F40099DBC7 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928DA2A6AE3F40099DBC7 /* AudioToolbox.framework */; };
 		9A9928DD2A6AE4070099DBC7 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928DC2A6AE4070099DBC7 /* Foundation.framework */; };
@@ -19,82 +16,85 @@
 		9A9928E12A6AE4110099DBC7 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928E02A6AE4110099DBC7 /* CoreFoundation.framework */; };
 		9A9928E32A6AE4160099DBC7 /* CoreMIDI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928E22A6AE4160099DBC7 /* CoreMIDI.framework */; };
 		9A9928E72A6AE88F0099DBC7 /* libmicropython.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A9928E62A6AE88F0099DBC7 /* libmicropython.a */; };
+		9AAE1E932A6DD02D00FD3A15 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AAE1E7F2A6DCF8B00FD3A15 /* SDL2.framework */; };
+		9AAE1E942A6DD02D00FD3A15 /* SDL2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9AAE1E7F2A6DCF8B00FD3A15 /* SDL2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9AAE1E962A6DD04300FD3A15 /* SDL_uikit_main.c in Sources */ = {isa = PBXBuildFile; fileRef = 9AAE1E952A6DD04300FD3A15 /* SDL_uikit_main.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		9A9928A22A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E7C2A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = BECDF66C0761BA81005FE872;
 			remoteInfo = Framework;
 		};
-		9A9928A42A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E7E2A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = A7D88B5423E2437C00DCD162;
 			remoteInfo = "Framework-iOS";
 		};
-		9A9928A62A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E802A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = A7D88D1523E24BED00DCD162;
 			remoteInfo = "Framework-tvOS";
 		};
-		9A9928A82A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E822A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = E2D187CF28A5673500D2B4F1;
 			remoteInfo = "xcFramework-iOS";
 		};
-		9A9928AA2A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E842A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = BECDF6B30761BA81005FE872;
 			remoteInfo = "Static Library";
 		};
-		9A9928AC2A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E862A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = A7D88E5423E24D3B00DCD162;
 			remoteInfo = "Static Library-iOS";
 		};
-		9A9928AE2A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E882A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = A769B23D23E259AE00872273;
 			remoteInfo = "Static Library-tvOS";
 		};
-		9A9928B02A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E8A2A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = DB31407717554B71006C0E22;
 			remoteInfo = "Shared Library";
 		};
-		9A9928B22A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E8C2A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = A75FCEB323E25AB700529352;
 			remoteInfo = "Shared Library-iOS";
 		};
-		9A9928B42A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E8E2A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = A75FD06C23E25AC700529352;
 			remoteInfo = "Shared Library-tvOS";
 		};
-		9A9928B62A6AD59E0099DBC7 /* PBXContainerItemProxy */ = {
+		9AAE1E902A6DCF8B00FD3A15 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+			containerPortal = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 			proxyType = 2;
 			remoteGlobalIDString = BECDF6BE0761BA81005FE872;
 			remoteInfo = "Standard DMG";
@@ -108,7 +108,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				9A9928BB2A6AD5EE0099DBC7 /* SDL2.framework in Embed Frameworks */,
+				9AAE1E942A6DD02D00FD3A15 /* SDL2.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -119,8 +119,6 @@
 		9A9928762A6AD5730099DBC7 /* tulip-desktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "tulip-desktop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		9A9928882A6AD5730099DBC7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9A99288B2A6AD5730099DBC7 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SDL.xcodeproj; path = "../../../../../ioslib/SDL-release-2.28.1/Xcode/SDL/SDL.xcodeproj"; sourceTree = "<group>"; };
-		9A9928BD2A6AD6460099DBC7 /* SDL_uikit_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_uikit_main.c; path = "../../../../../../ioslib/SDL-release-2.28.1/src/main/uikit/SDL_uikit_main.c"; sourceTree = "<group>"; };
 		9A9928D82A6AE3ED0099DBC7 /* AVFAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFAudio.framework; path = System/Library/Frameworks/AVFAudio.framework; sourceTree = SDKROOT; };
 		9A9928DA2A6AE3F40099DBC7 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		9A9928DC2A6AE4070099DBC7 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -128,6 +126,8 @@
 		9A9928E02A6AE4110099DBC7 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		9A9928E22A6AE4160099DBC7 /* CoreMIDI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMIDI.framework; path = System/Library/Frameworks/CoreMIDI.framework; sourceTree = SDKROOT; };
 		9A9928E62A6AE88F0099DBC7 /* libmicropython.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmicropython.a; path = "../build-standard/tulip/obj/libmicropython.a"; sourceTree = "<group>"; };
+		9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SDL.xcodeproj; path = "../SDL2-2.28.1/Xcode/SDL/SDL.xcodeproj"; sourceTree = "<group>"; };
+		9AAE1E952A6DD04300FD3A15 /* SDL_uikit_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_uikit_main.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -142,7 +142,7 @@
 				9A9928DD2A6AE4070099DBC7 /* Foundation.framework in Frameworks */,
 				9A9928DB2A6AE3F40099DBC7 /* AudioToolbox.framework in Frameworks */,
 				9A9928D92A6AE3ED0099DBC7 /* AVFAudio.framework in Frameworks */,
-				9A9928BA2A6AD5EE0099DBC7 /* SDL2.framework in Frameworks */,
+				9AAE1E932A6DD02D00FD3A15 /* SDL2.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -152,7 +152,7 @@
 		9A99286D2A6AD5730099DBC7 = {
 			isa = PBXGroup;
 			children = (
-				9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */,
+				9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */,
 				9A9928782A6AD5730099DBC7 /* tulip-desktop */,
 				9A9928772A6AD5730099DBC7 /* Products */,
 				9A9928B82A6AD5E10099DBC7 /* Frameworks */,
@@ -170,29 +170,11 @@
 		9A9928782A6AD5730099DBC7 /* tulip-desktop */ = {
 			isa = PBXGroup;
 			children = (
-				9A9928BD2A6AD6460099DBC7 /* SDL_uikit_main.c */,
+				9AAE1E952A6DD04300FD3A15 /* SDL_uikit_main.c */,
 				9A9928882A6AD5730099DBC7 /* Assets.xcassets */,
 				9A99288A2A6AD5730099DBC7 /* LaunchScreen.storyboard */,
 			);
 			path = "tulip-desktop";
-			sourceTree = "<group>";
-		};
-		9A9928952A6AD59D0099DBC7 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				9A9928A32A6AD59E0099DBC7 /* SDL2.framework */,
-				9A9928A52A6AD59E0099DBC7 /* SDL2.framework */,
-				9A9928A72A6AD59E0099DBC7 /* SDL2.framework */,
-				9A9928A92A6AD59E0099DBC7 /* SDL2.framework */,
-				9A9928AB2A6AD59E0099DBC7 /* libSDL2.a */,
-				9A9928AD2A6AD59E0099DBC7 /* libSDL2.a */,
-				9A9928AF2A6AD59E0099DBC7 /* libSDL2.a */,
-				9A9928B12A6AD59E0099DBC7 /* libSDL2.dylib */,
-				9A9928B32A6AD59E0099DBC7 /* libSDL2.dylib */,
-				9A9928B52A6AD59E0099DBC7 /* libSDL2.dylib */,
-				9A9928B72A6AD59E0099DBC7 /* SDL2 */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 		9A9928B82A6AD5E10099DBC7 /* Frameworks */ = {
@@ -207,6 +189,24 @@
 				9A9928D82A6AE3ED0099DBC7 /* AVFAudio.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		9AAE1E6F2A6DCF8B00FD3A15 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				9AAE1E7D2A6DCF8B00FD3A15 /* SDL2.framework */,
+				9AAE1E7F2A6DCF8B00FD3A15 /* SDL2.framework */,
+				9AAE1E812A6DCF8B00FD3A15 /* SDL2.framework */,
+				9AAE1E832A6DCF8B00FD3A15 /* SDL2.framework */,
+				9AAE1E852A6DCF8B00FD3A15 /* libSDL2.a */,
+				9AAE1E872A6DCF8B00FD3A15 /* libSDL2.a */,
+				9AAE1E892A6DCF8B00FD3A15 /* libSDL2.a */,
+				9AAE1E8B2A6DCF8B00FD3A15 /* libSDL2.dylib */,
+				9AAE1E8D2A6DCF8B00FD3A15 /* libSDL2.dylib */,
+				9AAE1E8F2A6DCF8B00FD3A15 /* libSDL2.dylib */,
+				9AAE1E912A6DCF8B00FD3A15 /* SDL2 */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -257,8 +257,8 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = 9A9928952A6AD59D0099DBC7 /* Products */;
-					ProjectRef = 9A9928942A6AD59D0099DBC7 /* SDL.xcodeproj */;
+					ProductGroup = 9AAE1E6F2A6DCF8B00FD3A15 /* Products */;
+					ProjectRef = 9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */;
 				},
 			);
 			projectRoot = "";
@@ -269,81 +269,81 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		9A9928A32A6AD59E0099DBC7 /* SDL2.framework */ = {
+		9AAE1E7D2A6DCF8B00FD3A15 /* SDL2.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
 			path = SDL2.framework;
-			remoteRef = 9A9928A22A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E7C2A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928A52A6AD59E0099DBC7 /* SDL2.framework */ = {
+		9AAE1E7F2A6DCF8B00FD3A15 /* SDL2.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
 			path = SDL2.framework;
-			remoteRef = 9A9928A42A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E7E2A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928A72A6AD59E0099DBC7 /* SDL2.framework */ = {
+		9AAE1E812A6DCF8B00FD3A15 /* SDL2.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
 			path = SDL2.framework;
-			remoteRef = 9A9928A62A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E802A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928A92A6AD59E0099DBC7 /* SDL2.framework */ = {
+		9AAE1E832A6DCF8B00FD3A15 /* SDL2.framework */ = {
 			isa = PBXReferenceProxy;
 			fileType = wrapper.framework;
 			path = SDL2.framework;
-			remoteRef = 9A9928A82A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E822A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928AB2A6AD59E0099DBC7 /* libSDL2.a */ = {
+		9AAE1E852A6DCF8B00FD3A15 /* libSDL2.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libSDL2.a;
-			remoteRef = 9A9928AA2A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E842A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928AD2A6AD59E0099DBC7 /* libSDL2.a */ = {
+		9AAE1E872A6DCF8B00FD3A15 /* libSDL2.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libSDL2.a;
-			remoteRef = 9A9928AC2A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E862A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928AF2A6AD59E0099DBC7 /* libSDL2.a */ = {
+		9AAE1E892A6DCF8B00FD3A15 /* libSDL2.a */ = {
 			isa = PBXReferenceProxy;
 			fileType = archive.ar;
 			path = libSDL2.a;
-			remoteRef = 9A9928AE2A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E882A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928B12A6AD59E0099DBC7 /* libSDL2.dylib */ = {
+		9AAE1E8B2A6DCF8B00FD3A15 /* libSDL2.dylib */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.dylib";
 			path = libSDL2.dylib;
-			remoteRef = 9A9928B02A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E8A2A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928B32A6AD59E0099DBC7 /* libSDL2.dylib */ = {
+		9AAE1E8D2A6DCF8B00FD3A15 /* libSDL2.dylib */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.dylib";
 			path = libSDL2.dylib;
-			remoteRef = 9A9928B22A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E8C2A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928B52A6AD59E0099DBC7 /* libSDL2.dylib */ = {
+		9AAE1E8F2A6DCF8B00FD3A15 /* libSDL2.dylib */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.dylib";
 			path = libSDL2.dylib;
-			remoteRef = 9A9928B42A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E8E2A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		9A9928B72A6AD59E0099DBC7 /* SDL2 */ = {
+		9AAE1E912A6DCF8B00FD3A15 /* SDL2 */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.executable";
 			path = SDL2;
-			remoteRef = 9A9928B62A6AD59E0099DBC7 /* PBXContainerItemProxy */;
+			remoteRef = 9AAE1E902A6DCF8B00FD3A15 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -365,7 +365,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9A9928BE2A6AD6460099DBC7 /* SDL_uikit_main.c in Sources */,
+				9AAE1E962A6DD04300FD3A15 /* SDL_uikit_main.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -503,7 +503,7 @@
 				DEVELOPMENT_TEAM = Y6CQ3JU8G4;
 				GENERATE_INFOPLIST_FILE = YES;
 				GENERATE_MASTER_OBJECT_FILE = NO;
-				"HEADER_SEARCH_PATHS[arch=*]" = "\"$(SRCROOT)/../../../../../ioslib/SDL-release-2.28.1/include\"";
+				"HEADER_SEARCH_PATHS[arch=*]" = "\"$(SRCROOT)/../SDL2-2.28.1/include\"";
 				INFOPLIST_KEY_CFBundleDisplayName = Tulip;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -542,7 +542,7 @@
 				DEVELOPMENT_TEAM = Y6CQ3JU8G4;
 				GENERATE_INFOPLIST_FILE = YES;
 				GENERATE_MASTER_OBJECT_FILE = NO;
-				"HEADER_SEARCH_PATHS[arch=*]" = "\"$(SRCROOT)/../../../../../ioslib/SDL-release-2.28.1/include\"";
+				"HEADER_SEARCH_PATHS[arch=*]" = "\"$(SRCROOT)/../SDL2-2.28.1/include\"";
 				INFOPLIST_KEY_CFBundleDisplayName = Tulip;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

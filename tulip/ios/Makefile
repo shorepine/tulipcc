@@ -72,8 +72,7 @@ CFLAGS += -g -D__TULIP_IOS__
 ifndef DEBUG
 CFLAGS += -U _FORTIFY_SOURCE
 endif
-#TOOLCHAIN = iphonesimulator
-TOOLCHAIN = iphoneos
+TOOLCHAIN ?= iphonesimulator
 CC = xcrun --sdk $(TOOLCHAIN) --toolchain $(TOOLCHAIN) clang 
 COBJC = xcrun --sdk $(TOOLCHAIN) --toolchain $(TOOLCHAIN) clang -x objective-c
 # Use clang syntax for map file

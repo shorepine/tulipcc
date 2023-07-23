@@ -4,23 +4,29 @@ Work in progress
 
 ```
 cd tulip/ios
-make lib # creates build-standard/tulip/obj/libmicropython.a
+./build-simulator.sh
+./build-simulator.sh Debug
+./build-device.sh
+./build-device.sh debug
 ```
 
-Get the SDL release zip file and put it in ~/ioslib/ (TODO, put it here instead)
+Will pull down SDL on first run. 
 
-Then go into the xcode project and build, which links the .a to a normal iOS .app
-
-We could do this all from the command line (my preferred) with `xcrun` or `xcodebuild`. 
+It will build micropython/Tulip as a static lib, then run xcode and open the simulator
 
 TODOs:
- - download/move SDL into here -- or share SDL among the ports?
- - get simulator/real device build as a makefile parameter
- - debug/release setting as well
- - pass off makefile build to xcode via `./build.sh`
+ - XXX download/move SDL into here -- or share SDL among the ports?
+ - XXX get simulator/real device build as a makefile parameter
+ - XXX debug/release setting as well
+ - XXX pass off makefile build to xcode via `./build.sh`
+ - Keyboard crasher on first launch
+ - install / run on device
  - soft keyboard is not returning symbols to Tulip, like `(` etc  (hard keyboard works)
  - screen size is not using hidpi -- for phone this is required
  - load example filesystem on first boot to Documents folder
  - MIDI
+ - test touch
+
+
 
 
