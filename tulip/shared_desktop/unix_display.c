@@ -6,19 +6,19 @@
 #include "ui.h"
 SDL_Window *window;
 SDL_Surface *window_surface;
-//SDL_Surface *surface_332;
 SDL_Renderer *fixed_fps_renderer;
 SDL_GameController *gp;
 SDL_Rect tulip_rect;
 SDL_Rect screen_rect;
+SDL_Rect viewport;
 SDL_Texture *framebuffer;
-
-uint8_t *pixels_332;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
 int64_t frame_ticks = 0;
 int8_t unix_display_flag = 0;
 SDL_Keymod last_held_mod;
+int drawable_w = 0;
+int drawable_h = 0;
 
 
 void unix_set_fps_from_parameters() {
@@ -67,7 +67,6 @@ void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3, ui
     TFB_ROWS = (V_RES_D/FONT_HEIGHT);
     TFB_COLS = (H_RES_D/FONT_WIDTH);
     BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
-
     unix_display_flag = -2; // restart display with new timings
 }
 
@@ -90,18 +89,15 @@ void init_window(uint16_t w, uint16_t h) {
     if (window == NULL) {
         fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
     } else {
-        int mh, mw, rw, rh;
-        /*
-        1180 820
-        surface is 2360 1640
-        */
-        SDL_GL_GetDrawableSize(window, &mw, &mh);
-        fprintf(stderr, "drawable area is %d %d\n", mw, mh);
+        int rw, rh;
+        // This returns points
+        SDL_GL_GetDrawableSize(window, &drawable_w, &drawable_h);
+        fprintf(stderr, "drawable area is %d %d\n", drawable_w, drawable_h);
         window_surface = SDL_GetWindowSurface(window);
-        //surface_332 = SDL_ConvertSurfaceFormat(window_surface, SDL_PIXELFORMAT_RGB332, 0);
-        //fprintf(stderr, "surface is %d %d\n", surface_332->w, surface_332->h);
         fixed_fps_renderer = SDL_CreateSoftwareRenderer( window_surface);
+        // This returns hidpi pixels
         SDL_GetRendererOutputSize(fixed_fps_renderer, &rw, &rh);
+        fprintf(stderr, "renderer output size is %d %d\n", rw, rh);
 
         tulip_rect.x = 0; 
         tulip_rect.y = 0; 
@@ -113,17 +109,20 @@ void init_window(uint16_t w, uint16_t h) {
         screen_rect.w = rw; 
         screen_rect.h = rh; 
 
-        framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, w,h);
-
-        if(rw != w) {
-            //float ws = (float)rw / (float)w;
-            //float hs = (float)rh / (float)h;
-            //fprintf(stderr, "Setting render scale to %f %f\n", ws, hs);
-            //SDL_RenderSetScale(fixed_fps_renderer, ws, hs);
+        if(screen_rect.w > screen_rect.h) { // iOS landscape
+            viewport.w = (int)((float)H_RES * ((float)screen_rect.h / (float)V_RES));
+            viewport.h = screen_rect.h;
+            viewport.y = 0;
+            viewport.x = (screen_rect.w - viewport.w)/2;
+        } else { // iOS portrait mode
+            viewport.h = (int)((float)V_RES * ((float)screen_rect.w / (float)H_RES));
+            viewport.w = screen_rect.w;
+            viewport.y = 200; // under the notch. don't center, bc of keyboard
+            viewport.x = 0;  
         }
-        //pixels_332 = (uint8_t*) surface_332->pixels;
+
+        framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, w,h);
     }
-    //memset(pixels_332, 0, surface_332->pitch * V_RES);
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
@@ -188,6 +187,17 @@ void check_key() {
             if(!skip && pos < 8) {
                 last_scan[pos] = key.keysym.scancode;
             }
+        } else if( e.type == SDL_WINDOWEVENT ) {
+            fprintf(stderr, "window event\n");
+            //Window resize/orientation change
+            if( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e.window.event == SDL_WINDOWEVENT_RESIZED) {
+                fprintf(stderr, "window size changed to %d %d\n", e.window.data1, e.window.data2);
+                if(e.window.data1 != drawable_w || e.window.data2 != drawable_h) {
+                    fprintf(stderr, "different than existing %d %d\n", drawable_w, drawable_h);
+                    // restart display
+                    unix_display_flag = -2;
+                }
+            }
         }
         if(e.type == SDL_KEYUP) {
             SDL_KeyboardEvent key = e.key; 
@@ -217,38 +227,10 @@ void check_key() {
 }
 
 
-void start_draw() { 
-    //SDL_LockSurface(surface_332); 
-
-}
-
-// Using our non-vsync software renderer, blit the surface into a texture and then out to the window
-void end_draw() {
-    //SDL_UnlockSurface(surface_332);
-
-    //SDL_Texture *blit_texture = SDL_CreateTextureFromSurface(fixed_fps_renderer, surface_332);
-    //SDL_RenderCopy(fixed_fps_renderer, blit_texture, &tulip_rect, NULL);//&tulip_rect);
-    SDL_RenderCopy(fixed_fps_renderer, framebuffer, &tulip_rect, NULL);//&tulip_rect);
-    SDL_RenderPresent(fixed_fps_renderer);
-
-    // Clean up and show
-    //SDL_DestroyTexture(blit_texture);
-    SDL_UpdateWindowSurface(window);
-    display_frame_done_generic();
-
-    int64_t ticks_per_frame_ms = (int64_t) (1000.0 / reported_fps);
-
-    //If frame finished early according to our FPS clock, pause a bit (still processing keys) until it's time
-    while(get_ticks_ms() - frame_ticks < ticks_per_frame_ms) {
-        SDL_Delay(1);
-        check_key();
-    }
-}
 
 int unix_display_draw() {
     frame_ticks = get_ticks_ms();
     check_key();
-    start_draw();
     uint8_t *pixels;
     int pitch;
     SDL_LockTexture(framebuffer, NULL, (void**)&pixels, &pitch);
@@ -260,17 +242,31 @@ int unix_display_draw() {
             for (uint16_t row=0;row<FONT_HEIGHT;row++) {
                 for(uint16_t x=0;x<H_RES;x++) {
                     pixels[((y+row)*pitch)+x] = frame_bb[H_RES*row + x];
-                    //pixels_332[((y+row)*surface_332->pitch)+x] = frame_bb[H_RES*row + x];
                 }
             }
         }
     }
     SDL_UnlockTexture(framebuffer);
 
-    // Now copy framebuffer 
-    end_draw();
+    // Copy the framebuffer (and stretch if needed into the renderer)
+    SDL_RenderCopy(fixed_fps_renderer, framebuffer, &tulip_rect, &viewport);
+    SDL_RenderPresent(fixed_fps_renderer);
+
+    // Clean up and show
+    SDL_UpdateWindowSurface(window);
+    display_frame_done_generic();
+
+    int64_t ticks_per_frame_ms = (int64_t) (1000.0 / reported_fps);
+
+    //If frame finished early according to our FPS clock, pause a bit (still processing keys) until it's time
+    while(get_ticks_ms() - frame_ticks < ticks_per_frame_ms) {
+        SDL_Delay(1);
+        check_key();
+    }
+
     // Are we restarting the display for a mode change, or quitting
     if(unix_display_flag < 0) {
+        fprintf(stderr, "shutting down because of flag %d\n", unix_display_flag);
         SDL_DestroyWindow(window);
         SDL_Quit();
         display_teardown();

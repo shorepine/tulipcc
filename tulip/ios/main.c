@@ -922,33 +922,7 @@ int main(int argc, char **argv) {
                 break; 
         } 
     }
-    // Defaults for ipad/ios
 
-/*
-    SDL_Window *window = NULL;
-
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
-        fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-    } else {
-        window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
-                                SDL_WINDOWPOS_UNDEFINED, 1180, 820,
-                                SDL_WINDOW_SHOWN |  SDL_WINDOW_FULLSCREEN_DESKTOP);
-    }
-    if (window == NULL) {
-        fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
-    } else {
-        int mh, mw;
-        SDL_GL_GetDrawableSize(window, &mw, &mh);
-        fprintf(stderr, "drawable is %d %d\n", mw, mh);
-        H_RES = mw;
-        V_RES = mh;
-        H_RES_D = DEFAULT_H_RES;
-        V_RES_D = DEFAULT_V_RES;
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-    }
-    */
-    
     fprintf(stderr,"display init\n");
     unix_display_init();
     fprintf(stderr,"display init done\n");
@@ -975,6 +949,7 @@ display_jump:
         c = unix_display_draw();
     }
     if(c==-2) {
+        fprintf(stderr,"restarting display\n");
         // signal to restart display after a timing change
         unix_display_init();
         c=0;

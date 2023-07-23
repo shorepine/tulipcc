@@ -19,11 +19,12 @@ TODOs:
  - XXX get simulator/real device build as a makefile parameter
  - XXX debug/release setting as well
  - XXX pass off makefile build to xcode via `./build.sh`
- - Keyboard crasher on first launch
+ - XXX Keyboard crasher on first launch
  - install / run on device
  - soft keyboard is not returning symbols to Tulip, like `(` etc  (hard keyboard works)
- - screen size is not using hidpi -- for phone this is required
+ - XXX screen size is not using hidpi -- for phone this is required
  - load example filesystem on first boot to Documents folder
+ - reload display when rotation changes
  - MIDI
  - test touch
 
