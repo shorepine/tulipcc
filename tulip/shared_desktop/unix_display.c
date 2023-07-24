@@ -78,11 +78,11 @@ void init_window(uint16_t w, uint16_t h) {
 #ifdef __TULIP_IOS__
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED, w, h,
-                                SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP);
+                                SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP);
 #else
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED, w, h,
-                                SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
+                                SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
 #endif
     }
@@ -109,9 +109,25 @@ void init_window(uint16_t w, uint16_t h) {
         screen_rect.w = rw; 
         screen_rect.h = rh; 
 
+        /*
+            drawable area is 1180 820
+            renderer output size is 2360 1640
+            setting viewport to -219 0 2798 1640
+        Oh right. Tulip is not the same ratio as iOS devices.    
+        Get the smaller res (h if landscape, w if portrait), and do tulip ratio from there
+        One of the width or the height is non-letterboxed. Calculate the ratio for width and height separately 1024/dev_w, 600/dev_h. 
+        These are the scaling from tulip pixels to dev pixels. You keep the smaller of the two; imposing it does the letter box 
+        Then the letterbox start is (orig_tulip_screen_ratio - imposed_ratio)*Dev_size/tulip_size/2
+        Or something like that. I think I got the ratios upside down but the point is you calculate the scaling both ways
+        and take the one that ends up with smaller display
+        */
+        
+        float tulip_wh_ratio = (float)H_RES/(float)V_RES;
         if(screen_rect.w > screen_rect.h) { // iOS landscape
-            viewport.w = (int)((float)H_RES * ((float)screen_rect.h / (float)V_RES));
-            viewport.h = screen_rect.h;
+            viewport.h = screen_rect.h; // fixed
+            viewport.w = (int)((float)viewport.h*tulip_wh_ratio);
+            //viewport.w = (int)((float)H_RES * ((float)screen_rect.h / (float)V_RES));
+
             viewport.y = 0;
             viewport.x = (screen_rect.w - viewport.w)/2;
         } else { // iOS portrait mode
@@ -120,7 +136,7 @@ void init_window(uint16_t w, uint16_t h) {
             viewport.y = 200; // under the notch. don't center, bc of keyboard
             viewport.x = 0;  
         }
-
+        fprintf(stderr, "setting viewport to %d %d %d %d\n", viewport.x, viewport.y, viewport.w, viewport.h);
         framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, w,h);
     }
     // If this is not set it prevents sleep on a mac (at least)
