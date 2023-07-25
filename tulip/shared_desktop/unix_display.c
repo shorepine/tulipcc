@@ -183,6 +183,9 @@ uint16_t check_joy() {
 
 uint8_t store_shift = 0;
 
+// it looks like from the perspective of tulip on iOS only ' and " come out as textinput only. 
+// so we can use keydown always (storing the shift when we get it) 225/229
+// and then only accept unicode from textinput , ' '
 void check_key() {
 #ifndef MONITOR_APPLE 
     SDL_Event e;
@@ -192,6 +195,7 @@ void check_key() {
             unix_display_flag = -1; // tell main to quit
         } else if(e.type == SDL_TEXTINPUT) {
             #ifdef __TULIP_IOS__
+                //fprintf(stderr, "textinput %d %d %d\n", e.text.text[0], e.text.text[1], e.text.text[2]);
                 if(e.text.text[0]==-30) { // utf8, either ' or "
                     if(e.text.text[2]==-99 || e.text.text[2]==-100) { // double quote
                         send_key_to_micropython(34);
@@ -199,34 +203,30 @@ void check_key() {
                     if(e.text.text[2]==-103 || e.text.text[2]==-104) { // single quote 
                         send_key_to_micropython(39);
                     }
-                } else { // ascii 
-                    send_key_to_micropython(e.text.text[0]);
                 }
             #endif
         } else if(e.type == SDL_KEYDOWN) {
             last_held_mod = SDL_GetModState();
             SDL_KeyboardEvent key = e.key; 
-            #ifndef __TULIP_IOS__
-                if(key.keysym.scancode >= 0x04 && key.keysym.scancode <= 0x94) {
-                    send_key_to_micropython(scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod));
-                }
-                uint8_t skip = 0;
-                uint8_t pos = 10;
-                for(uint8_t i=2;i<8;i++) {
-                    if(last_scan[i] == key.keysym.scancode) { skip = 1; }
-                    if(pos == 10 && last_scan[i] == 0) { pos = i; }
-                }
-                if(!skip && pos < 8) {
-                    last_scan[pos] = key.keysym.scancode;
-                }
-            #else
-                uint8_t s = key.keysym.scancode;
-                if(s==KEY_ENTER || s==KEY_BACKSPACE || s==KEY_TAB) {
-                    send_key_to_micropython(scan_ascii(s, 0));
-                }
-            #endif
+            //fprintf(stderr, "keydown %d %d = %d\n", key.keysym.scancode, last_held_mod, scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod));
+            if(key.keysym.scancode == 225 || key.keysym.scancode == 229) {
+                #ifdef __TULIP_IOS__
+                store_shift = 1;
+                #endif
+            } else if(key.keysym.scancode >= 0x04 && key.keysym.scancode <= 0x94) {
+                send_key_to_micropython(scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod+store_shift));
+                store_shift = 0;
+            }
+            uint8_t skip = 0;
+            uint8_t pos = 10;
+            for(uint8_t i=2;i<8;i++) {
+                if(last_scan[i] == key.keysym.scancode) { skip = 1; }
+                if(pos == 10 && last_scan[i] == 0) { pos = i; }
+            }
+            if(!skip && pos < 8) {
+                last_scan[pos] = key.keysym.scancode;
+            }
         } else if( e.type == SDL_WINDOWEVENT ) {
-            fprintf(stderr, "window event\n");
             //Window resize/orientation change
             if( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e.window.event == SDL_WINDOWEVENT_RESIZED) {
                 fprintf(stderr, "window size changed to %d %d\n", e.window.data1, e.window.data2);

@@ -184,7 +184,8 @@ SRC_CXX += \
 	$(SRC_MOD_CXX)
 
 SRC_M = \
-	libminiaudio.m
+	libminiaudio.m \
+	virtualmidi.m
 
 
 OBJ = $(PY_O)

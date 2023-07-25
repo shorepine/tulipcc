@@ -932,7 +932,12 @@ int main(int argc, char **argv) {
                 break; 
         } 
     }
-
+    /*
+    H_RES = 430;
+    V_RES = 466;
+    H_RES_D = H_RES;//400;
+    V_RES_D = V_RES;//480; 
+    */
     fprintf(stderr,"display init\n");
     unix_display_init();
     fprintf(stderr,"display init done\n");
