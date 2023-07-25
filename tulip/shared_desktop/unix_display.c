@@ -72,6 +72,8 @@ void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3, ui
 
 
 void init_window(uint16_t w, uint16_t h) {
+    uint8_t is_ipad = 0;
+    uint8_t is_iphone = 0;
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
         fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
     } else {
@@ -79,6 +81,10 @@ void init_window(uint16_t w, uint16_t h) {
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED, w, h,
                                 SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP);
+        /*
+            if(UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) is_ipad = 1;
+            if(UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) is_iphone = 1;
+        */
 #else
         window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                                 SDL_WINDOWPOS_UNDEFINED, w, h,
@@ -109,32 +115,27 @@ void init_window(uint16_t w, uint16_t h) {
         screen_rect.w = rw; 
         screen_rect.h = rh; 
 
-        /*
-            drawable area is 1180 820
-            renderer output size is 2360 1640
-            setting viewport to -219 0 2798 1640
-        Oh right. Tulip is not the same ratio as iOS devices.    
-        Get the smaller res (h if landscape, w if portrait), and do tulip ratio from there
-        One of the width or the height is non-letterboxed. Calculate the ratio for width and height separately 1024/dev_w, 600/dev_h. 
-        These are the scaling from tulip pixels to dev pixels. You keep the smaller of the two; imposing it does the letter box 
-        Then the letterbox start is (orig_tulip_screen_ratio - imposed_ratio)*Dev_size/tulip_size/2
-        Or something like that. I think I got the ratios upside down but the point is you calculate the scaling both ways
-        and take the one that ends up with smaller display
-        */
-        
-        float tulip_wh_ratio = (float)H_RES/(float)V_RES;
-        if(screen_rect.w > screen_rect.h) { // iOS landscape
-            viewport.h = screen_rect.h; // fixed
-            viewport.w = (int)((float)viewport.h*tulip_wh_ratio);
-            //viewport.w = (int)((float)H_RES * ((float)screen_rect.h / (float)V_RES));
 
-            viewport.y = 0;
-            viewport.x = (screen_rect.w - viewport.w)/2;
-        } else { // iOS portrait mode
-            viewport.h = (int)((float)V_RES * ((float)screen_rect.w / (float)H_RES));
-            viewport.w = screen_rect.w;
-            viewport.y = 200; // under the notch. don't center, bc of keyboard
-            viewport.x = 0;  
+        float w_ratio = (float)screen_rect.w / (float)tulip_rect.w;
+        float h_ratio = (float)screen_rect.h / (float)tulip_rect.h;
+        if(w_ratio > h_ratio) {
+            w_ratio = h_ratio;
+        } else {
+            h_ratio = w_ratio;
+        }
+        viewport.w = (int)((float)tulip_rect.w * w_ratio);
+        viewport.h = (int)((float)tulip_rect.h * h_ratio);
+        viewport.x = (screen_rect.w - viewport.w) / 2;
+        if(screen_rect.w > screen_rect.h) { // iOS landscape
+            if(is_iphone) {
+                viewport.y = 0;
+            } else if (is_ipad) {
+                viewport.y = 50; // under the bezel
+            } else {
+                viewport.y = 0;
+            }
+        } else {
+            viewport.y = 200; // under the notch
         }
         fprintf(stderr, "setting viewport to %d %d %d %d\n", viewport.x, viewport.y, viewport.w, viewport.h);
         framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, w,h);
@@ -180,6 +181,7 @@ uint16_t check_joy() {
     return last_held_joy_mask;
 }
 
+uint8_t store_shift = 0;
 
 void check_key() {
 #ifndef MONITOR_APPLE 
@@ -188,21 +190,41 @@ void check_key() {
     while (SDL_PollEvent(&e) != 0) {
         if (e.type == SDL_QUIT) {
             unix_display_flag = -1; // tell main to quit
+        } else if(e.type == SDL_TEXTINPUT) {
+            #ifdef __TULIP_IOS__
+                if(e.text.text[0]==-30) { // utf8, either ' or "
+                    if(e.text.text[2]==-99 || e.text.text[2]==-100) { // double quote
+                        send_key_to_micropython(34);
+                    }
+                    if(e.text.text[2]==-103 || e.text.text[2]==-104) { // single quote 
+                        send_key_to_micropython(39);
+                    }
+                } else { // ascii 
+                    send_key_to_micropython(e.text.text[0]);
+                }
+            #endif
         } else if(e.type == SDL_KEYDOWN) {
             last_held_mod = SDL_GetModState();
             SDL_KeyboardEvent key = e.key; 
-            if(key.keysym.scancode >= 0x04 && key.keysym.scancode <= 0x94) {
-                send_key_to_micropython(scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod));
-            }
-            uint8_t skip = 0;
-            uint8_t pos = 10;
-            for(uint8_t i=2;i<8;i++) {
-                if(last_scan[i] == key.keysym.scancode) { skip = 1; }
-                if(pos == 10 && last_scan[i] == 0) { pos = i; }
-            }
-            if(!skip && pos < 8) {
-                last_scan[pos] = key.keysym.scancode;
-            }
+            #ifndef __TULIP_IOS__
+                if(key.keysym.scancode >= 0x04 && key.keysym.scancode <= 0x94) {
+                    send_key_to_micropython(scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod));
+                }
+                uint8_t skip = 0;
+                uint8_t pos = 10;
+                for(uint8_t i=2;i<8;i++) {
+                    if(last_scan[i] == key.keysym.scancode) { skip = 1; }
+                    if(pos == 10 && last_scan[i] == 0) { pos = i; }
+                }
+                if(!skip && pos < 8) {
+                    last_scan[pos] = key.keysym.scancode;
+                }
+            #else
+                uint8_t s = key.keysym.scancode;
+                if(s==KEY_ENTER || s==KEY_BACKSPACE || s==KEY_TAB) {
+                    send_key_to_micropython(scan_ascii(s, 0));
+                }
+            #endif
         } else if( e.type == SDL_WINDOWEVENT ) {
             fprintf(stderr, "window event\n");
             //Window resize/orientation change

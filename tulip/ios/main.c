@@ -91,7 +91,17 @@ long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 extern int unix_display_draw(); 
 extern void unix_display_init();
 
+int ios_keyboard_y = -1;
 
+#if __cplusplus
+    extern "C" {
+#endif
+void update_keyboard_y(int y) {
+    ios_keyboard_y = y;
+}
+#if __cplusplus
+    }
+#endif
 void display_print_strn(void *env, const char *str, size_t len) {
     (void)env;
     if(len) {
