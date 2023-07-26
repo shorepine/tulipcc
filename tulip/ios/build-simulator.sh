@@ -6,8 +6,8 @@ source ../shared/grab_submodules.sh
 
 SCHEME=Release # override by giving this script any parameter
 
-IOS_SIM_DEVICE='iPad (10th generation)'
-#IOS_SIM_DEVICE='iPhone 14 Pro'
+#IOS_SIM_DEVICE='iPad (10th generation)'
+IOS_SIM_DEVICE='iPhone 14 Pro'
 
 IOS_SIM_UDID=`findsimulator -o ios -m latest "${IOS_SIM_DEVICE}" | grep -o ".\{36\}$"`
 IOS_SIM_DESTINATION=`findsimulator -o ios -m latest "${IOS_SIM_DEVICE}"`

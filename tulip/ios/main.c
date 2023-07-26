@@ -916,6 +916,10 @@ void warmup_display(int frames) {
 }
 
 extern void ios_copy_fs();
+extern void ios_draw_text(float x, float y, float w, float h, char *text) ;
+extern SDL_Rect button_bar;
+extern float viewport_scale;
+#define BUTTON_BAR_TEXT "  ⌃    ⇥    ␛    ◁     △    ▷    ▽"
 
 int main(int argc, char **argv) {
     // Get the resources folder loc
@@ -952,7 +956,7 @@ int main(int argc, char **argv) {
         } 
     }
 
-    // This will do this every time. Maybe only on first boot?
+    // This will do this every time. Maybe only on first boot? It's fast enough
     ios_copy_fs();
 
     int c = 0;
@@ -978,7 +982,9 @@ int main(int argc, char **argv) {
     delay_ms(500);
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
+    fprintf(stderr, "drawing text with button bar to %d %d %d %d\n", button_bar.x,button_bar.y,button_bar.w,button_bar.h);
 
+    ios_draw_text(0,button_bar.y/viewport_scale - 20,800,100,BUTTON_BAR_TEXT);
 
 display_jump: 
     while(c>=0) {
@@ -989,6 +995,8 @@ display_jump:
         fprintf(stderr,"restarting display\n");
         // signal to restart display after a timing change
         unix_display_init();
+        ios_draw_text(0,button_bar.y/viewport_scale - 20,800,100,BUTTON_BAR_TEXT);
+
         c=0;
         goto display_jump;
     }

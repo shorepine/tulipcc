@@ -42,8 +42,9 @@ TODOs:
  - XXX use keyboard height to set screen size
  - XXX fill up display nicely with default H_RES/V_RES and give option to go into 1:1 tulip mode (or just tulip.default_display())
  - XXX load example filesystem on first boot to Documents folder
- - control-C, arrow keys, tab as soft buttons above keyboard
- - touch
+ - XXX touch
+ - XXX control-C, arrow keys, tab, esc as soft buttons above keyboard
+ - startup display crasher
  - testflight
 
 

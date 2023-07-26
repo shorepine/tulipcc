@@ -4,6 +4,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import "SDL_uikitviewcontroller.h"
+#import <UIKit/UIKit.h>
 
 extern SDL_Window *window;
 
@@ -44,6 +45,26 @@ int get_keyboard_y()
     UIWindow * appWindow = systemWindowInfo.info.uikit.window;
     SDL_uikitviewcontroller * vc = (SDL_uikitviewcontroller * )appWindow.rootViewController;
     int keybottom = vc.view.bounds.size.height - vc.keyboardHeight;
+
     return keybottom;
+}
+
+void ios_draw_text(float x, float y, float w, float h, char *text) {
+    UILabel *lbl1 = [[UILabel alloc] init];
+    [lbl1 setFont:[UIFont systemFontOfSize:30]];
+    lbl1.textColor = [UIColor blackColor];
+    [lbl1 setFrame:CGRectMake(x,y,w,h)];
+    lbl1.backgroundColor=[UIColor clearColor];
+    lbl1.textColor=[UIColor blackColor];
+    lbl1.userInteractionEnabled=NO;
+    lbl1.text= [NSString stringWithCString:text encoding:NSUTF8StringEncoding];
+
+    SDL_SysWMinfo systemWindowInfo;
+    SDL_VERSION(&systemWindowInfo.version);
+    SDL_GetWindowWMInfo(window, &systemWindowInfo);
+    UIWindow * appWindow = systemWindowInfo.info.uikit.window;
+    SDL_uikitviewcontroller * vc = (SDL_uikitviewcontroller * )appWindow.rootViewController;
+
+    [vc.view addSubview:lbl1];
 }
 
