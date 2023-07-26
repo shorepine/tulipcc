@@ -8,9 +8,9 @@ SDL_Window *window;
 SDL_Surface *window_surface;
 SDL_Renderer *fixed_fps_renderer;
 SDL_GameController *gp;
-SDL_Rect tulip_rect;
-SDL_Rect screen_rect;
 SDL_Rect viewport;
+SDL_Rect tulip_rect;
+SDL_Rect button_bar;
 SDL_Texture *framebuffer;
 uint8_t *frame_bb;
 #define BYTES_PER_PIXEL 1
@@ -19,6 +19,12 @@ int8_t unix_display_flag = 0;
 SDL_Keymod last_held_mod;
 int drawable_w = 0;
 int drawable_h = 0;
+int keyboard_top_y = 0;
+float viewport_scale = 1.0;
+
+extern int get_keyboard_y();
+extern uint8_t is_iphone();
+extern uint8_t is_ipad();
 
 
 void unix_set_fps_from_parameters() {
@@ -70,80 +76,103 @@ void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3, ui
     unix_display_flag = -2; // restart display with new timings
 }
 
+// Compute the viewport and optionally new optimal Tulip size for this display 
+void compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
+    int sw = tw;
+    int sh = th;
+    #ifdef __TULIP_IOS__
+        // Boot up an SDL window so we can get the device size
+        SDL_Window *query_window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
+                SDL_WINDOWPOS_UNDEFINED, tw, th,
+                SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP);
+        SDL_Surface *query_surface = SDL_GetWindowSurface(query_window);
+        SDL_GL_GetDrawableSize(window, &drawable_w, &drawable_h);
+        SDL_Renderer *query_renderer = SDL_CreateSoftwareRenderer(query_surface);
+        SDL_GetRendererOutputSize(query_renderer, &sw, &sh);
+        SDL_DestroyRenderer(query_renderer);
+        SDL_DestroyWindow(query_window);
+    #else
+        sw = tw;
+        drawable_w = tw;
+        sh = th;
+        drawable_h = th;
+    #endif
+    
+    viewport_scale = (float)sw/(float)drawable_w;
+    tulip_rect.x = 0; 
+    tulip_rect.y = 0; 
+    tulip_rect.w = tw; 
+    tulip_rect.h = th; 
 
-void init_window(uint16_t w, uint16_t h) {
-    uint8_t is_ipad = 0;
-    uint8_t is_iphone = 0;
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
-        fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    // Adjust y for bezels
+    viewport.y = 0;
+    #ifdef __TULIP_IOS__
+        button_bar.w = sw;
+        button_bar.h = (int)(50.0 * viewport_scale);
+        button_bar.x = 0;
+        button_bar.y = sh - keyboard_top_y - button_bar.h;
+        sh = sh - keyboard_top_y - button_bar.h; // leave room for the keyboard
+        // Is this landscape or portrait
+        if(sw > sh) {
+            sh = sh - 100; // leave room for the bezel
+            viewport.y = 100;
+        } else {
+            sh = sh-200; // leave room for the notch
+            viewport.y = 200;
+        }
+    #endif
+
+    fprintf(stderr, "before resize: scale %f. sw %d sh %d dw %d dh %d tw %d th %d kbt %d\n", 
+        viewport_scale, sw, sh, drawable_w, drawable_h, tw, th, keyboard_top_y);
+    if(resize_tulip) {
+        // given the sw / sh, find a better H_RES/tw than what we have. 
+        tulip_rect.w = (int)((float)sw / viewport_scale);
+        tulip_rect.h = (int)((float)sh / viewport_scale); 
+        H_RES = tulip_rect.w;
+        V_RES = tulip_rect.h;
+        H_RES_D = H_RES;
+        V_RES_D = V_RES;
+
     } else {
-#ifdef __TULIP_IOS__
-        window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
-                                SDL_WINDOWPOS_UNDEFINED, w, h,
-                                SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP);
-        /*
-            if(UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) is_ipad = 1;
-            if(UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) is_iphone = 1;
-        */
-#else
-        window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
-                                SDL_WINDOWPOS_UNDEFINED, w, h,
-                                SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-
-#endif
+        // just keep it
     }
+
+    float w_ratio = (float)sw / (float)tulip_rect.w;
+    float h_ratio = (float)sh / (float)tulip_rect.h;
+    if(w_ratio > h_ratio) {
+        w_ratio = h_ratio;
+    } else {
+        h_ratio = w_ratio;
+    }
+    viewport.w = (int)((float)tulip_rect.w * w_ratio);
+    viewport.h = (int)((float)tulip_rect.h * h_ratio);
+    viewport.x = (sw - viewport.w) / 2;
+}
+
+
+void init_window() {
+#ifdef __TULIP_IOS__
+    window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
+                            SDL_WINDOWPOS_UNDEFINED, tulip_rect.w, tulip_rect.h,
+                            SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP);
+#else
+    window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
+                            SDL_WINDOWPOS_UNDEFINED, tulip_rect.w, tulip_rect.h,
+                            SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+#endif
     if (window == NULL) {
         fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
     } else {
-        int rw, rh;
-        // This returns points
-        SDL_GL_GetDrawableSize(window, &drawable_w, &drawable_h);
-        fprintf(stderr, "drawable area is %d %d\n", drawable_w, drawable_h);
         window_surface = SDL_GetWindowSurface(window);
         fixed_fps_renderer = SDL_CreateSoftwareRenderer( window_surface);
-        // This returns hidpi pixels
-        SDL_GetRendererOutputSize(fixed_fps_renderer, &rw, &rh);
-        fprintf(stderr, "renderer output size is %d %d\n", rw, rh);
-
-        tulip_rect.x = 0; 
-        tulip_rect.y = 0; 
-        tulip_rect.w = w; 
-        tulip_rect.h = h; 
-
-        screen_rect.x = 0; 
-        screen_rect.y = 0; 
-        screen_rect.w = rw; 
-        screen_rect.h = rh; 
-
-
-        float w_ratio = (float)screen_rect.w / (float)tulip_rect.w;
-        float h_ratio = (float)screen_rect.h / (float)tulip_rect.h;
-        if(w_ratio > h_ratio) {
-            w_ratio = h_ratio;
-        } else {
-            h_ratio = w_ratio;
-        }
-        viewport.w = (int)((float)tulip_rect.w * w_ratio);
-        viewport.h = (int)((float)tulip_rect.h * h_ratio);
-        viewport.x = (screen_rect.w - viewport.w) / 2;
-        if(screen_rect.w > screen_rect.h) { // iOS landscape
-            if(is_iphone) {
-                viewport.y = 0;
-            } else if (is_ipad) {
-                viewport.y = 50; // under the bezel
-            } else {
-                viewport.y = 0;
-            }
-        } else {
-            viewport.y = 200; // under the notch
-        }
-        fprintf(stderr, "setting viewport to %d %d %d %d\n", viewport.x, viewport.y, viewport.w, viewport.h);
-        framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, w,h);
+        fprintf(stderr, "setting viewport to x=%d y=%d w=%d h=%d and tulip to w=%d h=%d\n", viewport.x, viewport.y, viewport.w, viewport.h, tulip_rect.w, tulip_rect.h);
+        framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
     }
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
     SDL_StartTextInput();
+
 }
 
 
@@ -181,7 +210,7 @@ uint16_t check_joy() {
     return last_held_joy_mask;
 }
 
-uint8_t store_shift = 0;
+uint8_t store_mod = 0;
 
 // it looks like from the perspective of tulip on iOS only ' and " come out as textinput only. 
 // so we can use keydown always (storing the shift when we get it) 225/229
@@ -192,6 +221,7 @@ void check_key() {
     uint8_t was_touch = 0;
     while (SDL_PollEvent(&e) != 0) {
         if (e.type == SDL_QUIT) {
+            // TODO - not sure what to do here for iOS
             unix_display_flag = -1; // tell main to quit
         } else if(e.type == SDL_TEXTINPUT) {
             #ifdef __TULIP_IOS__
@@ -211,11 +241,11 @@ void check_key() {
             //fprintf(stderr, "keydown %d %d = %d\n", key.keysym.scancode, last_held_mod, scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod));
             if(key.keysym.scancode == 225 || key.keysym.scancode == 229) {
                 #ifdef __TULIP_IOS__
-                store_shift = 1;
+                    store_mod = store_mod | KMOD_LSHIFT;
                 #endif
             } else if(key.keysym.scancode >= 0x04 && key.keysym.scancode <= 0x94) {
-                send_key_to_micropython(scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod+store_shift));
-                store_shift = 0;
+                send_key_to_micropython(scan_ascii(key.keysym.scancode, (uint32_t)(last_held_mod | store_mod)));
+                store_mod = 0;
             }
             uint8_t skip = 0;
             uint8_t pos = 10;
@@ -228,32 +258,55 @@ void check_key() {
             }
         } else if( e.type == SDL_WINDOWEVENT ) {
             //Window resize/orientation change
+            #ifdef __TULIP_IOS__
+                int kby = get_keyboard_y();
+                if(kby != keyboard_top_y) {
+                    keyboard_top_y = kby;
+                    fprintf(stderr, "keyboard y has changed. now %d\n", keyboard_top_y);
+                    unix_display_flag = -2;
+                }
+            #endif
             if( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e.window.event == SDL_WINDOWEVENT_RESIZED) {
                 fprintf(stderr, "window size changed to %d %d\n", e.window.data1, e.window.data2);
                 if(e.window.data1 != drawable_w || e.window.data2 != drawable_h) {
                     fprintf(stderr, "different than existing %d %d\n", drawable_w, drawable_h);
+                    drawable_w = e.window.data1;
+                    drawable_h = e.window.data2;
                     // restart display
                     unix_display_flag = -2;
                 }
             }
-        }
-        if(e.type == SDL_KEYUP) {
+        } else if(e.type == SDL_KEYUP) {
             SDL_KeyboardEvent key = e.key; 
             for(uint8_t i=2;i<8;i++) {
                 if(key.keysym.scancode == last_scan[i]) {
                     last_scan[i] = 0;
                 }
             }
-        }
+        } 
+        #ifdef __TULIP_IOS__
+            else if(e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) {
+                if(e.button.x >= button_bar.x/viewport_scale && e.button.y >= button_bar.y/viewport_scale && e.button.x < button_bar.x/viewport_scale+button_bar.w/viewport_scale && e.button.y < button_bar.y/viewport_scale + button_bar.h/viewport_scale) {
+                    uint8_t up = 0;
+                    if(e.type == SDL_MOUSEBUTTONUP) up = 1;
+                    uint16_t button_x = e.button.x - button_bar.x/viewport_scale;
+                    uint16_t button_y = e.button.y - button_bar.y/viewport_scale;
+                    fprintf(stderr, "button bar is up %d at %d %d\n", up, button_x, button_y);
+                    if(button_x < 100 && up) { // control
+                        store_mod = store_mod | KMOD_LCTRL;
+                    }
+                }
+            }
+        #endif
         int x,y;
         uint32_t button = SDL_GetMouseState(&x, &y);
         if(button) {
-            last_touch_x[0] = (int16_t)x;
-            last_touch_y[0] = (int16_t)y;
+            last_touch_x[0] = (int16_t)x-(viewport.x/viewport_scale);
+            last_touch_y[0] = (int16_t)y-(viewport.y/viewport_scale);
             was_touch = 1;
         } else { // release
-            last_touch_x[0] = (int16_t)x;
-            last_touch_y[0] = (int16_t)y;
+            last_touch_x[0] = (int16_t)x-(viewport.x/viewport_scale);
+            last_touch_y[0] = (int16_t)y-(viewport.y/viewport_scale);
             was_touch = 2;
         }
         update_joy(e);
@@ -284,14 +337,21 @@ int unix_display_draw() {
             }
         }
     }
+
     SDL_UnlockTexture(framebuffer);
 
     // Copy the framebuffer (and stretch if needed into the renderer)
     SDL_RenderCopy(fixed_fps_renderer, framebuffer, &tulip_rect, &viewport);
+
+    SDL_SetRenderDrawColor(fixed_fps_renderer, 255, 255, 255, 255);
+
+    SDL_RenderFillRect(fixed_fps_renderer, &button_bar);
+
     SDL_RenderPresent(fixed_fps_renderer);
 
     // Clean up and show
     SDL_UpdateWindowSurface(window);
+
     display_frame_done_generic();
 
     int64_t ticks_per_frame_ms = (int64_t) (1000.0 / reported_fps);
@@ -320,9 +380,21 @@ int unix_display_draw() {
 }
 
 void unix_display_init() {
+    // on iOS we need to get the display size before computing display sizes
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
+        fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    } 
+    #ifdef __TULIP_IOS__
+        compute_viewport(H_RES,V_RES,1);
+    #else
+        compute_viewport(H_RES,V_RES,0);
+    #endif        
+
     display_init();
     unix_set_fps_from_parameters();
-    init_window(H_RES,V_RES); 
+
+    init_window(); 
+
     frame_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
     gp = SDL_GameControllerOpen(0);

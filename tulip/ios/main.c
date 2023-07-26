@@ -91,6 +91,8 @@ long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 extern int unix_display_draw(); 
 extern void unix_display_init();
 
+
+// We need to get the y-position of our keyboard from the SDL_uikitviewcontroller here somehow
 int ios_keyboard_y = -1;
 
 #if __cplusplus
@@ -898,6 +900,23 @@ soft_reset_exit:
 }
 #include <SDL.h>
 
+// There's a animation period on boot where the keyboard rises up. 
+// Wait for it to complete and reset the display when it's ready
+// so we know how big it is to properly draw the screen.
+void warmup_display(int frames) {
+    int warmup_frames = 10;
+    int c = 0;
+    while(warmup_frames--) {
+        c = unix_display_draw(); // draw once to get the keyboard on screen
+        if(c==-2) {
+            unix_display_init();
+            c=0;
+        }
+    }
+}
+
+extern void ios_copy_fs();
+
 int main(int argc, char **argv) {
     // Get the resources folder loc
     // So thread out alles and then micropython tasks
@@ -932,15 +951,16 @@ int main(int argc, char **argv) {
                 break; 
         } 
     }
-    /*
-    H_RES = 430;
-    V_RES = 466;
-    H_RES_D = H_RES;//400;
-    V_RES_D = V_RES;//480; 
-    */
+
+    // This will do this every time. Maybe only on first boot?
+    ios_copy_fs();
+
+    int c = 0;
+
     fprintf(stderr,"display init\n");
     unix_display_init();
     fprintf(stderr,"display init done\n");
+
     delay_ms(100);
 
     pthread_t alles_thread_id;
@@ -948,14 +968,16 @@ int main(int argc, char **argv) {
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
     fprintf(stderr,"alles init done\n");
 
-    delay_ms(100);
+    delay_ms(500);
+    warmup_display(10);
+    fprintf(stderr, "display warmed\n");
+    pthread_t midi_thread_id;
+    pthread_create(&midi_thread_id, NULL, run_midi, NULL);
+    fprintf(stderr, "midi done\n");
 
-    //pthread_t midi_thread_id;
-    //pthread_create(&midi_thread_id, NULL, run_midi, NULL);
-
+    delay_ms(500);
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
-    int c = 0;
 
 
 display_jump: 

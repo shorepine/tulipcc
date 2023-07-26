@@ -13,7 +13,6 @@
 
 #import "midi.h"
 
-//static CGEventSourceRef eventSource;
 MIDIClientRef midi_client;
 MIDIPortRef out_port;
 
@@ -37,7 +36,7 @@ void* run_midi(void*argp){
     if (@available(macOS 11, *))  {
         @autoreleasepool {
             //py_midi_callback = 0;
-
+            fprintf(stderr, "starting up virtualmidi\n");
             OSStatus status = MIDIClientCreate((__bridge CFStringRef)@"Tulip", NotifyProc, NULL, &midi_client);
             if (status != noErr) {
                 fprintf(stderr, "Error %d while setting up handlers\n", status);
@@ -48,8 +47,8 @@ void* run_midi(void*argp){
             if(status != noErr) {
                 fprintf(stderr, "Error %d while setting up MIDI output port\n", status);
             }
+            fprintf(stderr, "starting up virtualmidi 2\n");
 
-            //eventSource = CGEventSourceCreate(kCGEventSourceStatePrivate);
             ItemCount number_sources = MIDIGetNumberOfSources();
             for (unsigned long i = 0; i < number_sources; i++) {
                 MIDIEndpointRef source = MIDIGetSource(i);
@@ -78,6 +77,7 @@ void* run_midi(void*argp){
                     fprintf(stderr, "Error %d while connecting MIDI input port to source\n", status);
                 }
             }
+            
             CFRunLoopRun();
         }
     } else {

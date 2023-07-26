@@ -25,8 +25,6 @@ Will pull down SDL source on first run.
 
 Builds micropython/Tulip as a static lib, then runs xcodebuild of the app bundle, then opens the simulator, installs and runs (with console logging)
 
-
-
 TODOs:
  - XXX download/move SDL into here -- or share SDL among the ports?
  - XXX get simulator/real device build as a makefile parameter
@@ -40,11 +38,11 @@ TODOs:
  - XXX soft keyboard is not returning symbols to Tulip, like `(` etc  (hard keyboard works)
  - XXX install / run on device
  - XXX "hardware keyboard" uses keysyms, where the soft keyboard uses textinput. annoying 
+ - XXX MIDI
+ - XXX use keyboard height to set screen size
+ - XXX fill up display nicely with default H_RES/V_RES and give option to go into 1:1 tulip mode (or just tulip.default_display())
+ - XXX load example filesystem on first boot to Documents folder
  - control-C, arrow keys, tab as soft buttons above keyboard
- - use keyboard height to set screen size
- - fill up display nicely with default H_RES/V_RES and give option to go into 1:1 tulip mode
- - load example filesystem on first boot to Documents folder
- - MIDI
  - touch
  - testflight
 

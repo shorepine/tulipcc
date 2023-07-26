@@ -47,6 +47,7 @@ INC += -I$(TOP)/lib/mbedtls/include
 #INC += -I./SDL2.framework/Headers
 
 INC += -I/Users/bwhitman/ioslib/SDL-release-2.28.1/include
+INC += -I/Users/bwhitman/ioslib/SDL-release-2.28.1/src/video/uikit/
 
 # compiler settings
 CWARN = -Wall -Werror
@@ -185,7 +186,8 @@ SRC_CXX += \
 
 SRC_M = \
 	libminiaudio.m \
-	virtualmidi.m
+	virtualmidi.m \
+	bridge.m
 
 
 OBJ = $(PY_O)

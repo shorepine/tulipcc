@@ -52,7 +52,6 @@ except ImportError:
         cd(uos.getenv("HOME")+"/Documents/tulipcc")
     except:
         # Probably iOS
-        print("TODO: we will load in the filesystem")
         cd(tulip.app_path())
 
 gc.collect()
