@@ -88,10 +88,12 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
                 SDL_WINDOWPOS_UNDEFINED, tw, th,
                 SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP);
         SDL_Surface *query_surface = SDL_GetWindowSurface(query_window);
-        SDL_GL_GetDrawableSize(window, &drawable_w, &drawable_h);
         SDL_Renderer *query_renderer = SDL_CreateSoftwareRenderer(query_surface);
         SDL_GetRendererOutputSize(query_renderer, &sw, &sh);
+        SDL_GetWindowSize(query_window, &drawable_w, &drawable_h);
+        fprintf(stderr, "From setup I get drawable %d %d and screen %d %d.\n", drawable_w, drawable_h, sw, sh);
         SDL_DestroyRenderer(query_renderer);
+        SDL_FreeSurface(query_surface);
         SDL_DestroyWindow(query_window);
     #else
         sw = tw;
@@ -123,12 +125,7 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
     // Adjust y for bezels
     viewport.y = 0;
     #ifdef __TULIP_IOS__
-        button_bar.w = sw;
-        button_bar.h = (int)(50.0 * viewport_scale);
-        button_bar.x = 0;
-        button_bar.y = sh - keyboard_top_y - button_bar.h;
-        fprintf(stderr, "setting button bar to %d %d %d %d\n", button_bar.x,button_bar.y,button_bar.w,button_bar.h);
-        sh = sh - keyboard_top_y - button_bar.h; // leave room for the keyboard
+        int orig_sh = sh;
         // Is this landscape or portrait
         if(sw > sh) {
             sh = sh - 100; // leave room for the bezel
@@ -137,9 +134,20 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
             sh = sh-200; // leave room for the notch
             viewport.y = 200;
         }
+        // If no keyboard, don't draw button bar
+        if(keyboard_top_y>0) {
+            button_bar.w = sw;
+            button_bar.h = (int)(50.0 * viewport_scale);
+            button_bar.x = 0;
+            button_bar.y = orig_sh - keyboard_top_y - button_bar.h;
+            fprintf(stderr, "setting button bar to %d %d %d %d\n", button_bar.x,button_bar.y,button_bar.w,button_bar.h);
+        } else {
+            button_bar.w = 0;
+            button_bar.h = 0;
+        }
+        sh = sh - keyboard_top_y - button_bar.h; // leave room for the keyboard
     #endif
-
-    fprintf(stderr, "before resize: scale %f. sw %d sh %d dw %d dh %d tw %d th %d kbt %d\n", 
+    fprintf(stderr, "before resize: scale %f. sw %d sh %d dw %d dh %d tw %d th %d kty %d\n", 
         viewport_scale, sw, sh, drawable_w, drawable_h, tw, th, keyboard_top_y);
     if(resize_tulip) {
         // given the sw / sh, find a better H_RES/tw than what we have. 
@@ -196,7 +204,12 @@ void init_window() {
 
 
 void destroy_window() {
+    fprintf(stderr, "destroy_window1\n");
+    free_caps(frame_bb);
+    fprintf(stderr, "destroy_window2\n");
     SDL_DestroyWindow(window);
+    fprintf(stderr, "destroy_window3\n");
+
     SDL_Quit();    
 }
 
@@ -305,25 +318,27 @@ void check_key() {
         // Deal with the button bar in iOS
         #ifdef __TULIP_IOS__
             else if(e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP) {
-                if(e.button.x >= button_bar.x/viewport_scale && e.button.y >= button_bar.y/viewport_scale && e.button.x < button_bar.x/viewport_scale+button_bar.w/viewport_scale && e.button.y < button_bar.y/viewport_scale + button_bar.h/viewport_scale) {
-                    uint16_t button_x = e.button.x - button_bar.x;
-                    button_x = button_x * viewport_scale;
-                    if(e.type == SDL_MOUSEBUTTONUP) {
-                        fprintf(stderr, "button x is %d\n", button_x);
-                        if(button_x < btn_ctrl.x + btn_ctrl.w) { 
-                            store_mod = store_mod | KMOD_LCTRL;
-                        } else if(button_x < btn_tab.x + btn_tab.w) { 
-                            send_key_to_micropython(9);
-                        } else if(button_x < btn_esc.x + btn_esc.w) { 
-                            send_key_to_micropython(27); 
-                        } else if(button_x < btn_l.x + btn_l.w) { 
-                            send_key_to_micropython(260);
-                        } else if(button_x < btn_u.x + btn_u.w) { 
-                            send_key_to_micropython(259);                  
-                        } else if(button_x < btn_r.x + btn_r.w) { 
-                            send_key_to_micropython(261);
-                        } else if(button_x < btn_d.x + btn_d.w) { 
-                            send_key_to_micropython(258);
+                if(button_bar.w > 0) {
+                    if(e.button.x >= button_bar.x/viewport_scale && e.button.y >= button_bar.y/viewport_scale && e.button.x < button_bar.x/viewport_scale+button_bar.w/viewport_scale && e.button.y < button_bar.y/viewport_scale + button_bar.h/viewport_scale) {
+                        uint16_t button_x = e.button.x - button_bar.x;
+                        button_x = button_x * viewport_scale;
+                        if(e.type == SDL_MOUSEBUTTONUP) {
+                            fprintf(stderr, "button x is %d\n", button_x);
+                            if(button_x < btn_ctrl.x + btn_ctrl.w) { 
+                                store_mod = store_mod | KMOD_LCTRL;
+                            } else if(button_x < btn_tab.x + btn_tab.w) { 
+                                send_key_to_micropython(9);
+                            } else if(button_x < btn_esc.x + btn_esc.w) { 
+                                send_key_to_micropython(27); 
+                            } else if(button_x < btn_l.x + btn_l.w) { 
+                                send_key_to_micropython(260);
+                            } else if(button_x < btn_u.x + btn_u.w) { 
+                                send_key_to_micropython(259);                  
+                            } else if(button_x < btn_r.x + btn_r.w) { 
+                                send_key_to_micropython(261);
+                            } else if(button_x < btn_d.x + btn_d.w) { 
+                                send_key_to_micropython(258);
+                            }
                         }
                     }
                 }
@@ -349,20 +364,10 @@ void check_key() {
 }
 
 void draw_button_bar() {
-    SDL_SetRenderDrawColor(fixed_fps_renderer, 255, 0, 0, 255);
-    SDL_RenderFillRect(fixed_fps_renderer, &btn_ctrl);
-    SDL_SetRenderDrawColor(fixed_fps_renderer, 0, 255, 0, 255);
-    SDL_RenderFillRect(fixed_fps_renderer, &btn_tab);
-    SDL_SetRenderDrawColor(fixed_fps_renderer, 0, 0, 255, 255);
-    SDL_RenderFillRect(fixed_fps_renderer, &btn_esc);
-    SDL_SetRenderDrawColor(fixed_fps_renderer, 255, 255, 0, 255);
-    SDL_RenderFillRect(fixed_fps_renderer, &btn_l);
-    SDL_SetRenderDrawColor(fixed_fps_renderer, 255, 0, 255, 255);
-    SDL_RenderFillRect(fixed_fps_renderer, &btn_u);
-    SDL_SetRenderDrawColor(fixed_fps_renderer, 0, 255, 255, 255);
-    SDL_RenderFillRect(fixed_fps_renderer, &btn_r);
-    SDL_SetRenderDrawColor(fixed_fps_renderer, 255, 255, 255, 255);
-    SDL_RenderFillRect(fixed_fps_renderer, &btn_d);
+    if(button_bar.w > 0) {
+        SDL_SetRenderDrawColor(fixed_fps_renderer, 255, 255, 255, 255);
+        SDL_RenderFillRect(fixed_fps_renderer, &button_bar);
+    }
 }
 
 int unix_display_draw() {
@@ -391,9 +396,6 @@ int unix_display_draw() {
 
     // If iOS, draw the button bar
     // TODO -- every time, or just once?
-    #ifdef __TULIP_IOS__
-        draw_button_bar();
-    #endif
     SDL_RenderPresent(fixed_fps_renderer);
 
     // Clean up and show
@@ -412,8 +414,7 @@ int unix_display_draw() {
     // Are we restarting the display for a mode change, or quitting
     if(unix_display_flag < 0) {
         fprintf(stderr, "shutting down because of flag %d\n", unix_display_flag);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
+        destroy_window();
         display_teardown();
         if(unix_display_flag==-2) {
             unix_display_flag = 0;
@@ -432,50 +433,69 @@ void unix_display_init() {
         fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
     } 
     #ifdef __TULIP_IOS__
-        compute_viewport(H_RES,V_RES,1);
-        btn_ctrl.x = 0;
-        btn_ctrl.y = button_bar.y;
-        btn_ctrl.w = 150;
-        btn_ctrl.h = button_bar.h;
+        fprintf(stderr, "computing viewport\n");
+        if(!compute_viewport(H_RES,V_RES,1)) {
+            // problem
 
-        btn_tab.x = 150;
-        btn_tab.y = button_bar.y;
-        btn_tab.w = 150;
-        btn_tab.h = button_bar.h;
+        }
+        if(button_bar.w > 0) {
+            btn_ctrl.x = 0;
+            btn_ctrl.y = button_bar.y;
+            btn_ctrl.w = 150;
+            btn_ctrl.h = button_bar.h;
 
-        btn_esc.x = 300;
-        btn_esc.y = button_bar.y;
-        btn_esc.w = 150;
-        btn_esc.h = button_bar.h;
+            btn_tab.x = 150;
+            btn_tab.y = button_bar.y;
+            btn_tab.w = 150;
+            btn_tab.h = button_bar.h;
 
-        btn_l.x = 450;
-        btn_l.y = button_bar.y;
-        btn_l.w = 150;
-        btn_l.h = button_bar.h;
+            btn_esc.x = 300;
+            btn_esc.y = button_bar.y;
+            btn_esc.w = 150;
+            btn_esc.h = button_bar.h;
 
-        btn_u.x = 600;
-        btn_u.y = button_bar.y;
-        btn_u.w = 150;
-        btn_u.h = button_bar.h;
+            btn_l.x = 450;
+            btn_l.y = button_bar.y;
+            btn_l.w = 150;
+            btn_l.h = button_bar.h;
+
+            btn_u.x = 600;
+            btn_u.y = button_bar.y;
+            btn_u.w = 150;
+            btn_u.h = button_bar.h;
 
 
-        btn_r.x = 750;
-        btn_r.y = button_bar.y;
-        btn_r.w = 150;
-        btn_r.h = button_bar.h;
+            btn_r.x = 750;
+            btn_r.y = button_bar.y;
+            btn_r.w = 150;
+            btn_r.h = button_bar.h;
 
-        btn_d.x = 900;
-        btn_d.y = button_bar.y;
-        btn_d.w = 150;
-        btn_d.h = button_bar.h;
+            btn_d.x = 900;
+            btn_d.y = button_bar.y;
+            btn_d.w = 150;
+            btn_d.h = button_bar.h;
+        }
+        fprintf(stderr, "computed viewport\n");
+
     #else
         compute_viewport(H_RES,V_RES,0);
     #endif        
 
+    fprintf(stderr, "unix_display1\n");
+
     display_init();
+    fprintf(stderr, "unix_display2\n");
     unix_set_fps_from_parameters();
+    fprintf(stderr, "unix_display3\n");
 
     init_window(); 
+    fprintf(stderr, "unix_display4\n");
+
+    #ifdef __TULIP_IOS__
+        draw_button_bar();
+    #endif
+    fprintf(stderr, "unix_display5\n");
+
 
     frame_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");

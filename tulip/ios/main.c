@@ -907,9 +907,12 @@ void warmup_display(int frames) {
     int warmup_frames = 10;
     int c = 0;
     while(warmup_frames--) {
+        fprintf(stderr, "warm display %d\n", warmup_frames);
         c = unix_display_draw(); // draw once to get the keyboard on screen
         if(c==-2) {
+            fprintf(stderr, "warm restart called\n");
             unix_display_init();
+            fprintf(stderr, "warm init done\n");
             c=0;
         }
     }
@@ -919,7 +922,7 @@ extern void ios_copy_fs();
 extern void ios_draw_text(float x, float y, float w, float h, char *text) ;
 extern SDL_Rect button_bar;
 extern float viewport_scale;
-#define BUTTON_BAR_TEXT "  ⌃    ⇥    ␛    ◁     △    ▷    ▽"
+#define BUTTON_BAR_TEXT "  ⌃    ⇥    ␛    ◁    △    ▷    ▽"
 
 int main(int argc, char **argv) {
     // Get the resources folder loc
