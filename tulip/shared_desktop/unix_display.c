@@ -27,6 +27,9 @@ SDL_Rect btn_ctrl, btn_tab, btn_esc, btn_l, btn_r, btn_u, btn_d;
 extern int get_keyboard_y();
 extern uint8_t is_iphone();
 extern uint8_t is_ipad();
+extern void ios_draw_text(float x, float y, float w, float h, char *text) ;
+#define BUTTON_BAR_TEXT "  ⌃    ⇥    ␛    ◁    △    ▷    ▽"
+
 
 
 void unix_set_fps_from_parameters() {
@@ -110,18 +113,6 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
     tulip_rect.w = tw; 
     tulip_rect.h = th; 
 
-    if(drawable_w < 10 || drawable_h < 10) {
-        fprintf(stderr, "problem reading screen size\n");
-        viewport.x = 0;
-        viewport.y = 0;
-        viewport.w = tw;
-        viewport.h = th;
-        drawable_w = tw;
-        drawable_h = th;
-        viewport_scale = 1;
-        return 0;
-    }
-
     // Adjust y for bezels
     viewport.y = 0;
     #ifdef __TULIP_IOS__
@@ -197,19 +188,15 @@ void init_window() {
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
-    SDL_StartTextInput();
 
 }
 
 
 
 void destroy_window() {
-    fprintf(stderr, "destroy_window1\n");
     free_caps(frame_bb);
-    fprintf(stderr, "destroy_window2\n");
+    SDL_DestroyTexture(framebuffer);
     SDL_DestroyWindow(window);
-    fprintf(stderr, "destroy_window3\n");
-
     SDL_Quit();    
 }
 
@@ -363,16 +350,18 @@ void check_key() {
 #endif
 }
 
+
 void draw_button_bar() {
     if(button_bar.w > 0) {
         SDL_SetRenderDrawColor(fixed_fps_renderer, 255, 255, 255, 255);
         SDL_RenderFillRect(fixed_fps_renderer, &button_bar);
+        ios_draw_text(0,button_bar.y/viewport_scale - 20,800,100,BUTTON_BAR_TEXT);
     }
 }
+void unix_display_init();
 
 int unix_display_draw() {
     frame_ticks = get_ticks_ms();
-    check_key();
     uint8_t *pixels;
     int pitch;
     SDL_LockTexture(framebuffer, NULL, (void**)&pixels, &pitch);
@@ -403,28 +392,66 @@ int unix_display_draw() {
 
     display_frame_done_generic();
 
-    int64_t ticks_per_frame_ms = (int64_t) (1000.0 / reported_fps);
-
-    //If frame finished early according to our FPS clock, pause a bit (still processing keys) until it's time
-    while(get_ticks_ms() - frame_ticks < ticks_per_frame_ms) {
-        SDL_Delay(1);
-        check_key();
-    }
+    check_key();
 
     // Are we restarting the display for a mode change, or quitting
     if(unix_display_flag < 0) {
         fprintf(stderr, "shutting down because of flag %d\n", unix_display_flag);
         destroy_window();
         display_teardown();
-        if(unix_display_flag==-2) {
+
+        if(unix_display_flag == -2){
             unix_display_flag = 0;
-            return -2;
-        } else {
-            unix_display_flag = 0;
-            return -1;
+            unix_display_init();
         }
+
     }    
     return 1;
+}
+
+void show_frame(void*d) {
+    unix_display_draw();
+}
+
+int HandleAppEvents(void *userdata, SDL_Event *event) {
+    switch (event->type)
+    {
+    case SDL_APP_TERMINATING:
+        /* Terminate the app.
+           Shut everything down before returning from this function.
+        */
+        return 0;
+    case SDL_APP_LOWMEMORY:
+        /* You will get this when your app is paused and iOS wants more memory.
+           Release as much memory as possible.
+        */
+        return 0;
+    case SDL_APP_WILLENTERBACKGROUND:
+        /* Prepare your app to go into the background.  Stop loops, etc.
+           This gets called when the user hits the home button, or gets a call.
+        */
+        return 0;
+    case SDL_APP_DIDENTERBACKGROUND:
+        /* This will get called if the user accepted whatever sent your app to the background.
+           If the user got a phone call and canceled it, you'll instead get an SDL_APP_DIDENTERFOREGROUND event and restart your loops.
+           When you get this, you have 5 seconds to save all your state or the app will be terminated.
+           Your app is NOT active at this point.
+        */
+        return 0;
+    case SDL_APP_WILLENTERFOREGROUND:
+        /* This call happens when your app is coming back to the foreground.
+           Restore all your state here.
+        */
+        return 0;
+    case SDL_APP_DIDENTERFOREGROUND:
+        /* Restart your loops here.
+           Your app is interactive and getting CPU again.
+        */
+        return 0;
+    default:
+        /* No special processing, add it to the event queue */
+        return 1;
+    }
 }
 
 void unix_display_init() {
@@ -432,12 +459,12 @@ void unix_display_init() {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
         fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
     } 
+    SDL_SetEventFilter(HandleAppEvents, NULL);
+
+
     #ifdef __TULIP_IOS__
         fprintf(stderr, "computing viewport\n");
-        if(!compute_viewport(H_RES,V_RES,1)) {
-            // problem
-
-        }
+        compute_viewport(H_RES,V_RES,1);
         if(button_bar.w > 0) {
             btn_ctrl.x = 0;
             btn_ctrl.y = button_bar.y;
@@ -481,20 +508,16 @@ void unix_display_init() {
         compute_viewport(H_RES,V_RES,0);
     #endif        
 
-    fprintf(stderr, "unix_display1\n");
-
     display_init();
-    fprintf(stderr, "unix_display2\n");
     unix_set_fps_from_parameters();
-    fprintf(stderr, "unix_display3\n");
 
     init_window(); 
-    fprintf(stderr, "unix_display4\n");
+    SDL_StartTextInput();
+
 
     #ifdef __TULIP_IOS__
         draw_button_bar();
     #endif
-    fprintf(stderr, "unix_display5\n");
 
 
     frame_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -505,4 +528,13 @@ void unix_display_init() {
     } else {
         fprintf(stderr, "Gamepad detected\n");
     }
+    fprintf(stderr, "Starting text input...\n");
+    #ifdef __TULIP_IOS__
+        fprintf(stderr,"setting callback\n");
+        SDL_iPhoneSetAnimationCallback(window, 1, show_frame, NULL);
+        fprintf(stderr,"setting callback set\n");
+
+    #endif
+
+
 }

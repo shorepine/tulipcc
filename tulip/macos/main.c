@@ -878,6 +878,7 @@ soft_reset_exit:
     //return ret & 0xff;
     return 0;
 }
+extern int8_t unix_display_flag;
 
 int main(int argc, char **argv) {
     // Get the resources folder loc
@@ -922,21 +923,22 @@ int main(int argc, char **argv) {
 
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
-    int c = 0;
-
 
 display_jump: 
-    while(c>=0) {
-        // unix_display_draw returns -1 if the window was quit
-        c = unix_display_draw();
+    while(unix_display_flag>=0) {
+        unix_display_draw();
     }
-    if(c==-2) {
+    if(unix_display_flag==-2) {
+        fprintf(stderr,"restarting display\n");
         // signal to restart display after a timing change
+
         unix_display_init();
-        c=0;
+        unix_display_flag = 0;
         goto display_jump;
     }
+
     // We're done. join the threads?
+    return 0;
 }
 
 

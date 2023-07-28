@@ -39,16 +39,21 @@ void ios_copy_fs() {
 // Returns the y position of the keyboard on the screen -- will change with rotations etc 
 int get_keyboard_y()
 {
+    return 0;
+}
+/*
     SDL_SysWMinfo systemWindowInfo;
     SDL_VERSION(&systemWindowInfo.version);
     SDL_GetWindowWMInfo(window, &systemWindowInfo);
     UIWindow * appWindow = systemWindowInfo.info.uikit.window;
+    NSLog(@"get kby1");
     SDL_uikitviewcontroller * vc = (SDL_uikitviewcontroller * )appWindow.rootViewController;
+    NSLog(@"get kby2");
     int keybottom = vc.view.bounds.size.height - vc.keyboardHeight;
-
+    NSLog(@"get kby2");
     return keybottom;
 }
-
+*/
 void ios_draw_text(float x, float y, float w, float h, char *text) {
     UILabel *lbl1 = [[UILabel alloc] init];
     [lbl1 setFont:[UIFont systemFontOfSize:30]];

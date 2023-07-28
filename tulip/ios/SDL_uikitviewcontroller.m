@@ -128,7 +128,6 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
 #endif
 }
 
-/*
 - (void)setAnimationCallback:(int)interval
                     callback:(void (*)(void*))callback
                callbackParam:(void*)callbackParam
@@ -171,7 +170,7 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
     [displayLink invalidate];
     displayLink = nil;
 }
-*/
+
 - (void)doLoop:(CADisplayLink*)sender
 {
     /* Don't run the game loop while a messagebox is up */
@@ -181,7 +180,7 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
         UIKit_GL_RestoreCurrentContext();
 #endif
 
-        //animationCallback(animationCallbackParam);
+        animationCallback(animationCallbackParam);
     }
 }
 
@@ -272,7 +271,6 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
     textField.keyboardType = UIKeyboardTypeDefault;
     textField.returnKeyType = UIReturnKeyDefault;
     textField.secureTextEntry = NO;
-    textField.spellCheckingType = UITextSpellCheckingTypeNo;
 
     textField.hidden = YES;
     keyboardVisible = NO;
@@ -325,11 +323,10 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
     [view addSubview:textField];
 
     if (keyboardVisible) {
-        NSLog(@"showKeyboard");
         [self showKeyboard];
     }
 }
-/*
+
 - (void)viewWillTransitionToSize:(CGSize)size withTransitionCoordinator:(id<UIViewControllerTransitionCoordinator>)coordinator
 {
     [super viewWillTransitionToSize:size withTransitionCoordinator:coordinator];
@@ -339,7 +336,7 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
         self->rotatingOrientation = NO;
     }];
 }
-*/
+
 - (void)deinitKeyboard
 {
     NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
@@ -355,13 +352,8 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
 {
     keyboardVisible = YES;
     if (textField.window) {
-        NSLog(@"showKeyboard 1");
-
         showingKeyboard = YES;
-        [UIView performWithoutAnimation:^{
-            [textField becomeFirstResponder];
-        }];
-        //[textField becomeFirstResponder];
+        [textField becomeFirstResponder];
         showingKeyboard = NO;
     }
 }
@@ -369,8 +361,6 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
 /* hide onscreen virtual keyboard */
 - (void)hideKeyboard
 {
-            NSLog(@"hideKeyboard");
-
     keyboardVisible = NO;
     [textField resignFirstResponder];
 }
@@ -436,8 +426,6 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
 
 - (void)updateKeyboard
 {
-            NSLog(@"updateKeyboard");
-
     CGAffineTransform t = self.view.transform;
     CGPoint offset = CGPointMake(0.0, 0.0);
     CGRect frame = UIKit_ComputeViewFrame(window, self.view.window.screen);
@@ -519,7 +507,6 @@ SDL_bool UIKit_HasScreenKeyboardSupport(_THIS)
 
 void UIKit_ShowScreenKeyboard(_THIS, SDL_Window *window)
 {
-    NSLog(@"UIkit showscreenkeyboard");
     @autoreleasepool {
         SDL_uikitviewcontroller *vc = GetWindowViewController(window);
         [vc showKeyboard];
@@ -528,17 +515,14 @@ void UIKit_ShowScreenKeyboard(_THIS, SDL_Window *window)
 
 void UIKit_HideScreenKeyboard(_THIS, SDL_Window *window)
 {
-    NSLog(@"UIkit hidescreenkeyboard");
     @autoreleasepool {
         SDL_uikitviewcontroller *vc = GetWindowViewController(window);
-       //[vc hideKeyboard];
+        [vc hideKeyboard];
     }
 }
 
 SDL_bool UIKit_IsScreenKeyboardShown(_THIS, SDL_Window *window)
 {
-        NSLog(@"UIkit is screen kb shown");
-
     @autoreleasepool {
         SDL_uikitviewcontroller *vc = GetWindowViewController(window);
         if (vc != nil) {

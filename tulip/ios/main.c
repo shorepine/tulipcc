@@ -904,25 +904,13 @@ soft_reset_exit:
 // Wait for it to complete and reset the display when it's ready
 // so we know how big it is to properly draw the screen.
 void warmup_display(int frames) {
-    int warmup_frames = 10;
-    int c = 0;
-    while(warmup_frames--) {
-        fprintf(stderr, "warm display %d\n", warmup_frames);
-        c = unix_display_draw(); // draw once to get the keyboard on screen
-        if(c==-2) {
-            fprintf(stderr, "warm restart called\n");
-            unix_display_init();
-            fprintf(stderr, "warm init done\n");
-            c=0;
-        }
+    while(frames--) {
+        unix_display_draw();
     }
 }
 
 extern void ios_copy_fs();
-extern void ios_draw_text(float x, float y, float w, float h, char *text) ;
-extern SDL_Rect button_bar;
-extern float viewport_scale;
-#define BUTTON_BAR_TEXT "  ⌃    ⇥    ␛    ◁    △    ▷    ▽"
+extern int8_t unix_display_flag;
 
 int main(int argc, char **argv) {
     // Get the resources folder loc
@@ -962,21 +950,21 @@ int main(int argc, char **argv) {
     // This will do this every time. Maybe only on first boot? It's fast enough
     ios_copy_fs();
 
-    int c = 0;
-
-    fprintf(stderr,"display init\n");
-    unix_display_init();
-    fprintf(stderr,"display init done\n");
-
-    delay_ms(100);
-
+    //int c = 0;
     pthread_t alles_thread_id;
     fprintf(stderr,"alles init\n");
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
     fprintf(stderr,"alles init done\n");
 
     delay_ms(500);
-    warmup_display(10);
+
+    fprintf(stderr,"display init\n");
+    unix_display_init();
+    fprintf(stderr,"display init done\n");
+
+    delay_ms(500);
+
+    warmup_display(5);
     fprintf(stderr, "display warmed\n");
     pthread_t midi_thread_id;
     pthread_create(&midi_thread_id, NULL, run_midi, NULL);
@@ -985,24 +973,7 @@ int main(int argc, char **argv) {
     delay_ms(500);
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
-    fprintf(stderr, "drawing text with button bar to %d %d %d %d\n", button_bar.x,button_bar.y,button_bar.w,button_bar.h);
 
-    ios_draw_text(0,button_bar.y/viewport_scale - 20,800,100,BUTTON_BAR_TEXT);
-
-display_jump: 
-    while(c>=0) {
-        // unix_display_draw returns -1 if the window was quit
-        c = unix_display_draw();
-    }
-    if(c==-2) {
-        fprintf(stderr,"restarting display\n");
-        // signal to restart display after a timing change
-        unix_display_init();
-        ios_draw_text(0,button_bar.y/viewport_scale - 20,800,100,BUTTON_BAR_TEXT);
-
-        c=0;
-        goto display_jump;
-    }
     // We're done. join the threads?
     return 0;
 }
