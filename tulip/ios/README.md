@@ -45,6 +45,8 @@ TODOs:
  - XXX touch
  - XXX control-C, arrow keys, tab, esc as soft buttons above keyboard
  - startup display crasher
+ - have to modify sdl_uiviewcontroller to turn off autocorrect keyboard ribbon, annoying
+ - unreliable resizing still, tbd 
  - testflight
 
 

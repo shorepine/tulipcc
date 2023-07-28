@@ -5,10 +5,13 @@ set -e
 source ../shared/grab_submodules.sh
 
 SCHEME=Release # override by giving this script any parameter
+SDL_VERSION=SDL2-2.28.1
+# We have to keep a few files local here as we have to make changes to them
+cp SDL_* ${SDL_VERSION}/src/video/uikit/
 
 
 SDL_URL=https://github.com/libsdl-org/SDL/releases/download/release-2.28.1/SDL2-2.28.1.zip
-SDL_FILENAME=SDL2-2.28.1.zip
+SDL_FILENAME=${SDL_VERSION}.zip
 
 # Download SDL if you don't have it 
 if test -f "$SDL_FILENAME"; then
