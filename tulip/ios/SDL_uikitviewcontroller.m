@@ -35,6 +35,8 @@
 #include "SDL_uikitwindow.h"
 #include "SDL_uikitopengles.h"
 
+
+
 #if TARGET_OS_TV
 static void SDLCALL
 SDL_AppleTVControllerUIHintChanged(void *userdata, const char *name, const char *oldValue, const char *hint)
@@ -133,7 +135,6 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
                callbackParam:(void*)callbackParam
 {
     [self stopAnimation];
-
     animationInterval = interval;
     animationCallback = callback;
     animationCallbackParam = callbackParam;
@@ -167,6 +168,7 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
 
 - (void)stopAnimation
 {
+
     [displayLink invalidate];
     displayLink = nil;
 }
@@ -271,6 +273,8 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
     textField.keyboardType = UIKeyboardTypeDefault;
     textField.returnKeyType = UIReturnKeyDefault;
     textField.secureTextEntry = NO;
+    textField.spellCheckingType = UITextSpellCheckingTypeNo;
+
 
     textField.hidden = YES;
     keyboardVisible = NO;
@@ -381,7 +385,7 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
 - (void)keyboardWillHide:(NSNotification *)notification
 {
     if (!showingKeyboard && !rotatingOrientation) {
-        SDL_StopTextInput();
+        //SDL_StopTextInput();
     }
     [self setKeyboardHeight:0];
 }

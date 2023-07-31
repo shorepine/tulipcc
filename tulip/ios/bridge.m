@@ -36,21 +36,40 @@ void ios_copy_fs() {
     }
 }
 
-// Returns the y position of the keyboard on the screen -- will change with rotations etc 
-int get_keyboard_y()
-{
-    return 0;
+void screen_size(int *w, int *h, float *scale) {
+    CGRect screenRect = [[UIScreen mainScreen] bounds];
+    CGFloat screenWidth = screenRect.size.width;
+    CGFloat screenHeight = screenRect.size.height;
+    *w = (int)screenWidth;
+    *h = (int)screenHeight;
+    *scale = [UIScreen mainScreen].nativeScale;
+    fprintf(stderr, "setting w %d h %d scale %f\n", *w, *h, *scale);
+
 }
+
+// Returns the y position of the keyboard on the screen -- will change with rotations etc 
+int get_keyboard_y() {
+    @autoreleasepool {
+        SDL_SysWMinfo systemWindowInfo;
+        SDL_VERSION(&systemWindowInfo.version);
+        if ( ! SDL_GetWindowWMInfo(window, &systemWindowInfo)) {
+            // consider doing some kind of error handling here
+            return 0;
+        }  
+        UIWindow * appWindow = systemWindowInfo.info.uikit.window;
+        SDL_uikitviewcontroller * vc = (SDL_uikitviewcontroller * )appWindow.rootViewController;
+        int keybottom = vc.view.bounds.size.height - vc.keyboardHeight;
+        return keybottom;
+    }
+}
+    
 /*
     SDL_SysWMinfo systemWindowInfo;
     SDL_VERSION(&systemWindowInfo.version);
     SDL_GetWindowWMInfo(window, &systemWindowInfo);
     UIWindow * appWindow = systemWindowInfo.info.uikit.window;
-    NSLog(@"get kby1");
     SDL_uikitviewcontroller * vc = (SDL_uikitviewcontroller * )appWindow.rootViewController;
-    NSLog(@"get kby2");
     int keybottom = vc.view.bounds.size.height - vc.keyboardHeight;
-    NSLog(@"get kby2");
     return keybottom;
 }
 */

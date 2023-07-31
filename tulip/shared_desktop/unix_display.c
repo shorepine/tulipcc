@@ -20,7 +20,7 @@ int drawable_w = 0;
 int drawable_h = 0;
 int keyboard_top_y = 0;
 float viewport_scale = 1.0;
-
+uint8_t sdl_ready = 0;
 SDL_Rect button_bar;
 SDL_Rect btn_ctrl, btn_tab, btn_esc, btn_l, btn_r, btn_u, btn_d;
 
@@ -30,7 +30,11 @@ extern uint8_t is_ipad();
 extern void ios_draw_text(float x, float y, float w, float h, char *text) ;
 #define BUTTON_BAR_TEXT "  ⌃    ⇥    ␛    ◁    △    ▷    ▽"
 
-
+void show_frame(void*d);
+int unix_display_draw();
+void check_key();
+void destroy_window();
+void unix_display_init();
 
 void unix_set_fps_from_parameters() {
     // use the screen res and clock to discern a new FPS, based on real life measurements on tulip cc
@@ -81,38 +85,23 @@ void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3, ui
     unix_display_flag = -2; // restart display with new timings
 }
 
+void screen_size(int *w, int *h, float *scale);
+
 // Compute the viewport and optionally new optimal Tulip size for this display 
 int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
     int sw = tw;
     int sh = th;
+    viewport_scale = 1;
     #ifdef __TULIP_IOS__
-        // Boot up an SDL window so we can get the device size
-        SDL_Window *query_window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
-                SDL_WINDOWPOS_UNDEFINED, tw, th,
-                SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_FULLSCREEN_DESKTOP);
-        SDL_Surface *query_surface = SDL_GetWindowSurface(query_window);
-        SDL_Renderer *query_renderer = SDL_CreateSoftwareRenderer(query_surface);
-        SDL_GetRendererOutputSize(query_renderer, &sw, &sh);
-        SDL_GetWindowSize(query_window, &drawable_w, &drawable_h);
-        fprintf(stderr, "From setup I get drawable %d %d and screen %d %d.\n", drawable_w, drawable_h, sw, sh);
-        SDL_DestroyRenderer(query_renderer);
-        SDL_FreeSurface(query_surface);
-        SDL_DestroyWindow(query_window);
-    #else
-        sw = tw;
-        drawable_w = tw;
-        sh = th;
-        drawable_h = th;
+        screen_size(&drawable_w, &drawable_h, &viewport_scale);
+        sw = drawable_w * viewport_scale;
+        sh = drawable_h * viewport_scale;
     #endif
-    
-    
 
-    viewport_scale = (float)sw/(float)drawable_w;
     tulip_rect.x = 0; 
     tulip_rect.y = 0; 
     tulip_rect.w = tw; 
     tulip_rect.h = th; 
-
     // Adjust y for bezels
     viewport.y = 0;
     #ifdef __TULIP_IOS__
@@ -167,6 +156,61 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
 }
 
 
+int unix_display_draw() {
+    check_key();
+
+    frame_ticks = get_ticks_ms();
+    uint8_t *pixels;
+    int pitch;
+    SDL_LockTexture(framebuffer, NULL, (void**)&pixels, &pitch);
+
+    // bounce the entire screen at once to the 332 color framebuffer
+    for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
+        if(y+FONT_HEIGHT <= V_RES) {
+            display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT, NULL);
+            for (uint16_t row=0;row<FONT_HEIGHT;row++) {
+                for(uint16_t x=0;x<H_RES;x++) {
+                    pixels[((y+row)*pitch)+x] = frame_bb[H_RES*row + x];
+                }
+            }
+        }
+    }
+
+
+    // Copy the framebuffer (and stretch if needed into the renderer)
+    SDL_RenderCopy(fixed_fps_renderer, framebuffer, &tulip_rect, &viewport);
+
+    SDL_UnlockTexture(framebuffer);
+
+    // If iOS, draw the button bar
+    // TODO -- every time, or just once?
+    SDL_RenderPresent(fixed_fps_renderer);
+
+    // Clean up and show
+    SDL_UpdateWindowSurface(window);
+
+    display_frame_done_generic();
+
+
+    // Are we restarting the display for a mode change, or quitting
+    if(unix_display_flag < 0) {
+        fprintf(stderr, "shutting down because of flag %d\n", unix_display_flag);
+        destroy_window();
+        display_teardown();
+
+        if(unix_display_flag == -2){
+            unix_display_flag = 0;
+            unix_display_init();
+        }
+
+    }    
+    return 1;
+}
+
+void show_frame(void*d) {
+    unix_display_draw();
+}
+
 void init_window() {
 #ifdef __TULIP_IOS__
     window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
@@ -184,6 +228,10 @@ void init_window() {
         fixed_fps_renderer = SDL_CreateSoftwareRenderer( window_surface);
         fprintf(stderr, "setting viewport to x=%d y=%d w=%d h=%d and tulip to w=%d h=%d\n", viewport.x, viewport.y, viewport.w, viewport.h, tulip_rect.w, tulip_rect.h);
         framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
+
+        #ifdef __TULIP_IOS__
+            //SDL_iPhoneSetAnimationCallback(window, 1, show_frame, NULL);
+        #endif
     }
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
@@ -196,8 +244,10 @@ void init_window() {
 void destroy_window() {
     free_caps(frame_bb);
     SDL_DestroyTexture(framebuffer);
+    SDL_DestroyRenderer(fixed_fps_renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();    
+    sdl_ready = 0;
 }
 
 uint16_t last_held_joy_mask = 0;
@@ -276,21 +326,13 @@ void check_key() {
             }
         } else if( e.type == SDL_WINDOWEVENT ) {
             //Window resize/orientation change
-            #ifdef __TULIP_IOS__
-                int kby = get_keyboard_y();
-                if(kby != keyboard_top_y) {
-                    keyboard_top_y = kby;
-                    fprintf(stderr, "keyboard y has changed. now %d\n", keyboard_top_y);
-                    unix_display_flag = -2;
-                }
-            #endif
             if( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e.window.event == SDL_WINDOWEVENT_RESIZED) {
-                fprintf(stderr, "window size changed to %d %d\n", e.window.data1, e.window.data2);
-                if(e.window.data1 != drawable_w || e.window.data2 != drawable_h) {
-                    fprintf(stderr, "different than existing %d %d\n", drawable_w, drawable_h);
+                fprintf(stderr, "window size changed to %d %d. kty is %d and new is %d\n", e.window.data1, e.window.data2, keyboard_top_y, get_keyboard_y());
+                if(get_keyboard_y() != keyboard_top_y || (e.window.data1 != drawable_w || e.window.data2 != drawable_h)) {
+                    fprintf(stderr, "different than existing kty %d w %d h %d\n", keyboard_top_y, drawable_w, drawable_h);
+                    keyboard_top_y = get_keyboard_y();
                     drawable_w = e.window.data1;
                     drawable_h = e.window.data2;
-                    // restart display
                     unix_display_flag = -2;
                 }
             }
@@ -358,60 +400,7 @@ void draw_button_bar() {
         ios_draw_text(0,button_bar.y/viewport_scale - 20,800,100,BUTTON_BAR_TEXT);
     }
 }
-void unix_display_init();
 
-int unix_display_draw() {
-    frame_ticks = get_ticks_ms();
-    uint8_t *pixels;
-    int pitch;
-    SDL_LockTexture(framebuffer, NULL, (void**)&pixels, &pitch);
-
-    // bounce the entire screen at once to the 332 color framebuffer
-    for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
-        if(y+FONT_HEIGHT <= V_RES) {
-            display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT, NULL);
-            for (uint16_t row=0;row<FONT_HEIGHT;row++) {
-                for(uint16_t x=0;x<H_RES;x++) {
-                    pixels[((y+row)*pitch)+x] = frame_bb[H_RES*row + x];
-                }
-            }
-        }
-    }
-
-    SDL_UnlockTexture(framebuffer);
-
-    // Copy the framebuffer (and stretch if needed into the renderer)
-    SDL_RenderCopy(fixed_fps_renderer, framebuffer, &tulip_rect, &viewport);
-
-    // If iOS, draw the button bar
-    // TODO -- every time, or just once?
-    SDL_RenderPresent(fixed_fps_renderer);
-
-    // Clean up and show
-    SDL_UpdateWindowSurface(window);
-
-    display_frame_done_generic();
-
-    check_key();
-
-    // Are we restarting the display for a mode change, or quitting
-    if(unix_display_flag < 0) {
-        fprintf(stderr, "shutting down because of flag %d\n", unix_display_flag);
-        destroy_window();
-        display_teardown();
-
-        if(unix_display_flag == -2){
-            unix_display_flag = 0;
-            unix_display_init();
-        }
-
-    }    
-    return 1;
-}
-
-void show_frame(void*d) {
-    unix_display_draw();
-}
 
 int HandleAppEvents(void *userdata, SDL_Event *event) {
     switch (event->type)
@@ -456,11 +445,17 @@ int HandleAppEvents(void *userdata, SDL_Event *event) {
 
 void unix_display_init() {
     // on iOS we need to get the display size before computing display sizes
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
-        fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-    } 
-    SDL_SetEventFilter(HandleAppEvents, NULL);
+    if(!sdl_ready) {
+        fprintf(stderr, "first sdl boot\n");
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
+            fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        } 
+        SDL_SetEventFilter(HandleAppEvents, NULL);
 
+        sdl_ready = 1;
+    }  else {
+        fprintf(stderr, "sdl already ready\n");
+    }
 
     #ifdef __TULIP_IOS__
         fprintf(stderr, "computing viewport\n");
@@ -509,10 +504,9 @@ void unix_display_init() {
     #endif        
 
     display_init();
-    unix_set_fps_from_parameters();
+    //unix_set_fps_from_parameters();
 
     init_window(); 
-    SDL_StartTextInput();
 
 
     #ifdef __TULIP_IOS__
@@ -528,13 +522,7 @@ void unix_display_init() {
     } else {
         fprintf(stderr, "Gamepad detected\n");
     }
-    fprintf(stderr, "Starting text input...\n");
-    #ifdef __TULIP_IOS__
-        fprintf(stderr,"setting callback\n");
-        SDL_iPhoneSetAnimationCallback(window, 1, show_frame, NULL);
-        fprintf(stderr,"setting callback set\n");
 
-    #endif
-
+    SDL_StartTextInput();
 
 }

@@ -39,6 +39,7 @@
 @interface SDL_uikitviewcontroller : SDLRootViewController
 #endif
 
+
 @property (nonatomic, assign) SDL_Window *window;
 
 - (instancetype)initWithSDLWindow:(SDL_Window *)_window;
