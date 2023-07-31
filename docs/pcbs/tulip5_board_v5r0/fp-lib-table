@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "tulipcc_footprint_lib")(type "KiCad")(uri "${KIPRJMOD}/tulipcc_footprint_lib.pretty")(options "")(descr ""))
+)

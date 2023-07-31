@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "tulipcc_symbol_lib")(type "KiCad")(uri "${KIPRJMOD}/tulipcc_symbol_lib.kicad_sym")(options "")(descr ""))
+)
