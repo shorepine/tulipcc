@@ -95,9 +95,12 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
     int sh = th;
     viewport_scale = 1;
     #ifdef __TULIP_IOS__
+        fprintf(stderr, "SCALE: input sw %d sh %d\n", sw, sh);
         screen_size(&drawable_w, &drawable_h, &viewport_scale);
         sw = drawable_w * viewport_scale;
         sh = drawable_h * viewport_scale;
+        fprintf(stderr, "SCALE: output sw %d sh %d\n", sw, sh);
+
     #endif
 
     tulip_rect.x = 0; 
@@ -112,9 +115,11 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
         if(sw > sh) {
             sh = sh - 100; // leave room for the bezel
             viewport.y = 100;
+            fprintf(stderr, "SCALE: landscape sh now %d, viewport.y is 100\n", sh);
         } else {
             sh = sh-200; // leave room for the notch
             viewport.y = 200;
+            fprintf(stderr, "SCALE: portrait sh now %d, viewport.y is 200\n", sh);
         }
         // If no keyboard, don't draw button bar
         if(keyboard_top_y>0) {
@@ -122,14 +127,14 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
             button_bar.h = (int)(50.0 * viewport_scale);
             button_bar.x = 0;
             button_bar.y = orig_sh - keyboard_top_y - button_bar.h;
-            fprintf(stderr, "setting button bar to %d %d %d %d\n", button_bar.x,button_bar.y,button_bar.w,button_bar.h);
+            fprintf(stderr, "SCALE: kty is %d, so setting button bar to %d %d %d %d\n", keyboard_top_y, button_bar.x,button_bar.y,button_bar.w,button_bar.h);
         } else {
             button_bar.w = 0;
             button_bar.h = 0;
         }
         sh = sh - keyboard_top_y - button_bar.h; // leave room for the keyboard
     #endif
-    fprintf(stderr, "before resize: scale %f. sw %d sh %d dw %d dh %d tw %d th %d kty %d\n", 
+    fprintf(stderr, "SCALE before resize: scale %f. sw %d sh %d dw %d dh %d tw %d th %d kty %d\n", 
         viewport_scale, sw, sh, drawable_w, drawable_h, tw, th, keyboard_top_y);
     if(resize_tulip) {
         // given the sw / sh, find a better H_RES/tw than what we have. 
@@ -139,6 +144,7 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
         V_RES = tulip_rect.h;
         H_RES_D = H_RES;
         V_RES_D = V_RES;
+        fprintf(stderr, "SCALE after resize: tr.w %d tr.h %d\n", tulip_rect.w, tulip_rect.h);
 
     } else {
         // just keep it
@@ -147,13 +153,17 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
     float w_ratio = (float)sw / (float)tulip_rect.w;
     float h_ratio = (float)sh / (float)tulip_rect.h;
     if(w_ratio > h_ratio) {
+        fprintf(stderr, "SCALE w_ratio %f > h_ratio %f. so setting both to %f\n", w_ratio, h_ratio, h_ratio);
         w_ratio = h_ratio;
     } else {
+        fprintf(stderr, "SCALE w_ratio %f <= h_ratio %f. so setting both to %f\n", w_ratio, h_ratio, w_ratio);
         h_ratio = w_ratio;
     }
     viewport.w = (int)((float)tulip_rect.w * w_ratio);
     viewport.h = (int)((float)tulip_rect.h * h_ratio);
     viewport.x = (sw - viewport.w) / 2;
+    fprintf(stderr, "SCALE set viewport w %d h %d, x %d, y %d\n", viewport.w, viewport.h, viewport.x, viewport.y);
+
     return 1; // ok
 }
 
@@ -331,6 +341,7 @@ void check_key() {
             int kby = 0;
             #ifdef __TULIP_IOS__
                 kby = get_keyboard_y();
+                fprintf(stderr, "windowevent: new kby is %d, was %d\n", kby, keyboard_top_y);
             #endif
 
             if( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e.window.event == SDL_WINDOWEVENT_RESIZED) {

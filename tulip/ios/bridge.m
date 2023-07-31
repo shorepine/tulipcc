@@ -64,16 +64,7 @@ int get_keyboard_y() {
     }
 }
     
-/*
-    SDL_SysWMinfo systemWindowInfo;
-    SDL_VERSION(&systemWindowInfo.version);
-    SDL_GetWindowWMInfo(window, &systemWindowInfo);
-    UIWindow * appWindow = systemWindowInfo.info.uikit.window;
-    SDL_uikitviewcontroller * vc = (SDL_uikitviewcontroller * )appWindow.rootViewController;
-    int keybottom = vc.view.bounds.size.height - vc.keyboardHeight;
-    return keybottom;
-}
-*/
+
 void ios_draw_text(float x, float y, float w, float h, char *text) {
     UILabel *lbl1 = [[UILabel alloc] init];
     [lbl1 setFont:[UIFont systemFontOfSize:30]];
