@@ -956,13 +956,13 @@ int main(int argc, char **argv) {
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
     fprintf(stderr,"alles init done\n");
 
-    delay_ms(500);
+    delay_ms(1);
 
     fprintf(stderr,"display init\n");
     unix_display_init();
     fprintf(stderr,"display init done\n");
 
-    delay_ms(500);
+    delay_ms(1);
 
     warmup_display(5);
     fprintf(stderr, "display warmed\n");
@@ -970,9 +970,12 @@ int main(int argc, char **argv) {
     pthread_create(&midi_thread_id, NULL, run_midi, NULL);
     fprintf(stderr, "midi done\n");
 
-    delay_ms(500);
+    delay_ms(1);
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
+
+    // Schedule a "turning on" sound
+    bleep();
 
 display_jump: 
     while(unix_display_flag>=0) {

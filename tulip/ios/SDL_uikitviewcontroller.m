@@ -387,6 +387,7 @@ SDL_HideHomeIndicatorHintChanged(void *userdata, const char *name, const char *o
     if (!showingKeyboard && !rotatingOrientation) {
         //SDL_StopTextInput();
     }
+
     [self setKeyboardHeight:0];
 }
 

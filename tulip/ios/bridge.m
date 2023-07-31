@@ -36,6 +36,7 @@ void ios_copy_fs() {
     }
 }
 
+// Returns the size of the screen in points and then the scale to get pixels
 void screen_size(int *w, int *h, float *scale) {
     CGRect screenRect = [[UIScreen mainScreen] bounds];
     CGFloat screenWidth = screenRect.size.width;

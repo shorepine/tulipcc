@@ -9,15 +9,13 @@ brew install findsimulator
 
 # To build for simulator
 ./clean.sh
-./build-simulator.sh # builds release for simulator
-./build-simulator.sh Debug
+./build-simulator.sh # builds release for simulator, add "debug" if you want that
 # On first run of the simulator build, you'll want to run ./build-simulator.sh twice as the simulator will still be booting
 # Quit the simulator if you're changing device types (you can set them in ./build-simulator.sh)
 
 # To build for device
 ./clean.sh
 ./build-device.sh # builds release for device
-./build-device.sh Debug
 # You have to click the run button manually in xcode to install/run on device
 ```
 

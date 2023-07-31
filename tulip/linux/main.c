@@ -890,6 +890,10 @@ int main(int argc, char **argv) {
     pthread_create(&mp_thread_id, NULL, main_, NULL);
     int c = 0;
 
+    delay_ms(100);
+    // Schedule a "turning on" sound
+    bleep();
+
 
 display_jump: 
     while(c>=0) {

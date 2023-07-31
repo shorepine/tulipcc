@@ -923,6 +923,9 @@ int main(int argc, char **argv) {
 
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
+    delay_ms(100);
+    // Schedule a "turning on" sound
+    bleep();
 
 display_jump: 
     while(unix_display_flag>=0) {

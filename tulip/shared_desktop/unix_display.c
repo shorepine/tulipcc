@@ -24,11 +24,13 @@ uint8_t sdl_ready = 0;
 SDL_Rect button_bar;
 SDL_Rect btn_ctrl, btn_tab, btn_esc, btn_l, btn_r, btn_u, btn_d;
 
+#ifdef __TULIP_IOS__
 extern int get_keyboard_y();
 extern uint8_t is_iphone();
 extern uint8_t is_ipad();
 extern void ios_draw_text(float x, float y, float w, float h, char *text) ;
 #define BUTTON_BAR_TEXT "  ⌃    ⇥    ␛    ◁    △    ▷    ▽"
+#endif
 
 void show_frame(void*d);
 int unix_display_draw();
@@ -326,11 +328,16 @@ void check_key() {
             }
         } else if( e.type == SDL_WINDOWEVENT ) {
             //Window resize/orientation change
+            int kby = 0;
+            #ifdef __TULIP_IOS__
+                kby = get_keyboard_y();
+            #endif
+
             if( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e.window.event == SDL_WINDOWEVENT_RESIZED) {
-                fprintf(stderr, "window size changed to %d %d. kty is %d and new is %d\n", e.window.data1, e.window.data2, keyboard_top_y, get_keyboard_y());
-                if(get_keyboard_y() != keyboard_top_y || (e.window.data1 != drawable_w || e.window.data2 != drawable_h)) {
+                fprintf(stderr, "window size changed to %d %d. kty is %d and new is %d\n", e.window.data1, e.window.data2, keyboard_top_y, kby);
+                if(kby != keyboard_top_y || (e.window.data1 != drawable_w || e.window.data2 != drawable_h)) {
                     fprintf(stderr, "different than existing kty %d w %d h %d\n", keyboard_top_y, drawable_w, drawable_h);
-                    keyboard_top_y = get_keyboard_y();
+                    keyboard_top_y = kby;
                     drawable_w = e.window.data1;
                     drawable_h = e.window.data2;
                     unix_display_flag = -2;
@@ -352,7 +359,6 @@ void check_key() {
                         uint16_t button_x = e.button.x - button_bar.x;
                         button_x = button_x * viewport_scale;
                         if(e.type == SDL_MOUSEBUTTONUP) {
-                            fprintf(stderr, "button x is %d\n", button_x);
                             if(button_x < btn_ctrl.x + btn_ctrl.w) { 
                                 store_mod = store_mod | KMOD_LCTRL;
                             } else if(button_x < btn_tab.x + btn_tab.w) { 
@@ -394,11 +400,13 @@ void check_key() {
 
 
 void draw_button_bar() {
-    if(button_bar.w > 0) {
-        SDL_SetRenderDrawColor(fixed_fps_renderer, 255, 255, 255, 255);
-        SDL_RenderFillRect(fixed_fps_renderer, &button_bar);
-        ios_draw_text(0,button_bar.y/viewport_scale - 20,800,100,BUTTON_BAR_TEXT);
-    }
+    #ifdef __TULIP_IOS__
+        if(button_bar.w > 0) {
+            SDL_SetRenderDrawColor(fixed_fps_renderer, 255, 255, 255, 255);
+            SDL_RenderFillRect(fixed_fps_renderer, &button_bar);
+            ios_draw_text(0,button_bar.y/viewport_scale - 20,800,100,BUTTON_BAR_TEXT);
+        }
+    #endif
 }
 
 
@@ -451,6 +459,7 @@ void unix_display_init() {
             fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         } 
         SDL_SetEventFilter(HandleAppEvents, NULL);
+        SDL_StartTextInput();
 
         sdl_ready = 1;
     }  else {
@@ -506,8 +515,11 @@ void unix_display_init() {
     display_init();
     //unix_set_fps_from_parameters();
 
+
     init_window(); 
 
+
+    SDL_StartTextInput();
 
     #ifdef __TULIP_IOS__
         draw_button_bar();
@@ -522,7 +534,7 @@ void unix_display_init() {
     } else {
         fprintf(stderr, "Gamepad detected\n");
     }
+        SDL_StartTextInput();
 
-    SDL_StartTextInput();
 
 }
