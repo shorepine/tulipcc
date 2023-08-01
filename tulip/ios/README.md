@@ -48,7 +48,7 @@ TODOs:
  - unreliable resizing still, tbd 
  - testflight
 
-![iOS](pics/ios_1.png)
-![iOS](pics/ios_2.png)
+![iOS](../../docs/pics/ios_1.png)
+![iOS](../../docs/pics/ios_2.png)
 
 
