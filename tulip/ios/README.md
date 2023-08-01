@@ -2,6 +2,7 @@
 
 Work in progress port of Tulip Desktop to iOS devices (iPad & iPhone.)
 
+
 ```
 # First install findsimulator
 brew tap a7ex/homebrew-formulae
@@ -47,6 +48,7 @@ TODOs:
  - unreliable resizing still, tbd 
  - testflight
 
-
+![iOS](pics/ios_1.png)
+![iOS](pics/ios_2.png)
 
 
