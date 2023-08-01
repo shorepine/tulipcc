@@ -64,7 +64,7 @@ We've heard this works fine under WSL using the Linux instructions. We'd love a 
 
 ## iOS (iPad, iPhone) build of Tulip Desktop
 
-![iOS](pics/ios_1.png)
+<img src="pics/ios_1.png" alt="alt text" width="500">
 
 Early days, but we're able to boot Tulip (including sound, network, MIDI, display) under iOS. [Check out our build instructions here.](../tulip/ios/README.md) We'd love more help to make this a real thing!
 
