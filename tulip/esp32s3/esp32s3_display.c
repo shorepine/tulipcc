@@ -34,7 +34,7 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
     fprintf(stderr, "Stopping display task\n");
     display_stop();
     //vTaskDelete(display_handle);
-    //display_teardown();
+    display_teardown();
     H_RES = t0;
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
@@ -53,16 +53,21 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
     BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
 
     // Init the BG, TFB and sprite and UI layers
-    display_reset_bg();
-    display_reset_tfb();
-    display_reset_sprites();
-
-    vsync_count = 1;
-    reported_fps = 1;
-    reported_gpu_usage = 0;
-    touch_held = 0;
-    fprintf(stderr, "Restarting display task\n");
+    //display_reset_bg();
+    //display_reset_tfb();
+    //display_reset_sprites();
+    display_init();
+    panel_config.timings.h_res = H_RES;
+    panel_config.timings.v_res = V_RES;
+    panel_config.timings.hsync_back_porch = HSYNC_BACK_PORCH;
+    panel_config.timings.hsync_front_porch = HSYNC_FRONT_PORCH;
+    panel_config.timings.hsync_pulse_width = HSYNC_PULSE_WIDTH;
+    panel_config.timings.vsync_back_porch = VSYNC_BACK_PORCH;
+    panel_config.timings.vsync_front_porch = VSYNC_FRONT_PORCH;
+    panel_config.timings.vsync_pulse_width = VSYNC_PULSE_WIDTH;
+    panel_config.bounce_buffer_size_px = BOUNCE_BUFFER_SIZE_PX;
     //xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
+
     display_start();
     // Wait for it to come back
 //    delay_ms(5000);
