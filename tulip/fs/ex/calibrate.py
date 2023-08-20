@@ -1,15 +1,16 @@
 # calibrate.py
 # find touch delta
-import time
+import time, tulip
 
+(w,h) = tulip.screen_size()
 test_pos = [
-    [512,300],
-    [20, 300],
-    [1014, 300],
-    [512,20],
-    [512,580],
-    [500, 300],
-    [540, 300]
+    [w/2,h/2],
+    [20, h/2],
+    [w-10, h/2],
+    [w/2,20],
+    [w/2,h-20],
+    [w/2-20, h/2],
+    [w/2+20, h/2]
     ]
 
 got = [-1. -1]
@@ -24,6 +25,8 @@ tulip.touch_callback(touch_cb)
 
 print("Tap the middle of the pink circles.")
 for (x,y) in test_pos:
+    x = int(x)
+    y = int(y)
     tulip.bg_clear()
     time.sleep_ms(500)
     got = [-1, -1]

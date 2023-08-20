@@ -65,8 +65,8 @@ portBASE_TYPE ticks_to_wait);
 #define FT5X06_ADDR_DEF    (0x38)
 
 // TODO -- maybe this fixes the weird math
-#define SCREEN_XSIZE       (479)
-#define SCREEN_YSIZE       (799)
+//#define SCREEN_XSIZE       (479)
+//#define SCREEN_YSIZE       (799)
 
 #define WRITE_BIT          (I2C_MASTER_WRITE)       /*!< I2C master write */
 #define READ_BIT           (I2C_MASTER_READ)        /*!< I2C master read */
@@ -139,8 +139,6 @@ typedef struct {
     i2c_bus_handle_t bus;
     uint8_t dev_addr;
     bool xy_swap;
-    uint16_t x_size;
-    uint16_t y_size;
     //touch_info_t tch_info;
 } ft5x06_dev_t;
 

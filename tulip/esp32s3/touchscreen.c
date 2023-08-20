@@ -214,26 +214,26 @@ esp_err_t iot_ft5x06_touch_report(ft5x06_handle_t device, touch_info_t* ifo)
         ifo->touch_point = data[2] & 0x7;
         if(ifo->touch_point > 0 && ifo->touch_point <=5) {
             if(!(dev->xy_swap)) {
-                ifo->curx[0] = dev->x_size -(((uint16_t)(data[0x03] & 0x0f) << 8) | data[0x04]);
+                ifo->curx[0] = H_RES -(((uint16_t)(data[0x03] & 0x0f) << 8) | data[0x04]);
                 ifo->cury[0] = ((uint16_t)(data[0x05] & 0x0f) << 8) | data[0x06];
-                ifo->curx[1] = dev->x_size -(((uint16_t)(data[0x09] & 0x0f) << 8) | data[0x0a]);
+                ifo->curx[1] = H_RES -(((uint16_t)(data[0x09] & 0x0f) << 8) | data[0x0a]);
                 ifo->cury[1] = ((uint16_t)(data[0x0b] & 0x0f) << 8) | data[0x0c];
-                ifo->curx[2] = dev->x_size -(((uint16_t)(data[0x0f] & 0x0f) << 8) | data[0x10]);
+                ifo->curx[2] = H_RES -(((uint16_t)(data[0x0f] & 0x0f) << 8) | data[0x10]);
                 ifo->cury[2] = ((uint16_t)(data[0x11] & 0x0f) << 8) | data[0x12];
-                ifo->curx[3] = dev->x_size -(((uint16_t)(data[0x15] & 0x0f) << 8) | data[0x16]);
+                ifo->curx[3] = H_RES -(((uint16_t)(data[0x15] & 0x0f) << 8) | data[0x16]);
                 ifo->cury[3] = ((uint16_t)(data[0x17] & 0x0f) << 8) | data[0x18];
-                ifo->curx[4] = dev->x_size -(((uint16_t)(data[0x1b] & 0x0f) << 8) | data[0x1c]);
+                ifo->curx[4] = H_RES -(((uint16_t)(data[0x1b] & 0x0f) << 8) | data[0x1c]);
                 ifo->cury[4] = ((uint16_t)(data[0x1d] & 0x0f) << 8) | data[0x1e];
             } else {
-                ifo->cury[0] = dev->x_size - (((uint16_t)(data[0x03] & 0x0f) << 8) | data[0x04]);
+                ifo->cury[0] = H_RES - (((uint16_t)(data[0x03] & 0x0f) << 8) | data[0x04]);
                 ifo->curx[0] = ((uint16_t)(data[0x05] & 0x0f) << 8) | data[0x06];
-                ifo->cury[1] = dev->x_size - (((uint16_t)(data[0x09] & 0x0f) << 8) | data[0x0a]);
+                ifo->cury[1] = H_RES - (((uint16_t)(data[0x09] & 0x0f) << 8) | data[0x0a]);
                 ifo->curx[1] = ((uint16_t)(data[0x0b] & 0x0f) << 8) | data[0x0c];
-                ifo->cury[2] = dev->x_size - (((uint16_t)(data[0x0f] & 0x0f) << 8) | data[0x10]);
+                ifo->cury[2] = H_RES - (((uint16_t)(data[0x0f] & 0x0f) << 8) | data[0x10]);
                 ifo->curx[2] = ((uint16_t)(data[0x11] & 0x0f) << 8) | data[0x12];
-                ifo->cury[3] = dev->x_size - (((uint16_t)(data[0x15] & 0x0f) << 8) | data[0x16]);
+                ifo->cury[3] = H_RES - (((uint16_t)(data[0x15] & 0x0f) << 8) | data[0x16]);
                 ifo->curx[3] = ((uint16_t)(data[0x17] & 0x0f) << 8) | data[0x18];
-                ifo->cury[4] = dev->x_size - (((uint16_t)(data[0x1b] & 0x0f) << 8) | data[0x1c]);
+                ifo->cury[4] = H_RES - (((uint16_t)(data[0x1b] & 0x0f) << 8) | data[0x1c]);
                 ifo->curx[4] = ((uint16_t)(data[0x1d] & 0x0f) << 8) | data[0x1e];
             }
             ifo->touch_event = TOUCH_EVT_PRESS;
@@ -263,8 +263,6 @@ ft5x06_handle_t iot_ft5x06_create(i2c_bus_handle_t bus, uint16_t dev_addr)
     }
     dev->bus = bus;
     dev->dev_addr = dev_addr;
-    dev->x_size = SCREEN_XSIZE;
-    dev->y_size = SCREEN_YSIZE;
     dev->xy_swap = false;
     return (ft5x06_handle_t) dev;
 }
@@ -303,13 +301,6 @@ void ft5x06_init()
     fprintf(stderr,"ft5x06 device created\n");
 }
 
-// todo, calibrate function
-#define TOUCH_LEFT_X 473 // and goes down as X+ to 0 in the middle and then down from 65535 to 64997
-#define TOUCH_TOP_Y 4
-#define TOUCH_RIGHT_X 64997
-#define TOUCH_MIDDLE_X 65535
-#define TOUCH_BOTTOM_Y 591
-
 
 void run_ft5x06(void *param)
 {
@@ -323,17 +314,18 @@ void run_ft5x06(void *param)
             got_primary_touch = 0;
             for(i = 0; i < touch_info.touch_point; i++) {
                 if(i<4) {
-                    if(touch_info.curx[i] > 64000) { // right half of screen 
-                        last_touch_x[i] = (H_RES/2) + (TOUCH_MIDDLE_X - touch_info.curx[i]) * ((float)(H_RES/2) / (float)(TOUCH_MIDDLE_X-TOUCH_RIGHT_X));
-                    } else {
-                        last_touch_x[i] = (TOUCH_LEFT_X - touch_info.curx[i]) * ((float)(H_RES/2) / (float)(TOUCH_LEFT_X));
-                    }
-                    last_touch_y[i] = (touch_info.cury[i]-TOUCH_TOP_Y) * ((float)V_RES / (float) (TOUCH_BOTTOM_Y-TOUCH_TOP_Y));
-                    last_touch_x[i] += touch_x_delta;
-                    last_touch_y[i] += touch_y_delta;
+
+                    last_touch_x[i] = (H_RES - touch_info.curx[i]) + touch_x_delta;
+                    if(last_touch_x[i] < 0) last_touch_x[i] = 0;
+                    if(last_touch_x[i] >= H_RES) last_touch_x[i] = H_RES-1;
+
+                    last_touch_y[i] = touch_info.cury[i] + touch_y_delta;
+                    if(last_touch_y[i] < 0) last_touch_y[i] = 0;
+                    if(last_touch_y[i] >= V_RES) last_touch_y[i] = V_RES-1;
+
                 }
                 if(i==0) got_primary_touch = 1;
-                //fprintf(stderr,"evt %d touch point %d  x:%d  y:%d became %d %d\n", touch_info.touch_event, i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
+                //if(i==0) fprintf(stderr,"evt %d touch point %d  x:%d  y:%d became %d %d\n", touch_info.touch_event, i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
             }
             if(got_primary_touch) {
                 send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0); 

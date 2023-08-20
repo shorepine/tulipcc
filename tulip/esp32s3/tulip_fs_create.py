@@ -37,7 +37,7 @@ if(len(sys.argv)>1 and sys.argv[1]=='N8R8'):
 else:
     TULIP_VFS_SIZE = 0x1792000 
 
-cfg = lfs.LFSConfig(block_size=4096, block_count = TULIP_VFS_SIZE / 4096)
+cfg = lfs.LFSConfig(block_size=4096, block_count = TULIP_VFS_SIZE / 4096,  disk_version=0x00020000)
 fs = lfs.LFSFilesystem()
 lfs.format(fs, cfg)
 lfs.mount(fs, cfg)
