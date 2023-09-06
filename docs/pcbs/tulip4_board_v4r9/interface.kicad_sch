@@ -2598,6 +2598,7 @@
   (no_connect (at 153.67 69.85) (uuid 50416298-13a9-40d3-bf75-2ec6e877eea4))
   (no_connect (at 153.67 59.69) (uuid 61802417-3b9d-499b-8210-d7765bc79842))
   (no_connect (at 62.23 151.13) (uuid 9ecbf58a-7138-4365-8f41-9a03d5259e19))
+  (no_connect (at 257.81 36.83) (uuid b77ce441-9370-4987-a440-67ba004fc7cd))
   (no_connect (at 173.99 176.53) (uuid c13cbbe1-69dd-4a05-ba07-28f65f50a844))
   (no_connect (at 173.99 138.43) (uuid e4427408-48ee-41ed-b99c-19698db13810))
   (no_connect (at 153.67 80.01) (uuid ec7403dc-b7d4-4012-91e8-4d37cad11248))
@@ -3715,7 +3716,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:CAP_0805_0.1UF") (at 120.65 77.47 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 003de6d8-6769-47f4-be5c-ae44630c3712)
-    (property "Reference" "C3" (at 114.3 76.2 0)
+    (property "Reference" "C?" (at 114.3 76.2 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "0.1uF" (at 111.76 78.74 0)
@@ -3750,10 +3751,10 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "C3") (unit 1)
+          (reference "C?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
-          (reference "C6") (unit 1)
+          (reference "C8") (unit 1)
         )
       )
     )
@@ -3762,7 +3763,7 @@
   (symbol (lib_id "power:GND") (at 257.81 113.03 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 0381982d-8915-4b80-acd0-c9230dfaa220)
-    (property "Reference" "#PWR06" (at 264.16 113.03 0)
+    (property "Reference" "#PWR?" (at 264.16 113.03 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 113.03 90)
@@ -3778,7 +3779,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR033") (unit 1)
@@ -3786,7 +3787,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -3795,7 +3796,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:USB-C_217179-0001") (at 43.18 160.02 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 051992d3-213e-4db1-8d74-20120f754fb9)
-    (property "Reference" "J1" (at 33.02 144.78 0)
+    (property "Reference" "J?" (at 33.02 144.78 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "217179-0001" (at 29.21 152.4 90)
@@ -3845,7 +3846,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "J1") (unit 1)
+          (reference "J?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "J5") (unit 1)
@@ -3857,7 +3858,7 @@
   (symbol (lib_id "power:VBUS") (at 62.23 34.29 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 063326a0-47ac-484d-8f2f-fc9f77f3910d)
-    (property "Reference" "#PWR02" (at 62.23 38.1 0)
+    (property "Reference" "#PWR?" (at 62.23 38.1 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "VBUS" (at 62.23 30.48 0)
@@ -3873,7 +3874,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR02") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR07") (unit 1)
@@ -3881,7 +3882,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR03") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -3890,7 +3891,7 @@
   (symbol (lib_id "power:GND") (at 120.65 82.55 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 0868b56d-d832-47ff-bdc8-0aed5e187c45)
-    (property "Reference" "#PWR08" (at 120.65 88.9 0)
+    (property "Reference" "#PWR?" (at 120.65 88.9 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 122.555 86.36 0)
@@ -3906,7 +3907,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR08") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR024") (unit 1)
@@ -3914,7 +3915,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -3967,7 +3968,7 @@
   (symbol (lib_id "power:GND") (at 257.81 92.71 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 08fa2a50-d603-419e-8075-81a438bdd61c)
-    (property "Reference" "#PWR06" (at 264.16 92.71 0)
+    (property "Reference" "#PWR?" (at 264.16 92.71 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 92.71 90)
@@ -3983,7 +3984,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR027") (unit 1)
@@ -3991,7 +3992,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4021,7 +4022,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR028") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4030,7 +4031,7 @@
   (symbol (lib_id "power:GND") (at 257.81 72.39 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 0c502d9d-1e9f-4f7f-9b2f-ad4e45f50131)
-    (property "Reference" "#PWR06" (at 264.16 72.39 0)
+    (property "Reference" "#PWR?" (at 264.16 72.39 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 72.39 90)
@@ -4046,7 +4047,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR018") (unit 1)
@@ -4054,7 +4055,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4063,7 +4064,7 @@
   (symbol (lib_id "power:GND") (at 138.43 91.44 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 0d6017ed-a1c0-424d-8e59-15b85a55e154)
-    (property "Reference" "#PWR06" (at 138.43 97.79 0)
+    (property "Reference" "#PWR?" (at 138.43 97.79 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 140.335 95.25 0)
@@ -4079,7 +4080,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR026") (unit 1)
@@ -4087,7 +4088,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4096,7 +4097,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:CAP_0805_47PF") (at 102.87 64.77 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 17e311d8-d3d0-4dbe-afd9-dcf37582ae08)
-    (property "Reference" "C1" (at 97.282 63.5 0)
+    (property "Reference" "C?" (at 97.282 63.5 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "47pF" (at 95.25 66.04 0)
@@ -4131,10 +4132,10 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "C1") (unit 1)
+          (reference "C?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
-          (reference "C4") (unit 1)
+          (reference "C6") (unit 1)
         )
       )
     )
@@ -4143,7 +4144,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:RES_0805_5K1") (at 73.66 72.39 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 19c44dd5-5f12-4c27-89ad-51f615f79342)
-    (property "Reference" "R1" (at 71.12 69.85 0)
+    (property "Reference" "R?" (at 71.12 69.85 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "5.1K" (at 76.2 69.85 0)
@@ -4178,7 +4179,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "R1") (unit 1)
+          (reference "R?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "R9") (unit 1)
@@ -4190,7 +4191,7 @@
   (symbol (lib_id "power:VBUS") (at 139.7 34.29 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 1b06beb4-55d2-4cf1-9f45-e39098776984)
-    (property "Reference" "#PWR09" (at 139.7 38.1 0)
+    (property "Reference" "#PWR?" (at 139.7 38.1 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "VBUS" (at 139.7 30.48 0)
@@ -4206,7 +4207,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR09") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR08") (unit 1)
@@ -4214,7 +4215,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR03") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4361,7 +4362,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:CAP_0805_47PF") (at 110.49 64.77 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 2efbc18e-9450-4b8b-bec3-32c19a60577b)
-    (property "Reference" "C2" (at 113.03 63.5 0)
+    (property "Reference" "C?" (at 113.03 63.5 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "47pF" (at 113.03 66.04 0)
@@ -4396,10 +4397,10 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "C2") (unit 1)
+          (reference "C?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
-          (reference "C5") (unit 1)
+          (reference "C7") (unit 1)
         )
       )
     )
@@ -4477,7 +4478,7 @@
   (symbol (lib_id "power:GND") (at 257.81 100.33 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 332f5044-146a-4778-a1ce-1932b1330441)
-    (property "Reference" "#PWR06" (at 264.16 100.33 0)
+    (property "Reference" "#PWR?" (at 264.16 100.33 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 100.33 90)
@@ -4493,7 +4494,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR030") (unit 1)
@@ -4501,7 +4502,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4535,7 +4536,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:FT231XS") (at 142.24 67.31 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 3cc692cf-f8fc-4169-b5e4-92dbbf7486cb)
-    (property "Reference" "U3" (at 128.27 46.99 0)
+    (property "Reference" "U?" (at 128.27 46.99 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "FT231XS" (at 142.24 46.99 0)
@@ -4588,7 +4589,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "U3") (unit 1)
+          (reference "U?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "U4") (unit 1)
@@ -4600,7 +4601,7 @@
   (symbol (lib_id "power:GND") (at 257.81 120.65 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 3dfc0445-aabf-4a19-b0a0-21629dc6b058)
-    (property "Reference" "#PWR06" (at 264.16 120.65 0)
+    (property "Reference" "#PWR?" (at 264.16 120.65 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 120.65 90)
@@ -4616,7 +4617,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR036") (unit 1)
@@ -4624,7 +4625,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4679,7 +4680,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR028") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4688,7 +4689,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:CAP_0805_4.7UF") (at 163.83 40.64 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
     (uuid 414360fd-d06a-451a-ac0e-6e63ee98f429)
-    (property "Reference" "C5" (at 167.64 39.37 0)
+    (property "Reference" "C?" (at 167.64 39.37 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "4.7uF" (at 167.64 41.91 0)
@@ -4723,10 +4724,10 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "C5") (unit 1)
+          (reference "C?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
-          (reference "C3") (unit 1)
+          (reference "C5") (unit 1)
         )
       )
     )
@@ -4756,7 +4757,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR029") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4809,7 +4810,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:FERRITE_0805_120R_3A") (at 54.61 35.56 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 4584f634-2ecc-44b8-b5be-4b1ca8dd3892)
-    (property "Reference" "FB1" (at 54.61 33.02 0)
+    (property "Reference" "FB?" (at 54.61 33.02 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "120R" (at 54.61 38.1 0)
@@ -4844,7 +4845,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "FB1") (unit 1)
+          (reference "FB?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "FB1") (unit 1)
@@ -4877,7 +4878,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR028") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4886,7 +4887,7 @@
   (symbol (lib_id "power:VBUS") (at 93.98 55.88 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 49ec8ec3-d7fb-485e-a3fb-7bac57ffef65)
-    (property "Reference" "#PWR05" (at 93.98 59.69 0)
+    (property "Reference" "#PWR?" (at 93.98 59.69 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "VBUS" (at 97.79 54.61 0)
@@ -4902,7 +4903,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR05") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR014") (unit 1)
@@ -4910,7 +4911,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR02") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4919,7 +4920,7 @@
   (symbol (lib_id "power:GND") (at 257.81 123.19 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 4d941185-8556-4314-9708-4eb5213a9787)
-    (property "Reference" "#PWR06" (at 264.16 123.19 0)
+    (property "Reference" "#PWR?" (at 264.16 123.19 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 123.19 90)
@@ -4935,7 +4936,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR039") (unit 1)
@@ -4943,7 +4944,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -4952,7 +4953,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:CAP_220UF_16V") (at 63.5 132.08 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 4f0d84ac-6223-4892-99f5-3c7ef42f700b)
-    (property "Reference" "C23" (at 59.69 129.54 0)
+    (property "Reference" "C?" (at 59.69 129.54 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "220uF" (at 59.69 134.62 0)
@@ -4990,13 +4991,13 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "C23") (unit 1)
+          (reference "C?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/3d001c16-c356-40cf-94c4-c1000ab40cf1"
-          (reference "C23") (unit 1)
+          (reference "C?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
-          (reference "C8") (unit 1)
+          (reference "C10") (unit 1)
         )
       )
     )
@@ -5005,7 +5006,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:CAP_0805_0.1UF") (at 151.13 40.64 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 57cfb204-a2d9-4573-9dc8-e8b170d0978e)
-    (property "Reference" "C4" (at 153.67 39.37 0)
+    (property "Reference" "C?" (at 153.67 39.37 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "0.1uF" (at 153.67 41.91 0)
@@ -5040,35 +5041,10 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
+          (reference "C?") (unit 1)
+        )
+        (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "C4") (unit 1)
-        )
-        (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
-          (reference "C2") (unit 1)
-        )
-      )
-    )
-  )
-
-  (symbol (lib_id "power:+5V") (at 96.52 160.02 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no)
-    (uuid 59378f24-d184-40e3-a8c3-73caf0557c14)
-    (property "Reference" "#PWR052" (at 96.52 163.83 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "+5V" (at 99.06 160.02 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 96.52 160.02 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 96.52 160.02 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 90fc39d6-734c-4e86-bdc3-e39507bd314a))
-    (instances
-      (project "tulipcc"
-        (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
-          (reference "#PWR052") (unit 1)
         )
       )
     )
@@ -5077,7 +5053,7 @@
   (symbol (lib_id "power:GND") (at 71.12 55.88 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 5bf7ed66-8af0-4d4e-9b76-418ef78b1e99)
-    (property "Reference" "#PWR03" (at 71.12 62.23 0)
+    (property "Reference" "#PWR?" (at 71.12 62.23 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 73.025 59.69 0)
@@ -5093,7 +5069,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR03") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR013") (unit 1)
@@ -5101,7 +5077,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR025") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5110,7 +5086,7 @@
   (symbol (lib_id "power:GND") (at 257.81 128.27 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 5fe581ab-1ef0-4654-b010-9d081f7404bb)
-    (property "Reference" "#PWR06" (at 264.16 128.27 0)
+    (property "Reference" "#PWR?" (at 264.16 128.27 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 128.27 90)
@@ -5126,7 +5102,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR041") (unit 1)
@@ -5134,7 +5110,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5143,7 +5119,7 @@
   (symbol (lib_id "power:GND") (at 257.81 77.47 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 63a9fe06-4e6c-4e07-9227-45000b5da732)
-    (property "Reference" "#PWR06" (at 264.16 77.47 0)
+    (property "Reference" "#PWR?" (at 264.16 77.47 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 77.47 90)
@@ -5159,7 +5135,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR020") (unit 1)
@@ -5167,7 +5143,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5176,7 +5152,7 @@
   (symbol (lib_id "power:GND") (at 257.81 82.55 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 6477253f-ca2e-49ef-92b9-fc579a74e47e)
-    (property "Reference" "#PWR06" (at 264.16 82.55 0)
+    (property "Reference" "#PWR?" (at 264.16 82.55 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 82.55 90)
@@ -5192,7 +5168,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR025") (unit 1)
@@ -5200,7 +5176,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5230,7 +5206,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR028") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5239,7 +5215,7 @@
   (symbol (lib_id "power:GND") (at 63.5 137.16 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 7e6226af-2f7a-4cae-abd9-b18a0bd5e2b9)
-    (property "Reference" "#PWR01" (at 63.5 143.51 0)
+    (property "Reference" "#PWR?" (at 63.5 143.51 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 65.405 140.97 0)
@@ -5255,7 +5231,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR01") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR047") (unit 1)
@@ -5263,7 +5239,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR04") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5354,7 +5330,7 @@
   (symbol (lib_id "power:GND") (at 49.53 182.88 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 85328d43-ea8f-46c1-a805-1a1ce08c92fa)
-    (property "Reference" "#PWR01" (at 49.53 189.23 0)
+    (property "Reference" "#PWR?" (at 49.53 189.23 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 51.435 186.69 0)
@@ -5370,7 +5346,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR01") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR056") (unit 1)
@@ -5378,7 +5354,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR04") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5456,7 +5432,7 @@
   (symbol (lib_id "power:GND") (at 257.81 69.85 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 92ea07e1-80e1-469f-b95e-5df5c1732004)
-    (property "Reference" "#PWR06" (at 264.16 69.85 0)
+    (property "Reference" "#PWR?" (at 264.16 69.85 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 69.85 90)
@@ -5472,7 +5448,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR016") (unit 1)
@@ -5480,7 +5456,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5489,7 +5465,7 @@
   (symbol (lib_id "power:GND") (at 257.81 97.79 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 937d2d04-b485-4a76-b209-e9faa98cf271)
-    (property "Reference" "#PWR06" (at 264.16 97.79 0)
+    (property "Reference" "#PWR?" (at 264.16 97.79 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 97.79 90)
@@ -5505,7 +5481,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR029") (unit 1)
@@ -5513,7 +5489,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5613,7 +5589,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:CAP_0805_0.1UF") (at 223.52 127 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 9d7f1456-348b-4558-af85-bd0328a6fea0)
-    (property "Reference" "C3" (at 226.06 125.73 0)
+    (property "Reference" "C?" (at 226.06 125.73 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Value" "0.1uF" (at 226.06 128.27 0)
@@ -5648,10 +5624,10 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "C3") (unit 1)
+          (reference "C?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
-          (reference "C7") (unit 1)
+          (reference "C9") (unit 1)
         )
       )
     )
@@ -5660,7 +5636,7 @@
   (symbol (lib_id "power:GND") (at 257.81 102.87 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 9d8ecedb-2754-4a07-94d7-9868fc4b47d8)
-    (property "Reference" "#PWR06" (at 264.16 102.87 0)
+    (property "Reference" "#PWR?" (at 264.16 102.87 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 102.87 90)
@@ -5676,7 +5652,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR031") (unit 1)
@@ -5684,7 +5660,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5714,7 +5690,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR029") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5723,7 +5699,7 @@
   (symbol (lib_id "power:GND") (at 257.81 118.11 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid 9f979217-5bac-4cc6-89d2-fab459a8fe92)
-    (property "Reference" "#PWR06" (at 264.16 118.11 0)
+    (property "Reference" "#PWR?" (at 264.16 118.11 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 118.11 90)
@@ -5739,7 +5715,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR035") (unit 1)
@@ -5747,7 +5723,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5756,7 +5732,7 @@
   (symbol (lib_id "power:GND") (at 257.81 74.93 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid a0bd1a46-2c19-4f0e-bb50-1c81d6b2b3cc)
-    (property "Reference" "#PWR06" (at 264.16 74.93 0)
+    (property "Reference" "#PWR?" (at 264.16 74.93 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 74.93 90)
@@ -5772,7 +5748,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR019") (unit 1)
@@ -5780,7 +5756,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5833,7 +5809,7 @@
   (symbol (lib_id "power:GND") (at 257.81 95.25 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid a9f3373a-b500-4a70-9ad7-2a86a8d96aa3)
-    (property "Reference" "#PWR06" (at 264.16 95.25 0)
+    (property "Reference" "#PWR?" (at 264.16 95.25 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 95.25 90)
@@ -5849,7 +5825,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR028") (unit 1)
@@ -5857,7 +5833,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5866,7 +5842,7 @@
   (symbol (lib_id "power:GND") (at 83.82 78.74 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid af979d52-0ce9-4ed6-828e-e42bce23345a)
-    (property "Reference" "#PWR04" (at 83.82 85.09 0)
+    (property "Reference" "#PWR?" (at 83.82 85.09 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 85.725 82.55 0)
@@ -5882,7 +5858,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR04") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR022") (unit 1)
@@ -5890,7 +5866,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -5899,7 +5875,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:USB-C_217179-0001") (at 41.91 55.88 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid b04d3e68-df8f-4246-a040-a48b80df1462)
-    (property "Reference" "J1" (at 31.75 40.64 0)
+    (property "Reference" "J?" (at 31.75 40.64 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
     (property "Value" "217179-0001" (at 27.94 48.26 90)
@@ -5949,7 +5925,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "J1") (unit 1)
+          (reference "J?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "J3") (unit 1)
@@ -6005,7 +5981,7 @@
   (symbol (lib_id "power:GND") (at 157.48 44.45 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid b251d6d4-82fa-4229-ba62-2dc070ac69d0)
-    (property "Reference" "#PWR010" (at 157.48 50.8 0)
+    (property "Reference" "#PWR?" (at 157.48 50.8 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 159.385 48.26 0)
@@ -6021,7 +5997,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR010") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR011") (unit 1)
@@ -6029,7 +6005,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6082,7 +6058,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:RES_0805_27R") (at 116.84 58.42 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid b9cbc157-4535-4a44-9bcb-45b00754b5c1)
-    (property "Reference" "R4" (at 114.3 55.88 0)
+    (property "Reference" "R?" (at 114.3 55.88 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "27R" (at 119.38 55.88 0)
@@ -6117,7 +6093,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "R4") (unit 1)
+          (reference "R?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "R8") (unit 1)
@@ -6173,7 +6149,7 @@
   (symbol (lib_id "power:GND") (at 101.6 138.43 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid bc616c48-4152-4845-8127-a4b891819e6d)
-    (property "Reference" "#PWR01" (at 101.6 144.78 0)
+    (property "Reference" "#PWR?" (at 101.6 144.78 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 103.505 142.24 0)
@@ -6189,7 +6165,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR01") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR049") (unit 1)
@@ -6197,7 +6173,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR04") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6206,7 +6182,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:RES_0805_27R") (at 116.84 53.34 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid c22ae7dc-515e-432b-8b58-99843129f47c)
-    (property "Reference" "R3" (at 114.3 50.8 0)
+    (property "Reference" "R?" (at 114.3 50.8 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "27R" (at 119.38 50.8 0)
@@ -6241,7 +6217,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "R3") (unit 1)
+          (reference "R?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "R7") (unit 1)
@@ -6250,10 +6226,35 @@
     )
   )
 
+  (symbol (lib_id "power:+5VL") (at 96.52 160.02 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no)
+    (uuid c639cf6c-b117-4e06-901c-a8cda9f58838)
+    (property "Reference" "#PWR052" (at 96.52 163.83 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "+5VL" (at 99.06 160.02 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 96.52 160.02 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 96.52 160.02 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid fc86d693-bba5-4f5f-96a1-5ccf40b17612))
+    (instances
+      (project "tulipcc"
+        (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
+          (reference "#PWR052") (unit 1)
+        )
+      )
+    )
+  )
+
   (symbol (lib_id "power:GND") (at 257.81 115.57 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid cbf61e88-7d54-428c-ab65-53127a124e88)
-    (property "Reference" "#PWR06" (at 264.16 115.57 0)
+    (property "Reference" "#PWR?" (at 264.16 115.57 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 115.57 90)
@@ -6269,7 +6270,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR034") (unit 1)
@@ -6277,7 +6278,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6307,7 +6308,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR026") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6316,7 +6317,7 @@
   (symbol (lib_id "power:GND") (at 85.09 137.16 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid d39e5978-4b7f-4023-80ac-d8757a9d57eb)
-    (property "Reference" "#PWR01" (at 85.09 143.51 0)
+    (property "Reference" "#PWR?" (at 85.09 143.51 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 86.995 140.97 0)
@@ -6332,7 +6333,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR01") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR048") (unit 1)
@@ -6340,7 +6341,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR04") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6349,7 +6350,7 @@
   (symbol (lib_id "power:GND") (at 73.66 160.02 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid d46bb124-daf1-4ce4-a1ea-aea7ee1e83cf)
-    (property "Reference" "#PWR03" (at 73.66 166.37 0)
+    (property "Reference" "#PWR?" (at 73.66 166.37 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 75.565 163.83 0)
@@ -6365,7 +6366,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR03") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR051") (unit 1)
@@ -6373,7 +6374,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR025") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6382,7 +6383,7 @@
   (symbol (lib_id "power:GND") (at 257.81 44.45 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid d47bfa17-5061-44ad-a931-0715135225a5)
-    (property "Reference" "#PWR06" (at 264.16 44.45 0)
+    (property "Reference" "#PWR?" (at 264.16 44.45 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 44.45 90)
@@ -6398,7 +6399,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR012") (unit 1)
@@ -6406,7 +6407,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6483,7 +6484,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR028") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6492,7 +6493,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:USBLC6-2SC6") (at 85.09 160.02 0) (mirror x) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid d7d1e0d4-2143-4b39-9b34-7f25df4fc8c4)
-    (property "Reference" "U2" (at 78.74 151.13 0)
+    (property "Reference" "U?" (at 78.74 151.13 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "USBLC6-2SC6" (at 85.09 168.91 0)
@@ -6531,7 +6532,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "U2") (unit 1)
+          (reference "U?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "U7") (unit 1)
@@ -6564,7 +6565,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR026") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6573,7 +6574,7 @@
   (symbol (lib_id "power:GND") (at 257.81 62.23 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid de9ff465-9743-4a47-962a-2b3a92475866)
-    (property "Reference" "#PWR06" (at 264.16 62.23 0)
+    (property "Reference" "#PWR?" (at 264.16 62.23 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 62.23 90)
@@ -6589,7 +6590,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR015") (unit 1)
@@ -6597,7 +6598,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6653,7 +6654,7 @@
   (symbol (lib_id "power:GND") (at 257.81 80.01 90) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid e61226c0-8ae6-4cd2-8a3e-77b73a76d6d3)
-    (property "Reference" "#PWR06" (at 264.16 80.01 0)
+    (property "Reference" "#PWR?" (at 264.16 80.01 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 261.62 80.01 90)
@@ -6669,7 +6670,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR06") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR023") (unit 1)
@@ -6677,7 +6678,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6707,7 +6708,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR056") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6716,7 +6717,7 @@
   (symbol (lib_id "power:GND") (at 48.26 78.74 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid e8e5a685-6785-4931-a939-16eb4dee975a)
-    (property "Reference" "#PWR01" (at 48.26 85.09 0)
+    (property "Reference" "#PWR?" (at 48.26 85.09 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 50.165 82.55 0)
@@ -6732,7 +6733,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR01") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR021") (unit 1)
@@ -6740,7 +6741,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR04") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6749,7 +6750,7 @@
   (symbol (lib_id "power:GND") (at 106.68 72.39 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid eab79094-395a-4b0b-8a05-6731e0a25996)
-    (property "Reference" "#PWR07" (at 106.68 78.74 0)
+    (property "Reference" "#PWR?" (at 106.68 78.74 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Value" "GND" (at 108.585 76.2 0)
@@ -6765,7 +6766,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "#PWR07") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "#PWR017") (unit 1)
@@ -6773,7 +6774,7 @@
       )
       (project "sassafras"
         (path "/2f43e12c-664f-49db-adb2-dc21dc0c1abc"
-          (reference "#PWR030") (unit 1)
+          (reference "#PWR?") (unit 1)
         )
       )
     )
@@ -6807,7 +6808,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:USBLC6-2SC6") (at 82.55 55.88 0) (mirror x) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid f16ebba1-d5ec-4b5f-9dcd-11881b6915ae)
-    (property "Reference" "U2" (at 76.2 46.99 0)
+    (property "Reference" "U?" (at 76.2 46.99 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "USBLC6-2SC6" (at 82.55 64.77 0)
@@ -6846,7 +6847,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "U2") (unit 1)
+          (reference "U?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "U3") (unit 1)
@@ -6858,7 +6859,7 @@
   (symbol (lib_id "tulipcc_symbol_lib:RES_0805_5K1") (at 73.66 74.93 0) (unit 1)
     (in_bom yes) (on_board yes) (dnp no)
     (uuid f823e5bd-6751-4766-98cb-10dd4e9073c2)
-    (property "Reference" "R2" (at 71.12 77.47 0)
+    (property "Reference" "R?" (at 71.12 77.47 0)
       (effects (font (size 1.27 1.27)))
     )
     (property "Value" "5.1K" (at 76.2 77.47 0)
@@ -6893,7 +6894,7 @@
     (instances
       (project "tulipcc"
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd"
-          (reference "R2") (unit 1)
+          (reference "R?") (unit 1)
         )
         (path "/1f3f3d49-7116-41fe-a955-23c6a78acccd/54a214d3-9b5d-43ac-ae8e-d0c7ed30336b"
           (reference "R10") (unit 1)
