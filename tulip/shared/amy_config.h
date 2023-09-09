@@ -11,7 +11,11 @@ Small PCM samples
 #define AMY_EVENT_FIFO_LEN 1000  // number of events the queue can store
 #define AMY_MAX_DRIFT_MS 20000   // ms of time you can schedule ahead before synth recomputes time base
 #define AMY_SAMPLE_RATE 44100    // playback sample rate
+#ifndef TDECK
 #define AMY_NCHANS 2             // 1 = mono output, 'Q' (pan) ignored. 2 = Enable 2-channel output, pan, etc.
+#else
+#define AMY_NCHANS 1
+#endif
 #define AMY_HAS_CHORUS 1         // 1 = Make chorus available (uses RAM)
 #define AMY_HAS_REVERB 1         // 1 = Make reverb available (uses RAM)
 

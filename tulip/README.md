@@ -9,6 +9,7 @@ macos - all Tulip Desktop for macOS specific files
 shared - code shared between all Tulip ports (hardware & Desktop)
 shared/py - Python modules that get loaded into Tulip
 shared_desktop - code shared between Tulip Desktop ports (macOS, iOS, Linux)
+tdeck - Tulip port to the T-Deck 
 ```
 
 

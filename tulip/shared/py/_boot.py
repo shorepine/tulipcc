@@ -1,10 +1,10 @@
 import gc
 import uos
 import tulip, world
+
 import alles
 from upysh import *
 from tulip import edit, run
-
 
 # This _boot runs both desktop and esp32s3, so we check for flashdev
 try:
@@ -16,9 +16,13 @@ try:
         print(str(e))
         import inisetup
         vfs = inisetup.setup()
-    from esp32 import Partition
-    currentPartition = Partition(Partition.RUNNING)
-    currentPartition.mark_app_valid_cancel_rollback()
+    try:
+        from esp32 import Partition
+        currentPartition = Partition(Partition.RUNNING)
+        currentPartition.mark_app_valid_cancel_rollback()
+    except OSError:
+        # this is you booting a non-OTA esp32 device. it's ok!
+        pass
     
 except ImportError:
     # Tulip Desktop

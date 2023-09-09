@@ -94,8 +94,14 @@ extern const unsigned char font_8x12_r[256][12];
 // We assume we can store 16 unique 32x32 sprite tiles, you can swap these out from RAM
 #define SPRITE_RAM_BYTES (32*32*2*16) // 32KB
 
+#ifndef DEFAULT_H_RES
 #define DEFAULT_H_RES 1024 //1024 
+#endif
+
+#ifndef DEFAULT_V_RES
 #define DEFAULT_V_RES 600 //600 
+#endif
+
 #define DEFAULT_OFFSCREEN_X_PX 1024
 #define DEFAULT_OFFSCREEN_Y_PX 150
 #define DEFAULT_PIXEL_CLOCK_MHZ 22

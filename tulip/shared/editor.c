@@ -209,7 +209,7 @@ void move_cursor(int16_t x, int16_t y) {
 	char status[TFB_COLS];
 	// TODO, padding better 
 	float percent = ((float)(cursor_y+y_offset+1) / (float)lines) * 100.0;
-	sprintf(status, "|Tulip Editor| Row %04d / %04d [%02.2f%%] %3d %s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
+	sprintf(status, "%04d / %04d [%02.2f%%] %3d %s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
 	string_at_row(status, strlen(status), TFB_ROWS-1);
 	format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
 

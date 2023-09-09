@@ -12,7 +12,7 @@ execute_process(COMMAND bash -c "../shared/grab_submodules.sh"
 
 # Set the board if it's not already set.
 if(NOT MICROPY_BOARD)
-    set(MICROPY_BOARD TULIP4)
+    set(MICROPY_BOARD TDECK)
 endif()
 
 # Set the board directory and check that it exists.
@@ -60,3 +60,4 @@ set(EXTRA_COMPONENT_DIRS main)
 # Define the project.
 project(micropython)
 idf_build_set_property(COMPILE_OPTIONS "-fdiagnostics-color=always" APPEND)
+idf_build_set_property(COMPILE_OPTIONS "-DTDECK" APPEND)

@@ -215,6 +215,7 @@ int32_t desync = 0;
 
             uint8_t tfb_col = 0;
             while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
+
                 uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
                 uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
                 uint8_t fg_color = TFBfg[tfb_row*TFB_COLS+tfb_col];
