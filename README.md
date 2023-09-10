@@ -49,6 +49,13 @@ I've been working on Tulip on and off for years over many hardware iterations an
 ![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4.png)
 
 
+## T-Deck Tulip CC
+
+![T-Deck](docs/pics/tdeck_editor.jpg)
+
+A **new** easy mode option, too, get yourself a [T-Deck](https://www.aliexpress.us/item/3256805505920840.html?gatewayAdapt=glo2usa4itemAdapt) and install Tulip CC on it directly! [Check out our T-Deck page for more detail.](tulip/tdeck/README.md)
+
+
 ## Getting started
 
 Once you've [built a Tulip](docs/tulip_build.md) or [installed Tulip Desktop](docs/tulip_desktop.md), you'll see that Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
