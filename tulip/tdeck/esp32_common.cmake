@@ -70,7 +70,7 @@ list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/tdeck/tdeck_display.c
     ../../../tulip/tdeck/tdeck_keyboard.c
     ../../../tulip/tdeck/main.c
-    ../../../tulip/tdeck/uart.c
+    ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/usb_keyboard.c
     ../../../tulip/esp32s3/multicast.c
     ../../../tulip/esp32s3/mphalport.c
