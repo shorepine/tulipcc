@@ -15,10 +15,12 @@ Notes:
  * They keyboard by default ships with it reporting ASCII codes for each keypress, not any lower-level scan matrix codes. You can re-program the keyboard (it's powered by a separate ESP32-C2) but until then, we're limited to the key combos on the device. I had to cheat to get access to Control-C and Control-X (save in the editor.) Control-C is accessed by pressing right shift and the dollar sign or speaker key (depending on your model), and Control-X is left shift and the 0/microphone key.
  * The trackball is mapped to the arrow keys.
  * USB for MIDI and real keyboard *should* work, but it's annoying to test as the UART for monitoring goes over the same USB connection. There's a header on back for serial monitoring, so I'll eventually move to that and try to get USB working. Alternatively we could use MIDI over the exposed UART pins, but that would require a separate breakout board. 
+ * If you get your T-Deck in a state where your computer can't find its USB-Serial connection anymore (probably because you're doing something with USB on Tulip), you have to force it back into bootloader mode before it'll flash again. To do that, flip it off, then hold down the trackball button (GPIO0) while flipping it back on again. The next time you flash, it'll stay in bootloader mode until you hit the "reset" button (opposite side from the power switch.) 
 
 Still todo 
 
  * Touchscreen support
+ * Serial console - you can read but not write to it 
  * USB host support for keyboard and MIDI
  * SD card support
  * LoRA 
