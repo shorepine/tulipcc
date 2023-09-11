@@ -5,6 +5,6 @@ set(SDKCONFIG_DEFAULTS
     ../../micropython/ports/esp32/boards/sdkconfig.usb
     ../../micropython/ports/esp32/boards/sdkconfig.ble
     ../../micropython/ports/esp32/boards/sdkconfig.240mhz
-    ../esp32s3/boards/sdkconfig.tulip
-    boards/TDECK/sdkconfig.board
+    boards/sdkconfig.tulip
+    boards/TULIP4_N32R8/sdkconfig.board
 )

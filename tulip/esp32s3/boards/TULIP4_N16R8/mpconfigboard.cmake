@@ -6,5 +6,5 @@ set(SDKCONFIG_DEFAULTS
     ../../micropython/ports/esp32/boards/sdkconfig.ble
     ../../micropython/ports/esp32/boards/sdkconfig.240mhz
     boards/sdkconfig.tulip
-    boards/TULIP4/sdkconfig.board
+    boards/TULIP4_N16R8/sdkconfig.board
 )

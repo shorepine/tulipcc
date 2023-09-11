@@ -32,10 +32,11 @@ folders = source_folders
 for folder in source_folders:
     folders = folders + [ f.path for f in os.scandir(folder) if f.is_dir() ]
 
-if(len(sys.argv)>1 and sys.argv[1]=='N8R8'):
-    TULIP_VFS_SIZE = 0x440000
-else:
-    TULIP_VFS_SIZE = 0x1792000 
+TULIP_VFS_SIZE = 0x1792000  # 32MB
+if(len(sys.argv)>1 and sys.argv[1].endswith('N8R8')):
+    TULIP_VFS_SIZE = 0x440000 # 8MB (no OTA)
+if(len(sys.argv)>1 and sys.argv[1].endswith('N16R8')):
+    TULIP_VFS_SIZE = 0x730000 # 16MB
 
 cfg = lfs.LFSConfig(block_size=4096, block_count = TULIP_VFS_SIZE / 4096,  disk_version=0x00020000)
 fs = lfs.LFSFilesystem()
