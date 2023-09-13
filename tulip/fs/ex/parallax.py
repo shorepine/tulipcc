@@ -3,7 +3,7 @@ import time, tulip
 
 tulip.gpu_reset() # clear everything
 (sw,sh) = tulip.screen_size()
-
+tulip.display_stop()
 # Load the background image
 tulip.bg_png("g/mountain-bg.png",0,0)
 # Copy the background over a bunch to make it repeat, but overlap to avoid double moons
@@ -55,6 +55,7 @@ for i in range(4):
 for i in range(4):
     tulip.sprite_png("g/rabbit_l_%d.png" % (i),(rabbit_w*rabbit_h)*(i+4))
 
+tulip.display_start()
 # Register the first frame, we'll swap out frames during animation
 tulip.sprite_register(0, 0, rabbit_w, rabbit_h)
 tulip.sprite_on(0)
