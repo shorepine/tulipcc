@@ -385,7 +385,7 @@ void display_invert_bg(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
 }
 
 void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data) {
-    if(check_dim_xywh(x,y,w,h)) {
+    if(1) { // check_dim_xywh(x,y,w,h)) {
         for (int j = y; j < y+h; j++) {
             for (int i = x; i < x+w; i++) {
                 uint8_t r = *data++;
@@ -430,7 +430,7 @@ void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, u
 }
 
 void display_bg_bitmap_blit(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1) {
-    if(check_dim_xywh(x,y,w,h) && check_dim_xywh(x1,y1, w, h)) {
+    if(check_dim_xywh(x,y,w,h)) {
         for (uint16_t j = y1; j < y1+h; j++) {
             for (uint16_t i = x1; i < x1+w; i++) {
                 uint16_t src_y = y+(j-y1);
@@ -886,7 +886,7 @@ void display_init(void) {
     ui_init();
 
     vsync_count = 1;
-    reported_fps = 1;
+    reported_fps = 30;
     reported_gpu_usage = 0;
     touch_held = 0;
 
