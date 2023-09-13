@@ -74,6 +74,7 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
 }
 
 void esp32s3_display_stop() {
+    gpio_set_level(PIN_NUM_BK_LIGHT, !BK_LIGHT_ON_LEVEL);
     esp_lcd_panel_del(panel_handle);
 }
 
@@ -83,6 +84,7 @@ void esp32s3_display_start() {
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
+    gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
 }
 
 
