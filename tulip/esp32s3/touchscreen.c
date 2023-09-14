@@ -305,34 +305,43 @@ void ft5x06_init()
 void run_ft5x06(void *param)
 {
     int i = 0;
+    uint8_t last_te = 0;
     touch_info_t touch_info;
     uint8_t got_primary_touch = 0;
     while (1) {
         int8_t p0 = gpio_get_level(TOUCH_INT_IO);
         int8_t p1 = iot_ft5x06_touch_report(dev, &touch_info);
+        got_primary_touch = 0;
         if(p0 == 0 && p1 == ESP_OK) {
-            got_primary_touch = 0;
-            for(i = 0; i < touch_info.touch_point; i++) {
-                if(i<4) {
-
-                    last_touch_x[i] = (H_RES - touch_info.curx[i]) + touch_x_delta;
-                    if(last_touch_x[i] < 0) last_touch_x[i] = 0;
-                    if(last_touch_x[i] >= H_RES) last_touch_x[i] = H_RES-1;
-
-                    last_touch_y[i] = touch_info.cury[i] + touch_y_delta;
-                    if(last_touch_y[i] < 0) last_touch_y[i] = 0;
-                    if(last_touch_y[i] >= V_RES) last_touch_y[i] = V_RES-1;
-
-                }
-                if(i==0) got_primary_touch = 1;
-                //if(i==0) fprintf(stderr,"evt %d touch point %d  x:%d  y:%d became %d %d\n", touch_info.touch_event, i, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
-            }
-            if(got_primary_touch) {
-                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0); 
-            } else {
+            if(touch_info.touch_event == TOUCH_EVT_RELEASE) {
                 send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);                 
+            } else {
+                for(i = 0; i < touch_info.touch_point; i++) {
+                    if(i<4) {
+                        last_touch_x[i] = (H_RES - touch_info.curx[i]) + touch_x_delta;
+                        if(last_touch_x[i] < 0) last_touch_x[i] = 0;
+                        if(last_touch_x[i] >= H_RES) last_touch_x[i] = H_RES-1;
+
+                        last_touch_y[i] = touch_info.cury[i] + touch_y_delta;
+                        if(last_touch_y[i] < 0) last_touch_y[i] = 0;
+                        if(last_touch_y[i] >= V_RES) last_touch_y[i] = V_RES-1;
+
+                    }
+                    if(i==0) got_primary_touch = 1;
+                    //if(i==0) fprintf(stderr,"held %d evt %d touch i %d touch point %d  x:%d  y:%d became %d %d\n", touch_held, touch_info.touch_event, i, touch_info.touch_point, touch_info.curx[i], touch_info.cury[i], last_touch_x[i], last_touch_y[i]);
+                }
+                if(got_primary_touch) {
+                    send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0); 
+                } else {
+                    send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);                 
+                }
             }
         } else {
+            // Sometimes it doesn't return a full release event. So we watch for a transition from press to release
+            if(touch_info.touch_event == 0 && last_te == 1) {
+                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);                 
+            }
+            last_te = touch_info.touch_event;
         }
         vTaskDelay(20/portTICK_PERIOD_MS);
     }
