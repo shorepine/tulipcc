@@ -47,7 +47,7 @@
   (pad "6" smd roundrect (at 0.9875 0.25) (size 0.7 0.3) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.25) (tstamp 1ff8f041-7aba-4005-bc63-ef08e2c5f937))
   (pad "7" smd roundrect (at 0.9875 -0.25) (size 0.7 0.3) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.25) (tstamp f1cddda4-9a7f-4019-9805-417c6e53b611))
   (pad "8" smd roundrect (at 0.9875 -0.75) (size 0.7 0.3) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.25) (tstamp 740faacf-b452-4f5e-aec6-c2e10b75ef7d))
-  (pad "9" smd roundrect (at 0 0) (size 0.8 1.38) (layers "F.Cu" "F.Mask") (roundrect_rratio 0.25) (tstamp 02aa654f-e6a5-46d3-8ecc-d190b11be6ea))
+  (pad "9" smd roundrect (at 0 0) (size 0.8 1.38) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.25) (tstamp 02aa654f-e6a5-46d3-8ecc-d190b11be6ea))
   (model "${KIPRJMOD}/3dmodels/DFN 8.STEP"
     (offset (xyz 0 0 0))
     (scale (xyz 1 1 1))
