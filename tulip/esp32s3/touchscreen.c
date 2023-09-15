@@ -305,7 +305,7 @@ void ft5x06_init()
 void run_ft5x06(void *param)
 {
     int i = 0;
-    uint8_t last_te = 0;
+    uint8_t press_received = 0;
     touch_info_t touch_info;
     uint8_t got_primary_touch = 0;
     while (1) {
@@ -316,6 +316,7 @@ void run_ft5x06(void *param)
             if(touch_info.touch_event == TOUCH_EVT_RELEASE) {
                 send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);                 
             } else {
+                press_received = 1;
                 for(i = 0; i < touch_info.touch_point; i++) {
                     if(i<4) {
                         last_touch_x[i] = (H_RES - touch_info.curx[i]) + touch_x_delta;
@@ -338,10 +339,11 @@ void run_ft5x06(void *param)
             }
         } else {
             // Sometimes it doesn't return a full release event. So we watch for a transition from press to release
-            if(touch_info.touch_event == 0 && last_te == 1) {
-                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);                 
+            //if(touch_info.touch_event == TOUCH_EVT_RELEASE && last_te == TOUCH_EVT_PRESS) {
+            if(touch_info.touch_event == TOUCH_EVT_RELEASE && press_received) {
+                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
+                press_received = 0;                 
             }
-            last_te = touch_info.touch_event;
         }
         vTaskDelay(20/portTICK_PERIOD_MS);
     }
