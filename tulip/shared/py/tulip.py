@@ -290,6 +290,8 @@ def joyk():
 # TODO - pass args
 def run(module):
     import gc, sys
+    before_run = sys.modules.copy()
+
     cd(module)
     try:
         exec('import %s' % (module))
@@ -298,7 +300,12 @@ def run(module):
     except Exception as e:
         print("Error running %s:"% (module))
         sys.print_exception(e)
-    exec('del sys.modules["%s"]' % (module))
+        pass
+
+    for imported_module in sys.modules.keys():
+        if imported_module not in before_run:
+            exec('del sys.modules["%s"]' % (imported_module))
+
     gc.collect()
     cd('..')
 
@@ -362,6 +369,8 @@ def ip():
         return "127.0.0.1" # we are on local and it's ok
     sta_if = network.WLAN(network.STA_IF)
     if(sta_if.isconnected()):
+        ipv4 = sta_if.ifconfig()[0]
+        set_quartet(int(ipv4.split('.')[3]))
         return sta_if.ifconfig()[0]
     else:
         return None

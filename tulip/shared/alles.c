@@ -280,6 +280,7 @@ void alles_parse_message(char *message, uint16_t length) {
     }
     if(sync_response) {
         // If this is a sync response, let's update our local map of who is booted
+        //fprintf(stderr, "sync response message was %s\n", message);
         update_map(client, ipv4, sync);
         length = 0; // don't need to do the rest
     }
@@ -320,7 +321,7 @@ void update_map(uint8_t client, uint8_t ipv4, int64_t time) {
     // I'm called when I get a sync response or a regular ping packet
     // I update a map of booted devices.
 
-    //printf("[%d %d] Got a sync response client %d ipv4 %d time %lld\n",  ipv4_quartet, client_id, client , ipv4, time);
+    //fprintf(stderr,"[%d %d] Got a sync response client %d ipv4 %d time %lld\n",  ipv4_quartet, client_id, client , ipv4, time);
     clocks[ipv4] = time;
     int64_t my_sysclock = amy_sysclock();
     ping_times[ipv4] = my_sysclock;
@@ -365,6 +366,7 @@ void handle_sync(int64_t time, int8_t index) {
     int64_t sysclock = amy_sysclock();
     char message[100];
     // Before I send, i want to update the map locally
+    //fprintf(stderr, "handle_sync %d %d\n", client_id, ipv4_quartet);
     update_map(client_id, ipv4_quartet, sysclock);
     // Send back sync message with my time and received sync index and my client id & battery status (if any)
     sprintf(message, "_s%" PRIi64 "i%dc%dr%dy%dZ", sysclock, index, client_id, ipv4_quartet, 0);
@@ -380,6 +382,8 @@ void ping(int64_t sysclock) {
     char message[100];
     //printf("[%d %d] pinging with %lld\n", ipv4_quartet, client_id, sysclock);
     sprintf(message, "_s%" PRIi64 "i-1c%dr%dy%dZ", sysclock, client_id, ipv4_quartet, 0);
+    //fprintf(stderr, "ping %d %d\n", client_id, ipv4_quartet);
+
     update_map(client_id, ipv4_quartet, sysclock);
     //mcast_send(message, strlen(message));
     last_ping_time = sysclock;

@@ -738,6 +738,36 @@ STATIC mp_obj_t tulip_multicast_start(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_multicast_start_obj, 0, 1, tulip_multicast_start);
 
 
+extern uint8_t alive;
+extern int16_t client_id;
+extern int64_t clocks[255];
+extern int64_t ping_times[255];
+
+STATIC mp_obj_t tulip_alles_map(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t list = mp_obj_new_list(0, NULL);
+    for(uint8_t i=0;i<255;i++) {
+        mp_obj_t tuple[3];
+        if(clocks[i]>0) {
+            tuple[0] = mp_obj_new_int(i);
+            tuple[1] = mp_obj_new_int(clocks[i]);
+            tuple[2] = mp_obj_new_int(ping_times[i]);
+            mp_obj_list_append(list, mp_obj_new_tuple(3, tuple));
+        }
+    }
+    // TODO - sort this so that client 0 is the earliest, etc. Maybe do the sort in python 
+    return list;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_map_obj, 0, 0, tulip_alles_map);
+
+extern uint8_t ipv4_quartet;
+STATIC mp_obj_t tulip_set_quartet(size_t n_args, const mp_obj_t *args) {
+    ipv4_quartet = mp_obj_get_int(args[0]);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_quartet_obj, 1, 1, tulip_set_quartet);
+
 STATIC mp_obj_t tulip_brightness(size_t n_args, const mp_obj_t *args) {
     if(n_args > 0) {
         display_brightness(mp_obj_get_int(args[0]));
@@ -1265,7 +1295,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_algo_setup), MP_ROM_PTR(&tulip_algo_setup_obj) },
     { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
+    { MP_ROM_QSTR(MP_QSTR_alles_map), MP_ROM_PTR(&tulip_alles_map_obj) },
     { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&tulip_brightness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_quartet), MP_ROM_PTR(&tulip_set_quartet_obj) },
     { MP_ROM_QSTR(MP_QSTR_keys), MP_ROM_PTR(&tulip_keys_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch), MP_ROM_PTR(&tulip_touch_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch_delta), MP_ROM_PTR(&tulip_touch_delta_obj) },

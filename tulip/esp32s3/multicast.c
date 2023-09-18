@@ -88,7 +88,7 @@ void create_multicast_ipv4_socket(void) {
     struct sockaddr_in saddr = { 0 };
     sock = -1;
     int err = 0;
-    fprintf(stderr, "sock\n");
+    //fprintf(stderr, "sock\n");
     sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
     if (sock < 0) {
         ESP_LOGE(V4TAG, "Failed to create socket. Error %d", errno);
@@ -162,12 +162,14 @@ void mcast_listen_task(void *pvParameters) {
     };
     
     //ipv4_quartet = esp_ip4_addr4(&wifi_manager_ip4);
-    esp_netif_ip_info_t ip_info = { 0 };
-    esp_netif_get_ip_info(WIFI_IF_STA, &ip_info);
-    ipv4_quartet = ip4_addr4(&ip_info.ip);
+
+    //esp_netif_ip_info_t ip_info = { 0 };
+    //esp_netif_get_ip_info(WIFI_IF_STA, &ip_info);
+    //fprintf(stderr, "setting IPV4 quartet to %d %d\n",  ip4_addr3(&ip_info.ip),  ip4_addr4(&ip_info.ip));
+    //ipv4_quartet = ip4_addr4(&ip_info.ip);
 
     int16_t full_message_length;
-    printf("Network listening running on core %d\n",xPortGetCoreID());
+    printf("Network listening running on core %d quartet %d\n",xPortGetCoreID(), ipv4_quartet);
     while (1) {
 
         if (sock < 0) ESP_LOGE(TAG, "Failed to create IPv4 multicast socket");

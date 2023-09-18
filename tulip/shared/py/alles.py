@@ -287,7 +287,14 @@ def reverb(level=-1, liveness=-1, damping=-1, xover_hz=-1):
         args['reverb_xover'] = xover_hz
     send(**args)
 
-
+def map():
+    if mesh_flag:
+        tmap = tulip.alles_map()
+        # Sort it by clock descending to get client #
+        tmap.sort(key=lambda x:x[1], reverse=True)
+        return tmap
+    print("Need to be on wifi and mesh().")
+    return None
 
 def mesh(local_ip=None):
     global mesh_flag
