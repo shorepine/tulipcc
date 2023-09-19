@@ -57,13 +57,11 @@ void esp_render_task( void * pvParameters) {
     }
 }
 
-
 // Make AMY's FABT run forever , as a FreeRTOS task 
 void esp_fill_audio_buffer_task() {
     while(1) {
         int16_t *block = fill_audio_buffer_task();
         size_t written = 0;
-        //i2s_write((i2s_port_t)CONFIG_I2S_NUM, block, BLOCK_SIZE * BYTES_PER_SAMPLE * NCHANS, &written, portMAX_DELAY); 
         i2s_channel_write(tx_handle, block, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS, &written, portMAX_DELAY);
         if(written != AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS) {
             fprintf(stderr,"i2s underrun: %d vs %d\n", written, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS);
@@ -311,7 +309,7 @@ void alles_parse_message(char *message, uint16_t length) {
                     if(client_id % (client-255) == 0) for_me = 1;
                 }
             }
-            //fprintf(stderr, "LOG: AMY message for time %lld received at time %lld (latency %lld ms)\n", e.time, amy_sysclock(), amy_sysclock()-e.time);
+            //fprintf(stderr, "LOG: AMY message for time %lld received at time %lld (latency %lld ms) for_me %d\n", e.time, amy_sysclock(), amy_sysclock()-e.time, for_me);
             if(for_me) amy_add_event(e);
         }
     }

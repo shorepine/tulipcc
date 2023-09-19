@@ -5,7 +5,6 @@
 #include "alles.h"
 
 // All of the ESP tasks that we create in one place
-
 #define DISPLAY_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 2) //(ESP_TASK_PRIO_MIN + 5)
 #define USB_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)
 #define TOUCHSCREEN_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)
@@ -14,8 +13,8 @@
 #define ALLES_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 2)
 #define ALLES_PARSE_TASK_PRIORITY (ESP_TASK_PRIO_MIN +2)
 #define ALLES_RECEIVE_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 3)
-#define ALLES_RENDER_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 5)
-#define ALLES_FILL_BUFFER_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 5)
+#define ALLES_RENDER_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 1)
+#define ALLES_FILL_BUFFER_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 1)
 
 // Since display is on core0, things on core0 will be slower than things on core1
 #define DISPLAY_TASK_COREID (0)
