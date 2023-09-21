@@ -216,6 +216,7 @@ SRC_C += \
 	$(MICROPY_PORT_DIR)/gccollect.c \
 	$(MICROPY_PORT_DIR)/input.c \
 	$(MICROPY_PORT_DIR)/modmachine.c \
+	$(MICROPY_PORT_DIR)/modselect.c \
 	$(MICROPY_PORT_DIR)/alloc.c \
 	$(MICROPY_PORT_DIR)/fatfs_port.c \
 	$(MICROPY_PORT_DIR)/mpbthciport.c \
