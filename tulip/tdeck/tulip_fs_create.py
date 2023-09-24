@@ -35,7 +35,7 @@ for folder in source_folders:
 
 TULIP_VFS_SIZE = 0x730000
 
-cfg = lfs.LFSConfig(block_size=4096, block_count = TULIP_VFS_SIZE / 4096,  disk_version=0x00020000)
+cfg = lfs.LFSConfig(block_size=4096, block_count = int(TULIP_VFS_SIZE / 4096),  disk_version=0x00020000)
 fs = lfs.LFSFilesystem()
 lfs.format(fs, cfg)
 lfs.mount(fs, cfg)
