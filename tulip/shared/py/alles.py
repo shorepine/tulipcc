@@ -296,16 +296,20 @@ def map():
     print("Need to be on wifi and mesh().")
     return None
 
-def mesh(local_ip=None):
+def mesh(local_ip=None, local_node=True):
     global mesh_flag
+    if(local_node):
+        local_node = 1
+    else:
+        local_node = 0
     if(tulip.ip() is None):
         print("Need to be on wifi. Use tulip.wifi('ssid', 'password').")
         return
     latency_ms(1000)
     mesh_flag = 1
     if(local_ip is not None):
-        tulip.multicast_start(local_ip)
-    tulip.multicast_start()
+        tulip.multicast_start(local_ip, local_node)
+    tulip.multicast_start("", local_node)
 
 def local():
     global mesh_flag

@@ -237,6 +237,11 @@ alles.send(osc=0, pan=1) # set to the left channel
 
 # start mesh mode (control multiple speakers over wifi)
 alles.mesh() # after turning on wifi
+alles.mesh(local_node=False) # call it this way if you don't want Tulip to also be an Alles node
+alles.mesh(local_ip='192.168.50.4') # useful for setting a network on Tulip Desktop
+
+alles.map() # returns booted Alles synths on the mesh
+
 alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1) # all Alles speakers in a mesh will respond
 alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=2) # just a certain client
 alles.local() # turns off mesh mode and goes back to local mode

@@ -103,7 +103,7 @@ void ping(int64_t sysclock);
 extern void mcast_send(char*, uint16_t len);
 extern void create_multicast_ipv4_socket();
 
-void alles_init_multicast();
+void alles_init_multicast(uint8_t local_node);
 
 void esp_show_debug(uint8_t type);
 void alles_send_message(char * message, uint16_t len);

@@ -5,7 +5,7 @@
 
 uint8_t board_level;
 uint8_t status;
-
+uint8_t mesh_local_playback  = 1; 
 
 #ifdef ESP_PLATFORM
 // mutex that locks writes to the delta queue
@@ -202,7 +202,8 @@ void esp_parse_task() {
 #include "esp_wifi.h"
 #endif
 
-void alles_init_multicast() {
+void alles_init_multicast(uint8_t local_node) {
+    mesh_local_playback = local_node;
 #ifdef ESP_PLATFORM
     fprintf(stderr, "creating socket\n");
     create_multicast_ipv4_socket();
@@ -310,7 +311,7 @@ void alles_parse_message(char *message, uint16_t length) {
                 }
             }
             //fprintf(stderr, "LOG: AMY message for time %lld received at time %lld (latency %lld ms) for_me %d\n", e.time, amy_sysclock(), amy_sysclock()-e.time, for_me);
-            if(for_me) amy_add_event(e);
+            if(for_me && mesh_local_playback) amy_add_event(e);
         }
     }
 }
