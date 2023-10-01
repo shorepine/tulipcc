@@ -279,7 +279,7 @@ int32_t desync = 0;
         }
 
         for(uint8_t s=0;s<SPRITES;s++) {
-            if(sprite_vis[s]) {
+            if(sprite_vis[s]==SPRITE_IS_SPRITE) {
                 if(row_px >= sprite_y_px[s] && row_px < sprite_y_px[s]+sprite_h_px[s]) {
                     // this sprite is on this line 
                     // compute x and y (relative to the sprite!)

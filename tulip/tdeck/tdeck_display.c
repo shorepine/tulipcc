@@ -11,6 +11,7 @@ uint32_t VSYNC_FRONT_PORCH=0;
 uint32_t VSYNC_PULSE_WIDTH=0;
 int16_t touch_x_delta = 0;
 int16_t touch_y_delta = 0;
+uint8_t dumb_display_mutex = 0;
 
 // lookup table for Tulip's "pallete" to the 16-bit colorspace needed by the TDeck display
 const uint16_t rgb332_rgb565_i[256] = {
@@ -208,7 +209,9 @@ void run_tdeck_display(void) {
             for(uint16_t i=0;i<H_RES*FONT_HEIGHT;i++) {
                 bb565[i] = rgb332_rgb565_i[frame_bb[i]];
             }
+            dumb_display_mutex = 1;
             esp_lcd_panel_draw_bitmap(panel_handle, 0, y, H_RES, y+FONT_HEIGHT, bb565);
+            dumb_display_mutex = 0;
         }
         // Tell Tulip we're done with the frame
         display_frame_done_generic();

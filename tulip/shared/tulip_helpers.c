@@ -42,6 +42,7 @@ int32_t file_size(const char *filename) {
 }
 
 
+
 // if len < 0, read the whole thing
 uint32_t read_file(const char *filename, uint8_t *buf, int32_t len, uint8_t binary) {
     if(len<0) {
@@ -107,4 +108,31 @@ uint32_t tulip_fread(mp_obj_t file, uint8_t * buf, uint32_t len) {
     size_t bytes_read = mp_stream_rw(file, buf, len, &errcode, MP_STREAM_RW_READ | MP_STREAM_RW_ONCE);
     return bytes_read;
 }
+
+uint32_t tulip_fseek(mp_obj_t file, uint32_t seekpoint, int32_t whence) {
+    return mp_stream_posix_lseek(file, seekpoint, whence);
+}
+
+int32_t tulip_getline(char * line, uint32_t * len, mp_obj_t file ) {
+    // tulip_fread a char at a time until a \n
+    uint8_t buf[1];
+    int32_t rbytes = 0;
+    for(uint8_t i=0;i<255;i++) {
+        uint32_t bytes = tulip_fread(file, buf, 1);
+        rbytes += bytes;
+        if(bytes == 0) { // eof
+            line[i] = 0;
+            return rbytes;
+        }
+        if(buf[0] == '\n') {
+            line[i] = 0;
+            return rbytes;
+        }
+        line[i] = buf[0];
+        *len = *len + 1;
+    }
+    line[254] = 0;
+    return rbytes;
+}
+
 

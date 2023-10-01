@@ -227,6 +227,25 @@ STATIC mp_obj_t tulip_bg_blit(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_blit_obj, 6, 7, tulip_bg_blit);
 
 
+uint32_t load_obj_file_into_sprite_ram(const char *fn, uint32_t ram_start);
+void draw_sprite_wire(uint16_t sprite_no);
+
+STATIC mp_obj_t tulip_sprite_wire(size_t n_args, const mp_obj_t *args) {
+    uint32_t bytes_read = load_obj_file_into_sprite_ram(mp_obj_str_get_str(args[0]), mp_obj_get_int(args[1]));
+    return mp_obj_new_int(bytes_read);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_wire_obj, 2, 2, tulip_sprite_wire);
+
+
+STATIC mp_obj_t tulip_bg_wire(size_t n_args, const mp_obj_t *args) {
+    draw_sprite_wire(mp_obj_get_int(args[0]));
+    //draw_sprite_wire(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_float(args[3]), mp_obj_get_float(args[4]),mp_obj_get_int(args[5]));
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_wire_obj, 1, 1, tulip_bg_wire);
+
 
 // tulip.bg_png(bytes, x,y)
 // tulip.bg_png(filename, x,y)
@@ -577,12 +596,13 @@ STATIC mp_obj_t tulip_sprite_bitmap(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_bitmap_obj, 2, 2, tulip_sprite_bitmap);
 
-//sprite_register(34, mem_pos, w,h) # 34 = sprite number, can be up to ...
+//sprite_register(34, mem_pos, w,h, type) # 34 = sprite number, can be up to ...
 STATIC mp_obj_t tulip_sprite_register(size_t n_args, const mp_obj_t *args) {
     uint16_t spriteno = mp_obj_get_int(args[0]);
     uint32_t mem_pos = mp_obj_get_int(args[1]);
     uint16_t width = mp_obj_get_int(args[2]);
     uint16_t height = mp_obj_get_int(args[3]);
+
     if(spriteno < SPRITES) {
         sprite_mem[spriteno] = mem_pos;
         sprite_w_px[spriteno] = width;
@@ -618,11 +638,15 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_move_obj, 3, 3, tulip_sp
 
 STATIC mp_obj_t tulip_sprite_on(size_t n_args, const mp_obj_t *args) {
     uint16_t spriteno = mp_obj_get_int(args[0]);
-    if(spriteno < SPRITES) sprite_vis[spriteno] = SPRITE_IS_SPRITE;
+    if(n_args > 1) {
+        if(spriteno < SPRITES) sprite_vis[spriteno] = SPRITE_IS_WIREFRAME;
+    } else {
+        if(spriteno < SPRITES) sprite_vis[spriteno] = SPRITE_IS_SPRITE;        
+    }
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_on_obj, 1, 1, tulip_sprite_on);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_on_obj, 1, 2, tulip_sprite_on);
 
 
 STATIC mp_obj_t tulip_sprite_off(size_t n_args, const mp_obj_t *args) {
@@ -1268,6 +1292,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ticks_ms), MP_ROM_PTR(&tulip_ticks_ms_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_pixel), MP_ROM_PTR(&tulip_bg_pixel_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bg_wire), MP_ROM_PTR(&tulip_bg_wire_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll), MP_ROM_PTR(&tulip_bg_scroll_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll_x_speed), MP_ROM_PTR(&tulip_bg_scroll_x_speed_obj) },
@@ -1291,6 +1316,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_sprite_on), MP_ROM_PTR(&tulip_sprite_on_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_off), MP_ROM_PTR(&tulip_sprite_off_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_clear), MP_ROM_PTR(&tulip_sprite_clear_obj) },
+    { MP_ROM_QSTR(MP_QSTR_sprite_wire), MP_ROM_PTR(&tulip_sprite_wire_obj) },
     { MP_ROM_QSTR(MP_QSTR_collisions), MP_ROM_PTR(&tulip_collisions_obj) },
     { MP_ROM_QSTR(MP_QSTR_edit), MP_ROM_PTR(&tulip_edit_obj) },
     { MP_ROM_QSTR(MP_QSTR_int_screenshot), MP_ROM_PTR(&tulip_int_screenshot_obj) },
