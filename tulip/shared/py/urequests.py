@@ -1,4 +1,4 @@
-import usocket
+import socket
 
 
 class Response:
@@ -96,14 +96,14 @@ def request(
         host, port = host.split(":", 1)
         port = int(port)
 
-    ai = usocket.getaddrinfo(host, port, 0, usocket.SOCK_STREAM)
+    ai = socket.getaddrinfo(host, port, 0, socket.SOCK_STREAM)
     ai = ai[0]
 
     resp_d = None
     if parse_headers is not False:
         resp_d = {}
 
-    s = usocket.socket(ai[0], usocket.SOCK_STREAM, ai[2])
+    s = socket.socket(ai[0], socket.SOCK_STREAM, ai[2])
 
     if timeout is not None:
         # Note: settimeout is not supported on all platforms, will raise
