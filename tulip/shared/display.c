@@ -216,7 +216,11 @@ int32_t desync = 0;
             uint8_t tfb_col = 0;
             while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
 
-                uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
+                #ifndef TDECK
+                    uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
+                #else
+                    uint8_t data = portfolio_glyph_bitmap[(TFB[tfb_row*TFB_COLS+tfb_col] -32) * 8 + tfb_row_offset_px];
+                #endif
                 uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
                 uint8_t fg_color = TFBfg[tfb_row*TFB_COLS+tfb_col];
                 uint8_t bg_color = TFBbg[tfb_row*TFB_COLS+tfb_col];
@@ -232,8 +236,10 @@ int32_t desync = 0;
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                        #ifndef TDECK
+                            bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                            bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                        #endif
                     } else {
                         if((data) & 0x80) *(bptr) = fg_color; 
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
@@ -241,8 +247,10 @@ int32_t desync = 0;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                        #ifndef TDECK
+                            bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                            bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                        #endif
                     }
                 } else {
                     if(format & FORMAT_INVERSE) {
@@ -252,8 +260,10 @@ int32_t desync = 0;
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        #ifndef TDECK
+                            bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                            bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        #endif
                     } else {
                         if((data) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
@@ -261,8 +271,10 @@ int32_t desync = 0;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        #ifndef TDECK
+                            bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                            bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        #endif
                     }
 
                 }

@@ -87,6 +87,7 @@ uint8_t check_dim_xywh(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 uint8_t collide_mask_get(uint8_t a, uint8_t b);
 
 extern const unsigned char font_8x12_r[256][12];
+extern const unsigned char portfolio_glyph_bitmap[1792];
 
 
 // We can address this many moving things on screen
@@ -127,8 +128,13 @@ extern uint16_t H_RES, V_RES, H_RES_D, V_RES_D, TFB_COLS, TFB_ROWS, BOUNCE_BUFFE
 #define BYTES_PER_PIXEL 2
 #endif
 
+#ifndef TDECK
 #define FONT_HEIGHT 12
 #define FONT_WIDTH 8
+#else
+#define FONT_HEIGHT 8
+#define FONT_WIDTH 6
+#endif
 #define FLASH_FRAMES 12
 #define ALPHA0 0x55
 #define ALPHA1 0x53
