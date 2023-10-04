@@ -9,6 +9,8 @@ I've ported [Tulip CC](../../README.md) to it and most things work just fine. Th
 
 To flash your T-Deck with Tulip, follow the usual [Tulip CC flashing instructions](../../docs/tulip_flashing.md) except be in this directory (`tulipcc/tulip/tdeck`) instead of `tulipcc/tulip/esp32s3`, and don't pass any `MICROPY_BOARD` parameter. 
 
+We default the T-Deck to a 6x8 REPL font, to get 53x30 REPL / editor screen instead of 40x20. If this is too small, comment out the `idf_build_set_property(COMPILE_OPTIONS "-DTULIP_REPL_FONT_8X6" APPEND)` line at the end of `CMakeLists.txt` in this folder. 
+
 ![T-Deck](../../docs/pics/tdeck_game.jpg)
 
 

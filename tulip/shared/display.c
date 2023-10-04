@@ -216,7 +216,7 @@ int32_t desync = 0;
             uint8_t tfb_col = 0;
             while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
 
-                #ifndef TDECK
+                #ifndef TULIP_REPL_FONT_8X6
                     uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
                 #else
                     uint8_t data = portfolio_glyph_bitmap[(TFB[tfb_row*TFB_COLS+tfb_col] -32) * 8 + tfb_row_offset_px];
@@ -236,7 +236,7 @@ int32_t desync = 0;
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        #ifndef TDECK
+                        #ifndef TULIP_REPL_FONT_8X6
                             bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                             bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                         #endif
@@ -247,7 +247,7 @@ int32_t desync = 0;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        #ifndef TDECK
+                        #ifndef TULIP_REPL_FONT_8X6
                             bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                             bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                         #endif
@@ -260,7 +260,7 @@ int32_t desync = 0;
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        #ifndef TDECK
+                        #ifndef TULIP_REPL_FONT_8X6
                             bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                             bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                         #endif
@@ -271,7 +271,7 @@ int32_t desync = 0;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        #ifndef TDECK
+                        #ifndef TULIP_REPL_FONT_8X6
                             bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                             bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                         #endif
@@ -859,8 +859,8 @@ void display_teardown(void) {
 void display_init(void) {
     TFB_ROWS = (V_RES_D/FONT_HEIGHT);
     TFB_COLS = (H_RES_D/FONT_WIDTH);
-    BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
-
+    // 12 divides into 600, 480, 240
+    BOUNCE_BUFFER_SIZE_PX = (H_RES*12) ;
     // Create the background FB
     bg = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 

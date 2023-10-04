@@ -128,13 +128,15 @@ extern uint16_t H_RES, V_RES, H_RES_D, V_RES_D, TFB_COLS, TFB_ROWS, BOUNCE_BUFFE
 #define BYTES_PER_PIXEL 2
 #endif
 
-#ifndef TDECK
-#define FONT_HEIGHT 12
-#define FONT_WIDTH 8
-#else
+
+#ifdef TULIP_REPL_FONT_8X6
 #define FONT_HEIGHT 8
 #define FONT_WIDTH 6
+#else
+#define FONT_HEIGHT 12
+#define FONT_WIDTH 8
 #endif
+
 #define FLASH_FRAMES 12
 #define ALPHA0 0x55
 #define ALPHA1 0x53

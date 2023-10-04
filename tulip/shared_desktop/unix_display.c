@@ -83,7 +83,7 @@ void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3, ui
     V_RES_D = t5;
     TFB_ROWS = (V_RES_D/FONT_HEIGHT);
     TFB_COLS = (H_RES_D/FONT_WIDTH);
-    BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
+    BOUNCE_BUFFER_SIZE_PX = (H_RES*12) ;
     unix_display_flag = -2; // restart display with new timings
 }
 

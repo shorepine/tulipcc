@@ -60,3 +60,4 @@ set(EXTRA_COMPONENT_DIRS main)
 # Define the project.
 project(micropython)
 idf_build_set_property(COMPILE_OPTIONS "-fdiagnostics-color=always" APPEND)
+#idf_build_set_property(COMPILE_OPTIONS "-DTULIP_REPL_FONT_8X6" APPEND)

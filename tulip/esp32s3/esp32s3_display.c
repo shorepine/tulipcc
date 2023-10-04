@@ -50,7 +50,6 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
 
     TFB_ROWS = (V_RES_D/FONT_HEIGHT);
     TFB_COLS = (H_RES_D/FONT_WIDTH);
-    BOUNCE_BUFFER_SIZE_PX = (H_RES*FONT_HEIGHT) ;
 
     // Init the BG, TFB and sprite and UI layers
     //display_reset_bg();
