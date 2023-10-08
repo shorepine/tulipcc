@@ -94,6 +94,8 @@ extern const unsigned char portfolio_glyph_bitmap[1792];
 #define SPRITES 32
 // We assume we can store 16 unique 32x32 sprite tiles, you can swap these out from RAM
 #define SPRITE_RAM_BYTES (32*32*2*16) // 32KB
+#define LINE_BUFFERS_PER_ROW 256
+#define LINE_BUFFER_COLOR 255
 
 #ifndef DEFAULT_H_RES
 #define DEFAULT_H_RES 1024 //1024 
@@ -185,5 +187,6 @@ extern int16_t *y_offsets;//[V_RES];
 extern int16_t *x_speeds;//[V_RES];
 extern int16_t *y_speeds;//[V_RES];
 extern uint32_t **bg_lines;//[V_RES];
+extern uint16_t *line_buffer;
 
 #endif

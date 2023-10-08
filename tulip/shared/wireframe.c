@@ -98,8 +98,9 @@ uint32_t load_obj_file_into_sprite_ram(const char *fn, uint32_t ram_start) {
 }
 
 
+
 void project_draw(uint16_t x0, uint16_t y0, uint16_t z0,  uint16_t x1, uint16_t y1, uint16_t z1, float fa,float fb,float fc, float fd, 
-                    uint16_t x, uint16_t y, float scale, uint8_t color) {
+                    uint16_t x, uint16_t y, float scale, uint16_t color) {
 
   float fx, fy, fz;
   
@@ -121,7 +122,7 @@ void project_draw(uint16_t x0, uint16_t y0, uint16_t z0,  uint16_t x1, uint16_t 
 void draw_sprite_wire(uint16_t sprite_no){
     float theta = (float)sprite_h_px[sprite_no] * (M_PI/100.0);
     float scale = (float)sprite_w_px[sprite_no];
-    uint8_t color = 255; // TODO 
+    uint16_t color = 1024; 
     uint16_t tx = sprite_x_px[sprite_no];
     uint16_t ty = sprite_y_px[sprite_no];
     float fa,fb,fc,fd;
@@ -136,6 +137,9 @@ void draw_sprite_wire(uint16_t sprite_no){
     offset += 2;
     uint16_t f_count = u16fromu8(sprite_ram[offset], sprite_ram[offset+1]);
     offset += 2;
+
+    // clear line buffer before drawing
+    for(uint32_t i=0;i<V_RES*LINE_BUFFERS_PER_ROW;i++) line_buffer[i] = 65535;
 
     uint32_t f_offset = offset + (v_count*6);
     for(uint16_t f=0;f<f_count;f++) {
