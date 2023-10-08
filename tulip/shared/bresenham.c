@@ -3,6 +3,53 @@
 #include "bresenham.h"
 
 
+void drawPixel(int cx, int cy, uint8_t pal_idx) {
+    display_set_bg_pixel_pal(cx, cy, pal_idx);
+}
+
+
+// bresenham but it's per scanline, increasing on y not x
+void drawLine_scanline(short x0, short y0,short x1, short y1,unsigned short color) {
+    fprintf(stderr, "init %d,%d -> %d,%d\n", x0,y0, x1,y1);
+    short steep = abs(x1 - x0) > abs(y1 - y0);
+    if (steep) {
+        swap(y0, x0);
+        swap(y1, x1);
+    }
+
+    if (y0 > y1) {
+        swap(y0, y1);
+        swap(x0, x1);
+    }
+    fprintf(stderr, "swap %d,%d -> %d,%d\n", x0,y0, x1,y1);
+    short dx, dy;
+    dy = y1 - y0;
+    dx = abs(x1 - x0);
+
+    short err = dy / 2;
+    short xstep;
+
+    if (x0 < x1) {
+        xstep = 1;
+    } else {
+        xstep = -1;
+    }
+    for (; y0<=y1; y0++) {
+        if (steep) {
+            drawPixel(y0, x0, color);
+        } else {
+            drawPixel(x0, y0, color);
+        }
+        err -= dx;
+        if (err < 0) {
+            x0 += xstep;
+            err += dy;
+        }
+    }
+
+}
+
+
 // a halfway measure is to think about consectuive pixel rows in here
 // like encode somehow 100, 101, 102, 103 as 100+4 
 // use the space in an int (or uinn16)?
@@ -32,9 +79,7 @@ uint8_t drawLineBuffer(int cx, int cy) {
     return 0;
 }
 
-void drawPixel(int cx, int cy, uint8_t pal_idx) {
-    display_set_bg_pixel_pal(cx, cy, pal_idx);
-}
+
 uint8_t getPixel(int cx, int cy) {
     return display_get_bg_pixel_pal(cx,cy);
 }

@@ -12,6 +12,88 @@
 // Wire frame models are available
 // from https://people.sc.fsu.edu/~jburkardt/data/obj/obj.html
 
+// make a struct for lines that's LL and sorted on insert like our event queues
+
+// you really want to put this queue in sprite ram 
+// and you don't need a queue! The wire drawing can do the sort ! 
+// so yes, like wire = tulip.load_wire("teapot.obj") --> parses obj into bytes for python
+// tulip.wire_register(wire, 0, scale, theta) --> sorts and scales and writes line points into sprite ram, with existing header
+// 
+// 
+
+#define LINE_STORAGE_FIFO_LEN 1000
+uint16_t line_qsize = 0;
+
+// Delta holds the individual changes from an event, it's sorted in order of playback time 
+// this is more efficient in memory than storing entire events per message 
+struct line_storage {
+    uint16_t x0; 
+    uint16_t y0;
+    uint16_t x1; 
+    uint16_t y1;
+    // color can be part of them maybe on the unused bits?
+    struct line_storage * next; // the next event, in time 
+};
+
+struct line_storage * line_head;
+// like
+
+line_head = // use sprite_ram, right ? or ... (struct line_storage*) malloc(sizeof(struct line_storage));
+line_head.x0 = 65535;
+line_head.y0 = 65535;
+line_head.x1 = 65535;
+line_head.y1 = 65535;
+line_head.next = NULL;
+
+
+void add_line_to_queue(struct line_storage l) {
+    if(line_qsize < LINE_STORAGE_FIFO_LEN) {
+        int16_t found = -1;
+        while(found<0) {
+
+            if(events[write_location].time == UINT32_MAX) found = write_location;
+            write_location = (write_location + 1) % AMY_EVENT_FIFO_LEN;
+        }
+        // found a mem location. copy the data in and update the write pointers.
+        events[found].time = d.time;
+        events[found].osc = d.osc;
+        events[found].param = d.param;
+        events[found].data = d.data;
+        global.next_event_write = write_location;
+        global.event_qsize++;
+
+        // now insert it into the sorted list for fast playback
+        // first, see if it's eariler than the first item, special case
+        if(d.time < global.event_start->time) {
+            events[found].next = global.event_start;
+            global.event_start = &events[found];
+        } else {
+            // or it's got to be found somewhere
+            struct delta* ptr = global.event_start; 
+            int8_t inserted = -1;
+            while(inserted<0) {
+                if(d.time < ptr->next->time) { 
+                    // next should point to me, and my next should point to old next
+                    events[found].next = ptr->next;
+                    ptr->next = &events[found];
+                    inserted = 1;
+                }
+                ptr = ptr->next;
+            }
+        }
+        event_counter++;
+
+    } else {
+        // if there's no room in the queue, just skip the message
+        // todo -- report this somehow? 
+    }
+#ifdef ESP_PLATFORM
+    xSemaphoreGive( xQueueSemaphore );
+#endif
+}
+
+
+
 // we pack points in u16s
 uint8_t u0(uint16_t a) { return (uint8_t)(a & 0x00FF); }
 uint8_t u1(uint16_t a) { return (uint8_t)((a & 0xFF00) >> 8); }

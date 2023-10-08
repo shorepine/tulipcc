@@ -968,7 +968,7 @@ STATIC mp_obj_t tulip_bg_line(size_t n_args, const mp_obj_t *args) {
     int16_t x1 = mp_obj_get_int(args[2]);
     int16_t y1 = mp_obj_get_int(args[3]);
     uint8_t pal_idx = mp_obj_get_int(args[4]);
-    drawLine(x0,y0,x1,y1,pal_idx);
+    drawLine_scanline(x0,y0,x1,y1,pal_idx);
     return mp_const_none;
 }
 
