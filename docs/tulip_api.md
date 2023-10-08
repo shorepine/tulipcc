@@ -559,6 +559,43 @@ for c in tulip.collisions():
 tulip.sprite_clear()
 ```
 
+## Wireframes and line drawing
+
+You can use the sprite RAM to also draw lists of lines, which we call wireframes. If you put pairs of `x0,y0,x1,y1` cast as 16-bit unsigned shorts in sprite RAM and register the sprite, Tulip will draw those lines every frame as the scanlines get drawn, on top of the BG and TFB like sprites. This lets you do fast wireframe-like animations without having to draw to the BG and clear it every frame. 
+
+You can also load 3D models in from standard `obj` files, and set their rotation and scale, which will render a list of line positions for you to sprite line list RAM. 
+
+Colors TBD
+
+```python
+# Load an obj file into a list of raw faces and vertices - unscaled and unrotated.
+model = tulip.wire_load("teapot.obj")
+# A model encodes vertices and faces of a 3d model. You can also generate this model in code yourself.  
+
+# Draw model wireframe to a line buffer
+lines = tulip.wire_to_lines(model, x, y, scale, theta)
+# scale = integer multiplier on 0..1 coordinates. in general, sets width/height of model as pixels
+# theta = # of 100.0/PI rotations
+
+# You can also generate line lists yourself in code. It's:
+# x0 [uint16], y0 [uint16], x1 [uint16], y1 [uint16] -- 8 bytes per line, repeated per line
+# list of lines must end with a sentinel last line where y0=65535
+# list must be sorted by y0 increasing. and y0 must always be < y1. 
+
+# Load lines buffer into sprite RAM at whatever position you want. See len(lines) to see how many bytes your line list takes up.
+tulip.sprite_bitmap(lines, mem_pos)
+
+# Register this "sprite" as a line buffer. If you don't pass w and h like a normal sprite, we assume it's a wireframe and we turn it on right away
+tulip.sprite_register(12, mem_pos)
+
+# Whenever you want to rotate, scale or translate the wireframe, regenerate the lines and write them to sprite RAM
+lines = tulip.wire_to_lines(model, x, y, scale, theta)
+tulip.sprite_bitmap(lines, mem_pos)
+
+tulip.sprite_off(12) # turn off drawing
+```
+
+
 ## Convenience classes for sprites and games
 
 We provide a few classes to make it easier to make games and work with sprites, `Sprite`, `Player`, and `Game`.

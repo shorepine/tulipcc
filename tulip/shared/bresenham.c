@@ -50,34 +50,6 @@ void drawLine_scanline(short x0, short y0,short x1, short y1,unsigned short colo
 }
 
 
-// a halfway measure is to think about consectuive pixel rows in here
-// like encode somehow 100, 101, 102, 103 as 100+4 
-// use the space in an int (or uinn16)?
-// we need only max 1024 (10 bits), a uint16 goes to 65000  (16 bits)
-// so 6 extra bits (up to 64) for amount? could be worse 
-// and use 65535 as empty...
-// so ...
-// x = 516   10 0000 0100
-// repeat 0 times 0000 00 | 10 0000 0100
-// repeat 21      0101 01 | 10 0000 0100
-// 65535 is none. 1111 11 | 11 1111 1111
-// also maybe use an LL instead of fixed RAM? but you can add that next
-
-
-uint8_t drawLineBuffer(int cx, int cy) {
-    // do we believe cx is increasing each call?  I think we do ? 
-
-
-    for(uint16_t i=0;i<LINE_BUFFERS_PER_ROW;i++) {
-        if(line_buffer[cy*LINE_BUFFERS_PER_ROW + i] == 65535) {
-          //fprintf(stderr, "Drawing point to lb: cy %d cx %d i %d pos %d\n", cy, cx, i, cy*LINE_BUFFERS_PER_ROW+i);
-          line_buffer[cy*LINE_BUFFERS_PER_ROW + i] = cx;
-        return 0;
-      }
-    }
-    //fprintf(stderr, "no more room for cx %d cy %d\n", cx, cy);
-    return 0;
-}
 
 
 uint8_t getPixel(int cx, int cy) {
@@ -393,17 +365,9 @@ void drawLine(short x0, short y0,
 
   for (; x0<=x1; x0++) {
     if (steep) {
-      if(color>255) {
-        drawLineBuffer(y0,x0);
-      } else {
         drawPixel(y0, x0, color);
-      }
     } else {
-      if(color>255) {
-        drawLineBuffer(x0,y0);
-      } else {
         drawPixel(x0, y0, color);
-      }
     }
     err -= dy;
     if (err < 0) {

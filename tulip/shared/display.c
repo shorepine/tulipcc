@@ -29,7 +29,6 @@ uint8_t *sprite_ram; // in IRAM
 uint8_t * bg; // in SPIRAM
 
 uint8_t * sprite_ids;
-uint16_t *line_buffer; // V_RES x 32
 uint16_t *sprite_x_px;//[SPRITES]; 
 uint16_t *sprite_y_px;//[SPRITES]; 
 uint16_t *sprite_w_px;//[SPRITES]; 
@@ -291,13 +290,7 @@ int32_t desync = 0;
             }
         }
 
-        // draw the line buffer
-        uint16_t next = 0;
-        while(line_buffer[row_px * LINE_BUFFERS_PER_ROW + next]!=65535 && next < LINE_BUFFERS_PER_ROW) {
-            uint16_t col_px = line_buffer[row_px *LINE_BUFFERS_PER_ROW + next];
-            b[bounce_row_px*H_RES + col_px +start_col_px] = LINE_BUFFER_COLOR;
-            next++;
-        }
+        
 
         for(uint8_t s=0;s<SPRITES;s++) {
             if(sprite_vis[s]==SPRITE_IS_SPRITE) {
@@ -323,7 +316,28 @@ int32_t desync = 0;
                         }
                     } // end for each column
                 } // end if this row has a sprite on it 
-            } // end if sprite vis
+            } else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
+                // draw this as a bresenham list
+                // find where to start
+                uint16_t * line_data = (uint16_t*) (&sprite_ram[sprite_mem[s]]);
+                uint16_t line_c = 0;
+                uint16_t last_y0 = line_data[line_c * 4 + 1];
+                uint16_t last_y1 = line_data[line_c * 4 + 3];
+                while(last_y0 != 65535 && row_px <= last_y1) {
+                    if(row_px >= last_y0 && row_px <= last_y1) {
+                        // draw the x point(s)
+                        uint16_t x0 = line_data[line_c * 4 + 0];
+                        uint16_t x1 = line_data[line_c * 4 + 2];
+                        b[bounce_row_px*H_RES + x0] = 255;
+                        b[bounce_row_px*H_RES + x1] = 255;
+                    }
+                    line_c++;
+                    last_y0 = line_data[line_c * 4 + 1];
+                    last_y1 = line_data[line_c * 4 + 3];
+                }
+
+            }
+
         } // for each sprite
     } // per each row
     bounce_end:
@@ -382,7 +396,6 @@ void display_reset_sprites() {
     }
     for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
     for(uint32_t i=0;i<SPRITE_RAM_BYTES;i++) sprite_ram[i] = 0;
-    for(uint32_t i=0;i<V_RES*LINE_BUFFERS_PER_ROW;i++) line_buffer[i] = 65535;
 }
 
 
@@ -863,7 +876,6 @@ void display_teardown(void) {
     free_caps(x_speeds); x_speeds = NULL;
     free_caps(y_speeds); y_speeds = NULL;
     free_caps(bg_lines); bg_lines = NULL;
-    free_caps(line_buffer); line_buffer = NULL;
 }
 
 
@@ -885,7 +897,6 @@ void display_init(void) {
     sprite_h_px = (uint16_t*)malloc_caps(SPRITES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
     sprite_vis = (uint8_t*)malloc_caps(SPRITES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     sprite_mem = (uint32_t*)malloc_caps(SPRITES*sizeof(uint32_t), MALLOC_CAP_INTERNAL);
-    line_buffer = (uint16_t*)malloc_caps(V_RES*LINE_BUFFERS_PER_ROW*2, MALLOC_CAP_INTERNAL);
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
