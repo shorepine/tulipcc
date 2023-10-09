@@ -559,13 +559,13 @@ for c in tulip.collisions():
 tulip.sprite_clear()
 ```
 
-## Wireframes and line drawing
+## Wireframes and fast line drawing
 
-You can use the sprite RAM to also draw lists of lines, which we call wireframes. If you put pairs of `x0,y0,x1,y1` cast as 16-bit unsigned shorts in sprite RAM and register the sprite, Tulip will draw those lines every frame as the scanlines get drawn, on top of the BG and TFB like sprites. This lets you do fast wireframe-like animations without having to draw to the BG and clear it every frame. 
+You can also use the sprite RAM to also draw lists of lines. You can store lists of `x0,y0,x1,y1` in sprite RAM and register the sprite, Tulip will draw those lines every frame as the scanlines get drawn, on top of the BG and TFB like sprites. This lets you do fast wireframe-like animations without having to draw to the BG and clear it every frame. 
 
-You can also load 3D models in from standard `obj` files, and set their rotation and scale, which will render a list of line positions for you to sprite line list RAM. 
+You can also load 3D models as wireframes in from standard `obj` files, and set their rotation and scale, which will render a list of line positions for you to sprite line list RAM. 
 
-You can choose a color per line by encoding it in the line buffer as the top 4 bits of x0,x1 each. If not given, it'll be black (all 0s.)
+You can choose a color per line. It's encoded into the top bits of the x0 and x1 coordinates in sprite RAM. So each line only takes 8 bytes in sprite RAM.
 
 ```python
 # Load an obj file into a list of raw faces and vertices - unscaled and unrotated.
@@ -578,24 +578,26 @@ lines = tulip.wire_to_lines(model, x, y, scale, theta, color)
 # theta = # of 100.0/PI rotations
 # color = chooses the color of the entire model
 
-# You can also generate line lists yourself in code. It's:
-# x0 [uint16], y0 [uint16], x1 [uint16], y1 [uint16] -- 8 bytes per line, repeated per line
-# color is encoded as the top four bits of x0 and x1, e.g. color 129 is 0b1000000000000000 | x0 and 0b0001000000000000 | x1
-# list of lines must end with a sentinel last line where y0=65535
-# list must be sorted by y0 increasing. and y0 must always be < y1. 
+# You can also generate line lists yourself in code.
+lines = tulip.lines([
+    [x0_0,y0_0,x1_0,y1_0,color_0],
+    [x0_1,y0_1,x1_1,y1_1,color_1]
+    ]) # will return packed buffer of lines, sorted, including the last sentinel line
 
-# A convenience function is provided to make this easier:
-lines = tulip.lines([x0_0,y0_0,x1_0,y1_0,color_0,x0_1,y0_1,x1_1,y1_1,color_1]) 
-
-# Load lines buffer into sprite RAM at whatever position you want. See len(lines) to see how many bytes your line list takes up.
+# However you got your lines buffer, you can now load it into sprite RAM at whatever position you want. 
+# See len(lines) to see how many bytes your line list takes up so you don't overwrite other data. 
 tulip.sprite_bitmap(lines, mem_pos)
 
 # Register this "sprite" as a line buffer. If you don't pass w and h like a normal sprite, we assume it's a wireframe and we turn it on right away
 tulip.sprite_register(12, mem_pos)
 
 # Whenever you want to rotate, scale or translate the wireframe, regenerate the lines and write them to sprite RAM
+# The screen will immediately start drawing the new data once you call sprite_bitmap if the sprite is registered.
 lines = tulip.wire_to_lines(model, x, y, scale, theta)
 tulip.sprite_bitmap(lines, mem_pos)
+
+# Or, update your line coordinates directly:
+tulip.sprite_bitmap(tulip.lines(new_lines_list), mem_pos)
 
 tulip.sprite_off(12) # turn off drawing
 ```

@@ -44,7 +44,7 @@ mp_obj_t load_obj_file_into_ram(const char *fn) {
     }
     tulip_fclose(fp);
     uint32_t total_entries = 2 + v_count * 3 + f_count * 3;
-    fprintf(stderr, "f_count %d v_count %d max %f ram is %d\n", f_count, v_count, max_position, total_entries);
+    //fprintf(stderr, "f_count %d v_count %d max %f ram is %d\n", f_count, v_count, max_position, total_entries);
 
     // Header
     uint16_t ram[total_entries];
@@ -98,8 +98,8 @@ void project_draw(uint16_t x0, uint16_t y0, uint16_t z0,  uint16_t x1, uint16_t 
     fx = (x0 - 32767.0) / 32767.0;
     fy = (y0 - 32767.0) / 32767.0;
     fz = (z0 - 32767.0) / 32767.0;
-    uint16_t draw_x0 = (uint16_t)((fa*fx + fb*fz)*scale) + x;
-    uint16_t draw_y0 = (uint16_t)((fc*fy + fd*fz)*scale) + y;
+    int16_t draw_x0 = (uint16_t)((fa*fx + fb*fz)*scale) + x;
+    int16_t draw_y0 = (uint16_t)((fc*fy + fd*fz)*scale) + y;
 
     fx = (x1 - 32767.0) / 32767.0;
     fy = (y1 - 32767.0) / 32767.0;

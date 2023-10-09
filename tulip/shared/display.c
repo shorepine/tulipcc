@@ -336,8 +336,13 @@ int32_t desync = 0;
                         x0 = x0 & 0x0FFF;
                         x1 = x1 & 0x0FFF;
                         if(x1 > x0) {
-                            x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
-                            x_midpoint = x0 + (((row_px-y0) * (x1-x0)) / (y1-y0));
+                            if(y1==y0) {
+                                x_line_width = x1-x0;
+                                x_midpoint = (x1-x0)/2;
+                            } else {
+                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
+                                x_midpoint = x0 + (((row_px-y0) * (x1-x0)) / (y1-y0));
+                            }
                             if(x_line_width < 2) {
                                 b[bounce_row_px*H_RES+x_midpoint] = color;
                             } else {
@@ -348,8 +353,13 @@ int32_t desync = 0;
                                 }
                             }
                         } else if (x1<x0) {
-                            x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
-                            x_midpoint = x0 - (((row_px-y0) * (x0-x1)) / (y1-y0));
+                            if(y1==y0) {
+                                x_line_width = x0-x1;
+                                x_midpoint = (x0-x1)/2;
+                            } else {
+                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
+                                x_midpoint = x0 - (((row_px-y0) * (x0-x1)) / (y1-y0));
+                            }
                             if(x_line_width < 2) {
                                 b[bounce_row_px*H_RES+x_midpoint] = color;
                             } else {
