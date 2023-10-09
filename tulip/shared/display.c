@@ -331,20 +331,34 @@ int32_t desync = 0;
                         uint16_t x_line_width = 0;
                         uint16_t x0 = line_data[line_c * 4 + 0];
                         uint16_t x1 = line_data[line_c * 4 + 2];
+                        
                         if(x1 > x0) {
-                            x_line_width = 2; 
+                            x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
                             x_midpoint = x0 + (((row_px-y0) * (x1-x0)) / (y1-y0));
+                            if(x_line_width < 2) {
+                                b[bounce_row_px*H_RES+x_midpoint] = 255;
+                            } else {
+                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
+                                    if(i <= x1 && i >= x0) { 
+                                        b[bounce_row_px*H_RES + i] = 255;
+                                    }
+                                }
+                            }
                         } else if (x1<x0) {
-                            x_line_width = 2; 
+                            x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
                             x_midpoint = x0 - (((row_px-y0) * (x0-x1)) / (y1-y0));
+                            if(x_line_width < 2) {
+                                b[bounce_row_px*H_RES+x_midpoint] = 255;
+                            } else {
+                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
+                                    if(i <= x0 && i >= x1) { 
+                                        b[bounce_row_px*H_RES + i] = 255;
+                                    }
+                                }
+                            }
                         } else {
                             // A straight line up and down
-                            x_line_width = 1;
-                            x_midpoint = x1;
-                        }
-                        // Draw 
-                        for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
-                            b[bounce_row_px*H_RES + i] = 255;
+                            b[bounce_row_px*H_RES+x1] = 255;
                         }
                     }
                     line_c++;
