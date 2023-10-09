@@ -331,16 +331,19 @@ int32_t desync = 0;
                         uint16_t x_line_width = 0;
                         uint16_t x0 = line_data[line_c * 4 + 0];
                         uint16_t x1 = line_data[line_c * 4 + 2];
-                        
+
+                        uint8_t color = ((x0 & 0xF000) >> 8) | ((x1 & 0xF000) >> 12);
+                        x0 = x0 & 0x0FFF;
+                        x1 = x1 & 0x0FFF;
                         if(x1 > x0) {
                             x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
                             x_midpoint = x0 + (((row_px-y0) * (x1-x0)) / (y1-y0));
                             if(x_line_width < 2) {
-                                b[bounce_row_px*H_RES+x_midpoint] = 255;
+                                b[bounce_row_px*H_RES+x_midpoint] = color;
                             } else {
                                 for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
                                     if(i <= x1 && i >= x0) { 
-                                        b[bounce_row_px*H_RES + i] = 255;
+                                        b[bounce_row_px*H_RES + i] = color;
                                     }
                                 }
                             }
@@ -348,17 +351,17 @@ int32_t desync = 0;
                             x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
                             x_midpoint = x0 - (((row_px-y0) * (x0-x1)) / (y1-y0));
                             if(x_line_width < 2) {
-                                b[bounce_row_px*H_RES+x_midpoint] = 255;
+                                b[bounce_row_px*H_RES+x_midpoint] = color;
                             } else {
                                 for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
                                     if(i <= x0 && i >= x1) { 
-                                        b[bounce_row_px*H_RES + i] = 255;
+                                        b[bounce_row_px*H_RES + i] = color;
                                     }
                                 }
                             }
                         } else {
                             // A straight line up and down
-                            b[bounce_row_px*H_RES+x1] = 255;
+                            b[bounce_row_px*H_RES+x1] = color;
                         }
                     }
                     line_c++;

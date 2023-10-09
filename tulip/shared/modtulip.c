@@ -238,15 +238,15 @@ STATIC mp_obj_t tulip_wire_load(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_load_obj, 1, 1, tulip_wire_load);
 
 
-extern mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta);
+extern mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta, uint8_t color);
 
 STATIC mp_obj_t tulip_wire_to_lines(size_t n_args, const mp_obj_t *args) {
     mp_buffer_info_t bufinfo;
     mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
-    return render_wire_to_lines(bufinfo.buf, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]) );
+    return render_wire_to_lines(bufinfo.buf, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), mp_obj_get_int(args[5]));
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_to_lines_obj, 5, 5, tulip_wire_to_lines);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_to_lines_obj, 6, 6, tulip_wire_to_lines);
 
 
 // tulip.bg_png(bytes, x,y)

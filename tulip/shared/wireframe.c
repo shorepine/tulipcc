@@ -91,7 +91,7 @@ int compare_line_y0(const void *a, const void *b) {
 }
 
 void project_draw(uint16_t x0, uint16_t y0, uint16_t z0,  uint16_t x1, uint16_t y1, uint16_t z1, float fa,float fb,float fc, float fd, 
-                    uint16_t x, uint16_t y, float scale, uint16_t*lines, uint32_t w_offset ) {
+                    uint16_t x, uint16_t y, float scale, uint16_t*lines, uint32_t w_offset , uint8_t color) {
 
     float fx, fy, fz;
     
@@ -120,11 +120,15 @@ void project_draw(uint16_t x0, uint16_t y0, uint16_t z0,  uint16_t x1, uint16_t 
 
     // Ensure that y0 < y1
     if(draw_y0 > draw_y1) {
+        draw_x1 = draw_x1 | ((color & 0xF0) << 8);
+        draw_x0 = draw_x0 | ((color & 0x0F) << 12);
         lines[w_offset+0] = (uint16_t)draw_x1;
         lines[w_offset+1] = (uint16_t)draw_y1;
         lines[w_offset+2] = (uint16_t)draw_x0;
         lines[w_offset+3] = (uint16_t)draw_y0;
     } else {
+        draw_x0 = draw_x0 | ((color & 0xF0) << 8);
+        draw_x1 = draw_x1 | ((color & 0x0F) << 12);
         lines[w_offset+0] = (uint16_t)draw_x0;
         lines[w_offset+1] = (uint16_t)draw_y0;
         lines[w_offset+2] = (uint16_t)draw_x1;
@@ -135,7 +139,7 @@ void project_draw(uint16_t x0, uint16_t y0, uint16_t z0,  uint16_t x1, uint16_t 
 
 // TODO , go back to casting this as uint16
 
-mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta){
+mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta, uint8_t color){
     float theta_f = (float)theta * (M_PI/100.0);
     float scale_f = (float)scale;
     float fa,fb,fc,fd;
@@ -177,9 +181,9 @@ mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t sca
         uint16_t cz = buf0[v_c_offset+2];
 
         // drawline between a->b, b->c, c->a
-        project_draw(ax,ay,az,bx,by,bz,fa,fb,fc,fd,x,y,scale_f, lines, w_offset);
-        project_draw(bx,by,bz,cx,cy,cz,fa,fb,fc,fd,x,y,scale_f, lines, w_offset+4);
-        project_draw(cx,cy,cz,ax,ay,az,fa,fb,fc,fd,x,y,scale_f, lines, w_offset+8);
+        project_draw(ax,ay,az,bx,by,bz,fa,fb,fc,fd,x,y,scale_f, lines, w_offset, color);
+        project_draw(bx,by,bz,cx,cy,cz,fa,fb,fc,fd,x,y,scale_f, lines, w_offset+4, color);
+        project_draw(cx,cy,cz,ax,ay,az,fa,fb,fc,fd,x,y,scale_f, lines, w_offset+8, color);
         w_offset += 12;
     }
     // Last line has to be all 0xffff 

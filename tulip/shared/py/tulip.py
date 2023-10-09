@@ -194,6 +194,16 @@ class Joy:
     Y = 2048
     B = 4096
 
+#def lines(lines_list):
+#    if(len(lines_list) % 5 != 0):
+#        print("Needs to be a list of a multiple of 5 (x0,y0,x1,y1,color)")
+#        return None
+#    ret = bytes()
+#    for l in range(len(lines_list), 5):
+#        x0,y0,x1,y1,color = lines_list[l]
+#        lines += struct.pack('HHHH', line.x0,line.y0,line.x1,line.y1)
+#    lines += struct.pack('HHHH', 65535, 65535, 65535, 65535)
+
 def version():
     # Returns current tulip version (aka git hash and compiled date)
     me = build_strings()
