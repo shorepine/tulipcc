@@ -12,32 +12,6 @@
 // Wire frame models are available
 // from https://people.sc.fsu.edu/~jburkardt/data/obj/obj.html
 
-// make a struct for lines that's LL and sorted on insert like our event queues
-
-// you really want to put this queue in sprite ram 
-// and you don't need a queue! The wire drawing can do the sort ! 
-// so yes, like model = tulip.wire_load("teapot.obj") --> parses obj file into bytes for python (the unscaled vs/fs)
-// or generate this model yourself in code 
-// then 
-// tulip.sprite_wire(model, 1, scale, theta) --> sorts and scales and writes line points into sprite ram, with existing header, sprite #1 , mem_pos 0
-// tulip.sprite_on(1)
-// tulip.sprite_move(1,x,y)
-// tulip.sprite_wire(model, 1, scale, theta) , etc 
-// 
-// 
-
-
-// we pack points in u16s
-/*
-uint8_t u0(uint16_t a) { return (uint8_t)(a & 0x00FF); }
-uint8_t u1(uint16_t a) { return (uint8_t)((a & 0xFF00) >> 8); }
-uint16_t u16fromu8(uint8_t u0, uint8_t u1) { 
-    uint16_t ret = 0;
-    ret = ret | (u1 << 8);
-    ret = ret | u0;
-    return ret;
-}
-*/
 
 mp_obj_t load_obj_file_into_ram(const char *fn) {
     mp_obj_t fp;

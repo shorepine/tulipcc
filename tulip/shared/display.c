@@ -321,19 +321,35 @@ int32_t desync = 0;
                 // find where to start
                 uint16_t * line_data = (uint16_t*) (&sprite_ram[sprite_mem[s]]);
                 uint16_t line_c = 0;
-                uint16_t last_y0 = line_data[line_c * 4 + 1];
-                uint16_t last_y1 = line_data[line_c * 4 + 3];
-                while(last_y0 != 65535 && row_px <= last_y1) {
-                    if(row_px >= last_y0 && row_px <= last_y1) {
-                        // draw the x point(s)
+                uint16_t y0 = line_data[line_c * 4 + 1];
+                uint16_t y1 = line_data[line_c * 4 + 3];
+                // todo, we could get smarter and sort lines by length secondarily after y0 to save time here
+                while(y0 != 65535) {
+                    if(row_px >= y0 && row_px <= y1) {
+                        // get a int representation of how far down we are 
+                        uint16_t x_midpoint = 0;
+                        uint16_t x_line_width = 0;
                         uint16_t x0 = line_data[line_c * 4 + 0];
                         uint16_t x1 = line_data[line_c * 4 + 2];
-                        b[bounce_row_px*H_RES + x0] = 255;
-                        b[bounce_row_px*H_RES + x1] = 255;
+                        if(x1 > x0) {
+                            x_line_width = 2; 
+                            x_midpoint = x0 + (((row_px-y0) * (x1-x0)) / (y1-y0));
+                        } else if (x1<x0) {
+                            x_line_width = 2; 
+                            x_midpoint = x0 - (((row_px-y0) * (x0-x1)) / (y1-y0));
+                        } else {
+                            // A straight line up and down
+                            x_line_width = 1;
+                            x_midpoint = x1;
+                        }
+                        // Draw 
+                        for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
+                            b[bounce_row_px*H_RES + i] = 255;
+                        }
                     }
                     line_c++;
-                    last_y0 = line_data[line_c * 4 + 1];
-                    last_y1 = line_data[line_c * 4 + 3];
+                    y0 = line_data[line_c * 4 + 1];
+                    y1 = line_data[line_c * 4 + 3];
                 }
 
             }
