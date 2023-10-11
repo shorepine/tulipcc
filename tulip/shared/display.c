@@ -155,6 +155,7 @@ uint8_t collide_mask_get(uint8_t a, uint8_t b) {
 int64_t bounce_time = 0;
 uint32_t bounce_count = 0;
 int32_t desync = 0;
+uint16_t * line_data_ptr= NULL;
 
 // Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
@@ -319,18 +320,19 @@ int32_t desync = 0;
             } else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
                 // draw this as a bresenham list
                 // find where to start
-                uint16_t * line_data = (uint16_t*) (&sprite_ram[sprite_mem[s]]);
-                uint16_t line_c = 0;
-                uint16_t y0 = line_data[line_c * 4 + 1];
-                uint16_t y1 = line_data[line_c * 4 + 3];
+                if(line_data_ptr == NULL) line_data_ptr = (uint16_t*)(&sprite_ram[sprite_mem[s]]);
+
+                uint16_t y0 = line_data_ptr[1];
+                uint16_t y1 = line_data_ptr[3];
+
                 // todo, we could get smarter and sort lines by length secondarily after y0 to save time here
                 while(y0 != 65535) {
                     if(row_px >= y0 && row_px <= y1) {
                         // get a int representation of how far down we are 
                         uint16_t x_midpoint = 0;
                         uint16_t x_line_width = 0;
-                        uint16_t x0 = line_data[line_c * 4 + 0];
-                        uint16_t x1 = line_data[line_c * 4 + 2];
+                        uint16_t x0 = line_data_ptr[0];
+                        uint16_t x1 = line_data_ptr[2];
 
                         uint8_t color = ((x0 & 0xF000) >> 8) | ((x1 & 0xF000) >> 12);
                         x0 = x0 & 0x0FFF;
@@ -374,11 +376,11 @@ int32_t desync = 0;
                             b[bounce_row_px*H_RES+x1] = color;
                         }
                     }
-                    line_c++;
-                    y0 = line_data[line_c * 4 + 1];
-                    y1 = line_data[line_c * 4 + 3];
+                    line_data_ptr += 4;
+                    y0 = line_data_ptr[1];
+                    y1 = line_data_ptr[3];
                 }
-
+                line_data_ptr = NULL; // wrap around
             }
 
         } // for each sprite

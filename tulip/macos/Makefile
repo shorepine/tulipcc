@@ -131,7 +131,7 @@ else
 LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
 endif
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-LDFLAGS += -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI -framework Cocoa -lstdc++  $(ARCHFLAGS)
+LDFLAGS += -F. -framework SDL2 -framework CoreFoundation -framework CoreMIDI  -framework AudioToolbox -framework CoreAudio -framework Cocoa -lstdc++  $(ARCHFLAGS)
 CFLAGS += -DVIRTUAL_MIDI
 
 # Flags to link with pthread library
