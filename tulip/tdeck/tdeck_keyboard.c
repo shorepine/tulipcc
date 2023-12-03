@@ -17,6 +17,11 @@
 
 int state = 0;
 QueueHandle_t interruptQueue;
+bool alt_char_mode = false;
+struct CharMapping {
+    char original;
+    char alternative;
+};
 
 static void IRAM_ATTR gpio_interrupt_handler(void *args)
 {
@@ -45,9 +50,38 @@ void watch_trackball(void *params)
     }
 }
 
+char get_alternative_char(struct CharMapping mappings[], int size, char original) {
+    for (int i = 0; i < size; ++i) {
+        if (mappings[i].original == original) {
+            return mappings[i].alternative;
+        }
+    }
+    // Return the original character if no alternative is found
+    return original;
+}
+
 void run_tdeck_keyboard() {
 
     uint8_t rx_data[5];
+    struct CharMapping charMappings[] = {
+        {'q', '~'},
+        {'w', '&'},
+        {'e', '|'},
+        {'r', '%'},
+        {'t', '{'},
+        {'y', '}'},
+        {'(', '['},     // Requires symbol button to be pressed after activating alternate character mode
+        {')', ']'},     // Requires symbol button to be pressed after activating alternate character mode
+        {'u', '^'},
+        {'i', '<'},
+        {'o', '>'},
+        {'p', '='},
+        {'g', '\\'},    // Backslash needs escaping
+        {'k', '`'},
+        {' ', '\t'},
+        // Add more mappings as needed
+    };
+    int mappingsSize = sizeof(charMappings) / sizeof(charMappings[0]);
 
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
@@ -99,11 +133,23 @@ void run_tdeck_keyboard() {
         i2c_master_read_from_device(I2C_NUM_0, LILYGO_KB_SLAVE_ADDRESS, rx_data, 1, pdMS_TO_TICKS(TIMEOUT_MS));
         if(rx_data[0]>0) {
             // Send shift-$ or shift-volume as control C
-            if(rx_data[0]==4)  { 
+            if(rx_data[0]==4) { 
                 send_key_to_micropython(3); // ctrl c
             // Send shift 0 or shift-microphone as control X
-            }  else if(rx_data[0]==224) {
+            } else if(rx_data[0]==224) {
                 send_key_to_micropython(24); 
+            } else if(rx_data[0]==12) { 
+                // Set alternate character mode
+                if (alt_char_mode == true) {
+                    alt_char_mode = false;
+                } else {
+                    alt_char_mode = true;
+                }
+            } else if (alt_char_mode == true) {
+                // Send alternate characters
+                send_key_to_micropython(get_alternative_char(charMappings, mappingsSize, rx_data[0]));
+                // Reset back to default character set after sending the key, remove this line if a toggle is preferred
+                alt_char_mode = false;
             } else {
                 // Send as is
                 send_key_to_micropython(rx_data[0]);
