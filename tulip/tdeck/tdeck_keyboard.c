@@ -17,6 +17,14 @@
 
 int state = 0;
 QueueHandle_t interruptQueue;
+struct KeyMapping {
+    // The following characters should be available to map to an alternative
+    // Default: q w e r t y u i o p a s d f g h j k l z x c v b n m $  
+    // Shift: Q W E R T Y U I O P A S D F G H J K L Z X C V B N M
+    // Symbol: # 1 2 3 ( ) _ - + @ * 4 5 6 / : ; \ " 7 8 9 ? ! , . 0
+    char original;
+    char alternative;
+};
 
 static void IRAM_ATTR gpio_interrupt_handler(void *args)
 {
@@ -45,9 +53,76 @@ void watch_trackball(void *params)
     }
 }
 
+char get_alternative_char(struct KeyMapping mappings[], int size, char original) {
+    for (int i = 0; i < size; ++i) {
+        if (mappings[i].original == original) {
+            return mappings[i].alternative;
+        }
+    }
+    // Return the original character if no alternative is found
+    return original;
+}
+
 void run_tdeck_keyboard() {
 
+    bool alt_char_mode = false;
+    bool ctrl_toggle = false;
     uint8_t rx_data[5];
+    uint8_t char_to_send[1];
+    struct KeyMapping charMappings[] = {
+        // Default keys
+        {'q', '~'},
+        {'w', '&'},
+        {'e', '|'},
+        {'r', '%'},
+        {'t', '{'},
+        {'y', '}'},
+        {'u', '^'},
+        {'i', '<'},
+        {'o', '>'},
+        {'p', '='},
+        {'a', 172},     // Prints an empty character but should be a ¬ sign
+        {'g', '\\'},    // Backslash needs escaping
+        {'k', '`'},
+        {'$', 163},     // Prints an empty character but should be a £ sign
+        {' ', '\t'},    // Sends tab
+        // Requires symbol to be pressed after alt+c
+        {'(', '['},
+        {')', ']'},
+    };
+    struct KeyMapping ctrlMappings[] = {
+        // Default keys
+        {'q', 17},      // Device Control 1
+        {'w', 23},      // End of Transmission Block
+        {'e', 5},       // Enquiry character
+        {'r', 18},      // Device Control 2
+        {'t', 20},      // Device Control 4
+        {'y', 25},      // End of Medium
+        {'u', 21},      // Negative-acknowledge character
+        {'i', 9},       // Horizontal tab
+        {'o', 15},      // Shift In
+        {'p', 16},      // Data Link Escape
+        {'a', 1},       // Start of Heading
+        {'s', 19},      // Device Control 3
+        {'d', 4},       // End-of-transmission character
+        {'f', 6},       // Acknowledge character
+        {'g', 7},       // Bell character
+        {'h', 8},       // Backspace
+        {'j', 10},      // Linefeed
+        {'k', 11},      // Vertical tab
+        {'l', 12},      // Formfeed
+        {'z', 26},      // Substitute character
+        {'x', 24},      // Cancel character
+        {'c', 3},       // End-of-text character
+        {'v', 22},      // Synchronous Idle
+        {'b', 2},       // Start of Text
+        {'n', 14},      // Shift Out
+        {'m', 13},      // Carriage return
+        {'$', 127},     // Delete (DEL)
+        {' ', 27},      // Escape character
+    };
+    int charMappingsSize = sizeof(charMappings) / sizeof(charMappings[0]);
+    int ctrlMappingsSize = sizeof(ctrlMappings) / sizeof(ctrlMappings[0]);
 
     i2c_config_t conf = {
         .mode = I2C_MODE_MASTER,
@@ -97,16 +172,28 @@ void run_tdeck_keyboard() {
 
     while (1) {
         i2c_master_read_from_device(I2C_NUM_0, LILYGO_KB_SLAVE_ADDRESS, rx_data, 1, pdMS_TO_TICKS(TIMEOUT_MS));
-        if(rx_data[0]>0) {
-            // Send shift-$ or shift-volume as control C
-            if(rx_data[0]==4)  { 
-                send_key_to_micropython(3); // ctrl c
-            // Send shift 0 or shift-microphone as control X
-            }  else if(rx_data[0]==224) {
-                send_key_to_micropython(24); 
+        if (rx_data[0] > 0) {
+            if (rx_data[0] == 224) {
+                // Toggle ctrl key (shift+microphone)
+                ctrl_toggle = !ctrl_toggle;
+            } else if (rx_data[0] == 12) {
+                // Set alternate character mode
+                alt_char_mode = !alt_char_mode;
             } else {
-                // Send as is
-                send_key_to_micropython(rx_data[0]);
+                if (alt_char_mode) {
+                    // Send alternate characters if alternate character set is enabled, otherwise send as is
+                    char_to_send[0] = get_alternative_char(charMappings, charMappingsSize, rx_data[0]);
+                    alt_char_mode = false;
+                } else {
+                    char_to_send[0] = rx_data[0];
+                }
+                // Send as is, combining with ctrl if toggled
+                if (ctrl_toggle) {
+                    send_key_to_micropython(get_alternative_char(ctrlMappings, ctrlMappingsSize, char_to_send[0]));
+                    ctrl_toggle = false;  // Reset toggle after sending
+                } else {
+                    send_key_to_micropython(char_to_send[0]);
+                }
             }
         }
     }
