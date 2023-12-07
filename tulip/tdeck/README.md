@@ -45,40 +45,40 @@ An alternate character set can be accessed by pressing `alt+c` (the key with alt
 
 A `ctrl` key toggle has been created, to enable it press `shift+0` together and then release them, now presss any configured letter and then `enter`. The shortcut will be sent to the running program/REPL and the toggle will be deactivated. 
 
-| Key       | Action                         | Notes |
-|-----------|--------------------------------|-------|
-| `q`       | Device Control 1               |       |
-| `w`       | End of Transmission Block      |       |
-| `e`       | Enquiry Character              |       |
-| `r`       | Device Control 2               |       |
-| `t`       | Device Control 4               |       |
-| `y`       | End of Medium                  |       |
-| `u`       | Negative Acknowledge Character |       |
-| `i`       | Horizontal Tab                 |       |
-| `o`       | Shift In                       |       |
-| `p`       | Data Link Escape               |       |
-| `a`       | Start of Heading               |       |
-| `s`       | Device Control 3               |       |
-| `d`       | End of Transmission Character  |       |
-| `f`       | Acknowledge Character          |       |
-| `g`       | Bell Character                 |       |
-| `h`       | Backspace Character            |       |
-| `j`       | Linefeed Character             |       |
-| `k`       | Vertical Tab                   |       |
-| `l`       | Formfeed                       |       |
-| `z`       | Substitute Character           |       |
-| `x`       | Cancel Character               |       |
-| `c`       | End of Text Character          |       |
-| `v`       | Synchronous Idle               |       |
-| `b`       | Start of Text                  |       |
-| `n`       | Shift Out                      |       |
-| `m`       | Carriage Return                |       |
-| `$`       | Delete Character               |       |
-| `<space>` | Escape Character               |       |
+| Key       | Action                         | Notes                   |
+|-----------|--------------------------------|-------------------------|
+| `q`       | Device Control 1               |                         |
+| `w`       | End of Transmission Block      |                         |
+| `e`       | Enquiry Character              | Paste mode              |
+| `r`       | Device Control 2               |                         |
+| `t`       | Device Control 4               |                         |
+| `y`       | End of Medium                  |                         |
+| `u`       | Negative Acknowledge Character |                         |
+| `i`       | Horizontal Tab                 |                         |
+| `o`       | Shift In                       |                         |
+| `p`       | Data Link Escape               |                         |
+| `a`       | Start of Heading               | Enter raw REPL          |
+| `s`       | Device Control 3               |                         |
+| `d`       | End of Transmission Character  | Micropython soft reboot |
+| `f`       | Acknowledge Character          |                         |
+| `g`       | Bell Character                 |                         |
+| `h`       | Backspace Character            |                         |
+| `j`       | Linefeed Character             |                         |
+| `k`       | Vertical Tab                   |                         |
+| `l`       | Formfeed                       |                         |
+| `z`       | Substitute Character           |                         |
+| `x`       | Cancel Character               |                         |
+| `c`       | End of Text Character          | Keyboard interrupt      |
+| `v`       | Synchronous Idle               |                         |
+| `b`       | Start of Text                  | Exit raw REPL           |
+| `n`       | Shift Out                      |                         |
+| `m`       | Carriage Return                |                         |
+| `$`       | Delete Character               |                         |
+| `<space>` | Escape Character               |                         |
 
 ### Alt toggle
 
-An `alt` key toggle has been created, to enable it press `shift+$` together and then release them, now presss any configured letter and then `enter`. The shortcut will be sent to the running program/REPL and the toggle will be deactivated.
+An `alt` key toggle has been created, to enable it press `shift+$` together and then release them, now presss any configured letter and then `enter`. The shortcut will be sent to the running program/REPL and the toggle will be deactivated. Alt-keycodes can be sent to the REPL by enabling the toggle with `shift+$`, then pressing `sym` before choosing a number, the `sym` key must be pressed before each desired number, once the number is completed hit enter to send it to the REPL and disable the toggle.
 
 | Key | Action       | Notes |
 |-----|--------------|-------|
