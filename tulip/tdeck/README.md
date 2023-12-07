@@ -78,7 +78,7 @@ A `ctrl` key toggle has been created, to enable it press `shift+0` together and 
 
 ### Alt toggle
 
-An `alt` key toggle has been created, to enable it press `shift+$` together and then release them, now presss any configured letter and then `enter`. The shortcut will be sent to the running program/REPL and the toggle will be deactivated. Alt-keycodes can be sent to the REPL by enabling the toggle with `shift+$`, then pressing `sym` before choosing a number, the `sym` key must be pressed before each desired number, once the number is completed hit enter to send it to the REPL and disable the toggle.
+An `alt` key toggle has been created, to enable it press `shift+$` together and then release them, now presss any configured letter and then `enter`. The shortcut will be sent to the running program/REPL and the toggle will be deactivated. Alt-keycodes can be sent to the REPL by enabling the toggle with `shift+$`, then pressing `sym` before choosing a number, the `sym` key must be pressed before each digit, once the number is completed hit enter to send it to the REPL and disable the toggle. For example, to print a `$` symbol which is the 36th ASCII/Unicode character press the following keys in order: `shift+$` + `sym` + `3` + `sym` + `6` + `<enter>`.
 
 | Key | Action       | Notes |
 |-----|--------------|-------|
