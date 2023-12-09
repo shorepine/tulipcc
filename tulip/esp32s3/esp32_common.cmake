@@ -238,6 +238,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
 # Disable some warnings to keep the build output clean.
 target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-clobbered
+    -Wno-uninitialized
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
     -fsingle-precision-constant
