@@ -2,7 +2,7 @@ import struct, os, time, tulip
 
 BLOCK_SIZE = 256
 SAMPLE_RATE = 44100.0
-OSCS = 32
+OSCS = 64
 MAX_QUEUE = 400
 [SINE, PULSE, SAW_DOWN, SAW_UP, TRIANGLE, NOISE, KS, PCM, ALGO, PARTIAL, PARTIALS, OFF] = range(12)
 TARGET_AMP, TARGET_DUTY, TARGET_FREQ, TARGET_FILTER_FREQ, TARGET_RESONANCE, TARGET_FEEDBACK, TARGET_LINEAR, TARGET_TRUE_EXPONENTIAL, TARGET_DX7_EXPONENTIAL, TARGET_PAN = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512)
@@ -14,13 +14,12 @@ CHORUS_OSC = 63
     A bunch of useful presets
 """
 def preset(which,osc=0, **kwargs):
-    '''Choose a preset and set the oscillators starting at osc'''
     # Reset the osc first
     reset(osc=osc)
     if(which==0): # simple note
         send(osc=osc, wave=SINE, bp0="10,1,250,0.7,500,0", bp0_target=TARGET_AMP, **kwargs)
     if(which==1): # filter bass
-        send(osc=osc, filter_freq=2500, resonance=5, wave=SAW_DOWN, filter_type=FILTER_LPF, bp0="100,0.5,25,0", bp0_target=TARGET_AMP+TARGET_FILTER_FREQ, **kwargs)
+        send(osc=osc, filter_freq=2500, resonance=5, wave=SAW_DOWN, filter_type=FILTER_LPF, bp0="0,1,500,0.2,25,0", bp0_target=TARGET_AMP+TARGET_FILTER_FREQ, **kwargs)
 
     # TODO -- this is a good one to test the whistle on the bps... 
     if(which==2): # long sine pad to test ADSR
@@ -135,7 +134,7 @@ def reset(osc=None, **kwargs):
     if(osc is not None):
         send(reset=osc, **kwargs)
     else:
-        send(reset=100, **kwargs) # reset > ALLES_OSCS resets all oscs
+        send(reset=10000, **kwargs) # reset > ALLES_OSCS resets all oscs
 
 def volume(volume, client = -1):
     send(client=client, volume=volume)
@@ -213,7 +212,7 @@ def sweep(speed=0.100, res=0.5, loops = -1):
 """
     An example drum machine using osc+PCM presets
 """
-def drums(bpm=120, loops=-1, **kwargs):
+def drums(bpm=120, loops=-1, volume=0.2, **kwargs):
     preset(13, osc=0, **kwargs) # sample bass drum
     preset(8, osc=3, **kwargs) # sample hat
     preset(9, osc=4, pan=1, **kwargs) # sample cow
@@ -227,17 +226,17 @@ def drums(bpm=120, loops=-1, **kwargs):
         loops = loops - 1
         for i,x in enumerate(pattern):
             if(x & bass): 
-                send(osc=0, vel=4, **kwargs)
+                send(osc=0, vel=4*volume, **kwargs)
             if(x & snare):
-                send(osc=2, vel=1.5)
+                send(osc=2, vel=1.5*volume)
             if(x & hat): 
-                send(osc=3, vel=1)
+                send(osc=3, vel=1*volume)
             if(x & cow): 
-                send(osc=4, vel=1)
+                send(osc=4, vel=1*volume)
             if(x & hicow): 
-                send(osc=5, vel=1)
+                send(osc=5, vel=1*volume)
             if(bassline[i]>0):
-                send(osc=7, vel=0.5, note=bassline[i]-12, **kwargs)
+                send(osc=7, vel=0.5*volume, note=bassline[i]-12, **kwargs)
             else:
                 send(vel=0, osc=7, **kwargs)
             time.sleep(1.0/(bpm*2/60))

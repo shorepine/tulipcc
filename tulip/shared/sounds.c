@@ -20,9 +20,9 @@ void upgrade_tone() {
     e.time = sysclock;
     e.wave = SINE;
     e.freq = 220;
-    parse_breakpoint(&e, "0,0,10,1,500,0,0,0",0);
-    e.breakpoint_target[0] = TARGET_AMP;
-    e.breakpoint_target[1] = TARGET_FREQ;
+    strcpy(e.bp0, "0,0,10,1,500,0,0,0");
+    e.bp0_target = TARGET_AMP;
+    e.bp1_target = TARGET_FREQ;
     amy_add_event(e);
     e.osc = 1;
     e.freq = 420;
@@ -40,8 +40,8 @@ void wifi_tone() {
     e.time = sysclock;
     e.wave = SINE;
     e.freq = 440;
-    parse_breakpoint(&e, "0,0,10,1,500,0,0,0",0);
-    e.breakpoint_target[0] = TARGET_AMP;
+    strcpy(e.bp0 ,"0,0,10,1,500,0,0,0");
+    e.bp0_target = TARGET_AMP;
     amy_add_event(e);
     e.osc = 1;
     e.freq = 840;
