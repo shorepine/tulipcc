@@ -1,7 +1,11 @@
 #include "AXS15231B.h"
-#include "SPI.h"
 #include "Arduino.h"
+#include "SPI.h"
 #include "driver/spi_master.h"
+
+extern "C" void axs15231_init(void);
+extern "C" void lcd_PushColors(uint16_t x, uint16_t y,uint16_t width,  uint16_t high, uint16_t *data);
+
 
 static volatile bool lcd_spi_dma_write = false;
 extern void my_print(const char *buf);
@@ -129,6 +133,11 @@ static void lcd_send_cmd(uint32_t cmd, uint8_t *dat, uint32_t len)
     }
 #endif
 }
+extern TaskHandle_t display_handle;
+
+
+
+
 
 static void IRAM_ATTR spi_dma_cd(spi_transaction_t *trans)
 {
@@ -141,9 +150,9 @@ static void IRAM_ATTR spi_dma_cd(spi_transaction_t *trans)
     {
         if(lcd_spi_dma_write) {
             lcd_spi_dma_write = false;
-            lv_disp_t * disp = _lv_refr_get_disp_refreshing();
-            if(disp != NULL)
-                lv_disp_flush_ready(disp->driver);
+//            lv_disp_t * disp = _lv_refr_get_disp_refreshing();
+//            if(disp != NULL)
+//                lv_disp_flush_ready(disp->driver);
 
             TFT_CS_H;
         }
@@ -233,6 +242,7 @@ void axs15231_init(void)
                 delay(20);
         }
     }
+    //lcd_setRotation(3);
 }
 
 void lcd_setRotation(uint8_t r)
@@ -268,17 +278,251 @@ void lcd_address_set(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
     }
 }
 
+/*
+void lcd_fill(uint16_t xsta,
+              uint16_t ysta,
+              uint16_t xend,
+              uint16_t yend,
+              uint16_t color)
+{
 
+    uint16_t w = xend - xsta;
+    uint16_t h = yend - ysta;
+    uint16_t *color_p = (uint16_t *)heap_caps_malloc(w * h * 2, MALLOC_CAP_INTERNAL);
+    int i = 0;
+    for(i = 0; i < w * h ; i+=1)
+    {
+        color_p[i] = color;
+    }
+
+    lcd_PushColors(xsta, ysta, w, h, color_p);
+    free(color_p);
+}
+
+*/
+void lcd_DrawPoint(uint16_t x, uint16_t y, uint16_t color)
+{
+    //lcd_address_set(x, y, x + 1, y + 1);
+    //lcd_PushColors(&color, 1);
+}
 
 void spi_device_queue_trans_fun(spi_device_handle_t handle, spi_transaction_t *trans_desc, TickType_t ticks_to_wait)
 {
     ESP_ERROR_CHECK(spi_device_queue_trans(spi, (spi_transaction_t *)trans_desc, portMAX_DELAY));
 }
 
+#ifdef LCD_SPI_DMA 
 spi_transaction_ext_t t = {0};
+void lcd_PushColors(uint16_t x,
+                        uint16_t y,
+                        uint16_t width,
+                        uint16_t high,
+                        uint16_t *data)
+    {
+        static bool first_send = 1;
+        static uint16_t *p = (uint16_t *)data;
+        static uint32_t transfer_num_old = 0;
 
-void lcd_PushColors(uint16_t *data, uint32_t len)
+        if(data != NULL && (width != 0) && (high != 0))
+        {
+            lcd_PushColors_len = width * high;
+            p = (uint16_t *)data;
+            first_send = 1;
+
+            transfer_num = 0;
+            lcd_address_set(x, y, x + width - 1, y + high - 1);
+            TFT_CS_L;
+        }
+
+        for (int x = 0; x < (transfer_num_old - (transfer_num_old-(transfer_num_old-transfer_num))); x++) {
+            spi_transaction_t *rtrans;
+            esp_err_t ret = spi_device_get_trans_result(spi, &rtrans, portMAX_DELAY);
+            if (ret != ESP_OK) {
+            // ESP_LOGW(TAG, "1. transfer_num = %d", transfer_num_old);
+            }
+            assert(ret == ESP_OK);
+        }
+        transfer_num_old -= (transfer_num_old - (transfer_num_old-(transfer_num_old-transfer_num)));
+
+        do {
+            if(transfer_num >= 3 || ESP.getFreeHeap() <= 70000)
+            {
+                break;
+            }
+            size_t chunk_size = lcd_PushColors_len;
+
+            memset(&t, 0, sizeof(t));
+            if (first_send) {
+                t.base.flags =
+                    SPI_TRANS_MODE_QIO ;// | SPI_TRANS_MODE_DIOQIO_ADDR 
+                t.base.cmd = 0x32 ;// 0x12 
+                t.base.addr = 0x002C00;
+                first_send = 0;
+            } else {
+                t.base.flags = SPI_TRANS_MODE_QIO | SPI_TRANS_VARIABLE_CMD |
+                            SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_DUMMY;
+                t.command_bits = 0;
+                t.address_bits = 0;
+                t.dummy_bits = 0;
+            }
+            if (chunk_size > SEND_BUF_SIZE) {
+                chunk_size = SEND_BUF_SIZE;
+            }
+            t.base.tx_buffer = p;
+            t.base.length = chunk_size * 16;
+
+            lcd_spi_dma_write = true;
+
+            transfer_num++;
+            transfer_num_old++;
+            lcd_PushColors_len -= chunk_size;
+            esp_err_t ret;
+
+            ESP_ERROR_CHECK(spi_device_queue_trans(spi, (spi_transaction_t *)&t, portMAX_DELAY));
+            assert(ret == ESP_OK);
+
+            p += chunk_size;
+        } while (lcd_PushColors_len > 0);
+    }
+#if 0
+    void lcd_PushColors(uint16_t x,
+                        uint16_t y,
+                        uint16_t width,
+                        uint16_t high,
+                        uint16_t *data)
+    {
+        bool first_send = 1;
+        lcd_PushColors_len = width * high;
+        uint16_t *p = (uint16_t *)data;
+
+        spi_transaction_t *rtrans;
+
+        for (int x = 0; x < transfer_num; x++) {
+            esp_err_t ret = spi_device_get_trans_result(spi, &rtrans, portMAX_DELAY);
+            if (ret != ESP_OK) {
+            ESP_LOGW(TAG, "1. transfer_num = %d", transfer_num);
+            }
+            assert(ret == ESP_OK);
+        }
+        transfer_num = 0;
+
+        lcd_address_set(x, y, x + width - 1, y + high - 1);
+        TFT_CS_L;
+        do {
+            size_t chunk_size = lcd_PushColors_len;
+            spi_transaction_ext_t t = {0};
+            memset(&t, 0, sizeof(t));
+            if (first_send) {
+                t.base.flags =
+                    SPI_TRANS_MODE_QIO /* | SPI_TRANS_MODE_DIOQIO_ADDR */;
+                t.base.cmd = 0x32 /* 0x12 */;
+                t.base.addr = 0x002C00;
+                first_send = 0;
+            } else {
+                t.base.flags = SPI_TRANS_MODE_QIO | SPI_TRANS_VARIABLE_CMD |
+                            SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_DUMMY;
+                t.command_bits = 0;
+                t.address_bits = 0;
+                t.dummy_bits = 0;
+            }
+            if (chunk_size > SEND_BUF_SIZE) {
+                chunk_size = SEND_BUF_SIZE;
+            }
+            t.base.tx_buffer = p;
+            t.base.length = chunk_size * 16;
+
+            lcd_spi_dma_write = true;
+
+            transfer_num++;
+            lcd_PushColors_len -= chunk_size;
+
+            spi_device_queue_trans_fun(spi, (spi_transaction_t *)&t, portMAX_DELAY);
+
+            p += chunk_size;
+        } while (lcd_PushColors_len > 0);
+    }
+ #endif   
+#else
+    void lcd_PushColors(uint16_t x,
+                        uint16_t y,
+                        uint16_t width,
+                        uint16_t high,
+                        uint16_t *data)
+    {
+    #if LCD_USB_QSPI_DREVER == 1
+        bool first_send = 1;
+        size_t len = width * high;
+        uint16_t *p = (uint16_t *)data;
+
+        lcd_address_set(x, y, x + width - 1, y + high - 1);
+        
+        do {
+
+            TFT_CS_L;
+            size_t chunk_size = len;
+            spi_transaction_ext_t t = {0};
+            memset(&t, 0, sizeof(t));
+            if (1) {
+                t.base.flags =
+                    SPI_TRANS_MODE_QIO /* | SPI_TRANS_MODE_DIOQIO_ADDR */;
+                t.base.cmd = 0x32 /* 0x12 */;
+                if(first_send)
+                {
+                    t.base.addr = 0x002C00;
+                }
+                else 
+                    t.base.addr = 0x003C00;
+                first_send = 0;
+            } else {
+                t.base.flags = SPI_TRANS_MODE_QIO | SPI_TRANS_VARIABLE_CMD |
+                            SPI_TRANS_VARIABLE_ADDR | SPI_TRANS_VARIABLE_DUMMY;
+                t.command_bits = 0;
+                t.address_bits = 0;
+                t.dummy_bits = 0;
+            }
+            if (chunk_size > SEND_BUF_SIZE) {
+                chunk_size = SEND_BUF_SIZE;
+            }
+            t.base.tx_buffer = p;
+            t.base.length = chunk_size * 16;
+            int aaa = 0;
+            aaa = aaa>>1;
+            aaa = aaa>>1;
+            aaa = aaa>>1;
+            if(!first_send)
+                TFT_CS_H;
+            aaa = aaa>>1;
+            aaa = aaa>>1;
+            aaa = aaa>>1;
+            aaa = aaa>>1;
+            aaa = aaa>>1;
+            TFT_CS_L;
+            aaa = aaa>>1;
+            aaa = aaa>>1;
+            aaa = aaa>>1;
+            spi_device_polling_transmit(spi, (spi_transaction_t *)&t);
+            len -= chunk_size;
+            p += chunk_size;
+        } while (len > 0);
+        TFT_CS_H;
+
+    #else
+        lcd_address_set(x, y, x + width - 1, y + high - 1);
+        TFT_CS_L;
+        SPI.beginTransaction(SPISettings(SPI_FREQUENCY, MSBFIRST, TFT_SPI_MODE));
+        
+        SPI.writeBytes((uint8_t *)data, width * high * 2);
+        SPI.endTransaction();
+        TFT_CS_H;
+    #endif
+    }
+#endif
+
+
+#if 1
+void lcd_PushColors_whole(uint16_t *data, uint32_t len)
 {
+#if LCD_USB_QSPI_DREVER == 1
     bool first_send = 1;
     uint16_t *p = (uint16_t *)data;
     TFT_CS_L;
@@ -310,7 +554,18 @@ void lcd_PushColors(uint16_t *data, uint32_t len)
         p += chunk_size;
     } while (len > 0);
     TFT_CS_H;
+
+#else
+    TFT_CS_L;
+    SPI.beginTransaction(SPISettings(SPI_FREQUENCY, MSBFIRST, TFT_SPI_MODE));
+     
+    SPI.writeBytes((uint8_t *)data, len * 2);
+    SPI.endTransaction();
+    TFT_CS_H;
+#endif
 }
+
+#endif
 
 void lcd_sleep()
 {

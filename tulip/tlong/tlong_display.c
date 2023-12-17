@@ -1,8 +1,11 @@
-#include "tdeck_display.h"
+#include "tlong_display.h"
 #include "tasks.h"
 
-
-// Defaults for esp32 display params that we don't need on TDeck
+void axs15231_init(void);
+void lcd_PushColors(uint16_t x, uint16_t y,uint16_t width,  uint16_t high, uint16_t *data);
+void lcd_PushColors_whole(uint16_t *data, uint32_t len);
+bool get_lcd_spi_dma_write(void);
+// Defaults for esp32 display params that we don't need on TLong
 uint32_t HSYNC_BACK_PORCH=0;
 uint32_t HSYNC_FRONT_PORCH=0;
 uint32_t HSYNC_PULSE_WIDTH=0;
@@ -13,7 +16,7 @@ int16_t touch_x_delta = 0;
 int16_t touch_y_delta = 0;
 uint8_t dumb_display_mutex = 0;
 
-// lookup table for Tulip's "pallete" to the 16-bit colorspace needed by the TDeck display
+// lookup table for Tulip's "pallete" to the 16-bit colorspace needed by the TLong display
 const uint16_t rgb332_rgb565_i[256] = {
     0x0000, 0x0a00, 0x1500, 0x1f00, 0x2001, 0x2a01, 0x3501, 0x3f01, 
     0x4002, 0x4a02, 0x5502, 0x5f02, 0x6003, 0x6a03, 0x7503, 0x7f03, 
@@ -48,7 +51,7 @@ const uint16_t rgb332_rgb565_i[256] = {
     0x80fc, 0x8afc, 0x95fc, 0x9ffc, 0xa0fd, 0xaafd, 0xb5fd, 0xbffd, 
     0xc0fe, 0xcafe, 0xd5fe, 0xdffe, 0xe0ff, 0xeaff, 0xf5ff, 0xffff 
 };
-// Unused by TDeck stubs
+// Unused by TLong stubs
 void esp32s3_display_stop() {
 }
 
@@ -74,96 +77,36 @@ void display_pwm_setup() {
 void display_brightness(uint8_t amount) {
 }
 
-// interrupt called when the SPI transmission is complete. we use this to tell the display code
-// it is ok to start writing to our framebuffer RAM again. without this setup you'll get corruption in drawing
-static bool tlong_trans_done(esp_lcd_panel_io_handle_t panel_io,
-                            esp_lcd_panel_io_event_data_t* edata,
-                            void* user_ctx) {
-    BaseType_t high_task_wakeup;
-    vTaskNotifyGiveFromISR(display_handle, &high_task_wakeup);
-    return high_task_wakeup;
-}
 
+extern uint32_t transfer_num;
+extern size_t lcd_PushColors_len;
 // Task runner for the display, inits and then spins in a loop processing 
 void run_tlong_display(void) {
-    // Only one res for the TDeck
     H_RES=640;
-    V_RES=189;
+    V_RES=180;
     H_RES_D=640;
     V_RES_D=180;
 
     // First set up the memory
     display_init();
 
-    // Make an ESP_LCD object
-    esp_lcd_panel_io_handle_t io_handle = NULL;
-    esp_lcd_panel_handle_t panel_handle = NULL;
-
-    // turn off backlight
+     // turn on backlight
     gpio_config_t bk_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << TDECK_LCD_BK_LIGHT_GPIO
+        .pin_bit_mask = 1ULL << TFT_BL
     };
     gpio_config(&bk_gpio_config);
-    gpio_set_level(TDECK_LCD_BK_LIGHT_GPIO, 0);
+    gpio_set_level(TFT_BL, 1);
 
-    // turn on TDeck peripheral 
-    gpio_config_t peri_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << TDECK_PERI_GPIO
-    };
-    gpio_config(&peri_gpio_config);
-    gpio_set_level(TDECK_PERI_GPIO, 1);
-
-    // set up SPI
-    spi_bus_config_t buscfg = {
-        .sclk_io_num = TDECK_LCD_PCLK_GPIO,
-        .mosi_io_num = TDECK_LCD_MOSI_GPIO,
-        .miso_io_num = TDECK_LCD_MISO_GPIO,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
-        .max_transfer_sz = 0,
-    };
-    spi_bus_initialize(TDECK_SPI_HOST_ID, &buscfg, SPI_DMA_CH_AUTO);
-    esp_lcd_panel_io_spi_config_t io_config = {
-        .dc_gpio_num = TDECK_LCD_DC_GPIO,
-        .cs_gpio_num = TDECK_LCD_CS_GPIO,
-        .pclk_hz = TDECK_LCD_PIXEL_CLOCK_HZ,
-        .spi_mode = 0,
-        .trans_queue_depth = 10,
-        .lcd_cmd_bits = 8, 
-        .lcd_param_bits = 8, 
-        .on_color_trans_done = tdeck_trans_done,
-        .user_ctx = NULL,
-    };
-    esp_lcd_panel_dev_config_t panel_config = {
-        .reset_gpio_num = TDECK_LCD_RST_GPIO,
-        .rgb_endian = LCD_RGB_ENDIAN_RGB,
-        .bits_per_pixel = 16,
-    };
-    esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)TDECK_SPI_HOST_ID, &io_config, &io_handle);
-    esp_lcd_new_panel_st7789(io_handle, &panel_config, &panel_handle);
-    esp_lcd_panel_swap_xy(panel_handle, true);
-    esp_lcd_panel_mirror(panel_handle, true, false);
-    esp_lcd_panel_reset(panel_handle);
-    esp_lcd_panel_init(panel_handle);
-    esp_lcd_panel_invert_color(panel_handle, true);
-    esp_lcd_panel_disp_on_off(panel_handle, true);
-    gpio_set_level(TDECK_LCD_BK_LIGHT_GPIO, 1);
-    
-    // If you don't clear the screen it'll still show what was left there after reboots. 
-    uint8_t * clear = malloc_caps(H_RES*V_RES*2, MALLOC_CAP_DMA);
-    memset(clear, 0, H_RES*V_RES*2 );
-    esp_lcd_panel_draw_bitmap(panel_handle, 0, 0, H_RES, V_RES, clear);
-    free(clear);
-
-    brightness = DEFAULT_BRIGHTNESS;
+    // And the display
+    axs15231_init();
 
     // Time the frame sync and stay running forever 
     int64_t tic0 = esp_timer_get_time();
     uint16_t loop_count =0;
     uint8_t *frame_bb =(uint8_t*) malloc_caps(H_RES*FONT_HEIGHT, MALLOC_CAP_DMA);
-    uint16_t *bb565 = (uint16_t*) malloc_caps(H_RES*FONT_HEIGHT*2, MALLOC_CAP_DMA);
+    uint16_t *whole = (uint16_t*) malloc_caps(H_RES*V_RES*2, MALLOC_CAP_SPIRAM);
+    for(uint32_t i=0;i<H_RES*V_RES;i++) whole[i] = 0;
     while(1)  { 
         if(loop_count++ >= 100) {
             float reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);
@@ -173,19 +116,39 @@ void run_tlong_display(void) {
         }        
 
         // bounce the entire screen at once to the display
-        for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
+        // We can't bounce line by line like on the T-Deck as this display is rotated
+        for(uint16_t y=0;y<(V_RES-FONT_HEIGHT);y=y+FONT_HEIGHT) {
             // Get the pixel data for a row of screen from Tulip
             display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT, NULL);
-            // Wait for the last write to be done before starting
-            ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(100));
-            // Write it to the TDeck screen via colorspace conversion
-            for(uint16_t i=0;i<H_RES*FONT_HEIGHT;i++) {
-                bb565[i] = rgb332_rgb565_i[frame_bb[i]];
+
+            // Write it to the TLong screen via colorspace conversion and rotation
+            uint16_t idx = 0;
+            for(uint16_t sub_y=y;sub_y<y+FONT_HEIGHT;sub_y++) {
+                for(uint16_t sub_x=0;sub_x<H_RES;sub_x++) {
+                    uint32_t my_x = sub_y;
+                    uint32_t my_y = (H_RES-1)-sub_x; 
+                    whole[my_y*V_RES+my_x] = rgb332_rgb565_i[frame_bb[idx++]];
+                }
             }
-            dumb_display_mutex = 1;
-            esp_lcd_panel_draw_bitmap(panel_handle, 0, y, H_RES, y+FONT_HEIGHT, bb565);
-            dumb_display_mutex = 0;
+
         }
+
+        // Blit the entire display over. You have to do this flush dance or else it's corrupted
+        if (transfer_num <= 0 && lcd_PushColors_len <= 0){
+            #ifdef LCD_SPI_DMA
+            while (get_lcd_spi_dma_write()) {
+                lcd_PushColors(0, 0, 0, 0, NULL);
+            }
+            #endif
+            // Push the display
+            lcd_PushColors(0,0, V_RES, H_RES, whole);
+        }
+
+        // Wait for the last thing to finish
+        if (transfer_num <= 1 && lcd_PushColors_len > 0) {
+           lcd_PushColors(0, 0, 0, 0, NULL);
+        }
+
         // Tell Tulip we're done with the frame
         display_frame_done_generic();
 

@@ -14,8 +14,8 @@ sys.path.append(parttool_dir)  # this enables Python to find parttool module
 from parttool import *  # import all names inside parttool module
 
 
-if(not os.getcwd().endswith("tdeck")):
-    print("Run this from the tulipcc/ports/tdeck folder only")
+if(not os.getcwd().endswith("tlong")):
+    print("Run this from the tulipcc/ports/tlong folder only")
     sys.exit()
 
 TULIP_HOME = "../fs"

@@ -260,7 +260,7 @@ void alles_parse_message(char *message, uint16_t length) {
     //char local_message[MAX_RECEIVE_LEN];
     //strncpy(local_message, message, length);
     // Parse the AMY stuff out of the message first
-    struct i_event e = amy_parse_message(message);
+    struct event e = amy_parse_message(message);
     uint8_t sync_response = 0;
     //fprintf(stderr, "message is %s len is %d\n", message, length);
     // Then pull out any alles-specific modes in this message - c,i,r,s, _
@@ -311,7 +311,7 @@ void alles_parse_message(char *message, uint16_t length) {
                 }
             }
             //fprintf(stderr, "LOG: AMY message for time %lld received at time %lld (latency %lld ms) for_me %d\n", e.time, amy_sysclock(), amy_sysclock()-e.time, for_me);
-            if(for_me && mesh_local_playback) amy_add_i_event(e);
+            if(for_me && mesh_local_playback) amy_add_event(e);
         }
     }
 }

@@ -68,7 +68,7 @@ list(APPEND MICROPY_SOURCE_DRIVERS
 
 list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/tlong/tlong_display.c
-    ../../../tulip/tlong/AXS15231B.c
+    ../../../tulip/tlong/AXS15231B.cpp
     ../../../tulip/tlong/main.c
     ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/usb_keyboard.c
@@ -151,6 +151,7 @@ list(APPEND MICROPY_SOURCE_QSTR
 )
 
 list(APPEND IDF_COMPONENTS
+    arduino-just-spi
     app_update
     bootloader_support
     bt
@@ -231,6 +232,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     LFS1_NO_MALLOC LFS1_NO_DEBUG LFS1_NO_WARN LFS1_NO_ERROR LFS1_NO_ASSERT
     LFS2_NO_MALLOC LFS2_NO_ASSERT
     ESP_PLATFORM
+    TULIP
 )
 
 #LFS2_NO_DEBUG LFS2_NO_WARN LFS2_NO_ERROR 
@@ -238,6 +240,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
 # Disable some warnings to keep the build output clean.
 target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-clobbered
+    -Wno-uninitialized
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
     -fsingle-precision-constant
@@ -249,7 +252,10 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
 target_include_directories(${MICROPY_TARGET} PUBLIC
     ${IDF_PATH}/components/bt/host/nimble/nimble
 )
-
+target_include_directories(${MICROPY_TARGET} PUBLIC
+    components/arduino-just-spi/cores/esp32
+    components/arduino-just-spi/libraries/SPI/src
+)
 # Add additional extmod and usermod components.
 target_link_libraries(${MICROPY_TARGET} micropy_extmod_btree)
 target_link_libraries(${MICROPY_TARGET} usermod)

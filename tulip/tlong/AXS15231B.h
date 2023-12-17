@@ -2,9 +2,9 @@
 
 #include "stdint.h"
 #include "pins_config.h"
-#include "lvgl.h"/* https://github.com/lvgl/lvgl.git */
+#include <stdbool.h>
 
-#define LCD_SPI_DMA 
+//#define LCD_SPI_DMA 
 #define AX15231B
 
 #define TFT_MADCTL 0x36
@@ -38,7 +38,13 @@ typedef struct
     uint8_t len;
 } lcd_cmd_t;
 
-void axs15231_init(void);
+
+extern "C" void axs15231_init(void);
+extern "C" void lcd_PushColors(uint16_t x, uint16_t y,uint16_t width,  uint16_t high, uint16_t *data);
+extern "C" void lcd_PushColors_whole(uint16_t *data, uint32_t len);
+extern "C" bool get_lcd_spi_dma_write(void);
+
+//void axs15231_init(void);
 
 // Set the display window size
 void lcd_address_set(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2);
@@ -49,12 +55,7 @@ void lcd_fill(uint16_t xsta,
               uint16_t xend,
               uint16_t yend,
               uint16_t color);
-void lcd_PushColors(uint16_t x,
-                    uint16_t y,
-                    uint16_t width,
-                    uint16_t high,
-                    uint16_t *data);
-void lcd_PushColors(uint16_t *data, uint32_t len);
+//void lcd_PushColors(uint16_t *data, uint32_t len);
 void lcd_sleep();
 
-bool get_lcd_spi_dma_write(void);
+//bool get_lcd_spi_dma_write(void);

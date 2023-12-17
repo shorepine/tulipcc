@@ -201,11 +201,11 @@ void mp_task(void *pvParameter) {
     #if MICROPY_PY_THREAD
     mp_thread_init(pxTaskGetStackStart(NULL), TULIP_MP_TASK_STACK_SIZE / sizeof(uintptr_t));
     #endif
-    #if CONFIG_USB_ENABLED
+    //#if CONFIG_USB_ENABLED
     //usb_init();
-    #elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+    //#elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     usb_serial_jtag_init();
-    #endif
+    //#endif
     #if MICROPY_HW_ENABLE_UART_REPL
     uart_stdout_init();
     #endif
@@ -340,12 +340,12 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(100);
 
-/*
+
     fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
     delay_ms(500);
-*/    
+    
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);

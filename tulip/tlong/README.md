@@ -13,15 +13,12 @@ To flash your T-Long with Tulip, follow the usual [Tulip CC flashing instruction
 
 We default the T-Long to a 6x8 REPL font, to get 108x22 REPL / editor screen. If this is too small, comment out the `idf_build_set_property(COMPILE_OPTIONS "-DTULIP_REPL_FONT_8X6" APPEND)` line at the end of `CMakeLists.txt` in this folder. 
 
-
 Notes:
-
- * USB for MIDI and real keyboard *should* work, but it's annoying to test as the UART for monitoring goes over the same USB connection. There's a header on back for serial monitoring, so I'll eventually move to that and try to get USB working. Alternatively we could use MIDI over the exposed UART pins, but that would require a separate breakout board. 
+ * If you're having trouble flashing the T-Long, hold down BOOT, then press RST briefly, then let go of BOOT. You may have to then hit RST to start up Tulip after the flash.
 
 Still todo 
 
  * Touchscreen support
- * ~~Serial console - you can read but not write to it~~ 
  * USB host support for keyboard and MIDI
  * Battery voltage reporting
  * Try 120MHz SPI 
