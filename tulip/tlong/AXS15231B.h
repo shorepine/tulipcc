@@ -4,7 +4,7 @@
 #include "pins_config.h"
 #include <stdbool.h>
 
-//#define LCD_SPI_DMA 
+#define LCD_SPI_DMA 
 #define AX15231B
 
 #define TFT_MADCTL 0x36
