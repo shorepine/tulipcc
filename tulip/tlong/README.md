@@ -1,9 +1,8 @@
 # Tulip for the T-Display-S3-Long
 
-![T-Long](../../docs/pics/tlong_editor.jpg)
+![T-Long](../../docs/pics/tlong.jpg)
 
-
-The [T-Display-S3-Long aka `T-Long`](https://www.lilygo.cc/en-ca/products/t-display-s3-long) is a $29 ESP32S3 with a wide 640x180 3.4" touchscreen display. 
+The [T-Display-S3-Long aka `T-Long`](https://www.lilygo.cc/en-ca/products/t-display-s3-long) is a tiny $29 ESP32S3 with a wide 640x180 3.4" touchscreen display. 
 
 I've ported [Tulip CC](../../README.md) to it and most things work just fine. The editor and REPL is 108x22, using their AXS15231B controller. We're able to use our existing Tulip CC display code as a framebuffer to reach a very stable 40FPS when everything on the screen changes at once. There's no onboard audio, so to use the synth you'll need to set up an [Alles speaker](https://github.com/bwhitman/alles). 
 
