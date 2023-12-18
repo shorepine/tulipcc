@@ -725,7 +725,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_int_screenshot_obj, 1, 1, tulip
 
 
 STATIC mp_obj_t tulip_algo_setup(size_t n_args, const mp_obj_t *args) {
-    uint8_t target_oscs[8];
+    uint16_t target_oscs[8];
     for(uint8_t i=0;i<8;i++) target_oscs[i] = mp_obj_get_int(args[i+1]);
     algo_custom_setup_patch(mp_obj_get_int(args[0]), target_oscs);
     return mp_const_none;

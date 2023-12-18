@@ -231,6 +231,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     LFS1_NO_MALLOC LFS1_NO_DEBUG LFS1_NO_WARN LFS1_NO_ERROR LFS1_NO_ASSERT
     LFS2_NO_MALLOC LFS2_NO_ASSERT
     ESP_PLATFORM
+    TULIP
 )
 
 #LFS2_NO_DEBUG LFS2_NO_WARN LFS2_NO_ERROR 
@@ -238,6 +239,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
 # Disable some warnings to keep the build output clean.
 target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-clobbered
+    -Wno-uninitialized
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
     -fsingle-precision-constant
