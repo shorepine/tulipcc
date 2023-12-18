@@ -20,8 +20,8 @@ if(NOT AMY_DIR)
 endif()
 
 # Set location of the tulip esp32s3 directory.
-if(NOT TULIP_TDECK_DIR)
-    get_filename_component(TULIP_TDECK_DIR ${CMAKE_CURRENT_LIST_DIR} ABSOLUTE)
+if(NOT TULIP_TLONG_DIR)
+    get_filename_component(TULIP_TLONG_DIR ${CMAKE_CURRENT_LIST_DIR} ABSOLUTE)
 endif()
 
 
@@ -67,9 +67,9 @@ list(APPEND MICROPY_SOURCE_DRIVERS
 )
 
 list(APPEND MICROPY_SOURCE_PORT
-    ../../../tulip/tdeck/tdeck_display.c
-    ../../../tulip/tdeck/tdeck_keyboard.c
-    ../../../tulip/tdeck/main.c
+    ../../../tulip/tlong/tlong_display.c
+    ../../../tulip/tlong/AXS15231B.cpp
+    ../../../tulip/tlong/main.c
     ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/usb_keyboard.c
     ../../../tulip/esp32s3/multicast.c
@@ -151,6 +151,7 @@ list(APPEND MICROPY_SOURCE_QSTR
 )
 
 list(APPEND IDF_COMPONENTS
+    arduino-just-spi
     app_update
     bootloader_support
     bt
@@ -200,7 +201,7 @@ idf_component_register(
         ${MICROPY_SOURCE_PORT}
         ${MICROPY_SOURCE_BOARD}
     INCLUDE_DIRS
-        ../../tulip/tdeck
+        ../../tulip/tlong
         ../../tulip/esp32s3
         ${MICROPY_INC_CORE}
         ${MICROPY_INC_USERMOD}
@@ -239,6 +240,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
 # Disable some warnings to keep the build output clean.
 target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-clobbered
+    -Wno-uninitialized
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
     -fsingle-precision-constant
@@ -250,7 +252,10 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
 target_include_directories(${MICROPY_TARGET} PUBLIC
     ${IDF_PATH}/components/bt/host/nimble/nimble
 )
-
+target_include_directories(${MICROPY_TARGET} PUBLIC
+    components/arduino-just-spi/cores/esp32
+    components/arduino-just-spi/libraries/SPI/src
+)
 # Add additional extmod and usermod components.
 target_link_libraries(${MICROPY_TARGET} micropy_extmod_btree)
 target_link_libraries(${MICROPY_TARGET} usermod)

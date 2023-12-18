@@ -198,7 +198,7 @@ uint64_t mp_hal_time_ns(void) {
 
 // Wake up the main task if it is sleeping
 void mp_hal_wake_main_task_from_isr(void) {
-    #ifndef TDECK
+    #if !defined TDECK && !defined TLONG
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     vTaskNotifyGiveFromISR(mp_main_task_handle, &xHigherPriorityTaskWoken);
     if (xHigherPriorityTaskWoken == pdTRUE) {
