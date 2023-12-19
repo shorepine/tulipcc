@@ -23,27 +23,7 @@ if ("${idf_version}" AND NOT "$ENV{ARDUINO_SKIP_IDF_VERSION_CHECK}")
 endif()
 
 set(CORE_SRCS
-  cores/esp32/base64.cpp
-  cores/esp32/cbuf.cpp
-  cores/esp32/chip-debug-report.cpp
-  cores/esp32/esp32-hal-bt.c
-  cores/esp32/esp32-hal-cpu.c
-  cores/esp32/esp32-hal-dac.c
-  cores/esp32/esp32-hal-gpio.c
-  cores/esp32/esp32-hal-matrix.c
-  cores/esp32/esp32-hal-periman.c
-  cores/esp32/esp32-hal-misc.c
   cores/esp32/esp32-hal-spi.c
-  cores/esp32/esp32-hal-touch.c
-  cores/esp32/esp32-hal-uart.c
-  cores/esp32/Esp.cpp
-  cores/esp32/FunctionalInterrupt.cpp
-  cores/esp32/HardwareSerial.cpp
-  cores/esp32/IPAddress.cpp
-  cores/esp32/IPv6Address.cpp
-  cores/esp32/libb64/cdecode.c
-  cores/esp32/libb64/cencode.c
-  cores/esp32/main.cpp
   )
 
 set(LIBRARY_SRCS
@@ -58,7 +38,6 @@ set(includedirs
   )
 
 set(srcs ${CORE_SRCS} ${LIBRARY_SRCS} ${BLE_SRCS})
-set(priv_includes cores/esp32/libb64)
 set(requires spi_flash esp_partition mbedtls wifi_provisioning wpa_supplicant esp_adc esp_eth http_parser)
 set(priv_requires fatfs nvs_flash app_update spiffs bootloader_support bt esp_hid)
 

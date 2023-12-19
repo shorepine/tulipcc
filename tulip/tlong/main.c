@@ -88,6 +88,7 @@
 #include "display.h"
 #include "alles.h"
 #include "tasks.h"
+#include "usb_keyboard.h"
 
 
 TaskHandle_t display_handle;
@@ -204,11 +205,11 @@ void mp_task(void *pvParameter) {
     //#if CONFIG_USB_ENABLED
     //usb_init();
     //#elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
-    usb_serial_jtag_init();
+    //usb_serial_jtag_init();
     //#endif
-    #if MICROPY_HW_ENABLE_UART_REPL
+    //#if MICROPY_HW_ENABLE_UART_REPL
     uart_stdout_init();
-    #endif
+    //#endif
     machine_init();
 
     //esp_err_t err = esp_event_loop_create_default();
@@ -334,6 +335,11 @@ void app_main(void) {
     //xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
     //fflush(stderr);
     //delay_ms(10);
+
+    fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
+    xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
+    fflush(stderr);
+    delay_ms(100);
 
     fprintf(stderr,"Starting display on core %d\n", DISPLAY_TASK_COREID);
     xTaskCreatePinnedToCore(run_tlong_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);

@@ -16,6 +16,22 @@ int16_t touch_x_delta = 0;
 int16_t touch_y_delta = 0;
 uint8_t dumb_display_mutex = 0;
 
+
+void pinMode_output(int pin) {
+    gpio_config_t my_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << pin
+    };
+    gpio_config(&my_gpio_config);
+}
+
+void digitalWrite(int pin, int value) {
+    gpio_set_level(pin, value);
+
+}
+
+
+
 // lookup table for Tulip's "pallete" to the 16-bit colorspace needed by the TLong display
 const uint16_t rgb332_rgb565_i[256] = {
     0x0000, 0x0a00, 0x1500, 0x1f00, 0x2001, 0x2a01, 0x3501, 0x3f01, 
