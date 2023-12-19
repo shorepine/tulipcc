@@ -1,7 +1,13 @@
 #include "AXS15231B.h"
-#include "Arduino.h"
+//#include "Arduino.h"
 #include "SPI.h"
 #include "driver/spi_master.h"
+#include <cstring>
+#include "polyfills.h"
+#define HIGH 1
+#define LOW 0
+#define LSBFIRST 0
+#define MSBFIRST 1
 
 extern "C" void axs15231_init(void);
 extern "C" void lcd_PushColors(uint16_t x, uint16_t y,uint16_t width,  uint16_t high, uint16_t *data);
@@ -176,15 +182,15 @@ void lcd_send_data8(uint8_t dat) {
 
 void axs15231_init(void)
 {
-    pinMode(TFT_QSPI_CS, OUTPUT);
-    pinMode(TFT_QSPI_RST, OUTPUT);
+    pinMode_output(TFT_QSPI_CS);
+    pinMode_output(TFT_QSPI_RST);
 
     TFT_RES_H;
-    delay(130);
+    vTaskDelay(130 / portTICK_PERIOD_MS);
     TFT_RES_L;
-    delay(130);
+    vTaskDelay(130 / portTICK_PERIOD_MS);
     TFT_RES_H;
-    delay(300);
+    vTaskDelay(300 / portTICK_PERIOD_MS);
 
 #if LCD_USB_QSPI_DREVER == 1
     esp_err_t ret;
@@ -219,7 +225,7 @@ void axs15231_init(void)
 #else
     SPI.begin(TFT_SCK, -1, TFT_MOSI, TFT_CS);
     SPI.setFrequency(SPI_FREQUENCY);
-    pinMode(TFT_DC, OUTPUT);
+    pinMode_output(TFT_DC);
 #endif
     // Initialize the screen multiple times to prevent initialization failure
     int i = 1;
@@ -237,9 +243,9 @@ void axs15231_init(void)
                          lcd_init[i].len & 0x3f);
 
             if (lcd_init[i].len & 0x80)
-                delay(200);
+                vTaskDelay(200 / portTICK_PERIOD_MS);
             if (lcd_init[i].len & 0x40)
-                delay(20);
+                vTaskDelay(20 / portTICK_PERIOD_MS);
         }
     }
     //lcd_setRotation(3);
@@ -345,7 +351,7 @@ void lcd_PushColors(uint16_t x,
         transfer_num_old -= (transfer_num_old - (transfer_num_old-(transfer_num_old-transfer_num)));
 
         do {
-            if(transfer_num >= 3 || ESP.getFreeHeap() <= 70000)
+            if(transfer_num >= 3)
             {
                 break;
             }

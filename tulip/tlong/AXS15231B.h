@@ -38,6 +38,8 @@ typedef struct
     uint8_t len;
 } lcd_cmd_t;
 
+extern "C" void digitalWrite(int pin, int value);
+extern "C" void pinMode_output(int pin);
 
 extern "C" void axs15231_init(void);
 extern "C" void lcd_PushColors(uint16_t x, uint16_t y,uint16_t width,  uint16_t high, uint16_t *data);
