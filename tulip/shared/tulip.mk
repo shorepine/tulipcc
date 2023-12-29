@@ -8,6 +8,7 @@ EXTMOD_SRC_C += $(addprefix ../../amy/src/, \
 	delay.c \
 	envelope.c \
 	filters.c \
+	log2_exp2.c \
 	oscillators.c \
 	partials.c \
 	pcm.c \

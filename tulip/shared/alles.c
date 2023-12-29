@@ -108,7 +108,9 @@ extern void *miniaudio_run(void *vargp);
 #include <pthread.h>
 amy_err_t unix_amy_init() {
     //sync_init();
+    //fprintf(stderr, "about to amy_start...\n");
     amy_start();
+    //fprintf(stderr, "...amy_start done.\n");
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, miniaudio_run, NULL);
     return AMY_OK;
@@ -175,8 +177,11 @@ void run_alles() {
 void * alles_start(void *vargs) {
     alles_local_ip = malloc(256);
     alles_local_ip[0] = 0;
+    //fprintf(stderr, "calling unix_amy_init.\n");
     unix_amy_init();
+    //fprintf(stderr, "unix_amy_init done.\n");
     amy_reset_oscs();
+
     // Schedule a "turning on" sound
     // We don't do this by default on tulip desktop as all threads start at once and it makes the bleep sound bad 
     //bleep();
@@ -184,6 +189,7 @@ void * alles_start(void *vargs) {
     while(status & RUNNING) {
         delay_ms(10);
     }
+    //fprintf(stderr, "alles_start returning.\n");
     return 0;
 }
 
