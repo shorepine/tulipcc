@@ -2,7 +2,7 @@
 # build.sh
 # Just builds locally
 
-#source ../shared/grab_submodules.sh
+source ../shared/grab_submodules.sh
 
 # Make debug and set up app bundle on mac
 make DEBUG=1
