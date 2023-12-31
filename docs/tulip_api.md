@@ -300,7 +300,7 @@ tulip.midi_out(bytes) # Can send bytes or list
 The Tulip GPU consists of 3 subsystems, in drawing order:
  * A bitmap graphics plane (BG) (default size: 2048x750), with scrolling x- and y- speed registers. Drawing shape primitives and UI elements draw to the BG.
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
- * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites as well as mono line buffers, stored in the same RAM. The line buffers are useful for fast wireframe drawing. 
+ * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites as well as line buffers, stored in the same RAM. The line buffers are useful for fast wireframe drawing. 
 
 The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 22Mhz, which is 25FPS. This is a great balance of speed and stability for text -- the editor and REPL. If you're writing a game or animation, increase `tulip_clock` to at least 28 for 30FPS and higher. 
 
@@ -560,6 +560,9 @@ tulip.sprite_clear()
 ```
 
 ## Wireframes and fast line drawing
+
+![Line drawing](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/lines.png)
+
 
 You can also use the sprite RAM to also draw lists of lines. You can store lists of `x0,y0,x1,y1` in sprite RAM and register the sprite, Tulip will draw those lines every frame as the scanlines get drawn, on top of the BG and TFB like sprites. This lets you do fast wireframe-like animations without having to draw to the BG and clear it every frame. 
 
