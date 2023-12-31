@@ -194,6 +194,26 @@ class Joy:
     Y = 2048
     B = 4096
 
+def lines(lines_list):
+    import struct
+    ret = bytes()
+    fixed = []
+    # Swap 1 and 0 if y0 > y1
+    for l in lines_list:
+        (x0,y0,x1,y1,color) = l
+        if(y0 > y1):
+            fixed.append([x1,y1,x0,y0,color])
+        else:
+            fixed.append(l)
+    # Sort list by y0
+    sorted_list = sorted(fixed, key=lambda x: x[1])
+    for l in sorted_list:
+        x0 = l[0] | ((l[4] & 0xF0) << 8)
+        x1 = l[2] | ((l[4] & 0x0F) <<12)
+        ret += struct.pack('HHHH', x0, l[1], x1, l[3])
+    ret += struct.pack('HHHH', 65535, 65535, 65535, 65535)
+    return ret
+
 def version():
     # Returns current tulip version (aka git hash and compiled date)
     me = build_strings()

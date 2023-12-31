@@ -227,24 +227,26 @@ STATIC mp_obj_t tulip_bg_blit(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_blit_obj, 6, 7, tulip_bg_blit);
 
 
-uint32_t load_obj_file_into_sprite_ram(const char *fn, uint32_t ram_start);
+mp_obj_t load_obj_file_into_ram(const char *fn);
 void draw_sprite_wire(uint16_t sprite_no);
 
-STATIC mp_obj_t tulip_sprite_wire(size_t n_args, const mp_obj_t *args) {
-    uint32_t bytes_read = load_obj_file_into_sprite_ram(mp_obj_str_get_str(args[0]), mp_obj_get_int(args[1]));
-    return mp_obj_new_int(bytes_read);
+STATIC mp_obj_t tulip_wire_load(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t bytes = load_obj_file_into_ram(mp_obj_str_get_str(args[0]));
+    return bytes;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_wire_obj, 2, 2, tulip_sprite_wire);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_load_obj, 1, 1, tulip_wire_load);
 
 
-STATIC mp_obj_t tulip_bg_wire(size_t n_args, const mp_obj_t *args) {
-    draw_sprite_wire(mp_obj_get_int(args[0]));
-    //draw_sprite_wire(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_float(args[3]), mp_obj_get_float(args[4]),mp_obj_get_int(args[5]));
-    return mp_const_none;
+extern mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta, uint8_t color);
+
+STATIC mp_obj_t tulip_wire_to_lines(size_t n_args, const mp_obj_t *args) {
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+    return render_wire_to_lines(bufinfo.buf, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), mp_obj_get_int(args[5]));
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_wire_obj, 1, 1, tulip_bg_wire);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_to_lines_obj, 6, 6, tulip_wire_to_lines);
 
 
 // tulip.bg_png(bytes, x,y)
@@ -600,20 +602,23 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_bitmap_obj, 2, 2, tulip_
 STATIC mp_obj_t tulip_sprite_register(size_t n_args, const mp_obj_t *args) {
     uint16_t spriteno = mp_obj_get_int(args[0]);
     uint32_t mem_pos = mp_obj_get_int(args[1]);
-    uint16_t width = mp_obj_get_int(args[2]);
-    uint16_t height = mp_obj_get_int(args[3]);
-
     if(spriteno < SPRITES) {
         sprite_mem[spriteno] = mem_pos;
-        sprite_w_px[spriteno] = width;
-        sprite_h_px[spriteno] = height;
+    }
+    if(n_args > 2) {
+        uint16_t width = mp_obj_get_int(args[2]);
+        uint16_t height = mp_obj_get_int(args[3]);
+        if(spriteno < SPRITES) {
+            sprite_w_px[spriteno] = width;
+            sprite_h_px[spriteno] = height;
+        }
     } else {
-        fprintf(stderr, "register bad spriteno %d\n", spriteno);
+        sprite_vis[spriteno] = SPRITE_IS_WIREFRAME;
     }
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_register_obj, 4, 4, tulip_sprite_register);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_register_obj, 2, 4, tulip_sprite_register);
 
 
 //sprite_move(34, x,y)
@@ -638,15 +643,11 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_move_obj, 3, 3, tulip_sp
 
 STATIC mp_obj_t tulip_sprite_on(size_t n_args, const mp_obj_t *args) {
     uint16_t spriteno = mp_obj_get_int(args[0]);
-    if(n_args > 1) {
-        if(spriteno < SPRITES) sprite_vis[spriteno] = SPRITE_IS_WIREFRAME;
-    } else {
-        if(spriteno < SPRITES) sprite_vis[spriteno] = SPRITE_IS_SPRITE;        
-    }
+    if(spriteno < SPRITES) sprite_vis[spriteno] = SPRITE_IS_SPRITE;        
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_on_obj, 1, 2, tulip_sprite_on);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_on_obj, 1, 1, tulip_sprite_on);
 
 
 STATIC mp_obj_t tulip_sprite_off(size_t n_args, const mp_obj_t *args) {
@@ -968,7 +969,7 @@ STATIC mp_obj_t tulip_bg_line(size_t n_args, const mp_obj_t *args) {
     int16_t x1 = mp_obj_get_int(args[2]);
     int16_t y1 = mp_obj_get_int(args[3]);
     uint8_t pal_idx = mp_obj_get_int(args[4]);
-    drawLine(x0,y0,x1,y1,pal_idx);
+    drawLine_scanline(x0,y0,x1,y1,pal_idx);
     return mp_const_none;
 }
 
@@ -1292,7 +1293,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ticks_ms), MP_ROM_PTR(&tulip_ticks_ms_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_pixel), MP_ROM_PTR(&tulip_bg_pixel_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
-    { MP_ROM_QSTR(MP_QSTR_bg_wire), MP_ROM_PTR(&tulip_bg_wire_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll), MP_ROM_PTR(&tulip_bg_scroll_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_scroll_x_speed), MP_ROM_PTR(&tulip_bg_scroll_x_speed_obj) },
@@ -1316,7 +1316,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_sprite_on), MP_ROM_PTR(&tulip_sprite_on_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_off), MP_ROM_PTR(&tulip_sprite_off_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_clear), MP_ROM_PTR(&tulip_sprite_clear_obj) },
-    { MP_ROM_QSTR(MP_QSTR_sprite_wire), MP_ROM_PTR(&tulip_sprite_wire_obj) },
+    { MP_ROM_QSTR(MP_QSTR_wire_to_lines), MP_ROM_PTR(&tulip_wire_to_lines_obj) },
+    { MP_ROM_QSTR(MP_QSTR_wire_load), MP_ROM_PTR(&tulip_wire_load_obj) },
     { MP_ROM_QSTR(MP_QSTR_collisions), MP_ROM_PTR(&tulip_collisions_obj) },
     { MP_ROM_QSTR(MP_QSTR_edit), MP_ROM_PTR(&tulip_edit_obj) },
     { MP_ROM_QSTR(MP_QSTR_int_screenshot), MP_ROM_PTR(&tulip_int_screenshot_obj) },

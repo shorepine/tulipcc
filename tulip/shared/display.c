@@ -155,6 +155,7 @@ uint8_t collide_mask_get(uint8_t a, uint8_t b) {
 int64_t bounce_time = 0;
 uint32_t bounce_count = 0;
 int32_t desync = 0;
+uint16_t * line_data_ptr= NULL;
 
 // Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
@@ -290,6 +291,8 @@ int32_t desync = 0;
             }
         }
 
+        
+
         for(uint8_t s=0;s<SPRITES;s++) {
             if(sprite_vis[s]==SPRITE_IS_SPRITE) {
                 if(row_px >= sprite_y_px[s] && row_px < sprite_y_px[s]+sprite_h_px[s]) {
@@ -314,7 +317,72 @@ int32_t desync = 0;
                         }
                     } // end for each column
                 } // end if this row has a sprite on it 
-            } // end if sprite vis
+            } else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
+                // draw this as a bresenham list
+                // find where to start
+                if(line_data_ptr == NULL) line_data_ptr = (uint16_t*)(&sprite_ram[sprite_mem[s]]);
+
+                uint16_t y0 = line_data_ptr[1];
+                uint16_t y1 = line_data_ptr[3];
+
+                // todo, we could get smarter and sort lines by length secondarily after y0 to save time here
+                while(y0 != 65535) {
+                    if(row_px >= y0 && row_px <= y1) {
+                        // get a int representation of how far down we are 
+                        uint16_t x_midpoint = 0;
+                        uint16_t x_line_width = 0;
+                        uint16_t x0 = line_data_ptr[0];
+                        uint16_t x1 = line_data_ptr[2];
+
+                        uint8_t color = ((x0 & 0xF000) >> 8) | ((x1 & 0xF000) >> 12);
+                        x0 = x0 & 0x0FFF;
+                        x1 = x1 & 0x0FFF;
+                        if(x1 > x0) {
+                            if(y1==y0) {
+                                x_line_width = x1-x0;
+                                x_midpoint = (x1-x0)/2;
+                            } else {
+                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
+                                x_midpoint = x0 + (((row_px-y0) * (x1-x0)) / (y1-y0));
+                            }
+                            if(x_line_width < 2) {
+                                b[bounce_row_px*H_RES+x_midpoint] = color;
+                            } else {
+                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
+                                    if(i <= x1 && i >= x0) { 
+                                        b[bounce_row_px*H_RES + i] = color;
+                                    }
+                                }
+                            }
+                        } else if (x1<x0) {
+                            if(y1==y0) {
+                                x_line_width = x0-x1;
+                                x_midpoint = (x0-x1)/2;
+                            } else {
+                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
+                                x_midpoint = x0 - (((row_px-y0) * (x0-x1)) / (y1-y0));
+                            }
+                            if(x_line_width < 2) {
+                                b[bounce_row_px*H_RES+x_midpoint] = color;
+                            } else {
+                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
+                                    if(i <= x0 && i >= x1) { 
+                                        b[bounce_row_px*H_RES + i] = color;
+                                    }
+                                }
+                            }
+                        } else {
+                            // A straight line up and down
+                            b[bounce_row_px*H_RES+x1] = color;
+                        }
+                    }
+                    line_data_ptr += 4;
+                    y0 = line_data_ptr[1];
+                    y1 = line_data_ptr[3];
+                }
+                line_data_ptr = NULL; // wrap around
+            }
+
         } // for each sprite
     } // per each row
     bounce_end:
@@ -874,7 +942,6 @@ void display_init(void) {
     sprite_h_px = (uint16_t*)malloc_caps(SPRITES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
     sprite_vis = (uint8_t*)malloc_caps(SPRITES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     sprite_mem = (uint32_t*)malloc_caps(SPRITES*sizeof(uint32_t), MALLOC_CAP_INTERNAL);
-
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);

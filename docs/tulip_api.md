@@ -300,7 +300,7 @@ tulip.midi_out(bytes) # Can send bytes or list
 The Tulip GPU consists of 3 subsystems, in drawing order:
  * A bitmap graphics plane (BG) (default size: 2048x750), with scrolling x- and y- speed registers. Drawing shape primitives and UI elements draw to the BG.
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
- * A sprite layer on top of the TFB (which is on top of the BG)
+ * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites as well as line buffers, stored in the same RAM. The line buffers are useful for fast wireframe drawing. 
 
 The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 22Mhz, which is 25FPS. This is a great balance of speed and stability for text -- the editor and REPL. If you're writing a game or animation, increase `tulip_clock` to at least 28 for 30FPS and higher. 
 
@@ -513,7 +513,7 @@ tulip.tfb_log_stop() # stops
 
 
 ## Sprites
-You can have up to 32 sprites on screen at once, and have 32KB of bitmap data to store them in. Sprites have collision detection built in.
+You can have up to 32 bitmap sprites on screen at once, and have 32KB of bitmap data to store them in. Sprites have collision detection built in.
 Sprites are drawn in order of sprite index, so sprite index 5 will draw on top of sprite index 3 if they share pixel space.
 
 ```python
@@ -558,6 +558,53 @@ for c in tulip.collisions():
 # Clear all sprite RAM, reset all sprite handles
 tulip.sprite_clear()
 ```
+
+## Wireframes and fast line drawing
+
+![Line drawing](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/lines.png)
+
+
+You can also use the sprite RAM to also draw lists of lines. You can store lists of `x0,y0,x1,y1` in sprite RAM and register the sprite, Tulip will draw those lines every frame as the scanlines get drawn, on top of the BG and TFB like sprites. This lets you do fast wireframe-like animations without having to draw to the BG and clear it every frame. 
+
+You can also load 3D models as wireframes in from standard `obj` files, and set their rotation and scale, which will render a list of line positions for you to sprite line list RAM. 
+
+You can choose a color per line. It's encoded into the top bits of the x0 and x1 coordinates in sprite RAM. So each line only takes 8 bytes in sprite RAM.
+
+```python
+# Load an obj file into a list of raw faces and vertices - unscaled and unrotated.
+model = tulip.wire_load("teapot.obj")
+# A model encodes vertices and faces of a 3d model. You can also generate this model in code yourself.  
+
+# Draw model wireframe to a line buffer
+lines = tulip.wire_to_lines(model, x, y, scale, theta, color)
+# scale = integer multiplier on 0..1 coordinates. in general, sets width/height of model as pixels
+# theta = # of 100.0/PI rotations
+# color = chooses the color of the entire model
+
+# You can also generate line lists yourself in code.
+lines = tulip.lines([
+    [x0_0,y0_0,x1_0,y1_0,color_0],
+    [x0_1,y0_1,x1_1,y1_1,color_1]
+    ]) # will return packed buffer of lines, sorted, including the last sentinel line
+
+# However you got your lines buffer, you can now load it into sprite RAM at whatever position you want. 
+# See len(lines) to see how many bytes your line list takes up so you don't overwrite other data. 
+tulip.sprite_bitmap(lines, mem_pos)
+
+# Register this "sprite" as a line buffer. If you don't pass w and h like a normal sprite, we assume it's a wireframe and we turn it on right away
+tulip.sprite_register(12, mem_pos)
+
+# Whenever you want to rotate, scale or translate the wireframe, regenerate the lines and write them to sprite RAM
+# The screen will immediately start drawing the new data once you call sprite_bitmap if the sprite is registered.
+lines = tulip.wire_to_lines(model, x, y, scale, theta)
+tulip.sprite_bitmap(lines, mem_pos)
+
+# Or, update your line coordinates directly:
+tulip.sprite_bitmap(tulip.lines(new_lines_list), mem_pos)
+
+tulip.sprite_off(12) # turn off drawing
+```
+
 
 ## Convenience classes for sprites and games
 
@@ -623,13 +670,6 @@ See `world.download('planet_boing')` for a fleshed out example of using the `Gam
 A synth / patch editor for the AMY and Alles synth inside Tulip. [Like the YRM102.](https://www.msx.org/wiki/Yamaha_YRM-102) 
 
 Status: building locally, will share first alpha when ready
-
-
-## Scanline bresenham drawing on the sprite layer
-
-We plan to support line drawing on the sprite layer using sprite RAM (not modifyng the BG layer) for wireframe animations.
-
-Status: early research phase
 
 
 # Can you help? 

@@ -12,18 +12,8 @@
 // Wire frame models are available
 // from https://people.sc.fsu.edu/~jburkardt/data/obj/obj.html
 
-// we pack points in u16s
-uint8_t u0(uint16_t a) { return (uint8_t)(a & 0x00FF); }
-uint8_t u1(uint16_t a) { return (uint8_t)((a & 0xFF00) >> 8); }
-uint16_t u16fromu8(uint8_t u0, uint8_t u1) { 
-    uint16_t ret = 0;
-    ret = ret | (u1 << 8);
-    ret = ret | u0;
-    return ret;
-}
 
-uint32_t load_obj_file_into_sprite_ram(const char *fn, uint32_t ram_start) {
-    uint32_t offset = ram_start;
+mp_obj_t load_obj_file_into_ram(const char *fn) {
     mp_obj_t fp;
 
     char * line;
@@ -53,13 +43,14 @@ uint32_t load_obj_file_into_sprite_ram(const char *fn, uint32_t ram_start) {
         for(uint8_t j=0;j<255;j++) line[j] = 0;
     }
     tulip_fclose(fp);
-    fprintf(stderr, "f_count %d v_count %d max %f\n", f_count, v_count, max_position);
+    uint32_t total_entries = 2 + v_count * 3 + f_count * 3;
+    //fprintf(stderr, "f_count %d v_count %d max %f ram is %d\n", f_count, v_count, max_position, total_entries);
 
     // Header
-    sprite_ram[offset++] = u0(v_count);
-    sprite_ram[offset++] = u1(v_count);
-    sprite_ram[offset++] = u0(f_count);
-    sprite_ram[offset++] = u1(f_count);
+    uint16_t ram[total_entries];
+    uint32_t offset = 0;
+    ram[offset++] = v_count;
+    ram[offset++] = f_count;
 
     fp = tulip_fopen(fn, "r");
 
@@ -71,96 +62,143 @@ uint32_t load_obj_file_into_sprite_ram(const char *fn, uint32_t ram_start) {
             ux = (uint16_t) (((x/max_position)*32767.0) + 32767);
             uy = (uint16_t) (((y/max_position)*32767.0) + 32767);
             uz = (uint16_t) (((z/max_position)*32767.0) + 32767);
-            sprite_ram[offset++] = u0(ux);
-            sprite_ram[offset++] = u1(ux);
-            sprite_ram[offset++] = u0(uy);
-            sprite_ram[offset++] = u1(uy);
-            sprite_ram[offset++] = u0(uz);
-            sprite_ram[offset++] = u1(uz);
+            ram[offset++] = ux;
+            ram[offset++] = uy;
+            ram[offset++] = uz;
         }
 
         if(sscanf(line, "f %d %d %d", &a, &b, &c) == 3){
             a = a - 1;
             b = b - 1;
             c = c - 1;
-            sprite_ram[offset++] = u0(a);
-            sprite_ram[offset++] = u1(a);
-            sprite_ram[offset++] = u0(b);
-            sprite_ram[offset++] = u1(b);
-            sprite_ram[offset++] = u0(c);
-            sprite_ram[offset++] = u1(c);
+            ram[offset++] = a;
+            ram[offset++] = b;
+            ram[offset++] = c;
         }
         for(uint8_t j=0;j<255;j++) line[j] = 0;
     }
     free_caps(line);
     tulip_fclose(fp);
-    return offset-ram_start;
+    return mp_obj_new_bytes((uint8_t*)ram, total_entries*2);
 }
 
+int compare_line_y0(const void *a, const void *b) {
+    uint16_t y0a = ((uint16_t *) a)[1];
+    uint16_t y0b = ((uint16_t *) b)[1];
+    if (y0a < y0b) return -1;
+    else if (y0a > y0b) return 1;
+    return 0;
+}
 
 void project_draw(uint16_t x0, uint16_t y0, uint16_t z0,  uint16_t x1, uint16_t y1, uint16_t z1, float fa,float fb,float fc, float fd, 
-                    uint16_t x, uint16_t y, float scale, uint8_t color) {
+                    uint16_t x, uint16_t y, float scale, uint16_t*lines, uint32_t w_offset , uint8_t color) {
 
-  float fx, fy, fz;
-  
-  fx = (x0 - 32767.0) / 32767.0;
-  fy = (y0 - 32767.0) / 32767.0;
-  fz = (z0 - 32767.0) / 32767.0;
-  uint16_t draw_x0 = (uint16_t)((fa*fx + fb*fz)*scale) + x;
-  uint16_t draw_y0 = (uint16_t)((fc*fy + fd*fz)*scale) + y;
+    float fx, fy, fz;
+    
+    fx = (x0 - 32767.0) / 32767.0;
+    fy = (y0 - 32767.0) / 32767.0;
+    fz = (z0 - 32767.0) / 32767.0;
+    int16_t draw_x0 = (uint16_t)((fa*fx + fb*fz)*scale) + x;
+    int16_t draw_y0 = (uint16_t)((fc*fy + fd*fz)*scale) + y;
 
-  fx = (x1 - 32767.0) / 32767.0;
-  fy = (y1 - 32767.0) / 32767.0;
-  fz = (z1 - 32767.0) / 32767.0;
-  uint16_t draw_x1 = (uint16_t)((fa*fx + fb*fz)*scale) + x;
-  uint16_t draw_y1 = (uint16_t)((fc*fy + fd*fz)*scale) + y;
+    fx = (x1 - 32767.0) / 32767.0;
+    fy = (y1 - 32767.0) / 32767.0;
+    fz = (z1 - 32767.0) / 32767.0;
+    int16_t draw_x1 = (uint16_t)((fa*fx + fb*fz)*scale) + x;
+    int16_t draw_y1 = (uint16_t)((fc*fy + fd*fz)*scale) + y;
+    
+    if(draw_x0 > H_RES) draw_x0 = H_RES;
+    if(draw_x0 < 0) draw_x0 = 0;
+    if(draw_x1 > H_RES) draw_x1 = H_RES;
+    if(draw_x1 < 0) draw_x1 = 0;
 
-  drawLine(draw_x0,draw_y0,draw_x1,draw_y1,color);
-}
+    if(draw_y0 > V_RES) draw_y0 = V_RES;
+    if(draw_y0 < 0) draw_y0 = 0;
+    if(draw_y1 > V_RES) draw_y1 = V_RES;
+    if(draw_y1 < 0) draw_y1 = 0;
 
-void draw_sprite_wire(uint16_t sprite_no){
-    float theta = (float)sprite_h_px[sprite_no] * (M_PI/100.0);
-    float scale = (float)sprite_w_px[sprite_no];
-    uint8_t color = 255; // TODO 
-    uint16_t tx = sprite_x_px[sprite_no];
-    uint16_t ty = sprite_y_px[sprite_no];
-    float fa,fb,fc,fd;
-    fa = sinf(theta);
-    fb = cosf(theta);
-    fc = cosf(theta);
-    fd = -sinf(theta);
 
-    uint32_t offset = sprite_mem[sprite_no];
-
-    uint16_t v_count = u16fromu8(sprite_ram[offset], sprite_ram[offset+1]);
-    offset += 2;
-    uint16_t f_count = u16fromu8(sprite_ram[offset], sprite_ram[offset+1]);
-    offset += 2;
-
-    uint32_t f_offset = offset + (v_count*6);
-    for(uint16_t f=0;f<f_count;f++) {
-        uint16_t a = u16fromu8 (sprite_ram[f_offset + (f*6) + 0], sprite_ram[f_offset + (f*6) + 1]);
-        uint16_t b = u16fromu8 (sprite_ram[f_offset + (f*6) + 2], sprite_ram[f_offset + (f*6) + 3]);
-        uint16_t c = u16fromu8 (sprite_ram[f_offset + (f*6) + 4], sprite_ram[f_offset + (f*6) + 5]);
-
-        uint32_t v_a_offset = sprite_mem[sprite_no] + 2 + (a*6);
-        uint16_t ax = u16fromu8(sprite_ram[v_a_offset+0], sprite_ram[v_a_offset+1]);
-        uint16_t ay = u16fromu8(sprite_ram[v_a_offset+2], sprite_ram[v_a_offset+3]);
-        uint16_t az = u16fromu8(sprite_ram[v_a_offset+4], sprite_ram[v_a_offset+5]);
-
-        uint32_t v_b_offset = sprite_mem[sprite_no] + 2 + (b*6);
-        uint16_t bx = u16fromu8(sprite_ram[v_b_offset+0], sprite_ram[v_b_offset+1]);
-        uint16_t by = u16fromu8(sprite_ram[v_b_offset+2], sprite_ram[v_b_offset+3]);
-        uint16_t bz = u16fromu8(sprite_ram[v_b_offset+4], sprite_ram[v_b_offset+5]);
-
-        uint32_t v_c_offset = sprite_mem[sprite_no] + 2 + (c*6);
-        uint16_t cx = u16fromu8(sprite_ram[v_c_offset+0], sprite_ram[v_c_offset+1]);
-        uint16_t cy = u16fromu8(sprite_ram[v_c_offset+2], sprite_ram[v_c_offset+3]);
-        uint16_t cz = u16fromu8(sprite_ram[v_c_offset+4], sprite_ram[v_c_offset+5]);
-
-        // drawline between a->b, b->c, c->a
-        project_draw(ax,ay,az,bx,by,bz,fa,fb,fc,fd,tx,ty,scale,color);
-        project_draw(bx,by,bz,cx,cy,cz,fa,fb,fc,fd,tx,ty,scale,color);
-        project_draw(cx,cy,cz,ax,ay,az,fa,fb,fc,fd,tx,ty,scale,color);
+    // Ensure that y0 < y1
+    if(draw_y0 > draw_y1) {
+        draw_x1 = draw_x1 | ((color & 0xF0) << 8);
+        draw_x0 = draw_x0 | ((color & 0x0F) << 12);
+        lines[w_offset+0] = (uint16_t)draw_x1;
+        lines[w_offset+1] = (uint16_t)draw_y1;
+        lines[w_offset+2] = (uint16_t)draw_x0;
+        lines[w_offset+3] = (uint16_t)draw_y0;
+    } else {
+        draw_x0 = draw_x0 | ((color & 0xF0) << 8);
+        draw_x1 = draw_x1 | ((color & 0x0F) << 12);
+        lines[w_offset+0] = (uint16_t)draw_x0;
+        lines[w_offset+1] = (uint16_t)draw_y0;
+        lines[w_offset+2] = (uint16_t)draw_x1;
+        lines[w_offset+3] = (uint16_t)draw_y1;
     }
 }
+
+
+// TODO , go back to casting this as uint16
+
+mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta, uint8_t color){
+    float theta_f = (float)theta * (M_PI/100.0);
+    float scale_f = (float)scale;
+    float fa,fb,fc,fd;
+    fa = sinf(theta_f);
+    fb = cosf(theta_f);
+    fc = cosf(theta_f);
+    fd = -sinf(theta_f);
+
+    // this is now the drawing INTO offset
+    uint32_t w_offset = 0;
+    uint16_t *buf0 = (uint16_t*) buf;
+
+    uint16_t v_count = buf0[0];
+    uint16_t f_count = buf0[1];
+
+    uint32_t f_offset = 2 + (v_count*3);
+
+    uint32_t total_lines = f_count * 3 + 1; // one extra for end
+    uint16_t lines[total_lines * 4];
+
+    for(uint16_t f=0;f<f_count;f++) {
+        uint16_t a = buf0[f_offset + f*3 + 0]; 
+        uint16_t b = buf0[f_offset + f*3 + 1]; 
+        uint16_t c = buf0[f_offset + f*3 + 2]; 
+
+        uint32_t v_a_offset = 2 + (a*3);
+        uint16_t ax = buf0[v_a_offset+0];
+        uint16_t ay = buf0[v_a_offset+1]; 
+        uint16_t az = buf0[v_a_offset+2]; 
+
+        uint32_t v_b_offset = 2 + (b*3);
+        uint16_t bx = buf0[v_b_offset + 0]; 
+        uint16_t by = buf0[v_b_offset + 1]; 
+        uint16_t bz = buf0[v_b_offset + 2]; 
+
+        uint32_t v_c_offset = 2 + (c*3);
+        uint16_t cx = buf0[v_c_offset+0]; 
+        uint16_t cy = buf0[v_c_offset+1];
+        uint16_t cz = buf0[v_c_offset+2];
+
+        // drawline between a->b, b->c, c->a
+        project_draw(ax,ay,az,bx,by,bz,fa,fb,fc,fd,x,y,scale_f, lines, w_offset, color);
+        project_draw(bx,by,bz,cx,cy,cz,fa,fb,fc,fd,x,y,scale_f, lines, w_offset+4, color);
+        project_draw(cx,cy,cz,ax,ay,az,fa,fb,fc,fd,x,y,scale_f, lines, w_offset+8, color);
+        w_offset += 12;
+    }
+    // Last line has to be all 0xffff 
+    lines[w_offset+0] = 65535;
+    lines[w_offset+1] = 65535;
+    lines[w_offset+2] = 65535;
+    lines[w_offset+3] = 65535;
+
+    // Gotta sort the lines
+    qsort(lines, total_lines, 8, compare_line_y0);
+    //for(uint16_t i=0;i<total_lines;i++) {
+    //    fprintf(stderr, "line %d: %d %d -> %d %d\n", i, lines[i*4 + 0], lines[i*4 + 1], lines[i*4 + 2], lines[i*4 + 3]);
+    //}
+    return mp_obj_new_bytes((uint8_t*)lines, total_lines * 2 * 4);
+}
+
+
+
