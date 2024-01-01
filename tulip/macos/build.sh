@@ -5,7 +5,7 @@
 source ../shared/grab_submodules.sh
 
 # Make debug and set up app bundle on mac
-make DEBUG=1
+make DEBUG=1 OPTIMIZE=NO
 mkdir -p dev
 rm -rf dev/Tulip\ Desktop.app
 mkdir -p dev/Tulip\ Desktop.app/Contents/{MacOS,Resources,Frameworks,libs}

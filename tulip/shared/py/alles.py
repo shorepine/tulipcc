@@ -2,13 +2,13 @@ import struct, os, time, tulip
 
 BLOCK_SIZE = 256
 SAMPLE_RATE = 44100.0
-OSCS = 64
+OSCS = 120
 MAX_QUEUE = 400
 [SINE, PULSE, SAW_DOWN, SAW_UP, TRIANGLE, NOISE, KS, PCM, ALGO, PARTIAL, PARTIALS, OFF] = range(12)
 TARGET_AMP, TARGET_DUTY, TARGET_FREQ, TARGET_FILTER_FREQ, TARGET_RESONANCE, TARGET_FEEDBACK, TARGET_LINEAR, TARGET_TRUE_EXPONENTIAL, TARGET_DX7_EXPONENTIAL, TARGET_PAN = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512)
-FILTER_NONE, FILTER_LPF, FILTER_BPF, FILTER_HPF = range(4)
+FILTER_NONE, FILTER_LPF, FILTER_BPF, FILTER_HPF, FILTER_LPF24 = range(5)
 mesh_flag = 0
-CHORUS_OSC = 63
+CHORUS_OSC = 119
 
 """
     A bunch of useful presets
@@ -70,30 +70,31 @@ def trunc(number):
     return ('%.6f' % number).rstrip('0').rstrip('.')
 
 # Construct an AMY message
-def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=-1, freq=-1, duty=-1, feedback=-1, timestamp=None, reset=-1, phase=-1, pan=-1, \
-        client=-1, retries=1, volume=-1, filter_freq = -1, resonance = -1, bp0="", bp1="", bp2="", bp0_target=-1, bp1_target=-1, bp2_target=-1, mod_target=-1, \
+def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=None, freq=None, duty=None, feedback=-1, timestamp=None, reset=-1, phase=-1, pan=None, \
+        client=-1, retries=1, volume=-1, filter_freq=None, resonance = -1, bp0="", bp1="", bp2="", bp0_target=-1, bp1_target=-1, bp2_target=-1, mod_target=-1, \
             debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, latency_ms = -1, algo_source=None, chorus_level=-1, \
-            chorus_delay=-1, reverb_level=-1, reverb_liveness=-1, reverb_damping=-1, reverb_xover=-1):
+            chorus_delay=-1, reverb_level=-1, reverb_liveness=-1, reverb_damping=-1, reverb_xover=-1, chained_osc=None):
 
     m = ""
     if(timestamp is None): timestamp = millis()
     m = m + "t" + str(timestamp)
     if(osc>=0): m = m + "v" + str(osc)
     if(wave>=0): m = m + "w" + str(wave)
-    if(duty>=0): m = m + "d" + trunc(duty)
+    if(duty): m = m + "d" + str(duty)
     if(feedback>=0): m = m + "b" + trunc(feedback)
-    if(freq>=0): m = m + "f" + trunc(freq)
+    if(freq): m = m + "f" + str(freq)
     if(note>=0): m = m + "n" + str(note)
     if(patch>=0): m = m + "p" + str(patch)
     if(phase>=0): m = m + "P" + trunc(phase)
-    if(pan>=0): m = m + "Q" + trunc(pan)
-    if(client>=0): m = m + "c" + str(client)
-    if(amp>=0): m = m + "a" + trunc(amp)
+    if(pan): m = m + "Q" + str(pan)
+    #if(client>=0): m = m + "c" + str(client)
+    if(chained_osc is not None): m = m + "c" + str(chained_osc)
+    if(amp): m = m + "a" + str(amp)
     if(vel>=0): m = m + "l" + trunc(vel)
     if(volume>=0): m = m + "V" + trunc(volume)
     if(latency_ms>=0): m = m + "N" + str(latency_ms)
     if(resonance>=0): m = m + "R" + trunc(resonance)
-    if(filter_freq>=0): m = m + "F" + trunc(filter_freq)
+    if(filter_freq): m = m + "F" + str(filter_freq)
     if(ratio>=0): m = m + "I" + trunc(ratio)
     if(algorithm>=0): m = m + "o" + str(algorithm)
     if(len(bp0)): m = m +"A%s" % (bp0)
