@@ -59,6 +59,7 @@
 #include "alles.h"
 #include "midi.h"
 
+pthread_mutex_t amy_queue_lock; 
 
 // Command line options, with their defaults
 STATIC bool compile_only = false;
@@ -915,6 +916,8 @@ int main(int argc, char **argv) {
         } 
     }
     unix_display_init();
+
+    pthread_mutex_init(&amy_queue_lock, NULL);
     pthread_t alles_thread_id;
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
 
