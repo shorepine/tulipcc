@@ -11,6 +11,7 @@ EXTMOD_SRC_C += $(addprefix ../amy/src/, \
 	oscillators.c \
 	partials.c \
 	pcm.c \
+	log2_exp2.c \
 )
 
 EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \

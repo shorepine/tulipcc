@@ -86,7 +86,7 @@ void alles_send_message(char * message, uint16_t len) {
 #ifdef ESP_PLATFORM
 // init AMY from the esp. wraps some amy funcs in a task to do multicore rendering on the ESP32 
 amy_err_t esp_amy_init() {
-    amy_start();
+    amy_start(2,1,1);
     // We create a mutex for changing the event queue and pointers as two tasks do it at once
     xQueueSemaphore = xSemaphoreCreateMutex();
 
@@ -108,7 +108,7 @@ extern void *miniaudio_run(void *vargp);
 #include <pthread.h>
 amy_err_t unix_amy_init() {
     //sync_init();
-    amy_start();
+    amy_start(1,1,1);
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, miniaudio_run, NULL);
     return AMY_OK;
