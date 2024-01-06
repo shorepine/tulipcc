@@ -1,6 +1,7 @@
 // Alles multicast synthesizer
 // Brian Whitman
 // brian@variogr.am
+
 #include "alles.h"
 
 uint8_t board_level;
@@ -39,20 +40,11 @@ i2s_chan_handle_t tx_handle;
 
 extern void mcast_listen_task(void *pvParameters);
 
-// Wrap AMY's renderer into 2 FreeRTOS tasks, one per core
+// Render the second core
 void esp_render_task( void * pvParameters) {
-    uint8_t which = *((uint8_t *)pvParameters);
-    uint8_t start = 0; 
-    uint8_t end = AMY_OSCS;
-    if (AMY_CORES == 2) {
-        start = (AMY_OSCS/2); 
-        end = AMY_OSCS;
-        if(which == 0) { start = 0; end = (AMY_OSCS/2); } 
-    }
-    fprintf(stderr,"I'm renderer #%d on core #%d and i'm handling oscs %d up until %d\n", which, xPortGetCoreID(), start, end);
     while(1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        render_task(start, end, which);
+        amy_render(AMY_OSCS/2, AMY_OSCS, 1);
         xTaskNotifyGive(alles_fill_buffer_handle);
     }
 }
@@ -60,7 +52,17 @@ void esp_render_task( void * pvParameters) {
 // Make AMY's FABT run forever , as a FreeRTOS task 
 void esp_fill_audio_buffer_task() {
     while(1) {
-        int16_t *block = fill_audio_buffer_task();
+        // Get ready to render
+        amy_prepare_buffer();
+        // Tell the other core to start rendering
+        xTaskNotifyGive(amy_render_handle);
+        // Render me
+        amy_render(0, AMY_OSCS/2, 0);
+        // Wait for the other core to finish
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        // Write to i2s
+        int16_t *block = amy_fill_buffer();
         size_t written = 0;
         i2s_channel_write(tx_handle, block, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS, &written, portMAX_DELAY);
         if(written != AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS) {
@@ -90,11 +92,9 @@ amy_err_t esp_amy_init() {
     // We create a mutex for changing the event queue and pointers as two tasks do it at once
     xQueueSemaphore = xSemaphoreCreateMutex();
 
-    // Create rendering threads, one per core so we can deal with dan ellis float math
-    static uint8_t zero = 0;
-    static uint8_t one = 1;
-    xTaskCreatePinnedToCore(&esp_render_task, ALLES_RENDER_0_TASK_NAME, ALLES_RENDER_TASK_STACK_SIZE, &zero, ALLES_RENDER_TASK_PRIORITY, &amy_render_handle[0], ALLES_RENDER_0_TASK_COREID);
-    if(AMY_CORES>1) xTaskCreatePinnedToCore(&esp_render_task, ALLES_RENDER_1_TASK_NAME, ALLES_RENDER_TASK_STACK_SIZE, &one, ALLES_RENDER_TASK_PRIORITY, &amy_render_handle[1], ALLES_RENDER_1_TASK_COREID);
+    // Create the second core rendering task
+    xTaskCreatePinnedToCore(&esp_render_task, ALLES_RENDER_TASK_NAME, ALLES_RENDER_TASK_STACK_SIZE, NULL, ALLES_RENDER_TASK_PRIORITY, &amy_render_handle, ALLES_RENDER_TASK_COREID);
+
     // Wait for the render tasks to get going before starting the i2s task
     delay_ms(100);
 

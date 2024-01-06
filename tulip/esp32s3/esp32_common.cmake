@@ -139,6 +139,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/oscillators.c
     ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c
+    ${AMY_DIR}/src/log2_exp2.c
 )
 
 list(APPEND MICROPY_SOURCE_QSTR
