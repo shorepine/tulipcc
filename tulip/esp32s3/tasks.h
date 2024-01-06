@@ -25,8 +25,7 @@
 #define ALLES_TASK_COREID (1)
 #define ALLES_PARSE_TASK_COREID (0)
 #define ALLES_RECEIVE_TASK_COREID (1)
-#define ALLES_RENDER_0_TASK_COREID (1)
-#define ALLES_RENDER_1_TASK_COREID (0)
+#define ALLES_RENDER_TASK_COREID (1)
 #define ALLES_FILL_BUFFER_TASK_COREID (0)
 
 #define DISPLAY_TASK_STACK_SIZE    (4 * 1024) 
@@ -49,8 +48,7 @@
 #define ALLES_TASK_NAME             "alles_task"
 #define ALLES_PARSE_TASK_NAME       "alles_par_task"
 #define ALLES_RECEIVE_TASK_NAME     "alles_rec_task"
-#define ALLES_RENDER_0_TASK_NAME      "alles_r0_task"
-#define ALLES_RENDER_1_TASK_NAME      "alles_r1_task"
+#define ALLES_RENDER_TASK_NAME      "alles_r_task"
 #define ALLES_FILL_BUFFER_TASK_NAME "alles_fb_task"
 
 #define MAX_TASKS 20 // includes system tasks
@@ -63,7 +61,7 @@ extern TaskHandle_t midi_handle;
 extern TaskHandle_t alles_handle;
 extern TaskHandle_t alles_parse_handle;
 extern TaskHandle_t alles_receive_handle;
-extern TaskHandle_t amy_render_handle[AMY_CORES];
+extern TaskHandle_t amy_render_handle;
 extern TaskHandle_t alles_fill_buffer_handle;
 extern TaskHandle_t idle_0_handle;
 extern TaskHandle_t idle_1_handle;

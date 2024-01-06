@@ -99,7 +99,7 @@ TaskHandle_t midi_handle;
 TaskHandle_t alles_handle;
 TaskHandle_t alles_parse_handle;
 TaskHandle_t alles_receive_handle;
-TaskHandle_t amy_render_handle[AMY_CORES];
+TaskHandle_t amy_render_handle;
 TaskHandle_t alles_fill_buffer_handle;
 TaskHandle_t idle_0_handle;
 TaskHandle_t idle_1_handle;
@@ -131,7 +131,7 @@ float compute_cpu_usage(uint8_t debug) {
     const char* const tasks[] = {
          "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "idle0", "idle1",
          DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
-         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_0_TASK_NAME, ALLES_RENDER_1_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, 0
+         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, 0
     };
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
