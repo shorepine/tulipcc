@@ -138,6 +138,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/oscillators.c
     ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c
+    ${AMY_DIR}/src/log2_exp2.c
 )
 
 list(APPEND MICROPY_SOURCE_QSTR
@@ -239,12 +240,15 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
 # Disable some warnings to keep the build output clean.
 target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-clobbered
+    -Wno-uninitialized
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
     -fsingle-precision-constant
     -Wno-strict-aliasing
     -DESP_PLATFORM
 )
+
+
 
 # Additional include directories needed for private NimBLE headers.
 target_include_directories(${MICROPY_TARGET} PUBLIC
