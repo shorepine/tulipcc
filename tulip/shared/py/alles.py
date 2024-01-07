@@ -73,7 +73,7 @@ def trunc(number):
 def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=None, freq=None, duty=None, feedback=-1, timestamp=None, reset=-1, phase=-1, pan=None, \
         client=-1, retries=1, volume=-1, filter_freq=None, resonance = -1, bp0="", bp1="", bp2="", bp0_target=-1, bp1_target=-1, bp2_target=-1, mod_target=-1, \
             debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, latency_ms = -1, algo_source=None, chorus_level=-1, \
-            chorus_delay=-1, reverb_level=-1, reverb_liveness=-1, reverb_damping=-1, reverb_xover=-1, chained_osc=None):
+            chorus_delay=-1, reverb_level=-1, reverb_liveness=-1, reverb_damping=-1, reverb_xover=-1, chained_osc=None, clone_osc=None):
 
     m = ""
     if(timestamp is None): timestamp = millis()
@@ -89,6 +89,7 @@ def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=None, freq=None, duty
     if(pan): m = m + "Q" + str(pan)
     #if(client>=0): m = m + "c" + str(client)
     if(chained_osc is not None): m = m + "c" + str(chained_osc)
+    if(clone_osc is not None): m = m + "C" + str(clone_osc)
     if(amp): m = m + "a" + str(amp)
     if(vel>=0): m = m + "l" + trunc(vel)
     if(volume>=0): m = m + "V" + trunc(volume)
