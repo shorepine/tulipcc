@@ -19,13 +19,11 @@ void upgrade_tone() {
     e.osc = 0;
     e.time = sysclock;
     e.wave = SINE;
-    e.freq = 220;
+    e.freq_coefs[COEF_CONST] = 220;
     strcpy(e.bp0, "0,0,10,1,500,0,0,0");
-    e.bp0_target = TARGET_AMP;
-    e.bp1_target = TARGET_FREQ;
     amy_add_event(e);
     e.osc = 1;
-    e.freq = 420;
+    e.freq_coefs[COEF_CONST] = 420;
     amy_add_event(e);
 
     note_on(0, e.time+1);
@@ -39,12 +37,11 @@ void wifi_tone() {
     e.osc = 0;
     e.time = sysclock;
     e.wave = SINE;
-    e.freq = 440;
+    e.freq_coefs[COEF_CONST] = 440;
     strcpy(e.bp0 ,"0,0,10,1,500,0,0,0");
-    e.bp0_target = TARGET_AMP;
     amy_add_event(e);
     e.osc = 1;
-    e.freq = 840;
+    e.freq_coefs[COEF_CONST] = 840;
     amy_add_event(e);
 
     note_on(0, e.time+1);
@@ -55,39 +52,38 @@ void wifi_tone() {
 void bleep() {
     struct event e = amy_default_event();
     int64_t sysclock = amy_sysclock();
+    e.osc = 0;
     e.time = sysclock;
     e.wave = SINE;
-    e.freq = 220;
-    amy_add_event(e);
+    e.freq_coefs[COEF_CONST] = 220;
+    //amy_add_event(e);
     e.velocity = 1;
-    e.pan = 0.9;
+    e.pan_coefs[COEF_CONST] = 0.9;
     amy_add_event(e);
     e.time = sysclock + 150;
-    e.freq = 440;
-    e.pan = 0.1;
+    e.freq_coefs[COEF_CONST] = 440;
+    e.pan_coefs[COEF_CONST] = 0.1;
     amy_add_event(e);
     e.time = sysclock + 300;
     e.velocity = 0;
-    e.amp = 0;
-    e.freq = 0;
-    e.pan = 0.5;  // Restore default pan to osc 0.
+    e.pan_coefs[COEF_CONST] = 0.5;  // Restore default pan to osc 0.
     amy_add_event(e);
 }
 
 void debleep() {
     struct event e = amy_default_event();
     int64_t sysclock = amy_sysclock();
+    e.osc = 0;
     e.time = sysclock;
     e.wave = SINE;
-    e.freq = 440;
+    e.freq_coefs[COEF_CONST] = 440;
     e.velocity = 1;
     amy_add_event(e);
     e.time = sysclock + 150;
-    e.freq = 220;
+    e.freq_coefs[COEF_CONST] = 220;
     amy_add_event(e);
     e.time = sysclock + 300;
     e.velocity = 0;
-    e.freq = 0;
     amy_add_event(e);
 }
 

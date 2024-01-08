@@ -55,17 +55,18 @@ void* run_midi(void*argp){
                 MIDIEndpointRef source = MIDIGetSource(i);
                 MIDIPortRef in_port;
                 status = MIDIInputPortCreateWithProtocol(midi_client, (__bridge CFStringRef)[NSString stringWithFormat:@"Tulip Input %lu", i], kMIDIProtocol_1_0, &in_port, ^(const MIDIEventList *evtlist, void *srcConnRefCon) {
-                    const MIDIEventPacket* packet = &evtlist->packet[0];
                     for (uint32_t i = 0; i < evtlist->numPackets; i++) {
-                        if(packet->wordCount == 1){
-                            const unsigned char *bytes = (unsigned char*)(&packet->words[0]);
+                        const MIDIEventPacket* packet = &evtlist->packet[i];
+                        for(uint32_t j=0 ; j < packet->wordCount; j++) {
+                            const unsigned char *bytes = (unsigned char*)(&packet->words[j]);
                             if(bytes[3] == 0x20) { //  TODO, non-3 packets, then what? 
                                 uint8_t data[3];
                                 data[0] = bytes[2];
                                 data[1] = bytes[1];
                                 data[2] = bytes[0];
                                 convert_midi_bytes_to_messages(data, 3);
-                                packet = MIDIEventPacketNext(packet);
+                            } else {
+                                printf("bytes[3] was not 0x20\n");
                             }
                         }
                     }
