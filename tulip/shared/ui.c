@@ -12,6 +12,7 @@ uint8_t ui_id_held;
 // or i could just comptuationally invert the bitmap BG of the text ...  maybe that's better
 void ui_button_flip(uint8_t ui_id) {
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     if(e->type == UI_BUTTON) {
         // I think just invert the pixels of the text line
         uint8_t fh = u8g2_a_height(e->c2);
@@ -33,6 +34,7 @@ void ui_element_new(uint8_t ui_id) {
 
 void ui_element_active(uint8_t ui_id,  uint8_t active) {
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
 
     e->active = active;
     if(active) {
@@ -62,6 +64,7 @@ void ui_element_del(uint8_t ui_id) {
 // if a tap is registered , enter is sent to this function as well
 void ui_text_entry_update(uint8_t ui_id, uint8_t ch) {
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     uint8_t len = strlen(e->cval);
     if(ch != 13) {
         if(ch == 8) {
@@ -86,6 +89,7 @@ void ui_text_entry_update(uint8_t ui_id, uint8_t ch) {
 void ui_text_entry_start(uint8_t ui_id) {
     // first, clear out the text inside the button
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     e->cval[0] = 0;
     ui_text_draw(ui_id, 1);
     // now, wait for keys and fill them in
@@ -95,6 +99,7 @@ void ui_text_entry_start(uint8_t ui_id) {
 
 void ui_text_draw(uint8_t ui_id, uint8_t entry_mode) {
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     fillRect(e->x,e->y,e->w,e->h,e->c1);
 
     if(strlen(e->cval) >0) {
@@ -118,6 +123,7 @@ void ui_text_draw(uint8_t ui_id, uint8_t entry_mode) {
 void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t text_color, uint8_t box_color, uint8_t font_no) {
     ui_element_new(ui_id);
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
 
     e->type = UI_TEXT;
     e->x = x;
@@ -135,12 +141,14 @@ void ui_text_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16
 }
 
 char* ui_text_get_val(uint8_t ui_id) {
+    if (elements[ui_id]==NULL) return "";
     return elements[ui_id]->cval;
 }
 
 
 void ui_check_draw(uint8_t ui_id) {
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     fillRect(e->x, e->y, e->w, e->w, e->c1);
     if(e->val > 0) {
         if(e->c2 == 0) { // square
@@ -154,9 +162,11 @@ void ui_check_draw(uint8_t ui_id) {
     }
 }
 uint8_t ui_check_get_val(uint8_t ui_id) {
+    if (elements[ui_id]==NULL) return 0;
     return (uint8_t)elements[ui_id]->val;
 }
 void ui_check_set_val(uint8_t ui_id, uint8_t v) {
+    if (elements[ui_id]==NULL) return;
     elements[ui_id]->val = v;
     ui_check_draw(ui_id);
 }
@@ -164,6 +174,7 @@ void ui_check_set_val(uint8_t ui_id, uint8_t v) {
 void ui_check_new(uint8_t ui_id,uint8_t val, uint16_t x, uint16_t y, uint16_t w, uint8_t mark_color,uint8_t box_color, uint8_t style) {
     ui_element_new(ui_id);
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     e->type = UI_CHECKBOX;
     e->x = x;
     e->y = y;
@@ -177,6 +188,7 @@ void ui_check_new(uint8_t ui_id,uint8_t val, uint16_t x, uint16_t y, uint16_t w,
 
 void ui_button_draw(uint8_t ui_id) {
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
 
     if((uint8_t)e->val) {
         fillRoundRect(e->x,e->y,e->w,e->h,10,e->c1);
@@ -190,6 +202,7 @@ void ui_button_draw(uint8_t ui_id) {
 void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t fgc, uint8_t bc, uint8_t filled, uint8_t font_no) {
     ui_element_new(ui_id);
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     e->type = UI_BUTTON;
     e->x = x;
     e->y = y;
@@ -211,6 +224,7 @@ void ui_button_new(uint8_t ui_id, const char * str, uint16_t x, uint16_t y, uint
 void ui_slider_draw(uint8_t ui_id) {
     // draw two boxes
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     if(e->w > e->h) { // horizontal slider
         uint16_t slider_width = 20;
         // Make the frame
@@ -232,6 +246,7 @@ void ui_slider_draw(uint8_t ui_id) {
 
 void ui_slider_set_val(uint8_t ui_id, float val) {
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     e->val = val;
     ui_slider_draw(ui_id);
 }
@@ -239,6 +254,7 @@ void ui_slider_set_val(uint8_t ui_id, float val) {
 void ui_slider_set_val_xy(uint8_t ui_id, uint16_t x, uint16_t y) {
     // given an x and y, update the val, then draw
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     if(e->w > e->h) { // horizontal slider
         e->val = (((float)(x-e->x) / (float)(e->w)));
     } else { // vertical slider
@@ -248,12 +264,14 @@ void ui_slider_set_val_xy(uint8_t ui_id, uint16_t x, uint16_t y) {
 }
 
 float ui_slider_get_val(uint8_t ui_id) {
+    if (elements[ui_id]==NULL) return 0.0f;
     return elements[ui_id]->val;
 }
 
 void ui_slider_new(uint8_t ui_id, float val, uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t bc, uint8_t hc) {
     ui_element_new(ui_id);
     struct ui_element *e = elements[ui_id];
+    if (e==NULL) return;
     e->type = UI_SLIDER;
     e->x = x;
     e->y = y;
@@ -304,10 +322,12 @@ void ui_init() {
 }
 
 uint8_t bg_touch_up(uint8_t ui_id) {
+    if(bg_elements[ui_id] == NULL) return 0;
     return bg_elements[ui_id]->up;
 }
 
 void bg_touch_register(uint8_t ui_id, uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+    if(bg_elements[ui_id] == NULL) return;
     bg_elements[ui_id] = malloc_caps(sizeof(struct bg_element), MALLOC_CAP_SPIRAM);
     bg_elements[ui_id]->x = x;
     bg_elements[ui_id]->y = y;
@@ -316,6 +336,7 @@ void bg_touch_register(uint8_t ui_id, uint16_t x, uint16_t y, uint16_t w, uint16
     bg_elements[ui_id]->up = 0;
 }
 void bg_touch_deregister(uint8_t ui_id) {
+    if(bg_elements[ui_id] == NULL) return;
     free_caps(bg_elements[ui_id]);
     bg_elements[ui_id] = NULL;
 }
