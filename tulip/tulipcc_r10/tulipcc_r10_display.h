@@ -63,7 +63,7 @@ extern uint32_t HSYNC_BACK_PORCH, HSYNC_FRONT_PORCH, HSYNC_PULSE_WIDTH, VSYNC_BA
 #define DEFAULT_BRIGHTNESS 5 // 9 is max, 1 is min
 #define BK_LIGHT_OFF_LEVEL !BK_LIGHT_ON_LEVEL
 
-#define PIN_NUM_BK_LIGHT       10 // was 19, was 14 white
+//#define PIN_NUM_BK_LIGHT       10 // was 19, was 14 white
 #define PIN_NUM_HSYNC          39
 #define PIN_NUM_VSYNC          41
 #define PIN_NUM_DE             40

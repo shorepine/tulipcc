@@ -73,7 +73,6 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
 }
 
 void esp32s3_display_stop() {
-    gpio_set_level(PIN_NUM_BK_LIGHT, !BK_LIGHT_ON_LEVEL);
     esp_lcd_panel_del(panel_handle);
 }
 
@@ -83,7 +82,6 @@ void esp32s3_display_start() {
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
-    gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
 }
 
 
@@ -131,6 +129,14 @@ void display_brightness(uint8_t amount) {
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1) ;
 }
 
+void set_pin(uint16_t pin, uint8_t value) {
+    gpio_config_t peri_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << pin
+    };
+    gpio_config(&peri_gpio_config);
+    gpio_set_level(pin, value);
+}
 
 extern int64_t bounce_time;
 extern uint32_t bounce_count ;
@@ -140,14 +146,6 @@ void run_esp32s3_display(void) {
     // First set up the memory
     display_init();
     
-    // Backlight on GPIO for the 10.1 panel
-    gpio_config_t bk_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << PIN_NUM_BK_LIGHT
-    };
-    //xDisplayTask = xTaskGetCurrentTaskHandle();
-    //ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
-
     panel_handle = NULL;
     panel_config.data_width = BYTES_PER_PIXEL*8; 
     panel_config.psram_trans_align = 64;
@@ -166,6 +164,9 @@ void run_esp32s3_display(void) {
     panel_config.data_gpio_nums[5] = PIN_NUM_DATA5;
     panel_config.data_gpio_nums[6] = PIN_NUM_DATA6;
     panel_config.data_gpio_nums[7] = PIN_NUM_DATA7;
+
+
+
     // Even though we'll only use 8 pins for RGB332 we keep the others to set them low
     panel_config.data_gpio_nums[8] = PIN_NUM_DATA8;
     panel_config.data_gpio_nums[9] = PIN_NUM_DATA9;
@@ -175,6 +176,15 @@ void run_esp32s3_display(void) {
     panel_config.data_gpio_nums[13] = PIN_NUM_DATA13;
     panel_config.data_gpio_nums[14] = PIN_NUM_DATA14;
     panel_config.data_gpio_nums[15] = PIN_NUM_DATA15;
+
+    set_pin(PIN_NUM_DATA8, 0);
+    set_pin(PIN_NUM_DATA9, 0);
+    set_pin(PIN_NUM_DATA10, 0);
+    set_pin(PIN_NUM_DATA11, 0);
+    set_pin(PIN_NUM_DATA12, 0);
+    set_pin(PIN_NUM_DATA13, 0);
+    set_pin(PIN_NUM_DATA14, 0);
+    set_pin(PIN_NUM_DATA15, 0);
 
     panel_config.timings.pclk_hz = PIXEL_CLOCK_MHZ*1000*1000;
     panel_config.timings.h_res = H_RES;
@@ -203,10 +213,9 @@ void run_esp32s3_display(void) {
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
-    //display_pwm_setup();
-    //display_brightness(brightness); 
-    //gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
-
+    display_pwm_setup();
+    display_brightness(brightness); 
+    
     
     // Time the frame sync and stay running forever 
     int64_t free_time = 0;
