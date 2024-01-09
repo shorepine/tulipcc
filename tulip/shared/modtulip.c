@@ -548,6 +548,29 @@ STATIC mp_obj_t tulip_midi_out(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_out_obj, 1, 1, tulip_midi_out);
 
 
+// Send a message on the "local bus", as if it was received from physical midi in
+STATIC mp_obj_t tulip_midi_local(size_t n_args, const mp_obj_t *args) {
+    if(mp_obj_get_type(args[0]) == &mp_type_bytes) {
+        mp_buffer_info_t bufinfo;
+        mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+        midi_local((uint8_t*)bufinfo.buf, bufinfo.len);
+    } else {
+        mp_obj_t *items;
+        size_t len;
+        mp_obj_get_array(args[0], &len, &items);
+        uint8_t *b = malloc_caps(len, MALLOC_CAP_INTERNAL);
+        for(uint16_t i=0;i<(uint16_t)len;i++) {
+            b[i] = mp_obj_get_int(items[i]);
+        }
+        midi_local(b, len);
+        free_caps(b);
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_local_obj, 1, 1, tulip_midi_local);
+
+
 //(w,h,bytes) = sprite_png(pngdata, mem_pos) 
 //(w,h,bytes) = sprite_png("filename.png", mem_pos)
 STATIC mp_obj_t tulip_sprite_png(size_t n_args, const mp_obj_t *args) {
@@ -1307,6 +1330,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_touch_callback), MP_ROM_PTR(&tulip_bg_touch_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_local), MP_ROM_PTR(&tulip_midi_local_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_blit), MP_ROM_PTR(&tulip_bg_blit_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_png), MP_ROM_PTR(&tulip_sprite_png_obj) },

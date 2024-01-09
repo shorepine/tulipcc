@@ -280,6 +280,8 @@ Tulip supports MIDI in and out to connect to external music hardware. You can se
 
 On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later using the "IAC" MIDI bus. (It does not yet work at all on Linux.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." At this time, MIDI will not function (but the rest of Tulip will run fine) on macOS versions before 11.0.
 
+You can also send MIDI messages "locally", e.g. to a running program that is expecting hardware MIDI input, via `tulip.midi_local()`
+
 ```python
 def callback(x): # for now you have to define a callback with a dummy parameter
     m = tulip.midi_in()
@@ -292,6 +294,8 @@ tulip.midi_callback() # turns off callbacks
 m = tulip.midi_in() # returns bytes of the last MIDI message received
 tulip.midi_out((144,60,127)) # sends a note on message
 tulip.midi_out(bytes) # Can send bytes or list
+
+tulip.midi_local((144, 60, 127)) # send note on to local bus
 ```
 
 

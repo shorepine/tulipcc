@@ -74,6 +74,9 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
 }
 
 
+void midi_local(uint8_t * bytes, uint16_t len) {
+    convert_midi_bytes_to_messages(bytes, len);
+}
 
 #ifdef ESP_PLATFORM
 QueueHandle_t uart_queue;

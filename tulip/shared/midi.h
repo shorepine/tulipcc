@@ -19,6 +19,8 @@ extern int16_t midi_queue_tail;
 extern int16_t midi_queue_head;
 
 void midi_out(uint8_t * bytes, uint16_t len);
+void midi_local(uint8_t * bytes, uint16_t len);
+
 #ifdef ESP_PLATFORM
 void run_midi();
 #else
