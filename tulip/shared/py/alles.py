@@ -69,56 +69,52 @@ def millis():
 def trunc(number):
     return ('%.6f' % number).rstrip('0').rstrip('.')
 
-# Construct an AMY message
-def message(osc=0, wave=-1, patch=-1, note=-1, vel=-1, amp=None, freq=None, duty=None, feedback=-1, timestamp=None, reset=-1, phase=-1, pan=None, \
-        client=-1, retries=1, volume=-1, filter_freq=None, resonance = -1, bp0="", bp1="", bp2="", bp0_target=-1, bp1_target=-1, bp2_target=-1, mod_target=-1, \
-            debug=-1, mod_source=-1, eq_l = -1, eq_m = -1, eq_h = -1, filter_type= -1, algorithm=-1, ratio = -1, latency_ms = -1, algo_source=None, chorus_level=-1, \
-            chorus_delay=-1, reverb_level=-1, reverb_liveness=-1, reverb_damping=-1, reverb_xover=-1, chained_osc=None, clone_osc=None):
+def message(osc=0, wave=None, patch=None, note=None, vel=None, amp=None, freq=None, duty=None, feedback=None, timestamp=None, reset=None, phase=None, pan=None,
+            client=None, retries=None, volume=None, filter_freq = None, resonance = None, bp0=None, bp1=None, bp0_target=None, bp1_target=None, mod_target=None,
+            debug=None, chained_osc=None, mod_source=None, clone_osc=None, eq_l = None, eq_m = None, eq_h = None, filter_type= None, algorithm=None, ratio = None, latency_ms = None, algo_source=None,
+            chorus_level=None, chorus_delay=None, reverb_level=None, reverb_liveness=None, reverb_damping=None, reverb_xover=None):
 
     m = ""
-    if(timestamp is None): timestamp = millis()
-    m = m + "t" + str(timestamp)
-    if(osc>=0): m = m + "v" + str(osc)
-    if(wave>=0): m = m + "w" + str(wave)
-    if(duty): m = m + "d" + str(duty)
-    if(feedback>=0): m = m + "b" + trunc(feedback)
-    if(freq): m = m + "f" + str(freq)
-    if(note>=0): m = m + "n" + str(note)
-    if(patch>=0): m = m + "p" + str(patch)
-    if(phase>=0): m = m + "P" + trunc(phase)
-    if(pan): m = m + "Q" + str(pan)
-    #if(client>=0): m = m + "c" + str(client)
+    if(timestamp is not None): m = m + "t" + str(timestamp)
+    if(osc is not None): m = m + "v" + str(osc)
+    if(wave is not None): m = m + "w" + str(wave)
+    if(duty is not None): m = m + "d%s" % duty
+    if(feedback is not None): m = m + "b" + trunc(feedback)
+    if(freq is not None): m = m + "f%s" % freq
+    if(note is not None): m = m + "n" + str(note)
+    if(patch is not None): m = m + "p" + str(patch)
+    if(phase is not None): m = m + "P" + trunc(phase)
+    if(pan is not None): m = m + "Q%s" % pan
+    if(client is not None): m = m + "c" + str(client)
+    if(amp is not None): m = m + "a%s" % amp
+    if(vel is not None): m = m + "l" + trunc(vel)
+    if(volume is not None): m = m + "V" + trunc(volume)
+    if(latency_ms is not None): m = m + "N" + str(latency_ms)
+    if(resonance is not None): m = m + "R" + trunc(resonance)
+    if(filter_freq is not None): m = m + "F%s" % filter_freq
+    if(ratio is not None): m = m + "I" + trunc(ratio)
+    if(algorithm is not None): m = m + "o" + str(algorithm)
+    if(bp0 is not None): m = m +"A%s" % (bp0)
+    if(bp1 is not None): m = m +"B%s" % (bp1)
+    if(algo_source is not None): m = m +"O%s" % (algo_source)
+    if(bp0_target is not None): m = m + "T" +str(bp0_target)
+    if(bp1_target is not None): m = m + "W" +str(bp1_target)
     if(chained_osc is not None): m = m + "c" + str(chained_osc)
     if(clone_osc is not None): m = m + "C" + str(clone_osc)
-    if(amp): m = m + "a" + str(amp)
-    if(vel>=0): m = m + "l" + trunc(vel)
-    if(volume>=0): m = m + "V" + trunc(volume)
-    if(latency_ms>=0): m = m + "N" + str(latency_ms)
-    if(resonance>=0): m = m + "R" + trunc(resonance)
-    if(filter_freq): m = m + "F" + str(filter_freq)
-    if(ratio>=0): m = m + "I" + trunc(ratio)
-    if(algorithm>=0): m = m + "o" + str(algorithm)
-    if(len(bp0)): m = m +"A%s" % (bp0)
-    if(len(bp1)): m = m +"B%s" % (bp1)
-    if(len(bp2)): m = m +"C%s" % (bp2)
-    if(algo_source is not None): m = m +"O%s" % (algo_source)
-    if(bp0_target>=0): m = m + "T" +str(bp0_target)
-    if(bp1_target>=0): m = m + "W" +str(bp1_target)
-    if(bp2_target>=0): m = m + "X" +str(bp2_target)
-    if(mod_target>=0): m = m + "g" + str(mod_target)
-    if(mod_source>=0): m = m + "L" + str(mod_source)
-    if(reset>=0): m = m + "S" + str(reset)
-    if(debug>=0): m = m + "D" + str(debug)
-    if(eq_l>=0): m = m + "x" + trunc(eq_l)
-    if(eq_m>=0): m = m + "y" + trunc(eq_m)
-    if(eq_h>=0): m = m + "z" + trunc(eq_h)
-    if(filter_type>=0): m = m + "G" + str(filter_type)
-    if(chorus_level>=0): m = m + "k" + str(chorus_level)
-    if(chorus_delay>=0): m = m + "m" + str(chorus_delay)
-    if(reverb_level>=0): m = m + "h" + str(reverb_level)
-    if(reverb_liveness>=0): m = m + "H" + str(reverb_liveness)
-    if(reverb_damping>=0): m = m + "j" + str(reverb_damping)
-    if(reverb_xover>=0): m = m + "J" + str(reverb_xover)
+    if(mod_target is not None): m = m + "g" + str(mod_target)
+    if(mod_source is not None): m = m + "L" + str(mod_source)
+    if(reset is not None): m = m + "S" + str(reset)
+    if(debug is not None): m = m + "D" + str(debug)
+    if(eq_l is not None): m = m + "x" + trunc(eq_l)
+    if(eq_m is not None): m = m + "y" + trunc(eq_m)
+    if(eq_h is not None): m = m + "z" + trunc(eq_h)
+    if(filter_type is not None): m = m + "G" + str(filter_type)
+    if(chorus_level is not None): m = m + "k" + str(chorus_level)
+    if(chorus_delay is not None): m = m + "m" + str(chorus_delay)
+    if(reverb_level is not None): m = m + "h" + str(reverb_level)
+    if(reverb_liveness is not None): m = m + "H" + str(reverb_liveness)
+    if(reverb_damping is not None): m = m + "j" + str(reverb_damping)
+    if(reverb_xover is not None): m = m + "J" + str(reverb_xover)
     #print("message " + m)
     return m+'Z'
 
