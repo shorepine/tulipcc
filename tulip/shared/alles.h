@@ -47,13 +47,13 @@ typedef int16_t i2s_sample_type;
 
 // Pins & buttons
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/_images/ESP32-S3_DevKitC-1_pinlayout.jpg
-#ifndef TDECK
+#if defined TULIPCC_R10
 #define ESP_INTR_FLAG_DEFAULT 0
-#define CONFIG_I2S_LRCLK 4//45 // this is also VSPI 
-#define CONFIG_I2S_BCLK 1//2//1//47 // SPICLK_P 
-#define CONFIG_I2S_DIN 2//2//48 // SPICLK_N and LED, so move
+#define CONFIG_I2S_LRCLK 2//45 // this is also VSPI 
+#define CONFIG_I2S_BCLK 20//2//1//47 // SPICLK_P 
+#define CONFIG_I2S_DIN 19//2//48 // SPICLK_N and LED, so move
 #define CONFIG_I2S_NUM 0 
-#else
+#elif defined TDECK
 #define ESP_INTR_FLAG_DEFAULT 0
 #define CONFIG_I2S_LRCLK 5
 #define CONFIG_I2S_BCLK 7
@@ -61,7 +61,11 @@ typedef int16_t i2s_sample_type;
 #define CONFIG_I2S_NUM 0 
 #endif
 #else // ESP_PLATFORM
-
+#define ESP_INTR_FLAG_DEFAULT 0
+#define CONFIG_I2S_LRCLK 4//45 // this is also VSPI 
+#define CONFIG_I2S_BCLK 1//2//1//47 // SPICLK_P 
+#define CONFIG_I2S_DIN 2//2//48 // SPICLK_N and LED, so move
+#define CONFIG_I2S_NUM 0 
 #endif
 
 

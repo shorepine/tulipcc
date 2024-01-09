@@ -14,8 +14,8 @@ sys.path.append(parttool_dir)  # this enables Python to find parttool module
 from parttool import *  # import all names inside parttool module
 
 
-if(not os.getcwd().endswith("esp32s3")):
-    print("Run this from the tulipcc/ports/esp32s3 folder only")
+if(not os.getcwd().endswith("tulipcc_r10")):
+    print("Run this from the tulipcc/ports/tulipcc_r10 folder only")
     sys.exit()
 
 TULIP_HOME = "../fs"
@@ -32,11 +32,11 @@ folders = source_folders
 for folder in source_folders:
     folders = folders + [ f.path for f in os.scandir(folder) if f.is_dir() ]
 
-TULIP_VFS_SIZE = 0x1792000  # 32MB
-if(len(sys.argv)>1 and sys.argv[1].endswith('N8R8')):
-    TULIP_VFS_SIZE = 0x440000 # 8MB (no OTA)
-if(len(sys.argv)>1 and sys.argv[1].endswith('N16R8')):
-    TULIP_VFS_SIZE = 0x730000 # 16MB
+#TULIP_VFS_SIZE = 0x1792000  # 32MB
+#if(len(sys.argv)>1 and sys.argv[1].endswith('N8R8')):
+#    TULIP_VFS_SIZE = 0x440000 # 8MB (no OTA)
+#if(len(sys.argv)>1 and sys.argv[1].endswith('N16R8')):
+TULIP_VFS_SIZE = 0x730000 # 16MB
 
 cfg = lfs.LFSConfig(block_size=4096, block_count = int(TULIP_VFS_SIZE / 4096),  disk_version=0x00020000)
 fs = lfs.LFSFilesystem()

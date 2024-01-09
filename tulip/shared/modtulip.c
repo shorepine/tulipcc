@@ -832,10 +832,13 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_brightness_obj, 0, 1, tulip_bri
 
 extern uint16_t check_joy();
 STATIC mp_obj_t tulip_joy(size_t n_args, const mp_obj_t *args) {
+#ifndef TULIPCC_R10
     return mp_obj_new_int(check_joy());
+#else
+    return 0;
+#endif
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_joy_obj, 0, 0, tulip_joy);
-
 
 extern uint8_t last_scan[8];
 STATIC mp_obj_t tulip_keys(size_t n_args, const mp_obj_t *args) {

@@ -146,6 +146,7 @@ amy_err_t setup_i2s(void) {
 
     /* Before writing data, start the TX channel first */
     i2s_channel_enable(tx_handle);
+    fprintf(stderr, "i2s started blck %d dout %d lrck %d\n",CONFIG_I2S_BCLK,CONFIG_I2S_DIN,CONFIG_I2S_LRCLK );
     return AMY_OK;
 }
 
