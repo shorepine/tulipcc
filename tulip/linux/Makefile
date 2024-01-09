@@ -88,7 +88,7 @@ ifndef DEBUG
 # https://gcc.gnu.org/ml/gcc-patches/2004-09/msg02055.html .
 #
 # Turning off _FORTIFY_SOURCE is only required when compiling with -O1 or greater
-CFLAGS += -U _FORTIFY_SOURCE
+CFLAGS += -U _FORTIFY_SOURCE -fPIC
 endif
 
 # On OSX, 'gcc' is a symlink to clang unless a real gcc is installed.
