@@ -314,7 +314,6 @@ void boardctrl_startup(void) {
         nvs_flash_init();
     }
 }
-
 extern void run_gt911();
 extern void run_midi();
 uint8_t * xStack;
@@ -329,6 +328,7 @@ void app_main(void) {
     // Grab the idle tasks
     idle_0_handle = xTaskGetIdleTaskHandleForCPU(0);
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
+
 
 
     fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
@@ -348,11 +348,6 @@ void app_main(void) {
     delay_ms(10);
     esp32s3_display_stop();
 
-    fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
-    xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
-    fflush(stderr);
-    delay_ms(100);
-
     fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
@@ -365,6 +360,11 @@ void app_main(void) {
     
 
     esp32s3_display_start();
+
+    fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
+    xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
+    fflush(stderr);
+    delay_ms(100);
 
 
 }
