@@ -1,7 +1,74 @@
 
 #include "display.h"
+#include "touchscreen.h"
 int16_t touch_x_delta = 0;
 int16_t touch_y_delta = 0;
+
+#define I2C_SDA_PIN 17
+#define I2C_SCL_PIN 18
+#define TOUCH_INT -1
+#define TOUCH_RST 38
+esp_lcd_touch_handle_t tp;
+
+
+esp_err_t touch_init(void)
+{
+    const i2c_config_t i2c_conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_SDA_PIN,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_io_num = I2C_SCL_PIN,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = 400000
+
+    };
+    i2c_param_config(I2C_NUM_1, &i2c_conf);
+    i2c_driver_install(I2C_NUM_1, i2c_conf.mode, 0, 0, 0);
+    esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
+
+    esp_lcd_panel_io_handle_t io_handle = NULL;
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)I2C_NUM_1, &io_config, &io_handle));
+
+    esp_lcd_touch_config_t tp_cfg = {
+        .x_max = H_RES,
+        .y_max = V_RES,
+        .rst_gpio_num = TOUCH_RST,
+        .int_gpio_num = TOUCH_INT,
+        .levels = {
+            .reset = 0,
+            .interrupt = 0,
+        },
+        .flags = {
+            .swap_xy = 0,
+            .mirror_x = 0,
+            .mirror_y = 0,
+        },
+    };
+
+    esp_err_t err = esp_lcd_touch_new_i2c_gt911(io_handle, &tp_cfg, &tp);
+    return err;
+}
+   
+
+
+void run_gt911(void *param)
+{
+    /*
+    uint16_t touch_x[1];
+    uint16_t touch_y[1];
+    uint16_t touch_strength[1];
+    uint8_t touch_cnt = 0;
+    */
+    esp_err_t err = touch_init();
+    fprintf(stderr, "touch init err is %d\n", err);
+    while (1) {
+        //esp_lcd_touch_read_data(tp);
+        //if(esp_lcd_touch_get_coordinates(tp, touch_x, touch_y, touch_strength, &touch_cnt, 1)) {
+        //    fprintf(stderr, "TP pressed %d,%d str %d count %d\n", touch_x[0], touch_y[0], touch_strength[0], touch_cnt);
+        //}
+        vTaskDelay(20/portTICK_PERIOD_MS);
+    }
+}
 
 #if 0
 

@@ -203,6 +203,8 @@ idf_component_register(
     INCLUDE_DIRS
         ../../tulip/esp32s3
         ../../tulip/tulipcc_r10
+        ../../tulip/tulipcc_r10/managed_components/espressif__esp_lcd_touch_gt911/include
+        ../../tulip/tulipcc_r10/managed_components/espressif__esp_lcd_touch/include
         ${MICROPY_INC_CORE}
         ${MICROPY_INC_USERMOD}
         ${MICROPY_PORT_DIR}

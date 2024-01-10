@@ -315,10 +315,8 @@ void boardctrl_startup(void) {
     }
 }
 
-extern void ft5x06_init();
-extern void run_ft5x06();
+extern void run_gt911();
 extern void run_midi();
-extern void init_esp_joy();
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
 
@@ -351,8 +349,7 @@ void app_main(void) {
     esp32s3_display_stop();
 
     fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
-    //ft5x06_init();
-    //xTaskCreatePinnedToCore(run_ft5x06, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
+    xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
 
@@ -366,10 +363,6 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(10);
     
-    fprintf(stderr,"Starting joystick\n");
-    //init_esp_joy();
-    fflush(stderr);
-    delay_ms(100);
 
     esp32s3_display_start();
 
