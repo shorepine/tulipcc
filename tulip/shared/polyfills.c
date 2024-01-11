@@ -63,11 +63,11 @@ int64_t get_time_us() {
     return mp_hal_ticks_us();
 }
 
-extern int64_t get_sysclock();
+extern int32_t get_sysclock();
 int64_t get_time_ms() {
     return mp_hal_ticks_ms(); // a large number
 }
-int64_t get_ticks_ms() {
+int32_t get_ticks_ms() {
     return amy_sysclock(); // based on audio driver
 }
     

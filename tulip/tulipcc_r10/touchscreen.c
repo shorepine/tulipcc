@@ -54,7 +54,8 @@ void touch_init(void)
 
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(io_handle, &tp_cfg, &tp));
 }
-   
+uint8_t gt911_held = 0;
+
 void run_gt911(void *param) {
     uint16_t touch_x[3];
     uint16_t touch_y[3];
@@ -72,12 +73,12 @@ void run_gt911(void *param) {
             }
             //fprintf(stderr, "touch DOWN %d %d\n", last_touch_x[0], last_touch_y[0]);
             send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0);
-            touch_held = 1;
+            gt911_held = 1;
         } else {
-            if(touch_held) {
+            if(gt911_held) {
                 //fprintf(stderr, "touch UP   %d %d\n", last_touch_x[0], last_touch_y[0]);
                 send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
-                touch_held = 0;
+                gt911_held = 0;
             }
         }
         vTaskDelay(20/portTICK_PERIOD_MS);
