@@ -63,6 +63,8 @@ void esp_fill_audio_buffer_task() {
 
         // Write to i2s
         int16_t *block = amy_fill_buffer();
+
+
         size_t written = 0;
         i2s_channel_write(tx_handle, block, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS, &written, portMAX_DELAY);
         if(written != AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS) {
