@@ -27,24 +27,21 @@
  * THE SOFTWARE.
  */
 
-#include <stdio.h>
-#include "mphalport.h"
-#include "hal/uart_hal.h"
-#include "display.h"
 #include "py/runtime.h"
 #include "py/mphal.h"
 #include "uart.h"
+#include "soc/uart_periph.h"
+#include "display.h"
+//#if MICROPY_HW_ENABLE_UART_REPL
 
-// Backwards compatibility for when MICROPY_HW_UART_REPL was a ESP-IDF UART
-// driver enum. Only UART_NUM_0 was supported with that version of the driver.
-//#define UART_NUM_0 0
+#include <stdio.h>
+#include "driver/uart.h" // For uart_get_sclk_freq()
+#include "hal/uart_hal.h"
 
 STATIC void uart_irq_handler(void *arg);
-//STATIC void uart_midi_irq_handler(void *arg);
 
 // Declaring the HAL structure on the stack saves a tiny amount of static RAM
 #define REPL_HAL_DEFN() { .dev = UART_LL_GET_HW(MICROPY_HW_UART_REPL) }
-//#define MIDI_HAL_DEFN() { .dev = UART_LL_GET_HW(MICROPY_HW_UART_MIDI) }
 
 // RXFIFO Full interrupt threshold. Set the same as the ESP-IDF UART driver
 #define RXFIFO_FULL_THR (SOC_UART_FIFO_LEN - 8)
@@ -54,16 +51,18 @@ STATIC void uart_irq_handler(void *arg);
 
 void uart_stdout_init(void) {
     uart_hal_context_t repl_hal = REPL_HAL_DEFN();
+    #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 3, 0)
+    uart_sclk_t sclk;
+    #else
+    soc_module_clk_t sclk;
+    #endif
     uint32_t sclk_freq;
 
-    #if UART_SCLK_DEFAULT == SOC_MOD_CLK_APB
-    sclk_freq = APB_CLK_FREQ; // Assumes no frequency scaling
-    #else
-    // ESP32-H2 and ESP32-C2, I think
-    #error "This SoC uses a different default UART SCLK source, code needs updating."
-    #endif
+    uart_hal_get_sclk(&repl_hal, &sclk); // To restore SCLK after uart_hal_init() resets it
+    ESP_ERROR_CHECK(uart_get_sclk_freq(sclk, &sclk_freq));
 
     uart_hal_init(&repl_hal, MICROPY_HW_UART_REPL); // Sets defaults: 8n1, no flow control
+    uart_hal_set_sclk(&repl_hal, sclk);
     uart_hal_set_baudrate(&repl_hal, MICROPY_HW_UART_REPL_BAUD, sclk_freq);
     uart_hal_rxfifo_rst(&repl_hal);
     uart_hal_txfifo_rst(&repl_hal);
@@ -81,6 +80,7 @@ void uart_stdout_init(void) {
     uart_hal_set_rx_timeout(&repl_hal, RXFIFO_RX_TIMEOUT);
     uart_hal_ena_intr_mask(&repl_hal, UART_INTR_RXFIFO_FULL | UART_INTR_RXFIFO_TOUT);
 }
+
 
 // all code executed in ISR must be in IRAM, and any const data must be in DRAM
 STATIC void IRAM_ATTR uart_irq_handler(void *arg) {
