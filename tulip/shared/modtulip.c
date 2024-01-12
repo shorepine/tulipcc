@@ -835,7 +835,7 @@ STATIC mp_obj_t tulip_joy(size_t n_args, const mp_obj_t *args) {
 #ifndef TULIPCC_R10
     return mp_obj_new_int(check_joy());
 #else
-    return 0;
+    return mp_obj_new_int(0);
 #endif
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_joy_obj, 0, 0, tulip_joy);

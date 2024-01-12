@@ -1,14 +1,14 @@
-# pal.py
-# show all 255 RGB332 colors with pal_idx #s
-import tulip
-tulip.gpu_reset()
-tulip.bg_clear(0)
-color = 0
-for row in range(13):
-    for col in range(20):
-        if(color < 256):
-            x = col*50
-            y = 25 + (row*44)
-            tulip.bg_str(str(color), x+18, y, 255)
-            tulip.bg_rect(x+20, y+4, 25, 25, color, 1)
-            color += 1
+# draw the rgb332 palette nicely
+
+w = 32
+h = 75
+tulip.bg_clear()
+for b in [0, 1, 2, 3]:
+    for rg in range(64):
+        c = (rg << 2) | b
+        x = ((b*8) + (rg % 8)) * w
+        y = int(rg / 8) * h
+        tulip.bg_rect(x,y,w,h,c,1)
+        tc = 255-c
+        tulip.bg_str("%03d" % (c), x+7, y+41, tc, 8)
+                
