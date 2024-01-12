@@ -75,6 +75,7 @@ list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/mphalport.c
     ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/help.c
+    ../../../tulip/esp32s3/network_common.c
     usb_serial_jtag.c
     gccollect.c
     fatfs_port.c
@@ -88,7 +89,6 @@ list(APPEND MICROPY_SOURCE_PORT
     machine_i2c.c
     machine_uart.c
     modmachine.c
-    network_common.c
     network_lan.c
     network_wlan.c
     network_ppp.c

@@ -73,6 +73,7 @@ list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/touchscreen.c
     ../../../tulip/esp32s3/multicast.c
     ../../../tulip/esp32s3/mphalport.c
+    ../../../tulip/esp32s3/network_common.c
     ../../../tulip/esp32s3/main.c
     ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/help.c
@@ -89,7 +90,6 @@ list(APPEND MICROPY_SOURCE_PORT
     machine_i2c.c
     machine_uart.c
     modmachine.c
-    network_common.c
     network_lan.c
     network_wlan.c
     network_ppp.c
