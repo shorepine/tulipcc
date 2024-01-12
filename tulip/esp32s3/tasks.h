@@ -51,7 +51,7 @@
 #define ALLES_RENDER_TASK_NAME      "alles_r_task"
 #define ALLES_FILL_BUFFER_TASK_NAME "alles_fb_task"
 
-#define MAX_TASKS 20 // includes system tasks
+#define MAX_TASKS 19 // includes system tasks
 
 extern TaskHandle_t display_handle;
 extern TaskHandle_t usb_handle;
