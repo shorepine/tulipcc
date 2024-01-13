@@ -55,7 +55,6 @@
 #include "modmachine.h"
 #include "modnetwork.h"
 #include "mpthreadport.h"
-
 #if MICROPY_BLUETOOTH_NIMBLE
 #include "extmod/modbluetooth.h"
 #endif
