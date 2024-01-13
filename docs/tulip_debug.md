@@ -26,7 +26,7 @@ On the first terminal window, open your serial monitor `idf.py monitor` and conf
 While the program is running, connect the second USB cable to your computer. In a second terminal window, make sure you export.sh and then run
 
 ```c
-# openocd -f board/esp32s3-builtin.cfg
+% openocd -f board/esp32s3-builtin.cfg
 
 Open On-Chip Debugger v0.12.0-esp32-20230921 (2023-09-21-13:27)
 Licensed under GNU GPL v2
@@ -69,7 +69,7 @@ Here, we were debugging an AMY crash when changing synth patches, so I started t
 When the crash happens you can inspect the frame:
 
 ```c
-# xtensa-esp32s3-elf-gdb -x gdbinit build/micropython.elf
+% xtensa-esp32s3-elf-gdb -x gdbinit build/micropython.elf
 ...
 Reading symbols from build/micropython.elf...
 ...
@@ -106,7 +106,7 @@ You can get a `gprof` profile of running code by percentage of time spent. This 
 To do this, make sure `openocd` is still running and then, in a second terminal window, while you're doing the thing you want to profile on the chip:
 
 ```c
-# telnet localhost 4444
+% telnet localhost 4444
 ...
 Connected to localhost.
 Escape character is '^]'.
@@ -120,14 +120,20 @@ Profiling completed. 127 samples.
 Wrote gmon.out
 ```
 
-Then we need to visualize this gmon.out using `gprof`. 
-You first need to munge the section name `.flash.text` in your compiled binary (ours is called `micropython.elf`) to `.text` so that gprof understands it. 
-Then you can run the included `gprof` that comes with ESP-IDF. `gprof` has tons of options, can draw pretty pictures to a PDF, etc, but i just like the default flat profile:
+`gmon.out` will get written to your local host computer wherever `openocd` is running. 
 
-```
-# cp build/micropython.elf micropython_gprof.elf
-# xtensa-esp32s3-elf-objcopy -I elf32-xtensa-le --rename-section .flash.text=.text micropython_gprof.elf
-# xtensa-esp32s3-elf-gprof micropython_gprof.elf gmon.out
+Now we need to process this `gmon.out` file using `gprof`. 
+
+To do so, you need access to the compiled binary as well as `gmon.out`. For ESP-IDF, a compiled binary is an `elf` file, probably `build/X.elf`. This `elf` file needs some light modification before you give it to `gprof.`. You need to copy it and then rename the section name `.flash.text` to `.text` so that gprof understands it. You can do that with a call to `xtensa-esp32s3-elf-objcopy`. 
+
+Then you can run the included `gprof` that comes with ESP-IDF. `gprof` has tons of options, can draw pretty pictures to a PDF, etc, but i just like the default flat profile. 
+
+So put together, here's how we process the `elf` file and then profile in Tulip:
+
+```bash
+% cp build/micropython.elf micropython_gprof.elf # copy the .elf as we have to modify it
+% xtensa-esp32s3-elf-objcopy -I elf32-xtensa-le --rename-section .flash.text=.text micropython_gprof.elf
+% xtensa-esp32s3-elf-gprof micropython_gprof.elf gmon.out
 
 Flat profile:
 
