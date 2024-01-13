@@ -124,7 +124,7 @@ Wrote gmon.out
 
 Now we need to process this `gmon.out` file using `gprof`. 
 
-To do so, you need access to the compiled binary as well as `gmon.out`. For ESP-IDF, a compiled binary is an `elf` file, probably `build/X.elf`. This `elf` file needs some light modification before you give it to `gprof.`. You need to copy it and then rename the section name `.flash.text` to `.text` so that gprof understands it. You can do that with a call to `xtensa-esp32s3-elf-objcopy`. 
+To do so, you need access to the compiled binary as well as `gmon.out`. For ESP-IDF, a compiled binary is an `elf` file, probably `build/X.elf`. This `elf` file needs some light modification before you give it to `gprof`. You need to copy it and then rename the section name `.flash.text` to `.text` so that gprof understands it. You can do that with a call to `xtensa-esp32s3-elf-objcopy`. 
 
 Then you can run the included `gprof` that comes with ESP-IDF. `gprof` has tons of options, can draw pretty pictures to a PDF, etc, but i just like the default flat profile. 
 
