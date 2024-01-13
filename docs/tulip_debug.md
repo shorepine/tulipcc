@@ -120,6 +120,8 @@ Profiling completed. 127 samples.
 Wrote gmon.out
 ```
 
+(I had to install telnet on my mac to get this to work - `brew install telnet` did it.)
+
 `gmon.out` will get written to your local host computer wherever `openocd` is running. 
 
 Now we need to process this `gmon.out` file using `gprof`. 
