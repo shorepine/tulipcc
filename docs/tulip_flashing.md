@@ -15,6 +15,8 @@ macOS:
 brew install cmake ninja dfu-util
 ```
 
+You *may* need a driver for a serial-USB chip on the Tulip you're working with. If your board (including Tulip r10) uses a CH340X chip, and it is not detected by `idf.py`, [you may need to follow the instructions here to install a driver.](https://github.com/WCHSoftGroup/ch34xser_macos)
+
 Linux:
 ```bash
 # install esp-idf's requirements

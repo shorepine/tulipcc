@@ -64,12 +64,15 @@ void esp_fill_audio_buffer_task() {
         // Write to i2s
         int16_t *block = amy_fill_buffer();
 
-
+        // We turn off writing to i2s on r10 when doing on chip debugging because of pins
+        #ifndef TULIP_R10_DEBUG
         size_t written = 0;
         i2s_channel_write(tx_handle, block, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS, &written, portMAX_DELAY);
         if(written != AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS) {
             fprintf(stderr,"i2s underrun: %d vs %d\n", written, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS);
         }
+        #endif
+
     }
 }
 
@@ -161,7 +164,10 @@ amy_err_t setup_i2s(void) {
 #ifdef ESP_PLATFORM
 void run_alles() {
     check_init(&esp_event_loop_create_default, "Event");
-    check_init(&setup_i2s, "i2s");
+    // We turn off writing to i2s on r10 when doing on chip debugging because of pins
+    #ifndef TULIP_R10_DEBUG
+        check_init(&setup_i2s, "i2s");
+    #endif
     esp_amy_init();
     amy_reset_oscs();
     // Schedule a "turning on" sound
