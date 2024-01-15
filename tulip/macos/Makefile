@@ -67,8 +67,9 @@ INC += -I./SDL2.framework/Headers
 
 # compiler settings
 CWARN = -Wall -Werror
-CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion
-CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
+CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations
+CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA) 
+CFLAGS += -DAMY_DEBUG
 
 CFLAGS += $(ARCHFLAGS) 
 # Debugging/Optimization
