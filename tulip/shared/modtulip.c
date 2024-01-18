@@ -17,6 +17,7 @@
 
 #ifdef ESP_PLATFORM
 #include "tasks.h"
+#include "driver/rtc_io.h"
 #endif
 
 
@@ -31,6 +32,19 @@ extern void save_tfb();
 extern void restore_tfb();
 extern uint8_t tfb_active;
 
+STATIC mp_obj_t tulip_off(size_t n_args, const mp_obj_t *args) {
+    #ifdef ESP_PLATFORM
+    gpio_hold_dis(PIN_NUM_BK_PWM);
+    gpio_set_level(PIN_NUM_BK_PWM, 1); //set high/low
+    gpio_hold_en(PIN_NUM_BK_PWM);
+    gpio_deep_sleep_hold_en();
+    esp_deep_sleep_start(); //sleep
+    #endif
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_off_obj, 0, 0, tulip_off);
+
+
 STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
     if(n_args==1) {
         uint16_t mhz = mp_obj_get_int(args[0]);
@@ -41,8 +55,12 @@ STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_clock_obj, 0, 1, tulip_display_clock);
 
+extern void esp32s3_display_restart();
 STATIC mp_obj_t tulip_display_restart(size_t n_args, const mp_obj_t *args) {
-    display_set_clock(PIXEL_CLOCK_MHZ);
+    #ifdef ESP_PLATFORM
+    esp32s3_display_restart();
+    #endif
+    //display_set_clock(PIXEL_CLOCK_MHZ);
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_display_restart_obj, 0, 0, tulip_display_restart);
@@ -1303,6 +1321,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_build_strings_obj, 0,0, tulip_b
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
+    { MP_ROM_QSTR(MP_QSTR_off), MP_ROM_PTR(&tulip_off_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_restart), MP_ROM_PTR(&tulip_display_restart_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_stop), MP_ROM_PTR(&tulip_display_stop_obj) },

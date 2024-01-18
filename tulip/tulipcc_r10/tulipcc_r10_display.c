@@ -13,7 +13,18 @@ uint32_t HSYNC_PULSE_WIDTH=DEFAULT_HSYNC_PULSE_WIDTH;
 uint32_t VSYNC_BACK_PORCH=DEFAULT_VSYNC_BACK_PORCH;
 uint32_t VSYNC_FRONT_PORCH=DEFAULT_VSYNC_FRONT_PORCH;
 uint32_t VSYNC_PULSE_WIDTH=DEFAULT_VSYNC_PULSE_WIDTH;
+void set_pin(uint16_t pin, uint8_t value) {
+    gpio_config_t peri_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << pin
+    };
+    gpio_config(&peri_gpio_config);
+    gpio_set_level(pin, value);
+}
 
+void esp32s3_display_restart() {
+    esp_lcd_rgb_panel_restart(panel_handle);
+}
 
 // This gets called at vsync / frame done
 static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
@@ -72,6 +83,7 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
 //    delay_ms(5000);
 }
 
+
 void esp32s3_display_stop() {
     esp_lcd_panel_del(panel_handle);
 }
@@ -82,15 +94,18 @@ void esp32s3_display_start() {
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
+    display_brightness(brightness); 
+
 }
 
 
 
 void esp_display_set_clock(uint8_t mhz) {  
-        display_stop();
+        //display_stop();
         PIXEL_CLOCK_MHZ = mhz;
-        panel_config.timings.pclk_hz = PIXEL_CLOCK_MHZ*1000*1000;
-        display_start();
+        esp_lcd_rgb_panel_set_pclk(panel_handle, mhz*1000*1000);
+        //panel_config.timings.pclk_hz = PIXEL_CLOCK_MHZ*1000*1000;
+        //display_start();
 }
 
 
@@ -119,6 +134,7 @@ void display_pwm_setup() {
 }
 
 
+
 void display_brightness(uint8_t amount) {
     if(amount < 1) amount = 1;
     if(amount > 9) amount = 9;
@@ -129,14 +145,6 @@ void display_brightness(uint8_t amount) {
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1) ;
 }
 
-void set_pin(uint16_t pin, uint8_t value) {
-    gpio_config_t peri_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << pin
-    };
-    gpio_config(&peri_gpio_config);
-    gpio_set_level(pin, value);
-}
 
 
 
@@ -218,7 +226,6 @@ void run_esp32s3_display(void) {
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
     display_pwm_setup();
     display_brightness(brightness); 
-    
     
     // Time the frame sync and stay running forever 
     int64_t free_time = 0;
