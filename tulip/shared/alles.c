@@ -44,7 +44,7 @@ extern void mcast_listen_task(void *pvParameters);
 void esp_render_task( void * pvParameters) {
     while(1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        amy_render(AMY_OSCS/2, AMY_OSCS, 1);
+        amy_render(0, AMY_OSCS/2, 1);
         xTaskNotifyGive(alles_fill_buffer_handle);
     }
 }
@@ -52,17 +52,20 @@ void esp_render_task( void * pvParameters) {
 // Make AMY's FABT run forever , as a FreeRTOS task 
 void esp_fill_audio_buffer_task() {
     while(1) {
+        AMY_PROFILE_START(AMY_ESP_FILL_BUFFER)
+
         // Get ready to render
         amy_prepare_buffer();
         // Tell the other core to start rendering
         xTaskNotifyGive(amy_render_handle);
         // Render me
-        amy_render(0, AMY_OSCS/2, 0);
+        amy_render(AMY_OSCS/2, AMY_OSCS, 0);
         // Wait for the other core to finish
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
         // Write to i2s
         int16_t *block = amy_fill_buffer();
+        AMY_PROFILE_STOP(AMY_ESP_FILL_BUFFER)
 
         // We turn off writing to i2s on r10 when doing on chip debugging because of pins
         #ifndef TULIP_R10_DEBUG
@@ -72,6 +75,7 @@ void esp_fill_audio_buffer_task() {
             fprintf(stderr,"i2s underrun: %d vs %d\n", written, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS);
         }
         #endif
+
 
     }
 }

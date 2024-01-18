@@ -24,7 +24,7 @@ void run_esp32s3_display();
 void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9,uint32_t t10,uint32_t t11);
 void display_brightness(uint8_t amount);
 void esp_display_set_clock(uint8_t mhz) ;
-
+void esp32s3_display_restart();
 void esp32s3_display_stop();
 void esp32s3_display_start();
 
@@ -40,12 +40,15 @@ void esp32s3_display_start();
 // 18 -- 24.1FPS skips during long lines of TFB text but otherwise fine
 // https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/_images/ESP32-S3_DevKitC-1_pinlayout.jpg
 
+
 #define DEFAULT_HSYNC_BACK_PORCH 16
 #define DEFAULT_HSYNC_FRONT_PORCH 210
 #define DEFAULT_HSYNC_PULSE_WIDTH 30
 #define DEFAULT_VSYNC_BACK_PORCH 10
 #define DEFAULT_VSYNC_FRONT_PORCH 22
 #define DEFAULT_VSYNC_PULSE_WIDTH 13
+
+
 
 // VGA
 /*
