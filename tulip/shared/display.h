@@ -47,7 +47,7 @@ extern uint8_t tfb_log;
 void display_reset_sprites();
 void display_reset_tfb();
 void display_reset_bg();
-
+void display_tfb_update();
 void display_set_clock(uint8_t mhz) ;
 
 void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx);

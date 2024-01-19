@@ -164,6 +164,7 @@ void paint_tfb(uint16_t start_at_y) {
             clear_row(y);
         }
     }
+    display_tfb_update();
 }
 
 

@@ -27,6 +27,7 @@ uint8_t *collision_bitfield;
 // RAM for sprites and background FB
 uint8_t *sprite_ram; // in IRAM
 uint8_t * bg; // in SPIRAM
+uint8_t * bg_tfb;
 
 uint8_t * sprite_ids;
 uint16_t *sprite_x_px;//[SPRITES]; 
@@ -168,35 +169,10 @@ uint16_t * line_data_ptr= NULL;
     uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
     // compute the starting TFB row offset 
     uint8_t * b = (uint8_t*)bounce_buf;
-    int16_t touch_x = last_touch_x[0];
-    int16_t touch_y = last_touch_y[0];
-    uint8_t touch_held_local = touch_held;
-    uint16_t start_col_px = 0;
+    //int16_t touch_x = last_touch_x[0];
+    //int16_t touch_y = last_touch_y[0];
+    //uint8_t touch_held_local = touch_held;
 
-    // We want to (first vertically) center our visible window.
-    // compute starting row given V_RES_D..
-    // TODO -- this cuts off the top by half a line with ipad pro resolution
-    if(V_RES != V_RES_D) {
-        if(starting_display_row_px < ((V_RES-V_RES_D)/2)) {
-            // not yet in the window
-            memset(bounce_buf, 0, len_bytes); 
-            goto bounce_end;
-        } else if(starting_display_row_px >= ((V_RES-V_RES_D)/2)+V_RES_D) {
-            // past the window
-            memset(bounce_buf, 0, len_bytes); 
-            goto bounce_end;            
-        } else {
-            // it's me. adjust starting row px
-            starting_display_row_px = starting_display_row_px - ((V_RES-V_RES_D)/2);
-            // Also update touch_y
-            touch_y = touch_y - ((V_RES-V_RES_D)/2);
-        }
-    }
-
-    // And likewise, center horizontally 
-    if(H_RES != H_RES_D) {
-        start_col_px = ((H_RES-H_RES_D)/2);
-    }
 
 
     // Copy in the BG, line by line 
@@ -204,84 +180,27 @@ uint16_t * line_data_ptr= NULL;
     // 209uS per call at 12 lines RGB332
     // 416uS per call at 12 lines RGB565
     for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
-        memcpy(b+start_col_px+(H_RES*BYTES_PER_PIXEL*rows_relative_px), bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], H_RES_D*BYTES_PER_PIXEL); 
+        uint8_t * b_ptr = b+(H_RES*rows_relative_px);
+/*
+        memcpy(
+            b_ptr, 
+            bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], 
+            H_RES
+        ); 
+        
+*/        
+        // copy the TFB bitmap in
+        uint16_t y = (starting_display_row_px+rows_relative_px);
+        for(uint16_t x=0;x<H_RES;x++) {
+            b_ptr[x] = bg_lines[(y % V_RES)][x] | bg_tfb[y * H_RES + x];
+        }
+        
     }
 
-    // Now per row (N (now 12) pixel rows per call), draw the text frame buffer and sprites on top of the BG
-    for(uint8_t bounce_row_px=0;bounce_row_px<bounce_total_rows_px;bounce_row_px++) {
+
+    
+    #if 0
         memset(sprite_ids, 255, H_RES);
-        if(tfb_active) {
-            uint8_t tfb_row = (starting_display_row_px+bounce_row_px) / FONT_HEIGHT;
-            uint8_t tfb_row_offset_px = (starting_display_row_px+bounce_row_px) % FONT_HEIGHT; 
-
-            uint8_t tfb_col = 0;
-            while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
-
-                #ifndef TULIP_REPL_FONT_8X6
-                    uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
-                #else
-                    uint8_t data = portfolio_glyph_bitmap[(TFB[tfb_row*TFB_COLS+tfb_col] -32) * 8 + tfb_row_offset_px];
-                #endif
-                uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
-                uint8_t fg_color = TFBfg[tfb_row*TFB_COLS+tfb_col];
-                uint8_t bg_color = TFBbg[tfb_row*TFB_COLS+tfb_col];
-
-                // If you're looking at this code just know the unrolled versions were 1.5x faster than loops on esp32s3
-                // I'm sure there's more to do but this is the best we could get it for now
-                uint8_t * bptr = b + start_col_px + (bounce_row_px*H_RES + tfb_col*FONT_WIDTH);
-                if(bg_color == ALPHA) {
-                    if(format & FORMAT_INVERSE) {
-                        if(!((data) & 0x80)) *(bptr) = fg_color; 
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        #ifndef TULIP_REPL_FONT_8X6
-                            bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                            bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        #endif
-                    } else {
-                        if((data) & 0x80) *(bptr) = fg_color; 
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        #ifndef TULIP_REPL_FONT_8X6
-                            bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                            bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        #endif
-                    }
-                } else {
-                    if(format & FORMAT_INVERSE) {
-                        if(!((data) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        #ifndef TULIP_REPL_FONT_8X6
-                            bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                            bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        #endif
-                    } else {
-                        if((data) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        #ifndef TULIP_REPL_FONT_8X6
-                            bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                            bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        #endif
-                    }
-
-                }
-                tfb_col++;
-            }
-        }
         // Add in the sprites
         uint16_t row_px = starting_display_row_px + bounce_row_px; 
         // Add touch in as a fake colliison, if it exists
@@ -384,14 +303,91 @@ uint16_t * line_data_ptr= NULL;
             }
 
         } // for each sprite
-    } // per each row
-    bounce_end:
-        bounce_time += (get_time_us() - tic); // stop timer
-        bounce_count++;
+        #endif
+    //} // per each row
+    bounce_time += (get_time_us() - tic); // stop timer
+    bounce_count++;
 
-        return false; 
+    return false; 
 }
 
+
+void display_tfb_update() { 
+    if(!tfb_active) { return; }
+
+    for(uint16_t bounce_row_px=0;bounce_row_px<V_RES;bounce_row_px++) {
+        memset(bg_tfb + (bounce_row_px*H_RES), 0, H_RES);
+
+        uint8_t tfb_row = bounce_row_px / FONT_HEIGHT;
+        uint8_t tfb_row_offset_px = bounce_row_px % FONT_HEIGHT; 
+        uint8_t tfb_col = 0;
+        while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
+            #ifndef TULIP_REPL_FONT_8X6
+                uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
+            #else
+                uint8_t data = portfolio_glyph_bitmap[(TFB[tfb_row*TFB_COLS+tfb_col] -32) * 8 + tfb_row_offset_px];
+            #endif
+            uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
+            uint8_t fg_color = TFBfg[tfb_row*TFB_COLS+tfb_col];
+            uint8_t bg_color = TFBbg[tfb_row*TFB_COLS+tfb_col];
+
+            // If you're looking at this code just know the unrolled versions were 1.5x faster than loops on esp32s3
+            // I'm sure there's more to do but this is the best we could get it for now
+            uint8_t * bptr = bg_tfb + (bounce_row_px*H_RES + tfb_col*FONT_WIDTH);
+            if(bg_color == ALPHA) {
+                if(format & FORMAT_INVERSE) {
+                    if(!((data) & 0x80)) *(bptr) = fg_color; 
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                    #ifndef TULIP_REPL_FONT_8X6
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
+                    #endif
+                } else {
+                    if((data) & 0x80) *(bptr) = fg_color; 
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                    #ifndef TULIP_REPL_FONT_8X6
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
+                    #endif
+                }
+            } else {
+                if(format & FORMAT_INVERSE) {
+                    if(!((data) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    #ifndef TULIP_REPL_FONT_8X6
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    #endif
+                } else {
+                    if((data) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    #ifndef TULIP_REPL_FONT_8X6
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
+                    #endif
+                }
+            }
+            tfb_col++;
+        }
+    }
+
+}
 void display_reset_bg() {
     bg_pal_color = TULIP_TEAL;
     for(int i=0;i<(H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX);i++) { 
@@ -401,6 +397,7 @@ void display_reset_bg() {
     // init the scroll pointer to the top left of the fb 
     for(int i=0;i<V_RES;i++) {
         bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*i];
+        //bg_lines[i] = (uint32_t*)&bg_tfb[(H_RES)*i];
         x_offsets[i] = 0;
         y_offsets[i] = i;
         x_speeds[i] = 0;
@@ -425,6 +422,7 @@ void display_reset_tfb() {
     ansi_active_fg_color = tfb_fg_pal_color; 
     ansi_active_bg_color = tfb_bg_pal_color;
     tfb_active = 1;
+    //display_tfb_update();
 
 
 }
@@ -884,8 +882,9 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, u
             }
         }
     }
-    // Update the cursor
-    display_tfb_cursor(tfb_x_col, tfb_y_row);    
+    // Update the cursor 
+    display_tfb_cursor(tfb_x_col, tfb_y_row);  
+    display_tfb_update();
 }
 
 
@@ -903,6 +902,7 @@ void display_set_clock(uint8_t mhz) {
 void display_teardown(void) {
     fprintf(stderr, "freeing bg\n");
     free_caps(bg); bg = NULL;
+    free_caps(bg_tfb); bg_tfb = NULL;
     free_caps(sprite_ids);
     free_caps(sprite_ram); sprite_ram = NULL; 
     free_caps(sprite_x_px); sprite_x_px = NULL;
@@ -931,7 +931,7 @@ void display_init(void) {
     BOUNCE_BUFFER_SIZE_PX = (H_RES*12) ;
     // Create the background FB
     bg = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-
+    bg_tfb = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
     // And various ptrs
     sprite_ids = (uint8_t*)malloc_caps(H_RES_D *  sizeof(uint8_t), MALLOC_CAP_INTERNAL);
