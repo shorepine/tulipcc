@@ -1,0 +1,39 @@
+menu "LCD and Touch Panel"
+    comment "LCD Touch Drivers are maintained in the IDF Component Registry"
+
+    menu "LCD Peripheral Configuration"
+        config LCD_PANEL_IO_FORMAT_BUF_SIZE
+            int "LCD panel io format buffer size"
+            default 32
+            help
+                LCD driver allocates an internal buffer to transform the data into a proper format, because of
+                the endian order mismatch. This option is to set the size of the buffer, in bytes.
+
+        config LCD_ENABLE_DEBUG_LOG
+            bool "Enable debug log"
+            default n
+            help
+                Wether to enable the debug log message for LCD driver.
+                Note that, this option only controls the LCD driver log, won't affect other drivers.
+
+        if SOC_LCD_RGB_SUPPORTED
+            config LCD_RGB_ISR_IRAM_SAFE
+                bool "RGB LCD ISR IRAM-Safe"
+                default n
+                help
+                    Ensure the LCD interrupt is IRAM-Safe by allowing the interrupt handler to be
+                    executable when the cache is disabled (e.g. SPI Flash write).
+                    If you want the LCD driver to keep flushing the screen even when cache ops disabled,
+                    you can enable this option. Note, this will also increase the IRAM usage.
+
+            config LCD_RGB_RESTART_IN_VSYNC
+                bool "Restart transmission in VSYNC"
+                default n
+                select GDMA_CTRL_FUNC_IN_IRAM # need to restart GDMA in the LCD ISR
+                help
+                    Reset the GDMA channel every VBlank to stop permanent desyncs from happening.
+                    Only need to enable it when in your application, the DMA can't deliver data
+                    as fast as the LCD consumes it.
+        endif # SOC_LCD_RGB_SUPPORTED
+    endmenu
+endmenu

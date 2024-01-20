@@ -29,47 +29,28 @@ void esp32s3_display_restart() {
 }
 
 bool IRAM_ATTR display_bounce_empty(esp_lcd_panel_handle_t panel, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    //int64_t tic=get_time_us(); // start the timer
-    // Which pixel row and TFB row is this
-    //struct display_data * dd = (struct display_data *)user_ctx;
-
-
     uint16_t starting_display_row_px = pos_px / H_RES;
-    uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
-    // compute the starting TFB row offset 
+    uint8_t bounce_total_rows_px = len_bytes / H_RES;
     uint8_t * b = (uint8_t*)bounce_buf;
-    //int16_t touch_x = last_touch_x[0];
-    //int16_t touch_y = last_touch_y[0];
-    //uint8_t touch_held_local = touch_held;
 
-
-
-    // Copy in the BG, line by line 
-    // 208uS per call at 6 lines RGB565
-    // 209uS per call at 12 lines RGB332
-    // 416uS per call at 12 lines RGB565
     for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
         uint8_t * b_ptr = b+(H_RES*rows_relative_px);
         uint16_t y = (starting_display_row_px+rows_relative_px) % V_RES;
-        memcpy(
-            b_ptr, 
-            bg_lines[y], 
-            H_RES
-        ); 
-        // Copy the TFB bg ontop only as many px as it has (maybe this should be per row)
+        memcpy(b_ptr, bg_lines[y], H_RES); 
         memcpy(b_ptr, bg_tfb + (y * H_RES),TFB_pxlen[y]);
     }
-    return true;
+    return false;
 }
 
 
 // This gets called at vsync / frame done
 static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
-    TaskHandle_t task_to_notify = (TaskHandle_t)user_ctx;
-    BaseType_t high_task_wakeup;
-    display_frame_done_generic();
-    vTaskNotifyGiveFromISR(task_to_notify, &high_task_wakeup);
-    return high_task_wakeup;
+    //TaskHandle_t task_to_notify = (TaskHandle_t)user_ctx;
+    //BaseType_t high_task_wakeup;
+    //display_frame_done_generic();
+    //vTaskNotifyGiveFromISR(task_to_notify, &high_task_wakeup);
+    //return high_task_wakeup;
+    return false;
 }
 
 
@@ -197,7 +178,7 @@ void run_esp32s3_display(void) {
     panel_handle = NULL;
     panel_config.data_width = BYTES_PER_PIXEL*8; 
     panel_config.psram_trans_align = 64;
-    panel_config.clk_src = LCD_CLK_SRC_PLL160M;
+    panel_config.clk_src = LCD_CLK_SRC_DEFAULT;
     panel_config.disp_gpio_num = PIN_NUM_DISP_EN;
     panel_config.pclk_gpio_num = PIN_NUM_PCLK;
     panel_config.vsync_gpio_num = PIN_NUM_VSYNC;
@@ -274,8 +255,9 @@ void run_esp32s3_display(void) {
     int64_t tic0 = esp_timer_get_time();
     uint16_t loop_count =0;
     while(1)  { 
-        ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
-
+        
+        //ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
+        vTaskDelay(20);
         #if 0
         int64_t tic1 = esp_timer_get_time();
         free_time += (esp_timer_get_time() - tic1);

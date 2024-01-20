@@ -217,7 +217,7 @@ void mp_task(void *pvParameter) {
 
     heap_caps_register_failed_alloc_callback(esp_alloc_failed);
     uint32_t caps = MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM;
-    size_t mp_task_heap_size = 4 * 1024 * 1024; // MIN(heap_caps_get_largest_free_block(caps), heap_total / 2);
+    size_t mp_task_heap_size = 2 * 1024 * 1024; // MIN(heap_caps_get_largest_free_block(caps), heap_total / 2);
     void *mp_task_heap = heap_caps_malloc(mp_task_heap_size, caps);
 
 soft_reset:

@@ -408,9 +408,9 @@ void editor_save() {
             }
             text[c++] = '\n';
         }
-        display_stop();
+        //display_stop();
         write_file(fn, (uint8_t*)text, c, 0);
-        display_start();
+        //display_start();
         dirty = 0;
         editor_free(text);
     } else {
