@@ -41,6 +41,7 @@ uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBbg;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBf;//[TFB_ROWS][TFB_COLS];
+uint16_t *TFB_pxlen;
 int16_t *x_offsets;//[V_RES];
 int16_t *y_offsets;//[V_RES];
 int16_t *x_speeds;//[V_RES];
@@ -51,8 +52,6 @@ uint32_t **bg_lines;//[V_RES];
 // Defaults for runtime display params
 uint16_t H_RES = DEFAULT_H_RES;
 uint16_t V_RES = DEFAULT_V_RES;
-uint16_t H_RES_D = DEFAULT_H_RES;
-uint16_t V_RES_D = DEFAULT_V_RES;
 uint16_t OFFSCREEN_X_PX = DEFAULT_OFFSCREEN_X_PX;
 uint16_t OFFSCREEN_Y_PX = DEFAULT_OFFSCREEN_Y_PX;
 uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
@@ -161,8 +160,8 @@ uint16_t * line_data_ptr= NULL;
 // Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
 
- bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    int64_t tic=get_time_us(); // start the timer
+IRAM_ATTR static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
+    //int64_t tic=get_time_us(); // start the timer
     // Which pixel row and TFB row is this
 
     uint16_t starting_display_row_px = pos_px / H_RES;
@@ -181,20 +180,14 @@ uint16_t * line_data_ptr= NULL;
     // 416uS per call at 12 lines RGB565
     for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
         uint8_t * b_ptr = b+(H_RES*rows_relative_px);
-/*
+        uint16_t y = (starting_display_row_px+rows_relative_px) % V_RES;
         memcpy(
             b_ptr, 
-            bg_lines[(starting_display_row_px+rows_relative_px) % V_RES], 
+            bg_lines[y], 
             H_RES
         ); 
-        
-*/        
-        // copy the TFB bitmap in
-        uint16_t y = (starting_display_row_px+rows_relative_px);
-        for(uint16_t x=0;x<H_RES;x++) {
-            b_ptr[x] = bg_lines[(y % V_RES)][x] | bg_tfb[y * H_RES + x];
-        }
-        
+        // Copy the TFB bg ontop only as many px as it has (maybe this should be per row)
+        memcpy(b_ptr, bg_tfb + (y * H_RES),TFB_pxlen[y]);
     }
 
 
@@ -305,17 +298,24 @@ uint16_t * line_data_ptr= NULL;
         } // for each sprite
         #endif
     //} // per each row
-    bounce_time += (get_time_us() - tic); // stop timer
-    bounce_count++;
+    //bounce_time += (get_time_us() - tic); // stop timer
+    //bounce_count++;
 
     return false; 
 }
 
 
-void display_tfb_update() { 
+// set tfb_row_hint to -1 for everything
+void display_tfb_update(int8_t tfb_row_hint) { 
     if(!tfb_active) { return; }
 
-    for(uint16_t bounce_row_px=0;bounce_row_px<V_RES;bounce_row_px++) {
+    uint16_t bounce_row_start = 0;
+    uint16_t bounce_row_end = V_RES;
+    if(tfb_row_hint >= 0) {
+        bounce_row_start = tfb_row_hint * FONT_HEIGHT;
+        bounce_row_end = bounce_row_start + FONT_HEIGHT;
+    }
+    for(uint16_t bounce_row_px=bounce_row_start;bounce_row_px<bounce_row_end;bounce_row_px++) {
         memset(bg_tfb + (bounce_row_px*H_RES), 0, H_RES);
 
         uint8_t tfb_row = bounce_row_px / FONT_HEIGHT;
@@ -385,6 +385,7 @@ void display_tfb_update() {
             }
             tfb_col++;
         }
+        TFB_pxlen[bounce_row_px] = tfb_col*FONT_WIDTH;
     }
 
 }
@@ -409,22 +410,20 @@ void display_reset_bg() {
 void display_reset_tfb() {
     // Clear out the TFB
     tfb_fg_pal_color = color_332(255,255,255);
-    tfb_bg_pal_color = ALPHA;
+    tfb_bg_pal_color = TULIP_TEAL;
     for(uint i=0;i<TFB_ROWS*TFB_COLS;i++) {
         TFB[i]=0;
         TFBfg[i]=tfb_fg_pal_color;
         TFBbg[i]=tfb_bg_pal_color;
         TFBf[i]=0;
     }
+    for(uint16_t i=0;i<V_RES;i++) TFB_pxlen[i] = 0;
     tfb_y_row = 0;
     tfb_x_col = 0;
     ansi_active_format = -1; // no override
     ansi_active_fg_color = tfb_fg_pal_color; 
     ansi_active_bg_color = tfb_bg_pal_color;
     tfb_active = 1;
-    //display_tfb_update();
-
-
 }
 
 void display_reset_sprites() {
@@ -688,8 +687,11 @@ void display_tfb_new_row() {
             TFBfg[tfb_y_row*TFB_COLS+i] = tfb_fg_pal_color;
             TFBbg[tfb_y_row*TFB_COLS+i] = tfb_bg_pal_color;
         }
+        // update the whole screen
+        display_tfb_update(-1);
     } else {
         // Still got space, just increase the row counter
+        display_tfb_update(tfb_y_row);
         tfb_y_row++;
     }
     // No matter what, go back to 0 on cols
@@ -884,7 +886,7 @@ void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, u
     }
     // Update the cursor 
     display_tfb_cursor(tfb_x_col, tfb_y_row);  
-    display_tfb_update();
+    display_tfb_update(tfb_y_row);
 }
 
 
@@ -903,6 +905,7 @@ void display_teardown(void) {
     fprintf(stderr, "freeing bg\n");
     free_caps(bg); bg = NULL;
     free_caps(bg_tfb); bg_tfb = NULL;
+    free_caps(TFB_pxlen); TFB_pxlen = NULL;
     free_caps(sprite_ids);
     free_caps(sprite_ram); sprite_ram = NULL; 
     free_caps(sprite_x_px); sprite_x_px = NULL;
@@ -925,8 +928,8 @@ void display_teardown(void) {
 
 
 void display_init(void) {
-    TFB_ROWS = (V_RES_D/FONT_HEIGHT);
-    TFB_COLS = (H_RES_D/FONT_WIDTH);
+    TFB_ROWS = (V_RES/FONT_HEIGHT);
+    TFB_COLS = (H_RES/FONT_WIDTH);
     // 12 divides into 600, 480, 240
     BOUNCE_BUFFER_SIZE_PX = (H_RES*12) ;
     // Create the background FB
@@ -934,7 +937,7 @@ void display_init(void) {
     bg_tfb = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
     // And various ptrs
-    sprite_ids = (uint8_t*)malloc_caps(H_RES_D *  sizeof(uint8_t), MALLOC_CAP_INTERNAL);
+    sprite_ids = (uint8_t*)malloc_caps(H_RES *  sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     sprite_ram = (uint8_t*)malloc_caps(SPRITE_RAM_BYTES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     sprite_x_px = (uint16_t*)malloc_caps(SPRITES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
     sprite_y_px = (uint16_t*)malloc_caps(SPRITES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
@@ -943,11 +946,14 @@ void display_init(void) {
     sprite_vis = (uint8_t*)malloc_caps(SPRITES*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     sprite_mem = (uint32_t*)malloc_caps(SPRITES*sizeof(uint32_t), MALLOC_CAP_INTERNAL);
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
+    TFB_pxlen = (uint16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
+
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBfg = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBbg = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
+
 
     x_offsets = (int16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
     y_offsets = (int16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);

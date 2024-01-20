@@ -386,9 +386,8 @@ tulip.frame_callback() # disables the callback
 # Sets the screen brightness, from 1-9 (9 max brightness.) 5 is default.
 tulip.brightness(5)
 
-# Show a log of the GPU usage (frames per second, time spent in GPU) to the stderr log
-tulip.gpu_log_start()
-tulip.gpu_log_stop()
+# Show the GPU usage (frames per second, time spent in GPU) at the next GPU epoch (100 frames) in stderr 
+tulip.gpu_log()
 ```
 
 ## Graphics background plane

@@ -164,7 +164,7 @@ void paint_tfb(uint16_t start_at_y) {
             clear_row(y);
         }
     }
-    display_tfb_update();
+    display_tfb_update(-1);
 }
 
 
@@ -173,6 +173,7 @@ void paint_tfb(uint16_t start_at_y) {
 void move_cursor(int16_t x, int16_t y) {
 	// Undo old cursor
 	TFBf[cursor_y*TFB_COLS+cursor_x] = 0; 
+    display_tfb_update(cursor_y);
 
 	// Move viewport up/down (TFB_ROWS-1) / 2
 	// Move cursor to next/prev line (which would now be in the middle of the screen)
@@ -206,6 +207,8 @@ void move_cursor(int16_t x, int16_t y) {
 
     if(TFB[cursor_y*TFB_COLS+cursor_x]==0) TFB[cursor_y*TFB_COLS+cursor_x] = 32;
 
+    display_tfb_update(y);
+
 	// Update status bar
 	char status[TFB_COLS];
 	// TODO, padding better 
@@ -213,6 +216,8 @@ void move_cursor(int16_t x, int16_t y) {
 	sprintf(status, "%04d / %04d [%02.2f%%] %3d %s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
 	string_at_row(status, strlen(status), TFB_ROWS-1);
 	format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
+    display_tfb_update(TFB_ROWS-1);
+
 
 }
 
@@ -282,6 +287,7 @@ void restore_tfb() {
             display_set_bg_pixel_pal(x,y,bg_pal_color);
         }
     }
+    display_tfb_update(-1);
 }
 
 void editor_new_file() {

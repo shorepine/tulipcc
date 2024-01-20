@@ -47,7 +47,7 @@ extern uint8_t tfb_log;
 void display_reset_sprites();
 void display_reset_tfb();
 void display_reset_bg();
-void display_tfb_update();
+void display_tfb_update(int8_t tfb_row_hint);
 void display_set_clock(uint8_t mhz) ;
 
 void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx);
@@ -76,7 +76,7 @@ void display_brightness(uint8_t amount);
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
- bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
+//IRAM_ATTR static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
 bool display_frame_done_generic();
 void display_swap();
 
@@ -103,12 +103,12 @@ extern const unsigned char portfolio_glyph_bitmap[1792];
 #define DEFAULT_V_RES 600 //600 
 #endif
 
-#define DEFAULT_OFFSCREEN_X_PX 1024
+#define DEFAULT_OFFSCREEN_X_PX 150
 #define DEFAULT_OFFSCREEN_Y_PX 150
-#define DEFAULT_PIXEL_CLOCK_MHZ 22
+#define DEFAULT_PIXEL_CLOCK_MHZ 28
 
 
-extern uint16_t H_RES, V_RES, H_RES_D, V_RES_D, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, PIXEL_CLOCK_MHZ;
+extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, PIXEL_CLOCK_MHZ;
 // Use this to set workable ... no, use a py func...
 //#define H_RES              800//1024
 //#define V_RES              480//600
@@ -170,6 +170,7 @@ extern uint8_t *collision_bitfield;
 extern uint8_t *sprite_ids;  // IRAM
 extern uint8_t *sprite_ram; // in IRAM
 extern uint8_t * bg; // in SPIRAM
+extern uint8_t * bg_tfb; // in SPIRAM
 extern uint16_t *sprite_x_px;//[SPRITES]; 
 extern uint16_t *sprite_y_px;//[SPRITES]; 
 extern uint16_t *sprite_w_px;//[SPRITES]; 
@@ -185,5 +186,5 @@ extern int16_t *y_offsets;//[V_RES];
 extern int16_t *x_speeds;//[V_RES];
 extern int16_t *y_speeds;//[V_RES];
 extern uint32_t **bg_lines;//[V_RES];
-
+extern uint16_t *TFB_pxlen;
 #endif

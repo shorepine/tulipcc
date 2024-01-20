@@ -23,8 +23,45 @@ void set_pin(uint16_t pin, uint8_t value) {
 }
 
 void esp32s3_display_restart() {
-    esp_lcd_rgb_panel_restart(panel_handle);
+    //esp_lcd_rgb_panel_restart(panel_handle);
+    esp32s3_display_stop();
+    esp32s3_display_start();
 }
+
+bool IRAM_ATTR display_bounce_empty(esp_lcd_panel_handle_t panel, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
+    //int64_t tic=get_time_us(); // start the timer
+    // Which pixel row and TFB row is this
+    //struct display_data * dd = (struct display_data *)user_ctx;
+
+
+    uint16_t starting_display_row_px = pos_px / H_RES;
+    uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
+    // compute the starting TFB row offset 
+    uint8_t * b = (uint8_t*)bounce_buf;
+    //int16_t touch_x = last_touch_x[0];
+    //int16_t touch_y = last_touch_y[0];
+    //uint8_t touch_held_local = touch_held;
+
+
+
+    // Copy in the BG, line by line 
+    // 208uS per call at 6 lines RGB565
+    // 209uS per call at 12 lines RGB332
+    // 416uS per call at 12 lines RGB565
+    for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
+        uint8_t * b_ptr = b+(H_RES*rows_relative_px);
+        uint16_t y = (starting_display_row_px+rows_relative_px) % V_RES;
+        memcpy(
+            b_ptr, 
+            bg_lines[y], 
+            H_RES
+        ); 
+        // Copy the TFB bg ontop only as many px as it has (maybe this should be per row)
+        memcpy(b_ptr, bg_tfb + (y * H_RES),TFB_pxlen[y]);
+    }
+    return true;
+}
+
 
 // This gets called at vsync / frame done
 static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
@@ -36,37 +73,34 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const 
 }
 
 
-bool esp32s3_display_bounce_empty(esp_lcd_panel_handle_t panel_io, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    return display_bounce_empty(bounce_buf, pos_px, len_bytes, user_ctx);
-}
+//bool esp32s3_display_bounce_empty(esp_lcd_panel_handle_t panel_io, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
+//    return display_bounce_empty(bounce_buf, pos_px, len_bytes, user_ctx);
+//}
 
 #include "tasks.h"
-void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9,uint32_t t10,uint32_t t11) {
+void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9) {
     fprintf(stderr, "Stopping display task\n");
     display_stop();
-    //vTaskDelete(display_handle);
-    display_teardown();
+    //display_teardown();
     H_RES = t0;
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
     OFFSCREEN_Y_PX = t3; 
-    H_RES_D = t4;
-    V_RES_D = t5;
-    HSYNC_BACK_PORCH = t6; 
-    HSYNC_FRONT_PORCH = t7; 
-    HSYNC_PULSE_WIDTH = t8; 
-    VSYNC_BACK_PORCH = t9; 
-    VSYNC_FRONT_PORCH = t10; 
-    VSYNC_PULSE_WIDTH = t11; 
+    HSYNC_BACK_PORCH = t4; 
+    HSYNC_FRONT_PORCH = t5; 
+    HSYNC_PULSE_WIDTH = t6; 
+    VSYNC_BACK_PORCH = t7; 
+    VSYNC_FRONT_PORCH = t8; 
+    VSYNC_PULSE_WIDTH = t9; 
 
-    TFB_ROWS = (V_RES_D/FONT_HEIGHT);
-    TFB_COLS = (H_RES_D/FONT_WIDTH);
+    TFB_ROWS = (V_RES/FONT_HEIGHT);
+    TFB_COLS = (H_RES/FONT_WIDTH);
 
     // Init the BG, TFB and sprite and UI layers
     //display_reset_bg();
     //display_reset_tfb();
     //display_reset_sprites();
-    display_init();
+    //display_init();
     panel_config.timings.h_res = H_RES;
     panel_config.timings.v_res = V_RES;
     panel_config.timings.hsync_back_porch = HSYNC_BACK_PORCH;
@@ -152,11 +186,14 @@ void display_brightness(uint8_t amount) {
 extern int64_t bounce_time;
 extern uint32_t bounce_count ;
 
+
+
+
 // Task runner for the display, inits and then spins in a loop processing frame done ISRs
 void run_esp32s3_display(void) {
     // First set up the memory
     display_init();
-    
+
     panel_handle = NULL;
     panel_config.data_width = BYTES_PER_PIXEL*8; 
     panel_config.psram_trans_align = 64;
@@ -207,6 +244,12 @@ void run_esp32s3_display(void) {
     panel_config.timings.vsync_front_porch = VSYNC_FRONT_PORCH;
     panel_config.timings.vsync_pulse_width = VSYNC_PULSE_WIDTH;
 
+    panel_config.timings.flags.hsync_idle_low = 1;
+    panel_config.timings.flags.vsync_idle_low = 1;
+    panel_config.timings.flags.de_idle_high = 0;
+    panel_config.timings.flags.pclk_active_neg = 1;
+    panel_config.timings.flags.pclk_idle_high = 1;
+
     panel_config.num_fbs = 0; // we do this ourselves
     panel_config.flags.fb_in_psram = 0;
     panel_config.flags.no_fb = 1;
@@ -217,11 +260,10 @@ void run_esp32s3_display(void) {
     brightness = DEFAULT_BRIGHTNESS;
 
     panel_callbacks.on_vsync = display_frame_done;
-    panel_callbacks.on_bounce_empty = esp32s3_display_bounce_empty;
+    panel_callbacks.on_bounce_empty = display_bounce_empty;
 
-    // Start the RGB panel
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
-    ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
+    ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, NULL));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
     display_pwm_setup();
@@ -232,9 +274,12 @@ void run_esp32s3_display(void) {
     int64_t tic0 = esp_timer_get_time();
     uint16_t loop_count =0;
     while(1)  { 
-        int64_t tic1 = esp_timer_get_time();
         ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
+
+        #if 0
+        int64_t tic1 = esp_timer_get_time();
         free_time += (esp_timer_get_time() - tic1);
+        
         if(loop_count++ >= 100) {
             reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);
             reported_gpu_usage = ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))))*100.0;
@@ -253,8 +298,10 @@ void run_esp32s3_display(void) {
             bounce_time = 0;
             loop_count = 0;
             free_time = 0;
+            gpu_log = 0;
             tic0 = esp_timer_get_time();
-        }        
+        }    
+        #endif    
     }
 
 

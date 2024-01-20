@@ -25,12 +25,9 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const 
 }
 
 
-bool esp32s3_display_bounce_empty(esp_lcd_panel_handle_t panel_io, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    return display_bounce_empty(bounce_buf, pos_px, len_bytes, user_ctx);
-}
 
 #include "tasks.h"
-void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9,uint32_t t10,uint32_t t11) {
+void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9) {
     fprintf(stderr, "Stopping display task\n");
     display_stop();
     //vTaskDelete(display_handle);
@@ -39,17 +36,15 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
     OFFSCREEN_Y_PX = t3; 
-    H_RES_D = t4;
-    V_RES_D = t5;
-    HSYNC_BACK_PORCH = t6; 
-    HSYNC_FRONT_PORCH = t7; 
-    HSYNC_PULSE_WIDTH = t8; 
-    VSYNC_BACK_PORCH = t9; 
-    VSYNC_FRONT_PORCH = t10; 
-    VSYNC_PULSE_WIDTH = t11; 
+    HSYNC_BACK_PORCH = t4; 
+    HSYNC_FRONT_PORCH = t5; 
+    HSYNC_PULSE_WIDTH = t6; 
+    VSYNC_BACK_PORCH = t7; 
+    VSYNC_FRONT_PORCH = t8; 
+    VSYNC_PULSE_WIDTH = t9; 
 
-    TFB_ROWS = (V_RES_D/FONT_HEIGHT);
-    TFB_COLS = (H_RES_D/FONT_WIDTH);
+    TFB_ROWS = (V_RES/FONT_HEIGHT);
+    TFB_COLS = (H_RES/FONT_WIDTH);
 
     // Init the BG, TFB and sprite and UI layers
     //display_reset_bg();

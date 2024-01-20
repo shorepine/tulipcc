@@ -116,8 +116,6 @@ void run_tdeck_display(void) {
     // Only one res for the TDeck
     H_RES=320;
     V_RES=240;
-    H_RES_D=320;
-    V_RES_D=240;
 
     // First set up the memory
     display_init();
