@@ -45,18 +45,13 @@ bool IRAM_ATTR display_bounce_empty(esp_lcd_panel_handle_t panel, void *bounce_b
 
 // This gets called at vsync / frame done
 static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
-    //TaskHandle_t task_to_notify = (TaskHandle_t)user_ctx;
-    //BaseType_t high_task_wakeup;
-    //display_frame_done_generic();
-    //vTaskNotifyGiveFromISR(task_to_notify, &high_task_wakeup);
-    //return high_task_wakeup;
-    return false;
+    TaskHandle_t task_to_notify = (TaskHandle_t)user_ctx;
+    BaseType_t high_task_wakeup;
+    display_frame_done_generic();
+    vTaskNotifyGiveFromISR(task_to_notify, &high_task_wakeup);
+    return high_task_wakeup;
 }
 
-
-//bool esp32s3_display_bounce_empty(esp_lcd_panel_handle_t panel_io, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-//    return display_bounce_empty(bounce_buf, pos_px, len_bytes, user_ctx);
-//}
 
 #include "tasks.h"
 void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9) {
@@ -256,34 +251,24 @@ void run_esp32s3_display(void) {
     uint16_t loop_count =0;
     while(1)  { 
         
-        //ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
-        vTaskDelay(20);
-        #if 0
+        ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
         int64_t tic1 = esp_timer_get_time();
         free_time += (esp_timer_get_time() - tic1);
         
         if(loop_count++ >= 100) {
             reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);
-            reported_gpu_usage = ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))))*100.0;
             if(gpu_log) {
-                printf("past %d frames %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). bounce_count %ld\n", 
+                printf("past %d frames %2.2f FPS. free time %llduS.\n", 
                     loop_count,
                     reported_fps, 
-                    free_time / loop_count,
-                    bounce_time / bounce_count,
-                    reported_gpu_usage,
-                    (int) (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))),
-                    bounce_count
+                    free_time / loop_count
                 );
             }
-            bounce_count = 1;
-            bounce_time = 0;
             loop_count = 0;
             free_time = 0;
             gpu_log = 0;
             tic0 = esp_timer_get_time();
         }    
-        #endif    
     }
 
 

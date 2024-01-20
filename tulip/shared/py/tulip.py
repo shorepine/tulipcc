@@ -258,7 +258,7 @@ def upgrade():
             tfb_log_start()
             print("Flashing %s... [%s]" % (f["filename"], screen_blank))
             time.sleep(5)
-            display_stop()
+            #display_stop()
             try:
                 print("Flashing OTA partition %s..." % (partition.info()[4]))
                 url = "https://%s/_matrix/media/r0/download/%s" % (world.host, f["url"][6:])
@@ -279,7 +279,7 @@ def upgrade():
                 # Partition.mark_app_valid_cancel_rollback is set in _boot.py. So if Tulip reboots properly, the partition will be marked OK
                 machine.reset()
             except Exception as e:
-                display_start()
+                #display_start()
                 sys.print_exception(e)
             tfb_log_stop()
 
@@ -332,9 +332,9 @@ def run(module):
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests
-    display_stop()
+    #display_stop()
     d = urequests.get(url, headers = headers).save(filename,mode)
-    display_start()
+    #display_start()
     return d
 
 def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
@@ -424,7 +424,7 @@ def tar_create(directory):
 def tar_extract(file_name, show_progress=True):
     import os
     import utarfile
-    display_stop()
+    #display_stop()
 
     tar = utarfile.TarFile(file_name, 'r')
     if(show_progress): print("extracting", file_name)
@@ -449,4 +449,4 @@ def tar_extract(file_name, show_progress=True):
                         dest.close()
                 except OSError as error:
                     if(show_progress): print("borked on:", i.name)
-    display_start()
+    #display_start()

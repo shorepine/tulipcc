@@ -157,7 +157,7 @@ void string_at_row(char * s, int16_t len, uint16_t y) {
 // (Re) paints the entire TFB
 void paint_tfb(uint16_t start_at_y) {
     for(uint16_t y=start_at_y;y<TFB_ROWS-1;y++) {
-        delay_ms(1); // this helps Tulip not lose sync of the screen
+        //delay_ms(1); // this helps Tulip not lose sync of the screen
         if(y_offset + y < lines) { 
 	       string_at_row(text_lines[y_offset+y], -1, y);
         } else {
@@ -274,7 +274,7 @@ void restore_tfb() {
 		TFBf[y] = saved_tfbf[y];
 		TFBfg[y] = saved_tfbfg[y];
 		TFBbg[y] = saved_tfbbg[y];
-        if(y%TFB_COLS==0) delay_ms(1);
+        //if(y%TFB_COLS==0) delay_ms(1);
 	}
 	editor_free(saved_tfb);
 	editor_free(saved_tfbf);
@@ -433,7 +433,7 @@ void editor_quit() {
 	}
 	restore_tfb();
 	for(uint16_t i=0;i<lines;i++) {
-        delay_ms(1);
+        //delay_ms(1);
 		editor_free(text_lines[i]);
 	}
 	editor_free(text_lines);

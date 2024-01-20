@@ -214,6 +214,8 @@ static esp_err_t lcd_rgb_panel_destory(esp_rgb_panel_t *rgb_panel)
 
 esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_config, esp_lcd_panel_handle_t *ret_panel)
 {
+    fprintf(stderr, "this is the TULIP SPECIAL esp_lcd\n");
+
 #if CONFIG_LCD_ENABLE_DEBUG_LOG
     esp_log_level_set(TAG, ESP_LOG_DEBUG);
 #endif
@@ -260,7 +262,6 @@ esp_err_t esp_lcd_new_rgb_panel(const esp_lcd_rgb_panel_config_t *rgb_panel_conf
                           "fb size must be even multiple of bounce buffer size");
         expect_bb_eof_count = fb_size / bb_size;
     }
-    fprintf(stderr, "this is the TULIP SPECIAL esp_lcd\n");
     // calculate the number of DMA descriptors
     size_t num_dma_nodes = 0;
     if (bb_size) {
