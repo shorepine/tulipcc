@@ -344,19 +344,12 @@ tulip.display_clock(mhz)
 
 # You can also change the timing and resolution on the fly. 
 # This is helpful for getting higher FPS with lower resolution (less pixels)
-# If h_visible or v_visible is smaller than the resolution of the display, we will draw the whole h_res and v_res
-# to the display but center your visible res in a window. This is helpful for the Tulip CC display which cannot 
-# easily change native resolution. Your FPS will stay the same but you will have more GPU time to draw in the window.
 
-# H_RES, V_RES, H_VISIBLE_RES, V_VISIBLE_RES should be multiples of the Tulip default font size -- 8 x 12.
-(h_res, v_res, h_offscreen_px, v_offscreen_px, h_visible_res, v_visible_res,
+# H_RES, V_RES should be multiples of the Tulip default font size -- 8 x 12.
+(h_res, v_res, h_offscreen_px, v_offscreen_px, 
   hsync_back_porch, hsync_front_porch, hsync_pulse_width, 
   vsync_back_porch, vsync_front_porch, vsync_pulse_width) = tulip.timing() # returns current
 tulip.timing(1024, 600, 256, 150, 139, 140, 20, 20, 12, 20) # sets, will erase all display RAM
-
-# You can set the visible window on its own with
-tulip.window(1024, 240)
-(w,h) = tulip.window()
 
 # Convenience function for getting the screen width and height,
 # which are just the first two values returned by tulip.timing()
@@ -581,10 +574,11 @@ model = tulip.wire_load("teapot.obj")
 # A model encodes vertices and faces of a 3d model. You can also generate this model in code yourself.  
 
 # Draw model wireframe to a line buffer
-lines = tulip.wire_to_lines(model, x, y, scale, theta, color)
+lines = tulip.wire_to_lines(model, x, y, scale, theta, color, max_lines)
 # scale = integer multiplier on 0..1 coordinates. in general, sets width/height of model as pixels
 # theta = # of 100.0/PI rotations
 # color = chooses the color of the entire model
+# max_lines = optional, cuts the model off at a number of lines (really, faces). if not given uses all lines in model
 
 # You can also generate line lists yourself in code.
 lines = tulip.lines([

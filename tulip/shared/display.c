@@ -160,35 +160,123 @@ uint16_t * line_data_ptr= NULL;
 // Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
 
-IRAM_ATTR static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    //int64_t tic=get_time_us(); // start the timer
-    // Which pixel row and TFB row is this
+bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
+    int16_t touch_x = last_touch_x[0];
+    int16_t touch_y = last_touch_y[0];
+    uint8_t touch_held_local = touch_held;
 
     uint16_t starting_display_row_px = pos_px / H_RES;
-    uint8_t bounce_total_rows_px = len_bytes / H_RES / BYTES_PER_PIXEL;
-    // compute the starting TFB row offset 
+    uint8_t bounce_total_rows_px = len_bytes / H_RES;
     uint8_t * b = (uint8_t*)bounce_buf;
-    //int16_t touch_x = last_touch_x[0];
-    //int16_t touch_y = last_touch_y[0];
-    //uint8_t touch_held_local = touch_held;
-
-
-
-    // Copy in the BG, line by line 
-    // 208uS per call at 6 lines RGB565
-    // 209uS per call at 12 lines RGB332
-    // 416uS per call at 12 lines RGB565
+    // Copy the bg then the TFB over 
     for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
         uint8_t * b_ptr = b+(H_RES*rows_relative_px);
-        uint16_t y = (starting_display_row_px+rows_relative_px) % V_RES;
-        memcpy(
-            b_ptr, 
-            bg_lines[y], 
-            H_RES
-        ); 
-        // Copy the TFB bg ontop only as many px as it has (maybe this should be per row)
+        uint16_t y = (starting_display_row_px + rows_relative_px) % V_RES;
+        memcpy(b_ptr, bg_lines[y], H_RES); 
         memcpy(b_ptr, bg_tfb + (y * H_RES),TFB_pxlen[y]);
-    }
+    
+
+        memset(sprite_ids, 255, H_RES);
+        if(touch_held_local && touch_y == y) {
+            if(touch_x >= 0 && touch_x < H_RES) {
+                sprite_ids[touch_x] = SPRITES-1;
+            }
+        }
+        for(uint8_t s=0;s<SPRITES;s++) {
+            if(sprite_vis[s]==SPRITE_IS_SPRITE) {
+                if(y >= sprite_y_px[s] && y < sprite_y_px[s]+sprite_h_px[s]) {
+                    // this sprite is on this line 
+                    // compute x and y (relative to the sprite!)
+                    uint8_t * sprite_data = &sprite_ram[sprite_mem[s]];
+                    uint16_t relative_sprite_y_px = y - sprite_y_px[s];
+                    for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
+                        if(col_px < H_RES) {
+                            uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
+                            uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
+                            if(b0 != ALPHA) {
+                                b[rows_relative_px*H_RES + col_px] = b0;
+                                // Only update collisions on non-alpha pixels
+                                uint8_t overlap_sprite = sprite_ids[col_px];
+                                if(overlap_sprite!=255) { // sprite already here!
+                                    uint16_t field = s * (s - 1) / 2 + overlap_sprite;
+                                    collision_bitfield[field / 8] |= 1 << (field % 8);
+                                }
+                                sprite_ids[col_px] = s;
+                            }
+                        }
+                    } // end for each column
+                } // end if this row has a sprite on it 
+            } else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
+                // draw this as a bresenham list
+                // find where to start
+                if(line_data_ptr == NULL) line_data_ptr = (uint16_t*)(&sprite_ram[sprite_mem[s]]);
+
+                uint16_t y0 = line_data_ptr[1];
+                uint16_t y1 = line_data_ptr[3];
+
+                // todo, we could get smarter and sort lines by length secondarily after y0 to save time here
+                while(y0 != 65535) {
+                    if(y >= y0 && y <= y1) {
+                        // get a int representation of how far down we are 
+                        uint16_t x_midpoint = 0;
+                        uint16_t x_line_width = 0;
+                        uint16_t x0 = line_data_ptr[0];
+                        uint16_t x1 = line_data_ptr[2];
+
+                        uint8_t color = ((x0 & 0xF000) >> 8) | ((x1 & 0xF000) >> 12);
+                        x0 = x0 & 0x0FFF;
+                        x1 = x1 & 0x0FFF;
+                        if(x1 > x0) {
+                            if(y1==y0) {
+                                x_line_width = x1-x0;
+                                x_midpoint = (x1-x0)/2;
+                            } else {
+                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
+                                x_midpoint = x0 + (((y-y0) * (x1-x0)) / (y1-y0));
+                            }
+                            if(x_line_width < 2) {
+                                b[rows_relative_px*H_RES+x_midpoint] = color;
+                            } else {
+                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
+                                    if(i <= x1 && i >= x0) { 
+                                        b[rows_relative_px*H_RES + i] = color;
+                                    }
+                                }
+                            }
+                        } else if (x1<x0) {
+                            if(y1==y0) {
+                                x_line_width = x0-x1;
+                                x_midpoint = (x0-x1)/2;
+                            } else {
+                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
+                                x_midpoint = x0 - (((y-y0) * (x0-x1)) / (y1-y0));
+                            }
+                            if(x_line_width < 2) {
+                                b[rows_relative_px*H_RES+x_midpoint] = color;
+                            } else {
+                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
+                                    if(i <= x0 && i >= x1) { 
+                                        b[rows_relative_px*H_RES + i] = color;
+                                    }
+                                }
+                            }
+                        } else {
+                            // A straight line up and down
+                            b[rows_relative_px*H_RES+x1] = color;
+                        }
+                    }
+                    line_data_ptr += 4;
+                    y0 = line_data_ptr[1];
+                    y1 = line_data_ptr[3];
+                }
+                line_data_ptr = NULL; // wrap around
+            }
+
+        } // for each sprite
+    } // for each row
+
+    return false;
+}
 
 
     
@@ -297,12 +385,6 @@ IRAM_ATTR static bool display_bounce_empty(void *bounce_buf, int pos_px, int len
 
         } // for each sprite
         #endif
-    //} // per each row
-    //bounce_time += (get_time_us() - tic); // stop timer
-    //bounce_count++;
-
-    return false; 
-}
 
 
 // set tfb_row_hint to -1 for everything

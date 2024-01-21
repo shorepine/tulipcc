@@ -139,7 +139,7 @@ void project_draw(uint16_t x0, uint16_t y0, uint16_t z0,  uint16_t x1, uint16_t 
 
 // TODO , go back to casting this as uint16
 
-mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta, uint8_t color){
+mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta, uint8_t color, int16_t max_faces){
     float theta_f = (float)theta * (M_PI/100.0);
     float scale_f = (float)scale;
     float fa,fb,fc,fd;
@@ -154,7 +154,10 @@ mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t sca
 
     uint16_t v_count = buf0[0];
     uint16_t f_count = buf0[1];
-
+    if(max_faces > 0) { 
+        if(f_count > max_faces) f_count = max_faces;
+    }
+    
     uint32_t f_offset = 2 + (v_count*3);
 
     uint32_t total_lines = f_count * 3 + 1; // one extra for end

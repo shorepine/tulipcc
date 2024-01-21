@@ -23,24 +23,10 @@ void set_pin(uint16_t pin, uint8_t value) {
 }
 
 void esp32s3_display_restart() {
-    //esp_lcd_rgb_panel_restart(panel_handle);
     esp32s3_display_stop();
     esp32s3_display_start();
 }
 
-bool IRAM_ATTR display_bounce_empty(esp_lcd_panel_handle_t panel, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    uint16_t starting_display_row_px = pos_px / H_RES;
-    uint8_t bounce_total_rows_px = len_bytes / H_RES;
-    uint8_t * b = (uint8_t*)bounce_buf;
-
-    for(uint8_t rows_relative_px=0;rows_relative_px<bounce_total_rows_px;rows_relative_px++) {
-        uint8_t * b_ptr = b+(H_RES*rows_relative_px);
-        uint16_t y = (starting_display_row_px+rows_relative_px) % V_RES;
-        memcpy(b_ptr, bg_lines[y], H_RES); 
-        memcpy(b_ptr, bg_tfb + (y * H_RES),TFB_pxlen[y]);
-    }
-    return false;
-}
 
 
 // This gets called at vsync / frame done
@@ -98,6 +84,9 @@ void esp32s3_display_stop() {
     esp_lcd_panel_del(panel_handle);
 }
 
+bool IRAM_ATTR esp32s3_display_bounce_empty(esp_lcd_panel_handle_t panel_io, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
+    return display_bounce_empty(bounce_buf, pos_px, len_bytes, user_ctx);
+}
 
 void esp32s3_display_start() {
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
@@ -236,7 +225,7 @@ void run_esp32s3_display(void) {
     brightness = DEFAULT_BRIGHTNESS;
 
     panel_callbacks.on_vsync = display_frame_done;
-    panel_callbacks.on_bounce_empty = display_bounce_empty;
+    panel_callbacks.on_bounce_empty = esp32s3_display_bounce_empty;
 
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, NULL));
@@ -251,8 +240,8 @@ void run_esp32s3_display(void) {
     uint16_t loop_count =0;
     while(1)  { 
         
-        ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
         int64_t tic1 = esp_timer_get_time();
+        ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
         free_time += (esp_timer_get_time() - tic1);
         
         if(loop_count++ >= 100) {

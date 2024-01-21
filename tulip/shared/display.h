@@ -14,6 +14,8 @@
 
 #ifdef ESP_PLATFORM
 #include "esp32s3_display.h"
+#else
+#define IRAM_ATTR
 #endif
 
 extern uint8_t bg_pal_color;
@@ -76,7 +78,7 @@ void display_brightness(uint8_t amount);
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
-//IRAM_ATTR static bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
+bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
 bool display_frame_done_generic();
 void display_swap();
 

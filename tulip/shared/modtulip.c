@@ -249,15 +249,19 @@ STATIC mp_obj_t tulip_wire_load(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_load_obj, 1, 1, tulip_wire_load);
 
 
-extern mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta, uint8_t color);
+extern mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta, uint8_t color,  int16_t max_faces);
+
 
 STATIC mp_obj_t tulip_wire_to_lines(size_t n_args, const mp_obj_t *args) {
     mp_buffer_info_t bufinfo;
     mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
-    return render_wire_to_lines(bufinfo.buf, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), mp_obj_get_int(args[5]));
+    if(n_args > 6) {
+        return render_wire_to_lines(bufinfo.buf, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), mp_obj_get_int(args[5]), mp_obj_get_int(args[6]));
+    }
+    return render_wire_to_lines(bufinfo.buf, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), mp_obj_get_int(args[5]), -1);
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_to_lines_obj, 6, 6, tulip_wire_to_lines);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_to_lines_obj, 6, 7, tulip_wire_to_lines);
 
 
 // tulip.bg_png(bytes, x,y)
@@ -736,7 +740,7 @@ STATIC mp_obj_t tulip_edit(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_edit_obj, 0, 1, tulip_edit);
 
-extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t, uint16_t, uint16_t);
+extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t);
 STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
     display_reset_bg();
     display_reset_sprites();
