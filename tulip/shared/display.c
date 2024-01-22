@@ -33,7 +33,8 @@ uint16_t *sprite_w_px;//[SPRITES];
 uint16_t *sprite_h_px;//[SPRITES]; 
 uint8_t *sprite_vis;//[SPRITES];
 uint32_t *sprite_mem;//[SPRITES];
-uint8_t *lines_bitmap;
+uint16_t *line_emits_rle;
+uint16_t *line_emits_y;
 
 
 uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
@@ -108,6 +109,11 @@ uint8_t color_332(uint8_t red, uint8_t green, uint8_t blue) {
 // Python callback
 extern void tulip_frame_isr(); 
 
+uint8_t restart_wireframe = 0;
+uint16_t emit_counter = 0;
+uint16_t last_emit = 0;
+uint16_t emit_counter_dbl = 0;
+uint8_t spriteno_activated;
 
 bool display_frame_done_generic() {
     // Update the scroll
@@ -118,6 +124,14 @@ bool display_frame_done_generic() {
         y_offsets[i] = y_offsets[i] % (V_RES+OFFSCREEN_Y_PX);
         bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL*y_offsets[i] + x_offsets[i]*BYTES_PER_PIXEL];
     }
+
+    // Update wireframe if set
+    if(restart_wireframe) {
+        emit_counter = emit_counter_dbl;
+        last_emit = 0;
+        restart_wireframe = 0;
+    }
+
     tulip_frame_isr();
     vsync_count++; 
     return true;
@@ -151,17 +165,11 @@ uint8_t collide_mask_get(uint8_t a, uint8_t b) {
 int64_t bounce_time = 0;
 uint32_t bounce_count = 1;
 
-
-#define SET_BIT(x,y) \
-    lines_bitmap[(y*H_RES/8)+(x/8)] |= 1<<(x%8)
-#define GET_BIT(x,y) \
-    (lines_bitmap[(y*H_RES/8) + (x/8)] & (1<<(x%8)))
-
 bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
     int64_t tic=get_time_us(); // start the timer
-    //int16_t touch_x = last_touch_x[0];
-    //int16_t touch_y = last_touch_y[0];
-    //uint8_t touch_held_local = touch_held;
+    int16_t touch_x = last_touch_x[0];
+    int16_t touch_y = last_touch_y[0];
+    uint8_t touch_held_local = touch_held;
 
     uint16_t starting_display_row_px = pos_px / H_RES;
     uint8_t bounce_total_rows_px = len_bytes / H_RES;
@@ -173,49 +181,49 @@ bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes,
         memcpy(b_ptr, bg_lines[y], H_RES); 
         memcpy(b_ptr, bg_tfb + (y * H_RES),TFB_pxlen[y]);
     
-
-        //memset(sprite_ids, 255, H_RES);
-        //if(touch_held_local && touch_y == y) {
-        //    if(touch_x >= 0 && touch_x < H_RES) {
-        //        sprite_ids[touch_x] = SPRITES-1;
-        //    }
-        //}
-        //for(uint8_t s=0;s<SPRITES;s++) {
-            /*
-            if(sprite_vis[s]==SPRITE_IS_SPRITE) {
-                if(y >= sprite_y_px[s] && y < sprite_y_px[s]+sprite_h_px[s]) {
-                    // this sprite is on this line 
-                    // compute x and y (relative to the sprite!)
-                    uint8_t * sprite_data = &sprite_ram[sprite_mem[s]];
-                    uint16_t relative_sprite_y_px = y - sprite_y_px[s];
-                    for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
-                        if(col_px < H_RES) {
-                            uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
-                            uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
-                            if(b0 != ALPHA) {
-                                b[rows_relative_px*H_RES + col_px] = b0;
-                                // Only update collisions on non-alpha pixels
-                                uint8_t overlap_sprite = sprite_ids[col_px];
-                                if(overlap_sprite!=255) { // sprite already here!
-                                    uint16_t field = s * (s - 1) / 2 + overlap_sprite;
-                                    collision_bitfield[field / 8] |= 1 << (field % 8);
-                                }
-                                sprite_ids[col_px] = s;
-                            }
-                        }
-                    } // end for each column
-                } // end if this row has a sprite on it 
-                */
-            //} else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
-        
-            if(sprite_vis[0] == SPRITE_IS_WIREFRAME) {
-                for(uint16_t x=0;x<H_RES;x++) {
-                    if(GET_BIT(x,y)) b_ptr[x] = 255;
+        if(spriteno_activated) {
+            memset(sprite_ids, 255, H_RES);
+            if(touch_held_local && touch_y == y) {
+                if(touch_x >= 0 && touch_x < H_RES) {
+                    sprite_ids[touch_x] = SPRITES-1;
                 }
             }
-        
-
-        //} // for each sprite
+            for(uint8_t s=0;s<spriteno_activated;s++) {
+                if(sprite_vis[s]==SPRITE_IS_SPRITE) {
+                    if(y >= sprite_y_px[s] && y < sprite_y_px[s]+sprite_h_px[s]) {
+                        // this sprite is on this line 
+                        // compute x and y (relative to the sprite!)
+                        uint8_t * sprite_data = &sprite_ram[sprite_mem[s]];
+                        uint16_t relative_sprite_y_px = y - sprite_y_px[s];
+                        for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
+                            if(col_px < H_RES) {
+                                uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
+                                uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
+                                if(b0 != ALPHA) {
+                                    b[rows_relative_px*H_RES + col_px] = b0;
+                                    // Only update collisions on non-alpha pixels
+                                    uint8_t overlap_sprite = sprite_ids[col_px];
+                                    if(overlap_sprite!=255) { // sprite already here!
+                                        uint16_t field = s * (s - 1) / 2 + overlap_sprite;
+                                        collision_bitfield[field / 8] |= 1 << (field % 8);
+                                    }
+                                    sprite_ids[col_px] = s;
+                                }
+                            }
+                        } // end for each column
+                    } // end if this row has a sprite on it 
+                } else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
+                    // Draw my ys 
+                    while(line_emits_y[last_emit] == y) {
+                        uint8_t w = line_emits_rle[last_emit] & 0x3F;
+                        uint16_t s = (line_emits_rle[last_emit] >> 6) & 0x3ff;
+                        for(uint16_t i=s;i<s+w;i++) b_ptr[i] = 255;
+                        last_emit++;
+                        if(last_emit == emit_counter) last_emit = 0;
+                    }
+                }
+            } // for each sprite
+        } // end if any sprites on
     } // for each row
     bounce_time += (get_time_us() - tic); // stop timer
     bounce_count++;
@@ -223,12 +231,11 @@ bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes,
     return false;
 }
 
-
 void display_wireframe_update(uint8_t sprite_no) {
     // draw this as a bresenham list
     // find where to start
-    for(uint32_t i=0;i<H_RES*V_RES/8;i++) lines_bitmap[i] = 0;
-
+    emit_counter_dbl = 0;
+    //emit_swap = (emit_swap+1) % 2;
     for(uint16_t y=0;y<V_RES;y++) {
         // todo, we could get smarter and sort lines by length secondarily after y0 to save time here
         uint16_t * line_data_ptr = (uint16_t*)(&sprite_ram[sprite_mem[sprite_no]]);
@@ -261,15 +268,38 @@ void display_wireframe_update(uint8_t sprite_no) {
                     width = 1;
                     midpoint = x1;
                 }
+                // We're going to emit RLE now packed into an uint16
+                uint16_t emit_start = 0;
+                uint16_t emit_width = 0;
                 // Get points that rounded down to 0
                 if(width <= 1) {
-                    SET_BIT(midpoint, y);
+                    emit_width =1;
+                    emit_start = midpoint;
                 } else {
                     uint16_t x_s = (midpoint-(width/2));
                     uint16_t x_e = (midpoint+(width/2));
-                    for(uint16_t i=x_s;i<x_e;i++) {
-                        if(i>=x0 && i<=x1) SET_BIT(i,y);
+                    // Update for clamping (i.e. fix our math above, but for now...)
+                    if(x1>=x0)  {
+                        if(x_s < x0) x_s = x0;
+                        if(x_e > x1) x_e = x1;
+                    } else {
+                        if(x_s < x1) x_s = x1;
+                        if(x_e > x0) x_e = x0;
                     }
+                    if(emit_start + emit_width > H_RES) emit_width = (H_RES-emit_start);
+                    if(emit_width<=0) emit_width = 1;
+                    emit_start = x_s;
+                    emit_width = x_e-x_s;
+                    if(emit_width > 63) {
+                        // Maybe emit another one, unclear right now
+                        emit_width = 63;
+                    }
+                }
+                line_emits_rle[emit_counter_dbl] = (emit_start << 6) | (emit_width & 0x3f);
+                line_emits_y[emit_counter_dbl] = y;
+                emit_counter_dbl++;
+                if(emit_counter_dbl == MAX_LINE_EMITS) {
+                    goto end_emit;
                 }
             }
             line_data_ptr += 4;
@@ -277,6 +307,10 @@ void display_wireframe_update(uint8_t sprite_no) {
             y1 = line_data_ptr[3];
         }
     }
+end_emit:
+    // restart the drawing
+    restart_wireframe = 1;
+    return;
 }
 
 
@@ -412,9 +446,8 @@ void display_reset_sprites() {
     }
     for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
     for(uint32_t i=0;i<SPRITE_RAM_BYTES;i++) sprite_ram[i] = 0;
-    for(uint32_t i=0;i<H_RES*V_RES/8;i++) {
-        lines_bitmap[i] = 0;
-    }
+    line_emits_y[0] = V_RES+1; // just to make sure 
+    spriteno_activated = 0;
 }
 
 
@@ -541,7 +574,6 @@ void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data) {
         }
     }
     // Check if this is a wireframe to render it
-    
     for(uint8_t i=0;i<SPRITES;i++) {
         if(sprite_vis[i]==SPRITE_IS_WIREFRAME && sprite_mem[i] == mem_pos) {
             display_wireframe_update(i);
@@ -891,7 +923,11 @@ void display_teardown(void) {
     free_caps(bg); bg = NULL;
     free_caps(bg_tfb); bg_tfb = NULL;
     free_caps(TFB_pxlen); TFB_pxlen = NULL;
-    free_caps(sprite_ids);
+    free_caps(sprite_ids); sprite_ids = NULL;
+    free_caps(line_emits_rle); line_emits_rle = NULL;
+    free_caps(line_emits_y); line_emits_y = NULL;
+    //free_caps(line_emits_rle_1); line_emits_rle_1 = NULL;
+    //free_caps(line_emits_y_1); line_emits_y_1 = NULL;
     free_caps(sprite_ram); sprite_ram = NULL; 
     free_caps(sprite_x_px); sprite_x_px = NULL;
     free_caps(sprite_y_px); sprite_y_px = NULL;
@@ -899,7 +935,6 @@ void display_teardown(void) {
     free_caps(sprite_h_px); sprite_h_px = NULL;
     free_caps(sprite_vis); sprite_vis = NULL;
     free_caps(sprite_mem); sprite_mem = NULL;
-    free_caps(lines_bitmap); lines_bitmap = NULL;
     free_caps(collision_bitfield); collision_bitfield = NULL;
     free_caps(TFB); TFB = NULL;
     free_caps(TFBf); TFBf = NULL; 
@@ -930,7 +965,13 @@ void display_init(void) {
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
     TFB_pxlen = (uint16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
 
-    lines_bitmap = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES/8), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    //lines_bitmap = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES/8), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    line_emits_rle = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    line_emits_y = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+
+    //line_emits_rle_1 = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    //line_emits_y_1 = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);

@@ -636,9 +636,12 @@ STATIC mp_obj_t tulip_sprite_bitmap(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sprite_bitmap_obj, 2, 2, tulip_sprite_bitmap);
 
+extern uint8_t spriteno_activated; // tells the drawing loop to look at sprites
 //sprite_register(34, mem_pos, w,h, type) # 34 = sprite number, can be up to ...
 STATIC mp_obj_t tulip_sprite_register(size_t n_args, const mp_obj_t *args) {
     uint16_t spriteno = mp_obj_get_int(args[0]);
+    if(spriteno_activated < spriteno+1)
+        spriteno_activated = spriteno+1;
     uint32_t mem_pos = mp_obj_get_int(args[1]);
     if(spriteno < SPRITES) {
         sprite_mem[spriteno] = mem_pos;

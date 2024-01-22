@@ -92,9 +92,10 @@ uint8_t collide_mask_get(uint8_t a, uint8_t b);
 extern const unsigned char font_8x12_r[256][12];
 extern const unsigned char portfolio_glyph_bitmap[1792];
 
+#define MAX_LINE_EMITS 60000
 
 // We can address this many moving things on screen
-#define SPRITES 16
+#define SPRITES 32
 // We assume we can store 16 unique 32x32 sprite tiles, you can swap these out from RAM
 #define SPRITE_RAM_BYTES (32*32*SPRITES)
 
