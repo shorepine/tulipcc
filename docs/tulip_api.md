@@ -566,7 +566,6 @@ You can also use the sprite RAM to also draw lists of lines. You can store lists
 
 You can also load 3D models as wireframes in from standard `obj` files, and set their rotation and scale, which will render a list of line positions for you to sprite line list RAM. 
 
-You can choose a color per line. It's encoded into the top bits of the x0 and x1 coordinates in sprite RAM. So each line only takes 8 bytes in sprite RAM.
 
 ```python
 # Load an obj file into a list of raw faces and vertices - unscaled and unrotated.
@@ -574,16 +573,15 @@ model = tulip.wire_load("teapot.obj")
 # A model encodes vertices and faces of a 3d model. You can also generate this model in code yourself.  
 
 # Draw model wireframe to a line buffer
-lines = tulip.wire_to_lines(model, x, y, scale, theta, color, max_lines)
+lines = tulip.wire_to_lines(model, x, y, scale, theta, max_faces)
 # scale = integer multiplier on 0..1 coordinates. in general, sets width/height of model as pixels
 # theta = # of 100.0/PI rotations
-# color = chooses the color of the entire model
-# max_lines = optional, cuts the model off at a number of lines (really, faces). if not given uses all lines in model
+# max_faces = optional, cuts the model off at a number of faces (3 lines). if not given uses all faces in model
 
 # You can also generate line lists yourself in code.
 lines = tulip.lines([
-    [x0_0,y0_0,x1_0,y1_0,color_0],
-    [x0_1,y0_1,x1_1,y1_1,color_1]
+    [x0_0,y0_0,x1_0,y1_0],
+    [x0_1,y0_1,x1_1,y1_1]
     ]) # will return packed buffer of lines, sorted, including the last sentinel line
 
 # However you got your lines buffer, you can now load it into sprite RAM at whatever position you want. 

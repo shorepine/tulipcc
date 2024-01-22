@@ -69,6 +69,7 @@ void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_screenshot(char * filename);
 void display_screenshot_pal(char * filename);
 void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color);
+void display_wireframe_update(uint8_t sprite_no);
 
 void display_tfb_new_row();
 void display_run();
@@ -78,7 +79,7 @@ void display_brightness(uint8_t amount);
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
-bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
+bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
 bool display_frame_done_generic();
 void display_swap();
 
@@ -93,29 +94,29 @@ extern const unsigned char portfolio_glyph_bitmap[1792];
 
 
 // We can address this many moving things on screen
-#define SPRITES 32
+#define SPRITES 16
 // We assume we can store 16 unique 32x32 sprite tiles, you can swap these out from RAM
-#define SPRITE_RAM_BYTES (32*32*2*16) // 32KB
+#define SPRITE_RAM_BYTES (32*32*SPRITES)
 
-#ifndef DEFAULT_H_RES
-#define DEFAULT_H_RES 1024 //1024 
+#define H_RES 1024
+#define V_RES 600
+
+#ifdef TULIP_REPL_FONT_8X6
+#define FONT_HEIGHT 8
+#define FONT_WIDTH 6
+#else
+#define FONT_HEIGHT 12
+#define FONT_WIDTH 8
 #endif
 
-#ifndef DEFAULT_V_RES
-#define DEFAULT_V_RES 600 //600 
-#endif
-
-#define DEFAULT_OFFSCREEN_X_PX 150
-#define DEFAULT_OFFSCREEN_Y_PX 150
+#define OFFSCREEN_X_PX 200
+#define OFFSCREEN_Y_PX 150
 #define DEFAULT_PIXEL_CLOCK_MHZ 28
+#define BOUNCE_BUFFER_SIZE_PX (H_RES*12)
+#define TFB_ROWS (V_RES/FONT_HEIGHT)
+#define TFB_COLS (H_RES/FONT_WIDTH)
 
-
-extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCREEN_X_PX, OFFSCREEN_Y_PX, PIXEL_CLOCK_MHZ;
-// Use this to set workable ... no, use a py func...
-//#define H_RES              800//1024
-//#define V_RES              480//600
-// and also the porchces..
-
+extern uint16_t PIXEL_CLOCK_MHZ;
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -131,13 +132,6 @@ extern uint16_t H_RES, V_RES, TFB_COLS, TFB_ROWS, BOUNCE_BUFFER_SIZE_PX, OFFSCRE
 #endif
 
 
-#ifdef TULIP_REPL_FONT_8X6
-#define FONT_HEIGHT 8
-#define FONT_WIDTH 6
-#else
-#define FONT_HEIGHT 12
-#define FONT_WIDTH 8
-#endif
 
 #define FLASH_FRAMES 12
 #define ALPHA0 0x55
@@ -159,9 +153,6 @@ extern uint8_t gpu_log;
 extern uint8_t tfb_active;
 extern uint8_t tfb_y_row; 
 extern uint8_t tfb_x_col; 
-extern uint8_t task_screenshot;
-extern uint8_t task_start;
-extern uint8_t task_stop;
 extern int32_t vsync_count;
 extern uint8_t brightness;
 extern float reported_fps;
@@ -189,4 +180,6 @@ extern int16_t *x_speeds;//[V_RES];
 extern int16_t *y_speeds;//[V_RES];
 extern uint32_t **bg_lines;//[V_RES];
 extern uint16_t *TFB_pxlen;
+extern uint8_t *lines_bitmap;
+
 #endif

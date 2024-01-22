@@ -1,6 +1,5 @@
 #include "tulipcc_r10_display.h"
 
-//static TaskHandle_t xDisplayTask = NULL;
 esp_lcd_panel_handle_t panel_handle;
 esp_lcd_rgb_panel_config_t panel_config;
 esp_lcd_rgb_panel_event_callbacks_t panel_callbacks;
@@ -44,10 +43,12 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
     fprintf(stderr, "Stopping display task\n");
     display_stop();
     //display_teardown();
+/*
     H_RES = t0;
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
     OFFSCREEN_Y_PX = t3; 
+*/
     HSYNC_BACK_PORCH = t4; 
     HSYNC_FRONT_PORCH = t5; 
     HSYNC_PULSE_WIDTH = t6; 
@@ -55,8 +56,6 @@ void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uin
     VSYNC_FRONT_PORCH = t8; 
     VSYNC_PULSE_WIDTH = t9; 
 
-    TFB_ROWS = (V_RES/FONT_HEIGHT);
-    TFB_COLS = (H_RES/FONT_WIDTH);
 
     // Init the BG, TFB and sprite and UI layers
     //display_reset_bg();
@@ -151,9 +150,6 @@ void display_brightness(uint8_t amount) {
 extern int64_t bounce_time;
 extern uint32_t bounce_count ;
 
-
-
-
 // Task runner for the display, inits and then spins in a loop processing frame done ISRs
 void run_esp32s3_display(void) {
     // First set up the memory
@@ -228,7 +224,7 @@ void run_esp32s3_display(void) {
     panel_callbacks.on_bounce_empty = esp32s3_display_bounce_empty;
 
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
-    ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, NULL));
+    ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
     display_pwm_setup();
@@ -237,27 +233,34 @@ void run_esp32s3_display(void) {
     // Time the frame sync and stay running forever 
     int64_t free_time = 0;
     int64_t tic0 = esp_timer_get_time();
-    uint16_t loop_count =0;
+    uint16_t loop_count =1;
+    bounce_count = 1;
     while(1)  { 
-        
+
         int64_t tic1 = esp_timer_get_time();
         ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
         free_time += (esp_timer_get_time() - tic1);
-        
         if(loop_count++ >= 100) {
             reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);
+            reported_gpu_usage = ((float)(bounce_time/bounce_count) / (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))))*100.0;
             if(gpu_log) {
-                printf("past %d frames %2.2f FPS. free time %llduS.\n", 
+                printf("past %d frames %2.2f FPS. free time %llduS. bounce time per is %llduS, %2.2f%% of max (%duS). bounce_count %ld\n", 
                     loop_count,
                     reported_fps, 
-                    free_time / loop_count
-                );
+                    free_time / loop_count,
+                    bounce_time / bounce_count,
+                    reported_gpu_usage,
+                    (int) (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))),
+                    bounce_count);
+                gpu_log = 0;
             }
+            bounce_count = 1;
+            bounce_time = 0;
             loop_count = 0;
             free_time = 0;
-            gpu_log = 0;
             tic0 = esp_timer_get_time();
-        }    
+        }        
+        
     }
 
 

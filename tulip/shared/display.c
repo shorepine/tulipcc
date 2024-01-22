@@ -14,10 +14,7 @@ uint8_t tfb_log;
 
 uint8_t tfb_active;
 uint8_t tfb_y_row; 
-uint8_t tfb_x_col; 
-uint8_t task_screenshot;
-uint8_t task_start;
-uint8_t task_stop;
+uint8_t tfb_x_col;
 int32_t vsync_count;
 uint8_t brightness;
 float reported_fps;
@@ -36,6 +33,8 @@ uint16_t *sprite_w_px;//[SPRITES];
 uint16_t *sprite_h_px;//[SPRITES]; 
 uint8_t *sprite_vis;//[SPRITES];
 uint32_t *sprite_mem;//[SPRITES];
+uint8_t *lines_bitmap;
+
 
 uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
@@ -50,13 +49,7 @@ int16_t *y_speeds;//[V_RES];
 uint32_t **bg_lines;//[V_RES];
 
 // Defaults for runtime display params
-uint16_t H_RES = DEFAULT_H_RES;
-uint16_t V_RES = DEFAULT_V_RES;
-uint16_t OFFSCREEN_X_PX = DEFAULT_OFFSCREEN_X_PX;
-uint16_t OFFSCREEN_Y_PX = DEFAULT_OFFSCREEN_Y_PX;
 uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
-uint16_t BOUNCE_BUFFER_SIZE_PX;
-uint16_t TFB_ROWS, TFB_COLS;
 uint8_t tfb_active = 1;
 uint8_t tfb_log = 0;
 uint8_t gpu_log = 0;
@@ -152,18 +145,23 @@ uint8_t collide_mask_get(uint8_t a, uint8_t b) {
 }
 
 // Timers / counters for perf
-int64_t bounce_time = 0;
-uint32_t bounce_count = 0;
-int32_t desync = 0;
-uint16_t * line_data_ptr= NULL;
 
 // Two buffers are filled by this function, one gets filled while the other is drawn (via GDMA to the LCD.) 
 // Each call fills a certain number of lines, set by BOUNCE_BUFFER_SIZE_PX in setup (it's currently 12 lines / 1 row of text)
+int64_t bounce_time = 0;
+uint32_t bounce_count = 1;
+
+
+#define SET_BIT(x,y) \
+    lines_bitmap[(y*H_RES/8)+(x/8)] |= 1<<(x%8)
+#define GET_BIT(x,y) \
+    (lines_bitmap[(y*H_RES/8) + (x/8)] & (1<<(x%8)))
 
 bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    int16_t touch_x = last_touch_x[0];
-    int16_t touch_y = last_touch_y[0];
-    uint8_t touch_held_local = touch_held;
+    int64_t tic=get_time_us(); // start the timer
+    //int16_t touch_x = last_touch_x[0];
+    //int16_t touch_y = last_touch_y[0];
+    //uint8_t touch_held_local = touch_held;
 
     uint16_t starting_display_row_px = pos_px / H_RES;
     uint8_t bounce_total_rows_px = len_bytes / H_RES;
@@ -176,13 +174,14 @@ bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes,
         memcpy(b_ptr, bg_tfb + (y * H_RES),TFB_pxlen[y]);
     
 
-        memset(sprite_ids, 255, H_RES);
-        if(touch_held_local && touch_y == y) {
-            if(touch_x >= 0 && touch_x < H_RES) {
-                sprite_ids[touch_x] = SPRITES-1;
-            }
-        }
-        for(uint8_t s=0;s<SPRITES;s++) {
+        //memset(sprite_ids, 255, H_RES);
+        //if(touch_held_local && touch_y == y) {
+        //    if(touch_x >= 0 && touch_x < H_RES) {
+        //        sprite_ids[touch_x] = SPRITES-1;
+        //    }
+        //}
+        //for(uint8_t s=0;s<SPRITES;s++) {
+            /*
             if(sprite_vis[s]==SPRITE_IS_SPRITE) {
                 if(y >= sprite_y_px[s] && y < sprite_y_px[s]+sprite_h_px[s]) {
                     // this sprite is on this line 
@@ -206,185 +205,79 @@ bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes,
                         }
                     } // end for each column
                 } // end if this row has a sprite on it 
-            } else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
-                // draw this as a bresenham list
-                // find where to start
-                if(line_data_ptr == NULL) line_data_ptr = (uint16_t*)(&sprite_ram[sprite_mem[s]]);
-
-                uint16_t y0 = line_data_ptr[1];
-                uint16_t y1 = line_data_ptr[3];
-
-                // todo, we could get smarter and sort lines by length secondarily after y0 to save time here
-                while(y0 != 65535) {
-                    if(y >= y0 && y <= y1) {
-                        // get a int representation of how far down we are 
-                        uint16_t x_midpoint = 0;
-                        uint16_t x_line_width = 0;
-                        uint16_t x0 = line_data_ptr[0];
-                        uint16_t x1 = line_data_ptr[2];
-
-                        uint8_t color = ((x0 & 0xF000) >> 8) | ((x1 & 0xF000) >> 12);
-                        x0 = x0 & 0x0FFF;
-                        x1 = x1 & 0x0FFF;
-                        if(x1 > x0) {
-                            if(y1==y0) {
-                                x_line_width = x1-x0;
-                                x_midpoint = (x1-x0)/2;
-                            } else {
-                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
-                                x_midpoint = x0 + (((y-y0) * (x1-x0)) / (y1-y0));
-                            }
-                            if(x_line_width < 2) {
-                                b[rows_relative_px*H_RES+x_midpoint] = color;
-                            } else {
-                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
-                                    if(i <= x1 && i >= x0) { 
-                                        b[rows_relative_px*H_RES + i] = color;
-                                    }
-                                }
-                            }
-                        } else if (x1<x0) {
-                            if(y1==y0) {
-                                x_line_width = x0-x1;
-                                x_midpoint = (x0-x1)/2;
-                            } else {
-                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
-                                x_midpoint = x0 - (((y-y0) * (x0-x1)) / (y1-y0));
-                            }
-                            if(x_line_width < 2) {
-                                b[rows_relative_px*H_RES+x_midpoint] = color;
-                            } else {
-                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
-                                    if(i <= x0 && i >= x1) { 
-                                        b[rows_relative_px*H_RES + i] = color;
-                                    }
-                                }
-                            }
-                        } else {
-                            // A straight line up and down
-                            b[rows_relative_px*H_RES+x1] = color;
-                        }
-                    }
-                    line_data_ptr += 4;
-                    y0 = line_data_ptr[1];
-                    y1 = line_data_ptr[3];
+                */
+            //} else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
+        
+            if(sprite_vis[0] == SPRITE_IS_WIREFRAME) {
+                for(uint16_t x=0;x<H_RES;x++) {
+                    if(GET_BIT(x,y)) b_ptr[x] = 255;
                 }
-                line_data_ptr = NULL; // wrap around
             }
+        
 
-        } // for each sprite
+        //} // for each sprite
     } // for each row
+    bounce_time += (get_time_us() - tic); // stop timer
+    bounce_count++;
 
     return false;
 }
 
 
-    
-    #if 0
-        memset(sprite_ids, 255, H_RES);
-        // Add in the sprites
-        uint16_t row_px = starting_display_row_px + bounce_row_px; 
-        // Add touch in as a fake colliison, if it exists
-        if(touch_held_local && touch_y == row_px) {
-            if(touch_x >= 0 && touch_x < H_RES) {
-                sprite_ids[touch_x] = SPRITES-1;
-            }
-        }
+void display_wireframe_update(uint8_t sprite_no) {
+    // draw this as a bresenham list
+    // find where to start
+    for(uint32_t i=0;i<H_RES*V_RES/8;i++) lines_bitmap[i] = 0;
 
-        
-
-        for(uint8_t s=0;s<SPRITES;s++) {
-            if(sprite_vis[s]==SPRITE_IS_SPRITE) {
-                if(row_px >= sprite_y_px[s] && row_px < sprite_y_px[s]+sprite_h_px[s]) {
-                    // this sprite is on this line 
-                    // compute x and y (relative to the sprite!)
-                    uint8_t * sprite_data = &sprite_ram[sprite_mem[s]];
-                    uint16_t relative_sprite_y_px = row_px - sprite_y_px[s];
-                    for(uint16_t col_px=sprite_x_px[s]; col_px < sprite_x_px[s] + sprite_w_px[s]; col_px++) {
-                        if(col_px < H_RES_D) {
-                            uint16_t relative_sprite_x_px = col_px - sprite_x_px[s];
-                            uint8_t b0 = sprite_data[relative_sprite_y_px * sprite_w_px[s] + relative_sprite_x_px  ] ;
-                            if(b0 != ALPHA) {
-                                b[bounce_row_px*H_RES + col_px + start_col_px] = b0;
-                                // Only update collisions on non-alpha pixels
-                                uint8_t overlap_sprite = sprite_ids[col_px];
-                                if(overlap_sprite!=255) { // sprite already here!
-                                    uint16_t field = s * (s - 1) / 2 + overlap_sprite;
-                                    collision_bitfield[field / 8] |= 1 << (field % 8);
-                                }
-                                sprite_ids[col_px] = s;
-                            }
-                        }
-                    } // end for each column
-                } // end if this row has a sprite on it 
-            } else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
-                // draw this as a bresenham list
-                // find where to start
-                if(line_data_ptr == NULL) line_data_ptr = (uint16_t*)(&sprite_ram[sprite_mem[s]]);
-
-                uint16_t y0 = line_data_ptr[1];
-                uint16_t y1 = line_data_ptr[3];
-
-                // todo, we could get smarter and sort lines by length secondarily after y0 to save time here
-                while(y0 != 65535) {
-                    if(row_px >= y0 && row_px <= y1) {
-                        // get a int representation of how far down we are 
-                        uint16_t x_midpoint = 0;
-                        uint16_t x_line_width = 0;
-                        uint16_t x0 = line_data_ptr[0];
-                        uint16_t x1 = line_data_ptr[2];
-
-                        uint8_t color = ((x0 & 0xF000) >> 8) | ((x1 & 0xF000) >> 12);
-                        x0 = x0 & 0x0FFF;
-                        x1 = x1 & 0x0FFF;
-                        if(x1 > x0) {
-                            if(y1==y0) {
-                                x_line_width = x1-x0;
-                                x_midpoint = (x1-x0)/2;
-                            } else {
-                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
-                                x_midpoint = x0 + (((row_px-y0) * (x1-x0)) / (y1-y0));
-                            }
-                            if(x_line_width < 2) {
-                                b[bounce_row_px*H_RES+x_midpoint] = color;
-                            } else {
-                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
-                                    if(i <= x1 && i >= x0) { 
-                                        b[bounce_row_px*H_RES + i] = color;
-                                    }
-                                }
-                            }
-                        } else if (x1<x0) {
-                            if(y1==y0) {
-                                x_line_width = x0-x1;
-                                x_midpoint = (x0-x1)/2;
-                            } else {
-                                x_line_width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
-                                x_midpoint = x0 - (((row_px-y0) * (x0-x1)) / (y1-y0));
-                            }
-                            if(x_line_width < 2) {
-                                b[bounce_row_px*H_RES+x_midpoint] = color;
-                            } else {
-                                for(uint16_t i=x_midpoint-(x_line_width/2);i<x_midpoint+(x_line_width/2);i++) {
-                                    if(i <= x0 && i >= x1) { 
-                                        b[bounce_row_px*H_RES + i] = color;
-                                    }
-                                }
-                            }
-                        } else {
-                            // A straight line up and down
-                            b[bounce_row_px*H_RES+x1] = color;
-                        }
+    for(uint16_t y=0;y<V_RES;y++) {
+        // todo, we could get smarter and sort lines by length secondarily after y0 to save time here
+        uint16_t * line_data_ptr = (uint16_t*)(&sprite_ram[sprite_mem[sprite_no]]);
+        uint16_t y0 = line_data_ptr[1];
+        uint16_t y1 = line_data_ptr[3];
+        while(y0 != 65535) {
+            if(y >= y0 && y <= y1) {
+                // get a int representation of how far down we are 
+                uint16_t x0 = line_data_ptr[0];
+                uint16_t x1 = line_data_ptr[2];
+                uint16_t midpoint = 0;
+                uint16_t width = 0;
+                if(x1 > x0) {
+                    if(y1==y0) {
+                        width = x1-x0;
+                        midpoint = x0 + ((x1-x0)/2);
+                    } else {
+                        width = ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
+                        midpoint = x0 + (((y-y0) * (x1-x0)) / (y1-y0));
                     }
-                    line_data_ptr += 4;
-                    y0 = line_data_ptr[1];
-                    y1 = line_data_ptr[3];
+                } else if (x1<x0) {
+                    if(y1==y0) {
+                        width = x0-x1;
+                        midpoint = x1 + ((x0-x1)/2);
+                    } else {
+                        width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
+                        midpoint = x0 - (((y-y0) * (x0-x1)) / (y1-y0));
+                    }
+                } else { // x1 == x0
+                    width = 1;
+                    midpoint = x1;
                 }
-                line_data_ptr = NULL; // wrap around
+                // Get points that rounded down to 0
+                if(width <= 1) {
+                    SET_BIT(midpoint, y);
+                } else {
+                    uint16_t x_s = (midpoint-(width/2));
+                    uint16_t x_e = (midpoint+(width/2));
+                    for(uint16_t i=x_s;i<x_e;i++) {
+                        if(i>=x0 && i<=x1) SET_BIT(i,y);
+                    }
+                }
             }
-
-        } // for each sprite
-        #endif
+            line_data_ptr += 4;
+            y0 = line_data_ptr[1];
+            y1 = line_data_ptr[3];
+        }
+    }
+}
 
 
 // set tfb_row_hint to -1 for everything
@@ -480,7 +373,6 @@ void display_reset_bg() {
     // init the scroll pointer to the top left of the fb 
     for(int i=0;i<V_RES;i++) {
         bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*i];
-        //bg_lines[i] = (uint32_t*)&bg_tfb[(H_RES)*i];
         x_offsets[i] = 0;
         y_offsets[i] = i;
         x_speeds[i] = 0;
@@ -520,6 +412,9 @@ void display_reset_sprites() {
     }
     for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
     for(uint32_t i=0;i<SPRITE_RAM_BYTES;i++) sprite_ram[i] = 0;
+    for(uint32_t i=0;i<H_RES*V_RES/8;i++) {
+        lines_bitmap[i] = 0;
+    }
 }
 
 
@@ -645,6 +540,14 @@ void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data) {
             sprite_ram[j] = *data++;
         }
     }
+    // Check if this is a wireframe to render it
+    
+    for(uint8_t i=0;i<SPRITES;i++) {
+        if(sprite_vis[i]==SPRITE_IS_WIREFRAME && sprite_mem[i] == mem_pos) {
+            display_wireframe_update(i);
+        }
+    }
+    
 }
 
 
@@ -996,6 +899,7 @@ void display_teardown(void) {
     free_caps(sprite_h_px); sprite_h_px = NULL;
     free_caps(sprite_vis); sprite_vis = NULL;
     free_caps(sprite_mem); sprite_mem = NULL;
+    free_caps(lines_bitmap); lines_bitmap = NULL;
     free_caps(collision_bitfield); collision_bitfield = NULL;
     free_caps(TFB); TFB = NULL;
     free_caps(TFBf); TFBf = NULL; 
@@ -1008,12 +912,8 @@ void display_teardown(void) {
     free_caps(bg_lines); bg_lines = NULL;
 }
 
-
 void display_init(void) {
-    TFB_ROWS = (V_RES/FONT_HEIGHT);
-    TFB_COLS = (H_RES/FONT_WIDTH);
     // 12 divides into 600, 480, 240
-    BOUNCE_BUFFER_SIZE_PX = (H_RES*12) ;
     // Create the background FB
     bg = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     bg_tfb = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -1030,6 +930,7 @@ void display_init(void) {
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
     TFB_pxlen = (uint16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
 
+    lines_bitmap = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES/8), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);

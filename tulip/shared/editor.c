@@ -198,7 +198,7 @@ void move_cursor(int16_t x, int16_t y) {
 	if(x < 0) {
 		dbg("NYI scroll left\n");
 	} else if(x == TFB_COLS) {
-		dbg("NYI scroll right\n");
+		dbg("NYI scroll right %d %d\n", x, y);
 	} else {
 		cursor_x = x;
 	}
@@ -867,8 +867,9 @@ void editor(const char * filename) {
     editor_init();
 	if(filename != NULL) { 
         strcpy(fn, filename);
-		//dbg("editor fn is %s\n", fn);
+		dbg("editor fn is %s\n", fn);
 		editor_open_file(fn);
+
 	} else {
 		//dbg("no filename given\n");
         // In this case, let's just make a first text_line

@@ -217,7 +217,7 @@ void mp_task(void *pvParameter) {
 
     heap_caps_register_failed_alloc_callback(esp_alloc_failed);
     uint32_t caps = MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM;
-    size_t mp_task_heap_size = 2 * 1024 * 1024; // MIN(heap_caps_get_largest_free_block(caps), heap_total / 2);
+    size_t mp_task_heap_size = MP_TASK_HEAP_SIZE;  // MIN(heap_caps_get_largest_free_block(caps), heap_total / 2);
     void *mp_task_heap = heap_caps_malloc(mp_task_heap_size, caps);
 
 soft_reset:
@@ -345,7 +345,7 @@ void app_main(void) {
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
-    esp32s3_display_stop();
+    //esp32s3_display_stop();
 
     fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
@@ -357,8 +357,7 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(10);
     
-
-    esp32s3_display_start();
+    //esp32s3_display_start();
 
     fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
     xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
