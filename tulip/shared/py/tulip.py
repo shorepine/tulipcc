@@ -9,7 +9,7 @@ import alles
 
 def screen_size():
     s_s = timing()
-    return (s_s[4], s_s[5])
+    return (s_s[0], s_s[1])
 
 # A class for making a game. Clears and sets up the screen for a game
 class Game():
