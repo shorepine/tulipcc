@@ -4,7 +4,7 @@
 # Bring in all c-defined tulip functions
 from _tulip import *
 from world import world
-from upysh import cd
+from upysh import cd, pwd
 import alles
 
 # A class for making a game. Clears and sets up the screen for a game
@@ -349,8 +349,13 @@ def joyk():
 def run(module):
     import gc, sys
     before_run = sys.modules.copy()
+    before_run_pwd = pwd()
+    try:
+        cd(module)
+    except OSError:
+        cd("/sys/app")
+        cd(module)
 
-    cd(module)
     try:
         exec('import %s' % (module))
     except KeyboardInterrupt:
@@ -365,7 +370,7 @@ def run(module):
             exec('del sys.modules["%s"]' % (imported_module))
 
     gc.collect()
-    cd('..')
+    cd(before_run_pwd)
 
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):

@@ -26,7 +26,7 @@ if(not os.path.exists('build/flash_args')):
 SYSTEM_HOME = "../fs-release"
 
 # Copy over only these extensions 
-good_exts = [".txt", ".png", ".py"]
+good_exts = [".txt", ".png", ".py", ".json", ".obj"]
 # And these folders
 source_folders = ['app','ex','im']
 

@@ -1,11 +1,10 @@
 import gc
 import uos
-import tulip, world
+import tulip, world, sys
 
 import alles
 from upysh import *
 from tulip import edit, run
-
 # This _boot runs both desktop and esp32s3
 try:
     from esp32 import Partition
@@ -15,6 +14,7 @@ try:
         uos.mount(s,"/sys")
         uos.mount(u,"/user")
         cd('/user')
+        sys.path.append("/sys/app")
         
     except:
         print("Tulip flash not setup properly. Run tulip_fs_create.py.")

@@ -1,5 +1,5 @@
 """juno_ui: GUI for controlling Juno patches."""
-import juno
+import juno, tulip
 
 registered_callbacks = {}
 
