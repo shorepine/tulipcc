@@ -15,7 +15,11 @@ from parttool import *  # import all names inside parttool module
 
 
 if(not os.getcwd().endswith("esp32s3")):
-    print("Run this from the tulipcc/ports/esp32s3 folder only")
+    print("Run this from the tulipcc/tulip/esp32s3 folder only")
+    sys.exit()
+
+if(len(sys.argv)<2):
+    print("Call this with your MICROPY_BOARD value, e.g. \"python tulip_fs_create.py N32R8\"")
     sys.exit()
 
 TULIP_HOME = "../fs"
@@ -33,9 +37,11 @@ for folder in source_folders:
     folders = folders + [ f.path for f in os.scandir(folder) if f.is_dir() ]
 
 TULIP_VFS_SIZE = 0x1792000  # 32MB
-if(len(sys.argv)>1 and sys.argv[1].endswith('N8R8')):
-    TULIP_VFS_SIZE = 0x440000 # 8MB (no OTA)
-if(len(sys.argv)>1 and sys.argv[1].endswith('N16R8')):
+if(sys.argv[1].endswith('N16R8')):
+    TULIP_VFS_SIZE = 0x730000 # 16MB
+if(sys.argv[1].endswith('TDECK')):
+    TULIP_VFS_SIZE = 0x730000 # 16MB
+if(sys.argv[1].endswith('MATOUCH7')):
     TULIP_VFS_SIZE = 0x730000 # 16MB
 
 cfg = lfs.LFSConfig(block_size=4096, block_count = int(TULIP_VFS_SIZE / 4096),  disk_version=0x00020000)

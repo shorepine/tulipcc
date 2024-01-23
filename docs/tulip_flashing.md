@@ -45,36 +45,27 @@ cd ~/tulipcc/tulip/esp32s3
 
 ### Build and flash Tulip 
 
-Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. If using our Tulip board, use the USB-C connector and make sure Tulip is on. 
+Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. 
 
 Choose the right `MICROPY_BOARD` value for your board. 
 
- * Tulip4 (our integrated board): `TULIP4_N32R8`
- * Any Tulip board based on the N8R8 (8MB flash): `TULIP4_N8R8`
- * Any Tulip board based on the N16R8 (16MB flash): `TULIP4_N16R8`
- * For the [T-Deck](../tulip/tdeck/README.md), omit `MICROPY_BOARD` and make sure you're in the `tdeck` folder. 
- * For the [MaTouch 7", or Tulip CC v4r10](https://github.com/bwhitman/tulipcc/issues/160), omit `MICROPY_BOARD` and make sure you're in the `tulipcc_r10` folder.
+ * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
+ * Any DIY Tulip board based on the N32R8 (32MB flash): `N32R8`
+ * The [T-Deck](../tulip/tdeck/README.md): `TDECK`
+ * For the [MaTouch 7"](https://github.com/bwhitman/tulipcc/issues/160): `MATOUCH7`
+ * Tulip CC (our integrated board with display): `TULIP4_R10`
 
-The default is `TULIP4_N32R8`, so if you omit it that's what it'll use.
+The default is `N32R8`, so if you omit it that's what it'll use.
 
-You have to flash the firmware (`idf.py flash`) and then, for **only the first install**, run `tulip_fs_create.py`. The latter will set up the storage on Tulip. Only do that once per chip, or if you make changes to the underlying filesystem.
+You have to flash the firmware (`idf.py flash`) and then, for **only the first install**, run `tulip_fs_create.py [MICROPY_BOARD]`. The latter will set up the storage on Tulip. Only do that once per chip, or if you make changes to the underlying filesystem.
 
-For example, for the N8R8 chip only:
-
-```bash
-idf.py -D MICROPY_BOARD=TULIP4_N8R8 flash 
-# With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
-# to the flash memory. Run this only once, or each time you modify `fs` if you're developing Tulip itself.
-python tulip_fs_create.py TULIP4_N8R8
-```
-
-For the Tulip4 PCB or a board based on a N32R8:
+For example, for a Tulip4 DIY board based on a N32R8:
 
 ```bash
-idf.py flash 
+idf.py -DMICROPY_BOARD=N32R8 flash 
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
 # to the flash memory. Run this only once, or each time you modify `fs` if you're developing Tulip itself.
-python tulip_fs_create.py
+python tulip_fs_create.py N32R8
 ```
 
 You may need to restart Tulip after the flash, bt Tulip should now just turn on whenever you connect USB or power it on. 
@@ -84,7 +75,7 @@ To build going forward:
 ```bash
 cd tulip/esp32s3
 source ~/esp/esp-idf-v5.2-beta2/export.sh # do this once per terminal window
-idf.py flash
+idf.py -DMICROPY_BOARD=[X] flash 
 idf.py monitor # shows stderr and stdin for controlling Tulip, use control-] to quit
 
 # If you (or we!) make changes to the underlying libraries on AMY or micropython, you want to fully clean the build 
