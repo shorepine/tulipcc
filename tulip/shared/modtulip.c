@@ -420,7 +420,7 @@ STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
     return mp_obj_new_str("TDECK", strlen("TDECK"));
 #elif defined N16R8
     return mp_obj_new_str("N16R8", strlen("N16R8"));
-#elif defined N32R98
+#elif defined N32R8
     return mp_obj_new_str("N32R8", strlen("N32R8"));
 #else
     return mp_obj_new_str("OTHER", strlen("OTHER"));
