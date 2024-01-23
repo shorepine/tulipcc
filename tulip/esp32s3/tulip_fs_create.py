@@ -104,12 +104,16 @@ os.system("cp build/tulip-sys.bin dist/tulip-sys.bin")
 if(len(sys.argv)>1):
     for arg in sys.argv[1:]:
         if(arg == 'full'):
+            print("Writing full image")
             os.system("esptool.py write_flash 0x0 dist/tulip-full-%s.bin" % (MICROPY_BOARD))
         if(arg == 'vfs'):
+            print("Writing VFS")
             target = ParttoolTarget()
             target.write_partition(PartitionName("vfs"), "build/tulip-vfs.bin")
         if(arg == 'sys'):
+            print("Writing sys")
             target = ParttoolTarget()
             target.write_partition(PartitionName("system"), "build/tulip-sys.bin")
-
+else:
+    print("All done creating images. You can optionally call me with arguments [full, vfs, sys] to flash those directly.")
 
