@@ -400,6 +400,20 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_str_obj, 2, 6, tulip_tfb_st
 
 
 
+
+
+STATIC mp_obj_t tulip_screen_size(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t tuple[2];
+    tuple[0] = mp_obj_new_int(H_RES);
+    tuple[1] = mp_obj_new_int(V_RES);
+    return mp_obj_new_tuple(2,tuple);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_screen_size_obj, 0, 0, tulip_screen_size);
+
+
+
+
+
 mp_obj_t frame_callback = NULL; 
 mp_obj_t frame_arg = NULL; 
 mp_obj_t midi_callback = NULL; 
@@ -1332,6 +1346,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ui_del), MP_ROM_PTR(&tulip_ui_del_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_active), MP_ROM_PTR(&tulip_ui_active_obj) },
     { MP_ROM_QSTR(MP_QSTR_joy), MP_ROM_PTR(&tulip_joy_obj) },
+    { MP_ROM_QSTR(MP_QSTR_screen_size), MP_ROM_PTR(&tulip_screen_size_obj) },
     { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
 
 

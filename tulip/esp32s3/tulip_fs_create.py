@@ -77,8 +77,9 @@ with open("tulip-sys.bin","wb") as fh:
     fh.write(cfg.user_context.buffer)
 print("... done.")
 
-#target = ParttoolTarget()
-#target.write_partition(PartitionName("vfs"), "tulip-lfs.bin")
+target = ParttoolTarget()
+target.write_partition(PartitionName("vfs"), "tulip-vfs.bin")
+target.write_partition(PartitionName("system"), "tulip-sys.bin")
 #os.system('mv tulip-lfs.bin build/')
 
 
