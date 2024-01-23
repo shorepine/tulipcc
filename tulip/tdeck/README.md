@@ -16,8 +16,7 @@ a portable Python "deck" for music, graphics, and games.
 
 To flash your T-Deck with Tulip, follow the [Tulip CC flashing instructions](../../docs/tulip_flashing.md).
 
-We default the T-Deck to a 6x8 REPL font, to get 53x30 REPL / editor screen instead of 40x20. If this is too small, comment out the 
-`idf_build_set_property(COMPILE_OPTIONS "-DTULIP_REPL_FONT_8X6" APPEND)` line at the end of `CMakeLists.txt` in this folder. 
+We default the T-Deck to a 6x8 REPL font, to get 53x30 REPL / editor screen instead of 40x20. 
 
 ![T-Deck](../../docs/pics/tdeck_game.jpg)
 

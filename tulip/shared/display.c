@@ -331,7 +331,7 @@ void display_tfb_update(int8_t tfb_row_hint) {
         uint8_t tfb_row_offset_px = bounce_row_px % FONT_HEIGHT; 
         uint8_t tfb_col = 0;
         while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
-            #ifndef TULIP_REPL_FONT_8X6
+            #ifndef TDECK
                 uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
             #else
                 uint8_t data = portfolio_glyph_bitmap[(TFB[tfb_row*TFB_COLS+tfb_col] -32) * 8 + tfb_row_offset_px];
@@ -351,7 +351,7 @@ void display_tfb_update(int8_t tfb_row_hint) {
                     bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                     bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                     bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    #ifndef TULIP_REPL_FONT_8X6
+                    #ifndef TDECK
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
                     #endif
@@ -362,7 +362,7 @@ void display_tfb_update(int8_t tfb_row_hint) {
                     bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                     bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                     bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    #ifndef TULIP_REPL_FONT_8X6
+                    #ifndef TDECK
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
                     #endif
@@ -375,7 +375,7 @@ void display_tfb_update(int8_t tfb_row_hint) {
                     bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                     bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                     bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    #ifndef TULIP_REPL_FONT_8X6
+                    #ifndef TDECK
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
                     #endif
@@ -386,7 +386,7 @@ void display_tfb_update(int8_t tfb_row_hint) {
                     bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                     bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                     bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    #ifndef TULIP_REPL_FONT_8X6
+                    #ifndef TDECK
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                         bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
                     #endif

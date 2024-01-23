@@ -107,7 +107,7 @@ extern const unsigned char portfolio_glyph_bitmap[1792];
 #define V_RES 240
 #endif
 
-#ifdef TULIP_REPL_FONT_8X6
+#ifdef TDECK
 #define FONT_HEIGHT 8
 #define FONT_WIDTH 6
 #else

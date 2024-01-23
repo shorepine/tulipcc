@@ -58,13 +58,6 @@ cd tulip/linux
 ./dev/tulip
 ```
 
-## Smaller REPL font
-
-To use the 6x8 REPL font (instead of 8x12), change the `./build.sh` to call
-
-```
-COPT='-DTULIP_REPL_FONT_8X6' make DEBUG=1
-```
 
 ## Windows build of Tulip Desktop
 

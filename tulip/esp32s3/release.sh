@@ -9,5 +9,6 @@ do
     python upload_firmware.py
     # TODO - github release
 done
+python upload_firmware.py sys
 
 

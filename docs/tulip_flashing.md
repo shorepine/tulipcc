@@ -86,15 +86,6 @@ idf.py flash
 
 [To debug using GDB or profile code, see our new guide on live debugging of the ESP32S3.](tulip_debug.md)
 
-### Set REPL size smaller
-
-If you want a smaller REPL, add this line
-
-```
-idf_build_set_property(COMPILE_OPTIONS "-DTULIP_REPL_FONT_8X6" APPEND)
-```
-
-To the bottom of `esp32s3/CMakeLists.txt`.
 
 
 ## Windows build and flash
