@@ -6,18 +6,20 @@ import alles
 from upysh import *
 from tulip import edit, run
 
-# This _boot runs both desktop and esp32s3, so we check for flashdev
+# This _boot runs both desktop and esp32s3
 try:
-    from flashbdev import bdev
+    from esp32 import Partition
     try:
-        if bdev:
-            uos.mount(bdev, "/")
-    except OSError as e:
-        print(str(e))
-        import inisetup
-        vfs = inisetup.setup()
+        s = Partition.find(Partition.TYPE_DATA, label="system")[0]
+        u = Partition.find(Partition.TYPE_DATA, label="vfs")[0]
+        uos.mount(s,"/sys")
+        uos.mount(u,"/user")
+        cd('/user')
+        
+    except:
+        print("Tulip flash not setup properly. Run tulip_fs_create.py.")
+
     try:
-        from esp32 import Partition
         currentPartition = Partition(Partition.RUNNING)
         currentPartition.mark_app_valid_cancel_rollback()
     except OSError:

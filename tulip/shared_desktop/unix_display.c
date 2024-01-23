@@ -73,17 +73,17 @@ void unix_display_set_clock(uint8_t mhz) {
 }
 
 
-void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3, uint32_t t4, uint32_t t5) {
+void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3) {
     fprintf(stderr, "Stopping display task\n");
+/*
     H_RES = t0;
     V_RES = t1; 
     OFFSCREEN_X_PX = t2; 
     OFFSCREEN_Y_PX = t3; 
-    H_RES_D = t4;
-    V_RES_D = t5;
-    TFB_ROWS = (V_RES_D/FONT_HEIGHT);
-    TFB_COLS = (H_RES_D/FONT_WIDTH);
+    TFB_ROWS = (V_RES/FONT_HEIGHT);
+    TFB_COLS = (H_RES/FONT_WIDTH);
     BOUNCE_BUFFER_SIZE_PX = (H_RES*12) ;
+*/
     unix_display_flag = -2; // restart display with new timings
 }
 
@@ -140,10 +140,8 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
         // given the sw / sh, find a better H_RES/tw than what we have. 
         tulip_rect.w = (int)((float)sw / viewport_scale);
         tulip_rect.h = (int)((float)sh / viewport_scale); 
-        H_RES = tulip_rect.w;
-        V_RES = tulip_rect.h;
-        H_RES_D = H_RES;
-        V_RES_D = V_RES;
+        //H_RES = tulip_rect.w;
+        //V_RES = tulip_rect.h;
         fprintf(stderr, "SCALE after resize: tr.w %d tr.h %d\n", tulip_rect.w, tulip_rect.h);
 
     } else {

@@ -9,9 +9,14 @@ tulip/macos/tulip
 tulip/macos/tulip.arm64
 tulip/macos/tulip.x86_64
 tulip/macos/dist
-tulip/linux/build-standard/
+tulip/linux/build-standard
 tulip/linux/dev
 tulip/ios/build-standard
+tulip/esp32s3/managed_components
+tulip/tdeck/build
+tulip/tdeck/managed_components
+tulip/tulipcc_r10/build
+tulip/tulipcc_r10/managed_components
 .submodules_ok
 
 # Prerequisites

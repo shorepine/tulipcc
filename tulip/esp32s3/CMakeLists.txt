@@ -12,7 +12,7 @@ execute_process(COMMAND bash -c "../shared/grab_submodules.sh"
 
 # Set the board if it's not already set.
 if(NOT MICROPY_BOARD)
-    set(MICROPY_BOARD TULIP4_N32R8)
+    set(MICROPY_BOARD N32R8)
 endif()
 
 # Set the board directory and check that it exists.
@@ -55,9 +55,8 @@ set(SDKCONFIG_DEFAULTS ${CMAKE_BINARY_DIR}/sdkconfig.combined)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 # Set the location of the main component for the project (one per target).
-set(EXTRA_COMPONENT_DIRS main)
+set(EXTRA_COMPONENT_DIRS main components)
 
 # Define the project.
 project(micropython)
 idf_build_set_property(COMPILE_OPTIONS "-fdiagnostics-color=always" APPEND)
-#idf_build_set_property(COMPILE_OPTIONS "-DTULIP_REPL_FONT_8X6" APPEND)

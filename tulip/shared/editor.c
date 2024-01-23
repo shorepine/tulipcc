@@ -157,13 +157,14 @@ void string_at_row(char * s, int16_t len, uint16_t y) {
 // (Re) paints the entire TFB
 void paint_tfb(uint16_t start_at_y) {
     for(uint16_t y=start_at_y;y<TFB_ROWS-1;y++) {
-        delay_ms(1); // this helps Tulip not lose sync of the screen
+        //delay_ms(1); // this helps Tulip not lose sync of the screen
         if(y_offset + y < lines) { 
 	       string_at_row(text_lines[y_offset+y], -1, y);
         } else {
             clear_row(y);
         }
     }
+    display_tfb_update(-1);
 }
 
 
@@ -172,6 +173,7 @@ void paint_tfb(uint16_t start_at_y) {
 void move_cursor(int16_t x, int16_t y) {
 	// Undo old cursor
 	TFBf[cursor_y*TFB_COLS+cursor_x] = 0; 
+    display_tfb_update(cursor_y);
 
 	// Move viewport up/down (TFB_ROWS-1) / 2
 	// Move cursor to next/prev line (which would now be in the middle of the screen)
@@ -196,7 +198,7 @@ void move_cursor(int16_t x, int16_t y) {
 	if(x < 0) {
 		dbg("NYI scroll left\n");
 	} else if(x == TFB_COLS) {
-		dbg("NYI scroll right\n");
+		dbg("NYI scroll right %d %d\n", x, y);
 	} else {
 		cursor_x = x;
 	}
@@ -205,13 +207,22 @@ void move_cursor(int16_t x, int16_t y) {
 
     if(TFB[cursor_y*TFB_COLS+cursor_x]==0) TFB[cursor_y*TFB_COLS+cursor_x] = 32;
 
+    display_tfb_update(y);
+
 	// Update status bar
 	char status[TFB_COLS];
 	// TODO, padding better 
 	float percent = ((float)(cursor_y+y_offset+1) / (float)lines) * 100.0;
-	sprintf(status, "%04d / %04d [%02.2f%%] %3d %s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
+    #ifdef TDECK
+    // Smaller screen, less space for text
+	sprintf(status, "%04d / %04d [%02.2f%%] %3d %.10s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
+    #else
+    sprintf(status, "%04d / %04d [%02.2f%%] %3d %.35s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
+    #endif    
 	string_at_row(status, strlen(status), TFB_ROWS-1);
 	format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
+    display_tfb_update(TFB_ROWS-1);
+
 
 }
 
@@ -268,7 +279,7 @@ void restore_tfb() {
 		TFBf[y] = saved_tfbf[y];
 		TFBfg[y] = saved_tfbfg[y];
 		TFBbg[y] = saved_tfbbg[y];
-        if(y%TFB_COLS==0) delay_ms(1);
+        //if(y%TFB_COLS==0) delay_ms(1);
 	}
 	editor_free(saved_tfb);
 	editor_free(saved_tfbf);
@@ -281,6 +292,7 @@ void restore_tfb() {
             display_set_bg_pixel_pal(x,y,bg_pal_color);
         }
     }
+    display_tfb_update(-1);
 }
 
 void editor_new_file() {
@@ -401,9 +413,9 @@ void editor_save() {
             }
             text[c++] = '\n';
         }
-        display_stop();
+        //display_stop();
         write_file(fn, (uint8_t*)text, c, 0);
-        display_start();
+        //display_start();
         dirty = 0;
         editor_free(text);
     } else {
@@ -426,7 +438,7 @@ void editor_quit() {
 	}
 	restore_tfb();
 	for(uint16_t i=0;i<lines;i++) {
-        delay_ms(1);
+        //delay_ms(1);
 		editor_free(text_lines[i]);
 	}
 	editor_free(text_lines);
@@ -860,8 +872,9 @@ void editor(const char * filename) {
     editor_init();
 	if(filename != NULL) { 
         strcpy(fn, filename);
-		//dbg("editor fn is %s\n", fn);
+		dbg("editor fn is %s\n", fn);
 		editor_open_file(fn);
+
 	} else {
 		//dbg("no filename given\n");
         // In this case, let's just make a first text_line

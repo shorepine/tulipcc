@@ -7,10 +7,6 @@ from world import world
 from upysh import cd
 import alles
 
-def screen_size():
-    s_s = timing()
-    return (s_s[4], s_s[5])
-
 # A class for making a game. Clears and sets up the screen for a game
 class Game():
     def __init__(self, debug=False):
@@ -225,65 +221,107 @@ def free_disk_bytes():
     return st[1] * st[3]
 
 
-# takes 2:30
 def upgrade():
     import world, time, sys, os
     try:
         import esp32, machine
+        from esp32 import Partition
     except ImportError:
         print("Upgrading only works on Tulip CC for now. Visit tulip.computer to download the latest Tulip Desktop.")
         return
 
     # Ensures we are on a OTA partition
-    partition = esp32.Partition(esp32.Partition.RUNNING).get_next_update()
-    if(partition is None or (not partition.info()[4].startswith('ota'))):
-        print("You are not using OTA partitions, likely because of your flash size (N8R8.)")
+    ota_partition = Partition(esp32.Partition.RUNNING).get_next_update()
+    sys_partition = Partition.find(Partition.TYPE_DATA, label="system")[0]
+
+    if(ota_partition is None or (not ota_partition.info()[4].startswith('ota'))):
+        print("You are not using OTA partitions.")
+        return
+    if(board() == "OTHER"):
+        print("Unidentified board type, can't upgrade.")
         return
 
     # Checks for a new firmware from Tulip World, asks if you want to upgrade to it
     sec_size = 4096
-    screen_blank = "The screen will blank for 2-3 minutes. See status in monitor."
-    prefix = "tulipcc-"
     all_firmwares = world.files(limit=1000,room_id=world.firmware_room_id)
     all_firmwares.reverse()
-    if(len(all_firmwares)):
-        f = all_firmwares[0]
-        v = f["filename"][len(prefix):-4]
-        print("Latest available: %s   %s" % (v, world.nice_time(f["age_ms"]/1000)))
-        print("You have version: %s" % version())
-        print()
-        print("Install it?       (Yy/Nn) ",end='')
-        a = input()
-        if(a=='Y' or a=='y'):
-            tfb_log_start()
-            print("Flashing %s... [%s]" % (f["filename"], screen_blank))
-            time.sleep(5)
-            display_stop()
-            try:
-                print("Flashing OTA partition %s..." % (partition.info()[4]))
-                url = "https://%s/_matrix/media/r0/download/%s" % (world.host, f["url"][6:])
-                # Download the file directly to flash, don't save it first
-                r = world.matrix_get(url)
-                block_c = 0
-                for chunk in r.generate(chunk_size=sec_size):
-                    if len(chunk) < sec_size:
-                        print("Last chunk, adding padding")
-                        chunk = chunk + bytes(b'\xff'*(sec_size - len(chunk)))
-                    partition.writeblocks(block_c, chunk)
-                    if(block_c % 100 == 0):
-                        print("%d blocks, %d bytes flashed" % (block_c, block_c*sec_size))
-                    block_c = block_c + 1
-                print("Setting boot partition to %s..." % (partition.info()[4]))
-                partition.set_boot()
-                print("Rebooting...")
-                # Partition.mark_app_valid_cancel_rollback is set in _boot.py. So if Tulip reboots properly, the partition will be marked OK
-                machine.reset()
-            except Exception as e:
-                display_start()
-                sys.print_exception(e)
-            tfb_log_stop()
 
+    latest_sys = None
+    latest_firmware = None
 
+    for file in all_firmwares:
+        if(latest_firmware is None and file['filename'].startswith('tulipcc-%s' % (board()))):
+            latest_firmware = file
+        if(latest_sys is None and file['filename'].startswith('sys-')):
+            latest_sys = file
+
+    if(not (latest_firmware and latest_sys)):
+        print("Could not find firmware and system folder for board %s" % (board()))
+        return
+
+    v_firmware = (latest_firmware['filename'][:-4])[-8:]
+    v_sys = (latest_sys['filename'][:-4])[-8:]
+
+    print("For board: %s" % (board()))
+    print("Latest firmware: %s   %s" % (v_firmware, world.nice_time(latest_firmware["age_ms"]/1000)))
+    print("Latest /sys    : %s   %s" % (v_sys, world.nice_time(latest_sys["age_ms"]/1000)))
+    print("You have firmware: %s" % version())
+    do_firmware = False
+    do_system = False
+    print()
+
+    print("Upgrade firmware?       (Yy/Nn) ",end='')
+    a = input()
+    if(a=='Y' or a=='y'):
+        do_firmware=True
+
+    print("Upgrade /sys folder?    (Yy/Nn) ",end='')
+    a = input()
+    if(a=='Y' or a=='y'):
+        do_system=True
+    
+    if(do_system):
+        try:
+            print("Flashing %s to /sys folder... " % (latest_sys["filename"]))
+            url = "https://%s/_matrix/media/r0/download/%s" % (world.host, latest_sys["url"][6:])
+            r = world.matrix_get(url)
+            block_c = 0
+            for chunk in r.generate(chunk_size=sec_size):
+                if len(chunk) < sec_size:
+                    print("Last chunk, adding padding of sys folder")
+                    chunk = chunk + bytes(b'\xff'*(sec_size - len(chunk)))
+                sys_partition.writeblocks(block_c, chunk)
+                if(block_c % 128 == 0):
+                    print("%d blocks, %d bytes flashed of sys folder" % (block_c, block_c*sec_size))
+                block_c = block_c + 1
+            r.close()
+        except Exception as e:
+            sys.print_exception(e)
+
+    if(do_firmware):
+        try:
+            print("Flashing %s to OTA partition %s " % (latest_firmware["filename"], ota_partition.info()[4]))
+            url = "https://%s/_matrix/media/r0/download/%s" % (world.host, latest_firmware["url"][6:])
+            r = world.matrix_get(url)
+            block_c = 0
+            for chunk in r.generate(chunk_size=sec_size):
+                if len(chunk) < sec_size:
+                    print("Last chunk, adding padding of firmware")
+                    chunk = chunk + bytes(b'\xff'*(sec_size - len(chunk)))
+                ota_partition.writeblocks(block_c, chunk)
+                if(block_c % 128 == 0):
+                    print("%d blocks, %d bytes flashed of firmware" % (block_c, block_c*sec_size))
+                block_c = block_c + 1
+            print("Setting boot partition to %s..." % (ota_partition.info()[4]))
+            ota_partition.set_boot()
+            # Partition.mark_app_valid_cancel_rollback is set in _boot.py. So if Tulip reboots properly, the partition will be marked OK
+        except Exception as e:
+            sys.print_exception(e)
+
+    if(do_system or do_firmware): 
+        print("Rebooting in 5 seconds...")   
+        time.sleep(5)
+        machine.reset()
 
 
 # like joy, but also scans the keyboard. lets you use either
@@ -332,9 +370,9 @@ def run(module):
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests
-    display_stop()
+    #display_stop()
     d = urequests.get(url, headers = headers).save(filename,mode)
-    display_start()
+    #display_start()
     return d
 
 def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
@@ -424,7 +462,7 @@ def tar_create(directory):
 def tar_extract(file_name, show_progress=True):
     import os
     import utarfile
-    display_stop()
+    #display_stop()
 
     tar = utarfile.TarFile(file_name, 'r')
     if(show_progress): print("extracting", file_name)
@@ -449,4 +487,4 @@ def tar_extract(file_name, show_progress=True):
                         dest.close()
                 except OSError as error:
                     if(show_progress): print("borked on:", i.name)
-    display_start()
+    #display_start()

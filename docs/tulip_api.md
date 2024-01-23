@@ -10,7 +10,9 @@ Here you can see the API [Tulip](../README.md) currently ships with.
 
 ## General
 
-[Tulip](../README.md) boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
+[Tulip](../README.md) boots right into a Python prompt and all interaction with the system happens there. You have your own space to store code and files in `/user` and we keep system examples and programs in `/sys`. 
+
+You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
 
 ```python
 # Interact with the filesystem.
@@ -23,8 +25,9 @@ cd('directory')
 clear
 
 # Run a saved Python file. Control-C stops it
-cd('ex') # The ex folder has a few examples and graphics in it
+cd('/sys/ex') # The /sys/ex folder has a few examples and graphics in it
 execfile("parallax.py")
+
 run('game') # Runs a package, see below
 
 # Extract a .tar file.
@@ -36,7 +39,7 @@ tulip.tar_create(directory)
 # If you want something to run when Tulip boots, add it to boot.py
 edit("boot.py")
 
-# On Tulip CC with 16MB of flash or more, you can upgrade the firmware over-the-air over wifi
+# You can upgrade the firmware over-the-air over wifi
 tulip.upgrade()
 
 # Takes a screenshot and saves to disk. The screen will blank for a moment
@@ -49,8 +52,6 @@ imgur_url = tulip.screenshot()
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 
 ms = tulip.ticks_ms() # returns the milliseconds since boot, aka Arduino millis() 
-
-tulip.off() # Shuts down Tulip. On hardware, the button up top will turn it back on.
 ```
 
 If you have a program that relies on mulitple files (graphics, or multiple Python files) you'll want to create a Tulip Package. A package is just a folder with your files in it, like:
@@ -342,22 +343,6 @@ tulip.gpu_reset()
 clock = tulip.display_clock() 
 tulip.display_clock(mhz)
 
-# You can also change the timing and resolution on the fly. 
-# This is helpful for getting higher FPS with lower resolution (less pixels)
-# If h_visible or v_visible is smaller than the resolution of the display, we will draw the whole h_res and v_res
-# to the display but center your visible res in a window. This is helpful for the Tulip CC display which cannot 
-# easily change native resolution. Your FPS will stay the same but you will have more GPU time to draw in the window.
-
-# H_RES, V_RES, H_VISIBLE_RES, V_VISIBLE_RES should be multiples of the Tulip default font size -- 8 x 12.
-(h_res, v_res, h_offscreen_px, v_offscreen_px, h_visible_res, v_visible_res,
-  hsync_back_porch, hsync_front_porch, hsync_pulse_width, 
-  vsync_back_porch, vsync_front_porch, vsync_pulse_width) = tulip.timing() # returns current
-tulip.timing(1024, 600, 256, 150, 139, 140, 20, 20, 12, 20) # sets, will erase all display RAM
-
-# You can set the visible window on its own with
-tulip.window(1024, 240)
-(w,h) = tulip.window()
-
 # Convenience function for getting the screen width and height,
 # which are just the first two values returned by tulip.timing()
 (WIDTH, HEIGHT) = tulip.screen_size()
@@ -386,9 +371,8 @@ tulip.frame_callback() # disables the callback
 # Sets the screen brightness, from 1-9 (9 max brightness.) 5 is default.
 tulip.brightness(5)
 
-# Show a log of the GPU usage (frames per second, time spent in GPU) to the stderr log
-tulip.gpu_log_start()
-tulip.gpu_log_stop()
+# Show the GPU usage (frames per second, time spent in GPU) at the next GPU epoch (100 frames) in stderr 
+tulip.gpu_log()
 ```
 
 ## Graphics background plane
@@ -574,7 +558,6 @@ You can also use the sprite RAM to also draw lists of lines. You can store lists
 
 You can also load 3D models as wireframes in from standard `obj` files, and set their rotation and scale, which will render a list of line positions for you to sprite line list RAM. 
 
-You can choose a color per line. It's encoded into the top bits of the x0 and x1 coordinates in sprite RAM. So each line only takes 8 bytes in sprite RAM.
 
 ```python
 # Load an obj file into a list of raw faces and vertices - unscaled and unrotated.
@@ -582,15 +565,15 @@ model = tulip.wire_load("teapot.obj")
 # A model encodes vertices and faces of a 3d model. You can also generate this model in code yourself.  
 
 # Draw model wireframe to a line buffer
-lines = tulip.wire_to_lines(model, x, y, scale, theta, color)
+lines = tulip.wire_to_lines(model, x, y, scale, theta, max_faces)
 # scale = integer multiplier on 0..1 coordinates. in general, sets width/height of model as pixels
 # theta = # of 100.0/PI rotations
-# color = chooses the color of the entire model
+# max_faces = optional, cuts the model off at a number of faces (3 lines). if not given uses all faces in model
 
 # You can also generate line lists yourself in code.
 lines = tulip.lines([
-    [x0_0,y0_0,x1_0,y1_0,color_0],
-    [x0_1,y0_1,x1_1,y1_1,color_1]
+    [x0_0,y0_0,x1_0,y1_0],
+    [x0_1,y0_1,x1_1,y1_1]
     ]) # will return packed buffer of lines, sorted, including the last sentinel line
 
 # However you got your lines buffer, you can now load it into sprite RAM at whatever position you want. 

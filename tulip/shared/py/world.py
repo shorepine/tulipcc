@@ -81,7 +81,7 @@ def read_in_chunks(file_object, chunk_size=4096):
 def upload(filename, content_type="application/octet-stream", room_id=files_room_id):
     tar = False
     url = "https://%s/_matrix/media/v3/upload?filename=%s" % (host, filename)
-    tulip.display_stop()
+    #tulip.display_stop()
     if(_isdir(filename)):
         tar = True
         print("Packing %s" % (filename))
@@ -93,7 +93,7 @@ def upload(filename, content_type="application/octet-stream", room_id=files_room
     file = open(filename, "rb")
     uri = matrix_post(url, read_in_chunks(file), content_type=content_type).json()["content_uri"]
 
-    tulip.display_start()
+    #tulip.display_start()
     # Now make an event / message
     data={"info":{"mimetype":content_type},"msgtype":"m.file","body":filename,"url":uri}
     url="https://%s/_matrix/client/v3/rooms/%s/send/%s/%s" % (host, room_id, "m.room.message", str(uuid4()))
@@ -150,10 +150,10 @@ def download(filename, limit=5000, chunk_size=4096):
         mxc_id = grab_url[6:]
         url = "https://%s/_matrix/media/r0/download/%s" % (host, mxc_id)
 
-        tulip.display_stop()
+        #tulip.display_stop()
         r = matrix_get(url)
         b = r.save(filename, chunk_size=chunk_size)
-        tulip.display_start()
+        #tulip.display_start()
 
         print("Downloaded %s [%d bytes, last updated %s] from Tulip World." % (filename, b, age_nice.lstrip()))
         if(filename.endswith('.tar')):

@@ -1,6 +1,41 @@
-# Compiling and flashing Tulip CC
+# Upgrading, flashing or compiling Tulip CC
 
-## Compile TulipCC for ESP32-S3
+We will aim to release new versions of the Tulip firmware regularly. If you're developing on Tulip itself, you should learn how to compile and flash your own code. Otherwise, you can use our built in upgrading or full-device flash files to flash Tulip.
+
+To flash from a computer, you *may* need a driver for a serial-USB chip on the Tulip you're working with. If your board uses a CH340X chip, and it is not detected by `idf.py`, [you may need to follow the instructions here to install a driver.](https://github.com/WCHSoftGroup/ch34xser_macos)
+
+
+## Upgrade your working Tulip to the latest version
+
+If your Tulip is running and you just want to upgrade to the latest firmware, you can do that "over the air." Make sure your Tulip is connected to wifi and run `tulip.upgrade()`:
+
+```python
+>>> tulip.wifi("ssid", "password")
+>>> tulip.upgrade()
+```
+
+It will ask you if you want to upgrade your firmware and/or your `/sys` folder (the place we store baked in programs and examples.) Usually, a new firmware means new features, so it's recommended to upgrade both so that they're using the same APIs. This whole process takes about five minutes, and your Tulip will reboot. Easy!
+
+## Flash Tulip from a compiled release
+
+We aim to release versions of Tulip regularly. You can find the latest in our [releases section](https://github.com/bwhitman/tulipcc/releases). Find the `.bin` file for your type of Tulip:
+
+ * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
+ * Any DIY Tulip board based on the N32R8 (32MB flash): `N32R8`
+ * The [T-Deck](../tulip/tdeck/README.md): `TDECK`
+ * For the [MaTouch 7"](https://github.com/bwhitman/tulipcc/issues/160): `MATOUCH7`
+ * Tulip CC (our integrated board with display): `TULIP4_R10`
+
+ Download the `.bin` and use [`esptool.py`](https://docs.espressif.com/projects/esptool/en/latest/esp32/) or any other ESP32-flasher tool to write the entire `.bin` to flash:
+
+```bash
+% esptool.py write_flash 0x0 tulip-full-XXX.bin
+```
+
+This completely erases the chip on Tulip and may take some time for 32MB boards, up to 10 minutes or so. You don't have to do this very often, you can use `tulip.upgrade()` going forward after the first flash.
+
+
+## Compile and flash TulipCC for ESP32-S3
 
 [Tulip CC](../README.md) should build on all platforms, although I've only tested macOS and Linux so far. Please let me know if you have any trouble!
 
@@ -15,7 +50,6 @@ macOS:
 brew install cmake ninja dfu-util
 ```
 
-You *may* need a driver for a serial-USB chip on the Tulip you're working with. If your board (including Tulip r10) uses a CH340X chip, and it is not detected by `idf.py`, [you may need to follow the instructions here to install a driver.](https://github.com/WCHSoftGroup/ch34xser_macos)
 
 Linux:
 ```bash
@@ -43,48 +77,40 @@ pip3 install littlefs-python # needed to flash the filesystem
 cd ~/tulipcc/tulip/esp32s3
 ```
 
-### Build and flash Tulip 
+### Flash Tulip 
 
-Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. If using our Tulip board, use the USB-C connector and make sure Tulip is on. 
+Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. 
 
 Choose the right `MICROPY_BOARD` value for your board. 
 
- * Tulip4 (our integrated board): `TULIP4_N32R8`
- * Any Tulip board based on the N8R8 (8MB flash): `TULIP4_N8R8`
- * Any Tulip board based on the N16R8 (16MB flash): `TULIP4_N16R8`
- * For the [T-Deck](../tulip/tdeck/README.md), omit `MICROPY_BOARD` and make sure you're in the `tdeck` folder. 
- * For the [MaTouch 7", or Tulip CC v4r10](https://github.com/bwhitman/tulipcc/issues/160), omit `MICROPY_BOARD` and make sure you're in the `tulipcc_r10` folder.
+ * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
+ * Any DIY Tulip board based on the N32R8 (32MB flash): `N32R8`
+ * The [T-Deck](../tulip/tdeck/README.md): `TDECK`
+ * For the [MaTouch 7"](https://github.com/bwhitman/tulipcc/issues/160): `MATOUCH7`
+ * Tulip CC (our integrated board with display): `TULIP4_R10`
 
-The default is `TULIP4_N32R8`, so if you omit it that's what it'll use.
+The default is `N32R8`, so if you omit it that's what it'll use.
 
-You have to flash the firmware (`idf.py flash`) and then, for **only the first install**, run `tulip_fs_create.py`. The latter will set up the storage on Tulip. Only do that once per chip, or if you make changes to the underlying filesystem.
+You have to build the firmware (`idf.py build`) and then, for **only the first install**, run `tulip_fs_create.py` and then `esptool.py` to flash the entire filesystem to Tulip. This sets up the storage on Tulip. Only do that once per chip, or if you make changes to the underlying filesystem. Any further flashing can just use `idf.py -DMICROPY_BOARD=X flash`, which will save time and not overwrite your files!
 
-For example, for the N8R8 chip only:
-
-```bash
-idf.py -D MICROPY_BOARD=TULIP4_N8R8 flash 
-# With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
-# to the flash memory. Run this only once, or each time you modify `fs` if you're developing Tulip itself.
-python tulip_fs_create.py TULIP4_N8R8
-```
-
-For the Tulip4 PCB or a board based on a N32R8:
+For example, for a Tulip4 DIY board based on a N32R8:
 
 ```bash
-idf.py flash 
+idf.py -DMICROPY_BOARD=N32R8 build
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
 # to the flash memory. Run this only once, or each time you modify `fs` if you're developing Tulip itself.
 python tulip_fs_create.py
+esptool.py write_flash 0x0 build/tulip.bin
 ```
 
 You may need to restart Tulip after the flash, bt Tulip should now just turn on whenever you connect USB or power it on. 
 
-To build going forward:
+To build and flash going forward, without modifying the filesystem:
 
 ```bash
 cd tulip/esp32s3
 source ~/esp/esp-idf-v5.2-beta2/export.sh # do this once per terminal window
-idf.py flash
+idf.py -DMICROPY_BOARD=[X] flash 
 idf.py monitor # shows stderr and stdin for controlling Tulip, use control-] to quit
 
 # If you (or we!) make changes to the underlying libraries on AMY or micropython, you want to fully clean the build 
@@ -94,17 +120,6 @@ idf.py flash
 ```
 
 [To debug using GDB or profile code, see our new guide on live debugging of the ESP32S3.](tulip_debug.md)
-
-### Set REPL size smaller
-
-If you want a smaller REPL, add this line
-
-```
-idf_build_set_property(COMPILE_OPTIONS "-DTULIP_REPL_FONT_8X6" APPEND)
-```
-
-To the bottom of `esp32s3/CMakeLists.txt`.
-
 
 ## Windows build and flash
 

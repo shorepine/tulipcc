@@ -10,7 +10,7 @@ If you'd rather make something more permanent, you can [instead make a breakout 
 You'll need
 
 - A breadboard
-- [ESP32-S3 WROOM-1 N32R8 dev board](https://www.adafruit.com/product/5364). The N32R8 has 32MB of flash. You can also use the N8R8 with 8MB of flash but the speed of the display will be slightly slower and you won't be able to perform over-the-air upgrades as you won't have enough space. The 32MB is the same price, so get that if you can! 
+- [ESP32-S3 WROOM-1 N32R8 dev board](https://www.adafruit.com/product/5364). The N32R8 has 32MB of flash. You can also use the N16R8 with 16MB of flash.
 - [This $58 RGB dot-clock 10.1" display with capacitive touch.](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html) Note other RGB dot clock displays of different sizes and resolutions can also work, but the pin numberings will be different and you'll have to update the resolution in our code. 
 - [A 40-pin FPC header for the display.](https://www.adafruit.com/product/4905)
 - One of two choices for sound: either [this mono I2S speaker amp board](https://www.adafruit.com/product/3006) (you'll also need a 3W speaker) or this stereo line-out / headphone jack [UDA1334 DAC.](https://www.aliexpress.com/item/3256803337983466.html?gatewayAdapt=4itemAdapt) 

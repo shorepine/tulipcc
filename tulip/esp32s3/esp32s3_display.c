@@ -1,18 +1,26 @@
 #include "esp32s3_display.h"
+#include "tasks.h"
 
-//static TaskHandle_t xDisplayTask = NULL;
+
 esp_lcd_panel_handle_t panel_handle;
 esp_lcd_rgb_panel_config_t panel_config;
 esp_lcd_rgb_panel_event_callbacks_t panel_callbacks;
 
 
-// Defaults for esp32 display params
-uint32_t HSYNC_BACK_PORCH=DEFAULT_HSYNC_BACK_PORCH;
-uint32_t HSYNC_FRONT_PORCH=DEFAULT_HSYNC_FRONT_PORCH;
-uint32_t HSYNC_PULSE_WIDTH=DEFAULT_HSYNC_PULSE_WIDTH;
-uint32_t VSYNC_BACK_PORCH=DEFAULT_VSYNC_BACK_PORCH;
-uint32_t VSYNC_FRONT_PORCH=DEFAULT_VSYNC_FRONT_PORCH;
-uint32_t VSYNC_PULSE_WIDTH=DEFAULT_VSYNC_PULSE_WIDTH;
+
+void set_pin(uint16_t pin, uint8_t value) {
+    gpio_config_t peri_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << pin
+    };
+    gpio_config(&peri_gpio_config);
+    gpio_set_level(pin, value);
+}
+
+void esp32s3_display_restart() {
+    esp32s3_display_stop();
+    esp32s3_display_start();
+}
 
 
 // This gets called at vsync / frame done
@@ -25,75 +33,36 @@ static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const 
 }
 
 
-bool esp32s3_display_bounce_empty(esp_lcd_panel_handle_t panel_io, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
-    return display_bounce_empty(bounce_buf, pos_px, len_bytes, user_ctx);
-}
-
-#include "tasks.h"
-void esp32s3_display_timings(uint32_t t0,uint32_t t1,uint32_t t2,uint32_t t3,uint32_t t4,uint32_t t5,uint32_t t6,uint32_t t7,uint32_t t8,uint32_t t9,uint32_t t10,uint32_t t11) {
-    fprintf(stderr, "Stopping display task\n");
-    display_stop();
-    //vTaskDelete(display_handle);
-    display_teardown();
-    H_RES = t0;
-    V_RES = t1; 
-    OFFSCREEN_X_PX = t2; 
-    OFFSCREEN_Y_PX = t3; 
-    H_RES_D = t4;
-    V_RES_D = t5;
-    HSYNC_BACK_PORCH = t6; 
-    HSYNC_FRONT_PORCH = t7; 
-    HSYNC_PULSE_WIDTH = t8; 
-    VSYNC_BACK_PORCH = t9; 
-    VSYNC_FRONT_PORCH = t10; 
-    VSYNC_PULSE_WIDTH = t11; 
-
-    TFB_ROWS = (V_RES_D/FONT_HEIGHT);
-    TFB_COLS = (H_RES_D/FONT_WIDTH);
-
-    // Init the BG, TFB and sprite and UI layers
-    //display_reset_bg();
-    //display_reset_tfb();
-    //display_reset_sprites();
-    display_init();
-    panel_config.timings.h_res = H_RES;
-    panel_config.timings.v_res = V_RES;
-    panel_config.timings.hsync_back_porch = HSYNC_BACK_PORCH;
-    panel_config.timings.hsync_front_porch = HSYNC_FRONT_PORCH;
-    panel_config.timings.hsync_pulse_width = HSYNC_PULSE_WIDTH;
-    panel_config.timings.vsync_back_porch = VSYNC_BACK_PORCH;
-    panel_config.timings.vsync_front_porch = VSYNC_FRONT_PORCH;
-    panel_config.timings.vsync_pulse_width = VSYNC_PULSE_WIDTH;
-    panel_config.bounce_buffer_size_px = BOUNCE_BUFFER_SIZE_PX;
-    //xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
-
-    display_start();
-    // Wait for it to come back
-//    delay_ms(5000);
-}
-
 void esp32s3_display_stop() {
+    #ifdef TULIP_DIY
     gpio_set_level(PIN_NUM_BK_LIGHT, !BK_LIGHT_ON_LEVEL);
+    #endif
     esp_lcd_panel_del(panel_handle);
 }
 
+bool IRAM_ATTR esp32s3_display_bounce_empty(esp_lcd_panel_handle_t panel_io, void *bounce_buf, int pos_px, int len_bytes, void *user_ctx) {
+    return display_bounce_empty(bounce_buf, pos_px, len_bytes, user_ctx);
+}
 
 void esp32s3_display_start() {
     ESP_ERROR_CHECK(esp_lcd_new_rgb_panel(&panel_config, &panel_handle));
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
+    display_brightness(brightness); 
+    #ifdef TULIP_DIY
     gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
+    #endif
+
 }
-
-
 
 void esp_display_set_clock(uint8_t mhz) {  
-        display_stop();
         PIXEL_CLOCK_MHZ = mhz;
-        panel_config.timings.pclk_hz = PIXEL_CLOCK_MHZ*1000*1000;
-        display_start();
+        esp_lcd_rgb_panel_set_pclk(panel_handle, mhz*1000*1000);
 }
+
+
+
 
 
 
@@ -126,7 +95,6 @@ void display_brightness(uint8_t amount) {
     if(amount > 9) amount = 9;
     brightness = amount;
     uint16_t duty = (9-brightness)*1000;
-    fprintf(stderr, "setting duty to %d\n", duty);
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, duty);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1) ;
 }
@@ -140,18 +108,10 @@ void run_esp32s3_display(void) {
     // First set up the memory
     display_init();
     
-    // Backlight on GPIO for the 10.1 panel
-    gpio_config_t bk_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << PIN_NUM_BK_LIGHT
-    };
-    //xDisplayTask = xTaskGetCurrentTaskHandle();
-    ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
-
     panel_handle = NULL;
     panel_config.data_width = BYTES_PER_PIXEL*8; 
     panel_config.psram_trans_align = 64;
-    panel_config.clk_src = LCD_CLK_SRC_PLL160M;
+    panel_config.clk_src = LCD_CLK_SRC_DEFAULT;
     panel_config.disp_gpio_num = PIN_NUM_DISP_EN;
     panel_config.pclk_gpio_num = PIN_NUM_PCLK;
     panel_config.vsync_gpio_num = PIN_NUM_VSYNC;
@@ -175,6 +135,18 @@ void run_esp32s3_display(void) {
     panel_config.data_gpio_nums[13] = PIN_NUM_DATA13;
     panel_config.data_gpio_nums[14] = PIN_NUM_DATA14;
     panel_config.data_gpio_nums[15] = PIN_NUM_DATA15;
+
+    #ifdef MAKERFABS
+    // Set lower 8 bits to low
+    set_pin(PIN_NUM_DATA8, 0);
+    set_pin(PIN_NUM_DATA9, 0);
+    set_pin(PIN_NUM_DATA10, 0);
+    set_pin(PIN_NUM_DATA11, 0);
+    set_pin(PIN_NUM_DATA12, 0);
+    set_pin(PIN_NUM_DATA13, 0);
+    set_pin(PIN_NUM_DATA14, 0);
+    set_pin(PIN_NUM_DATA15, 0);
+    #endif
 
     panel_config.timings.pclk_hz = PIXEL_CLOCK_MHZ*1000*1000;
     panel_config.timings.h_res = H_RES;
@@ -203,15 +175,18 @@ void run_esp32s3_display(void) {
     ESP_ERROR_CHECK(esp_lcd_rgb_panel_register_event_callbacks(panel_handle, &panel_callbacks, display_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_reset(panel_handle));
     ESP_ERROR_CHECK(esp_lcd_panel_init(panel_handle));
-    //display_pwm_setup();
-    //display_brightness(brightness); 
+    display_pwm_setup();
+    display_brightness(brightness); 
+    #ifdef TULIP_DIY
     gpio_set_level(PIN_NUM_BK_LIGHT, BK_LIGHT_ON_LEVEL);
-
+    #endif
     
     // Time the frame sync and stay running forever 
     int64_t free_time = 0;
     int64_t tic0 = esp_timer_get_time();
-    uint16_t loop_count =0;
+    uint16_t loop_count =1;
+    bounce_count = 1;
+
     while(1)  { 
         int64_t tic1 = esp_timer_get_time();
         ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
@@ -229,6 +204,7 @@ void run_esp32s3_display(void) {
                     (int) (1000000.0 / ((H_RES*V_RES / BOUNCE_BUFFER_SIZE_PX) * (reported_fps))),
                     bounce_count
                 );
+                gpu_log = 0;
             }
             bounce_count = 1;
             bounce_time = 0;
