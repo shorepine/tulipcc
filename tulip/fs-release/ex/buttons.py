@@ -14,7 +14,7 @@ tulip.bg_clear()
 tulip.ui_callback(cb)
 
     
-tulip.ui_button(0,"hey there",600,200,150,60,255,200,0,0)
+tulip.ui_button(0,"hi there",600,200,150,60,255,200,0,0)
 tulip.ui_button(1,"here again", 700, 400, 150, 60, 255, 200, 1,1)
 tulip.ui_slider(2, 0.5, 200,400,30,150, 151,188)
 tulip.ui_slider(3, 0.5, 200,300,150,30, 151,188)

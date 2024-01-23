@@ -411,6 +411,23 @@ STATIC mp_obj_t tulip_screen_size(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_screen_size_obj, 0, 0, tulip_screen_size);
 
 
+STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
+#ifdef TULIP4_R10
+    return mp_obj_new_str("TULIP4_R10", strlen("TULIP4_R10"));
+#elif defined MATOUCH7
+    return mp_obj_new_str("MATOUCH7", strlen("MATOUCH7"));
+#elif defined N16R8
+    return mp_obj_new_str("N16R8", strlen("N16R8"));
+#elif defined N32R98
+    return mp_obj_new_str("N32R98", strlen("N32R98"));
+#elif defined TDECK
+    return mp_obj_new_str("TDECK", strlen("TDECK"));
+#else
+    return mp_obj_new_str("OTHER", strlen("OTHER"));
+#endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_board_obj, 0, 0, tulip_board);
+
 
 
 
@@ -1347,6 +1364,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ui_active), MP_ROM_PTR(&tulip_ui_active_obj) },
     { MP_ROM_QSTR(MP_QSTR_joy), MP_ROM_PTR(&tulip_joy_obj) },
     { MP_ROM_QSTR(MP_QSTR_screen_size), MP_ROM_PTR(&tulip_screen_size_obj) },
+    { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) },
     { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
 
 

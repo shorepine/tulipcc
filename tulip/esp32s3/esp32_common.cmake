@@ -264,5 +264,6 @@ foreach(comp ${IDF_COMPONENTS})
     micropy_gather_target_properties(${comp})
 endforeach()
 
+
 # Include the main MicroPython cmake rules.
 include(${MICROPY_DIR}/py/mkrules.cmake)
