@@ -10,7 +10,9 @@ Here you can see the API [Tulip](../README.md) currently ships with.
 
 ## General
 
-[Tulip](../README.md) boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
+[Tulip](../README.md) boots right into a Python prompt and all interaction with the system happens there. You have your own space to store code and files in `/user` and we keep system examples and programs in `/sys`. 
+
+You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
 
 ```python
 # Interact with the filesystem.
@@ -23,8 +25,9 @@ cd('directory')
 clear
 
 # Run a saved Python file. Control-C stops it
-cd('ex') # The ex folder has a few examples and graphics in it
+cd('/sys/ex') # The /sys/ex folder has a few examples and graphics in it
 execfile("parallax.py")
+
 run('game') # Runs a package, see below
 
 # Extract a .tar file.
@@ -36,7 +39,7 @@ tulip.tar_create(directory)
 # If you want something to run when Tulip boots, add it to boot.py
 edit("boot.py")
 
-# On Tulip CC with 16MB of flash or more, you can upgrade the firmware over-the-air over wifi
+# You can upgrade the firmware over-the-air over wifi
 tulip.upgrade()
 
 # Takes a screenshot and saves to disk. The screen will blank for a moment
