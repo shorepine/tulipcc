@@ -1,7 +1,6 @@
 // esp32s3_joy.
 
 #include <stdio.h>
-#include "touchscreen.h"
 #include "esp_log.h"
 #include "string.h"
 #include "esp_timer.h"

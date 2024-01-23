@@ -55,6 +55,11 @@
 #include "modmachine.h"
 #include "modnetwork.h"
 #include "mpthreadport.h"
+#ifdef TDECK
+#include "tdeck_display.h"
+#include "tdeck_keyboard.h"
+#endif
+
 
 #if MICROPY_BLUETOOTH_NIMBLE
 #include "extmod/modbluetooth.h"
@@ -85,10 +90,18 @@
 
 #include "display.h"
 #include "alles.h"
-#include "touchscreen.h"
 #include "tasks.h"
-#include "usb_keyboard.h"
 
+#ifdef TULIP_DIY
+#include "ft5x06_touchscreen.h"
+#elif defined MAKERFABS
+#include "gt911_touchscreen.h"
+#endif
+#ifdef TDECK
+#include "tdeck_keyboard.h"
+#else
+#include "usb_keyboard.h"
+#endif
 
 TaskHandle_t display_handle;
 TaskHandle_t usb_handle;
@@ -218,7 +231,7 @@ void mp_task(void *pvParameter) {
 
     heap_caps_register_failed_alloc_callback(esp_alloc_failed);
     uint32_t caps = MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM;
-    size_t mp_task_heap_size = 4 * 1024 * 1024; // MIN(heap_caps_get_largest_free_block(caps), heap_total / 2);
+    size_t mp_task_heap_size = MP_TASK_HEAP_SIZE; 
     void *mp_task_heap = heap_caps_malloc(mp_task_heap_size, caps);
 
 soft_reset:
@@ -315,10 +328,23 @@ void boardctrl_startup(void) {
     }
 }
 
+#ifdef TULIP_DIY
 extern void ft5x06_init();
 extern void run_ft5x06();
+#elif defined MAKERFABS
+extern void run_gt911();
+#endif
+
 extern void run_midi();
+
+#ifdef TULIP_DIY
 extern void init_esp_joy();
+#endif
+
+#ifdef TDECK
+extern void run_tdeck_keyboard();
+#endif
+
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
 
@@ -332,46 +358,66 @@ void app_main(void) {
     idle_0_handle = xTaskGetIdleTaskHandleForCPU(0);
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
-
+    #ifndef TDECK
     fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
     xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
     fflush(stderr);
-    delay_ms(10);
+    delay_ms(100);
+    #endif
 
-    delay_ms(500);
+    #ifndef MATOUCH7 // can't run USB and audio on MaTouch at the same time
+    #ifndef TDECK // TDECK doesn't send power to USB
     fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
     xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
+    #endif
+    #endif
 
     fprintf(stderr,"Starting display on core %d\n", DISPLAY_TASK_COREID);
+    #ifdef TDECK
+    xTaskCreatePinnedToCore(run_tdeck_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
+    #else
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
+    #endif
     fflush(stderr);
     delay_ms(10);
-    esp32s3_display_stop();
 
     fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
+    #ifdef TULIP_DIY
     ft5x06_init();
     xTaskCreatePinnedToCore(run_ft5x06, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
+    #elif defined MAKERFABS
+    xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
+    #elif defined TDECK
+    fprintf(stderr, "No touchscreen support on T-Deck yet\n");
+    #endif
     fflush(stderr);
     delay_ms(100);
 
     fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
-    delay_ms(250);
+    delay_ms(100);
     
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
     
+    #ifdef TDECK
+    fprintf(stderr,"Starting T-Deck keyboard on core %d\n", USB_TASK_COREID);
+    xTaskCreatePinnedToCore(run_tdeck_keyboard, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
+    fflush(stderr);
+    delay_ms(10);
+    #endif
+
+    #ifdef TULIP_DIY    
     fprintf(stderr,"Starting joystick\n");
     init_esp_joy();
     fflush(stderr);
     delay_ms(100);
-
-    esp32s3_display_start();
+    #endif
 
 
 }

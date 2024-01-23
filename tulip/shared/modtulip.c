@@ -32,17 +32,6 @@ extern void save_tfb();
 extern void restore_tfb();
 extern uint8_t tfb_active;
 
-STATIC mp_obj_t tulip_off(size_t n_args, const mp_obj_t *args) {
-    #ifdef ESP_PLATFORM
-    gpio_hold_dis(PIN_NUM_BK_PWM);
-    gpio_set_level(PIN_NUM_BK_PWM, 1); //set high/low
-    gpio_hold_en(PIN_NUM_BK_PWM);
-    gpio_deep_sleep_hold_en();
-    esp_deep_sleep_start(); //sleep
-    #endif
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_off_obj, 0, 0, tulip_off);
 
 
 STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
@@ -850,7 +839,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_brightness_obj, 0, 1, tulip_bri
 
 extern uint16_t check_joy();
 STATIC mp_obj_t tulip_joy(size_t n_args, const mp_obj_t *args) {
-#ifndef TULIPCC_R10
+#ifndef MAKERFABS
     return mp_obj_new_int(check_joy());
 #else
     return mp_obj_new_int(0);
@@ -884,12 +873,17 @@ STATIC mp_obj_t tulip_touch(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_obj, 0, 0, tulip_touch);
 
-#ifdef ESP_PLATFORM
-#include "touchscreen.h"
-#else
-int16_t touch_x_delta = 0;
-int16_t touch_y_delta = 0;
+#ifdef TULIP_DIY
+#include "ft5x06_touchscreen.h"
+#elif defined MAKERFABS
+#include "gt911_touchscreen.h"
 #endif
+
+#ifdef ESP_PLATFORM
+extern int16_t touch_x_delta;
+extern int16_t touch_y_delta;
+#endif
+
 STATIC mp_obj_t tulip_touch_delta(size_t n_args, const mp_obj_t *args) {
     if(n_args > 0) {
         touch_x_delta = mp_obj_get_int(args[0]);
@@ -1135,44 +1129,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_str_obj, 5, 7, tulip_bg_str)
 
 
 
-STATIC mp_obj_t tulip_timing(size_t n_args, const mp_obj_t *args) {
-    if(n_args == 0) {
-        mp_obj_t tuple[10];
-        tuple[0] = mp_obj_new_int(H_RES);
-        tuple[1] = mp_obj_new_int(V_RES);
-        tuple[2] = mp_obj_new_int(OFFSCREEN_X_PX);
-        tuple[3] = mp_obj_new_int(OFFSCREEN_Y_PX);
-#ifdef ESP_PLATFORM
-        tuple[4] = mp_obj_new_int(HSYNC_BACK_PORCH);
-        tuple[5] = mp_obj_new_int(HSYNC_FRONT_PORCH);
-        tuple[6] = mp_obj_new_int(HSYNC_PULSE_WIDTH);
-        tuple[7] = mp_obj_new_int(VSYNC_BACK_PORCH);
-        tuple[8] = mp_obj_new_int(VSYNC_FRONT_PORCH);
-        tuple[9] = mp_obj_new_int(VSYNC_PULSE_WIDTH);
-#else
-        tuple[4] = mp_obj_new_int(-1);
-        tuple[5] = mp_obj_new_int(-1);
-        tuple[6] = mp_obj_new_int(-1);
-        tuple[7] = mp_obj_new_int(-1);
-        tuple[8] = mp_obj_new_int(-1);
-        tuple[9] = mp_obj_new_int(-1);
-#endif
-        return mp_obj_new_tuple(10, tuple);
-    }
-
-#ifdef ESP_PLATFORM
-        esp32s3_display_timings(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), \
-                    mp_obj_get_int(args[5]), mp_obj_get_int(args[6]), mp_obj_get_int(args[7]), mp_obj_get_int(args[8]), mp_obj_get_int(args[9]));
-#else
-        unix_display_timings(mp_obj_get_int(args[0]), mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]));
-#endif
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_timing_obj, 0, 10, tulip_timing);
-
-
-
 //tulip.button(id, "text", x,y,w,h,r,fg_color,btn_color,filled)
 STATIC mp_obj_t tulip_ui_button(size_t n_args, const mp_obj_t *args) {
     uint8_t ui_id = mp_obj_get_int(args[0]);
@@ -1297,7 +1253,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_build_strings_obj, 0,0, tulip_b
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
-    { MP_ROM_QSTR(MP_QSTR_off), MP_ROM_PTR(&tulip_off_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_restart), MP_ROM_PTR(&tulip_display_restart_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_stop), MP_ROM_PTR(&tulip_display_stop_obj) },
@@ -1369,7 +1324,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_rect), MP_ROM_PTR(&tulip_bg_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_char), MP_ROM_PTR(&tulip_bg_char_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_str), MP_ROM_PTR(&tulip_bg_str_obj) },
-    { MP_ROM_QSTR(MP_QSTR_timing), MP_ROM_PTR(&tulip_timing_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_log), MP_ROM_PTR(&tulip_gpu_log_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_button), MP_ROM_PTR(&tulip_ui_button_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_text), MP_ROM_PTR(&tulip_ui_text_obj) },

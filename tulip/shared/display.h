@@ -99,8 +99,13 @@ extern const unsigned char portfolio_glyph_bitmap[1792];
 // We assume we can store 16 unique 32x32 sprite tiles, you can swap these out from RAM
 #define SPRITE_RAM_BYTES (32*32*SPRITES)
 
+#ifndef TDECK
 #define H_RES 1024
 #define V_RES 600
+#else
+#define H_RES 320
+#define V_RES 240
+#endif
 
 #ifdef TULIP_REPL_FONT_8X6
 #define FONT_HEIGHT 8

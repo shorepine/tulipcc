@@ -213,7 +213,12 @@ void move_cursor(int16_t x, int16_t y) {
 	char status[TFB_COLS];
 	// TODO, padding better 
 	float percent = ((float)(cursor_y+y_offset+1) / (float)lines) * 100.0;
-	sprintf(status, "%04d / %04d [%02.2f%%] %3d %s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
+    #ifdef TDECK
+    // Smaller screen, less space for text
+	sprintf(status, "%04d / %04d [%02.2f%%] %3d %.10s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
+    #else
+    sprintf(status, "%04d / %04d [%02.2f%%] %3d %.35s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
+    #endif    
 	string_at_row(status, strlen(status), TFB_ROWS-1);
 	format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
     display_tfb_update(TFB_ROWS-1);

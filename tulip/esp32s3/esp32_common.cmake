@@ -67,10 +67,6 @@ list(APPEND MICROPY_SOURCE_DRIVERS
 )
 
 list(APPEND MICROPY_SOURCE_PORT
-    ../../../tulip/esp32s3/esp32s3_display.c
-    ../../../tulip/esp32s3/esp32s3_joy.c
-    ../../../tulip/esp32s3/usb_keyboard.c
-    ../../../tulip/esp32s3/touchscreen.c
     ../../../tulip/esp32s3/multicast.c
     ../../../tulip/esp32s3/mphalport.c
     ../../../tulip/esp32s3/network_common.c
@@ -204,6 +200,8 @@ idf_component_register(
         ${MICROPY_SOURCE_BOARD}
     INCLUDE_DIRS
         ../../tulip/esp32s3
+        ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch_gt911/include
+        ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch/include
         ${MICROPY_INC_CORE}
         ${MICROPY_INC_USERMOD}
         ${MICROPY_PORT_DIR}
@@ -234,6 +232,8 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     LFS2_NO_MALLOC LFS2_NO_ASSERT
     ESP_PLATFORM
     TULIP
+    ${BOARD_DEFINITION1}
+    ${BOARD_DEFINITION2}
 )
 
 #LFS2_NO_DEBUG LFS2_NO_WARN LFS2_NO_ERROR 

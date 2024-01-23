@@ -49,8 +49,6 @@ imgur_url = tulip.screenshot()
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 
 ms = tulip.ticks_ms() # returns the milliseconds since boot, aka Arduino millis() 
-
-tulip.off() # Shuts down Tulip. On hardware, the button up top will turn it back on.
 ```
 
 If you have a program that relies on mulitple files (graphics, or multiple Python files) you'll want to create a Tulip Package. A package is just a folder with your files in it, like:
@@ -341,15 +339,6 @@ tulip.gpu_reset()
 # Higher clocks mean smoother animations, but less time for the CPU to prepare things to draw
 clock = tulip.display_clock() 
 tulip.display_clock(mhz)
-
-# You can also change the timing and resolution on the fly. 
-# This is helpful for getting higher FPS with lower resolution (less pixels)
-
-# H_RES, V_RES should be multiples of the Tulip default font size -- 8 x 12.
-(h_res, v_res, h_offscreen_px, v_offscreen_px, 
-  hsync_back_porch, hsync_front_porch, hsync_pulse_width, 
-  vsync_back_porch, vsync_front_porch, vsync_pulse_width) = tulip.timing() # returns current
-tulip.timing(1024, 600, 256, 150, 139, 140, 20, 20, 12, 20) # sets, will erase all display RAM
 
 # Convenience function for getting the screen width and height,
 # which are just the first two values returned by tulip.timing()
