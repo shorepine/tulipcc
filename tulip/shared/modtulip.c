@@ -913,6 +913,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_obj, 0, 0, tulip_touch);
 #ifdef ESP_PLATFORM
 extern int16_t touch_x_delta;
 extern int16_t touch_y_delta;
+#else
+int16_t touch_x_delta = 0;
+int16_t touch_y_delta = 0;
 #endif
 
 STATIC mp_obj_t tulip_touch_delta(size_t n_args, const mp_obj_t *args) {

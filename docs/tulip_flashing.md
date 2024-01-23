@@ -26,9 +26,10 @@ We aim to release versions of Tulip regularly. You can find the latest in our [r
  * For the [MaTouch 7"](https://github.com/bwhitman/tulipcc/issues/160): `MATOUCH7`
  * Tulip CC (our integrated board with display): `TULIP4_R10`
 
- Download the `.bin` and use [`esptool.py`](https://docs.espressif.com/projects/esptool/en/latest/esp32/) or any other ESP32-flasher tool to write the entire `.bin` to flash:
+Connect your Tulip to your computer with a USB cable. Download the `.bin` and use [`esptool.py`](https://docs.espressif.com/projects/esptool/en/latest/esp32/) or any other ESP32-flasher tool to write the entire `.bin` to flash:
 
 ```bash
+% pip install esptool # if you haven't installed it yet
 % esptool.py write_flash 0x0 tulip-full-XXX.bin
 ```
 

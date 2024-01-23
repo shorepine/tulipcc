@@ -23,7 +23,7 @@ if(not os.path.exists('build/flash_args')):
     print("Run this after a successful build only")
     sys.exit()
 
-SYSTEM_HOME = "../fs-release"
+SYSTEM_HOME = "../fs"
 
 # Copy over only these extensions 
 good_exts = [".txt", ".png", ".py", ".json", ".obj"]
@@ -58,10 +58,7 @@ print("... done.")
 
 cur_dir = os.getcwd()
 os.chdir(SYSTEM_HOME)
-folders = source_folders
-# Expand the folders
-for folder in source_folders:
-    folders = folders + [ f.path for f in os.scandir(folder) if f.is_dir() ]
+folders = [x[0][2:] for x in os.walk('.')][1:]
 
 cfg = lfs.LFSConfig(block_size=4096, block_count = int(sys_partition.size / 4096),  disk_version=0x00020000)
 fs = lfs.LFSFilesystem()

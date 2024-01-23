@@ -31,8 +31,8 @@ def get_osc():
     return play_osc
 
 
-tulip.tfb_stop()
-tulip.display_clock(22)
+#tulip.tfb_stop()
+#tulip.display_clock(22)
 
 pix_dir = "pix"
 
@@ -57,10 +57,10 @@ bounce_curr_note = bounce_base_note
 flower_notes = [3,4,11,12,13]
 shroom_notes = [28,25,1]
 
-str_len = tulip.str("LOADING...", WIDTH, math.floor(HEIGHT/2), 0, 2)
+str_len = tulip.bg_str("LOADING...", WIDTH, math.floor(HEIGHT/2), 0, 2)
 # clear the screen
 tulip.bg_clear(random.choice(grass_colors))
-tulip.str("LOADING...", math.floor(WIDTH/2)-(math.floor(str_len/2)), math.floor(HEIGHT/2), 0, 2)
+tulip.bg_str("LOADING...", math.floor(WIDTH/2)-(math.floor(str_len/2)), math.floor(HEIGHT/2), 0, 2)
 # Load the rabbit sprite frames into sprite RAM
 (rabbit_w, rabbit_h) = (48, 32)
 for i in range(4):
@@ -82,7 +82,7 @@ for i in range(4):
 
 #tulip.bg_blit(WIDTH,0,WIDTH,HEIGHT,0,0)
 
-for x in range(WIDTH * 2):
+for x in range(WIDTH):
     tulip.bg_pixel(x,0,random.choice(grass_colors))
 
 for y in range(1,HEIGHT):
@@ -142,8 +142,8 @@ def game_loop(d):
     poop_y = f_y + half_rabbit_h + 5
 
     if random.random() < poop_prob:
-        tulip.circle(poop_x,poop_y,5, 72, 1)
-        tulip.circle(poop_x,poop_y,3, d["poop_color"],1)
+        tulip.bg_circle(poop_x,poop_y,5, 72, 1)
+        tulip.bg_circle(poop_x,poop_y,3, d["poop_color"],1)
 
 
     if tulip.ticks_ms() > start_time + time_til_flowers:
@@ -154,10 +154,10 @@ def game_loop(d):
                 #fc = random.randint(0,len(flower_colors)-1)
                 off_x = random.randint(-3,3)
                 off_y = random.randint(-3,3)
-                tulip.circle(center_x + off_x,
+                tulip.bg_circle(center_x + off_x,
                     center_y + off_y,
                     5, random.choice(flower_colors), 1)
-            tulip.circle(center_x, center_y,2,253,1)
+            tulip.bg_circle(center_x, center_y,2,253,1)
             p_select = random.randrange(0,len(flower_notes))
             p = flower_notes[p_select]
             alles.send(osc=get_osc(), wave=alles.PCM, patch=p, vel=0.25)
@@ -242,7 +242,7 @@ start_time = tulip.ticks_ms()
 tulip.frame_callback(game_loop, d)
 
 #14
-alles.send(osc=0, wave=alles.PCM, patch=18,  vel=0.25, feedback=1)
+#alles.send(osc=0, wave=alles.PCM, patch=18,  vel=0.25, feedback=1)
 
 # Run in a loop forever. Catch ctrl-c
 try:
