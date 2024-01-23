@@ -39,39 +39,11 @@ extern "C" {
 #include "nvs_flash.h"
 
 #include "tasks.h"
-
+#include "pins.h"
 // This can be 32 bit, int32_t -- helpful for digital output to a i2s->USB teensy3 board
 //#define I2S_SAMPLE_TYPE I2S_BITS_PER_SAMPLE_16BIT
 typedef int16_t i2s_sample_type;
 
-
-// Pins & buttons
-// https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/_images/ESP32-S3_DevKitC-1_pinlayout.jpg
-#if defined MATOUCH7
-#define ESP_INTR_FLAG_DEFAULT 0
-#define CONFIG_I2S_LRCLK 2
-#define CONFIG_I2S_BCLK 20 
-#define CONFIG_I2S_DIN 19
-#define CONFIG_I2S_NUM 0 
-#elif defined TULIP4_R10
-#define ESP_INTR_FLAG_DEFAULT 0
-#define CONFIG_I2S_LRCLK 2
-#define CONFIG_I2S_BCLK 8
-#define CONFIG_I2S_DIN 5
-#define CONFIG_I2S_NUM 0 
-#elif defined TDECK
-#define ESP_INTR_FLAG_DEFAULT 0
-#define CONFIG_I2S_LRCLK 5
-#define CONFIG_I2S_BCLK 7
-#define CONFIG_I2S_DIN 6
-#define CONFIG_I2S_NUM 0 
-#elif defined TULIP_DIY
-#define ESP_INTR_FLAG_DEFAULT 0
-#define CONFIG_I2S_LRCLK 4
-#define CONFIG_I2S_BCLK 1
-#define CONFIG_I2S_DIN 2
-#define CONFIG_I2S_NUM 0 
-#endif
 
 #endif // ESP
 

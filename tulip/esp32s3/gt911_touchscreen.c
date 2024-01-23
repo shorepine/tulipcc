@@ -1,17 +1,12 @@
 
 #include "display.h"
 #include "gt911_touchscreen.h"
-
+#include "pins.h"
 // Default for my MaTouch 7" 1024x600
 int16_t touch_x_delta = -4;
 int16_t touch_y_delta = -6;
 float y_scale = 0.8f;
 
-#define I2C_SDA_PIN 17
-#define I2C_SCL_PIN 18
-#define TOUCH_INT -1
-#define TOUCH_RST 38
-#define I2C_NUM I2C_NUM_0
 esp_lcd_touch_handle_t tp;
 
 
@@ -22,11 +17,11 @@ void touch_init(void)
 
     i2c_config_t i2c_conf = {
         .mode = I2C_MODE_MASTER,
-        .sda_io_num = I2C_SDA_PIN,
-        .scl_io_num = I2C_SCL_PIN,
+        .sda_io_num = I2C_SDA,
+        .scl_io_num = I2C_SCL,
         .sda_pullup_en = GPIO_PULLUP_ENABLE,
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = 400000,
+        .master.clk_speed = I2C_CLK_FREQ,
     };
 
     ESP_ERROR_CHECK(i2c_param_config(I2C_NUM, &i2c_conf));

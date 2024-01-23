@@ -20,12 +20,8 @@
 #include "display.h"
 #include "soc/io_mux_reg.h"
 #include "ui.h"
+#include "pins.h"
 
-#define I2C_SCL                     17//11//47//17 //(3)
-#define I2C_SDA                     18//12//21//18//(1)
-#define TOUCH_INT_IO                (5)
-#define TOUCH_INT_IO_MUX            (PERIPHS_IO_MUX_GPIO5_U)
-#define I2C_MASTER_NUM              I2C_NUM_0
 #define I2C_MASTER_TX_BUF_DISABLE   0
 #define I2C_MASTER_RX_BUF_DISABLE   0
 #define I2C_FREQ_HZ                 (100000)
@@ -217,16 +213,16 @@ static void i2c_bus_init()
         .sda_pullup_en = GPIO_PULLUP_ENABLE,
         .scl_io_num = I2C_SCL,
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = I2C_FREQ_HZ,
+        .master.clk_speed = I2C_CLK_FREQ,
     };
 
-    i2c_bus = iot_i2c_bus_create(I2C_MASTER_NUM, &conf);
+    i2c_bus = iot_i2c_bus_create(I2C_NUM, &conf);
 }
 
 void ft5x06_init()
 {
     i2c_bus_init(); 
-    gpio_set_direction(TOUCH_INT_IO, GPIO_MODE_INPUT);
+    gpio_set_direction(TOUCH_INT, GPIO_MODE_INPUT);
     dev = iot_ft5x06_create(i2c_bus, FT5X06_ADDR_DEF);
     if(dev == NULL) {
         fprintf(stderr,"ft5x06 device create fail\n");
@@ -244,7 +240,7 @@ void run_ft5x06(void *param)
     touch_info_t touch_info;
     uint8_t got_primary_touch = 0;
     while (1) {
-        int8_t p0 = gpio_get_level(TOUCH_INT_IO);
+        int8_t p0 = gpio_get_level(TOUCH_INT);
         int8_t p1 = iot_ft5x06_touch_report(dev, &touch_info);
         got_primary_touch = 0;
         if(p0 == 0 && p1 == ESP_OK) {
