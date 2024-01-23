@@ -99,12 +99,17 @@ os.system("cp build/tulip.bin dist/tulip-full-%s.bin" % (MICROPY_BOARD))
 os.system("cp build/micropython.bin dist/tulip-firmware-%s.bin" % (MICROPY_BOARD))
 os.system("cp build/tulip-sys.bin dist/tulip-sys.bin")
 
-# Write the entire thing with
-# esptool.py write_flash 0x0 tulip.bin
-
-#target = ParttoolTarget()
-#target.write_partition(PartitionName("vfs"), "tulip-vfs.bin")
-#target.write_partition(PartitionName("system"), "tulip-sys.bin")
-
+# Optionally do the writes, 
+# you can pass nothing (Just creates the files), "full" (writes everything), "sys" (writes the system dir), "vfs" (writes the empty space for /user)
+if(len(sys.argv)>1):
+    for arg in sys.argv[1:]:
+        if(arg == 'full'):
+            os.system("esptool.py write_flash 0x0 dist/tulip-full-%s.bin" % (MICROPY_BOARD))
+        if(arg == 'vfs'):
+            target = ParttoolTarget()
+            target.write_partition(PartitionName("vfs"), "build/tulip-vfs.bin")
+        if(arg == 'sys'):
+            target = ParttoolTarget()
+            target.write_partition(PartitionName("system"), "build/tulip-sys.bin")
 
 
