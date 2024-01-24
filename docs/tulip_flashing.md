@@ -130,5 +130,5 @@ TODO
 
 ## Questions
 
-Any questions? [Chat with us on our discussions page](https://github.com/bwhitman/tulipcc/discussions) or **chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG).
+Any questions? [Chat with us on our discussions page](https://github.com/bwhitman/tulipcc/discussions) or [**chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG).
 
