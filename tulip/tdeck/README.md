@@ -22,14 +22,9 @@ We default the T-Deck to a 6x8 REPL font, to get 53x30 REPL / editor screen inst
 
 Keyboard Characters:
 
- * They keyboard by default ships with it reporting ASCII codes for each keypress, not any lower-level scan matrix codes. You can re-program the 
-keyboard (it's powered by a separate ESP32-C2). It would be great to reprogram this but then others would have to deal with building a flashing jig to 
-reprogram the ESP32-C2, so we may just have to be ok with it.
+ * Control (for control-C, control-X (save in editor), etc) is set by pressing left-shift and the microphone/0 key at the same time. Release that combo and then hit the key you want. (like C, or X)
  * A raw REPL can be enabled by pressing `sym` and then `shift+b`, to revert back to the normal REPL simply press `sym` and then `shift+l`.
- * I had to cheat to get access to Control-C and Control-X (save in the editor.) Control-C is accessed by pressing right shift and the dollar sign or 
-speaker key (depending on your model), and Control-X is left shift and the 0/microphone key.
- * An alternate character set can be accessed by pressing `alt+c`, this should allow the keyboard functionality to be expanded. The following 
-characters are currently available:
+ * An alternate character set can be accessed by pressing `alt+c`: The following characters are made available:
 
  | Default | Alternate | Notes |
  |---|---|---|
@@ -52,9 +47,9 @@ characters are currently available:
 Notes:
 
  * The trackball is mapped to the arrow keys.
- * USB for MIDI and real keyboard *should* work, but it's annoying to test as the UART for monitoring goes over the same USB connection. There's a 
-header on back for serial monitoring, so I'll eventually move to that and try to get USB working. Alternatively we could use MIDI over the exposed UART 
-pins, but that would require a separate breakout board. 
+ * USB for MIDI and real keyboard *should* work, but it's annoying to test as the UART for monitoring goes over the same USB connection. It also doesn't 
+ seem that the power pins for the USB connection are present. There's a header on back for serial monitoring, so MIDI could work over that, perhaps a 
+ USB power injector would work with a USB keyboard.  
  * If you get your T-Deck in a state where your computer can't find its USB-Serial connection anymore (probably because you're doing something with USB 
 on Tulip), you have to force it back into bootloader mode before it'll flash again. To do that, flip it off, then hold down the trackball button 
 (GPIO0) while flipping it back on again. You can let go of the ball right after you flip it on. The next time you flash, it'll stay in bootloader mode 
@@ -71,7 +66,7 @@ Still todo
  * SD card support
  * LoRA 
  * Battery voltage reporting
- * Integrate `CTRL` into the current keyboard implementation
+ * ~~Integrate `CTRL` into the current keyboard implementation~~
  * Microphone support 
  * Try 120MHz SPI 
 

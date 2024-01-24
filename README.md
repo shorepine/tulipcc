@@ -1,25 +1,21 @@
-# Tulip Creative Computer - a portable Python device for music, graphics and writing
-
+# Tulip Creative Computer - a portable programmable music and graphics synthesizer
 
 ![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/flat_tiles.jpg)
 
 Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
 
-Tulip is a self contained portable creative computer, with a display and keyboard and sound. It boots instantaneously into a Python prompt. Dive right into making something without distractions or complications. 
+Tulip is a self contained portable music and graphics synthesizer, with a display and keyboard and sound. It's fully programmable - you write code to define your music, games or anything else you can think of. It boots instantaneously into a Python prompt with a lot of built in support for music synthesis, fast graphics and text, MIDI and external sensors. Dive right into making something without distractions or complications. 
 
-Tulip is not a shell on top of another operating system. The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. 
-
-You can use Tulip to make music, code, art, games, or just write. It's a great environment for live coding performances. It doesn't run any existing applications and does not have a web browser, although it can connect to a network in a slow fashion.
+The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can build one or buy the parts needed to get one. You can use Tulip to make music, code, art, games, or just write. 
 
  * [**See the full Tulip API**](docs/tulip_api.md)
- * [**Build your own Tulip**](docs/tulip_build.md)
+ * [**Get or build your own Tulip**](docs/tulip_build.md)
  * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
  * Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
 
  [![shore pine sound systems discord](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
-
-Tulip is available both as a [hardware DIY project (Tulip CC)](docs/tulip_build.md) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop when developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about building the hardware, [download or build the desktop version!](docs/tulip_desktop.md)
+Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)](docs/tulip_build.md) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop while developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about getting or building the hardware, [download or build the desktop version!](docs/tulip_desktop.md)
 
 [![Tulip Desktop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
