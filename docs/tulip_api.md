@@ -52,6 +52,8 @@ imgur_url = tulip.screenshot()
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 
 ms = tulip.ticks_ms() # returns the milliseconds since boot, aka Arduino millis() 
+
+board = tulip.board() # Returns the board type, e.g. "TDECK", "MATOUCH7", "N16R8" etc
 ```
 
 If you have a program that relies on mulitple files (graphics, or multiple Python files) you'll want to create a Tulip Package. A package is just a folder with your files in it, like:
@@ -66,6 +68,7 @@ rabbit_game/
 
 The main Python script must be the name of the package. This script needs to explicitly `import tulip,alles` if you are using those. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package')`. 
 
+We put a few system packages in `/sys/app`, and if you `run('app')`, it will look both in your current folder and the `/sys/app` folder for the app. 
 
 ## Tulip World
 
