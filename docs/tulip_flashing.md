@@ -14,7 +14,7 @@ If your Tulip was flashed after our January 2024 release and is running fine and
 >>> tulip.upgrade()
 ```
 
-It will ask you if you want to upgrade your firmware and/or your `/sys` folder (the place we store baked in programs and examples.) Usually, a new firmware means new features, so it's recommended to upgrade both so that they're using the same APIs. This whole process takes about five minutes, and your Tulip will reboot. Easy!
+It will ask you if you want to upgrade your firmware and/or your `/sys` folder (the place we store baked in programs and examples.) Usually, a new firmware means new features, so it's recommended to upgrade both so that they're using the same APIs. This whole process takes about five minutes, and your Tulip will reboot. Your saved files (in `/user`) are safe. Easy!
 
 ## Flash Tulip from a compiled release
 
@@ -30,12 +30,14 @@ Connect your Tulip to your computer with a USB cable. **Note**: Many Tulip-capab
 
 Download the `.bin` for your board and use [`esptool.py`](https://docs.espressif.com/projects/esptool/en/latest/esp32/) or any other ESP32-flasher tool to write the entire `.bin` to flash:
 
+**NOTE: This will delete anything you've saved on the Tulip or anything else on the flash of the device. It may also take up to 10-15 minutes for 32MB boards and appear to 'stall' near the end -- but don't worry, it's working!**
+
 ```bash
 % pip install esptool # if you haven't installed it yet
 % esptool.py write_flash 0x0 tulip-full-XXX.bin
 ```
 
-**Note** especially on 32MB Tulips, this command may appear to stall or pause near the end longer than feels comfortable. Don't worry, it'll finish! This completely erases the chip on Tulip and may take some time for 32MB boards, up to 10 minutes or so. You don't have to do this very often, you can use `tulip.upgrade()` going forward after the first flash.
+Tulip should boot when it's finished (you may need to unplug/plug your USB cable.) You can use `tulip.upgrade()` going forward after this first flash.
 
 
 ## Compile and flash TulipCC for ESP32-S3
