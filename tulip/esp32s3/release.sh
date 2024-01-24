@@ -21,7 +21,7 @@ do
     gh release upload --clobber $RELEASE dist/tulip-full-$i.bin
 done
 python upload_firmware.py sys
-gh release upload --clobber v-jan-2024 dist/tulip-sys.bin
+gh release upload --clobber $RELEASE dist/tulip-sys.bin
 
 
 

@@ -80,7 +80,7 @@ pip3 install littlefs-python # needed to flash the filesystem
 cd ~/tulipcc/tulip/esp32s3
 ```
 
-### Flash Tulip 
+### Flash Tulip after compiling
 
 Now connect your Tulip to your computer over USB. See the notes about which USB port to use above. 
 
