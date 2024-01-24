@@ -7,7 +7,7 @@ To flash from a computer, you *may* need a driver for a serial-USB chip on the T
 
 ## Upgrade your working Tulip to the latest version
 
-If your Tulip is running and you just want to upgrade to the latest firmware, you can do that "over the air." Make sure your Tulip is connected to wifi and run `tulip.upgrade()`:
+If your Tulip was flashed after our January 2024 release and is running fine and you just want to upgrade to the latest firmware, you can do that "over the air." Make sure your Tulip is connected to wifi and run `tulip.upgrade()`:
 
 ```python
 >>> tulip.wifi("ssid", "password")
@@ -18,7 +18,7 @@ It will ask you if you want to upgrade your firmware and/or your `/sys` folder (
 
 ## Flash Tulip from a compiled release
 
-We aim to release versions of Tulip regularly. You can find the latest in our [releases section](https://github.com/bwhitman/tulipcc/releases). Find the `.bin` file for your type of Tulip:
+If you've got an unflashed Tulip, just finished a DIY, or somehow messed up the flash / firmware, you can flash the entire Tulip and filesystem with one file from our releases. We aim to release versions of Tulip regularly. You can find the latest in our [releases section](https://github.com/bwhitman/tulipcc/releases). Find the `.bin` file for your type of Tulip:
 
  * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
  * Any DIY Tulip board based on the N32R8 (32MB flash): `N32R8`
@@ -26,19 +26,21 @@ We aim to release versions of Tulip regularly. You can find the latest in our [r
  * For the [MaTouch 7"](https://github.com/bwhitman/tulipcc/issues/160): `MATOUCH7`
  * Tulip CC (our integrated board with display): `TULIP4_R10`
 
-Connect your Tulip to your computer with a USB cable. Download the `.bin` and use [`esptool.py`](https://docs.espressif.com/projects/esptool/en/latest/esp32/) or any other ESP32-flasher tool to write the entire `.bin` to flash:
+Connect your Tulip to your computer with a USB cable. **Note**: Many Tulip-capable boards have two USB ports, one called UART, TTL or Serial, and one called NATIVE, JTAG, or Host. You should use the UART one if available and try the NATIVE one if not. For example, on the MaTouch 7", you can use either USB port, but if you use the NATIVE port you have to hold down the BOOT button while attaching the USB cable. On the T-Deck, you only have access to the NATIVE port, and you may need to hold down the BOOT button (the trackball button) while you turn it on. If you've tried both ports and the following commands can't find a serial port to flash to, ensure that you've [installed a driver.](https://github.com/WCHSoftGroup/ch34xser_macos)
+
+Download the `.bin` for your board and use [`esptool.py`](https://docs.espressif.com/projects/esptool/en/latest/esp32/) or any other ESP32-flasher tool to write the entire `.bin` to flash:
 
 ```bash
 % pip install esptool # if you haven't installed it yet
 % esptool.py write_flash 0x0 tulip-full-XXX.bin
 ```
 
-This completely erases the chip on Tulip and may take some time for 32MB boards, up to 10 minutes or so. You don't have to do this very often, you can use `tulip.upgrade()` going forward after the first flash.
+**Note** especially on 32MB Tulips, this command may appear to stall or pause near the end longer than feels comfortable. Don't worry, it'll finish! This completely erases the chip on Tulip and may take some time for 32MB boards, up to 10 minutes or so. You don't have to do this very often, you can use `tulip.upgrade()` going forward after the first flash.
 
 
 ## Compile and flash TulipCC for ESP32-S3
 
-[Tulip CC](../README.md) should build on all platforms, although I've only tested macOS and Linux so far. Please let me know if you have any trouble!
+If you're working on Tulip itself or just like to see the latest bleeding edge before a release, you can compile [Tulip CC](../README.md) yourself. It should build on all platforms, although I've only tested macOS and Linux so far. Please let me know if you have any trouble!
 
 ### First time setup
 
@@ -80,7 +82,7 @@ cd ~/tulipcc/tulip/esp32s3
 
 ### Flash Tulip 
 
-Now connect your Tulip to your computer over USB. If using a breakout board, connect it to the UART connector, not the USB connector. 
+Now connect your Tulip to your computer over USB. See the notes about which USB port to use above. 
 
 Choose the right `MICROPY_BOARD` value for your board. 
 
@@ -92,7 +94,7 @@ Choose the right `MICROPY_BOARD` value for your board.
 
 The default is `N32R8`, so if you omit it that's what it'll use.
 
-You have to build the firmware (`idf.py build`) and then, for **only the first install**, run `tulip_fs_create.py` and then `esptool.py` to flash the entire filesystem to Tulip. This sets up the storage on Tulip. Only do that once per chip, or if you make changes to the underlying filesystem. Any further flashing can just use `idf.py -DMICROPY_BOARD=X flash`, which will save time and not overwrite your files!
+You have to build the firmware (`idf.py build`) and then, for **only the first install**, run `tulip_fs_create.py` and then `esptool.py` to flash the entire filesystem to Tulip. This sets up the storage on Tulip. Only do that once per chip, or if you make changes to the underlying filesystem. Any further flashing can just use (the much faster!) `idf.py -DMICROPY_BOARD=X flash`, which will save time and not overwrite your file system!
 
 For example, for a Tulip4 DIY board based on a N32R8:
 
@@ -104,7 +106,7 @@ python tulip_fs_create.py
 esptool.py write_flash 0x0 build/tulip.bin
 ```
 
-You may need to restart Tulip after the flash, bt Tulip should now just turn on whenever you connect USB or power it on. 
+You may need to restart Tulip after the flash, but Tulip should now just turn on whenever you connect USB or power it on. 
 
 To build and flash going forward, without modifying the filesystem:
 
@@ -128,5 +130,5 @@ TODO
 
 ## Questions
 
-Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
+Any questions? [Chat with us on our discussions page](https://github.com/bwhitman/tulipcc/discussions) or **chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG).
 
