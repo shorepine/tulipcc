@@ -179,7 +179,7 @@ bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes,
         uint8_t * b_ptr = b+(H_RES*rows_relative_px);
         uint16_t y = (starting_display_row_px + rows_relative_px) % V_RES;
         memcpy(b_ptr, bg_lines[y], H_RES); 
-        memcpy(b_ptr, bg_tfb + (y * H_RES),TFB_pxlen[y]);
+        if(tfb_active) memcpy(b_ptr, bg_tfb + (y * H_RES),TFB_pxlen[y]);
     
         if(spriteno_activated) {
             memset(sprite_ids, 255, H_RES);

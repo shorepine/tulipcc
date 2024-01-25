@@ -322,7 +322,7 @@ class PlanetBoing(tulip.Game):
         
     def __init__(self, num_blobs = 4):
         # If you want TFB etc to stay, use debug=True here 
-        super().__init__(debug=True)
+        super().__init__(debug=False)
 
         self.next_blob_at = 10
         

@@ -4,13 +4,9 @@ import tulip, alles, music
 
 
 def twiddle_path(incr, poop_color, note):
-
     global poop_colors
-
     twiddle = random.random()
-
     if twiddle < 0.1:
-
         if twiddle <= 0.05:
             incr -= random.random() * 2
             note -= 1
@@ -31,8 +27,7 @@ def get_osc():
     return play_osc
 
 
-#tulip.tfb_stop()
-#tulip.display_clock(22)
+tulip.tfb_stop()
 
 pix_dir = "pix"
 
@@ -73,14 +68,14 @@ for i in range(4):
 #print("starting bg fill at: ", ms_start)
 # fill background with noise pattern
 
-#num_c = len(grass_colors)
-#for x in range(WIDTH):
-#    for y in range(HEIGHT):         
-        #c_n = int(num_c * random.random())
-        #tulip.bg_pixel(x+WIDTH,y,grass_colors[c_n])
-#        tulip.bg_pixel(x+WIDTH,y,random.choice(grass_colors))
+num_c = len(grass_colors)
+for x in range(WIDTH):
+    for y in range(HEIGHT):         
+        c_n = int(num_c * random.random())
+        tulip.bg_pixel(x+WIDTH,y,grass_colors[c_n])
+        tulip.bg_pixel(x+WIDTH,y,random.choice(grass_colors))
 
-#tulip.bg_blit(WIDTH,0,WIDTH,HEIGHT,0,0)
+tulip.bg_blit(WIDTH,0,WIDTH,HEIGHT,0,0)
 
 for x in range(WIDTH):
     tulip.bg_pixel(x,0,random.choice(grass_colors))
@@ -262,8 +257,4 @@ tulip.sprite_clear()
 tulip.display_clock(18)
 tulip.tfb_start()
 
-# don't wanna do these, you probably want to see what was
-# on your screen before running screen saver?
-#tulip.gpu_reset()
-#tulip.display_restart()
 

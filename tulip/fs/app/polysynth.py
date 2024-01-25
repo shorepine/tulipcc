@@ -41,6 +41,7 @@ import math
 import time
 #import queue
 from collections import namedtuple
+import alles, tulip
 
 try:
     import amy

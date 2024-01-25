@@ -18,5 +18,6 @@ install_name_tool -add_rpath @executable_path/../Frameworks dev/Tulip\ Desktop.a
 
 mkdir -p ~/Documents/tulipcc
 mkdir -p ~/Documents/tulipcc/user
+rm -rf ~/Documents/tulipcc/sys
 mkdir -p ~/Documents/tulipcc/sys
 cp -Rf ../fs/* ~/Documents/tulipcc/sys/

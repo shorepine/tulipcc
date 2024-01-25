@@ -17,7 +17,7 @@ try:
         sys.path.append("/sys/app")
         
     except:
-        print("Tulip flash not setup properly. Run tulip_fs_create.py.")
+        print("Tulip flash not setup properly. Try fully flashing again.")
 
     try:
         currentPartition = Partition(Partition.RUNNING)
@@ -51,7 +51,8 @@ except ImportError:
             pass
 
         cd(tulip.desktop_home()+"/user")
-        
+        sys.path.append("../sys/app")
+
     except:
         # Probably iOS
         cd(tulip.app_path())
