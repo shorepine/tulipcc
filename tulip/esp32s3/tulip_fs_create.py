@@ -1,7 +1,4 @@
 # tulip_fs_create.py
-# creates the file system mounted on Tulip CC, using littlefs
-# takes everything in tulip_home/ex and tulip_home/ex/g and copies it in
-# then flashes the partition, which will erase anything you've stored there
 
 from littlefs import lfs
 import os

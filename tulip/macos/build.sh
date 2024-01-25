@@ -15,3 +15,8 @@ cp tulip.icns dev/Tulip\ Desktop.app/Contents/Resources/
 cp -rf ../fs dev/Tulip\ Desktop.app/Contents/Resources/tulip_home
 cp -a SDL2.framework dev/Tulip\ Desktop.app/Contents/Frameworks/
 install_name_tool -add_rpath @executable_path/../Frameworks dev/Tulip\ Desktop.app/Contents/MacOS/tulip
+
+mkdir -p ~/Documents/tulipcc
+mkdir -p ~/Documents/tulipcc/user
+mkdir -p ~/Documents/tulipcc/sys
+cp -Rf ../fs/ ~/Documents/tulipcc/sys/

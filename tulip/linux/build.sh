@@ -3,7 +3,12 @@
 # Just builds locally
 
 source ../shared/grab_submodules.sh
-mkdir -p ~/tulip_home
 make DEBUG=1
 mkdir -p dev
 cp build-standard/tulip/obj/tulip dev/
+
+mkdir -p ~/Documents/tulipcc
+mkdir -p ~/Documents/tulipcc/user
+mkdir -p ~/Documents/tulipcc/sys
+cp -Rf ../fs/ ~/Documents/tulipcc/sys/
+

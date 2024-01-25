@@ -980,13 +980,6 @@ STATIC mp_obj_t tulip_app_path(size_t n_args, const mp_obj_t *args) {
 #ifndef __linux__
     char * path = get_tulip_home_path();
     return mp_obj_new_str(path, strlen(path));
-#else
-    char cwd[255];
-    if (getcwd(cwd, sizeof(cwd)) != NULL) {
-        return (mp_obj_new_str(cwd, strlen(cwd)));
-    }  else {
-        return (mp_obj_new_str(".", 1));
-    }
 #endif
 }
 

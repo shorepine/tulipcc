@@ -220,20 +220,23 @@ def free_disk_bytes():
     st = os.statvfs('.')
     return st[1] * st[3]
 
+
+# Works on mac and linux
+def desktop_home():
+    import uos
+    return uos.getenv("HOME")+"/Documents/tulipcc"
+
+# This is only done from macOS .app packages. 
+# For linux/windows, it's copied on build -- no predefined packages for those (yet)
+# For iOS we work in the app folder
 def desktop_copy_sys(dest):
     import os
-    print("Loading new system folder in... ")
-
-    if(app_path().endswith("macos")): # running in dev mode
-        tulip_home = app_path()+"/../../tulip_home"
-    elif(app_path().endswith(".app")): # running from an app bundle
+    if (app_path().endswith(".app")): # running from an app bundle
+        print("Copying system folder from app bundle on first run... ")
         tulip_home = app_path()+"/Contents/Resources/tulip_home"
-    else:
-        # Linux or windows maybe
-        tulip_home = app_path()+"/tulip_home"
+        cmd = "cp -Rf \"%s/\" \"%s\"" % (tulip_home, dest)
+        os.system(cmd)
 
-    cmd = "cp -Rf \"%s/\" \"%s\"" % (tulip_home, dest)
-    os.system(cmd)
 
 
 
@@ -360,9 +363,6 @@ def joyk():
         if(k == 26): jmask = jmask | Joy.R1
     return jmask
 
-def desktop_home():
-    import uos
-    return uos.getenv("HOME")+"/Documents/tulipcc"
 
 # runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
 # TODO - pass args
