@@ -162,16 +162,12 @@ def game_loop(d):
         if random.random() < shroom_prob:
             center_x = random.randint(15,WIDTH-15)
             center_y = random.randint(15,HEIGHT-15)
-            tulip.roundrect(center_x, center_y,6,15,1,random.choice(shroom_colors),1)
+            tulip.bg_roundrect(center_x, center_y,6,15,1,random.choice(shroom_colors),1)
             for i in range(2):
                 w = random.randrange(10,20)
                 off_x = -math.floor(w/2) + 3#random.randint(-3,3) - math.floor(w/2)
                 off_y = random.randint(-3,3)
-                
-                #tulip.circle(center_x + off_x,
-                #    center_y + off_y,
-                #    5, random.choice(shroom_colors), 1)
-                tulip.roundrect(center_x + off_x,
+                tulip.bg_roundrect(center_x + off_x,
                                 center_y + off_y,
                                 w,5,1,random.choice(shroom_colors),1)
             p_select = random.randrange(0,len(shroom_notes))
