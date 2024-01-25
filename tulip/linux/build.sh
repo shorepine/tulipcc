@@ -10,5 +10,5 @@ cp build-standard/tulip/obj/tulip dev/
 mkdir -p ~/Documents/tulipcc
 mkdir -p ~/Documents/tulipcc/user
 mkdir -p ~/Documents/tulipcc/sys
-cp -Rf ../fs/ ~/Documents/tulipcc/sys/
+cp -Rf ../fs/* ~/Documents/tulipcc/sys/
 
