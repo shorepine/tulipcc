@@ -46,6 +46,7 @@ INC += -I/usr/include/SDL2
 CWARN = -Wall 
 CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion 
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
+CFLAGS += -DTULIP_DESKTOP
 
 CFLAGS += $(ARCHFLAGS) 
 # Debugging/Optimization

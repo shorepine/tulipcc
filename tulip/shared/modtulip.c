@@ -422,6 +422,8 @@ STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
     return mp_obj_new_str("N16R8", strlen("N16R8"));
 #elif defined N32R8
     return mp_obj_new_str("N32R8", strlen("N32R8"));
+#elif defined TULIP_DESKTOP
+    return mp_obj_new_str("DESKTOP", strlen("DESKTOP"));    
 #else
     return mp_obj_new_str("OTHER", strlen("OTHER"));
 #endif
@@ -979,7 +981,11 @@ STATIC mp_obj_t tulip_app_path(size_t n_args, const mp_obj_t *args) {
     char * path = get_tulip_home_path();
     return mp_obj_new_str(path, strlen(path));
 #else
-    return mp_obj_new_str("~/tulip_home", strlen("~/tulip_home"));
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        return (mp_obj_new_str(cwd, strlen(cwd)));
+    }  else {
+        return (mp_obj_new_str(".", 1));
+    }
 #endif
 }
 
