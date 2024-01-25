@@ -38,52 +38,16 @@ void check_key();
 void destroy_window();
 void unix_display_init();
 
-void unix_set_fps_from_parameters() {
-    // use the screen res and clock to discern a new FPS, based on real life measurements on tulip cc
-    float fps_map[20] = {14.98, 18.55, 23.19, 30.91, 46.37, 21.47, 34.36, 42.95, 57.26, 85.90,
-                         19.91, 30.26, 37.82, 50.43, 75.65, 35.03, 56.05, 70.07, 93.45, 140.13};
-    uint8_t clocks[5]= {10,14,18,22,28};
-    uint16_t h_reses[2] = {1024, 512};
-    uint16_t v_reses[2] = {600, 300};
-    uint8_t fps_i = 0;
-    for(uint8_t h_res_i = 0;h_res_i < 2;h_res_i++) {
-        for(uint8_t v_res_i = 0;v_res_i < 2;v_res_i++) {
-            for(uint8_t clock_i = 0;clock_i < 5;clock_i++) {
-                if(H_RES==h_reses[h_res_i] && V_RES==v_reses[v_res_i] && PIXEL_CLOCK_MHZ==clocks[clock_i]) {
-                    fprintf(stderr, "Returning %2.2f FPS for res %d %d clock %d\n", fps_map[fps_i], H_RES, V_RES, PIXEL_CLOCK_MHZ);
-                    reported_fps = fps_map[fps_i];
-                    // get out of search 
-                    clock_i = 10; v_res_i = 10; h_res_i = 10; 
-                }
-                fps_i++;
-            }
-        }
-    }
-    if(fps_i == 20) {
-        fprintf(stderr, "Problem: could not find matching fps from res %d, %d clock %d. returning 30fps.\n", H_RES, V_RES, PIXEL_CLOCK_MHZ);
-        reported_fps = 30;
-    }
 
-
-}
 
 void unix_display_set_clock(uint8_t mhz) {  
     PIXEL_CLOCK_MHZ = mhz;
-    unix_set_fps_from_parameters();
+    reported_fps = 30;
 }
 
 
 void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3) {
     fprintf(stderr, "Stopping display task\n");
-/*
-    H_RES = t0;
-    V_RES = t1; 
-    OFFSCREEN_X_PX = t2; 
-    OFFSCREEN_Y_PX = t3; 
-    TFB_ROWS = (V_RES/FONT_HEIGHT);
-    TFB_COLS = (H_RES/FONT_WIDTH);
-    BOUNCE_BUFFER_SIZE_PX = (H_RES*12) ;
-*/
     unix_display_flag = -2; // restart display with new timings
 }
 
@@ -529,8 +493,6 @@ void unix_display_init() {
     #endif        
 
     display_init();
-    //unix_set_fps_from_parameters();
-
 
     init_window(); 
 
