@@ -254,7 +254,6 @@ tulip.key_scan(0)
 tulip.frame_callback()
 tulip.bg_clear()
 tulip.sprite_clear()
-tulip.display_clock(18)
 tulip.tfb_start()
 
 
