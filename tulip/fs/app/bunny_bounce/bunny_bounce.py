@@ -68,18 +68,20 @@ for i in range(4):
 #print("starting bg fill at: ", ms_start)
 # fill background with noise pattern
 
-num_c = len(grass_colors)
-for x in range(WIDTH):
-    for y in range(HEIGHT):         
-        c_n = int(num_c * random.random())
-        tulip.bg_pixel(x+WIDTH,y,grass_colors[c_n])
-        tulip.bg_pixel(x+WIDTH,y,random.choice(grass_colors))
+#num_c = len(grass_colors)
+#for x in range(WIDTH/16):
+#    for y in range(HEIGHT/16):         
+#        c_n = int(num_c * random.random())
+#        tulip.bg_pixel(x+WIDTH,y,grass_colors[c_n])
+#        tulip.bg_pixel(x+WIDTH,y,random.choice(grass_colors))
 
-tulip.bg_blit(WIDTH,0,WIDTH,HEIGHT,0,0)
+#tulip.bg_blit(WIDTH,0,WIDTH,HEIGHT,0,0)
 
-for x in range(WIDTH):
+# Draw a line of pixels up top with random colors
+for x in range(WIDTH*2):
     tulip.bg_pixel(x,0,random.choice(grass_colors))
 
+# For the rest of the lines 
 for y in range(1,HEIGHT):
     x_start = random.randrange(WIDTH)
     tulip.bg_blit(x_start,0,WIDTH,1,0,y)
@@ -233,7 +235,7 @@ start_time = tulip.ticks_ms()
 tulip.frame_callback(game_loop, d)
 
 #14
-#alles.send(osc=0, wave=alles.PCM, patch=18,  vel=0.25, feedback=1)
+alles.send(osc=0, wave=alles.PCM, patch=18,  vel=0.25, feedback=1)
 
 # Run in a loop forever. Catch ctrl-c
 try:

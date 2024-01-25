@@ -15,9 +15,9 @@ except:
     alles.chorus(1)
 
 NEXT_OSC = 0
-TOTAL_OSCS = 64 # 48  # 64
-NUM_USABLE_OSCS = 62
-OSC_BLOCKING = 32  # Don't let sets of oscs straddle this.
+TOTAL_OSCS = 120 # 48  # 64
+NUM_USABLE_OSCS = 118
+OSC_BLOCKING = 60  # Don't let sets of oscs straddle this.
 
 C0_FREQ = 440.0 / math.pow(2.0, 4 + 9/12)
 
@@ -136,10 +136,9 @@ def broken_chord(base_pitch, intervals, start_time, wait_time=7.5, **kwargs):
         Note(pitch, 1, start_time + 0.1 * index, **kwargs)
     wait_another(wait_time)
 
-tulip.display_stop()
 amy.reset()
 # Make all our times be a little behind real time.  Make the offset larger if the script doesn't keep up.
-START = amy.millis() + 1500
+START = amy.millis() + 100
 last_time = START / 1000
 
 # F#7addB chord on a guitar
@@ -169,5 +168,4 @@ for i in range(10):
     time.sleep(0.1)
 
 amy.reset()
-tulip.display_start()
 

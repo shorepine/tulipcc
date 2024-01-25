@@ -3,6 +3,7 @@ import time, tulip
 
 tulip.gpu_reset() # clear everything
 (sw,sh) = tulip.screen_size()
+
 tulip.display_stop()
 # Load the background image
 tulip.bg_png("g/mountain-bg.png",0,0)
