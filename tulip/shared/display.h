@@ -68,7 +68,7 @@ void display_load_sprite_rgba(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_screenshot(char * filename);
 void display_screenshot_pal(char * filename);
-void display_tfb_str(char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color);
+void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color);
 void display_wireframe_update(uint8_t sprite_no);
 
 void display_tfb_new_row();

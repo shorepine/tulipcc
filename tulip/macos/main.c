@@ -95,7 +95,7 @@ extern void unix_display_init();
 void display_print_strn(void *env, const char *str, size_t len) {
     (void)env;
     if(len) {
-        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+        display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
 }
 extern void mp_uos_dupterm_tx_strn(const char *str, size_t len);

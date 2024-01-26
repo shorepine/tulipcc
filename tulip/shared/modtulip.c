@@ -388,12 +388,13 @@ STATIC mp_obj_t tulip_tfb_str(size_t n_args, const mp_obj_t *args) {
         }
         return mp_const_none; 
     } else {
-        mp_obj_t tuple[4];
+        mp_obj_t tuple[5];
         tuple[0] = mp_obj_new_str((const char*)(TFB + (y*TFB_COLS+x)), 1);
         tuple[1] = mp_obj_new_int(TFBf[y*TFB_COLS+x]);
         tuple[2] = mp_obj_new_int(TFBfg[y*TFB_COLS+x]);
         tuple[3] = mp_obj_new_int(TFBbg[y*TFB_COLS+x]);
-        return mp_obj_new_tuple(4,tuple);
+        tuple[4] = mp_obj_new_int(TFB[y*TFB_COLS+x]);
+        return mp_obj_new_tuple(5,tuple);
     }
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_str_obj, 2, 6, tulip_tfb_str);

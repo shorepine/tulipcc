@@ -220,7 +220,7 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
     //MP_HAL_RETRY_SYSCALL(ret, write(STDOUT_FILENO, str, len), {});
     //mp_uos_dupterm_tx_strn(str, len);
     if(len) {
-        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+        display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
 
 }
