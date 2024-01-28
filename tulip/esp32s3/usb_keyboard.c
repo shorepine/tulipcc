@@ -560,6 +560,13 @@ void new_enumeration_config_fn(const usb_config_desc_t *config_desc) {
 
 void run_usb()
 {
+    // Reset key maps
+    for(uint8_t i=0;i<MAX_KEY_REMAPS;i++) {
+        key_remaps[i].scan = 0;
+        key_remaps[i].mod = 0;
+        key_remaps[i].code = 0;
+    }
+
   usbh_setup();
   while(1) {
       usbh_task();

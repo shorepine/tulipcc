@@ -29,7 +29,7 @@ try:
 except ImportError:
     # Tulip Desktop
     try:
-        tulipcc = tulip.desktop_home()
+        tulipcc = tulip.root_dir()
         try:
             mkdir(tulipcc)
         except OSError:
@@ -38,19 +38,19 @@ except ImportError:
 
         # On Desktop, we can put sys in sys/ and user in user/
         try:
-            mkdir(tulipcc+"/sys")
-            tulip.desktop_copy_sys(tulipcc+"/sys")
+            mkdir(tulipcc+"sys")
+            tulip.desktop_copy_sys(tulipcc+"sys")
         except OSError:
             # already exists, do nothing
             pass
 
         try:
-            mkdir(tulipcc+"/user")
+            mkdir(tulipcc+"user")
         except OSError:
             # Already exists, don't do anything
             pass
 
-        cd(tulip.desktop_home()+"/user")
+        cd(tulip.root_dir()+"user")
         sys.path.append("../sys/app")
 
     except:

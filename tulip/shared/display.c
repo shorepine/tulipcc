@@ -715,7 +715,7 @@ void display_tfb_new_row() {
     tfb_x_col = 0;
 }
 
-uint8_t ansi_parse_digits(unsigned char*str, uint16_t j, uint16_t k, uint16_t * digits) {
+uint8_t ansi_parse_digits( unsigned char*str, uint16_t j, uint16_t k, uint16_t * digits) {
     uint8_t d = 0;
     uint16_t last_pos = j;
     for(uint16_t i=j; i<k; i++) {
@@ -777,7 +777,7 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
                 for(uint16_t scan=j;scan<len;scan++) {
                     if((str[scan]>='A' && str[scan]<='Z') || (str[scan]>='a' && str[scan]<='z')) {
                         uint16_t digits[5] = {0};
-                        uint16_t k = scan; unsigned char F=str[k];
+                        uint16_t k = scan;  unsigned char F=str[k];
                         if(F == 'K') { // clear to end of line
                             for(uint8_t col=tfb_x_col;col<TFB_COLS;col++) { 
                                 TFB[tfb_y_row*TFB_COLS+col] = 0; 
@@ -930,7 +930,6 @@ void display_set_clock(uint8_t mhz) {
 }
 
 void display_teardown(void) {
-    fprintf(stderr, "freeing bg\n");
     free_caps(bg); bg = NULL;
     free_caps(bg_tfb); bg_tfb = NULL;
     free_caps(TFB_pxlen); TFB_pxlen = NULL;
@@ -1010,10 +1009,6 @@ void display_init(void) {
     reported_gpu_usage = 0;
     touch_held = 0;
 
-    for(uint8_t i=0;i<12;i++) {
-        fprintf(stderr, "%02x, ", font_8x12_r[176][i]);
-    }
-        fprintf(stderr, "\n");
 
 }
 

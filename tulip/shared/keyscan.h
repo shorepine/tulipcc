@@ -29,6 +29,20 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up);
 uint8_t convert_utf8_to_cp437(uint8_t c, uint32_t *esc);
 
 
+#define MAX_KEY_REMAPS 16
+
+typedef struct key_remap {
+    uint8_t scan;
+    uint16_t mod;
+    uint8_t code;
+} key_remap;
+
+extern const uint8_t cp437_to_utf8[];
+extern key_remap key_remaps[MAX_KEY_REMAPS];
+extern uint8_t last_held_code;
+extern uint16_t last_held_modifier;
+
+
 /**
  * Modifier masks - used for the first byte in the HID report.
  * NOTE: The second byte in the report is reserved, 0x00

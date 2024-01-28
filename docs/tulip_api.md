@@ -167,13 +167,17 @@ if(tulip.joyk() & tulip.Joy.UP):
 (modifiers, scan0, scan1... scan5) = tulip.keys()
 
 # Gets a key ascii code
-ch = tulip.key_wait() # waits for a key press 
+(char, scan, modifier) = tulip.key_wait() # waits for a key press, returns scan code and modifier too  
 ch = tulip.key() # returns immediately, returns -1 if nothing held
 
 # If scanning key codes in a program, you may want to turn on "key scan" mode so that
 # keys are not sent to the underlying python process 
 tulip.key_scan(1)
 tulip.key_scan(0) # remember to turn it back off or you won't be able to type into the REPL
+
+# If you need to remap keys on your keyboard (we default to US)
+tulip.remap()  # interactive, can write to your boot.py for you
+tulip.key_remap(scan_code, modifier, target_cp437_code)
 
 # Return the last touch panel coordinates, up to 3 fingers at once
 (x0, y0, x1, y1, x2, y2) = tulip.touch()

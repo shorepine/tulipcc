@@ -42,7 +42,8 @@
 #define MICROPY_PY_BUILTINS_HELP_TEXT           tulip_desktop_help_text
 #define MICROPY_HW_BOARD_NAME "Tulip4"
 
-
+// Unclear how this works -- unicode (in strings) seems fine. maybe this is files
+//#define MICROPY_PY_BUILTINS_STR_UNICODE (1)
 
 #ifndef MICROPY_CONFIG_ROM_LEVEL
 #define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_CORE_FEATURES)

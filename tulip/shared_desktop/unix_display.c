@@ -47,7 +47,6 @@ void unix_display_set_clock(uint8_t mhz) {
 
 
 void unix_display_timings(uint32_t t0, uint32_t t1, uint32_t t2, uint32_t t3) {
-    fprintf(stderr, "Stopping display task\n");
     unix_display_flag = -2; // restart display with new timings
 }
 
@@ -59,12 +58,9 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
     int sh = th;
     viewport_scale = 1;
     #ifdef __TULIP_IOS__
-        fprintf(stderr, "SCALE: input sw %d sh %d\n", sw, sh);
         screen_size(&drawable_w, &drawable_h, &viewport_scale);
         sw = drawable_w * viewport_scale;
         sh = drawable_h * viewport_scale;
-        fprintf(stderr, "SCALE: output sw %d sh %d\n", sw, sh);
-
     #endif
 
     tulip_rect.x = 0; 
@@ -79,11 +75,9 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
         if(sw > sh) {
             sh = sh - 100; // leave room for the bezel
             viewport.y = 100;
-            fprintf(stderr, "SCALE: landscape sh now %d, viewport.y is 100\n", sh);
         } else {
             sh = sh-200; // leave room for the notch
             viewport.y = 200;
-            fprintf(stderr, "SCALE: portrait sh now %d, viewport.y is 200\n", sh);
         }
         // If no keyboard, don't draw button bar
         if(keyboard_top_y>0) {
@@ -91,23 +85,18 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
             button_bar.h = (int)(50.0 * viewport_scale);
             button_bar.x = 0;
             button_bar.y = orig_sh - keyboard_top_y - button_bar.h;
-            fprintf(stderr, "SCALE: kty is %d, so setting button bar to %d %d %d %d\n", keyboard_top_y, button_bar.x,button_bar.y,button_bar.w,button_bar.h);
         } else {
             button_bar.w = 0;
             button_bar.h = 0;
         }
         sh = sh - keyboard_top_y - button_bar.h; // leave room for the keyboard
     #endif
-    fprintf(stderr, "SCALE before resize: scale %f. sw %d sh %d dw %d dh %d tw %d th %d kty %d\n", 
-        viewport_scale, sw, sh, drawable_w, drawable_h, tw, th, keyboard_top_y);
     if(resize_tulip) {
         // given the sw / sh, find a better H_RES/tw than what we have. 
         tulip_rect.w = (int)((float)sw / viewport_scale);
         tulip_rect.h = (int)((float)sh / viewport_scale); 
         //H_RES = tulip_rect.w;
         //V_RES = tulip_rect.h;
-        fprintf(stderr, "SCALE after resize: tr.w %d tr.h %d\n", tulip_rect.w, tulip_rect.h);
-
     } else {
         // just keep it
     }
@@ -115,16 +104,13 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
     float w_ratio = (float)sw / (float)tulip_rect.w;
     float h_ratio = (float)sh / (float)tulip_rect.h;
     if(w_ratio > h_ratio) {
-        fprintf(stderr, "SCALE w_ratio %f > h_ratio %f. so setting both to %f\n", w_ratio, h_ratio, h_ratio);
         w_ratio = h_ratio;
     } else {
-        fprintf(stderr, "SCALE w_ratio %f <= h_ratio %f. so setting both to %f\n", w_ratio, h_ratio, w_ratio);
         h_ratio = w_ratio;
     }
     viewport.w = (int)((float)tulip_rect.w * w_ratio);
     viewport.h = (int)((float)tulip_rect.h * h_ratio);
     viewport.x = (sw - viewport.w) / 2;
-    fprintf(stderr, "SCALE set viewport w %d h %d, x %d, y %d\n", viewport.w, viewport.h, viewport.x, viewport.y);
 
     return 1; // ok
 }
@@ -175,7 +161,6 @@ int unix_display_draw() {
 
     // Are we restarting the display for a mode change, or quitting
     if(unix_display_flag < 0) {
-        fprintf(stderr, "shutting down because of flag %d\n", unix_display_flag);
         destroy_window();
         display_teardown();
 
@@ -207,7 +192,6 @@ void init_window() {
     } else {
         window_surface = SDL_GetWindowSurface(window);
         fixed_fps_renderer = SDL_CreateSoftwareRenderer( window_surface);
-        fprintf(stderr, "setting viewport to x=%d y=%d w=%d h=%d and tulip to w=%d h=%d\n", viewport.x, viewport.y, viewport.w, viewport.h, tulip_rect.w, tulip_rect.h);
         framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
 
         #ifdef __TULIP_IOS__
@@ -274,7 +258,6 @@ void check_key() {
             unix_display_flag = -1; // tell main to quit
         } else if(e.type == SDL_TEXTINPUT) {
             #ifdef __TULIP_IOS__
-                //fprintf(stderr, "textinput %d %d %d\n", e.text.text[0], e.text.text[1], e.text.text[2]);
                 if(e.text.text[0]==-30) { // utf8, either ' or "
                     if(e.text.text[2]==-99 || e.text.text[2]==-100) { // double quote
                         send_key_to_micropython(34);
@@ -284,17 +267,27 @@ void check_key() {
                     }
                 }
             #endif
+
+            // In SDL all non ascii stuff only comes in through textinput                    
+            uint8_t start = 0;
+            while(e.text.text[start] != 0) {
+                send_key_to_micropython((uint8_t) e.text.text[start] & 0xff);
+                start++;
+            }
+            
         } else if(e.type == SDL_KEYDOWN) {
             last_held_mod = SDL_GetModState();
             SDL_KeyboardEvent key = e.key; 
-            //fprintf(stderr, "keydown %d %d = %d\n", key.keysym.scancode, last_held_mod, scan_ascii(key.keysym.scancode, (uint32_t)last_held_mod));
             if(key.keysym.scancode == 225 || key.keysym.scancode == 229) {
                 #ifdef __TULIP_IOS__
                     store_mod = store_mod | KMOD_LSHIFT;
                 #endif
             } else if(key.keysym.scancode >= 0x04 && key.keysym.scancode <= 0x94) {
-                send_key_to_micropython(scan_ascii(key.keysym.scancode, (uint32_t)(last_held_mod | store_mod)));
-                store_mod = 0;
+                uint16_t ascii_key = scan_ascii(key.keysym.scancode, (uint32_t)(last_held_mod | store_mod));
+                if(ascii_key < 32 || ascii_key > 255) {
+                    send_key_to_micropython(ascii_key);
+                    store_mod = 0;
+                }
             }
             uint8_t skip = 0;
             uint8_t pos = 10;
@@ -310,13 +303,10 @@ void check_key() {
             int kby = 0;
             #ifdef __TULIP_IOS__
                 kby = get_keyboard_y();
-                fprintf(stderr, "windowevent: new kby is %d, was %d\n", kby, keyboard_top_y);
             #endif
 
             if( e.window.event == SDL_WINDOWEVENT_SIZE_CHANGED || e.window.event == SDL_WINDOWEVENT_RESIZED) {
-                fprintf(stderr, "window size changed to %d %d. kty is %d and new is %d\n", e.window.data1, e.window.data2, keyboard_top_y, kby);
                 if(kby != keyboard_top_y || (e.window.data1 != drawable_w || e.window.data2 != drawable_h)) {
-                    fprintf(stderr, "different than existing kty %d w %d h %d\n", keyboard_top_y, drawable_w, drawable_h);
                     keyboard_top_y = kby;
                     drawable_w = e.window.data1;
                     drawable_h = e.window.data2;
@@ -434,7 +424,6 @@ int HandleAppEvents(void *userdata, SDL_Event *event) {
 void unix_display_init() {
     // on iOS we need to get the display size before computing display sizes
     if(!sdl_ready) {
-        fprintf(stderr, "first sdl boot\n");
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
             fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         } 
@@ -447,7 +436,6 @@ void unix_display_init() {
     }
 
     #ifdef __TULIP_IOS__
-        fprintf(stderr, "computing viewport\n");
         compute_viewport(H_RES,V_RES,1);
         if(button_bar.w > 0) {
             btn_ctrl.x = 0;
@@ -486,7 +474,6 @@ void unix_display_init() {
             btn_d.w = 150;
             btn_d.h = button_bar.h;
         }
-        fprintf(stderr, "computed viewport\n");
 
     #else
         compute_viewport(H_RES,V_RES,0);
@@ -495,6 +482,12 @@ void unix_display_init() {
     display_init();
 
     init_window(); 
+
+    for(uint8_t i=0;i<MAX_KEY_REMAPS;i++) {
+        key_remaps[i].scan = 0;
+        key_remaps[i].mod = 0;
+        key_remaps[i].code = 0;
+    }
 
 
     SDL_StartTextInput();

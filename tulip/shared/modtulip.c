@@ -13,6 +13,7 @@
 #include "alles.h"
 #include "midi.h"
 #include "ui.h"
+#include "keyscan.h"
 #include "genhdr/mpversion.h"
 
 #ifdef ESP_PLATFORM
@@ -892,7 +893,6 @@ STATIC mp_obj_t tulip_keys(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_keys_obj, 0, 0, tulip_keys);
 
-
 extern int16_t last_touch_x[3];
 extern int16_t last_touch_y[3];
 STATIC mp_obj_t tulip_touch(size_t n_args, const mp_obj_t *args) {
@@ -938,9 +938,39 @@ STATIC mp_obj_t tulip_touch_delta(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_delta_obj, 0, 2, tulip_touch_delta);
 
 
+STATIC mp_obj_t tulip_key_remap(size_t n_args, const mp_obj_t *args) {
+    for(uint8_t i=0;i<MAX_KEY_REMAPS;i++) {
+        if(key_remaps[i].scan==0) {
+            key_remaps[i].scan = mp_obj_get_int(args[0]);
+            key_remaps[i].mod = mp_obj_get_int(args[1]);
+            key_remaps[i].code = mp_obj_get_int(args[2]);
+            i = MAX_KEY_REMAPS + 1;
+        }
+    }
+    return mp_const_none;
+
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_remap_obj, 3, 3, tulip_key_remap);
+
+STATIC mp_obj_t tulip_key_remaps_clear(size_t n_args, const mp_obj_t *args) {
+    for(uint8_t i=0;i<MAX_KEY_REMAPS;i++) {
+        key_remaps[i].scan =0 ;
+        key_remaps[i].mod =0 ;
+        key_remaps[i].code =0 ;
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_remaps_clear_obj, 0, 0, tulip_key_remaps_clear);
+
+
 STATIC mp_obj_t tulip_key_wait(size_t n_args, const mp_obj_t *args) {
-    int16_t ch = mp_hal_stdin_rx_chr();
-    return mp_obj_new_int(ch);
+    mp_obj_t tuple[3];
+    tuple[0] = mp_obj_new_int(mp_hal_stdin_rx_chr());
+    tuple[1] = mp_obj_new_int(last_held_code);
+    tuple[2] = mp_obj_new_int(last_held_modifier);
+    return mp_obj_new_tuple(3, tuple);
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_wait_obj, 0, 0, tulip_key_wait);
@@ -1342,6 +1372,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_keys), MP_ROM_PTR(&tulip_keys_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch), MP_ROM_PTR(&tulip_touch_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch_delta), MP_ROM_PTR(&tulip_touch_delta_obj) },
+    { MP_ROM_QSTR(MP_QSTR_key_remap), MP_ROM_PTR(&tulip_key_remap_obj) },
+    { MP_ROM_QSTR(MP_QSTR_key_remaps_clear), MP_ROM_PTR(&tulip_key_remaps_clear_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_wait), MP_ROM_PTR(&tulip_key_wait_obj) },
     { MP_ROM_QSTR(MP_QSTR_key), MP_ROM_PTR(&tulip_key_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },

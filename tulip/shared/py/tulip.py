@@ -191,6 +191,22 @@ class Joy:
     Y = 2048
     B = 4096
 
+def remap():
+    print("Type key or key combo you wish to remap: ",end='')
+    (_, scan, mod) = key_wait()
+    print()
+    print("Type ASCII (0-127) code for the symbol you want (see https://ascii-codes.com/): ", end='')
+    code = int(input())
+    cmd = "tulip.key_remap(%d,%d,%d)" % (scan, mod, code)
+    key_remap(scan, mod, code)
+    print("Remapped. Add \"%s\" to your boot.py? Yy/[Nn]: " % (cmd), end='')
+    answer = input()
+    if(answer == 'y' or answer=='Y'):
+        b = open(root_dir()+"user/boot.py", "a")
+        b.write("\n%s\n" % (cmd))
+        b.close()
+        print("All done. Reboot Tulip!")
+
 def lines(lines_list):
     import struct
     ret = bytes()
@@ -222,10 +238,12 @@ def free_disk_bytes():
     return st[1] * st[3]
 
 
-# Works on mac and linux. raises OSError on iOS
-def desktop_home():
-    import uos
-    return uos.getenv("HOME")+"/Documents/tulipcc"
+def root_dir():
+    try:
+        import uos
+        return uos.getenv("HOME")+"/Documents/tulipcc/"
+    except:
+        return "/"
 
 # This is only (fow now) done from macOS .app packages. 
 # For linux/windows, it's copied on build -- no predefined packages for those (yet)
@@ -373,10 +391,7 @@ def run(module):
     try:
         cd(module)
     except OSError:
-        if(board()=="DESKTOP"):
-            cd(desktop_home()+"/sys/app")
-        else:
-            cd("/sys/app")
+        cd(root_dir()+"sys/app")
         cd(module)
 
     try:
