@@ -160,7 +160,7 @@ STATIC void IRAM_ATTR uart_midi_irq_handler(void *arg) {
 
 int uart_stdout_tx_strn(const char *str, size_t len) {
     if(len) {
-        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+        display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
     ulTaskNotifyTake(pdFALSE, 1);
     return 0;
