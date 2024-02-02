@@ -19,8 +19,8 @@ void touch_init(void)
         .mode = I2C_MODE_MASTER,
         .sda_io_num = I2C_SDA,
         .scl_io_num = I2C_SCL,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .sda_pullup_en = GPIO_PULLUP_DISABLE,
+        .scl_pullup_en = GPIO_PULLUP_DISABLE,
         .master.clk_speed = I2C_CLK_FREQ,
     };
 

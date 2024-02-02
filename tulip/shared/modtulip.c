@@ -990,6 +990,14 @@ STATIC mp_obj_t tulip_key_scan(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_scan_obj, 1, 1, tulip_key_scan);
 
+void send_key_to_micropython(uint16_t key);
+STATIC mp_obj_t tulip_key_send(size_t n_args, const mp_obj_t *args) {
+    send_key_to_micropython(mp_obj_get_int(args[0]));
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_send_obj, 1, 1, tulip_key_send);
+
 
 extern float compute_cpu_usage(uint8_t debug);
 STATIC mp_obj_t tulip_cpu(size_t n_args, const mp_obj_t *args) {
@@ -1377,6 +1385,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key_wait), MP_ROM_PTR(&tulip_key_wait_obj) },
     { MP_ROM_QSTR(MP_QSTR_key), MP_ROM_PTR(&tulip_key_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
+    { MP_ROM_QSTR(MP_QSTR_key_send), MP_ROM_PTR(&tulip_key_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_touch_register), MP_ROM_PTR(&tulip_bg_touch_register_obj) },
