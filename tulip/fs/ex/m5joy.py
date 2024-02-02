@@ -1,4 +1,5 @@
 # m5joy.py - support for the m5stack joystick
+# returns 0-1 for x, y and 0/1 for button press
 
 from machine import Pin, I2C
 

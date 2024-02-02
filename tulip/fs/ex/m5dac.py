@@ -1,4 +1,5 @@
-# Use an MPC4725 over I2C on Tulip.
+# Use an m5stack DAC / MPC4725 over I2C on Tulip.
+# To use:
 # import dac
 # dac.dac(value) # 0-4095
 

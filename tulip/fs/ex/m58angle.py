@@ -1,4 +1,6 @@
 # 8angle.py - support for the m5stack 8angle
+# returns the values of each knob
+# you can also adapt this to light LEDs and etc
 
 from machine import Pin, I2C
 

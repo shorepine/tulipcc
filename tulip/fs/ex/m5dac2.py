@@ -1,4 +1,6 @@
 # driver for m5stack dac2
+# use: m5dac2.set(32767, 0) #5v, first channel
+
 from machine import Pin, I2C
 import time
 

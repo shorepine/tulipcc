@@ -1,4 +1,9 @@
 # m5cardkb.py - driver for CardKB keyboard
+
+# If you execfile("m5cardkb.py"), Tulip will take input from the cardKB
+# it uses the frame callback to "thread" out the keyboard listener
+# You can adapt this to read characters without sending them to Tulip
+
 from machine import Pin, I2C
 import tulip
 
