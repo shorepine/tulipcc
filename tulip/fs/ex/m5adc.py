@@ -1,4 +1,5 @@
-# driver for m5stack dac2
+# driver for m5stack adc
+# import m5adc; m5adc.get() # returns volts 0-12V
 from machine import Pin, I2C
 import time
 

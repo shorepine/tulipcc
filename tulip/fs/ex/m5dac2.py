@@ -1,4 +1,5 @@
 # driver for m5stack dac2
+# import m5dac2; m5dac2.set(5.0) # up to 10.0V
 from machine import Pin, I2C
 import time
 
@@ -11,13 +12,5 @@ def set(volts, channel=0):
     b0 = (val & 0x00ff)
     i2c.writeto_mem(89, 0x02+channel, bytes([b0,b1]))
 
-
-#set(65535) # 10V
-#time.sleep(5)
-#set(32767) # 5V
-#time.sleep(5)
-#set(16384) # 2.5V
-#time.sleep(5)
-#set(0) # 0V
 
 
