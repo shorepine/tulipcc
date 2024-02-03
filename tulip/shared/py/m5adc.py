@@ -3,7 +3,7 @@
 from machine import Pin, I2C
 import time
 
-i2c = I2C(0, scl=Pin(18), sda=Pin(17), freq=400000)
+i2c = I2C(0, freq=400000)
 
 def get():
     b = i2c.readfrom(0x48,3)

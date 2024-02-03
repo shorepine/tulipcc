@@ -3,7 +3,7 @@
 # m5dac.set(volts) # 0-3.3V
 
 from machine import Pin, I2C
-i2c = I2C(0, scl=Pin(18), sda=Pin(17), freq=400000)
+i2c = I2C(0, freq=400000)
 
 def set(volts):
     value = int((volts / 3.3)*4095)

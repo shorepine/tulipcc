@@ -27,6 +27,8 @@
 #define TDECK_TRACKBALL_RIGHT 2
 #define TDECK_TRACKBALL_CLICK 0
 #define TDECK_TOUCH_INT 16
+#define I2C_SCL 8
+#define I2C_SDA 18
 #endif
 
 #ifdef MAKERFABS

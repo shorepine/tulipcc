@@ -66,7 +66,7 @@ void* run_midi(void*argp){
                                 data[2] = bytes[0];
                                 convert_midi_bytes_to_messages(data, 3);
                             } else {
-                                printf("bytes[3] was not 0x20\n");
+                               //printf("bytes[3] was not 0x20\n");
                             }
                         }
                     }
