@@ -72,7 +72,7 @@ def trunc(number):
 def message(osc=0, wave=None, patch=None, note=None, vel=None, amp=None, freq=None, duty=None, feedback=None, timestamp=None, reset=None, phase=None, pan=None,
             client=None, retries=None, volume=None, filter_freq = None, resonance = None, bp0=None, bp1=None, bp0_target=None, bp1_target=None, mod_target=None,
             debug=None, chained_osc=None, mod_source=None, clone_osc=None, eq_l = None, eq_m = None, eq_h = None, filter_type= None, algorithm=None, ratio = None, latency_ms = None, algo_source=None,
-            chorus_level=None, chorus_delay=None, reverb_level=None, reverb_liveness=None, reverb_damping=None, reverb_xover=None):
+            chorus_level=None, chorus_delay=None, chorus_freq=None, chorus_depth=None, reverb_level=None, reverb_liveness=None, reverb_damping=None, reverb_xover=None, load_patch=None, voices=None):
 
     m = ""
     if(timestamp is not None): m = m + "t" + str(timestamp)
@@ -111,10 +111,15 @@ def message(osc=0, wave=None, patch=None, note=None, vel=None, amp=None, freq=No
     if(filter_type is not None): m = m + "G" + str(filter_type)
     if(chorus_level is not None): m = m + "k" + str(chorus_level)
     if(chorus_delay is not None): m = m + "m" + str(chorus_delay)
+    if(chorus_depth is not None): m = m + 'q' + trunc(chorus_depth)
+    if(chorus_freq is not None): m =m + 'M' + trunc(chorus_freq)
     if(reverb_level is not None): m = m + "h" + str(reverb_level)
     if(reverb_liveness is not None): m = m + "H" + str(reverb_liveness)
     if(reverb_damping is not None): m = m + "j" + str(reverb_damping)
     if(reverb_xover is not None): m = m + "J" + str(reverb_xover)
+    if(load_patch is not None): m = m + 'K' + str(load_patch)
+    if(voices is not None): m = m + 'r' + str(voices)
+    
     #print("message " + m)
     return m+'Z'
 

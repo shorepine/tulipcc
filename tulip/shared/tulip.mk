@@ -5,6 +5,7 @@ TULIP_EXTMOD_DIR = ../shared
 EXTMOD_SRC_C += $(addprefix ../amy/src/, \
 	amy.c \
 	algorithms.c \
+	patches.c \
 	delay.c \
 	envelope.c \
 	filters.c \
