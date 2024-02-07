@@ -78,7 +78,8 @@ def to_decay_time(val):
   # time is time to decay to 1/2; Amy envelope times are to decay to exp(-3) = 0.05
   # return np.log(0.05) / np.log(0.5) * time
   # from Arturia video
-  return 80 * exp2(0.066 * val * 127) - 80
+  #return 80 * exp2(0.066 * val * 127) - 80
+  return 80 * exp2(0.09 * val * 127) - 80
   
 
 def to_release_time(val):
@@ -122,9 +123,10 @@ def to_resonance(val):
 
 def to_filter_freq(val):
   # filter_freq goes from ? 100 to 6400 Hz with 18 steps/octave
-  #return float("%.3f" % (100 * np.exp(np.log(2) * midi / 20.0)))
+  #return float("%.3f" % (100 * np.exp2(midi / 20.0)))
   # from Arturia video
-  return float("%.3f" % (6.5 * exp2(0.11 * val * 127)))
+  #return float("%.3f" % (6.5 * exp2(0.11 * val * 127)))
+  return float("%.3f" % (25 * exp2(0.055 * val * 127)))
 
 
 def ffmt(val):
@@ -296,7 +298,7 @@ class JunoPatch:
     self.amy_send(osc=self.lfo_osc, wave=amy.TRIANGLE, amp='1,0,0,1,0,0')
     osc_setup = {
       'filter_type': amy.FILTER_LPF24, 'mod_source': self.lfo_osc}
-    self.amy_send(osc=self.pwm_osc, **osc_setup)
+    self.amy_send(osc=self.pwm_osc, wave=amy.PULSE, **osc_setup)
     # Setup chained_oscs
     # All the oscs are the same, except:
     #  - only pulse needs duty (but OK if it's cloned, except sub)
@@ -369,6 +371,7 @@ class JunoPatch:
                   to_lfo_delay(self.lfo_delay_time),
                   to_lfo_delay(self.lfo_delay_time))}
     self.amy_send(osc=self.lfo_osc, **lfo_args)
+    self.recloning_needed = True
 
   def update_dco(self):
     # Only one of stop_{16,8,4} should be set.
@@ -392,6 +395,7 @@ class JunoPatch:
         ffmt(0.5 + 0.5 * const_duty), ffmt(0.5 * lfo_duty)))
     # Setup the unique freq_coef for the sub_osc.
     self.sub_freq = self._freq_coef_string(base_freq / 2.0)
+    self.recloning_needed = True
 
   def update_vcf(self):
     vcf_env_polarity = -1.0 if self.vcf_neg else 1.0
@@ -401,6 +405,7 @@ class JunoPatch:
                     ffmt(to_level(self.vcf_kbd)),
                     ffmt(20 * vcf_env_polarity * to_level(self.vcf_env)),
                     ffmt(5 * to_level(self.vcf_lfo))))
+    self.recloning_needed = True
 
   def update_env(self):
     bp1_coefs = self._breakpoint_string()
@@ -409,6 +414,7 @@ class JunoPatch:
     else:
       bp0_coefs = self._breakpoint_string()
     self.amy_send(osc=self.pwm_osc, bp0=bp0_coefs, bp1=bp1_coefs)
+    self.recloning_needed = True
 
   def update_cho(self):
     # Chorus & HPF
@@ -425,18 +431,18 @@ class JunoPatch:
       eq_h = 8
     chorus_args = {
       'eq_l': eq_l, 'eq_m': eq_m, 'eq_h': eq_h,
-      'chorus_level': float(self.chorus)
+      'chorus_level': float(self.chorus > 0)
     }
     if self.chorus:
-      chorus_args['osc'] = amy.CHORUS_OSC
-      chorus_args['amp'] = 0.5
+      chorus_args['chorus_depth'] = 0.5
       if self.chorus == 1:
-        chorus_args['freq'] = 0.5
+        chorus_args['chorus_freq'] = 0.5
       elif self.chorus == 2:
-        chorus_args['freq'] = 0.83
+        chorus_args['chorus_freq'] = 0.83
       elif self.chorus == 3:
-        chorus_args['freq'] = 0.83
-        chorus_args['amp'] = 0.05
+        # We choose juno 60-style I+II.  Juno 6-style would be freq=8 depth=0.25
+        chorus_args['chorus_freq'] = 1
+        chorus_args['chorus_depth'] = 0.08
     #self.amy_send(osc=amy.CHORUS_OSC, **chorus_args)
     # *Don't* repeat for all the notes, these ones are global.
     amy.send(**chorus_args)
@@ -447,11 +453,13 @@ class JunoPatch:
     if self.defer_param_updates:
       self.dirty_params.add(param)
     else:
+      self.recloning_needed = False
       for group, params in self.post_set_fn.items():
         if param in params:
           getattr(self, 'update_' + group)()
-      self.clone_voice_oscs()
-      self.update_clones()
+      if self.recloning_needed:
+        self.clone_voice_oscs()
+        self.update_clones()
 
   def send_deferred_params(self):
     for group, params in self.post_set_fn.items():
