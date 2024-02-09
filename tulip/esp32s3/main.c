@@ -365,13 +365,11 @@ void app_main(void) {
     delay_ms(100);
     #endif
 
-    #ifndef MATOUCH7 // can't run USB and audio on MaTouch at the same time
     #ifndef TDECK // TDECK doesn't send power to USB
     fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
     xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
-    #endif
     #endif
 
     fprintf(stderr,"Starting display on core %d\n", DISPLAY_TASK_COREID);

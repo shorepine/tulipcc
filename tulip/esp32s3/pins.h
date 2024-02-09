@@ -138,9 +138,9 @@
 
 #if defined MATOUCH7
 #define ESP_INTR_FLAG_DEFAULT 0
-#define CONFIG_I2S_LRCLK 2
-#define CONFIG_I2S_BCLK 20 
-#define CONFIG_I2S_DIN 19
+#define CONFIG_I2S_LRCLK 13 //2
+#define CONFIG_I2S_BCLK 12 //20 
+#define CONFIG_I2S_DIN 11 //19
 #define CONFIG_I2S_NUM 0 
 #elif defined TULIP4_R10
 #define ESP_INTR_FLAG_DEFAULT 0
