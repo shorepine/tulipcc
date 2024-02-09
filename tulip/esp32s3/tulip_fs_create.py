@@ -92,6 +92,7 @@ os.chdir('..')
 # I don't love this but it works
 # i wonder if i can get CMake to pass along MICROPY_BOARD to this program in a shell instead
 MICROPY_BOARD = subprocess.check_output("grep MICROPY_BOARD build/CMakeCache.txt | cut -d '=' -f2 | awk '{print $1}'",shell=True)[:-1].decode('ascii')
+os.system("mkdir -p dist")
 os.system("cp build/tulip.bin dist/tulip-full-%s.bin" % (MICROPY_BOARD))
 os.system("cp build/micropython.bin dist/tulip-firmware-%s.bin" % (MICROPY_BOARD))
 os.system("cp build/tulip-sys.bin dist/tulip-sys.bin")

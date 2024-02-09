@@ -104,8 +104,7 @@ For example, for a Tulip4 DIY board based on a N32R8:
 idf.py -DMICROPY_BOARD=N32R8 build
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
 # to the flash memory. Run this only once, or each time you modify `fs` if you're developing Tulip itself.
-python tulip_fs_create.py
-esptool.py write_flash 0x0 build/tulip.bin
+python tulip_fs_create.py full
 ```
 
 You may need to restart Tulip after the flash, but Tulip should now just turn on whenever you connect USB or power it on. 
