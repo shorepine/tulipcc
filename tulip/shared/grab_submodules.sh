@@ -10,6 +10,7 @@ if test -f ".submodules_ok"; then
 else
     echo "Syncing submodules for first build..."
     git submodule update --init amy
+    git submodule update --init lvgl
     git submodule update --init micropython
     cd micropython
     git submodule update --init lib/axtls 

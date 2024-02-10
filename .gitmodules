@@ -4,3 +4,6 @@
 [submodule "amy"]
 	path = amy
 	url = https://github.com/bwhitman/amy
+[submodule "lvgl"]
+	path = lvgl
+	url = https://github.com/lvgl/lvgl
