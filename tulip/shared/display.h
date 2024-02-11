@@ -82,7 +82,7 @@ void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
 bool display_frame_done_generic();
 void display_swap();
-
+uint8_t rgb565to332(uint16_t rgb565);
 void display_teardown(void);
 
 uint8_t check_dim_xy(uint16_t x, uint16_t y);
@@ -117,6 +117,8 @@ extern const unsigned char portfolio_glyph_bitmap[1792];
 
 #define OFFSCREEN_X_PX 1024
 #define OFFSCREEN_Y_PX 100
+//#define OFFSCREEN_X_PX 0
+//#define OFFSCREEN_Y_PX 0
 #define DEFAULT_PIXEL_CLOCK_MHZ 28
 #define BOUNCE_BUFFER_SIZE_PX (H_RES*12)
 #define TFB_ROWS (V_RES/FONT_HEIGHT)

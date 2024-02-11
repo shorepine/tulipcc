@@ -35,12 +35,15 @@
 // Variant-specific definitions.
 #include "mpconfigvariant.h"
 #define MICROPY_PY_NETWORK_HOSTNAME_DEFAULT "tulip"
+#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (0)
 
 // Tulip stuff -- move to mpconfigtulip.h ? 
 #define MICROPY_PY_IO (1)
 #define MICROPY_PY_SYS_STDFILES                 (0)
 #define MICROPY_PY_BUILTINS_HELP_TEXT           tulip_desktop_help_text
 #define MICROPY_HW_BOARD_NAME "Tulip4"
+
+
 
 // Unclear how this works -- unicode (in strings) seems fine. maybe this is files
 //#define MICROPY_PY_BUILTINS_STR_UNICODE (1)

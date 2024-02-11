@@ -52,6 +52,36 @@ UNAME_S := $(shell uname -s)
 include $(TOP)/py/py.mk
 include $(TOP)/extmod/extmod.mk
 
+
+# LVGL stuff
+LVGL_BINDING_DIR = $(TOP)/lib/lv_binding_micropython
+LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
+LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
+INC += -I$(LVGL_BINDING_DIR)
+ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f) $(LVGL_BINDING_DIR)/lv_conf.h
+LVGL_PP = $(BUILD)/lvgl/lvgl.pp.c
+LVGL_MPY = $(BUILD)/lvgl/lv_mpy.c
+LVGL_MPY_METADATA = $(BUILD)/lvgl/lv_mpy.json
+QSTR_GLOBAL_DEPENDENCIES += $(LVGL_MPY)
+CFLAGS_MOD += $(LV_CFLAGS) 
+SRC_C += $(shell find $(LVGL_DIR)/src -type f -name '*.c')
+#CSRCS += $(shell find $(LVGL_PATH)/demos -type f -name '*.c')
+#CSRCS += $(shell find $(LVGL_PATH)/examples -type f -name '*.c')
+CXXEXT := .cpp
+SRC_CPP += $(shell find $(LVGL_DIR)/src/libs/thorvg -type f -name '*${CXXEXT}')
+CFLAGS += -DLV_CONF_INCLUDE_SIMPLE
+
+$(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
+	$(ECHO) "LVGL-GEN $@"
+	$(Q)mkdir -p $(dir $@)
+	$(Q)$(CPP) $(LV_CFLAGS) -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
+	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
+
+
+SRC_C += $(LVGL_PP)
+SRC_C += $(LVGL_MPY)
+
+
 #GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi lib/mbedtls lib/micropython-lib 
 
 INC +=  -I.
@@ -62,12 +92,13 @@ INC += -I$(TOP)/ports/unix
 INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
+INC += -I$(TOP)/lib/lv_binding_micropython/lvgl/src
 
 INC += -I./SDL2.framework/Headers
 
 # compiler settings
 CWARN = -Wall -Werror
-CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations
+CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA) 
 CFLAGS += -DTULIP_DESKTOP
 #CFLAGS += -DAMY_DEBUG
@@ -268,7 +299,7 @@ endif
 
 CPU_BRAND_NAME=`sysctl -n machdep.cpu.brand_string`
 CFLAGS += -DMICROPY_HW_MCU_NAME="\"$(CPU_BRAND_NAME)\""
-CFLAGS += -Wno-double-promotion -Wno-unused-function
+CFLAGS += -Wno-double-promotion -Wno-unused-function -Wno-unused-variable
 CXXFLAGS += $(filter-out -Wno-double-promotion -Wmissing-prototypes -Wold-style-definition -std=gnu99,$(CFLAGS) $(CXXFLAGS_MOD))
 
 ifeq ($(MICROPY_FORCE_32BIT),1)

@@ -10,7 +10,6 @@ if test -f ".submodules_ok"; then
 else
     echo "Syncing submodules for first build..."
     git submodule update --init amy
-    git submodule update --init lvgl
     git submodule update --init micropython
     cd micropython
     git submodule update --init lib/axtls 
@@ -18,6 +17,7 @@ else
     git submodule update --init lib/mbedtls
     git submodule update --init lib/berkeley-db-1.xx
     git submodule update --init lib/micropython-lib 
+    git submodule update --init --recursive lib/lv_binding_micropython
     cd ..
     touch .submodules_ok
 fi

@@ -1,4 +1,5 @@
 #include "display.h"
+#include "lvgl.h"
 
 uint8_t bg_pal_color;
 uint8_t tfb_fg_pal_color;
@@ -105,6 +106,12 @@ uint8_t color_332(uint8_t red, uint8_t green, uint8_t blue) {
 }
 
 
+// RRRRRGGG GGGBBBBB -> RRRGGGBB
+// >> 6
+
+uint8_t rgb565to332(uint16_t rgb565) {
+    return (rgb565 >> 6 & 0xe0)  | (rgb565 >> 6 & 0x1c) | (rgb565 >> 3 & 0x3);
+}
 
 // Python callback
 extern void tulip_frame_isr(); 
@@ -957,6 +964,10 @@ void display_teardown(void) {
     free_caps(bg_lines); bg_lines = NULL;
 }
 
+
+extern void setup_lvgl();
+
+
 void display_init(void) {
     // 12 divides into 600, 480, 240
     // Create the background FB
@@ -1003,6 +1014,9 @@ void display_init(void) {
     display_reset_sprites();
     display_reset_touch();
     ui_init();
+
+    setup_lvgl();
+
 
     vsync_count = 1;
     reported_fps = 30;

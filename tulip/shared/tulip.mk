@@ -18,7 +18,6 @@ EXTMOD_SRC_C += $(addprefix ../amy/src/, \
 EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	modtulip.c \
 	polyfills.c \
-	lodepng.c \
 	u8g2_fonts.c \
 	u8fontdata.c \
 	smallfont.c \
@@ -34,6 +33,9 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	alles.c \
 	sounds.c \
 	)
+
+#	lodepng.c \
+
 
 INC += -I$(TOP)/$(TULIP_EXTMOD_DIR)
 INC += -I../amy/src/
