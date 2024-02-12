@@ -1013,7 +1013,6 @@ void display_init(void) {
     display_reset_tfb();
     display_reset_sprites();
     display_reset_touch();
-    ui_init();
 
     setup_lvgl();
 
