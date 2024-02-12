@@ -4,11 +4,15 @@ tulip/macos/gon_config.json
 esp-idf/components/bootloader/subproject/dependencies.lock
 dependencies.lock
 tulip/esp32s3/build
+tulip/esp32s3/tulip-sys.bin
+tulip/esp32s3/tulip-vfs.bin
 tulip/macos/build-standard/
 tulip/macos/tulip
 tulip/macos/tulip.arm64
 tulip/macos/tulip.x86_64
 tulip/macos/dist
+tulip/macos/lextab.py
+tulip/macos/yacctab.py
 tulip/linux/build-standard
 tulip/linux/dev
 tulip/ios/build-standard
