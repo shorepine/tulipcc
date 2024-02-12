@@ -3,6 +3,7 @@ __pycache__
 tulip/macos/gon_config.json
 esp-idf/components/bootloader/subproject/dependencies.lock
 dependencies.lock
+tulip/esp32s3/dist
 tulip/esp32s3/build
 tulip/esp32s3/tulip-sys.bin
 tulip/esp32s3/tulip-vfs.bin
