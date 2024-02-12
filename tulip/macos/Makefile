@@ -57,8 +57,8 @@ include $(TOP)/extmod/extmod.mk
 LVGL_BINDING_DIR = $(TOP)/lib/lv_binding_micropython
 LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
 LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
-INC += -I$(LVGL_BINDING_DIR)
-ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f) $(LVGL_BINDING_DIR)/lv_conf.h
+INC += -I$(LVGL_BINDING_DIR) -I.
+ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f) lv_conf.h
 LVGL_PP = $(BUILD)/lvgl/lvgl.pp.c
 LVGL_MPY = $(BUILD)/lvgl/lv_mpy.c
 LVGL_MPY_METADATA = $(BUILD)/lvgl/lv_mpy.json
@@ -73,13 +73,11 @@ CFLAGS += -DLV_CONF_INCLUDE_SIMPLE
 
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
 	$(ECHO) "LVGL-GEN $@"
+	$(Q)cp lv_conf.h $(LVGL_BINDING_DIR)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(CPP) $(LV_CFLAGS) -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
 	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
 
-
-SRC_C += $(LVGL_PP)
-SRC_C += $(LVGL_MPY)
 
 
 #GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi lib/mbedtls lib/micropython-lib 
@@ -259,6 +257,10 @@ SRC_C += \
 	$(MICROPY_PORT_DIR)/mpnimbleport.c \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
+
+
+#SRC_C += $(LVGL_PP)
+SRC_C += $(LVGL_MPY)
 
 
 SHARED_SRC_C += $(addprefix ../../micropython/shared/,\

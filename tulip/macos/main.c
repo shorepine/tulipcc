@@ -929,7 +929,6 @@ int main(int argc, char **argv) {
     // Schedule a "turning on" sound
     bleep();
 
-    //lv_init();
 
 display_jump: 
     while(unix_display_flag>=0) {

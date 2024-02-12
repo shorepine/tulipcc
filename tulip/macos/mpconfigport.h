@@ -35,7 +35,11 @@
 // Variant-specific definitions.
 #include "mpconfigvariant.h"
 #define MICROPY_PY_NETWORK_HOSTNAME_DEFAULT "tulip"
+
+#undef MICROPY_MALLOC_USES_ALLOCATED_SIZE
+#undef MICROPY_MEM_STATS
 #define MICROPY_MALLOC_USES_ALLOCATED_SIZE (0)
+#define MICROPY_MEM_STATS              (0)
 
 // Tulip stuff -- move to mpconfigtulip.h ? 
 #define MICROPY_PY_IO (1)
