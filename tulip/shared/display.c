@@ -965,7 +965,74 @@ void display_teardown(void) {
 }
 
 
-extern void setup_lvgl();
+
+void lv_flush_cb(lv_display_t * display, const lv_area_t * area, unsigned char * px_map)
+{
+    uint16_t * buf16 = (uint16_t *)px_map; 
+    int16_t x, y;
+    for(y = area->y1; y <= area->y2; y++) {
+        for(x = area->x1; x <= area->x2; x++) {
+            bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL] = 
+                (*buf16 >> 6 & 0xe0)  | (*buf16 >> 6 & 0x1c) | (*buf16 >> 3 & 0x3);
+            buf16++;
+        }
+    }
+    // Inform LVGL that you are ready with the flushing and buf is not used anymore
+    lv_display_flush_ready(display);
+}
+
+
+
+uint32_t u32_ticks_ms() {
+    return (uint32_t) get_ticks_ms();
+}
+
+
+void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
+    if(touch_held) {
+        data->point.x = last_touch_x[0];
+        data->point.y = last_touch_y[0];
+        data->state = LV_INDEV_STATE_PRESSED;
+    } else {
+        data->state = LV_INDEV_STATE_RELEASED;
+    }
+}
+
+uint16_t * lv_buf;
+
+void setup_lvgl() {
+    lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
+    fprintf(stderr, "1\n");
+    // Setup LVGL for UI etc
+    lv_init();
+    fprintf(stderr, "2\n");
+    lv_display_t * lv_display = lv_display_create(H_RES, V_RES);
+    lv_display_set_flush_cb(lv_display, lv_flush_cb);
+    fprintf(stderr, "3\n");
+    lv_display_set_buffers(lv_display, lv_buf, NULL, H_RES*V_RES*2/10, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    fprintf(stderr, "4\n");
+
+    lv_tick_set_cb(u32_ticks_ms);
+    fprintf(stderr, "5\n");
+
+    // Set LVGL bg to tulip teal
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0xff4040), LV_PART_MAIN);
+    fprintf(stderr, "6\n");
+
+    // Create a input device (uses tulip.touch())
+    lv_indev_t * indev = lv_indev_create();
+    lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);   
+    lv_indev_set_read_cb(indev, lvgl_input_read_cb);  
+    fprintf(stderr, "7\n");
+
+    // Also create a keyboard input device 
+    /*
+    lv_indev_t *indev_kb = lv_indev_create();
+    lv_indev_set_type(indev_kb, LV_INDEV_TYPE_KEYPAD);
+    lv_indev_set_read_cb(indev_kb, lvgl_input_kb_read_cb);  
+    */
+}
+
 
 
 void display_init(void) {

@@ -22,7 +22,7 @@ void esp32s3_display_restart() {
     esp32s3_display_start();
 }
 
-
+#include "lvgl.h"
 // This gets called at vsync / frame done
 static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
     TaskHandle_t task_to_notify = (TaskHandle_t)user_ctx;
@@ -190,6 +190,8 @@ void run_esp32s3_display(void) {
     while(1)  { 
         int64_t tic1 = esp_timer_get_time();
         ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
+        lv_task_handler();
+
         free_time += (esp_timer_get_time() - tic1);
         if(loop_count++ >= 100) {
             reported_fps = 1000000.0 / ((esp_timer_get_time() - tic0) / loop_count);

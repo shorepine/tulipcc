@@ -25,6 +25,19 @@ if(NOT TULIP_ESP32S3_DIR)
 endif()
 
 
+# Set location of lvgl_mp dir
+if(NOT LV_BINDING_DIR)
+    get_filename_component(LV_BINDING_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython ABSOLUTE)
+endif()
+
+# Set location of lvgl dir
+if(NOT LVGL_DIR)
+    get_filename_component(LVGL_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython/lvgl ABSOLUTE)
+endif()
+
+file(GLOB_RECURSE LVGL_SOURCES ${LVGL_DIR}/src/*.c)
+
+
 # Include core source components.
 include(${MICROPY_DIR}/py/py.cmake)
 
@@ -66,6 +79,7 @@ list(APPEND MICROPY_SOURCE_DRIVERS
     ${MICROPY_DIR}/drivers/dht/dht.c
 )
 
+
 list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/multicast.c
     ../../../tulip/esp32s3/mphalport.c
@@ -73,6 +87,8 @@ list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/main.c
     ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/help.c
+    ../../../tulip/esp32s3/lv_mpy.c
+
     usb_serial_jtag.c
     gccollect.c
     fatfs_port.c
@@ -199,6 +215,7 @@ idf_component_register(
         ${MICROPY_SOURCE_DRIVERS}
         ${MICROPY_SOURCE_PORT}
         ${MICROPY_SOURCE_BOARD}
+        ${LVGL_SOURCES}
     INCLUDE_DIRS
         ../../tulip/esp32s3
         ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch_gt911/include
@@ -210,6 +227,8 @@ idf_component_register(
         ${CMAKE_BINARY_DIR}
         ../../tulip/shared
         ../../amy/src
+        ${LV_BINDING_DIR}
+        ${LVGL_DIR}/src
     REQUIRES
         ${IDF_COMPONENTS}
 )
@@ -233,6 +252,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     LFS2_NO_MALLOC LFS2_NO_ASSERT
     ESP_PLATFORM
     TULIP
+    LV_CONF_INCLUDE_SIMPLE
     ${BOARD_DEFINITION1}
     ${BOARD_DEFINITION2}
 )
@@ -245,6 +265,7 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-uninitialized
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
+    -Wno-unused-const-variable
     -fsingle-precision-constant
     -Wno-strict-aliasing
     -DESP_PLATFORM

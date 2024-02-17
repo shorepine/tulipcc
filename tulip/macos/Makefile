@@ -65,10 +65,6 @@ LVGL_MPY_METADATA = $(BUILD)/lvgl/lv_mpy.json
 QSTR_GLOBAL_DEPENDENCIES += $(LVGL_MPY)
 CFLAGS_MOD += $(LV_CFLAGS) 
 SRC_C += $(shell find $(LVGL_DIR)/src -type f -name '*.c')
-#CSRCS += $(shell find $(LVGL_PATH)/demos -type f -name '*.c')
-#CSRCS += $(shell find $(LVGL_PATH)/examples -type f -name '*.c')
-CXXEXT := .cpp
-SRC_CPP += $(shell find $(LVGL_DIR)/src/libs/thorvg -type f -name '*${CXXEXT}')
 CFLAGS += -DLV_CONF_INCLUDE_SIMPLE
 
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 

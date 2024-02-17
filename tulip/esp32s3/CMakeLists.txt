@@ -6,6 +6,11 @@ execute_process(COMMAND bash -c "../shared/grab_submodules.sh"
                     WORKING_DIRECTORY ".."
                     OUTPUT_VARIABLE GIT_SUBMOD_RESULT)
 
+execute_process(COMMAND bash -c "cp ../lv_conf.h ../../../lv_binding_micropython/"
+                    WORKING_DIRECTORY "."
+                )
+
+
 # Turn this on for debugging submodules
 #file(WRITE "submod" "${GIT_SUBMOD_RESULT}")
 

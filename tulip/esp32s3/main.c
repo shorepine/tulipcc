@@ -402,7 +402,7 @@ void app_main(void) {
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
-    
+
     #ifdef TDECK
     fprintf(stderr,"Starting T-Deck keyboard on core %d\n", USB_TASK_COREID);
     xTaskCreatePinnedToCore(run_tdeck_keyboard, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
