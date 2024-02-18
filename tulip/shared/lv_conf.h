@@ -65,10 +65,14 @@
     #define LV_MEM_ADR 0     /*0: unused*/
     /*Instead of an address give a memory allocator that will be called to get a memory pool for LVGL. E.g. my_malloc*/
     #if LV_MEM_ADR == 0
-        //#undef LV_MEM_POOL_INCLUDE
-        //#undef LV_MEM_POOL_ALLOC
+#ifdef ESP_PLATFORM
         #define LV_MEM_POOL_INCLUDE     "esp_heap_caps.h"
         #define LV_MEM_POOL_ALLOC(size) heap_caps_malloc(size, MALLOC_CAP_SPIRAM)
+#else
+        #undef LV_MEM_POOL_INCLUDE
+        #undef LV_MEM_POOL_ALLOC
+#endif
+
     #endif
 #endif  /*LV_USE_MALLOC == LV_STDLIB_BUILTIN*/
 
