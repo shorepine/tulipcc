@@ -127,13 +127,10 @@ list(TRANSFORM MICROPY_SOURCE_PORT PREPEND ${MICROPY_PORT_DIR}/)
 list(APPEND MICROPY_SOURCE_EXTMOD 
     ${TULIP_SHARED_DIR}/modtulip.c
     ${TULIP_SHARED_DIR}/polyfills.c
-    ${TULIP_SHARED_DIR}/lodepng.c
     ${TULIP_SHARED_DIR}/smallfont.c
     ${TULIP_SHARED_DIR}/display.c
     ${TULIP_SHARED_DIR}/bresenham.c
     ${TULIP_SHARED_DIR}/wireframe.c
-    ${TULIP_SHARED_DIR}/u8g2_fonts.c    
-    ${TULIP_SHARED_DIR}/u8fontdata.c    
     ${TULIP_SHARED_DIR}/tulip_helpers.c
     ${TULIP_SHARED_DIR}/editor.c
     ${TULIP_SHARED_DIR}/keyscan.c
@@ -230,6 +227,7 @@ idf_component_register(
         ../../amy/src
         ${LV_BINDING_DIR}
         ${LVGL_DIR}/src
+        ${LVGL_DIR}/src/libs/lodepng
     REQUIRES
         ${IDF_COMPONENTS}
 )

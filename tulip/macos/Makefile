@@ -69,7 +69,7 @@ CFLAGS += -DLV_CONF_INCLUDE_SIMPLE
 
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
 	$(ECHO) "LVGL-GEN $@"
-	$(Q)cp ../shared/lv_conf.h $(LVGL_BINDING_DIR)
+	$(Q)cp ../shared/lv_fonts/*.c ${LVGL_DIR}/src/font/
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(CPP) $(LV_CFLAGS) -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
 	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
@@ -85,6 +85,7 @@ INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
 INC += -I$(TOP)/../lv_binding_micropython/lvgl/src
+INC += -I$(TOP)/../lv_binding_micropython/lvgl/src/libs/lodepng
 
 INC += -I./SDL2.framework/Headers
 

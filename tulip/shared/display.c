@@ -1043,7 +1043,9 @@ void setup_lvgl() {
 void display_init(void) {
     // 12 divides into 600, 480, 240
     // Create the background FB
+    // 1536000 bytes
     bg = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    // 614400 bytes
     bg_tfb = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
     // And various ptrs
@@ -1058,9 +1060,11 @@ void display_init(void) {
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
     TFB_pxlen = (uint16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
 
+    // 120000 byes
     line_emits_rle = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    // 120000 bytes
     line_emits_y = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-
+    // 122880 bytes
     lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);

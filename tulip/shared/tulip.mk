@@ -19,8 +19,6 @@ EXTMOD_SRC_C += $(addprefix ../amy/src/, \
 EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	modtulip.c \
 	polyfills.c \
-	u8g2_fonts.c \
-	u8fontdata.c \
 	smallfont.c \
 	display.c \
 	bresenham.c \
