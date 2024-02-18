@@ -429,25 +429,6 @@ int HandleAppEvents(void *userdata, SDL_Event *event) {
 
 
 
-
-// TODO, find out what key scan / codes they expect you to use here
-/*
-void lvgl_input_kb_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
-    data->key = last_key();           
-    if(key_pressed()) {
-        data->state = LV_INDEV_STATE_PRESSED;
-    } else {
-        data->state = LV_INDEV_STATE_RELEASED;
-    }
-}
-
-*/
-
-
-// TODO , move this to a direct write to BG?
-//static uint16_t lv_buf[H_RES * V_RES / 10];
-
-
 void unix_display_init() {
     // on iOS we need to get the display size before computing display sizes
     if(!sdl_ready) {

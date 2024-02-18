@@ -87,7 +87,7 @@ list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/main.c
     ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/help.c
-    ../../../tulip/esp32s3/lv_mpy.c
+    ../../../tulip/esp32s3/build/lv_mpy.c
 
     usb_serial_jtag.c
     gccollect.c
@@ -144,6 +144,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/sounds.c
     ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
     ${AMY_DIR}/src/algorithms.c
+    ${AMY_DIR}/src/custom.c
     ${AMY_DIR}/src/patches.c
     ${AMY_DIR}/src/amy.c
     ${AMY_DIR}/src/delay.c

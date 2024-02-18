@@ -1,5 +1,6 @@
 #include "esp32s3_display.h"
 #include "tasks.h"
+#include "lvgl.h"
 
 
 esp_lcd_panel_handle_t panel_handle;
@@ -22,7 +23,6 @@ void esp32s3_display_restart() {
     esp32s3_display_start();
 }
 
-#include "lvgl.h"
 // This gets called at vsync / frame done
 static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
     TaskHandle_t task_to_notify = (TaskHandle_t)user_ctx;

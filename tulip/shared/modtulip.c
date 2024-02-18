@@ -955,7 +955,7 @@ STATIC mp_obj_t tulip_cpu(size_t n_args, const mp_obj_t *args) {
     // for now just printf to uart
     float idle;
     if(n_args > 0) {
-        idle = compute_cpu_usage(1);        
+        idle = compute_cpu_usage(1);
     } else {
         idle = compute_cpu_usage(0);
     }

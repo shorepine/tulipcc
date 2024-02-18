@@ -69,12 +69,10 @@ CFLAGS += -DLV_CONF_INCLUDE_SIMPLE
 
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
 	$(ECHO) "LVGL-GEN $@"
-	$(Q)cp lv_conf.h $(LVGL_BINDING_DIR)
+	$(Q)cp ../shared/lv_conf.h $(LVGL_BINDING_DIR)
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(CPP) $(LV_CFLAGS) -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
 	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
-
-
 
 #GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi lib/mbedtls lib/micropython-lib 
 

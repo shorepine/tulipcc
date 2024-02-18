@@ -121,6 +121,7 @@ unsigned long last_task_counters[MAX_TASKS];
 
 
 typedef void (*esp_alloc_failed_hook_t) (size_t size, uint32_t caps, const char * function_name);
+#include "esp_heap_caps.h"
 
 void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
     printf("alloc failed size %d function %s caps: ", size, function_name);
@@ -136,6 +137,21 @@ void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
     printf("\n");
 }
 
+/*
+void esp_heap_trace_alloc_hook(void* ptr, size_t size, uint32_t caps) {
+    fprintf(stderr,"alloc %d bytes ", size);
+    if(caps & MALLOC_CAP_SPIRAM) fprintf(stderr,"spiram ");
+    if(caps & MALLOC_CAP_INTERNAL) fprintf(stderr,"internal ");
+    if(caps & MALLOC_CAP_32BIT) fprintf(stderr,"32bit ");
+    if(caps & MALLOC_CAP_DEFAULT) fprintf(stderr,"default ");
+    if(caps & MALLOC_CAP_IRAM_8BIT) fprintf(stderr,"iram8bit ");
+    if(caps & MALLOC_CAP_RTCRAM) fprintf(stderr,"rtcram ");
+    if(caps & MALLOC_CAP_8BIT) fprintf(stderr,"8bit ");
+    if(caps & MALLOC_CAP_EXEC) fprintf(stderr,"exec ");
+    if(caps & MALLOC_CAP_DMA) fprintf(stderr,"dma ");
+    fprintf(stderr,"\n");
+}
+*/
 
 float compute_cpu_usage(uint8_t debug) {
     TaskStatus_t *pxTaskStatusArray;
@@ -196,6 +212,15 @@ float compute_cpu_usage(uint8_t debug) {
         }   
     }
     vPortFree(pxTaskStatusArray);
+
+    // Also print heap info
+
+    fprintf(stderr, "SPIRAM:\n "); fflush(stderr);
+    heap_caps_print_heap_info(MALLOC_CAP_SPIRAM);
+
+    fprintf(stderr, "INTERNAL:\n "); fflush(stderr);
+    heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
+
     return 100.0 - ((float)freeTime/ulTotalRunTime * 100.0);
 
 }

@@ -37,6 +37,7 @@ uint32_t *sprite_mem;//[SPRITES];
 uint16_t *line_emits_rle;
 uint16_t *line_emits_y;
 
+uint16_t * lv_buf;
 
 uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
@@ -943,8 +944,7 @@ void display_teardown(void) {
     free_caps(sprite_ids); sprite_ids = NULL;
     free_caps(line_emits_rle); line_emits_rle = NULL;
     free_caps(line_emits_y); line_emits_y = NULL;
-    //free_caps(line_emits_rle_1); line_emits_rle_1 = NULL;
-    //free_caps(line_emits_y_1); line_emits_y_1 = NULL;
+    free_caps(lv_buf); lv_buf = NULL;
     free_caps(sprite_ram); sprite_ram = NULL; 
     free_caps(sprite_x_px); sprite_x_px = NULL;
     free_caps(sprite_y_px); sprite_y_px = NULL;
@@ -981,12 +981,26 @@ void lv_flush_cb(lv_display_t * display, const lv_area_t * area, unsigned char *
     lv_display_flush_ready(display);
 }
 
-
-
+// Shim for lvgl to read ticks
 uint32_t u32_ticks_ms() {
     return (uint32_t) get_ticks_ms();
 }
 
+
+
+
+// TODO, find out what key scan / codes they expect you to use here
+/*
+void lvgl_input_kb_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
+    data->key = last_key();           
+    if(key_pressed()) {
+        data->state = LV_INDEV_STATE_PRESSED;
+    } else {
+        data->state = LV_INDEV_STATE_RELEASED;
+    }
+}
+
+*/
 
 void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
     if(touch_held) {
@@ -998,32 +1012,23 @@ void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
     }
 }
 
-uint16_t * lv_buf;
 
 void setup_lvgl() {
-    lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
-    fprintf(stderr, "1\n");
     // Setup LVGL for UI etc
     lv_init();
-    fprintf(stderr, "2\n");
     lv_display_t * lv_display = lv_display_create(H_RES, V_RES);
     lv_display_set_flush_cb(lv_display, lv_flush_cb);
-    fprintf(stderr, "3\n");
     lv_display_set_buffers(lv_display, lv_buf, NULL, H_RES*V_RES*2/10, LV_DISPLAY_RENDER_MODE_PARTIAL);
-    fprintf(stderr, "4\n");
 
     lv_tick_set_cb(u32_ticks_ms);
-    fprintf(stderr, "5\n");
 
     // Set LVGL bg to tulip teal
-    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0xff4040), LV_PART_MAIN);
-    fprintf(stderr, "6\n");
+    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0x404040), LV_PART_MAIN);
 
     // Create a input device (uses tulip.touch())
     lv_indev_t * indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);   
     lv_indev_set_read_cb(indev, lvgl_input_read_cb);  
-    fprintf(stderr, "7\n");
 
     // Also create a keyboard input device 
     /*
@@ -1053,13 +1058,10 @@ void display_init(void) {
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
     TFB_pxlen = (uint16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
 
-    //lines_bitmap = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES/8), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     line_emits_rle = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     line_emits_y = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
-    //line_emits_rle_1 = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    //line_emits_y_1 = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-
+    lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
