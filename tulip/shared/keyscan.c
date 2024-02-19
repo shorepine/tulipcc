@@ -398,24 +398,26 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
     return 0;
 }
 
-
+extern uint8_t lvgl_focused();
 
 void send_key_to_micropython(uint16_t c) {
     // Deal with the extended codes that need ANSI escape chars 
-    if(c>257 && c<263) { 
-        tx_char(27);
-        tx_char('[');
-        if(c==258) tx_char('B');
-        if(c==259) tx_char('A');
-        if(c==260) tx_char('D');
-        if(c==261) tx_char('C');
-        if(c==262) { tx_char('3'); tx_char(126); }
-    } else if (c==mp_interrupt_char) {
-        // Send a ctrl-C to Micropython if sent 
-        mp_sched_keyboard_interrupt();
-    } else if (c==4) { // control-D
-        tx_char(c );
-    } else {
-        tx_char(c );
+    if(!lvgl_focused()) {
+        if(c>257 && c<263) { 
+            tx_char(27);
+            tx_char('[');
+            if(c==258) tx_char('B');
+            if(c==259) tx_char('A');
+            if(c==260) tx_char('D');
+            if(c==261) tx_char('C');
+            if(c==262) { tx_char('3'); tx_char(126); }
+        } else if (c==mp_interrupt_char) {
+            // Send a ctrl-C to Micropython if sent 
+            mp_sched_keyboard_interrupt();
+        } else if (c==4) { // control-D
+            tx_char(c );
+        } else {
+            tx_char(c );
+        }
     }
 }

@@ -45,12 +45,14 @@ extern int16_t last_touch_x[3];
 extern int16_t last_touch_y[3];
 extern uint8_t touch_held;
 extern uint8_t tfb_log;
+extern lv_group_t * lvgl_kb_group;
 
 void display_reset_sprites();
 void display_reset_tfb();
 void display_reset_bg();
 void display_tfb_update(int8_t tfb_row_hint);
 void display_set_clock(uint8_t mhz) ;
+uint8_t lvgl_focused();
 
 void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx);
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b);

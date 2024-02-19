@@ -57,6 +57,8 @@ uint8_t tfb_active = 1;
 uint8_t tfb_log = 0;
 uint8_t gpu_log = 0;
 
+lv_group_t * lvgl_kb_group;
+
 
 uint8_t check_dim_xy(uint16_t x, uint16_t y) {
     if(x >= OFFSCREEN_X_PX + H_RES || y >= OFFSCREEN_Y_PX+V_RES) return 0;
@@ -987,20 +989,19 @@ uint32_t u32_ticks_ms() {
 }
 
 
+#ifdef TULIP_DESKTOP
+void sdl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
+#endif
 
 
 // TODO, find out what key scan / codes they expect you to use here
-/*
 void lvgl_input_kb_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
-    data->key = last_key();           
-    if(key_pressed()) {
-        data->state = LV_INDEV_STATE_PRESSED;
-    } else {
-        data->state = LV_INDEV_STATE_RELEASED;
-    }
+#ifdef TULIP_DESKTOP
+    sdl_keyboard_read(indev, data);
+#else
+    // don't know yet
+#endif
 }
-
-*/
 
 void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
     if(touch_held) {
@@ -1010,6 +1011,13 @@ void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
     } else {
         data->state = LV_INDEV_STATE_RELEASED;
     }
+}
+
+
+// return 1 if we're focused on something the keyboard is sending characters to (e.g. don't send keys to repl)
+uint8_t lvgl_focused() {
+    if(lv_group_get_focused(lvgl_kb_group) == lv_screen_active()) return 0;
+    return 1;
 }
 
 
@@ -1031,12 +1039,22 @@ void setup_lvgl() {
     lv_indev_set_read_cb(indev, lvgl_input_read_cb);  
 
     // Also create a keyboard input device 
-    /*
     lv_indev_t *indev_kb = lv_indev_create();
     lv_indev_set_type(indev_kb, LV_INDEV_TYPE_KEYPAD);
     lv_indev_set_read_cb(indev_kb, lvgl_input_kb_read_cb);  
-    */
+
+    // Put the screen as a group for the KB responder. You can pull this out with group_by_index later
+    lvgl_kb_group = lv_group_create();
+    lv_group_add_obj(lvgl_kb_group,lv_screen_active());
+    lv_indev_set_group(indev_kb, lvgl_kb_group);
 }
+
+/*
+>>> scr = lv.screen_active()
+>>> ta = lv.textarea(scr)
+>>> ta.align(lv.ALIGN.CENTER, 0, 0)
+>>> lv.group_by_index(0).add_obj(ta)
+*/
 
 
 
