@@ -14,6 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: setup
-      run: sudo apt install libsdl2-dev libffi-dev
+      run: sudo apt update; sudo apt install libsdl2-dev libffi-dev
     - name: make
       run: cd tulip/linux; ./build.sh
