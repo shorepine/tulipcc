@@ -47,11 +47,6 @@ void unix_display_init();
 static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
 
 
-/**
- * Get input from the keyboard.
- * @param indev_drv pointer to the related input device driver
- * @param data store the red data here
- */
 void sdl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 {
     (void) indev_drv;      /*Unused*/
