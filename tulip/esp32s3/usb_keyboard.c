@@ -465,7 +465,7 @@ void decode_report(uint8_t *p) {
                         }
                     } else {
                         // put it in lvgl_kb_buf for lvgl
-                        const size_t len = strlen(lvgl_kb_buf) + 1;
+                        const size_t len = strlen(lvgl_kb_buf);
                         if (len < KEYBOARD_BUFFER_SIZE - 1) {
                             lvgl_kb_buf[len] = c;
                             lvgl_kb_buf[len+1] = '\0';
