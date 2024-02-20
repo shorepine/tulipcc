@@ -31,9 +31,8 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	midi.c \
 	alles.c \
 	sounds.c \
+	lodepng.c \
 	)
-
-#	lodepng.c \
 
 
 INC += -I$(TOP)/$(TULIP_EXTMOD_DIR)
