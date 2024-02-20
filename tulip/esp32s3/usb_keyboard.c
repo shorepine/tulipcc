@@ -2,6 +2,7 @@
 #include "usb_keyboard.h"
 #include "midi.h"  // from extmod/tulip/
 #include "lvgl.h"
+
 #define KEYBOARD_BUFFER_SIZE 32
 
 uint16_t keyboard_bytes = KEYBOARD_BYTES;
@@ -411,23 +412,22 @@ uint32_t keycode_to_ctrl_key(uint16_t key)
 }
 
 
-
 static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
 
 
 void usb_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data) {
-    (void) indev_drv;      /*Unused*/
+    (void) indev_drv;     // unused
 
     static bool dummy_read = false;
     const size_t len = strlen(lvgl_kb_buf);
 
-    /*Send a release manually*/
+    // Send a release manually
     if (dummy_read) {
         dummy_read = false;
         data->state = LV_INDEV_STATE_RELEASED;
         data->continue_reading = len > 0;
     }
-        /*Send the pressed character*/
+        // Send the pressed character 
     else if (len > 0) {
         dummy_read = true;
         data->state = LV_INDEV_STATE_PRESSED;
@@ -457,6 +457,7 @@ void decode_report(uint8_t *p) {
 	  		if(!skip) { // only process new keys
 		        uint16_t c = scan_ascii(p[i], modifier);
 		        if(c) {
+                    
                     if(keycode_to_ctrl_key(c) != '\0') {
                         const size_t len = strlen(lvgl_kb_buf);
                         if (len < KEYBOARD_BUFFER_SIZE - 1) {
@@ -471,6 +472,7 @@ void decode_report(uint8_t *p) {
                             lvgl_kb_buf[len+1] = '\0';
                         }
                     }
+                    
                     new_key = 1;
                     current_held_ms = esp_timer_get_time()/1000;
                     current_held = c; 

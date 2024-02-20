@@ -10,6 +10,7 @@
 #include "polyfills.h"
 #include "ui.h"
 #include <inttypes.h>
+//#include "lvgl.h"
 #define RGB332
 
 #ifdef ESP_PLATFORM
@@ -45,7 +46,7 @@ extern int16_t last_touch_x[3];
 extern int16_t last_touch_y[3];
 extern uint8_t touch_held;
 extern uint8_t tfb_log;
-extern lv_group_t * lvgl_kb_group;
+//extern lv_group_t * lvgl_kb_group;
 
 void display_reset_sprites();
 void display_reset_tfb();

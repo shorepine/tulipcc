@@ -8,6 +8,7 @@ execute_process(COMMAND bash -c "../shared/grab_submodules.sh"
 
 # We have to do some nasty stuff to get the LVGL MP submodule compiled
 
+
 # First, we copy over our version of lv_conf.h to the place it's expected to be found
 execute_process(COMMAND bash -c "cp ../../shared/lv_conf.h ../../../lv_binding_micropython/"
                     WORKING_DIRECTORY "."

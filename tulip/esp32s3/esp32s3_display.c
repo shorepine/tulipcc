@@ -2,7 +2,6 @@
 #include "tasks.h"
 #include "lvgl.h"
 
-
 esp_lcd_panel_handle_t panel_handle;
 esp_lcd_rgb_panel_config_t panel_config;
 esp_lcd_rgb_panel_event_callbacks_t panel_callbacks;

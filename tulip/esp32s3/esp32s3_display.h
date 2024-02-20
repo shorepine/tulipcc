@@ -21,6 +21,7 @@
 #include "tasks.h"
 #include "pins.h"
 
+
 void run_esp32s3_display();
 void display_brightness(uint8_t amount);
 void esp_display_set_clock(uint8_t mhz) ;

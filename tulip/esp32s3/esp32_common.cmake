@@ -88,7 +88,6 @@ list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/help.c
     ../../../tulip/esp32s3/build/lv_mpy.c
-
     usb_serial_jtag.c
     gccollect.c
     fatfs_port.c
@@ -106,7 +105,7 @@ list(APPEND MICROPY_SOURCE_PORT
     network_wlan.c
     network_ppp.c
     ppp_set_auth.c
-    mpnimbleport.c
+    #mpnimbleport.c
     modsocket.c
     modesp.c
     esp32_nvs.c
@@ -139,6 +138,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/ui.c
     ${TULIP_SHARED_DIR}/midi.c
     ${TULIP_SHARED_DIR}/sounds.c
+    ${TULIP_SHARED_DIR}/lodepng.c
     ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
     ${AMY_DIR}/src/algorithms.c
     ${AMY_DIR}/src/custom.c
@@ -166,7 +166,7 @@ list(APPEND MICROPY_SOURCE_QSTR
 list(APPEND IDF_COMPONENTS
     app_update
     bootloader_support
-    bt
+    #bt
     driver
     esp_adc
     esp_app_format
@@ -227,7 +227,6 @@ idf_component_register(
         ../../amy/src
         ${LV_BINDING_DIR}
         ${LVGL_DIR}/src
-        ${LVGL_DIR}/src/libs/lodepng
     REQUIRES
         ${IDF_COMPONENTS}
 )
@@ -271,9 +270,9 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
 )
 
 # Additional include directories needed for private NimBLE headers.
-target_include_directories(${MICROPY_TARGET} PUBLIC
-    ${IDF_PATH}/components/bt/host/nimble/nimble
-)
+#target_include_directories(${MICROPY_TARGET} PUBLIC
+#    ${IDF_PATH}/components/bt/host/nimble/nimble
+#)
 
 # Add additional extmod and usermod components.
 target_link_libraries(${MICROPY_TARGET} micropy_extmod_btree)

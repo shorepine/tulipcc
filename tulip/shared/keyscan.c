@@ -398,11 +398,11 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
     return 0;
 }
 
-extern uint8_t lvgl_focused();
+//extern uint8_t lvgl_focused();
 
 void send_key_to_micropython(uint16_t c) {
     // Deal with the extended codes that need ANSI escape chars 
-    if(!lvgl_focused()) {
+    //if(!lvgl_focused()) {
         if(c>257 && c<263) { 
             tx_char(27);
             tx_char('[');
@@ -419,5 +419,5 @@ void send_key_to_micropython(uint16_t c) {
         } else {
             tx_char(c );
         }
-    }
+    //}
 }

@@ -1,6 +1,5 @@
 #include "display.h"
 #include "lvgl.h"
-
 uint8_t bg_pal_color;
 uint8_t tfb_fg_pal_color;
 uint8_t tfb_bg_pal_color;
@@ -967,7 +966,6 @@ void display_teardown(void) {
 }
 
 
-
 void lv_flush_cb(lv_display_t * display, const lv_area_t * area, unsigned char * px_map)
 {
     uint16_t * buf16 = (uint16_t *)px_map; 
@@ -987,8 +985,6 @@ void lv_flush_cb(lv_display_t * display, const lv_area_t * area, unsigned char *
 uint32_t u32_ticks_ms() {
     return (uint32_t) get_ticks_ms();
 }
-
-
 #ifdef TULIP_DESKTOP
 void sdl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
 #else
@@ -1051,13 +1047,11 @@ void setup_lvgl() {
     lv_indev_set_group(indev_kb, lvgl_kb_group);
 }
 
-/*
->>> scr = lv.screen_active()
->>> ta = lv.textarea(scr)
->>> ta.align(lv.ALIGN.CENTER, 0, 0)
->>> lv.group_by_index(0).add_obj(ta)
-*/
 
+//>>> scr = lv.screen_active()
+//>>> ta = lv.textarea(scr)
+//>>> ta.align(lv.ALIGN.CENTER, 0, 0)
+//>>> lv.group_by_index(0).add_obj(ta)
 
 
 void display_init(void) {
@@ -1085,7 +1079,7 @@ void display_init(void) {
     // 120000 bytes
     line_emits_y = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     // 122880 bytes
-    lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
+    //lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
