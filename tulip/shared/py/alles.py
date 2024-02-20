@@ -70,7 +70,7 @@ def trunc(number):
     return ('%.6f' % number).rstrip('0').rstrip('.')
 
 def message(osc=0, wave=None, patch=None, note=None, vel=None, amp=None, freq=None, duty=None, feedback=None, timestamp=None, reset=None, phase=None, pan=None,
-            client=None, retries=None, volume=None, filter_freq = None, resonance = None, bp0=None, bp1=None, bp0_target=None, bp1_target=None, mod_target=None,
+            client=None, retries=None, volume=None, pitch_bend=None, filter_freq = None, resonance = None, bp0=None, bp1=None, bp0_target=None, bp1_target=None, mod_target=None,
             debug=None, chained_osc=None, mod_source=None, clone_osc=None, eq_l = None, eq_m = None, eq_h = None, filter_type= None, algorithm=None, ratio = None, latency_ms = None, algo_source=None,
             chorus_level=None, chorus_delay=None, chorus_freq=None, chorus_depth=None, reverb_level=None, reverb_liveness=None, reverb_damping=None, reverb_xover=None, load_patch=None, voices=None):
 
@@ -89,6 +89,7 @@ def message(osc=0, wave=None, patch=None, note=None, vel=None, amp=None, freq=No
     if(amp is not None): m = m + "a%s" % amp
     if(vel is not None): m = m + "l" + trunc(vel)
     if(volume is not None): m = m + "V" + trunc(volume)
+    if(pitch_bend is not None): m = m + "s" + trunc(pitch_bend)
     if(latency_ms is not None): m = m + "N" + str(latency_ms)
     if(resonance is not None): m = m + "R" + trunc(resonance)
     if(filter_freq is not None): m = m + "F%s" % filter_freq

@@ -104,7 +104,7 @@ class Slider(UIBase):
       w = 2 * self.padx
       h = self.text_height
       tulip.bg_rect(x, y, w, h, self.bg_color, True)
-      tulip.bg_str("%.2f" % self.value, x, y, self.text_color, self.body_font, w, h)
+      tulip.bg_str("%d" % round(127 * self.value), x, y, self.text_color, self.body_font, w, h)
       tulip.ui_slider(self.id_, self.value)
     if self.value_callback_fn is not None:
       self.value_callback_fn(self.value)
@@ -197,6 +197,12 @@ class ButtonSet(UIBase):
     for tag in self.tags:
       self.state[tag] = False
       
+  def current_button_index(self):
+    for index, tag in enumerate(self.tags):
+      if self.state[tag]:
+        return index
+    return -1
+
   def draw(self):
     x = self.x + self.padx
     y = self.y + self.y_txt
@@ -237,6 +243,12 @@ class RadioButton(ButtonSet):
       if self.value_callback_fns[button_tag] is not None:
         self.value_callback_fns[button_tag](self.state[button_tag])
 
+  def next(self):
+    self.set_value(self.tags[(self.current_button_index() + 1) % len(self.tags)])
+        
+  def prev(self):
+    self.set_value(self.tags[(self.current_button_index() - 1) % len(self.tags)])
+        
   def callback(self, ui_id):
     # RadioButton deselects all other buttons.
     for id_, button_tag in zip(self.ids, self.tags):
@@ -261,6 +273,9 @@ class OptionButtons(ButtonSet):
           tulip.ui_checkbox(id_, value)
       if self.value_callback_fns[button_tag] is not None:
         self.value_callback_fns[button_tag](self.state[button_tag])
+
+  def get_value(self, tag):
+    return self.state[tag]
 
   def callback(self, ui_id):
     for id_, button_tag in zip(self.ids, self.tags):
@@ -463,19 +478,23 @@ midi_selector = Spinbox(set_fn=setup_from_midi_chan, max_value=15, width=160)
 # Wire up MIDI controls
 
 # Oxygen49 slider IDs, starting from left.
-#SLIDER_IDS = [0x5b, 0x5d, 0x46, 0x47, 0x73, 0x74, 0x75, 0x76, 0x7]
-SLIDER_IDS = [74, 71, 91, 93, 73, 72, 5, 84, 7]
+SLIDER_IDS = [0x49, 0x4b, 0x48, 0x4a, 0x4f, 0x54, 0x5b, 0x5d, 0x7]
+#SLIDER_IDS = [74, 71, 91, 93, 73, 72, 5, 84, 7]
 # Oxygen49 knobs, top row then second row.
-#KNOB_IDS = [0x11, 0x1a, 0x1c, 0x1e, 0x1b, 0x1d, 0xd, 0x4c]
-KNOB_IDS = [75, 76, 92, 95, 10, 77, 78, 79]
+KNOB_IDS = [0x10, 0x11, 0x12, 0x0a, 0x13, 0x50, 0x51, 0x14]
+#KNOB_IDS = [75, 76, 92, 95, 10, 77, 78, 79]
 # Oxygen49 buttons.  They toggle between 0 and 0x7f.
-#BUTTON_IDS = [0x4a, 0x19, 0x77, 0x4f, 0x55, 0x66, 0x6b, 0x70]
-BUTTON_IDS = [50, 51, 52, 53, 54, 55]
+BUTTON_IDS = [0x18, 0x19, 0x1a, 0x1b, 0x2c, 0x2d, 0x2e, 0x2f, 0x00, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76]
+# I had to program these.  See Oxygen49-UserGuide-v1.3.pdf + notes.
+#BUTTON_IDS = [96, 97, 98, 99, 100, 101, 102, 103, 104,   113, 114, 115, 116, 117, 118]
+PITCH_WHEEL = 0   # Pitch wheel is a special case, hard-coded in juno.py.
+MOD_WHEEL = 1
 
 param_map = {
     KNOB_IDS[0]: 'lfo_rate',
     KNOB_IDS[1]: 'lfo_delay_time',
-    KNOB_IDS[2]: 'dco_lfo',
+    #KNOB_IDS[2]: 'dco_lfo',
+    MOD_WHEEL: 'dco_lfo',
     KNOB_IDS[3]: 'dco_pwm',
     SLIDER_IDS[0]: 'dco_sub',
     SLIDER_IDS[1]: 'dco_noise',
@@ -489,24 +508,32 @@ param_map = {
     SLIDER_IDS[5]: 'env_d',
     SLIDER_IDS[6]: 'env_s',
     SLIDER_IDS[7]: 'env_r',
-    BUTTON_IDS[0]: 'Pulse',
-    BUTTON_IDS[1]: 'Saw',
-    BUTTON_IDS[2]: 'chorus_mode',
+    BUTTON_IDS[0]: 'dco_range',
+    BUTTON_IDS[1]: 'dco_pwm_mode', 
+    BUTTON_IDS[2]: 'Pulse',
+    BUTTON_IDS[3]: 'Saw',
+    BUTTON_IDS[4]: 'hpf_freq',
+    BUTTON_IDS[5]: 'vcf_pol',
+    BUTTON_IDS[6]: 'vca_mode',
+    BUTTON_IDS[7]: 'chorus_mode',
 }
 
 def control_change(control, value):
   #print("juno_ui control_change: control", control, "value", value)
   value = value / 127.0
+  if control == 0:  # Pitch bend.
+    current_juno().set_pitch_bend(2 * value - 1)
   if control in param_map:
     param_name = param_map[control]
     # Special cases.
     if param_name == 'Pulse' or param_name == 'Saw':
-      dco_wave.set_value(param_name, value != 0)
+      dco_wave.set_value(param_name, not dco_wave.get_value(param_name))
       return  # Early exit.
-    elif param_name == 'chorus_mode':
-      value = 'Off' if value == 0 else 'I'
-    #jp.set_param(param_name, value)
-    globals()[param_name].set_value(value)
+    param_obj = globals()[param_name]
+    if isinstance(param_obj, RadioButton):
+      param_obj.next()  # value ignored.
+      return
+    param_obj.set_value(value)
 
 
 
