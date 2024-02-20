@@ -1,7 +1,5 @@
 // usb_keyboard.c
 #include "usb_keyboard.h"
-#include "midi.h"  // from extmod/tulip/
-#include "lvgl.h"
 
 #define KEYBOARD_BUFFER_SIZE 32
 

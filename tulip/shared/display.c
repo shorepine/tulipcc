@@ -1,5 +1,4 @@
 #include "display.h"
-#include "lvgl.h"
 uint8_t bg_pal_color;
 uint8_t tfb_fg_pal_color;
 uint8_t tfb_bg_pal_color;

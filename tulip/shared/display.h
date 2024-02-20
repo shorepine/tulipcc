@@ -10,7 +10,7 @@
 #include "polyfills.h"
 #include "ui.h"
 #include <inttypes.h>
-//#include "lvgl.h"
+#include "lvgl.h"
 #define RGB332
 
 #ifdef ESP_PLATFORM

@@ -20,7 +20,7 @@ execute_process(COMMAND bash -c "cp ../../shared/lv_fonts/*.c ../../../lv_bindin
                 )
 
 # Then we generate a lvgl.pp.c file, which is just the compiler preprocessor running in this env
-execute_process(COMMAND bash -c "xtensa-esp32s3-elf-gcc -E  -I ../../../lv_binding_micropython/pycparser/utils/fake_libc_include -I../../../lv_binding_micropython -I. -I../../../lv_binding_micropython/lvgl/src ../../../lv_binding_micropython/lvgl/lvgl.h > ../build/lvgl.pp.c"
+execute_process(COMMAND bash -c "xtensa-esp32s3-elf-gcc -E -DLVGL_PREPROCESS -I ../../../lv_binding_micropython/pycparser/utils/fake_libc_include -I../../../lv_binding_micropython -I. -I../../../lv_binding_micropython/lvgl/src ../../../lv_binding_micropython/lvgl/lvgl.h > ../build/lvgl.pp.c"
                     WORKING_DIRECTORY "."
                 )
 

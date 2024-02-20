@@ -12,6 +12,8 @@
 #include "keyscan.h"
 #include "tulip_helpers.h"
 #include "esp_timer.h"
+#include "midi.h"  // from extmod/tulip/
+#include "lvgl.h"
 
 
 // vortex 8
