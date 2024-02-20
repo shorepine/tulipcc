@@ -1078,7 +1078,7 @@ void display_init(void) {
     // 120000 bytes
     line_emits_y = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     // 122880 bytes
-    //lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
+    lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
