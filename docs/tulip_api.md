@@ -111,7 +111,14 @@ edit("game.py")
 
 ## Input and user interface
 
-Tulip supports USB keyboard input, joystick and touch input. (On Tulip Desktop, mouse clicks act as touch points, your computers' keyboard works, and any connected gamepad will work.) It also comes with UI elements like buttons, sliders and text entry boxes to use in your applications.
+Tulip supports USB keyboard input, joystick and touch input. (On Tulip Desktop, mouse clicks act as touch points, your computers' keyboard works, and any connected gamepad will work.) 
+
+We include [LVGL](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. We provide simple wrappers around common UI elements in LVGL as `tulip.ui_X` commands. 
+
+For anything custom, please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.)
+
+LVGL also provides a touchscreen keyboard that you can summon with `tulip.keyboard()`.
+
 
 ```python
 # Create a callback to activate when UI elements are triggered

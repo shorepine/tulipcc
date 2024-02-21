@@ -1022,6 +1022,7 @@ void setup_lvgl() {
     // Setup LVGL for UI etc
     lv_init();
     lv_display_t * lv_display = lv_display_create(H_RES, V_RES);
+    lv_display_set_antialiasing(lv_display, 0);
     lv_display_set_flush_cb(lv_display, lv_flush_cb);
     lv_display_set_buffers(lv_display, lv_buf, NULL, H_RES*V_RES*2/10, LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_tick_set_cb(u32_ticks_ms);

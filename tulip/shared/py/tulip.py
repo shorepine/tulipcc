@@ -381,6 +381,9 @@ def joyk():
         if(k == 26): jmask = jmask | Joy.R1
     return jmask
 
+def reload(module):
+    exec('del sys.modules["%s"]' % (module))
+    exec('import %s' % (module))
 
 # runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
 # TODO - pass args
