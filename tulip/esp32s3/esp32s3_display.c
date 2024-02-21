@@ -187,7 +187,6 @@ void run_esp32s3_display(void) {
     while(1)  { 
         int64_t tic1 = esp_timer_get_time();
         ulTaskNotifyTake(pdFALSE, pdMS_TO_TICKS(100));
-        lv_task_handler();
 
         free_time += (esp_timer_get_time() - tic1);
         if(loop_count++ >= 100) {

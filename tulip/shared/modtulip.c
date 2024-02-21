@@ -440,8 +440,17 @@ mp_obj_t frame_arg = NULL;
 mp_obj_t midi_callback = NULL; 
 mp_obj_t touch_callback = NULL; 
 
+STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
+{  
+    lv_task_handler();
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_lv_task_handler_obj, mp_lv_task_handler);
 
 void tulip_frame_isr() {
+    // schedule lvgl task
+    mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
+
     if(frame_callback != NULL) {
         // Schedule the python callback given to run asap
         mp_sched_schedule(frame_callback, frame_arg);

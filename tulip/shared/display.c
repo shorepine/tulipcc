@@ -35,6 +35,7 @@ uint32_t *sprite_mem;//[SPRITES];
 uint16_t *line_emits_rle;
 uint16_t *line_emits_y;
 
+
 uint16_t * lv_buf;
 
 uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
@@ -967,13 +968,12 @@ void display_teardown(void) {
 
 void lv_flush_cb(lv_display_t * display, const lv_area_t * area, unsigned char * px_map)
 {
-    uint16_t * buf16 = (uint16_t *)px_map; 
+    uint16_t * buf = (uint16_t *)px_map; 
     int16_t x, y;
     for(y = area->y1; y <= area->y2; y++) {
         for(x = area->x1; x <= area->x2; x++) {
-            bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL] = 
-                (*buf16 >> 6 & 0xe0)  | (*buf16 >> 6 & 0x1c) | (*buf16 >> 3 & 0x3);
-            buf16++;
+            bg[y*(H_RES+OFFSCREEN_X_PX) + x] = (*buf >> 6 & 0xe0)  | (*buf >> 6 & 0x1c) | (*buf >> 3 & 0x3);
+            buf++;
         }
     }
     // Inform LVGL that you are ready with the flushing and buf is not used anymore
@@ -1024,7 +1024,6 @@ void setup_lvgl() {
     lv_display_t * lv_display = lv_display_create(H_RES, V_RES);
     lv_display_set_flush_cb(lv_display, lv_flush_cb);
     lv_display_set_buffers(lv_display, lv_buf, NULL, H_RES*V_RES*2/10, LV_DISPLAY_RENDER_MODE_PARTIAL);
-
     lv_tick_set_cb(u32_ticks_ms);
 
     // Set LVGL bg to tulip teal
@@ -1078,6 +1077,7 @@ void display_init(void) {
     // 120000 bytes
     line_emits_y = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     // 122880 bytes
+    
     lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);

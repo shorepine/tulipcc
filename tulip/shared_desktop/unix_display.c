@@ -203,7 +203,6 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
 
 int unix_display_draw() {
     check_key();
-    lv_task_handler();
 
     frame_ticks = get_ticks_ms();
 
