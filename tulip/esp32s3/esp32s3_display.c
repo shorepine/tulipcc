@@ -21,7 +21,7 @@ void esp32s3_display_restart() {
 }
 
 // This gets called at vsync / frame done
-static bool IRAM_ATTR display_frame_done(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
+static bool display_frame_done(esp_lcd_panel_handle_t panel_io, const esp_lcd_rgb_panel_event_data_t *edata, void *user_ctx)   {
     TaskHandle_t task_to_notify = (TaskHandle_t)user_ctx;
     BaseType_t high_task_wakeup;
     display_frame_done_generic();
