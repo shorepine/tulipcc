@@ -362,9 +362,6 @@ extern void run_gt911();
 
 extern void run_midi();
 
-#ifdef TULIP_DIY
-extern void init_esp_joy();
-#endif
 
 #ifdef TDECK
 extern void run_tdeck_keyboard();
@@ -435,12 +432,6 @@ void app_main(void) {
     delay_ms(10);
     #endif
 
-    #ifdef TULIP_DIY    
-    fprintf(stderr,"Starting joystick\n");
-    init_esp_joy();
-    fflush(stderr);
-    delay_ms(100);
-    #endif
 
 
 }

@@ -111,16 +111,18 @@ edit("game.py")
 
 ## Input and user interface
 
-Tulip supports USB keyboard input, joystick and touch input. (On Tulip Desktop, mouse clicks act as touch points, your computers' keyboard works, and any connected gamepad will work.) 
+Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, your computers' keyboard works.
 
 We include [LVGL](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. We provide simple wrappers around common UI elements in LVGL as `tulip.ui_X` commands. 
 
 For anything custom, please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.)
 
-LVGL also provides a touchscreen keyboard that you can summon with `tulip.keyboard()`.
+LVGL also provides a touchscreen keyboard that you can summon with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
 
 
 ```python
+tulip.keyboard() # open or close the soft keyboard
+
 # Create a callback to activate when UI elements are triggered
 def ui_callback(x):
     # x is the element ID that was triggered
@@ -160,13 +162,10 @@ tulip.ui_active(ui_element_id, 0)
 
 tulip.ui_del(ui_element_id) # deletes the memory for a UI component (the graphics will stay on the BG)
 
-tulip.joy() # returns a mask of hardware joystick presses
-
-# like joy, but also scans the arrow keys, Z, X, A, S, Q, W, enter and '
-# use this in games etc so people can use either joystick or keyboard!
+# Returns a mask of joystick-like presses from the keyboard, from arrow keys, Z, X, A, S, Q, W, enter and '
 tulip.joyk()
 
-# test for joystick or key presses. Try UP, DOWN, LEFT, RIGHT, X, Y, A, B, SELECT, START, R1, L1
+# test for joy presses. Try UP, DOWN, LEFT, RIGHT, X, Y, A, B, SELECT, START, R1, L1
 if(tulip.joyk() & tulip.Joy.UP):
     print("up")
 
@@ -656,7 +655,7 @@ b2 = Bullet(copy_from=b) # will use the image data from b but make a new sprite 
 b2.move_to(25,25) # Can have many sprites of the same image data on screen this way
 ```
 
-A `Player` class comes with a quick way to move a sprite from the joystick/keyboard:
+A `Player` class comes with a quick way to move a sprite from the keyboard:
 
 ```python
 p = tulip.Player(speed=5) # 5px per movement

@@ -842,15 +842,6 @@ STATIC mp_obj_t tulip_rgb332_565(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_rgb332_565_obj, 1, 1, tulip_rgb332_565);
 
 
-extern uint16_t check_joy();
-STATIC mp_obj_t tulip_joy(size_t n_args, const mp_obj_t *args) {
-#ifndef MAKERFABS
-    return mp_obj_new_int(check_joy());
-#else
-    return mp_obj_new_int(0);
-#endif
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_joy_obj, 0, 0, tulip_joy);
 
 extern uint8_t last_scan[8];
 STATIC mp_obj_t tulip_keys(size_t n_args, const mp_obj_t *args) {
@@ -1191,7 +1182,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_fill), MP_ROM_PTR(&tulip_bg_fill_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_rect), MP_ROM_PTR(&tulip_bg_rect_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_log), MP_ROM_PTR(&tulip_gpu_log_obj) },
-    { MP_ROM_QSTR(MP_QSTR_joy), MP_ROM_PTR(&tulip_joy_obj) },
     { MP_ROM_QSTR(MP_QSTR_screen_size), MP_ROM_PTR(&tulip_screen_size_obj) },
     { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) },
     { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },

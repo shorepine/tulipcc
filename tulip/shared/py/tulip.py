@@ -10,7 +10,7 @@ import lvgl as lv
 
 lv_scr = lv.screen_active() # gets the currently active screen
 lv_kb_group = lv.group_by_index(0) # gets the group that receives keyboard events. you have to add objs to this group for them to receive kbd
-
+lv_soft_kb = None
 
 # A class for making a game. Clears and sets up the screen for a game
 class Game():
@@ -366,10 +366,9 @@ def upgrade():
         machine.reset()
 
 
-# like joy, but also scans the keyboard. lets you use either
+# scans the keyboard. lets you use either
 # Z = B, X = A, A = Y, S = X, enter = START, ' = SELECT, Q = L1, W = R1, arrows = DPAD
 def joyk():
-    jmask = joy()
     key_scans = keys()[1:5] # get up to four keys held at once
     for k in key_scans:
         if(k == 79): jmask = jmask | Joy.RIGHT
@@ -556,6 +555,41 @@ def tar_extract(file_name, show_progress=True):
                 except OSError as error:
                     if(show_progress): print("borked on:", i.name)
     #display_start()
+
+def lv_soft_kb_cb(e):
+    global lv_soft_kb, lv_last_mode
+    kb = e.get_target_obj()
+    button = kb.get_selected_button()
+    text = kb.get_button_text(button)
+    code = text[0]
+    #print("button %d text %s code %d" % (button, text, ord(code)))
+
+    if(code==lv.SYMBOL.NEW_LINE): 
+        key_send(13)
+    elif(code==lv.SYMBOL.BACKSPACE): 
+        if(lv_last_mode == kb.get_mode()): # there's a bug where the mode swticher sends BS
+            key_send(8)
+    elif(code==lv.SYMBOL.KEYBOARD):
+        lv_soft_kb.delete()
+        lv_soft_kb = None
+        return
+    elif(ord(code)==49): # special
+        if(kb.get_mode() == lv_last_mode):  # only update after switching modes
+            key_send(49)
+    elif(len(text)==1 and ord(code)>31 and ord(code)<127): 
+        key_send(ord(code))
+
+    lv_last_mode = kb.get_mode()
+
+def keyboard():
+    global lv_soft_kb, lv_last_mode
+    if(lv_soft_kb is not None):
+        lv_soft_kb.delete()
+        lv_soft_kb = None
+        return
+    lv_soft_kb = lv.keyboard(lv_scr)
+    lv_soft_kb.add_event_cb(lv_soft_kb_cb, lv.EVENT.VALUE_CHANGED, None)
+    lv_last_mode = lv_soft_kb.get_mode()
 
 
 def pal_to_lv(pal):
