@@ -1056,6 +1056,11 @@ uint8_t lvgl_focused() {
     return 1;
 }
 
+// return 1 if we should eat tabs (if there's a single control on the screen that responds to keypresses)
+uint8_t tab_eater() {
+    if(lv_group_get_obj_count(lvgl_kb_group) > 1) return 1;
+    return 0;
+}
 
 void setup_lvgl() {
     // Setup LVGL for UI etc
