@@ -402,26 +402,28 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
 
 void send_key_to_micropython(uint16_t c) {
     // If something is taking in chars from LVGL (text area etc), don't send the char to MP
-    if(!lvgl_focused()) {
-        if(c==9) {
-            // If a control that responds to keyboard is on screen, don't send MP the tab
-            if(!tab_eater()) tx_char(c);
-        } else {
-            if(c>257 && c<263) { 
-                tx_char(27);
-                tx_char('[');
-                if(c==258) tx_char('B');
-                if(c==259) tx_char('A');
-                if(c==260) tx_char('D');
-                if(c==261) tx_char('C');
-                if(c==262) { tx_char('3'); tx_char(126); }
-            } else if (c==mp_interrupt_char) {
-                // Send a ctrl-C to Micropython if sent 
-                mp_sched_keyboard_interrupt();
-            } else if (c==4) { // control-D
-                tx_char(c );
+    if (c==mp_interrupt_char) {
+        // Send a ctrl-C to Micropython if sent 
+        mp_sched_keyboard_interrupt();
+    } else if (c==4) { // control-D
+        tx_char(c );
+    } else {
+        if(!lvgl_focused()) {
+            if(c==9) {
+                // If a control that responds to keyboard is on screen, don't send MP the tab
+                if(!tab_eater()) tx_char(c);
             } else {
-                tx_char(c );
+                if(c>257 && c<263) { 
+                    tx_char(27);
+                    tx_char('[');
+                    if(c==258) tx_char('B');
+                    if(c==259) tx_char('A');
+                    if(c==260) tx_char('D');
+                    if(c==261) tx_char('C');
+                    if(c==262) { tx_char('3'); tx_char(126); }
+                } else {
+                    tx_char(c );
+                }
             }
         }
     }

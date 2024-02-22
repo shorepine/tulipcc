@@ -6,6 +6,11 @@ from _tulip import *
 from world import world
 from upysh import cd, pwd
 import alles
+import lvgl as lv
+
+lv_scr = lv.screen_active() # gets the currently active screen
+lv_kb_group = lv.group_by_index(0) # gets the group that receives keyboard events. you have to add objs to this group for them to receive kbd
+
 
 # A class for making a game. Clears and sets up the screen for a game
 class Game():
@@ -551,3 +556,21 @@ def tar_extract(file_name, show_progress=True):
                 except OSError as error:
                     if(show_progress): print("borked on:", i.name)
     #display_start()
+
+
+def pal_to_lv(pal):
+    (r,g,b) = rgbw(pal)
+    return lv.color_make(r,g,b)
+
+def clear_ui():
+    # remove all the children of scr
+    how_many = lv_scr.get_child_count()
+    for i in range(how_many):
+        lv_scr.get_child(0).delete()
+
+
+
+
+
+
+
