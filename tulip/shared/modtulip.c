@@ -832,6 +832,16 @@ STATIC mp_obj_t tulip_brightness(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_brightness_obj, 0, 1, tulip_brightness);
 
+
+extern const uint16_t rgb332_rgb565_i[256];
+
+STATIC mp_obj_t tulip_rgb332_565(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(rgb332_rgb565_i[mp_obj_get_int(args[0])]);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_rgb332_565_obj, 1, 1, tulip_rgb332_565);
+
+
 extern uint16_t check_joy();
 STATIC mp_obj_t tulip_joy(size_t n_args, const mp_obj_t *args) {
 #ifndef MAKERFABS
@@ -1160,6 +1170,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_map), MP_ROM_PTR(&tulip_alles_map_obj) },
     { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&tulip_brightness_obj) },
+    { MP_ROM_QSTR(MP_QSTR_rgb332_565), MP_ROM_PTR(&tulip_rgb332_565_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_quartet), MP_ROM_PTR(&tulip_set_quartet_obj) },
     { MP_ROM_QSTR(MP_QSTR_keys), MP_ROM_PTR(&tulip_keys_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch), MP_ROM_PTR(&tulip_touch_obj) },

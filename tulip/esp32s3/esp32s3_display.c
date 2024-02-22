@@ -5,7 +5,6 @@ esp_lcd_rgb_panel_config_t panel_config;
 esp_lcd_rgb_panel_event_callbacks_t panel_callbacks;
 
 
-
 void set_pin(uint16_t pin, uint8_t value) {
     gpio_config_t peri_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,

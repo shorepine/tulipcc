@@ -23,6 +23,8 @@ def touch_cb(x):
 
 tulip.touch_callback(touch_cb)
 
+clear
+
 print("Tap the middle of the pink circles.")
 for (x,y) in test_pos:
     x = int(x)

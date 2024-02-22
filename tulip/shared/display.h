@@ -168,6 +168,7 @@ extern float reported_fps;
 extern float reported_gpu_usage;
 extern uint8_t *collision_bitfield;
 
+extern const uint16_t rgb332_rgb565_i[256];
 // RAM for sprites and background FB
 extern uint8_t *sprite_ids;  // IRAM
 extern uint8_t *sprite_ram; // in IRAM

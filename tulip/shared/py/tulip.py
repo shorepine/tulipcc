@@ -382,8 +382,15 @@ def joyk():
     return jmask
 
 def reload(module):
-    exec('del sys.modules["%s"]' % (module))
-    exec('import %s' % (module))
+    thing = module
+    if(type(thing)!=str): # this is a module, convert to a str
+        thing = module.__name__
+    try:
+        exec('del sys.modules["%s"]' % (thing))
+    except KeyError:
+        pass # it's ok
+    exec('import %s' % (thing))
+
 
 # runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
 # TODO - pass args
@@ -464,6 +471,16 @@ def rgb(px0):
     r = px0 & 0xe0;
     g = (px0 << 3) & 0xe0
     b = (px0 << 6) & 0xc0
+    return (r,g,b)
+
+def rgbw(px0):
+    # wide version
+    r = px0 & 0xe0
+    if(r & 0b00100000): r = r | 0b00011111
+    g = (px0 << 3) & 0xe0
+    if(g & 0b00100000): g = g | 0b00011111
+    b = (px0 << 6) & 0xc0
+    if(b & 0b01000000): b = b | 0b00111111
     return (r,g,b)
 
 def ip():
