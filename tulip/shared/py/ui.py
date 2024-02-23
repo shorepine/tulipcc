@@ -49,6 +49,13 @@ def keyboard():
     lv_soft_kb.add_event_cb(lv_soft_kb_cb, lv.EVENT.VALUE_CHANGED, None)
     lv_last_mode = lv_soft_kb.get_mode()
 
+def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box'):
+    mbox = lv.msgbox(tulip.lv_scr)
+    mbox.add_text(message)
+    mbox.add_title(title)
+    mbox.add_close_button()
+    for b in buttons:
+        mbox.add_footer_button(b)
 
 # Convert tulip rgb332 pal idx into lv color
 def pal_to_lv(pal):
