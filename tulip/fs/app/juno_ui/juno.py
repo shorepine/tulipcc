@@ -79,7 +79,7 @@ def to_decay_time(val):
   # return np.log(0.05) / np.log(0.5) * time
   # from Arturia video
   #return 80 * exp2(0.066 * val * 127) - 80
-  return 80 * exp2(0.09 * val * 127) - 80
+  return 80 * exp2(0.085 * val * 127) - 80
   
 
 def to_release_time(val):
@@ -87,6 +87,7 @@ def to_release_time(val):
   #time = 100 * np.exp(np.log(16) * midi/100)
   #return np.log(0.05) / np.log(0.5) * time
   # from Arturia video
+  #return 70 * exp2(0.066 * val * 127) - 70
   return 70 * exp2(0.066 * val * 127) - 70
 
 
@@ -105,7 +106,7 @@ def level_to_amp(level):
 def to_lfo_freq(val):
   # LFO frequency in Hz varies from 0.5 to 30
   # from Arturia video
-  return float("%.3f" % (0.6 * exp2(0.042 * val * 127) - 0.1))
+  return float("%.3f" % (0.6 * exp2(0.04 * val * 127) - 0.1))
 
 
 def to_lfo_delay(val):
@@ -118,7 +119,7 @@ def to_lfo_delay(val):
 
 def to_resonance(val):
   # Q goes from 0.5 to 16 exponentially
-  return float("%.3f" % (0.5 * exp2(5.0 * val)))
+  return float("%.3f" % (0.7 * exp2(4.0 * val)))
 
 
 def to_filter_freq(val):
@@ -126,7 +127,9 @@ def to_filter_freq(val):
   #return float("%.3f" % (100 * np.exp2(midi / 20.0)))
   # from Arturia video
   #return float("%.3f" % (6.5 * exp2(0.11 * val * 127)))
-  return float("%.3f" % (25 * exp2(0.055 * val * 127)))
+  #return float("%.3f" % (25 * exp2(0.055 * val * 127)))
+  #return float("%.3f" % (25 * exp2(0.083 * val * 127)))
+  return float("%.3f" % (13 * exp2(0.0938 * val * 127)))
 
 
 def ffmt(val):
@@ -200,7 +203,7 @@ class JunoPatch:
                  'dco': ['dco_lfo', 'dco_pwm', 'dco_noise', 'dco_sub', 'stop_16', 'stop_8', 'stop_4',
                          'pulse', 'saw', 'pwm_manual', 'vca_level'],
                  'vcf': ['vcf_neg', 'vcf_env', 'vcf_freq', 'vcf_lfo', 'vcf_res', 'vcf_kbd'],
-                 'env': ['env_a', 'env_d', 'env_s', 'env_r'],
+                 'env': ['env_a', 'env_d', 'env_s', 'env_r', 'vca_gate'],
                  'cho': ['chorus', 'hpf']}
   
   # These lists name the fields in the order they appear in the sysex.
@@ -341,11 +344,10 @@ class JunoPatch:
                    chained_osc=other_base_osc + self.voice_oscs[i + 1])
     
   def _amp_coef_string(self, level):
-    return '0,0,%s,1,0,0' % ffmt(
-      max(.001, to_level(level) * to_level(self.vca_level)))
+    return '0,0,%s,1,0,0' % ffmt(max(.001, to_level(level) * to_level(self.vca_level)))
 
   def _freq_coef_string(self, base_freq):
-    return '%s,1,0,0,0,%s' % (
+    return '%s,1,0,0,0,%s,1' % (
       ffmt(base_freq), ffmt(0.03 * to_level(self.dco_lfo)))
 
   def clone_voice_oscs(self):
@@ -403,14 +405,14 @@ class JunoPatch:
                   filter_freq='%s,%s,0,0,%s,%s' % (
                     ffmt(to_filter_freq(self.vcf_freq)),
                     ffmt(to_level(self.vcf_kbd)),
-                    ffmt(20 * vcf_env_polarity * to_level(self.vcf_env)),
-                    ffmt(5 * to_level(self.vcf_lfo))))
+                    ffmt(11 * vcf_env_polarity * to_level(self.vcf_env)),
+                    ffmt(1.25 * to_level(self.vcf_lfo))))
     self.recloning_needed = True
 
   def update_env(self):
     bp1_coefs = self._breakpoint_string()
     if self.vca_gate:
-      bp0_coefs=''
+      bp0_coefs='0,1,0,0'
     else:
       bp0_coefs = self._breakpoint_string()
     self.amy_send(osc=self.pwm_osc, bp0=bp0_coefs, bp1=bp1_coefs)
@@ -420,7 +422,9 @@ class JunoPatch:
     # Chorus & HPF
     eq_l = eq_m = eq_h = 0
     if self.hpf == 0:
-      eq_l = 10
+      eq_l = 7
+      eq_m = -3
+      eq_h = -3
     elif self.hpf == 1:
       pass
     elif self.hpf == 2:
@@ -512,3 +516,6 @@ class JunoPatch:
     self._init_from_patch_number(patch)
     print("New patch", patch, ":", self.name)
     self.init_AMY()
+
+  def set_pitch_bend(self, value):
+    amy.send(pitch_bend=value)

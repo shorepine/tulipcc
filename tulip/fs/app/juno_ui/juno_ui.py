@@ -7,7 +7,7 @@ def register_callback(id_, callback):
   global registered_callback
   registered_callbacks[id_] = callback
 
-def ui_callback(x):
+def ui_callback(obj, code, x):
   # x is the element ID that was triggered
   global registered_callback
   if x in registered_callbacks:
@@ -15,7 +15,7 @@ def ui_callback(x):
   else:
     print("Unrecognized element:", x)
 
-tulip.ui_callback(ui_callback)
+tulip.ui_callback = ui_callback
 
 
 class IdFactory:
@@ -53,10 +53,11 @@ class UIBase:
 
   def draw(self):
     """Replace with actual."""
-    tulip.bg_rect(self.x, self.y, self.w, self.h, self.fg_color, False)
-    tulip.bg_str(self.title, self.x, self.y + self.text_height,
+    tulip.ui_rect(self.x, self.y, self.w, self.h, self.fg_color, False)
+    tulip.ui_label(self.title, self.x, self.y + self.text_height,
                  self.text_color, self.title_font, 
                  self.w, 2 * self.text_height)
+
     self.drawn = True
 
 
@@ -78,21 +79,20 @@ class Slider(UIBase):
     self.h = self.y_val + 2 * self.text_height
 
   def draw(self):
-    tulip.ui_slider(self.id_, self.value,
-                    self.x + self.w_leg,
-                    self.y + self.y_sli, self.w_sli, self.h_sli,
-                    self.fg_color, self.bg_color)
-    tulip.ui_active(self.id_, 1)
+    tulip.ui_slider(ui_id=self.id_, val=self.value,
+                    x=self.x + self.w_leg,
+                    y=self.y + self.y_sli, w=self.w_sli, h=self.h_sli,
+                    bar_color=self.fg_color, handle_color=self.bg_color)
     register_callback(self.id_, self.callback)
-    tulip.bg_str(self.name, self.x + self.w_leg - self.padx,
+    tulip.ui_label(self.name, self.x + self.w_leg - self.padx,
                  self.y + self.y_txt - self.text_height // 2,
                  self.text_color, self.body_font, 2 * self.padx, self.text_height)
     thumb_height = self.h_sli // 10
     # Slider legend.
-    for i in range(11):
-      tulip.bg_str(str(10 - i), self.x - self.padx + self.w_leg,
-                   self.y + self.y_sli - (self.text_height - thumb_height) // 2 + (i * self.h_sli) // 11,
-                   self.text_color, self.body_font, self.padx, self.text_height)
+    #for i in range(11):
+      #tulip.ui_label(str(10 - i), self.x - self.padx + self.w_leg,
+      #             self.y + self.y_sli - (self.text_height - thumb_height) // 2 + (i * self.h_sli) // 11,
+      #             self.text_color, self.body_font, self.padx, self.text_height)
     self.drawn = True
     self.set_value(self.value)
     
@@ -103,14 +103,19 @@ class Slider(UIBase):
       y = self.y + self.y_val - self.text_height // 2
       w = 2 * self.padx
       h = self.text_height
-      tulip.bg_rect(x, y, w, h, self.bg_color, True)
-      tulip.bg_str("%.2f" % self.value, x, y, self.text_color, self.body_font, w, h)
-      tulip.ui_slider(self.id_, self.value)
+      tulip.ui_rect(x, y, w, h, self.bg_color, True)
+      tulip.ui_label("%d" % round(127 * self.value), x, y, self.text_color, self.body_font, w, h)
+
+      #TODO - set the slider by just slider.set_value()
+      #tulip.ui_slider(self.id_, self.value)
+
     if self.value_callback_fn is not None:
       self.value_callback_fn(self.value)
 
   def callback(self, id_):
-    self.set_value(tulip.ui_slider(id_))
+    #TODO: get the slider by just slider.get_value()
+    #self.set_value(tulip.ui_slider(id_))
+    pass
 
 
 class ControlledLabel(UIBase):
@@ -134,9 +139,8 @@ class ControlledLabel(UIBase):
     h = self.button_size
     dw = self.button_space
     for id_, tag in zip(self.ids, self.button_labels):
-      tulip.ui_button(id_, tag, x, y, w, h, self.text_color, self.bg_color, False, self.body_font) 
+      tulip.ui_button(ui_id=id_, text=tag, x=x, y=y, w=w, h=h, fg_color=self.text_color, bg_color=self.bg_color) 
       
-      tulip.ui_active(id_, 1)
       self.ids.append(id_)
       register_callback(id_, self.callback)
       x = x + w + dw
@@ -151,8 +155,8 @@ class ControlledLabel(UIBase):
     x = self.x + buttons_w
     w = self.w - buttons_w
     h = self.h
-    tulip.bg_rect(x, y, w, h, self.bg_color, True)
-    tulip.bg_str(self.text, x, y, self.text_color, self.body_font, w, h)
+    tulip.ui_rect(x, y, w, h, self.bg_color, True)
+    tulip.ui_label(self.text, x, y, self.text_color, self.body_font, w, h)
     
   def set_text(self, text):
     self.text = text
@@ -197,22 +201,27 @@ class ButtonSet(UIBase):
     for tag in self.tags:
       self.state[tag] = False
       
+  def current_button_index(self):
+    for index, tag in enumerate(self.tags):
+      if self.state[tag]:
+        return index
+    return -1
+
   def draw(self):
     x = self.x + self.padx
     y = self.y + self.y_txt
-    tulip.bg_str(self.name, x - self.padx, y - self.text_height // 2,
+    tulip.ui_label(self.name, x - self.padx, y - self.text_height // 2,
                  self.text_color, self.body_font,
                  2 * self.padx, self.text_height)
     y = self.y + self.y_top
     for id_, tag in zip(self.ids, self.tags):
-      tulip.bg_str(tag, x - self.padx, y - self.text_height // 2,
+      tulip.ui_label(tag, x - self.padx, y - self.text_height // 2,
                    self.text_color, self.body_font,
                    2 * self.padx, self.text_height)
       y = y + self.text_height
-      tulip.ui_checkbox(id_, self.state[tag],
-                        x - self.button_w // 2, y, self.button_w,
-                        self.fg_color, self.bg_color, self.checkbox_style)
-      tulip.ui_active(id_, 1)
+      tulip.ui_checkbox(ui_id=id_, val=self.state[tag],
+                        x=x - self.button_w // 2, y=y, w=self.button_w,
+                        fg_color=self.fg_color, bg_color=self.bg_color)
       self.ids.append(id_)
       register_callback(id_, self.callback)
       y = y + (self.y_spacing - self.text_height)
@@ -233,10 +242,18 @@ class RadioButton(ButtonSet):
       else:
         self.state[button_tag] = False
       if self.drawn:
-        tulip.ui_checkbox(id_, self.state[button_tag])
+        #TODO: set the checkbox by just checkbox.set_state(lv.STATE.CHECKED, true/false)
+        #tulip.ui_checkbox(id_, self.state[button_tag])
+        pass
       if self.value_callback_fns[button_tag] is not None:
         self.value_callback_fns[button_tag](self.state[button_tag])
 
+  def next(self):
+    self.set_value(self.tags[(self.current_button_index() + 1) % len(self.tags)])
+        
+  def prev(self):
+    self.set_value(self.tags[(self.current_button_index() - 1) % len(self.tags)])
+        
   def callback(self, ui_id):
     # RadioButton deselects all other buttons.
     for id_, button_tag in zip(self.ids, self.tags):
@@ -258,14 +275,21 @@ class OptionButtons(ButtonSet):
       if button_tag == tag:
         self.state[button_tag] = value
         if self.drawn:
-          tulip.ui_checkbox(id_, value)
+          #TODO set checkbox with set_state
+          #tulip.ui_checkbox(id_, value)
+          pass
       if self.value_callback_fns[button_tag] is not None:
         self.value_callback_fns[button_tag](self.state[button_tag])
+
+  def get_value(self, tag):
+    return self.state[tag]
 
   def callback(self, ui_id):
     for id_, button_tag in zip(self.ids, self.tags):
       if ui_id == id_:
-        self.set_value(button_tag, tulip.ui_checkbox(id_))
+        #TODO: get checkbox with checkbox.get_state()
+        #self.set_value(button_tag, tulip.ui_checkbox(id_))
+        pass
 
 
 class UIGroup(UIBase):
@@ -294,10 +318,10 @@ class UIGroup(UIBase):
   def draw(self):
     if self.name:
       # Draw frame.
-      tulip.bg_rect(self.x, self.y, self.w, self.h, self.fg_color, False)
+      tulip.ui_rect(self.x, self.y, self.w, self.h, self.fg_color, False)
       # Draw title.
-      tulip.bg_rect(self.x, self.y, self.w, self.top_height, self.top_color, True)
-      tulip.bg_str(self.name, self.x, self.y,
+      tulip.ui_rect(self.x, self.y, self.w, self.top_height, self.top_color, True)
+      tulip.ui_label(self.name, self.x, self.y,
                    self.text_color, self.title_font, 
                    self.w, self.top_height)
     # Draw elements.
@@ -463,19 +487,23 @@ midi_selector = Spinbox(set_fn=setup_from_midi_chan, max_value=15, width=160)
 # Wire up MIDI controls
 
 # Oxygen49 slider IDs, starting from left.
-#SLIDER_IDS = [0x5b, 0x5d, 0x46, 0x47, 0x73, 0x74, 0x75, 0x76, 0x7]
-SLIDER_IDS = [74, 71, 91, 93, 73, 72, 5, 84, 7]
+SLIDER_IDS = [0x49, 0x4b, 0x48, 0x4a, 0x4f, 0x54, 0x5b, 0x5d, 0x7]
+#SLIDER_IDS = [74, 71, 91, 93, 73, 72, 5, 84, 7]
 # Oxygen49 knobs, top row then second row.
-#KNOB_IDS = [0x11, 0x1a, 0x1c, 0x1e, 0x1b, 0x1d, 0xd, 0x4c]
-KNOB_IDS = [75, 76, 92, 95, 10, 77, 78, 79]
+KNOB_IDS = [0x10, 0x11, 0x12, 0x0a, 0x13, 0x50, 0x51, 0x14]
+#KNOB_IDS = [75, 76, 92, 95, 10, 77, 78, 79]
 # Oxygen49 buttons.  They toggle between 0 and 0x7f.
-#BUTTON_IDS = [0x4a, 0x19, 0x77, 0x4f, 0x55, 0x66, 0x6b, 0x70]
-BUTTON_IDS = [50, 51, 52, 53, 54, 55]
+BUTTON_IDS = [0x18, 0x19, 0x1a, 0x1b, 0x2c, 0x2d, 0x2e, 0x2f, 0x00, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76]
+# I had to program these.  See Oxygen49-UserGuide-v1.3.pdf + notes.
+#BUTTON_IDS = [96, 97, 98, 99, 100, 101, 102, 103, 104,   113, 114, 115, 116, 117, 118]
+PITCH_WHEEL = 0   # Pitch wheel is a special case, hard-coded in juno.py.
+MOD_WHEEL = 1
 
 param_map = {
     KNOB_IDS[0]: 'lfo_rate',
     KNOB_IDS[1]: 'lfo_delay_time',
-    KNOB_IDS[2]: 'dco_lfo',
+    #KNOB_IDS[2]: 'dco_lfo',
+    MOD_WHEEL: 'dco_lfo',
     KNOB_IDS[3]: 'dco_pwm',
     SLIDER_IDS[0]: 'dco_sub',
     SLIDER_IDS[1]: 'dco_noise',
@@ -489,24 +517,32 @@ param_map = {
     SLIDER_IDS[5]: 'env_d',
     SLIDER_IDS[6]: 'env_s',
     SLIDER_IDS[7]: 'env_r',
-    BUTTON_IDS[0]: 'Pulse',
-    BUTTON_IDS[1]: 'Saw',
-    BUTTON_IDS[2]: 'chorus_mode',
+    BUTTON_IDS[0]: 'dco_range',
+    BUTTON_IDS[1]: 'dco_pwm_mode', 
+    BUTTON_IDS[2]: 'Pulse',
+    BUTTON_IDS[3]: 'Saw',
+    BUTTON_IDS[4]: 'hpf_freq',
+    BUTTON_IDS[5]: 'vcf_pol',
+    BUTTON_IDS[6]: 'vca_mode',
+    BUTTON_IDS[7]: 'chorus_mode',
 }
 
 def control_change(control, value):
   #print("juno_ui control_change: control", control, "value", value)
   value = value / 127.0
+  if control == 0:  # Pitch bend.
+    current_juno().set_pitch_bend(2 * value - 1)
   if control in param_map:
     param_name = param_map[control]
     # Special cases.
     if param_name == 'Pulse' or param_name == 'Saw':
-      dco_wave.set_value(param_name, value != 0)
+      dco_wave.set_value(param_name, not dco_wave.get_value(param_name))
       return  # Early exit.
-    elif param_name == 'chorus_mode':
-      value = 'Off' if value == 0 else 'I'
-    #jp.set_param(param_name, value)
-    globals()[param_name].set_value(value)
+    param_obj = globals()[param_name]
+    if isinstance(param_obj, RadioButton):
+      param_obj.next()  # value ignored.
+      return
+    param_obj.set_value(value)
 
 
 

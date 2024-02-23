@@ -113,11 +113,9 @@ edit("game.py")
 
 Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, your computers' keyboard works.
 
-We include [LVGL](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. We provide simple wrappers around common UI elements in LVGL as `tulip.ui_X` commands. 
+We include [LVGL](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `ui_checkbox` and `ui_text`, etc. 
 
-For anything custom, please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.)
-
-LVGL also provides a touchscreen keyboard that you can summon with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
+You can summon a touch keyboard with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
 
 
 ```python
@@ -440,9 +438,8 @@ tulip.bg_roundrect(x,y, w,h, r, pal_idx, filled)
 tulip.bg_rect(x,y, w,h, pal_idx, filled)
 tulip.bg_triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
 tulip.bg_fill(x,y,pal_idx) # Flood fill starting at x,y
-tulip.bg_char(c, x, y, pal_idx, font_number) # proportional font, returns # of x pixels to advance for the next char
-tulip.bg_str(string, x, y, pal_idx, font_number) # same as char, but with a string. x and y are the bottom left
-tulip.bg_str(string, x, y, pal_idx, font_number, w, h) # Will center the text inside w,h
+tulip.bg_str(string, x, y, pal_idx, font) # same as char, but with a string. x and y are the bottom left
+tulip.bg_str(string, x, y, pal_idx, font, w, h) # Will center the text inside w,h
 
 """
   Set scrolling registers for the BG. 
@@ -471,7 +468,7 @@ tulip.bg_scroll_y_offset(line, y_offset)
 tulip.bg_swap()
 ```
 
-We currently ship 19 fonts with Tulip to use for the BG. Here they are:
+We currently ship XX fonts with Tulip to use for the BG and UI. You can see them all by running `fonts.py`, which also shows how to address them:
 
 ![IMG_3339](https://user-images.githubusercontent.com/76612/229381546-46ec4c50-4c4a-4f3a-9aec-c77d439081b2.jpeg)
 
