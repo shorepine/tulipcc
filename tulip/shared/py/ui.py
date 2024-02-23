@@ -25,19 +25,19 @@ def lv_soft_kb_cb(e):
     code = text[0]
 
     if(code==lv.SYMBOL.NEW_LINE): 
-        key_send(13)
+        tulip.key_send(13)
     elif(code==lv.SYMBOL.BACKSPACE): 
         if(lv_last_mode == kb.get_mode()): # there's a bug where the mode swticher sends BS
-            key_send(8)
+            tulip.key_send(8)
     elif(code==lv.SYMBOL.KEYBOARD):
         lv_soft_kb.delete()
         lv_soft_kb = None
         return
     elif(ord(code)==49): # special -- sends a "1" char even if just hit the mode switcher '1#'
         if(kb.get_mode() == lv_last_mode):  # only update after switching modes
-            key_send(49)
+            tulip.key_send(49)
     elif(len(text)==1 and ord(code)>31 and ord(code)<127): 
-        key_send(ord(code))
+        tulip.key_send(ord(code))
 
     lv_last_mode = kb.get_mode()
 
