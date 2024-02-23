@@ -5,7 +5,9 @@ import tulip
 import lvgl as lv
 
 lv_scr = lv.screen_active() # gets the currently active screen
-lv_kb_group = lv.group_by_index(0) # gets the group that receives keyboard events. you have to add objs to this group for them to receive kbd
+# gets the group that receives keyboard events. 
+# you have to add objs to this group for them to receive kbd
+lv_kb_group = lv.group_by_index(0) 
 lv_soft_kb = None
 lv_default_font = lv.font_montserrat_14
 
@@ -68,6 +70,10 @@ def ui_clear():
     while(lv_scr.get_child_count()):
         lv_scr.get_child(0).delete()
 
+# Return how many LVGL objs you've created
+def ui_count():
+    return lv_scr.get_child_count()
+
 # Callback that you can have LVGL objects register. It gets the event (which you can get the object from) and "extra" which we put ui_id in for legacy
 def lv_callback(e, extra):
     code = e.get_code()
@@ -114,11 +120,14 @@ def ui_button(text="Hello", x=0, y=0, w=None, h=None, bg_color=None, fg_color=No
 
 # tulip.bg_str(string, x, y, pal_idx, font_number) # same as char, but with a string. x and y are the bottom left
 # tulip.bg_str(string, x, y, pal_idx, font_number, w, h) # Will center the text inside w,h
-def ui_label(s, x, y, pal_idx, font_number, w=0, h=0):
+def ui_label(s, x, y, pal_idx, w=0, font=lv.font_montserrat_10):
     label = lv.label(lv_scr)
     label.set_pos(x,y)
+    if(w != 0):
+        label.set_width(w)
     label.set_text(s)
-    label.set_style_text_font(lv.font_unscii_8, 0)
+    label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+    label.set_style_text_font(font, 0)
     label.set_style_text_color(tulip.pal_to_lv(pal_idx),0)
     return label
 
