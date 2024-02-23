@@ -9,6 +9,8 @@ lv_scr = lv.screen_active() # gets the currently active screen
 # you have to add objs to this group for them to receive kbd
 lv_kb_group = lv.group_by_index(0) 
 lv_soft_kb = None
+lv_launcher = None
+
 lv_default_font = lv.font_montserrat_12
 
 # Can be overriden
@@ -49,6 +51,55 @@ def keyboard():
     lv_soft_kb = lv.keyboard(lv_scr)
     lv_soft_kb.add_event_cb(lv_soft_kb_cb, lv.EVENT.VALUE_CHANGED, None)
     lv_last_mode = lv_soft_kb.get_mode()
+
+def launcher_cb(e):
+    global lv_launcher
+    if(e.get_code() == lv.EVENT.CLICKED):
+        button = e.get_target_obj()
+        text = button.get_child(1).get_text()
+        lv_launcher.delete()
+        lv_launcher = None
+        if(text=="Juno-6"):
+            tulip.run('juno_ui')
+        if(text=="Keyboard"):
+            keyboard()
+        if(text=="Editor"):
+            # something weird about calling editor from here
+            pass
+        if(text=="Wordpad"):
+            tulip.run("wordpad")
+        if(text=="Wi-Fi"):
+            wifi()
+        if(text=="Turn off"):
+            print("Can't yet")
+
+
+# Draw a lvgl list box as a little launcher
+def launcher():
+    global lv_launcher
+    if(lv_launcher is not None):
+        lv_launcher.delete()
+        lv_launcher=None
+        return
+
+    lv_launcher = lv.list(lv_scr)
+    lv_launcher.set_pos(824,400)
+    lv_launcher.set_size(195, 180)
+    b_close = lv_launcher.add_button(lv.SYMBOL.CLOSE, "Close")
+    b_close.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_juno = lv_launcher.add_button(lv.SYMBOL.AUDIO, "Juno-6")
+    b_juno.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_keyboard = lv_launcher.add_button(lv.SYMBOL.KEYBOARD, "Keyboard")
+    b_keyboard.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_editor = lv_launcher.add_button(lv.SYMBOL.EDIT, "Editor")
+    b_editor.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_wordpad = lv_launcher.add_button(lv.SYMBOL.FILE, "Wordpad")
+    b_wordpad.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_wifi = lv_launcher.add_button(lv.SYMBOL.WIFI, "Wi-Fi")
+    b_wifi.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_power = lv_launcher.add_button(lv.SYMBOL.POWER,"Turn off")
+    b_power.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+
 
 # Draw a msgbox on screen. 
 def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box'):
@@ -99,7 +150,7 @@ def ui_circle(x,y,w,h,fg_color):
 # handle_v_pad, h_pad -- how many px above/below / left/right of the bar it extends
 # handle_radius - 0 for square 
 def ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=None, handle_color=None, handle_radius=None, 
-    handle_v_pad=None, handle_h_pad=None, ui_id=0):
+    handle_v_pad=None, handle_h_pad=None, ui_id=None):
     slider = lv.slider(tulip.lv_scr)
     slider.set_pos(x,y)
     # Set opacity to full (COVER). Default is to mix the color with the BG.
@@ -123,12 +174,13 @@ def ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=N
     if(handle_h_pad is not None):
         slider.set_style_pad_hor(handle_h_pad, lv.PART.KNOB)
     slider.set_value(int(val*100.0),lv.ANIM.OFF)
-    slider.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
+    if(ui_id is not None):
+        slider.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
     return slider
 
 # Copy of our "ui_button" with lvgl buttons
 #tulip.ui_button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
-def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=lv_default_font, radius=None, ui_id=0):
+def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=lv_default_font, radius=None, ui_id=None):
     button = lv.button(lv_scr)
     button.set_x(x)
     button.set_y(y)
@@ -146,8 +198,8 @@ def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None,
         label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
         if(fg_color is not None):
             label.set_style_text_color(tulip.pal_to_lv(fg_color), 0)
-
-    button.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
+    if(ui_id is not None):
+        button.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
     return button
 
 # Copy of our bg_str with LVGL labels
@@ -166,7 +218,7 @@ def ui_label(s, x, y, pal_idx, w=0, font=lv.font_montserrat_10):
 
 # Copy of our ui_text with lvgl textarea 
 #tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
-def ui_text(ui_id=0, text="Type here", x=0, y=0, w=200, h=36, bg_color=0, fg_color=255, font=lv.font_unscii_8, one_line=True):
+def ui_text(ui_id=None, text="Type here", x=0, y=0, w=200, h=36, bg_color=0, fg_color=255, font=lv.font_unscii_8, one_line=True):
     ta = lv.textarea(tulip.lv_scr)
     ta.set_pos(x,y)
     ta.set_size(w,h)
@@ -176,11 +228,12 @@ def ui_text(ui_id=0, text="Type here", x=0, y=0, w=200, h=36, bg_color=0, fg_col
     ta.set_placeholder_text(text)
     if(one_line): ta.set_one_line(True)
     tulip.lv_kb_group.add_obj(ta)
-    ta.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
+    if(ui_id is not None):
+        ta.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
     return ta
 
 # Copy of our ui_checkbox with lvgl 
-def ui_checkbox(ui_id=0, val=False, x=0, y=0, w=50, bg_color=0, fg_color=255):
+def ui_checkbox(ui_id=None, val=False, x=0, y=0, w=50, bg_color=0, fg_color=255):
     cb = lv.checkbox(tulip.lv_scr)
     #cb.set_text(label)
     cb.set_pos(x,y)
@@ -188,7 +241,8 @@ def ui_checkbox(ui_id=0, val=False, x=0, y=0, w=50, bg_color=0, fg_color=255):
     cb.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.INDICATOR | lv.STATE.CHECKED)
     cb.set_style_border_color(tulip.pal_to_lv(fg_color), lv.PART.INDICATOR)
     cb.set_state(lv.STATE.CHECKED, val)
-    cb.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
+    if(ui_id is not None):
+        cb.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
     return cb
 
 

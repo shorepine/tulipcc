@@ -248,6 +248,7 @@ class ButtonSet(UIBase):
 
 
 #TODO: lvgl has a radio button native control, maybe use that? 
+#https://docs.lvgl.io/8.3/examples.html#checkboxes-as-radio-buttons
 class RadioButton(ButtonSet):
 
   def __init__(self, name, tags, callbacks):
@@ -347,7 +348,8 @@ class UIGroup(UIBase):
     for element in self.elements:
       element.draw()
 
-
+#TODO: Lvgl has a native spinbox, probbaly should use it
+# https://docs.lvgl.io/8.3/examples.html#spinbox
 class Spinbox(ControlledLabel):
   value = 0
   min_value = 0

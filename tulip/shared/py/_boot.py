@@ -58,3 +58,4 @@ except ImportError:
         cd(tulip.app_path())
 
 gc.collect()
+tulip.launcher()
