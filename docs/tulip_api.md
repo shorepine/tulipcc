@@ -111,54 +111,76 @@ edit("game.py")
 
 ## Input and user interface
 
-Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, your computers' keyboard works.
+Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, and your computers' keyboard works.
 
-We include [LVGL](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `ui_checkbox` and `ui_text`, etc. 
+We include [LVGL](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
+
+For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `ui_checkbox` and `ui_text`, etc. See our fully Python implementation of these in [ui.py](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our `buttons.py` example in your Tulip's `/sys/ex/` folder.
 
 You can summon a touch keyboard with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
+
+We boot a launcher for common operations. You can remove this from your `boot.py` by calling `tulip.launcher()`. 
 
 
 ```python
 tulip.keyboard() # open or close the soft keyboard
+tulip.launcher() # open or close our launcher
 
-# Create a callback to activate when UI elements are triggered
-def ui_callback(x):
-    # x is the element ID that was triggered
-    print("Item %d was fired" % (x))
-    if(x==1): # slider ID
-        print("Slider value is now %f" % (tulip.slider(1)))
-    if(x==2): # text box ID
-        print("Text box now says %s" % (tulip.text(2)))
+# You're free to use any direct LVGL calls. It's a powerful library with a lot of functionality and customization, all accessible through Python.
+import lvgl as lv
+# our tulip.lv_scr is the base screen on bootup, to use as a base screen in LVGL.
+calendar = lv.calendar(tulip.lv_scr)
+calendar.set_pos(500,100)
 
-tulip.ui_callback(ui_callback)
+# Note that any LVGL object you want to receive keyboard events (tabbing, text entry)
+# should be added to the Tulip-wide keyboard responder group. 
+tulip.lv_kb_group.add_obj(lvgl_obj_i_created)
 
-# You can set up to 254 UI elements
-tulip.ui_button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
+# For simplicity, we include a few convenience wrappers around LVGL. They can take ui_id tags to view later in callbacks:
+def my_ui_cb(obj, code, ui_id):
+    # obj is the LVGL object interacted with
+    # code is the LVGL event code 
+    # ui_id is the tag you assigned
+    print("obj %d was changed!" % (ui_id))
+    val = obj.get_value() # for example
 
-# Sliders -- if w > h, it will be a horizontal slider, vertical otherwise
-tulip.ui_slider(ui_element_id, default_value, x, y, w, h, bar_color, handle_color)
-# Gets a slider val
-val = tulip.ui_slider(ui_element_id)
-# Set a slider val
-tulip.ui_slider(ui_element_id, val)
+# Set the callback for our convenience functions
+tulip.ui_callback = my_ui_cb
 
-# This text entry box UI element is limited to 32 characters. It will wait for you to hit return to finish input
-tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
+# Draw a simple modal message box
+mbox = tulip.ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=5)
 
-# Checkboxes - val -- 0 is unchecked, 1 is checked
-# style -- 0 is filled box, 1 is X, 2 is filled circle
-tulip.ui_checkbox(ui_element_id, val, x, y, w, mark_color, box_color, style)
-val = tulip.ui_checkbox(ui_element_id)
-# set value
-tulip.ui_checkbox(ui_element_id, val)
+# Draw a rectangle. Like bg_rect but on the UI layer. Stays around.
+rect = ui_rect(x,y,w,h,fg_color,radius=0)
 
-# No UI elements will be drawn or receive events until you set them to be active
-tulip.ui_active(ui_element_id, 1)
-# You can deactivate them too -- useful for many elements across pages / tabs that you "hide"
-# Deactivating does not remove the graphics on the BG layer. You have to clear it yourself.
-tulip.ui_active(ui_element_id, 0)
+# draw a slider
+# bar_color - the color of the whole bar, or just the set part if using two colors
+# unset_bar_color - the color of the unset side of the bar, if None will just be all one color
+# handle_v_pad, h_pad -- how many px above/below / left/right of the bar it extends
+# handle_radius - 0 for square 
+slider = tulip.ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=None, 
+    handle_color=None, handle_radius=None, handle_v_pad=None, handle_h_pad=None, ui_id=None)
 
-tulip.ui_del(ui_element_id) # deletes the memory for a UI component (the graphics will stay on the BG)
+slider.get_value() # gets 0-100 
+
+# Creates a button. If ui_id given will alert the callback when pressed
+btn = tulip.ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, 
+    font=None, radius=None, ui_id=None)
+
+# Draw text to the screen and keep a pointer to it
+label = tulip.ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None)
+label.set_text("changed") # Change it later
+
+# Create a textarea box for text entry. 
+text = tulip.ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, 
+    bg_color=None, fg_color=None, font=None, one_line=True)
+text.get_text() # will retrieve it later
+
+# Create a checkbox. Optionally draw a label next to the checkbox
+checkbox = tulip.ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_color=None)
+state = checkbox.get_state() # retrieves the state
+
+tulip.ui_clear() # clears all UI elements
 
 # Returns a mask of joystick-like presses from the keyboard, from arrow keys, Z, X, A, S, Q, W, enter and '
 tulip.joyk()
@@ -390,10 +412,11 @@ tulip.gpu_log()
 
 The default background plane (BG) is 2048 x 750, with the visible portion 1024x600. (You can change this with `tulip.timing()`.) Use the extra for double buffering, hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
 
+The UI operations (LVGL or anything in `ui_X`) also draw to the BG. Be careful if you're using both BG drawing operations and LVGL as they may draw on top of one another.
+
 Tulip uses RGB332, with 256 colors. Here's the palette: 
 
-![tulip_pal](https://user-images.githubusercontent.com/76612/229381451-17a47367-6338-4ed2-9be3-7ec631513e6b.jpg)
-
+![tulip_pal](https://github.com/bwhitman/tulipcc/blob/main/docs/pics/rgb332.png?raw=true)
 
 
 ```python
@@ -468,7 +491,7 @@ tulip.bg_scroll_y_offset(line, y_offset)
 tulip.bg_swap()
 ```
 
-We currently ship XX fonts with Tulip to use for the BG and UI. You can see them all by running `fonts.py`, which also shows how to address them:
+We currently ship some fonts with Tulip to use for the BG. These are aside from the fonts that come with LVGL for the UI. You can see them all by running `fonts.py`, which also shows how to address them:
 
 ![IMG_3339](https://user-images.githubusercontent.com/76612/229381546-46ec4c50-4c4a-4f3a-9aec-c77d439081b2.jpeg)
 
@@ -677,7 +700,6 @@ Things we've thought of we'd love your help on:
 
  * Sprite editor in Tulip
  * Tile / Map editor in Tulip
- * More UI types: radio button / rich text editor with scroll bar / ~~text entry~~
 
 Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
 

@@ -101,14 +101,6 @@ def launcher():
     b_power.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
 
 
-# Draw a msgbox on screen. 
-def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box'):
-    mbox = lv.msgbox(tulip.lv_scr)
-    mbox.add_text(message)
-    mbox.add_title(title)
-    mbox.add_close_button()
-    for b in buttons:
-        mbox.add_footer_button(b)
 
 # Convert tulip rgb332 pal idx into lv color
 def pal_to_lv(pal):
@@ -132,6 +124,18 @@ def lv_callback(e, extra):
     obj = e.get_target_obj()
     if(tulip.ui_callback is not None):
         tulip.ui_callback(obj, code, extra)
+
+# Draw a msgbox on screen. 
+def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=None):
+    mbox = lv.msgbox(tulip.lv_scr)
+    mbox.add_text(message)
+    mbox.add_title(title)
+    mbox.add_close_button()
+    for b in buttons:
+        mbox.add_footer_button(b)
+    if(ui_id is not None):
+        mbox.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
+    return mbox
 
 # Draw a rectangle. Like bg_rect but on the UI layer. Stays around.
 def ui_rect(x,y,w,h,fg_color,radius=0):
@@ -173,14 +177,14 @@ def ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=N
         slider.set_style_pad_ver(handle_v_pad, lv.PART.KNOB)
     if(handle_h_pad is not None):
         slider.set_style_pad_hor(handle_h_pad, lv.PART.KNOB)
-    slider.set_value(int(val*100.0),lv.ANIM.OFF)
+    slider.set_value(int(val),lv.ANIM.OFF)
     if(ui_id is not None):
         slider.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
     return slider
 
 # Copy of our "ui_button" with lvgl buttons
 #tulip.ui_button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
-def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=lv_default_font, radius=None, ui_id=None):
+def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=None, radius=None, ui_id=None):
     button = lv.button(lv_scr)
     button.set_x(x)
     button.set_y(y)
@@ -195,6 +199,8 @@ def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None,
     if(text is not None):
         label = lv.label(button)
         label.set_text(text)
+        if(font is not None):
+            label.set_style_text_font(font, 0)
         label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
         # if button width was manually set, we need to re-pad the text so it is centered
         if(w is not None):
@@ -205,18 +211,17 @@ def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None,
         button.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
     return button
 
-# Copy of our bg_str with LVGL labels
-# tulip.bg_str(string, x, y, pal_idx, font_number) # same as char, but with a string. x and y are the bottom left
-# tulip.bg_str(string, x, y, pal_idx, font_number, w, h) # Will center the text inside w,h
-def ui_label(s, x, y, pal_idx, w=0, font=lv.font_montserrat_10):
+def ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None)
     label = lv.label(lv_scr)
     label.set_pos(x,y)
-    if(w != 0):
+    if(w is not None):
         label.set_width(w)
-    label.set_text(s)
+    label.set_text(text)
     label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
-    label.set_style_text_font(font, 0)
-    label.set_style_text_color(tulip.pal_to_lv(pal_idx),0)
+    if(font is not None):
+        label.set_style_text_font(font, 0)
+    if(fg_color is not None):
+        label.set_style_text_color(tulip.pal_to_lv(fg_color),0)
     return label
 
 # Copy of our ui_text with lvgl textarea 
