@@ -196,6 +196,9 @@ def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None,
         label = lv.label(button)
         label.set_text(text)
         label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+        # if button width was manually set, we need to re-pad the text so it is centered
+        if(w is not None):
+            label.set_width(w-(button.get_style_pad_left(0)*2))
         if(fg_color is not None):
             label.set_style_text_color(tulip.pal_to_lv(fg_color), 0)
     if(ui_id is not None):
@@ -218,14 +221,23 @@ def ui_label(s, x, y, pal_idx, w=0, font=lv.font_montserrat_10):
 
 # Copy of our ui_text with lvgl textarea 
 #tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
-def ui_text(ui_id=None, text="Type here", x=0, y=0, w=200, h=36, bg_color=0, fg_color=255, font=lv.font_unscii_8, one_line=True):
+def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=None, one_line=True):
     ta = lv.textarea(tulip.lv_scr)
     ta.set_pos(x,y)
-    ta.set_size(w,h)
-    ta.set_style_text_font(font, 0)
-    ta.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.MAIN)
-    ta.set_style_text_color(tulip.pal_to_lv(fg_color),0)
-    ta.set_placeholder_text(text)
+    if(w is not None):
+        ta.set_width(w)
+    if(h is not None):
+        ta.set_height(h)
+    if(font is not None):
+        ta.set_style_text_font(font, 0)
+    if(bg_color is not None):
+        ta.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.MAIN)
+    if(fg_color is not None):
+        ta.set_style_text_color(tulip.pal_to_lv(fg_color),0)
+    if placeholder is not None:
+        ta.set_placeholder_text(placeholder)
+    if text is not None:
+        ta.set_text(text)
     if(one_line): ta.set_one_line(True)
     tulip.lv_kb_group.add_obj(ta)
     if(ui_id is not None):
@@ -233,13 +245,16 @@ def ui_text(ui_id=None, text="Type here", x=0, y=0, w=200, h=36, bg_color=0, fg_
     return ta
 
 # Copy of our ui_checkbox with lvgl 
-def ui_checkbox(ui_id=None, val=False, x=0, y=0, w=50, bg_color=0, fg_color=255):
+def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_color=None):
     cb = lv.checkbox(tulip.lv_scr)
-    #cb.set_text(label)
+    if(text is not None):
+        cb.set_text(text)
     cb.set_pos(x,y)
-    cb.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.INDICATOR)
-    cb.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.INDICATOR | lv.STATE.CHECKED)
-    cb.set_style_border_color(tulip.pal_to_lv(fg_color), lv.PART.INDICATOR)
+    if(bg_color is not None):
+        cb.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.INDICATOR)
+        cb.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.INDICATOR | lv.STATE.CHECKED)
+    if(fg_color is not None):
+        cb.set_style_border_color(tulip.pal_to_lv(fg_color), lv.PART.INDICATOR)
     cb.set_state(lv.STATE.CHECKED, val)
     if(ui_id is not None):
         cb.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
