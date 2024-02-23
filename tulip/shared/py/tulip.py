@@ -459,6 +459,7 @@ def ansi_bg(pal_idx):
     # ESC[48;5;{ID}m
     return("\033[48;5;%dm" % (pal_idx))
 
+# convert 0-255 r,g,b values to a tulip pal_idx
 def color(r,g,b):
     ret = 0;
     ret |= (r&0xe0);
@@ -466,21 +467,18 @@ def color(r,g,b):
     ret |= (b&0xc0) >> 6
     return (ret & 0xff)
 
-# TODO, the wide version too??
-def rgb(px0):
+# convert tulip RGB332 pal_idx to 3 rgb 0-255 values
+def rgb(px0, wide=False):
     r = px0 & 0xe0;
     g = (px0 << 3) & 0xe0
     b = (px0 << 6) & 0xc0
-    return (r,g,b)
 
-def rgbw(px0):
-    # wide version
-    r = px0 & 0xe0
-    if(r & 0b00100000): r = r | 0b00011111
-    g = (px0 << 3) & 0xe0
-    if(g & 0b00100000): g = g | 0b00011111
-    b = (px0 << 6) & 0xc0
-    if(b & 0b01000000): b = b | 0b00111111
+    # If "wide", carry over the smallest bit to the rest of the bits 
+    # This is like setting extra RGB TTL pins to high
+    if(wide):
+        if(r & 0b00100000): r = r | 0b00011111
+        if(g & 0b00100000): g = g | 0b00011111
+        if(b & 0b01000000): b = b | 0b00111111
     return (r,g,b)
 
 def ip():
@@ -525,8 +523,6 @@ def tar_create(directory):
 def tar_extract(file_name, show_progress=True):
     import os
     import utarfile
-    #display_stop()
-
     tar = utarfile.TarFile(file_name, 'r')
     if(show_progress): print("extracting", file_name)
     for i in tar:
@@ -550,7 +546,6 @@ def tar_extract(file_name, show_progress=True):
                         dest.close()
                 except OSError as error:
                     if(show_progress): print("borked on:", i.name)
-    #display_start()
 
 
 

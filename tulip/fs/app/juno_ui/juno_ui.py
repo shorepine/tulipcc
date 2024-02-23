@@ -1,6 +1,13 @@
 """juno_ui: GUI for controlling Juno patches."""
 import juno, tulip
 
+font_10 = tulip.lv.font_montserrat_10
+font_12 = tulip.lv.font_montserrat_12
+font_14 = tulip.lv.font_montserrat_14
+font_16 = tulip.lv.font_montserrat_16
+font_24 = tulip.lv.font_montserrat_24
+font_32 = tulip.lv.font_montserrat_32
+
 registered_callbacks = {}
 
 def register_callback(id_, callback):
@@ -53,10 +60,12 @@ class UIBase:
 
   def draw(self):
     """Replace with actual."""
+
+    #TODO: these return objects. Make sure to only draw them once and update them as necessary with eg label.set_text() 
     tulip.ui_rect(self.x, self.y, self.w, self.h, self.fg_color, False)
-    tulip.ui_label(self.title, self.x, self.y + self.text_height,
-                 self.text_color, self.title_font, 
-                 self.w, 2 * self.text_height)
+    tulip.ui_label(self.title, self.x, self.y + self.text_height + 12,
+                 self.text_color,  
+                 self.w,  font=font_32)
 
     self.drawn = True
 
@@ -79,20 +88,22 @@ class Slider(UIBase):
     self.h = self.y_val + 2 * self.text_height
 
   def draw(self):
+    #TODO: these return objects. only call these creators once and keep a pointer to the obj around for get/set values 
     tulip.ui_slider(ui_id=self.id_, val=self.value,
                     x=self.x + self.w_leg,
                     y=self.y + self.y_sli, w=self.w_sli, h=self.h_sli,
-                    bar_color=self.fg_color, handle_color=self.bg_color)
+                    bar_color=self.bg_color, handle_color=146, handle_radius=0, handle_h_pad=5, handle_v_pad=1)
     register_callback(self.id_, self.callback)
     tulip.ui_label(self.name, self.x + self.w_leg - self.padx,
                  self.y + self.y_txt - self.text_height // 2,
-                 self.text_color, self.body_font, 2 * self.padx, self.text_height)
+                 self.text_color, 2 * self.padx,  font=font_10)
     thumb_height = self.h_sli // 10
     # Slider legend.
-    #for i in range(11):
-      #tulip.ui_label(str(10 - i), self.x - self.padx + self.w_leg,
-      #             self.y + self.y_sli - (self.text_height - thumb_height) // 2 + (i * self.h_sli) // 11,
-      #             self.text_color, self.body_font, self.padx, self.text_height)
+    # TODO -- draw labels once and update their text when needed. don't redraw them on refresh
+    for i in range(11):
+      tulip.ui_label(str(10 - i), self.x - self.padx + self.w_leg,
+                   self.y + self.y_sli - (self.text_height - thumb_height) // 2 + (i * self.h_sli) // 11,
+                   self.text_color, self.padx,  font=font_10)
     self.drawn = True
     self.set_value(self.value)
     
@@ -103,8 +114,10 @@ class Slider(UIBase):
       y = self.y + self.y_val - self.text_height // 2
       w = 2 * self.padx
       h = self.text_height
+      # TODO - draw rect once, not on every set
       tulip.ui_rect(x, y, w, h, self.bg_color, True)
-      tulip.ui_label("%d" % round(127 * self.value), x, y, self.text_color, self.body_font, w, h)
+      # TODO -- draw labels once and update their text when needed. don't redraw them on refresh
+      tulip.ui_label("%d" % round(127 * self.value), x, y, self.text_color, w, font=font_10)
 
       #TODO - set the slider by just slider.set_value()
       #tulip.ui_slider(self.id_, self.value)
@@ -139,7 +152,8 @@ class ControlledLabel(UIBase):
     h = self.button_size
     dw = self.button_space
     for id_, tag in zip(self.ids, self.button_labels):
-      tulip.ui_button(ui_id=id_, text=tag, x=x, y=y, w=w, h=h, fg_color=self.text_color, bg_color=self.bg_color) 
+      #TODO: draw these once and keep pointer around for updates
+      tulip.ui_button(ui_id=id_, text=tag, x=x, y=y, w=w, h=h, fg_color=self.text_color, radius=0, bg_color=self.bg_color) 
       
       self.ids.append(id_)
       register_callback(id_, self.callback)
@@ -155,8 +169,9 @@ class ControlledLabel(UIBase):
     x = self.x + buttons_w
     w = self.w - buttons_w
     h = self.h
+    # TODO - draw once, not on every change. update labels with label.set_text
     tulip.ui_rect(x, y, w, h, self.bg_color, True)
-    tulip.ui_label(self.text, x, y, self.text_color, self.body_font, w, h)
+    tulip.ui_label(self.text, x, y, self.text_color,  w, font=font_10)
     
   def set_text(self, text):
     self.text = text
@@ -210,15 +225,18 @@ class ButtonSet(UIBase):
   def draw(self):
     x = self.x + self.padx
     y = self.y + self.y_txt
+    # TODO - draw these just once, and update text with label.set_text
     tulip.ui_label(self.name, x - self.padx, y - self.text_height // 2,
-                 self.text_color, self.body_font,
-                 2 * self.padx, self.text_height)
+                 self.text_color,
+                 2 * self.padx,font=font_10)
     y = self.y + self.y_top
     for id_, tag in zip(self.ids, self.tags):
+      # Draw these only once
       tulip.ui_label(tag, x - self.padx, y - self.text_height // 2,
-                   self.text_color, self.body_font,
-                   2 * self.padx, self.text_height)
+                   self.text_color,
+                   2 * self.padx,font=font_10)
       y = y + self.text_height
+      # Draw these only once
       tulip.ui_checkbox(ui_id=id_, val=self.state[tag],
                         x=x - self.button_w // 2, y=y, w=self.button_w,
                         fg_color=self.fg_color, bg_color=self.bg_color)
@@ -229,6 +247,7 @@ class ButtonSet(UIBase):
     self.drawn = True
 
 
+#TODO: lvgl has a radio button native control, maybe use that? 
 class RadioButton(ButtonSet):
 
   def __init__(self, name, tags, callbacks):
@@ -317,13 +336,13 @@ class UIGroup(UIBase):
 
   def draw(self):
     if self.name:
-      # Draw frame.
+      #TODO: only draw these ones and keep pointers to them around for updates
       tulip.ui_rect(self.x, self.y, self.w, self.h, self.fg_color, False)
       # Draw title.
       tulip.ui_rect(self.x, self.y, self.w, self.top_height, self.top_color, True)
-      tulip.ui_label(self.name, self.x, self.y,
-                   self.text_color, self.title_font, 
-                   self.w, self.top_height)
+      tulip.ui_label(self.name, self.x, self.y+5,
+                   self.text_color, 
+                   self.w, font=font_16)
     # Draw elements.
     for element in self.elements:
       element.draw()
