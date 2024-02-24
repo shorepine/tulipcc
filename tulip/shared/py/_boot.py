@@ -58,4 +58,7 @@ except ImportError:
         cd(tulip.app_path())
 
 gc.collect()
-tulip.launcher()
+
+# Don't boot the launcher on T-Deck
+if(tulip.board()!='TDECK'):
+    tulip.launcher()

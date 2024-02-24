@@ -83,8 +83,8 @@ def launcher():
         return
 
     lv_launcher = lv.list(lv_scr)
-    lv_launcher.set_pos(824,400)
-    lv_launcher.set_size(195, 180)
+    lv_launcher.set_size(195, 140)
+    lv_launcher.set_align(lv.ALIGN.BOTTOM_RIGHT)
     b_close = lv_launcher.add_button(lv.SYMBOL.CLOSE, "Close")
     b_close.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
     b_juno = lv_launcher.add_button(lv.SYMBOL.AUDIO, "Juno-6")
@@ -211,7 +211,7 @@ def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None,
         button.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
     return button
 
-def ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None)
+def ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None):
     label = lv.label(lv_scr)
     label.set_pos(x,y)
     if(w is not None):
