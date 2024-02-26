@@ -150,9 +150,6 @@ tulip.ui_callback = my_ui_cb
 # Draw a simple modal message box
 mbox = tulip.ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=5)
 
-# Draw a rectangle. Like bg_rect but on the UI layer. Stays around.
-rect = ui_rect(x,y,w,h,fg_color,radius=0)
-
 # draw a slider
 # bar_color - the color of the whole bar, or just the set part if using two colors
 # unset_bar_color - the color of the unset side of the bar, if None will just be all one color

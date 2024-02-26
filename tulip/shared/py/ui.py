@@ -4,9 +4,10 @@
 import tulip
 import lvgl as lv
 
-lv_scr = lv.screen_active() # gets the repl screen, saves it off
+# Since this is called on boot this is guaranteed to grab the repl screen
+lv_scr = lv.screen_active() 
 
-# gets the group that receives keyboard events. 
+# gets the group that receives keyboard events on the repl
 # you have to add objs to this group for them to receive kbd
 lv_kb_group = lv.group_by_index(0) 
 lv_soft_kb = None
@@ -14,14 +15,87 @@ lv_launcher = None
 
 lv_default_font = lv.font_montserrat_12
 
-# Can be overriden
+# For our convenience functions, Can be overriden
 tulip.ui_callback = None
-
 
 # Convert tulip rgb332 pal idx into lv color
 def pal_to_lv(pal):
     (r,g,b) = tulip.rgb(pal, wide=True) # todo -- not sure if we use wide or not
     return lv.color_make(r,g,b)
+
+# Remove padding from an LVGL object. Sometimes useful. 
+def lv_depad(obj):
+    obj.set_style_pad_left(0,0)
+    obj.set_style_pad_right(0,0)
+    obj.set_style_pad_top(0,0)
+    obj.set_style_pad_bottom(0,0)
+    obj.set_style_margin_left(0,0)
+    obj.set_style_margin_right(0,0)
+    obj.set_style_margin_top(0,0)
+    obj.set_style_margin_bottom(0,0)
+
+# The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
+class UIScreen():
+    # Constants you can change
+    default_bg_color = 73
+    # Start drawing at this position, a little to the right of the edge and 100px down
+    default_offset_x = 10
+    default_offset_y = 100
+
+    # Class vars we use to keep the screen around
+    def __init__(self, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
+        self.screen = lv.obj()
+        self.bg_color = bg_color
+        self.offset_x = offset_x
+        self.offset_y = offset_y
+        self.change_callback = None
+        self.last_screen = lv_scr
+        self.last_obj_added = None
+        self.screen.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
+
+    # add an obj (or list of obj) to the screen, aligning by the last one added,
+    # or the object relative (if you want to for example make a new line)
+    def add(self, obj, direction=lv.ALIGN.OUT_RIGHT_MID, relative=None, pad=0):
+        if(relative is not None):
+            self.last_obj_added = relative.group
+
+        if(type(obj) != list): obj = [obj]
+        for o in obj:
+            o.group.set_parent(self.screen)
+            o.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
+            o.group.set_width(o.group.get_width()+pad)
+            o.group.set_height(lv.SIZE_CONTENT)
+            if(self.last_obj_added is None):
+                o.group.align_to(self.screen,lv.ALIGN.TOP_LEFT,self.offset_x,self.offset_y)
+            else:
+                o.group.align_to(self.last_obj_added, direction,0,0)
+            self.last_obj_added = o.group
+
+    # Show the UI on the screen
+    def present(self):
+        lv.screen_load(self.screen)
+
+    # Keep everything around, but load the repl screen
+    def clear(self):
+        lv.screen_load(self.last_screen)
+
+    # Remove the elements you created
+    def remove_items(self):
+        self.clear()
+        things = self.screen.get_child_count()
+        for i in range(things):
+            self.screen.get_child(0).delete()
+        self.last_obj_added = None
+
+
+# A base class for our UI elements -- will also move this into Tulip
+class UIElement():
+    # We make one temp screen for the elements to use, then add it to the UIScreen parent at add.
+    temp_screen = lv.obj()
+    def __init__(self):
+        self.group = lv.obj(UIElement.temp_screen)
+        self.group.set_style_border_width(0, lv.PART.MAIN)
+
 
 
 # Callback for soft keyboard to send chars to Tulip.
@@ -72,14 +146,16 @@ def launcher_cb(e):
         if(text=="Keyboard"):
             keyboard()
         if(text=="Editor"):
-            # something weird about calling editor from here
+            # TODO something weird about calling editor from here
             pass
         if(text=="Wordpad"):
             tulip.run("wordpad")
         if(text=="Wi-Fi"):
             wifi()
-        if(text=="Turn off"):
-            print("Can't yet")
+        if(text=="Reset"):
+            if(tulip.board()!="DESKTOP"):
+                import machine
+                machine.reset()
 
 
 # Draw a lvgl list box as a little launcher
@@ -105,16 +181,21 @@ def launcher():
     b_wordpad.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
     b_wifi = lv_launcher.add_button(lv.SYMBOL.WIFI, "Wi-Fi")
     b_wifi.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
-    b_power = lv_launcher.add_button(lv.SYMBOL.POWER,"Turn off")
+    b_power = lv_launcher.add_button(lv.SYMBOL.POWER,"Reset")
     b_power.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
 
 
 
 # removes all ui elements
 def ui_clear():
-    # remove all the children of scr
-    while(lv_scr.get_child_count()):
-        lv_scr.get_child(0).delete()
+    current_screen = lv.screen_active()
+    while(current_screen.get_child_count()):
+        current_screen.get_child(0).delete()
+
+    if(current_screen != lv_scr):
+        # we're in a UI program. kill it
+        lv.screen_load(lv_scr)
+        current_screen.delete()
 
 # Return how many LVGL objs you've created
 def ui_count():
@@ -139,18 +220,6 @@ def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui
     if(ui_id is not None):
         mbox.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
     return mbox
-
-# Draw a rectangle. Like bg_rect but on the UI layer. Stays around.
-def ui_rect(x,y,w,h,fg_color,radius=0):
-    rect = lv.obj(tulip.lv_scr)
-    rect.set_size(w,h)
-    rect.set_pos(x,y)
-    rect.set_style_radius(radius, 0)
-    rect.set_style_bg_color(pal_to_lv(fg_color), 0)
-    return rect
-
-def ui_circle(x,y,w,h,fg_color):
-    return ui_rect(x,y,w,h,fg_color,radius=100)
 
 # bar_color - the color of the whole bar, or just the set part if using two colors
 # unset_bar_color - the color of the unset side of the bar, if None will just be all one color
