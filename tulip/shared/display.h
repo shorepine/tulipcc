@@ -42,6 +42,10 @@ static const uint8_t ansi_pal[256] = {
 182, 219, 219, 219, 255, 255
 };
 
+
+extern lv_group_t * lvgl_kb_group;
+
+
 extern int16_t last_touch_x[3];
 extern int16_t last_touch_y[3];
 extern uint8_t touch_held;

@@ -57,7 +57,7 @@ uint8_t tfb_log = 0;
 uint8_t gpu_log = 0;
 
 lv_group_t * lvgl_kb_group;
-
+lv_obj_t * lvgl_repl_screen;
 
 // lookup table for Tulip's "pallete" to the 16-bit colorspace needed by LVGL and T-deck
 
@@ -1052,7 +1052,7 @@ void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
 
 // return 1 if we're focused on something the keyboard is sending characters to (e.g. don't send keys to repl)
 uint8_t lvgl_focused() {
-    if(lv_group_get_focused(lvgl_kb_group) == lv_screen_active()) return 0;
+    if(lv_group_get_focused(lvgl_kb_group) == lvgl_repl_screen) return 0;
     return 1;
 }
 
@@ -1072,7 +1072,9 @@ void setup_lvgl() {
     lv_tick_set_cb(u32_ticks_ms);
 
     // Set LVGL bg to tulip teal
-    lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0x004040), LV_PART_MAIN);
+    lvgl_repl_screen = lv_obj_create(NULL);
+    lv_screen_load(lvgl_repl_screen);
+    lv_obj_set_style_bg_color(lvgl_repl_screen, lv_color_hex(0x004040), LV_PART_MAIN);
     
 
     // Create a input device (uses tulip.touch())

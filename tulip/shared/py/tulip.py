@@ -3,10 +3,26 @@
 
 # Bring in all c-defined tulip functions
 from _tulip import *
-from ui import *
 from world import world
 from upysh import cd, pwd
 import alles
+
+
+# convert tulip RGB332 pal_idx to 3 rgb 0-255 values
+def rgb(px0, wide=False):
+    r = px0 & 0xe0;
+    g = (px0 << 3) & 0xe0
+    b = (px0 << 6) & 0xc0
+
+    # If "wide", carry over the smallest bit to the rest of the bits 
+    # This is like setting extra RGB TTL pins to high
+    if(wide):
+        if(r & 0b00100000): r = r | 0b00011111
+        if(g & 0b00100000): g = g | 0b00011111
+        if(b & 0b01000000): b = b | 0b00111111
+    return (r,g,b)
+
+from ui import *
 
 # A class for making a game. Clears and sets up the screen for a game
 class Game():
@@ -467,19 +483,6 @@ def color(r,g,b):
     ret |= (b&0xc0) >> 6
     return (ret & 0xff)
 
-# convert tulip RGB332 pal_idx to 3 rgb 0-255 values
-def rgb(px0, wide=False):
-    r = px0 & 0xe0;
-    g = (px0 << 3) & 0xe0
-    b = (px0 << 6) & 0xc0
-
-    # If "wide", carry over the smallest bit to the rest of the bits 
-    # This is like setting extra RGB TTL pins to high
-    if(wide):
-        if(r & 0b00100000): r = r | 0b00011111
-        if(g & 0b00100000): g = g | 0b00011111
-        if(b & 0b01000000): b = b | 0b00111111
-    return (r,g,b)
 
 def ip():
     try:

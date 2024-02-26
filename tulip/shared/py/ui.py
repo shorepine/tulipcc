@@ -4,7 +4,8 @@
 import tulip
 import lvgl as lv
 
-lv_scr = lv.screen_active() # gets the currently active screen
+lv_scr = lv.screen_active() # gets the repl screen, saves it off
+
 # gets the group that receives keyboard events. 
 # you have to add objs to this group for them to receive kbd
 lv_kb_group = lv.group_by_index(0) 
@@ -15,6 +16,73 @@ lv_default_font = lv.font_montserrat_12
 
 # Can be overriden
 tulip.ui_callback = None
+
+# Remove padding from an LVGL object. Sometimes useful. 
+def lv_depad(obj):
+    obj.set_style_pad_left(0,0)
+    obj.set_style_pad_right(0,0)
+    obj.set_style_pad_top(0,0)
+    obj.set_style_pad_bottom(0,0)
+
+# Convert tulip rgb332 pal idx into lv color
+def pal_to_lv(pal):
+    (r,g,b) = tulip.rgb(pal, wide=True) # todo -- not sure if we use wide or not
+    return lv.color_make(r,g,b)
+
+# The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
+# I will eventually move this class into tulip.ui
+class UIScreen():
+    bg_color = 73
+    element_pad = 25 # pixels to pad the width of objects for spacing
+
+    screen = lv.obj()
+    change_callback = None
+    last_screen = lv_scr
+    last_obj_added = None
+    screen.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
+
+    # add an obj (or list of obj) to the screen, aligning by the last one added,
+    # or the object relative (if you want to for example make a new line)
+    def add(obj, direction=lv.ALIGN.OUT_RIGHT_MID, relative=None):
+        if(relative is not None):
+            UIScreen.last_obj_added = relative.group
+
+        if(type(obj) != list): obj = [obj]
+        for o in obj:
+            lv_depad(o.group)
+            o.group.set_width(o.group.get_width()+UIScreen.element_pad)
+            o.group.set_height(lv.SIZE_CONTENT)
+
+            if(UIScreen.last_obj_added is None):
+                o.group.align_to(UIScreen.screen,lv.ALIGN.TOP_LEFT,0,100)
+            else:
+                o.group.align_to(UIScreen.last_obj_added, direction,0,0)
+            UIScreen.last_obj_added = o.group
+
+    # Show the UI on the screen
+    def present():
+        lv.screen_load(UIScreen.screen)
+
+    # Keep everything around, but load the repl screen
+    def clear():
+        lv.screen_load(UIScreen.last_screen)
+
+    # Remove the elements you created
+    def remove_items():
+        UIScreen.clear()
+        things = UIScreen.screen.get_child_count()
+        for i in range(things):
+            UIScreen.screen.get_child(0).delete()
+        UIScreen.last_obj_added = None
+
+
+# A base class for our UI elements -- will also move this into Tulip
+class UIElement():
+    def __init__(self, group=None):
+        self.group = lv.obj(UIScreen.screen)
+        self.group.set_style_bg_color(pal_to_lv(UIScreen.bg_color), lv.PART.MAIN)
+        self.group.set_style_border_width(0, lv.PART.MAIN)
+
 
 # Callback for soft keyboard to send chars to Tulip.
 def lv_soft_kb_cb(e):
@@ -102,11 +170,6 @@ def launcher():
 
 
 
-# Convert tulip rgb332 pal idx into lv color
-def pal_to_lv(pal):
-    (r,g,b) = tulip.rgb(pal, wide=True) # todo -- not sure if we use wide or not
-    return lv.color_make(r,g,b)
-
 # removes all ui elements
 def ui_clear():
     # remove all the children of scr
@@ -143,7 +206,7 @@ def ui_rect(x,y,w,h,fg_color,radius=0):
     rect.set_size(w,h)
     rect.set_pos(x,y)
     rect.set_style_radius(radius, 0)
-    rect.set_style_bg_color(tulip.pal_to_lv(fg_color), 0)
+    rect.set_style_bg_color(pal_to_lv(fg_color), 0)
     return rect
 
 def ui_circle(x,y,w,h,fg_color):
@@ -164,13 +227,13 @@ def ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=N
     if(h is not None):
         slider.set_height(h)
     if(bar_color is not None):
-        slider.set_style_bg_color(tulip.pal_to_lv(bar_color), lv.PART.INDICATOR)
+        slider.set_style_bg_color(pal_to_lv(bar_color), lv.PART.INDICATOR)
         if(unset_bar_color is None):
-            slider.set_style_bg_color(tulip.pal_to_lv(bar_color), lv.PART.MAIN)
+            slider.set_style_bg_color(pal_to_lv(bar_color), lv.PART.MAIN)
         else:
-            slider.set_style_bg_color(tulip.pal_to_lv(unset_bar_color), lv.PART.MAIN)
+            slider.set_style_bg_color(pal_to_lv(unset_bar_color), lv.PART.MAIN)
     if(handle_color is not None):
-        slider.set_style_bg_color(tulip.pal_to_lv(handle_color), lv.PART.KNOB)
+        slider.set_style_bg_color(pal_to_lv(handle_color), lv.PART.KNOB)
     if(handle_radius is not None):
         slider.set_style_radius(handle_radius, lv.PART.KNOB)
     if(handle_v_pad is not None):
@@ -195,7 +258,7 @@ def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None,
     if(radius is not None):
         button.set_style_radius(radius, lv.PART.MAIN)
     if(bg_color is not None):
-        button.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.MAIN)
+        button.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
     if(text is not None):
         label = lv.label(button)
         label.set_text(text)
@@ -206,7 +269,7 @@ def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None,
         if(w is not None):
             label.set_width(w-(button.get_style_pad_left(0)*2))
         if(fg_color is not None):
-            label.set_style_text_color(tulip.pal_to_lv(fg_color), 0)
+            label.set_style_text_color(pal_to_lv(fg_color), 0)
     if(ui_id is not None):
         button.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
     return button
@@ -221,7 +284,7 @@ def ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None):
     if(font is not None):
         label.set_style_text_font(font, 0)
     if(fg_color is not None):
-        label.set_style_text_color(tulip.pal_to_lv(fg_color),0)
+        label.set_style_text_color(pal_to_lv(fg_color),0)
     return label
 
 # Copy of our ui_text with lvgl textarea 
@@ -236,9 +299,9 @@ def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, b
     if(font is not None):
         ta.set_style_text_font(font, 0)
     if(bg_color is not None):
-        ta.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.MAIN)
+        ta.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
     if(fg_color is not None):
-        ta.set_style_text_color(tulip.pal_to_lv(fg_color),0)
+        ta.set_style_text_color(pal_to_lv(fg_color),0)
     if placeholder is not None:
         ta.set_placeholder_text(placeholder)
     if text is not None:
@@ -256,10 +319,10 @@ def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_co
         cb.set_text(text)
     cb.set_pos(x,y)
     if(bg_color is not None):
-        cb.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.INDICATOR)
-        cb.set_style_bg_color(tulip.pal_to_lv(bg_color), lv.PART.INDICATOR | lv.STATE.CHECKED)
+        cb.set_style_bg_color(pal_to_lv(bg_color), lv.PART.INDICATOR)
+        cb.set_style_bg_color(pal_to_lv(bg_color), lv.PART.INDICATOR | lv.STATE.CHECKED)
     if(fg_color is not None):
-        cb.set_style_border_color(tulip.pal_to_lv(fg_color), lv.PART.INDICATOR)
+        cb.set_style_border_color(pal_to_lv(fg_color), lv.PART.INDICATOR)
     cb.set_state(lv.STATE.CHECKED, val)
     if(ui_id is not None):
         cb.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
