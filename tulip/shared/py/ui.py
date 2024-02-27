@@ -63,12 +63,12 @@ class UIScreen():
         for o in obj:
             o.group.set_parent(self.screen)
             o.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
-            o.group.set_width(o.group.get_width()+pad)
             o.group.set_height(lv.SIZE_CONTENT)
             if(self.last_obj_added is None):
                 o.group.align_to(self.screen,lv.ALIGN.TOP_LEFT,self.offset_x,self.offset_y)
             else:
                 o.group.align_to(self.last_obj_added, direction,0,0)
+            o.group.set_width(o.group.get_width()+pad)
             self.last_obj_added = o.group
 
     # Show the UI on the screen
