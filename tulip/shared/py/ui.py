@@ -43,12 +43,12 @@ class UIScreen():
     default_offset_y = 100
 
     # Class vars we use to keep the screen around
-    def __init__(self, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
+    def __init__(self, change_callback=None, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
         self.screen = lv.obj()
         self.bg_color = bg_color
         self.offset_x = offset_x
         self.offset_y = offset_y
-        self.change_callback = None
+        self.change_callback = change_callback
         self.last_screen = lv_scr
         self.last_obj_added = None
         self.screen.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
@@ -61,6 +61,7 @@ class UIScreen():
 
         if(type(obj) != list): obj = [obj]
         for o in obj:
+            o.update_callbacks(self.change_callback)
             o.group.set_parent(self.screen)
             o.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
             o.group.set_height(lv.SIZE_CONTENT)
@@ -92,10 +93,14 @@ class UIScreen():
 class UIElement():
     # We make one temp screen for the elements to use, then add it to the UIScreen parent at add.
     temp_screen = lv.obj()
+
     def __init__(self):
+        self.change_callback = None
         self.group = lv.obj(UIElement.temp_screen)
         self.group.set_style_border_width(0, lv.PART.MAIN)
 
+    def update_callbacks(self, cb):
+        self.change_callback = cb
 
 
 # Callback for soft keyboard to send chars to Tulip.
