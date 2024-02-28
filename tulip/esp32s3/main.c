@@ -365,6 +365,7 @@ extern void run_midi();
 
 #ifdef TDECK
 extern void run_tdeck_keyboard();
+extern void run_gt911();
 #endif
 
 uint8_t * xStack;
@@ -396,6 +397,7 @@ void app_main(void) {
 
     fprintf(stderr,"Starting display on core %d\n", DISPLAY_TASK_COREID);
     #ifdef TDECK
+    delay_ms(100);
     xTaskCreatePinnedToCore(run_tdeck_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
     #else
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
@@ -410,7 +412,7 @@ void app_main(void) {
     #elif defined MAKERFABS
     xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
     #elif defined TDECK
-    fprintf(stderr, "No touchscreen support on T-Deck yet\n");
+    xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
     #endif
     fflush(stderr);
     delay_ms(100);

@@ -1025,6 +1025,8 @@ uint32_t u32_ticks_ms() {
 }
 #ifdef TULIP_DESKTOP
 void sdl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
+#elif defined TDECK
+void tdeck_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
 #else
 void usb_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
 #endif
@@ -1034,6 +1036,8 @@ void usb_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
 void lvgl_input_kb_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
 #ifdef TULIP_DESKTOP
     sdl_keyboard_read(indev, data);
+#elif defined TDECK
+    tdeck_keyboard_read(indev, data);
 #else
     usb_keyboard_read(indev, data);
 #endif

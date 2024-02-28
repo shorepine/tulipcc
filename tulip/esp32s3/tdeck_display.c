@@ -85,8 +85,8 @@ void run_tdeck_display(void) {
         .pin_bit_mask = 1ULL << TDECK_LCD_BK_LIGHT_GPIO
     };
     gpio_config(&bk_gpio_config);
-    gpio_set_level(TDECK_LCD_BK_LIGHT_GPIO, 0);
-
+    //gpio_set_level(TDECK_LCD_BK_LIGHT_GPIO, 0);
+    delay_ms(50);
     // turn on TDeck peripheral 
     gpio_config_t peri_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
@@ -94,6 +94,7 @@ void run_tdeck_display(void) {
     };
     gpio_config(&peri_gpio_config);
     gpio_set_level(TDECK_PERI_GPIO, 1);
+    delay_ms(50);
 
     // set up SPI
     spi_bus_config_t buscfg = {

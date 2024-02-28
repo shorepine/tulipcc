@@ -63,6 +63,34 @@ char get_alternative_char(struct KeyMapping mappings[], int size, char original)
     return original;
 }
 
+#define KEYBOARD_BUFFER_SIZE 32
+
+static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
+
+
+void tdeck_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data) {
+    (void) indev_drv;     // unused
+
+    static bool dummy_read = false;
+    const size_t len = strlen(lvgl_kb_buf);
+
+    // Send a release manually
+    if (dummy_read) {
+        dummy_read = false;
+        data->state = LV_INDEV_STATE_RELEASED;
+        data->continue_reading = len > 0;
+    }
+        // Send the pressed character 
+    else if (len > 0) {
+        dummy_read = true;
+        data->state = LV_INDEV_STATE_PRESSED;
+        data->key = lvgl_kb_buf[0];
+        memmove(lvgl_kb_buf, lvgl_kb_buf + 1, len);
+        data->continue_reading = true;
+    }
+}
+
+
 void run_tdeck_keyboard() {
 
     bool alt_char_mode = false;
