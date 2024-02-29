@@ -44,37 +44,38 @@ class UIScreen():
 
     # Class vars we use to keep the screen around
     def __init__(self, change_callback=None, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
-        self.screen = lv.obj()
+        self.group = lv.obj() # a screen, really
         self.bg_color = bg_color
         self.offset_x = offset_x
         self.offset_y = offset_y
         self.change_callback = change_callback
         self.last_screen = lv_scr
         self.last_obj_added = None
-        self.screen.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
+        self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
 
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
-    def add(self, obj, direction=lv.ALIGN.OUT_RIGHT_MID, relative=None, pad=0):
+    def add(self, obj, direction=lv.ALIGN.OUT_RIGHT_MID, relative=None, pad_x=0, pad_y=0):
         if(relative is not None):
             self.last_obj_added = relative.group
 
         if(type(obj) != list): obj = [obj]
         for o in obj:
             o.update_callbacks(self.change_callback)
-            o.group.set_parent(self.screen)
+            o.group.set_parent(self.group)
             o.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
             o.group.set_height(lv.SIZE_CONTENT)
             if(self.last_obj_added is None):
-                o.group.align_to(self.screen,lv.ALIGN.TOP_LEFT,self.offset_x,self.offset_y)
+                o.group.align_to(self.group,lv.ALIGN.TOP_LEFT,self.offset_x,self.offset_y)
             else:
                 o.group.align_to(self.last_obj_added, direction,0,0)
-            o.group.set_width(o.group.get_width()+pad)
+            o.group.set_width(o.group.get_width()+pad_x)
+            o.group.set_height(o.group.get_height()+pad_y)
             self.last_obj_added = o.group
 
     # Show the UI on the screen
     def present(self):
-        lv.screen_load(self.screen)
+        lv.screen_load(self.group)
 
     # Keep everything around, but load the repl screen
     def clear(self):
@@ -83,9 +84,9 @@ class UIScreen():
     # Remove the elements you created
     def remove_items(self):
         self.clear()
-        things = self.screen.get_child_count()
+        things = self.group.get_child_count()
         for i in range(things):
-            self.screen.get_child(0).delete()
+            self.group.get_child(0).delete()
         self.last_obj_added = None
 
 
@@ -97,6 +98,7 @@ class UIElement():
     def __init__(self):
         self.change_callback = None
         self.group = lv.obj(UIElement.temp_screen)
+        # Hot tip - set this to 1 if you're debugging why elements are not aligning like you think they should
         self.group.set_style_border_width(0, lv.PART.MAIN)
 
     def update_callbacks(self, cb):
