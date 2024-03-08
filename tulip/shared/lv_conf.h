@@ -45,7 +45,7 @@
  * - LV_STDLIB_RTTHREAD:    RT-Thread implementation
  * - LV_STDLIB_CUSTOM:      Implement the functions externally
  */
-#define LV_USE_STDLIB_MALLOC    LV_STDLIB_BUILTIN
+#define LV_USE_STDLIB_MALLOC    LV_STDLIB_MICROPYTHON
 #define LV_USE_STDLIB_STRING    LV_STDLIB_BUILTIN
 #define LV_USE_STDLIB_SPRINTF   LV_STDLIB_BUILTIN
 
@@ -209,7 +209,7 @@
 #endif
 */
 
-#define LV_USE_LOG 0
+#define LV_USE_LOG 1
 
 #if LV_USE_LOG
 
@@ -284,10 +284,10 @@
 
 /*Garbage Collector settings
  *Used if LVGL is bound to higher level language and the memory is managed by that language*/
-//extern void mp_lv_init_gc();
-//#define LV_GC_INIT() mp_lv_init_gc()
+extern void mp_lv_init_gc();
+#define LV_GC_INIT() mp_lv_init_gc()
 
-#define LV_ENABLE_GLOBAL_CUSTOM 0
+#define LV_ENABLE_GLOBAL_CUSTOM 1
 #if LV_ENABLE_GLOBAL_CUSTOM
     extern void *mp_lv_roots;
     #define LV_GLOBAL_CUSTOM() ((lv_global_t*)mp_lv_roots)

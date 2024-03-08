@@ -47,6 +47,13 @@
 #define MICROPY_PY_BUILTINS_HELP_TEXT           tulip_desktop_help_text
 #define MICROPY_HW_BOARD_NAME "Tulip4"
 
+/*
+#define MICROPY_ROOT_POINTERS \
+    LV_ROOTS \
+    void *mp_lv_user_data; \
+    const char *readline_hist[50]; \
+    void *mmap_region_head; \
+*/
 
 
 // Unclear how this works -- unicode (in strings) seems fine. maybe this is files

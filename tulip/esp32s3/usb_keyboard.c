@@ -496,11 +496,14 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
     isKeyboardPolling = false;
     if (transfer->status == 0) {
         //fprintf(stderr, "nb is %d\n", transfer->actual_num_bytes);
+      //if(transfer->actual_num_bytes > 7 && transfer->actual_num_bytes < 17) {
       if (transfer->actual_num_bytes == 8 || transfer->actual_num_bytes == 16) {
         uint8_t *const p = transfer->data_buffer;
         decode_report(p);
-      }
-      else {
+      } else if (transfer->actual_num_bytes == 10) {
+        uint8_t *const p = transfer->data_buffer;
+        decode_report(p+1);
+      } else {
           printf("Keyboard boot hid transfer (%d bytes) too short or long\n",
                  transfer->actual_num_bytes);
       }

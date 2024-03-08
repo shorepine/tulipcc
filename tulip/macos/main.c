@@ -92,6 +92,8 @@ extern int unix_display_draw();
 extern void unix_display_init();
 
 
+
+
 void display_print_strn(void *env, const char *str, size_t len) {
     (void)env;
     if(len) {
@@ -543,9 +545,11 @@ int main(int argc, char **argv) {
 }
 */
 
+extern void setup_lvgl();
 
 MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
-#if MICROPY_PY_THREAD
+
+    #if MICROPY_PY_THREAD
     mp_thread_init();
     #endif
     // We should capture stack top ASAP after start, and it should be
@@ -617,6 +621,9 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     #else
     (void)emit_opt;
     #endif
+
+    setup_lvgl();
+
     
     #if MICROPY_VFS_POSIX
     {

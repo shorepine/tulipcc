@@ -1045,9 +1045,11 @@ void lvgl_input_kb_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
 
 void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
     if(touch_held) {
-        data->point.x = last_touch_x[0];
-        data->point.y = last_touch_y[0];
-        data->state = LV_INDEV_STATE_PRESSED;
+        if(last_touch_x[0] >= 0 && last_touch_x[0] < H_RES && last_touch_y[0] >= 0 && last_touch_y[0] < V_RES) {
+            data->point.x = last_touch_x[0];
+            data->point.y = last_touch_y[0];
+            data->state = LV_INDEV_STATE_PRESSED;
+        }
     } else {
         data->state = LV_INDEV_STATE_RELEASED;
     }
@@ -1056,8 +1058,8 @@ void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
 
 // return 1 if we're focused on something the keyboard is sending characters to (e.g. don't send keys to repl)
 uint8_t lvgl_focused() {
-    if(lv_group_get_focused(lvgl_kb_group) == lvgl_repl_screen) return 0;
-    return 1;
+    //if(lv_group_get_focused(lvgl_kb_group) == lvgl_repl_screen) return 0;
+    return 0;
 }
 
 // return 1 if we should eat tabs (if there's a single control on the screen that responds to keypresses)
@@ -1066,9 +1068,18 @@ uint8_t tab_eater() {
     return 0;
 }
 
+void my_log_cb(lv_log_level_t level, const char * buf)
+{
+    fprintf(stderr, "%s\n", buf);
+}
+
+
 void setup_lvgl() {
     // Setup LVGL for UI etc
+
     lv_init();
+
+    //lv_log_register_print_cb(my_log_cb);
     lv_display_t * lv_display = lv_display_create(H_RES, V_RES);
     lv_display_set_antialiasing(lv_display, 0);
     lv_display_set_flush_cb(lv_display, lv_flush_cb);
@@ -1076,9 +1087,9 @@ void setup_lvgl() {
     lv_tick_set_cb(u32_ticks_ms);
 
     // Set LVGL bg to tulip teal
-    lvgl_repl_screen = lv_obj_create(NULL);
-    lv_screen_load(lvgl_repl_screen);
-    lv_obj_set_style_bg_color(lvgl_repl_screen, lv_color_hex(0x004040), LV_PART_MAIN);
+    //lvgl_repl_screen = lv_obj_create(NULL);
+    //lv_screen_load(lvgl_repl_screen);
+    //lv_obj_set_style_bg_color(lvgl_repl_screen, lv_color_hex(0x004040), LV_PART_MAIN);
     
 
     // Create a input device (uses tulip.touch())
@@ -1093,7 +1104,7 @@ void setup_lvgl() {
 
     // Put the screen as a group for the KB responder. You can pull this out with group_by_index later
     lvgl_kb_group = lv_group_create();
-    lv_group_add_obj(lvgl_kb_group,lv_screen_active());
+    //lv_group_add_obj(lvgl_kb_group,lv_screen_active());
     lv_indev_set_group(indev_kb, lvgl_kb_group);
 }
 
@@ -1152,7 +1163,7 @@ void display_init(void) {
     display_reset_sprites();
     display_reset_touch();
 
-    setup_lvgl();
+    //setup_lvgl();
 
 
     vsync_count = 1;

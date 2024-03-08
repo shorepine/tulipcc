@@ -411,9 +411,15 @@ def reload(module):
 # runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
 # TODO - pass args
 def run(module):
-    import gc, sys
+    import gc, sys, time
     before_run = sys.modules.copy()
     before_run_pwd = pwd()
+
+    tfb_stop()
+    screen = tulip.UIScreen(bg_color=0)
+    screen.present()
+    time.sleep(0.1) # wait a frame for lvgl to draw
+
     try:
         cd(module)
     except OSError:
@@ -435,7 +441,8 @@ def run(module):
 
     gc.collect()
     cd(before_run_pwd)
-
+    screen.quit()
+    tfb_start()
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests

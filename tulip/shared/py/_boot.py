@@ -60,5 +60,5 @@ except ImportError:
 gc.collect()
 
 # Don't boot the launcher on T-Deck
-if(tulip.board()!='TDECK'):
-    tulip.launcher()
+#if(tulip.board()!='TDECK'):
+#    tulip.launcher()

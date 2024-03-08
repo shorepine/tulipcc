@@ -100,14 +100,14 @@ CFLAGS += -DTULIP_DESKTOP
 CFLAGS += $(ARCHFLAGS) 
 # Debugging/Optimization
 ifdef DEBUG
-COPT ?= -Og
+#COPT ?= -Og
 else
-COPT ?= -Os
+#COPT ?= -Os
 COPT += -DNDEBUG
 endif
 
 # Remove unused sections.
-COPT += -fdata-sections -ffunction-sections
+COPT += -fdata-sections -ffunction-sections -O0
 
 # Always enable symbols -- They're occasionally useful, and don't make it into the
 # final .bin/.hex/.dfu so the extra size doesn't matter.

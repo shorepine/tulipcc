@@ -43,12 +43,13 @@ class UIScreen():
     default_offset_y = 100
 
     # Class vars we use to keep the screen around
-    def __init__(self, change_callback=None, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
+    #def __init__(self, change_callback=None, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
+    def __init__(self, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
         self.group = lv.obj() # a screen, really
         self.bg_color = bg_color
         self.offset_x = offset_x
         self.offset_y = offset_y
-        self.change_callback = change_callback
+        #self.change_callback = change_callback
         self.last_screen = lv_scr
         self.last_obj_added = None
         self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
@@ -61,7 +62,7 @@ class UIScreen():
 
         if(type(obj) != list): obj = [obj]
         for o in obj:
-            o.update_callbacks(self.change_callback)
+            #o.update_callbacks(self.change_callback)
             o.group.set_parent(self.group)
             o.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
             o.group.set_height(lv.SIZE_CONTENT)
@@ -89,6 +90,8 @@ class UIScreen():
             self.group.get_child(0).delete()
         self.last_obj_added = None
 
+    def quit(self):
+        self.remove_items()
 
 # A base class for our UI elements -- will also move this into Tulip
 class UIElement():
@@ -96,13 +99,14 @@ class UIElement():
     temp_screen = lv.obj()
 
     def __init__(self):
-        self.change_callback = None
+        #self.change_callback = None
         self.group = lv.obj(UIElement.temp_screen)
         # Hot tip - set this to 1 if you're debugging why elements are not aligning like you think they should
         self.group.set_style_border_width(0, lv.PART.MAIN)
 
     def update_callbacks(self, cb):
-        self.change_callback = cb
+        pass
+        #self.change_callback = cb
 
 
 # Callback for soft keyboard to send chars to Tulip.
@@ -169,27 +173,28 @@ def launcher_cb(e):
 def launcher():
     global lv_launcher
     if(lv_launcher is not None):
+        #print("Shutting down launcher")
         lv_launcher.delete()
         lv_launcher=None
         return
-
+    #print("starting up launcher")
     lv_launcher = lv.list(lv_scr)
     lv_launcher.set_size(195, 140)
     lv_launcher.set_align(lv.ALIGN.BOTTOM_RIGHT)
     b_close = lv_launcher.add_button(lv.SYMBOL.CLOSE, "Close")
-    b_close.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_close.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_juno = lv_launcher.add_button(lv.SYMBOL.AUDIO, "Juno-6")
-    b_juno.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_juno.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_keyboard = lv_launcher.add_button(lv.SYMBOL.KEYBOARD, "Keyboard")
-    b_keyboard.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_keyboard.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_editor = lv_launcher.add_button(lv.SYMBOL.EDIT, "Editor")
-    b_editor.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_editor.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_wordpad = lv_launcher.add_button(lv.SYMBOL.FILE, "Wordpad")
-    b_wordpad.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_wordpad.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_wifi = lv_launcher.add_button(lv.SYMBOL.WIFI, "Wi-Fi")
-    b_wifi.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_wifi.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_power = lv_launcher.add_button(lv.SYMBOL.POWER,"Reset")
-    b_power.add_event_cb(launcher_cb, lv.EVENT.ALL, None)
+    b_power.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
 
 
 

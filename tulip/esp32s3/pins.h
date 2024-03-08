@@ -13,7 +13,7 @@
 #define TDECK_LCD_PIXEL_CLOCK_HZ (80 * 1000 * 1000)
 #define TDECK_SPI_HOST_ID SPI2_HOST
 #define BK_LIGHT_ON_LEVEL  1
-#define DEFAULT_BRIGHTNESS 5 // 9 is max, 1 is min
+#define DEFAULT_BRIGHTNESS 9 // 9 is max, 1 is min
 #define BK_LIGHT_OFF_LEVEL !BK_LIGHT_ON_LEVEL
 #define TDECK_POWERON       10
 #define TDECK_I2C_SDA       18
@@ -41,6 +41,7 @@
 #define TOUCH_RST 38
 #define I2C_NUM I2C_NUM_0
 #define I2C_CLK_FREQ 400000
+#define DEFAULT_BRIGHTNESS 9 // 9 is max, 1 is min
 #elif defined TULIP_DIY
 #define I2C_SCL                     17
 #define I2C_SDA                     18
@@ -69,7 +70,9 @@
 
 
 #define BK_LIGHT_ON_LEVEL  1
-#define DEFAULT_BRIGHTNESS 5 // 9 is max, 1 is min
+#ifndef DEFAULT_BRIGHTNESS
+#define DEFAULT_BRIGHTNESS 9 // 9 is max, 1 is min
+#endif
 #define BK_LIGHT_OFF_LEVEL !BK_LIGHT_ON_LEVEL
 
 #ifdef TULIP_DIY
@@ -145,23 +148,32 @@
 #define CONFIG_I2S_BCLK 12 //20 
 #define CONFIG_I2S_DIN 11 //19
 #define CONFIG_I2S_NUM 0 
+#define MIDI_OUT_PIN UART_PIN_NO_CHANGE
+#define MIDI_IN_PIN UART_PIN_NO_CHANGE
 #elif defined TULIP4_R10
 #define ESP_INTR_FLAG_DEFAULT 0
 #define CONFIG_I2S_LRCLK 2
-#define CONFIG_I2S_BCLK 8
-#define CONFIG_I2S_DIN 5
+#define CONFIG_I2S_BCLK 8 // 20//8
+#define CONFIG_I2S_DIN 5 // 19//5
 #define CONFIG_I2S_NUM 0 
+#define MIDI_OUT_PIN 11
+#define MIDI_IN_PIN 12
 #elif defined TDECK
 #define ESP_INTR_FLAG_DEFAULT 0
 #define CONFIG_I2S_LRCLK 5
 #define CONFIG_I2S_BCLK 7
 #define CONFIG_I2S_DIN 6
-#define CONFIG_I2S_NUM 0 
+#define CONFIG_I2S_NUM 0
+#define MIDI_OUT_PIN UART_PIN_NO_CHANGE
+#define MIDI_IN_PIN UART_PIN_NO_CHANGE 
 #elif defined TULIP_DIY
 #define ESP_INTR_FLAG_DEFAULT 0
 #define CONFIG_I2S_LRCLK 4
 #define CONFIG_I2S_BCLK 1
 #define CONFIG_I2S_DIN 2
 #define CONFIG_I2S_NUM 0 
+#define MIDI_OUT_PIN 11
+#define MIDI_IN_PIN 47
+
 #endif
 
