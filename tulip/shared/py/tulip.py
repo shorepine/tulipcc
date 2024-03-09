@@ -6,8 +6,6 @@ from _tulip import *
 from world import world
 from upysh import cd, pwd
 import alles
-
-
 # convert tulip RGB332 pal_idx to 3 rgb 0-255 values
 def rgb(px0, wide=False):
     r = px0 & 0xe0;
@@ -22,7 +20,13 @@ def rgb(px0, wide=False):
         if(b & 0b01000000): b = b | 0b00111111
     return (r,g,b)
 
+
 from ui import *
+
+repl_screen = tulip.UIScreen(bg_color=9, is_repl=True)
+repl_screen.present()
+running_apps = {"repl":repl_screen}
+
 
 # A class for making a game. Clears and sets up the screen for a game
 class Game():
@@ -409,39 +413,45 @@ def reload(module):
 
 
 # runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
-# TODO - pass args
-def run(module):
+def run(module_string):
     import gc, sys, time
     before_run = sys.modules.copy()
     before_run_pwd = pwd()
 
     tfb_stop()
+
+    # Make the app screen
     screen = tulip.UIScreen(bg_color=0)
-    screen.present()
-    time.sleep(0.1) # wait a frame for lvgl to draw
 
     try:
-        cd(module)
+        cd(module_string)
     except OSError:
         cd(root_dir()+"sys/app")
-        cd(module)
+        cd(module_string)
 
     try:
-        exec('import %s' % (module))
+        # Import the app module and call module.run(screen)
+        exec('import %s' % (module_string))
+        actual_module = sys.modules[module_string]
+        actual_module.run(screen)
+        running_apps[module_string] = screen
+
     except KeyboardInterrupt:
         pass
     except Exception as e:
-        print("Error running %s:"% (module))
+        print("Error running %s:"% (module_string))
         sys.print_exception(e)
         pass
 
+    # We're done. Clean up
     for imported_module in sys.modules.keys():
         if imported_module not in before_run:
             exec('del sys.modules["%s"]' % (imported_module))
 
+    del running_apps[module_string]
     gc.collect()
     cd(before_run_pwd)
-    screen.quit()
+    repl_screen.present()
     tfb_start()
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):

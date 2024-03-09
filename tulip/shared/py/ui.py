@@ -37,14 +37,13 @@ def lv_depad(obj):
 # The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
 class UIScreen():
     # Constants you can change
-    default_bg_color = 73
+    default_bg_color = 0
     # Start drawing at this position, a little to the right of the edge and 100px down
     default_offset_x = 10
     default_offset_y = 100
 
     # Class vars we use to keep the screen around
-    #def __init__(self, change_callback=None, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
-    def __init__(self, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
+    def __init__(self, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, is_repl=False):
         self.group = lv.obj() # a screen, really
         self.bg_color = bg_color
         self.offset_x = offset_x
@@ -53,6 +52,29 @@ class UIScreen():
         self.last_screen = lv_scr
         self.last_obj_added = None
         self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
+
+        # The REPL is special. Can't quit it 
+        self.is_repl = is_repl
+        self.running = True # is this code running 
+        self.active = False # is it showing on screen 
+
+        if(not self.is_repl):
+            quit_button = lv.button(self.group)
+            quit_button.set_style_bg_color(pal_to_lv(128), lv.PART.MAIN)
+            quit_label = lv.label(quit_button)
+            quit_label.set_text("Close")
+            quit_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+            quit_button.align_to(self.group, lv.ALIGN.TOP_RIGHT,0,0)
+            quit_button.add_event_cb(self.quit_callback, lv.EVENT.CLICKED, None)
+
+    def set_bg_color(self, bg_color):
+        self.bg_color = bg_color
+        self.group.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
+
+    def quit_callback(self, e):
+        self.running = False
+        self.active = False
+        self.remove_items()
 
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
@@ -76,6 +98,7 @@ class UIScreen():
 
     # Show the UI on the screen
     def present(self):
+        self.active = True
         lv.screen_load(self.group)
 
     # Keep everything around, but load the repl screen
@@ -90,8 +113,6 @@ class UIScreen():
             self.group.get_child(0).delete()
         self.last_obj_added = None
 
-    def quit(self):
-        self.remove_items()
 
 # A base class for our UI elements -- will also move this into Tulip
 class UIElement():
