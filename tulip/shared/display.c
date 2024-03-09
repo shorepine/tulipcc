@@ -1076,7 +1076,6 @@ void my_log_cb(lv_log_level_t level, const char * buf)
 
 void setup_lvgl() {
     // Setup LVGL for UI etc
-
     lv_init();
 
     //lv_log_register_print_cb(my_log_cb);
@@ -1086,6 +1085,7 @@ void setup_lvgl() {
     lv_display_set_buffers(lv_display, lv_buf, NULL, H_RES*V_RES*2/10, LV_DISPLAY_RENDER_MODE_PARTIAL);
     lv_tick_set_cb(u32_ticks_ms);
 
+    // Let's do this in python instead
     // Set LVGL bg to tulip teal
     //lvgl_repl_screen = lv_obj_create(NULL);
     //lv_screen_load(lvgl_repl_screen);
@@ -1162,9 +1162,6 @@ void display_init(void) {
     display_reset_tfb();
     display_reset_sprites();
     display_reset_touch();
-
-    //setup_lvgl();
-
 
     vsync_count = 1;
     reported_fps = 30;

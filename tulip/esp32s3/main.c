@@ -231,7 +231,7 @@ int vprintf_null(const char *format, va_list ap) {
     return 0;
 }
 
-
+extern void setup_lvgl();
 
 void mp_task(void *pvParameter) {
     volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
@@ -267,6 +267,8 @@ soft_reset:
     mp_init();
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
     readline_init0();
+
+    setup_lvgl();
 
     MP_STATE_PORT(native_code_pointers) = MP_OBJ_NULL;
 
