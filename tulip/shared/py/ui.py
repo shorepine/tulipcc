@@ -18,6 +18,10 @@ lv_default_font = lv.font_montserrat_12
 # For our convenience functions, Can be overriden
 tulip.ui_callback = None
 
+running_apps = {}
+current_app_string = "repl"
+
+
 # Convert tulip rgb332 pal idx into lv color
 def pal_to_lv(pal):
     (r,g,b) = tulip.rgb(pal, wide=True) # todo -- not sure if we use wide or not
@@ -42,39 +46,67 @@ class UIScreen():
     default_offset_x = 10
     default_offset_y = 100
 
-    # Class vars we use to keep the screen around
-    def __init__(self, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, is_repl=False):
+    def __init__(self, name, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
         self.group = lv.obj() # a screen, really
         self.bg_color = bg_color
         self.offset_x = offset_x
         self.offset_y = offset_y
-        #self.change_callback = change_callback
         self.last_screen = lv_scr
         self.last_obj_added = None
         self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
-
-        # The REPL is special. Can't quit it 
-        self.is_repl = is_repl
+        self.name = name
+        self.alttab_button = None
+        self.quit_button = None
         self.running = True # is this code running 
         self.active = False # is it showing on screen 
+        running_apps[self.name] = self
 
-        if(not self.is_repl):
-            quit_button = lv.button(self.group)
-            quit_button.set_style_bg_color(pal_to_lv(128), lv.PART.MAIN)
-            quit_label = lv.label(quit_button)
-            quit_label.set_text("Close")
-            quit_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
-            quit_button.align_to(self.group, lv.ALIGN.TOP_RIGHT,0,0)
-            quit_button.add_event_cb(self.quit_callback, lv.EVENT.CLICKED, None)
+    def draw_task_bar(self):
+        # draw whatever all screens share
+        if(self.alttab_button is None):
+            if( len(running_apps)>1):
+                self.alttab_button = lv.button(self.group)
+                self.alttab_button.set_style_bg_color(pal_to_lv(11), lv.PART.MAIN)
+                alttab_label = lv.label(self.alttab_button)
+                alttab_label.set_text("Alt-Tab")
+                alttab_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+                self.alttab_button.align_to(self.group, lv.ALIGN.TOP_RIGHT,0,0)
+                self.alttab_button.add_event_cb(self.alttab_callback, lv.EVENT.CLICKED, None)
+        else:
+            if(len(running_apps) == 1):
+                self.alttab_button.delete()
+                self.alttab_button = None
+
+        if(self.quit_button is None):
+            if(self.name != "repl"):
+                self.quit_button = lv.button(self.group)
+                self.quit_button.set_style_bg_color(pal_to_lv(128), lv.PART.MAIN)
+                quit_label = lv.label(self.quit_button)
+                quit_label.set_text("Quit")
+                quit_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+                self.quit_button.align_to(self.alttab_button, lv.ALIGN.OUT_LEFT_MID,0,0)
+                self.quit_button.add_event_cb(self.quit_callback, lv.EVENT.CLICKED, None)
+
 
     def set_bg_color(self, bg_color):
         self.bg_color = bg_color
         self.group.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
 
+
+    def alttab_callback(self, e):
+        if(len(running_apps)>1):
+            self.active = False
+            # Find the next app in the list (assuming dict is ordered by insertion, I think it is)
+            apps = list(running_apps.items())
+            for i,app in enumerate(apps):
+                if(self.name == app[0]):
+                    apps[(i + 1) % len(running_apps)][1].present()
+
     def quit_callback(self, e):
         self.running = False
         self.active = False
         self.remove_items()
+
 
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
@@ -98,8 +130,14 @@ class UIScreen():
 
     # Show the UI on the screen
     def present(self):
+        current_app_string = self.name
         self.active = True
+        self.draw_task_bar()
         lv.screen_load(self.group)
+        if(self.name == 'repl'):
+            tulip.tfb_start()
+        else:
+            tulip.tfb_stop()
 
     # Keep everything around, but load the repl screen
     def clear(self):
@@ -372,5 +410,7 @@ def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_co
 
 
 
+repl_screen = UIScreen("repl", bg_color=9)
+repl_screen.present()
 
 

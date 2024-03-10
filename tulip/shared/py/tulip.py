@@ -20,12 +20,7 @@ def rgb(px0, wide=False):
         if(b & 0b01000000): b = b | 0b00111111
     return (r,g,b)
 
-
 from ui import *
-
-repl_screen = tulip.UIScreen(bg_color=9, is_repl=True)
-repl_screen.present()
-running_apps = {"repl":repl_screen}
 
 
 # A class for making a game. Clears and sets up the screen for a game
@@ -412,6 +407,7 @@ def reload(module):
     exec('import %s' % (thing))
 
 
+
 # runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
 def run(module_string):
     import gc, sys, time
@@ -421,7 +417,7 @@ def run(module_string):
     tfb_stop()
 
     # Make the app screen
-    screen = tulip.UIScreen(bg_color=0)
+    screen = tulip.UIScreen(module_string, bg_color=0)
 
     try:
         cd(module_string)
@@ -434,25 +430,22 @@ def run(module_string):
         exec('import %s' % (module_string))
         actual_module = sys.modules[module_string]
         actual_module.run(screen)
-        running_apps[module_string] = screen
 
     except KeyboardInterrupt:
         pass
     except Exception as e:
         print("Error running %s:"% (module_string))
         sys.print_exception(e)
-        pass
 
     # We're done. Clean up
+    del running_apps[module_string]
     for imported_module in sys.modules.keys():
         if imported_module not in before_run:
             exec('del sys.modules["%s"]' % (imported_module))
 
-    del running_apps[module_string]
     gc.collect()
     cd(before_run_pwd)
     repl_screen.present()
-    tfb_start()
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests
