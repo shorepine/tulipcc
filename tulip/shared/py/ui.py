@@ -59,6 +59,7 @@ class UIScreen():
         self.quit_button = None
         self.running = True # is this code running 
         self.active = False # is it showing on screen 
+        self.imported_modules = []
         running_apps[self.name] = self
 
     def draw_task_bar(self):
@@ -103,9 +104,17 @@ class UIScreen():
                     apps[(i + 1) % len(running_apps)][1].present()
 
     def quit_callback(self, e):
+        import gc
         self.running = False
         self.active = False
         self.remove_items()
+        del running_apps[self.name]
+        # Delete the modules we imported
+        for m in self.imported_modules:
+            exec('del sys.modules["%s"]' % (m))
+        gc.collect()
+        repl_screen.present()
+
 
 
     # add an obj (or list of obj) to the screen, aligning by the last one added,

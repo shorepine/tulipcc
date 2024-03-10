@@ -376,6 +376,23 @@ def upgrade():
         time.sleep(5)
         machine.reset()
 
+# Return Tulip CC r10 battery voltage in V
+# This is read from a voltage divider on VBAT into an ADC.
+# It's not incredibly accurate, but good enough for a "four-bar" battery indicator 
+# Things should turn off around 3.1V 
+def battery(n=5):
+    if(board()=='TULIP4_R10'):
+        import time
+        from machine import Pin, ADC
+        pot = ADC(Pin(3))
+        pot.atten(ADC.ATTN_11DB)
+        x = 0
+        for i in range(n):
+            x = x + pot.read_uv()
+            time.sleep(0.1)
+        x = ((x / (float(n))) * 2.0) / 1000000.0
+        return x
+    return 0
 
 # scans the keyboard. lets you use either
 # Z = B, X = A, A = Y, S = X, enter = START, ' = SELECT, Q = L1, W = R1, arrows = DPAD
@@ -410,42 +427,41 @@ def reload(module):
 
 # runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
 def run(module_string):
-    import gc, sys, time
+    import sys
     before_run = sys.modules.copy()
     before_run_pwd = pwd()
-
-    tfb_stop()
 
     # Make the app screen
     screen = tulip.UIScreen(module_string, bg_color=0)
 
+    # cd into the module (or find it in sys/app)
     try:
         cd(module_string)
     except OSError:
         cd(root_dir()+"sys/app")
         cd(module_string)
 
+
+    # Run it 
     try:
         # Import the app module and call module.run(screen)
         exec('import %s' % (module_string))
         actual_module = sys.modules[module_string]
         actual_module.run(screen)
 
-    except KeyboardInterrupt:
-        pass
+        # Save the modules we imported so we can delete them on quit. This saves RAM on MP
+        for imported_module in sys.modules.keys():
+            if imported_module not in before_run:
+                screen.imported_modules.append(imported_module)
+
+        # Go back to where you were
+        cd(before_run_pwd)
+
     except Exception as e:
         print("Error running %s:"% (module_string))
         sys.print_exception(e)
-
-    # We're done. Clean up
-    del running_apps[module_string]
-    for imported_module in sys.modules.keys():
-        if imported_module not in before_run:
-            exec('del sys.modules["%s"]' % (imported_module))
-
-    gc.collect()
-    cd(before_run_pwd)
-    repl_screen.present()
+        # Clean up the screen
+        screen.quit_callback(None)
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests

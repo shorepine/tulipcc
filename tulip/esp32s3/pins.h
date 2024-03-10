@@ -105,7 +105,7 @@
 #define PIN_NUM_VSYNC          41
 #define PIN_NUM_DE             40
 #define PIN_NUM_PCLK           42 
-#define PIN_NUM_BK_PWM         10
+#define PIN_NUM_BK_PWM         47
 #define PIN_NUM_DATA0          9 //  B6, 14
 #define PIN_NUM_DATA1          1 //  B7, 13
 #define PIN_NUM_DATA2          15  // G5, 23
