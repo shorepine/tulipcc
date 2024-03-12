@@ -114,35 +114,56 @@ void run_esp32s3_display(void) {
     panel_config.hsync_gpio_num = PIN_NUM_HSYNC;
     panel_config.de_gpio_num = PIN_NUM_DE;
 
-    panel_config.data_gpio_nums[0] = PIN_NUM_DATA0;
-    panel_config.data_gpio_nums[1] = PIN_NUM_DATA1;
-    panel_config.data_gpio_nums[2] = PIN_NUM_DATA2;
-    panel_config.data_gpio_nums[3] = PIN_NUM_DATA3;
-    panel_config.data_gpio_nums[4] = PIN_NUM_DATA4;
-    panel_config.data_gpio_nums[5] = PIN_NUM_DATA5;
-    panel_config.data_gpio_nums[6] = PIN_NUM_DATA6;
-    panel_config.data_gpio_nums[7] = PIN_NUM_DATA7;
+    panel_config.data_gpio_nums[0] = PIN_B6;
+    panel_config.data_gpio_nums[1] = PIN_B7;
+    panel_config.data_gpio_nums[2] = PIN_G5;
+    panel_config.data_gpio_nums[3] = PIN_G6;
+    panel_config.data_gpio_nums[4] = PIN_G7;
+    panel_config.data_gpio_nums[5] = PIN_R5;
+    panel_config.data_gpio_nums[6] = PIN_R6;
+    panel_config.data_gpio_nums[7] = PIN_R7;
     // Even though we'll only use 8 pins for RGB332 we keep the others to set them low
-    panel_config.data_gpio_nums[8] = PIN_NUM_DATA8;
-    panel_config.data_gpio_nums[9] = PIN_NUM_DATA9;
-    panel_config.data_gpio_nums[10] = PIN_NUM_DATA10;
-    panel_config.data_gpio_nums[11] = PIN_NUM_DATA11;
-    panel_config.data_gpio_nums[12] = PIN_NUM_DATA12;
-    panel_config.data_gpio_nums[13] = PIN_NUM_DATA13;
-    panel_config.data_gpio_nums[14] = PIN_NUM_DATA14;
-    panel_config.data_gpio_nums[15] = PIN_NUM_DATA15;
+    panel_config.data_gpio_nums[8] = PIN_B3;
+    panel_config.data_gpio_nums[9] = PIN_B4;
+    panel_config.data_gpio_nums[10] = PIN_B5;
+    panel_config.data_gpio_nums[11] = PIN_G2;
+    panel_config.data_gpio_nums[12] = PIN_G3;
+    panel_config.data_gpio_nums[13] = PIN_G4;
+    panel_config.data_gpio_nums[14] = PIN_R3;
+    panel_config.data_gpio_nums[15] = PIN_R4;
 
-    #ifdef MAKERFABS
-    // Set lower 8 bits to low
-    set_pin(PIN_NUM_DATA8, 0);
-    set_pin(PIN_NUM_DATA9, 0);
-    set_pin(PIN_NUM_DATA10, 0);
-    set_pin(PIN_NUM_DATA11, 0);
-    set_pin(PIN_NUM_DATA12, 0);
-    set_pin(PIN_NUM_DATA13, 0);
-    set_pin(PIN_NUM_DATA14, 0);
-    set_pin(PIN_NUM_DATA15, 0);
+    // Set all lower 8 pins off for MATOUCH and DIY
+    #if defined (MATOUCH7) || defined (TULIP_DIY)
+    set_pin(PIN_B3, 0);
+    set_pin(PIN_B4, 0);
+    set_pin(PIN_B5, 0);
+    set_pin(PIN_G2, 0);
+    set_pin(PIN_G3, 0);
+    set_pin(PIN_G4, 0);
+    set_pin(PIN_R3, 0);
+    set_pin(PIN_R4, 0);
     #endif
+
+    // Set all but B4 off for R10 (touch rst is using B4 now)
+    #ifdef TULIP4_R10_V0
+    set_pin(PIN_B3, 0);
+    set_pin(PIN_B5, 0);
+    set_pin(PIN_G2, 0);
+    set_pin(PIN_G3, 0);
+    set_pin(PIN_G4, 0);
+    set_pin(PIN_R3, 0);
+    set_pin(PIN_R4, 0);
+    #endif    
+
+    // Set all but G2 and B3 and B4 off for R10 (i2s and touch rst are using G2, B3 and B4)
+    #ifdef TULIP4_R10
+    set_pin(PIN_B5, 0);
+    set_pin(PIN_G3, 0);
+    set_pin(PIN_G4, 0);
+    set_pin(PIN_R3, 0);
+    set_pin(PIN_R4, 0);
+    #endif
+
 
     panel_config.timings.pclk_hz = PIXEL_CLOCK_MHZ*1000*1000;
     panel_config.timings.h_res = H_RES;

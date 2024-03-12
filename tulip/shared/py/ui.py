@@ -145,7 +145,9 @@ class UIScreen():
         lv.screen_load(self.group)
         if(self.name == 'repl'):
             tulip.tfb_start()
+            tulip.set_screen_as_repl(1)
         else:
+            tulip.set_screen_as_repl(0)
             tulip.tfb_stop()
 
     # Keep everything around, but load the repl screen
@@ -421,5 +423,4 @@ def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_co
 
 repl_screen = UIScreen("repl", bg_color=9)
 repl_screen.present()
-
 

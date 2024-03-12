@@ -390,11 +390,13 @@ void app_main(void) {
     delay_ms(100);
     #endif
 
+    #ifndef TULIP4_R10_V0 // v0 doesn't do usb
     #ifndef TDECK // TDECK doesn't send power to USB
     fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
     xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
+    #endif
     #endif
 
     fprintf(stderr,"Starting display on core %d\n", DISPLAY_TASK_COREID);
