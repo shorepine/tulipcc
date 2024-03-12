@@ -43,7 +43,11 @@ void touch_init(void)
         .rst_gpio_num = TOUCH_RST,
         .int_gpio_num = TOUCH_INT,
         .levels = {
+            #ifdef TDECK
             .reset = 1,
+            #else
+            .reset = 0,
+            #endif
             .interrupt = 0,
         },
         .flags = {

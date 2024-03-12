@@ -122,6 +122,7 @@ void run_esp32s3_display(void) {
     panel_config.data_gpio_nums[5] = PIN_R5;
     panel_config.data_gpio_nums[6] = PIN_R6;
     panel_config.data_gpio_nums[7] = PIN_R7;
+    
     // Even though we'll only use 8 pins for RGB332 we keep the others to set them low
     panel_config.data_gpio_nums[8] = PIN_B3;
     panel_config.data_gpio_nums[9] = PIN_B4;
@@ -132,8 +133,8 @@ void run_esp32s3_display(void) {
     panel_config.data_gpio_nums[14] = PIN_R3;
     panel_config.data_gpio_nums[15] = PIN_R4;
 
-    // Set all lower 8 pins off for MATOUCH and DIY
-    #if defined (MATOUCH7) || defined (TULIP_DIY)
+    // Set all lower 8 pins off for MATOUCH and DIY and first rev R10
+    #if defined (MATOUCH7) || defined (TULIP_DIY) || defined(TULIP4_R10_V0)
     set_pin(PIN_B3, 0);
     set_pin(PIN_B4, 0);
     set_pin(PIN_B5, 0);
@@ -144,19 +145,9 @@ void run_esp32s3_display(void) {
     set_pin(PIN_R4, 0);
     #endif
 
-    // Set all but B4 off for R10 (touch rst is using B4 now)
-    #ifdef TULIP4_R10_V0
-    set_pin(PIN_B3, 0);
-    set_pin(PIN_B5, 0);
-    set_pin(PIN_G2, 0);
-    set_pin(PIN_G3, 0);
-    set_pin(PIN_G4, 0);
-    set_pin(PIN_R3, 0);
-    set_pin(PIN_R4, 0);
-    #endif    
-
-    // Set all but G2 and B3 and B4 off for R10 (i2s and touch rst are using G2, B3 and B4)
+    // Set all but G2 and B3 off for R10 (i2s using G2, B3)
     #ifdef TULIP4_R10
+    set_pin(PIN_B4, 0);
     set_pin(PIN_B5, 0);
     set_pin(PIN_G3, 0);
     set_pin(PIN_G4, 0);

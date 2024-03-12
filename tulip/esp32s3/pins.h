@@ -96,7 +96,7 @@
 #define MIDI_IN_PIN UART_PIN_NO_CHANGE
 
 #elif defined TULIP4_R10
-#define TOUCH_RST 38 // says 48??
+#define TOUCH_RST 48 
 #define PIN_NUM_BK_PWM 47
 #define PIN_R7 14
 #define PIN_R6 21
@@ -112,7 +112,7 @@
 #define PIN_B7 1
 #define PIN_B6 9
 #define PIN_B5 46
-#define PIN_B4 -1 // unclear?? 
+#define PIN_B4 38  
 #define PIN_B3 -1 
 #define ESP_INTR_FLAG_DEFAULT 0
 #define CONFIG_I2S_LRCLK 2
@@ -123,7 +123,7 @@
 #define MIDI_IN_PIN 12
 
 #elif defined TULIP4_R10_V0
-#define TOUCH_RST 38
+#define TOUCH_RST 48
 #define PIN_NUM_BK_PWM 47
 #define PIN_R7 14
 #define PIN_R6 21
@@ -139,7 +139,7 @@
 #define PIN_B7 1
 #define PIN_B6 9
 #define PIN_B5 46
-#define PIN_B4 -1
+#define PIN_B4 38
 #define PIN_B3 8
 #define ESP_INTR_FLAG_DEFAULT 0
 #define CONFIG_I2S_LRCLK 2
