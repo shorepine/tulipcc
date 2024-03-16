@@ -47,7 +47,7 @@ void unix_display_init();
 static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
 
 
-void sdl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
+void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 {
     (void) indev_drv;      /*Unused*/
 

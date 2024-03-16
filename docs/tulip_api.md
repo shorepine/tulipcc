@@ -132,9 +132,9 @@ import lvgl as lv
 calendar = lv.calendar(tulip.lv_scr)
 calendar.set_pos(500,100)
 
-# Note that any LVGL object you want to receive keyboard events (tabbing, text entry)
-# should be added to the Tulip-wide keyboard responder group. 
-tulip.lv_kb_group.add_obj(lvgl_obj_i_created)
+# UISScreen howto here
+
+
 
 # For simplicity, we include a few convenience wrappers around LVGL. They can take ui_id tags to view later in callbacks:
 def my_ui_cb(obj, code, ui_id):

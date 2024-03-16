@@ -413,7 +413,7 @@ uint32_t keycode_to_ctrl_key(uint16_t key)
 static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
 
 
-void usb_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data) {
+void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data) {
     (void) indev_drv;     // unused
 
     static bool dummy_read = false;

@@ -1,6 +1,6 @@
 # juno6.py
 # A more pure-LVGL (using Tulip's UIScreen) UI for Juno-6
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, tfb_stop, lv_kb_group, midi_in, midi_callback
+from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, tfb_stop, midi_in, midi_callback
 import time, gc
 
 
@@ -87,7 +87,6 @@ class JunoButtons(UIElement):
                 checkbox.set_style_radius(100, lv.PART.INDICATOR)
             checkbox.set_ext_click_area(15)  # make the label count too 
             checkbox.align_to(text, lv.ALIGN.OUT_BOTTOM_MID, 0, 0)
-            lv_kb_group.add_obj(checkbox)
             self.checkboxes.append(checkbox)
             self.state.append(False)
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
@@ -185,7 +184,6 @@ class JunoSlider(UIElement):
         self.slider.set_style_pad_ver(JunoSlider.handle_v_pad, lv.PART.KNOB)
         self.slider.set_style_pad_hor(JunoSlider.handle_h_pad, lv.PART.KNOB)
         self.slider.center()
-        lv_kb_group.add_obj(self.slider)
 
         self.label = lv.label(self.group)
         self.label.set_text('0')
@@ -243,7 +241,6 @@ class JunoControlledLabel(UIElement):
             label = lv.label(button)
             label.set_text(button_label)
             label.center()
-            lv_kb_group.add_obj(button)
             self.buttons.append(button)
         self.label_obj = lv.label(self.group)
         self.set_text(text)

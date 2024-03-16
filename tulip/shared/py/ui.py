@@ -6,10 +6,6 @@ import lvgl as lv
 
 # Since this is called on boot this is guaranteed to grab the repl screen
 lv_scr = lv.screen_active() 
-
-# gets the group that receives keyboard events on the repl
-# you have to add objs to this group for them to receive kbd
-lv_kb_group = lv.group_by_index(0) 
 lv_soft_kb = None
 lv_launcher = None
 
@@ -21,6 +17,18 @@ tulip.ui_callback = None
 running_apps = {}
 current_app_string = "repl"
 
+
+# Returns the keypad indev
+def get_keypad_indev():
+    nobody = lv.indev_t()
+    a = nobody.get_next()
+    if (a.get_type() == lv.INDEV_TYPE.KEYPAD):
+        return a
+    b = a.get_next()
+    if (b.get_type() == lv.INDEV_TYPE.KEYPAD):
+        return b
+    print("Couldn't find indev of type KEYPAD")
+    return None
 
 # Convert tulip rgb332 pal idx into lv color
 def pal_to_lv(pal):
@@ -37,6 +45,10 @@ def lv_depad(obj):
     obj.set_style_margin_right(0,0)
     obj.set_style_margin_top(0,0)
     obj.set_style_margin_bottom(0,0)
+
+def current_uiscreen():
+    return running_apps[current_app_string]
+
 
 # The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
 class UIScreen():
@@ -60,6 +72,8 @@ class UIScreen():
         self.running = True # is this code running 
         self.active = False # is it showing on screen 
         self.imported_modules = []
+        self.kb_group = lv.group_create()
+        self.kb_group.set_default()
         running_apps[self.name] = self
 
     def draw_task_bar(self):
@@ -143,6 +157,7 @@ class UIScreen():
         self.active = True
         self.draw_task_bar()
         lv.screen_load(self.group)
+        get_keypad_indev().set_group(self.kb_group)
         if(self.name == 'repl'):
             tulip.tfb_start()
             tulip.set_screen_as_repl(1)
@@ -398,7 +413,7 @@ def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, b
     if text is not None:
         ta.set_text(text)
     if(one_line): ta.set_one_line(True)
-    tulip.lv_kb_group.add_obj(ta)
+    current_uiscreen().add_to_kb(ta)
     if(ui_id is not None):
         ta.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
     return ta

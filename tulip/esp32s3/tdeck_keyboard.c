@@ -68,7 +68,7 @@ char get_alternative_char(struct KeyMapping mappings[], int size, char original)
 static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
 
 
-void tdeck_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data) {
+void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data) {
     (void) indev_drv;     // unused
 
     static bool dummy_read = false;

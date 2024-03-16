@@ -56,7 +56,6 @@ uint8_t tfb_active = 1;
 uint8_t tfb_log = 0;
 uint8_t gpu_log = 0;
 
-lv_group_t * lvgl_kb_group;
 int16_t lvgl_is_repl = 0;
 
 // lookup table for Tulip's "pallete" to the 16-bit colorspace needed by LVGL and T-deck
@@ -1023,24 +1022,12 @@ void lv_flush_cb(lv_display_t * display, const lv_area_t * area, unsigned char *
 uint32_t u32_ticks_ms() {
     return (uint32_t) get_ticks_ms();
 }
-#ifdef TULIP_DESKTOP
-void sdl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
-#elif defined TDECK
-void tdeck_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
-#else
-void usb_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
-#endif
+
+void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
 
 
-// TODO, find out what key scan / codes they expect you to use here
 void lvgl_input_kb_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
-#ifdef TULIP_DESKTOP
-    sdl_keyboard_read(indev, data);
-#elif defined TDECK
-    tdeck_keyboard_read(indev, data);
-#else
-    usb_keyboard_read(indev, data);
-#endif
+    lvgl_keyboard_read(indev, data);
 }
 
 void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
@@ -1055,17 +1042,6 @@ void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
     }
 }
 
-// TODO - with the new style, how does C know what screen is in Python? 
-// return 1 if we're focused on something the keyboard is sending characters to (e.g. don't send keys to repl)
-uint8_t lvgl_focused() {
-    return(!lvgl_is_repl);
-}
-
-// return 1 if we should eat tabs (if there's a single control on the screen that responds to keypresses)
-uint8_t tab_eater() {
-    if(lv_group_get_obj_count(lvgl_kb_group) > 1) return 1;
-    return 0;
-}
 
 void my_log_cb(lv_log_level_t level, const char * buf)
 {
@@ -1094,10 +1070,6 @@ void setup_lvgl() {
     lv_indev_t *indev_kb = lv_indev_create();
     lv_indev_set_type(indev_kb, LV_INDEV_TYPE_KEYPAD);
     lv_indev_set_read_cb(indev_kb, lvgl_input_kb_read_cb);  
-
-    // Put the screen as a group for the KB responder. You can pull this out with group_by_index later
-    lvgl_kb_group = lv_group_create();
-    lv_indev_set_group(indev_kb, lvgl_kb_group);
 }
 
 

@@ -5,7 +5,6 @@ import tulip, time
 (H_RES,V_RES) = tulip.screen_size()
 
 
-
 def run(screen):
     screen.set_bg_color(255)
     ta = lv.textarea(screen.group)
@@ -16,7 +15,6 @@ def run(screen):
     ta.set_style_text_color(tulip.pal_to_lv(0),0)
     ta.set_style_border_color(tulip.pal_to_lv(0), lv.PART.CURSOR | lv.STATE.FOCUSED)
     ta.set_placeholder_text("Type away...")
-    tulip.lv_kb_group.add_obj(ta)
     lv.group_focus_obj(ta)
     screen.present()
 
