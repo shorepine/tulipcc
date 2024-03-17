@@ -4,6 +4,7 @@
 #include "display.h"
 #include "keyscan.h"
 #include "ui.h"
+#include "lvgl.h"
 SDL_Window *window;
 SDL_Surface *window_surface;
 SDL_Renderer *fixed_fps_renderer;
@@ -38,6 +39,90 @@ void check_key();
 void destroy_window();
 void unix_display_init();
 
+
+// LVGL/SDL connectors for keyboard here
+
+#define KEYBOARD_BUFFER_SIZE SDL_TEXTINPUTEVENT_TEXT_SIZE
+
+static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
+
+
+void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
+{
+    (void) indev_drv;      /*Unused*/
+
+    static bool dummy_read = false;
+    const size_t len = strlen(lvgl_kb_buf);
+
+    /*Send a release manually*/
+    if (dummy_read) {
+        dummy_read = false;
+        data->state = LV_INDEV_STATE_RELEASED;
+        data->continue_reading = len > 0;
+    }
+        /*Send the pressed character*/
+    else if (len > 0) {
+        dummy_read = true;
+        data->state = LV_INDEV_STATE_PRESSED;
+        data->key = lvgl_kb_buf[0];
+        memmove(lvgl_kb_buf, lvgl_kb_buf + 1, len);
+        data->continue_reading = true;
+    }
+}
+
+
+/**
+ * Convert a SDL key code to it's LV_KEY_* counterpart or return '\0' if it's not a control character.
+ * @param sdl_key the key code
+ * @return LV_KEY_* control character or '\0'
+ */
+uint32_t keycode_to_ctrl_key(SDL_Keycode sdl_key)
+{
+    /*Remap some key to LV_KEY_... to manage groups*/
+    
+    SDL_Keymod mode = SDL_GetModState();
+    
+    switch(sdl_key) {
+        case SDLK_RIGHT:
+        case SDLK_KP_PLUS:
+            return LV_KEY_RIGHT;
+
+        case SDLK_LEFT:
+        case SDLK_KP_MINUS:
+            return LV_KEY_LEFT;
+
+        case SDLK_UP:
+            return LV_KEY_UP;
+
+        case SDLK_DOWN:
+            return LV_KEY_DOWN;
+
+        case SDLK_ESCAPE:
+            return LV_KEY_ESC;
+
+        case SDLK_BACKSPACE:
+            return LV_KEY_BACKSPACE;
+
+        case SDLK_DELETE:
+            return LV_KEY_DEL;
+
+        case SDLK_KP_ENTER:
+        case '\r':
+            return LV_KEY_ENTER;
+
+        case SDLK_TAB:
+            return (mode & KMOD_SHIFT)? LV_KEY_PREV: LV_KEY_NEXT;
+            
+        case SDLK_PAGEDOWN:
+            return LV_KEY_NEXT;
+
+        case SDLK_PAGEUP:
+            return LV_KEY_PREV;
+
+        default:
+            return '\0';
+    }
+}
 
 
 void unix_display_set_clock(uint8_t mhz) {  
@@ -120,6 +205,9 @@ int unix_display_draw() {
     check_key();
 
     frame_ticks = get_ticks_ms();
+
+
+
     uint8_t *pixels;
     int pitch;
     SDL_LockTexture(framebuffer, NULL, (void**)&pixels, &pitch);
@@ -215,33 +303,6 @@ void destroy_window() {
     sdl_ready = 0;
 }
 
-uint16_t last_held_joy_mask = 0;
-
-void update_joy(SDL_Event e) {
-    if(e.type == SDL_CONTROLLERBUTTONDOWN || e.type == SDL_CONTROLLERBUTTONUP) {
-        last_held_joy_mask = 0;
-        for(uint8_t b=0;b<SDL_CONTROLLER_BUTTON_MAX;b++) {
-            if(SDL_GameControllerGetButton(gp, b)) {
-                if(b == SDL_CONTROLLER_BUTTON_RIGHTSHOULDER) last_held_joy_mask |= 2;
-                if(b == SDL_CONTROLLER_BUTTON_LEFTSHOULDER) last_held_joy_mask |= 4;
-                if(b == SDL_CONTROLLER_BUTTON_X) last_held_joy_mask |= 8;
-                if(b == SDL_CONTROLLER_BUTTON_A) last_held_joy_mask |= 16;
-                if(b == SDL_CONTROLLER_BUTTON_DPAD_RIGHT) last_held_joy_mask |= 32;
-                if(b == SDL_CONTROLLER_BUTTON_DPAD_LEFT) last_held_joy_mask |= 64;
-                if(b == SDL_CONTROLLER_BUTTON_DPAD_DOWN) last_held_joy_mask |= 128;
-                if(b == SDL_CONTROLLER_BUTTON_DPAD_UP) last_held_joy_mask |= 256;
-                if(b == SDL_CONTROLLER_BUTTON_START) last_held_joy_mask |= 512;
-                if(b == SDL_CONTROLLER_BUTTON_BACK) last_held_joy_mask |= 1024;
-                if(b == SDL_CONTROLLER_BUTTON_Y) last_held_joy_mask |= 2048;
-                if(b == SDL_CONTROLLER_BUTTON_B) last_held_joy_mask |= 4096;
-            }
-        }
-    }    
-}
-
-uint16_t check_joy() {
-    return last_held_joy_mask;
-}
 
 uint8_t store_mod = 0;
 
@@ -267,6 +328,11 @@ void check_key() {
                     }
                 }
             #endif
+           
+            // lvgl stuff
+           const size_t len = strlen(lvgl_kb_buf) + strlen(e.text.text);
+           if (len < KEYBOARD_BUFFER_SIZE - 1)
+                strcat(lvgl_kb_buf, e.text.text);
 
             // In SDL all non ascii stuff only comes in through textinput                    
             uint8_t start = 0;
@@ -276,6 +342,19 @@ void check_key() {
             }
             
         } else if(e.type == SDL_KEYDOWN) {
+            // do LVGL stuff first
+            const uint32_t ctrl_key = keycode_to_ctrl_key(e.key.keysym.sym);
+            if (ctrl_key == '\0') {
+                // do nothing?
+            } else {
+                const size_t len = strlen(lvgl_kb_buf);
+                if (len < KEYBOARD_BUFFER_SIZE - 1) {
+                    lvgl_kb_buf[len] = ctrl_key;
+                    lvgl_kb_buf[len + 1] = '\0';
+                }
+            }
+
+
             last_held_mod = SDL_GetModState();
             SDL_KeyboardEvent key = e.key; 
             if(key.keysym.scancode == 225 || key.keysym.scancode == 229) {
@@ -360,7 +439,6 @@ void check_key() {
             last_touch_y[0] = (int16_t)y-(int16_t)(viewport.y/viewport_scale);
             was_touch = 2;
         }
-        update_joy(e);
     }
     if(was_touch) {
         send_touch_to_micropython(last_touch_x[0], last_touch_y[0], was_touch-1);
@@ -421,10 +499,13 @@ int HandleAppEvents(void *userdata, SDL_Event *event) {
     }
 }
 
+
+
+
 void unix_display_init() {
     // on iOS we need to get the display size before computing display sizes
     if(!sdl_ready) {
-        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0) {
+        if (SDL_Init(SDL_INIT_VIDEO) < 0) {
             fprintf(stderr,"SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         } 
         SDL_SetEventFilter(HandleAppEvents, NULL);
@@ -498,14 +579,10 @@ void unix_display_init() {
 
 
     frame_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
-    gp = SDL_GameControllerOpen(0);
-    if(!gp) {
-        fprintf(stderr, "No gamepad detected. That's ok\n");
-    } else {
-        fprintf(stderr, "Gamepad detected\n");
-    }
-        SDL_StartTextInput();
+    SDL_StartTextInput();
+
 
 
 }
+
+

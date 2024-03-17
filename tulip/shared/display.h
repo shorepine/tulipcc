@@ -10,6 +10,7 @@
 #include "polyfills.h"
 #include "ui.h"
 #include <inttypes.h>
+#include "lvgl.h"
 #define RGB332
 
 #ifdef ESP_PLATFORM
@@ -41,6 +42,7 @@ static const uint8_t ansi_pal[256] = {
 182, 219, 219, 219, 255, 255
 };
 
+
 extern int16_t last_touch_x[3];
 extern int16_t last_touch_y[3];
 extern uint8_t touch_held;
@@ -51,6 +53,7 @@ void display_reset_tfb();
 void display_reset_bg();
 void display_tfb_update(int8_t tfb_row_hint);
 void display_set_clock(uint8_t mhz) ;
+uint8_t lvgl_focused();
 
 void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx);
 void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b);
@@ -82,7 +85,7 @@ void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);
 bool display_frame_done_generic();
 void display_swap();
-
+uint8_t rgb565to332(uint16_t rgb565);
 void display_teardown(void);
 
 uint8_t check_dim_xy(uint16_t x, uint16_t y);
@@ -165,6 +168,7 @@ extern float reported_fps;
 extern float reported_gpu_usage;
 extern uint8_t *collision_bitfield;
 
+extern const uint16_t rgb332_rgb565_i[256];
 // RAM for sprites and background FB
 extern uint8_t *sprite_ids;  // IRAM
 extern uint8_t *sprite_ram; // in IRAM

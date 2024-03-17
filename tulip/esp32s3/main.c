@@ -121,6 +121,7 @@ unsigned long last_task_counters[MAX_TASKS];
 
 
 typedef void (*esp_alloc_failed_hook_t) (size_t size, uint32_t caps, const char * function_name);
+#include "esp_heap_caps.h"
 
 void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
     printf("alloc failed size %d function %s caps: ", size, function_name);
@@ -136,6 +137,21 @@ void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
     printf("\n");
 }
 
+/*
+void esp_heap_trace_alloc_hook(void* ptr, size_t size, uint32_t caps) {
+    fprintf(stderr,"alloc %d bytes ", size);
+    if(caps & MALLOC_CAP_SPIRAM) fprintf(stderr,"spiram ");
+    if(caps & MALLOC_CAP_INTERNAL) fprintf(stderr,"internal ");
+    if(caps & MALLOC_CAP_32BIT) fprintf(stderr,"32bit ");
+    if(caps & MALLOC_CAP_DEFAULT) fprintf(stderr,"default ");
+    if(caps & MALLOC_CAP_IRAM_8BIT) fprintf(stderr,"iram8bit ");
+    if(caps & MALLOC_CAP_RTCRAM) fprintf(stderr,"rtcram ");
+    if(caps & MALLOC_CAP_8BIT) fprintf(stderr,"8bit ");
+    if(caps & MALLOC_CAP_EXEC) fprintf(stderr,"exec ");
+    if(caps & MALLOC_CAP_DMA) fprintf(stderr,"dma ");
+    fprintf(stderr,"\n");
+}
+*/
 
 float compute_cpu_usage(uint8_t debug) {
     TaskStatus_t *pxTaskStatusArray;
@@ -196,6 +212,15 @@ float compute_cpu_usage(uint8_t debug) {
         }   
     }
     vPortFree(pxTaskStatusArray);
+
+    // Also print heap info
+
+    fprintf(stderr, "SPIRAM:\n "); fflush(stderr);
+    heap_caps_print_heap_info(MALLOC_CAP_SPIRAM);
+
+    fprintf(stderr, "INTERNAL:\n "); fflush(stderr);
+    heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
+
     return 100.0 - ((float)freeTime/ulTotalRunTime * 100.0);
 
 }
@@ -206,7 +231,7 @@ int vprintf_null(const char *format, va_list ap) {
     return 0;
 }
 
-
+extern void setup_lvgl();
 
 void mp_task(void *pvParameter) {
     volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
@@ -242,6 +267,8 @@ soft_reset:
     mp_init();
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
     readline_init0();
+
+    setup_lvgl();
 
     MP_STATE_PORT(native_code_pointers) = MP_OBJ_NULL;
 
@@ -337,12 +364,10 @@ extern void run_gt911();
 
 extern void run_midi();
 
-#ifdef TULIP_DIY
-extern void init_esp_joy();
-#endif
 
 #ifdef TDECK
 extern void run_tdeck_keyboard();
+extern void run_gt911();
 #endif
 
 uint8_t * xStack;
@@ -365,15 +390,18 @@ void app_main(void) {
     delay_ms(100);
     #endif
 
+    #ifndef TULIP4_R10_V0 // v0 doesn't do usb
     #ifndef TDECK // TDECK doesn't send power to USB
     fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
     xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
     #endif
+    #endif
 
     fprintf(stderr,"Starting display on core %d\n", DISPLAY_TASK_COREID);
     #ifdef TDECK
+    delay_ms(100);
     xTaskCreatePinnedToCore(run_tdeck_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
     #else
     xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
@@ -388,7 +416,7 @@ void app_main(void) {
     #elif defined MAKERFABS
     xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
     #elif defined TDECK
-    fprintf(stderr, "No touchscreen support on T-Deck yet\n");
+    xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
     #endif
     fflush(stderr);
     delay_ms(100);
@@ -402,7 +430,7 @@ void app_main(void) {
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);
     delay_ms(10);
-    
+
     #ifdef TDECK
     fprintf(stderr,"Starting T-Deck keyboard on core %d\n", USB_TASK_COREID);
     xTaskCreatePinnedToCore(run_tdeck_keyboard, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
@@ -410,12 +438,6 @@ void app_main(void) {
     delay_ms(10);
     #endif
 
-    #ifdef TULIP_DIY    
-    fprintf(stderr,"Starting joystick\n");
-    init_esp_joy();
-    fflush(stderr);
-    delay_ms(100);
-    #endif
 
 
 }

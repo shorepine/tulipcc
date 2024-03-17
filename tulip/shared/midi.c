@@ -100,7 +100,7 @@ void run_midi() {
     // Configure UART parameters
     ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
     // TX, RX, CTS/RTS -- Only care about RX here, pin 47 for now
-    ESP_ERROR_CHECK(uart_set_pin(uart_num, 11, 47, 10, 9));
+    ESP_ERROR_CHECK(uart_set_pin(uart_num, MIDI_OUT_PIN, MIDI_IN_PIN, UART_PIN_NO_CHANGE , UART_PIN_NO_CHANGE ));
 
     const int uart_buffer_size = (1024);
     // Install UART driver using an event queue here

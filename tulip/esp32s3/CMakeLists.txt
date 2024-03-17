@@ -6,6 +6,30 @@ execute_process(COMMAND bash -c "../shared/grab_submodules.sh"
                     WORKING_DIRECTORY ".."
                     OUTPUT_VARIABLE GIT_SUBMOD_RESULT)
 
+# We have to do some nasty stuff to get the LVGL MP submodule compiled
+
+
+# First, we copy over our version of lv_conf.h to the place it's expected to be found
+execute_process(COMMAND bash -c "cp ../../shared/lv_conf.h ../../../lv_binding_micropython/"
+                    WORKING_DIRECTORY "."
+                )
+
+# Then our fonts
+execute_process(COMMAND bash -c "cp ../../shared/lv_fonts/*.c ../../../lv_binding_micropython/lvgl/src/font/"
+                    WORKING_DIRECTORY "."
+                )
+
+# Then we generate a lvgl.pp.c file, which is just the compiler preprocessor running in this env
+execute_process(COMMAND bash -c "xtensa-esp32s3-elf-gcc -E -DLVGL_PREPROCESS -I ../../../lv_binding_micropython/pycparser/utils/fake_libc_include -I../../../lv_binding_micropython -I. -I../../../lv_binding_micropython/lvgl/src ../../../lv_binding_micropython/lvgl/lvgl.h > ../build/lvgl.pp.c"
+                    WORKING_DIRECTORY "."
+                )
+
+# Then we run a python script which generates a MP module for LVGL based on the source files (and your conf and stuff)
+# This gets compiled into Tulip 
+execute_process(COMMAND bash -c "python3 ../../../lv_binding_micropython/gen/gen_mpy.py -M lvgl -MP lv -MD ../build/lv_mpy.json -E ../build/lvgl.pp.c ../../../lv_binding_micropython/lvgl/lvgl.h > ../build/lv_mpy.c"
+                    WORKING_DIRECTORY "."
+                )
+
 # Turn this on for debugging submodules
 #file(WRITE "submod" "${GIT_SUBMOD_RESULT}")
 

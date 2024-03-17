@@ -70,6 +70,14 @@ The main Python script must be the name of the package. This script needs to exp
 
 We put a few system packages in `/sys/app`, and if you `run('app')`, it will look both in your current folder and the `/sys/app` folder for the app. 
 
+**There are two types of apps you can make in Tulip.** One is the default: “modal”; when you import program it will go into a while True: or other infinite loop and own all of Tulip’s resources while it runs. This is meant for games or animations or other types of apps that require all the cycles of Tulip. You will need to provide your own way to quit the app, or just `except KeyboardInterrupt`. We’ll then clean up the imports and free whatever memory was allocated after close. 
+
+The second type is “switchable”: if you design your app so that import program returns after setup and `program.run(screen)` exists to start up the app, but then relies on callbacks to do its job, we can support running that app alongside others. This can be used for music software that relies on timers or MIDI input, for example, a Juno-6 front end and a drum machine running at the same time. For these types of apps, we pass in a `UIScreen` object to a run method that you provide, that manages your screen and provides two buttons for quitting and switching between apps. The switch is “alt-tab” and keeps the UI and program running but hides it and switches to the next app available. The quit closes the app, clears the memory and removes the UI components and switches to the next available app. 
+
+The REPL itself is treated as a (special) switchable app, always first in the list and cannot be quit. 
+
+See [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py) or [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py) for examples of switchable apps. 
+
 ## Tulip World
 
 Still very much early days, but Tulip supports a native chat and file sharing BBS called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
@@ -111,55 +119,80 @@ edit("game.py")
 
 ## Input and user interface
 
-Tulip supports USB keyboard input, joystick and touch input. (On Tulip Desktop, mouse clicks act as touch points, your computers' keyboard works, and any connected gamepad will work.) It also comes with UI elements like buttons, sliders and text entry boxes to use in your applications.
+Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, and your computers' keyboard works.
+
+We include [LVGL 9](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
+
+For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `ui_checkbox` and `ui_text`, etc. See our fully Python implementation of these in [ui.py](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our `buttons.py` example in your Tulip's `/sys/ex/` folder.
+
+You can summon a touch keyboard with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
+
+We boot a launcher for common operations. It's available via the small grey icon on the bottom right.
+
 
 ```python
-# Create a callback to activate when UI elements are triggered
-def ui_callback(x):
-    # x is the element ID that was triggered
-    print("Item %d was fired" % (x))
-    if(x==1): # slider ID
-        print("Slider value is now %f" % (tulip.slider(1)))
-    if(x==2): # text box ID
-        print("Text box now says %s" % (tulip.text(2)))
+tulip.keyboard() # open or close the soft keyboard
+tulip.launcher() # open or close our launcher
 
-tulip.ui_callback(ui_callback)
+# You're free to use any direct LVGL calls. It's a powerful library with a lot of functionality and customization, all accessible through Python.
+import lvgl as lv
+# our tulip.lv_scr is the base screen on bootup, to use as a base screen in LVGL.
+calendar = lv.calendar(lv.current_screen())
+calendar.set_pos(500,100)
 
-# You can set up to 254 UI elements
-tulip.ui_button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
+# We also provide a more powerful "full screen" wrapper for LVGL that lets you manage a full app and add elements to it.
+screen = UIScreen("my_app")
+screen.add(calendar)
+screen.present()
+# Please see juno6 in /sys/app/ for a complete example on using UIScreen.
 
-# Sliders -- if w > h, it will be a horizontal slider, vertical otherwise
-tulip.ui_slider(ui_element_id, default_value, x, y, w, h, bar_color, handle_color)
-# Gets a slider val
-val = tulip.ui_slider(ui_element_id)
-# Set a slider val
-tulip.ui_slider(ui_element_id, val)
+# For simplicity, we include a few convenience wrappers around LVGL. They can take ui_id tags to view later in callbacks:
+def my_ui_cb(obj, code, ui_id):
+    # obj is the LVGL object interacted with
+    # code is the LVGL event code 
+    # ui_id is the tag you assigned
+    print("obj %d was changed!" % (ui_id))
+    val = obj.get_value() # for example
 
-# This text entry box UI element is limited to 32 characters. It will wait for you to hit return to finish input
-tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
+# Set the callback for our convenience functions
+tulip.ui_callback = my_ui_cb
 
-# Checkboxes - val -- 0 is unchecked, 1 is checked
-# style -- 0 is filled box, 1 is X, 2 is filled circle
-tulip.ui_checkbox(ui_element_id, val, x, y, w, mark_color, box_color, style)
-val = tulip.ui_checkbox(ui_element_id)
-# set value
-tulip.ui_checkbox(ui_element_id, val)
+# Draw a simple modal message box
+mbox = tulip.ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=5)
 
-# No UI elements will be drawn or receive events until you set them to be active
-tulip.ui_active(ui_element_id, 1)
-# You can deactivate them too -- useful for many elements across pages / tabs that you "hide"
-# Deactivating does not remove the graphics on the BG layer. You have to clear it yourself.
-tulip.ui_active(ui_element_id, 0)
+# draw a slider
+# bar_color - the color of the whole bar, or just the set part if using two colors
+# unset_bar_color - the color of the unset side of the bar, if None will just be all one color
+# handle_v_pad, h_pad -- how many px above/below / left/right of the bar it extends
+# handle_radius - 0 for square 
+slider = tulip.ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=None, 
+    handle_color=None, handle_radius=None, handle_v_pad=None, handle_h_pad=None, ui_id=None)
 
-tulip.ui_del(ui_element_id) # deletes the memory for a UI component (the graphics will stay on the BG)
+slider.get_value() # gets 0-100 
 
-tulip.joy() # returns a mask of hardware joystick presses
+# Creates a button. If ui_id given will alert the callback when pressed
+btn = tulip.ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, 
+    font=None, radius=None, ui_id=None)
 
-# like joy, but also scans the arrow keys, Z, X, A, S, Q, W, enter and '
-# use this in games etc so people can use either joystick or keyboard!
+# Draw text to the screen and keep a pointer to it
+label = tulip.ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None)
+label.set_text("changed") # Change it later
+
+# Create a textarea box for text entry. 
+text = tulip.ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, 
+    bg_color=None, fg_color=None, font=None, one_line=True)
+text.get_text() # will retrieve it later
+
+# Create a checkbox. Optionally draw a label next to the checkbox
+checkbox = tulip.ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_color=None)
+state = checkbox.get_state() # retrieves the state
+
+tulip.ui_clear() # clears all UI elements
+
+# Returns a mask of joystick-like presses from the keyboard, from arrow keys, Z, X, A, S, Q, W, enter and '
 tulip.joyk()
 
-# test for joystick or key presses. Try UP, DOWN, LEFT, RIGHT, X, Y, A, B, SELECT, START, R1, L1
+# test for joy presses. Try UP, DOWN, LEFT, RIGHT, X, Y, A, B, SELECT, START, R1, L1
 if(tulip.joyk() & tulip.Joy.UP):
     print("up")
 
@@ -386,10 +419,11 @@ tulip.gpu_log()
 
 The default background plane (BG) is 2048 x 750, with the visible portion 1024x600. (You can change this with `tulip.timing()`.) Use the extra for double buffering, hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
 
+The UI operations (LVGL or anything in `ui_X`) also draw to the BG. Be careful if you're using both BG drawing operations and LVGL as they may draw on top of one another.
+
 Tulip uses RGB332, with 256 colors. Here's the palette: 
 
-![tulip_pal](https://user-images.githubusercontent.com/76612/229381451-17a47367-6338-4ed2-9be3-7ec631513e6b.jpg)
-
+![tulip_pal](https://github.com/bwhitman/tulipcc/blob/main/docs/pics/rgb332.png?raw=true)
 
 
 ```python
@@ -434,9 +468,8 @@ tulip.bg_roundrect(x,y, w,h, r, pal_idx, filled)
 tulip.bg_rect(x,y, w,h, pal_idx, filled)
 tulip.bg_triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
 tulip.bg_fill(x,y,pal_idx) # Flood fill starting at x,y
-tulip.bg_char(c, x, y, pal_idx, font_number) # proportional font, returns # of x pixels to advance for the next char
-tulip.bg_str(string, x, y, pal_idx, font_number) # same as char, but with a string. x and y are the bottom left
-tulip.bg_str(string, x, y, pal_idx, font_number, w, h) # Will center the text inside w,h
+tulip.bg_str(string, x, y, pal_idx, font) # same as char, but with a string. x and y are the bottom left
+tulip.bg_str(string, x, y, pal_idx, font, w, h) # Will center the text inside w,h
 
 """
   Set scrolling registers for the BG. 
@@ -465,7 +498,7 @@ tulip.bg_scroll_y_offset(line, y_offset)
 tulip.bg_swap()
 ```
 
-We currently ship 19 fonts with Tulip to use for the BG. Here they are:
+We currently ship some fonts with Tulip to use for the BG. These are aside from the fonts that come with LVGL for the UI. You can see them all by running `fonts.py`, which also shows how to address them:
 
 ![IMG_3339](https://user-images.githubusercontent.com/76612/229381546-46ec4c50-4c4a-4f3a-9aec-c77d439081b2.jpeg)
 
@@ -649,7 +682,7 @@ b2 = Bullet(copy_from=b) # will use the image data from b but make a new sprite 
 b2.move_to(25,25) # Can have many sprites of the same image data on screen this way
 ```
 
-A `Player` class comes with a quick way to move a sprite from the joystick/keyboard:
+A `Player` class comes with a quick way to move a sprite from the keyboard:
 
 ```python
 p = tulip.Player(speed=5) # 5px per movement
@@ -674,7 +707,6 @@ Things we've thought of we'd love your help on:
 
  * Sprite editor in Tulip
  * Tile / Map editor in Tulip
- * More UI types: radio button / rich text editor with scroll bar / ~~text entry~~
 
 Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
 

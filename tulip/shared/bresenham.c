@@ -101,6 +101,7 @@ uint16_t draw_new_str(const char * str, uint16_t x, uint16_t y, uint8_t fg, uint
   return u8g2_DrawStr(&ufont, x,y,str);
 }
 
+
 //stack friendly and fast floodfill algorithm, using recursive function calls
 void floodFillScanline(int x, int y, int newColor, int oldColor)
 {

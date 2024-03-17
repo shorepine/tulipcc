@@ -2,10 +2,16 @@
 #include "display.h"
 #include "gt911_touchscreen.h"
 #include "pins.h"
+#ifndef TDECK
 // Default for my MaTouch 7" 1024x600
 int16_t touch_x_delta = -4;
 int16_t touch_y_delta = -6;
 float y_scale = 0.8f;
+#else
+int16_t touch_x_delta = 0;
+int16_t touch_y_delta = 0;
+float y_scale = 1.0f;
+#endif
 
 esp_lcd_touch_handle_t tp;
 
@@ -37,13 +43,23 @@ void touch_init(void)
         .rst_gpio_num = TOUCH_RST,
         .int_gpio_num = TOUCH_INT,
         .levels = {
+            #ifdef TDECK
             .reset = 1,
+            #else
+            .reset = 0,
+            #endif
             .interrupt = 0,
         },
         .flags = {
+            #ifdef TDECK
+            .swap_xy = 1,
+            .mirror_x = 0,
+            .mirror_y = 0,
+            #else
             .swap_xy = 0,
             .mirror_x = 0,
             .mirror_y = 0,
+            #endif            
         },
     };
 
@@ -64,7 +80,12 @@ void run_gt911(void *param) {
             //fprintf(stderr, "TP pressed %d,%d str %d count %d\n", touch_x[0], touch_y[0], touch_strength[0], touch_cnt);
             for(uint8_t i=0;i<touch_cnt;i++) {
                 last_touch_x[i] = touch_x[i] + touch_x_delta;
-                last_touch_y[i] = (touch_y[i] + touch_y_delta)*y_scale;
+                #ifdef TDECK
+                    // tdeck has swapped y that mirror_y doesn't fix
+                    last_touch_y[i] = ((V_RES-touch_y[i]) + touch_y_delta)*y_scale;
+                #else
+                    last_touch_y[i] = (touch_y[i] + touch_y_delta)*y_scale;
+                #endif
             }
             //fprintf(stderr, "touch DOWN %d %d\n", last_touch_x[0], last_touch_y[0]);
             send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0);

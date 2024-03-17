@@ -25,8 +25,8 @@ void fillTriangle ( short x0, short y0, short x1, short y1, short x2, short y2, 
 void fill(int16_t x, int16_t y, uint8_t color);
 void drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color);
 void drawFastVLine(short x0, short y0, short h, short color);
+void drawLine_scanline(short x0, short y0,short x1, short y1,unsigned short color);
 uint16_t draw_new_str(const char * str, uint16_t x, uint16_t y, uint8_t fg, uint8_t font_no, uint16_t w, uint16_t h, uint8_t centered);
 uint16_t draw_new_char(const char c, uint16_t x, uint16_t y, uint8_t fg, uint8_t font_no);
-void drawLine_scanline(short x0, short y0,short x1, short y1,unsigned short color);
 
 #endif

@@ -1,6 +1,7 @@
 // usb_keyboard.c
 #include "usb_keyboard.h"
-#include "midi.h"  // from extmod/tulip/
+
+#define KEYBOARD_BUFFER_SIZE 32
 
 uint16_t keyboard_bytes = KEYBOARD_BYTES;
 
@@ -366,6 +367,76 @@ int64_t last_inter_trigger_ms = 0;
 
 
 
+uint32_t keycode_to_ctrl_key(uint16_t key)
+{
+    switch(key) {
+        case 261:
+            return LV_KEY_RIGHT;
+
+        case 260:
+            return LV_KEY_LEFT;
+
+        case 259:
+            return LV_KEY_UP;
+
+        case 258:
+            return LV_KEY_DOWN;
+
+        case 27:
+            return LV_KEY_ESC;
+
+        case 8:
+            return LV_KEY_BACKSPACE;
+
+        //case SDLK_DELETE:
+        //    return LV_KEY_DEL;
+
+        case 13:
+            return LV_KEY_ENTER;
+
+        // We could feed in shift here, TODO
+        case 9:
+            return LV_KEY_NEXT;
+            
+        case 22:
+            return LV_KEY_NEXT;
+
+        case 25:
+            return LV_KEY_PREV;
+
+        default:
+            return '\0';
+    }
+}
+
+
+static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
+
+
+void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data) {
+    (void) indev_drv;     // unused
+
+    static bool dummy_read = false;
+    const size_t len = strlen(lvgl_kb_buf);
+
+    // Send a release manually
+    if (dummy_read) {
+        dummy_read = false;
+        data->state = LV_INDEV_STATE_RELEASED;
+        data->continue_reading = len > 0;
+    }
+        // Send the pressed character 
+    else if (len > 0) {
+        dummy_read = true;
+        data->state = LV_INDEV_STATE_PRESSED;
+        data->key = lvgl_kb_buf[0];
+        memmove(lvgl_kb_buf, lvgl_kb_buf + 1, len);
+        data->continue_reading = true;
+    }
+}
+
+
+
 void decode_report(uint8_t *p) {
     // First byte, modifier mask
     uint8_t modifier = p[0];
@@ -384,6 +455,22 @@ void decode_report(uint8_t *p) {
 	  		if(!skip) { // only process new keys
 		        uint16_t c = scan_ascii(p[i], modifier);
 		        if(c) {
+                    
+                    if(keycode_to_ctrl_key(c) != '\0') {
+                        const size_t len = strlen(lvgl_kb_buf);
+                        if (len < KEYBOARD_BUFFER_SIZE - 1) {
+                            lvgl_kb_buf[len] = keycode_to_ctrl_key(c);
+                            lvgl_kb_buf[len + 1] = '\0';
+                        }
+                    } else {
+                        // put it in lvgl_kb_buf for lvgl
+                        const size_t len = strlen(lvgl_kb_buf);
+                        if (len < KEYBOARD_BUFFER_SIZE - 1) {
+                            lvgl_kb_buf[len] = c;
+                            lvgl_kb_buf[len+1] = '\0';
+                        }
+                    }
+                    
                     new_key = 1;
                     current_held_ms = esp_timer_get_time()/1000;
                     current_held = c; 
@@ -409,11 +496,14 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
     isKeyboardPolling = false;
     if (transfer->status == 0) {
         //fprintf(stderr, "nb is %d\n", transfer->actual_num_bytes);
+      //if(transfer->actual_num_bytes > 7 && transfer->actual_num_bytes < 17) {
       if (transfer->actual_num_bytes == 8 || transfer->actual_num_bytes == 16) {
         uint8_t *const p = transfer->data_buffer;
         decode_report(p);
-      }
-      else {
+      } else if (transfer->actual_num_bytes == 10) {
+        uint8_t *const p = transfer->data_buffer;
+        decode_report(p+1);
+      } else {
           printf("Keyboard boot hid transfer (%d bytes) too short or long\n",
                  transfer->actual_num_bytes);
       }
@@ -583,10 +673,6 @@ void run_usb()
         }
       }
       if (isKeyboardReady && !isKeyboardPolling && (KeyboardTimer > KeyboardInterval)) {
-        // vortex is 8
-        // nuphy is 8 
-        // keychron is 16
-        // We need to discern this from the descriptor instead of hardcoding it
         KeyboardIn->num_bytes = keyboard_bytes; 
         esp_err_t err = usb_host_transfer_submit(KeyboardIn);
         if (err != ESP_OK) {

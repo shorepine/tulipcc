@@ -12,10 +12,12 @@ def set(volts, channel=0):
     if(val>65535): val = 65535
     b1 = (val & 0xff00) >> 8
     b0 = (val & 0x00ff)
-    if(channel > 1):
-            i2c.writeto_mem(88, 0x02+channel-2, bytes([b0,b1]))
-    else:
-        i2c.writeto_mem(89, 0x02+channel, bytes([b0,b1]))
+    ch = 0x02
+    addr = 89
+    if(channel == 1): ch = 0x04
+    if(channel == 2): addr = 88
+    if(channel == 3): (ch, addr) = (0x04, 88)
+    i2c.writeto_mem(addr, ch, bytes([b0,b1]))
 
 
 

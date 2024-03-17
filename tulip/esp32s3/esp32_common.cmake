@@ -25,6 +25,19 @@ if(NOT TULIP_ESP32S3_DIR)
 endif()
 
 
+# Set location of lvgl_mp dir
+if(NOT LV_BINDING_DIR)
+    get_filename_component(LV_BINDING_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython ABSOLUTE)
+endif()
+
+# Set location of lvgl dir
+if(NOT LVGL_DIR)
+    get_filename_component(LVGL_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython/lvgl ABSOLUTE)
+endif()
+
+file(GLOB_RECURSE LVGL_SOURCES ${LVGL_DIR}/src/*.c)
+
+
 # Include core source components.
 include(${MICROPY_DIR}/py/py.cmake)
 
@@ -66,6 +79,7 @@ list(APPEND MICROPY_SOURCE_DRIVERS
     ${MICROPY_DIR}/drivers/dht/dht.c
 )
 
+
 list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/multicast.c
     ../../../tulip/esp32s3/mphalport.c
@@ -73,6 +87,7 @@ list(APPEND MICROPY_SOURCE_PORT
     ../../../tulip/esp32s3/main.c
     ../../../tulip/esp32s3/uart.c
     ../../../tulip/esp32s3/help.c
+    ../../../tulip/esp32s3/build/lv_mpy.c
     usb_serial_jtag.c
     gccollect.c
     fatfs_port.c
@@ -90,7 +105,7 @@ list(APPEND MICROPY_SOURCE_PORT
     network_wlan.c
     network_ppp.c
     ppp_set_auth.c
-    mpnimbleport.c
+    #mpnimbleport.c
     modsocket.c
     modesp.c
     esp32_nvs.c
@@ -111,13 +126,10 @@ list(TRANSFORM MICROPY_SOURCE_PORT PREPEND ${MICROPY_PORT_DIR}/)
 list(APPEND MICROPY_SOURCE_EXTMOD 
     ${TULIP_SHARED_DIR}/modtulip.c
     ${TULIP_SHARED_DIR}/polyfills.c
-    ${TULIP_SHARED_DIR}/lodepng.c
     ${TULIP_SHARED_DIR}/smallfont.c
     ${TULIP_SHARED_DIR}/display.c
     ${TULIP_SHARED_DIR}/bresenham.c
     ${TULIP_SHARED_DIR}/wireframe.c
-    ${TULIP_SHARED_DIR}/u8g2_fonts.c    
-    ${TULIP_SHARED_DIR}/u8fontdata.c    
     ${TULIP_SHARED_DIR}/tulip_helpers.c
     ${TULIP_SHARED_DIR}/editor.c
     ${TULIP_SHARED_DIR}/keyscan.c
@@ -126,8 +138,12 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/ui.c
     ${TULIP_SHARED_DIR}/midi.c
     ${TULIP_SHARED_DIR}/sounds.c
+    ${TULIP_SHARED_DIR}/lodepng.c
+    ${TULIP_SHARED_DIR}/u8fontdata.c
+    ${TULIP_SHARED_DIR}/u8g2_fonts.c
     ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
     ${AMY_DIR}/src/algorithms.c
+    ${AMY_DIR}/src/custom.c
     ${AMY_DIR}/src/patches.c
     ${AMY_DIR}/src/custom.c
     ${AMY_DIR}/src/amy.c
@@ -153,7 +169,7 @@ list(APPEND MICROPY_SOURCE_QSTR
 list(APPEND IDF_COMPONENTS
     app_update
     bootloader_support
-    bt
+    #bt
     driver
     esp_adc
     esp_app_format
@@ -200,6 +216,7 @@ idf_component_register(
         ${MICROPY_SOURCE_DRIVERS}
         ${MICROPY_SOURCE_PORT}
         ${MICROPY_SOURCE_BOARD}
+        ${LVGL_SOURCES}
     INCLUDE_DIRS
         ../../tulip/esp32s3
         ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch_gt911/include
@@ -211,6 +228,8 @@ idf_component_register(
         ${CMAKE_BINARY_DIR}
         ../../tulip/shared
         ../../amy/src
+        ${LV_BINDING_DIR}
+        ${LVGL_DIR}/src
     REQUIRES
         ${IDF_COMPONENTS}
 )
@@ -234,6 +253,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     LFS2_NO_MALLOC LFS2_NO_ASSERT
     ESP_PLATFORM
     TULIP
+    LV_CONF_INCLUDE_SIMPLE
     ${BOARD_DEFINITION1}
     ${BOARD_DEFINITION2}
 )
@@ -246,15 +266,16 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-uninitialized
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
+    -Wno-unused-const-variable
     -fsingle-precision-constant
     -Wno-strict-aliasing
     -DESP_PLATFORM
 )
 
 # Additional include directories needed for private NimBLE headers.
-target_include_directories(${MICROPY_TARGET} PUBLIC
-    ${IDF_PATH}/components/bt/host/nimble/nimble
-)
+#target_include_directories(${MICROPY_TARGET} PUBLIC
+#    ${IDF_PATH}/components/bt/host/nimble/nimble
+#)
 
 # Add additional extmod and usermod components.
 target_link_libraries(${MICROPY_TARGET} micropy_extmod_btree)
