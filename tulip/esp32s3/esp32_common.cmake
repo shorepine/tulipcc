@@ -145,6 +145,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/algorithms.c
     ${AMY_DIR}/src/custom.c
     ${AMY_DIR}/src/patches.c
+    ${AMY_DIR}/src/custom.c
     ${AMY_DIR}/src/amy.c
     ${AMY_DIR}/src/delay.c
     ${AMY_DIR}/src/envelope.c
