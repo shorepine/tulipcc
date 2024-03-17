@@ -1,9 +1,7 @@
 # juno6.py
 # A more pure-LVGL (using Tulip's UIScreen) UI for Juno-6
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, tfb_stop, midi_in, midi_callback
-import time, gc
-
-
+from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, midi_in, midi_callback
+import time
 
 
 class JunoSection(UIElement):

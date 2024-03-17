@@ -724,7 +724,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_collisions_obj, 0, 0, tulip_col
 
 
 extern void editor(const char * filename);
-STATIC mp_obj_t tulip_edit(size_t n_args, const mp_obj_t *args) {
+STATIC mp_obj_t tulip_run_editor(size_t n_args, const mp_obj_t *args) {
     if(n_args) {
         editor(mp_obj_str_get_str(args[0]));
     } else {
@@ -733,7 +733,7 @@ STATIC mp_obj_t tulip_edit(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_edit_obj, 0, 1, tulip_edit);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_run_editor_obj, 0, 1, tulip_run_editor);
 
 extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t);
 STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
@@ -1193,7 +1193,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_wire_to_lines), MP_ROM_PTR(&tulip_wire_to_lines_obj) },
     { MP_ROM_QSTR(MP_QSTR_wire_load), MP_ROM_PTR(&tulip_wire_load_obj) },
     { MP_ROM_QSTR(MP_QSTR_collisions), MP_ROM_PTR(&tulip_collisions_obj) },
-    { MP_ROM_QSTR(MP_QSTR_edit), MP_ROM_PTR(&tulip_edit_obj) },
+    { MP_ROM_QSTR(MP_QSTR_run_editor), MP_ROM_PTR(&tulip_run_editor_obj) },
     { MP_ROM_QSTR(MP_QSTR_int_screenshot), MP_ROM_PTR(&tulip_int_screenshot_obj) },
     { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },

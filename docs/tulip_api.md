@@ -70,6 +70,14 @@ The main Python script must be the name of the package. This script needs to exp
 
 We put a few system packages in `/sys/app`, and if you `run('app')`, it will look both in your current folder and the `/sys/app` folder for the app. 
 
+**There are two types of apps you can make in Tulip.** One is the default: “modal”; when you import program it will go into a while True: or other infinite loop and own all of Tulip’s resources while it runs. This is meant for games or animations or other types of apps that require all the cycles of Tulip. You will need to provide your own way to quit the app, or just `except KeyboardInterrupt`. We’ll then clean up the imports and free whatever memory was allocated after close. 
+
+The second type is “switchable”: if you design your app so that import program returns after setup and `program.run(screen)` exists to start up the app, but then relies on callbacks to do its job, we can support running that app alongside others. This can be used for music software that relies on timers or MIDI input, for example, a Juno-6 front end and a drum machine running at the same time. For these types of apps, we pass in a `UIScreen` object to a run method that you provide, that manages your screen and provides two buttons for quitting and switching between apps. The switch is “alt-tab” and keeps the UI and program running but hides it and switches to the next app available. The quit closes the app, clears the memory and removes the UI components and switches to the next available app. 
+
+The REPL itself is treated as a (special) switchable app, always first in the list and cannot be quit. 
+
+See [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py) or [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py) for examples of switchable apps. 
+
 ## Tulip World
 
 Still very much early days, but Tulip supports a native chat and file sharing BBS called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
@@ -113,13 +121,13 @@ edit("game.py")
 
 Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, and your computers' keyboard works.
 
-We include [LVGL](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
+We include [LVGL 9](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
 
 For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `ui_checkbox` and `ui_text`, etc. See our fully Python implementation of these in [ui.py](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our `buttons.py` example in your Tulip's `/sys/ex/` folder.
 
 You can summon a touch keyboard with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
 
-We boot a launcher for common operations. You can remove this from your `boot.py` by calling `tulip.launcher()`. 
+We boot a launcher for common operations. It's available via the small grey icon on the bottom right.
 
 
 ```python
@@ -129,12 +137,14 @@ tulip.launcher() # open or close our launcher
 # You're free to use any direct LVGL calls. It's a powerful library with a lot of functionality and customization, all accessible through Python.
 import lvgl as lv
 # our tulip.lv_scr is the base screen on bootup, to use as a base screen in LVGL.
-calendar = lv.calendar(tulip.lv_scr)
+calendar = lv.calendar(lv.current_screen())
 calendar.set_pos(500,100)
 
-# UISScreen howto here
-
-
+# We also provide a more powerful "full screen" wrapper for LVGL that lets you manage a full app and add elements to it.
+screen = UIScreen("my_app")
+screen.add(calendar)
+screen.present()
+# Please see juno6 in /sys/app/ for a complete example on using UIScreen.
 
 # For simplicity, we include a few convenience wrappers around LVGL. They can take ui_id tags to view later in callbacks:
 def my_ui_cb(obj, code, ui_id):

@@ -4,8 +4,6 @@
 import tulip
 import lvgl as lv
 
-# Since this is called on boot this is guaranteed to grab the repl screen
-lv_scr = lv.screen_active() 
 lv_soft_kb = None
 lv_launcher = None
 
@@ -58,12 +56,13 @@ class UIScreen():
     default_offset_x = 10
     default_offset_y = 100
 
-    def __init__(self, name, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
+    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
         self.group = lv.obj() # a screen, really
+        self.keep_tfb = keep_tfb
         self.bg_color = bg_color
         self.offset_x = offset_x
         self.offset_y = offset_y
-        self.last_screen = lv_scr
+        self.last_screen = lv.screen_active()
         self.last_obj_added = None
         self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
         self.name = name
@@ -73,7 +72,8 @@ class UIScreen():
         self.active = False # is it showing on screen 
         self.imported_modules = []
         self.kb_group = lv.group_create()
-        self.kb_group.set_default()
+        if(self.name != 'repl'):
+            self.kb_group.set_default()
         running_apps[self.name] = self
 
     def draw_task_bar(self):
@@ -82,8 +82,9 @@ class UIScreen():
             if( len(running_apps)>1):
                 self.alttab_button = lv.button(self.group)
                 self.alttab_button.set_style_bg_color(pal_to_lv(11), lv.PART.MAIN)
+                self.alttab_button.set_style_radius(0,lv.PART.MAIN)
                 alttab_label = lv.label(self.alttab_button)
-                alttab_label.set_text("Alt-Tab")
+                alttab_label.set_text(lv.SYMBOL.SHUFFLE)
                 alttab_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
                 self.alttab_button.align_to(self.group, lv.ALIGN.TOP_RIGHT,0,0)
                 self.alttab_button.add_event_cb(self.alttab_callback, lv.EVENT.CLICKED, None)
@@ -96,11 +97,22 @@ class UIScreen():
             if(self.name != "repl"):
                 self.quit_button = lv.button(self.group)
                 self.quit_button.set_style_bg_color(pal_to_lv(128), lv.PART.MAIN)
+                self.quit_button.set_style_radius(0,lv.PART.MAIN)
                 quit_label = lv.label(self.quit_button)
-                quit_label.set_text("Quit")
+                quit_label.set_text(lv.SYMBOL.POWER)
                 quit_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
                 self.quit_button.align_to(self.alttab_button, lv.ALIGN.OUT_LEFT_MID,0,0)
                 self.quit_button.add_event_cb(self.quit_callback, lv.EVENT.CLICKED, None)
+            else:
+                self.launcher_button = lv.button(self.group)
+                self.launcher_button.set_style_bg_color(pal_to_lv(36), lv.PART.MAIN)
+                self.launcher_button.set_style_radius(0,lv.PART.MAIN)
+                launcher_label = lv.label(self.launcher_button)
+                launcher_label.set_text(lv.SYMBOL.LIST)
+                launcher_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+                self.launcher_button.align_to(self.group, lv.ALIGN.BOTTOM_RIGHT,0,0)
+                self.launcher_button.add_event_cb(launcher, lv.EVENT.CLICKED, None)
+
 
 
     def set_bg_color(self, bg_color):
@@ -151,8 +163,8 @@ class UIScreen():
             o.group.set_height(o.group.get_height()+pad_y)
             self.last_obj_added = o.group
 
-    # Show the UI on the screen
-    def present(self):
+    # Show the UI on the screen. Set up the keyboard group listener. Draw the task bar. 
+    def present(self, modal=False):
         current_app_string = self.name
         self.active = True
         self.draw_task_bar()
@@ -163,7 +175,10 @@ class UIScreen():
             tulip.set_screen_as_repl(1)
         else:
             tulip.set_screen_as_repl(0)
-            tulip.tfb_stop()
+            if(self.keep_tfb):
+                tulip.tfb_start()
+            else:
+                tulip.tfb_stop()
 
     # Keep everything around, but load the repl screen
     def clear(self):
@@ -226,7 +241,7 @@ def keyboard():
         lv_soft_kb.delete()
         lv_soft_kb = None
         return
-    lv_soft_kb = lv.keyboard(lv_scr)
+    lv_soft_kb = lv.keyboard(lv.screen_active())
     lv_soft_kb.add_event_cb(lv_soft_kb_cb, lv.EVENT.VALUE_CHANGED, None)
     lv_last_mode = lv_soft_kb.get_mode()
 
@@ -238,16 +253,16 @@ def launcher_cb(e):
         lv_launcher.delete()
         lv_launcher = None
         if(text=="Juno-6"):
-            tulip.run('juno_ui')
+            tulip.run('juno6')
         if(text=="Keyboard"):
             keyboard()
-        if(text=="Editor"):
-            # TODO something weird about calling editor from here
-            pass
         if(text=="Wordpad"):
             tulip.run("wordpad")
         if(text=="Wi-Fi"):
-            wifi()
+            try:
+                wifi()
+            except NameError:
+                print("Put a wifi() function in your boot.py")
         if(text=="Reset"):
             if(tulip.board()!="DESKTOP"):
                 import machine
@@ -255,7 +270,7 @@ def launcher_cb(e):
 
 
 # Draw a lvgl list box as a little launcher
-def launcher():
+def launcher(ignore=True):
     global lv_launcher
     if(lv_launcher is not None):
         #print("Shutting down launcher")
@@ -263,7 +278,7 @@ def launcher():
         lv_launcher=None
         return
     #print("starting up launcher")
-    lv_launcher = lv.list(lv_scr)
+    lv_launcher = lv.list(lv.screen_active())
     lv_launcher.set_size(195, 140)
     lv_launcher.set_align(lv.ALIGN.BOTTOM_RIGHT)
     b_close = lv_launcher.add_button(lv.SYMBOL.CLOSE, "Close")
@@ -272,8 +287,6 @@ def launcher():
     b_juno.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_keyboard = lv_launcher.add_button(lv.SYMBOL.KEYBOARD, "Keyboard")
     b_keyboard.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
-    b_editor = lv_launcher.add_button(lv.SYMBOL.EDIT, "Editor")
-    b_editor.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_wordpad = lv_launcher.add_button(lv.SYMBOL.FILE, "Wordpad")
     b_wordpad.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_wifi = lv_launcher.add_button(lv.SYMBOL.WIFI, "Wi-Fi")
@@ -283,20 +296,6 @@ def launcher():
 
 
 
-# removes all ui elements
-def ui_clear():
-    current_screen = lv.screen_active()
-    while(current_screen.get_child_count()):
-        current_screen.get_child(0).delete()
-
-    if(current_screen != lv_scr):
-        # we're in a UI program. kill it
-        lv.screen_load(lv_scr)
-        current_screen.delete()
-
-# Return how many LVGL objs you've created
-def ui_count():
-    return lv_scr.get_child_count()
 
 # Callback that you can have LVGL objects register. 
 # It gets the event (which you can get the object from) and "extra" which we put ui_id in for legacy uses
@@ -308,7 +307,7 @@ def lv_callback(e, extra):
 
 # Draw a msgbox on screen. 
 def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=None):
-    mbox = lv.msgbox(tulip.lv_scr)
+    mbox = lv.msgbox(lv.screen_active())
     mbox.add_text(message)
     mbox.add_title(title)
     mbox.add_close_button()
@@ -324,7 +323,7 @@ def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui
 # handle_radius - 0 for square 
 def ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=None, handle_color=None, handle_radius=None, 
     handle_v_pad=None, handle_h_pad=None, ui_id=None):
-    slider = lv.slider(tulip.lv_scr)
+    slider = lv.slider(lv.screen_active())
     slider.set_pos(x,y)
     # Set opacity to full (COVER). Default is to mix the color with the BG.
     slider.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
@@ -354,7 +353,7 @@ def ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=N
 # Copy of our "ui_button" with lvgl buttons
 #tulip.ui_button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
 def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=None, radius=None, ui_id=None):
-    button = lv.button(lv_scr)
+    button = lv.button(lv.screen_active())
     button.set_x(x)
     button.set_y(y)
     if(w is not None):
@@ -381,7 +380,7 @@ def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None,
     return button
 
 def ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None):
-    label = lv.label(lv_scr)
+    label = lv.label(lv.screen_active())
     label.set_pos(x,y)
     if(w is not None):
         label.set_width(w)
@@ -396,7 +395,7 @@ def ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None):
 # Copy of our ui_text with lvgl textarea 
 #tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
 def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=None, one_line=True):
-    ta = lv.textarea(tulip.lv_scr)
+    ta = lv.textarea(lv.screen_active())
     ta.set_pos(x,y)
     if(w is not None):
         ta.set_width(w)
@@ -420,7 +419,7 @@ def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, b
 
 # Copy of our ui_checkbox with lvgl 
 def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_color=None):
-    cb = lv.checkbox(tulip.lv_scr)
+    cb = lv.checkbox(lv.screen_active())
     if(text is not None):
         cb.set_text(text)
     cb.set_pos(x,y)

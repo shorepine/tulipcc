@@ -398,8 +398,6 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
     return 0;
 }
 
-//extern uint8_t lvgl_focused();
-
 extern int16_t lvgl_is_repl;
 
 void send_key_to_micropython(uint16_t c) {

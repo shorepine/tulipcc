@@ -207,6 +207,7 @@ class Joy:
     Y = 2048
     B = 4096
 
+
 def remap():
     print("Type key or key combo you wish to remap: ",end='')
     (_, scan, mod) = key_wait()
@@ -423,6 +424,20 @@ def reload(module):
         pass # it's ok
     exec('import %s' % (thing))
 
+def edit(filename=None):
+    if(filename is None):
+        tulip.run_editor()
+    else:
+        tulip.run_editor(filename)
+    # For now, just force a repl re-draw for any elements drawn on the repl (including task bar)
+    # TODO later make editor an app
+    repl_screen.group.invalidate()
+
+def app(switch=None):
+    if(switch is None):
+        return running_apps
+    current_uiscreen().active = False
+    running_apps[switch].present()
 
 
 # runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
@@ -447,7 +462,11 @@ def run(module_string):
         # Import the app module and call module.run(screen)
         exec('import %s' % (module_string))
         actual_module = sys.modules[module_string]
-        actual_module.run(screen)
+        try:
+            actual_module.run(screen)
+        except (AttributeError, TypeError):
+            # This is a modal style app that doesn't use a screen
+            screen.quit_callback(None)
 
         # Save the modules we imported so we can delete them on quit. This saves RAM on MP
         for imported_module in sys.modules.keys():
