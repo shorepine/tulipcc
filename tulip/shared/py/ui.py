@@ -56,7 +56,7 @@ class UIScreen():
     default_offset_x = 10
     default_offset_y = 100
 
-    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
+    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, activate_callback=None):
         self.group = lv.obj() # a screen, really
         self.keep_tfb = keep_tfb
         self.bg_color = bg_color
@@ -71,6 +71,7 @@ class UIScreen():
         self.running = True # is this code running 
         self.active = False # is it showing on screen 
         self.imported_modules = []
+        self.activate_callback = activate_callback
         self.kb_group = lv.group_create()
         if(self.name != 'repl'):
             self.kb_group.set_default()
@@ -179,6 +180,8 @@ class UIScreen():
                 tulip.tfb_start()
             else:
                 tulip.tfb_stop()
+        if(self.activate_callback is not None):
+            self.activate_callback(self)
 
     # Keep everything around, but load the repl screen
     def clear(self):

@@ -34,6 +34,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	alles.c \
 	sounds.c \
 	lodepng.c \
+	sequencer.c \
 	)
 
 
