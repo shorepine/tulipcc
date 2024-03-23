@@ -510,6 +510,15 @@ STATIC mp_obj_t tulip_seq_remove_callback(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callback_obj, 1, 1, tulip_seq_remove_callback);
 
+STATIC mp_obj_t tulip_seq_remove_callbacks(size_t n_args, const mp_obj_t *args) {
+    for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
+        sequencer_callbacks[i] = NULL;
+        sequencer_dividers[i] = 0;
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callbacks_obj, 0, 0, tulip_seq_remove_callbacks);
+
 
 STATIC mp_obj_t tulip_seq_bpm(size_t n_args, const mp_obj_t *args) {
     if(n_args == 1) {
@@ -1270,6 +1279,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_touch_callback), MP_ROM_PTR(&tulip_touch_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_add_callback), MP_ROM_PTR(&tulip_seq_add_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_bpm), MP_ROM_PTR(&tulip_seq_bpm_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_ppq), MP_ROM_PTR(&tulip_seq_ppq_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_latency), MP_ROM_PTR(&tulip_seq_latency_obj) },
