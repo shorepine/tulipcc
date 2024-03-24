@@ -42,7 +42,7 @@ in C, we have a timer/thread that calls .. mp_sched_schedule(tick_guy(time)) and
 #include "sequencer.h"
 
 // Things that MP can change
-float sequencer_bpm = 108;
+float sequencer_bpm = 108; // verified optimal BPM 
 uint8_t sequencer_ppq = 48;
 uint16_t sequencer_latency_ms = 50;
 mp_obj_t sequencer_callbacks[SEQUENCER_SLOTS];
@@ -54,42 +54,92 @@ uint32_t tick_count = 0;
 uint64_t next_amy_tick_us = 0;
 uint32_t us_per_tick = 0;
 
+#ifdef ESP_PLATFORM
+#include "esp_timer.h"
+esp_timer_handle_t periodic_timer;
+#endif
+
 void sequencer_recompute() {
     us_per_tick = (uint32_t) (1000000.0 / ((sequencer_bpm/60.0) * (float)sequencer_ppq));    
     next_amy_tick_us = amy_sysclock()*1000 + us_per_tick;
 }
 
-// called from a thread/task
-#ifndef ESP_PLATFORM
-void * run_sequencer(void *vargs) {
-#else
-void run_sequencer() {
-#endif
-    for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) { sequencer_callbacks[i] = NULL; sequencer_dividers[i] = 0; }
+void sequencer_start() {
     sequencer_recompute();
-    while(1) {
-        if(sequencer_running) {
-            // I'm nervous here that sequencer_latency gets bigger than us_per_tick*1000. I think it's ok? 
-            if(amy_sysclock()  >= (next_amy_tick_us/1000)  - (sequencer_latency_ms)) {
-                tick_count++;
-                for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
-                    if(sequencer_dividers[i]!=0) {
-                        if(tick_count % sequencer_dividers[i] == 0) {
-                            mp_sched_schedule(sequencer_callbacks[i], mp_obj_new_int(next_amy_tick_us/1000));
-                        }
-                    }
-                }
-                next_amy_tick_us = next_amy_tick_us + us_per_tick;
-            }
-        }
-        #ifndef ESP_PLATFORM
-            // Sleep 500000nS / 500uS / 0.5mS
-            nanosleep((const struct timespec[]){{0, 500000L}}, NULL);
-        #else
-            // This will eventually be a timer
-            //vTaskDelay(1/portTICK_PERIOD_MS);
-        #endif
-    }
-
+    sequencer_running = 1;
+    #ifdef ESP_PLATFORM
+    // Restart the timer
+    run_sequencer();
+    #endif
 }
 
+
+void sequencer_stop() {
+    sequencer_running = 0;
+    #ifdef ESP_PLATFORM
+    // Kill the timer
+    ESP_ERROR_CHECK(esp_timer_stop(periodic_timer));
+    ESP_ERROR_CHECK(esp_timer_delete(periodic_timer));
+    #endif
+}
+
+
+void sequencer_init() {
+    for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) { sequencer_callbacks[i] = NULL; sequencer_dividers[i] = 0; }
+    sequencer_recompute();    
+}
+
+static void sequencer_check_and_fill() {
+    // The while is in case the timer fires later than a tick; (on esp this would be due to SPI or wifi ops), we can still use our latency to keep up
+    while(amy_sysclock()  >= (next_amy_tick_us/1000)) {
+        tick_count++;
+        for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
+            if(sequencer_dividers[i]!=0) {
+                if(tick_count % sequencer_dividers[i] == 0) {
+                    /*
+                    mp_obj_tuple_t *tuple = MP_OBJ_TO_PTR(mp_obj_new_tuple(2, NULL));
+                    tuple->items[0] = MP_OBJ_NEW_SMALL_INT((next_amy_tick_us/1000)+sequencer_latency_ms);
+                    tuple->items[1] = MP_OBJ_NEW_SMALL_INT(tick_count);
+                    //mp_call_function_2(sequencer_callbacks[i], MP_OBJ_NEW_SMALL_INT((next_amy_tick_us/1000)+sequencer_latency_ms), MP_OBJ_NEW_SMALL_INT(tick_count));
+                    */
+                    /*
+                    mp_obj_t tuple[2];
+                    tuple[0] = mp_obj_new_int((next_amy_tick_us/1000)+sequencer_latency_ms);
+                    tuple[1] = mp_obj_new_int(tick_count);
+                    mp_obj_t send_tuple = mp_obj_new_tuple(2, tuple);
+                    */
+                    mp_sched_schedule(sequencer_callbacks[i], mp_obj_new_int((next_amy_tick_us/1000)+sequencer_latency_ms));
+                }
+            }
+        }
+        next_amy_tick_us = next_amy_tick_us + us_per_tick;
+    }
+}
+
+// Desktop: called from a thread
+#ifndef ESP_PLATFORM
+void * run_sequencer(void *vargs) {
+    // Loop forever, checking for time and sleeping
+    while(1) {
+        if(sequencer_running) sequencer_check_and_fill();            
+        // 500000nS = 500uS = 0.5mS
+        nanosleep((const struct timespec[]){{0, 500000L}}, NULL);
+    }
+}
+
+// ESP: do it with hardware timer
+#else
+static void sequencer_timer_callback(void* arg) {
+    sequencer_check_and_fill();
+}
+
+void run_sequencer() {
+    const esp_timer_create_args_t periodic_timer_args = {
+            .callback = &sequencer_timer_callback,
+            .name = "sequencer"
+    };
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &periodic_timer));
+    // 500uS = 0.5mS
+    ESP_ERROR_CHECK(esp_timer_start_periodic(periodic_timer, 500));
+}
+#endif

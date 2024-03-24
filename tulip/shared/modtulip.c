@@ -558,7 +558,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_latency_obj, 0, 1, tulip_se
 
 
 STATIC mp_obj_t tulip_seq_stop(size_t n_args, const mp_obj_t *args) {
-    sequencer_running = 0;
+    sequencer_stop();
     return mp_const_none;
 }
 
@@ -566,8 +566,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_stop_obj, 0, 0, tulip_seq_s
 
 
 STATIC mp_obj_t tulip_seq_start(size_t n_args, const mp_obj_t *args) {
-    sequencer_recompute();
-    sequencer_running = 1;
+    sequencer_start();
     return mp_const_none;
 }
 

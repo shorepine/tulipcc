@@ -96,7 +96,7 @@
 #define MIDI_IN_PIN UART_PIN_NO_CHANGE
 
 #elif defined TULIP4_R10
-#define TOUCH_RST 48 
+#define TOUCH_RST -1 //48 
 #define PIN_NUM_BK_PWM 47
 #define PIN_R7 14
 #define PIN_R6 21

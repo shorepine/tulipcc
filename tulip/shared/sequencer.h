@@ -29,6 +29,9 @@ void * run_sequencer(void *vargs);
 void run_sequencer();
 #endif
 
+void sequencer_init();
+void sequencer_start();
+void sequencer_stop();
 void sequencer_recompute();
 
 

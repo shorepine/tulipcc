@@ -933,6 +933,7 @@ int main(int argc, char **argv) {
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
 
+    sequencer_init();
     pthread_t sequencer_thread_id;
     pthread_create(&sequencer_thread_id, NULL, run_sequencer, NULL);
 

@@ -398,6 +398,7 @@ def battery(n=5):
 # scans the keyboard. lets you use either
 # Z = B, X = A, A = Y, S = X, enter = START, ' = SELECT, Q = L1, W = R1, arrows = DPAD
 def joyk():
+    jmask = 0
     key_scans = keys()[1:5] # get up to four keys held at once
     for k in key_scans:
         if(k == 79): jmask = jmask | Joy.RIGHT

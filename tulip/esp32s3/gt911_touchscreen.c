@@ -45,6 +45,10 @@ void touch_init(void)
         .levels = {
             #ifdef TDECK
             .reset = 1,
+            #elif defined MATOUCH7
+            .reset = 1,
+            #elif defined TULIP4_R10
+            .reset = 0,
             #else
             .reset = 0,
             #endif
