@@ -96,18 +96,6 @@ static void sequencer_check_and_fill() {
         for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
             if(sequencer_dividers[i]!=0) {
                 if(tick_count % sequencer_dividers[i] == 0) {
-                    /*
-                    mp_obj_tuple_t *tuple = MP_OBJ_TO_PTR(mp_obj_new_tuple(2, NULL));
-                    tuple->items[0] = MP_OBJ_NEW_SMALL_INT((next_amy_tick_us/1000)+sequencer_latency_ms);
-                    tuple->items[1] = MP_OBJ_NEW_SMALL_INT(tick_count);
-                    //mp_call_function_2(sequencer_callbacks[i], MP_OBJ_NEW_SMALL_INT((next_amy_tick_us/1000)+sequencer_latency_ms), MP_OBJ_NEW_SMALL_INT(tick_count));
-                    */
-                    /*
-                    mp_obj_t tuple[2];
-                    tuple[0] = mp_obj_new_int((next_amy_tick_us/1000)+sequencer_latency_ms);
-                    tuple[1] = mp_obj_new_int(tick_count);
-                    mp_obj_t send_tuple = mp_obj_new_tuple(2, tuple);
-                    */
                     mp_sched_schedule(sequencer_callbacks[i], mp_obj_new_int((next_amy_tick_us/1000)+sequencer_latency_ms));
                 }
             }
