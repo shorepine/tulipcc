@@ -217,7 +217,9 @@ void mp_task(void *pvParameter) {
     #if CONFIG_USB_ENABLED
     //usb_init();
     #elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
-    //usb_serial_jtag_init();
+    #ifdef TDECK
+    usb_serial_jtag_init();
+    #endif
     #endif
     #if MICROPY_HW_ENABLE_UART_REPL
     uart_stdout_init();
