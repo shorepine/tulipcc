@@ -36,11 +36,25 @@
 #include "mpconfigvariant.h"
 #define MICROPY_PY_NETWORK_HOSTNAME_DEFAULT "tulip"
 
+#undef MICROPY_MALLOC_USES_ALLOCATED_SIZE
+#undef MICROPY_MEM_STATS
+#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (0)
+#define MICROPY_MEM_STATS              (0)
+
 // Tulip stuff -- move to mpconfigtulip.h ? 
 #define MICROPY_PY_IO (1)
 #define MICROPY_PY_SYS_STDFILES                 (0)
 #define MICROPY_PY_BUILTINS_HELP_TEXT           tulip_desktop_help_text
 #define MICROPY_HW_BOARD_NAME "Tulip4"
+
+/*
+#define MICROPY_ROOT_POINTERS \
+    LV_ROOTS \
+    void *mp_lv_user_data; \
+    const char *readline_hist[50]; \
+    void *mmap_region_head; \
+*/
+
 
 // Unclear how this works -- unicode (in strings) seems fine. maybe this is files
 //#define MICROPY_PY_BUILTINS_STR_UNICODE (1)

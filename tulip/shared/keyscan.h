@@ -18,6 +18,7 @@
 #include "tulip_helpers.h"
 #include "py/runtime.h"
 #include "py/mphal.h"
+#include "display.h"
 
 extern uint8_t keyboard_send_keys_to_micropython;
 extern int8_t keyboard_grab_ui_focus;

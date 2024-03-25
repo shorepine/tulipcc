@@ -430,7 +430,10 @@ void editor_quit() {
             prompt_for_string("Save as", "", fn);
             editor_save(); // if no fn give, will skip
         } else {
-            int8_t c = prompt_for_char("Save file? [Y/N]");
+            int8_t c = 0;
+            while(c != 'Y' && c != 'y' && c != 'N' && c != 'n') {
+                c = prompt_for_char("Save file? [Y/N]");
+            }
             if(c=='Y' || c=='y') {
     	    	editor_save();
             }

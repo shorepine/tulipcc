@@ -20,6 +20,9 @@
 #include "driver/ledc.h"
 #include "tasks.h"
 #include "pins.h"
+#include "tasks.h"
+#include "lvgl.h"
+
 
 void run_esp32s3_display();
 void display_brightness(uint8_t amount);

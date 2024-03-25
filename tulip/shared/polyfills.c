@@ -70,7 +70,6 @@ int64_t get_time_ms() {
 int32_t get_ticks_ms() {
     return amy_sysclock(); // based on audio driver
 }
-    
 
 void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags) {
 #ifdef ESP_PLATFORM

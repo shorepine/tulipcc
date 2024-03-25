@@ -1,5 +1,4 @@
 #include "display.h"
-
 uint8_t bg_pal_color;
 uint8_t tfb_fg_pal_color;
 uint8_t tfb_bg_pal_color;
@@ -37,6 +36,8 @@ uint16_t *line_emits_rle;
 uint16_t *line_emits_y;
 
 
+uint16_t * lv_buf;
+
 uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBbg;//[TFB_ROWS][TFB_COLS];
@@ -54,6 +55,46 @@ uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
 uint8_t tfb_active = 1;
 uint8_t tfb_log = 0;
 uint8_t gpu_log = 0;
+
+int16_t lvgl_is_repl = 0;
+
+// lookup table for Tulip's "pallete" to the 16-bit colorspace needed by LVGL and T-deck
+
+const uint16_t rgb332_rgb565_i[256] = {
+    0x0000, 0x0a00, 0x1500, 0x1f00, 0x2001, 0x2a01, 0x3501, 0x3f01, 
+    0x4002, 0x4a02, 0x5502, 0x5f02, 0x6003, 0x6a03, 0x7503, 0x7f03, 
+    0x8004, 0x8a04, 0x9504, 0x9f04, 0xa005, 0xaa05, 0xb505, 0xbf05, 
+    0xc006, 0xca06, 0xd506, 0xdf06, 0xe007, 0xea07, 0xf507, 0xff07, 
+    0x0020, 0x0a20, 0x1520, 0x1f20, 0x2021, 0x2a21, 0x3521, 0x3f21, 
+    0x4022, 0x4a22, 0x5522, 0x5f22, 0x6023, 0x6a23, 0x7523, 0x7f23, 
+    0x8024, 0x8a24, 0x9524, 0x9f24, 0xa025, 0xaa25, 0xb525, 0xbf25, 
+    0xc026, 0xca26, 0xd526, 0xdf26, 0xe027, 0xea27, 0xf527, 0xff27, 
+    0x0048, 0x0a48, 0x1548, 0x1f48, 0x2049, 0x2a49, 0x3549, 0x3f49, 
+    0x404a, 0x4a4a, 0x554a, 0x5f4a, 0x604b, 0x6a4b, 0x754b, 0x7f4b, 
+    0x804c, 0x8a4c, 0x954c, 0x9f4c, 0xa04d, 0xaa4d, 0xb54d, 0xbf4d, 
+    0xc04e, 0xca4e, 0xd54e, 0xdf4e, 0xe04f, 0xea4f, 0xf54f, 0xff4f, 
+    0x0068, 0x0a68, 0x1568, 0x1f68, 0x2069, 0x2a69, 0x3569, 0x3f69, 
+    0x406a, 0x4a6a, 0x556a, 0x5f6a, 0x606b, 0x6a6b, 0x756b, 0x7f6b, 
+    0x806c, 0x8a6c, 0x956c, 0x9f6c, 0xa06d, 0xaa6d, 0xb56d, 0xbf6d, 
+    0xc06e, 0xca6e, 0xd56e, 0xdf6e, 0xe06f, 0xea6f, 0xf56f, 0xff6f, 
+    0x0090, 0x0a90, 0x1590, 0x1f90, 0x2091, 0x2a91, 0x3591, 0x3f91, 
+    0x4092, 0x4a92, 0x5592, 0x5f92, 0x6093, 0x6a93, 0x7593, 0x7f93, 
+    0x8094, 0x8a94, 0x9594, 0x9f94, 0xa095, 0xaa95, 0xb595, 0xbf95, 
+    0xc096, 0xca96, 0xd596, 0xdf96, 0xe097, 0xea97, 0xf597, 0xff97, 
+    0x00b0, 0x0ab0, 0x15b0, 0x1fb0, 0x20b1, 0x2ab1, 0x35b1, 0x3fb1, 
+    0x40b2, 0x4ab2, 0x55b2, 0x5fb2, 0x60b3, 0x6ab3, 0x75b3, 0x7fb3, 
+    0x80b4, 0x8ab4, 0x95b4, 0x9fb4, 0xa0b5, 0xaab5, 0xb5b5, 0xbfb5, 
+    0xc0b6, 0xcab6, 0xd5b6, 0xdfb6, 0xe0b7, 0xeab7, 0xf5b7, 0xffb7, 
+    0x00d8, 0x0ad8, 0x15d8, 0x1fd8, 0x20d9, 0x2ad9, 0x35d9, 0x3fd9, 
+    0x40da, 0x4ada, 0x55da, 0x5fda, 0x60db, 0x6adb, 0x75db, 0x7fdb, 
+    0x80dc, 0x8adc, 0x95dc, 0x9fdc, 0xa0dd, 0xaadd, 0xb5dd, 0xbfdd, 
+    0xc0de, 0xcade, 0xd5de, 0xdfde, 0xe0df, 0xeadf, 0xf5df, 0xffdf, 
+    0x00f8, 0x0af8, 0x15f8, 0x1ff8, 0x20f9, 0x2af9, 0x35f9, 0x3ff9, 
+    0x40fa, 0x4afa, 0x55fa, 0x5ffa, 0x60fb, 0x6afb, 0x75fb, 0x7ffb, 
+    0x80fc, 0x8afc, 0x95fc, 0x9ffc, 0xa0fd, 0xaafd, 0xb5fd, 0xbffd, 
+    0xc0fe, 0xcafe, 0xd5fe, 0xdffe, 0xe0ff, 0xeaff, 0xf5ff, 0xffff 
+};
+
 
 
 uint8_t check_dim_xy(uint16_t x, uint16_t y) {
@@ -105,6 +146,12 @@ uint8_t color_332(uint8_t red, uint8_t green, uint8_t blue) {
 }
 
 
+// RRRRRGGG GGGBBBBB -> RRRGGGBB
+// >> 6
+
+uint8_t rgb565to332(uint16_t rgb565) {
+    return (rgb565 >> 6 & 0xe0)  | (rgb565 >> 6 & 0x1c) | (rgb565 >> 3 & 0x3);
+}
 
 // Python callback
 extern void tulip_frame_isr(); 
@@ -936,8 +983,7 @@ void display_teardown(void) {
     free_caps(sprite_ids); sprite_ids = NULL;
     free_caps(line_emits_rle); line_emits_rle = NULL;
     free_caps(line_emits_y); line_emits_y = NULL;
-    //free_caps(line_emits_rle_1); line_emits_rle_1 = NULL;
-    //free_caps(line_emits_y_1); line_emits_y_1 = NULL;
+    free_caps(lv_buf); lv_buf = NULL;
     free_caps(sprite_ram); sprite_ram = NULL; 
     free_caps(sprite_x_px); sprite_x_px = NULL;
     free_caps(sprite_y_px); sprite_y_px = NULL;
@@ -957,10 +1003,83 @@ void display_teardown(void) {
     free_caps(bg_lines); bg_lines = NULL;
 }
 
+
+void lv_flush_cb(lv_display_t * display, const lv_area_t * area, unsigned char * px_map)
+{
+    uint16_t * buf = (uint16_t *)px_map; 
+    int16_t x, y;
+    for(y = area->y1; y <= area->y2; y++) {
+        for(x = area->x1; x <= area->x2; x++) {
+            bg[y*(H_RES+OFFSCREEN_X_PX) + x] = ((*buf >> 8) & 0xe0)  | ((*buf >> 6) & 0x1c) | ((*buf >> 3 & 0x3));
+            buf++;
+        }
+    }
+    // Inform LVGL that you are ready with the flushing and buf is not used anymore
+    lv_display_flush_ready(display);
+}
+
+// Shim for lvgl to read ticks
+uint32_t u32_ticks_ms() {
+    return (uint32_t) get_ticks_ms();
+}
+
+void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data);
+
+
+void lvgl_input_kb_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
+    lvgl_keyboard_read(indev, data);
+}
+
+void lvgl_input_read_cb(lv_indev_t * indev, lv_indev_data_t*data) {
+    if(touch_held) {
+        if(last_touch_x[0] >= 0 && last_touch_x[0] < H_RES && last_touch_y[0] >= 0 && last_touch_y[0] < V_RES) {
+            data->point.x = last_touch_x[0];
+            data->point.y = last_touch_y[0];
+            data->state = LV_INDEV_STATE_PRESSED;
+        }
+    } else {
+        data->state = LV_INDEV_STATE_RELEASED;
+    }
+}
+
+
+void my_log_cb(lv_log_level_t level, const char * buf)
+{
+    fprintf(stderr, "%s\n", buf);
+}
+
+
+
+void setup_lvgl() {
+    // Setup LVGL for UI etc
+    lv_init();
+
+    //lv_log_register_print_cb(my_log_cb);
+    lv_display_t * lv_display = lv_display_create(H_RES, V_RES);
+    lv_display_set_antialiasing(lv_display, 0);
+    lv_display_set_flush_cb(lv_display, lv_flush_cb);
+    lv_display_set_buffers(lv_display, lv_buf, NULL, H_RES*V_RES*2/10, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    lv_tick_set_cb(u32_ticks_ms);
+
+    // Create a input device (uses tulip.touch())
+    lv_indev_t * indev = lv_indev_create();
+    lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);   
+    lv_indev_set_read_cb(indev, lvgl_input_read_cb);  
+
+    // Also create a keyboard input device 
+    lv_indev_t *indev_kb = lv_indev_create();
+    lv_indev_set_type(indev_kb, LV_INDEV_TYPE_KEYPAD);
+    lv_indev_set_read_cb(indev_kb, lvgl_input_kb_read_cb);  
+}
+
+
+
 void display_init(void) {
     // 12 divides into 600, 480, 240
     // Create the background FB
+    // 1536000 bytes
     bg = (uint8_t*)calloc_caps(32, 1, (H_RES+OFFSCREEN_X_PX)*(V_RES+OFFSCREEN_Y_PX)*BYTES_PER_PIXEL, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    // 614400 bytes
     bg_tfb = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
 
     // And various ptrs
@@ -975,13 +1094,13 @@ void display_init(void) {
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
     TFB_pxlen = (uint16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
 
-    //lines_bitmap = (uint8_t*)calloc_caps(32, 1, (H_RES*V_RES/8), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    // 120000 byes
     line_emits_rle = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    // 120000 bytes
     line_emits_y = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-
-    //line_emits_rle_1 = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    //line_emits_y_1 = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-
+    // 122880 bytes
+    
+    lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
@@ -1002,7 +1121,6 @@ void display_init(void) {
     display_reset_tfb();
     display_reset_sprites();
     display_reset_touch();
-    ui_init();
 
     vsync_count = 1;
     reported_fps = 30;

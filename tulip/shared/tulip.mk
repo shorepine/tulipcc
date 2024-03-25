@@ -5,6 +5,7 @@ TULIP_EXTMOD_DIR = ../shared
 EXTMOD_SRC_C += $(addprefix ../amy/src/, \
 	amy.c \
 	algorithms.c \
+	custom.c \
 	patches.c \
 	delay.c \
 	envelope.c \
@@ -18,11 +19,10 @@ EXTMOD_SRC_C += $(addprefix ../amy/src/, \
 EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	modtulip.c \
 	polyfills.c \
-	lodepng.c \
-	u8g2_fonts.c \
-	u8fontdata.c \
 	smallfont.c \
 	display.c \
+	u8g2_fonts.c \
+	u8fontdata.c \
 	bresenham.c \
 	wireframe.c \
 	ui.c \
@@ -33,7 +33,9 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	midi.c \
 	alles.c \
 	sounds.c \
+	lodepng.c \
 	)
+
 
 INC += -I$(TOP)/$(TULIP_EXTMOD_DIR)
 INC += -I../amy/src/
