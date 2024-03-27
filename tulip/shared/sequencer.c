@@ -89,6 +89,22 @@ void sequencer_init() {
     sequencer_recompute();    
 }
 
+/*
+#define SEQUENCER_RINGBUF_SIZE 100
+mp_obj_list_t ** sequencer_tuples;
+void sequencer_alloc_ringbuf() {
+    sequencer_tuples = malloc_caps(sizeof(mp_obj_list_t*)*SEQUENCER_RINGBUF_SIZE, 0);
+    for(uint8_t i=0;i<SEQUENCER_RINGBUF_SIZE;i++) {
+        mp_obj_t list[2];
+        list[0] = mp_obj_new_int(0);
+        list[1] = mp_obj_new_int(0);        
+        sequencer_tuples[i] = MP_OBJ_TO_PTR(mp_obj_new_list(2, list));
+    }
+    fprintf(stderr, "allocated\n");
+    //mp_sched_schedule(sequencer_callback, mp_obj_new_tuple(2, tuple));
+}
+*/
+
 static void sequencer_check_and_fill() {
     // The while is in case the timer fires later than a tick; (on esp this would be due to SPI or wifi ops), we can still use our latency to keep up
     while(amy_sysclock()  >= (next_amy_tick_us/1000)) {
@@ -96,6 +112,10 @@ static void sequencer_check_and_fill() {
         for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
             if(sequencer_dividers[i]!=0) {
                 if(tick_count % sequencer_dividers[i] == 0) {
+                    //mp_obj_list_t * my_preallocated_tuple = sequencer_tuples[tick_count % SEQUENCER_RINGBUF_SIZE];
+                    //my_preallocated_tuple->items[0] = mp_obj_new_int((next_amy_tick_us/1000)+sequencer_latency_ms);
+                    //my_preallocated_tuple->items[1] = mp_obj_new_int(tick_count);
+                    //mp_sched_schedule(sequencer_callbacks[i], my_preallocated_tuple);
                     mp_sched_schedule(sequencer_callbacks[i], mp_obj_new_int((next_amy_tick_us/1000)+sequencer_latency_ms));
                 }
             }

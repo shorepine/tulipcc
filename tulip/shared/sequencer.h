@@ -33,6 +33,6 @@ void sequencer_init();
 void sequencer_start();
 void sequencer_stop();
 void sequencer_recompute();
-
+void sequencer_alloc_ringbuf();
 
 #endif

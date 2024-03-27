@@ -623,7 +623,6 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     #endif
 
     setup_lvgl();
-
     
     #if MICROPY_VFS_POSIX
     {
