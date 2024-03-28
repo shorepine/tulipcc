@@ -938,7 +938,6 @@ int main(int argc, char **argv) {
 
     delay_ms(100);
     // Schedule a "turning on" sound
-    bleep();
 
 
 display_jump: 

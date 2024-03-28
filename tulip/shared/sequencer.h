@@ -18,7 +18,7 @@ extern mp_obj_t sequencer_callbacks[SEQUENCER_SLOTS];
 extern uint8_t sequencer_dividers[SEQUENCER_SLOTS];
 
 // Our internal accounting
-extern uint32_t tick_count ;
+extern uint32_t sequencer_tick_count ;
 extern uint64_t next_amy_tick_us ;
 extern uint32_t us_per_tick ;
 
@@ -33,6 +33,5 @@ void sequencer_init();
 void sequencer_start();
 void sequencer_stop();
 void sequencer_recompute();
-void sequencer_alloc_ringbuf();
 
 #endif

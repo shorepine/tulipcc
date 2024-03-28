@@ -573,6 +573,13 @@ STATIC mp_obj_t tulip_seq_start(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_start_obj, 0, 0, tulip_seq_start);
 
 
+STATIC mp_obj_t tulip_seq_ticks(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(sequencer_tick_count);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_ticks_obj, 0, 0, tulip_seq_ticks);
+
+
 // tulip.frame_callback(cb, arg)
 // tulip.frame_callback() -- stops 
 STATIC mp_obj_t tulip_frame_callback(size_t n_args, const mp_obj_t *args) {
@@ -1284,6 +1291,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_seq_latency), MP_ROM_PTR(&tulip_seq_latency_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_stop), MP_ROM_PTR(&tulip_seq_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_start), MP_ROM_PTR(&tulip_seq_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_local), MP_ROM_PTR(&tulip_midi_local_obj) },

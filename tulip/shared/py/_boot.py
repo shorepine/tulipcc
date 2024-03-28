@@ -1,6 +1,6 @@
 import gc
 import uos
-import tulip, world, sys
+import tulip, world, sys, midi
 
 import alles
 from upysh import *
@@ -58,7 +58,7 @@ except ImportError:
         cd(tulip.app_path())
 
 gc.collect()
-
+midi.setup()
 
 
 # Don't boot the launcher on T-Deck
