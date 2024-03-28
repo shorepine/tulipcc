@@ -32,10 +32,11 @@ import tulip
 # Tulip defaults, 4 note polyphony on four channels
 # drum machine always on channel 9/10
 PCM_PATCHES = 29
-voices_for_channel = {1:[0,1,2,3], 2:[4,5,6,7], 3:[8,9,10,11], 4:[12,13,14,15], 10:range(110,120)}
-patch_for_channel = {1:0, 2:1, 3:128, 4:129}
+polyphony_map = {1:4, 2:4, 3:4, 4:4, 10:10}
+patch_map = {1:0, 2:1, 3:128, 4:129}
 
 # Our state
+voices_for_channel = {} #1:[0,1,2,3], 2:[4,5,6,7], 3:[8,9,10,11], 4:[12,13,14,15], 10:range(110,120)}
 note_for_voice = {}
 voices_active = []
 
@@ -102,12 +103,12 @@ def note_off(channel, midinote):
 def update_channel(channel):
     import time
     vstr = ",".join([str(x) for x in voices_for_channel[channel]])
-    amy.send(voices=vstr, load_patch=patch_for_channel[channel])
+    amy.send(voices=vstr, load_patch=patch_map[channel])
     time.sleep(0.1) # AMY queue will fill if not slept 
 
 def program_change(channel, patch):
     # update the map
-    patch_for_channel[channel] = patch
+    patch_map[channel] = patch
     update_channel(channel)
 
 def midi_event_cb(x):
@@ -136,22 +137,32 @@ def midi_event_cb(x):
         if len(m) == 0:
             m = tulip.midi_in()
 
+def setup_voices():
+    #amy.reset()
+    v_counter = 0
+    voices_for_channel[10] = list(range(110,120))
+    for channel in polyphony_map.keys():
+        if channel is not 10:
+            voices_for_channel[channel] = list(range(v_counter, v_counter+polyphony_map[channel]))
+            v_counter = v_counter + polyphony_map[channel]
+            update_channel(channel)
 
-def music_map(channel, patch_number, voice_count):
-    pass
-
-def setup_voices(t):
-    # do initial voice setup
-    # drums on channel 10
+def defer_setup(t):
     if(tulip.seq_ticks() > tulip.seq_ppq()):
-        for channel in voices_for_channel.keys():
-            if channel is not 10:
-                update_channel(channel)
+        setup_voices()
         tulip.midi_callback(midi_event_cb)
-        tulip.seq_remove_callback(setup_voices)
+        tulip.seq_remove_callback(defer_setup)
+
+def music_map(channel, patch_number=None, voice_count=None):
+    if voice_count is not None:
+        polyphony_map[channel] = voice_count
+        setup_voices()
+    if patch_number is not None:
+        patch_map[channel] = patch_number
+        update_channel(channel)
 
 def setup():
     # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a callback
-    tulip.seq_add_callback(setup_voices)
+    tulip.seq_add_callback(defer_setup)
 
 
