@@ -1,8 +1,7 @@
 import gc
 import uos
-import tulip, world, sys, midi
+import tulip, world, sys, midi, amy, alles
 
-import alles
 from upysh import *
 from tulip import edit, run
 # This _boot runs both desktop and esp32s3
@@ -58,6 +57,9 @@ except ImportError:
         cd(tulip.app_path())
 
 gc.collect()
+# Override amy's send to work with tulip
+amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
+alles.local() # start in local mode 
 midi.setup()
 
 

@@ -5,7 +5,7 @@
 from _tulip import *
 from world import world
 from upysh import cd, pwd
-import alles
+import amy
 import midi
 
 from midi import music_map
@@ -37,7 +37,7 @@ class Game():
         key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
         Sprite.reset()  # resets sprite counter and RAM
         collisions() # resets collision
-        alles.reset()
+        amy.reset()
         self.run = 1
 
     def quit(self):

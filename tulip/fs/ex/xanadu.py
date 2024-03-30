@@ -7,12 +7,12 @@ See https://github.com/csound/examples/blob/master/csd/xanadu.csd for original.
 import math
 import time
 
+import amy
 try:
-    import amy
     amy.live()
 except:
-    amy = alles
-    alles.chorus(1)
+    pass
+    
 
 NEXT_OSC = 0
 TOTAL_OSCS = 120 # 48  # 64

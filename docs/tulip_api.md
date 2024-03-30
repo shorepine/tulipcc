@@ -66,13 +66,13 @@ rabbit_game/
 ... rabbit_pic1.png
 ```
 
-The main Python script must be the name of the package. This script needs to explicitly `import tulip,alles` if you are using those. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package')`. 
+The main Python script must be the name of the package. This script needs to explicitly `import tulip,amy` if you are using those. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package')`. 
 
 We put a few system packages in `/sys/app`, and if you `run('app')`, it will look both in your current folder and the `/sys/app` folder for the app. 
 
 **There are two types of apps you can make in Tulip.** One is the default: “modal”; when you import program it will go into a while True: or other infinite loop and own all of Tulip’s resources while it runs. This is meant for games or animations or other types of apps that require all the cycles of Tulip. You will need to provide your own way to quit the app, or just `except KeyboardInterrupt`. We’ll then clean up the imports and free whatever memory was allocated after close. 
 
-The second type is “switchable”: if you design your app so that import program returns after setup and `program.run(screen)` exists to start up the app, but then relies on LVGL UI components and callbacks to do its job, we can support running that app alongside others. This can be used for music software that relies on timers or MIDI input, for example, a Juno-6 front end and a drum machine running at the same time. For these types of apps, we pass in a `UIScreen` object to a run method that you provide, that manages your screen and provides two buttons for quitting and switching between apps. The switch is “alt-tab” and keeps the UI and program running but hides it and switches to the next app available. The quit closes the app, clears the memory and removes the UI components and switches to the next available app. 
+The second type is “switchable”: if you design your app so that import program returns after setup and `program.run(screen)` exists to start up the app, but then relies on LVGL UI components and callbacks (graphics, sequencer, MIDI) to do its job, we can support running that app alongside others. This can be used for music software that relies on timers or MIDI input, for example, a Juno-6 front end and a drum machine running at the same time. For these types of apps, we pass in a `UIScreen` object to a run method that you provide, that manages your screen and provides two buttons for quitting and switching between apps. The switch is “alt-tab” and keeps the UI and program running but hides it and switches to the next app available. The quit closes the app, clears the memory and removes the UI components and switches to the next available app. 
 
 Note that if you draw anything without using LVGL on your app (for example, BG drawing) you will have to re-draw upon activation again. LVGL components will by default show themselves on activation and hide on deactivation. You can register an activation callback to re-draw non-LVGL components with `screen.activate_callback=callback`. 
 
@@ -266,19 +266,20 @@ tulip.set_time()
 
 ## Music / sound
 
-Tulip comes with the Alles synthesizer, a very full featured 64-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [Alles documentation](https://github.com/bwhitman/alles/blob/main/README.md) for more information, and the [AMY Readme](https://github.com/bwhitman/amy/blob/main/README.md) for full details of the synthesizer API. Tulip's version of AMY comes with stereo sound, which you can set per oscillator with the `pan` parameter.
+Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches.
 
-Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/bwhitman/alles/blob/main/README.md) Connect any number of Alles speakers to the wifi to have instant surround sound! 
+Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/bwhitman/alles/blob/main/README.md) Alles is a wrapper around AMY that lets you control the synthesizer over Wi-Fi to remote speakers, or other computers or Tulips. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information and for more music examples.
 
-See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information and for more music examples.
+![With Alles](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/nicoboard-alles.jpg)
 
 ```python
-alles.drums() # plays a test song
-alles.volume(4) # change volume
-alles.reset() # stops all music / sounds playing
-alles.send(osc=0, wave=alles.ALGO, patch=4, note=45, vel=1) # plays a tone
-alles.send(osc=0, pan=0) # set to the right channel
-alles.send(osc=0, pan=1) # set to the left channel
+
+amy.drums() # plays a test song
+amy.volume(4) # change volume
+amy.reset() # stops all music / sounds playing
+amy.send(voices='0', load_patch=129, note=45, vel=1) # plays a tone
+amy.send(voices='0', pan=0) # set to the right channel
+amy.send(voices='0', pan=1) # set to the left channel
 
 # start mesh mode (control multiple speakers over wifi)
 alles.mesh() # after turning on wifi
@@ -287,26 +288,12 @@ alles.mesh(local_ip='192.168.50.4') # useful for setting a network on Tulip Desk
 
 alles.map() # returns booted Alles synths on the mesh
 
-alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1) # all Alles speakers in a mesh will respond
-alles.send(osc=1, wave=alles.ALGO, patch=101, note=50, ratio=0.1, vel=1, client=2) # just a certain client
+amy.send(voices='0', load_patch=101, note=50, vel=1) # all Alles speakers in a mesh will respond
+amy.send(voices='0', load_patch=101, note=50, vel=1, client=2) # just a certain client
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
 Tuilp's Alles synth includes a stereo chorus unit which has a set of control parameters:
-
-```python
-alles.chorus(mix_level, max_delay_samples, lfo_freq, lfo_depth_amp, lfo_wave_shape)
-```
-
-The Roland Juno-6 stereo chorus is approximated by ```alles.chorus(level=1.0, max_delay=320, freq=0.5, amp=0.5, wave=alles.TRIANGLE)```.  The chorus can be turned on and off with ```alles.chorus(1)``` and ```alles.chorus(0)``` respectively.
-
-It also supports reverb:
-
-```python
-alles.reverb(level, liveness, damping, xover_hz):
-```
-
-It can be turned on and off like `chorus` with `alles.reverb(1)` and `alles.reverb(0)`. 
 
 Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/music.py), which lets you create chords, progressions and scales through code:
 
@@ -314,20 +301,44 @@ Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/b
 import music
 chord = music.Chord("F:min7")
 for i,note in enumerate(chord.midinotes()):
-  alles.send(wave=alles.ALGO,osc=i*9,note=note,vel=0.25,patch=101,ratio=0.1)
+    amy.send(wave=amy.SINE,osc=i*9,note=note,vel=0.25)
 ```
 
+## Music sequencer
 
+Tulip is always running a live sequencer, meant for music programs you write to share a common clock. This allows you to have multiple music programs running that respond to a callback to play notes. 
+
+To use the clock in your code, you should first register on the music callback with `tulip.seq_add_callback(my_callback)`. You can remove your callback with `tulip.seq_remove_callback(my_callback)`.  You can remove all callbacks with `tulip.seq_remove_callbacks()`. We support up to 4 callbacks running at once. 
+
+When adding a callback, there's an optional second parameter to denote a divider on the system level parts-per-quarter timer (currently defaults at 48). If you run `tulip.seq_add_callback(my_callback, 6)`, it would call your function `my_callback` every 6th "tick", so 8 times a quarter note at a PPQ of 48. The default divider is `tulip.seq_ppq()`, so if you don't set it, your callback will activate once a quarter note. 
+
+By default, your callback will receive a message 50 milliseconds ahead of the time of the intended tick, with the parameters `my_callback(intended_time_ms)`. This is so that you can take extra CPU time to prepare to send messages at the precise time, using AMY scheduling commands, to keep in perfect sync. You can set this "lookahead" globally for all callbacks if you want more or less latency with `tulip.seq_latency(X)` or get it with `tulip.seq_latency()`. 
+
+You can set the system-wide BPM (beats, or quarters per minute) with `tulip.seq_bpm(120)` or retrieve it with `tulip.seq_bpm()`. You can change the PPQ with `tulip.seq_ppq(new_value)` or retrieve it with `tulip.seq_ppq()`. You can stop the sequencer with `tulip.seq_stop()`, and restart it with `tulip.seq_start()`. 
+
+See the example `seq.py` on Tulip World for an example of using the music clock.
 
 ## MIDI
 
 Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
 
-On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later using the "IAC" MIDI bus. (It does not yet work at all on Linux.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." At this time, MIDI will not function (but the rest of Tulip will run fine) on macOS versions before 11.0.
+By default, Tulip boots into a live MIDI synthesizer mode. Any note-ons, note-offs, program changes or pitch bend messages will be processed automatically with polyphony and voice stealing, and Tulip will play the tones with no other user intervention needed.
+
+By default, MIDI notes on channel 1 will map to Juno-6 patch 0. And MIDI notes on channel 10 will play the PCM samples (like a drum machine).
+
+You can adjust which voices are sent with `tulip.music_map(channel, patch_number, voice_count)`. For example, you can have Tulip play DX7 patch 129 on channel 2 with `tulip.music_map(2, 129)`. The channel is a MIDI channel (we use 1-16 indexing), the patch_number is an AMY patch number, and voice_count is the optional number of voices (polyphony) you want to support for that channel and patch. 
+
+(A good rule of thumb is Tulip CC can support about 8 simultaneous total voices for Juno-6 and DX7, and 20-30 total voices for PCM and more for other simpler oscillator patches.)
+
+These mappings will get reset to default on boot. If you want to save them, put tulip.music_map() commands in your boot.py.
+
+On Tulip Desktop, MIDI works on our iOS and macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
 
 You can also send MIDI messages "locally", e.g. to a running program that is expecting hardware MIDI input, via `tulip.midi_local()`
 
 ```python
+tulip.music_map(1,129) # change MIDI channel 1 to patch 129.
+
 def callback(x): # for now you have to define a callback with a dummy parameter
     m = tulip.midi_in()
     if(m[0]==144):
@@ -351,24 +362,10 @@ The Tulip GPU consists of 3 subsystems, in drawing order:
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
  * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites as well as line buffers, stored in the same RAM. The line buffers are useful for fast wireframe drawing. 
 
-The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 22Mhz, which is 25FPS. This is a great balance of speed and stability for text -- the editor and REPL. If you're writing a game or animation, increase `tulip_clock` to at least 28 for 30FPS and higher. 
-
-Some example display clocks and resolutions:
-
-| H_RES   | V_RES   | Clock  |  FPS   | - | H_RES   | V_RES   | Clock  |  FPS   |
-| ------- | ------- | ------ | ------ | --| ------- | ------- | ------ | ------ |
-| 1024    | 600     | 10     | 14.98  | |512     | 600     | 10     | 19.91  |
-| 1024    | 600     | 14     | 18.55  | |512     | 600     | 14     | 30.26  |
-| 1024    | 600     | 18     | 23.19  | |512     | 600     | 18     | 37.82  |
-| 1024    | 600     | 22     | 25.91  | |512     | 600     | 22     | 50.43  |
-| 1024    | 600     | 28     | 46.37  | |512     | 600     | 28     | 75.65  |
-| 1024    | 300     | 10     | 21.47  | |512     | 300     | 10     | 35.03  |
-| 1024    | 300     | 14     | 34.36  | |512     | 300     | 14     | 56.05  |
-| 1024    | 300     | 18     | 42.95  | |512     | 300     | 18     | 70.07  |
-| 1024    | 300     | 22     | 57.26  | |512     | 300     | 22     | 93.45  |
-| 1024    | 300     | 28     | 85.90  | |512     | 300     | 28     | 140.13 |
+The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 28Mhz, which is 30FPS. This is a great balance of speed and stability for text -- the editor and REPL. 
 
 You can set a python callback for the frame done interrupt, for use in games or animations. 
+
 
 ```python
 # returns current GPU usage computed on the last 100 frames, as a percentage of max
@@ -698,7 +695,7 @@ See `world.download('planet_boing')` for a fleshed out example of using the `Gam
 
 ## Tulip Music Editor
 
-A synth / patch editor for the AMY and Alles synth inside Tulip. [Like the YRM102.](https://www.msx.org/wiki/Yamaha_YRM-102) 
+A synth / patch editor for the AMY synth inside Tulip. [Like the YRM102.](https://www.msx.org/wiki/Yamaha_YRM-102) 
 
 Status: building locally, will share first alpha when ready
 

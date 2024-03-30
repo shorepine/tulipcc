@@ -2,41 +2,19 @@
 # always running midi listener
 # based on dan's polyvoice
 
-#By default, at power on, Tulip will respond to MIDI note messages and assign them to different voices in AMY, with polyphony and voice stealing. 
-#This will happen with no other apps running, and allows Tulip to just act as a synthesizer with no user interaction. 
-#For example, by default, MIDI notes on channel 1 will map to Juno-6 patch 0, channel 2 to Juno-6 patch 1, channel 3 to DX-7 patch 0, etc.
-
-#You can adjust which voices are sent with tulip.music_map(channel, patch_number, voice_count). 
-#The channel is a MIDI channel (we use 1-16 indexing), the patch_number is an AMY patch number, and 
-#voice_count is the number of voices (polyphony) you want to support for that channel and patch. 
-#(A good rule of thumb is Tulip CC can support about 12 simultaneous total voices for Juno-6 and DX7, and 20-30 
-#    total voices for PCM and more for other simpler oscillator patches.)
-
-#You can also send AMY patch commands (strings) with tulip.music_map(channel, patch_string, voice_count). 
-#This lets your UI apps adjust patches and send updates to AMY for the synthesizer. (You can use AMY’s record_patch 
-#    functionality to get a patch string, or have your app generate one.)
-
-#These mappings will get reset to default on boot. If you want to save them, put tulip.music_map() commands in your boot.py.
 
 
-# So this
-# midi in handling
-# voice stealing
-# setting up AMY voices on boot
-# handle map from chan -> voice
-# handle map from string -> voice (requires AMY changes, so do last)
-
-import alles as amy
+import amy
 import tulip
 
-# Tulip defaults, 4 note polyphony on four channels
-# drum machine always on channel 9/10
+# Tulip defaults, 4 note polyphony on channel 1
+# drum machine always on channel 10
 PCM_PATCHES = 29
-polyphony_map = {1:4, 2:4, 3:4, 4:4, 10:10}
-patch_map = {1:0, 2:1, 3:128, 4:129}
+polyphony_map = {1:4, 10:10}
+patch_map = {1:0}
 
 # Our state
-voices_for_channel = {} #1:[0,1,2,3], 2:[4,5,6,7], 3:[8,9,10,11], 4:[12,13,14,15], 10:range(110,120)}
+voices_for_channel = {} 
 note_for_voice = {}
 voices_active = []
 
@@ -74,7 +52,6 @@ def pitch_bend(channel, val):
     for v in voices_for_channel[channel]:
         if v in voices_active: v_str = v_str + "%d," % (v)
         if(len(v_str)):
-            print('sending pb to voices %s val %f' % (v_str[:-1], val))
             amy.send(voices=v_str[:-1], pitch_bend=val)
 
 def note_on(channel, midinote, vel):
@@ -138,7 +115,7 @@ def midi_event_cb(x):
             m = tulip.midi_in()
 
 def setup_voices():
-    #amy.reset()
+    #amy.reset() # TODO - this messes up voices. find out why. probably AMY bug 
     v_counter = 0
     voices_for_channel[10] = list(range(110,120))
     for channel in polyphony_map.keys():

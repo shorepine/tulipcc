@@ -2,12 +2,7 @@
 # Convert juno-106 sysex patches to Amy
 
 
-try:
-  import amy
-except ImportError:
-  import alles
-  amy = alles
-
+import amy
 import json
 import math
 import time
