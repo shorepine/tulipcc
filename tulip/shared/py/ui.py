@@ -56,7 +56,7 @@ class UIScreen():
     default_offset_x = 10
     default_offset_y = 100
 
-    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, activate_callback=None):
+    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, activate_callback=None, quit_callback=None):
         self.group = lv.obj() # a screen, really
         self.keep_tfb = keep_tfb
         self.bg_color = bg_color
@@ -72,6 +72,7 @@ class UIScreen():
         self.active = False # is it showing on screen 
         self.imported_modules = []
         self.activate_callback = activate_callback
+        self.quit_callback = quit_callback
         self.kb_group = lv.group_create()
         if(self.name != 'repl'):
             self.kb_group.set_default()
@@ -103,7 +104,7 @@ class UIScreen():
                 quit_label.set_text(lv.SYMBOL.POWER)
                 quit_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
                 self.quit_button.align_to(self.alttab_button, lv.ALIGN.OUT_LEFT_MID,0,0)
-                self.quit_button.add_event_cb(self.quit_callback, lv.EVENT.CLICKED, None)
+                self.quit_button.add_event_cb(self.screen_quit_callback, lv.EVENT.CLICKED, None)
             else:
                 self.launcher_button = lv.button(self.group)
                 self.launcher_button.set_style_bg_color(pal_to_lv(36), lv.PART.MAIN)
@@ -130,8 +131,10 @@ class UIScreen():
                 if(self.name == app[0]):
                     apps[(i + 1) % len(running_apps)][1].present()
 
-    def quit_callback(self, e):
+    def screen_quit_callback(self, e):
         import gc
+        if(self.quit_callback is not None):
+            self.quit_callback(self)
         self.running = False
         self.active = False
         self.remove_items()
@@ -192,7 +195,8 @@ class UIScreen():
         self.clear()
         things = self.group.get_child_count()
         for i in range(things):
-            self.group.get_child(0).delete()
+            if(self.group.get_child(0) is not None):
+                self.group.get_child(0).delete()
         self.last_obj_added = None
 
 

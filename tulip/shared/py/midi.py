@@ -6,6 +6,7 @@
 
 import amy
 import tulip
+import time
 
 # Tulip defaults, 4 note polyphony on channel 1
 # drum machine always on channel 10
@@ -78,10 +79,9 @@ def note_off(channel, midinote):
             return
 
 def update_channel(channel):
-    import time
+    time.sleep(0.1) # AMY queue will fill if not slept 
     vstr = ",".join([str(x) for x in voices_for_channel[channel]])
     amy.send(voices=vstr, load_patch=patch_map[channel])
-    time.sleep(0.1) # AMY queue will fill if not slept 
 
 def program_change(channel, patch):
     # update the map
@@ -115,7 +115,7 @@ def midi_event_cb(x):
             m = tulip.midi_in()
 
 def setup_voices():
-    #amy.reset() # TODO - this messes up voices. find out why. probably AMY bug 
+    amy.reset()
     v_counter = 0
     voices_for_channel[10] = list(range(110,120))
     for channel in polyphony_map.keys():

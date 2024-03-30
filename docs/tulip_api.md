@@ -316,7 +316,7 @@ By default, your callback will receive a message 50 milliseconds ahead of the ti
 
 You can set the system-wide BPM (beats, or quarters per minute) with `tulip.seq_bpm(120)` or retrieve it with `tulip.seq_bpm()`. You can change the PPQ with `tulip.seq_ppq(new_value)` or retrieve it with `tulip.seq_ppq()`. You can stop the sequencer with `tulip.seq_stop()`, and restart it with `tulip.seq_start()`. 
 
-See the example `seq.py` on Tulip World for an example of using the music clock.
+See the example `seq.py` on Tulip World for an example of using the music clock, or the [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py) included app.
 
 ## MIDI
 
