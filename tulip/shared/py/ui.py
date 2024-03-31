@@ -266,6 +266,8 @@ def launcher_cb(e):
         lv_launcher = None
         if(text=="Juno-6"):
             tulip.run('juno6')
+        if(text=="Drums"):
+            tulip.run('drums')
         if(text=="Keyboard"):
             keyboard()
         if(text=="Wordpad"):
@@ -297,6 +299,8 @@ def launcher(ignore=True):
     b_close.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_juno = lv_launcher.add_button(lv.SYMBOL.AUDIO, "Juno-6")
     b_juno.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
+    b_drums = lv_launcher.add_button(lv.SYMBOL.NEXT, "Drums")
+    b_drums.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_keyboard = lv_launcher.add_button(lv.SYMBOL.KEYBOARD, "Keyboard")
     b_keyboard.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_wordpad = lv_launcher.add_button(lv.SYMBOL.FILE, "Wordpad")
