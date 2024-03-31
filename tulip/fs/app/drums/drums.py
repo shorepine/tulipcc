@@ -215,13 +215,13 @@ def beat_callback(t):
     app.leds.set((app.current_beat-1)% 16, 0)
     app.leds.set(app.current_beat, 1)
 
-    # todo there's something broken about pcm patches in amy , set patch on an osc then change it, its out of pitch
     for i, row in enumerate(app.rows):
         if(row.get(app.current_beat)):
             base_note = drumkit[row.get_preset()][0]
-            note_for_pitch = int(base_note + (row.get_pitch() - 0.5)*24.0)
+            note_for_pitch = None
+            if row.get_pitch() != 0.5:
+                note_for_pitch = int(base_note + (row.get_pitch() - 0.5)*24.0)
             amy.send(osc=50+i+2, wave=amy.PCM, patch=row.get_preset(), note=note_for_pitch, vel=row.get_vel()*2, pan=row.get_pan(), time=t)
-
     app.current_beat = (app.current_beat+1) % 16
 
 def quit(screen):

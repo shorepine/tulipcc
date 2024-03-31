@@ -1,6 +1,6 @@
 # juno6.py
 # A more pure-LVGL (using Tulip's UIScreen) UI for Juno-6
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, midi_in, midi_callback
+from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, midi_in, midi_callback, seq_ppq, seq_add_callback, seq_remove_callback
 import time
 
 
@@ -512,20 +512,26 @@ midi_callback(polyvoice.midi_event_cb)
 
 arpeggiator.synth = polyvoice.SYNTH
 polyvoice.SYNTH = arpeggiator
-#polyvoice.control_change_fn = arpeggiator.control_change
+polyvoice.control_change_fn = arpeggiator.control_change
 
-# TODO - move this to a music callback
-# Arpeggiator run must be launched from main thread, not event thread, since it blocks.
-#arpeggiator.run()
+def arp_callback(t):
+    if arpeggiator.running:
+        arpeggiator.next_note(t)
+
+def quit(screen):
+    seq_remove_callback(arp_callback)
+
 
 def run(screen):
     screen.offset_y = 100
+    screen.quit_callback = quit
     screen.set_bg_color(73)
     screen.add([lfo, dco, hpf, vcf, vca, env, ch])
     screen.add(arp, relative=lfo, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
     screen.add(patch_selector, relative=vcf, direction=lv.ALIGN.OUT_TOP_MID)
     screen.add(midi_selector) # the second add after relative will be relative to the last obj added
     screen.present()
+    seq_add_callback(arp_callback, int(seq_ppq()))
 
 
 
