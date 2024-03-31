@@ -1,6 +1,7 @@
 #!/bin/bash
 # build.sh
 # Just builds locally
+set -e
 
 source ../shared/grab_submodules.sh
 

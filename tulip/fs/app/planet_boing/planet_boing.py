@@ -1,4 +1,4 @@
-import time, random, math, tulip, alles
+import time, random, math, tulip, amy
 
 (WIDTH, HEIGHT) = tulip.screen_size()
 
@@ -86,7 +86,7 @@ class Blob(tulip.Sprite):
             self.y_v = random.randrange(-10, 10)
             p = self.x / tulip.Sprite.SCREEN_WIDTH
             #print("x:", self.x, "pan:", p)
-            alles.send(osc=32+self.sprite_id, wave=alles.PCM, patch=13, note=48+self.sprite_id, vel=0.75, pan=p)
+            amy.send(osc=32+self.sprite_id, wave=amy.PCM, patch=13, note=48+self.sprite_id, vel=0.75, pan=p)
             self.last_bounce = frame
             return True
         else:
@@ -97,7 +97,7 @@ class Blob(tulip.Sprite):
             self.x = wormhole.x
             self.y = wormhole.y
             p = self.x / tulip.Sprite.SCREEN_WIDTH
-            alles.send(osc=32+self.sprite_id, wave=alles.PCM, patch=18, note=48+self.sprite_id, vel=0.75, pan=p)
+            amy.send(osc=32+self.sprite_id, wave=amy.PCM, patch=18, note=48+self.sprite_id, vel=0.75, pan=p)
             self.last_wormhole = frame        
 
 
@@ -326,7 +326,7 @@ class PlanetBoing(tulip.Game):
 
         self.next_blob_at = 10
         
-        alles.reverb(0.8)
+        amy.reverb(0.8)
         self.draw_background()
 
         self.score = Score()

@@ -5,7 +5,11 @@
 from _tulip import *
 from world import world
 from upysh import cd, pwd
-import alles
+import amy
+import midi
+
+from midi import music_map
+
 # convert tulip RGB332 pal_idx to 3 rgb 0-255 values
 def rgb(px0, wide=False):
     r = px0 & 0xe0;
@@ -33,7 +37,7 @@ class Game():
         key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
         Sprite.reset()  # resets sprite counter and RAM
         collisions() # resets collision
-        alles.reset()
+        amy.reset()
         self.run = 1
 
     def quit(self):
@@ -398,6 +402,7 @@ def battery(n=5):
 # scans the keyboard. lets you use either
 # Z = B, X = A, A = Y, S = X, enter = START, ' = SELECT, Q = L1, W = R1, arrows = DPAD
 def joyk():
+    jmask = 0
     key_scans = keys()[1:5] # get up to four keys held at once
     for k in key_scans:
         if(k == 79): jmask = jmask | Joy.RIGHT
@@ -464,7 +469,7 @@ def run(module_string):
         actual_module = sys.modules[module_string]
         try:
             actual_module.run(screen)
-        except (AttributeError, TypeError):
+        except (AttributeError, TypeError) as e:
             # This is a modal style app that doesn't use a screen
             screen.quit_callback(None)
 

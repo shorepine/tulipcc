@@ -1,6 +1,6 @@
 # a pooping bunny screen saver
 import random, time, math, os
-import tulip, alles, music
+import tulip, amy, music
 
 
 def twiddle_path(incr, poop_color, note):
@@ -157,7 +157,7 @@ def game_loop(d):
             tulip.bg_circle(center_x, center_y,2,253,1)
             p_select = random.randrange(0,len(flower_notes))
             p = flower_notes[p_select]
-            alles.send(osc=get_osc(), wave=alles.PCM, patch=p, vel=0.25)
+            amy.send(osc=get_osc(), wave=amy.PCM, patch=p, vel=0.25)
 
 
     if tulip.ticks_ms() > start_time + time_til_shrooms:
@@ -174,7 +174,7 @@ def game_loop(d):
                                 w,5,1,random.choice(shroom_colors),1)
             p_select = random.randrange(0,len(shroom_notes))
             p = shroom_notes[p_select]
-            alles.send(osc=get_osc(), wave=alles.PCM, patch=p, vel=0.25)
+            amy.send(osc=get_osc(), wave=amy.PCM, patch=p, vel=0.25)
 
     d["x"] += d["x_incr"]
     d["y"] += d["y_incr"]
@@ -182,25 +182,25 @@ def game_loop(d):
     if d["x"] + rabbit_w >= WIDTH or d["x"] <= 0:
         d["x_incr"] *= -1
         (d["x_incr"], d["poop_color"],d["curr_note"]) = twiddle_path(d["x_incr"], d["poop_color"],d["curr_note"])
-        alles.send(osc=get_osc(), wave=alles.PCM, patch=13, note=d["curr_note"], vel=0.25)
+        amy.send(osc=get_osc(), wave=amy.PCM, patch=13, note=d["curr_note"], vel=0.25)
         ringing_pan += (random.random() - 0.5) * 0.1
         if ringing_pan > 0.75:
             ringing_pan = 0.75
         elif ringing_pan < -0.75:
             ringing_pan = -0.75
-        alles.send(osc=0,pan=ringing_pan)
+        amy.send(osc=0,pan=ringing_pan)
         #print("x_incr: " , x_incr)
         #tulip.cpu(2)
     if d["y"] + rabbit_h >= HEIGHT or d["y"] <= 0:
         d["y_incr"] *= -1
         (d["y_incr"], d["poop_color"],d["curr_note"]) = twiddle_path(d["y_incr"], d["poop_color"],d["curr_note"])
-        alles.send(osc=get_osc(), wave=alles.PCM, patch=13, note=d["curr_note"], vel=0.25)
+        amy.send(osc=get_osc(), wave=amy.PCM, patch=13, note=d["curr_note"], vel=0.25)
         ringing_pan += (random.random() - 0.5) * 0.1
         if ringing_pan > 0.75:
             ringing_pan = 0.75
         elif ringing_pan < -0.75:
             ringing_pan = -0.75
-        alles.send(osc=0,pan=ringing_pan)
+        amy.send(osc=0,pan=ringing_pan)
         #tulip.cpu(2)
         #print("y_incr: " , y_incr)
 
@@ -235,7 +235,7 @@ start_time = tulip.ticks_ms()
 tulip.frame_callback(game_loop, d)
 
 #14
-alles.send(osc=0, wave=alles.PCM, patch=18,  vel=0.25, feedback=1)
+amy.send(osc=0, wave=amy.PCM, patch=18,  vel=0.25, feedback=1)
 
 # Run in a loop forever. Catch ctrl-c
 try:
@@ -247,7 +247,7 @@ except KeyboardInterrupt:
     d["run"] = 0
 
 # Clean up a bit
-alles.reset()
+amy.reset()
 tulip.key_scan(0)
 tulip.frame_callback()
 tulip.bg_clear()

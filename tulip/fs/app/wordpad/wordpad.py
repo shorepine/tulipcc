@@ -7,6 +7,7 @@ import tulip, time
 
 def run(screen):
     screen.set_bg_color(255)
+    screen.handle_keyboard=True
     ta = lv.textarea(screen.group)
     ta.set_pos(0,0)
     ta.set_size(H_RES, V_RES)

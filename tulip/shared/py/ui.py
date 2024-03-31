@@ -56,9 +56,11 @@ class UIScreen():
     default_offset_x = 10
     default_offset_y = 100
 
-    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y):
+    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
+        activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
         self.group = lv.obj() # a screen, really
         self.keep_tfb = keep_tfb
+        self.handle_keyboard = handle_keyboard
         self.bg_color = bg_color
         self.offset_x = offset_x
         self.offset_y = offset_y
@@ -71,6 +73,9 @@ class UIScreen():
         self.running = True # is this code running 
         self.active = False # is it showing on screen 
         self.imported_modules = []
+        self.activate_callback = activate_callback
+        self.deactivate_callback = deactivate_callback
+        self.quit_callback = quit_callback
         self.kb_group = lv.group_create()
         if(self.name != 'repl'):
             self.kb_group.set_default()
@@ -102,7 +107,7 @@ class UIScreen():
                 quit_label.set_text(lv.SYMBOL.POWER)
                 quit_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
                 self.quit_button.align_to(self.alttab_button, lv.ALIGN.OUT_LEFT_MID,0,0)
-                self.quit_button.add_event_cb(self.quit_callback, lv.EVENT.CLICKED, None)
+                self.quit_button.add_event_cb(self.screen_quit_callback, lv.EVENT.CLICKED, None)
             else:
                 self.launcher_button = lv.button(self.group)
                 self.launcher_button.set_style_bg_color(pal_to_lv(36), lv.PART.MAIN)
@@ -123,14 +128,19 @@ class UIScreen():
     def alttab_callback(self, e):
         if(len(running_apps)>1):
             self.active = False
+            if(self.deactivate_callback is not None):
+                self.deactivate_callback(self)
+    
             # Find the next app in the list (assuming dict is ordered by insertion, I think it is)
             apps = list(running_apps.items())
             for i,app in enumerate(apps):
                 if(self.name == app[0]):
                     apps[(i + 1) % len(running_apps)][1].present()
 
-    def quit_callback(self, e):
+    def screen_quit_callback(self, e):
         import gc
+        if(self.quit_callback is not None):
+            self.quit_callback(self)
         self.running = False
         self.active = False
         self.remove_items()
@@ -140,8 +150,6 @@ class UIScreen():
             exec('del sys.modules["%s"]' % (m))
         gc.collect()
         repl_screen.present()
-
-
 
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
@@ -164,12 +172,13 @@ class UIScreen():
             self.last_obj_added = o.group
 
     # Show the UI on the screen. Set up the keyboard group listener. Draw the task bar. 
-    def present(self, modal=False):
+    def present(self):
         current_app_string = self.name
         self.active = True
         self.draw_task_bar()
         lv.screen_load(self.group)
-        get_keypad_indev().set_group(self.kb_group)
+        if(self.handle_keyboard):
+            get_keypad_indev().set_group(self.kb_group)
         if(self.name == 'repl'):
             tulip.tfb_start()
             tulip.set_screen_as_repl(1)
@@ -179,6 +188,8 @@ class UIScreen():
                 tulip.tfb_start()
             else:
                 tulip.tfb_stop()
+        if(self.activate_callback is not None):
+            self.activate_callback(self)
 
     # Keep everything around, but load the repl screen
     def clear(self):
@@ -189,7 +200,8 @@ class UIScreen():
         self.clear()
         things = self.group.get_child_count()
         for i in range(things):
-            self.group.get_child(0).delete()
+            if(self.group.get_child(0) is not None):
+                self.group.get_child(0).delete()
         self.last_obj_added = None
 
 
@@ -435,6 +447,6 @@ def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_co
 
 
 
-repl_screen = UIScreen("repl", bg_color=9)
+repl_screen = UIScreen("repl", bg_color=9, handle_keyboard=True)
 repl_screen.present()
 

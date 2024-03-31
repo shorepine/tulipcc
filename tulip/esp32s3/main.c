@@ -51,6 +51,7 @@
 #include "shared/runtime/pyexec.h"
 #include "uart.h"
 #include "usb.h"
+#include "sequencer.h"
 #include "usb_serial_jtag.h"
 #include "modmachine.h"
 #include "modnetwork.h"
@@ -115,6 +116,7 @@ TaskHandle_t amy_render_handle;
 TaskHandle_t alles_fill_buffer_handle;
 TaskHandle_t idle_0_handle;
 TaskHandle_t idle_1_handle;
+TaskHandle_t sequencer_handle;
 
 // For CPU usage
 unsigned long last_task_counters[MAX_TASKS];
@@ -156,10 +158,11 @@ void esp_heap_trace_alloc_hook(void* ptr, size_t size, uint32_t caps) {
 float compute_cpu_usage(uint8_t debug) {
     TaskStatus_t *pxTaskStatusArray;
     volatile UBaseType_t uxArraySize, x, i;
+
     const char* const tasks[] = {
-         "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "idle0", "idle1",
+         "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "IDLE0", "IDLE1", "tiT",
          DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
-         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, 0
+         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, SEQUENCER_TASK_NAME, 0
     };
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
@@ -188,14 +191,14 @@ float compute_cpu_usage(uint8_t debug) {
         }
         
         // Have to get these specially as the task manager calls them both "IDLE" and swaps their orderings around
-        if(strcmp("idle0", tasks[i])==0) { 
+        if(strcmp("IDLE0", tasks[i])==0) { 
             vTaskGetInfo(idle_0_handle, &xTaskDetails, pdFALSE, eRunning);
             counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
             freeTime = freeTime + xTaskDetails.ulRunTimeCounter - last_task_counters[i];
             last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
             ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
         }
-        if(strcmp("idle1", tasks[i])==0) { 
+        if(strcmp("IDLE1", tasks[i])==0) { 
             vTaskGetInfo(idle_1_handle, &xTaskDetails, pdFALSE, eRunning);
             counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
             freeTime = freeTime + xTaskDetails.ulRunTimeCounter - last_task_counters[i];
@@ -385,12 +388,14 @@ void app_main(void) {
     idle_0_handle = xTaskGetIdleTaskHandleForCPU(0);
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
+    
     #ifndef TDECK
     fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
     xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
     #endif
+    
 
     #ifndef TULIP4_R10_V0 // v0 doesn't do usb
     #ifndef TDECK // TDECK doesn't send power to USB
@@ -426,12 +431,16 @@ void app_main(void) {
     fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
     xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
-    delay_ms(200);
+    delay_ms(100);
     
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);
-    delay_ms(10);
+    delay_ms(100);
+
+    fprintf(stderr,"Starting Sequencer (timer)\n");
+    sequencer_init();
+    run_sequencer();
 
     #ifdef TDECK
     fprintf(stderr,"Starting T-Deck keyboard on core %d\n", USB_TASK_COREID);

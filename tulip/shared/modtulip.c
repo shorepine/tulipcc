@@ -13,6 +13,7 @@
 #include "alles.h"
 #include "midi.h"
 #include "ui.h"
+#include "sequencer.h"
 #include "keyscan.h"
 #include "genhdr/mpversion.h"
 
@@ -433,12 +434,11 @@ STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_board_obj, 0, 0, tulip_board);
 
 
-
-
 mp_obj_t frame_callback = NULL; 
 mp_obj_t frame_arg = NULL; 
 mp_obj_t midi_callback = NULL; 
 mp_obj_t touch_callback = NULL; 
+mp_obj_t keyboard_callback = NULL;
 
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 {  
@@ -473,6 +473,112 @@ void tulip_touch_isr(uint8_t up) {
         mp_sched_schedule(touch_callback, mp_obj_new_int(up)); 
     }
 }
+
+
+STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
+    uint8_t index = 5;
+    if(sequencer_callbacks[0]==NULL) {
+        index = 0;
+    } else if(sequencer_callbacks[1]==NULL) {
+        index = 1;
+    } else if(sequencer_callbacks[2]==NULL) {
+        index = 2;
+    } else if(sequencer_callbacks[3]==NULL) {
+        index = 3;
+    }
+    if(index<4) {
+        sequencer_callbacks[index] = args[0];
+        if(n_args == 2) {
+            sequencer_dividers[index] = mp_obj_get_int(args[1]);
+        } else {
+            sequencer_dividers[index] = sequencer_ppq;            
+        }
+    } else {
+        mp_raise_ValueError(MP_ERROR_TEXT("No more sequencer slots available"));
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_add_callback_obj, 1, 2, tulip_seq_add_callback);
+
+STATIC mp_obj_t tulip_seq_remove_callback(size_t n_args, const mp_obj_t *args) {
+    for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
+        if(sequencer_callbacks[i] == args[0]) {
+            sequencer_callbacks[i] = NULL;
+            sequencer_dividers[i] = 0;
+        }
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callback_obj, 1, 1, tulip_seq_remove_callback);
+
+STATIC mp_obj_t tulip_seq_remove_callbacks(size_t n_args, const mp_obj_t *args) {
+    for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
+        sequencer_callbacks[i] = NULL;
+        sequencer_dividers[i] = 0;
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callbacks_obj, 0, 0, tulip_seq_remove_callbacks);
+
+
+STATIC mp_obj_t tulip_seq_bpm(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 1) {
+        sequencer_bpm = mp_obj_get_float(args[0]);
+        sequencer_recompute();
+    } else {
+        return mp_obj_new_float(sequencer_bpm);
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_bpm_obj, 0, 1, tulip_seq_bpm);
+
+
+STATIC mp_obj_t tulip_seq_ppq(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 1) {
+        sequencer_ppq = mp_obj_get_int(args[0]);
+        sequencer_recompute();
+    } else {
+        return mp_obj_new_int(sequencer_ppq);
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_ppq_obj, 0, 1, tulip_seq_ppq);
+
+STATIC mp_obj_t tulip_seq_latency(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 1) {
+        sequencer_latency_ms = mp_obj_get_int(args[0]);
+    } else {
+        return mp_obj_new_int(sequencer_latency_ms);
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_latency_obj, 0, 1, tulip_seq_latency);
+
+
+STATIC mp_obj_t tulip_seq_stop(size_t n_args, const mp_obj_t *args) {
+    sequencer_stop();
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_stop_obj, 0, 0, tulip_seq_stop);
+
+
+STATIC mp_obj_t tulip_seq_start(size_t n_args, const mp_obj_t *args) {
+    sequencer_start();
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_start_obj, 0, 0, tulip_seq_start);
+
+
+STATIC mp_obj_t tulip_seq_ticks(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(sequencer_tick_count);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_ticks_obj, 0, 0, tulip_seq_ticks);
 
 
 // tulip.frame_callback(cb, arg)
@@ -516,6 +622,16 @@ STATIC mp_obj_t tulip_touch_callback(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_callback_obj, 0, 1, tulip_touch_callback);
+
+STATIC mp_obj_t tulip_keyboard_callback(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 0) {
+        keyboard_callback = NULL;
+    } else {
+        keyboard_callback = args[0];
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_keyboard_callback_obj, 0, 1, tulip_keyboard_callback);
 
 
 
@@ -1178,6 +1294,16 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch_callback), MP_ROM_PTR(&tulip_touch_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_keyboard_callback), MP_ROM_PTR(&tulip_keyboard_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_add_callback), MP_ROM_PTR(&tulip_seq_add_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_bpm), MP_ROM_PTR(&tulip_seq_bpm_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_ppq), MP_ROM_PTR(&tulip_seq_ppq_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_latency), MP_ROM_PTR(&tulip_seq_latency_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_stop), MP_ROM_PTR(&tulip_seq_stop_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_start), MP_ROM_PTR(&tulip_seq_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_local), MP_ROM_PTR(&tulip_midi_local_obj) },
