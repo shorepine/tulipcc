@@ -56,9 +56,11 @@ class UIScreen():
     default_offset_x = 10
     default_offset_y = 100
 
-    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, activate_callback=None, quit_callback=None):
+    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
+        activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
         self.group = lv.obj() # a screen, really
         self.keep_tfb = keep_tfb
+        self.handle_keyboard = handle_keyboard
         self.bg_color = bg_color
         self.offset_x = offset_x
         self.offset_y = offset_y
@@ -72,6 +74,7 @@ class UIScreen():
         self.active = False # is it showing on screen 
         self.imported_modules = []
         self.activate_callback = activate_callback
+        self.deactivate_callback = deactivate_callback
         self.quit_callback = quit_callback
         self.kb_group = lv.group_create()
         if(self.name != 'repl'):
@@ -125,6 +128,8 @@ class UIScreen():
     def alttab_callback(self, e):
         if(len(running_apps)>1):
             self.active = False
+            if(self.deactivate_callback is not None):
+                self.deactivate_callback(self)
             # Find the next app in the list (assuming dict is ordered by insertion, I think it is)
             apps = list(running_apps.items())
             for i,app in enumerate(apps):
@@ -144,8 +149,6 @@ class UIScreen():
             exec('del sys.modules["%s"]' % (m))
         gc.collect()
         repl_screen.present()
-
-
 
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
@@ -168,12 +171,13 @@ class UIScreen():
             self.last_obj_added = o.group
 
     # Show the UI on the screen. Set up the keyboard group listener. Draw the task bar. 
-    def present(self, modal=False):
+    def present(self):
         current_app_string = self.name
         self.active = True
         self.draw_task_bar()
         lv.screen_load(self.group)
-        get_keypad_indev().set_group(self.kb_group)
+        if(self.handle_keyboard):
+            get_keypad_indev().set_group(self.kb_group)
         if(self.name == 'repl'):
             tulip.tfb_start()
             tulip.set_screen_as_repl(1)

@@ -399,8 +399,14 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
 }
 
 extern int16_t lvgl_is_repl;
+extern mp_obj_t keyboard_callback;
 
 void send_key_to_micropython(uint16_t c) {
+
+    // Call the callback if set
+    if(keyboard_callback != NULL) 
+        mp_sched_schedule(keyboard_callback, mp_obj_new_int(c));
+
     // If something is taking in chars from LVGL (text area etc), don't send the char to MP
     if (c==mp_interrupt_char) {
         // Send a ctrl-C to Micropython if sent 

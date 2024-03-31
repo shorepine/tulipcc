@@ -438,6 +438,7 @@ mp_obj_t frame_callback = NULL;
 mp_obj_t frame_arg = NULL; 
 mp_obj_t midi_callback = NULL; 
 mp_obj_t touch_callback = NULL; 
+mp_obj_t keyboard_callback = NULL;
 
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 {  
@@ -621,6 +622,16 @@ STATIC mp_obj_t tulip_touch_callback(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_callback_obj, 0, 1, tulip_touch_callback);
+
+STATIC mp_obj_t tulip_keyboard_callback(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 0) {
+        keyboard_callback = NULL;
+    } else {
+        keyboard_callback = args[0];
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_keyboard_callback_obj, 0, 1, tulip_keyboard_callback);
 
 
 
@@ -1283,6 +1294,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch_callback), MP_ROM_PTR(&tulip_touch_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_keyboard_callback), MP_ROM_PTR(&tulip_keyboard_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_add_callback), MP_ROM_PTR(&tulip_seq_add_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
