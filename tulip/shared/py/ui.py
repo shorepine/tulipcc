@@ -130,6 +130,7 @@ class UIScreen():
             self.active = False
             if(self.deactivate_callback is not None):
                 self.deactivate_callback(self)
+    
             # Find the next app in the list (assuming dict is ordered by insertion, I think it is)
             apps = list(running_apps.items())
             for i,app in enumerate(apps):
@@ -446,6 +447,6 @@ def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_co
 
 
 
-repl_screen = UIScreen("repl", bg_color=9)
+repl_screen = UIScreen("repl", bg_color=9, handle_keyboard=True)
 repl_screen.present()
 

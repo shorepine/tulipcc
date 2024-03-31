@@ -470,7 +470,6 @@ def run(module_string):
         try:
             actual_module.run(screen)
         except (AttributeError, TypeError) as e:
-            sys.print_exception(e)
             # This is a modal style app that doesn't use a screen
             screen.quit_callback(None)
 
