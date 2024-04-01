@@ -387,17 +387,22 @@ def upgrade():
 # Things should turn off around 3.1V 
 def battery(n=5):
     if(board()=='TULIP4_R10'):
-        import time
-        from machine import Pin, ADC
-        pot = ADC(Pin(3))
-        pot.atten(ADC.ATTN_11DB)
-        x = 0
-        for i in range(n):
-            x = x + pot.read_uv()
-            time.sleep(0.1)
-        x = ((x / (float(n))) * 2.0) / 1000000.0
-        return x
-    return 0
+        pin = 3
+    elif(board()=='TDECK'):
+        pin = 4
+    else:
+        return 0
+
+    import time
+    from machine import Pin, ADC
+    pot = ADC(Pin(pin))
+    pot.atten(ADC.ATTN_11DB)
+    x = 0
+    for i in range(n):
+        x = x + pot.read_uv()
+        time.sleep(0.1)
+    x = ((x / (float(n))) * 2.0) / 1000000.0
+    return x
 
 # scans the keyboard. lets you use either
 # Z = B, X = A, A = Y, S = X, enter = START, ' = SELECT, Q = L1, W = R1, arrows = DPAD
