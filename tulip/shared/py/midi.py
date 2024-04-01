@@ -15,9 +15,29 @@ polyphony_map = {1:4, 10:10}
 patch_map = {1:0}
 
 # Our state
-voices_for_channel = {} 
+voices_for_channel = {}
 note_for_voice = {}
 voices_active = []
+# Dict of per-channel booleans
+in_sustain_dict = {}
+# Dict of per-channel sets of notes
+sustained_notes_dict = {}
+
+def get_in_sustain(channel):
+    global in_sustain_dict
+    if channel not in in_sustain_dict:
+        in_sustain_dict[channel] = False
+    return in_sustain_dict[channel]
+
+def set_in_sustain(channel, state):
+    global in_sustain_dict
+    in_sustain_dict[channel] = state
+
+def get_sustained_notes_set(channel):
+    global sustained_notes_dict
+    if channel not in sustained_notes_dict:
+        sustained_notes_dict[channel] = set()
+    return sustained_notes_dict[channel]
 
 # Get the voice for this chan/note 
 def find_voice(channel, midinote):
@@ -55,6 +75,16 @@ def pitch_bend(channel, val):
         if(len(v_str)):
             amy.send(voices=v_str[:-1], pitch_bend=val)
 
+def sustain_pedal(channel, value):
+    if value:
+        set_in_sustain(channel, True)
+    else:
+        set_in_sustain(channel, False)
+        sustained_notes = get_sustained_notes_set(channel)
+        for midinote in sustained_notes:
+            note_off(channel, midinote)
+            sustained_notes.remove(midinote)  # Modifies the global.
+
 def note_on(channel, midinote, vel):
     # Drum channel is special
     voice = find_voice(channel, midinote)
@@ -66,6 +96,10 @@ def note_on(channel, midinote, vel):
 
 def note_off(channel, midinote):  
     # Get the voice number for this midinote
+    if get_in_sustain(channel):
+        sustained_notes = get_sustained_notes_set(channel)
+        sustained_notes.add(midinote)
+        return
     for v in voices_for_channel[channel]:
         if note_for_voice.get(v,None) == midinote:
             # Remove it
@@ -108,6 +142,8 @@ def midi_event_cb(x):
             pb_value = ((m[2] << 7) | (m[1])) - 8192 # -8192-8192, where 0 is nothing
             amy_value = float(pb_value)/(8192*6.0) # convert to -2 / +2 semitones
             amy.send(pitch_bend=amy_value)
+        elif message == 0xb0 and m[1] == 0x40:
+            sustain_pedal(channel, m[2])
     
         # Are there more events waiting?
         m = m[3:]
