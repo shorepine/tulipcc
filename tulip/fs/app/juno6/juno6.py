@@ -354,7 +354,7 @@ dco_range = JunoRadioButtons("Range", ["4'", "8'", "16'"],
 dco_lfo = JunoSlider("LFO", jcb('dco_lfo'))
 
 dco_pwm = JunoSlider("PWM", jcb('dco_pwm'))
-dco_pwm_mode = JunoRadioButtons("PWM", ["LFO", "Man"], [jcb('pwm_manual'), jcb('pwm_manual')])
+dco_pwm_mode = JunoRadioButtons("PWM", ["LFO", "Man"], [None, jcb('pwm_manual')])
 dco_wave = JunoButtons("Wave", ["Pls", "Saw"], [jcb('pulse'), jcb('saw')])
 dco_sub = JunoSlider("Sub", jcb('dco_sub'))
 dco_noise = JunoSlider("Noise", jcb('dco_noise'))
