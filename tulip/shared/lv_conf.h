@@ -32,7 +32,7 @@
 // TODO : hack this to do RGB332
 
 /*Color depth: 8 (A8), 16 (RGB565), 24 (RGB888), 32 (XRGB8888)*/
-#define LV_COLOR_DEPTH 16
+#define LV_COLOR_DEPTH 8
 
 /*=========================
    STDLIB WRAPPER SETTINGS
@@ -947,10 +947,10 @@ extern void mp_lv_init_gc();
 #define LV_USE_EVDEV    0
 
 /*Drivers for LCD devices connected via SPI/parallel port*/
-#define LV_USE_ST7735		0
-#define LV_USE_ST7789		0
-#define LV_USE_ST7796		0
-#define LV_USE_ILI9341		0
+#define LV_USE_ST7735       0
+#define LV_USE_ST7789       0
+#define LV_USE_ST7796       0
+#define LV_USE_ILI9341      0
 
 #define LV_USE_GENERIC_MIPI (LV_USE_ST7735 | LV_USE_ST7789 | LV_USE_ST7796 | LV_USE_ILI9341)
 

@@ -35,8 +35,8 @@ uint32_t *sprite_mem;//[SPRITES];
 uint16_t *line_emits_rle;
 uint16_t *line_emits_y;
 
-
-uint16_t * lv_buf;
+//uint16_t * lv_buf;
+uint8_t * lv_buf;
 
 uint8_t *TFB;//[TFB_ROWS][TFB_COLS];
 uint8_t *TFBfg;//[TFB_ROWS][TFB_COLS];
@@ -1018,6 +1018,22 @@ void lv_flush_cb(lv_display_t * display, const lv_area_t * area, unsigned char *
     lv_display_flush_ready(display);
 }
 
+void lv_flush_cb_8b(lv_display_t * display, const lv_area_t * area, unsigned char * px_map)
+{
+/*    uint8_t * buf = (uint8_t *)px_map; 
+    int16_t x, y;
+    for(y = area->y1; y <= area->y2; y++) {
+        for(x = area->x1; x <= area->x2; x++) {
+            bg[y*(H_RES+OFFSCREEN_X_PX) + x] = (*buf); //((*buf >> 8) & 0xe0)  | ((*buf >> 6) & 0x1c) | ((*buf >> 3 & 0x3));
+            buf++;
+        }
+    }
+    */
+    // Inform LVGL that you are ready with the flushing and buf is not used anymore
+    lv_display_flush_ready(display);
+}
+
+
 // Shim for lvgl to read ticks
 uint32_t u32_ticks_ms() {
     return (uint32_t) get_ticks_ms();
@@ -1057,8 +1073,11 @@ void setup_lvgl() {
     //lv_log_register_print_cb(my_log_cb);
     lv_display_t * lv_display = lv_display_create(H_RES, V_RES);
     lv_display_set_antialiasing(lv_display, 0);
-    lv_display_set_flush_cb(lv_display, lv_flush_cb);
-    lv_display_set_buffers(lv_display, lv_buf, NULL, H_RES*V_RES*2/10, LV_DISPLAY_RENDER_MODE_PARTIAL);
+    lv_display_set_color_format(lv_display, LV_COLOR_FORMAT_RGB332);
+    lv_display_set_flush_cb(lv_display, lv_flush_cb_8b);
+    lv_display_set_buffers(lv_display, bg, NULL, H_RES*V_RES, LV_DISPLAY_RENDER_MODE_DIRECT);
+    //lv_display_set_buffers(lv_display, lv_buf, NULL, H_RES*V_RES/10, LV_DISPLAY_RENDER_MODE_PARTIAL);
+
     lv_tick_set_cb(u32_ticks_ms);
 
     // Create a input device (uses tulip.touch())
@@ -1100,7 +1119,7 @@ void display_init(void) {
     line_emits_y = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     // 122880 bytes
     
-    lv_buf = malloc_caps(H_RES*V_RES*2 / 10, MALLOC_CAP_SPIRAM); 
+    lv_buf = malloc_caps(H_RES*V_RES / 10, MALLOC_CAP_SPIRAM); 
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
