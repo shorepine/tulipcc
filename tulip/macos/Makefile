@@ -92,7 +92,7 @@ INC += -I./SDL2.framework/Headers
 
 # compiler settings
 CWARN = -Wall -Werror
-CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end
+CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA) 
 CFLAGS += -DTULIP_DESKTOP
 #CFLAGS += -DAMY_DEBUG
@@ -242,7 +242,6 @@ SRC_C += \
 	../../amy/src/libminiaudio-audio.c \
 	$(MICROPY_PORT_DIR)/gccollect.c \
 	$(MICROPY_PORT_DIR)/input.c \
-	$(MICROPY_PORT_DIR)/modmachine.c \
 	$(MICROPY_PORT_DIR)/modselect.c \
 	$(MICROPY_PORT_DIR)/alloc.c \
 	$(MICROPY_PORT_DIR)/fatfs_port.c \
