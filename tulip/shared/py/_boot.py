@@ -62,7 +62,3 @@ amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
 alles.local() # start in local mode 
 midi.setup()
 
-
-# Don't boot the launcher on T-Deck
-#if(tulip.board()!='TDECK'):
-#    tulip.launcher()
