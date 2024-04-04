@@ -339,13 +339,14 @@ You can also send MIDI messages "locally", e.g. to a running program that is exp
 ```python
 tulip.music_map(1,129) # change MIDI channel 1 to patch 129.
 
-def callback(x): # for now you have to define a callback with a dummy parameter
+def callback():
     m = tulip.midi_in()
     if(m[0]==144):
         print("Note on, note # %d velocity # %d" % (m[1], m[2]))
 
-tulip.midi_callback(callback)
-tulip.midi_callback() # turns off callbacks
+tulip.midi_add_callback(callback)
+tulip.midi_remove_callback(callback) # turns off callback
+tulip.midi_remove_callbacks() # turns off all
 
 m = tulip.midi_in() # returns bytes of the last MIDI message received
 tulip.midi_out((144,60,127)) # sends a note on message

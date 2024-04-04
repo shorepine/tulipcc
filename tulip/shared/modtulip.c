@@ -436,7 +436,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_board_obj, 0, 0, tulip_board);
 
 mp_obj_t frame_callback = NULL; 
 mp_obj_t frame_arg = NULL; 
-mp_obj_t midi_callback = NULL; 
 mp_obj_t touch_callback = NULL; 
 mp_obj_t keyboard_callback = NULL;
 
@@ -460,19 +459,64 @@ void tulip_frame_isr() {
     }
 }
 
-void tulip_midi_isr() {
+/*void tulip_midi_isr() {
     if(midi_callback != NULL) {
         //fprintf(stderr, "LOG: midi_callback at time %lld\n", get_ticks_ms());
         mp_sched_schedule(midi_callback, mp_const_none); 
     }
 }
-
+*/
 
 void tulip_touch_isr(uint8_t up) {
     if(touch_callback != NULL) {
         mp_sched_schedule(touch_callback, mp_obj_new_int(up)); 
     }
 }
+
+
+
+
+STATIC mp_obj_t tulip_midi_add_callback(size_t n_args, const mp_obj_t *args) {
+    uint8_t index = 5;
+    if(midi_callbacks[0]==NULL) {
+        index = 0;
+    } else if(midi_callbacks[1]==NULL) {
+        index = 1;
+    } else if(midi_callbacks[2]==NULL) {
+        index = 2;
+    } else if(midi_callbacks[3]==NULL) {
+        index = 3;
+    }
+    if(index<4) {
+        midi_callbacks[index] = args[0];
+    } else {
+        mp_raise_ValueError(MP_ERROR_TEXT("No more MIDI slots available"));
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_add_callback_obj, 1, 2, tulip_midi_add_callback);
+
+STATIC mp_obj_t tulip_midi_remove_callback(size_t n_args, const mp_obj_t *args) {
+    for(uint8_t i=0;i<MIDI_SLOTS;i++) {
+        if(midi_callbacks[i] == args[0]) {
+            midi_callbacks[i] = NULL;
+        }
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_remove_callback_obj, 1, 1, tulip_midi_remove_callback);
+
+STATIC mp_obj_t tulip_midi_remove_callbacks(size_t n_args, const mp_obj_t *args) {
+    for(uint8_t i=0;i<MIDI_SLOTS;i++) {
+        midi_callbacks[i] = NULL;
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_remove_callbacks_obj, 0, 0, tulip_midi_remove_callbacks);
+
+
+
+
 
 
 STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
@@ -596,20 +640,6 @@ STATIC mp_obj_t tulip_frame_callback(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_frame_callback_obj, 0, 2, tulip_frame_callback);
-
-
-// tulip.midi_callback(cb)
-// tulip.midi_callback() -- stops 
-STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
-    if(n_args == 0) {
-        midi_callback = NULL;
-    } else {
-        midi_callback = args[0];
-    }
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 0, 2, tulip_midi_callback);
 
 
 
@@ -1292,12 +1322,14 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_scroll_y_offset), MP_ROM_PTR(&tulip_bg_scroll_y_offset_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_str), MP_ROM_PTR(&tulip_tfb_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
-    { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch_callback), MP_ROM_PTR(&tulip_touch_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_keyboard_callback), MP_ROM_PTR(&tulip_keyboard_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_add_callback), MP_ROM_PTR(&tulip_seq_add_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_add_callback), MP_ROM_PTR(&tulip_midi_add_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_remove_callback), MP_ROM_PTR(&tulip_midi_remove_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_remove_callbacks), MP_ROM_PTR(&tulip_midi_remove_callbacks_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_bpm), MP_ROM_PTR(&tulip_seq_bpm_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_ppq), MP_ROM_PTR(&tulip_seq_ppq_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_latency), MP_ROM_PTR(&tulip_seq_latency_obj) },

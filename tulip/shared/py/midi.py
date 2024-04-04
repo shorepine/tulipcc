@@ -12,7 +12,7 @@ import time
 # drum machine always on channel 10
 PCM_PATCHES = 29
 polyphony_map = {1:4, 10:10}
-patch_map = {1:0}
+patch_map = {1:2}
 
 # Our state
 voices_for_channel = {}
@@ -92,6 +92,7 @@ def note_on(channel, midinote, vel):
         if(channel == 10):
             amy.send(osc=voice, wave=amy.PCM, patch=midinote % PCM_PATCHES, vel=vel, freq=0)
         else:
+            print("note on voice %d" % (voice))
             amy.send(voices="%d" % (voice), note=midinote, vel=vel)
 
 def note_off(channel, midinote):  
@@ -163,14 +164,16 @@ def setup_voices():
 def defer_setup(t):
     if(tulip.seq_ticks() > tulip.seq_ppq()):
         setup_voices()
-        tulip.midi_callback(midi_event_cb)
+        tulip.midi_add_callback(midi_event_cb)
         tulip.seq_remove_callback(defer_setup)
 
 def music_map(channel, patch_number=None, voice_count=None):
     if voice_count is not None:
+        if patch_number is not None:
+            patch_map[channel] = patch_number
         polyphony_map[channel] = voice_count
         setup_voices()
-    if patch_number is not None:
+    elif patch_number is not None:
         patch_map[channel] = patch_number
         update_channel(channel)
 

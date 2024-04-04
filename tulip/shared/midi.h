@@ -6,11 +6,14 @@ extern QueueHandle_t uart_queue;
 #else
 // virtualmidi Cocoa stubs
 #endif
-
+#define MIDI_SLOTS 4
+#include "py/mphal.h"
+#include "py/runtime.h"
 void convert_midi_bytes_to_messages(uint8_t * data, size_t len);
+extern mp_obj_t midi_callbacks[MIDI_SLOTS];
 
 
-void tulip_midi_isr();
+//void tulip_midi_isr();
 #define MAX_MIDI_BYTES_PER_MESSAGE 3
 #define MIDI_QUEUE_DEPTH 48
 extern uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];

@@ -1,6 +1,6 @@
 # juno6.py
 # A more pure-LVGL (using Tulip's UIScreen) UI for Juno-6
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, midi_in, midi_callback, seq_ppq, seq_add_callback, seq_remove_callback
+from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, midi_in, midi_add_callback, midi_remove_callback, seq_ppq, seq_add_callback, seq_remove_callback, music_map
 import time
 
 
@@ -270,8 +270,9 @@ class JunoTokenSpinbox(JunoControlledLabel):
     max_value = 127
     set_fn = None
 
-    def __init__(self, name, set_fn, initial_text='', min_value=0, max_value=127, initial_value=0, **kwargs):
+    def __init__(self, name, set_fn, initial_text='', min_value=0, max_value=127, initial_value=0, offset=0, **kwargs):
         self.set_fn = set_fn  # called when value changes, returns text to display.
+        self.offset = offset
         self.min_value = min_value
         self.max_value = max_value
         super().__init__(name + 'TokenSpinbox', ['-', '+'],
@@ -292,22 +293,38 @@ class JunoTokenSpinbox(JunoControlledLabel):
 
     def set_value(self, value):
         self.value = value
-        self.name = self.set_fn(self.value)
+        self.name = self.set_fn(self.value+self.offset)
         self.set_text(self.name)
 
 
 
-# After juno_ui.py
+import juno, midi
 
+midi_channel = 1
+juno_patch_for_midi_channel = {}
 
-import juno
-midi_channel = 0
-juno_patch_from_midi_channel = [juno.JunoPatch.from_patch_number(i) for i in range(16)]
+# Get the patch to channel mapping and the AMY voices from midi.patch_map if set
+for i in range(16):
+    channel = i+1
+    if channel in midi.patch_map and midi.patch_map[channel] < 128:
+        jp = juno.JunoPatch.from_patch_number(midi.patch_map[channel])
+        jp.voices = midi.voices_for_channel[channel]
+        juno_patch_for_midi_channel[channel] = jp
 
 def current_juno():
-    return juno_patch_from_midi_channel[midi_channel]
+    global midi_channel
+    jp = juno_patch_for_midi_channel.get(midi_channel, None)
+    if jp is not None:
+        print("patch number for channel %d is %d" %(midi_channel, jp.patch_number) )
+        return juno_patch_for_midi_channel.get(midi_channel, None)
+    return None
+
+
 
 current_juno().init_AMY()
+
+
+#current_juno().init_AMY()
 
 # Make the callback function.
 def jcb(arg):
@@ -322,29 +339,28 @@ def cho(n):
     callback = lambda x: current_juno().set_param('chorus', n) if x else None
     return callback
 
+if 0:
+    import arpegg
+    arpeggiator = arpegg.ArpeggiatorSynth(current_juno())
 
-import arpegg
+    def acb(arg):
+        callback = lambda x: arpeggiator.set(arg, x)
+        return callback
 
-arpeggiator = arpegg.ArpeggiatorSynth(current_juno())
-
-def acb(arg):
-    callback = lambda x: arpeggiator.set(arg, x)
-    return callback
-
-def arng(val):
-    callback = lambda b: arpeggiator.set('octaves', val)
-    return callback
+    def arng(val):
+        callback = lambda b: arpeggiator.set('octaves', val)
+        return callback
 
 
-arp = JunoSection("ARPEGGIO", [arp_ctl := JunoButtons("Ctl", ["On", "Hold"],
-                                                      [acb('on'), acb('hold')]),
-                               arp_mode := JunoRadioButtons("Mode", ["Up", "U/D", "Dn", "Rn"],
-                                                            [acb('up'), acb('updown'),
-                                                             acb('down'), acb('rand')]),
-                               arp_rng := JunoRadioButtons("Rng", ["1", "2", "3"],
-                                                           [arng(1), arng(2), arng(3)]),
-                               arp_rate := JunoSlider("Rate", acb('arp_rate'))],
-                  header_color=43)
+    arp = JunoSection("ARPEGGIO", [arp_ctl := JunoButtons("Ctl", ["On", "Hold"],
+                                                          [acb('on'), acb('hold')]),
+                                   arp_mode := JunoRadioButtons("Mode", ["Up", "U/D", "Dn", "Rn"],
+                                                                [acb('up'), acb('updown'),
+                                                                 acb('down'), acb('rand')]),
+                                   arp_rng := JunoRadioButtons("Rng", ["1", "2", "3"],
+                                                               [arng(1), arng(2), arng(3)]),
+                                   arp_rate := JunoSlider("Rate", acb('arp_rate'))],
+                      header_color=43)
 
 lfo = JunoSection("LFO", [lfo_rate := JunoSlider("Rate", jcb('lfo_rate')),
                           lfo_delay_time := JunoSlider("Delay", jcb('lfo_delay_time'))])
@@ -410,25 +426,42 @@ def setup_from_patch(patch):
 
     return patch.name
 
+
+
 def setup_from_patch_number(patch_number):
-    current_juno().patch_number = patch_number
-    current_juno().name = setup_from_patch(juno.JunoPatch.from_patch_number(patch_number))
+    global midi_channel
+    print("resetting patch number to %d" % (patch_number))
+
+    jp = juno.JunoPatch.from_patch_number(patch_number)
+    juno_patch_for_midi_channel[midi_channel] = jp
+    music_map(midi_channel, patch_number, 4)
+    jp.voices = midi.voices_for_channel[midi_channel]
+
+    #current_juno().patch_number = patch_number
+    #current_juno().name = setup_from_patch(jp)
     return current_juno().name
 
 def setup_from_midi_chan(new_midi_channel):
     """Switch which JunoPatch we display based on MIDI channel."""
     global midi_channel
-    midi_channel = new_midi_channel
+    print("setup chan %d" % (new_midi_channel))
+    midi_channel = (new_midi_channel)
     new_patch = current_juno()
-    new_patch.init_AMY()
-    patch_selector.value = new_patch.patch_number  # Bypass actually reading that patch, just set the state.
-    patch_selector.set_text(new_patch.name)
-    setup_from_patch(new_patch)
-    return "MIDI chan %d" % (midi_channel + 1)
+    if(new_patch == None):
+        patch_selector.set_text("None assigned")
+        patch_selector.value = -1 
+    else:
+        print("new patch patch is %d" % (new_patch.patch_number))
+        new_patch.init_AMY()
+        patch_selector.value = new_patch.patch_number  # Bypass actually reading that patch, just set the state.
+        patch_selector.set_text(new_patch.name)
+        setup_from_patch(new_patch)
+    return "MIDI chan %d" % (midi_channel)
+
+patch_selector = JunoTokenSpinbox('Patch', set_fn=setup_from_patch_number, initial_value=current_juno().patch_number)
+midi_selector = JunoTokenSpinbox('MIDI', set_fn=setup_from_midi_chan, max_value=15, width=160, offset=1)
 
 
-patch_selector = JunoTokenSpinbox('Patch', set_fn=setup_from_patch_number)
-midi_selector = JunoTokenSpinbox('MIDI', set_fn=setup_from_midi_chan, max_value=15, width=160)
 
 
 # Wire up MIDI controls
@@ -488,7 +521,6 @@ def control_change(control, value):
         current_juno().set_pitch_bend(2 * value - 1)
     if control in param_map:
         param_name = param_map[control]
-        #print("control_change:", param_name, value)
         # Special cases.
         if param_name == 'Pls' or param_name == 'Saw':
             dco_wave.set(param_name, not dco_wave.get(param_name))
@@ -503,35 +535,43 @@ def control_change(control, value):
         param_obj.set(int(round(127 * value)))
 
 
-#arpeggiator.control_change_fwd_fn = control_change
 
-import polyvoice
-polyvoice.init(current_juno(), midi_in, control_change, patch_selector.set_value)
+def midi_event_cb(x):
+    m = midi_in()   
+    while m is not None and len(m) > 0:
+        if m[0] == 0xb0:    # Other control slider.
+            control_change(m[1], m[2])
+        elif m[0] == 0xbf:
+            # Special case for Oxygen49 transport buttons which send val 0x00 on release.
+            if m[2] == 0x7f:
+                control_change(m[1], m[2])
+                
+        # Are there more events waiting?
+        m = m[3:]
+        if len(m) == 0:
+            m = midi_in_fn()
 
-midi_callback(polyvoice.midi_event_cb)
-
-arpeggiator.synth = polyvoice.SYNTH
-polyvoice.SYNTH = arpeggiator
-polyvoice.control_change_fn = arpeggiator.control_change
 
 def arp_callback(t):
     if arpeggiator.running:
         arpeggiator.next_note(t)
 
 def quit(screen):
+    midi_remove_callback(midi_event_cb)
     seq_remove_callback(arp_callback)
-
 
 def run(screen):
     screen.offset_y = 100
     screen.quit_callback = quit
     screen.set_bg_color(73)
     screen.add([lfo, dco, hpf, vcf, vca, env, ch])
-    screen.add(arp, relative=lfo, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
+    #screen.add(arp, relative=lfo, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
     screen.add(patch_selector, relative=vcf, direction=lv.ALIGN.OUT_TOP_MID)
     screen.add(midi_selector) # the second add after relative will be relative to the last obj added
     screen.present()
-    seq_add_callback(arp_callback, int(seq_ppq()))
+
+    midi_add_callback(midi_event_cb)
+    #seq_add_callback(arp_callback, int(seq_ppq()))
 
 
 
