@@ -6,4 +6,4 @@
 	url = https://github.com/bwhitman/amy
 [submodule "lv_binding_micropython"]
 	path = lv_binding_micropython
-	url = https://github.com/lvgl/lv_binding_micropython
+	url = https://github.com/bwhitman/lv_binding_micropython

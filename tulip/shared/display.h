@@ -118,6 +118,9 @@ extern const unsigned char portfolio_glyph_bitmap[1792];
 #define FONT_WIDTH 8
 #endif
 
+//#define OFFSCREEN_X_PX 0
+//#define OFFSCREEN_Y_PX 0
+
 #define OFFSCREEN_X_PX 1024
 #define OFFSCREEN_Y_PX 100
 #define DEFAULT_PIXEL_CLOCK_MHZ 28

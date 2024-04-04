@@ -46,7 +46,8 @@ def lv_depad(obj):
 
 def current_uiscreen():
     return running_apps[current_app_string]
-
+def current_lv_group():
+    return current_uiscreen().group
 
 # The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
 class UIScreen():
@@ -58,13 +59,19 @@ class UIScreen():
 
     def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
         activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
-        self.group = lv.obj() # a screen, really
+        self.screen = lv.obj() # a screen, will be display size (which is actually 2x H_RES)
+        self.group = lv.obj(self.screen) # the group to write UI elements to in the screen
+        self.group.set_width(tulip.screen_size()[0])
+        self.group.set_height(tulip.screen_size()[1])
+        self.group.set_style_radius(0,lv.PART.MAIN)
+        self.group.set_style_border_width(0, lv.PART.MAIN)
+
+        lv_depad(self.group)
         self.keep_tfb = keep_tfb
         self.handle_keyboard = handle_keyboard
         self.bg_color = bg_color
         self.offset_x = offset_x
         self.offset_y = offset_y
-        self.last_screen = lv.screen_active()
         self.last_obj_added = None
         self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
         self.name = name
@@ -176,7 +183,9 @@ class UIScreen():
         current_app_string = self.name
         self.active = True
         self.draw_task_bar()
-        lv.screen_load(self.group)
+
+        lv.screen_load(self.screen)
+
         if(self.handle_keyboard):
             get_keypad_indev().set_group(self.kb_group)
         if(self.name == 'repl'):
@@ -191,17 +200,12 @@ class UIScreen():
         if(self.activate_callback is not None):
             self.activate_callback(self)
 
-    # Keep everything around, but load the repl screen
-    def clear(self):
-        lv.screen_load(self.last_screen)
-
     # Remove the elements you created
     def remove_items(self):
-        self.clear()
-        things = self.group.get_child_count()
+        things = self.screen.get_child_count()
         for i in range(things):
-            if(self.group.get_child(0) is not None):
-                self.group.get_child(0).delete()
+            if(self.screen.get_child(0) is not None):
+                self.screen.get_child(0).delete()
         self.last_obj_added = None
 
 
@@ -253,7 +257,7 @@ def keyboard():
         lv_soft_kb.delete()
         lv_soft_kb = None
         return
-    lv_soft_kb = lv.keyboard(lv.screen_active())
+    lv_soft_kb = lv.keyboard(current_lv_group())
     lv_soft_kb.add_event_cb(lv_soft_kb_cb, lv.EVENT.VALUE_CHANGED, None)
     lv_last_mode = lv_soft_kb.get_mode()
 
@@ -292,7 +296,7 @@ def launcher(ignore=True):
         lv_launcher=None
         return
     #print("starting up launcher")
-    lv_launcher = lv.list(lv.screen_active())
+    lv_launcher = lv.list(repl_screen.group)
     lv_launcher.set_size(195, 140)
     lv_launcher.set_align(lv.ALIGN.BOTTOM_RIGHT)
     b_close = lv_launcher.add_button(lv.SYMBOL.CLOSE, "Close")
@@ -323,7 +327,7 @@ def lv_callback(e, extra):
 
 # Draw a msgbox on screen. 
 def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=None):
-    mbox = lv.msgbox(lv.screen_active())
+    mbox = lv.msgbox(current_lv_group())
     mbox.add_text(message)
     mbox.add_title(title)
     mbox.add_close_button()
@@ -339,7 +343,7 @@ def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui
 # handle_radius - 0 for square 
 def ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=None, handle_color=None, handle_radius=None, 
     handle_v_pad=None, handle_h_pad=None, ui_id=None):
-    slider = lv.slider(lv.screen_active())
+    slider = lv.slider(current_lv_group())
     slider.set_pos(x,y)
     # Set opacity to full (COVER). Default is to mix the color with the BG.
     slider.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
@@ -369,7 +373,7 @@ def ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=N
 # Copy of our "ui_button" with lvgl buttons
 #tulip.ui_button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
 def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=None, radius=None, ui_id=None):
-    button = lv.button(lv.screen_active())
+    button = lv.button(current_lv_group())
     button.set_x(x)
     button.set_y(y)
     if(w is not None):
@@ -396,7 +400,7 @@ def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None,
     return button
 
 def ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None):
-    label = lv.label(lv.screen_active())
+    label = lv.label(current_lv_group())
     label.set_pos(x,y)
     if(w is not None):
         label.set_width(w)
@@ -411,7 +415,7 @@ def ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None):
 # Copy of our ui_text with lvgl textarea 
 #tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
 def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=None, one_line=True):
-    ta = lv.textarea(lv.screen_active())
+    ta = lv.textarea(current_lv_group())
     ta.set_pos(x,y)
     if(w is not None):
         ta.set_width(w)
@@ -435,7 +439,7 @@ def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, b
 
 # Copy of our ui_checkbox with lvgl 
 def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_color=None):
-    cb = lv.checkbox(lv.screen_active())
+    cb = lv.checkbox(current_lv_group())
     if(text is not None):
         cb.set_text(text)
     cb.set_pos(x,y)
