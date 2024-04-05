@@ -315,7 +315,7 @@ def current_juno():
     global midi_channel
     jp = juno_patch_for_midi_channel.get(midi_channel, None)
     if jp is not None:
-        print("patch number for channel %d is %d" %(midi_channel, jp.patch_number) )
+        #print("patch number for channel %d is %d" %(midi_channel, jp.patch_number) )
         return juno_patch_for_midi_channel.get(midi_channel, None)
     return None
 
@@ -430,7 +430,7 @@ def setup_from_patch(patch):
 
 def setup_from_patch_number(patch_number):
     global midi_channel
-    print("resetting patch number to %d" % (patch_number))
+    #print("resetting patch number to %d" % (patch_number))
 
     jp = juno.JunoPatch.from_patch_number(patch_number)
     juno_patch_for_midi_channel[midi_channel] = jp
@@ -444,14 +444,14 @@ def setup_from_patch_number(patch_number):
 def setup_from_midi_chan(new_midi_channel):
     """Switch which JunoPatch we display based on MIDI channel."""
     global midi_channel
-    print("setup chan %d" % (new_midi_channel))
+    #print("setup chan %d" % (new_midi_channel))
     midi_channel = (new_midi_channel)
     new_patch = current_juno()
     if(new_patch == None):
         patch_selector.set_text("None assigned")
         patch_selector.value = -1 
     else:
-        print("new patch patch is %d" % (new_patch.patch_number))
+        #print("new patch patch is %d" % (new_patch.patch_number))
         new_patch.init_AMY()
         patch_selector.value = new_patch.patch_number  # Bypass actually reading that patch, just set the state.
         patch_selector.set_text(new_patch.name)

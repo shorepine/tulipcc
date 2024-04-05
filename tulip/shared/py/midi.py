@@ -92,7 +92,7 @@ def note_on(channel, midinote, vel):
         if(channel == 10):
             amy.send(osc=voice, wave=amy.PCM, patch=midinote % PCM_PATCHES, vel=vel, freq=0)
         else:
-            print("note on voice %d" % (voice))
+            #print("note on voice %d" % (voice))
             amy.send(voices="%d" % (voice), note=midinote, vel=vel)
 
 def note_off(channel, midinote):  
