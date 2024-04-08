@@ -3,6 +3,7 @@
 # lvgl drum machine for Tulip
 
 import tulip
+import midi
 import lvgl as lv
 import amy
 from patches import patches
@@ -48,7 +49,7 @@ class Settings(tulip.UIElement):
 
         self.tempo = lv.slider(self.rect)
         self.tempo.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
-        self.tempo.set_width(180)
+        self.tempo.set_width(220)
         self.tempo.set_style_bg_color(tulip.pal_to_lv(255), lv.PART.INDICATOR)
         self.tempo.set_style_bg_color(tulip.pal_to_lv(255), lv.PART.MAIN)
         self.tempo.set_style_bg_color(tulip.pal_to_lv(129), lv.PART.KNOB)
@@ -115,6 +116,7 @@ class ListColumn(tulip.UIElement):
         self.list.set_size(width-25,height-20)
         self.list.align_to(self.label,lv.ALIGN.OUT_BOTTOM_LEFT,0,0)
         self.buttons = []
+        self.button_texts = []
         tulip.lv_depad(self.list)
         tulip.lv_depad(self.group)
         tulip.lv_depad(self.label)
@@ -131,18 +133,25 @@ class ListColumn(tulip.UIElement):
                 button = self.list.add_button(lv.SYMBOL.PLUS, i)
                 button.add_event_cb(self.list_cb, lv.EVENT.CLICKED, None)
                 self.buttons.append(button)
+                self.button_texts.append(i)
 
-    def list_cb(self, e):
+    def select(self, index, defer=False):
         if(self.selected is not None):
             self.buttons[self.selected].set_style_bg_color(tulip.pal_to_lv(self.default_bg), 0)
-        button = e.get_target_obj()
-        text = button.get_child(1).get_text()
-        self.selected = button.get_index()
-        self.buttons[self.selected].set_style_bg_color(tulip.pal_to_lv(129), 0)
-        if(self.name=='synth'):
-            update_patches(text)
+        self.selected = index
+        if index is not None:
+            self.buttons[self.selected].set_style_bg_color(tulip.pal_to_lv(129), 0)
+            if(self.name=='channel'):
+                current_patch(self.selected+1)
+            elif(self.name=='synth'):
+                update_patches(self.button_texts[self.selected])
+            else:
+                if not defer: update_map()
 
-        print('list_db ' + self.name + ' ' + text)
+
+    def list_cb(self, e):
+        button = e.get_target_obj()
+        self.select(button.get_index())
 
 def play_note_from_coord(app, x, y):
     white_key = int((x-app.piano_x)/app.white_key_w)
@@ -180,8 +189,6 @@ def quit(screen):
     tulip.seq_remove_callback(step)
 
 def activate(screen):
-    # Re-draw grid -- for tulip bg_X commands, you have to defer this as LVGL will write for a few frames and would overwrite your BG 
-    # so i just use the sequencer to wait for the next tick and redraw then. adds a tiny bit of lag on activation
     app.redraw_ticks = 2
     # start listening to the keyboard again
     tulip.keyboard_callback(process_key)
@@ -193,6 +200,22 @@ def deactivate(screen):
     tulip.keyboard_callback()
     tulip.touch_callback()
 
+# actually make the change in our midi map
+def update_map():
+    global app
+    # channels guaranteed to always be selected
+    if(app.patches.selected is not None and app.polyphony.selected is not None and app.synths.selected is not None):
+        patch_no = app.patches.selected
+        if(app.synths.selected == 1): patch_no += 128
+        if(app.synths.selected == 2): patch_no += 256
+        if(app.synths.selected == 3): patch_no += 1024
+        channel = app.channels.selected + 1
+        polyphony = app.polyphony.selected + 1
+        # Check if this is a new thing
+        if not (midi.patch_map.get(channel, None) == patch_no and midi.polyphony_map.get(channel, None) == polyphony):
+            tulip.music_map(channel, patch_number=patch_no, voice_count=polyphony)
+
+# populate the patches dialog from patches,oy
 def update_patches(synth):
     global app
     if(synth=='DX7'):
@@ -203,8 +226,31 @@ def update_patches(synth):
         app.patches.replace_items([("Custom %d" % x) for x in range(32)])
     if(synth=='Misc'):
         app.patches.replace_items([])
-
     app.patches.label.set_text("%s patches" % (synth))
+
+# Get current settings for a channel from midi.patch_map
+def current_patch(channel):
+    global app
+    if(channel in midi.patch_map):
+        p = midi.patch_map[channel]
+        if(p<128):
+            # We defer here so that setting the UI component doesn't trigger an update before it updates
+            app.synths.select(0, defer=True)
+            app.patches.select(p, defer=True)
+        elif(p>128 and p<256):
+            app.synths.select(1, defer=True)
+            app.patches.select(p-128, defer=True)
+        elif(p<1024):
+            app.synths.select(2, defer=True)
+            app.patches.select(p-256, defer=True)
+        else:
+            app.synths.select(3, defer=True)
+            app.patches.select(p-1024, defer=True)
+        app.polyphony.select(midi.polyphony_map[channel]-1, defer=True)
+    else:
+        # no patch set for this chanel
+        app.patches.select(None)
+        app.polyphony.select(None)
 
 
 def run(screen):
@@ -219,21 +265,24 @@ def run(screen):
     app.deactivate_callback = deactivate
     tulip.seq_add_callback(step, int(tulip.seq_ppq()/2))
 
-    app.channels = ListColumn('channel',[str(i+1) for i in range(16)], selected=0, width=100)
+    # Skip 10, drums
+    app.channels = ListColumn('channel',["1","2","3","4","5","6","7","8","9","11","12","13","14","15","16"], selected=0, width=100)
     app.add(app.channels, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
 
     app.synths = ListColumn('synth', ["Juno-6", "DX7", "Misc", "Custom"])
     app.add(app.synths)
 
-    app.patches = ListColumn('Patches')
-    update_patches("Juno-6")
+    app.patches = ListColumn('patches')
     app.add(app.patches)
 
-    app.polyphony = ListColumn('polyphony', [str(x+1) for x in range(6)], width=100)
+    app.polyphony = ListColumn('polyphony', [str(x+1) for x in range(8)], width=100)
     app.add(app.polyphony)
 
     app.settings = Settings()
     app.add(app.settings)
+
+    current_patch(1)
+
 
     app.present()
 
