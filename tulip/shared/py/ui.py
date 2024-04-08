@@ -33,6 +33,10 @@ def pal_to_lv(pal):
     (r,g,b) = tulip.rgb(pal, wide=True) # todo -- not sure if we use wide or not
     return lv.color_make(r,g,b)
 
+# Convert tulip rgb332 pal idx into lv color
+def lv_to_pal(lvcolor):
+    return tulip.color(lvcolor.red, lvcolor.green, lvcolor.blue)
+
 # Remove padding from an LVGL object. Sometimes useful. 
 def lv_depad(obj):
     obj.set_style_pad_left(0,0)

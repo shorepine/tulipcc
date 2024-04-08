@@ -472,10 +472,9 @@ def run(module_string):
         # Import the app module and call module.run(screen)
         exec('import %s' % (module_string))
         actual_module = sys.modules[module_string]
-        try:
+        if(hasattr(actual_module, 'run')):
             actual_module.run(screen)
-        except (AttributeError, TypeError) as e:
-            # This is a modal style app that doesn't use a screen
+        else:
             screen.quit_callback(None)
 
         # Save the modules we imported so we can delete them on quit. This saves RAM on MP
