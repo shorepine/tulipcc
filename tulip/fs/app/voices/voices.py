@@ -81,11 +81,15 @@ class Settings(tulip.UIElement):
         self.mode.group.set_parent(self.rect)
         self.mode.group.set_style_bg_color(tulip.pal_to_lv(9),0)
         self.mode.group.align_to(alabel, lv.ALIGN.OUT_BOTTOM_LEFT, 0, 20)
+
         self.range = ListColumn("range", ["1", "2", "3"], width=130, height=160, selected=0)
         self.range.group.set_parent(self.rect)
         self.range.group.set_style_bg_color(tulip.pal_to_lv(9),0)
         self.range.group.align_to(self.mode.group, lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
 
+    def mode_cb(self,e):
+        button = e.get_target_obj()
+        midi.arpegg_mode = button.get_index()
     def tempo_cb(self,e):
         new_bpm = self.tempo.get_value()*2.4
         if(new_bpm < 1.0): new_bpm = 1
@@ -93,14 +97,14 @@ class Settings(tulip.UIElement):
         self.tempo_label.set_text("%d BPM" % (tulip.seq_bpm()))
     def hold_cb(self,e):
         if(self.hold.get_state()==3): 
-            self.arpegg_hold = True
+            midi.arpegg_hold = True
         else:
-            self.arpegg_hold = False
+            midi.arpegg_hold = False
     def arpegg_cb(self,e):
         if(self.arpegg.get_state()==3): 
-            self.arpegg_on = True
+            midi.arpegg = True
         else:
-            self.arpegg_on = False
+            midi.arpegg = False
 
 
 class ListColumn(tulip.UIElement):
@@ -145,9 +149,12 @@ class ListColumn(tulip.UIElement):
                 current_patch(self.selected+1)
             elif(self.name=='synth'):
                 update_patches(self.button_texts[self.selected])
+            elif(self.name=='mode'):
+                midi.arpegg_mode = index
+            elif(self.name=='range'):
+                midi.arpegg_range = index+1
             else:
                 if not defer: update_map()
-
 
     def list_cb(self, e):
         button = e.get_target_obj()

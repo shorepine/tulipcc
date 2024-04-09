@@ -7,9 +7,11 @@
 import amy
 import tulip
 import time
+import random
 
 # Tulip defaults, 4 note polyphony on channel 1
 # drum machine always on channel 10
+has_init = False
 PCM_PATCHES = 29
 polyphony_map = {1:4, 10:10}
 patch_map = {1:2}
@@ -23,6 +25,13 @@ in_sustain_dict = {}
 # Dict of per-channel sets of notes
 sustained_notes_dict = {}
 
+# Arpeggiator stuff, set by voices
+arpegg = False
+arpegg_hold = False
+arpegg_mode = 0 
+arpegg_range = 1
+arpegg_note = 0
+arpegg_dir = 1
 def get_in_sustain(channel):
     global in_sustain_dict
     if channel not in in_sustain_dict:
@@ -86,21 +95,26 @@ def sustain_pedal(channel, value):
             sustained_notes.remove(midinote)  # Modifies the global.
 
 def note_on(channel, midinote, vel):
+    global arpeg
     # Drum channel is special
     voice = find_voice(channel, midinote)
     if voice is not None:
         if(channel == 10):
             amy.send(osc=voice, wave=amy.PCM, patch=midinote % PCM_PATCHES, vel=vel, freq=0)
         else:
-            #print("note on voice %d" % (voice))
-            amy.send(voices="%d" % (voice), note=midinote, vel=vel)
+            if(not arpegg):
+                amy.send(voices="%d" % (voice), note=midinote, vel=vel)
 
 def note_off(channel, midinote):  
+    global arpeg
     # Get the voice number for this midinote
     if get_in_sustain(channel):
         sustained_notes = get_sustained_notes_set(channel)
         sustained_notes.add(midinote)
         return
+    
+    if channel not in voices_for_channel: return
+
     for v in voices_for_channel[channel]:
         if note_for_voice.get(v,None) == midinote:
             # Remove it
@@ -122,6 +136,57 @@ def program_change(channel, patch):
     # update the map
     patch_map[channel] = patch
     update_channel(channel)
+
+def play_arpegg_step(t, mode):
+    # Get the channel number for the _last_ held note, and only arpeggiate that.
+    # I don't know if multichannel arpeggiators exist, and I don't want to know
+    global arpegg_note, arpegg_dir, arpegg_range
+    if(len(voices_active)==0): return
+    last_voice = voices_active[-1]
+    last_channel = None
+    for c in voices_for_channel.keys():
+        if last_voice in voices_for_channel[c]:
+            last_channel = c
+
+    # Find held notes for that channel and add them to a list of notes
+    all_held = []
+    if last_channel is not None:
+        for v in voices_for_channel[c]:
+            if v in note_for_voice:
+                all_held.append(note_for_voice[v])
+
+    # Add range if set
+    if(arpegg_range > 1):
+        new_held = []
+        for r in range(arpegg_range):
+            for n in all_held:
+                new_held.append(n + (r*12))
+        all_held = new_held
+
+
+
+    amy.send(voices='%d' % (voices_for_channel[last_channel][0]), note=all_held[arpegg_note % len(all_held)], vel=1, time=t)
+    # mode -- up, down, up&down, rand
+    if mode==0:
+        arpegg_note = arpegg_note + 1
+        if(arpegg_note == len(all_held)): arpegg_note = 0
+    elif mode==1:
+        arpegg_note = arpegg_note - 1
+        if(arpegg_note < 0): arpegg_note = len(all_held)-1
+    elif mode==2:
+        if(arpegg_dir == 1): # up
+            arpegg_note = arpegg_note + 1
+            if(arpegg_note >= len(all_held)-1):
+                arpegg_dir = 0 # down
+        else:
+            arpegg_note = arpegg_note - 1
+            if(arpegg_note <= 0):
+                arpegg_dir = 1
+    elif mode==3:
+        arpegg_note = random.randrange(0, len(all_held))
+
+
+
 
 def midi_event_cb(x):
     """Callback that takes MIDI note on/off to create Note objects."""
@@ -161,11 +226,17 @@ def setup_voices():
             v_counter = v_counter + polyphony_map[channel]
             update_channel(channel)
 
-def defer_setup(t):
-    if(tulip.seq_ticks() > tulip.seq_ppq()):
-        setup_voices()
-        tulip.midi_add_callback(midi_event_cb)
-        tulip.seq_remove_callback(defer_setup)
+def midi_step(t):
+    global has_init, arpegg, arpegg_mode
+    if(not has_init):
+        # Deferred init
+        if(tulip.seq_ticks() > tulip.seq_ppq()):
+            setup_voices()
+            tulip.midi_add_callback(midi_event_cb)
+            has_init = True
+    if(arpegg):
+        play_arpegg_step(t, arpegg_mode)
+
 
 def music_map(channel, patch_number=None, voice_count=None):
     if voice_count is not None:
@@ -179,6 +250,6 @@ def music_map(channel, patch_number=None, voice_count=None):
 
 def setup():
     # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a callback
-    tulip.seq_add_callback(defer_setup)
+    tulip.seq_add_callback(midi_step, int(tulip.seq_ppq()/2))
 
 
