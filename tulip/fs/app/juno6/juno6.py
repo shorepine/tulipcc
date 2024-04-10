@@ -339,29 +339,6 @@ def cho(n):
     callback = lambda x: current_juno().set_param('chorus', n) if x else None
     return callback
 
-if 0:
-    import arpegg
-    arpeggiator = arpegg.ArpeggiatorSynth(current_juno())
-
-    def acb(arg):
-        callback = lambda x: arpeggiator.set(arg, x)
-        return callback
-
-    def arng(val):
-        callback = lambda b: arpeggiator.set('octaves', val)
-        return callback
-
-
-    arp = JunoSection("ARPEGGIO", [arp_ctl := JunoButtons("Ctl", ["On", "Hold"],
-                                                          [acb('on'), acb('hold')]),
-                                   arp_mode := JunoRadioButtons("Mode", ["Up", "U/D", "Dn", "Rn"],
-                                                                [acb('up'), acb('updown'),
-                                                                 acb('down'), acb('rand')]),
-                                   arp_rng := JunoRadioButtons("Rng", ["1", "2", "3"],
-                                                               [arng(1), arng(2), arng(3)]),
-                                   arp_rate := JunoSlider("Rate", acb('arp_rate'))],
-                      header_color=43)
-
 lfo = JunoSection("LFO", [lfo_rate := JunoSlider("Rate", jcb('lfo_rate')),
                           lfo_delay_time := JunoSlider("Delay", jcb('lfo_delay_time'))])
 
@@ -552,26 +529,18 @@ def midi_event_cb(x):
             m = midi_in_fn()
 
 
-def arp_callback(t):
-    if arpeggiator.running:
-        arpeggiator.next_note(t)
-
 def quit(screen):
     midi_remove_callback(midi_event_cb)
-    seq_remove_callback(arp_callback)
 
 def run(screen):
     screen.offset_y = 100
     screen.quit_callback = quit
     screen.set_bg_color(73)
     screen.add([lfo, dco, hpf, vcf, vca, env, ch])
-    #screen.add(arp, relative=lfo, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
-    screen.add(patch_selector, relative=vcf, direction=lv.ALIGN.OUT_TOP_MID)
-    screen.add(midi_selector) # the second add after relative will be relative to the last obj added
+    screen.add(midi_selector, relative=vcf, direction=lv.ALIGN.OUT_TOP_MID)
     screen.present()
 
     midi_add_callback(midi_event_cb)
-    #seq_add_callback(arp_callback, int(seq_ppq()))
 
 
 

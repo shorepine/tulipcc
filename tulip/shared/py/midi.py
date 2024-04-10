@@ -138,7 +138,7 @@ def program_change(channel, patch):
     update_channel(channel)
 
 def play_arpegg_step(t, mode):
-    # Get the channel number for the _last_ held note, and only arpeggiate that.
+    # Get the channel number for the _last_ held note, and only arpeggiate that channel.
     # I don't know if multichannel arpeggiators exist, and I don't want to know
     global arpegg_note, arpegg_dir, arpegg_range
     if(len(voices_active)==0): return
