@@ -32,6 +32,157 @@ arpegg_mode = 0
 arpegg_range = 1
 arpegg_note = 0
 arpegg_dir = 1
+
+
+
+
+# Micropython collections.deque does not support remove.
+class Queue:
+    def __init__(self, maxsize=64, name=''):
+            self.name = name    # Just for debug.
+            self.maxsize = maxsize + 1
+            self.queue = [None] * self.maxsize
+            self.head = 0
+            self.tail = 0
+
+    def _next(self, pointer):
+        """Incrementing a cicular buffer pointer."""
+        return (pointer + 1) % self.maxsize
+                
+    def _prev(self, pointer):
+        """Decrementing a cicular buffer pointer."""
+        return (pointer + self.maxsize - 1) % self.maxsize
+                
+    def put(self, item):
+        self.queue[self.tail] = item
+        self.tail = self._next(self.tail)
+        if self.tail == self.head:
+            # Wrap around
+            self.head = self._next(self.head)
+            print("%s: dropped oldest item", self)
+
+    def _delete_at(self, pointer):
+        """Remove the value at queue[pointer], and close up the rest."""
+        if self.tail > pointer:
+            self.queue[pointer : self.tail - 1] = (
+                self.queue[pointer + 1 : self.tail])
+            self.tail = self._prev(self.tail)
+        elif self.tail < pointer:
+            # Shift head: pointer one step forward.
+            self.queue[self.head + 1 : pointer + 1] = self.queue[self.head : pointer]
+            self.head = self._next(self.head)
+        else:
+            raise ValueError('pointer at tail???')
+
+    def remove(self, value):
+        """Remove first occurrence of value from queue."""
+        pointer = self.head
+        while pointer != self.tail:
+            if self.queue[pointer] == value:
+                self._delete_at(pointer)
+                return
+            pointer = self._next(pointer)
+        # Fell through, value wasn't found.
+        raise ValueError('%s: No such item: %s' % (self, str(value)))
+
+    def empty(self):
+        return self.head == self.tail
+
+    def full(self):
+        return self.head == self._next(self.tail)
+
+    def qsize(self):
+        return (self.tail - self.head + self.maxsize) % self.maxsize
+
+    def get(self):
+        if self.empty():
+            # get() on empty queue.
+            raise ValueError
+        value = self.queue[self.head]
+        self.head = self._next(self.head)
+        return value
+
+    def __repr__(self):
+        result = []
+        p = self.head
+        while p != self.tail:
+            result.append(self.queue[p])
+            p = self._next(p)
+        return ("Queue%s(maxsize=%d) [" % (self.name, self.maxsize - 1)
+            + (", ".join(str(s) for s in result))
+            + "]")
+
+
+class Synth:
+    """Manage a polyphonic synthesizer by rotating among a fixed pool of voices.
+
+    Argument synth_source provides the following methods:
+        synth_source.get_new_voices(num_voices) returns num_voices VoiceObjects.
+            VoiceObjects accept voice.note_on(note, vel), voice.note_off()
+        synth_source.set_patch(patch_num) changes preset for all voices.
+        synth_source.control_change(control, value) modifies a parameter for all voices.
+    """
+    
+    def __init__(self, synth_source, num_voices=6):
+        self.synth_source = synth_source
+        self.voices = synth_source.get_new_voices(num_voices)
+        self.released_voices = Queue(num_voices, name='Released')
+        for voice_num in range(num_voices):
+            self.released_voices.put(voice_num)
+        self.active_voices = Queue(num_voices, name='Active')
+        # Dict to look up active voice from note number, for note-off.
+        self.voice_of_note = {}
+        self.note_of_voice = [None] * num_voices
+
+    def get_next_voice(self):
+        """Return the next voice to use."""
+        # First try free/released_voices in order, then steal from active_voices.
+        if not self.released_voices.empty():
+            return self.released_voices.get()
+        # We have to steal an active voice.
+        stolen_voice = self.active_voices.get()
+        print('Stealing voice for', self.note_of_voice[stolen_voice])
+        self.voice_off(stolen_voice)
+        return stolen_voice
+
+    def voice_off(self, voice, time=None):
+        """Terminate voice, update note_of_voice, but don't alter the queues."""
+        self.voices[voice].note_off(time=time)
+        # We no longer have a voice playing this note.
+        del self.voice_of_note[self.note_of_voice[voice]]
+        self.note_of_voice[voice] = None
+
+    def note_off(self, note, time=None):
+        if note not in self.voice_of_note:
+            return
+        old_voice = self.voice_of_note[note]
+        self.voice_off(old_voice, time=time)
+        # Return to released.
+        self.active_voices.remove(old_voice)
+        self.released_voices.put(old_voice)
+
+    def note_on(self, note, velocity, time=None):
+        if velocity == 0:
+            self.note_off(note, time=time)
+        else:
+            # Velocity > 0, note on.
+            if note in self.voice_of_note:
+                # Send another note-on to the voice already playing this note.
+                new_voice = self.voice_of_note[note]
+            else:
+                new_voice = self.get_next_voice()
+                self.active_voices.put(new_voice)
+                self.voice_of_note[note] = new_voice
+                self.note_of_voice[new_voice] = note
+            self.voices[new_voice].note_on(note, velocity, time=time)
+
+    def set_patch(self, patch_number):
+        self.synth_source.set_patch(patch_number)
+
+    def control_change(self, control, value):
+        self.synth_source.control_change(control, value)
+
+
 def get_in_sustain(channel):
     global in_sustain_dict
     if channel not in in_sustain_dict:
@@ -48,6 +199,8 @@ def get_sustained_notes_set(channel):
         sustained_notes_dict[channel] = set()
     return sustained_notes_dict[channel]
 
+
+# TODO - REPLACE WITH Synth
 # Get the voice for this chan/note 
 def find_voice(channel, midinote):
     if channel not in voices_for_channel:
@@ -94,6 +247,7 @@ def sustain_pedal(channel, value):
             note_off(channel, midinote)
             sustained_notes.remove(midinote)  # Modifies the global.
 
+# TODO - REPLACE WITH Synth
 def note_on(channel, midinote, vel):
     global arpeg
     # Drum channel is special
@@ -105,6 +259,7 @@ def note_on(channel, midinote, vel):
             if(not arpegg):
                 amy.send(voices="%d" % (voice), note=midinote, vel=vel)
 
+# TODO - REPLACE WITH Synth
 def note_off(channel, midinote):  
     global arpeg
     # Get the voice number for this midinote
@@ -127,6 +282,7 @@ def note_off(channel, midinote):
                 amy.send(voices='%d' % (v), vel=0)
             return
 
+# Do the actual setting of the voice for a channel
 def update_channel(channel):
     time.sleep(0.1) # AMY queue will fill if not slept 
     vstr = ",".join([str(x) for x in voices_for_channel[channel]])
@@ -136,6 +292,11 @@ def program_change(channel, patch):
     # update the map
     patch_map[channel] = patch
     update_channel(channel)
+    # Update voices UI if it is running
+    try:
+        voices.refresh()
+    except:
+        pass
 
 def play_arpegg_step(t, mode):
     # Get the channel number for the _last_ held note, and only arpeggiate that channel.
@@ -163,9 +324,10 @@ def play_arpegg_step(t, mode):
                 new_held.append(n + (r*12))
         all_held = new_held
 
-
-
+    # TODO - This should call synth.note_on / note_off instead
     amy.send(voices='%d' % (voices_for_channel[last_channel][0]), note=all_held[arpegg_note % len(all_held)], vel=1, time=t)
+
+
     # mode -- up, down, up&down, rand
     if mode==0:
         arpegg_note = arpegg_note + 1
@@ -226,6 +388,7 @@ def setup_voices():
             v_counter = v_counter + polyphony_map[channel]
             update_channel(channel)
 
+
 def midi_step(t):
     global has_init, arpegg, arpegg_mode
     if(not has_init):
@@ -238,6 +401,7 @@ def midi_step(t):
         play_arpegg_step(t, arpegg_mode)
 
 
+# Keep this -- this is a tulip API 
 def music_map(channel, patch_number=None, voice_count=None):
     if voice_count is not None:
         if patch_number is not None:
@@ -247,6 +411,13 @@ def music_map(channel, patch_number=None, voice_count=None):
     elif patch_number is not None:
         patch_map[channel] = patch_number
         update_channel(channel)
+
+    # Update voices UI if it is running
+    try:
+        voices.refresh()
+    except:
+        pass
+
 
 def setup():
     # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a callback
