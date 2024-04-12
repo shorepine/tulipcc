@@ -7,10 +7,11 @@
 //#import <cassert>
 //#import <cstdio>
 
+#define unichar OSX_UNICHAR
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <CoreMidi/CoreMidi.h>
-
+#undef unichar
 #import "midi.h"
 
 static CGEventSourceRef eventSource;
