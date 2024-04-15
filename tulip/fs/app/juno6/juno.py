@@ -297,19 +297,6 @@ class JunoPatch:
         osc_setup = {
             'filter_type': amy.FILTER_LPF24, 'mod_source': self.lfo_osc}
         self.amy_send(osc=self.pwm_osc, wave=amy.PULSE, **osc_setup)
-        # Setup chained_oscs
-        # All the oscs are the same, except:
-        #    - only pulse needs duty (but OK if it's cloned, except sub)
-        #    - wave is diff for each
-        #    - chained osc is diff for each (but not cloned)
-        #    - sub has different frequency, no duty
-        # So, to update for instance envelope:
-        #    - we could run through each osc and update all params
-        #    - or just update osc 0, then clone to 1,2,3, then restore
-        #        their unique params
-        self.amy_send(osc=self.pwm_osc, chained_osc=self.sub_osc)
-        self.amy_send(osc=self.sub_osc, chained_osc=self.saw_osc)
-        self.amy_send(osc=self.saw_osc, chained_osc=self.nse_osc)
         # Setup all the variable params.
         self.update_lfo()
         self.update_dco()
@@ -351,16 +338,23 @@ class JunoPatch:
             return
         base_osc = self.base_oscs[0]
         clone_osc = base_osc + self.pwm_osc
+        # Make the clones have their filters turned off.
+        amy.send(osc=base_osc + self.pwm_osc, filter_type=amy.FILTER_NONE,
+                         chained_osc=base_osc + self.saw_osc)
         amy.send(osc=base_osc + self.saw_osc, clone_osc=clone_osc)
         amy.send(osc=base_osc + self.saw_osc, wave=amy.SAW_UP,
-                         amp=self._amp_coef_string(float(self.saw)))
-        amy.send(osc=base_osc + self.nse_osc, clone_osc=clone_osc)
-        amy.send(osc=base_osc + self.nse_osc, wave=amy.NOISE,
-                         amp=self._amp_coef_string(self.dco_noise))
+                         amp=self._amp_coef_string(float(self.saw)),
+                         chained_osc=base_osc + self.sub_osc)
         amy.send(osc=base_osc + self.sub_osc, clone_osc=clone_osc)
         amy.send(osc=base_osc + self.sub_osc, wave=amy.PULSE,
                          amp=self._amp_coef_string(self.dco_sub),
-                         freq=self.sub_freq)
+                         freq=self.sub_freq,
+                         chained_osc=base_osc + self.nse_osc)
+        amy.send(osc=base_osc + self.nse_osc, clone_osc=clone_osc)
+        amy.send(osc=base_osc + self.nse_osc, wave=amy.NOISE,
+                         amp=self._amp_coef_string(self.dco_noise))  # No chained_osc.
+       # Re-enable the filter on PWM osc.
+        amy.send(osc=base_osc + self.pwm_osc, filter_type=amy.FILTER_LPF24)
 
     def update_lfo(self):
         lfo_args = {'freq': to_lfo_freq(self.lfo_rate),
