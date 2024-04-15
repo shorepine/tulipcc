@@ -199,6 +199,25 @@ def get_sustained_notes_set(channel):
         sustained_notes_dict[channel] = set()
     return sustained_notes_dict[channel]
 
+def pitch_bend(channel, val):
+    # get the active voices for this channel
+    if channel not in voices_for_channel:
+        return
+    v_str = ""
+    for v in voices_for_channel[channel]:
+        if v in voices_active: v_str = v_str + "%d," % (v)
+        if(len(v_str)):
+            amy.send(voices=v_str[:-1], pitch_bend=val)
+
+def sustain_pedal(channel, value):
+    if value:
+        set_in_sustain(channel, True)
+    else:
+        set_in_sustain(channel, False)
+        sustained_notes = get_sustained_notes_set(channel)
+        for midinote in sustained_notes:
+            note_off(channel, midinote)
+            sustained_notes.remove(midinote)  # Modifies the global.
 
 # TODO - REPLACE WITH Synth
 # Get the voice for this chan/note 
@@ -227,27 +246,6 @@ def find_voice(channel, midinote):
             note_for_voice[v] = midinote
             return v
 
-def pitch_bend(channel, val):
-    # get the active voices for this channel
-    if channel not in voices_for_channel:
-        return
-    v_str = ""
-    for v in voices_for_channel[channel]:
-        if v in voices_active: v_str = v_str + "%d," % (v)
-        if(len(v_str)):
-            amy.send(voices=v_str[:-1], pitch_bend=val)
-
-def sustain_pedal(channel, value):
-    if value:
-        set_in_sustain(channel, True)
-    else:
-        set_in_sustain(channel, False)
-        sustained_notes = get_sustained_notes_set(channel)
-        for midinote in sustained_notes:
-            note_off(channel, midinote)
-            sustained_notes.remove(midinote)  # Modifies the global.
-
-# TODO - REPLACE WITH Synth
 def note_on(channel, midinote, vel):
     global arpeg
     # Drum channel is special
