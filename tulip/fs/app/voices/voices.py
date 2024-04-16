@@ -87,9 +87,6 @@ class Settings(tulip.UIElement):
         self.range.group.set_style_bg_color(tulip.pal_to_lv(9),0)
         self.range.group.align_to(self.mode.group, lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
 
-    def mode_cb(self,e):
-        button = e.get_target_obj()
-        midi.arpegg_mode = button.get_index()
     def tempo_cb(self,e):
         new_bpm = self.tempo.get_value()*2.4
         if(new_bpm < 1.0): new_bpm = 1
@@ -97,14 +94,14 @@ class Settings(tulip.UIElement):
         self.tempo_label.set_text("%d BPM" % (tulip.seq_bpm()))
     def hold_cb(self,e):
         if(self.hold.get_state()==3): 
-            midi.arpegg_hold = True
+            midi.arpeggiator.set('hold', True)
         else:
-            midi.arpegg_hold = False
+            midi.arpeggiator.set('hold', False)
     def arpegg_cb(self,e):
-        if(self.arpegg.get_state()==3): 
-            midi.arpegg = True
+        if(self.arpegg.get_state()==3):
+            midi.arpeggiator.set('on', True)
         else:
-            midi.arpegg = False
+            midi.arpeggiator.set('on', False)
 
 
 class ListColumn(tulip.UIElement):
@@ -146,13 +143,14 @@ class ListColumn(tulip.UIElement):
         if index is not None:
             self.buttons[self.selected].set_style_bg_color(tulip.pal_to_lv(129), 0)
             if(self.name=='channel'):
-                current_patch(self.selected+1)
+                current_patch(self.selected + 1)
             elif(self.name=='synth'):
                 update_patches(self.button_texts[self.selected])
             elif(self.name=='mode'):
-                midi.arpegg_mode = index
+                mode = ['up', 'down', 'updown', 'rand'][index]
+                midi.arpeggiator.set('direction', mode)
             elif(self.name=='range'):
-                midi.arpegg_range = index+1
+                midi.arpeggiator.set('octaves', index + 1)
             else:
                 if not defer: update_map()
 
@@ -219,8 +217,9 @@ def update_map():
         channel = app.channels.selected + 1
         polyphony = app.polyphony.selected + 1
         # Check if this is a new thing
-        if not (midi.patch_map.get(channel, None) == patch_no and midi.polyphony_map.get(channel, None) == polyphony):
-            tulip.music_map(channel, patch_number=patch_no, voice_count=polyphony)
+        if midi.config.channel_info(channel) != (patch_no, polyphony):
+            tulip.music_map(channel, patch_number=patch_no,
+                            voice_count=polyphony)
 
 # populate the patches dialog from patches,oy
 def update_patches(synth):
@@ -235,25 +234,25 @@ def update_patches(synth):
         app.patches.replace_items([])
     app.patches.label.set_text("%s patches" % (synth))
 
-# Get current settings for a channel from midi.patch_map
+# Get current settings for a channel from midi.config.
 def current_patch(channel):
     global app
-    if(channel in midi.patch_map):
-        p = midi.patch_map[channel]
-        if(p<128):
+    patch_num, polyphony = midi.config.channel_info(channel)
+    if patch_num is not None:
+        if patch_num < 128:
             # We defer here so that setting the UI component doesn't trigger an update before it updates
             app.synths.select(0, defer=True)
-            app.patches.select(p, defer=True)
-        elif(p>128 and p<256):
+            app.patches.select(patch_num, defer=True)
+        elif patch_num > 128 and patch_num < 256:
             app.synths.select(1, defer=True)
-            app.patches.select(p-128, defer=True)
-        elif(p<1024):
+            app.patches.select(patch_num - 128, defer=True)
+        elif patch_num < 1024:
             app.synths.select(2, defer=True)
-            app.patches.select(p-256, defer=True)
+            app.patches.select(patch_num - 256, defer=True)
         else:
             app.synths.select(3, defer=True)
-            app.patches.select(p-1024, defer=True)
-        app.polyphony.select(midi.polyphony_map[channel]-1, defer=True)
+            app.patches.select(patch_num - 1024, defer=True)
+        app.polyphony.select(polyphony - 1, defer=True)
     else:
         # no patch set for this chanel
         app.patches.select(None)

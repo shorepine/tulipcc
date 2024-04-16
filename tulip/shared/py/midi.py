@@ -6,9 +6,9 @@ import amy
 import tulip
 import time
 import random
+import arpegg
 
-
-class MidiSynthsConfig:
+class MidiConfig:
     """System-wide Midi input config."""
 
     def __init__(self, voices_per_channel, patch_per_channel):
@@ -38,11 +38,20 @@ class MidiSynthsConfig:
         else:
             # Setting up a new channel.
             self.add_synth(channel, patch_number, voice_count)
+
+    def channel_info(self, channel):
+        """Report the current patch_num and polyphony for this channel."""
+        if channel not in self.synth_per_channel:
+            return (None, None)
+        return (
+            self.synth_per_channel[channel].patch_number,
+            self.synth_per_channel[channel].num_voices,
+        )
                   
 
 
-# Global object.
-midi_synths = None
+# Global MidiConfig object.
+config = None
 
 
 # TODO(dpwe):
@@ -173,6 +182,9 @@ class Synth:
       synth.note_off(midi_note)
       synth.control_change(control, value)
       synth.program_change(patch_num)
+    Provides read-back attributes (for voices.py UI):
+      synth.num_voices
+      synth.patch_number
   
     Argument voice_source provides the following methods:
       voice_source.get_new_voices(num_voices) returns num_voices VoiceObjects.
@@ -194,6 +206,9 @@ class Synth:
         self.note_of_voice = [None] * num_voices
         self.sustaining = False
         self.sustained_notes = set()
+        # Fields used by UI
+        self.num_voices = num_voices
+        self.patch_number = None
 
     def _get_next_voice(self):
         """Return the next voice to use."""
@@ -251,6 +266,7 @@ class Synth:
             self.sustained_notes = set()
 
     def program_change(self, patch_number):
+        self.patch_number = patch_number
         self.voice_source.program_change(patch_number)
 
     def control_change(self, control, value):
@@ -265,6 +281,9 @@ class DrumSynth:
         self.oscs = range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS)
         self.next_osc = 0
         self.note_to_osc = {}
+        # Fields used by UI
+        self.num_voices = num_voices
+        self.patch_number = 0
 
     def note_on(self, note, velocity):
         osc = self.oscs[self.next_osc]
@@ -292,41 +311,49 @@ class DrumSynth:
         pass
 
 
-def ensure_midi_setup():
-    global midi_synths
-    if not midi_synths:
+def ensure_midi_config():
+    global config
+    if not config:
         # Tulip defaults, 4 note polyphony on channel 1
         # drum machine always on channel 10
-        midi_synths = MidiSynthsConfig(
+        config = MidiConfig(
             voices_per_channel={1: 4, 10: 10},
             patch_per_channel={1: 2},
         )
         tulip.midi_add_callback(midi_event_cb)
 
+WARNED_MISSING_CHANNELS = set()
 
 def midi_event_cb(x):
     """Callback that takes MIDI note on/off to create Note objects."""
-    ensure_midi_setup()
+    ensure_midi_config()
     m = tulip.midi_in() 
     while m is not None and len(m) > 0:
-        channel = (m[0] & 0x0F) + 1
         message = m[0] & 0xF0
-        if message == 0x90:  # Note on.
-            midinote = m[1]
-            midivel = m[2]
-            vel = midivel / 127.
-            midi_synths.synth_per_channel[channel].note_on(midinote, vel)
-        elif message == 0x80:  # Note off.
-            midinote = m[1]
-            midi_synths.synth_per_channel[channel].note_off(midinote)
-        elif message == 0xc0:  # Program change
-            midi_synths.synth_per_channel[channel].program_change(m[1])
-        elif message == 0xe0:  # Pitch bend. m[2] is MSB, m[1] is LSB. 14 bits 
+        channel = (m[0] & 0x0F) + 1
+        set_arpegg_chan(channel)
+        synth = config.synth_per_channel[channel]
+        if not synth:
+            if channel not in WARNED_MISSING_CHANNELS:
+                print("Warning: No synth configured for MIDI channel", channel)
+                WARNED_MISSING_CHANNELS.add(channel)
+        else:
+            if message == 0x90:  # Note on.
+                midinote = m[1]
+                midivel = m[2]
+                vel = midivel / 127.
+                synth.note_on(midinote, vel)
+            elif message == 0x80:  # Note off.
+                midinote = m[1]
+                synth.note_off(midinote)
+            elif message == 0xc0:  # Program change
+                synth.program_change(m[1])
+            elif message == 0xb0 and m[1] == 0x40:
+                synth.sustain(m[2])
+        if message == 0xe0:  # Pitch bend. m[2] is MSB, m[1] is LSB. 14 bits 
             pb_value = ((m[2] << 7) | (m[1])) - 8192 # -8192-8192, where 0 is nothing
             amy_value = float(pb_value)/(8192*6.0) # convert to -2 / +2 semitones
             amy.send(pitch_bend=amy_value)
-        elif message == 0xb0 and m[1] == 0x40:
-            midi_synths.synth_per_channel[channel].sustain(m[2])
     
         # Are there more events waiting?
         m = m[3:]
@@ -337,20 +364,29 @@ def midi_event_cb(x):
 # Keep this -- this is a tulip API 
 def music_map(channel, patch_number=None, voice_count=None):
     """API to set a patch and polyphony for a given MIDI channel."""
-    midi_synths.music_map(channel, patch_number, voice_count)
+    config.music_map(channel, patch_number, voice_count)
     try:
         voices.refresh()  # Update voices UI if it is running.
     except:
         pass
 
 
-arpegg = None
+arpeggiator = arpegg.ArpeggiatorSynth(synth=None, channel=0)
+
+def set_arpegg_chan(channel):
+    if arpeggiator.channel != channel and config.synth_per_channel[channel]:
+        if arpeggiator.channel != 0:
+            # Uninstall arpeggiator from previous channel.
+            config.synth_per_channel[arpeggiator.channel] = arpeggiator.synth
+        arpeggiator.synth = config.synth_per_channel[channel]
+        arpeggiator.channel = channel
+        config.synth_per_channel[channel] = arpeggiator
 
 def midi_step(t):
     if(tulip.seq_ticks() > tulip.seq_ppq()):
-        ensure_midi_setup()
-    if(arpegg):
-        play_arpegg_step(t, arpegg_mode)
+        ensure_midi_config()
+    if(arpeggiator.running):
+        arpeggiator.next_note()
 
 
 def setup():
