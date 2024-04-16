@@ -73,9 +73,7 @@ class ArpeggiatorSynth:
       # Semaphore to the run loop to start going.
       self.running = True
 
-  def next_note(self, step=None):
-    if step is None:
-      step = self.current_step + 1
+  def next_note(self, time=None):
     if self.current_note:
       self.synth.note_off(self.current_note)
       self.current_note = None
@@ -83,9 +81,9 @@ class ArpeggiatorSynth:
       if self.direction == "rand":
         self.current_step = random.randint(0, len(self.full_sequence) - 1)
       else:
-        self.current_step = step % len(self.full_sequence)
+        self.current_step = (self.current_step + 1) % len(self.full_sequence)
       self.current_note = self.full_sequence[self.current_step]
-      self.synth.note_on(self.current_note, self.velocity)
+      self.synth.note_on(self.current_note, self.velocity, time=time)
     else:
       self.running = False
 

@@ -54,13 +54,6 @@ class MidiConfig:
 config = None
 
 
-# TODO(dpwe):
-#   - Implement synth_for_channel[channel]
-#   - Add sustain to Synth
-#   - Wrap amy.send(voices) as a voice_source with VoiceObjects
-#   - Provide a DrumSynth (same API, no voice rotation etc.)
-
-
 # Micropython collections.deque does not support remove.
 class Queue:
     def __init__(self, maxsize=64, name=''):
@@ -145,28 +138,32 @@ class VoiceObject:
         self.amy_voice = amy_voice
 
     def note_on(self, note, vel, time=None):
-        amy.send(voices=self.amy_voice, note=note, vel=vel, time=time)
+        amy.send(time=time, voices=self.amy_voice, note=note, vel=vel)
 
     def note_off(self, time=None):
-        amy.send(voices=self.amy_voice, vel=0, time=time)
+        amy.send(time=time, voices=self.amy_voice, vel=0)
 
 
 class VoiceSource:
     """Manage the pool of amy voices. Provide voice_source for Synth objects."""
     # Class-wide record of which voice to allocate next.
-    next_voice = 0
+    next_amy_voice = 0
 
     def get_new_voices(self, num_voices):
-        self.voice_nums = list(range(VoiceSource.next_voice, VoiceSource.next_voice + num_voices))
-        VoiceSource.next_voice += num_voices
+        self.amy_voice_nums = list(
+            range(VoiceSource.next_amy_voice,
+                  VoiceSource.next_amy_voice + num_voices)
+        )
+        VoiceSource.next_amy_voice += num_voices
         voice_objects = []
-        for voice_num in self.voice_nums:
-            voice_objects.append(VoiceObject(voice_num))
+        for amy_voice_num in self.amy_voice_nums:
+            voice_objects.append(VoiceObject(amy_voice_num))
         return voice_objects
 
     def program_change(self, patch_num):
         time.sleep(0.1)  # "AMY queue will fill if not slept."
-        amy.send(voices=','.join([str(v) for v in self.voice_nums]), load_patch=patch_num)
+        amy.send(voices=','.join([str(v) for v in self.amy_voice_nums]),
+                 load_patch=patch_num)
 
     def control_change(self, control, value):
         # Aha.  This is the sticking point.
@@ -178,8 +175,8 @@ class Synth:
     """Manage a polyphonic synthesizer by rotating among a fixed pool of voices.
 
     Provides methods:
-      synth.note_on(midi_note, velocity)
-      synth.note_off(midi_note)
+      synth.note_on(midi_note, velocity, time=None)
+      synth.note_off(midi_note, time=None)
       synth.control_change(control, value)
       synth.program_change(patch_num)
     Provides read-back attributes (for voices.py UI):
@@ -188,18 +185,25 @@ class Synth:
   
     Argument voice_source provides the following methods:
       voice_source.get_new_voices(num_voices) returns num_voices VoiceObjects.
-        VoiceObjects accept voice.note_on(note, vel), voice.note_off()
+        VoiceObjects accept voice.note_on(note, vel, time=None),
+        voice.note_off(time=None)
       voice_source.program_change(patch_num) changes preset for all voices.
       voice_source.control_change(control, value) modifies a parameter for all
           voices.
+
+    Note: The synth internally refers to its voices by indices in
+    range(0, num_voices).  These numbers are not related to the actual amy
+    voices rendering the note; the amy voice number is internal to the
+    VoiceObjects returned by voice_source.get_new_voices, and is opaque to
+    the Synth object.
     """
 
     def __init__(self, voice_source, num_voices=6):
         self.voice_source = voice_source
-        self.voices = voice_source.get_new_voices(num_voices)
+        self.voice_objs = voice_source.get_new_voices(num_voices)
         self.released_voices = Queue(num_voices, name='Released')
-        for voice_num in range(num_voices):
-            self.released_voices.put(voice_num)
+        for voice_index in range(num_voices):
+            self.released_voices.put(voice_index)
         self.active_voices = Queue(num_voices, name='Active')
         # Dict to look up active voice from note number, for note-off.
         self.voice_of_note = {}
@@ -221,28 +225,28 @@ class Synth:
         self._voice_off(stolen_voice)
         return stolen_voice
 
-    def _voice_off(self, voice):
+    def _voice_off(self, voice, time=None):
         """Terminate voice, update note_of_voice, but don't alter the queues."""
-        self.voices[voice].note_off()
+        self.voice_objs[voice].note_off(time)
         # We no longer have a voice playing this note.
         del self.voice_of_note[self.note_of_voice[voice]]
         self.note_of_voice[voice] =  None
 
-    def note_off(self, note):
+    def note_off(self, note, time=None):
         if self.sustaining:
             self.sustained_notes.add(note)
             return
         if note not in self.voice_of_note:
             return
         old_voice = self.voice_of_note[note]
-        self._voice_off(old_voice)
+        self._voice_off(old_voice, time)
         # Return to released.
         self.active_voices.remove(old_voice)
         self.released_voices.put(old_voice)
 
-    def note_on(self, note, velocity):
+    def note_on(self, note, velocity, time=None):
         if velocity == 0:
-            self.note_off(note)
+            self.note_off(note, time)
         else:
             # Velocity > 0, note on.
             if note in self.voice_of_note:
@@ -253,7 +257,7 @@ class Synth:
                 self.active_voices.put(new_voice)
                 self.voice_of_note[note] = new_voice
                 self.note_of_voice[new_voice] = note
-                self.voices[new_voice].note_on(note, velocity)
+                self.voice_objs[new_voice].note_on(note, velocity, time)
 
     def sustain(self, state):
         """Turn sustain on/off."""
@@ -285,19 +289,21 @@ class DrumSynth:
         self.num_voices = num_voices
         self.patch_number = 0
 
-    def note_on(self, note, velocity):
+    def note_on(self, note, velocity, time=None):
         osc = self.oscs[self.next_osc]
         self.next_osc = (self.next_osc + 1) % len(self.oscs)
-        amy.send(osc=osc, wave=amy.PCM, patch=note % self.PCM_PATCHES, vel=velocity, freq=0)
+        amy.send(time=time, osc=osc, wave=amy.PCM,
+                 patch=note % self.PCM_PATCHES, vel=velocity, freq=0)
         self.note_to_osc[note] = osc
 
-    def note_off(self, note):
+    def note_off(self, note, time=None):
         # Drums don't really need note-offs, but handle them anyway.
         try:
             osc = self.note_to_osc[note]
-            amy.send(osc=osc, vel=0)
+            amy.send(time=time, osc=osc, vel=0)
             del self.note_to_osc[note]
         except KeyError:
+            # We didn't recognize the note number; never mind.
             pass
 
     # Rest of Synth protocol doesn't do anything for drums.
@@ -382,15 +388,14 @@ def set_arpegg_chan(channel):
         arpeggiator.channel = channel
         config.synth_per_channel[channel] = arpeggiator
 
-def midi_step(t):
+def midi_step(time):
     if(tulip.seq_ticks() > tulip.seq_ppq()):
         ensure_midi_config()
     if(arpeggiator.running):
-        arpeggiator.next_note()
+        # time is the actual event time for this event.
+        arpeggiator.next_note(time=time)
 
 
 def setup():
     # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a callback
     tulip.seq_add_callback(midi_step, int(tulip.seq_ppq()/2))
-
-
