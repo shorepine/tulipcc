@@ -94,8 +94,8 @@ class ArpeggiatorSynth:
     return self.synth.program_change(patch_number)
 
   @property
-  def num_voices(self):
-    return self.synth.num_voices
+  def amy_voices(self):
+    return self.synth.amy_voices
 
   @property
   def patch_number(self):
@@ -135,4 +135,7 @@ class ArpeggiatorSynth:
 
   def get_new_voices(self, num_voices):
     return self.synth.get_new_voices(num_voices)
+
+  def release_voices(self):
+    return self.synth.release_voices()
 

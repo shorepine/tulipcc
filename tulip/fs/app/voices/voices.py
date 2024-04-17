@@ -152,7 +152,8 @@ class ListColumn(tulip.UIElement):
             elif(self.name=='range'):
                 midi.arpeggiator.set('octaves', index + 1)
             else:
-                if not defer: update_map()
+                if not defer:
+                    update_map()
 
     def list_cb(self, e):
         button = e.get_target_obj()
@@ -217,7 +218,9 @@ def update_map():
         channel = app.channels.selected + 1
         polyphony = app.polyphony.selected + 1
         # Check if this is a new thing
-        if midi.config.channel_info(channel) != (patch_no, polyphony):
+        channel_patch, amy_voices = midi.config.channel_info(channel)
+        channel_polyphony = 0 if amy_voices is None else len(amy_voices)
+        if  (channel_patch, channel_polyphony) != (patch_no, polyphony):
             tulip.music_map(channel, patch_number=patch_no,
                             voice_count=polyphony)
 
@@ -237,21 +240,22 @@ def update_patches(synth):
 # Get current settings for a channel from midi.config.
 def current_patch(channel):
     global app
-    patch_num, polyphony = midi.config.channel_info(channel)
-    if patch_num is not None:
-        if patch_num < 128:
+    channel_patch, amy_voices = midi.config.channel_info(channel)
+    if channel_patch is not None:
+        polyphony = len(amy_voices)
+        if channel_patch < 128:
             # We defer here so that setting the UI component doesn't trigger an update before it updates
             app.synths.select(0, defer=True)
-            app.patches.select(patch_num, defer=True)
-        elif patch_num > 128 and patch_num < 256:
+            app.patches.select(channel_patch, defer=True)
+        elif channel_patch < 256:
             app.synths.select(1, defer=True)
-            app.patches.select(patch_num - 128, defer=True)
-        elif patch_num < 1024:
+            app.patches.select(channel_patch - 128, defer=True)
+        elif channel_patch < 1024:
             app.synths.select(2, defer=True)
-            app.patches.select(patch_num - 256, defer=True)
+            app.patches.select(channel_patch - 256, defer=True)
         else:
             app.synths.select(3, defer=True)
-            app.patches.select(patch_num - 1024, defer=True)
+            app.patches.select(channel_patch - 1024, defer=True)
         app.polyphony.select(polyphony - 1, defer=True)
     else:
         # no patch set for this chanel

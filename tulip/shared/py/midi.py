@@ -12,12 +12,17 @@ class MidiConfig:
     """System-wide Midi input config."""
 
     def __init__(self, voices_per_channel, patch_per_channel):
-        self.synth_per_channel = [None] * 16  # Fixed array of 16 slots for Synths.
+        self.synth_per_channel = dict()
         for channel, polyphony in voices_per_channel.items():
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
             self.add_synth(channel, patch, polyphony)
 
     def add_synth(self, channel, patch, polyphony):
+        if channel in self.synth_per_channel:
+            # Old Synth allocated - Expicitly return the amy_voices to the pool.
+            release_arpeggiator(channel)
+            self.synth_per_channel[channel].release_voices()
+            del self.synth_per_channel[channel]
         if channel == 10:
             synth = DrumSynth(num_voices=polyphony)
         else:
@@ -40,13 +45,19 @@ class MidiConfig:
             self.add_synth(channel, patch_number, voice_count)
 
     def channel_info(self, channel):
-        """Report the current patch_num and polyphony for this channel."""
+        """Report the current patch_num and list of amy_voices for this channel."""
         if channel not in self.synth_per_channel:
             return (None, None)
         return (
             self.synth_per_channel[channel].patch_number,
-            self.synth_per_channel[channel].num_voices,
+            self.synth_per_channel[channel].amy_voices,
         )
+
+    def voices_for_channel(self, channel):
+        """Return a list of AMY voices assigned to a channel."""
+        if channel not in self.synth_per_channel:
+            return []
+        return self.synth_per_channel[channel].amy_voices()
                   
 
 
@@ -147,14 +158,18 @@ class VoiceObject:
 class VoiceSource:
     """Manage the pool of amy voices. Provide voice_source for Synth objects."""
     # Class-wide record of which voice to allocate next.
-    next_amy_voice = 0
+    allocated_amy_voices = set()
 
     def get_new_voices(self, num_voices):
-        self.amy_voice_nums = list(
-            range(VoiceSource.next_amy_voice,
-                  VoiceSource.next_amy_voice + num_voices)
-        )
-        VoiceSource.next_amy_voice += num_voices
+        new_voices = []
+        next_amy_voice = 0
+        while len(new_voices) < num_voices:
+            while next_amy_voice in VoiceSource.allocated_amy_voices:
+                next_amy_voice += 1
+            new_voices.append(next_amy_voice)
+            next_amy_voice += 1
+        self.amy_voice_nums = new_voices
+        VoiceSource.allocated_amy_voices.update(new_voices)
         voice_objects = []
         for amy_voice_num in self.amy_voice_nums:
             voice_objects.append(VoiceObject(amy_voice_num))
@@ -170,6 +185,11 @@ class VoiceSource:
         print('control_change not implemented for amy-managed voices.')
         pass
 
+    def release_voices(self):
+        """Return the amy_voices when the VoiceSource is no longer needed."""
+        for amy_voice in self.amy_voice_nums:
+            VoiceSource.allocated_amy_voices.remove(amy_voice)
+
 
 class Synth:
     """Manage a polyphonic synthesizer by rotating among a fixed pool of voices.
@@ -180,7 +200,7 @@ class Synth:
       synth.control_change(control, value)
       synth.program_change(patch_num)
     Provides read-back attributes (for voices.py UI):
-      synth.num_voices
+      synth.amy_voices
       synth.patch_number
   
     Argument voice_source provides the following methods:
@@ -211,8 +231,12 @@ class Synth:
         self.sustaining = False
         self.sustained_notes = set()
         # Fields used by UI
-        self.num_voices = num_voices
+        #self.num_voices = num_voices
         self.patch_number = None
+
+    @property
+    def amy_voices(self):
+        return [o.amy_voice for o in self.voice_objs]
 
     def _get_next_voice(self):
         """Return the next voice to use."""
@@ -276,17 +300,21 @@ class Synth:
     def control_change(self, control, value):
         self.voice_source.control_change(control, value)
 
+    def release_voices(self):
+        # Make sure the voice source is deleted, so all the amy_voices get returned.
+        self.voice_source.release_voices()
+
 
 class DrumSynth:
     """Simplified Synth for Drum channel (10)."""
     PCM_PATCHES = 29
 
     def __init__(self, num_voices=10):
-        self.oscs = range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS)
+        self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
         self.next_osc = 0
         self.note_to_osc = {}
         # Fields used by UI
-        self.num_voices = num_voices
+        self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
         self.patch_number = 0
 
     def note_on(self, note, velocity, time=None):
@@ -337,13 +365,13 @@ def midi_event_cb(x):
     while m is not None and len(m) > 0:
         message = m[0] & 0xF0
         channel = (m[0] & 0x0F) + 1
-        set_arpegg_chan(channel)
-        synth = config.synth_per_channel[channel]
-        if not synth:
+        insert_arpeggiator(channel)
+        if channel not in config.synth_per_channel:
             if channel not in WARNED_MISSING_CHANNELS:
                 print("Warning: No synth configured for MIDI channel", channel)
                 WARNED_MISSING_CHANNELS.add(channel)
         else:
+            synth = config.synth_per_channel[channel]
             if message == 0x90:  # Note on.
                 midinote = m[1]
                 midivel = m[2]
@@ -379,15 +407,21 @@ def music_map(channel, patch_number=None, voice_count=None):
 
 arpeggiator = arpegg.ArpeggiatorSynth(synth=None, channel=0)
 
-def set_arpegg_chan(channel):
-    if arpeggiator.channel != channel and config.synth_per_channel[channel]:
-        if arpeggiator.channel != 0:
-            # Uninstall arpeggiator from previous channel.
-            config.synth_per_channel[arpeggiator.channel] = arpeggiator.synth
+def insert_arpeggiator(channel):
+    if arpeggiator.channel != channel and channel in config.synth_per_channel:
+        release_arpeggiator()
         arpeggiator.synth = config.synth_per_channel[channel]
         arpeggiator.channel = channel
         config.synth_per_channel[channel] = arpeggiator
 
+def release_arpeggiator(channel=None):
+    """De-insert arpeggiator in front of current channel's synth, e.g. before changing synth."""
+    # If channel is provided, only release the arpeggiator if it's on this channel.
+    if channel is None or arpeggiator.channel == channel:
+        if arpeggiator.channel:
+            config.synth_per_channel[arpeggiator.channel] = arpeggiator.synth
+        arpeggiator.channel = 0
+        
 def midi_step(time):
     if(tulip.seq_ticks() > tulip.seq_ppq()):
         ensure_midi_config()
