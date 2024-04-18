@@ -11,27 +11,37 @@ from patches import patches
 def redraw(app):
     # draw bg_x stuff, like the piano
     (app.screen_w, app.screen_h) = tulip.screen_size()
+    # Since redraw is not within app.run() it is not guaranteed to be in the cwd of the app. 
+    # luckily, tulip.run() adds the cwd of the app to the app class before starting.
+    app.piano_w = 800
+    app.piano_h = 301
+    app.piano_y = app.screen_h - 280
+    app.piano_x = int((app.screen_w - app.piano_w) / 2)
+    app.white_key_w = 56
+    tulip.bg_png(app.app_dir+'/piano.png', app.piano_x, app.piano_y)
 
-    # piano size
-    app.piano_w = app.screen_w - 100 # initial, will get adjusted slightly
-    app.piano_x = 50 # initial, will get adjusted slightly
-    app.piano_h = 250
-    app.white_key_w = 50
 
-    # computed
-    app.piano_y = app.screen_h - app.piano_h
-    app.black_key_w = int(app.white_key_w/2)
-    app.black_key_h = int(float(app.piano_h) * (2.0/3.0))
-    app.white_keys = int(app.piano_w / app.white_key_w)-1
-    app.piano_w = app.white_keys * app.white_key_w # reset
-    app.piano_x = int( (app.screen_w - app.piano_w)/2)
-    tulip.bg_rect(app.piano_x, app.piano_y, app.piano_w, app.piano_h, 255, 1)
-    app.black_idx = [1,2,4,5,6,8,9,11,12,13,15,16,18,19,20,22,23] # etc
-    for i in range(app.white_keys)[1:]:
-        white_line_x = app.piano_x+(i*app.white_key_w)
-        tulip.bg_line(white_line_x, app.piano_y, white_line_x, app.piano_y+app.piano_h, 0)
-        if i in app.black_idx:
-            tulip.bg_rect(white_line_x-int(app.white_key_w/4), app.piano_y, app.black_key_w, app.black_key_h, 0, 1)
+    if 0:
+        # piano size
+        app.piano_w = app.screen_w - 100 # initial, will get adjusted slightly
+        app.piano_x = 50 # initial, will get adjusted slightly
+        app.piano_h = 250
+        app.white_key_w = 50
+
+        # computed
+        app.piano_y = app.screen_h - app.piano_h
+        app.black_key_w = int(app.white_key_w/2)
+        app.black_key_h = int(float(app.piano_h) * (2.0/3.0))
+        app.white_keys = int(app.piano_w / app.white_key_w)-1
+        app.piano_w = app.white_keys * app.white_key_w # reset
+        app.piano_x = int( (app.screen_w - app.piano_w)/2)
+        tulip.bg_rect(app.piano_x, app.piano_y, app.piano_w, app.piano_h, 255, 1)
+        app.black_idx = [1,2,4,5,6,8,9,11,12,13,15,16,18,19,20,22,23] # etc
+        for i in range(app.white_keys)[1:]:
+            white_line_x = app.piano_x+(i*app.white_key_w)
+            tulip.bg_line(white_line_x, app.piano_y, white_line_x, app.piano_y+app.piano_h, 0)
+            if i in app.black_idx:
+                tulip.bg_rect(white_line_x-int(app.white_key_w/4), app.piano_y, app.black_key_w, app.black_key_h, 0, 1)
 
 class Settings(tulip.UIElement):
     def __init__(self, width=350, height=300):
@@ -159,12 +169,27 @@ class ListColumn(tulip.UIElement):
         button = e.get_target_obj()
         self.select(button.get_index())
 
-def play_note_from_coord(app, x, y):
+def play_note_from_coord(app, x, y, up):
+    (r,g,b) = tulip.rgb(tulip.bg_pixel(x,y))
+    intensity = float( (r+g+b) / (256*3) )
+    white_key_notes = [0,2,4,5,7,9,11,12,14,16,17,19,21,23]
+
     white_key = int((x-app.piano_x)/app.white_key_w)
-    if(white_key in app.black_idx and y<app.piano_y+app.black_key_h):
-        print('black %d' % (white_key))
+    if(intensity > 0.59):
+        note_idx = white_key_notes[white_key]
     else:
-        print('white %d' % (white_key))
+        # figure out which index this is
+        # how many px from the left side of the white key
+        offset = x - (app.piano_x+(white_key*app.white_key_w))
+        if(offset < int(app.white_key_w*0.66)): # left 2/3rds
+            note_idx = white_key_notes[white_key] - 1
+        else: # right half
+            note_idx = white_key_notes[white_key] + 1
+    if(up):
+        tulip.midi_local((128+app.channels.selected, note_idx+48, 127))
+    else:
+        tulip.midi_local((144+app.channels.selected, note_idx+48, 127))
+
 
 
 def touch(up):
@@ -173,8 +198,7 @@ def touch(up):
     (x[0],y[0],x[1],y[1],x[2],y[2]) = tulip.touch()
     for i in range(3):
         if(x[i] >= app.piano_x and x[i] <= app.piano_x+app.piano_w and y[i] >= app.piano_y and y[i] <= app.piano_y+app.piano_h):
-            if(not up):
-                play_note_from_coord(app, x[i], y[i])
+            play_note_from_coord(app, x[i], y[i], up)
     #print("got points up %d : %d,%d %d,%d %d,%d" % (up, points[0], points[1], points[2], points[3], points[4], points[5] ))
 
 def process_key(key):

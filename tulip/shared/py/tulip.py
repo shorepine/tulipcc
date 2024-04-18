@@ -458,7 +458,6 @@ def run(module_string):
 
     # Make the app screen
     screen = tulip.UIScreen(module_string, bg_color=0)
-
     # cd into the module (or find it in sys/app)
     try:
         cd(module_string)
@@ -466,6 +465,7 @@ def run(module_string):
         cd(root_dir()+"sys/app")
         cd(module_string)
 
+    screen.app_dir = pwd()
 
     # Run it 
     try:
