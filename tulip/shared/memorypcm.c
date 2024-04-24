@@ -53,7 +53,10 @@ int8_t memorypcm_load(mp_obj_t bytes, uint32_t samplerate, uint8_t midinote, uin
     memorypcm_map[patch]->length = bufinfo.len / 2;
     // Alloc the buffer and copy to Tulip RAM. The python alloc'd one will go away in gc
     memorypcm_map[patch]->sample_ram = malloc_caps(bufinfo.len, MALLOC_CAP_SPIRAM);
-    if(memorypcm_map[patch]->sample_ram  == NULL) return -1; // no ram 
+    if(memorypcm_map[patch]->sample_ram  == NULL) {
+        free_caps(memorypcm_map[patch]);
+        return -1; // no ram for sample
+    }
     memcpy(memorypcm_map[patch]->sample_ram, (int16_t*)bufinfo.buf, bufinfo.len);
     return patch; // patch number 
 }

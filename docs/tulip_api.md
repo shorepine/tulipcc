@@ -266,7 +266,7 @@ tulip.set_time()
 
 ## Music / sound
 
-Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches.
+Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches. It also has support for loading WAVE files in Tulip as samples. 
 
 Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/bwhitman/alles/blob/main/README.md) Alles is a wrapper around AMY that lets you control the synthesizer over Wi-Fi to remote speakers, or other computers or Tulips. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information and for more music examples.
 
@@ -293,7 +293,22 @@ amy.send(voices='0', load_patch=101, note=50, vel=1, client=2) # just a certain 
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
-Tuilp's Alles synth includes a stereo chorus unit which has a set of control parameters:
+To load your own WAVE files as samples, use `tulip.load_sample`:
+
+```python
+patch = tulip.load_sample("flutea4.wav") # samples must be mono. 
+# You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample, or sample rate
+patch = tulip.load_sample("flutea4.wav", 44100, 81, 1020, 1500)
+
+# The patch number can now be used in the custom Tulip memory PCM sample player. 
+# It has all the features of the AMY's PCM wave type.
+amy.send(osc=20, wave=amy.CUSTOM, patch=patch, vel=1, note=50)
+
+# You can load up to 32 custom PCM patches. Be careful of memory use. load_sample will return -1 if there's no more room.
+# You can unload already allocated patches:
+tulip.unload_patch(patch) # frees the RAM and the patch slot
+tulip.unload_patch() # frees all allocated PCM patches
+```
 
 Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/music.py), which lets you create chords, progressions and scales through code:
 
