@@ -163,7 +163,7 @@ amy_err_t setup_i2s(void) {
 #endif
 
 
-
+extern struct custom_oscillator memorypcm;
 
 #ifdef ESP_PLATFORM
 void run_alles() {
@@ -173,6 +173,7 @@ void run_alles() {
         check_init(&setup_i2s, "i2s");
     #endif
     esp_amy_init();
+    amy_set_custom(&memorypcm);
     amy_reset_oscs();
     // Schedule a "turning on" sound
     bleep();
@@ -189,6 +190,7 @@ void * alles_start(void *vargs) {
     alles_local_ip = malloc(256);
     alles_local_ip[0] = 0;
     unix_amy_init();
+    amy_set_custom(&memorypcm);
     amy_reset_oscs();
     // Schedule a "turning on" sound
     // We don't do this by default on tulip desktop as all threads start at once and it makes the bleep sound bad 
