@@ -574,10 +574,10 @@ def wifi(ssid, passwd, wait_timeout=10):
 def load_sample(wavfile, midinote=60, loopstart=0, loopend=0):
     import wave
     w = wave.open(wavfile, 'r')
-    if(w.getnchannels()>1):
-        print("mono only for now")
-        return None
     f = w.readframes(w.getnframes())
+    if(w.getnchannels()>1):
+        # de-interleave and just choose the first channel
+        f = bytes([f[j] for i in range(0,len(f),4) for j in (i,i+1)])
     return call_load_sample(f, w.getframerate(), midinote, loopstart, loopend)
 
 

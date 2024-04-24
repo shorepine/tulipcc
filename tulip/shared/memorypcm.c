@@ -57,7 +57,7 @@ int8_t memorypcm_load(mp_obj_t bytes, uint32_t samplerate, uint8_t midinote, uin
         free_caps(memorypcm_map[patch]);
         return -1; // no ram for sample
     }
-    memcpy(memorypcm_map[patch]->sample_ram, (int16_t*)bufinfo.buf, bufinfo.len);
+    memcpy(memorypcm_map[patch]->sample_ram, bufinfo.buf, bufinfo.len);
     return patch; // patch number 
 }
 

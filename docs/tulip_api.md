@@ -296,9 +296,11 @@ alles.local() # turns off mesh mode and goes back to local mode
 To load your own WAVE files as samples, use `tulip.load_sample`:
 
 ```python
-patch = tulip.load_sample("flutea4.wav") # samples must be mono. 
-# You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample, or sample rate
-patch = tulip.load_sample("flutea4.wav", 44100, 81, 1020, 1500)
+# To save space / RAM, you may want to downsample your WAVE files to 22050Hz. We detect SR automatically.
+patch = tulip.load_sample("flutea4.wav") # samples are converted to mono if they are stereo
+
+# You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample.
+patch = tulip.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500)
 
 # The patch number can now be used in the custom Tulip memory PCM sample player. 
 # It has all the features of the AMY's PCM wave type.
