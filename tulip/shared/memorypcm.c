@@ -20,40 +20,56 @@ typedef struct {
 #define MAX_MEMORYPCM_PATCHES 32
 
 memorypcm_map_t *memorypcm_map[MAX_MEMORYPCM_PATCHES];
-uint8_t memorypcm_patches = 0;
+
+
+uint8_t osc_patch_exists(uint16_t osc) {
+    if(memorypcm_map[synth[osc].patch] != NULL) return 1;
+    return 0;
+}
 
 // load mono samples (let python parse wave files) into patch # 
 // set loopstart, loopend, midinote, samplerate (and log2sr)
 int8_t memorypcm_load(mp_obj_t bytes, uint32_t samplerate, uint8_t midinote, uint32_t loopstart, uint32_t loopend) {
-    if(memorypcm_patches < MAX_MEMORYPCM_PATCHES) {
-        // alloc the map
-        memorypcm_map[memorypcm_patches] = malloc_caps(sizeof(memorypcm_map_t), MALLOC_CAP_SPIRAM);
-        memorypcm_map[memorypcm_patches]->samplerate = samplerate;
-        memorypcm_map[memorypcm_patches]->log2sr = log2f((float)samplerate / ZERO_LOGFREQ_IN_HZ);
-        memorypcm_map[memorypcm_patches]->midinote = midinote;
-        memorypcm_map[memorypcm_patches]->loopstart = loopstart;
-        memorypcm_map[memorypcm_patches]->loopend = loopend;
-        // Grab the samples and len from bytes
-        mp_buffer_info_t bufinfo;
-        mp_get_buffer(bytes, &bufinfo, MP_BUFFER_READ);
-        memorypcm_map[memorypcm_patches]->length = bufinfo.len / 2;
-        // Alloc the buffer and copy to Tulip RAM. The python alloc'd one will go away in gc
-        memorypcm_map[memorypcm_patches]->sample_ram = malloc_caps(bufinfo.len, MALLOC_CAP_SPIRAM);
-        if(memorypcm_map[memorypcm_patches]->sample_ram  == NULL) return -1; // no ram 
-        memcpy(memorypcm_map[memorypcm_patches]->sample_ram, (int16_t*)bufinfo.buf, bufinfo.len);
-        memorypcm_patches++;
-        return memorypcm_patches-1; // patch number 
+    // find the next free patch #
+    int8_t patch = -1;
+    for(uint8_t i=0;i<MAX_MEMORYPCM_PATCHES;i++) {
+        if(memorypcm_map[i]==NULL) {
+            patch = i;
+            i = MAX_MEMORYPCM_PATCHES+1;
+        }
     }
-    return -1; // no room 
+    if(patch<0) return patch;
+
+    // alloc the map
+    memorypcm_map[patch] = malloc_caps(sizeof(memorypcm_map_t), MALLOC_CAP_SPIRAM);
+    memorypcm_map[patch]->samplerate = samplerate;
+    memorypcm_map[patch]->log2sr = log2f((float)samplerate / ZERO_LOGFREQ_IN_HZ);
+    memorypcm_map[patch]->midinote = midinote;
+    memorypcm_map[patch]->loopstart = loopstart;
+    memorypcm_map[patch]->loopend = loopend;
+    // Grab the samples and len from bytes
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer(bytes, &bufinfo, MP_BUFFER_READ);
+    memorypcm_map[patch]->length = bufinfo.len / 2;
+    // Alloc the buffer and copy to Tulip RAM. The python alloc'd one will go away in gc
+    memorypcm_map[patch]->sample_ram = malloc_caps(bufinfo.len, MALLOC_CAP_SPIRAM);
+    if(memorypcm_map[patch]->sample_ram  == NULL) return -1; // no ram 
+    memcpy(memorypcm_map[patch]->sample_ram, (int16_t*)bufinfo.buf, bufinfo.len);
+    return patch; // patch number 
+}
+
+void memorypcm_unload_patch(uint8_t patch) {
+    if(memorypcm_map[patch] == NULL) return;
+    free_caps(memorypcm_map[patch]->sample_ram);
+    free_caps(memorypcm_map[patch]);
+    memorypcm_map[patch] = NULL;
 }
 
 //free all patches
 void memorypcm_unload() {
-    for(uint8_t i=0;i<memorypcm_patches;i++) {
-        free_caps(memorypcm_map[i]->sample_ram);
-        free_caps(memorypcm_map[i]);
+    for(uint8_t i=0;i<MAX_MEMORYPCM_PATCHES;i++) {
+        memorypcm_unload_patch(i);
     }
-
 }
 
 
@@ -75,7 +91,7 @@ void memorypcm_init(void) {
 }
 
 void memorypcm_note_on(uint16_t osc, float freq) {
-    if(synth[osc].patch < memorypcm_patches) {
+    if(osc_patch_exists(osc)) {
         // if no freq given, just play it at midinote
         if(synth[osc].logfreq_coefs[0] <= 0) {
             synth[osc].logfreq_coefs[0] = memorypcm_map[synth[osc].patch]->log2sr - logfreq_for_midi_note(memorypcm_map[synth[osc].patch]->midinote);
@@ -85,7 +101,7 @@ void memorypcm_note_on(uint16_t osc, float freq) {
 }
 
 void memorypcm_note_off(uint16_t osc) {
-    if(synth[osc].patch < memorypcm_patches) {
+    if(osc_patch_exists(osc)) {
         // if looping set, disable looping; sample should play through to end.
         if(msynth[osc].feedback > 0) {
             msynth[osc].feedback = 0;
@@ -101,7 +117,7 @@ void memorypcm_mod_trigger(uint16_t osc) {
 }
 
 SAMPLE memorypcm_render(SAMPLE* buf, uint16_t osc) {
-    if(synth[osc].patch < memorypcm_patches) {
+    if(osc_patch_exists(osc)) {
         // Patches can be > 32768 samples long.
         // We need s16.15 fixed-point indexing.
         memorypcm_map_t* patch = memorypcm_map[synth[osc].patch];
@@ -147,8 +163,7 @@ SAMPLE memorypcm_render(SAMPLE* buf, uint16_t osc) {
 }
 
 SAMPLE memorypcm_compute_mod(uint16_t osc) {
-    if(synth[osc].patch < memorypcm_patches) {
-
+    if(osc_patch_exists(osc)) {
         float mod_sr = (float)AMY_SAMPLE_RATE / (float)AMY_BLOCK_SIZE;
         memorypcm_map_t* patch = memorypcm_map[synth[osc].patch];
         PHASOR step = F2P(((float)patch->samplerate / mod_sr) / (1 << PCM_INDEX_BITS));
