@@ -214,6 +214,14 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 tulip.remap()  # interactive, can write to your boot.py for you
 tulip.key_remap(scan_code, modifier, target_cp437_code)
 
+# You can also register a keyboard callback. Useful for full screen apps that share with others
+# there can only be one keyboard callback running. 
+tulip.keyboard_callback(key)
+def key(k):
+    print("got key: %d" % (key))
+
+tulip.keyboard_callback() # removes callbacks. 
+
 # Return the last touch panel coordinates, up to 3 fingers at once
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 

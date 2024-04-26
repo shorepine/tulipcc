@@ -119,6 +119,7 @@ class ListColumn(tulip.UIElement):
             self.buttons = []
             for i in items:
                 button = self.list.add_button(lv.SYMBOL.PLUS, i)
+                button.get_child(1).set_long_mode(0) # wrap instead of scroll 
                 button.add_event_cb(self.list_cb, lv.EVENT.CLICKED, None)
                 self.buttons.append(button)
                 self.button_texts.append(i)

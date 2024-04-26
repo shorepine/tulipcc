@@ -90,7 +90,7 @@ void memorypcm_unload() {
 #endif
 
 void memorypcm_init(void) {
-    printf("memorypcm init\n");
+
 }
 
 void memorypcm_note_on(uint16_t osc, float freq) {

@@ -523,6 +523,8 @@ bool check_interface_desc_boot_keyboard(const void *p) {
       (intf->bInterfaceProtocol == 1)) {
     isKeyboard = true;
     Interface_Number = intf->bInterfaceNumber;
+
+
     esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle,
                                              Interface_Number, intf->bAlternateSetting);
     if (err != ESP_OK) printf("usb_host_interface_claim failed: 0x%x\n", err);
@@ -574,6 +576,8 @@ void new_enumeration_config_fn(const usb_config_desc_t *config_desc) {
   // so the first "descriptor type" found is actually TYPE_CONFIGURATION
   // and the call to show_config_desc(p) is equivalent to doing
   // show_config_desc(config_desc) here.
+
+
   const uint8_t *p = &config_desc->val[0];
   uint8_t bLength;
   int indent = 1;
