@@ -255,6 +255,37 @@ STATIC mp_obj_t tulip_wire_to_lines(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_to_lines_obj, 5, 6, tulip_wire_to_lines);
 
 
+extern int8_t memorypcm_load(mp_obj_t bytes, uint32_t samplerate, uint8_t midinote, uint32_t loopstart, uint32_t loopend);
+extern void memorypcm_unload_patch(uint8_t patch);
+extern void memorypcm_unload();
+
+STATIC mp_obj_t tulip_call_load_sample(size_t n_args, const mp_obj_t *args) {
+    uint32_t samplerate = 44100;
+    uint8_t midinote = 60;
+    uint32_t loopstart = 0;
+    uint32_t loopend = 0;
+    if(n_args > 1) samplerate = mp_obj_get_int(args[1]);
+    if(n_args > 2) midinote = mp_obj_get_int(args[2]);
+    if(n_args > 3) loopstart = mp_obj_get_int(args[3]);
+    if(n_args > 4) loopend = mp_obj_get_int(args[4]);
+    int8_t patch = memorypcm_load(args[0], samplerate, midinote, loopstart, loopend);
+    return mp_obj_new_int(patch);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_call_load_sample_obj, 1, 5, tulip_call_load_sample);
+
+STATIC mp_obj_t tulip_unload_patch(size_t n_args, const mp_obj_t *args) {
+    if(n_args > 0) {
+        memorypcm_unload_patch(mp_obj_get_int(args[0]));
+        return mp_const_none;
+    }
+    memorypcm_unload();
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_unload_patch_obj, 0, 1, tulip_unload_patch);
+
+
 // tulip.bg_png(bytes, x,y)
 // tulip.bg_png(filename, x,y)
 STATIC mp_obj_t tulip_bg_png(size_t n_args, const mp_obj_t *args) {
@@ -1373,6 +1404,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_circle), MP_ROM_PTR(&tulip_bg_circle_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bezier), MP_ROM_PTR(&tulip_bg_bezier_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_line), MP_ROM_PTR(&tulip_bg_line_obj) },
+    { MP_ROM_QSTR(MP_QSTR_call_load_sample), MP_ROM_PTR(&tulip_call_load_sample_obj) },
+    { MP_ROM_QSTR(MP_QSTR_unload_patch), MP_ROM_PTR(&tulip_unload_patch_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_roundrect), MP_ROM_PTR(&tulip_bg_roundrect_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_triangle), MP_ROM_PTR(&tulip_bg_triangle_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_fill), MP_ROM_PTR(&tulip_bg_fill_obj) },

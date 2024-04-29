@@ -304,12 +304,14 @@ midi_channel = 1
 juno_patch_for_midi_channel = {}
 
 # Get the patch to channel mapping and the AMY voices from midi.patch_map if set
-for i in range(16):
-    channel = i+1
-    if channel in midi.patch_map and midi.patch_map[channel] < 128:
-        jp = juno.JunoPatch.from_patch_number(midi.patch_map[channel])
-        jp.voices = midi.voices_for_channel[channel]
-        juno_patch_for_midi_channel[channel] = jp
+for m_channel in range(1, 17):
+    if m_channel != 10:
+        patch_num, amy_voices = midi.config.channel_info(m_channel)
+        if patch_num is not None and patch_num < 128:
+            jp = juno.JunoPatch()  # .from_patch_number(patch_num)
+            jp.set_voices(amy_voices)
+            jp.set_patch(patch_num)
+            juno_patch_for_midi_channel[m_channel] = jp
 
 def current_juno():
     global midi_channel
@@ -409,10 +411,12 @@ def setup_from_patch_number(patch_number):
     global midi_channel
     #print("resetting patch number to %d" % (patch_number))
 
-    jp = juno.JunoPatch.from_patch_number(patch_number)
-    juno_patch_for_midi_channel[midi_channel] = jp
     music_map(midi_channel, patch_number, 4)
-    jp.voices = midi.voices_for_channel[midi_channel]
+    _, amy_voices = midi.config.channel_info(midi_channel)
+    jp = juno.JunoPatch()  #.from_patch_number(patch_number)
+    jp.set_voices(amy_voices)
+    jp.set_patch(patch_number)
+    juno_patch_for_midi_channel[midi_channel] = jp
 
     #current_juno().patch_number = patch_number
     #current_juno().name = setup_from_patch(jp)
@@ -541,6 +545,3 @@ def run(screen):
     screen.present()
 
     midi_add_callback(midi_event_cb)
-
-
-

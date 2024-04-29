@@ -458,7 +458,6 @@ def run(module_string):
 
     # Make the app screen
     screen = tulip.UIScreen(module_string, bg_color=0)
-
     # cd into the module (or find it in sys/app)
     try:
         cd(module_string)
@@ -466,6 +465,7 @@ def run(module_string):
         cd(root_dir()+"sys/app")
         cd(module_string)
 
+    screen.app_dir = pwd()
 
     # Run it 
     try:
@@ -569,6 +569,16 @@ def wifi(ssid, passwd, wait_timeout=10):
         sleep = sleep + 1
         time.sleep(1)
     return ip()
+
+
+def load_sample(wavfile, midinote=60, loopstart=0, loopend=0):
+    import wave
+    w = wave.open(wavfile, 'r')
+    f = w.readframes(w.getnframes())
+    if(w.getnchannels()>1):
+        # de-interleave and just choose the first channel
+        f = bytes([f[j] for i in range(0,len(f),4) for j in (i,i+1)])
+    return call_load_sample(f, w.getframerate(), midinote, loopstart, loopend)
 
 
 def tar_create(directory):

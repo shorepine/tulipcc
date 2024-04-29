@@ -11,27 +11,14 @@ from patches import patches
 def redraw(app):
     # draw bg_x stuff, like the piano
     (app.screen_w, app.screen_h) = tulip.screen_size()
-
-    # piano size
-    app.piano_w = app.screen_w - 100 # initial, will get adjusted slightly
-    app.piano_x = 50 # initial, will get adjusted slightly
-    app.piano_h = 250
-    app.white_key_w = 50
-
-    # computed
-    app.piano_y = app.screen_h - app.piano_h
-    app.black_key_w = int(app.white_key_w/2)
-    app.black_key_h = int(float(app.piano_h) * (2.0/3.0))
-    app.white_keys = int(app.piano_w / app.white_key_w)-1
-    app.piano_w = app.white_keys * app.white_key_w # reset
-    app.piano_x = int( (app.screen_w - app.piano_w)/2)
-    tulip.bg_rect(app.piano_x, app.piano_y, app.piano_w, app.piano_h, 255, 1)
-    app.black_idx = [1,2,4,5,6,8,9,11,12,13,15,16,18,19,20,22,23] # etc
-    for i in range(app.white_keys)[1:]:
-        white_line_x = app.piano_x+(i*app.white_key_w)
-        tulip.bg_line(white_line_x, app.piano_y, white_line_x, app.piano_y+app.piano_h, 0)
-        if i in app.black_idx:
-            tulip.bg_rect(white_line_x-int(app.white_key_w/4), app.piano_y, app.black_key_w, app.black_key_h, 0, 1)
+    # Since redraw is not within app.run() we are not guaranteed to be in the cwd of the app. 
+    # luckily, tulip.run() adds the cwd of the app to the app class before starting.
+    app.piano_w = 800
+    app.piano_h = 301
+    app.piano_y = app.screen_h - 280
+    app.piano_x = int((app.screen_w - app.piano_w) / 2)
+    app.white_key_w = 56
+    tulip.bg_png(app.app_dir+'/piano.png', app.piano_x, app.piano_y)
 
 class Settings(tulip.UIElement):
     def __init__(self, width=350, height=300):
@@ -87,9 +74,6 @@ class Settings(tulip.UIElement):
         self.range.group.set_style_bg_color(tulip.pal_to_lv(9),0)
         self.range.group.align_to(self.mode.group, lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
 
-    def mode_cb(self,e):
-        button = e.get_target_obj()
-        midi.arpegg_mode = button.get_index()
     def tempo_cb(self,e):
         new_bpm = self.tempo.get_value()*2.4
         if(new_bpm < 1.0): new_bpm = 1
@@ -97,14 +81,14 @@ class Settings(tulip.UIElement):
         self.tempo_label.set_text("%d BPM" % (tulip.seq_bpm()))
     def hold_cb(self,e):
         if(self.hold.get_state()==3): 
-            midi.arpegg_hold = True
+            midi.arpeggiator.set('hold', True)
         else:
-            midi.arpegg_hold = False
+            midi.arpeggiator.set('hold', False)
     def arpegg_cb(self,e):
-        if(self.arpegg.get_state()==3): 
-            midi.arpegg = True
+        if(self.arpegg.get_state()==3):
+            midi.arpeggiator.set('on', True)
         else:
-            midi.arpegg = False
+            midi.arpeggiator.set('on', False)
 
 
 class ListColumn(tulip.UIElement):
@@ -135,6 +119,7 @@ class ListColumn(tulip.UIElement):
             self.buttons = []
             for i in items:
                 button = self.list.add_button(lv.SYMBOL.PLUS, i)
+                button.get_child(1).set_long_mode(0) # wrap instead of scroll 
                 button.add_event_cb(self.list_cb, lv.EVENT.CLICKED, None)
                 self.buttons.append(button)
                 self.button_texts.append(i)
@@ -146,26 +131,43 @@ class ListColumn(tulip.UIElement):
         if index is not None:
             self.buttons[self.selected].set_style_bg_color(tulip.pal_to_lv(129), 0)
             if(self.name=='channel'):
-                current_patch(self.selected+1)
+                current_patch(self.selected + 1)
             elif(self.name=='synth'):
                 update_patches(self.button_texts[self.selected])
             elif(self.name=='mode'):
-                midi.arpegg_mode = index
+                mode = ['up', 'down', 'updown', 'rand'][index]
+                midi.arpeggiator.set('direction', mode)
             elif(self.name=='range'):
-                midi.arpegg_range = index+1
+                midi.arpeggiator.set('octaves', index + 1)
             else:
-                if not defer: update_map()
+                if not defer:
+                    update_map()
 
     def list_cb(self, e):
         button = e.get_target_obj()
         self.select(button.get_index())
 
-def play_note_from_coord(app, x, y):
+def play_note_from_coord(app, x, y, up):
+    (r,g,b) = tulip.rgb(tulip.bg_pixel(x,y))
+    intensity = float( (r+g+b) / (256*3) )
+    white_key_notes = [0,2,4,5,7,9,11,12,14,16,17,19,21,23]
+
     white_key = int((x-app.piano_x)/app.white_key_w)
-    if(white_key in app.black_idx and y<app.piano_y+app.black_key_h):
-        print('black %d' % (white_key))
+    # white key?
+    if(intensity > 0.59):
+        note_idx = white_key_notes[white_key]
     else:
-        print('white %d' % (white_key))
+        # how many px from the left side of the white key
+        offset = x - (app.piano_x+(white_key*app.white_key_w))
+        if(offset < int(app.white_key_w*0.66)): # left 2/3rds
+            note_idx = white_key_notes[white_key] - 1
+        else: # right third
+            note_idx = white_key_notes[white_key] + 1
+    if(up):
+        tulip.midi_local((128+app.channels.selected, note_idx+48, 127))
+    else:
+        tulip.midi_local((144+app.channels.selected, note_idx+48, 127))
+
 
 
 def touch(up):
@@ -174,15 +176,14 @@ def touch(up):
     (x[0],y[0],x[1],y[1],x[2],y[2]) = tulip.touch()
     for i in range(3):
         if(x[i] >= app.piano_x and x[i] <= app.piano_x+app.piano_w and y[i] >= app.piano_y and y[i] <= app.piano_y+app.piano_h):
-            if(not up):
-                play_note_from_coord(app, x[i], y[i])
-    #print("got points up %d : %d,%d %d,%d %d,%d" % (up, points[0], points[1], points[2], points[3], points[4], points[5] ))
+            play_note_from_coord(app, x[i], y[i], up)
 
 def process_key(key):
     global app
     # play kb notes from keyboard?
     pass
 
+# I don't love this approach. It works. We should make a more generic tulip defer (wrapper around timer) that doesn't eat a sequencer slot
 def step(t):
     global app
     if(app.redraw_ticks is not None):
@@ -219,8 +220,11 @@ def update_map():
         channel = app.channels.selected + 1
         polyphony = app.polyphony.selected + 1
         # Check if this is a new thing
-        if not (midi.patch_map.get(channel, None) == patch_no and midi.polyphony_map.get(channel, None) == polyphony):
-            tulip.music_map(channel, patch_number=patch_no, voice_count=polyphony)
+        channel_patch, amy_voices = midi.config.channel_info(channel)
+        channel_polyphony = 0 if amy_voices is None else len(amy_voices)
+        if  (channel_patch, channel_polyphony) != (patch_no, polyphony):
+            tulip.music_map(channel, patch_number=patch_no,
+                            voice_count=polyphony)
 
 # populate the patches dialog from patches,oy
 def update_patches(synth):
@@ -235,25 +239,26 @@ def update_patches(synth):
         app.patches.replace_items([])
     app.patches.label.set_text("%s patches" % (synth))
 
-# Get current settings for a channel from midi.patch_map
+# Get current settings for a channel from midi.config.
 def current_patch(channel):
     global app
-    if(channel in midi.patch_map):
-        p = midi.patch_map[channel]
-        if(p<128):
+    channel_patch, amy_voices = midi.config.channel_info(channel)
+    if channel_patch is not None:
+        polyphony = len(amy_voices)
+        if channel_patch < 128:
             # We defer here so that setting the UI component doesn't trigger an update before it updates
             app.synths.select(0, defer=True)
-            app.patches.select(p, defer=True)
-        elif(p>128 and p<256):
+            app.patches.select(channel_patch, defer=True)
+        elif channel_patch < 256:
             app.synths.select(1, defer=True)
-            app.patches.select(p-128, defer=True)
-        elif(p<1024):
+            app.patches.select(channel_patch - 128, defer=True)
+        elif channel_patch < 1024:
             app.synths.select(2, defer=True)
-            app.patches.select(p-256, defer=True)
+            app.patches.select(channel_patch - 256, defer=True)
         else:
             app.synths.select(3, defer=True)
-            app.patches.select(p-1024, defer=True)
-        app.polyphony.select(midi.polyphony_map[channel]-1, defer=True)
+            app.patches.select(channel_patch - 1024, defer=True)
+        app.polyphony.select(polyphony - 1, defer=True)
     else:
         # no patch set for this chanel
         app.patches.select(None)

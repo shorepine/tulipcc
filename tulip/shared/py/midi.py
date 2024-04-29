@@ -2,38 +2,67 @@
 # always running midi listener
 # based on dan's polyvoice
 
-
-
 import amy
 import tulip
 import time
 import random
+import arpegg
 
-# Tulip defaults, 4 note polyphony on channel 1
-# drum machine always on channel 10
-has_init = False
-PCM_PATCHES = 29
-polyphony_map = {1:4, 10:10}
-patch_map = {1:2}
+class MidiConfig:
+    """System-wide Midi input config."""
 
-# Our state
-voices_for_channel = {}
-note_for_voice = {}
-voices_active = []
-# Dict of per-channel booleans
-in_sustain_dict = {}
-# Dict of per-channel sets of notes
-sustained_notes_dict = {}
+    def __init__(self, voices_per_channel, patch_per_channel):
+        self.synth_per_channel = dict()
+        for channel, polyphony in voices_per_channel.items():
+            patch = patch_per_channel[channel] if channel in patch_per_channel else None
+            self.add_synth(channel, patch, polyphony)
 
-# Arpeggiator stuff, set by voices
-arpegg = False
-arpegg_hold = False
-arpegg_mode = 0 
-arpegg_range = 1
-arpegg_note = 0
-arpegg_dir = 1
+    def add_synth(self, channel, patch, polyphony):
+        if channel in self.synth_per_channel:
+            # Old Synth allocated - Expicitly return the amy_voices to the pool.
+            release_arpeggiator(channel)
+            self.synth_per_channel[channel].release_voices()
+            del self.synth_per_channel[channel]
+        if channel == 10:
+            synth = DrumSynth(num_voices=polyphony)
+        else:
+            synth = Synth(voice_source=VoiceSource(), num_voices=polyphony)
+            if patch is not None:
+                synth.program_change(patch)
+        self.synth_per_channel[channel] = synth
+
+    def program_change(self, channel, patch):
+        # update the map
+        self.synth_per_channel[channel].program_change(patch)
+
+    def music_map(self, channel, patch_number=0, voice_count=None):
+        """Implement the tulip music_map API."""
+        if not voice_count:
+            # Simply changing patch.
+            self.program_change(channel, patch_number)
+        else:
+            # Setting up a new channel.
+            self.add_synth(channel, patch_number, voice_count)
+
+    def channel_info(self, channel):
+        """Report the current patch_num and list of amy_voices for this channel."""
+        if channel not in self.synth_per_channel:
+            return (None, None)
+        return (
+            self.synth_per_channel[channel].patch_number,
+            self.synth_per_channel[channel].amy_voices,
+        )
+
+    def voices_for_channel(self, channel):
+        """Return a list of AMY voices assigned to a channel."""
+        if channel not in self.synth_per_channel:
+            return []
+        return self.synth_per_channel[channel].amy_voices()
+                  
 
 
+# Global MidiConfig object.
+config = None
 
 
 # Micropython collections.deque does not support remove.
@@ -113,28 +142,103 @@ class Queue:
             + "]")
 
 
+class VoiceObject:
+    """Object to wrap an amy voice."""
+
+    def __init__(self, amy_voice):
+        self.amy_voice = amy_voice
+
+    def note_on(self, note, vel, time=None):
+        amy.send(time=time, voices=self.amy_voice, note=note, vel=vel)
+
+    def note_off(self, time=None):
+        amy.send(time=time, voices=self.amy_voice, vel=0)
+
+
+class VoiceSource:
+    """Manage the pool of amy voices. Provide voice_source for Synth objects."""
+    # Class-wide record of which voice to allocate next.
+    allocated_amy_voices = set()
+
+    def get_new_voices(self, num_voices):
+        new_voices = []
+        next_amy_voice = 0
+        while len(new_voices) < num_voices:
+            while next_amy_voice in VoiceSource.allocated_amy_voices:
+                next_amy_voice += 1
+            new_voices.append(next_amy_voice)
+            next_amy_voice += 1
+        self.amy_voice_nums = new_voices
+        VoiceSource.allocated_amy_voices.update(new_voices)
+        voice_objects = []
+        for amy_voice_num in self.amy_voice_nums:
+            voice_objects.append(VoiceObject(amy_voice_num))
+        return voice_objects
+
+    def program_change(self, patch_num):
+        time.sleep(0.1)  # "AMY queue will fill if not slept."
+        amy.send(voices=','.join([str(v) for v in self.amy_voice_nums]),
+                 load_patch=patch_num)
+
+    def control_change(self, control, value):
+        # Aha.  This is the sticking point.
+        print('control_change not implemented for amy-managed voices.')
+        pass
+
+    def release_voices(self):
+        """Return the amy_voices when the VoiceSource is no longer needed."""
+        for amy_voice in self.amy_voice_nums:
+            VoiceSource.allocated_amy_voices.remove(amy_voice)
+
+
 class Synth:
     """Manage a polyphonic synthesizer by rotating among a fixed pool of voices.
 
-    Argument synth_source provides the following methods:
-        synth_source.get_new_voices(num_voices) returns num_voices VoiceObjects.
-            VoiceObjects accept voice.note_on(note, vel), voice.note_off()
-        synth_source.set_patch(patch_num) changes preset for all voices.
-        synth_source.control_change(control, value) modifies a parameter for all voices.
+    Provides methods:
+      synth.note_on(midi_note, velocity, time=None)
+      synth.note_off(midi_note, time=None)
+      synth.control_change(control, value)
+      synth.program_change(patch_num)
+    Provides read-back attributes (for voices.py UI):
+      synth.amy_voices
+      synth.patch_number
+  
+    Argument voice_source provides the following methods:
+      voice_source.get_new_voices(num_voices) returns num_voices VoiceObjects.
+        VoiceObjects accept voice.note_on(note, vel, time=None),
+        voice.note_off(time=None)
+      voice_source.program_change(patch_num) changes preset for all voices.
+      voice_source.control_change(control, value) modifies a parameter for all
+          voices.
+
+    Note: The synth internally refers to its voices by indices in
+    range(0, num_voices).  These numbers are not related to the actual amy
+    voices rendering the note; the amy voice number is internal to the
+    VoiceObjects returned by voice_source.get_new_voices, and is opaque to
+    the Synth object.
     """
-    
-    def __init__(self, synth_source, num_voices=6):
-        self.synth_source = synth_source
-        self.voices = synth_source.get_new_voices(num_voices)
+
+    def __init__(self, voice_source, num_voices=6):
+        self.voice_source = voice_source
+        self.voice_objs = voice_source.get_new_voices(num_voices)
         self.released_voices = Queue(num_voices, name='Released')
-        for voice_num in range(num_voices):
-            self.released_voices.put(voice_num)
+        for voice_index in range(num_voices):
+            self.released_voices.put(voice_index)
         self.active_voices = Queue(num_voices, name='Active')
         # Dict to look up active voice from note number, for note-off.
         self.voice_of_note = {}
         self.note_of_voice = [None] * num_voices
+        self.sustaining = False
+        self.sustained_notes = set()
+        # Fields used by UI
+        #self.num_voices = num_voices
+        self.patch_number = None
 
-    def get_next_voice(self):
+    @property
+    def amy_voices(self):
+        return [o.amy_voice for o in self.voice_objs]
+
+    def _get_next_voice(self):
         """Return the next voice to use."""
         # First try free/released_voices in order, then steal from active_voices.
         if not self.released_voices.empty():
@@ -142,285 +246,190 @@ class Synth:
         # We have to steal an active voice.
         stolen_voice = self.active_voices.get()
         print('Stealing voice for', self.note_of_voice[stolen_voice])
-        self.voice_off(stolen_voice)
+        self._voice_off(stolen_voice)
         return stolen_voice
 
-    def voice_off(self, voice, time=None):
+    def _voice_off(self, voice, time=None):
         """Terminate voice, update note_of_voice, but don't alter the queues."""
-        self.voices[voice].note_off(time=time)
+        self.voice_objs[voice].note_off(time)
         # We no longer have a voice playing this note.
         del self.voice_of_note[self.note_of_voice[voice]]
-        self.note_of_voice[voice] = None
+        self.note_of_voice[voice] =  None
 
     def note_off(self, note, time=None):
+        if self.sustaining:
+            self.sustained_notes.add(note)
+            return
         if note not in self.voice_of_note:
             return
         old_voice = self.voice_of_note[note]
-        self.voice_off(old_voice, time=time)
+        self._voice_off(old_voice, time)
         # Return to released.
         self.active_voices.remove(old_voice)
         self.released_voices.put(old_voice)
 
     def note_on(self, note, velocity, time=None):
         if velocity == 0:
-            self.note_off(note, time=time)
+            self.note_off(note, time)
         else:
             # Velocity > 0, note on.
             if note in self.voice_of_note:
                 # Send another note-on to the voice already playing this note.
                 new_voice = self.voice_of_note[note]
             else:
-                new_voice = self.get_next_voice()
+                new_voice = self._get_next_voice()
                 self.active_voices.put(new_voice)
                 self.voice_of_note[note] = new_voice
                 self.note_of_voice[new_voice] = note
-            self.voices[new_voice].note_on(note, velocity, time=time)
+                self.voice_objs[new_voice].note_on(note, velocity, time)
 
-    def set_patch(self, patch_number):
-        self.synth_source.set_patch(patch_number)
+    def sustain(self, state):
+        """Turn sustain on/off."""
+        if state:
+            self.sustained = True
+        else:
+            self.sustained = False
+            for midinote in self.sustained_notes:
+                self.note_off(midinote)
+            self.sustained_notes = set()
+
+    def program_change(self, patch_number):
+        self.patch_number = patch_number
+        self.voice_source.program_change(patch_number)
 
     def control_change(self, control, value):
-        self.synth_source.control_change(control, value)
+        self.voice_source.control_change(control, value)
+
+    def release_voices(self):
+        # Make sure the voice source is deleted, so all the amy_voices get returned.
+        self.voice_source.release_voices()
 
 
-def get_in_sustain(channel):
-    global in_sustain_dict
-    if channel not in in_sustain_dict:
-        in_sustain_dict[channel] = False
-    return in_sustain_dict[channel]
+class DrumSynth:
+    """Simplified Synth for Drum channel (10)."""
+    PCM_PATCHES = 29
 
-def set_in_sustain(channel, state):
-    global in_sustain_dict
-    in_sustain_dict[channel] = state
+    def __init__(self, num_voices=10):
+        self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
+        self.next_osc = 0
+        self.note_to_osc = {}
+        # Fields used by UI
+        self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
+        self.patch_number = 0
 
-def get_sustained_notes_set(channel):
-    global sustained_notes_dict
-    if channel not in sustained_notes_dict:
-        sustained_notes_dict[channel] = set()
-    return sustained_notes_dict[channel]
+    def note_on(self, note, velocity, time=None):
+        osc = self.oscs[self.next_osc]
+        self.next_osc = (self.next_osc + 1) % len(self.oscs)
+        amy.send(time=time, osc=osc, wave=amy.PCM,
+                 patch=note % self.PCM_PATCHES, vel=velocity, freq=0)
+        self.note_to_osc[note] = osc
 
+    def note_off(self, note, time=None):
+        # Drums don't really need note-offs, but handle them anyway.
+        try:
+            osc = self.note_to_osc[note]
+            amy.send(time=time, osc=osc, vel=0)
+            del self.note_to_osc[note]
+        except KeyError:
+            # We didn't recognize the note number; never mind.
+            pass
 
-# TODO - REPLACE WITH Synth
-# Get the voice for this chan/note 
-def find_voice(channel, midinote):
-    if channel not in voices_for_channel:
-        return None
-
-    for v in voices_for_channel[channel]:
-        # Is this voice active already but also the existing note? that's ok
-        if note_for_voice.get(v,None) == midinote:
-            return v
-
-        # Is this voice free? Use it
-        if v not in voices_active:
-            voices_active.append(v)
-            note_for_voice[v] = midinote
-            return v
-
-    # couldn't find free voice. 
-    # steal the earliest voice added
-    for v in voices_active:
-        if v in voices_for_channel[channel]:
-            # move this stolen voice to the end
-            voices_active.remove(v)
-            voices_active.append(v)
-            note_for_voice[v] = midinote
-            return v
-
-def pitch_bend(channel, val):
-    # get the active voices for this channel
-    if channel not in voices_for_channel:
-        return
-    v_str = ""
-    for v in voices_for_channel[channel]:
-        if v in voices_active: v_str = v_str + "%d," % (v)
-        if(len(v_str)):
-            amy.send(voices=v_str[:-1], pitch_bend=val)
-
-def sustain_pedal(channel, value):
-    if value:
-        set_in_sustain(channel, True)
-    else:
-        set_in_sustain(channel, False)
-        sustained_notes = get_sustained_notes_set(channel)
-        for midinote in sustained_notes:
-            note_off(channel, midinote)
-            sustained_notes.remove(midinote)  # Modifies the global.
-
-# TODO - REPLACE WITH Synth
-def note_on(channel, midinote, vel):
-    global arpeg
-    # Drum channel is special
-    voice = find_voice(channel, midinote)
-    if voice is not None:
-        if(channel == 10):
-            amy.send(osc=voice, wave=amy.PCM, patch=midinote % PCM_PATCHES, vel=vel, freq=0)
-        else:
-            if(not arpegg):
-                amy.send(voices="%d" % (voice), note=midinote, vel=vel)
-
-# TODO - REPLACE WITH Synth
-def note_off(channel, midinote):  
-    global arpeg
-    # Get the voice number for this midinote
-    if get_in_sustain(channel):
-        sustained_notes = get_sustained_notes_set(channel)
-        sustained_notes.add(midinote)
-        return
-    
-    if channel not in voices_for_channel: return
-
-    for v in voices_for_channel[channel]:
-        if note_for_voice.get(v,None) == midinote:
-            # Remove it
-            voices_active.remove(v)
-            del note_for_voice[v]
-            # Turn off the note
-            if(channel == 10):
-                amy.send(osc=v, vel=0)
-            else:
-                amy.send(voices='%d' % (v), vel=0)
-            return
-
-# Do the actual setting of the voice for a channel
-def update_channel(channel):
-    time.sleep(0.1) # AMY queue will fill if not slept 
-    vstr = ",".join([str(x) for x in voices_for_channel[channel]])
-    amy.send(voices=vstr, load_patch=patch_map[channel])
-
-def program_change(channel, patch):
-    # update the map
-    patch_map[channel] = patch
-    update_channel(channel)
-    # Update voices UI if it is running
-    try:
-        voices.refresh()
-    except:
+    # Rest of Synth protocol doesn't do anything for drums.
+    def sustain(self, state):
         pass
 
-def play_arpegg_step(t, mode):
-    # Get the channel number for the _last_ held note, and only arpeggiate that channel.
-    # I don't know if multichannel arpeggiators exist, and I don't want to know
-    global arpegg_note, arpegg_dir, arpegg_range
-    if(len(voices_active)==0): return
-    last_voice = voices_active[-1]
-    last_channel = None
-    for c in voices_for_channel.keys():
-        if last_voice in voices_for_channel[c]:
-            last_channel = c
+    def program_change(self, patch_number):
+        pass
 
-    # Find held notes for that channel and add them to a list of notes
-    all_held = []
-    if last_channel is not None:
-        for v in voices_for_channel[c]:
-            if v in note_for_voice:
-                all_held.append(note_for_voice[v])
-
-    # Add range if set
-    if(arpegg_range > 1):
-        new_held = []
-        for r in range(arpegg_range):
-            for n in all_held:
-                new_held.append(n + (r*12))
-        all_held = new_held
-
-    # TODO - This should call synth.note_on / note_off instead
-    amy.send(voices='%d' % (voices_for_channel[last_channel][0]), note=all_held[arpegg_note % len(all_held)], vel=1, time=t)
+    def control_change(self, control, value):
+        pass
 
 
-    # mode -- up, down, up&down, rand
-    if mode==0:
-        arpegg_note = arpegg_note + 1
-        if(arpegg_note == len(all_held)): arpegg_note = 0
-    elif mode==1:
-        arpegg_note = arpegg_note - 1
-        if(arpegg_note < 0): arpegg_note = len(all_held)-1
-    elif mode==2:
-        if(arpegg_dir == 1): # up
-            arpegg_note = arpegg_note + 1
-            if(arpegg_note >= len(all_held)-1):
-                arpegg_dir = 0 # down
-        else:
-            arpegg_note = arpegg_note - 1
-            if(arpegg_note <= 0):
-                arpegg_dir = 1
-    elif mode==3:
-        arpegg_note = random.randrange(0, len(all_held))
+def ensure_midi_config():
+    global config
+    if not config:
+        # Tulip defaults, 4 note polyphony on channel 1
+        # drum machine always on channel 10
+        config = MidiConfig(
+            voices_per_channel={1: 4, 10: 10},
+            patch_per_channel={1: 2},
+        )
+        tulip.midi_add_callback(midi_event_cb)
 
-
-
+WARNED_MISSING_CHANNELS = set()
 
 def midi_event_cb(x):
     """Callback that takes MIDI note on/off to create Note objects."""
+    ensure_midi_config()
     m = tulip.midi_in() 
     while m is not None and len(m) > 0:
-        channel = (m[0] & 0x0F) + 1
         message = m[0] & 0xF0
-        if message == 0x90:  # Note on.
-            midinote = m[1]
-            midivel = m[2]
-            vel = midivel / 127.
-            note_on(channel, midinote, vel)
-        elif message == 0x80:  # Note off.
-            midinote = m[1]
-            note_off(channel, midinote)
-        elif message == 0xc0:  # Program change
-            program_change(channel, m[1])
-        elif message == 0xe0:  # Pitch bend. m[2] is MSB, m[1] is LSB. 14 bits 
+        channel = (m[0] & 0x0F) + 1
+        insert_arpeggiator(channel)
+        if channel not in config.synth_per_channel:
+            if channel not in WARNED_MISSING_CHANNELS:
+                print("Warning: No synth configured for MIDI channel", channel)
+                WARNED_MISSING_CHANNELS.add(channel)
+        else:
+            synth = config.synth_per_channel[channel]
+            if message == 0x90:  # Note on.
+                midinote = m[1]
+                midivel = m[2]
+                vel = midivel / 127.
+                synth.note_on(midinote, vel)
+            elif message == 0x80:  # Note off.
+                midinote = m[1]
+                synth.note_off(midinote)
+            elif message == 0xc0:  # Program change
+                synth.program_change(m[1])
+            elif message == 0xb0 and m[1] == 0x40:
+                synth.sustain(m[2])
+        if message == 0xe0:  # Pitch bend. m[2] is MSB, m[1] is LSB. 14 bits 
             pb_value = ((m[2] << 7) | (m[1])) - 8192 # -8192-8192, where 0 is nothing
             amy_value = float(pb_value)/(8192*6.0) # convert to -2 / +2 semitones
             amy.send(pitch_bend=amy_value)
-        elif message == 0xb0 and m[1] == 0x40:
-            sustain_pedal(channel, m[2])
     
         # Are there more events waiting?
         m = m[3:]
         if len(m) == 0:
             m = tulip.midi_in()
 
-def setup_voices():
-    amy.reset()
-    v_counter = 0
-    voices_for_channel[10] = list(range(110,120))
-    for channel in polyphony_map.keys():
-        if channel is not 10:
-            voices_for_channel[channel] = list(range(v_counter, v_counter+polyphony_map[channel]))
-            v_counter = v_counter + polyphony_map[channel]
-            update_channel(channel)
-
-
-def midi_step(t):
-    global has_init, arpegg, arpegg_mode
-    if(not has_init):
-        # Deferred init
-        if(tulip.seq_ticks() > tulip.seq_ppq()):
-            setup_voices()
-            tulip.midi_add_callback(midi_event_cb)
-            has_init = True
-    if(arpegg):
-        play_arpegg_step(t, arpegg_mode)
-
 
 # Keep this -- this is a tulip API 
 def music_map(channel, patch_number=None, voice_count=None):
-    if voice_count is not None:
-        if patch_number is not None:
-            patch_map[channel] = patch_number
-        polyphony_map[channel] = voice_count
-        setup_voices()
-    elif patch_number is not None:
-        patch_map[channel] = patch_number
-        update_channel(channel)
-
-    # Update voices UI if it is running
+    """API to set a patch and polyphony for a given MIDI channel."""
+    config.music_map(channel, patch_number, voice_count)
     try:
-        voices.refresh()
+        voices.refresh()  # Update voices UI if it is running.
     except:
         pass
+
+
+arpeggiator = arpegg.ArpeggiatorSynth(synth=None, channel=0)
+
+def insert_arpeggiator(channel):
+    if arpeggiator.channel != channel and channel in config.synth_per_channel:
+        release_arpeggiator()
+        arpeggiator.synth = config.synth_per_channel[channel]
+        arpeggiator.channel = channel
+        config.synth_per_channel[channel] = arpeggiator
+
+def release_arpeggiator(channel=None):
+    """De-insert arpeggiator in front of current channel's synth, e.g. before changing synth."""
+    # If channel is provided, only release the arpeggiator if it's on this channel.
+    if channel is None or arpeggiator.channel == channel:
+        if arpeggiator.channel:
+            config.synth_per_channel[arpeggiator.channel] = arpeggiator.synth
+        arpeggiator.channel = 0
+        
+def midi_step(time):
+    if(tulip.seq_ticks() > tulip.seq_ppq()):
+        ensure_midi_config()
+    if(arpeggiator.running):
+        # time is the actual event time for this event.
+        arpeggiator.next_note(time=time)
 
 
 def setup():
     # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a callback
     tulip.seq_add_callback(midi_step, int(tulip.seq_ppq()/2))
-
-

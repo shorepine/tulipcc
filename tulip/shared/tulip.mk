@@ -36,6 +36,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	lodepng.c \
 	sequencer.c \
 	lvgl_u8g2.c \
+	memorypcm.c \
 	)
 
 
