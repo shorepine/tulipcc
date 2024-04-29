@@ -1064,7 +1064,7 @@ void my_log_cb(lv_log_level_t level, const char * buf)
 }
 
 
-
+extern void setup_lvgl_u8g2();
 void setup_lvgl() {
     // Setup LVGL for UI etc
     lv_init();
@@ -1089,7 +1089,10 @@ void setup_lvgl() {
     lv_indev_t *indev_kb = lv_indev_create();
     lv_indev_set_type(indev_kb, LV_INDEV_TYPE_KEYPAD);
     lv_indev_set_read_cb(indev_kb, lvgl_input_kb_read_cb);  
+
+    setup_lvgl_u8g2();
 }
+
 
 
 
