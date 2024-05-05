@@ -7,7 +7,6 @@ import lvgl as lv
 lv_soft_kb = None
 lv_launcher = None
 
-lv_default_font = lv.font_montserrat_12
 
 # For our convenience functions, Can be overriden
 tulip.ui_callback = None

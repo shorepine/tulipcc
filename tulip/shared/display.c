@@ -1064,7 +1064,27 @@ void my_log_cb(lv_log_level_t level, const char * buf)
 }
 
 
-extern void setup_lvgl_u8g2();
+extern void get_lvgl_font_from_tulip(uint8_t font_no, lv_font_t *outfont);
+lv_font_t lv_tulip_font_0;
+lv_font_t lv_tulip_font_1;
+lv_font_t lv_tulip_font_2;
+lv_font_t lv_tulip_font_3;
+lv_font_t lv_tulip_font_4;
+lv_font_t lv_tulip_font_5;
+lv_font_t lv_tulip_font_6;
+lv_font_t lv_tulip_font_7;
+lv_font_t lv_tulip_font_8;
+lv_font_t lv_tulip_font_9;
+lv_font_t lv_tulip_font_10;
+lv_font_t lv_tulip_font_11;
+lv_font_t lv_tulip_font_12;
+lv_font_t lv_tulip_font_13;
+lv_font_t lv_tulip_font_14;
+lv_font_t lv_tulip_font_15;
+lv_font_t lv_tulip_font_16;
+lv_font_t lv_tulip_font_17;
+lv_font_t lv_tulip_font_18;
+
 void setup_lvgl() {
     // Setup LVGL for UI etc
     lv_init();
@@ -1090,7 +1110,25 @@ void setup_lvgl() {
     lv_indev_set_type(indev_kb, LV_INDEV_TYPE_KEYPAD);
     lv_indev_set_read_cb(indev_kb, lvgl_input_kb_read_cb);  
 
-    setup_lvgl_u8g2();
+    get_lvgl_font_from_tulip(0, &lv_tulip_font_0);
+    get_lvgl_font_from_tulip(1, &lv_tulip_font_1);
+    get_lvgl_font_from_tulip(2, &lv_tulip_font_2);
+    get_lvgl_font_from_tulip(3, &lv_tulip_font_3);
+    get_lvgl_font_from_tulip(4, &lv_tulip_font_4);
+    get_lvgl_font_from_tulip(5, &lv_tulip_font_5);
+    get_lvgl_font_from_tulip(6, &lv_tulip_font_6);
+    get_lvgl_font_from_tulip(7, &lv_tulip_font_7);
+    get_lvgl_font_from_tulip(8, &lv_tulip_font_8);
+    get_lvgl_font_from_tulip(9, &lv_tulip_font_9);
+    get_lvgl_font_from_tulip(10, &lv_tulip_font_10);
+    get_lvgl_font_from_tulip(11, &lv_tulip_font_11);
+    get_lvgl_font_from_tulip(12, &lv_tulip_font_12);
+    get_lvgl_font_from_tulip(13, &lv_tulip_font_13);
+    get_lvgl_font_from_tulip(14, &lv_tulip_font_14);
+    get_lvgl_font_from_tulip(15, &lv_tulip_font_15);
+    get_lvgl_font_from_tulip(16, &lv_tulip_font_16);
+    get_lvgl_font_from_tulip(17, &lv_tulip_font_17);
+    get_lvgl_font_from_tulip(18, &lv_tulip_font_18);
 }
 
 

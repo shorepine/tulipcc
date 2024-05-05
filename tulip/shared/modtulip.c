@@ -34,8 +34,6 @@ extern void save_tfb();
 extern void restore_tfb();
 extern uint8_t tfb_active;
 
-
-
 STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
     if(n_args==1) {
         uint16_t mhz = mp_obj_get_int(args[0]);

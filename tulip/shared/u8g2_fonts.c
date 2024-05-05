@@ -320,9 +320,9 @@ void drawLine_target(short x0, short y0,short x1, short y1, uint8_t *target, uin
 
   for (; x0<=x1; x0++) {
     if (steep) { // swap x and y. 
-        target[y0 + ((target_height+x0)*target_width)] = 0xff;
+        target[y0 + 1 + (((target_height/2)+x0)*target_width)] = 0xff;
     } else {
-        target[x0 + ((target_height+y0)*target_width)] = 0xff;
+        target[x0 + 1 + (((target_height/2)+y0)*target_width)] = 0xff;
     }
     err -= dy;
     if (err < 0) {
@@ -333,9 +333,11 @@ void drawLine_target(short x0, short y0,short x1, short y1, uint8_t *target, uin
 }
 
 void drawFastHLine_target(int16_t x, int16_t y, int16_t w, uint8_t*target, uint16_t target_width, uint16_t target_height) {
+    //fprintf(stderr, "draw H line x %d y %d w %d tw %d th %d\n", x,y,w,target_width, target_height);
     drawLine_target(x, y, x + w - 1, y, target, target_width, target_height);
 }
 void drawFastVLine_target(short x0, short y0, short h, uint8_t*target, uint16_t target_width, uint16_t target_height) {
+    fprintf(stderr, "draw V line x0 %d y0 %d h %d tw %d th %d\n", x0,y0,h,target_width, target_height);
     drawLine_target(x0, y0, x0, y0+h-1, target, target_width, target_height);
 }
 
@@ -370,13 +372,13 @@ void u8g2_draw_hv_line_target(u8g2_font_t *u8g2, int16_t x, int16_t y, int16_t l
       drawFastHLine_target(x,y,len,target,target_width, target_height);
       break;
     case 1:
-      drawFastHLine_target(x,y,len,target, target_width, target_height);
+      drawFastVLine_target(x,y,len,target, target_width, target_height);
       break;
     case 2:
       drawFastHLine_target(x-len+1,y,len,target, target_width, target_height);
       break;
     case 3:
-      drawFastHLine_target(x,y-len+1,len,target, target_width, target_height);
+      drawFastVLine_target(x,y-len+1,len,target, target_width, target_height);
       break;
   }
   
