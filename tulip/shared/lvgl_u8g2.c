@@ -25,7 +25,7 @@ bool my_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t * dsc_out, 
     // unfortunately this function seems to be called 3 times per glyph, so maybe try to not draw so much
 
     // BDF fonts only have lower ascii i think
-    // Also, there's some bug where * and ' can't be drawn without a python bug TypeError: 'int' object isn't callable
+    // Also, there's some bug where * and ' can't be drawn in a list without segfault
     if(unicode_letter>127 || unicode_letter=='*' || unicode_letter == '\'') {
         return false;
     }

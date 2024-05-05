@@ -422,12 +422,12 @@ def release_arpeggiator(channel=None):
             config.synth_per_channel[arpeggiator.channel] = arpeggiator.synth
         arpeggiator.channel = 0
         
-def midi_step(time):
+def midi_step(t):
     if(tulip.seq_ticks() > tulip.seq_ppq()):
         ensure_midi_config()
     if(arpeggiator.running):
         # time is the actual event time for this event.
-        arpeggiator.next_note(time=time)
+        arpeggiator.next_note(time=t)
 
 
 def setup():

@@ -190,8 +190,8 @@ def step(t):
     if(app.redraw_ticks is not None):
         app.redraw_ticks = app.redraw_ticks - 1
         if(app.redraw_ticks == 0):
-            redraw(app)
             app.redraw_ticks = None
+            redraw(app)
 
 def quit(screen):
     deactivate(app)
