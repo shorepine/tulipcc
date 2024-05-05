@@ -9,7 +9,7 @@ class JunoSection(UIElement):
     
     header_color = 224
     bg_color = 73
-    header_font = lv.font_montserrat_16
+    header_font = lv.font_tulip_14
     text_color = 255
     section_gap = 10
     

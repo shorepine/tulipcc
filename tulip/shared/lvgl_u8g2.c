@@ -24,7 +24,6 @@ bool my_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t * dsc_out, 
     // drawing CB will use the same bit of ram without having to re-draw. 
     // unfortunately this function seems to be called 3 times per glyph, so maybe try to not draw so much
     uint32_t font_no = *((uint32_t*)(font->user_data));
-    fprintf(stderr, "font_no is %d\n", font_no);
     u8g2_font_t ufont;
     ufont.font = NULL; 
     ufont.font_decode.fg_color = 1; 

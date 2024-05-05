@@ -8,6 +8,8 @@ import lvgl as lv
 import amy
 from patches import patches
 
+label_font = lv.font_tulip_14
+
 def redraw(app):
     # draw bg_x stuff, like the piano
     (app.screen_w, app.screen_h) = tulip.screen_size()
@@ -26,6 +28,7 @@ class Settings(tulip.UIElement):
         self.group.set_size(width, height)
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
         self.label = lv.label(self.group)
+        self.label.set_style_text_font(label_font, 0)
         self.label.set_text("sequencer and arpeggiator")
         self.rect = lv.obj(self.group)
         self.rect.set_style_bg_color(tulip.pal_to_lv(9), 0)
@@ -42,12 +45,14 @@ class Settings(tulip.UIElement):
         self.tempo.set_style_bg_color(tulip.pal_to_lv(129), lv.PART.KNOB)
         self.tempo.align_to(self.rect, lv.ALIGN.TOP_LEFT,0,0)
         self.tempo_label = lv.label(self.rect)
+        self.tempo_label.set_style_text_font(label_font, 0)
         self.tempo.set_value(int(tulip.seq_bpm() / 2.4),lv.ANIM.OFF)
         self.tempo_label.set_text("%d BPM" % (tulip.seq_bpm()))
         self.tempo_label.align_to(self.tempo, lv.ALIGN.OUT_RIGHT_MID,10,0)
         self.tempo.add_event_cb(self.tempo_cb, lv.EVENT.VALUE_CHANGED, None)
 
         alabel = lv.label(self.rect)
+        alabel.set_style_text_font(label_font, 0)
         alabel.set_text("Arpeggiator:")
         alabel.align_to(self.tempo, lv.ALIGN.OUT_BOTTOM_LEFT,0,30)
         self.arpegg = lv.switch(self.rect)
@@ -56,6 +61,7 @@ class Settings(tulip.UIElement):
         self.arpegg.align_to(alabel, lv.ALIGN.OUT_RIGHT_MID,10,0)
         self.arpegg.add_event_cb(self.arpegg_cb, lv.EVENT.VALUE_CHANGED, None)
         hlabel = lv.label(self.rect)
+        hlabel.set_style_text_font(label_font, 0)
         hlabel.set_text("Hold:")
         hlabel.align_to(self.arpegg, lv.ALIGN.OUT_RIGHT_MID,10,0)
         self.hold = lv.switch(self.rect)
@@ -99,6 +105,7 @@ class ListColumn(tulip.UIElement):
         self.group.set_size(width,height)
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
         self.label = lv.label(self.group)
+        self.label.set_style_text_font(label_font, 0)
         self.label.set_text(name)
         self.list = lv.list(self.group)
         self.list.set_size(width-25,height-20)
