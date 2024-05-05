@@ -320,7 +320,7 @@ void drawLine_target(short x0, short y0,short x1, short y1, uint8_t *target, uin
 
   for (; x0<=x1; x0++) {
     if (steep) {
-        target[y0 + ((target_height+x0)*target_width)] = 0xff;
+        target[y0 + ((target_width+x0)*target_height)] = 0xff;
     } else {
         target[x0 + ((target_height+y0)*target_width)] = 0xff;
     }
