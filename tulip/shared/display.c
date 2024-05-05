@@ -1065,6 +1065,7 @@ void my_log_cb(lv_log_level_t level, const char * buf)
 
 
 extern void get_lvgl_font_from_tulip(uint8_t font_no, lv_font_t *outfont);
+
 lv_font_t lv_font_tulip_0;
 lv_font_t lv_font_tulip_1;
 lv_font_t lv_font_tulip_2;
@@ -1084,6 +1085,9 @@ lv_font_t lv_font_tulip_15;
 lv_font_t lv_font_tulip_16;
 lv_font_t lv_font_tulip_17;
 lv_font_t lv_font_tulip_18;
+
+
+//lv_font_t lv_font_tulip[MAX_TULIP_FONTS];
 
 void setup_lvgl() {
     // Setup LVGL for UI etc

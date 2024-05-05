@@ -8,7 +8,6 @@ import lvgl as lv
 import amy
 from patches import patches
 
-label_font = lv.font_tulip_14
 
 def redraw(app):
     # draw bg_x stuff, like the piano
@@ -28,14 +27,13 @@ class Settings(tulip.UIElement):
         self.group.set_size(width, height)
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
         self.label = lv.label(self.group)
-        self.label.set_style_text_font(label_font, 0)
         self.label.set_text("sequencer and arpeggiator")
         self.rect = lv.obj(self.group)
         self.rect.set_style_bg_color(tulip.pal_to_lv(9), 0)
         self.rect.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
         self.rect.set_size(width-25,height-20)
-        self.rect.align_to(self.label,lv.ALIGN.OUT_BOTTOM_LEFT,0,0)
+        self.rect.align_to(self.label,lv.ALIGN.OUT_BOTTOM_LEFT,0,5)
 
         self.tempo = lv.slider(self.rect)
         self.tempo.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
@@ -45,14 +43,12 @@ class Settings(tulip.UIElement):
         self.tempo.set_style_bg_color(tulip.pal_to_lv(129), lv.PART.KNOB)
         self.tempo.align_to(self.rect, lv.ALIGN.TOP_LEFT,0,0)
         self.tempo_label = lv.label(self.rect)
-        self.tempo_label.set_style_text_font(label_font, 0)
         self.tempo.set_value(int(tulip.seq_bpm() / 2.4),lv.ANIM.OFF)
         self.tempo_label.set_text("%d BPM" % (tulip.seq_bpm()))
         self.tempo_label.align_to(self.tempo, lv.ALIGN.OUT_RIGHT_MID,10,0)
         self.tempo.add_event_cb(self.tempo_cb, lv.EVENT.VALUE_CHANGED, None)
 
         alabel = lv.label(self.rect)
-        alabel.set_style_text_font(label_font, 0)
         alabel.set_text("Arpeggiator:")
         alabel.align_to(self.tempo, lv.ALIGN.OUT_BOTTOM_LEFT,0,30)
         self.arpegg = lv.switch(self.rect)
@@ -61,7 +57,6 @@ class Settings(tulip.UIElement):
         self.arpegg.align_to(alabel, lv.ALIGN.OUT_RIGHT_MID,10,0)
         self.arpegg.add_event_cb(self.arpegg_cb, lv.EVENT.VALUE_CHANGED, None)
         hlabel = lv.label(self.rect)
-        hlabel.set_style_text_font(label_font, 0)
         hlabel.set_text("Hold:")
         hlabel.align_to(self.arpegg, lv.ALIGN.OUT_RIGHT_MID,10,0)
         self.hold = lv.switch(self.rect)
@@ -105,11 +100,10 @@ class ListColumn(tulip.UIElement):
         self.group.set_size(width,height)
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
         self.label = lv.label(self.group)
-        self.label.set_style_text_font(label_font, 0)
         self.label.set_text(name)
         self.list = lv.list(self.group)
         self.list.set_size(width-25,height-20)
-        self.list.align_to(self.label,lv.ALIGN.OUT_BOTTOM_LEFT,0,0)
+        self.list.align_to(self.label,lv.ALIGN.OUT_BOTTOM_LEFT,0,5)
         self.buttons = []
         self.button_texts = []
         tulip.lv_depad(self.list)
@@ -124,9 +118,9 @@ class ListColumn(tulip.UIElement):
         if items is not None:
             self.list.clean()
             self.buttons = []
-            for i in items:
-                button = self.list.add_button(lv.SYMBOL.PLUS, i)
-                button.get_child(1).set_long_mode(0) # wrap instead of scroll 
+            for idx,i in enumerate(items):
+                button = self.list.add_button(None, i) #lv.SYMBOL.PLUS, i)
+                button.get_child(0).set_long_mode(0) # wrap instead of scroll 
                 button.add_event_cb(self.list_cb, lv.EVENT.CLICKED, None)
                 self.buttons.append(button)
                 self.button_texts.append(i)
@@ -219,8 +213,8 @@ def deactivate(screen):
 def update_map():
     global app
     # channels guaranteed to always be selected
-    if(app.patches.selected is not None and app.polyphony.selected is not None and app.synths.selected is not None):
-        patch_no = app.patches.selected
+    if(app.patchlist.selected is not None and app.polyphony.selected is not None and app.synths.selected is not None):
+        patch_no = app.patchlist.selected
         if(app.synths.selected == 1): patch_no += 128
         if(app.synths.selected == 2): patch_no += 256
         if(app.synths.selected == 3): patch_no += 1024
@@ -237,38 +231,39 @@ def update_map():
 def update_patches(synth):
     global app
     if(synth=='DX7'):
-        app.patches.replace_items(patches[128:256])
+        app.patchlist.replace_items(patches[128:256])
     if(synth=='Juno-6'):
-        app.patches.replace_items(patches[0:128])
+        app.patchlist.replace_items(patches[0:128])
     if(synth=='Custom'):
-        app.patches.replace_items([("Custom %d" % x) for x in range(32)])
+        app.patchlist.replace_items([("Custom %d" % x) for x in range(32)])
     if(synth=='Misc'):
-        app.patches.replace_items([])
-    app.patches.label.set_text("%s patches" % (synth))
-
+        app.patchlist.replace_items([])
+    app.patchlist.label.set_text("%s patches" % (synth))
 # Get current settings for a channel from midi.config.
 def current_patch(channel):
     global app
     channel_patch, amy_voices = midi.config.channel_info(channel)
+
     if channel_patch is not None:
         polyphony = len(amy_voices)
         if channel_patch < 128:
             # We defer here so that setting the UI component doesn't trigger an update before it updates
             app.synths.select(0, defer=True)
-            app.patches.select(channel_patch, defer=True)
+            app.patchlist.select(channel_patch, defer=True)
+            pass
         elif channel_patch < 256:
             app.synths.select(1, defer=True)
-            app.patches.select(channel_patch - 128, defer=True)
+            app.patchlist.select(channel_patch - 128, defer=True)
         elif channel_patch < 1024:
             app.synths.select(2, defer=True)
-            app.patches.select(channel_patch - 256, defer=True)
+            app.patchlist.select(channel_patch - 256, defer=True)
         else:
             app.synths.select(3, defer=True)
-            app.patches.select(channel_patch - 1024, defer=True)
+            app.patchlist.select(channel_patch - 1024, defer=True)
         app.polyphony.select(polyphony - 1, defer=True)
     else:
         # no patch set for this chanel
-        app.patches.select(None)
+        app.patchlist.select(None)
         app.polyphony.select(None)
 
 
@@ -291,12 +286,11 @@ def run(screen):
     app.synths = ListColumn('synth', ["Juno-6", "DX7", "Misc", "Custom"])
     app.add(app.synths)
 
-    app.patches = ListColumn('patches')
-    app.add(app.patches)
+    app.patchlist = ListColumn('patches')
+    app.add(app.patchlist)
 
     app.polyphony = ListColumn('polyphony', [str(x+1) for x in range(8)], width=100)
     app.add(app.polyphony)
-
     app.settings = Settings()
     app.add(app.settings)
 

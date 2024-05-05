@@ -527,7 +527,9 @@ static void u8g2_font_decode_len_target(u8g2_font_t *u8g2, uint8_t len, uint8_t 
       {
         if ( is_foreground )
           {
-            u8g2_draw_hv_line_target(u8g2, x, y, current, decode->dir, target, decode->glyph_width*2, decode->glyph_height*2);
+            uint16_t target_width = (decode->glyph_width+ abs(decode->target_x))*2 ;
+            uint16_t target_height = decode->glyph_height*2;
+            u8g2_draw_hv_line_target(u8g2, x, y, current, decode->dir, target, target_width, target_height);
           }
       }    
     /* check, whether the end of the run length code has been reached */
