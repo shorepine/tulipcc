@@ -26,7 +26,7 @@ tulip.ui_slider(ui_id=2, val=50, x=300, y=400, w=15, h=150, bar_color=151, handl
 tulip.ui_slider(ui_id=3, val=50, x=250, y=300, w=400, bar_color=255, handle_color=0)
 
 tulip.ui_text(ui_id=4, text="12", x=200, y=200, w=100, fg_color=255, bg_color=0, font=tulip.lv.font_unscii_8)
-tulip.ui_text(ui_id=5, placeholder="Type here", x=400, y=200, w=200, fg_color=255, bg_color=0, font=tulip.lv.font_montserrat_12)
+tulip.ui_text(ui_id=5, placeholder="Type here", x=400, y=200, w=200, fg_color=255, bg_color=0)
 
 tulip.ui_checkbox(ui_id=6, text="Extra text", x=400, y=400, fg_color=255, bg_color=0)
 tulip.ui_checkbox(ui_id=7, x=400, y=430, fg_color=255, bg_color=0)

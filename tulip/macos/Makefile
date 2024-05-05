@@ -58,7 +58,7 @@ LVGL_BINDING_DIR = $(TOP)/../lv_binding_micropython
 LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
 LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
 INC += -I$(LVGL_BINDING_DIR) -I.
-ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f) ../shared/lv_conf.h
+ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f) ../shared/lv_conf.h ../shared/lv_font.h
 LVGL_PP = $(BUILD)/lvgl/lvgl.pp.c
 LVGL_MPY = $(BUILD)/lvgl/lv_mpy.c
 LVGL_MPY_METADATA = $(BUILD)/lvgl/lv_mpy.json
@@ -70,6 +70,7 @@ CFLAGS += -DLV_CONF_INCLUDE_SIMPLE
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
 	$(ECHO) "LVGL-GEN $@"
 	$(Q)cp ../shared/lv_conf.h ${LVGL_BINDING_DIR}
+	$(Q)cp ../shared/lv_font.h ${LVGL_DIR}/src/font
 	$(Q)cp ../shared/lv_fonts/*.c ${LVGL_DIR}/src/font/
 	$(Q)mkdir -p $(dir $@)
 	$(Q)$(CPP) $(LV_CFLAGS) -DLVGL_PREPROCESS -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)

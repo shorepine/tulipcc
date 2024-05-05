@@ -214,6 +214,14 @@ tulip.key_scan(0) # remember to turn it back off or you won't be able to type in
 tulip.remap()  # interactive, can write to your boot.py for you
 tulip.key_remap(scan_code, modifier, target_cp437_code)
 
+# You can also register a keyboard callback. Useful for full screen apps that share with others
+# there can only be one keyboard callback running. 
+tulip.keyboard_callback(key)
+def key(k):
+    print("got key: %d" % (key))
+
+tulip.keyboard_callback() # removes callbacks. 
+
 # Return the last touch panel coordinates, up to 3 fingers at once
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 
@@ -266,7 +274,7 @@ tulip.set_time()
 
 ## Music / sound
 
-Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches.
+Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches. It also has support for loading WAVE files in Tulip as samples. 
 
 Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/bwhitman/alles/blob/main/README.md) Alles is a wrapper around AMY that lets you control the synthesizer over Wi-Fi to remote speakers, or other computers or Tulips. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information and for more music examples.
 
@@ -293,7 +301,24 @@ amy.send(voices='0', load_patch=101, note=50, vel=1, client=2) # just a certain 
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
-Tuilp's Alles synth includes a stereo chorus unit which has a set of control parameters:
+To load your own WAVE files as samples, use `tulip.load_sample`:
+
+```python
+# To save space / RAM, you may want to downsample your WAVE files to 22050Hz. We detect SR automatically.
+patch = tulip.load_sample("flutea4.wav") # samples are converted to mono if they are stereo
+
+# You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample.
+patch = tulip.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500)
+
+# The patch number can now be used in the custom Tulip memory PCM sample player. 
+# It has all the features of the AMY's PCM wave type.
+amy.send(osc=20, wave=amy.CUSTOM, patch=patch, vel=1, note=50)
+
+# You can load up to 32 custom PCM patches. Be careful of memory use. load_sample will return -1 if there's no more room.
+# You can unload already allocated patches:
+tulip.unload_patch(patch) # frees the RAM and the patch slot
+tulip.unload_patch() # frees all allocated PCM patches
+```
 
 Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/music.py), which lets you create chords, progressions and scales through code:
 
@@ -339,13 +364,14 @@ You can also send MIDI messages "locally", e.g. to a running program that is exp
 ```python
 tulip.music_map(1,129) # change MIDI channel 1 to patch 129.
 
-def callback(x): # for now you have to define a callback with a dummy parameter
+def callback():
     m = tulip.midi_in()
     if(m[0]==144):
         print("Note on, note # %d velocity # %d" % (m[1], m[2]))
 
-tulip.midi_callback(callback)
-tulip.midi_callback() # turns off callbacks
+tulip.midi_add_callback(callback)
+tulip.midi_remove_callback(callback) # turns off callback
+tulip.midi_remove_callbacks() # turns off all
 
 m = tulip.midi_in() # returns bytes of the last MIDI message received
 tulip.midi_out((144,60,127)) # sends a note on message

@@ -65,15 +65,15 @@ def Note1(pitch, vel=1.0, time=None, duration=10.0, pan=0.5):
     oscs = get_oscs(2)
     osc = oscs[0]
     modosc = oscs[1]
-    amy.send(osc=modosc, wave=amy.SINE, freq=5, amp=0.005, timestamp=timestamp)
+    amy.send(osc=modosc, wave=amy.SINE, freq=5, amp=0.005, time=timestamp)
     amy.send(osc=osc, wave=amy.SAW_DOWN, freq=440, mod_source=modosc, mod_target=amy.TARGET_FREQ, 
-             filter_freq=500, filter_type=amy.FILTER_LPF, timestamp=timestamp)
-    amy.send(osc=osc, bp0="5000,0.01,0,0", bp0_target=amy.TARGET_FILTER_FREQ, resonance=0.5, timestamp=timestamp)
-    amy.send(osc=osc, bp1="100,1.0,8000,0.0,250,0", bp1_target=amy.TARGET_AMP, timestamp=timestamp)
+             filter_freq=500, filter_type=amy.FILTER_LPF, time=timestamp)
+    amy.send(osc=osc, bp0="5000,0.01,0,0", bp0_target=amy.TARGET_FILTER_FREQ, resonance=0.5, time=timestamp)
+    amy.send(osc=osc, bp1="100,1.0,8000,0.0,250,0", bp1_target=amy.TARGET_AMP, time=timestamp)
     freq = pitch2freq(pitch)
-    amy.send(osc=osc, freq=freq, vel=vel, timestamp=timestamp, pan=pan)
+    amy.send(osc=osc, freq=freq, vel=vel, time=timestamp, pan=pan)
     # Note off
-    #amy.send(osc=osc, vel=0, timestamp=timestamp + int(round(1000 * duration)))
+    #amy.send(osc=osc, vel=0, time=timestamp + int(round(1000 * duration)))
 
 def Note2(pitch, vel=1.0, time=None, pitch_dev=0.05, duration=10.0, pan=0.5):
     global START
@@ -81,16 +81,16 @@ def Note2(pitch, vel=1.0, time=None, pitch_dev=0.05, duration=10.0, pan=0.5):
     oscs = get_oscs(2)
     osc = oscs[0]
     modosc = oscs[1]
-    amy.send(osc=modosc, wave=amy.SAW_DOWN, freq=0.1, amp=pitch_dev, timestamp=timestamp)
+    amy.send(osc=modosc, wave=amy.SAW_DOWN, freq=0.1, amp=pitch_dev, time=timestamp)
     amy.send(osc=osc, wave=amy.SAW_DOWN, freq=440, mod_source=modosc, mod_target=amy.TARGET_FREQ, 
-             filter_freq=500, filter_type=amy.FILTER_LPF, timestamp = timestamp)
+             filter_freq=500, filter_type=amy.FILTER_LPF, time = timestamp)
     amy.send(osc=osc, bp0="5000,0.01,0,0", bp0_target=amy.TARGET_FILTER_FREQ, resonance=0.5, 
-             timestamp=timestamp)
-    amy.send(osc=osc, bp1="100,1.0,8000,0.0,250,0", bp1_target=amy.TARGET_AMP, timestamp=timestamp)
+             time=timestamp)
+    amy.send(osc=osc, bp1="100,1.0,8000,0.0,250,0", bp1_target=amy.TARGET_AMP, time=timestamp)
     freq = pitch2freq(pitch)
-    amy.send(osc=osc, freq=freq, vel=vel, timestamp=timestamp, pan=pan)
+    amy.send(osc=osc, freq=freq, vel=vel, time=timestamp, pan=pan)
     # Note off
-    #amy.send(osc=osc, vel=0, timestamp=timestamp + int(round(1000 * duration)))
+    #amy.send(osc=osc, vel=0, time=timestamp + int(round(1000 * duration)))
 
 def Note(pitch, vel=1.0, time=None, pitch_shift=0, second_delay=0.2, use_third=False):
     if time == None:
@@ -108,15 +108,15 @@ def NoteFM(pitch, vel=1.0, time=0, duration=8.0):
     global START
     timestamp = int(round(START + time * 1000))
     oscs = get_oscs(4)
-    amy.send(osc=oscs[2], wave=amy.SINE, freq=1/duration, phase=0.75, amp=1, timestamp=timestamp)
+    amy.send(osc=oscs[2], wave=amy.SINE, freq=1/duration, phase=0.75, amp=1, time=timestamp)
     amy.send(osc=oscs[1], wave=amy.SINE, ratio=1, amp=0.1, mod_source=oscs[2], mod_target=amy.TARGET_AMP,
-             timestamp=timestamp )
+             time=timestamp )
     amy.send(osc=oscs[0], wave=amy.SINE, ratio=1, amp=0.2, bp0_target=amy.TARGET_AMP, bp0="0,0,1000,1,1000,0",
-             timestamp=timestamp )
+             time=timestamp )
     amy.send(osc=oscs[3], wave=amy.ALGO,algorithm=1,algo_source="-1,-1,-1,-1,%d,%d" % (oscs[1], oscs[0]),
-             bp0_target=amy.TARGET_AMP,bp0="0,1,1000,1,200,0", timestamp = timestamp)
-    amy.send(osc=oscs[1], vel=0.3, timestamp=timestamp)
-    amy.send(osc=oscs[3], freq=pitch2freq(pitch), vel=1, timestamp=timestamp)
+             bp0_target=amy.TARGET_AMP,bp0="0,1,1000,1,200,0", time = timestamp)
+    amy.send(osc=oscs[1], vel=0.3, time=timestamp)
+    amy.send(osc=oscs[3], freq=pitch2freq(pitch), vel=1, time=timestamp)
     # Note off
     #amy.send(osc=oscs[3], vel=0, timestamp=timestamp + int(round(1000 * duration)))
     # Note offs cause trouble if they are executed after the osc has been stolen for another note.

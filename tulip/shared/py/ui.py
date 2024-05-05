@@ -7,7 +7,6 @@ import lvgl as lv
 lv_soft_kb = None
 lv_launcher = None
 
-lv_default_font = lv.font_montserrat_12
 
 # For our convenience functions, Can be overriden
 tulip.ui_callback = None
@@ -32,6 +31,10 @@ def get_keypad_indev():
 def pal_to_lv(pal):
     (r,g,b) = tulip.rgb(pal, wide=True) # todo -- not sure if we use wide or not
     return lv.color_make(r,g,b)
+
+# Convert tulip rgb332 pal idx into lv color
+def lv_to_pal(lvcolor):
+    return tulip.color(lvcolor.red, lvcolor.green, lvcolor.blue)
 
 # Remove padding from an LVGL object. Sometimes useful. 
 def lv_depad(obj):
@@ -96,6 +99,7 @@ class UIScreen():
                 self.alttab_button.set_style_bg_color(pal_to_lv(11), lv.PART.MAIN)
                 self.alttab_button.set_style_radius(0,lv.PART.MAIN)
                 alttab_label = lv.label(self.alttab_button)
+                alttab_label.set_style_text_font(lv.font_montserrat_12,0)
                 alttab_label.set_text(lv.SYMBOL.SHUFFLE)
                 alttab_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
                 self.alttab_button.align_to(self.group, lv.ALIGN.TOP_RIGHT,0,0)
@@ -111,6 +115,7 @@ class UIScreen():
                 self.quit_button.set_style_bg_color(pal_to_lv(128), lv.PART.MAIN)
                 self.quit_button.set_style_radius(0,lv.PART.MAIN)
                 quit_label = lv.label(self.quit_button)
+                quit_label.set_style_text_font(lv.font_montserrat_12,0)
                 quit_label.set_text(lv.SYMBOL.POWER)
                 quit_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
                 self.quit_button.align_to(self.alttab_button, lv.ALIGN.OUT_LEFT_MID,0,0)
@@ -120,6 +125,7 @@ class UIScreen():
                 self.launcher_button.set_style_bg_color(pal_to_lv(36), lv.PART.MAIN)
                 self.launcher_button.set_style_radius(0,lv.PART.MAIN)
                 launcher_label = lv.label(self.launcher_button)
+                launcher_label.set_style_text_font(lv.font_montserrat_12,0)
                 launcher_label.set_text(lv.SYMBOL.LIST)
                 launcher_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
                 self.launcher_button.align_to(self.group, lv.ALIGN.BOTTOM_RIGHT,0,0)
@@ -272,6 +278,10 @@ def launcher_cb(e):
             tulip.run('juno6')
         if(text=="Drums"):
             tulip.run('drums')
+        if(text=='Voices'):
+            tulip.run('voices')
+        if(text=='Pattern'):
+            tulip.run('pattern')
         if(text=="Keyboard"):
             keyboard()
         if(text=="Wordpad"):
@@ -299,12 +309,17 @@ def launcher(ignore=True):
     lv_launcher = lv.list(repl_screen.group)
     lv_launcher.set_size(195, 140)
     lv_launcher.set_align(lv.ALIGN.BOTTOM_RIGHT)
+    lv_launcher.set_style_text_font(lv.font_montserrat_12,0)
     b_close = lv_launcher.add_button(lv.SYMBOL.CLOSE, "Close")
     b_close.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
+    b_voices = lv_launcher.add_button(lv.SYMBOL.AUDIO, "Voices")
+    b_voices.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_juno = lv_launcher.add_button(lv.SYMBOL.AUDIO, "Juno-6")
     b_juno.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_drums = lv_launcher.add_button(lv.SYMBOL.NEXT, "Drums")
     b_drums.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
+    b_pattern = lv_launcher.add_button(lv.SYMBOL.NEXT, "Pattern")
+    b_pattern.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_keyboard = lv_launcher.add_button(lv.SYMBOL.KEYBOARD, "Keyboard")
     b_keyboard.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_wordpad = lv_launcher.add_button(lv.SYMBOL.FILE, "Wordpad")

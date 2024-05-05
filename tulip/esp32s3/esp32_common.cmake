@@ -92,6 +92,7 @@ list(APPEND MICROPY_SOURCE_PORT
     gccollect.c
     fatfs_port.c
     machine_bitstream.c
+    machine_sdcard.c
     machine_timer.c
     machine_pin.c
     machine_touchpad.c
@@ -140,8 +141,10 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/sounds.c
     ${TULIP_SHARED_DIR}/sequencer.c
     ${TULIP_SHARED_DIR}/lodepng.c
+    ${TULIP_SHARED_DIR}/lvgl_u8g2.c
     ${TULIP_SHARED_DIR}/u8fontdata.c
     ${TULIP_SHARED_DIR}/u8g2_fonts.c
+    ${TULIP_SHARED_DIR}/memorypcm.c
     ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
     ${AMY_DIR}/src/algorithms.c
     ${AMY_DIR}/src/custom.c
@@ -266,6 +269,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
 target_compile_options(${MICROPY_TARGET} PUBLIC
     -Wno-clobbered
     -Wno-uninitialized
+    -Wno-dangling-pointer
     -Wno-deprecated-declarations
     -Wno-missing-field-initializers
     -Wno-unused-const-variable
