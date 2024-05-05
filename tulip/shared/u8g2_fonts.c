@@ -319,8 +319,8 @@ void drawLine_target(short x0, short y0,short x1, short y1, uint8_t *target, uin
   }
 
   for (; x0<=x1; x0++) {
-    if (steep) {
-        target[y0 + ((target_width+x0)*target_height)] = 0xff;
+    if (steep) { // swap x and y. 
+        target[y0 + ((target_height+x0)*target_width)] = 0xff;
     } else {
         target[x0 + ((target_height+y0)*target_width)] = 0xff;
     }
@@ -525,7 +525,7 @@ static void u8g2_font_decode_len_target(u8g2_font_t *u8g2, uint8_t len, uint8_t 
       {
         if ( is_foreground )
           {
-            u8g2_draw_hv_line_target(u8g2, x, y, current, decode->dir, target, decode->glyph_width, decode->glyph_height);
+            u8g2_draw_hv_line_target(u8g2, x, y, current, decode->dir, target, decode->glyph_width*2, decode->glyph_height*2);
           }
       }    
     /* check, whether the end of the run length code has been reached */
