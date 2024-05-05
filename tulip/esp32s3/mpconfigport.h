@@ -130,7 +130,11 @@
 #define MICROPY_PY_NETWORK_WLAN             (1)
 #endif
 #ifndef MICROPY_HW_ENABLE_SDCARD
-#define MICROPY_HW_ENABLE_SDCARD            (0) // TODO
+#ifdef TDECK
+#define MICROPY_HW_ENABLE_SDCARD            (1) 
+#else
+#define MICROPY_HW_ENABLE_SDCARD            (0) 
+#endif
 #endif
 #define MICROPY_HW_SOFTSPI_MIN_DELAY        (0)
 #define MICROPY_HW_SOFTSPI_MAX_BAUDRATE     (esp_rom_get_cpu_ticks_per_us() * 1000000 / 200) // roughly

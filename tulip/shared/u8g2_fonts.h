@@ -127,6 +127,7 @@ typedef struct _u8g2_font_t u8g2_font_t;
 
 uint8_t u8g2_IsGlyph(u8g2_font_t *u8g2, uint16_t requested_encoding);
 int8_t u8g2_GetGlyphWidth(u8g2_font_t *u8g2, uint16_t requested_encoding);
+int8_t u8g2_GetGlyphHeight(u8g2_font_t *u8g2, uint16_t requested_encoding);
 void u8g2_SetFontMode(u8g2_font_t *u8g2, uint8_t is_transparent);
 void u8g2_SetFontDirection(u8g2_font_t *u8g2, uint8_t dir);
 int16_t u8g2_DrawGlyph(u8g2_font_t *u8g2, int16_t x, int16_t y, uint16_t encoding);
@@ -136,6 +137,9 @@ void u8g2_SetForegroundColor(u8g2_font_t *u8g2, uint16_t fg);
 void u8g2_SetBackgroundColor(u8g2_font_t *u8g2, uint16_t bg);
 uint8_t u8g2_a_height(uint8_t font_no);
 uint8_t u8g2_glyph_width(uint8_t font_no, uint16_t glyph);
+uint8_t u8g2_glyph_height(uint8_t font_no, uint16_t glyph);
+u8g2_font_decode_t u8g2_GetGlyphInfo(u8g2_font_t *u8g2, uint16_t requested_encoding);
+int16_t u8g2_DrawGlyph_target(u8g2_font_t *u8g2, uint16_t encoding, uint8_t * target);
 
 
 /* start font list */
