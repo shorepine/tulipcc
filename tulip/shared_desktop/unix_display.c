@@ -239,6 +239,7 @@ int unix_display_draw() {
 
     display_frame_done_generic();
 
+    /*
     #ifndef __TULIP_IOS__
         int64_t ticks_per_frame_ms = (int64_t) (1000.0 / reported_fps);
         while(get_ticks_ms() - frame_ticks < ticks_per_frame_ms) {
@@ -246,7 +247,8 @@ int unix_display_draw() {
             check_key();
         }
     #endif
-
+    */
+    
     // Are we restarting the display for a mode change, or quitting
     if(unix_display_flag < 0) {
         destroy_window();
