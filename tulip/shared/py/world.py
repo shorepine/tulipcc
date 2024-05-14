@@ -51,7 +51,7 @@ headers = { "Authorization":"Bot {}".format(ta+'.'+tb),
 discord_epoch = 1420070400000
 
 # get the last n messages
-def messages(n=500, chunk_size = 100, mtype='text', after=None):
+def messages(n=500, chunk_size = 100, mtype='text'):
     ret = []
     before = None
 
