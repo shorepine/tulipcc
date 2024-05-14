@@ -43,12 +43,13 @@ bool my_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t * dsc_out, 
     
     // debug
        
+/*
     if((unicode_letter=='*' || unicode_letter=='j' || unicode_letter=='i' || unicode_letter=='o') && font_no==11) {
         fprintf(stderr, "fn %d %c adv %d height %d width %d x %d y %d tx %d ty %d\n", 
             font_no, unicode_letter, adv,font_decode.glyph_height, font_decode.glyph_width, font_decode.x, font_decode.y, 
             font_decode.target_x, font_decode.target_y );
     }
-    
+*/    
     dsc_out->adv_w = adv;        /*Horizontal space required by the glyph in [px]*/
     dsc_out->box_h = font_decode.glyph_height*2;           /*Height of the bitmap in [px]*/
     dsc_out->box_w = (font_decode.glyph_width+abs(font_decode.target_x))*2 ;         /*Width of the bitmap in [px]*/

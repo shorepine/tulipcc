@@ -277,13 +277,35 @@ def desktop_copy_sys(dest):
         cmd = "cp -Rf \"%s/\" \"%s\"" % (tulip_home, dest)
         os.system(cmd)
 
+
+def get_latest_release():
+    import json
+    from upysh import rm
+    tulip.url_save('https://api.github.com/repos/bwhitman/tulipcc/releases/latest','releases_temp.json')
+    j = json.load(open('releases_temp.json','r'))
+    rm('releases_temp.json')
+    mine = None
+    sys = None
+    for i in j['assets']:
+        if i['name'] == 'tulip-firmware-%s.bin' % (board()):
+            mine = i
+        if i['name'] == 'tulip-sys.bin':
+            sys = i
+    if(mine and sys):
+        return (mine['browser_download_url'], mine['updated_at'], sys['browser_download_url'], sys['updated_at'])
+    return (None, None, None, None)
+
 def upgrade():
-    import world_matrix, time, sys, os
+    import time, sys, os, urequests
     try:
         import esp32, machine
         from esp32 import Partition
     except ImportError:
         print("Upgrading only works on Tulip CC for now. Visit tulip.computer to download the latest Tulip Desktop.")
+        return
+
+    if ip() is None:
+        print("Need to be on wifi.")
         return
 
     # Ensures we are on a OTA partition
@@ -297,31 +319,17 @@ def upgrade():
         print("Unidentified board type, can't upgrade.")
         return
 
-    # Checks for a new firmware from Tulip World, asks if you want to upgrade to it
+    # Checks for a new firmware from Github, asks if you want to upgrade to it
     sec_size = 4096
-    all_firmwares = world_matrix.files(limit=20,room_id=world_matrix.firmware_room_id)
-    all_firmwares.reverse()
 
-    latest_sys = None
-    latest_firmware = None
-
-    for file in all_firmwares:
-        if(latest_firmware is None and file['filename'].startswith('tulipcc-%s' % (board()))):
-            latest_firmware = file
-        if(latest_sys is None and file['filename'].startswith('sys-')):
-            latest_sys = file
-
-    if(not (latest_firmware and latest_sys)):
+    (latest_mine_url, latest_mine_date, latest_sys_url, latest_sys_date) = get_latest_release()
+    if(latest_mine_url is None):
         print("Could not find firmware and system folder for board %s" % (board()))
         return
 
-    v_firmware = (latest_firmware['filename'][:-4])[-8:]
-    v_sys = (latest_sys['filename'][:-4])[-8:]
-
     print("For board: %s" % (board()))
-    print("Latest firmware: %s   %s" % (v_firmware, world_matrix.nice_time(latest_firmware["age_ms"]/1000)))
-    print("Latest /sys    : %s   %s" % (v_sys, world_matrix.nice_time(latest_sys["age_ms"]/1000)))
-    print("You have firmware: %s" % version())
+    print("Latest firmware: %s" % (latest_mine_date))
+    print("Latest /sys    : %s" % (latest_sys_date))
     print()
     do_firmware = False
     do_system = False
@@ -339,9 +347,8 @@ def upgrade():
     if(do_system):
         try:
             write_size = sys_partition.info()[3]
-            print("Flashing %s to /sys folder... " % (latest_sys["filename"]))
-            url = "https://%s/_matrix/media/r0/download/%s" % (world_matrix.host, latest_sys["url"][6:])
-            r = world_matrix.matrix_get(url)
+            print("Flashing /sys folder... ")
+            r = urequests.get(latest_sys_url)
             block_c = 0
             for chunk in r.generate(chunk_size=sec_size):
                 if len(chunk) < sec_size:
@@ -359,9 +366,8 @@ def upgrade():
     if(do_firmware):
         try:
             write_size = ota_partition.info()[3]
-            print("Flashing %s to OTA partition %s " % (latest_firmware["filename"], ota_partition.info()[4]))
-            url = "https://%s/_matrix/media/r0/download/%s" % (world_matrix.host, latest_firmware["url"][6:])
-            r = world_matrix.matrix_get(url)
+            print("Flashing to OTA partition %s " % (ota_partition.info()[4]))
+            r = urequests.get(latest_mine_url)
             block_c = 0
             for chunk in r.generate(chunk_size=sec_size):
                 if len(chunk) < sec_size:

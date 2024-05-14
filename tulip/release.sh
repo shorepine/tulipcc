@@ -40,6 +40,7 @@ do
     if [ "$TYPE" == "upload" ]; then
         python upload_firmware.py
         gh release upload --clobber $RELEASE dist/tulip-full-$i.bin
+        gh release upload --clobber $RELEASE dist/tulip-firmware-$i.bin
     fi
 done
 

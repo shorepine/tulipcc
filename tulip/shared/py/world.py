@@ -103,6 +103,7 @@ def messages(n=500, chunk_size = 100, mtype='text'):
     return ret
 
 def download(filename, username=None, limit=5000, chunk_size=4096):
+    got = None
     # Check for an extension
     if('.' not in filename[-5:]):
         filename = filename + ".tar"
