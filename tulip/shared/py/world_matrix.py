@@ -6,7 +6,7 @@ import urequests
 import json
 import time 
 import tulip
-
+import world
 
 # TODO: i should verify Tulip-ness some other way . I can revoke this token easily enough but why not do it per user?
 world_token = "syt_dHVsaXA_lPADiXCwKdCJvreALSul_0ody9J"
@@ -41,20 +41,7 @@ def uuid4():
     random[8] = (random[8] & 0x3F) | 0x80
     return UUID(bytes=random)
 
-# covert age from matrix to something readable
-def nice_time(age_s):
-    if(age_s < 60):
-        c = "%ds" % (age_s)
-    elif(age_s < 60*60):
-        c = "%dm" % (age_s/60)
-    elif(age_s < 60*60*24):
-        c = "%dh" % (age_s/60/60)
-    elif(age_s < 60*60*24*365):
-        c = "%dd" % (age_s/60/60/24)
-    else: 
-        c= "~"
-    c = c + " ago"
-    return "% 8s" % c
+
 
 # PUT call to matrix CS api using auth
 def matrix_put(url, data):
@@ -67,22 +54,14 @@ def matrix_get(url):
 def matrix_post(url, data, content_type="application/octet-stream"):
     return urequests.post(url, data=data, headers={"Authorization":"Bearer %s" %(world_token), "Content-Type":content_type})
 
-def _isdir(filename):
-    return (os.stat(filename)[0] & 0o40000) > 0
 
-def read_in_chunks(file_object, chunk_size=4096):
-    while True:
-        data = file_object.read(chunk_size)
-        if not data:
-            break
-        yield data
 
 # Uploads a file or folder from Tulip to Tulip World
 def upload(filename, content_type="application/octet-stream", room_id=files_room_id):
     tar = False
     url = "https://%s/_matrix/media/v3/upload?filename=%s" % (host, filename)
 
-    if(_isdir(filename)):
+    if(world._isdir(filename)):
         tar = True
         print("Packing %s" % (filename))
         tulip.tar_create(filename)
@@ -122,9 +101,10 @@ def ls(count=10): # lists latest count files
             already[fn] = True
             if(fn.endswith(".tar")):
                 fn = "< %s >" % (fn[:-4])
-            print("\t% 40s %s" % (fn, nice_time(f["age_ms"]/1000)))
+            print("\t% 40s %s" % (fn, world.nice_time(f["age_ms"]/1000)))
             i+=1
         if(i==count): break 
+
 
 # Convenience function that just grabs the __last__ file named filename from Tulip World. Does full initial sync to find it
 # Or, you can give it an item from files(), if you want a specific file and not look it up by filename
@@ -132,7 +112,7 @@ def download(filename, limit=5000, chunk_size=4096):
     grab_url = None
     if(type(filename)==dict): # this is a item in the files() list
         grab_url = filename["url"]
-        age_nice = nice_time(filename["age_ms"]/1000)
+        age_nice = world.nice_time(filename["age_ms"]/1000)
         filename = filename["filename"]
     else: # was a filename search 
         # Check for an extension
@@ -140,7 +120,7 @@ def download(filename, limit=5000, chunk_size=4096):
             filename = filename + ".tar"
         for file in files(limit=limit):
             if(file["filename"] == filename):
-                age_nice = nice_time(file["age_ms"]/1000)
+                age_nice = world.nice_time(file["age_ms"]/1000)
                 grab_url = file["url"] # Will get the latest (most recent) file with that name
 
     if(grab_url is not None):
@@ -161,6 +141,23 @@ def download(filename, limit=5000, chunk_size=4096):
     else:
         print("Could not find %s on Tulip World" % (filename))
 
+
+
+def downloadall():
+    already = {}
+    i = 0
+    all_files = files()
+    all_files.reverse()
+    for f in all_files:
+        fn = f["filename"]
+        if(not fn in already):
+            already[fn] = True
+            if(fn.endswith(".tar")):
+                fn = fn[:-4]
+            print(fn)
+            download(fn)
+            print("\t% 40s %s" % (fn, world.nice_time(f["age_ms"]/1000)))
+            
 # Send a m.room.message to the tulip room
 def send(message):
     data={"msgtype":"m.text","body":message}

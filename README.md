@@ -174,11 +174,16 @@ Still very much early days, but Tulip supports a native chat and file sharing BB
 
 ```python
 import world
-messages = world.check() # returns a list of latest messages since your last call
-world.send("hello!!") # Sends a message to Tulip World
-world.upload(filename) # Uploads a file to Tulip World 
-world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
-world.ls() # lists most recent unique filenames
+messages = world.messages() # returns a list of latest messages 
+world.post_message("hello!!", username) # Sends a message to Tulip World. username required.
+
+world.upload(filename, username) # Uploads a file to Tulip World. username required
+world.upload(folder, username) # Packages a folder and uploads it to Tulip World as a package
+world.download(filename, [username]) # Downloads the latest file named filename from Tulip World if it exists
+# If username given, will download the filename by username. If not given, downloads the first one with filename.
+world.download(package_name) # Downloads a package and extracts it
+
+world.ls() # lists most recent unique filenames/usernames
 ```
 
 ## How to build, compile and help develop Tulip

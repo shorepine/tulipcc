@@ -66,7 +66,7 @@ rabbit_game/
 ... rabbit_pic1.png
 ```
 
-The main Python script must be the name of the package. This script needs to explicitly `import tulip,amy` if you are using those. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package')` or `world.download('package')`. 
+The main Python script must be the name of the package. This script needs to explicitly `import tulip,amy` if you are using those. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package', username)` or `world.download('package')`. 
 
 We put a few system packages in `/sys/app`, and if you `run('app')`, it will look both in your current folder and the `/sys/app` folder for the app. 
 
@@ -88,21 +88,19 @@ You can call the underlying Tulip World APIs:
 
 ```python
 import world
-messages = world.check() # returns a list of latest messages since your last call
-world.send("hello!!") # Sends a message to Tulip World
+messages = world.messages() # returns a list of latest messages 
+world.post_message("hello!!", username) # Sends a message to Tulip World. username required.
 
-world.upload(filename) # Uploads a file to Tulip World 
-world.upload(folder) # Packages a folder and uploads it to Tulip World as a package
-world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
+world.upload(filename, username) # Uploads a file to Tulip World. username required
+world.upload(folder, username) # Packages a folder and uploads it to Tulip World as a package
+world.download(filename, [username]) # Downloads the latest file named filename from Tulip World if it exists
+# If username given, will download the filename by username. If not given, downloads the first one with filename.
 world.download(package_name) # Downloads a package and extracts it
 
-files = world.files(limit=5000) # returns the most recent N files (including versions with the same name) for selective download
-world.download(files[0]) # download a specific file instead
-
-world.ls() # lists most recent unique filenames
+world.ls() # lists most recent unique filenames/usernames
 ```
 
-Big note: Tulip World is powered by a [Matrix](https://matrix.org) instance that I run. I can't guarantee anything about its uptime, and if there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
+Big note: Tulip World is hosted by a bot running on the SPSS Discord. If there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
 
 
 ## The Tulip Editor

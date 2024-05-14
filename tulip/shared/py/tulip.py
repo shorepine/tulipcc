@@ -3,7 +3,7 @@
 
 # Bring in all c-defined tulip functions
 from _tulip import *
-from world import world
+import world
 from upysh import cd, pwd
 import amy
 import midi
