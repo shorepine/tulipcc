@@ -278,7 +278,7 @@ def desktop_copy_sys(dest):
         os.system(cmd)
 
 def upgrade():
-    import world, time, sys, os
+    import world_matrix, time, sys, os
     try:
         import esp32, machine
         from esp32 import Partition
@@ -299,7 +299,7 @@ def upgrade():
 
     # Checks for a new firmware from Tulip World, asks if you want to upgrade to it
     sec_size = 4096
-    all_firmwares = world.files(limit=20,room_id=world.firmware_room_id)
+    all_firmwares = world_matrix.files(limit=20,room_id=world_matrix.firmware_room_id)
     all_firmwares.reverse()
 
     latest_sys = None
@@ -319,8 +319,8 @@ def upgrade():
     v_sys = (latest_sys['filename'][:-4])[-8:]
 
     print("For board: %s" % (board()))
-    print("Latest firmware: %s   %s" % (v_firmware, world.nice_time(latest_firmware["age_ms"]/1000)))
-    print("Latest /sys    : %s   %s" % (v_sys, world.nice_time(latest_sys["age_ms"]/1000)))
+    print("Latest firmware: %s   %s" % (v_firmware, world_matrix.nice_time(latest_firmware["age_ms"]/1000)))
+    print("Latest /sys    : %s   %s" % (v_sys, world_matrix.nice_time(latest_sys["age_ms"]/1000)))
     print("You have firmware: %s" % version())
     print()
     do_firmware = False
@@ -340,8 +340,8 @@ def upgrade():
         try:
             write_size = sys_partition.info()[3]
             print("Flashing %s to /sys folder... " % (latest_sys["filename"]))
-            url = "https://%s/_matrix/media/r0/download/%s" % (world.host, latest_sys["url"][6:])
-            r = world.matrix_get(url)
+            url = "https://%s/_matrix/media/r0/download/%s" % (world_matrix.host, latest_sys["url"][6:])
+            r = world_matrix.matrix_get(url)
             block_c = 0
             for chunk in r.generate(chunk_size=sec_size):
                 if len(chunk) < sec_size:
@@ -360,8 +360,8 @@ def upgrade():
         try:
             write_size = ota_partition.info()[3]
             print("Flashing %s to OTA partition %s " % (latest_firmware["filename"], ota_partition.info()[4]))
-            url = "https://%s/_matrix/media/r0/download/%s" % (world.host, latest_firmware["url"][6:])
-            r = world.matrix_get(url)
+            url = "https://%s/_matrix/media/r0/download/%s" % (world_matrix.host, latest_firmware["url"][6:])
+            r = world_matrix.matrix_get(url)
             block_c = 0
             for chunk in r.generate(chunk_size=sec_size):
                 if len(chunk) < sec_size:
