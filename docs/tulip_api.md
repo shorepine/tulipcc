@@ -88,19 +88,20 @@ You can call the underlying Tulip World APIs:
 
 ```python
 import world
-messages = world.messages(n=500, mtype='files') # returns a list of latest files (not unique names)
+messages = world.messages(n=500, mtype='files') # returns a list of latest files (not unique ones)
 messages = world.messages(n=100, mtype='text') # returns a list of latest chat messages
 
 # When posting messages or files you set a username, minimum 1 character, maximum 10 
 world.post_message("hello!!", username) # Sends a message to Tulip World. username required.
 
-world.upload(filename, username, [description]) # Uploads a file to Tulip World. username required. description optional (25 characters)
-world.upload(folder, username, [description]) # Packages a folder and uploads it to Tulip World as a package
-world.download(filename, [username]) # Downloads the latest file named filename from Tulip World if it exists
-# If username given, will download the latest filename by username. If not given, downloads the latest one with filename.
+world.upload(filename, username, description) # Uploads a file to Tulip World. username required. description optional (25 characters)
+world.upload(folder, username, description) # Packages a folder and uploads it to Tulip World as a package
+world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
+world.download(filename, username) # Downloads the latest file named filename from username from Tulip World if it exists
 world.download(package_name) # Downloads a package and extracts it
 
-world.ls([count]) # lists most recent unique filenames/usernames
+world.ls() # lists most recent unique filenames/usernames
+world.ls(100) # optional count (most recent)
 ```
 
 Big note: Tulip World is hosted by a bot running on the SPSS Discord. If there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
