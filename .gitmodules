@@ -7,5 +7,4 @@
 [submodule "lv_binding_micropython"]
 	path = lv_binding_micropython
 	url = https://github.com/bwhitman/lv_binding_micropython
-	branch = tulip
 
