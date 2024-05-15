@@ -69,7 +69,7 @@ STATIC uint emit_opt = MP_EMIT_OPT_NONE;
 // Make it larger on a 64 bit machine, because pointers are larger.
 
 // TODO - make this equivalent always with Tulip CC
-long heap_size = 2 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
+long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 #endif
 
 // Number of heaps to assign by default if MICROPY_GC_SPLIT_HEAP=1

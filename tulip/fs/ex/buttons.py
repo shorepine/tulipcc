@@ -16,7 +16,6 @@ def cb(obj, code, ui_id):
         checkbox = obj
         print("checkbox %d now %s" % (ui_id, checkbox.get_state()))
 
-tulip.ui_clear()
 tulip.ui_callback = cb
 
     

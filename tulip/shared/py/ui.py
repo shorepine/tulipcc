@@ -447,7 +447,6 @@ def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, b
     if text is not None:
         ta.set_text(text)
     if(one_line): ta.set_one_line(True)
-    current_uiscreen().add_to_kb(ta)
     if(ui_id is not None):
         ta.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
     return ta
