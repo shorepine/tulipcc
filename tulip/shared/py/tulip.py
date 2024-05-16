@@ -469,7 +469,12 @@ def run(module_string):
         cd(module_string)
     except OSError:
         cd(root_dir()+"sys/app")
-        cd(module_string)
+        try:
+            cd(module_string)
+        except OSError:
+            cd(before_run_pwd)
+            print("No such program.")
+            return
 
     screen.app_dir = pwd()
 
@@ -481,7 +486,11 @@ def run(module_string):
         if(hasattr(actual_module, 'run')):
             actual_module.run(screen)
         else:
-            screen.quit_callback(None)
+            try:
+                screen.quit_callback(None)
+            except TypeError:
+                # no qcb
+                pass
 
         # Save the modules we imported so we can delete them on quit. This saves RAM on MP
         for imported_module in sys.modules.keys():
