@@ -549,7 +549,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_remove_callbacks_obj, 0, 0
 
 
 STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
-    uint8_t index = 5;
+    int8_t index = -1;
     if(sequencer_callbacks[0]==NULL) {
         index = 0;
     } else if(sequencer_callbacks[1]==NULL) {
@@ -559,7 +559,7 @@ STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
     } else if(sequencer_callbacks[3]==NULL) {
         index = 3;
     }
-    if(index<4) {
+    if(index>=0) {
         sequencer_callbacks[index] = args[0];
         if(n_args == 2) {
             sequencer_dividers[index] = mp_obj_get_int(args[1]);
@@ -567,21 +567,21 @@ STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
             sequencer_dividers[index] = sequencer_ppq;            
         }
     } else {
-        mp_raise_ValueError(MP_ERROR_TEXT("No more sequencer slots available"));
+        index = -1;
     }
-    return mp_const_none;
+    return mp_obj_new_int(index);
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_add_callback_obj, 1, 2, tulip_seq_add_callback);
 
 STATIC mp_obj_t tulip_seq_remove_callback(size_t n_args, const mp_obj_t *args) {
-    for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
-        if(sequencer_callbacks[i] == args[0]) {
-            sequencer_callbacks[i] = NULL;
-            sequencer_dividers[i] = 0;
-        }
+    int8_t index = mp_obj_get_int(args[0]);
+    if(index>=0 && index <SEQUENCER_SLOTS) {
+        sequencer_callbacks[index] = NULL;
+        sequencer_dividers[index] = 0;
     }
     return mp_const_none;
 }
+
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callback_obj, 1, 1, tulip_seq_remove_callback);
 
 STATIC mp_obj_t tulip_seq_remove_callbacks(size_t n_args, const mp_obj_t *args) {

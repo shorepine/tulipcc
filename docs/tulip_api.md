@@ -335,9 +335,9 @@ for i,note in enumerate(chord.midinotes()):
 
 Tulip is always running a live sequencer, meant for music programs you write to share a common clock. This allows you to have multiple music programs running that respond to a callback to play notes. 
 
-To use the clock in your code, you should first register on the music callback with `tulip.seq_add_callback(my_callback)`. You can remove your callback with `tulip.seq_remove_callback(my_callback)`.  You can remove all callbacks with `tulip.seq_remove_callbacks()`. We support up to 4 callbacks running at once. 
+To use the clock in your code, you should first register on the music callback with `slot = tulip.seq_add_callback(my_callback)`. You can remove your callback with `tulip.seq_remove_callback(slot)`.  You can remove all callbacks with `tulip.seq_remove_callbacks()`. We support up to 4 callbacks running at once. 
 
-When adding a callback, there's an optional second parameter to denote a divider on the system level parts-per-quarter timer (currently defaults at 48). If you run `tulip.seq_add_callback(my_callback, 6)`, it would call your function `my_callback` every 6th "tick", so 8 times a quarter note at a PPQ of 48. The default divider is `tulip.seq_ppq()`, so if you don't set it, your callback will activate once a quarter note. 
+When adding a callback, there's an optional second parameter to denote a divider on the system level parts-per-quarter timer (currently defaults at 48). If you run `slot = tulip.seq_add_callback(my_callback, 6)`, it would call your function `my_callback` every 6th "tick", so 8 times a quarter note at a PPQ of 48. The default divider is `tulip.seq_ppq()`, so if you don't set it, your callback will activate once a quarter note. 
 
 By default, your callback will receive a message 50 milliseconds ahead of the time of the intended tick, with the parameters `my_callback(intended_time_ms)`. This is so that you can take extra CPU time to prepare to send messages at the precise time, using AMY scheduling commands, to keep in perfect sync. You can set this "lookahead" globally for all callbacks if you want more or less latency with `tulip.seq_latency(X)` or get it with `tulip.seq_latency()`. 
 

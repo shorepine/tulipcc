@@ -432,4 +432,5 @@ def midi_step(t):
 
 def setup():
     # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a callback
+    # TODO : this slot stays on the entire life of tulip. 
     tulip.seq_add_callback(midi_step, int(tulip.seq_ppq()/2))

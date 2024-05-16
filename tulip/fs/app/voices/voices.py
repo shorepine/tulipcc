@@ -195,7 +195,7 @@ def step(t):
 
 def quit(screen):
     deactivate(app)
-    tulip.seq_remove_callback(step)
+    tulip.seq_remove_callback(screen.slot)
 
 def activate(screen):
     app.redraw_ticks = 2
@@ -277,7 +277,7 @@ def run(screen):
     app.quit_callback = quit
     app.activate_callback = activate
     app.deactivate_callback = deactivate
-    tulip.seq_add_callback(step, int(tulip.seq_ppq()/2))
+    app.slot = tulip.seq_add_callback(step, int(tulip.seq_ppq()/2))
 
     # Skip 10, drums
     app.channels = ListColumn('channel',["1","2","3","4","5","6","7","8","9","11","12","13","14","15","16"], selected=0, width=100)

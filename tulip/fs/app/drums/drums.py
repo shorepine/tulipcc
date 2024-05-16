@@ -225,7 +225,7 @@ def beat_callback(t):
     app.current_beat = (app.current_beat+1) % 16
 
 def quit(screen):
-    seq_remove_callback(beat_callback)
+    seq_remove_callback(screen.slot)
 
 def run(screen):
     global app 
@@ -245,7 +245,7 @@ def run(screen):
         row.set_pan(.5)
         row.set_pitch(.5)
 
-    seq_add_callback(beat_callback, int(seq_ppq()/2))
+    app.slot = seq_add_callback(beat_callback, int(seq_ppq()/2))
     app.present()
 
 
