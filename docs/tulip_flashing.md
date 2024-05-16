@@ -23,7 +23,6 @@ If you've got an unflashed Tulip, just finished a DIY, or somehow messed up the 
  * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
  * Any DIY Tulip board based on the N32R8 (32MB flash): `N32R8`
  * The [T-Deck](../tulip/tdeck/README.md): `TDECK`
- * For the [MaTouch 7"](https://github.com/bwhitman/tulipcc/issues/160): `MATOUCH7`
  * Tulip CC (our integrated board with display): `TULIP4_R10`
 
 Connect your Tulip to your computer with a USB cable. **Note**: Many Tulip-capable boards have two USB ports, one called UART, TTL or Serial, and one called NATIVE, JTAG, or Host. You should use the UART one if available and try the NATIVE one if not. For example, on the MaTouch 7", you can use either USB port, but if you use the NATIVE port you have to hold down the BOOT button while attaching the USB cable. On the T-Deck, you only have access to the NATIVE port, and you may need to hold down the BOOT button (the trackball button) while you turn it on. If you've tried both ports and the following commands can't find a serial port to flash to, ensure that you've [installed a driver.](https://github.com/WCHSoftGroup/ch34xser_macos)
@@ -91,7 +90,6 @@ Choose the right `MICROPY_BOARD` value for your board.
  * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
  * Any DIY Tulip board based on the N32R8 (32MB flash): `N32R8`
  * The [T-Deck](../tulip/tdeck/README.md): `TDECK`
- * For the [MaTouch 7"](https://github.com/bwhitman/tulipcc/issues/160): `MATOUCH7`
  * Tulip CC (our integrated board with display): `TULIP4_R10`
 
 The default is `N32R8`, so if you omit it that's what it'll use.

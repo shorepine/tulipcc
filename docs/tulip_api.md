@@ -53,7 +53,7 @@ usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UAR
 
 ms = tulip.ticks_ms() # returns the milliseconds since boot, aka Arduino millis() 
 
-board = tulip.board() # Returns the board type, e.g. "TDECK", "MATOUCH7", "N16R8" etc
+board = tulip.board() # Returns the board type, e.g. "TDECK", "N16R8" etc
 ```
 
 If you have a program that relies on mulitple files (graphics, or multiple Python files) you'll want to create a Tulip Package. A package is just a folder with your files in it, like:

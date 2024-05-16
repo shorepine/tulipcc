@@ -47,9 +47,8 @@ def matrix_put(url, data):
 
 # Uploads a file or folder from Tulip to Tulip World
 def upload(filename, content_type="application/octet-stream"):
-    # Don't upload this here anymore, we use github releases
-    pass
-    if 0:
+    # Don't upload this here anymore after the next release, we use github releases
+    if 1:
         url = "https://%s/_matrix/media/v3/upload?filename=%s" % (host, filename)
         file = open(filename, "rb").read()
         uri = matrix_post(url, file, content_type=content_type).json()["content_uri"]
