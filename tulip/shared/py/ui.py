@@ -197,6 +197,7 @@ class UIScreen():
         if(self.name == 'repl'):
             tulip.tfb_start()
             tulip.set_screen_as_repl(1)
+            tulip.tfb_update() # force redraw of tfb, maybe tfb_start should do this? 
         else:
             tulip.set_screen_as_repl(0)
             if(self.keep_tfb):
