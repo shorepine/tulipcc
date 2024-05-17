@@ -550,14 +550,10 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_remove_callbacks_obj, 0, 0
 
 STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
     int8_t index = -1;
-    if(sequencer_callbacks[0]==NULL) {
-        index = 0;
-    } else if(sequencer_callbacks[1]==NULL) {
-        index = 1;
-    } else if(sequencer_callbacks[2]==NULL) {
-        index = 2;
-    } else if(sequencer_callbacks[3]==NULL) {
-        index = 3;
+    for(uint8_t slot=0;slot<SEQUENCER_SLOTS;slot++) {
+        if(sequencer_callbacks[slot]==NULL) {
+            index = slot; slot = SEQUENCER_SLOTS+1;
+        }
     }
     if(index>=0) {
         sequencer_callbacks[index] = args[0];

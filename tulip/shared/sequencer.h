@@ -2,7 +2,7 @@
 #ifndef __SEQUENCERH
 #define __SEQUENCERH
 
-#define SEQUENCER_SLOTS 4
+#define SEQUENCER_SLOTS 8
 #include "py/mphal.h"
 #include "py/runtime.h"
 #include <stdio.h>

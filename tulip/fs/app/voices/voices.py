@@ -194,8 +194,9 @@ def step(t):
             redraw(app)
 
 def quit(screen):
+    global app
     deactivate(app)
-    tulip.seq_remove_callback(screen.slot)
+    tulip.seq_remove_callback(app.slot)
 
 def activate(screen):
     app.redraw_ticks = 2
