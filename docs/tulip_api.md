@@ -127,7 +127,7 @@ Tulip supports USB keyboard input and touch input. It also supports a software o
 
 We include [LVGL 9](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
 
-For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `ui_checkbox` and `ui_text`, etc. See our fully Python implementation of these in [ui.py](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our `buttons.py` example in your Tulip's `/sys/ex/` folder.
+For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `UICheckbox` and `UIButton`, etc. See our fully Python implementation of these in [ui.py](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our `buttons.py` example in your Tulip's `/sys/ex/` folder, or more complete examples like `drums`, `juno6`, `wordpad` etc in `/sys/app`. 
 
 You can summon a touch keyboard with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
 
@@ -446,7 +446,7 @@ tulip.gpu_log()
 
 The default background plane (BG) is 2048 x 750, with the visible portion 1024x600. (You can change this with `tulip.timing()`.) Use the extra for double buffering, hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
 
-The UI operations (LVGL or anything in `ui_X`) also draw to the BG. Be careful if you're using both BG drawing operations and LVGL as they may draw on top of one another.
+The UI operations (LVGL or anything in `tulip.UI`) also draw to the BG. Be careful if you're using both BG drawing operations and LVGL as they may draw on top of one another.
 
 Tulip uses RGB332, with 256 colors. Here's the palette: 
 

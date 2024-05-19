@@ -68,8 +68,8 @@
 #define MICROPY_PERSISTENT_CODE_LOAD   (1)
 
 // Extra memory debugging.
-#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (1)
-#define MICROPY_MEM_STATS              (1)
+#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (0)
+#define MICROPY_MEM_STATS              (0)
 
 // Enable a small performance boost for the VM.
 #define MICROPY_OPT_COMPUTED_GOTO      (1)

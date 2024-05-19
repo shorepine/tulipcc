@@ -519,7 +519,7 @@ void unix_display_init() {
     }
 
     #ifdef __TULIP_IOS__
-        compute_viewport(H_RES,V_RES,1);
+        compute_viewport(H_RES,V_RES,0);
         if(button_bar.w > 0) {
             btn_ctrl.x = 0;
             btn_ctrl.y = button_bar.y;

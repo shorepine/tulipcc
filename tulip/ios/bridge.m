@@ -25,10 +25,11 @@ uint8_t is_iphone() {
 void ios_copy_fs() {
     fprintf(stderr, "copying fs..\n");
     NSURL *fileFromBundle,*destinationURL;
-    NSArray *folders = @[@"ex", @"images", @"sounds", @"test"];
+    NSArray *folders = @[@"ex", @"im", @"app"];
     for (NSString *folder in folders){
         fileFromBundle = [[NSBundle mainBundle]URLForResource:folder withExtension:nil];
         destinationURL = [[[[NSFileManager defaultManager] URLsForDirectory:NSDocumentDirectory inDomains:NSUserDomainMask] lastObject] URLByAppendingPathComponent:folder];
+        NSLog(@"copying folder %@ file %@ to %@", folder, fileFromBundle, destinationURL);
         if ([[NSFileManager defaultManager] fileExistsAtPath:[destinationURL path]]) {
             [[NSFileManager defaultManager] removeItemAtURL:destinationURL error:nil];
         }

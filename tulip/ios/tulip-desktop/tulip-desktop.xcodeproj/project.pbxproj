@@ -19,11 +19,10 @@
 		9AAE1E932A6DD02D00FD3A15 /* SDL2.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AAE1E7F2A6DCF8B00FD3A15 /* SDL2.framework */; };
 		9AAE1E942A6DD02D00FD3A15 /* SDL2.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9AAE1E7F2A6DCF8B00FD3A15 /* SDL2.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9AAE1E962A6DD04300FD3A15 /* SDL_uikit_main.c in Sources */ = {isa = PBXBuildFile; fileRef = 9AAE1E952A6DD04300FD3A15 /* SDL_uikit_main.c */; };
+		9AE4E0AB2BF988210028F088 /* im in Resources */ = {isa = PBXBuildFile; fileRef = 9AE4E0A82BF988210028F088 /* im */; };
+		9AE4E0AC2BF988210028F088 /* app in Resources */ = {isa = PBXBuildFile; fileRef = 9AE4E0A92BF988210028F088 /* app */; };
+		9AE4E0AD2BF988210028F088 /* ex in Resources */ = {isa = PBXBuildFile; fileRef = 9AE4E0AA2BF988210028F088 /* ex */; };
 		9AE8C07C2A704E7E00E953C9 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AE8C07B2A704E7E00E953C9 /* UIKit.framework */; };
-		9AE8C0842A70920200E953C9 /* images in Resources */ = {isa = PBXBuildFile; fileRef = 9AE8C0802A70920200E953C9 /* images */; };
-		9AE8C0852A70920200E953C9 /* ex in Resources */ = {isa = PBXBuildFile; fileRef = 9AE8C0812A70920200E953C9 /* ex */; };
-		9AE8C0862A70920200E953C9 /* sounds in Resources */ = {isa = PBXBuildFile; fileRef = 9AE8C0822A70920200E953C9 /* sounds */; };
-		9AE8C0872A70920200E953C9 /* test in Resources */ = {isa = PBXBuildFile; fileRef = 9AE8C0832A70920200E953C9 /* test */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -133,11 +132,10 @@
 		9A9928E62A6AE88F0099DBC7 /* libmicropython.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmicropython.a; path = "../build-standard/tulip/obj/libmicropython.a"; sourceTree = "<group>"; };
 		9AAE1E6E2A6DCF8B00FD3A15 /* SDL.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = SDL.xcodeproj; path = "../SDL2-2.28.1/Xcode/SDL/SDL.xcodeproj"; sourceTree = "<group>"; };
 		9AAE1E952A6DD04300FD3A15 /* SDL_uikit_main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SDL_uikit_main.c; sourceTree = "<group>"; };
+		9AE4E0A82BF988210028F088 /* im */ = {isa = PBXFileReference; lastKnownFileType = folder; name = im; path = ../../../../fs/im; sourceTree = "<group>"; };
+		9AE4E0A92BF988210028F088 /* app */ = {isa = PBXFileReference; lastKnownFileType = folder; name = app; path = ../../../../fs/app; sourceTree = "<group>"; };
+		9AE4E0AA2BF988210028F088 /* ex */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ex; path = ../../../../fs/ex; sourceTree = "<group>"; };
 		9AE8C07B2A704E7E00E953C9 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
-		9AE8C0802A70920200E953C9 /* images */ = {isa = PBXFileReference; lastKnownFileType = folder; name = images; path = ../../../../fs/images; sourceTree = "<group>"; };
-		9AE8C0812A70920200E953C9 /* ex */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ex; path = ../../../../fs/ex; sourceTree = "<group>"; };
-		9AE8C0822A70920200E953C9 /* sounds */ = {isa = PBXFileReference; lastKnownFileType = folder; name = sounds; path = ../../../../fs/sounds; sourceTree = "<group>"; };
-		9AE8C0832A70920200E953C9 /* test */ = {isa = PBXFileReference; lastKnownFileType = folder; name = test; path = ../../../../fs/test; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -225,10 +223,9 @@
 		9AE8C07D2A70906100E953C9 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				9AE8C0812A70920200E953C9 /* ex */,
-				9AE8C0802A70920200E953C9 /* images */,
-				9AE8C0822A70920200E953C9 /* sounds */,
-				9AE8C0832A70920200E953C9 /* test */,
+				9AE4E0A92BF988210028F088 /* app */,
+				9AE4E0AA2BF988210028F088 /* ex */,
+				9AE4E0A82BF988210028F088 /* im */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -378,12 +375,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9AE8C0862A70920200E953C9 /* sounds in Resources */,
-				9AE8C0842A70920200E953C9 /* images in Resources */,
-				9AE8C0872A70920200E953C9 /* test in Resources */,
+				9AE4E0AD2BF988210028F088 /* ex in Resources */,
+				9AE4E0AC2BF988210028F088 /* app in Resources */,
+				9AE4E0AB2BF988210028F088 /* im in Resources */,
 				9A99288C2A6AD5730099DBC7 /* LaunchScreen.storyboard in Resources */,
 				9A9928892A6AD5730099DBC7 /* Assets.xcassets in Resources */,
-				9AE8C0852A70920200E953C9 /* ex in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

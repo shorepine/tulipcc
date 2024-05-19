@@ -107,7 +107,7 @@ void update_keyboard_y(int y) {
 void display_print_strn(void *env, const char *str, size_t len) {
     (void)env;
     if(len) {
-        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+        display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
 }
 extern void mp_uos_dupterm_tx_strn(const char *str, size_t len);
@@ -563,6 +563,8 @@ int main(int argc, char **argv) {
 
 mp_state_ctx_t mp_state_ctx;
 #include "SDL_main.h"
+extern void setup_lvgl();
+#include "sequencer.h"
 
 MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
 #if MICROPY_PY_THREAD
@@ -630,6 +632,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     mp_init();
 
 
+    setup_lvgl();
 
     #if MICROPY_EMIT_NATIVE
     // Set default emitter options
@@ -964,8 +967,8 @@ int main(int argc, char **argv) {
 
     delay_ms(1);
 
-    warmup_display(5);
-    fprintf(stderr, "display warmed\n");
+    //warmup_display(5);
+    //fprintf(stderr, "display warmed\n");
     pthread_t midi_thread_id;
     pthread_create(&midi_thread_id, NULL, run_midi, NULL);
     fprintf(stderr, "midi done\n");
@@ -973,6 +976,10 @@ int main(int argc, char **argv) {
     delay_ms(1);
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
+
+    sequencer_init();
+    pthread_t sequencer_thread_id;
+    pthread_create(&sequencer_thread_id, NULL, run_sequencer, NULL);
 
     // Schedule a "turning on" sound
     bleep();

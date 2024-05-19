@@ -74,7 +74,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
 
     // Now send the bulk of the frames
     for(uint8_t i=0;i<(uint8_t)(frame_count / AMY_BLOCK_SIZE);i++) {
-        int16_t *buf = fill_audio_buffer_task();
+        int16_t *buf = amy_simple_fill_buffer();
         for(uint16_t frame=0;frame<AMY_BLOCK_SIZE;frame++) {
             for(uint8_t c=0;c<pDevice->playback.channels;c++) {
                 poke[ptr++] = buf[AMY_NCHANS * frame + c];
@@ -85,7 +85,7 @@ static void data_callback(ma_device* pDevice, void* pOutput, const void* pInput,
     // If any leftover, let's put those in the outgoing buf and the rest in leftover_samples
     uint16_t still_need = frame_count % AMY_BLOCK_SIZE;
     if(still_need != 0) {
-        int16_t *buf = fill_audio_buffer_task();
+        int16_t *buf = amy_simple_fill_buffer();
         for(uint16_t frame=0;frame<still_need;frame++) {
             for(uint8_t c=0;c<pDevice->playback.channels;c++) {
                 poke[ptr++] = buf[AMY_NCHANS * frame + c];

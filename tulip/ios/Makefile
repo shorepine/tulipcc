@@ -45,14 +45,47 @@ INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
 #INC += -I./SDL2.framework/Headers
+INC += -I$(TOP)/../lv_binding_micropython/lvgl/src
+INC += -I$(TOP)/../lv_binding_micropython/lvgl/src/libs/lodepng
 
 INC += -I/Users/bwhitman/ioslib/SDL-release-2.28.1/include
 INC += -I/Users/bwhitman/ioslib/SDL-release-2.28.1/src/video/uikit/
 
+
+
+
+# LVGL stuff
+LVGL_BINDING_DIR = $(TOP)/../lv_binding_micropython
+LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
+LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
+INC += -I$(LVGL_BINDING_DIR) -I.
+ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f) 
+LVGL_PP = $(BUILD)/lvgl/lvgl.pp.c
+LVGL_MPY = $(BUILD)/lvgl/lv_mpy.c
+LVGL_MPY_METADATA = $(BUILD)/lvgl/lv_mpy.json
+QSTR_GLOBAL_DEPENDENCIES += $(LVGL_MPY)
+CFLAGS_MOD += $(LV_CFLAGS) 
+SRC_C += $(shell find $(LVGL_DIR)/src -type f -name '*.c')
+CFLAGS += -DLV_CONF_INCLUDE_SIMPLE
+
+$(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
+	$(ECHO) "LVGL-GEN $@"
+	$(Q)mkdir -p $(dir $@)
+	$(Q)$(CPP) $(LV_CFLAGS) -DLVGL_PREPROCESS -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
+	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
+
+#GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi lib/mbedtls lib/micropython-lib 
+
+
+
+
 # compiler settings
 CWARN = -Wall -Werror
-CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion #-Wfloat-conversion
-CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
+CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wno-float-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
+CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA) 
+CFLAGS += -DTULIP_DESKTOP
+#CFLAGS += -DAMY_DEBUG
+
 
 CFLAGS += $(ARCHFLAGS) 
 # Debugging/Optimization
@@ -173,6 +206,10 @@ SRC_C += \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
 
+#SRC_C += $(LVGL_PP)
+SRC_C += $(LVGL_MPY)
+
+
 SHARED_SRC_C += $(addprefix ../../micropython/shared/,\
 	runtime/gchelper_generic.c \
 	runtime/interrupt_char.c \
@@ -216,7 +253,7 @@ endif
 
 CPU_BRAND_NAME=`sysctl -n machdep.cpu.brand_string`
 CFLAGS += -DMICROPY_HW_MCU_NAME="\"$(CPU_BRAND_NAME)\""
-CFLAGS += -Wno-double-promotion -Wno-unused-function
+CFLAGS += -Wno-double-promotion -Wno-unused-function -Wno-unused-variable
 CXXFLAGS += $(filter-out -Wno-double-promotion -Wmissing-prototypes -Wold-style-definition -std=gnu99,$(CFLAGS) $(CXXFLAGS_MOD))
 
 ifeq ($(MICROPY_FORCE_32BIT),1)

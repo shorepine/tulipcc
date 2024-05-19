@@ -166,7 +166,8 @@ class UIScreen():
 
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
-    def add(self, obj, direction=lv.ALIGN.OUT_RIGHT_MID, relative=None, pad_x=0, pad_y=0):
+    # or x,y directly if you want that
+    def add(self, obj, direction=lv.ALIGN.OUT_RIGHT_MID, relative=None, pad_x=0, pad_y=0, x=None, y=None):
         if(relative is not None):
             self.last_obj_added = relative.group
 
@@ -182,6 +183,7 @@ class UIScreen():
                 o.group.align_to(self.last_obj_added, direction,0,0)
             o.group.set_width(o.group.get_width()+pad_x)
             o.group.set_height(o.group.get_height()+pad_y)
+            if(x is not None and y is not None): o.group.set_pos(x,y)
             self.last_obj_added = o.group
 
     # Show the UI on the screen. Set up the keyboard group listener. Draw the task bar. 
@@ -357,76 +359,86 @@ def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui
 # unset_bar_color - the color of the unset side of the bar, if None will just be all one color
 # handle_v_pad, h_pad -- how many px above/below / left/right of the bar it extends
 # handle_radius - 0 for square 
-def ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=None, handle_color=None, handle_radius=None, 
-    handle_v_pad=None, handle_h_pad=None, ui_id=None):
-    slider = lv.slider(current_lv_group())
-    slider.set_pos(x,y)
-    # Set opacity to full (COVER). Default is to mix the color with the BG.
-    slider.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
-    if(w is not None):
-        slider.set_width(w)
-    if(h is not None):
-        slider.set_height(h)
-    if(bar_color is not None):
-        slider.set_style_bg_color(pal_to_lv(bar_color), lv.PART.INDICATOR)
-        if(unset_bar_color is None):
-            slider.set_style_bg_color(pal_to_lv(bar_color), lv.PART.MAIN)
-        else:
-            slider.set_style_bg_color(pal_to_lv(unset_bar_color), lv.PART.MAIN)
-    if(handle_color is not None):
-        slider.set_style_bg_color(pal_to_lv(handle_color), lv.PART.KNOB)
-    if(handle_radius is not None):
-        slider.set_style_radius(handle_radius, lv.PART.KNOB)
-    if(handle_v_pad is not None):
-        slider.set_style_pad_ver(handle_v_pad, lv.PART.KNOB)
-    if(handle_h_pad is not None):
-        slider.set_style_pad_hor(handle_h_pad, lv.PART.KNOB)
-    slider.set_value(int(val),lv.ANIM.OFF)
-    if(ui_id is not None):
-        slider.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
-    return slider
+class UISlider(UIElement):
+    def __init__(self, val=0, w=None, h=None, bar_color=None, unset_bar_color=None, handle_color=None, handle_radius=None, 
+        handle_v_pad=None, handle_h_pad=None, callback=None):
 
-# Copy of our "ui_button" with lvgl buttons
-#tulip.ui_button(ui_element_id, "Button text", x, y, w, h, bg_pal_idx, fg_pal_idx, filled, font_number)
-def ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=None, radius=None, ui_id=None):
-    button = lv.button(current_lv_group())
-    button.set_x(x)
-    button.set_y(y)
-    if(w is not None):
-        button.set_width(w)
-    if(h is not None):
-        button.set_height(h)
-    if(radius is not None):
-        button.set_style_radius(radius, lv.PART.MAIN)
-    if(bg_color is not None):
-        button.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
-    if(text is not None):
-        label = lv.label(button)
-        label.set_text(text)
+        super().__init__()
+        self.slider = lv.slider(self.group)
+        # Set opacity to full (COVER). Default is to mix the color with the BG.
+        self.slider.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
+            
+        if(bar_color is not None):
+            self.slider.set_style_bg_color(pal_to_lv(bar_color), lv.PART.INDICATOR)
+            if(unset_bar_color is None):
+                self.slider.set_style_bg_color(pal_to_lv(bar_color), lv.PART.MAIN)
+            else:
+                self.slider.set_style_bg_color(pal_to_lv(unset_bar_color), lv.PART.MAIN)
+        if(handle_color is not None):
+            self.slider.set_style_bg_color(pal_to_lv(handle_color), lv.PART.KNOB)
+        if(handle_radius is not None):
+            self.slider.set_style_radius(handle_radius, lv.PART.KNOB)
+        if(handle_v_pad is not None):
+            self.slider.set_style_pad_ver(handle_v_pad, lv.PART.KNOB)
+        if(handle_h_pad is not None):
+            self.slider.set_style_pad_hor(handle_h_pad, lv.PART.KNOB)
+
+        if(w is not None):
+            self.slider.set_width(w)
+            self.group.set_width(w+self.slider.get_style_pad_left(0)*2 + 20)
+            self.slider.align(lv.ALIGN.CENTER,0,0)
+        if(h is not None):
+            self.slider.set_height(h)
+            self.group.set_height(h+self.slider.get_style_pad_top(0)*2)
+            self.slider.align(lv.ALIGN.CENTER,0,0)
+
+        self.slider.set_value(int(val),lv.ANIM.OFF)
+        self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
+
+        if(callback is not None):
+            self.slider.add_event_cb(callback, lv.EVENT.VALUE_CHANGED, None)
+
+class UIButton(UIElement):
+    def __init__(self, text=None, w=None, h=None, bg_color=None, fg_color=None, font=None, radius=None, callback=None):
+        super().__init__()
+        self.button = lv.button(self.group)
+        if(w is not None):
+            self.button.set_width(w)
+            self.group.set_width(w+self.button.get_style_pad_left(0)*2)
+            self.button.align(lv.ALIGN.CENTER,0,0)
+        if(h is not None):
+            self.button.set_height(h)
+        if(radius is not None):
+            self.button.set_style_radius(radius, lv.PART.MAIN)
+        if(bg_color is not None):
+            self.button.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
+        if(text is not None):
+            self.label = lv.label(self.button)
+            self.label.set_text(text)
         if(font is not None):
-            label.set_style_text_font(font, 0)
-        label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+            self.label.set_style_text_font(font, 0)
+        self.label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
         # if button width was manually set, we need to re-pad the text so it is centered
         if(w is not None):
-            label.set_width(w-(button.get_style_pad_left(0)*2))
+            self.label.set_width(w-(self.button.get_style_pad_left(0)*2))
         if(fg_color is not None):
-            label.set_style_text_color(pal_to_lv(fg_color), 0)
-    if(ui_id is not None):
-        button.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
-    return button
+            self.label.set_style_text_color(pal_to_lv(fg_color), 0)
+        if(callback is not None):
+            self.button.add_event_cb(callback, lv.EVENT.CLICKED, None)
+        self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
-def ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None):
-    label = lv.label(current_lv_group())
-    label.set_pos(x,y)
-    if(w is not None):
-        label.set_width(w)
-    label.set_text(text)
-    label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
-    if(font is not None):
-        label.set_style_text_font(font, 0)
-    if(fg_color is not None):
-        label.set_style_text_color(pal_to_lv(fg_color),0)
-    return label
+class UILabel(UIElement):
+    def __init__(self, text, x=0, y=0, fg_color=None, font=None):
+        super().__init__() 
+        self.label = lv.label(self.group)
+        self.label.set_text(text)
+        self.label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+        if(font is not None):
+            self.label.set_style_text_font(font, 0)
+        if(fg_color is not None):
+            self.label.set_style_text_color(pal_to_lv(fg_color),0)
+        self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
+        self.label.align_to(self.group, lv.ALIGN.CENTER,0, 0)
 
 # Copy of our ui_text with lvgl textarea 
 #tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
