@@ -130,10 +130,10 @@ def download(filename, username=None, limit=5000, chunk_size=4096):
             print("Could not find %s by %s on Tulip World" % (filename, username))
 
 
-def ls(count=10): # lists latest count files
+def ls(count=10, overquery=10): # lists latest count files
     already = {}
     i = 0
-    all_files = messages(n=count, mtype='files')
+    all_files = messages(n=count*overquery, mtype='files')
     for f in all_files:
         fn = f['username']+':'+f["filename"]
         if(not fn in already):

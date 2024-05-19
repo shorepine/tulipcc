@@ -47,6 +47,10 @@ uint8_t sequencer_ppq = 48;
 uint16_t sequencer_latency_ms = 50;
 mp_obj_t sequencer_callbacks[SEQUENCER_SLOTS];
 uint8_t sequencer_dividers[SEQUENCER_SLOTS];
+
+mp_obj_t defer_callbacks[DEFER_SLOTS];
+uint32_t defer_sysclock[DEFER_SLOTS];
+
 uint8_t sequencer_running = 1;
 
 // Our internal accounting
@@ -86,6 +90,7 @@ void sequencer_stop() {
 
 void sequencer_init() {
     for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) { sequencer_callbacks[i] = NULL; sequencer_dividers[i] = 0; }
+    for(uint8_t i=0;i<DEFER_SLOTS;i++) { defer_callbacks[i] = NULL; defer_sysclock[i] = 0; }
     sequencer_recompute();    
 }
 
@@ -93,6 +98,15 @@ static void sequencer_check_and_fill() {
     // The while is in case the timer fires later than a tick; (on esp this would be due to SPI or wifi ops), we can still use our latency to keep up
     while(amy_sysclock()  >= (next_amy_tick_us/1000)) {
         sequencer_tick_count++;
+
+        // Check defers 
+        for(uint8_t i=0;i<DEFER_SLOTS;i++) {
+            if(defer_callbacks[i] != NULL && amy_sysclock() > defer_sysclock[i]) {
+                mp_sched_schedule(defer_callbacks[i], mp_obj_new_int(defer_sysclock[i]));
+                defer_callbacks[i] = NULL; defer_sysclock[i] = 0;
+            }
+        }
+
         for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
             if(sequencer_dividers[i]!=0) {
                 if(sequencer_tick_count % sequencer_dividers[i] == 0) {

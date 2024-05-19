@@ -554,6 +554,24 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_remove_callbacks_obj, 0, 0
 
 
 
+STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
+    int8_t index = -1;
+    for(uint8_t slot=0;slot<DEFER_SLOTS;slot++) {
+        if(defer_callbacks[slot]==NULL) {
+            index = slot; slot = DEFER_SLOTS+1;
+        }
+    }
+    if(index>=0) {
+        defer_callbacks[index] = args[0];
+        defer_sysclock[index] = amy_sysclock() + mp_obj_get_int(args[1]);
+    } else {
+        mp_raise_ValueError(MP_ERROR_TEXT("No more defer slots available"));
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_defer_obj, 2, 2, tulip_defer);
+
+
 
 STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
     int8_t index = -1;
@@ -632,22 +650,6 @@ STATIC mp_obj_t tulip_seq_latency(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_latency_obj, 0, 1, tulip_seq_latency);
-
-
-STATIC mp_obj_t tulip_seq_stop(size_t n_args, const mp_obj_t *args) {
-    sequencer_stop();
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_stop_obj, 0, 0, tulip_seq_stop);
-
-
-STATIC mp_obj_t tulip_seq_start(size_t n_args, const mp_obj_t *args) {
-    sequencer_start();
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_start_obj, 0, 0, tulip_seq_start);
 
 
 STATIC mp_obj_t tulip_seq_ticks(size_t n_args, const mp_obj_t *args) {
@@ -1357,6 +1359,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_frame_callback), MP_ROM_PTR(&tulip_frame_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_touch_callback), MP_ROM_PTR(&tulip_touch_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_keyboard_callback), MP_ROM_PTR(&tulip_keyboard_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_defer), MP_ROM_PTR(&tulip_defer_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_add_callback), MP_ROM_PTR(&tulip_seq_add_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
@@ -1366,8 +1369,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_seq_bpm), MP_ROM_PTR(&tulip_seq_bpm_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_ppq), MP_ROM_PTR(&tulip_seq_ppq_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_latency), MP_ROM_PTR(&tulip_seq_latency_obj) },
-    { MP_ROM_QSTR(MP_QSTR_seq_stop), MP_ROM_PTR(&tulip_seq_stop_obj) },
-    { MP_ROM_QSTR(MP_QSTR_seq_start), MP_ROM_PTR(&tulip_seq_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },

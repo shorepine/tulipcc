@@ -422,15 +422,12 @@ def release_arpeggiator(channel=None):
             config.synth_per_channel[arpeggiator.channel] = arpeggiator.synth
         arpeggiator.channel = 0
         
-def midi_step(t):
-    if(tulip.seq_ticks() > tulip.seq_ppq()):
-        ensure_midi_config()
-    if(arpeggiator.running):
-        # time is the actual event time for this event.
-        arpeggiator.next_note(time=t)
 
+
+def deferred_midi_config(t):
+    ensure_midi_config()
 
 def setup():
-    # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a callback
-    # TODO : this slot stays on the entire life of tulip. 
-    tulip.seq_add_callback(midi_step, int(tulip.seq_ppq()/2))
+    # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a defer
+    tulip.defer(deferred_midi_config, 500)
+

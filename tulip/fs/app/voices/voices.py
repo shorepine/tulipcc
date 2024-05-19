@@ -184,22 +184,16 @@ def process_key(key):
     # play kb notes from keyboard?
     pass
 
-# I don't love this approach. It works. We should make a more generic tulip defer (wrapper around timer) that doesn't eat a sequencer slot
-def step(t):
-    global app
-    if(app.redraw_ticks is not None):
-        app.redraw_ticks = app.redraw_ticks - 1
-        if(app.redraw_ticks == 0):
-            app.redraw_ticks = None
-            redraw(app)
+
+def deferred_bg_redraw(t):
+    redraw(app)
 
 def quit(screen):
     global app
     deactivate(app)
-    tulip.seq_remove_callback(app.slot)
 
 def activate(screen):
-    app.redraw_ticks = 2
+    tulip.defer(deferred_bg_redraw, 250)
     # start listening to the keyboard again
     tulip.keyboard_callback(process_key)
     tulip.touch_callback(touch)
@@ -274,11 +268,11 @@ def run(screen):
     app.set_bg_color(0)
     app.offset_y = 25
     app.offset_x = 50
-    app.redraw_ticks = None
     app.quit_callback = quit
     app.activate_callback = activate
     app.deactivate_callback = deactivate
-    app.slot = tulip.seq_add_callback(step, int(tulip.seq_ppq()/2))
+    # Draw the BG in 250ms, after LVGL finishes
+    tulip.defer(deferred_bg_redraw, 250)
 
     # Skip 10, drums
     app.channels = ListColumn('channel',["1","2","3","4","5","6","7","8","9","11","12","13","14","15","16"], selected=0, width=100)

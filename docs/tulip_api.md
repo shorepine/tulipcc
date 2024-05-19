@@ -121,13 +121,11 @@ edit("game.py")
 ```
 
 
-## Input and user interface
-
-Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, and your computers' keyboard works.
+## User interface
 
 We include [LVGL 9](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
 
-For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `UICheckbox` and `UIButton`, etc. See our fully Python implementation of these in [ui.py](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our `buttons.py` example in your Tulip's `/sys/ex/` folder, or more complete examples like `drums`, `juno6`, `wordpad` etc in `/sys/app`. 
+For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/buttons.py) example in your Tulip's `/sys/ex/` folder, or more complete examples like [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py), [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py), [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py) etc in `/sys/app`. 
 
 You can summon a touch keyboard with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
 
@@ -140,6 +138,10 @@ tulip.launcher() # open or close our launcher
 
 # You're free to use any direct LVGL calls. It's a powerful library with a lot of functionality and customization, all accessible through Python.
 import lvgl as lv
+
+TODO fix these back up
+
+
 # our tulip.lv_scr is the base screen on bootup, to use as a base screen in LVGL.
 calendar = lv.calendar(lv.current_screen())
 calendar.set_pos(500,100)
@@ -149,17 +151,6 @@ screen = UIScreen("my_app")
 screen.add(calendar)
 screen.present()
 # Please see juno6 in /sys/app/ for a complete example on using UIScreen.
-
-# For simplicity, we include a few convenience wrappers around LVGL. They can take ui_id tags to view later in callbacks:
-def my_ui_cb(obj, code, ui_id):
-    # obj is the LVGL object interacted with
-    # code is the LVGL event code 
-    # ui_id is the tag you assigned
-    print("obj %d was changed!" % (ui_id))
-    val = obj.get_value() # for example
-
-# Set the callback for our convenience functions
-tulip.ui_callback = my_ui_cb
 
 # Draw a simple modal message box
 mbox = tulip.ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=5)
@@ -190,9 +181,13 @@ text.get_text() # will retrieve it later
 # Create a checkbox. Optionally draw a label next to the checkbox
 checkbox = tulip.ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_color=None)
 state = checkbox.get_state() # retrieves the state
+```
 
-tulip.ui_clear() # clears all UI elements
+## Input
 
+Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, and your computers' keyboard works.
+
+```python
 # Returns a mask of joystick-like presses from the keyboard, from arrow keys, Z, X, A, S, Q, W, enter and '
 tulip.joyk()
 
@@ -273,10 +268,28 @@ content = tulip.url_get("https://url")
 tulip.set_time() 
 ```
 
+## Async
+
+We ship `asyncio` and also provide a simpler `tulip.defer()` callback to schedule code in the future.
+
+```python
+import asyncio
+async def sleep(sec):
+    await asnycio.sleep(sec)
+    print("done")
+asyncio.run(sleep(5))
+
+
+def hello(t):
+    print("hello called at %d" % (t))
+
+tulip.defer(hello, 1500) # will be called 1500ms later
+```
+
 
 ## Music / sound
 
-Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches. It also has support for loading WAVE files in Tulip as samples. 
+Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, subtractive and additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches. It also has support for loading WAVE files in Tulip as samples. 
 
 Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/bwhitman/alles/blob/main/README.md) Alles is a wrapper around AMY that lets you control the synthesizer over Wi-Fi to remote speakers, or other computers or Tulips. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information and for more music examples.
 
@@ -341,7 +354,7 @@ When adding a callback, there's an optional second parameter to denote a divider
 
 By default, your callback will receive a message 50 milliseconds ahead of the time of the intended tick, with the parameters `my_callback(intended_time_ms)`. This is so that you can take extra CPU time to prepare to send messages at the precise time, using AMY scheduling commands, to keep in perfect sync. You can set this "lookahead" globally for all callbacks if you want more or less latency with `tulip.seq_latency(X)` or get it with `tulip.seq_latency()`. 
 
-You can set the system-wide BPM (beats, or quarters per minute) with `tulip.seq_bpm(120)` or retrieve it with `tulip.seq_bpm()`. You can change the PPQ with `tulip.seq_ppq(new_value)` or retrieve it with `tulip.seq_ppq()`. You can stop the sequencer with `tulip.seq_stop()`, and restart it with `tulip.seq_start()`. 
+You can set the system-wide BPM (beats, or quarters per minute) with `tulip.seq_bpm(120)` or retrieve it with `tulip.seq_bpm()`. You can change the PPQ with `tulip.seq_ppq(new_value)` or retrieve it with `tulip.seq_ppq()`. 
 
 See the example `seq.py` on Tulip World for an example of using the music clock, or the [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py) included app.
 
@@ -718,15 +731,6 @@ p.joy_move() # will update the position based on the joystick
 ```
 
 See `world.download('planet_boing')` for a fleshed out example of using the `Game` and `Sprite` classes.
-
-# In progress or planned features
-
-## Tulip Music Editor
-
-A synth / patch editor for the AMY synth inside Tulip. [Like the YRM102.](https://www.msx.org/wiki/Yamaha_YRM-102) 
-
-Status: building locally, will share first alpha when ready
-
 
 # Can you help? 
 
