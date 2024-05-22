@@ -132,6 +132,13 @@ You can summon a touch keyboard with `tulip.keyboard()`. Tapping the keyboard ic
 We boot a launcher for common operations. It's available via the small grey icon on the bottom right.
 
 
+**TODO** write a better UIScreen tutorial here 
+
+```python
+screen = UIScreen(name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
+        activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
+```
+
 ```python
 tulip.keyboard() # open or close the soft keyboard
 tulip.launcher() # open or close our launcher
