@@ -41,12 +41,22 @@ uint8_t quit_flag = 0;
 uint16_t y_offset = 0;
 uint16_t cursor_x = 0;
 uint16_t cursor_y = 0;
+#define EDITOR_NORMAL 0
+#define EDITOR_PROMPT_CHAR 1
+#define EDITOR_PROMPT_SEARCH 2
+#define EDITOR_PROMPT_SAVE 3
+#define EDITOR_PROMPT_READ 3
+#define MAX_STRING_LEN 50 // for search string, filenames
 #define EDITOR_TAB_SPACES 4
 #define V_SCROLL_MARGIN 6
-#define MAX_STRING_LEN 50 // for search string, filenames
-char fn[MAX_STRING_LEN]; 
-char last_search[MAX_STRING_LEN];
 
+char prompted_string[MAX_STRING_LEN];
+char current_prompt[MAX_STRING_LEN];
+uint8_t prompted_count = 0;
+uint8_t editor_mode = EDITOR_NORMAL;
+char fn[MAX_STRING_LEN]; 
+int mc=0;
+int fc=0;
 
 void dbg(const char *fmt, ...) {
     va_list args;
@@ -55,8 +65,7 @@ void dbg(const char *fmt, ...) {
     va_end(args);
 }
 
-int mc=0;
-int fc=0;
+
 void * editor_malloc(uint32_t size) {
     mc++;
 	return malloc_caps(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -157,7 +166,6 @@ void string_at_row(char * s, int16_t len, uint16_t y) {
 // (Re) paints the entire TFB
 void paint_tfb(uint16_t start_at_y) {
     for(uint16_t y=start_at_y;y<TFB_ROWS-1;y++) {
-        //delay_ms(1); // this helps Tulip not lose sync of the screen
         if(y_offset + y < lines) { 
 	       string_at_row(text_lines[y_offset+y], -1, y);
         } else {
@@ -213,11 +221,13 @@ void move_cursor(int16_t x, int16_t y) {
 	char status[TFB_COLS];
 	// TODO, padding better 
 	float percent = ((float)(cursor_y+y_offset+1) / (float)lines) * 100.0;
+    char dirty_char = ' ';
+    if(dirty) dirty_char = '*';
     #ifdef TDECK
     // Smaller screen, less space for text
-	sprintf(status, "%04d / %04d [%02.2f%%] %3d %.10s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
+	sprintf(status, "%04d / %04d [%02.2f%%] %3d %.10s %c", cursor_y+y_offset+1, lines,  percent, cursor_x, fn, dirty_char);
     #else
-    sprintf(status, "%04d / %04d [%02.2f%%] %3d %.35s", cursor_y+y_offset+1, lines,  percent, cursor_x, fn);
+    sprintf(status, "%04d / %04d [%02.2f%%] %3d %.35s %c", cursor_y+y_offset+1, lines,  percent, cursor_x, fn, dirty_char);
     #endif    
 	string_at_row(status, strlen(status), TFB_ROWS-1);
 	format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
@@ -361,43 +371,15 @@ void editor_open_file(const char *filename) {
 	paint_tfb(0);
 }
 
-int8_t prompt_for_char(char * prompt) {
+void prompt_for_string(char * prompt,  uint8_t mode) {
+    prompted_count = 0;
+    prompted_string[0] = 0;
+    strcpy(current_prompt, prompt);
     string_at_row(prompt, -1, TFB_ROWS-1);
     format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
     paint_tfb(TFB_ROWS-1);
-
-    return mp_hal_stdin_rx_chr();
-}
-
-void prompt_for_string(char * prompt, char * default_answer, char * output_string) {
-    char *expanded_prompt;
-    if(strlen(default_answer)) {
-        expanded_prompt = editor_malloc(strlen(prompt) + strlen(default_answer) + 4);
-        sprintf(expanded_prompt, "%s [%s]:", prompt, default_answer);
-    } else {
-        expanded_prompt = editor_malloc(strlen(prompt)+1);
-        sprintf(expanded_prompt, "%s:", prompt);        
-    }
-    string_at_row(expanded_prompt, -1, TFB_ROWS-1);
-    format_at_row(FORMAT_INVERSE, -1, TFB_ROWS-1);
-    int c = -1;
-    uint8_t i = 0;
-    c = mp_hal_stdin_rx_chr();
-    while(c!=13 && c!=10) {
-        output_string[i++] = c;
-        TFB[(TFB_ROWS-1)*TFB_COLS+i+strlen(expanded_prompt)] = c;
-        paint_tfb(TFB_ROWS-1);
-        c = mp_hal_stdin_rx_chr();
-    }
-    output_string[i] = 0;
-
-    if(i == 0) {
-        if(strlen(default_answer)) {
-            strcpy(output_string, default_answer);
-        }
-    } 
-    move_cursor(cursor_x, cursor_y);
-    editor_free(expanded_prompt);
+    display_tfb_update(TFB_ROWS-1);
+    editor_mode=mode;
 }
 
 
@@ -418,37 +400,13 @@ void editor_save() {
         //display_start();
         dirty = 0;
         editor_free(text);
+        dbg("Saved %s\n", fn);
+        move_cursor(cursor_x, cursor_y);
     } else {
-        //dbg("No filename given, not saving\n");
+        dbg("No filename given, not saving\n");
     }
 }
 
-void editor_quit() {
-	quit_flag = 0;
-	if(dirty) {
-        if(strlen(fn)==0) {
-            prompt_for_string("Save as", "", fn);
-            editor_save(); // if no fn give, will skip
-        } else {
-            int8_t c = 0;
-            while(c != 'Y' && c != 'y' && c != 'N' && c != 'n') {
-                c = prompt_for_char("Save file? [Y/N]");
-            }
-            if(c=='Y' || c=='y') {
-    	    	editor_save();
-            }
-        }
-	}
-	restore_tfb();
-	for(uint16_t i=0;i<lines;i++) {
-        //delay_ms(1);
-		editor_free(text_lines[i]);
-	}
-	editor_free(text_lines);
-	if(yank) editor_free(yank);
-    yank = 0;
-    if(mc != fc) dbg("mc %d fc %d\n", mc, fc);
-}
 
 
 void editor_insert_character(int c) {
@@ -718,11 +676,8 @@ void editor_unyank() {
 }
 
 
-void editor_search() {
-    char search_string[MAX_STRING_LEN];
-    prompt_for_string("Search string", last_search, search_string);
+void editor_search(char * search_string) {
     if(strlen(search_string)) {
-        strcpy(last_search, search_string);
         uint8_t found = 0;
         //dbg("starting search on line %d\n", y_offset + cursor_y);
         for(uint16_t i=y_offset+cursor_y;i<lines+y_offset+cursor_y;i++) {
@@ -769,111 +724,131 @@ void editor_search() {
     
 }
 
-void editor_save_as() {
-    char save_as_fn[MAX_STRING_LEN];
-    prompt_for_string("Save as", fn, save_as_fn);
-    strcpy(fn, save_as_fn);
-    // save the file now
-    editor_save();
-    // Update the status
-    move_cursor(cursor_x, cursor_y);
-}
-
-void editor_read_into() {
-    char read_into_fn[MAX_STRING_LEN];
-    dirty=1;
-    prompt_for_string("Read file into buffer", "", read_into_fn);
-    //dbg("I got fn of %s\n", read_into_fn);
-    if(file_exists(read_into_fn)) {
-        // now run open_file
-        editor_open_file(read_into_fn);
-    } else {
-        //dbg("no such file %s\n", read_into_fn);
-    }
-
-}
-
-
-
 
 void process_char(int c) {
-	//dbg("Got char %d\n", c);
-	if(c==127 || c==8) { // backspace
-		editor_backspace();
-	} else if(c == 9) { // tab, control-I
-		editor_tab();
-	} else if(c==10 || c == 13) { // CRLF
-		editor_crlf();
-	} else if(c == 3) {  // control-C 
-        // we should trap this and ... what?
-	} else if(c ==11) { // control-K, yank
-		editor_yank();
-	} else if(c== 21) { // control-U, unyank
-		editor_unyank();
-	} else if(c==15) { // control-O, save as 
-        //dbg("save-as\n");
-		editor_save_as();
-    } else if(c==18) { // control-R, read into
-        editor_read_into();
-	} else if(c==23) { // control-W, "where is" aka search TODO 
-        editor_search();
-	} else if(c==24) { // control-X, quit 
-		quit_flag = 1;
-	} else if(c == 1) { // control-A, start of line
-		editor_linestart();
-	} else if(c == 5) { // control-E, end of line
-		editor_lineend();
-	} else if(c==25) { // control Y, page up
-		editor_page_up();
-	} else if(c==22) { // control V, page down 
-		editor_page_down();
-	} else if(c==27) { // ansi code, up / down / left / right / forward delete
-		char s = (char) mp_hal_stdin_rx_chr(); // Skip the [
-		s = (char)mp_hal_stdin_rx_chr(); // Get the code
-		if(s == 'D') { //left 
-			editor_left();
-		} else if(s=='C') { // right
-			editor_right();
-		} else if(s=='B') { // down
-			editor_down();
-		} else if(s=='A') { // up
-			editor_up();
-		} else if(s=='3') { // forward delete
-			s = (char)mp_hal_stdin_rx_chr(); // skip the ~
-			// AFAIK this is what forward delete is
-			editor_right();
-			editor_backspace();
-		}
-	// local mode high bit arrows & forward delete 
-	} else if(c == 259) { editor_up(); 
-	} else if(c == 258) { editor_down(); 
-	} else if(c == 260) { editor_left(); 
-	} else if(c == 261) { editor_right(); 
-	} else if(c == 330) { editor_right(); editor_backspace(); 
-	} else if(c>31 && c<127) {
-		editor_insert_character(c);
-	} else {
-		// Ignore unsupported keycodes...
-	}
+    if(editor_mode == EDITOR_PROMPT_SEARCH || editor_mode == EDITOR_PROMPT_SAVE || editor_mode == EDITOR_PROMPT_READ) {
+        if(c>31 && c<127) {
+            prompted_string[prompted_count++] = c;
+            TFB[(TFB_ROWS-1)*TFB_COLS+prompted_count+strlen(current_prompt)] = c;
+            paint_tfb(TFB_ROWS-1);
+            display_tfb_update(TFB_ROWS-1);
+        }
+        if(c==3) {
+            editor_mode=EDITOR_NORMAL;
+            move_cursor(cursor_x,cursor_y);
+        }
+        if(c==127 || c==8) {
+            if(prompted_count>0) {
+                prompted_string[prompted_count] = 0;
+                TFB[(TFB_ROWS-1)*TFB_COLS+prompted_count+strlen(current_prompt)] = ' ';
+                prompted_count--; // now pc is 4
+                paint_tfb(TFB_ROWS-1);
+                display_tfb_update(TFB_ROWS-1);
+            }
+        }
+        if(c==13 || c == 10) {
+            prompted_string[prompted_count] = 0;
+            if(strlen(prompted_string)==0) {
+                dbg("no text entered\n");
+            } else {
+                dbg("str %s\n", prompted_string); 
+                if(editor_mode == EDITOR_PROMPT_SAVE) {
+                    strcpy(fn, prompted_string);
+                    editor_save();
+                } else if(editor_mode==EDITOR_PROMPT_READ) {
+                    if(file_exists(prompted_string)) {
+                        editor_open_file(prompted_string);
+                    } else {
+                        dbg("no such file %s\n", prompted_string);
+                    }
+                } else if(editor_mode==EDITOR_PROMPT_SEARCH) {
+                    editor_search(prompted_string);
+                }
+            }
+            editor_mode = EDITOR_NORMAL;
+            move_cursor(cursor_x,cursor_y);
+        } 
+    } else {
+    	//dbg("Got char %d\n", c);
+    	if(c==127 || c==8) { // backspace
+    		editor_backspace();
+    	} else if(c == 9) { // tab, control-I
+    		editor_tab();
+    	} else if(c==10 || c == 13) { // CRLF
+    		editor_crlf();
+    	} else if(c == 3) {  // control-C 
+            // we should trap this and ... what?
+    	} else if(c ==11) { // control-K, yank
+    		editor_yank();
+    	} else if(c== 21) { // control-U, unyank
+    		editor_unyank();
+    	} else if(c==15) { // control-O, save as 
+            prompt_for_string("Save as: ", EDITOR_PROMPT_SAVE);
+        } else if(c==18) { // control-R, read into
+            prompt_for_string("Read file: ",EDITOR_PROMPT_READ);
+    	} else if(c==23) { // control-W, "where is" aka search TODO 
+            prompt_for_string("Search string: ", EDITOR_PROMPT_SEARCH);
+    	} else if(c==24) { // control-X, save (no ask)
+            if(strlen(fn)>0) {
+                editor_save();
+            } else {
+                prompt_for_string("Save as: ", EDITOR_PROMPT_SAVE);
+            }
+    	} else if(c == 1) { // control-A, start of line
+    		editor_linestart();
+    	} else if(c == 5) { // control-E, end of line
+    		editor_lineend();
+    	} else if(c==25) { // control Y, page up
+    		editor_page_up();
+    	} else if(c==22) { // control V, page down 
+    		editor_page_down();
+    	} else if(c==27) { // ansi code, up / down / left / right / forward delete
+    		char s = (char) mp_hal_stdin_rx_chr(); // Skip the [
+    		s = (char)mp_hal_stdin_rx_chr(); // Get the code
+    		if(s == 'D') { //left 
+    			editor_left();
+    		} else if(s=='C') { // right
+    			editor_right();
+    		} else if(s=='B') { // down
+    			editor_down();
+    		} else if(s=='A') { // up
+    			editor_up();
+    		} else if(s=='3') { // forward delete
+    			s = (char)mp_hal_stdin_rx_chr(); // skip the ~
+    			// AFAIK this is what forward delete is
+    			editor_right();
+    			editor_backspace();
+    		}
+    	// local mode high bit arrows & forward delete 
+    	} else if(c == 259) { editor_up(); 
+    	} else if(c == 258) { editor_down(); 
+    	} else if(c == 260) { editor_left(); 
+    	} else if(c == 261) { editor_right(); 
+    	} else if(c == 330) { editor_right(); editor_backspace(); 
+    	} else if(c>31 && c<127) {
+    		editor_insert_character(c);
+    	} else {
+    		// Ignore unsupported keycodes...
+    	}
+    }
 }
 
-void editor_init() {
+
+void editor_start(const char * filename) {
+    mc = 0; 
+    fc = 0;
+    prompted_string[0] = 0;
+    current_prompt[0] = 0;
+    prompted_count = 0;
+    editor_mode = EDITOR_NORMAL;
     lines =0;
     dirty = 0;
     y_offset = 0;
     cursor_y = 0;
     cursor_x = 0;
-    last_search[0] = 0;
     fn[0] = 0;
-}
 
-
-
-void editor(const char * filename) {
-    mc = 0; fc = 0;
-	save_tfb();
-    editor_init();
-	if(filename != NULL) { 
+    if(filename != NULL) { 
         strcpy(fn, filename);
 		dbg("editor fn is %s\n", fn);
 		editor_open_file(fn);
@@ -885,16 +860,28 @@ void editor(const char * filename) {
 	}
 	move_cursor(0,0);
 	y_offset = 0;
-    while(quit_flag == 0) {
-#ifdef ESP_PLATFORM
-		vPortYield();
-#endif
-		int c = mp_hal_stdin_rx_chr();
-		if(c>=0) {
-			process_char(c);
-		}
-	}	
-	editor_quit();
+}
+
+void editor_key(int c) {
+	process_char(c);
+}
+
+// stuff is still in RAM, just redraw
+void editor_activate() {
+    paint_tfb(0);
+    move_cursor(cursor_x,cursor_y);
+}
+
+void editor_deinit() {
+    //restore_tfb();
+    for(uint16_t i=0;i<lines;i++) {
+        //delay_ms(1);
+        editor_free(text_lines[i]);
+    }
+    editor_free(text_lines);
+    if(yank) editor_free(yank);
+    yank = 0;
+    if(mc != fc) dbg("mc %d fc %d\n", mc, fc);
 }
 
 

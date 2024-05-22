@@ -25,6 +25,7 @@ def rgb(px0, wide=False):
     return (r,g,b)
 
 from ui import *
+from editor import edit
 
 
 # A class for making a game. Clears and sets up the screen for a game
@@ -32,7 +33,6 @@ class Game():
     def __init__(self, debug=False):
         self.debug = debug
         if(not debug):
-            tfb_save()
             tfb_stop()
         key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
         Sprite.reset()  # resets sprite counter and RAM
@@ -440,14 +440,6 @@ def reload(module):
         pass # it's ok
     exec('import %s' % (thing))
 
-def edit(filename=None):
-    if(filename is None):
-        tulip.run_editor()
-    else:
-        tulip.run_editor(filename)
-    # For now, just force a repl re-draw for any elements drawn on the repl (including task bar)
-    # TODO later make editor an app
-    repl_screen.group.invalidate()
 
 def app(switch=None):
     if(switch is None):

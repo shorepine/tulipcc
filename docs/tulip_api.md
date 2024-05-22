@@ -113,11 +113,11 @@ Tulip ships with a text editor, based on pico/nano. It supports syntax highlight
 
 ```python
 # Opens the Tulip editor to the given filename. 
-# Control-X exits and prompts to save if any changes. 
-# Control-O is save as
+# Control-X saves the file, if no filename give will prompt for one. 
+# Control-O is save as -- will write to new filename given
 # Control-W searches
-# Filename will be created on save if it doesn't exist.
 edit("game.py")
+edit() # no filename
 ```
 
 

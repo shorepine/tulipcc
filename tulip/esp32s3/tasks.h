@@ -42,7 +42,7 @@
 #define ALLES_RENDER_TASK_STACK_SIZE (8 * 1024)
 #define ALLES_FILL_BUFFER_TASK_STACK_SIZE (8 * 1024)
 
-#define MP_TASK_HEAP_SIZE (2 * 1024 * 1024)
+#define MP_TASK_HEAP_SIZE (3 * 1024 * 1024)
 
 #define DISPLAY_TASK_NAME           "display_task"
 #define USB_TASK_NAME               "usb_task"

@@ -8,9 +8,6 @@ lv_soft_kb = None
 lv_launcher = None
 
 
-# For our convenience functions, Can be overriden
-tulip.ui_callback = None
-
 running_apps = {}
 current_app_string = "repl"
 
@@ -167,7 +164,7 @@ class UIScreen():
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
     # or x,y directly if you want that
-    def add(self, obj, direction=lv.ALIGN.OUT_RIGHT_MID, relative=None, pad_x=0, pad_y=0, x=None, y=None):
+    def add(self, obj, first_align=lv.ALIGN.TOP_LEFT, direction=lv.ALIGN.OUT_RIGHT_MID, relative=None, pad_x=0, pad_y=0, x=None, y=None):
         if(relative is not None):
             self.last_obj_added = relative.group
 
@@ -178,9 +175,13 @@ class UIScreen():
             o.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
             o.group.set_height(lv.SIZE_CONTENT)
             if(self.last_obj_added is None):
-                o.group.align_to(self.group,lv.ALIGN.TOP_LEFT,self.offset_x,self.offset_y)
+                o.group.align_to(self.group,first_align,self.offset_x,self.offset_y)
             else:
-                o.group.align_to(self.last_obj_added, direction,0,0)
+                try:
+                    o.group.align_to(self.last_obj_added, direction,0,0)
+                except lv.LvReferenceError:
+                    self.last_obj_added = None
+                    o.group.align_to(self.group,first_align,self.offset_x,self.offset_y)
             o.group.set_width(o.group.get_width()+pad_x)
             o.group.set_height(o.group.get_height()+pad_y)
             if(x is not None and y is not None): o.group.set_pos(x,y)
@@ -196,10 +197,13 @@ class UIScreen():
 
         if(self.handle_keyboard):
             get_keypad_indev().set_group(self.kb_group)
+
         if(self.name == 'repl'):
             tulip.tfb_start()
             tulip.set_screen_as_repl(1)
+
             tulip.tfb_update() # force redraw of tfb, maybe tfb_start should do this? 
+
         else:
             tulip.set_screen_as_repl(0)
             if(self.keep_tfb):
@@ -232,6 +236,13 @@ class UIElement():
     def update_callbacks(self, cb):
         pass
         #self.change_callback = cb
+
+    # Remove the elements you created (including the group)
+    def remove_items(self):
+        for i in range(self.group.get_child_count()):
+            if(self.group.get_child(0) is not None):
+                self.group.get_child(0).delete()
+        self.group.delete()
 
 
 # Callback for soft keyboard to send chars to Tulip.
@@ -333,27 +344,58 @@ def launcher(ignore=True):
     b_power.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
 
 
+# A text entry widget w/ ok and cancel 
+class TextEntry(UIElement):
+    def __init__(self, label_text="", filled_text="", ok_callback=None, cancel_callback=None, bg_color=0, fg_color=255):
+        super().__init__()
+        self.group.set_size(420,80)
+        self.box = lv.obj(self.group)
+        self.box.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
+        self.box.set_size(400,80)
+        self.box.align_to(self.group, lv.ALIGN.CENTER,0,0)
+        self.label = lv.label(self.box)
+        self.label.set_style_text_color(pal_to_lv(fg_color),0)
+        self.label.set_text(label_text)
+        self.label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+        self.label.align_to(self.box,lv.ALIGN.LEFT_MID,0,0)
+
+        self.text = lv.textarea(self.box)
+        self.text.set_size(150,45)
+        self.text.add_text(filled_text)
+        self.text.align_to(self.label, lv.ALIGN.OUT_RIGHT_MID,10,0)
+
+        self.ok = lv.button(self.box)
+        self.ok.set_style_bg_color(pal_to_lv(29), lv.PART.MAIN)
+        ok_label = lv.label(self.ok)
+        ok_label.set_style_text_font(lv.font_montserrat_12,0)
+        ok_label.set_text(lv.SYMBOL.OK)
+        ok_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+        self.ok.align_to(self.text, lv.ALIGN.OUT_RIGHT_MID,10,0)
+        self.ok.add_event_cb(self.ok_callback, lv.EVENT.CLICKED, None)
+        self.cancel = lv.button(self.box)
+        self.cancel.set_style_bg_color(pal_to_lv(224), lv.PART.MAIN)
+        cancel_label = lv.label(self.cancel)
+        cancel_label.set_style_text_font(lv.font_montserrat_12,0)
+        cancel_label.set_text(lv.SYMBOL.CLOSE)
+        cancel_label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
+        self.cancel.align_to(self.ok, lv.ALIGN.OUT_RIGHT_MID,10,0)
+        self.cancel.add_event_cb(self.cancel_callback, lv.EVENT.CLICKED, None)
+        self.box.remove_flag(lv.obj.FLAG.SCROLLABLE)
+        self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
+        self.external_ok_callback = ok_callback
+        self.external_cancel_callback = cancel_callback
+
+    def ok_callback(self, e):
+        if(self.external_ok_callback):
+            self.external_ok_callback()
+        self.remove_items()
+
+    def cancel_callback(self, e):
+        if(self.external_cancel_callback):
+            self.external_cancel_callback()
+        self.remove_items()
 
 
-# Callback that you can have LVGL objects register. 
-# It gets the event (which you can get the object from) and "extra" which we put ui_id in for legacy uses
-def lv_callback(e, extra):
-    code = e.get_code()
-    obj = e.get_target_obj()
-    if(tulip.ui_callback is not None):
-        tulip.ui_callback(obj, code, extra)
-
-# Draw a msgbox on screen. 
-def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=None):
-    mbox = lv.msgbox(current_lv_group())
-    mbox.add_text(message)
-    mbox.add_title(title)
-    mbox.add_close_button()
-    for b in buttons:
-        mbox.add_footer_button(b)
-    if(ui_id is not None):
-        mbox.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
-    return mbox
 
 # bar_color - the color of the whole bar, or just the set part if using two colors
 # unset_bar_color - the color of the unset side of the bar, if None will just be all one color
@@ -440,6 +482,21 @@ class UILabel(UIElement):
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
         self.label.align_to(self.group, lv.ALIGN.CENTER,0, 0)
 
+# TODO: Make UIMsgBox
+# Draw a msgbox on screen. 
+def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=None):
+    mbox = lv.msgbox(current_lv_group())
+    mbox.add_text(message)
+    mbox.add_title(title)
+    mbox.add_close_button()
+    for b in buttons:
+        mbox.add_footer_button(b)
+    if(ui_id is not None):
+        mbox.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
+    return mbox
+
+# TODO : make UIText
+
 # Copy of our ui_text with lvgl textarea 
 #tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
 def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=None, one_line=True):
@@ -464,6 +521,8 @@ def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, b
         ta.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
     return ta
 
+# TODO: Make UICheckbox
+
 # Copy of our ui_checkbox with lvgl 
 def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_color=None):
     cb = lv.checkbox(current_lv_group())
@@ -479,6 +538,8 @@ def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_co
     if(ui_id is not None):
         cb.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
     return cb
+
+#TODO : Make UILabel 
 
 
 

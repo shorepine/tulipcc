@@ -475,6 +475,8 @@ mp_obj_t frame_arg = NULL;
 mp_obj_t touch_callback = NULL; 
 mp_obj_t keyboard_callback = NULL;
 
+
+
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 {  
     lv_task_handler();
@@ -549,8 +551,6 @@ STATIC mp_obj_t tulip_midi_remove_callbacks(size_t n_args, const mp_obj_t *args)
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_remove_callbacks_obj, 0, 0, tulip_midi_remove_callbacks);
-
-
 
 
 
@@ -903,17 +903,48 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_collisions_obj, 0, 0, tulip_col
 
 
 
-extern void editor(const char * filename);
+extern void editor_start(const char * filename);
+extern void editor_activate();
+extern void editor_key(int c); 
+extern void editor_deinit();
+
+
 STATIC mp_obj_t tulip_run_editor(size_t n_args, const mp_obj_t *args) {
     if(n_args) {
-        editor(mp_obj_str_get_str(args[0]));
+        editor_start(mp_obj_str_get_str(args[0]));
     } else {
-        editor(NULL);
+        editor_start(NULL);
     }
     return mp_const_none;
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_run_editor_obj, 0, 1, tulip_run_editor);
+
+
+STATIC mp_obj_t tulip_key_editor(size_t n_args, const mp_obj_t *args) {
+    editor_key(mp_obj_get_int(args[0]));
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_editor_obj, 1, 1, tulip_key_editor);
+
+
+
+STATIC mp_obj_t tulip_deinit_editor(size_t n_args, const mp_obj_t *args) {
+    editor_deinit();
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_deinit_editor_obj, 0, 0, tulip_deinit_editor);
+
+
+STATIC mp_obj_t tulip_activate_editor(size_t n_args, const mp_obj_t *args) {
+    editor_activate();
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_activate_editor_obj, 0, 1, tulip_activate_editor);
+
 
 extern void unix_display_timings(uint16_t, uint16_t, uint16_t, uint16_t);
 STATIC mp_obj_t tulip_gpu_reset(size_t n_args, const mp_obj_t *args) {
@@ -1386,6 +1417,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_wire_load), MP_ROM_PTR(&tulip_wire_load_obj) },
     { MP_ROM_QSTR(MP_QSTR_collisions), MP_ROM_PTR(&tulip_collisions_obj) },
     { MP_ROM_QSTR(MP_QSTR_run_editor), MP_ROM_PTR(&tulip_run_editor_obj) },
+    { MP_ROM_QSTR(MP_QSTR_deinit_editor), MP_ROM_PTR(&tulip_deinit_editor_obj) },
+    { MP_ROM_QSTR(MP_QSTR_key_editor), MP_ROM_PTR(&tulip_key_editor_obj) },
+    { MP_ROM_QSTR(MP_QSTR_activate_editor), MP_ROM_PTR(&tulip_activate_editor_obj) },
     { MP_ROM_QSTR(MP_QSTR_int_screenshot), MP_ROM_PTR(&tulip_int_screenshot_obj) },
     { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
