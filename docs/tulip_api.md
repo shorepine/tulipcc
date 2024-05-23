@@ -24,18 +24,6 @@ cd('directory')
 # Clears the REPL screen and formatting
 clear
 
-# Run a saved Python file. Control-C stops it
-cd('/sys/ex') # The /sys/ex folder has a few examples and graphics in it
-execfile("parallax.py")
-
-run('game') # Runs a package, see below
-
-# Extract a .tar file.
-tulip.tar_extract(filename)
-
-# Create a tar file from a directory (and everything in it)
-tulip.tar_create(directory)
-
 # If you want something to run when Tulip boots, add it to boot.py
 edit("boot.py")
 
@@ -56,31 +44,74 @@ ms = tulip.ticks_ms() # returns the milliseconds since boot, aka Arduino millis(
 board = tulip.board() # Returns the board type, e.g. "TDECK", "N16R8" etc
 ```
 
-## Making app packages and screens
+## Using and making scripts, packages and screens
 
-If you have a program that relies on mulitple files (graphics, or multiple Python files) you'll want to create a Tulip Package. A package is just a folder with your files in it, like:
+Tulip can run different types of programs that you make or you can download from [Tulip World](#tulip-world). They range from simple Python scripts or modules, to full-screen "apps" with multitasking and UIs. You can edit and create these apps on Tulip itself using our editor, and upload them to Tulip World for others to use. 
+
+You can run any Python script in your current directory with `execfile`:
+
+```python
+>>> execfile("hello.py")
+Hello world
+```
+
+You can also create Python libraries and `import` them from your current directory:
+
+```python
+>>> import my_library
+>>> my_library.do_something()
+Doing it
+```
+
+## Tulip Packages
+
+If you have a program that relies on mulitple files (graphics, sounds or multiple Python files) you'll want to create a Tulip package. A package is just a folder with your files in it, like:
 
 ```
 rabbit_game/
-... rabbit_game.py # starts the program when imported
+... rabbit_game.py # the main script should have the same name as the package
 ... extra.py # can put any other python files in here
 ... rabbit_pic.png
 ... rabbit_pic1.png
+... rabbit_sample.wav
 ```
 
-The main Python script must be the name of the package. This script needs to explicitly `import tulip,amy` if you are using those. Then, your users can start the package by `run('rabbit_game')`. The package will be cleaned up after when they exit. The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package', username)` or `world.download('package')`. 
+The main Python script must be the name of the package. This script needs to explicitly `import tulip` or `amy` or others if you are using those. Then, you and your users can start the package by `run('rabbit_game')` from the directory that has the folder in it. The package will be cleaned up after when they exit. 
+
+By default, a package is imported (for example, `import rabbit_game`.) If your `rabbit_game.py` has code that runs on import, it will run. If you are writing a game or other thing that needs full access to Tulip, put an infinite loop in your code. Users can use `Control-C` to quit and they will be back at the REPL with the program's imports removed from memory.
+
+We ship a couple of game-like examples, check them out:
+ * [`bunny_bounce`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/bunny_bounce/bunny_bounce.py)
+ * [`planet_boing`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/planet_boing/planet_boing.py)
+
+
+The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package', username)` or `world.download('package')`. 
 
 We put a few system packages in `/sys/app`, and if you `run('app')`, it will look both in your current folder and the `/sys/app` folder for the app. 
 
-**There are two types of apps you can make in Tulip.** One is the default: “modal”; when you import program it will go into a while True: or other infinite loop and own all of Tulip’s resources while it runs. This is meant for games or animations or other types of apps that require all the cycles of Tulip. You will need to provide your own way to quit the app, or just `except KeyboardInterrupt`. We’ll then clean up the imports and free whatever memory was allocated after close. 
 
-The second type is “switchable”: if you design your app so that import program returns after setup and `program.run(screen)` exists to start up the app, but then relies on LVGL UI components and callbacks (graphics, sequencer, MIDI) to do its job, we can support running that app alongside others. This can be used for music software that relies on timers or MIDI input, for example, a Juno-6 front end and a drum machine running at the same time. For these types of apps, we pass in a `UIScreen` object to a run method that you provide, that manages your screen and provides two buttons for quitting and switching between apps. The switch is “alt-tab” and keeps the UI and program running but hides it and switches to the next app available. The quit closes the app, clears the memory and removes the UI components and switches to the next available app. 
+### Multitasking apps 
 
-Note that if you draw anything without using LVGL on your app (for example, BG drawing) you will have to re-draw upon activation again. LVGL components will by default show themselves on activation and hide on deactivation. You can register an activation callback to re-draw non-LVGL components with `screen.activate_callback=callback`. 
+If you want your package to run alongside other apps, and show a task bar with a quit and app-switch button, you need to use a package that implements `UIScreen`. `UIScreen`'s API is [detailed below](#uiscreen), but a simplest example is:
 
-The REPL itself is treated as a (special) switchable app, always first in the list and cannot be quit. 
+```python
+# my switchable program, program.py
+def run(screen):
+    screen.present() # I'm ready, show my app
+```
 
-See [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py) or [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py) for examples of switchable apps. 
+Put that in a package called `program`, and when `run('program')` is called, your app will start and show a task bar. Multitasking apps have to return immediately after setup (the `run` function) and rely on callbacks to process data and user input. We have callbacks for almost everything you'd need: keyboard input, MIDI input, music sequencer ticks and touch input. `UIScreen` also sets up callbacks for "activating" (switching to the app or first run), "deactivating" (switching away from the app) or quitting. 
+
+`UIScreen` apps should use LVGL/`tulip.UIX` classes for their UI, so that the UI appears and disappears automatically during switching. You can also use other Tulip drawing commands for the UI, but be mindful that the BG (and often TFB) will be cleared on switching away from your app, so you'll have to redraw those on your activate callback. 
+
+The REPL itself is treated as a (special) multitasking app, always first in the list and cannot be quit. 
+
+We ship a few examples of multitasking apps, please check them out on Tulip or here:
+ * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py)
+ * [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py)
+ * [`buttons`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/buttons/buttons.py)
+ * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py)
+ * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/voices/voices.py)
 
 ## Tulip World
 
@@ -106,7 +137,7 @@ world.ls() # lists most recent unique filenames/usernames
 world.ls(100) # optional count (most recent)
 ```
 
-Big note: Tulip World is hosted by a bot running on the SPSS Discord. If there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
+Big note: Tulip World is hosted by a bot running on the [Tulip/AMY/Alles Discord](https://discord.gg/TzBFkUb8pG). If there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
 
 
 ## The Tulip Editor
@@ -125,21 +156,56 @@ edit() # no filename
 
 ## User interface
 
-We include [LVGL 9](https://lvgl.io) for use in making your own user interface. LVGL is quite powerful and optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
+We include [LVGL 9](https://lvgl.io) for use in making your own user interface. LVGL is optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
 
-For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrappers like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/buttons.py) example in your Tulip's `/sys/ex/` folder, or more complete examples like [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py), [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py), [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py) etc in `/sys/app`. 
+It's best to build user interfaces inside a `UIScreen` multitasking Tulip package. Our `UIScreen` will handle placing elements on your app and dealing with multitasking. 
+
+For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/buttons/buttons.py) example, or more complete examples like [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py), [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py), [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py) etc in `/sys/app`. 
+
+### UIScreen
+
+Tulip apps that support multitasking are called `UIScreen`s and they wrap functionality for adding UI elements and switching between apps. A Tulip package tries to `run(screen)` in your main Python file, and if it exists, will expect the `run(screen)` function to exit quickly and hand over control to various callbacks. This allows multiple apps to work at the same time. It's especially useful for music apps that share the sequencer and MIDI callbacks.
+
+By default a `UIScreen` is created for you when you `run(app)`, presuming `app.py` in the package has a `def run(screen):` function. The `UIScreen` object is passed into `screen`. You can treat that object as your app's global state, and also set and get various parameters of the app:
+
+```python
+def run(screen):
+    # These are all the defaults:
+    screen.bg_color = 0 # tulip color of the screen BG
+    screen.keep_tfb = False # whether to hide the TFB while running the app
+    screen.offset_y = 100 # by default, screens "start" at 0,100 to leave room for the task bar
+    screen.activate_callback = None # called when the app starts and when it is switched to
+    screen.quit_callback = None # called when the quit button is pressed
+    screen.handle_keyboard = False # if you set up UI components that accept keyboard input
+    # Set up your UI with screen.add(), adding UIElement objects
+    screen.add(tulip.UILabel("hello there"), x=500,y=100)
+    # You can use LVGL alignment to add objects in relation to the last object added
+    # See https://docs.lvgl.io/master/widgets/obj.html for a listing of aligns
+    screen.add(tulip.UILabel("under that one"), direction=lv.ALIGN.BOTTOM_MID)
+    # When you're ready, do 
+    screen.present()
+
+def quit(screen):
+    # your quit callback gets a screen object, use it to shut down
+def activate(screen):
+    # use this to re-draw anything explicitly. LVGL components added with add() will automatically appear
+```
+
+Tulip `UIScreen` apps should never wait in a loop or call `sleep`. They should rely on callbacks to do all their work. For example, our drum machine waits for the sequencer callback to play the next note. Our editor app relies on the keyboard callback for the next keypress. This allows Tulip to run multiple programs at once.
+
+See some examples of more complex UIs using `UIScreen`:
+ * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py)
+ * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py)
+ * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/voices/voices.py)
+
+
+
+
+### Other interface elements
 
 You can summon a touch keyboard with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
 
 We boot a launcher for common operations. It's available via the small grey icon on the bottom right.
-
-
-**TODO** write a better UIScreen tutorial here 
-
-```python
-screen = UIScreen(name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
-        activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
-```
 
 ```python
 tulip.keyboard() # open or close the soft keyboard
@@ -148,49 +214,37 @@ tulip.launcher() # open or close our launcher
 # You're free to use any direct LVGL calls. It's a powerful library with a lot of functionality and customization, all accessible through Python.
 import lvgl as lv
 
-TODO fix these back up
-
-
 # our tulip.lv_scr is the base screen on bootup, to use as a base screen in LVGL.
 calendar = lv.calendar(lv.current_screen())
 calendar.set_pos(500,100)
 
-# We also provide a more powerful "full screen" wrapper for LVGL that lets you manage a full app and add elements to it.
-screen = UIScreen("my_app")
-screen.add(calendar)
-screen.present()
-# Please see juno6 in /sys/app/ for a complete example on using UIScreen.
+# use our tulip.UIX classes to add simple UI elements to your app.
 
-# Draw a simple modal message box
-mbox = tulip.ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=5)
-
-# draw a slider
+# UISlider: draw a slider
 # bar_color - the color of the whole bar, or just the set part if using two colors
 # unset_bar_color - the color of the unset side of the bar, if None will just be all one color
 # handle_v_pad, h_pad -- how many px above/below / left/right of the bar it extends
 # handle_radius - 0 for square 
-slider = tulip.ui_slider(val=0, x=0, y=0, w=None, h=None, bar_color=None, unset_bar_color=None, 
-    handle_color=None, handle_radius=None, handle_v_pad=None, handle_h_pad=None, ui_id=None)
+screen.add(tulip.UISlider(val=0, w=None, h=None, bar_color=None, unset_bar_color=None, 
+    handle_color=None, handle_radius=None, handle_v_pad=None, handle_h_pad=None, callback=None))
 
-slider.get_value() # gets 0-100 
+# UIButton: push button with text
+screen.add(tulip.UIbutton(text=None, w=None, h=None, bg_color=None, fg_color=None, 
+    font=None, radius=None, callback=None))
 
-# Creates a button. If ui_id given will alert the callback when pressed
-btn = tulip.ui_button(text=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, 
-    font=None, radius=None, ui_id=None)
+# UILabel: text
+screen.add(tulip.UILabel(text="", fg_color=None, w=None, font=None))
 
-# Draw text to the screen and keep a pointer to it
-label = tulip.ui_label(text="", x=0, y=0, fg_color=None, w=None, font=None)
-label.set_text("changed") # Change it later
+# UIText: text entry
+screen.add(tulip.UIText(text=None, placeholder=None, w=None, h=None, 
+    bg_color=None, fg_color=None, font=None, one_line=True, callback=None))
 
-# Create a textarea box for text entry. 
-text = tulip.ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, 
-    bg_color=None, fg_color=None, font=None, one_line=True)
-text.get_text() # will retrieve it later
-
-# Create a checkbox. Optionally draw a label next to the checkbox
-checkbox = tulip.ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_color=None)
-state = checkbox.get_state() # retrieves the state
+# UICheckbox
+# Optionally draw a label next to the checkbox
+screen.add(tulip.UICheckbox(text=None, val=False, bg_color=None, fg_color=None, callback=None))
 ```
+
+See our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/buttons/buttons.py) example for `UIX` class use.
 
 ## Input
 

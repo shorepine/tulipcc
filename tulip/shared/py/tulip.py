@@ -454,8 +454,6 @@ def run(module_string):
     before_run = sys.modules.copy()
     before_run_pwd = pwd()
 
-    # Make the app screen
-    screen = tulip.UIScreen(module_string, bg_color=0)
     # cd into the module (or find it in sys/app)
     try:
         cd(module_string)
@@ -468,35 +466,41 @@ def run(module_string):
             print("No such program.")
             return
 
-    screen.app_dir = pwd()
-
     # Run it 
     try:
-        # Import the app module and call module.run(screen)
+        screen = None
+        # Import the app module -- if non switchable this will run until it stops
         exec('import %s' % (module_string))
+
+        # Is this a switchable app? 
         actual_module = sys.modules[module_string]
         if(hasattr(actual_module, 'run')):
-            actual_module.run(screen)
-        else:
+            # Make the app screen
+            screen = tulip.UIScreen(module_string, bg_color=0)
+            screen.app_dir = pwd()
+            # Run the app
             try:
-                screen.quit_callback(None)
-            except TypeError:
-                # no qcb
-                pass
+                actual_module.run(screen)
+            except:
+                screen.screen_quit_callback(None)
 
-        # Save the modules we imported so we can delete them on quit. This saves RAM on MP
-        for imported_module in sys.modules.keys():
-            if imported_module not in before_run:
-                screen.imported_modules.append(imported_module)
+        else:
+            # This was a package but not an app, and we're done. so clean up.
+            # Delete the modules we imported
+            for imported_module in sys.modules.keys():
+                if imported_module not in before_run:
+                    exec('del sys.modules["%s"]' % (imported_module))
+            repl_screen.present()
 
         # Go back to where you were
         cd(before_run_pwd)
+
 
     except Exception as e:
         print("Error running %s:"% (module_string))
         sys.print_exception(e)
         # Clean up the screen
-        screen.quit_callback(None)
+        if(screen): screen.screen_quit_callback(None)
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests

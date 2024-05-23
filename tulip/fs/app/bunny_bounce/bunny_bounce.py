@@ -227,6 +227,7 @@ def game_loop(d):
         g_y = int(random.random() * HEIGHT)    
         tulip.bg_pixel(g_x,g_y,random.choice(grass_colors))
 
+amy.reset()
 
 # do this right before takeoff...
 start_time = tulip.ticks_ms()

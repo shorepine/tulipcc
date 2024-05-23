@@ -78,7 +78,6 @@ class UIScreen():
         self.quit_button = None
         self.running = True # is this code running 
         self.active = False # is it showing on screen 
-        self.imported_modules = []
         self.activate_callback = activate_callback
         self.deactivate_callback = deactivate_callback
         self.quit_callback = quit_callback
@@ -154,9 +153,6 @@ class UIScreen():
         self.active = False
         self.remove_items()
         del running_apps[self.name]
-        # Delete the modules we imported
-        for m in self.imported_modules:
-            exec('del sys.modules["%s"]' % (m))
         gc.collect()
         repl_screen.present()
 
