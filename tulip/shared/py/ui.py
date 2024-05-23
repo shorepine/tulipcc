@@ -73,7 +73,6 @@ class UIScreen():
         self.offset_x = offset_x
         self.offset_y = offset_y
         self.last_obj_added = None
-        self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
         self.name = name
         self.alttab_button = None
         self.quit_button = None
@@ -192,7 +191,7 @@ class UIScreen():
         current_app_string = self.name
         self.active = True
         self.draw_task_bar()
-
+        self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
         lv.screen_load(self.screen)
 
         if(self.handle_keyboard):
@@ -232,6 +231,7 @@ class UIElement():
         self.group = lv.obj(UIElement.temp_screen)
         # Hot tip - set this to 1 if you're debugging why elements are not aligning like you think they should
         self.group.set_style_border_width(0, lv.PART.MAIN)
+        self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
     def update_callbacks(self, cb):
         pass
@@ -381,7 +381,6 @@ class TextEntry(UIElement):
         self.cancel.align_to(self.ok, lv.ALIGN.OUT_RIGHT_MID,10,0)
         self.cancel.add_event_cb(self.cancel_callback, lv.EVENT.CLICKED, None)
         self.box.remove_flag(lv.obj.FLAG.SCROLLABLE)
-        self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
         self.external_ok_callback = ok_callback
         self.external_cancel_callback = cancel_callback
 
@@ -435,7 +434,6 @@ class UISlider(UIElement):
             self.slider.align(lv.ALIGN.CENTER,0,0)
 
         self.slider.set_value(int(val),lv.ANIM.OFF)
-        self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
         if(callback is not None):
             self.slider.add_event_cb(callback, lv.EVENT.VALUE_CHANGED, None)
@@ -467,10 +465,9 @@ class UIButton(UIElement):
             self.label.set_style_text_color(pal_to_lv(fg_color), 0)
         if(callback is not None):
             self.button.add_event_cb(callback, lv.EVENT.CLICKED, None)
-        self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
 class UILabel(UIElement):
-    def __init__(self, text, x=0, y=0, fg_color=None, font=None):
+    def __init__(self, text, fg_color=None, font=None):
         super().__init__() 
         self.label = lv.label(self.group)
         self.label.set_text(text)
@@ -479,68 +476,49 @@ class UILabel(UIElement):
             self.label.set_style_text_font(font, 0)
         if(fg_color is not None):
             self.label.set_style_text_color(pal_to_lv(fg_color),0)
-        self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
-        self.label.align_to(self.group, lv.ALIGN.CENTER,0, 0)
+        lv_depad(self.label)
+        lv_depad(self.group)
 
-# TODO: Make UIMsgBox
-# Draw a msgbox on screen. 
-def ui_msgbox(buttons=['OK', 'Cancel'], title='Title', message='Message box', ui_id=None):
-    mbox = lv.msgbox(current_lv_group())
-    mbox.add_text(message)
-    mbox.add_title(title)
-    mbox.add_close_button()
-    for b in buttons:
-        mbox.add_footer_button(b)
-    if(ui_id is not None):
-        mbox.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.CLICKED, None)
-    return mbox
 
-# TODO : make UIText
+# TODO -- get the kb_group back involved
+class UIText(UIElement):
+    def __init__(self, text=None, placeholder=None, w=None, h=None, bg_color=None, fg_color=None, font=None, one_line=True, callback=None):
+        super().__init__()
+        self.ta = lv.textarea(self.group)
+        if(w is not None):
+            self.ta.set_width(w)
+        if(h is not None):
+            self.ta.set_height(h)
+        if(font is not None):
+            self.ta.set_style_text_font(font, 0)
+        if(bg_color is not None):
+            self.ta.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
+        if(fg_color is not None):
+            self.ta.set_style_text_color(pal_to_lv(fg_color),0)
+        if placeholder is not None:
+            self.ta.set_placeholder_text(placeholder)
+        if text is not None:
+            self.ta.set_text(text)
+        if(one_line): self.ta.set_one_line(True)
+        if(callback is not None):
+            self.ta.add_event_cb(callback, lv.EVENT.VALUE_CHANGED, None)
+        if(w is not None):
+            self.group.set_width(w+20)
 
-# Copy of our ui_text with lvgl textarea 
-#tulip.ui_text(ui_element_id, default_value, x, y, w, h, text_color, box_color, font_number)
-def ui_text(ui_id=None, text=None, placeholder=None, x=0, y=0, w=None, h=None, bg_color=None, fg_color=None, font=None, one_line=True):
-    ta = lv.textarea(current_lv_group())
-    ta.set_pos(x,y)
-    if(w is not None):
-        ta.set_width(w)
-    if(h is not None):
-        ta.set_height(h)
-    if(font is not None):
-        ta.set_style_text_font(font, 0)
-    if(bg_color is not None):
-        ta.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
-    if(fg_color is not None):
-        ta.set_style_text_color(pal_to_lv(fg_color),0)
-    if placeholder is not None:
-        ta.set_placeholder_text(placeholder)
-    if text is not None:
-        ta.set_text(text)
-    if(one_line): ta.set_one_line(True)
-    if(ui_id is not None):
-        ta.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
-    return ta
-
-# TODO: Make UICheckbox
-
-# Copy of our ui_checkbox with lvgl 
-def ui_checkbox(ui_id=None, text=None, val=False, x=0, y=0, bg_color=None, fg_color=None):
-    cb = lv.checkbox(current_lv_group())
-    if(text is not None):
-        cb.set_text(text)
-    cb.set_pos(x,y)
-    if(bg_color is not None):
-        cb.set_style_bg_color(pal_to_lv(bg_color), lv.PART.INDICATOR)
-        cb.set_style_bg_color(pal_to_lv(bg_color), lv.PART.INDICATOR | lv.STATE.CHECKED)
-    if(fg_color is not None):
-        cb.set_style_border_color(pal_to_lv(fg_color), lv.PART.INDICATOR)
-    cb.set_state(lv.STATE.CHECKED, val)
-    if(ui_id is not None):
-        cb.add_event_cb(lambda e: lv_callback(e, ui_id), lv.EVENT.VALUE_CHANGED, None)
-    return cb
-
-#TODO : Make UILabel 
-
+class UICheckbox(UIElement):
+    def __init__(self, text=None, val=False, bg_color=None, fg_color=None, callback=None):
+        super().__init__()
+        self.cb = lv.checkbox(self.group)
+        if(text is not None):
+            self.cb.set_text(text)
+        if(bg_color is not None):
+            self.cb.set_style_bg_color(pal_to_lv(bg_color), lv.PART.INDICATOR)
+            self.cb.set_style_bg_color(pal_to_lv(bg_color), lv.PART.INDICATOR | lv.STATE.CHECKED)
+        if(fg_color is not None):
+            self.cb.set_style_border_color(pal_to_lv(fg_color), lv.PART.INDICATOR)
+        self.cb.set_state(lv.STATE.CHECKED, val)
+        if(callback is not None):
+            self.cb.add_event_cb(callback, lv.EVENT.VALUE_CHANGED, None)
 
 
 repl_screen = UIScreen("repl", bg_color=9, handle_keyboard=True)
