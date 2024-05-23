@@ -481,7 +481,9 @@ def run(module_string):
             # Run the app
             try:
                 actual_module.run(screen)
-            except:
+            except Exception as e:
+                print("Error running %s: " % (module_string))
+                sys.print_exception(e)
                 screen.screen_quit_callback(None)
 
         else:
