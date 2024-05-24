@@ -24,7 +24,7 @@ class MidiConfig:
             self.synth_per_channel[channel].release_voices()
             del self.synth_per_channel[channel]
         if channel == 10:
-            synth = DrumSynth(num_voices=polyphony)
+            synth = PitchedPCMSynth(num_voices=polyphony)
         else:
             synth = Synth(voice_source=VoiceSource(), num_voices=polyphony)
             if patch is not None:
@@ -305,6 +305,46 @@ class Synth:
         self.voice_source.release_voices()
 
 
+
+class PitchedPCMSynth:
+    def __init__(self, num_voices=10):
+        self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
+        self.next_osc = 0
+        self.pcm_patch_to_osc = {}
+        # Fields used by UI
+        self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
+
+    def note_on(self, note, velocity, pcm_patch, time=None):
+        osc = self.pcm_patch_to_osc.get(pcm_patch, None)
+        if osc is None:
+            osc = self.oscs[self.next_osc]
+            self.next_osc = (self.next_osc + 1) % len(self.oscs)
+        self.pcm_patch_to_osc[pcm_patch] = osc
+        amy.send(time=time, osc=osc, wave=amy.PCM, note=note,
+             patch=pcm_patch, vel=velocity)
+
+    def note_off(self, note, pcm_patch, time=None):
+        # Drums don't really need note-offs, but handle them anyway.
+        try:
+            osc = self.pcm_patch_to_osc[note]
+            amy.send(time=time, osc=osc, vel=0)
+            del self.pcm_patch_to_osc[note]
+        except KeyError:
+            # We didn't recognize the patch; never mind.
+            pass
+
+    # Rest of Synth protocol doesn't do anything for drums.
+    def sustain(self, state):
+        pass
+
+    def program_change(self, patch_number):
+        pass
+
+    def control_change(self, control, value):
+        pass
+
+
+
 class DrumSynth:
     """Simplified Synth for Drum channel (10)."""
     PCM_PATCHES = 29
@@ -321,7 +361,7 @@ class DrumSynth:
         osc = self.oscs[self.next_osc]
         self.next_osc = (self.next_osc + 1) % len(self.oscs)
         amy.send(time=time, osc=osc, wave=amy.PCM,
-                 patch=note % self.PCM_PATCHES, vel=velocity, freq=0)
+             patch=note % DrumSynth.PCM_PATCHES, vel=velocity, freq=0)
         self.note_to_osc[note] = osc
 
     def note_off(self, note, time=None):

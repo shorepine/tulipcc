@@ -3,6 +3,9 @@
 
 from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_add_callback, seq_remove_callback, seq_ppq, ticks_ms
 import amy
+import midi
+from patches import drumkit
+
 
 # A single drum machine switch with LED
 class DrumSwitch(UIElement):
@@ -176,37 +179,6 @@ class DrumRow(UIElement):
     def cb(self, e):
         pass
 
-drumkit = [ 
-    (89, "Maraca"),
-    (39, "Kick"),
-    (45, "Snare"),
-    (52, "Snare2"),
-    (51, "Snare3"),
-    (41, "Snare4"),
-    (53, "Closed Hat"),
-    (56, "Open Hat"),
-    (61, "Low Tom"),
-    (94, "Clap"),
-    (69, "Cowbell"),
-    (74, "Congo Low"),
-    (82, "Clave"),
-    (60, "Block"),
-    (60, "Roll"),
-    (60, "Hit"),
-    (60, "Crash"),
-    (60, "Shell"),
-    (60, "Chimes"),
-    (60, "Seashore"),
-    (60, "Pwr Snare"),
-    (60, "Hi Tom"),
-    (66, "Shamisen"),
-    (66, "Koto"),
-    (72, "Steel"),
-    (60, "Pwr Kick"),
-    (66, "Marimba"),
-    (60, "Frets"),
-    (60, "Std Kick")
-    ]
 
 # Called from tulip's sequencer
 def beat_callback(t):
@@ -221,7 +193,8 @@ def beat_callback(t):
             note_for_pitch = None
             if row.get_pitch() != 0.5:
                 note_for_pitch = int(base_note + (row.get_pitch() - 0.5)*24.0)
-            amy.send(osc=50+i+2, wave=amy.PCM, patch=row.get_preset(), note=note_for_pitch, vel=row.get_vel()*2, pan=row.get_pan(), time=t)
+            app.synth.note_on(note_for_pitch, row.get_vel()*2, row.get_preset(), t)
+            #amy.send(osc=50+i+2, wave=amy.PCM, patch=row.get_preset(), note=note_for_pitch, vel=row.get_vel()*2, pan=row.get_pan(), time=t)
     app.current_beat = (app.current_beat+1) % 16
 
 def quit(screen):
@@ -230,6 +203,7 @@ def quit(screen):
 def run(screen):
     global app 
     app = screen # we can use the screen obj passed in as a general "store stuff here" class, as well as inspect the UI 
+    app.synth = midi.config.synth_per_channel[10]
     app.current_beat = 0
     app.offset_y = 10
     app.set_bg_color(0)

@@ -1,6 +1,39 @@
 # patches.py
 # maybe one day automated list of patches in AMY
 
+# Drumkit is [base_midi_note, name]
+drumkit = [ 
+    (89, "Maraca"),
+    (39, "Kick"),
+    (45, "Snare"),
+    (52, "Snare2"),
+    (51, "Snare3"),
+    (41, "Snare4"),
+    (53, "Closed Hat"),
+    (56, "Open Hat"),
+    (61, "Low Tom"),
+    (94, "Clap"),
+    (69, "Cowbell"),
+    (74, "Congo Low"),
+    (82, "Clave"),
+    (60, "Block"),
+    (60, "Roll"),
+    (60, "Hit"),
+    (60, "Crash"),
+    (60, "Shell"),
+    (60, "Chimes"),
+    (60, "Seashore"),
+    (60, "Pwr Snare"),
+    (60, "Hi Tom"),
+    (66, "Shamisen"),
+    (66, "Koto"),
+    (72, "Steel"),
+    (60, "Pwr Kick"),
+    (66, "Marimba"),
+    (60, "Frets"),
+    (60, "Std Kick")
+    ]
+
 patches =  [
 "A11 Brass Set 1",
 "A12 Brass Swell",
