@@ -326,7 +326,7 @@ class PitchedPCMSynth:
     def note_off(self, note, pcm_patch, time=None):
         # Drums don't really need note-offs, but handle them anyway.
         try:
-            osc = self.pcm_patch_to_osc[note]
+            osc = self.pcm_patch_to_osc[pcm_patch]
             amy.send(time=time, osc=osc, vel=0)
             del self.pcm_patch_to_osc[note]
         except KeyError:
@@ -346,7 +346,7 @@ class PitchedPCMSynth:
 
 
 class DrumSynth:
-    """Simplified Synth for Drum channel (10)."""
+    """Simplified Synth for Drum channel (10). Plays one patch per note at its default pitch. Not used right now. """
     PCM_PATCHES = 29
 
     def __init__(self, num_voices=10):

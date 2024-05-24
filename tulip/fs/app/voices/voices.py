@@ -14,12 +14,20 @@ def redraw(app):
     (app.screen_w, app.screen_h) = tulip.screen_size()
     # Since redraw is not within app.run() we are not guaranteed to be in the cwd of the app. 
     # luckily, tulip.run() adds the cwd of the app to the app class before starting.
-    app.piano_w = 800
-    app.piano_h = 301
-    app.piano_y = app.screen_h - 280
-    app.piano_x = int((app.screen_w - app.piano_w) / 2)
-    app.white_key_w = 56
-    tulip.bg_png(app.app_dir+'/piano.png', app.piano_x, app.piano_y)
+    app.piano_x = 112
+    app.piano_y = 320
+    app.piano_w = 798
+    app.piano_h = 280
+    tulip.bg_rect(app.piano_x,app.piano_y,app.piano_w,app.piano_h,255,1)
+    app.white_key_w = 57
+    for k in range(15):
+        x = app.piano_x+(app.white_key_w*k)
+        tulip.bg_line(x, app.piano_y, x, 599, 36)
+    app.black_key_w = 38
+    app.black_key_h = 180
+    app.black_key_starts = [148, 217, 315, 381, 447, 542, 612, 711, 776, 843]
+    for s in app.black_key_starts:
+        tulip.bg_rect(s, app.piano_y, app.black_key_w, app.black_key_h, 0, 1)    
 
 class Settings(tulip.UIElement):
     def __init__(self, width=350, height=300):
@@ -149,25 +157,23 @@ class ListColumn(tulip.UIElement):
         self.select(button.get_index())
 
 def play_note_from_coord(app, x, y, up):
-    (r,g,b) = tulip.rgb(tulip.bg_pixel(x,y))
-    intensity = float( (r+g+b) / (256*3) )
+    c = tulip.bg_pixel(x,y)
     white_key_notes = [0,2,4,5,7,9,11,12,14,16,17,19,21,23]
-
+    black_key_notes = [1,3,6,8, 10, 13, 15, 18, 20, 22]
     white_key = int((x-app.piano_x)/app.white_key_w)
     # white key?
-    if(intensity > 0.59):
+    note_idx = None
+    if(c==255 or c==36):
         note_idx = white_key_notes[white_key]
     else:
-        # how many px from the left side of the white key
-        offset = x - (app.piano_x+(white_key*app.white_key_w))
-        if(offset < int(app.white_key_w*0.66)): # left 2/3rds
-            note_idx = white_key_notes[white_key] - 1
-        else: # right third
-            note_idx = white_key_notes[white_key] + 1
-    if(up):
-        tulip.midi_local((128+app.channels.selected, note_idx+48, 127))
-    else:
-        tulip.midi_local((144+app.channels.selected, note_idx+48, 127))
+        for i,black_x in enumerate(app.black_key_starts):
+            if(x >= black_x and x < black_x+app.black_key_w):
+                note_idx = black_key_notes[i]
+    if note_idx is not None:
+        if(up):
+            tulip.midi_local((128+app.channels.selected, note_idx+48, 127))
+        else:
+            tulip.midi_local((144+app.channels.selected, note_idx+48, 127))
 
 
 

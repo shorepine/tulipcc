@@ -199,6 +199,16 @@ See some examples of more complex UIs using `UIScreen`:
  * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/voices/voices.py)
 
 
+You can see running multitasking apps with `tulip.running_apps`, which is a dict by app name. This lets you inspect parameters of running apps. `tulip.repl_screen` always returns the REPL UIScreen.
+
+```python
+>>> tulip.running_apps['voices'].piano_y
+320
+
+>>> tulip.repl_screen.bg_color
+9
+```
+
 
 
 ### Other interface elements
