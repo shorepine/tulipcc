@@ -106,6 +106,8 @@ Put that in a package called `program`, and when `run('program')` is called, you
 
 The REPL itself is treated as a (special) multitasking app, always first in the list and cannot be quit. 
 
+You can switch apps with the keyboard: `control-tab`, and quit apps with `control-Q`. 
+
 We ship a few examples of multitasking apps, please check them out on Tulip or here:
  * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py)
  * [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py)

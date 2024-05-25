@@ -146,15 +146,16 @@ class UIScreen():
                     apps[(i + 1) % len(running_apps)][1].present()
 
     def screen_quit_callback(self, e):
-        import gc
-        if(self.quit_callback is not None):
-            self.quit_callback(self)
-        self.running = False
-        self.active = False
-        self.remove_items()
-        del running_apps[self.name]
-        gc.collect()
-        repl_screen.present()
+        if(self.name!='repl'):
+            import gc
+            if(self.quit_callback is not None):
+                self.quit_callback(self)
+            self.running = False
+            self.active = False
+            self.remove_items()
+            del running_apps[self.name]
+            gc.collect()
+            repl_screen.present()
 
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
@@ -207,6 +208,9 @@ class UIScreen():
                 tulip.tfb_stop()
         if(self.activate_callback is not None):
             self.activate_callback(self)
+
+        tulip.ui_quit_callback(self.screen_quit_callback)
+        tulip.ui_switch_callback(self.alttab_callback)
 
     # Remove the elements you created
     def remove_items(self):

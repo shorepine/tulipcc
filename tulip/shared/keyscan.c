@@ -323,7 +323,7 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
     // Check for key remap
     for(uint8_t i=0;i<MAX_KEY_REMAPS;i++) {
         if(code == key_remaps[i].scan && modifier == key_remaps[i].mod) {
-            fprintf(stderr, "remap returning %d\n", key_remaps[i].code);
+            //fprintf(stderr, "remap returning %d\n", key_remaps[i].code);
             return key_remaps[i].code;
         }
     }
@@ -369,7 +369,7 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
         case KEY_ENTER: return 13;  
         case KEY_ESC: return 27; 
         case KEY_BACKSPACE: return 8; 
-        case KEY_TAB: return 9; 
+        case KEY_TAB: if(ctrl) return 263; else return 9; 
         case KEY_PAGEUP: return 25;
         case KEY_PAGEDOWN: return 22;
 
@@ -399,32 +399,38 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
 }
 
 extern int16_t lvgl_is_repl;
-extern mp_obj_t keyboard_callback;
+extern mp_obj_t keyboard_callback, ui_quit_callback, ui_switch_callback;
 
 void send_key_to_micropython(uint16_t c) {
-
-    // Call the callback if set
-    if(keyboard_callback != NULL) 
-        mp_sched_schedule(keyboard_callback, mp_obj_new_int(c));
-
-    // If something is taking in chars from LVGL (text area etc), don't send the char to MP
-    if (c==mp_interrupt_char) {
-        // Send a ctrl-C to Micropython if sent 
-        mp_sched_keyboard_interrupt();
-    } else if (c==4) { // control-D
-        tx_char(c );
+    // handle the global system hotkeys before anything else. we have two, ctrl-tab and ctrl-q 
+    if(c==17) {
+        mp_sched_schedule(ui_quit_callback, NULL);
+    } else if (c==263) {
+        mp_sched_schedule(ui_switch_callback, NULL);
     } else {
-        if(lvgl_is_repl) {
-            if(c>257 && c<263) { 
-                tx_char(27);
-                tx_char('[');
-                if(c==258) tx_char('B');
-                if(c==259) tx_char('A');
-                if(c==260) tx_char('D');
-                if(c==261) tx_char('C');
-                if(c==262) { tx_char('3'); tx_char(126); }
-            } else {
-                tx_char(c );
+        // Call the callback if set
+        if(keyboard_callback != NULL) 
+            mp_sched_schedule(keyboard_callback, mp_obj_new_int(c));
+
+        // If something is taking in chars from LVGL (text area etc), don't send the char to MP
+        if (c==mp_interrupt_char) {
+            // Send a ctrl-C to Micropython if sent 
+            mp_sched_keyboard_interrupt();
+        } else if (c==4) { // control-D
+            tx_char(c );
+        } else {
+            if(lvgl_is_repl) {
+                if(c>257 && c<263) { 
+                    tx_char(27);
+                    tx_char('[');
+                    if(c==258) tx_char('B');
+                    if(c==259) tx_char('A');
+                    if(c==260) tx_char('D');
+                    if(c==261) tx_char('C');
+                    if(c==262) { tx_char('3'); tx_char(126); }
+                } else {
+                    tx_char(c );
+                }
             }
         }
     }
