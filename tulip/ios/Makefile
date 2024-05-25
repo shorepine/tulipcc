@@ -39,7 +39,7 @@ include $(TOP)/extmod/extmod.mk
 INC +=  -I.
 INC +=  -I$(TOP)
 INC += -I$(BUILD)
-INC += -I../shared_desktop/
+INC += -I../shared/desktop/
 INC += -I$(TOP)/ports/unix
 INC += -I../shared/
 INC += -I../../amy/src/
@@ -189,10 +189,10 @@ endif
 # source files
 SRC_C += \
 	main.c \
-	../shared_desktop/unix_mphal.c \
-	../shared_desktop/unix_display.c \
-	../shared_desktop/multicast.c \
-	../shared_desktop/mpthreadport.c \
+	../shared/desktop/unix_mphal.c \
+	../shared/desktop/unix_display.c \
+	../shared/desktop/multicast.c \
+	../shared/desktop/mpthreadport.c \
 	$(MICROPY_PORT_DIR)/gccollect.c \
 	$(MICROPY_PORT_DIR)/input.c \
 	$(MICROPY_PORT_DIR)/modmachine.c \
