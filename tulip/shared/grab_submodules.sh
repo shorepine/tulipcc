@@ -11,7 +11,6 @@ else
     echo "Syncing submodules for first build..."
     git submodule update --init amy
     git submodule update --init micropython
-    git submodule update --init --recursive lv_binding_micropython
     cd micropython
     git submodule update --init lib/axtls 
     git submodule update --init lib/libffi 

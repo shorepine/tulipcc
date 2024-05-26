@@ -27,12 +27,12 @@ endif()
 
 # Set location of lvgl_mp dir
 if(NOT LV_BINDING_DIR)
-    get_filename_component(LV_BINDING_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython ABSOLUTE)
+    get_filename_component(LV_BINDING_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython_tulip ABSOLUTE)
 endif()
 
 # Set location of lvgl dir
 if(NOT LVGL_DIR)
-    get_filename_component(LVGL_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython/lvgl ABSOLUTE)
+    get_filename_component(LVGL_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython_tulip/lvgl ABSOLUTE)
 endif()
 
 file(GLOB_RECURSE LVGL_SOURCES ${LVGL_DIR}/src/*.c)

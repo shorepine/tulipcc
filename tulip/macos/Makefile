@@ -54,7 +54,7 @@ include $(TOP)/extmod/extmod.mk
 
 
 # LVGL stuff
-LVGL_BINDING_DIR = $(TOP)/../lv_binding_micropython
+LVGL_BINDING_DIR = $(TOP)/../lv_binding_micropython_tulip
 LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
 LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
 INC += -I$(LVGL_BINDING_DIR) -I.
@@ -83,8 +83,8 @@ INC += -I$(TOP)/ports/unix
 INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
-INC += -I$(TOP)/../lv_binding_micropython/lvgl/src
-INC += -I$(TOP)/../lv_binding_micropython/lvgl/src/libs/lodepng
+INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src
+INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src/libs/lodepng
 
 INC += -I./SDL2.framework/Headers
 

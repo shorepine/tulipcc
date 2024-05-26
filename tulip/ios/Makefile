@@ -45,8 +45,8 @@ INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
 #INC += -I./SDL2.framework/Headers
-INC += -I$(TOP)/../lv_binding_micropython/lvgl/src
-INC += -I$(TOP)/../lv_binding_micropython/lvgl/src/libs/lodepng
+INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src
+INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src/libs/lodepng
 
 INC += -I/Users/bwhitman/ioslib/SDL-release-2.28.1/include
 INC += -I/Users/bwhitman/ioslib/SDL-release-2.28.1/src/video/uikit/
@@ -55,7 +55,7 @@ INC += -I/Users/bwhitman/ioslib/SDL-release-2.28.1/src/video/uikit/
 
 
 # LVGL stuff
-LVGL_BINDING_DIR = $(TOP)/../lv_binding_micropython
+LVGL_BINDING_DIR = $(TOP)/../lv_binding_micropython_tulip
 LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
 LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
 INC += -I$(LVGL_BINDING_DIR) -I.
