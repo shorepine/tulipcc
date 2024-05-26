@@ -83,16 +83,33 @@ class Settings(tulip.UIElement):
         self.range.group.set_style_bg_color(tulip.pal_to_lv(9),0)
         self.range.group.align_to(self.mode.group, lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
 
+    def update_from_arp(self, arp):
+        """Configure arpegg UI to match current arpeggiator."""
+        arpegg_state = self.arpegg.get_state() & lv.STATE.CHECKED
+        if arp.active and not arpegg_state:
+            self.arpegg.add_state(lv.STATE.CHECKED)
+        elif not arp.active and arpegg_state:
+            self.arpegg.remove_state(lv.STATE_CHECKED)
+        hold_state = self.hold.get_state() & lv.STATE.CHECKED
+        if arp.hold and not hold_state:
+            self.hold.add_state(lv.STATE.CHECKED)
+        elif not arp.hold and hold_state:
+            self.hold.remove_state(lv.STATE.CHECKED)
+        self.mode.select(['up', 'down', 'updown', 'rand'].index(arp.direction))
+        self.range.select(arp.octaves - 1)
+
     def tempo_cb(self,e):
         new_bpm = self.tempo.get_value()*2.4
         if(new_bpm < 1.0): new_bpm = 1
         tulip.seq_bpm(new_bpm)
         self.tempo_label.set_text("%d BPM" % (tulip.seq_bpm()))
+
     def hold_cb(self,e):
         if(self.hold.get_state()==3): 
             midi.arpeggiator.set('hold', True)
         else:
             midi.arpeggiator.set('hold', False)
+
     def arpegg_cb(self,e):
         if(self.arpegg.get_state()==3):
             midi.arpeggiator.set('on', True)
@@ -293,6 +310,7 @@ def run(screen):
     app.polyphony = ListColumn('polyphony', [str(x+1) for x in range(8)], width=100)
     app.add(app.polyphony)
     app.settings = Settings()
+    app.settings.update_from_arp(midi.arpeggiator)
     app.add(app.settings)
 
     current_patch(1)
