@@ -227,7 +227,7 @@ idf_component_register(
         ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch/include
         ${MICROPY_INC_CORE}
         ${MICROPY_INC_USERMOD}
-        ${MICROPY_PORT_DIR}
+        #${MICROPY_PORT_DIR}
         ${MICROPY_BOARD_DIR}
         ${CMAKE_BINARY_DIR}
         ../../tulip/shared

@@ -1,11 +1,10 @@
 /*
  * This file is part of the MicroPython project, http://micropython.org/
  *
- * Development of the code in this file was sponsored by Microbric Pty Ltd
- *
  * The MIT License (MIT)
  *
- * Copyright (c) 2016 Damien P. George
+ * Copyright (c) 2017 "Eric Poulsen" <eric@zyxod.com>
+ * Copyright (c) 2017 "Tom Manning" <tom@manningetal.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,23 +24,22 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef MICROPY_INCLUDED_ESP32_UART_H
-#define MICROPY_INCLUDED_ESP32_UART_H
 
-// Whether to enable the REPL on a UART.
-#ifndef MICROPY_HW_ENABLE_UART_REPL
-#define MICROPY_HW_ENABLE_UART_REPL (!CONFIG_USB_OTG_SUPPORTED && !CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG)
+#ifndef MICROPY_INCLUDED_ESP32_MACHINE_RTC_H
+#define MICROPY_INCLUDED_ESP32_MACHINE_RTC_H
+
+#include "modmachine.h"
+
+typedef struct {
+    uint64_t ext1_pins; // set bit == pin#
+    int8_t ext0_pin;   // just the pin#, -1 == None
+    bool wake_on_touch : 1;
+    bool wake_on_ulp : 1;
+    bool ext0_level : 1;
+    wake_type_t ext0_wake_types;
+    bool ext1_level : 1;
+} machine_rtc_config_t;
+
+extern machine_rtc_config_t machine_rtc_config;
+
 #endif
-
-#ifndef MICROPY_HW_UART_REPL
-#define MICROPY_HW_UART_REPL (0)
-#endif
-
-#ifndef MICROPY_HW_UART_REPL_BAUD
-#define MICROPY_HW_UART_REPL_BAUD (115200)
-#endif
-
-void uart_stdout_init(void);
-int uart_stdout_tx_strn(const char *str, size_t len);
-
-#endif // MICROPY_INCLUDED_ESP32_UART_H

@@ -1,11 +1,9 @@
 /*
  * This file is part of the MicroPython project, http://micropython.org/
  *
- * Development of the code in this file was sponsored by Microbric Pty Ltd
- *
  * The MIT License (MIT)
  *
- * Copyright (c) 2016 Damien P. George
+ * Copyright (c) 2021 Glenn Moloney @glenn20
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,23 +23,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef MICROPY_INCLUDED_ESP32_UART_H
-#define MICROPY_INCLUDED_ESP32_UART_H
 
-// Whether to enable the REPL on a UART.
-#ifndef MICROPY_HW_ENABLE_UART_REPL
-#define MICROPY_HW_ENABLE_UART_REPL (!CONFIG_USB_OTG_SUPPORTED && !CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG)
-#endif
+#include "py/obj.h"
 
-#ifndef MICROPY_HW_UART_REPL
-#define MICROPY_HW_UART_REPL (0)
-#endif
-
-#ifndef MICROPY_HW_UART_REPL_BAUD
-#define MICROPY_HW_UART_REPL_BAUD (115200)
-#endif
-
-void uart_stdout_init(void);
-int uart_stdout_tx_strn(const char *str, size_t len);
-
-#endif // MICROPY_INCLUDED_ESP32_UART_H
+// Called from main.c:mp_task() to reset the espnow software stack
+mp_obj_t espnow_deinit(mp_obj_t _);

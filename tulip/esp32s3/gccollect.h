@@ -5,7 +5,7 @@
  *
  * The MIT License (MIT)
  *
- * Copyright (c) 2016 Damien P. George
+ * Copyright (c) 2014 Damien P. George
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,23 +25,18 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef MICROPY_INCLUDED_ESP32_UART_H
-#define MICROPY_INCLUDED_ESP32_UART_H
 
-// Whether to enable the REPL on a UART.
-#ifndef MICROPY_HW_ENABLE_UART_REPL
-#define MICROPY_HW_ENABLE_UART_REPL (!CONFIG_USB_OTG_SUPPORTED && !CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG)
-#endif
+extern uint32_t _text_start;
+extern uint32_t _text_end;
+extern uint32_t _irom0_text_start;
+extern uint32_t _irom0_text_end;
+extern uint32_t _data_start;
+extern uint32_t _data_end;
+extern uint32_t _rodata_start;
+extern uint32_t _rodata_end;
+extern uint32_t _bss_start;
+extern uint32_t _bss_end;
+extern uint32_t _heap_start;
+extern uint32_t _heap_end;
 
-#ifndef MICROPY_HW_UART_REPL
-#define MICROPY_HW_UART_REPL (0)
-#endif
-
-#ifndef MICROPY_HW_UART_REPL_BAUD
-#define MICROPY_HW_UART_REPL_BAUD (115200)
-#endif
-
-void uart_stdout_init(void);
-int uart_stdout_tx_strn(const char *str, size_t len);
-
-#endif // MICROPY_INCLUDED_ESP32_UART_H
+void gc_collect(void);

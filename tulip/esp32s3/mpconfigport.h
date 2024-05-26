@@ -9,7 +9,7 @@
 #include "esp_random.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
-//#include "driver/i2s.h"
+#include "driver/i2s.h"
 #include "esp_wifi_types.h"
 
 #ifndef MICROPY_CONFIG_ROM_LEVEL
@@ -130,11 +130,7 @@
 #define MICROPY_PY_NETWORK_WLAN             (1)
 #endif
 #ifndef MICROPY_HW_ENABLE_SDCARD
-#ifdef TDECK
-#define MICROPY_HW_ENABLE_SDCARD            (1) 
-#else
-#define MICROPY_HW_ENABLE_SDCARD            (0) 
-#endif
+#define MICROPY_HW_ENABLE_SDCARD            (1)
 #endif
 #define MICROPY_HW_SOFTSPI_MIN_DELAY        (0)
 #define MICROPY_HW_SOFTSPI_MAX_BAUDRATE     (esp_rom_get_cpu_ticks_per_us() * 1000000 / 200) // roughly
