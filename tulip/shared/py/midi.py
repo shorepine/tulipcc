@@ -469,5 +469,5 @@ def deferred_midi_config(t):
 
 def setup():
     # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a defer
-    tulip.defer(deferred_midi_config, 500)
+    tulip.defer(deferred_midi_config, None, 500)
 

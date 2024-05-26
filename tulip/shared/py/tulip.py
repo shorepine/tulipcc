@@ -453,24 +453,32 @@ def run(module_string):
     import sys
     before_run = sys.modules.copy()
     before_run_pwd = pwd()
+    already_imported = False
 
-    # cd into the module (or find it in sys/app)
+    # first, try to just import the module. maybe it's frozen or not a directory, just a module in pwd
     try:
-        cd(module_string)
-    except OSError:
-        cd(root_dir()+"sys/app")
+        reload(module_string)
+        already_imported = True
+    except ImportError:
+        # cd into the module (or find it in sys/app)
         try:
             cd(module_string)
         except OSError:
-            cd(before_run_pwd)
-            print("No such program.")
-            return
+            cd(root_dir()+"sys/app")
+            try:
+                cd(module_string)
+            except OSError:
+                cd(before_run_pwd)
+                print("No such program.")
+                return
 
     # Run it 
     try:
         screen = None
-        # Import the app module -- if non switchable this will run until it stops
-        exec('import %s' % (module_string))
+        
+        if(not already_imported):
+            # Import the app module -- if non switchable this will run until it stops
+            exec('import %s' % (module_string))
 
         # Is this a switchable app? 
         actual_module = sys.modules[module_string]

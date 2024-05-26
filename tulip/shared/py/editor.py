@@ -41,7 +41,7 @@ class Editor(tulip.UIScreen):
         # The TFB switches over, but the REPL will print >>> after this runs, 
         # overwriting the first line. So wait a bit and activate then
         # (This also means the >>> will print on the alternate TFB, so we have to fudge on reactivate)
-        tulip.defer(tulip.activate_editor, 50)
+        tulip.defer(tulip.activate_editor, None, 50)
 
 # Launch the tulip editor as a UIScreen
 def edit(filename=None):

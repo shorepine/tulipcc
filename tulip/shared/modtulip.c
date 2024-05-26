@@ -481,6 +481,10 @@ mp_obj_t ui_switch_callback = NULL;
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 {  
     lv_task_handler();
+    //lv_timer_handler_brian();
+    //if(lv_tick_counter++ % 100 == 0) {
+    //    fprintf(stderr, "%d ticks, brian %d %2.4f bs/tick\n", lv_tick_counter, brian_counter, (float)(brian_counter)/(float)(lv_tick_counter));
+   // }
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_lv_task_handler_obj, mp_lv_task_handler);
@@ -564,13 +568,14 @@ STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
     }
     if(index>=0) {
         defer_callbacks[index] = args[0];
-        defer_sysclock[index] = amy_sysclock() + mp_obj_get_int(args[1]);
+        defer_args[index] = args[1];
+        defer_sysclock[index] = amy_sysclock() + mp_obj_get_int(args[2]);
     } else {
         mp_raise_ValueError(MP_ERROR_TEXT("No more defer slots available"));
     }
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_defer_obj, 2, 2, tulip_defer);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_defer_obj, 3, 3, tulip_defer);
 
 
 

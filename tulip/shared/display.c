@@ -177,7 +177,6 @@ bool display_frame_done_generic() {
         last_emit = 0;
         restart_wireframe = 0;
     }
-
     tulip_frame_isr();
     vsync_count++; 
     return true;
@@ -1003,31 +1002,8 @@ void display_teardown(void) {
 }
 
 
-void lv_flush_cb(lv_display_t * display, const lv_area_t * area, unsigned char * px_map)
-{
-    uint16_t * buf = (uint16_t *)px_map; 
-    int16_t x, y;
-    for(y = area->y1; y <= area->y2; y++) {
-        for(x = area->x1; x <= area->x2; x++) {
-            bg[y*(H_RES+OFFSCREEN_X_PX) + x] = ((*buf >> 8) & 0xe0)  | ((*buf >> 6) & 0x1c) | ((*buf >> 3 & 0x3));
-            buf++;
-        }
-    }
-    // Inform LVGL that you are ready with the flushing and buf is not used anymore
-    lv_display_flush_ready(display);
-}
-
 void lv_flush_cb_8b(lv_display_t * display, const lv_area_t * area, unsigned char * px_map)
 {
-/*    uint8_t * buf = (uint8_t *)px_map; 
-    int16_t x, y;
-    for(y = area->y1; y <= area->y2; y++) {
-        for(x = area->x1; x <= area->x2; x++) {
-            bg[y*(H_RES+OFFSCREEN_X_PX) + x] = (*buf); //((*buf >> 8) & 0xe0)  | ((*buf >> 6) & 0x1c) | ((*buf >> 3 & 0x3));
-            buf++;
-        }
-    }
-    */
     // Inform LVGL that you are ready with the flushing and buf is not used anymore
     lv_display_flush_ready(display);
 }
@@ -1063,7 +1039,7 @@ void my_log_cb(lv_log_level_t level, const char * buf)
     fprintf(stderr, "%s\n", buf);
 }
 
-
+/*
 extern void get_lvgl_font_from_tulip(uint8_t font_no, lv_font_t *outfont);
 
 lv_font_t lv_font_tulip_0;
@@ -1085,9 +1061,8 @@ lv_font_t lv_font_tulip_15;
 lv_font_t lv_font_tulip_16;
 lv_font_t lv_font_tulip_17;
 lv_font_t lv_font_tulip_18;
+*/
 
-
-//lv_font_t lv_font_tulip[MAX_TULIP_FONTS];
 
 void setup_lvgl() {
     // Setup LVGL for UI etc
@@ -1113,7 +1088,7 @@ void setup_lvgl() {
     lv_indev_t *indev_kb = lv_indev_create();
     lv_indev_set_type(indev_kb, LV_INDEV_TYPE_KEYPAD);
     lv_indev_set_read_cb(indev_kb, lvgl_input_kb_read_cb);  
-
+/*
     get_lvgl_font_from_tulip(0, &lv_font_tulip_0);
     get_lvgl_font_from_tulip(1, &lv_font_tulip_1);
     get_lvgl_font_from_tulip(2, &lv_font_tulip_2);
@@ -1133,6 +1108,7 @@ void setup_lvgl() {
     get_lvgl_font_from_tulip(16, &lv_font_tulip_16);
     get_lvgl_font_from_tulip(17, &lv_font_tulip_17);
     get_lvgl_font_from_tulip(18, &lv_font_tulip_18);
+    */
 }
 
 

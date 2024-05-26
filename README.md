@@ -34,7 +34,7 @@ Tulip CC rev 4 supports:
 - 256 colors
 - Can load PNGs from disk to set sprites or background, or generate bitmap data from code
 - Built in code and text editor
-- Built in BBS chat room and file transfer area called **T U L I P ~ W O R L D**
+- Built in BBS chat room and file transfer area called **TULIP ~ WORLD**
 - USB keyboard support
 - Capactive multi-touch support (mouse on Tulip Desktop)
 - MIDI input and output
@@ -170,7 +170,7 @@ https://user-images.githubusercontent.com/76612/215896311-fc0823aa-44bc-4305-85d
 
 ### Tulip World
 
-Still very much early days, but Tulip supports a native chat and file sharing BBS called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. More in the [full API](docs/tulip_api.md).
+Still very much early days, but Tulip supports a native chat and file sharing BBS called **TULIP ~ WORLD** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. More in the [full API](docs/tulip_api.md).
 
 ```python
 import world

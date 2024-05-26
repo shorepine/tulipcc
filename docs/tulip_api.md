@@ -117,7 +117,7 @@ We ship a few examples of multitasking apps, please check them out on Tulip or h
 
 ## Tulip World
 
-Still very much early days, but Tulip supports a native chat and file sharing BBS called **T U L I P ~ W O R L D** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
+Still very much early days, but Tulip supports a native chat and file sharing BBS called **TULIP ~ WORLD** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
 
 You can call the underlying Tulip World APIs:
 
@@ -201,7 +201,7 @@ See some examples of more complex UIs using `UIScreen`:
  * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/voices/voices.py)
 
 
-You can see running multitasking apps with `tulip.running_apps`, which is a dict by app name. This lets you inspect parameters of running apps. `tulip.repl_screen` always returns the REPL UIScreen.
+You can see running multitasking apps with `tulip.running_apps`, which is a dict by app name. This lets you set or inspect parameters of running apps. `tulip.repl_screen` always returns the REPL UIScreen. You can programtically switch apps with e.g. `tulip.app('drums')`. The current running UIScreen is `tulip.current_uiscreen()`. 
 
 ```python
 >>> tulip.running_apps['voices'].piano_y
@@ -356,9 +356,9 @@ asyncio.run(sleep(5))
 
 
 def hello(t):
-    print("hello called at %d" % (t))
+    print("hello called with arg %d" % (t))
 
-tulip.defer(hello, 1500) # will be called 1500ms later
+tulip.defer(hello, 123, 1500) # will be called 1500ms later
 ```
 
 

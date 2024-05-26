@@ -177,11 +177,11 @@ void run_alles() {
     amy_reset_oscs();
     // Schedule a "turning on" sound
     bleep();
-
+    //
     // Spin this core until the power off button is pressed, parsing events and making sounds
-    while(status & RUNNING) {
-        delay_ms(10);
-    }
+    //while(status & RUNNING) {
+    //    delay_ms(10);
+    //}
 }
 
 #else

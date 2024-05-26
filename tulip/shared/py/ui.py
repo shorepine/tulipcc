@@ -2,6 +2,7 @@
 # imports into tulip for ui_x translation into lvgl
 # also has keyboard and other small LVGL things
 import tulip
+import time
 import lvgl as lv
 
 lv_soft_kb = None
@@ -45,9 +46,20 @@ def lv_depad(obj):
     obj.set_style_margin_bottom(0,0)
 
 def current_uiscreen():
+    global current_app_string
     return running_apps[current_app_string]
 def current_lv_group():
     return current_uiscreen().group
+
+def hide(i):
+    g = lv.screen_active().get_child(0)
+    to_hide = g.get_child(i)
+    to_hide.add_flag(1) # hide
+
+def unhide(i):
+    g = lv.screen_active().get_child(0)
+    to_unhide = g.get_child(i)
+    to_unhide.remove_flag(1) # show
 
 # The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
 class UIScreen():
@@ -136,6 +148,10 @@ class UIScreen():
     def alttab_callback(self, e):
         if(len(running_apps)>1):
             self.active = False
+
+            for i in range(self.group.get_child_count()):
+                hide(i)
+
             if(self.deactivate_callback is not None):
                 self.deactivate_callback(self)
     
@@ -180,16 +196,23 @@ class UIScreen():
                     o.group.align_to(self.group,first_align,self.offset_x,self.offset_y)
             o.group.set_width(o.group.get_width()+pad_x)
             o.group.set_height(o.group.get_height()+pad_y)
+            o.group.add_flag(1) # Hide by default
             if(x is not None and y is not None): o.group.set_pos(x,y)
             self.last_obj_added = o.group
 
     # Show the UI on the screen. Set up the keyboard group listener. Draw the task bar. 
     def present(self):
+        global current_app_string
+        #tic = tulip.ticks_ms()
         current_app_string = self.name
         self.active = True
         self.draw_task_bar()
         self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
+        
         lv.screen_load(self.screen)
+
+        for i in range(self.group.get_child_count()):
+            tulip.defer(unhide, i, 500 + i*100)
 
         if(self.handle_keyboard):
             get_keypad_indev().set_group(self.kb_group)
@@ -197,7 +220,6 @@ class UIScreen():
         if(self.name == 'repl'):
             tulip.tfb_start()
             tulip.set_screen_as_repl(1)
-
             tulip.tfb_update() # force redraw of tfb, maybe tfb_start should do this? 
 
         else:
@@ -211,6 +233,7 @@ class UIScreen():
 
         tulip.ui_quit_callback(self.screen_quit_callback)
         tulip.ui_switch_callback(self.alttab_callback)
+        #print("took %dms to load screen" % (tulip.ticks_ms()-tic))
 
     # Remove the elements you created
     def remove_items(self):
@@ -315,11 +338,9 @@ def launcher_cb(e):
 def launcher(ignore=True):
     global lv_launcher
     if(lv_launcher is not None):
-        #print("Shutting down launcher")
         lv_launcher.delete()
         lv_launcher=None
         return
-    #print("starting up launcher")
     lv_launcher = lv.list(repl_screen.group)
     lv_launcher.set_size(195, 140)
     lv_launcher.set_align(lv.ALIGN.BOTTOM_RIGHT)

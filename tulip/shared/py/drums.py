@@ -1,7 +1,7 @@
 # drums.py
 # lvgl drum machine for Tulip
 
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_add_callback, seq_remove_callback, seq_ppq, ticks_ms
+from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_add_callback, seq_remove_callback, seq_ppq, seq_ticks
 import amy
 import midi
 from patches import drumkit
@@ -186,7 +186,7 @@ def beat_callback(t):
     # Hm, how should we deal with visual latency 
     app.leds.set((app.current_beat-1)% 16, 0)
     app.leds.set(app.current_beat, 1)
-
+    #print("beat %d at time %d sysclock %d delta %d tick %d" % (app.current_beat, t, ticks_ms(), t-ticks_ms(), seq_ticks()))
     for i, row in enumerate(app.rows):
         if(row.get(app.current_beat)):
             base_note = drumkit[row.get_preset()][0]
@@ -218,6 +218,8 @@ def run(screen):
         row.set_vel(.5)
         row.set_pan(.5)
         row.set_pitch(.5)
+    for i in range(16):
+        app.rows[2].objs[i].set(True)
 
     app.slot = seq_add_callback(beat_callback, int(seq_ppq()/2))
     app.present()

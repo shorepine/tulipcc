@@ -235,7 +235,7 @@ int vprintf_null(const char *format, va_list ap) {
 }
 
 extern void setup_lvgl();
-
+uint8_t lvgl_setup = 0;
 void mp_task(void *pvParameter) {
     volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
     //volatile uint32_t sp = (uint32_t)get_sp();
@@ -272,8 +272,10 @@ soft_reset:
     mp_init();
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
     readline_init0();
-
-    setup_lvgl();
+    if(!lvgl_setup) {
+        setup_lvgl();
+        lvgl_setup = 1;
+    }
 
     MP_STATE_PORT(native_code_pointers) = MP_OBJ_NULL;
 
@@ -336,7 +338,8 @@ soft_reset_exit:
 
     gc_sweep_all();
 
-    mp_hal_stdout_tx_str("MPY: soft reboot\r\n");
+    mp_hal_stdout_tx_str("MPY: hard reboot\r\n");
+    esp_restart();
 
     // deinitialise peripherals
     machine_pwm_deinit_all();
@@ -429,9 +432,11 @@ void app_main(void) {
     delay_ms(100);
 
     fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
-    xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
+    run_alles();
+
+    //xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
-    delay_ms(100);
+    delay_ms(500);
     
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);

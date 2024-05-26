@@ -5,13 +5,22 @@
 #include "alles.h"
 
 // All of the ESP tasks that we create in one place
-#define DISPLAY_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 2) //(ESP_TASK_PRIO_MIN + 5)
+//#define DISPLAY_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 2) //(ESP_TASK_PRIO_MIN + 5)
+#define DISPLAY_TASK_PRIORITY (ESP_TASK_PRIO_MIN)
+
 #define USB_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)
 #define TOUCHSCREEN_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)
-#define SEQUENCER_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1) // Can be low because it sets its own timers?
-#define TULIP_MP_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 2)
+
+//#define SEQUENCER_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1) // Can be low because it sets its own timers?
+#define SEQUENCER_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 1) // Can be low because it sets its own timers?
+
+//#define TULIP_MP_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 2)
+#define TULIP_MP_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)
+
 #define MIDI_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 2)
-#define ALLES_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 2)
+
+//#define ALLES_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 2)
+
 #define ALLES_PARSE_TASK_PRIORITY (ESP_TASK_PRIO_MIN +2)
 #define ALLES_RECEIVE_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 3)
 #define ALLES_RENDER_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 1)
@@ -42,7 +51,7 @@
 #define ALLES_RENDER_TASK_STACK_SIZE (8 * 1024)
 #define ALLES_FILL_BUFFER_TASK_STACK_SIZE (8 * 1024)
 
-#define MP_TASK_HEAP_SIZE (3 * 1024 * 1024)
+#define MP_TASK_HEAP_SIZE (2 * 1024 * 1024)
 
 #define DISPLAY_TASK_NAME           "display_task"
 #define USB_TASK_NAME               "usb_task"

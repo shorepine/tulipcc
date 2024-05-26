@@ -199,7 +199,7 @@ def quit(screen):
     deactivate(app)
 
 def activate(screen):
-    tulip.defer(deferred_bg_redraw, 250)
+    tulip.defer(deferred_bg_redraw, None, 250)
     # start listening to the keyboard again
     tulip.keyboard_callback(process_key)
     tulip.touch_callback(touch)
@@ -278,7 +278,7 @@ def run(screen):
     app.activate_callback = activate
     app.deactivate_callback = deactivate
     # Draw the BG in 250ms, after LVGL finishes
-    tulip.defer(deferred_bg_redraw, 250)
+    tulip.defer(deferred_bg_redraw, None, 250)
 
     # Skip 10, drums
     app.channels = ListColumn('channel',["1","2","3","4","5","6","7","8","9","11","12","13","14","15","16"], selected=0, width=100)
