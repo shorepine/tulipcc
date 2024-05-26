@@ -411,7 +411,12 @@ def setup_from_patch_number(patch_number):
     global midi_channel
     #print("resetting patch number to %d" % (patch_number))
 
-    music_map(midi_channel, patch_number, 4)
+    # See how many voices are allocated going in.
+    _, amy_voices = midi.config.channel_info(midi_channel)
+    #print("channel", midi_channel, "voices", amy_voices)
+    # Use no fewer than 4.
+    polyphony = max(4, len(amy_voices))
+    music_map(midi_channel, patch_number, polyphony)
     _, amy_voices = midi.config.channel_info(midi_channel)
     jp = juno.JunoPatch()  #.from_patch_number(patch_number)
     jp.set_voices(amy_voices)

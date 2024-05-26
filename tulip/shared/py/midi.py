@@ -388,10 +388,10 @@ class DrumSynth:
 def ensure_midi_config():
     global config
     if not config:
-        # Tulip defaults, 4 note polyphony on channel 1
+        # Tulip defaults, 6 note polyphony on channel 1
         # drum machine always on channel 10
         config = MidiConfig(
-            voices_per_channel={1: 4, 10: 10},
+            voices_per_channel={1: 6, 10: 10},
             patch_per_channel={1: 2},
         )
         tulip.midi_add_callback(midi_event_cb)
