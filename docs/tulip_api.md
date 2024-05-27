@@ -87,7 +87,7 @@ We ship a couple of game-like examples, check them out:
 
 The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package', username)` or `world.download('package')`. 
 
-We put a few system packages in `/sys/app`, and if you `run('app')`, it will look both in your current folder and the `/sys/app` folder for the app. 
+We put a few system packages in `/sys/app` and some examples in `/sys/ex`, and if you `run('app')`, it will look in your current folder, the `/sys/ex` folder, and the `/sys/app` folder for the app. 
 
 
 ### Multitasking apps 
@@ -96,24 +96,25 @@ If you want your package to run alongside other apps, and show a task bar with a
 
 ```python
 # my switchable program, program.py
-def run(screen):
-    screen.present() # I'm ready, show my app
+def run(app):
+    # Setup my app
+    app.present() # I'm ready, show my app
 ```
 
 Put that in a package called `program`, and when `run('program')` is called, your app will start and show a task bar. Multitasking apps have to return immediately after setup (the `run` function) and rely on callbacks to process data and user input. We have callbacks for almost everything you'd need: keyboard input, MIDI input, music sequencer ticks and touch input. `UIScreen` also sets up callbacks for "activating" (switching to the app or first run), "deactivating" (switching away from the app) or quitting. 
 
-`UIScreen` apps should use LVGL/`tulip.UIX` classes for their UI, so that the UI appears and disappears automatically during switching. You can also use other Tulip drawing commands for the UI, but be mindful that the BG (and often TFB) will be cleared on switching away from your app, so you'll have to redraw those on your activate callback. 
+`UIScreen` apps should use LVGL/`tulip.UIX` classes for their UI, so that the UI appears and disappears automatically during switching. This is especially important on Tulip CC hardware, where we ensure the UI switching drawing does not interrupt music or other time sensitive callbacks. You can also use other Tulip drawing commands for the UI, but be mindful that the BG (and often TFB) will be cleared on switching away from your app, so you'll have to redraw those on your activate callback. 
 
 The REPL itself is treated as a (special) multitasking app, always first in the list and cannot be quit. 
 
 You can switch apps with the keyboard: `control-tab`, and quit apps with `control-Q`. 
 
-We ship a few examples of multitasking apps, please check them out on Tulip or here:
- * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py)
+We ship a few examples of multitasking apps, please check them out here:
+ * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py)
  * [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py)
  * [`buttons`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/buttons/buttons.py)
- * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py)
- * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/voices/voices.py)
+ * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py)
+ * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/voices.py)
 
 ## Tulip World
 
@@ -162,7 +163,7 @@ We include [LVGL 9](https://lvgl.io) for use in making your own user interface. 
 
 It's best to build user interfaces inside a `UIScreen` multitasking Tulip package. Our `UIScreen` will handle placing elements on your app and dealing with multitasking. 
 
-For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/buttons/buttons.py) example, or more complete examples like [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py), [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py), [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py) etc in `/sys/app`. 
+For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/buttons/buttons.py) example, or more complete examples like [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py), [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py), [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py) etc in `/sys/app`. 
 
 ### UIScreen
 
@@ -196,9 +197,9 @@ def activate(screen):
 Tulip `UIScreen` apps should never wait in a loop or call `sleep`. They should rely on callbacks to do all their work. For example, our drum machine waits for the sequencer callback to play the next note. Our editor app relies on the keyboard callback for the next keypress. This allows Tulip to run multiple programs at once.
 
 See some examples of more complex UIs using `UIScreen`:
- * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/juno6/juno6.py)
- * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py)
- * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/voices/voices.py)
+ * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py)
+ * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py)
+ * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/voices.py)
 
 
 You can see running multitasking apps with `tulip.running_apps`, which is a dict by app name. This lets you set or inspect parameters of running apps. `tulip.repl_screen` always returns the REPL UIScreen. You can programtically switch apps with e.g. `tulip.app('drums')`. The current running UIScreen is `tulip.current_uiscreen()`. 
@@ -431,7 +432,7 @@ By default, your callback will receive a message 50 milliseconds ahead of the ti
 
 You can set the system-wide BPM (beats, or quarters per minute) with `tulip.seq_bpm(120)` or retrieve it with `tulip.seq_bpm()`. You can change the PPQ with `tulip.seq_ppq(new_value)` or retrieve it with `tulip.seq_ppq()`. 
 
-See the example `seq.py` on Tulip World for an example of using the music clock, or the [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/drums/drums.py) included app.
+See the example `seq.py` on Tulip World for an example of using the music clock, or the [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py) included app.
 
 ## MIDI
 
