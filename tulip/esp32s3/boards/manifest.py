@@ -19,7 +19,7 @@ require("onewire")
 require("umqtt.robust")
 require("umqtt.simple")
 
-freeze("$(MPY_DIR)/../tulip/shared/py")
+freeze("$(PORT_DIR)/../shared/py")
 freeze("$(MPY_DIR)/../amy", "amy.py")
 freeze("$(MPY_DIR)/../amy", "juno.py")
 #freeze("$(MPY_DIR)/lib/micropython-lib/micropython/utarfile", "utarfile.py")
