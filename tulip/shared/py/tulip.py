@@ -430,6 +430,13 @@ def joyk():
         if(k == 26): jmask = jmask | Joy.R1
     return jmask
 
+def app(switch=None):
+    if(switch is None):
+        return running_apps
+    current_uiscreen().active = False
+    running_apps[switch].present()
+
+
 def reload(module):
     thing = module
     if(type(thing)!=str): # this is a module, convert to a str
@@ -438,48 +445,71 @@ def reload(module):
         exec('del sys.modules["%s"]' % (thing))
     except KeyError:
         pass # it's ok
-    exec('import %s' % (thing))
+    if(not is_folder(thing)):
+        exec('import %s' % (thing))
+    else:
+        cd()
 
 
-def app(switch=None):
-    if(switch is None):
-        return running_apps
-    current_uiscreen().active = False
-    running_apps[switch].present()
+def is_folder(fn):
+    import os
+    try:
+        if(os.stat(fn)[0]&0x4000):
+            return True
+    except:
+        pass
+    return False
+
+def exists(fn):
+    import os
+    try:
+        r = os.stat(fn)
+    except OSError:
+        return False
+    return True
 
 
-# runs and cleans up a Tulip "app", which is a folder named X with a file called X.py inside
+# reloads, runs and cleans up a Tulip "app"
+# Some ways to run things
+# (1) run('module') # imports module.py in your cwd 
+# (2) run('game') # cds into game and imports game.py
+# (3) run('screen_module') # cds into, imports and then calls run(screen) on screen_module.py in your cwd
+# (4) run('m5joy') # imports m5joy.py from frozen python module
+# (5) run('drums') # imports drums.py and run(screen)s it
+# (6) run('bunny_bounce') # finds this in /sys/app/bunny_bounce
+# (7) run("calibrate") # finds this in /sys/ex/calibrate.py
+
 def run(module_string):
     import sys
     before_run = sys.modules.copy()
     before_run_pwd = pwd()
-    already_imported = False
 
-    # first, try to just import the module. maybe it's frozen or not a directory, just a module in pwd
+    # First, see if we need to delete a running import, for reload
     try:
-        reload(module_string)
-        already_imported = True
-    except ImportError:
-        # cd into the module (or find it in sys/app)
-        try:
-            cd(module_string)
-        except OSError:
-            cd(root_dir()+"sys/app")
-            try:
-                cd(module_string)
-            except OSError:
-                cd(before_run_pwd)
-                print("No such program.")
-                return
+        exec('del sys.modules["%s"]' % (module_string))
+    except KeyError:
+        pass # ok!
 
-    # Run it 
+    # Let's find out what this is. In order, we go: cwd, frozen modules, /sys/app, /ex
+    if(is_folder(module_string)):
+        cd(module_string)
+    elif(is_folder(root_dir()+"sys/app/"+module_string)):
+        cd(root_dir()+"sys/app/"+module_string)
+    elif(exists(root_dir()+"sys/ex/"+module_string+".py")):
+        cd(root_dir()+"sys/ex/")
+
+    try:
+        exec('import %s' % (module_string))
+    except Exception as e:
+        print("Problem running %s: "  %(module_string))
+        sys.print_exception(e)
+        cd(before_run_pwd)
+        return
+
+
+    # Now run it. Check for a run() def
     try:
         screen = None
-        
-        if(not already_imported):
-            # Import the app module -- if non switchable this will run until it stops
-            exec('import %s' % (module_string))
-
         # Is this a switchable app? 
         actual_module = sys.modules[module_string]
         if(hasattr(actual_module, 'run')):
