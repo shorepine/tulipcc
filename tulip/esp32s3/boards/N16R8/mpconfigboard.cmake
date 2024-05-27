@@ -13,7 +13,7 @@ set(SDKCONFIG_DEFAULTS
 )
 
 list(APPEND MICROPY_SOURCE_PORT
-     ../../../tulip/esp32s3/esp32s3_display.c
-     ../../../tulip/esp32s3/usb_keyboard.c
-     ../../../tulip/esp32s3/ft5x06_touchscreen.c
+     esp32s3_display.c
+     usb_keyboard.c
+     ft5x06_touchscreen.c
 )

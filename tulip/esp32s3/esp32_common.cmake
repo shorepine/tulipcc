@@ -5,7 +5,7 @@ endif()
 
 # Set location of the ESP32 port directory.
 if(NOT MICROPY_PORT_DIR)
-    get_filename_component(MICROPY_PORT_DIR ${MICROPY_DIR}/ports/esp32 ABSOLUTE)
+    get_filename_component(MICROPY_PORT_DIR ${CMAKE_CURRENT_LIST_DIR}/ ABSOLUTE)
 endif()
 
 
@@ -81,13 +81,13 @@ list(APPEND MICROPY_SOURCE_DRIVERS
 
 
 list(APPEND MICROPY_SOURCE_PORT
-    ../../../tulip/esp32s3/multicast.c
-    ../../../tulip/esp32s3/mphalport.c
-    ../../../tulip/esp32s3/network_common.c
-    ../../../tulip/esp32s3/main.c
-    ../../../tulip/esp32s3/uart.c
-    ../../../tulip/esp32s3/help.c
-    ../../../tulip/esp32s3/build/lv_mpy.c
+    multicast.c
+    mphalport.c
+    network_common.c
+    main.c
+    uart.c
+    help.c
+    build/lv_mpy.c
     usb_serial_jtag.c
     gccollect.c
     fatfs_port.c

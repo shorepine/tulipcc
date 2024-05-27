@@ -14,7 +14,7 @@ set(SDKCONFIG_DEFAULTS
 )
 
 list(APPEND MICROPY_SOURCE_PORT
-     ../../../tulip/esp32s3/tdeck_display.c
-     ../../../tulip/esp32s3/tdeck_keyboard.c
-     ../../../tulip/esp32s3/gt911_touchscreen.c
+     tdeck_display.c
+     tdeck_keyboard.c
+     gt911_touchscreen.c
 )
