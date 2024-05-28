@@ -122,6 +122,10 @@ class ArpeggiatorSynth:
         return self.synth.amy_voices
 
     @property
+    def num_voices(self):
+        return self.synth.num_voices
+
+    @property
     def patch_number(self):
         return self.synth.patch_number
 
@@ -163,3 +167,8 @@ class ArpeggiatorSynth:
     def release_voices(self):
         return self.synth.release_voices()
 
+    def get_patch_state(self):
+        return self.synth.get_patch_state()
+
+    def set_patch_state(self, state):
+        return self.synth.set_patch_state(state)

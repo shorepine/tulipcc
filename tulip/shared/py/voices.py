@@ -240,11 +240,18 @@ def update_map():
         # Check if this is a new thing
         channel_patch, amy_voices = midi.config.channel_info(channel)
         channel_polyphony = 0 if amy_voices is None else len(amy_voices)
-        if  (channel_patch, channel_polyphony) != (patch_no, polyphony):
+        if (channel_patch, channel_polyphony) != (patch_no, polyphony):
             tulip.music_map(channel, patch_number=patch_no,
                             voice_count=polyphony)
+            # If the juno6 app is running, maybe inform it that patch has changed.
+            try:
+                juno6_app = tulip.running_apps.get("juno6", None)
+                juno6_app.update_patch_for_channel_hook(channel, patch_no)
+            except:
+                pass
 
-# populate the patches dialog from patches,oy
+
+# populate the patches dialog from patches.py
 def update_patches(synth):
     global app
     if(synth=='DX7'):
@@ -256,6 +263,7 @@ def update_patches(synth):
     if(synth=='Misc'):
         app.patchlist.replace_items([])
     app.patchlist.label.set_text("%s patches" % (synth))
+
 # Get current settings for a channel from midi.config.
 def current_patch(channel):
     global app
@@ -313,7 +321,6 @@ def run(screen):
     app.add(app.settings)
 
     current_patch(1)
-
 
     app.present()
 

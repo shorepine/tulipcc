@@ -37,7 +37,9 @@ class MidiConfig:
 
     def music_map(self, channel, patch_number=0, voice_count=None):
         """Implement the tulip music_map API."""
-        if not voice_count:
+        if (not voice_count
+            or (channel in self.synth_per_channel
+                and self.synth_per_channel[channel].num_voices == voice_count)):
             # Simply changing patch.
             self.program_change(channel, patch_number)
         else:
@@ -56,12 +58,13 @@ class MidiConfig:
     def get_channel_state(self, channel):
         if channel not in self.synth_per_channel:
             return None
-        return self.synth_per_channel[channel].patch_state
+        return self.synth_per_channel[channel].get_patch_state()
 
     def set_channel_state(self, channel, state):
         if channel not in self.synth_per_channel:
-            raise ValueError('Attempting to set state for unallocated channel %d.' % channel)
-        self.synth_per_channel[channel].patch_state = state
+            #raise ValueError('Attempting to set state for unallocated channel %d.' % channel)
+            return
+        self.synth_per_channel[channel].set_patch_state(state)
 
     def voices_for_channel(self, channel):
         """Return a list of AMY voices assigned to a channel."""
@@ -250,6 +253,10 @@ class Synth:
     def amy_voices(self):
         return [o.amy_voice for o in self.voice_objs]
 
+    @property
+    def num_voices(self):
+        return len(self.voice_objs)
+
     def _get_next_voice(self):
         """Return the next voice to use."""
         # First try free/released_voices in order, then steal from active_voices.
@@ -305,9 +312,18 @@ class Synth:
                 self.note_off(midinote)
             self.sustained_notes = set()
 
+    def get_patch_state(self):
+        return self.patch_state
+
+    def set_patch_state(self, state):
+        self.patch_state = state
+
     def program_change(self, patch_number):
-        self.patch_number = patch_number
-        self.voice_source.program_change(patch_number)
+        if patch_number != self.patch_number:
+            self.patch_number = patch_number
+            # Reset any modified state due to previous patch modifications.
+            self.patch_state = None
+            self.voice_source.program_change(self.patch_number)
 
     def control_change(self, control, value):
         self.voice_source.control_change(control, value)
@@ -317,10 +333,9 @@ class Synth:
         self.voice_source.release_voices()
 
 
-
 class PitchedPCMSynth:
     def __init__(self, num_voices=10):
-        self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
+        self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))  # This will collide with Drums.
         self.next_osc = 0
         self.pcm_patch_to_osc = {}
         # Fields used by UI
@@ -336,7 +351,7 @@ class PitchedPCMSynth:
              patch=pcm_patch, vel=velocity)
 
     def note_off(self, note, pcm_patch, time=None):
-        # Drums don't really need note-offs, but handle them anyway.
+        # Samples don't really need note-offs, but handle them anyway.
         try:
             osc = self.pcm_patch_to_osc[pcm_patch]
             amy.send(time=time, osc=osc, vel=0)
@@ -345,7 +360,7 @@ class PitchedPCMSynth:
             # We didn't recognize the patch; never mind.
             pass
 
-    # Rest of Synth protocol doesn't do anything for drums.
+    # Rest of Synth protocol doesn't do anything for PitchedPCM.
     def sustain(self, state):
         pass
 
@@ -355,6 +370,11 @@ class PitchedPCMSynth:
     def control_change(self, control, value):
         pass
 
+    def get_patch_state(self):
+        return None
+
+    def set_patch_state(self, state):
+        pass
 
 
 class DrumSynth:
@@ -395,6 +415,12 @@ class DrumSynth:
         pass
 
     def control_change(self, control, value):
+        pass
+
+    def get_patch_state(self):
+        return None
+
+    def set_patch_state(self, state):
         pass
 
 
@@ -453,7 +479,9 @@ def music_map(channel, patch_number=None, voice_count=None):
     """API to set a patch and polyphony for a given MIDI channel."""
     config.music_map(channel, patch_number, voice_count)
     try:
-        voices.refresh()  # Update voices UI if it is running.
+        # Update voices UI if it is running.
+        voices_app = tulip.running_apps.get("voices", None)
+        #voices_app.refresh_with_new_music_map()   # Not yet implemented!
     except:
         pass
 

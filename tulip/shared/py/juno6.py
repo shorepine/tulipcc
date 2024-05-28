@@ -1,10 +1,12 @@
 # juno6.py
 # A more pure-LVGL (using Tulip's UIScreen) UI for Juno-6
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, midi_in, midi_add_callback, midi_remove_callback, seq_ppq, seq_add_callback, seq_remove_callback, music_map
+import tulip
+import lvgl as lv
+#from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, midi_in, midi_add_callback, midi_remove_callback, seq_ppq, seq_add_callback, seq_remove_callback, music_map
 import time
 
 
-class JunoSection(UIElement):
+class JunoSection(tulip.UIElement):
     """A group of elements in an red-header group with a title."""
     
     header_color = 224
@@ -24,8 +26,8 @@ class JunoSection(UIElement):
         self.header = lv.label(self.group)
         self.header.set_text(name)
         self.header.set_style_text_font(self.header_font, lv.PART.MAIN)
-        self.header.set_style_bg_color(pal_to_lv(self.header_color), lv.PART.MAIN)
-        self.header.set_style_text_color(pal_to_lv(self.text_color), lv.PART.MAIN)
+        self.header.set_style_bg_color(tulip.pal_to_lv(self.header_color), lv.PART.MAIN)
+        self.header.set_style_text_color(tulip.pal_to_lv(self.text_color), lv.PART.MAIN)
         self.header.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
         self.header.align_to(self.group, lv.ALIGN.TOP_LEFT, 0, 0)
         self.header.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
@@ -43,20 +45,20 @@ class JunoSection(UIElement):
                 obj.group.align_to(self.last_obj_added, direction, 0, 0)
             else:
                 obj.group.align_to(self.header, lv.ALIGN.OUT_BOTTOM_LEFT, 0, 0)
-            obj.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
+            obj.group.set_style_bg_color(tulip.pal_to_lv(self.bg_color), lv.PART.MAIN)
 
             self.last_obj_added = obj.group
             total_width += obj.group.get_width() 
 
         self.header.set_width(total_width)
-        lv_depad(self.header)
+        tulip.lv_depad(self.header)
 
         self.group.set_width(total_width + self.section_gap)
-        lv_depad(self.group)
+        tulip.lv_depad(self.group)
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
 
-class JunoButtons(UIElement):
+class JunoButtons(tulip.UIElement):
     """A set of buttons/checkboxes, one under another."""
 
     font = lv.font_unscii_8
@@ -145,7 +147,7 @@ class JunoRadioButtons(JunoButtons):
         self.next(step=-1)
 
 
-class JunoSlider(UIElement):
+class JunoSlider(tulip.UIElement):
     """Builds a slider with description on top and a ganged label on bottom showing the value."""
     
     handle_color = 0
@@ -175,9 +177,9 @@ class JunoSlider(UIElement):
         self.slider.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
         self.slider.set_width(JunoSlider.width)
         self.slider.set_height(JunoSlider.height)
-        self.slider.set_style_bg_color(pal_to_lv(JunoSlider.bar_color), lv.PART.INDICATOR)
-        self.slider.set_style_bg_color(pal_to_lv(JunoSlider.bar_color), lv.PART.MAIN)
-        self.slider.set_style_bg_color(pal_to_lv(JunoSlider.handle_color), lv.PART.KNOB)
+        self.slider.set_style_bg_color(tulip.pal_to_lv(JunoSlider.bar_color), lv.PART.INDICATOR)
+        self.slider.set_style_bg_color(tulip.pal_to_lv(JunoSlider.bar_color), lv.PART.MAIN)
+        self.slider.set_style_bg_color(tulip.pal_to_lv(JunoSlider.handle_color), lv.PART.KNOB)
         self.slider.set_style_radius(JunoSlider.handle_radius, lv.PART.KNOB)
         self.slider.set_style_pad_ver(JunoSlider.handle_v_pad, lv.PART.KNOB)
         self.slider.set_style_pad_hor(JunoSlider.handle_h_pad, lv.PART.KNOB)
@@ -214,7 +216,7 @@ class JunoSlider(UIElement):
         if self.callback:
             self.callback(self.slider.get_value() / 127.0)
 
-class JunoControlledLabel(UIElement):
+class JunoControlledLabel(tulip.UIElement):
     """A label with some press-to-act buttons (e.g. + and -)."""
     button_size = 28
     button_space = 4
@@ -291,9 +293,9 @@ class JunoTokenSpinbox(JunoControlledLabel):
     def value_down(self):
         self.value_delta(-1)
 
-    def set_value(self, value):
+    def set_value(self, value, additional_kwargs={}):
         self.value = value
-        self.name = self.set_fn(self.value+self.offset)
+        self.name = self.set_fn(self.value + self.offset, **additional_kwargs)
         self.set_text(self.name)
 
 
@@ -309,7 +311,7 @@ def hexify(bytelist):
     return ' '.join('%02x' % b for b in bytelist)
 
 
-def set_patch_with_state(jp, patch_num, midi_channel):
+def update_patch_including_state(jp, patch_num, midi_channel):
     """Mutates juno_patch in-place to use patch_num, or override by state for midi_chan if any."""
     jp.set_patch(patch_num)
     # Maybe this channel has existing modified state?
@@ -326,8 +328,9 @@ for m_channel in range(1, 17):
         if patch_num is not None and patch_num < 128:
             jp = juno.JunoPatch()  # .from_patch_number(patch_num)
             jp.set_voices(amy_voices)
-            set_patch_with_state(jp, patch_num, m_channel)
+            update_patch_including_state(jp, patch_num, m_channel)
             juno_patch_for_midi_channel[m_channel] = jp
+
 
 def current_juno():
     global midi_channel
@@ -396,7 +399,8 @@ env = JunoSection('ENV', [
 ch = JunoSection("CH", [chorus_mode := JunoRadioButtons("Mode", ["Off", "I", "II", "III"],
                                                         [cho(0), cho(1), cho(2), cho(3)])])
 
-def setup_from_patch(patch):
+
+def setup_ui_from_juno_patch(patch):
     """Make the UI match the values in a JunoPatch."""
     current_juno().defer_param_updates = True
     glob_fns = globals()
@@ -420,24 +424,30 @@ def setup_from_patch(patch):
     return patch.name
 
 
-
-def setup_from_patch_number(patch_number):
+def setup_from_patch_number(patch_number, propagate_to_voices_app=True):
     global midi_channel
     # See how many voices are allocated going in.
     _, amy_voices = midi.config.channel_info(midi_channel)
     # Use no fewer than 4.
     num_amy_voices = 0 if amy_voices == None else len(amy_voices)
     polyphony = max(4, num_amy_voices)
-    music_map(midi_channel, patch_number, polyphony)
+    tulip.music_map(midi_channel, patch_number, polyphony)
     _, amy_voices = midi.config.channel_info(midi_channel)
-    jp = juno.JunoPatch()  #.from_patch_number(patch_number)
+    #jp = juno.JunoPatch()  #.from_patch_number(patch_number)
+    #juno_patch_for_midi_channel[midi_channel] = jp
+    jp = juno_patch_for_midi_channel[midi_channel]
     jp.set_voices(amy_voices)
-    set_patch_with_state(jp, patch_number, midi_channel)
-    juno_patch_for_midi_channel[midi_channel] = jp
+    update_patch_including_state(jp, patch_number, midi_channel)
+    setup_ui_from_juno_patch(jp)
+    # Maybe inform the voices app.
+    if propagate_to_voices_app:
+        try:
+            voices_app = tulip.running_apps.get("voices", None)
+            voices_app.patchlist.select(patch_number)
+        except:
+            pass
+    return jp.name
 
-    #current_juno().patch_number = patch_number
-    #current_juno().name = setup_from_patch(jp)
-    return current_juno().name
 
 def setup_from_midi_chan(new_midi_channel):
     """Switch which JunoPatch we display based on MIDI channel."""
@@ -461,14 +471,25 @@ def setup_from_midi_chan(new_midi_channel):
     else:
         #print("new patch patch is %d" % (new_patch.patch_number))
         new_patch.init_AMY()
-        patch_selector.value = new_patch.patch_number  # Bypass actually reading that patch, just set the state.
-        patch_selector.set_text(new_patch.name)
-        setup_from_patch(new_patch)
+        try:
+            patch_selector.value = new_patch.patch_number  # Bypass actually reading that patch, just set the state.
+            patch_selector.set_text(new_patch.name)
+        except:
+            # patch_selector isn't created yet.
+            pass
+        setup_ui_from_juno_patch(new_patch)
     return "MIDI chan %d" % (midi_channel)
 
-patch_selector = JunoTokenSpinbox('Patch', set_fn=setup_from_patch_number, initial_value=current_juno().patch_number)
 midi_selector = JunoTokenSpinbox('MIDI', set_fn=setup_from_midi_chan, max_value=15, width=160, offset=1)
+patch_selector = JunoTokenSpinbox('Patch', set_fn=setup_from_patch_number, initial_value=current_juno().patch_number)
 
+
+# Hook for voices.py to change the patch.
+def update_patch_for_channel(channel, patch_num):
+    global midi_channel
+    if channel == midi_channel:
+        patch_selector.set_value(patch_num,
+                                 additional_kwargs={'propagate_to_voices_app': False})
 
 
 
@@ -545,7 +566,7 @@ def control_change(control, value):
 
 
 def midi_event_cb(x):
-    m = midi_in()   
+    m = tulip.midi_in()
     while m is not None and len(m) > 0:
         if m[0] == 0xb0:    # Other control slider.
             control_change(m[1], m[2])
@@ -557,14 +578,14 @@ def midi_event_cb(x):
         # Are there more events waiting?
         m = m[3:]
         if len(m) == 0:
-            m = midi_in_fn()
+            m = tulip.midi_in()
 
 
 def quit(screen):
     state = current_juno().to_sysex()
     #print("quit: saving state for channel %d: %s" % (midi_channel, hexify(state)))
     midi.config.set_channel_state(midi_channel, state)
-    midi_remove_callback(midi_event_cb)
+    tulip.midi_remove_callback(midi_event_cb)
 
 def run(screen):
     screen.offset_y = 100
@@ -572,6 +593,10 @@ def run(screen):
     screen.set_bg_color(73)
     screen.add([lfo, dco, hpf, vcf, vca, env, ch])
     screen.add(midi_selector, relative=vcf, direction=lv.ALIGN.OUT_TOP_MID)
+    screen.add(patch_selector, relative=dco, direction=lv.ALIGN.OUT_TOP_MID)
     screen.present()
 
-    midi_add_callback(midi_event_cb)
+    # Hook for communication from voices
+    screen.update_patch_for_channel_hook = update_patch_for_channel
+
+    tulip.midi_add_callback(midi_event_cb)
