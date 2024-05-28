@@ -1,6 +1,5 @@
 # voices.py
-# drums.py
-# lvgl drum machine for Tulip
+# lvgl MIDI patch setting + arpeggiator for Tulip.
 
 import tulip
 import midi

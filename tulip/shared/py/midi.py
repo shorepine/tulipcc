@@ -53,6 +53,16 @@ class MidiConfig:
             self.synth_per_channel[channel].amy_voices,
         )
 
+    def get_channel_state(self, channel):
+        if channel not in self.synth_per_channel:
+            return None
+        return self.synth_per_channel[channel].patch_state
+
+    def set_channel_state(self, channel, state):
+        if channel not in self.synth_per_channel:
+            raise ValueError('Attempting to set state for unallocated channel %d.' % channel)
+        self.synth_per_channel[channel].patch_state = state
+
     def voices_for_channel(self, channel):
         """Return a list of AMY voices assigned to a channel."""
         if channel not in self.synth_per_channel:
@@ -202,6 +212,7 @@ class Synth:
     Provides read-back attributes (for voices.py UI):
       synth.amy_voices
       synth.patch_number
+      synth.patch_state  - patch-specific data only used by clients e.g. UI state
   
     Argument voice_source provides the following methods:
       voice_source.get_new_voices(num_voices) returns num_voices VoiceObjects.
@@ -233,6 +244,7 @@ class Synth:
         # Fields used by UI
         #self.num_voices = num_voices
         self.patch_number = None
+        self.patch_state = None
 
     @property
     def amy_voices(self):
@@ -356,6 +368,7 @@ class DrumSynth:
         # Fields used by UI
         self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
         self.patch_number = 0
+        self.patch_state = None
 
     def note_on(self, note, velocity, time=None):
         osc = self.oscs[self.next_osc]

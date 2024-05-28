@@ -300,8 +300,24 @@ class JunoTokenSpinbox(JunoControlledLabel):
 
 import juno, midi
 
-midi_channel = 1
-juno_patch_for_midi_channel = {}
+# Midi channel 0 is not accessible, it's used to store "initial state" juno. Actual UI switches to a real MIDI channel (1 up) once the UI is up.
+midi_channel = 0
+juno_patch_for_midi_channel = {0: juno.JunoPatch.from_patch_number(0)}
+
+
+def hexify(bytelist):
+    return ' '.join('%02x' % b for b in bytelist)
+
+
+def set_patch_with_state(jp, patch_num, midi_channel):
+    """Mutates juno_patch in-place to use patch_num, or override by state for midi_chan if any."""
+    jp.set_patch(patch_num)
+    # Maybe this channel has existing modified state?
+    state = midi.config.get_channel_state(midi_channel)
+    if state:
+        #print('Got existing state for channel %d: %s' % (m_channel, hexify(state)))
+        jp.set_sysex(state)
+
 
 # Get the patch to channel mapping and the AMY voices from midi.patch_map if set
 for m_channel in range(1, 17):
@@ -310,7 +326,7 @@ for m_channel in range(1, 17):
         if patch_num is not None and patch_num < 128:
             jp = juno.JunoPatch()  # .from_patch_number(patch_num)
             jp.set_voices(amy_voices)
-            jp.set_patch(patch_num)
+            set_patch_with_state(jp, patch_num, m_channel)
             juno_patch_for_midi_channel[m_channel] = jp
 
 def current_juno():
@@ -322,11 +338,9 @@ def current_juno():
     return None
 
 
-
+# I think we need to ensure current_juno() is init'ed to support the jcb callbacks during UI construction.
 current_juno().init_AMY()
 
-
-#current_juno().init_AMY()
 
 # Make the callback function.
 def jcb(arg):
@@ -409,18 +423,16 @@ def setup_from_patch(patch):
 
 def setup_from_patch_number(patch_number):
     global midi_channel
-    #print("resetting patch number to %d" % (patch_number))
-
     # See how many voices are allocated going in.
     _, amy_voices = midi.config.channel_info(midi_channel)
-    #print("channel", midi_channel, "voices", amy_voices)
     # Use no fewer than 4.
-    polyphony = max(4, len(amy_voices))
+    num_amy_voices = 0 if amy_voices == None else len(amy_voices)
+    polyphony = max(4, num_amy_voices)
     music_map(midi_channel, patch_number, polyphony)
     _, amy_voices = midi.config.channel_info(midi_channel)
     jp = juno.JunoPatch()  #.from_patch_number(patch_number)
     jp.set_voices(amy_voices)
-    jp.set_patch(patch_number)
+    set_patch_with_state(jp, patch_number, midi_channel)
     juno_patch_for_midi_channel[midi_channel] = jp
 
     #current_juno().patch_number = patch_number
@@ -430,12 +442,22 @@ def setup_from_patch_number(patch_number):
 def setup_from_midi_chan(new_midi_channel):
     """Switch which JunoPatch we display based on MIDI channel."""
     global midi_channel
-    #print("setup chan %d" % (new_midi_channel))
+    if new_midi_channel == midi_channel:
+        #print("midi channel %d is already selected" % midi_channel)
+        return
+    old_midi_channel = midi_channel   # In case we need to unwind.
+    # Store state of current channel
+    state = current_juno().to_sysex()
+    #print("setup_from_midi: saving state for channel %d: %s" % (midi_channel, hexify(state)))
+    midi.config.set_channel_state(midi_channel, state)
     midi_channel = (new_midi_channel)
     new_patch = current_juno()
     if(new_patch == None):
+        print("No Juno on midi channel %d" % midi_channel)
         patch_selector.set_text("None assigned")
-        patch_selector.value = -1 
+        patch_selector.value = -1
+        # Unwind
+        midi_channel = old_midi_channel
     else:
         #print("new patch patch is %d" % (new_patch.patch_number))
         new_patch.init_AMY()
@@ -539,6 +561,9 @@ def midi_event_cb(x):
 
 
 def quit(screen):
+    state = current_juno().to_sysex()
+    #print("quit: saving state for channel %d: %s" % (midi_channel, hexify(state)))
+    midi.config.set_channel_state(midi_channel, state)
     midi_remove_callback(midi_event_cb)
 
 def run(screen):
