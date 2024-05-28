@@ -37,6 +37,7 @@ class ArpeggiatorSynth:
         self.arpeggiate_base_notes = set()
         self.full_sequence = []
         self.slot = -1
+        self.step_callback = self.arp_step  # Ensure bound_method_obj created just once.
 
     def note_on(self, note, vel):
         if not self.active or note >= self.split_note:
@@ -71,7 +72,7 @@ class ArpeggiatorSynth:
         self.current_step = -1
         # Semaphore to the run loop to start going.
         self.running = True
-        self.slot = tulip.seq_add_callback(self.arp_step, int(tulip.seq_ppq()/2))
+        self.slot = tulip.seq_add_callback(self.step_callback, int(tulip.seq_ppq()/2))
 
     def stop(self):
         self.running = False
