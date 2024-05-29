@@ -7,6 +7,7 @@ import tulip
 import time
 import random
 import arpegg
+import patches
 
 class MidiConfig:
     """System-wide Midi input config."""
@@ -24,7 +25,8 @@ class MidiConfig:
             self.synth_per_channel[channel].release_voices()
             del self.synth_per_channel[channel]
         if channel == 10:
-            synth = PitchedPCMSynth(num_voices=polyphony)
+            #synth = PitchedPCMSynth(num_voices=polyphony)
+            synth = DrumSynth(num_voices=polyphony)
         else:
             synth = Synth(voice_source=VoiceSource(), num_voices=polyphony)
             if patch is not None:
@@ -378,8 +380,8 @@ class PitchedPCMSynth:
 
 
 class DrumSynth:
-    """Simplified Synth for Drum channel (10). Plays one patch per note at its default pitch. Not used right now. """
-    PCM_PATCHES = 29
+    """Simplified Synth for Drum channel (10). Plays one patch per note at a per-patch defined pitch. Not used right now. """
+    PCM_PATCHES = len(patches.drumkit)
 
     def __init__(self, num_voices=10):
         self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
@@ -389,12 +391,20 @@ class DrumSynth:
         self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
         self.patch_number = 0
         self.patch_state = None
+        self.amy_note_per_patch_num = [base_note for base_note, _ in patches.drumkit]
 
+    def set_amy_note_for_patch_num(self, patch_num, amy_note):
+        patch_num = patch_num % DrumSynth.PCM_PATCHES
+        self.amy_note_per_patch_num[patch_num] = amy_note
+        
     def note_on(self, note, velocity, time=None):
         osc = self.oscs[self.next_osc]
         self.next_osc = (self.next_osc + 1) % len(self.oscs)
+        patch_num = note % DrumSynth.PCM_PATCHES
+        amy_note = self.amy_note_per_patch_num[patch_num]
         amy.send(time=time, osc=osc, wave=amy.PCM,
-             patch=note % DrumSynth.PCM_PATCHES, vel=velocity, freq=0)
+                 patch=patch_num, vel=velocity, note=amy_note)
+        print("patch", patch_num, "note", amy_note)
         self.note_to_osc[note] = osc
 
     def note_off(self, note, time=None):

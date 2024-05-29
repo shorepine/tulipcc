@@ -189,11 +189,10 @@ def beat_callback(t):
     #print("beat %d at time %d sysclock %d delta %d tick %d" % (app.current_beat, t, ticks_ms(), t-ticks_ms(), seq_ticks()))
     for i, row in enumerate(app.rows):
         if(row.get(app.current_beat)):
-            base_note = drumkit[row.get_preset()][0]
-            note_for_pitch = None
-            if row.get_pitch() != 0.5:
-                note_for_pitch = int(base_note + (row.get_pitch() - 0.5)*24.0)
-            app.synth.note_on(note_for_pitch, row.get_vel()*2, row.get_preset(), t)
+            patch_num = row.get_preset()
+            note_for_pitch = int(drumkit[patch_num][0] + (row.get_pitch() - 0.5) * 24.0)
+            app.synth.set_amy_note_for_patch_num(patch_num, note_for_pitch)
+            app.synth.note_on(note=patch_num, velocity=row.get_vel()*2, time=t)
             #amy.send(osc=50+i+2, wave=amy.PCM, patch=row.get_preset(), note=note_for_pitch, vel=row.get_vel()*2, pan=row.get_pan(), time=t)
     app.current_beat = (app.current_beat+1) % 16
 
