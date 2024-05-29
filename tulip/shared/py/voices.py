@@ -14,9 +14,9 @@ def redraw(app):
     # Since redraw is not within app.run() we are not guaranteed to be in the cwd of the app. 
     # luckily, tulip.run() adds the cwd of the app to the app class before starting.
     app.piano_x = 112
-    app.piano_y = 320
+    app.piano_y = 330
     app.piano_w = 798
-    app.piano_h = 280
+    app.piano_h = 270
     tulip.bg_rect(app.piano_x,app.piano_y,app.piano_w,app.piano_h,255,1)
     app.white_key_w = 57
     for k in range(15):
@@ -28,8 +28,9 @@ def redraw(app):
     for s in app.black_key_starts:
         tulip.bg_rect(s, app.piano_y, app.black_key_w, app.black_key_h, 0, 1)    
 
+
 class Settings(tulip.UIElement):
-    def __init__(self, width=350, height=300):
+    def __init__(self, width=310, height=300):
         super().__init__()
         self.group.set_size(width, height)
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
@@ -44,7 +45,7 @@ class Settings(tulip.UIElement):
 
         self.tempo = lv.slider(self.rect)
         self.tempo.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
-        self.tempo.set_width(220)
+        self.tempo.set_width(160)
         self.tempo.set_style_bg_color(tulip.pal_to_lv(255), lv.PART.INDICATOR)
         self.tempo.set_style_bg_color(tulip.pal_to_lv(255), lv.PART.MAIN)
         self.tempo.set_style_bg_color(tulip.pal_to_lv(129), lv.PART.KNOB)
@@ -81,6 +82,8 @@ class Settings(tulip.UIElement):
         self.range.group.set_parent(self.rect)
         self.range.group.set_style_bg_color(tulip.pal_to_lv(9),0)
         self.range.group.align_to(self.mode.group, lv.ALIGN.OUT_RIGHT_TOP, 10, 0)
+
+        tulip.lv_depad(self.group)
 
     def update_from_arp(self, arp):
         """Configure arpegg UI to match current arpeggiator."""
@@ -316,9 +319,11 @@ def run(screen):
 
     app.polyphony = ListColumn('polyphony', [str(x+1) for x in range(8)], width=100)
     app.add(app.polyphony)
+    
     app.settings = Settings()
     app.settings.update_from_arp(midi.arpeggiator)
-    app.add(app.settings)
+
+    app.add(app.settings, pad_x=0)
 
     current_patch(1)
 

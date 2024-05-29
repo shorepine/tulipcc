@@ -431,7 +431,7 @@ def ensure_midi_config():
         # drum machine always on channel 10
         config = MidiConfig(
             voices_per_channel={1: 6, 10: 10},
-            patch_per_channel={1: 2},
+            patch_per_channel={1: 0},
         )
         tulip.midi_add_callback(midi_event_cb)
 

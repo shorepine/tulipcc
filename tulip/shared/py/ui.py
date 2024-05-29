@@ -192,7 +192,7 @@ class UIScreen():
                 o.group.align_to(self.group,first_align,self.offset_x,self.offset_y)
             else:
                 try:
-                    o.group.align_to(self.last_obj_added, direction,0,0)
+                    o.group.align_to(self.last_obj_added, direction,pad_x,pad_y)
                 except lv.LvReferenceError:
                     self.last_obj_added = None
                     o.group.align_to(self.group,first_align,self.offset_x,self.offset_y)
