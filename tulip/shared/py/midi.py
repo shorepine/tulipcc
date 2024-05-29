@@ -341,7 +341,7 @@ class PitchedPCMSynth:
         # Fields used by UI
         self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
 
-    def note_on(self, note, velocity, pcm_patch, time=None):
+    def note_on(self, note, velocity, pcm_patch=0, time=None):
         osc = self.pcm_patch_to_osc.get(pcm_patch, None)
         if osc is None:
             osc = self.oscs[self.next_osc]
