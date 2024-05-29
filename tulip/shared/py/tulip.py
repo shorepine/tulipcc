@@ -484,7 +484,13 @@ def run(module_string):
     before_run = sys.modules.copy()
     before_run_pwd = pwd()
 
-    # First, see if we need to delete a running import, for reload
+    # First, if we're already running, don't run again. Causes some problems
+    if module_string in running_apps:
+        # Switch to it
+        app(module_string)
+        return
+
+    # Second, see if we need to delete a running import, for reload
     try:
         exec('del sys.modules["%s"]' % (module_string))
     except KeyError:

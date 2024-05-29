@@ -12,6 +12,8 @@ lv_launcher = None
 running_apps = {}
 current_app_string = "repl"
 
+uiscreen_load_delay = 50 # milliseconds between section loads
+
 
 # Returns the keypad indev
 def get_keypad_indev():
@@ -212,7 +214,7 @@ class UIScreen():
         lv.screen_load(self.screen)
 
         for i in range(self.group.get_child_count()):
-            tulip.defer(unhide, i, 500 + i*100)
+            tulip.defer(unhide, i, uiscreen_load_delay + i*uiscreen_load_delay)
 
         if(self.handle_keyboard):
             get_keypad_indev().set_group(self.kb_group)
