@@ -2,9 +2,8 @@
 # A more pure-LVGL (using Tulip's UIScreen) UI for Juno-6
 import tulip
 import lvgl as lv
-#from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, midi_in, midi_add_callback, midi_remove_callback, seq_ppq, seq_add_callback, seq_remove_callback, music_map
 import time
-
+import patches
 
 class JunoSection(tulip.UIElement):
     """A group of elements in an red-header group with a title."""
@@ -298,44 +297,27 @@ class JunoTokenSpinbox(JunoControlledLabel):
         self.name = self.set_fn(self.value + self.offset, **additional_kwargs)
         self.set_text(self.name)
 
-class JunoDropDown(UIElement):
-    def __init__(self, name, initial_items, **kwargs):
+class JunoDropDown(tulip.UIElement):
+    def __init__(self, name, items, set_fn, initial_value=0, **kwargs):
         super().__init__()
-
-        self.group.set_size(200,40)
+        self.set_fn = set_fn  # called when value changes, returns text to display.
+        self.group.set_size(430,40)
+        self.label = lv.label(self.group)
+        self.label.set_text(name)
         self.dropdown = lv.dropdown(self.group)
-        self.dropdown.set_options("\n".join(initial_items))
+        self.dropdown.align_to(self.label, lv.ALIGN.OUT_RIGHT_MID, 0, 0)
+        self.dropdown.set_options("\n".join(items))
         self.dropdown.set_dir(lv.DIR.BOTTOM)
         self.dropdown.add_event_cb(self.cb, lv.EVENT.VALUE_CHANGED, None)
         self.dropdown.set_height(40)
-        self.dropdown.set_width(100)
-        self.dropdown.align_to(self.group, lv.ALIGN.LEFT_MID,0,0)
-        lv_depad(self.dropdown)
+        self.set_fn(initial_value)
+        #self.dropdown.set_width(150)
+        #self.dropdown.align_to(self.group, lv.ALIGN.LEFT_MID,0,0)
+        #tulip.lv_depad(self.dropdown)
 
-        self.set_fn = set_fn  # called when value changes, returns text to display.
-        self.offset = offset
-        self.min_value = min_value
-        self.max_value = max_value
-        super().__init__(name + 'TokenSpinbox', ['-', '+'],
-            [self.value_down, self.value_up],
-            initial_text, **kwargs)
-        self.set_value(initial_value)
-
-    def value_delta(self, increment=1):
-        value_range = self.max_value - self.min_value + 1
-        self.value = self.min_value + ((self.value - self.min_value + increment) % value_range)
-        self.set_value(self.value)
-
-    def value_up(self):
-        self.value_delta(1)
-
-    def value_down(self):
-        self.value_delta(-1)
-
-    def set_value(self, value, additional_kwargs={}):
-        self.value = value
-        self.name = self.set_fn(self.value + self.offset, **additional_kwargs)
-        self.set_text(self.name)
+    def cb(self,e):
+        self.set_fn(e.get_target_obj().get_selected())
+        print("cb")
 
 
 import juno, midi
@@ -518,10 +500,9 @@ def setup_from_midi_chan(new_midi_channel):
         setup_ui_from_juno_patch(new_patch)
     return "MIDI chan %d" % (midi_channel)
 
-midi_selector = JunoDropDown('MIDI', set_fn=setup_from_midi_chan, max_value=15, width=160, offset=1)
-#patch_selector = JunoTokenSpinbox('Patch', set_fn=setup_from_patch_number, initial_value=current_juno().patch_number)
-
-patch_selector = JunoDropDown("Patch", et_fn=setup_from_patch_number, initial_value=current_juno().patch_number)
+midi_selector = JunoDropDown('Assigned Juno Channel:', ['1','2'], setup_from_midi_chan, initial_value = 0)#, max_value=15, width=160, offset=1)
+patch_selector = JunoDropDown("Patch", patches.patches[:128], setup_from_patch_number, initial_value=current_juno().patch_number)
+#, initial_value=current_juno().patch_number)
 
 # Hook for voices.py to change the patch.
 def update_patch_for_channel(channel, patch_num):
@@ -631,8 +612,8 @@ def run(screen):
     screen.quit_callback = quit
     screen.set_bg_color(73)
     screen.add([lfo, dco, hpf, vcf, vca, env, ch])
-    screen.add(midi_selector, relative=vcf, direction=lv.ALIGN.OUT_TOP_MID)
-    screen.add(patch_selector, relative=dco, direction=lv.ALIGN.OUT_TOP_MID)
+    screen.add(patch_selector, x=20, y=20) # relative=lfo, direction=lv.ALIGN.OUT_TOP_MID)
+    screen.add(midi_selector, x=500, y=20) # relative=patch_selector, direction=lv.ALIGN.OUT_RIGHT_MID)
     screen.present()
 
     # Hook for communication from voices
