@@ -392,7 +392,7 @@ def upgrade():
 # It's not incredibly accurate, but good enough for a "four-bar" battery indicator 
 # Things should turn off around 3.1V 
 def battery(n=5):
-    if(board()=='TULIP4_R10'):
+    if(board()=='TULIP4_R11'):
         pin = 3
     elif(board()=='TDECK'):
         pin = 4

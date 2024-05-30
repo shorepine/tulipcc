@@ -451,8 +451,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_screen_size_obj, 0, 0, tulip_sc
 
 
 STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
-#ifdef TULIP4_R10
-    return mp_obj_new_str("TULIP4_R10", strlen("TULIP4_R10"));
+#ifdef TULIP4_R11
+    return mp_obj_new_str("TULIP4_R11", strlen("TULIP4_R11"));
 #elif defined MATOUCH7
     return mp_obj_new_str("MATOUCH7", strlen("MATOUCH7"));
 #elif defined TDECK

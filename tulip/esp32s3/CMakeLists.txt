@@ -24,7 +24,7 @@ execute_process(COMMAND bash -c "python3 ../../../lv_binding_micropython_tulip/g
 
 # Set the board if it's not already set.
 if(NOT MICROPY_BOARD)
-    set(MICROPY_BOARD N32R8)
+    set(MICROPY_BOARD TULIP4_R11)
 endif()
 
 # Set the board directory and check that it exists.

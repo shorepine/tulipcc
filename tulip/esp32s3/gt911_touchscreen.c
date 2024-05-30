@@ -3,9 +3,9 @@
 #include "gt911_touchscreen.h"
 #include "pins.h"
 #ifndef TDECK
-// Default for my MaTouch 7" 1024x600
-int16_t touch_x_delta = -4;
-int16_t touch_y_delta = -6;
+// Default for my V4R11
+int16_t touch_x_delta = -2;
+int16_t touch_y_delta = -12;
 float y_scale = 0.8f;
 #else
 int16_t touch_x_delta = 0;
@@ -47,7 +47,7 @@ void touch_init(void)
             .reset = 1,
             #elif defined MATOUCH7
             .reset = 1,
-            #elif defined TULIP4_R10
+            #elif defined TULIP4_R11
             .reset = 0,
             #else
             .reset = 0,

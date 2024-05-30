@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-declare -a boards=("TULIP4_R10" "N16R8" "N32R8" "TDECK")
+declare -a boards=("TULIP4_R11" "N16R8" "N32R8" "TDECK")
 for i in "${boards[@]}"
 do
     rm -rf build

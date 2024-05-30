@@ -12,7 +12,6 @@ lv_launcher = None
 running_apps = {}
 current_app_string = "repl"
 
-uiscreen_load_delay = 50 # milliseconds between section loads
 
 
 # Returns the keypad indev
@@ -70,6 +69,7 @@ class UIScreen():
     # Start drawing at this position, a little to the right of the edge and 100px down
     default_offset_x = 10
     default_offset_y = 100
+    load_delay = 50 # milliseconds between section loads
 
     def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
         activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
@@ -214,7 +214,7 @@ class UIScreen():
         lv.screen_load(self.screen)
 
         for i in range(self.group.get_child_count()):
-            tulip.defer(unhide, i, uiscreen_load_delay + i*uiscreen_load_delay)
+            tulip.defer(unhide, i, UIScreen.load_delay + i*UIScreen.load_delay)
 
         if(self.handle_keyboard):
             get_keypad_indev().set_group(self.kb_group)
@@ -321,6 +321,8 @@ def launcher_cb(e):
             tulip.run('voices')
         if(text=='Pattern'):
             tulip.run('pattern')
+        if(text=='Editor'):
+            tulip.run('edit')
         if(text=="Keyboard"):
             keyboard()
         if(text=="Wordpad"):
@@ -357,6 +359,8 @@ def launcher(ignore=True):
     b_drums.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_pattern = lv_launcher.add_button(lv.SYMBOL.NEXT, "Pattern")
     b_pattern.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
+    b_editor = lv_launcher.add_button(lv.SYMBOL.FILE, "Editor")
+    b_editor.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_keyboard = lv_launcher.add_button(lv.SYMBOL.KEYBOARD, "Keyboard")
     b_keyboard.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_wordpad = lv_launcher.add_button(lv.SYMBOL.FILE, "Wordpad")

@@ -146,7 +146,7 @@ void run_esp32s3_display(void) {
     #endif
 
     // Set all but G2 and B3 off for R10 (i2s using G2, B3)
-    #ifdef TULIP4_R10
+    #ifdef TULIP4_R11
     set_pin(PIN_B4, 0);
     set_pin(PIN_B5, 0);
     set_pin(PIN_G3, 0);

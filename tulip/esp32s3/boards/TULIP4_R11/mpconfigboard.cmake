@@ -2,7 +2,7 @@ set(IDF_TARGET esp32s3)
 
 
 
-set(BOARD_DEFINITION1 TULIP4_R10)
+set(BOARD_DEFINITION1 TULIP4_R11)
 set(BOARD_DEFINITION2 MAKERFABS)
 
 set(SDKCONFIG_DEFAULTS
@@ -11,7 +11,7 @@ set(SDKCONFIG_DEFAULTS
     ../../micropython/ports/esp32/boards/sdkconfig.240mhz
     boards/sdkconfig.tulip
     boards/N32R8/sdkconfig.board
-    boards/TULIP4_R10/sdkconfig.board
+    boards/TULIP4_R11/sdkconfig.board
 )
 
 list(APPEND MICROPY_SOURCE_PORT
