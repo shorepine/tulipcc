@@ -456,10 +456,11 @@ def setup_from_midi_chan(new_midi_channel):
         #print("midi channel %d is already selected" % midi_channel)
         return
     old_midi_channel = midi_channel   # In case we need to unwind.
-    # Store state of current channel
-    state = current_juno().to_sysex()
-    #print("setup_from_midi: saving state for channel %d: %s" % (midi_channel, hexify(state)))
-    midi.config.set_channel_state(midi_channel, state)
+    if old_midi_channel:  # DON'T do this for the fake startup midi channel 0.
+        # Store state of current channel
+        state = current_juno().to_sysex()
+        #print("setup_from_midi: saving state for channel %d: %s" % (midi_channel, hexify(state)))
+        midi.config.set_channel_state(midi_channel, state)
     midi_channel = (new_midi_channel)
     new_patch = current_juno()
     if(new_patch == None):
@@ -584,7 +585,8 @@ def midi_event_cb(x):
 def quit(screen):
     state = current_juno().to_sysex()
     #print("quit: saving state for channel %d: %s" % (midi_channel, hexify(state)))
-    midi.config.set_channel_state(midi_channel, state)
+    if midi_channel:  # Don't attempt to save state for channel zero?
+        midi.config.set_channel_state(midi_channel, state)
     tulip.midi_remove_callback(midi_event_cb)
 
 def run(screen):
