@@ -55,12 +55,19 @@ def current_lv_group():
 def hide(i):
     g = lv.screen_active().get_child(0)
     to_hide = g.get_child(i)
-    to_hide.add_flag(1) # hide
+    try:
+        to_hide.add_flag(1) # hide
+    except AttributeError: # we've switched too fast
+        pass
+
 
 def unhide(i):
     g = lv.screen_active().get_child(0)
     to_unhide = g.get_child(i)
-    to_unhide.remove_flag(1) # show
+    try:
+        to_unhide.remove_flag(1) # show
+    except AttributeError: # we've switched too fast and the hidden thing wasn't hidden
+        pass
 
 # The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
 class UIScreen():
@@ -69,7 +76,7 @@ class UIScreen():
     # Start drawing at this position, a little to the right of the edge and 100px down
     default_offset_x = 10
     default_offset_y = 100
-    load_delay = 50 # milliseconds between section loads
+    load_delay = 200 # milliseconds between section loads
 
     def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
         activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
