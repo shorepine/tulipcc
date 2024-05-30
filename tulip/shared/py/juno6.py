@@ -298,26 +298,27 @@ class JunoTokenSpinbox(JunoControlledLabel):
         self.set_text(self.name)
 
 class JunoDropDown(tulip.UIElement):
-    def __init__(self, name, items, set_fn, initial_value=0, **kwargs):
+    def __init__(self, name, items, set_fn, initial_value=0, offset=0, **kwargs):
         super().__init__()
         self.set_fn = set_fn  # called when value changes, returns text to display.
+        self.offset = offset # for e.g. channel selector, index 0 is actually channel = 1
         self.group.set_size(430,40)
         self.label = lv.label(self.group)
         self.label.set_text(name)
         self.dropdown = lv.dropdown(self.group)
         self.dropdown.align_to(self.label, lv.ALIGN.OUT_RIGHT_MID, 0, 0)
-        self.dropdown.set_options("\n".join(items))
+        self.update_items(items)
         self.dropdown.set_dir(lv.DIR.BOTTOM)
         self.dropdown.add_event_cb(self.cb, lv.EVENT.VALUE_CHANGED, None)
         self.dropdown.set_height(40)
         self.set_fn(initial_value)
-        #self.dropdown.set_width(150)
-        #self.dropdown.align_to(self.group, lv.ALIGN.LEFT_MID,0,0)
-        #tulip.lv_depad(self.dropdown)
+
+    def update_items(self, items):
+        self.dropdown.set_options("\n".join(items))
 
     def cb(self,e):
-        self.set_fn(e.get_target_obj().get_selected())
-        print("cb")
+        print("cb offset is %d"% (self.offset))
+        self.set_fn(e.get_target_obj().get_selected()+self.offset)
 
 
 import juno, midi
@@ -470,16 +471,18 @@ def setup_from_patch_number(patch_number, propagate_to_voices_app=True):
 
 
 def setup_from_midi_chan(new_midi_channel):
+    print("setup midi chan %d" %(new_midi_channel))
     """Switch which JunoPatch we display based on MIDI channel."""
     global midi_channel
     if new_midi_channel == midi_channel:
         #print("midi channel %d is already selected" % midi_channel)
         return
     old_midi_channel = midi_channel   # In case we need to unwind.
-    # Store state of current channel
-    state = current_juno().to_sysex()
-    #print("setup_from_midi: saving state for channel %d: %s" % (midi_channel, hexify(state)))
-    midi.config.set_channel_state(midi_channel, state)
+    if old_midi_channel:
+        # store state of current channel
+        state = current_juno().to_sysex()
+        midi.config.set_channel_state(midi_channel, state)
+
     midi_channel = (new_midi_channel)
     new_patch = current_juno()
     if(new_patch == None):
@@ -500,7 +503,18 @@ def setup_from_midi_chan(new_midi_channel):
         setup_ui_from_juno_patch(new_patch)
     return "MIDI chan %d" % (midi_channel)
 
-midi_selector = JunoDropDown('Assigned Juno Channel:', ['1','2'], setup_from_midi_chan, initial_value = 0)#, max_value=15, width=160, offset=1)
+
+# get active juno channels
+def get_active_midi_channels():
+    juno_midi_channels = []
+    for c in midi.config.synth_per_channel.keys():
+        if(c>0): # dan sets up a fake juno on channel 0
+            if(hasattr(midi.config.synth_per_channel[c],'patch_number')):
+                if midi.config.synth_per_channel[c].patch_number < 128:
+                    juno_midi_channels.append(str(c))
+    return juno_midi_channels
+
+midi_selector = JunoDropDown('Assigned Juno Channel:', get_active_midi_channels(), setup_from_midi_chan, initial_value = 0, offset=1)
 patch_selector = JunoDropDown("Patch", patches.patches[:128], setup_from_patch_number, initial_value=current_juno().patch_number)
 #, initial_value=current_juno().patch_number)
 
@@ -600,16 +614,21 @@ def midi_event_cb(x):
         if len(m) == 0:
             m = tulip.midi_in()
 
+# called when switching to me. update stuff
+def activate(screen):
+    midi_selector.update_items(get_active_midi_channels())
 
 def quit(screen):
     state = current_juno().to_sysex()
     #print("quit: saving state for channel %d: %s" % (midi_channel, hexify(state)))
-    midi.config.set_channel_state(midi_channel, state)
+    if midi_channel: # Dont' attempt to save state for channel zero?
+        midi.config.set_channel_state(midi_channel, state)
     tulip.midi_remove_callback(midi_event_cb)
 
 def run(screen):
     screen.offset_y = 100
     screen.quit_callback = quit
+    screen.activate_callback = activate
     screen.set_bg_color(73)
     screen.add([lfo, dco, hpf, vcf, vca, env, ch])
     screen.add(patch_selector, x=20, y=20) # relative=lfo, direction=lv.ALIGN.OUT_TOP_MID)
