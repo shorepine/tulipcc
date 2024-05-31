@@ -159,7 +159,7 @@ class ListColumn(tulip.UIElement):
         if index is not None:
             self.buttons[self.selected].set_style_bg_color(tulip.pal_to_lv(129), 0)
             if(self.name=='channel'):
-                current_patch(self.selected + 1)
+                sync_ui_for_channel(self.selected + 1)
             elif(self.name=='synth'):
                 update_patches(self.button_texts[self.selected])
             elif(self.name=='mode'):
@@ -218,6 +218,9 @@ def quit(screen):
     deactivate(app)
 
 def activate(screen):
+    # Synchronize the patch selector item in case editor changed patch.
+    if app.channels.selected is not None:
+        sync_ui_for_channel(app.channels.selected + 1)
     tulip.defer(deferred_bg_redraw, None, 250)
     # start listening to the keyboard again
     tulip.keyboard_callback(process_key)
@@ -246,12 +249,6 @@ def update_map():
         if (channel_patch, channel_polyphony) != (patch_no, polyphony):
             tulip.music_map(channel, patch_number=patch_no,
                             voice_count=polyphony)
-            # If the juno6 app is running, maybe inform it that patch has changed.
-            try:
-                juno6_app = tulip.running_apps.get("juno6", None)
-                juno6_app.update_patch_for_channel_hook(channel, patch_no)
-            except:
-                pass
 
 
 # populate the patches dialog from patches.py
@@ -267,8 +264,8 @@ def update_patches(synth):
         app.patchlist.replace_items([])
     app.patchlist.label.set_text("%s patches" % (synth))
 
-# Get current settings for a channel from midi.config.
-def current_patch(channel):
+def sync_ui_for_channel(channel):
+    """Synchronize the UI to the state for this channel per midi.py."""
     global app
     channel_patch, amy_voices = midi.config.channel_info(channel)
 
@@ -278,7 +275,6 @@ def current_patch(channel):
             # We defer here so that setting the UI component doesn't trigger an update before it updates
             app.synths.select(0, defer=True)
             app.patchlist.select(channel_patch, defer=True)
-            pass
         elif channel_patch < 256:
             app.synths.select(1, defer=True)
             app.patchlist.select(channel_patch - 128, defer=True)
@@ -325,8 +321,6 @@ def run(screen):
 
     app.add(app.settings, pad_x=0)
 
-    current_patch(1)
+    sync_ui_for_channel(1)
 
     app.present()
-
-
