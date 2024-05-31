@@ -297,11 +297,12 @@ class JunoTokenSpinbox(JunoControlledLabel):
         self.name = self.set_fn(self.value + self.offset, **additional_kwargs)
         self.set_text(self.name)
 
+
 class JunoDropDown(tulip.UIElement):
-    def __init__(self, name, items, set_fn, initial_value=0, offset=0, **kwargs):
+    def __init__(self, name, items, set_fn, initial_value=0, set_fn_takes_item_str=False, **kwargs):
         super().__init__()
         self.set_fn = set_fn  # called when value changes, returns text to display.
-        self.offset = offset # for e.g. channel selector, index 0 is actually channel = 1
+        self.set_fn_takes_item_str = set_fn_takes_item_str
         self.group.set_size(430,40)
         self.label = lv.label(self.group)
         self.label.set_text(name)
@@ -314,11 +315,20 @@ class JunoDropDown(tulip.UIElement):
         self.set_fn(initial_value)
 
     def update_items(self, items):
-        self.dropdown.set_options("\n".join(items))
+        self.items = items
+        self.dropdown.set_options("\n".join(self.items))
 
-    def cb(self,e):
-        print("cb offset is %d"% (self.offset))
-        self.set_fn(e.get_target_obj().get_selected()+self.offset)
+    def cb(self, e):
+        selected_index = e.get_target_obj().get_selected()
+        if self.set_fn_takes_item_str:
+            # Callback is passed the actual item string, not the index.
+            self.set_fn(self.items[selected_index])
+        else:
+            self.set_fn(selected_index)
+
+    def set_selected(self, item):
+        """Set the item displayed, but do not trigger the callback."""
+        self.dropdown.set_selected(item)
 
 
 import juno, midi
@@ -340,17 +350,6 @@ def update_patch_including_state(jp, patch_num, midi_channel):
     if state:
         #print('Got existing state for channel %d: %s' % (m_channel, hexify(state)))
         jp.set_sysex(state)
-
-
-# Get the patch to channel mapping and the AMY voices from midi.patch_map if set
-for m_channel in range(1, 17):
-    if m_channel != 10:
-        patch_num, amy_voices = midi.config.channel_info(m_channel)
-        if patch_num is not None and patch_num < 128:
-            jp = juno.JunoPatch()  # .from_patch_number(patch_num)
-            jp.set_voices(amy_voices)
-            update_patch_including_state(jp, patch_num, m_channel)
-            juno_patch_for_midi_channel[m_channel] = jp
 
 
 def current_juno():
@@ -447,12 +446,16 @@ def setup_ui_from_juno_patch(patch):
 
 def setup_from_patch_number(patch_number, propagate_to_voices_app=True):
     global midi_channel
+    if midi_channel == 0:
+        setup_ui_from_juno_patch(juno_patch_for_midi_channel[midi_channel])
+        return "FAKE FOR SETUP"
     # See how many voices are allocated going in.
-    _, amy_voices = midi.config.channel_info(midi_channel)
+    #_, amy_voices = midi.config.channel_info(midi_channel)
     # Use no fewer than 4.
-    num_amy_voices = 0 if amy_voices == None else len(amy_voices)
-    polyphony = max(4, num_amy_voices)
-    tulip.music_map(midi_channel, patch_number, polyphony)
+    #num_amy_voices = 0 if amy_voices == None else len(amy_voices)
+    #polyphony = max(4, num_amy_voices)
+    #tulip.music_map(midi_channel, patch_number, polyphony)
+    midi.config.program_change(midi_channel, patch_number)
     _, amy_voices = midi.config.channel_info(midi_channel)
     #jp = juno.JunoPatch()  #.from_patch_number(patch_number)
     #juno_patch_for_midi_channel[midi_channel] = jp
@@ -470,10 +473,10 @@ def setup_from_patch_number(patch_number, propagate_to_voices_app=True):
     return jp.name
 
 
-def setup_from_midi_chan(new_midi_channel):
-    print("setup midi chan %d" %(new_midi_channel))
+def setup_from_midi_chan_str(midi_chan_str):
     """Switch which JunoPatch we display based on MIDI channel."""
     global midi_channel
+    new_midi_channel = int(midi_chan_str)
     if new_midi_channel == midi_channel:
         #print("midi channel %d is already selected" % midi_channel)
         return
@@ -482,21 +485,23 @@ def setup_from_midi_chan(new_midi_channel):
         # store state of current channel
         state = current_juno().to_sysex()
         midi.config.set_channel_state(midi_channel, state)
-
-    midi_channel = (new_midi_channel)
+    midi_channel = new_midi_channel
     new_patch = current_juno()
     if(new_patch == None):
         print("No Juno on midi channel %d" % midi_channel)
-        patch_selector.set_text("None assigned")
-        patch_selector.value = -1
+        try:
+            patch_selector.set_selected(0)
+        except:
+            # patch_selector not yet created.
+            pass
         # Unwind
         midi_channel = old_midi_channel
     else:
         #print("new patch patch is %d" % (new_patch.patch_number))
         new_patch.init_AMY()
         try:
-            patch_selector.value = new_patch.patch_number  # Bypass actually reading that patch, just set the state.
-            patch_selector.set_text(new_patch.name)
+            # Just set the state, don't do the callback.
+            patch_selector.set_selected(new_patch.patch_number)
         except:
             # patch_selector isn't created yet.
             pass
@@ -505,16 +510,29 @@ def setup_from_midi_chan(new_midi_channel):
 
 
 # get active juno channels
-def get_active_midi_channels():
+def get_active_midi_channels_as_str():
+    """Scan midi channels and return list of strings of ones that are juno."""
+    # Ensure that our juno_patch_for_midi_channel is setup to match too.
+    global midi_channel
     juno_midi_channels = []
-    for c in midi.config.synth_per_channel.keys():
-        if(c>0): # dan sets up a fake juno on channel 0
-            if(hasattr(midi.config.synth_per_channel[c],'patch_number')):
-                if midi.config.synth_per_channel[c].patch_number < 128:
-                    juno_midi_channels.append(str(c))
-    return juno_midi_channels
+    for chan in midi.config.get_active_channels():
+        patch_num, amy_voices = midi.config.channel_info(chan)
+        if patch_num is not None and patch_num < 128:
+            juno_midi_channels.append(chan)
+            if chan not in juno_patch_for_midi_channel:
+                # We didn't know this channel was a juno, make a new one
+                jp = juno.JunoPatch()
+                jp.set_voices(amy_voices)
+                update_patch_including_state(jp, patch_num, chan)
+                juno_patch_for_midi_channel[chan] = jp
+    # What if our current midi channel is no longer available?
+    if midi_channel and midi_channel not in juno_midi_channels:
+        # Switch to a working channel.  0 is always there.
+        setup_from_midi_chan_str(str((juno_midi_channels + [0])[0]))
+    # Return as a list of str since these are for display in dropdown.
+    return [str(c) for c in juno_midi_channels]
 
-midi_selector = JunoDropDown('Assigned Juno Channel:', get_active_midi_channels(), setup_from_midi_chan, initial_value = 0, offset=1)
+midi_selector = JunoDropDown('Assigned Juno Channel:', get_active_midi_channels_as_str(), setup_from_midi_chan_str, set_fn_takes_item_str=True)
 patch_selector = JunoDropDown("Patch", patches.patches[:128], setup_from_patch_number, initial_value=current_juno().patch_number)
 #, initial_value=current_juno().patch_number)
 
@@ -614,9 +632,13 @@ def midi_event_cb(x):
         if len(m) == 0:
             m = tulip.midi_in()
 
+def refresh_with_new_music_map():
+    """Called when the active midid channels changes, so we can update menu."""
+    midi_selector.update_items(get_active_midi_channels_as_str())
+            
 # called when switching to me. update stuff
 def activate(screen):
-    midi_selector.update_items(get_active_midi_channels())
+    midi_selector.update_items(get_active_midi_channels_as_str())
 
 def quit(screen):
     state = current_juno().to_sysex()
@@ -635,7 +657,8 @@ def run(screen):
     screen.add(midi_selector, x=500, y=20) # relative=patch_selector, direction=lv.ALIGN.OUT_RIGHT_MID)
     screen.present()
 
-    # Hook for communication from voices
+    # Hook for communication from voices.py/midi.py.
     screen.update_patch_for_channel_hook = update_patch_for_channel
-
+    screen.refresh_with_new_music_map = refresh_with_new_music_map
+    
     tulip.midi_add_callback(midi_event_cb)

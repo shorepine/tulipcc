@@ -46,6 +46,10 @@ class MidiConfig:
             # Setting up a new channel.
             self.add_synth(channel, patch_number, voice_count)
 
+    def get_active_channels(self):
+        """Return numbers of MIDI channels with allocated synths."""
+        return list(self.synth_per_channel.keys())
+
     def channel_info(self, channel):
         """Report the current patch_num and list of amy_voices for this channel."""
         if channel not in self.synth_per_channel:
@@ -340,6 +344,8 @@ class PitchedPCMSynth:
         self.pcm_patch_to_osc = {}
         # Fields used by UI
         self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
+        self.patch_number = None  # Patch number is used to detect Juno synths
+        self.patch_state = None
 
     def note_on(self, note, velocity, pcm_patch=0, time=None):
         osc = self.pcm_patch_to_osc.get(pcm_patch, None)
@@ -387,7 +393,7 @@ class DrumSynth:
         self.note_to_osc = {}
         # Fields used by UI
         self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
-        self.patch_number = 0
+        self.patch_number = None  # Patch number is used to detect Juno synths
         self.patch_state = None
 
     def note_on(self, note, velocity, time=None):
@@ -480,8 +486,15 @@ def music_map(channel, patch_number=None, voice_count=None):
     config.music_map(channel, patch_number, voice_count)
     try:
         # Update voices UI if it is running.
+        # (But watch out for circularity - voices calls music_map too).
         voices_app = tulip.running_apps.get("voices", None)
         #voices_app.refresh_with_new_music_map()   # Not yet implemented!
+    except:
+        pass
+    try:
+        # Update juno6 UI if it is running.
+        juno6_app = tulip.running_apps.get("juno6", None)
+        juno6_app.refresh_with_new_music_map()
     except:
         pass
 
