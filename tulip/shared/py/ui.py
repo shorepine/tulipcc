@@ -53,7 +53,8 @@ def current_lv_group():
     return current_uiscreen().group
 
 def hide(i):
-    g = lv.screen_active().get_child(0)
+    g = tulip.current_uiscreen().group
+    #g = lv.screen_active().get_child(0)
     to_hide = g.get_child(i)
     try:
         to_hide.add_flag(1) # hide
@@ -62,11 +63,13 @@ def hide(i):
 
 
 def unhide(i):
-    g = lv.screen_active().get_child(0)
+    #g = lv.screen_active().get_child(0)
+    g = tulip.current_uiscreen().group
     to_unhide = g.get_child(i)
     try:
         to_unhide.remove_flag(1) # show
     except AttributeError: # we've switched too fast and the hidden thing wasn't hidden
+        print("can't unhide %d")
         pass
 
 # The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
