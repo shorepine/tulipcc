@@ -6,9 +6,9 @@ Welcome to the Tulip Creative Computer! Here you'll find out all about your new 
 
 Here's a legend to the ports, both facing the front and the back (with the cover removed.) You can use a standard phillips head screwdriver to remove the back plate. 
 
-![Front legend](pics/tulip4r11_front.png)
+![Front legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11_front.png)
 
-![Back legend](pics/tulip4r11_back.png)
+![Back legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11_back.png)
 
 
 ## Acesssories you may want
@@ -46,7 +46,7 @@ Now that you've got your Tulip, here's how to get started:
  - Turn on the Tulip! The switch on the top of the board.
  - You should see the following. If you have audio connected, you should also hear a "bleep" sound on startup.
 
-![First boot](pics/tulip4r11firstboot.jpg)
+![First boot](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11firstboot.jpg)
 
  - Your USB keyboard should be able to type into this screen, called the "REPL". It can accept Python code and some simple system commands. Try `ls` and you should see a directory listing. 
 
