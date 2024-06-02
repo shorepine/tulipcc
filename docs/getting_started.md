@@ -10,7 +10,7 @@ Tulip has been a side project of [mine](https://notes.variogram.com/about) for a
 
 **No one working on Tulip makes any money from it**. We're all hobbyists and engineers and scientists and musicians who enjoy working on a small project like this and we hope others can join us. Tulip was designed to be incredibly cheap and completely open source. You can even [build one yourself!](tulip_build.md). I've spent the initial money on PCB design to be able to get this version of Tulip in your hands, and you did pay a tiny amount (single-digit US $) extra over the raw cost of the parts and assembly needed to build Tulip, to support future design work from our partner Makerfabs. 
 
-**Tulip is fun to use today but still needs help**. You should have hacking on and using Tulip, and not expect it to be perfect. You will run into lots of weirdness and challenges. We're hoping to build a community of people that can work together to fix these and constantly make the firmware in Tulip better every day. We're often amazed that it even works this well today. We're pushing the limits of very constrained hardware. A very low power all-in-one computer with high-res screen that supports more Juno-6 polyphony than Roland's own modern products, that can run Python code every 16th note? This is very cool to us, and we hope you agree and can help us make it even better. And remember, if the Tulip firmware doesn't do it for you, you can always use the hardware you bought for your own creations. You can easily remove our firmware and flash it yourself using the ESP-IDF or Arduino.
+**Tulip is fun to use today but still needs help**. You should have fun hacking on and using Tulip, and never expect it to be perfect. You will run into lots of weirdness and challenges. We hope you find those constraints and challenges entertaining and inspiring. We're hoping to build a community of people that can work together to make Tulip even better every day. We're often amazed that it even works this well today. We're pushing the limits of very constrained hardware. A very low power all-in-one computer with high-res screen that supports more Juno-6 polyphony than Roland's own modern products, that can run Python code every 16th note? This is very cool to us, and we hope you agree and can help us make it even better. And remember, if the Tulip firmware doesn't do it for you, you can always use the hardware you bought for your own creations. You can easily remove our firmware and flash it yourself using the ESP-IDF or Arduino.
 
 If you have problems with Tulip, you can find us on GitHub [issues](https://github.com/bwhitman/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG). We'll do our best to help out!
 
@@ -79,8 +79,10 @@ You should **upgrade your Tulip** whenever you receive it. We are constantly add
  - Tap the top right blue "switch" icon to get back to the REPL. Tap it again to get back to the drum machine.
  - Tap the red "quit" icon to quit the drum machine.
  - You can `edit('boot.py')` to add anything you want to run on Tulip startup, like wifi, or calibration, or setting up a synth.
+ - Other things to try: `run('bunny_bounce')`, `run('voices')`, `run('juno6')`
+ - After joining Wi-Fi, try out Tulip World with `world.ls()` to see files posted by others! 
 
-Now, [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
+Next stop: [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
 
 [If you want to work on Tulip itself, check out our guide to building and flashing the Tulip firmware.](tulip_flashing.md)
 
