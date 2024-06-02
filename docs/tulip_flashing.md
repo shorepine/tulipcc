@@ -25,7 +25,7 @@ If you've got an unflashed Tulip, just finished a DIY, or somehow messed up the 
  * The [T-Deck](../tulip/tdeck/README.md): `TDECK`
  * Tulip CC (our integrated board with display): `TULIP4_R11`
 
-Connect your Tulip to your computer with a USB cable. **Note**: Many Tulip-capable boards have two USB ports, one called UART, TTL or Serial, and one called NATIVE, JTAG, or Host. You should use the UART one if available and try the NATIVE one if not. For example, on the MaTouch 7", you can use either USB port, but if you use the NATIVE port you have to hold down the BOOT button while attaching the USB cable. On the T-Deck, you only have access to the NATIVE port, and you may need to hold down the BOOT button (the trackball button) while you turn it on. If you've tried both ports and the following commands can't find a serial port to flash to, ensure that you've [installed a driver.](https://github.com/WCHSoftGroup/ch34xser_macos)
+Connect your Tulip to your computer with a USB cable. **Note**: Many Tulip-capable boards have two USB ports, one called UART, TTL or Serial, and one called NATIVE, JTAG, or Host. You should use the UART one if available and try the NATIVE one if not. For example, on the Tulip CC, you can use either USB port, but if you use the NATIVE port you have to hold down the BOOT button while attaching the USB cable. On the T-Deck, you only have access to the NATIVE port, and you may need to hold down the BOOT button (the trackball button) while you turn it on. If you've tried both ports and the following commands can't find a serial port to flash to, ensure that you've [installed a driver.](https://github.com/WCHSoftGroup/ch34xser_macos)
 
 Download the `.bin` for your board and use [`esptool.py`](https://docs.espressif.com/projects/esptool/en/latest/esp32/) or any other ESP32-flasher tool to write the entire `.bin` to flash:
 
@@ -92,7 +92,7 @@ Choose the right `MICROPY_BOARD` value for your board.
  * The [T-Deck](../tulip/tdeck/README.md): `TDECK`
  * Tulip CC (our integrated board with display): `TULIP4_R11`
 
-The default is `N32R8`, so if you omit it that's what it'll use.
+The default is `TULIP4_R11`, so if you omit it that's what it'll use.
 
 You have to build the firmware (`idf.py build`) and then, for **only the first install**, run `tulip_fs_create.py` and then `esptool.py` to flash the entire filesystem to Tulip. This sets up the storage on Tulip. Only do that once per chip, or if you make changes to the underlying filesystem. Any further flashing can just use (the much faster!) `idf.py -DMICROPY_BOARD=X flash`, which will save time and not overwrite your file system!
 

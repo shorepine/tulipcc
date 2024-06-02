@@ -1,6 +1,19 @@
 # Getting started with the Tulip CC v4r11
 
-Welcome to the Tulip Creative Computer! Here you'll find out all about your new Tulip that you bought from Makerfabs. 
+Welcome to the [Tulip Creative Computer!](https://github.com/bwhitman/tulipcc) Here you'll find out all about your new Tulip board that you bought from Makerfabs. 
+
+Before we get started, we want to explain the brief history of Tulip and how we work on it. You'll get a lot more out of Tulip if you understand what sort of thing we're building and what sort of community we are.
+
+Tulip has been a side project of [mine](https://notes.variogram.com/about) for a few years. I've always wanted a small low-power computer I could write code or games or music on, that was portable and didn't have distractions like a web browser or work email. Over the years, Tulip has gone through a few iterations from [a bunch of wires](tulip_breadboard.md) to the much more polished and cheap board you just bought from our friends at Makerfabs. Along the way, I encouraged [a friend](https://scholar.google.com/citations?user=1H4HuCkAAAAJ&hl=en) to help me with the [music synthesizer underlying Tulip](https://github.com/bwhitman/amy). We quickly saw the power and fun of having an excellent analog and FM-style synth that could be controlled in Python on constrained real-time hardware. The Tulip you have in your hands is brand new, we constantly chase bugs, add new features, make new music and demos for it. There's a small but growing community of like minded people on our [Discord](https://discord.gg/TzBFkUb8pG) who try fun experiments as we build. 
+
+**No one working on Tulip makes any money from it**. This is not our full time job. We're all hobbyists and engineers and musicians who like working on a small project like this and we hope others can join us. Tulip was designed to be incredibly cheap and completely open source. You can even [build one yourself!](tulip_build.md). I've fronted the initial money to be able to get this version of Tulip in your hands, and you did pay a tiny amount (single-digit US $) extra over the raw cost to build Tulip, to support future design work from our partner Makerfabs. 
+
+**Tulip is fun to use today but still needs help**. You will run into lots of weirdness and challenges. We're hoping to build a community of people that can work together to fix these and constantly make the firmware in Tulip better every day. We're often amazed that it even works this well today. A low power all-in-one computer with high-res screen that supports more Juno-6 polyphony than Roland's own modern products, that can run Python code every 16th note? This is very cool to us, and we hope you agree and can help us make it even better. 
+
+If you have problems with Tulip, you can find us on GitHub [issues](https://github.com/bwhitman/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG). We'll do our best to help out!
+
+-- Brian
+
 
 ## Get used to the ports
 
