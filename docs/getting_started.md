@@ -80,6 +80,8 @@ Now, [check out the API for making your own music, games, graphics and writing w
 
 [If you want to work on Tulip itself, check out our guide to building and flashing the Tulip firmware.](tulip_flashing.md)
 
+If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware.
+
 [![shore pine sound systems discord](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
 Have fun! See you on Tulip World!
