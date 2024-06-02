@@ -6,9 +6,9 @@ Welcome to the Tulip Creative Computer! Here you'll find out all about your new 
 
 Here's a legend to the ports, both facing the front and the back (with the cover removed.) You can use a standard phillips head screwdriver to remove the back plate. 
 
-![Front legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11_front.png)
+![Front legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11_front.png)
 
-![Back legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11_back.png)
+![Back legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png)
 
 
 ## Acesssories you may want
