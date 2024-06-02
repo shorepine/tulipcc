@@ -10,6 +10,8 @@ Tulip has been a side project of [mine](https://notes.variogram.com/about) for a
 
 **Tulip is fun to use today but still needs help**. You will run into lots of weirdness and challenges. We're hoping to build a community of people that can work together to fix these and constantly make the firmware in Tulip better every day. We're often amazed that it even works this well today. A low power all-in-one computer with high-res screen that supports more Juno-6 polyphony than Roland's own modern products, that can run Python code every 16th note? This is very cool to us, and we hope you agree and can help us make it even better. 
 
+And remember, if the Tulip firmware doesn't do it for you, you can always use the hardware for your own creations. You can flash it using the ESP-IDF or Arduino.
+
 If you have problems with Tulip, you can find us on GitHub [issues](https://github.com/bwhitman/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG). We'll do our best to help out!
 
 -- Brian
@@ -27,7 +29,9 @@ The Tulip board you got can work on its own. Most people will want to add a coup
 
 ### USB keyboard
 
-Tulip is a very command-line centered interface with some touch controls. You'll have a much easier time using Tulip if you connect a USB computer keyboard to it for typing. It turns the Tulip into a portable "deck" for whatever you can imagine. You can use _almost_ any USB computer keyboard you already have. However, make sure it's just a keyboard -- no extra trackpads or trackballs or nib-pointers. Tulip can only work with a single USB device at a time, and those combination keyboards appear as two. 
+Tulip is a very command-line centered interface with some touch controls. You'll have a much easier time using Tulip if you connect a USB computer keyboard to it for typing. It turns the Tulip into a portable "deck" for whatever you can imagine. 
+
+You can use _almost_ any USB computer keyboard you already have. However, a keyboard including an internal USB hub will not work. You can tell if a keyboard includes a hub if it has one or more subsidiary USB sockets (e.g. for connecting a mouse), or if it includes an integrated pointing device (trackpad, trackball etc). These keyboards are not compatible with Tulip. 
 
 ### I2C DAC for modular synths
 
