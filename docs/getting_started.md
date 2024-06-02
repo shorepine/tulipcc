@@ -4,12 +4,9 @@ Welcome to the Tulip Creative Computer! Here you'll find out all about your new 
 
 ## Get used to the ports
 
-Here's a legend to the ports, both facing the front and the back (with the cover removed.) You can use a standard phillips head screwdriver to remove the back plate. 
+Here's a legend to the ports, facing the front. 
 
 ![Front legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11_front.png)
-
-![Back legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png)
-
 
 ## Acesssories you may want
 
@@ -35,6 +32,9 @@ Tulip is a low power device and can run on battery for portable computing. There
 
 Larger batteries will work great and last longer, but you'll have to remove the back case to make them fit (or mount the battery some other way.) [This 5200mAh battery pack](https://www.amazon.com/XINLANTECH-Rechargeable-Bluetooth-Electronic-Batteries/dp/B0C2VFTDPY) will last many many hours on Tulip and fit right on the PCB with the back case removed. 
 
+
+![Back legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png)
+
 ## Get started with Tulip
 
 Now that you've got your Tulip, here's how to get started:
@@ -57,9 +57,11 @@ You should **upgrade your Tulip** whenever you receive it. We are constantly add
 
  More quick start tips:
 
+ - Type `run('calibrate')` to calibrate the touch screen if you think it is needed. 
  - The black icon on the bottom right is a launcher, for quick access to some included programs. Tap on `Drums` and you should see (and hear!) a drum machine. 
  - Tap the top right blue "switch" icon to get back to the REPL. Tap it again to get back to the drum machine.
  - Tap the red "quit" icon to quit the drum machine.
+ - You can `edit('boot.py')` to add anything you want to run on Tulip startup, like wifi, or calibration, or setting up a synth.
 
 Now, [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
 
@@ -71,19 +73,23 @@ Have fun! See you on Tulip World!
 
 
 
-
-
-
-
-
-
 ## Known problems
 
-### Slow boot: flashing on boot, or a message "Tulip flash not setup properly"
+### Flashing on boot, or a message "Tulip flash not setup properly"
+
+We "overclock" Tulip's RAM to 120MHz so it can support more polyphony. This works great but currently (we're working on it) has a downside where first cold boots often stall or hang in certain temperature conditions. If you see your Tulip flash or appear to reboot on first turn on (with the swtich), it should eventually settle down and be fine. Future reboots (with the `RESET` button or by `control-D`) will be fine as well. In rare instances, the cold boot may not load our file system properly. You'll see a message like "Tulip flash not setup properly." If you see that message, just hit `control-D` or the `RESET` button on top. It will go away and you'll be fine. We're working with the chip manufacturer on a more solid solution.
 
 ### Touchscreen not responding
 
+If your touchscreen appears to not respond, the most likely explanation is the touchscreen panel cable got loose during shipping or if you installed a battery. We're working with Makerfabs to tape down this connector for higher reliability. But it's a quick fix if it happens to you. Just take off the back case, unseat the touch connector (labeled above) by pulling up the black clamp, and push back in the cable tight, applying a little pressure. Clamp it back, and take a piece of tape to hold down the cable right at the connector, like this: 
+
+![Touch connector tape](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tuilpv4r11ctp.jpg)
+
+
 ### USB computer keyboard not working
+
+If your USB computer keyboard is not working, the most likely explanation is that it appears as a "hub" instead of a bare keyboard to Tulip. At this time (we're working on it!) Tulip only supports "root" devices. You'll have to try another keyboard. If you think your keyboard should work, please find us on [issues](https://github.com/bwhitman/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG) and we'll help out!
+
 
 
 
