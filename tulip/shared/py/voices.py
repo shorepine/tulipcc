@@ -211,6 +211,7 @@ def process_key(key):
 
 
 def deferred_bg_redraw(t):
+    global app
     redraw(app)
 
 def quit(screen):
@@ -300,8 +301,6 @@ def run(screen):
     app.quit_callback = quit
     app.activate_callback = activate
     app.deactivate_callback = deactivate
-    # Draw the BG in 250ms, after LVGL finishes
-    tulip.defer(deferred_bg_redraw, None, 250)
 
     # Skip 10, drums
     app.channels = ListColumn('channel',["1","2","3","4","5","6","7","8","9","11","12","13","14","15","16"], selected=0, width=100)

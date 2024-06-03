@@ -37,14 +37,17 @@ def lv_to_pal(lvcolor):
 
 # Remove padding from an LVGL object. Sometimes useful. 
 def lv_depad(obj):
-    obj.set_style_pad_left(0,0)
-    obj.set_style_pad_right(0,0)
-    obj.set_style_pad_top(0,0)
-    obj.set_style_pad_bottom(0,0)
-    obj.set_style_margin_left(0,0)
-    obj.set_style_margin_right(0,0)
-    obj.set_style_margin_top(0,0)
-    obj.set_style_margin_bottom(0,0)
+    try:
+        obj.set_style_pad_left(0,0)
+        obj.set_style_pad_right(0,0)
+        obj.set_style_pad_top(0,0)
+        obj.set_style_pad_bottom(0,0)
+        obj.set_style_margin_left(0,0)
+        obj.set_style_margin_right(0,0)
+        obj.set_style_margin_top(0,0)
+        obj.set_style_margin_bottom(0,0)
+    except KeyError:
+        pass
 
 def current_uiscreen():
     global current_app_string
@@ -69,7 +72,6 @@ def unhide(i):
     try:
         to_unhide.remove_flag(1) # show
     except AttributeError: # we've switched too fast and the hidden thing wasn't hidden
-        print("can't unhide %d")
         pass
 
 # The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
@@ -215,7 +217,6 @@ class UIScreen():
     # Show the UI on the screen. Set up the keyboard group listener. Draw the task bar. 
     def present(self):
         global current_app_string
-        #tic = tulip.ticks_ms()
         current_app_string = self.name
         self.active = True
         self.draw_task_bar()
@@ -223,8 +224,10 @@ class UIScreen():
         
         lv.screen_load(self.screen)
 
+        wait_time = UIScreen.load_delay
         for i in range(self.group.get_child_count()):
             tulip.defer(unhide, i, UIScreen.load_delay + i*UIScreen.load_delay)
+            wait_time = wait_time + UIScreen.load_delay
 
         if(self.handle_keyboard):
             get_keypad_indev().set_group(self.kb_group)
@@ -240,12 +243,13 @@ class UIScreen():
                 tulip.tfb_start()
             else:
                 tulip.tfb_stop()
+
         if(self.activate_callback is not None):
-            self.activate_callback(self)
+            tulip.defer(self.activate_callback, self, wait_time)
+            #self.activate_callback(self)
 
         tulip.ui_quit_callback(self.screen_quit_callback)
         tulip.ui_switch_callback(self.alttab_callback)
-        #print("took %dms to load screen" % (tulip.ticks_ms()-tic))
 
     # Remove the elements you created
     def remove_items(self):

@@ -79,7 +79,7 @@ You should **upgrade your Tulip** whenever you receive it. We are constantly add
  - Tap the top right blue "switch" icon to get back to the REPL. Tap it again to get back to the drum machine.
  - Tap the red "quit" icon to quit the drum machine.
  - You can `edit('boot.py')` to add anything you want to run on Tulip startup, like wifi, or calibration, or setting up a synth.
- - Other things to try: `run('bunny_bounce')`, `run('voices')`, `run('juno6')`
+ - Other things to try: `run('bunny_bounce')`, `run('voices')`, `run('juno6')`, `run('drums')`
  - After joining Wi-Fi, try out Tulip World with `world.ls()` to see files posted by others! 
 
 Next stop: [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
