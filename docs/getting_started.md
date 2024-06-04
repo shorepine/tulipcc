@@ -1,6 +1,6 @@
 # Getting started with the Tulip CC v4r11
 
-Welcome to the [Tulip Creative Computer!](https://github.com/bwhitman/tulipcc) Here you'll find out all about your new Tulip board that you bought from Makerfabs. 
+Welcome to the [Tulip Creative Computer!](https://github.com/bwhitman/tulipcc) Here you'll find out all about your new [Tulip board that you bought from Makerfabs.](https://www.makerfabs.com/the-tulip-creative-computer.html)
 
 Before we get started, we want to explain the brief history of Tulip and how we work on it. You'll get a lot more out of Tulip if you understand what sort of thing we're building and what sort of community we are.
 
@@ -8,9 +8,9 @@ Before we get started, we want to explain the brief history of Tulip and how we 
 
 Tulip has been a side project of [mine](https://notes.variogram.com/about) for a few years. I've always wanted a small low-power computer I could write code or games or music on, that was portable and didn't have distractions like a web browser or work email. Over the years, Tulip has gone through a few iterations from [a bunch of wires](tulip_breadboard.md) to the much more polished and cheap board you just bought from our friends at Makerfabs. Along the way, I encouraged [a friend](https://scholar.google.com/citations?user=1H4HuCkAAAAJ&hl=en) to help me with the [music synthesizer underlying Tulip](https://github.com/bwhitman/amy). We quickly saw the power and fun of having an excellent analog and FM-style synth that could be controlled in Python on constrained real-time hardware. The Tulip you have in your hands is brand new, we constantly chase bugs, add new features, make new music and demos for it. There's a small but growing community of like minded people on our [Discord](https://discord.gg/TzBFkUb8pG) who try fun experiments as we build. 
 
-**No one working on Tulip makes any money from it**. We're all hobbyists and engineers and scientists and musicians who enjoy working on a small project like this and we hope others can join us. Tulip was designed to be incredibly cheap and completely open source. You can even [build one yourself!](tulip_build.md). I've spent the initial money on PCB design to be able to get this version of Tulip in your hands, and you did pay a tiny amount (single-digit US $) extra over the raw cost of the parts and assembly needed to build Tulip, to support future design work from our partner Makerfabs. 
+**No one working on Tulip makes any money from it**. We're all hobbyists and engineers and scientists and musicians who enjoy working on a small project like this and we hope others can join us. Tulip was designed to be incredibly cheap and completely open source. You can even [build one yourself!](tulip_build.md) I've spent the initial money on PCB design to be able to get this version of Tulip in your hands, and you did pay a tiny amount extra over the raw cost of the parts and assembly needed to build Tulip, to support future design work from our partner Makerfabs. 
 
-**Tulip is fun to use today but still needs help**. You should have fun hacking on and using Tulip, and never expect it to be perfect. You will run into lots of weirdness and challenges. We hope you find those constraints and challenges entertaining and inspiring. We're hoping to build a community of people that can work together to make Tulip even better every day. We're often amazed that it even works this well today. We're pushing the limits of very constrained hardware. A very low power all-in-one computer with high-res screen that supports more Juno-6 polyphony than Roland's own modern products, that can run Python code every 16th note? This is very cool to us, and we hope you agree and can help us make it even better. And remember, if the Tulip firmware doesn't do it for you, you can always use the hardware you bought for your own creations. You can easily remove our firmware and flash it yourself using the ESP-IDF or Arduino.
+**Tulip is fun to use today but still needs help**. You should have fun hacking on and using Tulip, and never expect it to be perfect. You will run into lots of weirdness and challenges. We hope you find those constraints and challenges entertaining and inspiring. We're hoping to build a community of people that can work together to make Tulip even better every day. Remember, if the Tulip firmware doesn't do it for you, you can always use the hardware you bought for your own creations. You can easily remove our firmware and flash it yourself using the ESP-IDF or Arduino.
 
 If you have problems with Tulip, you can find us on GitHub [issues](https://github.com/bwhitman/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG). We'll do our best to help out!
 
@@ -60,17 +60,19 @@ Now that you've got your Tulip, here's how to get started:
  - Connect a USB-C cable from a power adapter or your computer to the **top** USB connector, facing Tulip.
  - Plug in a USB keyboard to the **bottom** USB connector. 
  - Optionally wire up your audio jack, MIDI and I2C connectors if you have them. Headphones will work fine on the audio jack if you don't have a mixer or other sound system. 
- - Turn on the Tulip! The switch on the top of the board.
+ - Turn on the Tulip! The switch is on the top of the board.
  - You should see the following. If you have audio connected, you should also hear a "bleep" sound on startup.
 
 ![First boot](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11firstboot.jpg)
 
  - Your USB keyboard should be able to type into this screen, called the "REPL". It can accept Python code and some simple system commands. Try `ls` and you should see a directory listing. 
 
-You should **upgrade your Tulip** whenever you receive it. We are constantly adding new features, fixing bugs, updating the API. To upgrade your Tulip, connect it to your Wi-Fi first:
+You should **upgrade the firmware on Tulip** whenever you receive it. You should also upgrade maybe once every couple of weeks. We are constantly adding new features, fixing bugs, updating the API. To upgrade your Tulip, connect it to your Wi-Fi first:
 
  - `tulip.wifi('ssid', 'password')` will return an IP address if successful.
  - `tulip.upgrade()` will walk you through the upgrade. Accept both upgrades -- the system folder and the firmware. This process will take a few minutes in total. Your Tulip will reboot itself when it is done.
+
+[If you don't have easy access to Wi-Fi, or want to flash Tulip from code we haven't released yet, you can also directly flash Tulip from your computer.](tulip_flashing.md)
 
  More quick start tips:
 
@@ -79,14 +81,14 @@ You should **upgrade your Tulip** whenever you receive it. We are constantly add
  - Tap the top right blue "switch" icon to get back to the REPL. Tap it again to get back to the drum machine.
  - Tap the red "quit" icon to quit the drum machine.
  - You can `edit('boot.py')` to add anything you want to run on Tulip startup, like wifi, or calibration, or setting up a synth.
- - Other things to try: `run('bunny_bounce')`, `run('voices')`, `run('juno6')`, `run('drums')`
- - After joining Wi-Fi, try out Tulip World with `world.ls()` to see files posted by others! 
+ - Other things to try: `run('bunny_bounce')`, `run('voices')`, `run('juno6')`, `run('drums')`, `run('wordpad')`. The code for all of these are available, for you to modify or learn from.
+ - After joining Wi-Fi, try out Tulip World with `world.ls()` to see files posted by others! Try `world.download('mc_dance')` or `world.download('periodic2')` for some neat things by the Tulip community. 
 
-Next stop: [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
+Your next stop: [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
 
 [If you want to work on Tulip itself, check out our guide to building and flashing the Tulip firmware.](tulip_flashing.md)
 
-If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware.
+If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware. It's also an easy way to transfer files from your computer to a Tulip, by using Tulip World on Desktop to upload and then downloading on Tulip hardware.
 
 [![shore pine sound systems discord](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
