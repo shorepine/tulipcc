@@ -1,6 +1,6 @@
 # juno6.py
 # A more pure-LVGL (using Tulip's UIScreen) UI for Juno-6
-import tulip
+import tulip, midi
 import lvgl as lv
 import time
 import patches
@@ -343,7 +343,7 @@ class JunoDropDown(tulip.UIElement):
         self.current_index = index
 
 
-import juno, midi
+import juno
 
 # Midi channel 0 is not accessible, it's used to store "initial state" juno. Actual UI switches to a real MIDI channel (1 up) once the UI is up.
 midi_channel = 0
@@ -643,7 +643,7 @@ def deactivate(screen):
     
 def quit(screen):
     deactivate(screen)
-    tulip.midi_remove_callback(midi_event_cb)
+    midi.remove_callback(midi_event_cb)
 
 def run(screen):
     screen.offset_y = 100
@@ -662,4 +662,4 @@ def run(screen):
     screen.update_patch_for_channel_hook = update_patch_for_channel
     screen.refresh_with_new_music_map = refresh_with_new_music_map
     
-    tulip.midi_add_callback(midi_event_cb)
+    midi.add_callback(midi_event_cb)

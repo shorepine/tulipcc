@@ -439,7 +439,6 @@ def ensure_midi_config():
             voices_per_channel={1: 6, 10: 10},
             patch_per_channel={1: 0},
         )
-        #tulip.midi_add_callback(midi_event_cb)
 
 WARNED_MISSING_CHANNELS = set()
 
