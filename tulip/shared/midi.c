@@ -5,7 +5,7 @@ uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
 uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
 int16_t midi_queue_head = 0;
 int16_t midi_queue_tail = 0;
-mp_obj_t midi_callbacks[MIDI_SLOTS];
+extern mp_obj_t midi_callback;
 
 #define DEBUG_MIDI 0
 
@@ -32,9 +32,7 @@ uint8_t midi_message_i = 0;
 
 void callback_midi_message_received(uint8_t *data, size_t len) {
     push_midi_message_into_fifo(data, len);
-    for(uint8_t i=0;i<MIDI_SLOTS;i++) {
-        if(midi_callbacks[i]!=NULL) mp_sched_schedule(midi_callbacks[i], mp_const_none);
-    }
+    if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_none);
     current_midi_status = 0;
     midi_message_i = 0;
 }

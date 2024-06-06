@@ -439,41 +439,69 @@ def ensure_midi_config():
             voices_per_channel={1: 6, 10: 10},
             patch_per_channel={1: 0},
         )
-        tulip.midi_add_callback(midi_event_cb)
+        #tulip.midi_add_callback(midi_event_cb)
 
 WARNED_MISSING_CHANNELS = set()
 
-def midi_event_cb(x):
+
+# midi.py's own python midi callback. you can remove this if you don't want it active
+def midi_event_cb(midi_message):
     """Callback that takes MIDI note on/off to create Note objects."""
     ensure_midi_config()
+    message = midi_message[0] & 0xF0
+    channel = (midi_message[0] & 0x0F) + 1
+    insert_arpeggiator(channel)
+    if channel not in config.synth_per_channel:
+        if channel not in WARNED_MISSING_CHANNELS:
+            print("Warning: No synth configured for MIDI channel", channel)
+            WARNED_MISSING_CHANNELS.add(channel)
+    else:
+        synth = config.synth_per_channel[channel]
+        if message == 0x90:  # Note on.
+            midinote = midi_message[1]
+            midivel = midi_message[2]
+            vel = midivel / 127.
+            synth.note_on(midinote, vel)
+        elif message == 0x80:  # Note off.
+            midinote = midi_message[1]
+            synth.note_off(midinote)
+        elif message == 0xc0:  # Program change
+            synth.program_change(midi_message[1])
+        elif message == 0xb0 and midi_message[1] == 0x40:
+            synth.sustain(midi_message[2])
+    if message == 0xe0:  # Pitch bend. m[2] is MSB, m[1] is LSB. 14 bits 
+        pb_value = ((midi_message[2] << 7) | (midi_message[1])) - 8192 # -8192-8192, where 0 is nothing
+        amy_value = float(pb_value)/(8192*6.0) # convert to -2 / +2 semitones
+        amy.send(pitch_bend=amy_value)
+
+
+
+midi_callbacks = {}
+
+# Add a midi callback and return a slot number
+def add_callback(fn):
+    midi_callbacks[fn] = True
+
+def remove_callback(fn):
+    if fn in midi_callbacks:
+        del midi_callbacks[fn]
+
+def start_default_callback():
+    add_callback(midi_event_cb)
+
+def stop_default_callback():
+    remove_callback(midi_event_cb)
+
+
+
+# The midi callback sent over from C, fires all the other ones if set.
+def c_fired_midi_event(x):
     m = tulip.midi_in() 
     while m is not None and len(m) > 0:
-        message = m[0] & 0xF0
-        channel = (m[0] & 0x0F) + 1
-        insert_arpeggiator(channel)
-        if channel not in config.synth_per_channel:
-            if channel not in WARNED_MISSING_CHANNELS:
-                print("Warning: No synth configured for MIDI channel", channel)
-                WARNED_MISSING_CHANNELS.add(channel)
-        else:
-            synth = config.synth_per_channel[channel]
-            if message == 0x90:  # Note on.
-                midinote = m[1]
-                midivel = m[2]
-                vel = midivel / 127.
-                synth.note_on(midinote, vel)
-            elif message == 0x80:  # Note off.
-                midinote = m[1]
-                synth.note_off(midinote)
-            elif message == 0xc0:  # Program change
-                synth.program_change(m[1])
-            elif message == 0xb0 and m[1] == 0x40:
-                synth.sustain(m[2])
-        if message == 0xe0:  # Pitch bend. m[2] is MSB, m[1] is LSB. 14 bits 
-            pb_value = ((m[2] << 7) | (m[1])) - 8192 # -8192-8192, where 0 is nothing
-            amy_value = float(pb_value)/(8192*6.0) # convert to -2 / +2 semitones
-            amy.send(pitch_bend=amy_value)
-    
+        # call the other callbacks
+        for c in midi_callbacks.keys():
+            c(m)
+
         # Are there more events waiting?
         m = m[3:]
         if len(m) == 0:
@@ -519,6 +547,8 @@ def release_arpeggiator(channel=None):
 
 
 def deferred_midi_config(t):
+    tulip.midi_callback(c_fired_midi_event)
+    start_default_callback()
     ensure_midi_config()
 
 def setup():

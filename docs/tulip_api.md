@@ -450,6 +450,8 @@ You can adjust which voices are sent with `tulip.music_map(channel, patch_number
 
 These mappings will get reset to default on boot. If you want to save them, put tulip.music_map() commands in your boot.py.
 
+You can set up your own MIDI callbacks in your own programs. You can call `midi.add_callback(function)`, which will call your `function` with a list of a (2 or 3-byte) MIDI message. These callbacks will get called alongside the default MIDI callback (that plays synth notes on MIDI in). You can stop the default MIDI callback with `midi.stop_default_callback()` and start it again with `midi.start_default_callback()`. 
+
 On Tulip Desktop, MIDI works on our iOS and macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
 
 You can also send MIDI messages "locally", e.g. to a running program that is expecting hardware MIDI input, via `tulip.midi_local()`
@@ -462,11 +464,15 @@ def callback():
     if(m[0]==144):
         print("Note on, note # %d velocity # %d" % (m[1], m[2]))
 
-tulip.midi_add_callback(callback)
-tulip.midi_remove_callback(callback) # turns off callback
-tulip.midi_remove_callbacks() # turns off all
+midi.add_callback(callback)
+midi.remove_callback(callback) # turns off callback
 
-m = tulip.midi_in() # returns bytes of the last MIDI message received
+def callback(message):
+    print(message[0]) # first byte of MIDI in message
+
+midi.stop_default_callback() # turn on the default MIDI receiver
+midi.start_default_callback() # turn on the default MIDI receiver
+
 tulip.midi_out((144,60,127)) # sends a note on message
 tulip.midi_out(bytes) # Can send bytes or list
 
