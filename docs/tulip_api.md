@@ -470,7 +470,7 @@ midi.remove_callback(callback) # turns off callback
 def callback(message):
     print(message[0]) # first byte of MIDI in message
 
-midi.stop_default_callback() # turn on the default MIDI receiver
+midi.stop_default_callback() # turn off the default MIDI receiver
 midi.start_default_callback() # turn on the default MIDI receiver
 
 tulip.midi_out((144,60,127)) # sends a note on message
