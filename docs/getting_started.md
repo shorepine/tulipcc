@@ -49,6 +49,12 @@ Tulip is a low power device and can run on battery for portable computing. There
 
 Larger batteries will work great and last longer, but you'll have to remove the back case to make them fit (or mount the battery some other way.) [This 5200mAh battery pack](https://www.amazon.com/XINLANTECH-Rechargeable-Bluetooth-Electronic-Batteries/dp/B0C2VFTDPY) will last many many hours on Tulip and fit right on the PCB with the back case removed. 
 
+### An extra Alles or two
+
+![Alles](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/nicoboard-alles.jpg)
+
+Tulip supports using [Alles](http://github.com/bwhitman/allex) as extra speakers. You control dozens of other speakers wirelessly using the AMY synthesizer for amazing multi-channel audio setups, using only a Tulip to control them! [You can get Alles PCBs from our friends at Blinkinlabs.](https://shop.blinkinlabs.com/products/alles-pcb)
+
 
 ![Back legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png)
 
