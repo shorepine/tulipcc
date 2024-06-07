@@ -21,7 +21,7 @@ If you have problems with Tulip, you can find us on GitHub [issues](https://gith
 
 Here's a legend to the ports, facing the front. 
 
-![Front legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11_front.png)
+<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11_front.png" width=600>
 
 ## Acesssories you may want
 
@@ -59,7 +59,7 @@ Tulip supports using [Alles](http://github.com/bwhitman/allex) as extra speakers
 ## Get started with Tulip
 
 
-![Back legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png)
+<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png" width=600>
 
 
 Now that you've got your Tulip, here's how to get started:
@@ -71,7 +71,7 @@ Now that you've got your Tulip, here's how to get started:
  - Turn on the Tulip! The switch is on the top of the board.
  - You should see the following. If you have audio connected, you should also hear a "bleep" sound on startup.
 
-![First boot](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11firstboot.jpg)
+<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11firstboot.jpg" width=400>
 
  - Your USB keyboard should be able to type into this screen, called the "REPL". It can accept Python code and some simple system commands. Try `ls` and you should see a directory listing. 
 
@@ -114,7 +114,7 @@ We "overclock" Tulip's RAM to 120MHz so it can support more polyphony. This work
 
 If your touchscreen appears to not respond, the most likely explanation is the touchscreen panel cable got loose during shipping or if you installed a battery. We're working with Makerfabs to tape down this connector for higher reliability. But it's a quick fix if it happens to you. Just take off the back case, unseat the touch connector (labeled above) by pulling up the black clamp, and push back in the cable tight, applying a little pressure. Clamp it back, and take a piece of tape to hold down the cable right at the connector, like this: 
 
-![Touch connector tape](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tuilpv4r11ctp.jpg)
+<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tuilpv4r11ctp.jpg" width=600>
 
 
 ### USB computer keyboard not working
