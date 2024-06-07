@@ -30,6 +30,26 @@ UNAME_S := $(shell uname -s)
 include $(TOP)/py/py.mk
 include $(TOP)/extmod/extmod.mk
 
+# LVGL stuff
+LVGL_BINDING_DIR = $(TOP)/../lv_binding_micropython_tulip
+LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
+LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
+INC += -I$(LVGL_BINDING_DIR) -I.
+ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f) 
+LVGL_PP = $(BUILD)/lvgl/lvgl.pp.c
+LVGL_MPY = $(BUILD)/lvgl/lv_mpy.c
+LVGL_MPY_METADATA = $(BUILD)/lvgl/lv_mpy.json
+QSTR_GLOBAL_DEPENDENCIES += $(LVGL_MPY)
+CFLAGS_MOD += $(LV_CFLAGS) 
+SRC_C += $(shell find $(LVGL_DIR)/src -type f -name '*.c')
+CFLAGS += -DLV_CONF_INCLUDE_SIMPLE
+
+$(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
+	$(ECHO) "LVGL-GEN $@"
+	$(Q)mkdir -p $(dir $@)
+	$(Q)$(CPP) $(LV_CFLAGS) -DLVGL_PREPROCESS -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
+	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
+
 #GIT_SUBMODULES += lib/axtls lib/berkeley-db-1.xx lib/libffi lib/mbedtls lib/micropython-lib 
 
 INC +=  -I.
@@ -41,6 +61,8 @@ INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
 INC += -I/usr/include/SDL2
+INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src
+INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src/libs/lodepng
 
 # compiler settings
 CWARN = -Wall 
