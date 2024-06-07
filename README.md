@@ -8,6 +8,7 @@ Tulip is a self contained portable music and graphics synthesizer, with a displa
 
 The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can build one or buy the parts needed to get one. You can use Tulip to make music, code, art, games, or just write. 
 
+ * [**Just got a Tulip? Check out our getting started guide!**](docs/getting_started.md)
  * [**See the full Tulip API**](docs/tulip_api.md)
  * [**Get or build your own Tulip**](docs/tulip_build.md)
  * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
