@@ -56,9 +56,11 @@ Larger batteries will work great and last longer, but you'll have to remove the 
 Tulip supports using [Alles](http://github.com/bwhitman/allex) as extra speakers. You control dozens of other speakers wirelessly using the AMY synthesizer for amazing multi-channel audio setups, using only a Tulip to control them! [You can get Alles PCBs from our friends at Blinkinlabs.](https://shop.blinkinlabs.com/products/alles-pcb)
 
 
+## Get started with Tulip
+
+
 ![Back legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png)
 
-## Get started with Tulip
 
 Now that you've got your Tulip, here's how to get started:
 
