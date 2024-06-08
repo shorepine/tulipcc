@@ -53,7 +53,7 @@ Larger batteries will work great and last longer, but you'll have to remove the 
 
 <img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/nicoboard-alles.jpg" width=400>
 
-Tulip supports using [Alles](http://github.com/bwhitman/allex) as extra speakers. You control dozens of other speakers wirelessly using the AMY synthesizer for amazing multi-channel audio setups, using only a Tulip to control them! [You can get Alles PCBs from our friends at Blinkinlabs.](https://shop.blinkinlabs.com/products/alles-pcb)
+Tulip supports using [Alles](http://github.com/bwhitman/alles) as extra speakers. You control dozens of other speakers wirelessly using the AMY synthesizer for amazing multi-channel audio setups, using only a Tulip to control them! [You can get Alles PCBs from our friends at Blinkinlabs.](https://shop.blinkinlabs.com/products/alles-pcb)
 
 
 ## Get started with Tulip
