@@ -25,6 +25,14 @@
  * THE SOFTWARE.
  */
 
+
+breaking the build on purpose
+
+test
+
+test
+
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
