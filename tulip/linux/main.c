@@ -490,6 +490,7 @@ STATIC void sys_set_excecutable(char *argv0) {
 
 
 extern int16_t amy_device_id;
+extern void setup_lvgl();
 
 
 /*
@@ -584,6 +585,8 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     (void)emit_opt;
     #endif
     
+    setup_lvgl();
+
     #if MICROPY_VFS_POSIX
     {
         // Mount the host FS at the root of our internal VFS
