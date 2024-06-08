@@ -58,6 +58,7 @@
 #include "display.h"
 #include "alles.h"
 #include "midi.h"
+#include "sequencer.h"
 
 
 // Command line options, with their defaults
@@ -490,6 +491,7 @@ STATIC void sys_set_excecutable(char *argv0) {
 
 
 extern int16_t amy_device_id;
+extern void setup_lvgl();
 
 
 /*
@@ -584,6 +586,8 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     (void)emit_opt;
     #endif
     
+    setup_lvgl();
+
     #if MICROPY_VFS_POSIX
     {
         // Mount the host FS at the root of our internal VFS
@@ -889,6 +893,10 @@ int main(int argc, char **argv) {
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
     int c = 0;
+
+    sequencer_init();
+    pthread_t sequencer_thread_id;
+    pthread_create(&sequencer_thread_id, NULL, run_sequencer, NULL);
 
     delay_ms(100);
     // Schedule a "turning on" sound

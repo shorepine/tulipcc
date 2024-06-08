@@ -80,6 +80,13 @@
 #endif
 
 
+#ifdef MICROPY_MALLOC_USES_ALLOCATED_SIZE
+#undef MICROPY_MALLOC_USES_ALLOCATED_SIZE
+#define MICROPY_MALLOC_USES_ALLOCATED_SIZE (0)
+#undef MICROPY_MEM_STATS
+#define MICROPY_MEM_STATS (0)
+#endif
+
 // If enabled, configure how to seed random on init.
 #ifdef MICROPY_PY_RANDOM_SEED_INIT_FUNC
 #include <stddef.h>

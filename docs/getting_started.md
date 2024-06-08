@@ -21,7 +21,7 @@ If you have problems with Tulip, you can find us on GitHub [issues](https://gith
 
 Here's a legend to the ports, facing the front. 
 
-![Front legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11_front.png)
+<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11_front.png" width=600>
 
 ## Acesssories you may want
 
@@ -49,10 +49,18 @@ Tulip is a low power device and can run on battery for portable computing. There
 
 Larger batteries will work great and last longer, but you'll have to remove the back case to make them fit (or mount the battery some other way.) [This 5200mAh battery pack](https://www.amazon.com/XINLANTECH-Rechargeable-Bluetooth-Electronic-Batteries/dp/B0C2VFTDPY) will last many many hours on Tulip and fit right on the PCB with the back case removed. 
 
+### An extra Alles or two
 
-![Back legend](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png)
+<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/nicoboard-alles.jpg" width=400>
+
+Tulip supports using [Alles](http://github.com/bwhitman/alles) as extra speakers. You control dozens of other speakers wirelessly using the AMY synthesizer for amazing multi-channel audio setups, using only a Tulip to control them! [You can get Alles PCBs from our friends at Blinkinlabs.](https://shop.blinkinlabs.com/products/alles-pcb)
+
 
 ## Get started with Tulip
+
+
+<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png" width=600>
+
 
 Now that you've got your Tulip, here's how to get started:
 
@@ -63,7 +71,7 @@ Now that you've got your Tulip, here's how to get started:
  - Turn on the Tulip! The switch is on the top of the board.
  - You should see the following. If you have audio connected, you should also hear a "bleep" sound on startup.
 
-![First boot](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11firstboot.jpg)
+<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11firstboot.jpg" width=400>
 
  - Your USB keyboard should be able to type into this screen, called the "REPL". It can accept Python code and some simple system commands. Try `ls` and you should see a directory listing. 
 
@@ -106,7 +114,7 @@ We "overclock" Tulip's RAM to 120MHz so it can support more polyphony. This work
 
 If your touchscreen appears to not respond, the most likely explanation is the touchscreen panel cable got loose during shipping or if you installed a battery. We're working with Makerfabs to tape down this connector for higher reliability. But it's a quick fix if it happens to you. Just take off the back case, unseat the touch connector (labeled above) by pulling up the black clamp, and push back in the cable tight, applying a little pressure. Clamp it back, and take a piece of tape to hold down the cable right at the connector, like this: 
 
-![Touch connector tape](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tuilpv4r11ctp.jpg)
+<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tuilpv4r11ctp.jpg" width=600>
 
 
 ### USB computer keyboard not working

@@ -48,6 +48,9 @@ sudo apt install libsdl2-dev libffi-dev
 
 # Fedora etc
 sudo yum install SDL2-devel libffi-devel
+
+# Arch
+sudo pacman -S sdl2 libffi
 ```
 
 Build and run:

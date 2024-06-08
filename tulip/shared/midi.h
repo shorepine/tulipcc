@@ -10,7 +10,7 @@ extern QueueHandle_t uart_queue;
 #include "py/mphal.h"
 #include "py/runtime.h"
 void convert_midi_bytes_to_messages(uint8_t * data, size_t len);
-extern mp_obj_t midi_callbacks[MIDI_SLOTS];
+extern mp_obj_t midi_callback;
 
 
 //void tulip_midi_isr();
