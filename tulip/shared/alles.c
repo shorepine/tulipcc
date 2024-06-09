@@ -31,13 +31,6 @@ extern void mcast_send(char*, uint16_t);
 uint8_t debug_on = 0;
 char raw_file[1] = "";
 char * alles_local_ip;
-
-
-#ifdef ESP_PLATFORM
-#include "driver/i2s_std.h"
-#include "driver/gpio.h"
-i2s_chan_handle_t tx_handle;
-
 // sync.c -- keep track of mulitple synths
 //extern uint8_t battery_mask;
 extern uint8_t ipv4_quartet;
@@ -56,6 +49,13 @@ amy_err_t sync_init() {
     for(uint8_t i=0;i<255;i++) { clocks[i] = 0; ping_times[i] = 0; }
     return AMY_OK;
 }
+
+
+
+#ifdef ESP_PLATFORM
+#include "driver/i2s_std.h"
+#include "driver/gpio.h"
+i2s_chan_handle_t tx_handle;
 
 
 extern void mcast_listen_task(void *pvParameters);
