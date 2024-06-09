@@ -993,8 +993,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_multicast_start_obj, 2, 2, tuli
 
 extern uint8_t alive;
 extern int16_t client_id;
-extern int64_t clocks[255];
-extern int64_t ping_times[255];
+extern int32_t clocks[255];
+extern int32_t ping_times[255];
 
 STATIC mp_obj_t tulip_alles_map(size_t n_args, const mp_obj_t *args) {
     mp_obj_t list = mp_obj_new_list(0, NULL);

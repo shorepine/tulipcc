@@ -38,6 +38,25 @@ char * alles_local_ip;
 #include "driver/gpio.h"
 i2s_chan_handle_t tx_handle;
 
+// sync.c -- keep track of mulitple synths
+//extern uint8_t battery_mask;
+extern uint8_t ipv4_quartet;
+extern char githash[8];
+int16_t client_id;
+int32_t clocks[255];
+int32_t ping_times[255];
+uint8_t alive = 1;
+
+extern int32_t computed_delta ; // can be negative no prob, but usually host is larger # than client
+extern uint8_t computed_delta_set ; // have we set a delta yet?
+extern int32_t last_ping_time;
+
+amy_err_t sync_init() {
+    client_id = -1; // for now
+    for(uint8_t i=0;i<255;i++) { clocks[i] = 0; ping_times[i] = 0; }
+    return AMY_OK;
+}
+
 
 extern void mcast_listen_task(void *pvParameters);
 
@@ -98,6 +117,7 @@ void alles_send_message(char * message, uint16_t len) {
 #ifdef ESP_PLATFORM
 // init AMY from the esp. wraps some amy funcs in a task to do multicore rendering on the ESP32 
 amy_err_t esp_amy_init() {
+    sync_init();
     amy_start(2,1,1);
     // We create a mutex for changing the event queue and pointers as two tasks do it at once
     xQueueSemaphore = xSemaphoreCreateMutex();
@@ -117,7 +137,7 @@ amy_err_t esp_amy_init() {
 extern void *miniaudio_run(void *vargp);
 #include <pthread.h>
 amy_err_t unix_amy_init() {
-    //sync_init();
+    sync_init();
     amy_start(1,1,1);
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, miniaudio_run, NULL);
@@ -274,25 +294,6 @@ void alles_init_multicast(uint8_t local_node) {
 
 
 
-// sync.c -- keep track of mulitple synths
-//extern uint8_t battery_mask;
-extern uint8_t ipv4_quartet;
-extern char githash[8];
-int16_t client_id;
-int32_t clocks[255];
-int32_t ping_times[255];
-uint8_t alive = 1;
-
-extern int32_t computed_delta ; // can be negative no prob, but usually host is larger # than client
-extern uint8_t computed_delta_set ; // have we set a delta yet?
-extern int32_t last_ping_time;
-
-amy_err_t sync_init() {
-    client_id = -1; // for now
-    for(uint8_t i=0;i<255;i++) { clocks[i] = 0; ping_times[i] = 0; }
-    return AMY_OK;
-}
-
 
 
 
@@ -316,9 +317,10 @@ void alles_parse_message(char *message, uint16_t length) {
         if(b == '_' && c==0) sync_response = 1;
         if( ((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')) || b == 0) {  // new mode or end
             if(mode=='g') client = atoi(message + start); 
-            if(mode=='i') sync_index = atoi(message + start);
             if(mode=='U') sync = atol(message + start); 
             if(mode=='W') external_map[e.osc] = atoi(message+start);
+            if(sync_response) if(mode=='r') ipv4=atoi(message + start);
+            if(sync_response) if(mode=='i') sync_index = atoi(message + start);
             mode = b;
             start = c + 1;
         } 
@@ -367,7 +369,7 @@ void update_map(uint8_t client, uint8_t ipv4, int32_t time) {
     // I'm called when I get a sync response or a regular ping packet
     // I update a map of booted devices.
 
-    //fprintf(stderr,"[%d %d] Got a sync response client %d ipv4 %d time %lld\n",  ipv4_quartet, client_id, client , ipv4, time);
+    //fprintf(stderr,"[%d %d] Got a sync response client %d ipv4 %d time %ld\n",  ipv4_quartet, client_id, client , ipv4, time);
     clocks[ipv4] = time;
     int32_t my_sysclock = amy_sysclock();
     ping_times[ipv4] = my_sysclock;
