@@ -160,10 +160,14 @@ float compute_cpu_usage(uint8_t debug) {
     volatile UBaseType_t uxArraySize, x, i;
 
     const char* const tasks[] = {
-         "esp_timer", "sys_evt", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "IDLE0", "IDLE1", "tiT",
+         "IDLE0", "IDLE1", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "esp_timer", "sys_evt", "tiT",
          DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
          ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, SEQUENCER_TASK_NAME, 0
     };
+    const uint8_t cores[] = {0, 0, 0, 0, 1, 0, 0, 0, 1, 0, DISPLAY_TASK_COREID, USB_TASK_COREID, TOUCHSCREEN_TASK_COREID, TULIP_MP_TASK_COREID,
+        MIDI_TASK_COREID, ALLES_TASK_COREID, ALLES_PARSE_TASK_COREID, ALLES_RECEIVE_TASK_COREID, ALLES_RENDER_TASK_COREID, ALLES_FILL_BUFFER_TASK_COREID, 
+        SEQUENCER_TASK_COREID};
+
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
     uxArraySize = uxTaskGetSystemState( pxTaskStatusArray, uxArraySize, NULL );
@@ -176,9 +180,10 @@ float compute_cpu_usage(uint8_t debug) {
     }
     
     unsigned long counter_since_last[MAX_TASKS];
-    unsigned long ulTotalRunTime = 0;
-    unsigned long freeTime = 0;
-    TaskStatus_t xTaskDetails;
+    unsigned long ulTotalRunTime_per_core[2];
+    ulTotalRunTime_per_core[0] = 0;
+    ulTotalRunTime_per_core[1] = 0;
+
     // We have to check for the names we want to track
     for(i=0;i<MAX_TASKS;i++) { // for each name
         counter_since_last[i] = 0;
@@ -186,45 +191,30 @@ float compute_cpu_usage(uint8_t debug) {
             if(strcmp(pxTaskStatusArray[x].pcTaskName, tasks[i])==0) {
                 counter_since_last[i] = pxTaskStatusArray[x].ulRunTimeCounter - last_task_counters[i];
                 last_task_counters[i] = pxTaskStatusArray[x].ulRunTimeCounter;
-                ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
+                ulTotalRunTime_per_core[cores[i]]= ulTotalRunTime_per_core[cores[i]] + counter_since_last[i];
             }
         }
-        
-        // Have to get these specially as the task manager calls them both "IDLE" and swaps their orderings around
-        if(strcmp("IDLE0", tasks[i])==0) { 
-            vTaskGetInfo(idle_0_handle, &xTaskDetails, pdFALSE, eRunning);
-            counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
-            freeTime = freeTime + xTaskDetails.ulRunTimeCounter - last_task_counters[i];
-            last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
-            ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
-        }
-        if(strcmp("IDLE1", tasks[i])==0) { 
-            vTaskGetInfo(idle_1_handle, &xTaskDetails, pdFALSE, eRunning);
-            counter_since_last[i] = xTaskDetails.ulRunTimeCounter - last_task_counters[i];
-            freeTime = freeTime + xTaskDetails.ulRunTimeCounter - last_task_counters[i];
-            last_task_counters[i] = xTaskDetails.ulRunTimeCounter;
-            ulTotalRunTime = ulTotalRunTime + counter_since_last[i];
-        }
-    
-
     }
     if(debug) {
         printf("------ CPU usage since last call to tulip.cpu()\n");
         for(i=0;i<MAX_TASKS;i++) {
-            printf("%-15s\t%-15ld\t\t%2.2f%%\n", tasks[i], counter_since_last[i], ((float)counter_since_last[i]*2.0)/ulTotalRunTime * 100.0);
+            printf("%d %-15s\t%-15ld\t\t%2.2f%%\n", cores[i], tasks[i], counter_since_last[i], ((float)counter_since_last[i])/ulTotalRunTime_per_core[cores[i]] * 100.0);
         }   
     }
     vPortFree(pxTaskStatusArray);
 
     // Also print heap info
+    if(debug){
+        fprintf(stderr, "SPIRAM:\n "); fflush(stderr);
+        heap_caps_print_heap_info(MALLOC_CAP_SPIRAM);
 
-    fprintf(stderr, "SPIRAM:\n "); fflush(stderr);
-    heap_caps_print_heap_info(MALLOC_CAP_SPIRAM);
+        fprintf(stderr, "INTERNAL:\n "); fflush(stderr);
+        heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
+    }
 
-    fprintf(stderr, "INTERNAL:\n "); fflush(stderr);
-    heap_caps_print_heap_info(MALLOC_CAP_INTERNAL);
-
-    return 100.0 - ((float)freeTime/ulTotalRunTime * 100.0);
+    unsigned long freeTime = counter_since_last[0] + counter_since_last[1]; // add IDLE0 + IDLE1 
+    unsigned long ulTotalRunTime = ulTotalRunTime_per_core[0] + ulTotalRunTime_per_core[1]; // add total counts 
+    return 100.0 - (((float)freeTime/(float)ulTotalRunTime) * 100.0); // return CPU usage
 
 }
 
