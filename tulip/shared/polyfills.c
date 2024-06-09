@@ -73,7 +73,7 @@ int32_t get_ticks_ms() {
 
 void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags) {
 #ifdef ESP_PLATFORM
-    //fprintf(stderr, "callocing count %ld size %ld flags %ld\n", count, size, flags);
+    //if(flags & MALLOC_CAP_SPIRAM) fprintf(stderr, "spiram callocing count %ld size %ld flags %ld\n", count, size, flags);
     return heap_caps_aligned_calloc(align, count, size, flags); 
 #else
     return (void*)malloc(size*count);

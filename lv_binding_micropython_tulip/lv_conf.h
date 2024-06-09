@@ -69,7 +69,7 @@
     #if LV_MEM_ADR == 0
 #ifdef ESP_PLATFORM
         #define LV_MEM_POOL_INCLUDE     "esp_heap_caps.h"
-        #define LV_MEM_POOL_ALLOC(size) heap_caps_malloc(size, MALLOC_CAP_SPIRAM)
+        #define LV_MEM_POOL_ALLOC(size) malloc_caps(size, MALLOC_CAP_SPIRAM)
 #else
         #undef LV_MEM_POOL_INCLUDE
         #undef LV_MEM_POOL_ALLOC

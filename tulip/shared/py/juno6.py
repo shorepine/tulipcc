@@ -610,20 +610,13 @@ def control_change(control, value):
 
 
 
-def midi_event_cb(x):
-    m = tulip.midi_in()
-    while m is not None and len(m) > 0:
-        if m[0] == 0xb0:    # Other control slider.
+def midi_event_cb(m):
+    if m[0] == 0xb0:    # Other control slider.
+        control_change(m[1], m[2])
+    elif m[0] == 0xbf:
+        # Special case for Oxygen49 transport buttons which send val 0x00 on release.
+        if m[2] == 0x7f:
             control_change(m[1], m[2])
-        elif m[0] == 0xbf:
-            # Special case for Oxygen49 transport buttons which send val 0x00 on release.
-            if m[2] == 0x7f:
-                control_change(m[1], m[2])
-                
-        # Are there more events waiting?
-        m = m[3:]
-        if len(m) == 0:
-            m = tulip.midi_in()
 
 def refresh_with_new_music_map():
     """Called when the active midid channels changes, so we can update menu."""

@@ -139,21 +139,8 @@ void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
     printf("\n");
 }
 
-/*
-void esp_heap_trace_alloc_hook(void* ptr, size_t size, uint32_t caps) {
-    fprintf(stderr,"alloc %d bytes ", size);
-    if(caps & MALLOC_CAP_SPIRAM) fprintf(stderr,"spiram ");
-    if(caps & MALLOC_CAP_INTERNAL) fprintf(stderr,"internal ");
-    if(caps & MALLOC_CAP_32BIT) fprintf(stderr,"32bit ");
-    if(caps & MALLOC_CAP_DEFAULT) fprintf(stderr,"default ");
-    if(caps & MALLOC_CAP_IRAM_8BIT) fprintf(stderr,"iram8bit ");
-    if(caps & MALLOC_CAP_RTCRAM) fprintf(stderr,"rtcram ");
-    if(caps & MALLOC_CAP_8BIT) fprintf(stderr,"8bit ");
-    if(caps & MALLOC_CAP_EXEC) fprintf(stderr,"exec ");
-    if(caps & MALLOC_CAP_DMA) fprintf(stderr,"dma ");
-    fprintf(stderr,"\n");
-}
-*/
+
+
 
 float compute_cpu_usage(uint8_t debug) {
     TaskStatus_t *pxTaskStatusArray;
