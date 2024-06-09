@@ -7,6 +7,7 @@
 uint8_t board_level;
 uint8_t status;
 uint8_t mesh_local_playback  = 1; 
+uint8_t external_map[AMY_OSCS];
 
 #ifdef ESP_PLATFORM
 // mutex that locks writes to the delta queue
@@ -166,12 +167,43 @@ amy_err_t setup_i2s(void) {
 extern struct custom_oscillator memorypcm;
 
 #ifdef ESP_PLATFORM
+#include "driver/i2c.h"
+
+// An AMY hook to send values out to a CV DAC over i2c, only on ESP 
+uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
+    if(external_map[osc]>0) {
+        float volts = S2F(buf[0])*2.5f + 2.5f;
+        // do the thing
+        uint16_t value_int = (uint16_t)((volts/10.0) * 65535.0);
+        uint8_t bytes[3];
+        bytes[2] = (value_int & 0xff00) >> 8;
+        bytes[1] = (value_int & 0x00ff);
+
+        uint8_t ch = 0x02;
+        uint8_t addr = 89;
+        uint8_t channel = external_map[osc]-1;
+        if(channel == 1) ch = 0x04;
+        if(channel == 2) addr = 88;
+        if(channel == 3) {ch = 0x04; addr=88; }
+        bytes[0] = ch;
+        i2c_master_write_to_device(I2C_NUM_0, addr, bytes, 3, pdMS_TO_TICKS(10));
+        return 1;
+    }
+    return 0;
+
+}
 void run_alles() {
     check_init(&esp_event_loop_create_default, "Event");
     // We turn off writing to i2s on r10 when doing on chip debugging because of pins
     #ifndef TULIP_R10_DEBUG
         check_init(&setup_i2s, "i2s");
     #endif
+    // clear the external map
+    for(uint16_t i=0;i<AMY_OSCS;i++) external_map[i] = 0;
+    amy_external_render_hook = external_cv_render;
+
+
+
     esp_amy_init();
     amy_set_custom(&memorypcm);
     amy_reset_oscs();
@@ -278,15 +310,15 @@ void alles_parse_message(char *message, uint16_t length) {
     struct event e = amy_parse_message(message);
     uint8_t sync_response = 0;
     //fprintf(stderr, "message is %s len is %d\n", message, length);
-    // Then pull out any alles-specific modes in this message - c,i,r,s, _
+    // Then pull out any alles-specific modes in this message 
     while(c < length+1) {
         uint8_t b = message[c];
         if(b == '_' && c==0) sync_response = 1;
         if( ((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')) || b == 0) {  // new mode or end
-            if(mode=='c') client = atoi(message + start); 
+            if(mode=='g') client = atoi(message + start); 
             if(mode=='i') sync_index = atoi(message + start);
-            if(mode=='r') ipv4=atoi(message + start);
-            if(mode=='s') sync = atol(message + start); 
+            if(mode=='U') sync = atol(message + start); 
+            if(mode=='W') external_map[e.osc] = atoi(message+start);
             mode = b;
             start = c + 1;
         } 
@@ -383,7 +415,7 @@ void handle_sync(int32_t time, int8_t index) {
     //fprintf(stderr, "handle_sync %d %d\n", client_id, ipv4_quartet);
     update_map(client_id, ipv4_quartet, sysclock);
     // Send back sync message with my time and received sync index and my client id & battery status (if any)
-    sprintf(message, "_s%" PRIi32 "i%dc%dr%dy%dZ", sysclock, index, client_id, ipv4_quartet, 0);
+    sprintf(message, "_U%" PRIi32 "i%dg%dr%dy%dZ", sysclock, index, client_id, ipv4_quartet, 0);
     //mcast_send(message, strlen(message));
     // Update computed delta (i could average these out, but I don't think that'll help too much)
     //int64_t old_cd = computed_delta;
@@ -395,7 +427,7 @@ void handle_sync(int32_t time, int8_t index) {
 void ping(int32_t sysclock) {
     char message[100];
     //printf("[%d %d] pinging with %lld\n", ipv4_quartet, client_id, sysclock);
-    sprintf(message, "_s%" PRIi32 "i-1c%dr%dy%dZ", sysclock, client_id, ipv4_quartet, 0);
+    sprintf(message, "_U%" PRIi32 "i-1g%dr%dy%dZ", sysclock, client_id, ipv4_quartet, 0);
     //fprintf(stderr, "ping %d %d\n", client_id, ipv4_quartet);
 
     update_map(client_id, ipv4_quartet, sysclock);
