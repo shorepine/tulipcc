@@ -31,9 +31,9 @@ edit("boot.py")
 tulip.upgrade()
 
 # Takes a screenshot and saves to disk. The screen will blank for a moment
-# If no filename given will upload to imgur and return a URL (needs wifi)
+# If no filename given will upload to Tulip World (needs wifi)
 tulip.screenshot("screenshot.png")
-imgur_url = tulip.screenshot()
+tulip.screenshot(username='me')
 
 # Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
 # Note that Python code is bound to one core, so Python-only usage tops out at 50%.
