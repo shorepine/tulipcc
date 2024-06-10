@@ -1,5 +1,5 @@
 # draw the rgb332 palette nicely
-
+import tulip
 w = 32
 h = 75
 tulip.bg_clear()

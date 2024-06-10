@@ -1,4 +1,5 @@
 # test joystick / keys
+import tulip
 tulip.gpu_reset()
 r = 40 # button radius
 

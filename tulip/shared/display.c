@@ -115,7 +115,7 @@ void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
 }
 
 // RRRGGGBB , but expand any non-zero colors with 1111s (won't matter for display as there's no wires there)
-void unpack_rgb_332_wide(uint8_t px0, uint16_t *r, uint16_t *g, uint16_t *b) {
+void unpack_rgb_332_wide(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *r = (px0 & 0xe0);
     if(*r != 0) *r |= 0x1f;
     *g = ((px0 << 3) & 0xe0);
@@ -128,6 +128,11 @@ void unpack_rgb_332_wide(uint8_t px0, uint16_t *r, uint16_t *g, uint16_t *b) {
 // Given a single uint (0-255 for RGB332, 0-65535 for RGB565), return r, g, b
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b) {
     unpack_rgb_332(pal_idx & 0xff, r, g, b);
+}
+
+// Given a single uint (0-255 for RGB332, 0-65535 for RGB565), return r, g, b
+void unpack_pal_idx_wide(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b) {
+    unpack_rgb_332_wide(pal_idx & 0xff, r, g, b);
 }
 
 // Given an ansi pal index (0-255 right now), return r g b
@@ -631,14 +636,13 @@ void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data) {
 // Palletized version of screenshot. about 3x as fast, RGB332 only
 void display_screenshot(char * screenshot_fn) {
     // Blank the display
-    //display_stop();
+    display_stop();
 
-    // 778ms total without blanking, pretty good
     uint8_t * screenshot_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    uint8_t * full_pic = (uint8_t*) malloc_caps(H_RES*V_RES*1,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     uint32_t c = 0;
     uint8_t r,g,b,a;
-    // Generate the pal
+
+    // Generate the pal -- this generates a slightly darker png than "real" tulip. i don't yet know why.
     LodePNGState state;
     lodepng_state_init(&state);
     a = 255; // todo, we could use BG alpha colors? but it doesn't matter
@@ -649,37 +653,37 @@ void display_screenshot(char * screenshot_fn) {
         err = lodepng_palette_add(&state.info_png.color, r,g,b,a);
         err = lodepng_palette_add(&state.info_raw, r,g,b,a);        
     }
+
     (void)err;
     state.info_png.color.colortype = LCT_PALETTE; 
     state.info_png.color.bitdepth = 8;
     state.info_raw.colortype = LCT_PALETTE;
     state.info_raw.bitdepth = 8;
     state.encoder.auto_convert = 0;
-    //int64_t tic = get_time_us();
+
     for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
+        c=0;
         display_bounce_empty(screenshot_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
-        for(uint16_t x=0;x<FONT_HEIGHT*H_RES*BYTES_PER_PIXEL;x=x+BYTES_PER_PIXEL) {
-            full_pic[c++] = screenshot_bb[x];
+        for(uint8_t sy=0;sy<FONT_HEIGHT;sy++) {
+            for(uint16_t x=0;x<H_RES;x++) {
+                bg_tfb[(y+sy)*H_RES + x] = screenshot_bb[c++];
+            }
         }
     }
-    // 45ms
-    //fprintf(stderr,"Took %lld uS to bounce entire screen\n", get_time_us() - tic);
-    //tic = get_time_us();
+    // now bg_tfb has rendered sprites/tfb/etc on screen
+
+    // encode png
     uint32_t outsize = 0;
     uint8_t *out;
-    err = lodepng_encode(&out, (size_t*)&outsize,full_pic, H_RES, V_RES, &state);
-    // 456ms , 4223 b frame
-    //fprintf(stderr,"Took %lld uS to encode as PNG to memory. err %d\n", get_time_us() - tic, err);
-    //tic = get_time_us();
-    //fprintf(stderr,"PNG done encoding. writing %" PRIu32" bytes to file %s\n", outsize, screenshot_fn);
+    err = lodepng_encode(&out, (size_t*)&outsize,bg_tfb, H_RES, V_RES, &state);
     write_file(screenshot_fn, out, outsize, 1);
-    // 268ms 
-    //fprintf(stderr,"Took %lld uS to write to disk\n", get_time_us() - tic);
     free_caps(out);
     free_caps(screenshot_bb);
-    free_caps(full_pic);
+
+    // redraw the tfb
+    display_tfb_update(-1);
     // Restart the display
-    //display_start();
+    display_start();
 }
 
 void display_set_bg_pixel_pal(uint16_t x, uint16_t y, uint8_t pal_idx) {

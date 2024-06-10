@@ -1,4 +1,5 @@
 # Draw all the ansi fg / bg on the TFB
+import tulip
 for i in range(255):
     bg = 255 - i
     str = tulip.ansi_bg(bg)

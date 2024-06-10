@@ -560,22 +560,19 @@ def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
     c = urequests.get(url, headers = headers)
     return c
 
-def screenshot(filename=None):
+def screenshot(filename=None, username=None):
     from upysh import rm
     if(filename is not None):
         int_screenshot(filename)
         return None
     if(ip() is not None):
-        int_screenshot("_temp_ss.png")
-        import urequests
-        url = "https://api.imgur.com/3/image"
-        auth = "Client-ID 3939c2d3f5a6f83"
-        ct = "multipart/form-data;"
-        data = open("_temp_ss.png","rb").read()
-        r = urequests.post(url, data=data, headers={"authorization":auth, "content-type":ct}).content
-        rm('_temp_ss.png')
-        return "https://i.imgur.com/%s.png" % (r.decode('ascii')[15:22])
-    return "Need wi-fi on"
+        if(username is not None):
+            int_screenshot("screenshot.png")
+            world.upload("screenshot.png", username, 'Tulip Screenshot')
+            return
+        else:
+            print("Need to pass Tulip World username, like tulip.screenshot(username='me')")
+    print("Need wi-fi on")
 
 
 def ansi_fg(pal_idx):
