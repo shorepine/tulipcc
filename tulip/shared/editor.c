@@ -322,13 +322,13 @@ void editor_open_file(const char *filename) {
 	if(fs > 0) {
 		char * text = (char*) editor_malloc(fs+3); 
 		uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
-        dbg("Filesize %d bytes read %d\n", fs, bytes_read);
+        //dbg("Filesize %d bytes read %d\n", fs, bytes_read);
         // if the last char is not a \n then add it.
         new_lines = 1;
-        if(text[bytes_read-1]!='\n') { new_lines = 0; dbg("adding n\n"); text[bytes_read] = '\n'; bytes_read++; }
+        //if(text[bytes_read-1]!='\n') { new_lines = 0; dbg("adding n\n"); text[bytes_read] = '\n'; bytes_read++; }
 		text[bytes_read] = 0; // end
 		for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') new_lines++;
-		dbg("File %s has %d lines. %d bytes\n", filename, new_lines,bytes_read);
+		//dbg("File %s has %d lines. %d bytes\n", filename, new_lines,bytes_read);
 		char ** incoming_text_lines = (char**)editor_malloc(sizeof(char*)*(new_lines));
 
 		uint32_t last = 0;
@@ -340,14 +340,14 @@ void editor_open_file(const char *filename) {
 					incoming_text_lines[c][x] = text[last+x];
 				}
 				incoming_text_lines[c][x] = 0;
-                dbg("itl %d is %s\n", c, incoming_text_lines[c]);
+                //dbg("itl %d is %s\n", c, incoming_text_lines[c]);
 				last = i+1;
 				c++;
 			}
 		}
 		editor_free(text);
 
-		dbg("File %s read with %d lines. Inserting at position %d. existing lines %d\n", filename, new_lines, y_offset+cursor_y, lines);
+		//dbg("File %s read with %d lines. Inserting at position %d. existing lines %d\n", filename, new_lines, y_offset+cursor_y, lines);
 
         // Now insert the text lines at cursor_y+y_offset
         char ** combined_text_lines = (char**)editor_malloc(sizeof(char*)*(new_lines+lines));
@@ -355,22 +355,16 @@ void editor_open_file(const char *filename) {
         for(uint16_t y=0;y<cursor_y+y_offset;y++) {
             combined_text_lines[line++] = text_lines[y];
         }
-        dbg("a\n");
         for(uint16_t y=0;y<new_lines;y++) {
             combined_text_lines[line++] = incoming_text_lines[y];
         }
-        dbg("b\n");
         for(uint16_t y=cursor_y+y_offset;y<lines;y++) {
             combined_text_lines[line++] = text_lines[y];
         }
-        dbg("c\n");
         if(lines) { 
             editor_free(text_lines);
         }
-        dbg("d\n");
-
         editor_free(incoming_text_lines);
-        dbg("e\n");
         text_lines = combined_text_lines;
         lines = lines + new_lines;
 	} else {
