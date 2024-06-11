@@ -147,19 +147,22 @@ void format_at_row(uint8_t format, int16_t len, uint16_t y) {
 	}
 }
 void string_at_row(char * s, int16_t len, uint16_t y) {
-	if(len < 0) len=strlen(s);
-	if(y<TFB_ROWS) {
-		for(uint16_t i=0;i<len;i++) {
-			TFB[y*TFB_COLS+i] = s[i];
-			TFBf[y*TFB_COLS+i] = 0; ;
-			TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_FG;
-			TFBbg[y*TFB_COLS+i] = EDITOR_COLOR_BG;
-		}
-		for(uint16_t i=len;i<TFB_COLS;i++) {
-			TFB[y*TFB_COLS+i] = 0;
-		}
-        if(y!=TFB_ROWS-1)editor_highlight_at_row(y);
-	}
+    //dbg("string at row ###%s### len %d y %d\n", s, len, y);
+    if(s!=NULL) {
+    	if(len < 0) len=strlen(s);
+    	if(y<TFB_ROWS) {
+    		for(uint16_t i=0;i<len;i++) {
+    			TFB[y*TFB_COLS+i] = s[i];
+    			TFBf[y*TFB_COLS+i] = 0; ;
+    			TFBfg[y*TFB_COLS+i] = EDITOR_COLOR_FG;
+    			TFBbg[y*TFB_COLS+i] = EDITOR_COLOR_BG;
+    		}
+    		for(uint16_t i=len;i<TFB_COLS;i++) {
+    			TFB[y*TFB_COLS+i] = 0;
+    		}
+            if(y!=TFB_ROWS-1)editor_highlight_at_row(y);
+    	}
+    }
 }
 
 
@@ -323,7 +326,6 @@ void editor_open_file(const char *filename) {
 		char * text = (char*) editor_malloc(fs+3); 
 		uint32_t bytes_read = read_file(filename, (uint8_t*)text, fs, 0);
         //dbg("Filesize %d bytes read %d\n", fs, bytes_read);
-        // if the last char is not a \n then add it.
         new_lines = 1;
         //if(text[bytes_read-1]!='\n') { new_lines = 0; dbg("adding n\n"); text[bytes_read] = '\n'; bytes_read++; }
 		text[bytes_read] = 0; // end
@@ -332,19 +334,23 @@ void editor_open_file(const char *filename) {
 		char ** incoming_text_lines = (char**)editor_malloc(sizeof(char*)*(new_lines));
 
 		uint32_t last = 0;
-		for(uint32_t i=0;i<bytes_read;i++) {
-			if(text[i]=='\n' || i==bytes_read-1) {
+		for(uint32_t i=0;i<bytes_read+1;i++) {
+			if(text[i]=='\n' || i==bytes_read) {
 				incoming_text_lines[c]  = editor_malloc(i-last + 1);
 				uint16_t x;
 				for(x=0;x<i-last;x++) { 
 					incoming_text_lines[c][x] = text[last+x];
 				}
 				incoming_text_lines[c][x] = 0;
-                //dbg("itl %d is %s\n", c, incoming_text_lines[c]);
 				last = i+1;
 				c++;
 			}
 		}
+        if(c < new_lines) {
+            //dbg("allocing last line %d\n", c);
+            incoming_text_lines[c] = editor_malloc(1);
+            incoming_text_lines[c][0] = 0;
+        }
 		editor_free(text);
 
 		//dbg("File %s read with %d lines. Inserting at position %d. existing lines %d\n", filename, new_lines, y_offset+cursor_y, lines);
@@ -390,14 +396,18 @@ void prompt_for_string(char * prompt,  uint8_t mode) {
 void editor_save() {
     if(strlen(fn)) {
         uint32_t bytes = 0;
-        for(uint16_t i=0;i<lines;i++) { bytes = bytes + strlen(text_lines[i]) + 1; }
+        for(uint16_t i=0;i<lines;i++) { if(text_lines[i] != NULL) bytes = bytes + strlen(text_lines[i]) + 1; }
         char * text = (char*)editor_malloc(bytes);
         uint32_t c = 0;
         for(uint16_t i=0;i<lines;i++) { 
-            for(uint16_t j=0;j<strlen(text_lines[i]);j++) {
-                text[c++] = text_lines[i][j];
+            if(text_lines[i]!=NULL) {
+                if(text_lines[i][0] != 0) {
+                    for(uint16_t j=0;j<strlen(text_lines[i]);j++) {
+                        text[c++] = text_lines[i][j];
+                    }
+                    text[c++] = '\n';
+                }
             }
-            text[c++] = '\n';
         }
         //display_stop();
         write_file(fn, (uint8_t*)text, c, 0);
@@ -755,7 +765,7 @@ void process_char(int c) {
             if(strlen(prompted_string)==0) {
                 dbg("no text entered\n");
             } else {
-                dbg("str %s\n", prompted_string); 
+                //dbg("str %s\n", prompted_string); 
                 if(editor_mode == EDITOR_PROMPT_SAVE) {
                     strcpy(fn, prompted_string);
                     editor_save();
