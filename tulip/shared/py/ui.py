@@ -336,7 +336,7 @@ def launcher_cb(e):
         if(text=='Pattern'):
             tulip.run('pattern')
         if(text=='Editor'):
-            tulip.run('edit')
+            tulip.edit()
         if(text=="Keyboard"):
             keyboard()
         if(text=="Wordpad"):
