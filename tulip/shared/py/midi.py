@@ -26,7 +26,7 @@ class MidiConfig:
         if channel == 10:
             synth = PitchedPCMSynth(num_voices=polyphony)
         else:
-            synth = Synth(voice_source=VoiceSource(), num_voices=polyphony)
+            synth = Synth(num_voices=polyphony)
             if patch is not None:
                 synth.program_change(patch)
         self.synth_per_channel[channel] = synth
@@ -172,41 +172,6 @@ class VoiceObject:
         amy.send(time=time, voices=self.amy_voice, vel=0)
 
 
-class VoiceSource:
-    """Manage the pool of amy voices. Provide voice_source for Synth objects."""
-    # Class-wide record of which voice to allocate next.
-    allocated_amy_voices = set()
-
-    def get_new_voices(self, num_voices):
-        new_voices = []
-        next_amy_voice = 0
-        while len(new_voices) < num_voices:
-            while next_amy_voice in VoiceSource.allocated_amy_voices:
-                next_amy_voice += 1
-            new_voices.append(next_amy_voice)
-            next_amy_voice += 1
-        self.amy_voice_nums = new_voices
-        VoiceSource.allocated_amy_voices.update(new_voices)
-        voice_objects = []
-        for amy_voice_num in self.amy_voice_nums:
-            voice_objects.append(VoiceObject(amy_voice_num))
-        return voice_objects
-
-    def program_change(self, patch_num):
-        time.sleep(0.1)  # "AMY queue will fill if not slept."
-        amy.send(voices=','.join([str(v) for v in self.amy_voice_nums]),
-                 load_patch=patch_num)
-
-    def control_change(self, control, value):
-        # Aha.  This is the sticking point.
-        print('control_change not implemented for amy-managed voices.')
-        pass
-
-    def release_voices(self):
-        """Return the amy_voices when the VoiceSource is no longer needed."""
-        for amy_voice in self.amy_voice_nums:
-            VoiceSource.allocated_amy_voices.remove(amy_voice)
-
 
 class Synth:
     """Manage a polyphonic synthesizer by rotating among a fixed pool of voices.
@@ -221,24 +186,27 @@ class Synth:
       synth.patch_number
       synth.patch_state  - patch-specific data only used by clients e.g. UI state
   
-    Argument voice_source provides the following methods:
-      voice_source.get_new_voices(num_voices) returns num_voices VoiceObjects.
+    provides the following methods:
+     get_new_voices(num_voices) returns num_voices VoiceObjects.
         VoiceObjects accept voice.note_on(note, vel, time=None),
         voice.note_off(time=None)
-      voice_source.program_change(patch_num) changes preset for all voices.
-      voice_source.control_change(control, value) modifies a parameter for all
+      program_change(patch_num) changes preset for all voices.
+      control_change(control, value) modifies a parameter for all
           voices.
 
     Note: The synth internally refers to its voices by indices in
     range(0, num_voices).  These numbers are not related to the actual amy
     voices rendering the note; the amy voice number is internal to the
-    VoiceObjects returned by voice_source.get_new_voices, and is opaque to
+    VoiceObjects returned by get_new_voices, and is opaque to
     the Synth object.
     """
 
-    def __init__(self, voice_source, num_voices=6):
-        self.voice_source = voice_source
-        self.voice_objs = voice_source.get_new_voices(num_voices)
+    """Manage the pool of amy voices."""
+    # Class-wide record of which voice to allocate next.
+    allocated_amy_voices = set()
+
+    def __init__(self, num_voices=6):
+        self.voice_objs = self.get_new_voices(num_voices)
         self.released_voices = Queue(num_voices, name='Released')
         for voice_index in range(num_voices):
             self.released_voices.put(voice_index)
@@ -253,6 +221,22 @@ class Synth:
         self.patch_number = None
         self.patch_state = None
 
+        
+    def get_new_voices(self, num_voices):
+        new_voices = []
+        next_amy_voice = 0
+        while len(new_voices) < num_voices:
+            while next_amy_voice in Synth.allocated_amy_voices:
+                next_amy_voice += 1
+            new_voices.append(next_amy_voice)
+            next_amy_voice += 1
+        self.amy_voice_nums = new_voices
+        Synth.allocated_amy_voices.update(new_voices)
+        voice_objects = []
+        for amy_voice_num in self.amy_voice_nums:
+            voice_objects.append(VoiceObject(amy_voice_num))
+        return voice_objects
+
     @property
     def amy_voices(self):
         return [o.amy_voice for o in self.voice_objs]
@@ -260,6 +244,11 @@ class Synth:
     @property
     def num_voices(self):
         return len(self.voice_objs)
+
+    # send an AMY message to the voices in this synth
+    def amy_send(self, **kwargs):
+        vstr = ",".join([str(a) for a in self.amy_voice_nums])
+        amy.send(voices=vstr, **kwargs)
 
     def _get_next_voice(self):
         """Return the next voice to use."""
@@ -304,7 +293,7 @@ class Synth:
                 self.active_voices.put(new_voice)
                 self.voice_of_note[note] = new_voice
                 self.note_of_voice[new_voice] = note
-                self.voice_objs[new_voice].note_on(note, velocity, time)
+            self.voice_objs[new_voice].note_on(note, velocity, time)
 
     def sustain(self, state):
         """Turn sustain on/off."""
@@ -327,14 +316,16 @@ class Synth:
             self.patch_number = patch_number
             # Reset any modified state due to previous patch modifications.
             self.patch_state = None
-            self.voice_source.program_change(self.patch_number)
+            time.sleep(0.1)  # "AMY queue will fill if not slept."
+            self.amy_send(load_patch=patch_number)
 
     def control_change(self, control, value):
-        self.voice_source.control_change(control, value)
+        print('control_change not implemented for amy-managed voices.')
 
     def release_voices(self):
         # Make sure the voice source is deleted, so all the amy_voices get returned.
-        self.voice_source.release_voices()
+        for amy_voice in self.amy_voice_nums:
+            Synth.allocated_amy_voices.remove(amy_voice)
 
 
 class PitchedPCMSynth:
