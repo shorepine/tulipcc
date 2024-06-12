@@ -52,10 +52,10 @@ bounce_curr_note = bounce_base_note
 flower_notes = [3,4,11,12,13]
 shroom_notes = [28,25,1]
 
-str_len = tulip.bg_str("LOADING...", WIDTH, math.floor(HEIGHT/2), 0, 2)
+#str_len = tulip.bg_str("LOADING...", 0, math.floor(HEIGHT/2), 0, 2)
 # clear the screen
 tulip.bg_clear(random.choice(grass_colors))
-tulip.bg_str("LOADING...", math.floor(WIDTH/2)-(math.floor(str_len/2)), math.floor(HEIGHT/2), 0, 2)
+#tulip.bg_str("LOADING...", math.floor(WIDTH/2)-(math.floor(str_len/2)), math.floor(HEIGHT/2), 0, 2)
 # Load the rabbit sprite frames into sprite RAM
 (rabbit_w, rabbit_h) = (48, 32)
 for i in range(4):
@@ -78,13 +78,13 @@ for i in range(4):
 #tulip.bg_blit(WIDTH,0,WIDTH,HEIGHT,0,0)
 
 # Draw a line of pixels up top with random colors
-for x in range(WIDTH*2):
+for x in range(WIDTH):
     tulip.bg_pixel(x,0,random.choice(grass_colors))
 
 # For the rest of the lines 
 for y in range(1,HEIGHT):
     x_start = random.randrange(WIDTH)
-    tulip.bg_blit(x_start,0,WIDTH,1,0,y)
+    tulip.bg_blit(x_start,0,0,1,0,y)
 
 #ms_end = tulip.ticks_ms()
 

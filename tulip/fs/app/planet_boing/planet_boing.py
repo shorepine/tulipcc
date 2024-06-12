@@ -214,13 +214,13 @@ class Flag(tulip.Sprite):
         self.draw_flag()
 
     def draw_flag(self):
-        tulip.bg_rect(WIDTH+600, 0, self.width+1,self.width+1, 0x55, 1)
+        tulip.bg_rect(WIDTH, 0, self.width+1,self.width+1, 0x55, 1)
         r = int(self.width/2)
-        tulip.bg_circle(WIDTH+600 + int(self.width/2), int(self.width/2), r, 235, 1)
-        tulip.bg_circle(WIDTH+600 + int(self.width/2), int(self.width/2), r-4, 0x55, 1)
+        tulip.bg_circle(WIDTH + int(self.width/2), int(self.width/2), r, 235, 1)
+        tulip.bg_circle(WIDTH + int(self.width/2), int(self.width/2), r-4, 0x55, 1)
         self.width += 1
         self.height += 1
-        bitmap = tulip.bg_bitmap(WIDTH+600,0, self.width, self.height)
+        bitmap = tulip.bg_bitmap(WIDTH,0, self.width, self.height)
         tulip.sprite_bitmap(bitmap, tulip.Sprite.mem_pointer)
         tulip.sprite_register(self.sprite_id,tulip.Sprite.mem_pointer, self.width, self.height)
         tulip.Sprite.mem_pointer += self.width * self.height
@@ -262,12 +262,12 @@ class Thrust(tulip.Sprite):
     def make_accel_wiggles(self):
         w = 32
         # make left thrust
-        tulip.bg_rect(WIDTH+500, 0, 32,32, 0x55, 1)
-        tulip.bg_line(WIDTH+500,16, WIDTH+532, 0, 0)
-        tulip.bg_line(WIDTH+500,16, WIDTH+532, 16, 0)
-        tulip.bg_line(WIDTH+500,16, WIDTH+532, 32, 0)
+        tulip.bg_rect(WIDTH+0, 0, 32,32, 0x55, 1)
+        tulip.bg_line(WIDTH+0,16, WIDTH+32, 0, 0)
+        tulip.bg_line(WIDTH+0,16, WIDTH+32, 16, 0)
+        tulip.bg_line(WIDTH+0,16, WIDTH+32, 32, 0)
 
-        bitmap = tulip.bg_bitmap(WIDTH+500,0, 32,32)
+        bitmap = tulip.bg_bitmap(WIDTH,0, 32,32)
         tulip.sprite_bitmap(bitmap, tulip.Sprite.mem_pointer)
         tulip.sprite_register(self.sprite_id,tulip.Sprite.mem_pointer, self.width, self.height)
         self.mem_left = tulip.Sprite.mem_pointer
@@ -386,14 +386,14 @@ class PlanetBoing(tulip.Game):
         pi = 3.14159
         ph_incr = pi/10
         ph = 0.0
-        for x in range(tulip.Sprite.SCREEN_WIDTH*2):
+        for x in range(tulip.Sprite.SCREEN_WIDTH):
             y = int(math.sin(ph) * a) + a
             ph += ph_incr
             tulip.bg_pixel(x,y+tulip.Sprite.SCREEN_HEIGHT,15)
 
-        for y in range(1,tulip.Sprite.SCREEN_HEIGHT,a_span):
-            x_start = random.randrange(tulip.Sprite.SCREEN_WIDTH)
-            tulip.bg_blit(x_start,tulip.Sprite.SCREEN_HEIGHT,tulip.Sprite.SCREEN_WIDTH,a_span,0,y)
+        #for y in range(1,tulip.Sprite.SCREEN_HEIGHT,a_span):
+        #    x_start = random.randrange(tulip.Sprite.SCREEN_WIDTH)
+        #    tulip.bg_blit(x_start,tulip.Sprite.SCREEN_HEIGHT,tulip.Sprite.SCREEN_WIDTH,a_span,0,y)
 
     def new_blob(self):
         b = None
