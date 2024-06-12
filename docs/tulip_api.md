@@ -503,7 +503,7 @@ tulip.midi_local((144, 60, 127)) # send note on to local bus
 The Tulip GPU consists of 3 subsystems, in drawing order:
  * A bitmap graphics plane (BG) (default size: 2048x750), with scrolling x- and y- speed registers. Drawing shape primitives and UI elements draw to the BG.
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
- * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites as well as line buffers, stored in the same RAM. The line buffers are useful for fast wireframe drawing. 
+ * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites.
 
 The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 28Mhz, which is 30FPS. This is a great balance of speed and stability for text -- the editor and REPL. 
 
@@ -730,52 +730,6 @@ for c in tulip.collisions():
 # Clear all sprite RAM, reset all sprite handles
 tulip.sprite_clear()
 ```
-
-## Wireframes and fast line drawing
-
-![Line drawing](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/lines.png)
-
-
-You can also use the sprite RAM to also draw lists of lines. You can store lists of `x0,y0,x1,y1` in sprite RAM and register the sprite, Tulip will draw those lines every frame as the scanlines get drawn, on top of the BG and TFB like sprites. This lets you do fast wireframe-like animations without having to draw to the BG and clear it every frame. 
-
-You can also load 3D models as wireframes in from standard `obj` files, and set their rotation and scale, which will render a list of line positions for you to sprite line list RAM. 
-
-
-```python
-# Load an obj file into a list of raw faces and vertices - unscaled and unrotated.
-model = tulip.wire_load("teapot.obj")
-# A model encodes vertices and faces of a 3d model. You can also generate this model in code yourself.  
-
-# Draw model wireframe to a line buffer
-lines = tulip.wire_to_lines(model, x, y, scale, theta, max_faces)
-# scale = integer multiplier on 0..1 coordinates. in general, sets width/height of model as pixels
-# theta = # of 100.0/PI rotations
-# max_faces = optional, cuts the model off at a number of faces (3 lines). if not given uses all faces in model
-
-# You can also generate line lists yourself in code.
-lines = tulip.lines([
-    [x0_0,y0_0,x1_0,y1_0],
-    [x0_1,y0_1,x1_1,y1_1]
-    ]) # will return packed buffer of lines, sorted, including the last sentinel line
-
-# However you got your lines buffer, you can now load it into sprite RAM at whatever position you want. 
-# See len(lines) to see how many bytes your line list takes up so you don't overwrite other data. 
-tulip.sprite_bitmap(lines, mem_pos)
-
-# Register this "sprite" as a line buffer. If you don't pass w and h like a normal sprite, we assume it's a wireframe and we turn it on right away
-tulip.sprite_register(12, mem_pos)
-
-# Whenever you want to rotate, scale or translate the wireframe, regenerate the lines and write them to sprite RAM
-# The screen will immediately start drawing the new data once you call sprite_bitmap if the sprite is registered.
-lines = tulip.wire_to_lines(model, x, y, scale, theta)
-tulip.sprite_bitmap(lines, mem_pos)
-
-# Or, update your line coordinates directly:
-tulip.sprite_bitmap(tulip.lines(new_lines_list), mem_pos)
-
-tulip.sprite_off(12) # turn off drawing
-```
-
 
 ## Convenience classes for sprites and games
 

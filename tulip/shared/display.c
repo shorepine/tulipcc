@@ -32,8 +32,6 @@ uint16_t *sprite_w_px;//[SPRITES];
 uint16_t *sprite_h_px;//[SPRITES]; 
 uint8_t *sprite_vis;//[SPRITES];
 uint32_t *sprite_mem;//[SPRITES];
-uint16_t *line_emits_rle;
-uint16_t *line_emits_y;
 
 uint8_t * lv_buf;
 
@@ -160,10 +158,6 @@ uint8_t rgb565to332(uint16_t rgb565) {
 // Python callback
 extern void tulip_frame_isr(); 
 
-uint8_t restart_wireframe = 0;
-uint16_t emit_counter = 0;
-uint16_t last_emit = 0;
-uint16_t emit_counter_dbl = 0;
 uint8_t spriteno_activated;
 
 bool display_frame_done_generic() {
@@ -176,12 +170,6 @@ bool display_frame_done_generic() {
         bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL*y_offsets[i] + x_offsets[i]*BYTES_PER_PIXEL];
     }
 
-    // Update wireframe if set
-    if(restart_wireframe) {
-        emit_counter = emit_counter_dbl;
-        last_emit = 0;
-        restart_wireframe = 0;
-    }
     tulip_frame_isr();
     vsync_count++; 
     return true;
@@ -262,15 +250,6 @@ bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes,
                             }
                         } // end for each column
                     } // end if this row has a sprite on it 
-                } else if(sprite_vis[s] == SPRITE_IS_WIREFRAME) {
-                    // Draw my ys 
-                    while(line_emits_y[last_emit] == y) {
-                        uint8_t w = line_emits_rle[last_emit] & 0x3F;
-                        uint16_t s = (line_emits_rle[last_emit] >> 6) & 0x3ff;
-                        for(uint16_t i=s;i<s+w;i++) b_ptr[i] = 255;
-                        last_emit++;
-                        if(last_emit == emit_counter) last_emit = 0;
-                    }
                 }
             } // for each sprite
         } // end if any sprites on
@@ -280,89 +259,6 @@ bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes,
 
     return false;
 }
-
-void display_wireframe_update(uint8_t sprite_no) {
-    // draw this as a bresenham list
-    // find where to start
-    emit_counter_dbl = 0;
-    //emit_swap = (emit_swap+1) % 2;
-    for(uint16_t y=0;y<V_RES;y++) {
-        // todo, we could get smarter and sort lines by length secondarily after y0 to save time here
-        uint16_t * line_data_ptr = (uint16_t*)(&sprite_ram[sprite_mem[sprite_no]]);
-        uint16_t y0 = line_data_ptr[1];
-        uint16_t y1 = line_data_ptr[3];
-        while(y0 != 65535) {
-            if(y >= y0 && y <= y1) {
-                // get a int representation of how far down we are 
-                uint16_t x0 = line_data_ptr[0];
-                uint16_t x1 = line_data_ptr[2];
-                uint16_t midpoint = 0;
-                uint16_t width = 0;
-                if(x1 > x0) {
-                    if(y1==y0) {
-                        width = x1-x0;
-                        midpoint = x0 + ((x1-x0)/2);
-                    } else {
-                        width = ((H_RES) / (((y1-y0)*H_RES)/(x1-x0)));
-                        midpoint = x0 + (((y-y0) * (x1-x0)) / (y1-y0));
-                    }
-                } else if (x1<x0) {
-                    if(y1==y0) {
-                        width = x0-x1;
-                        midpoint = x1 + ((x0-x1)/2);
-                    } else {
-                        width =  ((H_RES) / (((y1-y0)*H_RES)/(x0-x1)));
-                        midpoint = x0 - (((y-y0) * (x0-x1)) / (y1-y0));
-                    }
-                } else { // x1 == x0
-                    width = 1;
-                    midpoint = x1;
-                }
-                // We're going to emit RLE now packed into an uint16
-                uint16_t emit_start = 0;
-                uint16_t emit_width = 0;
-                // Get points that rounded down to 0
-                if(width <= 1) {
-                    emit_width =1;
-                    emit_start = midpoint;
-                } else {
-                    uint16_t x_s = (midpoint-(width/2));
-                    uint16_t x_e = (midpoint+(width/2));
-                    // Update for clamping (i.e. fix our math above, but for now...)
-                    if(x1>=x0)  {
-                        if(x_s < x0) x_s = x0;
-                        if(x_e > x1) x_e = x1;
-                    } else {
-                        if(x_s < x1) x_s = x1;
-                        if(x_e > x0) x_e = x0;
-                    }
-                    if(emit_start + emit_width > H_RES) emit_width = (H_RES-emit_start);
-                    if(emit_width<=0) emit_width = 1;
-                    emit_start = x_s;
-                    emit_width = x_e-x_s;
-                    if(emit_width > 63) {
-                        // Maybe emit another one, unclear right now
-                        emit_width = 63;
-                    }
-                }
-                line_emits_rle[emit_counter_dbl] = (emit_start << 6) | (emit_width & 0x3f);
-                line_emits_y[emit_counter_dbl] = y;
-                emit_counter_dbl++;
-                if(emit_counter_dbl == MAX_LINE_EMITS) {
-                    goto end_emit;
-                }
-            }
-            line_data_ptr += 4;
-            y0 = line_data_ptr[1];
-            y1 = line_data_ptr[3];
-        }
-    }
-end_emit:
-    // restart the drawing
-    restart_wireframe = 1;
-    return;
-}
-
 
 // set tfb_row_hint to -1 for everything
 void display_tfb_update(int8_t tfb_row_hint) { 
@@ -496,7 +392,6 @@ void display_reset_sprites() {
     }
     for(uint8_t i=0;i<62;i++) collision_bitfield[i] = 0;
     for(uint32_t i=0;i<SPRITE_RAM_BYTES;i++) sprite_ram[i] = 0;
-    line_emits_y[0] = V_RES+1; // just to make sure 
     spriteno_activated = 0;
 }
 
@@ -622,14 +517,7 @@ void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data) {
         for (uint32_t j = mem_pos; j < mem_pos + len; j=j+BYTES_PER_PIXEL) {
             sprite_ram[j] = *data++;
         }
-    }
-    // Check if this is a wireframe to render it
-    for(uint8_t i=0;i<SPRITES;i++) {
-        if(sprite_vis[i]==SPRITE_IS_WIREFRAME && sprite_mem[i] == mem_pos) {
-            display_wireframe_update(i);
-        }
-    }
-    
+    }    
 }
 
 
@@ -983,8 +871,6 @@ void display_teardown(void) {
     free_caps(bg_tfb); bg_tfb = NULL;
     free_caps(TFB_pxlen); TFB_pxlen = NULL;
     free_caps(sprite_ids); sprite_ids = NULL;
-    free_caps(line_emits_rle); line_emits_rle = NULL;
-    free_caps(line_emits_y); line_emits_y = NULL;
     free_caps(lv_buf); lv_buf = NULL;
     free_caps(sprite_ram); sprite_ram = NULL; 
     free_caps(sprite_x_px); sprite_x_px = NULL;
@@ -1138,12 +1024,6 @@ void display_init(void) {
     collision_bitfield = (uint8_t*)malloc_caps(128, MALLOC_CAP_INTERNAL);
     TFB_pxlen = (uint16_t*)malloc_caps(V_RES*sizeof(uint16_t), MALLOC_CAP_INTERNAL);
 
-    // 120000 byes
-    line_emits_rle = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    // 120000 bytes
-    line_emits_y = (uint16_t*)calloc_caps(32, 1, MAX_LINE_EMITS*2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    // 122880 bytes
-    
 
     TFB = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
     TFBf = (uint8_t*)malloc_caps(TFB_ROWS*TFB_COLS*sizeof(uint8_t), MALLOC_CAP_INTERNAL);
