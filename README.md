@@ -174,8 +174,8 @@ Still very much early days, but Tulip supports a native chat and file sharing BB
 
 ```python
 import world
-world.post_message("hello!!", username) # Sends a message to Tulip World. username required.
-world.upload(filename, username) # Uploads a file to Tulip World. username required
+world.post_message("hello!!") # Sends a message to Tulip World. username required. will prompt if not set
+world.upload(filename) # Uploads a file to Tulip World. username required
 world.ls() # lists most recent unique filenames/usernames
 ```
 

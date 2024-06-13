@@ -635,7 +635,6 @@ def deactivate(screen):
         midi.config.set_channel_state(midi_channel, state)
     
 def quit(screen):
-    deactivate(screen)
     midi.remove_callback(midi_event_cb)
 
 def run(screen):

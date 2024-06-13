@@ -33,7 +33,7 @@ tulip.upgrade()
 # Takes a screenshot and saves to disk. The screen will blank for a moment
 # If no filename given will upload to Tulip World (needs wifi)
 tulip.screenshot("screenshot.png")
-tulip.screenshot(username='me')
+tulip.screenshot()
 
 # Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
 # Note that Python code is bound to one core, so Python-only usage tops out at 50%.
@@ -128,10 +128,10 @@ messages = world.messages(n=500, mtype='files') # returns a list of latest files
 messages = world.messages(n=100, mtype='text') # returns a list of latest chat messages
 
 # When posting messages or files you set a username, minimum 1 character, maximum 10 
-world.post_message("hello!!", username) # Sends a message to Tulip World. username required.
+world.post_message("hello!!") # Sends a message to Tulip World. username required. will prompt if not set.
 
-world.upload(filename, username, description) # Uploads a file to Tulip World. username required. description optional (25 characters)
-world.upload(folder, username, description) # Packages a folder and uploads it to Tulip World as a package
+world.upload(filename,  description) # Uploads a file to Tulip World. username required. description optional (25 characters)
+world.upload(folder, description) # Packages a folder and uploads it to Tulip World as a package
 world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
 world.download(filename, username) # Downloads the latest file named filename from username from Tulip World if it exists
 world.download(package_name) # Downloads a package and extracts it

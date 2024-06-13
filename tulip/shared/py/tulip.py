@@ -560,19 +560,16 @@ def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
     c = urequests.get(url, headers = headers)
     return c
 
-def screenshot(filename=None, username=None):
+def screenshot(filename=None):
     from upysh import rm
     if(filename is not None):
         int_screenshot(filename)
         return None
     if(ip() is not None):
-        if(username is not None):
-            int_screenshot("screenshot.png")
-            world.upload("screenshot.png", username, 'Tulip Screenshot')
-            return
-        else:
-            print("Need to pass Tulip World username, like tulip.screenshot(username='me')")
-    print("Need wi-fi on")
+        int_screenshot("screenshot.png")
+        world.upload("screenshot.png", 'Tulip Screenshot')
+    else:
+        print("Need wi-fi on")
 
 
 def ansi_fg(pal_idx):

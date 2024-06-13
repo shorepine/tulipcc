@@ -178,6 +178,8 @@ class UIScreen():
     def screen_quit_callback(self, e):
         if(self.name!='repl'):
             import gc
+            if(self.deactivate_callback is not None):
+                self.deactivate_callback(self)
             if(self.quit_callback is not None):
                 self.quit_callback(self)
             self.running = False

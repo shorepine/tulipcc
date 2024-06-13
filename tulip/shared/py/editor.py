@@ -30,9 +30,7 @@ class Editor(tulip.UIScreen):
         #print(">>> ",end='')
 
     def quit_editor_cb(self, screen):
-        tulip.keyboard_callback()
         tulip.deinit_editor()
-        tulip.tfb_restore()
 
     def activate_editor_cb(self,screen):
         # Only load in the file on first run

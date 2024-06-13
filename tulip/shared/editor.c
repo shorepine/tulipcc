@@ -336,6 +336,7 @@ void editor_open_file(const char *filename) {
 		uint32_t last = 0;
 		for(uint32_t i=0;i<bytes_read+1;i++) {
 			if(text[i]=='\n' || i==bytes_read) {
+                //dbg("mallocing line %d\n", c);
 				incoming_text_lines[c]  = editor_malloc(i-last + 1);
 				uint16_t x;
 				for(x=0;x<i-last;x++) { 
@@ -372,6 +373,7 @@ void editor_open_file(const char *filename) {
         }
         editor_free(incoming_text_lines);
         text_lines = combined_text_lines;
+        //dbg("Setting lines to %d, was %d\n", lines+new_lines, lines);
         lines = lines + new_lines;
 	} else {
         //dbg("File doesn't exist\n");
@@ -414,7 +416,7 @@ void editor_save() {
         //display_start();
         dirty = 0;
         editor_free(text);
-        dbg("Saved %s\n", fn);
+        //dbg("Saved %s\n", fn);
         move_cursor(cursor_x, cursor_y);
     } else {
         dbg("No filename given, not saving\n");
@@ -864,7 +866,6 @@ void editor_start(const char * filename) {
 
     if(filename != NULL) { 
         strcpy(fn, filename);
-		dbg("editor fn is %s\n", fn);
 		editor_open_file(fn);
 
 	} else {
@@ -895,7 +896,8 @@ void editor_deinit() {
     editor_free(text_lines);
     if(yank) editor_free(yank);
     yank = 0;
-    if(mc != fc) dbg("mc %d fc %d\n", mc, fc);
+    // this is usually the case because the TFB is restored after deinit 
+    //if(mc != fc) dbg("mc %d fc %d\n", mc, fc);
 }
 
 

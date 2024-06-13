@@ -8,6 +8,7 @@ import tulip
 
 MAX_DESCRIPTION_SIZE=50
 MAX_USERNAME_SIZE=10
+username = None
 
 def read_in_chunks(file_object, chunk_size=4096):
     while True:
@@ -156,9 +157,9 @@ def ls(count=10): # prints latest count files
         print("% 20s % 10s % 8s  %s" % (f['filename'], f['username'][:MAX_USERNAME_SIZE],nice_time(f["age_ms"]), f['content'][:MAX_DESCRIPTION_SIZE]))
 
 # uploads a file
-def upload(filename, username, description=""):
-    if(len(username)<1 or len(username)>MAX_USERNAME_SIZE):
-        print("Username %s needs to be at least one character and at most %d charactesrs." % (username, MAX_USERNAME_SIZE))
+def upload(filename, description=""):
+    u = prompt_username()
+    if u is None:
         return
 
     tar = False
@@ -194,7 +195,7 @@ def upload(filename, username, description=""):
 
     # Lastly, post a message with the uploaded filename
     payload = {
-        "content":username[:MAX_USERNAME_SIZE] + " ### " + description[:MAX_DESCRIPTION_SIZE],
+        "content":u + " ### " + description[:MAX_DESCRIPTION_SIZE],
         "attachments": [{
             "id": attachment_info['id'],
             "uploaded_filename":attachment_info['upload_filename'],
@@ -207,12 +208,30 @@ def upload(filename, username, description=""):
     if(tar):
         os.remove(filename)
 
+def prompt_username():
+    global username
+    if(username is None):
+        print("You need to tell us your username. Between 1 and 10 characters: ",end='')
+        r = input()
+        if(len(r)>0 and len(r)<=MAX_USERNAME_SIZE):
+            username = r
+            print("Do you want me to save this username to your boot.py? [Y/n]", end='')
+            r = input()
+            if(not (r=='n' or r=='N')):
+                bootpy = open(tulip.root_dir()+"user/boot.py","r").read()
+                bootpy = bootpy + "\nworld.username='%s'\n" %(username)
+                w = open(tulip.root_dir()+'user/boot.py','w')
+                w.write(bootpy)
+                w.close()
+        else:
+            print("Username %s needs to be at least one character and at most %d characters." % (r, MAX_USERNAME_SIZE))
+    return username
 
-def post_message(message, username):
-    if(len(username)<1 or len(username)>MAX_USERNAME_SIZE):
-        print("Username %s needs to be at least one character and at most %d charactesrs." % (username, MAX_USERNAME_SIZE))
+def post_message(message):
+    u = prompt_username()
+    if u is None:
         return
-    r = requests.post(text_base_url+"messages", headers = headers, data =  json.dumps ( {"content":username[:MAX_USERNAME_SIZE] + " ### " + message} ))
+    r = requests.post(text_base_url+"messages", headers = headers, data =  json.dumps ( {"content":u + " ### " + message} ))
 
 
 
