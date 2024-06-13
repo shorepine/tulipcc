@@ -95,9 +95,11 @@ def run(screen):
     if tulip.ip() is None:
         print("Needs wifi")
         screen.quit()
-    
-    if(world.prompt_username() is None):
+        return
+    if(world.username is None):
+        print("Run world.prompt_username() first.")
         screen.quit()
+        return
 
     app = screen
 
