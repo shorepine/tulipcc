@@ -499,8 +499,6 @@ def run(module_string):
     # Let's find out what this is. In order, we go: cwd, frozen modules, /sys/app, /ex
     if(is_folder(module_string)):
         cd(module_string)
-    elif(is_folder(root_dir()+"sys/app/"+module_string)):
-        cd(root_dir()+"sys/app/"+module_string)
     elif(exists(root_dir()+"sys/ex/"+module_string+".py")):
         cd(root_dir()+"sys/ex/")
 

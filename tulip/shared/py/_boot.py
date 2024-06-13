@@ -13,7 +13,7 @@ try:
         uos.mount(s,"/sys")
         uos.mount(u,"/user")
         cd('/user')
-        sys.path.append("/sys/app")
+        sys.path.append("/sys/ex")
         
     except:
         print("Tulip flash not setup properly. Try resetting the device.")
@@ -50,7 +50,7 @@ except ImportError:
             pass
 
         cd(tulip.root_dir()+"user")
-        sys.path.append("../sys/app")
+        sys.path.append("../sys/ex")
 
     except:
         # Probably iOS
