@@ -20,6 +20,14 @@ die() { echo "$*" 1>&2 ; exit 1; }
 RELEASE=$1
 TYPE=$2
 
+# Copy over some known examples to /sys/ex before creating image
+cp shared/py/drums.py fs/ex/my_drums.py
+cp shared/py/juno6.py fs/ex/my_juno6.py
+cp shared/py/worldui.py fs/ex/my_worldui.py
+cp shared/py/voices.py fs/ex/my_voices.py
+
+
+
 cd esp32s3
 source ~/esp/esp-idf-v5.2/export.sh 
 # If sys, just create/upload the last sys and exit

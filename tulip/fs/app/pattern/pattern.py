@@ -1,2 +1,0 @@
-# pattern.py
-# pattern editor
