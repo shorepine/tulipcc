@@ -90,6 +90,7 @@ def messages(n=500, chunk_size = 100, mtype='text'):
         r = {
             # Discord IDs have epoch ms (since 2015) encoded in them
             'age_ms':server_time_ms - ((int(i['id']) >> 22) + discord_epoch), 
+            'time':((int(i['id']) >> 22) + discord_epoch),
             'username':username,
             'content':content
         }

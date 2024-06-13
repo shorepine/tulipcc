@@ -16,7 +16,7 @@ try:
         sys.path.append("/sys/app")
         
     except:
-        print("Tulip flash not setup properly. Try fully flashing again.")
+        print("Tulip flash not setup properly. Try resetting the device.")
 
     try:
         currentPartition = Partition(Partition.RUNNING)

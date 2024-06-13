@@ -179,7 +179,8 @@ def run(screen):
     screen.keep_tfb = False # whether to hide the TFB while running the app
     screen.offset_y = 100 # by default, screens "start" at 0,100 to leave room for the task bar
     screen.activate_callback = None # called when the app starts and when it is switched to
-    screen.quit_callback = None # called when the quit button is pressed
+    screen.deactivate_callback = None # called when you switch away from the app
+    screen.quit_callback = None # called when the quit button is pressed. Note: deactivate_callback is called first on quit
     screen.handle_keyboard = False # if you set up UI components that accept keyboard input
     # Set up your UI with screen.add(), adding UIElement objects
     screen.add(tulip.UILabel("hello there"), x=500,y=100)
