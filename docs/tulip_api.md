@@ -112,15 +112,19 @@ You can switch apps with the keyboard: `control-tab`, and quit apps with `contro
 We ship a few examples of multitasking apps, please check them out here:
  * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py)
  * [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/wordpad.py)
- * [`buttons`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/buttons.py)
+ * [`worldui`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/worldui.py)
  * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py)
  * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/voices.py)
+
+On your Tulip, you can find these in editable form as `my_X`, for example, `/sys/ex/my_drums.py`. This lets you edit the drum machine. The original one is read-only and always baked into Tulip, so it can't be harmed. 
 
 ## Tulip World
 
 Still very much early days, but Tulip supports a native chat and file sharing BBS called **TULIP ~ WORLD** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
 
-You can call the underlying Tulip World APIs:
+Try it out with `run('worldui')`. You'll first want to run `world.prompt_username()` to choose a username.
+
+You can also call the underlying Tulip World APIs:
 
 ```python
 import world
