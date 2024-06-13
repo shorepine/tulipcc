@@ -6,6 +6,9 @@ import json
 import os
 import tulip
 
+MAX_DESCRIPTION_SIZE=50
+MAX_USERNAME_SIZE=10
+
 def read_in_chunks(file_object, chunk_size=4096):
     while True:
         data = file_object.read(chunk_size)
@@ -16,8 +19,9 @@ def read_in_chunks(file_object, chunk_size=4096):
 def _isdir(filename):
     return (os.stat(filename)[0] & 0o40000) > 0
 
-# covert age from matrix to something readable
-def nice_time(age_s):
+# covert age from discord to something readable
+def nice_time(age_ms):
+    age_s = age_ms / 1000
     if(age_s < 60):
         c = "%ds" % (age_s)
     elif(age_s < 60*60):
@@ -113,7 +117,7 @@ def download(filename, username=None, limit=5000, chunk_size=4096):
                 got = file
                 break
     if got is not None:
-        age_nice = nice_time(got["age_ms"]/1000)
+        age_nice = nice_time(got["age_ms"])
         grab_url = got["url"] # Will get the latest (most recent) file with that name
 
         r = tulip.url_save(got['url'], filename)
@@ -130,24 +134,31 @@ def download(filename, username=None, limit=5000, chunk_size=4096):
             print("Could not find %s by %s on Tulip World" % (filename, username))
 
 
-def ls(count=10, overquery=10): # lists latest count files
+# get unique files
+def unique_files(count=10, overquery=10):
     already = {}
     i = 0
+    ret= []
     all_files = messages(n=count*overquery, mtype='files')
     for f in all_files:
         fn = f['username']+':'+f["filename"]
         if(not fn in already):
             already[fn] = True
-            if(f['filename'].endswith(".tar")):
-                f['filename'] = "<%s>" % (f['filename'][:-4])
-            print("% 20s % 10s % 20s %s" % (f['filename'], f['username'][:10], f['content'][:20], nice_time(f["age_ms"]/1000)))
-            i+=1
-        if(i==count): break     
+            ret.append(f)
+            if(len(ret)==count):
+                return ret
+    return ret
+
+def ls(count=10): # prints latest count files
+    for f in unique_files(count=count):
+        if(f['filename'].endswith(".tar")):
+            f['filename'] = "<%s>" % (f['filename'][:-4])
+        print("% 20s % 10s % 8s  %s" % (f['filename'], f['username'][:MAX_USERNAME_SIZE],nice_time(f["age_ms"]), f['content'][:MAX_DESCRIPTION_SIZE]))
 
 # uploads a file
 def upload(filename, username, description=""):
-    if(len(username)<1 or len(username)>10):
-        print("Username %s too long or short." % username)
+    if(len(username)<1 or len(username)>MAX_USERNAME_SIZE):
+        print("Username %s needs to be at least one character and at most %d charactesrs." % (username, MAX_USERNAME_SIZE))
         return
 
     tar = False
@@ -183,7 +194,7 @@ def upload(filename, username, description=""):
 
     # Lastly, post a message with the uploaded filename
     payload = {
-        "content":username[:10] + " ### " + description[:25],
+        "content":username[:MAX_USERNAME_SIZE] + " ### " + description[:MAX_DESCRIPTION_SIZE],
         "attachments": [{
             "id": attachment_info['id'],
             "uploaded_filename":attachment_info['upload_filename'],
@@ -198,10 +209,10 @@ def upload(filename, username, description=""):
 
 
 def post_message(message, username):
-    if(len(username)<1 or len(username)>10):
-        print("Username %s too long or short." % username)
+    if(len(username)<1 or len(username)>MAX_USERNAME_SIZE):
+        print("Username %s needs to be at least one character and at most %d charactesrs." % (username, MAX_USERNAME_SIZE))
         return
-    r = requests.post(text_base_url+"messages", headers = headers, data =  json.dumps ( {"content":username[:10] + " ### " + message} ))
+    r = requests.post(text_base_url+"messages", headers = headers, data =  json.dumps ( {"content":username[:MAX_USERNAME_SIZE] + " ### " + message} ))
 
 
 
