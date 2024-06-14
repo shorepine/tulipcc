@@ -6,6 +6,7 @@ See https://github.com/csound/examples/blob/master/csd/xanadu.csd for original.
 
 import math
 import time
+import tulip,midi
 
 import amy
 try:
