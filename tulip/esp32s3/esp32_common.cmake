@@ -130,7 +130,6 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/smallfont.c
     ${TULIP_SHARED_DIR}/display.c
     ${TULIP_SHARED_DIR}/bresenham.c
-    ${TULIP_SHARED_DIR}/wireframe.c
     ${TULIP_SHARED_DIR}/tulip_helpers.c
     ${TULIP_SHARED_DIR}/editor.c
     ${TULIP_SHARED_DIR}/keyscan.c

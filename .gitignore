@@ -23,6 +23,7 @@ tulip/tdeck/managed_components
 tulip/tulipcc_r10/build
 tulip/tulipcc_r10/managed_components
 .submodules_ok
+tulip/fs/ex/my_*
 
 # Prerequisites
 *.d

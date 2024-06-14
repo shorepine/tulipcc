@@ -72,7 +72,6 @@ void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_screenshot(char * filename);
 void display_screenshot_pal(char * filename);
 void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color);
-void display_wireframe_update(uint8_t sprite_no);
 
 void display_tfb_new_row();
 void display_run();
@@ -117,9 +116,6 @@ extern const unsigned char portfolio_glyph_bitmap[1792];
 #define FONT_HEIGHT 12
 #define FONT_WIDTH 8
 #endif
-
-//#define OFFSCREEN_X_PX 0
-//#define OFFSCREEN_Y_PX 0
 
 #define OFFSCREEN_X_PX 128
 #define OFFSCREEN_Y_PX 100

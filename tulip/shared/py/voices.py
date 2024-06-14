@@ -215,9 +215,8 @@ def deferred_bg_redraw(t):
     redraw(app)
 
 def quit(screen):
-    global app
-    deactivate(app)
-
+    pass
+    
 def activate(screen):
     # Synchronize the patch selector item in case editor changed patch.
     if app.channels.selected is not None:

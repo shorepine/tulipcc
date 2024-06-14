@@ -4,6 +4,13 @@
 # That will let us do LVGL stuff for saving/searching/etc
 
 import tulip
+editor = None
+
+
+def draw(x):
+    global editor
+    editor.alttab_button.invalidate()
+    editor.quit_button.invalidate()
 
 class Editor(tulip.UIScreen):
     def __init__(self, filename):
@@ -20,12 +27,10 @@ class Editor(tulip.UIScreen):
         tulip.keyboard_callback()
         tulip.tfb_restore()
         # Fudge the repl line as it got eaten during the TFB restore. This will never be a problem, lol 
-        print(">>> ",end='')
+        #print(">>> ",end='')
 
     def quit_editor_cb(self, screen):
-        tulip.keyboard_callback()
         tulip.deinit_editor()
-        tulip.tfb_restore()
 
     def activate_editor_cb(self,screen):
         # Only load in the file on first run
@@ -42,7 +47,14 @@ class Editor(tulip.UIScreen):
         # overwriting the first line. So wait a bit and activate then
         # (This also means the >>> will print on the alternate TFB, so we have to fudge on reactivate)
         tulip.defer(tulip.activate_editor, None, 50)
+        # And because of the TFB clearing, the buttons may get destroyed, so re-draw them
+        tulip.defer(draw, None, 100)
 
 # Launch the tulip editor as a UIScreen
 def edit(filename=None):
-    editor = Editor(filename)
+    global editor
+    if 'edit' in tulip.running_apps:
+        print("Editor already running.")
+        return
+    else:
+        editor = Editor(filename)

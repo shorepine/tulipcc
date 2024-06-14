@@ -33,7 +33,7 @@ tulip.upgrade()
 # Takes a screenshot and saves to disk. The screen will blank for a moment
 # If no filename given will upload to Tulip World (needs wifi)
 tulip.screenshot("screenshot.png")
-tulip.screenshot(username='me')
+tulip.screenshot()
 
 # Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
 # Note that Python code is bound to one core, so Python-only usage tops out at 50%.
@@ -81,13 +81,13 @@ The main Python script must be the name of the package. This script needs to exp
 By default, a package is imported (for example, `import rabbit_game`.) If your `rabbit_game.py` has code that runs on import, it will run. If you are writing a game or other thing that needs full access to Tulip, put an infinite loop in your code. Users can use `Control-C` to quit and they will be back at the REPL with the program's imports removed from memory.
 
 We ship a couple of game-like examples, check them out:
- * [`bunny_bounce`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/bunny_bounce/bunny_bounce.py)
- * [`planet_boing`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/planet_boing/planet_boing.py)
+ * [`bunny_bounce`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/bunny_bounce/bunny_bounce.py)
+ * [`planet_boing`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/planet_boing/planet_boing.py)
 
 
 The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package', username)` or `world.download('package')`. 
 
-We put a few system packages in `/sys/app` and some examples in `/sys/ex`, and if you `run('app')`, it will look in your current folder, the `/sys/ex` folder, and the `/sys/app` folder for the app. 
+We put a few examples in `/sys/ex`, and if you `run('app')`, it will look in your current folder and the `/sys/ex` folder.
 
 
 ### Multitasking apps 
@@ -111,16 +111,20 @@ You can switch apps with the keyboard: `control-tab`, and quit apps with `contro
 
 We ship a few examples of multitasking apps, please check them out here:
  * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py)
- * [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py)
- * [`buttons`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/buttons/buttons.py)
+ * [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/wordpad.py)
+ * [`worldui`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/worldui.py)
  * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py)
  * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/voices.py)
+
+On your Tulip, you can find these in editable form as `my_X`, for example, `/sys/ex/my_drums.py`. This lets you edit the drum machine. The original one is read-only and always baked into Tulip, so it can't be harmed. 
 
 ## Tulip World
 
 Still very much early days, but Tulip supports a native chat and file sharing BBS called **TULIP ~ WORLD** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
 
-You can call the underlying Tulip World APIs:
+Try it out with `run('worldui')`. You'll first want to run `world.prompt_username()` to choose a username.
+
+You can also call the underlying Tulip World APIs:
 
 ```python
 import world
@@ -128,10 +132,10 @@ messages = world.messages(n=500, mtype='files') # returns a list of latest files
 messages = world.messages(n=100, mtype='text') # returns a list of latest chat messages
 
 # When posting messages or files you set a username, minimum 1 character, maximum 10 
-world.post_message("hello!!", username) # Sends a message to Tulip World. username required.
+world.post_message("hello!!") # Sends a message to Tulip World. username required. will prompt if not set.
 
-world.upload(filename, username, description) # Uploads a file to Tulip World. username required. description optional (25 characters)
-world.upload(folder, username, description) # Packages a folder and uploads it to Tulip World as a package
+world.upload(filename,  description) # Uploads a file to Tulip World. username required. description optional (25 characters)
+world.upload(folder, description) # Packages a folder and uploads it to Tulip World as a package
 world.download(filename) # Downloads the latest file named filename from Tulip World if it exists
 world.download(filename, username) # Downloads the latest file named filename from username from Tulip World if it exists
 world.download(package_name) # Downloads a package and extracts it
@@ -152,6 +156,7 @@ Tulip ships with a text editor, based on pico/nano. It supports syntax highlight
 # Control-X saves the file, if no filename give will prompt for one. 
 # Control-O is save as -- will write to new filename given
 # Control-W searches
+# Control-R prompts for a filename to read into the current buffer
 edit("game.py")
 edit() # no filename
 ```
@@ -163,7 +168,7 @@ We include [LVGL 9](https://lvgl.io) for use in making your own user interface. 
 
 It's best to build user interfaces inside a `UIScreen` multitasking Tulip package. Our `UIScreen` will handle placing elements on your app and dealing with multitasking. 
 
-For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/buttons/buttons.py) example, or more complete examples like [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py), [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py), [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/wordpad/wordpad.py) etc in `/sys/app`. 
+For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/buttons.py) example, or more complete examples like [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py), [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py), [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/wordpad.py) etc in `/sys/ex`.
 
 ### UIScreen
 
@@ -178,7 +183,8 @@ def run(screen):
     screen.keep_tfb = False # whether to hide the TFB while running the app
     screen.offset_y = 100 # by default, screens "start" at 0,100 to leave room for the task bar
     screen.activate_callback = None # called when the app starts and when it is switched to
-    screen.quit_callback = None # called when the quit button is pressed
+    screen.deactivate_callback = None # called when you switch away from the app
+    screen.quit_callback = None # called when the quit button is pressed. Note: deactivate_callback is called first on quit
     screen.handle_keyboard = False # if you set up UI components that accept keyboard input
     # Set up your UI with screen.add(), adding UIElement objects
     screen.add(tulip.UILabel("hello there"), x=500,y=100)
@@ -257,7 +263,7 @@ screen.add(tulip.UIText(text=None, placeholder=None, w=None, h=None,
 screen.add(tulip.UICheckbox(text=None, val=False, bg_color=None, fg_color=None, callback=None))
 ```
 
-See our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/app/buttons/buttons.py) example for `UIX` class use.
+See our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/buttons.py) example for `UIX` class use.
 
 ## Input
 
@@ -470,7 +476,7 @@ These mappings will get reset to default on boot. If you want to save them, put 
 
 You can set up your own MIDI callbacks in your own programs. You can call `midi.add_callback(function)`, which will call your `function` with a list of a (2 or 3-byte) MIDI message. These callbacks will get called alongside the default MIDI callback (that plays synth notes on MIDI in). You can stop the default MIDI callback with `midi.stop_default_callback()` and start it again with `midi.start_default_callback()`. 
 
-On Tulip Desktop, MIDI works on our iOS and macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
+On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
 
 You can also send MIDI messages "locally", e.g. to a running program that is expecting hardware MIDI input, via `tulip.midi_local()`
 
@@ -502,7 +508,7 @@ tulip.midi_local((144, 60, 127)) # send note on to local bus
 The Tulip GPU consists of 3 subsystems, in drawing order:
  * A bitmap graphics plane (BG) (default size: 2048x750), with scrolling x- and y- speed registers. Drawing shape primitives and UI elements draw to the BG.
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
- * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites as well as line buffers, stored in the same RAM. The line buffers are useful for fast wireframe drawing. 
+ * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites.
 
 The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 28Mhz, which is 30FPS. This is a great balance of speed and stability for text -- the editor and REPL. 
 
@@ -729,52 +735,6 @@ for c in tulip.collisions():
 # Clear all sprite RAM, reset all sprite handles
 tulip.sprite_clear()
 ```
-
-## Wireframes and fast line drawing
-
-![Line drawing](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/lines.png)
-
-
-You can also use the sprite RAM to also draw lists of lines. You can store lists of `x0,y0,x1,y1` in sprite RAM and register the sprite, Tulip will draw those lines every frame as the scanlines get drawn, on top of the BG and TFB like sprites. This lets you do fast wireframe-like animations without having to draw to the BG and clear it every frame. 
-
-You can also load 3D models as wireframes in from standard `obj` files, and set their rotation and scale, which will render a list of line positions for you to sprite line list RAM. 
-
-
-```python
-# Load an obj file into a list of raw faces and vertices - unscaled and unrotated.
-model = tulip.wire_load("teapot.obj")
-# A model encodes vertices and faces of a 3d model. You can also generate this model in code yourself.  
-
-# Draw model wireframe to a line buffer
-lines = tulip.wire_to_lines(model, x, y, scale, theta, max_faces)
-# scale = integer multiplier on 0..1 coordinates. in general, sets width/height of model as pixels
-# theta = # of 100.0/PI rotations
-# max_faces = optional, cuts the model off at a number of faces (3 lines). if not given uses all faces in model
-
-# You can also generate line lists yourself in code.
-lines = tulip.lines([
-    [x0_0,y0_0,x1_0,y1_0],
-    [x0_1,y0_1,x1_1,y1_1]
-    ]) # will return packed buffer of lines, sorted, including the last sentinel line
-
-# However you got your lines buffer, you can now load it into sprite RAM at whatever position you want. 
-# See len(lines) to see how many bytes your line list takes up so you don't overwrite other data. 
-tulip.sprite_bitmap(lines, mem_pos)
-
-# Register this "sprite" as a line buffer. If you don't pass w and h like a normal sprite, we assume it's a wireframe and we turn it on right away
-tulip.sprite_register(12, mem_pos)
-
-# Whenever you want to rotate, scale or translate the wireframe, regenerate the lines and write them to sprite RAM
-# The screen will immediately start drawing the new data once you call sprite_bitmap if the sprite is registered.
-lines = tulip.wire_to_lines(model, x, y, scale, theta)
-tulip.sprite_bitmap(lines, mem_pos)
-
-# Or, update your line coordinates directly:
-tulip.sprite_bitmap(tulip.lines(new_lines_list), mem_pos)
-
-tulip.sprite_off(12) # turn off drawing
-```
-
 
 ## Convenience classes for sprites and games
 

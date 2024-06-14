@@ -234,31 +234,6 @@ STATIC mp_obj_t tulip_bg_blit(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_blit_obj, 6, 7, tulip_bg_blit);
 
 
-mp_obj_t load_obj_file_into_ram(const char *fn);
-void draw_sprite_wire(uint16_t sprite_no);
-
-STATIC mp_obj_t tulip_wire_load(size_t n_args, const mp_obj_t *args) {
-    mp_obj_t bytes = load_obj_file_into_ram(mp_obj_str_get_str(args[0]));
-    return bytes;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_load_obj, 1, 1, tulip_wire_load);
-
-
-extern mp_obj_t render_wire_to_lines(uint8_t *buf, uint16_t x, uint16_t y, uint16_t scale, uint16_t theta,  int16_t max_faces);
-
-
-STATIC mp_obj_t tulip_wire_to_lines(size_t n_args, const mp_obj_t *args) {
-    mp_buffer_info_t bufinfo;
-    mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
-    if(n_args > 5) {
-        return render_wire_to_lines(bufinfo.buf, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), mp_obj_get_int(args[5]));
-    }
-    return render_wire_to_lines(bufinfo.buf, mp_obj_get_int(args[1]), mp_obj_get_int(args[2]), mp_obj_get_int(args[3]), mp_obj_get_int(args[4]), -1);
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_wire_to_lines_obj, 5, 6, tulip_wire_to_lines);
-
 
 extern int8_t memorypcm_load(mp_obj_t bytes, uint32_t samplerate, uint8_t midinote, uint32_t loopstart, uint32_t loopend);
 extern void memorypcm_unload_patch(uint8_t patch);
@@ -815,8 +790,6 @@ STATIC mp_obj_t tulip_sprite_register(size_t n_args, const mp_obj_t *args) {
             sprite_w_px[spriteno] = width;
             sprite_h_px[spriteno] = height;
         }
-    } else {
-        sprite_vis[spriteno] = SPRITE_IS_WIREFRAME;
     }
     return mp_const_none;
 }
@@ -1403,8 +1376,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_sprite_on), MP_ROM_PTR(&tulip_sprite_on_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_off), MP_ROM_PTR(&tulip_sprite_off_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_clear), MP_ROM_PTR(&tulip_sprite_clear_obj) },
-    { MP_ROM_QSTR(MP_QSTR_wire_to_lines), MP_ROM_PTR(&tulip_wire_to_lines_obj) },
-    { MP_ROM_QSTR(MP_QSTR_wire_load), MP_ROM_PTR(&tulip_wire_load_obj) },
     { MP_ROM_QSTR(MP_QSTR_collisions), MP_ROM_PTR(&tulip_collisions_obj) },
     { MP_ROM_QSTR(MP_QSTR_run_editor), MP_ROM_PTR(&tulip_run_editor_obj) },
     { MP_ROM_QSTR(MP_QSTR_deinit_editor), MP_ROM_PTR(&tulip_deinit_editor_obj) },

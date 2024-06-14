@@ -499,10 +499,10 @@ def run(module_string):
     # Let's find out what this is. In order, we go: cwd, frozen modules, /sys/app, /ex
     if(is_folder(module_string)):
         cd(module_string)
-    elif(is_folder(root_dir()+"sys/app/"+module_string)):
-        cd(root_dir()+"sys/app/"+module_string)
     elif(exists(root_dir()+"sys/ex/"+module_string+".py")):
-        cd(root_dir()+"sys/ex/")
+        cd("/sys/ex")
+    elif(is_folder(root_dir()+"sys/ex/"+module_string)):
+        cd(root_dir()+"sys/ex/"+module_string)
 
     try:
         exec('import %s' % (module_string))
@@ -560,19 +560,16 @@ def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
     c = urequests.get(url, headers = headers)
     return c
 
-def screenshot(filename=None, username=None):
+def screenshot(filename=None):
     from upysh import rm
     if(filename is not None):
         int_screenshot(filename)
         return None
     if(ip() is not None):
-        if(username is not None):
-            int_screenshot("screenshot.png")
-            world.upload("screenshot.png", username, 'Tulip Screenshot')
-            return
-        else:
-            print("Need to pass Tulip World username, like tulip.screenshot(username='me')")
-    print("Need wi-fi on")
+        int_screenshot("screenshot.png")
+        world.upload("screenshot.png", 'Tulip Screenshot')
+    else:
+        print("Need wi-fi on")
 
 
 def ansi_fg(pal_idx):

@@ -86,11 +86,16 @@ You should **upgrade the firmware on Tulip** whenever you receive it. You should
 
  - Type `run('calibrate')` to calibrate the touch screen if you think it is needed. 
  - The black icon on the bottom right is a launcher, for quick access to some included programs. Tap on `Drums` and you should see (and hear!) a drum machine. 
- - Tap the top right blue "switch" icon to get back to the REPL. Tap it again to get back to the drum machine.
+ - Tap the top right blue "switch" icon to get back to the REPL. Tap it again to get back to the drum machine. You can also use `control-Tab`
  - Tap the red "quit" icon to quit the drum machine.
- - You can `edit('boot.py')` to add anything you want to run on Tulip startup, like wifi, or calibration, or setting up a synth.
- - Other things to try: `run('bunny_bounce')`, `run('voices')`, `run('juno6')`, `run('drums')`, `run('wordpad')`. The code for all of these are available, for you to modify or learn from.
- - After joining Wi-Fi, try out Tulip World with `world.ls()` to see files posted by others! Try `world.download('mc_dance')` or `world.download('periodic2')` for some neat things by the Tulip community. 
+ - You can `edit('boot.py')` to add anything you want to run on Tulip startup, like wifi, or calibration, or setting up a synth. You can save in the editor with `control-X` and quit with `control-Q`. 
+ - Other things to try:
+   - Some games/animations: `run('bunny_bounce')` or `run('planet_boing')` or `run('parallax')` (use control-C to quit), 
+   - Music apps: `run('voices')`, `run('juno6')`, `run('drums')`
+   - Other utlities: `run('wordpad')`, `run('buttons')`. 
+ - The code for all of these are available, for you to modify or learn from.
+ - After joining Wi-Fi, try out Tulip World with `run('worldui')` or `world.ls()` to see files and messages posted by others! 
+ - Try `world.download('mc_dance')` or `world.download('periodic2')` for some neat things by the Tulip community. 
 
 Your next stop: [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
 

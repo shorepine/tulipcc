@@ -178,15 +178,22 @@ class UIScreen():
     def screen_quit_callback(self, e):
         if(self.name!='repl'):
             import gc
+            if(self.deactivate_callback is not None):
+                self.deactivate_callback(self)
             if(self.quit_callback is not None):
                 self.quit_callback(self)
             self.running = False
             self.active = False
             self.remove_items()
-            del running_apps[self.name]
+            try:
+                del running_apps[self.name]
+            except KeyError:
+                pass
             gc.collect()
             repl_screen.present()
 
+    def quit(self):
+        self.screen_quit_callback(None)
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
     # or x,y directly if you want that
@@ -333,10 +340,10 @@ def launcher_cb(e):
             tulip.run('drums')
         if(text=='Voices'):
             tulip.run('voices')
-        if(text=='Pattern'):
-            tulip.run('pattern')
+        if(text=='Tulip World'):
+            tulip.run('worldui')
         if(text=='Editor'):
-            tulip.run('edit')
+            tulip.edit()
         if(text=="Keyboard"):
             keyboard()
         if(text=="Wordpad"):
@@ -365,14 +372,14 @@ def launcher(ignore=True):
     lv_launcher.set_style_text_font(lv.font_montserrat_12,0)
     b_close = lv_launcher.add_button(lv.SYMBOL.CLOSE, "Close")
     b_close.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
+    b_pattern = lv_launcher.add_button(lv.SYMBOL.HOME, "Tulip World")
+    b_pattern.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_voices = lv_launcher.add_button(lv.SYMBOL.AUDIO, "Voices")
     b_voices.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_juno = lv_launcher.add_button(lv.SYMBOL.AUDIO, "Juno-6")
     b_juno.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_drums = lv_launcher.add_button(lv.SYMBOL.NEXT, "Drums")
     b_drums.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
-    b_pattern = lv_launcher.add_button(lv.SYMBOL.NEXT, "Pattern")
-    b_pattern.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_editor = lv_launcher.add_button(lv.SYMBOL.FILE, "Editor")
     b_editor.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_keyboard = lv_launcher.add_button(lv.SYMBOL.KEYBOARD, "Keyboard")
