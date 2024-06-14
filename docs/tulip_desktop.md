@@ -66,12 +66,6 @@ cd tulip/linux
 
 We've heard this works fine under WSL using the Linux instructions. We'd love a native build! 
 
-## iOS (iPad, iPhone) build of Tulip Desktop
-
-<img src="pics/ios_1.png" alt="alt text" width="500">
-
-Early days, but we're able to boot Tulip (including sound, network, MIDI, display) under iOS. [Check out our build instructions here.](../tulip/ios/README.md) We'd love more help to make this a real thing!
-
 
 ## Questions
 

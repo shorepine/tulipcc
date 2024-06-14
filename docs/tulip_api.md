@@ -476,7 +476,7 @@ These mappings will get reset to default on boot. If you want to save them, put 
 
 You can set up your own MIDI callbacks in your own programs. You can call `midi.add_callback(function)`, which will call your `function` with a list of a (2 or 3-byte) MIDI message. These callbacks will get called alongside the default MIDI callback (that plays synth notes on MIDI in). You can stop the default MIDI callback with `midi.stop_default_callback()` and start it again with `midi.start_default_callback()`. 
 
-On Tulip Desktop, MIDI works on our iOS and macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
+On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
 
 You can also send MIDI messages "locally", e.g. to a running program that is expecting hardware MIDI input, via `tulip.midi_local()`
 
