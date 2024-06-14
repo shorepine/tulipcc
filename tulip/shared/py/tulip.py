@@ -500,7 +500,7 @@ def run(module_string):
     if(is_folder(module_string)):
         cd(module_string)
     elif(exists(root_dir()+"sys/ex/"+module_string+".py")):
-        cd("/sys/ex")
+        cd(root_dir()+"sys/ex")
     elif(is_folder(root_dir()+"sys/ex/"+module_string)):
         cd(root_dir()+"sys/ex/"+module_string)
 

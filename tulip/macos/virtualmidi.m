@@ -23,16 +23,17 @@ static void NotifyProc(const MIDINotification *message, void *refCon)
 {
 }
 
-/*
+
 void midi_out(uint8_t * bytes, uint16_t len) {
     if (@available(macOS 11, *))  {
+        fprintf(stderr, "midi out len %d\n",len);
         // do something with out_port
         
     } else {
         fprintf(stderr, "Can only run MIDI on macOS Big Sur (11.0) or later, sorry\n");   
     }
 }
-*/
+
 
 void* run_midi(void*argp){
     if (@available(macOS 11, *))  {
