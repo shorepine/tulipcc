@@ -161,8 +161,9 @@ class ArpeggiatorSynth:
             self.direction = val
         self._update_full_sequence()
 
-    def get_new_voices(self, num_voices):
-        return self.synth.get_new_voices(num_voices)
+    # These should not be here.  Need to move arpeggiator.
+    def _get_new_voices(self, num_voices):
+        return self.synth._get_new_voices(num_voices)
 
     def release_voices(self):
         return self.synth.release_voices()

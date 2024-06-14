@@ -179,34 +179,33 @@ class Synth:
     Provides methods:
       synth.note_on(midi_note, velocity, time=None)
       synth.note_off(midi_note, time=None)
-      synth.control_change(control, value)
-      synth.program_change(patch_num)
+      synth.program_change(patch_num) changes preset for all voices.
+      synth.control_change(control, value) modifies a parameter for all voices.
     Provides read-back attributes (for voices.py UI):
       synth.amy_voices
       synth.patch_number
       synth.patch_state  - patch-specific data only used by clients e.g. UI state
   
-    provides the following methods:
-     get_new_voices(num_voices) returns num_voices VoiceObjects.
-        VoiceObjects accept voice.note_on(note, vel, time=None),
-        voice.note_off(time=None)
-      program_change(patch_num) changes preset for all voices.
-      control_change(control, value) modifies a parameter for all
-          voices.
-
     Note: The synth internally refers to its voices by indices in
     range(0, num_voices).  These numbers are not related to the actual amy
     voices rendering the note; the amy voice number is internal to the
-    VoiceObjects returned by get_new_voices, and is opaque to
-    the Synth object.
+    VoiceObjects and is opaque to the Synth object.
     """
 
     """Manage the pool of amy voices."""
     # Class-wide record of which voice to allocate next.
     allocated_amy_voices = set()
+    next_amy_patch_number = 1024
 
-    def __init__(self, num_voices=6):
-        self.voice_objs = self.get_new_voices(num_voices)
+    @classmethod
+    def reset(cls):
+        """Resets AMY and Synth's tracking of its state."""
+        cls.allocated_amy_voices = set()
+        cls.next_amy_patch_number = 1024
+        amy.reset()
+
+    def __init__(self, num_voices=6, patch_number=None, patch_string=None):
+        self.voice_objs = self._get_new_voices(num_voices)
         self.released_voices = Queue(num_voices, name='Released')
         for voice_index in range(num_voices):
             self.released_voices.put(voice_index)
@@ -220,9 +219,15 @@ class Synth:
         #self.num_voices = num_voices
         self.patch_number = None
         self.patch_state = None
+        if patch_number is not None and patch_string is not None:
+            raise ValueError('You cannot specify both patch_number and patch_string.')
+        if patch_string is not None:
+            patch_number = Synth.next_amy_patch_number
+            Synth.next_amy_patch_number = patch_number + 1
+            amy.send(store_patch='%d,%s' % (patch_number, patch_string))
+        self.program_change(patch_number)
 
-        
-    def get_new_voices(self, num_voices):
+    def _get_new_voices(self, num_voices):
         new_voices = []
         next_amy_voice = 0
         while len(new_voices) < num_voices:
@@ -257,7 +262,7 @@ class Synth:
             return self.released_voices.get()
         # We have to steal an active voice.
         stolen_voice = self.active_voices.get()
-        print('Stealing voice for', self.note_of_voice[stolen_voice])
+        #print('Stealing voice for', self.note_of_voice[stolen_voice])
         self._voice_off(stolen_voice)
         return stolen_voice
 
@@ -517,6 +522,7 @@ def music_map(channel, patch_number=None, voice_count=None):
         pass
 
 
+##### ARPEGGIATOR CURRENTLY NOT ENABLED (pending proper grafting onto back end of midi_in) #########
 arpeggiator = arpegg.ArpeggiatorSynth(synth=None, channel=0)
 
 def insert_arpeggiator(channel):
