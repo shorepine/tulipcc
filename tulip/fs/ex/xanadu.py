@@ -3,12 +3,13 @@
 See https://github.com/csound/examples/blob/master/csd/xanadu.csd for original.
 """
 
-
 import math
 import time
-import tulip,midi
 
+import tulip
+import midi
 import amy
+
 try:
     amy.live()
 except:
@@ -60,8 +61,8 @@ def note1_patch(pan=0.5):
         {'osc': osc, 'wave': amy.SAW_DOWN, 'freq': '261,1,0,0,0,1', 'mod_source': modosc,
          'filter_freq': '200,0,0,0,4', 'filter_type': amy.FILTER_LPF24, 'resonance': 0.7,
          'pan': pan},
-        {'osc': osc, 'bp0': '100,1,8000,0,100,0'},
-        {'osc': osc, 'bp1': '20,1,5000,0,100,0'},
+        {'osc': osc, 'bp0': '0,1,8000,0,100,0'},
+        {'osc': osc, 'bp1': '0,1,3000,0.1,100,0'},
     ])
 
 
@@ -74,8 +75,8 @@ def note2_patch(pitch_dev=0.1, pan=0.5):
         {'osc': osc, 'wave': amy.SAW_DOWN, 'freq': '261,1,0,0,0,-1', 'mod_source': modosc,
          'filter_freq': '200,0,0,0,4', 'filter_type': amy.FILTER_LPF24, 'resonance': 0.7,
          'pan': pan},
-        {'osc': osc, 'bp0': '100,1,8000,0,100,0'},
-        {'osc': osc, 'bp1': '20,1,5000,0,100,0'},
+        {'osc': osc, 'bp0': '0,1,8000,0,100,0'},
+        {'osc': osc, 'bp1': '0,1,3000,0.1,100,0'},
     ])
 
 
