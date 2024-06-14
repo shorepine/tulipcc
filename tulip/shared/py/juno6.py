@@ -540,16 +540,16 @@ def update_patch_for_channel(channel, patch_num):
 
 # Wire up MIDI controls
 # Oxygen49 slider IDs, starting from left.
-SLIDER_IDS = [0x49, 0x4b, 0x48, 0x4a, 0x4f, 0x54, 0x5b, 0x5d, 0x7]
-#SLIDER_IDS = [74, 71, 91, 93, 73, 72, 5, 84, 7]
+#SLIDER_IDS = [0x49, 0x4b, 0x48, 0x4a, 0x4f, 0x54, 0x5b, 0x5d, 0x7]
+SLIDER_IDS = [74, 71, 91, 93, 73, 72, 5, 84, 7]
 # Oxygen49 knobs, top row then second row.
-KNOB_IDS = [0x10, 0x11, 0x12, 0x0a, 0x13, 0x50, 0x51, 0x14]
-#KNOB_IDS = [75, 76, 92, 95, 10, 77, 78, 79]
+#KNOB_IDS = [0x10, 0x11, 0x12, 0x0a, 0x13, 0x50, 0x51, 0x14]
+KNOB_IDS = [75, 76, 92, 95, 10, 77, 78, 79]
 # Oxygen49 buttons.  They toggle between 0 and 0x7f.
-BUTTON_IDS = [0x18, 0x19, 0x1a, 0x1b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,
-              0x71, 0x72, 0x73, 0x74, 0x75, 0x76]
+#BUTTON_IDS = [0x18, 0x19, 0x1a, 0x1b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,
+#              0x71, 0x72, 0x73, 0x74, 0x75, 0x76]
 # I had to program these.  See Oxygen49-UserGuide-v1.3.pdf + notes.
-#BUTTON_IDS = [96, 97, 98, 99, 100, 101, 102, 103, 104,   113, 114, 115, 116, 117, 118]
+BUTTON_IDS = [96, 97, 98, 99, 100, 101, 102, 103, 104,   113, 114, 115, 116, 117, 118]
 PITCH_WHEEL = 0   # Pitch wheel is a special case, hard-coded in juno.py.
 MOD_WHEEL = 1
 
@@ -567,7 +567,7 @@ param_map = {
     KNOB_IDS[5]: 'vcf_lfo',
     KNOB_IDS[6]: 'vcf_kbd',
     #
-    KNOB_IDS[7]: 'arp_rate',
+    KNOB_IDS[7]: 'seq_bpm',
     #
     SLIDER_IDS[8]: 'vca_level',
     SLIDER_IDS[4]: 'env_a',
@@ -609,8 +609,53 @@ def control_change(control, value):
         param_obj.set(int(round(127 * value)))
 
 
+class SetNextCallbackObj:
+    """Object that accepts set(midi_value) and next() methods, to work with control_change's use of globals() to map param names to functions."""
+    def __init__(self, set_method=None, next_method=None):
+        self.set_method = set_method
+        self.next_method = next_method
+
+    def set(self, value):
+        self.set_method(value)
+
+    def next(self):
+        self.next_method()
+
+seq_bpm = SetNextCallbackObj(set_method=lambda v: tulip.seq_bpm(2.4 * v))
+arp_mode = SetNextCallbackObj(next_method=lambda: midi.arpeggiator.cycle_direction())
+arp_rng = SetNextCallbackObj(next_method=lambda: midi.arpeggiator.cycle_octaves())
+
+class ParamGetSetObj:
+    """Object that supports set(param, val) and get(param) methods."""
+    def __init__(self, get_method=None, set_method=None):
+        self.get_method = get_method
+        self.set_method = set_method
+
+    def get(self, param):
+        return self.get_method(param)
+
+    def set(self, param, val):
+        self.set_method(param, val)
+
+    
+def arp_set_fn(param, val):
+    if param == 'On':
+        midi.arpeggiator.set('on', val)
+    elif param == 'Hold':
+        midi.arpeggiator.set('hold', val)
+
+def arp_get_fn(param):
+    if param == 'On':
+        return midi.arpeggiator.active
+    elif param == 'Hold':
+        return midi.arpeggiator.hold
+
+arp_ctl = ParmGetSetObj(set_method=arp_set_fn, get_method=arp_get_fn)
+
+
 
 def midi_event_cb(m):
+    #print('midi_cb:', [int(b) for b in m])
     if m[0] == 0xb0:    # Other control slider.
         control_change(m[1], m[2])
     elif m[0] == 0xbf:

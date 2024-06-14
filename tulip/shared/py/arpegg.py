@@ -129,10 +129,10 @@ class ArpeggiatorSynth:
     def patch_number(self):
         return self.synth.patch_number
 
-    def _cycle_octaves(self):
+    def cycle_octaves(self):
         self.octaves = 1 + (self.octaves % 3)
 
-    def _cycle_direction(self):
+    def cycle_direction(self):
         if self.direction == 'up':
             self.direction = 'down'
         elif self.direction == 'down':
