@@ -94,7 +94,8 @@ You should **upgrade the firmware on Tulip** whenever you receive it. You should
    - Music apps: `run('voices')`, `run('juno6')`, `run('drums')`
    - Other utlities: `run('wordpad')`, `run('buttons')`. 
  - The code for all of these are available, for you to modify or learn from.
- - After joining Wi-Fi, try out Tulip World with `world.ls()` to see files posted by others! Try `world.download('mc_dance')` or `world.download('periodic2')` for some neat things by the Tulip community. 
+ - After joining Wi-Fi, try out Tulip World with `run('worldui')` or `world.ls()` to see files and messages posted by others! 
+ - Try `world.download('mc_dance')` or `world.download('periodic2')` for some neat things by the Tulip community. 
 
 Your next stop: [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
 

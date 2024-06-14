@@ -500,7 +500,9 @@ def run(module_string):
     if(is_folder(module_string)):
         cd(module_string)
     elif(exists(root_dir()+"sys/ex/"+module_string+".py")):
-        cd(root_dir()+"sys/ex/")
+        cd("/sys/ex")
+    elif(is_folder(root_dir()+"sys/ex/"+module_string)):
+        cd(root_dir()+"sys/ex/"+module_string)
 
     try:
         exec('import %s' % (module_string))
