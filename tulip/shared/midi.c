@@ -136,8 +136,12 @@ void run_midi() {
 }
 #else
 // midi out is in virtualmidi 
-//void midi_out(uint8_t * bytes, uint16_t len) {
-//    // nothing yet
-//}
+#ifdef MACOS
+// defined in virtualmidi.m
+#else
+void midi_out(uint8_t * bytes, uint16_t len) {
+    // nothing yet
+}
+#endif
 
 #endif
