@@ -124,7 +124,6 @@ def broken_chord(base_pitch, intervals, start_time, **kwargs):
         Note(pitch, 1, start_time + 100 * index, **kwargs)
 
 
-tulip.display_stop()
 midi.Synth.reset()
 time.sleep(0.1)   # Let the reset() happen
 amy.chorus(1)
@@ -166,5 +165,4 @@ for i in range(10):
     time.sleep(0.1)
 
 midi.Synth.reset()
-tulip.display_start()
 
