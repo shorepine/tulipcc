@@ -650,7 +650,7 @@ def arp_get_fn(param):
     elif param == 'Hold':
         return midi.arpeggiator.hold
 
-arp_ctl = ParmGetSetObj(set_method=arp_set_fn, get_method=arp_get_fn)
+arp_ctl = ParamGetSetObj(set_method=arp_set_fn, get_method=arp_get_fn)
 
 
 
