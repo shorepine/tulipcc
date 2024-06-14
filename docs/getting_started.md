@@ -92,6 +92,7 @@ You should **upgrade the firmware on Tulip** whenever you receive it. You should
  - Other things to try:
    - Some games/animations: `run('bunny_bounce')` or `run('planet_boing')` or `run('parallax')` (use control-C to quit), 
    - Music apps: `run('voices')`, `run('juno6')`, `run('drums')`
+   - Music demo: `run('xanadu')`
    - Other utlities: `run('wordpad')`, `run('buttons')`. 
  - The code for all of these are available, for you to modify or learn from.
  - After joining Wi-Fi, try out Tulip World with `run('worldui')` or `world.ls()` to see files and messages posted by others! 
