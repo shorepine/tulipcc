@@ -603,7 +603,8 @@ def control_change(control, value):
             arp_ctl.set(param_name, not arp_ctl.get(param_name))
             return  # Early exit.
         param_obj = globals()[param_name]
-        if isinstance(param_obj, JunoRadioButtons):
+        if getattr(param_obj, 'next', None):
+            # RadioBox objects just cycle through their options when button pressed.
             param_obj.next()  # value ignored.
             return
         param_obj.set(int(round(127 * value)))
@@ -612,30 +613,26 @@ def control_change(control, value):
 class SetNextCallbackObj:
     """Object that accepts set(midi_value) and next() methods, to work with control_change's use of globals() to map param names to functions."""
     def __init__(self, set_method=None, next_method=None):
-        self.set_method = set_method
-        self.next_method = next_method
+        # Don't define the methods unless they are provided.  That way, we can tell if the method is provided with getattr() on the object.
+        if set_method:
+            self.set = set_method
+        if next_method:
+            self.next = next_method
 
-    def set(self, value):
-        self.set_method(value)
-
-    def next(self):
-        self.next_method()
 
 seq_bpm = SetNextCallbackObj(set_method=lambda v: tulip.seq_bpm(2.4 * v))
 arp_mode = SetNextCallbackObj(next_method=lambda: midi.arpeggiator.cycle_direction())
 arp_rng = SetNextCallbackObj(next_method=lambda: midi.arpeggiator.cycle_octaves())
 
+
 class ParamGetSetObj:
     """Object that supports set(param, val) and get(param) methods."""
     def __init__(self, get_method=None, set_method=None):
-        self.get_method = get_method
-        self.set_method = set_method
-
-    def get(self, param):
-        return self.get_method(param)
-
-    def set(self, param, val):
-        self.set_method(param, val)
+        # Don't define the methods unless they are provided.  That way, we can tell if the method is provided with getattr() on the object.
+        if get_method:
+            self.get = get_method
+        if set_method:
+            self.set = set_method
 
     
 def arp_set_fn(param, val):

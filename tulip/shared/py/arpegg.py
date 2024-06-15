@@ -131,6 +131,7 @@ class ArpeggiatorSynth:
 
     def cycle_octaves(self):
         self.octaves = 1 + (self.octaves % 3)
+        self._update_full_sequence()
 
     def cycle_direction(self):
         if self.direction == 'up':
@@ -141,6 +142,7 @@ class ArpeggiatorSynth:
             self.direction = 'rand'
         else:
             self.direction = 'up'
+        self._update_full_sequence()
 
     def set(self, arg, val=None):
         """Callback for external control."""
