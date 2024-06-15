@@ -47,11 +47,11 @@ y_mean = int(float(y_mean) / float(len(deltas)))
 
 old_delta = tulip.touch_delta()
 print("New computed delta is [%d, %d]. It was [%d, %d]. " %(x_mean, y_mean, old_delta[0], old_delta[1]))
-print("Set it? [Y/N]")
-r = input()
-if(r=='y' or r=='Y'):
+if(tulip.prompt("Set it?")):
     tulip.touch_delta(x_mean, y_mean)
-    print("Set. Add tulip.touch_delta(%d, %d) to boot.py if you want this to persist." % (x_mean, y_mean))
+    if(tulip.prompt("Set. Add calibration to boot.py?")):
+        tulip.add_to_bootpy("tulip.touch_delta(%d,%d)" % (x_mean, y_mean))
+        print("Added.")
 
 tulip.bg_clear()
 tulip.touch_callback()

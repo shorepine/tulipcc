@@ -211,6 +211,22 @@ class Joy:
     Y = 2048
     B = 4096
 
+# prompt for y/n and return true if Y
+def prompt(prompt):
+    print(prompt + " [Yy/Nn]: ", end='')
+    r = input()
+    if(r=='Y' or r=='y'): 
+        return True
+    return
+
+# Add a string to the users' boot.py -- used by some utlities
+def add_to_bootpy(s):
+    bootpy = open(tulip.root_dir()+"user/boot.py","r").read()
+    bootpy = bootpy + "\n" + s + "\n"
+    w = open(tulip.root_dir()+'user/boot.py','w')
+    w.write(bootpy)
+    w.close()
+
 
 def remap():
     print("Type key or key combo you wish to remap: ",end='')
@@ -220,33 +236,9 @@ def remap():
     code = int(input())
     cmd = "tulip.key_remap(%d,%d,%d)" % (scan, mod, code)
     key_remap(scan, mod, code)
-    print("Remapped. Add \"%s\" to your boot.py? Yy/[Nn]: " % (cmd), end='')
-    answer = input()
-    if(answer == 'y' or answer=='Y'):
-        b = open(root_dir()+"user/boot.py", "a")
-        b.write("\n%s\n" % (cmd))
-        b.close()
+    if(prompt("Remapped. Add \"%s\" to your boot.py?" % (cmd))):
+        add_to_bootpy(cmd)
         print("All done. Reboot Tulip!")
-
-def lines(lines_list):
-    import struct
-    ret = bytes()
-    fixed = []
-    # Swap 1 and 0 if y0 > y1
-    for l in lines_list:
-        (x0,y0,x1,y1,color) = l
-        if(y0 > y1):
-            fixed.append([x1,y1,x0,y0,color])
-        else:
-            fixed.append(l)
-    # Sort list by y0
-    sorted_list = sorted(fixed, key=lambda x: x[1])
-    for l in sorted_list:
-        x0 = l[0] | ((l[4] & 0xF0) << 8)
-        x1 = l[2] | ((l[4] & 0x0F) <<12)
-        ret += struct.pack('HHHH', x0, l[1], x1, l[3])
-    ret += struct.pack('HHHH', 65535, 65535, 65535, 65535)
-    return ret
 
 def version():
     # Returns current tulip version (aka git hash and compiled date)
@@ -387,7 +379,7 @@ def upgrade():
         time.sleep(5)
         machine.reset()
 
-# Return Tulip CC r10 battery voltage in V
+# Return Tulip CC r11 or TDECK battery voltage in V
 # This is read from a voltage divider on VBAT into an ADC.
 # It's not incredibly accurate, but good enough for a "four-bar" battery indicator 
 # Things should turn off around 3.1V 
@@ -550,9 +542,7 @@ def run(module_string):
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
     import urequests
-    #display_stop()
     d = urequests.get(url, headers = headers).save(filename,mode)
-    #display_start()
     return d
 
 def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):

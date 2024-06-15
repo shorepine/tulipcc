@@ -216,14 +216,8 @@ def prompt_username():
         r = input()
         if(len(r)>0 and len(r)<=MAX_USERNAME_SIZE):
             username = r
-            print("Do you want me to save this username to your boot.py? [Y/n]", end='')
-            r = input()
-            if(not (r=='n' or r=='N')):
-                bootpy = open(tulip.root_dir()+"user/boot.py","r").read()
-                bootpy = bootpy + "\nworld.username='%s'\n" %(username)
-                w = open(tulip.root_dir()+'user/boot.py','w')
-                w.write(bootpy)
-                w.close()
+            if(tulip.prompt("Do you want me to save this username to your boot.py?")):
+                tulip.add_to_bootpy("world.username='%s'" % (username))
         else:
             print("Username %s needs to be at least one character and at most %d characters." % (r, MAX_USERNAME_SIZE))
     return username
