@@ -567,7 +567,8 @@ param_map = {
     KNOB_IDS[5]: 'vcf_lfo',
     KNOB_IDS[6]: 'vcf_kbd',
     #
-    KNOB_IDS[7]: 'seq_bpm',
+    # Moved to midi.py
+    #KNOB_IDS[7]: 'seq_bpm',
     #
     SLIDER_IDS[8]: 'vca_level',
     SLIDER_IDS[4]: 'env_a',
@@ -583,10 +584,11 @@ param_map = {
     BUTTON_IDS[6]: 'vca_mode',
     BUTTON_IDS[7]: 'chorus_mode',
     #
-    BUTTON_IDS[9]: 'On',
-    BUTTON_IDS[10]: 'Hold',
-    BUTTON_IDS[11]: 'arp_mode',
-    BUTTON_IDS[12]: 'arp_rng',
+    # Arpeggiator controls - moved to midi.py
+    #BUTTON_IDS[9]: 'On',
+    #BUTTON_IDS[10]: 'Hold',
+    #BUTTON_IDS[11]: 'arp_mode',
+    #BUTTON_IDS[12]: 'arp_rng',
 }
 
 def control_change(control, value):
@@ -610,66 +612,6 @@ def control_change(control, value):
         param_obj.set(int(round(127 * value)))
 
 
-class SetNextCallbackObj:
-    """Object that accepts set(midi_value) and next() methods, to work with control_change's use of globals() to map param names to functions."""
-    def __init__(self, set_method=None, next_method=None):
-        # Don't define the methods unless they are provided.  That way, we can tell if the method is provided with getattr() on the object.
-        if set_method:
-            self.set = set_method
-        if next_method:
-            self.next = next_method
-
-def tempo_update(midi_value):
-    """Called when arpeggiator rate knob turned."""
-    new_bpm = max(1, int(round(240 / 127 * midi_value)))
-    tulip.seq_bpm(new_bpm)
-    if get_voices_app():
-        get_voices_app().settings.set_tempo(new_bpm)
-
-def arp_mode_next():
-    midi.arpeggiator.cycle_direction()
-    if get_voices_app():
-        get_voices_app().settings.update_from_arp(midi.arpeggiator)
-
-def arp_rng_next():
-    midi.arpeggiator.cycle_octaves()
-    if get_voices_app():
-        get_voices_app().settings.update_from_arp(midi.arpeggiator)
-
-seq_bpm = SetNextCallbackObj(set_method=tempo_update)
-arp_mode = SetNextCallbackObj(next_method=arp_mode_next)
-arp_rng = SetNextCallbackObj(next_method=arp_rng_next)
-
-
-class ParamGetSetObj:
-    """Object that supports set(param, val) and get(param) methods."""
-    def __init__(self, get_method=None, set_method=None):
-        # Don't define the methods unless they are provided.  That way, we can tell if the method is provided with getattr() on the object.
-        if get_method:
-            self.get = get_method
-        if set_method:
-            self.set = set_method
-
-    
-def arp_set_fn(param, val):
-    if param == 'On':
-        midi.arpeggiator.set('on', val)
-    elif param == 'Hold':
-        midi.arpeggiator.set('hold', val)
-    if get_voices_app():
-        get_voices_app().settings.update_from_arp(midi.arpeggiator)
-
-
-def arp_get_fn(param):
-    if param == 'On':
-        return midi.arpeggiator.active
-    elif param == 'Hold':
-        return midi.arpeggiator.hold
-
-arp_ctl = ParamGetSetObj(set_method=arp_set_fn, get_method=arp_get_fn)
-
-
-
 def midi_event_cb(m):
     #print('midi_cb:', [int(b) for b in m])
     if m[0] == 0xb0:    # Other control slider.
@@ -683,11 +625,6 @@ def midi_event_cb(m):
 def refresh_with_new_music_map():
     """Called when the active midid channels changes, so we can update menu."""
     channel_selector.update_items(get_active_midi_channels_as_str())
-
-
-def get_voices_app():
-    # Return voices app if it exists
-    return tulip.running_apps.get("voices", None)
 
 
 # called when switching to me. update stuff

@@ -1,6 +1,8 @@
 # voices.py
 # lvgl MIDI patch setting + arpeggiator for Tulip.
 
+import math
+
 import tulip
 import midi
 import lvgl as lv
@@ -98,13 +100,23 @@ class Settings(tulip.UIElement):
         self.mode.select(['up', 'down', 'updown', 'rand'].index(arp.direction))
         self.range.select(arp.octaves - 1)
 
+    @staticmethod
+    def _bpm_to_percent(bpm):
+        """Map 30..240 (log) to 0..100."""
+        return int(round(33.33 * math.log2(bpm / 30)))
+
+    @staticmethod
+    def _percent_to_bpm(percent):
+        """Map 0 to 100 to 30..240 (log)."""
+        return int(round(30 * (2 ** (percent / 33.33))))
+
     def set_tempo(self, new_bpm):
         """Update UI when other mechanism changes bpm."""
-        self.tempo.set_value(int(round(new_bpm / 2.4)), lv.ANIM.OFF)
+        self.tempo.set_value(self._bpm_to_percent(new_bpm), lv.ANIM.OFF)
         self.tempo_label.set_text("%d BPM" % new_bpm)
 
     def tempo_cb(self, e):
-        new_bpm = max(1, self.tempo.get_value() * 2.4)
+        new_bpm = max(1, self._percent_to_bpm(self.tempo.get_value()))
         tulip.seq_bpm(new_bpm)
         self.tempo_label.set_text("%d BPM" % new_bpm)
 

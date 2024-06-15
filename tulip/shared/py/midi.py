@@ -2,11 +2,11 @@
 # always running midi listener
 # based on dan's polyvoice
 
-import amy
-import tulip
 import time
-import random
+
+import amy
 import arpegg
+import tulip
 
 class MidiConfig:
     """System-wide Midi input config."""
@@ -438,6 +438,7 @@ class DrumSynth:
 
 arpeggiator = arpegg.ArpeggiatorSynth(synth=None)
 
+
 def ensure_midi_config():
     global config
     if not config:
@@ -450,6 +451,59 @@ def ensure_midi_config():
         config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
 
 
+# Hooks for Arpeggiator UI control from MIDI input CCs.
+
+def get_voices_app():
+    # Return voices app if it exists, else None.
+    return tulip.running_apps.get("voices", None)
+
+def tempo_update(midi_value):
+    """Called when arpeggiator rate knob turned."""
+    # Log range from 30 to 240 bpm.
+    new_bpm = int(round(30 * (2 ** (midi_value / (127 / 3)))))
+    tulip.seq_bpm(new_bpm)
+    if get_voices_app():
+        get_voices_app().settings.set_tempo(new_bpm)
+
+def arp_on():
+    arpeggiator.set('on', not arpeggiator.active)
+    if get_voices_app():
+        get_voices_app().settings.update_from_arp(arpeggiator)
+
+def arp_hold():
+    arpeggiator.set('hold', not arpeggiator.hold),
+    if get_voices_app():
+        get_voices_app().settings.update_from_arp(arpeggiator)
+
+def arp_mode_next():
+    arpeggiator.cycle_direction()
+    if get_voices_app():
+        get_voices_app().settings.update_from_arp(arpeggiator)
+
+def arp_rng_next():
+    arpeggiator.cycle_octaves()
+    if get_voices_app():
+        get_voices_app().settings.update_from_arp(arpeggiator)
+
+
+# Default connection of MIDI CCs to sequencer/arpeggiator
+# Oxygen49 bindings
+TEMPO_KNOB = 79  # Rightmost knob
+ARP_ON_BTN = 113  # C27, transport button
+ARP_HOLD_BTN = 114
+ARP_MODE_BTN = 115
+ARP_RANGE_BTN = 116
+
+GLOBAL_MIDI_CC_BINDINGS = {
+    TEMPO_KNOB: tempo_update,
+    # Some buttons send 0 on release, ignore that.
+    ARP_ON_BTN: lambda x: arp_on() if x else None,
+    ARP_HOLD_BTN: lambda x: arp_hold() if x else None,
+    ARP_MODE_BTN: lambda x: arp_mode_next() if x else None,
+    ARP_RANGE_BTN: lambda x: arp_rng_next() if x else None,
+}
+
+
 WARNED_MISSING_CHANNELS = set()
 
 
@@ -459,41 +513,48 @@ def midi_event_cb(midi_message):
     ensure_midi_config()
     message = midi_message[0] & 0xF0
     channel = (midi_message[0] & 0x0F) + 1
+    control = midi_message[1]
+    value = midi_message[2]
+    #print("MIDI in:", channel, message, control, value)
+    if message == 0xb0 and control in GLOBAL_MIDI_CC_BINDINGS:
+        # Accept GLOBAL_MIDI_CC_BINDINGS regardless of channel.
+        GLOBAL_MIDI_CC_BINDINGS[control](value)
+        return  # Early exit
     if channel not in config.synth_per_channel:
         if channel not in WARNED_MISSING_CHANNELS:
             print("Warning: No synth configured for MIDI channel", channel)
             WARNED_MISSING_CHANNELS.add(channel)
-    else:
-        synth = config.synth_per_channel[channel]
-        # Fetch the arpeggiator for this channel, or use synth if there isn't one.
-        note_receiver = config.arpeggiator_per_channel.get(channel, synth)
-        if message == 0x90:  # Note on.
-            midinote = midi_message[1]
-            midivel = midi_message[2]
-            vel = midivel / 127.
-            note_receiver.note_on(midinote, vel)
-        elif message == 0x80:  # Note off.
-            midinote = midi_message[1]
-            note_receiver.note_off(midinote)
-        elif message == 0xc0:  # Program change
-            synth.program_change(midi_message[1])
-        elif message == 0xb0 and midi_message[1] == 0x40:
-            synth.sustain(midi_message[2])
-    if message == 0xe0:  # Pitch bend. m[2] is MSB, m[1] is LSB. 14 bits 
+        return  # Early exit
+    # We have a populated channel.
+    synth = config.synth_per_channel[channel]
+    # Fetch the arpeggiator for this channel, or use synth if there isn't one.
+    note_receiver = config.arpeggiator_per_channel.get(channel, synth)
+    midinote = control
+    if message == 0x90:  # Note on.
+        vel = value / 127.
+        note_receiver.note_on(midinote, vel)
+    elif message == 0x80:  # Note off.
+        note_receiver.note_off(midinote)
+    elif message == 0xc0:  # Program change
+        synth.program_change(control)
+    elif message == 0xb0 and control == 0x40:
+        # Sustain pedal.
+        synth.sustain(value)
+    elif message == 0xe0:  # Pitch bend goes direct to AMY.
+        # m[2] is MSB, m[1] is LSB. 14 bits
         pb_value = ((midi_message[2] << 7) | (midi_message[1])) - 8192 # -8192-8192, where 0 is nothing
         amy_value = float(pb_value)/(8192*6.0) # convert to -2 / +2 semitones
         amy.send(pitch_bend=amy_value)
 
 
-
-midi_callbacks = set()
+MIDI_CALLBACKS = set()
 
 # Add a midi callback and return a slot number
 def add_callback(fn):
-    midi_callbacks.add(fn)
+    MIDI_CALLBACKS.add(fn)
 
 def remove_callback(fn):
-    midi_callbacks.remove(fn)
+    MIDI_CALLBACKS.remove(fn)
 
 def start_default_callback():
     add_callback(midi_event_cb)
@@ -507,7 +568,7 @@ def c_fired_midi_event(x):
     m = tulip.midi_in() 
     while m is not None and len(m) > 0:
         # call the other callbacks
-        for c in midi_callbacks:
+        for c in MIDI_CALLBACKS:
             c(m)
 
         # Are there more events waiting?
