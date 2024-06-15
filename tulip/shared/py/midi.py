@@ -471,15 +471,14 @@ def midi_event_cb(midi_message):
 
 
 
-midi_callbacks = {}
+midi_callbacks = set()
 
 # Add a midi callback and return a slot number
 def add_callback(fn):
-    midi_callbacks[fn] = True
+    midi_callbacks.add(fn)
 
 def remove_callback(fn):
-    if fn in midi_callbacks:
-        del midi_callbacks[fn]
+    midi_callbacks.remvoe(fn)
 
 def start_default_callback():
     add_callback(midi_event_cb)
@@ -488,13 +487,12 @@ def stop_default_callback():
     remove_callback(midi_event_cb)
 
 
-
 # The midi callback sent over from C, fires all the other ones if set.
 def c_fired_midi_event(x):
     m = tulip.midi_in() 
     while m is not None and len(m) > 0:
         # call the other callbacks
-        for c in midi_callbacks.keys():
+        for c in midi_callbacks:
             c(m)
 
         # Are there more events waiting?
