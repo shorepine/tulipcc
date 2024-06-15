@@ -30,7 +30,7 @@ void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up);
 uint8_t convert_utf8_to_cp437(uint8_t c, uint32_t *esc);
 
 
-#define MAX_KEY_REMAPS 16
+#define MAX_KEY_REMAPS 64
 
 typedef struct key_remap {
     uint8_t scan;
