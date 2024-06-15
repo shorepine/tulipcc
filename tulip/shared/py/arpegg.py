@@ -5,8 +5,6 @@ import random
 import tulip
 
 
-
-
 #tulip.seq_add_callback(midi_step, int(tulip.seq_ppq()/2))
 
 
@@ -30,9 +28,8 @@ class ArpeggiatorSynth:
     # Notes at or above the split_note are always passed through live, not sequenced.
     split_note = 128    # Split is off the end of the keyboard, i.e., inactive.
     
-    def __init__(self, synth, channel=0):
+    def __init__(self, synth):
         self.synth = synth
-        self.channel = channel    # This is just bookkeeping for my owner, not used.
         self.current_active_notes = set()
         self.arpeggiate_base_notes = set()
         self.full_sequence = []
@@ -96,7 +93,6 @@ class ArpeggiatorSynth:
         if self.full_sequence and not self.running:
             self.run()
 
-
     def next_note(self, time=None):
         if self.current_note:
             self.synth.note_off(self.current_note)
@@ -110,24 +106,6 @@ class ArpeggiatorSynth:
             self.synth.note_on(self.current_note, self.velocity, time=time)
         else:
             self.stop()
-
-    def control_change(self, control, value):
-        return self.synth.control_change(control, value)
-
-    def program_change(self, patch_number):
-        return self.synth.program_change(patch_number)
-
-    @property
-    def amy_voices(self):
-        return self.synth.amy_voices
-
-    @property
-    def num_voices(self):
-        return self.synth.num_voices
-
-    @property
-    def patch_number(self):
-        return self.synth.patch_number
 
     def cycle_octaves(self):
         self.octaves = 1 + (self.octaves % 3)
@@ -146,9 +124,6 @@ class ArpeggiatorSynth:
 
     def set(self, arg, val=None):
         """Callback for external control."""
-        #print("arp set", arg, val)
-        #if self.active:
-        #    return self.synth.set(arg, val)
         if arg == 'on':
             self.active = val
             # Reset hold state when on/off changes.
@@ -162,16 +137,3 @@ class ArpeggiatorSynth:
         elif arg == 'direction':
             self.direction = val
         self._update_full_sequence()
-
-    # These should not be here.  Need to move arpeggiator.
-    def _get_new_voices(self, num_voices):
-        return self.synth._get_new_voices(num_voices)
-
-    def release_voices(self):
-        return self.synth.release_voices()
-
-    def get_patch_state(self):
-        return self.synth.get_patch_state()
-
-    def set_patch_state(self, state):
-        return self.synth.set_patch_state(state)

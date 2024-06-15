@@ -16,11 +16,11 @@ class MidiConfig:
         for channel, polyphony in voices_per_channel.items():
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
             self.add_synth(channel, patch, polyphony)
+        self.arpeggiator_per_channel = {}
 
     def add_synth(self, channel, patch, polyphony):
         if channel in self.synth_per_channel:
             # Old Synth allocated - Expicitly return the amy_voices to the pool.
-            release_arpeggiator(channel)
             self.synth_per_channel[channel].release_voices()
             del self.synth_per_channel[channel]
         if channel == 10:
@@ -30,6 +30,16 @@ class MidiConfig:
             if patch is not None:
                 synth.program_change(patch)
         self.synth_per_channel[channel] = synth
+
+    def insert_arpeggiator(self, channel, arpeggiator):
+        if channel in self.synth_per_channel:
+            self.arpeggiator_per_channel[channel] = arpeggiator
+            arpeggiator.synth = self.synth_per_channel[channel]
+
+    def remove_arpeggiator(self, channel):
+        if channel in self.arpeggiator_per_channel:
+            self.arpeggiator_per_channel.synth = None
+            del self.arpeggiator_per_channel[channel]
 
     def program_change(self, channel, patch):
         # update the map
@@ -426,6 +436,8 @@ class DrumSynth:
         pass
 
 
+arpeggiator = arpegg.ArpeggiatorSynth(synth=None)
+
 def ensure_midi_config():
     global config
     if not config:
@@ -435,6 +447,8 @@ def ensure_midi_config():
             voices_per_channel={1: 6, 10: 10},
             patch_per_channel={1: 0},
         )
+        config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
+
 
 WARNED_MISSING_CHANNELS = set()
 
@@ -445,21 +459,22 @@ def midi_event_cb(midi_message):
     ensure_midi_config()
     message = midi_message[0] & 0xF0
     channel = (midi_message[0] & 0x0F) + 1
-    insert_arpeggiator(channel)
     if channel not in config.synth_per_channel:
         if channel not in WARNED_MISSING_CHANNELS:
             print("Warning: No synth configured for MIDI channel", channel)
             WARNED_MISSING_CHANNELS.add(channel)
     else:
         synth = config.synth_per_channel[channel]
+        # Fetch the arpeggiator for this channel, or use synth if there isn't one.
+        note_receiver = config.arpeggiator_per_channel.get(channel, synth)
         if message == 0x90:  # Note on.
             midinote = midi_message[1]
             midivel = midi_message[2]
             vel = midivel / 127.
-            synth.note_on(midinote, vel)
+            note_receiver.note_on(midinote, vel)
         elif message == 0x80:  # Note off.
             midinote = midi_message[1]
-            synth.note_off(midinote)
+            note_receiver.note_off(midinote)
         elif message == 0xc0:  # Program change
             synth.program_change(midi_message[1])
         elif message == 0xb0 and midi_message[1] == 0x40:
@@ -518,26 +533,6 @@ def music_map(channel, patch_number=None, voice_count=None):
         juno6_app.refresh_with_new_music_map()
     except:
         pass
-
-
-##### ARPEGGIATOR CURRENTLY NOT ENABLED (pending proper grafting onto back end of midi_in) #########
-arpeggiator = arpegg.ArpeggiatorSynth(synth=None, channel=0)
-
-def insert_arpeggiator(channel):
-    if arpeggiator.channel != channel and channel in config.synth_per_channel:
-        release_arpeggiator()
-        arpeggiator.synth = config.synth_per_channel[channel]
-        arpeggiator.channel = channel
-        config.synth_per_channel[channel] = arpeggiator
-
-def release_arpeggiator(channel=None):
-    """De-insert arpeggiator in front of current channel's synth, e.g. before changing synth."""
-    # If channel is provided, only release the arpeggiator if it's on this channel.
-    if channel is None or arpeggiator.channel == channel:
-        if arpeggiator.channel:
-            config.synth_per_channel[arpeggiator.channel] = arpeggiator.synth
-        arpeggiator.channel = 0
-        
 
 
 def deferred_midi_config(t):
