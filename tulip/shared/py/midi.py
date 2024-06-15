@@ -313,9 +313,9 @@ class Synth:
     def sustain(self, state):
         """Turn sustain on/off."""
         if state:
-            self.sustained = True
+            self.sustaining = True
         else:
-            self.sustained = False
+            self.sustaining = False
             for midinote in self.sustained_notes:
                 self.note_off(midinote)
             self.sustained_notes = set()
