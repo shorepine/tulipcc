@@ -619,10 +619,26 @@ class SetNextCallbackObj:
         if next_method:
             self.next = next_method
 
+def tempo_update(midi_value):
+    """Called when arpeggiator rate knob turned."""
+    new_bpm = max(1, int(round(240 / 127 * midi_value)))
+    tulip.seq_bpm(new_bpm)
+    if get_voices_app():
+        get_voices_app().settings.set_tempo(new_bpm)
 
-seq_bpm = SetNextCallbackObj(set_method=lambda v: tulip.seq_bpm(2.4 * v))
-arp_mode = SetNextCallbackObj(next_method=lambda: midi.arpeggiator.cycle_direction())
-arp_rng = SetNextCallbackObj(next_method=lambda: midi.arpeggiator.cycle_octaves())
+def arp_mode_next():
+    midi.arpeggiator.cycle_direction()
+    if get_voices_app():
+        get_voices_app().settings.update_from_arp(midi.arpeggiator)
+
+def arp_rng_next():
+    midi.arpeggiator.cycle_octaves()
+    if get_voices_app():
+        get_voices_app().settings.update_from_arp(midi.arpeggiator)
+
+seq_bpm = SetNextCallbackObj(set_method=tempo_update)
+arp_mode = SetNextCallbackObj(next_method=arp_mode_next)
+arp_rng = SetNextCallbackObj(next_method=arp_rng_next)
 
 
 class ParamGetSetObj:
@@ -640,6 +656,9 @@ def arp_set_fn(param, val):
         midi.arpeggiator.set('on', val)
     elif param == 'Hold':
         midi.arpeggiator.set('hold', val)
+    if get_voices_app():
+        get_voices_app().settings.update_from_arp(midi.arpeggiator)
+
 
 def arp_get_fn(param):
     if param == 'On':
@@ -660,16 +679,24 @@ def midi_event_cb(m):
         if m[2] == 0x7f:
             control_change(m[1], m[2])
 
+
 def refresh_with_new_music_map():
     """Called when the active midid channels changes, so we can update menu."""
     channel_selector.update_items(get_active_midi_channels_as_str())
-            
+
+
+def get_voices_app():
+    # Return voices app if it exists
+    return tulip.running_apps.get("voices", None)
+
+
 # called when switching to me. update stuff
 def activate(screen):
     # Make sure the channel selector is in sync with current system state.
     channel_selector.update_items(get_active_midi_channels_as_str())
     # Make sure patch is in sync with current channel.
     setup_from_midi_chan_str(str(midi_channel))
+
 
 def deactivate(screen):
     state = current_juno().to_sysex()

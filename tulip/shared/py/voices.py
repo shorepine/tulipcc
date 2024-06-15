@@ -51,8 +51,6 @@ class Settings(tulip.UIElement):
         self.tempo.set_style_bg_color(tulip.pal_to_lv(129), lv.PART.KNOB)
         self.tempo.align_to(self.rect, lv.ALIGN.TOP_LEFT,0,0)
         self.tempo_label = lv.label(self.rect)
-        self.tempo.set_value(int(tulip.seq_bpm() / 2.4),lv.ANIM.OFF)
-        self.tempo_label.set_text("%d BPM" % (tulip.seq_bpm()))
         self.tempo_label.align_to(self.tempo, lv.ALIGN.OUT_RIGHT_MID,10,0)
         self.tempo.add_event_cb(self.tempo_cb, lv.EVENT.VALUE_CHANGED, None)
 
@@ -91,7 +89,7 @@ class Settings(tulip.UIElement):
         if arp.active and not arpegg_state:
             self.arpegg.add_state(lv.STATE.CHECKED)
         elif not arp.active and arpegg_state:
-            self.arpegg.remove_state(lv.STATE_CHECKED)
+            self.arpegg.remove_state(lv.STATE.CHECKED)
         hold_state = self.hold.get_state() & lv.STATE.CHECKED
         if arp.hold and not hold_state:
             self.hold.add_state(lv.STATE.CHECKED)
@@ -100,19 +98,23 @@ class Settings(tulip.UIElement):
         self.mode.select(['up', 'down', 'updown', 'rand'].index(arp.direction))
         self.range.select(arp.octaves - 1)
 
-    def tempo_cb(self,e):
-        new_bpm = self.tempo.get_value()*2.4
-        if(new_bpm < 1.0): new_bpm = 1
-        tulip.seq_bpm(new_bpm)
-        self.tempo_label.set_text("%d BPM" % (tulip.seq_bpm()))
+    def set_tempo(self, new_bpm):
+        """Update UI when other mechanism changes bpm."""
+        self.tempo.set_value(int(round(new_bpm / 2.4)), lv.ANIM.OFF)
+        self.tempo_label.set_text("%d BPM" % new_bpm)
 
-    def hold_cb(self,e):
+    def tempo_cb(self, e):
+        new_bpm = max(1, self.tempo.get_value() * 2.4)
+        tulip.seq_bpm(new_bpm)
+        self.tempo_label.set_text("%d BPM" % new_bpm)
+
+    def hold_cb(self, e):
         if(self.hold.get_state()==3): 
             midi.arpeggiator.set('hold', True)
         else:
             midi.arpeggiator.set('hold', False)
 
-    def arpegg_cb(self,e):
+    def arpegg_cb(self, e):
         if(self.arpegg.get_state()==3):
             midi.arpeggiator.set('on', True)
         else:
@@ -316,6 +318,7 @@ def run(screen):
     
     app.settings = Settings()
     app.settings.update_from_arp(midi.arpeggiator)
+    app.settings.set_tempo(tulip.seq_bpm())
 
     app.add(app.settings, pad_x=0)
 

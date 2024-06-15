@@ -478,7 +478,7 @@ def add_callback(fn):
     midi_callbacks.add(fn)
 
 def remove_callback(fn):
-    midi_callbacks.remvoe(fn)
+    midi_callbacks.remove(fn)
 
 def start_default_callback():
     add_callback(midi_event_cb)
