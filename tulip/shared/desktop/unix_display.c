@@ -8,6 +8,7 @@
 SDL_Window *window;
 SDL_Surface *window_surface;
 SDL_Renderer *fixed_fps_renderer;
+SDL_Renderer *default_renderer;
 SDL_GameController *gp;
 SDL_Rect viewport;
 SDL_Rect tulip_rect;
@@ -177,14 +178,18 @@ int unix_display_draw() {
     uint8_t *pixels;
     int pitch;
     SDL_LockTexture(framebuffer, NULL, (void**)&pixels, &pitch);
-
-    // bounce the entire screen at once to the 332 color framebuffer
+    // bounce the entire screen at once to the ARGB8888 color framebuffer
     for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
         if(y+FONT_HEIGHT <= V_RES) {
             display_bounce_empty(frame_bb, y*H_RES, H_RES*FONT_HEIGHT, NULL);
             for (uint16_t row=0;row<FONT_HEIGHT;row++) {
-                for(uint16_t x=0;x<H_RES;x++) {
-                    pixels[((y+row)*pitch)+x] = frame_bb[H_RES*row + x];
+                for(uint16_t x=0;x<H_RES*4;x=x+4) {
+                    uint8_t r,g,b;
+                    unpack_rgb_332_repeat(frame_bb[H_RES*row + (x/4)], &r, &g, &b);
+                    pixels[((y+row)*pitch)+x+0] = b;
+                    pixels[((y+row)*pitch)+x+1] = g;
+                    pixels[((y+row)*pitch)+x+2] = r;
+                    pixels[((y+row)*pitch)+x+3] = 0;
                 }
             }
         }
@@ -192,11 +197,14 @@ int unix_display_draw() {
 
 
     // Copy the framebuffer (and stretch if needed into the renderer)
-    SDL_RenderCopy(fixed_fps_renderer, framebuffer, &tulip_rect, &viewport);
+    //SDL_RenderCopy(fixed_fps_renderer, framebuffer, &tulip_rect, &viewport);
+    SDL_RenderCopy(default_renderer, framebuffer, &tulip_rect, &viewport);
 
     SDL_UnlockTexture(framebuffer);
 
-    SDL_RenderPresent(fixed_fps_renderer);
+    //SDL_RenderPresent(fixed_fps_renderer);
+    SDL_RenderPresent(default_renderer);
+
 
     // Clean up and show
     SDL_UpdateWindowSurface(window);
@@ -228,13 +236,28 @@ void init_window() {
     if (window == NULL) {
         fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
     } else {
-        window_surface = SDL_GetWindowSurface(window);
-        fixed_fps_renderer = SDL_CreateSoftwareRenderer( window_surface);
-        framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
+        //window_surface = SDL_GetWindowSurface(window);
+        default_renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE | SDL_RENDERER_PRESENTVSYNC);
+
+        SDL_RendererInfo info;
+        SDL_GetRendererInfo( default_renderer, &info );
+        for( Uint32 i = 0; i < info.num_texture_formats; i++ )
+            fprintf(stderr, "%s\n", SDL_GetPixelFormatName( info.texture_formats[i] ) );
+
+        //fixed_fps_renderer = SDL_CreateSoftwareRenderer( window_surface);
+        //framebuffer= SDL_CreateTexture(fixed_fps_renderer,SDL_PIXELFORMAT_RGB332, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
+        framebuffer= SDL_CreateTexture(default_renderer,SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
+        int rw, rh;
+        SDL_GetRendererOutputSize(default_renderer, &rw, &rh);
+        float widthScale = (float)rw / (float) tulip_rect.w;
+        float heightScale = (float)rh / (float) tulip_rect.h;
+
+        SDL_RenderSetScale(default_renderer, widthScale, heightScale);
     }
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
+    uint8_t r,g,b;
 
 }
 
@@ -243,7 +266,8 @@ void init_window() {
 void destroy_window() {
     free_caps(frame_bb);
     SDL_DestroyTexture(framebuffer);
-    SDL_DestroyRenderer(fixed_fps_renderer);
+    //SDL_DestroyRenderer(fixed_fps_renderer);
+    SDL_DestroyRenderer(default_renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();    
     sdl_ready = 0;

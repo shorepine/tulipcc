@@ -80,6 +80,8 @@ void display_init();
 void display_brightness(uint8_t amount);
 
 void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
+void unpack_rgb_332_wide(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) ;
+void unpack_rgb_332_repeat(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b);
 bool display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes, void *user_ctx);

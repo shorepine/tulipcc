@@ -112,6 +112,16 @@ void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *b = (px0 << 6) & 0xc0;
 }
 
+
+// RRRGGGBB -> 
+void unpack_rgb_332_repeat(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
+    *r=0; *g=0; *b=0;
+    *r = (px0 & 0xe0) | ((px0 & 0xe0)>>3) | ((px0&0xc0)>>6);
+    *g = ((px0 & 0x1c) << 3) | (px0 & 0x1c) | ((px0&0x18) >> 3); 
+    *b = (px0 & 0x03) | ((px0 & 0x03) << 2) | ((px0 & 0x03) << 4) | ((px0 & 0x03) << 6);
+}
+
+
 // RRRGGGBB , but expand any non-zero colors with 1111s (won't matter for display as there's no wires there)
 void unpack_rgb_332_wide(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *r = (px0 & 0xe0);
@@ -125,17 +135,17 @@ void unpack_rgb_332_wide(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
 
 // Given a single uint (0-255 for RGB332, 0-65535 for RGB565), return r, g, b
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b) {
-    unpack_rgb_332(pal_idx & 0xff, r, g, b);
+    unpack_rgb_332_repeat(pal_idx & 0xff, r, g, b);
 }
 
 // Given a single uint (0-255 for RGB332, 0-65535 for RGB565), return r, g, b
 void unpack_pal_idx_wide(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b) {
-    unpack_rgb_332_wide(pal_idx & 0xff, r, g, b);
+    unpack_rgb_332_repeat(pal_idx & 0xff, r, g, b);
 }
 
 // Given an ansi pal index (0-255 right now), return r g b
 void unpack_ansi_idx(uint8_t ansi_idx, uint8_t *r, uint8_t *g, uint8_t *b) {
-    unpack_rgb_332(ansi_idx, r, g, b);
+    unpack_rgb_332_repeat(ansi_idx, r, g, b);
 }
 
 // Return a packed 8-bit number for RRRGGGBB
@@ -530,7 +540,6 @@ void display_screenshot(char * screenshot_fn) {
     uint32_t c = 0;
     uint8_t r,g,b,a;
 
-    // Generate the pal -- this generates a slightly darker png than "real" tulip. i don't yet know why.
     LodePNGState state;
     lodepng_state_init(&state);
     a = 255; // todo, we could use BG alpha colors? but it doesn't matter
@@ -590,7 +599,7 @@ void display_set_bg_pixel(uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t 
 void display_get_bg_pixel(uint16_t x, uint16_t y, uint8_t *r, uint8_t *g, uint8_t *b) {
     if(check_dim_xy(x,y)) {
         uint8_t px0 = bg[y*(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL + x*BYTES_PER_PIXEL + 0];
-        unpack_rgb_332(px0, r, g, b);
+        unpack_rgb_332_repeat(px0, r, g, b);
     } else {
         *r = 0; *g =0; *b = 0;
     }
