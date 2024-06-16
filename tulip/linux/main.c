@@ -907,6 +907,12 @@ display_jump:
     while(c>=0) {
         // unix_display_draw returns -1 if the window was quit
         c = unix_display_draw();
+        if(c>=0) {
+            // Figure out how long to sleep. ticks has the amount of time already spent for this frame
+            // so let's fill in the rest with a usleep.
+            int sleep_ms_for_frame = (int) ((1000.0/TARGET_DESKTOP_FPS) - ticks);
+            if(sleep_ms_for_frame > 0) usleep(1000*sleep_ms_for_frame);
+        }
     }
     if(c==-2) {
         // signal to restart display after a timing change
