@@ -36,7 +36,6 @@ tulip.screenshot("screenshot.png")
 tulip.screenshot()
 
 # Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
-# Note that Python code is bound to one core, so Python-only usage tops out at 50%.
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 
 ms = tulip.ticks_ms() # returns the milliseconds since boot, aka Arduino millis() 
@@ -207,6 +206,7 @@ See some examples of more complex UIs using `UIScreen`:
  * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py)
  * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/voices.py)
 
+If you want to edit these programs on Tulip, find editable versions in `/sys/ex/my_X.py`, like `/sys/ex/my_drums.py`. 
 
 You can see running multitasking apps with `tulip.running_apps`, which is a dict by app name. This lets you set or inspect parameters of running apps. `tulip.repl_screen` always returns the REPL UIScreen. You can programtically switch apps with e.g. `tulip.app('drums')`. The current running UIScreen is `tulip.current_uiscreen()`. 
 
@@ -327,6 +327,18 @@ tulip.bg_touch_callback() # turns off
 tulip.bg_touch_del(12) # removes
 ```
 
+## I2C / Grove / Mabee
+
+Tulip hardware has a I2C port on the side for connecting a variety of input or output devices. We currently support the following:
+
+ - [ADC (up to 12V)](https://shop.m5stack.com/products/adc-i2c-unit-v1-1-ads1100?variant=44321440399617) - use `import m5adc; m5adc.get()`
+ - [DAC-2 (Two channel, up to 10V)](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413) - use `import m5dac2; m5dac2.set(volts, channel)` -- see the CV control section in the sound documentation as well 
+ - [DAC (single channel, up to 3.3V)](https://shop.m5stack.com/products/dac-unit) - use `import m5dac; m5dac.set(volts)`
+ - [CardKB keyboard](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a) - use `import m5cardkb`, which will automatically let your cardKB be a keyboard in Tulip 
+ - [8-angle knobs](https://shop.m5stack.com/products/8-angle-unit-with-potentiometer) - use `import m58angle; m58angle.get(ch)`
+ - [Digiclock 7-segment clock](https://shop.m5stack.com/products/red-7-segment-digit-clock-unit) - use `import m5digiclock; m5digiclock.set('ABCD')`
+ - [Joystick](https://shop.m5stack.com/products/i2c-joystick-unit-v1-1-mega8a) - use `import m5joy; m5joy.get()`
+ - [Extend GPIO](https://shop.m5stack.com/products/official-extend-serial-i-o-unit) - use `import m5extend; m5extend.write_pin(pin, val); m5extend.read_pin(pin)`
 
 ## Network
 
@@ -424,7 +436,7 @@ To send signals over CV on Tulip CC (hardware only):
 ```python
 amy.send(osc=100, wave=amy.SAW_DOWN, freq=2.5, vel=1, external_channel=1)
 # external_channel = 0 - no CV output, will route to audio
-# external_channel = 1 - 1st channel of the first connected GP8413
+# external_channel = 1 - 1st channel of the first connected GP8413 / m5dac2
 # external_channel = 2 - 2nd channel of the first connected GP8413
 # external_channel = 3 - 1st channel of the second connected GP8413
 # external_channel = 4 - 2st channel of the second connected GP8413
@@ -478,7 +490,7 @@ You can set up your own MIDI callbacks in your own programs. You can call `midi.
 
 On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
 
-You can also send MIDI messages "locally", e.g. to a running program that is expecting hardware MIDI input, via `tulip.midi_local()`
+You can also send MIDI messages "locally", e.g. to a running Tulip program that is expecting hardware MIDI input, via `tulip.midi_local()`
 
 ```python
 tulip.music_map(1,129) # change MIDI channel 1 to patch 129.
@@ -510,7 +522,7 @@ The Tulip GPU consists of 3 subsystems, in drawing order:
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
  * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites.
 
-The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 28Mhz, which is 30FPS. This is a great balance of speed and stability for text -- the editor and REPL. 
+The Tulip GPU runs at a fixed FPS depending on the resolution and display clock. You can change the display clock but will limit the amount of room for sprites and text tiles per line. The default for Tulip CC is 28Mhz, which is 34FPS. This is a great balance of speed and stability for text -- the editor and REPL. 
 
 You can set a python callback for the frame done interrupt, for use in games or animations. 
 
