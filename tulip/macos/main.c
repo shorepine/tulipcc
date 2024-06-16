@@ -940,9 +940,14 @@ int main(int argc, char **argv) {
     // Schedule a "turning on" sound
 
 
-display_jump: 
+display_jump:
+
     while(unix_display_flag>=0) {
-        unix_display_draw();
+        int ticks = unix_display_draw();
+        // Figure out how long to sleep. ticks has the amount of time already spent for this frame
+        // so let's fill in the rest with a usleep.
+        int sleep_ms_for_frame = (int) ((1000.0/TARGET_DESKTOP_FPS) - ticks);
+        if(sleep_ms_for_frame > 0) usleep(1000*sleep_ms_for_frame);
     }
     if(unix_display_flag==-2) {
         fprintf(stderr,"restarting display\n");

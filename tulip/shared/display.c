@@ -1046,7 +1046,7 @@ void display_init(void) {
     display_reset_touch();
 
     vsync_count = 1;
-    reported_fps = 30;
+    reported_fps = TARGET_DESKTOP_FPS;
     reported_gpu_usage = 0;
     touch_held = 0;
 

@@ -42,6 +42,7 @@ static const uint8_t ansi_pal[256] = {
 182, 219, 219, 219, 255, 255
 };
 
+#define TARGET_DESKTOP_FPS 28.0
 
 extern int16_t last_touch_x[3];
 extern int16_t last_touch_y[3];

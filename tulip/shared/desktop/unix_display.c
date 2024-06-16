@@ -25,6 +25,7 @@ uint8_t sdl_ready = 0;
 SDL_Rect button_bar;
 SDL_Rect btn_ctrl, btn_tab, btn_esc, btn_l, btn_r, btn_u, btn_d;
 
+
 void show_frame(void*d);
 int unix_display_draw();
 void check_key();
@@ -119,7 +120,7 @@ uint32_t keycode_to_ctrl_key(SDL_Keycode sdl_key)
 
 void unix_display_set_clock(uint8_t mhz) {  
     PIXEL_CLOCK_MHZ = mhz;
-    reported_fps = 30;
+    reported_fps = TARGET_DESKTOP_FPS;
 }
 
 
@@ -213,7 +214,7 @@ int unix_display_draw() {
         }
 
     }    
-    return 1;
+    return get_ticks_ms() - frame_ticks;
 }
 
 void show_frame(void*d) {
