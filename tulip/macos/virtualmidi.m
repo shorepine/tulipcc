@@ -11,6 +11,7 @@
 #import <Foundation/Foundation.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <CoreMidi/CoreMidi.h>
+#include <mach/mach_time.h>
 #undef unichar
 #import "midi.h"
 
@@ -26,13 +27,21 @@ static void NotifyProc(const MIDINotification *message, void *refCon)
 
 void midi_out(uint8_t * bytes, uint16_t len) {
     if (@available(macOS 11, *))  {
-        fprintf(stderr, "midi out len %d\n",len);
-        // do something with out_port
-        
+        MIDIPacketList pl;
+        MIDIPacket *p;
+        p = MIDIPacketListInit(&pl);
+        p = MIDIPacketListAdd(&pl, 1024, p, 0, len, bytes);
+        for (NSUInteger endpointRefIndex = 0; endpointRefIndex < MIDIGetNumberOfDestinations(); ++endpointRefIndex) {
+            MIDIObjectRef destinationEndpoint = MIDIGetDestination(endpointRefIndex);
+            fprintf(stderr, "sending message\n");
+            MIDISend(out_port, destinationEndpoint, &pl);
+        }
     } else {
         fprintf(stderr, "Can only run MIDI on macOS Big Sur (11.0) or later, sorry\n");   
     }
+
 }
+
 
 
 void* run_midi(void*argp){
