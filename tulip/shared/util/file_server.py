@@ -19,18 +19,6 @@ except ImportError:
     import SimpleHTTPServer as server
 
 class HTTPRequestHandler(server.SimpleHTTPRequestHandler):
-    """Extend SimpleHTTPRequestHandler to handle PUT requests"""
-    def do_PUTX(self):
-        """Save a file following a HTTP PUT request"""
-        filename = self.headers['Tulip-Filename']
-        file_length = int(self.headers['Content-Length'])
-        with open(filename, 'wb') as output_file:
-            output_file.write(self.rfile.read(file_length))
-        self.send_response(201, 'Created')
-        self.end_headers()
-        #reply_body = 'Saved "%s"\n' % filename
-        #self.wfile.write(reply_body.encode('utf-8'))
-
     def do_PUT(self):
         self.send_response(200)
         self.end_headers()
