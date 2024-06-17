@@ -103,7 +103,7 @@ Your next stop: [check out the API for making your own music, games, graphics an
 
 [If you want to work on Tulip itself, check out our guide to building and flashing the Tulip firmware.](tulip_flashing.md)
 
-If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware. It's also an easy way to transfer files from your computer to a Tulip, by using Tulip World on Desktop to upload and then downloading on Tulip hardware.
+If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware. 
 
 [![shore pine sound systems discord](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
