@@ -559,6 +559,21 @@ def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
     c = urequests.get(url, headers = headers)
     return c
 
+def url_put(url, filename, headers={"User-Agent":"TulipCC/4.0"}):
+    import urequests, os
+    filesize = os.stat(filename)[6]
+    f = open(filename, 'rb')
+    put_response = urequests.put(
+        url,
+        headers={
+            "User-Agent": headers['User-Agent'],
+            "Tulip-Filename": filename,
+            "Content-Type": "application/octet-stream",
+        },
+        data=f,
+    )
+    f.close()
+
 def screenshot(filename=None):
     from upysh import rm
     if(filename is not None):

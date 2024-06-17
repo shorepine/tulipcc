@@ -109,6 +109,17 @@ If you find yourself wanting to write Tulip code on a "real" computer, check out
 Have fun! See you on Tulip World!
 
 
+## How-tos
+
+### Transfer files between Tulip and your computer
+
+There are two ways of getting files between Tulip hardware and your computer:
+
+ - **Use Tulip World and Tulip Desktop:** On [Tulip Desktop](tulip_desktop.md) your files are in your home folder + `tulipcc/user`. (On the Mac, under ~/Documents/tulipcc/user.)  You can edit and add files there directly and use `world.upload(folder)` or `world.upload(filename)` to place files on Tulip World from either Deskop or hardware Tulip. You can retrieve these files with `world.download(folder)` or `world.download(filename)`. The only downside to this method is that your files are publicly available to anyone else on Tulip World, so please don't share private information using Tulip World. 
+
+ - **Use our file transfer script**: On your computer, run the Python script [file_server.py](../tulip/shared/util/file_server.py) like `$ python file_server.py`. Wherever you run that script, all files in the folder you ran it from will be available to your Tulip. You can transfer any files **from** a computer to Tulip with `tulip.url_save(url, filename)` like: `tulip.url_save('http://192.168.1.23:8000/file.py`, 'file.py').  To transfer from a Tulip **to** a computer, use `tulip.url_put(url, file)` like `tulip.url_put('http://192.168.1.23:8000', 'file.py')` and it will appear in that folder on your computer. Use your computers' network manager to find out the IP address (the `192.168.1.23` bit.) This method is private, you are only transferring data over the local network. Maybe someone can contribute a more full featured Tulip transfer system one day!
+
+
 
 ## Known problems
 
