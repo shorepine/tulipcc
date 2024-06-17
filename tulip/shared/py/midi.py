@@ -500,13 +500,16 @@ KNOB_IDS = [75, 76, 92, 95, 10, 77, 78, 79]
 BUTTON_IDS = [96, 97, 98, 99, 100, 101, 102, 103, 104,   113, 114, 115, 116, 117, 118]
 
 try:
+    import json
     midi_cc_file = tulip.root_dir() + 'user/midi_cc_file.json'
     data = json.loads(open(midi_cc_file, 'rt').read())
     SLIDER_IDS = data['sliders']
     KNOB_IDS = data['knobs']
     BUTTON_IDS = data['buttons']
-    print('MIDI CC mappings read from', midi_cc_file)
-except:
+    #print('MIDI CC mappings read from', midi_cc_file)
+except Exception as e:
+    #import sys
+    #sys.print_exception(e)
     pass
 
 PITCH_WHEEL = 0   # Pitch wheel is a special case, hard-coded in juno.py.

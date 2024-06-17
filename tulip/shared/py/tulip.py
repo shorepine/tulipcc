@@ -6,6 +6,15 @@ from _tulip import *
 import world
 from upysh import cd, pwd
 import amy
+
+def root_dir():
+    try:
+        import uos
+        return uos.getenv("HOME")+"/Documents/tulipcc/"
+    except:
+        return "/"
+
+
 import midi
 
 from midi import music_map
