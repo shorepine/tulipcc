@@ -536,59 +536,43 @@ def update_patch_for_channel(channel, patch_num):
     if channel == midi_channel:
         patch_selector.set_value(patch_num)
 
-
-
-# Wire up MIDI controls
-# Oxygen49 slider IDs, starting from left.
-#SLIDER_IDS = [0x49, 0x4b, 0x48, 0x4a, 0x4f, 0x54, 0x5b, 0x5d, 0x7]
-SLIDER_IDS = [74, 71, 91, 93, 73, 72, 5, 84, 7]
-# Oxygen49 knobs, top row then second row.
-#KNOB_IDS = [0x10, 0x11, 0x12, 0x0a, 0x13, 0x50, 0x51, 0x14]
-KNOB_IDS = [75, 76, 92, 95, 10, 77, 78, 79]
-# Oxygen49 buttons.  They toggle between 0 and 0x7f.
-#BUTTON_IDS = [0x18, 0x19, 0x1a, 0x1b, 0x2c, 0x2d, 0x2e, 0x2f, 0x30,
-#              0x71, 0x72, 0x73, 0x74, 0x75, 0x76]
-# I had to program these.  See Oxygen49-UserGuide-v1.3.pdf + notes.
-BUTTON_IDS = [96, 97, 98, 99, 100, 101, 102, 103, 104,   113, 114, 115, 116, 117, 118]
-PITCH_WHEEL = 0   # Pitch wheel is a special case, hard-coded in juno.py.
-MOD_WHEEL = 1
-
+# Midi key mappings now initialized in midi.py
 param_map = {
-    KNOB_IDS[0]: 'lfo_rate',
-    KNOB_IDS[1]: 'lfo_delay_time',
-    #KNOB_IDS[2]: 'dco_lfo',
-    MOD_WHEEL: 'dco_lfo',
-    KNOB_IDS[3]: 'dco_pwm',
-    SLIDER_IDS[0]: 'dco_sub',
-    SLIDER_IDS[1]: 'dco_noise',
-    SLIDER_IDS[2]: 'vcf_freq',
-    SLIDER_IDS[3]: 'vcf_res',
-    KNOB_IDS[4]: 'vcf_env',
-    KNOB_IDS[5]: 'vcf_lfo',
-    KNOB_IDS[6]: 'vcf_kbd',
+    midi.KNOB_IDS[0]: 'lfo_rate',
+    midi.KNOB_IDS[1]: 'lfo_delay_time',
+    #midi.KNOB_IDS[2]: 'dco_lfo',
+    midi.MOD_WHEEL: 'dco_lfo',
+    midi.KNOB_IDS[3]: 'dco_pwm',
+    midi.SLIDER_IDS[0]: 'dco_sub',
+    midi.SLIDER_IDS[1]: 'dco_noise',
+    midi.SLIDER_IDS[2]: 'vcf_freq',
+    midi.SLIDER_IDS[3]: 'vcf_res',
+    midi.KNOB_IDS[4]: 'vcf_env',
+    midi.KNOB_IDS[5]: 'vcf_lfo',
+    midi.KNOB_IDS[6]: 'vcf_kbd',
     #
     # Moved to midi.py
-    #KNOB_IDS[7]: 'seq_bpm',
+    #midi.KNOB_IDS[7]: 'seq_bpm',
     #
-    SLIDER_IDS[8]: 'vca_level',
-    SLIDER_IDS[4]: 'env_a',
-    SLIDER_IDS[5]: 'env_d',
-    SLIDER_IDS[6]: 'env_s',
-    SLIDER_IDS[7]: 'env_r',
-    BUTTON_IDS[0]: 'dco_range',
-    BUTTON_IDS[1]: 'dco_pwm_mode', 
-    BUTTON_IDS[2]: 'Pls',
-    BUTTON_IDS[3]: 'Saw',
-    BUTTON_IDS[4]: 'hpf_freq',
-    BUTTON_IDS[5]: 'vcf_pol',
-    BUTTON_IDS[6]: 'vca_mode',
-    BUTTON_IDS[7]: 'chorus_mode',
+    midi.SLIDER_IDS[8]: 'vca_level',
+    midi.SLIDER_IDS[4]: 'env_a',
+    midi.SLIDER_IDS[5]: 'env_d',
+    midi.SLIDER_IDS[6]: 'env_s',
+    midi.SLIDER_IDS[7]: 'env_r',
+    midi.BUTTON_IDS[0]: 'dco_range',
+    midi.BUTTON_IDS[1]: 'dco_pwm_mode', 
+    midi.BUTTON_IDS[2]: 'Pls',
+    midi.BUTTON_IDS[3]: 'Saw',
+    midi.BUTTON_IDS[4]: 'hpf_freq',
+    midi.BUTTON_IDS[5]: 'vcf_pol',
+    midi.BUTTON_IDS[6]: 'vca_mode',
+    midi.BUTTON_IDS[7]: 'chorus_mode',
     #
     # Arpeggiator controls - moved to midi.py
-    #BUTTON_IDS[9]: 'On',
-    #BUTTON_IDS[10]: 'Hold',
-    #BUTTON_IDS[11]: 'arp_mode',
-    #BUTTON_IDS[12]: 'arp_rng',
+    #midi.BUTTON_IDS[9]: 'On',
+    #midi.BUTTON_IDS[10]: 'Hold',
+    #midi.BUTTON_IDS[11]: 'arp_mode',
+    #midi.BUTTON_IDS[12]: 'arp_rng',
 }
 
 def control_change(control, value):
