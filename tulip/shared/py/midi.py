@@ -514,7 +514,7 @@ def midi_event_cb(midi_message):
     message = midi_message[0] & 0xF0
     channel = (midi_message[0] & 0x0F) + 1
     control = midi_message[1]
-    value = midi_message[2]
+    value = midi_message[2] if len(midi_message) > 2 else None
     #print("MIDI in:", channel, message, control, value)
     if message == 0xb0 and control in GLOBAL_MIDI_CC_BINDINGS:
         # Accept GLOBAL_MIDI_CC_BINDINGS regardless of channel.
