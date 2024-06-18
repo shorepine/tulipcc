@@ -2,6 +2,7 @@
 # always running midi listener
 # based on dan's polyvoice
 
+import json
 import time
 
 import amy
@@ -499,38 +500,42 @@ KNOB_IDS = [75, 76, 92, 95, 10, 77, 78, 79]
 # I had to program these.  See Oxygen49-UserGuide-v1.3.pdf + notes.
 BUTTON_IDS = [96, 97, 98, 99, 100, 101, 102, 103, 104,   113, 114, 115, 116, 117, 118]
 
-try:
-    import json
-    midi_cc_file = tulip.root_dir() + 'user/midi_cc_file.json'
-    data = json.loads(open(midi_cc_file, 'rt').read())
-    SLIDER_IDS = data['sliders']
-    KNOB_IDS = data['knobs']
-    BUTTON_IDS = data['buttons']
-    #print('MIDI CC mappings read from', midi_cc_file)
-except Exception as e:
-    #import sys
-    #sys.print_exception(e)
-    pass
-
 PITCH_WHEEL = 0   # Pitch wheel is a special case, hard-coded in juno.py.
 MOD_WHEEL = 1
 
-# Default connection of MIDI CCs to sequencer/arpeggiator
-# Oxygen49 bindings
-TEMPO_KNOB = KNOB_IDS[7]  # Rightmost knob
-ARP_ON_BTN = BUTTON_IDS[9]  # C27, transport button
-ARP_HOLD_BTN = BUTTON_IDS[10]
-ARP_MODE_BTN = BUTTON_IDS[11]
-ARP_RANGE_BTN = BUTTON_IDS[12]
+def setup_midi_codes():
+    """Set up the global MIDI controller codes.  Happens late so filesystem is present."""
+    global SLIDER_IDS, KNOB_IDS, BUTTON_IDS
+    try:
+        midi_cc_file = tulip.root_dir() + 'user/midi_cc_file.json'
+        data = json.loads(open(midi_cc_file, 'rt').read())
+        SLIDER_IDS = data['sliders']
+        KNOB_IDS = data['knobs']
+        BUTTON_IDS = data['buttons']
+        #print('MIDI CC mappings read from', midi_cc_file)
+    except OSError:  # Anticipating midi_cc_file not found.
+        #print('MIDI CC mappings file', midi_cc_file, 'not found.')
+        pass
 
-GLOBAL_MIDI_CC_BINDINGS = {
-    TEMPO_KNOB: tempo_update,
-    # Some buttons send 0 on release, ignore that.
-    ARP_ON_BTN: lambda x: arp_on() if x else None,
-    ARP_HOLD_BTN: lambda x: arp_hold() if x else None,
-    ARP_MODE_BTN: lambda x: arp_mode_next() if x else None,
-    ARP_RANGE_BTN: lambda x: arp_rng_next() if x else None,
-}
+def setup_global_midi_cc_bindings():
+    """Set up the global midi control code bindings, once the code arrays are set."""
+    global GLOBAL_MIDI_CC_BINDINGS
+    # My default connection of MIDI CCs to sequencer/arpeggiator
+    # to the Oxygen49 transport keys.
+    TEMPO_KNOB = KNOB_IDS[7]  # Rightmost knob
+    ARP_ON_BTN = BUTTON_IDS[9]  # C27, transport button
+    ARP_HOLD_BTN = BUTTON_IDS[10]
+    ARP_MODE_BTN = BUTTON_IDS[11]
+    ARP_RANGE_BTN = BUTTON_IDS[12]
+
+    GLOBAL_MIDI_CC_BINDINGS = {
+        TEMPO_KNOB: tempo_update,
+        # Some buttons send 0 on release, ignore that.
+        ARP_ON_BTN: lambda x: arp_on() if x else None,
+        ARP_HOLD_BTN: lambda x: arp_hold() if x else None,
+        ARP_MODE_BTN: lambda x: arp_mode_next() if x else None,
+        ARP_RANGE_BTN: lambda x: arp_rng_next() if x else None,
+    }
 
 
 WARNED_MISSING_CHANNELS = set()
@@ -626,6 +631,8 @@ def music_map(channel, patch_number=None, voice_count=None):
 
 
 def deferred_midi_config(t):
+    setup_midi_codes()
+    setup_global_midi_cc_bindings()
     tulip.midi_callback(c_fired_midi_event)
     start_default_callback()
     ensure_midi_config()
