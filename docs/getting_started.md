@@ -10,7 +10,7 @@ Tulip has been a side project of [mine](https://notes.variogram.com/about) for a
 
 **No one working on Tulip makes any money from it**. We're all hobbyists and engineers and scientists and musicians who enjoy working on a small project like this and we hope others can join us. Tulip was designed to be incredibly cheap and completely open source. You can even [build one yourself!](tulip_build.md) I've spent the initial money on PCB design to be able to get this version of Tulip in your hands, and you did pay a tiny amount extra over the raw cost of the parts and assembly needed to build Tulip, to support future design work from our partner Makerfabs. 
 
-**Tulip is fun to use today but still needs help**. You should have fun hacking on and using Tulip, and never expect it to be perfect. You will run into lots of weirdness and challenges. We hope you find those constraints and challenges entertaining and inspiring. We're hoping to build a community of people that can work together to make Tulip even better every day. Remember, if the Tulip firmware doesn't do it for you, you can always use the hardware you bought for your own creations. You can easily remove our firmware and flash it yourself using the ESP-IDF or Arduino.
+**Tulip is fun to use today but still needs help**. You should have fun hacking on and using Tulip, and never expect it to be perfect. You will run into lots of weirdness and challenges. We hope you find those constraints entertaining and inspiring. We're hoping to build a community of people that can work together to make Tulip better every day. Remember, if the Tulip firmware doesn't do it for you, you can always use the hardware you bought for your own creations. You can easily replace our firmware and flash it yourself using the ESP-IDF or Arduino.
 
 If you have problems with Tulip, you can find us on GitHub [issues](https://github.com/bwhitman/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG). We'll do our best to help out!
 
@@ -25,7 +25,7 @@ Here's a legend to the ports, facing the front.
 
 ## Acesssories you may want
 
-The Tulip board you got can work on its own. Most people will want to add a couple of accessories to make it work even better. 
+The Tulip board you got can work on its own. Most people will want to add a couple of accessories to make it work even better. You should at least get a computer keyboard, the rest are optional. 
 
 ### USB keyboard
 
@@ -33,11 +33,15 @@ Tulip is a very command-line centered interface with some touch controls. You'll
 
 You can use _almost_ any USB computer keyboard you already have. However, a keyboard including an internal USB hub will not work. You can tell if a keyboard includes a hub if it has one or more subsidiary USB sockets (e.g. for connecting a mouse), or if it includes an integrated pointing device (trackpad, trackball etc). These keyboards are not compatible with Tulip. 
 
-### I2C DAC for modular synths
+[If you want a more compact hardware keyboard, the tiny "cardKB" will work great with Tulip, plugged into the I2C port.](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a)
 
-If you use modular synths, Tulip is a powerful and fun control surface and way to "program" your modulars in Python. You can use the existing MIDI ports to do a lot, but if you have CV gear, we recommend getting a I2C DAC to control it. Our friends at Makerfabs are going to list one in their store. In the meantime, we recommend [the M5Stack DAC2](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413). It's only $7 and provides two DAC channels. You can use up to 8 at once for a total of 16 CV outputs!! 
+### DACs or ADCs for modular synths
+
+If you use modular synths, Tulip is a powerful and fun control surface and way to "program" your modular rig or older analog synth in Python. You can use the existing MIDI ports to do a lot, but if you have CV gear, we recommend getting a I2C DAC to control it. Our friends at Makerfabs are going to list one in their store. In the meantime, we recommend [the M5Stack DAC2](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413). It's only $7 and provides two DAC channels. You can use up to 8 at once for a total of 16 CV outputs!
 
 The Makerfabs DACs will have 3.5mm outputs, ready for analog synths. The M5Stack ones use screw terminals, so you should pick up a few [mono 3.5mm screw terminal adapters](https://www.amazon.com/Terminal-Solderless-Speaker-Headphone-Pack-32CM/dp/B08QFKFG13). 
+
+[You can see a list other supported I2C devices, including ADCs to read CV output, that you can use with your Tulip.](tulip_api.md#i2c--grove--mabee)
 
 ### Type-A 3.5mm MIDI adapters to full size
 
@@ -49,11 +53,11 @@ Tulip is a low power device and can run on battery for portable computing. There
 
 Larger batteries will work great and last longer, but you'll have to remove the back case to make them fit (or mount the battery some other way.) [This 5200mAh battery pack](https://www.amazon.com/XINLANTECH-Rechargeable-Bluetooth-Electronic-Batteries/dp/B0C2VFTDPY) will last many many hours on Tulip and fit right on the PCB with the back case removed. 
 
-### An extra Alles or two
+### An extra Alles or five
 
 <img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/nicoboard-alles.jpg" width=400>
 
-Tulip supports using [Alles](http://github.com/bwhitman/alles) as extra speakers. You control dozens of other speakers wirelessly using the AMY synthesizer for amazing multi-channel audio setups, using only a Tulip to control them! [You can get Alles PCBs from our friends at Blinkinlabs.](https://shop.blinkinlabs.com/products/alles-pcb)
+Tulip supports using [Alles](http://github.com/bwhitman/alles) as extra speakers. You control up to dozens of other speakers wirelessly using the AMY synthesizer for amazing multi-channel audio setups, using only a Tulip to control them! [You can get Alles PCBs from our friends at Blinkinlabs.](https://shop.blinkinlabs.com/products/alles-pcb)
 
 
 ## Get started with Tulip

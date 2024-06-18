@@ -193,7 +193,7 @@ def beat_callback(t):
             note_for_pitch = None
             if row.get_pitch() != 0.5:
                 note_for_pitch = int(base_note + (row.get_pitch() - 0.5)*24.0)
-            app.synth.note_on(note_for_pitch, row.get_vel()*2, pcm_patch=row.get_preset(), time=t)
+            app.synth.note_on(note_for_pitch, row.get_vel()*2, pcm_patch=row.get_preset(), pan=row.get_pan(), time=t)
             #amy.send(osc=50+i+2, wave=amy.PCM, patch=row.get_preset(), note=note_for_pitch, vel=row.get_vel()*2, pan=row.get_pan(), time=t)
     app.current_beat = (app.current_beat+1) % 16
 

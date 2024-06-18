@@ -105,14 +105,6 @@ uint8_t check_dim_xywh(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
     return 1;
 }
 
-// RRRGGGBB
-void unpack_rgb_332(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
-    *r = px0 & 0xe0;
-    *g = (px0 << 3) & 0xe0;
-    *b = (px0 << 6) & 0xc0;
-}
-
-
 // RRRGGGBB -> 
 void unpack_rgb_332_repeat(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *r=0; *g=0; *b=0;
@@ -120,18 +112,6 @@ void unpack_rgb_332_repeat(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
     *g = ((px0 & 0x1c) << 3) | (px0 & 0x1c) | ((px0&0x18) >> 3); 
     *b = (px0 & 0x03) | ((px0 & 0x03) << 2) | ((px0 & 0x03) << 4) | ((px0 & 0x03) << 6);
 }
-
-
-// RRRGGGBB , but expand any non-zero colors with 1111s (won't matter for display as there's no wires there)
-void unpack_rgb_332_wide(uint8_t px0, uint8_t *r, uint8_t *g, uint8_t *b) {
-    *r = (px0 & 0xe0);
-    if(*r != 0) *r |= 0x1f;
-    *g = ((px0 << 3) & 0xe0);
-    if(*g != 0) *g |= 0x1f;
-    *b = ((px0 << 6) & 0xc0);
-    if(*b != 0) *b |= 0x3f;
-}
-
 
 // Given a single uint (0-255 for RGB332, 0-65535 for RGB565), return r, g, b
 void unpack_pal_idx(uint16_t pal_idx, uint8_t *r, uint8_t *g, uint8_t *b) {

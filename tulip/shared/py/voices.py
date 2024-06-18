@@ -204,9 +204,12 @@ def play_note_from_coord(app, x, y, up):
                 note_idx = black_key_notes[i]
     if note_idx is not None:
         if(up):
+            app.held_note[note_idx+48] = False
             tulip.midi_local((128+app.channels.selected, note_idx+48, 127))
         else:
-            tulip.midi_local((144+app.channels.selected, note_idx+48, 127))
+            if app.held_note.get(note_idx+48, False) == False:
+                app.held_note[note_idx+48] = True
+                tulip.midi_local((144+app.channels.selected, note_idx+48, 127))
 
 
 
@@ -239,6 +242,7 @@ def activate(screen):
     # start listening to the keyboard again
     tulip.keyboard_callback(process_key)
     tulip.touch_callback(touch)
+    screen.held_note = {}
 
 def deactivate(screen):
     # i am being switched away -- keep running but clear and close any active callbacks 
