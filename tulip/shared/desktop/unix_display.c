@@ -244,8 +244,6 @@ void init_window() {
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
-    uint8_t r,g,b;
-
 }
 
 

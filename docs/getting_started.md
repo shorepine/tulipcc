@@ -64,10 +64,10 @@ Tulip supports using [Alles](http://github.com/bwhitman/alles) as extra speakers
 
 Now that you've got your Tulip, here's how to get started:
 
- - Plug in a battery if you have one. If you remove the back case, make sure not to bump the touchscreen connector labeled above as it's been known to be loose (we're working on gluing it down at the factory.) 
+ - If you want to use a battery, open the back black case with a screwdriver and plug it in. If you do remove the back case, make sure not to bump the touchscreen connector labeled above as it's been known to be loose (we're working on gluing it down at the factory.) 
  - Connect a USB-C cable from a power adapter or your computer to the **top** USB connector, facing Tulip.
  - Plug in a USB keyboard to the **bottom** USB connector. 
- - Optionally wire up your audio jack, MIDI and I2C connectors if you have them. Headphones will work fine on the audio jack if you don't have a mixer or other sound system. 
+ - Optionally wire up your stereo audio jack, MIDI and I2C connectors if you have them. Headphones will work fine on the audio jack if you don't have a mixer or other sound system. 
  - Turn on the Tulip! The switch is on the top of the board.
  - You should see the following. If you have audio connected, you should also hear a "bleep" sound on startup.
 
@@ -75,14 +75,16 @@ Now that you've got your Tulip, here's how to get started:
 
  - Your USB keyboard should be able to type into this screen, called the "REPL". It can accept Python code and some simple system commands. Try `ls` and you should see a directory listing. 
 
-You should **upgrade the firmware on Tulip** whenever you receive it. You should also upgrade maybe once every couple of weeks. We are constantly adding new features, fixing bugs, updating the API. To upgrade your Tulip, connect it to your Wi-Fi first:
+### First, upgrade your Tulip! 
+
+You should **upgrade the firmware on Tulip** whenever you receive it. You should also upgrade maybe once every week or so. We are constantly adding new features, fixing bugs, updating the API. To upgrade your Tulip, connect it to your Wi-Fi first:
 
  - `tulip.wifi('ssid', 'password')` will return an IP address if successful.
  - `tulip.upgrade()` will walk you through the upgrade. Accept both upgrades -- the system folder and the firmware. This process will take a few minutes in total. Your Tulip will reboot itself when it is done.
 
 [If you don't have easy access to Wi-Fi, or want to flash Tulip from code we haven't released yet, you can also directly flash Tulip from your computer.](tulip_flashing.md)
 
- More quick start tips:
+### More quick start tips
 
  - Type `run('calibrate')` to calibrate the touch screen if you think it is needed. 
  - The black icon on the bottom right is a launcher, for quick access to some included programs. Tap on `Drums` and you should see (and hear!) a drum machine. 
@@ -96,7 +98,7 @@ You should **upgrade the firmware on Tulip** whenever you receive it. You should
    - Music demo: `run('xanadu')`
    - Other utlities: `run('wordpad')`, `run('buttons')`. 
  - The code for all of these are available, for you to modify or learn from. We ship a copy of `drums`, `voices` and `juno6` as `my_drums`, `my_voices`, `my_juno6` in `/sys/ex` if you want to edit those. The official versions are read-only and you can't mess them up! 
- - If you've got MIDI plugged in, try playing a note! Tulip boots with Juno-6 patch #0 on MIDI Channel 1. You can use the `voices` app to change that assignment. 
+ - If you've got MIDI plugged in, try playing a note! Tulip boots with Juno-6 patch #0 on MIDI Channel 1. You can use the `voices` app to change that assignment. If you want your MIDI knobs / sliders to control things like the Juno-6 parameters in `run('juno6')`, run DAn's script to learn the sliders and update the midi mapping: `world.download('learn_midi_codes.py','dpwe')`
  - Try `world.download('mc_dance')` or `world.download('periodic2')` for some neat things by the Tulip community. 
 
 Your next stop: [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
