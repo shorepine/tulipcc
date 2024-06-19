@@ -3,7 +3,7 @@
 ![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/flat_tiles.jpg)
 
 Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
-
+ 
 Tulip is a self contained portable music and graphics synthesizer, with a display and keyboard and sound. It's fully programmable - you write code to define your music, games or anything else you can think of. It boots instantaneously into a Python prompt with a lot of built in support for music synthesis, fast graphics and text, MIDI and external sensors. Dive right into making something without distractions or complications. 
 
 The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can build one or buy the parts needed to get one. You can use Tulip to make music, code, art, games, or just write. 
