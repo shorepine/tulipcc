@@ -1,6 +1,38 @@
 # Using Tulip to make music tutorial
 
+Welcome to Tulip! 
 
+This tutorial shows you all the ways to make music and make code to make music on Tulip. We'll update it as more examples, techniques and demos appear. 
+
+First, make sure you've gone through the initial [getting started tutorial](getting_started.md). Especially, please make sure you've run `tulip.upgrade()`. 
+
+
+## What Tulip can do with music 
+
+ - Play very accurate Juno-6 patches and similar synths, up to 6 note polyphony / multimbrality. You have full control over all the parameters.
+ - Play very accurate DX7 patches, and allow you to create your own FM synthesis setup -- in code!
+ - Play built in 808-style drum patches, with pitch control 
+ - Load in your own .WAV samples to use in a sampler
+ - Control CV outputs for modular synths and analog synths, with built in waveforms and sample & hold 
+ - Send MIDI in and out, from code. You can write code to respond to MIDI messages to do whatever you want
+ - Share a common sequencer clock across multiple apps, for example, a drum machine and an arpeggiator 
+ - Add global EQ, chorus or reverb to the audio output
+ - Have total low level control of the oscillators, specifying their filters, waveform, modulation sources, ADSRs
+
+
+## The built-in Tulip synthesizer
+
+When you start up your Tulip, it is configured to receive MIDI messages from the MIDI in port. You can plug in any MIDI device that sends MIDI out, like a MIDI keyboard or your computer running a sequencer. 
+
+Try to just play notes once you've turned on Tulip, By default, MIDI channel 1 plays a Juno-6 patch. 
+
+You can adjust patch assignments per channel, or change patches, using our built in `voices` app. You can type `run('voices')` or tap the bottom right menu and tap `Voices`. 
+
+![voices](pics/voices.png)
+
+The red button on the top right will quit the app, and the blue button will switch to other apps, including the REPL (where you can type commands.)
+
+Try changing the channel 1 patch to a different Juno-6 patch, or a DX-7 patch. You can also tap the keyboard on screen, even with multiple fingers. Try also playing with the arpeggiator. 
 
 
 import midi
