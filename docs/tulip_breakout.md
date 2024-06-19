@@ -1,6 +1,6 @@
 # Tulip Breakout Board Edition
 
-![Tulip Breakout](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/breakout.jpg)
+![Tulip Breakout](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/breakout.jpg)
 
 
 If you'd like a permament version of [Tulip CC](../README.md) and can do through hole soldering, you can buy [this breakout PCB I designed fron OSH Park.](https://oshpark.com/shared_projects/L1xtM8pM) 
@@ -9,11 +9,11 @@ If you'd rather make something more all-in-one, you can make [a fully integrated
 
 Our [breakout board PCB is $30 for 3](https://oshpark.com/shared_projects/L1xtM8pM) (this money goes all to OSH Park to manufacture the boards, I don't receive anything), and takes about a week to ship. The PCB is simply a way to connect the breakout boards without any jumper wires. 
 
-The [Eagle files for this breakout PCB are here.](https://github.com/bwhitman/tulipcc/tree/main/docs/pcbs/tulip4_breakout_v3)
+The [Eagle files for this breakout PCB are here.](https://github.com/shorepine/tulipcc/tree/main/docs/pcbs/tulip4_breakout_v3)
 
 **NOTE**: the current version of the breakout board Tulip does not have support for the joystick port. We'll add it soon! If you really want that, build the breadboard or (r7+) integrated board version instead. 
 
-![Tulip Breakout](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/breakout_bare.png)
+![Tulip Breakout](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/breakout_bare.png)
 
 
 You'll need:
@@ -22,7 +22,7 @@ You'll need:
 -  [This $58 RGB dot-clock 10.1" display with capacitive touch.](https://www.hotmcu.com/101-inch-1024x600-tft-lcd-display-with-capacitive-touch-panel-p-215.html) Note other RGB dot clock displays of different sizes and resolutions can also work, but the pin numberings will be different and you'll have to update the resolution in our code. 
 - [A 40-pin FPC header for the display.](https://www.adafruit.com/product/4905) 
 - This stereo line-out / headphone jack [UDA1334 DAC.](https://www.aliexpress.com/item/3256803337983466.html?gatewayAdapt=4itemAdapt) 
-- _Almost_ any USB keyboard should work. Please ensure it's just a keyboard -- if it has a trackpad, or extra USB ports on it, or anything else, it likely [won't work as we only support single root USB devices.](https://github.com/bwhitman/tulipcc/issues/40) If yours doesn't, please file an issue here and I can investigate with you. I can only test the ones I have here! I do recommend the [Keychron series of mechanical keyboards](https://www.keychron.com/products/keychron-k7-ultra-slim-wireless-mechanical-keyboard?variant=39396239048793), they're inspiringly clicky. 
+- _Almost_ any USB keyboard should work. Please ensure it's just a keyboard -- if it has a trackpad, or extra USB ports on it, or anything else, it likely [won't work as we only support single root USB devices.](https://github.com/shorepine/tulipcc/issues/40) If yours doesn't, please file an issue here and I can investigate with you. I can only test the ones I have here! I do recommend the [Keychron series of mechanical keyboards](https://www.keychron.com/products/keychron-k7-ultra-slim-wireless-mechanical-keyboard?variant=39396239048793), they're inspiringly clicky. 
 - Connectors and random parts: 
    - [Female headers are recommended, so you don't solder the ESP and audio jack directly to the PCB.](https://www.adafruit.com/product/598) 
    - I'd also get this [2x20 shrouded header](https://www.adafruit.com/product/1993) for the display FPC breakout. 
@@ -36,4 +36,4 @@ The assembly for our breakout PCB is simple. Solder the headers to the DISPLAY, 
 
 After you're done assembling, [read about how to compile and flash Tulip.](tulip_flashing.md)
 
-Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
+Any questions? [Chat with us on our discussions page.](https://github.com/shorepine/tulipcc/discussions)

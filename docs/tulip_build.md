@@ -1,6 +1,6 @@
 # Building your own Tulip Creative Computer
 
-![Custom Tulip laptop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/hinge.jpg)
+![Custom Tulip laptop](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/hinge.jpg)
 
 There are four ways to start building and using your own [Tulip Creative Computer.](../README.md) 
 
@@ -11,7 +11,7 @@ There are four ways to start building and using your own [Tulip Creative Compute
 
  When you're done building your Tulip Creative Computer, [next learn how to compile and flash the firmware.](tulip_flashing.md)
 
-Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
+Any questions? [Chat with us on our discussions page.](https://github.com/shorepine/tulipcc/discussions)
 
 
 

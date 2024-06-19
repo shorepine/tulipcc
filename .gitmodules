@@ -3,4 +3,4 @@
 	url = https://github.com/micropython/micropython
 [submodule "amy"]
 	path = amy
-	url = https://github.com/bwhitman/amy
+	url = https://github.com/shorepine/amy

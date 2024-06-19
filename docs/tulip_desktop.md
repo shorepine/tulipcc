@@ -1,12 +1,12 @@
 # Tulip Desktop
 
-![Tulip Desktop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/desktop.png)
+![Tulip Desktop](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/desktop.png)
 
 Tulip Desktop is the desktop computer version of [Tulip CC](../README.md) itself. It supports everything Tulip CC does, and simulates the display and hardware to the best of its ability. It's a great way to learn how to use Tulip or develop for Tulip itself without having to have access to hardware or wait for long flash cycles. 
 
 You can download Tulip Desktop here:
 
- * [macOS universal build (Apple Silicon & Intel), 10.15 or later](https://github.com/bwhitman/tulipcc/releases/download/v0.4/Tulip_Desktop.dmg)
+ * [macOS universal build (Apple Silicon & Intel), 10.15 or later](https://github.com/shorepine/tulipcc/releases/)
  * For Linux, see the build instructions below
  * Windows-native build is forthcoming, but it works under WSL using the Linux instructions!
 
@@ -69,4 +69,4 @@ We've heard this works fine under WSL using the Linux instructions. We'd love a 
 
 ## Questions
 
-Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
+Any questions? [Chat with us on our discussions page.](https://github.com/shorepine/tulipcc/discussions)

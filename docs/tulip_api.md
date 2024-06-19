@@ -6,7 +6,7 @@ Here you can see the API [Tulip](../README.md) currently ships with.
 
 **NOTE**: Our own builds of [Tulip Desktop](tulip_desktop.md) may lag behind some of the APIs listed here. This page represents the APIs in the latest commit of our _main_ branch. If something isn't working properly, try building from scratch.
 
-![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4.png)
+![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulip4.png)
 
 ## General
 
@@ -80,8 +80,8 @@ The main Python script must be the name of the package. This script needs to exp
 By default, a package is imported (for example, `import rabbit_game`.) If your `rabbit_game.py` has code that runs on import, it will run. If you are writing a game or other thing that needs full access to Tulip, put an infinite loop in your code. Users can use `Control-C` to quit and they will be back at the REPL with the program's imports removed from memory.
 
 We ship a couple of game-like examples, check them out:
- * [`bunny_bounce`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/bunny_bounce/bunny_bounce.py)
- * [`planet_boing`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/planet_boing/planet_boing.py)
+ * [`bunny_bounce`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/bunny_bounce/bunny_bounce.py)
+ * [`planet_boing`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/planet_boing/planet_boing.py)
 
 
 The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package', username)` or `world.download('package')`. 
@@ -109,11 +109,11 @@ The REPL itself is treated as a (special) multitasking app, always first in the 
 You can switch apps with the keyboard: `control-tab`, and quit apps with `control-Q`. 
 
 We ship a few examples of multitasking apps, please check them out here:
- * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py)
- * [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/wordpad.py)
- * [`worldui`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/worldui.py)
- * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py)
- * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/voices.py)
+ * [`juno6`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/juno6.py)
+ * [`wordpad`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/wordpad.py)
+ * [`worldui`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/worldui.py)
+ * [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py)
+ * [`voices`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/voices.py)
 
 On your Tulip, you can find these in editable form as `my_X`, for example, `/sys/ex/my_drums.py`. This lets you edit the drum machine. The original one is read-only and always baked into Tulip, so it can't be harmed. 
 
@@ -167,7 +167,7 @@ We include [LVGL 9](https://lvgl.io) for use in making your own user interface. 
 
 It's best to build user interfaces inside a `UIScreen` multitasking Tulip package. Our `UIScreen` will handle placing elements on your app and dealing with multitasking. 
 
-For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/buttons.py) example, or more complete examples like [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py), [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py), [`wordpad`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/wordpad.py) etc in `/sys/ex`.
+For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/buttons.py) example, or more complete examples like [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py), [`juno6`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/juno6.py), [`wordpad`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/wordpad.py) etc in `/sys/ex`.
 
 ### UIScreen
 
@@ -202,9 +202,9 @@ def activate(screen):
 Tulip `UIScreen` apps should never wait in a loop or call `sleep`. They should rely on callbacks to do all their work. For example, our drum machine waits for the sequencer callback to play the next note. Our editor app relies on the keyboard callback for the next keypress. This allows Tulip to run multiple programs at once.
 
 See some examples of more complex UIs using `UIScreen`:
- * [`juno6`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/juno6.py)
- * [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py)
- * [`voices`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/voices.py)
+ * [`juno6`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/juno6.py)
+ * [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py)
+ * [`voices`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/voices.py)
 
 If you want to edit these programs on Tulip, find editable versions in `/sys/ex/my_X.py`, like `/sys/ex/my_drums.py`. 
 
@@ -263,7 +263,7 @@ screen.add(tulip.UIText(text=None, placeholder=None, w=None, h=None,
 screen.add(tulip.UICheckbox(text=None, val=False, bg_color=None, fg_color=None, callback=None))
 ```
 
-See our [`buttons.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/fs/ex/buttons.py) example for `UIX` class use.
+See our [`buttons.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/buttons.py) example for `UIX` class use.
 
 ## Input
 
@@ -383,13 +383,13 @@ tulip.defer(hello, 123, 1500) # will be called 1500ms later
 
 ## Music / sound
 
-Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, subtractive and additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/bwhitman/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches. It also has support for loading WAVE files in Tulip as samples. 
+Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, subtractive and additive synthesis, partial synthesis, filters, and much more. See the [AMY documentation](https://github.com/shorepine/amy/blob/main/README.md) for more information, Tulip's version of AMY comes with stereo sound, chorus and reverb. It includes a "small" version of the PCM patch set (29 patches) alongside all the Juno-6 and DX7 patches. It also has support for loading WAVE files in Tulip as samples. 
 
-Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/bwhitman/alles/blob/main/README.md) Alles is a wrapper around AMY that lets you control the synthesizer over Wi-Fi to remote speakers, or other computers or Tulips. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/bwhitman/alles/blob/main/getting-started.md) for more information and for more music examples.
+Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/shorepine/alles/blob/main/README.md) Alles is a wrapper around AMY that lets you control the synthesizer over Wi-Fi to remote speakers, or other computers or Tulips. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/shorepine/alles/blob/main/getting-started.md) for more information and for more music examples.
 
 Tulip can also route AMY signals to CV outputs connected over Tulip CC's I2C port. You will need one or two [M5Stack DAC2s](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413) or similar GP8413 setup. This lets you send accurate LFOs over CV to modular or other older analog synthesizers.
 
-![With Alles](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/nicoboard-alles.jpg)
+![With Alles](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/nicoboard-alles.jpg)
 
 ```python
 
@@ -447,7 +447,7 @@ m5dac2.send(volts, channel=0)
 ```
 
 
-Tulip also ships with our own [`music.py`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/music.py), which lets you create chords, progressions and scales through code:
+Tulip also ships with our own [`music.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/music.py), which lets you create chords, progressions and scales through code:
 
 ```python
 import music
@@ -470,7 +470,7 @@ You can set the system-wide BPM (beats, or quarters per minute) with `tulip.seq_
 
 You can see what tick you are on with `tulip.seq_ticks()`. 
 
-See the example `seq.py` on Tulip World for an example of using the music clock, or the [`drums`](https://github.com/bwhitman/tulipcc/blob/main/tulip/shared/py/drums.py) included app.
+See the example `seq.py` on Tulip World for an example of using the music clock, or the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) included app.
 
 ## MIDI
 
@@ -582,7 +582,7 @@ The UI operations (LVGL or anything in `tulip.UI`) also draw to the BG. Be caref
 
 Tulip uses RGB332, with 256 colors. Here's the palette: 
 
-![tulip_pal](https://github.com/bwhitman/tulipcc/blob/main/docs/pics/rgb332.png?raw=true)
+![tulip_pal](https://github.com/shorepine/tulipcc/blob/main/docs/pics/rgb332.png?raw=true)
 
 
 ```python
@@ -812,7 +812,7 @@ Things we've thought of we'd love your help on:
  * Sprite editor in Tulip
  * Tile / Map editor in Tulip
 
-Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
+Any questions? [Chat with us on our discussions page.](https://github.com/shorepine/tulipcc/discussions)
 
 
 

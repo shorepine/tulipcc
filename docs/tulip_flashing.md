@@ -18,7 +18,7 @@ It will ask you if you want to upgrade your firmware and/or your `/sys` folder (
 
 ## Flash Tulip from a compiled release
 
-If you've got an unflashed Tulip, just finished a DIY, or somehow messed up the flash / firmware, you can flash the entire Tulip and filesystem with one file from our releases. We aim to release versions of Tulip regularly. You can find the latest in our [releases section](https://github.com/bwhitman/tulipcc/releases). Find the `.bin` file for your type of Tulip:
+If you've got an unflashed Tulip, just finished a DIY, or somehow messed up the flash / firmware, you can flash the entire Tulip and filesystem with one file from our releases. We aim to release versions of Tulip regularly. You can find the latest in our [releases section](https://github.com/shorepine/tulipcc/releases). Find the `.bin` file for your type of Tulip:
 
  * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
  * Any DIY Tulip board based on the N32R8 (32MB flash): `N32R8`
@@ -75,7 +75,7 @@ esp-idf-v5.2/install.sh esp32s3
 source ~/esp/esp-idf-v5.2/export.sh
 
 cd ~
-git clone https://github.com/bwhitman/tulipcc.git 
+git clone https://github.com/shorepine/tulipcc.git 
 pip3 install Cython
 pip3 install littlefs-python # needed to flash the filesystem
 cd ~/tulipcc/tulip/esp32s3
@@ -129,5 +129,5 @@ TODO
 
 ## Questions
 
-Any questions? [Chat with us on our discussions page](https://github.com/bwhitman/tulipcc/discussions) or [**chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG).
+Any questions? [Chat with us on our discussions page](https://github.com/shorepine/tulipcc/discussions) or [**chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG).
 
