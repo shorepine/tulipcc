@@ -167,6 +167,8 @@ def stop():
 
 ```
 
+![jam.py](pics/jampy.png)
+
 Hit `control-X` to save this (you'll see a little asterisk `*` go away in the status bar) and then either `control-Q` to quit the editor or `control-Tab` to switch back to the REPL. Now, just:
 
 
@@ -239,8 +241,7 @@ def bpm_change(event):
 
 Now quit the `jam2` app if it was already running and re-`run` it. You should see a slider, and when you move it, the system BPM changes. The `2.4` you see in the code is because sliders return values between 0-100, and we convert that into BPMs of 0-240. You can add all sorts of UI elements. We provide a few classic ones like `UICheckbox` and `UIButton`. You should look at the source of `drums` and `voices` to see how they're built and [our API documentation for the full details.](tulip_api.md) How about a `UIText` entry box for people to type in the chord they want to play? 
 
-
-
+![jam2](pics/jam2.png)
 
 ```
 
@@ -264,7 +265,7 @@ amy.send(voices='6', note=52, vel=1, load_patch=1024)
 
 
 
-# To save space / RAM, you may want to downsample your WAVE files to 11025 or 22050Hz. We detect SR automatically.
+# To save RAM, you may want to downsample your WAVE files to 11025 or 22050Hz. We detect SR automatically.
 patch = tulip.load_sample("flutea4.wav") # samples are converted to mono if they are stereo
 
 # You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample.
