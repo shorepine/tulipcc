@@ -346,7 +346,7 @@ class Synth:
 
 class PitchedPCMSynth:
     def __init__(self, num_voices=10):
-        self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))  # This will collide with Drums.
+        self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS)) 
         self.next_osc = 0
         self.pcm_patch_to_osc = {}
         # Fields used by UI
@@ -354,17 +354,18 @@ class PitchedPCMSynth:
         self.patch_number = None  # Patch number is used to detect Juno synths
         self.patch_state = None
 
-    def note_on(self, note, velocity, pcm_patch=0, pan=None, time=None):
+    def note_on(self, note, velocity, pcm_patch=0, pan=None, time=None, custom=False, feedback=None):
+        wave_type = amy.PCM
+        if(custom): wave_type = amy.CUSTOM
         osc = self.pcm_patch_to_osc.get(pcm_patch, None)
         if osc is None:
             osc = self.oscs[self.next_osc]
             self.next_osc = (self.next_osc + 1) % len(self.oscs)
         self.pcm_patch_to_osc[pcm_patch] = osc
-        amy.send(time=time, osc=osc, wave=amy.PCM, note=note,
-             patch=pcm_patch, vel=velocity, pan=pan)
+        amy.send(time=time, osc=osc, wave=wave_type, note=note,
+             patch=pcm_patch, vel=velocity, pan=pan, feedback=feedback)
 
     def note_off(self, note, pcm_patch, time=None):
-        # Samples don't really need note-offs, but handle them anyway.
         try:
             osc = self.pcm_patch_to_osc[pcm_patch]
             amy.send(time=time, osc=osc, vel=0)
