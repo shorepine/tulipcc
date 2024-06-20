@@ -248,27 +248,24 @@ Now quit the `jam2` app if it was already running and re-`run` it. You should se
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/jam2.png" width=600>
 
+
+## More below
+
+This is a "living document" and we'll add more tutorials about the stuff below..
+
 ```
 
 pcm loading wave 
 MIDI from code
 amy low level 
-store patches
-
-
-import midi
-synth = midi.Synth(2) # two voice polyhony
-synth.program_change(10) # change to patch #10 (juno-6 patch)
-synth.note_on(50, 127)
-
+store patches (bass drum example)
+CV
 
 amy.start_store_patch()
 amy.send(osc=0,wave=amy.SINE,chained_osc=1)
 amy.send(osc=1,wave=amy.SAW_DOWN, amp="0.1,0,1,1")
 amy.stop_store_patch(1024)
 amy.send(voices='6', note=52, vel=1, load_patch=1024)
-
-
 
 # To save RAM, you may want to downsample your WAVE files to 11025 or 22050Hz. We detect SR automatically.
 patch = tulip.load_sample("flutea4.wav") # samples are converted to mono if they are stereo
