@@ -33,7 +33,8 @@ Try to just play notes once you've turned on Tulip, By default, MIDI channel 1 p
 
 You can adjust patch assignments per channel, or change patches, using our built in `voices` app. You can type `run('voices')` or tap the bottom right launcher menu and tap `Voices`. 
 
-![voices](pics/voices.png)
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/voices.png" width=600>
+
 
 The red button on the top right will quit the app, and the blue button will switch to other apps, including the REPL (where you can type commands.)
 
@@ -43,13 +44,15 @@ Try changing the channel 1 patch to a different Juno-6 patch, or a DX-7 patch. Y
 
 If you want to modify parameters of the Juno-6 synthesizer you can open `juno6`, either from the REPL or the launcher menu. While you have a Juno-6 patch assigned to a MIDI channel, you can modify any parameters of it, just like a real Juno-6. You can also assign MIDI control change values to a parameter, so that your MIDI keyboards sliders/knobs can control parameters.
 
-![juno-6](pics/juno6.png)
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/juno6.png" width=600>
+
 
 ## The Tulip sequencer and built-in drum machine
 
 There's an 808-style drum machine that comes with Tulip, accessed via `run('drums')`. You can play back any PCM sample that ships on Tulip, or even load your own (see below.) The Tulip drum machine shares a common clock alongside any other Tulip program that uses a sequencer. This means that for example the arpeggiator in the `voices` app will stay in time with the drum machine. We'll show you how to control and use the sequencer in your own programs below.
 
-![drums](pics/drums.png)
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/drums.png" width=600>
+
 
 Set up a nice drum sequence for a bit. Play with the pitch parameter and pan. Now, go back to the REPL with the "switch" icon, or by using `control-Tab`. The drum machine should still be playing!
 
@@ -143,6 +146,8 @@ tulip.seq_remove_callback(slot) # the synth should stop
 
 to stop your REPL sequencer callback.
 
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/jampy.png" width=600>
+
 Type `edit('jam.py')` (or whatever you want to call it.) You'll see a black screen open. This is the editor! You can use it like a computer's editor to save code. Just start typing, let's put our program in posterity:
 
 ```python
@@ -167,7 +172,7 @@ def stop():
 
 ```
 
-![jam.py](pics/jampy.png)
+
 
 Hit `control-X` to save this (you'll see a little asterisk `*` go away in the status bar) and then either `control-Q` to quit the editor or `control-Tab` to switch back to the REPL. Now, just:
 
@@ -241,7 +246,7 @@ def bpm_change(event):
 
 Now quit the `jam2` app if it was already running and re-`run` it. You should see a slider, and when you move it, the system BPM changes. The `2.4` you see in the code is because sliders return values between 0-100, and we convert that into BPMs of 0-240. You can add all sorts of UI elements. We provide a few classic ones like `UICheckbox` and `UIButton`. You should look at the source of `drums` and `voices` to see how they're built and [our API documentation for the full details.](tulip_api.md) How about a `UIText` entry box for people to type in the chord they want to play? 
 
-![jam2](pics/jam2.png)
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/jam2.png" width=600>
 
 ```
 
