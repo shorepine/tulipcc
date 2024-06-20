@@ -46,7 +46,6 @@ int8_t memorypcm_load(mp_obj_t bytes, uint32_t samplerate, uint8_t midinote, uin
     memorypcm_map[patch]->log2sr = log2f((float)samplerate / ZERO_LOGFREQ_IN_HZ);
     memorypcm_map[patch]->midinote = midinote;
     memorypcm_map[patch]->loopstart = loopstart;
-    memorypcm_map[patch]->loopend = loopend;
     // Grab the samples and len from bytes
     mp_buffer_info_t bufinfo;
     mp_get_buffer(bytes, &bufinfo, MP_BUFFER_READ);
@@ -56,6 +55,10 @@ int8_t memorypcm_load(mp_obj_t bytes, uint32_t samplerate, uint8_t midinote, uin
     if(memorypcm_map[patch]->sample_ram  == NULL) {
         free_caps(memorypcm_map[patch]);
         return -1; // no ram for sample
+    }
+
+    if(loopend == 0) {  // loop whole sample
+        memorypcm_map[patch]->loopend = memorypcm_map[patch]->length-1;
     }
     memcpy(memorypcm_map[patch]->sample_ram, bufinfo.buf, bufinfo.len);
     return patch; // patch number 

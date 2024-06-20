@@ -1,18 +1,18 @@
 # Getting started with the Tulip CC v4r11
 
-Welcome to the [Tulip Creative Computer!](https://github.com/bwhitman/tulipcc) Here you'll find out all about your new [Tulip board that you bought from Makerfabs.](https://www.makerfabs.com/the-tulip-creative-computer.html)
+Welcome to the [Tulip Creative Computer!](https://github.com/shorepine/tulipcc) Here you'll find out all about your new [Tulip board that you bought from Makerfabs.](https://www.makerfabs.com/the-tulip-creative-computer.html)
 
 Before we get started, we want to explain the brief history of Tulip and how we work on it. You'll get a lot more out of Tulip if you understand what sort of thing we're building and what sort of community we are.
 
-![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4.png)
+![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulip4.png)
 
-Tulip has been a side project of [mine](https://notes.variogram.com/about) for a few years. I've always wanted a small low-power computer I could write code or games or music on, that was portable and didn't have distractions like a web browser or work email. Over the years, Tulip has gone through a few iterations from [a bunch of wires](tulip_breadboard.md) to the much more polished and cheap board you just bought from our friends at Makerfabs. Along the way, I encouraged [a friend](https://scholar.google.com/citations?user=1H4HuCkAAAAJ&hl=en) to help me with the [music synthesizer underlying Tulip](https://github.com/bwhitman/amy). We quickly saw the power and fun of having an excellent analog and FM-style synth that could be controlled in Python on constrained real-time hardware. The Tulip you have in your hands is brand new, we constantly chase bugs, add new features, make new music and demos for it. There's a small but growing community of like minded people on our [Discord](https://discord.gg/TzBFkUb8pG) who try fun experiments as we build. 
+Tulip has been a side project of [mine](https://notes.variogram.com/about) for a few years. I've always wanted a small low-power computer I could write code or games or music on, that was portable and didn't have distractions like a web browser or work email. Over the years, Tulip has gone through a few iterations from [a bunch of wires](tulip_breadboard.md) to the much more polished and cheap board you just bought from our friends at Makerfabs. Along the way, I encouraged [a friend](https://scholar.google.com/citations?user=1H4HuCkAAAAJ&hl=en) to help me with the [music synthesizer underlying Tulip](https://github.com/shorepine/amy). We quickly saw the power and fun of having an excellent analog and FM-style synth that could be controlled in Python on constrained real-time hardware. The Tulip you have in your hands is brand new, we constantly chase bugs, add new features, make new music and demos for it. There's a small but growing community of like minded people on our [Discord](https://discord.gg/TzBFkUb8pG) who try fun experiments as we build. 
 
 **No one working on Tulip makes any money from it**. We're all hobbyists and engineers and scientists and musicians who enjoy working on a small project like this and we hope others can join us. Tulip was designed to be incredibly cheap and completely open source. You can even [build one yourself!](tulip_build.md) I've spent the initial money on PCB design to be able to get this version of Tulip in your hands, and you did pay a tiny amount extra over the raw cost of the parts and assembly needed to build Tulip, to support future design work from our partner Makerfabs. 
 
 **Tulip is fun to use today but still needs help**. You should have fun hacking on and using Tulip, and never expect it to be perfect. You will run into lots of weirdness and challenges. We hope you find those constraints entertaining and inspiring. We're hoping to build a community of people that can work together to make Tulip better every day. Remember, if the Tulip firmware doesn't do it for you, you can always use the hardware you bought for your own creations. You can easily replace our firmware and flash it yourself using the ESP-IDF or Arduino.
 
-If you have problems with Tulip, you can find us on GitHub [issues](https://github.com/bwhitman/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG). We'll do our best to help out!
+If you have problems with Tulip, you can find us on GitHub [issues](https://github.com/shorepine/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG). We'll do our best to help out!
 
 -- Brian
 
@@ -21,7 +21,7 @@ If you have problems with Tulip, you can find us on GitHub [issues](https://gith
 
 Here's a legend to the ports, facing the front. 
 
-<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11_front.png" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulipv4r11_front.png" width=600>
 
 ## Acesssories you may want
 
@@ -55,15 +55,15 @@ Larger batteries will work great and last longer, but you'll have to remove the 
 
 ### An extra Alles or five
 
-<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/nicoboard-alles.jpg" width=400>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/nicoboard-alles.jpg" width=400>
 
-Tulip supports using [Alles](http://github.com/bwhitman/alles) as extra speakers. You control up to dozens of other speakers wirelessly using the AMY synthesizer for amazing multi-channel audio setups, using only a Tulip to control them! [You can get Alles PCBs from our friends at Blinkinlabs.](https://shop.blinkinlabs.com/products/alles-pcb)
+Tulip supports using [Alles](http://github.com/shorepine/alles) as extra speakers. You control up to dozens of other speakers wirelessly using the AMY synthesizer for amazing multi-channel audio setups, using only a Tulip to control them! [You can get Alles PCBs from our friends at Blinkinlabs.](https://shop.blinkinlabs.com/products/alles-pcb)
 
 
 ## Get started with Tulip
 
 
-<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulipv4r11back.png" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulipv4r11back.png" width=600>
 
 
 Now that you've got your Tulip, here's how to get started:
@@ -75,7 +75,7 @@ Now that you've got your Tulip, here's how to get started:
  - Turn on the Tulip! The switch is on the top of the board.
  - You should see the following. If you have audio connected, you should also hear a "bleep" sound on startup.
 
-<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4r11firstboot.jpg" width=400>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulip4r11firstboot.jpg" width=400>
 
  - Your USB keyboard should be able to type into this screen, called the "REPL". It can accept Python code and some simple system commands. Try `ls` and you should see a directory listing. 
 
@@ -111,7 +111,7 @@ Your next stop: [check out the API for making your own music, games, graphics an
 
 If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware. 
 
-[![shore pine sound systems discord](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
+[![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
 Have fun! See you on Tulip World!
 
@@ -144,12 +144,12 @@ We "overclock" Tulip's RAM to 120MHz so it can support more polyphony. This work
 
 If your touchscreen appears to not respond, the most likely explanation is the touchscreen panel cable got loose during shipping or if you installed a battery. We're working with Makerfabs to tape down this connector for higher reliability. But it's a quick fix if it happens to you. Just take off the back case, unseat the touch connector (labeled above) by pulling up the black clamp, and push back in the cable tight, applying a little pressure. Clamp it back, and take a piece of tape to hold down the cable right at the connector, like this: 
 
-<img src="https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tuilpv4r11ctp.jpg" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tuilpv4r11ctp.jpg" width=600>
 
 
 ### USB computer keyboard not working
 
-If your USB computer keyboard is not working, the most likely explanation is that it appears as a "hub" instead of a bare keyboard to Tulip. At this time (we're working on it!) Tulip only supports "root" devices. You'll have to try another keyboard. If you think your keyboard should work, please find us on [issues](https://github.com/bwhitman/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG) and we'll help out!
+If your USB computer keyboard is not working, the most likely explanation is that it appears as a "hub" instead of a bare keyboard to Tulip. At this time (we're working on it!) Tulip only supports "root" devices. You'll have to try another keyboard. If you think your keyboard should work, please find us on [issues](https://github.com/shorepine/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG) and we'll help out!
 
 
 

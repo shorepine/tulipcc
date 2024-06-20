@@ -5,7 +5,7 @@ We recently figured out how to use GDB on a live running ESP32S3, or how to to p
 I couldn't find a single HOWTO anywhere that tied everything together, and based 
 on my challenge getting it going and my google searches I may be one of the few people outside of Espressif that has done this, so I thought I'd write a short guide. 
 
-We use this to debug and profile code running in [Tulip](https://github.com/bwhitman/tulipcc). It's very helpful!
+We use this to debug and profile code running in [Tulip](https://github.com/shorepine/tulipcc). It's very helpful!
 
 ## You need
 

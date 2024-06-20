@@ -1,6 +1,6 @@
 # Tulip Creative Computer - a portable programmable music and graphics synthesizer
 
-![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/flat_tiles.jpg)
+![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/flat_tiles.jpg)
 
 Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
  
@@ -12,20 +12,20 @@ The entire system is dedicated to your code, the display and sound, running in r
  * [**See the full Tulip API**](docs/tulip_api.md)
  * [**Get or build your own Tulip**](docs/tulip_build.md)
  * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
- * Any questions? [Chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
+ * Any questions? [Chat with us on our discussions page.](https://github.com/shorepine/tulipcc/discussions)
 
- [![shore pine sound systems discord](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
+ [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
 Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)](docs/tulip_build.md) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop while developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about getting or building the hardware, [download or build the desktop version!](docs/tulip_desktop.md)
 
-[![Tulip Desktop](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
+[![Tulip Desktop](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
 You can [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the cost of a display ($50) and USB keyboard. The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. Tulip's sound system is a full featured 64-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
 
 Tulip CC rev 4 supports:
 - 8.5MB of RAM
 - 32MB flash storage, as a filesystem accesible in Python (24MB left over after OS in ROM)
-- An [AMY](https://github.com/bwhitman/amy) stereo 64-voice synthesizer engine running locally or as a wireless controller for an [Alles](https://github.com/bwhitman/alles) mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
+- An [AMY](https://github.com/shorepine/amy) stereo 64-voice synthesizer engine running locally or as a wireless controller for an [Alles](https://github.com/shorepine/alles) mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, with collision detection, from a total of 32KB of bitmap memory (1 byte per pixel)
 - A 2048x750 background frame buffer to draw arbitrary bitmaps to, or use as RAM, and which can scroll horizontally / vertically
@@ -42,7 +42,7 @@ Tulip CC rev 4 supports:
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
-![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4.png)
+![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulip4.png)
 
 
 ## T-Deck Tulip CC
@@ -59,8 +59,6 @@ Once you've [built a Tulip](docs/tulip_build.md) or [installed Tulip Desktop](do
 [**See the full Tulip API**](docs/tulip_api.md) for more details on all the graphics, sound and input functions.
 
 Below are a few getting started tips and small examples. The [full API](docs/tulip_api.md) page has more detail on everything you can do on a Tulip.
-
-Any big challenges getting this going? Please [chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
 
 
 ```python
@@ -80,7 +78,7 @@ Tulip ships with a text editor, based on pico/nano. It supports syntax highlight
 edit("game.py")
 ```
 
-![Editor](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/editor.png)
+![Editor](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/editor.png)
 
 
 ### Input and user interface
@@ -95,7 +93,7 @@ tulip.slider(ui_element_id, x, y, w, h, orientation, default_value, bg_pal_idx, 
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 ```
 
-![UI demo](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/sliders.png)
+![UI demo](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/sliders.png)
 
 
 ### Network
@@ -185,8 +183,7 @@ world.ls() # lists most recent unique filenames/usernames
  * [How to compile and flash Tulip hardware](docs/tulip_flashing.md)
  * [How to run or compile Tulip Desktop](docs/tulip_desktop.md)
  * [The full Tulip API](docs/tulip_api.md)
- * Please [chat with us on our discussions page.](https://github.com/bwhitman/tulipcc/discussions)
- * [File any code issues or pull requests!](https://github.com/bwhitman/tulipcc/issues)
+ * [File any code issues or pull requests!](https://github.com/shorepine/tulipcc/issues)
 
 Two important development guidelines if you'd like to help contribute!
 
@@ -195,7 +192,7 @@ Two important development guidelines if you'd like to help contribute!
 
 Have fun!
 
-![Tulip](https://raw.githubusercontent.com/bwhitman/tulipcc/main/docs/pics/tulip4.png)
+![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulip4.png)
 
 
 
