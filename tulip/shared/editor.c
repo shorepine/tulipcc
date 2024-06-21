@@ -408,6 +408,8 @@ void editor_save() {
                         text[c++] = text_lines[i][j];
                     }
                     text[c++] = '\n';
+                } else {
+                    text[c++] = '\n';
                 }
             }
         }
