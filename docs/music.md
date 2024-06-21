@@ -130,7 +130,7 @@ synth2.note_on(50,0.5)
 
 Remember to `release` your synths when you're done with them
 ```python
-synth1.release() # DOESNT EXIST YET, does all note-off and then clears the voice alloc 
+synth1.release() # Does all note-off and then clears the voice alloc 
 synth2.release()
 ```
 
