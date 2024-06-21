@@ -22,7 +22,7 @@ class MidiConfig:
     def add_synth(self, channel, patch, polyphony):
         if channel in self.synth_per_channel:
             # Old Synth allocated - Expicitly return the amy_voices to the pool.
-            self.synth_per_channel[channel].release_voices()
+            self.synth_per_channel[channel].release()
             del self.synth_per_channel[channel]
         if channel == 10:
             synth = PitchedPCMSynth(num_voices=polyphony)
@@ -297,6 +297,9 @@ class Synth:
         self.released_voices.put(old_voice)
 
     def note_on(self, note, velocity, time=None):
+        if not self.amy_voice_nums:
+            # Note on after synth.release()?
+            raise ValueError('Synth note on with no voices - synth has been released?')
         if velocity == 0:
             self.note_off(note, time)
         else:
@@ -338,10 +341,18 @@ class Synth:
     def control_change(self, control, value):
         print('control_change not implemented for amy-managed voices.')
 
-    def release_voices(self):
-        # Make sure the voice source is deleted, so all the amy_voices get returned.
+    def release(self):
+        """Called to terminate this synth and release its amy_voice resources."""
+        # Turn off any active notes
+        self.sustain(False)
+        while not self.active_voices.empty():
+            voice = self.active_voices.get()
+            self._voice_off(voice)
+        # Return all the amy_voices
         for amy_voice in self.amy_voice_nums:
             Synth.allocated_amy_voices.remove(amy_voice)
+        self.amy_voice_nums = []
+        del self.voice_objs[:]
 
 
 class PitchedPCMSynth:
