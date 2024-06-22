@@ -249,13 +249,40 @@ Now quit the `jam2` app if it was already running and re-`run` it. You should se
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/jam2.png" width=600>
 
 
+## Sampler, PitchedPCMSynth
+
+The drum machine in Tulip uses a slightly different `Synth` called `PitchedPCMSynth`. There are 29 samples of drum-like and some instrument sounds in Tulip, and it can adjust the pitch and pan and loop of each one. You can try it out by just
+
+```python
+s = midi.PitchedPCMSynth()
+
+s.note_on(50, 1.0, pcm_patch=10)
+s.note_on(40, 1.0, pcm_patch=10) # different pitch
+s.note_on(40, 1.0, pcm_patch=10, pan=0) # different pan
+s.note_on(40,1,pcm_patch=23,feedback=1) # feedback=1 "loops" the sound, for instruments
+s.note_off(40,pcm_patch=23) # note_off for looped instruments
+```
+
+You can load your own samples into Tulip. Take any .wav file and [load it onto Tulip.](getting_started.md#transfer-files-between-tulip-and-your-computer) Now, load it in as a `CUSTOM` PCM patch:
+
+```python
+s = midi.PitchedPCMSynth()
+patch = tulip.load_sample('sample.wav')
+s.note_on(60, 1.0, pcm_patch=patch, custom=True)
+```
+
+You can also load PCM patches with looped segments if you have their loopstart and loopend parameters (these are usually stored in the WAVE metadata.)
+
+```python
+patch = tulip.load_sample("flute.wav", midinote=81, loopstart=1020, loopend=1500)
+```
+
+
 ## More below
 
 This is a "living document" and we'll add more tutorials about the stuff below..
 
 ```
-
-pcm loading wave 
 MIDI from code
 amy low level 
 store patches (bass drum example)

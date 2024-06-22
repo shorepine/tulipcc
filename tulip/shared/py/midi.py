@@ -376,7 +376,7 @@ class PitchedPCMSynth:
         amy.send(time=time, osc=osc, wave=wave_type, note=note,
              patch=pcm_patch, vel=velocity, pan=pan, feedback=feedback)
 
-    def note_off(self, note, pcm_patch, time=None):
+    def note_off(self, note, pcm_patch=0, time=None):
         try:
             osc = self.pcm_patch_to_osc[pcm_patch]
             amy.send(time=time, osc=osc, vel=0)
