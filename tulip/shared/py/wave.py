@@ -149,6 +149,8 @@ class Wave_read:
                 self._nframes = chunk.chunksize // self._framesize
                 self._data_seek_needed = 0
                 break
+            elif chunkname == b'smpl':
+                self._read_smpl_chunk(chunk)
             chunk.skip()
         if not self._fmt_chunk_read or not self._data_chunk:
             raise Error('fmt chunk and/or data chunk missing')
@@ -249,6 +251,10 @@ class Wave_read:
     #
     # Internal methods.
     #
+    def _read_smpl_chunk(self, chunk):
+        _, _,_, self._midinote, _, _, _, self._loops, _ = struct.unpack('<LLLLLLLLL', chunk.read(36))
+        if(self._loops>0):  # read first loop
+            _, _, self._loopstart, self._loopend = struct.unpack('<LLLL', chunk.read(16))
 
     def _read_fmt_chunk(self, chunk):
         wFormatTag, self._nchannels, self._framerate, dwAvgBytesPerSec, wBlockAlign = struct.unpack('<HHLLH', chunk.read(14))

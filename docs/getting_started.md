@@ -105,9 +105,12 @@ You should **upgrade the firmware on Tulip** whenever you receive it. You should
  - If you've got MIDI plugged in, try playing a note! Tulip boots with Juno-6 patch #0 on MIDI Channel 1. You can use the `voices` app to change that assignment. If you want your MIDI knobs / sliders to control things like the Juno-6 parameters in `run('juno6')`, run DAn's script to learn the sliders and update the midi mapping: `world.download('learn_midi_codes.py','dpwe')`
  - Try `world.download('mc_dance')` or `world.download('periodic2')` for some neat things by the Tulip community. 
 
-Your next stop: [check out the API for making your own music, games, graphics and writing with Tulip.](tulip_api.md)
 
-[If you want to work on Tulip itself, check out our guide to building and flashing the Tulip firmware.](tulip_flashing.md)
+Your next stop: [check out our making music on Tulip tutorial](music.md)
+
+Then, [check out the API for making your own music, games, graphics with Tulip.](tulip_api.md)
+
+[If you want to work on Tulip itself, check out our guide to compiling and flashing the Tulip firmware.](tulip_flashing.md)
 
 If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware. 
 

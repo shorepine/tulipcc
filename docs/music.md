@@ -271,10 +271,14 @@ patch = tulip.load_sample('sample.wav')
 s.note_on(60, 1.0, pcm_patch=patch, custom=True)
 ```
 
-You can also load PCM patches with looped segments if you have their loopstart and loopend parameters (these are usually stored in the WAVE metadata.)
+You can also load PCM patches with looped segments if you have their loopstart and loopend parameters (these are often stored in the WAVE metadata. If the .wav file has this metadata, we'll parse it. The example file `/sys/ex/vlng3.wav` has it. You can also provide the metadata directly.) To indicate looping, use `feedback=1`. 
 
 ```python
-patch = tulip.load_sample("flute.wav", midinote=81, loopstart=1020, loopend=1500)
+patch = tulip.load_sample("/sys/ex/vlng3.wav") # loads wave looping metadata
+s = midi.PitchedPCMSynth()
+s.note_on(60, 1.0, pcm_patch=patch, custom=True, feedback=1) # loops
+s.note_on(55, 1.0, pcm_patch=patch, custom=True, feedback=1) # loops
+s.note_off(60, pcm_patch=patch) # stops
 ```
 
 
