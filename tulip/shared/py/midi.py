@@ -366,9 +366,13 @@ class PitchedPCMSynth:
         self.patch_state = None
 
     def note_on(self, note, velocity, pcm_patch=0, pan=None, time=None, custom=False, feedback=None):
-        wave_type = amy.PCM
-        if(custom): wave_type = amy.CUSTOM
-        osc = self.pcm_patch_to_osc.get(pcm_patch, None)
+        if(custom): 
+            wave_type = amy.CUSTOM
+            osc = self.pcm_patch_to_osc.get(pcm_patch+1024, None)
+        else:
+            wave_type = amy.PCM
+            osc = self.pcm_patch_to_osc.get(pcm_patch, None)
+
         if osc is None:
             osc = self.oscs[self.next_osc]
             self.next_osc = (self.next_osc + 1) % len(self.oscs)
@@ -376,14 +380,15 @@ class PitchedPCMSynth:
         amy.send(time=time, osc=osc, wave=wave_type, note=note,
              patch=pcm_patch, vel=velocity, pan=pan, feedback=feedback)
 
-    def note_off(self, note, pcm_patch=0, time=None):
-        try:
-            osc = self.pcm_patch_to_osc[pcm_patch]
+    def note_off(self, note, pcm_patch=0, custom=False, time=None):
+        if(custom):
+            osc = self.pcm_patch_to_osc.get(pcm_patch+1024, None)
+        else:
+            osc = self.pcm_patch_to_osc.get(pcm_patch, None)
+
+        if(osc is not None):
             amy.send(time=time, osc=osc, vel=0)
             del self.pcm_patch_to_osc[note]
-        except KeyError:
-            # We didn't recognize the patch; never mind.
-            pass
 
     # Rest of Synth protocol doesn't do anything for PitchedPCM.
     def sustain(self, state):
