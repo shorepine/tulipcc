@@ -23,6 +23,7 @@ memorypcm_map_t *memorypcm_map[MAX_MEMORYPCM_PATCHES];
 
 
 uint8_t osc_patch_exists(uint16_t osc) {
+    if(AMY_IS_UNSET(synth[osc].patch)) return 0;
     if(memorypcm_map[synth[osc].patch] != NULL) return 1;
     return 0;
 }
@@ -51,6 +52,7 @@ int8_t memorypcm_load(mp_obj_t bytes, uint32_t samplerate, uint8_t midinote, uin
     mp_get_buffer(bytes, &bufinfo, MP_BUFFER_READ);
     memorypcm_map[patch]->length = bufinfo.len / 2;
     // Alloc the buffer and copy to Tulip RAM. The python alloc'd one will go away in gc
+    //fprintf(stderr, "samplerate %d midinote %d, loopstart %d loopend %d length %lu\n", samplerate, midinote, loopstart, loopend, bufinfo.len/2);
     memorypcm_map[patch]->sample_ram = malloc_caps(bufinfo.len, MALLOC_CAP_SPIRAM);
     if(memorypcm_map[patch]->sample_ram  == NULL) {
         free_caps(memorypcm_map[patch]);
@@ -59,6 +61,8 @@ int8_t memorypcm_load(mp_obj_t bytes, uint32_t samplerate, uint8_t midinote, uin
 
     if(loopend == 0) {  // loop whole sample
         memorypcm_map[patch]->loopend = memorypcm_map[patch]->length-1;
+    } else {
+        memorypcm_map[patch]->loopend = loopend;        
     }
     memcpy(memorypcm_map[patch]->sample_ram, bufinfo.buf, bufinfo.len);
     return patch; // patch number 
@@ -84,7 +88,7 @@ void memorypcm_unload() {
 
 #ifndef PCM_INDEX_FRAC_BITS
 // How many bits used for fractional part of PCM table index.
-#define PCM_INDEX_FRAC_BITS 15
+#define PCM_INDEX_FRAC_BITS 8
 #endif
 
 #ifndef PCM_INDEX_BITS
@@ -93,7 +97,9 @@ void memorypcm_unload() {
 #endif
 
 void memorypcm_init(void) {
-
+    for(uint8_t i=0;i<MAX_MEMORYPCM_PATCHES;i++) {
+        memorypcm_map[i] = NULL;
+    }   
 }
 
 void memorypcm_note_on(uint16_t osc, float freq) {
@@ -114,7 +120,7 @@ void memorypcm_note_off(uint16_t osc) {
     if(osc_patch_exists(osc)) {
         if(msynth[osc].feedback == 0) {
             // Non-looping note: Set phase to the end to cause immediate stop.
-            synth[osc].phase = F2P(pcm_map[synth[osc].patch].length / (float)(1 << PCM_INDEX_FRAC_BITS));
+            synth[osc].phase = F2P(memorypcm_map[synth[osc].patch]->length / (float)(1 << PCM_INDEX_FRAC_BITS));
         } else {
             // Looping is requested, disable future looping, sample will play through to end.
             // (sending a second note-off will stop it immediately).

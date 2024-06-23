@@ -185,6 +185,7 @@ amy_err_t setup_i2s(void) {
 
 
 extern struct custom_oscillator memorypcm;
+extern void memorypcm_init();
 
 #ifdef ESP_PLATFORM
 #include "driver/i2c.h"
@@ -243,6 +244,7 @@ void * alles_start(void *vargs) {
     alles_local_ip[0] = 0;
     unix_amy_init();
     amy_set_custom(&memorypcm);
+    memorypcm_init();
     amy_reset_oscs();
     // Schedule a "turning on" sound
     // We don't do this by default on tulip desktop as all threads start at once and it makes the bleep sound bad 
