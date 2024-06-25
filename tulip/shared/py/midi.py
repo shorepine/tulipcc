@@ -56,7 +56,6 @@ class MidiConfig:
         else:
             # Setting up a new channel.
             self.add_synth(channel, patch_number, voice_count)
-
     def get_active_channels(self):
         """Return numbers of MIDI channels with allocated synths."""
         return list(self.synth_per_channel.keys())

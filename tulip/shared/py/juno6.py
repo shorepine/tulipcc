@@ -609,14 +609,13 @@ def midi_event_cb(m):
 def refresh_with_new_music_map():
     """Called when the active midid channels changes, so we can update menu."""
     channel_selector.update_items(get_active_midi_channels_as_str())
+    setup_from_midi_chan_str(str(midi_channel))
 
 
 # called when switching to me. update stuff
 def activate(screen):
     # Make sure the channel selector is in sync with current system state.
     channel_selector.update_items(get_active_midi_channels_as_str())
-    # Make sure patch is in sync with current channel.
-    setup_from_midi_chan_str(str(midi_channel))
 
 
 def deactivate(screen):
@@ -645,3 +644,6 @@ def run(screen):
     screen.refresh_with_new_music_map = refresh_with_new_music_map
     
     midi.add_callback(midi_event_cb)
+
+    # Make sure patch is in sync with current channel.
+    setup_from_midi_chan_str(str(midi_channel))
