@@ -310,6 +310,55 @@ If you switch back to the Juno-6 editor, you'll see the slider for resonance phy
 You can type `juno6.` and then hit the `TAB` key to see functions you can call. 
 
 
+## AMY low-level control in Tulip
+
+Tulip's synth is powered by [AMY](https://github.com/shorepine/amy), a very full featured multi-oscillator additive and subtractive style synth. It's got tons of features. Our examples so far have all been in the "higher-level" Tulip python mode, but you can send direct AMY commands by simply calling `amy.send()`:
+
+```python
+import amy
+amy.send(osc=30, wave=amy.SINE, freq=440, vel=1) # 440Hz sine wave
+amy.send(osc=30, vel = 0) # note off
+amy.reverb(1) # turn on global reverb
+amy.drums() # play a test pattern
+amy.reset() # reset every AMY oscillator
+```
+
+Here's how to make an 808-style bass drum tone in pure AMY oscillators:
+
+```python
+amy.send(osc=31,wave=amy.SINE,amp=0.5, freq=0.25, phase=0.5)
+amy.send(osc=32,wave=amy.SINE,bp0="0,1,500,0,0,0",freq="261.63,1,0,0,0,1",mod_source=31,vel=1)
+```
+
+If you're interested in going deeper on all that AMY can do, [check out AMY's README](https://github.com/shorepine/amy/blob/main/README.md). 
+
+
+## Sending and receiving MIDI in code
+
+You can write functions that respond to MIDI inputs easily on Tulip. Let's say you wanted to make a very simple sine wave oscillator that responded to MIDI messages on channel 1. All you need to do is write a MIDI callback function, like the sequencer one you did earlier. 
+
+```python
+import midi, amy
+def sine(m):
+    if(m[0]==144): # MIDI message byte 0 note on
+        # send a sine wave to osc 30, with midi note and velocity
+        amy.send(osc=30,wave=amy.SINE,note=m[1],vel=m[2]/127.0)
+
+# Stop the default MIDI callback that plays e.g. Juno notes, so we can hear ours 
+midi.stop_default_callback()
+
+# Add our callback
+midi.add_callback(sine)
+
+# Now play a MIDI note into Tulip. If you don't have a KB attached, use midi_local to send the message:
+tulip.midi_local((144,40,100))
+# You should hear a sine wave
+
+midi.start_default_callback()
+```
+
+To send MIDI out, just use `tulip.midi_send(message)`. You can, for example, send a MIDI message out every sequencer tick on Tulip.
+
 ## Outputting CV signals to modular and analog synths
 
 Tulip can output CV signals instead of audio signals out a compatible DAC chip that you attach on the side "i2c" port. [You can get a DAC](https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md#dacs-or-adcs-for-modular-synths) and send any waveform out its port, even synced to a tempo or using sample & hold. I'd first recommend trying out the user-contributed `waves` app, which brings all this together using a GUI: 
@@ -324,63 +373,26 @@ run('waves')
 
 And you should see:
 
-![waves](pics/waves.png)
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/waves.png" width=600>
 
 If you look at the source of `waves` in the editor, you can see it's pretty simple after the UI setup. 
 
 ```python
-amy.send(osc=30, external_channel=0, wave=amy.SAW_DOWN, vel=1, freq=0.5, amp=1)
+amy.send(osc=30, external_channel=1, wave=amy.SAW_DOWN, vel=1, freq=0.5, amp=1)
 ```
 This sends a saw wave out the first channel of DACs at 0.5Hz with amplitude of 1, so will be 0-5V peak to peak. 
 
+Send
 
-## More below
-
-This is a "living document" and we'll add more tutorials about the stuff below..
-
-
+```python
+amy.send(osc=30, amp=0)
 ```
-MIDI from code
-amy low level 
-store patches (bass drum example)
-CV
 
-amy.start_store_patch()
-amy.send(osc=0,wave=amy.SINE,chained_osc=1)
-amy.send(osc=1,wave=amy.SAW_DOWN, amp="0.1,0,1,1")
-amy.stop_store_patch(1024)
-amy.send(voices='6', note=52, vel=1, load_patch=1024)
+to stop it. You can also send individual voltages with
 
-# To save RAM, you may want to downsample your WAVE files to 11025 or 22050Hz. We detect SR automatically.
-patch = tulip.load_sample("flutea4.wav") # samples are converted to mono if they are stereo
-
-# You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample.
-patch = tulip.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500)
-
-# The patch number can now be used in the custom Tulip memory PCM sample player. 
-# It has all the features of the AMY's PCM wave type.
-amy.send(osc=20, wave=amy.CUSTOM, patch=patch, vel=1, note=50)
-
-# You can load up to 32 custom PCM patches. Be careful of memory use. load_sample will return -1 if there's no more room.
-# You can unload already allocated patches:
-tulip.unload_patch(patch) # frees the RAM and the patch slot
-tulip.unload_patch() # frees all allocated PCM patches
-
-
-To send signals over CV on Tulip CC (hardware only):
-
-amy.send(osc=100, wave=amy.SAW_DOWN, freq=2.5, vel=1, external_channel=1)
-# external_channel = 0 - no CV output, will route to audio
-# external_channel = 1 - 1st channel of the first connected GP8413
-# external_channel = 2 - 2nd channel of the first connected GP8413
-# external_channel = 3 - 1st channel of the second connected GP8413
-# external_channel = 4 - 2st channel of the second connected GP8413
-
-# Or just send CV signals directly using the m5dac2 library:
+```python
 import m5dac2
-m5dac2.send(volts, channel=0)
-
-
-import m5adc
-volts = m5adc.get()
+m5dac2.send(2.5, channel=0) # sends 2.5V 
 ```
+
+
