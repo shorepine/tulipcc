@@ -24,6 +24,10 @@ Tulip is a **music computer** where everything about the underlying synthesis an
  - A scale and chord library to define musical notes in code, e.g. `music.Chord("F:min")`
  - Have total low level control of all oscillators, specifying their filters, waveform, modulation sources, ADSRs
 
+## A small note about Tulip Desktop
+
+If you're using [Tulip Desktop](tulip_desktop.md) instead of a real Tulip, things will mostly be the same. CV sending does not work on Tulip Desktop. And anytime you see `/sys/` (for example, to open an example), replace it with `../sys/`. 
+
 
 ## The built-in Tulip synthesizer
 
@@ -394,5 +398,30 @@ to stop it. You can also send individual voltages with
 import m5dac2
 m5dac2.send(2.5, channel=0) # sends 2.5V 
 ```
+
+## Custom patches (WOOD PIANO)
+
+To load your own patches (and assign them to voices), try out the infamous DX100 "WOOD PIANO" tone. We've included AMY commands for it (we can show you how to generate those later!)
+
+First, load up the AMY commands and assign them to a "memory patch" and voice. Memory patches start at #1024.
+
+```python
+patch = open("/sys/ex/woodpiano.txt","r").read()
+amy.send(store_patch="1024,"+patch)
+amy.send(load_patch=1024, voices="6") # assign this patch to voice number 6
+```
+
+Now, you can play this patch on the voice!
+
+```python
+s = midi.Synth(1)
+s.program_change(1024)
+s.note_on(50,1)
+s.note_on(55,1)
+```
+
+
+
+
 
 
