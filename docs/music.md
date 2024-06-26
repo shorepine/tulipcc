@@ -128,10 +128,25 @@ synth1.note_on(50,1)
 synth2.note_on(50,0.5)
 ```
 
+You can also "schedule" notes in the near future (up to 20 seconds ahead). This is useful for sequencing fast parameter changes or keeping in time with the sequencer. `Synth`s accept a `time` parameter, and it's in milliseconds. For example:
+
+```python
+# play a chord all at once
+import music, midi, tulip
+synth4 = midi.Synth(4)
+synth.program_change(1)
+chord = music.Chord("F:min7").midinotes()
+tic = tulip.ticks_ms() + 1000 # 1 seconds from right now
+for i,note in enumerate(chord):
+    synth4.note_on(note, 0.5, time=tulip.ticks_ms()+(i*1000)) 
+    # each note on will play precisely one second after the last
+```
+
 Remember to `release` your synths when you're done with them
 ```python
 synth1.release() # Does all note-off and then clears the voice alloc 
 synth2.release()
+synth4.release()
 ```
 
 As you learn more about AMY (the underlying synth engine) you may be interested in making your own `Synth` subclasses in Python. See `midi.py`'s `PitchedPCMSynth` for an example. 
@@ -171,7 +186,6 @@ def stop():
     synth.release_voices()
 
 ```
-
 
 
 Hit `control-X` to save this (you'll see a little asterisk `*` go away in the status bar) and then either `control-Q` to quit the editor or `control-Tab` to switch back to the REPL. Now, just:
@@ -281,10 +295,49 @@ s.note_on(55, 1.0, pcm_patch=patch, custom=True, feedback=1) # loops
 s.note_off(60, pcm_patch=patch) # stops
 ```
 
+## Modify Juno-6 patches programatically
+
+We showed above how to `run('juno6')` to see a Juno-6 editor. But if you want your code to change the patches, you can do it yourself with:
+
+```python
+run("juno6")
+# Go back to REPL
+juno6.vcf_res.set(64) # 0-127
+```
+
+If you switch back to the Juno-6 editor, you'll see the slider for resonance physically moved as well.
+
+You can type `juno6.` and then hit the `TAB` key to see functions you can call. 
+
+
+## Outputting CV signals to modular and analog synths
+
+Tulip can output CV signals instead of audio signals out a compatible DAC chip that you attach on the side "i2c" port. [You can get a DAC](https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md#dacs-or-adcs-for-modular-synths) and send any waveform out its port, even synced to a tempo or using sample & hold. I'd first recommend trying out the user-contributed `waves` app, which brings all this together using a GUI: 
+
+To get the `waves` app, you'll first need to join Wi-Fi and get it from Tulip World. See the [getting started](getting_started.md) tutorial for more info, but just do:
+
+```python
+tulip.wifi(ssid, password)
+world.download('waves')
+run('waves')
+```
+
+And you should see:
+
+![waves](pics/waves.png)
+
+If you look at the source of `waves` in the editor, you can see it's pretty simple after the UI setup. 
+
+```python
+amy.send(osc=30, external_channel=0, wave=amy.SAW_DOWN, vel=1, freq=0.5, amp=1)
+```
+This sends a saw wave out the first channel of DACs at 0.5Hz with amplitude of 1, so will be 0-5V peak to peak. 
+
 
 ## More below
 
 This is a "living document" and we'll add more tutorials about the stuff below..
+
 
 ```
 MIDI from code

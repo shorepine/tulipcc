@@ -14,6 +14,8 @@ def root_dir():
     except:
         return "/"
 
+def sys():
+    return root_dir()+"sys/"
 
 import midi
 
