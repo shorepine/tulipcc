@@ -231,6 +231,9 @@ class UIScreen():
         
         lv.screen_load(self.screen)
 
+
+        # We stagger the loading of LVGL elements in presenting a screen. 
+        # Tulip can draw the screen faster, but the bandwidth it uses on SPIRAM to draw to the screen BG kills audio if done too fast. 
         wait_time = UIScreen.load_delay
         for i in range(self.group.get_child_count()):
             tulip.defer(unhide, i, UIScreen.load_delay + i*UIScreen.load_delay)
@@ -253,7 +256,6 @@ class UIScreen():
 
         if(self.activate_callback is not None):
             tulip.defer(self.activate_callback, self, wait_time)
-            #self.activate_callback(self)
 
         tulip.ui_quit_callback(self.screen_quit_callback)
         tulip.ui_switch_callback(self.alttab_callback)
