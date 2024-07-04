@@ -396,29 +396,60 @@ to stop it. You can also send individual voltages with
 
 ```python
 import m5dac2
-m5dac2.send(2.5, channel=0) # sends 2.5V 
+m5dac2.send(2.5, channel=0) # sends 2.5V to the first CV channel.
 ```
 
-## Custom patches (WOOD PIANO)
+## Custom FM tones and AMY patches (WOOD PIANO)
 
-To load your own patches (and assign them to voices), try out the infamous DX100 "WOOD PIANO" tone. We've included AMY commands for it (we can show you how to generate those later!)
+Let's see how to make your own FM synthesis in AMY commands. The 4-operator "WOOD PIANO" FM tone is a classic. It's pretty simple, too. 
 
-First, load up the AMY commands and assign them to a "memory patch" and voice. Memory patches start at #1024.
+Let's make a custom patch, which is a set of AMY commands you can assign to a patch number (from 1024 to 1055.)
+
+To do so, ask AMY to "remember" what we're doing, but not send it to the internal synthesizer. This is done by
 
 ```python
-patch = open("/sys/ex/woodpiano.txt","r").read()
-amy.send(store_patch="1024,"+patch)
-amy.send(load_patch=1024, voices="6") # assign this patch to voice number 6
+amy.start_store_patch()
 ```
 
-Now, you can play this patch on the voice!
+Anything you send AMY from now will be logged to a custom patch and not to the internal synth. 
+
+Now, send the AMY setup commands for your patch. Make sure your patch is consecutive oscillators, starting at oscillator 0 for the "root oscillator."
+
+The WOOD PIANO patch is four operators, each with an envelope and different modulation amplitude.
+
 
 ```python
-s = midi.Synth(1)
+amy.send(osc=1,bp0="0,1,5300,0,0,0",phase=0.25,ratio=1,amp="0.3,0,0,1,0,0")
+amy.send(osc=2,bp0="0,1,3400,0,0,0",phase=0.25,ratio=0.5,amp="1.68,0,0,1,0,0")
+amy.send(osc=3,bp0="0,1,6700,0,0,0",phase=0.25,ratio=1,amp="0.23,0,0,1,0,0")
+amy.send(osc=4,bp0="0,1,3400,0,0,0",phase=0.25,ratio=0.5,amp="1.68,0,0,1,0,0")
+```
+
+Then, send the "root" oscillator instructions. This is the one you'd send note-ons to. The root oscillator gets an "algorithm", which indicates how to modulate the operators. See the [AMY documentation](https://github.com/shorepine/amy) for more detail. It also gets its own amplitude and pitch envelopes (`bp0` and `bp1`). 
+
+
+```python
+amy.send(osc=0,wave=amy.ALGO,algorithm=5,algo_source="1,2,3,4",bp0="0,1,147,0",bp1="0,1,179,1",freq="0,1,0,0,1,1")
+```
+
+Now, tell AMY to stop logging the patch and store it to a custom patch number.
+
+```python
+amy.stop_store_patch(1024)
+```
+
+Now, you're free to use this patch number like all the Juno and DX7 ones. For a polyphonic wood piano, do:
+
+```python
+s = midi.Synth(5)
 s.program_change(1024)
+s.note_on(50,1)
 s.note_on(50,1)
 s.note_on(55,1)
 ```
+
+Try saving these setup commands (including the `store_patch`, which gets cleared on power / boot) to a python file, like `woodpiano.py`, and `execfile("woodpiano.py")` on reboot to set it up for you!
+
 
 
 
