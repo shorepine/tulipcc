@@ -417,7 +417,6 @@ Now, send the AMY setup commands for your patch. Make sure your patch is consecu
 
 The WOOD PIANO patch is four operators, each with an envelope and different modulation amplitude.
 
-
 ```python
 amy.send(osc=1,bp0="0,1,5300,0,0,0",phase=0.25,ratio=1,amp="0.3,0,0,1,0,0")
 amy.send(osc=2,bp0="0,1,3400,0,0,0",phase=0.25,ratio=0.5,amp="1.68,0,0,1,0,0")
