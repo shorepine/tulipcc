@@ -820,32 +820,15 @@ void process_char(int c) {
     		editor_page_up();
     	} else if(c==22) { // control V, page down 
     		editor_page_down();
-    	} else if(c==27) { // ansi code, up / down / left / right / forward delete
-    		char s = (char) mp_hal_stdin_rx_chr(); // Skip the [
-    		s = (char)mp_hal_stdin_rx_chr(); // Get the code
-    		if(s == 'D') { //left 
-    			editor_left();
-    		} else if(s=='C') { // right
-    			editor_right();
-    		} else if(s=='B') { // down
-    			editor_down();
-    		} else if(s=='A') { // up
-    			editor_up();
-    		} else if(s=='3') { // forward delete
-    			s = (char)mp_hal_stdin_rx_chr(); // skip the ~
-    			// AFAIK this is what forward delete is
-    			editor_right();
-    			editor_backspace();
-    		}
-    	// local mode high bit arrows & forward delete 
     	} else if(c == 259) { editor_up(); 
     	} else if(c == 258) { editor_down(); 
     	} else if(c == 260) { editor_left(); 
     	} else if(c == 261) { editor_right(); 
-    	} else if(c == 330) { editor_right(); editor_backspace(); 
+    	} else if(c == 330 || c == 262) { editor_right(); editor_backspace(); 
     	} else if(c>31 && c<127) {
     		editor_insert_character(c);
     	} else {
+            dbg("not supported %d\n", c);
     		// Ignore unsupported keycodes...
     	}
     }
