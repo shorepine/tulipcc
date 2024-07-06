@@ -8,7 +8,9 @@ Tulip is a self contained portable music and graphics synthesizer, with a displa
 
 The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can build one or buy the parts needed to get one. You can use Tulip to make music, code, art, games, or just write. 
 
+ * [**Get a Tulip from our friends at Makerfabs**](https://www.makerfabs.com/the-tulip-creative-computer.html)
  * [**Just got a Tulip? Check out our getting started guide!**](docs/getting_started.md)
+ * [**Want to make music with your Tulip?**](docs/music.md)
  * [**See the full Tulip API**](docs/tulip_api.md)
  * [**Get or build your own Tulip**](docs/tulip_build.md)
  * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
@@ -20,7 +22,7 @@ Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)]
 
 [![Tulip Desktop](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
-You can [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the cost of a display ($50) and USB keyboard. The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. The display we use is a 10.1" 1024 x 600 RGB dot clock color LCD with capacative touch support. Tulip's sound system is a full featured 64-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
+You can [buy a Tulip for $59 US](https://www.makerfabs.com/the-tulip-creative-computer.html) or [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the cost of a display ($50). The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. The display we use is a 7" 1024 x 600 RGB dot clock color LCD with capacative touch support. Tulip's sound system is a full featured 64-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
 
 Tulip CC rev 4 supports:
 - 8.5MB of RAM

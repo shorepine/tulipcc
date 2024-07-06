@@ -37,9 +37,7 @@ You can use _almost_ any USB computer keyboard you already have. However, a keyb
 
 ### DACs or ADCs for modular synths
 
-If you use modular synths, Tulip is a powerful and fun control surface and way to "program" your modular rig or older analog synth in Python. You can use the existing MIDI ports to do a lot, but if you have CV gear, we recommend getting a I2C DAC to control it. Our friends at Makerfabs are going to list one in their store. In the meantime, we recommend [the M5Stack DAC2](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413). It's only $7 and provides two DAC channels. You can use up to 8 at once for a total of 16 CV outputs!
-
-The Makerfabs DACs will have 3.5mm outputs, ready for analog synths. The M5Stack ones use screw terminals, so you should pick up a few [mono 3.5mm screw terminal adapters](https://www.amazon.com/Terminal-Solderless-Speaker-Headphone-Pack-32CM/dp/B08QFKFG13). 
+If you use modular synths, Tulip is a powerful and fun control surface and way to "program" your modular rig or older analog synth in Python. You can use the existing MIDI ports to do a lot, but if you have CV gear, we recommend getting a I2C DAC to control it. [You can get a 2 channel DAC with modular ready 3.5mm jacks from Makerfabs](https://www.makerfabs.com/mabee-dac-gp8413.html). You can use up to 8 at once for a total of 16 CV outputs!
 
 [You can see a list other supported I2C devices, including ADCs to read CV output, that you can use with your Tulip.](tulip_api.md#i2c--grove--mabee)
 
