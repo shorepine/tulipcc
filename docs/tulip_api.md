@@ -331,8 +331,8 @@ tulip.bg_touch_del(12) # removes
 
 Tulip hardware has a I2C port on the side for connecting a variety of input or output devices. We currently support the following:
 
+ - [Mabee DAC (up to 10V)](https://www.makerfabs.com/mabee-dac-gp8413.html) - use `import m5dac2; m5dac2.set(volts, channel)` - see the CV control section in the sound documentation as well 
  - [ADC (up to 12V)](https://shop.m5stack.com/products/adc-i2c-unit-v1-1-ads1100?variant=44321440399617) - use `import m5adc; m5adc.get()`
- - [DAC-2 (Two channel, up to 10V)](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413) - use `import m5dac2; m5dac2.set(volts, channel)` -- see the CV control section in the sound documentation as well 
  - [DAC (single channel, up to 3.3V)](https://shop.m5stack.com/products/dac-unit) - use `import m5dac; m5dac.set(volts)`
  - [CardKB keyboard](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a) - use `import m5cardkb`, which will automatically let your cardKB be a keyboard in Tulip 
  - [8-angle knobs](https://shop.m5stack.com/products/8-angle-unit-with-potentiometer) - use `import m58angle; m58angle.get(ch)`
@@ -387,7 +387,7 @@ Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth 
 
 Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](https://github.com/shorepine/alles/blob/main/README.md) Alles is a wrapper around AMY that lets you control the synthesizer over Wi-Fi to remote speakers, or other computers or Tulips. Connect any number of Alles speakers to the wifi to have instant surround sound! See the Alles [getting started tutorial](https://github.com/shorepine/alles/blob/main/getting-started.md) for more information and for more music examples.
 
-Tulip can also route AMY signals to CV outputs connected over Tulip CC's I2C port. You will need one or two [M5Stack DAC2s](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413) or similar GP8413 setup. This lets you send accurate LFOs over CV to modular or other older analog synthesizers.
+Tulip can also route AMY signals to CV outputs connected over Tulip CC's I2C port. You will need one or two [Mabee DACs](https://www.makerfabs.com/mabee-dac-gp8413.html) or similar GP8413 setup. This lets you send accurate LFOs over CV to modular or other older analog synthesizers.
 
 ![With Alles](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/nicoboard-alles.jpg)
 
