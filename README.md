@@ -1,36 +1,37 @@
-# Tulip Creative Computer - a portable programmable music and graphics synthesizer
+# Tulip Creative Computer - Tulip Creative Computer - a portable programmable device for music, graphics, code and writing
 
 ![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/flat_tiles.jpg)
 
-Welcome to the Tulip Creative Computer (aka Tulip, aka Tulip CC.) 
+Welcome to the Tulip Creative Computer (Tulip CC)!
  
-Tulip is a self contained portable music and graphics synthesizer, with a display and keyboard and sound. It's fully programmable - you write code to define your music, games or anything else you can think of. It boots instantaneously into a Python prompt with a lot of built in support for music synthesis, fast graphics and text, MIDI and external sensors. Dive right into making something without distractions or complications. 
+Tulip is a low power and afforable self-contained portable computer, with a touchscreen display and sound. It's fully programmable - you write code to define your music, games or anything else you can think of. It boots instantaneously into a Python prompt with a lot of built in support for music synthesis, fast graphics and text, hardware MIDI, network access and external sensors. Dive right into making something without distractions or complications. 
 
-The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can build one or buy the parts needed to get one. You can use Tulip to make music, code, art, games, or just write. 
+The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://www.makerfabs.com/the-tulip-creative-computer.html) or [build one](docs/build.md). You can use Tulip to make music, code, art, games, or just write. 
 
- * [**Get a Tulip from our friends at Makerfabs**](https://www.makerfabs.com/the-tulip-creative-computer.html)
- * [**Just got a Tulip? Check out our getting started guide!**](docs/getting_started.md)
- * [**Want to make music with your Tulip?**](docs/music.md)
+ * [**Get a Tulip from our friends at Makerfabs for only US$59**](https://www.makerfabs.com/the-tulip-creative-computer.html)
+ * [**Just got a Tulip CC? Check out our getting started guide!**](docs/getting_started.md)
+ * [**Want to make music with your Tulip? Check out our music tutorial here**](docs/music.md)
  * [**See the full Tulip API**](docs/tulip_api.md)
- * [**Get or build your own Tulip**](docs/tulip_build.md)
+ * [**Build your own Tulip**](docs/tulip_build.md)
  * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
- * Any questions? [Chat with us on our discussions page.](https://github.com/shorepine/tulipcc/discussions)
 
  [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
-Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)](docs/tulip_build.md) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop while developing Tulip, but use the hardware Tulip CC when making things! If you're nervous about getting or building the hardware, [download or build the desktop version!](docs/tulip_desktop.md)
+[![Floyd Steinberg's Tulip Video](https://img.youtube.com/vi/1lYFjQp7Xrw/0.jpg)](https://www.youtube.com/watch?v=1lYFjQp7Xrw)
+
+Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)](https://www.makerfabs.com/the-tulip-creative-computer.html) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop while developing Tulip, but use the hardware Tulip CC when making my own personal things! If you're nervous about getting or building the hardware, [download or build the desktop version!](docs/tulip_desktop.md)
 
 [![Tulip Desktop](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
-You can [buy a Tulip for $59 US](https://www.makerfabs.com/the-tulip-creative-computer.html) or [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the cost of a display ($50). The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. The display we use is a 7" 1024 x 600 RGB dot clock color LCD with capacative touch support. Tulip's sound system is a full featured 64-voice synthesizer with a stereo line-out / headphone jack. You can use speakers or other connectors instead.
+You can [buy a Tulip for $59 US](https://www.makerfabs.com/the-tulip-creative-computer.html) or [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the cost of a display ($50). The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. 
 
-Tulip CC rev 4 supports:
-- 8.5MB of RAM
+Tulip CC supports:
+- 8.5MB of RAM - 2MB is available to Python, and 1.5MB is available for OS memory. The rest is used for the graphics framebuffers (which you can use as storage) and the firmware cache. 
 - 32MB flash storage, as a filesystem accesible in Python (24MB left over after OS in ROM)
-- An [AMY](https://github.com/shorepine/amy) stereo 64-voice synthesizer engine running locally or as a wireless controller for an [Alles](https://github.com/shorepine/alles) mesh. Tulip's synth supports additive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, filters, and much more. 
+- An [AMY](https://github.com/shorepine/amy) stereo 120-voice synthesizer engine running locally, or as a wireless controller for an [Alles](https://github.com/shorepine/alles) mesh. Tulip's synth supports additive and subtractive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, high quality analog style filters, and much more. 
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, with collision detection, from a total of 32KB of bitmap memory (1 byte per pixel)
-- A 2048x750 background frame buffer to draw arbitrary bitmaps to, or use as RAM, and which can scroll horizontally / vertically
+- A 1024 (+128 overscan) by 600 (+100 overscan) background frame buffer to draw arbitrary bitmaps to, or use as RAM, and which can scroll horizontally / vertically
 - WiFi, access http via Python requests or TCP / UDP sockets 
 - Adjustable display clock and resolution, defaults to 30 FPS at 1024x600.
 - 256 colors
@@ -40,6 +41,7 @@ Tulip CC rev 4 supports:
 - USB keyboard support
 - Capactive multi-touch support (mouse on Tulip Desktop)
 - MIDI input and output
+- I2C / Grove / Mabee connector, compatible with [many I2C devices like joysticks, keyboard, GPIO, DACs, ADCs, hubs](docs/tulip_api.md#i2c--grove--mabee)
 - 575mA power usage @ 5V including display, at medium display brightness, can last for hours on LiPo, 18650s, or USB battery pack 
 
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
@@ -51,16 +53,17 @@ I've been working on Tulip on and off for years over many hardware iterations an
 
 ![T-Deck](docs/pics/tdeck_editor.jpg)
 
-A **new** easy mode option, too, get yourself a [T-Deck](https://www.aliexpress.us/item/3256805505920840.html?gatewayAdapt=glo2usa4itemAdapt) and install Tulip CC on it directly! [Check out our T-Deck page for more detail.](tulip/tdeck/README.md)
+A **new** small option: get yourself a [T-Deck](https://www.aliexpress.us/item/3256805505920840.html?gatewayAdapt=glo2usa4itemAdapt) and install Tulip CC on it directly! [Check out our T-Deck page for more detail.](tulip/tdeck/README.md)
 
 
 ## Getting started
 
-Once you've [built a Tulip](docs/tulip_build.md) or [installed Tulip Desktop](docs/tulip_desktop.md), you'll see that Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
+Once you've [bought a Tulip](https://www.makerfabs.com/the-tulip-creative-computer.html), [built a Tulip](docs/tulip_build.md) or [installed Tulip Desktop](docs/tulip_desktop.md), you'll see that Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
 
 [**See the full Tulip API**](docs/tulip_api.md) for more details on all the graphics, sound and input functions.
 
-Below are a few getting started tips and small examples. The [full API](docs/tulip_api.md) page has more detail on everything you can do on a Tulip.
+Below are a few getting started tips and small examples. The [full API](docs/tulip_api.md) page has more detail on everything you can do on a Tulip. [**See a more complete getting started page**](docs/getting_started.md) or [**a music making tutorial**](docs/music.md) as well!
+
 
 
 ```python
@@ -85,13 +88,9 @@ edit("game.py")
 
 ### Input and user interface
 
-Tulip supports USB keyboard input and touch input. (On Tulip Desktop, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications. More in the [full API](docs/tulip_api.md).
+Tulip supports USB keyboard input and touch input. (On Tulip Desktop, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications, and a way to run mulitple applications as once using callbacks. More in the [full API](docs/tulip_api.md).
 
 ```python
-tulip.ui_callback(ui_callback)
-tulip.button(ui_element_id, "Button text", x, y, w, h, radius, bg_pal_idx, fg_pal_idx, filled)
-tulip.slider(ui_element_id, x, y, w, h, orientation, default_value, bg_pal_idx, handle_pal_idx)
-
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
 ```
 
@@ -116,20 +115,19 @@ bytes_read = tulip.url_save("https://url", "filename.ext")
 
 ### Music / sound
 
-Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. We also provide a useful "music computer" for scales, chords and progressions. More in the [full API](docs/tulip_api.md). Tulip's version of AMY comes with stereo sound, which you can set per oscillator with the `pan` parameter.
+Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth that supports FM, PCM, additive synthesis, partial synthesis, filters, and much more. We also provide a useful "music computer" for scales, chords and progressions. More in the [full API](docs/tulip_api.md) and in the [music tutorial.](docs/musid.md) Tulip's version of AMY comes with stereo sound, which you can set per oscillator with the `pan` parameter.
 
 ```python
 amy.drums() # plays a test song
 amy.volume(4) # change volume
 amy.reset() # stops all music / sounds playing
 ```
-
 https://user-images.githubusercontent.com/76612/215893940-658144b7-0c6f-42e2-9836-bd271597aab3.mov
 
 
 ### MIDI
 
-Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. More in the [full API](docs/tulip_api.md).
+Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. More in the [full API](docs/tulip_api.md) and [music tutorial](docs/music.md).
 
 ```python
 m = tulip.midi_in() # returns bytes of the last MIDI message received
@@ -181,11 +179,14 @@ world.ls() # lists most recent unique filenames/usernames
 
 ## How to build, compile and help develop Tulip
 
- * [See our new page that describes how to build your own Tulip Creative Computer](docs/tulip_build.md) with FOUR different options.
+ * [Get a Tulip!](https://www.makerfabs.com/the-tulip-creative-computer.html)
+ * [Build your own Tulip Creative Computer](docs/tulip_build.md) with FOUR different options.
  * [How to compile and flash Tulip hardware](docs/tulip_flashing.md)
  * [How to run or compile Tulip Desktop](docs/tulip_desktop.md)
  * [The full Tulip API](docs/tulip_api.md)
  * [File any code issues or pull requests!](https://github.com/shorepine/tulipcc/issues)
+
+[![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
 Two important development guidelines if you'd like to help contribute!
 

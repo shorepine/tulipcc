@@ -10,7 +10,7 @@ Here you can see the API [Tulip](../README.md) currently ships with.
 
 ## General
 
-[Tulip](../README.md) boots right into a Python prompt and all interaction with the system happens there. You have your own space to store code and files in `/user` and we keep system examples and programs in `/sys`. 
+[Tulip](../README.md) boots right into a Python prompt and all interaction with the system happens there. You have your own space to store code and files in `/user` and we keep system examples and programs in `/sys`. (On Tulip Desktop, the `sys` folder is actually `../sys` from where it boots.)
 
 You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
 
@@ -117,6 +117,8 @@ We ship a few examples of multitasking apps, please check them out here:
 
 On your Tulip, you can find these in editable form as `my_X`, for example, `/sys/ex/my_drums.py`. This lets you edit the drum machine. The original one is read-only and always baked into Tulip, so it can't be harmed. 
 
+Please see the [music tutorial](music.md) for a tutorial on `UIScreen`.
+
 ## Tulip World
 
 Still very much early days, but Tulip supports a native chat and file sharing BBS called **TULIP ~ WORLD** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
@@ -165,7 +167,7 @@ edit() # no filename
 
 We include [LVGL 9](https://lvgl.io) for use in making your own user interface. LVGL is optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
 
-It's best to build user interfaces inside a `UIScreen` multitasking Tulip package. Our `UIScreen` will handle placing elements on your app and dealing with multitasking. 
+It's best to build user interfaces inside a `UIScreen` multitasking Tulip package. Our `UIScreen` will handle placing elements on your app and dealing with multitasking. On Tulip CC, drawing lots of UI elements to the screen will steal all of the GDMA buffer, which may impact audio. So we slow down loading of elements in the `UIScreen` class. 
 
 For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/buttons.py) example, or more complete examples like [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py), [`juno6`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/juno6.py), [`wordpad`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/wordpad.py) etc in `/sys/ex`.
 
@@ -331,10 +333,11 @@ tulip.bg_touch_del(12) # removes
 
 Tulip hardware has a I2C port on the side for connecting a variety of input or output devices. We currently support the following:
 
- - [Mabee DAC (up to 10V)](https://www.makerfabs.com/mabee-dac-gp8413.html) - use `import m5dac2; m5dac2.set(volts, channel)` - see the CV control section in the sound documentation as well 
+ - [Mabee DAC (up to 10V)](https://www.makerfabs.com/mabee-dac-gp8413.html) - use `import mabeedac; mabeedac.set(volts, channel)` - see the CV control section in the sound documentation as well 
  - [ADC (up to 12V)](https://shop.m5stack.com/products/adc-i2c-unit-v1-1-ads1100?variant=44321440399617) - use `import m5adc; m5adc.get()`
  - [DAC (single channel, up to 3.3V)](https://shop.m5stack.com/products/dac-unit) - use `import m5dac; m5dac.set(volts)`
- - [CardKB keyboard](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a) - use `import m5cardkb`, which will automatically let your cardKB be a keyboard in Tulip 
+ - [DAC2 (dual channel, up to 10V)](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413) - use `import m5dac2; m5dac.set2(volts, channel)`
+ - [CardKB keyboard](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a) - use `import m5cardkb`, which will automatically let your cardKB be a keyboard in Tulip. Put this in your `boot.py` for using it at startup.
  - [8-angle knobs](https://shop.m5stack.com/products/8-angle-unit-with-potentiometer) - use `import m58angle; m58angle.get(ch)`
  - [Digiclock 7-segment clock](https://shop.m5stack.com/products/red-7-segment-digit-clock-unit) - use `import m5digiclock; m5digiclock.set('ABCD')`
  - [Joystick](https://shop.m5stack.com/products/i2c-joystick-unit-v1-1-mega8a) - use `import m5joy; m5joy.get()`
@@ -357,6 +360,9 @@ bytes_read = tulip.url_save("https://url", "filename.ext")
 
 # Get the contents of a URL to memory (needs wifi, and be careful of RAM use)
 content = tulip.url_get("https://url")
+
+# Upload a URL to a PUT API. Used in our file_server.py 
+tulip.url_put(url, "filename.ext")
 
 # Set the time from an NTP server (needs wifi)
 tulip.set_time() 
@@ -389,6 +395,8 @@ Once connected to Wi-Fi, Tulip can also control or respond to an [Alles mesh.](h
 
 Tulip can also route AMY signals to CV outputs connected over Tulip CC's I2C port. You will need one or two [Mabee DACs](https://www.makerfabs.com/mabee-dac-gp8413.html) or similar GP8413 setup. This lets you send accurate LFOs over CV to modular or other older analog synthesizers.
 
+**See the [music tutorial](music.md) for a LOT more information on music in Tulip.**
+
 ![With Alles](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/nicoboard-alles.jpg)
 
 ```python
@@ -419,6 +427,7 @@ To load your own WAVE files as samples, use `tulip.load_sample`:
 patch = tulip.load_sample("flutea4.wav") # samples are converted to mono if they are stereo
 
 # You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample.
+# We can detect this in WAVE file metadata if it exists! (Many sample packs include this.)
 patch = tulip.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500)
 
 # The patch number can now be used in the custom Tulip memory PCM sample player. 
@@ -436,16 +445,15 @@ To send signals over CV on Tulip CC (hardware only):
 ```python
 amy.send(osc=100, wave=amy.SAW_DOWN, freq=2.5, vel=1, external_channel=1)
 # external_channel = 0 - no CV output, will route to audio
-# external_channel = 1 - 1st channel of the first connected GP8413 / m5dac2
+# external_channel = 1 - 1st channel of the first connected GP8413 / dac
 # external_channel = 2 - 2nd channel of the first connected GP8413
 # external_channel = 3 - 1st channel of the second connected GP8413
 # external_channel = 4 - 2st channel of the second connected GP8413
 
-# Or just send CV signals directly using the m5dac2 library:
-import m5dac2
-m5dac2.send(volts, channel=0)
+# Or just send CV signals directly using the mabeedac library:
+import mabeedac
+mabeedac.send(volts, channel=0)
 ```
-
 
 Tulip also ships with our own [`music.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/music.py), which lets you create chords, progressions and scales through code:
 
@@ -471,6 +479,8 @@ You can set the system-wide BPM (beats, or quarters per minute) with `tulip.seq_
 You can see what tick you are on with `tulip.seq_ticks()`. 
 
 See the example `seq.py` on Tulip World for an example of using the music clock, or the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) included app.
+
+**See the [music tutorial](music.md) for a LOT more information on music in Tulip.**
 
 ## MIDI
 
@@ -514,11 +524,13 @@ tulip.midi_out(bytes) # Can send bytes or list
 tulip.midi_local((144, 60, 127)) # send note on to local bus
 ```
 
+**See the [music tutorial](music.md) for a LOT more information on music in Tulip.**
+
 
 ## Graphics system
 
 The Tulip GPU consists of 3 subsystems, in drawing order:
- * A bitmap graphics plane (BG) (default size: 2048x750), with scrolling x- and y- speed registers. Drawing shape primitives and UI elements draw to the BG.
+ * A bitmap graphics plane (BG) (default size: 1024+128 x 600+100), with scrolling x- and y- speed registers. Drawing shape primitives and UI elements draw to the BG.
  * A text frame buffer (TFB) that draws 8x12 fixed width text on top of the BG, with 256 colors
  * A sprite layer on top of the TFB (which is on top of the BG). The sprite layer is fast, doesn't need to have a clear screen, is drawn per scanline, can draw bitmap color sprites.
 
@@ -576,7 +588,7 @@ tulip.gpu_log()
 
 ## Graphics background plane
 
-The default background plane (BG) is 2048 x 750, with the visible portion 1024x600. (You can change this with `tulip.timing()`.) Use the extra for double buffering, hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
+The default background plane (BG) is 1024 + 128 x 600 + 100, with the visible portion 1024x600. (You can change this with `tulip.timing()`.) Use the extra for double buffering, hardware scrolling or for storing bitmap data "offscreen" for later blitting (you can treat it as fixed bitmap RAM.) The BG is drawn first, with the TFB and sprite layers drawn on top.
 
 The UI operations (LVGL or anything in `tulip.UI`) also draw to the BG. Be careful if you're using both BG drawing operations and LVGL as they may draw on top of one another.
 
@@ -812,8 +824,7 @@ Things we've thought of we'd love your help on:
  * Sprite editor in Tulip
  * Tile / Map editor in Tulip
 
-Any questions? [Chat with us on our discussions page.](https://github.com/shorepine/tulipcc/discussions)
-
+ [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
 
 

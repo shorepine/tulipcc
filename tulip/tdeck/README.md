@@ -3,20 +3,16 @@
 ![T-Deck](../../docs/pics/tdeck_editor.jpg)
 
 
-The [T-Deck](https://www.aliexpress.us/item/3256805505920840.html?gatewayAdapt=glo2usa4itemAdapt) is a ESP32-S3 device with (small) touchscreen, small 
-blackberry-style keyboard, LoRA (optional), speaker, microphone, SD card slot, battery charging IC, trackball. The price flucuates but I got the one 
-with LoRA for $60 shipped. It's running a ESP32-S3 N16R8 (16MB flash, 8MB RAM), which meets Tulip CC specs.
+The [T-Deck](https://www.aliexpress.us/item/3256805505920840.html?gatewayAdapt=glo2usa4itemAdapt) is a ESP32-S3 device with (small) touchscreen, small blackberry-style keyboard, LoRA (optional), speaker, microphone, SD card slot, battery charging IC, trackball. The price flucuates but I got the one with LoRA for $60 shipped. It's running a ESP32-S3 N16R8 (16MB flash, 8MB RAM), which meets Tulip CC specs.
 
-I've ported [Tulip CC](../../README.md) to it and most things work just fine. The screen is 320x240, so you'll only get 53x30 text in the console / 
-editor. The screen is powered by an ST7789 SPI display controller. We're able to use our existing Tulip CC display code as a framebuffer and we blit 
-over DMA each 12-row line of a screen every frame, to reach a very stable 30FPS when everything on the screen changes at once. The synth works fine but 
-is mono only and the speaker can use an upgrade (luckily, it is removable!) You can get [batteries with the smaller JST pins already 
-on](https://www.amazon.com/dp/B08T6GT7DV?ref=ppx_yo2ov_dt_b_product_details&th=1) that fit right in. That and a back case or rubber band and you've got 
-a portable Python "deck" for music, graphics, and games.
+I've ported [Tulip CC](../../README.md) to it and most things work just fine. The screen is 320x240, so you'll only get 53x30 text in the console / editor. The screen is powered by an ST7789 SPI display controller. We're able to use our existing Tulip CC display code as a framebuffer and we blit over DMA each 12-row line of a screen every frame, to reach a very stable 30FPS when everything on the screen changes at once. The synth works fine but is mono only and the speaker can use an upgrade (luckily, it is removable!) You can get [batteries with the smaller JST pins already 
+on](https://www.amazon.com/dp/B08T6GT7DV?ref=ppx_yo2ov_dt_b_product_details&th=1) that fit right in. That and a back case or rubber band and you've got a portable Python "deck" for music, graphics, and games.
 
-To flash your T-Deck with Tulip, follow the [Tulip CC flashing instructions](../../docs/tulip_flashing.md).
+To flash your T-Deck with Tulip, follow the [Tulip CC flashing instructions](../../docs/tulip_flashing.md). You can flash a precompiled version of Tulip without having to compile anything. 
 
 We default the T-Deck to a 6x8 REPL font, to get 53x30 REPL / editor screen instead of 40x20. 
+
+**PLEASE NOTE** -- Tulip works on a T-Deck, but it's not "supported" in the sense that we'll always test new features on it. Our main focus is on the [7" Tulip CC from Makerfabs.](https://www.makerfabs.com/the-tulip-creative-computer.html). For example, many of the newer music making tools on Tulip (voices, Juno-6 editor) won't work well on the T-Deck and we're not likely to port it to the smaller screen. But it's still quite usable! 
 
 ![T-Deck](../../docs/pics/tdeck_game.jpg)
 

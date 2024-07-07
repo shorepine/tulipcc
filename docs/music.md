@@ -395,8 +395,8 @@ amy.send(osc=30, amp=0)
 to stop it. You can also send individual voltages with
 
 ```python
-import m5dac2
-m5dac2.send(2.5, channel=0) # sends 2.5V to the first CV channel.
+import mabeedac
+mabeedac.send(2.5, channel=0) # sends 2.5V to the first CV channel.
 ```
 
 ## Custom FM tones and AMY patches (WOOD PIANO)
