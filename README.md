@@ -1,4 +1,4 @@
-# Tulip Creative Computer - Tulip Creative Computer - a portable programmable device for music, graphics, code and writing
+# Tulip Creative Computer - a portable programmable device for music, graphics, code and writing
 
 ![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/flat_tiles.jpg)
 
@@ -6,7 +6,7 @@ Welcome to the Tulip Creative Computer (Tulip CC)!
  
 Tulip is a low power and afforable self-contained portable computer, with a touchscreen display and sound. It's fully programmable - you write code to define your music, games or anything else you can think of. It boots instantaneously into a Python prompt with a lot of built in support for music synthesis, fast graphics and text, hardware MIDI, network access and external sensors. Dive right into making something without distractions or complications. 
 
-The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://www.makerfabs.com/the-tulip-creative-computer.html) or [build one](docs/build.md). You can use Tulip to make music, code, art, games, or just write. 
+The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://www.makerfabs.com/the-tulip-creative-computer.html) or [build one](docs/tulip_build.md). You can use Tulip to make music, code, art, games, or just write. 
 
  * [**Get a Tulip from our friends at Makerfabs for only US$59**](https://www.makerfabs.com/the-tulip-creative-computer.html)
  * [**Just got a Tulip CC? Check out our getting started guide!**](docs/getting_started.md)
@@ -17,7 +17,11 @@ The entire system is dedicated to your code, the display and sound, running in r
 
  [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
-[![Floyd Steinberg's Tulip Video](https://img.youtube.com/vi/1lYFjQp7Xrw/0.jpg)](https://www.youtube.com/watch?v=1lYFjQp7Xrw)
+
+**Check out this video!**
+
+[![Tulip, a musical computer based on Micropython
+](https://i.ytimg.com/vi/1lYFjQp7Xrw/maxresdefault.jpg)](https://www.youtube.com/watch?v=1lYFjQp7Xrw "Tulip, a musical computer based on Micropython")
 
 Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)](https://www.makerfabs.com/the-tulip-creative-computer.html) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop while developing Tulip, but use the hardware Tulip CC when making my own personal things! If you're nervous about getting or building the hardware, [download or build the desktop version!](docs/tulip_desktop.md)
 
