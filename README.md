@@ -1,6 +1,6 @@
 # Tulip Creative Computer - a portable programmable device for music, graphics, code and writing
 
-![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/flat_tiles.jpg)
+![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulip_hero.jpg)
 
 Welcome to the Tulip Creative Computer (Tulip CC)!
  
