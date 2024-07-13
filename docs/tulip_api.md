@@ -338,6 +338,7 @@ Tulip hardware has a I2C port on the side for connecting a variety of input or o
  - [DAC (single channel, up to 3.3V)](https://shop.m5stack.com/products/dac-unit) - use `import m5dac; m5dac.set(volts)`
  - [DAC2 (dual channel, up to 10V)](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413) - use `import m5dac2; m5dac.set2(volts, channel)`
  - [CardKB keyboard](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a) - use `import m5cardkb`, which will automatically let your cardKB be a keyboard in Tulip. Put this in your `boot.py` for using it at startup.
+ - [8-encoder knobs](https://shop.m5stack.com/products/8-encoder-unit-stm32f030) - use `import m5_8encoder`, see the [m5_8encoder.py file for more](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/m5_8encoder.py)
  - [8-angle knobs](https://shop.m5stack.com/products/8-angle-unit-with-potentiometer) - use `import m58angle; m58angle.get(ch)`
  - [Digiclock 7-segment clock](https://shop.m5stack.com/products/red-7-segment-digit-clock-unit) - use `import m5digiclock; m5digiclock.set('ABCD')`
  - [Joystick](https://shop.m5stack.com/products/i2c-joystick-unit-v1-1-mega8a) - use `import m5joy; m5joy.get()`
