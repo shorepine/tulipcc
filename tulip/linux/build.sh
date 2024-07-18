@@ -8,10 +8,21 @@ make DEBUG=1
 mkdir -p dev
 cp build-standard/tulip/obj/tulip dev/
 
-mkdir -p ~/Documents/tulipcc
-mkdir -p ~/Documents/tulipcc/user
+tulip_home="${HOME}/.local/share/tulipcc"
 
-rm -rf ~/Documents/tulipcc/sys
-mkdir -p ~/Documents/tulipcc/sys
-cp -Rf ../fs/* ~/Documents/tulipcc/sys/
+mkdir -p "${tulip_home}"
+mkdir -p "${tulip_home}/user"
 
+tulip_sys="${tulip_home}/sys"
+
+if [ -d ${tulip_sys} ]
+then
+  echo "refreshing ${tulip_sys}"
+
+  # safely delete ${tulip_sys}
+  find "${tulip_sys}" ! -type d -delete
+  find "${tulip_sys}" -type d -delete
+fi
+
+mkdir -p "${tulip_sys}"
+cp -Rf ../fs/* "${tulip_sys}"
