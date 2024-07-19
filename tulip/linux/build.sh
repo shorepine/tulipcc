@@ -20,7 +20,7 @@ then
   echo "refreshing ${tulip_sys}"
 
   # safely delete ${tulip_sys}
-  find "${tulip_sys}" ! -type d -delete
+  find "${tulip_sys}" -type f -delete
   find "${tulip_sys}" -type d -delete
 fi
 
