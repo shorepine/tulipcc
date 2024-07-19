@@ -10,7 +10,18 @@ import amy
 def root_dir():
     try:
         import uos
-        return uos.getenv("HOME")+"/Documents/tulipcc/"
+
+        root_directory = "/"
+        if board() == "DESKTOP":
+            xdg_data_directory = uos.getenv("HOME") + "/.local/share"
+
+            if (exists(xdg_data_directory)):
+                root_directory = xdg_data_directory + "/tulipcc/"
+            else:
+                # fall back to ~/Documents if XDG base directory spec is not supported
+                root_directory = uos.getenv("HOME") + "/Documents/tulipcc/"
+                
+        return root_directory
     except:
         return "/"
 
@@ -62,7 +73,7 @@ class Game():
             tfb_restore()
             tfb_start()
         key_scan(0)
-    
+
 # Class to handle sprites, takes care of memory
 class Sprite():
     mem_pointer = 0
@@ -140,7 +151,7 @@ class Sprite():
 
     def move(self):
         sprite_move(self.sprite_id, int(self.x), int(self.y))
-    
+
 
 # A sprite who can move from the joystick/keyboard
 class Player(Sprite):
@@ -261,15 +272,25 @@ def free_disk_bytes():
     st = os.statvfs('.')
     return st[1] * st[3]
 
-
 def root_dir():
     try:
         import uos
-        return uos.getenv("HOME")+"/Documents/tulipcc/"
+
+        root_directory = "/"
+        if board() == "DESKTOP":
+            xdg_data_directory = uos.getenv("HOME") + "/.local/share"
+            
+            if (exists(xdg_data_directory)):
+                root_directory = xdg_data_directory + "/tulipcc/"
+            else:
+                # fall back to ~/Documents if XDG base directory spec is not supported
+                root_directory = uos.getenv("HOME") + "/Documents/tulipcc/"
+                
+        return root_directory
     except:
         return "/"
 
-# This is only (fow now) done from macOS .app packages. 
+# This is only (fow now) done from macOS .app packages.
 # For linux/windows, it's copied on build -- no predefined packages for those (yet)
 # For iOS we work in the app folder, so no need to copy
 def desktop_copy_sys(dest):
@@ -392,8 +413,8 @@ def upgrade():
 
 # Return Tulip CC r11 or TDECK battery voltage in V
 # This is read from a voltage divider on VBAT into an ADC.
-# It's not incredibly accurate, but good enough for a "four-bar" battery indicator 
-# Things should turn off around 3.1V 
+# It's not incredibly accurate, but good enough for a "four-bar" battery indicator
+# Things should turn off around 3.1V
 def battery(n=5):
     if(board()=='TULIP4_R11'):
         pin = 3
@@ -474,7 +495,7 @@ def exists(fn):
 
 # reloads, runs and cleans up a Tulip "app"
 # Some ways to run things
-# (1) run('module') # imports module.py in your cwd 
+# (1) run('module') # imports module.py in your cwd
 # (2) run('game') # cds into game and imports game.py
 # (3) run('screen_module') # cds into, imports and then calls run(screen) on screen_module.py in your cwd
 # (4) run('m5joy') # imports m5joy.py from frozen python module
@@ -691,7 +712,3 @@ def tar_extract(file_name, show_progress=True):
                         dest.close()
                 except OSError as error:
                     if(show_progress): print("borked on:", i.name)
-
-
-
-
