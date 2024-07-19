@@ -32,7 +32,7 @@ You can [buy a Tulip for $59 US](https://www.makerfabs.com/the-tulip-creative-co
 Tulip CC supports:
 - 8.5MB of RAM - 2MB is available to Python, and 1.5MB is available for OS memory. The rest is used for the graphics framebuffers (which you can use as storage) and the firmware cache. 
 - 32MB flash storage, as a filesystem accesible in Python (24MB left over after OS in ROM)
-- An [AMY](https://github.com/shorepine/amy) stereo 120-voice synthesizer engine running locally, or as a wireless controller for an [Alles](https://github.com/shorepine/alles) mesh. Tulip's synth supports additive and subtractive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, high quality analog style filters, and much more. 
+- An [AMY](https://github.com/shorepine/amy) stereo 120-voice synthesizer engine running locally, or as a wireless controller for an [Alles](https://github.com/shorepine/alles) mesh. Tulip's synth supports additive and subtractive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, high quality analog style filters, and much more. We ship Tulip with a drum machine, voices / patch app, and Juno-6 editor.
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
 - Up to 32 sprites on screen, drawn per scanline, with collision detection, from a total of 32KB of bitmap memory (1 byte per pixel)
 - A 1024 (+128 overscan) by 600 (+100 overscan) background frame buffer to draw arbitrary bitmaps to, or use as RAM, and which can scroll horizontally / vertically
