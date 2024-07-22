@@ -133,7 +133,10 @@ Using WiFi on Tulip (start `tulip.wifi('ssid', 'password')` first), there are tw
 
 ### Remap your non-US keyboard
 
-Tulip uses low-level USB keyboard scan codes to translate from keypresses to ASCII to show on screen. We don't have the luxury of an OS to translate these for us across all the different locales of keyboards in the world! If your keyboard is not a US keyboard, you'll need to remap some keys. You can do it one at a time with `tulip.remap()`. If you have a German keyboard, Tulip community friend `olav` has contributed a keymap on Tulip World: get it from `world.download('keys_de.txt')`. You can see how to use it with their `boot.py`: `world.download('boot.py', 'olav')`
+Tulip uses low-level USB keyboard scan codes to translate from keypresses to ASCII to show on screen. We don't have the luxury of an OS to translate these for us across all the different locales of keyboards in the world! If your keyboard is not a US keyboard, you'll need to remap some keys. You can do it one at a time with `tulip.remap()`. 
+ - If you have a German keyboard, Tulip community friend `olav` has contributed a keymap on Tulip World: get it from `world.download('keys_de.txt')`. 
+ - If you have a French keyboard, `remis` made `world.download('keys_fr.txt')`
+ You can see how to use them with Olav's `boot.py`: `world.download('boot.py', 'olav')`
 
 ## Known problems
 
