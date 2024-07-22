@@ -243,7 +243,10 @@ def prompt(prompt):
 
 # Add a string to the users' boot.py -- used by some utlities
 def add_to_bootpy(s):
-    bootpy = open(tulip.root_dir()+"user/boot.py","r").read()
+    try:
+        bootpy = open(tulip.root_dir()+"user/boot.py","r").read()
+    except OSError:
+        bootpy = "" # file doesn't exist yet
     bootpy = bootpy + "\n" + s + "\n"
     w = open(tulip.root_dir()+'user/boot.py','w')
     w.write(bootpy)
