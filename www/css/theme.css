@@ -6598,6 +6598,11 @@ textarea.form-control-lg {
 .text-opacity-100 {
   --bs-text-opacity: 1; }
 
+  .block-white {
+  --bs-bg-opacity: 0;
+  background-color: #ffffff; }
+
+
 .bg-primary {
   --bs-bg-opacity: 1;
   background-color: rgba(var(--bs-primary-rgb), var(--bs-bg-opacity)) !important; }
@@ -8904,7 +8909,8 @@ img {
 
 .navbar {
   padding-top: 32px;
-  padding-bottom: 32px; }
+  padding-bottom: 32px; 
+}
 
 .navbar.scrolled {
   padding-top: 12px;
