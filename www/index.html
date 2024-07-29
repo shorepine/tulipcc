@@ -103,7 +103,7 @@
 
         <div class="col-lg-7 py-vh-6 position-relative" data-aos="fade-right">
           <h1 class="display-1 fw-bold mt-5"><span style="background-color: white">The <br/>Tulip<br/>Creative<br/> Computer</span></h1>
-          <p class="lead"><span style="background-color: white">An affordable, portable and personal synthesizer for music, writing and coding.</span></p>
+          <p class="lead"><span style="background-color: white">An affordable, portable and focused device for music, writing and coding.</span></p>
           <a href="#get" class="btn btn-success btn-xl shadow me-3 rounded-0 my-5">Get a Tulip for only US$59</a>
         </div>
     </div>
@@ -124,24 +124,19 @@
 
     <div class="row d-flex align-items-top py-vh-3">
 
-      <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Simple and fun</span>
-        <p class="border-top border-dark">Tulip is powered by the ESP32S3 microcontroller. It boots right into a Python prompt, and we ship music programs and other examples. It only does what you ask it to. It has no web browser or social media, other than our fun Tulip-only BBS <strong>Tulip WORLD</strong> for sharing files. Its constraints and single focus should help you make amazing creative work.</p>
+      <div class="col-md-6 col-lg-3 py-vh-2 " data-aos="fade-up" data-aos-delay="200">
+        <span class="h5 fw-lighter">Simple, focused and fun</span>
+        <p class="border-top border-dark">Tulip's processor is a low-power real time microcontroller. It boots right into a Python prompt. We provide a code editor and we ship music programs and other examples. It only does what you ask it to. It has no web browser or social media, other than our fun Tulip-only BBS <strong>Tulip WORLD</strong> for sharing files. Its constraints and single focus should help you make amazing creative work.</p>
       </div>
 
-      <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Bring your own keyboards</span>
-        <p class="border-top border-dark">Tulip can work with any USB computer keyboard to write code, using our in-built editor and REPL. It also ships with MIDI in and out jacks, audio out, and a Grove/I2C port for accessories, like DACs and ADCs to control your modular synth.</p>
-      </div>
-
-      <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+      <div class="col-md-6 col-lg-3 py-vh-2 " data-aos="fade-up" data-aos-delay="200">
         <span class="h5 fw-lighter">Write your music in code</span>
         <p class="border-top border-dark">Tulip ships with the <a href="https://github.com/shorepine/amy">AMY synthesizer</a>, a fully featured additive, subtractive and FM synth (think DX-7 and Juno-6) and you can control every parameter of every oscillator in code. Write your own synth UIs in <a href="https://lvgl.io">LVGL</a> on the Tulip touchscreen and control your synths over MIDI, I2C, or even Wi-Fi using <a href="https://github.com/shorepine/alles">Alles</a>.</p>
       </div>
 
-      <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+      <div class="col-md-6 col-lg-3 py-vh-2" data-aos="fade-up" data-aos-delay="200">
         <span class="h5 fw-lighter">Completely open source and cheap as possible</span>
-        <p class="border-top border-dark">You're paying the cost of the parts and manufacturing for your US$59 Tulip, with a tiny fee added on to support future development. Tulip is <a href="https://github.com/shorepine/tulipcc">completely open source</a>, from the hardware to the OS to the synthesizer DSP code. It's made possible by excited volunteers and <a href="#involved">we'd love your help!</a></p>
+        <p class="border-top border-dark">You're paying the cost of the parts and manufacturing for your US$59 Tulip, with a tiny fee added on to support future development. Tulip is <a href="https://github.com/shorepine/tulipcc">completely open source</a>, from the hardware to the OS to the synthesizer DSP code. It's made possible by excited volunteers and <a href="#involved">we'd love your help!</a> Tulip is just as fun to work on as to make things on.</p>
       </div>
     </div>
   </div>
@@ -149,7 +144,7 @@
 
 <div class="position-relative overflow-hidden w-100 bg-light" id="gallery">
   <div class="container-fluid">
-  <div class="row overflow-scroll">
+  <div class="row overflow-hidden">
     <div class="col-12">
       <div class="row vw-50 px-0 py-vh-5 d-flex align-items-center scrollx">
         <div class="col-md-4" data-aos="fade-up">
@@ -170,12 +165,48 @@
 
 </div>
 
+<div class="py-vh-5 w-100 overflow-hidden" id="more">
+  <div class="container">
+    <div class="row d-flex">
+        <div class="col-lg-8" data-aos="fade-down"><h2 class="display-6">Tulip is packed with features, connectivity and APIs for you to make or build anything you can imagine.</h2></div>
+    </div>
+    <div class="row">
+      <img src="img/tulipcc-voices.jpeg"/>
+    </div>
+
+    <div class="row d-flex align-items-top py-vh-3">
+
+      <div class="col-md-6 col-lg-3  py-vh-2" data-aos="fade-up" data-aos-delay="200">
+        <span class="h5 fw-lighter">Synthesizer</span>
+        <p class="border-top border-dark">Tulip's underlying synthesizer, <A HREF="https://github.com/shorepine/amy">AMY</A>, supports up to 120 oscillators, stereo sound, filters, reverb, chorus, FM, PCM samples (baked in or loaded from a file), and comes with a Python library for managing voices and patches for polyphony and multitimbral operation. <A href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md">You can write all your patches, music or interactions with other synths in pure Python.</A></p>
+        <p><a href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md" class="btn btn-info">Make music in code on Tulip</a></p>
+
+
+      </div>
+
+      <div class="col-md-6 col-lg-3 py-vh-2" data-aos="fade-up" data-aos-delay="200">
+        <span class="h5 fw-lighter">Graphics</span>
+        <p class="border-top border-dark">The 1024x600 7" touchscreen is fully <A HREF="https://github.com/shorepine/tulipcc/blob/main/docs/tulip_api.md">programmable in Python and runs at 30FPS, with support for loading PNG files, sprites, scrolling backgrounds, shapes, UIs in LVGL</A>, and a lot more.</p>
+        <p><a href="https://github.com/shorepine/tulipcc/blob/main/docs/tulip_api.md" class="btn btn-info">Check out the Tulip API</a></p>
+      </div>
+
+      <div class="col-md-6 col-lg-3 py-vh-2" data-aos="fade-up" data-aos-delay="200">
+        <span class="h5 fw-lighter">Connectivity</span>
+        <p class="border-top border-dark">Tulip has stereo audio out, I2C connector (with support for I2C hubs), MIDI in and out, USB connector for charging and programming, and another USB connector for computer keyboards and USB MIDI. <A href="https://github.com/shorepine/tulipcc/blob/main/docs/tulip_api.md">The I2C connector and MIDI jacks are fully programmable on Tulip itself</A> and we support many existing I2C accessories out of the box. It can also connect to Wi-Fi networks for network communication, upgrading, or chatting on <strong>Tulip WORLD</strong>.</p>
+        <p><a href="https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md" class="btn btn-info">Getting Started on a Tulip</a></p>
+
+      </div>
+
+    
+    </div>
+  </div>
+</div>
 
 
 
 <div class="container py-vh-3 border-top" data-aos="fade" data-aos-delay="200">
   <div class="row d-flex justify-content-center">
-    <p class="lead">See a video on how to make amazing music in Python, only on Tulip:</p>
+    <h2 class="display-6">See a video on how to make amazing music on Tulip:</h2>
   </div>
   <div class="row d-flex justify-content-center">
 
@@ -227,7 +258,7 @@
 
 <div class="position-relative overflow-hidden w-100 bg-light">
   <div class="container-fluid">
-  <div class="row overflow-scroll">
+  <div class="row overflow-hidden">
     <div class="col-12">
       <div class="row vw-100 px-0 py-vh-2 d-flex align-items-center scrollx">
         <div class="col-md-4" data-aos="fade-up">
@@ -316,7 +347,7 @@
   <div class="row">
     <div class="col">
 
-<div><form class="js-cm-form  form-floating" id="subForm" action="https://www.createsend.com/t/subscribeerror?description=" method="post" data-id="191722FC90141D02184CB1B62AB3DC2675654653F2206D9D3DFDDFF93FE33CA318B9F25CD29BC4D6DF178F98DE91C79343FC6537030C0474A872D9DDB02E0FE8"><div><div><label>Email: </label><input autocomplete="Email" aria-label="Email" class="js-cm-email-input qa-input-email" id="fieldEmail" maxlength="200" name="cm-trwtdh-trwtdh" required="" type="email"></div></div><button type="submit" class="btn-success">Subscribe</button></form></div><script type="text/javascript" src="https://js.createsend1.com/javascript/copypastesubscribeformlogic.js"></script>
+<div><form class="js-cm-form  form-floating" id="subForm" action="https://www.createsend.com/t/subscribeerror?description=" method="post" data-id="191722FC90141D02184CB1B62AB3DC2675654653F2206D9D3DFDDFF93FE33CA318B9F25CD29BC4D6DF178F98DE91C79343FC6537030C0474A872D9DDB02E0FE8"><div><div><input autocomplete="Email" aria-label="Email" class="h5 my-3 js-cm-email-input qa-input-email" id="fieldEmail" maxlength="200" name="cm-trwtdh-trwtdh" required="" placeholder="email@address" type="email"></div></div><button type="submit" class="btn btn-success btn-xl shadow me-3 rounded-0 my-5">Subscribe</button></form></div><script type="text/javascript" src="https://js.createsend1.com/javascript/copypastesubscribeformlogic.js"></script>
 
   </div>
 </div>
