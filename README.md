@@ -9,7 +9,7 @@ Tulip is a low power and afforable self-contained portable computer, with a touc
 The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://tulip.computer/) or [build one](docs/tulip_build.md). You can use Tulip to make music, code, art, games, or just write. 
 
 
- * [**Get a Tulip from our friends at Makerfabs for only US$59**](https:/tulip.computer)
+ * [**Get a Tulip from our friends at Makerfabs for only US$59**](https://tulip.computer)
  * [**Just got a Tulip CC? Check out our getting started guide!**](docs/getting_started.md)
  * [**Want to make music with your Tulip? Check out our music tutorial here**](docs/music.md)
  * [**See the full Tulip API**](docs/tulip_api.md)
