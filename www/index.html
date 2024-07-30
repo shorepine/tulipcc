@@ -258,27 +258,19 @@
   </div>
     <div class="row d">
       <pre><code class="language-python"> 
-# Play a random note of an F minor 7 chord. Beat syncs with other programs
-
+# Play a random note of an F minor 7 chord. 
+# Beat syncs with other running music programs
 import tulip, midi, music, random
 
 chord = music.Chord("F:min7").midinotes()
 synth = midi.Synth(1) # single note polyphony
 synth.program_change(143) # DX7 BASS 2 patch
-slot = None
 
 def note(t):
     synth.note_on(random.choice(chord), 0.6, time=t)
 
-def start():
-    global slot
-    # Call me every 24 ticks (twice a quarter note)
-    slot = tulip.seq_add_callback(note, 24)
-
-def stop():
-    global slot
-    tulip.seq_remove_callback(slot)
-    synth.release_voices()
+# Call note() every 24 ticks (twice a quarter note)
+slot = tulip.seq_add_callback(note, 24)
       </code></pre>
     </div>
   </div>
