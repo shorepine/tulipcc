@@ -12,7 +12,7 @@ To flash your T-Deck with Tulip, follow the [Tulip CC flashing instructions](../
 
 We default the T-Deck to a 6x8 REPL font, to get 53x30 REPL / editor screen instead of 40x20. 
 
-**PLEASE NOTE** -- Tulip works on a T-Deck, but it's not "supported" in the sense that we'll always test new features on it. Our main focus is on the [7" Tulip CC from Makerfabs.](https://www.makerfabs.com/the-tulip-creative-computer.html). For example, many of the newer music making tools on Tulip (voices, Juno-6 editor) won't work well on the T-Deck and we're not likely to port it to the smaller screen. But it's still quite usable! 
+**PLEASE NOTE** -- Tulip works on a T-Deck, but it's not "supported" in the sense that we'll always test new features on it. Our main focus is on the [7" Tulip CC from Makerfabs.](https://tulip.computer/). For example, many of the newer music making tools on Tulip (voices, Juno-6 editor) won't work well on the T-Deck and we're not likely to port it to the smaller screen. But it's still quite usable! 
 
 ![T-Deck](../../docs/pics/tdeck_game.jpg)
 
