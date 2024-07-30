@@ -6,14 +6,15 @@ Welcome to the Tulip Creative Computer (Tulip CC)!
  
 Tulip is a low power and afforable self-contained portable computer, with a touchscreen display and sound. It's fully programmable - you write code to define your music, games or anything else you can think of. It boots instantaneously into a Python prompt with a lot of built in support for music synthesis, fast graphics and text, hardware MIDI, network access and external sensors. Dive right into making something without distractions or complications. 
 
-The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://www.makerfabs.com/the-tulip-creative-computer.html) or [build one](docs/tulip_build.md). You can use Tulip to make music, code, art, games, or just write. 
+The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://tulip.computer/) or [build one](docs/tulip_build.md). You can use Tulip to make music, code, art, games, or just write. 
 
- * [**Get a Tulip from our friends at Makerfabs for only US$59**](https://www.makerfabs.com/the-tulip-creative-computer.html)
+
+ * [**Get a Tulip from our friends at Makerfabs for only US$59**](https:/tulip.computer)
  * [**Just got a Tulip CC? Check out our getting started guide!**](docs/getting_started.md)
  * [**Want to make music with your Tulip? Check out our music tutorial here**](docs/music.md)
  * [**See the full Tulip API**](docs/tulip_api.md)
  * [**Build your own Tulip**](docs/tulip_build.md)
- * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2023/02/14/tulip/)** 
+ * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2024/07/30/tulip-available/)** 
 
  [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
@@ -23,11 +24,11 @@ The entire system is dedicated to your code, the display and sound, running in r
 [![Tulip, a musical computer based on Micropython
 ](https://i.ytimg.com/vi/1lYFjQp7Xrw/maxresdefault.jpg)](https://www.youtube.com/watch?v=1lYFjQp7Xrw "Tulip, a musical computer based on Micropython")
 
-Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)](https://www.makerfabs.com/the-tulip-creative-computer.html) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop while developing Tulip, but use the hardware Tulip CC when making my own personal things! If you're nervous about getting or building the hardware, [download or build the desktop version!](docs/tulip_desktop.md)
+Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)](https://tulip.computer/) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop while developing Tulip, but use the hardware Tulip CC when making my own personal things! If you're nervous about getting or building the hardware, [download or build the desktop version!](docs/tulip_desktop.md)
 
 [![Tulip Desktop](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
 
-You can [buy a Tulip for $59 US](https://www.makerfabs.com/the-tulip-creative-computer.html) or [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the cost of a display ($50). The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. 
+You can [buy a Tulip for $59 US](https://tulip.computer) or [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the cost of a display ($50). The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. 
 
 Tulip CC supports:
 - 8.5MB of RAM - 2MB is available to Python, and 1.5MB is available for OS memory. The rest is used for the graphics framebuffers (which you can use as storage) and the firmware cache. 
@@ -62,7 +63,7 @@ A **new** small option: get yourself a [T-Deck](https://www.aliexpress.us/item/3
 
 ## Getting started
 
-Once you've [bought a Tulip](https://www.makerfabs.com/the-tulip-creative-computer.html), [built a Tulip](docs/tulip_build.md) or [installed Tulip Desktop](docs/tulip_desktop.md), you'll see that Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
+Once you've [bought a Tulip](https://tulip.computer), [built a Tulip](docs/tulip_build.md) or [installed Tulip Desktop](docs/tulip_desktop.md), you'll see that Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
 
 [**See the full Tulip API**](docs/tulip_api.md) for more details on all the graphics, sound and input functions.
 
@@ -183,7 +184,7 @@ world.ls() # lists most recent unique filenames/usernames
 
 ## How to build, compile and help develop Tulip
 
- * [Get a Tulip!](https://www.makerfabs.com/the-tulip-creative-computer.html)
+ * [Get a Tulip!](https://tulip.computer)
  * [Build your own Tulip Creative Computer](docs/tulip_build.md) with FOUR different options.
  * [How to compile and flash Tulip hardware](docs/tulip_flashing.md)
  * [How to run or compile Tulip Desktop](docs/tulip_desktop.md)

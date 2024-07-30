@@ -2,7 +2,7 @@
 
 ![Custom Tulip laptop](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/hinge.jpg)
 
-[If you don't want to buy your own Tulip CC](https://www.makerfabs.com/the-tulip-creative-computer.html), there are four ways to start building and using your own [Tulip Creative Computer.](../README.md) 
+[If you don't want to buy your own Tulip CC](https://tulip.computer), there are four ways to start building and using your own [Tulip Creative Computer.](../README.md) 
 
  * [No hardware for me, I want to just run Tulip Desktop on my desktop computer for now.](tulip_desktop.md) Use this option if you're just curious about Tulip and want to try it out. If you get into it, you can then upgrade to real hardware!
  * [I just want to build a temporary Tulip with hookup wires and a breadboard.](tulip_breadboard.md) Do this if you aren't great at soldering or just want to quickly throw a Tulip together. It won't be very stable and will be hard to move or use portably, as there's many wires. But it'll work!

@@ -1,6 +1,6 @@
 # Getting started with the Tulip CC v4r11
 
-Welcome to the [Tulip Creative Computer!](https://github.com/shorepine/tulipcc) Here you'll find out all about your new [Tulip board that you bought from Makerfabs.](https://www.makerfabs.com/the-tulip-creative-computer.html)
+Welcome to the [Tulip Creative Computer!](https://github.com/shorepine/tulipcc) Here you'll find out all about your new [Tulip board that you bought from Makerfabs.](https://tulip.computer)
 
 Before we get started, we want to explain the brief history of Tulip and how we work on it. You'll get a lot more out of Tulip if you understand what sort of thing we're building and what sort of community we are.
 
