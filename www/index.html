@@ -31,6 +31,8 @@
   <meta name="HandheldFriendly" content="true">
   <title>Tulip Creative Computer. Now available</title>
   <link rel="stylesheet" href="css/theme.css">
+  <link href="css/prism.css" rel="stylesheet"/>
+
 
    <style>
 
@@ -179,8 +181,8 @@
       </div>
 
       <div class="col-md-6 col-lg-3 py-vh-2 " data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Write your music in code</span>
-        <p class="border-top border-dark">Tulip ships with the <a href="https://github.com/shorepine/amy">AMY synthesizer</a>, a fully featured additive, subtractive and FM synth (think DX-7 and Juno-6) and you can control every parameter of every oscillator in code. Write your own synth UIs in <a href="https://lvgl.io">LVGL</a> on the Tulip touchscreen and control your synths over MIDI, I2C, or even Wi-Fi using <a href="https://github.com/shorepine/alles">Alles</a>.</p>
+        <span class="h5 fw-lighter">Make your art in code</span>
+        <p class="border-top border-dark">Tulip ships with the <a href="https://github.com/shorepine/amy">AMY synthesizer</a>, a fully featured additive, subtractive and FM synth (think DX-7 and Juno-6) and you can control every parameter of every oscillator in code. Our graphics API is fully programmable as well, with hardware sprites and scrolling backgrounds. Write your own games or synth UIs in <a href="https://lvgl.io">LVGL</a> on the Tulip touchscreen and control your creations over MIDI, I2C, or even Wi-Fi.</p>
       </div>
 
       <div class="col-md-6 col-lg-3 py-vh-2" data-aos="fade-up" data-aos-delay="200">
@@ -249,7 +251,38 @@
   </div>
 </div>
 
+<div class="py-vh-1 w-100 overflow-hidden">
+  <div class="container">
+      <div class="row d-flex justify-content-center">
+    <h2 class="display-6">Write your music in Python. <a href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md">See more</a></h2>
+  </div>
+    <div class="row d">
+      <pre><code class="language-python"> 
+# Play a random note of an F minor 7 chord. Beat syncs with other programs
 
+import tulip, midi, music, random
+
+chord = music.Chord("F:min7").midinotes()
+synth = midi.Synth(1) # single note polyphony
+synth.program_change(143) # DX7 BASS 2 patch
+slot = None
+
+def note(t):
+    synth.note_on(random.choice(chord), 0.6, time=t)
+
+def start():
+    global slot
+    # Call me every 24 ticks (twice a quarter note)
+    slot = tulip.seq_add_callback(note, 24)
+
+def stop():
+    global slot
+    tulip.seq_remove_callback(slot)
+    synth.release_voices()
+      </code></pre>
+    </div>
+  </div>
+</div>
 
 <div class="container py-vh-3 border-top" data-aos="fade" data-aos-delay="200">
   <div class="row d-flex justify-content-center">
@@ -262,6 +295,31 @@
 
   </div>
 </div>
+
+
+
+<div class="py-vh-2 w-100 overflow-hidden" id="more">
+  <div class="container">
+    <div class="row d-flex">
+        <div class="col-lg-10" data-aos="fade-down"><h2 class="display-6">Make multichannel sound installations with an optional Alles speaker, or 30</h2></div>
+    </div>
+    <div class="row">
+      <img src="img/nicoboard-alles.jpg"/>
+    </div>
+
+    <div class="row d-flex align-items-top py-vh-3">
+
+      <div class="col-md-6 col-lg-6  py-vh-2" data-aos="fade-up" data-aos-delay="200">
+        <span class="h5 fw-lighter">Alles</span>
+        <p class="border-top border-dark">With an optional <a href="https://github.com/shorepine/alles">Alles speaker</A> (or up to a few dozen!) you can perform multichannel audio in Tulip. The underlying synthesizer can address multiple Alles speakers over a Wi-Fi mesh. Each speaker has the same synthesizer capabilities as in Tulip. You can address them individually or in groups, and send all the same commands you can send on the built-in synth in Tulip. Make stunning whole-room installations of dozens of channels all powered from one Tulip.</p>
+        <p><a href="https://notes.variogram.com/2022/09/23/alles-amy/" class="btn btn-info">Read more about Alles</a></p>
+
+
+      </div>
+    </div>
+  </div>
+</div>
+
 
 
 <div class="py-vh-4 w-100 overflow-hidden" id="get">
@@ -426,8 +484,10 @@
 
 </footer>
 
-    <script src="js/bootstrap.bundle.min.js"></script>
+<script src="js/bootstrap.bundle.min.js"></script>
 <script src="js/aos.js"></script>
+<script src="js/prism.js"></script>
+
  <script>
  AOS.init({
    duration: 800, // values from 0 to 3000, with step 50ms
