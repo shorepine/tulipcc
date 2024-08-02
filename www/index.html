@@ -258,27 +258,19 @@
   </div>
     <div class="row d">
       <pre><code class="language-python"> 
-# Play a random note of an F minor 7 chord. Beat syncs with other programs
-
+# Play a random note of an F minor 7 chord. 
+# Beat syncs with other running music programs
 import tulip, midi, music, random
 
 chord = music.Chord("F:min7").midinotes()
 synth = midi.Synth(1) # single note polyphony
 synth.program_change(143) # DX7 BASS 2 patch
-slot = None
 
 def note(t):
     synth.note_on(random.choice(chord), 0.6, time=t)
 
-def start():
-    global slot
-    # Call me every 24 ticks (twice a quarter note)
-    slot = tulip.seq_add_callback(note, 24)
-
-def stop():
-    global slot
-    tulip.seq_remove_callback(slot)
-    synth.release_voices()
+# Call note() every 24 ticks (twice a quarter note)
+slot = tulip.seq_add_callback(note, 24)
       </code></pre>
     </div>
   </div>
@@ -327,6 +319,12 @@ def stop():
         <div class="row d-flex justify-content-center">
           <h2 class="display-6">Buy a Tulip, DAC or Alles. Ships anywhere in the world.</h2>
         </div>
+
+        <div class="alert alert-secondary" role="alert">
+          <strong>August 1 2024:</strong> Tulip's manufacturer sold out of the first batch of Tulips yesterday during our launch and are currently hard at work making more. 
+          The next batch of Tulips are set to be ready by <strong>around August 20</strong>. Order now to get your Tulip as soon as possible! Please contact <A HREF="https://www.makerfabs.com/contact.html">Makerfabs</A> with any questions about your order or
+          timing!
+      </div>
     <div class="row vw-100 px-0 py-vh-1  align-items-top">
 
         <div class=" col-md-8 col-lg-4" >
@@ -475,6 +473,9 @@ def stop():
     </li>
     <li class="nav-item">
       <a class="nav-link link-secondary ps-0" href="https://discord.com/invite/TzBFkUb8pG">Discord</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link link-secondary ps-0" href="https://instagram.com/shorepinesound">Instagram</a>
     </li>
     <li class="nav-item">
       <a class="nav-link link-secondary ps-0" href="mailto:brian@variogram.com">Email</a>
