@@ -8,6 +8,7 @@ Tulip is a low power and afforable self-contained portable computer, with a touc
 
 The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://tulip.computer/) or [build one](docs/tulip_build.md). You can use Tulip to make music, code, art, games, or just write. 
 
+Tulip is powered by [MicroPython](https://micropython.org), [AMY](https://github.com/shorepine/amy), and [LVGL](https://lvgl.io), and the Tulip hardware runs on the ESP32-S3 chip using the [ESP-IDF](https://github.com/espressif/esp-idf).
 
  * [**Get a Tulip from our friends at Makerfabs for only US$59**](https://tulip.computer)
  * [**Just got a Tulip CC? Check out our getting started guide!**](docs/getting_started.md)
@@ -31,7 +32,7 @@ Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)]
 You can [buy a Tulip for $59 US](https://tulip.computer) or [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the cost of a display ($50). The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. 
 
 Tulip CC supports:
-- 8.5MB of RAM - 2MB is available to Python, and 1.5MB is available for OS memory. The rest is used for the graphics framebuffers (which you can use as storage) and the firmware cache. 
+- 8.5MB of RAM - 2MB is available to MicroPython, and 1.5MB is available for OS memory. The rest is used for the graphics framebuffers (which you can use as storage) and the firmware cache. 
 - 32MB flash storage, as a filesystem accesible in Python (24MB left over after OS in ROM)
 - An [AMY](https://github.com/shorepine/amy) stereo 120-voice synthesizer engine running locally, or as a wireless controller for an [Alles](https://github.com/shorepine/alles) mesh. Tulip's synth supports additive and subtractive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, high quality analog style filters, and much more. We ship Tulip with a drum machine, voices / patch app, and Juno-6 editor.
 - Text frame buffer layer, 128 x 50, with ANSI support for 256 colors, inverse, bold, underline, background color
@@ -132,7 +133,7 @@ https://user-images.githubusercontent.com/76612/215893940-658144b7-0c6f-42e2-983
 
 ### MIDI
 
-Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. More in the [full API](docs/tulip_api.md) and [music tutorial](docs/music.md).
+Tulip supports MIDI in and out to connect to external music hardware. You can set up a Python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. More in the [full API](docs/tulip_api.md) and [music tutorial](docs/music.md).
 
 ```python
 m = tulip.midi_in() # returns bytes of the last MIDI message received
