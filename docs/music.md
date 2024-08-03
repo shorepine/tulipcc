@@ -365,13 +365,13 @@ To send MIDI out, just use `tulip.midi_send(message)`. You can, for example, sen
 
 ## Outputting CV signals to modular and analog synths
 
-Tulip can output CV signals instead of audio signals out a compatible DAC chip that you attach on the side "i2c" port. [You can get a DAC](https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md#dacs-or-adcs-for-modular-synths) and send any waveform out its port, even synced to a tempo or using sample & hold. I'd first recommend trying out the user-contributed `waves` app, which brings all this together using a GUI: 
+Tulip can output CV signals instead of audio signals out a compatible DAC chip that you attach on the side "i2c" port. [You can get a DAC](https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md#dacs-or-adcs-for-modular-synths) and send any waveform out its port, even synced to a tempo or using sample & hold. I'd first recommend trying out the user-contributed `waves.py` app, which brings all this together using a GUI: 
 
-To get the `waves` app, you'll first need to join Wi-Fi and get it from Tulip World. See the [getting started](getting_started.md) tutorial for more info, but just do:
+To get the `waves.py` app, you'll first need to join Wi-Fi and get it from Tulip World. See the [getting started](getting_started.md) tutorial for more info, but just do:
 
 ```python
 tulip.wifi(ssid, password)
-world.download('waves')
+world.download('waves.py')
 run('waves')
 ```
 
@@ -379,7 +379,7 @@ And you should see:
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/waves.png" width=600>
 
-If you look at the source of `waves` in the editor, you can see it's pretty simple after the UI setup. 
+If you look at the source of `waves.py` in the editor, you can see it's pretty simple after the UI setup. 
 
 ```python
 amy.send(osc=30, external_channel=1, wave=amy.SAW_DOWN, vel=1, freq=0.5, amp=1)
