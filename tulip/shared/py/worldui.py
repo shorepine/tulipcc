@@ -113,7 +113,7 @@ def run(screen):
     screen.deactivate_callback = deactivate
     screen.handle_keyboard=True
     screen.offset_y = 30
-    app.files = TextSection(120, "Latest files. Use world.download(name) to get them.", bgcolor=35)
+    app.files = TextSection(120, "Latest files. Use world.download(name) in the REPL to get them.", bgcolor=35)
     app.messages = TextSection(280, "Latest messages", bgcolor=0)
     app.entry = TextEntry(60, bgcolor=0)
 
