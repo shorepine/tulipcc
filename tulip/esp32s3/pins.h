@@ -51,7 +51,7 @@
 #define I2C_SCL 18
 #define TOUCH_INT -1
 #define I2C_NUM I2C_NUM_0
-#define I2C_CLK_FREQ 400000
+#define I2C_CLK_FREQ 100000
 #define DEFAULT_BRIGHTNESS 9 // 9 is max, 1 is min
 #define HSYNC_BACK_PORCH 16
 #define HSYNC_FRONT_PORCH 210
@@ -96,7 +96,7 @@
 #define MIDI_IN_PIN UART_PIN_NO_CHANGE
 
 #elif defined TULIP4_R11
-#define TOUCH_RST -1 //48 
+#define TOUCH_RST 48 
 #define PIN_NUM_BK_PWM 47
 #define PIN_R7 14
 #define PIN_R6 21
