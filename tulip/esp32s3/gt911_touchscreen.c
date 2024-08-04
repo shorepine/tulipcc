@@ -70,13 +70,24 @@ void touch_init(void)
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(io_handle, &tp_cfg, &tp));
 }
 uint8_t gt911_held = 0;
-
+extern void set_pin(uint16_t pin, uint8_t value);
 void run_gt911(void *param) {
     uint16_t touch_x[3];
     uint16_t touch_y[3];
     uint16_t touch_strength[3];
     uint8_t touch_cnt = 0;
-    
+    //#ifdef CHARLIN
+    fprintf(stderr, "Charlin mode: resetting touch i2c RST pin twice, will take 4 seconds...\n");
+    set_pin(TOUCH_RST, 0);
+    delay_ms(1000);
+    set_pin(TOUCH_RST, 1);
+    delay_ms(1000);
+    set_pin(TOUCH_RST, 0);
+    delay_ms(1000);
+    set_pin(TOUCH_RST, 1);
+    delay_ms(1000);
+
+    //#endif
     touch_init();
     while (1) {
         esp_lcd_touch_read_data(tp);
