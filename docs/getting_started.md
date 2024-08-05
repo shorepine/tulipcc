@@ -108,6 +108,8 @@ Your next stop: [check out our making music on Tulip tutorial](music.md)
 
 Then, [check out the API for making your own music, games, graphics with Tulip.](tulip_api.md)
 
+If you're having any issues with your Tulip, please check out our [troubleshooting guide.](troubleshooting.md)
+
 [If you want to work on Tulip itself, check out our guide to compiling and flashing the Tulip firmware.](tulip_flashing.md)
 
 If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware. 
@@ -130,33 +132,4 @@ Using WiFi on Tulip (start `tulip.wifi('ssid', 'password')` first), there are tw
  You can transfer any files **from** a computer to Tulip with `tulip.url_save(url, filename)` like: `tulip.url_save('http://192.168.1.23:8000/file.py', 'file.py')`. The `file.py` should be a file in the current directory that you've run `file_server.py` from.\
  \
  To transfer from a Tulip **to** a computer, use `tulip.url_put(url, file)` like `tulip.url_put('http://192.168.1.23:8000', 'file.py')` and it will appear in that folder on your computer. 
-
-### Remap your non-US keyboard
-
-Tulip uses low-level USB keyboard scan codes to translate from keypresses to ASCII to show on screen. We don't have the luxury of an OS to translate these for us across all the different locales of keyboards in the world! If your keyboard is not a US keyboard, you'll need to remap some keys. You can do it one at a time with `tulip.remap()`. 
- - If you have a German keyboard, Tulip community friend `olav` has contributed a keymap on Tulip World: get it from `world.download('keys_de.txt')`. 
- - If you have a French keyboard, `remis` made `world.download('keys_fr.txt')`
- You can see how to use them with Olav's `boot.py`: `world.download('boot.py', 'olav')`
-
-## Known problems
-
-### Flashing on boot, or a message "Tulip flash not setup properly"
-
-We "overclock" Tulip's RAM to 120MHz so it can support more polyphony. This works great but currently (we're working on it) has a downside where first cold boots often stall or hang in certain temperature conditions. If you see your Tulip flash or appear to reboot on first turn on (with the swtich), it should eventually settle down and be fine. Future reboots (with the `RESET` button or by `control-D`) will be fine as well. In rare instances, the cold boot may not load our file system properly. You'll see a message like "Tulip flash not setup properly." If you see that message, just hit `control-D` or the `RESET` button on top. It will go away and you'll be fine. We're working with the chip manufacturer on a more solid solution.
-
-### Touchscreen not responding
-
-If your touchscreen appears to not respond, the most likely explanation is the touchscreen panel cable got loose during shipping or if you installed a battery. We're working with Makerfabs to tape down this connector for higher reliability. But it's a quick fix if it happens to you. Just take off the back case, unseat the touch connector (labeled above) by pulling up the black clamp, and push back in the cable tight, applying a little pressure. Clamp it back, and take a piece of tape to hold down the cable right at the connector, like this: 
-
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tuilpv4r11ctp.jpg" width=600>
-
-
-### USB computer keyboard not working
-
-If your USB computer keyboard is not working, the most likely explanation is that it appears as a "hub" instead of a bare keyboard to Tulip. At this time (we're working on it!) Tulip only supports "root" devices. You'll have to try another keyboard. If you think your keyboard should work, please find us on [issues](https://github.com/shorepine/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG) and we'll help out!
-
-
-
-
-
 
