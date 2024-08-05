@@ -13,7 +13,9 @@ For help, the community of people that can help out with Tulip are
  * [Tulip GitHub discussions](https://github.com/shorepine/tulipcc/discussions)
  * [Makerfabs contact](https://makerfabs.com/contact.html)
 
-**Please remember**: Tulip is supported by volunteers. Makerfabs will send you a tested board free of hardware faults, and the community will do our best to support you using Tulip and fixing any issues with the firmware. If you're having issues, please follow this guide and [contact us](#reach-us) with any questions, but be patient!** **If you believe the board you received has a hardware fault, contact Makerfabs directly, the community does not handle shipping / testing / fulfillment.** But try to resolve the issue here first.  
+**Please remember**: Tulip is supported by volunteers. Makerfabs will send you a tested board free of hardware faults, and the community will do our best to support you using Tulip and fixing any issues with the firmware. If you're having issues, please follow this guide and [contact us](#reach-us) with any questions, but be patient! 
+
+**If you believe the board you received has a hardware fault, contact Makerfabs directly, the community does not handle shipping / testing / fulfillment.** But please try to resolve and diganose the issue here first.  
 
 ## Always upgrade Tulip first
 
@@ -21,11 +23,13 @@ First, always [upgrade your Tulip to the latest firmware](tulip_flashing.md). If
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulipv4r11_front.png" width=600>
 
-## Tulip won't start properly, black screen, no sound
+## Tulip won't start properly, black screen
 
 First be certain that your Tulip is switched on (the switch to the right, facing your Tulip) and being powered properly. Even if your Tulip is not showing the REPL screen, it should be showing an LCD backlight glow (there are no other LEDs on Tulip.) Make sure your USB connector or battery is seated properly. The USB adapter should support at least 1A of power. 
 
 If you think your Tulip is powered properly but not booting, try to first reset the Tulip. Flip the power switch on and off a few times. Hit the RESET button a few times. Try unplugging your USB keyboard if you have one. Wait a few seconds. There are rare instances (usually temperature related) where the chip may not boot properly, but a reboot or two will usually fix it. 
+
+If your Tulip makes a startup noise but doesn't show the screen, there may be an issue with your screen. The startup "bleep" should only happen if the system boots properly.
 
 ## Flash a Tulip manually
 
