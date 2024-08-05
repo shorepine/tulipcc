@@ -12,6 +12,7 @@ Tulip is powered by [MicroPython](https://micropython.org), [AMY](https://github
 
  * [**Get a Tulip from our friends at Makerfabs for only US$59**](https://tulip.computer)
  * [**Just got a Tulip CC? Check out our getting started guide!**](docs/getting_started.md)
+ * [**Any issues with your Tulip CC? Here's our troubleshooting guide**](docs/troubleshooting.md)
  * [**Want to make music with your Tulip? Check out our music tutorial here**](docs/music.md)
  * [**See the full Tulip API**](docs/tulip_api.md)
  * [**Build your own Tulip**](docs/tulip_build.md)
