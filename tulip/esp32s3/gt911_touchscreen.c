@@ -16,8 +16,7 @@ float y_scale = 1.0f;
 esp_lcd_touch_handle_t tp;
 
 
-void touch_init(void)
-{
+void touch_init(uint8_t alternate) {
     tp = NULL;
     esp_lcd_panel_io_handle_t io_handle = NULL;
 
@@ -32,8 +31,11 @@ void touch_init(void)
 
     ESP_ERROR_CHECK(i2c_param_config(I2C_NUM, &i2c_conf));
     ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM, i2c_conf.mode, 0, 0, 0));
-
     esp_lcd_panel_io_i2c_config_t io_config = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
+    if(alternate) {
+        io_config.dev_addr = 0x14;
+    } 
+
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c((esp_lcd_i2c_bus_handle_t)I2C_NUM, &io_config, &io_handle));
 
 
@@ -80,8 +82,8 @@ void run_gt911(void *param) {
     uint16_t touch_strength[3];
     uint8_t touch_cnt = 0;
 
+    #ifdef TULIP4_R11    
     fprintf(stderr, "Resetting touch i2c RST pin twice\n");
-
     gpio_config_t peri_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
         .pin_bit_mask = 1ULL << TOUCH_RST
@@ -96,8 +98,20 @@ void run_gt911(void *param) {
     delay_ms(200);
     gpio_set_level(TOUCH_RST, 1);
     delay_ms(200);
+    #endif
 
-    touch_init();
+    touch_init(0);
+    uint8_t bytes[1] = {0};
+    esp_err_t err= i2c_master_write_to_device(I2C_NUM_0, 0x5D, bytes, 0, pdMS_TO_TICKS(10));
+    fprintf(stderr, "\nerr for writing to 0x5D is %d %s\n", err, esp_err_to_name(err));
+    if(err != 0) {
+        fprintf(stderr, "falling back on 0x14 for touch\n");
+        touch_init(1);
+        err= i2c_master_write_to_device(I2C_NUM_0, 0x14, bytes, 0, pdMS_TO_TICKS(10));
+        fprintf(stderr, "\nerr for writing to 0x14 is %d %s\n", err, esp_err_to_name(err));
+    }
+
+  
     while (1) {
         esp_lcd_touch_read_data(tp);
         if(esp_lcd_touch_get_coordinates(tp, touch_x, touch_y, touch_strength, &touch_cnt, 3)) {
