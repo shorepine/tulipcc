@@ -69,6 +69,9 @@ void touch_init(void)
 
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(io_handle, &tp_cfg, &tp));
 }
+
+
+
 uint8_t gt911_held = 0;
 extern void set_pin(uint16_t pin, uint8_t value);
 void run_gt911(void *param) {
@@ -78,13 +81,20 @@ void run_gt911(void *param) {
     uint8_t touch_cnt = 0;
 
     fprintf(stderr, "Resetting touch i2c RST pin twice\n");
-    set_pin(TOUCH_RST, 0);
+
+    gpio_config_t peri_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << TOUCH_RST
+    };
+    gpio_config(&peri_gpio_config);
+
+    gpio_set_level(TOUCH_RST, 0);
     delay_ms(200);
-    set_pin(TOUCH_RST, 1);
+    gpio_set_level(TOUCH_RST, 1);
     delay_ms(200);
-    set_pin(TOUCH_RST, 0);
+    gpio_set_level(TOUCH_RST, 0);
     delay_ms(200);
-    set_pin(TOUCH_RST, 1);
+    gpio_set_level(TOUCH_RST, 1);
     delay_ms(200);
 
     touch_init();
