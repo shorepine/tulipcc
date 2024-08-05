@@ -368,7 +368,7 @@ void app_main(void) {
     idle_0_handle = xTaskGetIdleTaskHandleForCPU(0);
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
-    
+
     #ifndef TDECK
     fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
     xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
