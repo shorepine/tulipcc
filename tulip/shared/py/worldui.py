@@ -16,6 +16,7 @@ def check_messages(x=None):
         nt = world.nice_time(i['age_ms'])
         text = text + "\n["+ nt +"] "+ i['username'] +": " +i['content']
     app.messages.ta.set_text(text)
+    app.messages.ta.scroll_to_y(lv.COORD.MAX,0)
 
 def check_files():
     global app
@@ -29,6 +30,7 @@ def check_files():
         text = text + "\n["+ nt +"] "+ i['username'] +": " + fn + " (" +i['content'] + ")"
 
     app.files.ta.set_text(text)
+    app.files.ta.scroll_to_y(lv.COORD.MAX,0)
 
 def check():
     check_files()
