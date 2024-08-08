@@ -16,9 +16,15 @@ You don't need to compile your own Tulip Desktop unless you're a developer and w
 
 If you want to develop or compile Tulip yourself, start by cloning this repository. 
 
+
+```bash
+git clone https://github.com/shorepine/tulipcc
+cd tulipcc
+```
+
 Then install homebrew
 
-```
+```bash
 # install homebrew first, skip this if you already have it...
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 # Then restart your terminal
@@ -26,7 +32,7 @@ Then install homebrew
 
 To build Tulip Desktop (macOS 10.15 (Catalina) and higher, Apple Silicon or x86_64):
 
-```
+```bash
 cd tulip/macos
 brew install pkg-config libffi
 
@@ -38,11 +44,18 @@ brew install pkg-config libffi
 ./package.sh # makes .app bundle in dist, not necessary if you're just using it locally
 ```
 
-## Linux build of Tulip Desktop
+## Linux (including Windows WSL2) build of Tulip Desktop
 
-Install SDL2:
+First, clone this repository and cd into it
 
+```bash
+git clone https://github.com/shorepine/tulipcc
+cd tulipcc
 ```
+
+Install the dependencies:
+
+```bash
 # Ubuntu etc
 sudo apt install libsdl2-dev libffi-dev
 
@@ -51,11 +64,14 @@ sudo yum install SDL2-devel libffi-devel
 
 # Arch
 sudo pacman -S sdl2 libffi
+
+# WSL 
+sudo apt install libsdl2-dev libffi-dev make gcc alsa-utils
 ```
 
 Build and run:
 
-```
+```bash
 cd tulip/linux
 ./build.sh
 ./dev/tulip
@@ -64,7 +80,7 @@ cd tulip/linux
 
 ## Windows build of Tulip Desktop
 
-We've heard this works fine under WSL using the Linux instructions. We'd love a native build! 
+We've heard this works fine under WSL2 using the Linux instructions. We'd love a native build! 
 
 
 ## Questions
