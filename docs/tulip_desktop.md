@@ -56,17 +56,14 @@ cd tulipcc
 Install the dependencies:
 
 ```bash
-# Ubuntu etc
-sudo apt install libsdl2-dev libffi-dev
+# Ubuntu, Debian, etc., including Windows 11 in WSL2
+sudo apt install build-essential libsdl2-dev libffi-dev alsa-utils
 
-# Fedora etc
-sudo yum install SDL2-devel libffi-devel
+# Fedora 40+, etc.
+sudo dnf install gcc make SDL2-devel libffi-devel alsa-utils
 
 # Arch
 sudo pacman -S sdl2 libffi
-
-# WSL 
-sudo apt install libsdl2-dev libffi-dev make gcc alsa-utils
 ```
 
 Build and run:
