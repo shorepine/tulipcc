@@ -1183,11 +1183,13 @@ STATIC mp_obj_t tulip_bg_line(size_t n_args, const mp_obj_t *args) {
     int16_t x1 = mp_obj_get_int(args[2]);
     int16_t y1 = mp_obj_get_int(args[3]);
     uint8_t pal_idx = mp_obj_get_int(args[4]);
-    drawLine_scanline(x0,y0,x1,y1,pal_idx);
+    uint16_t width = 1;
+    if(n_args>5) width = mp_obj_get_int(args[5]);
+    drawLine_scanline(x0,y0,x1,y1,pal_idx, width);
     return mp_const_none;
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_line_obj, 5, 5, tulip_bg_line);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_line_obj, 5, 6, tulip_bg_line);
 
 STATIC mp_obj_t tulip_bg_roundrect(size_t n_args, const mp_obj_t *args) {
     uint16_t x = mp_obj_get_int(args[0]);

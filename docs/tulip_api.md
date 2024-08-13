@@ -633,7 +633,7 @@ tulip.bg_clear() # uses default
 # Drawing primitives. These all write to the BG. 
 # If you want to use them for sprites, you can use bg_bitmap after drawing offscreen.
 # set filled to 1 if you want the shape filled, 0 or omit otherwise
-tulip.bg_line(x0,y0, x1,y1, pal_idx)
+tulip.bg_line(x0,y0, x1,y1, pal_idx, [width])
 tulip.bg_bezier(x0,y0, x1,y1, x2,y2, pal_idx)
 tulip.bg_circle(x,y,r, pal_idx, filled) # x and y are the center
 tulip.bg_roundrect(x,y, w,h, r, pal_idx, filled)
