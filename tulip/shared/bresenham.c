@@ -9,7 +9,7 @@ void drawPixel(int cx, int cy, uint8_t pal_idx) {
 
 
 // bresenham but it's per scanline, increasing on y not x
-void drawLine_scanline(short x0, short y0,short x1, short y1,unsigned short color) {
+void drawLine_scanline(short x0, short y0,short x1, short y1,unsigned short color, unsigned short width) {
     short steep = abs(x1 - x0) > abs(y1 - y0);
     if (steep) {
         swap(y0, x0);
@@ -34,9 +34,13 @@ void drawLine_scanline(short x0, short y0,short x1, short y1,unsigned short colo
     }
     for (; y0<=y1; y0++) {
         if (steep) {
-            drawPixel(y0, x0, color);
+            for(uint16_t i=0;i<width;i++) {
+              drawPixel(y0, x0+i, color);
+            }
         } else {
-            drawPixel(x0, y0, color);
+            for(uint16_t i=0;i<width;i++) {
+              drawPixel(x0+i, y0, color);
+            }
         }
         err -= dx;
         if (err < 0) {
