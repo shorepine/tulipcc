@@ -178,6 +178,14 @@ list(APPEND IDF_COMPONENTS
     esp_app_format
     esp_bootloader_format
     esp_common
+    esp_driver_uart
+    esp_driver_i2s
+    esp_driver_i2c
+    esp_driver_sdmmc
+    esp_driver_sdspi
+    esp_driver_spi
+    esp_driver_gpio
+    esp_driver_ledc
     esp_eth
     esp_event
     esp_hw_support
@@ -205,6 +213,7 @@ list(APPEND IDF_COMPONENTS
     spi_flash
     ulp
     usb
+    usb_host_hid
     vfs
     xtensa
 )
@@ -224,6 +233,7 @@ idf_component_register(
         ../../tulip/esp32s3
         ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch_gt911/include
         ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch/include
+        ../../tulip/esp32s3/managed_components/espressif__usb_host_hid/include
         ${MICROPY_INC_CORE}
         ${MICROPY_INC_USERMOD}
         #${MICROPY_PORT_DIR}
