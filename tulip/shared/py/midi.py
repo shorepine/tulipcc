@@ -561,6 +561,11 @@ WARNED_MISSING_CHANNELS = set()
 def midi_event_cb(midi_message):
     """Callback that takes MIDI note on/off to create Note objects."""
     ensure_midi_config()
+
+    # Ignore single value messages (clock, etc) for now.
+    if(len(midi_message)<2): 
+        return
+
     message = midi_message[0] & 0xF0
     channel = (midi_message[0] & 0x0F) + 1
     control = midi_message[1]
@@ -571,9 +576,9 @@ def midi_event_cb(midi_message):
         GLOBAL_MIDI_CC_BINDINGS[control](value)
         return  # Early exit
     if channel not in config.synth_per_channel:
-        if channel not in WARNED_MISSING_CHANNELS:
-            print("Warning: No synth configured for MIDI channel", channel)
-            WARNED_MISSING_CHANNELS.add(channel)
+        #if channel not in WARNED_MISSING_CHANNELS:
+        #    print("Warning: No synth configured for MIDI channel %d. message was %s %s" %(channel, hex(midi_message[0]), hex(midi_message[1])))
+        #    WARNED_MISSING_CHANNELS.add(channel)
         return  # Early exit
     # We have a populated channel.
     synth = config.synth_per_channel[channel]
@@ -621,10 +626,11 @@ def c_fired_midi_event(x):
         for c in MIDI_CALLBACKS:
             c(m)
 
-        # Are there more events waiting?
-        m = m[3:]
-        if len(m) == 0:
-            m = tulip.midi_in()
+        m = tulip.midi_in()
+        ## Are there more events waiting?
+        #m = m[3:]
+        #if len(m) == 0:
+        #    m = tulip.midi_in()
 
 
 # Keep this -- this is a tulip API 
