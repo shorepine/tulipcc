@@ -15,7 +15,7 @@ extern mp_obj_t midi_callback;
 
 //void tulip_midi_isr();
 #define MAX_MIDI_BYTES_PER_MESSAGE 3
-#define MIDI_QUEUE_DEPTH 48
+#define MIDI_QUEUE_DEPTH 1024
 extern uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
 extern uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
 extern int16_t midi_queue_tail;

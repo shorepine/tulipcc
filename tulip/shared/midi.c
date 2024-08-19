@@ -11,11 +11,14 @@ extern mp_obj_t midi_callback;
 
 
 static inline void push_midi_message_into_fifo(uint8_t *data, int len) {
+    //fprintf(stderr, "adding midi message of %d bytes to queue: ", len);
     for(uint32_t i = 0; i < (uint32_t)len; i++) {
         if(i < MAX_MIDI_BYTES_PER_MESSAGE) {
+            //fprintf(stderr, "%02x ", data[i]);
             last_midi[midi_queue_tail][i] = data[i];
         }
     }
+    //fprintf(stderr, "\n");
     last_midi_len[midi_queue_tail] = (uint16_t)len;
     midi_queue_tail = (midi_queue_tail + 1) % MIDI_QUEUE_DEPTH;
     if (midi_queue_tail == midi_queue_head) {
@@ -56,6 +59,7 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
             }
         } else { // data byte 
             uint8_t status = current_midi_status & 0xF0;
+            uint8_t channel = current_midi_status & 0x0F;
             if(status == 0x80 || status == 0x90 || status == 0xA0 || status == 0xB0 || status == 0xE0) {
                 midi_message[midi_message_i++] = byte;
                 if(midi_message_i >= 3) { 
@@ -127,9 +131,14 @@ void run_midi() {
     uint8_t data[128];
     size_t length = 0;
     while(1) {
-        length = uart_read_bytes(uart_num, data, MAX_MIDI_BYTES_PER_MESSAGE*MIDI_QUEUE_DEPTH, 1/portTICK_PERIOD_MS);
+        length = uart_read_bytes(uart_num, data, 1024 /*MAX_MIDI_BYTES_PER_MESSAGE*MIDI_QUEUE_DEPTH*/, 1/portTICK_PERIOD_MS);
         if(length > 0) {
             //uart_flush(uart_num);
+            //fprintf(stderr, "got raw bytes of %d length:  ", length);
+            //for(uint8_t i=0;i<length;i++) {
+            //    fprintf(stderr, "%02x ", data[i]);
+            //}
+            //fprintf(stderr, "\n");
             convert_midi_bytes_to_messages(data,length);
         }
     } // end loop forever

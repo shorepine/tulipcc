@@ -50,7 +50,7 @@ uint32_t **bg_lines;//[V_RES];
 // Defaults for runtime display params
 uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
 uint8_t tfb_active = 1;
-uint8_t tfb_log = 0;
+uint8_t tfb_log = 1;
 uint8_t gpu_log = 0;
 
 int16_t lvgl_is_repl = 0;
