@@ -214,7 +214,7 @@ import tulip, midi, music, random
 
 def note(t):
     global app
-    app synth.note_on(random.choice(app.chord), 0.6, time=t)
+    app.synth.note_on(random.choice(app.chord), 0.6, time=t)
 
 def start(app):
     app.slot = tulip.seq_add_callback(note, 24)
