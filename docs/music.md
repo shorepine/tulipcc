@@ -187,7 +187,7 @@ def start():
 def stop():
     global slot
     tulip.seq_remove_callback(slot)
-    synth.release_voices()
+    synth.release()
 
 ```
 
@@ -221,7 +221,7 @@ def start(app):
 
 def stop(app):
     tulip.seq_remove_callback(app.slot)
-    app.synth.release_voices()
+    app.synth.release()
 
 def run(screen):
     global app
