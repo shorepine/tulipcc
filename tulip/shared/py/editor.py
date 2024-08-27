@@ -26,8 +26,7 @@ class Editor(tulip.UIScreen):
     def deactivate_editor_cb(self, screen):
         tulip.keyboard_callback()
         tulip.tfb_restore()
-        # Fudge the repl line as it got eaten during the TFB restore. This will never be a problem, lol 
-        #print(">>> ",end='')
+ 
 
     def quit_editor_cb(self, screen):
         tulip.deinit_editor()
@@ -45,7 +44,6 @@ class Editor(tulip.UIScreen):
         tulip.keyboard_callback(tulip.key_editor)
         # The TFB switches over, but the REPL will print >>> after this runs, 
         # overwriting the first line. So wait a bit and activate then
-        # (This also means the >>> will print on the alternate TFB, so we have to fudge on reactivate)
         tulip.defer(tulip.activate_editor, None, 50)
         # And because of the TFB clearing, the buttons may get destroyed, so re-draw them
         tulip.defer(draw, None, 100)
