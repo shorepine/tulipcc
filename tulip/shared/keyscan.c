@@ -409,8 +409,9 @@ void send_key_to_micropython(uint16_t c) {
         mp_sched_schedule(ui_switch_callback, NULL);
     } else {
         // Call the callback if set
-        if(keyboard_callback != NULL) 
+        if(keyboard_callback != NULL)  {
             mp_sched_schedule(keyboard_callback, mp_obj_new_int(c));
+        }
 
         // If something is taking in chars from LVGL (text area etc), don't send the char to MP
         if (c==mp_interrupt_char) {
