@@ -77,6 +77,10 @@ You can see how to use them with Olav's `boot.py`: `world.download('boot.py', 'o
 
 If your USB computer keyboard is not working, the most likely explanation is that it appears as a "hub" instead of a bare keyboard to Tulip. At this time (we're working on it!) Tulip only supports "root" devices. You'll have to try another keyboard. If you think your keyboard should work, please find us on [issues](https://github.com/shorepine/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG) and we'll help out!
 
+## The Mabee DAC is not correctly sending CV / Gate values to your modular synthesizer
+
+If you can't seem to control your modular synths with the DAC, please note that the current revision of the <a href="https://www.makerfabs.com/mabee-dac-gp8413.html">Mabee DAC</a>is set up for TRS (stereo 3.5mm) cables. To use with a mono modular patch cable, you will need a stereo to mono <a href="https://www.amazon.com/3-5mm-Stereo-Adapter-Plated-Female/dp/B0919C5D93">adapter</a> or <a href="https://www.amazon.com/Gold-Plated-Connector-Splitter-RFAdapter-Headphone/dp/B096XNHTH3/">cable</a> plugged in at the DAC end. You can also slightly pull out a mono cable's connector. We are working on fixing this for future batches and will update this when we do.
+
 ## Any other issues
 
 Please [reach out](#reach-us) with any other issues, and we'll add them here.
