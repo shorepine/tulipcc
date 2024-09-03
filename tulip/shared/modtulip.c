@@ -1051,26 +1051,31 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_obj, 0, 0, tulip_touch);
 #ifdef ESP_PLATFORM
 extern int16_t touch_x_delta;
 extern int16_t touch_y_delta;
+extern float touch_y_scale;
 #else
 int16_t touch_x_delta = 0;
 int16_t touch_y_delta = 0;
+float touch_y_scale = 1.0;
 #endif
 
 STATIC mp_obj_t tulip_touch_delta(size_t n_args, const mp_obj_t *args) {
     if(n_args > 0) {
         touch_x_delta = mp_obj_get_int(args[0]);
         touch_y_delta = mp_obj_get_int(args[1]);
+        // Allow people to still set x,y delta without scale
+        if(n_args > 2) touch_y_scale = mp_obj_get_float(args[2]);
     } else {
-        mp_obj_t tuple[2];
+        mp_obj_t tuple[3];
         tuple[0] = mp_obj_new_int(touch_x_delta);
         tuple[1] = mp_obj_new_int(touch_y_delta);
-        return mp_obj_new_tuple(2, tuple);
+        tuple[2] = mp_obj_new_float(touch_y_scale);
+        return mp_obj_new_tuple(3, tuple);
     }
     return mp_const_none;
 
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_delta_obj, 0, 2, tulip_touch_delta);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_touch_delta_obj, 0, 3, tulip_touch_delta);
 
 
 STATIC mp_obj_t tulip_key_remap(size_t n_args, const mp_obj_t *args) {

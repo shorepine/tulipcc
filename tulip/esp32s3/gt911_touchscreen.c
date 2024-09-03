@@ -6,11 +6,11 @@
 // Default for my V4R11
 int16_t touch_x_delta = -2;
 int16_t touch_y_delta = -12;
-float y_scale = 0.8f;
+float touch_y_scale = 0.8f;
 #else
 int16_t touch_x_delta = 0;
 int16_t touch_y_delta = 0;
-float y_scale = 1.0f;
+float touch_y_scale = 1.0f;
 #endif
 
 esp_lcd_touch_handle_t tp;
@@ -120,9 +120,9 @@ void run_gt911(void *param) {
                 last_touch_x[i] = touch_x[i] + touch_x_delta;
                 #ifdef TDECK
                     // tdeck has swapped y that mirror_y doesn't fix
-                    last_touch_y[i] = ((V_RES-touch_y[i]) + touch_y_delta)*y_scale;
+                    last_touch_y[i] = ((V_RES-touch_y[i]) + touch_y_delta)*touch_y_scale;
                 #else
-                    last_touch_y[i] = (touch_y[i] + touch_y_delta)*y_scale;
+                    last_touch_y[i] = (touch_y[i] + touch_y_delta)*touch_y_scale;
                 #endif
             }
             //fprintf(stderr, "touch DOWN %d %d\n", last_touch_x[0], last_touch_y[0]);

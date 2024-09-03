@@ -42,15 +42,20 @@ y_mean = 0
 for (x,y) in deltas:
     x_mean += x
     y_mean += y
+
+
+old_delta = tulip.touch_delta()
 x_mean = int(float(x_mean) / float(len(deltas)))
 y_mean = int(float(y_mean) / float(len(deltas)))
 
-old_delta = tulip.touch_delta()
-print("New computed delta is [%d, %d]. It was [%d, %d]. " %(x_mean, y_mean, old_delta[0], old_delta[1]))
+# TODO: compute this from the deltas
+y_scale = old_delta[2]
+
+print("New computed delta is [%d, %d, %f]. It was [%d, %d, %f]. " %(x_mean, y_mean, y_scale, old_delta[0], old_delta[1], old_delta[2]))
 if(tulip.prompt("Set it?")):
-    tulip.touch_delta(x_mean, y_mean)
+    tulip.touch_delta(x_mean, y_mean, y_scale)
     if(tulip.prompt("Set. Add calibration to boot.py?")):
-        tulip.add_to_bootpy("tulip.touch_delta(%d,%d)" % (x_mean, y_mean))
+        tulip.add_to_bootpy("tulip.touch_delta(%d,%d,%f)" % (x_mean, y_mean, y_scale))
         print("Added.")
 
 tulip.bg_clear()
