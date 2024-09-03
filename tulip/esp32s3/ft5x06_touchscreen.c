@@ -28,6 +28,7 @@
 
 int16_t touch_x_delta = 0;
 int16_t touch_y_delta = 0;
+float touch_y_scale = 1.0f;
 
 typedef struct {
     i2c_config_t i2c_conf;   /*!<I2C bus parameters*/
@@ -254,7 +255,7 @@ void run_ft5x06(void *param)
                         if(last_touch_x[i] < 0) last_touch_x[i] = 0;
                         if(last_touch_x[i] >= H_RES) last_touch_x[i] = H_RES-1;
 
-                        last_touch_y[i] = touch_info.cury[i] + touch_y_delta;
+                        last_touch_y[i] = (touch_info.cury[i] + touch_y_delta)*touch_y_scale;
                         if(last_touch_y[i] < 0) last_touch_y[i] = 0;
                         if(last_touch_y[i] >= V_RES) last_touch_y[i] = V_RES-1;
 
