@@ -429,6 +429,7 @@ env = JunoSection('ENV', [
 ch = JunoSection("CH", [chorus_mode := JunoRadioButtons("Mode", ["Off", "I", "II", "III"],
                                                         [cho(0), cho(1), cho(2), cho(3)])])
 
+port = JunoSection("PORT", [portamento := JunoSlider("Port", jcb('portamento'))])
 
 def setup_ui_from_juno_patch(patch):
     """Make the UI match the values in a JunoPatch."""
@@ -633,6 +634,7 @@ def run(screen):
     screen.deactivate_callback = deactivate
     screen.set_bg_color(73)
     screen.add([lfo, dco, hpf, vcf, vca, env, ch])
+    screen.add(port, x=20, y=330)
     # I wanted this further left, but the channel_selector stomps on in?
     screen.add(patch_selector, x=500, y=20) # relative=lfo, direction=lv.ALIGN.OUT_TOP_MID)
     # channel_selector affects patch_selector, so it is placed to the left.
