@@ -15,6 +15,7 @@ Tulip is powered by [MicroPython](https://micropython.org), [AMY](https://github
  * [**Any issues with your Tulip CC? Here's our troubleshooting guide**](docs/troubleshooting.md)
  * [**Want to make music with your Tulip? Check out our music tutorial here**](docs/music.md)
  * [**See the full Tulip API**](docs/tulip_api.md)
+ * [**Learn about our roadmap and find out what we're working on next**](https://github.com/orgs/shorepine/projects/1)
  * [**Build your own Tulip**](docs/tulip_build.md)
  * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2024/07/30/tulip-available/)** 
 
