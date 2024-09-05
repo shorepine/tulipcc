@@ -57,12 +57,15 @@ Starting Sequencer (timer)
 
 This screen may show important diagnostic or troubleshooting information that you can [share with us](#reach-us)
 
-## Tulip's touchscreen doesn't work
+## Tulip's touchscreen doesn't work at all
 
 If your touchscreen appears to not respond, the most likely explanation is the touchscreen panel cable got loose during shipping or if you installed a battery. We're working with Makerfabs to tape down this connector for higher reliability. But it's a quick fix if it happens to you. Just take off the back case, unseat the touch connector (labeled above) by pulling up the black clamp, and push back in the cable tight, applying a little pressure. Clamp it back, and take a piece of tape to hold down the cable right at the connector, like this: 
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tuilpv4r11ctp.jpg" width=600>
 
+## The touchscreen works but it's hard to tap on the menu, switch or quit buttons
+
+Some newer Tulips are shipping with the touch panel in a slightly different orientation, which is causing our old calibration to not be accurate. First, try the Tulip World `paint.py` program to test your touchscreen: do `world.download('paint.py')` and then `run('paint')`. A few users have then said that their newer Tulip's touchscreen acts better with a `y_scale` of 0.75 instead of our default 0.8. To fix that, `run('calibrate')` and note its suggested `touch_delta`, and write it to your `boot.py` when it asks. Calibration does not currently guess the `y_scale`, so `edit('boot.py')` and change the `0.8` in `touch_delta()` (the last of 3 numbers) to `0.75`. Try `run('paint')` again! If you're still stuck, [we'd love your help debugging this more!](#reach-us)
 
 ## Your USB keyboard's keys are typing the wrong characters
 
