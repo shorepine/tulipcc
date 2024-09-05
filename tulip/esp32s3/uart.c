@@ -158,6 +158,29 @@ STATIC void IRAM_ATTR uart_midi_irq_handler(void *arg) {
 }
 */
 
+
+int uart_stdout_tx_strn(const char *str, size_t len) {
+    uart_hal_context_t repl_hal = REPL_HAL_DEFN();
+    size_t remaining = len;
+    uint32_t written = 0;
+    // TODO add a timeout
+    for (;;) {
+        uart_hal_write_txfifo(&repl_hal, (const void *)str, remaining, &written);
+
+        if (written >= remaining) {
+            break;
+        }
+        remaining -= written;
+        str += written;
+        ulTaskNotifyTake(pdFALSE, 1);
+    }
+    if(len) {
+        display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+    }
+    return len;
+}
+/*
+
 int uart_stdout_tx_strn(const char *str, size_t len) {
     if(len) {
         display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
@@ -165,4 +188,5 @@ int uart_stdout_tx_strn(const char *str, size_t len) {
     ulTaskNotifyTake(pdFALSE, 1);
     return 0;
 }
+*/
 

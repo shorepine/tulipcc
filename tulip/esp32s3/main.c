@@ -213,6 +213,7 @@ int vprintf_null(const char *format, va_list ap) {
 
 extern void setup_lvgl();
 uint8_t lvgl_setup = 0;
+
 void mp_task(void *pvParameter) {
     volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
     //volatile uint32_t sp = (uint32_t)get_sp();
@@ -242,33 +243,40 @@ void mp_task(void *pvParameter) {
     void *mp_task_heap = heap_caps_malloc(mp_task_heap_size, caps);
 
 soft_reset:
+
     // initialise the stack pointer for the main thread
     mp_stack_set_top((void *)sp);
     mp_stack_set_limit(TULIP_MP_TASK_STACK_SIZE - MP_TASK_STACK_LIMIT_MARGIN);
+
     gc_init(mp_task_heap, mp_task_heap + mp_task_heap_size);
     mp_init();
+
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
+
     readline_init0();
+
     if(!lvgl_setup) {
         setup_lvgl();
         lvgl_setup = 1;
     }
-
+    
     MP_STATE_PORT(native_code_pointers) = MP_OBJ_NULL;
-
+    
     // initialise peripherals
     machine_pins_init();
     #if MICROPY_PY_MACHINE_I2S
     //machine_i2s_init0();
     #endif
-
+    
     // run boot-up scripts
     pyexec_frozen_module("_boot.py", false);
+    
     pyexec_file_if_exists("boot.py");
+    
     if (pyexec_mode_kind == PYEXEC_MODE_FRIENDLY_REPL) {
-        int ret = pyexec_file_if_exists("main.py");
-        if (ret & PYEXEC_FORCED_EXIT) {
-            goto soft_reset_exit;
+            int ret = pyexec_file_if_exists("main.py");
+            if (ret & PYEXEC_FORCED_EXIT) {
+                goto soft_reset_exit;
         }
     }
 
@@ -315,9 +323,8 @@ soft_reset_exit:
 
     gc_sweep_all();
 
-    mp_hal_stdout_tx_str("MPY: hard reboot\r\n");
+    mp_hal_stdout_tx_str("MPY: soft reboot\r\n");
     esp_restart();
-
     // deinitialise peripherals
     machine_pwm_deinit_all();
     // TODO: machine_rmt_deinit_all();

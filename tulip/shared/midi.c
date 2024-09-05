@@ -29,26 +29,30 @@ static inline void push_midi_message_into_fifo(uint8_t *data, int len) {
 }
 
 
+//uint8_t midi_message[3];
+//uint8_t midi_message_i = 0;
+
+
 uint8_t current_midi_status = 0;
-uint8_t midi_message[3];
-uint8_t midi_message_i = 0;
+uint8_t midi_message_pointer = 0;
+uint8_t midi_message_buffer[MAX_MIDI_BYTES_TO_PARSE];
+
 
 void callback_midi_message_received(uint8_t *data, size_t len) {
     push_midi_message_into_fifo(data, len);
     if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_none);
     current_midi_status = 0;
-    midi_message_i = 0;
+    //midi_message_i = 0;
 }
 
 
 void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
-    // i take any amount of bytes and add messages to the fifo
+    // i take any amount of bytes and add messages 
+    /*
     for(size_t i=0;i<len;i++) {
         uint8_t byte = data[i];
         if(byte & 0x80) { // status byte 
-            if(current_midi_status != 0) {
-                // this means we got a new status byte before sending the last message. i guess this is fine... 
-            }
+
             current_midi_status = byte;
             midi_message_i = 1;
             midi_message[0] = byte;
@@ -76,6 +80,7 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
             }
         }
     }
+    */
 }
 
 
@@ -107,7 +112,7 @@ void run_midi() {
     // TX, RX, CTS/RTS -- Only care about RX here, pin 47 for now
     ESP_ERROR_CHECK(uart_set_pin(uart_num, MIDI_OUT_PIN, MIDI_IN_PIN, UART_PIN_NO_CHANGE , UART_PIN_NO_CHANGE ));
 
-    const int uart_buffer_size = (1024);
+    const int uart_buffer_size = (MAX_MIDI_BYTES_TO_PARSE);
     // Install UART driver using an event queue here
     ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, \
                                           0, 0, NULL, 0));
@@ -128,10 +133,10 @@ void run_midi() {
 
     printf("UART MIDI running on core %d\n", xPortGetCoreID());
 
-    uint8_t data[128];
+    uint8_t data[MAX_MIDI_BYTES_TO_PARSE];
     size_t length = 0;
     while(1) {
-        length = uart_read_bytes(uart_num, data, 1024 /*MAX_MIDI_BYTES_PER_MESSAGE*MIDI_QUEUE_DEPTH*/, 1/portTICK_PERIOD_MS);
+        length = uart_read_bytes(uart_num, data, MAX_MIDI_BYTES_TO_PARSE /*MAX_MIDI_BYTES_PER_MESSAGE*MIDI_QUEUE_DEPTH*/, 1/portTICK_PERIOD_MS);
         if(length > 0) {
             //uart_flush(uart_num);
             //fprintf(stderr, "got raw bytes of %d length:  ", length);
@@ -148,6 +153,8 @@ void run_midi() {
 #ifdef MACOS
 // defined in virtualmidi.m
 #else
+
+// This is MIDI out on tulip desktop that is NOT macos... not supported 
 void midi_out(uint8_t * bytes, uint16_t len) {
     // nothing yet
 }
