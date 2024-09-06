@@ -47,7 +47,6 @@ static const uint8_t ansi_pal[256] = {
 extern int16_t last_touch_x[3];
 extern int16_t last_touch_y[3];
 extern uint8_t touch_held;
-extern uint8_t tfb_log;
 
 void display_reset_sprites();
 void display_reset_tfb();

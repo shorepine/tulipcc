@@ -9,7 +9,6 @@ int16_t ansi_active_format;
 int16_t last_touch_x[3];
 int16_t last_touch_y[3];
 uint8_t touch_held;
-uint8_t tfb_log;
 
 uint8_t tfb_active;
 uint8_t tfb_y_row; 
@@ -50,7 +49,6 @@ uint32_t **bg_lines;//[V_RES];
 // Defaults for runtime display params
 uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
 uint8_t tfb_active = 1;
-uint8_t tfb_log = 1;
 uint8_t gpu_log = 0;
 
 int16_t lvgl_is_repl = 0;
@@ -664,10 +662,6 @@ uint8_t ansi_parse_digits( unsigned char*str, uint16_t j, uint16_t k, uint16_t *
 uint32_t utf8_esc = 0;
 uint8_t supress_lf = 0;
 void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color) {
-    if(tfb_log) {
-        fprintf(stderr, "%.*s", len, str);
-        fflush(stderr);
-    }
 
     //fprintf(stderr,"str len %d format %d is ### ", len, format);
     //for(uint16_t i=0;i<len;i++) fprintf(stderr, "[%c/%d] ", str[i], str[i]);
@@ -942,13 +936,16 @@ lv_font_t lv_font_tulip_17;
 lv_font_t lv_font_tulip_18;
 */
 
+lv_indev_t * indev;
+lv_indev_t * indev_kb;
+lv_display_t * lv_display;
 
 void setup_lvgl() {
     // Setup LVGL for UI etc
     lv_init();
 
     //lv_log_register_print_cb(my_log_cb);
-    lv_display_t * lv_display = lv_display_create(H_RES+OFFSCREEN_X_PX, V_RES+OFFSCREEN_Y_PX);
+    lv_display = lv_display_create(H_RES+OFFSCREEN_X_PX, V_RES+OFFSCREEN_Y_PX);
     lv_display_set_physical_resolution(lv_display, H_RES, V_RES); // for touchpad
     lv_display_set_offset(lv_display,0,0);
     lv_display_set_antialiasing(lv_display, 0);
@@ -959,12 +956,12 @@ void setup_lvgl() {
     lv_tick_set_cb(u32_ticks_ms);
 
     // Create a input device (uses tulip.touch())
-    lv_indev_t * indev = lv_indev_create();
+    indev = lv_indev_create();
     lv_indev_set_type(indev, LV_INDEV_TYPE_POINTER);   
     lv_indev_set_read_cb(indev, lvgl_input_read_cb);  
 
     // Also create a keyboard input device 
-    lv_indev_t *indev_kb = lv_indev_create();
+    indev_kb = lv_indev_create();
     lv_indev_set_type(indev_kb, LV_INDEV_TYPE_KEYPAD);
     lv_indev_set_read_cb(indev_kb, lvgl_input_kb_read_cb);  
 /*

@@ -81,20 +81,6 @@ STATIC mp_obj_t tulip_tfb_start(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_start_obj, 0, 0, tulip_tfb_start);
 
-STATIC mp_obj_t tulip_tfb_log_start(size_t n_args, const mp_obj_t *args) {
-    tfb_log = 1;
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_log_start_obj, 0, 0, tulip_tfb_log_start);
-
-
-STATIC mp_obj_t tulip_tfb_log_stop(size_t n_args, const mp_obj_t *args) {
-    tfb_log = 0;
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_log_stop_obj, 0, 0, tulip_tfb_log_stop);
-
-
 
 STATIC mp_obj_t tulip_gpu_log(size_t n_args, const mp_obj_t *args) {
     gpu_log = 1;
@@ -1339,8 +1325,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_display_start), MP_ROM_PTR(&tulip_display_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_swap), MP_ROM_PTR(&tulip_bg_swap_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_stop), MP_ROM_PTR(&tulip_tfb_stop_obj) },
-    { MP_ROM_QSTR(MP_QSTR_tfb_log_start), MP_ROM_PTR(&tulip_tfb_log_start_obj) },
-    { MP_ROM_QSTR(MP_QSTR_tfb_log_stop), MP_ROM_PTR(&tulip_tfb_log_stop_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_start), MP_ROM_PTR(&tulip_tfb_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_save), MP_ROM_PTR(&tulip_tfb_save_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_restore), MP_ROM_PTR(&tulip_tfb_restore_obj) },
