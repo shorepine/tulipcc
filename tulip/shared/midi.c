@@ -3,14 +3,23 @@
 #include "polyfills.h"
 uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
 uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
-int16_t midi_queue_head = 0;
-int16_t midi_queue_tail = 0;
 extern mp_obj_t midi_callback;
 
 #define DEBUG_MIDI 0
 
 
-static inline void push_midi_message_into_fifo(uint8_t *data, int len) {
+uint8_t current_midi_message[3] = {0,0,0};
+uint8_t midi_message_slot = 0;
+
+uint8_t midi_message_buffer[MAX_MIDI_BYTES_TO_PARSE];
+uint8_t sysex_flag = 0;
+int16_t midi_queue_head = 0;
+int16_t midi_queue_tail = 0;
+
+
+// This takes a fully formed (and with status byte) midi messages and puts it in a queue that Python reads from.
+// We have to do this as python may be slower than the bytes come in.
+void callback_midi_message_received(uint8_t *data, size_t len) {
     //fprintf(stderr, "adding midi message of %d bytes to queue: ", len);
     for(uint32_t i = 0; i < (uint32_t)len; i++) {
         if(i < MAX_MIDI_BYTES_PER_MESSAGE) {
@@ -26,61 +35,83 @@ static inline void push_midi_message_into_fifo(uint8_t *data, int len) {
         midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
         fprintf(stderr, "dropped midi message\n");
     }
-}
 
-
-//uint8_t midi_message[3];
-//uint8_t midi_message_i = 0;
-
-
-uint8_t current_midi_status = 0;
-uint8_t midi_message_pointer = 0;
-uint8_t midi_message_buffer[MAX_MIDI_BYTES_TO_PARSE];
-
-
-void callback_midi_message_received(uint8_t *data, size_t len) {
-    push_midi_message_into_fifo(data, len);
+    // We tell Python that a MIDI message has been received
     if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_none);
-    current_midi_status = 0;
-    //midi_message_i = 0;
 }
 
+/*
+    3 0x8X - note off    |   note number    |  velocity 
+    3 0x9X - note on     |   note number    |  velocity
+    3 0xAX - Paftertouch |   note number    |  pressure
+    3 0xBX - CC          |   controller #   |  value 
+    2 0xCX - PC          |   program        |  XXXX
+    2 0xDX - Caftertouch |   pressure       |  XXXX
+    3 0xEX - pitch bend  |    LSB.          |  MSB
+    X 0xF0  - sysex start|  ... wait until F7
+    2 0xF1  - time code  | data
+    3 0xF2 song pos      | lsb              | msb
+    2 0xF3 song sel      | data
+    1 0xF4 reserved      | XXXX
+    1 0xF5 reserved.     | XXXX
+    1 0xF6 tune request  | XXXX
+    X 0xF7 end of sysex  | XXXX
+    1 0xF8 timing clock  | XXXX
+    1 0xF9 reserved.     | XXXX
+    1 0xFA start         | XXXX
+    1 0xFB continue      | XXXX
+    1 0xFC stop          | XXXX
+    1 0xFD reserved      | XXXX
+    1 0xFE sensing       | XXXX
+    1 0xFF reset         | XXXX
+*/
 
 void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
     // i take any amount of bytes and add messages 
-    /*
+    // remember this can start in the middle of a midi message, so act accordingly
+    // running status is handled by keeping the status byte around after getting a message.
     for(size_t i=0;i<len;i++) {
-        uint8_t byte = data[i];
-        if(byte & 0x80) { // status byte 
 
-            current_midi_status = byte;
-            midi_message_i = 1;
-            midi_message[0] = byte;
-            if(byte == 0xF6 || byte == 0xF8 || byte == 0xFA || byte == 0xFB || byte == 0xFC || byte == 0xFF) {
-                callback_midi_message_received(midi_message, 1);                
-            } else {
-                // skip.. sysex... 
-            }
-        } else { // data byte 
-            uint8_t status = current_midi_status & 0xF0;
-            uint8_t channel = current_midi_status & 0x0F;
-            if(status == 0x80 || status == 0x90 || status == 0xA0 || status == 0xB0 || status == 0xE0) {
-                midi_message[midi_message_i++] = byte;
-                if(midi_message_i >= 3) { 
-                    callback_midi_message_received(midi_message, 3);
+        uint8_t byte = data[i];
+
+        // Skip sysex in this parser until we get an F7. We do not pass sysex over to python (yet)
+        if(sysex_flag) {
+            if(byte == 0xF7) sysex_flag = 0;
+        } else {
+            if(byte & 0x80) { // new status byte 
+                // Single byte message?
+                current_midi_message[0] = byte;
+                if(byte == 0xF4 || byte == 0xF5 || byte == 0xF6 || byte == 0xF8 || byte == 0xF9 || 
+                    byte == 0xFA || byte == 0xFB || byte == 0xFC || byte == 0xFD || byte == 0xFE || byte == 0xFF) {
+                    callback_midi_message_received(current_midi_message, 1);                
+                }  else if(byte == 0xF0) { // sysex start 
+                    // We will ignore sysex for now, but we have to understand it. We'll tell the parser to ignore anything up to F7
+                    sysex_flag = 1;
+                } else { // a new status message that expects at least one byte of message after
+                    current_midi_message[0] = byte;
                 }
-            } else if(status == 0xC0 || status == 0xD0) {
-                midi_message[midi_message_i++] = byte;
-                if(midi_message_i >= 2) { 
-                    callback_midi_message_received(midi_message, 2);
+            } else { // data byte of some kind
+                uint8_t status = current_midi_message[0] & 0xF0;
+
+                // a 2 bytes of data message
+                if(status == 0x80 || status == 0x90 || status == 0xA0 || status == 0xB0 || status == 0xE0 || current_midi_message[0] == 0xF2) {
+                    if(midi_message_slot == 0) {
+                        current_midi_message[1] = byte;
+                        midi_message_slot = 1;
+                    } else {
+                        current_midi_message[2] = byte;
+                        midi_message_slot = 0;
+                        callback_midi_message_received(current_midi_message, 3);
+                    }
+                // a 1 byte data message
+                } else if (status == 0xC0 || status == 0xD0 || current_midi_message[0] == 0xF3 || current_midi_message[0] == 0xF1) {
+                    current_midi_message[1] = byte;
+                    callback_midi_message_received(current_midi_message, 2);
                 }
-            } else {
-                // fs or a 0 -- skip. the only F that has data we don't care about right now
-                // the 0 would happen if dan passed a 3 byte message for a 2 byte message from the USB MIDI 
             }
         }
     }
-    */
+    
 }
 
 

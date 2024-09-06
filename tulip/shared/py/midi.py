@@ -295,6 +295,13 @@ class Synth:
         self.active_voices.remove(old_voice)
         self.released_voices.put(old_voice)
 
+    def all_notes_off(self):
+        self.sustain(False)
+        while not self.active_voices.empty():
+            voice = self.active_voices.get()
+            self._voice_off(voice)
+
+
     def note_on(self, note, velocity, time=None):
         if not self.amy_voice_nums:
             # Note on after synth.release()?
@@ -343,10 +350,7 @@ class Synth:
     def release(self):
         """Called to terminate this synth and release its amy_voice resources."""
         # Turn off any active notes
-        self.sustain(False)
-        while not self.active_voices.empty():
-            voice = self.active_voices.get()
-            self._voice_off(voice)
+        self.all_notes_off()
         # Return all the amy_voices
         for amy_voice in self.amy_voice_nums:
             Synth.allocated_amy_voices.remove(amy_voice)
@@ -585,7 +589,7 @@ def midi_event_cb(midi_message):
     # Fetch the arpeggiator for this channel, or use synth if there isn't one.
     note_receiver = config.arpeggiator_per_channel.get(channel, synth)
     midinote = control
-    if message == 0x90:  # Note on.
+    if message == 0x90:  # Note on (or note off, if vel = 0)
         vel = value / 127.
         note_receiver.note_on(midinote, vel)
     elif message == 0x80:  # Note off.
@@ -600,6 +604,11 @@ def midi_event_cb(midi_message):
         pb_value = ((midi_message[2] << 7) | (midi_message[1])) - 8192 # -8192-8192, where 0 is nothing
         amy_value = float(pb_value)/(8192*6.0) # convert to -2 / +2 semitones
         amy.send(pitch_bend=amy_value)
+    elif message == 0xB0 and control == 123: # all notes off
+        synth.all_notes_off()
+    elif message == 0xFF: # reset everything
+        amy.reset() 
+
 
 
 MIDI_CALLBACKS = set()
