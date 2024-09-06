@@ -606,8 +606,7 @@ def midi_event_cb(midi_message):
         amy.send(pitch_bend=amy_value)
     elif message == 0xB0 and control == 123: # all notes off
         synth.all_notes_off()
-    elif message == 0xFF: # reset everything
-        amy.reset() 
+
 
 
 
