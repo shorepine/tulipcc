@@ -119,11 +119,27 @@ If you find yourself wanting to write Tulip code on a "real" computer, check out
 Have fun! See you on Tulip World!
 
 
-## How-tos
+## How to transfer files between Tulip and your computer
 
-### Transfer files between Tulip and your computer
+There are a few ways to files between Tulip and your computer. You can connect Tulip to your computer over a USB cable (the top USB port, the charging/UART/power port) and use a program called `mpremote`, or you can do it wirelessly by turning on Wi-Fi on the Tulip and using our Tulip World BBS or setting up a little server on your computer. 
 
-Using WiFi on Tulip (start `tulip.wifi('ssid', 'password')` first), there are two ways of getting files between Tulip hardware and your computer:
+### Using `mpremote`
+
+[`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html) is provided by the MicroPython project to be able to control and interact with MicroPython on many kinds of devices, including Tulip! It connects to Tulip over the UART USB connection and you are able to use the Tulip REPL, edit, upload and download files. (It does a lot more, but we'll just discuss file transfer here.)
+
+First, install `mpremote`on your computer. Usually, this is (in your Terminal app) `pip install mpremote`. (If you don't have `pip`, please search for how to install it on your OS.) Once it's installed, make sure you've connected a USB cable from Tulip's top USB port - "USB pwr/charge/program" - to your computer. Then, with Tulip on, just run `mpremote` on your computer's terminal. You should see the Tulip's REPL on your screen! You can type into it and see it there. It's a fine way to control almost all of Tulip. 
+
+To transfer a file from your computer to Tulip from mpremote, use `mpremote resume fs cp local_file.py :tulip_file.py`. This takes a file called `local_file.py` on your computer in the folder you're in, and transfers it to the current Tulip directory, calling it `tulip_file.py`. It's pretty fast! To tranasfer a file from Tulip to your computer, do it in reverse: `mpremote resule fs cp :tulip_file.py local_file.py`. 
+
+To edit a file on Tulip directly on your computer, just do `mpremote resume edit file.py`. This will open whatever `EDITOR` you have set in your shell's environment. Once you save it in your editor, it'll be saved on Tulip! 
+
+A very useful way to interact with files on your local computer in Tulip is to use `mpremote resume mount`. This lets you "mount" a local folder on your computer on Tulip, and you can run files and interact with them as if they were locally there. Try `mpremote resume mount .` to 'mount' the current directory on your computer to Tulip's `/remote`. `mpremote` will show you a REPL already in the right directory, but you can then move over to your Tulip to continue working there.
+
+[See a lot more about `mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html). Note that we've only confirmed Tulip to work with the `fs`, `mount` and `repl` commands so far.  And on Tulip, you always need to add `resume` to your `mpremote` command. If you have any issues let us know! 
+
+## Using Wi-Fi
+
+With Wi-Fi, after you do `tulip.wifi('ssid', 'password')` first, there are two ways of getting files between Tulip hardware and your computer:
 
  - **Use Tulip World and Tulip Desktop:** On [Tulip Desktop](tulip_desktop.md) your files are in your  `~/.local/share/tulipcc/user` folder. You can edit and add files there directly and use `world.upload(folder)` or `world.upload(filename)` to place files on Tulip World from either Deskop or hardware Tulip. You can retrieve these files with `world.download(folder)` or `world.download(filename)`. The only downside to this method is that your files are publicly available to anyone else on Tulip World, so please don't share private information using Tulip World. 
 
