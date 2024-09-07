@@ -359,6 +359,55 @@ class Synth:
         del self.voice_objs[:]
 
 
+class DrumSynth:
+     """Simplified Synth for Drum channel (10). Plays one patch per note at its default pitch. """
+     PCM_PATCHES = 29
+
+     def __init__(self, num_voices=10):
+         self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
+         self.next_osc = 0
+         self.note_to_osc = {}
+         # Fields used by UI
+         self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
+         self.patch_number = None  # Patch number is used to detect Juno synths
+         self.patch_state = None
+
+     def note_on(self, note, velocity, time=None):
+         osc = self.oscs[self.next_osc]
+         self.next_osc = (self.next_osc + 1) % len(self.oscs)
+         amy.send(time=time, osc=osc, wave=amy.PCM,
+              patch=note % DrumSynth.PCM_PATCHES, vel=velocity, freq=0)
+         self.note_to_osc[note] = osc
+
+     def note_off(self, note, time=None):
+         # Drums don't really need note-offs, but handle them anyway.
+         try:
+             osc = self.note_to_osc[note]
+             amy.send(time=time, osc=osc, vel=0)
+             del self.note_to_osc[note]
+         except KeyError:
+             # We didn't recognize the note number; never mind.
+             pass
+
+     # Rest of Synth protocol doesn't do anything for drums.
+     def sustain(self, state):
+         pass
+
+     def program_change(self, patch_number):
+         pass
+
+     def control_change(self, control, value):
+         pass
+
+     def get_patch_state(self):
+         return None
+
+     def set_patch_state(self, state):
+         pass
+
+    def all_notes_off(self):
+        pass
+
 class PitchedPCMSynth:
     def __init__(self, num_voices=10):
         self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS)) 
@@ -392,11 +441,11 @@ class PitchedPCMSynth:
 
         if(osc is not None):
             amy.send(time=time, osc=osc, vel=0)
-            del self.pcm_patch_to_osc[note]
+            del self.pcm_patch_to_osc[pcm_patch]
 
     def all_notes_off(self):
         for i in self.oscs:
-            amy.send(osc=osc, vel=0)
+            amy.send(osc=i, vel=0)
 
     # Rest of Synth protocol doesn't do anything for PitchedPCM.
     def sustain(self, state):
