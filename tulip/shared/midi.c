@@ -66,10 +66,12 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
     1 0xFF reset         | XXXX
 */
 
-void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
+void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
     // i take any amount of bytes and add messages 
     // remember this can start in the middle of a midi message, so act accordingly
     // running status is handled by keeping the status byte around after getting a message.
+    // remember that USB midi always comes in groups of 3 here, even if it's just a one byte message
+    // so we have USB (and mac IAC) set a usb flag so we know to end the loop once a message is parsed
     for(size_t i=0;i<len;i++) {
 
         uint8_t byte = data[i];
@@ -83,7 +85,8 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
                 current_midi_message[0] = byte;
                 if(byte == 0xF4 || byte == 0xF5 || byte == 0xF6 || byte == 0xF8 || byte == 0xF9 || 
                     byte == 0xFA || byte == 0xFB || byte == 0xFC || byte == 0xFD || byte == 0xFE || byte == 0xFF) {
-                    callback_midi_message_received(current_midi_message, 1);                
+                    callback_midi_message_received(current_midi_message, 1); 
+                    if(usb) i = len+1; // exit the loop if usb
                 }  else if(byte == 0xF0) { // sysex start 
                     // We will ignore sysex for now, but we have to understand it. We'll tell the parser to ignore anything up to F7
                     sysex_flag = 1;
@@ -107,6 +110,7 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
                 } else if (status == 0xC0 || status == 0xD0 || current_midi_message[0] == 0xF3 || current_midi_message[0] == 0xF1) {
                     current_midi_message[1] = byte;
                     callback_midi_message_received(current_midi_message, 2);
+                    if(usb) i = len+1; // exit the loop if usb
                 }
             }
         }
@@ -116,7 +120,7 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len) {
 
 
 void midi_local(uint8_t * bytes, uint16_t len) {
-    convert_midi_bytes_to_messages(bytes, len);
+    convert_midi_bytes_to_messages(bytes, len, 0);
 }
 
 #ifdef ESP_PLATFORM
@@ -175,7 +179,7 @@ void run_midi() {
             //    fprintf(stderr, "%02x ", data[i]);
             //}
             //fprintf(stderr, "\n");
-            convert_midi_bytes_to_messages(data,length);
+            convert_midi_bytes_to_messages(data,length,0);
         }
     } // end loop forever
 }

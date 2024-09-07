@@ -9,7 +9,7 @@ extern QueueHandle_t uart_queue;
 #define MIDI_SLOTS 4
 #include "py/mphal.h"
 #include "py/runtime.h"
-void convert_midi_bytes_to_messages(uint8_t * data, size_t len);
+void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb);
 extern mp_obj_t midi_callback;
 
 
