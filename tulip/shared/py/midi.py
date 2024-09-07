@@ -405,8 +405,9 @@ class DrumSynth:
      def set_patch_state(self, state):
          pass
 
-    def all_notes_off(self):
-        pass
+     def all_notes_off(self):
+         pass
+
 
 class PitchedPCMSynth:
     def __init__(self, num_voices=10):
