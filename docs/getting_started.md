@@ -127,6 +127,8 @@ There are a few ways to files between Tulip and your computer. You can connect T
 
 [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html) is provided by the MicroPython project to be able to control and interact with MicroPython on many kinds of devices, including Tulip! It connects to Tulip over the UART USB connection and you are able to use the Tulip REPL, edit, upload and download files. (It does a lot more, but we'll just discuss file transfer here.)
 
+**You may need to install the USB->Serial driver first for your computer's OS.** Some OSes already have it installed and some don't. If `mpremote` can't find a port, [try to install the CH340K drivers.](https://www.wch-ic.com/downloads/CH341SER_ZIP.html). 
+
 First, install `mpremote`on your computer. Usually, this is (in your Terminal app) `pip install mpremote`. (If you don't have `pip`, please search for how to install it on your OS.) Once it's installed, make sure you've connected a USB cable from Tulip's top USB port - "USB pwr/charge/program" - to your computer. Then, with Tulip on, just run `mpremote` on your computer's terminal. You should see the Tulip's REPL on your screen! You can type into it and see it there. It's a fine way to control almost all of Tulip. 
 
 To transfer a file from your computer to Tulip from mpremote, use `mpremote resume fs cp local_file.py :tulip_file.py`. This takes a file called `local_file.py` on your computer in the folder you're in, and transfers it to the current Tulip directory, calling it `tulip_file.py`. It's pretty fast! To transfer a file from Tulip to your computer, do it in reverse: `mpremote resule fs cp :tulip_file.py local_file.py`. 
