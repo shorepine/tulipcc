@@ -543,7 +543,10 @@ def setup_midi_codes():
         BUTTON_IDS = data['buttons']
         #print('MIDI CC mappings read from', midi_cc_file)
     except OSError:  # Anticipating midi_cc_file not found.
-        #print('MIDI CC mappings file', midi_cc_file, 'not found.')
+        pass
+    except TypeError: # data is not a dict
+        pass
+    except KeyError: # data doesn't have one of the required things in it
         pass
 
 def setup_global_midi_cc_bindings():
@@ -551,20 +554,25 @@ def setup_global_midi_cc_bindings():
     global GLOBAL_MIDI_CC_BINDINGS
     # My default connection of MIDI CCs to sequencer/arpeggiator
     # to the Oxygen49 transport keys.
-    TEMPO_KNOB = KNOB_IDS[7]  # Rightmost knob
-    ARP_ON_BTN = BUTTON_IDS[9]  # C27, transport button
-    ARP_HOLD_BTN = BUTTON_IDS[10]
-    ARP_MODE_BTN = BUTTON_IDS[11]
-    ARP_RANGE_BTN = BUTTON_IDS[12]
+    try:
+        TEMPO_KNOB = KNOB_IDS[7]  # Rightmost knob
+        ARP_ON_BTN = BUTTON_IDS[9]  # C27, transport button
+        ARP_HOLD_BTN = BUTTON_IDS[10]
+        ARP_MODE_BTN = BUTTON_IDS[11]
+        ARP_RANGE_BTN = BUTTON_IDS[12]
+        
+        GLOBAL_MIDI_CC_BINDINGS = {
+            TEMPO_KNOB: tempo_update,
+            # Some buttons send 0 on release, ignore that.
+            ARP_ON_BTN: lambda x: arp_on() if x else None,
+            ARP_HOLD_BTN: lambda x: arp_hold() if x else None,
+            ARP_MODE_BTN: lambda x: arp_mode_next() if x else None,
+            ARP_RANGE_BTN: lambda x: arp_rng_next() if x else None,
+        }
 
-    GLOBAL_MIDI_CC_BINDINGS = {
-        TEMPO_KNOB: tempo_update,
-        # Some buttons send 0 on release, ignore that.
-        ARP_ON_BTN: lambda x: arp_on() if x else None,
-        ARP_HOLD_BTN: lambda x: arp_hold() if x else None,
-        ARP_MODE_BTN: lambda x: arp_mode_next() if x else None,
-        ARP_RANGE_BTN: lambda x: arp_rng_next() if x else None,
-    }
+    except IndexError: # custom midi cc file did not specify buttons or knobs that go this high
+        print("Warning: we need at least 13 buttons and 8 knobs defined to automatically assign MIDI cc mappings")
+        GLOBAL_MIDI_CC_BINDINGS = {}
 
 
 WARNED_MISSING_CHANNELS = set()
