@@ -364,12 +364,8 @@ class DrumSynth:
      """Synth for Drum channel (10).
      Each MIDI note plays a separately-configured sound.
      """
-     # These are the patches in amy/src/pcm_small.h reconciled to general midi c10.
-     default_midi_mappings = {}
-     for i,drum in enumerate(drumkit):
-        if(drum[2] is not None):
-            default_midi_mappings[drum[2]] = {'wave': amy.PCM, 'freq': 0, 'patch': i}
-
+     missing_note_warned = []
+     
      def __init__(self, num_voices=10):
          self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
          self.next_osc = 0
@@ -377,7 +373,11 @@ class DrumSynth:
          self.note_of_osc = {}
          # A dict of parameters associated with each midi note.  Make a copy
          # of the defaults.
-         self.midi_note_params = dict(self.default_midi_mappings)
+         self.midi_note_params = {}
+         # These are the patches in amy/src/pcm_small.h reconciled to general midi chan 10.
+         for patch, (_, _, midi_note) in enumerate(drumkit):
+             if midi_note is not None:
+                 self.midi_note_params[midi_note] = {'wave': amy.PCM, 'freq': 0, 'patch': patch}
          # Fields used by UI
          self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
 
@@ -387,9 +387,11 @@ class DrumSynth:
 
      def note_on(self, note, velocity, time=None):
          if note not in self.midi_note_params:
-             print("DrumSynth note_on for note %d but only %s set up." % (
-                 note, str(sorted(list(self.midi_note_params.keys())))
-             ))
+             if note not in DrumSynth.missing_note_warned:
+                 print("DrumSynth note_on for note %d but only %s set up." % (
+                     note, str(sorted(list(self.midi_note_params.keys())))
+                 ))
+                 DrumSynth.missing_note_warned.append(note)
              return
          osc = self.oscs[self.next_osc]
          self.next_osc = (self.next_osc + 1) % len(self.oscs)
