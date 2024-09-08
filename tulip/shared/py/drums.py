@@ -98,7 +98,7 @@ class LEDStrip(UIElement):
 
 
 # A row of drum switches with a dropdown on the left for tone
-# and maybe volume or other knob on right idk 
+# and some knobs on the right for pitch / vol / pan
 class DrumRow(UIElement):
     knob_color = 209
     def __init__(self, items, midi_note=0):
@@ -224,16 +224,13 @@ def beat_callback(t):
     # Hm, how should we deal with visual latency 
     app.leds.set((app.current_beat-1)% 16, 0)
     app.leds.set(app.current_beat, 1)
-    #print("beat %d at time %d sysclock %d delta %d tick %d" % (app.current_beat, t, ticks_ms(), t-ticks_ms(), seq_ticks()))
     for i, row in enumerate(app.rows):
         if(row.get(app.current_beat)):
             base_note = drumkit[row.get_preset()][0]
             note_for_pitch = None
             if row.get_pitch() != 0.5:
                 note_for_pitch = int(base_note + (row.get_pitch() - 0.5)*24.0)
-            #app.synth.note_on(note_for_pitch, row.get_vel()*2, pcm_patch=row.get_preset(), pan=row.get_pan(), time=t)
             app.synth.note_on(note=row.midi_note, velocity=row.get_vel()*2, time=t)
-            #amy.send(osc=50+i+2, wave=amy.PCM, patch=row.get_preset(), note=note_for_pitch, vel=row.get_vel()*2, pan=row.get_pan(), time=t)
     app.current_beat = (app.current_beat+1) % 16
 
 def quit(screen):

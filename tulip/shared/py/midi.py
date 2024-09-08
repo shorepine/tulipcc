@@ -8,6 +8,7 @@ import time
 import amy
 import arpegg
 import tulip
+from patches import drumkit
 
 class MidiConfig:
     """System-wide Midi input config."""
@@ -364,24 +365,10 @@ class DrumSynth:
      Each MIDI note plays a separately-configured sound.
      """
      # These are the patches in amy/src/pcm_small.h reconciled to general midi c10.
-     default_midi_mappings = {
-         35: {'wave': amy.PCM, 'freq': 0, 'patch': 28}, # Acous BDrum > Std Kick 3
-         36: {'wave': amy.PCM, 'freq': 0, 'patch': 25}, # Elec BDrum > Power Kick 3
-         37: {'wave': amy.PCM, 'freq': 0, 'patch': 3}, # Side stick > 808 SNR7
-         38: {'wave': amy.PCM, 'freq': 0, 'patch': 5},  # Acous Snare > 808 SNR
-         39: {'wave': amy.PCM, 'freq': 0, 'patch': 9},  # Dry clap
-         40: {'wave': amy.PCM, 'freq': 0, 'patch': 20},  # Elec Snare > Power snare 1
-         41: {'wave': amy.PCM, 'freq': 0, 'patch': 8},  # Low Tom
-         42: {'wave': amy.PCM, 'freq': 0, 'patch': 6},  # Closed HHat
-         43: {'wave': amy.PCM, 'freq': 0, 'patch': 21},  # Hi Tom
-         46: {'wave': amy.PCM, 'freq': 0, 'patch': 7},  # Open HHat
-         49: {'wave': amy.PCM, 'freq': 0, 'patch': 16},  # Crash
-         56: {'wave': amy.PCM, 'freq': 0, 'patch': 10},  # Cowbell
-         64: {'wave': amy.PCM, 'freq': 0, 'patch': 11},  # Low Conga
-         70: {'wave': amy.PCM, 'freq': 0, 'patch': 0},  # Maracas
-         75: {'wave': amy.PCM, 'freq': 0, 'patch': 12},  # Clave
-         76: {'wave': amy.PCM, 'freq': 0, 'patch': 13},  # High woodblock
-     }
+     default_midi_mappings = {}
+     for i,drum in enumerate(drumkit):
+        if(drum[2] is not None):
+            default_midi_mappings[drum[2]] = {'wave': amy.PCM, 'freq': 0, 'patch': i}
 
      def __init__(self, num_voices=10):
          self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
@@ -400,7 +387,6 @@ class DrumSynth:
 
      def note_on(self, note, velocity, time=None):
          if note not in self.midi_note_params:
-             # raise ValueError
              print("DrumSynth note_on for note %d but only %s set up." % (
                  note, str(sorted(list(self.midi_note_params.keys())))
              ))
@@ -676,10 +662,6 @@ def c_fired_midi_event(x):
             c(m)
 
         m = tulip.midi_in()
-        ## Are there more events waiting?
-        #m = m[3:]
-        #if len(m) == 0:
-        #    m = tulip.midi_in()
 
 
 # Keep this -- this is a tulip API 
