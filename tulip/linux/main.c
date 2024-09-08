@@ -92,26 +92,17 @@ long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 extern int unix_display_draw(); 
 extern void unix_display_init();
 
-
-void display_print_strn(void *env, const char *str, size_t len) {
-    (void)env;
-    if(len) {
-        display_tfb_str((char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
-    }
-}
-extern void mp_uos_dupterm_tx_strn(const char *str, size_t len);
-
 STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
     (void)env;
     ssize_t ret;
     MP_HAL_RETRY_SYSCALL(ret, write(STDERR_FILENO, str, len), {});
-    mp_uos_dupterm_tx_strn(str, len);
+    mp_os_dupterm_tx_strn(str, len);
+    if(len) {
+        display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
+    }
 }
 
-const mp_print_t mp_stderr_print = {NULL, display_print_strn};
-const mp_print_t mp_stdout_print = {NULL, display_print_strn};
-const mp_print_t mp_sys_stdout_print = {NULL, display_print_strn};
-const mp_print_t mp_display_print = {NULL, display_print_strn};
+const mp_print_t mp_stderr_print = {NULL, stderr_print_strn};
 
 
 #define FORCED_EXIT (0x100)
