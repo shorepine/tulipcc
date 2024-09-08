@@ -13,12 +13,13 @@ from patches import drumkit
 class MidiConfig:
     """System-wide Midi input config."""
 
-    def __init__(self, voices_per_channel, patch_per_channel):
+    def __init__(self, voices_per_channel, patch_per_channel, show_warnings=True):
         self.synth_per_channel = dict()
         for channel, polyphony in voices_per_channel.items():
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
             self.add_synth(channel, patch, polyphony)
         self.arpeggiator_per_channel = {}
+        self.show_warnings = show_warnings
 
     def add_synth_object(self, channel, synth_object):
         if channel in self.synth_per_channel:
@@ -462,7 +463,7 @@ class DrumSynth(SingleOscSynthBase):
 
     def _note_on_with_osc(self, osc, note, velocity, time):
         if note not in self.midi_note_params:
-            if note not in DrumSynth.missing_note_warned:
+            if config.show_warnings and note not in DrumSynth.missing_note_warned:
                 print("DrumSynth note_on for note %d but only %s set up." % (
                     note, str(sorted(list(self.midi_note_params.keys())))
                 ))
@@ -486,6 +487,7 @@ def ensure_midi_config():
         config = MidiConfig(
             voices_per_channel={1: 6, 10: 10},
             patch_per_channel={1: 0},
+            show_warnings=True,
         )
         config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
 
@@ -598,9 +600,9 @@ def midi_event_cb(midi_message):
         GLOBAL_MIDI_CC_BINDINGS[control](value)
         return  # Early exit
     if channel not in config.synth_per_channel:
-        #if channel not in WARNED_MISSING_CHANNELS:
-        #    print("Warning: No synth configured for MIDI channel %d. message was %s %s" %(channel, hex(midi_message[0]), hex(midi_message[1])))
-        #    WARNED_MISSING_CHANNELS.add(channel)
+        if config.show_warnings and channel not in WARNED_MISSING_CHANNELS:
+            print("Warning: No synth configured for MIDI channel %d. message was %s %s" %(channel, hex(midi_message[0]), hex(midi_message[1])))
+            WARNED_MISSING_CHANNELS.add(channel)
         return  # Early exit
     # We have a populated channel.
     synth = config.synth_per_channel[channel]
