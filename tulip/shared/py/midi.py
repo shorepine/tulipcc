@@ -422,7 +422,7 @@ class SingleOscSynthBase:
         pass
 
 
-class ParamSynth(SingleOscSynthBase):
+class OscSynth(SingleOscSynthBase):
     """Synth that uses one osc per note.  Osc parameters are specified at initialization."""
 
     def __init__(self, params_dict, num_voices=6, first_osc=None):
