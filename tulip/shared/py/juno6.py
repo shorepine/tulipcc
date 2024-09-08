@@ -541,7 +541,7 @@ def update_patch_for_channel(channel, patch_num):
 param_map = {
     midi.KNOB_IDS[0]: 'lfo_rate',
     midi.KNOB_IDS[1]: 'lfo_delay_time',
-    #midi.KNOB_IDS[2]: 'dco_lfo',
+    midi.KNOB_IDS[2]: 'portamento',
     midi.MOD_WHEEL: 'dco_lfo',
     midi.KNOB_IDS[3]: 'dco_pwm',
     midi.SLIDER_IDS[0]: 'dco_sub',

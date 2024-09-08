@@ -25,7 +25,7 @@ class MidiConfig:
             self.synth_per_channel[channel].release()
             del self.synth_per_channel[channel]
         if channel == 10:
-            synth = PitchedPCMSynth(num_voices=polyphony)
+            synth = DrumSynth(num_voices=polyphony)
         else:
             synth = Synth(num_voices=polyphony)
             if patch is not None:
@@ -360,34 +360,74 @@ class Synth:
 
 
 class DrumSynth:
-     """Simplified Synth for Drum channel (10). Plays one patch per note at its default pitch. """
-     PCM_PATCHES = 29
+     """Synth for Drum channel (10).
+     Each MIDI note plays a separately-configured sound.
+     """
+     # These are the patches in amy/src/pcm_small.h reconciled to general midi c10.
+     default_midi_mappings = {
+         35: {'wave': amy.PCM, 'freq': 0, 'patch': 28}, # Acous BDrum > Std Kick 3
+         36: {'wave': amy.PCM, 'freq': 0, 'patch': 25}, # Elec BDrum > Power Kick 3
+         37: {'wave': amy.PCM, 'freq': 0, 'patch': 3}, # Side stick > 808 SNR7
+         38: {'wave': amy.PCM, 'freq': 0, 'patch': 5},  # Acous Snare > 808 SNR
+         39: {'wave': amy.PCM, 'freq': 0, 'patch': 9},  # Dry clap
+         40: {'wave': amy.PCM, 'freq': 0, 'patch': 20},  # Elec Snare > Power snare 1
+         41: {'wave': amy.PCM, 'freq': 0, 'patch': 8},  # Low Tom
+         42: {'wave': amy.PCM, 'freq': 0, 'patch': 6},  # Closed HHat
+         43: {'wave': amy.PCM, 'freq': 0, 'patch': 21},  # Hi Tom
+         46: {'wave': amy.PCM, 'freq': 0, 'patch': 7},  # Open HHat
+         49: {'wave': amy.PCM, 'freq': 0, 'patch': 16},  # Crash
+         56: {'wave': amy.PCM, 'freq': 0, 'patch': 10},  # Cowbell
+         64: {'wave': amy.PCM, 'freq': 0, 'patch': 11},  # Low Conga
+         70: {'wave': amy.PCM, 'freq': 0, 'patch': 0},  # Maracas
+         75: {'wave': amy.PCM, 'freq': 0, 'patch': 12},  # Clave
+         76: {'wave': amy.PCM, 'freq': 0, 'patch': 13},  # High woodblock
+     }
 
      def __init__(self, num_voices=10):
          self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
          self.next_osc = 0
-         self.note_to_osc = {}
+         # A dict indicating which note is being used by each osc.
+         self.note_of_osc = {}
+         # A dict of parameters associated with each midi note.  Make a copy
+         # of the defaults.
+         self.midi_note_params = dict(self.default_midi_mappings)
          # Fields used by UI
          self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
-         self.patch_number = None  # Patch number is used to detect Juno synths
-         self.patch_state = None
+
+     def setup_midi_note(self, midi_note, params_dict):
+         """Configure a midi note with a dict of osc params."""
+         self.midi_note_params[midi_note] = params_dict
 
      def note_on(self, note, velocity, time=None):
+         if note not in self.midi_note_params:
+             # raise ValueError
+             print("DrumSynth note_on for note %d but only %s set up." % (
+                 note, str(sorted(list(self.midi_note_params.keys())))
+             ))
+             return
          osc = self.oscs[self.next_osc]
          self.next_osc = (self.next_osc + 1) % len(self.oscs)
-         amy.send(time=time, osc=osc, wave=amy.PCM,
-              patch=note % DrumSynth.PCM_PATCHES, vel=velocity, freq=0)
-         self.note_to_osc[note] = osc
+         send_args = {'time': time, 'osc': osc, 'vel': velocity}
+         # Add the args for this note
+         send_args |= self.midi_note_params[note]
+         amy.send(**send_args)
+         self.note_of_osc[osc] = note
 
      def note_off(self, note, time=None):
          # Drums don't really need note-offs, but handle them anyway.
-         try:
-             osc = self.note_to_osc[note]
-             amy.send(time=time, osc=osc, vel=0)
-             del self.note_to_osc[note]
-         except KeyError:
-             # We didn't recognize the note number; never mind.
-             pass
+         # Search through our allocated oscs to see if we find the note.
+         for osc, osc_note in self.note_of_osc.items():
+             if osc_note == note:
+                 amy.send(time=time, osc=osc, vel=0)
+                 del self.note_of_osc[osc]
+                 return
+        # If we don't find it, we'll fall through.  Whatever.
+
+     def all_notes_off(self):
+         """Execute note-offs for all the notes we believe currently active."""
+         for osc in self.note_of_osc.keys():
+             amy.send(osc=osc, vel=0)
+             del self.note_of_osc[osc]
 
      # Rest of Synth protocol doesn't do anything for drums.
      def sustain(self, state):
@@ -399,14 +439,6 @@ class DrumSynth:
      def control_change(self, control, value):
          pass
 
-     def get_patch_state(self):
-         return None
-
-     def set_patch_state(self, state):
-         pass
-
-     def all_notes_off(self):
-         pass
 
 
 class PitchedPCMSynth:
