@@ -8,29 +8,34 @@ import time
 import amy
 import arpegg
 import tulip
+from patches import drumkit
 
 class MidiConfig:
     """System-wide Midi input config."""
 
-    def __init__(self, voices_per_channel, patch_per_channel):
+    def __init__(self, voices_per_channel, patch_per_channel, show_warnings=True):
         self.synth_per_channel = dict()
         for channel, polyphony in voices_per_channel.items():
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
             self.add_synth(channel, patch, polyphony)
         self.arpeggiator_per_channel = {}
+        self.show_warnings = show_warnings
 
-    def add_synth(self, channel, patch, polyphony):
+    def add_synth_object(self, channel, synth_object):
         if channel in self.synth_per_channel:
             # Old Synth allocated - Expicitly return the amy_voices to the pool.
             self.synth_per_channel[channel].release()
             del self.synth_per_channel[channel]
+        self.synth_per_channel[channel] = synth_object
+
+    def add_synth(self, channel, patch, polyphony):
         if channel == 10:
-            synth = PitchedPCMSynth(num_voices=polyphony)
+            synth_object = DrumSynth(num_voices=polyphony)
         else:
-            synth = Synth(num_voices=polyphony)
+            synth_object = Synth(num_voices=polyphony)
             if patch is not None:
-                synth.program_change(patch)
-        self.synth_per_channel[channel] = synth
+                synth_object.program_change(patch)
+        self.add_synth_object(channel, synth_object)
 
     def insert_arpeggiator(self, channel, arpeggiator):
         if channel in self.synth_per_channel:
@@ -359,96 +364,55 @@ class Synth:
         del self.voice_objs[:]
 
 
-class DrumSynth:
-     """Simplified Synth for Drum channel (10). Plays one patch per note at its default pitch. """
-     PCM_PATCHES = 29
+class SingleOscSynthBase:
+    """Base class for synth using one osc per note from preallocated pool."""
 
-     def __init__(self, num_voices=10):
-         self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS))
-         self.next_osc = 0
-         self.note_to_osc = {}
-         # Fields used by UI
-         self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
-         self.patch_number = None  # Patch number is used to detect Juno synths
-         self.patch_state = None
-
-     def note_on(self, note, velocity, time=None):
-         osc = self.oscs[self.next_osc]
-         self.next_osc = (self.next_osc + 1) % len(self.oscs)
-         amy.send(time=time, osc=osc, wave=amy.PCM,
-              patch=note % DrumSynth.PCM_PATCHES, vel=velocity, freq=0)
-         self.note_to_osc[note] = osc
-
-     def note_off(self, note, time=None):
-         # Drums don't really need note-offs, but handle them anyway.
-         try:
-             osc = self.note_to_osc[note]
-             amy.send(time=time, osc=osc, vel=0)
-             del self.note_to_osc[note]
-         except KeyError:
-             # We didn't recognize the note number; never mind.
-             pass
-
-     # Rest of Synth protocol doesn't do anything for drums.
-     def sustain(self, state):
-         pass
-
-     def program_change(self, patch_number):
-         pass
-
-     def control_change(self, control, value):
-         pass
-
-     def get_patch_state(self):
-         return None
-
-     def set_patch_state(self, state):
-         pass
-
-     def all_notes_off(self):
-         pass
-
-
-class PitchedPCMSynth:
-    def __init__(self, num_voices=10):
-        self.oscs = list(range(amy.AMY_OSCS - num_voices, amy.AMY_OSCS)) 
+    def __init__(self, num_voices=6, first_osc=None):
+        """Create a synth that plays the specified note on a single osc configured with params_dict."""
+        if first_osc is None:
+            first_osc = amy.AMY_OSCS - num_voices
+        self.oscs = list(range(first_osc, first_osc + num_voices))
         self.next_osc = 0
-        self.pcm_patch_to_osc = {}
+        self.osc_of_note = {}
+        # Put the oscs in a default state.
+        for osc in self.oscs:
+            amy.send(reset=osc)
         # Fields used by UI
         self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
-        self.patch_number = None  # Patch number is used to detect Juno synths
-        self.patch_state = None
 
-    def note_on(self, note, velocity, pcm_patch=0, pan=None, time=None, custom=False, feedback=None):
-        if(custom): 
-            wave_type = amy.CUSTOM
-            osc = self.pcm_patch_to_osc.get(pcm_patch+1024, None)
-        else:
-            wave_type = amy.PCM
-            osc = self.pcm_patch_to_osc.get(pcm_patch, None)
+    # This method must be overridden by the derived class to actually send the note.
+    def _note_on_with_osc(self, osc, note, velocity, time):
+        raise NotImplementedError
 
-        if osc is None:
-            osc = self.oscs[self.next_osc]
-            self.next_osc = (self.next_osc + 1) % len(self.oscs)
-        self.pcm_patch_to_osc[pcm_patch] = osc
-        amy.send(time=time, osc=osc, wave=wave_type, note=note,
-             patch=pcm_patch, vel=velocity, pan=pan, feedback=feedback)
+    def note_on(self, note, velocity, time=None):
+        osc = self.oscs[self.next_osc]
+        self.next_osc = (self.next_osc + 1) % len(self.oscs)
+        # Update mapping of note to osc.  If notes are repeated, this will lose track.
+        self.osc_of_note[note] = osc
+        # Actually issue the note-on via derived class function
+        self._note_on_with_osc(osc, note, velocity, time)
 
-    def note_off(self, note, pcm_patch=0, custom=False, time=None):
-        if(custom):
-            osc = self.pcm_patch_to_osc.get(pcm_patch+1024, None)
-        else:
-            osc = self.pcm_patch_to_osc.get(pcm_patch, None)
-
-        if(osc is not None):
-            amy.send(time=time, osc=osc, vel=0)
-            del self.pcm_patch_to_osc[pcm_patch]
+    def note_off(self, note, time=None):
+        if note in self.osc_of_note:
+             amy.send(time=time, osc=self.osc_of_note[note], vel=0)
+             del self.osc_of_note[note]
 
     def all_notes_off(self):
-        for i in self.oscs:
-            amy.send(osc=i, vel=0)
+        """Execute note-offs for all the notes we believe currently active."""
+        for osc in self.oscs:
+            amy.send(osc=osc, vel=0)
+        # Delete active osc record.
+        self.osc_of_note = {}
 
-    # Rest of Synth protocol doesn't do anything for PitchedPCM.
+    def release(self):
+        """Called to terminate this synth and release its amy_voice resources."""
+        # Turn off any active notes
+        self.all_notes_off()
+        # Release the oscs we use .. not registered at the moment.
+        self.oscs = []
+        self.amy_voices = []
+
+    # Rest of Synth protocol doesn't do anything by default.
     def sustain(self, state):
         pass
 
@@ -458,11 +422,57 @@ class PitchedPCMSynth:
     def control_change(self, control, value):
         pass
 
-    def get_patch_state(self):
-        return None
 
-    def set_patch_state(self, state):
-        pass
+class OscSynth(SingleOscSynthBase):
+    """Synth that uses one osc per note.  Osc parameters are specified at initialization."""
+
+    def __init__(self, params_dict, num_voices=6, first_osc=None):
+        """Create a synth that plays the specified note on a single osc configured with params_dict."""
+        super().__init__(num_voices, first_osc)
+        # Configure oscs.
+        self.update_oscs(params_dict)
+
+    def update_oscs(self, params_dict):
+        """Update all our oscs with the params in the dict."""
+        for osc in self.oscs:
+            amy.send(osc=osc, **params_dict)
+
+    def _note_on_with_osc(self, osc, note, velocity, time=None):
+        amy.send(time=time, osc=osc, note=note, vel=velocity)
+
+
+class DrumSynth(SingleOscSynthBase):
+    """Synth for Drum channel (10).
+    Each MIDI note plays a separately-configured sound.
+    """
+    missing_note_warned = []
+
+    def __init__(self, num_voices=6, first_osc=None):
+        super().__init__(num_voices, first_osc)
+        # A dict of parameters associated with each midi note.  Make a copy
+        # of the defaults.
+        self.midi_note_params = {}
+        # These are the patches in amy/src/pcm_small.h reconciled to general midi chan 10.
+        for patch, (base_pitch, _, midi_note) in enumerate(drumkit):
+            if midi_note is not None:
+                self.midi_note_params[midi_note] = {'wave': amy.PCM, 'note': base_pitch, 'freq': 0, 'patch': patch}
+
+    def setup_midi_note(self, midi_note, params_dict):
+        """Configure a midi note with a dict of osc params."""
+        self.midi_note_params[midi_note] = params_dict
+
+    def _note_on_with_osc(self, osc, note, velocity, time):
+        if note not in self.midi_note_params:
+            if config.show_warnings and note not in DrumSynth.missing_note_warned:
+                print("DrumSynth note_on for note %d but only %s set up." % (
+                    note, str(sorted(list(self.midi_note_params.keys())))
+                ))
+                DrumSynth.missing_note_warned.append(note)
+            return
+        send_args = {'time': time, 'osc': osc, 'vel': velocity}
+        # Add the args for this note
+        send_args |= self.midi_note_params[note]
+        amy.send(**send_args)
 
 
 
@@ -477,6 +487,7 @@ def ensure_midi_config():
         config = MidiConfig(
             voices_per_channel={1: 6, 10: 10},
             patch_per_channel={1: 0},
+            show_warnings=True,
         )
         config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
 
@@ -597,9 +608,9 @@ def midi_event_cb(midi_message):
         GLOBAL_MIDI_CC_BINDINGS[control](value)
         return  # Early exit
     if channel not in config.synth_per_channel:
-        #if channel not in WARNED_MISSING_CHANNELS:
-        #    print("Warning: No synth configured for MIDI channel %d. message was %s %s" %(channel, hex(midi_message[0]), hex(midi_message[1])))
-        #    WARNED_MISSING_CHANNELS.add(channel)
+        if config.show_warnings and channel not in WARNED_MISSING_CHANNELS:
+            print("Warning: No synth configured for MIDI channel %d. message was %s %s" %(channel, hex(midi_message[0]), hex(midi_message[1])))
+            WARNED_MISSING_CHANNELS.add(channel)
         return  # Early exit
     # We have a populated channel.
     synth = config.synth_per_channel[channel]
@@ -652,10 +663,6 @@ def c_fired_midi_event(x):
             c(m)
 
         m = tulip.midi_in()
-        ## Are there more events waiting?
-        #m = m[3:]
-        #if len(m) == 0:
-        #    m = tulip.midi_in()
 
 
 # Keep this -- this is a tulip API 

@@ -153,7 +153,7 @@ synth2.release()
 synth4.release()
 ```
 
-As you learn more about AMY (the underlying synth engine) you may be interested in making your own `Synth` subclasses in Python. See `midi.py`'s `PitchedPCMSynth` for an example. 
+As you learn more about AMY (the underlying synth engine) you may be interested in making your own `Synth`s in Python. See `midi.py`'s `PitchedPCMSynth` for an example. 
 
 ## The editor
 

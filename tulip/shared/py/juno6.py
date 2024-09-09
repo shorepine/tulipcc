@@ -537,6 +537,7 @@ def update_patch_for_channel(channel, patch_num):
     if channel == midi_channel:
         patch_selector.set_value(patch_num)
 
+
 try:
     param_map = {
         midi.KNOB_IDS[0]: 'lfo_rate',
