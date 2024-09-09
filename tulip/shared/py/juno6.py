@@ -537,44 +537,38 @@ def update_patch_for_channel(channel, patch_num):
     if channel == midi_channel:
         patch_selector.set_value(patch_num)
 
-# Midi key mappings now initialized in midi.py
-param_map = {
-    midi.KNOB_IDS[0]: 'lfo_rate',
-    midi.KNOB_IDS[1]: 'lfo_delay_time',
-    midi.KNOB_IDS[2]: 'portamento',
-    midi.MOD_WHEEL: 'dco_lfo',
-    midi.KNOB_IDS[3]: 'dco_pwm',
-    midi.SLIDER_IDS[0]: 'dco_sub',
-    midi.SLIDER_IDS[1]: 'dco_noise',
-    midi.SLIDER_IDS[2]: 'vcf_freq',
-    midi.SLIDER_IDS[3]: 'vcf_res',
-    midi.KNOB_IDS[4]: 'vcf_env',
-    midi.KNOB_IDS[5]: 'vcf_lfo',
-    midi.KNOB_IDS[6]: 'vcf_kbd',
-    #
-    # Moved to midi.py
-    #midi.KNOB_IDS[7]: 'seq_bpm',
-    #
-    midi.SLIDER_IDS[8]: 'vca_level',
-    midi.SLIDER_IDS[4]: 'env_a',
-    midi.SLIDER_IDS[5]: 'env_d',
-    midi.SLIDER_IDS[6]: 'env_s',
-    midi.SLIDER_IDS[7]: 'env_r',
-    midi.BUTTON_IDS[0]: 'dco_range',
-    midi.BUTTON_IDS[1]: 'dco_pwm_mode', 
-    midi.BUTTON_IDS[2]: 'Pls',
-    midi.BUTTON_IDS[3]: 'Saw',
-    midi.BUTTON_IDS[4]: 'hpf_freq',
-    midi.BUTTON_IDS[5]: 'vcf_pol',
-    midi.BUTTON_IDS[6]: 'vca_mode',
-    midi.BUTTON_IDS[7]: 'chorus_mode',
-    #
-    # Arpeggiator controls - moved to midi.py
-    #midi.BUTTON_IDS[9]: 'On',
-    #midi.BUTTON_IDS[10]: 'Hold',
-    #midi.BUTTON_IDS[11]: 'arp_mode',
-    #midi.BUTTON_IDS[12]: 'arp_rng',
-}
+
+try:
+    param_map = {
+        midi.KNOB_IDS[0]: 'lfo_rate',
+        midi.KNOB_IDS[1]: 'lfo_delay_time',
+        midi.MOD_WHEEL: 'dco_lfo',
+        midi.KNOB_IDS[3]: 'dco_pwm',
+        midi.SLIDER_IDS[0]: 'dco_sub',
+        midi.SLIDER_IDS[1]: 'dco_noise',
+        midi.SLIDER_IDS[2]: 'vcf_freq',
+        midi.SLIDER_IDS[3]: 'vcf_res',
+        midi.KNOB_IDS[4]: 'vcf_env',
+        midi.KNOB_IDS[5]: 'vcf_lfo',
+        midi.KNOB_IDS[6]: 'vcf_kbd',
+        midi.SLIDER_IDS[8]: 'vca_level',
+        midi.SLIDER_IDS[4]: 'env_a',
+        midi.SLIDER_IDS[5]: 'env_d',
+        midi.SLIDER_IDS[6]: 'env_s',
+        midi.SLIDER_IDS[7]: 'env_r',
+        midi.BUTTON_IDS[0]: 'dco_range',
+        midi.BUTTON_IDS[1]: 'dco_pwm_mode', 
+        midi.BUTTON_IDS[2]: 'Pls',
+        midi.BUTTON_IDS[3]: 'Saw',
+        midi.BUTTON_IDS[4]: 'hpf_freq',
+        midi.BUTTON_IDS[5]: 'vcf_pol',
+        midi.BUTTON_IDS[6]: 'vca_mode',
+        midi.BUTTON_IDS[7]: 'chorus_mode',
+    }
+except IndexError:
+    print("Warning: Not enough sliders and buttons defined in midi_cc_file.json to control Juno-6")
+    param_map = {}
+
 
 def control_change(control, value):
     value = value / 127.0

@@ -100,7 +100,7 @@ You should **upgrade the firmware on Tulip** whenever you receive it. You should
    - Music demo: `run('xanadu')`
    - Other utlities: `run('wordpad')`, `run('buttons')`. 
  - The code for all of these are available, for you to modify or learn from. We ship a copy of `drums`, `voices` and `juno6` as `my_drums`, `my_voices`, `my_juno6` in `/sys/ex` if you want to edit those. The official versions are read-only and you can't mess them up! 
- - If you've got MIDI plugged in, try playing a note! Tulip boots with Juno-6 patch #0 on MIDI Channel 1. You can use the `voices` app to change that assignment. If you want your MIDI knobs / sliders to control things like the Juno-6 parameters in `run('juno6')`, run DAn's script to learn the sliders and update the midi mapping: `world.download('learn_midi_codes.py','dpwe')`
+ - If you've got MIDI plugged in, try playing a note! Tulip boots with Juno-6 patch #0 on MIDI Channel 1. You can use the `voices` app to change that assignment. If you want your MIDI knobs / sliders to control things like the Juno-6 parameters in `run('juno6')`, run a script to learn the sliders and update the midi mapping: `import learn_midi_codes`. Note you'll need to "learn" at least 13 buttons, 8 knobs and 9 sliders for full control of Juno. 
  - Try `world.download('mc_dance')` or `world.download('periodic2')` for some neat things by the Tulip community. 
 
 
@@ -112,12 +112,7 @@ If you're having any issues with your Tulip, please check out our [troubleshooti
 
 [If you want to work on Tulip itself, check out our guide to compiling and flashing the Tulip firmware.](tulip_flashing.md)
 
-If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware. 
-
-[![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
-
-Have fun! See you on Tulip World!
-
+If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware, or, see below how to transfer and edit files remotely.
 
 ## How to transfer files between Tulip and your computer
 
@@ -126,6 +121,8 @@ There are a few ways to files between Tulip and your computer. You can connect T
 ### Using `mpremote`
 
 [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html) is provided by the MicroPython project to be able to control and interact with MicroPython on many kinds of devices, including Tulip! It connects to Tulip over the UART USB connection and you are able to use the Tulip REPL, edit, upload and download files. (It does a lot more, but we'll just discuss file transfer here.)
+
+**You may need to install the USB->Serial driver first for your computer's OS.** Some OSes already have it installed and some don't. If `mpremote` can't find a port, [try to install the CH340K drivers.](https://www.wch-ic.com/downloads/CH341SER_ZIP.html). 
 
 First, install `mpremote`on your computer. Usually, this is (in your Terminal app) `pip install mpremote`. (If you don't have `pip`, please search for how to install it on your OS.) Once it's installed, make sure you've connected a USB cable from Tulip's top USB port - "USB pwr/charge/program" - to your computer. Then, with Tulip on, just run `mpremote` on your computer's terminal. You should see the Tulip's REPL on your screen! You can type into it and see it there. It's a fine way to control almost all of Tulip. 
 
@@ -147,5 +144,11 @@ With Wi-Fi, after you do `tulip.wifi('ssid', 'password')` first, there are two w
  \
  You can transfer any files **from** a computer to Tulip with `tulip.url_save(url, filename)` like: `tulip.url_save('http://192.168.1.23:8000/file.py', 'file.py')`. The `file.py` should be a file in the current directory that you've run `file_server.py` from.\
  \
- To transfer from a Tulip **to** a computer, use `tulip.url_put(url, file)` like `tulip.url_put('http://192.168.1.23:8000', 'file.py')` and it will appear in that folder on your computer. 
+ To transfer from a Tulip **to** a computer, use `tulip.url_put(url, file)` like `tulip.url_put('http://192.168.1.23:8000', 'file.py')` and it will appear in that folder on your computer.
+
+ 
+[![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
+
+Have fun! See you on Tulip World!
+
 
