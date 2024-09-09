@@ -571,7 +571,7 @@ def setup_global_midi_cc_bindings():
         }
 
     except IndexError: # custom midi cc file did not specify buttons or knobs that go this high
-        print("Warning: we need at least 13 buttons and 8 knobs defined to automatically assign MIDI cc mappings")
+        print("Warning: Not enough knobs and buttons defined in midi_cc_file.json to control arp and tempo")
         GLOBAL_MIDI_CC_BINDINGS = {}
 
 
