@@ -14,12 +14,12 @@ class MidiConfig:
     """System-wide Midi input config."""
 
     def __init__(self, voices_per_channel, patch_per_channel, show_warnings=True):
+        self.show_warnings = show_warnings
         self.synth_per_channel = dict()
+        self.arpeggiator_per_channel = {}
         for channel, polyphony in voices_per_channel.items():
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
             self.add_synth(channel, patch, polyphony)
-        self.arpeggiator_per_channel = {}
-        self.show_warnings = show_warnings
 
     def add_synth_object(self, channel, synth_object):
         if channel in self.synth_per_channel:
@@ -27,6 +27,8 @@ class MidiConfig:
             self.synth_per_channel[channel].release()
             del self.synth_per_channel[channel]
         self.synth_per_channel[channel] = synth_object
+        if channel in self.arpeggiator_per_channel:
+            self.arpeggiator_per_channel[channel].synth = synth_object
 
     def add_synth(self, channel, patch, polyphony):
         if channel == 10:
@@ -426,16 +428,18 @@ class SingleOscSynthBase:
 class OscSynth(SingleOscSynthBase):
     """Synth that uses one osc per note.  Osc parameters are specified at initialization."""
 
-    def __init__(self, params_dict, num_voices=6, first_osc=None):
-        """Create a synth that plays the specified note on a single osc configured with params_dict."""
+    def __init__(self, num_voices=6, first_osc=None, **kwargs):
+        """Create a synth that plays the specified note on a single osc configured with keyword args."""
         super().__init__(num_voices, first_osc)
         # Configure oscs.
-        self.update_oscs(params_dict)
+        self.update_oscs(**kwargs)
 
-    def update_oscs(self, params_dict):
+    def update_oscs(self, **kwargs):
         """Update all our oscs with the params in the dict."""
+        if 'osc' in kwargs:
+            raise ValueError('Do not provide an \'osc\' argument to OscSynth.')
         for osc in self.oscs:
-            amy.send(osc=osc, **params_dict)
+            amy.send(osc=osc, **kwargs)
 
     def _note_on_with_osc(self, osc, note, velocity, time=None):
         amy.send(time=time, osc=osc, note=note, vel=velocity)
