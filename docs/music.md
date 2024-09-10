@@ -153,7 +153,7 @@ synth2.release()
 synth4.release()
 ```
 
-As you learn more about AMY (the underlying synth engine) you may be interested in making your own `Synth`s in Python. See `midi.py`'s `PitchedPCMSynth` for an example. 
+As you learn more about AMY (the underlying synth engine) you may be interested in making your own `Synth`s in Python. See `midi.py`'s `OscSynth` for an example. 
 
 ## The editor
 
@@ -267,36 +267,42 @@ Now quit the `jam2` app if it was already running and re-`run` it. You should se
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/jam2.png" width=600>
 
 
-## Sampler, PitchedPCMSynth
+## Sampler, OscSynth
 
-The drum machine in Tulip uses a slightly different `Synth` called `PitchedPCMSynth`. There are 29 samples of drum-like and some instrument sounds in Tulip, and it can adjust the pitch and pan and loop of each one. You can try it out by just
+The drum machine in Tulip uses a slightly different `Synth` called `OscSynth`. You can use AMY directly with `OscSynth`, with one oscillator per voice of polyphony. Let's try it as a sampler. There are 29 samples of drum-like and some instrument sounds in Tulip, and it can adjust the pitch and pan and loop of each one. You can try it out by just
 
 ```python
-s = midi.PitchedPCMSynth()
 
-s.note_on(50, 1.0, pcm_patch=10)
-s.note_on(40, 1.0, pcm_patch=10) # different pitch
-s.note_on(40, 1.0, pcm_patch=10, pan=0) # different pan
-s.note_on(40,1,pcm_patch=23,feedback=1) # feedback=1 "loops" the sound, for instruments
-s.note_off(40,pcm_patch=23) # note_off for looped instruments
+# You can pass any AMY arguments to the setup of OscSynth, after you specify how many voices you want
+s = midi.OscSynth(wave=amy.PCM, patch=10) # PCM wave type, patch=10
+
+s.note_on(50, 1.0)
+s.note_on(40, 1.0) # different pitch
+
+s.update_oscs(pan=0) # different pan
+s.note_on(40, 1.0)
+
+s.update_oscs(feedback=1, patch=23) # feedback=1 loops the sound 
+s.note_on(40, 1.0)
+s.note_off(40) # note_off for looped instruments
 ```
 
 You can load your own samples into Tulip. Take any .wav file and [load it onto Tulip.](getting_started.md#transfer-files-between-tulip-and-your-computer) Now, load it in as a `CUSTOM` PCM patch:
 
 ```python
-s = midi.PitchedPCMSynth()
 patch = tulip.load_sample('sample.wav')
-s.note_on(60, 1.0, pcm_patch=patch, custom=True)
+s = midi.OscSynth(wave=amy.CUSTOM, patch=patch)
+s.note_on(60, 1.0)
 ```
 
 You can also load PCM patches with looped segments if you have their loopstart and loopend parameters (these are often stored in the WAVE metadata. If the .wav file has this metadata, we'll parse it. The example file `/sys/ex/vlng3.wav` has it. You can also provide the metadata directly.) To indicate looping, use `feedback=1`. 
 
 ```python
 patch = tulip.load_sample("/sys/ex/vlng3.wav") # loads wave looping metadata
-s = midi.PitchedPCMSynth()
-s.note_on(60, 1.0, pcm_patch=patch, custom=True, feedback=1) # loops
-s.note_on(55, 1.0, pcm_patch=patch, custom=True, feedback=1) # loops
-s.note_off(60, pcm_patch=patch) # stops
+s = midi.OscSynth(wave=amy.CUSTOM, patch=patch, feedback=1,num_voices=1)
+s.note_on(60, 1.0) # loops
+s.note_on(55, 1.0) # loops
+s.note_off(55) # stops
 ```
 
 ## Modify Juno-6 patches programatically

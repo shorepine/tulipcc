@@ -120,7 +120,7 @@ void memorypcm_note_off(uint16_t osc) {
     if(osc_patch_exists(osc)) {
         if(msynth[osc].feedback == 0) {
             // Non-looping note: Set phase to the end to cause immediate stop.
-            synth[osc].phase = F2P(memorypcm_map[synth[osc].patch]->length / (float)(1 << PCM_INDEX_BITS));
+            synth[osc].phase = F2P(memorypcm_map[synth[osc].patch]->length / (float)(1 << PCM_INDEX_FRAC_BITS));
         } else {
             // Looping is requested, disable future looping, sample will play through to end.
             // (sending a second note-off will stop it immediately).
