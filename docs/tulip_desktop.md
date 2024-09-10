@@ -77,9 +77,29 @@ cd tulip/linux
 
 ## Windows build of Tulip Desktop
 
-We've heard this works fine under WSL2 using the Linux instructions. We'd love a native build! 
+We've heard this works fine under WSL2 using the Linux instructions. We'd love a native build!
 
+## Troubleshooting
 
+Tulip on Mac OS X selects which audio device it will use for output when it starts. If you get no audio, you can check the available audio devices with
+
+```shell
+$ <path_to_app_bundle>/Tulip\ Desktop.app/Contents/MacOS/tulip -l
+0 - DELL U2715H
+1 - DELL U2715H
+2 - External Headphones
+3 - MacBook Pro Speakers
+4 - Microsoft Teams Audio
+5 - ZoomAudioDevice
+```
+
+And then select the device that you want to use with the `-d <device_number>` option, for example
+
+```shell
+$ <path_to_app_bundle>/Tulip\ Desktop.app/Contents/MacOS/tulip -d 2
+```
+
+For more details see <https://github.com/shorepine/tulipcc/issues/103>.
 ## Questions
 
 Any questions? [Chat with us on our discussions page.](https://github.com/shorepine/tulipcc/discussions)
