@@ -381,6 +381,7 @@ class SingleOscSynthBase:
             amy.send(reset=osc)
         # Fields used by UI
         self.amy_voices = self.oscs  # Actually osc numbers not amy voices.
+        self.patch_number = None
 
     # This method must be overridden by the derived class to actually send the note.
     def _note_on_with_osc(self, osc, note, velocity, time):
