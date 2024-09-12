@@ -465,7 +465,6 @@ def setup_from_patch_number(patch_number):
     # Use no fewer than 4.
     #num_amy_voices = 0 if amy_voices == None else len(amy_voices)
     #polyphony = max(4, num_amy_voices)
-    #tulip.music_map(midi_channel, patch_number, polyphony)
     midi.config.program_change(midi_channel, patch_number)
     _, amy_voices = midi.config.channel_info(midi_channel)
     #jp = juno.JunoPatch()  #.from_patch_number(patch_number)

@@ -168,7 +168,7 @@ You may want to programatically change the MIDI to synth mapping. One example wo
 You can change the parameters of channel synths like:
 
 ```python
-midi.config.add_synth(channel=1, num_voices=2, patch=30)
+midi.config.add_synth(channel, patch, polyphony)
 ```
 
 Note that `add_synth` will stop any running Synth on that channel and boot a new one in its place. 

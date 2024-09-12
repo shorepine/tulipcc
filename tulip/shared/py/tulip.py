@@ -30,8 +30,6 @@ def sys():
 
 import midi
 
-from midi import music_map
-
 # convert tulip RGB332 pal_idx to 3 rgb 0-255 values
 def rgb(px0, wide=False):
     r = px0 & 0xe0;

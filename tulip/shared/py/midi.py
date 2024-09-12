@@ -53,16 +53,6 @@ class MidiConfig:
         # update the map
         self.synth_per_channel[channel].program_change(patch)
 
-    def music_map(self, channel, patch_number=0, voice_count=None):
-        """Implement the tulip music_map API."""
-        if (not voice_count
-            or (channel in self.synth_per_channel
-                and self.synth_per_channel[channel].num_voices == voice_count)):
-            # Simply changing patch.
-            self.program_change(channel, patch_number)
-        else:
-            # Setting up a new channel.
-            self.add_synth(channel, patch_number, voice_count)
     def get_active_channels(self):
         """Return numbers of MIDI channels with allocated synths."""
         return list(self.synth_per_channel.keys())
@@ -668,25 +658,6 @@ def c_fired_midi_event(x):
             c(m)
 
         m = tulip.midi_in()
-
-
-# Keep this -- this is a tulip API 
-def music_map(channel, patch_number=None, voice_count=None):
-    """API to set a patch and polyphony for a given MIDI channel."""
-    config.music_map(channel, patch_number, voice_count)
-    try:
-        # Update voices UI if it is running.
-        # (But watch out for circularity - voices calls music_map too).
-        voices_app = tulip.running_apps.get("voices", None)
-        #voices_app.refresh_with_new_music_map()   # Not yet implemented!
-    except:
-        pass
-    try:
-        # Update juno6 UI if it is running.
-        juno6_app = tulip.running_apps.get("juno6", None)
-        juno6_app.refresh_with_new_music_map()
-    except:
-        pass
 
 
 def deferred_midi_config(t):

@@ -491,11 +491,11 @@ By default, Tulip boots into a live MIDI synthesizer mode. Any note-ons, note-of
 
 By default, MIDI notes on channel 1 will map to Juno-6 patch 0. And MIDI notes on channel 10 will play the PCM samples (like a drum machine).
 
-You can adjust which voices are sent with `tulip.music_map(channel, patch_number, voice_count)`. For example, you can have Tulip play DX7 patch 129 on channel 2 with `tulip.music_map(2, 129)`. The channel is a MIDI channel (we use 1-16 indexing), the patch_number is an AMY patch number, and voice_count is the optional number of voices (polyphony) you want to support for that channel and patch. 
+You can adjust which voices are sent with `midi.config.add_synth(channel, patch, polyphony)`. For example, you can have Tulip play DX7 patch 129 on channel 2 with `midi.config.add_synth(2,129,1)`. The `2`, channel, is a MIDI channel (we use 1-16 indexing), the patch `129` is an AMY patch number, `1` is the optional number of voices (polyphony) you want to support for that channel and patch. 
 
-(A good rule of thumb is Tulip CC can support about 8 simultaneous total voices for Juno-6 and DX7, and 20-30 total voices for PCM and more for other simpler oscillator patches.)
+(A good rule of thumb is Tulip CC can support about 6 simultaneous total voices for Juno-6, 8-10 for DX7, and 20-30 total voices for PCM and more for other simpler oscillator patches.)
 
-These mappings will get reset to default on boot. If you want to save them, put tulip.music_map() commands in your boot.py.
+These mappings will get reset to default on boot. If you want to save them, put `add_synth` commands in your boot.py.
 
 You can set up your own MIDI callbacks in your own programs. You can call `midi.add_callback(function)`, which will call your `function` with a list of a (2 or 3-byte) MIDI message. These callbacks will get called alongside the default MIDI callback (that plays synth notes on MIDI in). You can stop the default MIDI callback with `midi.stop_default_callback()` and start it again with `midi.start_default_callback()`. 
 
@@ -504,8 +504,6 @@ On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later po
 You can also send MIDI messages "locally", e.g. to a running Tulip program that is expecting hardware MIDI input, via `tulip.midi_local()`
 
 ```python
-tulip.music_map(1,129) # change MIDI channel 1 to patch 129.
-
 def callback(m):
     if(m[0]==144):
         print("Note on, note # %d velocity # %d" % (m[1], m[2]))
