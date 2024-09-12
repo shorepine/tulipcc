@@ -298,7 +298,7 @@ s.note_off(60)
 Let's try it as a sampler. There are 29 samples of drum-like and some instrument sounds in Tulip, and it can adjust the pitch and pan and loop of each one. You can try it out by just
 
 ```python
-# You can pass any AMY arguments to the setup of OscSynth, after you specify how many voices you want
+# You can pass any AMY arguments to the setup of OscSynth
 s = midi.OscSynth(wave=amy.PCM, patch=10) # PCM wave type, patch=10
 
 s.note_on(50, 1.0)
