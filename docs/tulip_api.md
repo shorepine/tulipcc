@@ -267,6 +267,22 @@ screen.add(tulip.UICheckbox(text=None, val=False, bg_color=None, fg_color=None, 
 
 See our [`buttons.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/buttons.py) example for `UIX` class use.
 
+### Tabbed UIs
+
+You can set up a tabbed UI in a `UIScreen` with our `TabView` class. It's set up to act like a mini `UIScreen`, where you can add elements. 
+
+```python
+def run(screen):
+    # This will create a TabView in the UIScreen, on the left, with three tabs
+    tabview = ui.TabView(screen, ["tab1", "tab2", "tab3"], size=80,  position = lv.DIR.LEFT)
+    # Create any UIElement 
+    bpm_slider = tulip.UISlider(tulip.seq_bpm()/2.4, w=300, h=25, 
+        callback=bpm_change, bar_color=123, handle_color=23)
+    # Add it to the tab you want, same API as UIScreen.add()
+    tabview.add("tab2", bpm_slider, x=300,y=200)
+    screen.present()
+```
+
 ## Input
 
 Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, and your computers' keyboard works.
