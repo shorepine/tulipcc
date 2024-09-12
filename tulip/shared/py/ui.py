@@ -293,6 +293,7 @@ class UIElement():
         self.group.delete()
 
 
+
 # Callback for soft keyboard to send chars to Tulip.
 def lv_soft_kb_cb(e):
     global lv_soft_kb, lv_last_mode
@@ -392,6 +393,47 @@ def launcher(ignore=True):
     b_wifi.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
     b_power = lv_launcher.add_button(lv.SYMBOL.POWER,"Reset")
     b_power.add_event_cb(launcher_cb, lv.EVENT.CLICKED, None)
+
+# A tab view (that you can add other things to)
+class TabView:
+    def __init__(self, parent, tabs=[], position = lv.DIR.LEFT, size=100):
+        self.parent = parent
+        self.tabs = []
+        self.tab_names = tabs
+        self.tabview = lv.tabview(self.parent.group)
+        self.tabview.set_tab_bar_position(position)
+        self.tabview.set_tab_bar_size(size)
+        for t in self.tab_names:
+            self.tabs.append(self.tabview.add_tab(t))
+        self.last_obj_added = None
+
+    def tab(self, name):
+        return self.tabs[self.tab_names.index(name)]
+
+    def add(self, name, obj, first_align=lv.ALIGN.TOP_LEFT, direction=lv.ALIGN.OUT_RIGHT_MID, relative=None, pad_x=0, pad_y=0, x=None, y=None):
+        group = self.tab(name)
+
+        if(relative is not None):
+            self.last_obj_added = relative.group
+
+        if(type(obj) != list): obj = [obj]
+        for o in obj:
+            o.group.set_parent(group)
+            o.group.set_style_bg_color(pal_to_lv(self.parent.bg_color), lv.PART.MAIN)
+            o.group.set_height(lv.SIZE_CONTENT)
+            if(self.last_obj_added is None):
+                o.group.align_to(group,first_align,self.parent.offset_x,self.parent.offset_y)
+            else:
+                try:
+                    o.group.align_to(self.last_obj_added, direction,pad_x,pad_y)
+                except lv.LvReferenceError:
+                    self.last_obj_added = None
+                    o.group.align_to(group,first_align,self.parent.offset_x,self.parent.offset_y)
+            o.group.set_width(o.group.get_width()+pad_x)
+            o.group.set_height(o.group.get_height()+pad_y)
+            if(x is not None and y is not None): o.group.set_pos(x,y)
+            self.last_obj_added = o.group
+
 
 
 # A text entry widget w/ ok and cancel 
