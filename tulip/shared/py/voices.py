@@ -265,7 +265,7 @@ def update_map():
         channel_patch, amy_voices = midi.config.channel_info(channel)
         channel_polyphony = 0 if amy_voices is None else len(amy_voices)
         if (channel_patch, channel_polyphony) != (patch_no, polyphony):
-            midi.config.add_synth(channel=channel, patch=patch_no, polyphony=polyphony)
+            midi.config.add_synth(channel=channel, patch_number=patch_no, num_voices=polyphony)
 
 
 # populate the patches dialog from patches.py
