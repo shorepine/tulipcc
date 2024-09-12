@@ -146,7 +146,13 @@ for i,note in enumerate(chord):
     # each note on will play precisely one second after the last
 ```
 
-Remember to `release` your synths when you're done with them
+You can send `all_notes_off()` to your synth to stop playing notes:
+
+```python
+synth4.all_notes_off()
+```
+
+If you are booting a new Synth in your program, remember to `release` your synths when you're done with them
 ```python
 synth1.release() # Does all note-off and then clears the voice alloc 
 synth2.release()
@@ -154,6 +160,18 @@ synth4.release()
 ```
 
 As you learn more about AMY (the underlying synth engine) you may be interested in making your own `Synth`s in Python. See `midi.py`'s `OscSynth` for an example. 
+
+## Modifying the default synth or other MIDI channel assignments in code
+
+You may want to programatically change the MIDI to synth mapping. One example would be to lower the polyphony of the booted by default 6-note synth on channel 1, so that notes coming in through MIDI don't impact the performance or polyphony of your app. Or if you want to set up your music app to receive different patches on different MIDI channels. 
+
+You can change the parameters of channel synths like:
+
+```python
+midi.config.add_synth(channel=1, num_voices=2, patch=30)
+```
+
+Note that `add_synth` will stop any running Synth on that channel and boot a new one in its place. 
 
 ## The editor
 
@@ -269,10 +287,17 @@ Now quit the `jam2` app if it was already running and re-`run` it. You should se
 
 ## Sampler, OscSynth
 
-The drum machine in Tulip uses a slightly different `Synth` called `OscSynth`. You can use AMY directly with `OscSynth`, with one oscillator per voice of polyphony. Let's try it as a sampler. There are 29 samples of drum-like and some instrument sounds in Tulip, and it can adjust the pitch and pan and loop of each one. You can try it out by just
+The drum machine in Tulip uses a slightly different `Synth` called `OscSynth`. You can use AMY directly with `OscSynth`, with one oscillator per voice of polyphony. Like this simple sine wave synth:
 
 ```python
+s = midi.OscSynth(wave=amy.SINE)
+s.note_on(60,1)
+s.note_off(60)
+```
 
+Let's try it as a sampler. There are 29 samples of drum-like and some instrument sounds in Tulip, and it can adjust the pitch and pan and loop of each one. You can try it out by just
+
+```python
 # You can pass any AMY arguments to the setup of OscSynth, after you specify how many voices you want
 s = midi.OscSynth(wave=amy.PCM, patch=10) # PCM wave type, patch=10
 
