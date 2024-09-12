@@ -20,7 +20,7 @@ Tulip is a **music computer** where everything about the underlying synthesis an
  - Sample CV inputs from an ADC to control other events on Tulip 
  - Send MIDI in and out, from code. You can write code to respond to MIDI messages to do whatever you want
  - Share a common sequencer clock across multiple apps, for example, a drum machine and an arpeggiator 
- - Add global EQ, chorus or reverb to the audio output
+ - Add global EQ, chorus, echo or reverb to the audio output
  - A scale and chord library to define musical notes in code, e.g. `music.Chord("F:min")`
  - Have total low level control of all oscillators, specifying their filters, waveform, modulation sources, ADSRs
 
@@ -346,6 +346,7 @@ import amy
 amy.send(osc=30, wave=amy.SINE, freq=440, vel=1) # 440Hz sine wave
 amy.send(osc=30, vel = 0) # note off
 amy.reverb(1) # turn on global reverb
+amy.echo(level=1, delay_ms=400, feedback=0.8) # global echo
 amy.drums() # play a test pattern
 amy.reset() # reset every AMY oscillator
 ```
