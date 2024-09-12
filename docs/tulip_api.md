@@ -491,7 +491,7 @@ By default, Tulip boots into a live MIDI synthesizer mode. Any note-ons, note-of
 
 By default, MIDI notes on channel 1 will map to Juno-6 patch 0. And MIDI notes on channel 10 will play the PCM samples (like a drum machine).
 
-You can adjust which voices are sent with `midi.config.add_synth(channel, patch, polyphony)`. For example, you can have Tulip play DX7 patch 129 on channel 2 with `midi.config.add_synth(channel=2, patch=129, polyphony=1)`. The `2`, channel, is a MIDI channel (we use 1-16 indexing), the patch `129` is an AMY patch number, `1` is the optional number of voices (polyphony) you want to support for that channel and patch. 
+You can adjust which voices are sent with `midi.config.add_synth(channel, patch, polyphony)`. For example, you can have Tulip play DX7 patch 129 on channel 2 with `midi.config.add_synth(channel=2, patch=129, polyphony=1)`. The `2`, channel, is a MIDI channel (we use 1-16 indexing), the patch `129` is an AMY patch number, `1` is the number of voices (polyphony) you want to support for that channel and patch. 
 
 (A good rule of thumb is Tulip CC can support about 6 simultaneous total voices for Juno-6, 8-10 for DX7, and 20-30 total voices for PCM and more for other simpler oscillator patches.)
 
