@@ -17,9 +17,9 @@ class MidiConfig:
         self.show_warnings = show_warnings
         self.synth_per_channel = dict()
         self.arpeggiator_per_channel = {}
-        for channel, polyphony in voices_per_channel.items():
+        for channel, num_voices in voices_per_channel.items():
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
-            self.add_synth(channel, patch, polyphony)
+            self.add_synth(channel, patch, num_voices)
 
     def add_synth_object(self, channel, synth_object):
         if channel in self.synth_per_channel:
@@ -30,13 +30,11 @@ class MidiConfig:
         if channel in self.arpeggiator_per_channel:
             self.arpeggiator_per_channel[channel].synth = synth_object
 
-    def add_synth(self, channel, patch, polyphony):
+    def add_synth(self, channel=1, patch_number=0, num_voices=6):
         if channel == 10:
-            synth_object = DrumSynth(num_voices=polyphony)
+            synth_object = DrumSynth(num_voices=num_voices)
         else:
-            synth_object = Synth(num_voices=polyphony)
-            if patch is not None:
-                synth_object.program_change(patch)
+            synth_object = Synth(num_voices=num_voices, patch_number=patch_number)
         self.add_synth_object(channel, synth_object)
 
     def insert_arpeggiator(self, channel, arpeggiator):
@@ -49,13 +47,17 @@ class MidiConfig:
             self.arpeggiator_per_channel.synth = None
             del self.arpeggiator_per_channel[channel]
 
-    def program_change(self, channel, patch):
+    def program_change(self, channel, patch_number):
         # update the map
-        self.synth_per_channel[channel].program_change(patch)
+        self.synth_per_channel[channel].program_change(patch_number)
 
     def get_active_channels(self):
         """Return numbers of MIDI channels with allocated synths."""
         return list(self.synth_per_channel.keys())
+
+    def get_synth(self, channel):
+        """Return the Synth associated with a given channel."""
+        return self.synth_per_channel[channel] if channel in self.synth_per_channel else None
 
     def channel_info(self, channel):
         """Report the current patch_num and list of amy_voices for this channel."""
@@ -300,7 +302,7 @@ class Synth:
             self._voice_off(voice)
 
 
-    def note_on(self, note, velocity, time=None):
+    def note_on(self, note, velocity=1, time=None):
         if not self.amy_voice_nums:
             # Note on after synth.release()?
             raise ValueError('Synth note on with no voices - synth has been released?')
@@ -377,7 +379,7 @@ class SingleOscSynthBase:
     def _note_on_with_osc(self, osc, note, velocity, time):
         raise NotImplementedError
 
-    def note_on(self, note, velocity, time=None):
+    def note_on(self, note, velocity=1, time=None):
         osc = self.oscs[self.next_osc]
         self.next_osc = (self.next_osc + 1) % len(self.oscs)
         # Update mapping of note to osc.  If notes are repeated, this will lose track.
