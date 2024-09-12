@@ -280,7 +280,7 @@ def run(screen):
         callback=bpm_change, bar_color=123, handle_color=23)
     # Add it to the tab you want, same API as UIScreen.add()
     tabview.add("tab2", bpm_slider, x=300,y=200)
-    app.present()
+    screen.present()
 ```
 
 ## Input
