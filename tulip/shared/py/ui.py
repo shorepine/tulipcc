@@ -36,7 +36,7 @@ def lv_to_pal(lvcolor):
     return tulip.color(lvcolor.red, lvcolor.green, lvcolor.blue)
 
 # Remove padding from an LVGL object. Sometimes useful. 
-def lv_depad(obj):
+def lv_depad(obj, remove_scroll = False):
     try:
         obj.set_style_pad_left(0,0)
         obj.set_style_pad_right(0,0)
@@ -48,6 +48,9 @@ def lv_depad(obj):
         obj.set_style_margin_bottom(0,0)
     except KeyError:
         pass
+    if(remove_scroll):
+        obj.remove_flag(lv.obj.FLAG.SCROLLABLE)
+
 
 def current_uiscreen():
     global current_app_string
@@ -274,11 +277,13 @@ class UIElement():
     # We make one temp screen for the elements to use, then add it to the UIScreen parent at add.
     temp_screen = lv.obj()
 
-    def __init__(self):
+    def __init__(self, debug=False):
         #self.change_callback = None
         self.group = lv.obj(UIElement.temp_screen)
         # Hot tip - set this to 1 if you're debugging why elements are not aligning like you think they should
-        self.group.set_style_border_width(0, lv.PART.MAIN)
+        bw = 0
+        if(debug): bw = 1
+        self.group.set_style_border_width(bw, lv.PART.MAIN)
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
 
     def update_callbacks(self, cb):
@@ -403,9 +408,19 @@ class TabView:
         self.tabview = lv.tabview(self.parent.group)
         self.tabview.set_tab_bar_position(position)
         self.tabview.set_tab_bar_size(size)
+
+ 
         for t in self.tab_names:
             self.tabs.append(self.tabview.add_tab(t))
         self.last_obj_added = None
+
+        lv_depad(self.tabview, remove_scroll=True)
+        lv_depad(self.tabview.get_content(), remove_scroll=True)
+        lv_depad(self.tabview.get_tab_bar(), remove_scroll=True)
+        for i in self.tabs:
+            lv_depad(i, remove_scroll=True)
+
+
 
     def tab(self, name):
         return self.tabs[self.tab_names.index(name)]
@@ -438,8 +453,8 @@ class TabView:
 
 # A text entry widget w/ ok and cancel 
 class TextEntry(UIElement):
-    def __init__(self, label_text="", filled_text="", ok_callback=None, cancel_callback=None, bg_color=0, fg_color=255):
-        super().__init__()
+    def __init__(self, label_text="", filled_text="", ok_callback=None, cancel_callback=None, bg_color=0, fg_color=255, **kwargs):
+        super().__init__(**kwargs)
         self.group.set_size(420,80)
         self.box = lv.obj(self.group)
         self.box.set_style_bg_color(pal_to_lv(bg_color), lv.PART.MAIN)
@@ -494,9 +509,9 @@ class TextEntry(UIElement):
 # handle_radius - 0 for square 
 class UISlider(UIElement):
     def __init__(self, val=0, w=None, h=None, bar_color=None, unset_bar_color=None, handle_color=None, handle_radius=None, 
-        handle_v_pad=None, handle_h_pad=None, callback=None):
+        handle_v_pad=None, handle_h_pad=None, callback=None, **kwargs):
 
-        super().__init__()
+        super().__init__(**kwargs)
         self.slider = lv.slider(self.group)
         # Set opacity to full (COVER). Default is to mix the color with the BG.
         self.slider.set_style_bg_opa(lv.OPA.COVER, lv.PART.MAIN)
@@ -531,8 +546,8 @@ class UISlider(UIElement):
             self.slider.add_event_cb(callback, lv.EVENT.VALUE_CHANGED, None)
 
 class UIButton(UIElement):
-    def __init__(self, text=None, w=None, h=None, bg_color=None, fg_color=None, font=None, radius=None, callback=None):
-        super().__init__()
+    def __init__(self, text=None, w=None, h=None, bg_color=None, fg_color=None, font=None, radius=None, callback=None, **kwargs):
+        super().__init__(**kwargs)
         self.button = lv.button(self.group)
         if(w is not None):
             self.button.set_width(w)
@@ -559,8 +574,8 @@ class UIButton(UIElement):
             self.button.add_event_cb(callback, lv.EVENT.CLICKED, None)
 
 class UILabel(UIElement):
-    def __init__(self, text, fg_color=None, font=None):
-        super().__init__() 
+    def __init__(self, text, fg_color=None, font=None, **kwargs):
+        super().__init__(**kwargs) 
         self.label = lv.label(self.group)
         self.label.set_text(text)
         self.label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
@@ -574,8 +589,8 @@ class UILabel(UIElement):
 
 # TODO -- get the kb_group back involved
 class UIText(UIElement):
-    def __init__(self, text=None, placeholder=None, w=None, h=None, bg_color=None, fg_color=None, font=None, one_line=True, callback=None):
-        super().__init__()
+    def __init__(self, text=None, placeholder=None, w=None, h=None, bg_color=None, fg_color=None, font=None, one_line=True, callback=None, **kwargs):
+        super().__init__(**kwargs)
         self.ta = lv.textarea(self.group)
         if(w is not None):
             self.ta.set_width(w)
@@ -598,8 +613,8 @@ class UIText(UIElement):
             self.group.set_width(w+20)
 
 class UICheckbox(UIElement):
-    def __init__(self, text=None, val=False, bg_color=None, fg_color=None, callback=None):
-        super().__init__()
+    def __init__(self, text=None, val=False, bg_color=None, fg_color=None, callback=None, **kwargs):
+        super().__init__(**kwargs)
         self.cb = lv.checkbox(self.group)
         if(text is not None):
             self.cb.set_text(text)
