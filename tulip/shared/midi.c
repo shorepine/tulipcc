@@ -17,6 +17,11 @@ int16_t midi_queue_head = 0;
 int16_t midi_queue_tail = 0;
 
 
+void midi_clock_received() {
+    // do nothing
+    // but one day update our sequencer
+}
+
 // This takes a fully formed (and with status byte) midi messages and puts it in a queue that Python reads from.
 // We have to do this as python may be slower than the bytes come in.
 void callback_midi_message_received(uint8_t *data, size_t len) {
@@ -83,13 +88,16 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
             if(byte & 0x80) { // new status byte 
                 // Single byte message?
                 current_midi_message[0] = byte;
-                if(byte == 0xF4 || byte == 0xF5 || byte == 0xF6 || byte == 0xF8 || byte == 0xF9 || 
+                if(byte == 0xF4 || byte == 0xF5 || byte == 0xF6 || byte == 0xF9 || 
                     byte == 0xFA || byte == 0xFB || byte == 0xFC || byte == 0xFD || byte == 0xFE || byte == 0xFF) {
                     callback_midi_message_received(current_midi_message, 1); 
                     if(usb) i = len+1; // exit the loop if usb
                 }  else if(byte == 0xF0) { // sysex start 
                     // We will ignore sysex for now, but we have to understand it. We'll tell the parser to ignore anything up to F7
                     sysex_flag = 1;
+                } else if(byte == 0xF8) { // clock. don't forward this on to Tulip userspace
+                    midi_clock_received();
+                    if(usb) i = len+1; // exit the loop if usb
                 } else { // a new status message that expects at least one byte of message after
                     current_midi_message[0] = byte;
                 }
