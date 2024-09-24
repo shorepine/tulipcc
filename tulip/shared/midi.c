@@ -88,8 +88,8 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
             if(byte & 0x80) { // new status byte 
                 // Single byte message?
                 current_midi_message[0] = byte;
-                if(byte == 0xF4 || byte == 0xF5 || byte == 0xF6 || byte == 0xF8 || byte == 0xF9 || 
-                    byte == 0xFA || byte == 0xFC || byte == 0xFD || byte == 0xFE || byte == 0xFF) {
+                if(byte == 0xF4 || byte == 0xF5 || byte == 0xF6 || byte == 0xF9 || 
+                    byte == 0xFA || byte == 0xFB || byte == 0xFC || byte == 0xFD || byte == 0xFE || byte == 0xFF) {
                     callback_midi_message_received(current_midi_message, 1); 
                     if(usb) i = len+1; // exit the loop if usb
                 }  else if(byte == 0xF0) { // sysex start 
