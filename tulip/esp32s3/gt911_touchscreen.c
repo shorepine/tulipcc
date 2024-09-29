@@ -91,48 +91,56 @@ void run_gt911(void *param) {
     gpio_config(&peri_gpio_config);
 
     gpio_set_level(TOUCH_RST, 0);
-    delay_ms(200);
+    delay_ms(500);
     gpio_set_level(TOUCH_RST, 1);
-    delay_ms(200);
+    delay_ms(500);
     gpio_set_level(TOUCH_RST, 0);
-    delay_ms(200);
+    delay_ms(500);
     gpio_set_level(TOUCH_RST, 1);
-    delay_ms(200);
+    delay_ms(500);
     #endif
 
     touch_init(0);
     uint8_t bytes[1] = {0};
     esp_err_t err= i2c_master_write_to_device(I2C_NUM_0, 0x5D, bytes, 0, pdMS_TO_TICKS(10));
-    fprintf(stderr, "\nerr for writing to 0x5D is %d %s\n", err, esp_err_to_name(err));
+    if(err) fprintf(stderr, "\nerr for writing to 0x5D is %d %s\n", err, esp_err_to_name(err));
+    uint8_t touchscreen_ok = 1;
     if(err != 0) {
-        fprintf(stderr, "falling back on 0x14 for touch\n");
+        fprintf(stderr, "attempting to fall back on 0x14 for touch\n");
         touch_init(1);
         err= i2c_master_write_to_device(I2C_NUM_0, 0x14, bytes, 0, pdMS_TO_TICKS(10));
-        fprintf(stderr, "\nerr for writing to 0x14 is %d %s\n", err, esp_err_to_name(err));
+        if(err) fprintf(stderr, "\nerr for writing to 0x14 is %d %s\n", err, esp_err_to_name(err));
+        if(err != 0) {
+            // no touchscreen. probably not connected. 
+            fprintf(stderr, "Touchscreen could not be booted. Please try fixing the cable and restarting.\n");
+            touchscreen_ok = 0;
+        }
     }
 
   
-    while (1) {
-        esp_lcd_touch_read_data(tp);
-        if(esp_lcd_touch_get_coordinates(tp, touch_x, touch_y, touch_strength, &touch_cnt, 3)) {
-            //fprintf(stderr, "TP pressed %d,%d str %d count %d\n", touch_x[0], touch_y[0], touch_strength[0], touch_cnt);
-            for(uint8_t i=0;i<touch_cnt;i++) {
-                last_touch_x[i] = touch_x[i] + touch_x_delta;
-                #ifdef TDECK
-                    // tdeck has swapped y that mirror_y doesn't fix
-                    last_touch_y[i] = ((V_RES-touch_y[i]) + touch_y_delta)*touch_y_scale;
-                #else
-                    last_touch_y[i] = (touch_y[i] + touch_y_delta)*touch_y_scale;
-                #endif
-            }
-            //fprintf(stderr, "touch DOWN %d %d\n", last_touch_x[0], last_touch_y[0]);
-            send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0);
-            gt911_held = 1;
-        } else {
-            if(gt911_held) {
-                //fprintf(stderr, "touch UP   %d %d\n", last_touch_x[0], last_touch_y[0]);
-                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
-                gt911_held = 0;
+    while(1) {
+        if (touchscreen_ok) {
+            esp_lcd_touch_read_data(tp);
+            if(esp_lcd_touch_get_coordinates(tp, touch_x, touch_y, touch_strength, &touch_cnt, 3)) {
+                //fprintf(stderr, "TP pressed %d,%d str %d count %d\n", touch_x[0], touch_y[0], touch_strength[0], touch_cnt);
+                for(uint8_t i=0;i<touch_cnt;i++) {
+                    last_touch_x[i] = touch_x[i] + touch_x_delta;
+                    #ifdef TDECK
+                        // tdeck has swapped y that mirror_y doesn't fix
+                        last_touch_y[i] = ((V_RES-touch_y[i]) + touch_y_delta)*touch_y_scale;
+                    #else
+                        last_touch_y[i] = (touch_y[i] + touch_y_delta)*touch_y_scale;
+                    #endif
+                }
+                //fprintf(stderr, "touch DOWN %d %d\n", last_touch_x[0], last_touch_y[0]);
+                send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0);
+                gt911_held = 1;
+            } else {
+                if(gt911_held) {
+                    //fprintf(stderr, "touch UP   %d %d\n", last_touch_x[0], last_touch_y[0]);
+                    send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 1);
+                    gt911_held = 0;
+                }
             }
         }
         vTaskDelay(20/portTICK_PERIOD_MS);
