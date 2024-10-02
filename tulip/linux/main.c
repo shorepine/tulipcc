@@ -480,9 +480,10 @@ static void sys_set_excecutable(char *argv0) {
 #endif
 
 
+extern int16_t amy_playback_device_id;
+extern int16_t amy_capture_device_id;
+extern void setup_lvgl();
 
-
-extern int16_t amy_device_id;
 
 /*
 MP_NOINLINE int main_(int argc, char **argv);
@@ -875,7 +876,10 @@ int main(int argc, char **argv) {
         switch(opt) 
         { 
             case 'd': 
-                amy_device_id = atoi(optarg);
+                amy_playback_device_id = atoi(optarg);
+                break;
+            case 'c': 
+                amy_capture_device_id = atoi(optarg);
                 break;
             case 'l':
                 amy_print_devices();
@@ -884,6 +888,7 @@ int main(int argc, char **argv) {
             case 'h':
                 fprintf(stderr,"usage: tulip\n");
                 fprintf(stderr,"\t[-d sound device id, use -l to list, default, autodetect]\n");
+                fprintf(stderr,"\t[-c capture sound device id, use -l to list, default, autodetect]\n");
                 fprintf(stderr,"\t[-l list all sound devices and exit]\n");
                 fprintf(stderr,"\t[-h show this help and exit]\n");
                 exit(0);
