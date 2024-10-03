@@ -90,9 +90,9 @@ void esp_fill_audio_buffer_task() {
         // We turn off writing to i2s on r10 when doing on chip debugging because of pins
         #ifndef TULIP_R10_DEBUG
         size_t written = 0;
-        i2s_channel_write(tx_handle, block, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS, &written, portMAX_DELAY);
-        if(written != AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS) {
-            fprintf(stderr,"i2s underrun: %d vs %d\n", written, AMY_BLOCK_SIZE * BYTES_PER_SAMPLE * AMY_NCHANS);
+        i2s_channel_write(tx_handle, block, AMY_BLOCK_SIZE * AMY_BYTES_PER_SAMPLE * AMY_NCHANS, &written, portMAX_DELAY);
+        if(written != AMY_BLOCK_SIZE * AMY_BYTES_PER_SAMPLE * AMY_NCHANS) {
+            fprintf(stderr,"i2s underrun: %d vs %d\n", written, AMY_BLOCK_SIZE * AMY_BYTES_PER_SAMPLE * AMY_NCHANS);
         }
         #endif
 
@@ -184,8 +184,6 @@ amy_err_t setup_i2s(void) {
 #endif
 
 
-extern struct custom_oscillator memorypcm;
-extern void memorypcm_init();
 
 #ifdef ESP_PLATFORM
 #include "driver/i2c.h"
@@ -226,7 +224,6 @@ void run_alles() {
 
 
     esp_amy_init();
-    amy_set_custom(&memorypcm);
     amy_reset_oscs();
     // Schedule a "turning on" sound
     bleep();
@@ -243,8 +240,6 @@ void * alles_start(void *vargs) {
     alles_local_ip = malloc(256);
     alles_local_ip[0] = 0;
     unix_amy_init();
-    amy_set_custom(&memorypcm);
-    memorypcm_init();
     amy_reset_oscs();
     // Schedule a "turning on" sound
     // We don't do this by default on tulip desktop as all threads start at once and it makes the bleep sound bad 
@@ -307,26 +302,30 @@ void alles_parse_message(char *message, uint16_t length) {
     uint8_t ipv4 = 0;
     uint16_t start = 0;
     uint16_t c = 0;
-    //char local_message[MAX_RECEIVE_LEN];
-    //strncpy(local_message, message, length);
+    uint8_t sync_response = 0;
+
     // Parse the AMY stuff out of the message first
     struct event e = amy_parse_message(message);
-    uint8_t sync_response = 0;
-    //fprintf(stderr, "message is %s len is %d\n", message, length);
-    // Then pull out any alles-specific modes in this message 
-    while(c < length+1) {
-        uint8_t b = message[c];
-        if(b == '_' && c==0) sync_response = 1;
-        if( ((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')) || b == 0) {  // new mode or end
-            if(mode=='g') client = atoi(message + start); 
-            if(mode=='U') sync = atol(message + start); 
-            if(mode=='W') external_map[e.osc] = atoi(message+start);
-            if(sync_response) if(mode=='r') ipv4=atoi(message + start);
-            if(sync_response) if(mode=='i') sync_index = atoi(message + start);
-            mode = b;
-            start = c + 1;
-        } 
-        c++;
+    if(e.status == TRANSFER_DATA) {
+        // transfer data already dealt with. we skip this followon check.
+        length = 0;
+    } else {
+        //fprintf(stderr, "message is %s len is %d\n", message, length);
+        // Then pull out any alles-specific modes in this message 
+        while(c < length+1) {
+            uint8_t b = message[c];
+            if(b == '_' && c==0) sync_response = 1;
+            if( ((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')) || b == 0) {  // new mode or end
+                if(mode=='g') client = atoi(message + start); 
+                if(mode=='U') sync = atol(message + start); 
+                if(mode=='W') external_map[e.osc] = atoi(message+start);
+                if(sync_response) if(mode=='r') ipv4=atoi(message + start);
+                if(sync_response) if(mode=='i') sync_index = atoi(message + start);
+                mode = b;
+                start = c + 1;
+            } 
+            c++;
+        }
     }
     if(sync_response) {
         // If this is a sync response, let's update our local map of who is booted

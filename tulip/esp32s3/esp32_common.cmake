@@ -183,7 +183,6 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/lvgl_u8g2.c
     ${TULIP_SHARED_DIR}/u8fontdata.c
     ${TULIP_SHARED_DIR}/u8g2_fonts.c
-    ${TULIP_SHARED_DIR}/memorypcm.c
     ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
     ${AMY_DIR}/src/algorithms.c
     ${AMY_DIR}/src/custom.c
@@ -194,6 +193,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/envelope.c
     ${AMY_DIR}/src/filters.c
     ${AMY_DIR}/src/oscillators.c
+    ${AMY_DIR}/src/transfer.c
     ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c
     ${AMY_DIR}/src/log2_exp2.c
