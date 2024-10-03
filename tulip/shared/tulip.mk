@@ -11,6 +11,7 @@ EXTMOD_SRC_C += $(addprefix ../amy/src/, \
 	envelope.c \
 	filters.c \
 	oscillators.c \
+	transfer.c \
 	partials.c \
 	pcm.c \
 	log2_exp2.c \
@@ -35,7 +36,6 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	lodepng.c \
 	sequencer.c \
 	lvgl_u8g2.c \
-	memorypcm.c \
 	)
 
 
