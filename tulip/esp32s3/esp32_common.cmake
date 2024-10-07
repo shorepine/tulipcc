@@ -104,8 +104,8 @@ list(APPEND MICROPY_SOURCE_PORT
     modmachine.c
     network_lan.c
     network_wlan.c
-    network_ppp.c
-    ppp_set_auth.c
+    #network_ppp.c
+    #ppp_set_auth.c
     #mpnimbleport.c
     modsocket.c
     modesp.c
@@ -179,6 +179,14 @@ list(APPEND IDF_COMPONENTS
     esp_bootloader_format
     esp_common
     esp_eth
+    esp_driver_uart
+    esp_driver_i2s
+    esp_driver_i2c
+    esp_driver_sdmmc
+    esp_driver_sdspi
+    esp_driver_spi
+    esp_driver_gpio
+    esp_driver_ledc
     esp_event
     esp_hw_support
     esp_lcd

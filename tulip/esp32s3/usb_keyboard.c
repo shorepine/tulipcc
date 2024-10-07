@@ -450,11 +450,11 @@ void decode_report(uint8_t *p) {
             key_held_this_session = 1;
             uint8_t skip = 0;
             for(uint8_t j=2;j<8;j++) {
-        		if(last_scan[j] == p[i]) skip = 1;
-  			}
-	  		if(!skip) { // only process new keys
-		        uint16_t c = scan_ascii(p[i], modifier);
-		        if(c) {
+                if(last_scan[j] == p[i]) skip = 1;
+            }
+            if(!skip) { // only process new keys
+                uint16_t c = scan_ascii(p[i], modifier);
+                if(c) {
                     
                     if(keycode_to_ctrl_key(c) != '\0') {
                         const size_t len = strlen(lvgl_kb_buf);
@@ -477,8 +477,8 @@ void decode_report(uint8_t *p) {
                     //fprintf(stderr, "sending new key %d to MP at time %lld\n", c, current_held_ms);
                     send_key_to_micropython(c);
                 }
-            }	
-		} 
+            }   
+        } 
     }
     if(!new_key && !key_held_this_session) {
         // we got a message but no new keys. so is a release

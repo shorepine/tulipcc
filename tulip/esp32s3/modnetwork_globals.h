@@ -7,7 +7,7 @@
 #if MICROPY_PY_NETWORK_LAN
 { MP_ROM_QSTR(MP_QSTR_LAN), MP_ROM_PTR(&esp_network_get_lan_obj) },
 #endif
-{ MP_ROM_QSTR(MP_QSTR_PPP), MP_ROM_PTR(&esp_network_ppp_make_new_obj) },
+//{ MP_ROM_QSTR(MP_QSTR_PPP), MP_ROM_PTR(&esp_network_ppp_make_new_obj) },
 { MP_ROM_QSTR(MP_QSTR_phy_mode), MP_ROM_PTR(&esp_network_phy_mode_obj) },
 
 #if MICROPY_PY_NETWORK_WLAN
