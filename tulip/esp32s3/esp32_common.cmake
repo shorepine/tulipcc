@@ -213,6 +213,7 @@ list(APPEND IDF_COMPONENTS
     spi_flash
     ulp
     usb
+    usb_host_hid
     vfs
     xtensa
 )
@@ -232,6 +233,7 @@ idf_component_register(
         ../../tulip/esp32s3
         ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch_gt911/include
         ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch/include
+        ../../tulip/esp32s3/managed_components/espressif__usb_host_hid/include
         ${MICROPY_INC_CORE}
         ${MICROPY_INC_USERMOD}
         #${MICROPY_PORT_DIR}
