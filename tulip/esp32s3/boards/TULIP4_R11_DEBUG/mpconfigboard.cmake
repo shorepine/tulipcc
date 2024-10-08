@@ -16,5 +16,5 @@ set(SDKCONFIG_DEFAULTS
 list(APPEND MICROPY_SOURCE_PORT
      gt911_touchscreen.c
      esp32s3_display.c
-     usb_keyboard.c
+     usb_host.c
 )

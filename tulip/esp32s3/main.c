@@ -101,7 +101,7 @@
 #ifdef TDECK
 #include "tdeck_keyboard.h"
 #else
-#include "usb_keyboard.h"
+#include "usb_host.h"
 #endif
 
 TaskHandle_t display_handle;

@@ -31,9 +31,13 @@ The Tulip board you got can work on its own. Most people will want to add a coup
 
 Tulip is a very command-line centered interface with some touch controls. You'll have a much easier time using Tulip if you connect a USB computer keyboard to it for typing. It turns the Tulip into a portable "deck" for whatever you can imagine. 
 
-You can use _almost_ any USB computer keyboard you already have. However, a keyboard including an internal USB hub will not work. You can tell if a keyboard includes a hub if it has one or more subsidiary USB sockets (e.g. for connecting a mouse), or if it includes an integrated pointing device (trackpad, trackball etc). These keyboards are not compatible with Tulip. 
+You _should_ be able to use any USB computer keyboard you already have. We're always surprised to find weirder and weirder keyboards that don't follow all the "rules", so if yours doesn't "just work", get in touch and we'll help you debug!
 
 [If you want a more compact hardware keyboard, the tiny "cardKB" will work great with Tulip, plugged into the I2C port.](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a)
+
+### A hub for USB MIDI
+
+We now support USB MIDI on Tulip from the `USB-KB` connector. We also support simple hubs, since you'll want to connect both a USB MIDI plug and a typing keyboard. USB hub support works but is in constant development, so please let us know if your setup doesn't work! 
 
 ### DACs or ADCs for modular synths
 
@@ -43,7 +47,7 @@ If you use modular synths, Tulip is a powerful and fun control surface and way t
 
 ### Type-A 3.5mm MIDI adapters to full size
 
-Most modern MIDI equipment now uses 3.5mm jacks for MIDI connectors. If you have the older 5-pin DIN connectors and want to use them on Tulip, you'll want to pick up a couple of [Type-A 3.5mm adapters](https://www.amazon.com/Kurrent-Electric-Type-3-5mm-Adapter/dp/B0C2RLB3SL/). 
+We support both USB MIDI and "standard" TRS MIDI. Most modern MIDI equipment now uses 3.5mm jacks for MIDI connectors. If you have the older 5-pin DIN connectors and want to use them on Tulip, you'll want to pick up a couple of [Type-A 3.5mm adapters](https://www.amazon.com/Kurrent-Electric-Type-3-5mm-Adapter/dp/B0C2RLB3SL/). 
 
 ### A small li-po battery
 

@@ -10,6 +10,8 @@ int16_t last_touch_x[3];
 int16_t last_touch_y[3];
 uint8_t touch_held;
 
+uint8_t mouse_pointer_status = 0;
+
 uint8_t tfb_active;
 uint8_t tfb_y_row; 
 uint8_t tfb_x_col;
@@ -157,7 +159,10 @@ bool display_frame_done_generic() {
         y_offsets[i] = y_offsets[i] % (V_RES+OFFSCREEN_Y_PX);
         bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL*y_offsets[i] + x_offsets[i]*BYTES_PER_PIXEL];
     }
-
+    if(mouse_pointer_status) {
+        sprite_x_px[0] = mouse_x_pos;
+        sprite_y_px[0] = mouse_y_pos;
+    }
     tulip_frame_isr();
     vsync_count++; 
     return true;
@@ -508,6 +513,27 @@ void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data) {
     }    
 }
 
+void enable_mouse_pointer() {
+    // just overwrite sprite ram for this, near the end of the ram slice ? 
+    // 8x8 = 64 bytes 
+    // TODO: maybe not a pink square ... one day 
+    for(uint32_t i=SPRITE_RAM_BYTES-64; i<SPRITE_RAM_BYTES; i++) {
+        sprite_ram[i] = 162; // pink
+    }
+    uint8_t spriteno = 0;
+    spriteno_activated++;
+    sprite_w_px[spriteno] = 8;
+    sprite_h_px[spriteno] = 8;
+    sprite_mem[spriteno] = SPRITE_RAM_BYTES-64;
+    sprite_vis[spriteno] = SPRITE_IS_SPRITE;
+    mouse_pointer_status = 1;
+}
+
+void disable_mouse_pointer() {
+    mouse_pointer_status = 0;
+    sprite_vis[0] = 0;
+    spriteno_activated--;
+}
 
 // Palletized version of screenshot. about 3x as fast, RGB332 only
 void display_screenshot(char * screenshot_fn) {

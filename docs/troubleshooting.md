@@ -78,7 +78,7 @@ You can see how to use them with Olav's `boot.py`: `world.download('boot.py', 'o
 
 ## USB computer keyboard not working
 
-If your USB computer keyboard is not working, the most likely explanation is that it appears as a "hub" instead of a bare keyboard to Tulip. At this time (we're working on it!) Tulip only supports "root" devices. You'll have to try another keyboard. If you think your keyboard should work, please find us on [issues](https://github.com/shorepine/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG) and we'll help out!
+If your USB computer keyboard is not working, please find us on [issues](https://github.com/shorepine/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG) and we'll help out! We have tested many keyboards but since we have to build this support ourselves there are likely edge cases we haven't run into yet. 
 
 ## The Mabee DAC is not correctly sending CV / Gate values to your modular synthesizer
 

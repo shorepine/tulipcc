@@ -11,7 +11,7 @@ If you're comfortable with surface mount soldering, you can put together your ow
 
 [The BOM for the latest revision is here.](https://github.com/shorepine/tulipcc/blob/main/docs/pcbs/tulip4_board_v4r9/tulipcc-bom.xlsx) [KiCad files are here.](https://github.com/shorepine/tulipcc/tree/main/docs/pcbs/tulip4_board_v4r9) 
 
-Almost_ any USB keyboard should work. Please ensure it's just a keyboard -- if it has a trackpad, or extra USB ports on it, or anything else, it likely [won't work as we only support single root USB devices.](https://github.com/shorepine/tulipcc/issues/40).
+_Almost_ any USB keyboard should work. 
 
 If this looks too hard, you can [instead make a breakout board with just through hole solder](tulip_breakout.md), or [with no soldering and a breadboard.](tulip_breadboard.md)
 

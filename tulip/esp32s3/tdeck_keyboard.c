@@ -11,7 +11,7 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "driver/gpio.h"
-#include "usb_keyboard.h"
+#include "usb_host.h"
 
 #define TIMEOUT_MS    10
 

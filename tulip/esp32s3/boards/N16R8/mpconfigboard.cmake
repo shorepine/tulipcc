@@ -14,6 +14,6 @@ set(SDKCONFIG_DEFAULTS
 
 list(APPEND MICROPY_SOURCE_PORT
      esp32s3_display.c
-     usb_keyboard.c
+     usb_host.c
      ft5x06_touchscreen.c
 )

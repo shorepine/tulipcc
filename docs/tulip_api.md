@@ -285,7 +285,9 @@ def run(screen):
 
 ## Input
 
-Tulip supports USB keyboard input and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, and your computers' keyboard works.
+Tulip supports USB keyboard input, USB mouse input, and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, and your computers' keyboard works. 
+
+If you have a USB mouse connected to Tulip (presumably through a hub) it will, by default, show a mouse pointer and treat clicks as touch downs. 
 
 ```python
 # Returns a mask of joystick-like presses from the keyboard, from arrow keys, Z, X, A, S, Q, W, enter and '
@@ -502,6 +504,10 @@ See the example `seq.py` on Tulip World for an example of using the music clock,
 ## MIDI
 
 Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
+
+You can use MIDI over USB as well, using the `USB-KB` connector. Note this is meant as a **host** connector: you can connect USB MIDI keyboards or USB MIDI interfaces to Tulip. You cannot connect Tulip directly to a computer as a "USB MIDI gadget". If you want your Tulip to control your computer, use a MIDI interface on your computer and wire Tulip's MIDI out to it. 
+
+If you have a USB MIDI adapter connected, MIDI out from Tulip will go to USB, not the TRS MIDI connectors. MIDI in can come into either TRS or USB. 
 
 By default, Tulip boots into a live MIDI synthesizer mode. Any note-ons, note-offs, program changes or pitch bend messages will be processed automatically with polyphony and voice stealing, and Tulip will play the tones with no other user intervention needed.
 
