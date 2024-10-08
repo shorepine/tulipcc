@@ -134,8 +134,15 @@ void midi_local(uint8_t * bytes, uint16_t len) {
 #ifdef ESP_PLATFORM
 QueueHandle_t uart_queue;
 
+extern void send_usb_midi_out(uint8_t * data, uint16_t len);
+extern bool midi_has_out;
+
 void midi_out(uint8_t * bytes, uint16_t len) {
-    uart_write_bytes(UART_NUM_1, bytes, len);
+    if(midi_has_out) { // usb midi
+        send_usb_midi_out(bytes,len);
+    } else { // uart midi
+        uart_write_bytes(UART_NUM_1, bytes, len);
+    }
 }
 
 void run_midi() {

@@ -201,13 +201,15 @@ uint8_t mouse_buttons[3];
 //
 
 static void midi_transfer_cb(usb_transfer_t *transfer) {
-    //printf("**midi_transfer_cb context: %p\n", transfer->context);
+    fprintf(stderr, "**midi_transfer_cb context: %p, num_bytes %d\n", transfer->context, transfer->actual_num_bytes);
     if (Device_Handle_midi == transfer->device_handle) {
         int in_xfer = transfer->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK;
         if ((transfer->status == 0) && in_xfer) {
             uint8_t *const p = transfer->data_buffer;
             for (int i = 0; i < transfer->actual_num_bytes; i += 4) {
                 if ((p[i] + p[i + 1] + p[i + 2] + p[i + 3]) == 0) break;
+                //uint8_t cable = (p[0] & 0xF0) >> 4;
+                //uint8_t code_index = (p[0] & 0x0F);
                 DBGPRINTF4("midi: %02x %02x %02x %02x\n",
                             p[i], p[i + 1], p[i + 2], p[i + 3]);
                 // Strip the first byte which is the USB-MIDI virtual wire ID,
@@ -216,13 +218,15 @@ static void midi_transfer_cb(usb_transfer_t *transfer) {
             }
             esp_err_t err = usb_host_transfer_submit(transfer);
             if (err != ESP_OK) {
-                printf("midi usb_host_transfer_submit err: 0x%x\n", err);
+                fprintf(stderr, "midi usb_host_transfer_submit err: 0x%x\n", err);
             }
         } else {
-            printf("midi transfer->status %d\n", transfer->status);
+            fprintf(stderr, "midi transfer->status %d\n", transfer->status);
         }
     }
 }
+
+
 
 bool check_interface_desc_MIDI(const void *p) {
     const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
@@ -232,15 +236,84 @@ bool check_interface_desc_MIDI(const void *p) {
             (intf->bInterfaceSubClass == 3) &&
             (intf->bInterfaceProtocol == 0)) {
         midi_claimed = true;
-        printf("Claiming a MIDI device!\n");
+        fprintf(stderr, "Claiming a MIDI device!\n");
         Interface_Number_midi = intf->bInterfaceNumber;
         esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle_unknown,
-                                                                                         Interface_Number_midi, intf->bAlternateSetting);
-        if (err != ESP_OK) printf("midi usb_host_interface_claim failed: %x\n", err);
+                Interface_Number_midi, intf->bAlternateSetting);
+        if (err != ESP_OK) fprintf(stderr, "midi usb_host_interface_claim failed: %x\n", err);
         return true;
     }
     return false;
 }
+
+
+void send_single_midi_out_packet(uint8_t * data) { // 4 bytes
+    MIDIOut->data_buffer[0] = data[0];
+    MIDIOut->data_buffer[1] = data[1];
+    MIDIOut->data_buffer[2] = data[2];
+    MIDIOut->data_buffer[3] = data[3];
+    MIDIOut->num_bytes = 4;
+    fprintf(stderr, "sending midi out packet %02x %02x %02x %02x\n", data[0], data[1], data[2], data[3]);
+    esp_err_t err = usb_host_transfer_submit(MIDIOut);
+    if (err != ESP_OK) {
+        fprintf(stderr, "midi OUT usb_host_transfer_submit err: 0x%x\n", err);
+    }
+}
+uint8_t usb_sysex_flag=0;
+
+void send_usb_midi_out(uint8_t * data, uint16_t len) {
+    // we have to discern code_index from data. basically a reverse version of our MIDI input parser.
+    uint8_t usb_midi_packet[4] = {0,0,0,0};
+    uint8_t usb_midi_message_slot = 0;
+    for(size_t i=0;i<len;i++) {
+        uint8_t byte = data[i];
+        if(usb_sysex_flag) {
+            if(byte == 0xF7) usb_sysex_flag = 0;
+        } else {
+            if(byte & 0x80) { // new status byte 
+                // Single byte message?
+                usb_midi_packet[1] = byte;
+                if(byte == 0xF4 || byte == 0xF5 || byte == 0xF6 || byte == 0xF9 ||  byte == 0xF8 ||
+                    byte == 0xFA || byte == 0xFB || byte == 0xFC || byte == 0xFD || byte == 0xFE || byte == 0xFF) {
+                    usb_midi_packet[0] = 0x05; // single byte system common message
+                    send_single_midi_out_packet(usb_midi_packet);
+                    i = len+1;
+                }  else if(byte == 0xF0) {
+                    usb_sysex_flag = 1;
+                } else { // a new status message that expects at least one byte of message after
+                    // do nothing yet
+                }
+            } else { // data byte of some kind
+                uint8_t status = usb_midi_packet[1] & 0xF0;
+                // a 2 bytes of data message
+                if(status == 0x80 || status == 0x90 || status == 0xA0 || status == 0xB0 || status == 0xE0 || usb_midi_packet[1] == 0xF2) {
+                    usb_midi_packet[0] = (status >> 4); // status is code_index for these guys 
+                    if(usb_midi_packet[1]==0xF2) usb_midi_packet[0] = 0x03; // special 
+                    if(usb_midi_message_slot == 0) {
+                        usb_midi_packet[2] = byte;
+                        usb_midi_message_slot = 1;
+                    } else {
+                        usb_midi_packet[3] = byte;
+                        usb_midi_message_slot = 0;
+                        send_single_midi_out_packet(usb_midi_packet);
+                    }
+                // a 1 byte data message
+                } else if (status == 0xC0 || status == 0xD0) {
+                    usb_midi_packet[0] = (status >> 4);
+                    usb_midi_packet[2] = byte;
+                    send_single_midi_out_packet(usb_midi_packet);
+                    i = len+1;
+                } else if (usb_midi_packet[1] == 0xF3 || usb_midi_packet[1] == 0xF1) {
+                    usb_midi_packet[0] = 0x02; // special
+                    send_single_midi_out_packet(usb_midi_packet);
+                    i = len+1;
+                }
+            }
+        }
+    }
+    
+}
+
 
 void prepare_endpoint_midi(const void *p) {
     const usb_ep_desc_t *endpoint = (const usb_ep_desc_t *)p;
@@ -248,7 +321,7 @@ void prepare_endpoint_midi(const void *p) {
 
     // must be bulk for MIDI
     if ((endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK) != USB_BM_ATTRIBUTES_XFER_BULK) {
-        printf("MIDI: Not bulk endpoint: 0x%02x\n", endpoint->bmAttributes);
+        fprintf(stderr, "USB MIDI: Not bulk endpoint: 0x%02x\n", endpoint->bmAttributes);
         return;
     }
     if (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK) {
@@ -258,7 +331,7 @@ void prepare_endpoint_midi(const void *p) {
                 err = usb_host_transfer_alloc(endpoint->wMaxPacketSize, 0, &MIDIIn[i]);
                 if (err != ESP_OK) {
                     MIDIIn[i] = NULL;
-                    printf("midi usb_host_transfer_alloc/In err: 0x%x\n", err);
+                    fprintf(stderr, "midi usb_host_transfer_alloc/In err: 0x%x\n", err);
                     midi_has_out = false;
                     return;
                 }
@@ -271,7 +344,7 @@ void prepare_endpoint_midi(const void *p) {
                 MIDIIn[i]->num_bytes = endpoint->wMaxPacketSize;
                 esp_err_t err = usb_host_transfer_submit(MIDIIn[i]);
                 if (err != ESP_OK) {
-                    printf("midi usb_host_transfer_submit/In err: 0x%x\n", err);
+                    fprintf(stderr, "midi usb_host_transfer_submit/In err: 0x%x\n", err);
                 }
                 midi_has_in = true;
             }
@@ -282,13 +355,13 @@ void prepare_endpoint_midi(const void *p) {
             err = usb_host_transfer_alloc(endpoint->wMaxPacketSize, 0, &MIDIOut);
             if (err != ESP_OK) {
                 MIDIOut = NULL;
-                printf("midi usb_host_transfer_alloc/Out err: 0x%x\n", err);
+                fprintf(stderr, "midi usb_host_transfer_alloc/Out err: 0x%x\n", err);
                 midi_has_out = false;
                 return;
             }
         }
         if (MIDIOut != NULL) {
-            DBGPRINTF1("Out data_buffer_size: %d\n", MIDIOut->data_buffer_size);
+            DBGPRINTF1("MIDI USB Out data_buffer_size: %d\n", MIDIOut->data_buffer_size);
             MIDIOut->device_handle = Device_Handle_midi;
             MIDIOut->bEndpointAddress = endpoint->bEndpointAddress;
             MIDIOut->callback = midi_transfer_cb;
@@ -543,11 +616,10 @@ void mouse_transfer_cb(usb_transfer_t *transfer)
         isMousePolling = false;
         if (transfer->status == 0) {
             hid_mouse_input_report_boot_t *mouse_report = (hid_mouse_input_report_boot_t *)(transfer->data_buffer+1);
-            // Calculate absolute position from displacement
             mouse_x_pos += mouse_report->x_displacement;
             mouse_y_pos += mouse_report->y_displacement;
-            if(mouse_x_pos >= H_RES) mouse_x_pos = H_RES-1
-            if(mouse_y_pos >= V_RES) mouse_y_pos = V_RES-1
+            if(mouse_x_pos >= H_RES) mouse_x_pos = H_RES-1;
+            if(mouse_y_pos >= V_RES) mouse_y_pos = V_RES-1;
             if(mouse_x_pos < 0) mouse_x_pos = 0;
             if(mouse_y_pos < 0) mouse_y_pos = 0;
             mouse_buttons[0] = mouse_report->buttons.button1;
@@ -562,8 +634,6 @@ void mouse_transfer_cb(usb_transfer_t *transfer)
 
 bool check_interface_desc_boot_keyboard(const void *p) {
     const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
-
-    // HID Keyboard
     if ((intf->bInterfaceClass == USB_CLASS_HID) &&
             (intf->bInterfaceSubClass == 1) &&
             (intf->bInterfaceProtocol == 1)) {
@@ -579,8 +649,6 @@ bool check_interface_desc_boot_keyboard(const void *p) {
 
 bool check_interface_desc_boot_mouse(const void *p) {
     const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
-
-    // HID mouse
     if ((intf->bInterfaceClass == USB_CLASS_HID) &&
             (intf->bInterfaceSubClass == 1) &&
             (intf->bInterfaceProtocol == 2)) {
