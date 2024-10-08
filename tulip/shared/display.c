@@ -513,18 +513,37 @@ void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data) {
     }    
 }
 
+
+const uint8_t pointer_bitmap_xys[96] = {
+    0,0, 0,1, 1,1, 0,2, 2,2, 0,3, 3,3, 0,4, 4,4, 0,5, 5,5, 0,6, 6,6, 0,7, 7,7, 0,8, 8,8,
+    0,9, 9,9, 0,10, 10,10, 0,11, 11,11, 0,12, 7,12, 8,12, 9,12, 10,12, 11,12, 0,13, 4,13, 7,13,
+    0,14, 3,14, 5,14, 8,14, 0,15, 2,15, 5,15, 8,14, 0,16, 1,16, 6,16, 9,16, 7,17, 10,17, 8,18, 9,18
+};
+
 void enable_mouse_pointer() {
     // just overwrite sprite ram for this, near the end of the ram slice ? 
-    // 8x8 = 64 bytes 
-    // TODO: maybe not a pink square ... one day 
-    for(uint32_t i=SPRITE_RAM_BYTES-64; i<SPRITE_RAM_BYTES; i++) {
-        sprite_ram[i] = 162; // pink
+    uint8_t w=12;
+    uint8_t h=19;
+    for(uint32_t i=SPRITE_RAM_BYTES-(w*h); i<SPRITE_RAM_BYTES; i++) {
+        sprite_ram[i] = ALPHA;
+    }
+    for(uint8_t i=0;i<96;i=i+2) {
+        uint8_t x0 = pointer_bitmap_xys[i];
+        uint8_t y0 = pointer_bitmap_xys[i+1];
+        if(i<93 && pointer_bitmap_xys[i+3]==y0) {
+            if(x0!=3 && x0!=2 && x0!=1) { // skip the end of the tail
+                for(uint8_t j=x0; j<pointer_bitmap_xys[i+2]; j++) {
+                    sprite_ram[(SPRITE_RAM_BYTES-(w*h)) + (y0*w + j)] = 244;
+                }
+            }
+        }
+        sprite_ram[(SPRITE_RAM_BYTES-(w*h)) + (y0*w + x0)] = 162;
     }
     uint8_t spriteno = 0;
     spriteno_activated++;
-    sprite_w_px[spriteno] = 8;
-    sprite_h_px[spriteno] = 8;
-    sprite_mem[spriteno] = SPRITE_RAM_BYTES-64;
+    sprite_w_px[spriteno] = w;
+    sprite_h_px[spriteno] = h;
+    sprite_mem[spriteno] = SPRITE_RAM_BYTES-(w*h);
     sprite_vis[spriteno] = SPRITE_IS_SPRITE;
     mouse_pointer_status = 1;
 }
