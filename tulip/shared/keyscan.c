@@ -315,6 +315,33 @@ uint8_t convert_utf8_to_cp437(uint8_t c, uint32_t *esc)
 }
 
 
+uint32_t keycode_to_ctrl_key(uint16_t key)
+{
+    switch(key) {
+        case 261:
+            return LV_KEY_RIGHT;
+        case 260:
+            return LV_KEY_LEFT;
+        case 259:
+            return LV_KEY_UP;
+        case 258:
+            return LV_KEY_DOWN;
+        case 27:
+            return LV_KEY_ESC;
+        case 8:
+            return LV_KEY_BACKSPACE;
+        case 13:
+            return LV_KEY_ENTER;
+        case 9:
+            return LV_KEY_NEXT;
+        case 22:
+            return LV_KEY_NEXT;
+        case 25:
+            return LV_KEY_PREV;
+        default:
+            return '\0';
+    }
+}
 
 uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
     last_held_code = code;

@@ -19,6 +19,7 @@
 #include "py/runtime.h"
 #include "py/mphal.h"
 #include "display.h"
+#include "lvgl.h"
 
 extern uint8_t keyboard_send_keys_to_micropython;
 extern int8_t keyboard_grab_ui_focus;
@@ -28,7 +29,7 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier);
 void send_key_to_micropython(uint16_t c);
 void send_touch_to_micropython(int16_t touch_x, int16_t touch_y, uint8_t up);
 uint8_t convert_utf8_to_cp437(uint8_t c, uint32_t *esc);
-
+uint32_t keycode_to_ctrl_key(uint16_t key);
 
 #define MAX_KEY_REMAPS 64
 
