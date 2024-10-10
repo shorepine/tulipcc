@@ -55,6 +55,8 @@ Tulip is a low power device and can run on battery for portable computing. There
 
 Larger batteries will work great and last longer, but you'll have to remove the back case to make them fit (or mount the battery some other way.) [This 5200mAh battery pack](https://www.amazon.com/XINLANTECH-Rechargeable-Bluetooth-Electronic-Batteries/dp/B0C2VFTDPY) will last many many hours on Tulip and fit right on the PCB with the back case removed. 
 
+**Please make sure you have the polarity right!** The red cable on the battery should be going to the side of the connector with a + sign on the Tulip board. 
+
 ### An extra Alles or five
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/nicoboard-alles.jpg" width=400>

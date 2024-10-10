@@ -91,6 +91,7 @@ list(APPEND MICROPY_SOURCE_PORT
     usb_serial_jtag.c
     gccollect.c
     fatfs_port.c
+    esp_lcd_touch.c
     machine_bitstream.c
     machine_sdcard.c
     machine_timer.c
@@ -213,7 +214,6 @@ list(APPEND IDF_COMPONENTS
     spi_flash
     ulp
     usb
-    usb_host_hid
     vfs
     xtensa
 )
@@ -231,9 +231,6 @@ idf_component_register(
         ${LVGL_SOURCES}
     INCLUDE_DIRS
         ../../tulip/esp32s3
-        ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch_gt911/include
-        ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch/include
-        ../../tulip/esp32s3/managed_components/espressif__usb_host_hid/include
         ${MICROPY_INC_CORE}
         ${MICROPY_INC_USERMOD}
         #${MICROPY_PORT_DIR}
