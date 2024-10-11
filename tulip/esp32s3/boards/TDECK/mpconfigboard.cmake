@@ -13,7 +13,7 @@ set(SDKCONFIG_DEFAULTS
     boards/TDECK/sdkconfig.board
 )
 
-list(APPEND MICROPY_SOURCE_PORT
+list(APPEND MICROPY_SOURCE_BOARD
      tdeck_display.c
      tdeck_keyboard.c
      gt911_touchscreen.c
