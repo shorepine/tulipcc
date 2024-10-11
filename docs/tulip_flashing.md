@@ -61,7 +61,9 @@ Linux:
 sudo apt install cmake ninja-build dfu-util virtualenv
 ```
 
-For both macOS & Linux, next, download the supported version of ESP-IDF. That is currently 5.2. [You can download it directly here.](https://dl.espressif.com/github_assets/espressif/esp-idf/releases/download/v5.2/esp-idf-v5.2.zip) Unpack it to a folder. I like to keep them in `~/esp/`, as you'll likely want to use different versions eventually. So we'll assume it's in `~/esp/esp-idf-v5.2`.
+For both macOS & Linux, next, download the supported version of ESP-IDF. That is currently a pre-release of 5.4. You need to get this with `git`, so install that if you don't already have it. Once Espressif updates the release, we can provide a direct download link that's a bit easier. 
+
+I like to keep them in `~/esp/`, as you'll likely want to use different versions eventually. So we'll assume it's in `~/esp/esp-idf`.
 
 Also, clone this Tulip repository. We'll assume it's in `~/tulipcc`.
 
@@ -69,10 +71,12 @@ Also, clone this Tulip repository. We'll assume it's in `~/tulipcc`.
 cd ~
 mkdir esp
 cd esp
-curl -O https://dl.espressif.com/github_assets/espressif/esp-idf/releases/download/v5.2/esp-idf-v5.2.zip
-unzip esp-idf-v5.2.zip
-esp-idf-v5.2/install.sh esp32s3
-source ~/esp/esp-idf-v5.2/export.sh
+git clone https://github.com/espressif/esp-idf.git
+cd esp-idf
+git checkout 70f222e5d29df8ffe5da25057601708c8097bcd1
+git submodule update --init --recursive
+./install.sh esp32s3
+source export.sh
 
 cd ~
 git clone https://github.com/shorepine/tulipcc.git 
@@ -111,7 +115,7 @@ To build and flash going forward, without modifying the filesystem:
 
 ```bash
 cd tulip/esp32s3
-source ~/esp/esp-idf-v5.2/export.sh # do this once per terminal window
+source ~/esp/esp-idf/export.sh # do this once per terminal window
 idf.py -DMICROPY_BOARD=[X] flash 
 idf.py monitor # shows stderr and stdin for controlling Tulip, use control-] to quit
 
