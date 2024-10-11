@@ -91,10 +91,12 @@ uint8_t check_dim_xy(uint16_t x, uint16_t y);
 uint8_t check_dim_xywh(uint16_t x, uint16_t y, uint16_t w, uint16_t h);
 uint8_t collide_mask_get(uint8_t a, uint8_t b);
 
+#ifdef ESP_PLATFORM
 void enable_mouse_pointer();
 void disable_mouse_pointer();
-
 extern int16_t mouse_x_pos, mouse_y_pos;
+#endif
+
 extern const unsigned char font_8x12_r[256][12];
 extern const unsigned char portfolio_glyph_bitmap[1792];
 
