@@ -13,7 +13,7 @@ set(SDKCONFIG_DEFAULTS
 )
 
 
-list(APPEND MICROPY_SOURCE_PORT
+list(APPEND MICROPY_SOURCE_BOARD
      gt911_touchscreen.c
      esp32s3_display.c
      usb_host.c

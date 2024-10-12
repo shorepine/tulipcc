@@ -581,8 +581,8 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
             } else if (transfer->actual_num_bytes == 10) {
                 uint8_t *const p = transfer->data_buffer;
                 decode_keyboard_report(p+1);
-            } else if (transfer->actual_num_bytes == 17) {
-                // This is a weird keyboard (8bitdo retro) that uses USB FS HID and sends keys as a bitmask. 
+            } else if (transfer->actual_num_bytes == 17 || transfer->actual_num_bytes == 32) {
+                // This is a weird keyboard (8bitdo retro, custom 40 key ortho) that uses USB FS HID and sends keys as a bitmask. 
                 // I found people talking about this here but no code, so here i am https://stackoverflow.com/questions/57793525/unusual-usb-hid-reports
                 uint8_t *const p = transfer->data_buffer;
                 // We treat each bit on position as a index into a scan code, and will add it to a new buffer for decode_report to deal with
@@ -615,6 +615,11 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
 
 void mouse_transfer_cb(usb_transfer_t *transfer)
 {
+    //fprintf(stderr, "mouse nb is %d\n", transfer->actual_num_bytes);
+    //uint8_t *p = transfer->data_buffer;
+    //fprintf(stderr,"mouse decode report %d %d %d %d %d %d %d %d\n", p[0], p[1], p[2],p[3],p[4],p[5],p[6],p[7]);
+
+   
     if (Device_Handle_mouse == transfer->device_handle) {
         isMousePolling = false;
         if (transfer->status == 0) {
@@ -630,6 +635,7 @@ void mouse_transfer_cb(usb_transfer_t *transfer)
             mouse_buttons[2] = mouse_report->buttons.button3;
             last_touch_x[0] = mouse_x_pos;
             last_touch_y[0] = mouse_y_pos;
+            enable_mouse_pointer();// this is a no-op if already installed
             if(mouse_buttons[0]) {
                 send_touch_to_micropython(mouse_x_pos, mouse_y_pos, 0);
             } else {
@@ -721,36 +727,42 @@ void prepare_endpoint_hid_mouse(const void *p)
     const usb_ep_desc_t *endpoint = (const usb_ep_desc_t *)p;
     esp_err_t err;
     mouse_bytes = usb_round_up_to_mps(MOUSE_BYTES, endpoint->wMaxPacketSize);
-    DBGPRINTF2("Setting mouse to %d from MPS %d\n", mouse_bytes, endpoint->wMaxPacketSize);
-
-    // must be interrupt for HID
-    if ((endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK) != USB_BM_ATTRIBUTES_XFER_INT) {
-        fprintf(stderr, "Mouse: Not interrupt endpoint: 0x%02x\n", endpoint->bmAttributes);
-        return;
-    }
-    if (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK) {
-        if (MouseIn == NULL) {
-            err = usb_host_transfer_alloc(mouse_bytes, 0, &MouseIn);
-            if (err != ESP_OK) {
-                MouseIn = NULL;
-                fprintf(stderr, "mouse usb_host_transfer_alloc/In err: 0x%x\n", err);
-                return;
-            }
-        }
-        if (MouseIn != NULL) {
-            MouseIn->device_handle = Device_Handle_mouse;
-            MouseIn->bEndpointAddress = endpoint->bEndpointAddress;
-            MouseIn->callback = mouse_transfer_cb;
-            MouseIn->context = NULL;
-            mouse_ready = true;
-            mouse_x_pos = H_RES/2;
-            mouse_y_pos = V_RES/2;
-            enable_mouse_pointer();
-            MouseInterval = endpoint->bInterval;
-            DBGPRINTF("USB boot mouse ready\n");
-        }
+    DBGPRINTF2("Setting mouse or 0x03/0/0 to %d from MPS %d\n", mouse_bytes, endpoint->wMaxPacketSize);
+    if(mouse_bytes==32) {
+        fprintf(stderr, "Redirecting this endpoint to KB (0x03/0/0)\n");
+        KeyboardIn = NULL;
+        MouseIn = NULL;
+        prepare_endpoint_hid_kb(p);
+        mouse_claimed = false;
     } else {
-        DBGPRINTF("Ignoring mouse interrupt Out endpoint\n");
+        // must be interrupt for HID
+        if ((endpoint->bmAttributes & USB_BM_ATTRIBUTES_XFERTYPE_MASK) != USB_BM_ATTRIBUTES_XFER_INT) {
+            fprintf(stderr, "Mouse: Not interrupt endpoint: 0x%02x\n", endpoint->bmAttributes);
+            return;
+        }
+        if (endpoint->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK) {
+            if (MouseIn == NULL) {
+                err = usb_host_transfer_alloc(mouse_bytes, 0, &MouseIn);
+                if (err != ESP_OK) {
+                    MouseIn = NULL;
+                    fprintf(stderr, "mouse usb_host_transfer_alloc/In err: 0x%x\n", err);
+                    return;
+                }
+            }
+            if (MouseIn != NULL) {
+                MouseIn->device_handle = Device_Handle_mouse;
+                MouseIn->bEndpointAddress = endpoint->bEndpointAddress;
+                MouseIn->callback = mouse_transfer_cb;
+                MouseIn->context = NULL;
+                mouse_ready = true;
+                mouse_x_pos = H_RES/2;
+                mouse_y_pos = V_RES/2;
+                MouseInterval = endpoint->bInterval;
+                DBGPRINTF("USB boot mouse ready\n");
+            }
+        } else {
+            DBGPRINTF("Ignoring mouse interrupt Out endpoint\n");
+        }
     }
 }
 

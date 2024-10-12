@@ -10,3 +10,13 @@
 
 #define MICROPY_HW_I2C0_SCL                 (I2C_SCL)
 #define MICROPY_HW_I2C0_SDA                 (I2C_SDA)
+
+#define MICROPY_HW_ENABLE_SDCARD            (0)
+#define MICROPY_PY_MACHINE_I2S              (0)
+#define MICROPY_PY_BLUETOOTH (0)
+#define MICROPY_BLUETOOTH_NIMBLE (0)
+#define MICROPY_HW_USB_CDC (1)
+#define MICROPY_HW_ENABLE_USBDEV (1)
+#define MICROPY_HW_ESP_USB_SERIAL_JTAG (0)
+#define MICROPY_ENABLE_SCHEDULER (1)
+#define MICROPY_SCHEDULER_DEPTH             (128)
