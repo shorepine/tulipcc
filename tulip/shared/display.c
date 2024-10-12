@@ -162,10 +162,12 @@ bool display_frame_done_generic() {
         bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL*y_offsets[i] + x_offsets[i]*BYTES_PER_PIXEL];
     }
     #ifdef ESP_PLATFORM
+    #ifndef TDECK
     if(mouse_pointer_status) {
         sprite_x_px[0] = mouse_x_pos;
         sprite_y_px[0] = mouse_y_pos;
     }
+    #endif
     #endif
     tulip_frame_isr();
     vsync_count++; 

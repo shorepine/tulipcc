@@ -13,7 +13,8 @@ set(SDKCONFIG_DEFAULTS
     boards/TULIP4_R11_DEBUG/sdkconfig.board
 )
 
-list(APPEND MICROPY_SOURCE_PORT
+list(APPEND MICROPY_SOURCE_BOARD
+     esp_lcd_touch_gt911.c
      gt911_touchscreen.c
      esp32s3_display.c
      usb_host.c

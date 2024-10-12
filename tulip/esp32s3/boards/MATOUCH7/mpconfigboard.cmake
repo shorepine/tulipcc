@@ -16,5 +16,6 @@ set(SDKCONFIG_DEFAULTS
 list(APPEND MICROPY_SOURCE_BOARD
      gt911_touchscreen.c
      esp32s3_display.c
+      esp_lcd_touch_gt911.c
      usb_host.c
 )
