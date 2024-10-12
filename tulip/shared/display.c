@@ -10,6 +10,10 @@ int16_t last_touch_x[3];
 int16_t last_touch_y[3];
 uint8_t touch_held;
 
+#ifdef ESP_PLATFORM
+uint8_t mouse_pointer_status = 0;
+#endif
+
 uint8_t tfb_active;
 uint8_t tfb_y_row; 
 uint8_t tfb_x_col;
@@ -157,7 +161,14 @@ bool display_frame_done_generic() {
         y_offsets[i] = y_offsets[i] % (V_RES+OFFSCREEN_Y_PX);
         bg_lines[i] = (uint32_t*)&bg[(H_RES+OFFSCREEN_X_PX)*BYTES_PER_PIXEL*y_offsets[i] + x_offsets[i]*BYTES_PER_PIXEL];
     }
-
+    #ifdef ESP_PLATFORM
+    #ifndef TDECK
+    if(mouse_pointer_status) {
+        sprite_x_px[0] = mouse_x_pos;
+        sprite_y_px[0] = mouse_y_pos;
+    }
+    #endif
+    #endif
     tulip_frame_isr();
     vsync_count++; 
     return true;
@@ -508,6 +519,58 @@ void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data) {
     }    
 }
 
+#ifdef ESP_PLATFORM
+const uint8_t pointer_bitmap_xys[96] = {
+    0,0, 
+    0,1, 1,1, 0,2, 2,2, 0,3, 3,3, 0,4, 4,4, 0,5, 5,5, 0,6, 6,6, 0,7, 7,7, 0,8, 8,8, 0,9, 9,9, 0,10, 10,10, 0,11, 11,11, 
+    0,12, 7,12, 8,12, 9,12, 10,12, 11,12, 
+    0,13, 4,13, 7,13,
+    0,14, 3,14, 5,14, 8,14, 
+    0,15, 2,15, 5,15, 8,15, 
+    0,16, 1,16, 6,16, 9,16, 
+    6,17, 9,17, 
+    7,18, 8,18
+};
+
+
+void enable_mouse_pointer() {
+    // just overwrite sprite ram for this, near the end of the ram slice ? 
+    if(mouse_pointer_status==0) {
+        uint8_t w=12;
+        uint8_t h=19;
+        for(uint32_t i=SPRITE_RAM_BYTES-(w*h); i<SPRITE_RAM_BYTES; i++) {
+            sprite_ram[i] = ALPHA;
+        }
+        for(uint8_t i=0;i<96;i=i+2) {
+            uint8_t x0 = pointer_bitmap_xys[i];
+            uint8_t y0 = pointer_bitmap_xys[i+1];
+            if(i<93 && pointer_bitmap_xys[i+3]==y0) {
+                if(x0!=3 && x0!=2 && x0!=1) { // skip the end of the tail
+                    for(uint8_t j=x0; j<pointer_bitmap_xys[i+2]; j++) {
+                        sprite_ram[(SPRITE_RAM_BYTES-(w*h)) + (y0*w + j)] = 244;
+                    }
+                }
+            }
+            sprite_ram[(SPRITE_RAM_BYTES-(w*h)) + (y0*w + x0)] = 162;
+        }
+        uint8_t spriteno = 0;
+        spriteno_activated++;
+        sprite_w_px[spriteno] = w;
+        sprite_h_px[spriteno] = h;
+        sprite_mem[spriteno] = SPRITE_RAM_BYTES-(w*h);
+        sprite_vis[spriteno] = SPRITE_IS_SPRITE;
+        mouse_pointer_status = 1;
+    }
+}
+
+void disable_mouse_pointer() {
+    if(mouse_pointer_status==1) {
+        mouse_pointer_status = 0;
+        sprite_vis[0] = 0;
+        spriteno_activated--;
+    }
+}
+#endif
 
 // Palletized version of screenshot. about 3x as fast, RGB332 only
 void display_screenshot(char * screenshot_fn) {

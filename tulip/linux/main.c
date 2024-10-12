@@ -44,7 +44,7 @@
 #include "py/repl.h"
 #include "py/gc.h"
 #include "py/objstr.h"
-#include "py/stackctrl.h"
+#include "py/cstack.h"
 #include "py/mphal.h"
 #include "py/mpthread.h"
 #include "extmod/misc.h"
@@ -53,23 +53,22 @@
 #include "extmod/vfs_posix.h"
 #include "genhdr/mpversion.h"
 #include "input.h"
-#include "shared/runtime/pyexec.h"
 #include "mpthreadport.h"
 #include "display.h"
 #include "alles.h"
 #include "midi.h"
 #include "sequencer.h"
+#include "shared/runtime/pyexec.h"
+
 
 
 // Command line options, with their defaults
-STATIC bool compile_only = false;
-STATIC uint emit_opt = MP_EMIT_OPT_NONE;
+static bool compile_only = false;
+static uint emit_opt = MP_EMIT_OPT_NONE;
 
 #if MICROPY_ENABLE_GC
 // Heap size of GC heap (if enabled)
 // Make it larger on a 64 bit machine, because pointers are larger.
-
-// TODO - make this equivalent always with Tulip CC
 long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 #endif
 
@@ -77,7 +76,6 @@ long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 #ifndef MICROPY_GC_SPLIT_HEAP_N_HEAPS
 #define MICROPY_GC_SPLIT_HEAP_N_HEAPS (1)
 #endif
-
 
 #if !MICROPY_PY_SYS_PATH
 #error "The unix port requires MICROPY_PY_SYS_PATH=1"
@@ -87,12 +85,13 @@ long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 #error "The unix port requires MICROPY_PY_SYS_ARGV=1"
 #endif
 
-
-
 extern int unix_display_draw(); 
 extern void unix_display_init();
 
-STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
+
+
+
+static void stderr_print_strn(void *env, const char *str, size_t len) {
     (void)env;
     ssize_t ret;
     MP_HAL_RETRY_SYSCALL(ret, write(STDERR_FILENO, str, len), {});
@@ -104,12 +103,11 @@ STATIC void stderr_print_strn(void *env, const char *str, size_t len) {
 
 const mp_print_t mp_stderr_print = {NULL, stderr_print_strn};
 
-
 #define FORCED_EXIT (0x100)
 // If exc is SystemExit, return value where FORCED_EXIT bit set,
 // and lower 8 bits are SystemExit value. For all other exceptions,
 // return 1.
-STATIC int handle_uncaught_exception(mp_obj_base_t *exc) {
+static int handle_uncaught_exception(mp_obj_base_t *exc) {
     // check for SystemExit
     if (mp_obj_is_subclass_fast(MP_OBJ_FROM_PTR(exc->type), MP_OBJ_FROM_PTR(&mp_type_SystemExit))) {
         // None is an exit value of 0; an int is its value; anything else is 1
@@ -134,7 +132,7 @@ STATIC int handle_uncaught_exception(mp_obj_base_t *exc) {
 // Returns standard error codes: 0 for success, 1 for all other errors,
 // except if FORCED_EXIT bit is set then script raised SystemExit and the
 // value of the exit is in the lower 8 bits of the return value
-STATIC int execute_from_lexer(int source_kind, const void *source, mp_parse_input_kind_t input_kind, bool is_repl) {
+static int execute_from_lexer(int source_kind, const void *source, mp_parse_input_kind_t input_kind, bool is_repl) {
     mp_hal_set_interrupt_char(CHAR_CTRL_C);
 
     nlr_buf_t nlr;
@@ -148,7 +146,8 @@ STATIC int execute_from_lexer(int source_kind, const void *source, mp_parse_inpu
             const vstr_t *vstr = source;
             lex = mp_lexer_new_from_str_len(MP_QSTR__lt_stdin_gt_, vstr->buf, vstr->len, false);
         } else if (source_kind == LEX_SRC_FILENAME) {
-            lex = mp_lexer_new_from_file((const char *)source);
+            const char *filename = (const char *)source;
+            lex = mp_lexer_new_from_file(qstr_from_str(filename));
         } else { // LEX_SRC_STDIN
             lex = mp_lexer_new_from_fd(MP_QSTR__lt_stdin_gt_, 0, false);
         }
@@ -195,7 +194,7 @@ STATIC int execute_from_lexer(int source_kind, const void *source, mp_parse_inpu
 #if MICROPY_USE_READLINE == 1
 #include "shared/readline/readline.h"
 #else
-STATIC char *strjoin(const char *s1, int sep_char, const char *s2) {
+static char *strjoin(const char *s1, int sep_char, const char *s2) {
     int l1 = strlen(s1);
     int l2 = strlen(s2);
     char *s = malloc(l1 + l2 + 2);
@@ -210,11 +209,11 @@ STATIC char *strjoin(const char *s1, int sep_char, const char *s2) {
 }
 #endif
 
-STATIC int do_repl(void) {
+static int do_repl(void) {
     mp_hal_stdout_tx_str(MICROPY_BANNER_NAME_AND_VERSION);
     mp_hal_stdout_tx_str("; " MICROPY_BANNER_MACHINE);
-    mp_hal_stdout_tx_str("\nType \"help()\" for more information.\n");
-
+    mp_hal_stdout_tx_str("\n");
+    
     #if MICROPY_USE_READLINE == 1
 
     // use MicroPython supplied readline
@@ -315,24 +314,24 @@ STATIC int do_repl(void) {
         }
 
         int ret = execute_from_lexer(LEX_SRC_STR, line, MP_PARSE_SINGLE_INPUT, true);
+        free(line);
         if (ret & FORCED_EXIT) {
             return ret;
         }
-        free(line);
     }
 
     #endif
 }
 
-STATIC int do_file(const char *file) {
+static int do_file(const char *file) {
     return execute_from_lexer(LEX_SRC_FILENAME, file, MP_PARSE_FILE_INPUT, false);
 }
 
-STATIC int do_str(const char *str) {
+static int do_str(const char *str) {
     return execute_from_lexer(LEX_SRC_STR, str, MP_PARSE_FILE_INPUT, false);
 }
 
-STATIC void print_help(char **argv) {
+static void print_help(char **argv) {
     printf(
         "usage: %s [<opts>] [-X <implopt>] [-c <command> | -m <module> | <filename>]\n"
         "Options:\n"
@@ -371,13 +370,13 @@ STATIC void print_help(char **argv) {
     }
 }
 
-STATIC int invalid_args(void) {
+static int invalid_args(void) {
     fprintf(stderr, "Invalid command line arguments. Use -h option for help.\n");
     return 1;
 }
 
 // Process options which set interpreter init options
-STATIC void pre_process_options(int argc, char **argv) {
+static void pre_process_options(int argc, char **argv) {
     for (int a = 1; a < argc; a++) {
         if (argv[a][0] == '-') {
             if (strcmp(argv[a], "-c") == 0 || strcmp(argv[a], "-m") == 0) {
@@ -457,7 +456,7 @@ STATIC void pre_process_options(int argc, char **argv) {
     }
 }
 
-STATIC void set_sys_argv(char *argv[], int argc, int start_arg) {
+static void set_sys_argv(char *argv[], int argc, int start_arg) {
     for (int i = start_arg; i < argc; i++) {
         mp_obj_list_append(mp_sys_argv, MP_OBJ_NEW_QSTR(qstr_from_str(argv[i])));
     }
@@ -465,9 +464,9 @@ STATIC void set_sys_argv(char *argv[], int argc, int start_arg) {
 
 #if MICROPY_PY_SYS_EXECUTABLE
 extern mp_obj_str_t mp_sys_executable_obj;
-STATIC char executable_path[MICROPY_ALLOC_PATH_MAX];
+static char executable_path[MICROPY_ALLOC_PATH_MAX];
 
-STATIC void sys_set_excecutable(char *argv0) {
+static void sys_set_excecutable(char *argv0) {
     if (realpath(argv0, executable_path)) {
         mp_obj_str_set_data(&mp_sys_executable_obj, (byte *)executable_path, strlen(executable_path));
     }
@@ -481,9 +480,9 @@ STATIC void sys_set_excecutable(char *argv0) {
 #endif
 
 
-extern int16_t amy_device_id;
-extern void setup_lvgl();
 
+
+extern int16_t amy_device_id;
 
 /*
 MP_NOINLINE int main_(int argc, char **argv);
@@ -492,27 +491,45 @@ int main(int argc, char **argv) {
     #if MICROPY_PY_THREAD
     mp_thread_init();
     #endif
+
+    // Define a reasonable stack limit to detect stack overflow.
+    mp_uint_t stack_size = 40000 * (sizeof(void *) / 4);
+    #if defined(__arm__) && !defined(__thumb2__)
+    // ARM (non-Thumb) architectures require more stack.
+    stack_size *= 2;
+    #endif
+
     // We should capture stack top ASAP after start, and it should be
     // captured guaranteedly before any other stack variables are allocated.
     // For this, actual main (renamed main_) should not be inlined into
     // this function. main_() itself may have other functions inlined (with
     // their own stack variables), that's why we need this main/main_ split.
-    mp_stack_ctrl_init();
+    mp_cstack_init_with_sp_here(stack_size);
     return main_(argc, argv);
 }
 */
 
+extern void setup_lvgl();
 
 MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
-#if MICROPY_PY_THREAD
+
+    #if MICROPY_PY_THREAD
     mp_thread_init();
     #endif
+
+    // Define a reasonable stack limit to detect stack overflow.
+    mp_uint_t stack_size = 40000 * (sizeof(void *) / 4);
+    #if defined(__arm__) && !defined(__thumb2__)
+    // ARM (non-Thumb) architectures require more stack.
+    stack_size *= 2;
+    #endif
+
     // We should capture stack top ASAP after start, and it should be
     // captured guaranteedly before any other stack variables are allocated.
     // For this, actual main (renamed main_) should not be inlined into
     // this function. main_() itself may have other functions inlined (with
     // their own stack variables), that's why we need this main/main_ split.
-    mp_stack_ctrl_init();
+    mp_cstack_init_with_sp_here(stack_size);
     
 
     #ifdef SIGPIPE
@@ -529,17 +546,8 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
     #endif
 
-    // Define a reasonable stack limit to detect stack overflow.
-    mp_uint_t stack_limit = 40000 * (sizeof(void *) / 4);
-    #if defined(__arm__) && !defined(__thumb2__)
-    // ARM (non-Thumb) architectures require more stack.
-    stack_limit *= 2;
-    #endif
-    mp_stack_set_limit(stack_limit);
 
-
-
-   // pre_process_options(argc, argv);
+    //pre_process_options(argc, argv);
 
     #if MICROPY_ENABLE_GC
     #if !MICROPY_GC_SPLIT_HEAP
@@ -565,10 +573,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     mp_pystack_init(pystack, &pystack[MP_ARRAY_SIZE(pystack)]);
     #endif
 
-
     mp_init();
-
-
 
     #if MICROPY_EMIT_NATIVE
     // Set default emitter options
@@ -576,7 +581,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     #else
     (void)emit_opt;
     #endif
-    
+
     setup_lvgl();
 
     #if MICROPY_VFS_POSIX
@@ -590,6 +595,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
         MP_STATE_VM(vfs_cur) = MP_STATE_VM(vfs_mount_table);
     }
     #endif
+
     {
         // sys.path starts as [""]
         mp_sys_path = mp_obj_new_list(0, NULL);
@@ -605,7 +611,12 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
             // First entry is empty. We've already added an empty entry to sys.path, so skip it.
             ++path;
         }
-        bool path_remaining = *path;
+        // GCC targeting RISC-V 64 reports a warning about `path_remaining` being clobbered by
+        // either setjmp or vfork if that variable it is allocated on the stack.  This may
+        // probably be a compiler error as it occurs on a few recent GCC releases (up to 14.1.0)
+        // but LLVM doesn't report any warnings.
+        static bool path_remaining;
+        path_remaining = *path;
         while (path_remaining) {
             char *path_entry_end = strchr(path, PATHLIST_SEP_CHAR);
             if (path_entry_end == NULL) {
@@ -626,7 +637,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
             path = path_entry_end + 1;
         }
     }
-    
+
     mp_obj_list_init(MP_OBJ_TO_PTR(mp_sys_argv), 0);
 
     #if defined(MICROPY_UNIX_COVERAGE)
@@ -658,9 +669,11 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
     printf("    peak  %d\n", m_get_peak_bytes_allocated());
     */
 
-    //#if MICROPY_PY_SYS_EXECUTABLE
-    //sys_set_excecutable(argv[0]);
-    //#endif
+    /*
+    #if MICROPY_PY_SYS_EXECUTABLE
+    sys_set_excecutable(argv[0]);
+    #endif
+    */
 
     const int NOTHING_EXECUTED = -2;
     int ret = NOTHING_EXECUTED;
@@ -683,7 +696,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
                     return invalid_args();
                 }
                 mp_obj_t import_args[4];
-                import_args[0] = mp_obj_new_str(argv[a + 1], strlen(argv[a + 1]));
+                import_args[0] = mp_obj_new_str_from_cstr(argv[a + 1]);
                 import_args[1] = import_args[2] = mp_const_none;
                 // Ask __import__ to handle imported module specially - set its __name__
                 // to __main__, and also return this leaf module, not top-level package
@@ -713,7 +726,10 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
                     return handle_uncaught_exception(nlr.ret_val) & 0xff;
                 }
 
-                if (mp_obj_is_package(mod) && !subpkg_tried) {
+                // If this module is a package, see if it has a `__main__.py`.
+                mp_obj_t dest[2];
+                mp_load_method_protected(mod, MP_QSTR___path__, dest, true);
+                if (dest[0] != MP_OBJ_NULL && !subpkg_tried) {
                     subpkg_tried = true;
                     vstr_t vstr;
                     int len = strlen(argv[a + 1]);
@@ -733,7 +749,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
                 mp_verbose_flag++;
             #endif
             } else if (strncmp(argv[a], "-O", 2) == 0) {
-                if (mp_unichar_mp_isdigit(argv[a][2])) {
+                if (unichar_isdigit(argv[a][2])) {
                     MP_STATE_VM(mp_optimise_value) = argv[a][2] & 0xf;
                 } else {
                     MP_STATE_VM(mp_optimise_value) = 0;
@@ -756,7 +772,7 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
 
             // Set base dir of the script as first entry in sys.path.
             char *p = strrchr(basedir, '/');
-            path_items[0] = mp_obj_new_str_via_qstr(basedir, p - basedir);
+            mp_obj_list_store(mp_sys_path, MP_OBJ_NEW_SMALL_INT(0), mp_obj_new_str_via_qstr(basedir, p - basedir));
             free(pathbuf);
 
             set_sys_argv(argv, argc, a);
@@ -764,11 +780,13 @@ MP_NOINLINE void * main_(void *vargs) {  //int argc, char **argv) {
             break;
         }
     }
+
+    const char *inspect_env = getenv("MICROPYINSPECT");
+    if (inspect_env && inspect_env[0] != '\0') {
+        inspect = true;
+    }
     */
-    //const char *inspect_env = getenv("MICROPYINSPECT");
-    //if (inspect_env && inspect_env[0] != '\0') {
-    //    inspect = true;
-    //}
+
     inspect = true;
     pyexec_frozen_module("_boot.py", false);
     pyexec_file_if_exists("boot.py");
@@ -840,6 +858,12 @@ soft_reset_exit:
     return 0;
 }
 
+
+
+extern int8_t unix_display_flag;
+
+#include "lvgl.h"
+
 int main(int argc, char **argv) {
     // Get the resources folder loc
     // So thread out alles and then micropython tasks
@@ -877,13 +901,12 @@ int main(int argc, char **argv) {
     unix_display_init();
     pthread_t alles_thread_id;
     pthread_create(&alles_thread_id, NULL, alles_start, NULL);
-
-    //pthread_t midi_thread_id;
-    ///pthread_create(&midi_thread_id, NULL, run_midi, NULL);
-
+    /*
+    pthread_t midi_thread_id;
+    pthread_create(&midi_thread_id, NULL, run_midi, NULL);
+    */
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
-    int c = 0;
 
     sequencer_init();
     pthread_t sequencer_thread_id;
@@ -891,29 +914,29 @@ int main(int argc, char **argv) {
 
     delay_ms(100);
     // Schedule a "turning on" sound
-    bleep();
 
 
-display_jump: 
-    while(c>=0) {
-        // unix_display_draw returns -1 if the window was quit
-        c = unix_display_draw();
-        if(c>=0) {
-            // Figure out how long to sleep. ticks has the amount of time already spent for this frame
-            // so let's fill in the rest with a usleep.
-            int sleep_ms_for_frame = (int) ((1000.0/TARGET_DESKTOP_FPS) - c);
-            if(sleep_ms_for_frame > 0) usleep(1000*sleep_ms_for_frame);
-        }
+display_jump:
+
+    while(unix_display_flag>=0) {
+        int ticks = unix_display_draw();
+        // Figure out how long to sleep. ticks has the amount of time already spent for this frame
+        // so let's fill in the rest with a usleep.
+        int sleep_ms_for_frame = (int) ((1000.0/TARGET_DESKTOP_FPS) - ticks);
+        if(sleep_ms_for_frame > 0) usleep(1000*sleep_ms_for_frame);
     }
-    if(c==-2) {
+    if(unix_display_flag==-2) {
+        fprintf(stderr,"restarting display\n");
         // signal to restart display after a timing change
+
         unix_display_init();
-        c=0;
+        unix_display_flag = 0;
         goto display_jump;
     }
-    // We're done. join the threads?
-}
 
+    // We're done. join the threads?
+    return 0;
+}
 
 void nlr_jump_fail(void *val) {
     #if MICROPY_USE_READLINE == 1

@@ -67,7 +67,7 @@ set(SDKCONFIG_DEFAULTS ${CMAKE_BINARY_DIR}/sdkconfig.combined)
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
 # Set the location of the main component for the project (one per target).
-set(EXTRA_COMPONENT_DIRS main components)
+#set(EXTRA_COMPONENT_DIRS main components)
 
 # Define the project.
 project(micropython)

@@ -46,7 +46,7 @@ Tulip CC supports:
 - Can load PNGs from disk to set sprites or background, or generate bitmap data from code
 - Built in code and text editor
 - Built in BBS chat room and file transfer area called **TULIP ~ WORLD**
-- USB keyboard support
+- USB keyboard, MIDI and mouse support, including hubs 
 - Capactive multi-touch support (mouse on Tulip Desktop)
 - MIDI input and output
 - I2C / Grove / Mabee connector, compatible with [many I2C devices like joysticks, keyboard, GPIO, DACs, ADCs, hubs](docs/tulip_api.md#i2c--grove--mabee)
@@ -96,7 +96,7 @@ edit("game.py")
 
 ### Input and user interface
 
-Tulip supports USB keyboard input and touch input. (On Tulip Desktop, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications, and a way to run mulitple applications as once using callbacks. More in the [full API](docs/tulip_api.md).
+Tulip supports USB keyboard and mice input as well as touch input. (On Tulip Desktop, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications, and a way to run mulitple applications as once using callbacks. More in the [full API](docs/tulip_api.md).
 
 ```python
 (x0, y0, x1, y1, x2, y2) = tulip.touch()

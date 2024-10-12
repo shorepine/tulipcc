@@ -31,9 +31,10 @@ The Tulip board you got can work on its own. Most people will want to add a coup
 
 Tulip is a very command-line centered interface with some touch controls. You'll have a much easier time using Tulip if you connect a USB computer keyboard to it for typing. It turns the Tulip into a portable "deck" for whatever you can imagine. 
 
-You can use _almost_ any USB computer keyboard you already have. However, a keyboard including an internal USB hub will not work. You can tell if a keyboard includes a hub if it has one or more subsidiary USB sockets (e.g. for connecting a mouse), or if it includes an integrated pointing device (trackpad, trackball etc). These keyboards are not compatible with Tulip. 
+You _should_ be able to use any USB computer keyboard you already have. We're always surprised to find weird keyboards that don't follow all the "rules", so if yours doesn't "just work", get in touch and we'll help you debug!
 
 [If you want a more compact hardware keyboard, the tiny "cardKB" will work great with Tulip, plugged into the I2C port.](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a)
+
 
 ### DACs or ADCs for modular synths
 
@@ -43,13 +44,19 @@ If you use modular synths, Tulip is a powerful and fun control surface and way t
 
 ### Type-A 3.5mm MIDI adapters to full size
 
-Most modern MIDI equipment now uses 3.5mm jacks for MIDI connectors. If you have the older 5-pin DIN connectors and want to use them on Tulip, you'll want to pick up a couple of [Type-A 3.5mm adapters](https://www.amazon.com/Kurrent-Electric-Type-3-5mm-Adapter/dp/B0C2RLB3SL/). 
+We support both USB MIDI and "standard" TRS MIDI. Most modern MIDI equipment now uses 3.5mm jacks for MIDI connectors. If you have the older 5-pin DIN connectors and want to use them on Tulip, you'll want to pick up a couple of [Type-A 3.5mm adapters](https://www.amazon.com/Kurrent-Electric-Type-3-5mm-Adapter/dp/B0C2RLB3SL/). 
+
+### A hub for USB MIDI
+
+If you want to use a USB MIDI device (like a keyboard or a USB-MIDI adapter), we support that on Tulip from the `USB-KB` connector. We also support simple hubs, since you'll want to connect both a USB MIDI plug and a typing keyboard. USB hub support works but is in constant development, so please let us know if your setup doesn't work! 
 
 ### A small li-po battery
 
 Tulip is a low power device and can run on battery for portable computing. There's a standard JST connector on back for flat li-po or 18650 battery packs. Tulip will charge the battery if you connect a USB power cable to the USB charge/PWR port (the top one.) I personally use [this 1200mAh battery](https://www.adafruit.com/product/258). If you want to keep it "inside" Tulip (between the back case and the PCB), you'll want to find a battery that is 5mm or so thin. You can use a piece of double sided tape it keep it inside the battery area of the PCB. 
 
 Larger batteries will work great and last longer, but you'll have to remove the back case to make them fit (or mount the battery some other way.) [This 5200mAh battery pack](https://www.amazon.com/XINLANTECH-Rechargeable-Bluetooth-Electronic-Batteries/dp/B0C2VFTDPY) will last many many hours on Tulip and fit right on the PCB with the back case removed. 
+
+**Please make sure you have the polarity right!** The red cable on the battery should be going to the side of the connector with a + sign on the Tulip board. 
 
 ### An extra Alles or five
 

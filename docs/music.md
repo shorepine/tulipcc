@@ -19,6 +19,7 @@ Tulip is a **music computer** where everything about the underlying synthesis an
  - Control CV outputs for modular synths and analog synths, with built in waveforms and sample & hold 
  - Sample CV inputs from an ADC to control other events on Tulip 
  - Send MIDI in and out, from code. You can write code to respond to MIDI messages to do whatever you want
+ - Use USB MIDI devices like keyboards or synthesizers or adapters connected to Tulip's USB-KB port (with a hub to still support typing keyboards)
  - Share a common sequencer clock across multiple apps, for example, a drum machine and an arpeggiator 
  - Add global EQ, chorus, echo or reverb to the audio output
  - A scale and chord library to define musical notes in code, e.g. `music.Chord("F:min")`
@@ -31,7 +32,7 @@ If you're using [Tulip Desktop](tulip_desktop.md) instead of a real Tulip, thing
 
 ## The built-in Tulip synthesizer
 
-When you start up your Tulip, it is configured to receive MIDI messages from the MIDI in port. You can plug in any MIDI device that sends MIDI out, like a MIDI keyboard or your computer running a sequencer. 
+When you start up your Tulip, it is configured to receive MIDI messages from the MIDI in port (or the USB MIDI port if connected.) You can plug in any MIDI device that sends MIDI out, like a MIDI keyboard or your computer running a sequencer. 
 
 Try to just play notes once you've turned on Tulip, By default, MIDI channel 1 plays a Juno-6 patch. Notes on channel 10 will play PCM patches, roughly aligned with General MIDI drums. 
 

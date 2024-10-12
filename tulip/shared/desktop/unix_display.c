@@ -69,7 +69,7 @@ void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
  * @param sdl_key the key code
  * @return LV_KEY_* control character or '\0'
  */
-uint32_t keycode_to_ctrl_key(SDL_Keycode sdl_key)
+uint32_t sdl_keycode_to_ctrl_key(SDL_Keycode sdl_key)
 {
     /*Remap some key to LV_KEY_... to manage groups*/
     
@@ -282,7 +282,7 @@ void check_key() {
             
         } else if(e.type == SDL_KEYDOWN) {
             // do LVGL stuff first
-            const uint32_t ctrl_key = keycode_to_ctrl_key(e.key.keysym.sym);
+            const uint32_t ctrl_key = sdl_keycode_to_ctrl_key(e.key.keysym.sym);
             if (ctrl_key == '\0') {
                 // do nothing?
             } else {

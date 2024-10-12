@@ -29,7 +29,7 @@ cp shared/py/voices.py fs/ex/my_voices.py
 
 
 cd esp32s3
-source ~/esp/esp-idf-v5.2/export.sh 
+source ~/esp/esp-idf/export.sh 
 # If sys, just create/upload the last sys and exit
 if [ "$TYPE" == "sys" ]; then
     python tulip_fs_create.py
