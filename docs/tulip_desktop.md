@@ -22,19 +22,10 @@ git clone https://github.com/shorepine/tulipcc
 cd tulipcc
 ```
 
-Then install homebrew
-
-```bash
-# install homebrew first, skip this if you already have it...
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-# Then restart your terminal
-```
-
 To build Tulip Desktop (macOS 10.15 (Catalina) and higher, Apple Silicon or x86_64):
 
 ```bash
 cd tulip/macos
-brew install pkg-config libffi
 
 # For local development (just your native arch, and shows stderr in terminal)
 ./build.sh
@@ -57,13 +48,13 @@ Install the dependencies:
 
 ```bash
 # Ubuntu, Debian, etc., including Windows 11 in WSL2
-sudo apt install build-essential libsdl2-dev libffi-dev alsa-utils
+sudo apt install build-essential libsdl2-dev alsa-utils
 
 # Fedora 40+, etc.
-sudo dnf install gcc make SDL2-devel libffi-devel alsa-utils
+sudo dnf install gcc make SDL2-devel alsa-utils
 
 # Arch
-sudo pacman -S sdl2 libffi
+sudo pacman -S sdl2
 ```
 
 Build and run:
