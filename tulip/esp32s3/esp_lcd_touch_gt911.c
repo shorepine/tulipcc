@@ -56,6 +56,125 @@ static esp_err_t esp_lcd_touch_gt911_exit_sleep(esp_lcd_touch_handle_t tp);
 * Public API functions
 *******************************************************************************/
 
+#ifdef TDECK
+
+esp_err_t esp_lcd_touch_new_i2c_gt911(const esp_lcd_panel_io_handle_t io, const esp_lcd_touch_config_t *config, esp_lcd_touch_handle_t *out_touch)
+{
+    esp_err_t ret = ESP_OK;
+
+    assert(io != NULL);
+    assert(config != NULL);
+    assert(out_touch != NULL);
+
+    /* Prepare main structure */
+    esp_lcd_touch_handle_t esp_lcd_touch_gt911 = heap_caps_calloc(1, sizeof(esp_lcd_touch_t), MALLOC_CAP_DEFAULT);
+    ESP_GOTO_ON_FALSE(esp_lcd_touch_gt911, ESP_ERR_NO_MEM, err, TAG, "no mem for GT911 controller");
+
+    /* Communication interface */
+    esp_lcd_touch_gt911->io = io;
+
+    /* Only supported callbacks are set */
+    esp_lcd_touch_gt911->read_data = esp_lcd_touch_gt911_read_data;
+    esp_lcd_touch_gt911->get_xy = esp_lcd_touch_gt911_get_xy;
+#if (CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS > 0)
+    esp_lcd_touch_gt911->get_button_state = esp_lcd_touch_gt911_get_button_state;
+#endif
+    esp_lcd_touch_gt911->del = esp_lcd_touch_gt911_del;
+    esp_lcd_touch_gt911->enter_sleep = esp_lcd_touch_gt911_enter_sleep;
+    esp_lcd_touch_gt911->exit_sleep = esp_lcd_touch_gt911_exit_sleep;
+
+    /* Mutex */
+    esp_lcd_touch_gt911->data.lock.owner = portMUX_FREE_VAL;
+
+    /* Save config */
+    memcpy(&esp_lcd_touch_gt911->config, config, sizeof(esp_lcd_touch_config_t));
+    esp_lcd_touch_io_gt911_config_t *gt911_config = (esp_lcd_touch_io_gt911_config_t *)esp_lcd_touch_gt911->config.driver_data;
+
+    /* Prepare pin for touch controller reset */
+    if (esp_lcd_touch_gt911->config.rst_gpio_num != GPIO_NUM_NC) {
+        const gpio_config_t rst_gpio_config = {
+            .mode = GPIO_MODE_OUTPUT,
+            .pin_bit_mask = BIT64(esp_lcd_touch_gt911->config.rst_gpio_num)
+        };
+        ret = gpio_config(&rst_gpio_config);
+        ESP_GOTO_ON_ERROR(ret, err, TAG, "GPIO config failed");
+    }
+
+    if (gt911_config && esp_lcd_touch_gt911->config.rst_gpio_num != GPIO_NUM_NC && esp_lcd_touch_gt911->config.int_gpio_num != GPIO_NUM_NC) {
+        /* Prepare pin for touch controller int */
+        const gpio_config_t int_gpio_config = {
+            .mode = GPIO_MODE_OUTPUT,
+            .intr_type = GPIO_INTR_DISABLE,
+            .pull_down_en = 0,
+            .pull_up_en = 1,
+            .pin_bit_mask = BIT64(esp_lcd_touch_gt911->config.int_gpio_num),
+        };
+        ret = gpio_config(&int_gpio_config);
+        ESP_GOTO_ON_ERROR(ret, err, TAG, "GPIO config failed");
+
+        ESP_RETURN_ON_ERROR(gpio_set_level(esp_lcd_touch_gt911->config.rst_gpio_num, esp_lcd_touch_gt911->config.levels.reset), TAG, "GPIO set level error!");
+        ESP_RETURN_ON_ERROR(gpio_set_level(esp_lcd_touch_gt911->config.int_gpio_num, 0), TAG, "GPIO set level error!");
+        vTaskDelay(pdMS_TO_TICKS(10));
+
+        /* Select I2C addr, set output high or low */
+        uint32_t gpio_level;
+        if (ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS_BACKUP == gt911_config->dev_addr) {
+            gpio_level = 1;
+        } else if (ESP_LCD_TOUCH_IO_I2C_GT911_ADDRESS == gt911_config->dev_addr) {
+            gpio_level = 0;
+        } else {
+            gpio_level = 0;
+            ESP_LOGE(TAG, "Addr (0x%X) is invalid", gt911_config->dev_addr);
+        }
+        ESP_RETURN_ON_ERROR(gpio_set_level(esp_lcd_touch_gt911->config.int_gpio_num, gpio_level), TAG, "GPIO set level error!");
+        vTaskDelay(pdMS_TO_TICKS(1));
+
+        ESP_RETURN_ON_ERROR(gpio_set_level(esp_lcd_touch_gt911->config.rst_gpio_num, !esp_lcd_touch_gt911->config.levels.reset), TAG, "GPIO set level error!");
+        vTaskDelay(pdMS_TO_TICKS(10));
+
+        vTaskDelay(pdMS_TO_TICKS(50));
+    } else {
+        ESP_LOGW(TAG, "Unable to initialize the I2C address");
+        /* Reset controller */
+        ret = touch_gt911_reset(esp_lcd_touch_gt911);
+        ESP_GOTO_ON_ERROR(ret, err, TAG, "GT911 reset failed");
+    }
+
+    /* Prepare pin for touch interrupt */
+    if (esp_lcd_touch_gt911->config.int_gpio_num != GPIO_NUM_NC) {
+        const gpio_config_t int_gpio_config = {
+            .mode = GPIO_MODE_INPUT,
+            .intr_type = (esp_lcd_touch_gt911->config.levels.interrupt ? GPIO_INTR_POSEDGE : GPIO_INTR_NEGEDGE),
+            .pin_bit_mask = BIT64(esp_lcd_touch_gt911->config.int_gpio_num)
+        };
+        ret = gpio_config(&int_gpio_config);
+        ESP_GOTO_ON_ERROR(ret, err, TAG, "GPIO config failed");
+
+        /* Register interrupt callback */
+        if (esp_lcd_touch_gt911->config.interrupt_callback) {
+            esp_lcd_touch_register_interrupt_callback(esp_lcd_touch_gt911, esp_lcd_touch_gt911->config.interrupt_callback);
+        }
+    }
+
+    /* Read status and config info */
+    ret = touch_gt911_read_cfg(esp_lcd_touch_gt911);
+    ESP_GOTO_ON_ERROR(ret, err, TAG, "GT911 init failed");
+
+err:
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Error (0x%x)! Touch controller GT911 initialization failed!", ret);
+        if (esp_lcd_touch_gt911) {
+            esp_lcd_touch_gt911_del(esp_lcd_touch_gt911);
+        }
+    }
+
+    *out_touch = esp_lcd_touch_gt911;
+
+    return ret;
+}
+
+#else
+
 esp_err_t esp_lcd_touch_new_i2c_gt911(const esp_lcd_panel_io_handle_t io, const esp_lcd_touch_config_t *config, esp_lcd_touch_handle_t *out_touch)
 {
     esp_err_t ret = ESP_OK;
@@ -142,6 +261,7 @@ err:
 
     return ret;
 }
+#endif
 
 static esp_err_t esp_lcd_touch_gt911_enter_sleep(esp_lcd_touch_handle_t tp)
 {

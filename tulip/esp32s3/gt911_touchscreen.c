@@ -97,13 +97,14 @@ void run_gt911(void *param) {
     
     // We have to toggle the RST pin more than once (the driver only does it once)
     // So we do that here, wait a second, then init the driver.
+
+    #ifdef TULIP4_R11
     fprintf(stderr, "Resetting touch i2c RST pin twice\n");
     const gpio_config_t rst_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
         .pin_bit_mask = BIT64(TOUCH_RST)
     };
     gpio_config(&rst_gpio_config);
-    
     gpio_set_level(TOUCH_RST, 1);
     delay_ms(11);
     gpio_set_level(TOUCH_RST, !1);
@@ -112,6 +113,8 @@ void run_gt911(void *param) {
     delay_ms(11);
     gpio_set_level(TOUCH_RST, !1);
     delay_ms(1000);
+    #endif
+    
     if(touch_init(0) != ESP_OK) {
         fprintf(stderr, "attempting to fall back on 0x14 for touch\n");
         delay_ms(500);
