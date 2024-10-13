@@ -40,8 +40,8 @@ int32_t clocks[255];
 int32_t ping_times[255];
 uint8_t alive = 1;
 
-extern int32_t computed_delta ; // can be negative no prob, but usually host is larger # than client
-extern uint8_t computed_delta_set ; // have we set a delta yet?
+//extern int32_t computed_delta ; // can be negative no prob, but usually host is larger # than client
+//extern uint8_t computed_delta_set ; // have we set a delta yet?
 extern int32_t last_ping_time;
 
 amy_err_t sync_init() {
@@ -422,8 +422,12 @@ void handle_sync(int32_t time, int8_t index) {
     //mcast_send(message, strlen(message));
     // Update computed delta (i could average these out, but I don't think that'll help too much)
     //int64_t old_cd = computed_delta;
-    computed_delta = time - sysclock;
-    computed_delta_set = 1;
+    
+    // TODO, fix this up for the new style
+    //computed_delta = time - sysclock;
+    //computed_delta_set = 1;
+    
+
     //if(old_cd != computed_delta) printf("Changed computed_delta from %lld to %lld on sync\n", old_cd, computed_delta);
 }
 
