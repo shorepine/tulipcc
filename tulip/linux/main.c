@@ -484,7 +484,6 @@ extern int16_t amy_playback_device_id;
 extern int16_t amy_capture_device_id;
 extern void setup_lvgl();
 
-
 /*
 MP_NOINLINE int main_(int argc, char **argv);
 
