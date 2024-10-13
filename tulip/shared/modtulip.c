@@ -1109,17 +1109,16 @@ STATIC mp_obj_t tulip_cpu(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cpu_obj, 0, 1, tulip_cpu);
 
 #ifndef ESP_PLATFORM
+#ifndef __linux__
 extern char* get_tulip_home_path();
 STATIC mp_obj_t tulip_app_path(size_t n_args, const mp_obj_t *args) {
-#ifndef __linux__
     char * path = get_tulip_home_path();
     return mp_obj_new_str(path, strlen(path));
-#endif
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_app_path_obj, 0, 0, tulip_app_path);
 #endif
-
+#endif
 
 STATIC mp_obj_t tulip_bg_bezier(size_t n_args, const mp_obj_t *args) {
     uint16_t x0 = mp_obj_get_int(args[0]);
@@ -1377,7 +1376,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 
 // Special platform specific things
 #ifndef ESP_PLATFORM
+#ifndef __linux__
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
+#endif
 #endif
 
 };

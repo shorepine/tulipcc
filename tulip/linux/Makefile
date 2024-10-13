@@ -1,3 +1,7 @@
+# Tulip linux, based on unix port makefile
+
+DEBUG=1
+
 # Select the variant to build for.
 VARIANT ?= standard
 MAKEFLAGS += --jobs=4
@@ -9,12 +13,15 @@ TOP = ../../micropython
 
 VARIANT_DIR ?= ../../micropython/ports/unix/variants/$(VARIANT)
 
+# If the build directory is not given, make it reflect the variant name.
+BUILD ?= build-$(VARIANT)
+
 include $(TOP)/py/mkenv.mk
-include ../shared/desktop/mpconfigport.mk
-include $(VARIANT_DIR)/mpconfigvariant.mk
+include mpconfigport.mk
+#include $(VARIANT_DIR)/mpconfigvariant.mk
 
 # Use the default frozen manifest, variants may override this.
-FROZEN_MANIFEST ?= manifest.py
+FROZEN_MANIFEST ?= variants/manifest.py
 
 # This should be configured by the mpconfigvariant.mk
 PROG = tulip
@@ -30,6 +37,7 @@ UNAME_S := $(shell uname -s)
 include $(TOP)/py/py.mk
 include $(TOP)/extmod/extmod.mk
 
+
 # LVGL stuff
 LVGL_BINDING_DIR = $(TOP)/../lv_binding_micropython_tulip
 LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
@@ -42,7 +50,10 @@ LVGL_MPY_METADATA = $(BUILD)/lvgl/lv_mpy.json
 QSTR_GLOBAL_DEPENDENCIES += $(LVGL_MPY)
 CFLAGS_MOD += $(LV_CFLAGS) 
 SRC_C += $(shell find $(LVGL_DIR)/src -type f -name '*.c')
-CFLAGS += -DLV_CONF_INCLUDE_SIMPLE
+CFLAGS += -DLV_CONF_INCLUDE_SIMPLE 
+
+# This is for the lvgl stuff that uses STATIC 
+CFLAGS += -DSTATIC=static
 
 $(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
 	$(ECHO) "LVGL-GEN $@"
@@ -60,30 +71,40 @@ INC += -I$(TOP)/ports/unix
 INC += -I../shared/
 INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
-INC += -I/usr/include/SDL2
 INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src
 INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src/libs/lodepng
+INC += -I/usr/include/SDL2
+
+
+GIT_SUBMODULES += lib/berkeley-db-1.xx
+
+INC +=  -I.
+INC +=  -I$(TOP)
+INC += -I$(BUILD)
 
 # compiler settings
-CWARN = -Wall 
-CWARN += -Wextra -Wno-unused-parameter -Wpointer-arith -Wdouble-promotion 
-CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
-CFLAGS += -DTULIP_DESKTOP
 
+# compiler settings
+CWARN = -Wall -Werror
+CWARN += -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-old-style-declaration -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wno-float-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
+CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA) 
+CFLAGS += -DTULIP_DESKTOP
 CFLAGS += $(ARCHFLAGS) 
+
 # Debugging/Optimization
 ifdef DEBUG
-COPT ?= -Og
+#COPT ?= -Og
 else
-COPT ?= -Os
+#COPT ?= -Os
 COPT += -DNDEBUG
 endif
 
 # Remove unused sections.
-COPT += -fdata-sections -ffunction-sections
+COPT += -fdata-sections -ffunction-sections -O0
 
-# Always enable symbols -- They're occasionally useful, and don't make it into the
-# final .bin/.hex/.dfu so the extra size doesn't matter.
+
+# Note: Symbols and debug information will still be stripped from the final binary
+# unless "DEBUG=1" or "STRIP=" is passed to make, see README.md for details.
 CFLAGS += -g
 
 ifndef DEBUG
@@ -111,17 +132,11 @@ ifndef DEBUG
 # https://gcc.gnu.org/ml/gcc-patches/2004-09/msg02055.html .
 #
 # Turning off _FORTIFY_SOURCE is only required when compiling with -O1 or greater
-CFLAGS += -U _FORTIFY_SOURCE -fPIC
+CFLAGS += -U _FORTIFY_SOURCE
 endif
 
-# On OSX, 'gcc' is a symlink to clang unless a real gcc is installed.
-# The unix port of MicroPython on OSX must be compiled with clang,
-# while cross-compile ports require gcc, so we test here for OSX and
-# if necessary override the value of 'CC' set in py/mkenv.mk
-
-LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections 
+LDFLAGS_ARCH = -Wl,-Map=$@.map,--cref -Wl,--gc-sections
 LDFLAGS += $(LDFLAGS_MOD) $(LDFLAGS_ARCH) -lm $(LDFLAGS_EXTRA)
-#LDFLAGS += -lstdc++  $(ARCHFLAGS)
 
 # Flags to link with pthread library
 LIBPTHREAD = -lpthread
@@ -131,75 +146,102 @@ ifeq ($(MICROPY_FORCE_32BIT),1)
 # starting with linux-libc-dev:i386
 ifeq ($(MICROPY_PY_FFI),1)
 ifeq ($(UNAME_S),Linux)
-CFLAGS_MOD += -I/usr/include/i686-linux-gnu
+CFLAGS += -I/usr/include/i686-linux-gnu
 endif
 endif
 endif
 
 ifeq ($(MICROPY_USE_READLINE),1)
 INC += -I$(TOP)/shared/readline
-CFLAGS_MOD += -DMICROPY_USE_READLINE=1
+CFLAGS += -DMICROPY_USE_READLINE=1
 SHARED_SRC_C_EXTRA += readline/readline.c
 endif
 ifeq ($(MICROPY_PY_TERMIOS),1)
-CFLAGS_MOD += -DMICROPY_PY_TERMIOS=1
-SRC_MOD += $(MICROPY_PORT_DIR)/modtermios.c
+CFLAGS += -DMICROPY_PY_TERMIOS=1
 endif
 ifeq ($(MICROPY_PY_SOCKET),1)
-CFLAGS_MOD += -DMICROPY_PY_SOCKET=1
+CFLAGS += -DMICROPY_PY_SOCKET=1
 SRC_MOD += $(MICROPY_PORT_DIR)/modsocket.c
 endif
 ifeq ($(MICROPY_PY_THREAD),1)
-CFLAGS_MOD += -DMICROPY_PY_THREAD=1 -DMICROPY_PY_THREAD_GIL=0
-LDFLAGS_MOD += $(LIBPTHREAD)
+CFLAGS += -DMICROPY_PY_THREAD=1 -DMICROPY_PY_THREAD_GIL=0
+LDFLAGS += $(LIBPTHREAD)
 endif
+
 
 include ../shared/tulip.mk
 
 MICROPY_PORT_DIR=../../micropython/ports/unix
 
+ifeq ($(MICROPY_PY_SSL),1)
+ifeq ($(MICROPY_SSL_AXTLS),1)
+
+endif
+endif
+
+# If the variant enables it, enable modbluetooth.
+ifeq ($(MICROPY_PY_BLUETOOTH),1)
+ifeq ($(MICROPY_BLUETOOTH_BTSTACK),1)
+HAVE_LIBUSB := $(shell (which pkg-config > /dev/null && pkg-config --exists libusb-1.0) 2>/dev/null && echo '1')
+
+# Figure out which BTstack transport to use.
+ifeq ($(HAVE_LIBUSB),1)
+# Default to btstack-over-usb.
+MICROPY_BLUETOOTH_BTSTACK_USB ?= 1
+else
+# Fallback to HCI controller via a H4 UART (e.g. Zephyr on nRF) over a /dev/tty serial port.
+MICROPY_BLUETOOTH_BTSTACK_H4 ?= 1
+endif
+
+SRC_BTSTACK_C += lib/btstack/platform/embedded/btstack_run_loop_embedded.c
+endif
+endif
+
 ifeq ($(MICROPY_PY_FFI),1)
 
 ifeq ($(MICROPY_STANDALONE),1)
-LIBFFI_CFLAGS_MOD := -I$(shell ls -1d $(BUILD)/lib/libffi/out/lib/libffi-*/include)
+# Build libffi from source.
+GIT_SUBMODULES += lib/libffi
+DEPLIBS += libffi
+LIBFFI_CFLAGS := -I$(shell ls -1d $(BUILD)/lib/libffi/include)
  ifeq ($(MICROPY_FORCE_32BIT),1)
-  LIBFFI_LDFLAGS_MOD = $(BUILD)/lib/libffi/out/lib32/libffi.a
+  LIBFFI_LDFLAGS = $(BUILD)/lib/libffi/out/lib32/libffi.a
  else
-  LIBFFI_LDFLAGS_MOD = $(BUILD)/lib/libffi/out/lib/libffi.a
+  LIBFFI_LDFLAGS = $(BUILD)/lib/libffi/out/lib/libffi.a
  endif
 else
-LIBFFI_CFLAGS_MOD := $(shell pkg-config --cflags libffi)
-LIBFFI_LDFLAGS_MOD := $(shell pkg-config --libs libffi)
+# Use system version of libffi.
+LIBFFI_CFLAGS := $(shell pkg-config --cflags libffi)
+LIBFFI_LDFLAGS := $(shell pkg-config --libs libffi)
 endif
 
 
-ifeq ($(UNAME_S),Linux)
-LIBFFI_LDFLAGS_MOD += -ldl -lSDL2
-endif
 
-CFLAGS_MOD += $(LIBFFI_CFLAGS_MOD) -DMICROPY_PY_FFI=1
-LDFLAGS_MOD += $(LIBFFI_LDFLAGS_MOD)
-SRC_MOD += $(MICROPY_PORT_DIR)/modffi.c
+CFLAGS += $(LIBFFI_CFLAGS) -DMICROPY_PY_FFI=1
+LDFLAGS += $(LIBFFI_LDFLAGS)
 endif
 
 ifeq ($(MICROPY_PY_JNI),1)
 # Path for 64-bit OpenJDK, should be adjusted for other JDKs
-CFLAGS_MOD += -I/usr/lib/jvm/java-7-openjdk-amd64/include -DMICROPY_PY_JNI=1
-SRC_MOD += $(MICROPY_PORT_DIR)/modjni.c
+CFLAGS += -I/usr/lib/jvm/java-7-openjdk-amd64/include -DMICROPY_PY_JNI=1
+endif
+
+
+ifeq ($(UNAME_S),Linux)
+LDFLAGS += -ldl -lSDL2
 endif
 
 
 # source files
 SRC_C += \
 	main.c \
-	../shared/desktop/unix_mphal.c \
 	../shared/desktop/unix_display.c \
 	../shared/desktop/multicast.c \
-	../shared/desktop/mpthreadport.c \
+	../shared/desktop/unix_mphal.c \
 	../../amy/src/libminiaudio-audio.c \
+	$(MICROPY_PORT_DIR)/mpthreadport.c \
 	$(MICROPY_PORT_DIR)/gccollect.c \
 	$(MICROPY_PORT_DIR)/input.c \
-	$(MICROPY_PORT_DIR)/modmachine.c \
 	$(MICROPY_PORT_DIR)/alloc.c \
 	$(MICROPY_PORT_DIR)/fatfs_port.c \
 	$(MICROPY_PORT_DIR)/mpbthciport.c \
@@ -210,7 +252,10 @@ SRC_C += \
 	$(SRC_MOD) \
 	$(wildcard $(VARIANT_DIR)/*.c)
 
+
+#SRC_C += $(LVGL_PP)
 SRC_C += $(LVGL_MPY)
+
 
 SHARED_SRC_C += $(addprefix ../../micropython/shared/,\
 	runtime/gchelper_generic.c \
@@ -223,34 +268,28 @@ SHARED_SRC_C += $(addprefix ../../micropython/shared/,\
 SRC_CXX += \
 	$(SRC_MOD_CXX)
 
-
 OBJ = $(PY_O)
 OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))
-OBJ += $(addprefix $(BUILD)/, $(SRC_M:.m=.o))
 OBJ += $(addprefix $(BUILD)/, $(SRC_CXX:.cpp=.o))
 OBJ += $(addprefix $(BUILD)/, $(SHARED_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(EXTMOD_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
 
+
+
 # List of sources for qstr extraction
 SRC_QSTR += $(SRC_C) $(SRC_CXX) $(SHARED_SRC_C) $(EXTMOD_SRC_C) 
-# Append any auto-generated sources that are needed by sources listed in
-# SRC_QSTR
-SRC_QSTR_AUTO_DEPS +=
 
 ifneq ($(FROZEN_MANIFEST),)
-# To use frozen code create a manifest.py file with a description of files to
-# freeze, then invoke make with FROZEN_MANIFEST=manifest.py (be sure to build from scratch).
-CFLAGS += -DMICROPY_QSTR_EXTRA_POOL=mp_qstr_frozen_const_pool
-CFLAGS += -DMICROPY_MODULE_FROZEN_MPY
 CFLAGS += -DMPZ_DIG_SIZE=16 # force 16 bits to work on both 32 and 64 bit archs
-CFLAGS += -DMICROPY_MODULE_FROZEN_STR
 endif
+
 
 CPU_BRAND_NAME=linux
 CFLAGS += -DMICROPY_HW_MCU_NAME="\"$(CPU_BRAND_NAME)\""
 CFLAGS += -Wno-double-promotion -Wno-unused-function
 CXXFLAGS += $(filter-out -Wno-double-promotion -Wmissing-prototypes -Wold-style-definition -std=gnu99,$(CFLAGS) $(CXXFLAGS_MOD))
+
 
 ifeq ($(MICROPY_FORCE_32BIT),1)
 RUN_TESTS_MPY_CROSS_FLAGS = --mpy-cross-flags='-march=x86'
@@ -269,23 +308,25 @@ endif
 
 include $(TOP)/py/mkrules.mk
 
-#undefine compile_c
+.PHONY: test test_full
 
-define compile_c
-$(ECHO) "CC $<"
-$(Q)$(CC) $(CFLAGS) -c -MD -o $@ $< || (echo -e $(HELP_BUILD_ERROR); false)
-@# The following fixes the dependency file.
-@# See http://make.paulandlesley.org/autodep.html for details.
-@# Regex adjusted from the above to play better with Windows paths, etc.
-@$(CP) $(@:.o=.d) $(@:.o=.P); \
-  $(SED) -e 's/#.*//' -e 's/^.*:  *//' -e 's/ *\\$$//' \
-      -e '/^$$/ d' -e 's/$$/ :/' < $(@:.o=.d) >> $(@:.o=.P); \
-  $(RM) -f $(@:.o=.d)
-endef
+test: $(BUILD)/$(PROG) $(TOP)/tests/run-tests.py
+	$(eval DIRNAME=ports/$(notdir $(CURDIR)))
+	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(BUILD)/$(PROG) ./run-tests.py
 
-$(BUILD)/%.o: %.m
-	$(ECHO) "M $<"
-	clang  -I$(INC) $(CFLAGS) -c -o $@ $<
+test_full: $(BUILD)/$(PROG) $(TOP)/tests/run-tests.py
+	$(eval DIRNAME=ports/$(notdir $(CURDIR)))
+	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(BUILD)/$(PROG) ./run-tests.py
+	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(BUILD)/$(PROG) ./run-tests.py -d thread
+	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(BUILD)/$(PROG) ./run-tests.py --emit native
+	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(BUILD)/$(PROG) ./run-tests.py --via-mpy $(RUN_TESTS_MPY_CROSS_FLAGS) -d basics float micropython
+	cd $(TOP)/tests && MICROPY_MICROPYTHON=../$(DIRNAME)/$(BUILD)/$(PROG) ./run-tests.py --via-mpy $(RUN_TESTS_MPY_CROSS_FLAGS) --emit native -d basics float micropython
+	cat $(TOP)/tests/basics/0prelim.py | ./$(BUILD)/$(PROG) | grep -q 'abc'
+
+test_gcov: test_full
+	gcov -o $(BUILD)/py $(TOP)/py/*.c
+	gcov -o $(BUILD)/extmod $(TOP)/extmod/*.c
+
 
 # Value of configure's --host= option (required for cross-compilation).
 # Deduce it from CROSS_COMPILE by default, but can be overridden.
@@ -295,7 +336,7 @@ else
 CROSS_COMPILE_HOST =
 endif
 
-deplibs: libffi axtls
+deplibs: $(DEPLIBS)
 
 libffi: $(BUILD)/lib/libffi/include/ffi.h
 
@@ -306,15 +347,15 @@ $(TOP)/lib/libffi/configure: $(TOP)/lib/libffi/autogen.sh
 # docs and depending on makeinfo
 $(BUILD)/lib/libffi/include/ffi.h: $(TOP)/lib/libffi/configure
 	mkdir -p $(BUILD)/lib/libffi; cd $(BUILD)/lib/libffi; \
-	$(abspath $(TOP))/lib/libffi/configure $(CROSS_COMPILE_HOST) --prefix=$$PWD/out --disable-structs CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="-Os -fomit-frame-pointer -fstrict-aliasing -ffast-math -fno-exceptions"; \
+	$(abspath $(TOP))/lib/libffi/configure $(CROSS_COMPILE_HOST) --prefix=$$PWD/out --disable-shared --disable-structs CC="$(CC)" CXX="$(CXX)" LD="$(LD)" CFLAGS="-Os -fomit-frame-pointer -fstrict-aliasing -ffast-math -fno-exceptions"; \
 	$(MAKE) install-exec-recursive; $(MAKE) -C include install-data-am
 
 PREFIX = /usr/local
 BINDIR = $(DESTDIR)$(PREFIX)/bin
 
-install: $(PROG)
+install: $(BUILD)/$(PROG)
 	install -d $(BINDIR)
-	install $(PROG) $(BINDIR)/$(PROG)
+	install $(BUILD)/$(PROG) $(BINDIR)/$(PROG)
 
 uninstall:
 	-rm $(BINDIR)/$(PROG)

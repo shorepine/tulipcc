@@ -29,7 +29,7 @@ cp shared/py/voices.py fs/ex/my_voices.py
 
 
 cd esp32s3
-source ~/esp/esp-idf-v5.2/export.sh 
+source ~/esp/esp-idf/export.sh 
 # If sys, just create/upload the last sys and exit
 if [ "$TYPE" == "sys" ]; then
     python tulip_fs_create.py
@@ -40,6 +40,7 @@ fi
 
 # Otherwise, compile all boards. If upload set, upload them
 declare -a boards=("TULIP4_R11" "N16R8" "N32R8" "TDECK" "TULIP4_R11_DEBUG")
+#declare -a boards=("TDECK")
 for i in "${boards[@]}"
 do
     rm -rf build

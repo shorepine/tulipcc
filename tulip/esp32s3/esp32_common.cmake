@@ -3,6 +3,11 @@ if(NOT MICROPY_DIR)
     get_filename_component(MICROPY_DIR ${CMAKE_CURRENT_LIST_DIR}/../../micropython ABSOLUTE)
 endif()
 
+# Set location of base MicroPython esp32 port (which this is based on).
+if(NOT MICROPY_ESP32_DIR)
+    get_filename_component(MICROPY_ESP32_DIR ${CMAKE_CURRENT_LIST_DIR}/../../micropython/ports/esp32 ABSOLUTE)
+endif()
+
 # Set location of the ESP32 port directory.
 if(NOT MICROPY_PORT_DIR)
     get_filename_component(MICROPY_PORT_DIR ${CMAKE_CURRENT_LIST_DIR}/ ABSOLUTE)
@@ -59,20 +64,23 @@ list(APPEND MICROPY_SOURCE_SHARED
     ${MICROPY_DIR}/shared/netutils/netutils.c
     ${MICROPY_DIR}/shared/timeutils/timeutils.c
     ${MICROPY_DIR}/shared/runtime/interrupt_char.c
+    ${MICROPY_DIR}/shared/runtime/mpirq.c
     ${MICROPY_DIR}/shared/runtime/stdout_helpers.c
     ${MICROPY_DIR}/shared/runtime/sys_stdio_mphal.c
     ${MICROPY_DIR}/shared/runtime/pyexec.c
 )
+
 
 list(APPEND MICROPY_SOURCE_LIB
     ${MICROPY_DIR}/lib/littlefs/lfs1.c
     ${MICROPY_DIR}/lib/littlefs/lfs1_util.c
     ${MICROPY_DIR}/lib/littlefs/lfs2.c
     ${MICROPY_DIR}/lib/littlefs/lfs2_util.c
-    #${MICROPY_DIR}/lib/mbedtls_errors/esp32_mbedtls_errors.c
+    ${MICROPY_DIR}/lib/mbedtls_errors/esp32_mbedtls_errors.c
     ${MICROPY_DIR}/lib/oofatfs/ff.c
     ${MICROPY_DIR}/lib/oofatfs/ffunicode.c
 )
+
 
 list(APPEND MICROPY_SOURCE_DRIVERS
     ${MICROPY_DIR}/drivers/bus/softspi.c
@@ -80,49 +88,81 @@ list(APPEND MICROPY_SOURCE_DRIVERS
 )
 
 
+
+string(CONCAT GIT_SUBMODULES "${GIT_SUBMODULES} " lib/tinyusb)
+if(MICROPY_PY_TINYUSB)
+    set(TINYUSB_SRC "${MICROPY_DIR}/lib/tinyusb/src")
+    string(TOUPPER OPT_MCU_${IDF_TARGET} tusb_mcu)
+
+    list(APPEND MICROPY_DEF_TINYUSB
+        CFG_TUSB_MCU=${tusb_mcu}
+    )
+
+    list(APPEND MICROPY_SOURCE_TINYUSB
+        ${TINYUSB_SRC}/tusb.c
+        ${TINYUSB_SRC}/common/tusb_fifo.c
+        ${TINYUSB_SRC}/device/usbd.c
+        ${TINYUSB_SRC}/device/usbd_control.c
+        ${TINYUSB_SRC}/class/cdc/cdc_device.c
+        ${TINYUSB_SRC}/portable/synopsys/dwc2/dcd_dwc2.c
+        ${MICROPY_DIR}/shared/tinyusb/mp_usbd.c
+        ${MICROPY_DIR}/shared/tinyusb/mp_usbd_cdc.c
+        ${MICROPY_DIR}/shared/tinyusb/mp_usbd_descriptor.c
+    )
+
+    list(APPEND MICROPY_INC_TINYUSB
+        ${TINYUSB_SRC}
+        ${MICROPY_DIR}/shared/tinyusb/
+    )
+
+    list(APPEND MICROPY_LINK_TINYUSB
+        -Wl,--wrap=dcd_event_handler
+    )
+endif()
+
+
 list(APPEND MICROPY_SOURCE_PORT
-    multicast.c
-    mphalport.c
-    network_common.c
-    main.c
-    uart.c
-    help.c
-    build/lv_mpy.c
-    usb_serial_jtag.c
-    gccollect.c
-    fatfs_port.c
-    machine_bitstream.c
-    machine_sdcard.c
-    machine_timer.c
-    machine_pin.c
-    machine_touchpad.c
-    machine_adc.c
-    machine_adcblock.c
-    machine_dac.c
-    machine_i2c.c
-    machine_uart.c
-    modmachine.c
-    network_lan.c
-    network_wlan.c
-    network_ppp.c
-    ppp_set_auth.c
-    #mpnimbleport.c
-    modsocket.c
-    modesp.c
-    esp32_nvs.c
-    esp32_partition.c
-    esp32_rmt.c
-    esp32_ulp.c
-    modesp32.c
-    machine_hw_spi.c
-    machine_wdt.c
-    mpthreadport.c
-    machine_rtc.c
-    machine_sdcard.c
-    modespnow.c
-    usb.c
+    ${MICROPY_PORT_DIR}/main.c
+    ${MICROPY_PORT_DIR}/multicast.c
+    ${MICROPY_PORT_DIR}/help.c
+    ${MICROPY_PORT_DIR}/build/lv_mpy.c
+    ${MICROPY_PORT_DIR}/network_common.c
+    ${MICROPY_PORT_DIR}/esp_lcd_touch.c
+    ${MICROPY_PORT_DIR}/uart.c
+    ${MICROPY_PORT_DIR}/modsocket.c
+    ${MICROPY_ESP32_DIR}/panichandler.c
+    ${MICROPY_ESP32_DIR}/adc.c
+    ${MICROPY_ESP32_DIR}/mphalport.c
+    #${MICROPY_ESP32_DIR}/usb_serial_jtag.c
+    ${MICROPY_ESP32_DIR}/gccollect.c
+    ${MICROPY_ESP32_DIR}/fatfs_port.c
+    ${MICROPY_ESP32_DIR}/machine_bitstream.c
+    ${MICROPY_ESP32_DIR}/machine_sdcard.c
+    ${MICROPY_ESP32_DIR}/machine_timer.c
+    ${MICROPY_ESP32_DIR}/machine_pin.c
+    ${MICROPY_ESP32_DIR}/machine_touchpad.c
+    ${MICROPY_ESP32_DIR}/machine_dac.c
+    ${MICROPY_ESP32_DIR}/machine_i2c.c
+    ${MICROPY_ESP32_DIR}/network_lan.c
+    ${MICROPY_ESP32_DIR}/network_wlan.c
+    ${MICROPY_ESP32_DIR}/modesp.c
+    ${MICROPY_ESP32_DIR}/esp32_nvs.c
+    ${MICROPY_ESP32_DIR}/esp32_partition.c
+    ${MICROPY_ESP32_DIR}/esp32_rmt.c
+    ${MICROPY_ESP32_DIR}/esp32_ulp.c
+    ${MICROPY_ESP32_DIR}/modesp32.c
+    ${MICROPY_ESP32_DIR}/machine_hw_spi.c
+    ${MICROPY_ESP32_DIR}/mpthreadport.c
+    ${MICROPY_ESP32_DIR}/machine_rtc.c
+    ${MICROPY_ESP32_DIR}/machine_sdcard.c
+    ${MICROPY_ESP32_DIR}/modespnow.c
+    ${MICROPY_ESP32_DIR}/usb.c
 )
-list(TRANSFORM MICROPY_SOURCE_PORT PREPEND ${MICROPY_PORT_DIR}/)
+
+list(TRANSFORM MICROPY_SOURCE_BOARD PREPEND ${MICROPY_PORT_DIR}/)
+
+list(APPEND MICROPY_SOURCE_PORT ${CMAKE_BINARY_DIR}/pins.c)
+
 
 list(APPEND MICROPY_SOURCE_EXTMOD 
     ${TULIP_SHARED_DIR}/modtulip.c
@@ -167,6 +207,7 @@ list(APPEND MICROPY_SOURCE_QSTR
     ${MICROPY_SOURCE_LIB}
     ${MICROPY_SOURCE_PORT}
     ${MICROPY_SOURCE_BOARD}
+    ${MICROPY_SOURCE_TINYUSB}
 )
 
 list(APPEND IDF_COMPONENTS
@@ -174,11 +215,20 @@ list(APPEND IDF_COMPONENTS
     bootloader_support
     #bt
     driver
+    esp_driver_tsens
     esp_adc
     esp_app_format
     esp_bootloader_format
     esp_common
     esp_eth
+    esp_driver_uart
+    esp_driver_i2s
+    esp_driver_i2c
+    esp_driver_sdmmc
+    esp_driver_sdspi
+    esp_driver_spi
+    esp_driver_gpio
+    esp_driver_ledc
     esp_event
     esp_hw_support
     esp_lcd
@@ -219,16 +269,16 @@ idf_component_register(
         ${MICROPY_SOURCE_DRIVERS}
         ${MICROPY_SOURCE_PORT}
         ${MICROPY_SOURCE_BOARD}
+        ${MICROPY_SOURCE_TINYUSB}
         ${LVGL_SOURCES}
     INCLUDE_DIRS
-        ../../tulip/esp32s3
-        ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch_gt911/include
-        ../../tulip/esp32s3/managed_components/espressif__esp_lcd_touch/include
+        .
         ${MICROPY_INC_CORE}
         ${MICROPY_INC_USERMOD}
-        #${MICROPY_PORT_DIR}
+        ${MICROPY_ESP32_DIR}
         ${MICROPY_BOARD_DIR}
         ${CMAKE_BINARY_DIR}
+        ${MICROPY_INC_TINYUSB}
         ../../tulip/shared
         ../../amy/src
         ${LV_BINDING_DIR}
@@ -260,6 +310,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     LV_CONF_INCLUDE_SIMPLE
     ${BOARD_DEFINITION1}
     ${BOARD_DEFINITION2}
+    ${MICROPY_DEF_TINYUSB}
 )
 
 #LFS2_NO_DEBUG LFS2_NO_WARN LFS2_NO_ERROR 
@@ -275,12 +326,18 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
     -fsingle-precision-constant
     -Wno-strict-aliasing
     -DESP_PLATFORM
+    -DSTATIC=static
+    -DLFS2_NO_DEBUG
 )
 
 # Additional include directories needed for private NimBLE headers.
 #target_include_directories(${MICROPY_TARGET} PUBLIC
 #    ${IDF_PATH}/components/bt/host/nimble/nimble
 #)
+
+target_link_options(${MICROPY_TARGET} PUBLIC
+     ${MICROPY_LINK_TINYUSB}
+)
 
 # Add additional extmod and usermod components.
 target_link_libraries(${MICROPY_TARGET} micropy_extmod_btree)
@@ -295,3 +352,36 @@ endforeach()
 
 # Include the main MicroPython cmake rules.
 include(${MICROPY_DIR}/py/mkrules.cmake)
+
+
+
+# Generate source files for named pins (requires mkrules.cmake for MICROPY_GENHDR_DIR).
+
+set(GEN_PINS_PREFIX "${MICROPY_ESP32_DIR}/boards/pins_prefix.c")
+set(GEN_PINS_MKPINS "${MICROPY_ESP32_DIR}/boards/make-pins.py")
+set(GEN_PINS_SRC "${CMAKE_BINARY_DIR}/pins.c")
+set(GEN_PINS_HDR "${MICROPY_GENHDR_DIR}/pins.h")
+
+if(EXISTS "${MICROPY_BOARD_DIR}/pins.csv")
+    set(GEN_PINS_BOARD_CSV "${MICROPY_BOARD_DIR}/pins.csv")
+    set(GEN_PINS_BOARD_CSV_ARG --board-csv "${GEN_PINS_BOARD_CSV}")
+endif()
+
+target_sources(${MICROPY_TARGET} PRIVATE ${GEN_PINS_HDR})
+
+add_custom_command(
+    OUTPUT ${GEN_PINS_SRC} ${GEN_PINS_HDR}
+    COMMAND ${Python3_EXECUTABLE} ${GEN_PINS_MKPINS} ${GEN_PINS_BOARD_CSV_ARG}
+        --prefix ${GEN_PINS_PREFIX} --output-source ${GEN_PINS_SRC} --output-header ${GEN_PINS_HDR}
+    DEPENDS
+        ${MICROPY_MPVERSION}
+        ${GEN_PINS_MKPINS}
+        ${GEN_PINS_BOARD_CSV}
+        ${GEN_PINS_PREFIX}
+    VERBATIM
+    COMMAND_EXPAND_LISTS
+)
+
+
+
+

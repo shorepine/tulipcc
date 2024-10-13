@@ -48,7 +48,7 @@
 #ifndef _WIN32
 #include <signal.h>
 
-STATIC void sighandler(int signum) {
+static void sighandler(int signum) {
     if (signum == SIGINT) {
         #if MICROPY_ASYNC_KBD_INTR
         #if MICROPY_PY_THREAD_GIL
@@ -217,7 +217,7 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 
 //extern void mp_uos_dupterm_tx_strn(const char *str, size_t len);
 
-void mp_hal_stdout_tx_strn(const char *str, size_t len) {
+mp_uint_t mp_hal_stdout_tx_strn(const char *str, size_t len) {
     // TFB log
     for(uint16_t i=0;i<len;i++) {
         fprintf(stderr, "%c", str[i]);
@@ -225,6 +225,7 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
     if(len) {
         display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
+    return 0;
 
 }
 

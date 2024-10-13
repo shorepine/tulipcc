@@ -100,9 +100,9 @@ static void sequencer_check_and_fill() {
 
     //int32_t lag= (total_samples*10 / 441) -(next_amy_tick_us/1000);
     //while(lag>=0) {
+    //fprintf(stderr, "check and fill %" PRIu32"\n", amy_sysclock());
     while(amy_sysclock()  >= (next_amy_tick_us/1000)) {
         sequencer_tick_count++;
-        uint32_t lag = amy_sysclock() - (next_amy_tick_us/1000);
         // Check defers 
         for(uint8_t i=0;i<DEFER_SLOTS;i++) {
             if(defer_callbacks[i] != NULL && amy_sysclock() > defer_sysclock[i]) {

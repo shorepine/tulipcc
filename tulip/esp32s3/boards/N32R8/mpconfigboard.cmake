@@ -11,8 +11,8 @@ set(SDKCONFIG_DEFAULTS
     boards/N32R8/sdkconfig.board
 )
 
-list(APPEND MICROPY_SOURCE_PORT
+list(APPEND MICROPY_SOURCE_BOARD
      esp32s3_display.c
      ft5x06_touchscreen.c
-     usb_keyboard.c
+     usb_host.c
 )
