@@ -457,6 +457,14 @@ amy.unload_sample(patch) # frees the RAM and the patch slot
 amy.reset() # frees all allocated PCM patches
 ```
 
+On Tulip Desktop, or with an [AMYboard / AMYchip](https://github.com/shorepine/amychip) connected to a hardware Tulip over I2C, you can use audio input as well. This is brand new and we're still working out a good API for it. For now, you can set any oscillator to be fed by the L or R channel of an audio input. 
+
+```python
+amy.send(osc=0, wave=amy.AUDIO_IN0, vel=1)
+amy.echo(1, 250, 500, 0.8) # echo effect on the audio input
+```
+
+
 To send signals over CV on Tulip CC (hardware only):
 
 ```python

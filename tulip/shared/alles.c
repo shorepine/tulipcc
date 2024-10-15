@@ -306,7 +306,7 @@ void alles_parse_message(char *message, uint16_t length) {
 
     // Parse the AMY stuff out of the message first
     struct event e = amy_parse_message(message);
-    if(e.status == TRANSFER_DATA) {
+    if(e.status == EVENT_TRANSFER_DATA) {
         // transfer data already dealt with. we skip this followon check.
         length = 0;
     } else {
