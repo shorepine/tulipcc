@@ -439,24 +439,22 @@ amy.send(voices='0', load_patch=101, note=50, vel=1, client=2) # just a certain 
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
-To load your own WAVE files as samples, use `tulip.load_sample`:
+To load your own WAVE files as samples, use `amy.load_sample`:
 
 ```python
 # To save space / RAM, you may want to downsample your WAVE files to 11025 or 22050Hz. We detect SR automatically.
-patch = tulip.load_sample("flutea4.wav") # samples are converted to mono if they are stereo
+amy.load_sample("flutea4.wav", patch=50) # samples are converted to mono if they are stereo. patch # can be anything
 
 # You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample.
 # We can detect this in WAVE file metadata if it exists! (Many sample packs include this.)
-patch = tulip.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500)
+amy.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500, patch=50)
 
-# The patch number can now be used in the custom Tulip memory PCM sample player. 
-# It has all the features of the AMY's PCM wave type.
-amy.send(osc=20, wave=amy.CUSTOM, patch=patch, vel=1, note=50)
+# The patch number can now be used in AMY's PCM sample player. 
+amy.send(osc=20, wave=amy.PCM, patch=50, vel=1, note=50)
 
-# You can load up to 32 custom PCM patches. Be careful of memory use. load_sample will return -1 if there's no more room.
 # You can unload already allocated patches:
-tulip.unload_patch(patch) # frees the RAM and the patch slot
-tulip.unload_patch() # frees all allocated PCM patches
+amy.unload_sample(patch) # frees the RAM and the patch slot
+amy.reset() # frees all allocated PCM patches
 ```
 
 To send signals over CV on Tulip CC (hardware only):
