@@ -305,23 +305,25 @@ s.note_on(40, 1.0)
 s.note_off(40) # looped instruments require a note_off to stop
 ```
 
-You can load your own samples into Tulip. Take any .wav file and [load it onto Tulip.](getting_started.md#transfer-files-between-tulip-and-your-computer) Now, load it in as a `CUSTOM` PCM patch:
+You can load your own samples into Tulip. Take any .wav file and [load it onto Tulip.](getting_started.md#transfer-files-between-tulip-and-your-computer) Now, load it in as a PCM patch:
 
 ```python
-patch = tulip.load_sample('sample.wav')
-s = midi.OscSynth(wave=amy.CUSTOM, patch=patch)
+amy.load_sample('sample.wav', patch=50)
+s = midi.OscSynth(wave=amy.PCM, patch=50)
 s.note_on(60, 1.0)
 ```
 
 You can also load PCM patches with looped segments if you have their loopstart and loopend parameters (these are often stored in the WAVE metadata. If the .wav file has this metadata, we'll parse it. The example file `/sys/ex/vlng3.wav` has it. You can also provide the metadata directly.) To indicate looping, use `feedback=1`. 
 
 ```python
-patch = tulip.load_sample("/sys/ex/vlng3.wav")  # loads wave looping metadata
-s = midi.OscSynth(wave=amy.CUSTOM, patch=patch, feedback=1, num_voices=1)
+amy.load_sample("/sys/ex/vlng3.wav", patch=50)  # loads wave looping metadata
+s = midi.OscSynth(wave=amy.CUSTOM, patch=50, feedback=1, num_voices=1)
 s.note_on(60, 1.0) # loops
 s.note_on(55, 1.0) # loops
 s.note_off(55) # stops
 ```
+
+You can unload samples from RAM with `amy.unload_sample(patch_number)`. 
 
 ## Modify Juno-6 patches programatically
 

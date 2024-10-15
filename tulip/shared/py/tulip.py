@@ -660,27 +660,6 @@ def wifi(ssid, passwd, wait_timeout=10):
     return ip()
 
 
-def load_sample(wavfile, midinote=0, loopstart=0, loopend=0):
-    import wave
-    w = wave.open(wavfile, 'r')
-    f = w.readframes(w.getnframes())
-    if(w.getnchannels()>1):
-        # de-interleave and just choose the first channel
-        f = bytes([f[j] for i in range(0,len(f),4) for j in (i,i+1)])
-    if(loopstart==0): 
-        if(hasattr(w,'_loopstart')): 
-            loopstart = w._loopstart
-    if(loopend==0): 
-        if(hasattr(w,'_loopend')): 
-            loopend = w._loopend
-    if(midinote==0): 
-        if(hasattr(w,'_midinote')): 
-            midinote = w._midinote
-        else:
-            midinote=60
-    return call_load_sample(f, w.getframerate(), midinote, loopstart, loopend)
-
-
 def tar_create(directory):
     import utarfile
     t = utarfile.TarFile(directory+".tar", 'w')

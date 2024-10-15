@@ -439,25 +439,31 @@ amy.send(voices='0', load_patch=101, note=50, vel=1, client=2) # just a certain 
 alles.local() # turns off mesh mode and goes back to local mode
 ```
 
-To load your own WAVE files as samples, use `tulip.load_sample`:
+To load your own WAVE files as samples, use `amy.load_sample`:
 
 ```python
 # To save space / RAM, you may want to downsample your WAVE files to 11025 or 22050Hz. We detect SR automatically.
-patch = tulip.load_sample("flutea4.wav") # samples are converted to mono if they are stereo
+amy.load_sample("flutea4.wav", patch=50) # samples are converted to mono if they are stereo. patch # can be anything
 
 # You can optionally tell us the loop start and end point (in samples), and base MIDI note of the sample.
 # We can detect this in WAVE file metadata if it exists! (Many sample packs include this.)
-patch = tulip.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500)
+amy.load_sample("flutea4.wav", midinote=81, loopstart=1020, loopend=1500, patch=50)
 
-# The patch number can now be used in the custom Tulip memory PCM sample player. 
-# It has all the features of the AMY's PCM wave type.
-amy.send(osc=20, wave=amy.CUSTOM, patch=patch, vel=1, note=50)
+# The patch number can now be used in AMY's PCM sample player. 
+amy.send(osc=20, wave=amy.PCM, patch=50, vel=1, note=50)
 
-# You can load up to 32 custom PCM patches. Be careful of memory use. load_sample will return -1 if there's no more room.
 # You can unload already allocated patches:
-tulip.unload_patch(patch) # frees the RAM and the patch slot
-tulip.unload_patch() # frees all allocated PCM patches
+amy.unload_sample(patch) # frees the RAM and the patch slot
+amy.reset() # frees all allocated PCM patches
 ```
+
+On Tulip Desktop, or with an [AMYboard / AMYchip](https://github.com/shorepine/amychip) connected to a hardware Tulip over I2C, you can use audio input as well. This is brand new and we're still working out a good API for it. For now, you can set any oscillator to be fed by the L or R channel of an audio input. 
+
+```python
+amy.send(osc=0, wave=amy.AUDIO_IN0, vel=1)
+amy.echo(1, 250, 500, 0.8) # echo effect on the audio input
+```
+
 
 To send signals over CV on Tulip CC (hardware only):
 
