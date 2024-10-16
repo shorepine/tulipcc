@@ -18,6 +18,9 @@ execute_process(COMMAND bash -c "python3 ../../../lv_binding_micropython_tulip/g
                     WORKING_DIRECTORY "."
                 )
 
+# We also have to copy over mpconfigport.h
+execute_process(COMMAND bash -c "cp ../mpconfigport.h ../../../micropython/ports/esp32/mpconfigport.h" WORKING_DIRECTORY ".")
+
 # Turn this on for debugging submodules
 #file(WRITE "submod" "${GIT_SUBMOD_RESULT}")
 
