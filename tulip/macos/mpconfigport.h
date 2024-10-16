@@ -35,6 +35,8 @@
 // Variant-specific definitions.
 #include "mpconfigvariant.h"
 
+#define MICROPY_ENABLE_SCHEDULER (1)
+#define MICROPY_SCHEDULER_DEPTH             (128)
 
 #define MICROPY_PY_NETWORK_HOSTNAME_DEFAULT "tulip"
 
