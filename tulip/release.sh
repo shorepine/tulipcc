@@ -39,7 +39,7 @@ if [ "$TYPE" == "sys" ]; then
 fi
 
 # Otherwise, compile all boards. If upload set, upload them
-declare -a boards=("TULIP4_R11" "N16R8" "N32R8" "TDECK" "TULIP4_R11_DEBUG")
+declare -a boards=("TULIP4_R11" "N16R8" "N32R8" "TULIP4_R11_DEBUG")
 #declare -a boards=("TDECK")
 for i in "${boards[@]}"
 do
