@@ -17,6 +17,7 @@ else
     git submodule update --init lib/mbedtls
     git submodule update --init lib/berkeley-db-1.xx
     git submodule update --init lib/micropython-lib 
+    git submodule update --init lib/tinyusb 
     cd ..
     touch .submodules_ok
 fi
