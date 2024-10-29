@@ -152,17 +152,7 @@ void run_tdeck_keyboard() {
     int charMappingsSize = sizeof(charMappings) / sizeof(charMappings[0]);
     int ctrlMappingsSize = sizeof(ctrlMappings) / sizeof(ctrlMappings[0]);
 
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = TDECK_I2C_SDA,
-        .scl_io_num = TDECK_I2C_SCL,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = 400000,
-    };
-    i2c_param_config(I2C_NUM_0, &conf);
-
-    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
+    // I2C already initialized on tdeck from the touchscreen
 
     gpio_set_direction(TDECK_TRACKBALL_UP, GPIO_MODE_INPUT);
     gpio_pulldown_dis(TDECK_TRACKBALL_UP);
@@ -199,7 +189,7 @@ void run_tdeck_keyboard() {
     gpio_isr_handler_add(TDECK_TRACKBALL_CLICK, gpio_interrupt_handler, (void *)TDECK_TRACKBALL_CLICK);
 
     while (1) {
-        i2c_master_read_from_device(I2C_NUM_0, LILYGO_KB_SLAVE_ADDRESS, rx_data, 1, pdMS_TO_TICKS(TIMEOUT_MS));
+        i2c_master_read_from_device(I2C_NUM, LILYGO_KB_SLAVE_ADDRESS, rx_data, 1, pdMS_TO_TICKS(TIMEOUT_MS));
         if (rx_data[0] > 0) {
             if (rx_data[0] == 224) {
                 // Toggle ctrl key (shift+microphone)
@@ -224,6 +214,7 @@ void run_tdeck_keyboard() {
                 }
             }
         }
+        delay_ms(10);
     }
 }
 

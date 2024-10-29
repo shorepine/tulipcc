@@ -225,7 +225,7 @@ void mp_task(void *pvParameter) {
     //usb_init();
     #elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
     #ifdef TDECK
-    usb_serial_jtag_init();
+    //usb_serial_jtag_init();
     #endif
     #endif
     #if MICROPY_HW_ENABLE_UART_REPL
@@ -377,6 +377,17 @@ void app_main(void) {
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
 
+    #ifdef TDECK
+    // turn on TDeck peripheral 
+    gpio_config_t peri_gpio_config = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pin_bit_mask = 1ULL << TDECK_PERI_GPIO
+    };
+    gpio_config(&peri_gpio_config);
+    gpio_set_level(TDECK_PERI_GPIO, 1);
+    delay_ms(500);
+    #endif
+
     #ifndef TDECK
     fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
     xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
@@ -411,6 +422,7 @@ void app_main(void) {
     #elif defined MAKERFABS
     xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
     #elif defined TDECK
+    delay_ms(500);
     xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
     #endif
     fflush(stderr);
@@ -433,6 +445,7 @@ void app_main(void) {
     run_sequencer();
 
     #ifdef TDECK
+    delay_ms(3000); // wait for touchscreen
     fprintf(stderr,"Starting T-Deck keyboard on core %d\n", USB_TASK_COREID);
     xTaskCreatePinnedToCore(run_tdeck_keyboard, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
     fflush(stderr);
