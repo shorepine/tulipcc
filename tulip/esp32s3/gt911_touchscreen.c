@@ -91,14 +91,16 @@ void run_gt911(void *param) {
     uint16_t touch_y[3];
     uint16_t touch_strength[3];
     uint8_t touch_cnt = 0;
-    // We wait a bit before initializing the touchscreen 
+    // We wait a bit before initializing the touchscreen on Tulipv4r11
+    #ifndef TDECK
     delay_ms(2000);
+    #endif
     uint8_t touchscreen_ok = 1;
     
     // We have to toggle the RST pin more than once (the driver only does it once)
     // So we do that here, wait a second, then init the driver.
 
-    #ifdef TULIP4_R11
+    #if defined TULIP4_R11
     fprintf(stderr, "Resetting touch i2c RST pin twice\n");
     const gpio_config_t rst_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,

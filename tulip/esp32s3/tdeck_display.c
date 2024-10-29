@@ -67,6 +67,8 @@ static bool tdeck_trans_done(esp_lcd_panel_io_handle_t panel_io,
     vTaskNotifyGiveFromISR(display_handle, &high_task_wakeup);
     return high_task_wakeup;
 }
+extern esp_err_t touch_init(uint8_t alternate);
+extern void check_touchscreen();
 
 // Task runner for the display, inits and then spins in a loop processing 
 void run_tdeck_display(void) {
@@ -87,14 +89,7 @@ void run_tdeck_display(void) {
     gpio_config(&bk_gpio_config);
     //gpio_set_level(TDECK_LCD_BK_LIGHT_GPIO, 0);
     delay_ms(50);
-    // turn on TDeck peripheral 
-    gpio_config_t peri_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << TDECK_PERI_GPIO
-    };
-    gpio_config(&peri_gpio_config);
-    gpio_set_level(TDECK_PERI_GPIO, 1);
-    delay_ms(50);
+    
 
     // set up SPI
     spi_bus_config_t buscfg = {
@@ -131,7 +126,7 @@ void run_tdeck_display(void) {
     esp_lcd_panel_invert_color(panel_handle, true);
     esp_lcd_panel_disp_on_off(panel_handle, true);
     gpio_set_level(TDECK_LCD_BK_LIGHT_GPIO, 1);
-    
+
     // If you don't clear the screen it'll still show what was left there after reboots. 
     uint8_t * clear = malloc_caps(H_RES*V_RES*2, MALLOC_CAP_DMA);
     memset(clear, 0, H_RES*V_RES*2 );
