@@ -573,7 +573,7 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
             #ifdef DEBUG_USB 
             //fprintf(stderr, "KB nb is %d\n", transfer->actual_num_bytes);
             #endif
-            if (transfer->actual_num_bytes == 8 || transfer->actual_num_bytes == 16) {
+            if (transfer->actual_num_bytes == 8 || transfer->actual_num_bytes == 16 || transfer->actual_num_bytes==18) {
                 uint8_t *const p = transfer->data_buffer;
                 decode_keyboard_report(p);
             } else if (transfer->actual_num_bytes == 10) {
@@ -584,11 +584,6 @@ void keyboard_transfer_cb(usb_transfer_t *transfer)
                 // I found people talking about this here but no code, so here i am https://stackoverflow.com/questions/57793525/unusual-usb-hid-reports
                 // I'm still not sure how to determine between "normal" scan code buffers or these types other than looking at actual_num_bytes
                 uint8_t *const p = transfer->data_buffer;
-                #ifdef DEBUG_USB
-                if(transfer->actual_num_bytes == 18) {
-                    fprintf(stderr,"debugging weird kb: decode report %d %d %d %d %d %d %d %d %d %d\n", p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7],p[8],p[9]);
-                }
-                #endif
                 // We treat each bit on position as a index into a scan code, and will add it to a new buffer for decode_report to deal with
                 uint8_t new_decode[8];
                 for(uint8_t i=0;i<8;i++) new_decode[i] = 0;
