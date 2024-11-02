@@ -34,6 +34,7 @@ extern void save_tfb();
 extern void restore_tfb();
 extern uint8_t tfb_active;
 
+
 STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
     if(n_args==1) {
         uint16_t mhz = mp_obj_get_int(args[0]);
@@ -1372,6 +1373,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) }, 
     { MP_ROM_QSTR(MP_QSTR_set_screen_as_repl), MP_ROM_PTR(&tulip_set_screen_as_repl_obj) },
     { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
+
 
 
 // Special platform specific things
