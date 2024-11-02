@@ -39,10 +39,9 @@ int16_t client_id;
 int32_t clocks[255];
 int32_t ping_times[255];
 uint8_t alive = 1;
-
-//extern int32_t computed_delta ; // can be negative no prob, but usually host is larger # than client
-//extern uint8_t computed_delta_set ; // have we set a delta yet?
 extern int32_t last_ping_time;
+
+uint8_t mesh_flag = 0;
 
 amy_err_t sync_init() {
     client_id = -1; // for now
@@ -266,8 +265,7 @@ void esp_parse_task() {
 #include "esp_wifi.h"
 #endif
 
-void alles_init_multicast(uint8_t local_node) {
-    mesh_local_playback = local_node;
+void alles_init_multicast() {
 #ifdef ESP_PLATFORM
     fprintf(stderr, "creating socket\n");
     create_multicast_ipv4_socket();
@@ -287,6 +285,7 @@ void alles_init_multicast(uint8_t local_node) {
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, mcast_listen_task, NULL);
 #endif
+    mesh_flag = 1;
 }
 
 
@@ -320,7 +319,7 @@ void alles_parse_message(char *message, uint16_t length) {
                 if(mode=='U') sync = atol(message + start); 
                 if(mode=='W') external_map[e.osc] = atoi(message+start);
                 if(sync_response) if(mode=='r') ipv4=atoi(message + start);
-                if(sync_response) if(mode=='i') sync_index = atoi(message + start);
+                if(mode=='i') sync_index = atoi(message + start);
                 mode = b;
                 start = c + 1;
             } 
@@ -332,6 +331,8 @@ void alles_parse_message(char *message, uint16_t length) {
         //fprintf(stderr, "sync response message was %s\n", message);
         update_map(client, ipv4, sync);
         length = 0; // don't need to do the rest
+    } else {
+        // Note, we DO NOT do anything with computed_delta in Tulip. Tulip cannot receive alles mesh messages for playback.
     }
     // Only do this if we got some data
     if(length >0) {
@@ -361,7 +362,7 @@ void alles_parse_message(char *message, uint16_t length) {
                 }
             }
             //fprintf(stderr, "LOG: AMY message for time %lld received at time %lld (latency %lld ms) for_me %d\n", e.time, amy_sysclock(), amy_sysclock()-e.time, for_me);
-            if(for_me && mesh_local_playback) amy_add_event(e);
+            if(for_me && !mesh_flag) amy_add_event(e);
         }
     }
 }

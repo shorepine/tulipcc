@@ -428,8 +428,7 @@ amy.send(voices='0', pan=0) # set to the right channel
 amy.send(voices='0', pan=1) # set to the left channel
 
 # start mesh mode (control multiple speakers over wifi)
-alles.mesh() # after turning on wifi
-alles.mesh(local_node=False) # call it this way if you don't want Tulip to also be an Alles node
+alles.mesh() # after turning on wifi. tulip itself will stop playing AMY messages.
 alles.mesh(local_ip='192.168.50.4') # useful for setting a network on Tulip Desktop
 
 alles.map() # returns booted Alles synths on the mesh

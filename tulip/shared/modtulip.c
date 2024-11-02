@@ -909,15 +909,14 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_send_obj, 1, 2, tulip_all
 extern char * alles_local_ip;
 STATIC mp_obj_t tulip_multicast_start(size_t n_args, const mp_obj_t *args) {
     const char * local_ip = mp_obj_str_get_str(args[0]);
-    uint8_t local_node = mp_obj_get_int(args[1]);
     if(strlen(local_ip)>2) {
         strcpy(alles_local_ip, local_ip);
     }
-    alles_init_multicast(local_node);
+    alles_init_multicast();
     return mp_const_none;
 
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_multicast_start_obj, 2, 2, tulip_multicast_start);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_multicast_start_obj, 1, 1, tulip_multicast_start);
 
 
 extern uint8_t alive;
