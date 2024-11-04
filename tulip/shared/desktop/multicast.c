@@ -135,7 +135,7 @@ void create_multicast_ipv4_socket(void) {
     err = socket_add_ipv4_multicast_group();
     if(err) exit(EXIT_FAILURE);
 
-    printf("Multicast IF is %s. Client tag (not ID) is %d. Listening on %s:%d\n", alles_local_ip, ipv4_quartet, MULTICAST_IPV4_ADDR, UDP_PORT);
+    fprintf(stderr,"Multicast IF is %s. Listening on %s:%d\n", alles_local_ip,  MULTICAST_IPV4_ADDR, UDP_PORT);
 }
 
 
@@ -159,6 +159,7 @@ void mcast_send(char * message, uint16_t len) {
     if (err < 0) {
         fprintf(stderr, "IPV4 sendto failed. errno: %d", errno);
     }
+
 }
 
 
@@ -166,9 +167,11 @@ void mcast_send(char * message, uint16_t len) {
 // called from pthread
 void *mcast_listen_task(void *vargp) {
     struct timeval tv = {
-        .tv_sec =  1,
-        .tv_usec = 0,
+        .tv_sec =  0,
+        .tv_usec = 10*1000,
     };
+
+    create_multicast_ipv4_socket();
 
     int16_t full_message_length;
     while (1) {
@@ -207,7 +210,7 @@ void *mcast_listen_task(void *vargp) {
                     }
                     udp_message[full_message_length] = 0;
                     uint16_t start = 0;
-                    // Break the packet up into messages (delimited by \n.)
+                    // Break the packet up into messages (delimited by Z.)
                     for(uint16_t i=0;i<full_message_length;i++) {
                         if(udp_message[i] == 'Z') {
                             udp_message[i] = 0;
@@ -220,12 +223,8 @@ void *mcast_listen_task(void *vargp) {
                     }
                 }
             } 
-            // Do a ping every so often
-            int64_t sysclock = amy_sysclock();
-            if(sysclock > (last_ping_time+PING_TIME_MS)) {
-                ping(sysclock);
-            }
-            usleep(THREAD_USLEEP);
+            // Tulip doesn't ping, and we don't need real time UDP listening on Tulip. This is just for receiving pings for the map. 
+            usleep(1000*10);
         }
 
         fprintf(stderr, "Shutting down socket and restarting...\n");

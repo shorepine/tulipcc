@@ -161,13 +161,6 @@ void mcast_listen_task(void *pvParameters) {
         .tv_usec = 0,
     };
     
-    //ipv4_quartet = esp_ip4_addr4(&wifi_manager_ip4);
-
-    //esp_netif_ip_info_t ip_info = { 0 };
-    //esp_netif_get_ip_info(WIFI_IF_STA, &ip_info);
-    //fprintf(stderr, "setting IPV4 quartet to %d %d\n",  ip4_addr3(&ip_info.ip),  ip4_addr4(&ip_info.ip));
-    //ipv4_quartet = ip4_addr4(&ip_info.ip);
-
     int16_t full_message_length;
     printf("Network listening running on core %d quartet %d\n",xPortGetCoreID(), ipv4_quartet);
     while (1) {
@@ -196,7 +189,6 @@ void mcast_listen_task(void *pvParameters) {
             else if (s > 0) {
                 if (FD_ISSET(sock, &rfds)) {
                     // Incoming UDP packet received
-                    // Turn on the CPU monitor to see how long parsing takes
                     struct sockaddr_in6 raddr; // Large enough for both IPv4 or IPv6
                     socklen_t socklen = sizeof(raddr);
                     full_message_length = recvfrom(sock, udp_message, sizeof(udp_message)-1, 0,
@@ -224,11 +216,7 @@ void mcast_listen_task(void *pvParameters) {
                     }
                 }
             }
-            // Do a ping every so often
-            int64_t sysclock = esp_timer_get_time() / 1000;
-            if(sysclock > (last_ping_time+PING_TIME_MS)) {
-                ping(sysclock);
-            }
+            // Tulip does not ping other nodes.
         }
 
         ESP_LOGE(TAG, "Shutting down socket and restarting...");

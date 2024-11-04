@@ -35,17 +35,14 @@ char * alles_local_ip;
 //extern uint8_t battery_mask;
 extern uint8_t ipv4_quartet;
 extern char githash[8];
-int16_t client_id;
 int32_t clocks[255];
 int32_t ping_times[255];
 uint8_t alive = 1;
-
-//extern int32_t computed_delta ; // can be negative no prob, but usually host is larger # than client
-//extern uint8_t computed_delta_set ; // have we set a delta yet?
 extern int32_t last_ping_time;
 
+uint8_t mesh_flag = 0;
+
 amy_err_t sync_init() {
-    client_id = -1; // for now
     for(uint8_t i=0;i<255;i++) { clocks[i] = 0; ping_times[i] = 0; }
     return AMY_OK;
 }
@@ -266,28 +263,33 @@ void esp_parse_task() {
 #include "esp_wifi.h"
 #endif
 
-void alles_init_multicast(uint8_t local_node) {
-    mesh_local_playback = local_node;
-#ifdef ESP_PLATFORM
-    fprintf(stderr, "creating socket\n");
-    create_multicast_ipv4_socket();
-    fprintf(stderr, "power save off\n");
-    esp_wifi_set_ps(WIFI_PS_NONE);
-    fprintf(stderr, "creating mcast task\n");
-    xTaskCreatePinnedToCore(&mcast_listen_task, ALLES_RECEIVE_TASK_NAME, ALLES_RECEIVE_TASK_STACK_SIZE, NULL, ALLES_RECEIVE_TASK_PRIORITY, &alles_receive_handle, ALLES_RECEIVE_TASK_COREID);
-    fprintf(stderr, "creating parse task\n");
-    xTaskCreatePinnedToCore(&esp_parse_task, ALLES_PARSE_TASK_NAME, ALLES_PARSE_TASK_STACK_SIZE, NULL, ALLES_PARSE_TASK_PRIORITY, &alles_parse_handle, ALLES_PARSE_TASK_COREID);
-#else
-    if(alles_local_ip[0]==0) {
-        get_first_ip_address(alles_local_ip);
-    }
-    fprintf(stderr, "creating socket to ip %s\n", alles_local_ip);
-    create_multicast_ipv4_socket();
-    fprintf(stderr, "creating mcast task\n");
+#ifndef ESP_PLATFORM
     pthread_t thread_id;
-    pthread_create(&thread_id, NULL, mcast_listen_task, NULL);
 #endif
+
+void alles_init_multicast() {
+    if(!mesh_flag) {
+    #ifdef ESP_PLATFORM
+        fprintf(stderr, "creating socket\n");
+        create_multicast_ipv4_socket();
+        fprintf(stderr, "power save off\n");
+        esp_wifi_set_ps(WIFI_PS_NONE);
+        fprintf(stderr, "creating mcast task\n");
+        xTaskCreatePinnedToCore(&mcast_listen_task, ALLES_RECEIVE_TASK_NAME, ALLES_RECEIVE_TASK_STACK_SIZE, NULL, ALLES_RECEIVE_TASK_PRIORITY, &alles_receive_handle, ALLES_RECEIVE_TASK_COREID);
+        fprintf(stderr, "creating parse task\n");
+        xTaskCreatePinnedToCore(&esp_parse_task, ALLES_PARSE_TASK_NAME, ALLES_PARSE_TASK_STACK_SIZE, NULL, ALLES_PARSE_TASK_PRIORITY, &alles_parse_handle, ALLES_PARSE_TASK_COREID);
+    #else
+        if(alles_local_ip[0]==0) {
+            get_first_ip_address(alles_local_ip);
+        }
+        fprintf(stderr, "creating mcast task\n");
+        pthread_create(&thread_id, NULL, mcast_listen_task, NULL);
+    #endif
+        mesh_flag = 1;
+    }
 }
+
+
 
 
 
@@ -320,7 +322,7 @@ void alles_parse_message(char *message, uint16_t length) {
                 if(mode=='U') sync = atol(message + start); 
                 if(mode=='W') external_map[e.osc] = atoi(message+start);
                 if(sync_response) if(mode=='r') ipv4=atoi(message + start);
-                if(sync_response) if(mode=='i') sync_index = atoi(message + start);
+                if(mode=='i') sync_index = atoi(message + start);
                 mode = b;
                 start = c + 1;
             } 
@@ -332,6 +334,8 @@ void alles_parse_message(char *message, uint16_t length) {
         //fprintf(stderr, "sync response message was %s\n", message);
         update_map(client, ipv4, sync);
         length = 0; // don't need to do the rest
+    } else {
+        // Note, we DO NOT do anything with computed_delta in Tulip. Tulip cannot receive alles mesh messages for playback.
     }
     // Only do this if we got some data
     if(length >0) {
@@ -340,28 +344,10 @@ void alles_parse_message(char *message, uint16_t length) {
         if(sync >= 0 && sync_index >= 0) {
             handle_sync(sync, sync_index);
         } else {
-            // Assume it's for me
-            uint8_t for_me = 1;
-            // But wait, they specified, so don't assume
-            if(client >= 0) {
-                for_me = 0;
-                if(client <= 255) {
-                    // If they gave an individual client ID check that it exists
-                    if(alive>0) { // alive may get to 0 in a bad situation
-                        if(client >= alive) {
-                            client = client % alive;
-                        } 
-                    }
-                }
-                // It's actually precisely for me
-                if(client == client_id) for_me = 1;
-                if(client > 255) {
-                    // It's a group message, see if i'm in the group
-                    if(client_id % (client-255) == 0) for_me = 1;
-                }
+            // Don't parse events other than sync messages if i'm in mesh mode. 
+            if(!mesh_flag) {
+                amy_add_event(e);
             }
-            //fprintf(stderr, "LOG: AMY message for time %lld received at time %lld (latency %lld ms) for_me %d\n", e.time, amy_sysclock(), amy_sysclock()-e.time, for_me);
-            if(for_me && mesh_local_playback) amy_add_event(e);
         }
     }
 }
@@ -369,76 +355,31 @@ void alles_parse_message(char *message, uint16_t length) {
 void update_map(uint8_t client, uint8_t ipv4, int32_t time) {
     // I'm called when I get a sync response or a regular ping packet
     // I update a map of booted devices.
-
-    //fprintf(stderr,"[%d %d] Got a sync response client %d ipv4 %d time %ld\n",  ipv4_quartet, client_id, client , ipv4, time);
+    //fprintf(stderr,"Got a sync response client %d ipv4 %d time %"PRIu32"\n",  client , ipv4, time);
     clocks[ipv4] = time;
     int32_t my_sysclock = amy_sysclock();
     ping_times[ipv4] = my_sysclock;
 
-    // Now I basically see what index I would be in the list of booted synths (clocks[i] > 0)
-    // And I set my client_id to that index
     uint8_t last_alive = alive;
-    uint8_t my_new_client_id = 255;
     alive = 0;
     for(uint8_t i=0;i<255;i++) {
         if(clocks[i] > 0) { 
             if(my_sysclock < (ping_times[i] + (PING_TIME_MS * 2))) { // alive
-                //printf("[%d %d] Checking my time %lld against ipv4 %d's of %lld, client_id now %d ping_time[%d] = %lld\n", 
-                //    ipv4_quartet, client_id, my_sysclock, i, clocks[i], my_new_client_id, i, ping_times[i]);
                 alive++;
             } else {
-                //printf("[ipv4 %d client %d] clock %d is dead, ping time was %lld time now is %lld.\n", ipv4_quartet, client_id, i, ping_times[i], my_sysclock);
                 clocks[i] = 0;
                 ping_times[i] = 0;
             }
-            // If this is not me....
-            if(i != ipv4_quartet) {
-                // predicted time is what we think the alive node should be at by now
-                int32_t predicted_time = (my_sysclock - ping_times[i]) + clocks[i];
-                if(my_sysclock >= predicted_time) my_new_client_id--;
-            } else {
-                my_new_client_id--;
-            }
-        } else {
-            // if clocks[] is 0, no need to check
-            my_new_client_id--;
         }
     }
-    if(client_id != my_new_client_id || last_alive != alive) {
-        fprintf(stderr,"[%d] my client_id is now %d. %d alive\n", ipv4_quartet, my_new_client_id, alive);
-        client_id = my_new_client_id;
+    if(last_alive != alive) {
+        fprintf(stderr,"[alles] %d alive\n", alive);
     }
 }
 
 void handle_sync(int32_t time, int8_t index) {
-    // I am called when I get an s message, which comes along with host time and index
-    int32_t sysclock = amy_sysclock();
-    char message[100];
-    // Before I send, i want to update the map locally
-    //fprintf(stderr, "handle_sync %d %d\n", client_id, ipv4_quartet);
-    update_map(client_id, ipv4_quartet, sysclock);
-    // Send back sync message with my time and received sync index and my client id & battery status (if any)
-    sprintf(message, "_U%" PRIi32 "i%dg%dr%dy%dZ", sysclock, index, client_id, ipv4_quartet, 0);
-    //mcast_send(message, strlen(message));
-    // Update computed delta (i could average these out, but I don't think that'll help too much)
-    //int64_t old_cd = computed_delta;
-    
-    // TODO, fix this up for the new style
-    //computed_delta = time - sysclock;
-    //computed_delta_set = 1;
-    
-
-    //if(old_cd != computed_delta) printf("Changed computed_delta from %lld to %lld on sync\n", old_cd, computed_delta);
+    // Tulip doesn't respond to alles sync messages ever, as it does not boot as an alles node (it can control them only)
 }
 
-void ping(int32_t sysclock) {
-    char message[100];
-    //printf("[%d %d] pinging with %lld\n", ipv4_quartet, client_id, sysclock);
-    sprintf(message, "_U%" PRIi32 "i-1g%dr%dy%dZ", sysclock, client_id, ipv4_quartet, 0);
-    //fprintf(stderr, "ping %d %d\n", client_id, ipv4_quartet);
 
-    update_map(client_id, ipv4_quartet, sysclock);
-    //mcast_send(message, strlen(message));
-    last_ping_time = sysclock;
-}
 
