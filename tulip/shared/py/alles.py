@@ -1,6 +1,9 @@
 # This is a wrapper for running Alles in AMY on Tulip only. The trifecta!
 import struct, os, time, tulip, amy
 
+amy.insert_time = False
+mesh_flag = 0
+
 def send(retries=1, **kwargs):
     global mesh_flag
     m = amy.message(**kwargs)
@@ -29,12 +32,6 @@ def mesh(local_ip=None):
     else:
         tulip.multicast_start("")
 
-def local():
-    global mesh_flag
-    # the default
-    mesh_flag = 0
-    amy.insert_time = False
-    amy.send(latency_ms=0)
 
 
 

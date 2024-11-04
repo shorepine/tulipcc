@@ -59,6 +59,5 @@ except ImportError:
 gc.collect()
 # Override amy's send to work with tulip
 amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
-alles.local() # start in local mode 
 midi.setup()
 

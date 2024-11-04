@@ -84,6 +84,7 @@ extern void mcast_send(char*, uint16_t len);
 extern void create_multicast_ipv4_socket();
 
 void alles_init_multicast();
+void alles_stop_multicast();
 
 void esp_show_debug(uint8_t type);
 void alles_send_message(char * message, uint16_t len);
