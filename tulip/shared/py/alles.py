@@ -1,7 +1,7 @@
 # This is a wrapper for running Alles in AMY on Tulip only. The trifecta!
 import struct, os, time, tulip, amy
 
-amy.insert_time = False
+amy.insert_time = None
 mesh_flag = 0
 
 def send(retries=1, **kwargs):
@@ -24,8 +24,8 @@ def mesh(local_ip=None):
         print("Need to be on wifi. Use tulip.wifi('ssid', 'password').")
         return
     amy.send(latency_ms=1000)
-    # Explicitly send insert_time arg to AMY using amy.millis() when using Alles.
-    amy.insert_time = True    
+    # Explicitly send insert_time arg when using Alles.
+    amy.insert_time = tulip.ticks_ms 
     mesh_flag = 1
     if(local_ip is not None):
         tulip.multicast_start(local_ip)
