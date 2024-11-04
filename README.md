@@ -127,7 +127,7 @@ Tulip comes with the AMY synthesizer, a very full featured 120-oscillator synth 
 
 ```python
 amy.drums() # plays a test song
-amy.volume(4) # change volume
+amy.send(volume=4) # change volume
 amy.reset() # stops all music / sounds playing
 ```
 https://user-images.githubusercontent.com/76612/215893940-658144b7-0c6f-42e2-9836-bd271597aab3.mov
