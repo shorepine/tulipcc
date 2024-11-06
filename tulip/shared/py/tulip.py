@@ -250,6 +250,15 @@ def add_to_bootpy(s):
     w.write(bootpy)
     w.close()
 
+# Wrapper around AMY tempo to store it
+amy_bpm = 108
+def seq_bpm(bpm=None):
+    global amy_bpm
+    if bpm is None:
+        return amy_bpm
+    else:
+        amy.send(tempo=bpm)
+        amy_bpm = bpm
 
 def remap():
     print("Type key or key combo you wish to remap: ",end='')

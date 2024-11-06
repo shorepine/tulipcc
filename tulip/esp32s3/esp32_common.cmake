@@ -178,7 +178,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/ui.c
     ${TULIP_SHARED_DIR}/midi.c
     ${TULIP_SHARED_DIR}/sounds.c
-    ${TULIP_SHARED_DIR}/sequencer.c
+    ${TULIP_SHARED_DIR}/tsequencer.c
     ${TULIP_SHARED_DIR}/lodepng.c
     ${TULIP_SHARED_DIR}/lvgl_u8g2.c
     ${TULIP_SHARED_DIR}/u8fontdata.c
