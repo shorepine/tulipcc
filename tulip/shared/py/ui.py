@@ -258,7 +258,8 @@ class UIScreen():
                 tulip.tfb_stop()
 
         if(self.activate_callback is not None):
-            tulip.defer(self.activate_callback, self, wait_time)
+            self.activate_callback(self)
+            #tulip.defer(self.activate_callback, self, wait_time)
 
         tulip.ui_quit_callback(self.screen_quit_callback)
         tulip.ui_switch_callback(self.alttab_callback)
