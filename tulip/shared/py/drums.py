@@ -6,6 +6,7 @@ import amy
 import midi
 from patches import drumkit
 PPQ = 48
+AMY_TAG_OFFSET = 4385 # random offset to allow other apps to share
 
 # A single drum machine switch with LED
 class DrumSwitch(UIElement):
@@ -20,7 +21,7 @@ class DrumSwitch(UIElement):
         super().__init__() 
         self.row = row
         self.col = col
-        self.tag = (self.row * 16) + self.col
+        self.tag = (self.row * 16) + self.col + AMY_TAG_OFFSET
         self.group.set_size(DrumSwitch.button_width+10,DrumSwitch.button_height+25)
         lv_depad(self.group)
 
@@ -46,23 +47,24 @@ class DrumSwitch(UIElement):
         self.led.off()
         self.on = False
 
-    # Probably should refactor this. Basically every drum swtich gets a tag. then any change to the knobs or swtiches updates those tag(s)
-    # also clear all sequenced tags on quit! 
+    def update_amy(self):
+        row = app.rows[self.row]
+        if(self.on):
+            length = int((PPQ/2) * 16) 
+            offset = int(PPQ/2) * self.col
+            app.synth.note_on(note=row.midi_note, sequence = "%d,%d,%d" % (offset, length, self.tag))
+        else:
+            # Turn off note, the rest of stuff doesn't matter
+            amy.send(sequence = ",,%d" %  (self.tag))
+
     def set(self, val):
         if(val):
             self.on = True
             self.led.on()
-            row = app.rows[self.row]
-            length = int((PPQ/2) * 16) 
-            offset = int(PPQ/2) * self.col
-            app.synth.note_on(note=row.midi_note, velocity=1, sequence = "%d,%d,%d" % (offset, length, self.tag))
         else:
             self.on = False
             self.led.off()
-            row = app.rows[self.row]
-            # Turn off note, the rest of stuff doesn't matter
-            app.synth.note_on(note=row.midi_note, velocity=0, sequence = ",,%d" %  (self.tag))
-
+        self.update_amy()
 
     def get(self):
         return self.on
@@ -72,16 +74,6 @@ class DrumSwitch(UIElement):
             self.set(False)
         else:
             self.set(True)
-
-def update_sequence():
-    for i, row in enumerate(app.rows):
-        if(row.get(app.current_beat)):
-            base_note = drumkit[row.get_preset()][0]
-            note_for_pitch = None
-            if row.get_pitch() != 0.5:
-                note_for_pitch = int(base_note + (row.get_pitch() - 0.5)*24.0)
-            app.synth.note_on(note=row.midi_note, velocity=row.get_vel()*2, time=t)
-
 
 # A row of LEDs to keep time with and some labels
 class LEDStrip(UIElement): 
@@ -224,8 +216,14 @@ class DrumRow(UIElement):
         }
         app.synth.setup_midi_note(midi_note=self.midi_note, params_dict=params_dict)
 
+        # For each on switch in the row, we have to update the sequence with the new params
+        for switch in self.objs:
+            switch.update_amy()
+
+
     def vel_cb(self, e):
         self.vel = e.get_target_obj().get_value() / 100.0
+        self.update_note()
 
     def pitch_cb(self, e):
         self.pitch = e.get_target_obj().get_value() / 100.0
@@ -240,7 +238,7 @@ class DrumRow(UIElement):
         self.update_note()
 
 
-# Called from tulip's sequencer, just updates the LEDs
+# Called from AMY's sequencer, just updates the LEDs
 def beat_callback(t):
     global app
     app.current_beat = int((seq_ticks() / 24) % 16)
@@ -250,6 +248,10 @@ def beat_callback(t):
 
 def quit(screen):
     seq_remove_callback(screen.slot)
+    # Clear all the sequenced tags -- even if we never set them, it's a no-op if so 
+    for i in range(16*7):
+        amy.send(sequence=",,%d" % (i+AMY_TAG_OFFSET))
+
 
 def run(screen):
     global app 

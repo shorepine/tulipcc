@@ -458,7 +458,7 @@ class DrumSynth(SingleOscSynthBase):
         """Configure a midi note with a dict of osc params."""
         self.midi_note_params[midi_note] = params_dict
 
-    def _note_on_with_osc(self, osc, note, velocity, time=None, sequence=None):
+    def _note_on_with_osc(self, osc, note, velocity=None, time=None, sequence=None):
         if note not in self.midi_note_params:
             if config.show_warnings and note not in DrumSynth.missing_note_warned:
                 print("DrumSynth note_on for note %d but only %s set up." % (
@@ -466,6 +466,10 @@ class DrumSynth(SingleOscSynthBase):
                 ))
                 DrumSynth.missing_note_warned.append(note)
             return
+
+        # If velocity not set, attempt to use amp from the stored settings. 
+        if(velocity is None): velocity = self.midi_note_params[note].get('amp',1)
+
         send_args = {'time': time, 'sequence': sequence, 'osc': osc, 'vel': velocity}
         # Add the args for this note
         send_args |= self.midi_note_params[note]

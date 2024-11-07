@@ -84,7 +84,7 @@ class UIScreen():
     # Start drawing at this position, a little to the right of the edge and 100px down
     default_offset_x = 10
     default_offset_y = 100
-    load_delay = 200 # milliseconds between section loads
+    #load_delay = 200 # milliseconds between section loads
 
     def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
         activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
@@ -166,8 +166,8 @@ class UIScreen():
         if(len(running_apps)>1):
             self.active = False
 
-            for i in range(self.group.get_child_count()):
-                hide(i)
+            #for i in range(self.group.get_child_count()):
+            #    hide(i)
 
             if(self.deactivate_callback is not None):
                 self.deactivate_callback(self)
@@ -220,7 +220,7 @@ class UIScreen():
                     o.group.align_to(self.group,first_align,self.offset_x,self.offset_y)
             o.group.set_width(o.group.get_width()+pad_x)
             o.group.set_height(o.group.get_height()+pad_y)
-            o.group.add_flag(1) # Hide by default
+            #o.group.add_flag(1) # Hide by default
             if(x is not None and y is not None): o.group.set_pos(x,y)
             self.last_obj_added = o.group
 
@@ -237,10 +237,10 @@ class UIScreen():
 
         # We stagger the loading of LVGL elements in presenting a screen. 
         # Tulip can draw the screen faster, but the bandwidth it uses on SPIRAM to draw to the screen BG kills audio if done too fast. 
-        wait_time = UIScreen.load_delay
-        for i in range(self.group.get_child_count()):
-            tulip.defer(unhide, i, UIScreen.load_delay + i*UIScreen.load_delay)
-            wait_time = wait_time + UIScreen.load_delay
+        #wait_time = UIScreen.load_delay
+        #for i in range(self.group.get_child_count()):
+        #    tulip.defer(unhide, i, UIScreen.load_delay + i*UIScreen.load_delay)
+        #    wait_time = wait_time + UIScreen.load_delay
 
         if(self.handle_keyboard):
             get_keypad_indev().set_group(self.kb_group)
