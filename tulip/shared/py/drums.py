@@ -53,8 +53,9 @@ class DrumSwitch(UIElement):
             self.on = True
             self.led.on()
             row = app.rows[self.row]
-            divider = (PPQ/2) * self.col
-            app.synth.note_on(note=row.midi_note, velocity=1, sequence = ",%d,%d" % (divider, self.tag))
+            length = int((PPQ/2) * 16) 
+            offset = int(PPQ/2) * self.col
+            app.synth.note_on(note=row.midi_note, velocity=1, sequence = "%d,%d,%d" % (offset, length, self.tag))
         else:
             self.on = False
             self.led.off()
@@ -242,10 +243,10 @@ class DrumRow(UIElement):
 # Called from tulip's sequencer, just updates the LEDs
 def beat_callback(t):
     global app
-    # Hm, how should we deal with visual latency 
+    app.current_beat = int((seq_ticks() / 24) % 16)
+
     app.leds.set((app.current_beat-1)% 16, 0)
     app.leds.set(app.current_beat, 1)
-    app.current_beat = (app.current_beat+1) % 16
 
 def quit(screen):
     seq_remove_callback(screen.slot)
@@ -254,7 +255,6 @@ def run(screen):
     global app 
     app = screen # we can use the screen obj passed in as a general "store stuff here" class, as well as inspect the UI 
     app.synth = midi.config.synth_per_channel[10]
-    app.current_beat = 0
     app.offset_y = 10
     app.set_bg_color(0)
     app.quit_callback = quit
@@ -271,6 +271,7 @@ def run(screen):
     for i in range(16):
         app.rows[2].objs[i].set(True)
 
+    app.current_beat = int((seq_ticks() / 24) % 16)
     app.slot = seq_add_callback(beat_callback, int(PPQ/2))
     app.present()
 
