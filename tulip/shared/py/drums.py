@@ -1,11 +1,11 @@
 # drums.py
 # lvgl drum machine for Tulip
 
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_add_callback, seq_remove_callback, seq_ppq, seq_ticks
+from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_add_callback, seq_remove_callback, seq_ticks
 import amy
 import midi
 from patches import drumkit
-
+PPQ = 48
 
 # A single drum machine switch with LED
 class DrumSwitch(UIElement):
@@ -16,9 +16,11 @@ class DrumSwitch(UIElement):
     button_width = 30
     button_height = 40
 
-    def __init__(self, switch_color_idx=0):
+    def __init__(self, row, col, switch_color_idx=0):
         super().__init__() 
-
+        self.row = row
+        self.col = col
+        self.tag = (self.row * 16) + self.col
         self.group.set_size(DrumSwitch.button_width+10,DrumSwitch.button_height+25)
         lv_depad(self.group)
 
@@ -44,25 +46,41 @@ class DrumSwitch(UIElement):
         self.led.off()
         self.on = False
 
-
+    # Probably should refactor this. Basically every drum swtich gets a tag. then any change to the knobs or swtiches updates those tag(s)
+    # also clear all sequenced tags on quit! 
     def set(self, val):
         if(val):
             self.on = True
             self.led.on()
+            row = app.rows[self.row]
+            divider = (PPQ/2) * self.col
+            app.synth.note_on(note=row.midi_note, velocity=1, sequence = ",%d,%d" % (divider, self.tag))
         else:
-            self.off = False
+            self.on = False
             self.led.off()
+            row = app.rows[self.row]
+            # Turn off note, the rest of stuff doesn't matter
+            app.synth.note_on(note=row.midi_note, velocity=0, sequence = ",,%d" %  (self.tag))
+
 
     def get(self):
         return self.on
 
     def cb(self, e):
         if(self.on):
-            self.on = False
-            self.led.off()
+            self.set(False)
         else:
-            self.on = True
-            self.led.on()
+            self.set(True)
+
+def update_sequence():
+    for i, row in enumerate(app.rows):
+        if(row.get(app.current_beat)):
+            base_note = drumkit[row.get_preset()][0]
+            note_for_pitch = None
+            if row.get_pitch() != 0.5:
+                note_for_pitch = int(base_note + (row.get_pitch() - 0.5)*24.0)
+            app.synth.note_on(note=row.midi_note, velocity=row.get_vel()*2, time=t)
+
 
 # A row of LEDs to keep time with and some labels
 class LEDStrip(UIElement): 
@@ -101,7 +119,7 @@ class LEDStrip(UIElement):
 # and some knobs on the right for pitch / vol / pan
 class DrumRow(UIElement):
     knob_color = 209
-    def __init__(self, items, midi_note=0):
+    def __init__(self, items, row, midi_note=0):
         super().__init__()
         self.midi_note = midi_note
         self.preset = 0
@@ -121,7 +139,7 @@ class DrumRow(UIElement):
         lv_depad(self.dropdown)
         for i in range(4):
             for j in range(4):
-                d = DrumSwitch(switch_color_idx=i)
+                d = DrumSwitch(switch_color_idx=i, row=row, col = j + i*4)
                 self.objs.append(d)
                 d.group.set_parent(self.group)
                 d.group.set_style_bg_color(pal_to_lv(UIScreen.default_bg_color),lv.PART.MAIN)
@@ -161,6 +179,8 @@ class DrumRow(UIElement):
     def set_vel(self, val):
         self.knobs[0].set_value(int(val*100.0))
         self.vel = val
+        self.update_note()
+
 
     def get_vel(self):
         return self.knobs[0].get_value()/100.0
@@ -194,6 +214,7 @@ class DrumRow(UIElement):
         base_note = drumkit[self.preset][0]
         note_for_pitch = int(base_note + (self.pitch - 0.5)*24.0)
         params_dict={
+            'amp': self.vel*2.0,
             'wave': amy.PCM,
             'patch': self.preset,
             'freq': 0,
@@ -218,19 +239,12 @@ class DrumRow(UIElement):
         self.update_note()
 
 
-# Called from tulip's sequencer
+# Called from tulip's sequencer, just updates the LEDs
 def beat_callback(t):
     global app
     # Hm, how should we deal with visual latency 
     app.leds.set((app.current_beat-1)% 16, 0)
     app.leds.set(app.current_beat, 1)
-    for i, row in enumerate(app.rows):
-        if(row.get(app.current_beat)):
-            base_note = drumkit[row.get_preset()][0]
-            note_for_pitch = None
-            if row.get_pitch() != 0.5:
-                note_for_pitch = int(base_note + (row.get_pitch() - 0.5)*24.0)
-            app.synth.note_on(note=row.midi_note, velocity=row.get_vel()*2, time=t)
     app.current_beat = (app.current_beat+1) % 16
 
 def quit(screen):
@@ -246,7 +260,7 @@ def run(screen):
     app.quit_callback = quit
     app.leds = LEDStrip()
     app.add(app.leds, direction=lv.ALIGN.OUT_BOTTOM_LEFT, pad_y=0)
-    app.rows = [DrumRow([x[1] for x in drumkit], midi_note=i) for i in range(7)]
+    app.rows = [DrumRow([x[1] for x in drumkit], i, midi_note=i) for i in range(7)]
     app.add(app.rows, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
 
     for i,row in enumerate(app.rows):
@@ -257,7 +271,7 @@ def run(screen):
     for i in range(16):
         app.rows[2].objs[i].set(True)
 
-    app.slot = seq_add_callback(beat_callback, int(seq_ppq()/2))
+    app.slot = seq_add_callback(beat_callback, int(PPQ/2))
     app.present()
 
 
