@@ -5,7 +5,6 @@ from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, 
 import amy
 import midi
 from patches import drumkit
-PPQ = 48
 AMY_TAG_OFFSET = 4385 # random offset to allow other apps to share
 
 # A single drum machine switch with LED
@@ -50,8 +49,8 @@ class DrumSwitch(UIElement):
     def update_amy(self):
         row = app.rows[self.row]
         if(self.on):
-            length = int((PPQ/2) * 16) 
-            offset = int(PPQ/2) * self.col
+            length = int((amy.SEQUENCER_PPQ/2) * 16) 
+            offset = int(amy.SEQUENCER_PPQ/2) * self.col
             app.synth.note_on(note=row.midi_note, sequence = "%d,%d,%d" % (offset, length, self.tag))
         else:
             # Turn off note, the rest of stuff doesn't matter
@@ -274,7 +273,7 @@ def run(screen):
         app.rows[2].objs[i].set(True)
 
     app.current_beat = int((seq_ticks() / 24) % 16)
-    app.slot = seq_add_callback(beat_callback, int(PPQ/2))
+    app.slot = seq_add_callback(beat_callback, int(amy.SEQUENCER_PPQ/2))
     app.present()
 
 

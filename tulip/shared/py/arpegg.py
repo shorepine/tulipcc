@@ -3,9 +3,7 @@
 import time
 import random
 import tulip
-
-
-#tulip.seq_add_callback(midi_step, int(tulip.seq_ppq()/2))
+import amy 
 
 
 class ArpeggiatorSynth:
@@ -69,7 +67,7 @@ class ArpeggiatorSynth:
         self.current_step = -1
         # Semaphore to the run loop to start going.
         self.running = True
-        self.slot = tulip.seq_add_callback(self.step_callback, int(tulip.seq_ppq()/2))
+        self.slot = tulip.seq_add_callback(self.step_callback, int(amy.SEQUENCER_PPQ/2))
 
     def stop(self):
         self.running = False
