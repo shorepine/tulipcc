@@ -60,7 +60,6 @@ def current_lv_group():
 
 def hide(i):
     g = tulip.current_uiscreen().group
-    #g = lv.screen_active().get_child(0)
     to_hide = g.get_child(i)
     try:
         to_hide.add_flag(1) # hide
@@ -69,7 +68,6 @@ def hide(i):
 
 
 def unhide(i):
-    #g = lv.screen_active().get_child(0)
     g = tulip.current_uiscreen().group
     to_unhide = g.get_child(i)
     try:
@@ -84,7 +82,6 @@ class UIScreen():
     # Start drawing at this position, a little to the right of the edge and 100px down
     default_offset_x = 10
     default_offset_y = 100
-    #load_delay = 200 # milliseconds between section loads
 
     def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
         activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
@@ -166,9 +163,6 @@ class UIScreen():
         if(len(running_apps)>1):
             self.active = False
 
-            #for i in range(self.group.get_child_count()):
-            #    hide(i)
-
             if(self.deactivate_callback is not None):
                 self.deactivate_callback(self)
     
@@ -206,7 +200,6 @@ class UIScreen():
 
         if(type(obj) != list): obj = [obj]
         for o in obj:
-            #o.update_callbacks(self.change_callback)
             o.group.set_parent(self.group)
             o.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
             o.group.set_height(lv.SIZE_CONTENT)
@@ -220,7 +213,6 @@ class UIScreen():
                     o.group.align_to(self.group,first_align,self.offset_x,self.offset_y)
             o.group.set_width(o.group.get_width()+pad_x)
             o.group.set_height(o.group.get_height()+pad_y)
-            #o.group.add_flag(1) # Hide by default
             if(x is not None and y is not None): o.group.set_pos(x,y)
             self.last_obj_added = o.group
 
@@ -233,14 +225,6 @@ class UIScreen():
         self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
         
         lv.screen_load(self.screen)
-
-
-        # We stagger the loading of LVGL elements in presenting a screen. 
-        # Tulip can draw the screen faster, but the bandwidth it uses on SPIRAM to draw to the screen BG kills audio if done too fast. 
-        #wait_time = UIScreen.load_delay
-        #for i in range(self.group.get_child_count()):
-        #    tulip.defer(unhide, i, UIScreen.load_delay + i*UIScreen.load_delay)
-        #    wait_time = wait_time + UIScreen.load_delay
 
         if(self.handle_keyboard):
             get_keypad_indev().set_group(self.kb_group)
@@ -259,7 +243,6 @@ class UIScreen():
 
         if(self.activate_callback is not None):
             self.activate_callback(self)
-            #tulip.defer(self.activate_callback, self, wait_time)
 
         tulip.ui_quit_callback(self.screen_quit_callback)
         tulip.ui_switch_callback(self.alttab_callback)
@@ -279,7 +262,6 @@ class UIElement():
     temp_screen = lv.obj()
 
     def __init__(self, debug=False):
-        #self.change_callback = None
         self.group = lv.obj(UIElement.temp_screen)
         # Hot tip - set this to 1 if you're debugging why elements are not aligning like you think they should
         bw = 0
@@ -289,7 +271,6 @@ class UIElement():
 
     def update_callbacks(self, cb):
         pass
-        #self.change_callback = cb
 
     # Remove the elements you created (including the group)
     def remove_items(self):
