@@ -130,7 +130,7 @@ synth1.note_on(50, 1)
 synth2.note_on(50, 0.5)
 ```
 
-You can also "schedule" notes in the near future (up to 20 seconds ahead). This is useful for sequencing fast parameter changes or keeping in time with the sequencer. `Synth`s accept a `time` parameter, and it's in milliseconds. For example:
+You can also "schedule" notes. This is useful for sequencing fast parameter changes. `Synth`s accept a `time` parameter, and it's in milliseconds. For example:
 
 ```python
 # play a chord all at once
