@@ -113,6 +113,8 @@ You can also easily change the BPM of the sequencer -- this will impact everythi
 tulip.seq_bpm(120)
 ```
 
+(Make sure to read below about the higher-accuracy sequencer API, `amy.send(sequence)`. The Tulip `seq_X` commands are simple and easy to use, but if you're making a music app that requires rock-solid timing, you'll want to use the AMY sequencer directly.)
+
 ## Making new Synths
 
 We're using `midi.config.get_synth(channel=1)` to "borrow" the synth booted with Tulip. But if you're going to want to share your ideas with others, you should make your own `Synth` that doesn't conflict with anything already running on Tulip. That's easy, you can just run:
@@ -130,7 +132,7 @@ synth1.note_on(50, 1)
 synth2.note_on(50, 0.5)
 ```
 
-You can also "schedule" notes in the near future (up to 20 seconds ahead). This is useful for sequencing fast parameter changes or keeping in time with the sequencer. `Synth`s accept a `time` parameter, and it's in milliseconds. For example:
+You can also "schedule" notes. This is useful for sequencing fast parameter changes. `Synth`s accept a `time` parameter, and it's in milliseconds. For example:
 
 ```python
 # play a chord all at once
@@ -477,6 +479,22 @@ s.note_on(55, 1)
 Try saving these setup commands (including the `store_patch`, which gets cleared on power / boot) to a python file, like `woodpiano.py`, and `execfile("woodpiano.py")` on reboot to set it up for you!
 
 
+## Direct AMY sequencer
+
+Tulip can use the AMY sequencer directly. The `tulip.seq_X` commands are written in Python, and may end up being delayed some small amount of milliseconds if Python is busy doing other things (like drawing a screen.) For this reason, we recommend using the AMY sequencer directly for music, and using the Tulip sequencer for graphical updates. The AMY sequencer runs in a separate "thread" on Tulip and cannot be interrupted. It will maintain rock-solid timing using the audio clock on your device.
+
+A great longer example of how to do this is in our [`drums` app](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py). You can see that the drum pattern itself is updated in AMY any time a parameter is changed, and that we use `tulip.seq_X` callbacks only to update the "time LED" ticker across the top.
+
+You can schedule events to happen in a sequence in AMY using `amy.send(sequence=` commands. For the drum machine example, you set the `period` of the sequence and then update events using AMY commands at the right `tick` offset to that length. For example, a drum machine that has 16 steps, each an eighth note, would have a `period` of 24 * 16 = 384. (24 is half of the sequencer's PPQ. If you wanted 16 quarter notes, you would use 48 * 16. Sixteenth notes would be 12 * 16.) And then, each event you expect to play in that pattern is sequenced with an "offset" `tick` into that pattern. The first event in the pattern is at `tick` 0, and the 9th event would be at `tick` 24 * 9 = 216.
+
+```python
+amy.send(reset=amy.RESET_SEQUENCER) # clears the sequence
+
+amy.send(osc=0, vel=1, wave=amy.PCM, patch=0, sequence="0,384,1") # first slot of a 16 1/8th note drum machine
+amy.send(osc=1, vel=1, wave=amy.PCM, patch=1, sequence="216,384,2") # ninth slot of a 16 1/8th note drum machine
+```
+
+The three parameters in `sequence` are `tick`, `period` and then `tag`. `tag` is used to keep track of which events are scheduled, so you can overwrite their parameters or delete them later.
 
 
 

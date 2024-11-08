@@ -205,12 +205,29 @@ void run_tdeck_keyboard() {
                 } else {
                     char_to_send[0] = rx_data[0];
                 }
+
+                uint8_t c = char_to_send[0];
+                if(keycode_to_ctrl_key(c) != '\0') {
+                    const size_t len = strlen(lvgl_kb_buf);
+                    if (len < KEYBOARD_BUFFER_SIZE - 1) {
+                        lvgl_kb_buf[len] = keycode_to_ctrl_key(c);
+                        lvgl_kb_buf[len + 1] = '\0';
+                    }
+                } else {
+                    // put it in lvgl_kb_buf for lvgl
+                    const size_t len = strlen(lvgl_kb_buf);
+                    if (len < KEYBOARD_BUFFER_SIZE - 1) {
+                        lvgl_kb_buf[len] = c;
+                        lvgl_kb_buf[len+1] = '\0';
+                    }
+                }
+
                 // Send as is, combining with ctrl if toggled
                 if (ctrl_toggle) {
-                    send_key_to_micropython(get_alternative_char(ctrlMappings, ctrlMappingsSize, char_to_send[0]));
+                    send_key_to_micropython(get_alternative_char(ctrlMappings, ctrlMappingsSize, c));
                     ctrl_toggle = false;  // Reset toggle after sending
                 } else {
-                    send_key_to_micropython(char_to_send[0]);
+                    send_key_to_micropython(c);
                 }
             }
         }

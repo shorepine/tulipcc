@@ -174,11 +174,11 @@ class VoiceObject:
     def __init__(self, amy_voice):
         self.amy_voice = amy_voice
 
-    def note_on(self, note, vel, time=None):
-        amy.send(time=time, voices=self.amy_voice, note=note, vel=vel)
+    def note_on(self, note, vel, time=None, sequence=None):
+        amy.send(time=time, voices=self.amy_voice, note=note, vel=vel, sequence=sequence)
 
-    def note_off(self, time=None):
-        amy.send(time=time, voices=self.amy_voice, vel=0)
+    def note_off(self, time=None, sequence=None):
+        amy.send(time=time, voices=self.amy_voice, vel=0, sequence=sequence)
 
 
 
@@ -186,8 +186,8 @@ class Synth:
     """Manage a polyphonic synthesizer by rotating among a fixed pool of voices.
 
     Provides methods:
-      synth.note_on(midi_note, velocity, time=None)
-      synth.note_off(midi_note, time=None)
+      synth.note_on(midi_note, velocity, time=None, sequence=None)
+      synth.note_off(midi_note, time=None, sequence=None)
       synth.all_notes_off()
       synth.program_change(patch_num) changes preset for all voices.
       synth.control_change(control, value) modifies a parameter for all voices.
@@ -276,21 +276,21 @@ class Synth:
         self._voice_off(stolen_voice)
         return stolen_voice
 
-    def _voice_off(self, voice, time=None):
+    def _voice_off(self, voice, time=None, sequence=None):
         """Terminate voice, update note_of_voice, but don't alter the queues."""
-        self.voice_objs[voice].note_off(time)
+        self.voice_objs[voice].note_off(time=time, sequence=sequence)
         # We no longer have a voice playing this note.
         del self.voice_of_note[self.note_of_voice[voice]]
         self.note_of_voice[voice] =  None
 
-    def note_off(self, note, time=None):
+    def note_off(self, note, time=None, sequence=None):
         if self.sustaining:
             self.sustained_notes.add(note)
             return
         if note not in self.voice_of_note:
             return
         old_voice = self.voice_of_note[note]
-        self._voice_off(old_voice, time)
+        self._voice_off(old_voice, time=time, sequence=sequence)
         # Return to released.
         self.active_voices.remove(old_voice)
         self.released_voices.put(old_voice)
@@ -302,12 +302,12 @@ class Synth:
             self._voice_off(voice)
 
 
-    def note_on(self, note, velocity=1, time=None):
+    def note_on(self, note, velocity=1, time=None, sequence=None):
         if not self.amy_voice_nums:
             # Note on after synth.release()?
             raise ValueError('Synth note on with no voices - synth has been released?')
         if velocity == 0:
-            self.note_off(note, time)
+            self.note_off(note, time=time, sequence=sequence)
         else:
             # Velocity > 0, note on.
             if note in self.voice_of_note:
@@ -318,7 +318,7 @@ class Synth:
                 self.active_voices.put(new_voice)
                 self.voice_of_note[note] = new_voice
                 self.note_of_voice[new_voice] = note
-            self.voice_objs[new_voice].note_on(note, velocity, time)
+            self.voice_objs[new_voice].note_on(note, velocity, time=time, sequence=sequence)
 
     def sustain(self, state):
         """Turn sustain on/off."""
@@ -376,20 +376,20 @@ class SingleOscSynthBase:
         self.patch_number = None
 
     # This method must be overridden by the derived class to actually send the note.
-    def _note_on_with_osc(self, osc, note, velocity, time):
+    def _note_on_with_osc(self, osc, note, velocity, time=None, sequence=None):
         raise NotImplementedError
 
-    def note_on(self, note, velocity=1, time=None):
+    def note_on(self, note, velocity=1, time=None, sequence=None):
         osc = self.oscs[self.next_osc]
         self.next_osc = (self.next_osc + 1) % len(self.oscs)
         # Update mapping of note to osc.  If notes are repeated, this will lose track.
         self.osc_of_note[note] = osc
         # Actually issue the note-on via derived class function
-        self._note_on_with_osc(osc, note, velocity, time)
+        self._note_on_with_osc(osc, note, velocity, time=time, sequence=sequence)
 
-    def note_off(self, note, time=None):
+    def note_off(self, note, time=None, sequence=None):
         if note in self.osc_of_note:
-             amy.send(time=time, osc=self.osc_of_note[note], vel=0)
+             amy.send(time=time, sequence=sequence, osc=self.osc_of_note[note], vel=0)
              del self.osc_of_note[note]
 
     def all_notes_off(self):
@@ -434,8 +434,8 @@ class OscSynth(SingleOscSynthBase):
         for osc in self.oscs:
             amy.send(osc=osc, **kwargs)
 
-    def _note_on_with_osc(self, osc, note, velocity, time=None):
-        amy.send(time=time, osc=osc, note=note, vel=velocity)
+    def _note_on_with_osc(self, osc, note, velocity, time=None, sequence=None):
+        amy.send(time=time, sequence=sequence, osc=osc, note=note, vel=velocity)
 
 
 class DrumSynth(SingleOscSynthBase):
@@ -458,7 +458,7 @@ class DrumSynth(SingleOscSynthBase):
         """Configure a midi note with a dict of osc params."""
         self.midi_note_params[midi_note] = params_dict
 
-    def _note_on_with_osc(self, osc, note, velocity, time):
+    def _note_on_with_osc(self, osc, note, velocity=None, time=None, sequence=None):
         if note not in self.midi_note_params:
             if config.show_warnings and note not in DrumSynth.missing_note_warned:
                 print("DrumSynth note_on for note %d but only %s set up." % (
@@ -466,7 +466,11 @@ class DrumSynth(SingleOscSynthBase):
                 ))
                 DrumSynth.missing_note_warned.append(note)
             return
-        send_args = {'time': time, 'osc': osc, 'vel': velocity}
+
+        # If velocity not set, attempt to use amp from the stored settings. 
+        if(velocity is None): velocity = self.midi_note_params[note].get('amp',1)
+
+        send_args = {'time': time, 'sequence': sequence, 'osc': osc, 'vel': velocity}
         # Add the args for this note
         send_args |= self.midi_note_params[note]
         amy.send(**send_args)

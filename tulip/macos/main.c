@@ -57,9 +57,9 @@
 #include "display.h"
 #include "alles.h"
 #include "midi.h"
-#include "sequencer.h"
 #include "shared/runtime/pyexec.h"
 
+#include "tsequencer.h"
 
 
 // Command line options, with their defaults
@@ -945,9 +945,7 @@ int main(int argc, char **argv) {
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
 
-    sequencer_init();
-    pthread_t sequencer_thread_id;
-    pthread_create(&sequencer_thread_id, NULL, run_sequencer, NULL);
+    tsequencer_init();
 
     delay_ms(100);
     // Schedule a "turning on" sound

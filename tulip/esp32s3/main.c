@@ -53,7 +53,6 @@
 
 
 #include "usb.h"
-#include "sequencer.h"
 #include "usb_serial_jtag.h"
 #include "modmachine.h"
 #include "modnetwork.h"
@@ -62,6 +61,8 @@
 #include "tdeck_display.h"
 #include "tdeck_keyboard.h"
 #endif
+
+#include "tsequencer.h"
 
 
 #if MICROPY_BLUETOOTH_NIMBLE
@@ -440,10 +441,6 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(100);
 
-    fprintf(stderr,"Starting Sequencer (timer)\n");
-    sequencer_init();
-    run_sequencer();
-
     #ifdef TDECK
     delay_ms(3000); // wait for touchscreen
     fprintf(stderr,"Starting T-Deck keyboard on core %d\n", USB_TASK_COREID);
@@ -452,6 +449,7 @@ void app_main(void) {
     delay_ms(10);
     #endif
 
+    tsequencer_init();
 
 
 }

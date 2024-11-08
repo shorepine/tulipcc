@@ -490,19 +490,21 @@ for i,note in enumerate(chord.midinotes()):
 
 ## Music sequencer
 
-Tulip is always running a live sequencer, meant for music programs you write to share a common clock. This allows you to have multiple music programs running that respond to a callback to play notes. 
+Tulip is always running AMY's live sequencer, meant for music programs you write to share a common clock. This allows you to have multiple music programs running that respond to a callback to play notes. 
 
-To use the clock in your code, you should first register on the music callback with `slot = tulip.seq_add_callback(my_callback)`. You can remove your callback with `tulip.seq_remove_callback(slot)`.  You can remove all callbacks with `tulip.seq_remove_callbacks()`. We support up to 8 callbacks running at once. 
+**There are two types of sequencer callbacks in Tulip**. One is the AMY sequencer, where you set up an AMY synthesizer event to run at a certain time (or periodically.) This is done using the `amy.send(sequence=)` command. See [AMY's documentation](https://github.com/shorepine/amy/blob/main/README.md#the-sequencer) for more details. 
+
+Tulip also receives these same sequencer messages, for use in updating the screen or doing other periodic events. Due the way Tulip works, depending on the activity, there can sometimes be a noticeable delay between the sequencer firing and Tulip finishing drawing (some 10s-100 milliseconds.) The audio synthesizer will run far more accurately using the AMY native sequencer. So make sure you use AMY's event sequencing to schedule audio events, and use these Tulip callbacks for less important events like updating the screen. For exanple, a drum machine should use AMY's `sequence` command to schedule the notes to play, but using the `tulip.seq_add_callback` API to update the "beat ticker" display in Tulip. See how we do this in the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) app.
+
+To use the lower-precision Python Tulip sequencer callback in your code, you should first register with `slot = tulip.seq_add_callback(my_callback)`. You can remove your callback with `tulip.seq_remove_callback(slot)`.  You can remove all callbacks with `tulip.seq_remove_callbacks()`. We support up to 8 callbacks running at once. 
 
 When adding a callback, there's an optional second parameter to denote a divider on the system level parts-per-quarter timer (currently at 48). If you run `slot = tulip.seq_add_callback(my_callback, 6)`, it would call your function `my_callback` every 6th "tick", so 8 times a quarter note at a PPQ of 48. The default divider is 48, so if you don't set a divider, your callback will activate once a quarter note. 
 
-By default, your callback will receive a message 50 milliseconds ahead of the time of the intended tick, with the parameters `my_callback(intended_time_ms)`. This is so that you can take extra CPU time to prepare to send messages at the precise time, using AMY scheduling commands, to keep in perfect sync. You can set this "lookahead" globally for all callbacks if you want more or less latency with `tulip.seq_latency(X)` or get it with `tulip.seq_latency()`. 
-
-You can set the system-wide BPM (beats, or quarters per minute) with `tulip.seq_bpm(120)` or retrieve it with `tulip.seq_bpm()`. 
+You can set the system-wide BPM (beats, or quarters per minute) with AMY's `amy.send(tempo=120)` or using wrapper `tulip.seq_bpm(bpm)`. You can retrieve the BPM with `tulip.seq_bpm()`.
 
 You can see what tick you are on with `tulip.seq_ticks()`. 
 
-See the example `seq.py` on Tulip World for an example of using the music clock, or the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) included app.
+See the example `world.download('seq.py','bwhitman')` on Tulip World for an example of using the music clock, or the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) included app.
 
 **See the [music tutorial](music.md) for a LOT more information on music in Tulip.**
 
