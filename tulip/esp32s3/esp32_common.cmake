@@ -88,7 +88,6 @@ list(APPEND MICROPY_SOURCE_DRIVERS
 )
 
 
-
 string(CONCAT GIT_SUBMODULES "${GIT_SUBMODULES} " lib/tinyusb)
 if(MICROPY_PY_TINYUSB)
     set(TINYUSB_SRC "${MICROPY_DIR}/lib/tinyusb/src")
@@ -128,12 +127,14 @@ list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/build/lv_mpy.c
     ${MICROPY_PORT_DIR}/network_common.c
     ${MICROPY_PORT_DIR}/esp_lcd_touch.c
-    ${MICROPY_PORT_DIR}/uart.c
     ${MICROPY_PORT_DIR}/modsocket.c
+    ${MICROPY_PORT_DIR}/mphalport.c
+    ${MICROPY_PORT_DIR}/usb.c
+
     ${MICROPY_ESP32_DIR}/panichandler.c
     ${MICROPY_ESP32_DIR}/adc.c
-    ${MICROPY_ESP32_DIR}/mphalport.c
-    #${MICROPY_ESP32_DIR}/usb_serial_jtag.c
+    ${MICROPY_ESP32_DIR}/uart.c
+    ${MICROPY_ESP32_DIR}/usb_serial_jtag.c
     ${MICROPY_ESP32_DIR}/gccollect.c
     ${MICROPY_ESP32_DIR}/fatfs_port.c
     ${MICROPY_ESP32_DIR}/machine_bitstream.c
@@ -156,7 +157,6 @@ list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_ESP32_DIR}/machine_rtc.c
     ${MICROPY_ESP32_DIR}/machine_sdcard.c
     ${MICROPY_ESP32_DIR}/modespnow.c
-    ${MICROPY_ESP32_DIR}/usb.c
 )
 
 list(TRANSFORM MICROPY_SOURCE_BOARD PREPEND ${MICROPY_PORT_DIR}/)
