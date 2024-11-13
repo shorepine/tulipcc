@@ -14,12 +14,15 @@
 #include "usb_host.h"
 
 #define TIMEOUT_MS    10
+#define KEYBOARD_BUFFER_SIZE 32
+
+static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
 
 int state = 0;
 QueueHandle_t interruptQueue;
 struct KeyMapping {
     // The following characters should be available to map to an alternative
-    // Default: q w e r t y u i o p a s d f g h j k l z x c v b n m $  
+    // Default: q w e r t y u i o p a s d f g h j k l z x c v b n m $
     // Shift: Q W E R T Y U I O P A S D F G H J K L Z X C V B N M
     // Symbol: # 1 2 3 ( ) _ - + @ * 4 5 6 / : ; \ " 7 8 9 ? ! , . 0
     char original;
@@ -32,6 +35,16 @@ static void IRAM_ATTR gpio_interrupt_handler(void *args)
     xQueueSendFromISR(interruptQueue, &pinNumber, NULL);
 }
 
+static void send_key_to_both(uint16_t key) {
+    const size_t len = strlen(lvgl_kb_buf);
+    if (len < KEYBOARD_BUFFER_SIZE - 1) {
+        lvgl_kb_buf[len] = keycode_to_ctrl_key(key);
+        lvgl_kb_buf[len + 1] = '\0';
+    }
+    send_key_to_micropython(key);
+}
+
+
 // Send trackpall spins as arrow keys.
 // The push current sends "enter"
 void watch_trackball(void *params)
@@ -43,11 +56,11 @@ void watch_trackball(void *params)
     {
         if (xQueueReceive(interruptQueue, &pinNumber, portMAX_DELAY))
         {
-            if(pinNumber == TDECK_TRACKBALL_UP) send_key_to_micropython(259);
-            if(pinNumber == TDECK_TRACKBALL_DOWN) send_key_to_micropython(258);
-            if(pinNumber == TDECK_TRACKBALL_LEFT) send_key_to_micropython(260);
-            if(pinNumber == TDECK_TRACKBALL_RIGHT) send_key_to_micropython(261);
-            if(pinNumber == TDECK_TRACKBALL_CLICK) send_key_to_micropython(13);
+            if(pinNumber == TDECK_TRACKBALL_UP) send_key_to_both(259);
+            if(pinNumber == TDECK_TRACKBALL_DOWN) send_key_to_both(258);
+            if(pinNumber == TDECK_TRACKBALL_LEFT) send_key_to_both(260);
+            if(pinNumber == TDECK_TRACKBALL_RIGHT) send_key_to_both(261);
+            if(pinNumber == TDECK_TRACKBALL_CLICK) send_key_to_both(13);
             //fprintf(stderr,"GPIO %d was pressed. The state is %d\n", pinNumber, gpio_get_level(pinNumber));
         }
     }
@@ -63,10 +76,6 @@ char get_alternative_char(struct KeyMapping mappings[], int size, char original)
     return original;
 }
 
-#define KEYBOARD_BUFFER_SIZE 32
-
-static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
-
 
 void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data) {
     (void) indev_drv;     // unused
@@ -80,7 +89,7 @@ void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data) {
         data->state = LV_INDEV_STATE_RELEASED;
         data->continue_reading = len > 0;
     }
-        // Send the pressed character 
+        // Send the pressed character
     else if (len > 0) {
         dummy_read = true;
         data->state = LV_INDEV_STATE_PRESSED;
@@ -234,5 +243,3 @@ void run_tdeck_keyboard() {
         delay_ms(10);
     }
 }
-
-
