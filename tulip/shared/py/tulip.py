@@ -1,11 +1,17 @@
 # tulip.py
 
-
 # Bring in all c-defined tulip functions
 from _tulip import *
-import world
 from upysh import cd, pwd
 import amy
+
+# NYI on web, TODO
+if(board()!="WEB"):
+    import world
+    import midi
+    from ui import *
+    from editor import edit
+
 
 def root_dir():
     try:
@@ -28,7 +34,6 @@ def root_dir():
 def sys():
     return root_dir()+"sys/"
 
-import midi
 
 # convert tulip RGB332 pal_idx to 3 rgb 0-255 values
 def rgb(px0, wide=False):
@@ -44,8 +49,6 @@ def rgb(px0, wide=False):
         if(b & 0b01000000): b = b | 0b00111111
     return (r,g,b)
 
-from ui import *
-from editor import edit
 
 
 # A class for making a game. Clears and sets up the screen for a game

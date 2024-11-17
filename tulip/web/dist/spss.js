@@ -5,11 +5,9 @@ var amy_module = null;
 var everything_started = false;
 var mp = null;
 var term = null;
-var editors = [];
 
 
-
-// Once AMY module is loaded, do...
+// Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
   amy_module = am;
   amy_live_start = amy_module.cwrap(
@@ -34,7 +32,7 @@ async function start_term_and_repl() {
   await mp.replInit();
 }
 
-async function start_python() {
+async function register_amy() {
   // Let micropython call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_play_message);
 
@@ -48,16 +46,17 @@ async function start_python() {
     import amy, amy_js_message, time
     amy.override_send = amy_js_message
   `);
-  //await mp.startTulip();
 }
-async function start_python_and_audio() {
+
+async function start_audio() {
   // Don't run this twice
   if(everything_started) return;
   // Start the audio worklet (miniaudio)
   await amy_live_start();
-  await start_python();
+  await register_amy();
   // Wait 200ms on first run only before playing amy commands back to avoid clicks
   await new Promise((r) => setTimeout(r, 200));
+  await mp.runPythonAsync('import tulip')
   everything_started = true;
 }
 

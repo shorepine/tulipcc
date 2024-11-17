@@ -16,7 +16,7 @@
       // Tulip settings
       term = new Terminal({rows:40, cols:100, fontSize:12, theme: { background: '#004955'  }});
 
-      term.writeln("Tap in the terminal window here to start...");
+      //term.writeln("Tap in the terminal window here to start...");
       term.open(document.getElementById('terminal'));
       const stdoutWriter = (line) => {
         // While it's called line, it's always one char, line[0].
@@ -35,12 +35,15 @@
         pystack: 32 * 1024, 
         heapsize: 2 * 1024 * 1024
       });
-      //mp.canvas = (function() { return document.getElementById('canvas'); })();
       term.onKey(e => {
         var code = e.key.charCodeAt(0);
         mp.replProcessCharWithAsyncify(code).then((response) => {
         });
       });
+      await term.clear();
+      // Tell MP to start serving a REPL
+      await mp.replInit();
+      
     </script>
     <div class="container-fluid px-5 my-5">
       <h1><A HREF="https://github.com/shorepine/tulipcc">Tulip</A> Web</h1>
@@ -49,15 +52,9 @@
       <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
 
       <div id="terminal"></div>
-      <script language="javascript">
-
-
-        function start_repl() {
-          start_python_and_audio();
-          start_term_and_repl();
-        }
-        // On click anywhere, start audio and the REPL, after audio is started (otherwise python gets confused about AMY)
-        document.body.addEventListener('click', start_repl, true); 
+      <script language="javascript">        
+        // On click anywhere, start audio
+        document.body.addEventListener('click', start_audio, true); 
       </script>
     </div>
 

@@ -6,7 +6,7 @@ set -e
 source ../shared/grab_submodules.sh
 
 cd ../../amy
-make web
+make docs/amy.js
 cd ../tulip/web
 cp ../../amy/docs/amy.js dist/
 cp ../../amy/docs/amy.wasm dist/

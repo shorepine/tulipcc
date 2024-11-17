@@ -162,7 +162,6 @@ int8_t compute_viewport(uint16_t tw, uint16_t th, int8_t resize_tulip) {
     viewport.w = (int)((float)tulip_rect.w * w_ratio);
     viewport.h = (int)((float)tulip_rect.h * h_ratio);
     viewport.x = (sw - viewport.w) / 2;
-
     return 1; // ok
 }
 
@@ -173,6 +172,7 @@ int unix_display_draw() {
     frame_ticks = get_ticks_ms();
 
 
+    
 
     uint8_t *pixels;
     int pitch;
@@ -200,14 +200,15 @@ int unix_display_draw() {
 
     SDL_UnlockTexture(framebuffer);
 
+#ifndef __EMSCRIPTEN__
     SDL_RenderPresent(default_renderer);
-
+#endif
 
     // Clean up and show
     SDL_UpdateWindowSurface(window);
 
     display_frame_done_generic();
-    
+
     // Are we restarting the display for a mode change, or quitting
     if(unix_display_flag < 0) {
         destroy_window();
@@ -219,6 +220,9 @@ int unix_display_draw() {
         }
 
     }    
+
+
+
     return get_ticks_ms() - frame_ticks;
 }
 
@@ -227,7 +231,6 @@ void show_frame(void*d) {
 }
 
 void init_window() {
-#ifndef __EMSCRIPTEN__
     window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                             SDL_WINDOWPOS_UNDEFINED, tulip_rect.w, tulip_rect.h,
                             SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
@@ -245,19 +248,11 @@ void init_window() {
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
-#else // Tulip web deskop
-    //SDL_Init(SDL_INIT_VIDEO);
-    SDL_CreateWindowAndRenderer(1024, 600, 0, &window, &default_renderer);
 
-
-    const int simulate_infinite_loop = 1; // call the function repeatedly
+#ifdef __EMSCRIPTEN__ // Tulip web deskop
+    const int simulate_infinite_loop = 0; // call the function repeatedly
     const int fps = 0; // call the function as fast as the browser wants to render (typically 60fps)
     emscripten_set_main_loop_arg(show_frame, NULL, fps, simulate_infinite_loop);
-    
-    //SDL_DestroyRenderer(renderer);
-    //SDL_DestroyWindow(window);
-    //SDL_Quit();
-
 #endif
 }
 

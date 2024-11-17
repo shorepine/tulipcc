@@ -85,7 +85,7 @@ CFLAGS += -Wall -Werror -Wdouble-promotion -Wfloat-conversion -DSTATIC=static -W
 CFLAGS += -Os -DNDEBUG #-pthread -Wno-pthreads-mem-growth
 CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN)
-CFLAGS += -DTULIP_DESKTOP -DTULIP_WEB -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 
+CFLAGS += -DTULIP_WEB -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 
 
 EXPORTED_FUNCTIONS_EXTRA += ,\
 	_mp_js_do_exec,\
@@ -137,6 +137,7 @@ JSFLAGS += -s EXPORTED_RUNTIME_METHODS="\
 JSFLAGS += --js-library library.js
 JSFLAGS += -s SUPPORT_LONGJMP=emscripten
 JSFLAGS += -s MODULARIZE -s EXPORT_NAME=_createMicroPythonModule
+JSFLAGS += -s INITIAL_MEMORY=128mb -s TOTAL_STACK=64mb -s ALLOW_MEMORY_GROWTH=1 
 
 
 ################################################################################
