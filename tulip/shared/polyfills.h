@@ -2,7 +2,9 @@
 
 #include <stdint.h>
 #include "py/mphal.h"
+#ifndef __EMSCRIPTEN__
 #include "amy.h"
+#endif
 #ifdef ESP_PLATFORM
 // not sure, maybe esp includes?
 extern void esp32s3_display_start();

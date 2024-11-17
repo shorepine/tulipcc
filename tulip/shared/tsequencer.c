@@ -9,7 +9,7 @@ uint32_t defer_sysclock[DEFER_SLOTS];
 
 void tulip_amy_sequencer_hook(uint32_t tick_count) {
     for(uint8_t i=0;i<DEFER_SLOTS;i++) {
-        if(defer_callbacks[i] != NULL && amy_sysclock() > defer_sysclock[i]) {
+        if(defer_callbacks[i] != NULL && get_ticks_ms() > defer_sysclock[i]) {
             //fprintf(stderr, "calling defer with sysclock %" PRIu32 " and actual %" PRIu32"\n", defer_sysclock[i], amy_sysclock() );
             mp_sched_schedule(defer_callbacks[i], defer_args[i]);
             defer_callbacks[i] = NULL; defer_sysclock[i] = 0; defer_args[i] = NULL;
@@ -30,6 +30,7 @@ void tulip_amy_sequencer_hook(uint32_t tick_count) {
 void tsequencer_init() {
     for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) { sequencer_callbacks[i] = NULL; sequencer_dividers[i] = 0; }
     for(uint8_t i=0;i<DEFER_SLOTS;i++) { defer_callbacks[i] = NULL; defer_sysclock[i] = 0; }
+    #ifndef __EMSCRIPTEN__
     amy_external_sequencer_hook = tulip_amy_sequencer_hook;
-
+    #endif
 }

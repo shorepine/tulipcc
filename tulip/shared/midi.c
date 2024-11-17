@@ -38,7 +38,7 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
     if (midi_queue_tail == midi_queue_head) {
         // Queue wrap, drop oldest item.
         midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
-        fprintf(stderr, "dropped midi message\n");
+        //fprintf(stderr, "dropped midi message\n");
     }
 
     // We tell Python that a MIDI message has been received

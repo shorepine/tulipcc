@@ -106,7 +106,11 @@ uint32_t tulip_fread(mp_obj_t file, uint8_t * buf, uint32_t len) {
 }
 
 uint32_t tulip_fseek(mp_obj_t file, uint32_t seekpoint, int32_t whence) {
+    #ifdef __EMSCRIPTEN__
+    return 0;
+    #else
     return mp_stream_posix_lseek(file, seekpoint, whence);
+    #endif
 }
 
 int32_t tulip_getline(char * line, uint32_t * len, mp_obj_t file ) {

@@ -8,7 +8,11 @@
 #include "py/runtime.h"
 #include <stdio.h>
 #include "polyfills.h"
+#ifndef __EMSCRIPTEN__
 #include "sequencer.h" 
+#else
+#define AMY_SEQUENCER_PPQ 48
+#endif
 extern mp_obj_t sequencer_callbacks[SEQUENCER_SLOTS];
 extern uint8_t sequencer_dividers[SEQUENCER_SLOTS];
 
