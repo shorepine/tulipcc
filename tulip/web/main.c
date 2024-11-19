@@ -113,62 +113,9 @@ void mp_js_init(int pystack_size, int heap_size) {
     unix_display_init();
 }
 
-#include <emscripten.h>
-#include <SDL2/SDL.h>
-
-struct context
-{
-    SDL_Renderer *renderer;
-    int iteration;
-};
-/*
-void mainloop(void *other)
-{
-    struct context * ctx = (struct context *) other;
-    SDL_Renderer *renderer = ctx->renderer;
-    
-    // example: draw a moving rectangle
-    
-    // red background
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-    SDL_RenderClear(renderer);
-    
-    // moving blue rectangle
-    SDL_Rect r;
-    r.x = ctx->iteration % 1024;
-    r.y = 50;
-    r.w = 50;
-    r.h = 50;
-    SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255 );
-    SDL_RenderFillRect(renderer, &r );
-
-    SDL_RenderPresent(renderer);
-
-    ctx->iteration++;
-}
-*/
-
-// Start the non AMY tulip stuff -- display, midi, tsequencer
+// Start the non AMY tulip stuff 
 // AMY is a separate program basically in the web port
 void tulip_start() {
-    /*
-    SDL_Init(SDL_INIT_VIDEO);
-    SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_CreateWindowAndRenderer(1024, 600, 0, &window, &renderer);
-
-    struct context ctx;
-    ctx.renderer = renderer;
-    ctx.iteration = 0;
-
-    const int simulate_infinite_loop = 1; // call the function repeatedly
-    const int fps = 0; // call the function as fast as the browser wants to render (typically 60fps)
-    emscripten_set_main_loop_arg(mainloop, &ctx, fps, simulate_infinite_loop);
-    
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-    */
 
 }
 

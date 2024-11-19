@@ -56,7 +56,7 @@ async function start_audio() {
   await register_amy();
   // Wait 200ms on first run only before playing amy commands back to avoid clicks
   await new Promise((r) => setTimeout(r, 200));
-  await mp.runPythonAsync('import tulip')
+  await mp.runPythonAsync('import tulip\nfrom upysh import *')
   everything_started = true;
 }
 

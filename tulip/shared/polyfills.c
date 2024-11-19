@@ -86,7 +86,7 @@ int32_t get_ticks_ms() {
 #ifndef __EMSCRIPTEN__
     return amy_sysclock(); // based on audio driver
 #else
-    return 0; // fix this
+    return mp_hal_ticks_ms(); 
 #endif
 }
 
