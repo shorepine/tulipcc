@@ -4,10 +4,15 @@
 #include "ui.h"
 extern uint8_t keyboard_send_keys_to_micropython;
 extern int8_t keyboard_grab_ui_focus;
-
+#ifdef __EMSCRIPTEN__
+extern int mp_js_repl_process_char(int);
+#endif
 void tx_char(int c) {
         if(keyboard_send_keys_to_micropython) {
             ringbuf_put(&stdin_ringbuf, c);
+            #ifdef __EMSCRIPTEN__
+                mp_js_repl_process_char(c);
+            #endif
         } 
 }
 

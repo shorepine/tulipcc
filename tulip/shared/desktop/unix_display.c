@@ -252,7 +252,7 @@ void init_window() {
 #ifdef __EMSCRIPTEN__ // Tulip web deskop
     const int simulate_infinite_loop = 0; // call the function repeatedly
     const int fps = 0; // call the function as fast as the browser wants to render (typically 60fps)
-    emscripten_set_main_loop_arg(show_frame, NULL, fps, simulate_infinite_loop);
+//    emscripten_set_main_loop(show_frame, NULL, fps, simulate_infinite_loop);
 #endif
 }
 

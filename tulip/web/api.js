@@ -168,6 +168,24 @@ export async function loadMicroPython(options) {
             }
             return ret;
         },
+        handlePending() {
+            return Module.ccall(
+                "mp_handle_pending", "null", ["boolean"], [true]
+            );
+        },
+        runFrozenAsync(module) {
+            const len = Module.lengthBytesUTF8(module);
+            const buf = Module._malloc(len + 1);
+            Module.stringToUTF8(module, buf, len + 1);
+            Module.ccall(
+                "mp_js_frozen_exec",
+                "number",
+                ["pointer"],
+                [buf],
+                { async: true },
+            );
+            Module._free(buf);
+        },
         replInit() {
             Module.ccall("mp_js_repl_init", "null", ["null"], {async: true});
         },
@@ -179,9 +197,9 @@ export async function loadMicroPython(options) {
                 [chr],
             );
         },
-        startTulip() {
+        tulipTick(tick) {
             return Module.ccall(
-                "tulip_start", "null", ["null"]
+                "tulip_tick", "null", ["number"], [tick], {async:true}
             );
         },
         // Needed if the GC/asyncify is enabled.

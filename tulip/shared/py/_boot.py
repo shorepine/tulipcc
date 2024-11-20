@@ -4,7 +4,10 @@ import tulip, world, sys, midi, amy, alles
 
 from upysh import *
 from tulip import edit, run
+
 # This _boot runs both desktop and esp32s3
+
+
 try:
     from esp32 import Partition
     try:
@@ -24,21 +27,25 @@ try:
     except OSError:
         # this is you booting a non-OTA esp32 device. it's ok!
         pass
-    
+
+
 except ImportError:
-    # Tulip Desktop
+    # Not a hardware Tulip
     try:
         tulipcc = tulip.root_dir()
-        try:
-            mkdir(tulipcc)
-        except OSError:
-            # already exists, that's fine
-            pass
-
+        if(not tulip.exists(tulipcc)):
+            if(tulip.board()=="WEB"):
+                mkdir("/home/web_user/.local")
+                mkdir("/home/web_user/.local/share")
+                mkdir("/home/web_user/.local/share/tulipcc")
+            else:
+                mkdir(tulipcc)
+    
         # On Desktop, we can put sys in sys/ and user in user/
         try:
             mkdir(tulipcc+"sys")
-            tulip.desktop_copy_sys(tulipcc+"sys")
+            if(tulip.board()!="WEB"):
+                tulip.desktop_copy_sys(tulipcc+"sys")
         except OSError:
             # already exists, do nothing
             pass
@@ -52,12 +59,15 @@ except ImportError:
         cd(tulip.root_dir()+"user")
         sys.path.append("../sys/ex")
 
-    except:
+    except Exception as e:
+        sys.print_exception(e)
         # Probably iOS
         cd(tulip.app_path())
 
 gc.collect()
 # Override amy's send to work with tulip
-amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
+if(tulip.board()!="WEB"):
+    amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
 midi.setup()
+
 

@@ -22,14 +22,14 @@ amyModule().then(async function(am) {
   amy_reset_sysclock = amy_module.cwrap(
     'amy_reset_sysclock', null, null
   );
+  amy_ticks = amy_module.cwrap(
+    'sequencer_ticks', 'number', [null]
+  );
   amy_start(1,1,1,1);
 });
 
-async function start_term_and_repl() {
-  // Clear the terminal
-  await term.clear();
-  // Tell MP to start serving a REPL
-  await mp.replInit();
+function amy_sequencer_js_hook(tick) {
+  mp.tulipTick(tick);
 }
 
 async function register_amy() {
@@ -56,10 +56,10 @@ async function start_audio() {
   await register_amy();
   // Wait 200ms on first run only before playing amy commands back to avoid clicks
   await new Promise((r) => setTimeout(r, 200));
-  await mp.runPythonAsync('import tulip\nfrom upysh import *')
+  await mp.runFrozenAsync('_boot.py');
   everything_started = true;
 }
 
-
-
-
+async function tulip_tick() {
+  //if(everything_started) await mp.tulipTick(amy_ticks());
+}

@@ -45,6 +45,9 @@
 #include "proxy_c.h"
 #include "py/ringbuf.h"
 
+#include "tsequencer.h"
+
+extern void setup_lvgl();
 void tulip_start();
 
 
@@ -75,8 +78,24 @@ void external_call_depth_dec(void) {
 }
 
 extern void unix_display_init();
+extern int unix_display_draw();
+uint8_t tulip_ready = 0;
+
+void main_loop__tulip() {
+    if(tulip_ready) {
+        unix_display_draw();
+        mp_handle_pending(true);
+    }
+}
+
+void tulip_tick(uint32_t tick) {
+    if(tulip_ready) tulip_amy_sequencer_hook(tick);
+}
+
+extern void unix_display_init();
 
 void mp_js_init(int pystack_size, int heap_size) {
+    emscripten_set_main_loop(main_loop__tulip, 0, 0);
 
     #if MICROPY_ENABLE_PYSTACK
     mp_obj_t *pystack = (mp_obj_t *)malloc(pystack_size * sizeof(mp_obj_t));
@@ -110,13 +129,10 @@ void mp_js_init(int pystack_size, int heap_size) {
     }
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
     #endif
+    tsequencer_init();
     unix_display_init();
-}
-
-// Start the non AMY tulip stuff 
-// AMY is a separate program basically in the web port
-void tulip_start() {
-
+    setup_lvgl();
+    tulip_ready = 1;
 }
 
 void mp_js_register_js_module(const char *name, uint32_t *value) {
@@ -173,6 +189,21 @@ void mp_js_do_exec(const char *src, size_t len, uint32_t *out) {
         external_call_depth_dec();
         proxy_convert_mp_to_js_exc_cside(nlr.ret_val, out);
     }
+}
+#include "py/frozenmod.h"
+
+void mp_js_frozen_exec(const char *name) {
+    pyexec_file_if_exists(name);
+
+/*
+    void *frozen_data;
+    uint32_t *out = NULL;
+    int frozen_type;
+    mp_find_frozen_module(name, &frozen_type, &frozen_data);
+    fprintf(stderr, "frozs: %s\n", (const char*)frozen_data);
+    mp_js_do_exec((const char*)frozen_data, strlen((const char*)frozen_data), out);
+    */
+
 }
 
 void mp_js_do_exec_async(const char *src, size_t len, uint32_t *out) {

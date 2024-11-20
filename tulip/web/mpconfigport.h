@@ -87,7 +87,7 @@
 // Whether the VM will periodically call mp_js_hook(), which checks for
 // interrupt characters on stdin (or equivalent input).
 #ifndef MICROPY_VARIANT_ENABLE_JS_HOOK
-#define MICROPY_VARIANT_ENABLE_JS_HOOK (0)
+#define MICROPY_VARIANT_ENABLE_JS_HOOK (1)
 #endif
 
 //#if MICROPY_VARIANT_ENABLE_JS_HOOK
@@ -117,7 +117,7 @@ typedef int mp_int_t; // must be pointer size
 typedef unsigned mp_uint_t; // must be pointer size
 typedef long mp_off_t;
 
-#define MICROPY_HW_BOARD_NAME "JS"
+#define MICROPY_HW_BOARD_NAME "Tulip"
 #define MICROPY_HW_MCU_NAME "Emscripten"
 
 #define MP_STATE_PORT MP_STATE_VM

@@ -85,11 +85,12 @@ CFLAGS += -Wall -Werror -Wdouble-promotion -Wfloat-conversion -DSTATIC=static -W
 CFLAGS += -Os -DNDEBUG #-pthread -Wno-pthreads-mem-growth
 CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN)
-CFLAGS += -DTULIP_WEB -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 
+CFLAGS += -DTULIP_WEB -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 -DAMY_IS_EXTERNAL
 
 EXPORTED_FUNCTIONS_EXTRA += ,\
 	_mp_js_do_exec,\
 	_mp_js_do_exec_async,\
+	_mp_js_frozen_exec,\
 	_mp_js_do_import,\
 	_mp_js_register_js_module,\
 	_proxy_c_free_obj,\
@@ -107,7 +108,7 @@ EXPORTED_FUNCTIONS_EXTRA += ,\
 	_proxy_c_to_js_resume,\
 	_proxy_c_to_js_store_attr,\
 	_proxy_convert_mp_to_js_obj_cside,\
-	_tulip_start
+	_tulip_tick
 
 EXPORTED_RUNTIME_METHODS_EXTRA += ,\
 	PATH,\
@@ -121,7 +122,8 @@ EXPORTED_RUNTIME_METHODS_EXTRA += ,\
 JSFLAGS += \
     -s USE_SDL=2 \
 	-s ASYNCIFY \
-	-s ASYNCIFY_STACK_SIZE=8000 \
+	-s ASYNCIFY_STACK_SIZE=80000 \
+	-s ASSERTIONS \
 	-s EXPORTED_FUNCTIONS="\
 	_free,\
 	_malloc,\
@@ -129,6 +131,7 @@ JSFLAGS += \
 	_mp_js_repl_init,\
 	_mp_js_repl_process_char,\
 	_mp_hal_get_interrupt_char,\
+	_mp_handle_pending,\
 	_mp_sched_keyboard_interrupt$(EXPORTED_FUNCTIONS_EXTRA)"
 JSFLAGS += -s EXPORTED_RUNTIME_METHODS="\
 	ccall,\

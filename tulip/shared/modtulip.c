@@ -466,6 +466,7 @@ STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
         defer_callbacks[index] = args[0];
         defer_args[index] = args[1];
         defer_sysclock[index] = get_ticks_ms() + mp_obj_get_int(args[2]);
+
     } else {
         mp_raise_ValueError(MP_ERROR_TEXT("No more defer slots available"));
     }
@@ -519,11 +520,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callbacks_obj, 0, 0,
 
 
 STATIC mp_obj_t tulip_seq_ticks(size_t n_args, const mp_obj_t *args) {
-    #ifdef __EMSCRIPTEN__
-    return mp_obj_new_int(0);
-    #else
     return mp_obj_new_int(sequencer_tick_count);
-    #endif
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_ticks_obj, 0, 0, tulip_seq_ticks);

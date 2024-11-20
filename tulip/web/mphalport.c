@@ -83,6 +83,6 @@ uint64_t mp_hal_time_ns(void) {
 
 extern int mp_interrupt_char;
 
-int mp_hal_get_interrupt_char(void) {
+int mp_hal_get_interrupt_char(int c) {
     return mp_interrupt_char;
 }

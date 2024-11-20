@@ -8,9 +8,10 @@
 #include "py/runtime.h"
 #include <stdio.h>
 #include "polyfills.h"
-#ifndef __EMSCRIPTEN__
+#ifndef AMY_IS_EXTERNAL
 #include "sequencer.h" 
 #else
+extern uint32_t sequencer_tick_count;
 #define AMY_SEQUENCER_PPQ 48
 #endif
 extern mp_obj_t sequencer_callbacks[SEQUENCER_SLOTS];
@@ -22,5 +23,6 @@ extern mp_obj_t defer_args[DEFER_SLOTS];
 
 
 void tsequencer_init();
+void tulip_amy_sequencer_hook(uint32_t tick_count);
 
 #endif
