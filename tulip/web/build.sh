@@ -8,14 +8,12 @@ source ../shared/grab_submodules.sh
 cd ../../amy
 make docs/amy.js
 cd ../tulip/web
-cp ../../amy/docs/amy.js dist/
-cp ../../amy/docs/amy.wasm dist/
-cp ../../amy/docs/amy.aw.js dist/
+cp ../../amy/docs/amy.js ../../www/run/
+cp ../../amy/docs/amy.wasm ../../www/run/
+cp ../../amy/docs/amy.aw.js ../../www/run/
 
 make
-cp build-standard/tulip/obj/micropython.wasm dist/
-cp build-standard/tulip/obj/micropython.mjs dist/
-cp build-standard/tulip/obj/micropython.data dist/
-
-cp -Rf dist/* ../../www/run/
+cp build-standard/tulip/obj/micropython.wasm ../../www/run/
+cp build-standard/tulip/obj/micropython.mjs ../../www/run/
+cp build-standard/tulip/obj/micropython.data ../../www/run/
 
