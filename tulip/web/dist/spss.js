@@ -28,15 +28,11 @@ amyModule().then(async function(am) {
   amy_start(1,1,1,1);
 });
 
+// Called from AMY to update Tulip about what tick it is, for the sequencer
 function amy_sequencer_js_hook(tick) {
   mp.tulipTick(tick);
 }
 
-function setup_fs() {
-  mp.FS.mkdir("/tulip4");
-  mp.FS.mount(IDBFS, {autoPersist:true}, "/tulip4");
-  mp.FS.syncfs(true);
-}
 async function register_amy() {
   // Let micropython call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_play_message);
@@ -46,27 +42,67 @@ async function register_amy() {
     sleep: async (s) => await new Promise((r) => setTimeout(r, s * 1000)),
   });
 
-  // Set up the micropython context, like _boot.py. 
+  // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
     import amy, amy_js_message, time
     amy.override_send = amy_js_message
   `);
 }
 
-async function start_midi() {
-  function onEnabled() {    
-    // Inputs
-    WebMidi.inputs.forEach(input => console.log(input.manufacturer, input.name));
-    
-    // Outputs
-    WebMidi.outputs.forEach(output => console.log(output.manufacturer, output.name));
+var midiOutputDevice = null;
+var midiInputDevice = null;
 
-    const myInput = WebMidi.getInputByName("Q25");
-    myInput.addListener("midimessage", e => {
+async function clear_storage() {
+  if(confirm("This will delete your Tulip user folder and start again.\nAre you sure?")) {
+    indexedDB.deleteDatabase('/tulip4/user');
+    location.reload(true);
+  }
+}
+
+async function restart_tulip() {
+  location.reload(true);
+}
+
+
+async function setup_midi_devices() {
+  var midi_in = document.tulip_settings.midi_input;
+  var midi_out = document.tulip_settings.midi_output;
+  if(WebMidi.inputs.length > midi_in.selectedIndex) {
+    if(midiInputDevice != null) midiInputDevice.destroy();
+    midiInputDevice = WebMidi.getInputById(WebMidi.inputs[midi_in.selectedIndex].id);
+    midiInputDevice.addListener("midimessage", e => {
       for(byte in e.message.data) {
         mp.midiByte(e.message.data[byte]);
       }
     });
+  }
+  if(WebMidi.outputs.length > midi_out.selectedIndex) {
+    if(midiOutputDevice != null) midiOutputDevice.destroy();
+    midiOutputDevice = WebMidi.getOutputById(WebMidi.outputs[midi_out.selectedIndex].id);
+  }
+}
+
+async function start_midi() {
+  function onEnabled() {
+    // Populate the dropdowns
+    var midi_in = document.tulip_settings.midi_input;
+    var midi_out = document.tulip_settings.midi_output;
+
+    if(WebMidi.inputs.length>0) {
+      midi_in.options.length = 0;
+      WebMidi.inputs.forEach(input => {
+        midi_in.options[midi_in.options.length] = new Option(input.manufacturer + " " + input.name);
+      });
+    }
+
+    if(WebMidi.outputs.length>0) {
+      midi_out.options.length = 0;
+      WebMidi.outputs.forEach(output => {
+        midi_out.options[midi_out.options.length] = new Option(output.manufacturer + " " + output.name);
+      });
+    }
+    // First run setup 
+    setup_midi_devices();
   }
 
   WebMidi
@@ -82,14 +118,14 @@ async function start_audio() {
   await start_midi();
   // Start the audio worklet (miniaudio)
   await amy_live_start();
+  // Tell Tulip about this external AMY
   await register_amy();
+
   // Wait 200ms on first run only before playing amy commands back to avoid clicks
   await new Promise((r) => setTimeout(r, 200));
+
   await mp.runFrozenAsync('_boot.py');
   await mp.runFrozenAsync('/tulip4/user/boot.py');
   everything_started = true;
 }
 
-async function tulip_tick() {
-  //if(everything_started) await mp.tulipTick(amy_ticks());
-}

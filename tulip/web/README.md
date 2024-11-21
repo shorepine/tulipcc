@@ -18,30 +18,40 @@ python3 server.py
 
 I test on Chrome right now. I don't think safari supports webmidi.
 
-The tulip "sys" files will load into `/tulip4/sys`. `/tulip4/user` is there for your files.
-
-The file system persists in your browser as an IndexedDB localstorage thing. To delete it, do `indexedDB.deleteDatabase('/tulip4/user')` in the console.
+The tulip "sys" files will load into `/tulip4/sys`. `/tulip4/user` is there for your files. Unlike other tulip ports, /tulip4/sys is "read only" in the sense that it resets back to our shipped FS default every page load. `tulip4/user` will persist in your browser as an IndexedDB localstorage thing. To delete it, do `indexedDB.deleteDatabase('/tulip4/user')` in the console.
 
 
 ## what works
  - python REPL
- - tulip BG functions, graphics
+ - tulip BG functions, graphics layer, TFB, sprites etc
  - LVGL
  - AMY (loaded as a separate audioworklet), including sequencer
  - keyboard & mouse via SDL
- - persistent filesystem in localstorage, including `sys` folder
+ - persistent filesystem in localstorage, including `sys` examples folder
+ - MIDI input & output w/ selectable devices
+
+## what doesn't (yet)
+ - tulip world
+ - urequests
+ - time.sleep() 
 
 ## TODO
- - speed of LVGL (try `run('drums')`)
+ - speed of LVGL object creation(?) (try `run('drums')`)
  - ~~T-sequencer running too slowly to hit every tick #, so % dividers get missed (see LEDs in drums)~~
  - "sockets"/web requests - tulip world etc
  - ~~FS needs examples loaded on boot~~
  - ~~FS needs to persist to localstorage~~
- - MIDI
+ - ~~MIDI output~~
+ - ~~MIDI device selector dropdown~~
+ - ~~audio device dropdown if possible?~~ - [seems not fully supported yet](https://developer.mozilla.org/en-US/docs/Web/API/Audio_Output_Devices_API#browser_compatibility))
  - some solution for `time.sleep` / `sleep_ms` -- see `parallax`, `bunny_bounce`, `xanadu`
  - sync my AMY changes to main AMY 
- - test github hosting
-
-
-
+ - test changes on tulip desktop mac / linux and tulip cc
+ - github hosting on tulip.computer/
+ - build in release.sh 
+ - get working on safari / iOS safari minus webmidi 
+ - resizeable/responsive SDL canvas 
+ - start LVGL before onclick for audio so it's not a black screen on launch
+ - restart tulip button
+ - delete storage button
 

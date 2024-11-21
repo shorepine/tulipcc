@@ -215,9 +215,17 @@ void run_midi() {
 // defined in virtualmidi.m
 #else
 
-// This is MIDI out on tulip desktop that is NOT macos... not supported 
+// This is MIDI out on tulip desktop that is NOT macos... web or linux
 void midi_out(uint8_t * bytes, uint16_t len) {
-    // nothing yet
+    #ifdef __EMSCRIPTEN__
+    EM_ASM(
+            if(midiOutputDevice != null) {
+                midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1));
+            }, bytes, len
+        );
+    #else
+    // nothing yet for linux
+    #endif
 }
 #endif
 

@@ -24,16 +24,34 @@
       // Tell MP to start serving a REPL
       await mp.replInit();
     </script>
-    <div class="container-fluid px-5 my-5">
+    <div class="container-lg my-2 px-2">
       <h1><A HREF="https://github.com/shorepine/tulipcc">Tulip</A> Web</h1>
-
       <!-- Tulip's SDL canvas -->
       <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+      <form name="tulip_settings">
+        <div class="row align-items-start">
+          <div class="col-4 align-self-start">
+            MIDI input: 
+            <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
+              <option selected>[Not available]</option>
+            </select>
+          </div>
+          <div class="col-4 align-self-start">
+            MIDI output: 
+            <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
+              <option selected>[Not available]</option>
+            </select>
+          </div>
+          <div class="col-3 align-self-start">
+            <button type="button" onclick="restart_tulip()" class="btn btn-warning">Restart Tulip</button>
+            <button type="button" onclick="clear_storage()" class="btn btn-danger">Clear Storage</button>
+          </div>
+        </div>
+      </form>
 
       <script language="javascript">        
         // On click anywhere, start audio
         document.body.addEventListener('click', start_audio, true); 
-        //setInterval(tulip_tick, 1);
       </script>
     </div>
 
