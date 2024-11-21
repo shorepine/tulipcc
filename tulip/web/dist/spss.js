@@ -105,10 +105,12 @@ async function start_midi() {
     setup_midi_devices();
   }
 
-  WebMidi
-    .enable({sysex:true})
-    .then(onEnabled)
-    .catch(err => alert(err));
+  if(WebMidi.supported) {
+    WebMidi
+      .enable({sysex:true})
+      .then(onEnabled)
+      .catch(err => console.log("MIDI: " + err));
+  }
 }
 
 async function start_audio() {

@@ -17,3 +17,5 @@ cp build-standard/tulip/obj/micropython.wasm dist/
 cp build-standard/tulip/obj/micropython.mjs dist/
 cp build-standard/tulip/obj/micropython.data dist/
 
+cp -Rf dist/* ../../www/run/
+
