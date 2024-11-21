@@ -82,7 +82,7 @@ INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src
 INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src/libs/lodepng
 
 CFLAGS += -Wall -Werror -Wdouble-promotion -Wfloat-conversion -DSTATIC=static -Wno-unused-variable -Wno-unused-function
-CFLAGS += -Os -DNDEBUG #-pthread -Wno-pthreads-mem-growth
+CFLAGS += -O3 -DNDEBUG
 CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN)
 CFLAGS += -DTULIP_WEB -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 -DAMY_IS_EXTERNAL
@@ -120,6 +120,7 @@ EXPORTED_RUNTIME_METHODS_EXTRA += ,\
 	stringToUTF8
 
 JSFLAGS += \
+	-lidbfs.js \
     -s USE_SDL=2 \
 	-s ASYNCIFY \
 	-s ASYNCIFY_STACK_SIZE=80000 \
@@ -132,6 +133,7 @@ JSFLAGS += \
 	_mp_js_repl_process_char,\
 	_mp_hal_get_interrupt_char,\
 	_mp_handle_pending,\
+	_process_single_midi_byte,\
 	_mp_sched_keyboard_interrupt$(EXPORTED_FUNCTIONS_EXTRA)"
 JSFLAGS += -s EXPORTED_RUNTIME_METHODS="\
 	ccall,\
@@ -141,7 +143,7 @@ JSFLAGS += --js-library library.js
 JSFLAGS += -s SUPPORT_LONGJMP=emscripten
 JSFLAGS += -s MODULARIZE -s EXPORT_NAME=_createMicroPythonModule
 JSFLAGS += -s INITIAL_MEMORY=128mb -s TOTAL_STACK=64mb -s ALLOW_MEMORY_GROWTH=1 
-
+JSFLAGS += --preload-file ../fs@tulip4/sys
 
 ################################################################################
 # Source files and libraries.

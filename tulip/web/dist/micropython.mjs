@@ -28,7 +28,7 @@ var readyPromise = new Promise((resolve, reject) => {
   readyPromiseResolve = resolve;
   readyPromiseReject = reject;
 });
-["_free","_malloc","_mp_js_init","_mp_js_repl_init","_mp_js_repl_process_char","_mp_hal_get_interrupt_char","_mp_handle_pending","_mp_sched_keyboard_interrupt","_mp_js_do_exec","_mp_js_do_exec_async","_mp_js_frozen_exec","_mp_js_do_import","_mp_js_register_js_module","_proxy_c_free_obj","_proxy_c_init","_proxy_c_to_js_call","_proxy_c_to_js_delete_attr","_proxy_c_to_js_dir","_proxy_c_to_js_get_array","_proxy_c_to_js_get_dict","_proxy_c_to_js_get_iter","_proxy_c_to_js_get_type","_proxy_c_to_js_has_attr","_proxy_c_to_js_iternext","_proxy_c_to_js_lookup_attr","_proxy_c_to_js_resume","_proxy_c_to_js_store_attr","_proxy_convert_mp_to_js_obj_cside","_tulip_tick","_memory","___indirect_function_table","_proxy_convert_mp_to_js_then_js_to_mp_obj_jsside","_proxy_convert_mp_to_js_then_js_to_js_then_js_to_mp_obj_jsside","_js_get_proxy_js_ref_info","_has_attr","_lookup_attr","_store_attr","_call0","_call1","_call2","_calln","_call0_kwarg","_call1_kwarg","_js_reflect_construct","_js_get_iter","_js_iter_next","_js_subscr_load","_js_subscr_store","_proxy_js_free_obj","_js_check_existing","_js_get_error_info","_js_then_resolve","_js_then_reject","_js_then_continue","_create_promise","___em_lib_deps_sdlaudio","___em_lib_deps_sdlmouse","onRuntimeInitialized"].forEach((prop) => {
+["_free","_malloc","_mp_js_init","_mp_js_repl_init","_mp_js_repl_process_char","_mp_hal_get_interrupt_char","_mp_handle_pending","_process_single_midi_byte","_mp_sched_keyboard_interrupt","_mp_js_do_exec","_mp_js_do_exec_async","_mp_js_frozen_exec","_mp_js_do_import","_mp_js_register_js_module","_proxy_c_free_obj","_proxy_c_init","_proxy_c_to_js_call","_proxy_c_to_js_delete_attr","_proxy_c_to_js_dir","_proxy_c_to_js_get_array","_proxy_c_to_js_get_dict","_proxy_c_to_js_get_iter","_proxy_c_to_js_get_type","_proxy_c_to_js_has_attr","_proxy_c_to_js_iternext","_proxy_c_to_js_lookup_attr","_proxy_c_to_js_resume","_proxy_c_to_js_store_attr","_proxy_convert_mp_to_js_obj_cside","_tulip_tick","_memory","___indirect_function_table","_proxy_convert_mp_to_js_then_js_to_mp_obj_jsside","_proxy_convert_mp_to_js_then_js_to_js_then_js_to_mp_obj_jsside","_js_get_proxy_js_ref_info","_has_attr","_lookup_attr","_store_attr","_call0","_call1","_call2","_calln","_call0_kwarg","_call1_kwarg","_js_reflect_construct","_js_get_iter","_js_iter_next","_js_subscr_load","_js_subscr_store","_proxy_js_free_obj","_js_check_existing","_js_get_error_info","_js_then_resolve","_js_then_reject","_js_then_continue","_create_promise","___em_lib_deps_sdlaudio","___em_lib_deps_sdlmouse","onRuntimeInitialized"].forEach((prop) => {
   if (!Object.getOwnPropertyDescriptor(readyPromise, prop)) {
     Object.defineProperty(readyPromise, prop, {
       get: () => abort('You are getting ' + prop + ' on the Promise object, instead of the instance. Use .then() to get called back with the instance, see the MODULARIZE docs in src/settings.js'),
@@ -65,6 +65,211 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpqvklq6v1.js
+
+  if (!Module['expectedDataFileDownloads']) {
+    Module['expectedDataFileDownloads'] = 0;
+  }
+
+  Module['expectedDataFileDownloads']++;
+  (() => {
+    // Do not attempt to redownload the virtual filesystem data when in a pthread or a Wasm Worker context.
+    var isPthread = typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD;
+    var isWasmWorker = typeof ENVIRONMENT_IS_WASM_WORKER != 'undefined' && ENVIRONMENT_IS_WASM_WORKER;
+    if (isPthread || isWasmWorker) return;
+    function loadPackage(metadata) {
+
+      var PACKAGE_PATH = '';
+      if (typeof window === 'object') {
+        PACKAGE_PATH = window['encodeURIComponent'](window.location.pathname.toString().substring(0, window.location.pathname.toString().lastIndexOf('/')) + '/');
+      } else if (typeof process === 'undefined' && typeof location !== 'undefined') {
+        // web worker
+        PACKAGE_PATH = encodeURIComponent(location.pathname.toString().substring(0, location.pathname.toString().lastIndexOf('/')) + '/');
+      }
+      var PACKAGE_NAME = 'build-standard/tulip/obj/micropython.data';
+      var REMOTE_PACKAGE_BASE = 'micropython.data';
+      if (typeof Module['locateFilePackage'] === 'function' && !Module['locateFile']) {
+        Module['locateFile'] = Module['locateFilePackage'];
+        err('warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)');
+      }
+      var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
+var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
+
+      function fetchRemotePackage(packageName, packageSize, callback, errback) {
+        if (typeof process === 'object' && typeof process.versions === 'object' && typeof process.versions.node === 'string') {
+          require('fs').readFile(packageName, (err, contents) => {
+            if (err) {
+              errback(err);
+            } else {
+              callback(contents.buffer);
+            }
+          });
+          return;
+        }
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', packageName, true);
+        xhr.responseType = 'arraybuffer';
+        xhr.onprogress = (event) => {
+          var url = packageName;
+          var size = packageSize;
+          if (event.total) size = event.total;
+          if (event.loaded) {
+            if (!xhr.addedTotal) {
+              xhr.addedTotal = true;
+              if (!Module['dataFileDownloads']) Module['dataFileDownloads'] = {};
+              Module['dataFileDownloads'][url] = {
+                loaded: event.loaded,
+                total: size
+              };
+            } else {
+              Module['dataFileDownloads'][url].loaded = event.loaded;
+            }
+            var total = 0;
+            var loaded = 0;
+            var num = 0;
+            for (var download in Module['dataFileDownloads']) {
+            var data = Module['dataFileDownloads'][download];
+              total += data.total;
+              loaded += data.loaded;
+              num++;
+            }
+            total = Math.ceil(total * Module['expectedDataFileDownloads']/num);
+            Module['setStatus']?.(`Downloading data... (${loaded}/${total})`);
+          } else if (!Module['dataFileDownloads']) {
+            Module['setStatus']?.('Downloading data...');
+          }
+        };
+        xhr.onerror = (event) => {
+          throw new Error("NetworkError for: " + packageName);
+        }
+        xhr.onload = (event) => {
+          if (xhr.status == 200 || xhr.status == 304 || xhr.status == 206 || (xhr.status == 0 && xhr.response)) { // file URLs can return 0
+            var packageData = xhr.response;
+            callback(packageData);
+          } else {
+            throw new Error(xhr.statusText + " : " + xhr.responseURL);
+          }
+        };
+        xhr.send(null);
+      };
+
+      function handleError(error) {
+        console.error('package error:', error);
+      };
+
+      var fetchedCallback = null;
+      var fetched = Module['getPreloadedPackage'] ? Module['getPreloadedPackage'](REMOTE_PACKAGE_NAME, REMOTE_PACKAGE_SIZE) : null;
+
+      if (!fetched) fetchRemotePackage(REMOTE_PACKAGE_NAME, REMOTE_PACKAGE_SIZE, (data) => {
+        if (fetchedCallback) {
+          fetchedCallback(data);
+          fetchedCallback = null;
+        } else {
+          fetched = data;
+        }
+      }, handleError);
+
+    function runWithFS(Module) {
+
+      function assert(check, msg) {
+        if (!check) throw msg + new Error().stack;
+      }
+Module['FS_createPath']("/", "tulip4", true, true);
+Module['FS_createPath']("/tulip4", "sys", true, true);
+Module['FS_createPath']("/tulip4/sys", "ex", true, true);
+Module['FS_createPath']("/tulip4/sys/ex", "bunny_bounce", true, true);
+Module['FS_createPath']("/tulip4/sys/ex/bunny_bounce", "pix", true, true);
+Module['FS_createPath']("/tulip4/sys/ex", "g", true, true);
+Module['FS_createPath']("/tulip4/sys/ex", "planet_boing", true, true);
+Module['FS_createPath']("/tulip4/sys/ex/planet_boing", "pix", true, true);
+Module['FS_createPath']("/tulip4/sys", "im", true, true);
+Module['FS_createPath']("/tulip4/sys/im", "tiny_town", true, true);
+
+      /** @constructor */
+      function DataRequest(start, end, audio) {
+        this.start = start;
+        this.end = end;
+        this.audio = audio;
+      }
+      DataRequest.prototype = {
+        requests: {},
+        open: function(mode, name) {
+          this.name = name;
+          this.requests[name] = this;
+          Module['addRunDependency'](`fp ${this.name}`);
+        },
+        send: function() {},
+        onload: function() {
+          var byteArray = this.byteArray.subarray(this.start, this.end);
+          this.finish(byteArray);
+        },
+        finish: function(byteArray) {
+          var that = this;
+          // canOwn this data in the filesystem, it is a slide into the heap that will never change
+          Module['FS_createDataFile'](this.name, null, byteArray, true, true, true);
+          Module['removeRunDependency'](`fp ${that.name}`);
+          this.requests[this.name] = null;
+        }
+      };
+
+      var files = metadata['files'];
+      for (var i = 0; i < files.length; ++i) {
+        new DataRequest(files[i]['start'], files[i]['end'], files[i]['audio'] || 0).open('GET', files[i]['filename']);
+      }
+
+      function processPackageData(arrayBuffer) {
+        assert(arrayBuffer, 'Loading data file failed.');
+        assert(arrayBuffer.constructor.name === ArrayBuffer.name, 'bad input to processPackageData');
+        var byteArray = new Uint8Array(arrayBuffer);
+        var curr;
+        // Reuse the bytearray from the XHR as the source for file reads.
+          DataRequest.prototype.byteArray = byteArray;
+          var files = metadata['files'];
+          for (var i = 0; i < files.length; ++i) {
+            DataRequest.prototype.requests[files[i].filename].onload();
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/micropython.data');
+
+      };
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/micropython.data');
+
+      if (!Module['preloadResults']) Module['preloadResults'] = {};
+
+      Module['preloadResults'][PACKAGE_NAME] = {fromCache: false};
+      if (fetched) {
+        processPackageData(fetched);
+        fetched = null;
+      } else {
+        fetchedCallback = processPackageData;
+      }
+
+    }
+    if (Module['calledRun']) {
+      runWithFS(Module);
+    } else {
+      if (!Module['preRun']) Module['preRun'] = [];
+      Module["preRun"].push(runWithFS); // FS is not initialized yet, wait for it
+    }
+
+    }
+    loadPackage({"files": [{"filename": "/tulip4/sys/ex/.DS_Store", "start": 0, "end": 8196}, {"filename": "/tulip4/sys/ex/ansi.py", "start": 8196, "end": 8407}, {"filename": "/tulip4/sys/ex/bcla3.wav", "start": 8407, "end": 594189, "audio": 1}, {"filename": "/tulip4/sys/ex/bunny_bounce/bunny_bounce.py", "start": 594189, "end": 601964}, {"filename": "/tulip4/sys/ex/bunny_bounce/pix/rabbit_l_0.png", "start": 601964, "end": 604374}, {"filename": "/tulip4/sys/ex/bunny_bounce/pix/rabbit_l_1.png", "start": 604374, "end": 606569}, {"filename": "/tulip4/sys/ex/bunny_bounce/pix/rabbit_l_2.png", "start": 606569, "end": 608847}, {"filename": "/tulip4/sys/ex/bunny_bounce/pix/rabbit_l_3.png", "start": 608847, "end": 611145}, {"filename": "/tulip4/sys/ex/bunny_bounce/pix/rabbit_r_0.png", "start": 611145, "end": 613439}, {"filename": "/tulip4/sys/ex/bunny_bounce/pix/rabbit_r_1.png", "start": 613439, "end": 615715}, {"filename": "/tulip4/sys/ex/bunny_bounce/pix/rabbit_r_2.png", "start": 615715, "end": 617923}, {"filename": "/tulip4/sys/ex/bunny_bounce/pix/rabbit_r_3.png", "start": 617923, "end": 620343}, {"filename": "/tulip4/sys/ex/buttons.py", "start": 620343, "end": 621959}, {"filename": "/tulip4/sys/ex/calibrate.py", "start": 621959, "end": 623326}, {"filename": "/tulip4/sys/ex/fonts.py", "start": 623326, "end": 623497}, {"filename": "/tulip4/sys/ex/g/brick.png", "start": 623497, "end": 623790}, {"filename": "/tulip4/sys/ex/g/cave.png", "start": 623790, "end": 624392}, {"filename": "/tulip4/sys/ex/g/clouds.png", "start": 624392, "end": 625222}, {"filename": "/tulip4/sys/ex/g/clouds2.png", "start": 625222, "end": 626019}, {"filename": "/tulip4/sys/ex/g/colorbars.png", "start": 626019, "end": 635860}, {"filename": "/tulip4/sys/ex/g/desert.png", "start": 635860, "end": 636498}, {"filename": "/tulip4/sys/ex/g/earth.png", "start": 636498, "end": 637341}, {"filename": "/tulip4/sys/ex/g/earth2.png", "start": 637341, "end": 638187}, {"filename": "/tulip4/sys/ex/g/fire.png", "start": 638187, "end": 639177}, {"filename": "/tulip4/sys/ex/g/flowers.png", "start": 639177, "end": 639939}, {"filename": "/tulip4/sys/ex/g/grass.png", "start": 639939, "end": 641110}, {"filename": "/tulip4/sys/ex/g/meadow.png", "start": 641110, "end": 641616}, {"filename": "/tulip4/sys/ex/g/mountain-bg.png", "start": 641616, "end": 646219}, {"filename": "/tulip4/sys/ex/g/mountain-far.png", "start": 646219, "end": 648634}, {"filename": "/tulip4/sys/ex/g/mountain.png", "start": 648634, "end": 653516}, {"filename": "/tulip4/sys/ex/g/rabbit_l_0.png", "start": 653516, "end": 655926}, {"filename": "/tulip4/sys/ex/g/rabbit_l_1.png", "start": 655926, "end": 658121}, {"filename": "/tulip4/sys/ex/g/rabbit_l_2.png", "start": 658121, "end": 660399}, {"filename": "/tulip4/sys/ex/g/rabbit_l_3.png", "start": 660399, "end": 662697}, {"filename": "/tulip4/sys/ex/g/rabbit_r_0.png", "start": 662697, "end": 664991}, {"filename": "/tulip4/sys/ex/g/rabbit_r_1.png", "start": 664991, "end": 667267}, {"filename": "/tulip4/sys/ex/g/rabbit_r_2.png", "start": 667267, "end": 669475}, {"filename": "/tulip4/sys/ex/g/rabbit_r_3.png", "start": 669475, "end": 671895}, {"filename": "/tulip4/sys/ex/g/trees-far.png", "start": 671895, "end": 677610}, {"filename": "/tulip4/sys/ex/g/trees.png", "start": 677610, "end": 684536}, {"filename": "/tulip4/sys/ex/g/tulip3.png", "start": 684536, "end": 719654}, {"filename": "/tulip4/sys/ex/g/tulipbw.png", "start": 719654, "end": 722533}, {"filename": "/tulip4/sys/ex/g/water.png", "start": 722533, "end": 723117}, {"filename": "/tulip4/sys/ex/joy.py", "start": 723117, "end": 724118}, {"filename": "/tulip4/sys/ex/my_drums.py", "start": 724118, "end": 733715}, {"filename": "/tulip4/sys/ex/my_juno6.py", "start": 733715, "end": 758495}, {"filename": "/tulip4/sys/ex/my_voices.py", "start": 758495, "end": 771784}, {"filename": "/tulip4/sys/ex/my_worldui.py", "start": 771784, "end": 775795}, {"filename": "/tulip4/sys/ex/parallax.py", "start": 775795, "end": 780000}, {"filename": "/tulip4/sys/ex/planet_boing/pix/bang_texture_03.png", "start": 780000, "end": 781945}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_00.png", "start": 781945, "end": 783785}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_01.png", "start": 783785, "end": 787290}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_02.png", "start": 787290, "end": 789500}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_03.png", "start": 789500, "end": 791580}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_04.png", "start": 791580, "end": 793768}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_05.png", "start": 793768, "end": 795763}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_06.png", "start": 795763, "end": 797879}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_07.png", "start": 797879, "end": 800024}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_08.png", "start": 800024, "end": 802176}, {"filename": "/tulip4/sys/ex/planet_boing/pix/blob_texture_09.png", "start": 802176, "end": 804289}, {"filename": "/tulip4/sys/ex/planet_boing/pix/wormhole.png", "start": 804289, "end": 805051}, {"filename": "/tulip4/sys/ex/planet_boing/planet_boing.py", "start": 805051, "end": 820957}, {"filename": "/tulip4/sys/ex/rgb332.py", "start": 820957, "end": 821295}, {"filename": "/tulip4/sys/ex/screensaver.py", "start": 821295, "end": 822311}, {"filename": "/tulip4/sys/ex/vlng3.wav", "start": 822311, "end": 1125101, "audio": 1}, {"filename": "/tulip4/sys/ex/vlsa3.wav", "start": 1125101, "end": 1583675, "audio": 1}, {"filename": "/tulip4/sys/ex/woodpiano.txt", "start": 1583675, "end": 1584258}, {"filename": "/tulip4/sys/ex/wordpad.py", "start": 1584258, "end": 1584934}, {"filename": "/tulip4/sys/ex/xanadu.py", "start": 1584934, "end": 1590525}, {"filename": "/tulip4/sys/im/tiny_town/tile_0000.png", "start": 1590525, "end": 1590624}, {"filename": "/tulip4/sys/im/tiny_town/tile_0001.png", "start": 1590624, "end": 1590768}, {"filename": "/tulip4/sys/im/tiny_town/tile_0002.png", "start": 1590768, "end": 1590942}, {"filename": "/tulip4/sys/im/tiny_town/tile_0003.png", "start": 1590942, "end": 1591118}, {"filename": "/tulip4/sys/im/tiny_town/tile_0004.png", "start": 1591118, "end": 1591293}, {"filename": "/tulip4/sys/im/tiny_town/tile_0005.png", "start": 1591293, "end": 1591490}, {"filename": "/tulip4/sys/im/tiny_town/tile_0006.png", "start": 1591490, "end": 1591670}, {"filename": "/tulip4/sys/im/tiny_town/tile_0007.png", "start": 1591670, "end": 1591827}, {"filename": "/tulip4/sys/im/tiny_town/tile_0008.png", "start": 1591827, "end": 1592012}, {"filename": "/tulip4/sys/im/tiny_town/tile_0009.png", "start": 1592012, "end": 1592192}, {"filename": "/tulip4/sys/im/tiny_town/tile_0010.png", "start": 1592192, "end": 1592349}, {"filename": "/tulip4/sys/im/tiny_town/tile_0011.png", "start": 1592349, "end": 1592534}, {"filename": "/tulip4/sys/im/tiny_town/tile_0012.png", "start": 1592534, "end": 1592695}, {"filename": "/tulip4/sys/im/tiny_town/tile_0013.png", "start": 1592695, "end": 1592848}, {"filename": "/tulip4/sys/im/tiny_town/tile_0014.png", "start": 1592848, "end": 1593009}, {"filename": "/tulip4/sys/im/tiny_town/tile_0015.png", "start": 1593009, "end": 1593202}, {"filename": "/tulip4/sys/im/tiny_town/tile_0016.png", "start": 1593202, "end": 1593394}, {"filename": "/tulip4/sys/im/tiny_town/tile_0017.png", "start": 1593394, "end": 1593571}, {"filename": "/tulip4/sys/im/tiny_town/tile_0018.png", "start": 1593571, "end": 1593734}, {"filename": "/tulip4/sys/im/tiny_town/tile_0019.png", "start": 1593734, "end": 1593934}, {"filename": "/tulip4/sys/im/tiny_town/tile_0020.png", "start": 1593934, "end": 1594100}, {"filename": "/tulip4/sys/im/tiny_town/tile_0021.png", "start": 1594100, "end": 1594263}, {"filename": "/tulip4/sys/im/tiny_town/tile_0022.png", "start": 1594263, "end": 1594463}, {"filename": "/tulip4/sys/im/tiny_town/tile_0023.png", "start": 1594463, "end": 1594629}, {"filename": "/tulip4/sys/im/tiny_town/tile_0024.png", "start": 1594629, "end": 1594764}, {"filename": "/tulip4/sys/im/tiny_town/tile_0025.png", "start": 1594764, "end": 1594863}, {"filename": "/tulip4/sys/im/tiny_town/tile_0026.png", "start": 1594863, "end": 1595003}, {"filename": "/tulip4/sys/im/tiny_town/tile_0027.png", "start": 1595003, "end": 1595194}, {"filename": "/tulip4/sys/im/tiny_town/tile_0028.png", "start": 1595194, "end": 1595385}, {"filename": "/tulip4/sys/im/tiny_town/tile_0029.png", "start": 1595385, "end": 1595582}, {"filename": "/tulip4/sys/im/tiny_town/tile_0030.png", "start": 1595582, "end": 1595763}, {"filename": "/tulip4/sys/im/tiny_town/tile_0031.png", "start": 1595763, "end": 1595920}, {"filename": "/tulip4/sys/im/tiny_town/tile_0032.png", "start": 1595920, "end": 1596101}, {"filename": "/tulip4/sys/im/tiny_town/tile_0033.png", "start": 1596101, "end": 1596282}, {"filename": "/tulip4/sys/im/tiny_town/tile_0034.png", "start": 1596282, "end": 1596439}, {"filename": "/tulip4/sys/im/tiny_town/tile_0035.png", "start": 1596439, "end": 1596620}, {"filename": "/tulip4/sys/im/tiny_town/tile_0036.png", "start": 1596620, "end": 1596774}, {"filename": "/tulip4/sys/im/tiny_town/tile_0037.png", "start": 1596774, "end": 1596908}, {"filename": "/tulip4/sys/im/tiny_town/tile_0038.png", "start": 1596908, "end": 1597057}, {"filename": "/tulip4/sys/im/tiny_town/tile_0039.png", "start": 1597057, "end": 1597186}, {"filename": "/tulip4/sys/im/tiny_town/tile_0040.png", "start": 1597186, "end": 1597325}, {"filename": "/tulip4/sys/im/tiny_town/tile_0041.png", "start": 1597325, "end": 1597451}, {"filename": "/tulip4/sys/im/tiny_town/tile_0042.png", "start": 1597451, "end": 1597588}, {"filename": "/tulip4/sys/im/tiny_town/tile_0043.png", "start": 1597588, "end": 1597754}, {"filename": "/tulip4/sys/im/tiny_town/tile_0044.png", "start": 1597754, "end": 1597918}, {"filename": "/tulip4/sys/im/tiny_town/tile_0045.png", "start": 1597918, "end": 1598096}, {"filename": "/tulip4/sys/im/tiny_town/tile_0046.png", "start": 1598096, "end": 1598260}, {"filename": "/tulip4/sys/im/tiny_town/tile_0047.png", "start": 1598260, "end": 1598404}, {"filename": "/tulip4/sys/im/tiny_town/tile_0048.png", "start": 1598404, "end": 1598570}, {"filename": "/tulip4/sys/im/tiny_town/tile_0049.png", "start": 1598570, "end": 1598731}, {"filename": "/tulip4/sys/im/tiny_town/tile_0050.png", "start": 1598731, "end": 1598902}, {"filename": "/tulip4/sys/im/tiny_town/tile_0051.png", "start": 1598902, "end": 1599069}, {"filename": "/tulip4/sys/im/tiny_town/tile_0052.png", "start": 1599069, "end": 1599249}, {"filename": "/tulip4/sys/im/tiny_town/tile_0053.png", "start": 1599249, "end": 1599427}, {"filename": "/tulip4/sys/im/tiny_town/tile_0054.png", "start": 1599427, "end": 1599608}, {"filename": "/tulip4/sys/im/tiny_town/tile_0055.png", "start": 1599608, "end": 1599796}, {"filename": "/tulip4/sys/im/tiny_town/tile_0056.png", "start": 1599796, "end": 1599942}, {"filename": "/tulip4/sys/im/tiny_town/tile_0057.png", "start": 1599942, "end": 1600155}, {"filename": "/tulip4/sys/im/tiny_town/tile_0058.png", "start": 1600155, "end": 1600302}, {"filename": "/tulip4/sys/im/tiny_town/tile_0059.png", "start": 1600302, "end": 1600447}, {"filename": "/tulip4/sys/im/tiny_town/tile_0060.png", "start": 1600447, "end": 1600624}, {"filename": "/tulip4/sys/im/tiny_town/tile_0061.png", "start": 1600624, "end": 1600790}, {"filename": "/tulip4/sys/im/tiny_town/tile_0062.png", "start": 1600790, "end": 1600974}, {"filename": "/tulip4/sys/im/tiny_town/tile_0063.png", "start": 1600974, "end": 1601190}, {"filename": "/tulip4/sys/im/tiny_town/tile_0064.png", "start": 1601190, "end": 1601367}, {"filename": "/tulip4/sys/im/tiny_town/tile_0065.png", "start": 1601367, "end": 1601533}, {"filename": "/tulip4/sys/im/tiny_town/tile_0066.png", "start": 1601533, "end": 1601717}, {"filename": "/tulip4/sys/im/tiny_town/tile_0067.png", "start": 1601717, "end": 1601933}, {"filename": "/tulip4/sys/im/tiny_town/tile_0068.png", "start": 1601933, "end": 1602097}, {"filename": "/tulip4/sys/im/tiny_town/tile_0069.png", "start": 1602097, "end": 1602268}, {"filename": "/tulip4/sys/im/tiny_town/tile_0070.png", "start": 1602268, "end": 1602433}, {"filename": "/tulip4/sys/im/tiny_town/tile_0071.png", "start": 1602433, "end": 1602572}, {"filename": "/tulip4/sys/im/tiny_town/tile_0072.png", "start": 1602572, "end": 1602709}, {"filename": "/tulip4/sys/im/tiny_town/tile_0073.png", "start": 1602709, "end": 1602838}, {"filename": "/tulip4/sys/im/tiny_town/tile_0074.png", "start": 1602838, "end": 1602993}, {"filename": "/tulip4/sys/im/tiny_town/tile_0075.png", "start": 1602993, "end": 1603136}, {"filename": "/tulip4/sys/im/tiny_town/tile_0076.png", "start": 1603136, "end": 1603273}, {"filename": "/tulip4/sys/im/tiny_town/tile_0077.png", "start": 1603273, "end": 1603402}, {"filename": "/tulip4/sys/im/tiny_town/tile_0078.png", "start": 1603402, "end": 1603557}, {"filename": "/tulip4/sys/im/tiny_town/tile_0079.png", "start": 1603557, "end": 1603700}, {"filename": "/tulip4/sys/im/tiny_town/tile_0080.png", "start": 1603700, "end": 1603860}, {"filename": "/tulip4/sys/im/tiny_town/tile_0081.png", "start": 1603860, "end": 1603980}, {"filename": "/tulip4/sys/im/tiny_town/tile_0082.png", "start": 1603980, "end": 1604142}, {"filename": "/tulip4/sys/im/tiny_town/tile_0083.png", "start": 1604142, "end": 1604331}, {"filename": "/tulip4/sys/im/tiny_town/tile_0084.png", "start": 1604331, "end": 1604501}, {"filename": "/tulip4/sys/im/tiny_town/tile_0085.png", "start": 1604501, "end": 1604664}, {"filename": "/tulip4/sys/im/tiny_town/tile_0086.png", "start": 1604664, "end": 1604825}, {"filename": "/tulip4/sys/im/tiny_town/tile_0087.png", "start": 1604825, "end": 1604986}, {"filename": "/tulip4/sys/im/tiny_town/tile_0088.png", "start": 1604986, "end": 1605153}, {"filename": "/tulip4/sys/im/tiny_town/tile_0089.png", "start": 1605153, "end": 1605316}, {"filename": "/tulip4/sys/im/tiny_town/tile_0090.png", "start": 1605316, "end": 1605477}, {"filename": "/tulip4/sys/im/tiny_town/tile_0091.png", "start": 1605477, "end": 1605639}, {"filename": "/tulip4/sys/im/tiny_town/tile_0092.png", "start": 1605639, "end": 1605797}, {"filename": "/tulip4/sys/im/tiny_town/tile_0093.png", "start": 1605797, "end": 1605959}, {"filename": "/tulip4/sys/im/tiny_town/tile_0094.png", "start": 1605959, "end": 1606144}, {"filename": "/tulip4/sys/im/tiny_town/tile_0095.png", "start": 1606144, "end": 1606339}, {"filename": "/tulip4/sys/im/tiny_town/tile_0096.png", "start": 1606339, "end": 1606528}, {"filename": "/tulip4/sys/im/tiny_town/tile_0097.png", "start": 1606528, "end": 1606667}, {"filename": "/tulip4/sys/im/tiny_town/tile_0098.png", "start": 1606667, "end": 1606848}, {"filename": "/tulip4/sys/im/tiny_town/tile_0099.png", "start": 1606848, "end": 1607019}, {"filename": "/tulip4/sys/im/tiny_town/tile_0100.png", "start": 1607019, "end": 1607151}, {"filename": "/tulip4/sys/im/tiny_town/tile_0101.png", "start": 1607151, "end": 1607325}, {"filename": "/tulip4/sys/im/tiny_town/tile_0102.png", "start": 1607325, "end": 1607500}, {"filename": "/tulip4/sys/im/tiny_town/tile_0103.png", "start": 1607500, "end": 1607696}, {"filename": "/tulip4/sys/im/tiny_town/tile_0104.png", "start": 1607696, "end": 1607938}, {"filename": "/tulip4/sys/im/tiny_town/tile_0105.png", "start": 1607938, "end": 1608136}, {"filename": "/tulip4/sys/im/tiny_town/tile_0106.png", "start": 1608136, "end": 1608314}, {"filename": "/tulip4/sys/im/tiny_town/tile_0107.png", "start": 1608314, "end": 1608516}, {"filename": "/tulip4/sys/im/tiny_town/tile_0108.png", "start": 1608516, "end": 1608638}, {"filename": "/tulip4/sys/im/tiny_town/tile_0109.png", "start": 1608638, "end": 1608737}, {"filename": "/tulip4/sys/im/tiny_town/tile_0110.png", "start": 1608737, "end": 1608858}, {"filename": "/tulip4/sys/im/tiny_town/tile_0111.png", "start": 1608858, "end": 1609061}, {"filename": "/tulip4/sys/im/tiny_town/tile_0112.png", "start": 1609061, "end": 1609264}, {"filename": "/tulip4/sys/im/tiny_town/tile_0113.png", "start": 1609264, "end": 1609464}, {"filename": "/tulip4/sys/im/tiny_town/tile_0114.png", "start": 1609464, "end": 1609664}, {"filename": "/tulip4/sys/im/tiny_town/tile_0115.png", "start": 1609664, "end": 1609850}, {"filename": "/tulip4/sys/im/tiny_town/tile_0116.png", "start": 1609850, "end": 1610034}, {"filename": "/tulip4/sys/im/tiny_town/tile_0117.png", "start": 1610034, "end": 1610206}, {"filename": "/tulip4/sys/im/tiny_town/tile_0118.png", "start": 1610206, "end": 1610389}, {"filename": "/tulip4/sys/im/tiny_town/tile_0119.png", "start": 1610389, "end": 1610572}, {"filename": "/tulip4/sys/im/tiny_town/tile_0120.png", "start": 1610572, "end": 1610730}, {"filename": "/tulip4/sys/im/tiny_town/tile_0121.png", "start": 1610730, "end": 1610871}, {"filename": "/tulip4/sys/im/tiny_town/tile_0122.png", "start": 1610871, "end": 1611034}, {"filename": "/tulip4/sys/im/tiny_town/tile_0123.png", "start": 1611034, "end": 1611179}, {"filename": "/tulip4/sys/im/tiny_town/tile_0124.png", "start": 1611179, "end": 1611325}, {"filename": "/tulip4/sys/im/tiny_town/tile_0125.png", "start": 1611325, "end": 1611511}, {"filename": "/tulip4/sys/im/tiny_town/tile_0126.png", "start": 1611511, "end": 1611669}, {"filename": "/tulip4/sys/im/tiny_town/tile_0127.png", "start": 1611669, "end": 1611853}, {"filename": "/tulip4/sys/im/tiny_town/tile_0128.png", "start": 1611853, "end": 1612053}, {"filename": "/tulip4/sys/im/tiny_town/tile_0129.png", "start": 1612053, "end": 1612253}, {"filename": "/tulip4/sys/im/tiny_town/tile_0130.png", "start": 1612253, "end": 1612459}, {"filename": "/tulip4/sys/im/tiny_town/tile_0131.png", "start": 1612459, "end": 1612679}], "remote_package_size": 1612679});
+
+  })();
+
+// end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpqvklq6v1.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp09mmdw0r.js
+
+    // All the pre-js content up to here must remain later on, we need to run
+    // it.
+    if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
+    var necessaryPreJSTasks = Module['preRun'].slice();
+  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp09mmdw0r.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmph6cbcrje.js
+
+    if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
+    necessaryPreJSTasks.forEach((task) => {
+      if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
+    });
+  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmph6cbcrje.js
 
 
 // Sometimes an existing Module object exists with properties
@@ -264,7 +469,7 @@ legacyModuleProp('asm', 'wasmExports');
 legacyModuleProp('readAsync', 'readAsync');
 legacyModuleProp('readBinary', 'readBinary');
 legacyModuleProp('setWindowTitle', 'setWindowTitle');
-var IDBFS = 'IDBFS is no longer included by default; build with -lidbfs.js';
+
 var PROXYFS = 'PROXYFS is no longer included by default; build with -lproxyfs.js';
 var WORKERFS = 'WORKERFS is no longer included by default; build with -lworkerfs.js';
 var FETCHFS = 'FETCHFS is no longer included by default; build with -lfetchfs.js';
@@ -295,6 +500,32 @@ if (typeof WebAssembly != 'object') {
   err('no native wasm support detected');
 }
 
+// include: base64Utils.js
+// Converts a string of base64 into a byte array (Uint8Array).
+function intArrayFromBase64(s) {
+  if (typeof ENVIRONMENT_IS_NODE != 'undefined' && ENVIRONMENT_IS_NODE) {
+    var buf = Buffer.from(s, 'base64');
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.length);
+  }
+
+  var decoded = atob(s);
+  var bytes = new Uint8Array(decoded.length);
+  for (var i = 0 ; i < decoded.length ; ++i) {
+    bytes[i] = decoded.charCodeAt(i);
+  }
+  return bytes;
+}
+
+// If filename is a base64 data URI, parses and returns data (Buffer on node,
+// Uint8Array otherwise). If filename is not a base64 data URI, returns undefined.
+function tryParseAsDataURI(filename) {
+  if (!isDataURI(filename)) {
+    return;
+  }
+
+  return intArrayFromBase64(filename.slice(dataURIPrefix.length));
+}
+// end include: base64Utils.js
 // Wasm globals
 
 var wasmMemory;
@@ -914,22 +1145,23 @@ function dbg(...args) {
 // === Body ===
 
 var ASM_CONSTS = {
-  67606292: ($0) => { var str = UTF8ToString($0) + '\n\n' + 'Abort/Retry/Ignore/AlwaysIgnore? [ariA] :'; var reply = window.prompt(str, "i"); if (reply === null) { reply = "i"; } return allocate(intArrayFromString(reply), 'i8', ALLOC_NORMAL); },  
- 67606517: () => { if (typeof(AudioContext) !== 'undefined') { return true; } else if (typeof(webkitAudioContext) !== 'undefined') { return true; } return false; },  
- 67606664: () => { if ((typeof(navigator.mediaDevices) !== 'undefined') && (typeof(navigator.mediaDevices.getUserMedia) !== 'undefined')) { return true; } else if (typeof(navigator.webkitGetUserMedia) !== 'undefined') { return true; } return false; },  
- 67606898: ($0) => { if(typeof(Module['SDL2']) === 'undefined') { Module['SDL2'] = {}; } var SDL2 = Module['SDL2']; if (!$0) { SDL2.audio = {}; } else { SDL2.capture = {}; } if (!SDL2.audioContext) { if (typeof(AudioContext) !== 'undefined') { SDL2.audioContext = new AudioContext(); } else if (typeof(webkitAudioContext) !== 'undefined') { SDL2.audioContext = new webkitAudioContext(); } if (SDL2.audioContext) { autoResumeAudioContext(SDL2.audioContext); } } return SDL2.audioContext === undefined ? -1 : 0; },  
- 67607391: () => { var SDL2 = Module['SDL2']; return SDL2.audioContext.sampleRate; },  
- 67607459: ($0, $1, $2, $3) => { var SDL2 = Module['SDL2']; var have_microphone = function(stream) { if (SDL2.capture.silenceTimer !== undefined) { clearTimeout(SDL2.capture.silenceTimer); SDL2.capture.silenceTimer = undefined; } SDL2.capture.mediaStreamNode = SDL2.audioContext.createMediaStreamSource(stream); SDL2.capture.scriptProcessorNode = SDL2.audioContext.createScriptProcessor($1, $0, 1); SDL2.capture.scriptProcessorNode.onaudioprocess = function(audioProcessingEvent) { if ((SDL2 === undefined) || (SDL2.capture === undefined)) { return; } audioProcessingEvent.outputBuffer.getChannelData(0).fill(0.0); SDL2.capture.currentCaptureBuffer = audioProcessingEvent.inputBuffer; dynCall('vi', $2, [$3]); }; SDL2.capture.mediaStreamNode.connect(SDL2.capture.scriptProcessorNode); SDL2.capture.scriptProcessorNode.connect(SDL2.audioContext.destination); SDL2.capture.stream = stream; }; var no_microphone = function(error) { }; SDL2.capture.silenceBuffer = SDL2.audioContext.createBuffer($0, $1, SDL2.audioContext.sampleRate); SDL2.capture.silenceBuffer.getChannelData(0).fill(0.0); var silence_callback = function() { SDL2.capture.currentCaptureBuffer = SDL2.capture.silenceBuffer; dynCall('vi', $2, [$3]); }; SDL2.capture.silenceTimer = setTimeout(silence_callback, ($1 / SDL2.audioContext.sampleRate) * 1000); if ((navigator.mediaDevices !== undefined) && (navigator.mediaDevices.getUserMedia !== undefined)) { navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(have_microphone).catch(no_microphone); } else if (navigator.webkitGetUserMedia !== undefined) { navigator.webkitGetUserMedia({ audio: true, video: false }, have_microphone, no_microphone); } },  
- 67609111: ($0, $1, $2, $3) => { var SDL2 = Module['SDL2']; SDL2.audio.scriptProcessorNode = SDL2.audioContext['createScriptProcessor']($1, 0, $0); SDL2.audio.scriptProcessorNode['onaudioprocess'] = function (e) { if ((SDL2 === undefined) || (SDL2.audio === undefined)) { return; } SDL2.audio.currentOutputBuffer = e['outputBuffer']; dynCall('vi', $2, [$3]); }; SDL2.audio.scriptProcessorNode['connect'](SDL2.audioContext['destination']); },  
- 67609521: ($0, $1) => { var SDL2 = Module['SDL2']; var numChannels = SDL2.capture.currentCaptureBuffer.numberOfChannels; for (var c = 0; c < numChannels; ++c) { var channelData = SDL2.capture.currentCaptureBuffer.getChannelData(c); if (channelData.length != $1) { throw 'Web Audio capture buffer length mismatch! Destination size: ' + channelData.length + ' samples vs expected ' + $1 + ' samples!'; } if (numChannels == 1) { for (var j = 0; j < $1; ++j) { setValue($0 + (j * 4), channelData[j], 'float'); } } else { for (var j = 0; j < $1; ++j) { setValue($0 + (((j * numChannels) + c) * 4), channelData[j], 'float'); } } } },  
- 67610126: ($0, $1) => { var SDL2 = Module['SDL2']; var numChannels = SDL2.audio.currentOutputBuffer['numberOfChannels']; for (var c = 0; c < numChannels; ++c) { var channelData = SDL2.audio.currentOutputBuffer['getChannelData'](c); if (channelData.length != $1) { throw 'Web Audio output buffer length mismatch! Destination size: ' + channelData.length + ' samples vs expected ' + $1 + ' samples!'; } for (var j = 0; j < $1; ++j) { channelData[j] = HEAPF32[$0 + ((j*numChannels + c) << 2) >> 2]; } } },  
- 67610606: ($0) => { var SDL2 = Module['SDL2']; if ($0) { if (SDL2.capture.silenceTimer !== undefined) { clearTimeout(SDL2.capture.silenceTimer); } if (SDL2.capture.stream !== undefined) { var tracks = SDL2.capture.stream.getAudioTracks(); for (var i = 0; i < tracks.length; i++) { SDL2.capture.stream.removeTrack(tracks[i]); } SDL2.capture.stream = undefined; } if (SDL2.capture.scriptProcessorNode !== undefined) { SDL2.capture.scriptProcessorNode.onaudioprocess = function(audioProcessingEvent) {}; SDL2.capture.scriptProcessorNode.disconnect(); SDL2.capture.scriptProcessorNode = undefined; } if (SDL2.capture.mediaStreamNode !== undefined) { SDL2.capture.mediaStreamNode.disconnect(); SDL2.capture.mediaStreamNode = undefined; } if (SDL2.capture.silenceBuffer !== undefined) { SDL2.capture.silenceBuffer = undefined } SDL2.capture = undefined; } else { if (SDL2.audio.scriptProcessorNode != undefined) { SDL2.audio.scriptProcessorNode.disconnect(); SDL2.audio.scriptProcessorNode = undefined; } SDL2.audio = undefined; } if ((SDL2.audioContext !== undefined) && (SDL2.audio === undefined) && (SDL2.capture === undefined)) { SDL2.audioContext.close(); SDL2.audioContext = undefined; } },  
- 67611778: ($0, $1, $2) => { var w = $0; var h = $1; var pixels = $2; if (!Module['SDL2']) Module['SDL2'] = {}; var SDL2 = Module['SDL2']; if (SDL2.ctxCanvas !== Module['canvas']) { SDL2.ctx = Module['createContext'](Module['canvas'], false, true); SDL2.ctxCanvas = Module['canvas']; } if (SDL2.w !== w || SDL2.h !== h || SDL2.imageCtx !== SDL2.ctx) { SDL2.image = SDL2.ctx.createImageData(w, h); SDL2.w = w; SDL2.h = h; SDL2.imageCtx = SDL2.ctx; } var data = SDL2.image.data; var src = pixels >> 2; var dst = 0; var num; if (typeof CanvasPixelArray !== 'undefined' && data instanceof CanvasPixelArray) { num = data.length; while (dst < num) { var val = HEAP32[src]; data[dst ] = val & 0xff; data[dst+1] = (val >> 8) & 0xff; data[dst+2] = (val >> 16) & 0xff; data[dst+3] = 0xff; src++; dst += 4; } } else { if (SDL2.data32Data !== data) { SDL2.data32 = new Int32Array(data.buffer); SDL2.data8 = new Uint8Array(data.buffer); SDL2.data32Data = data; } var data32 = SDL2.data32; num = data32.length; data32.set(HEAP32.subarray(src, src + num)); var data8 = SDL2.data8; var i = 3; var j = i + 4*num; if (num % 8 == 0) { while (i < j) { data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; } } else { while (i < j) { data8[i] = 0xff; i = i + 4 | 0; } } } SDL2.ctx.putImageData(SDL2.image, 0, 0); },  
- 67613247: ($0, $1, $2, $3, $4) => { var w = $0; var h = $1; var hot_x = $2; var hot_y = $3; var pixels = $4; var canvas = document.createElement("canvas"); canvas.width = w; canvas.height = h; var ctx = canvas.getContext("2d"); var image = ctx.createImageData(w, h); var data = image.data; var src = pixels >> 2; var dst = 0; var num; if (typeof CanvasPixelArray !== 'undefined' && data instanceof CanvasPixelArray) { num = data.length; while (dst < num) { var val = HEAP32[src]; data[dst ] = val & 0xff; data[dst+1] = (val >> 8) & 0xff; data[dst+2] = (val >> 16) & 0xff; data[dst+3] = (val >> 24) & 0xff; src++; dst += 4; } } else { var data32 = new Int32Array(data.buffer); num = data32.length; data32.set(HEAP32.subarray(src, src + num)); } ctx.putImageData(image, 0, 0); var url = hot_x === 0 && hot_y === 0 ? "url(" + canvas.toDataURL() + "), auto" : "url(" + canvas.toDataURL() + ") " + hot_x + " " + hot_y + ", auto"; var urlBuf = _malloc(url.length + 1); stringToUTF8(url, urlBuf, url.length + 1); return urlBuf; },  
- 67614236: ($0) => { if (Module['canvas']) { Module['canvas'].style['cursor'] = UTF8ToString($0); } },  
- 67614319: () => { if (Module['canvas']) { Module['canvas'].style['cursor'] = 'none'; } },  
- 67614388: () => { return window.innerWidth; },  
- 67614418: () => { return window.innerHeight; }
+  67600240: () => { try { FS.mkdir('/tulip4/user'); } catch (err) { console.log('tulip4/user already exist'); } FS.mount(IDBFS, {autoPersist:true}, '/tulip4/user'); FS.syncfs(true, function (err) { }); },  
+ 67600422: ($0) => { var str = UTF8ToString($0) + '\n\n' + 'Abort/Retry/Ignore/AlwaysIgnore? [ariA] :'; var reply = window.prompt(str, "i"); if (reply === null) { reply = "i"; } return allocate(intArrayFromString(reply), 'i8', ALLOC_NORMAL); },  
+ 67600647: () => { if (typeof(AudioContext) !== 'undefined') { return true; } else if (typeof(webkitAudioContext) !== 'undefined') { return true; } return false; },  
+ 67600794: () => { if ((typeof(navigator.mediaDevices) !== 'undefined') && (typeof(navigator.mediaDevices.getUserMedia) !== 'undefined')) { return true; } else if (typeof(navigator.webkitGetUserMedia) !== 'undefined') { return true; } return false; },  
+ 67601028: ($0) => { if(typeof(Module['SDL2']) === 'undefined') { Module['SDL2'] = {}; } var SDL2 = Module['SDL2']; if (!$0) { SDL2.audio = {}; } else { SDL2.capture = {}; } if (!SDL2.audioContext) { if (typeof(AudioContext) !== 'undefined') { SDL2.audioContext = new AudioContext(); } else if (typeof(webkitAudioContext) !== 'undefined') { SDL2.audioContext = new webkitAudioContext(); } if (SDL2.audioContext) { autoResumeAudioContext(SDL2.audioContext); } } return SDL2.audioContext === undefined ? -1 : 0; },  
+ 67601521: () => { var SDL2 = Module['SDL2']; return SDL2.audioContext.sampleRate; },  
+ 67601589: ($0, $1, $2, $3) => { var SDL2 = Module['SDL2']; var have_microphone = function(stream) { if (SDL2.capture.silenceTimer !== undefined) { clearTimeout(SDL2.capture.silenceTimer); SDL2.capture.silenceTimer = undefined; } SDL2.capture.mediaStreamNode = SDL2.audioContext.createMediaStreamSource(stream); SDL2.capture.scriptProcessorNode = SDL2.audioContext.createScriptProcessor($1, $0, 1); SDL2.capture.scriptProcessorNode.onaudioprocess = function(audioProcessingEvent) { if ((SDL2 === undefined) || (SDL2.capture === undefined)) { return; } audioProcessingEvent.outputBuffer.getChannelData(0).fill(0.0); SDL2.capture.currentCaptureBuffer = audioProcessingEvent.inputBuffer; dynCall('vi', $2, [$3]); }; SDL2.capture.mediaStreamNode.connect(SDL2.capture.scriptProcessorNode); SDL2.capture.scriptProcessorNode.connect(SDL2.audioContext.destination); SDL2.capture.stream = stream; }; var no_microphone = function(error) { }; SDL2.capture.silenceBuffer = SDL2.audioContext.createBuffer($0, $1, SDL2.audioContext.sampleRate); SDL2.capture.silenceBuffer.getChannelData(0).fill(0.0); var silence_callback = function() { SDL2.capture.currentCaptureBuffer = SDL2.capture.silenceBuffer; dynCall('vi', $2, [$3]); }; SDL2.capture.silenceTimer = setTimeout(silence_callback, ($1 / SDL2.audioContext.sampleRate) * 1000); if ((navigator.mediaDevices !== undefined) && (navigator.mediaDevices.getUserMedia !== undefined)) { navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(have_microphone).catch(no_microphone); } else if (navigator.webkitGetUserMedia !== undefined) { navigator.webkitGetUserMedia({ audio: true, video: false }, have_microphone, no_microphone); } },  
+ 67603241: ($0, $1, $2, $3) => { var SDL2 = Module['SDL2']; SDL2.audio.scriptProcessorNode = SDL2.audioContext['createScriptProcessor']($1, 0, $0); SDL2.audio.scriptProcessorNode['onaudioprocess'] = function (e) { if ((SDL2 === undefined) || (SDL2.audio === undefined)) { return; } SDL2.audio.currentOutputBuffer = e['outputBuffer']; dynCall('vi', $2, [$3]); }; SDL2.audio.scriptProcessorNode['connect'](SDL2.audioContext['destination']); },  
+ 67603651: ($0, $1) => { var SDL2 = Module['SDL2']; var numChannels = SDL2.capture.currentCaptureBuffer.numberOfChannels; for (var c = 0; c < numChannels; ++c) { var channelData = SDL2.capture.currentCaptureBuffer.getChannelData(c); if (channelData.length != $1) { throw 'Web Audio capture buffer length mismatch! Destination size: ' + channelData.length + ' samples vs expected ' + $1 + ' samples!'; } if (numChannels == 1) { for (var j = 0; j < $1; ++j) { setValue($0 + (j * 4), channelData[j], 'float'); } } else { for (var j = 0; j < $1; ++j) { setValue($0 + (((j * numChannels) + c) * 4), channelData[j], 'float'); } } } },  
+ 67604256: ($0, $1) => { var SDL2 = Module['SDL2']; var numChannels = SDL2.audio.currentOutputBuffer['numberOfChannels']; for (var c = 0; c < numChannels; ++c) { var channelData = SDL2.audio.currentOutputBuffer['getChannelData'](c); if (channelData.length != $1) { throw 'Web Audio output buffer length mismatch! Destination size: ' + channelData.length + ' samples vs expected ' + $1 + ' samples!'; } for (var j = 0; j < $1; ++j) { channelData[j] = HEAPF32[$0 + ((j*numChannels + c) << 2) >> 2]; } } },  
+ 67604736: ($0) => { var SDL2 = Module['SDL2']; if ($0) { if (SDL2.capture.silenceTimer !== undefined) { clearTimeout(SDL2.capture.silenceTimer); } if (SDL2.capture.stream !== undefined) { var tracks = SDL2.capture.stream.getAudioTracks(); for (var i = 0; i < tracks.length; i++) { SDL2.capture.stream.removeTrack(tracks[i]); } SDL2.capture.stream = undefined; } if (SDL2.capture.scriptProcessorNode !== undefined) { SDL2.capture.scriptProcessorNode.onaudioprocess = function(audioProcessingEvent) {}; SDL2.capture.scriptProcessorNode.disconnect(); SDL2.capture.scriptProcessorNode = undefined; } if (SDL2.capture.mediaStreamNode !== undefined) { SDL2.capture.mediaStreamNode.disconnect(); SDL2.capture.mediaStreamNode = undefined; } if (SDL2.capture.silenceBuffer !== undefined) { SDL2.capture.silenceBuffer = undefined } SDL2.capture = undefined; } else { if (SDL2.audio.scriptProcessorNode != undefined) { SDL2.audio.scriptProcessorNode.disconnect(); SDL2.audio.scriptProcessorNode = undefined; } SDL2.audio = undefined; } if ((SDL2.audioContext !== undefined) && (SDL2.audio === undefined) && (SDL2.capture === undefined)) { SDL2.audioContext.close(); SDL2.audioContext = undefined; } },  
+ 67605908: ($0, $1, $2) => { var w = $0; var h = $1; var pixels = $2; if (!Module['SDL2']) Module['SDL2'] = {}; var SDL2 = Module['SDL2']; if (SDL2.ctxCanvas !== Module['canvas']) { SDL2.ctx = Module['createContext'](Module['canvas'], false, true); SDL2.ctxCanvas = Module['canvas']; } if (SDL2.w !== w || SDL2.h !== h || SDL2.imageCtx !== SDL2.ctx) { SDL2.image = SDL2.ctx.createImageData(w, h); SDL2.w = w; SDL2.h = h; SDL2.imageCtx = SDL2.ctx; } var data = SDL2.image.data; var src = pixels >> 2; var dst = 0; var num; if (typeof CanvasPixelArray !== 'undefined' && data instanceof CanvasPixelArray) { num = data.length; while (dst < num) { var val = HEAP32[src]; data[dst ] = val & 0xff; data[dst+1] = (val >> 8) & 0xff; data[dst+2] = (val >> 16) & 0xff; data[dst+3] = 0xff; src++; dst += 4; } } else { if (SDL2.data32Data !== data) { SDL2.data32 = new Int32Array(data.buffer); SDL2.data8 = new Uint8Array(data.buffer); SDL2.data32Data = data; } var data32 = SDL2.data32; num = data32.length; data32.set(HEAP32.subarray(src, src + num)); var data8 = SDL2.data8; var i = 3; var j = i + 4*num; if (num % 8 == 0) { while (i < j) { data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; data8[i] = 0xff; i = i + 4 | 0; } } else { while (i < j) { data8[i] = 0xff; i = i + 4 | 0; } } } SDL2.ctx.putImageData(SDL2.image, 0, 0); },  
+ 67607377: ($0, $1, $2, $3, $4) => { var w = $0; var h = $1; var hot_x = $2; var hot_y = $3; var pixels = $4; var canvas = document.createElement("canvas"); canvas.width = w; canvas.height = h; var ctx = canvas.getContext("2d"); var image = ctx.createImageData(w, h); var data = image.data; var src = pixels >> 2; var dst = 0; var num; if (typeof CanvasPixelArray !== 'undefined' && data instanceof CanvasPixelArray) { num = data.length; while (dst < num) { var val = HEAP32[src]; data[dst ] = val & 0xff; data[dst+1] = (val >> 8) & 0xff; data[dst+2] = (val >> 16) & 0xff; data[dst+3] = (val >> 24) & 0xff; src++; dst += 4; } } else { var data32 = new Int32Array(data.buffer); num = data32.length; data32.set(HEAP32.subarray(src, src + num)); } ctx.putImageData(image, 0, 0); var url = hot_x === 0 && hot_y === 0 ? "url(" + canvas.toDataURL() + "), auto" : "url(" + canvas.toDataURL() + ") " + hot_x + " " + hot_y + ", auto"; var urlBuf = _malloc(url.length + 1); stringToUTF8(url, urlBuf, url.length + 1); return urlBuf; },  
+ 67608366: ($0) => { if (Module['canvas']) { Module['canvas'].style['cursor'] = UTF8ToString($0); } },  
+ 67608449: () => { if (Module['canvas']) { Module['canvas'].style['cursor'] = 'none'; } },  
+ 67608518: () => { return window.innerWidth; },  
+ 67608548: () => { return window.innerHeight; }
 };
 function proxy_convert_mp_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); proxy_convert_js_to_mp_obj_jsside_force_double_proxy(ret, out); }
 function proxy_convert_mp_to_js_then_js_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); const js_obj = PyProxy.toJs(ret); proxy_convert_js_to_mp_obj_jsside(js_obj, out); }
@@ -1956,6 +2188,379 @@ function create_promise(out_set,out_promise) { const out_set_js = proxy_convert_
   
   
   
+  
+  
+  
+  var IDBFS = {
+  dbs:{
+  },
+  indexedDB:() => {
+        if (typeof indexedDB != 'undefined') return indexedDB;
+        var ret = null;
+        if (typeof window == 'object') ret = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+        assert(ret, 'IDBFS used, but indexedDB not supported');
+        return ret;
+      },
+  DB_VERSION:21,
+  DB_STORE_NAME:"FILE_DATA",
+  queuePersist:(mount) => {
+        function onPersistComplete() {
+          if (mount.idbPersistState === 'again') startPersist(); // If a new sync request has appeared in between, kick off a new sync
+          else mount.idbPersistState = 0; // Otherwise reset sync state back to idle to wait for a new sync later
+        }
+        function startPersist() {
+          mount.idbPersistState = 'idb'; // Mark that we are currently running a sync operation
+          IDBFS.syncfs(mount, /*populate:*/false, onPersistComplete);
+        }
+  
+        if (!mount.idbPersistState) {
+          // Programs typically write/copy/move multiple files in the in-memory
+          // filesystem within a single app frame, so when a filesystem sync
+          // command is triggered, do not start it immediately, but only after
+          // the current frame is finished. This way all the modified files
+          // inside the main loop tick will be batched up to the same sync.
+          mount.idbPersistState = setTimeout(startPersist, 0);
+        } else if (mount.idbPersistState === 'idb') {
+          // There is an active IndexedDB sync operation in-flight, but we now
+          // have accumulated more files to sync. We should therefore queue up
+          // a new sync after the current one finishes so that all writes
+          // will be properly persisted.
+          mount.idbPersistState = 'again';
+        }
+      },
+  mount:(mount) => {
+        // reuse core MEMFS functionality
+        var mnt = MEMFS.mount(mount);
+        // If the automatic IDBFS persistence option has been selected, then automatically persist
+        // all modifications to the filesystem as they occur.
+        if (mount?.opts?.autoPersist) {
+          mnt.idbPersistState = 0; // IndexedDB sync starts in idle state
+          var memfs_node_ops = mnt.node_ops;
+          mnt.node_ops = Object.assign({}, mnt.node_ops); // Clone node_ops to inject write tracking
+          mnt.node_ops.mknod = (parent, name, mode, dev) => {
+            var node = memfs_node_ops.mknod(parent, name, mode, dev);
+            // Propagate injected node_ops to the newly created child node
+            node.node_ops = mnt.node_ops;
+            // Remember for each IDBFS node which IDBFS mount point they came from so we know which mount to persist on modification.
+            node.idbfs_mount = mnt.mount;
+            // Remember original MEMFS stream_ops for this node
+            node.memfs_stream_ops = node.stream_ops;
+            // Clone stream_ops to inject write tracking
+            node.stream_ops = Object.assign({}, node.stream_ops);
+  
+            // Track all file writes
+            node.stream_ops.write = (stream, buffer, offset, length, position, canOwn) => {
+              // This file has been modified, we must persist IndexedDB when this file closes
+              stream.node.isModified = true;
+              return node.memfs_stream_ops.write(stream, buffer, offset, length, position, canOwn);
+            };
+  
+            // Persist IndexedDB on file close
+            node.stream_ops.close = (stream) => {
+              var n = stream.node;
+              if (n.isModified) {
+                IDBFS.queuePersist(n.idbfs_mount);
+                n.isModified = false;
+              }
+              if (n.memfs_stream_ops.close) return n.memfs_stream_ops.close(stream);
+            };
+  
+            return node;
+          };
+          // Also kick off persisting the filesystem on other operations that modify the filesystem.
+          mnt.node_ops.mkdir   = (...args) => (IDBFS.queuePersist(mnt.mount), memfs_node_ops.mkdir(...args));
+          mnt.node_ops.rmdir   = (...args) => (IDBFS.queuePersist(mnt.mount), memfs_node_ops.rmdir(...args));
+          mnt.node_ops.symlink = (...args) => (IDBFS.queuePersist(mnt.mount), memfs_node_ops.symlink(...args));
+          mnt.node_ops.unlink  = (...args) => (IDBFS.queuePersist(mnt.mount), memfs_node_ops.unlink(...args));
+          mnt.node_ops.rename  = (...args) => (IDBFS.queuePersist(mnt.mount), memfs_node_ops.rename(...args));
+        }
+        return mnt;
+      },
+  syncfs:(mount, populate, callback) => {
+        IDBFS.getLocalSet(mount, (err, local) => {
+          if (err) return callback(err);
+  
+          IDBFS.getRemoteSet(mount, (err, remote) => {
+            if (err) return callback(err);
+  
+            var src = populate ? remote : local;
+            var dst = populate ? local : remote;
+  
+            IDBFS.reconcile(src, dst, callback);
+          });
+        });
+      },
+  quit:() => {
+        Object.values(IDBFS.dbs).forEach((value) => value.close());
+        IDBFS.dbs = {};
+      },
+  getDB:(name, callback) => {
+        // check the cache first
+        var db = IDBFS.dbs[name];
+        if (db) {
+          return callback(null, db);
+        }
+  
+        var req;
+        try {
+          req = IDBFS.indexedDB().open(name, IDBFS.DB_VERSION);
+        } catch (e) {
+          return callback(e);
+        }
+        if (!req) {
+          return callback("Unable to connect to IndexedDB");
+        }
+        req.onupgradeneeded = (e) => {
+          var db = /** @type {IDBDatabase} */ (e.target.result);
+          var transaction = e.target.transaction;
+  
+          var fileStore;
+  
+          if (db.objectStoreNames.contains(IDBFS.DB_STORE_NAME)) {
+            fileStore = transaction.objectStore(IDBFS.DB_STORE_NAME);
+          } else {
+            fileStore = db.createObjectStore(IDBFS.DB_STORE_NAME);
+          }
+  
+          if (!fileStore.indexNames.contains('timestamp')) {
+            fileStore.createIndex('timestamp', 'timestamp', { unique: false });
+          }
+        };
+        req.onsuccess = () => {
+          db = /** @type {IDBDatabase} */ (req.result);
+  
+          // add to the cache
+          IDBFS.dbs[name] = db;
+          callback(null, db);
+        };
+        req.onerror = (e) => {
+          callback(e.target.error);
+          e.preventDefault();
+        };
+      },
+  getLocalSet:(mount, callback) => {
+        var entries = {};
+  
+        function isRealDir(p) {
+          return p !== '.' && p !== '..';
+        };
+        function toAbsolute(root) {
+          return (p) => PATH.join2(root, p);
+        };
+  
+        var check = FS.readdir(mount.mountpoint).filter(isRealDir).map(toAbsolute(mount.mountpoint));
+  
+        while (check.length) {
+          var path = check.pop();
+          var stat;
+  
+          try {
+            stat = FS.stat(path);
+          } catch (e) {
+            return callback(e);
+          }
+  
+          if (FS.isDir(stat.mode)) {
+            check.push(...FS.readdir(path).filter(isRealDir).map(toAbsolute(path)));
+          }
+  
+          entries[path] = { 'timestamp': stat.mtime };
+        }
+  
+        return callback(null, { type: 'local', entries: entries });
+      },
+  getRemoteSet:(mount, callback) => {
+        var entries = {};
+  
+        IDBFS.getDB(mount.mountpoint, (err, db) => {
+          if (err) return callback(err);
+  
+          try {
+            var transaction = db.transaction([IDBFS.DB_STORE_NAME], 'readonly');
+            transaction.onerror = (e) => {
+              callback(e.target.error);
+              e.preventDefault();
+            };
+  
+            var store = transaction.objectStore(IDBFS.DB_STORE_NAME);
+            var index = store.index('timestamp');
+  
+            index.openKeyCursor().onsuccess = (event) => {
+              var cursor = event.target.result;
+  
+              if (!cursor) {
+                return callback(null, { type: 'remote', db, entries });
+              }
+  
+              entries[cursor.primaryKey] = { 'timestamp': cursor.key };
+  
+              cursor.continue();
+            };
+          } catch (e) {
+            return callback(e);
+          }
+        });
+      },
+  loadLocalEntry:(path, callback) => {
+        var stat, node;
+  
+        try {
+          var lookup = FS.lookupPath(path);
+          node = lookup.node;
+          stat = FS.stat(path);
+        } catch (e) {
+          return callback(e);
+        }
+  
+        if (FS.isDir(stat.mode)) {
+          return callback(null, { 'timestamp': stat.mtime, 'mode': stat.mode });
+        } else if (FS.isFile(stat.mode)) {
+          // Performance consideration: storing a normal JavaScript array to a IndexedDB is much slower than storing a typed array.
+          // Therefore always convert the file contents to a typed array first before writing the data to IndexedDB.
+          node.contents = MEMFS.getFileDataAsTypedArray(node);
+          return callback(null, { 'timestamp': stat.mtime, 'mode': stat.mode, 'contents': node.contents });
+        } else {
+          return callback(new Error('node type not supported'));
+        }
+      },
+  storeLocalEntry:(path, entry, callback) => {
+        try {
+          if (FS.isDir(entry['mode'])) {
+            FS.mkdirTree(path, entry['mode']);
+          } else if (FS.isFile(entry['mode'])) {
+            FS.writeFile(path, entry['contents'], { canOwn: true });
+          } else {
+            return callback(new Error('node type not supported'));
+          }
+  
+          FS.chmod(path, entry['mode']);
+          FS.utime(path, entry['timestamp'], entry['timestamp']);
+        } catch (e) {
+          return callback(e);
+        }
+  
+        callback(null);
+      },
+  removeLocalEntry:(path, callback) => {
+        try {
+          var stat = FS.stat(path);
+  
+          if (FS.isDir(stat.mode)) {
+            FS.rmdir(path);
+          } else if (FS.isFile(stat.mode)) {
+            FS.unlink(path);
+          }
+        } catch (e) {
+          return callback(e);
+        }
+  
+        callback(null);
+      },
+  loadRemoteEntry:(store, path, callback) => {
+        var req = store.get(path);
+        req.onsuccess = (event) => callback(null, event.target.result);
+        req.onerror = (e) => {
+          callback(e.target.error);
+          e.preventDefault();
+        };
+      },
+  storeRemoteEntry:(store, path, entry, callback) => {
+        try {
+          var req = store.put(entry, path);
+        } catch (e) {
+          callback(e);
+          return;
+        }
+        req.onsuccess = (event) => callback();
+        req.onerror = (e) => {
+          callback(e.target.error);
+          e.preventDefault();
+        };
+      },
+  removeRemoteEntry:(store, path, callback) => {
+        var req = store.delete(path);
+        req.onsuccess = (event) => callback();
+        req.onerror = (e) => {
+          callback(e.target.error);
+          e.preventDefault();
+        };
+      },
+  reconcile:(src, dst, callback) => {
+        var total = 0;
+  
+        var create = [];
+        Object.keys(src.entries).forEach((key) => {
+          var e = src.entries[key];
+          var e2 = dst.entries[key];
+          if (!e2 || e['timestamp'].getTime() != e2['timestamp'].getTime()) {
+            create.push(key);
+            total++;
+          }
+        });
+  
+        var remove = [];
+        Object.keys(dst.entries).forEach((key) => {
+          if (!src.entries[key]) {
+            remove.push(key);
+            total++;
+          }
+        });
+  
+        if (!total) {
+          return callback(null);
+        }
+  
+        var errored = false;
+        var db = src.type === 'remote' ? src.db : dst.db;
+        var transaction = db.transaction([IDBFS.DB_STORE_NAME], 'readwrite');
+        var store = transaction.objectStore(IDBFS.DB_STORE_NAME);
+  
+        function done(err) {
+          if (err && !errored) {
+            errored = true;
+            return callback(err);
+          }
+        };
+  
+        // transaction may abort if (for example) there is a QuotaExceededError
+        transaction.onerror = transaction.onabort = (e) => {
+          done(e.target.error);
+          e.preventDefault();
+        };
+  
+        transaction.oncomplete = (e) => {
+          if (!errored) {
+            callback(null);
+          }
+        };
+  
+        // sort paths in ascending order so directory entries are created
+        // before the files inside them
+        create.sort().forEach((path) => {
+          if (dst.type === 'local') {
+            IDBFS.loadRemoteEntry(store, path, (err, entry) => {
+              if (err) return done(err);
+              IDBFS.storeLocalEntry(path, entry, done);
+            });
+          } else {
+            IDBFS.loadLocalEntry(path, (err, entry) => {
+              if (err) return done(err);
+              IDBFS.storeRemoteEntry(store, path, entry, done);
+            });
+          }
+        });
+  
+        // sort paths in descending order so files are deleted before their
+        // parent directories
+        remove.sort().reverse().forEach((path) => {
+          if (dst.type === 'local') {
+            IDBFS.removeLocalEntry(path, done);
+          } else {
+            IDBFS.removeRemoteEntry(store, path, done);
+          }
+        });
+      },
+  };
   
   
   
@@ -3355,6 +3960,7 @@ function create_promise(out_set,out_promise) { const out_set_js = proxy_convert_
   
         FS.filesystems = {
           'MEMFS': MEMFS,
+          'IDBFS': IDBFS,
         };
       },
   init(input, output, error) {
@@ -9229,6 +9835,7 @@ function create_promise(out_set,out_promise) { const out_set_js = proxy_convert_
 
 
 
+
   var runAndAbortIfError = (func) => {
       try {
         return func();
@@ -9635,9 +10242,25 @@ function create_promise(out_set,out_promise) { const out_set_js = proxy_convert_
 
 
 
+  var FS_createPath = FS.createPath;
+
+
+
+  var FS_unlink = (path) => FS.unlink(path);
+
+  var FS_createLazyFile = FS.createLazyFile;
+
+  var FS_createDevice = FS.createDevice;
+
   FS.createPreloadedFile = FS_createPreloadedFile;
   FS.staticInit();
   // Set module methods based on EXPORTED_RUNTIME_METHODS
+  Module["FS_createPath"] = FS.createPath;
+  Module["FS_createDataFile"] = FS.createDataFile;
+  Module["FS_createPreloadedFile"] = FS.createPreloadedFile;
+  Module["FS_unlink"] = FS.unlink;
+  Module["FS_createLazyFile"] = FS.createLazyFile;
+  Module["FS_createDevice"] = FS.createDevice;
   ;
 
       // exports
@@ -10286,6 +10909,7 @@ var _proxy_c_to_js_get_dict = Module['_proxy_c_to_js_get_dict'] = createExportWr
 var _proxy_c_to_js_get_iter = Module['_proxy_c_to_js_get_iter'] = createExportWrapper('proxy_c_to_js_get_iter', 1);
 var _proxy_c_to_js_iternext = Module['_proxy_c_to_js_iternext'] = createExportWrapper('proxy_c_to_js_iternext', 2);
 var _proxy_c_to_js_resume = Module['_proxy_c_to_js_resume'] = createExportWrapper('proxy_c_to_js_resume', 2);
+var _process_single_midi_byte = Module['_process_single_midi_byte'] = createExportWrapper('process_single_midi_byte', 1);
 var _emscripten_stack_get_base = () => (_emscripten_stack_get_base = wasmExports['emscripten_stack_get_base'])();
 var _emscripten_stack_get_current = () => (_emscripten_stack_get_current = wasmExports['emscripten_stack_get_current'])();
 var _fflush = createExportWrapper('fflush', 1);
@@ -10303,11 +10927,9 @@ var dynCall_vii = Module['dynCall_vii'] = createExportWrapper('dynCall_vii', 3);
 var dynCall_iii = Module['dynCall_iii'] = createExportWrapper('dynCall_iii', 3);
 var dynCall_viiii = Module['dynCall_viiii'] = createExportWrapper('dynCall_viiii', 5);
 var dynCall_iiii = Module['dynCall_iiii'] = createExportWrapper('dynCall_iiii', 4);
-var dynCall_iiiii = Module['dynCall_iiiii'] = createExportWrapper('dynCall_iiiii', 5);
 var dynCall_v = Module['dynCall_v'] = createExportWrapper('dynCall_v', 1);
+var dynCall_iiiii = Module['dynCall_iiiii'] = createExportWrapper('dynCall_iiiii', 5);
 var dynCall_i = Module['dynCall_i'] = createExportWrapper('dynCall_i', 1);
-var dynCall_dd = Module['dynCall_dd'] = createExportWrapper('dynCall_dd', 2);
-var dynCall_ddd = Module['dynCall_ddd'] = createExportWrapper('dynCall_ddd', 3);
 var dynCall_viiiiii = Module['dynCall_viiiiii'] = createExportWrapper('dynCall_viiiiii', 7);
 var dynCall_iiiiii = Module['dynCall_iiiiii'] = createExportWrapper('dynCall_iiiiii', 6);
 var dynCall_viiiii = Module['dynCall_viiiii'] = createExportWrapper('dynCall_viiiii', 6);
@@ -10465,6 +11087,8 @@ function invoke_iiiiii(index,a1,a2,a3,a4,a5) {
 // include: postamble.js
 // === Auto-generated postamble setup entry stuff ===
 
+Module['addRunDependency'] = addRunDependency;
+Module['removeRunDependency'] = removeRunDependency;
 Module['ccall'] = ccall;
 Module['cwrap'] = cwrap;
 Module['setValue'] = setValue;
@@ -10474,7 +11098,13 @@ Module['PATH_FS'] = PATH_FS;
 Module['UTF8ToString'] = UTF8ToString;
 Module['stringToUTF8'] = stringToUTF8;
 Module['lengthBytesUTF8'] = lengthBytesUTF8;
+Module['FS_createPreloadedFile'] = FS_createPreloadedFile;
+Module['FS_unlink'] = FS_unlink;
+Module['FS_createPath'] = FS_createPath;
+Module['FS_createDevice'] = FS_createDevice;
 Module['FS'] = FS;
+Module['FS_createDataFile'] = FS_createDataFile;
+Module['FS_createLazyFile'] = FS_createLazyFile;
 var missingLibrarySymbols = [
   'writeI53ToI64Clamped',
   'writeI53ToI64Signaling',
@@ -10557,7 +11187,6 @@ var missingLibrarySymbols = [
   'addDays',
   'getSocketFromFD',
   'getSocketAddress',
-  'FS_unlink',
   'FS_mkdirTree',
   '_setNetworkCallback',
   'writeGLArray',
@@ -10580,8 +11209,6 @@ var unexportedSymbols = [
   'addOnPreMain',
   'addOnExit',
   'addOnPostRun',
-  'addRunDependency',
-  'removeRunDependency',
   'out',
   'err',
   'callMain',
@@ -10699,16 +11326,11 @@ var unexportedSymbols = [
   'MONTH_DAYS_LEAP_CUMULATIVE',
   'SYSCALLS',
   'preloadPlugins',
-  'FS_createPreloadedFile',
   'FS_modeStringToFlags',
   'FS_getMode',
   'FS_stdin_getChar_buffer',
   'FS_stdin_getChar',
-  'FS_createPath',
-  'FS_createDevice',
   'FS_readFile',
-  'FS_createDataFile',
-  'FS_createLazyFile',
   'MEMFS',
   'TTY',
   'PIPEFS',
@@ -10748,6 +11370,7 @@ var unexportedSymbols = [
   'allocateUTF8OnStack',
   'print',
   'printErr',
+  'IDBFS',
 ];
 unexportedSymbols.forEach(unexportedRuntimeSymbol);
 
@@ -11102,6 +11725,11 @@ export async function loadMicroPython(options) {
         tulipTick(tick) {
             return Module.ccall(
                 "tulip_tick", "null", ["number"], [tick], {async:true}
+            );
+        },
+        midiByte(byte) {
+            return Module.ccall(
+                "process_single_midi_byte", "null", ["number"], [byte], {async:true}
             );
         },
         // Needed if the GC/asyncify is enabled.

@@ -125,6 +125,11 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
     }
     
 }
+void process_single_midi_byte(uint8_t byte) {
+    uint8_t data[1];
+    data[0] = byte;
+    convert_midi_bytes_to_messages(data, 1, 1);
+}
 
 
 void midi_local(uint8_t * bytes, uint16_t len) {

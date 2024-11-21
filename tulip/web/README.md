@@ -14,7 +14,14 @@ python3 server.py
 # go to localhost:8000 
 ```
 
+## Use
+
 I test on Chrome right now. I don't think safari supports webmidi.
+
+The tulip "sys" files will load into `/tulip4/sys`. `/tulip4/user` is there for your files.
+
+The file system persists in your browser as an IndexedDB localstorage thing. To delete it, do `indexedDB.deleteDatabase('/tulip4/user')` in the console.
+
 
 ## what works
  - python REPL
@@ -22,15 +29,19 @@ I test on Chrome right now. I don't think safari supports webmidi.
  - LVGL
  - AMY (loaded as a separate audioworklet), including sequencer
  - keyboard & mouse via SDL
- - filesystem
+ - persistent filesystem in localstorage, including `sys` folder
 
 ## TODO
  - speed of LVGL (try `run('drums')`)
  - ~~T-sequencer running too slowly to hit every tick #, so % dividers get missed (see LEDs in drums)~~
  - "sockets"/web requests - tulip world etc
- - FS needs examples loaded on boot
- - FS needs to persist to localstorage
+ - ~~FS needs examples loaded on boot~~
+ - ~~FS needs to persist to localstorage~~
  - MIDI
- - some solution for `time.sleep`
+ - some solution for `time.sleep` / `sleep_ms` -- see `parallax`, `bunny_bounce`, `xanadu`
+ - sync my AMY changes to main AMY 
+ - test github hosting
+
+
 
 

@@ -10,6 +10,7 @@ extern QueueHandle_t uart_queue;
 #include "py/mphal.h"
 #include "py/runtime.h"
 void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb);
+void process_single_midi_byte(uint8_t byte);
 extern mp_obj_t midi_callback;
 
 

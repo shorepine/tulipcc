@@ -92,9 +92,26 @@ void tulip_tick(uint32_t tick) {
     if(tulip_ready) tulip_amy_sequencer_hook(tick);
 }
 
+void setup_fs() {
+    EM_ASM(
+        try {
+            FS.mkdir('/tulip4/user');
+        } catch (err) {
+            console.log('tulip4/user already exist');
+        }
+        // Then mount with IDBFS type
+        FS.mount(IDBFS, {autoPersist:true}, '/tulip4/user');
+        // Then sync
+        FS.syncfs(true, function (err) {
+            // Error
+        });
+    );
+}
 extern void unix_display_init();
 
 void mp_js_init(int pystack_size, int heap_size) {
+
+    setup_fs();
     emscripten_set_main_loop(main_loop__tulip, 0, 0);
 
     #if MICROPY_ENABLE_PYSTACK

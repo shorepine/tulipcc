@@ -7,24 +7,6 @@ from upysh import cd, pwd
 import amy
 
 
-def root_dir():
-    try:
-        import uos
-
-        root_directory = "/"
-        if board() == "DESKTOP":
-            xdg_data_directory = uos.getenv("HOME") + "/.local/share"
-
-            if (exists(xdg_data_directory)):
-                root_directory = xdg_data_directory + "/tulipcc/"
-            else:
-                # fall back to ~/Documents if XDG base directory spec is not supported
-                root_directory = uos.getenv("HOME") + "/Documents/tulipcc/"
-                
-        return root_directory
-    except:
-        return "/"
-
 def sys():
     return root_dir()+"sys/"
 
@@ -240,15 +222,20 @@ def prompt(prompt):
     return
 
 # Add a string to the users' boot.py -- used by some utlities
-def add_to_bootpy(s):
+# if only_first_create is set, will only write if the file doesn't exist yet
+def add_to_bootpy(s, only_first_create=False):
+    first = False
     try:
         bootpy = open(tulip.root_dir()+"user/boot.py","r").read()
     except OSError:
+        first = True
         bootpy = "" # file doesn't exist yet
+    
     bootpy = bootpy + "\n" + s + "\n"
-    w = open(tulip.root_dir()+'user/boot.py','w')
-    w.write(bootpy)
-    w.close()
+    if((only_first_create and first) or (not only_first_create)):
+        w = open(tulip.root_dir()+'user/boot.py','w')
+        w.write(bootpy)
+        w.close()
 
 # Wrapper around AMY tempo to store it
 amy_bpm = 108
@@ -301,7 +288,7 @@ def root_dir():
                 # fall back to ~/Documents if XDG base directory spec is not supported
                 root_directory = uos.getenv("HOME") + "/Documents/tulipcc/"
         elif board() == "WEB":
-            root_directory = "/home/web_user/.local/share/tulipcc"
+            root_directory = "/tulip4/"
         return root_directory
     except:
         return "/"

@@ -34,29 +34,25 @@ except ImportError:
     try:
         tulipcc = tulip.root_dir()
         if(not tulip.exists(tulipcc)):
-            if(tulip.board()=="WEB"):
-                mkdir("/home/web_user/.local")
-                mkdir("/home/web_user/.local/share")
-                mkdir("/home/web_user/.local/share/tulipcc")
-            else:
-                mkdir(tulipcc)
+            mkdir(tulipcc)
     
         # On Desktop, we can put sys in sys/ and user in user/
-        try:
-            mkdir(tulipcc+"sys")
-            if(tulip.board()!="WEB"):
+        if(tulip.board()=='DESKTOP'):
+            try:
+                mkdir(tulipcc+"sys")
                 tulip.desktop_copy_sys(tulipcc+"sys")
-        except OSError:
-            # already exists, do nothing
-            pass
+            except OSError:
+                # already exists, do nothing
+                pass
 
-        try:
-            mkdir(tulipcc+"user")
-        except OSError:
-            # Already exists, don't do anything
-            pass
+            try:
+                mkdir(tulipcc+"user")
+            except OSError:
+                # Already exists, don't do anything
+                pass
 
         cd(tulip.root_dir()+"user")
+        tulip.add_to_bootpy("# boot.py\n# Put anything here you want to run on Tulip startup\n", only_first_create=True)
         sys.path.append("../sys/ex")
 
     except Exception as e:

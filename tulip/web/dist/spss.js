@@ -32,6 +32,11 @@ function amy_sequencer_js_hook(tick) {
   mp.tulipTick(tick);
 }
 
+function setup_fs() {
+  mp.FS.mkdir("/tulip4");
+  mp.FS.mount(IDBFS, {autoPersist:true}, "/tulip4");
+  mp.FS.syncfs(true);
+}
 async function register_amy() {
   // Let micropython call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_play_message);
@@ -48,15 +53,40 @@ async function register_amy() {
   `);
 }
 
+async function start_midi() {
+  function onEnabled() {    
+    // Inputs
+    WebMidi.inputs.forEach(input => console.log(input.manufacturer, input.name));
+    
+    // Outputs
+    WebMidi.outputs.forEach(output => console.log(output.manufacturer, output.name));
+
+    const myInput = WebMidi.getInputByName("Q25");
+    myInput.addListener("midimessage", e => {
+      for(byte in e.message.data) {
+        mp.midiByte(e.message.data[byte]);
+      }
+    });
+  }
+
+  WebMidi
+    .enable({sysex:true})
+    .then(onEnabled)
+    .catch(err => alert(err));
+}
+
 async function start_audio() {
   // Don't run this twice
   if(everything_started) return;
+  // Start midi
+  await start_midi();
   // Start the audio worklet (miniaudio)
   await amy_live_start();
   await register_amy();
   // Wait 200ms on first run only before playing amy commands back to avoid clicks
   await new Promise((r) => setTimeout(r, 200));
   await mp.runFrozenAsync('_boot.py');
+  await mp.runFrozenAsync('/tulip4/user/boot.py');
   everything_started = true;
 }
 

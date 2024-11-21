@@ -5,8 +5,7 @@
 // free(?)
 // thread / xtaskCreate 
 
-
-#ifndef malloc_caps
+#ifdef AMY_IS_EXTERNAL
 void * malloc_caps(uint32_t size, uint32_t flags) {
 #ifdef ESP_PLATFORM
     //fprintf(stderr, "allocing size %ld flags %ld\n", size, flags);
@@ -17,6 +16,7 @@ void * malloc_caps(uint32_t size, uint32_t flags) {
 #endif
 }
 #endif
+
 
 #ifndef ESP_PLATFORM
 
