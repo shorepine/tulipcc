@@ -2,7 +2,6 @@
 
 # Bring in all c-defined tulip functions
 from _tulip import *
-import world
 from upysh import cd, pwd
 import amy
 
@@ -601,6 +600,7 @@ def url_put(url, filename, headers={"User-Agent":"TulipCC/4.0"}):
     f.close()
 
 def screenshot(filename=None):
+    import world
     from upysh import rm
     if(filename is not None):
         int_screenshot(filename)

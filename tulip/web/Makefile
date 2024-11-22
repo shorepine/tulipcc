@@ -123,7 +123,7 @@ JSFLAGS += \
 	-lidbfs.js \
     -s USE_SDL=2 \
 	-s ASYNCIFY \
-	-s ASYNCIFY_STACK_SIZE=80000 \
+	-s ASYNCIFY_STACK_SIZE=16000 \
 	-s ASSERTIONS \
 	-s EXPORTED_FUNCTIONS="\
 	_free,\

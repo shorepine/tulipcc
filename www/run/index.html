@@ -16,8 +16,8 @@
       mp = await loadMicroPython({
         stdout:null, 
         linebuffer: false,
-        pystack: 32 * 1024, 
-        heapsize: 2 * 1024 * 1024
+        pystack: 64 * 1024, 
+        heapsize: 8 * 1024 * 1024
       });
 
       // Tell MP to start serving a REPL

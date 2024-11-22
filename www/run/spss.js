@@ -91,6 +91,17 @@ async function start_midi() {
       .catch(err => console.log("MIDI: " + err));
   }
 }
+async function get_test() {
+    await mp.runPythonAsync(`
+        import js
+        url = "https://api.github.com/users/micropython"
+        print(f"fetching {url}...")
+        res = await js.fetch(url)
+        json = await res.json()
+        for i in dir(json):
+          print(f"{i}: {json[i]}")
+      `);
+}
 
 async function start_tulip() {
   // Don't run this twice
@@ -103,19 +114,20 @@ async function start_tulip() {
   await mp.registerJsModule('amy_js_message', amy_play_message);
 
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
-  mp.registerJsModule("time", {
-    sleep: async (s) => await new Promise((r) => setTimeout(r, s * 1000)),
-  });
+  //mp.registerJsModule("time", {
+  //  sleep: async (s) => await new Promise((r) => setTimeout(r, s * 1000)),
+  //});
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import amy, amy_js_message, time
+    import amy, amy_js_message
     amy.override_send = amy_js_message
   `);
-
+  // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
+  await new Promise((r) => setTimeout(r, 200));
   await mp.runFrozenAsync('_boot.py');
+  await new Promise((r) => setTimeout(r, 200));
   await mp.runFrozenAsync('/tulip4/user/boot.py');
-
   tulip_started = true;
 }
 

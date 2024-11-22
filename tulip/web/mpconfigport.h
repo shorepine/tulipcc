@@ -87,21 +87,20 @@
 // Whether the VM will periodically call mp_js_hook(), which checks for
 // interrupt characters on stdin (or equivalent input).
 #ifndef MICROPY_VARIANT_ENABLE_JS_HOOK
-#define MICROPY_VARIANT_ENABLE_JS_HOOK (1)
+#define MICROPY_VARIANT_ENABLE_JS_HOOK (0)
 #endif
 
-//#if MICROPY_VARIANT_ENABLE_JS_HOOK
+#if MICROPY_VARIANT_ENABLE_JS_HOOK
 #define MICROPY_VM_HOOK_COUNT (10)
 #define MICROPY_VM_HOOK_INIT static uint vm_hook_divisor = MICROPY_VM_HOOK_COUNT;
 #define MICROPY_VM_HOOK_POLL if (--vm_hook_divisor == 0) { \
         vm_hook_divisor = MICROPY_VM_HOOK_COUNT; \
-        emscripten_sleep(0); \
         extern void mp_js_hook(void); \
         mp_js_hook(); \
 }
 #define MICROPY_VM_HOOK_LOOP MICROPY_VM_HOOK_POLL
 #define MICROPY_VM_HOOK_RETURN MICROPY_VM_HOOK_POLL
-//#endif
+#endif
 
 // type definitions for the specific machine
 

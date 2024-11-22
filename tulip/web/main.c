@@ -211,16 +211,6 @@ void mp_js_do_exec(const char *src, size_t len, uint32_t *out) {
 
 void mp_js_frozen_exec(const char *name) {
     pyexec_file_if_exists(name);
-
-/*
-    void *frozen_data;
-    uint32_t *out = NULL;
-    int frozen_type;
-    mp_find_frozen_module(name, &frozen_type, &frozen_data);
-    fprintf(stderr, "frozs: %s\n", (const char*)frozen_data);
-    mp_js_do_exec((const char*)frozen_data, strlen((const char*)frozen_data), out);
-    */
-
 }
 
 void mp_js_do_exec_async(const char *src, size_t len, uint32_t *out) {

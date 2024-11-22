@@ -1,7 +1,8 @@
 import gc
 import uos
-import tulip, world, sys, midi, amy, alles
-
+import tulip, sys, midi, amy, alles
+if(tulip.board()!="WEB"):
+    import world
 from upysh import *
 from tulip import edit, run
 

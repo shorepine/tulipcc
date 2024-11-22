@@ -143,6 +143,7 @@ function proxy_call_python(target, argumentsList) {
         "null",
         ["number", "number", "number", "pointer"],
         [target, argumentsList.length, args, value],
+        {async:true},
     );
     if (argumentsList.length > 0) {
         Module._free(args);
