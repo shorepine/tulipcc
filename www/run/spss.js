@@ -1,28 +1,26 @@
 var amy_play_message = null;
 var amy_live_start = null;
-var amy_reset_sysclock = null
-var amy_module = null;
-var everything_started = false;
+var audio_started = false;
+var tulip_started = false;
 var mp = null;
-var term = null;
-
+var midiOutputDevice = null;
+var midiInputDevice = null;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
-  amy_module = am;
-  amy_live_start = amy_module.cwrap(
+  amy_live_start = am.cwrap(
     'amy_live_start', null, null, {async: true}    
   );
-  amy_start = amy_module.cwrap(
+  amy_start = am.cwrap(
     'amy_start', null, ['number', 'number', 'number']
   );
-  amy_play_message = amy_module.cwrap(
+  amy_play_message = am.cwrap(
     'amy_play_message', null, ['string']
   );
-  amy_reset_sysclock = amy_module.cwrap(
+  amy_reset_sysclock = am.cwrap(
     'amy_reset_sysclock', null, null
   );
-  amy_ticks = amy_module.cwrap(
+  amy_ticks = am.cwrap(
     'sequencer_ticks', 'number', [null]
   );
   amy_start(1,1,1,1);
@@ -32,25 +30,6 @@ amyModule().then(async function(am) {
 function amy_sequencer_js_hook(tick) {
   mp.tulipTick(tick);
 }
-
-async function register_amy() {
-  // Let micropython call an exported AMY function
-  await mp.registerJsModule('amy_js_message', amy_play_message);
-
-  // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
-  mp.registerJsModule("time", {
-    sleep: async (s) => await new Promise((r) => setTimeout(r, s * 1000)),
-  });
-
-  // Set up the micropython context for AMY.
-  await mp.runPythonAsync(`
-    import amy, amy_js_message, time
-    amy.override_send = amy_js_message
-  `);
-}
-
-var midiOutputDevice = null;
-var midiInputDevice = null;
 
 async function clear_storage() {
   if(confirm("This will delete your Tulip user folder and start again.\nAre you sure?")) {
@@ -113,21 +92,39 @@ async function start_midi() {
   }
 }
 
-async function start_audio() {
+async function start_tulip() {
   // Don't run this twice
-  if(everything_started) return;
+  if(tulip_started) return;
+
   // Start midi
   await start_midi();
-  // Start the audio worklet (miniaudio)
-  await amy_live_start();
-  // Tell Tulip about this external AMY
-  await register_amy();
 
-  // Wait 200ms on first run only before playing amy commands back to avoid clicks
-  await new Promise((r) => setTimeout(r, 200));
+  // Let micropython call an exported AMY function
+  await mp.registerJsModule('amy_js_message', amy_play_message);
+
+  // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
+  mp.registerJsModule("time", {
+    sleep: async (s) => await new Promise((r) => setTimeout(r, s * 1000)),
+  });
+
+  // Set up the micropython context for AMY.
+  await mp.runPythonAsync(`
+    import amy, amy_js_message, time
+    amy.override_send = amy_js_message
+  `);
 
   await mp.runFrozenAsync('_boot.py');
   await mp.runFrozenAsync('/tulip4/user/boot.py');
-  everything_started = true;
+
+  tulip_started = true;
 }
 
+async function start_audio() {
+  document.body.removeEventListener('click', start_audio, true); 
+  document.body.removeEventListener('keydown', start_audio, true); 
+  // Don't run this twice
+  if(audio_started) return;
+  // Start the audio worklet (miniaudio)
+  await amy_live_start();
+  audio_started = true;
+}

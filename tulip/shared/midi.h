@@ -1,6 +1,6 @@
 // midi.h
-//#include "alles.h"
 #ifdef ESP_PLATFORM 
+#include "alles.h"
 #include "soc/uart_reg.h"
 extern QueueHandle_t uart_queue;
 #else

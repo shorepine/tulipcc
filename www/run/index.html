@@ -12,7 +12,6 @@
   </head>
   <body>
     <script type="module">
-
       // Tulip settings
       mp = await loadMicroPython({
         stdout:null, 
@@ -23,6 +22,8 @@
 
       // Tell MP to start serving a REPL
       await mp.replInit();
+      // Start up the Tulip stuff
+      await start_tulip();
     </script>
     <div class="container-lg my-2 px-2">
       <h1><A HREF="https://github.com/shorepine/tulipcc">Tulip</A> Web</h1>
@@ -50,8 +51,9 @@
       </form>
 
       <script language="javascript">        
-        // On click anywhere, start audio
+        // On keypress or click anywhere, start audio
         document.body.addEventListener('click', start_audio, true); 
+        document.body.addEventListener('keydown', start_audio, true); 
       </script>
     </div>
 
