@@ -1,10 +1,12 @@
 import gc
 import uos
-import tulip, world, sys, midi, amy, alles
-
+import tulip, sys, midi, amy, alles, world
 from upysh import *
 from tulip import edit, run
+
 # This _boot runs both desktop and esp32s3
+
+
 try:
     from esp32 import Partition
     try:
@@ -24,40 +26,48 @@ try:
     except OSError:
         # this is you booting a non-OTA esp32 device. it's ok!
         pass
-    
+
+
 except ImportError:
-    # Tulip Desktop
+    # Not a hardware Tulip
     try:
         tulipcc = tulip.root_dir()
-        try:
+        if(not tulip.exists(tulipcc)):
             mkdir(tulipcc)
-        except OSError:
-            # already exists, that's fine
-            pass
-
+    
         # On Desktop, we can put sys in sys/ and user in user/
-        try:
-            mkdir(tulipcc+"sys")
-            tulip.desktop_copy_sys(tulipcc+"sys")
-        except OSError:
-            # already exists, do nothing
-            pass
+        if(tulip.board()=='DESKTOP'):
+            try:
+                mkdir(tulipcc+"sys")
+                tulip.desktop_copy_sys(tulipcc+"sys")
+            except OSError:
+                # already exists, do nothing
+                pass
 
-        try:
-            mkdir(tulipcc+"user")
-        except OSError:
-            # Already exists, don't do anything
-            pass
+            try:
+                mkdir(tulipcc+"user")
+            except OSError:
+                # Already exists, don't do anything
+                pass
 
         cd(tulip.root_dir()+"user")
+        tulip.add_to_bootpy("# boot.py\n# Put anything here you want to run on Tulip startup\n", only_first_create=True)
         sys.path.append("../sys/ex")
 
-    except:
+    except Exception as e:
+        sys.print_exception(e)
         # Probably iOS
         cd(tulip.app_path())
 
 gc.collect()
-# Override amy's send to work with tulip
-amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
-midi.setup()
+
+# Set up audio/midi. 
+if(tulip.board() == "WEB"):
+    midi.setup()
+    # Override send & bleep are done from JS on web because of click-to-start audio.
+else:
+    # Override amy's send to work with tulip
+    amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
+    midi.setup()
+    midi.startup_bleep()
 

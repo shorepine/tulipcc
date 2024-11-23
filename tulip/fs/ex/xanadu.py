@@ -160,9 +160,9 @@ broken_chord(5.06, [.07, 1.0, 1.04, 1.05, 1.10], start_time=45000, pitch_shift=0
 
 wait_for(53000)
 # Crude fade-out.
-for i in range(10):
-    amy.volume(1 - i / 10)
-    time.sleep(0.1)
+#for i in range(10):
+#    amy.send(volume=1 - i / 10)
+#    time.sleep(0.1)
 
 midi.Synth.reset()
 

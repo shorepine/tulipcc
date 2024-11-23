@@ -1,6 +1,6 @@
 #!/bin/bash
 # This script cleans, builds and uploads binaries for the 4 supported Tulip CC versions
-# It also does this for Tulip Desktop macOS.
+# It also does this for Tulip Desktop macOS and Tulip Web.
 
 # call it like ./release.sh v-jan-2024 upload , where v-jan-2024 is a github release tag 
 # and upload is one of [sys, upload, test]
@@ -65,6 +65,14 @@ if [ "$TYPE" == "upload" ]; then
 fi
 cd ..
 
+# Now do web
+cd ../web
+make clean
+./build.sh
+if [ "$TYPE" == "upload" ]; then
+    git commit -a -m "deploying Tulip Web"; git push -u origin HEAD; gh pr create -f; gh pr merge -m
+fi
+cd ..
 
 
 

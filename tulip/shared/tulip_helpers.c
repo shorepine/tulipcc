@@ -4,10 +4,15 @@
 #include "ui.h"
 extern uint8_t keyboard_send_keys_to_micropython;
 extern int8_t keyboard_grab_ui_focus;
-
+#ifdef __EMSCRIPTEN__
+extern int mp_js_repl_process_char(int);
+#endif
 void tx_char(int c) {
         if(keyboard_send_keys_to_micropython) {
             ringbuf_put(&stdin_ringbuf, c);
+            #ifdef __EMSCRIPTEN__
+                mp_js_repl_process_char(c);
+            #endif
         } 
 }
 
@@ -106,7 +111,11 @@ uint32_t tulip_fread(mp_obj_t file, uint8_t * buf, uint32_t len) {
 }
 
 uint32_t tulip_fseek(mp_obj_t file, uint32_t seekpoint, int32_t whence) {
+    #ifdef __EMSCRIPTEN__
+    return 0;
+    #else
     return mp_stream_posix_lseek(file, seekpoint, whence);
+    #endif
 }
 
 int32_t tulip_getline(char * line, uint32_t * len, mp_obj_t file ) {

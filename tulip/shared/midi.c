@@ -38,7 +38,7 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
     if (midi_queue_tail == midi_queue_head) {
         // Queue wrap, drop oldest item.
         midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
-        fprintf(stderr, "dropped midi message\n");
+        //fprintf(stderr, "dropped midi message\n");
     }
 
     // We tell Python that a MIDI message has been received
@@ -125,6 +125,11 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
     }
     
 }
+void process_single_midi_byte(uint8_t byte) {
+    uint8_t data[1];
+    data[0] = byte;
+    convert_midi_bytes_to_messages(data, 1, 1);
+}
 
 
 void midi_local(uint8_t * bytes, uint16_t len) {
@@ -210,9 +215,17 @@ void run_midi() {
 // defined in virtualmidi.m
 #else
 
-// This is MIDI out on tulip desktop that is NOT macos... not supported 
+// This is MIDI out on tulip desktop that is NOT macos... web or linux
 void midi_out(uint8_t * bytes, uint16_t len) {
-    // nothing yet
+    #ifdef __EMSCRIPTEN__
+    EM_ASM(
+            if(midiOutputDevice != null) {
+                midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1));
+            }, bytes, len
+        );
+    #else
+    // nothing yet for linux
+    #endif
 }
 #endif
 

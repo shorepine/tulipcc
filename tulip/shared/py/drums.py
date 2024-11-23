@@ -263,7 +263,6 @@ def run(screen):
     app.add(app.leds, direction=lv.ALIGN.OUT_BOTTOM_LEFT, pad_y=0)
     app.rows = [DrumRow([x[1] for x in drumkit], i, midi_note=i) for i in range(7)]
     app.add(app.rows, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
-
     for i,row in enumerate(app.rows):
         row.set_preset([1, 2, 0, 6, 7, 9, 10][i])
         row.set_vel(.5)

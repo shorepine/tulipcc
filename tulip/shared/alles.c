@@ -222,8 +222,6 @@ void run_alles() {
 
     esp_amy_init();
     amy_reset_oscs();
-    // Schedule a "turning on" sound
-    bleep();
     //
     // Spin this core until the power off button is pressed, parsing events and making sounds
     //while(status & RUNNING) {
@@ -238,9 +236,6 @@ void * alles_start(void *vargs) {
     alles_local_ip[0] = 0;
     unix_amy_init();
     amy_reset_oscs();
-    // Schedule a "turning on" sound
-    // We don't do this by default on tulip desktop as all threads start at once and it makes the bleep sound bad 
-    bleep();
     // Spin this core until the power off button is pressed, parsing events and making sounds
     while(status & RUNNING) {
         delay_ms(10);

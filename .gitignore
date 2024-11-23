@@ -15,6 +15,7 @@ tulip/macos/dist
 tulip/macos/lextab.py
 tulip/macos/yacctab.py
 tulip/linux/build-standard
+tulip/web/build-standard
 tulip/linux/dev
 tulip/ios/build-standard
 tulip/esp32s3/managed_components
