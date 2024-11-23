@@ -102,6 +102,9 @@ async function get_test() {
           print(f"{i}: {json[i]}")
       `);
 }
+async function sleep_ms(ms) {
+    await new Promise((r) => setTimeout(r, ms));
+}
 
 async function start_tulip() {
   // Don't run this twice
@@ -124,9 +127,9 @@ async function start_tulip() {
     amy.override_send = amy_js_message
   `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
-  await new Promise((r) => setTimeout(r, 200));
+  await sleep_ms(200);
   await mp.runFrozenAsync('_boot.py');
-  await new Promise((r) => setTimeout(r, 200));
+  await sleep_ms(200);
   await mp.runFrozenAsync('/tulip4/user/boot.py');
   tulip_started = true;
 }
@@ -138,5 +141,9 @@ async function start_audio() {
   if(audio_started) return;
   // Start the audio worklet (miniaudio)
   await amy_live_start();
+  // Wait 1s for audio to start
+  await sleep_ms(1000);
+  // Play the bleep
+  await mp.runPythonAsync(`midi.startup_bleep()`);
   audio_started = true;
 }

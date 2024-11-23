@@ -1,8 +1,6 @@
 import gc
 import uos
-import tulip, sys, midi, amy, alles
-if(tulip.board()!="WEB"):
-    import world
+import tulip, sys, midi, amy, alles, world
 from upysh import *
 from tulip import edit, run
 
@@ -62,9 +60,14 @@ except ImportError:
         cd(tulip.app_path())
 
 gc.collect()
-# Override amy's send to work with tulip
-if(tulip.board()!="WEB"):
-    amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
-midi.setup()
 
+# Set up audio/midi. 
+if(tulip.board() == "WEB"):
+    midi.setup()
+    # Override send & bleep are done from JS on web because of click-to-start audio.
+else:
+    # Override amy's send to work with tulip
+    amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
+    midi.setup()
+    midi.startup_bleep()
 

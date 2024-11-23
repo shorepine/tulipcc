@@ -33,6 +33,8 @@ class MidiConfig:
     def add_synth(self, channel=1, patch_number=0, num_voices=6):
         if channel == 10:
             synth_object = DrumSynth(num_voices=num_voices)
+        elif channel == 16:
+            synth_object = OscSynth(num_voices=1) # the "system bleep" synth
         else:
             synth_object = Synth(num_voices=num_voices, patch_number=patch_number)
         self.add_synth_object(channel, synth_object)
@@ -485,8 +487,9 @@ def ensure_midi_config():
     if not config:
         # Tulip defaults, 6 note polyphony on channel 1
         # drum machine always on channel 10
+        # utility sine wave bleeper on channel 16
         config = MidiConfig(
-            voices_per_channel={1: 6, 10: 10},
+            voices_per_channel={1: 6, 10: 10, 16: 1},
             patch_per_channel={1: 0},
             show_warnings=True,
         )
@@ -664,6 +667,14 @@ def c_fired_midi_event(x):
             c(m)
 
         m = tulip.midi_in()
+
+# Resets AMY timebase and plays the bleep
+def startup_bleep():
+    amy.send(reset=amy.RESET_TIMEBASE)
+    if 16 in config.synth_per_channel:
+        config.synth_per_channel[16].note_on(57, 1, time=0)
+        config.synth_per_channel[16].note_on(69, 1, time=150)
+        config.synth_per_channel[16].note_off(69, time=300)
 
 
 def deferred_midi_config(t):

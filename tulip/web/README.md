@@ -49,10 +49,11 @@ The tulip "sys" files will load into `/tulip4/sys`. `/tulip4/user` is there for 
  - ~~sync my AMY changes to main AMY~~
  - ~~build in release.sh~~ 
  - ~~speed of LVGL object creation(?) (try `run('drums')`)~~
- - startup bleep (and fix the juno bleep on macos desktop!)
+ - ~~startup bleep (and fix the juno bleep on macos desktop!)~~
+ - ~~test changes on tulip desktop mac / linux and tulip cc~~
  - "sockets"/web requests - tulip world etc
  - some solution for `time.sleep` / `sleep_ms` -- see `parallax`, `bunny_bounce`, `xanadu`
- - test changes on tulip desktop mac / linux and tulip cc
  - test github hosting on tulip.computer/
  - resizeable/responsive SDL canvas 
-
+ - maybe some simple intro HOWTO on the page 
+ 
