@@ -26,7 +26,7 @@
       await start_tulip();
     </script>
     <div class="container-lg my-2 px-2">
-      <h1><A HREF="https://github.com/shorepine/tulipcc">Tulip</A> Web</h1>
+      <h1><A HREF="https://tulip.computer/">Tulip</A> Web</h1>
       <!-- Tulip's SDL canvas -->
       <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
       <form name="tulip_settings">
@@ -49,13 +49,35 @@
           </div>
         </div>
       </form>
-
-      <script language="javascript">        
-        // On keypress or click anywhere, start audio
-        document.body.addEventListener('click', start_audio, true); 
-        document.body.addEventListener('keydown', start_audio, true); 
-      </script>
     </div>
+    <hr/>
+    <div class="container-sm my-4 px-2">
+      <h2>Welcome to a very WIP version of <a href="https://tulip.computer/">Tulip</a> for the web.</h2>
+      <p>
+        Tulip is a creative computer with lots of music and graphics functionality. <A HREF="https://tulip.computer">You can buy a hardware Tulip for $59.</A> 
+        This version of Tulip is a simulator, running all the same code. There are some small changes and things we haven't yet ported over to the web, see below.
+      </p>
+      <p>If you've never used Tulip before, please check out these getting started tips:</p>
+      <ul>
+        <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md">Getting Started on Tulip</A></li>
+        <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md">Make music tutorial</A></li>
+        <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/tulip_api.md">Full Tulip API</A></li>
+        <li><A href="https://github.com/orgs/shorepine/projects/1">Roadmap</A></li>
+      </ul>
+      <h3>Some notes on the web port:</h3>
+      <ul>
+        <li>Tulip World and requests / http / url_save etc do not yet work</li>
+        <li>time.sleep does not yet work. It will return immediately.</li>
+        <li>Mobile browsers do not show a keyboard yet</li>
+        <li>We ask for audio input access -- don't be alarmed. Tulip can apply effects to audio input, see the API docs. No data leaves this web page unless you explicitly do so.
+        <li>The canvas should be resizable / responsive, it is not yet</li>
+      </ul>
+    </div>
+    <script language="javascript">        
+      // On keypress or click anywhere, start audio
+      document.body.addEventListener('click', start_audio, true); 
+      document.body.addEventListener('keydown', start_audio, true); 
+    </script>
 
   </body>
 </html>
