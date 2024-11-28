@@ -224,11 +224,11 @@ void mp_js_repl_init(void) {
 }
 
 int mp_js_repl_process_char(int c) {
-    mp_compile_allow_top_level_await = true;
+//    mp_compile_allow_top_level_await = true;
     external_call_depth_inc();
     int ret = pyexec_event_repl_process_char(c);
     external_call_depth_dec();
-    mp_compile_allow_top_level_await = false;
+//    mp_compile_allow_top_level_await = false;
     return ret;
 }
 

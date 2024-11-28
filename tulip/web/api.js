@@ -159,7 +159,7 @@ export async function loadMicroPython(options) {
                 "number",
                 ["pointer", "number", "pointer"],
                 [buf, len, value],
-                { async: true },
+                // BAW { async: true },
             );
             Module._free(buf);
             const ret = proxy_convert_mp_to_js_obj_jsside_with_free(value);
@@ -187,7 +187,9 @@ export async function loadMicroPython(options) {
             Module._free(buf);
         },
         replInit() {
-            Module.ccall("mp_js_repl_init", "null", ["null"], {async: true});
+            Module.ccall("mp_js_repl_init", "null", ["null"], 
+            // BAW {async: true}
+            );
         },
         replProcessChar(chr) {
             return Module.ccall(

@@ -65,7 +65,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpub4_unxs.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpkjxxpvvh.js
 
   if (!Module['expectedDataFileDownloads']) {
     Module['expectedDataFileDownloads'] = 0;
@@ -255,21 +255,21 @@ Module['FS_createPath']("/tulip4/sys/im", "tiny_town", true, true);
 
   })();
 
-// end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpub4_unxs.js
-// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpozo9hvlk.js
+// end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpkjxxpvvh.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp2fu1oypo.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpozo9hvlk.js
-// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpwi308vqv.js
+  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp2fu1oypo.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp8yz7ptvh.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpwi308vqv.js
+  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp8yz7ptvh.js
 
 
 // Sometimes an existing Module object exists with properties
@@ -11685,7 +11685,7 @@ export async function loadMicroPython(options) {
                 "number",
                 ["pointer", "number", "pointer"],
                 [buf, len, value],
-                { async: true },
+                // BAW { async: true },
             );
             Module._free(buf);
             const ret = proxy_convert_mp_to_js_obj_jsside_with_free(value);
@@ -11713,7 +11713,9 @@ export async function loadMicroPython(options) {
             Module._free(buf);
         },
         replInit() {
-            Module.ccall("mp_js_repl_init", "null", ["null"], {async: true});
+            Module.ccall("mp_js_repl_init", "null", ["null"], 
+            // BAW {async: true}
+            );
         },
         replProcessChar(chr) {
             return Module.ccall(
@@ -12238,7 +12240,7 @@ function proxy_call_python(target, argumentsList) {
         "null",
         ["number", "number", "number", "pointer"],
         [target, argumentsList.length, args, value],
-        {async:true},
+        // BAW {async:true},
     );
     if (argumentsList.length > 0) {
         Module._free(args);
