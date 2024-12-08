@@ -145,6 +145,10 @@ void run_gt911(void *param) {
                         last_touch_y[i] = (touch_y[i] + touch_y_delta)*touch_y_scale;
                     #endif
                 }
+                for(uint8_t i=touch_cnt;i<3;i++) {
+                    last_touch_x[i] = -1;
+                    last_touch_y[i] = -1;
+		}
                 //fprintf(stderr, "touch DOWN %d %d\n", last_touch_x[0], last_touch_y[0]);
                 send_touch_to_micropython(last_touch_x[0], last_touch_y[0], 0);
                 gt911_held = 1;
