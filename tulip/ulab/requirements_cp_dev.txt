@@ -1,0 +1,18 @@
+# For docs
+mypy
+black
+isort
+astroid
+setuptools
+setuptools_scm
+
+Sphinx>=4.0.0
+sphinx-autoapi
+sphinx-rtd-theme
+sphinxcontrib-svg2pdfconverter
+readthedocs-sphinx-search
+myst-parser
+
+# For stubs and annotations
+adafruit-circuitpython-typing
+build

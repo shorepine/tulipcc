@@ -21,6 +21,7 @@ MAKEFLAGS += --jobs=$(CPUS)
 # If the build directory is not given, make it reflect the variant name.
 BUILD ?= build-$(VARIANT)/tulip/obj
 
+
 TOP = ../../micropython
 
 VARIANT_DIR ?= ../../micropython/ports/unix/variants/$(VARIANT)
@@ -200,7 +201,6 @@ endif
 
 
 include ../shared/tulip.mk
-
 MICROPY_PORT_DIR=../../micropython/ports/unix
 
 ifeq ($(MICROPY_PY_SSL),1)
@@ -306,7 +306,6 @@ OBJ += $(addprefix $(BUILD)/, $(SRC_CXX:.cpp=.o))
 OBJ += $(addprefix $(BUILD)/, $(SHARED_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(EXTMOD_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
-
 
 
 # List of sources for qstr extraction
