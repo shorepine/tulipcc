@@ -19,6 +19,11 @@ if(NOT TULIP_SHARED_DIR)
     get_filename_component(TULIP_SHARED_DIR ${CMAKE_CURRENT_LIST_DIR}/../shared ABSOLUTE)
 endif()
 
+# Set location of the ulab directory.
+if(NOT ULAB_DIR)
+    get_filename_component(ULAB_DIR ${CMAKE_CURRENT_LIST_DIR}/../ulab/code ABSOLUTE)
+endif()
+
 # Set location of the amy directory.
 if(NOT AMY_DIR)
     get_filename_component(AMY_DIR ${CMAKE_CURRENT_LIST_DIR}/../../amy ABSOLUTE)
@@ -198,6 +203,39 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c
     ${AMY_DIR}/src/log2_exp2.c
+    ${ULAB_DIR}/scipy/integrate/integrate.c
+    ${ULAB_DIR}/scipy/linalg/linalg.c
+    ${ULAB_DIR}/scipy/optimize/optimize.c
+    ${ULAB_DIR}/scipy/signal/signal.c
+    ${ULAB_DIR}/scipy/special/special.c
+    ${ULAB_DIR}/ndarray_operators.c
+    ${ULAB_DIR}/ulab_tools.c
+    ${ULAB_DIR}/ndarray.c
+    ${ULAB_DIR}/numpy/ndarray/ndarray_iter.c
+    ${ULAB_DIR}/ndarray_properties.c
+    ${ULAB_DIR}/numpy/approx.c
+    ${ULAB_DIR}/numpy/bitwise.c
+    ${ULAB_DIR}/numpy/compare.c
+    ${ULAB_DIR}/numpy/carray/carray.c
+    ${ULAB_DIR}/numpy/carray/carray_tools.c
+    ${ULAB_DIR}/numpy/create.c
+    ${ULAB_DIR}/numpy/fft/fft.c
+    ${ULAB_DIR}/numpy/fft/fft_tools.c
+    ${ULAB_DIR}/numpy/filter.c
+    ${ULAB_DIR}/numpy/io/io.c
+    ${ULAB_DIR}/numpy/linalg/linalg.c
+    ${ULAB_DIR}/numpy/linalg/linalg_tools.c
+    ${ULAB_DIR}/numpy/numerical.c
+    ${ULAB_DIR}/numpy/poly.c
+    ${ULAB_DIR}/numpy/random/random.c
+    ${ULAB_DIR}/numpy/stats.c
+    ${ULAB_DIR}/numpy/transform.c
+    ${ULAB_DIR}/numpy/vector.c
+    ${ULAB_DIR}/numpy/numpy.c
+    ${ULAB_DIR}/scipy/scipy.c
+    ${ULAB_DIR}/user/user.c
+    ${ULAB_DIR}/utils/utils.c
+    ${ULAB_DIR}/ulab.c
 )
 
 list(APPEND MICROPY_SOURCE_QSTR
@@ -282,6 +320,7 @@ idf_component_register(
         ${MICROPY_INC_TINYUSB}
         ../../tulip/shared
         ../../amy/src
+        ../../tulip/ulab/code
         ${LV_BINDING_DIR}
         ${LVGL_DIR}/src
     REQUIRES
@@ -302,6 +341,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     MICROPY_VFS_FAT=1
     MICROPY_VFS_LFS2=1
     MICROPY_VFS_LFS1=1
+    MODULE_ULAB_ENABLED=1
     FFCONF_H=\"${MICROPY_OOFATFS_DIR}/ffconf.h\"
     LFS1_NO_MALLOC LFS1_NO_DEBUG LFS1_NO_WARN LFS1_NO_ERROR LFS1_NO_ASSERT
     LFS2_NO_MALLOC LFS2_NO_ASSERT
