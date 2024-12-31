@@ -74,7 +74,7 @@ TERSER ?= npx terser
 
 INC += -I.
 INC += -I../shared/
-INC += -I../ulab/code/
+INC += -I../shared/ulab/code/
 INC += -I../shared/desktop/
 INC += -I$(TOP)
 INC += -I$(BUILD)
@@ -169,7 +169,7 @@ SRC_C += \
 
 
 TULIP_EXTMOD_DIR = ../shared
-ULAB_DIR = ../ulab/code
+ULAB_DIR = ../shared/ulab/code
 
 EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	modtulip.c \

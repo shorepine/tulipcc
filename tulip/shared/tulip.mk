@@ -1,7 +1,7 @@
 # tulip.mk
 
 TULIP_EXTMOD_DIR = $(TOP)/../tulip/shared
-ULAB_DIR = $(TOP)/../tulip/ulab/code
+ULAB_DIR = $(TOP)/../tulip/shared/ulab/code
 
 EXTMOD_SRC_C += $(addprefix $(TOP)/../amy/src/, \
 	amy.c \

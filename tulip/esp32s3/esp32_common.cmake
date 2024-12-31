@@ -21,7 +21,7 @@ endif()
 
 # Set location of the ulab directory.
 if(NOT ULAB_DIR)
-    get_filename_component(ULAB_DIR ${CMAKE_CURRENT_LIST_DIR}/../ulab/code ABSOLUTE)
+    get_filename_component(ULAB_DIR ${CMAKE_CURRENT_LIST_DIR}/../shared/ulab/code ABSOLUTE)
 endif()
 
 # Set location of the amy directory.
