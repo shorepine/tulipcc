@@ -18,7 +18,6 @@ VARIANT ?= standard
 VARIANT_DIR ?= variants/$(VARIANT)
 endif
 
-
 ifeq ($(wildcard $(VARIANT_DIR)/.),)
 $(error Invalid VARIANT specified: $(VARIANT_DIR))
 endif

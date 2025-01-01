@@ -3,6 +3,7 @@
 # runtime (with setTimeout an Promise's) to contrtol the scheduling.
 freeze("../../../../amy", "amy.py")
 freeze("../../../../amy/experiments", "tulip_piano.py")
+freeze("../../../../amy/experiments", "piano_params.py")
 freeze("../../../../amy", "juno.py")
 
 package(

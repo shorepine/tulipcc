@@ -1,6 +1,12 @@
 ################################################################################
 # Initial setup of Makefile environment.
 
+TOP = ../../micropython
+
+# Set parallel flag to # of CPUs
+CPUS ?= $(shell sysctl -n hw.ncpu || echo 1)
+MAKEFLAGS += --jobs=$(CPUS)
+
 # Select the variant to build for:
 ifdef VARIANT_DIR
 # Custom variant path - remove trailing slash and get the final component of
@@ -17,9 +23,9 @@ $(error Invalid VARIANT specified: $(VARIANT_DIR))
 endif
 
 # If the build directory is not given, make it reflect the variant name.
-BUILD ?= build-$(VARIANT)
+BUILD ?= build-$(VARIANT)/tulip/obj
 
-include ../../py/mkenv.mk
+include $(TOP)/py/mkenv.mk
 include $(VARIANT_DIR)/mpconfigvariant.mk
 
 # Use the default frozen manifest, variants may override this.
@@ -44,10 +50,12 @@ INC += -I.
 INC += -I$(TOP)
 INC += -I$(BUILD)
 INC += -I$(VARIANT_DIR)
-INC += -I../../../tulip/shared/ulab/code/
+INC += -I../shared/
+INC += -I../shared/ulab/code/
+INC += -I../shared/desktop/
 
 
-ULAB_DIR = ../../../tulip/shared/ulab/code
+ULAB_DIR = ../shared/ulab/code
 EXTMOD_SRC_C += $(addprefix $(ULAB_DIR)/, \
 	scipy/integrate/integrate.c \
 	scipy/linalg/linalg.c \
@@ -86,7 +94,7 @@ EXTMOD_SRC_C += $(addprefix $(ULAB_DIR)/, \
 
 
 CFLAGS += -std=c99 -Wall -Werror -Wdouble-promotion -Wfloat-conversion
-CFLAGS += -Os -DNDEBUG  -DMODULE_ULAB_ENABLED=1
+CFLAGS += -Os -DNDEBUG  -DMODULE_ULAB_ENABLED=1 -DAMY_IS_EXTERNAL
 CFLAGS += $(INC)
 
 EXPORTED_FUNCTIONS_EXTRA += ,\
