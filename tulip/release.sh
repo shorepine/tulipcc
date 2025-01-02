@@ -66,7 +66,7 @@ fi
 cd ..
 
 # Now do web
-cd ../web
+cd web
 make clean
 ./build.sh
 if [ "$TYPE" == "upload" ]; then
