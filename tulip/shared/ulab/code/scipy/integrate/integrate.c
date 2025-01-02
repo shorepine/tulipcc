@@ -55,7 +55,7 @@ ULAB_DEFINE_FLOAT_CONST(etolerance, MICROPY_FLOAT_CONST(1e-8), 0x358637cfUL, 0x3
 #define SIX            MICROPY_FLOAT_CONST(6.0)
 #define TEN            MICROPY_FLOAT_CONST(10.0)
 #define FIFTEEN        MICROPY_FLOAT_CONST(15.0)
-#define EPS_5          MICROPY_FLOAT_CONST(1e-5)
+#define ULAB_EPS_5     MICROPY_FLOAT_CONST(1e-5)
 
 
 static mp_float_t integrate_python_call(const mp_obj_type_t *type, mp_obj_t fun, mp_float_t x, mp_obj_t *fargs, uint8_t nparams) {
@@ -85,7 +85,7 @@ mp_float_t exp_sinh_opt_d(mp_float_t (*fun)(mp_float_t), mp_float_t a, mp_float_
     mp_obj_t fargs[1];
     mp_float_t h2 = integrate_python_call(type, fun, a + d/2, fargs, 0) - integrate_python_call(type, fun, (a + d*2)*4, fargs, 0);
     int i = 1, j = 32;                   // j=32 is optimal to find r
-    if (isfinite(h2) && MICROPY_FLOAT_C_FUN(fabs)(h2) > EPS_5) {    // if |h2| > 2^-16
+    if (isfinite(h2) && MICROPY_FLOAT_C_FUN(fabs)(h2) > ULAB_EPS_5) {    // if |h2| > 2^-16
         mp_float_t r, fl, fr, h, s = 0, lfl, lfr, lr = 2;
         do {                                  // find max j such that fl and fr are finite
             j /= 2;
