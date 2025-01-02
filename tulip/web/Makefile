@@ -18,7 +18,6 @@ VARIANT ?= standard
 VARIANT_DIR ?= variants/$(VARIANT)
 endif
 
-
 ifeq ($(wildcard $(VARIANT_DIR)/.),)
 $(error Invalid VARIANT specified: $(VARIANT_DIR))
 endif
@@ -74,6 +73,7 @@ TERSER ?= npx terser
 
 INC += -I.
 INC += -I../shared/
+INC += -I../shared/ulab/code/
 INC += -I../shared/desktop/
 INC += -I$(TOP)
 INC += -I$(BUILD)
@@ -85,7 +85,7 @@ CFLAGS += -Wall -Werror -Wdouble-promotion -Wfloat-conversion -DSTATIC=static -W
 CFLAGS += -O3 -DNDEBUG
 CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN)
-CFLAGS += -DTULIP_WEB -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 -DAMY_IS_EXTERNAL
+CFLAGS += -DTULIP_WEB -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 -DAMY_IS_EXTERNAL -DMODULE_ULAB_ENABLED=1 -DAMY_HAS_AUDIO_IN
 
 EXPORTED_FUNCTIONS_EXTRA += ,\
 	_mp_js_do_exec,\
@@ -168,6 +168,8 @@ SRC_C += \
 
 
 TULIP_EXTMOD_DIR = ../shared
+ULAB_DIR = ../shared/ulab/code
+
 EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	modtulip.c \
 	polyfills.c \
@@ -186,6 +188,42 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	tsequencer.c \
 	midi.c \
 	desktop/unix_display.c \
+	)
+
+EXTMOD_SRC_C += $(addprefix $(ULAB_DIR)/, \
+	scipy/integrate/integrate.c \
+	scipy/linalg/linalg.c \
+	scipy/optimize/optimize.c \
+	scipy/signal/signal.c \
+	scipy/special/special.c \
+	ndarray_operators.c \
+	ulab_tools.c \
+	ndarray.c \
+	numpy/ndarray/ndarray_iter.c \
+	ndarray_properties.c \
+	numpy/approx.c \
+	numpy/bitwise.c \
+	numpy/compare.c \
+	numpy/carray/carray.c \
+	numpy/carray/carray_tools.c \
+	numpy/create.c \
+	numpy/fft/fft.c \
+	numpy/fft/fft_tools.c \
+	numpy/filter.c \
+	numpy/io/io.c \
+	numpy/linalg/linalg.c \
+	numpy/linalg/linalg_tools.c \
+	numpy/numerical.c \
+	numpy/poly.c \
+	numpy/random/random.c \
+	numpy/stats.c \
+	numpy/transform.c \
+	numpy/vector.c \
+	numpy/numpy.c \
+	scipy/scipy.c \
+	user/user.c \
+	utils/utils.c \
+	ulab.c \
 	)
 
 # List of sources for qstr extraction.

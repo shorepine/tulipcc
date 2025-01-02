@@ -21,6 +21,7 @@ MAKEFLAGS += --jobs=$(CPUS)
 # If the build directory is not given, make it reflect the variant name.
 BUILD ?= build-$(VARIANT)/tulip/obj
 
+
 TOP = ../../micropython
 
 VARIANT_DIR ?= ../../micropython/ports/unix/variants/$(VARIANT)
@@ -101,7 +102,7 @@ INC += -I$(BUILD)
 CWARN = -Wall -Werror
 CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA) 
-CFLAGS += -DTULIP_DESKTOP -DMACOS
+CFLAGS += -DTULIP_DESKTOP -DMACOS -DAMY_HAS_AUDIO_IN
 CFLAGS += $(ARCHFLAGS) 
 
 # Debugging/Optimization
@@ -200,7 +201,6 @@ endif
 
 
 include ../shared/tulip.mk
-
 MICROPY_PORT_DIR=../../micropython/ports/unix
 
 ifeq ($(MICROPY_PY_SSL),1)
@@ -306,7 +306,6 @@ OBJ += $(addprefix $(BUILD)/, $(SRC_CXX:.cpp=.o))
 OBJ += $(addprefix $(BUILD)/, $(SHARED_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(EXTMOD_SRC_C:.c=.o))
 OBJ += $(addprefix $(BUILD)/, $(LIB_SRC_C:.c=.o))
-
 
 
 # List of sources for qstr extraction
