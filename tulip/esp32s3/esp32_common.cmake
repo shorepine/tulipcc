@@ -320,7 +320,7 @@ idf_component_register(
         ${MICROPY_INC_TINYUSB}
         ../../tulip/shared
         ../../amy/src
-        ../../tulip/ulab/code
+        ../../tulip/shared/ulab/code
         ${LV_BINDING_DIR}
         ${LVGL_DIR}/src
     REQUIRES
@@ -367,6 +367,7 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
     -fsingle-precision-constant
     -Wno-strict-aliasing
     -DESP_PLATFORM
+    -DAMY_HAS_AUDIO_IN
     -DSTATIC=static
     -DLFS2_NO_DEBUG
 )

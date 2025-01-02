@@ -23,4 +23,7 @@ freeze("$(PORT_DIR)/../shared/py")
 freeze("$(MPY_DIR)/../amy", "amy.py")
 freeze("$(MPY_DIR)/../amy", "juno.py")
 freeze("$(MPY_DIR)/../amy", "amy_wave.py")
+freeze("$(MPY_DIR)/../amy/experiments", "tulip_piano.py")
+freeze("$(MPY_DIR)/../amy/experiments", "piano_params.py")
+
 #freeze("$(MPY_DIR)/lib/micropython-lib/micropython/utarfile", "utarfile.py")
