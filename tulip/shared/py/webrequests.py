@@ -4,6 +4,8 @@
 
 import json
 import js
+import time
+
 
 def as_bytearray(buffer):
     """
@@ -99,6 +101,15 @@ def fetch(url, **kw):
     _DirectResponse(promise)
     return promise
 
+turl = "https://api.github.com/users/bwhitman"
+def get(url=turl):
+    done = False
+    def cb(text):
+        global done
+        print('cb')
+        done = text
+    js.fetch(url).then(lambda r: r.text()).then(lambda x: cb(x))
+    return done
 
 """
 def get(url):

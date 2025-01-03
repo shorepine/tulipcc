@@ -117,13 +117,11 @@ async function start_tulip() {
   await mp.registerJsModule('amy_js_message', amy_play_message);
 
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
-  //mp.registerJsModule("time", {
-  //  sleep: async (s) => await new Promise((r) => setTimeout(r, s * 1000)),
-  //});
+  mp.registerJsModule("jssleep", sleep_ms);
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import amy, amy_js_message
+    import amy, amy_js_message, jssleep, webrequests
     amy.override_send = amy_js_message
   `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.

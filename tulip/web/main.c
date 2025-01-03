@@ -50,6 +50,7 @@
 extern void setup_lvgl();
 void tulip_start();
 
+#define TULIP_FS_SYNC_DIVIDER 120
 
 STATIC uint8_t stdin_ringbuf_array[260];
 ringbuf_t stdin_ringbuf = {stdin_ringbuf_array, sizeof(stdin_ringbuf_array), 0, 0};
@@ -81,10 +82,17 @@ extern void unix_display_init();
 extern int unix_display_draw();
 uint8_t tulip_ready = 0;
 
+uint32_t fs_sync_divider = TULIP_FS_SYNC_DIVIDER;
 void main_loop__tulip() {
     if(tulip_ready) {
         unix_display_draw();
         mp_handle_pending(true);
+        if(fs_sync_divider-- == 0) {
+            EM_ASM(
+                FS.syncfs(false, function (err) {});
+            );
+            fs_sync_divider = TULIP_FS_SYNC_DIVIDER;
+        }
     }
 }
 
@@ -95,15 +103,23 @@ void tulip_tick(uint32_t tick) {
 void setup_fs() {
     EM_ASM(
         try {
+            FS.mkdir('/tulip4');
+        } catch (err) {
+            // OK, already exists
+        }
+        try {
             FS.mkdir('/tulip4/user');
         } catch (err) {
-            console.log('tulip4/user already exist');
+            // OK, already exists
         }
+
         // Then mount with IDBFS type
-        FS.mount(IDBFS, {autoPersist:true}, '/tulip4/user');
+        // NB: autoPersist:true does not seem to work with the current tulip setup -- unsure why
+        // So we use a divider on the tulip frame drawing to sync FS manually every couple seconds
+        FS.mount(IDBFS,  {autoPersist:true}, '/tulip4/user');
         // Then sync
         FS.syncfs(true, function (err) {
-            // Error
+            // callback
         });
     );
 }
