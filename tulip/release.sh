@@ -65,14 +65,6 @@ if [ "$TYPE" == "upload" ]; then
 fi
 cd ..
 
-# Now do web
-cd web
-make clean
-./build.sh
-if [ "$TYPE" == "upload" ]; then
-    git commit -a -m "deploying Tulip Web"; git push -u origin HEAD; gh pr create -f; gh pr merge -m
-fi
-cd ..
 
 
 
