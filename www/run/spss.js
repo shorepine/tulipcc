@@ -93,13 +93,16 @@ async function start_midi() {
 }
 async function get_test() {
     await mp.runPythonAsync(`
-        import js
-        url = "https://api.github.com/users/micropython"
-        print(f"fetching {url}...")
-        res = await js.fetch(url)
-        json = await res.json()
-        for i in dir(json):
-          print(f"{i}: {json[i]}")
+        async def test():
+          import js
+          url = "https://api.github.com/users/micropython"
+          print(f"fetching {url}...")
+          res = await js.fetch(url)
+          json = await res.json()
+          print(json['name'])
+          #for i in dir(json):
+          #  print(f"{i}: {json[i]}")
+          return json['name']
       `);
 }
 async function sleep_ms(ms) {
