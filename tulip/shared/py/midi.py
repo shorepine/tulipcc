@@ -21,11 +21,16 @@ class MidiConfig:
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
             self.add_synth(channel, patch, num_voices)
 
-    def add_synth_object(self, channel, synth_object):
+    def release_synth_for_channel(self, channel):
         if channel in self.synth_per_channel:
             # Old Synth allocated - Expicitly return the amy_voices to the pool.
             self.synth_per_channel[channel].release()
             del self.synth_per_channel[channel]
+        if channel in self.arpeggiator_per_channel:
+            self.arpeggiator_per_channel[channel].synth = None
+
+    def add_synth_object(self, channel, synth_object):
+        self.release_synth_for_channel(channel)
         self.synth_per_channel[channel] = synth_object
         if channel in self.arpeggiator_per_channel:
             self.arpeggiator_per_channel[channel].synth = synth_object
@@ -36,6 +41,7 @@ class MidiConfig:
         elif channel == 16:
             synth_object = OscSynth(num_voices=1) # the "system bleep" synth
         else:
+            self.release_synth_for_channel(channel)
             synth_object = Synth(num_voices=num_voices, patch_number=patch_number)
         self.add_synth_object(channel, synth_object)
 
@@ -302,6 +308,7 @@ class Synth:
         while not self.active_voices.empty():
             voice = self.active_voices.get()
             self._voice_off(voice)
+            self.released_voices.put(voice)
 
 
     def note_on(self, note, velocity=1, time=None, sequence=None):
