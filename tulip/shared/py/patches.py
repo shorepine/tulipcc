@@ -290,7 +290,8 @@ patches =  [
 "OCTAVE WAR", 
 "GRAND PRIX", 
 "ST.HELENS ", 
-"EXPLOSION "
+"EXPLOSION ",
+"dpwe Piano"
 
 
 ]

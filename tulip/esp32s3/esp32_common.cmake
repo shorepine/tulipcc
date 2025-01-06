@@ -203,6 +203,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c
     ${AMY_DIR}/src/log2_exp2.c
+    ${AMY_DIR}/src/interp_partials.c
     ${ULAB_DIR}/scipy/integrate/integrate.c
     ${ULAB_DIR}/scipy/linalg/linalg.c
     ${ULAB_DIR}/scipy/optimize/optimize.c
