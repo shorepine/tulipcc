@@ -302,6 +302,7 @@ class Synth:
         while not self.active_voices.empty():
             voice = self.active_voices.get()
             self._voice_off(voice)
+            self.released_voices.put(voice)
 
 
     def note_on(self, note, velocity=1, time=None, sequence=None):
