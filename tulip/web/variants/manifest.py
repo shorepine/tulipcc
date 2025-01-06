@@ -6,8 +6,6 @@ freeze("../../shared/py")
 freeze("../../../amy", "amy.py")
 freeze("../../../amy", "juno.py")
 freeze("../../../amy", "amy_wave.py")
-freeze("../../../amy/experiments", "tulip_piano.py")
-freeze("../../../amy/experiments", "piano_params.py")
 
 package(
     "asyncio",
