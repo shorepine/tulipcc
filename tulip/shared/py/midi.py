@@ -36,6 +36,10 @@ class MidiConfig:
         elif channel == 16:
             synth_object = OscSynth(num_voices=1) # the "system bleep" synth
         else:
+            # TODO: this is a temporary hack to fix allocations that overrun available oscs
+            if channel in self.synth_per_channel:
+                self.synth_per_channel[channel].release()
+                del self.synth_per_channel[channel]
             synth_object = Synth(num_voices=num_voices, patch_number=patch_number)
         self.add_synth_object(channel, synth_object)
 

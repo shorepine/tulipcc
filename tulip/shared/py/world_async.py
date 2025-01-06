@@ -6,9 +6,9 @@ import json
 import js
 import asyncio
 import os
-from world import MAX_DESCRIPTION_SIZE, MAX_USERNAME_SIZE, username, _isdir, nice_time, read_in_chunks, 
-    ta, tb, text_channel_id, files_channel_id, text_base_url, files_base_url, headers, discord_epoch,
-    unique_files, ls, prompt_username
+from world import MAX_DESCRIPTION_SIZE, MAX_USERNAME_SIZE, username, _isdir, nice_time, read_in_chunks
+from world import ta, tb, text_channel_id, files_channel_id, text_base_url, files_base_url, headers, discord_epoch
+from world import unique_files, ls, prompt_username
 
 
 # get the last n messages

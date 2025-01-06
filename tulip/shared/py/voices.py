@@ -278,7 +278,7 @@ def update_patches(synth):
     if(synth=='Custom'):
         app.patchlist.replace_items([("Custom %d" % x) for x in range(32)])
     if(synth=='Misc'):
-        app.patchlist.replace_items([])
+        app.patchlist.replace_items([patches[256]])
     app.patchlist.label.set_text("%s patches" % (synth))
 
 def sync_ui_for_channel(channel):
