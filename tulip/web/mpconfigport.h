@@ -87,7 +87,7 @@
 // Whether the VM will periodically call mp_js_hook(), which checks for
 // interrupt characters on stdin (or equivalent input).
 #ifndef MICROPY_VARIANT_ENABLE_JS_HOOK
-#define MICROPY_VARIANT_ENABLE_JS_HOOK (0)
+#define MICROPY_VARIANT_ENABLE_JS_HOOK (1)
 #endif
 
 #if MICROPY_VARIANT_ENABLE_JS_HOOK

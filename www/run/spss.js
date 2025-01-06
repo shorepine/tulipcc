@@ -91,17 +91,23 @@ async function start_midi() {
       .catch(err => console.log("MIDI: " + err));
   }
 }
+/*
 async function get_test() {
     await mp.runPythonAsync(`
-        import js
-        url = "https://api.github.com/users/micropython"
-        print(f"fetching {url}...")
-        res = await js.fetch(url)
-        json = await res.json()
-        for i in dir(json):
-          print(f"{i}: {json[i]}")
+        async def test():
+          import js
+          url = "https://api.github.com/users/micropython"
+          print(f"fetching {url}...")
+          res = await js.fetch(url)
+          json = await res.json()
+          print(json['name'])
+          #for i in dir(json):
+          #  print(f"{i}: {json[i]}")
+          return json['name']
       `);
 }
+*/
+
 async function sleep_ms(ms) {
     await new Promise((r) => setTimeout(r, ms));
 }
@@ -117,9 +123,7 @@ async function start_tulip() {
   await mp.registerJsModule('amy_js_message', amy_play_message);
 
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
-  //mp.registerJsModule("time", {
-  //  sleep: async (s) => await new Promise((r) => setTimeout(r, s * 1000)),
-  //});
+  mp.registerJsModule("jssleep", sleep_ms);
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
