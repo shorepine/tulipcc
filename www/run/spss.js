@@ -91,6 +91,7 @@ async function start_midi() {
       .catch(err => console.log("MIDI: " + err));
   }
 }
+/*
 async function get_test() {
     await mp.runPythonAsync(`
         async def test():
@@ -105,6 +106,8 @@ async function get_test() {
           return json['name']
       `);
 }
+*/
+
 async function sleep_ms(ms) {
     await new Promise((r) => setTimeout(r, ms));
 }
@@ -124,7 +127,7 @@ async function start_tulip() {
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import amy, amy_js_message, jssleep, webrequests
+    import amy, amy_js_message
     amy.override_send = amy_js_message
   `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
