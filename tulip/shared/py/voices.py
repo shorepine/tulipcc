@@ -167,7 +167,7 @@ class ListColumn(tulip.UIElement):
                 self.button_texts.append(i)
 
     def select(self, index, defer=False):
-        if(self.selected is not None):
+        if self.selected is not None and self.selected < len(self.buttons):
             self.buttons[self.selected].set_style_bg_color(tulip.pal_to_lv(self.default_bg), 0)
         self.selected = index
         if index is not None:
