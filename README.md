@@ -12,12 +12,9 @@ Tulip is powered by [MicroPython](https://micropython.org), [AMY](https://github
 
  * [**Get a Tulip from our friends at Makerfabs for only US$59**](https://tulip.computer)
  * [**Just got a Tulip CC? Check out our getting started guide!**](docs/getting_started.md)
- * [**Any issues with your Tulip CC? Here's our troubleshooting guide**](docs/troubleshooting.md)
  * [**Want to make music with your Tulip? Check out our music tutorial here**](docs/music.md)
  * [**See the full Tulip API**](docs/tulip_api.md)
- * [**Learn about our roadmap and find out what we're working on next**](https://github.com/orgs/shorepine/projects/1)
- * [**Build your own Tulip**](docs/tulip_build.md)
- * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2024/07/30/tulip-available/)** 
+
 
  [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
@@ -55,6 +52,12 @@ Tulip CC supports:
 I've been working on Tulip on and off for years over many hardware iterations and hope that someone out there finds it as fun as I have, either making things with Tulip or working on Tulip itself. I'd love feedback, your own Tulip experiments or pull requests to improve the system.
 
 ![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulip4.png)
+
+
+ * [**Any issues with your Tulip CC? Here's our troubleshooting guide**](docs/troubleshooting.md)
+ * [**Learn about our roadmap and find out what we're working on next**](https://github.com/orgs/shorepine/projects/1)
+ * [**Build your own Tulip**](docs/tulip_build.md)
+ * **[You can read more about the "why" or "how" of Tulip on my website!](https://notes.variogram.com/2024/07/30/tulip-available/)** 
 
 
 ## T-Deck Tulip CC
