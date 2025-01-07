@@ -133,7 +133,7 @@ There are a few ways to files between Tulip and your computer. You can connect T
 
 First, install `mpremote`on your computer. Usually, this is (in your Terminal app) `pip install mpremote`. (If you don't have `pip`, please search for how to install it on your OS.) Once it's installed, make sure you've connected a USB cable from Tulip's top USB port - "USB pwr/charge/program" - to your computer. Then, with Tulip on, just run `mpremote` on your computer's terminal. You should see the Tulip's REPL on your screen! You can type into it and see it there. It's a fine way to control almost all of Tulip. 
 
-To transfer a file from your computer to Tulip from mpremote, use `mpremote resume fs cp local_file.py :tulip_file.py`. This takes a file called `local_file.py` on your computer in the folder you're in, and transfers it to the current Tulip directory, calling it `tulip_file.py`. It's pretty fast! To transfer a file from Tulip to your computer, do it in reverse: `mpremote resule fs cp :tulip_file.py local_file.py`. 
+To transfer a file from your computer to Tulip from mpremote, use `mpremote resume fs cp local_file.py :tulip_file.py`. This takes a file called `local_file.py` on your computer in the folder you're in, and transfers it to the current Tulip directory, calling it `tulip_file.py`. It's pretty fast! To transfer a file from Tulip to your computer, do it in reverse: `mpremote resume fs cp :tulip_file.py local_file.py`. 
 
 To edit a file on Tulip directly on your computer, just do `mpremote resume edit file.py`. This will open whatever `EDITOR` you have set in your shell's environment. Once you save it in your editor, it'll be saved on Tulip! 
 
