@@ -4,7 +4,6 @@
 from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_add_callback, seq_remove_callback, seq_ticks
 import amy
 import midi
-import m5_8encoder as enc
 from patches import drumkit
 AMY_TAG_OFFSET = 4385 # random offset to allow other apps to share
 
@@ -237,41 +236,14 @@ class DrumRow(UIElement):
         self.preset = e.get_target_obj().get_selected()
         self.update_note()
 
-class EncVal():
-    def __init__(self):
-        self.prv_pos = 9999
 
-    def set(self, val):
-        self.prv_pos = val
-
-    def get(self):
-        return self.prv_pos
-    
-
-
-# Called from AMY's sequencer, 
-#  updates the LEDs
-# reads encoders
+# Called from AMY's sequencer, just updates the LEDs
 def beat_callback(t):
     global app
     app.current_beat = int((seq_ticks() / 24) % 16)
 
     app.leds.set((app.current_beat-1)% 16, 0)
     app.leds.set(app.current_beat, 1)
-
-    #print('beat:', app.current_beat)
-    
-    new_pos = enc.read_counter(0)
-    if new_pos != app.enc_val.get():
-        print(f'new_pos:{enc.read_counter(0)}')
-        app.enc_val.set(new_pos)
-
-        # invert the present value of the switch
-        s = app.rows[0].objs[app.current_beat] 
-        s.set(True)
-        #s.get( ) and s.set(False) or s.set(True)
-        #print('counter:', ctr_pos)
-
 
 def quit(screen):
     seq_remove_callback(screen.slot)
@@ -298,7 +270,6 @@ def run(screen):
         row.set_pitch(.5)
     for i in range(16):
         app.rows[2].objs[i].set(True)
-    app.enc_val = EncVal()
 
     app.current_beat = int((seq_ticks() / 24) % 16)
     app.slot = seq_add_callback(beat_callback, int(amy.SEQUENCER_PPQ/2))
