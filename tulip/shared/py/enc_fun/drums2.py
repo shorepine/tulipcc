@@ -1,7 +1,7 @@
 # drums.py
 # lvgl drum machine for Tulip
 
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_add_callback, seq_remove_callback, seq_ticks
+from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_add_callback, seq_remove_callback, seq_ticks, 
 import amy
 import midi
 import m5_8encoder as enc
