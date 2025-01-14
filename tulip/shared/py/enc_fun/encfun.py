@@ -62,20 +62,44 @@ KNOB_XPOS = 7
 KNOB_YPOS = 0
 XPOS_PUSH_SCALE = 8
 YPOS_PUSH_SCALE = 8
+NEW_NOTE_BUTTON1 = 6
+NEW_NOTE_BUTTON2 = 1
+
+def new_note_button_det(enc):
+    v1 = enc.read_button(NEW_NOTE_BUTTON1)
+    v2 = 1- v1
+    w1 = enc.read_button(NEW_NOTE_BUTTON2)
+    w2 = 1- w1
+    x1 = v2 or w2
+    print(f'v1: {v1}, v2: {v2}, w1: {w1}, w2: {w2}, x1: {x1}')
+
+    return x1
+
+
 
 # This is called every frame by the GPU.
 def game_loop(d):
 
     global rabbit_h,rabbit_w,WIDTH,HEIGHT,ringing_pan
+    
+    enc_butts = enc.read_all_buttons()
+    enc_butts = [1-x for x in enc_butts]  # rev polarity
+
+    if enc_butts[NEW_NOTE_BUTTON1] == 1 and enc_butts[NEW_NOTE_BUTTON2] == 1:
+        tulip.bg_clear(random.choice(grass_colors))
+
+    if enc_butts[NEW_NOTE_BUTTON1] == 1 or enc_butts[NEW_NOTE_BUTTON2] == 1:
+        tulip.bg_circle(math.floor( d["x"] + rabbit_w/2), 
+                        math.floor( d["y"] + rabbit_h/2), 10, 1, 1)    
 
     dx = enc.read_increment(KNOB_XPOS)
     dy = enc.read_increment(KNOB_YPOS)
-    bx = enc.read_button(KNOB_XPOS)
-    by = enc.read_button(KNOB_YPOS)
+    bx = 1 - enc_butts[KNOB_XPOS]
+    by = 1 - enc_butts[KNOB_YPOS]
     d["x"] += dx*(1 + bx*XPOS_PUSH_SCALE)
     d["y"] -= dy*(1 + by*YPOS_PUSH_SCALE)
-    d["x"] = clip(d["x"], 0, WIDTH-1)
-    d["y"] = clip(d["y"], 0, HEIGHT-1)
+    d["x"] = clip(d["x"], 0, WIDTH-rabbit_w)
+    d["y"] = clip(d["y"], 0, HEIGHT-rabbit_h)    
     f_x = math.floor(d["x"])
     f_y = math.floor(d["y"])
 
