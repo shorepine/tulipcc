@@ -48,7 +48,27 @@ tulip.sprite_register(1,0, rabbit_w, rabbit_h)
 tulip.sprite_move(1, math.floor(WIDTH/2) - half_rabbit_w, 0)
 tulip.sprite_on(1)
 
+class Note():
+    def __init__(self, pos, note, vel, dur):
+        self.pos = pos
+        self.note = note
+        self.vel = vel
+        self.dur = dur
 
+    def __repr__(self):
+        return f"Note: {self.note} at {self.pos} with vel {self.vel} for {self.dur} ticks"
+
+
+class NoteManager():
+    def __init__(self):
+        self.notes = []
+        
+    def add(self, pos, note, vel, dur):
+        new_note = Note(pos, note, vel, dur)
+        self.notes.append(new_note)
+    
+    def display_notes(self):
+        print(self.notes)
 
 class EncVal():
     def __init__(self):
@@ -65,6 +85,16 @@ class EncVal():
 def clip(val, min_val, max_val):
     return max(min(val, max_val), min_val)
 
+class KeebMgr():
+    def __init__(self):
+        self.note_add_down=False
+
+    def note_add_down_get(self):
+        return self.note_add_down
+
+    def note_add_down_set(self, val):
+        self.note_add_down = val    
+
 KNOB_XPOS = 7
 KNOB_YPOS = 0
 XPOS_PUSH_SCALE = 8
@@ -72,11 +102,13 @@ YPOS_PUSH_SCALE = 8
 NEW_NOTE_BUTTON1 = 6
 NEW_NOTE_BUTTON2 = 1
 
+note_manager = NoteManager()
+keeb_mgr = KeebMgr()    
 
 def beat_callback(t):
     global app
-    current_beat = int((seq_ticks() / 24) % 16)
-    tulip.sprite_move(1, math.floor(WIDTH/16)*current_beat, 0 )
+    current_beat = int((seq_ticks() / 96) % 4)
+    tulip.sprite_move(1, math.floor(WIDTH/4)*current_beat, 0 )
 
     
 # This is called every frame by the GPU.
@@ -90,9 +122,14 @@ def game_loop(d):
     if enc_butts[NEW_NOTE_BUTTON1] == 1 and enc_butts[NEW_NOTE_BUTTON2] == 1:
         tulip.bg_clear(random.choice(grass_colors))
 
-    elif enc_butts[NEW_NOTE_BUTTON1] == 1 or enc_butts[NEW_NOTE_BUTTON2] == 1:
-        tulip.bg_circle(math.floor( d["x"] + rabbit_w/2), 
-                        math.floor( d["y"] + rabbit_h/2), 10, 1, 1)    
+    elif keeb_mgr.note_add_down_get() == False and \
+            ( enc_butts[NEW_NOTE_BUTTON1] == 1 or enc_butts[NEW_NOTE_BUTTON2] == 1):
+            tulip.bg_circle(math.floor( d["x"] + rabbit_w/2), 
+                            math.floor( d["y"] + rabbit_h/2), 10, 1, 1)  
+            keeb_mgr.note_add_down_set(True)
+            note_manager.add(d["x"], d["y"], 0.5, 12 ) 
+            note_manager.display_notes()    
+        
     else:
         dx = enc.read_increment(KNOB_XPOS)
         dy = enc.read_increment(KNOB_YPOS)
@@ -106,6 +143,9 @@ def game_loop(d):
         f_y = math.floor(d["y"])
         tulip.sprite_move(0, f_x, f_y)
 
+    if keeb_mgr.note_add_down_get() == True and \
+        enc_butts[NEW_NOTE_BUTTON1] == 0 and enc_butts[NEW_NOTE_BUTTON2] == 0:
+            keeb_mgr.note_add_down_set(False)
 
     # fill background with noise pattern
     for i in range(10):
@@ -121,8 +161,8 @@ tulip.frame_callback(game_loop, d)   # Register the frame callback and data
 amy.send(osc=0, wave=amy.PCM, patch=18,  vel=0.25, feedback=1) #14
 
 
-current_beat = int((seq_ticks() / 24) % 16)
-tulip.seq_add_callback(beat_callback, int(amy.SEQUENCER_PPQ/2))
+current_beat = int((seq_ticks() / 96) % 4)
+tulip.seq_add_callback(beat_callback, int(amy.SEQUENCER_PPQ*4/2))
 
 # Run in a loop forever. Catch ctrl-c
 try:
