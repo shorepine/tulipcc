@@ -2,6 +2,11 @@ import random, time, math, os
 import tulip, amy, music
 from tulip import ticks_ms, seq_add_callback, seq_remove_callback, seq_ticks
 import m5_8encoder as enc
+import gridfun as gfun
+
+"""
+note: screen size 1024x600, with rabbit: 975x568
+"""
 
 # initialize
 tulip.tfb_stop()
@@ -56,7 +61,7 @@ class Note():
         self.dur = dur
 
     def __repr__(self):
-        return f"Note: {self.note} at {self.pos} with vel {self.vel} for {self.dur} ticks"
+        return f"Note: {self.note} at {self.pos} with vel {self.vel} for {self.dur} ticks\n"
 
 
 class NoteManager():
@@ -102,13 +107,28 @@ YPOS_PUSH_SCALE = 8
 NEW_NOTE_BUTTON1 = 6
 NEW_NOTE_BUTTON2 = 1
 
+
+
 note_manager = NoteManager()
 keeb_mgr = KeebMgr()    
+grid = gfun.Grid(800, 500, cols=32,  rows=25, start_x=100, start_y=50, palette_index=3) 
+grid.draw()
 
 def beat_callback(t):
     global app
-    current_beat = int((seq_ticks() / 96) % 4)
-    tulip.sprite_move(1, math.floor(WIDTH/4)*current_beat, 0 )
+
+    discrete_steps = 4 
+    current_beat = int((seq_ticks() / 96) % discrete_steps )   # 48 PPQ, e.g. 108 BPM = 48*108 ticks/minute = 86 ticks/second
+
+    # plot the running rabbit
+    ratio = current_beat / discrete_steps
+    sprite_x = grid.start_x + grid.width * ratio - half_rabbit_w
+    sprite_y = grid.start_y - grid.VerticalSpacing / 2  # start_y - some vertical spacing upwards, ticker is above the grid :)
+    sprite_x = clip(sprite_x, 0, WIDTH-rabbit_w)
+    sprite_y = clip(sprite_y, 0, HEIGHT-rabbit_h)
+
+    #tulip.sprite_move(1, math.floor(WIDTH/4)*current_beat, 0 ) # later replace with scroll, how cool would that be
+    tulip.sprite_move(1, math.floor(sprite_x), math.floor(sprite_y)) # later add bg scroll, how cool would that be
 
     
 # This is called every frame by the GPU.
@@ -158,7 +178,7 @@ def game_loop(d):
 amy.reset()
 start_time = tulip.ticks_ms()  # do this right before takeoff...
 tulip.frame_callback(game_loop, d)   # Register the frame callback and data
-amy.send(osc=0, wave=amy.PCM, patch=18,  vel=0.25, feedback=1) #14
+amy.send(osc=0, wave=amy.PCM, patch=18,  vel=0.25, feedback=.6) #14
 
 
 current_beat = int((seq_ticks() / 96) % 4)
