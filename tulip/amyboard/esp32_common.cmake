@@ -127,14 +127,13 @@ endif()
 
 list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/main.c
+    ${MICROPY_PORT_DIR}/amychip.c
+    ${MICROPY_PORT_DIR}/esp32-hal-i2c-slave.c
     ${MICROPY_PORT_DIR}/multicast.c
     ${MICROPY_PORT_DIR}/help.c
-    ${MICROPY_PORT_DIR}/build/lv_mpy.c
     ${MICROPY_PORT_DIR}/network_common.c
-    ${MICROPY_PORT_DIR}/esp_lcd_touch.c
     ${MICROPY_PORT_DIR}/modsocket.c
     ${MICROPY_PORT_DIR}/mphalport.c
-    ${MICROPY_PORT_DIR}/usb.c
 
     ${MICROPY_ESP32_DIR}/panichandler.c
     ${MICROPY_ESP32_DIR}/adc.c
