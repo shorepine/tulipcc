@@ -317,11 +317,13 @@ class Synth:
             raise ValueError('Synth note on with no voices - synth has been released?')
         if velocity == 0:
             self.note_off(note, time=time, sequence=sequence)
-        else:
-            # Velocity > 0, note on.
+        else:  # Velocity > 0, note on.
             if note in self.voice_of_note:
                 # Send another note-on to the voice already playing this note.
                 new_voice = self.voice_of_note[note]
+                # Remove pending note-off from sustain, if any.
+                if note in self.sustained_notes:
+                    self.sustained_notes.remove(note)
             else:
                 new_voice = self._get_next_voice()
                 self.active_voices.put(new_voice)
