@@ -44,6 +44,8 @@ class MidiConfig:
             self.release_synth_for_channel(channel)
             synth_object = Synth(num_voices=num_voices, patch_number=patch_number)
         self.add_synth_object(channel, synth_object)
+        # Return the newly-created synth object so client can tweak it.
+        return synth_object
 
     def insert_arpeggiator(self, channel, arpeggiator):
         if channel in self.synth_per_channel:
