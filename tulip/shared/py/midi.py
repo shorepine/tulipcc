@@ -225,27 +225,35 @@ class Synth:
         amy.reset()
 
     def __init__(self, num_voices=6, patch_number=None, patch_string=None):
-        self.voice_objs = self._get_new_voices(num_voices)
-        self.released_voices = Queue(num_voices, name='Released')
-        for voice_index in range(num_voices):
-            self.released_voices.put(voice_index)
-        self.active_voices = Queue(num_voices, name='Active')
-        # Dict to look up active voice from note number, for note-off.
-        self.voice_of_note = {}
-        self.note_of_voice = [None] * num_voices
-        self.sustaining = False
-        self.sustained_notes = set()
-        # Fields used by UI
-        #self.num_voices = num_voices
-        self.patch_number = None
-        self.patch_state = None
         if patch_number is not None and patch_string is not None:
             raise ValueError('You cannot specify both patch_number and patch_string.')
         if patch_string is not None:
             patch_number = Synth.next_amy_patch_number
             Synth.next_amy_patch_number = patch_number + 1
             amy.send(store_patch='%d,%s' % (patch_number, patch_string))
-        self.program_change(patch_number)
+        self._pre_init_num_voices = num_voices
+        self._pre_init_patch_number = patch_number
+        self._initialized = False
+
+    def deferred_init(self):
+        if not self._initialized:
+            self._initialized = True
+            num_voices = self._pre_init_num_voices
+            self.voice_objs = self._get_new_voices(num_voices)
+            self.released_voices = Queue(num_voices, name='Released')
+            for voice_index in range(num_voices):
+                self.released_voices.put(voice_index)
+            self.active_voices = Queue(num_voices, name='Active')
+            # Dict to look up active voice from note number, for note-off.
+            self.voice_of_note = {}
+            self.note_of_voice = [None] * num_voices
+            self.sustaining = False
+            self.sustained_notes = set()
+            # Fields used by UI
+            #self.num_voices = num_voices
+            self.patch_number = None
+            self.patch_state = None
+            self.program_change(self._pre_init_patch_number)
 
     def _get_new_voices(self, num_voices):
         new_voices = []
@@ -264,10 +272,12 @@ class Synth:
 
     @property
     def amy_voices(self):
+        self.deferred_init()
         return [o.amy_voice for o in self.voice_objs]
 
     @property
     def num_voices(self):
+        self.deferred_init()
         return len(self.voice_objs)
 
     # send an AMY message to the voices in this synth
@@ -294,6 +304,7 @@ class Synth:
         self.note_of_voice[voice] =  None
 
     def note_off(self, note, time=None, sequence=None):
+        self.deferred_init()
         if self.sustaining:
             self.sustained_notes.add(note)
             return
@@ -306,6 +317,7 @@ class Synth:
         self.released_voices.put(old_voice)
 
     def all_notes_off(self):
+        self.deferred_init()
         self.sustain(False)
         while not self.active_voices.empty():
             voice = self.active_voices.get()
@@ -314,6 +326,7 @@ class Synth:
 
 
     def note_on(self, note, velocity=1, time=None, sequence=None):
+        self.deferred_init()
         if not self.amy_voice_nums:
             # Note on after synth.release()?
             raise ValueError('Synth note on with no voices - synth has been released?')
@@ -335,6 +348,7 @@ class Synth:
 
     def sustain(self, state):
         """Turn sustain on/off."""
+        self.deferred_init()
         if state:
             self.sustaining = True
         else:
@@ -344,12 +358,15 @@ class Synth:
             self.sustained_notes = set()
 
     def get_patch_state(self):
+        self.deferred_init()
         return self.patch_state
 
     def set_patch_state(self, state):
+        self.deferred_init()
         self.patch_state = state
 
     def program_change(self, patch_number):
+        self.deferred_init()
         if patch_number != self.patch_number:
             self.patch_number = patch_number
             # Reset any modified state due to previous patch modifications.
@@ -362,6 +379,7 @@ class Synth:
 
     def release(self):
         """Called to terminate this synth and release its amy_voice resources."""
+        self.deferred_init()
         # Turn off any active notes
         self.all_notes_off()
         # Return all the amy_voices
