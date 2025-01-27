@@ -19,7 +19,7 @@ class MidiConfig:
         self.arpeggiator_per_channel = {}
         for channel, num_voices in voices_per_channel.items():
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
-            self.add_synth(channel, patch, num_voices)
+            self.add_synth(channel=channel, synth=Synth(patch_number=patch, num_voices=num_voices))
 
     def release_synth_for_channel(self, channel):
         if channel in self.synth_per_channel:
@@ -29,18 +29,25 @@ class MidiConfig:
         if channel in self.arpeggiator_per_channel:
             self.arpeggiator_per_channel[channel].synth = None
 
-    def add_synth_object(self, channel, synth_object):
+    def add_synth(self, synth=None, patch_number=None, channel=1, num_voices=None):
+        if synth is None and patch_number is None:
+            raise ValueError('No synth (or patch_number) specified')
         self.release_synth_for_channel(channel)
-        self.synth_per_channel[channel] = synth_object
+        if synth is None:
+            print('add_synth(patch_number=..) is deprecated and will be removed.  Use add_synth(Synth(patch_number=..)) instead.')
+            if num_voices is None:
+                num_voices = 6  # Default
+            synth = Synth(num_voices=num_voices, patch_number=patch_number)
+        elif patch_number is not None or num_voices is not None:
+            raise ValueError('You cannot specify both synth and patch_number/num_voices')
+            # .. because we can't reconfigure num_voices which you might be expecting.
+        self.synth_per_channel[channel] = synth
         if channel in self.arpeggiator_per_channel:
-            self.arpeggiator_per_channel[channel].synth = synth_object
-
-    def add_synth(self, channel=1, patch_number=0, num_voices=6):
-        self.release_synth_for_channel(channel)
-        synth_object = Synth(num_voices=num_voices, patch_number=patch_number)
-        self.add_synth_object(channel, synth_object)
+            self.arpeggiator_per_channel[channel].synth = synth
+        if hasattr(synth, 'deferred_init'):
+            synth.deferred_init()
         # Return the newly-created synth object so client can tweak it.
-        return synth_object
+        return synth
 
     def insert_arpeggiator(self, channel, arpeggiator):
         if channel in self.synth_per_channel:
@@ -220,27 +227,43 @@ class Synth:
         amy.reset()
 
     def __init__(self, num_voices=6, patch_number=None, patch_string=None):
-        self.voice_objs = self._get_new_voices(num_voices)
-        self.released_voices = Queue(num_voices, name='Released')
-        for voice_index in range(num_voices):
-            self.released_voices.put(voice_index)
-        self.active_voices = Queue(num_voices, name='Active')
-        # Dict to look up active voice from note number, for note-off.
-        self.voice_of_note = {}
-        self.note_of_voice = [None] * num_voices
-        self.sustaining = False
-        self.sustained_notes = set()
-        # Fields used by UI
-        #self.num_voices = num_voices
-        self.patch_number = None
-        self.patch_state = None
         if patch_number is not None and patch_string is not None:
             raise ValueError('You cannot specify both patch_number and patch_string.')
         if patch_string is not None:
             patch_number = Synth.next_amy_patch_number
             Synth.next_amy_patch_number = patch_number + 1
             amy.send(store_patch='%d,%s' % (patch_number, patch_string))
-        self.program_change(patch_number)
+        self._pre_init_num_voices = num_voices
+        self._pre_init_patch_number = patch_number
+        # The actual grabbing of AMY voices is deferred until the first time this
+        # synth is used.  This is to cleanly handle the case of replacing a MIDI
+        # channel synth, when a new Synth object is constructed and passed to
+        # config.add_synth, but the AMY voices held by the existing synth on that
+        # channel are not released until add_synth() runs.  This way, the new,
+        # replacement synth can use the same voice numbers when it eventually
+        # does its deferred_init().
+        self._initialized = False
+
+    def deferred_init(self):
+        """Finish synth initialization once we can assume all voices are available."""
+        if not self._initialized:
+            self._initialized = True
+            num_voices = self._pre_init_num_voices
+            self.voice_objs = self._get_new_voices(num_voices)
+            self.released_voices = Queue(num_voices, name='Released')
+            for voice_index in range(num_voices):
+                self.released_voices.put(voice_index)
+            self.active_voices = Queue(num_voices, name='Active')
+            # Dict to look up active voice from note number, for note-off.
+            self.voice_of_note = {}
+            self.note_of_voice = [None] * num_voices
+            self.sustaining = False
+            self.sustained_notes = set()
+            # Fields used by UI
+            #self.num_voices = num_voices
+            self.patch_number = None
+            self.patch_state = None
+            self.program_change(self._pre_init_patch_number)
 
     def _get_new_voices(self, num_voices):
         new_voices = []
@@ -259,10 +282,12 @@ class Synth:
 
     @property
     def amy_voices(self):
+        self.deferred_init()
         return [o.amy_voice for o in self.voice_objs]
 
     @property
     def num_voices(self):
+        self.deferred_init()
         return len(self.voice_objs)
 
     # send an AMY message to the voices in this synth
@@ -289,6 +314,7 @@ class Synth:
         self.note_of_voice[voice] =  None
 
     def note_off(self, note, time=None, sequence=None):
+        self.deferred_init()
         if self.sustaining:
             self.sustained_notes.add(note)
             return
@@ -301,6 +327,7 @@ class Synth:
         self.released_voices.put(old_voice)
 
     def all_notes_off(self):
+        self.deferred_init()
         self.sustain(False)
         while not self.active_voices.empty():
             voice = self.active_voices.get()
@@ -309,6 +336,7 @@ class Synth:
 
 
     def note_on(self, note, velocity=1, time=None, sequence=None):
+        self.deferred_init()
         if not self.amy_voice_nums:
             # Note on after synth.release()?
             raise ValueError('Synth note on with no voices - synth has been released?')
@@ -330,6 +358,7 @@ class Synth:
 
     def sustain(self, state):
         """Turn sustain on/off."""
+        self.deferred_init()
         if state:
             self.sustaining = True
         else:
@@ -339,12 +368,15 @@ class Synth:
             self.sustained_notes = set()
 
     def get_patch_state(self):
+        self.deferred_init()
         return self.patch_state
 
     def set_patch_state(self, state):
+        self.deferred_init()
         self.patch_state = state
 
     def program_change(self, patch_number):
+        self.deferred_init()
         if patch_number != self.patch_number:
             self.patch_number = patch_number
             # Reset any modified state due to previous patch modifications.
@@ -357,6 +389,7 @@ class Synth:
 
     def release(self):
         """Called to terminate this synth and release its amy_voice resources."""
+        self.deferred_init()
         # Turn off any active notes
         self.all_notes_off()
         # Return all the amy_voices
@@ -495,11 +528,11 @@ def ensure_midi_config():
         # utility sine wave bleeper on channel 16
         config = MidiConfig(show_warnings=True)
         # The "system bleep" synth
-        config.add_synth_object(channel=16, synth_object=OscSynth(num_voices=1))
+        config.add_synth(channel=16, synth=OscSynth(num_voices=1))
         # GeneralMidi Drums.
-        config.add_synth_object(channel=10, synth_object=DrumSynth(num_voices=10))
+        config.add_synth(channel=10, synth=DrumSynth(num_voices=10))
         # Default Juno synth on Channel 1.
-        config.add_synth(channel=1, patch_number=0, num_voices=6)
+        config.add_synth(channel=1, synth=Synth(patch_number=0, num_voices=6))
         config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
 
 
