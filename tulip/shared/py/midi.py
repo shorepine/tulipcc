@@ -233,9 +233,17 @@ class Synth:
             amy.send(store_patch='%d,%s' % (patch_number, patch_string))
         self._pre_init_num_voices = num_voices
         self._pre_init_patch_number = patch_number
+        # The actual grabbing of AMY voices is deferred until the first time this
+        # synth is used.  This is to cleanly handle the case of replacing a MIDI
+        # channel synth, when a new Synth object is constructed and passed to
+        # config.add_synth, but the AMY voices held by the existing synth on that
+        # channel are not released until add_synth() runs.  This way, the new,
+        # replacement synth can use the same voice numbers when it eventually
+        # does its deferred_init().
         self._initialized = False
 
     def deferred_init(self):
+        """Finish synth initialization once we can assume all voices are available."""
         if not self._initialized:
             self._initialized = True
             num_voices = self._pre_init_num_voices
