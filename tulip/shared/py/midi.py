@@ -19,7 +19,7 @@ class MidiConfig:
         self.arpeggiator_per_channel = {}
         for channel, num_voices in voices_per_channel.items():
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
-            self.add_synth(channel, patch, num_voices)
+            self.add_synth(channel=channel, synth=Synth(patch_number=patch, num_voices=num_voices))
 
     def release_synth_for_channel(self, channel):
         if channel in self.synth_per_channel:
@@ -29,18 +29,23 @@ class MidiConfig:
         if channel in self.arpeggiator_per_channel:
             self.arpeggiator_per_channel[channel].synth = None
 
-    def add_synth_object(self, channel, synth_object):
+    def add_synth(self, synth=None, patch_number=None, channel=1, num_voices=None):
+        if synth is None and patch_number is None:
+            raise ValueError('No synth (or patch_number) specified')
         self.release_synth_for_channel(channel)
-        self.synth_per_channel[channel] = synth_object
+        if synth is None:
+            print('add_synth(patch_number=..) is deprecated and will be removed.  Use add_synth(Synth(patch_number=..)) instead.')
+            if num_voices is None:
+                num_voices = 6  # Default
+            synth = Synth(num_voices=num_voices, patch_number=patch_number)
+        elif patch_number is not None or num_voices is not None:
+            raise ValueError('You cannot specify both synth and patch_number/num_voices')
+            # .. because we can't reconfigure num_voices which you might be expecting.
+        self.synth_per_channel[channel] = synth
         if channel in self.arpeggiator_per_channel:
-            self.arpeggiator_per_channel[channel].synth = synth_object
-
-    def add_synth(self, channel=1, patch_number=0, num_voices=6):
-        self.release_synth_for_channel(channel)
-        synth_object = Synth(num_voices=num_voices, patch_number=patch_number)
-        self.add_synth_object(channel, synth_object)
+            self.arpeggiator_per_channel[channel].synth = synth
         # Return the newly-created synth object so client can tweak it.
-        return synth_object
+        return synth
 
     def insert_arpeggiator(self, channel, arpeggiator):
         if channel in self.synth_per_channel:
@@ -495,11 +500,11 @@ def ensure_midi_config():
         # utility sine wave bleeper on channel 16
         config = MidiConfig(show_warnings=True)
         # The "system bleep" synth
-        config.add_synth_object(channel=16, synth_object=OscSynth(num_voices=1))
+        config.add_synth(channel=16, synth=OscSynth(num_voices=1))
         # GeneralMidi Drums.
-        config.add_synth_object(channel=10, synth_object=DrumSynth(num_voices=10))
+        config.add_synth(channel=10, synth=DrumSynth(num_voices=10))
         # Default Juno synth on Channel 1.
-        config.add_synth(channel=1, patch_number=0, num_voices=6)
+        config.add_synth(channel=1, synth=Synth(patch_number=0, num_voices=6))
         config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
 
 
