@@ -44,6 +44,8 @@ class MidiConfig:
         self.synth_per_channel[channel] = synth
         if channel in self.arpeggiator_per_channel:
             self.arpeggiator_per_channel[channel].synth = synth
+        if hasattr(synth, 'deferred_init'):
+            synth.deferred_init()
         # Return the newly-created synth object so client can tweak it.
         return synth
 
