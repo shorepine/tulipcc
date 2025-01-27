@@ -13,7 +13,7 @@ from patches import drumkit
 class MidiConfig:
     """System-wide Midi input config."""
 
-    def __init__(self, voices_per_channel, patch_per_channel, show_warnings=True):
+    def __init__(self, voices_per_channel={}, patch_per_channel={}, show_warnings=True):
         self.show_warnings = show_warnings
         self.synth_per_channel = dict()
         self.arpeggiator_per_channel = {}
@@ -36,13 +36,8 @@ class MidiConfig:
             self.arpeggiator_per_channel[channel].synth = synth_object
 
     def add_synth(self, channel=1, patch_number=0, num_voices=6):
-        if channel == 10:
-            synth_object = DrumSynth(num_voices=num_voices)
-        elif channel == 16:
-            synth_object = OscSynth(num_voices=1) # the "system bleep" synth
-        else:
-            self.release_synth_for_channel(channel)
-            synth_object = Synth(num_voices=num_voices, patch_number=patch_number)
+        self.release_synth_for_channel(channel)
+        synth_object = Synth(num_voices=num_voices, patch_number=patch_number)
         self.add_synth_object(channel, synth_object)
         # Return the newly-created synth object so client can tweak it.
         return synth_object
@@ -492,18 +487,19 @@ class DrumSynth(SingleOscSynthBase):
 
 arpeggiator = arpegg.ArpeggiatorSynth(synth=None)
 
-
 def ensure_midi_config():
     global config
     if not config:
         # Tulip defaults, 6 note polyphony on channel 1
         # drum machine always on channel 10
         # utility sine wave bleeper on channel 16
-        config = MidiConfig(
-            voices_per_channel={1: 6, 10: 10, 16: 1},
-            patch_per_channel={1: 0},
-            show_warnings=True,
-        )
+        config = MidiConfig(show_warnings=True)
+        # The "system bleep" synth
+        config.add_synth_object(channel=16, synth_object=OscSynth(num_voices=1))
+        # GeneralMidi Drums.
+        config.add_synth_object(channel=10, synth_object=DrumSynth(num_voices=10))
+        # Default Juno synth on Channel 1.
+        config.add_synth(channel=1, patch_number=0, num_voices=6)
         config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
 
 
