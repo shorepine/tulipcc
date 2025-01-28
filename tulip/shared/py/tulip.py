@@ -599,14 +599,14 @@ def url_put(url, filename, headers={"User-Agent":"TulipCC/4.0"}):
     )
     f.close()
 
-def screenshot(filename=None):
+def screenshot(filename=None, x=-1, y=-1, w=-1, h=-1):
     import world
     from upysh import rm
     if(filename is not None):
-        int_screenshot(filename)
+        int_screenshot(filename,x,y,w,h)
         return None
     if(ip() is not None):
-        int_screenshot("screenshot.png")
+        int_screenshot("screenshot.png",x,y,w,h)
         world.upload("screenshot.png", 'Tulip Screenshot')
     else:
         print("Need wi-fi on")

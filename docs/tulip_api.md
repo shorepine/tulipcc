@@ -35,6 +35,9 @@ tulip.upgrade()
 tulip.screenshot("screenshot.png")
 tulip.screenshot()
 
+# You can optionally pass x,y,w,h to screenshot to only capture part of the screen
+tulip.screenshot("middle.png", x=400,y=200,w=200,h=200)
+
 # Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 

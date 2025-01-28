@@ -69,8 +69,7 @@ void display_bg_bitmap_blit_alpha(uint16_t x,uint16_t y,uint16_t w,uint16_t h,ui
 
 void display_load_sprite_rgba(uint32_t mem_pos, uint32_t len, uint8_t* data);
 void display_load_sprite_raw(uint32_t mem_pos, uint32_t len, uint8_t* data);
-void display_screenshot(char * filename);
-void display_screenshot_pal(char * filename);
+void display_screenshot(char * screenshot_fn, int16_t x, int16_t y, int16_t w, int16_t h);
 void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color);
 
 void display_tfb_new_row();

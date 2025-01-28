@@ -573,7 +573,11 @@ void disable_mouse_pointer() {
 #endif
 
 // Palletized version of screenshot. about 3x as fast, RGB332 only
-void display_screenshot(char * screenshot_fn) {
+void display_screenshot(char * screenshot_fn, int16_t x, int16_t y, int16_t w, int16_t h) {
+    if(x<0 || x>=H_RES) x = 0;
+    if(y<0 || y>=V_RES) y = 0;
+    if(w<0 || w>=H_RES) w = H_RES;
+    if(h<0 || h>=V_RES) h = V_RES;
     // Blank the display
     display_stop();
 
@@ -599,13 +603,18 @@ void display_screenshot(char * screenshot_fn) {
     state.info_raw.bitdepth = 8;
     state.encoder.auto_convert = 0;
 
-    for(uint16_t y=0;y<V_RES;y=y+FONT_HEIGHT) {
+    uint16_t y_counter = 0;
+    for(uint16_t scan_y=y;scan_y<y+h;scan_y=scan_y+FONT_HEIGHT) {
         c=0;
-        display_bounce_empty(screenshot_bb, y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
-        for(uint8_t sy=0;sy<FONT_HEIGHT;sy++) {
-            for(uint16_t x=0;x<H_RES;x++) {
-                bg_tfb[(y+sy)*H_RES + x] = screenshot_bb[c++];
+        display_bounce_empty(screenshot_bb, scan_y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
+        for(uint8_t ly=0;ly<FONT_HEIGHT;ly++) {
+            uint16_t x_counter = 0;
+            for(uint16_t scan_x=x;scan_x<x+w;scan_x++) {
+                if(y_counter<h) {
+                    bg_tfb[y_counter*w + x_counter++] = screenshot_bb[ly*H_RES + scan_x];
+                }
             }
+            y_counter++;
         }
     }
     // now bg_tfb has rendered sprites/tfb/etc on screen
@@ -613,7 +622,7 @@ void display_screenshot(char * screenshot_fn) {
     // encode png
     uint32_t outsize = 0;
     uint8_t *out;
-    err = lodepng_encode(&out, (size_t*)&outsize,bg_tfb, H_RES, V_RES, &state);
+    err = lodepng_encode(&out, (size_t*)&outsize,bg_tfb, w, h, &state);
     write_file(screenshot_fn, out, outsize, 1);
     free_caps(out);
     free_caps(screenshot_bb);
