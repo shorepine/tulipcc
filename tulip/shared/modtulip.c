@@ -849,12 +849,20 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_gpu_reset_obj, 0, 0, tulip_gpu_
 STATIC mp_obj_t tulip_int_screenshot(size_t n_args, const mp_obj_t *args) {
     char fn[50];
     strcpy(fn, mp_obj_str_get_str(args[0]));
-    display_screenshot(fn);
+    if(n_args>1) {
+        int16_t x = mp_obj_get_int(args[1]);
+        int16_t y = mp_obj_get_int(args[2]);
+        int16_t w = mp_obj_get_int(args[3]);
+        int16_t h = mp_obj_get_int(args[4]);
+        display_screenshot(fn, x,y,w,h);
+    } else {
+        display_screenshot(fn, -1, -1, -1, -1);
+    }
     return mp_const_none;
 
 }
 
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_int_screenshot_obj, 1, 1, tulip_int_screenshot);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_int_screenshot_obj, 1, 5, tulip_int_screenshot);
 
 
 
