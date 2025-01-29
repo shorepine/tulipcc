@@ -108,6 +108,81 @@ async function get_test() {
 }
 */
 
+
+async function runCodeBlock() {
+  var py = editor.getValue();
+  amy_reset_sysclock();
+  try {
+    mp.runPythonAsync(py);
+  } catch (e) {
+    await print_error(e.message);
+  }
+}
+
+function create_editor(element) {
+  code = element.textContent;
+  element.innerHTML = `
+  <div>
+    <section class="input">
+      <div><textarea id="code" name="code"></textarea></div> 
+    </section>
+    <div class="align-self-center my-3"> 
+      <button type="button" class="btn btn-sm btn-success" onclick="runCodeBlock()">►</button> 
+      <button type="button" class="btn btn-sm btn-danger" onclick="resetAMY()">Reset</button> 
+    </div>
+  </div>`;
+
+  const editor = CodeMirror.fromTextArea(document.getElementById(`code`), { 
+    mode: { 
+      name: "python", 
+      version: 3, 
+      singleLineStringErrors: false,
+      lint: false
+    }, 
+    lineNumbers: true, 
+    indentUnit: 4, 
+    matchBrackets: true,
+    spellCheck: false,
+    autocorrect: false,
+    theme: "solarized dark",
+    lint: false,
+  }); 
+
+  editor.setSize(null,200);
+  editor.setValue(code.trim()); 
+}
+
+
+
+
+// Comppreses string to GZIP. Retruns a Promise with Base64 string
+const compress = string => {
+    const blobToBase64 = blob => new Promise((resolve, _) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(blob);
+    });
+    const byteArray = new TextEncoder().encode(string);
+    const cs = new CompressionStream('gzip');
+    const writer = cs.writable.getWriter();
+    writer.write(byteArray);
+    writer.close();
+    return new Response(cs.readable).blob().then(blobToBase64);
+};
+
+// Decompresses base64 encoded GZIP string. Retruns a string with original text.
+const decompress = base64string => {
+    const bytes = Uint8Array.from(atob(base64string), c => c.charCodeAt(0));
+    const cs = new DecompressionStream('gzip');
+    const writer = cs.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    return new Response(cs.readable).arrayBuffer().then(function (arrayBuffer) {
+        return new TextDecoder().decode(arrayBuffer);
+    });
+}
+
+
 async function sleep_ms(ms) {
     await new Promise((r) => setTimeout(r, ms));
 }

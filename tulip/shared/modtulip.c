@@ -333,6 +333,12 @@ STATIC mp_obj_t tulip_tfb_str(size_t n_args, const mp_obj_t *args) {
     if(n_args > 2) set = 1;
     if(set) {
         const char * str = mp_obj_str_get_str(args[2]);
+        if(x>0) {
+            // Clear the front so the redraw works
+            for(uint16_t i=0;i<x;i++) {
+                if(TFB[y*TFB_COLS+i]==0) TFB[y*TFB_COLS+i] = 32;
+            }
+        }
         for(uint16_t i=0;i<strlen(str);i++) {
             TFB[y*TFB_COLS+x+i] = str[i];
         }
@@ -357,6 +363,7 @@ STATIC mp_obj_t tulip_tfb_str(size_t n_args, const mp_obj_t *args) {
                 }
             }
         }
+        display_tfb_update(-1);
         return mp_const_none; 
     } else {
         mp_obj_t tuple[5];
