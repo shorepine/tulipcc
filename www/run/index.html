@@ -42,6 +42,14 @@
   <body>
     <script type="module">
       // Tulip settings
+      const queryString = window.location.search;
+      const url_params = new URLSearchParams(queryString);
+      var share = url_params.get('share');
+      var code = null;
+      if(share != null) {
+        code = await decompress(share);
+      }
+      console.log(code);
       mp = await loadMicroPython({
         stdout:null, 
         linebuffer: false,
