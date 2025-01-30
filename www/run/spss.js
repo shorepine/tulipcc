@@ -129,7 +129,7 @@ async function runCodeBlock() {
 
 async function shareCode() {
   var py = editor.getValue();
-  code = await compress(py);
+  code = encodeURIComponent(await compress(py));
   url = window.location.host+"/run/?share=" + code;
   navigator.clipboard.writeText(url);
   document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 

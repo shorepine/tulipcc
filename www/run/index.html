@@ -66,13 +66,14 @@
       const queryString = window.location.search;
       const url_params = new URLSearchParams(queryString);
       var share = url_params.get('share');
+      console.log(share);
       var code = null;
       if(share != null) {
         var bsCollapse = new bootstrap.Collapse(editorElement, {
           toggle: true
         });
         try {
-          code = await decompress(share);
+          code = decodeURIComponent(await decompress(share));
           editor.setValue(code);
           setTimeout(function () { editor.save() }, 100)
         } catch (e) {
