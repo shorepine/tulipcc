@@ -363,7 +363,7 @@ STATIC mp_obj_t tulip_tfb_str(size_t n_args, const mp_obj_t *args) {
                 }
             }
         }
-        display_tfb_update(-1);
+        display_tfb_update(y);
         return mp_const_none; 
     } else {
         mp_obj_t tuple[5];
