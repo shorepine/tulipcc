@@ -248,7 +248,7 @@ static EM_BOOL on_web_display_size_changed( int event_type,
 
 void init_window() {
 #ifdef __EMSCRIPTEN__
-    SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#canvas");
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#textinput");
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 #endif
     window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
