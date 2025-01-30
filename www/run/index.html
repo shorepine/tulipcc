@@ -43,7 +43,7 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
       <script src="micropython.mjs" type="module"></script>
       <!--<script type="text/javascript" src="enable-threads.js"></script>-->
-      <script type="text/javascript" src="amy-audioin.js"></script>
+      <script type="text/javascript" src="amy.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
 
@@ -66,14 +66,13 @@
       const queryString = window.location.search;
       const url_params = new URLSearchParams(queryString);
       var share = url_params.get('share');
-      console.log(share);
-      var code = null;
       if(share != null) {
         var bsCollapse = new bootstrap.Collapse(editorElement, {
           toggle: true
         });
+        document.getElementById('showhideeditor').style.display='none';
         try {
-          code = decodeURIComponent(await decompress(share));
+          var code = decodeURIComponent(await decompress(share));
           editor.setValue(code);
           setTimeout(function () { editor.save() }, 100)
         } catch (e) {
@@ -132,10 +131,10 @@
       </ul>
       <h3>Some notes on the web port:</h3>
       <ul>
-        <li>We ask for audio input access -- don't be alarmed. Tulip can apply effects to audio input, see the API docs. No data leaves this web page unless you explicitly do so.
         <li>Tulip World and requests / http / url_save etc do not yet work</li>
         <li>time.sleep does not yet work. It will return immediately.</li>
         <li>Mobile browsers do not show a keyboard yet</li>
+        <li>Audio input is available on Tulip but not here, as the microphone privacy prompt is too annoying and you can't change input sources on the web yet. You can change the <code>amy.js</code> include to <code>amy-audioin.js</code> if you want it.</li>
       </ul>
     </div>
     <script language="javascript">        

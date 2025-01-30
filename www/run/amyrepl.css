@@ -5,7 +5,7 @@
 
 canvas {
   aspect-ratio: 1024 / 600;
-  width: min(75%, 75vh * 1024 / 600);
+  width: min(95%, 95vh * 1024 / 600);
 }
 
 
