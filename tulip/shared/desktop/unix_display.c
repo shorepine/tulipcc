@@ -363,7 +363,6 @@ void check_key() {
                     float widthScale = (float)rw / (float) tulip_rect.w;
                     float heightScale = (float)rh / (float) tulip_rect.h;
                     SDL_RenderSetScale(default_renderer, widthScale, heightScale);
-                    viewport_scale = widthScale/2.0;
                     #endif
                 }
             }
@@ -378,9 +377,11 @@ void check_key() {
         int x,y;
         uint32_t button = SDL_GetMouseState(&x, &y);
         #ifdef __EMSCRIPTEN__
+        float newx, newy;
+        SDL_RenderWindowToLogical(default_renderer, x,y , &newx, &newy);
         //if(button) fprintf(stderr, "x,y was %d,%d. vs is %f\n", x,y, viewport_scale);
-        x = (int16_t) ((float)x / viewport_scale);
-        y = (int16_t) ((float)y / viewport_scale);
+        x = (int16_t) newx;
+        y = (int16_t) newy;
         #endif
         if(button) {
             //fprintf(stderr, "button is at %d,%d. vp is %d,%d. scale is %f\n", x,y, viewport.x, viewport.y, viewport_scale);
