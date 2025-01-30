@@ -1,5 +1,9 @@
 
 /*.modal-backdrop.fade.show { z-index: inherit; }*/
+#textinput {
+    position: absolute;
+    left: -10000px;
+}
 
 *:focus { outline: none; }
 

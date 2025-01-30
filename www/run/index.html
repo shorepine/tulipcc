@@ -95,6 +95,9 @@
         </button>
       </p>
       <div class="editor mb-4 collapse" id="collapseEditor"></div>
+      <!-- Fake textarea to capture keystrokes on mobile -->
+      <textarea id="textinput" autocapitalize="off" rows="1"></textarea>
+      
       <!-- Tulip's SDL canvas -->
       <canvas id="canvas" tabindex=0></canvas>
 
@@ -131,6 +134,7 @@
       </ul>
       <h3>Some notes on the web port:</h3>
       <ul>
+        <li>MIDI works on almost all browsers <a href="https://webmidijs.org/docs/getting-started/">except for Safari</a></li>
         <li>Tulip World and requests / http / url_save etc do not yet work</li>
         <li>time.sleep does not yet work. It will return immediately.</li>
         <li>Mobile browsers do not show a keyboard yet</li>
