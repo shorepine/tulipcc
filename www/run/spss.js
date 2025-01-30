@@ -117,6 +117,8 @@ async function resetAMY() {
 }   
 
 async function runCodeBlock() {
+  if(!audio_started) await sleep_ms(1000);
+
   var py = editor.getValue();
   amy_reset_sysclock();
   try {
@@ -133,7 +135,7 @@ async function shareCode() {
   url = window.location.host+"/run/?share=" + code;
   navigator.clipboard.writeText(url);
   document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
-  await new Promise(resolve => setTimeout(resolve, 2500));
+  await sleep_ms(2500);
   document.getElementById(`shareButton`).innerHTML = shareButtonSVG; 
  }
 
@@ -148,7 +150,6 @@ function create_editor(element) {
       <button type="button" class="btn btn-sm btn-success" onclick="runCodeBlock()">►</button> 
       <button type="share" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()">
       </button>
-      <button type="button" class="btn btn-sm btn-danger" onclick="resetAMY()">Reset sound</button> 
       <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('showhideeditor').style.display='';"
         data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
         Hide
@@ -248,8 +249,8 @@ async function start_audio() {
   // Start the audio worklet (miniaudio)
   await amy_live_start();
   // Wait 1s for audio to start
-  await sleep_ms(1000);
+  // await sleep_ms(1000);
   // Play the bleep
-  await mp.runPythonAsync(`midi.startup_bleep()`);
+  // await mp.runPythonAsync(`midi.startup_bleep()`);
   audio_started = true;
 }
