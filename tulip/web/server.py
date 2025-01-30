@@ -21,7 +21,7 @@ class CORSRequestHandler (SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     import os
-    os.chdir("../../www/run")
+    os.chdir("../../www")
     test(CORSRequestHandler, HTTPServer)
 
 

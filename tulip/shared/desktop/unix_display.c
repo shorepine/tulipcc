@@ -231,6 +231,9 @@ void show_frame(void*d) {
 }
 
 void init_window() {
+#ifdef __EMSCRIPTEN__
+    SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#canvas");
+#endif
     window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
                             SDL_WINDOWPOS_UNDEFINED, tulip_rect.w, tulip_rect.h,
                             SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
@@ -248,7 +251,6 @@ void init_window() {
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
     SDL_SetWindowTitle(window, "Tulip Desktop");
-
 #ifdef __EMSCRIPTEN__ // Tulip web deskop
     const int simulate_infinite_loop = 0; // call the function repeatedly
     const int fps = 0; // call the function as fast as the browser wants to render (typically 60fps)

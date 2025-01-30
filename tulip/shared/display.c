@@ -582,7 +582,6 @@ void display_screenshot(char * screenshot_fn, int16_t x, int16_t y, int16_t w, i
     display_stop();
 
     uint8_t * screenshot_bb = (uint8_t *) malloc_caps(FONT_HEIGHT*H_RES*BYTES_PER_PIXEL,MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    uint32_t c = 0;
     uint8_t r,g,b,a;
 
     LodePNGState state;
@@ -605,7 +604,6 @@ void display_screenshot(char * screenshot_fn, int16_t x, int16_t y, int16_t w, i
 
     uint16_t y_counter = 0;
     for(uint16_t scan_y=y;scan_y<y+h;scan_y=scan_y+FONT_HEIGHT) {
-        c=0;
         display_bounce_empty(screenshot_bb, scan_y*H_RES, H_RES*FONT_HEIGHT*BYTES_PER_PIXEL, NULL);
         for(uint8_t ly=0;ly<FONT_HEIGHT;ly++) {
             uint16_t x_counter = 0;
