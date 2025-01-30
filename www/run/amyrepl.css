@@ -1,6 +1,13 @@
 
 /*.modal-backdrop.fade.show { z-index: inherit; }*/
 
+*:focus { outline: none; }
+
+canvas {
+  aspect-ratio: 1024 / 600;
+  width: min(75%, 75vh * 1024 / 600);
+}
+
 
 /*
 Solarized theme for code-mirror
@@ -11,6 +18,8 @@ http://ethanschoonover.com/solarized
 Solarized color palette
 http://ethanschoonover.com/solarized/img/solarized-palette.png
 */
+
+
 
 .CodeMirror * {
 /*          ^

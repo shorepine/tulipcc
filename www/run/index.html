@@ -71,9 +71,13 @@
         var bsCollapse = new bootstrap.Collapse(editorElement, {
           toggle: true
         });
-        code = await decompress(share);
-        editor.setValue(code);
-        setTimeout(function () { editor.save() }, 100)
+        try {
+          code = await decompress(share);
+          editor.setValue(code);
+          setTimeout(function () { editor.save() }, 100)
+        } catch (e) {
+          console.log("Couldn't decode share");
+        }
       }
 
     </script>
@@ -86,8 +90,8 @@
     <div class="container-lg my-2 px-2">
       <h1><A HREF="https://tulip.computer/">Tulip</A> Web</h1>
       <p>
-        <button class="btn btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
-          Show/hide editor
+        <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="document.getElementById('showhideeditor').style.display='none';">
+          Show editor
         </button>
       </p>
       <div class="editor mb-4 collapse" id="collapseEditor"></div>
@@ -108,10 +112,6 @@
               <option selected>[Not available]</option>
             </select>
           </div>
-          <div class="col-3 align-self-start">
-            <button type="button" onclick="restart_tulip()" class="btn btn-warning">Restart Tulip</button>
-            <button type="button" onclick="clear_storage()" class="btn btn-danger">Clear Storage</button>
-          </div>
         </div>
       </form>
     </div>
@@ -131,11 +131,10 @@
       </ul>
       <h3>Some notes on the web port:</h3>
       <ul>
+        <li>We ask for audio input access -- don't be alarmed. Tulip can apply effects to audio input, see the API docs. No data leaves this web page unless you explicitly do so.
         <li>Tulip World and requests / http / url_save etc do not yet work</li>
         <li>time.sleep does not yet work. It will return immediately.</li>
         <li>Mobile browsers do not show a keyboard yet</li>
-        <li>We ask for audio input access -- don't be alarmed. Tulip can apply effects to audio input, see the API docs. No data leaves this web page unless you explicitly do so.
-        <li>The canvas should be resizable / responsive, it is not yet</li>
       </ul>
     </div>
     <script language="javascript">        

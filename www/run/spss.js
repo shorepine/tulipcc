@@ -112,7 +112,9 @@ async function get_test() {
       `);
 }
 */
-
+async function resetAMY() {
+  await mp.runPythonAsync('amy.reset()\n');
+}   
 
 async function runCodeBlock() {
   var py = editor.getValue();
@@ -130,7 +132,7 @@ async function shareCode() {
   code = await compress(py);
   url = window.location.host+"/run/?share=" + code;
   navigator.clipboard.writeText(url);
-  document.getElementById(`shareButton`).innerHTML = "Copied!"; 
+  document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
   await new Promise(resolve => setTimeout(resolve, 2500));
   document.getElementById(`shareButton`).innerHTML = shareButtonSVG; 
  }
@@ -146,7 +148,11 @@ function create_editor(element) {
       <button type="button" class="btn btn-sm btn-success" onclick="runCodeBlock()">►</button> 
       <button type="share" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()">
       </button>
-      <button type="button" class="btn btn-sm btn-danger" onclick="resetAMY()">Reset</button> 
+      <button type="button" class="btn btn-sm btn-danger" onclick="resetAMY()">Reset sound</button> 
+      <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('showhideeditor').style.display='';"
+        data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
+        Hide
+      </button>
     </div>
   </div>`;
 

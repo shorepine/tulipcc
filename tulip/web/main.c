@@ -44,6 +44,8 @@
 #include "library.h"
 #include "proxy_c.h"
 #include "py/ringbuf.h"
+#include "SDL.h"
+#include "emscripten/html5.h"
 
 #include "tsequencer.h"
 
@@ -81,6 +83,8 @@ void external_call_depth_dec(void) {
 extern void unix_display_init();
 extern int unix_display_draw();
 uint8_t tulip_ready = 0;
+extern uint8_t display_size_changed;
+extern SDL_Window * window;
 
 uint32_t fs_sync_divider = TULIP_FS_SYNC_DIVIDER;
 void main_loop__tulip() {
@@ -93,6 +97,15 @@ void main_loop__tulip() {
             );
             fs_sync_divider = TULIP_FS_SYNC_DIVIDER;
         }
+        if (display_size_changed) {
+            double w, h;
+            emscripten_get_element_css_size( "#canvas", &w, &h );
+            SDL_SetWindowSize( window, (int)w, (int) h );
+            unix_display_draw();
+            display_size_changed = 0;
+        }
+
+
     }
 }
 
