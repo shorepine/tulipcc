@@ -34,7 +34,10 @@ void unix_display_init();
 
 #ifdef __EMSCRIPTEN__
     uint8_t display_size_changed = 0;
-#endif
+    #define SDL_WINDOW_NAME "Tulip Web"
+#else
+    #define SDL_WINDOW_NAME "Tulip Desktop"
+#endif    
 
 
 // LVGL/SDL connectors for keyboard here
@@ -248,10 +251,12 @@ static EM_BOOL on_web_display_size_changed( int event_type,
 
 void init_window() {
 #ifdef __EMSCRIPTEN__
+    // We keep a hidden textinput on the page to capture keypresses for mobile devices & web
     SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#textinput");
+    // This sets the scale to nearest neighbor -- "0", the default, makes our pixel font very jaggy
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 #endif
-    window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
+    window = SDL_CreateWindow(SDL_WINDOW_NAME, SDL_WINDOWPOS_UNDEFINED,
                             SDL_WINDOWPOS_UNDEFINED, tulip_rect.w, tulip_rect.h,
                             SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == NULL) {
@@ -269,7 +274,8 @@ void init_window() {
     }
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
-    SDL_SetWindowTitle(window, "Tulip Desktop");
+    SDL_SetWindowTitle(window, SDL_WINDOW_NAME);
+
 #ifdef __EMSCRIPTEN__ // Tulip web deskop
     emscripten_set_resize_callback(
         EMSCRIPTEN_EVENT_TARGET_WINDOW,
