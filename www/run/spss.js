@@ -43,11 +43,6 @@ async function clear_storage() {
   }
 }
 
-async function restart_tulip() {
-  location.reload(true);
-}
-
-
 async function setup_midi_devices() {
   var midi_in = document.tulip_settings.midi_input;
   var midi_out = document.tulip_settings.midi_output;
@@ -96,91 +91,34 @@ async function start_midi() {
       .catch(err => console.log("MIDI: " + err));
   }
 }
-/*
-async function get_test() {
-    await mp.runPythonAsync(`
-        async def test():
-          import js
-          url = "https://api.github.com/users/micropython"
-          print(f"fetching {url}...")
-          res = await js.fetch(url)
-          json = await res.json()
-          print(json['name'])
-          #for i in dir(json):
-          #  print(f"{i}: {json[i]}")
-          return json['name']
-      `);
-}
-*/
-async function resetAMY() {
-  await mp.runPythonAsync('amy.reset()\n');
-}   
 
 async function runCodeBlock() {
+  // If audio hasn't yet started, the on-first-click audio starter is still running, so wait 1s so we don't glitch.
   if(!audio_started) await sleep_ms(1000);
 
   var py = editor.getValue();
+  // Reset AMY's timebase every run here, so people can use absolute sequence / timestamps in AMY code.
   amy_reset_sysclock();
   try {
     mp.runPythonAsync(py);
   } catch (e) {
-    // Print the error message to the REPL. Maybe there's a way to raise JS errors to MPY
+    // Print any error message to the REPL. Maybe there's a more direct way to raise JS errors to MPY
     await mp.runPythonAsync("print(\"\"\"" + e.message + "\"\"\")");
   }
 }
 
 async function shareCode() {
+  // get the editor text, compress and base64 url safe it, and copy that + our base URL to the clipboard:
   var py = editor.getValue();
   code = encodeURIComponent(await compress(py));
   url = window.location.host+"/run/?share=" + code;
   navigator.clipboard.writeText(url);
+
+  // Do a little button animation
   document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
   await sleep_ms(2500);
   document.getElementById(`shareButton`).innerHTML = shareButtonSVG; 
  }
-
-function create_editor(element) {
-  code = element.textContent;
-  element.innerHTML = `
-  <div>
-    <section class="input">
-      <div><textarea id="code" name="code"></textarea></div> 
-    </section>
-    <div class="align-self-center my-3"> 
-      <button type="button" class="btn btn-sm btn-success" onclick="runCodeBlock()">►</button> 
-      <button type="share" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()">
-      </button>
-      <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('showhideeditor').style.display='';"
-        data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
-        Hide
-      </button>
-    </div>
-  </div>`;
-
-  document.getElementById(`shareButton`).innerHTML = shareButtonSVG; 
-
-  editor = CodeMirror.fromTextArea(document.getElementById(`code`), { 
-    mode: { 
-      name: "python", 
-      version: 3, 
-      singleLineStringErrors: false,
-      lint: false
-    }, 
-    lineNumbers: true, 
-    indentUnit: 4, 
-    matchBrackets: true,
-    spellCheck: false,
-    autocorrect: false,
-    theme: "solarized dark",
-    lint: false,
-  }); 
-
-  editor.setSize(null,200);
-  editor.setValue(code.trim()); 
-  editor.refresh();
-}
-
-
 
 
 // Comppreses string to GZIP. Retruns a Promise with Base64 string
@@ -209,7 +147,6 @@ const decompress = base64string => {
         return new TextDecoder().decode(arrayBuffer);
     });
 }
-
 
 async function sleep_ms(ms) {
     await new Promise((r) => setTimeout(r, ms));
@@ -246,11 +183,8 @@ async function start_audio() {
   document.body.removeEventListener('keydown', start_audio, true); 
   // Don't run this twice
   if(audio_started) return;
+
   // Start the audio worklet (miniaudio)
   await amy_live_start();
-  // Wait 1s for audio to start
-  // await sleep_ms(1000);
-  // Play the bleep
-  // await mp.runPythonAsync(`midi.startup_bleep()`);
   audio_started = true;
 }

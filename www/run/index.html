@@ -60,8 +60,31 @@
       await mp.replInit();
       // Start up the Tulip stuff
       await start_tulip();
+
       var editorElement = document.getElementById('collapseEditor');
-      create_editor(editorElement);
+      document.getElementById(`shareButton`).innerHTML = shareButtonSVG; 
+
+      editor = CodeMirror.fromTextArea(document.getElementById(`code`), { 
+        mode: { 
+          name: "python", 
+          version: 3, 
+          singleLineStringErrors: false,
+          lint: false
+        }, 
+        lineNumbers: true, 
+        indentUnit: 4, 
+        matchBrackets: true,
+        spellCheck: false,
+        autocorrect: false,
+        theme: "solarized dark",
+        lint: false,
+      }); 
+
+      editor.setSize(null,200);
+      setTimeout(function () { editor.save() }, 100)
+
+      //create_editor(editorElement);
+    
       // Load in the share code if given
       const queryString = window.location.search;
       const url_params = new URLSearchParams(queryString);
@@ -90,11 +113,28 @@
     <div class="container-lg my-2 px-2">
       <h1><A HREF="https://tulip.computer/">Tulip</A> Web</h1>
       <p>
-        <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="document.getElementById('showhideeditor').style.display='none';">
+        <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="document.getElementById('showhideeditor').style.display='none'; editor.refresh();">
           Show editor
         </button>
       </p>
-      <div class="editor mb-4 collapse" id="collapseEditor"></div>
+
+
+      <div class="editor mb-4 collapse" id="collapseEditor" style="width: 95%;">
+        <div>
+          <section class="input">
+            <div><textarea id="code" name="code"></textarea></div> 
+          </section>
+          <div class="align-self-center my-3"> 
+            <button type="button" class="btn btn-sm btn-success" onclick="runCodeBlock()">►</button> 
+            <button type="share" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"></button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('showhideeditor').style.display='';"
+              data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
+              Hide
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Fake textarea to capture keystrokes on mobile -->
       <textarea id="textinput" autocapitalize="off" rows="1"></textarea>
       
@@ -104,13 +144,13 @@
       <form name="tulip_settings">
         <div class="row align-items-start">
           <div class="col-4 align-self-start">
-            MIDI input: 
+            MIDI input device: 
             <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
               <option selected>[Not available]</option>
             </select>
           </div>
           <div class="col-4 align-self-start">
-            MIDI output: 
+            MIDI output device: 
             <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
               <option selected>[Not available]</option>
             </select>
@@ -118,9 +158,9 @@
         </div>
       </form>
     </div>
-    <hr/>
+
     <div class="container-sm my-4 px-2">
-      <h2>Welcome to a very WIP version of <a href="https://tulip.computer/">Tulip</a> for the web.</h2>
+      <h2>Welcome to a version of <a href="https://tulip.computer/">Tulip</a> on the web.</h2>
       <p>
         Tulip is a creative computer with lots of music and graphics functionality. <A HREF="https://tulip.computer">You can buy a hardware Tulip for $59.</A> 
         This version of Tulip is a simulator, running all the same code. There are some small changes and things we haven't yet ported over to the web, see below.
@@ -137,20 +177,53 @@
         <li>MIDI works on almost all browsers <a href="https://webmidijs.org/docs/getting-started/">except for Safari</a></li>
         <li>Tulip World and requests / http / url_save etc do not yet work</li>
         <li>time.sleep does not yet work. It will return immediately.</li>
-        <li>Mobile browsers do not show a keyboard yet</li>
         <li>Audio input is available on Tulip but not here, as the microphone privacy prompt is too annoying and you can't change input sources on the web yet. You can change the <code>amy.js</code> include to <code>amy-audioin.js</code> if you want it.</li>
       </ul>
+
+
+
+      <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
+
+      <div class="col-4 py-vh-3" data-aos="fade-up">
+            <a href="https://tulip.computer/"><img src="/img/tulip.svg" width=42 height=42></a>
+            <a href="https://tulip.computer/"><h3 class="h5 my-2">Want more? Get a Tulip</h3></a>
+            <p>Get your own hardware Tulip for only US$59.</p>
+      </div>
+
+      <div class="col-4 py-vh-3" data-aos="fade-up">
+            <a href="https://discord.com/invite/TzBFkUb8pG"><img src="/img/discord-mark-black.svg" width=42 height=42></a>
+            <a href="https://discord.com/invite/TzBFkUb8pG"><h3 class="h5 my-2">Discord</h3></a>
+            <p>Join the <strong>shore pine sound systems</strong> Discord to chat about Tulip, AMY and Alles. A fun small community!</p>
+      </div>
+
+      <div class="col-4 py-vh-3" data-aos="fade-up" data-aos-delay="200">
+            <a href="https://github.com/shorepine/tulipcc"><img src="/img/github-mark.svg" width=42 height=42/></a>
+             <a href="https://github.com/shorepine/tulipcc"><h3 class="h5 my-2">Github</h3></a>
+            <p>Check out the Tulip Github page for issues, discussions and the code.</p>
+        </div>
+    </div>
+
+      <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
+             <h3 class="h5 my-2"><A href="https://confirmsubscription.com/h/y/204B1B40E85DDBA3">Join our email list</A></h3>
+      <p>We'll send you <A HREF="https://confirmsubscription.com/h/y/204B1B40E85DDBA3"><strong>very rare</strong> updates</A> about Tulip, Alles, AMY and other projects we're working on.</p>
+      </div>
+
+
+    </div>
+   
+
     </div>
     <script language="javascript">        
       // On keypress or click anywhere, start audio
       document.body.addEventListener('click', start_audio, true); 
       document.body.addEventListener('keydown', start_audio, true); 
       //document.querySelectorAll('.editor').forEach(create_editor);
-      // We have to force that a click on the canvas focuses it, so that SDL can receive keypresses.
+      // We have to force that a click on the canvas focuses a hidden textinput, so that SDL can receive keypresses.
       document.querySelector('#canvas').addEventListener('click', function() {
         document.getElementById("textinput").focus();
       });
 
+      editor.refresh();
 
 
     </script>
