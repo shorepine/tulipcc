@@ -1,6 +1,6 @@
 import gc
 import uos
-import tulip, sys, midi, amy, alles, world
+import tulip, sys, midi, synth, amy, alles, world
 from upysh import *
 from tulip import edit, run
 

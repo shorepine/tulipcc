@@ -125,14 +125,14 @@ tulip.seq_bpm(120)
 We're using `midi.config.get_synth(channel=1)` to "borrow" the synth booted with Tulip. But if you're going to want to share your ideas with others, you should make your own `Synth` that doesn't conflict with anything already running on Tulip. That's easy, you can just run:
 
 ```python
-synth = midi.Synth(num_voices=2, patch_number=143) # two note polyphony, patch 143 is DX7 BASS 2
+synth = synth.Synth(num_voices=2, patch_number=143) # two note polyphony, patch 143 is DX7 BASS 2
 ```
 
 And if you want to play multimbral tones, like a Juno-6 bass alongside a DX7 pad:
 
 ```python
-synth1 = midi.Synth(num_voices=1, patch_number=0)  # Juno
-synth2 = midi.Synth(num_voices=1, patch_number=128)  # DX7
+synth1 = synth.Synth(num_voices=1, patch_number=0)  # Juno
+synth2 = synth.Synth(num_voices=1, patch_number=128)  # DX7
 synth1.note_on(50, 1)
 synth2.note_on(50, 0.5)
 ```
@@ -142,7 +142,7 @@ You can also "schedule" notes. This is useful for sequencing fast parameter chan
 ```python
 # play a chord all at once
 import music, midi, tulip
-synth4 = midi.Synth(num_voices=4, patch_number=1)
+synth4 = synth.Synth(num_voices=4, patch_number=1)
 chord = music.Chord("F:min7").midinotes()
 for i,note in enumerate(chord):
     synth4.note_on(note, 0.5, time=tulip.ticks_ms() + (i * 1000))   # time is i seconds from now
@@ -162,7 +162,7 @@ synth2.release()
 synth4.release()
 ```
 
-As you learn more about AMY (the underlying synth engine) you may be interested in making your own `Synth`s in Python. See `midi.py`'s `OscSynth` for an example. 
+As you learn more about AMY (the underlying synth engine) you may be interested in making your own `Synth`s in Python. See `synth.py`'s `OscSynth` for an example. 
 
 ## Modifying the default synth or other MIDI channel assignments in code
 
@@ -171,7 +171,7 @@ You may want to programatically change the MIDI to synth mapping. One example wo
 You can change the parameters of channel synths like this:
 
 ```python
-midi.config.add_synth(channel=c, synth=midi.Synth(patch_number=p, num_voices=n))
+midi.config.add_synth(channel=c, synth=synth.Synth(patch_number=p, num_voices=n))
 ```
 
 Note that `add_synth` will stop any running Synth on that channel and boot a new one in its place. 
@@ -194,7 +194,7 @@ Type `edit('jam.py')` (or whatever you want to call it.) You'll see a black scre
 import tulip, midi, music, random
 
 chord = music.Chord("F:min7").midinotes()
-synth = midi.Synth(num_voices=1, patch_number=143)  # DX7 BASS 2
+synth = synth.Synth(num_voices=1, patch_number=143)  # DX7 BASS 2
 slot = None
 
 def note(t):
@@ -248,7 +248,7 @@ def run(screen):
     app = screen
     app.slot = None
     app.chord = music.Chord("F:min7").midinotes()
-    app.synth = midi.Synth(num_voices=1, patch_number=143)  # DX7 BASS 2
+    app.synth = synth.Synth(num_voices=1, patch_number=143)  # DX7 BASS 2
     app.present()
     app.quit_callback = stop
     start(app)
@@ -264,7 +264,7 @@ def run(screen):
     app = screen
     app.slot = None
     app.chord = music.Chord("F:min7").midinotes()
-    app.synth = midi.Synth(num_voices=1, patch_number=143)  # DX7 BASS 2
+    app.synth = synth.Synth(num_voices=1, patch_number=143)  # DX7 BASS 2
     bpm_slider = tulip.UISlider(tulip.seq_bpm()/2.4, w=300, h=25,
         callback=bpm_change, bar_color=123, handle_color=23)
     app.add(bpm_slider, x=300,y=200)
@@ -290,7 +290,7 @@ Now quit the `jam2` app if it was already running and re-`run` it. You should se
 Tulip defines a few different `Synth` classes, including `OscSynth` which directly uses one oscillator per voice of polyphony, as in this simple sine wave synth:
 
 ```python
-s = midi.OscSynth(wave=amy.SINE)
+s = synth.OscSynth(wave=amy.SINE)
 s.note_on(60,1)
 s.note_off(60)
 ```
@@ -299,7 +299,7 @@ Let's try it as a sampler. There are 29 samples of drum-like and instrument soun
 
 ```python
 # You can pass any AMY arguments to the setup of OscSynth
-s = midi.OscSynth(wave=amy.PCM, patch=10) # PCM wave type, patch=10 (808 Cowbell)
+s = synth.OscSynth(wave=amy.PCM, patch=10) # PCM wave type, patch=10 (808 Cowbell)
 
 s.note_on(50, 1.0)
 s.note_on(40, 1.0) # different pitch
@@ -316,7 +316,7 @@ You can load your own samples into Tulip. Take any .wav file and [load it onto T
 
 ```python
 amy.load_sample('sample.wav', patch=50)
-s = midi.OscSynth(wave=amy.PCM, patch=50)
+s = synth.OscSynth(wave=amy.PCM, patch=50)
 s.note_on(60, 1.0)
 ```
 
@@ -324,7 +324,7 @@ You can also load PCM patches with looped segments if you have their loopstart a
 
 ```python
 amy.load_sample("/sys/ex/vlng3.wav", patch=50)  # loads wave looping metadata
-s = midi.OscSynth(wave=amy.CUSTOM, patch=50, feedback=1, num_voices=1)
+s = synth.OscSynth(wave=amy.CUSTOM, patch=50, feedback=1, num_voices=1)
 s.note_on(60, 1.0) # loops
 s.note_on(55, 1.0) # loops
 s.note_off(55) # stops
@@ -474,7 +474,7 @@ amy.stop_store_patch(1024)
 Now, you're free to use this patch number like all the Juno and DX7 ones. For a polyphonic wood piano, do:
 
 ```python
-s = midi.Synth(5)
+s = synth.Synth(5)
 s.program_change(1024)
 s.note_on(50, 1)
 s.note_on(50, 1)

@@ -7,7 +7,7 @@ import math
 import time
 
 import tulip
-import midi
+import synth
 import amy
 
 try:
@@ -124,14 +124,14 @@ def broken_chord(base_pitch, intervals, start_time, **kwargs):
         Note(pitch, 1, start_time + 100 * index, **kwargs)
 
 
-midi.Synth.reset()
+synth.Synth.reset()
 time.sleep(0.1)   # Let the reset() happen
 amy.chorus(1)
 
-synth0 = midi.Synth(num_voices=6, patch_string=note1_patch())
-synth1 = midi.Synth(num_voices=6, patch_string=note1_patch(pan=0.8))
-synth2 = midi.Synth(num_voices=6, patch_string=note2_patch(pan=0.2))
-synth3 = midi.Synth(num_voices=6, patch_string=fm_note_patch())
+synth0 = synth.Synth(num_voices=6, patch_string=note1_patch())
+synth1 = synth.Synth(num_voices=6, patch_string=note1_patch(pan=0.8))
+synth2 = synth.Synth(num_voices=6, patch_string=note2_patch(pan=0.2))
+synth3 = synth.Synth(num_voices=6, patch_string=fm_note_patch())
 
 
 # Make all our times be a little behind real time.  Make the offset larger if the script doesn't keep up.
@@ -164,5 +164,5 @@ wait_for(53000)
 #    amy.send(volume=1 - i / 10)
 #    time.sleep(0.1)
 
-midi.Synth.reset()
+synth.Synth.reset()
 
