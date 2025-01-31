@@ -28,6 +28,20 @@ def rgb(px0, wide=False):
 from ui import *
 from editor import edit
 
+# A class for making a game that runs in a UIScreen. Clears and sets up the screen for a game
+class UIScreenGame():
+    def __init__(self):
+        key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
+        Sprite.reset()  # resets sprite counter and RAM
+        collisions() # resets collision
+        amy.reset()
+
+    def quit(self):
+        collisions() # resets collision
+        Sprite.reset()  # resets sprite counter
+        key_scan(0)
+        amy.reset()
+
 
 # A class for making a game. Clears and sets up the screen for a game
 class Game():

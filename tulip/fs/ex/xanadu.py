@@ -112,7 +112,7 @@ def NoteFM(pitch, vel=1.0, time=0, duration=8000):
 
 def wait_for(time_millis):
     global START
-    time.sleep( (START + time_millis - amy.millis() - 50) / 1000)
+    #time.sleep( (START + time_millis - amy.millis() - 50) / 1000)
 
 
 def broken_chord(base_pitch, intervals, start_time, **kwargs):
@@ -158,11 +158,11 @@ broken_chord(4.07, [.07, 1.0, 1.04, 2.04, 1.09], start_time=37500)
 # F#7addB chord on a guitar
 broken_chord(5.06, [.07, 1.0, 1.04, 1.05, 1.10], start_time=45000, pitch_shift=0.029, second_delay=1000, use_third=True)
 
-wait_for(53000)
+#wait_for(53000)
 # Crude fade-out.
-#for i in range(10):
-#    amy.send(volume=1 - i / 10)
-#    time.sleep(0.1)
+for i in range(10):
+    amy.send(volume=1 - i / 10, time = 53000 + (i*500))
 
-midi.Synth.reset()
+amy.send(reset=amy.RESET_ALL_OSCS, time=58000)
+#midi.Synth.reset()
 

@@ -1,6 +1,7 @@
-import time, random, math, tulip, amy
+import random, math, tulip, amy
 
 (WIDTH, HEIGHT) = tulip.screen_size()
+
 
 class Blob(tulip.Sprite):
     DEBOUNCE = 20 # frames
@@ -315,22 +316,20 @@ class WormHole(tulip.Sprite):
         self.load("pix/wormhole.png", 32, 32)
 
 
-class PlanetBoing(tulip.Game):
+class PlanetBoing(tulip.UIScreenGame):
     MAX_BLOB_MODELS = 10
     MAX_BLOBS = 20
     BLOBS_ACTIVE = 0
         
     def __init__(self, num_blobs = 4):
-        # If you want TFB etc to stay, use debug=True here 
-        super().__init__(debug=False)
+        super().__init__()
 
         self.next_blob_at = 10
         
         amy.reverb(0.8)
-        self.draw_background()
 
         self.score = Score()
-        self.score.draw()        
+           
 
         self.num_blobs = num_blobs
 
@@ -374,13 +373,11 @@ class PlanetBoing(tulip.Game):
             
         self.frame_counter = 0            
         
-        # Register the frame callback and data
-        tulip.frame_callback(game_loop, self)
 
 
 
-    def draw_background(self):
-        tulip.bg_clear(167)
+    def draw_background(self, extra=None):
+        tulip.bg_rect(0,0, WIDTH, HEIGHT,167, 1)
         a = 10
         a_span = (a * 2) + 2
         pi = 3.14159
@@ -390,6 +387,7 @@ class PlanetBoing(tulip.Game):
             y = int(math.sin(ph) * a) + a
             ph += ph_incr
             tulip.bg_pixel(x,y+tulip.Sprite.SCREEN_HEIGHT,15)
+        self.score.draw()
 
         #for y in range(1,tulip.Sprite.SCREEN_HEIGHT,a_span):
         #    x_start = random.randrange(tulip.Sprite.SCREEN_WIDTH)
@@ -422,10 +420,10 @@ class Score():
         self.score = 0
 
     def draw(self):
-        tulip.bg_roundrect(10,10,200,50,2,103,1)
+        tulip.bg_roundrect(10,50,200,50,2,103,1)
         w = tulip.bg_str(str(self.score),tulip.Sprite.SCREEN_WIDTH, 100,
                       227,18)
-        tulip.bg_str(str(self.score), 190 - w,50,227,18)
+        tulip.bg_str(str(self.score), 190 - w,90,227,18)
 
     def increment(self):
         self.score += 1
@@ -499,20 +497,25 @@ def game_loop(g):
     #g.flag.y = g.player.y - 3
     #g.flag.move()
 
-game = PlanetBoing()
-
-# Run in a loop forever. Catch ctrl-c 
-try:
-    while game.run:
-        # In an infinite loop , it's better to sleep than to say "pass", give the Tulip some time to breathe
-        time.sleep_ms(100)
-except KeyboardInterrupt:
-    game.quit()
 
 
+def quit_callback(screen):
+    screen.game.quit()
 
+def activate_callback(screen):
+    # Register the frame callback and data
+    tulip.frame_callback(game_loop, screen.game)
+    tulip.defer(screen.game.draw_background, None, 500)
 
+def deactivate_callback(screen):
+    tulip.frame_callback()
 
+def run(screen):
+    screen.game = PlanetBoing()
+    screen.activate_callback = activate_callback
+    screen.quit_callback = quit_callback
+    screen.deactivate_callback = deactivate_callback
+    screen.present()
 
 
 

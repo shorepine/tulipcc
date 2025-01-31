@@ -438,6 +438,7 @@ void tulip_frame_isr() {
 
     if(frame_callback != NULL) {
         // Schedule the python callback given to run asap
+        //fprintf(stderr, "calling function %p with arg %p at frame %d\n", frame_callback, frame_arg, vsync_count);
         mp_sched_schedule(frame_callback, frame_arg);
 #ifdef ESP_PLATFORM
         //mp_hal_wake_main_task_from_isr();
