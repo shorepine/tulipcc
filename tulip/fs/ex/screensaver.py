@@ -1,4 +1,4 @@
-import tulip, random, time
+import tulip, random
 
 every = 2500
 last = tulip.ticks_ms()-every
@@ -28,32 +28,52 @@ def cb(x):
         last = tulip.ticks_ms()
 
 def touchcb(up):
-    global play
+    global app
     if(not up):
-        play = False
+        app.quit()
         
 def keycb(key):
-    global play
-    play = False
+    global app
+    app.quit()
+
+class Screensaver(tulip.UIScreenGame):
+    def __init__(self):
+        super().__init__()
+
+    def draw_background(self, extra=None):
+        tulip.frame_callback(cb)
+        tulip.touch_callback(touchcb)
+        tulip.keyboard_callback(keycb)
     
-tulip.tfb_stop()
+    def deactivate(self):
+        tulip.frame_callback()
+        tulip.keyboard_callback()
+        tulip.touch_callback()
+        tulip.bg_clear()
 
-tulip.frame_callback(cb)
-
-tulip.keyboard_callback(keycb)
-tulip.touch_callback(touchcb)
-
-while play:
-    pass
-        
-tulip.frame_callback()
-tulip.keyboard_callback()
-tulip.touch_callback()
-
-tulip.bg_clear()
-
-tulip.tfb_start()
     
+
+
+
+def quit_callback(screen):
+    screen.game.quit()
+
+def activate_callback(screen):
+    # Register the frame callback and data
+    tulip.defer(screen.game.draw_background, screen.app_dir, 500)
+
+def deactivate_callback(screen):
+    screen.game.deactivate()
+
+def run(screen):
+    global app
+    app = screen
+    screen.game = Screensaver()
+    screen.activate_callback = activate_callback
+    screen.quit_callback = quit_callback
+    screen.deactivate_callback = deactivate_callback
+    screen.present()
+
 
 
 
