@@ -6,7 +6,7 @@ var mp = null;
 var midiOutputDevice = null;
 var midiInputDevice = null;
 var editor = null;
-
+var treeView = null;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -150,6 +150,97 @@ const decompress = base64string => {
 async function sleep_ms(ms) {
     await new Promise((r) => setTimeout(r, ms));
 }
+
+
+
+class DirItem {
+  constructor(fullpath, showpath) {
+    this.fullpath = fullpath;
+    this.showpath = showpath;
+  }
+  toString() {
+    return this.showpath;
+  }
+}
+
+async function download() {
+    var FS = mp.FS;
+    if(treeView.getSelectedNodes().length > 0) {
+        file = treeView.getSelectedNodes()[0].getUserObject();
+        const { mode, timestamp } = FS.lookupPath(file.fullpath).node;
+        if(FS.isFile(mode)) {
+            var bytes = FS.readFile(file.fullpath, {encoding:'binary'});
+            var blob=new Blob([bytes], {type: "application/binary"});
+            var link=document.createElement('a');
+            link.href=window.URL.createObjectURL(blob);
+            link.download=file.showpath;
+            link.click();
+        }
+    }
+}
+
+async function upload() {
+    var FS = mp.FS;
+    if(treeView.getSelectedNodes().length > 0) {
+        upload_folder = treeView.getSelectedNodes()[0].getUserObject();
+        const { mode, timestamp } = FS.lookupPath(upload_folder.fullpath).node;
+        if(FS.isDir(mode)) {
+            // Get a file upload window, read the data and write to FS
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.onchange = e => { 
+                // getting a hold of the file reference
+                var file = e.target.files[0]; 
+                console.log(file);
+                // setting up the reader
+                var reader = new FileReader();
+                reader.readAsText(file,'UTF-8');
+
+                // here we tell the reader what to do when it's done reading...
+                reader.onload = readerEvent => {
+                    var content = readerEvent.target.result; // this is the content!
+                    FS.writeFile(upload_folder.fullpath + '/' + file.name, content);
+                    fill_tree();
+                }
+            }
+
+            input.click();
+        } else {
+            console.log("must click on a folder first");
+        }
+    }
+}
+
+
+async function fill_tree() {
+    var FS = mp.FS;
+    var root = new TreeNode(new DirItem("/tulip4", "tulip4"));
+    function impl(curFolder, curNode) {
+        for (const name of FS.readdir(curFolder)) {
+            if (name === '.' || name === '..') continue;
+            const path = `${curFolder}/${name}`;
+            const { mode, timestamp } = FS.lookupPath(path).node;
+            if (FS.isFile(mode)) {
+                var file = new TreeNode(new DirItem(path, name));
+                curNode.addChild(file);
+            } else if (FS.isDir(mode)) {
+                var newdir = new TreeNode(new DirItem(path, name));
+                curNode.addChild(newdir);
+                impl(path, newdir);
+            }
+        }
+    }
+    impl('/tulip4', root);
+    treeView = new TreeView(root, "#treecontainer");
+    treeView.changeOption("leaf_icon", '<i class="fas fa-file"></i>');
+    treeView.changeOption("parent_icon", '<i class="fas fa-folder"></i>');
+    treeView.changeOption("show_root", false);
+    TreeConfig.open_icon = '<i class="fas fa-angle-down"></i>';
+    TreeConfig.close_icon = '<i class="fas fa-angle-right"></i>';
+    treeView.collapseAllNodes();
+    treeView.reload();
+}
+
 
 async function start_tulip() {
   // Don't run this twice
