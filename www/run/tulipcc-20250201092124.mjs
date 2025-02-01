@@ -65,7 +65,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpy78cf9g8.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpnnbzy_uo.js
 
   if (!Module['expectedDataFileDownloads']) {
     Module['expectedDataFileDownloads'] = 0;
@@ -86,8 +86,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.toString().substring(0, location.pathname.toString().lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/tulipcc-20250201091708.data';
-      var REMOTE_PACKAGE_BASE = 'tulipcc-20250201091708.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/tulipcc-20250201092124.data';
+      var REMOTE_PACKAGE_BASE = 'tulipcc-20250201092124.data';
       if (typeof Module['locateFilePackage'] === 'function' && !Module['locateFile']) {
         Module['locateFile'] = Module['locateFilePackage'];
         err('warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)');
@@ -227,10 +227,10 @@ Module['FS_createPath']("/tulip4/sys/im", "tiny_town", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201091708.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201092124.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201091708.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201092124.data');
 
       if (!Module['preloadResults']) Module['preloadResults'] = {};
 
@@ -255,21 +255,21 @@ Module['FS_createPath']("/tulip4/sys/im", "tiny_town", true, true);
 
   })();
 
-// end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpy78cf9g8.js
-// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpsh_yvyj4.js
+// end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpnnbzy_uo.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp1e6oe139.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpsh_yvyj4.js
-// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpsl8ke0qw.js
+  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp1e6oe139.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpxe1wsrb4.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpsl8ke0qw.js
+  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpxe1wsrb4.js
 
 
 // Sometimes an existing Module object exists with properties
@@ -861,14 +861,14 @@ function createExportWrapper(name, nargs) {
 // end include: runtime_exceptions.js
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'tulipcc-20250201091708.wasm';
+    var f = 'tulipcc-20250201092124.wasm';
     if (!isDataURI(f)) {
       return locateFile(f);
     }
     return f;
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('tulipcc-20250201091708.wasm', import.meta.url).href;
+  return new URL('tulipcc-20250201092124.wasm', import.meta.url).href;
 }
 
 var wasmBinaryFile;
@@ -11529,7 +11529,7 @@ for (const prop of Object.keys(Module)) {
 })();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250201091708.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250201092124.org/
  *
  * The MIT License (MIT)
  *
@@ -11557,7 +11557,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `tulipcc-20250201091708.mjs`.
+// - url: location to load `tulipcc-20250201092124.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -11918,7 +11918,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node tulipcc-20250201091708.mjs`.
+    // Check if this module is run from the command line via `node tulipcc-20250201092124.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -11942,7 +11942,7 @@ if (
 }
 
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250201091708.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250201092124.org/
  *
  * The MIT License (MIT)
  *
@@ -12183,7 +12183,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250201091708.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250201092124.org/
  *
  * The MIT License (MIT)
  *
