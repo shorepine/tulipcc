@@ -65,7 +65,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpnnbzy_uo.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmplew_3fjf.js
 
   if (!Module['expectedDataFileDownloads']) {
     Module['expectedDataFileDownloads'] = 0;
@@ -86,8 +86,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.toString().substring(0, location.pathname.toString().lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/tulipcc-20250201092124.data';
-      var REMOTE_PACKAGE_BASE = 'tulipcc-20250201092124.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/tulipcc-20250201124100.data';
+      var REMOTE_PACKAGE_BASE = 'tulipcc-20250201124100.data';
       if (typeof Module['locateFilePackage'] === 'function' && !Module['locateFile']) {
         Module['locateFile'] = Module['locateFilePackage'];
         err('warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)');
@@ -227,10 +227,10 @@ Module['FS_createPath']("/tulip4/sys/im", "tiny_town", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201092124.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201124100.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201092124.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201124100.data');
 
       if (!Module['preloadResults']) Module['preloadResults'] = {};
 
@@ -255,21 +255,21 @@ Module['FS_createPath']("/tulip4/sys/im", "tiny_town", true, true);
 
   })();
 
-// end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpnnbzy_uo.js
-// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp1e6oe139.js
+// end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmplew_3fjf.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp35aa1rfh.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp1e6oe139.js
-// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpxe1wsrb4.js
+  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp35aa1rfh.js
+// include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp6b3xpvb4.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmpxe1wsrb4.js
+  // end include: /var/folders/ys/g3zjs1s13z3chzx5zwnyk1bw0000gn/T/tmp6b3xpvb4.js
 
 
 // Sometimes an existing Module object exists with properties
@@ -861,14 +861,14 @@ function createExportWrapper(name, nargs) {
 // end include: runtime_exceptions.js
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'tulipcc-20250201092124.wasm';
+    var f = 'tulipcc-20250201124100.wasm';
     if (!isDataURI(f)) {
       return locateFile(f);
     }
     return f;
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('tulipcc-20250201092124.wasm', import.meta.url).href;
+  return new URL('tulipcc-20250201124100.wasm', import.meta.url).href;
 }
 
 var wasmBinaryFile;
@@ -11529,7 +11529,7 @@ for (const prop of Object.keys(Module)) {
 })();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250201092124.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250201124100.org/
  *
  * The MIT License (MIT)
  *
@@ -11557,7 +11557,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `tulipcc-20250201092124.mjs`.
+// - url: location to load `tulipcc-20250201124100.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -11918,7 +11918,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node tulipcc-20250201092124.mjs`.
+    // Check if this module is run from the command line via `node tulipcc-20250201124100.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -11941,8 +11941,261 @@ if (
     }
 }
 
+var amy_play_message = null;
+var amy_live_start = null;
+var audio_started = false;
+var tulip_started = false;
+var mp = null;
+var midiOutputDevice = null;
+var midiInputDevice = null;
+var editor = null;
+
+
+// Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
+amyModule().then(async function(am) {
+  amy_live_start = am.cwrap(
+    'amy_live_start', null, null, {async: true}    
+  );
+  amy_start = am.cwrap(
+    'amy_start', null, ['number', 'number', 'number']
+  );
+  amy_play_message = am.cwrap(
+    'amy_play_message', null, ['string']
+  );
+  amy_reset_sysclock = am.cwrap(
+    'amy_reset_sysclock', null, null
+  );
+  amy_ticks = am.cwrap(
+    'sequencer_ticks', 'number', [null]
+  );
+  amy_start(1,1,1,1);
+});
+
+// Called from AMY to update Tulip about what tick it is, for the sequencer
+function amy_sequencer_js_hook(tick) {
+  mp.tulipTick(tick);
+}
+
+async function clear_storage() {
+  if(confirm("This will delete your Tulip user folder and start again.\nAre you sure?")) {
+    indexedDB.deleteDatabase('/tulip4/user');
+    location.reload(true);
+  }
+}
+
+async function setup_midi_devices() {
+  var midi_in = document.tulip_settings.midi_input;
+  var midi_out = document.tulip_settings.midi_output;
+  if(WebMidi.inputs.length > midi_in.selectedIndex) {
+    if(midiInputDevice != null) midiInputDevice.destroy();
+    midiInputDevice = WebMidi.getInputById(WebMidi.inputs[midi_in.selectedIndex].id);
+    midiInputDevice.addListener("midimessage", e => {
+      for(byte in e.message.data) {
+        mp.midiByte(e.message.data[byte]);
+      }
+    });
+  }
+  if(WebMidi.outputs.length > midi_out.selectedIndex) {
+    if(midiOutputDevice != null) midiOutputDevice.destroy();
+    midiOutputDevice = WebMidi.getOutputById(WebMidi.outputs[midi_out.selectedIndex].id);
+  }
+}
+
+async function start_midi() {
+  function onEnabled() {
+    // Populate the dropdowns
+    var midi_in = document.tulip_settings.midi_input;
+    var midi_out = document.tulip_settings.midi_output;
+
+    if(WebMidi.inputs.length>0) {
+      midi_in.options.length = 0;
+      WebMidi.inputs.forEach(input => {
+        midi_in.options[midi_in.options.length] = new Option(input.manufacturer + " " + input.name);
+      });
+    }
+
+    if(WebMidi.outputs.length>0) {
+      midi_out.options.length = 0;
+      WebMidi.outputs.forEach(output => {
+        midi_out.options[midi_out.options.length] = new Option(output.manufacturer + " " + output.name);
+      });
+    }
+    // First run setup 
+    setup_midi_devices();
+  }
+
+  if(WebMidi.supported) {
+    WebMidi
+      .enable({sysex:true})
+      .then(onEnabled)
+      .catch(err => console.log("MIDI: " + err));
+  } else {
+    document.getElementById('midi_settings').style.display='none';
+  }
+}
+
+async function runCodeBlock() {
+  // If audio hasn't yet started, the on-first-click audio starter is still running, so wait 1s so we don't glitch.
+  if(!audio_started) await sleep_ms(1000);
+
+  var py = editor.getValue();
+  // Reset AMY's timebase every run here, so people can use absolute sequence / timestamps in AMY code.
+  amy_reset_sysclock();
+  try {
+    mp.runPythonAsync(py);
+  } catch (e) {
+    // Print any error message to the REPL. Maybe there's a more direct way to raise JS errors to MPY
+    await mp.runPythonAsync("print(\"\"\"" + e.message + "\"\"\")");
+  }
+}
+
+async function shareCode() {
+  // get the editor text, compress and base64 url safe it, and copy that + our base URL to the clipboard:
+  var py = editor.getValue();
+  code = encodeURIComponent(await compress(py));
+  url = window.location.host+"/run/?share=" + code;
+  navigator.clipboard.writeText(url);
+
+  // Do a little button animation
+  document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
+  await sleep_ms(2500);
+  document.getElementById(`shareButton`).innerHTML = "Share code as URL"; 
+ }
+
+
+// Comppreses string to GZIP. Retruns a Promise with Base64 string
+const compress = string => {
+    const blobToBase64 = blob => new Promise((resolve, _) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(blob);
+    });
+    const byteArray = new TextEncoder().encode(string);
+    const cs = new CompressionStream('gzip');
+    const writer = cs.writable.getWriter();
+    writer.write(byteArray);
+    writer.close();
+    return new Response(cs.readable).blob().then(blobToBase64);
+};
+
+// Decompresses base64 encoded GZIP string. Retruns a string with original text.
+const decompress = base64string => {
+    const bytes = Uint8Array.from(atob(base64string), c => c.charCodeAt(0));
+    const cs = new DecompressionStream('gzip');
+    const writer = cs.writable.getWriter();
+    writer.write(bytes);
+    writer.close();
+    return new Response(cs.readable).arrayBuffer().then(function (arrayBuffer) {
+        return new TextDecoder().decode(arrayBuffer);
+    });
+}
+
+async function sleep_ms(ms) {
+    await new Promise((r) => setTimeout(r, ms));
+}
+
+async function fill_tree() {
+    const files = [];
+    var root = new TreeNode("/");
+    var curdir = root;
+    function impl(curFolder) {
+        for (const name of FS.readdir(curFolder)) {
+            if (name === '.' || name === '..') continue;
+
+            const path = `${curFolder}/${name}`;
+            const { mode, timestamp } = FS.lookupPath(path).node;
+            if (FS.isFile(mode)) {
+                var file = new TreeNode(name);
+                curdir.addChild(file);
+                files.push({path, timestamp});
+            } else if (FS.isDir(mode)) {
+                var newdir = new TreeNode(curfolder);
+                curdir.addChild(newdir);
+                curdir = newdir;
+                impl(path);
+            }
+        }
+    }
+    impl('/');
+
+
+    var view = new TreeView(root, "#treecontainer");
+    view.changeOption("leaf_icon", '<i class="fas fa-file"></i>');
+    view.changeOption("parent_icon", '<i class="fas fa-folder"></i>');
+
+    TreeConfig.open_icon = '<i class="fas fa-angle-down"></i>';
+    TreeConfig.close_icon = '<i class="fas fa-angle-right"></i>';
+    view.reload();
+}
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250201092124.org/
+
+    var root = new TreeNode("root");
+    var n1 = new TreeNode("1");
+    var n11 = new TreeNode("1.1");
+    var n2 = new TreeNode("2");
+    var n3 = new TreeNode("3");
+    var n31 = new TreeNode("3.1");
+    var n32 = new TreeNode("3.2");
+    var n321 = new TreeNode("3.2.1");
+    var n33 = new TreeNode("3.3");
+    root.addChild(n1);
+    root.addChild(n2);
+    root.addChild(n3);
+
+    n1.addChild(n11);
+    n3.addChild(n31);
+    n3.addChild(n32);
+    n3.addChild(n33);
+
+    n3.setEnabled(false);
+    n32.addChild(n321);
+
+    var view = new TreeView(root, "#treecontainer");
+    view.changeOption("leaf_icon", '<i class="fas fa-file"></i>');
+    view.changeOption("parent_icon", '<i class="fas fa-folder"></i>');
+
+    TreeConfig.open_icon = '<i class="fas fa-angle-down"></i>';
+    TreeConfig.close_icon = '<i class="fas fa-angle-right"></i>';
+    view.reload();
+}
+*/
+async function start_tulip() {
+  // Don't run this twice
+  if(tulip_started) return;
+
+  // Start midi
+  await start_midi();
+
+  // Let tulipcc-20250201124100.call an exported AMY function
+  await mp.registerJsModule('amy_js_message', amy_play_message);
+
+  // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
+  mp.registerJsModule("jssleep", sleep_ms);
+
+  // Set up the tulipcc-20250201124100.context for AMY.
+  await mp.runPythonAsync(`
+    import amy, amy_js_message
+    amy.override_send = amy_js_message
+  `);
+  // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
+  await sleep_ms(200);
+  await mp.runFrozenAsync('_boot.py');
+  await sleep_ms(200);
+  await mp.runFrozenAsync('/tulip4/user/boot.py');
+  tulip_started = true;
+}
+
+async function start_audio() {
+  document.body.removeEventListener('click', start_audio, true); 
+  document.body.removeEventListener('keydown', start_audio, true); 
+  // Don't run this twice
+  if(audio_started) return;
+
+  // Start the audio worklet (miniaudio)
+  await amy_live_start();
+  audio_started = true;
+}/*
+ * This file is part of the MicroPython project, http://tulipcc-20250201124100.org/
  *
  * The MIT License (MIT)
  *
@@ -12183,7 +12436,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250201092124.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250201124100.org/
  *
  * The MIT License (MIT)
  *
