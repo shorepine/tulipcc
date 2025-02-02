@@ -86,8 +86,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.toString().substring(0, location.pathname.toString().lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/tulipcc-20250201124100.data';
-      var REMOTE_PACKAGE_BASE = 'tulipcc-20250201124100.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/tulipcc-20250201173426.data';
+      var REMOTE_PACKAGE_BASE = 'tulipcc-20250201173426.data';
       if (typeof Module['locateFilePackage'] === 'function' && !Module['locateFile']) {
         Module['locateFile'] = Module['locateFilePackage'];
         err('warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)');
@@ -227,10 +227,10 @@ Module['FS_createPath']("/tulip4/sys/im", "tiny_town", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201124100.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201173426.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201124100.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250201173426.data');
 
       if (!Module['preloadResults']) Module['preloadResults'] = {};
 
@@ -861,14 +861,14 @@ function createExportWrapper(name, nargs) {
 // end include: runtime_exceptions.js
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'tulipcc-20250201124100.wasm';
+    var f = 'tulipcc-20250201173426.wasm';
     if (!isDataURI(f)) {
       return locateFile(f);
     }
     return f;
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('tulipcc-20250201124100.wasm', import.meta.url).href;
+  return new URL('tulipcc-20250201173426.wasm', import.meta.url).href;
 }
 
 var wasmBinaryFile;
@@ -11529,7 +11529,7 @@ for (const prop of Object.keys(Module)) {
 })();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250201124100.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250201173426.org/
  *
  * The MIT License (MIT)
  *
@@ -11557,7 +11557,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `tulipcc-20250201124100.mjs`.
+// - url: location to load `tulipcc-20250201173426.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -11918,7 +11918,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node tulipcc-20250201124100.mjs`.
+    // Check if this module is run from the command line via `node tulipcc-20250201173426.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -12166,13 +12166,13 @@ async function start_tulip() {
   // Start midi
   await start_midi();
 
-  // Let tulipcc-20250201124100.call an exported AMY function
+  // Let tulipcc-20250201173426.call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_play_message);
 
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
   mp.registerJsModule("jssleep", sleep_ms);
 
-  // Set up the tulipcc-20250201124100.context for AMY.
+  // Set up the tulipcc-20250201173426.context for AMY.
   await mp.runPythonAsync(`
     import amy, amy_js_message
     amy.override_send = amy_js_message
@@ -12195,7 +12195,7 @@ async function start_audio() {
   await amy_live_start();
   audio_started = true;
 }/*
- * This file is part of the MicroPython project, http://tulipcc-20250201124100.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250201173426.org/
  *
  * The MIT License (MIT)
  *
@@ -12436,7 +12436,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250201124100.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250201173426.org/
  *
  * The MIT License (MIT)
  *
