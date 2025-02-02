@@ -17,9 +17,11 @@ make
 rm -rf stage
 mkdir stage
 mkdir stage/run
-mkdir stage/img
+
 cp static/* stage/run
-cp ../../www/img/* stage/img
+cp -Rf ../../www/img stage
+cp -Rf ../../www/webfonts stage
+cp -Rf ../../www/css stage
 
 cp ../../amy/docs/amy.js stage/run/amy-$timestamp.js
 cp ../../amy/docs/amy.wasm stage/run/amy-$timestamp.wasm
