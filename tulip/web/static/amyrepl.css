@@ -5,6 +5,11 @@
     left: -10000px;
 }
 
+.headertext {
+    color: #fff;
+    background-color: #002b36; 
+}
+
 *:focus { outline: none; }
 
 canvas {

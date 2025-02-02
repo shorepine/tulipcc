@@ -162,125 +162,120 @@ async function show_alert(text) {
 }
 
 class DirItem {
-  constructor(fullpath, showpath) {
-    this.fullpath = fullpath;
-    this.showpath = showpath;
-  }
-  toString() {
-    return this.showpath;
-  }
+    constructor(fullpath, showpath, is_dir) {
+        this.fullpath = fullpath;
+        this.showpath = showpath;
+        this.is_dir = is_dir
+      }
+    
+    getContents(encoding) {
+        if(!this.is_dir) {
+            return mp.FS.readFile(this.fullpath, {encoding:encoding});
+        }
+        return null;
+    }
+    toString() {
+        return this.showpath;
+    }
+}
+
+// Ask for a selected FS item in the treeview and return it, showing errors if not
+async function request_file_or_folder(want_folder) {
+    if(treeView.getSelectedNodes().length > 0) {
+        thing = treeView.getSelectedNodes()[0].getUserObject();
+        if(want_folder) {
+            if(thing.is_dir) { 
+                if(thing.fullpath.startsWith('/tulip4/sys')) {
+                    show_alert("You can't write to /sys on Tulip. Try /user.")
+                    return null;
+                }
+                return thing; 
+            } 
+            show_alert("Please select a destination folder (not a file).");
+            return null;
+        } else {
+            if(!thing.is_dir) { 
+                return thing;
+            }
+            show_alert("Please select a file (not a folder).");
+            return null;
+        }       
+    }
+    var t = "file"
+    if(want_folder) t = "folder;"
+    show_alert("Please select a " + t + " first.")
+    return null;
 }
 
 async function download() {
-    var FS = mp.FS;
-    if(treeView.getSelectedNodes().length > 0) {
-        file = treeView.getSelectedNodes()[0].getUserObject();
-        const { mode, timestamp } = FS.lookupPath(file.fullpath).node;
-        if(FS.isFile(mode)) {
-            var bytes = FS.readFile(file.fullpath, {encoding:'binary'});
-            var blob=new Blob([bytes], {type: "application/binary"});
-            var link=document.createElement('a');
-            link.href=window.URL.createObjectURL(blob);
-            link.download=file.showpath;
-            link.click();
-        } else {
-            show_alert("You must select a file to download, not a folder");
-        }
-    } else {
-        show_alert("Select a file to download");
+    file = await request_file_or_folder(false);
+    if(file != null) {
+        var blob=new Blob([file.getContents('binary')], {type: "application/binary"});
+        var link=document.createElement('a');
+        link.href=window.URL.createObjectURL(blob);
+        link.download=file.showpath;
+        link.click();
     }
 }
 
 async function upload() {
-    var FS = mp.FS;
-    if(treeView.getSelectedNodes().length > 0) {
-        upload_folder = treeView.getSelectedNodes()[0].getUserObject();
-        const { mode, timestamp } = FS.lookupPath(upload_folder.fullpath).node;
-        if(FS.isDir(mode)) {
-            // Get a file upload window, read the data and write to FS
-            var input = document.createElement('input');
-            input.type = 'file';
-            input.onchange = e => { 
-                // getting a hold of the file reference
-                var file = e.target.files[0]; 
-                // setting up the reader
-                var reader = new FileReader();
-                reader.readAsText(file,'UTF-8');
-
-                // here we tell the reader what to do when it's done reading...
-                reader.onload = readerEvent => {
-                    var content = readerEvent.target.result; // this is the content!
-                    FS.writeFile(upload_folder.fullpath + '/' + file.name, content);
-                    fill_tree();
-                }
+    upload_folder = await request_file_or_folder(true);
+    if(upload_folder != null) {
+        // Get a file upload window, read the data and write to FS
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = e => { 
+            var file = e.target.files[0]; 
+            var reader = new FileReader();
+            reader.readAsText(file,'UTF-8');
+            reader.onload = readerEvent => {
+                var content = readerEvent.target.result; // this is the content!
+                mp.FS.writeFile(upload_folder.fullpath + '/' + file.name, content);
+                fill_tree();
             }
-            input.click();
-        } else {
-            show_alert("Please select a destination folder (not a file) first.")
         }
-    } else {
-        show_alert("Select a destination folder first.")
+        input.click();
     }
 }
 
 async function save_editor() {
-    var FS = mp.FS;
+    upload_folder = await request_file_or_folder(true);
     target_filename = document.getElementById('editor_filename').value;
-    if(target_filename.length > 0) {
-        if(treeView.getSelectedNodes().length > 0) {
-            upload_folder = treeView.getSelectedNodes()[0].getUserObject();
-            const { mode, timestamp } = FS.lookupPath(upload_folder.fullpath).node;
-            if(FS.isDir(mode)) {
-                content = editor.getValue();
-                FS.writeFile(upload_folder.fullpath + '/' + target_filename, content);
-                fill_tree();
-            } else {
-                show_alert("Please select a destination folder (not a file) first.")
-            }
+    if(upload_folder != null) {
+        if(target_filename.length > 0) {
+            content = editor.getValue();
+            mp.FS.writeFile(upload_folder.fullpath + '/' + target_filename, content);
+            fill_tree();
         } else {
-            show_alert("Select a destination folder first.")
+            show_alert('You need to provide a filename before saving.');
         }
-    } else {
-        show_alert('You need to provide a filename before saving.');
     }
 }
 
 
 async function load_editor() {
-    var FS = mp.FS;
-    if(treeView.getSelectedNodes().length > 0) {
-        file = treeView.getSelectedNodes()[0].getUserObject();
-        const { mode, timestamp } = FS.lookupPath(file.fullpath).node;
-        if(FS.isFile(mode)) {
-            var bytes = FS.readFile(file.fullpath, {encoding:'utf8'});
-            editor.setValue(bytes);
-            setTimeout(function () { editor.save() }, 100);
-            setTimeout(function () { editor.refresh() }, 250);
-        } else {
-            show_alert("You must select a file to load into the editor, not a folder");
-        }
-    } else {
-        show_alert("First select the file you want to load into the editor.");
+    file = await request_file_or_folder(false);
+    if(file != null) {
+        editor.setValue(file.getContents('utf8'));
+        document.getElementById('editor_filename').value = file.showpath;
+        setTimeout(function () { editor.save() }, 100);
+        setTimeout(function () { editor.refresh() }, 250);
     }
-}
-
-async function tree_clicked() {
 }
 
 
 async function fill_tree() {
-    var FS = mp.FS;
     var root = new TreeNode(new DirItem("/tulip4", "tulip4"));
     function impl(curFolder, curNode) {
-        for (const name of FS.readdir(curFolder)) {
+        for (const name of mp.FS.readdir(curFolder)) {
             if (name === '.' || name === '..') continue;
             const path = `${curFolder}/${name}`;
-            const { mode, timestamp } = FS.lookupPath(path).node;
-            if (FS.isFile(mode)) {
-                var file = new TreeNode(new DirItem(path, name));
+            const { mode, timestamp } = mp.FS.lookupPath(path).node;
+            if (mp.FS.isFile(mode)) {
+                var file = new TreeNode(new DirItem(path, name, false));
                 curNode.addChild(file);
-            } else if (FS.isDir(mode)) {
-                var newdir = new TreeNode(new DirItem(path, name));
+            } else if (mp.FS.isDir(mode)) {
+                var newdir = new TreeNode(new DirItem(path, name, true));
                 curNode.addChild(newdir);
                 impl(path, newdir);
             }
@@ -295,7 +290,6 @@ async function fill_tree() {
     TreeConfig.close_icon = '<i class="fas fa-angle-right"></i>';
     treeView.collapseAllNodes();
     treeView.reload();
-    document.getElementById('treecontainer').addEventListener('click', tree_clicked, true); 
 }
 
 
