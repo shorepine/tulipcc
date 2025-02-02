@@ -101,6 +101,7 @@ async function runCodeBlock() {
   try {
     mp.runPythonAsync(py);
   } catch (e) {
+    console.log("Error in Python: " + e.message)
     // Print any error message to the REPL. Maybe there's a more direct way to raise JS errors to MPY
     await mp.runPythonAsync("print(\"\"\"" + e.message + "\"\"\")");
   }
@@ -146,6 +147,7 @@ const decompress = base64string => {
         return new TextDecoder().decode(arrayBuffer);
     });
 }
+
 
 async function sleep_ms(ms) {
     await new Promise((r) => setTimeout(r, ms));

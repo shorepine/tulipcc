@@ -22,6 +22,9 @@ def messages(n=500, chunk_size = 100, mtype='text'):
     # First one is the newest
     # https://discord.com/developers/docs/resources/channel#get-channel-messages
     if(n<chunk_size): chunk_size = n
+
+    js.fetch(url).then(lambda r: r.text()).then(lambda x: jsonparse(x))
+
     response = requests.get(base_url+"messages?limit=%d" % (chunk_size), headers = headers)
     # We get a x-ratelimit-reset from the headers here, we can use that to know what time it is
     # We have to do it this way because (1) micropython does not have datetime/dateutil
