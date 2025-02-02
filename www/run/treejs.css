@@ -1,3 +1,11 @@
+#treecontainer {
+    color: #839496;
+    background-color: #002b36; 
+    height: 200px; 
+    overflow:scroll; 
+    font-size:12px;
+}
+
 .tj_container *{
 	position: relative;
 	box-sizing: border-box;
@@ -29,7 +37,7 @@
 }
 
 .tj_container li span.tj_description:hover{
-	background-color: #ccc;
+	background-color: #073642; ;
 }
 
 .tj_container li span.tj_mod_icon, .tj_container li span.tj_icon{
@@ -55,7 +63,7 @@
 }
 
 .tj_container span.tj_description.selected{
-	background-color: #2b2b2b;
+	background-color: #606060;
 	color: #fff;
 }
 
