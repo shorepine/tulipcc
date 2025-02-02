@@ -110,13 +110,13 @@ async function shareCode() {
   // get the editor text, compress and base64 url safe it, and copy that + our base URL to the clipboard:
   var py = editor.getValue();
   code = encodeURIComponent(await compress(py));
-  url = window.location.host+"/run/?share=" + code;
+  var encoded_filename = encodeURIComponent(document.getElementById('editor_filename').value);
+  url = window.location.host+"/run/?fn=" + encoded_filename + "&" + "share=" + code;
   navigator.clipboard.writeText(url);
-
   // Do a little button animation
   document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
   await sleep_ms(2500);
-  document.getElementById(`shareButton`).innerHTML = "Share code as URL"; 
+  document.getElementById(`shareButton`).innerHTML = "<i class='fas fa-share-square'></i>"; 
  }
 
 
@@ -152,6 +152,14 @@ async function sleep_ms(ms) {
 }
 
 
+async function show_alert(text) {
+    const alertbox = document.querySelector("#alert_box");
+    alertbox.innerHTML = text;
+    alertbox.classList.remove('d-none'); //Remove hidden class
+    alertbox.classList.add('alert-danger'); //Chance red color
+    setTimeout(function() {alertbox.classList.add('d-none')}, 3000);
+
+}
 
 class DirItem {
   constructor(fullpath, showpath) {
@@ -175,7 +183,11 @@ async function download() {
             link.href=window.URL.createObjectURL(blob);
             link.download=file.showpath;
             link.click();
+        } else {
+            show_alert("You must select a file to download, not a folder");
         }
+    } else {
+        show_alert("Select a file to download");
     }
 }
 
@@ -191,7 +203,6 @@ async function upload() {
             input.onchange = e => { 
                 // getting a hold of the file reference
                 var file = e.target.files[0]; 
-                console.log(file);
                 // setting up the reader
                 var reader = new FileReader();
                 reader.readAsText(file,'UTF-8');
@@ -203,12 +214,57 @@ async function upload() {
                     fill_tree();
                 }
             }
-
             input.click();
         } else {
-            console.log("must click on a folder first");
+            show_alert("Please select a destination folder (not a file) first.")
         }
+    } else {
+        show_alert("Select a destination folder first.")
     }
+}
+
+async function save_editor() {
+    var FS = mp.FS;
+    target_filename = document.getElementById('editor_filename').value;
+    if(target_filename.length > 0) {
+        if(treeView.getSelectedNodes().length > 0) {
+            upload_folder = treeView.getSelectedNodes()[0].getUserObject();
+            const { mode, timestamp } = FS.lookupPath(upload_folder.fullpath).node;
+            if(FS.isDir(mode)) {
+                content = editor.getValue();
+                FS.writeFile(upload_folder.fullpath + '/' + target_filename, content);
+                fill_tree();
+            } else {
+                show_alert("Please select a destination folder (not a file) first.")
+            }
+        } else {
+            show_alert("Select a destination folder first.")
+        }
+    } else {
+        show_alert('You need to provide a filename before saving.');
+    }
+}
+
+
+async function load_editor() {
+    var FS = mp.FS;
+    if(treeView.getSelectedNodes().length > 0) {
+        file = treeView.getSelectedNodes()[0].getUserObject();
+        const { mode, timestamp } = FS.lookupPath(file.fullpath).node;
+        if(FS.isFile(mode)) {
+            var bytes = FS.readFile(file.fullpath, {encoding:'utf8'});
+            editor.setValue(bytes);
+            setTimeout(function () { editor.save() }, 100);
+            setTimeout(function () { editor.refresh() }, 250);
+        } else {
+            show_alert("You must select a file to load into the editor, not a folder");
+        }
+    } else {
+        show_alert("First select the file you want to load into the editor.");
+    }
+}
+
+async function tree_clicked() {
 }
 
 
@@ -239,6 +295,7 @@ async function fill_tree() {
     TreeConfig.close_icon = '<i class="fas fa-angle-right"></i>';
     treeView.collapseAllNodes();
     treeView.reload();
+    document.getElementById('treecontainer').addEventListener('click', tree_clicked, true); 
 }
 
 
