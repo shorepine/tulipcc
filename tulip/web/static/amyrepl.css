@@ -12,6 +12,15 @@ canvas {
   width: min(100%, 100vh * 1024 / 600);
 }
 
+.alert-fixed {
+    position:fixed; 
+    top: 0px; 
+    left: 0px; 
+    width: 100%;
+    z-index:9999; 
+    border-radius:0px
+}
+
 
 /*
 Solarized theme for code-mirror

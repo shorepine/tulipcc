@@ -34,7 +34,7 @@
 
       <script src="tree.js"></script>
       <link rel="stylesheet" href="treejs.css" id="treejs_styles">
-      <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css" integrity="sha384-DNOHZ68U8hZfKXOrtjWvjxusGo9WQnrNx2sqG0tfsghAvtVlRW3tvkXWZh58N9jp" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.0/css/all.css" crossorigin="anonymous">
 
       <script src="./mini-coi.js" scope="./"></script>
       <script
@@ -47,8 +47,8 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250201124100.mjs" type="module"></script>
-      <script type="text/javascript" src="amy-20250201124100.js"></script>
+      <script src="tulipcc-20250201173426.mjs" type="module"></script>
+      <script type="text/javascript" src="amy-20250201173426.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
 
@@ -96,8 +96,12 @@
         var bsCollapse = new bootstrap.Collapse(editorElement, { toggle: true });
         document.getElementById('showhideeditor').style.display='none';
         try {
-          var code = decodeURIComponent(await decompress(share));
+          var code = await decompress(decodeURIComponent(share));
           editor.setValue(code);
+          var fn = url_params.get('fn');
+          if(fn != null) {
+            document.getElementById('editor_filename').value = fn;
+          }
           setTimeout(function () { editor.save() }, 100);
           setTimeout(function () { editor.refresh() }, 250);
           setTimeout(function () { window.scrollTo(0,0) }, 300);
@@ -118,6 +122,7 @@
       </div>
 
       <div class="editor collapse px-4" id="collapseEditor">
+        <div class="alert fixed-top d-none" id="alert_box"></div>
         <div class="row">
           <div class="col-3">
             <div id="treecontainer" style="height: 200px; overflow:scroll; font-size:12px;"></div>
@@ -131,17 +136,20 @@
         <div class="row">
           <div class="col-3">
             <div class="align-self-center my-3"> 
-              <button type="button" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
-              <button type="button" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
-              <button type="button" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
+              <button type="button" title="Refresh Tulip file list" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
+              <button type="button" title="Download file from Tulip" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
+              <button type="button" title="Upload file to Tulip" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
+              <button type="button" title="Load Tulip file into editor" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
             </div>
           </div>
           <div class="col-9">
             <div class="align-self-center my-3"> 
-              <button type="button" class="btn btn-sm btn-success" onclick="runCodeBlock()">Run</button> 
-              <button type="share" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()">Share code as URL</button>
-              <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('showhideeditor').style.display='';"
-                data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
+              <button type="button" title="Save editor contents to file on Tulip" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-chevron-circle-left"></i></button>
+              <button type="button" title="Run editor contents in Tulip" class="btn btn-sm btn-success" onclick="runCodeBlock()"><i class="fas fa-running"></i></button> 
+              <button type="share" title="Share editor contents (and filename, if given) as a URL" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
+              <input type='text' title="Filename for saving or sharing" id="editor_filename" class="small" placeholder="Filename"/>
+              <button type="button" class="btn btn-sm btn-primary float-end" onclick="document.getElementById('showhideeditor').style.display='';"
+                data-bs-toggle="collapse" title="Hide editor" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
                 Hide editor
               </button>
             </div>
@@ -223,7 +231,7 @@
       </div>
     </div>
 
-    <script language="javascript">        
+    <script language="javascript">     
       // On keypress or click anywhere, start audio worklet
       document.body.addEventListener('click', start_audio, true); 
       document.body.addEventListener('keydown', start_audio, true); 
