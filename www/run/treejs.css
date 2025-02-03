@@ -1,14 +1,29 @@
+/*
+::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 7px;
+}
+
+*/
+::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background-color: rgba(0,0,0,.5);
+    box-shadow: 0 0 1px rgba(255,255,255,.5);
+}
+
 #treecontainer {
     color: #839496;
     background-color: #002b36; 
     height: 200px; 
-    overflow:scroll; 
+    overflow:auto; 
     font-size:12px;
 }
 
 .tj_container *{
 	position: relative;
 	box-sizing: border-box;
+	color: #839496;
+    background-color: #002b36; 
 }
 
 .tj_container ul{
