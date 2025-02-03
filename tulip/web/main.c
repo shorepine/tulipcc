@@ -80,7 +80,7 @@ void external_call_depth_inc(void) {
 void external_call_depth_dec(void) {
     --external_call_depth;
 }
-
+extern void mp_schedule_lv();
 extern void unix_display_init();
 extern int unix_display_draw();
 uint8_t tulip_ready = 0;
@@ -93,6 +93,8 @@ void main_loop__tulip() {
         // We seem to be stuck at 60fps (even if we change it in the loop setup), so let's halve that to be more "Tulip-y"
         if(frame_count++ % 2 == 0)
             unix_display_draw();
+        
+        //mp_schedule_lv();
 
         // Why run this more than once? Tulip on web updates all its stuff twice a frame. 
         // We schedule at least 1 thing a frame - the LVGL updater

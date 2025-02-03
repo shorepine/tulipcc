@@ -432,10 +432,14 @@ STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_1(mp_lv_task_handler_obj, mp_lv_task_handler);
 
-void tulip_frame_isr() {
+
+void mp_schedule_lv() {
     // schedule lvgl task
     mp_sched_schedule((mp_obj_t)&mp_lv_task_handler_obj, mp_const_none);
+}
 
+void tulip_frame_isr() {
+    mp_schedule_lv();
     if(frame_callback != NULL) {
         // Schedule the python callback given to run asap
         //fprintf(stderr, "calling function %p with arg %p at frame %d\n", frame_callback, frame_arg, vsync_count);
