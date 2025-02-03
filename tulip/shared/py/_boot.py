@@ -1,8 +1,12 @@
 import gc
 import uos
-import tulip, sys, midi, amy, alles, world
+import tulip, sys, midi, amy, alles
 from upysh import *
 from tulip import edit, run
+if board()=="WEB":
+    import world_web as world
+else:
+    import world
 
 # This _boot runs both desktop and esp32s3
 
