@@ -55,7 +55,7 @@ def modal_url(method, **kwargs):
     joined = ""
     for x in kwargs.keys():
         joined += "%s=%s&" % (x, url_encoder(str(kwargs[x])))
-    return "https://bwhitman--tulipworldapi-%s-dev.modal.run?%s" % (method, joined[:-1])
+    return "https://bwhitman--tulipworldapi-%s.modal.run?%s" % (method, joined[:-1])
 
 # generic grab of modal API proxy, returns a promise of a json decode from modal
 def grab(method, **kwargs):
