@@ -13,6 +13,9 @@
 *:focus { outline: none; }
 
 canvas {
+  display: block;
+  margin: 0;
+  padding: 0;
   aspect-ratio: 1024 / 600;
   max-width: 1024px;
 }

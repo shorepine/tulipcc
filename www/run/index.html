@@ -46,8 +46,8 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250203121501.mjs" type="module"></script>
-      <script type="text/javascript" src="amy-20250203121501.js"></script>
+      <script src="tulipcc-20250203141154.mjs" type="module"></script>
+      <script type="text/javascript" src="amy-20250203141154.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
 
@@ -111,76 +111,78 @@
     </script>
 
     <div class="container my-2">
-      <div class="px-4">
+      <div class="px-4 maintulipview">
         <h1><A HREF="https://tulip.computer/"><img src="/img/favicon.png"/ width=40></A>Tulip Web</h1> 
         <p>
           <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="show_editor();">
             Show code editor
           </button>
         </p>
-      </div>
-
-      <div class="editor collapse px-4" id="collapseEditor">
-        <div class="alert fixed-top d-none" id="alert_box"></div>
-        <div class="row g-0 headertext">
-          <div class="col-3 headertext">
-            <span class="px-1 small align-middle">Tulip files</span>
-            <div id="treecontainer"></div>
-          </div>
-          <div class="col-9 headertext">
-            <span class="px-1 small align-middle">Code editor</span>
-            <section class="input">
-              <div><textarea id="code" name="code"></textarea></div> 
-            </section>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-3">
-            <div class="align-self-center my-3"> 
-              <button type="button" title="Refresh Tulip file list" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
-              <button type="button" title="Download file from Tulip" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
-              <button type="button" title="Upload file to Tulip into the selected folder" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
-              <button type="button" title="Load selected Tulip file into editor" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
-            </div>
-          </div>
-          <div class="col-9">
-            <div class="align-self-center my-3"> 
-              <button type="button" title="Save editor contents to file on Tulip into the selected folder" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-chevron-circle-left"></i></button>
-              <button type="button" title="Run editor contents in Tulip" class="btn btn-sm btn-success" onclick="runCodeBlock()"><i class="fas fa-running"></i></button> 
-              <button type="share" title="Share editor contents (and filename, if given) as a URL" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
-              <input type='text' title="Filename for saving or sharing" id="editor_filename" class="small" placeholder="Filename"/>
-              <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_editor();"
-                data-bs-toggle="collapse" title="Hide editor" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
-                Hide editor
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Fake textarea to capture keystrokes to the SDL canvas -->
-      <textarea id="textinput" autocapitalize="off" rows="1"></textarea>
       
-      <!-- Tulip's SDL canvas -->
-      <canvas id="canvas" tabindex=0 class="px-4 canvas-solo"></canvas>
 
-      <!-- MIDI settings panel if MIDI is available -->
-      <form name="tulip_settings">
-        <div class="row align-items-start px-4" id="midi_settings">
-          <div class="col-4 align-self-start small">
-            MIDI input device:
-            <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
-              <option selected>[Not available]</option>
-            </select>
+        <div class="editor collapse" id="collapseEditor">
+          <div class="alert fixed-top d-none" id="alert_box"></div>
+          <div class="row g-0 headertext">
+            <div class="col-3 headertext">
+              <span class="px-1 small align-middle">Tulip files</span>
+              <div id="treecontainer"></div>
+            </div>
+            <div class="col-9 headertext">
+              <span class="px-1 small align-middle">Code editor</span>
+              <section class="input">
+                <div><textarea id="code" name="code"></textarea></div> 
+              </section>
+            </div>
           </div>
-          <div class="col-4 align-self-start small">
-            MIDI output device:
-            <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
-              <option selected>[Not available]</option>
-            </select>
+          <div class="row">
+            <div class="col-3">
+              <div class="align-self-center my-3"> 
+                <button type="button" title="Refresh Tulip file list" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
+                <button type="button" title="Download file from Tulip" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
+                <button type="button" title="Upload file to Tulip into the selected folder" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
+                <button type="button" title="Load selected Tulip file into editor" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
+              </div>
+            </div>
+            <div class="col-9">
+              <div class="align-self-center my-3"> 
+                <button type="button" title="Save editor contents to file on Tulip into the selected folder" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-chevron-circle-left"></i></button>
+                <button type="button" title="Run editor contents in Tulip" class="btn btn-sm btn-success" onclick="runCodeBlock()"><i class="fas fa-running"></i></button> 
+                <button type="share" title="Share editor contents (and filename, if given) as a URL" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
+                <input type='text' title="Filename for saving or sharing" id="editor_filename" class="small" placeholder="Filename"/>
+                <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_editor();"
+                  data-bs-toggle="collapse" title="Hide editor" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
+                  Hide editor
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </form>
+
+        <!-- Fake textarea to capture keystrokes to the SDL canvas -->
+        <textarea id="textinput" autocapitalize="off" rows="1"></textarea>
+        
+        <!-- Tulip's SDL canvas -->
+
+        <canvas id="canvas" tabindex=0 class="canvas-solo"></canvas>
+
+        <!-- MIDI settings panel if MIDI is available -->
+        <form name="tulip_settings">
+          <div class="row align-items-start" id="midi_settings">
+            <div class="col-4 align-self-start small">
+              MIDI input device:
+              <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                <option selected>[Not available]</option>
+              </select>
+            </div>
+            <div class="col-4 align-self-start small">
+              MIDI output device:
+              <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                <option selected>[Not available]</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
 
     <div class="container my-2">
@@ -200,9 +202,9 @@
         <h3>Some notes on the web port:</h3>
         <ul>
           <li>MIDI works on almost all browsers <a href="https://webmidijs.org/docs/getting-started/">except for Safari</a></li>
-          <li>Tulip World and requests / http / url_save etc do not yet work</li>
-          <li><code>time.sleep()</code> will sleep, but will block all other callbacks, audio and graphics from updating. Use callbacks, <code>asyncio</code> or <code>tulip.defer</code> if you want to sleep in Tulip.</li>
-          <li>Audio input is available on Tulip but not here, as the microphone privacy prompt is too annoying and you can't change input sources on the web yet. You can change the <code>amy.js</code> include to <code>amy-audioin.js</code> if you want it.</li>
+          <li>Tulip World works, as does <code>url_save</code>. Other Tulip network calls may return a JS "promise" rather than a Python result.</li>
+          <li>Anything relying on <code>input</code> will fail. Most things using <code>time.sleep()</code> will sleep, but will block all other callbacks, audio and graphics from updating. Instead, use callbacks, <code>asyncio</code> or <code>tulip.defer</code> if you want to block or defer execution in Tulip.</li>
+          <li>Audio input is available on Tulip but not here, as the microphone privacy prompt is too annoying and you can't change input sources for audio processing on the web yet. You can change our <code>amy.js</code> include to <code>amy-audioin.js</code> if you want it.</li>
         </ul>
 
         <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
@@ -238,7 +240,7 @@
       document.body.addEventListener('keydown', start_audio, true); 
       // We have to force that a click on the canvas focuses a hidden textinput, so that SDL can receive keypresses.
       document.querySelector('#canvas').addEventListener('click', function() {
-        document.getElementById("textinput").focus();
+        document.getElementById("textinput").focus({preventScroll:true});
       });
     </script>
   </body>

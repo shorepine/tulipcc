@@ -388,7 +388,7 @@ void check_key() {
         #ifdef __EMSCRIPTEN__
         float newx, newy;
         SDL_RenderWindowToLogical(default_renderer, x,y , &newx, &newy);
-        //if(button) fprintf(stderr, "x,y was %d,%d. vs is %f\n", x,y, viewport_scale);
+        if(button) fprintf(stderr, "x,y was %d,%d is now %d,%d vs is %f\n", x,y, (int)newx, (int)newy, viewport_scale);
         x = (int16_t) newx;
         y = (int16_t) newy;
         #endif
