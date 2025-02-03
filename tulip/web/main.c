@@ -112,7 +112,7 @@ void main_loop__tulip() {
             int iw,ih;
             emscripten_get_canvas_element_size("#canvas", &iw, &ih);
             emscripten_get_element_css_size( "#canvas", &w, &h );
-            fprintf(stderr, "size change event --> CSS %d,%d DOM %d,%d\n", (int)w, (int) h ,iw,ih);
+            //fprintf(stderr, "size change event --> CSS %d,%d DOM %d,%d\n", (int)w, (int) h ,iw,ih);
             SDL_SetWindowSize( window, (int)w, (int) h );
             force_rescale();
             unix_display_draw();

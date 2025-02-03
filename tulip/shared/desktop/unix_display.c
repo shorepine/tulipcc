@@ -74,7 +74,7 @@ void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 void force_rescale() {
     int rw, rh;
     SDL_GetRendererOutputSize(default_renderer, &rw, &rh);
-    fprintf(stderr, "renderer output size %d %d\n", rw,rh);
+    //fprintf(stderr, "renderer output size %d %d\n", rw,rh);
     float widthScale = (float)rw / (float) tulip_rect.w;
     float heightScale = (float)rh / (float) tulip_rect.h;
     SDL_RenderSetScale(default_renderer, widthScale, heightScale);
