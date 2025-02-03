@@ -21,6 +21,13 @@ class MidiConfig:
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
             self.add_synth(channel=channel, synth=Synth(patch_number=patch, num_voices=num_voices))
 
+    def reset(self):
+        """Clear the midi config, release all the synths."""
+        for channel in self.synth_per_channel.keys():
+            self.release_synth_for_channel(channel)
+        # For now, for convenience, reset the whole system too, clearing any synth definitions.
+        Synth.reset()
+
     def release_synth_for_channel(self, channel):
         if channel in self.synth_per_channel:
             # Old Synth allocated - Expicitly return the amy_voices to the pool.
