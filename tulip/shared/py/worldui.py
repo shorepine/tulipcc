@@ -1,36 +1,53 @@
 # worldui.py
 
 import lvgl as lv
-import tulip, time, world
+import tulip, time
 (H_RES,V_RES) = tulip.screen_size()
+if(tulip.board()=='WEB'):
+    import world_web as world
+else:
+    import world
 
 app = None
 TIME_BETWEEN_CHECKS_S = 60
 
 def check_messages(x=None):
     global app
-    messages = world.messages(n=25)
-    messages.reverse()
-    text = ""
-    for i in messages:
-        nt = world.nice_time(i['age_ms'])
-        text = text + "\n["+ nt +"] "+ i['username'] +": " +i['content']
-    app.messages.ta.set_text(text)
-    app.messages.ta.scroll_to_y(lv.COORD.MAX,0)
+
+    # Different paths for web and normal world
+    if(tulip.board()=="WEB"):
+        world.grab("messages", n=25, mtype='text').then(lambda x: done(x))
+    else:            
+        messages = world.messages(n=25)
+        done(messages)
+
+    def done(messages):
+        messages.reverse()
+        text = ""
+        for i in messages:
+            nt = world.nice_time(i['age_ms'])
+            text = text + "\n["+ nt +"] "+ i['username'] +": " +i['content']
+        app.messages.ta.set_text(text)
+        app.messages.ta.scroll_to_y(lv.COORD.MAX,0)
 
 def check_files():
     global app
-    text = ""
-    files = world.unique_files(count=12)
-    files.reverse()
-    for i in files:
-        nt = world.nice_time(i['age_ms'])
-        fn = i['filename']
-        if(fn.endswith('.tar')): fn = fn[:-4]
-        text = text + "\n["+ nt +"] "+ i['username'] +": " + fn + " (" +i['content'] + ")"
+    if(tulip.board()=="WEB"):
+        world.unique_files(count=12).then(lambda x: done(x))
+    else:
+        files = world.unique_files(count=12)
+        done(files)
 
-    app.files.ta.set_text(text)
-    app.files.ta.scroll_to_y(lv.COORD.MAX,0)
+    def done(files):
+        text = ""
+        files.reverse()
+        for i in files:
+            nt = world.nice_time(i['age_ms'])
+            fn = i['filename']
+            if(fn.endswith('.tar')): fn = fn[:-4]
+            text = text + "\n["+ nt +"] "+ i['username'] +": " + fn + " (" +i['content'] + ")"
+        app.files.ta.set_text(text)
+        app.files.ta.scroll_to_y(lv.COORD.MAX,0)
 
 def check():
     check_files()
@@ -56,9 +73,15 @@ def enter_cb(e):
     global app
     text = app.entry.ta.get_text()
     if(len(text)>1 and world.username is not None):
-        world.post_message(text)
-        app.entry.ta.set_text("")
-        tulip.defer(check_messages, None, 5000)
+        if(tulip.board()=="WEB"):
+            world.post_message(text).then(lambda x:done(x))
+        else:
+            world.post_message(text)
+            done(None)
+
+        def done(x):
+            app.entry.ta.set_text("")
+            tulip.defer(check_messages, None, 5000)
 
 class TextEntry(tulip.UIElement):
     def __init__(self, h, bgcolor=255):
@@ -100,7 +123,7 @@ def run(screen):
         screen.quit()
         return
     if(world.username is None):
-        print("Run world.prompt_username() first.")
+        print("Type world.username='username' first.")
         screen.quit()
         return
 

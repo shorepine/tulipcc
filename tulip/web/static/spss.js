@@ -295,20 +295,31 @@ async function fill_tree() {
 }
 
 
+// Create a js File object and upload it to the TW proxy API. This is easier to do here than in python
 async function tulip_world_upload_file(pwd, filename, username, description) {
     var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
-    var blob = await new Blob(contents);
-    var file = await new File([new Uint8Array(blob)], pwd+filename, {type: 'application/binary'})
-
+    var file = await new File([new Uint8Array(contents)], filename, {type: 'application/binary'})
     var data = new FormData();
     data.append('file',file);
     data.append('username', username);
-    data.append('descriptiom', description);
-    fetch('https://bwhitman--tulipworldapi-upload-dev.modal.run', {
+    data.append('description', description);
+    return fetch('https://bwhitman--tulipworldapi-upload-dev.modal.run', {
         method: 'POST',
         body: data,
-    })
-    return data;
+    });
+}
+
+async function show_editor() {
+    document.getElementById('showhideeditor').style.display='none'; 
+    if(editor) editor.refresh();
+    document.getElementById('canvas').classList.remove("canvas-solo");
+    document.getElementById('canvas').classList.add("canvas-editor");
+}
+
+async function hide_editor() {
+    document.getElementById('showhideeditor').style.display='';
+    document.getElementById('canvas').classList.remove("canvas-editor");
+    document.getElementById('canvas').classList.add("canvas-solo");
 }
 
 async function start_tulip() {
@@ -328,7 +339,7 @@ async function start_tulip() {
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import amy, amy_js_message, tulip_world_upload_file
+    import amy, amy_js_message
     amy.override_send = amy_js_message
   `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.

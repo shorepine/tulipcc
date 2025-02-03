@@ -82,7 +82,7 @@
         matchBrackets: true,
         spellCheck: false,
         autocorrect: false,
-        theme: "solarized dark",
+        theme: "lucario",
         lint: false,
       }); 
       editor.setSize(null,200);
@@ -93,7 +93,7 @@
       var share = url_params.get('share');
       if(share != null) {
         var bsCollapse = new bootstrap.Collapse(editorElement, { toggle: true });
-        document.getElementById('showhideeditor').style.display='none';
+        show_editor();
         try {
           var code = await decompress(decodeURIComponent(share));
           editor.setValue(code);
@@ -114,7 +114,7 @@
       <div class="px-4">
         <h1><A HREF="https://tulip.computer/"><img src="/img/favicon.png"/ width=40></A>Tulip Web</h1> 
         <p>
-          <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="document.getElementById('showhideeditor').style.display='none'; editor.refresh();">
+          <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="show_editor();">
             Show code editor
           </button>
         </p>
@@ -122,7 +122,7 @@
 
       <div class="editor collapse px-4" id="collapseEditor">
         <div class="alert fixed-top d-none" id="alert_box"></div>
-        <div class="row g-0">
+        <div class="row g-0 headertext">
           <div class="col-3 headertext">
             <span class="px-1 small align-middle">Tulip files</span>
             <div id="treecontainer"></div>
@@ -149,7 +149,7 @@
               <button type="button" title="Run editor contents in Tulip" class="btn btn-sm btn-success" onclick="runCodeBlock()"><i class="fas fa-running"></i></button> 
               <button type="share" title="Share editor contents (and filename, if given) as a URL" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
               <input type='text' title="Filename for saving or sharing" id="editor_filename" class="small" placeholder="Filename"/>
-              <button type="button" class="btn btn-sm btn-primary float-end" onclick="document.getElementById('showhideeditor').style.display='';"
+              <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_editor();"
                 data-bs-toggle="collapse" title="Hide editor" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
                 Hide editor
               </button>
@@ -162,7 +162,7 @@
       <textarea id="textinput" autocapitalize="off" rows="1"></textarea>
       
       <!-- Tulip's SDL canvas -->
-      <canvas id="canvas" tabindex=0 class="px-4"></canvas>
+      <canvas id="canvas" tabindex=0 class="px-4 canvas-solo"></canvas>
 
       <!-- MIDI settings panel if MIDI is available -->
       <form name="tulip_settings">

@@ -4,7 +4,10 @@ import tulip, sys, midi, amy, alles
 from upysh import *
 from tulip import edit, run, board
 if board()=="WEB":
+    def webnyi():
+        return "This function is not available on Tulip Web"
     import world_web as world
+    input = webnyi()
 else:
     import world
 

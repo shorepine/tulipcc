@@ -71,6 +71,17 @@ void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
 }
 
 
+void force_rescale() {
+    int rw, rh;
+    SDL_GetRendererOutputSize(default_renderer, &rw, &rh);
+    fprintf(stderr, "renderer output size %d %d\n", rw,rh);
+    float widthScale = (float)rw / (float) tulip_rect.w;
+    float heightScale = (float)rh / (float) tulip_rect.h;
+    SDL_RenderSetScale(default_renderer, widthScale, heightScale);
+}
+
+
+
 /**
  * Convert a SDL key code to it's LV_KEY_* counterpart or return '\0' if it's not a control character.
  * @param sdl_key the key code
@@ -265,11 +276,7 @@ void init_window() {
         default_renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE | SDL_RENDERER_PRESENTVSYNC);
         framebuffer= SDL_CreateTexture(default_renderer,SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
         #ifndef __EMSCRIPTEN__
-        int rw, rh;
-        SDL_GetRendererOutputSize(default_renderer, &rw, &rh);
-        float widthScale = (float)rw / (float) tulip_rect.w;
-        float heightScale = (float)rh / (float) tulip_rect.h;
-        SDL_RenderSetScale(default_renderer, widthScale, heightScale);
+        force_rescale();
         #endif
     }
     // If this is not set it prevents sleep on a mac (at least)
@@ -364,11 +371,7 @@ void check_key() {
                     #ifndef __EMSCRIPTEN__
                     unix_display_flag = -2;
                     #else
-                    int rw, rh;
-                    SDL_GetRendererOutputSize(default_renderer, &rw, &rh);
-                    float widthScale = (float)rw / (float) tulip_rect.w;
-                    float heightScale = (float)rh / (float) tulip_rect.h;
-                    SDL_RenderSetScale(default_renderer, widthScale, heightScale);
+                    force_rescale();
                     #endif
                 }
             }

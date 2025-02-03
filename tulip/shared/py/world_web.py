@@ -4,9 +4,11 @@
 
 import json
 import js
-from world import nice_time, prompt_username, headers, MAX_USERNAME_SIZE, MAX_DESCRIPTION_SIZE, _isdir
+from world import nice_time, headers, MAX_USERNAME_SIZE, MAX_DESCRIPTION_SIZE, _isdir, username
 import tulip
 import os
+from upysh import pwd
+import tulip_world_upload_file
 
 # convert python dict to JS options
 def options(d):
@@ -63,6 +65,9 @@ def grab(method, **kwargs):
 def grab_bytes(method, **kwargs):
     return js.fetch(modal_url(method, **kwargs)).then(lambda r: r.arrayBuffer()).then(lambda x: as_bytearray(x))
 
+def grab_bytes_direct(url, **kwargs):
+    return js.fetch(url, options(kwargs)).then(lambda r: r.arrayBuffer()).then(lambda x: as_bytearray(x))
+
 def post_bytes(method, filename, **kwargs):
     contents = bytes(open(filename,'rb').read())
     ui8a = js.Uint8Array.new(contents)
@@ -85,6 +90,7 @@ def unique_files(count=10, overquery=10):
 
 def ls(count=10): # prints latest count files
     def do_next(x):
+        print()
         for f in x:
             if(f['filename'].endswith(".tar")):
                 f['filename'] = "<%s>" % (f['filename'][:-4])
@@ -126,15 +132,15 @@ def download(filename, username=None, limit=5000, chunk_size=4096):
                 os.remove(filename)
 
 def post_message(message):
-    if(world.username is None):
+    if(username is None):
         print("need to type in: world.username = 'username' first.")
         return
-    grab("postmessage", content=u + " ### " + message)
+    return grab("postmessage", content=username + " ### " + message)
 
 
 # uploads a file
 def upload(filename, description=""):
-    if(world.username is None):
+    if(username is None):
         print("need to type in: world.username = 'username' first.")
         return
 
@@ -145,12 +151,11 @@ def upload(filename, description=""):
         tulip.tar_create(filename)
         filename += ".tar"
 
-    def clean_up(filename):
+    def clean_up(x):
         print("Uploaded %s to Tulip World." % (filename))
         if(tar):
             os.remove(filename)
 
-    post_bytes("upload", filename, username=world.username, description=description[:MAX_DESCRIPTION_SIZE])
-
+    tulip_world_upload_file(pwd()+'/', filename, username, description).then(lambda x: clean_up(x))
 
 

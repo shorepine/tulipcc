@@ -2,29 +2,13 @@ import modal
 import json
 import os
 import requests
-from fastapi import FastAPI, Response, Form
+from fastapi import FastAPI, Response, Form, Body
 from fastapi import File, UploadFile, HTTPException
 from typing import List
 
 MAX_DESCRIPTION_SIZE=50
 MAX_USERNAME_SIZE=10
 username = None
-
-# covert age from discord to something readable
-def nice_time(age_ms):
-    age_s = age_ms / 1000
-    if(age_s < 60):
-        c = "%ds" % (age_s)
-    elif(age_s < 60*60):
-        c = "%dm" % (age_s/60)
-    elif(age_s < 60*60*24):
-        c = "%dh" % (age_s/60/60)
-    elif(age_s < 60*60*24*365):
-        c = "%dd" % (age_s/60/60/24)
-    else: 
-        c= "~"
-    c = c + " ago"
-    return "% 8s" % c
 
 # This is the token for the Tulip World app. 
 # it only has perms to be able to read and post to the private Tulip World channels on the SPSS discord
@@ -45,9 +29,6 @@ discord_epoch = 1420070400000
 
 image = modal.Image.debian_slim().pip_install("fastapi[standard]", "requests", "python-multipart")
 app = modal.App("tulipworldapi", image=image)
-
-# TODO: 
-# upload (to discord)
 
 @app.function()
 @modal.web_endpoint()
@@ -115,16 +96,12 @@ def messages(n: int=500, chunk_size: int = 100, mtype: str='text'):
             ret.append(r)
     return ret
 
-    files: List[UploadFile] = File(...),
-
-# get the last n messages
 @app.function()
 @modal.web_endpoint(method='POST')
 def upload(username: str = Form(...), description: str = Form(...), file: UploadFile = File(...)):
     contents = file.file.read()
     filename = file.filename
     filesize = len(contents)
-    print("contents: %s filename %s filesize %d"  % (contents, filename, filesize))
     if(filesize==0): return {"error":"couldn't read file %s" % (filename)}
 
     # First get the url to upload to
@@ -145,7 +122,7 @@ def upload(username: str = Form(...), description: str = Form(...), file: Upload
             "Content-Length": str(filesize),
             "Content-Type": "application/octet-stream",
         },
-        data=file_contents,
+        data=contents,
     )
 
     # Lastly, post a message with the uploaded filename
