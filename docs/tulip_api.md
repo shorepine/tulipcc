@@ -4,13 +4,13 @@ Here you can see the API [Tulip](../README.md) currently ships with.
 
 # Current API
 
-**NOTE**: Our own builds of [Tulip Desktop](tulip_desktop.md) may lag behind some of the APIs listed here. This page represents the APIs in the latest commit of our _main_ branch. If something isn't working properly, try building from scratch.
+**NOTE**: This page represents the APIs in the latest commit of our _main_ branch. Builds for the Tulip hardware (`tulip.upgrade()`) and the macOS build of Tulip Desktop may lag behind these changes. [Tulip Web](https://tulip.computer/run) should always be up to date with our _main_ branch.
 
 ![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulip4.png)
 
 ## General
 
-[Tulip](../README.md) boots right into a Python prompt and all interaction with the system happens there. You have your own space to store code and files in `/user` and we keep system examples and programs in `/sys`. (On Tulip Desktop, the `sys` folder is actually `../sys` from where it boots.)
+[Tulip](../README.md) boots right into a Python prompt and all interaction with the system happens there. You have your own space to store code and files in `/user` and we keep system examples and programs in `/sys`. (On Tulip Desktop or Web, the `sys` folder is actually `../sys` from where it boots.)
 
 You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
 
@@ -288,7 +288,7 @@ def run(screen):
 
 ## Input
 
-Tulip supports USB keyboard input, USB mouse input, and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop, mouse clicks act as touch points, and your computers' keyboard works. 
+Tulip supports USB keyboard input, USB mouse input, and touch input. It also supports a software on-screen keyboard, and any I2C connected keyboard or joystick on Tulip CC. On Tulip Desktop and Tulip Web, mouse clicks act as touch points, and your computers' keyboard works. 
 
 If you have a USB mouse connected to Tulip (presumably through a hub) it will, by default, show a mouse pointer and treat clicks as touch downs. 
 
@@ -360,7 +360,7 @@ Tulip hardware has a I2C port on the side for connecting a variety of input or o
 Tulip CC has the capability to connect to a Wi-Fi network, and Python's native requests library will work to access TCP and UDP. We ship a few convenience functions to grab data from URLs as well. 
 
 ```python
-# Join a wifi network (not needed on Tulip Desktop)
+# Join a wifi network (not needed on Tulip Desktop or Web)
 tulip.wifi("ssid", "password")
 
 # Get IP address or check if connected
@@ -522,6 +522,8 @@ These mappings will get reset to default on boot. If you want to save them, put 
 You can set up your own MIDI callbacks in your own programs. You can call `midi.add_callback(function)`, which will call your `function` with a list of a (2 or 3-byte) MIDI message. These callbacks will get called alongside the default MIDI callback (that plays synth notes on MIDI in). You can stop the default MIDI callback with `midi.stop_default_callback()` and start it again with `midi.start_default_callback()`. 
 
 On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
+
+On Tulip Web, MIDI works in many browsers, but not Safari. 
 
 You can also send MIDI messages "locally", e.g. to a running Tulip program that is expecting hardware MIDI input, via `tulip.midi_local()`
 

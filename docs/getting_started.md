@@ -119,7 +119,7 @@ If you're having any issues with your Tulip, please check out our [troubleshooti
 
 [If you want to work on Tulip itself, check out our guide to compiling and flashing the Tulip firmware.](tulip_flashing.md)
 
-If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware, or, see below how to transfer and edit files remotely.
+If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Web](https://tulip.computer/run) and [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware, or, see below how to transfer and edit files remotely.
 
 ## How to transfer files between Tulip and your computer
 

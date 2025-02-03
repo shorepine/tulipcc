@@ -14,13 +14,6 @@ TIME_BETWEEN_CHECKS_S = 60
 def check_messages(x=None):
     global app
 
-    # Different paths for web and normal world
-    if(tulip.board()=="WEB"):
-        world.grab("messages", n=25, mtype='text').then(lambda x: done(x))
-    else:            
-        messages = world.messages(n=25)
-        done(messages)
-
     def done(messages):
         messages.reverse()
         text = ""
@@ -30,14 +23,15 @@ def check_messages(x=None):
         app.messages.ta.set_text(text)
         app.messages.ta.scroll_to_y(lv.COORD.MAX,0)
 
+    # Different paths for web and normal world
+    if(tulip.board()=="WEB"):
+        world.grab("messages", n=25, mtype='text').then(lambda x: done(x))
+    else:            
+        messages = world.messages(n=25)
+        done(messages)
+
 def check_files():
     global app
-    if(tulip.board()=="WEB"):
-        world.unique_files(count=12).then(lambda x: done(x))
-    else:
-        files = world.unique_files(count=12)
-        done(files)
-
     def done(files):
         text = ""
         files.reverse()
@@ -48,6 +42,13 @@ def check_files():
             text = text + "\n["+ nt +"] "+ i['username'] +": " + fn + " (" +i['content'] + ")"
         app.files.ta.set_text(text)
         app.files.ta.scroll_to_y(lv.COORD.MAX,0)
+
+    if(tulip.board()=="WEB"):
+        world.unique_files(count=12).then(lambda x: done(x))
+    else:
+        files = world.unique_files(count=12)
+        done(files)
+
 
 def check():
     check_files()
@@ -71,6 +72,10 @@ def quit(screen):
 
 def enter_cb(e):
     global app
+    def done(x):
+        app.entry.ta.set_text("")
+        tulip.defer(check_messages, None, 5000)
+
     text = app.entry.ta.get_text()
     if(len(text)>1 and world.username is not None):
         if(tulip.board()=="WEB"):
@@ -79,9 +84,6 @@ def enter_cb(e):
             world.post_message(text)
             done(None)
 
-        def done(x):
-            app.entry.ta.set_text("")
-            tulip.defer(check_messages, None, 5000)
 
 class TextEntry(tulip.UIElement):
     def __init__(self, h, bgcolor=255):
