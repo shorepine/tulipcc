@@ -2,7 +2,7 @@ import gc
 import uos
 import tulip, sys, midi, amy, alles
 from upysh import *
-from tulip import edit, run
+from tulip import edit, run, board
 if board()=="WEB":
     import world_web as world
 else:

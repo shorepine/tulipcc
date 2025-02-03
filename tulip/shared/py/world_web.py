@@ -4,9 +4,13 @@
 
 import json
 import js
-from world import nice_time, prompt_username, headers, MAX_USERNAME_SIZE, MAX_DESCRIPTION_SIZE
+from world import nice_time, prompt_username, headers, MAX_USERNAME_SIZE, MAX_DESCRIPTION_SIZE, _isdir
 import tulip
 import os
+
+# convert python dict to JS options
+def options(d):
+    return js.JSON.parse(json.dumps(d))
 
 def as_bytearray(buffer):
     """
@@ -59,7 +63,12 @@ def grab(method, **kwargs):
 def grab_bytes(method, **kwargs):
     return js.fetch(modal_url(method, **kwargs)).then(lambda r: r.arrayBuffer()).then(lambda x: as_bytearray(x))
 
+def post_bytes(method, filename, **kwargs):
+    contents = bytes(open(filename,'rb').read())
+    ui8a = js.Uint8Array.new(contents)
 
+    file = js.File.new(ui8a, filename, options({'type':'application/binary'}))
+    return js.fetch(modal_url(method), options({'method':'POST', 'body':{'file':file}}))
 
 # get unique files
 def unique_files(count=10, overquery=10):
@@ -125,8 +134,8 @@ def post_message(message):
 
 # uploads a file
 def upload(filename, description=""):
-    u = prompt_username()
-    if u is None:
+    if(world.username is None):
+        print("need to type in: world.username = 'username' first.")
         return
 
     tar = False
@@ -136,17 +145,12 @@ def upload(filename, description=""):
         tulip.tar_create(filename)
         filename += ".tar"
 
-    filesize = os.stat(filename)[6]
-    f = open(filename, 'rb')
-
     def clean_up(filename):
         print("Uploaded %s to Tulip World." % (filename))
         if(tar):
             os.remove(filename)
 
-    content = u + " ### " + description[:MAX_DESCRIPTION_SIZE] 
-    r = api_upload(filename, filesize, content).then(lambda x: clean_up(filename))
-
+    post_bytes("upload", filename, username=world.username, description=description[:MAX_DESCRIPTION_SIZE])
 
 
 

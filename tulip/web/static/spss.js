@@ -295,6 +295,22 @@ async function fill_tree() {
 }
 
 
+async function tulip_world_upload_file(pwd, filename, username, description) {
+    var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
+    var blob = await new Blob(contents);
+    var file = await new File([new Uint8Array(blob)], pwd+filename, {type: 'application/binary'})
+
+    var data = new FormData();
+    data.append('file',file);
+    data.append('username', username);
+    data.append('descriptiom', description);
+    fetch('https://bwhitman--tulipworldapi-upload-dev.modal.run', {
+        method: 'POST',
+        body: data,
+    })
+    return data;
+}
+
 async function start_tulip() {
   // Don't run this twice
   if(tulip_started) return;
@@ -305,12 +321,14 @@ async function start_tulip() {
   // Let micropython call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_play_message);
 
+  await mp.registerJsModule('tulip_world_upload_file', tulip_world_upload_file);
+
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
   mp.registerJsModule("jssleep", sleep_ms);
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import amy, amy_js_message
+    import amy, amy_js_message, tulip_world_upload_file
     amy.override_send = amy_js_message
   `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.

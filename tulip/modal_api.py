@@ -120,19 +120,20 @@ def messages(n: int=500, chunk_size: int = 100, mtype: str='text'):
 # get the last n messages
 @app.function()
 @modal.web_endpoint(method='POST')
-def upload(username: str = Form(...), description: str = Form(...), files: List[UploadFile] = File(...)):
-    file = files[0]
+def upload(username: str = Form(...), description: str = Form(...), file: UploadFile = File(...)):
     contents = file.file.read()
     filename = file.filename
     filesize = len(contents)
     print("contents: %s filename %s filesize %d"  % (contents, filename, filesize))
+    if(filesize==0): return {"error":"couldn't read file %s" % (filename)}
+
     # First get the url to upload to
     api_response = requests.post(
         files_base_url+"attachments",
         headers=headers,
         json={"files": [{"filename": filename, "file_size": filesize, "id": 1}]},
     )
-    print(str(api_response.json()))
+
     # Then PUT the file to the url
     attachment_info = api_response.json()["attachments"][0]
     put_url = attachment_info["upload_url"]
@@ -158,7 +159,7 @@ def upload(username: str = Form(...), description: str = Form(...), files: List[
     }
     r = requests.post(files_base_url+"messages", headers = headers, data = json.dumps(payload))
 
-    return True # not needed
+    return {"ok":True} # not needed
 
 
 
