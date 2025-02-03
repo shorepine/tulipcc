@@ -2,7 +2,7 @@
 
 Here's a page to check out when you're having problems with your Tulip. We'll list common issues and their resolutions, and then general diagnostic help.
 
-This is for hardware Tulip CCs you got from [Makerfabs](https://tulip.computer). If your hardware Tulip is DIY or you're having issues in Tulip Desktop, you can ask the community for help.
+This is for hardware Tulip CCs you got from [Makerfabs](https://tulip.computer). If your hardware Tulip is DIY or you're having issues in Tulip Desktop or Tulip Web, you can ask the community for help.
 
 ## Reach us
 
