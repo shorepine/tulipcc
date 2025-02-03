@@ -101,6 +101,7 @@ async function runCodeBlock() {
   try {
     mp.runPythonAsync(py);
   } catch (e) {
+    console.log("Error in Python: " + e.message)
     // Print any error message to the REPL. Maybe there's a more direct way to raise JS errors to MPY
     await mp.runPythonAsync("print(\"\"\"" + e.message + "\"\"\")");
   }
@@ -146,6 +147,7 @@ const decompress = base64string => {
         return new TextDecoder().decode(arrayBuffer);
     });
 }
+
 
 async function sleep_ms(ms) {
     await new Promise((r) => setTimeout(r, ms));
@@ -293,6 +295,33 @@ async function fill_tree() {
 }
 
 
+// Create a js File object and upload it to the TW proxy API. This is easier to do here than in python
+async function tulip_world_upload_file(pwd, filename, username, description) {
+    var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
+    var file = await new File([new Uint8Array(contents)], filename, {type: 'application/binary'})
+    var data = new FormData();
+    data.append('file',file);
+    data.append('username', username);
+    data.append('description', description);
+    return fetch('https://bwhitman--tulipworldapi-upload-dev.modal.run', {
+        method: 'POST',
+        body: data,
+    });
+}
+
+async function show_editor() {
+    document.getElementById('showhideeditor').style.display='none'; 
+    if(editor) editor.refresh();
+    document.getElementById('canvas').classList.remove("canvas-solo");
+    document.getElementById('canvas').classList.add("canvas-editor");
+}
+
+async function hide_editor() {
+    document.getElementById('showhideeditor').style.display='';
+    document.getElementById('canvas').classList.remove("canvas-editor");
+    document.getElementById('canvas').classList.add("canvas-solo");
+}
+
 async function start_tulip() {
   // Don't run this twice
   if(tulip_started) return;
@@ -302,6 +331,8 @@ async function start_tulip() {
 
   // Let micropython call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_play_message);
+
+  await mp.registerJsModule('tulip_world_upload_file', tulip_world_upload_file);
 
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
   mp.registerJsModule("jssleep", sleep_ms);

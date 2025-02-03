@@ -228,6 +228,8 @@ class Joy:
 
 # prompt for y/n and return true if Y
 def prompt(prompt):
+    if(board()=="WEB"):
+        return webnyi()
     print(prompt + " [Yy/Nn]: ", end='')
     r = input()
     if(r=='Y' or r=='y'): 
@@ -266,6 +268,8 @@ def seq_ppq(ppq=None):
     return amy.SEQUENCER_PPQ    
 
 def remap():
+    if(board()=="WEB"):
+        return webnyi()
     print("Type key or key combo you wish to remap: ",end='')
     (_, scan, mod) = key_wait()
     print()
@@ -341,7 +345,7 @@ def upgrade():
         import esp32, machine
         from esp32 import Partition
     except ImportError:
-        print("Upgrading only works on Tulip CC for now. Visit tulip.computer to download the latest Tulip Desktop.")
+        print("Upgrading only works on Tulip CC for now. Visit tulip.computer to download the latest Tulip Desktop or Tulip Web.")
         return
 
     if ip() is None:
@@ -589,16 +593,32 @@ def run(module_string):
         if(screen): screen.screen_quit_callback(None)
 
 def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
-    import urequests
-    d = urequests.get(url, headers = headers).save(filename,mode)
-    return d
+    if(board()=="WEB"):
+        import world_web, js
+        def next(x):
+            r = open(filename, mode)
+            r.write(x)
+            r.close()
+            return "OK"
+        return world_web.grab_bytes_direct(url, headers=headers).then(lambda x: next(x))
+    else:
+        import urequests
+        d = urequests.get(url, headers = headers).save(filename,mode)
+        return d
 
 def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
-    import urequests
-    c = urequests.get(url, headers = headers)
-    return c
+    if(board()=="WEB"):
+        import world_web
+        return world_web.grab_bytes_direct(url, headers=headers)
+    else:
+        import urequests
+        c = urequests.get(url, headers = headers)
+        return c
+
 
 def url_put(url, filename, headers={"User-Agent":"TulipCC/4.0"}):
+    if(board()=="WEB"):
+        return webnyi()
     import urequests, os
     filesize = os.stat(filename)[6]
     f = open(filename, 'rb')
@@ -614,7 +634,10 @@ def url_put(url, filename, headers={"User-Agent":"TulipCC/4.0"}):
     f.close()
 
 def screenshot(filename=None, x=-1, y=-1, w=-1, h=-1):
-    import world
+    if(board()=="WEB"):
+        import world_web as world
+    else:
+        import world
     from upysh import rm
     if(filename is not None):
         int_screenshot(filename,x,y,w,h)

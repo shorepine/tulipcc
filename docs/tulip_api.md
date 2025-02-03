@@ -126,7 +126,7 @@ Please see the [music tutorial](music.md) for a tutorial on `UIScreen`.
 
 Still very much early days, but Tulip supports a native chat and file sharing BBS called **TULIP ~ WORLD** where you can hang out with other Tulip owners. You're able to pull down the latest messages and files and send messages and files yourself. 
 
-Try it out with `run('worldui')`. You'll first want to run `world.prompt_username()` to choose a username.
+Try it out with `run('worldui')`. You'll first want to run `world.username="my_name"` to choose a username.
 
 You can also call the underlying Tulip World APIs:
 

@@ -86,8 +86,8 @@ extern int unix_display_draw();
 uint8_t tulip_ready = 0;
 extern uint8_t display_size_changed;
 extern SDL_Window * window;
+extern void force_rescale();
 uint32_t frame_count = 0;
-uint32_t fs_sync_divider = TULIP_FS_SYNC_DIVIDER;
 void main_loop__tulip() {
     if(tulip_ready) {
         // We seem to be stuck at 60fps (even if we change it in the loop setup), so let's halve that to be more "Tulip-y"
@@ -100,16 +100,21 @@ void main_loop__tulip() {
         for(uint8_t i=0;i<TULIP_FRAME_SCHEDULER_EATS;i++) 
             mp_handle_pending(true);
 
-        if(fs_sync_divider-- == 0) {
+        if(frame_count % TULIP_FS_SYNC_DIVIDER == 0)
             EM_ASM(
                 FS.syncfs(false, function (err) {});
             );
-            fs_sync_divider = TULIP_FS_SYNC_DIVIDER;
-        }
+
+        if(frame_count == 10) display_size_changed = 1;
+
         if (display_size_changed) {
             double w, h;
+            int iw,ih;
+            emscripten_get_canvas_element_size("#canvas", &iw, &ih);
             emscripten_get_element_css_size( "#canvas", &w, &h );
+            //fprintf(stderr, "size change event --> CSS %d,%d DOM %d,%d\n", (int)w, (int) h ,iw,ih);
             SDL_SetWindowSize( window, (int)w, (int) h );
+            force_rescale();
             unix_display_draw();
             display_size_changed = 0;
         }
