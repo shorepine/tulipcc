@@ -7,7 +7,7 @@ import math
 import time
 
 import tulip
-import midi
+import synth
 import amy
 
 try:
@@ -115,10 +115,10 @@ def broken_chord(base_pitch, intervals, start_time, **kwargs):
 def xanadu_stage1(x):
     global synths
     amy.chorus(1)
-    synths.append(midi.Synth(num_voices=6, patch_string=note1_patch()))
-    synths.append(midi.Synth(num_voices=6, patch_string=note1_patch(pan=0.8)))
-    synths.append(midi.Synth(num_voices=6, patch_string=note2_patch(pan=0.2)))
-    synths.append(midi.Synth(num_voices=18, patch_string=fm_note_patch()))
+    synths.append(synth.PatchSynth(num_voices=6, patch_string=note1_patch()))
+    synths.append(synth.PatchSynth(num_voices=6, patch_string=note1_patch(pan=0.8)))
+    synths.append(synth.PatchSynth(num_voices=6, patch_string=note2_patch(pan=0.2)))
+    synths.append(synth.PatchSynth(num_voices=18, patch_string=fm_note_patch()))
     for s in synths:
         s.deferred_init()
 
@@ -153,8 +153,7 @@ def xanadu_stage2(x):
     tulip.defer(xanadu_stage3, None, 60000)
 
 def xanadu_stage3(x):
-    midi.Synth.reset()
+    synth.PatchSynth.reset()
 
 
-midi.Synth.reset()
 tulip.defer(xanadu_stage1, None, 250)
