@@ -263,7 +263,7 @@
 import tulip, midi, music, random
 
 chord = music.Chord("F:min7").midinotes()
-synth = synth.Synth(1) # single note polyphony
+synth = synth.PatchSynth(1) # single note polyphony
 synth.program_change(143) # DX7 BASS 2 patch
 
 def note(t):

@@ -120,29 +120,29 @@ tulip.seq_bpm(120)
 
 (Make sure to read below about the higher-accuracy sequencer API, `amy.send(sequence)`. The Tulip `seq_X` commands are simple and easy to use, but if you're making a music app that requires rock-solid timing, you'll want to use the AMY sequencer directly.)
 
-## Making new Synths
+## Making new synths
 
-We're using `midi.config.get_synth(channel=1)` to "borrow" the synth booted with Tulip. But if you're going to want to share your ideas with others, you should make your own `Synth` that doesn't conflict with anything already running on Tulip. That's easy, you can just run:
+We're using `midi.config.get_synth(channel=1)` to "borrow" the synth booted with Tulip. But if you're going to want to share your ideas with others, you should make your own `synth` that doesn't conflict with anything already running on Tulip. That's easy, you can just run:
 
 ```python
-synth = synth.Synth(num_voices=2, patch_number=143) # two note polyphony, patch 143 is DX7 BASS 2
+synth = synth.PatchSynth(num_voices=2, patch_number=143) # two note polyphony, patch 143 is DX7 BASS 2
 ```
 
 And if you want to play multimbral tones, like a Juno-6 bass alongside a DX7 pad:
 
 ```python
-synth1 = synth.Synth(num_voices=1, patch_number=0)  # Juno
-synth2 = synth.Synth(num_voices=1, patch_number=128)  # DX7
+synth1 = synth.PatchSynth(num_voices=1, patch_number=0)  # Juno
+synth2 = synth.PatchSynth(num_voices=1, patch_number=128)  # DX7
 synth1.note_on(50, 1)
 synth2.note_on(50, 0.5)
 ```
 
-You can also "schedule" notes. This is useful for sequencing fast parameter changes. `Synth`s accept a `time` parameter, and it's in milliseconds. For example:
+You can also "schedule" notes. This is useful for sequencing fast parameter changes. `synth`s accept a `time` parameter, and it's in milliseconds. For example:
 
 ```python
 # play a chord all at once
 import music, midi, tulip
-synth4 = synth.Synth(num_voices=4, patch_number=1)
+synth4 = synth.PatchSynth(num_voices=4, patch_number=1)
 chord = music.Chord("F:min7").midinotes()
 for i,note in enumerate(chord):
     synth4.note_on(note, 0.5, time=tulip.ticks_ms() + (i * 1000))   # time is i seconds from now
@@ -155,14 +155,14 @@ You can send `all_notes_off()` to your synth to stop playing notes:
 synth4.all_notes_off()
 ```
 
-If you are booting a new Synth in your program, remember to `release` your synths when you're done with them
+If you are booting a new synth in your program, remember to `release` your synths when you're done with them
 ```python
 synth1.release() # Does all note-off and then clears the voice alloc 
 synth2.release()
 synth4.release()
 ```
 
-As you learn more about AMY (the underlying synth engine) you may be interested in making your own `Synth`s in Python. See `synth.py`'s `OscSynth` for an example. 
+As you learn more about AMY (the underlying synth engine) you may be interested in making your own `synth`s in Python. See `synth.py`'s `OscSynth` for an example. 
 
 ## Modifying the default synth or other MIDI channel assignments in code
 
@@ -171,10 +171,10 @@ You may want to programatically change the MIDI to synth mapping. One example wo
 You can change the parameters of channel synths like this:
 
 ```python
-midi.config.add_synth(channel=c, synth=synth.Synth(patch_number=p, num_voices=n))
+midi.config.add_synth(channel=c, synth=synth.PatchSynth(patch_number=p, num_voices=n))
 ```
 
-Note that `add_synth` will stop any running Synth on that channel and boot a new one in its place. 
+Note that `add_synth` will stop any running synth on that channel and boot a new one in its place. 
 
 ## The editor
 
@@ -194,7 +194,7 @@ Type `edit('jam.py')` (or whatever you want to call it.) You'll see a black scre
 import tulip, midi, music, random
 
 chord = music.Chord("F:min7").midinotes()
-synth = synth.Synth(num_voices=1, patch_number=143)  # DX7 BASS 2
+synth = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
 slot = None
 
 def note(t):
@@ -248,7 +248,7 @@ def run(screen):
     app = screen
     app.slot = None
     app.chord = music.Chord("F:min7").midinotes()
-    app.synth = synth.Synth(num_voices=1, patch_number=143)  # DX7 BASS 2
+    app.synth = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
     app.present()
     app.quit_callback = stop
     start(app)
@@ -264,7 +264,7 @@ def run(screen):
     app = screen
     app.slot = None
     app.chord = music.Chord("F:min7").midinotes()
-    app.synth = synth.Synth(num_voices=1, patch_number=143)  # DX7 BASS 2
+    app.synth = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
     bpm_slider = tulip.UISlider(tulip.seq_bpm()/2.4, w=300, h=25,
         callback=bpm_change, bar_color=123, handle_color=23)
     app.add(bpm_slider, x=300,y=200)
@@ -287,7 +287,7 @@ Now quit the `jam2` app if it was already running and re-`run` it. You should se
 
 ## Sampler, OscSynth
 
-Tulip defines a few different `Synth` classes, including `OscSynth` which directly uses one oscillator per voice of polyphony, as in this simple sine wave synth:
+Tulip defines a few different `synth` classes, including `OscSynth` which directly uses one oscillator per voice of polyphony, as in this simple sine wave synth:
 
 ```python
 s = synth.OscSynth(wave=amy.SINE)
@@ -474,7 +474,7 @@ amy.stop_store_patch(1024)
 Now, you're free to use this patch number like all the Juno and DX7 ones. For a polyphonic wood piano, do:
 
 ```python
-s = synth.Synth(5)
+s = synth.PatchSynth(5)
 s.program_change(1024)
 s.note_on(50, 1)
 s.note_on(50, 1)

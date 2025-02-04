@@ -18,7 +18,7 @@ class VoiceObject:
     def note_off(self, time=None, sequence=None):
         amy.send(time=time, voices=self.amy_voice, vel=0, sequence=sequence)
 
-class Synth:
+class PatchSynth:
     """Manage a polyphonic synthesizer by rotating among a fixed pool of voices.
 
     Provides methods:
@@ -35,7 +35,7 @@ class Synth:
     Note: The synth internally refers to its voices by indices in
     range(0, num_voices).  These numbers are not related to the actual amy
     voices rendering the note; the amy voice number is internal to the
-    VoiceObjects and is opaque to the Synth object.
+    VoiceObjects and is opaque to the PatchSynth object.
     """
 
     """Manage the pool of amy voices."""
@@ -45,7 +45,7 @@ class Synth:
 
     @classmethod
     def reset(cls):
-        """Resets AMY and Synth's tracking of its state."""
+        """Resets AMY and PatchSynth's tracking of its state."""
         cls.allocated_amy_voices = set()
         cls.next_amy_patch_number = 1024
         amy.reset()
@@ -54,14 +54,14 @@ class Synth:
         if patch_number is not None and patch_string is not None:
             raise ValueError('You cannot specify both patch_number and patch_string.')
         if patch_string is not None:
-            patch_number = Synth.next_amy_patch_number
-            Synth.next_amy_patch_number = patch_number + 1
+            patch_number = PatchSynth.next_amy_patch_number
+            PatchSynth.next_amy_patch_number = patch_number + 1
             amy.send(store_patch='%d,%s' % (patch_number, patch_string))
         self._pre_init_num_voices = num_voices
         self._pre_init_patch_number = patch_number
         # The actual grabbing of AMY voices is deferred until the first time this
         # synth is used.  This is to cleanly handle the case of replacing a MIDI
-        # channel synth, when a new Synth object is constructed and passed to
+        # channel synth, when a new PatchSynth object is constructed and passed to
         # config.add_synth, but the AMY voices held by the existing synth on that
         # channel are not released until add_synth() runs.  This way, the new,
         # replacement synth can use the same voice numbers when it eventually
@@ -93,12 +93,12 @@ class Synth:
         new_voices = []
         next_amy_voice = 0
         while len(new_voices) < num_voices:
-            while next_amy_voice in Synth.allocated_amy_voices:
+            while next_amy_voice in PatchSynth.allocated_amy_voices:
                 next_amy_voice += 1
             new_voices.append(next_amy_voice)
             next_amy_voice += 1
         self.amy_voice_nums = new_voices
-        Synth.allocated_amy_voices.update(new_voices)
+        PatchSynth.allocated_amy_voices.update(new_voices)
         voice_objects = []
         for amy_voice_num in self.amy_voice_nums:
             voice_objects.append(VoiceObject(amy_voice_num))
@@ -163,7 +163,7 @@ class Synth:
         self.deferred_init()
         if not self.amy_voice_nums:
             # Note on after synth.release()?
-            raise ValueError('Synth note on with no voices - synth has been released?')
+            raise ValueError('PatchSynth note on with no voices - synth has been released?')
         if velocity == 0:
             self.note_off(note, time=time, sequence=sequence)
         else:  # Velocity > 0, note on.
@@ -219,7 +219,7 @@ class Synth:
         self.all_notes_off()
         # Return all the amy_voices
         for amy_voice in self.amy_voice_nums:
-            Synth.allocated_amy_voices.remove(amy_voice)
+            PatchSynth.allocated_amy_voices.remove(amy_voice)
         self.amy_voice_nums = []
         del self.voice_objs[:]
 
@@ -273,7 +273,7 @@ class SingleOscSynthBase:
         self.oscs = []
         self.amy_voices = []
 
-    # Rest of Synth protocol doesn't do anything by default.
+    # Rest of PatchSynth protocol doesn't do anything by default.
     def sustain(self, state):
         pass
 
@@ -285,7 +285,7 @@ class SingleOscSynthBase:
 
 
 class OscSynth(SingleOscSynthBase):
-    """Synth that uses one osc per note.  Osc parameters are specified at initialization."""
+    """PatchSynth that uses one osc per note.  Osc parameters are specified at initialization."""
 
     def __init__(self, num_voices=6, first_osc=None, **kwargs):
         """Create a synth that plays the specified note on a single osc configured with keyword args."""

@@ -7,7 +7,7 @@ import arpegg
 import tulip
 
 # the synths we apply to MIDI channels
-from synth import Synth, OscSynth, DrumSynth
+from synth import PatchSynth, OscSynth, DrumSynth
 
 class MidiConfig:
     """System-wide Midi input config."""
@@ -18,11 +18,11 @@ class MidiConfig:
         self.arpeggiator_per_channel = {}
         for channel, num_voices in voices_per_channel.items():
             patch = patch_per_channel[channel] if channel in patch_per_channel else None
-            self.add_synth(channel=channel, synth=Synth(patch_number=patch, num_voices=num_voices))
+            self.add_synth(channel=channel, synth=PatchSynth(patch_number=patch, num_voices=num_voices))
 
     def release_synth_for_channel(self, channel):
         if channel in self.synth_per_channel:
-            # Old Synth allocated - Expicitly return the amy_voices to the pool.
+            # Old synth allocated - Expicitly return the amy_voices to the pool.
             self.synth_per_channel[channel].release()
             del self.synth_per_channel[channel]
         if channel in self.arpeggiator_per_channel:
@@ -33,10 +33,10 @@ class MidiConfig:
             raise ValueError('No synth (or patch_number) specified')
         self.release_synth_for_channel(channel)
         if synth is None:
-            print('add_synth(patch_number=..) is deprecated and will be removed.  Use add_synth(Synth(patch_number=..)) instead.')
+            print('add_synth(patch_number=..) is deprecated and will be removed.  Use add_synth(PatchSynth(patch_number=..)) instead.')
             if num_voices is None:
                 num_voices = 6  # Default
-            synth = Synth(num_voices=num_voices, patch_number=patch_number)
+            synth = PatchSynth(num_voices=num_voices, patch_number=patch_number)
         elif patch_number is not None or num_voices is not None:
             raise ValueError('You cannot specify both synth and patch_number/num_voices')
             # .. because we can't reconfigure num_voices which you might be expecting.
@@ -67,7 +67,7 @@ class MidiConfig:
         return list(self.synth_per_channel.keys())
 
     def get_synth(self, channel):
-        """Return the Synth associated with a given channel."""
+        """Return the synth associated with a given channel."""
         return self.synth_per_channel[channel] if channel in self.synth_per_channel else None
 
     def channel_info(self, channel):
@@ -115,7 +115,7 @@ def ensure_midi_config():
         # GeneralMidi Drums.
         config.add_synth(channel=10, synth=DrumSynth(num_voices=10))
         # Default Juno synth on Channel 1.
-        config.add_synth(channel=1, synth=Synth(patch_number=0, num_voices=6))
+        config.add_synth(channel=1, synth=PatchSynth(patch_number=0, num_voices=6))
         config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
 
 
