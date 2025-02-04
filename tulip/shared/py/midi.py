@@ -9,6 +9,11 @@ import tulip
 # the synths we apply to MIDI channels
 from synth import PatchSynth, OscSynth, DrumSynth
 
+class Synth(PatchSynth): 
+    def __init__(self, *args, **kwargs): 
+        print("midi.Synth is deprecated -- use synth.PatchSynth instead")
+        super().__init__(*args, **kwargs)
+
 class MidiConfig:
     """System-wide Midi input config."""
 
