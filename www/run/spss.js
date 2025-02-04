@@ -6,10 +6,7 @@ var mp = null;
 var midiOutputDevice = null;
 var midiInputDevice = null;
 var editor = null;
-var shareButtonSVG = `
-  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-share" viewBox="0 0 16 16">
-    <path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.5 2.5 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5m-8.5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m11 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3"/>
-  </svg>`;
+var treeView = null;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -89,6 +86,8 @@ async function start_midi() {
       .enable({sysex:true})
       .then(onEnabled)
       .catch(err => console.log("MIDI: " + err));
+  } else {
+    document.getElementById('midi_settings').style.display='none';
   }
 }
 
@@ -102,6 +101,7 @@ async function runCodeBlock() {
   try {
     mp.runPythonAsync(py);
   } catch (e) {
+    console.log("Error in Python: " + e.message)
     // Print any error message to the REPL. Maybe there's a more direct way to raise JS errors to MPY
     await mp.runPythonAsync("print(\"\"\"" + e.message + "\"\"\")");
   }
@@ -111,13 +111,13 @@ async function shareCode() {
   // get the editor text, compress and base64 url safe it, and copy that + our base URL to the clipboard:
   var py = editor.getValue();
   code = encodeURIComponent(await compress(py));
-  url = window.location.host+"/run/?share=" + code;
+  var encoded_filename = encodeURIComponent(document.getElementById('editor_filename').value);
+  url = window.location.protocol+"//"+window.location.host+"/run/?fn=" + encoded_filename + "&" + "share=" + code;
   navigator.clipboard.writeText(url);
-
   // Do a little button animation
   document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
   await sleep_ms(2500);
-  document.getElementById(`shareButton`).innerHTML = shareButtonSVG; 
+  document.getElementById(`shareButton`).innerHTML = "<i class='fas fa-share-square'></i>"; 
  }
 
 
@@ -148,8 +148,178 @@ const decompress = base64string => {
     });
 }
 
+
 async function sleep_ms(ms) {
     await new Promise((r) => setTimeout(r, ms));
+}
+
+
+async function show_alert(text) {
+    const alertbox = document.querySelector("#alert_box");
+    alertbox.innerHTML = text;
+    alertbox.classList.remove('d-none'); //Remove hidden class
+    alertbox.classList.add('alert-danger'); //Chance red color
+    setTimeout(function() {alertbox.classList.add('d-none')}, 3000);
+
+}
+
+class DirItem {
+    constructor(fullpath, showpath, is_dir) {
+        this.fullpath = fullpath;
+        this.showpath = showpath;
+        this.is_dir = is_dir
+      }
+    
+    getContents(encoding) {
+        if(!this.is_dir) {
+            return mp.FS.readFile(this.fullpath, {encoding:encoding});
+        }
+        return null;
+    }
+    toString() {
+        return this.showpath;
+    }
+}
+
+// Ask for a selected FS item in the treeview and return it, showing errors if not
+async function request_file_or_folder(want_folder) {
+    if(treeView.getSelectedNodes().length > 0) {
+        thing = treeView.getSelectedNodes()[0].getUserObject();
+        if(want_folder) {
+            if(thing.is_dir) { 
+                if(thing.fullpath.startsWith('/tulip4/sys')) {
+                    show_alert("You can't write to /sys on Tulip. Try /user.")
+                    return null;
+                }
+                return thing; 
+            } 
+            show_alert("Please select a destination folder (not a file).");
+            return null;
+        } else {
+            if(!thing.is_dir) { 
+                return thing;
+            }
+            show_alert("Please select a file (not a folder).");
+            return null;
+        }       
+    }
+    var t = "file"
+    if(want_folder) t = "folder;"
+    show_alert("Please select a " + t + " first.")
+    return null;
+}
+
+async function download() {
+    file = await request_file_or_folder(false);
+    if(file != null) {
+        var blob=new Blob([file.getContents('binary')], {type: "application/binary"});
+        var link=document.createElement('a');
+        link.href=window.URL.createObjectURL(blob);
+        link.download=file.showpath;
+        link.click();
+    }
+}
+
+async function upload() {
+    upload_folder = await request_file_or_folder(true);
+    if(upload_folder != null) {
+        // Get a file upload window, read the data and write to FS
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.onchange = e => { 
+            var file = e.target.files[0]; 
+            var reader = new FileReader();
+            reader.readAsText(file,'UTF-8');
+            reader.onload = readerEvent => {
+                var content = readerEvent.target.result; // this is the content!
+                mp.FS.writeFile(upload_folder.fullpath + '/' + file.name, content);
+                fill_tree();
+            }
+        }
+        input.click();
+    }
+}
+
+async function save_editor() {
+    upload_folder = await request_file_or_folder(true);
+    target_filename = document.getElementById('editor_filename').value;
+    if(upload_folder != null) {
+        if(target_filename.length > 0) {
+            content = editor.getValue();
+            mp.FS.writeFile(upload_folder.fullpath + '/' + target_filename, content);
+            fill_tree();
+        } else {
+            show_alert('You need to provide a filename before saving.');
+        }
+    }
+}
+
+
+async function load_editor() {
+    file = await request_file_or_folder(false);
+    if(file != null) {
+        editor.setValue(file.getContents('utf8'));
+        document.getElementById('editor_filename').value = file.showpath;
+        setTimeout(function () { editor.save() }, 100);
+        setTimeout(function () { editor.refresh() }, 250);
+    }
+}
+
+
+async function fill_tree() {
+    var root = new TreeNode(new DirItem("/tulip4", "tulip4"));
+    function impl(curFolder, curNode) {
+        for (const name of mp.FS.readdir(curFolder)) {
+            if (name === '.' || name === '..') continue;
+            const path = `${curFolder}/${name}`;
+            const { mode, timestamp } = mp.FS.lookupPath(path).node;
+            if (mp.FS.isFile(mode)) {
+                var file = new TreeNode(new DirItem(path, name, false));
+                curNode.addChild(file);
+            } else if (mp.FS.isDir(mode)) {
+                var newdir = new TreeNode(new DirItem(path, name, true));
+                curNode.addChild(newdir);
+                impl(path, newdir);
+            }
+        }
+    }
+    impl('/tulip4', root);
+    treeView = new TreeView(root, "#treecontainer");
+    treeView.changeOption("leaf_icon", '<i class="fas fa-file"></i>');
+    treeView.changeOption("parent_icon", '<i class="fas fa-folder"></i>');
+    treeView.changeOption("show_root", false);
+    TreeConfig.open_icon = '<i class="fas fa-angle-down"></i>';
+    TreeConfig.close_icon = '<i class="fas fa-angle-right"></i>';
+    treeView.collapseAllNodes();
+    treeView.reload();
+}
+
+
+// Create a js File object and upload it to the TW proxy API. This is easier to do here than in python
+async function tulip_world_upload_file(pwd, filename, username, description) {
+    var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
+    var file = await new File([new Uint8Array(contents)], filename, {type: 'application/binary'})
+    var data = new FormData();
+    data.append('file',file);
+    data.append('username', username);
+    data.append('description', description);
+    return fetch('https://bwhitman--tulipworldapi-upload.modal.run', {
+        method: 'POST',
+        body: data,
+    });
+}
+
+async function show_editor() {
+    document.getElementById('showhideeditor').style.display='none'; 
+    if(editor) editor.refresh();
+    document.getElementById('canvas').classList.remove("canvas-solo");
+    document.getElementById('canvas').classList.add("canvas-editor");
+}
+
+async function hide_editor() {
+    document.getElementById('showhideeditor').style.display='';
+    document.getElementById('canvas').classList.remove("canvas-editor");
+    document.getElementById('canvas').classList.add("canvas-solo");
 }
 
 async function start_tulip() {
@@ -161,6 +331,8 @@ async function start_tulip() {
 
   // Let micropython call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_play_message);
+
+  await mp.registerJsModule('tulip_world_upload_file', tulip_world_upload_file);
 
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
   mp.registerJsModule("jssleep", sleep_ms);

@@ -26,9 +26,9 @@ Tulip is a **music computer** where everything about the underlying synthesis an
  - A scale and chord library to define musical notes in code, e.g. `music.Chord("F:min")`
  - Have total low level control of all oscillators, specifying their filters, waveform, modulation sources, ADSRs
 
-## A small note about Tulip Desktop
+## A small note about Tulip Desktop and Tulip Web
 
-If you're using [Tulip Desktop](tulip_desktop.md) instead of a real Tulip, things will mostly be the same. CV sending does not work on Tulip Desktop. And anytime you see `/sys/` (for example, to open an example), replace it with `../sys/`. 
+If you're using [Tulip Desktop](tulip_desktop.md) or [Tulip Web](https://tulip.computer/run) instead of a real Tulip, things will mostly be the same. CV sending does not work on Tulip Desktop. And anytime you see `/sys/` (for example, to open an example), replace it with `../sys/`. 
 
 
 ## The built-in Tulip synthesizer

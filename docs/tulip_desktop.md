@@ -1,18 +1,24 @@
-# Tulip Desktop
+# Tulip Web and Desktop
+
+We have two ways of running Tulip without building or buying [Tulip CC hardware](../README.md). This is useful for local development, or sharing your creations with people that don't have a Tulip of their own yet. 
+
+[![Tulip Web](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulipweb.png)](https://tulip.computer/run/)
+
+* [Tulip Web](https://tulip.computer/run) is the easiest way to get started on Tulip on any browser, or even mobile devices. Tulip Web keeps a local filesystem that's just for your code, and you can upload and download to Tulip World to get others creations. It supports everything a "real" Tulip does, including MIDI, audio, and graphics. 
+
+* Tulip Desktop is a version of Tulip for desktop computers. We regularly make builds for macOS and it also supports many types of Linux machines, including Raspberry Pis. It also has been reported to work on Windows in WSL. 
+
+It's hard for our small team to support all possible combinations of OSes and computers, so we'll be focusing our work on Tulip hardware and [Tulip Web.](https://tulip.computer/run) But read below for more information on compiling and running Tulip Desktop on your computer. 
+
+## Tulip Desktop for macOS
 
 ![Tulip Desktop](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/desktop.png)
 
 Tulip Desktop is the desktop computer version of [Tulip CC](../README.md) itself. It supports everything Tulip CC does, and simulates the display and hardware to the best of its ability. It's a great way to learn how to use Tulip or develop for Tulip itself without having to have access to hardware or wait for long flash cycles. 
 
-You can download Tulip Desktop here:
+You can download Tulip Desktop for [macOS universal build (Apple Silicon & Intel), 10.15 or later](https://github.com/shorepine/tulipcc/releases/).
 
- * [macOS universal build (Apple Silicon & Intel), 10.15 or later](https://github.com/shorepine/tulipcc/releases/)
- * For Linux, see the build instructions below
- * Windows-native build is forthcoming, but it works under WSL using the Linux instructions!
-
-You don't need to compile your own Tulip Desktop unless you're a developer and want to work on Tulip (or on a platform we haven't uploaded a build for.) We regularly upload latest builds of Tulip Desktop for macOS.
-
-## macOS build of Tulip Desktop 
+### Compiling Tulip Desktop for macOS
 
 If you want to develop or compile Tulip yourself, start by cloning this repository. 
 
@@ -35,7 +41,7 @@ cd tulip/macos
 ./package.sh # makes .app bundle in dist, not necessary if you're just using it locally
 ```
 
-## Linux (including Windows WSL2) build of Tulip Desktop
+### Compiling Tulip Desktop for Linux (including Windows WSL2 and Raspberry Pi)
 
 First, clone this repository and cd into it
 
@@ -65,12 +71,7 @@ cd tulip/linux
 ./dev/tulip
 ```
 
-
-## Windows build of Tulip Desktop
-
-We've heard this works fine under WSL2 using the Linux instructions. We'd love a native build!
-
-## Troubleshooting
+### Troubleshooting
 
 Tulip on Mac OS X selects which audio device it will use for output when it starts. If you get no audio, you can check the available audio devices with
 
@@ -91,6 +92,8 @@ $ <path_to_app_bundle>/Tulip\ Desktop.app/Contents/MacOS/tulip -d 2
 ```
 
 For more details see <https://github.com/shorepine/tulipcc/issues/103>.
+
 ## Questions
 
 Any questions? [Chat with us on our discussions page.](https://github.com/shorepine/tulipcc/discussions)
+

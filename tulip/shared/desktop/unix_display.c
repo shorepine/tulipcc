@@ -34,7 +34,10 @@ void unix_display_init();
 
 #ifdef __EMSCRIPTEN__
     uint8_t display_size_changed = 0;
-#endif
+    #define SDL_WINDOW_NAME "Tulip Web"
+#else
+    #define SDL_WINDOW_NAME "Tulip Desktop"
+#endif    
 
 
 // LVGL/SDL connectors for keyboard here
@@ -66,6 +69,17 @@ void lvgl_keyboard_read(lv_indev_t * indev_drv, lv_indev_data_t * data)
         data->continue_reading = true;
     }
 }
+
+
+void force_rescale() {
+    int rw, rh;
+    SDL_GetRendererOutputSize(default_renderer, &rw, &rh);
+    //fprintf(stderr, "renderer output size %d %d\n", rw,rh);
+    float widthScale = (float)rw / (float) tulip_rect.w;
+    float heightScale = (float)rh / (float) tulip_rect.h;
+    SDL_RenderSetScale(default_renderer, widthScale, heightScale);
+}
+
 
 
 /**
@@ -248,10 +262,12 @@ static EM_BOOL on_web_display_size_changed( int event_type,
 
 void init_window() {
 #ifdef __EMSCRIPTEN__
+    // We keep a hidden textinput on the page to capture keypresses for mobile devices & web
     SDL_SetHint(SDL_HINT_EMSCRIPTEN_KEYBOARD_ELEMENT, "#textinput");
+    // This sets the scale to nearest neighbor -- "0", the default, makes our pixel font very jaggy
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 #endif
-    window = SDL_CreateWindow("SDL Output", SDL_WINDOWPOS_UNDEFINED,
+    window = SDL_CreateWindow(SDL_WINDOW_NAME, SDL_WINDOWPOS_UNDEFINED,
                             SDL_WINDOWPOS_UNDEFINED, tulip_rect.w, tulip_rect.h,
                             SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == NULL) {
@@ -260,16 +276,13 @@ void init_window() {
         default_renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE | SDL_RENDERER_PRESENTVSYNC);
         framebuffer= SDL_CreateTexture(default_renderer,SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
         #ifndef __EMSCRIPTEN__
-        int rw, rh;
-        SDL_GetRendererOutputSize(default_renderer, &rw, &rh);
-        float widthScale = (float)rw / (float) tulip_rect.w;
-        float heightScale = (float)rh / (float) tulip_rect.h;
-        SDL_RenderSetScale(default_renderer, widthScale, heightScale);
+        force_rescale();
         #endif
     }
     // If this is not set it prevents sleep on a mac (at least)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
-    SDL_SetWindowTitle(window, "Tulip Desktop");
+    SDL_SetWindowTitle(window, SDL_WINDOW_NAME);
+
 #ifdef __EMSCRIPTEN__ // Tulip web deskop
     emscripten_set_resize_callback(
         EMSCRIPTEN_EVENT_TARGET_WINDOW,
@@ -358,11 +371,7 @@ void check_key() {
                     #ifndef __EMSCRIPTEN__
                     unix_display_flag = -2;
                     #else
-                    int rw, rh;
-                    SDL_GetRendererOutputSize(default_renderer, &rw, &rh);
-                    float widthScale = (float)rw / (float) tulip_rect.w;
-                    float heightScale = (float)rh / (float) tulip_rect.h;
-                    SDL_RenderSetScale(default_renderer, widthScale, heightScale);
+                    force_rescale();
                     #endif
                 }
             }
@@ -379,7 +388,7 @@ void check_key() {
         #ifdef __EMSCRIPTEN__
         float newx, newy;
         SDL_RenderWindowToLogical(default_renderer, x,y , &newx, &newy);
-        //if(button) fprintf(stderr, "x,y was %d,%d. vs is %f\n", x,y, viewport_scale);
+        if(button) fprintf(stderr, "x,y was %d,%d is now %d,%d vs is %f\n", x,y, (int)newx, (int)newy, viewport_scale);
         x = (int16_t) newx;
         y = (int16_t) newy;
         #endif

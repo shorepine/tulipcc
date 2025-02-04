@@ -34,6 +34,9 @@
 // Variant-specific definitions.
 #include "mpconfigvariant.h"
 #include "emscripten.h"
+
+#define MICROPY_SCHEDULER_DEPTH             (128)
+
 #ifndef MICROPY_CONFIG_ROM_LEVEL
 #define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_EXTRA_FEATURES)
 #endif

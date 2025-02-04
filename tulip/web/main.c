@@ -53,6 +53,7 @@ extern void setup_lvgl();
 void tulip_start();
 
 #define TULIP_FS_SYNC_DIVIDER 120
+#define TULIP_FRAME_SCHEDULER_EATS 4
 
 STATIC uint8_t stdin_ringbuf_array[260];
 ringbuf_t stdin_ringbuf = {stdin_ringbuf_array, sizeof(stdin_ringbuf_array), 0, 0};
@@ -79,28 +80,43 @@ void external_call_depth_inc(void) {
 void external_call_depth_dec(void) {
     --external_call_depth;
 }
-
+extern void mp_schedule_lv();
 extern void unix_display_init();
 extern int unix_display_draw();
 uint8_t tulip_ready = 0;
 extern uint8_t display_size_changed;
 extern SDL_Window * window;
-
-uint32_t fs_sync_divider = TULIP_FS_SYNC_DIVIDER;
+extern void force_rescale();
+uint32_t frame_count = 0;
 void main_loop__tulip() {
     if(tulip_ready) {
-        unix_display_draw();
-        mp_handle_pending(true);
-        if(fs_sync_divider-- == 0) {
+        // We seem to be stuck at 60fps (even if we change it in the loop setup), so let's halve that to be more "Tulip-y"
+        if(frame_count++ % 2 == 0)
+            unix_display_draw();
+        
+        //mp_schedule_lv();
+
+        // Why run this more than once? Tulip on web updates all its stuff twice a frame. 
+        // We schedule at least 1 thing a frame - the LVGL updater
+        // So this ensures that anything else scheduled (MIDI, sequencer, frame_callback, touch_callback) still can run
+        for(uint8_t i=0;i<TULIP_FRAME_SCHEDULER_EATS;i++) 
+            mp_handle_pending(true);
+
+        if(frame_count % TULIP_FS_SYNC_DIVIDER == 0)
             EM_ASM(
                 FS.syncfs(false, function (err) {});
             );
-            fs_sync_divider = TULIP_FS_SYNC_DIVIDER;
-        }
+
+        if(frame_count == 10) display_size_changed = 1;
+
         if (display_size_changed) {
             double w, h;
+            int iw,ih;
+            emscripten_get_canvas_element_size("#canvas", &iw, &ih);
             emscripten_get_element_css_size( "#canvas", &w, &h );
+            //fprintf(stderr, "size change event --> CSS %d,%d DOM %d,%d\n", (int)w, (int) h ,iw,ih);
             SDL_SetWindowSize( window, (int)w, (int) h );
+            force_rescale();
             unix_display_draw();
             display_size_changed = 0;
         }
@@ -141,7 +157,7 @@ extern void unix_display_init();
 void mp_js_init(int pystack_size, int heap_size) {
 
     setup_fs();
-    emscripten_set_main_loop(main_loop__tulip, 0, 0);
+    emscripten_set_main_loop(main_loop__tulip, 60, 0);
 
     #if MICROPY_ENABLE_PYSTACK
     mp_obj_t *pystack = (mp_obj_t *)malloc(pystack_size * sizeof(mp_obj_t));

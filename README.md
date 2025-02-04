@@ -8,29 +8,34 @@ Tulip is a low power and afforable self-contained portable computer, with a touc
 
 The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://tulip.computer/) or [build one](docs/tulip_build.md). You can use Tulip to make music, code, art, games, or just write. 
 
-Tulip is powered by [MicroPython](https://micropython.org), [AMY](https://github.com/shorepine/amy), and [LVGL](https://lvgl.io), and the Tulip hardware runs on the ESP32-S3 chip using the [ESP-IDF](https://github.com/espressif/esp-idf).
+You can now even [run Tulip on the web](https://tulip.computer/run) and share your creations with anyone!
 
- * [**Get a Tulip from our friends at Makerfabs for only US$59**](https://tulip.computer)
- * [**Just got a Tulip CC? Check out our getting started guide!**](docs/getting_started.md)
- * [**Want to make music with your Tulip? Check out our music tutorial here**](docs/music.md)
- * [**See the full Tulip API**](docs/tulip_api.md)
+Tulip is powered by [MicroPython](https://micropython.org), [AMY](https://github.com/shorepine/amy), and [LVGL](https://lvgl.io). The Tulip hardware runs on the ESP32-S3 chip using the [ESP-IDF](https://github.com/espressif/esp-idf).
 
+ * [**Get a Tulip** from our friends at Makerfabs for only US$59](https://tulip.computer)
+ * [Just got a Tulip CC? **Check out our getting started guide!**](docs/getting_started.md)
+ * [Want to make music with your Tulip? **See our music tutorial**](docs/music.md)
+ * [See the full **Tulip API**](docs/tulip_api.md)
+ * [**Try out Tulip on the web!**](https://tulip.computer/run/)
 
  [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
-
 
 **Check out this video!**
 
 [![Tulip, a musical computer based on Micropython
 ](https://i.ytimg.com/vi/1lYFjQp7Xrw/maxresdefault.jpg)](https://www.youtube.com/watch?v=1lYFjQp7Xrw "Tulip, a musical computer based on Micropython")
 
-Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)](https://tulip.computer/) and a [desktop simulator app (Tulip Desktop.)](docs/tulip_desktop.md) They both have all the same features. I use Tulip Desktop while developing Tulip, but use the hardware Tulip CC when making my own personal things! If you're nervous about getting or building the hardware, [download or build the desktop version!](docs/tulip_desktop.md)
+You can use Tulip one of three ways:
+ * Tulip is available both as an [off the shelf or DIY hardware project (Tulip CC)](https://tulip.computer/)
+ * [Tulip runs on the web](https://tulip.computer/run) with (almost) all the same features. 
+ * Tulip can also run as a native app for Mac or Linux (or WSL in Windows) as [Tulip Desktop](docs/tulip_desktop.md)
 
-[![Tulip Desktop](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/desktop.png)](docs/tulip_desktop.md)
+If you're nervous about getting or building the hardware, [try it out on the web!](https://tulip.computer/run)
 
-You can [buy a Tulip for $59 US](https://tulip.computer) or [build your own Tulip CC](docs/tulip_build.md) for about $25 plus the cost of a display ($50). The hardware for revision 4 of Tulip CC is based on the ESP32-S3 dual core microcontroller running at 240MHz. This single inexpensive chip can support all of Tulip's functionality at low power use. It can last on any USB battery pack or LiPo battery for many hours. 
+[![Tulip Web](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulipweb.png)](https://tulip.computer/run/)
 
-Tulip CC supports:
+The hardware Tulip CC supports:
+
 - 8.5MB of RAM - 2MB is available to MicroPython, and 1.5MB is available for OS memory. The rest is used for the graphics framebuffers (which you can use as storage) and the firmware cache. 
 - 32MB flash storage, as a filesystem accesible in Python (24MB left over after OS in ROM)
 - An [AMY](https://github.com/shorepine/amy) stereo 120-voice synthesizer engine running locally, or as a wireless controller for an [Alles](https://github.com/shorepine/alles) mesh. Tulip's synth supports additive and subtractive oscillators, an excellent FM synthesis engine, samplers, karplus-strong, high quality analog style filters, a sequencer, and much more. We ship Tulip with a drum machine, voices / patch app, and Juno-6 editor.
@@ -44,7 +49,7 @@ Tulip CC supports:
 - Built in code and text editor
 - Built in BBS chat room and file transfer area called **TULIP ~ WORLD**
 - USB keyboard, MIDI and mouse support, including hubs 
-- Capactive multi-touch support (mouse on Tulip Desktop)
+- Capactive multi-touch support (mouse on Tulip Desktop and Tulip Web)
 - MIDI input and output
 - I2C / Grove / Mabee connector, compatible with [many I2C devices like joysticks, keyboard, GPIO, DACs, ADCs, hubs](docs/tulip_api.md#i2c--grove--mabee)
 - 575mA power usage @ 5V including display, at medium display brightness, can last for hours on LiPo, 18650s, or USB battery pack 
@@ -69,7 +74,7 @@ A **new** small option: get yourself a [T-Deck](https://www.aliexpress.us/item/3
 
 ## Getting started
 
-Once you've [bought a Tulip](https://tulip.computer), [built a Tulip](docs/tulip_build.md) or [installed Tulip Desktop](docs/tulip_desktop.md), you'll see that Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
+Once you've [bought a Tulip](https://tulip.computer), [opened Tulip Web](https://tulip.computer/run), [built a Tulip](docs/tulip_build.md) or [installed Tulip Desktop](docs/tulip_desktop.md), you'll see that Tulip boots right into a Python prompt and all interaction with the system happens there. You can make your own Python programs with Tulip's built in editor and execute them, or just experiment on the Tulip REPL prompt in real time.
 
 [**See the full Tulip API**](docs/tulip_api.md) for more details on all the graphics, sound and input functions.
 
@@ -99,7 +104,7 @@ edit("game.py")
 
 ### Input and user interface
 
-Tulip supports USB keyboard and mice input as well as touch input. (On Tulip Desktop, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications, and a way to run mulitple applications as once using callbacks. More in the [full API](docs/tulip_api.md).
+Tulip supports USB keyboard and mice input as well as touch input. (On Tulip Desktop and Web, mouse clicks act as touch points.) It also comes with UI elements like buttons and sliders to use in your applications, and a way to run mulitple applications as once using callbacks. More in the [full API](docs/tulip_api.md).
 
 ```python
 (x0, y0, x1, y1, x2, y2) = tulip.touch()
@@ -113,7 +118,7 @@ Tulip supports USB keyboard and mice input as well as touch input. (On Tulip Des
 Tulip CC has the capability to connect to a Wi-Fi network, and Python's native requests library will work to access TCP and UDP. We ship a few convenience functions to grab data from URLs as well. More in the [full API](docs/tulip_api.md).
 
 ```python
-# Join a wifi network (not needed on Tulip Desktop)
+# Join a wifi network (not needed on Tulip Desktop or Web)
 tulip.wifi("ssid", "password")
 
 # Get IP address or check if connected

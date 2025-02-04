@@ -1,6 +1,6 @@
 #!/bin/bash
 # This script cleans, builds and uploads binaries for the 4 supported Tulip CC versions
-# It also does this for Tulip Desktop macOS and Tulip Web.
+# It also does this for Tulip Desktop macOS
 
 # call it like ./release.sh v-jan-2024 upload , where v-jan-2024 is a github release tag 
 # and upload is one of [sys, upload, test]

@@ -108,7 +108,7 @@ You should **upgrade the firmware on Tulip** whenever you receive it. You should
    - Other utlities: `run('wordpad')`, `run('buttons')`. 
  - The code for all of these are available, for you to modify or learn from. We ship a copy of `drums`, `voices` and `juno6` as `my_drums`, `my_voices`, `my_juno6` in `/sys/ex` if you want to edit those. The official versions are read-only and you can't mess them up! 
  - If you've got MIDI plugged in, try playing a note! Tulip boots with Juno-6 patch #0 on MIDI Channel 1. You can use the `voices` app to change that assignment. If you want your MIDI knobs / sliders to control things like the Juno-6 parameters in `run('juno6')`, run a script to learn the sliders and update the midi mapping: `import learn_midi_codes`. Note you'll need to "learn" at least 13 buttons, 8 knobs and 9 sliders for full control of Juno. 
- - Try `world.download('mc_dance')` or `world.download('periodic2')` for some neat things by the Tulip community. 
+ - Try `world.download('mc_dance')`, `world.download('tracks')`, or `world.download('periodic2')` for some neat things by the Tulip community. 
 
 
 Your next stop: [check out our making music on Tulip tutorial](music.md)
@@ -119,7 +119,7 @@ If you're having any issues with your Tulip, please check out our [troubleshooti
 
 [If you want to work on Tulip itself, check out our guide to compiling and flashing the Tulip firmware.](tulip_flashing.md)
 
-If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware, or, see below how to transfer and edit files remotely.
+If you find yourself wanting to write Tulip code on a "real" computer, check out [Tulip Web](https://tulip.computer/run) and [Tulip Desktop](tulip_desktop.md), which simulates the Tulip hardware, or, see below how to transfer and edit files remotely.
 
 ## How to transfer files between Tulip and your computer
 
