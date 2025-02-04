@@ -112,7 +112,7 @@ async function shareCode() {
   var py = editor.getValue();
   code = encodeURIComponent(await compress(py));
   var encoded_filename = encodeURIComponent(document.getElementById('editor_filename').value);
-  url = window.location.host+"/run/?fn=" + encoded_filename + "&" + "share=" + code;
+  url = window.location.protocol+"//"+window.location.host+"/run/?fn=" + encoded_filename + "&" + "share=" + code;
   navigator.clipboard.writeText(url);
   // Do a little button animation
   document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
