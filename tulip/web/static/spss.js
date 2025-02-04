@@ -108,16 +108,24 @@ async function runCodeBlock() {
 }
 
 async function shareCode() {
-  // get the editor text, compress and base64 url safe it, and copy that + our base URL to the clipboard:
-  var py = editor.getValue();
-  code = encodeURIComponent(await compress(py));
-  var encoded_filename = encodeURIComponent(document.getElementById('editor_filename').value);
-  url = window.location.protocol+"//"+window.location.host+"/run/?fn=" + encoded_filename + "&" + "share=" + code;
-  navigator.clipboard.writeText(url);
-  // Do a little button animation
-  document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
-  await sleep_ms(2500);
-  document.getElementById(`shareButton`).innerHTML = "<i class='fas fa-share-square'></i>"; 
+    // get the editor text, compress and base64 url safe it, and copy that + our base URL to the clipboard:
+    var py = editor.getValue();
+    const makeURLpromise = async() => {
+        code = encodeURIComponent(await compress(py));
+        var encoded_filename = encodeURIComponent(document.getElementById('editor_filename').value);
+        var s =  window.location.protocol+"//"+window.location.host+"/run/?fn=" + encoded_filename + "&" + "share=" + code;
+        return await new Blob([s], { type: 'text/plain'});
+        //return await window.location.protocol+"//"+window.location.host+"/run/?fn=" + encoded_filename + "&" + "share=" + code;
+    }
+
+    navigator.clipboard.write([new ClipboardItem({ "text/plain": makeURLpromise() })])
+      .then(function () {  })
+      .catch(function (error) { console.log(error); });
+    
+    // Do a little button animation
+    document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
+    await sleep_ms(2500);
+    document.getElementById(`shareButton`).innerHTML = "<i class='fas fa-share-square'></i>"; 
  }
 
 
