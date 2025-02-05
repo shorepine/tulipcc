@@ -66,6 +66,22 @@ except ImportError:
         # Probably iOS
         cd(tulip.app_path())
 
+# Make sure user/lib exists and add it to sys.path
+libdir = tulip.root_dir()+"user/lib"
+if(not tulip.exists(libdir)):
+    mkdir(libdir)
+sys.path.append(libdir)
+
+# Remove other ones
+try:
+    sys.path.remove('/lib')
+except ValueError:
+    pass
+try:
+    sys.path.remove('~/.micropython/lib')
+except ValueError:
+    pass
+
 gc.collect()
 
 # Set up audio/midi. 

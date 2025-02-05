@@ -5,7 +5,7 @@ import json
 import os
 import tulip
 if(tulip.board()!="WEB"):
-    import urequests as requests
+    import tuliprequests as urequests
 
 MAX_DESCRIPTION_SIZE=50
 MAX_USERNAME_SIZE=10

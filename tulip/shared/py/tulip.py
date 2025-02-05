@@ -340,7 +340,8 @@ def get_latest_release():
     return (None, None, None, None)
 
 def upgrade():
-    import time, sys, os, urequests
+    import time, sys, os
+    import tuliprequests as urequests
     try:
         import esp32, machine
         from esp32 import Partition
@@ -602,7 +603,7 @@ def url_save(url, filename, mode="wb", headers={"User-Agent":"TulipCC/4.0"}):
             return "OK"
         return world_web.grab_bytes_direct(url, headers=headers).then(lambda x: next(x))
     else:
-        import urequests
+        import tuliprequests as urequests
         d = urequests.get(url, headers = headers).save(filename,mode)
         return d
 
@@ -611,7 +612,7 @@ def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
         import world_web
         return world_web.grab_bytes_direct(url, headers=headers)
     else:
-        import urequests
+        import tuliprequests as urequests
         c = urequests.get(url, headers = headers)
         return c
 
@@ -619,7 +620,8 @@ def url_get(url, headers={"User-Agent":"TulipCC/4.0"}):
 def url_put(url, filename, headers={"User-Agent":"TulipCC/4.0"}):
     if(board()=="WEB"):
         return webnyi()
-    import urequests, os
+    import os
+    import tuliprequests as urequests
     filesize = os.stat(filename)[6]
     f = open(filename, 'rb')
     put_response = urequests.put(

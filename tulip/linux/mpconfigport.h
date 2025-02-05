@@ -64,7 +64,7 @@
 #endif
 
 #ifndef MICROPY_PY_SYS_PATH_DEFAULT
-#define MICROPY_PY_SYS_PATH_DEFAULT ".frozen:~/.micropython/lib:/usr/lib/micropython"
+#define MICROPY_PY_SYS_PATH_DEFAULT ".frozen"
 #endif
 
 #define MP_STATE_PORT MP_STATE_VM
