@@ -3,6 +3,7 @@ freeze("$(PORT_DIR)/modules", "apa106.py")
 freeze("$(PORT_DIR)/modules", "inisetup.py")
 freeze("$(PORT_DIR)/modules", "espnow.py")
 freeze("$(PORT_DIR)/modules", "flashbdev.py")
+require("bundle-networking")
 
 include("$(MPY_DIR)/extmod/asyncio")
 
