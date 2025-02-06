@@ -56,8 +56,8 @@ Module['ready'] = new Promise((resolve, reject) => {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.toString().substring(0, location.pathname.toString().lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/tulipcc-20250206114854.data';
-      var REMOTE_PACKAGE_BASE = 'tulipcc-20250206114854.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/tulipcc-20250206150530.data';
+      var REMOTE_PACKAGE_BASE = 'tulipcc-20250206150530.data';
       if (typeof Module['locateFilePackage'] === 'function' && !Module['locateFile']) {
         Module['locateFile'] = Module['locateFilePackage'];
         err('warning: you defined Module.locateFilePackage, that has been renamed to Module.locateFile (using your locateFilePackage for now)');
@@ -197,10 +197,10 @@ Module['FS_createPath']("/tulip4/sys/im", "tiny_town", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250206114854.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250206150530.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250206114854.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/tulipcc-20250206150530.data');
 
       if (!Module.preloadResults) Module.preloadResults = {};
 
@@ -937,13 +937,13 @@ function createExportWrapper(name) {
 // end include: runtime_exceptions.js
 var wasmBinaryFile;
 if (Module['locateFile']) {
-  wasmBinaryFile = 'tulipcc-20250206114854.wasm';
+  wasmBinaryFile = 'tulipcc-20250206150530.wasm';
   if (!isDataURI(wasmBinaryFile)) {
     wasmBinaryFile = locateFile(wasmBinaryFile);
   }
 } else {
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  wasmBinaryFile = new URL('tulipcc-20250206114854.wasm', import.meta.url).href;
+  wasmBinaryFile = new URL('tulipcc-20250206150530.wasm', import.meta.url).href;
 }
 
 function getBinarySync(file) {
@@ -11579,7 +11579,7 @@ run();
 })();
 ;
 export default _createMicroPythonModule;/*
- * This file is part of the MicroPython project, http://tulipcc-20250206114854.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250206150530.org/
  *
  * The MIT License (MIT)
  *
@@ -11607,7 +11607,7 @@ export default _createMicroPythonModule;/*
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `tulipcc-20250206114854.mjs`.
+// - url: location to load `tulipcc-20250206150530.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -11968,7 +11968,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node tulipcc-20250206114854.mjs`.
+    // Check if this module is run from the command line via `node tulipcc-20250206150530.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -11992,7 +11992,7 @@ if (
 }
 
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250206114854.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250206150530.org/
  *
  * The MIT License (MIT)
  *
@@ -12233,7 +12233,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://tulipcc-20250206114854.org/
+ * This file is part of the MicroPython project, http://tulipcc-20250206150530.org/
  *
  * The MIT License (MIT)
  *

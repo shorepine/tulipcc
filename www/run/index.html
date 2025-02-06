@@ -43,24 +43,10 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250206114854.mjs" type="module"></script>
-      <script type="text/javascript" src="amy-20250206114854.js"></script>
+      <script src="tulipcc-20250206150530.mjs" type="module"></script>
+      <script type="text/javascript" src="amy-20250206150530.js"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
-
-      <!-- Matomo -->
-      <script>
-        var _paq = window._paq = window._paq || [];
-         /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
-         _paq.push(['trackPageView']);
-         _paq.push(['enableLinkTracking']);
-         try {(function() { var u="https://tulipcomputer.matomo.cloud/";
-          _paq.push(['setTrackerUrl', u+'matomo.php']);
-          _paq.push(['setSiteId', '1']);
-          var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
-          g.async=true; g.src='https://cdn.matomo.cloud/tulipcomputer.matomo.cloud/matomo.js'; s.parentNode.insertBefore(g,s);
-        })()} catch(err) { console.log("matomo CORS error"); }
-      </script>
   </head>
 
   <body>
@@ -194,32 +180,47 @@
             </div>
           </div>
         </form>
-
-        <!-- Tutorial pills block -->
-        <div class="pt-4">
-          <h6>Try some examples:</h6>
-          <div id="tutorials"></div>
-        </div>
-
       </div>
     </div>
 
     <div class="container my-2">
       <div class="px-2 py-4">
         <h2>Welcome to a version of <a href="https://tulip.computer/">Tulip</a> running locally in your browser.</h2>
+        <!-- Tutorial pills block -->
+        <div class="py-2">
+          <div class="card">
+            <div class="card-header">
+              Try some examples! They'll load and run in the Tulip window above.
+            </div>
+            <div class="card-body" id="tutorials"></div>
+          </div>
+        </div>
         <p>
-          Tulip is a creative computer with lots of music and graphics functionality. <A HREF="https://tulip.computer">You can buy a hardware Tulip for $59.</A> 
-          This version of Tulip is a simulator, running all the same code. The filesystem is stored in your browsers' storage. There are some small changes and things we haven't yet ported over to the web, see below.
+          Tulip is a creative computer running Python with lots of music and graphics functionality. <A HREF="https://tulip.computer">You can buy a hardware Tulip for $59.</A> 
         </p>
-        <p>If you've never used Tulip before, please check out these getting started tips:</p>
-        <ul>
-          <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md">Getting Started on Tulip</A></li>
-          <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md">Make music tutorial</A></li>
-          <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/tulip_api.md">Full Tulip API</A></li>
-          <li><A href="https://github.com/orgs/shorepine/projects/1">Roadmap</A></li>
-        </ul>
+        <P>
+          This version of Tulip runs locally live in your browser. The files are stored in your browsers' storage. It's almost perfectly like a real Tulip, including support for MIDI, graphics, synthesis and Python. There's some small changes and things we haven't yet ported over to the web, see below.
+        </p>
+        <p>If you've never used Tulip before, please check out the examples above and these getting started tips:</p>
+        <div class='row'>
+          <div class='col-4'>
+            <ul>
+              <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md">Getting Started on Tulip</A></li>
+              <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md">Make music tutorial</A></li>
+              <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/tulip_api.md">Full Tulip API</A></li>
+              <li><A href="https://github.com/orgs/shorepine/projects/1">Roadmap</A></li>
+            </ul>
+          </div>
+          <div class='col-8'>
+            <P>
+              <a href="https://tulip.computer"><img src="/img/tulip-shop-1.jpg" width=500/></a>
+            </P>
+          </div>
+        </div>
+
         <h3>Some notes on the web port:</h3>
         <ul>
+          <li>If you're using Private Browsing mode, we can't keep your files around after you reload. And on <A HREF="https://bugzilla.mozilla.org/show_bug.cgi?id=1320796">Firefox Private Browsing, the page won't work at all.</A> Don't worry, we're not doing anything nefarious here. No data leaves this page, unless you choose to connect to Tulip World to send a message or download a program. 
           <li>MIDI works on almost all browsers <a href="https://webmidijs.org/docs/getting-started/">except for Safari</a></li>
           <li>Tulip World works, as does <code>url_save</code>. Other Tulip network calls may return a JS "promise" rather than a Python result.</li>
           <li>Anything relying on <code>input</code> will fail. Most things using <code>time.sleep()</code> will sleep, but will block all other callbacks, audio and graphics from updating. Instead, use callbacks, <code>asyncio</code> or <code>tulip.defer</code> if you want to block or defer execution in Tulip.</li>
