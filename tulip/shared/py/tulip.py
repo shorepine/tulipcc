@@ -264,8 +264,8 @@ def seq_bpm(bpm=None):
 
 def seq_ppq(ppq=None):
     if(ppq is not None):
-        print("You can no longer set PPQ in Tulip. It's fixed at %d" % (amy.SEQUENCER_PPQ))
-    return amy.SEQUENCER_PPQ    
+        print("You can no longer set PPQ in Tulip. It's fixed at %d" % (amy.AMY_SEQUENCER_PPQ))
+    return amy.AMY_SEQUENCER_PPQ    
 
 def remap():
     if(board()=="WEB"):

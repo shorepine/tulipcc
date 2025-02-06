@@ -91,11 +91,10 @@ async function start_midi() {
   }
 }
 
-async function runCodeBlock() {
+async function runCodeBlock(py) {
   // If audio hasn't yet started, the on-first-click audio starter is still running, so wait 1s so we don't glitch.
   if(!audio_started) await sleep_ms(1000);
 
-  var py = editor.getValue();
   // Reset AMY's timebase every run here, so people can use absolute sequence / timestamps in AMY code.
   amy_reset_sysclock();
   try {
@@ -105,6 +104,11 @@ async function runCodeBlock() {
     // Print any error message to the REPL. Maybe there's a more direct way to raise JS errors to MPY
     await mp.runPythonAsync("print(\"\"\"" + e.message + "\"\"\")");
   }
+}
+
+async function runEditorBlock() {
+  var py = editor.getValue();
+  runCodeBlock(py);
 }
 
 async function shareCode() {
@@ -316,6 +320,18 @@ async function tulip_world_upload_file(pwd, filename, username, description) {
         body: data,
     });
 }
+async function show_tutorials() {
+    document.getElementById('showhidetutorials').style.display='none'; 
+    document.getElementById('canvas').classList.remove("canvas-solo");
+    document.getElementById('canvas').classList.add("canvas-editor");
+}
+
+async function hide_tutorials() {
+    document.getElementById('showhidetutorials').style.display='';
+    document.getElementById('canvas').classList.remove("canvas-editor");
+    document.getElementById('canvas').classList.add("canvas-solo");
+}
+
 
 async function show_editor() {
     document.getElementById('showhideeditor').style.display='none'; 
@@ -328,6 +344,68 @@ async function hide_editor() {
     document.getElementById('showhideeditor').style.display='';
     document.getElementById('canvas').classList.remove("canvas-editor");
     document.getElementById('canvas').classList.add("canvas-solo");
+}
+
+const example_snippets = [{
+    description:"Download and run a <b>pattern sequencer</b>",
+    code:`
+def rt():
+    run('tracks')
+world.download('tracks',done_cb=rt)
+`},{
+    description:"Run a drum machine",
+    code:`
+run('drums')
+`},{
+    description:"Set up a MIDI channel to play a piano",
+    code:`
+midi.config.reset()
+midi.config.add_synth(synth.PatchSynth(6, 256))
+`},{
+    description:"Move a sprite around the screen with the keyboard",
+    code:`
+run("planet_boing")
+`},{
+    description:"Chat on the Tulip World BBS",
+    code:`
+world.username="anonymous"
+run('worldui')
+`},{
+    description:"Play a complex FM synthesis example",
+    code:`
+run('xanadu')
+`},{
+    description:"Scrolling backgrounds",
+    code:`
+run('parallax')
+`},{
+    description:"Buttons, sliders and entry widgets",
+    code:`
+run("buttons")
+`}
+]
+async function run_snippet(i) {
+    var code = example_snippets[i].code;
+    var ti = document.getElementById('textinput');
+    // maybe send a keydown message to the textinput instead
+    //for (let i = 0; i < code.length; i++) {
+        //const event = new KeyboardEvent('keydown', {'a'});
+        //ti.dispatchEvent(event);
+        //mp.runPythonAsync('tulip.key_send('+code.charCodeAt(i).toString()+')');
+    //}
+    await mp.runPythonAsync("print(\"\"\"" + code + "\"\"\")");
+    runCodeBlock(code);
+}
+
+async function fill_examples() {
+    colors = ['bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning text-dark', 'bg-info text-dark', 'bg-light text-dark', 'bg-dark'];
+    h = '';
+    var i = 0;
+    for (i=0;i<example_snippets.length;i++) { 
+        h += ' <a href="#" onclick="run_snippet('+i.toString()+');"><span class="badge rounded-pill ' + colors[i%colors.length] + '">'+example_snippets[i].description+'</span></a>';
+    } 
+    document.getElementById('tutorials').innerHTML = h;
+
 }
 
 async function start_tulip() {
