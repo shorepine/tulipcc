@@ -49,8 +49,8 @@ class DrumSwitch(UIElement):
     def update_amy(self):
         row = app.rows[self.row]
         if(self.on):
-            length = int((amy.SEQUENCER_PPQ/2) * 16) 
-            offset = int(amy.SEQUENCER_PPQ/2) * self.col
+            length = int((amy.AMY_SEQUENCER_PPQ/2) * 16) 
+            offset = int(amy.AMY_SEQUENCER_PPQ/2) * self.col
             app.synth.note_on(note=row.midi_note, sequence = "%d,%d,%d" % (offset, length, self.tag))
         else:
             # Turn off note, the rest of stuff doesn't matter
@@ -272,7 +272,7 @@ def run(screen):
         app.rows[2].objs[i].set(True)
 
     app.current_beat = int((seq_ticks() / 24) % 16)
-    app.slot = seq_add_callback(beat_callback, int(amy.SEQUENCER_PPQ/2))
+    app.slot = seq_add_callback(beat_callback, int(amy.AMY_SEQUENCER_PPQ/2))
     app.present()
 
 

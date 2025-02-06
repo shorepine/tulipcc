@@ -67,7 +67,7 @@ class ArpeggiatorSynth:
         self.current_step = -1
         # Semaphore to the run loop to start going.
         self.running = True
-        self.slot = tulip.seq_add_callback(self.step_callback, int(amy.SEQUENCER_PPQ/2))
+        self.slot = tulip.seq_add_callback(self.step_callback, int(amy.AMY_SEQUENCER_PPQ/2))
 
     def stop(self):
         self.running = False

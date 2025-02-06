@@ -36,18 +36,15 @@
       <script src="tree.js"></script>
       <link rel="stylesheet" href="treejs.css" id="treejs_styles">
       <script src="./mini-coi.js" scope="./"></script>
-      <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
-      crossorigin="anonymous"
-      ></script>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
       <script src="https://cdn.jsdelivr.net/npm/webmidi@latest/dist/iife/webmidi.iife.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
       <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250205113402.mjs" type="module"></script>
-      <script type="text/javascript" src="amy-20250205113402.js"></script>
+      <script src="tulipcc-20250205161148.mjs" type="module"></script>
+      <script type="text/javascript" src="amy-20250205161148.js"></script>
       <script type="text/javascript" src="spss.js"></script>
 
       <!-- Matomo -->
@@ -131,6 +128,9 @@
           <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="show_editor();">
             Show code editor
           </button>
+          <button class="btn btn-sm btn-warning" type="button" id="showhidetutorials" data-bs-toggle="collapse" data-bs-target="#collapseTutorials" aria-expanded="true" aria-controls="collapseTutorials" onclick="show_tutorials();">
+            Show tutorials
+          </button>
         </p>
       
 
@@ -148,23 +148,24 @@
               </section>
             </div>
           </div>
+
           <div class="row">
             <div class="col-3">
               <div class="align-self-center my-3"> 
-                <button type="button" title="Refresh Tulip file list" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
-                <button type="button" title="Download file from Tulip" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
-                <button type="button" title="Upload file to Tulip into the selected folder" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
-                <button type="button" title="Load selected Tulip file into editor" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
+                <button type="button" title="Refresh Tulip file list" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
+                <button type="button" title="Download file from Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
+                <button type="button" title="Upload file to Tulip into the selected folder" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
+                <button type="button" title="Load selected Tulip file into editor" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
               </div>
             </div>
             <div class="col-9">
               <div class="align-self-center my-3"> 
-                <button type="button" title="Save editor contents to file on Tulip into the selected folder" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-chevron-circle-left"></i></button>
-                <button type="button" title="Run editor contents in Tulip" class="btn btn-sm btn-success" onclick="runCodeBlock()"><i class="fas fa-running"></i></button> 
-                <button type="share" title="Share editor contents (and filename, if given) as a URL" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
-                <input type='text' title="Filename for saving or sharing" id="editor_filename" class="small" placeholder="Filename"/>
+                <button type="button" title="Save editor contents to file on Tulip into the selected folder" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-chevron-circle-left"></i></button>
+                <button type="button" title="Run editor contents in Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="runEditorBlock()"><i class="fas fa-running"></i></button> 
+                <button type="share" title="Share editor contents (and filename, if given) as a URL" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
+                <input type='text' title="Filename for saving or sharing" data-toggle="tooltip" data-placement="top"  id="editor_filename" class="small" placeholder="Filename"/>
                 <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_editor();"
-                  data-bs-toggle="collapse" title="Hide editor" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
+                  data-bs-toggle="collapse" title="Hide editor" data-toggle="tooltip" data-placement="top"  data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
                   Hide
                 </button>
               </div>
@@ -172,11 +173,17 @@
           </div>
         </div>
 
+        <div class="tutorials collapse" id="collapseTutorials">
+          <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_tutorials();"
+            data-bs-toggle="collapse" title="Hide tutorials" data-toggle="tooltip" data-placement="top"  data-bs-target="#collapseTutorials" aria-expanded="true" aria-controls="collapseTutorials">
+            Hide
+          </button>
+        </div>
+
         <!-- Fake textarea to capture keystrokes to the SDL canvas -->
         <textarea id="textinput" autocapitalize="off" rows="1"></textarea>
         
         <!-- Tulip's SDL canvas -->
-
         <canvas id="canvas" tabindex=0 class="canvas-solo"></canvas>
 
         <!-- MIDI settings panel if MIDI is available -->
@@ -196,6 +203,9 @@
             </div>
           </div>
         </form>
+
+        <div id="tutorials" class="pt-4">
+        </div>
       </div>
     </div>
 
@@ -256,6 +266,10 @@
       document.querySelector('#canvas').addEventListener('click', function() {
         document.getElementById("textinput").focus({preventScroll:true});
       });
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip({delay: { "show": 1000, "hide": 100 }})
+      }) 
+      fill_examples();
     </script>
   </body>
 </html>

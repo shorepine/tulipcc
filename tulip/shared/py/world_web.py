@@ -98,29 +98,9 @@ def ls(count=10): # prints latest count files
     unique_files(count=count).then(lambda x: do_next(x))
 
 
-def download(filename, username=None, limit=5000, chunk_size=4096):
-    got = None
-    # Check for an extension
-    if('.' not in filename[-5:]):
-        filename = filename + ".tar"
-    grab("messages", n=limit, mtype="files").then(lambda x: do_next(x))
-
+def download(filename, username=None, limit=5000, chunk_size=4096, done_cb = None):
     def do_next(files):
-        for file in files:
-            if(file["filename"] == filename):
-                if username is None or username==file['username']:
-                    got = file
-                    break
-        if got is not None:
-            age_nice = nice_time(got["age_ms"])
-            grab_url = got["url"] # Will get the latest (most recent) file with that name
-            grab_bytes("urlget", url=got['url']).then(lambda x: save_finished(x))
-        else:
-            if(username is None):
-                print("Could not find %s on Tulip World" % (filename))
-            else:
-                print("Could not find %s by %s on Tulip World" % (filename, username))
-        
+        got = None
         def save_finished(x):
             r = open(filename, 'wb')
             r.write(bytes(x))
@@ -130,6 +110,31 @@ def download(filename, username=None, limit=5000, chunk_size=4096):
                 print("Unpacking %s. Run it with run('%s')" % (filename, filename[:-4]))
                 tulip.tar_extract(filename, show_progress=False)
                 os.remove(filename)
+            if(done_cb is not None): done_cb()
+
+        for file in files:
+            if(file["filename"] == filename):
+                if username is None or username==file['username']:
+                    got = file
+                    break
+        if got is not None:
+            age_nice = nice_time(got["age_ms"])
+            grab_url = got["url"] # Will get the latest (most recent) file with that name
+            return grab_bytes("urlget", url=got['url']).then(lambda x: save_finished(x))
+        else:
+            if(username is None):
+                print("Could not find %s on Tulip World" % (filename))
+            else:
+                print("Could not find %s by %s on Tulip World" % (filename, username))
+
+    # Check for an extension
+    if('.' not in filename[-5:]):
+        filename = filename + ".tar"
+    return grab("messages", n=limit, mtype="files").then(lambda x: do_next(x))
+
+    
+        
+        
 
 def post_message(message):
     if(username is None):
