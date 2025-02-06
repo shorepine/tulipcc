@@ -115,20 +115,18 @@ config = None
 
 arpeggiator = arpegg.ArpeggiatorSynth(synth=None)
 
-def ensure_midi_config():
+def add_default_synths():
+    """Add the default synths (Juno on Chan1, drums on 10) e.g. after config.reset()."""
     global config
-    if not config:
-        # Tulip defaults, 6 note polyphony on channel 1
-        # drum machine always on channel 10
-        # utility sine wave bleeper on channel 16
-        config = MidiConfig(show_warnings=True)
-        # The "system bleep" synth
-        config.add_synth(channel=16, synth=OscSynth(num_voices=1))
-        # GeneralMidi Drums.
-        config.add_synth(channel=10, synth=DrumSynth(num_voices=10))
-        # Default Juno synth on Channel 1.
-        config.add_synth(channel=1, synth=PatchSynth(patch_number=0, num_voices=6))
-        config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
+    # utility sine wave bleeper on channel 16 - the "system bleep" synth
+    # (which for the moment steals one of the drum machine oscs, I think).
+    config.add_synth(channel=16, synth=OscSynth(num_voices=1))
+    # drum machine always on channel 10
+    # GeneralMidi Drums.
+    config.add_synth(channel=10, synth=DrumSynth(num_voices=10))
+    # Default Juno synth on Channel 1.
+    config.add_synth(channel=1, synth=PatchSynth(patch_number=0, num_voices=6))
+    config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
 
 
 # Hooks for Arpeggiator UI control from MIDI input CCs.
@@ -232,8 +230,6 @@ WARNED_MISSING_CHANNELS = set()
 # midi.py's own python midi callback. you can remove this if you don't want it active
 def midi_event_cb(midi_message):
     """Callback that takes MIDI note on/off to create Note objects."""
-    ensure_midi_config()
-
     # Ignore single value messages (clock, etc) for now.
     if(len(midi_message)<2): 
         return
@@ -314,11 +310,17 @@ def startup_bleep():
 
 
 def deferred_midi_config(t):
+    # Create the global midi config structure
+    global config
+    config = MidiConfig(show_warnings=True)
+    # Instantiate default synths
+    add_default_synths()
+    # Wire up the midi control routing
     setup_midi_codes()
     setup_global_midi_cc_bindings()
     tulip.midi_callback(c_fired_midi_event)
     start_default_callback()
-    ensure_midi_config()
+
 
 def setup():
     deferred_midi_config(None)
