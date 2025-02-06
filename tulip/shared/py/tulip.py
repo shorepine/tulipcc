@@ -514,6 +514,17 @@ def exists(fn):
     return True
 
 
+def download_and_run(name):
+    if board()=="WEB":
+        import world_web as world
+    else:
+        import world
+    def rt():
+        run(name)
+    world.download(name,done_cb=rt)
+    print("Downloading '%s'... please wait..." % (name))
+
+
 # reloads, runs and cleans up a Tulip "app"
 # Some ways to run things
 # (1) run('module') # imports module.py in your cwd
