@@ -43,8 +43,9 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250205161148.mjs" type="module"></script>
-      <script type="text/javascript" src="amy-20250205161148.js"></script>
+      <script src="tulipcc-20250206114854.mjs" type="module"></script>
+      <script type="text/javascript" src="amy-20250206114854.js"></script>
+      <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
 
       <!-- Matomo -->
@@ -53,12 +54,12 @@
          /* tracker methods like "setCustomDimension" should be called before "trackPageView" */
          _paq.push(['trackPageView']);
          _paq.push(['enableLinkTracking']);
-         (function() { var u="https://tulipcomputer.matomo.cloud/";
+         try {(function() { var u="https://tulipcomputer.matomo.cloud/";
           _paq.push(['setTrackerUrl', u+'matomo.php']);
           _paq.push(['setSiteId', '1']);
           var d=document, g=d.createElement('script'), s=d.getElementsByTagName('script')[0];
           g.async=true; g.src='https://cdn.matomo.cloud/tulipcomputer.matomo.cloud/matomo.js'; s.parentNode.insertBefore(g,s);
-        })();
+        })()} catch(err) { console.log("matomo CORS error"); }
       </script>
   </head>
 
@@ -128,9 +129,6 @@
           <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="show_editor();">
             Show code editor
           </button>
-          <button class="btn btn-sm btn-warning" type="button" id="showhidetutorials" data-bs-toggle="collapse" data-bs-target="#collapseTutorials" aria-expanded="true" aria-controls="collapseTutorials" onclick="show_tutorials();">
-            Show tutorials
-          </button>
         </p>
       
 
@@ -173,13 +171,6 @@
           </div>
         </div>
 
-        <div class="tutorials collapse" id="collapseTutorials">
-          <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_tutorials();"
-            data-bs-toggle="collapse" title="Hide tutorials" data-toggle="tooltip" data-placement="top"  data-bs-target="#collapseTutorials" aria-expanded="true" aria-controls="collapseTutorials">
-            Hide
-          </button>
-        </div>
-
         <!-- Fake textarea to capture keystrokes to the SDL canvas -->
         <textarea id="textinput" autocapitalize="off" rows="1"></textarea>
         
@@ -204,8 +195,12 @@
           </div>
         </form>
 
-        <div id="tutorials" class="pt-4">
+        <!-- Tutorial pills block -->
+        <div class="pt-4">
+          <h6>Try some examples:</h6>
+          <div id="tutorials"></div>
         </div>
+
       </div>
     </div>
 

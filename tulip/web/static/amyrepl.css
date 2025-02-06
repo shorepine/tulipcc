@@ -51,7 +51,7 @@ canvas {
 }
 .cm-s-lucario .CodeMirror-gutters { color: #002b36; }
 .cm-s-lucario .CodeMirror-cursor { border-left: solid thin #E6C845; }
-.cm-s-lucario .CodeMirror-linenumber { color: #f8f8f2; }
+.cm-s-lucario .CodeMirror-linenumber { color: #a8a8a2; }
 .cm-s-lucario .CodeMirror-selected { background: #243443; }
 .cm-s-lucario .CodeMirror-line::selection, .cm-s-lucario .CodeMirror-line > span::selection, .cm-s-lucario .CodeMirror-line > span > span::selection { background: #243443; }
 .cm-s-lucario .CodeMirror-line::-moz-selection, .cm-s-lucario .CodeMirror-line > span::-moz-selection, .cm-s-lucario .CodeMirror-line > span > span::-moz-selection { background: #243443; }

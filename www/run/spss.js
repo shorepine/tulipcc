@@ -7,6 +7,7 @@ var midiOutputDevice = null;
 var midiInputDevice = null;
 var editor = null;
 var treeView = null;
+var editor_shown = false;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -320,81 +321,35 @@ async function tulip_world_upload_file(pwd, filename, username, description) {
         body: data,
     });
 }
-async function show_tutorials() {
-    document.getElementById('showhidetutorials').style.display='none'; 
-    document.getElementById('canvas').classList.remove("canvas-solo");
-    document.getElementById('canvas').classList.add("canvas-editor");
-}
-
-async function hide_tutorials() {
-    document.getElementById('showhidetutorials').style.display='';
-    document.getElementById('canvas').classList.remove("canvas-editor");
-    document.getElementById('canvas').classList.add("canvas-solo");
-}
-
 
 async function show_editor() {
     document.getElementById('showhideeditor').style.display='none'; 
     if(editor) editor.refresh();
     document.getElementById('canvas').classList.remove("canvas-solo");
     document.getElementById('canvas').classList.add("canvas-editor");
+    editor_shown = true;
 }
 
 async function hide_editor() {
     document.getElementById('showhideeditor').style.display='';
     document.getElementById('canvas').classList.remove("canvas-editor");
     document.getElementById('canvas').classList.add("canvas-solo");
+    editor_shown = false;
 }
 
-const example_snippets = [{
-    description:"Download and run a <b>pattern sequencer</b>",
-    code:`
-def rt():
-    run('tracks')
-world.download('tracks',done_cb=rt)
-`},{
-    description:"Run a drum machine",
-    code:`
-run('drums')
-`},{
-    description:"Set up a MIDI channel to play a piano",
-    code:`
-midi.config.reset()
-midi.config.add_synth(synth.PatchSynth(6, 256))
-`},{
-    description:"Move a sprite around the screen with the keyboard",
-    code:`
-run("planet_boing")
-`},{
-    description:"Chat on the Tulip World BBS",
-    code:`
-world.username="anonymous"
-run('worldui')
-`},{
-    description:"Play a complex FM synthesis example",
-    code:`
-run('xanadu')
-`},{
-    description:"Scrolling backgrounds",
-    code:`
-run('parallax')
-`},{
-    description:"Buttons, sliders and entry widgets",
-    code:`
-run("buttons")
-`}
-]
+
 async function run_snippet(i) {
-    var code = example_snippets[i].code;
-    var ti = document.getElementById('textinput');
-    // maybe send a keydown message to the textinput instead
-    //for (let i = 0; i < code.length; i++) {
-        //const event = new KeyboardEvent('keydown', {'a'});
-        //ti.dispatchEvent(event);
-        //mp.runPythonAsync('tulip.key_send('+code.charCodeAt(i).toString()+')');
-    //}
-    await mp.runPythonAsync("print(\"\"\"" + code + "\"\"\")");
-    runCodeBlock(code);
+    var code = example_snippets[i].c.trimStart();
+    if(!editor_shown) {
+        var editorElement = document.getElementById('collapseEditor');
+        var bsCollapse = new bootstrap.Collapse(editorElement, { toggle: true });
+        show_editor();
+    }
+    editor.setValue(code);
+    setTimeout(function () { editor.save() }, 100);
+    setTimeout(function () { editor.refresh() }, 250);
+    setTimeout(function () { window.scrollTo(0,0) }, 300);
+    runEditorBlock();
 }
 
 async function fill_examples() {
@@ -402,7 +357,7 @@ async function fill_examples() {
     h = '';
     var i = 0;
     for (i=0;i<example_snippets.length;i++) { 
-        h += ' <a href="#" onclick="run_snippet('+i.toString()+');"><span class="badge rounded-pill ' + colors[i%colors.length] + '">'+example_snippets[i].description+'</span></a>';
+        h += ' <a href="#" onclick="run_snippet('+i.toString()+');"><span class="badge rounded-pill ' + colors[i%colors.length] + '">'+example_snippets[i].d+'</span></a>';
     } 
     document.getElementById('tutorials').innerHTML = h;
 
