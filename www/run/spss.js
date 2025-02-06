@@ -98,6 +98,7 @@ async function runCodeBlock(py) {
 
   // Reset AMY's timebase every run here, so people can use absolute sequence / timestamps in AMY code.
   amy_reset_sysclock();
+  await sleep_ms(50);
   try {
     mp.runPythonAsync(py);
   } catch (e) {
@@ -353,7 +354,11 @@ async function run_snippet(i) {
 }
 
 async function fill_examples() {
-    colors = ['bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning text-dark', 'bg-info text-dark', 'bg-light text-dark', 'bg-dark'];
+    colors = [
+        'bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning text-dark', 'bg-info text-dark', 
+        'bg-dark', 'border border-primary text-dark', 'border border-secondary text-dark',
+        'border border-success text-dark', 'border border-danger text-dark', 'border border-warning text-dark', 
+        'border border-info text-dark','border border-light text-dark', 'border border-dark'];
     h = '';
     var i = 0;
     for (i=0;i<example_snippets.length;i++) { 
