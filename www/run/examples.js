@@ -7,7 +7,7 @@ tulip.download_and_run('tracks')
 `},{
     d:"Run a drum machine",
     c:`
-run('drums')
+tulip.run('drums')
 `},{
     d:"Set up a MIDI channel to play a piano",
     c:`
@@ -40,20 +40,20 @@ if __name__ == "__main__":
     c:`
 # Set your own username!!
 world.username="anonymous"
-run('worldui')
+tulip.run('worldui')
 `},{
     d:"Play a complex FM synthesis example",
     c:`
-run('xanadu')
+tulip.run('xanadu')
 `},{
     d:"Scrolling backgrounds",
     c:`
 # Use control-Q to exit
-run('parallax')
+tulip.run('parallax')
 `},{
     d:"Buttons, sliders and entry widgets",
     c:`
-run("buttons")
+tulip.run("buttons")
 `},{
     d:"Load a .wav sample and play a chord",
     c:`
