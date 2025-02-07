@@ -86,8 +86,8 @@ def fm_note_patch(duration=7.5):
 
 def Note(pitch, vel=1.0, time=0, pitch_shift=0, second_delay=200, use_third=False):
     """Composite 'note' triggers up to 3 delayed instances."""
-    global START, synths
-    timestamp = START + time
+    global synths
+    timestamp = time
     pitch += 1.0  # 1 octave up
     note = pitch2note(pitch)
     synths[0].note_on(note, vel, timestamp)
@@ -97,8 +97,8 @@ def Note(pitch, vel=1.0, time=0, pitch_shift=0, second_delay=200, use_third=Fals
 
 def NoteFM(pitch, vel=1.0, time=0, duration=8000):
     """Play a note on the FM voice."""
-    global START, synths
-    timestamp = START + time
+    global synths
+    timestamp = time
     synths[3].note_on(pitch2note(pitch), vel, timestamp)
     # Note off
     #synth3.note_off(pitch2note(pitch), timestamp + duration)
@@ -126,31 +126,29 @@ def xanadu_stage1(x):
     tulip.defer(xanadu_stage2, None, 250)
 
 def xanadu_stage2(x):    
-    global START
-    # Make all our times be a little behind real time.  Make the offset larger if the script doesn't keep up.
-    START = amy.millis() + 1000
+    amy.send(reset=amy.RESET_TIMEBASE)
 
     # F#7addB chord on a guitar
-    broken_chord(4.06, [.07, 1.0, 1.04, 1.05, 1.10], start_time=0, pitch_shift=0.029, second_delay=1000, use_third=True)
+    broken_chord(4.06, [.07, 1.0, 1.04, 1.05, 1.10], start_time=1000, pitch_shift=0.029, second_delay=1000, use_third=True)
 
     # D6add9 chord on a guitar
-    broken_chord(4.02, [.07, 1.0, 1.04, 0.09, 1.02], start_time=7500)
+    broken_chord(4.02, [.07, 1.0, 1.04, 0.09, 1.02], start_time=9500)
 
     # Bmajadd11 chord on a guitar
-    broken_chord(4.11, [.07, 1.0, 1.04, 2.00, 1.05], start_time=15000)
+    broken_chord(4.11, [.07, 1.0, 1.04, 2.00, 1.05], start_time=16000)
 
     # Amajadd9 chord on a guitar
-    broken_chord(4.09, [.07, 2.0, 1.04, 1.02, 1.07], start_time=22500)
+    broken_chord(4.09, [.07, 2.0, 1.04, 1.02, 1.07], start_time=23500)
 
     # Bmajadd11 chord on a guitar
-    broken_chord(4.11, [.07, 1.0, 1.04, 2.0, 1.05], start_time=30000)
+    broken_chord(4.11, [.07, 1.0, 1.04, 2.0, 1.05], start_time=31000)
 
     # Gmaj6 chord on a guitar
-    broken_chord(4.07, [.07, 1.0, 1.04, 2.04, 1.09], start_time=37500)
+    broken_chord(4.07, [.07, 1.0, 1.04, 2.04, 1.09], start_time=38500)
 
     # F#7addB chord on a guitar
-    broken_chord(5.06, [.07, 1.0, 1.04, 1.05, 1.10], start_time=45000, pitch_shift=0.029, second_delay=1000, use_third=True)
-    tulip.defer(xanadu_stage3, None, 60000)
+    broken_chord(5.06, [.07, 1.0, 1.04, 1.05, 1.10], start_time=46000, pitch_shift=0.029, second_delay=1000, use_third=True)
+    tulip.defer(xanadu_stage3, None, 61000)
 
 def xanadu_stage3(x):
     synth.PatchSynth.reset()

@@ -80,19 +80,19 @@ rabbit_game/
 
 The main Python script must be the name of the package. This script needs to explicitly `import tulip` or `amy` or others if you are using those. Then, you and your users can start the package by `run('rabbit_game')` from the directory that has the folder in it. The package will be cleaned up after when they exit. 
 
-By default, a package is imported (for example, `import rabbit_game`.) If your `rabbit_game.py` has code that runs on import, it will run. If you are writing a game or other thing that needs full access to Tulip, put an infinite loop in your code. Users can use `Control-C` to quit and they will be back at the REPL with the program's imports removed from memory.
+By default, a package is imported (for example, `import rabbit_game`.) If your `rabbit_game.py` has code that runs on import, it will run. If it has a `def run(app):` method, a `UIScreen` full screen window will be created that the user can switch to or quit. 
 
 We ship a couple of game-like examples, check them out:
  * [`bunny_bounce`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/bunny_bounce/bunny_bounce.py)
  * [`planet_boing`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/planet_boing/planet_boing.py)
-
+ * [`parallax`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/parallax.py)
 
 The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package', username)` or `world.download('package')`. 
 
 We put a few examples in `/sys/ex`, and if you `run('app')`, it will look in your current folder and the `/sys/ex` folder.
 
 
-### Multitasking apps 
+### Apps 
 
 If you want your package to run alongside other apps, and show a task bar with a quit and app-switch button, you need to use a package that implements `UIScreen`. `UIScreen`'s API is [detailed below](#uiscreen), but a simplest example is:
 
@@ -103,9 +103,11 @@ def run(app):
     app.present() # I'm ready, show my app
 ```
 
-Put that in a package called `program`, and when `run('program')` is called, your app will start and show a task bar. Multitasking apps have to return immediately after setup (the `run` function) and rely on callbacks to process data and user input. We have callbacks for almost everything you'd need: keyboard input, MIDI input, music sequencer ticks and touch input. `UIScreen` also sets up callbacks for "activating" (switching to the app or first run), "deactivating" (switching away from the app) or quitting. 
+Put that in a package called `program`, and when `run('program')` is called, your app will start and show a task bar. Multitasking apps have to return immediately after setup (the `run` function) and rely on callbacks to process data and user input. We have callbacks for  everything you'd need: keyboard input, MIDI input, music sequencer ticks and touch input. `UIScreen` also sets up callbacks for "activating" (switching to the app or first run), "deactivating" (switching away from the app) or quitting. 
 
-`UIScreen` apps should use LVGL/`tulip.UIX` classes for their UI, so that the UI appears and disappears automatically during switching. This is especially important on Tulip CC hardware, where we ensure the UI switching drawing does not interrupt music or other time sensitive callbacks. You can also use other Tulip drawing commands for the UI, but be mindful that the BG (and often TFB) will be cleared on switching away from your app, so you'll have to redraw those on your activate callback. 
+If you set your `UIScreen` up as a `game` (by setting `app.game = True` in your `def run(app):` before `app.present()`), it will handle things like clearing the sprites and BG, and making sure keypresses only go to the full screen window. `game` mode `UIScreen`s also do not show a task bar up top. That means users will have to know to use `control-Tab` and `control-Q` to switch and quit from your game.
+
+`UIScreen` apps should use LVGL/`tulip.UIX` classes for their UI, so that the UI appears and disappears automatically during switching. This is especially important on Tulip CC hardware, where we ensure the UI switching drawing does not interrupt music or other time sensitive callbacks. You can also use other Tulip drawing commands for the UI, but be mindful that the BG (and often TFB) will be cleared on switching away from your app, so you'll have to redraw those on your activate callback. If you have a `game` mode on, the `deactivate` callback will clear the BG and sprite layer for you.
 
 The REPL itself is treated as a (special) multitasking app, always first in the list and cannot be quit. 
 
@@ -590,7 +592,7 @@ tulip.display_stop() # Tulip will still run
 tulip.display_start()
 
 # Sets a frame callback python function to run every frame 
-# See the Game class below for an easier way to make games
+# See the game mode in UIScreen for an easier way to make games
 game_data = {"frame_count": 0, "score": 0}
 def game_loop(data):
     update_inputs(data)
@@ -725,7 +727,6 @@ tulip.tfb_stop()
 tulip.tfb_start()
 
 # If you want to keep the existing TFB around, you can save it to a temporary buffer and recall it
-# This is used in the Game() class to keep the REPL around after running a game, and the editor
 tulip.tfb_save()
 tulip.tfb_restore()
 
@@ -779,30 +780,7 @@ for c in tulip.collisions():
 tulip.sprite_clear()
 ```
 
-## Convenience classes for sprites and games
-
-We provide a few classes to make it easier to make games and work with sprites, `Sprite`, `Player`, and `Game`.
-
-```python
-def game_loop(game):
-    # game.X available
-
-# make your game a subclass of Game. This will set up the display, reset the sprites, etc, and provide a quit()
-class MyGame(Game):
-    def __init__(self):
-        # debug=True will keep the TFB on the screen and not remove sprites/BG after finishing
-        super().init(debug=False)
-        # .. game setup stuff
-        tulip.frame_callback(game_loop, self)
-
-game = MyGame()
-try:
-    while game.run:
-        time.sleep_ms(100)
-except KeyboardInterrupt:
-    game.quit() # will clean up 
-
-```
+## Convenience classes for sprites 
 
 You can access sprites using the `tulip_sprite_X` commands, or use our convenience `Sprite` class to manage memory and IDs for you:
 
@@ -834,7 +812,7 @@ p.load("me.png", 32, 32)
 p.joy_move() # will update the position based on the joystick
 ```
 
-See `world.download('planet_boing')` for a fleshed out example of using the `Game` and `Sprite` classes.
+See `planet_boing` in `/sys/ex/` for a fleshed out example of using the `Game` and `Sprite` classes.
 
 # Can you help? 
 

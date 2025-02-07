@@ -83,16 +83,22 @@ class UIScreen():
     default_offset_x = 10
     default_offset_y = 100
 
-    def __init__(self, name, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
+    def __init__(self, name=None, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
         activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
+
+        # support running run(tulip.UIScreen()) in one-off temporary scripts
+        if(name is None):
+            name = "anon"
+
         self.screen = lv.obj() # a screen, will be display size (which is actually 2x H_RES)
         self.group = lv.obj(self.screen) # the group to write UI elements to in the screen
         self.group.set_width(tulip.screen_size()[0])
         self.group.set_height(tulip.screen_size()[1])
         self.group.set_style_radius(0,lv.PART.MAIN)
         self.group.set_style_border_width(0, lv.PART.MAIN)
-
+        self.app_dir = tulip.pwd()
         lv_depad(self.group)
+        self.game = False
         self.keep_tfb = keep_tfb
         self.handle_keyboard = handle_keyboard
         self.bg_color = bg_color
@@ -162,10 +168,15 @@ class UIScreen():
     def alttab_callback(self, e):
         if(len(running_apps)>1):
             self.active = False
-
             if(self.deactivate_callback is not None):
                 self.deactivate_callback(self)
-    
+
+            if(self.game):
+                tulip.frame_callback()
+                tulip.Sprite.reset()
+                tulip.bg_clear()
+                tulip.key_scan(0)
+
             # Find the next app in the list (assuming dict is ordered by insertion, I think it is)
             apps = list(running_apps.items())
             for i,app in enumerate(apps):
@@ -175,13 +186,23 @@ class UIScreen():
     def screen_quit_callback(self, e):
         if(self.name!='repl'):
             import gc
+
             if(self.deactivate_callback is not None):
                 self.deactivate_callback(self)
+
             if(self.quit_callback is not None):
                 self.quit_callback(self)
             self.running = False
             self.active = False
             self.remove_items()
+
+            if(self.game):
+                tulip.frame_callback()
+                tulip.collisions() # resets collision
+                tulip.Sprite.reset()  # resets sprite counter
+                tulip.bg_clear()
+                tulip.tfb_update()
+                tulip.key_scan(0)
             try:
                 del running_apps[self.name]
             except KeyError:
@@ -191,6 +212,8 @@ class UIScreen():
 
     def quit(self):
         self.screen_quit_callback(None)
+
+
     # add an obj (or list of obj) to the screen, aligning by the last one added,
     # or the object relative (if you want to for example make a new line)
     # or x,y directly if you want that
@@ -221,7 +244,8 @@ class UIScreen():
         global current_app_string
         current_app_string = self.name
         self.active = True
-        self.draw_task_bar()
+        if(not self.game):
+            self.draw_task_bar()
         self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
         
         lv.screen_load(self.screen)
@@ -240,10 +264,15 @@ class UIScreen():
                 tulip.tfb_start()
             else:
                 tulip.tfb_stop()
+            if(self.game):
+                tulip.key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
 
         if(self.activate_callback is not None):
-            self.activate_callback(self)
+            # We defer the activate callback as some apps will draw to the BG, and LVGL may get there first
+            tulip.defer(self.activate_callback, self, 200)
 
+        # These set (in modtulip/C) the python callbacks for quit and switch. 
+        # This lets control-Q and control-TAB control them 
         tulip.ui_quit_callback(self.screen_quit_callback)
         tulip.ui_switch_callback(self.alttab_callback)
 

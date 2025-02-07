@@ -744,10 +744,10 @@ STATIC mp_obj_t tulip_sprite_move(size_t n_args, const mp_obj_t *args) {
             sprite_x_px[spriteno] = x;
             sprite_y_px[spriteno] = y;
         } else {
-            fprintf(stderr, "bad sprite xy %d %d\n", x,y);
+            //fprintf(stderr, "bad sprite xy %d %d\n", x,y);
         }
     } else {
-        fprintf(stderr, "move bad spriteno %d\n", spriteno);
+        //fprintf(stderr, "move bad spriteno %d\n", spriteno);
     }
     return mp_const_none;
 }
