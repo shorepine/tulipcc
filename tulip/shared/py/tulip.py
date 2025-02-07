@@ -28,44 +28,6 @@ def rgb(px0, wide=False):
 from ui import *
 from editor import edit
 
-# A class for making a game that runs in a UIScreen. Clears and sets up the screen for a game
-class UIScreenGame():
-    def __init__(self):
-        key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
-        Sprite.reset()  # resets sprite counter and RAM
-        collisions() # resets collision
-        amy.reset()
-
-    def quit(self):
-        collisions() # resets collision
-        Sprite.reset()  # resets sprite counter
-        key_scan(0)
-        amy.reset()
-
-
-# A class for making a game. Clears and sets up the screen for a game
-class Game():
-    def __init__(self, debug=False):
-        self.debug = debug
-        if(not debug):
-            tfb_stop()
-        key_scan(1) # enter direct scan mode, keys will not hit the REPL this way
-        Sprite.reset()  # resets sprite counter and RAM
-        collisions() # resets collision
-        amy.reset()
-        self.run = 1
-
-    def quit(self):
-        self.run = 0
-        # Done. Clean up a bit
-        frame_callback()
-        collisions() # resets collision
-        if(not self.debug):
-            Sprite.reset()  # resets sprite counter
-            gpu_reset()
-            tfb_restore()
-            tfb_start()
-        key_scan(0)
 
 # Class to handle sprites, takes care of memory
 class Sprite():
@@ -535,6 +497,9 @@ def download_and_run(name):
 # (6) run('bunny_bounce') # finds this in /sys/app/bunny_bounce
 # (7) run("calibrate") # finds this in /sys/ex/calibrate.py
 
+# how about
+# (8) run(className) -- runs a class name in a single file
+
 def run(module_string):
     import sys
     before_run = sys.modules.copy()
@@ -577,7 +542,6 @@ def run(module_string):
         if(hasattr(actual_module, 'run')):
             # Make the app screen
             screen = tulip.UIScreen(module_string, bg_color=0)
-            screen.app_dir = pwd()
             # Run the app
             try:
                 actual_module.run(screen)

@@ -255,7 +255,13 @@ def quit(screen):
 def run(screen):
     global app 
     app = screen # we can use the screen obj passed in as a general "store stuff here" class, as well as inspect the UI 
-    app.synth = midi.config.synth_per_channel[10]
+    try:
+        app.synth = midi.config.synth_per_channel[10]
+    except KeyError:
+        midi.config.reset()
+        midi.add_default_synths()
+        app.synth = midi.config.synth_per_channel[10]
+
     app.offset_y = 10
     app.set_bg_color(0)
     app.quit_callback = quit

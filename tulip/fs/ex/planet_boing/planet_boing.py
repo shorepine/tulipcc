@@ -1,23 +1,22 @@
 import random, math, tulip, amy
 
 (WIDTH, HEIGHT) = tulip.screen_size()
-
+MAX_BLOB_MODELS = 10
+MAX_BLOBS = 20
 
 class Blob(tulip.Sprite):
     DEBOUNCE = 20 # frames
     DEWORM = 15
-    BLOB_SPRITE_START = -1
-    BLOBS_EXTANT = 0
 
-    def __init__(self, diameter = 32, copy_of=None):
+    def __init__(self, app, diameter = 32, copy_of=None):
         super().__init__(copy_of=copy_of)
         name = "copyblob"
 
-        if  Blob.BLOBS_EXTANT < PlanetBoing.MAX_BLOB_MODELS:
-            name = "pix/blob_texture_0" + str(Blob.BLOBS_EXTANT) + ".png"
+        if  app.BLOBS_EXTANT < MAX_BLOB_MODELS:
+            name = app.app_dir+"/pix/blob_texture_0" + str(app.BLOBS_EXTANT) + ".png"
         
-        if Blob.BLOB_SPRITE_START < 0:
-            Blob.BLOB_SPRITE_START = self.sprite_id
+        if app.BLOB_SPRITE_START < 0:
+            app.BLOB_SPRITE_START = self.sprite_id
 
         self.x = random.randrange(int(tulip.Sprite.SCREEN_WIDTH/2)) + int(tulip.Sprite.SCREEN_WIDTH/4)
         self.y = random.randrange(int(tulip.Sprite.SCREEN_HEIGHT/2)) + int(tulip.Sprite.SCREEN_HEIGHT/4)
@@ -35,12 +34,12 @@ class Blob(tulip.Sprite):
             self.load(name, 32, 32)
         except:
             print("hmm, didn't like ", name)
-            print("BLOBS_EXTANT:", Blob.BLOBS_EXTANT)
+            print("BLOBS_EXTANT:", app.BLOBS_EXTANT)
 
    
         self.follow()
 
-        Blob.BLOBS_EXTANT += 1
+        app.BLOBS_EXTANT += 1
 
     def update_flag(self, has_flag):
         self.has_flag = has_flag
@@ -105,7 +104,6 @@ class Blob(tulip.Sprite):
 
 # A sprite who can move from the joystick/keyboard
 class DooglePlayer(tulip.Sprite):
-
     X = 0
     R = 1
     L = 2
@@ -122,7 +120,6 @@ class DooglePlayer(tulip.Sprite):
     RUD = 13
     LUD = 14
     RLUD = 15
-
 
     def __init__(self, speed=0):
         super().__init__()
@@ -165,8 +162,8 @@ class DooglePlayer(tulip.Sprite):
 
 
 class BlobPlayer(Blob, DooglePlayer):
-    def __init__(self, speed=0):
-        super().__init__()
+    def __init__(self, app, speed=0):
+        super().__init__(app)
         self.x_v = 0
         self.y_v = 0
         self.x_a = 0.0
@@ -187,9 +184,9 @@ class Bang(tulip.Sprite):
     bang_frames = -1
     bang_timeout = 5
 
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
-        self.load("pix/bang_texture_03.png", 32, 32)
+        self.load(app.app_dir+"/pix/bang_texture_03.png", 32, 32)
 
         Bang.bang_bit = tulip.sprite_bitmap(self.mem_pos, 32*32)
 
@@ -207,7 +204,7 @@ class Bang(tulip.Sprite):
         #tulip.bg_bitmap(int(self.x), int(self.y), 32, 32, Bang.bang_bit)
 
 class Flag(tulip.Sprite):
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
         self.width = 39
         self.height = 39
@@ -228,7 +225,7 @@ class Flag(tulip.Sprite):
 
 class Thrust(tulip.Sprite):
     
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
         self.width = 32
         self.height = 32
@@ -311,112 +308,91 @@ class Thrust(tulip.Sprite):
         tulip.Sprite.mem_pointer += 32*32
 
 class WormHole(tulip.Sprite):
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
-        self.load("pix/wormhole.png", 32, 32)
+        self.load(app.app_dir+"/pix/wormhole.png", 32, 32)
 
 
-class PlanetBoing(tulip.UIScreenGame):
-    MAX_BLOB_MODELS = 10
-    MAX_BLOBS = 20
-    BLOBS_ACTIVE = 0
-        
-    def __init__(self, num_blobs = 4):
-        super().__init__()
+def setup(app):
+    app.BLOBS_ACTIVE = 0
+    app.BLOB_SPRITE_START = -1
+    app.num_blobs = 4        
+    app.BLOBS_EXTANT = 0
+    app.next_blob_at = 10
+    amy.reset()
+    amy.reverb(0.8)
 
-        self.next_blob_at = 10
-        
-        amy.reverb(0.8)
-
-        self.score = Score()
            
-
-        self.num_blobs = num_blobs
-
-
-        self.wormhole1 = WormHole() # sprite 1 & 2 for wormholes
-        self.wormhole1.moveto(random.randrange(int(tulip.Sprite.SCREEN_WIDTH * 0.2),
-                                               int(tulip.Sprite.SCREEN_WIDTH * 0.35)),
-                              random.randrange(int(tulip.Sprite.SCREEN_HEIGHT * 0.1),
-                                               int(tulip.Sprite.SCREEN_HEIGHT * 0.8)))
-        self.wormhole1.on()        
-        self.wormhole2 = WormHole()
-        self.wormhole2.moveto(random.randrange(int(tulip.Sprite.SCREEN_WIDTH * 0.65),
+    app.wormhole1 = WormHole(app) # sprite 1 & 2 for wormholes
+    app.wormhole1.moveto(random.randrange(int(tulip.Sprite.SCREEN_WIDTH * 0.2),
+                                           int(tulip.Sprite.SCREEN_WIDTH * 0.35)),
+                          random.randrange(int(tulip.Sprite.SCREEN_HEIGHT * 0.1),
+                                           int(tulip.Sprite.SCREEN_HEIGHT * 0.8)))
+    app.wormhole1.on()        
+    app.wormhole2 = WormHole(app)
+    app.wormhole2.moveto(random.randrange(int(tulip.Sprite.SCREEN_WIDTH * 0.65),
                                                int(tulip.Sprite.SCREEN_WIDTH * 0.9)),
                               random.randrange(int(tulip.Sprite.SCREEN_HEIGHT * 0.2),
                                                int(tulip.Sprite.SCREEN_HEIGHT * 0.8)))
-        self.wormhole2.on()
+    app.wormhole2.on()
         
-        self.thrust = Thrust()
-        self.thrust.x = 500
-        self.thrust.y = 250
-        #self.thrust.move()
-        #self.thrust.on()
+    app.thrust = Thrust(app)
+    app.thrust.x = 500
+    app.thrust.y = 250
+    app.flag = Flag(app)
 
-        self.flag = Flag()
+    app.player = BlobPlayer(app) # sprite 4 for player
+    app.flag.x = app.player.x
+    app.flag.y = app.player.y
+    app.flag.move()
+    app.flag.on()
 
-        self.player = BlobPlayer() # sprite 4 for player
-        self.flag.x = self.player.X
-        self.flag.y = self.player.y
-        self.flag.move()
-        self.flag.on()
+    app.blobs = [app.player]
+    for i in range(MAX_BLOBS):
+        new_blob(app)
 
-        self.blobs = [self.player]
-        #for i in range(self.num_blobs):
-        for i in range(PlanetBoing.MAX_BLOBS):
-            self.new_blob()
+    for i in range(app.num_blobs):
+        next_blob_on(app)
 
-        for i in range(self.num_blobs):
-            self.next_blob_on()
-
-        self.bang = Bang() # bang on top?
-            
-        self.frame_counter = 0            
+    app.bang = Bang(app) # bang on top?    
+    app.frame_counter = 0            
         
 
+def draw_background(app, extra=None):
+    tulip.bg_rect(0,0, WIDTH, HEIGHT,167, 1)
+    a = 10
+    a_span = (a * 2) + 2
+    pi = 3.14159
+    ph_incr = pi/10
+    ph = 0.0
+    for x in range(tulip.Sprite.SCREEN_WIDTH):
+        y = int(math.sin(ph) * a) + a
+        ph += ph_incr
+        tulip.bg_pixel(x,y+tulip.Sprite.SCREEN_HEIGHT,15)
+    app.score.draw()
 
+def new_blob(app):
+    b = None
+    if len(app.blobs) < MAX_BLOB_MODELS:
+        b = Blob(app)
+    else:
+        if len(app.blobs) < MAX_BLOBS:
+            blob_copy_num = len(app.blobs) % MAX_BLOB_MODELS
+            b = Blob(app,copy_of = app.blobs[blob_copy_num])
+    if b != None:
+        app.blobs.append(b)
+    return b
 
-    def draw_background(self, extra=None):
-        tulip.bg_rect(0,0, WIDTH, HEIGHT,167, 1)
-        a = 10
-        a_span = (a * 2) + 2
-        pi = 3.14159
-        ph_incr = pi/10
-        ph = 0.0
-        for x in range(tulip.Sprite.SCREEN_WIDTH):
-            y = int(math.sin(ph) * a) + a
-            ph += ph_incr
-            tulip.bg_pixel(x,y+tulip.Sprite.SCREEN_HEIGHT,15)
-        self.score.draw()
-
-        #for y in range(1,tulip.Sprite.SCREEN_HEIGHT,a_span):
-        #    x_start = random.randrange(tulip.Sprite.SCREEN_WIDTH)
-        #    tulip.bg_blit(x_start,tulip.Sprite.SCREEN_HEIGHT,tulip.Sprite.SCREEN_WIDTH,a_span,0,y)
-
-    def new_blob(self):
-        b = None
-        if len(self.blobs) < PlanetBoing.MAX_BLOB_MODELS:
-            b = Blob()
-        else:
-            if len(self.blobs) < PlanetBoing.MAX_BLOBS:
-                blob_copy_num = len(self.blobs) % PlanetBoing.MAX_BLOB_MODELS
-                b = Blob(copy_of = self.blobs[blob_copy_num])
-
-        if b != None:
-            self.blobs.append(b)
-        return b
-
-    def next_blob_on(self):
-        #print("nbo:", PlanetBoing.BLOBS_ACTIVE, PlanetBoing.MAX_BLOBS)
-        if PlanetBoing.BLOBS_ACTIVE < PlanetBoing.MAX_BLOBS:
-            self.blobs[PlanetBoing.BLOBS_ACTIVE].on()
-            PlanetBoing.BLOBS_ACTIVE += 1
-            return True
-        else:
-            return False
+def next_blob_on(app):
+    if app.BLOBS_ACTIVE < MAX_BLOBS:
+        app.blobs[app.BLOBS_ACTIVE].on()
+        app.BLOBS_ACTIVE += 1
+        return True
+    else:
+        return False
 
 class Score():
-    def __init__(self):
+    def __init__(self, app):
         self.score = 0
 
     def draw(self):
@@ -431,94 +407,85 @@ class Score():
 
 
 # This is called every frame by the GPU.
-def game_loop(g):
-    g.frame_counter += 1
+def game_loop(app):
+    # This is a bit of a hack for web; the frame scheduler can happen after we quit/alttab away from this app, so we check
+    if(not app.active): return
+
+    app.frame_counter += 1
     # Turn off the bang
     if Bang.bang_frames >= 0:
         Bang.bang_frames += 1
     if Bang.bang_frames > Bang.bang_timeout:
-        g.bang.off()
+        app.bang.off()
         Bang.bang_frames = -1
-    g.thrust.off()
+    app.thrust.off()
     # Move the player blob according to joy input
-    move_dir = g.player.joy_move()
+    move_dir = app.player.joy_move()
     if move_dir > 0:
         #print("moved: ", move_dir)
-        g.thrust.thrust(move_dir, g.player)
+        app.thrust.thrust(move_dir, app.player)
 
     # Check for collisions...
     collisions = tulip.collisions()
     culled_collisions = [c for c in collisions if 
-                         g.bang.sprite_id not in c and 
-                         g.thrust.sprite_id not in c and 
-                         g.flag.sprite_id not in c]
+                         app.bang.sprite_id not in c and 
+                         app.thrust.sprite_id not in c and 
+                         app.flag.sprite_id not in c]
 
     for (a,b) in culled_collisions:
 
             # check for wormhole trips
             # this should be a list of connected wormholes...
-        if(a == g.wormhole1.sprite_id):
-            g.blobs[b-Blob.BLOB_SPRITE_START].wormholize(g.frame_counter,g.wormhole2)
-        elif(a == g.wormhole2.sprite_id):
-            g.blobs[b-Blob.BLOB_SPRITE_START].wormholize(g.frame_counter,g.wormhole1)
+        if(a == app.wormhole1.sprite_id):
+            app.blobs[b-app.BLOB_SPRITE_START].wormholize(app.frame_counter,app.wormhole2)
+        elif(a == app.wormhole2.sprite_id):
+            app.blobs[b-app.BLOB_SPRITE_START].wormholize(app.frame_counter,app.wormhole1)
         
         else:
             # a and b are sprite numbers, but we want to access the blob array, 
             # which starts at zero. so we'll offset sprite numbers.
-            a -= Blob.BLOB_SPRITE_START
-            b -= Blob.BLOB_SPRITE_START
+            a -= app.BLOB_SPRITE_START
+            b -= app.BLOB_SPRITE_START
 
-            g.bang.bang(g.blobs[a], g.blobs[b], g.frame_counter)
+            app.bang.bang(app.blobs[a], app.blobs[b], app.frame_counter)
 
-            if g.blobs[a].has_flag:
-                g.blobs[a].update_flag(False)
-                g.blobs[b].update_flag(True)
-            elif g.blobs[b].has_flag:
-                g.blobs[b].update_flag(False)
-                g.blobs[a].update_flag(True)
+            if app.blobs[a].has_flag:
+                app.blobs[a].update_flag(False)
+                app.blobs[b].update_flag(True)
+            elif app.blobs[b].has_flag:
+                app.blobs[b].update_flag(False)
+                app.blobs[a].update_flag(True)
             
-            g.score.increment()
+            app.score.increment()
 
     # Update all the blob positions
-    for blob in g.blobs:
+    for blob in app.blobs:
         blob.follow() 
         if blob.has_flag:
-            g.flag.on()
-            g.flag.x = blob.x - 3
-            g.flag.y = blob.y - 3
-            g.flag.move()
+            app.flag.on()
+            app.flag.x = blob.x - 3
+            app.flag.y = blob.y - 3
+            app.flag.move()
 
-    if g.score.score >= g.next_blob_at:
-        if g.next_blob_on():
-            g.next_blob_at += 10
+    if app.score.score >= app.next_blob_at:
+        if next_blob_on(app):
+            app.next_blob_at += 10
 
-    #g.player.move()
-    #g.flag.x = g.player.x - 3
-    #g.flag.y = g.player.y - 3
-    #g.flag.move()
+def activate_callback(app):
+    setup(app)
+    draw_background(app)
+    tulip.frame_callback(game_loop, app)
 
+def deactivate_callback(app):
+    amy.reset()
 
+def run(app):
+    app.game = True
+    app.score = Score(app)
 
-def quit_callback(screen):
-    screen.game.quit()
-
-def activate_callback(screen):
-    # Register the frame callback and data
-    tulip.frame_callback(game_loop, screen.game)
-    tulip.defer(screen.game.draw_background, None, 500)
-
-def deactivate_callback(screen):
-    tulip.frame_callback()
-
-def run(screen):
-    screen.game = PlanetBoing()
-    screen.activate_callback = activate_callback
-    screen.quit_callback = quit_callback
-    screen.deactivate_callback = deactivate_callback
-    screen.present()
-
-
-
+    app.activate_callback = activate_callback
+    app.deactivate_callback = deactivate_callback
+    app.present()
 
 
 

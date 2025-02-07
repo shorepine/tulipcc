@@ -412,7 +412,9 @@ void display_invert_bg(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
                 }
             }
         }
-    } else { fprintf(stderr, "invert_bg %d %d %d %d\n", x,y,w,h); }
+    } else { 
+        //fprintf(stderr, "invert_bg %d %d %d %d\n", x,y,w,h); 
+    }
 }
 
 void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data) {
@@ -430,7 +432,9 @@ void display_set_bg_bitmap_rgba(uint16_t x, uint16_t y, uint16_t w, uint16_t h, 
                 }
             }
         }
-    } else { fprintf(stderr, "bg_bitmap_rgba %d %d %d %d\n", x,y,w,h); }
+    } else { 
+        //fprintf(stderr, "bg_bitmap_rgba %d %d %d %d\n", x,y,w,h); 
+    }
 }
 
 void display_set_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t* data) {
@@ -446,7 +450,9 @@ void display_set_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, u
                 }
             }
         }
-    } else { fprintf(stderr, "bg_bitmap_raw %d %d %d %d\n", x,y,w,h); }
+    } else { 
+        //fprintf(stderr, "bg_bitmap_raw %d %d %d %d\n", x,y,w,h); 
+    }
 }
 
 void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint8_t * data) {
@@ -457,7 +463,9 @@ void display_get_bg_bitmap_raw(uint16_t x, uint16_t y, uint16_t w, uint16_t h, u
                 data[c++] = (bg)[(((j*(H_RES+OFFSCREEN_X_PX) + i)*BYTES_PER_PIXEL) + 0)];
             }
         }
-    } else { fprintf(stderr, "get_bitmap_raw %d %d %d %d\n", x,y,w,h); }
+    } else { 
+        //fprintf(stderr, "get_bitmap_raw %d %d %d %d\n", x,y,w,h); 
+    }
 }
 
 void display_bg_bitmap_blit(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1) {
@@ -471,7 +479,9 @@ void display_bg_bitmap_blit(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t
                 }
             }
         }    
-    } else { fprintf(stderr, "bg_bitmap_blit %d %d %d %d %d %d\n", x,y,w,h, x1, y1); }
+    } else { 
+     //fprintf(stderr, "bg_bitmap_blit %d %d %d %d %d %d\n", x,y,w,h, x1, y1); 
+    }
 }
 
 void display_bg_bitmap_blit_alpha(uint16_t x,uint16_t y,uint16_t w,uint16_t h,uint16_t x1,uint16_t y1) {
@@ -488,7 +498,9 @@ void display_bg_bitmap_blit_alpha(uint16_t x,uint16_t y,uint16_t w,uint16_t h,ui
                 }
             }
         }    
-    } else { fprintf(stderr, "bg_bitmap_blit_alpha %d %d %d %d %d %d\n", x,y,w,h, x1, y1); }
+    } else { 
+        //fprintf(stderr, "bg_bitmap_blit_alpha %d %d %d %d %d %d\n", x,y,w,h, x1, y1); 
+    }
 }
 
 

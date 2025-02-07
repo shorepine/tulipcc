@@ -17,8 +17,24 @@ midi.config.add_synth(synth.PatchSynth(6, 256))
 `},{
     d:"Move a sprite around the screen with the keyboard",
     c:`
-# Use control-Q to exit
-run("planet_boing")
+# Use control-q to exit
+import tulip
+def game_loop(app):
+    app.player.joy_move()
+    app.player.move()
+def game_setup(app):
+    app.player = tulip.Player()
+    app.player.load(tulip.root_dir()+"/sys/im/tiny_town/tile_0105.png", 16, 16)
+    app.player.on()
+    app.player.x = 300
+    app.player.y = 300
+    tulip.frame_callback(game_loop, app)
+def run(app):
+    app.game = True
+    app.activate_callback = game_setup
+    app.present()
+if __name__ == "__main__":
+    run(tulip.UIScreen())
 `},{
     d:"Chat on the Tulip World BBS",
     c:`
@@ -51,6 +67,7 @@ for i,note in enumerate(music.Chord('F:min7').midinotes()):
 `},{
     d:"Load a small holiday animation with music",
     c:`
+# use control-q to quit
 tulip.download_and_run('xmas')
 `},{
     d:"Construct a custom FM synth and play a progression",
@@ -59,16 +76,20 @@ import midi, music
 # WOOD PIANO amy setup, 4-op FM synth
 
 midi.config.reset()
-amy.start_store_patch()
-amy.send(osc=1, bp0="0,1,5300,0,0,0", phase=0.25, ratio=1, amp="0.3,0,0,1,0,0")
-amy.send(osc=2, bp0="0,1,3400,0,0,0", phase=0.25, ratio=0.5, amp="1.68,0,0,1,0,0")
-amy.send(osc=3, bp0="0,1,6700,0,0,0", phase=0.25, ratio=1, amp="0.23,0,0,1,0,0")
-amy.send(osc=4, bp0="0,1,3400,0,0,0", phase=0.25, ratio=0.5, amp="1.68,0,0,1,0,0")
-amy.send(osc=0, wave=amy.ALGO, algorithm=5, algo_source="1,2,3,4", bp0="0,1,147,0", bp1="0,1,179,1", freq="0,1,0,0,1,1")
-amy.stop_store_patch(1024)
+try:
+    already_stored
+except NameError:
+    already_stored = False
+if(not already_stored):
+    amy.start_store_patch()
+    amy.send(osc=1, bp0="0,1,5300,0,0,0", phase=0.25, ratio=1, amp="0.3,0,0,1,0,0")
+    amy.send(osc=2, bp0="0,1,3400,0,0,0", phase=0.25, ratio=0.5, amp="1.68,0,0,1,0,0")
+    amy.send(osc=3, bp0="0,1,6700,0,0,0", phase=0.25, ratio=1, amp="0.23,0,0,1,0,0")
+    amy.send(osc=4, bp0="0,1,3400,0,0,0", phase=0.25, ratio=0.5, amp="1.68,0,0,1,0,0")
+    amy.send(osc=0, wave=amy.ALGO, algorithm=5, algo_source="1,2,3,4", bp0="0,1,147,0", bp1="0,1,179,1", freq="0,1,0,0,1,1")
+    amy.stop_store_patch(1024)
 
 s = synth.PatchSynth(8, 1024)
-
 p = music.Progression(["I", "vi", "IV", "V"], music.Key("E:maj"))
 chord_len = 2000
 note_len = 500
