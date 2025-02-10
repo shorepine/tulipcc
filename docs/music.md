@@ -82,7 +82,7 @@ To set this up to play with the sequencer, we will add a **sequence**.  A sequen
 
 For now, let's make a `Sequence` of 8 quarter notes -- the `4` defines the `1/4` note and the `8` is the length. 
 
-(Hit the `Tab` key for the line that have four spaces before the code to make an indent. Hit enter a few times at the end until you see a `>>>` prompt again (not a `...`.) )
+(When finishing typing this, hit enter a few times at the end until you see a `>>>` prompt again (not a `...`.) )
 
 ```python
 seq = sequencer.Sequence(4, 8) 
@@ -95,7 +95,6 @@ To unpack this a litte, we're creating a 8 1/4 note long pattern `(4,8)` and the
 You should now be hearing a synth pattern play every quarter note in time with the drums. It will keep going! The first parameter of `sequencer.Sequence` is the `divider` of the callback. This tells Tulip how often to call the callback. A `4` means `1/4`, a quarter note. If you made it `8`, it would be an eighth note. 
 
 ```python
-seq.
 seq.clear() # the sequence should stop 
 seq = sequencer.Sequence(8, 8)  
 for i in range(8):

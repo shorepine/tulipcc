@@ -132,8 +132,14 @@ Try it out with `run('worldui')`. You'll first want to run `world.username="my_n
 
 You can also call the underlying Tulip World APIs:
 
+
 ```python
-import world
+# On Tulip Web, you should use world_web
+if(tulip.board()=="WEB"):
+    import world_web as world
+else:
+    import world
+
 messages = world.messages(n=500, mtype='files') # returns a list of latest files (not unique ones)
 messages = world.messages(n=100, mtype='text') # returns a list of latest chat messages
 
@@ -172,7 +178,7 @@ edit() # no filename
 
 We include [LVGL 9](https://lvgl.io) for use in making your own user interface. LVGL is optimized for constrained hardware like Tulip. You can build nice UIs with simple Python commands. You can use LVGL directly by simply `import lvgl` and setting up your own widgets. Please check out [LVGL's examples page](https://docs.lvgl.io/8.3/examples.html) for inspiration. (As of this writing, their Python examples have not been ported to our version of LVGL (9.0.0) but most things should still work.) 
 
-It's best to build user interfaces inside a `UIScreen` multitasking Tulip package. Our `UIScreen` will handle placing elements on your app and dealing with multitasking. On Tulip CC, drawing lots of UI elements to the screen will steal all of the GDMA buffer, which may impact audio. So we slow down loading of elements in the `UIScreen` class. 
+It's best to build user interfaces inside a `UIScreen` multitasking Tulip package. Our `UIScreen` will handle placing elements on your app and dealing with multitasking. 
 
 For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/buttons.py) example, or more complete examples like [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py), [`juno6`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/juno6.py), [`wordpad`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/wordpad.py) etc in `/sys/ex`.
 
@@ -369,7 +375,6 @@ tulip.wifi("ssid", "password")
 ip_address = tulip.ip() # returns None if not connected
 
 # Save the contents of a URL to disk (needs wifi)
-# Note: the screen will blank during this operation 
 bytes_read = tulip.url_save("https://url", "filename.ext")
 
 # Get the contents of a URL to memory (needs wifi, and be careful of RAM use)
@@ -412,6 +417,48 @@ Tulip can also route AMY signals to CV outputs connected over Tulip CC's I2C por
 **See the [music tutorial](music.md) for a LOT more information on music in Tulip.**
 
 ![With Alles](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/nicoboard-alles.jpg)
+
+
+### synth
+
+We provide a wrapper on AMY that manages synthesizers you can allocate. These handle voice stealing and finding oscillators for the underlying synth patches. They're recommended to use for most use cases. If you need more direct control, you can use AMY.
+
+You can use `synth.PatchSynth` to create a synthesizer based on our built-in patches. 0-127 are Juno-6 patches, 128-255 are DX-7 patches, 256 is a piano. You can create your own patches as well.
+
+```python
+syn = synth.PatchSynth(num_voices=2, patch_number=143) # two note polyphony, patch 143 is DX7 BASS 2
+```
+
+If you want to play multimbral tones, like a Juno-6 bass alongside a DX7 pad:
+
+```python
+synth1 = synth.PatchSynth(num_voices=1, patch_number=0)  # Juno
+synth2 = synth.PatchSynth(num_voices=1, patch_number=128)  # DX7
+synth1.note_on(50, 1)
+synth2.note_on(50, 0.5)
+synth1.note_off(50)
+```
+
+The `OscSynth` synth lets yo directly control parameters of an AMY oscillator as a managed synth:
+
+```python
+syn = synth.OscSynth(wave=amy.PCM, patch=10) # PCM wave type, patch=10 (808 Cowbell)
+```
+
+You can use `OscSynth` and `amy.load_sample` to load samples from WAV files on Tulip storage:
+
+```python
+amy.load_sample('sample.wav', patch=50)
+s = synth.OscSynth(wave=amy.PCM, patch=50)
+s.note_on(60, 1.0)
+```
+
+Use `syn.release()` to free up the resources for a synth.
+
+
+### Low level AMY control
+
+You can use `amy.py` to control the AMY synthesizer directly.
 
 ```python
 
@@ -503,7 +550,7 @@ Tulip can sequence any Python function, but has special handling for music `note
 
 Using our sequencer allows you to keep rock solid music timing but also schedule complex graphical or other updates that won't be audible if they're slightly delayed using the same `Sequence` API. See how we do this in the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) app.
 
-To use the music sequencer, use `seq = sequencer.Sequence(divider, length)`. Then add new events using `seq.add(position, function, [args])`. `position` is the position within the pattern to schedule `function` in. In the drum machine example, you set up a pattern of 16 16th notes, so index 0 would be the first hit, and 15 the last). You lastly pass whatever arguments you want to give to that function. `synth.note_on` takes 2 - a note number and a velocity. You can optionally pass other parameters like `pan=0.1` as keyword arguments. 
+To use the music sequencer, use `seq = sequencer.Sequence(divider, length)`. Then add new events using `seq.add(position, function, [args])`. `position` is the position within the pattern to schedule `function` in. In the drum machine example, you set up a pattern of 16 1/8th notes, so index 0 would be the first hit, and 15 the last). You lastly pass whatever arguments you want to give to that function. `synth.note_on` takes 2 - a note number and a velocity. You can optionally pass other parameters like `pan=0.1` as keyword arguments. 
 
 
 `seq.add()` returns a list of events that were added. You can keep this event around to later update or remove an individual event. `e = seq.add(0, func)` can then be used to update the sequence with a new function: `e.update(0, new_func)` or remove it with: `e.remove()`.
