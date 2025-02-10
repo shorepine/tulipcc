@@ -51,7 +51,7 @@ class DrumSwitch(UIElement):
     def update_amy(self):
         row = app.rows[self.row]
         if(self.on):
-            self.sequencer_event = app.drum_seq.add([self.col], app.synth.note_on, [row.midi_note])[0]
+            self.sequencer_event = app.drum_seq.add(self.col, app.synth.note_on, [row.midi_note])
             length = int((amy.AMY_SEQUENCER_PPQ/2) * 16) 
             offset = int(amy.AMY_SEQUENCER_PPQ/2) * self.col
         else:
@@ -285,7 +285,7 @@ def run(screen):
         app.rows[2].objs[i].set(True)
 
     app.current_beat = int((seq_ticks() / 24) % 16)
-    app.led_seq.add([0], beat_callback)
+    app.led_seq.add(0, beat_callback)
     app.present()
 
 

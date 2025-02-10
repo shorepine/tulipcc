@@ -503,10 +503,10 @@ Tulip can sequence any Python function, but has special handling for music `note
 
 Using our sequencer allows you to keep rock solid music timing but also schedule complex graphical or other updates that won't be audible if they're slightly delayed using the same `Sequence` API. See how we do this in the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) app.
 
-To use the music sequencer, use `seq = sequencer.Sequence(divider, length)`. Then add new events using `seq.add(ticks, function, [args])`. `ticks` is the list of ticks within the pattern to schedule `function` in. In the drum machine example, you set up a pattern of 16 16th notes, so index 0 would be the first hit, and 15 the last). You lastly pass whatever arguments you want to give to that function. `synth.note_on` takes 2 - a note number and a velocity. You can optionally pass other parameters like `pan=0.1` as keyword arguments. 
+To use the music sequencer, use `seq = sequencer.Sequence(divider, length)`. Then add new events using `seq.add(position, function, [args])`. `position` is the position within the pattern to schedule `function` in. In the drum machine example, you set up a pattern of 16 16th notes, so index 0 would be the first hit, and 15 the last). You lastly pass whatever arguments you want to give to that function. `synth.note_on` takes 2 - a note number and a velocity. You can optionally pass other parameters like `pan=0.1` as keyword arguments. 
 
 
-`seq.add()` returns a list of events that were added. You can keep this event around to later update or remove an individual event. `e = seq.add([0], func)[0]` can then be used to update the sequence with a new function: `e.update([0], new_func)` or remove it with: `e.remove()`.
+`seq.add()` returns a list of events that were added. You can keep this event around to later update or remove an individual event. `e = seq.add(0, func)` can then be used to update the sequence with a new function: `e.update(0, new_func)` or remove it with: `e.remove()`.
 
 Here's an example:
 
@@ -523,10 +523,10 @@ music_seq= sequencer.Sequence(8, 16) # 1/8th notes, 16 of them
 print_seq= sequencer.Sequence(8) # every 1/8th note
 for i in range(16):
     # At index i, schedule a note on for the synth, with parameters (arp_notes[i%8], 1)
-    music_seq.add([i], syn.note_on, [arp_notes[i%8], 1])
+    music_seq.add(i, syn.note_on, [arp_notes[i%8], 1])
 
 # Every 1/8th note print the current tick
-print_seq.add([0], print_every_other_note)
+print_seq.add(0, print_every_other_note)
 
 def stop():
     music_seq.clear() # Removes all scheduled notes from this sequence

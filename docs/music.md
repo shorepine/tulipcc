@@ -87,7 +87,7 @@ For now, let's make a `Sequence` of 8 quarter notes -- the `4` defines the `1/4`
 ```python
 seq = sequencer.Sequence(4, 8) 
 for i in range(8):
-    seq.add([i],  syn.note_on, [random.choice(chord), 0.6])
+    seq.add(i, syn.note_on, [random.choice(chord), 0.6])
 ```
 
 To unpack this a litte, we're creating a 8 1/4 note long pattern `(4,8)` and then adding 8 random notes of the F:min7 chord we created earlier to it. The `seq.add` first takes a parameter of which element to schedule (here, just 0, 1, 2, 3.... 7) and then the function to call (`syn.note_on`), then the arguments for that function (`random.choice(chord)` chooses a random midi note, and 0.6 is the velocity.)
@@ -99,7 +99,7 @@ seq.
 seq.clear() # the sequence should stop 
 seq = sequencer.Sequence(8, 8)  
 for i in range(8):
-    seq.add([i],  syn.note_on, [random.choice(chord), 0.6])
+    seq.add(i, syn.note_on, [random.choice(chord), 0.6])
 ```
 
 This should be twice as fast! 
@@ -113,7 +113,7 @@ def p(x):
     print("hey!")
 
 print_seq = sequencer.Sequence(2, 1)
-print_seq.add([0], p)
+print_seq.add(0,p)
 ```
 
 To stop this printing every half note, type `print_seq.clear()`. Your programs should end in a `seq.clear()` so that you can clean up after yourself!
@@ -195,7 +195,7 @@ Note that `add_synth` will stop any running synth on that channel and boot a new
 You can get a lot done in the Tulip REPL just playing around. But you'll eventually want to save your creations and run them alongside other things. Let's start up the Tulip Editor and save your first program. You can go ahead and quit the drum machine if you want, and remember to run
 
 ```
-tulip.seq_remove_callback(slot) # the synth should stop 
+seq.clear() # the synth should stop 
 ```
 
 to stop your REPL sequencer callback.
@@ -217,7 +217,7 @@ def note(t):
 def start():
     global seq
     seq = sequencer.Sequence(8, 1)
-    seq.add([0], note)
+    seq.add(0,note)
 
 def stop():
     global seq
@@ -251,7 +251,7 @@ def note(t):
 
 def start(app):
     app.seq = sequencer.Sequence(8, 1)
-    app.seq.add([0], note)
+    app.seq.add(0,note)
 
 def stop(app):
     app.seq.clear()
@@ -279,7 +279,7 @@ def run(screen):
     app.seq = None
     app.chord = music.Chord("F:min7").midinotes()
     app.syn = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
-    bpm_slider = tulip.UISlider(tulip.seq_bpm()/2.4, w=300, h=25,
+    bpm_slider = tulip.UISlider(sequencer.tempo()/2.4, w=300, h=25,
         callback=bpm_change, bar_color=123, handle_color=23)
     app.add(bpm_slider, x=300,y=200)
     app.present()
