@@ -5,47 +5,6 @@ import amy
 import tulip
 PPQ = amy.AMY_SEQUENCER_PPQ
 
-"""
-import sequencer
-sequencer.clear()
-syn = synth.PatchSynth(1, 0)
-midi.config.add_synth(channel=2, synth=syn)
-
-seq= sequencer.Sequence(8, 16)
-for i in range(16):
-    seq.add([i], syn.note_on, [60+i, 1])
-    #seq.add([i*2+1], syn.note_off, [60+i])
-
-def stop():
-    sequencer.clear()
-    syn.release()
-
-run('juno6')    
-juno6.setup_from_midi_chan_str('2')
-
-print("to stop, run stop()")
-"""
-
-""" 
-was: 
-slot = tulip.seq_add_callback(my_callback)
-tulip.seq_remove_callback(slot)
-tulip.seq_remove_callbacks()
-slot = tulip.seq_add_callback(my_callback, 6)
-tulip.seq_ticks()
-
-instead
-
-seq = sequence.Sequence(8, 16)
-seq.add([0,8], draw_a_dot, [])
-seq.clear()
-
-What this does --> first try draw-a-dot with sequence (amy)
-if it doesn't like it, do
-
-"""
-
-
 # set and/or return the tempo 
 def tempo(tempo=None):
     if(tempo is not None):
