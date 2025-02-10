@@ -4,7 +4,7 @@ import time
 import random
 import tulip
 import amy 
-
+import sequencer
 
 class ArpeggiatorSynth:
     """Create arpeggios."""
@@ -31,7 +31,7 @@ class ArpeggiatorSynth:
         self.current_active_notes = set()
         self.arpeggiate_base_notes = set()
         self.full_sequence = []
-        self.slot = -1
+        self.seq = None
         self.step_callback = self.arp_step  # Ensure bound_method_obj created just once.
 
     def note_on(self, note, vel):
@@ -67,12 +67,14 @@ class ArpeggiatorSynth:
         self.current_step = -1
         # Semaphore to the run loop to start going.
         self.running = True
-        self.slot = tulip.seq_add_callback(self.step_callback, int(amy.AMY_SEQUENCER_PPQ/2))
+        self.seq = sequencer.Sequence(8, 1)
+        self.seq.add(0, self.step_callback)
 
     def stop(self):
         self.running = False
-        if(self.slot >= 0):
-            tulip.seq_remove_callback(self.slot)
+        if(self.seq != None):
+            self.seq.clear()
+            self.seq = None
         
     def _update_full_sequence(self):
         """The full note loop given base_notes, octaves, and direction."""
