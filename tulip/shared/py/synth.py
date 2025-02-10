@@ -5,6 +5,7 @@ import amy
 import tulip
 from patches import drumkit
 from tulip_queue import Queue
+import midi
 
 class VoiceObject:
     """Object to wrap an amy voice."""
@@ -326,7 +327,7 @@ class DrumSynth(SingleOscSynthBase):
 
     def _note_on_with_osc(self, osc, note, velocity=None, time=None, sequence=None):
         if note not in self.midi_note_params:
-            if config.show_warnings and note not in DrumSynth.missing_note_warned:
+            if midi.config.show_warnings and note not in DrumSynth.missing_note_warned:
                 print("DrumSynth note_on for note %d but only %s set up." % (
                     note, str(sorted(list(self.midi_note_params.keys())))
                 ))

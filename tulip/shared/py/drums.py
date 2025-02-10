@@ -1,9 +1,10 @@
 # drums.py
 # lvgl drum machine for Tulip
 
-from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_add_callback, seq_remove_callback, seq_ticks
+from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_ticks
 import amy
 import midi
+import sequencer
 from patches import drumkit
 AMY_TAG_OFFSET = 4385 # random offset to allow other apps to share
 
@@ -20,7 +21,8 @@ class DrumSwitch(UIElement):
         super().__init__() 
         self.row = row
         self.col = col
-        self.tag = (self.row * 16) + self.col + AMY_TAG_OFFSET
+        #self.tag = (self.row * 16) + self.col + AMY_TAG_OFFSET
+        self.sequencer_event = None
         self.group.set_size(DrumSwitch.button_width+10,DrumSwitch.button_height+25)
         lv_depad(self.group)
 
@@ -49,12 +51,13 @@ class DrumSwitch(UIElement):
     def update_amy(self):
         row = app.rows[self.row]
         if(self.on):
+            self.sequencer_event = app.drum_seq.add([self.col], app.synth.note_on, [row.midi_note])[0]
             length = int((amy.AMY_SEQUENCER_PPQ/2) * 16) 
             offset = int(amy.AMY_SEQUENCER_PPQ/2) * self.col
-            app.synth.note_on(note=row.midi_note, sequence = "%d,%d,%d" % (offset, length, self.tag))
         else:
-            # Turn off note, the rest of stuff doesn't matter
-            amy.send(sequence = ",,%d" %  (self.tag))
+            if(self.sequencer_event is not None):
+                self.sequencer_event.remove()
+            self.sequencer_event = None
 
     def set(self, val):
         if(val):
@@ -240,16 +243,15 @@ class DrumRow(UIElement):
 # Called from AMY's sequencer, just updates the LEDs
 def beat_callback(t):
     global app
-    app.current_beat = int((seq_ticks() / 24) % 16)
+    app.current_beat = int((t / 24) % 16)
 
     app.leds.set((app.current_beat-1)% 16, 0)
     app.leds.set(app.current_beat, 1)
 
 def quit(screen):
-    seq_remove_callback(screen.slot)
-    # Clear all the sequenced tags -- even if we never set them, it's a no-op if so 
-    for i in range(16*7):
-        amy.send(sequence=",,%d" % (i+AMY_TAG_OFFSET))
+    # Clear all the sequenced stuff
+    screen.drum_seq.clear()
+    screen.led_seq.clear()
 
 
 def run(screen):
@@ -261,6 +263,11 @@ def run(screen):
         midi.config.reset()
         midi.add_default_synths()
         app.synth = midi.config.synth_per_channel[10]
+
+    # Drum machine sequencer - plays notes
+    app.drum_seq = sequencer.Sequence(8, 16)
+    # Graphical update sequencer -- moves the LEDs
+    app.led_seq = sequencer.Sequence(8, 1)
 
     app.offset_y = 10
     app.set_bg_color(0)
@@ -278,7 +285,7 @@ def run(screen):
         app.rows[2].objs[i].set(True)
 
     app.current_beat = int((seq_ticks() / 24) % 16)
-    app.slot = seq_add_callback(beat_callback, int(amy.AMY_SEQUENCER_PPQ/2))
+    app.led_seq.add([0], beat_callback)
     app.present()
 
 
