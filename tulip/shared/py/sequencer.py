@@ -73,14 +73,12 @@ class Sequence:
             e.remove()
             self.events = []
 
-    def add(self, positions, func, args=[], **kwargs):
-        added_events = []
-        for p in positions:
-            tick = self.event_length_ticks*p
-            try:
-                added_events.append(MusicSequenceEvent(self, tick, func, args, kwargs))
-            except TypeError: # not an AMY sequenceable event
-                added_events.append(PythonSequenceEvent(self, tick, func))
-        self.events = self.events + added_events
-        return added_events
+    def add(self, position, func, args=[], **kwargs):
+        tick = self.event_length_ticks*position
+        try:
+             e = MusicSequenceEvent(self, tick, func, args, kwargs)
+        except TypeError: # not an AMY sequenceable event
+            e = PythonSequenceEvent(self, tick, func)
+        self.events = self.events + [e]
+        return e
 

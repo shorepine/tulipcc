@@ -123,7 +123,7 @@ midi.config.add_synth(channel=2, synth=syn)
 arp_notes = [48,50,52,49,56,58,60,57]
 seq= sequencer.Sequence(8, 16)
 for i in range(16):
-    seq.add([i], syn.note_on, [arp_notes[i%8], 1])
+    seq.add(i, syn.note_on, [arp_notes[i%8], 1])
 
 def stop():
     sequencer.clear()
