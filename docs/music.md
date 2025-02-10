@@ -57,7 +57,7 @@ If you want to modify parameters of the Juno-6 synthesizer you can open `juno6`,
 
 ## The Tulip sequencer and built-in drum machine
 
-There's an 808-style drum machine that comes with Tulip, accessed via `run('drums')`. You can play back any PCM sample that ships on Tulip, or even load your own (see below.) The Tulip drum machine shares a common clock alongside any other Tulip program that uses a sequencer. This means that for example the arpeggiator in the `voices` app will stay in time with the drum machine. We'll show you how to control and use the sequencer in your own programs below.
+There's an 808-style drum machine that comes with Tulip, accessed via `run('drums')`. You can play back any PCM sample that ships on Tulip, or even load your own (see below.) The Tulip drum machine shares a common clock alongside any other Tulip program that uses a sequencer. This means that, for example, the arpeggiator in the `voices` app will stay in time with the drum machine. We'll show you how to control and use the sequencer in your own programs below.
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/drums.png" width=600>
 
@@ -71,43 +71,57 @@ First, let's grab the synth we'll be playing. Let's just use the default playing
 ```python
 import music, random
 chord = music.Chord("F:min7").midinotes()
-synth = midi.config.get_synth(channel=1)
+syn = midi.config.get_synth(channel=1)
 ```
 
 The first `import music, random` tells Tulip that we'll be using those libraries. Some (like `tulip, amy, midi`) are already included on bootup, but it's a good habit to get into when writing programs. 
 
-If you just type `chord` and enter, you'll see the contents - just a list of MIDI notes corresponding to F minor 7. And `synth` is an object you can send messages to do make tones. Try `synth.note_on(50, 0.5)` -- will play a MIDI note 50 at half volume. 
+If you just type `chord` and enter, you'll see the contents - just a list of MIDI notes corresponding to F minor 7. And `syn` is an object you can send messages to do make tones. Try `syn.note_on(50, 0.5)` -- will play a MIDI note 50 at half volume. 
 
-To set this up to play with the sequencer, we will add a **sequencer callback**.  This is just a simple Python function that will get called every sequencer "tick". You can customize how often the tick is called. We'll call ours every quarter note. But first, let's define the function that will get called. Type this into the REPL. Hit the `Tab` key for the line that have four spaces before the code to make an indent. Hit enter a few times at the end until you see a `>>>` prompt again (not a `...`.) 
+To set this up to play with the sequencer, we will add a **sequence**.  A sequence has a set length per note (like quarter note, 1/32nd note, etc) and total length of the pattern. Let's make a 8 quarter note long sequence filled with random notes in the F:min7 chord we got earlier. 
 
-```python
-def note(t):
-    synth.note_on(random.choice(chord), 0.6, time=t)
-```
+For now, let's make a `Sequence` of 8 quarter notes -- the `4` defines the `1/4` note and the `8` is the length. 
 
-This function is called `note` and will tell our `synth` to play a random note of the `chord` at velocity 0.6 at time `t`. `random.choice(x)` just means to pull a random thing out of a list, like our list of midi notes. Don't worry about `time` right now, the sequencer takes care of it! This callback can do anything -- it can draw graphics, send or read MIDI events, send or read CV values from an external synth, do something on a Wi-Fi network change synth parameters, whatever you want. But we'll start with simply playing a note every quarter note.
-
-For now, tell the callback to start:
+(Hit the `Tab` key for the line that have four spaces before the code to make an indent. Hit enter a few times at the end until you see a `>>>` prompt again (not a `...`.) )
 
 ```python
-slot = tulip.seq_add_callback(note, 48)
+seq = sequencer.Sequence(4, 8) 
+for i in range(8):
+    seq.add([i],  syn.note_on, [random.choice(chord), 0.6])
 ```
 
-You should now be hearing a synth pattern play every quarter note in time with the drums. It will keep going! The second parameter of `seq_add_callback` is the `divider` of the callback. This tells Tulip how often to call the callback. We send 48 ticks a quarter note. So giving `48` to the divider just means to call the function once a quarter note. We can instead call our `note` every 1/8th note by changing the divider to `24`:
+To unpack this a litte, we're creating a 8 1/4 note long pattern `(4,8)` and then adding 8 random notes of the F:min7 chord we created earlier to it. The `seq.add` first takes a parameter of which element to schedule (here, just 0, 1, 2, 3.... 7) and then the function to call (`syn.note_on`), then the arguments for that function (`random.choice(chord)` chooses a random midi note, and 0.6 is the velocity.)
+
+You should now be hearing a synth pattern play every quarter note in time with the drums. It will keep going! The first parameter of `sequencer.Sequence` is the `divider` of the callback. This tells Tulip how often to call the callback. A `4` means `1/4`, a quarter note. If you made it `8`, it would be an eighth note. 
 
 ```python
-tulip.seq_remove_callback(slot) # the synth should stop 
-slot = tulip.seq_add_callback(note, 24) # it should start in double time again
+seq.
+seq.clear() # the sequence should stop 
+seq = sequencer.Sequence(8, 8)  
+for i in range(8):
+    seq.add([i],  syn.note_on, [random.choice(chord), 0.6])
 ```
 
-(If you want to do more complex things that aren't in even time, you can set your divider to `1` and it will be called every single tick (with roughly 10ms between ticks) and you can decide when to emit notes.)
+This should be twice as fast! 
 
-The `slot` that gets returned by `seq_add_callback` is how you keep track of your callbacks. Every program on Tulip that uses the sequencer (like the drum machine, arpeggiator, etc) has its own callback slot. Your programs should end in a `tulip.seq_remove_callback(slot)`.
+(If you want to do more complex things that aren't in even time, you can set your divider up to `192` and it will be called every single tick (with roughly 10ms between ticks) and you can decide when to emit notes. You can also run multiple `Sequence`s at once for polyrhythms.
+
+You can also schedule any python function with a sequencer, not just a music note. This will be useful to do things like update the screen, or send something to a CV channel, or anything you can imagine. Instead of `syn.note_on` as the function, just make your own function!
+
+```python
+def p(x):
+    print("hey!")
+
+print_seq = sequencer.Sequence(2, 1)
+print_seq.add([0], p)
+```
+
+To stop this printing every half note, type `print_seq.clear()`. Your programs should end in a `seq.clear()` so that you can clean up after yourself!
 
 While you're playing with this, go back to the `voices` app and change the patch on channel 1 to something else. You'll hear your synth change immediately. You can also do this programatically: 
 
 ```python
-synth.program_change(143) # change to patch #143 (dx-7 patch BASS 2)
+syn.program_change(143) # change to patch #143 (dx-7 patch BASS 2)
 ```
 
 Juno patches use patch number 0-127, DX7 are 128-255, and the piano is at 256.
@@ -115,17 +129,17 @@ Juno patches use patch number 0-127, DX7 are 128-255, and the piano is at 256.
 You can also easily change the BPM of the sequencer -- this will impact everything using it, like the drum machine as well:
 
 ```python
-tulip.seq_bpm(120)
+sequencer.tempo(120)
 ```
 
-(Make sure to read below about the higher-accuracy sequencer API, `amy.send(sequence)`. The Tulip `seq_X` commands are simple and easy to use, but if you're making a music app that requires rock-solid timing, you'll want to use the AMY sequencer directly.)
+[(Make sure to read more about the sequencer API in the API docs!)](tulip_api.md)
 
 ## Making new synths
 
-We're using `midi.config.get_synth(channel=1)` to "borrow" the synth booted with Tulip. But if you're going to want to share your ideas with others, you should make your own `synth` that doesn't conflict with anything already running on Tulip. That's easy, you can just run:
+We're using `midi.config.get_synth(channel=1)` to "borrow" the synth that booted with Tulip. But if you're going to want to share your ideas with others, you should make your own `synth` that doesn't conflict with anything already running on Tulip. That's easy, you can just run:
 
 ```python
-synth = synth.PatchSynth(num_voices=2, patch_number=143) # two note polyphony, patch 143 is DX7 BASS 2
+syn = synth.PatchSynth(num_voices=2, patch_number=143) # two note polyphony, patch 143 is DX7 BASS 2
 ```
 
 And if you want to play multimbral tones, like a Juno-6 bass alongside a DX7 pad:
@@ -137,7 +151,7 @@ synth1.note_on(50, 1)
 synth2.note_on(50, 0.5)
 ```
 
-You can also "schedule" notes. This is useful for sequencing fast parameter changes. `synth`s accept a `time` parameter, and it's in milliseconds. For example:
+You can also "schedule" notes. This is useful for sequencing fast parameter changes. `synth`s accept a `time` parameter, and it's in milliseconds. For example, type this into the REPL.
 
 ```python
 # play a chord all at once
@@ -191,29 +205,28 @@ to stop your REPL sequencer callback.
 Type `edit('jam.py')` (or whatever you want to call it.) You'll see a black screen open. This is the editor! You can use it like a computer's editor to save code. Just start typing, let's put our program in posterity:
 
 ```python
-import tulip, midi, music, random
+import tulip, midi, music, random, sequencer
 
 chord = music.Chord("F:min7").midinotes()
-synth = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
-slot = None
+syn = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
+seq = None
 
 def note(t):
-    synth.note_on(random.choice(chord), 0.6, time=t)
+    syn.note_on(random.choice(chord), 0.6, time=t)
 
 def start():
-    global slot
-    slot = tulip.seq_add_callback(note, 24)
+    global seq
+    seq = sequencer.Sequence(8, 1)
+    seq.add([0], note)
 
 def stop():
-    global slot
-    tulip.seq_remove_callback(slot)
-    synth.release()
+    global seq
+    seq.clear()
+    syn.release()
 
 ```
 
-
 Hit `control-X` to save this (you'll see a little asterisk `*` go away in the status bar) and then either `control-Q` to quit the editor or `control-Tab` to switch back to the REPL. Now, just:
-
 
 ```
 import jam
@@ -234,21 +247,22 @@ import tulip, midi, music, random
 
 def note(t):
     global app
-    app.synth.note_on(random.choice(app.chord), 0.6, time=t)
+    app.syn.note_on(random.choice(app.chord), 0.6, time=t)
 
 def start(app):
-    app.slot = tulip.seq_add_callback(note, 24)
+    app.seq = sequencer.Sequence(8, 1)
+    app.seq.add([0], note)
 
 def stop(app):
-    tulip.seq_remove_callback(app.slot)
-    app.synth.release()
+    app.seq.clear()
+    app.syn.release()
 
 def run(screen):
     global app
     app = screen
-    app.slot = None
+    app.seq = None
     app.chord = music.Chord("F:min7").midinotes()
-    app.synth = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
+    app.syn = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
     app.present()
     app.quit_callback = stop
     start(app)
@@ -262,9 +276,9 @@ Let's add a UI component. Add a few lines to `run` so it looks like:
 def run(screen):
     global app
     app = screen
-    app.slot = None
+    app.seq = None
     app.chord = music.Chord("F:min7").midinotes()
-    app.synth = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
+    app.syn = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
     bpm_slider = tulip.UISlider(tulip.seq_bpm()/2.4, w=300, h=25,
         callback=bpm_change, bar_color=123, handle_color=23)
     app.add(bpm_slider, x=300,y=200)
@@ -277,7 +291,7 @@ And also add a new function, above the `run(screen)`. This is the callback from 
 
 ```python
 def bpm_change(event):
-    tulip.seq_bpm(event.get_target_obj().get_value()*2.4)
+    sequencer.tempo(event.get_target_obj().get_value()*2.4)
 ```
 
 Now quit the `jam2` app if it was already running and re-`run` it. You should see a slider, and when you move it, the system BPM changes. The `2.4` you see in the code is because sliders return values between 0-100, and we convert that into BPMs of 0-240. You can add all sorts of UI elements. We provide a few classic ones like `UICheckbox` and `UIButton`. You should look at the source of `drums` and `voices` to see how they're built and [our API documentation for the full details.](tulip_api.md) How about a `UIText` entry box for people to type in the chord they want to play? 
@@ -482,24 +496,6 @@ s.note_on(55, 1)
 ```
 
 Try saving these setup commands (including the `store_patch`, which gets cleared on power / boot) to a python file, like `woodpiano.py`, and `execfile("woodpiano.py")` on reboot to set it up for you!
-
-
-## Direct AMY sequencer
-
-Tulip can use the AMY sequencer directly. The `tulip.seq_X` commands are written in Python, and may end up being delayed some small amount of milliseconds if Python is busy doing other things (like drawing a screen.) For this reason, we recommend using the AMY sequencer directly for music, and using the Tulip sequencer for graphical updates. The AMY sequencer runs in a separate "thread" on Tulip and cannot be interrupted. It will maintain rock-solid timing using the audio clock on your device.
-
-A great longer example of how to do this is in our [`drums` app](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py). You can see that the drum pattern itself is updated in AMY any time a parameter is changed, and that we use `tulip.seq_X` callbacks only to update the "time LED" ticker across the top.
-
-You can schedule events to happen in a sequence in AMY using `amy.send(sequence=` commands. For the drum machine example, you set the `period` of the sequence and then update events using AMY commands at the right `tick` offset to that length. For example, a drum machine that has 16 steps, each an eighth note, would have a `period` of 24 * 16 = 384. (24 is half of the sequencer's PPQ. If you wanted 16 quarter notes, you would use 48 * 16. Sixteenth notes would be 12 * 16.) And then, each event you expect to play in that pattern is sequenced with an "offset" `tick` into that pattern. The first event in the pattern is at `tick` 0, and the 9th event would be at `tick` 24 * 9 = 216.
-
-```python
-amy.send(reset=amy.RESET_SEQUENCER) # clears the sequence
-
-amy.send(osc=0, vel=1, wave=amy.PCM, patch=0, sequence="0,384,1") # first slot of a 16 1/8th note drum machine
-amy.send(osc=1, vel=1, wave=amy.PCM, patch=1, sequence="216,384,2") # ninth slot of a 16 1/8th note drum machine
-```
-
-The three parameters in `sequence` are `tick`, `period` and then `tag`. `tag` is used to keep track of which events are scheduled, so you can overwrite their parameters or delete them later.
 
 
 

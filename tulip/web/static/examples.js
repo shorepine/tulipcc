@@ -79,8 +79,6 @@ midi.config.reset()
 try:
     already_stored
 except NameError:
-    already_stored = False
-if(not already_stored):
     amy.start_store_patch()
     amy.send(osc=1, bp0="0,1,5300,0,0,0", phase=0.25, ratio=1, amp="0.3,0,0,1,0,0")
     amy.send(osc=2, bp0="0,1,3400,0,0,0", phase=0.25, ratio=0.5, amp="1.68,0,0,1,0,0")
@@ -88,6 +86,7 @@ if(not already_stored):
     amy.send(osc=4, bp0="0,1,3400,0,0,0", phase=0.25, ratio=0.5, amp="1.68,0,0,1,0,0")
     amy.send(osc=0, wave=amy.ALGO, algorithm=5, algo_source="1,2,3,4", bp0="0,1,147,0", bp1="0,1,179,1", freq="0,1,0,0,1,1")
     amy.stop_store_patch(1024)
+    already_stored = True
 
 s = synth.PatchSynth(8, 1024)
 p = music.Progression(["I", "vi", "IV", "V"], music.Key("E:maj"))
@@ -105,6 +104,39 @@ for x,chord in enumerate(p.chords):
         note_time = (x*chord_len)+(i*note_len)
         s.note_on(note, 1, time=start+note_time)
         s.note_off(note, time=start+note_time+100)
-`
-}
+`},{
+    d:"Parse a live API response from the web",
+    c:`
+import json, js
+def show(j):
+    for i in j.keys():
+        print("%s -> %s" % (i, j[i]))
+        
+url = "https://api.github.com/users/shorepine"
+js.fetch(url).then(lambda r: r.text()).then(lambda x: json.loads(x)).then(lambda x: show(x))
+`},{
+    d:"Play a sequence and show the Juno-6 patch editor",
+    c:`
+import sequencer
+sequencer.clear()
+syn = synth.PatchSynth(1, 0)
+midi.config.add_synth(channel=2, synth=syn)
+arp_notes = [48,50,52,49,56,58,60,57]
+seq= sequencer.Sequence(8, 16)
+for i in range(16):
+    seq.add([i], syn.note_on, [arp_notes[i%8], 1])
+
+def stop():
+    sequencer.clear()
+    syn.release()
+
+# We update the juno6 channel dropdown to show ours after it opens
+run('juno6')
+def update(x):
+    juno6.channel_selector.do_callback(1)
+    juno6.channel_selector.set_selected(1)
+tulip.defer(update, None, 500)
+
+print("to stop sequencer, run stop()")
+`}
 ]

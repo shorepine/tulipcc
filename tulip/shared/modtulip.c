@@ -497,23 +497,21 @@ STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
     }
     if(index>=0) {
         sequencer_callbacks[index] = args[0];
-        if(n_args == 2) {
-            sequencer_dividers[index] = mp_obj_get_int(args[1]);
-        } else {
-            sequencer_dividers[index] = AMY_SEQUENCER_PPQ;            
-        }
+        sequencer_tick[index] = mp_obj_get_int(args[1]);
+        sequencer_period[index] = mp_obj_get_int(args[2]);
     } else {
         index = -1;
     }
     return mp_obj_new_int(index);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_add_callback_obj, 1, 2, tulip_seq_add_callback);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_add_callback_obj, 3, 3, tulip_seq_add_callback);
 
 STATIC mp_obj_t tulip_seq_remove_callback(size_t n_args, const mp_obj_t *args) {
     int8_t index = mp_obj_get_int(args[0]);
     if(index>=0 && index <SEQUENCER_SLOTS) {
         sequencer_callbacks[index] = NULL;
-        sequencer_dividers[index] = 0;
+        sequencer_period[index] = 0;
+        sequencer_tick[index] = 0;
     }
     return mp_const_none;
 }
@@ -523,7 +521,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callback_obj, 1, 1, 
 STATIC mp_obj_t tulip_seq_remove_callbacks(size_t n_args, const mp_obj_t *args) {
     for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
         sequencer_callbacks[i] = NULL;
-        sequencer_dividers[i] = 0;
+        sequencer_period[i] = 0;
+        sequencer_tick[i] = 0;
     }
     return mp_const_none;
 }
