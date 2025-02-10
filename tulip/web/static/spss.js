@@ -113,6 +113,25 @@ async function runEditorBlock() {
   runCodeBlock(py);
 }
 
+async function shortio(url) {
+    var data = {
+        "domain":"share.tulip.computer",
+        "originalURL": url
+    }; 
+    return fetch('https://api.short.io/links/public', {
+        method: 'post',
+        headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+            'authorization': 'pk_C9ZPffijcRJnQMUq'
+        },
+        body: JSON.stringify(data)
+    }).then(function(response){ 
+        return response.json();
+    }).then(function(data){
+        return data.shortURL;
+    })
+}
 async function shareCode() {
     // get the editor text, compress and base64 url safe it, and copy that + our base URL to the clipboard:
     var py = editor.getValue();
@@ -120,7 +139,8 @@ async function shareCode() {
         code = encodeURIComponent(await compress(py));
         var encoded_filename = encodeURIComponent(document.getElementById('editor_filename').value);
         var s =  window.location.protocol+"//"+window.location.host+"/run/?fn=" + encoded_filename + "&" + "share=" + code;
-        return await new Blob([s], { type: 'text/plain'});
+        var ss = await shortio(s);
+        return await new Blob([ss], { type: 'text/plain'});
         //return await window.location.protocol+"//"+window.location.host+"/run/?fn=" + encoded_filename + "&" + "share=" + code;
     }
 
