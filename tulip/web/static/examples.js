@@ -1,9 +1,8 @@
 // examples.js
 const example_snippets = [{
-    d:"Download and run a <b>pattern sequencer</b>",
+    d:"Download and run <b>ITD's</b> pattern sequencer",
     c:`
 tulip.download_and_run('tracks')
-
 `},{
     d:"Run a drum machine",
     c:`
