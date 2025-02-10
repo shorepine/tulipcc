@@ -534,7 +534,7 @@ for i,note in enumerate(chord.midinotes()):
 
 Tulip is always running AMY's live sequencer, which allows you to have multiple music programs running sharing a common clock.
 
-A sequence in Tulip is defined as a `divider` and a `length`. The `divider` is set as the musical note length's denominator. If you want this sequence to be a pattern of events, you can specify that in `length`, which how many of those events happen in a loop. 
+A sequence in Tulip is defined as a `divider` and a `length`. The `divider` is set as the musical note length's denominator. If you want this sequence to be a pattern of events, you can specify that in `length`, which how indicates many of those events happen in a loop. 
 
 For an example of a 16 position 1/8th note drum machine, `divider` is 8 and `length` is 16. For a 8 note long quarter note pattern, `divider` is 4 and `length` is 8. 
 
