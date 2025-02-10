@@ -76,7 +76,7 @@ class Sequence:
     def add(self, position, func, args=[], **kwargs):
         tick = self.event_length_ticks*position
         try:
-             e = MusicSequenceEvent(self, tick, func, args, kwargs)
+            e = MusicSequenceEvent(self, tick, func, args, kwargs)
         except TypeError: # not an AMY sequenceable event
             e = PythonSequenceEvent(self, tick, func)
         self.events = self.events + [e]
