@@ -358,7 +358,7 @@ async function fill_examples() {
         'bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning text-dark', 'bg-info text-dark', 
         'bg-dark', 'border border-primary text-dark', 'border border-secondary text-dark',
         'border border-success text-dark', 'border border-danger text-dark', 'border border-warning text-dark', 
-        'border border-info text-dark','border border-light text-dark', 'border border-dark'];
+        'border border-info text-dark'];
     h = '';
     var i = 0;
     for (i=0;i<example_snippets.length;i++) { 

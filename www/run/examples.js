@@ -137,5 +137,141 @@ def update(x):
 tulip.defer(update, None, 500)
 
 print("to stop sequencer, run stop()")
-`}
+`},{
+    'd':'Play microtonal scales with your keyboard, by @diydsp',
+    'c':`
+import math 
+
+# hello
+print("Microtonal keyboard fun!")
+print("play on keys Q through P and 2 through -")
+print("add your own ratios for microtonal scales")
+print("page up/down to change patch")
+
+def key_to_note( key ):
+
+    print(f'key {key}, {str(key)}')
+    super_piano_string = "q2w3e4r5t6y7u8i9o0p-";
+
+    
+    index = super_piano_string.find( chr(key) )
+    print(f"index:{index}")
+    if index == -1:
+        return None
+    
+    ratios_12tet = [
+        1.0,                   # C
+        1.0594630943592953,    # C#
+        1.122462048309373,     # D
+        1.189207115002721,     # D#
+        1.2599210498948732,    # E
+        1.3348398541700344,    # E#
+        1.3348398541700344,    # F
+        1.4142135623730951,    # F# 
+        1.4983070768766815,    # G
+        1.5874010519681994,    # G#
+        1.681792830507429,     # A
+        1.7817974362806785,    # A#
+        1.8877486253633868,    # B
+        2.0,                    # B#
+        2.0,                    # C
+        2*1.05946309435929,    # C2#
+        2*1.122462048309373,     # D2
+        2*1.189207115002721,     # D2#
+        2*1.2599210498948732,    # E2
+        2*1.3348398541700344,    # E2#
+        2*1.3348398541700344,    # F2
+        2*1.4142135623730951,    # F2#
+        2*1.4983070768766815,    # G2
+        2*1.5874010519681994,    # G2#
+        2*1.681792830507429,     # A2
+        2*1.7817974362806785,    # A2#
+    ]
+
+    ratios_metric = [
+        1.0,    # C
+        1.1,    # C#
+        1.2,     # D
+        1.3,     # D#
+        1.4,    # E
+        1.5,    # E#
+        1.6,    # F
+        1.7,    # F# 
+        1.8,    # G
+        1.9,    # G#
+        2.0,     # A
+        2.2,    # A#
+        2.4,    # B
+        2.6, # B#
+        2.8,  # C
+        3.0,    # C2#
+        3.2,     # D2
+        3.4,     # D2#
+        3.6,    # E2
+        3.8,    # E2#
+        4.0,    # F2
+        2*1.4142135623730951,    # F2#
+        2*1.4983070768766815,    # G2
+        2*1.5874010519681994,    # G2#
+        2*1.681792830507429,     # A2
+        2*1.7817974362806785,    # A2#
+    ]
+
+    
+    return ratios_metric[index]
+
+
+def process_key( key ):
+    global patch_num
+
+    # space
+    if key == 32: print( "toggle")        
+        
+    elif key >= 65 and key <= 90: # shift-A through shift-Z
+        pass
+    
+    # a through z, lowercase 
+    elif (key >= 97 and key <= 122) or key >= 45 and key <= 57:   # numbers, and - and a few more
+        ratio = key_to_note( key )
+        print(f'ratio: {ratio}')
+        if ratio is not None:
+            note_num = 36 + 12 * math.log( ratio ) / math.log( 2 )
+            print( f"note_num: {note_num}" )
+                  
+            amy.send(voices=0,load_patch=patch_num,note=note_num,vel=1)
+            
+        pass
+    
+    # cursor keys
+    elif key == 259: print("up")
+    elif key == 258: print("down")  
+    elif key == 260: print("left")  
+    elif key == 261: print("right") 
+
+    # esc
+    #if key == 0x29: 
+
+    # page up/down
+    elif key== 25:
+        #print(1)
+        patch_num += 1
+        print(f'patch_num: {patch_num}')
+        amy.send(osc=0,vel=0)
+    elif key == 22:#print(-1)
+        patch_num -= 1
+        print(f'patch_num: {patch_num}')
+        amy.send(osc=0,vel=0)
+
+    else:   
+        print("unhandled key: %d" % (key))
+        print(f'{tulip.keys()}')
+
+
+patch_num = 129
+amy.send(voices=0,load_patch=patch_num,note=45,vel=1)
+
+tulip.key_scan(1)
+tulip.keyboard_callback( process_key )
+`
+}
 ]
