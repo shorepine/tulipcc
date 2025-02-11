@@ -374,17 +374,16 @@ async function run_snippet(i) {
 }
 
 async function fill_examples() {
-    colors = [
-        'bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning text-dark', 'bg-info text-dark', 
-        'bg-dark']
-        // 'border border-primary text-dark', 'border border-secondary text-dark',
-        //'border border-success text-dark', 'border border-danger text-dark', 'border border-warning text-dark', 
-        //'border border-info text-dark'];
+    colors = {
+        'music':'bg-success',
+        'network':'bg-warning text-dark',
+        'games':'bg-primary',
+        'other':'bg-danger'
+    } // 'bg-info text-dark', 'bg-secondary', 'bg-dark'
     h = '';
     var i = 0;
     for (i=0;i<example_snippets.length;i++) { 
-        const random = Math.floor(Math.random() * colors.length)
-        h += ' <a href="#" onclick="run_snippet('+i.toString()+');"><span class="badge rounded-pill ' + colors[random] + '">'+example_snippets[i].d+'</span></a>';
+        h += ' <a href="#" onclick="run_snippet('+i.toString()+');"><span class="badge rounded-pill ' + colors[example_snippets[i].t] + '">'+example_snippets[i].d+'</span></a>';
     } 
     document.getElementById('tutorials').innerHTML = h;
 
@@ -411,9 +410,9 @@ async function start_tulip() {
     amy.override_send = amy_js_message
   `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
-  await sleep_ms(200);
+  await sleep_ms(400);
   await mp.runFrozenAsync('_boot.py');
-  await sleep_ms(200);
+  await sleep_ms(400);
   await mp.runFrozenAsync('/tulip4/user/boot.py');
   tulip_started = true;
 }
