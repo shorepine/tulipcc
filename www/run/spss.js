@@ -376,13 +376,15 @@ async function run_snippet(i) {
 async function fill_examples() {
     colors = [
         'bg-primary', 'bg-secondary', 'bg-success', 'bg-danger', 'bg-warning text-dark', 'bg-info text-dark', 
-        'bg-dark', 'border border-primary text-dark', 'border border-secondary text-dark',
-        'border border-success text-dark', 'border border-danger text-dark', 'border border-warning text-dark', 
-        'border border-info text-dark'];
+        'bg-dark']
+        // 'border border-primary text-dark', 'border border-secondary text-dark',
+        //'border border-success text-dark', 'border border-danger text-dark', 'border border-warning text-dark', 
+        //'border border-info text-dark'];
     h = '';
     var i = 0;
     for (i=0;i<example_snippets.length;i++) { 
-        h += ' <a href="#" onclick="run_snippet('+i.toString()+');"><span class="badge rounded-pill ' + colors[i%colors.length] + '">'+example_snippets[i].d+'</span></a>';
+        const random = Math.floor(Math.random() * colors.length)
+        h += ' <a href="#" onclick="run_snippet('+i.toString()+');"><span class="badge rounded-pill ' + colors[random] + '">'+example_snippets[i].d+'</span></a>';
     } 
     document.getElementById('tutorials').innerHTML = h;
 
