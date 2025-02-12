@@ -165,16 +165,15 @@
 
         <!-- MIDI settings panel if MIDI is available -->
         <form name="tulip_settings">
-          <div class="row align-items-start">
-            <div class="col-3 align-self-end small">
+          <div class="row align-items-start pt-1">
+            <div class="col-3 align-top small">
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
                 <label class="form-check-label" for="amy_audioin">Allow audio input</label>
               </div>
             </div>
-            <div class="col-4 align-self-start">
+            <div class="col-4 align-self-start small">
               <div id="midi-input-panel">
-                MIDI input device:
                 <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
                   <option selected>[Not available]</option>
                 </select>
@@ -182,7 +181,6 @@
             </div>
             <div class="col-4 align-self-start small">
               <div id="midi-output-panel">
-                MIDI output device:
                 <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
                   <option selected>[Not available]</option>
                 </select>

@@ -72,14 +72,14 @@ async function start_midi() {
     if(WebMidi.inputs.length>0) {
       midi_in.options.length = 0;
       WebMidi.inputs.forEach(input => {
-        midi_in.options[midi_in.options.length] = new Option(input.manufacturer + " " + input.name);
+        midi_in.options[midi_in.options.length] = new Option("MIDI in: " + input.name);
       });
     }
 
     if(WebMidi.outputs.length>0) {
       midi_out.options.length = 0;
       WebMidi.outputs.forEach(output => {
-        midi_out.options[midi_out.options.length] = new Option(output.manufacturer + " " + output.name);
+        midi_out.options[midi_out.options.length] = new Option("MIDI out: "+ output.name);
       });
     }
     // First run setup 

@@ -305,5 +305,13 @@ for b in [0, 1, 2, 3]:
         tulip.bg_rect(x,y,w,h,c,1)
         tc = 255-c
         tulip.bg_str("%03d" % (c), x+7, y+41, tc, 8)
+`},{
+    't':'music',
+    'd':'Put an echo effect on audio input',
+    'c':`
+# "Allow audio input" must be turned on 
+amy.send(osc=30, pan=0, wave=amy.AUDIO_IN0, vel=1)
+amy.send(osc=31, pan=1, wave=amy.AUDIO_IN1, vel=1)
+amy.echo(level=1, delay_ms=400, max_delay_ms=1500, feedback=0.8, filter_coef=None)
 `}
 ]
