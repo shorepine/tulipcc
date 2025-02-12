@@ -88,7 +88,8 @@ async function start_midi() {
       .then(onEnabled)
       .catch(err => console.log("MIDI: " + err));
   } else {
-    document.getElementById('midi_settings').style.display='none';
+    document.getElementById('midi-input-panel').style.display='none';
+    document.getElementById('midi-output-panel').style.display='none';
   }
 }
 
