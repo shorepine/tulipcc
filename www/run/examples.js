@@ -1,7 +1,7 @@
 // examples.js
 const example_snippets = [{
     't':'music',
-    'd':"Download and run <b>ITD's</b> pattern sequencer",
+    'd':"ITD's pattern sequencer",
     'c':`
 tulip.download_and_run('tracks')
 `},{
@@ -80,7 +80,7 @@ for i,note in enumerate(music.Chord('F:min7').midinotes()):
 tulip.download_and_run('xmas')
 `},{
     't':'music',
-    'd':"Construct a custom FM synth and play a progression",
+    'd':"Construct a custom FM synth",
     'c':`
 import midi, music
 # WOOD PIANO amy setup, 4-op FM synth
@@ -127,7 +127,7 @@ url = "https://api.github.com/users/shorepine"
 js.fetch(url).then(lambda r: r.text()).then(lambda x: json.loads(x)).then(lambda x: show(x))
 `},{
     t:'music',
-    d:"Play a sequence with drums and show the Juno-6 patch editor",
+    d:"Sequence with drums and the Juno-6 editor",
     c:`
 import sequencer
 # Set up default synth and add a new one on channel 2
@@ -153,7 +153,7 @@ tulip.defer(update, None, 500)
 print("Type seq.clear() to stop Juno-6 pattern")
 `},{
     't':'music',
-    'd':'Play microtonal scales with your keyboard, by @diydsp',
+    'd':'Microtonal scales (@diydsp)',
     'c':`
 import math 
 

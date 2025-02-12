@@ -44,7 +44,7 @@
 
       <!-- These filenames are replaced by the build system -->
       <script src="TULIPCCMJS" type="module"></script>
-      <script type="text/javascript" src="AMYJS"></script>
+      <script type="text/javascript" id="amy_js_include" src="AMYJS"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
@@ -168,8 +168,8 @@
           <div class="row align-items-start">
             <div class="col-3 align-self-end small">
               <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="flexSwitchCheckDefault"/>
-                <label class="form-check-label" for="flexSwitchCheckDefault">Allow audio input</label>
+                <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
+                <label class="form-check-label" for="amy_audioin">Allow audio input</label>
               </div>
             </div>
             <div class="col-4 align-self-start">
