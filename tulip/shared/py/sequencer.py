@@ -5,59 +5,51 @@ import amy
 import tulip
 PPQ = amy.AMY_SEQUENCER_PPQ
 
-# set and/or return the tempo 
+# set and/or return the global tempo 
 def tempo(tempo=None):
     if(tempo is not None):
         tulip.seq_bpm(tempo)
     return tulip.seq_bpm()
 
+# clears all sequence data (across all of Tulip)
 def clear():
     amy.send(reset=amy.RESET_SEQUENCER)
     tulip.seq_remove_callbacks()
 
-
-# musical events that accept sequence= params (note_on, note_off, more to come)
-# will use the AMY C-side sequencer, and be very reliable and good timing
-class MusicSequenceEvent:
+class SequenceEvent:
     SEQUENCE_TAG = 0
-    def __init__(self, sequence, tick, func, args, kwargs):
+    def __init__(self, sequence):
         self.sequence = sequence
-        self.tick = tick
-        self.tag = MusicSequenceEvent.SEQUENCE_TAG
+        self.amy_sequenceable = False
+
+    def amy_sequence_string(self):
+        return "%d,%d,%d" % (self.tick, self.sequence.period, self.tag)
+
+    def remove(self):
+        if(self.amy_sequenceable):
+            amy.send(sequence=",,%d" % (self.tag))
+        else:
+            tulip.seq_remove_callback(self.tag)
+        self.sequence.events.remove(self)
+
+    def update(self, position, func, args=[], **kwargs):
+        self.tick = self.sequence.event_length_ticks*position
         self.func = func
         self.g_args = args
         self.g_kwargs = kwargs
-        self.update()
-        MusicSequenceEvent.SEQUENCE_TAG = MusicSequenceEvent.SEQUENCE_TAG + 1
-
-    def sequence_string(self):
-        return "%d,%d,%d" % (self.tick, self.sequence.period, self.tag)
-
-    def update(self):
-        self.func(*self.g_args, **self.g_kwargs, sequence=self.sequence_string())
-
-    def remove(self):
-        amy.send(sequence=",,%d" % (self.tag))
-
-
-# Just rando python functions (used for display updates, etc)
-# uses mp_sched_schedule and may not execute until some ms after the expected time
-class PythonSequenceEvent:
-    def __init__(self, sequence, tick, func):
-        self.sequence = sequence
-        self.tick = tick
-        self.func = func
         self.tag = None
-        self.update()
-        if(self.tag == -1):
-            raise Exception("No more Python sequencer callbacks available")
-    def update(self):
-        if(self.tag != None):
-            tulip.seq_remove_callback(self.tag)
-        self.tag = tulip.seq_add_callback(self.func, self.tick, self.sequence.period)
-
-    def remove(self):
-        tulip.seq_remove_callback(self.tag)
+        try:
+            self.tag = SequenceEvent.SEQUENCE_TAG 
+            self.func(*self.g_args, **self.g_kwargs, sequence=self.amy_sequence_string())
+            SequenceEvent.SEQUENCE_TAG = SequenceEvent.SEQUENCE_TAG + 1
+            self.amy_sequenceable = True
+        except TypeError:
+            if(self.tag != None):
+                tulip.seq_remove_callback(self.tag)
+            self.tag = tulip.seq_add_callback(self.func, self.tick, self.sequence.period)
+            if(self.tag == -1):
+                raise Exception("No more Python sequencer callbacks available")
+            self.amy_sequenceable = False
 
 class Sequence:
     # 8 = 1/8th note, 4 = 1/4 note, 64 = 1/64 note, etc 
@@ -69,16 +61,13 @@ class Sequence:
         self.period = self.event_length_ticks*self.length
 
     def clear(self):
-        for e in self.events:
+        c = self.events.copy()
+        for e in c:
             e.remove()
-            self.events = []
 
     def add(self, position, func, args=[], **kwargs):
-        tick = self.event_length_ticks*position
-        try:
-            e = MusicSequenceEvent(self, tick, func, args, kwargs)
-        except TypeError: # not an AMY sequenceable event
-            e = PythonSequenceEvent(self, tick, func)
+        e = SequenceEvent(self)
+        e.update(position, func, args, **kwargs)
         self.events = self.events + [e]
         return e
 
