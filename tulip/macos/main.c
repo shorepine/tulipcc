@@ -223,6 +223,7 @@ static int do_repl(void) {
     for (;;) {
         mp_hal_stdio_mode_raw();
 
+
     input_restart:
         vstr_reset(&line);
         int ret = readline(&line, mp_repl_get_ps1());
@@ -294,7 +295,7 @@ static int do_repl(void) {
 
     #else
 
-    // use simple readline
+    // use simple readline    
 
     for (;;) {
         char *line = prompt((char *)mp_repl_get_ps1());
