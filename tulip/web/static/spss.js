@@ -8,11 +8,15 @@ var midiInputDevice = null;
 var editor = null;
 var treeView = null;
 var editor_shown = false;
+var amy_audioin_toggle = false;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
   amy_live_start = am.cwrap(
-    'amy_live_start', null, null, {async: true}    
+    'amy_live_start', null, ['number'], {async: true}    
+  );
+  amy_live_stop = am.cwrap(
+    'amy_live_stop', null,  null, {async: true}    
   );
   amy_start = am.cwrap(
     'amy_start', null, ['number', 'number', 'number']
@@ -88,7 +92,8 @@ async function start_midi() {
       .then(onEnabled)
       .catch(err => console.log("MIDI: " + err));
   } else {
-    document.getElementById('midi_settings').style.display='none';
+    document.getElementById('midi-input-panel').style.display='none';
+    document.getElementById('midi-output-panel').style.display='none';
   }
 }
 
@@ -389,6 +394,20 @@ async function fill_examples() {
 
 }
 
+async function toggle_audioin() {
+    if(!audio_started) await sleep_ms(1000);
+    await amy_live_stop();
+    if (document.getElementById('amy_audioin').checked) {
+        console.log("swap with audioin");
+        amy_audioin_toggle = true;
+        await amy_live_start(1);
+    } else {
+        console.log("swap with no audioin");
+        amy_audioin_toggle = false;
+        await amy_live_start(0);
+    }
+}
+
 async function start_tulip() {
   // Don't run this twice
   if(tulip_started) return;
@@ -424,6 +443,10 @@ async function start_audio() {
   if(audio_started) return;
 
   // Start the audio worklet (miniaudio)
-  await amy_live_start();
+  if(amy_audioin_toggle) {
+      await amy_live_start(1);
+  } else {
+      await amy_live_start(0);    
+  }
   audio_started = true;
 }

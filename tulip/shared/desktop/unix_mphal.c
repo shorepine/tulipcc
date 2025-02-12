@@ -108,10 +108,9 @@ void mp_hal_set_interrupt_char(char c) {
 
 #include <termios.h>
 
-//static struct termios orig_termios;
+static struct termios orig_termios;
 
 void mp_hal_stdio_mode_raw(void) {
-    /*
     // save and set terminal settings
     tcgetattr(0, &orig_termios);
     static struct termios termios;
@@ -119,15 +118,15 @@ void mp_hal_stdio_mode_raw(void) {
     termios.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
     termios.c_cflag = (termios.c_cflag & ~(CSIZE | PARENB)) | CS8;
     termios.c_lflag = 0;
-    termios.c_cc[VMIN] = 1;
+    termios.c_cc[VMIN] = 0; //1;
     termios.c_cc[VTIME] = 0;
     tcsetattr(0, TCSAFLUSH, &termios);
-    */
+    
 }
 
 void mp_hal_stdio_mode_orig(void) {
     // restore terminal settings
-    //tcsetattr(0, TCSAFLUSH, &orig_termios);
+    tcsetattr(0, TCSAFLUSH, &orig_termios);
 }
 
 #endif
@@ -167,46 +166,29 @@ static int call_dupterm_read(size_t idx) {
 #endif
 
 int mp_hal_stdin_rx_chr(void) {
-    for (;;) {
-        int c = ringbuf_get(&stdin_ringbuf);
-        if (c != -1) {
-           return c;
-        }
-        MICROPY_EVENT_POLL_HOOK
-    }
-}
-
-/*
-int mp_hal_stdin_rx_chr(void) {
-    #if MICROPY_PY_OS_DUPTERM
-    // TODO only support dupterm one slot at the moment
-    if (MP_STATE_VM(dupterm_objs[0]) != MP_OBJ_NULL) {
-        int c;
-        do {
-            c = call_dupterm_read(0);
-        } while (c == -2);
-        if (c == -1) {
-            goto main_term;
-        }
-        if (c == '\n') {
-            c = '\r';
-        }
-        return c;
-    }
-main_term:;
-    #endif
-
     unsigned char c;
     ssize_t ret;
-    MP_HAL_RETRY_SYSCALL(ret, read(STDIN_FILENO, &c, 1), {});
-    if (ret == 0) {
-        c = 4; // EOF, ctrl-D
-    } else if (c == '\n') {
-        c = '\r';
-    }
-    return c;
+
+    for (;;) { 
+        MP_THREAD_GIL_EXIT(); 
+        ret = read(0, &c, 1); 
+        MP_THREAD_GIL_ENTER(); 
+        if (ret == -1) {
+            int err = errno; 
+            if (err == EINTR) { 
+                mp_handle_pending(true); 
+                continue; 
+            } 
+        } 
+        if(ret) return c; 
+        int rc = ringbuf_get(&stdin_ringbuf);
+        if (rc != -1) {
+            return rc;
+        }
+        MICROPY_EVENT_POLL_HOOK
+    } 
 }
-*/
+
 /*
 void mp_hal_stdout_tx_strn(const char *str, size_t len) {
     ssize_t ret;
@@ -218,10 +200,14 @@ void mp_hal_stdout_tx_strn(const char *str, size_t len) {
 //extern void mp_uos_dupterm_tx_strn(const char *str, size_t len);
 
 mp_uint_t mp_hal_stdout_tx_strn(const char *str, size_t len) {
+    ssize_t ret;
     // TFB log
+    MP_HAL_RETRY_SYSCALL(ret, write(STDOUT_FILENO, str, len), {});
+    /*
     for(uint16_t i=0;i<len;i++) {
         fprintf(stderr, "%c", str[i]);
     }
+    */
     if(len) {
         display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }

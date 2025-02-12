@@ -38,19 +38,13 @@
       <script src="./mini-coi.js" scope="./"></script>
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
       <script src="https://cdn.jsdelivr.net/npm/webmidi@latest/dist/iife/webmidi.iife.js"></script>
-
       <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
       <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-
-     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.63.3/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>-->
-
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
       <!-- These filenames are replaced by the build system -->
       <script src="TULIPCCMJS" type="module"></script>
-      <script type="text/javascript" src="AMYJS"></script>
+      <script type="text/javascript" id="amy_js_include" src="AMYJS"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
@@ -171,18 +165,28 @@
 
         <!-- MIDI settings panel if MIDI is available -->
         <form name="tulip_settings">
-          <div class="row align-items-start" id="midi_settings">
-            <div class="col-4 align-self-start small">
-              MIDI input device:
-              <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
-                <option selected>[Not available]</option>
-              </select>
+          <div class="row align-items-start">
+            <div class="col-3 align-self-end small">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
+                <label class="form-check-label" for="amy_audioin">Allow audio input</label>
+              </div>
+            </div>
+            <div class="col-4 align-self-start">
+              <div id="midi-input-panel">
+                MIDI input device:
+                <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                  <option selected>[Not available]</option>
+                </select>
+              </div>
             </div>
             <div class="col-4 align-self-start small">
-              MIDI output device:
-              <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
-                <option selected>[Not available]</option>
-              </select>
+              <div id="midi-output-panel">
+                MIDI output device:
+                <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                  <option selected>[Not available]</option>
+                </select>
+              </div>
             </div>
           </div>
         </form>
@@ -205,7 +209,7 @@
           Tulip is a creative computer running Python with lots of music and graphics functionality. <A HREF="https://tulip.computer">You can buy a hardware Tulip for $59.</A> 
         </p>
         <P>
-          This version of Tulip runs locally live in your browser. The files are stored in your browsers' storage. It's almost perfectly like a real Tulip, including support for MIDI, graphics, synthesis and Python. There's some small changes and things we haven't yet ported over to the web, see below.
+          This version of Tulip runs locally in your browser. The files are stored in your browsers' storage. It's <I>almost</I> perfectly like a real Tulip, including support for MIDI, graphics, synthesis and Python. There's some small differences, see below.
         </p>
         <p>If you've never used Tulip before, please check out the examples above and these getting started tips:</p>
         <div class='row'>
@@ -227,10 +231,10 @@
         <h3>Some notes on the web port:</h3>
         <ul>
           <li>If you're using Private Browsing mode, we can't keep your files around after you reload. And on <A HREF="https://bugzilla.mozilla.org/show_bug.cgi?id=1320796">Firefox Private Browsing, the page won't work at all.</A> Don't worry, we're not doing anything nefarious here. No data leaves this page, unless you choose to connect to Tulip World to send a message or download a program. <a href="https://github.com/shorepine/tulipcc/tree/main/tulip/web">Everything is open source.</a>
-          <li>MIDI works on almost all browsers <a href="https://webmidijs.org/docs/getting-started/">except for Safari</a></li>
-          <li>Tulip World works, as does <code>url_save</code>. Other Tulip network calls may return a JS "promise" rather than a Python result.</li>
-          <li>Anything relying on <code>input</code> will fail. Most things using <code>time.sleep()</code> will sleep, but will block all other callbacks, audio and graphics from updating. Instead, use callbacks, <code>asyncio</code> or <code>tulip.defer</code> if you want to block or defer execution in Tulip.</li>
-          <li>Audio input is available on Tulip but not here, as the microphone privacy prompt is too annoying and you can't change input sources for audio processing on the web yet. You can change our <code>amy.js</code> include to <code>amy-audioin.js</code> if you want it.</li>
+          <li>MIDI works on all browsers <a href="https://webmidijs.org/docs/getting-started/">except for Safari</a></li>
+          <li>Some Tulip network calls may fail if the CORS settings of the destination prevent it. Some networking methods may return a JS "promise" rather than an immediate Python result.</li>
+          <li>Anything relying on Python's <code>input</code> will fail -- use <code>tulip.key_wait</code> or <code>keyboard_callback</code> instead.</li>
+          <li>Do not use <code>time.sleep()</code> in your code as it will block all input, audio and graphics from updating. Instead, use Tulip callbacks, <code>asyncio</code> or <code>tulip.defer</code> if you want to block or defer execution in Tulip.</li>
         </ul>
 
         <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
@@ -266,7 +270,7 @@
       document.body.addEventListener('keydown', start_audio, true); 
       // We have to force that a click on the canvas focuses a hidden textinput, so that SDL can receive keypresses.
       document.querySelector('#canvas').addEventListener('click', function() {
-        document.getElementById("textinput").focus({preventScroll:true});
+            document.getElementById("textinput").focus({preventScroll:true});
       });
       $(function () {
         $('[data-toggle="tooltip"]').tooltip({delay: { "show": 1000, "hide": 100 }})
