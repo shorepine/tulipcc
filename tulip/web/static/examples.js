@@ -146,10 +146,7 @@ for i in range(16):
 # We update the juno6 channel dropdown to show ours after it opens
 run('drums')
 run('juno6')
-def update(x):
-    juno6.channel_selector.do_callback(1)
-    juno6.channel_selector.set_selected(1)
-tulip.defer(update, None, 500)
+juno6.select_midi_channel(2)
 print("Type seq.clear() to stop Juno-6 pattern")
 `},{
     't':'music',

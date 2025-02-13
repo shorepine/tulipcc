@@ -43,8 +43,8 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250212103358.mjs" type="module"></script>
-      <script type="text/javascript" id="amy_js_include" src="amy-20250212103358.js"></script>
+      <script src="tulipcc-20250213071411.mjs" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="amy-20250213071411.js"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
@@ -163,15 +163,15 @@
         <!-- Tulip's SDL canvas -->
         <canvas id="canvas" tabindex=0 class="canvas-solo"></canvas>
 
-        <!-- MIDI settings panel if MIDI is available -->
         <form name="tulip_settings">
           <div class="row align-items-start pt-1">
-            <div class="col-3 align-top small">
+            <div class="col-md-auto align-top small" id="audioin_grow">
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
                 <label class="form-check-label" for="amy_audioin">Allow audio input</label>
               </div>
             </div>
+            <!-- MIDI settings panel if MIDI is available -->
             <div class="col-4 align-self-start small">
               <div id="midi-input-panel">
                 <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
