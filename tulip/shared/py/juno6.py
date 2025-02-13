@@ -328,7 +328,13 @@ class JunoDropDown(tulip.UIElement):
         )
         self.items = items
         self.dropdown.set_options("\n".join(self.items))
-        self.current_index = min(self.current_index, len(self.items) - 1)
+        # Try to reselect the same item.
+        try:
+            self.current_index = self.items.index(old_selection)
+        except ValueError:
+            # It wasn't found, just select the item at the same position, or as close as possible if list got shorter
+            self.current_index = min(self.current_index, len(self.items) - 1)
+        self.set_selected_without_callback(self.current_index)
         current_selection = self.items[self.current_index]
         if current_selection != old_selection:
             # The content of the item changed.
@@ -337,10 +343,21 @@ class JunoDropDown(tulip.UIElement):
     def cb(self, e):
         self.do_callback(e.get_target_obj().get_selected())
 
-    def set_selected(self, index):
+    def set_selected_without_callback(self, index):
         """Set the item displayed, but do not trigger the callback."""
         self.dropdown.set_selected(index)
         self.current_index = index
+
+    def set_selected_by_content(self, content):
+        """Simulate selecting an item matching "content" on the UI."""
+        try:
+            index = self.items.index(content)
+        except ValueError:
+            print("No item '%s' in dropdown" % content)
+            return
+        self.do_callback(index)
+        self.set_selected_without_callback(index)
+
 
 
 import juno
@@ -489,13 +506,13 @@ def setup_from_midi_chan_str(midi_chan_str):
     if(new_patch == None):
         print("No Juno on midi channel %d" % midi_channel)
         # By construction, the patch_selector already exists.  Update it.
-        patch_selector.set_selected(0)
+        patch_selector.set_selected_without_callback(0)
         # Unwind
         midi_channel = old_midi_channel
     else:
         new_patch.init_AMY()
         # Just set the state, don't do the callback.
-        patch_selector.set_selected(new_patch.patch_number)
+        patch_selector.set_selected_without_callback(new_patch.patch_number)
         setup_ui_from_juno_patch(new_patch)
 
 
@@ -610,6 +627,13 @@ def refresh_with_new_music_map():
 def activate(screen):
     # Make sure the channel selector is in sync with current system state.
     channel_selector.update_items(get_active_midi_channels_as_str())
+
+
+def select_midi_channel(channel):
+    """Programatically switch to midi channel."""
+    global midi_channel
+    midi_channel = channel
+    channel_selector.set_selected_by_content(str(channel))
 
 
 def deactivate(screen):
