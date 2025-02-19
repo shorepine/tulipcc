@@ -1,7 +1,7 @@
 // examples.js
 const example_snippets = [{
     't':'music',
-    'd':"ITD's pattern sequencer",
+    'd':"Launch a pattern sequencer (by @ITD)",
     'c':`
 tulip.download_and_run('tracks')
 `},{
@@ -150,7 +150,7 @@ juno6.select_midi_channel(2)
 print("Type seq.clear() to stop Juno-6 pattern")
 `},{
     't':'music',
-    'd':'Microtonal scales (@diydsp)',
+    'd':'Microtonal scales (by @diydsp)',
     'c':`
 import math 
 
@@ -310,5 +310,11 @@ for b in [0, 1, 2, 3]:
 amy.send(osc=30, pan=0, wave=amy.AUDIO_IN0, vel=1)
 amy.send(osc=31, pan=1, wave=amy.AUDIO_IN1, vel=1)
 amy.echo(level=1, delay_ms=400, max_delay_ms=1500, feedback=0.8, filter_coef=None)
+`},{
+    't':'music',
+    'd':'Launch an algorithmic music composer (by @nicoVR)',
+    'c':`
+# see user/periodic2/config.py for instructions!
+tulip.download_and_run("periodic2")
 `}
 ]
