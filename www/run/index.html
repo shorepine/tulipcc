@@ -43,8 +43,8 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250213071411.mjs" type="module"></script>
-      <script type="text/javascript" id="amy_js_include" src="amy-20250213071411.js"></script>
+      <script src="tulipcc-20250219140717.mjs" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="amy-20250219140717.js"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
@@ -133,26 +133,26 @@
             </div>
           </div>
 
-          <div class="row">
+          <div class="row mb-4 mt-1">
             <div class="col-3">
-              <div class="align-self-center my-3"> 
                 <button type="button" title="Refresh Tulip file list" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
                 <button type="button" title="Download file from Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
                 <button type="button" title="Upload file to Tulip into the selected folder" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
                 <button type="button" title="Load selected Tulip file into editor" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
-              </div>
             </div>
-            <div class="col-9">
-              <div class="align-self-center my-3"> 
-                <button type="button" title="Save editor contents to file on Tulip into the selected folder" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-chevron-circle-left"></i></button>
+            <div class="col-3">
+                <button type="button" title="Save editor contents to file on Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-floppy-disk"></i></button>
                 <button type="button" title="Run editor contents in Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="runEditorBlock()"><i class="fas fa-running"></i></button> 
                 <button type="share" title="Share editor contents (and filename, if given) as a URL" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
-                <input type='text' title="Filename for saving or sharing" data-toggle="tooltip" data-placement="top"  id="editor_filename" class="small" placeholder="Filename"/>
-                <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_editor();"
-                  data-bs-toggle="collapse" title="Hide editor" data-toggle="tooltip" data-placement="top"  data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
-                  Hide
-                </button>
-              </div>
+            </div>
+            <div class="col-4">
+                <input type='text' title="Filename for saving or sharing" data-toggle="tooltip" data-placement="top"  id="editor_filename" class="small form-control" placeholder="Filename"/>
+            </div>
+            <div class="col-2">
+              <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_editor();"
+              data-bs-toggle="collapse" title="Hide editor" data-toggle="tooltip" data-placement="top"  data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
+              Hide
+              </button>
             </div>
           </div>
         </div>
@@ -271,8 +271,11 @@
             document.getElementById("textinput").focus({preventScroll:true});
       });
       $(function () {
-        $('[data-toggle="tooltip"]').tooltip({delay: { "show": 1000, "hide": 100 }})
+        $('[data-toggle="tooltip"]').tooltip({delay: { "show": 3000, "hide": 500 }, trigger:'hover'})
       }) 
+      $('[rel="tooltip"]').on('click', function () {
+        $(this).tooltip('hide')
+      });
       fill_examples();
     </script>
   </body>

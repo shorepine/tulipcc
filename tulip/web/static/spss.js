@@ -154,8 +154,8 @@ async function shareCode() {
       .catch(function (error) { console.log(error); });
     
     // Do a little button animation
-    document.getElementById(`shareButton`).innerHTML = "Copied to clipboard!"; 
-    await sleep_ms(2500);
+    document.getElementById(`shareButton`).innerHTML = "Copied!"; 
+    await sleep_ms(1000);
     document.getElementById(`shareButton`).innerHTML = "<i class='fas fa-share-square'></i>"; 
  }
 
@@ -280,13 +280,17 @@ async function upload() {
 }
 
 async function save_editor() {
-    upload_folder = await request_file_or_folder(true);
     target_filename = document.getElementById('editor_filename').value;
-    if(upload_folder != null) {
+    if(target_filename.startsWith("/sys")) {
+        show_alert("You can't write to the /sys folder. Save it to /user.");
+    } else {
         if(target_filename.length > 0) {
+            if(!target_filename.startsWith("/user")) {
+                target_filename = "/user/" + target_filename;
+            }
             content = editor.getValue();
-            mp.FS.writeFile(upload_folder.fullpath + '/' + target_filename, content);
-            fill_tree();
+            mp.FS.writeFile("/tulip4"+target_filename, content);
+            document.getElementById('editor_filename').value = target_filename;
         } else {
             show_alert('You need to provide a filename before saving.');
         }
@@ -298,7 +302,8 @@ async function load_editor() {
     file = await request_file_or_folder(false);
     if(file != null) {
         editor.setValue(file.getContents('utf8'));
-        document.getElementById('editor_filename').value = file.showpath;
+        // trim the `/tulip4` from here
+        document.getElementById('editor_filename').value = file.fullpath.substring(7);
         setTimeout(function () { editor.save() }, 100);
         setTimeout(function () { editor.refresh() }, 250);
     }
