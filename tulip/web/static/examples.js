@@ -805,6 +805,249 @@ def quit(screen):
     
 if __name__ == '__main__':
     run(tulip.UIScreen())
+`},{
+    't':'music',
+    'd':'A simple 4 track MIDI sequencer',
+    'c':`
+# dpweseq.py
+# a simple 4 track MIDI sequencer
+
+import synth, tulip, midi, amy
+app = None
+(sw, sh) = tulip.screen_size()
+
+# dpwe to make this more real. 
+class SeqEvent:
+    def from_midi_event(message, tick):
+        method = message[0] & 0xF0
+        channel = (message[0] & 0x0F) + 1
+        control = message[1]
+        value = message[2] if len(message) > 2 else None
+        if(method == 0x90): # note on
+            return SeqEvent(control, value/127., tick, channel, 1)
+        if(method == 0x80): #note off
+            return SeqEvent(control,  0, tick, channel, 0)
+
+    def __init__(self, note, vel, tick, channel, on):
+        global app
+        self.note = note
+        self.tick = tick
+        self.channel = channel
+        self.on = on
+        self.vel = vel
+        if(tick > app.last_ms): app.last_ms = tick
+
+    def draw(self):
+        global app
+        # todo -- draw length, like have a length field and draw a long line to the note off??? 
+        c = 93
+        if not self.on: c = 160
+        # only draw if fits in view
+        if(self.tick >= app.x_offset_ms and self.tick < app.x_offset_ms + (app.ms_per_px*sw)):
+            # handle midi notes 30-90
+            if(self.note > 29 and self.note < 90):
+                # height of channel is 120
+                cy = 120 - ((self.note-29) * 2)
+                cx = int((self.tick-app.x_offset_ms) / app.ms_per_px)
+                tulip.bg_rect(cx, 60+((self.channel-1)*130)+cy, 2, 2, c, 1)
+
+    def schedule(self, offset=0):
+        global app
+        if(self.on):
+            midi.config.synth_per_channel[self.channel].note_on(self.note, self.vel, time=self.tick-app.offset_ms)
+        else:
+            midi.config.synth_per_channel[self.channel].note_off(self.note, time=self.tick-app.offset_ms)
+
+def quit(app):
+    pass
+
+# Got a midi message. parse it and store it
+def midi_received(message):
+    global app
+    if(app.recording):
+        tick = tulip.amy_ticks_ms() + app.offset_ms
+        event = SeqEvent.from_midi_event(message, tick)
+        app.events.append(event)
+        event.draw()
+        update_seq_position_bar()
+
+def move_playhead():
+    global app
+    app.playhead_ms = tulip.amy_ticks_ms() + app.offset_ms
+    x = int((app.playhead_ms - app.x_offset_ms) / app.ms_per_px)
+
+    if(x>=sw): # scroll
+        # current playhead position is now the left side of the screen
+        app.x_offset_ms = app.playhead_ms
+        x = 0
+        draw()
+
+    for i in range(4): # one per channel
+        tulip.sprite_register(i, 0, 1, 120) 
+        tulip.sprite_on(i)
+        tulip.sprite_move(i, x, 60 + (i*130))
+
+
+
+# called every frane
+def frame_cb(x):
+    global app
+    if(app.playing or app.recording):
+        move_playhead()
+    if(app.playing and app.playhead_ms > app.last_ms):
+        app.playing = False
+
+def touch_cb(up):
+    global app
+    (x,y,_,_,_,_) = tulip.touch()
+    # is this a click on the sequence or the position bar
+    update = False
+    if(y>60 and y<570):
+        app.offset_ms = x*app.ms_per_px + app.x_offset_ms
+        update = True
+    if(y>570): # position bar
+        pos_ms = app.last_ms*(x/sw)
+        # only move view if this click is outside of view
+        if(not (pos_ms >= app.x_offset_ms and pos_ms < app.x_offset_ms + (app.ms_per_px*sw))):
+            app.offset_ms = pos_ms
+            app.x_offset_ms = pos_ms 
+            app.playhead_ms = pos_ms
+            draw()
+            update = True
+    if(update):
+        # Reset time and also upcoming events
+        amy.send(reset=amy.RESET_TIMEBASE + amy.RESET_EVENTS)
+        move_playhead()
+        if(app.playing): # reschedule events if playing
+            for event in app.events:
+                # Only schedule things ahead of the playhead when we start
+                if(event.tick > app.offset_ms):
+                    event.schedule()
+
+
+def rec_pushed(x):
+    global app
+    if(not app.recording):
+        amy.send(reset=amy.RESET_TIMEBASE)
+        app.playing = False
+        app.recording = True
+        # start recording from playhead position
+        app.offset_ms = app.playhead_ms
+
+def play_pushed(x):
+    global app
+    if(not app.playing):
+        amy.send(reset=amy.RESET_TIMEBASE)
+        app.recording = False
+        app.playing = True
+        app.offset_ms = app.playhead_ms
+        for event in app.events:
+            # Only schedule things ahead of the playhead when we start
+            if(event.tick > app.offset_ms):
+                event.schedule(app.offset_ms)
+
+def rw_pushed(x):
+    global app
+    amy.send(reset=amy.RESET_TIMEBASE)
+    app.offset_ms = 0
+    app.x_offset_ms = 0
+    app.playhead_ms = 0
+    move_playhead()
+    draw()
+
+def stop_pushed(x):
+    global app
+    app.playing = False
+    app.recording = False
+    # clear any AMY messages in the queue 
+    amy.send(reset=amy.RESET_EVENTS)
+
+def zoom_changed(x):
+    global app
+    val = x.get_target_obj().get_value()
+    # set zoom where 0 (left) = 100 ms_per_px and 100 (right) = 5 ms_per_px 
+    app.ms_per_px = max((100 - val), 5)
+    draw()
+
+def activate(app):
+    setup_playhead_sprites()
+    draw()
+    midi.add_callback(midi_received)
+    tulip.touch_callback(touch_cb)
+    tulip.frame_callback(frame_cb)
+
+def deactivate(app):
+    midi.remove_callback(midi_received)
+    tulip.touch_callback()
+
+def setup_playhead_sprites():
+    bitmap = bytes([0x55, 0x55, 159] * 40) # just a light blue dotted line (0x55 is alpha), 120px hight, 1 px wide
+    tulip.sprite_bitmap(bitmap, 0)
+    for i in range(4): # one per channel
+        tulip.sprite_register(i, 0, 1, 120) 
+        tulip.sprite_on(i)
+        tulip.sprite_move(i, 0, 60 + (i*130))
+
+def update_seq_position_bar():
+    # Draw a box on the bottom to show zoom position
+    ms_per_screen = app.ms_per_px * sw
+    if(app.last_ms > ms_per_screen): 
+        screen_use_px = int((ms_per_screen / app.last_ms)*sw)
+        seq_position_px = int((app.x_offset_ms / app.last_ms)*sw)
+    else:
+        screen_use_px= sw
+        seq_position_px = 0
+    tulip.bg_rect(0, 580, sw, 20, 109, 1)
+    tulip.bg_rect(seq_position_px, 580, screen_use_px, 20, 165, 1)
+
+# Redraw everything
+def draw():
+    global app
+    # for now, draw 4 channels 
+    channel_bg_colors = [32, 5, 4, 33]
+    for i in range(4):
+        tulip.bg_rect(0, 60+(i*130), sw, 120, channel_bg_colors[i], 1)
+
+    for event in app.events:
+        event.draw()
+
+    update_seq_position_bar()
+
+
+def run(screen):
+    global app
+    app = screen
+    # Since we're using sprites, BG drawing and scrolling, use "game mode"
+    app.game = True
+    
+    # Where in ms of the sequence the left side of the screen is
+    app.x_offset_ms = 0
+    # Where the playhead is currently in the sequence, moves during recording/playback
+    app.playhead_ms = 0
+    # Where the record/play started from, as an offset in ms
+    app.offset_ms = 0
+    # The latest note ms
+    app.last_ms = 0
+
+    app.recording = False
+    app.playing = False
+    app.events = []
+    app.activate_callback = activate
+    app.quit_callback = quit
+    app.deactivate_callback = deactivate
+    app.add(tulip.UIButton(text="Rec",  bg_color=96, fg_color=255, callback=rec_pushed), x=0, y=0)
+    app.add(tulip.UIButton(text="Play", bg_color=48, fg_color=255, callback=play_pushed))
+    app.add(tulip.UIButton(text="Rewind", bg_color=252, fg_color=0, callback=rw_pushed))
+    app.add(tulip.UIButton(text="Stop", bg_color=237, fg_color=0, callback=stop_pushed))
+    app.add(tulip.UISlider(w=200, val=70, bar_color=74, handle_color=208, handle_radius=25, callback=zoom_changed))
+    app.ms_per_px = 30 
+
+
+    app.present()
+
+
+if __name__ == '__main__':
+    run(tulip.UIScreen())
 `
 }
 ]
