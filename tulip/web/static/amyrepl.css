@@ -41,6 +41,9 @@ canvas {
 */
   font-size: 12px;
   line-height: 14px;
+  resize: vertical;
+  overflow: auto;
+}
 }
 
 
