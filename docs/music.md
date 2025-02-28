@@ -158,7 +158,7 @@ import music, midi, tulip
 synth4 = synth.PatchSynth(num_voices=4, patch_number=1)
 chord = music.Chord("F:min7").midinotes()
 for i,note in enumerate(chord):
-    synth4.note_on(note, 0.5, time=tulip.ticks_ms() + (i * 1000))   # time is i seconds from now
+    synth4.note_on(note, 0.5, time=tulip.amy_ticks_ms() + (i * 1000))   # time is i seconds from now
     # each note on will play precisely one second after the last
 ```
 

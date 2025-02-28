@@ -41,7 +41,9 @@ tulip.screenshot("middle.png", x=400,y=200,w=200,h=200)
 # Return the current CPU usage (% of time spent on CPU tasks like Python code, sound, some display)
 usage = tulip.cpu() # or use tulip.cpu(1) to show more detail in a connected UART
 
-ms = tulip.ticks_ms() # returns the milliseconds since boot, aka Arduino millis() 
+ms = tulip.ticks_ms() # returns the milliseconds since epoch, aka Arduino millis() 
+
+ms = tulip.amy_ticks_ms() # returns the audio engine's ms since boot
 
 board = tulip.board() # Returns the board type, e.g. "TDECK", "N16R8" etc
 ```

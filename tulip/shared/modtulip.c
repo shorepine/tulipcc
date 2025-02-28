@@ -132,7 +132,13 @@ STATIC mp_obj_t tulip_bg_swap(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_swap_obj, 0, 0, tulip_bg_swap);
 
-
+#ifndef __EMSCRIPTEN__
+// on web this will get shim in with js 
+STATIC mp_obj_t tulip_amy_ticks_ms(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(amy_sysclock());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_ticks_ms_obj, 0, 0, tulip_amy_ticks_ms);
+#endif
 
 STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
     return mp_obj_new_int(get_ticks_ms());
@@ -1332,6 +1338,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_activate_editor), MP_ROM_PTR(&tulip_activate_editor_obj) },
     { MP_ROM_QSTR(MP_QSTR_int_screenshot), MP_ROM_PTR(&tulip_int_screenshot_obj) },
 #ifndef __EMSCRIPTEN__
+    { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
     { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_map), MP_ROM_PTR(&tulip_alles_map_obj) },

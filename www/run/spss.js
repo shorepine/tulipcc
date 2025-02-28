@@ -30,6 +30,10 @@ amyModule().then(async function(am) {
   amy_ticks = am.cwrap(
     'sequencer_ticks', 'number', [null]
   );
+  amy_sysclock = am.cwrap(
+    'amy_sysclock', 'number', [null]
+  );
+
   amy_start(1,1,1,1);
 });
 
@@ -422,7 +426,7 @@ async function start_tulip() {
 
   // Let micropython call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_play_message);
-
+  await mp.registerJsModule('amy_sysclock', amy_sysclock);
   await mp.registerJsModule('tulip_world_upload_file', tulip_world_upload_file);
 
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
@@ -430,8 +434,9 @@ async function start_tulip() {
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import amy, amy_js_message
+    import tulip, amy, amy_js_message, amy_sysclock
     amy.override_send = amy_js_message
+    tulip.amy_ticks_ms = amy_sysclock
   `);
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
   await sleep_ms(400);
