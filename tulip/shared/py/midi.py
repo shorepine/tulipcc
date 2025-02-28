@@ -303,9 +303,9 @@ def c_fired_midi_event(x):
 # Resets AMY timebase and plays the bleep
 def startup_bleep():
     if 16 in config.synth_per_channel:
-        config.synth_per_channel[16].note_on(57, 1, time=0)
-        config.synth_per_channel[16].note_on(69, 1, time=150)
-        config.synth_per_channel[16].note_off(69, time=300)
+        config.synth_per_channel[16].note_on(57, 1, time=tulip.amy_ticks_ms()+0)
+        config.synth_per_channel[16].note_on(69, 1, time=tulip.amy_ticks_ms()+150)
+        config.synth_per_channel[16].note_off(69, time=tulip.amy_ticks_ms()+300)
 
 
 def deferred_midi_config(t):
