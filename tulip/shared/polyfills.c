@@ -83,11 +83,11 @@ int64_t get_time_ms() {
     return mp_hal_ticks_ms(); // a large number
 }
 int32_t get_ticks_ms() {
-#ifndef __EMSCRIPTEN__
-    return amy_sysclock(); // based on audio driver
-#else
+//#ifndef __EMSCRIPTEN__
+//    return amy_sysclock(); // based on audio driver
+//#else
     return mp_hal_ticks_ms(); 
-#endif
+//#endif
 }
 
 void *calloc_caps(uint32_t align, uint32_t count, uint32_t size, uint32_t flags) {

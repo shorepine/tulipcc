@@ -302,7 +302,6 @@ def c_fired_midi_event(x):
 
 # Resets AMY timebase and plays the bleep
 def startup_bleep():
-    amy.send(reset=amy.RESET_TIMEBASE)
     if 16 in config.synth_per_channel:
         config.synth_per_channel[16].note_on(57, 1, time=0)
         config.synth_per_channel[16].note_on(69, 1, time=150)
@@ -320,6 +319,8 @@ def deferred_midi_config(t):
     setup_global_midi_cc_bindings()
     tulip.midi_callback(c_fired_midi_event)
     start_default_callback()
+    startup_bleep()
+
 
 
 def setup():

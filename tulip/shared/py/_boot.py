@@ -92,5 +92,4 @@ else:
     # Override amy's send to work with tulip
     amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
     midi.setup()
-    midi.startup_bleep()
 

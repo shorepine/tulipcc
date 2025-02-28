@@ -30,6 +30,10 @@ amyModule().then(async function(am) {
   amy_ticks = am.cwrap(
     'sequencer_ticks', 'number', [null]
   );
+  amy_sysclock = am.cwrap(
+    'amy_sysclock', 'number', [null]
+  );
+
   amy_start(1,1,1,1);
 });
 
