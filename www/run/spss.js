@@ -9,6 +9,8 @@ var editor = null;
 var treeView = null;
 var editor_shown = false;
 var amy_audioin_toggle = false;
+var editor_height = 200;
+var tulip_height = null; // gets set on launch
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -357,12 +359,19 @@ async function tulip_world_upload_file(pwd, filename, username, description) {
     });
 }
 
+async function resize_tulip_grippie() {
+    var tulip_width = document.getElementById('canvas').offsetWidth;
+    tulip_height = document.getElementById('canvas').offsetHeight;
+    document.getElementById('tulip_grippierow').setAttribute("style","width:"+tulip_width.toString()+"px");
+}
+
 async function show_editor() {
     document.getElementById('showhideeditor').style.display='none'; 
     if(editor) editor.refresh();
     document.getElementById('canvas').classList.remove("canvas-solo");
     document.getElementById('canvas').classList.add("canvas-editor");
     editor_shown = true;
+    resize_tulip_grippie();
 }
 
 async function hide_editor() {
@@ -370,6 +379,7 @@ async function hide_editor() {
     document.getElementById('canvas').classList.remove("canvas-editor");
     document.getElementById('canvas').classList.add("canvas-solo");
     editor_shown = false;
+    resize_tulip_grippie();
 }
 
 
@@ -407,11 +417,9 @@ async function toggle_audioin() {
     if(!audio_started) await sleep_ms(1000);
     await amy_live_stop();
     if (document.getElementById('amy_audioin').checked) {
-        console.log("swap with audioin");
         amy_audioin_toggle = true;
         await amy_live_start(1);
     } else {
-        console.log("swap with no audioin");
         amy_audioin_toggle = false;
         await amy_live_start(0);
     }

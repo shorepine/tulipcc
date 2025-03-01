@@ -10,6 +10,13 @@
     background-color: #002b36; 
 }
 
+.grippierow {
+    color: #000;
+    background-color: #f0f0f0;
+    height: 15px;
+}
+
+
 *:focus { outline: none; }
 
 canvas {
@@ -17,7 +24,7 @@ canvas {
   margin: 0;
   padding: 0;
   aspect-ratio: 1024 / 600;
-  max-width: 1024px;
+  /*max-width: 1024px;*/
 }
 .canvas-solo {
   width: min(100%, 90vh * 1024 / 600);
@@ -33,6 +40,23 @@ canvas {
     width: 100%;
     z-index:9999; 
     border-radius:0px
+}
+
+.grippie {
+  cursor: grab;
+  font-size: 14px;
+  line-height: 1.0;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  -webkit-user-drag: none !important;
+  -khtml-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
 }
 
 
