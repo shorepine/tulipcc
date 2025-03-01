@@ -43,8 +43,8 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250228134854.mjs" type="module"></script>
-      <script type="text/javascript" id="amy_js_include" src="amy-20250228134854.js"></script>
+      <script src="tulipcc-20250301163409.mjs" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="amy-20250301163409.js"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
@@ -83,7 +83,7 @@
         theme: "lucario",
         lint: false,
       }); 
-      editor.setSize(null,200);
+      editor.setSize(null,editor_height);
     
       // Load in the share code if given
       const queryString = window.location.search;
@@ -132,7 +132,9 @@
               </section>
             </div>
           </div>
-
+          <div class="row g-0 py-0 my-0 grippierow">
+            <p class="text-center grippie" id="editor_grippie">• • •</p>
+          </div>
           <div class="row mb-4 mt-1">
             <div class="col-3">
                 <button type="button" title="Refresh Tulip file list" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
@@ -162,6 +164,9 @@
         
         <!-- Tulip's SDL canvas -->
         <canvas id="canvas" tabindex=0 class="canvas-solo"></canvas>
+        <div class="row g-0 py-0 my-0 grippierow" id="tulip_grippierow">
+          <p class="text-center grippie" id="tulip_grippie">• • •</p>
+        </div>
 
         <form name="tulip_settings">
           <div class="row align-items-start pt-1">
@@ -270,13 +275,67 @@
       document.querySelector('#canvas').addEventListener('click', function() {
             document.getElementById("textinput").focus({preventScroll:true});
       });
+
+      window.addEventListener('resize', function() {
+        // Code to execute when the viewport changes
+        resize_tulip_grippie();
+      });
+
+
+      // Handle the grippie bars on the page for the editor & Tulip blocks
+      var editor_grippie_held = false;
+      var editor_grippie_y_start = 0;
+      var tulip_grippie_held = false;
+      var tulip_grippie_y_start = 0;
+
+      $('body').on('mouseup', function mouseState(e) {
+        editor_grippie_held = false;
+        tulip_grippie_held = false;
+      });
+      $('#editor_grippie').on('mousedown mousemove', function mouseState(e) {
+        if (e.type == "mousedown") {
+          editor_grippie_held = true;
+          editor_grippie_y_start = e.clientY;
+        }
+        if(e.type == "mousemove") {
+          if(editor_grippie_held) {
+            editor_height = editor_height + (e.clientY - editor_grippie_y_start);
+            if(editor_height < 200) editor_height = 200;
+            editor.setSize(null, editor_height);
+            document.getElementById('treecontainer').setAttribute("style","height:"+editor_height.toString()+"px");
+          }
+        }
+      });
+
+      $('#tulip_grippie').on('mousedown mousemove', function mouseState(e) {
+        if (e.type == "mousedown") {
+          tulip_grippie_held = true;
+          tulip_grippie_y_start = e.clientY;
+        }
+        if(e.type == "mousemove") {
+          if(tulip_grippie_held) {
+            tulip_height = tulip_height + (e.clientY - tulip_grippie_y_start);
+            if(tulip_height < 200) tulip_height = 200;
+            document.getElementById('canvas').setAttribute("style","height:"+tulip_height.toString()+"px");
+            document.getElementById('canvas').setAttribute("style","width:"+tulip_height*(1024/600).toString()+"px");
+            resize_tulip_grippie();
+          }
+        }
+      });
+
+
+      // Set up the tooltips
       $(function () {
         $('[data-toggle="tooltip"]').tooltip({delay: { "show": 3000, "hide": 500 }, trigger:'hover'})
       }) 
       $('[rel="tooltip"]').on('click', function () {
         $(this).tooltip('hide')
       });
+
+      // Populate the example pills
       fill_examples();
+
+      resize_tulip_grippie();
     </script>
   </body>
 </html>

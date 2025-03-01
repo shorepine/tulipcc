@@ -1048,6 +1048,270 @@ def run(screen):
 
 if __name__ == '__main__':
     run(tulip.UIScreen())
-`
-}
+`},{
+    't':'music',
+    'd':'A simple pattern note player',
+    'c':`
+# pattern.py 
+# pattern sequencer in UIScreen
+# bwhitman
+
+import tulip, midi, music, sequencer, synth
+
+def bg_line(x0,y0,x1,y1,color,width):
+    try:
+        tulip.bg_line(x0,y0,x1,y1,color,width)
+    except TypeError:
+        tulip.bg_line(x0,y0,x1,y1,color)
+
+def note_name_for_midinote(midinote):
+    note = music.Note(midinote)
+    return "%s%d" % (note.note.name(), note.octave)
+    
+class NoteGrid:
+    NOTES = 26
+    TIMES = 32
+    NOTE_H = 20
+    NOTE_W = 30
+    GRID_Y = 70
+    GRID_X = 40
+    def __init__(self):
+        self.midinote_start = 48
+        self.slice_a = 9 
+        self.slice_b = 5
+        self.notelines = []
+        self.grid = []
+
+        # grid[column][row]
+        for i in range(NoteGrid.TIMES):
+            arr = []
+            for j in range(NoteGrid.NOTES):
+                arr.append(0)
+            self.grid.append(arr)
+
+        self.midi_val_arr = []
+
+        # create array of midi notes / values
+        for i in range(NoteGrid.TIMES):
+            midinote = NoteGrid.NOTES - i + self.midinote_start
+            self.midi_val_arr.append(midinote)
+
+    def noteline_touch(self, x, y, up):
+        # given x,y, deal with a touch on the grid
+        (t,n) = self.xy_to_tn(x,y)
+        if(t is not None and n is not None):
+            #print("%d %d" % (t,n))
+            pass
+
+        if t is not None and n is not None:
+            return (t,n,self.grid[t][n])
+        else:
+            return (t,n,-1)
+
+    def xy_to_tn(self,x,y):
+        n = (NoteGrid.NOTES-1) - int((y-NoteGrid.GRID_Y) / NoteGrid.NOTE_H)
+        if(n>=0 and n<NoteGrid.NOTES):
+            if(x>=NoteGrid.GRID_X):
+                t = int((x-NoteGrid.GRID_X) / NoteGrid.NOTE_W)
+                if(t>=0 and t<NoteGrid.TIMES):
+                    return (t,n)
+        return (None,None)
+
+    def draw(self):
+        # Draw note lines
+        for i in range(NoteGrid.NOTES):
+            midinote = NoteGrid.NOTES - i + self.midinote_start 
+            notename = note_name_for_midinote(midinote)
+            c = self.slice_a
+            if(notename.find("#")>-1): c = self.slice_b
+            #if (i % 2 == 1): c = self.slice_b
+            tulip.bg_rect(0,NoteGrid.GRID_Y+i*NoteGrid.NOTE_H,1000,NoteGrid.NOTE_H,c,1)
+            tulip.bg_str(notename, 1, NoteGrid.GRID_Y+15+i*NoteGrid.NOTE_H, 255, 11) 
+        # Draw time lines
+        for i in range(NoteGrid.TIMES):
+            c = 76
+            if(i%4==0):
+                c = 93
+            bg_line(NoteGrid.GRID_X + (i*NoteGrid.NOTE_W), NoteGrid.GRID_Y, NoteGrid.GRID_X + (i*NoteGrid.NOTE_W), 589, c, 1)
+
+        # Draw NoteLines
+        for nl in self.notelines:
+            nl.draw()
+
+    def update_note_on_grid(self, t, n):
+
+        if(t is not None and n is not None):
+            #print("%d %d" % (t,n))
+
+            # clicked on empty space, create a note
+            if self.grid[t][n] == 0:
+
+                # do not allow more than 1 note in a column
+                if sum(self.grid[t]) > 0:
+                    return
+                
+                self.grid[t][n] = 1
+
+                nl = NoteLine([t,n])
+                nl.draw()
+
+            # clicked on occupied space, delete the note
+            else:
+                self.grid[t][n] = 0 
+
+                y = (NoteGrid.NOTES - n)*NoteGrid.NOTE_H + NoteGrid.GRID_Y - int(NoteGrid.NOTE_H/2)
+                x = NoteGrid.GRID_X + (t*NoteGrid.NOTE_W) + int(NoteGrid.NOTE_W/2)
+                midinote = self.midinote_start + n + 1
+                notename = note_name_for_midinote(midinote)
+                note = music.Note(midinote)
+                #print(note.midinote())
+                c = self.slice_a
+                if(notename.find("#")>-1): c = self.slice_b
+                tulip.bg_circle(x,y,8,c,1)
+
+
+    def get_note_in_column(self, t):
+        midinote = -1
+        for n in range(len(self.grid[t])):
+            if self.grid[t][n] > 0:
+                midinote = self.midinote_start + n + 1
+                notename = note_name_for_midinote(midinote)
+                #print (t,n,midinote, notename)
+                break
+
+        if midinote == -1:
+            pass
+            #print (t,'none')
+
+        return midinote
+
+
+class NoteLine:
+    # A NoteLine is a lsit of time(0-31), note (from 0->NOTES). 
+    # [0,10,1,10,2,10,3,9,3,9]
+    def __init__(self, notes=[]):
+        self.notes = notes
+        self.color = 226
+
+    def event_for_time(self, time):
+        # given a tick (0-TIMES), play the event for this time
+        pass
+
+    def draw(self):
+        prev = None
+        for i in range(0, len(self.notes), 2):
+            t = self.notes[i]
+            n = self.notes[i + 1]
+            y = (NoteGrid.NOTES - n)*NoteGrid.NOTE_H + NoteGrid.GRID_Y - int(NoteGrid.NOTE_H/2)
+            x = NoteGrid.GRID_X + (t*NoteGrid.NOTE_W) + int(NoteGrid.NOTE_W/2)
+            if 1: #if prev is None or i == len(self.notes)-2: # unclear if i want this
+                tulip.bg_circle(x,y,8,self.color,1)
+            if(prev is not None):
+                # Draw a line to the previous note from me
+                bg_line(x,y-int(NoteGrid.NOTE_H/4),prev[0],prev[1]-int(NoteGrid.NOTE_H/4),self.color,int(NoteGrid.NOTE_H/2))
+            prev = [x,y]
+            
+
+cnt = 0
+prev_midi_val = 60
+
+# TODO: enforce downbeat mod for this and drums
+def beat_callback(t):
+    global app, cnt, prev_midi_val
+    
+    midi_val = app.grid.get_note_in_column(cnt)
+    if midi_val > 0:
+        app.synth.note_on(midi_val, 0.6, time=t)
+        prev_midi_val = midi_val
+    else:
+        app.synth.note_off(prev_midi_val, time=t)
+
+    cnt += 1
+    if cnt > NoteGrid.TIMES - 1:
+        cnt = 0
+
+    '''
+    # check current notelines for this time 
+    for noteline in app.grid.notelines:
+        noteline.event_for_time(app.current_beat)
+
+    app.current_beat = (app.current_beat+1) % NoteGrid.TIMES
+    '''
+
+def redraw(app):
+    app.grid.draw()
+
+def touch(up):
+    global app
+    x,y = [-1,-1,-1], [-1,-1,-1]
+    (x[0],y[0],x[1],y[1],x[2],y[2]) = tulip.touch()
+    for i in range(3):
+        if(x[i]>0 and y[i]>0):
+            (a,b,val) = app.grid.noteline_touch(x[i],y[i],up)  
+
+            if a is None or b is None:
+                continue
+
+            if up == 0:
+                app.grid.update_note_on_grid(a,b)
+
+def deferred_bg_redraw(t):
+    global app
+    redraw(app)
+
+def quit(app):
+    app.seq.clear()
+
+    if app.synth != None:
+        app.synth.release()
+
+def activate(app):
+    tulip.defer(deferred_bg_redraw, None, 250)
+    # start listening to the touchscreen again
+    tulip.touch_callback(touch)
+
+def deactivate(app):
+    # i am being switched away -- keep running but clear and close any active callbacks 
+    tulip.bg_clear()
+    tulip.touch_callback()
+
+def setup_from_midi_chan_str(midi_chan_str):
+    pass
+
+def run(screen):
+    global app
+    app = screen
+    app.synth = midi.config.synth_per_channel[1]
+    app.current_beat = 0
+    app.seq = sequencer.Sequence(16, 1)
+    app.seq.add(0, beat_callback)
+    app.set_bg_color(0)
+    app.grid = NoteGrid()
+    '''
+    app.grid.notelines = [
+        NoteLine([0,10,1,10,2,10,3,9,3,9]),
+        NoteLine([0,14,1,14,2,14,3,13,3,13]),
+        NoteLine([4,17,5,17]),
+        NoteLine([6,17,7,17]),
+        NoteLine([8,17]),
+        NoteLine([28,2,29,2,30,2,31,2]),
+        NoteLine([8,1,9,2,10,3,11,4,12,5,13,6,16,8])
+    ]
+    '''
+    app.quit_callback = quit
+    app.activate_callback = activate
+    app.deactivate_callback = deactivate
+
+    app.synth = synth.PatchSynth(1)
+    app.synth.program_change(31)
+
+    #from juno6 import JunoDropDown as jdd
+    #channel_selector = jdd('Channel:', [str(x+1) for x in range(16)], setup_from_midi_chan_str, set_fn_takes_item_str=True)
+    #app.add(channel_selector, x=650, y=0) 
+
+    app.present()
+
+if __name__ == '__main__':
+        run(tulip.UIScreen())
+`}
 ]
