@@ -27,7 +27,7 @@ def game_loop(app):
     app.player.move()
 def game_setup(app):
     app.player = tulip.Player()
-    app.player.load(tulip.root_dir()+"/sys/im/tiny_town/tile_0105.png", 16, 16)
+    app.player.load(tulip.root_dir()+"sys/im/tiny_town/tile_0105.png", 16, 16)
     app.player.on()
     app.player.x = 300
     app.player.y = 300
@@ -246,7 +246,7 @@ def rotate(x,y,w,h, out_x, out_y, angle):
             tulip.bg_blit(j+x, i+y, 1, 1, new_x, new_y)
 
 tulip.bg_clear()
-tulip.bg_png('/tulip4/sys/ex/g/rabbit_l_0.png', 300, 200)
+tulip.bg_png(tulip.root_dir()+'sys/ex/g/rabbit_l_0.png', 300, 200)
 
 tic = tulip.ticks_ms()
 for i in range(1,10):
