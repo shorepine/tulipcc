@@ -505,6 +505,10 @@ def run(module_string):
     before_run = sys.modules.copy()
     before_run_pwd = pwd()
 
+    # Check if someone tries to do `run("thing.py")`
+    if(module_string.endswith(".py")):
+        module_string = module_string[:-3]
+
     # First, if we're already running, don't run again. Causes some problems
     if module_string in running_apps:
         # Switch to it
