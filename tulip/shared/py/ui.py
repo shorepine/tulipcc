@@ -99,6 +99,7 @@ class UIScreen():
         self.app_dir = tulip.pwd()
         lv_depad(self.group)
         self.game = False
+        self.hide_task_bar = False
         self.keep_tfb = keep_tfb
         self.handle_keyboard = handle_keyboard
         self.bg_color = bg_color
@@ -244,7 +245,7 @@ class UIScreen():
         global current_app_string
         current_app_string = self.name
         self.active = True
-        if(not self.game):
+        if(not self.hide_task_bar):
             self.draw_task_bar()
         self.group.set_style_bg_color(pal_to_lv(self.bg_color), lv.PART.MAIN)
         
