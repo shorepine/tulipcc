@@ -395,6 +395,7 @@ async function run_snippet(i) {
     setTimeout(function () { editor.refresh() }, 250);
     setTimeout(function () { window.scrollTo(0,0) }, 300);
     runEditorBlock();
+
 }
 
 async function fill_examples() {
