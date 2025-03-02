@@ -294,11 +294,13 @@
       });
       $('#editor_grippie').on('mousedown mousemove', function mouseState(e) {
         if (e.type == "mousedown") {
+          e.preventDefault();
           editor_grippie_held = true;
           editor_grippie_y_start = e.clientY;
         }
         if(e.type == "mousemove") {
           if(editor_grippie_held) {
+            e.preventDefault();
             editor_height = editor_height + (e.clientY - editor_grippie_y_start);
             if(editor_height < 200) editor_height = 200;
             editor.setSize(null, editor_height);
@@ -309,11 +311,13 @@
 
       $('#tulip_grippie').on('mousedown mousemove', function mouseState(e) {
         if (e.type == "mousedown") {
+          e.preventDefault();
           tulip_grippie_held = true;
           tulip_grippie_y_start = e.clientY;
         }
         if(e.type == "mousemove") {
           if(tulip_grippie_held) {
+            e.preventDefault();
             tulip_height = tulip_height + (e.clientY - tulip_grippie_y_start);
             if(tulip_height < 200) tulip_height = 200;
             document.getElementById('canvas').setAttribute("style","height:"+tulip_height.toString()+"px");
