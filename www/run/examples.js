@@ -107,8 +107,8 @@ if __name__ == '__main__':
     'd':"Load a .wav sample and play a chord",
     'c':`
 # some stuart dempster in your browser
-import music
-amy.load_sample('../sys/ex/bcla3.wav', patch=50)
+import music, tulip
+amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', patch=50)
 s = synth.OscSynth(wave=amy.PCM, patch=50)
 for i,note in enumerate(music.Chord('F:min7').midinotes()):
     s.note_on(note+24, 1, time=i*4000)
