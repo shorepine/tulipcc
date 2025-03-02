@@ -216,6 +216,7 @@ def deactivate_callback(app):
 
 def run(app):
     app.game = True
+    app.hide_task_bar = True
     amy.reset()
     app.activate_callback = activate_callback
     app.deactivate_callback = deactivate_callback

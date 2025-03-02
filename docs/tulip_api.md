@@ -107,7 +107,9 @@ def run(app):
 
 Put that in a package called `program`, and when `run('program')` is called, your app will start and show a task bar. Multitasking apps have to return immediately after setup (the `run` function) and rely on callbacks to process data and user input. We have callbacks for  everything you'd need: keyboard input, MIDI input, music sequencer ticks and touch input. `UIScreen` also sets up callbacks for "activating" (switching to the app or first run), "deactivating" (switching away from the app) or quitting. 
 
-If you set your `UIScreen` up as a `game` (by setting `app.game = True` in your `def run(app):` before `app.present()`), it will handle things like clearing the sprites and BG, and making sure keypresses only go to the full screen window. `game` mode `UIScreen`s also do not show a task bar up top. That means users will have to know to use `control-Tab` and `control-Q` to switch and quit from your game.
+If you set your `UIScreen` up as a `game` (by setting `app.game = True` in your `def run(app):` before `app.present()`), it will handle things like clearing the sprites and BG, and making sure keypresses only go to the full screen window. 
+
+You can also hide the task bar for `game`s by setting `app.hide_task_bar=True`. That means users will have to know to use `control-Tab` and `control-Q` to switch and quit from your game.
 
 `UIScreen` apps should use LVGL/`tulip.UIX` classes for their UI, so that the UI appears and disappears automatically during switching. This is especially important on Tulip CC hardware, where we ensure the UI switching drawing does not interrupt music or other time sensitive callbacks. You can also use other Tulip drawing commands for the UI, but be mindful that the BG (and often TFB) will be cleared on switching away from your app, so you'll have to redraw those on your activate callback. If you have a `game` mode on, the `deactivate` callback will clear the BG and sprite layer for you.
 
