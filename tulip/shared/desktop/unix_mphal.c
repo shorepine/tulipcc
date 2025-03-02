@@ -121,7 +121,7 @@ void mp_hal_stdio_mode_raw(void) {
     termios.c_cc[VMIN] = 0; //1;
     termios.c_cc[VTIME] = 0;
     tcsetattr(0, TCSAFLUSH, &termios);
-    
+
 }
 
 void mp_hal_stdio_mode_orig(void) {

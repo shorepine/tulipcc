@@ -542,6 +542,7 @@ int main(int argc, char **argv) {
     return main_(argc, argv);
 }
 */
+extern int8_t unix_display_flag;
 
 extern void setup_lvgl();
 
@@ -886,7 +887,7 @@ soft_reset_exit:
     }
     #endif
     #endif
-
+    unix_display_flag=-1;
     // printf("total bytes = %d\n", m_get_total_bytes_allocated());
     //return ret & 0xff;
     return 0;
@@ -894,7 +895,6 @@ soft_reset_exit:
 
 
 
-extern int8_t unix_display_flag;
 
 #include "lvgl.h"
 
@@ -971,6 +971,7 @@ display_jump:
     }
 
     // We're done. join the threads?
+    mp_hal_stdio_mode_orig();
     return 0;
 }
 
