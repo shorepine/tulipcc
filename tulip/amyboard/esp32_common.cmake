@@ -122,6 +122,7 @@ list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/../esp32s3/modsocket.c
     ${MICROPY_PORT_DIR}/../esp32s3/usb.c
     ${MICROPY_PORT_DIR}/mphalport.c
+    ${MICROPY_PORT_DIR}/machine_sdcard.c
     ${MICROPY_ESP32_DIR}/usb_serial_jtag.c
 
     ${MICROPY_ESP32_DIR}/panichandler.c
@@ -131,7 +132,6 @@ list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_ESP32_DIR}/gccollect.c
     ${MICROPY_ESP32_DIR}/fatfs_port.c
     ${MICROPY_ESP32_DIR}/machine_bitstream.c
-    ${MICROPY_ESP32_DIR}/machine_sdcard.c
     ${MICROPY_ESP32_DIR}/machine_timer.c
     ${MICROPY_ESP32_DIR}/machine_pin.c
     ${MICROPY_ESP32_DIR}/machine_touchpad.c

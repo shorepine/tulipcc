@@ -1,7 +1,7 @@
 # ui.py
 # imports into tulip for ui_x translation into lvgl
 # also has keyboard and other small LVGL things
-import tulip
+import tulip, tulip_graphics
 import time
 import lvgl as lv
 
@@ -28,12 +28,12 @@ def get_keypad_indev():
 
 # Convert tulip rgb332 pal idx into lv color
 def pal_to_lv(pal):
-    (r,g,b) = tulip.rgb(pal, wide=True) # todo -- not sure if we use wide or not
+    (r,g,b) = tulip_graphics.rgb(pal, wide=True) # todo -- not sure if we use wide or not
     return lv.color_make(r,g,b)
 
 # Convert tulip rgb332 pal idx into lv color
 def lv_to_pal(lvcolor):
-    return tulip.color(lvcolor.red, lvcolor.green, lvcolor.blue)
+    return tulip_graphics.color(lvcolor.red, lvcolor.green, lvcolor.blue)
 
 # Remove padding from an LVGL object. Sometimes useful. 
 def lv_depad(obj, remove_scroll = False):

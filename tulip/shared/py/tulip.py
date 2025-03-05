@@ -7,6 +7,8 @@ import amy
 
 if(board()!='AMYBOARD'):
     from tulip_graphics import *
+    from ui import *
+    from editor import edit
 
 def sys():
     return root_dir()+"sys/"

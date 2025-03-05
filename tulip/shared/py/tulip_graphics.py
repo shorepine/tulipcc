@@ -1,5 +1,5 @@
 # tulip_graphics.py
-
+import tulip
 
 # convert tulip RGB332 pal_idx to 3 rgb 0-255 values
 def rgb(px0, wide=False):
@@ -15,9 +15,7 @@ def rgb(px0, wide=False):
         if(b & 0b01000000): b = b | 0b00111111
     return (r,g,b)
 
-from ui import *
-from editor import edit
-
+import ui
 
 # Class to handle sprites, takes care of memory
 class Sprite():
@@ -25,12 +23,12 @@ class Sprite():
     num_sprites = 0
     SPRITE_RAM_BYTES = 32*1024
     SPRITES = 32
-    SCREEN_WIDTH, SCREEN_HEIGHT = screen_size()
+    SCREEN_WIDTH, SCREEN_HEIGHT = tulip.screen_size()
 
     def reset():
         Sprite.mem_pointer = 0
         Sprite.num_sprites = 0
-        sprite_clear()
+        tulip.sprite_clear()
 
     def __init__(self, sprite_id=None, copy_of=None):
         if(sprite_id is None):
@@ -70,7 +68,7 @@ class Sprite():
             raise Exception("No more sprite handles.")
         else:
             if(self.mem_pos is not None):
-                sprite_register(self.sprite_id,self.mem_pos, self.width, self.height)
+                tulip.sprite_register(self.sprite_id,self.mem_pos, self.width, self.height)
             else:
                 self.width = width
                 self.height = height
@@ -78,15 +76,15 @@ class Sprite():
                     raise Exception("No more sprite RAM. Current pointer %d, you want to add %d" % (Sprite.mem_pointer, (height*width)))
                 else:
                     self.mem_pos = Sprite.mem_pointer
-                    sprite_png(filename, Sprite.mem_pointer)
-                    sprite_register(self.sprite_id,self.mem_pos, self.width, self.height)
+                    tulip.sprite_png(filename, Sprite.mem_pointer)
+                    tulip.sprite_register(self.sprite_id,self.mem_pos, self.width, self.height)
                     Sprite.mem_pointer += width*height
 
     def off(self):
-        sprite_off(self.sprite_id)
+        tulip.sprite_off(self.sprite_id)
 
     def on(self):
-        sprite_on(self.sprite_id)
+        tulip.sprite_on(self.sprite_id)
 
     def moveto(self,x,y):
         # convenience -- set x and y and move there
@@ -95,7 +93,7 @@ class Sprite():
         self.move()
 
     def move(self):
-        sprite_move(self.sprite_id, int(self.x), int(self.y))
+        tulip.sprite_move(self.sprite_id, int(self.x), int(self.y))
 
 
 # A sprite who can move from the joystick/keyboard
@@ -107,13 +105,13 @@ class Player(Sprite):
 
     def joy_move(self):
         # Move the player based on joyk
-        if(joyk() & Joy.RIGHT):
+        if(tulip.joyk() & Joy.RIGHT):
             self.x += self.x_v
-        if(joyk() & Joy.LEFT):
+        if(tulip.joyk() & Joy.LEFT):
             self.x -= self.x_v
-        if(joyk() & Joy.UP):
+        if(tulip.joyk() & Joy.UP):
             self.y -= self.y_v
-        if(joyk() & Joy.DOWN):
+        if(tulip.joyk() & Joy.DOWN):
             self.y += self.y_v
         self.clamp() # Make sure we're on screen
 
@@ -184,7 +182,7 @@ class Joy:
 # Z = B, X = A, A = Y, S = X, enter = START, ' = SELECT, Q = L1, W = R1, arrows = DPAD
 def joyk():
     jmask = 0
-    key_scans = keys()[1:5] # get up to four keys held at once
+    key_scans = tulip.keys()[1:5] # get up to four keys held at once
     for k in key_scans:
         if(k == 79): jmask = jmask | Joy.RIGHT
         if(k == 80): jmask = jmask | Joy.LEFT
@@ -202,9 +200,9 @@ def joyk():
 
 def app(switch=None):
     if(switch is None):
-        return running_apps
-    current_uiscreen().active = False
-    running_apps[switch].present()
+        return ui.running_apps
+    tulip.current_uiscreen().active = False
+    ui.running_apps[switch].present()
 
 
 def screenshot(filename=None, x=-1, y=-1, w=-1, h=-1):
@@ -214,10 +212,10 @@ def screenshot(filename=None, x=-1, y=-1, w=-1, h=-1):
         import world
     from upysh import rm
     if(filename is not None):
-        int_screenshot(filename,x,y,w,h)
+        tulip.int_screenshot(filename,x,y,w,h)
         return None
     if(ip() is not None):
-        int_screenshot("screenshot.png",x,y,w,h)
+        tulip.int_screenshot("screenshot.png",x,y,w,h)
         world.upload("screenshot.png", 'Tulip Screenshot')
     else:
         print("Need wi-fi on")
@@ -256,15 +254,15 @@ def color(r,g,b):
 
 def run(module_string):
     import sys
+    from upysh import pwd, cd
     before_run = sys.modules.copy()
     before_run_pwd = pwd()
-
     # Check if someone tries to do `run("thing.py")`
     if(module_string.endswith(".py")):
         module_string = module_string[:-3]
 
     # First, if we're already running, don't run again. Causes some problems
-    if module_string in running_apps:
+    if module_string in ui.running_apps:
         # Switch to it
         app(module_string)
         return
@@ -276,12 +274,12 @@ def run(module_string):
         pass # ok!
 
     # Let's find out what this is. In order, we go: cwd, frozen modules, /sys/app, /ex
-    if(is_folder(module_string)):
+    if(tulip.is_folder(module_string)):
         cd(module_string)
-    elif(exists(root_dir()+"sys/ex/"+module_string+".py")):
-        cd(root_dir()+"sys/ex")
-    elif(is_folder(root_dir()+"sys/ex/"+module_string)):
-        cd(root_dir()+"sys/ex/"+module_string)
+    elif(tulip.exists(tulip.root_dir()+"sys/ex/"+module_string+".py")):
+        cd(tulip.root_dir()+"sys/ex")
+    elif(tulip.is_folder(tulip.root_dir()+"sys/ex/"+module_string)):
+        cd(tulip.root_dir()+"sys/ex/"+module_string)
 
     try:
         exec('import %s' % (module_string))
