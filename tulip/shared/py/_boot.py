@@ -2,7 +2,19 @@ import gc
 import uos
 import tulip, sys, midi, synth, amy, world, alles, sequencer
 from upysh import *
-from tulip import edit, run, board
+from tulip import board
+
+if board()!="AMYBOARD":
+    from tulip import edit, run
+else:
+    # mount the SD card if given
+    import machine
+    try:
+        sd = machine.SDCard(sck=12, miso=13, mosi=11, cs=10,slot=2)
+        uos.mount(uos.VfsFat(sd), '/sd')
+    except OSError:
+        pass # it's ok!
+
 if board()=="WEB":
     def webnyi():
         return "This function is not available on Tulip Web"

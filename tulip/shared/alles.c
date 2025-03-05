@@ -145,6 +145,7 @@ amy_err_t unix_amy_init() {
 
 #ifdef ESP_PLATFORM
 
+#ifndef AMYBOARD
 amy_err_t setup_i2s(void) {
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
     i2s_new_channel(&chan_cfg, &tx_handle, NULL);
@@ -176,7 +177,7 @@ amy_err_t setup_i2s(void) {
     fprintf(stderr, "i2s started blck %d dout %d lrck %d\n",CONFIG_I2S_BCLK,CONFIG_I2S_DIN,CONFIG_I2S_LRCLK );
     return AMY_OK;
 }
-
+#endif
 
 #endif
 
@@ -212,7 +213,9 @@ void run_alles() {
     check_init(&esp_event_loop_create_default, "Event");
     // We turn off writing to i2s on r10 when doing on chip debugging because of pins
     #ifndef TULIP_R10_DEBUG
+    #ifndef AMYBOARD
         check_init(&setup_i2s, "i2s");
+    #endif
     #endif
     // clear the external map
     for(uint16_t i=0;i<AMY_OSCS;i++) external_map[i] = 0;

@@ -1,6 +1,8 @@
 // tulip_helpers.c
 
 #include "tulip_helpers.h"
+
+#ifndef AMYBOARD
 #include "ui.h"
 extern uint8_t keyboard_send_keys_to_micropython;
 extern int8_t keyboard_grab_ui_focus;
@@ -21,6 +23,7 @@ int check_rx_char() {
     c = ringbuf_get(&stdin_ringbuf);
     return c;
 }
+#endif
 
 // Returns 0 if file doesn't exist, 2 if it's a file, XXX if it's a directory
 uint8_t file_exists(const char *filename) {

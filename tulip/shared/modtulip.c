@@ -6,8 +6,6 @@
 #include "py/runtime.h"
 #include "py/mperrno.h"
 #include "py/mphal.h"
-#include "display.h"
-#include "bresenham.h"
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #ifndef __EMSCRIPTEN__
@@ -15,8 +13,12 @@
 #endif
 #include "midi.h"
 #include "tsequencer.h"
+#ifndef AMYBOARD
 #include "ui.h"
 #include "keyscan.h"
+#include "display.h"
+#include "bresenham.h"
+#endif
 #include "genhdr/mpversion.h"
 
 #ifdef ESP_PLATFORM
@@ -25,17 +27,310 @@
 #endif
 
 
-// Graphics
 
-// tulip.display_clock(18)
-// clock = tulip.display_clock()
+#ifndef __EMSCRIPTEN__
+// on web this will get shim in with js 
+STATIC mp_obj_t tulip_amy_ticks_ms(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(amy_sysclock());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_ticks_ms_obj, 0, 0, tulip_amy_ticks_ms);
+#endif
+
+STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(get_ticks_ms());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ticks_ms_obj, 0, 0, tulip_ticks_ms);
+
+
+
+
+STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
+#ifdef TULIP4_R11
+    return mp_obj_new_str("TULIP4_R11", strlen("TULIP4_R11"));
+#elif defined MATOUCH7
+    return mp_obj_new_str("MATOUCH7", strlen("MATOUCH7"));
+#elif defined TDECK
+    return mp_obj_new_str("TDECK", strlen("TDECK"));
+#elif defined N16R8
+    return mp_obj_new_str("N16R8", strlen("N16R8"));
+#elif defined N32R8
+    return mp_obj_new_str("N32R8", strlen("N32R8"));
+#elif defined TULIP_DESKTOP
+    return mp_obj_new_str("DESKTOP", strlen("DESKTOP"));    
+#elif defined TULIP_WEB
+    return mp_obj_new_str("WEB", strlen("WEB"));    
+#elif defined AMYBOARD
+    return mp_obj_new_str("AMYBOARD", strlen("AMYBOARD"));    
+#else    
+    return mp_obj_new_str("OTHER", strlen("OTHER"));
+#endif
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_board_obj, 0, 0, tulip_board);
+
+
+mp_obj_t midi_callback = NULL;
+
+
+
+
+STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
+    midi_callback = args[0];
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_midi_callback);
+
+
+STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
+    int8_t index = -1;
+    for(uint8_t slot=0;slot<DEFER_SLOTS;slot++) {
+        if(defer_callbacks[slot]==NULL) {
+            index = slot; slot = DEFER_SLOTS+1;
+        }
+    }
+    if(index>=0) {
+        defer_callbacks[index] = args[0];
+        defer_args[index] = args[1];
+        defer_sysclock[index] = get_ticks_ms() + mp_obj_get_int(args[2]);
+
+    } else {
+        mp_raise_ValueError(MP_ERROR_TEXT("No more defer slots available"));
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_defer_obj, 3, 3, tulip_defer);
+
+
+
+STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
+    int8_t index = -1;
+    for(uint8_t slot=0;slot<SEQUENCER_SLOTS;slot++) {
+        if(sequencer_callbacks[slot]==NULL) {
+            index = slot; slot = SEQUENCER_SLOTS+1;
+        }
+    }
+    if(index>=0) {
+        sequencer_callbacks[index] = args[0];
+        sequencer_tick[index] = mp_obj_get_int(args[1]);
+        sequencer_period[index] = mp_obj_get_int(args[2]);
+    } else {
+        index = -1;
+    }
+    return mp_obj_new_int(index);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_add_callback_obj, 3, 3, tulip_seq_add_callback);
+
+STATIC mp_obj_t tulip_seq_remove_callback(size_t n_args, const mp_obj_t *args) {
+    int8_t index = mp_obj_get_int(args[0]);
+    if(index>=0 && index <SEQUENCER_SLOTS) {
+        sequencer_callbacks[index] = NULL;
+        sequencer_period[index] = 0;
+        sequencer_tick[index] = 0;
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callback_obj, 1, 1, tulip_seq_remove_callback);
+
+STATIC mp_obj_t tulip_seq_remove_callbacks(size_t n_args, const mp_obj_t *args) {
+    for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
+        sequencer_callbacks[i] = NULL;
+        sequencer_period[i] = 0;
+        sequencer_tick[i] = 0;
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callbacks_obj, 0, 0, tulip_seq_remove_callbacks);
+
+
+
+STATIC mp_obj_t tulip_seq_ticks(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(sequencer_tick_count);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_ticks_obj, 0, 0, tulip_seq_ticks);
+
+
+STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
+    if(midi_queue_head != midi_queue_tail) {
+        int16_t prev_head = midi_queue_head;
+        // Step on the head, hope no-one notices before we pop it.
+        midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
+        return mp_obj_new_bytes(last_midi[prev_head],
+                                last_midi_len[prev_head]);
+    } 
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_in_obj, 0, 0, tulip_midi_in);
+
+
+STATIC mp_obj_t tulip_midi_out(size_t n_args, const mp_obj_t *args) {
+    if(mp_obj_get_type(args[0]) == &mp_type_bytes) {
+        mp_buffer_info_t bufinfo;
+        mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+        midi_out((uint8_t*)bufinfo.buf, bufinfo.len);
+    } else {
+        mp_obj_t *items;
+        size_t len;
+        mp_obj_get_array(args[0], &len, &items);
+        uint8_t *b = malloc_caps(len, MALLOC_CAP_INTERNAL);
+        for(uint16_t i=0;i<(uint16_t)len;i++) {
+            b[i] = mp_obj_get_int(items[i]);
+        }
+        midi_out(b, len);
+        free_caps(b);
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_out_obj, 1, 1, tulip_midi_out);
+
+
+// Send a message on the "local bus", as if it was received from physical midi in
+STATIC mp_obj_t tulip_midi_local(size_t n_args, const mp_obj_t *args) {
+    if(mp_obj_get_type(args[0]) == &mp_type_bytes) {
+        mp_buffer_info_t bufinfo;
+        mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+        midi_local((uint8_t*)bufinfo.buf, bufinfo.len);
+    } else {
+        mp_obj_t *items;
+        size_t len;
+        mp_obj_get_array(args[0], &len, &items);
+        uint8_t *b = malloc_caps(len, MALLOC_CAP_INTERNAL);
+        for(uint16_t i=0;i<(uint16_t)len;i++) {
+            b[i] = mp_obj_get_int(items[i]);
+        }
+        midi_local(b, len);
+        free_caps(b);
+    }
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_local_obj, 1, 1, tulip_midi_local);
+
+
+
+
+extern void mcast_send(char*, uint16_t len);
+#ifndef __EMSCRIPTEN__
+STATIC mp_obj_t tulip_alles_send(size_t n_args, const mp_obj_t *args) {
+    if(n_args > 1) {
+        if(mp_obj_get_int(args[1])) { // mesh
+            mcast_send( (char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
+            return mp_const_none;
+        }
+    }
+    alles_send_message((char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_send_obj, 1, 2, tulip_alles_send);
+
+#ifndef AMYBOARD
+extern char * alles_local_ip;
+STATIC mp_obj_t tulip_multicast_start(size_t n_args, const mp_obj_t *args) {
+    const char * local_ip = mp_obj_str_get_str(args[0]);
+    if(strlen(local_ip)>2) {
+        strcpy(alles_local_ip, local_ip);
+    }
+    alles_init_multicast();
+    return mp_const_none;
+
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_multicast_start_obj, 1, 1, tulip_multicast_start);
+
+
+
+extern uint8_t alive;
+extern int16_t client_id;
+extern int32_t clocks[255];
+extern int32_t ping_times[255];
+
+STATIC mp_obj_t tulip_alles_map(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t list = mp_obj_new_list(0, NULL);
+    for(uint8_t i=0;i<255;i++) {
+        mp_obj_t tuple[3];
+        if(clocks[i]>0) {
+            tuple[0] = mp_obj_new_int(i);
+            tuple[1] = mp_obj_new_int(clocks[i]);
+            tuple[2] = mp_obj_new_int(ping_times[i]);
+            mp_obj_list_append(list, mp_obj_new_tuple(3, tuple));
+        }
+    }
+    // TODO - sort this so that client 0 is the earliest, etc. Maybe do the sort in python 
+    return list;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_map_obj, 0, 0, tulip_alles_map);
+
+extern uint8_t ipv4_quartet;
+STATIC mp_obj_t tulip_set_quartet(size_t n_args, const mp_obj_t *args) {
+    ipv4_quartet = mp_obj_get_int(args[0]);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_quartet_obj, 1, 1, tulip_set_quartet);
+#endif
+
+#endif
+
+
+extern float compute_cpu_usage(uint8_t debug);
+STATIC mp_obj_t tulip_cpu(size_t n_args, const mp_obj_t *args) {
+    // for now just printf to uart
+    float idle;
+    if(n_args > 0) {
+        idle = compute_cpu_usage(1);
+    } else {
+        idle = compute_cpu_usage(0);
+    }
+    return mp_obj_new_float_from_f(idle);
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cpu_obj, 0, 1, tulip_cpu);
+
+#ifndef ESP_PLATFORM
+#ifndef __linux__
+#ifndef __EMSCRIPTEN__
+extern char* get_tulip_home_path();
+STATIC mp_obj_t tulip_app_path(size_t n_args, const mp_obj_t *args) {
+    char * path = get_tulip_home_path();
+    return mp_obj_new_str(path, strlen(path));
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_app_path_obj, 0, 0, tulip_app_path);
+#endif
+#endif
+#endif
+
+
+
+
+
+STATIC mp_obj_t tulip_build_strings(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t tuple[3];
+    tuple[0] = mp_obj_new_str(MICROPY_GIT_TAG, strlen(MICROPY_GIT_TAG));
+    tuple[1] = mp_obj_new_str(MICROPY_GIT_HASH, strlen(MICROPY_GIT_HASH));
+    tuple[2] = mp_obj_new_str(MICROPY_BUILD_DATE, strlen(MICROPY_BUILD_DATE));
+    return mp_obj_new_tuple(3, tuple);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_build_strings_obj, 0,0, tulip_build_strings);
+
+
+
+
+
+/// Tulip-with-screen stuff only below
+
+
+
+#ifndef AMYBOARD
 extern void unix_display_set_clock(uint8_t);
 extern void display_start();
 extern void display_stop();
 extern void save_tfb();
 extern void restore_tfb();
 extern uint8_t tfb_active;
-
 
 STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
     if(n_args==1) {
@@ -131,19 +426,6 @@ STATIC mp_obj_t tulip_bg_swap(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_swap_obj, 0, 0, tulip_bg_swap);
-
-#ifndef __EMSCRIPTEN__
-// on web this will get shim in with js 
-STATIC mp_obj_t tulip_amy_ticks_ms(size_t n_args, const mp_obj_t *args) {
-    return mp_obj_new_int(amy_sysclock());
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_ticks_ms_obj, 0, 0, tulip_amy_ticks_ms);
-#endif
-
-STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
-    return mp_obj_new_int(get_ticks_ms());
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ticks_ms_obj, 0, 0, tulip_ticks_ms);
 
 // tulip.bg_pixel(x,y, pal_idx)
 // (r,g,b) = tulip.bg_pixel(x,y)
@@ -396,29 +678,6 @@ STATIC mp_obj_t tulip_screen_size(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_screen_size_obj, 0, 0, tulip_screen_size);
 
 
-STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
-#ifdef TULIP4_R11
-    return mp_obj_new_str("TULIP4_R11", strlen("TULIP4_R11"));
-#elif defined MATOUCH7
-    return mp_obj_new_str("MATOUCH7", strlen("MATOUCH7"));
-#elif defined TDECK
-    return mp_obj_new_str("TDECK", strlen("TDECK"));
-#elif defined N16R8
-    return mp_obj_new_str("N16R8", strlen("N16R8"));
-#elif defined N32R8
-    return mp_obj_new_str("N32R8", strlen("N32R8"));
-#elif defined TULIP_DESKTOP
-    return mp_obj_new_str("DESKTOP", strlen("DESKTOP"));    
-#elif defined TULIP_WEB
-    return mp_obj_new_str("WEB", strlen("WEB"));    
-#else
-    return mp_obj_new_str("OTHER", strlen("OTHER"));
-#endif
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_board_obj, 0, 0, tulip_board);
-
-
-mp_obj_t midi_callback = NULL;
 mp_obj_t frame_callback = NULL; 
 mp_obj_t frame_arg = NULL; 
 mp_obj_t touch_callback = NULL; 
@@ -464,83 +723,6 @@ void tulip_touch_isr(uint8_t up) {
 }
 
 
-
-
-STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
-    midi_callback = args[0];
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_midi_callback);
-
-
-STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
-    int8_t index = -1;
-    for(uint8_t slot=0;slot<DEFER_SLOTS;slot++) {
-        if(defer_callbacks[slot]==NULL) {
-            index = slot; slot = DEFER_SLOTS+1;
-        }
-    }
-    if(index>=0) {
-        defer_callbacks[index] = args[0];
-        defer_args[index] = args[1];
-        defer_sysclock[index] = get_ticks_ms() + mp_obj_get_int(args[2]);
-
-    } else {
-        mp_raise_ValueError(MP_ERROR_TEXT("No more defer slots available"));
-    }
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_defer_obj, 3, 3, tulip_defer);
-
-
-
-STATIC mp_obj_t tulip_seq_add_callback(size_t n_args, const mp_obj_t *args) {
-    int8_t index = -1;
-    for(uint8_t slot=0;slot<SEQUENCER_SLOTS;slot++) {
-        if(sequencer_callbacks[slot]==NULL) {
-            index = slot; slot = SEQUENCER_SLOTS+1;
-        }
-    }
-    if(index>=0) {
-        sequencer_callbacks[index] = args[0];
-        sequencer_tick[index] = mp_obj_get_int(args[1]);
-        sequencer_period[index] = mp_obj_get_int(args[2]);
-    } else {
-        index = -1;
-    }
-    return mp_obj_new_int(index);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_add_callback_obj, 3, 3, tulip_seq_add_callback);
-
-STATIC mp_obj_t tulip_seq_remove_callback(size_t n_args, const mp_obj_t *args) {
-    int8_t index = mp_obj_get_int(args[0]);
-    if(index>=0 && index <SEQUENCER_SLOTS) {
-        sequencer_callbacks[index] = NULL;
-        sequencer_period[index] = 0;
-        sequencer_tick[index] = 0;
-    }
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callback_obj, 1, 1, tulip_seq_remove_callback);
-
-STATIC mp_obj_t tulip_seq_remove_callbacks(size_t n_args, const mp_obj_t *args) {
-    for(uint8_t i=0;i<SEQUENCER_SLOTS;i++) {
-        sequencer_callbacks[i] = NULL;
-        sequencer_period[i] = 0;
-        sequencer_tick[i] = 0;
-    }
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callbacks_obj, 0, 0, tulip_seq_remove_callbacks);
-
-
-
-STATIC mp_obj_t tulip_seq_ticks(size_t n_args, const mp_obj_t *args) {
-    return mp_obj_new_int(sequencer_tick_count);
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_ticks_obj, 0, 0, tulip_seq_ticks);
 
 
 // tulip.frame_callback(cb, arg)
@@ -604,65 +786,6 @@ STATIC mp_obj_t tulip_ui_switch_callback(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ui_switch_callback_obj, 0, 1, tulip_ui_switch_callback);
 
 
-
-
-STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
-    if(midi_queue_head != midi_queue_tail) {
-        int16_t prev_head = midi_queue_head;
-        // Step on the head, hope no-one notices before we pop it.
-        midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
-        return mp_obj_new_bytes(last_midi[prev_head],
-                                last_midi_len[prev_head]);
-    } 
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_in_obj, 0, 0, tulip_midi_in);
-
-
-STATIC mp_obj_t tulip_midi_out(size_t n_args, const mp_obj_t *args) {
-    if(mp_obj_get_type(args[0]) == &mp_type_bytes) {
-        mp_buffer_info_t bufinfo;
-        mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
-        midi_out((uint8_t*)bufinfo.buf, bufinfo.len);
-    } else {
-        mp_obj_t *items;
-        size_t len;
-        mp_obj_get_array(args[0], &len, &items);
-        uint8_t *b = malloc_caps(len, MALLOC_CAP_INTERNAL);
-        for(uint16_t i=0;i<(uint16_t)len;i++) {
-            b[i] = mp_obj_get_int(items[i]);
-        }
-        midi_out(b, len);
-        free_caps(b);
-    }
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_out_obj, 1, 1, tulip_midi_out);
-
-
-// Send a message on the "local bus", as if it was received from physical midi in
-STATIC mp_obj_t tulip_midi_local(size_t n_args, const mp_obj_t *args) {
-    if(mp_obj_get_type(args[0]) == &mp_type_bytes) {
-        mp_buffer_info_t bufinfo;
-        mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
-        midi_local((uint8_t*)bufinfo.buf, bufinfo.len);
-    } else {
-        mp_obj_t *items;
-        size_t len;
-        mp_obj_get_array(args[0], &len, &items);
-        uint8_t *b = malloc_caps(len, MALLOC_CAP_INTERNAL);
-        for(uint16_t i=0;i<(uint16_t)len;i++) {
-            b[i] = mp_obj_get_int(items[i]);
-        }
-        midi_local(b, len);
-        free_caps(b);
-    }
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_local_obj, 1, 1, tulip_midi_local);
 
 
 //(w,h,bytes) = sprite_png(pngdata, mem_pos) 
@@ -884,68 +1007,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_int_screenshot_obj, 1, 5, tulip
 
 
 
-
-extern void mcast_send(char*, uint16_t len);
-#ifndef __EMSCRIPTEN__
-STATIC mp_obj_t tulip_alles_send(size_t n_args, const mp_obj_t *args) {
-    if(n_args > 1) {
-        if(mp_obj_get_int(args[1])) { // mesh
-            mcast_send( (char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
-            return mp_const_none;
-        }
-    }
-    alles_send_message((char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_send_obj, 1, 2, tulip_alles_send);
-
-extern char * alles_local_ip;
-STATIC mp_obj_t tulip_multicast_start(size_t n_args, const mp_obj_t *args) {
-    const char * local_ip = mp_obj_str_get_str(args[0]);
-    if(strlen(local_ip)>2) {
-        strcpy(alles_local_ip, local_ip);
-    }
-    alles_init_multicast();
-    return mp_const_none;
-
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_multicast_start_obj, 1, 1, tulip_multicast_start);
-
-
-
-extern uint8_t alive;
-extern int16_t client_id;
-extern int32_t clocks[255];
-extern int32_t ping_times[255];
-
-STATIC mp_obj_t tulip_alles_map(size_t n_args, const mp_obj_t *args) {
-    mp_obj_t list = mp_obj_new_list(0, NULL);
-    for(uint8_t i=0;i<255;i++) {
-        mp_obj_t tuple[3];
-        if(clocks[i]>0) {
-            tuple[0] = mp_obj_new_int(i);
-            tuple[1] = mp_obj_new_int(clocks[i]);
-            tuple[2] = mp_obj_new_int(ping_times[i]);
-            mp_obj_list_append(list, mp_obj_new_tuple(3, tuple));
-        }
-    }
-    // TODO - sort this so that client 0 is the earliest, etc. Maybe do the sort in python 
-    return list;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_map_obj, 0, 0, tulip_alles_map);
-
-extern uint8_t ipv4_quartet;
-STATIC mp_obj_t tulip_set_quartet(size_t n_args, const mp_obj_t *args) {
-    ipv4_quartet = mp_obj_get_int(args[0]);
-    return mp_const_none;
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_quartet_obj, 1, 1, tulip_set_quartet);
-#endif
-
-
 STATIC mp_obj_t tulip_brightness(size_t n_args, const mp_obj_t *args) {
     if(n_args > 0) {
         display_brightness(mp_obj_get_int(args[0]));
@@ -1091,34 +1152,6 @@ STATIC mp_obj_t tulip_key_send(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_send_obj, 1, 1, tulip_key_send);
 
 
-extern float compute_cpu_usage(uint8_t debug);
-STATIC mp_obj_t tulip_cpu(size_t n_args, const mp_obj_t *args) {
-    // for now just printf to uart
-    float idle;
-    if(n_args > 0) {
-        idle = compute_cpu_usage(1);
-    } else {
-        idle = compute_cpu_usage(0);
-    }
-    return mp_obj_new_float_from_f(idle);
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cpu_obj, 0, 1, tulip_cpu);
-
-#ifndef ESP_PLATFORM
-#ifndef __linux__
-#ifndef __EMSCRIPTEN__
-extern char* get_tulip_home_path();
-STATIC mp_obj_t tulip_app_path(size_t n_args, const mp_obj_t *args) {
-    char * path = get_tulip_home_path();
-    return mp_obj_new_str(path, strlen(path));
-}
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_app_path_obj, 0, 0, tulip_app_path);
-#endif
-#endif
-#endif
-
 STATIC mp_obj_t tulip_bg_bezier(size_t n_args, const mp_obj_t *args) {
     uint16_t x0 = mp_obj_get_int(args[0]);
     uint16_t y0 = mp_obj_get_int(args[1]);
@@ -1263,14 +1296,6 @@ STATIC mp_obj_t tulip_bg_str(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_bg_str_obj, 5, 7, tulip_bg_str);
 
 
-STATIC mp_obj_t tulip_build_strings(size_t n_args, const mp_obj_t *args) {
-    mp_obj_t tuple[3];
-    tuple[0] = mp_obj_new_str(MICROPY_GIT_TAG, strlen(MICROPY_GIT_TAG));
-    tuple[1] = mp_obj_new_str(MICROPY_GIT_HASH, strlen(MICROPY_GIT_HASH));
-    tuple[2] = mp_obj_new_str(MICROPY_BUILD_DATE, strlen(MICROPY_BUILD_DATE));
-    return mp_obj_new_tuple(3, tuple);
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_build_strings_obj, 0,0, tulip_build_strings);
 
 extern int16_t lvgl_is_repl;
 STATIC mp_obj_t tulip_set_screen_as_repl(size_t n_args, const mp_obj_t *args) {
@@ -1282,10 +1307,32 @@ STATIC mp_obj_t tulip_set_screen_as_repl(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_screen_as_repl_obj, 1,1, tulip_set_screen_as_repl);
 
-
+#endif // #ifndef AMYBOARD
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
+    { MP_ROM_QSTR(MP_QSTR_ticks_ms), MP_ROM_PTR(&tulip_ticks_ms_obj) },
+    { MP_ROM_QSTR(MP_QSTR_defer), MP_ROM_PTR(&tulip_defer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_add_callback), MP_ROM_PTR(&tulip_seq_add_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
+    { MP_ROM_QSTR(MP_QSTR_midi_local), MP_ROM_PTR(&tulip_midi_local_obj) },
+#ifndef __EMSCRIPTEN__
+    { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
+#endif
+    { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
+    { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) }, 
+    { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
+
+#ifndef AMYBOARD
+    { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
+    { MP_ROM_QSTR(MP_QSTR_alles_map), MP_ROM_PTR(&tulip_alles_map_obj) },
+    { MP_ROM_QSTR(MP_QSTR_set_quartet), MP_ROM_PTR(&tulip_set_quartet_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_restart), MP_ROM_PTR(&tulip_display_restart_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_stop), MP_ROM_PTR(&tulip_display_stop_obj) },
@@ -1298,7 +1345,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_tfb_update), MP_ROM_PTR(&tulip_tfb_update_obj) },
     { MP_ROM_QSTR(MP_QSTR_fps), MP_ROM_PTR(&tulip_fps_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu), MP_ROM_PTR(&tulip_gpu_obj) },
-    { MP_ROM_QSTR(MP_QSTR_ticks_ms), MP_ROM_PTR(&tulip_ticks_ms_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_pixel), MP_ROM_PTR(&tulip_bg_pixel_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_png), MP_ROM_PTR(&tulip_bg_png_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_clear), MP_ROM_PTR(&tulip_bg_clear_obj) },
@@ -1313,15 +1359,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_keyboard_callback), MP_ROM_PTR(&tulip_keyboard_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_quit_callback), MP_ROM_PTR(&tulip_ui_quit_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_ui_switch_callback), MP_ROM_PTR(&tulip_ui_switch_callback_obj) },
-    { MP_ROM_QSTR(MP_QSTR_defer), MP_ROM_PTR(&tulip_defer_obj) },
-    { MP_ROM_QSTR(MP_QSTR_seq_add_callback), MP_ROM_PTR(&tulip_seq_add_callback_obj) },
-    { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
-    { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
-    { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
-    { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
-    { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
-    { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
-    { MP_ROM_QSTR(MP_QSTR_midi_local), MP_ROM_PTR(&tulip_midi_local_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bitmap), MP_ROM_PTR(&tulip_bg_bitmap_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_blit), MP_ROM_PTR(&tulip_bg_blit_obj) },
     { MP_ROM_QSTR(MP_QSTR_sprite_png), MP_ROM_PTR(&tulip_sprite_png_obj) },
@@ -1337,13 +1374,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key_editor), MP_ROM_PTR(&tulip_key_editor_obj) },
     { MP_ROM_QSTR(MP_QSTR_activate_editor), MP_ROM_PTR(&tulip_activate_editor_obj) },
     { MP_ROM_QSTR(MP_QSTR_int_screenshot), MP_ROM_PTR(&tulip_int_screenshot_obj) },
-#ifndef __EMSCRIPTEN__
-    { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
-    { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
-    { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
-    { MP_ROM_QSTR(MP_QSTR_alles_map), MP_ROM_PTR(&tulip_alles_map_obj) },
-    { MP_ROM_QSTR(MP_QSTR_set_quartet), MP_ROM_PTR(&tulip_set_quartet_obj) },
-#endif
     { MP_ROM_QSTR(MP_QSTR_brightness), MP_ROM_PTR(&tulip_brightness_obj) },
     { MP_ROM_QSTR(MP_QSTR_rgb332_565), MP_ROM_PTR(&tulip_rgb332_565_obj) },
     { MP_ROM_QSTR(MP_QSTR_keys), MP_ROM_PTR(&tulip_keys_obj) },
@@ -1355,7 +1385,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key), MP_ROM_PTR(&tulip_key_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_send), MP_ROM_PTR(&tulip_key_send_obj) },
-    { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_circle), MP_ROM_PTR(&tulip_bg_circle_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bezier), MP_ROM_PTR(&tulip_bg_bezier_obj) },
@@ -1368,10 +1397,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_bg_str), MP_ROM_PTR(&tulip_bg_str_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_log), MP_ROM_PTR(&tulip_gpu_log_obj) },
     { MP_ROM_QSTR(MP_QSTR_screen_size), MP_ROM_PTR(&tulip_screen_size_obj) },
-    { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) }, 
     { MP_ROM_QSTR(MP_QSTR_set_screen_as_repl), MP_ROM_PTR(&tulip_set_screen_as_repl_obj) },
-    { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
-
+#endif
 
 
 // Special platform specific things

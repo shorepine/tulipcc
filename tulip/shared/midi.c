@@ -140,12 +140,14 @@ void midi_local(uint8_t * bytes, uint16_t len) {
 QueueHandle_t uart_queue;
 
 #ifndef TDECK
+#ifndef AMYBOARD
 extern void send_usb_midi_out(uint8_t * data, uint16_t len);
 extern bool midi_has_out;
 #endif
+#endif
 
 void midi_out(uint8_t * bytes, uint16_t len) {
-    #ifndef TDECK
+    #if !defined (TDECK) && !defined(AMYBOARD)
         if(midi_has_out) { // usb midi
             send_usb_midi_out(bytes,len);
         } else { // uart midi

@@ -7,7 +7,7 @@
 #include "esp_flash.h"
 #include "esp_system.h"
 #include "esp_task.h"
-#include "driver/i2c_master.h"
+//#include "driver/i2c_master.h"
 
 #include "amy.h"
 #include "examples.h"
@@ -23,28 +23,7 @@ static const char *TAG = "amy-chip";
 i2s_chan_handle_t tx_handle;
 i2s_chan_handle_t rx_handle;
 
-#ifdef AMYBOARD_DIY
-#define I2S_MCLK  10
-#define I2S_BCLK  13 
-#define I2S_LRCLK 12
-#define AMYOUT 11 // data going to the codec, eg DAC data
-#define I2C_SLAVE_SCL 5  
-#define I2C_SLAVE_SDA 4 
-#define I2C_MASTER_SCL 17
-#define I2C_MASTER_SDA 18
-#define AMYIN 16 // data coming from the codec, eg ADC  data
-#elif defined AMYBOARD_R3
-// stuff in the eagle
-#define I2S_MCLK  3
-#define I2S_BCLK  8
-#define I2S_LRCLK 2
-#define AMYOUT 6 // data going to the codec, eg DAC data
-#define I2C_SLAVE_SCL 5
-#define I2C_SLAVE_SDA 4 
-#define I2C_MASTER_SCL 17
-#define I2C_MASTER_SDA 18
-#define AMYIN 9 // data coming from the codec, eg ADC  data
-#endif
+#include "pins.h"
 
 #define I2S_SAMPLE_TYPE I2S_BITS_PER_SAMPLE_32BIT
 typedef int32_t i2s_sample_type;
@@ -53,11 +32,12 @@ typedef int32_t i2s_sample_type;
 
 // mutex that locks writes to the delta queue
 SemaphoreHandle_t xQueueSemaphore;
-
+void delay_ms(uint32_t);
+/*
 void delay_ms(uint32_t ms) {
     vTaskDelay(ms / portTICK_PERIOD_MS);
 }
-
+*/
 // Task handles for the renderers, multicast listener and main
 TaskHandle_t amy_render_handle;
 TaskHandle_t alles_fill_buffer_handle;
@@ -78,7 +58,7 @@ TaskHandle_t alles_fill_buffer_handle;
 
 // i2c stuff
 #define I2C_CLK_FREQ 400000
-#include "esp32-hal-i2c-slave.h"
+//#include "esp32-hal-i2c-slave.h"
 #define DATA_LENGTH 255
 #define _I2C_NUMBER(num) I2C_NUM_##num
 #define I2C_NUMBER(num) _I2C_NUMBER(num)
@@ -91,10 +71,12 @@ TaskHandle_t alles_fill_buffer_handle;
 #define I2C_MASTER_TX_BUF_DISABLE 0                           /*!< I2C master doesn't need buffer */
 #define I2C_MASTER_RX_BUF_DISABLE 0  
 
-i2c_master_bus_handle_t tool_bus_handle;
-i2c_master_dev_handle_t pcm9211_handle;
-#define I2C_TOOL_TIMEOUT_VALUE_MS (50)
+//i2c_master_bus_handle_t tool_bus_handle;
+//i2c_master_dev_handle_t pcm9211_handle;
+#define I2C_TOOL_TIMEOUT_VALUE_MS (500)
 
+//esp_err_t i2c_master_write(uint8_t device_addr, uint8_t *data_wr, size_t size_wr);
+/*
 esp_err_t i2c_master_write(uint8_t device_addr, uint8_t *data_wr, size_t size_wr) {
     esp_err_t ret = i2c_master_transmit(pcm9211_handle, data_wr, size_wr, I2C_TOOL_TIMEOUT_VALUE_MS);
     if (ret == ESP_OK) {
@@ -106,7 +88,9 @@ esp_err_t i2c_master_write(uint8_t device_addr, uint8_t *data_wr, size_t size_wr
     }
     return 0;
 }
+*/
 
+/*
 uint8_t pcm9211_readRegister(uint8_t reg) {
     uint8_t buf[1] = {reg};
     uint8_t buffer[1] = { 0};
@@ -122,33 +106,36 @@ void pcm9211_writeRegister(uint8_t reg, uint16_t value) {
       fprintf(stderr, "bad write to pcm9211\n");
 }
 
+uint8_t pcm9211_registers[10][2] = {
+    { 0x40, 0x33 }, // Power down ADC, power down DIR, power down DIT, power down OSC
+    { 0x40, 0xc0 }, // Normal operation for all
+    { 0x34, 0x00 }, // Initialize DIR - both biphase amps on, input from RXIN0
+    { 0x26, 0x01 }, // Main Out is DIR/ADC if no DIR sync (these match power-on default, repeated for clarity).
+    { 0x6B, 0x00 }, // Main output pins are DIR/ADC AUTO
+    { 0x30, 0x04 }, // PLL sends 512fs as SCK
+    { 0x31, 0x0A }, // XTI SCK as 512fs too
+    { 0x60, 0x44 }, // Initialize PCM9211 DIT to send SPDIF from AUXIN1 through MPO0 (pin15).  MPO1 (pin16) is VOUT (Valid)
+    { 0x78, 0x3d }, // MPO0 = 0b1101 = TXOUT, MPO1 = 0b0011 = VOUT
+    { 0x6F, 0x40 }  // MPIO_A = CLKST etc / MPIO_B = AUXIN2 / MPIO_C = AUXIN1
+};
+
 esp_err_t setup_pcm9211(void) {
-    // #System RST Control
-    fprintf(stderr, "setting up pcm9211\n");
-    pcm9211_writeRegister(0x40, 0x33);  // Power down ADC, power down DIR, power down DIT, power down OSC
-    pcm9211_writeRegister(0x40, 0xc0);  // Normal operation for all
-
-    // Initialize DIR - both biphase amps on, input from RXIN0
-    pcm9211_writeRegister(0x34, 0x00);
-    // Main Out is DIR/ADC if no DIR sync (these match power-on default, repeated for clarity).
-    pcm9211_writeRegister(0x26, 0x01);  // AUTO selects based on PLL lock error.
-    pcm9211_writeRegister(0x6B, 0x00);  // Main output pins are DIR/ADC AUTO
-
-    // PLL sends 512fs as SCK
-    pcm9211_writeRegister(0x30, 0x04); 
-    // XTI SCK as 512fs too
-    pcm9211_writeRegister(0x31, 0x0A); 
-    
-    // Initialize PCM9211 DIT to send SPDIF from AUXIN1 through MPO0 (pin15).  MPO1 (pin16) is VOUT (Valid)
-    pcm9211_writeRegister(0x60, 0x44);  // 0x44 = AUXIN1
-    pcm9211_writeRegister(0x78, 0x3d);  // MPO0 = 0b1101 = TXOUT, MPO1 = 0b0011 = VOUT
-
-    // Initialize MPIO_C as I2S input to AUXIN1
-    pcm9211_writeRegister(0x6F, 0x40);  // MPIO_A = CLKST etc / MPIO_B = AUXIN2 / MPIO_C = AUXIN1
+    for(uint8_t i=0;i<10; i++) {
+        delay_ms(100);
+        fprintf(stderr, "[pcm9211] setting register 0x%02x to 0x%02x: ", pcm9211_registers[i][0], pcm9211_registers[i][1]);
+        pcm9211_writeRegister(pcm9211_registers[i][0], pcm9211_registers[i][1]);
+        delay_ms(100);
+        uint8_t read_back = pcm9211_readRegister(pcm9211_registers[i][0]);
+        if(read_back == pcm9211_registers[i][1]) {
+            fprintf(stderr, "success\n");
+        } else {
+            fprintf(stderr, "failed?: read back is 0x%02x\n", read_back);
+        }
+    }
     return ESP_OK;
 }
 
-static esp_err_t i2c_master_init(void) {
+esp_err_t i2c_master_init(void) {
     i2c_master_bus_config_t i2c_bus_config = {
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .i2c_port = I2C_MASTER_NUM,
@@ -173,7 +160,7 @@ static esp_err_t i2c_master_init(void) {
 
 
 
-static void i2c_slave_request_cb(uint8_t num, uint8_t *cmd, uint8_t cmd_len, void * arg) {
+void i2c_slave_request_cb(uint8_t num, uint8_t *cmd, uint8_t cmd_len, void * arg) {
     if (cmd_len > 0) {
         // first write to master
         i2cSlaveWrite(I2C_SLAVE_NUM, cmd, cmd_len, 0);
@@ -185,20 +172,20 @@ static void i2c_slave_request_cb(uint8_t num, uint8_t *cmd, uint8_t cmd_len, voi
     }
 }
 
-static void i2c_slave_receive_cb(uint8_t num, uint8_t * data, size_t len, bool stop, void * arg) {
+void i2c_slave_receive_cb(uint8_t num, uint8_t * data, size_t len, bool stop, void * arg) {
     if (len > 0) {
         data[len]= 0;
         amy_play_message((char*)data);
     }
 }
 
-static esp_err_t i2c_slave_init(void) {
+esp_err_t i2c_slave_init(void) {
     i2cSlaveAttachCallbacks(I2C_SLAVE_NUM, i2c_slave_request_cb, i2c_slave_receive_cb, NULL);
     return i2cSlaveInit(I2C_SLAVE_NUM, I2C_SLAVE_SDA, I2C_SLAVE_SCL, AMYCHIP_ADDR, I2C_CLK_FREQ, I2C_SLAVE_RX_BUF_LEN, I2C_SLAVE_TX_BUF_LEN);
 }
 
 
-
+*/
 // AMY synth states
 extern struct state amy_global;
 extern uint32_t event_counter;
@@ -330,12 +317,65 @@ amy_err_t setup_i2s(void) {
     return AMY_OK;
 }
 
-void setup_amychip(void) {
+
+#if 0
+
+void app_main(void)
+{
+    printf("Welcome to the AMY chip implementation!\n");
+
+    /* Print chip information */
+    esp_chip_info_t chip_info;
+    uint32_t flash_size;
+    esp_chip_info(&chip_info);
+    printf("This is %s chip with %d CPU core(s), %s%s%s%s, ",
+           CONFIG_IDF_TARGET,
+           chip_info.cores,
+           (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? "WiFi/" : "",
+           (chip_info.features & CHIP_FEATURE_BT) ? "BT" : "",
+           (chip_info.features & CHIP_FEATURE_BLE) ? "BLE" : "",
+           (chip_info.features & CHIP_FEATURE_IEEE802154) ? ", 802.15.4 (Zigbee/Thread)" : "");
+
+    unsigned major_rev = chip_info.revision / 100;
+    unsigned minor_rev = chip_info.revision % 100;
+    printf("silicon revision v%d.%d, ", major_rev, minor_rev);
+    if(esp_flash_get_size(NULL, &flash_size) != ESP_OK) {
+        printf("Get flash size failed");
+        return;
+    }
+
+    printf("%" PRIu32 "MB %s flash\n", flash_size / (uint32_t)(1024 * 1024),
+           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+
+    printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
+
     check_init(&i2c_master_init, "i2c_master");
     check_init(&i2c_slave_init, "i2c_slave");
     check_init(&setup_pcm9211, "pcm9211");
-    check_init(&setup_i2s, "i2s");
 
-    esp_amy_init();
-    amy_reset_oscs();
+    delay_ms(1000);
+    
+
+    // make this 1 if you want to actually turn on i2s... it is currently hanging as it can't find MCLK on the pin....
+    if(0) {
+        check_init(&setup_i2s, "i2s");
+        esp_amy_init();
+        amy_reset_oscs();
+
+        struct event e = amy_default_event();
+        e.time = amy_sysclock();
+        e.freq_coefs[0] = 440;
+        e.wave = SINE;
+        e.osc = 0;
+        e.velocity = 1;
+        amy_add_event(e);
+        //example_voice_chord(amy_sysclock(), 0);
+    }
+    while(1) {
+        delay_ms(1000);
+            fprintf(stderr, "register 0x39 is 0x%02x\n", pcm9211_readRegister(0x39));
+
+
+    }
 }
+#endif
