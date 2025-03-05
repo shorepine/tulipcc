@@ -210,9 +210,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_local_obj, 1, 1, tulip_mid
 
 
 
-
-extern void mcast_send(char*, uint16_t len);
 #ifndef __EMSCRIPTEN__
+extern void mcast_send(char*, uint16_t len);
 STATIC mp_obj_t tulip_alles_send(size_t n_args, const mp_obj_t *args) {
     if(n_args > 1) {
         if(mp_obj_get_int(args[1])) { // mesh
@@ -225,8 +224,12 @@ STATIC mp_obj_t tulip_alles_send(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_send_obj, 1, 2, tulip_alles_send);
+#endif
 
-#ifndef AMYBOARD
+
+
+#if !defined(AMYBOARD) && !defined(__EMSCRIPTEN__)
+
 extern char * alles_local_ip;
 STATIC mp_obj_t tulip_multicast_start(size_t n_args, const mp_obj_t *args) {
     const char * local_ip = mp_obj_str_get_str(args[0]);
@@ -238,8 +241,6 @@ STATIC mp_obj_t tulip_multicast_start(size_t n_args, const mp_obj_t *args) {
 
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_multicast_start_obj, 1, 1, tulip_multicast_start);
-
-
 
 extern uint8_t alive;
 extern int16_t client_id;
@@ -272,7 +273,8 @@ STATIC mp_obj_t tulip_set_quartet(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_quartet_obj, 1, 1, tulip_set_quartet);
 #endif
 
-#endif
+
+
 
 
 extern float compute_cpu_usage(uint8_t debug);
@@ -1321,18 +1323,22 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_local), MP_ROM_PTR(&tulip_midi_local_obj) },
-#ifndef __EMSCRIPTEN__
-    { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
-#endif
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) }, 
     { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
 
-#ifndef AMYBOARD
+#if !defined(AMYBOARD) && !defined(__EMSCRIPTEN__)
     { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_map), MP_ROM_PTR(&tulip_alles_map_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_quartet), MP_ROM_PTR(&tulip_set_quartet_obj) },
+#endif
+
+#ifndef __EMSCRIPTEN__
+    { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
+#endif
+
+#ifndef AMYBOARD
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_restart), MP_ROM_PTR(&tulip_display_restart_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_stop), MP_ROM_PTR(&tulip_display_stop_obj) },

@@ -105,13 +105,13 @@ class Player(Sprite):
 
     def joy_move(self):
         # Move the player based on joyk
-        if(tulip.joyk() & Joy.RIGHT):
+        if(joyk() & Joy.RIGHT):
             self.x += self.x_v
-        if(tulip.joyk() & Joy.LEFT):
+        if(joyk() & Joy.LEFT):
             self.x -= self.x_v
-        if(tulip.joyk() & Joy.UP):
+        if(joyk() & Joy.UP):
             self.y -= self.y_v
-        if(tulip.joyk() & Joy.DOWN):
+        if(joyk() & Joy.DOWN):
             self.y += self.y_v
         self.clamp() # Make sure we're on screen
 
@@ -206,7 +206,7 @@ def app(switch=None):
 
 
 def screenshot(filename=None, x=-1, y=-1, w=-1, h=-1):
-    if(board()=="WEB"):
+    if(tulip.board()=="WEB"):
         import world_web as world
     else:
         import world
@@ -214,7 +214,7 @@ def screenshot(filename=None, x=-1, y=-1, w=-1, h=-1):
     if(filename is not None):
         tulip.int_screenshot(filename,x,y,w,h)
         return None
-    if(ip() is not None):
+    if(tulip.ip() is not None):
         tulip.int_screenshot("screenshot.png",x,y,w,h)
         world.upload("screenshot.png", 'Tulip Screenshot')
     else:
@@ -326,7 +326,7 @@ def run(module_string):
 
 
 def download_and_run(name):
-    if board()=="WEB":
+    if tulip.board()=="WEB":
         import world_web as world
     else:
         import world
