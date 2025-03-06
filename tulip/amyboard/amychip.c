@@ -75,6 +75,14 @@ TaskHandle_t alles_fill_buffer_handle;
 //i2c_master_dev_handle_t pcm9211_handle;
 #define I2C_TOOL_TIMEOUT_VALUE_MS (500)
 
+
+// Commenting out all the i2c code here because it conflicts with Micropython's i2c driver.
+// So instead, we can set up PCM9211 over micropython i2c
+
+
+
+
+
 //esp_err_t i2c_master_write(uint8_t device_addr, uint8_t *data_wr, size_t size_wr);
 /*
 esp_err_t i2c_master_write(uint8_t device_addr, uint8_t *data_wr, size_t size_wr) {
@@ -186,6 +194,9 @@ esp_err_t i2c_slave_init(void) {
 
 
 */
+
+
+
 // AMY synth states
 extern struct state amy_global;
 extern uint32_t event_counter;
@@ -272,6 +283,7 @@ amy_err_t esp_amy_init() {
 // Setup I2S
 amy_err_t setup_i2s(void) {
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_SLAVE);  // ************* I2S_ROLE_SLAVE - needs external I2S clock input.
+    fprintf(stderr, "creating I2S channel\n");
     i2s_new_channel(&chan_cfg, &tx_handle, &rx_handle);
 
      i2s_std_config_t std_cfg = {
@@ -306,76 +318,26 @@ amy_err_t setup_i2s(void) {
             },
         },
     };
-
     /* Initialize the channel */
+    fprintf(stderr, "initializing I2S TX channel\n");
     i2s_channel_init_std_mode(tx_handle, &std_cfg);
+    fprintf(stderr, "initializing I2S RX channel\n");
     i2s_channel_init_std_mode(rx_handle, &std_cfg);
 
     /* Before writing data, start the TX channel first */
+    fprintf(stderr, "enabling I2S TX channel\n");
     i2s_channel_enable(tx_handle);
+    fprintf(stderr, "enabling I2S RX channel\n");
     i2s_channel_enable(rx_handle);
     return AMY_OK;
 }
 
-
-#if 0
-
-void app_main(void)
-{
-    printf("Welcome to the AMY chip implementation!\n");
-
-    /* Print chip information */
-    esp_chip_info_t chip_info;
-    uint32_t flash_size;
-    esp_chip_info(&chip_info);
-    printf("This is %s chip with %d CPU core(s), %s%s%s%s, ",
-           CONFIG_IDF_TARGET,
-           chip_info.cores,
-           (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? "WiFi/" : "",
-           (chip_info.features & CHIP_FEATURE_BT) ? "BT" : "",
-           (chip_info.features & CHIP_FEATURE_BLE) ? "BLE" : "",
-           (chip_info.features & CHIP_FEATURE_IEEE802154) ? ", 802.15.4 (Zigbee/Thread)" : "");
-
-    unsigned major_rev = chip_info.revision / 100;
-    unsigned minor_rev = chip_info.revision % 100;
-    printf("silicon revision v%d.%d, ", major_rev, minor_rev);
-    if(esp_flash_get_size(NULL, &flash_size) != ESP_OK) {
-        printf("Get flash size failed");
-        return;
-    }
-
-    printf("%" PRIu32 "MB %s flash\n", flash_size / (uint32_t)(1024 * 1024),
-           (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-
-    printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
-
-    check_init(&i2c_master_init, "i2c_master");
-    check_init(&i2c_slave_init, "i2c_slave");
-    check_init(&setup_pcm9211, "pcm9211");
-
-    delay_ms(1000);
-    
-
-    // make this 1 if you want to actually turn on i2s... it is currently hanging as it can't find MCLK on the pin....
-    if(0) {
-        check_init(&setup_i2s, "i2s");
-        esp_amy_init();
-        amy_reset_oscs();
-
-        struct event e = amy_default_event();
-        e.time = amy_sysclock();
-        e.freq_coefs[0] = 440;
-        e.wave = SINE;
-        e.osc = 0;
-        e.velocity = 1;
-        amy_add_event(e);
-        //example_voice_chord(amy_sysclock(), 0);
-    }
-    while(1) {
-        delay_ms(1000);
-            fprintf(stderr, "register 0x39 is 0x%02x\n", pcm9211_readRegister(0x39));
-
-
-    }
+void start_amyboard_amy() {
+    fprintf(stderr, "attempting to start I2S\n");
+    check_init(&setup_i2s, "i2s");
+    fprintf(stderr, "initializing AMY\n");
+    esp_amy_init();
+    amy_reset_oscs();
+    fprintf(stderr, "done initializing AMY\n");
 }
-#endif
+
