@@ -178,7 +178,7 @@ sequencer.tempo(140)
 syn = synth.PatchSynth(1, 0)
 midi.config.add_synth(channel=2, synth=syn)
 arp_notes = [48,50,None,49,56,None,46,44,None,None,49,56,58,60,None,56]
-seq= sequencer.Sequence(8, 16)
+seq= sequencer.Sequence(16,8)
 for i in range(16):
     note = arp_notes[i%len(arp_notes)]
     if note is not None:
@@ -1039,7 +1039,7 @@ def run(screen):
     app = screen
     app.synth = midi.config.synth_per_channel[1]
     app.current_beat = 0
-    app.seq = sequencer.Sequence(16, 1)
+    app.seq = sequencer.Sequence(1,16)
     app.seq.add(0, beat_callback)
     app.set_bg_color(0)
     app.grid = NoteGrid()

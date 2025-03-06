@@ -312,7 +312,7 @@ def run(module_string):
             for imported_module in sys.modules.keys():
                 if imported_module not in before_run:
                     exec('del sys.modules["%s"]' % (imported_module))
-            repl_screen.present()
+            ui.repl_screen.present()
 
         # Go back to where you were
         cd(before_run_pwd)

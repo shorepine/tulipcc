@@ -25,6 +25,7 @@ tulip/tulipcc_r10/build
 tulip/tulipcc_r10/managed_components
 .submodules_ok
 tulip/fs/ex/my_*
+tulip/web/stage
 
 # Prerequisites
 *.d
