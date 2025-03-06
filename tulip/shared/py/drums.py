@@ -265,9 +265,9 @@ def run(screen):
         app.synth = midi.config.synth_per_channel[10]
 
     # Drum machine sequencer - plays notes
-    app.drum_seq = sequencer.Sequence(8, 16)
+    app.drum_seq = sequencer.Sequence(16, 8)
     # Graphical update sequencer -- moves the LEDs
-    app.led_seq = sequencer.Sequence(8, 1)
+    app.led_seq = sequencer.Sequence(1, 8)
 
     app.offset_y = 10
     app.set_bg_color(0)

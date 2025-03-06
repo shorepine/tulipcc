@@ -538,24 +538,25 @@ for i,note in enumerate(chord.midinotes()):
 
 Tulip is always running AMY's live sequencer, which allows you to have multiple music programs running sharing a common clock.
 
-A sequence in Tulip is defined as a `divider` and a `length`. The `divider` is set as the musical note length's denominator. If you want this sequence to be a pattern of events, you can specify that in `length`, which indicates how many of those events happen in a loop. 
+A sequence in Tulip is defined as a `length` and `divider`. The `divider` is set as the musical note length's denominator. If you want this sequence to be a pattern of events, you can specify that in `length`, which indicates how many of those events happen in a loop. 
 
-For an example of a 16 position 1/8th note drum machine, `divider` is 8 and `length` is 16. For a 8 note long quarter note pattern, `divider` is 4 and `length` is 8. 
+For an example of a 16 position 1/8th note drum machine, `length` is 16 and `divider` is 8. For a 8 note long quarter note pattern, `length` is 8 and `divider` is 4. 
 
-If you don't care about a pattern, you can omit `length` or set it to 1. The sequence will just repeat at the given `divider` note length. For example, if you want a thing to happen every 32nd note, you'd choose a `divider` of 32 and omit `length`.
+If you want repeating events but don't care about a pattern, you can set `length` to 1. The sequence will just repeat at the given `divider` note length. For example, if you want a thing to happen every 32nd note, you'd choose a `length` of 1 and a `divider` of 32. 
 
-You can set `divider` from 1 up to 192 and `length` can be any number you want over 0. You can have multiple sequences running at once, each with different dividers and lengths.
+You can also set `length` to 0, which lets you address ticks in absolute time. This is useful for non-repeating sequencing, like a MIDI event recorder: just set the `divider` to whatever note length you want, and set `length` to 0: `Sequence(0,8)`. Then you can add events to the sequence in absolute note lengths from the start.
+
+You can set `divider` from 1 up to 192 and `length` can be any number you want. You can have multiple sequences running at once, each with different dividers and lengths.
 
 Tulip can sequence any Python function, but has special handling for music `note_on`s or `note_off`s. If you're writing a music sequencer we really recommend using the `synth.note_on` type functions for sequencing.
 
  - **AMY, `synth.note_` musical functions**: Any method we provide or you write that can accept a `sequence` keyword argument will be scheduled using AMY, our underlying synthesizer core. This guarantees that the musical event will happen in perfect time, as the AMY core runs on Tulip on its own set of resources (or even a separate device, if you're using an AMYboard or other external AMY chip), and cannot be interrupted by things happening elsewhere in Tulip. Our `synth` methods -- `PatchSynth`, `DrumSynth` etc -- all support this no latency protocol. If you're writing your own music generating methods, make sure they accept `sequence` and pass that along to `synth` or `amy.send()`. 
 
- - **Any other Python function**: for example, if you want to update the display to show a LED animation as a pattern plays -- are scheduled using the same API. But they have two constraints: (1) depending on how busy Tulip is, these messages may be delayed up to 100ms and (2) you can only schedule up to 8 non-musical callback functions in Tulip. Try to schedule just one non-musical callback in your app at your note length and do all your graphical updates there. (For example, if your drum machine is `Sequence(8, 16)`, use `Sequence(8,1)` for your graphical update code -- it will be called every 1/8th note, in time with the drum pattern.)
+ - **Any other Python function**: for example, if you want to update the display to show a LED animation as a pattern plays -- are scheduled using the same API. But they have two constraints: (1) depending on how busy Tulip is, these messages may be delayed up to 100ms and (2) you can only schedule up to 8 non-musical callback functions in Tulip. Try to schedule just one non-musical callback in your app at your note length and do all your graphical updates there. (For example, if your drum machine is `Sequence(16, 8)`, use `Sequence(1,8)` for your graphical update code -- it will be called every 1/8th note, in time with the drum pattern.)
 
 Using our sequencer allows you to keep rock solid music timing but also schedule complex graphical or other updates that won't be audible if they're slightly delayed using the same `Sequence` API. See how we do this in the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) app.
 
-To use the music sequencer, use `seq = sequencer.Sequence(divider, length)`. Then add new events using `seq.add(position, function, [args])`. `position` is the position within the pattern to schedule `function` in. In the drum machine example, you set up a pattern of 16 1/8th notes, so index 0 would be the first hit, and 15 the last). You lastly pass whatever arguments you want to give to that function. `synth.note_on` takes 2 - a note number and a velocity. You can optionally pass other parameters like `pan=0.1` as keyword arguments. 
-
+To use the music sequencer, use `seq = sequencer.Sequence(length, divider)`. Then add new events using `seq.add(position, function, [args])`. `position` is the position within the pattern (or any future position, if `length` is 0) to schedule `function` in. In the drum machine example, you set up a pattern of 16 1/8th notes, so index 0 would be the first hit, and 15 the last). You lastly pass whatever arguments you want to give to that function. `synth.note_on` takes 2 - a note number and a velocity. You can optionally pass other parameters like `pan=0.1` as keyword arguments. 
 
 `seq.add()` returns the event that was added. You can keep this event around to later update or remove an individual event. `e = seq.add(0, func)` can then be used to update the sequence with a new function: `e.update(0, new_func)` or remove it with: `e.remove()`.
 
@@ -570,8 +571,8 @@ arp_notes = [48,50,52,49,56,58,60,57]
 def print_every_other_note(x):
     print("hit! %d" %(x))
 
-music_seq= sequencer.Sequence(8, 16) # 1/8th notes, 16 of them
-print_seq= sequencer.Sequence(8) # every 1/8th note
+music_seq= sequencer.Sequence(16, 8) # 1/8th notes, 16 of them
+print_seq= sequencer.Sequence(1, 8) # every 1/8th note
 for i in range(16):
     # At index i, schedule a note on for the synth, with parameters (arp_notes[i%8], 1)
     music_seq.add(i, syn.note_on, [arp_notes[i%8], 1])
@@ -584,7 +585,6 @@ def stop():
     print_seq.clear() # Removes all scheduled notes from this sequence
     syn.release() # Stops the synth
 ```
-
 
 You can set or see the system-wide BPM (beats, or quarters per minute) with AMY's `sequencer.tempo(120)`
 
