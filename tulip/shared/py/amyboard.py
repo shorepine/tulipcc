@@ -81,7 +81,7 @@ def cv_out(volts, channel=0):
 # TODO - move this to C and have it be an AMY CtrlCoef input
 def cv_in(channel=0, n=5):
     from machine import Pin, ADC
-    pin = 16 if channel==1 else 15
+    pin = 15 if channel==1 else 16
     pot = ADC(Pin(pin))
     pot.atten(ADC.ATTN_11DB) 
 
