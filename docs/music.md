@@ -85,7 +85,7 @@ For now, let's make a `Sequence` of 8 quarter notes -- the `4` defines the `1/4`
 (When finishing typing this, hit enter a few times at the end until you see a `>>>` prompt again (not a `...`.) )
 
 ```python
-seq = sequencer.Sequence(4, 8) 
+seq = sequencer.Sequence(8, 4) 
 for i in range(8):
     seq.add(i, syn.note_on, [random.choice(chord), 0.6])
 ```
@@ -111,7 +111,7 @@ You can also schedule any python function with a sequencer, not just a music not
 def p(x):
     print("hey!")
 
-print_seq = sequencer.Sequence(2, 1)
+print_seq = sequencer.Sequence(1, 2)
 print_seq.add(0,p)
 ```
 
@@ -215,7 +215,7 @@ def note(t):
 
 def start():
     global seq
-    seq = sequencer.Sequence(8, 1)
+    seq = sequencer.Sequence(1, 8)
     seq.add(0,note)
 
 def stop():
@@ -249,7 +249,7 @@ def note(t):
     app.syn.note_on(random.choice(app.chord), 0.6, time=t)
 
 def start(app):
-    app.seq = sequencer.Sequence(8, 1)
+    app.seq = sequencer.Sequence(1, 8)
     app.seq.add(0,note)
 
 def stop(app):

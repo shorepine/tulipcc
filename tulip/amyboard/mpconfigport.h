@@ -15,21 +15,16 @@
 
 // This is Tulip specific stuff. Unfortunately we cannot override some of this in ports/esp32, 
 // so we have to copy it over there as a build step.
-#define MICROPY_HW_I2C0_SCL                 (I2C_SCL)
-#define MICROPY_HW_I2C0_SDA                 (I2C_SDA)
+#define MICROPY_HW_I2C0_SCL                 (I2C_MASTER_SCL)
+#define MICROPY_HW_I2C0_SDA                 (I2C_MASTER_SDA)
 
-#define MICROPY_HW_ENABLE_SDCARD            (0)
+#define MICROPY_HW_ENABLE_SDCARD            (1)
 #define MICROPY_PY_MACHINE_I2S              (0)
 #define MICROPY_PY_BLUETOOTH (0)
 #define MICROPY_BLUETOOTH_NIMBLE (0)
-#ifdef TDECK
 #define MICROPY_HW_USB_CDC (0)
 #define MICROPY_HW_ESP_USB_SERIAL_JTAG (1)
-#else
-#define MICROPY_HW_USB_CDC (1)
-#define MICROPY_HW_ESP_USB_SERIAL_JTAG (0)
-#endif
-#define MICROPY_HW_ENABLE_USBDEV (1)
+#define MICROPY_HW_ENABLE_USBDEV (0)
 #define MICROPY_ENABLE_SCHEDULER (1)
 #define MICROPY_SCHEDULER_DEPTH             (128)
 
@@ -46,7 +41,7 @@
 
 // memory allocation policies
 #define MICROPY_ALLOC_PATH_MAX              (128)
-
+#define USB_SERIAL_JTAG_PACKET_SZ_BYTES 64
 // Initial Python heap size.  This starts small but adds new heap areas on demand due to
 // the settings MICROPY_GC_SPLIT_HEAP and MICROPY_GC_SPLIT_HEAP_AUTO.  The value is
 // different for different MCUs and is chosen so they can grow the heap once (double it)
@@ -278,7 +273,8 @@
 
 // Enable stdio over USB Serial/JTAG peripheral
 #ifndef MICROPY_HW_ESP_USB_SERIAL_JTAG
-#define MICROPY_HW_ESP_USB_SERIAL_JTAG      (SOC_USB_SERIAL_JTAG_SUPPORTED && !MICROPY_HW_USB_CDC)
+#define MICROPY_HW_ESP_USB_SERIAL_JTAG     (1) 
+//(SOC_USB_SERIAL_JTAG_SUPPORTED && !MICROPY_HW_USB_CDC)
 #endif
 
 #if MICROPY_HW_USB_CDC && MICROPY_HW_ESP_USB_SERIAL_JTAG

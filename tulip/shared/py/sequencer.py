@@ -52,8 +52,8 @@ class SequenceEvent:
             self.amy_sequenceable = False
 
 class Sequence:
-    # 8 = 1/8th note, 4 = 1/4 note, 64 = 1/64 note, etc 
-    def __init__(self, divider=8, length=1):
+    # Divider: 8 = 1/8th note, 4 = 1/4 note, 64 = 1/64 note, etc 
+    def __init__(self, length=1, divider=8):
         self.events = []
         self.divider = divider
         self.length = length
@@ -70,4 +70,5 @@ class Sequence:
         e.update(position, func, args, **kwargs)
         self.events = self.events + [e]
         return e
+
 

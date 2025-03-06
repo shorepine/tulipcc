@@ -35,18 +35,6 @@ if(NOT TULIP_ESP32S3_DIR)
 endif()
 
 
-# Set location of lvgl_mp dir
-if(NOT LV_BINDING_DIR)
-    get_filename_component(LV_BINDING_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython_tulip ABSOLUTE)
-endif()
-
-# Set location of lvgl dir
-if(NOT LVGL_DIR)
-    get_filename_component(LVGL_DIR ${CMAKE_CURRENT_LIST_DIR}/../../lv_binding_micropython_tulip/lvgl ABSOLUTE)
-endif()
-
-file(GLOB_RECURSE LVGL_SOURCES ${LVGL_DIR}/src/*.c)
-
 
 # Include core source components.
 include(${MICROPY_DIR}/py/py.cmake)
@@ -92,7 +80,6 @@ list(APPEND MICROPY_SOURCE_DRIVERS
     ${MICROPY_DIR}/drivers/dht/dht.c
 )
 
-
 string(CONCAT GIT_SUBMODULES "${GIT_SUBMODULES} " lib/tinyusb)
 if(MICROPY_PY_TINYUSB)
     set(TINYUSB_SRC "${MICROPY_DIR}/lib/tinyusb/src")
@@ -128,12 +115,15 @@ endif()
 list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/main.c
     ${MICROPY_PORT_DIR}/amychip.c
-    ${MICROPY_PORT_DIR}/esp32-hal-i2c-slave.c
-    ${MICROPY_PORT_DIR}/multicast.c
-    ${MICROPY_PORT_DIR}/help.c
-    ${MICROPY_PORT_DIR}/network_common.c
-    ${MICROPY_PORT_DIR}/modsocket.c
+    #${MICROPY_PORT_DIR}/esp32-hal-i2c-slave.c
+    ${MICROPY_PORT_DIR}/../esp32s3/multicast.c
+    ${MICROPY_PORT_DIR}/../esp32s3/help.c
+    ${MICROPY_PORT_DIR}/../esp32s3/network_common.c
+    ${MICROPY_PORT_DIR}/../esp32s3/modsocket.c
+    ${MICROPY_PORT_DIR}/../esp32s3/usb.c
     ${MICROPY_PORT_DIR}/mphalport.c
+    ${MICROPY_PORT_DIR}/machine_sdcard.c
+    ${MICROPY_ESP32_DIR}/usb_serial_jtag.c
 
     ${MICROPY_ESP32_DIR}/panichandler.c
     ${MICROPY_ESP32_DIR}/adc.c
@@ -142,7 +132,6 @@ list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_ESP32_DIR}/gccollect.c
     ${MICROPY_ESP32_DIR}/fatfs_port.c
     ${MICROPY_ESP32_DIR}/machine_bitstream.c
-    ${MICROPY_ESP32_DIR}/machine_sdcard.c
     ${MICROPY_ESP32_DIR}/machine_timer.c
     ${MICROPY_ESP32_DIR}/machine_pin.c
     ${MICROPY_ESP32_DIR}/machine_touchpad.c
@@ -171,22 +160,11 @@ list(APPEND MICROPY_SOURCE_PORT ${CMAKE_BINARY_DIR}/pins.c)
 list(APPEND MICROPY_SOURCE_EXTMOD 
     ${TULIP_SHARED_DIR}/modtulip.c
     ${TULIP_SHARED_DIR}/polyfills.c
-    ${TULIP_SHARED_DIR}/smallfont.c
-    ${TULIP_SHARED_DIR}/display.c
-    ${TULIP_SHARED_DIR}/bresenham.c
     ${TULIP_SHARED_DIR}/tulip_helpers.c
-    ${TULIP_SHARED_DIR}/editor.c
-    ${TULIP_SHARED_DIR}/keyscan.c
     ${TULIP_SHARED_DIR}/help.c
-    ${TULIP_SHARED_DIR}/alles.c
-    ${TULIP_SHARED_DIR}/ui.c
     ${TULIP_SHARED_DIR}/midi.c
     ${TULIP_SHARED_DIR}/sounds.c
     ${TULIP_SHARED_DIR}/tsequencer.c
-    ${TULIP_SHARED_DIR}/lodepng.c
-    ${TULIP_SHARED_DIR}/lvgl_u8g2.c
-    ${TULIP_SHARED_DIR}/u8fontdata.c
-    ${TULIP_SHARED_DIR}/u8g2_fonts.c
     ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
     ${AMY_DIR}/src/algorithms.c
     ${AMY_DIR}/src/custom.c
@@ -202,6 +180,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c
     ${AMY_DIR}/src/log2_exp2.c
+    ${AMY_DIR}/src/interp_partials.c
     ${ULAB_DIR}/scipy/integrate/integrate.c
     ${ULAB_DIR}/scipy/linalg/linalg.c
     ${ULAB_DIR}/scipy/optimize/optimize.c
@@ -259,17 +238,17 @@ list(APPEND IDF_COMPONENTS
     esp_bootloader_format
     esp_common
     esp_eth
+    esp_driver_ledc
     esp_driver_uart
     esp_driver_i2s
+    esp_driver_rmt
     esp_driver_i2c
     esp_driver_sdmmc
     esp_driver_sdspi
     esp_driver_spi
     esp_driver_gpio
-    esp_driver_ledc
     esp_event
     esp_hw_support
-    esp_lcd
     esp_mm
     esp_netif
     esp_partition
@@ -308,7 +287,6 @@ idf_component_register(
         ${MICROPY_SOURCE_PORT}
         ${MICROPY_SOURCE_BOARD}
         ${MICROPY_SOURCE_TINYUSB}
-        ${LVGL_SOURCES}
     INCLUDE_DIRS
         .
         ${MICROPY_INC_CORE}
@@ -320,8 +298,6 @@ idf_component_register(
         ../../tulip/shared
         ../../amy/src
         ../../tulip/shared/ulab/code
-        ${LV_BINDING_DIR}
-        ${LVGL_DIR}/src
     REQUIRES
         ${IDF_COMPONENTS}
 )
@@ -345,12 +321,11 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     LFS1_NO_MALLOC LFS1_NO_DEBUG LFS1_NO_WARN LFS1_NO_ERROR LFS1_NO_ASSERT
     LFS2_NO_MALLOC LFS2_NO_ASSERT
     ESP_PLATFORM
-    TULIP
+    AMYBOARD
     #AMY_DEBUG
-    LV_CONF_INCLUDE_SIMPLE
+    ${MICROPY_DEF_TINYUSB}
     ${BOARD_DEFINITION1}
     ${BOARD_DEFINITION2}
-    ${MICROPY_DEF_TINYUSB}
 )
 
 #LFS2_NO_DEBUG LFS2_NO_WARN LFS2_NO_ERROR 
@@ -375,9 +350,6 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
 #    ${IDF_PATH}/components/bt/host/nimble/nimble
 #)
 
-target_link_options(${MICROPY_TARGET} PUBLIC
-     ${MICROPY_LINK_TINYUSB}
-)
 
 # Add additional extmod and usermod components.
 target_link_libraries(${MICROPY_TARGET} micropy_extmod_btree)

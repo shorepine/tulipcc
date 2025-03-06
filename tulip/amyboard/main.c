@@ -57,10 +57,6 @@
 #include "modmachine.h"
 #include "modnetwork.h"
 #include "mpthreadport.h"
-#ifdef TDECK
-#include "tdeck_display.h"
-#include "tdeck_keyboard.h"
-#endif
 
 #include "tsequencer.h"
 
@@ -92,31 +88,17 @@
 #define MP_TASK_STACK_LIMIT_MARGIN (1024)
 #endif
 
-#include "display.h"
 #include "alles.h"
 #include "tasks.h"
 
-#ifdef TULIP_DIY
-#include "ft5x06_touchscreen.h"
-#elif defined MAKERFABS
-#include "gt911_touchscreen.h"
-#endif
-#ifdef TDECK
-#include "tdeck_keyboard.h"
-#else
-#include "usb_host.h"
-#endif
 
-TaskHandle_t display_handle;
-TaskHandle_t usb_handle;
-TaskHandle_t touchscreen_handle;
 TaskHandle_t tulip_mp_handle;
 TaskHandle_t midi_handle;
-TaskHandle_t alles_handle;
-TaskHandle_t alles_parse_handle;
-TaskHandle_t alles_receive_handle;
-TaskHandle_t amy_render_handle;
-TaskHandle_t alles_fill_buffer_handle;
+//TaskHandle_t alles_handle;
+//TaskHandle_t alles_parse_handle;
+//TaskHandle_t alles_receive_handle;
+//TaskHandle_t amy_render_handle;
+//TaskHandle_t alles_fill_buffer_handle;
 TaskHandle_t idle_0_handle;
 TaskHandle_t idle_1_handle;
 TaskHandle_t sequencer_handle;
@@ -150,10 +132,10 @@ float compute_cpu_usage(uint8_t debug) {
 
     const char* const tasks[] = {
          "IDLE0", "IDLE1", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "esp_timer", "sys_evt", "tiT",
-         DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
+         TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
          ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, SEQUENCER_TASK_NAME, 0
     };
-    const uint8_t cores[] = {0, 1, 0, 0, 1, 0, 0, 0, 1, 0, DISPLAY_TASK_COREID, USB_TASK_COREID, TOUCHSCREEN_TASK_COREID, TULIP_MP_TASK_COREID,
+    const uint8_t cores[] = {0, 1, 0, 0, 1, 0, 0, 0, 1, 0, TULIP_MP_TASK_COREID,
         MIDI_TASK_COREID, ALLES_TASK_COREID, ALLES_PARSE_TASK_COREID, ALLES_RECEIVE_TASK_COREID, ALLES_RENDER_TASK_COREID, ALLES_FILL_BUFFER_TASK_COREID, 
         SEQUENCER_TASK_COREID};
 
@@ -232,9 +214,11 @@ void mp_task(void *pvParameter) {
     #endif
     #endif
 
+    usb_serial_jtag_init();
+
     #if MICROPY_HW_ENABLE_UART_REPL
-    fprintf(stderr, "init uart repl\n");
-    uart_stdout_init();
+    //fprintf(stderr, "init uart repl\n");
+    //uart_stdout_init();
     #endif
     
     machine_init();
@@ -262,11 +246,6 @@ soft_reset:
 
     readline_init0();
 
-    if(!lvgl_setup) {
-        setup_lvgl();
-        lvgl_setup = 1;
-    }
-    
     MP_STATE_PORT(native_code_pointers) = MP_OBJ_NULL;
     
     // initialise peripherals
@@ -354,23 +333,18 @@ void boardctrl_startup(void) {
     }
 }
 
-#ifdef TULIP_DIY
-extern void ft5x06_init();
-extern void run_ft5x06();
-#elif defined MAKERFABS
-extern void run_gt911();
-#endif
 
 extern void run_midi();
 
 
-#ifdef TDECK
-extern void run_tdeck_keyboard();
-extern void run_gt911();
-#endif
 
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
+
+
+//esp_err_t i2c_master_init(void);
+//esp_err_t i2c_slave_init(void);
+//esp_err_t setup_pcm9211(void);
 
 void app_main(void) {
     // Hook for a board to run code at start up.
@@ -383,80 +357,31 @@ void app_main(void) {
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
 
-    #ifdef TDECK
-    // turn on TDeck peripheral 
-    gpio_config_t peri_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << TDECK_PERI_GPIO
-    };
-    gpio_config(&peri_gpio_config);
-    gpio_set_level(TDECK_PERI_GPIO, 1);
-    delay_ms(500);
-    #endif
-
-    #ifndef TDECK
     fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
     xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
-    #endif
-    
 
-    #ifndef TULIP4_R10_V0 // v0 doesn't do usb
-    #ifndef TDECK // TDECK doesn't send power to USB
-    fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
-    xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
-    fflush(stderr);
-    delay_ms(100);
-    #endif
-    #endif
+    // TODO -- USB gadget 
 
-    fprintf(stderr,"Starting display on core %d\n", DISPLAY_TASK_COREID);
-    #ifdef TDECK
-    delay_ms(100);
-    xTaskCreatePinnedToCore(run_tdeck_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
-    #else
-    xTaskCreatePinnedToCore(run_esp32s3_display, DISPLAY_TASK_NAME, (DISPLAY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, DISPLAY_TASK_PRIORITY, &display_handle, DISPLAY_TASK_COREID);
-    #endif
-    fflush(stderr);
-    delay_ms(100);
+    /*
+    fprintf(stderr,"Starting AMY on core %d\n", ALLES_TASK_COREID);
+    check_init(&i2c_master_init, "i2c_master");
+    check_init(&i2c_slave_init, "i2c_slave");
+    check_init(&setup_pcm9211, "pcm9211");
+    */
 
-    fprintf(stderr,"Starting touchscreen on core %d \n", TOUCHSCREEN_TASK_COREID);
-    #ifdef TULIP_DIY
-    ft5x06_init();
-    xTaskCreatePinnedToCore(run_ft5x06, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
-    #elif defined MAKERFABS
-    xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
-    #elif defined TDECK
-    delay_ms(500);
-    xTaskCreatePinnedToCore(run_gt911, TOUCHSCREEN_TASK_NAME, (TOUCHSCREEN_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TOUCHSCREEN_TASK_PRIORITY, &touchscreen_handle, TOUCHSCREEN_TASK_COREID);
-    #endif
-    fflush(stderr);
-    delay_ms(100);
-
-    fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
-    run_alles();
-
-    //xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
+    //run_alles();
     fflush(stderr);
     delay_ms(500);
     
+
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
 
-    #ifdef TDECK
-    delay_ms(3000); // wait for touchscreen
-    fprintf(stderr,"Starting T-Deck keyboard on core %d\n", USB_TASK_COREID);
-    xTaskCreatePinnedToCore(run_tdeck_keyboard, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
-    fflush(stderr);
-    delay_ms(10);
-    #endif
-
     tsequencer_init();
-
-
 }
 
 void nlr_jump_fail(void *val) {
