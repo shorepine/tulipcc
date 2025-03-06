@@ -7,13 +7,8 @@ from tulip import board
 if board()!="AMYBOARD":
     from tulip import edit, run
 else:
-    # mount the SD card if given
-    import machine
-    try:
-        sd = machine.SDCard(sck=12, miso=13, mosi=11, cs=10,slot=2)
-        uos.mount(uos.VfsFat(sd), '/sd')
-    except OSError:
-        pass # it's ok!
+    import amyboard
+    amyboard.mount_sd()
 
 if board()=="WEB":
     def webnyi():
@@ -101,7 +96,8 @@ if(tulip.board() == "WEB"):
     midi.setup()
     # Override send & bleep are done from JS on web because of click-to-start audio.
 else:
-    # Override amy's send to work with tulip
-    amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
-    midi.setup()
+    if(tulip.board() != "AMYBOARD"):
+        # Override amy's send to work with tulip
+        amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
+        midi.setup()
 

@@ -319,14 +319,26 @@ STATIC mp_obj_t tulip_build_strings(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_build_strings_obj, 0,0, tulip_build_strings);
 
 
+// Just AMYBOARD c code
+#ifdef AMYBOARD
+extern void start_amyboard_amy();
+
+STATIC mp_obj_t tulip_start_amyboard_amy(size_t n_args, const mp_obj_t *args) {
+    start_amyboard_amy();    
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_start_amyboard_amy_obj, 0, 0, tulip_start_amyboard_amy);
 
 
+STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {
+    amy_play_message((char*)mp_obj_str_get_str(args[0]));
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_send_obj, 1, 1, tulip_amyboard_send);
+
+#else
 
 /// Tulip-with-screen stuff only below
-
-
-
-#ifndef AMYBOARD
 extern void unix_display_set_clock(uint8_t);
 extern void display_start();
 extern void display_stop();
@@ -1338,7 +1350,10 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
 #endif
 
-#ifndef AMYBOARD
+#ifdef AMYBOARD
+    { MP_ROM_QSTR(MP_QSTR_start_amyboard_amy), MP_ROM_PTR(&tulip_start_amyboard_amy_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amyboard_send), MP_ROM_PTR(&tulip_amyboard_send_obj) },
+#else
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_restart), MP_ROM_PTR(&tulip_display_restart_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_stop), MP_ROM_PTR(&tulip_display_stop_obj) },
