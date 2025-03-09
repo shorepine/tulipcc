@@ -171,7 +171,6 @@ uint8_t u8g2_glyph_width(uint8_t font_no, uint16_t glyph) {
     ufont.font_decode.fg_color = 1; 
     ufont.font_decode.is_transparent = 1; 
     ufont.font_decode.dir = 0;
-    //fprintf(stderr, "getting width for %d %c\n", font_no, glyph);
     u8g2_SetFont(&ufont, tulip_fonts[font_no]);
     uint8_t width = u8g2_GetGlyphWidth(&ufont, glyph);
     return width;
@@ -291,7 +290,10 @@ static int16_t u8g2_add_vector_x(int16_t dx, int8_t x, int8_t y, uint8_t dir)
   return dx;
 }
 
-
+void drawPixel_target(int16_t x, int16_t y, uint8_t *target, uint16_t target_width, uint16_t target_height) {
+  uint16_t new_y = y + target_height;
+  target[x + new_y*target_width] = 0xff;
+}
 
 void drawLine_target(short x0, short y0,short x1, short y1, uint8_t *target, uint16_t target_width, uint16_t target_height) {
   short steep = abs(y1 - y0) > abs(x1 - x0);
@@ -320,9 +322,11 @@ void drawLine_target(short x0, short y0,short x1, short y1, uint8_t *target, uin
 
   for (; x0<=x1; x0++) {
     if (steep) { // swap x and y. 
-        target[y0 + 1 + (((target_height/2)+x0)*target_width)] = 0xff;
+        drawPixel_target(y0, x0, target, target_width, target_height);
+        //target[y0 + 1 + (((target_height/2)+x0)*target_width)] = 0xff;
     } else {
-        target[x0 + 1 + (((target_height/2)+y0)*target_width)] = 0xff;
+        drawPixel_target(x0, y0, target, target_width, target_height);
+        //target[x0 + 1 + (((target_height/2)+y0)*target_width)] = 0xff;
     }
     err -= dy;
     if (err < 0) {
@@ -333,11 +337,9 @@ void drawLine_target(short x0, short y0,short x1, short y1, uint8_t *target, uin
 }
 
 void drawFastHLine_target(int16_t x, int16_t y, int16_t w, uint8_t*target, uint16_t target_width, uint16_t target_height) {
-    //fprintf(stderr, "draw H line x %d y %d w %d tw %d th %d\n", x,y,w,target_width, target_height);
     drawLine_target(x, y, x + w - 1, y, target, target_width, target_height);
 }
 void drawFastVLine_target(short x0, short y0, short h, uint8_t*target, uint16_t target_width, uint16_t target_height) {
-    fprintf(stderr, "draw V line x0 %d y0 %d h %d tw %d th %d\n", x0,y0,h,target_width, target_height);
     drawLine_target(x0, y0, x0, y0+h-1, target, target_width, target_height);
 }
 
@@ -489,9 +491,7 @@ static void u8g2_font_decode_len_target(u8g2_font_t *u8g2, uint8_t len, uint8_t 
   
   /* target position on the screen */
   int16_t x, y;
-  
   u8g2_font_decode_t *decode = &(u8g2->font_decode);
-  
   cnt = len;
   
   /* get the local position */
@@ -515,20 +515,23 @@ static void u8g2_font_decode_len_target(u8g2_font_t *u8g2, uint8_t len, uint8_t 
     //u8g2_font_decode_draw_pixel(u8g2, lx,ly,current, is_foreground);
 
     /* get target position */
+        /* get target position */
     x = decode->target_x;
-    y = decode->target_y;
+    //y = decode->target_y;
+    //x = decode->target_x+   u8g2->font_info.x_offset  ;
+    y = decode->target_y +   u8g2->font_info.y_offset  ;
 
     /* apply rotation */
     x = u8g2_add_vector_x(x, lx, ly, decode->dir);
     y = u8g2_add_vector_y(y, lx, ly, decode->dir);
-    
     /* draw foreground and background (if required) */
     if ( current > 0 )      /* avoid drawing zero length lines, issue #4 */
       {
         if ( is_foreground )
           {
-            uint16_t target_width = (decode->glyph_width+ abs(decode->target_x))*2 ;
-            uint16_t target_height = decode->glyph_height*2;
+            // These are swapped??! 
+            uint16_t target_width = u8g2->font_info.max_char_height; 
+            uint16_t target_height =u8g2->font_info.max_char_width; 
             u8g2_draw_hv_line_target(u8g2, x, y, current, decode->dir, target, target_width, target_height);
           }
       }    

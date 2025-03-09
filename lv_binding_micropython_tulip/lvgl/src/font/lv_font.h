@@ -190,8 +190,11 @@ void lv_font_set_kerning(lv_font_t * font, lv_font_kerning_t kerning);
  **********************/
 
 #define LV_FONT_DECLARE(font_name) LV_ATTRIBUTE_EXTERN_DATA extern const lv_font_t font_name;
+
+extern lv_font_t lv_font_tulip_11;
+//LV_FONT_DECLARE(lv_font_tulip_0);
+
 /*
-extern lv_font_t lv_font_tulip_0;
 extern lv_font_t lv_font_tulip_1;
 extern lv_font_t lv_font_tulip_2;
 extern lv_font_t lv_font_tulip_3;

@@ -1,5 +1,5 @@
 # amyboard.py
-import tulip, amy
+import tulip, midi, amy
 
 i2c = None
 
@@ -68,20 +68,25 @@ def initpcm9211(addr=0x40):
 # TODO - keep this in C as "external output" in AMY
 # TODO - should we take in -V and scale it ? 
 def cv_out(volts, channel=0):
-    addr = 89 # GP8413 - not working yet
-    val = int((volts/10.0) * 65535.0)
-    if(val>65535): val = 65535
+    """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1)"""
+    addr = 88 # GP8413
+    # With rev1 scaling, 0x0000 -> -10v, 0x7fff -> +10v
+    val = int(((volts + 10)/20.0) * 0x8000)
+    if(val < 0):
+        val = 0
+    if(val > 0x7fff):
+        val = 0x7fff
     b1 = (val & 0xff00) >> 8
     b0 = (val & 0x00ff)
     ch = 0x02
-    addr = 89
-    if(channel == 1): ch = 0x04
+    if(channel == 1):
+        ch = 0x04
     get_i2c().writeto_mem(addr, ch, bytes([b0,b1]))
 
 # TODO - move this to C and have it be an AMY CtrlCoef input
 def cv_in(channel=0, n=5):
     from machine import Pin, ADC
-    pin = 16 if channel==1 else 15
+    pin = 15 if channel==1 else 16
     pot = ADC(Pin(pin))
     pot.atten(ADC.ATTN_11DB) 
 
