@@ -9,6 +9,7 @@ if board()!="AMYBOARD":
 else:
     import amyboard
     amyboard.mount_sd()
+    amyboard.start_amy()
 
 if board()=="WEB":
     def webnyi():
