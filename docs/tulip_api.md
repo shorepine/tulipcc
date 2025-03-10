@@ -202,6 +202,9 @@ def run(screen):
     screen.deactivate_callback = None # called when you switch away from the app
     screen.quit_callback = None # called when the quit button is pressed. Note: deactivate_callback is called first on quit
     screen.handle_keyboard = False # if you set up UI components that accept keyboard input
+
+    screen.group.set_style_text_font(lv.font_tulip_11,0) # Set the default font for the entire app if you want
+
     # Set up your UI with screen.add(), adding UIElement objects
     screen.add(tulip.UILabel("hello there"), x=500,y=100)
     # You can use LVGL alignment to add objects in relation to the last object added
@@ -242,6 +245,8 @@ You can see running multitasking apps with `tulip.running_apps`, which is a dict
 You can summon a touch keyboard with `tulip.keyboard()`. Tapping the keyboard icon dismisses it, or you can use `tulip.keyboard()` again to remove it. 
 
 We boot a launcher for common operations. It's available via the small grey icon on the bottom right.
+
+For LVGL fonts, you can use default [LVGL `montserrat` fonts](https://docs.lvgl.io/master/details/main-modules/font.html), e.g. `font=lv.font_montserrat_12`, or the built in Tulip BG fonts, e.g. `font=lv.tulip_font_13`. 
 
 ```python
 tulip.keyboard() # open or close the soft keyboard
@@ -751,7 +756,7 @@ tulip.bg_roundrect(x,y, w,h, r, pal_idx, filled)
 tulip.bg_rect(x,y, w,h, pal_idx, filled)
 tulip.bg_triangle(x0,y0, x1,y1, x2,y2, pal_idx, filled)
 tulip.bg_fill(x,y,pal_idx) # Flood fill starting at x,y
-tulip.bg_str(string, x, y, pal_idx, font) # same as char, but with a string. x and y are the bottom left
+tulip.bg_str(string, x, y, pal_idx, font) # same as char, but with a string. x and y are the bottom left. font is a number, 0-18
 tulip.bg_str(string, x, y, pal_idx, font, w, h) # Will center the text inside w,h
 
 """
@@ -781,10 +786,15 @@ tulip.bg_scroll_y_offset(line, y_offset)
 tulip.bg_swap()
 ```
 
-We currently ship some fonts with Tulip to use for the BG. These are aside from the fonts that come with LVGL for the UI. You can see them all by running `fonts.py`, which also shows how to address them:
+### Fonts
+
+There are three types of fonts built into Tulip. 
+
+ - TFB font: we ship one fixed size font for the TFB (see below). This cannot be changed at runtime.
+ - LVGL fonts: [LVGL ships a few fonts like `lv.font_montserrat_12`](https://docs.lvgl.io/master/details/main-modules/font.html). These fonts have more glyphs, can handle some unicode characters, and also ship with symbols (like the ones we show in the Tulip launcher). 
+ - Tulip fonts: we ship 19 fonts to use with `bg_str` etc, and they can also be used in LVGL widgets by referencing them like `lv.tulip_font_13`.
 
 ![IMG_3339](https://user-images.githubusercontent.com/76612/229381546-46ec4c50-4c4a-4f3a-9aec-c77d439081b2.jpeg)
-
 
 
 ## Text frame buffer (TFB)
