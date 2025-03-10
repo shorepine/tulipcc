@@ -292,7 +292,9 @@ static int16_t u8g2_add_vector_x(int16_t dx, int8_t x, int8_t y, uint8_t dir)
 
 void drawPixel_target(int16_t x, int16_t y, uint8_t *target, uint16_t target_width, uint16_t target_height) {
   uint16_t new_y = y + target_height;
-  target[x + new_y*target_width] = 0xff;
+  if(new_y < target_height && x < target_width) {
+    target[x + new_y*target_width] = 0xff;
+  }
 }
 
 void drawLine_target(short x0, short y0,short x1, short y1, uint8_t *target, uint16_t target_width, uint16_t target_height) {
@@ -323,10 +325,8 @@ void drawLine_target(short x0, short y0,short x1, short y1, uint8_t *target, uin
   for (; x0<=x1; x0++) {
     if (steep) { // swap x and y. 
         drawPixel_target(y0, x0, target, target_width, target_height);
-        //target[y0 + 1 + (((target_height/2)+x0)*target_width)] = 0xff;
     } else {
         drawPixel_target(x0, y0, target, target_width, target_height);
-        //target[x0 + 1 + (((target_height/2)+y0)*target_width)] = 0xff;
     }
     err -= dy;
     if (err < 0) {

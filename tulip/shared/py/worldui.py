@@ -91,7 +91,7 @@ class TextEntry(tulip.UIElement):
         self.ta = lv.textarea(self.group)
         self.group.set_size(H_RES-40,h)
         self.ta.set_size(H_RES-80, h)
-        self.ta.set_style_text_font(lv.font_montserrat_18, 0)
+        self.ta.set_style_text_font(lv.font_tulip_13, 0)
         self.ta.set_style_bg_color(tulip.pal_to_lv(bgcolor), lv.PART.MAIN)
         self.ta.set_style_text_color(tulip.pal_to_lv(255),0)
         self.ta.set_style_border_color(tulip.pal_to_lv(255), lv.PART.CURSOR | lv.STATE.FOCUSED)
@@ -113,7 +113,7 @@ class TextSection(tulip.UIElement):
         self.ta.set_style_border_color(tulip.pal_to_lv(0), lv.PART.CURSOR | lv.STATE.FOCUSED)
 
         self.label = lv.label(self.group)
-        self.label.set_style_text_font(lv.font_montserrat_18, 0)
+        self.label.set_style_text_font(lv.font_tulip_13, 0)
         self.label.set_text(name)
         self.label.set_style_text_color(tulip.pal_to_lv(255),0)
         self.label.align_to(self.ta, lv.ALIGN.OUT_TOP_LEFT, 0, 0)

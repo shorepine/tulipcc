@@ -1,12 +1,9 @@
 // lvgl_u8g2.c
 // render u8g2 fonts in lvgl 
-
-
 #include "lvgl.h"
 #include "u8g2_fonts.h"
 
 
-//lv_font_t lv_u8g2_font_helvB14_tr;
 // will make this less nasty asap
 #define MAX_FONT_W 50
 #define MAX_FONT_H 80
@@ -25,8 +22,7 @@ bool my_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t * dsc_out, 
     // unfortunately this function seems to be called 3 times per glyph, so maybe try to not draw so much
 
     // BDF fonts only have lower ascii i think
-    // Also, there's some bug where * and ' can't be drawn in a list without segfault
-    if(unicode_letter>127) {// || unicode_letter=='*' || unicode_letter == '\'') {
+    if(unicode_letter>127) {
         return false;
     }
 
@@ -39,39 +35,13 @@ bool my_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t * dsc_out, 
     u8g2_SetFont(&ufont, tulip_fonts[font_no]);
     for(uint16_t i=0;i<(MAX_FONT_H*MAX_FONT_W);i++) { databuf[i] = 0; }
     int16_t adv = u8g2_DrawGlyph_target(&ufont, unicode_letter, databuf);
-    //uint16_t c = 0;
-    //uint16_t tick = 0;
     u8g2_font_decode_t font_decode = u8g2_GetGlyphInfo(&ufont, unicode_letter);
-    /*
-    for(uint16_t i = 0; i< (MAX_FONT_H*MAX_FONT_W);i++) {
-        if(databuf[i]!=0) tick++;
-    }
-    fprintf(stderr, "[[%c]] width %d height %d tick %d\n", unicode_letter, font_decode.glyph_width, font_decode.glyph_height, tick);
-    for(uint16_t y=0;y<ufont.font_info.max_char_height;y++) {
-        fprintf(stderr, "%02d: |", y);
-        for(uint16_t x=0;x<font_decode.glyph_width*2;x++) {
-            if(databuf[c++]){
-                fprintf(stderr, "#");
-            } else {
-                fprintf(stderr, " ");
-            }
-
-        }   
-        fprintf(stderr, "|\n");
-    }
-    */
-    /*
-    if((unicode_letter=='*' || unicode_letter=='-' || unicode_letter=='_' || unicode_letter=='y' || unicode_letter=='A') && font_no==11) {
-        fprintf(stderr, "fn %d %c adv %d height %d width %d x %d y %d tx %d ty %d FONT: mcw %d mch %d, xoff %d yoff %d, aA %d dg %d\n", 
-            font_no, unicode_letter, adv,font_decode.glyph_height, font_decode.glyph_width, font_decode.x, font_decode.y, 
-            font_decode.target_x, font_decode.target_y, ufont.font_info.max_char_width, ufont.font_info.max_char_height, 
-            ufont.font_info.x_offset, ufont.font_info.y_offset, ufont.font_info.ascent_A, ufont.font_info.descent_g );
-
-    }
-    */
     dsc_out->adv_w = adv;        /*Horizontal space required by the glyph in [px]*/
-    dsc_out->box_w = ufont.font_info.max_char_height;//(font_decode.glyph_width)-(ufont.font_info.x_offset); //)*2 ;         /*Width of the bitmap in [px]*/
-    dsc_out->box_h = ufont.font_info.max_char_width;//(font_decode.glyph_height-(ufont.font_info.y_offset));//) ;         /*Width of the bitmap in [px]*/
+
+    // ufont height/width are swapped
+    dsc_out->box_w = ufont.font_info.max_char_height;      /*Width of the bitmap in [px]*/
+    dsc_out->box_h = ufont.font_info.max_char_width;       /*Width of the bitmap in [px]*/
+
     dsc_out->ofs_x = 0;                            /*X offset of the bitmap in [pf]*/
     dsc_out->ofs_y = 0;
     dsc_out->format= LV_FONT_GLYPH_FORMAT_A1;
@@ -81,29 +51,10 @@ bool my_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t * dsc_out, 
 
 const void * my_get_glyph_bitmap_cb(lv_font_glyph_dsc_t * g_dsc, lv_draw_buf_t * draw_buf)
 {
-    /*
-    for(uint16_t i=0;i<g_dsc->box_w*g_dsc->box_h;i++) draw_buf->data[i] = 0;
-    uint16_t c =0;
-    
-    fprintf(stderr, "gid: %c. w %d h %d ox %d oy %d\n", g_dsc->gid.index, g_dsc->box_w, g_dsc->box_h, g_dsc->ofs_x, g_dsc->ofs_y);
-    for(uint16_t y=0;y<g_dsc->box_h;y++) {
-        fprintf(stderr, "%02d: |", y);
-        for(uint16_t x=0;x<g_dsc->box_w;x++) {
-            if(databuf[c]){
-                fprintf(stderr, "#");
-            } else {
-                fprintf(stderr, " ");
-            }
-            draw_buf->data[y*g_dsc->box_w + x] = databuf[c++];
-        }   
-        fprintf(stderr, "|\n");
-    }
-    */
     memcpy(draw_buf->data, databuf, g_dsc->box_w*g_dsc->box_h);
     return draw_buf;
 }
 
-//uint32_t font_no= 5;
 void get_lvgl_font_from_tulip(uint32_t font_no, lv_font_t * outfont) {
     u8g2_font_t ufont;
     ufont.font = NULL; 

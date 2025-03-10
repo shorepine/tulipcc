@@ -142,8 +142,10 @@ class ListColumn(tulip.UIElement):
         self.group.set_size(width,height)
         self.group.remove_flag(lv.obj.FLAG.SCROLLABLE)
         self.label = lv.label(self.group)
+        #self.label.set_style_text_font(lv.font_tulip_11)
         self.label.set_text(name)
         self.list = lv.list(self.group)
+        #self.list.set_style_text_font(lv.font_tulip_11)
         self.list.set_size(width-25,height-20)
         self.list.align_to(self.label,lv.ALIGN.OUT_BOTTOM_LEFT,0,5)
         self.buttons = []
@@ -318,6 +320,7 @@ def run(screen):
     app.quit_callback = quit
     app.activate_callback = activate
     app.deactivate_callback = deactivate
+    app.group.set_style_text_font(lv.font_tulip_11,0)
 
     # Skip 10, drums
     app.channels = ListColumn('channel',["1","2","3","4","5","6","7","8","9","11","12","13","14","15","16"], selected=0, width=100)
