@@ -294,6 +294,8 @@ void drawPixel_target(int16_t x, int16_t y, uint8_t *target, uint16_t target_wid
   uint16_t new_y = y + target_height;
   if(new_y < target_height && x < target_width) {
     target[x + new_y*target_width] = 0xff;
+  } else {
+    //fprintf(stderr, "bad %d %d %d [%d %d]\n", x,y,new_y, target_width, target_height);
   }
 }
 
@@ -510,16 +512,10 @@ static void u8g2_font_decode_len_target(u8g2_font_t *u8g2, uint8_t len, uint8_t 
     if ( cnt < rem )
       current = cnt;
     
-    
-    /* now draw the line, but apply the rotation around the glyph target position */
-    //u8g2_font_decode_draw_pixel(u8g2, lx,ly,current, is_foreground);
 
     /* get target position */
-        /* get target position */
     x = decode->target_x;
-    //y = decode->target_y;
-    //x = decode->target_x+   u8g2->font_info.x_offset  ;
-    y = decode->target_y +   u8g2->font_info.y_offset  ;
+    y = decode->target_y+   u8g2->font_info.y_offset  ;
 
     /* apply rotation */
     x = u8g2_add_vector_x(x, lx, ly, decode->dir);
@@ -529,9 +525,9 @@ static void u8g2_font_decode_len_target(u8g2_font_t *u8g2, uint8_t len, uint8_t 
       {
         if ( is_foreground )
           {
-            // These are swapped??! 
-            uint16_t target_width = u8g2->font_info.max_char_height; 
-            uint16_t target_height =u8g2->font_info.max_char_width; 
+            //fprintf(stderr, "mcw %d mch %d \n", u8g2->font_info.max_char_width, u8g2->font_info.max_char_height);
+            uint16_t target_width = u8g2->font_info.max_char_width; 
+            uint16_t target_height =u8g2->font_info.max_char_height; 
             u8g2_draw_hv_line_target(u8g2, x, y, current, decode->dir, target, target_width, target_height);
           }
       }    

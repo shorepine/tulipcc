@@ -39,8 +39,8 @@ bool my_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t * dsc_out, 
     dsc_out->adv_w = adv;        /*Horizontal space required by the glyph in [px]*/
 
     // ufont height/width are swapped
-    dsc_out->box_w = ufont.font_info.max_char_height;      /*Width of the bitmap in [px]*/
-    dsc_out->box_h = ufont.font_info.max_char_width;       /*Width of the bitmap in [px]*/
+    dsc_out->box_w = ufont.font_info.max_char_width;      /*Width of the bitmap in [px]*/
+    dsc_out->box_h = ufont.font_info.max_char_height;       /*Width of the bitmap in [px]*/
 
     dsc_out->ofs_x = 0;                            /*X offset of the bitmap in [pf]*/
     dsc_out->ofs_y = 0;
@@ -65,8 +65,8 @@ void get_lvgl_font_from_tulip(uint32_t font_no, lv_font_t * outfont) {
     
     outfont->get_glyph_dsc = my_get_glyph_dsc_cb;        /*Set a callback to get info about glyphs*/
     outfont->get_glyph_bitmap = my_get_glyph_bitmap_cb;  /*Set a callback to get bitmap of a glyph*/
-    outfont->line_height = ufont.font_info.max_char_height;                       /*The real line height where any text fits*/
-    outfont->base_line = abs(ufont.font_info.y_offset); // base_line;                      /*Base line measured from the top of line_height*/
+    outfont->line_height = ufont.font_info.max_char_width;                       /*The real line height where any text fits*/
+    outfont->base_line = 0;//abs(ufont.font_info.y_offset); // base_line;                      /*Base line measured from the top of line_height*/
     //outfont->fallback = &lv_font_montserrat_12;
     void *ptr = malloc(sizeof(uint32_t));
     *((uint32_t*)ptr) = font_no;
