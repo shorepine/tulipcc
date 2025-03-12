@@ -284,8 +284,7 @@ static int do_repl(void) {
                 }
             }
         }
-
-        mp_hal_stdio_mode_orig();
+        //mp_hal_stdio_mode_orig();
 
         ret = execute_from_lexer(LEX_SRC_VSTR, &line, parse_input_kind, true);
         if (ret & FORCED_EXIT) {

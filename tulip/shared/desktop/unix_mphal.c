@@ -111,6 +111,7 @@ void mp_hal_set_interrupt_char(char c) {
 static struct termios orig_termios;
 
 void mp_hal_stdio_mode_raw(void) {
+
     // save and set terminal settings
     tcgetattr(0, &orig_termios);
     static struct termios termios;
