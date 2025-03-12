@@ -77,6 +77,7 @@ def unhide(i):
 
 # The entire UI is loaded into this screen, which we can swap out from "main" REPL screen
 class UIScreen():
+    first_run = True
     # Constants you can change
     default_bg_color = 0
     # Start drawing at this position, a little to the right of the edge and 100px down
@@ -274,8 +275,11 @@ class UIScreen():
 
         # These set (in modtulip/C) the python callbacks for quit and switch. 
         # This lets control-Q and control-TAB control them 
-        tulip.ui_quit_callback(self.screen_quit_callback)
-        tulip.ui_switch_callback(self.alttab_callback)
+        # Only do this after another app (not the repl) has been made
+        if(not UIScreen.first_run):
+            tulip.ui_quit_callback(self.screen_quit_callback)
+            tulip.ui_switch_callback(self.alttab_callback)
+        UIScreen.first_run = False
 
     # Remove the elements you created
     def remove_items(self):

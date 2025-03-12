@@ -741,6 +741,10 @@ uint8_t ansi_parse_digits( unsigned char*str, uint16_t j, uint16_t k, uint16_t *
     return d;
 }
 
+// New things to suppport
+// ESC[?25l -- hide cursor
+// ESC[{line};{column}H -- moves to that position
+
 uint32_t utf8_esc = 0;
 uint8_t supress_lf = 0;
 void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color) {
@@ -781,12 +785,14 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
                         uint16_t digits[5] = {0};
                         uint16_t k = scan;  unsigned char F=str[k];
                         if(F == 'K') { // clear to end of line
+                            //fprintf(stderr, "CLEAR\n");
                             for(uint8_t col=tfb_x_col;col<TFB_COLS;col++) { 
                                 TFB[tfb_y_row*TFB_COLS+col] = 0; 
                                 TFBf[tfb_y_row*TFB_COLS+col] = 0; 
                                 TFBfg[tfb_y_row*TFB_COLS+col] = tfb_fg_pal_color; 
                                 TFBbg[tfb_y_row*TFB_COLS+col] = tfb_bg_pal_color ;
                             }    
+                            //fprintf(stderr, "CLEAR DONE\n");
                             i = k;
                             scan = len;
                         } else if(F=='D') { // move cursor backwards
@@ -814,6 +820,7 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
                             uint8_t d = ansi_parse_digits(str, j, k, digits); 
                             if(d==2) {
                                 // move cursor to line digits[0] and column digits[1]
+                                // these are 1 indexed i think ?? 
                                 tfb_x_col = digits[1];
                                 tfb_y_row = digits[0];
                             } else if(d==0) {
@@ -823,6 +830,13 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
                                 // Perhaps supress the oncoming LF too? 
                                 supress_lf = 1;
                             }
+                            // I guess because of the drawing optimization, we need to add 32s to the TFB if col is nonzero and there's a 0 col to its left
+                            if(tfb_x_col!=0) {
+                                if(TFB[tfb_y_row*TFB_COLS+(tfb_x_col-1)]==0) {
+                                    for(uint16_t i=0;i<tfb_x_col;i++) TFB[tfb_y_row*TFB_COLS+i] = 32;
+                                }
+                            }
+                            //fprintf(stderr, "MOVED cursor to %d,%d\n", tfb_x_col, tfb_y_row);
                             i = k;
                             scan = len;
                         } else if(F=='m') { // formatting
@@ -872,7 +886,7 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
                                     if(code>=40 && code<=47) ansi_active_bg_color = ansi_pal[ansi_color_idx + (code-40)];
                                     if(code==49) ansi_active_bg_color = tfb_bg_pal_color; // reset   
                                 }
-                                //printf("code was %d. aaf is now %d, fg now %d bg now %d. color_idx %d\n", code, ansi_active_format, ansi_active_fg_color, ansi_active_bg_color, ansi_color_idx);
+                                //fprintf(stderr,"code was %d. aaf is now %d, fg now %d bg now %d. color_idx %d\n", code, ansi_active_format, ansi_active_fg_color, ansi_active_bg_color, ansi_color_idx);
                             }
                             i = k;
                             scan = len;

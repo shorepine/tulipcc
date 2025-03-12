@@ -431,9 +431,11 @@ extern mp_obj_t keyboard_callback, ui_quit_callback, ui_switch_callback;
 void send_key_to_micropython(uint16_t c) {
     // handle the global system hotkeys before anything else. we have two, ctrl-tab and ctrl-q 
     if(c==17) {
-        mp_sched_schedule(ui_quit_callback, NULL);
+        if(ui_quit_callback != NULL) 
+            mp_sched_schedule(ui_quit_callback, NULL);
     } else if (c==263) {
-        mp_sched_schedule(ui_switch_callback, NULL);
+        if(ui_switch_callback != NULL) 
+            mp_sched_schedule(ui_switch_callback, NULL);
     } else {
         // Call the callback if set
         if(keyboard_callback != NULL)  {
