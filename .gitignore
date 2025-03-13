@@ -26,6 +26,7 @@ tulip/tulipcc_r10/managed_components
 .submodules_ok
 tulip/fs/ex/my_*
 tulip/web/stage
+.python-version
 
 # Prerequisites
 *.d
