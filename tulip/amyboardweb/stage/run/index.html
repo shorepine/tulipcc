@@ -1,0 +1,346 @@
+<!doctype html>
+<html>
+  <head>
+      <link rel="stylesheet" href="amyrepl.css"/>
+      <title>Tulip Web</title>
+      <meta charset="UTF-8">
+
+      <meta property="og:title" content="Tulip Web">
+      <meta property="og:image" content="https://tulip.computer/img/tulip_hero.jpg">
+      <meta property="og:description" content="Tulip on the web. Run Tulip in the browser. Share your creations with others.">
+      <meta property="og:type" content="product" />
+      <meta property="og:url" content="https://tulip.computer"/>
+      <meta property="og:site_name" content="Tulip Web"/>
+      <meta property="product:price:amount" content="58.90"/>
+      <meta property="product:price:currency" content="USD"/>
+      <meta property="og:availability" content="instock" />
+      <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+      <meta name="description" content="Tulip on the web. Run Tulip in the browser. Share your creations with others.">
+      <meta name="author" content="shore pine sound systems">
+      <meta name="HandheldFriendly" content="true">
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:site" content="@shorepinesound">
+      <meta name="twitter:creator" content="@shorepinesound">
+      <meta name="twitter:title" content="Tulip Web">
+      <meta name="twitter:description" content="Tulip on the web. Run Tulip in the browser. Share your creations with others.">
+      <meta name="twitter:image" content="https://tulip.computer/img/tulip_hero.jpg">
+
+      <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+      <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png">
+      <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png">
+      <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon.png">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.48.4/codemirror.min.css" /> 
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous"> 
+      
+      <link rel="stylesheet" href="/css/all.css" id="treejs_styles">
+      <script src="tree.js"></script>
+      <link rel="stylesheet" href="treejs.css" id="treejs_styles">
+      <script src="./mini-coi.js" scope="./"></script>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+      <script src="https://cdn.jsdelivr.net/npm/webmidi@latest/dist/iife/webmidi.iife.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
+      <!-- These filenames are replaced by the build system -->
+      <script src="tulipcc-20250317075612.mjs" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="amy-20250317075612.js"></script>
+      <script type="text/javascript" src="examples.js"></script>
+      <script type="text/javascript" src="spss.js"></script>
+  </head>
+
+  <body>
+    <script type="module">
+      mp = await loadMicroPython({
+        stdout:null, 
+        linebuffer: false,
+        pystack: 64 * 1024, 
+        heapsize: 8 * 1024 * 1024
+      });
+
+      // Tell MP to start serving a REPL
+      await mp.replInit();
+      // Start up the Tulip stuff
+      await start_tulip();
+      
+      // Fill the ree
+      await fill_tree();
+
+      // Create the editor and see if there's a share URL to decompress into it
+      var editorElement = document.getElementById('collapseEditor');
+      editor = CodeMirror.fromTextArea(document.getElementById(`code`), { 
+        mode: { 
+          name: "python", 
+          version: 3, 
+          singleLineStringErrors: false,
+          lint: false
+        }, 
+        lineNumbers: true, 
+        indentUnit: 4, 
+        matchBrackets: true,
+        spellCheck: false,
+        autocorrect: false,
+        theme: "lucario",
+        lint: false,
+      }); 
+      editor.setSize(null,editor_height);
+    
+      // Load in the share code if given
+      const queryString = window.location.search;
+      const url_params = new URLSearchParams(queryString);
+      var share = url_params.get('share');
+      if(share != null) {
+        var bsCollapse = new bootstrap.Collapse(editorElement, { toggle: true });
+        show_editor();
+        try {
+          var code = await decompress(decodeURIComponent(share));
+          editor.setValue(code);
+          var fn = url_params.get('fn');
+          if(fn != null) {
+            document.getElementById('editor_filename').value = fn;
+          }
+          setTimeout(function () { editor.save() }, 100);
+          setTimeout(function () { editor.refresh() }, 250);
+          setTimeout(function () { window.scrollTo(0,0) }, 300);
+        } catch (e) {
+          console.log("Couldn't decode share");
+        }
+      }
+    </script>
+
+    <div class="container my-2">
+      <div class="px-2 maintulipview">
+        <h1><A HREF="https://tulip.computer/"><img src="/img/favicon.png"/ width=40></A>Tulip Web</h1> 
+        <p>
+          <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="show_editor();">
+            Show code editor
+          </button>
+        </p>
+      
+
+        <div class="editor collapse" id="collapseEditor">
+          <div class="alert fixed-top d-none" id="alert_box"></div>
+          <div class="row g-0 headertext">
+            <div class="col-3 headertext">
+              <span class="px-1 small align-middle">Tulip files</span>
+              <div id="treecontainer"></div>
+            </div>
+            <div class="col-9 headertext">
+              <span class="px-1 small align-middle">Code editor</span>
+              <section class="input">
+                <div><textarea id="code" name="code"></textarea></div> 
+              </section>
+            </div>
+          </div>
+          <div class="row g-0 py-0 my-0 grippierow">
+            <p class="text-center grippie" id="editor_grippie">• • •</p>
+          </div>
+          <div class="row mb-4 mt-1">
+            <div class="col-3">
+                <button type="button" title="Refresh Tulip file list" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
+                <button type="button" title="Download file from Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
+                <button type="button" title="Upload file to Tulip into the selected folder" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
+                <button type="button" title="Load selected Tulip file into editor" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
+            </div>
+            <div class="col-3">
+                <button type="button" title="Save editor contents to file on Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-floppy-disk"></i></button>
+                <button type="button" title="Run editor contents in Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="runEditorBlock()"><i class="fas fa-running"></i></button> 
+                <button type="share" title="Share editor contents (and filename, if given) as a URL" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
+            </div>
+            <div class="col-4">
+                <input type='text' title="Filename for saving or sharing" data-toggle="tooltip" data-placement="top"  id="editor_filename" class="small form-control" placeholder="Filename"/>
+            </div>
+            <div class="col-2">
+              <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_editor();"
+              data-bs-toggle="collapse" title="Hide editor" data-toggle="tooltip" data-placement="top"  data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
+              Hide
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fake textarea to capture keystrokes to the SDL canvas -->
+        <textarea id="textinput" autocapitalize="off" rows="1"></textarea>
+        
+        <!-- Tulip's SDL canvas -->
+        <canvas id="canvas" tabindex=0 class="canvas-solo"></canvas>
+        <div class="row g-0 py-0 my-0 grippierow" id="tulip_grippierow">
+          <p class="text-center grippie" id="tulip_grippie">• • •</p>
+        </div>
+
+        <form name="tulip_settings">
+          <div class="row align-items-start pt-1">
+            <div class="col-md-auto align-top small" id="audioin_grow">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
+                <label class="form-check-label" for="amy_audioin">Allow audio input</label>
+              </div>
+            </div>
+            <!-- MIDI settings panel if MIDI is available -->
+            <div class="col-4 align-self-start small">
+              <div id="midi-input-panel">
+                <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                  <option selected>[Not available]</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-4 align-self-start small">
+              <div id="midi-output-panel">
+                <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                  <option selected>[Not available]</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="container my-2">
+      <div class="px-2 py-4">
+        <h2>Welcome to a version of <a href="https://tulip.computer/">Tulip</a> running locally in your browser.</h2>
+        <!-- Tutorial pills block -->
+        <div class="py-2">
+          <div class="card">
+            <div class="card-header">
+              Try some examples! They'll load and run in the Tulip window above.
+            </div>
+            <div class="card-body" id="tutorials"></div>
+          </div>
+        </div>
+        <p>
+          Tulip is a creative computer running Python with lots of music and graphics functionality. <A HREF="https://tulip.computer">You can buy a hardware Tulip for $59.</A> 
+        </p>
+        <P>
+          This version of Tulip runs locally in your browser. The files are stored in your browsers' storage. It's <I>almost</I> perfectly like a real Tulip, including support for MIDI, graphics, synthesis and Python. There's some small differences, see below.
+        </p>
+        <p>If you've never used Tulip before, please check out the examples above and these getting started tips:</p>
+        <div class='row'>
+          <div class='col-4'>
+            <ul>
+              <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md">Getting Started on Tulip</A></li>
+              <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md">Make music tutorial</A></li>
+              <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/tulip_api.md">Full Tulip API</A></li>
+              <li><A href="https://github.com/orgs/shorepine/projects/1">Roadmap</A></li>
+            </ul>
+          </div>
+          <div class='col-8 overflow-hidden'>
+            <P>
+              <a href="https://tulip.computer"><img src="/img/tulip-shop-1.jpg" width=500/></a>
+            </P>
+          </div>
+        </div>
+
+        <h3>Some notes on the web port:</h3>
+        <ul>
+          <li>If you're using Private Browsing mode, we can't keep your files around after you reload. And on <A HREF="https://bugzilla.mozilla.org/show_bug.cgi?id=1320796">Firefox Private Browsing, the page won't work at all.</A> Don't worry, we're not doing anything nefarious here. No data leaves this page, unless you choose to connect to Tulip World to send a message or download a program. <a href="https://github.com/shorepine/tulipcc/tree/main/tulip/web">Everything is open source.</a>
+          <li>MIDI works on all browsers <a href="https://webmidijs.org/docs/getting-started/">except for Safari</a></li>
+          <li>Some Tulip network calls may fail if the CORS settings of the destination prevent it. Some networking methods may return a JS "promise" rather than an immediate Python result.</li>
+          <li>Anything relying on Python's <code>input</code> will fail -- use <code>tulip.key_wait</code> or <code>keyboard_callback</code> instead.</li>
+          <li>Do not use <code>time.sleep()</code> in your code as it will block all input, audio and graphics from updating. Instead, use Tulip callbacks, <code>asyncio</code> or <code>tulip.defer</code> if you want to block or defer execution in Tulip.</li>
+        </ul>
+
+        <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
+          <div class="col-4 py-vh-3" data-aos="fade-up">
+            <a href="https://tulip.computer/"><img src="/img/tulip.svg" width=42 height=42></a>
+            <a href="https://tulip.computer/"><h3 class="h5 my-2">Want more? Get a Tulip</h3></a>
+            <p>Get your own hardware Tulip for only US$59.</p>
+          </div>
+
+          <div class="col-4 py-vh-3" data-aos="fade-up">
+            <a href="https://discord.com/invite/TzBFkUb8pG"><img src="/img/discord-mark-black.svg" width=42 height=42></a>
+            <a href="https://discord.com/invite/TzBFkUb8pG"><h3 class="h5 my-2">Discord</h3></a>
+            <p>Join the <strong>shore pine sound systems</strong> Discord to chat about Tulip, AMY and Alles. A fun small community!</p>
+          </div>
+
+          <div class="col-4 py-vh-3" data-aos="fade-up" data-aos-delay="200">
+            <a href="https://github.com/shorepine/tulipcc"><img src="/img/github-mark.svg" width=42 height=42/></a>
+            <a href="https://github.com/shorepine/tulipcc"><h3 class="h5 my-2">Github</h3></a>
+            <p>Check out the Tulip Github page for issues, discussions and the code.</p>
+          </div>
+        </div>
+
+        <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
+          <h3 class="h5 my-2"><A href="https://confirmsubscription.com/h/y/204B1B40E85DDBA3">Join our email list</A></h3>
+          <p>We'll send you <A HREF="https://confirmsubscription.com/h/y/204B1B40E85DDBA3"><strong>very rare</strong> updates</A> about Tulip, Alles, AMY and other projects we're working on.</p>
+        </div>
+      </div>
+    </div>
+
+    <script language="javascript">     
+      // On keypress or click anywhere, start audio worklet
+      document.body.addEventListener('click', start_audio, true); 
+      document.body.addEventListener('keydown', start_audio, true); 
+      // We have to force that a click on the canvas focuses a hidden textinput, so that SDL can receive keypresses.
+      document.querySelector('#canvas').addEventListener('click', function() {
+            document.getElementById("textinput").focus({preventScroll:true});
+      });
+
+      window.addEventListener('resize', function() {
+        // Code to execute when the viewport changes
+        resize_tulip_grippie();
+      });
+
+      // Handle the grippie bars on the page for the editor & Tulip blocks
+      var editor_grippie_held = false;
+      var editor_grippie_y_start = 0;
+      var tulip_grippie_held = false;
+      var tulip_grippie_y_start = 0;
+
+      $('body').on('mouseup', function mouseState(e) {
+        editor_grippie_held = false;
+        tulip_grippie_held = false;
+      });
+      $('#editor_grippie').on('mousedown mousemove', function mouseState(e) {
+        if (e.type == "mousedown") {
+          e.preventDefault();
+          editor_grippie_held = true;
+          editor_grippie_y_start = e.clientY;
+        }
+        if(e.type == "mousemove") {
+          if(editor_grippie_held) {
+            e.preventDefault();
+            editor_height = editor_height + (e.clientY - editor_grippie_y_start);
+            if(editor_height < 200) editor_height = 200;
+            editor.setSize(null, editor_height);
+            document.getElementById('treecontainer').setAttribute("style","height:"+editor_height.toString()+"px");
+          }
+        }
+      });
+
+      $('#tulip_grippie').on('mousedown mousemove', function mouseState(e) {
+        if (e.type == "mousedown") {
+          e.preventDefault();
+          tulip_grippie_held = true;
+          tulip_grippie_y_start = e.clientY;
+        }
+        if(e.type == "mousemove") {
+          if(tulip_grippie_held) {
+            e.preventDefault();
+            tulip_height = tulip_height + (e.clientY - tulip_grippie_y_start);
+            if(tulip_height < 200) tulip_height = 200;
+            document.getElementById('canvas').setAttribute("style","height:"+tulip_height.toString()+"px");
+            document.getElementById('canvas').setAttribute("style","width:"+tulip_height*(1024/600).toString()+"px");
+            resize_tulip_grippie();
+          }
+        }
+      });
+
+
+      // Set up the tooltips
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip({delay: { "show": 3000, "hide": 500 }, trigger:'hover'})
+      }) 
+      $('[rel="tooltip"]').on('click', function () {
+        $(this).tooltip('hide')
+      });
+
+      // Populate the example pills
+      fill_examples();
+
+      resize_tulip_grippie();
+    </script>
+  </body>
+</html>
+
+
