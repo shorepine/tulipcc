@@ -1,5 +1,5 @@
 # amyboard.py
-import tulip, midi, amy
+import tulip, midi, amy, time
 
 i2c = None
 
@@ -15,8 +15,11 @@ def mount_sd():
 
 def start_amy():
     initpcm9211()
+    time.sleep(1)
     tulip.start_amyboard_amy()
+    time.sleep(1)
     amy.override_send = lambda x: tulip.amyboard_send(x)
+    time.sleep(1)
     midi.setup()
 
 
@@ -31,6 +34,15 @@ def adafruit_oled():
     import ssd1327
     display = ssd1327.SSD1327_I2C(128,128,get_i2c(),addr=0x3d)
     display.text("AMYboard!",0,0,255)
+    display.show()
+    return display
+
+def sh1107_oled():
+    import sh1107
+    display = sh1107.SH1107_I2C(128, 128, get_i2c(), address=0x3c)
+    display.sleep(False)
+    display.fill(0)
+    display.text('AMYboard!', 0, 0, 1)
     display.show()
     return display
 

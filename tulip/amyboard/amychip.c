@@ -218,6 +218,92 @@ void esp_render_task( void * pvParameters) {
 extern int16_t amy_in_block[AMY_BLOCK_SIZE * AMY_NCHANS];
 i2s_sample_type my_int32_block[AMY_BLOCK_SIZE * AMY_NCHANS];
 
+#include "esp_adc/adc_cali.h"
+#include "driver/adc.h"
+#include "esp_adc/adc_cali_scheme.h"
+adc_cali_handle_t cali_scheme;
+uint8_t external_map[AMY_OSCS];
+float cv_local_value[2];
+uint8_t cv_local_override[2];
+
+float cv_input_hook(uint16_t channel) {
+    /*
+    pin = 15 if channel==1 else 16
+    pot = ADC(Pin(pin))
+    pot.atten(ADC.ATTN_11DB) 
+
+    # Read it n times to smooth it
+    x = 0
+    for i in range(n):
+        x = x + pot.read_uv()
+    x = (x / (float(n))) 
+
+    # measured uV with a CV pot module that goes from -5.4V to +5.4V (10vpp)
+    (lo, hi) = 755000,2568000
+    rge = hi-lo
+    return (((x-lo) / rge) * 10.0) - 5.0
+    */
+    if(cv_local_override[channel]) {
+        return cv_local_value[channel];
+    }
+    uint8_t channel_id = ADC_CHANNEL_5;
+    if(channel==1) channel_id = ADC_CHANNEL_4;
+    int raw = 0;
+    int uv = 0;
+    adc2_get_raw(channel_id,ADC_WIDTH_BIT_12, &raw);
+    adc_cali_raw_to_voltage(cali_scheme, raw, &uv);
+    // latest curve was 427000 is -10, 3044200 is 9.5
+    float uvf = (float)uv;
+    float lo = 427000.0;
+    float hi = 3104200.0;
+    if(uvf < lo) return -1;
+    if(uvf > hi) return 1;
+    return (((uvf-lo)/(hi-lo)) *10.0)-5.0;
+}
+
+
+#include "driver/i2c.h"
+
+// An AMY hook to send values out to a CV DAC over i2c, only on ESP 
+/*
+    """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1)"""
+    addr = 88 # GP8413
+    # With rev1 scaling, 0x0000 -> -10v, 0x7fff -> +10v
+    val = int(((volts + 10)/20.0) * 0x8000)
+    if(val < 0):
+        val = 0
+    if(val > 0x7fff):
+        val = 0x7fff
+    b1 = (val & 0xff00) >> 8
+    b0 = (val & 0x00ff)
+    ch = 0x02
+    if(channel == 1):
+        ch = 0x04
+    get_i2c().writeto_mem(addr, ch, bytes([b0,b1]))
+*/
+
+uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
+    if(external_map[osc]>0) {
+        // -5v to +5v? 
+        float volts = S2F(buf[0])*5.0;
+        int32_t val = (int32_t)(((volts + 10)/20.0) * 0x8000);
+        if(val < 0) val = 0;
+        if(val > 0x7fff) val = 0x7fff;
+        uint8_t bytes[3];
+        bytes[2] = (val & 0xff00) >> 8;
+        bytes[1] = (val & 0x00ff);
+        uint8_t ch = 0x02;
+        uint8_t addr = 88;
+        uint8_t channel = external_map[osc]-1;
+        if(channel == 1) ch = 0x04;
+        bytes[0] = ch;
+        i2c_master_write_to_device(I2C_NUM_0, addr, bytes, 3, pdMS_TO_TICKS(10));
+        return 1;
+    }
+    return 0;
+
+}
+
 // Make AMY's FABT run forever , as a FreeRTOS task 
 void esp_fill_audio_buffer_task() {
     size_t read = 0;
@@ -260,9 +346,34 @@ void esp_fill_audio_buffer_task() {
 }
 
 
-
 // init AMY from the esp. wraps some amy funcs in a task to do multicore rendering on the ESP32 
 amy_err_t esp_amy_init() {
+    cv_local_override[0] = 0;
+    cv_local_override[1] = 0;
+    amy_external_coef_hook = cv_input_hook;
+    amy_external_render_hook = cv_output_hook;
+    //{{&machine_adc_type}, ADCBLOCK2, ADC_CHANNEL_4, GPIO_NUM_15},
+    //{{&machine_adc_type}, ADCBLOCK2, ADC_CHANNEL_5, GPIO_NUM_16},
+        
+    adc2_config_channel_atten(ADC_CHANNEL_5, ADC_ATTEN_DB_11);
+    adc2_config_channel_atten(ADC_CHANNEL_4, ADC_ATTEN_DB_11);
+
+    #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
+    adc_cali_curve_fitting_config_t cali_config = {
+        .unit_id = ADC_UNIT_2,
+        .atten = ADC_ATTEN_DB_11,
+        .bitwidth = ADC_WIDTH_BIT_12,
+    };
+    adc_cali_create_scheme_curve_fitting(&cali_config, &cali_scheme);
+    #else
+    adc_cali_line_fitting_config_t cali_config = {
+        .unit_id = ADC_UNIT_2,
+        .atten = ADC_ATTEN_DB_11,
+        .bitwidth = ADC_WIDTH_BIT_12,
+    };
+    adc_cali_create_scheme_line_fitting(&cali_config, &cali_scheme);
+    #endif
+    
     amy_start(2, 1, 1, 1);
     // We create a mutex for changing the event queue and pointers as two tasks do it at once
     xQueueSemaphore = xSemaphoreCreateMutex();
