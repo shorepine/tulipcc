@@ -114,7 +114,7 @@ def desktop_copy_sys(dest):
 def get_latest_release():
     import json
     from upysh import rm
-    tulip.url_save('https://api.github.com/repos/shorepine/tulipcc/releases/latest','releases_temp.json')
+    url_save('https://api.github.com/repos/shorepine/tulipcc/releases/latest','releases_temp.json')
     j = json.load(open('releases_temp.json','r'))
     rm('releases_temp.json')
     mine = None
