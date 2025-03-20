@@ -15,11 +15,8 @@ def mount_sd():
 
 def start_amy():
     initpcm9211()
-    time.sleep(1)
     tulip.start_amyboard_amy()
-    time.sleep(1)
     amy.override_send = lambda x: tulip.amyboard_send(x)
-    time.sleep(1)
     midi.setup()
 
 

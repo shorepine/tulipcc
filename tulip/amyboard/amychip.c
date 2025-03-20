@@ -7,7 +7,7 @@
 #include "esp_flash.h"
 #include "esp_system.h"
 #include "esp_task.h"
-//#include "driver/i2c_master.h"
+#include "driver/i2c.h"
 
 #include "amy.h"
 #include "examples.h"
@@ -17,8 +17,6 @@
 #include "esp_err.h"
 
 #include "driver/i2s_std.h"
-
-static const char *TAG = "amy-chip";
 
 i2s_chan_handle_t tx_handle;
 i2s_chan_handle_t rx_handle;
@@ -33,167 +31,74 @@ typedef int32_t i2s_sample_type;
 // mutex that locks writes to the delta queue
 SemaphoreHandle_t xQueueSemaphore;
 void delay_ms(uint32_t);
-/*
-void delay_ms(uint32_t ms) {
-    vTaskDelay(ms / portTICK_PERIOD_MS);
-}
-*/
+
 // Task handles for the renderers, multicast listener and main
 TaskHandle_t amy_render_handle;
 TaskHandle_t alles_fill_buffer_handle;
+TaskHandle_t i2c_check_for_data_handle;
 
 
 #define ALLES_TASK_COREID (1)
 #define ALLES_RENDER_TASK_COREID (0)
 #define ALLES_FILL_BUFFER_TASK_COREID (1)
+#define ALLES_I2C_CHECK_FOR_DATA_TASK_COREID (1)
+
 #define ALLES_RENDER_TASK_PRIORITY (ESP_TASK_PRIO_MAX-1 )
 #define ALLES_FILL_BUFFER_TASK_PRIORITY (ESP_TASK_PRIO_MAX-1)
+#define ALLES_I2C_CHECK_FOR_DATA_TASK_PRIORITY (ESP_TASK_PRIO_MAX-1)
+
 #define ALLES_TASK_NAME             "alles_task"
 #define ALLES_RENDER_TASK_NAME      "alles_r_task"
 #define ALLES_FILL_BUFFER_TASK_NAME "alles_fb_task"
+#define ALLES_I2C_CHECK_FOR_DATA_TASK_NAME "alles_i2c"
+
 #define ALLES_TASK_STACK_SIZE    (8 * 1024) 
 #define ALLES_RENDER_TASK_STACK_SIZE (8 * 1024)
 #define ALLES_FILL_BUFFER_TASK_STACK_SIZE (8 * 1024)
+#define ALLES_I2C_CHECK_FOR_DATA_TASK_STACK_SIZE (16 * 1024)
 
 
 // i2c stuff
 #define I2C_CLK_FREQ 400000
-//#include "esp32-hal-i2c-slave.h"
-#define DATA_LENGTH 255
+#define DATA_LENGTH MAX_MESSAGE_LEN
 #define _I2C_NUMBER(num) I2C_NUM_##num
 #define I2C_NUMBER(num) _I2C_NUMBER(num)
-#define I2C_SLAVE_NUM I2C_NUMBER(1) /*!< I2C port number for slave dev */
-#define I2C_SLAVE_TX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C slave tx buffer size */
-#define I2C_SLAVE_RX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C slave rx buffer size */
+#define I2C_FOLLOWER_NUM I2C_NUMBER(1) /*!< I2C port number for follower dev */
+#define I2C_FOLLOWER_TX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C follower tx buffer size */
+#define I2C_FOLLOWER_RX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C follower rx buffer size */
 #define AMYCHIP_ADDR 0x58
 #define PCM9211_ADDR 0x40
-#define I2C_MASTER_NUM I2C_NUMBER(0) /*!< I2C port number for master dev */
-#define I2C_MASTER_TX_BUF_DISABLE 0                           /*!< I2C master doesn't need buffer */
-#define I2C_MASTER_RX_BUF_DISABLE 0  
 
-//i2c_master_bus_handle_t tool_bus_handle;
-//i2c_master_dev_handle_t pcm9211_handle;
-#define I2C_TOOL_TIMEOUT_VALUE_MS (500)
-
-
-// Commenting out all the i2c code here because it conflicts with Micropython's i2c driver.
-// So instead, we can set up PCM9211 over micropython i2c
-
-
-
-
-
-//esp_err_t i2c_master_write(uint8_t device_addr, uint8_t *data_wr, size_t size_wr);
-/*
-esp_err_t i2c_master_write(uint8_t device_addr, uint8_t *data_wr, size_t size_wr) {
-    esp_err_t ret = i2c_master_transmit(pcm9211_handle, data_wr, size_wr, I2C_TOOL_TIMEOUT_VALUE_MS);
-    if (ret == ESP_OK) {
-        //ESP_LOGI(TAG, "Write OK");
-    } else if (ret == ESP_ERR_TIMEOUT) {
-        ESP_LOGW(TAG, "Bus is busy");
-    } else {
-        ESP_LOGW(TAG, "Write Failed");
-    }
-    return 0;
-}
-*/
-
-/*
-uint8_t pcm9211_readRegister(uint8_t reg) {
-    uint8_t buf[1] = {reg};
-    uint8_t buffer[1] = { 0};
-    ESP_ERROR_CHECK(i2c_master_transmit_receive(pcm9211_handle, buf, 1, buffer, 1, I2C_TOOL_TIMEOUT_VALUE_MS));
-    return(buffer[0]);
+static esp_err_t i2c_follower_init() {
+    i2c_port_t i2c_follower_port = I2C_FOLLOWER_NUM;
+    i2c_config_t conf_follower;
+    conf_follower.sda_io_num = I2C_FOLLOWER_SDA;
+    conf_follower.sda_pullup_en = GPIO_PULLUP_ENABLE;
+    conf_follower.scl_io_num = I2C_FOLLOWER_SCL;
+    conf_follower.scl_pullup_en = GPIO_PULLUP_ENABLE;
+    conf_follower.mode = I2C_MODE_SLAVE;
+    conf_follower.slave.addr_10bit_en = 0;
+    conf_follower.slave.slave_addr = AMYCHIP_ADDR;
+    conf_follower.slave.maximum_speed = I2C_CLK_FREQ; // expected maximum clock speed
+    conf_follower.clk_flags =0;
+    i2c_param_config(i2c_follower_port, &conf_follower);
+    return i2c_driver_install(i2c_follower_port, conf_follower.mode,
+                            I2C_FOLLOWER_RX_BUF_LEN, I2C_FOLLOWER_TX_BUF_LEN, 0);
 }
 
-void pcm9211_writeRegister(uint8_t reg, uint16_t value) {
-  uint8_t data[2];
-  data[0] = reg; 
-  data[1] = value; 
-  if (i2c_master_write(PCM9211_ADDR, data, 2))
-      fprintf(stderr, "bad write to pcm9211\n");
-}
 
-uint8_t pcm9211_registers[10][2] = {
-    { 0x40, 0x33 }, // Power down ADC, power down DIR, power down DIT, power down OSC
-    { 0x40, 0xc0 }, // Normal operation for all
-    { 0x34, 0x00 }, // Initialize DIR - both biphase amps on, input from RXIN0
-    { 0x26, 0x01 }, // Main Out is DIR/ADC if no DIR sync (these match power-on default, repeated for clarity).
-    { 0x6B, 0x00 }, // Main output pins are DIR/ADC AUTO
-    { 0x30, 0x04 }, // PLL sends 512fs as SCK
-    { 0x31, 0x0A }, // XTI SCK as 512fs too
-    { 0x60, 0x44 }, // Initialize PCM9211 DIT to send SPDIF from AUXIN1 through MPO0 (pin15).  MPO1 (pin16) is VOUT (Valid)
-    { 0x78, 0x3d }, // MPO0 = 0b1101 = TXOUT, MPO1 = 0b0011 = VOUT
-    { 0x6F, 0x40 }  // MPIO_A = CLKST etc / MPIO_B = AUXIN2 / MPIO_C = AUXIN1
-};
+uint8_t i2c_buffer[MAX_MESSAGE_LEN];
 
-esp_err_t setup_pcm9211(void) {
-    for(uint8_t i=0;i<10; i++) {
-        delay_ms(100);
-        fprintf(stderr, "[pcm9211] setting register 0x%02x to 0x%02x: ", pcm9211_registers[i][0], pcm9211_registers[i][1]);
-        pcm9211_writeRegister(pcm9211_registers[i][0], pcm9211_registers[i][1]);
-        delay_ms(100);
-        uint8_t read_back = pcm9211_readRegister(pcm9211_registers[i][0]);
-        if(read_back == pcm9211_registers[i][1]) {
-            fprintf(stderr, "success\n");
-        } else {
-            fprintf(stderr, "failed?: read back is 0x%02x\n", read_back);
+void i2c_check_for_data() {
+    while(1) {
+        size_t size = i2c_slave_read_buffer(I2C_FOLLOWER_NUM, i2c_buffer, MAX_MESSAGE_LEN, 10 / portTICK_PERIOD_MS);
+        if(size>0) {
+            i2c_buffer[size] = 0;
+            //fprintf(stderr, "%s\n", i2c_buffer);
+            amy_play_message((char*)i2c_buffer);
         }
     }
-    return ESP_OK;
 }
-
-esp_err_t i2c_master_init(void) {
-    i2c_master_bus_config_t i2c_bus_config = {
-        .clk_source = I2C_CLK_SRC_DEFAULT,
-        .i2c_port = I2C_MASTER_NUM,
-        .scl_io_num = I2C_MASTER_SCL,
-        .sda_io_num = I2C_MASTER_SDA,
-        .flags.enable_internal_pullup = true,
-    };
-
-    if (i2c_new_master_bus(&i2c_bus_config, &tool_bus_handle) != ESP_OK) {
-        return 1;
-    }
-    i2c_device_config_t i2c_dev_conf = {
-        .scl_speed_hz = I2C_CLK_FREQ,
-        .device_address = PCM9211_ADDR, 
-        .flags.disable_ack_check = true,
-    };
-    if (i2c_master_bus_add_device(tool_bus_handle, &i2c_dev_conf, &pcm9211_handle) != ESP_OK) {
-        return 1;
-    }
-    return ESP_OK;
-}
-
-
-
-void i2c_slave_request_cb(uint8_t num, uint8_t *cmd, uint8_t cmd_len, void * arg) {
-    if (cmd_len > 0) {
-        // first write to master
-        i2cSlaveWrite(I2C_SLAVE_NUM, cmd, cmd_len, 0);
-    } else {
-        // cmd_len == 0 means master want more data from slave
-        // we just send one byte 0 each time to master here
-        uint8_t extra_data = 0x00;
-        i2cSlaveWrite(I2C_SLAVE_NUM, &extra_data, 1, 0);
-    }
-}
-
-void i2c_slave_receive_cb(uint8_t num, uint8_t * data, size_t len, bool stop, void * arg) {
-    if (len > 0) {
-        data[len]= 0;
-        amy_play_message((char*)data);
-    }
-}
-
-esp_err_t i2c_slave_init(void) {
-    i2cSlaveAttachCallbacks(I2C_SLAVE_NUM, i2c_slave_request_cb, i2c_slave_receive_cb, NULL);
-    return i2cSlaveInit(I2C_SLAVE_NUM, I2C_SLAVE_SDA, I2C_SLAVE_SCL, AMYCHIP_ADDR, I2C_CLK_FREQ, I2C_SLAVE_RX_BUF_LEN, I2C_SLAVE_TX_BUF_LEN);
-}
-
-
-*/
 
 
 
@@ -277,25 +182,6 @@ float cv_input_hook(uint16_t channel) {
 }
 
 
-#include "driver/i2c.h"
-
-// An AMY hook to send values out to a CV DAC over i2c, only on ESP 
-/*
-    """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1)"""
-    addr = 88 # GP8413
-    # With rev1 scaling, 0x0000 -> -10v, 0x7fff -> +10v
-    val = int(((volts + 10)/20.0) * 0x8000)
-    if(val < 0):
-        val = 0
-    if(val > 0x7fff):
-        val = 0x7fff
-    b1 = (val & 0xff00) >> 8
-    b0 = (val & 0x00ff)
-    ch = 0x02
-    if(channel == 1):
-        ch = 0x04
-    get_i2c().writeto_mem(addr, ch, bytes([b0,b1]))
-*/
 
 uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
     if(external_map[osc]>0) {
@@ -363,6 +249,8 @@ void esp_fill_audio_buffer_task() {
 
 // init AMY from the esp. wraps some amy funcs in a task to do multicore rendering on the ESP32 
 amy_err_t esp_amy_init() {
+    i2c_follower_init();
+
     cv_local_override[0] = 0;
     cv_local_override[1] = 0;
     amy_external_coef_hook = cv_input_hook;
@@ -400,6 +288,9 @@ amy_err_t esp_amy_init() {
 
     // And the fill audio buffer thread, combines, does volume & filters
     xTaskCreatePinnedToCore(&esp_fill_audio_buffer_task, ALLES_FILL_BUFFER_TASK_NAME, ALLES_FILL_BUFFER_TASK_STACK_SIZE, NULL, ALLES_FILL_BUFFER_TASK_PRIORITY, &alles_fill_buffer_handle, ALLES_FILL_BUFFER_TASK_COREID);
+
+    // i2c listener task
+    xTaskCreatePinnedToCore(&i2c_check_for_data, ALLES_I2C_CHECK_FOR_DATA_TASK_NAME, ALLES_I2C_CHECK_FOR_DATA_TASK_STACK_SIZE, NULL, ALLES_I2C_CHECK_FOR_DATA_TASK_PRIORITY, &i2c_check_for_data_handle, ALLES_I2C_CHECK_FOR_DATA_TASK_COREID);
 
     return AMY_OK;
 }
@@ -444,25 +335,18 @@ amy_err_t setup_i2s(void) {
         },
     };
     /* Initialize the channel */
-    //fprintf(stderr, "initializing I2S TX channel\n");
     i2s_channel_init_std_mode(tx_handle, &std_cfg);
-    //fprintf(stderr, "initializing I2S RX channel\n");
     i2s_channel_init_std_mode(rx_handle, &std_cfg);
 
     /* Before writing data, start the TX channel first */
-    //fprintf(stderr, "enabling I2S TX channel\n");
     i2s_channel_enable(tx_handle);
-    //fprintf(stderr, "enabling I2S RX channel\n");
     i2s_channel_enable(rx_handle);
     return AMY_OK;
 }
 
 void start_amyboard_amy() {
-    //fprintf(stderr, "attempting to start I2S\n");
     check_init(&setup_i2s, "i2s");
-    //fprintf(stderr, "initializing AMY\n");
     esp_amy_init();
     amy_reset_oscs();
-    //fprintf(stderr, "done initializing AMY\n");
 }
 
