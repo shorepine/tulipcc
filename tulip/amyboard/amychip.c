@@ -226,39 +226,54 @@ uint8_t external_map[AMY_OSCS];
 float cv_local_value[2];
 uint8_t cv_local_override[2];
 
+#define BLOCK_CV_READS 100
+float last_cv_reads[2][BLOCK_CV_READS];
+uint32_t cv_reads[2] = {0,0};
+
 float cv_input_hook(uint16_t channel) {
-    /*
-    pin = 15 if channel==1 else 16
-    pot = ADC(Pin(pin))
-    pot.atten(ADC.ATTN_11DB) 
 
-    # Read it n times to smooth it
-    x = 0
-    for i in range(n):
-        x = x + pot.read_uv()
-    x = (x / (float(n))) 
-
-    # measured uV with a CV pot module that goes from -5.4V to +5.4V (10vpp)
-    (lo, hi) = 755000,2568000
-    rge = hi-lo
-    return (((x-lo) / rge) * 10.0) - 5.0
-    */
+    // If they used cv_local, just return that, skip everything else
     if(cv_local_override[channel]) {
         return cv_local_value[channel];
     }
+
+    // Figure out which pin / ADC channel we're using
     uint8_t channel_id = ADC_CHANNEL_5;
     if(channel==1) channel_id = ADC_CHANNEL_4;
+    
+    // Read the ADC once
     int raw = 0;
-    int uv = 0;
+    int v = 0;
     adc2_get_raw(channel_id,ADC_WIDTH_BIT_12, &raw);
-    adc_cali_raw_to_voltage(cali_scheme, raw, &uv);
-    // latest curve was 427000 is -10, 3044200 is 9.5
-    float uvf = (float)uv;
-    float lo = 427000.0;
-    float hi = 3104200.0;
-    if(uvf < lo) return -1;
-    if(uvf > hi) return 1;
-    return (((uvf-lo)/(hi-lo)) *10.0)-5.0;
+    adc_cali_raw_to_voltage(cali_scheme, raw, &v);
+
+    // Convert the voltage to the calibrated -10 to 10 scale
+    float vf = (float)v;
+
+    float lo = 427.0;
+    float hi = 3104.0;
+    float ret;
+    if(vf < lo) {
+        ret = -10;
+    } else if (vf > hi) {
+        ret = 10;
+    } else {
+        ret = (((vf-lo)/(hi-lo)) *20.0)-10.0;
+    }
+
+    // Now smooth the per-AMY block voltage reading to BLOCK_CV_READS 
+    last_cv_reads[channel][cv_reads[channel]] = ret;
+    float myret = 0;
+    for(uint16_t n=0;n<BLOCK_CV_READS;n++) {
+        myret += last_cv_reads[channel][n];
+    }
+
+    cv_reads[channel] = cv_reads[channel] + 1;
+    if(cv_reads[channel] == BLOCK_CV_READS) {
+        //if(channel==0) fprintf(stderr, "cv_reads %ld v %d ret %f avg %f\n", cv_reads[channel], v, ret, myret/(float)BLOCK_CV_READS);
+        cv_reads[channel] = 0;
+    }
+    return myret/(float)BLOCK_CV_READS;
 }
 
 
@@ -352,9 +367,8 @@ amy_err_t esp_amy_init() {
     cv_local_override[1] = 0;
     amy_external_coef_hook = cv_input_hook;
     amy_external_render_hook = cv_output_hook;
-    //{{&machine_adc_type}, ADCBLOCK2, ADC_CHANNEL_4, GPIO_NUM_15},
-    //{{&machine_adc_type}, ADCBLOCK2, ADC_CHANNEL_5, GPIO_NUM_16},
-        
+
+    for(uint8_t n=0;n<BLOCK_CV_READS;n++) { last_cv_reads[0][n] = 0; last_cv_reads[1][n] = 0;  }
     adc2_config_channel_atten(ADC_CHANNEL_5, ADC_ATTEN_DB_11);
     adc2_config_channel_atten(ADC_CHANNEL_4, ADC_ATTEN_DB_11);
 
@@ -394,14 +408,14 @@ amy_err_t esp_amy_init() {
 // Setup I2S
 amy_err_t setup_i2s(void) {
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_SLAVE);  // ************* I2S_ROLE_SLAVE - needs external I2S clock input.
-    fprintf(stderr, "creating I2S channel\n");
+    //fprintf(stderr, "creating I2S channel\n");
     i2s_new_channel(&chan_cfg, &tx_handle, &rx_handle);
 
      i2s_std_config_t std_cfg = {
         .clk_cfg = {
-            .sample_rate_hz = 48000,
+            .sample_rate_hz = AMY_SAMPLE_RATE,
             .clk_src = I2S_CLK_SRC_EXTERNAL,
-            .ext_clk_freq_hz = 48000 * 512,
+            .ext_clk_freq_hz = AMY_SAMPLE_RATE * 512,
             .mclk_multiple = 512, 
         },
         .slot_cfg = {
@@ -430,25 +444,25 @@ amy_err_t setup_i2s(void) {
         },
     };
     /* Initialize the channel */
-    fprintf(stderr, "initializing I2S TX channel\n");
+    //fprintf(stderr, "initializing I2S TX channel\n");
     i2s_channel_init_std_mode(tx_handle, &std_cfg);
-    fprintf(stderr, "initializing I2S RX channel\n");
+    //fprintf(stderr, "initializing I2S RX channel\n");
     i2s_channel_init_std_mode(rx_handle, &std_cfg);
 
     /* Before writing data, start the TX channel first */
-    fprintf(stderr, "enabling I2S TX channel\n");
+    //fprintf(stderr, "enabling I2S TX channel\n");
     i2s_channel_enable(tx_handle);
-    fprintf(stderr, "enabling I2S RX channel\n");
+    //fprintf(stderr, "enabling I2S RX channel\n");
     i2s_channel_enable(rx_handle);
     return AMY_OK;
 }
 
 void start_amyboard_amy() {
-    fprintf(stderr, "attempting to start I2S\n");
+    //fprintf(stderr, "attempting to start I2S\n");
     check_init(&setup_i2s, "i2s");
-    fprintf(stderr, "initializing AMY\n");
+    //fprintf(stderr, "initializing AMY\n");
     esp_amy_init();
     amy_reset_oscs();
-    fprintf(stderr, "done initializing AMY\n");
+    //fprintf(stderr, "done initializing AMY\n");
 }
 
