@@ -92,13 +92,9 @@ except ValueError:
 
 gc.collect()
 
-# Set up audio/midi. 
-if(tulip.board() == "WEB"):
-    midi.setup()
-    # Override send & bleep are done from JS on web because of click-to-start audio.
-else:
-    if(tulip.board() != "AMYBOARD"):
-        # Override amy's send to work with tulip
-        amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
-        midi.setup()
+# On web, this is handled with JS callbacks
+if(tulip.board() != "WEB"):
+    # Override amy's send to work with tulip/amyboard
+    amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
+midi.setup()
 

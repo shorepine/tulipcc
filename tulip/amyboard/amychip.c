@@ -18,8 +18,8 @@
 
 #include "driver/i2s_std.h"
 
-i2s_chan_handle_t tx_handle;
-i2s_chan_handle_t rx_handle;
+i2s_chan_handle_t amyboard_tx_handle;
+i2s_chan_handle_t amyboard_rx_handle;
 
 #include "pins.h"
 
@@ -29,7 +29,7 @@ typedef int32_t i2s_sample_type;
 
 
 // mutex that locks writes to the delta queue
-SemaphoreHandle_t xQueueSemaphore;
+extern SemaphoreHandle_t xQueueSemaphore;
 void delay_ms(uint32_t);
 
 // Task handles for the renderers, multicast listener and main
@@ -102,24 +102,6 @@ void i2c_check_for_data() {
 
 
 
-// AMY synth states
-extern struct state amy_global;
-extern uint32_t event_counter;
-extern uint32_t message_counter;
-
-void esp_show_debug(uint8_t t) {
-
-}
-
-// Render the second core
-void esp_render_task( void * pvParameters) {
-    while(1) {
-        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        amy_render(0, AMY_OSCS/2, 1);
-        xTaskNotifyGive(alles_fill_buffer_handle);
-    }
-}
-
 extern int16_t amy_in_block[AMY_BLOCK_SIZE * AMY_NCHANS];
 i2s_sample_type my_int32_block[AMY_BLOCK_SIZE * AMY_NCHANS];
 
@@ -127,7 +109,7 @@ i2s_sample_type my_int32_block[AMY_BLOCK_SIZE * AMY_NCHANS];
 #include "driver/adc.h"
 #include "esp_adc/adc_cali_scheme.h"
 adc_cali_handle_t cali_scheme;
-uint8_t external_map[AMY_OSCS];
+extern uint8_t external_map[AMY_OSCS];
 float cv_local_value[2];
 uint8_t cv_local_override[2];
 
@@ -198,6 +180,7 @@ uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
         uint8_t channel = external_map[osc]-1;
         if(channel == 1) ch = 0x04;
         bytes[0] = ch;
+        //fprintf(stderr, "writing %f volts [%ld] to channel %d\n", volts, val, channel);
         i2c_master_write_to_device(I2C_NUM_0, addr, bytes, 3, pdMS_TO_TICKS(10));
         return 1;
     }
@@ -206,12 +189,12 @@ uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
 }
 
 // Make AMY's FABT run forever , as a FreeRTOS task 
-void esp_fill_audio_buffer_task() {
+void amyboard_fill_audio_buffer_task() {
     size_t read = 0;
     size_t written = 0;
     while(1) {
         AMY_PROFILE_START(AMY_ESP_FILL_BUFFER)
-        i2s_channel_read(rx_handle, my_int32_block, AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS, &read, portMAX_DELAY);
+        i2s_channel_read(amyboard_rx_handle, my_int32_block, AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS, &read, portMAX_DELAY);
         
         for (int i = 0; i < AMY_BLOCK_SIZE * AMY_NCHANS; ++i)
             amy_in_block[i] = (i2s_sample_type)(my_int32_block[i] >> 16);
@@ -237,7 +220,7 @@ void esp_fill_audio_buffer_task() {
 
         AMY_PROFILE_STOP(AMY_ESP_FILL_BUFFER)
 
-        i2s_channel_write(tx_handle, my_int32_block, AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS, &written, portMAX_DELAY);
+        i2s_channel_write(amyboard_tx_handle, my_int32_block, AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS, &written, portMAX_DELAY);
 
         if(written != AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS || read != AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS) {
             fprintf(stderr,"i2s underrun: [w %d,r %d] vs %d\n", written, read, AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS);
@@ -245,10 +228,10 @@ void esp_fill_audio_buffer_task() {
 
     }
 }
-
+extern void esp_render_task( void * pvParameters);
 
 // init AMY from the esp. wraps some amy funcs in a task to do multicore rendering on the ESP32 
-amy_err_t esp_amy_init() {
+amy_err_t amyboard_amy_init() {
     i2c_follower_init();
 
     cv_local_override[0] = 0;
@@ -287,7 +270,7 @@ amy_err_t esp_amy_init() {
     delay_ms(100);
 
     // And the fill audio buffer thread, combines, does volume & filters
-    xTaskCreatePinnedToCore(&esp_fill_audio_buffer_task, ALLES_FILL_BUFFER_TASK_NAME, ALLES_FILL_BUFFER_TASK_STACK_SIZE, NULL, ALLES_FILL_BUFFER_TASK_PRIORITY, &alles_fill_buffer_handle, ALLES_FILL_BUFFER_TASK_COREID);
+    xTaskCreatePinnedToCore(&amyboard_fill_audio_buffer_task, ALLES_FILL_BUFFER_TASK_NAME, ALLES_FILL_BUFFER_TASK_STACK_SIZE, NULL, ALLES_FILL_BUFFER_TASK_PRIORITY, &alles_fill_buffer_handle, ALLES_FILL_BUFFER_TASK_COREID);
 
     // i2c listener task
     xTaskCreatePinnedToCore(&i2c_check_for_data, ALLES_I2C_CHECK_FOR_DATA_TASK_NAME, ALLES_I2C_CHECK_FOR_DATA_TASK_STACK_SIZE, NULL, ALLES_I2C_CHECK_FOR_DATA_TASK_PRIORITY, &i2c_check_for_data_handle, ALLES_I2C_CHECK_FOR_DATA_TASK_COREID);
@@ -297,10 +280,10 @@ amy_err_t esp_amy_init() {
 
 
 // Setup I2S
-amy_err_t setup_i2s(void) {
+amy_err_t amyboard_setup_i2s(void) {
     i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_SLAVE);  // ************* I2S_ROLE_SLAVE - needs external I2S clock input.
     //fprintf(stderr, "creating I2S channel\n");
-    i2s_new_channel(&chan_cfg, &tx_handle, &rx_handle);
+    i2s_new_channel(&chan_cfg, &amyboard_tx_handle, &amyboard_rx_handle);
 
      i2s_std_config_t std_cfg = {
         .clk_cfg = {
@@ -335,18 +318,18 @@ amy_err_t setup_i2s(void) {
         },
     };
     /* Initialize the channel */
-    i2s_channel_init_std_mode(tx_handle, &std_cfg);
-    i2s_channel_init_std_mode(rx_handle, &std_cfg);
+    i2s_channel_init_std_mode(amyboard_tx_handle, &std_cfg);
+    i2s_channel_init_std_mode(amyboard_rx_handle, &std_cfg);
 
     /* Before writing data, start the TX channel first */
-    i2s_channel_enable(tx_handle);
-    i2s_channel_enable(rx_handle);
+    i2s_channel_enable(amyboard_tx_handle);
+    i2s_channel_enable(amyboard_rx_handle);
     return AMY_OK;
 }
 
 void start_amyboard_amy() {
-    check_init(&setup_i2s, "i2s");
-    esp_amy_init();
+    check_init(&amyboard_setup_i2s, "i2s");
+    amyboard_amy_init();
     amy_reset_oscs();
 }
 
