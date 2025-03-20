@@ -15,11 +15,8 @@ def mount_sd():
 
 def start_amy():
     initpcm9211()
-    time.sleep(1)
     tulip.start_amyboard_amy()
-    time.sleep(1)
     amy.override_send = lambda x: tulip.amyboard_send(x)
-    time.sleep(1)
     midi.setup()
 
 
@@ -77,8 +74,6 @@ def initpcm9211(addr=0x40):
         else:
             print("Write 0x%02x to 0x%02x returned 0x%02x" % (val, reg, r))
 
-# TODO - keep this in C as "external output" in AMY
-# TODO - should we take in -V and scale it ? 
 def cv_out(volts, channel=0):
     """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1)"""
     addr = 88 # GP8413
@@ -95,7 +90,6 @@ def cv_out(volts, channel=0):
         ch = 0x04
     get_i2c().writeto_mem(addr, ch, bytes([b0,b1]))
 
-# TODO - move this to C and have it be an AMY CtrlCoef input
 def cv_in(channel=0, n=5):
     from machine import Pin, ADC
     pin = 15 if channel==1 else 16
@@ -108,7 +102,6 @@ def cv_in(channel=0, n=5):
         x = x + pot.read_uv()
     x = (x / (float(n))) 
 
-    # measured uV with a CV pot module that goes from -5.4V to +5.4V (10vpp)
-    (lo, hi) = 755000,2568000
-    rge = hi-lo
-    return (((x-lo) / rge) * 10.0) - 5.0
+    lo = 427000.0
+    hi = 3104200.0
+    return (((x-lo)/(hi-lo)) *20.0)-10.0
