@@ -16,8 +16,6 @@ def mount_sd():
 def start_amy():
     initpcm9211()
     tulip.start_amyboard_amy()
-    amy.override_send = lambda x: tulip.amyboard_send(x)
-    midi.setup()
 
 
 def get_i2c():

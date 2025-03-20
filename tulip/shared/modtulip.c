@@ -1354,10 +1354,10 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) }, 
     { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_quartet), MP_ROM_PTR(&tulip_set_quartet_obj) },
+    { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
 
 #if !defined(AMYBOARD) && !defined(__EMSCRIPTEN__)
     { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
-    { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_map), MP_ROM_PTR(&tulip_alles_map_obj) },
 #endif
 
