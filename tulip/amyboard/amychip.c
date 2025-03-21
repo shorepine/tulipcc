@@ -113,9 +113,7 @@ extern uint8_t external_map[AMY_OSCS];
 float cv_local_value[2];
 uint8_t cv_local_override[2];
 
-#define BLOCK_CV_READS 100
-float last_cv_reads[2][BLOCK_CV_READS];
-uint32_t cv_reads[2] = {0,0};
+float last_cv_reads[2];
 
 float cv_input_hook(uint16_t channel) {
 
@@ -148,19 +146,16 @@ float cv_input_hook(uint16_t channel) {
         ret = (((vf-lo)/(hi-lo)) *20.0)-10.0;
     }
 
-    // Now smooth the per-AMY block voltage reading to BLOCK_CV_READS 
-    last_cv_reads[channel][cv_reads[channel]] = ret;
-    float myret = 0;
-    for(uint16_t n=0;n<BLOCK_CV_READS;n++) {
-        myret += last_cv_reads[channel][n];
-    }
+    // 1st order smoothing with smoothing time constant dependent on how much
+    // the signal has deviated.  Large changes -> small time constant.
+    // alpha = 1 / time_constant.
+    const float scale = 0.2f;
+    float last_out = cv_reads[channel];
+    float alpha = 1.0f - expf(-fabs(ret - cv_reads[channel]) / scale);
+    ret = last_out + alpha * (ret - last_out);
+    cv_reads[channel] = ret;
 
-    cv_reads[channel] = cv_reads[channel] + 1;
-    if(cv_reads[channel] == BLOCK_CV_READS) {
-        //if(channel==0) fprintf(stderr, "cv_reads %ld v %d ret %f avg %f\n", cv_reads[channel], v, ret, myret/(float)BLOCK_CV_READS);
-        cv_reads[channel] = 0;
-    }
-    return myret/(float)BLOCK_CV_READS;
+    return ret;
 }
 
 
