@@ -199,29 +199,21 @@ extern void setup_lvgl();
 uint8_t lvgl_setup = 0;
 
 void mp_task(void *pvParameter) {
+
     volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
-    //volatile uint32_t sp = (uint32_t)get_sp();
     #if MICROPY_PY_THREAD
-    mp_thread_init(pxTaskGetStackStart(NULL), TULIP_MP_TASK_STACK_SIZE / sizeof(uintptr_t));
+    mp_thread_init(pxTaskGetStackStart(NULL), MICROPY_TASK_STACK_SIZE / sizeof(uintptr_t));
     #endif
-    
-    #if CONFIG_USB_ENABLED
+    #if MICROPY_HW_ESP_USB_SERIAL_JTAG
+    usb_serial_jtag_init();
+    #elif MICROPY_HW_ENABLE_USBDEV
     usb_init();
-    #elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
-    #ifdef TDECK
-    fprintf(stderr, "init jtag\n");
-    usb_serial_jtag_init();
     #endif
-    #endif
-
-    usb_serial_jtag_init();
-
     #if MICROPY_HW_ENABLE_UART_REPL
-    //fprintf(stderr, "init uart repl\n");
-    //uart_stdout_init();
+    uart_stdout_init();
     #endif
-    
     machine_init();
+
     
     esp_err_t err = esp_event_loop_create_default();
     if (err != ESP_OK) {
