@@ -99,7 +99,7 @@ if(MICROPY_PY_TINYUSB)
         ${TINYUSB_SRC}/portable/synopsys/dwc2/dcd_dwc2.c
         ${MICROPY_DIR}/shared/tinyusb/mp_usbd.c
         ${MICROPY_DIR}/shared/tinyusb/mp_usbd_cdc.c
-        ${MICROPY_DIR}/shared/tinyusb/mp_usbd_descriptor.c
+        ${MICROPY_PORT_DIR}/mp_usbd_descriptor.c
     )
 
     list(APPEND MICROPY_INC_TINYUSB
