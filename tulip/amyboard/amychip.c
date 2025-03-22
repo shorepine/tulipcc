@@ -135,23 +135,25 @@ float cv_input_hook(uint16_t channel) {
     // Convert the voltage to the calibrated -10 to 10 scale
     float vf = (float)v;
 
-    float lo = 427.0;
-    float hi = 3104.0;
+    float lo = 427.0;  // Calibration reading for -10V in
+    float hi = 3104.0;  // Calibration reading for +10V in
     float ret;
     if(vf < lo) {
         ret = -10;
     } else if (vf > hi) {
         ret = 10;
     } else {
-        ret = (((vf-lo)/(hi-lo)) *20.0)-10.0;
+        ret = (((vf - lo) / (hi - lo)) * 20.0) - 10.0;
     }
 
     // 1st order smoothing with smoothing time constant dependent on how much
     // the signal has deviated.  Large changes -> small time constant.
     // alpha = 1 / time_constant.
-    const float scale = 0.2f;
+    const float slope = 10.0f;
+    const float thresh = 0.2f;
     float last_out = last_cv_reads[channel];
-    float alpha = 1.0f - expf(-fabs(ret - last_cv_reads[channel]) / scale);
+    float alpha = 1.0f /
+        (1.0f + expf(-slope * (fabs(ret - last_out) - thresh)));
     ret = last_out + alpha * (ret - last_out);
     last_cv_reads[channel] = ret;
 
@@ -235,6 +237,7 @@ amy_err_t amyboard_amy_init() {
     amy_external_render_hook = cv_output_hook;
 
     //for(uint8_t n=0;n<BLOCK_CV_READS;n++) { last_cv_reads[0][n] = 0; last_cv_reads[1][n] = 0;  }
+    last_cv_reads[0] = 0; last_cv_reads[1] = 0;
     adc2_config_channel_atten(ADC_CHANNEL_5, ADC_ATTEN_DB_11);
     adc2_config_channel_atten(ADC_CHANNEL_4, ADC_ATTEN_DB_11);
 
