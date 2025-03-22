@@ -150,10 +150,10 @@ float cv_input_hook(uint16_t channel) {
     // the signal has deviated.  Large changes -> small time constant.
     // alpha = 1 / time_constant.
     const float scale = 0.2f;
-    float last_out = cv_reads[channel];
-    float alpha = 1.0f - expf(-fabs(ret - cv_reads[channel]) / scale);
+    float last_out = last_cv_reads[channel];
+    float alpha = 1.0f - expf(-fabs(ret - last_cv_reads[channel]) / scale);
     ret = last_out + alpha * (ret - last_out);
-    cv_reads[channel] = ret;
+    last_cv_reads[channel] = ret;
 
     return ret;
 }
@@ -234,7 +234,7 @@ amy_err_t amyboard_amy_init() {
     amy_external_coef_hook = cv_input_hook;
     amy_external_render_hook = cv_output_hook;
 
-    for(uint8_t n=0;n<BLOCK_CV_READS;n++) { last_cv_reads[0][n] = 0; last_cv_reads[1][n] = 0;  }
+    //for(uint8_t n=0;n<BLOCK_CV_READS;n++) { last_cv_reads[0][n] = 0; last_cv_reads[1][n] = 0;  }
     adc2_config_channel_atten(ADC_CHANNEL_5, ADC_ATTEN_DB_11);
     adc2_config_channel_atten(ADC_CHANNEL_4, ADC_ATTEN_DB_11);
 
