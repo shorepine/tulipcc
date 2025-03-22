@@ -42,8 +42,8 @@
 #include "extmod/misc.h"
 #include "shared/timeutils/timeutils.h"
 #include "shared/runtime/pyexec.h"
-//#include "shared/tinyusb/mp_usbd.h"
-//#include "shared/tinyusb/mp_usbd_cdc.h"
+#include "shared/tinyusb/mp_usbd.h"
+#include "shared/tinyusb/mp_usbd_cdc.h"
 #include "usb.h"
 #include "usb_serial_jtag.h"
 #include "uart.h"
@@ -109,19 +109,20 @@ uintptr_t mp_hal_stdio_poll(uintptr_t poll_flags) {
     uintptr_t ret = 0;
     #if MICROPY_HW_ESP_USB_SERIAL_JTAG
     usb_serial_jtag_poll_rx();
+    #endif
+    #if MICROPY_HW_USB_CDC
+    ret |= mp_usbd_cdc_poll_interfaces(poll_flags);
+    #endif
+    #if MICROPY_PY_OS_DUPTERM
+    ret |= mp_os_dupterm_poll(poll_flags);
+    #endif
+    // Check ringbuffer directly for uart and usj.
     if ((poll_flags & MP_STREAM_POLL_RD) && ringbuf_peek(&stdin_ringbuf) != -1) {
         ret |= MP_STREAM_POLL_RD;
     }
     if (poll_flags & MP_STREAM_POLL_WR) {
         ret |= MP_STREAM_POLL_WR;
     }
-    #endif
-//    #if MICROPY_HW_USB_CDC
-//    ret |= mp_usbd_cdc_poll_interfaces(poll_flags);
-//    #endif
-    #if MICROPY_PY_OS_DUPTERM
-    ret |= mp_os_dupterm_poll(poll_flags);
-    #endif
     return ret;
 }
 
@@ -130,9 +131,9 @@ int mp_hal_stdin_rx_chr(void) {
         #if MICROPY_HW_ESP_USB_SERIAL_JTAG
         usb_serial_jtag_poll_rx();
         #endif
-//        #if MICROPY_HW_USB_CDC
-//        mp_usbd_cdc_poll_interfaces(0);
-//        #endif
+        #if MICROPY_HW_USB_CDC
+        mp_usbd_cdc_poll_interfaces(0);
+        #endif
         int c = ringbuf_get(&stdin_ringbuf);
         if (c != -1) {
             return c;
@@ -168,13 +169,13 @@ mp_uint_t mp_hal_stdout_tx_strn(const char *str, size_t len) {
         MP_THREAD_GIL_ENTER();
     }
     #endif // MICROPY_HW_ENABLE_UART_REPL || CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG_ENABLED
-//    #if MICROPY_HW_USB_CDC
-//    mp_uint_t cdc_res = mp_usbd_cdc_tx_strn(str, len);
-//    if (cdc_res > 0) {
-//        did_write = true;
-//        ret = MIN(cdc_res, ret);
-//    }
-//    #endif
+    #if MICROPY_HW_USB_CDC
+    mp_uint_t cdc_res = mp_usbd_cdc_tx_strn(str, len);
+    if (cdc_res > 0) {
+        did_write = true;
+        ret = MIN(cdc_res, ret);
+    }
+    #endif
     int dupterm_res = mp_os_dupterm_tx_strn(str, len);
     if (dupterm_res >= 0) {
         did_write = true;
@@ -260,8 +261,8 @@ void mp_hal_wake_main_task(void) {
 // Wake up the main task if it is sleeping, to be called from an ISR.
 void mp_hal_wake_main_task_from_isr(void) {
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    //vTaskNotifyGiveFromISR(mp_main_task_handle, &xHigherPriorityTaskWoken);
-    //if (xHigherPriorityTaskWoken == pdTRUE) {
-    //    portYIELD_FROM_ISR();
-    //}
+    vTaskNotifyGiveFromISR(mp_main_task_handle, &xHigherPriorityTaskWoken);
+    if (xHigherPriorityTaskWoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
 }

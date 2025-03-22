@@ -95,10 +95,11 @@ if(MICROPY_PY_TINYUSB)
         ${TINYUSB_SRC}/device/usbd.c
         ${TINYUSB_SRC}/device/usbd_control.c
         ${TINYUSB_SRC}/class/cdc/cdc_device.c
+        ${TINYUSB_SRC}/class/midi/midi_device.c
         ${TINYUSB_SRC}/portable/synopsys/dwc2/dcd_dwc2.c
         ${MICROPY_DIR}/shared/tinyusb/mp_usbd.c
         ${MICROPY_DIR}/shared/tinyusb/mp_usbd_cdc.c
-        ${MICROPY_DIR}/shared/tinyusb/mp_usbd_descriptor.c
+        ${MICROPY_PORT_DIR}/mp_usbd_descriptor.c
     )
 
     list(APPEND MICROPY_INC_TINYUSB
@@ -115,6 +116,7 @@ endif()
 list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/main.c
     ${MICROPY_PORT_DIR}/amychip.c
+    ${MICROPY_PORT_DIR}/tusb_midi.c
     #${MICROPY_PORT_DIR}/esp32-hal-i2c-slave.c
     ${MICROPY_PORT_DIR}/../esp32s3/multicast.c
     ${MICROPY_PORT_DIR}/../esp32s3/help.c
