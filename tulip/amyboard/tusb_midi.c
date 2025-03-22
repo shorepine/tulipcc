@@ -15,11 +15,13 @@ void midi_task(void);
 // Invoked when device is mounted
 void tud_mount_cb(void)
 {
+  fprintf(stderr, "MIDI mount\n") ;
 }
 
 // Invoked when device is unmounted
 void tud_umount_cb(void)
 {
+  fprintf(stderr, "MIDI unmount\n") ;
 }
 
 // Invoked when usb bus is suspended
@@ -28,11 +30,13 @@ void tud_umount_cb(void)
 void tud_suspend_cb(bool remote_wakeup_en)
 {
   (void) remote_wakeup_en;
+  fprintf(stderr, "MIDI suspended\n") ;
 }
 
 // Invoked when usb bus is resumed
 void tud_resume_cb(void)
 {
+  fprintf(stderr, "MIDI resume\n") ;
 }
 
 //--------------------------------------------------------------------+
