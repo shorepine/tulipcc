@@ -15,6 +15,9 @@
 #include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "esp_err.h"
+#include "esp_adc/adc_continuous.h"
+#include "esp_adc/adc_filter.h"
+
 
 #include "driver/i2s_std.h"
 
@@ -37,6 +40,7 @@ TaskHandle_t amy_render_handle;
 TaskHandle_t alles_fill_buffer_handle;
 TaskHandle_t i2c_check_for_data_handle;
 
+adc_continuous_handle_t adc_handle = NULL;
 
 #define ALLES_TASK_COREID (1)
 #define ALLES_RENDER_TASK_COREID (0)
@@ -114,9 +118,9 @@ float cv_local_value[2];
 uint8_t cv_local_override[2];
 
 float last_cv_reads[2];
+#define ADC_READS 5
 
 float cv_input_hook(uint16_t channel) {
-
     // If they used cv_local, just return that, skip everything else
     if(cv_local_override[channel]) {
         return cv_local_value[channel];
@@ -125,15 +129,39 @@ float cv_input_hook(uint16_t channel) {
     // Figure out which pin / ADC channel we're using
     uint8_t channel_id = ADC_CHANNEL_5;
     if(channel==1) channel_id = ADC_CHANNEL_4;
+
+    // Read the ADC N times
+    int tv = 0;
+    for(uint8_t i=0;i<ADC_READS;i++) {
+        int raw = 0;
+        int v = 0;
+        adc2_get_raw(channel_id,ADC_WIDTH_BIT_12, &raw);
+        adc_cali_raw_to_voltage(cali_scheme, raw, &v);
+        tv += v;
+    }
     
-    // Read the ADC once
-    int raw = 0;
-    int v = 0;
-    adc2_get_raw(channel_id,ADC_WIDTH_BIT_12, &raw);
-    adc_cali_raw_to_voltage(cali_scheme, raw, &v);
+
+    /*
+    uint32_t ret_num = 0;
+    uint8_t result[256] = {0};
+    uint16_t rc = 0;
+    adc_continuous_read(adc_handle, result, 256, &ret_num, 0);
+    for (int i = 0; i < ret_num; i += SOC_ADC_DIGI_RESULT_BYTES) {
+        adc_digi_output_data_t *p = (adc_digi_output_data_t*)&result[i];
+        uint32_t chan_num = p->type2.channel;
+        uint32_t data = p->type2.data;
+        // Check the channel number validation, the data is invalid if the channel num exceed the maximum channel 
+        if (chan_num < SOC_ADC_CHANNEL_NUM(ADC_UNIT_2)) {
+            if(chan_num == channel_id) {
+                tv = tv + data;
+                rc++;
+            }
+        }
+    }
+    */
 
     // Convert the voltage to the calibrated -10 to 10 scale
-    float vf = (float)v;
+    float vf = (float)tv / (float)ADC_READS;
 
     float lo = 427.0;  // Calibration reading for -10V in
     float hi = 3104.0;  // Calibration reading for +10V in
@@ -146,6 +174,7 @@ float cv_input_hook(uint16_t channel) {
         ret = (((vf - lo) / (hi - lo)) * 20.0) - 10.0;
     }
 
+    
     // 1st order smoothing with smoothing time constant dependent on how much
     // the signal has deviated.  Large changes -> small time constant.
     // alpha = 1 / time_constant.
@@ -156,7 +185,7 @@ float cv_input_hook(uint16_t channel) {
         (1.0f + expf(-slope * (fabs(ret - last_out) - thresh)));
     ret = last_out + alpha * (ret - last_out);
     last_cv_reads[channel] = ret;
-
+    
     return ret;
 }
 
@@ -236,7 +265,7 @@ amy_err_t amyboard_amy_init() {
     amy_external_coef_hook = cv_input_hook;
     amy_external_render_hook = cv_output_hook;
 
-    //for(uint8_t n=0;n<BLOCK_CV_READS;n++) { last_cv_reads[0][n] = 0; last_cv_reads[1][n] = 0;  }
+    
     last_cv_reads[0] = 0; last_cv_reads[1] = 0;
     adc2_config_channel_atten(ADC_CHANNEL_5, ADC_ATTEN_DB_11);
     adc2_config_channel_atten(ADC_CHANNEL_4, ADC_ATTEN_DB_11);
@@ -257,6 +286,57 @@ amy_err_t amyboard_amy_init() {
     adc_cali_create_scheme_line_fitting(&cali_config, &cali_scheme);
     #endif
     
+
+
+    /*
+    adc_continuous_handle_cfg_t adc_config = {
+        .max_store_buf_size = 1024,
+        .conv_frame_size = 256,
+    };
+    ESP_ERROR_CHECK(adc_continuous_new_handle(&adc_config, &adc_handle));
+
+    adc_continuous_config_t dig_cfg = {
+        .sample_freq_hz = AMY_SAMPLE_RATE/AMY_BLOCK_SIZE,
+        .conv_mode = ADC_CONV_SINGLE_UNIT_2,
+        .format = ADC_DIGI_OUTPUT_FORMAT_TYPE2,
+    };
+
+    adc_digi_pattern_config_t adc_pattern[SOC_ADC_PATT_LEN_MAX] = {0};
+    dig_cfg.pattern_num = 2; //channel_num;
+
+    adc_pattern[0].atten = ADC_ATTEN_DB_11;
+    adc_pattern[0].channel = ADC_CHANNEL_5;
+    adc_pattern[0].unit = ADC_UNIT_2;
+    adc_pattern[0].bit_width = SOC_ADC_DIGI_MAX_BITWIDTH;
+
+    adc_pattern[1].atten = ADC_ATTEN_DB_11;
+    adc_pattern[1].channel = ADC_CHANNEL_4;
+    adc_pattern[1].unit = ADC_UNIT_2;
+    adc_pattern[1].bit_width = SOC_ADC_DIGI_MAX_BITWIDTH;
+
+    dig_cfg.adc_pattern = adc_pattern;
+    ESP_ERROR_CHECK(adc_continuous_config(adc_handle, &dig_cfg));
+    adc_iir_filter_handle_t iir[2];
+
+    adc_continuous_iir_filter_config_t filterCfg[2] = {
+        {
+            .unit = ADC_UNIT_2,
+            .channel = ADC_CHANNEL_5,
+            .coeff = ADC_DIGI_IIR_FILTER_COEFF_64 
+        },
+        {
+            .unit = ADC_UNIT_2,
+            .channel = ADC_CHANNEL_4,
+            .coeff = ADC_DIGI_IIR_FILTER_COEFF_64 
+        },
+    };
+    adc_new_continuous_iir_filter(adc_handle, &filterCfg[0], &iir[0]);
+    adc_new_continuous_iir_filter(adc_handle, &filterCfg[1], &iir[1]);
+    adc_continuous_iir_filter_enable(iir[0]);
+    adc_continuous_iir_filter_enable(iir[1]);
+
+    // *out_handle = handle;
+    */
     amy_start(2, 1, 1, 1);
     // We create a mutex for changing the event queue and pointers as two tasks do it at once
     xQueueSemaphore = xSemaphoreCreateMutex();
