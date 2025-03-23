@@ -35,6 +35,8 @@
       <link rel="stylesheet" href="/css/all.css" id="treejs_styles">
       <script src="tree.js"></script>
       <link rel="stylesheet" href="treejs.css" id="treejs_styles">
+      <link rel="stylesheet" href="knobs.css">
+      <script src="knobs.js"></script>
       <script src="./mini-coi.js" scope="./"></script>
       <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
       <script src="https://cdn.jsdelivr.net/npm/webmidi@latest/dist/iife/webmidi.iife.js"></script>
@@ -45,8 +47,8 @@
       <script type="text/javascript" src="xterm.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="amyboard-20250323091724.mjs" type="module"></script>
-      <script type="text/javascript" id="amy_js_include" src="amy-20250323091724.js"></script>
+      <script src="amyboard-20250323134239.mjs" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="amy-20250323134239.js"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
@@ -56,7 +58,7 @@
 
 
     <script type="module">
-      term = new Terminal({rows:40, cols:80, fontSize:12, theme: { background: '#0f0f0f'  }});
+      term = new Terminal({rows:20,cols:100, fontSize:12, theme: { background: '#0f0f0f'  }});
       term.open(document.getElementById('terminal'));
       const stdoutWriter = (line) => {
         // While it's called line, it's always one char, line[0].
@@ -185,8 +187,36 @@
             </div>
           </div>
         </div>
-
-        <div id="terminal"></div>
+        <div class="row">
+          <div class="col-9">
+            <div id="terminal"></div>
+          </div>
+          <div class="col-2">
+            <input id="cv-input-1"
+               name="cv-input-1"
+               type="range"
+               min="0" max="1000"
+               value="500"
+               data-angle-start="90"
+               data-angle-end="450"
+               data-indicator-auto-position="true"
+               data-indicator-auto-rotate="true"
+               data-indicator-radius="22"
+            />
+            <p id="cv-input-1-label" class='text-center small'>CV1: 0.0V</p>
+            <input id="cv-input-2"
+              name="cv-input-2"
+              type="range"
+              min="0" max="1000"
+              value="500"
+              data-angle-start="90"
+              data-angle-end="450"
+              data-indicator-auto-position="true"
+              data-indicator-auto-rotate="true"
+              data-indicator-radius="22"
+            />
+            <p id="cv-input-2-label" class='text-center small'>CV2: 0.0V</p>
+        </div>
   
         <form name="amyboard_settings">
           <div class="row align-items-start pt-1">
@@ -262,6 +292,8 @@
         </div>
       </div>
     </div>
+    <script type="text/javascript" src="knob2.js"></script>
+
 
     <script language="javascript">     
       // On keypress or click anywhere, start audio worklet
@@ -302,6 +334,18 @@
 
       // Populate the example pills
       fill_examples();
+
+      // Handle the CV knobs
+      ['cv-input-1', 'cv-input-2'].map((name) => {
+        KnobHelper.createKnobCSS(document.getElementById(name), name)
+      })
+      $('#cv-input-1').on('change', function knob_change(e) { 
+        change_cv(1, document.getElementById('cv-input-1').value);
+      });
+      $('#cv-input-2').on('change', function knob_change(e) { 
+        change_cv(2, document.getElementById('cv-input-2').value);
+      });
+
     </script>
   </body>
 </html>

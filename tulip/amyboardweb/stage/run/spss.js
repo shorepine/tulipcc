@@ -39,7 +39,7 @@ amyModule().then(async function(am) {
   amy_start(1,1,1,1);
 });
 
-// Called from AMY to update Tulip about what tick it is, for the sequencer
+// Called from AMY to update AMYboard about what tick it is, for the sequencer
 function amy_sequencer_js_hook(tick) {
   mp.tulipTick(tick);
 }
@@ -52,8 +52,8 @@ async function clear_storage() {
 }
 
 async function setup_midi_devices() {
-  var midi_in = document.tulip_settings.midi_input;
-  var midi_out = document.tulip_settings.midi_output;
+  var midi_in = document.amyboard_settings.midi_input;
+  var midi_out = document.amyboard_settings.midi_output;
   if(WebMidi.inputs.length > midi_in.selectedIndex) {
     if(midiInputDevice != null) midiInputDevice.destroy();
     midiInputDevice = WebMidi.getInputById(WebMidi.inputs[midi_in.selectedIndex].id);
@@ -72,8 +72,8 @@ async function setup_midi_devices() {
 async function start_midi() {
   function onEnabled() {
     // Populate the dropdowns
-    var midi_in = document.tulip_settings.midi_input;
-    var midi_out = document.tulip_settings.midi_output;
+    var midi_in = document.amyboard_settings.midi_input;
+    var midi_out = document.amyboard_settings.midi_output;
 
     if(WebMidi.inputs.length>0) {
       midi_in.options.length = 0;
@@ -344,6 +344,16 @@ async function fill_tree() {
     treeView.reload();
 }
 
+async function change_cv(which, value) {
+    voltage = (value / 1000.0) * 10.0 - 5.0;
+    voltage_string = voltage.toFixed(2).toString();
+    if(which==1) {
+        document.getElementById('cv-input-1-label').innerHTML = 'CV1: ' + voltage_string + 'V'
+    } else {
+        document.getElementById('cv-input-2-label').innerHTML = 'CV2: ' + voltage_string + 'V'        
+    }
+    mp.runPythonAsync('tulip.cv_local('+(which-1).toString()+', ' + voltage_string+ ')\n');
+}
 
 // Create a js File object and upload it to the TW proxy API. This is easier to do here than in python
 async function amyboard_world_upload_file(pwd, filename, username, description) {
