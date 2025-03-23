@@ -17,10 +17,13 @@ ta = 'MTIzOTIyNTc4NDU3NzgxODc0NQ.GjGMum'
 tb = 'KvPGzKZDr1phrId9iY7LMtIDgMNtI0om8MsWsA'
 text_channel_id = "1239226672046407824" # tulip-world channel
 files_channel_id = "1239512482025050204" # tulip-world-files channel
+amyboard_channel_id = "1353327346924388422" # amyboard-world-files
 
 # Discord HTTP API stuff
 text_base_url = "https://discordapp.com/api/channels/{}/".format(text_channel_id)
 files_base_url = "https://discordapp.com/api/channels/{}/".format(files_channel_id)
+amyboard_base_url = "https://discordapp.com/api/channels/{}/".format(amyboard_channel_id)
+
 headers = { "Authorization":"Bot {}".format(ta+'.'+tb),
             "User-Agent":"TulipCC/4.0 (https://tulip.computer, v0.1)",
             "Content-Type":"application/json", }
@@ -50,6 +53,7 @@ def messages(n: int=500, chunk_size: int = 100, mtype: str='text'):
 
     base_url = files_base_url
     if(mtype == 'text'): base_url = text_base_url
+    if(mtype == 'amyboard'): base_url = amyboard_base_url
 
     # First one is the newest
     # https://discord.com/developers/docs/resources/channel#get-channel-messages
@@ -85,7 +89,7 @@ def messages(n: int=500, chunk_size: int = 100, mtype: str='text'):
         if mtype=='text' and len(i['attachments']) == 0:
             ret.append(r)
 
-        if mtype=='files' and len(i['attachments']) > 0:
+        if (mtype=='files' or mtype=='amyboard') and len(i['attachments']) > 0:
             a = i['attachments'][0]
             r.update({
                 'filename':a['filename'], 
@@ -98,19 +102,23 @@ def messages(n: int=500, chunk_size: int = 100, mtype: str='text'):
 
 @app.function()
 @modal.web_endpoint(method='POST')
-def upload(username: str = Form(...), description: str = Form(...), file: UploadFile = File(...)):
+def upload(username: str = Form(...), description: str = Form(...), which: str = Form(...), file: UploadFile = File(...)):
     contents = file.file.read()
     filename = file.filename
     filesize = len(contents)
     if(filesize==0): return {"error":"couldn't read file %s" % (filename)}
 
+    bu = files_base_url
+    if(which=='amyboard'):
+        bu = amyboard_base_url
+
     # First get the url to upload to
     api_response = requests.post(
-        files_base_url+"attachments",
+        bu+"attachments",
         headers=headers,
         json={"files": [{"filename": filename, "file_size": filesize, "id": 1}]},
     )
-
+    print(api_response.json())
     # Then PUT the file to the url
     attachment_info = api_response.json()["attachments"][0]
     put_url = attachment_info["upload_url"]
@@ -134,7 +142,7 @@ def upload(username: str = Form(...), description: str = Form(...), file: Upload
             "filename":filename
         }]
     }
-    r = requests.post(files_base_url+"messages", headers = headers, data = json.dumps(payload))
+    r = requests.post(bu+"messages", headers = headers, data = json.dumps(payload))
 
     return {"ok":True} # not needed
 
