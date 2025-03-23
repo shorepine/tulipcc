@@ -11,6 +11,8 @@ var editor_shown = false;
 var amy_audioin_toggle = false;
 var editor_height = 200;
 var term = null; 
+var cv_1_voltage = 0;
+var cv_2_voltage = 0;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -41,7 +43,7 @@ amyModule().then(async function(am) {
 
 // Called from AMY to update AMYboard about what tick it is, for the sequencer
 function amy_sequencer_js_hook(tick) {
-  mp.tulipTick(tick);
+    mp.tulipTick(tick);
 }
 
 async function clear_storage() {
@@ -344,15 +346,17 @@ async function fill_tree() {
     treeView.reload();
 }
 
+
 async function change_cv(which, value) {
     voltage = (value / 1000.0) * 10.0 - 5.0;
     voltage_string = voltage.toFixed(2).toString();
     if(which==1) {
         document.getElementById('cv-input-1-label').innerHTML = 'CV1: ' + voltage_string + 'V'
+        cv_1_voltage = voltage;
     } else {
         document.getElementById('cv-input-2-label').innerHTML = 'CV2: ' + voltage_string + 'V'        
+        cv_2_voltage = voltage;
     }
-    mp.runPythonAsync('tulip.cv_local('+(which-1).toString()+', ' + voltage_string+ ')\n');
 }
 
 // Create a js File object and upload it to the TW proxy API. This is easier to do here than in python

@@ -137,9 +137,7 @@ SRC_C += \
 	modjsffi.c \
 	mphalport.c \
 	objjsproxy.c \
-	proxy_c.c \
-	$(LVGL_MPY)
-
+	proxy_c.c
 
 TULIP_EXTMOD_DIR = ../shared
 ULAB_DIR = ../shared/ulab/code
