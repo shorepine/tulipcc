@@ -42,29 +42,6 @@ include $(TOP)/extmod/extmod.mk
 # Project specific settings and compiler/linker flags.
 
 
-# LVGL stuff
-LVGL_BINDING_DIR = $(TOP)/../lv_binding_micropython_tulip
-LVGL_DIR = $(LVGL_BINDING_DIR)/lvgl
-LVGL_GENERIC_DRV_DIR = $(LVGL_BINDING_DIR)/driver/generic
-INC += -I$(LVGL_BINDING_DIR) -I.
-ALL_LVGL_SRC = $(shell find $(LVGL_DIR) -type f) 
-LVGL_PP = $(BUILD)/lvgl/lvgl.pp.c
-LVGL_MPY = $(BUILD)/lvgl/lv_mpy.c
-LVGL_MPY_METADATA = $(BUILD)/lvgl/lv_mpy.json
-QSTR_GLOBAL_DEPENDENCIES += $(LVGL_MPY)
-CFLAGS_MOD += $(LV_CFLAGS) 
-SRC_C += $(shell find $(LVGL_DIR)/src -type f -name '*.c')
-CFLAGS += -DLV_CONF_INCLUDE_SIMPLE 
-
-# This is for the lvgl stuff that uses STATIC 
-CFLAGS += -DSTATIC=static
-
-$(LVGL_MPY): $(ALL_LVGL_SRC) $(LVGL_BINDING_DIR)/gen/gen_mpy.py 
-	$(ECHO) "LVGL-GEN $@"
-	$(Q)mkdir -p $(dir $@)
-	$(Q)$(CPP) $(LV_CFLAGS) -DLVGL_PREPROCESS -I $(LVGL_BINDING_DIR)/pycparser/utils/fake_libc_include $(INC) $(LVGL_DIR)/lvgl.h > $(LVGL_PP)
-	$(Q)$(PYTHON) $(LVGL_BINDING_DIR)/gen/gen_mpy.py -M lvgl -MP lv -MD $(LVGL_MPY_METADATA) -E $(LVGL_PP) $(LVGL_DIR)/lvgl.h > $@
-
 
 CC = emcc
 LD = emcc
@@ -78,14 +55,12 @@ INC += -I../shared/desktop/
 INC += -I$(TOP)
 INC += -I$(BUILD)
 INC += -I$(VARIANT_DIR)
-INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src
-INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src/libs/lodepng
 
 CFLAGS += -Wall -Werror -Wdouble-promotion -Wfloat-conversion -DSTATIC=static -Wno-unused-variable -Wno-unused-function
 CFLAGS += -O3 -DNDEBUG
 CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN)
-CFLAGS += -DTULIP_WEB -DTULIP -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 -DAMY_IS_EXTERNAL -DMODULE_ULAB_ENABLED=1 -DAMY_HAS_AUDIO_IN
+CFLAGS += -DAMYBOARD_WEB -DTULIP -DMA_ENABLE_AUDIO_WORKLETS -DAMY_IS_EXTERNAL -DMODULE_ULAB_ENABLED=1 -DAMY_HAS_AUDIO_IN
 
 EXPORTED_FUNCTIONS_EXTRA += ,\
 	_mp_js_do_exec,\
@@ -121,7 +96,6 @@ EXPORTED_RUNTIME_METHODS_EXTRA += ,\
 
 JSFLAGS += \
 	-lidbfs.js \
-    -s USE_SDL=2 \
 	-s ASYNCIFY \
 	-s ASYNCIFY_STACK_SIZE=16000 \
 	-s ASSERTIONS \
@@ -143,7 +117,7 @@ JSFLAGS += --js-library library.js
 JSFLAGS += -s SUPPORT_LONGJMP=emscripten
 JSFLAGS += -s MODULARIZE -s EXPORT_NAME=_createMicroPythonModule
 JSFLAGS += -s INITIAL_MEMORY=128mb -s TOTAL_STACK=64mb -s ALLOW_MEMORY_GROWTH=1 
-JSFLAGS += --preload-file ../fs@tulip4/sys
+JSFLAGS += --preload-file ../fs@amyboard/sys
 
 ################################################################################
 # Source files and libraries.
@@ -173,21 +147,10 @@ ULAB_DIR = ../shared/ulab/code
 EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	modtulip.c \
 	polyfills.c \
-	smallfont.c \
-	display.c \
-	u8g2_fonts.c \
-	u8fontdata.c \
-	bresenham.c \
-	ui.c \
 	help.c \
 	tulip_helpers.c \
-	editor.c \
-	keyscan.c \
-	lodepng.c \
-	lvgl_u8g2.c \
 	tsequencer.c \
 	midi.c \
-	desktop/unix_display.c \
 	)
 
 EXTMOD_SRC_C += $(addprefix $(ULAB_DIR)/, \

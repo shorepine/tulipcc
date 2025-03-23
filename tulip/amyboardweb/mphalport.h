@@ -37,7 +37,7 @@ mp_uint_t mp_hal_ticks_us(void);
 mp_uint_t mp_hal_ticks_cpu(void);
 uint64_t mp_hal_time_ms(void);
 
-int mp_hal_get_interrupt_char(int);
+int mp_hal_get_interrupt_char(void);
 
 #if MICROPY_VFS_POSIX
 

@@ -1,6 +1,7 @@
 
 
 #include <stdio.h>
+#include <string.h>
 #include "polyfills.h"
 
 #include "py/runtime.h"
@@ -13,7 +14,7 @@
 #endif
 #include "midi.h"
 #include "tsequencer.h"
-#ifndef AMYBOARD
+#if !defined(AMYBOARD) && !defined(AMYBOARD_WEB)
 #include "ui.h"
 #include "keyscan.h"
 #include "display.h"
@@ -59,6 +60,8 @@ STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
     return mp_obj_new_str("DESKTOP", strlen("DESKTOP"));    
 #elif defined TULIP_WEB
     return mp_obj_new_str("WEB", strlen("WEB"));    
+#elif defined AMYBOARD_WEB
+    return mp_obj_new_str("AMYBOARD_WEB", strlen("AMYBOARD_WEB"));    
 #elif defined AMYBOARD
     return mp_obj_new_str("AMYBOARD", strlen("AMYBOARD"));    
 #else    
@@ -337,6 +340,8 @@ STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_send_obj, 1, 1, tulip_amyboard_send);
 
 #else
+
+#ifndef AMYBOARD_WEB
 
 /// Tulip-with-screen stuff only below
 extern void unix_display_set_clock(uint8_t);
@@ -1321,6 +1326,7 @@ STATIC mp_obj_t tulip_set_screen_as_repl(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_screen_as_repl_obj, 1,1, tulip_set_screen_as_repl);
 
+#endif // #ifndef AMYBOARD_WEB
 #endif // #ifndef AMYBOARD
 
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
@@ -1354,6 +1360,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_start_amyboard_amy), MP_ROM_PTR(&tulip_start_amyboard_amy_obj) },
     { MP_ROM_QSTR(MP_QSTR_amyboard_send), MP_ROM_PTR(&tulip_amyboard_send_obj) },
 #else
+    #ifndef AMYBOARD_WEB
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_restart), MP_ROM_PTR(&tulip_display_restart_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_stop), MP_ROM_PTR(&tulip_display_stop_obj) },
@@ -1419,6 +1426,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_gpu_log), MP_ROM_PTR(&tulip_gpu_log_obj) },
     { MP_ROM_QSTR(MP_QSTR_screen_size), MP_ROM_PTR(&tulip_screen_size_obj) },
     { MP_ROM_QSTR(MP_QSTR_set_screen_as_repl), MP_ROM_PTR(&tulip_set_screen_as_repl_obj) },
+    #endif
 #endif
 
 

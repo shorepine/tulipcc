@@ -4,7 +4,7 @@
 import json
 import os
 import tulip
-if(tulip.board()!="WEB"):
+if(tulip.board()!="WEB" and tulip.board()!="AMYBOARD_WEB"):
     import tuliprequests as requests
 
 MAX_DESCRIPTION_SIZE=50

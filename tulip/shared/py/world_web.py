@@ -8,7 +8,10 @@ from world import nice_time, headers, MAX_USERNAME_SIZE, MAX_DESCRIPTION_SIZE, _
 import tulip
 import os
 from upysh import pwd
-import tulip_world_upload_file
+if tulip.board()=="WEB":
+    import tulip_world_upload_file as world_upload_file
+if tulip.board()=="AMYBOARD_WEB":
+    import amyboard_world_upload_file as world_upload_file
 
 # convert python dict to JS options
 def options(d):
@@ -161,6 +164,6 @@ def upload(filename, description=""):
         if(tar):
             os.remove(filename)
 
-    tulip_world_upload_file(pwd()+'/', filename, username, description).then(lambda x: clean_up(x))
+    world_upload_file(pwd()+'/', filename, username, description).then(lambda x: clean_up(x))
 
 

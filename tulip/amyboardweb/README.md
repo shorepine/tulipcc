@@ -22,7 +22,7 @@ This will help us lessen our support load and also expose Tulip to people on oth
 
 ## Use
 
-The tulip "sys" files will load into `/tulip4/sys`. `/tulip4/user` is there for your files. Unlike other tulip ports, `/tulip4/sys` is "read only" in the sense that it resets back to our shipped FS default every page load. `/tulip4/user` will persist in your browser as an IndexedDB localstorage thing. 
+The tulip "sys" files will load into `/amyboard/sys`. `/amyboard/user` is there for your files. Unlike other tulip ports, `/amyboard/sys` is "read only" in the sense that it resets back to our shipped FS default every page load. `/amyboard/user` will persist in your browser as an IndexedDB localstorage thing. 
 
 
 ## what works

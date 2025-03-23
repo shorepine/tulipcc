@@ -27,14 +27,8 @@
 #include <unistd.h>
 #include "py/mphal.h"
 #include "library.h"
-#include "mphalport.h"
-#include "display.h"
-
 
 static void stderr_print_strn(void *env, const char *str, size_t len) {
-    if(len) {
-        display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
-    }
     (void)env;
     write(2, str, len);
 }
@@ -42,9 +36,6 @@ static void stderr_print_strn(void *env, const char *str, size_t len) {
 const mp_print_t mp_stderr_print = {NULL, stderr_print_strn};
 
 mp_uint_t mp_hal_stdout_tx_strn(const char *str, size_t len) {
-    if(len) {
-        display_tfb_str((unsigned char*)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
-    }
     return write(1, str, len);
 }
 
@@ -83,6 +74,6 @@ uint64_t mp_hal_time_ns(void) {
 
 extern int mp_interrupt_char;
 
-int mp_hal_get_interrupt_char(int c) {
+int mp_hal_get_interrupt_char(void) {
     return mp_interrupt_char;
 }

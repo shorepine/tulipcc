@@ -86,6 +86,7 @@ export async function loadMicroPython(options) {
         }
     }
     Module = await _createMicroPythonModule(Module);
+    /*
     Module.canvas = (function() { return document.getElementById('canvas'); })();
 
 
@@ -166,7 +167,7 @@ export async function loadMicroPython(options) {
         }
     })
 
-
+    */
 
 
 

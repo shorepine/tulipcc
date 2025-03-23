@@ -41,27 +41,54 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
       <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+      <link rel="stylesheet" href="xterm.css" />
+      <script type="text/javascript" src="xterm.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="amyboard-20250323080215.mjs" type="module"></script>
-      <script type="text/javascript" id="amy_js_include" src="amy-20250323080215.js"></script>
+      <script src="amyboard-20250323091724.mjs" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="amy-20250323091724.js"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
 
   <body>
+
+
+
     <script type="module">
+      term = new Terminal({rows:40, cols:80, fontSize:12, theme: { background: '#0f0f0f'  }});
+      term.open(document.getElementById('terminal'));
+      const stdoutWriter = (line) => {
+        // While it's called line, it's always one char, line[0].
+        // Writing a 10 to xterm does LF but not CR, so we use its writeln to LFCR
+        if(line[0]==10) {
+          term.writeln([0]);
+        } else {
+          term.write(line);
+        }
+      };
+
+      term.onKey(e => {
+        var code = e.key.charCodeAt(0);
+        mp.replProcessCharWithAsyncify(code).then((response) => {
+        });
+      });
+
       mp = await loadMicroPython({
-        stdout:null, 
+        stdout:stdoutWriter, 
         linebuffer: false,
         pystack: 64 * 1024, 
         heapsize: 8 * 1024 * 1024
       });
 
+      // Clear the terminal
+      await term.clear();
+
       // Tell MP to start serving a REPL
       await mp.replInit();
-      // Start up the Tulip stuff
-      await start_tulip();
+
+      // Start up the AMYboard stuff
+      await start_amyboard();
       
       // Fill the ree
       await fill_tree();
@@ -159,10 +186,8 @@
           </div>
         </div>
 
-        <div>
-          <p>AMYboard REPL go here</p>
-        </div>
-
+        <div id="terminal"></div>
+  
         <form name="amyboard_settings">
           <div class="row align-items-start pt-1">
             <div class="col-md-auto align-top small" id="audioin_grow">

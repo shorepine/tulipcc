@@ -1,7 +1,7 @@
 var amy_play_message = null;
 var amy_live_start = null;
 var audio_started = false;
-var tulip_started = false;
+var amyboard_started = false;
 var mp = null;
 var midiOutputDevice = null;
 var midiInputDevice = null;
@@ -10,7 +10,7 @@ var treeView = null;
 var editor_shown = false;
 var amy_audioin_toggle = false;
 var editor_height = 200;
-var tulip_height = null; // gets set on launch
+var term = null; 
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -45,8 +45,8 @@ function amy_sequencer_js_hook(tick) {
 }
 
 async function clear_storage() {
-  if(confirm("This will delete your Tulip user folder and start again.\nAre you sure?")) {
-    indexedDB.deleteDatabase('/tulip4/user');
+  if(confirm("This will delete your AMYboard user folder and start again.\nAre you sure?")) {
+    indexedDB.deleteDatabase('/amyboard/user');
     location.reload(true);
   }
 }
@@ -232,8 +232,8 @@ async function request_file_or_folder(want_folder) {
         thing = treeView.getSelectedNodes()[0].getUserObject();
         if(want_folder) {
             if(thing.is_dir) { 
-                if(thing.fullpath.startsWith('/tulip4/sys')) {
-                    show_alert("You can't write to /sys on Tulip. Try /user.")
+                if(thing.fullpath.startsWith('/amyboard/sys')) {
+                    show_alert("You can't write to /sys on AMYboard. Try /user.")
                     return null;
                 }
                 return thing; 
@@ -295,7 +295,7 @@ async function save_editor() {
                 target_filename = "/user/" + target_filename;
             }
             content = editor.getValue();
-            mp.FS.writeFile("/tulip4"+target_filename, content);
+            mp.FS.writeFile("/amyboard"+target_filename, content);
             document.getElementById('editor_filename').value = target_filename;
         } else {
             show_alert('You need to provide a filename before saving.');
@@ -308,7 +308,7 @@ async function load_editor() {
     file = await request_file_or_folder(false);
     if(file != null) {
         editor.setValue(file.getContents('utf8'));
-        // trim the `/tulip4` from here
+        // trim the `/amyboard` from here
         document.getElementById('editor_filename').value = file.fullpath.substring(7);
         setTimeout(function () { editor.save() }, 100);
         setTimeout(function () { editor.refresh() }, 250);
@@ -317,7 +317,7 @@ async function load_editor() {
 
 
 async function fill_tree() {
-    var root = new TreeNode(new DirItem("/tulip4", "tulip4"));
+    var root = new TreeNode(new DirItem("/amyboard", "amyboard"));
     function impl(curFolder, curNode) {
         for (const name of mp.FS.readdir(curFolder)) {
             if (name === '.' || name === '..') continue;
@@ -333,7 +333,7 @@ async function fill_tree() {
             }
         }
     }
-    impl('/tulip4', root);
+    impl('/amyboard', root);
     treeView = new TreeView(root, "#treecontainer");
     treeView.changeOption("leaf_icon", '<i class="fas fa-file"></i>');
     treeView.changeOption("parent_icon", '<i class="fas fa-folder"></i>');
@@ -346,7 +346,7 @@ async function fill_tree() {
 
 
 // Create a js File object and upload it to the TW proxy API. This is easier to do here than in python
-async function tulip_world_upload_file(pwd, filename, username, description) {
+async function amyboard_world_upload_file(pwd, filename, username, description) {
     var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
     var file = await new File([new Uint8Array(contents)], filename, {type: 'application/binary'})
     var data = new FormData();
@@ -357,12 +357,6 @@ async function tulip_world_upload_file(pwd, filename, username, description) {
         method: 'POST',
         body: data,
     });
-}
-
-async function resize_tulip_grippie() {
-    var tulip_width = document.getElementById('canvas').offsetWidth;
-    tulip_height = document.getElementById('canvas').offsetHeight;
-    document.getElementById('tulip_grippierow').setAttribute("style","width:"+tulip_width.toString()+"px");
 }
 
 async function show_editor() {
@@ -426,9 +420,9 @@ async function toggle_audioin() {
     }
 }
 
-async function start_tulip() {
+async function start_amyboard() {
   // Don't run this twice
-  if(tulip_started) return;
+  if(amyboard_started) return;
 
   // Start midi
   await start_midi();
@@ -436,8 +430,7 @@ async function start_tulip() {
   // Let micropython call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_play_message);
   await mp.registerJsModule('amy_sysclock', amy_sysclock);
-  await mp.registerJsModule('tulip_world_upload_file', tulip_world_upload_file);
-
+  await mp.registerJsModule('amyboard_world_upload_file', amyboard_world_upload_file);
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
   mp.registerJsModule("jssleep", sleep_ms);
 
@@ -447,12 +440,14 @@ async function start_tulip() {
     amy.override_send = amy_js_message
     tulip.amy_ticks_ms = amy_sysclock
   `);
+
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
   await sleep_ms(400);
   await mp.runFrozenAsync('_boot.py');
+
   await sleep_ms(400);
-  await mp.runFrozenAsync('/tulip4/user/boot.py');
-  tulip_started = true;
+  await mp.runFrozenAsync('/amyboard/user/boot.py');
+  amyboard_started = true;
 }
 
 async function start_audio() {

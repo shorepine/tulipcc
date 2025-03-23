@@ -44,7 +44,6 @@
 #include "library.h"
 #include "proxy_c.h"
 #include "py/ringbuf.h"
-#include "SDL.h"
 #include "emscripten/html5.h"
 
 #include "tsequencer.h"
@@ -80,25 +79,14 @@ void external_call_depth_inc(void) {
 void external_call_depth_dec(void) {
     --external_call_depth;
 }
-extern void mp_schedule_lv();
-extern void unix_display_init();
-extern int unix_display_draw();
+
 uint8_t tulip_ready = 0;
-extern uint8_t display_size_changed;
-extern SDL_Window * window;
-extern void force_rescale();
-uint32_t frame_count = 0;
+
+uint32_t frame_count = 1;
 void main_loop__tulip() {
     if(tulip_ready) {
-        // We seem to be stuck at 60fps (even if we change it in the loop setup), so let's halve that to be more "Tulip-y"
-        if(frame_count++ % 2 == 0)
-            unix_display_draw();
         
-        //mp_schedule_lv();
-
-        // Why run this more than once? Tulip on web updates all its stuff twice a frame. 
-        // We schedule at least 1 thing a frame - the LVGL updater
-        // So this ensures that anything else scheduled (MIDI, sequencer, frame_callback, touch_callback) still can run
+        // this ensures that anything else scheduled (MIDI, sequencer, frame_callback, touch_callback) still can run
         for(uint8_t i=0;i<TULIP_FRAME_SCHEDULER_EATS;i++) 
             mp_handle_pending(true);
 
@@ -106,22 +94,7 @@ void main_loop__tulip() {
             EM_ASM(
                 FS.syncfs(false, function (err) {});
             );
-
-        if(frame_count == 10) display_size_changed = 1;
-
-        if (display_size_changed) {
-            double w, h;
-            int iw,ih;
-            emscripten_get_canvas_element_size("#canvas", &iw, &ih);
-            emscripten_get_element_css_size( "#canvas", &w, &h );
-            //fprintf(stderr, "size change event --> CSS %d,%d DOM %d,%d\n", (int)w, (int) h ,iw,ih);
-            SDL_SetWindowSize( window, (int)w, (int) h );
-            force_rescale();
-            unix_display_draw();
-            display_size_changed = 0;
-        }
-
-
+        frame_count++;
     }
 }
 
@@ -132,12 +105,12 @@ void tulip_tick(uint32_t tick) {
 void setup_fs() {
     EM_ASM(
         try {
-            FS.mkdir('/tulip4');
+            FS.mkdir('/amyboard');
         } catch (err) {
             // OK, already exists
         }
         try {
-            FS.mkdir('/tulip4/user');
+            FS.mkdir('/amyboard/user');
         } catch (err) {
             // OK, already exists
         }
@@ -145,14 +118,13 @@ void setup_fs() {
         // Then mount with IDBFS type
         // NB: autoPersist:true does not seem to work with the current tulip setup -- unsure why
         // So we use a divider on the tulip frame drawing to sync FS manually every couple seconds
-        FS.mount(IDBFS,  {autoPersist:true}, '/tulip4/user');
+        FS.mount(IDBFS,  {autoPersist:true}, '/amyboard/user');
         // Then sync
         FS.syncfs(true, function (err) {
             // callback
         });
     );
 }
-extern void unix_display_init();
 
 void mp_js_init(int pystack_size, int heap_size) {
 
@@ -192,8 +164,6 @@ void mp_js_init(int pystack_size, int heap_size) {
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
     #endif
     tsequencer_init();
-    unix_display_init();
-    setup_lvgl();
     tulip_ready = 1;
 }
 
