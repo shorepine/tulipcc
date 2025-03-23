@@ -353,6 +353,7 @@ async function tulip_world_upload_file(pwd, filename, username, description) {
     data.append('file',file);
     data.append('username', username);
     data.append('description', description);
+    data.append('which', 'tulip');
     return fetch('https://bwhitman--tulipworldapi-upload.modal.run', {
         method: 'POST',
         body: data,
