@@ -2,27 +2,27 @@
 <html>
   <head>
       <link rel="stylesheet" href="amyrepl.css"/>
-      <title>Tulip Web</title>
+      <title>AMYboard Web</title>
       <meta charset="UTF-8">
 
-      <meta property="og:title" content="Tulip Web">
+      <meta property="og:title" content="AMYboard Web">
       <meta property="og:image" content="https://tulip.computer/img/tulip_hero.jpg">
-      <meta property="og:description" content="Tulip on the web. Run Tulip in the browser. Share your creations with others.">
+      <meta property="og:description" content="AMYboard on the web. Run and test your AMYboard setup. Share your creations with others.">
       <meta property="og:type" content="product" />
-      <meta property="og:url" content="https://tulip.computer"/>
-      <meta property="og:site_name" content="Tulip Web"/>
+      <meta property="og:url" content="https://tulip.computer/amyboard"/>
+      <meta property="og:site_name" content="AMYboard Web"/>
       <meta property="product:price:amount" content="58.90"/>
       <meta property="product:price:currency" content="USD"/>
       <meta property="og:availability" content="instock" />
       <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
-      <meta name="description" content="Tulip on the web. Run Tulip in the browser. Share your creations with others.">
+      <meta name="description" content="AMYboard on the web. Run and test your AMYboard setup. Share your creations with others.">
       <meta name="author" content="shore pine sound systems">
       <meta name="HandheldFriendly" content="true">
       <meta name="twitter:card" content="summary_large_image">
       <meta name="twitter:site" content="@shorepinesound">
       <meta name="twitter:creator" content="@shorepinesound">
-      <meta name="twitter:title" content="Tulip Web">
-      <meta name="twitter:description" content="Tulip on the web. Run Tulip in the browser. Share your creations with others.">
+      <meta name="twitter:title" content="AMYboard Web">
+      <meta name="twitter:description" content="AMYboard on the web. Run and test your AMYboard setup. Share your creations with others.">
       <meta name="twitter:image" content="https://tulip.computer/img/tulip_hero.jpg">
 
       <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
@@ -43,8 +43,8 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250317075612.mjs" type="module"></script>
-      <script type="text/javascript" id="amy_js_include" src="amy-20250317075612.js"></script>
+      <script src="amyboard-20250323080215.mjs" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="amy-20250323080215.js"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
@@ -110,7 +110,7 @@
 
     <div class="container my-2">
       <div class="px-2 maintulipview">
-        <h1><A HREF="https://tulip.computer/"><img src="/img/favicon.png"/ width=40></A>Tulip Web</h1> 
+        <h1><A HREF="https://tulip.computer/"><img src="/img/favicon.png"/ width=40></A>AMYboard Web</h1> 
         <p>
           <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="show_editor();">
             Show code editor
@@ -122,7 +122,7 @@
           <div class="alert fixed-top d-none" id="alert_box"></div>
           <div class="row g-0 headertext">
             <div class="col-3 headertext">
-              <span class="px-1 small align-middle">Tulip files</span>
+              <span class="px-1 small align-middle">AMYboard files</span>
               <div id="treecontainer"></div>
             </div>
             <div class="col-9 headertext">
@@ -137,14 +137,14 @@
           </div>
           <div class="row mb-4 mt-1">
             <div class="col-3">
-                <button type="button" title="Refresh Tulip file list" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
-                <button type="button" title="Download file from Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
-                <button type="button" title="Upload file to Tulip into the selected folder" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
-                <button type="button" title="Load selected Tulip file into editor" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
+                <button type="button" title="Refresh AMYboard file list" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
+                <button type="button" title="Download file from AMYboard" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
+                <button type="button" title="Upload file into the selected folder" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
+                <button type="button" title="Load selected AMYboard file into editor" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
             </div>
             <div class="col-3">
-                <button type="button" title="Save editor contents to file on Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-floppy-disk"></i></button>
-                <button type="button" title="Run editor contents in Tulip" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="runEditorBlock()"><i class="fas fa-running"></i></button> 
+                <button type="button" title="Save editor contents to file" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-floppy-disk"></i></button>
+                <button type="button" title="Run editor contents in AMYboard" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="runEditorBlock()"><i class="fas fa-running"></i></button> 
                 <button type="share" title="Share editor contents (and filename, if given) as a URL" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
             </div>
             <div class="col-4">
@@ -159,16 +159,11 @@
           </div>
         </div>
 
-        <!-- Fake textarea to capture keystrokes to the SDL canvas -->
-        <textarea id="textinput" autocapitalize="off" rows="1"></textarea>
-        
-        <!-- Tulip's SDL canvas -->
-        <canvas id="canvas" tabindex=0 class="canvas-solo"></canvas>
-        <div class="row g-0 py-0 my-0 grippierow" id="tulip_grippierow">
-          <p class="text-center grippie" id="tulip_grippie">• • •</p>
+        <div>
+          <p>AMYboard REPL go here</p>
         </div>
 
-        <form name="tulip_settings">
+        <form name="amyboard_settings">
           <div class="row align-items-start pt-1">
             <div class="col-md-auto align-top small" id="audioin_grow">
               <div class="form-check form-switch">
@@ -198,59 +193,35 @@
 
     <div class="container my-2">
       <div class="px-2 py-4">
-        <h2>Welcome to a version of <a href="https://tulip.computer/">Tulip</a> running locally in your browser.</h2>
+        <h2>Welcome to a version of <a href="https://tulip.computer/amyboard">AMYboard</a> running locally in your browser.</h2>
         <!-- Tutorial pills block -->
         <div class="py-2">
           <div class="card">
             <div class="card-header">
-              Try some examples! They'll load and run in the Tulip window above.
+              Try some examples! They'll load and run in the AMYboard window above.
             </div>
             <div class="card-body" id="tutorials"></div>
           </div>
         </div>
         <p>
-          Tulip is a creative computer running Python with lots of music and graphics functionality. <A HREF="https://tulip.computer">You can buy a hardware Tulip for $59.</A> 
+          AMYboard is a .... <A HREF="https://tulip.computer/amyboard">You can buy a hardware AMYboard for $XX.</A> 
         </p>
         <P>
-          This version of Tulip runs locally in your browser. The files are stored in your browsers' storage. It's <I>almost</I> perfectly like a real Tulip, including support for MIDI, graphics, synthesis and Python. There's some small differences, see below.
+          This version of AMYboard runs locally in your browser. The files are stored in your browsers' storage. 
         </p>
-        <p>If you've never used Tulip before, please check out the examples above and these getting started tips:</p>
-        <div class='row'>
-          <div class='col-4'>
-            <ul>
-              <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md">Getting Started on Tulip</A></li>
-              <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md">Make music tutorial</A></li>
-              <li><A href="https://github.com/shorepine/tulipcc/blob/main/docs/tulip_api.md">Full Tulip API</A></li>
-              <li><A href="https://github.com/orgs/shorepine/projects/1">Roadmap</A></li>
-            </ul>
-          </div>
-          <div class='col-8 overflow-hidden'>
-            <P>
-              <a href="https://tulip.computer"><img src="/img/tulip-shop-1.jpg" width=500/></a>
-            </P>
-          </div>
-        </div>
-
-        <h3>Some notes on the web port:</h3>
-        <ul>
-          <li>If you're using Private Browsing mode, we can't keep your files around after you reload. And on <A HREF="https://bugzilla.mozilla.org/show_bug.cgi?id=1320796">Firefox Private Browsing, the page won't work at all.</A> Don't worry, we're not doing anything nefarious here. No data leaves this page, unless you choose to connect to Tulip World to send a message or download a program. <a href="https://github.com/shorepine/tulipcc/tree/main/tulip/web">Everything is open source.</a>
-          <li>MIDI works on all browsers <a href="https://webmidijs.org/docs/getting-started/">except for Safari</a></li>
-          <li>Some Tulip network calls may fail if the CORS settings of the destination prevent it. Some networking methods may return a JS "promise" rather than an immediate Python result.</li>
-          <li>Anything relying on Python's <code>input</code> will fail -- use <code>tulip.key_wait</code> or <code>keyboard_callback</code> instead.</li>
-          <li>Do not use <code>time.sleep()</code> in your code as it will block all input, audio and graphics from updating. Instead, use Tulip callbacks, <code>asyncio</code> or <code>tulip.defer</code> if you want to block or defer execution in Tulip.</li>
-        </ul>
+        <p>If you've never used AMYboard before, please check out the examples above and these getting started tips:</p>
 
         <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
           <div class="col-4 py-vh-3" data-aos="fade-up">
-            <a href="https://tulip.computer/"><img src="/img/tulip.svg" width=42 height=42></a>
-            <a href="https://tulip.computer/"><h3 class="h5 my-2">Want more? Get a Tulip</h3></a>
-            <p>Get your own hardware Tulip for only US$59.</p>
+            <a href="https://tulip.computer/amyboard"><img src="/img/tulip.svg" width=42 height=42></a>
+            <a href="https://tulip.computer/amyboard"><h3 class="h5 my-2">Want more? Get an AMYboard</h3></a>
+            <p>Get your own hardware AMYboard for only US$XX.</p>
           </div>
 
           <div class="col-4 py-vh-3" data-aos="fade-up">
             <a href="https://discord.com/invite/TzBFkUb8pG"><img src="/img/discord-mark-black.svg" width=42 height=42></a>
             <a href="https://discord.com/invite/TzBFkUb8pG"><h3 class="h5 my-2">Discord</h3></a>
-            <p>Join the <strong>shore pine sound systems</strong> Discord to chat about Tulip, AMY and Alles. A fun small community!</p>
+            <p>Join the <strong>shore pine sound systems</strong> Discord to chat about Tulip, AMYboard, AMY and Alles. A fun small community!</p>
           </div>
 
           <div class="col-4 py-vh-3" data-aos="fade-up" data-aos-delay="200">
@@ -271,25 +242,13 @@
       // On keypress or click anywhere, start audio worklet
       document.body.addEventListener('click', start_audio, true); 
       document.body.addEventListener('keydown', start_audio, true); 
-      // We have to force that a click on the canvas focuses a hidden textinput, so that SDL can receive keypresses.
-      document.querySelector('#canvas').addEventListener('click', function() {
-            document.getElementById("textinput").focus({preventScroll:true});
-      });
-
-      window.addEventListener('resize', function() {
-        // Code to execute when the viewport changes
-        resize_tulip_grippie();
-      });
 
       // Handle the grippie bars on the page for the editor & Tulip blocks
       var editor_grippie_held = false;
       var editor_grippie_y_start = 0;
-      var tulip_grippie_held = false;
-      var tulip_grippie_y_start = 0;
 
       $('body').on('mouseup', function mouseState(e) {
         editor_grippie_held = false;
-        tulip_grippie_held = false;
       });
       $('#editor_grippie').on('mousedown mousemove', function mouseState(e) {
         if (e.type == "mousedown") {
@@ -308,25 +267,6 @@
         }
       });
 
-      $('#tulip_grippie').on('mousedown mousemove', function mouseState(e) {
-        if (e.type == "mousedown") {
-          e.preventDefault();
-          tulip_grippie_held = true;
-          tulip_grippie_y_start = e.clientY;
-        }
-        if(e.type == "mousemove") {
-          if(tulip_grippie_held) {
-            e.preventDefault();
-            tulip_height = tulip_height + (e.clientY - tulip_grippie_y_start);
-            if(tulip_height < 200) tulip_height = 200;
-            document.getElementById('canvas').setAttribute("style","height:"+tulip_height.toString()+"px");
-            document.getElementById('canvas').setAttribute("style","width:"+tulip_height*(1024/600).toString()+"px");
-            resize_tulip_grippie();
-          }
-        }
-      });
-
-
       // Set up the tooltips
       $(function () {
         $('[data-toggle="tooltip"]').tooltip({delay: { "show": 3000, "hide": 500 }, trigger:'hover'})
@@ -337,8 +277,6 @@
 
       // Populate the example pills
       fill_examples();
-
-      resize_tulip_grippie();
     </script>
   </body>
 </html>

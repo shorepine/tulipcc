@@ -368,18 +368,18 @@ async function resize_tulip_grippie() {
 async function show_editor() {
     document.getElementById('showhideeditor').style.display='none'; 
     if(editor) editor.refresh();
-    document.getElementById('canvas').classList.remove("canvas-solo");
-    document.getElementById('canvas').classList.add("canvas-editor");
+    //document.getElementById('canvas').classList.remove("canvas-solo");
+    //document.getElementById('canvas').classList.add("canvas-editor");
     editor_shown = true;
-    resize_tulip_grippie();
+    //resize_tulip_grippie();
 }
 
 async function hide_editor() {
     document.getElementById('showhideeditor').style.display='';
-    document.getElementById('canvas').classList.remove("canvas-editor");
-    document.getElementById('canvas').classList.add("canvas-solo");
+    //document.getElementById('canvas').classList.remove("canvas-editor");
+    //document.getElementById('canvas').classList.add("canvas-solo");
     editor_shown = false;
-    resize_tulip_grippie();
+    //resize_tulip_grippie();
 }
 
 
