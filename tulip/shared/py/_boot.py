@@ -4,14 +4,15 @@ import tulip, sys, midi, synth, amy, world, alles, sequencer
 from upysh import *
 from tulip import board
 
-if board()!="AMYBOARD":
+if board()!="AMYBOARD" and board()!="AMYBOARD_WEB":
     from tulip import edit, run
 else:
-    import amyboard
-    amyboard.mount_sd()
-    amyboard.start_amy()
+    if(board()=="AMYBOARD"):
+        import amyboard
+        amyboard.mount_sd()
+        amyboard.start_amy()
 
-if board()=="WEB":
+if board()=="WEB" or board()=="AMYBOARD_WEB":
     def webnyi():
         return "This function is not available on Tulip Web"
     import world_web as world
@@ -92,9 +93,13 @@ except ValueError:
 
 gc.collect()
 
-# On web, this is handled with JS callbacks
-if(tulip.board() != "WEB"):
-    # Override amy's send to work with tulip/amyboard
-    amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
-midi.setup()
+# Set up audio/midi. 
+if(tulip.board() == "WEB" or tulip.board()=="AMYBOARD_WEB"):
+    midi.setup()
+    # Override send & bleep are done from JS on web because of click-to-start audio.
+else:
+    if(tulip.board() != "AMYBOARD"):
+        # Override amy's send to work with tulip
+        amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
+        midi.setup()
 

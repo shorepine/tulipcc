@@ -5,7 +5,7 @@ from _tulip import *
 from upysh import cd, pwd
 import amy
 
-if(board()!='AMYBOARD'):
+if(board()!='AMYBOARD' and board()!="AMYBOARD_WEB"):
     from tulip_graphics import *
     from ui import *
     from editor import edit
@@ -30,14 +30,14 @@ def prompt(prompt):
 def add_to_bootpy(s, only_first_create=False):
     first = False
     try:
-        bootpy = open(tulip.root_dir()+"user/boot.py","r").read()
+        bootpy = open(root_dir()+"user/boot.py","r").read()
     except OSError:
         first = True
         bootpy = "" # file doesn't exist yet
     
     bootpy = bootpy + "\n" + s + "\n"
     if((only_first_create and first) or (not only_first_create)):
-        w = open(tulip.root_dir()+'user/boot.py','w')
+        w = open(root_dir()+'user/boot.py','w')
         w.write(bootpy)
         w.close()
 
@@ -95,6 +95,8 @@ def root_dir():
                 root_directory = uos.getenv("HOME") + "/Documents/tulipcc/"
         elif board() == "WEB":
             root_directory = "/tulip4/"
+        elif board() == "AMYBOARD_WEB":
+            root_directory = "/amyboard/"
         return root_directory
     except:
         return "/"

@@ -2,7 +2,7 @@
 
 #include "tulip_helpers.h"
 
-#ifndef AMYBOARD
+#if !defined(AMYBOARD) && !defined(AMYBOARD_WEB)
 #include "ui.h"
 extern uint8_t keyboard_send_keys_to_micropython;
 extern int8_t keyboard_grab_ui_focus;
