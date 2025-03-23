@@ -271,7 +271,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_map_obj, 0, 0, tulip_alle
 #endif
 
 
-
+#ifndef AMYBOARD_WEB
 extern uint8_t ipv4_quartet;
 STATIC mp_obj_t tulip_set_quartet(size_t n_args, const mp_obj_t *args) {
     ipv4_quartet = mp_obj_get_int(args[0]);
@@ -279,6 +279,7 @@ STATIC mp_obj_t tulip_set_quartet(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_quartet_obj, 1, 1, tulip_set_quartet);
+#endif
 
 extern float compute_cpu_usage(uint8_t debug);
 STATIC mp_obj_t tulip_cpu(size_t n_args, const mp_obj_t *args) {
@@ -322,6 +323,22 @@ STATIC mp_obj_t tulip_build_strings(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_build_strings_obj, 0,0, tulip_build_strings);
 
 
+#if defined(AMYBOARD) 
+extern float cv_local_value[2];
+extern uint8_t cv_local_override[2];
+STATIC mp_obj_t tulip_cv_local(size_t n_args, const mp_obj_t *args) {
+    uint8_t channel = mp_obj_get_int(args[0]);
+    if(n_args>1) {
+        cv_local_override[channel] = 1;
+        cv_local_value[channel] = mp_obj_get_float(args[1]);
+    } else {
+        cv_local_override[channel] = 0;
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cv_local_obj, 1, 2, tulip_cv_local);
+#endif
+
 // Just AMYBOARD c code
 #ifdef AMYBOARD
 extern void start_amyboard_amy();
@@ -339,19 +356,6 @@ STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_send_obj, 1, 1, tulip_amyboard_send);
 
-extern float cv_local_value[2];
-extern uint8_t cv_local_override[2];
-STATIC mp_obj_t tulip_cv_local(size_t n_args, const mp_obj_t *args) {
-    uint8_t channel = mp_obj_get_int(args[0]);
-    if(n_args>1) {
-        cv_local_override[channel] = 1;
-        cv_local_value[channel] = mp_obj_get_float(args[1]);
-    } else {
-        cv_local_override[channel] = 0;
-    }
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cv_local_obj, 1, 2, tulip_cv_local);
 
 
 #else
@@ -1359,9 +1363,10 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) }, 
     { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
+#ifndef AMYBOARD_WEB
     { MP_ROM_QSTR(MP_QSTR_set_quartet), MP_ROM_PTR(&tulip_set_quartet_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
-
+#endif
 #if !defined(AMYBOARD) && !defined(__EMSCRIPTEN__)
     { MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_alles_map), MP_ROM_PTR(&tulip_alles_map_obj) },
@@ -1371,10 +1376,13 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
 #endif
 
+#if defined(AMYBOARD)
+    { MP_ROM_QSTR(MP_QSTR_cv_local), MP_ROM_PTR(&tulip_cv_local_obj) },
+#endif
+
 #ifdef AMYBOARD
     { MP_ROM_QSTR(MP_QSTR_start_amyboard_amy), MP_ROM_PTR(&tulip_start_amyboard_amy_obj) },
     { MP_ROM_QSTR(MP_QSTR_amyboard_send), MP_ROM_PTR(&tulip_amyboard_send_obj) },
-    { MP_ROM_QSTR(MP_QSTR_cv_local), MP_ROM_PTR(&tulip_cv_local_obj) },
 #else
     #ifndef AMYBOARD_WEB
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },

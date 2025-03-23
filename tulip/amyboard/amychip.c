@@ -1,5 +1,10 @@
 #include <stdio.h>
 #include <inttypes.h>
+#include "amy.h"
+
+
+
+#ifdef ESP_PLATFORM
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -8,15 +13,12 @@
 #include "esp_system.h"
 #include "esp_task.h"
 #include "driver/i2c.h"
-
-#include "amy.h"
-#include "examples.h"
-#include "freertos/queue.h"
+#include "freertos/aqueue.h"
 #include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "esp_err.h"
-
 #include "driver/i2s_std.h"
+
 
 i2s_chan_handle_t amyboard_tx_handle;
 i2s_chan_handle_t amyboard_rx_handle;
@@ -109,6 +111,8 @@ i2s_sample_type my_int32_block[AMY_BLOCK_SIZE * AMY_NCHANS];
 #include "driver/adc.h"
 #include "esp_adc/adc_cali_scheme.h"
 adc_cali_handle_t cali_scheme;
+#endif // ESP_PLATFORM
+
 extern uint8_t external_map[AMY_OSCS];
 float cv_local_value[2];
 uint8_t cv_local_override[2];
@@ -128,6 +132,7 @@ float cv_input_hook(uint16_t channel) {
     uint8_t channel_id = ADC_CHANNEL_5;
     if(channel==1) channel_id = ADC_CHANNEL_4;
     
+    #ifdef ESP_PLATFORM
     // Read the ADC once
     int raw = 0;
     int v = 0;
@@ -161,11 +166,15 @@ float cv_input_hook(uint16_t channel) {
         cv_reads[channel] = 0;
     }
     return myret/(float)BLOCK_CV_READS;
+    #else
+    return 0;
+    #endif
 }
 
 
 
 uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
+#ifdef ESP_PLATFORM
     if(external_map[osc]>0) {
         // -5v to +5v? 
         float volts = S2F(buf[0])*5.0;
@@ -184,10 +193,12 @@ uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
         i2c_master_write_to_device(I2C_NUM_0, addr, bytes, 3, pdMS_TO_TICKS(10));
         return 1;
     }
+#endif
     return 0;
 
 }
 
+#ifdef ESP_PLATFORM
 // Make AMY's FABT run forever , as a FreeRTOS task 
 void amyboard_fill_audio_buffer_task() {
     size_t read = 0;
@@ -332,4 +343,4 @@ void start_amyboard_amy() {
     amyboard_amy_init();
     amy_reset_oscs();
 }
-
+#endif // ESP_PLATFORM
