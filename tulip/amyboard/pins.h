@@ -12,8 +12,8 @@
 #define I2S_BCLK  8
 #define I2S_LRCLK 2
 #define AMYOUT 6 // data going to the codec, eg DAC data
-#define I2C_SLAVE_SCL 5
-#define I2C_SLAVE_SDA 4 
+#define I2C_FOLLOWER_SCL 5
+#define I2C_FOLLOWER_SDA 4 
 #define I2C_MASTER_SCL 18
 #define I2C_MASTER_SDA 17
 #define AMYIN 9 // data coming from the codec, eg ADC  data

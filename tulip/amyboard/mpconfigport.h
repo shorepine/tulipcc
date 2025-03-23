@@ -22,9 +22,7 @@
 #define MICROPY_PY_MACHINE_I2S              (0)
 #define MICROPY_PY_BLUETOOTH (0)
 #define MICROPY_BLUETOOTH_NIMBLE (0)
-#define MICROPY_HW_USB_CDC (0)
-#define MICROPY_HW_ESP_USB_SERIAL_JTAG (1)
-#define MICROPY_HW_ENABLE_USBDEV (0)
+
 #define MICROPY_ENABLE_SCHEDULER (1)
 #define MICROPY_SCHEDULER_DEPTH             (128)
 
@@ -226,15 +224,15 @@
 
 #ifndef MICROPY_HW_USB_VID
 #define USB_ESPRESSIF_VID 0x303A
-#if CONFIG_TINYUSB_DESC_USE_ESPRESSIF_VID
-#define MICROPY_HW_USB_VID  (USB_ESPRESSIF_VID)
+#if 1 //CONFIG_TINYUSB_DESC_USE_ESPRESSIF_VID
+#define MICROPY_HW_USB_VID  (0xCAF0)
 #else
 #define MICROPY_HW_USB_VID  (CONFIG_TINYUSB_DESC_CUSTOM_VID)
 #endif
 #endif
 
 #ifndef MICROPY_HW_USB_PID
-#if CONFIG_TINYUSB_DESC_USE_DEFAULT_PID
+#if 1 //CONFIG_TINYUSB_DESC_USE_DEFAULT_PID
 #define _PID_MAP(itf, n) ((CFG_TUD_##itf) << (n))
 // A combination of interfaces must have a unique product id, since PC will save device driver after the first plug.
 // Same VID/PID with different interface e.g MSC (first), then CDC (later) will possibly cause system error on PC.
@@ -252,7 +250,7 @@
 #ifdef CONFIG_TINYUSB_DESC_MANUFACTURER_STRING
 #define MICROPY_HW_USB_MANUFACTURER_STRING CONFIG_TINYUSB_DESC_MANUFACTURER_STRING
 #else
-#define MICROPY_HW_USB_MANUFACTURER_STRING "MicroPython"
+#define MICROPY_HW_USB_MANUFACTURER_STRING "SPSS"
 #endif
 #endif
 
@@ -260,7 +258,7 @@
 #ifdef CONFIG_TINYUSB_DESC_PRODUCT_STRING
 #define MICROPY_HW_USB_PRODUCT_FS_STRING CONFIG_TINYUSB_DESC_PRODUCT_STRING
 #else
-#define MICROPY_HW_USB_PRODUCT_FS_STRING "Board in FS mode"
+#define MICROPY_HW_USB_PRODUCT_FS_STRING "AMYboard"
 #endif
 #endif
 

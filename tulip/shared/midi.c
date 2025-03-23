@@ -7,7 +7,9 @@ extern mp_obj_t midi_callback;
 
 #define DEBUG_MIDI 0
 
-
+#ifdef AMYBOARD
+#include "tusb.h"
+#endif
 uint8_t current_midi_message[3] = {0,0,0};
 uint8_t midi_message_slot = 0;
 
@@ -148,13 +150,16 @@ extern bool midi_has_out;
 
 void midi_out(uint8_t * bytes, uint16_t len) {
     #if !defined (TDECK) && !defined(AMYBOARD)
-        if(midi_has_out) { // usb midi
+        if(midi_has_out) { // usb midi HOST
             send_usb_midi_out(bytes,len);
         } else { // uart midi
             uart_write_bytes(UART_NUM_1, bytes, len);
         }
     #else
         uart_write_bytes(UART_NUM_1, bytes, len);
+        #ifdef AMYBOARD
+        tud_midi_stream_write(0, bytes, len);
+        #endif
     #endif
 }
 
@@ -209,6 +214,15 @@ void run_midi() {
             //fprintf(stderr, "\n");
             convert_midi_bytes_to_messages(data,length,0);
         }
+        #ifdef AMYBOARD
+        // check midi USB gadget
+        while ( tud_midi_available() ) {
+            uint8_t packet[4];
+            tud_midi_packet_read(packet);
+            convert_midi_bytes_to_messages(packet+1, 3, 1);
+        }
+        #endif
+
     } // end loop forever
 }
 #else
