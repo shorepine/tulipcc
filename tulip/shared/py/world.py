@@ -46,10 +46,12 @@ ta = 'MTIzOTIyNTc4NDU3NzgxODc0NQ.GjGMum'
 tb = 'KvPGzKZDr1phrId9iY7LMtIDgMNtI0om8MsWsA'
 text_channel_id = "1239226672046407824" # tulip-world channel
 files_channel_id = "1239512482025050204" # tulip-world-files channel
+amyboard_channel_id = "1353327346924388422" # amyboard-world-files
 
 # Discord HTTP API stuff
 text_base_url = "https://discordapp.com/api/channels/{}/".format(text_channel_id)
 files_base_url = "https://discordapp.com/api/channels/{}/".format(files_channel_id)
+amyboard_base_url = "https://discordapp.com/api/channels/{}/".format(amyboard_channel_id)
 headers = { "Authorization":"Bot {}".format(ta+'.'+tb),
             "User-Agent":"TulipCC/4.0 (https://tulip.computer, v0.1)",
             "Content-Type":"application/json", }
@@ -62,6 +64,9 @@ def messages(n=500, chunk_size = 100, mtype='text'):
     before = None
 
     base_url = files_base_url
+    if(tulip.board()=="AMYBOARD"):
+        base_url = amyboard_base_url
+
     if(mtype == 'text'): base_url = text_base_url
 
     # First one is the newest
@@ -125,7 +130,7 @@ def download(filename, username=None, limit=5000, chunk_size=4096):
 
         r = tulip.url_save(got['url'], filename)
 
-        print("Downloaded %s by %s [%d bytes, last updated %s] from Tulip World." % (filename,got['username'], got['size'], age_nice.lstrip()))
+        print("Downloaded %s by %s [%d bytes, last updated %s] from %s World." % (filename,got['username'], got['size'], age_nice.lstrip()), "AMYboard" if tulip.board()=="AMYBOARD" else "Tulip")
         if(filename.endswith('.tar')):
             print("Unpacking %s. Run it with run('%s')" % (filename, filename[:-4]))
             tulip.tar_extract(filename, show_progress=False)
@@ -160,6 +165,9 @@ def ls(count=10): # prints latest count files
 
 # uploads a file
 def upload(filename, description=""):
+    if(tulip.board()=="AMYBOARD"):
+        files_base_url = amyboard_base_url
+
     u = prompt_username()
     if u is None:
         return
@@ -206,7 +214,7 @@ def upload(filename, description=""):
     }
     r = requests.post(files_base_url+"messages", headers = headers, data = json.dumps(payload))
 
-    print("Uploaded %s to Tulip World." % (filename))
+    print("Uploaded %s to %s World." % (filename,"AMYboard" if tulip.board()=="AMYBOARD" else "Tulip"))
     if(tar):
         os.remove(filename)
 
