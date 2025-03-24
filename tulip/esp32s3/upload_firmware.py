@@ -10,24 +10,6 @@ import binascii as ub
 import json
 
 
-# micropython version of uuid from micropython-lib
-class UUID:
-    def __init__(self, bytes):
-        if len(bytes) != 16:
-            raise ValueError('bytes arg must be 16 bytes long')
-        self._bytes = bytes
-
-    @property
-    def hex(self):
-        return ub.hexlify(self._bytes).decode()
-
-    def __str__(self):
-        h = self.hex
-        return '-'.join((h[0:8], h[8:12], h[12:16], h[16:20], h[20:32]))
-
-    def __repr__(self):
-        return "<UUID: %s>" % str(self)
-
 info = makeversionhdr.get_version_info_from_git('.')
 build_date = datetime.date.today()
 bd_p = build_date.strftime("%Y%m%d")

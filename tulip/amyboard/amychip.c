@@ -13,7 +13,7 @@
 #include "esp_system.h"
 #include "esp_task.h"
 #include "driver/i2c.h"
-#include "freertos/aqueue.h"
+#include "freertos/queue.h"
 #include "freertos/event_groups.h"
 #include "esp_log.h"
 #include "esp_err.h"

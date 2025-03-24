@@ -98,7 +98,7 @@ Choose the right `MICROPY_BOARD` value for your board.
 
 The default is `TULIP4_R11`, so if you omit it that's what it'll use.
 
-You have to build the firmware (`idf.py -DMICROPY_BOARD=[X] build`) and then, for **only the first install**, run `tulip_fs_create.py` and then `esptool.py` to flash the entire filesystem to Tulip. This sets up the storage on Tulip. Only do that once per chip, or if you make changes to the underlying filesystem. Any further flashing can just use (the much faster!) `idf.py -DMICROPY_BOARD=[X] flash`, which will save time and not overwrite your file system!
+You have to build the firmware (`idf.py -DMICROPY_BOARD=[X] build`) and then, for **only the first install**, run `fs_create.py tulip flash` to flash the entire filesystem to Tulip. This sets up the storage on Tulip. Only do that once per chip, or if you make changes to the underlying filesystem. Any further flashing can just use (the much faster!) `idf.py -DMICROPY_BOARD=[X] flash`, which will save time and not overwrite your file system!
 
 For example, for a Tulip4 DIY board based on a N32R8:
 
@@ -106,7 +106,8 @@ For example, for a Tulip4 DIY board based on a N32R8:
 idf.py -DMICROPY_BOARD=N32R8 build
 # With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
 # to the flash memory. Run this only once, or each time you modify `fs` if you're developing Tulip itself.
-python tulip_fs_create.py full
+cd ..
+python fs_create.py tulip flash
 ```
 
 You may need to restart Tulip after the flash, but Tulip should now just turn on whenever you connect USB or power it on. 
@@ -127,9 +128,6 @@ idf.py -DMICROPY_BOARD=[X] flash
 
 [To debug using GDB or profile code, see our new guide on live debugging of the ESP32S3.](tulip_debug.md)
 
-## Windows build and flash
-
-TODO 
 
 ## Questions
 

@@ -85,9 +85,9 @@ The main Python script must be the name of the package. This script needs to exp
 By default, a package is imported (for example, `import rabbit_game`.) If your `rabbit_game.py` has code that runs on import, it will run. If it has a `def run(app):` method, a `UIScreen` full screen window will be created that the user can switch to or quit. 
 
 We ship a couple of game-like examples, check them out:
- * [`bunny_bounce`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/bunny_bounce/bunny_bounce.py)
- * [`planet_boing`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/planet_boing/planet_boing.py)
- * [`parallax`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/parallax.py)
+ * [`bunny_bounce`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/tulip/ex/bunny_bounce/bunny_bounce.py)
+ * [`planet_boing`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/tulip/ex/planet_boing/planet_boing.py)
+ * [`parallax`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/tulip/ex/parallax.py)
 
 The Tulip World BBS supports uploading and downloading packages as tar files: just `world.upload('package', username)` or `world.download('package')`. 
 
@@ -119,7 +119,7 @@ You can switch apps with the keyboard: `control-tab`, and quit apps with `contro
 
 We ship a few examples of multitasking apps, please check them out here:
  * [`juno6`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/juno6.py)
- * [`wordpad`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/wordpad.py)
+ * [`wordpad`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/tulip/ex/wordpad.py)
  * [`worldui`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/worldui.py)
  * [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py)
  * [`voices`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/voices.py)
@@ -184,7 +184,7 @@ We include [LVGL 9](https://lvgl.io) for use in making your own user interface. 
 
 It's best to build user interfaces inside a `UIScreen` multitasking Tulip package. Our `UIScreen` will handle placing elements on your app and dealing with multitasking. 
 
-For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/buttons.py) example, or more complete examples like [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py), [`juno6`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/juno6.py), [`wordpad`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/wordpad.py) etc in `/sys/ex`.
+For more simple uses of LVGL, like buttons, sliders, checkboxes and single line text entry, we provide wrapper classes like `UICheckbox`, `UIButton`, `UISlider`, `UIText`, and `UILabel`. See our fully Python implementation of these in [`ui.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/ui.py) for hints on building your own UIs. Also see our [`buttons.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/tulip/ex/buttons.py) example, or more complete examples like [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py), [`juno6`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/juno6.py), [`wordpad`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/tulip/ex/wordpad.py) etc in `/sys/ex`.
 
 ### UIScreen
 
@@ -285,7 +285,7 @@ screen.add(tulip.UIText(text=None, placeholder=None, w=None, h=None,
 screen.add(tulip.UICheckbox(text=None, val=False, bg_color=None, fg_color=None, callback=None))
 ```
 
-See our [`buttons.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/ex/buttons.py) example for `UIX` class use.
+See our [`buttons.py`](https://github.com/shorepine/tulipcc/blob/main/tulip/fs/tulip/ex/buttons.py) example for `UIX` class use.
 
 ### Tabbed UIs
 

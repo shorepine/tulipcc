@@ -20,14 +20,12 @@ if(not os.path.exists('build/flash_args')):
     print("Run this after a successful build only")
     sys.exit()
 
-SYSTEM_HOME = "../fs"
+SYSTEM_HOME = "../fs/amyboard"
 
 # Copy over only these extensions 
-good_exts = [] # none for now
-# [".txt", ".png", ".py", ".json", ".obj"]
+good_exts = [".txt", ".png", ".py", ".json", ".obj", ".wav"]
 # And these folders
-source_folders = [] # none for now
-# ['app','ex','im']
+source_folders = ['app','ex','im']
 
 # Get the partition info from the built partition table
 partition_table_file = "build/partition_table/partition-table.bin"

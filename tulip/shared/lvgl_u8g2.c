@@ -35,7 +35,7 @@ bool my_get_glyph_dsc_cb(const lv_font_t * font, lv_font_glyph_dsc_t * dsc_out, 
     u8g2_SetFont(&ufont, tulip_fonts[font_no]);
     for(uint16_t i=0;i<(MAX_FONT_H*MAX_FONT_W);i++) { databuf[i] = 0; }
     int16_t adv = u8g2_DrawGlyph_target(&ufont, unicode_letter, databuf);
-    u8g2_font_decode_t font_decode = u8g2_GetGlyphInfo(&ufont, unicode_letter);
+    //u8g2_font_decode_t font_decode = u8g2_GetGlyphInfo(&ufont, unicode_letter);
     dsc_out->adv_w = adv;        /*Horizontal space required by the glyph in [px]*/
 
     // ufont height/width are swapped

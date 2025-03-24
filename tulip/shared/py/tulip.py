@@ -122,10 +122,16 @@ def get_latest_release():
     mine = None
     sys = None
     for i in j['assets']:
-        if i['name'] == 'tulip-firmware-%s.bin' % (board()):
-            mine = i
-        if i['name'] == 'tulip-sys.bin':
-            sys = i
+        if(board()=="AMYBOARD"):
+            if i['name'] == 'amyboard-firmware-AMYBOARD.bin':
+                mine = i
+            if i['name'] == 'amyboard-sys.bin':
+                sys = i
+        else:
+            if i['name'] == 'tulip-firmware-%s.bin' % (board()):
+                mine = i
+            if i['name'] == 'tulip-sys.bin':
+                sys = i
     if(mine and sys):
         return (mine['browser_download_url'], mine['updated_at'], sys['browser_download_url'], sys['updated_at'])
     return (None, None, None, None)
@@ -137,7 +143,7 @@ def upgrade():
         import esp32, machine
         from esp32 import Partition
     except ImportError:
-        print("Upgrading only works on Tulip CC for now. Visit tulip.computer to download the latest Tulip Desktop or Tulip Web.")
+        print("Upgrading only works on AMYboard or Tulip CC. Visit tulip.computer to download the latest Tulip Desktop or Tulip Web.")
         return
 
     if ip() is None:
