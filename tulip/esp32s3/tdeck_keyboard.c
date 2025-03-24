@@ -49,8 +49,6 @@ static void send_key_to_both(uint16_t key) {
 // The push current sends "enter"
 void watch_trackball(void *params)
 {
-    uint8_t raw_data[40];
-    for(uint8_t i=0;i<40;i++) raw_data[i] = 0;
     int pinNumber = 0;
     while (true)
     {

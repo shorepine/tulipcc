@@ -1,8 +1,17 @@
-# tulip_fs_create.py
+# fs_create.py
 
 from littlefs import lfs
 import os
 import sys
+
+if(len(sys.argv)<2):
+    print("Usage: python fs_create.py (amyboard,tulip) [flash]")
+
+distro = sys.argv[1]
+if(distro=='tulip'):
+    os.chdir('esp32s3')
+else:
+    os.chdir('amyboard')
 
 idf_path = os.environ["IDF_PATH"]  # get value of IDF_PATH from environment
 parttool_dir = os.path.join(idf_path, "components", "partition_table")  # parttool.py lives in $IDF_PATH/components/partition_table
@@ -11,19 +20,14 @@ sys.path.append(parttool_dir)  # this enables Python to find parttool module
 from parttool import *  # import all names inside parttool module
 import gen_esp32part as gen
 
-
-if(not os.getcwd().endswith("esp32s3")):
-    print("Run this from the tulipcc/tulip/esp32s3 folder only")
-    sys.exit()
-
 if(not os.path.exists('build/flash_args')):
     print("Run this after a successful build only")
     sys.exit()
 
-SYSTEM_HOME = "../fs"
+SYSTEM_HOME = "../fs/%s" % (distro)
 
 # Copy over only these extensions 
-good_exts = [".txt", ".png", ".py", ".json", ".obj"]
+good_exts = [".txt", ".png", ".py", ".json", ".obj", ".wav"]
 # And these folders
 source_folders = ['app','ex','im']
 
@@ -49,7 +53,7 @@ lfs.mount(fs, cfg)
 copy_to_lfs('boot.py', 'boot.py')
 
 print("writing VFS .bin file...")
-with open("build/tulip-vfs.bin","wb") as fh:
+with open("build/%s-vfs.bin" % (distro),"wb") as fh:
     fh.write(cfg.user_context.buffer)
 print("... done.")
 
@@ -72,46 +76,36 @@ for folder in folders:
 os.chdir(cur_dir)
 
 print("writing sys .bin file...")
-with open("build/tulip-sys.bin","wb") as fh:
+with open("build/%s-sys.bin" % (distro),"wb") as fh:
     fh.write(cfg.user_context.buffer)
 print("... done.")
 
 
 # Update the flash_args file to have the sys and user partitions
 flash_args = open('build/flash_args','r').read().split('\n')[:-1]
-flash_args.append('%s tulip-sys.bin' % (hex(sys_partition.offset)))
-flash_args.append('%s tulip-vfs.bin' % (hex(vfs_partition.offset)))
-new_flash_args = open('build/flash_args_tulip','w')
+flash_args.append('%s %s-sys.bin' % (hex(sys_partition.offset), distro))
+flash_args.append('%s %s-vfs.bin' % (hex(vfs_partition.offset), distro))
+new_flash_args = open('build/flash_args_%s' % (distro),'w')
 for f in flash_args:
     new_flash_args.write('%s\n' % (f))
 new_flash_args.close()
 os.chdir('build')
-os.system('esptool.py --chip esp32s3 merge_bin -o tulip.bin @flash_args_tulip')
+os.system('esptool.py --chip esp32s3 merge_bin -o %s.bin @flash_args_%s' % (distro, distro))
 os.chdir('..')
 
 # I don't love this but it works
 # i wonder if i can get CMake to pass along MICROPY_BOARD to this program in a shell instead
 MICROPY_BOARD = subprocess.check_output("grep MICROPY_BOARD build/CMakeCache.txt | cut -d '=' -f2 | awk '{print $1}'",shell=True)[:-1].decode('ascii')
 os.system("mkdir -p dist")
-os.system("cp build/tulip.bin dist/tulip-full-%s.bin" % (MICROPY_BOARD))
-os.system("cp build/micropython.bin dist/tulip-firmware-%s.bin" % (MICROPY_BOARD))
-os.system("cp build/tulip-sys.bin dist/tulip-sys.bin")
+os.system("cp build/%s.bin dist/%s-full-%s.bin" % (distro, distro, MICROPY_BOARD))
+os.system("cp build/micropython.bin dist/%s-firmware-%s.bin" % (distro, MICROPY_BOARD))
+os.system("cp build/%s-sys.bin dist/%s-sys.bin" %(distro, distro))
 
-# Optionally do the writes, 
-# you can pass nothing (Just creates the files), "full" (writes everything), "sys" (writes the system dir), "vfs" (writes the empty space for /user)
-if(len(sys.argv)>1):
-    for arg in sys.argv[1:]:
-        if(arg == 'full'):
-            print("Writing full image")
-            os.system("esptool.py write_flash 0x0 dist/tulip-full-%s.bin" % (MICROPY_BOARD))
-        if(arg == 'vfs'):
-            print("Writing VFS")
-            target = ParttoolTarget()
-            target.write_partition(PartitionName("vfs"), "build/tulip-vfs.bin")
-        if(arg == 'sys'):
-            print("Writing sys")
-            target = ParttoolTarget()
-            target.write_partition(PartitionName("system"), "build/tulip-sys.bin")
-else:
-    print("All done creating images. You can optionally call me with arguments [full, vfs, sys] to flash those directly.")
+# Optionally do the flash of the whole image
+if(len(sys.argv)>2):
+    if(sys.argv[2]== 'flash'):
+        print("Writing full image")
+        os.system("esptool.py write_flash 0x0 dist/%s-full-%s.bin" % (distro, MICROPY_BOARD))
+
+os.chdir('..')
 

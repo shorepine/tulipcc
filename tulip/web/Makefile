@@ -143,7 +143,7 @@ JSFLAGS += --js-library library.js
 JSFLAGS += -s SUPPORT_LONGJMP=emscripten
 JSFLAGS += -s MODULARIZE -s EXPORT_NAME=_createMicroPythonModule
 JSFLAGS += -s INITIAL_MEMORY=128mb -s TOTAL_STACK=64mb -s ALLOW_MEMORY_GROWTH=1 
-JSFLAGS += --preload-file ../fs@tulip4/sys
+JSFLAGS += --preload-file ../fs/tulip@tulip4/sys
 
 ################################################################################
 # Source files and libraries.
