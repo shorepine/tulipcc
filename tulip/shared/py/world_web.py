@@ -78,6 +78,14 @@ def post_bytes(method, filename, **kwargs):
     file = js.File.new(ui8a, filename, options({'type':'application/binary'}))
     return js.fetch(modal_url(method), options({'method':'POST', 'body':{'file':file}}))
 
+# default helper for messages
+def world_print(x):
+    for r in x:
+        print("[%s ago] %s: %s" % (nice_time(r['age_ms']), r['username'], r['content'] ))
+
+def messages(n=25, mtype='text', done=lambda x: world_print(x)):
+    grab("messages", n=n, mtype=mtype).then(lambda x: done(x))
+
 # get unique files
 def unique_files(count=10, overquery=10):
     def do_next(all_files):
