@@ -147,6 +147,10 @@ else:
 messages = world.messages(n=500, mtype='files') # returns a list of latest files (not unique ones)
 messages = world.messages(n=100, mtype='text') # returns a list of latest chat messages
 
+# On Tulip web, you can't assign the output of messages. 
+# If you want to do somethign other than print them, use your own done callback:
+world.messages(n=25, done=do_something)
+
 # When posting messages or files you set a username, minimum 1 character, maximum 10 
 world.post_message("hello!!") # Sends a message to Tulip World. username required. will prompt if not set.
 

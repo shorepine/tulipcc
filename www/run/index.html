@@ -43,8 +43,8 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="tulipcc-20250323163616.mjs" type="module"></script>
-      <script type="text/javascript" id="amy_js_include" src="amy-20250323163616.js"></script>
+      <script src="tulipcc-20250324180846.mjs" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="amy-20250324180846.js"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
@@ -236,8 +236,8 @@
           <li>If you're using Private Browsing mode, we can't keep your files around after you reload. And on <A HREF="https://bugzilla.mozilla.org/show_bug.cgi?id=1320796">Firefox Private Browsing, the page won't work at all.</A> Don't worry, we're not doing anything nefarious here. No data leaves this page, unless you choose to connect to Tulip World to send a message or download a program. <a href="https://github.com/shorepine/tulipcc/tree/main/tulip/web">Everything is open source.</a>
           <li>MIDI works on all browsers <a href="https://webmidijs.org/docs/getting-started/">except for Safari</a></li>
           <li>Some Tulip network calls may fail if the CORS settings of the destination prevent it. Some networking methods may return a JS "promise" rather than an immediate Python result.</li>
-          <li>Anything relying on Python's <code>input</code> will fail -- use <code>tulip.key_wait</code> or <code>keyboard_callback</code> instead.</li>
-          <li>Do not use <code>time.sleep()</code> in your code as it will block all input, audio and graphics from updating. Instead, use Tulip callbacks, <code>asyncio</code> or <code>tulip.defer</code> if you want to block or defer execution in Tulip.</li>
+          <li>Anything relying on Python's <code>input</code> will fail -- use <code>tulip.keyboard_callback</code> instead.</li>
+          <li>Do not use <code>time.sleep()</code> in your code as it will block all input, audio and graphics from updating. Instead, use Tulip callbacks, AMY sequencing, <code>asyncio</code> or <code>tulip.defer</code> if you want to block or defer execution in Tulip.</li>
         </ul>
 
         <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
