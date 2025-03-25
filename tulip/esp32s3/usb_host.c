@@ -202,8 +202,8 @@ uint8_t mouse_buttons[3];
 
 static void midi_transfer_cb(usb_transfer_t *transfer) {
     #ifdef DEBUG_USB
-    //fprintf(stderr, "**midi_transfer_cb context: %p, num_bytes %d\n", transfer->context, transfer->actual_num_bytes);
     #endif
+    fprintf(stderr, "**midi_transfer_cb context: %p, num_bytes %d\n", transfer->context, transfer->actual_num_bytes);
     if (Device_Handle == transfer->device_handle) {
         int in_xfer = transfer->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK;
         if ((transfer->status == 0) && in_xfer) {
@@ -226,6 +226,11 @@ static void midi_transfer_cb(usb_transfer_t *transfer) {
     }
 }
 
+uint8_t out_mtx = 0;
+static void midi_out_transfer_cb(usb_transfer_t *transfer) {
+    //fprintf(stderr, "**midi_out_transfer_cb context: %p, num_bytes %d\n", transfer->context, transfer->actual_num_bytes);
+    xTaskNotifyGive(tulip_mp_handle);
+}
 
 
 bool check_interface_desc_MIDI(const void *p) {
@@ -246,6 +251,15 @@ bool check_interface_desc_MIDI(const void *p) {
     return false;
 }
 
+void midi_out_transfer() {
+    //fprintf(stderr, "sending %d bytes to midi\n", MIDIOut->num_bytes);
+    esp_err_t err = usb_host_transfer_submit(MIDIOut);
+    // Don't exit until you get the callback
+    ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+    if (err != ESP_OK) {
+        fprintf(stderr, "midi OUT usb_host_transfer_submit err: 0x%x\n", err);
+    }
+}
 
 void send_single_midi_out_packet(uint8_t * data) { // 4 bytes
     MIDIOut->data_buffer[0] = data[0];
@@ -254,12 +268,59 @@ void send_single_midi_out_packet(uint8_t * data) { // 4 bytes
     MIDIOut->data_buffer[3] = data[3];
     MIDIOut->num_bytes = 4;
     //fprintf(stderr, "sending midi out packet %02x %02x %02x %02x\n", data[0], data[1], data[2], data[3]);
-    esp_err_t err = usb_host_transfer_submit(MIDIOut);
-    if (err != ESP_OK) {
-        fprintf(stderr, "midi OUT usb_host_transfer_submit err: 0x%x\n", err);
+    midi_out_transfer();
+}
+
+uint8_t usb_sysex_flag=0;
+#define MAX_USB_SYSEX_BYTES (MAX_MESSAGE_LEN+3)
+uint8_t usb_sysex_buffer[MAX_USB_SYSEX_BYTES];
+uint16_t usb_sysex_len = 0;
+
+void usb_emit_sysex() {
+    // send any sysex out
+    uint8_t data[64];
+    uint8_t packet_count = 0;
+
+    if(usb_sysex_len) {
+        uint16_t i=0;
+        while(i!=usb_sysex_len) {
+            if (usb_sysex_len-i>3){
+                data[(packet_count*4)+0] = 0x04;
+                data[(packet_count*4)+1] = usb_sysex_buffer[i++];
+                data[(packet_count*4)+2] = usb_sysex_buffer[i++];
+                data[(packet_count*4)+3] = usb_sysex_buffer[i++];
+            }else{
+                switch(usb_sysex_len-i) {
+                    case 1:
+                        data[(packet_count*4)+0] = 0x05;
+                        data[(packet_count*4)+1] = usb_sysex_buffer[i++];
+                        break;
+                    case 2:
+                        data[(packet_count*4)+0] = 0x06;
+                        data[(packet_count*4)+1] = usb_sysex_buffer[i++];
+                        data[(packet_count*4)+2] = usb_sysex_buffer[i++];
+                        break;
+                    case 3:
+                        data[(packet_count*4)+0] = 0x07;
+                        data[(packet_count*4)+1] = usb_sysex_buffer[i++];
+                        data[(packet_count*4)+2] = usb_sysex_buffer[i++];
+                        data[(packet_count*4)+3] = usb_sysex_buffer[i++];
+                        break;
+                }
+            }
+            packet_count++;
+            if(packet_count==16) {
+                for(uint16_t j=0;j<64;j++) { MIDIOut->data_buffer[j] = data[j]; data[j]=0; }
+                MIDIOut->num_bytes = 64;
+                midi_out_transfer();
+                packet_count = 0;
+            }
+        }
+        for(uint16_t j=0;j<packet_count*4;j++) { MIDIOut->data_buffer[j] = data[j]; }
+        MIDIOut->num_bytes = packet_count*4;
+        midi_out_transfer();
     }
 }
-uint8_t usb_sysex_flag=0;
 
 void send_usb_midi_out(uint8_t * data, uint16_t len) {
     // we have to discern code_index from data. basically a reverse version of our MIDI input parser.
@@ -268,7 +329,12 @@ void send_usb_midi_out(uint8_t * data, uint16_t len) {
     for(size_t i=0;i<len;i++) {
         uint8_t byte = data[i];
         if(usb_sysex_flag) {
-            if(byte == 0xF7) usb_sysex_flag = 0;
+            usb_sysex_buffer[usb_sysex_len++] = byte;
+            if(byte == 0xF7) {
+                usb_sysex_flag = 0;
+                usb_emit_sysex();
+                usb_sysex_len = 0;
+            }
         } else {
             if(byte & 0x80) { // new status byte 
                 // Single byte message?
@@ -279,6 +345,7 @@ void send_usb_midi_out(uint8_t * data, uint16_t len) {
                     send_single_midi_out_packet(usb_midi_packet);
                     i = len+1;
                 }  else if(byte == 0xF0) {
+                    usb_sysex_buffer[usb_sysex_len++] = 0xF0;
                     usb_sysex_flag = 1;
                 } else { // a new status message that expects at least one byte of message after
                     // do nothing yet
@@ -361,12 +428,12 @@ void prepare_endpoint_midi(const void *p) {
             }
         }
         if (MIDIOut != NULL) {
-            DBGPRINTF1("MIDI USB Out data_buffer_size: %d\n", MIDIOut->data_buffer_size);
+            fprintf(stderr, "MIDI USB Out data_buffer_size: %d\n", MIDIOut->data_buffer_size);
             MIDIOut->device_handle = Device_Handle;
             MIDIOut->bEndpointAddress = endpoint->bEndpointAddress;
-            MIDIOut->callback = midi_transfer_cb;
+            MIDIOut->callback = midi_out_transfer_cb;
             MIDIOut->context = NULL;
-            //        MIDIOut->flags |= USB_TRANSFER_FLAG_ZERO_PACK;
+            MIDIOut->flags |= USB_TRANSFER_FLAG_ZERO_PACK;
             midi_has_out = true;
         }
     }

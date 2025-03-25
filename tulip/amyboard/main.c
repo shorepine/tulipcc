@@ -349,10 +349,7 @@ void app_main(void) {
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
 
-    fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
-    xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
-    fflush(stderr);
-    delay_ms(100);
+
 
     // TODO -- USB gadget 
 
@@ -372,7 +369,10 @@ void app_main(void) {
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
-
+    fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
+    xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
+    fflush(stderr);
+    delay_ms(100);
     tsequencer_init();
 }
 

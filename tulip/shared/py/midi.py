@@ -226,6 +226,12 @@ def setup_global_midi_cc_bindings():
 
 WARNED_MISSING_CHANNELS = set()
 
+# This lets you set amy.override_send to midi.sysex_amy, for sending AMY messages over sysex to a connected AMYboard
+def sysex_amy(m):
+    # the 0x00, 0x03, 0x45 is SPSS's "MIDI manufacturer code"
+    d = bytes([0xf0,0x00,0x03,0x45])+bytes(m,'ascii')+bytes([0xf7])
+    #print("Bytes is %s" % str(d))
+    tulip.midi_out(d)
 
 # midi.py's own python midi callback. you can remove this if you don't want it active
 def midi_event_cb(midi_message):

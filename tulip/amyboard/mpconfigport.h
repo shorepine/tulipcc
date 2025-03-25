@@ -12,6 +12,7 @@
 #include "driver/i2s_std.h"
 #include "esp_wifi_types.h"
 
+#define CFG_TUD_MIDI 1
 
 // This is Tulip specific stuff. Unfortunately we cannot override some of this in ports/esp32, 
 // so we have to copy it over there as a build step.
