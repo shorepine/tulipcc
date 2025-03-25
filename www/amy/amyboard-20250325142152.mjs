@@ -50,7 +50,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpxh8t2sgh.js
+// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmp4g507aoz.js
 
   Module['expectedDataFileDownloads'] ??= 0;
   Module['expectedDataFileDownloads']++;
@@ -69,8 +69,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.substring(0, location.pathname.lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250323191540.data';
-      var REMOTE_PACKAGE_BASE = 'amyboard-20250323191540.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250325142152.data';
+      var REMOTE_PACKAGE_BASE = 'amyboard-20250325142152.data';
       var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
 var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 
@@ -163,13 +163,6 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 Module['FS_createPath']("/", "amyboard", true, true);
 Module['FS_createPath']("/amyboard", "sys", true, true);
 Module['FS_createPath']("/amyboard/sys", "ex", true, true);
-Module['FS_createPath']("/amyboard/sys/ex", "bunny_bounce", true, true);
-Module['FS_createPath']("/amyboard/sys/ex/bunny_bounce", "pix", true, true);
-Module['FS_createPath']("/amyboard/sys/ex", "g", true, true);
-Module['FS_createPath']("/amyboard/sys/ex", "planet_boing", true, true);
-Module['FS_createPath']("/amyboard/sys/ex/planet_boing", "pix", true, true);
-Module['FS_createPath']("/amyboard/sys", "im", true, true);
-Module['FS_createPath']("/amyboard/sys/im", "tiny_town", true, true);
 
       /** @constructor */
       function DataRequest(start, end, audio) {
@@ -213,10 +206,10 @@ Module['FS_createPath']("/amyboard/sys/im", "tiny_town", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250323191540.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250325142152.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250323191540.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250325142152.data');
 
       Module['preloadResults'] ??= {};
 
@@ -236,25 +229,25 @@ Module['FS_createPath']("/amyboard/sys/im", "tiny_town", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/amyboard/sys/ex/ansi.py", "start": 0, "end": 211}, {"filename": "/amyboard/sys/ex/bcla3.wav", "start": 211, "end": 585993, "audio": 1}, {"filename": "/amyboard/sys/ex/bunny_bounce/bunny_bounce.py", "start": 585993, "end": 593463}, {"filename": "/amyboard/sys/ex/bunny_bounce/pix/rabbit_l_0.png", "start": 593463, "end": 595873}, {"filename": "/amyboard/sys/ex/bunny_bounce/pix/rabbit_l_1.png", "start": 595873, "end": 598068}, {"filename": "/amyboard/sys/ex/bunny_bounce/pix/rabbit_l_2.png", "start": 598068, "end": 600346}, {"filename": "/amyboard/sys/ex/bunny_bounce/pix/rabbit_l_3.png", "start": 600346, "end": 602644}, {"filename": "/amyboard/sys/ex/bunny_bounce/pix/rabbit_r_0.png", "start": 602644, "end": 604938}, {"filename": "/amyboard/sys/ex/bunny_bounce/pix/rabbit_r_1.png", "start": 604938, "end": 607214}, {"filename": "/amyboard/sys/ex/bunny_bounce/pix/rabbit_r_2.png", "start": 607214, "end": 609422}, {"filename": "/amyboard/sys/ex/bunny_bounce/pix/rabbit_r_3.png", "start": 609422, "end": 611842}, {"filename": "/amyboard/sys/ex/buttons.py", "start": 611842, "end": 613458}, {"filename": "/amyboard/sys/ex/calibrate.py", "start": 613458, "end": 614825}, {"filename": "/amyboard/sys/ex/fonts.py", "start": 614825, "end": 614996}, {"filename": "/amyboard/sys/ex/g/brick.png", "start": 614996, "end": 615289}, {"filename": "/amyboard/sys/ex/g/cave.png", "start": 615289, "end": 615891}, {"filename": "/amyboard/sys/ex/g/clouds.png", "start": 615891, "end": 616721}, {"filename": "/amyboard/sys/ex/g/clouds2.png", "start": 616721, "end": 617518}, {"filename": "/amyboard/sys/ex/g/colorbars.png", "start": 617518, "end": 627359}, {"filename": "/amyboard/sys/ex/g/desert.png", "start": 627359, "end": 627997}, {"filename": "/amyboard/sys/ex/g/earth.png", "start": 627997, "end": 628840}, {"filename": "/amyboard/sys/ex/g/earth2.png", "start": 628840, "end": 629686}, {"filename": "/amyboard/sys/ex/g/fire.png", "start": 629686, "end": 630676}, {"filename": "/amyboard/sys/ex/g/flowers.png", "start": 630676, "end": 631438}, {"filename": "/amyboard/sys/ex/g/grass.png", "start": 631438, "end": 632609}, {"filename": "/amyboard/sys/ex/g/meadow.png", "start": 632609, "end": 633115}, {"filename": "/amyboard/sys/ex/g/mountain-bg.png", "start": 633115, "end": 637718}, {"filename": "/amyboard/sys/ex/g/mountain-far.png", "start": 637718, "end": 640133}, {"filename": "/amyboard/sys/ex/g/mountain.png", "start": 640133, "end": 645015}, {"filename": "/amyboard/sys/ex/g/rabbit_l_0.png", "start": 645015, "end": 647425}, {"filename": "/amyboard/sys/ex/g/rabbit_l_1.png", "start": 647425, "end": 649620}, {"filename": "/amyboard/sys/ex/g/rabbit_l_2.png", "start": 649620, "end": 651898}, {"filename": "/amyboard/sys/ex/g/rabbit_l_3.png", "start": 651898, "end": 654196}, {"filename": "/amyboard/sys/ex/g/rabbit_r_0.png", "start": 654196, "end": 656490}, {"filename": "/amyboard/sys/ex/g/rabbit_r_1.png", "start": 656490, "end": 658766}, {"filename": "/amyboard/sys/ex/g/rabbit_r_2.png", "start": 658766, "end": 660974}, {"filename": "/amyboard/sys/ex/g/rabbit_r_3.png", "start": 660974, "end": 663394}, {"filename": "/amyboard/sys/ex/g/trees-far.png", "start": 663394, "end": 669109}, {"filename": "/amyboard/sys/ex/g/trees.png", "start": 669109, "end": 676035}, {"filename": "/amyboard/sys/ex/g/tulip3.png", "start": 676035, "end": 711153}, {"filename": "/amyboard/sys/ex/g/tulipbw.png", "start": 711153, "end": 714032}, {"filename": "/amyboard/sys/ex/g/water.png", "start": 714032, "end": 714616}, {"filename": "/amyboard/sys/ex/joy.py", "start": 714616, "end": 715617}, {"filename": "/amyboard/sys/ex/parallax.py", "start": 715617, "end": 720036}, {"filename": "/amyboard/sys/ex/planet_boing/pix/bang_texture_03.png", "start": 720036, "end": 721981}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_00.png", "start": 721981, "end": 723821}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_01.png", "start": 723821, "end": 727326}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_02.png", "start": 727326, "end": 729536}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_03.png", "start": 729536, "end": 731616}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_04.png", "start": 731616, "end": 733804}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_05.png", "start": 733804, "end": 735799}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_06.png", "start": 735799, "end": 737915}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_07.png", "start": 737915, "end": 740060}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_08.png", "start": 740060, "end": 742212}, {"filename": "/amyboard/sys/ex/planet_boing/pix/blob_texture_09.png", "start": 742212, "end": 744325}, {"filename": "/amyboard/sys/ex/planet_boing/pix/wormhole.png", "start": 744325, "end": 745087}, {"filename": "/amyboard/sys/ex/planet_boing/planet_boing.py", "start": 745087, "end": 760248}, {"filename": "/amyboard/sys/ex/rgb332.py", "start": 760248, "end": 760586}, {"filename": "/amyboard/sys/ex/screensaver.py", "start": 760586, "end": 762242}, {"filename": "/amyboard/sys/ex/vlng3.wav", "start": 762242, "end": 1065032, "audio": 1}, {"filename": "/amyboard/sys/ex/vlsa3.wav", "start": 1065032, "end": 1523606, "audio": 1}, {"filename": "/amyboard/sys/ex/woodpiano.txt", "start": 1523606, "end": 1524189}, {"filename": "/amyboard/sys/ex/wordpad.py", "start": 1524189, "end": 1524865}, {"filename": "/amyboard/sys/ex/xanadu.py", "start": 1524865, "end": 1530104}, {"filename": "/amyboard/sys/im/tiny_town/tile_0000.png", "start": 1530104, "end": 1530203}, {"filename": "/amyboard/sys/im/tiny_town/tile_0001.png", "start": 1530203, "end": 1530347}, {"filename": "/amyboard/sys/im/tiny_town/tile_0002.png", "start": 1530347, "end": 1530521}, {"filename": "/amyboard/sys/im/tiny_town/tile_0003.png", "start": 1530521, "end": 1530697}, {"filename": "/amyboard/sys/im/tiny_town/tile_0004.png", "start": 1530697, "end": 1530872}, {"filename": "/amyboard/sys/im/tiny_town/tile_0005.png", "start": 1530872, "end": 1531069}, {"filename": "/amyboard/sys/im/tiny_town/tile_0006.png", "start": 1531069, "end": 1531249}, {"filename": "/amyboard/sys/im/tiny_town/tile_0007.png", "start": 1531249, "end": 1531406}, {"filename": "/amyboard/sys/im/tiny_town/tile_0008.png", "start": 1531406, "end": 1531591}, {"filename": "/amyboard/sys/im/tiny_town/tile_0009.png", "start": 1531591, "end": 1531771}, {"filename": "/amyboard/sys/im/tiny_town/tile_0010.png", "start": 1531771, "end": 1531928}, {"filename": "/amyboard/sys/im/tiny_town/tile_0011.png", "start": 1531928, "end": 1532113}, {"filename": "/amyboard/sys/im/tiny_town/tile_0012.png", "start": 1532113, "end": 1532274}, {"filename": "/amyboard/sys/im/tiny_town/tile_0013.png", "start": 1532274, "end": 1532427}, {"filename": "/amyboard/sys/im/tiny_town/tile_0014.png", "start": 1532427, "end": 1532588}, {"filename": "/amyboard/sys/im/tiny_town/tile_0015.png", "start": 1532588, "end": 1532781}, {"filename": "/amyboard/sys/im/tiny_town/tile_0016.png", "start": 1532781, "end": 1532973}, {"filename": "/amyboard/sys/im/tiny_town/tile_0017.png", "start": 1532973, "end": 1533150}, {"filename": "/amyboard/sys/im/tiny_town/tile_0018.png", "start": 1533150, "end": 1533313}, {"filename": "/amyboard/sys/im/tiny_town/tile_0019.png", "start": 1533313, "end": 1533513}, {"filename": "/amyboard/sys/im/tiny_town/tile_0020.png", "start": 1533513, "end": 1533679}, {"filename": "/amyboard/sys/im/tiny_town/tile_0021.png", "start": 1533679, "end": 1533842}, {"filename": "/amyboard/sys/im/tiny_town/tile_0022.png", "start": 1533842, "end": 1534042}, {"filename": "/amyboard/sys/im/tiny_town/tile_0023.png", "start": 1534042, "end": 1534208}, {"filename": "/amyboard/sys/im/tiny_town/tile_0024.png", "start": 1534208, "end": 1534343}, {"filename": "/amyboard/sys/im/tiny_town/tile_0025.png", "start": 1534343, "end": 1534442}, {"filename": "/amyboard/sys/im/tiny_town/tile_0026.png", "start": 1534442, "end": 1534582}, {"filename": "/amyboard/sys/im/tiny_town/tile_0027.png", "start": 1534582, "end": 1534773}, {"filename": "/amyboard/sys/im/tiny_town/tile_0028.png", "start": 1534773, "end": 1534964}, {"filename": "/amyboard/sys/im/tiny_town/tile_0029.png", "start": 1534964, "end": 1535161}, {"filename": "/amyboard/sys/im/tiny_town/tile_0030.png", "start": 1535161, "end": 1535342}, {"filename": "/amyboard/sys/im/tiny_town/tile_0031.png", "start": 1535342, "end": 1535499}, {"filename": "/amyboard/sys/im/tiny_town/tile_0032.png", "start": 1535499, "end": 1535680}, {"filename": "/amyboard/sys/im/tiny_town/tile_0033.png", "start": 1535680, "end": 1535861}, {"filename": "/amyboard/sys/im/tiny_town/tile_0034.png", "start": 1535861, "end": 1536018}, {"filename": "/amyboard/sys/im/tiny_town/tile_0035.png", "start": 1536018, "end": 1536199}, {"filename": "/amyboard/sys/im/tiny_town/tile_0036.png", "start": 1536199, "end": 1536353}, {"filename": "/amyboard/sys/im/tiny_town/tile_0037.png", "start": 1536353, "end": 1536487}, {"filename": "/amyboard/sys/im/tiny_town/tile_0038.png", "start": 1536487, "end": 1536636}, {"filename": "/amyboard/sys/im/tiny_town/tile_0039.png", "start": 1536636, "end": 1536765}, {"filename": "/amyboard/sys/im/tiny_town/tile_0040.png", "start": 1536765, "end": 1536904}, {"filename": "/amyboard/sys/im/tiny_town/tile_0041.png", "start": 1536904, "end": 1537030}, {"filename": "/amyboard/sys/im/tiny_town/tile_0042.png", "start": 1537030, "end": 1537167}, {"filename": "/amyboard/sys/im/tiny_town/tile_0043.png", "start": 1537167, "end": 1537333}, {"filename": "/amyboard/sys/im/tiny_town/tile_0044.png", "start": 1537333, "end": 1537497}, {"filename": "/amyboard/sys/im/tiny_town/tile_0045.png", "start": 1537497, "end": 1537675}, {"filename": "/amyboard/sys/im/tiny_town/tile_0046.png", "start": 1537675, "end": 1537839}, {"filename": "/amyboard/sys/im/tiny_town/tile_0047.png", "start": 1537839, "end": 1537983}, {"filename": "/amyboard/sys/im/tiny_town/tile_0048.png", "start": 1537983, "end": 1538149}, {"filename": "/amyboard/sys/im/tiny_town/tile_0049.png", "start": 1538149, "end": 1538310}, {"filename": "/amyboard/sys/im/tiny_town/tile_0050.png", "start": 1538310, "end": 1538481}, {"filename": "/amyboard/sys/im/tiny_town/tile_0051.png", "start": 1538481, "end": 1538648}, {"filename": "/amyboard/sys/im/tiny_town/tile_0052.png", "start": 1538648, "end": 1538828}, {"filename": "/amyboard/sys/im/tiny_town/tile_0053.png", "start": 1538828, "end": 1539006}, {"filename": "/amyboard/sys/im/tiny_town/tile_0054.png", "start": 1539006, "end": 1539187}, {"filename": "/amyboard/sys/im/tiny_town/tile_0055.png", "start": 1539187, "end": 1539375}, {"filename": "/amyboard/sys/im/tiny_town/tile_0056.png", "start": 1539375, "end": 1539521}, {"filename": "/amyboard/sys/im/tiny_town/tile_0057.png", "start": 1539521, "end": 1539734}, {"filename": "/amyboard/sys/im/tiny_town/tile_0058.png", "start": 1539734, "end": 1539881}, {"filename": "/amyboard/sys/im/tiny_town/tile_0059.png", "start": 1539881, "end": 1540026}, {"filename": "/amyboard/sys/im/tiny_town/tile_0060.png", "start": 1540026, "end": 1540203}, {"filename": "/amyboard/sys/im/tiny_town/tile_0061.png", "start": 1540203, "end": 1540369}, {"filename": "/amyboard/sys/im/tiny_town/tile_0062.png", "start": 1540369, "end": 1540553}, {"filename": "/amyboard/sys/im/tiny_town/tile_0063.png", "start": 1540553, "end": 1540769}, {"filename": "/amyboard/sys/im/tiny_town/tile_0064.png", "start": 1540769, "end": 1540946}, {"filename": "/amyboard/sys/im/tiny_town/tile_0065.png", "start": 1540946, "end": 1541112}, {"filename": "/amyboard/sys/im/tiny_town/tile_0066.png", "start": 1541112, "end": 1541296}, {"filename": "/amyboard/sys/im/tiny_town/tile_0067.png", "start": 1541296, "end": 1541512}, {"filename": "/amyboard/sys/im/tiny_town/tile_0068.png", "start": 1541512, "end": 1541676}, {"filename": "/amyboard/sys/im/tiny_town/tile_0069.png", "start": 1541676, "end": 1541847}, {"filename": "/amyboard/sys/im/tiny_town/tile_0070.png", "start": 1541847, "end": 1542012}, {"filename": "/amyboard/sys/im/tiny_town/tile_0071.png", "start": 1542012, "end": 1542151}, {"filename": "/amyboard/sys/im/tiny_town/tile_0072.png", "start": 1542151, "end": 1542288}, {"filename": "/amyboard/sys/im/tiny_town/tile_0073.png", "start": 1542288, "end": 1542417}, {"filename": "/amyboard/sys/im/tiny_town/tile_0074.png", "start": 1542417, "end": 1542572}, {"filename": "/amyboard/sys/im/tiny_town/tile_0075.png", "start": 1542572, "end": 1542715}, {"filename": "/amyboard/sys/im/tiny_town/tile_0076.png", "start": 1542715, "end": 1542852}, {"filename": "/amyboard/sys/im/tiny_town/tile_0077.png", "start": 1542852, "end": 1542981}, {"filename": "/amyboard/sys/im/tiny_town/tile_0078.png", "start": 1542981, "end": 1543136}, {"filename": "/amyboard/sys/im/tiny_town/tile_0079.png", "start": 1543136, "end": 1543279}, {"filename": "/amyboard/sys/im/tiny_town/tile_0080.png", "start": 1543279, "end": 1543439}, {"filename": "/amyboard/sys/im/tiny_town/tile_0081.png", "start": 1543439, "end": 1543559}, {"filename": "/amyboard/sys/im/tiny_town/tile_0082.png", "start": 1543559, "end": 1543721}, {"filename": "/amyboard/sys/im/tiny_town/tile_0083.png", "start": 1543721, "end": 1543910}, {"filename": "/amyboard/sys/im/tiny_town/tile_0084.png", "start": 1543910, "end": 1544080}, {"filename": "/amyboard/sys/im/tiny_town/tile_0085.png", "start": 1544080, "end": 1544243}, {"filename": "/amyboard/sys/im/tiny_town/tile_0086.png", "start": 1544243, "end": 1544404}, {"filename": "/amyboard/sys/im/tiny_town/tile_0087.png", "start": 1544404, "end": 1544565}, {"filename": "/amyboard/sys/im/tiny_town/tile_0088.png", "start": 1544565, "end": 1544732}, {"filename": "/amyboard/sys/im/tiny_town/tile_0089.png", "start": 1544732, "end": 1544895}, {"filename": "/amyboard/sys/im/tiny_town/tile_0090.png", "start": 1544895, "end": 1545056}, {"filename": "/amyboard/sys/im/tiny_town/tile_0091.png", "start": 1545056, "end": 1545218}, {"filename": "/amyboard/sys/im/tiny_town/tile_0092.png", "start": 1545218, "end": 1545376}, {"filename": "/amyboard/sys/im/tiny_town/tile_0093.png", "start": 1545376, "end": 1545538}, {"filename": "/amyboard/sys/im/tiny_town/tile_0094.png", "start": 1545538, "end": 1545723}, {"filename": "/amyboard/sys/im/tiny_town/tile_0095.png", "start": 1545723, "end": 1545918}, {"filename": "/amyboard/sys/im/tiny_town/tile_0096.png", "start": 1545918, "end": 1546107}, {"filename": "/amyboard/sys/im/tiny_town/tile_0097.png", "start": 1546107, "end": 1546246}, {"filename": "/amyboard/sys/im/tiny_town/tile_0098.png", "start": 1546246, "end": 1546427}, {"filename": "/amyboard/sys/im/tiny_town/tile_0099.png", "start": 1546427, "end": 1546598}, {"filename": "/amyboard/sys/im/tiny_town/tile_0100.png", "start": 1546598, "end": 1546730}, {"filename": "/amyboard/sys/im/tiny_town/tile_0101.png", "start": 1546730, "end": 1546904}, {"filename": "/amyboard/sys/im/tiny_town/tile_0102.png", "start": 1546904, "end": 1547079}, {"filename": "/amyboard/sys/im/tiny_town/tile_0103.png", "start": 1547079, "end": 1547275}, {"filename": "/amyboard/sys/im/tiny_town/tile_0104.png", "start": 1547275, "end": 1547517}, {"filename": "/amyboard/sys/im/tiny_town/tile_0105.png", "start": 1547517, "end": 1547715}, {"filename": "/amyboard/sys/im/tiny_town/tile_0106.png", "start": 1547715, "end": 1547893}, {"filename": "/amyboard/sys/im/tiny_town/tile_0107.png", "start": 1547893, "end": 1548095}, {"filename": "/amyboard/sys/im/tiny_town/tile_0108.png", "start": 1548095, "end": 1548217}, {"filename": "/amyboard/sys/im/tiny_town/tile_0109.png", "start": 1548217, "end": 1548316}, {"filename": "/amyboard/sys/im/tiny_town/tile_0110.png", "start": 1548316, "end": 1548437}, {"filename": "/amyboard/sys/im/tiny_town/tile_0111.png", "start": 1548437, "end": 1548640}, {"filename": "/amyboard/sys/im/tiny_town/tile_0112.png", "start": 1548640, "end": 1548843}, {"filename": "/amyboard/sys/im/tiny_town/tile_0113.png", "start": 1548843, "end": 1549043}, {"filename": "/amyboard/sys/im/tiny_town/tile_0114.png", "start": 1549043, "end": 1549243}, {"filename": "/amyboard/sys/im/tiny_town/tile_0115.png", "start": 1549243, "end": 1549429}, {"filename": "/amyboard/sys/im/tiny_town/tile_0116.png", "start": 1549429, "end": 1549613}, {"filename": "/amyboard/sys/im/tiny_town/tile_0117.png", "start": 1549613, "end": 1549785}, {"filename": "/amyboard/sys/im/tiny_town/tile_0118.png", "start": 1549785, "end": 1549968}, {"filename": "/amyboard/sys/im/tiny_town/tile_0119.png", "start": 1549968, "end": 1550151}, {"filename": "/amyboard/sys/im/tiny_town/tile_0120.png", "start": 1550151, "end": 1550309}, {"filename": "/amyboard/sys/im/tiny_town/tile_0121.png", "start": 1550309, "end": 1550450}, {"filename": "/amyboard/sys/im/tiny_town/tile_0122.png", "start": 1550450, "end": 1550613}, {"filename": "/amyboard/sys/im/tiny_town/tile_0123.png", "start": 1550613, "end": 1550758}, {"filename": "/amyboard/sys/im/tiny_town/tile_0124.png", "start": 1550758, "end": 1550904}, {"filename": "/amyboard/sys/im/tiny_town/tile_0125.png", "start": 1550904, "end": 1551090}, {"filename": "/amyboard/sys/im/tiny_town/tile_0126.png", "start": 1551090, "end": 1551248}, {"filename": "/amyboard/sys/im/tiny_town/tile_0127.png", "start": 1551248, "end": 1551432}, {"filename": "/amyboard/sys/im/tiny_town/tile_0128.png", "start": 1551432, "end": 1551632}, {"filename": "/amyboard/sys/im/tiny_town/tile_0129.png", "start": 1551632, "end": 1551832}, {"filename": "/amyboard/sys/im/tiny_town/tile_0130.png", "start": 1551832, "end": 1552038}, {"filename": "/amyboard/sys/im/tiny_town/tile_0131.png", "start": 1552038, "end": 1552258}], "remote_package_size": 1552258});
+    loadPackage({"files": [{"filename": "/amyboard/sys/.DS_Store", "start": 0, "end": 6148}, {"filename": "/amyboard/sys/ex/bcla3.wav", "start": 6148, "end": 591930, "audio": 1}, {"filename": "/amyboard/sys/ex/vlng3.wav", "start": 591930, "end": 894720, "audio": 1}, {"filename": "/amyboard/sys/ex/vlsa3.wav", "start": 894720, "end": 1353294, "audio": 1}, {"filename": "/amyboard/sys/ex/woodpiano.txt", "start": 1353294, "end": 1353877}], "remote_package_size": 1353877});
 
   })();
 
-// end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpxh8t2sgh.js
-// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmp589b1h1k.js
+// end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmp4g507aoz.js
+// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpkx0axv4t.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmp589b1h1k.js
-// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpuhjlx9bj.js
+  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpkx0axv4t.js
+// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpc8c4jnzh.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpuhjlx9bj.js
+  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpc8c4jnzh.js
 
 
 // Sometimes an existing Module object exists with properties
@@ -930,14 +923,14 @@ function createExportWrapper(name, nargs) {
 var wasmBinaryFile;
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'amyboard-20250323191540.wasm';
+    var f = 'amyboard-20250325142152.wasm';
     if (!isDataURI(f)) {
       return locateFile(f);
     }
     return f;
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('amyboard-20250323191540.wasm', import.meta.url).href;
+  return new URL('amyboard-20250325142152.wasm', import.meta.url).href;
 }
 
 function getBinarySync(file) {
@@ -1104,9 +1097,9 @@ async function createWasm() {
 // === Body ===
 
 var ASM_CONSTS = {
-  67358776: () => { FS.syncfs(false, function (err) {}); },  
- 67358813: () => { try { FS.mkdir('/amyboard'); } catch (err) { } try { FS.mkdir('/amyboard/user'); } catch (err) { } FS.mount(IDBFS, {autoPersist:true}, '/amyboard/user'); FS.syncfs(true, function (err) { }); },  
- 67359004: ($0, $1) => { if(midiOutputDevice != null) { midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1)); } }
+  67359432: () => { FS.syncfs(false, function (err) {}); },  
+ 67359469: () => { try { FS.mkdir('/amyboard'); } catch (err) { } try { FS.mkdir('/amyboard/user'); } catch (err) { } FS.mount(IDBFS, {autoPersist:true}, '/amyboard/user'); FS.syncfs(true, function (err) { }); },  
+ 67359660: ($0, $1) => { if(midiOutputDevice != null) { midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1)); } }
 };
 function proxy_convert_mp_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); proxy_convert_js_to_mp_obj_jsside_force_double_proxy(ret, out); }
 function proxy_convert_mp_to_js_then_js_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); const js_obj = PyProxy.toJs(ret); proxy_convert_js_to_mp_obj_jsside(js_obj, out); }
@@ -1132,6 +1125,7 @@ function js_then_resolve(ret_value,resolve) { const ret_value_js = proxy_convert
 function js_then_reject(ret_value,reject) { let ret_value_js; try { ret_value_js = proxy_convert_mp_to_js_obj_jsside(ret_value); } catch(error) { ret_value_js = error; } const reject_js = proxy_convert_mp_to_js_obj_jsside(reject); reject_js(ret_value_js); }
 function js_then_continue(jsref,py_resume,resolve,reject,out) { const py_resume_js = proxy_convert_mp_to_js_obj_jsside(py_resume); const resolve_js = proxy_convert_mp_to_js_obj_jsside(resolve); const reject_js = proxy_convert_mp_to_js_obj_jsside(reject); const ret = proxy_js_ref[jsref].then( (result) => { py_resume_js(result, null, resolve_js, reject_js); }, (reason) => { py_resume_js(null, reason, resolve_js, reject_js); }, ); proxy_convert_js_to_mp_obj_jsside(ret, out); }
 function create_promise(out_set,out_promise) { const out_set_js = proxy_convert_mp_to_js_obj_jsside(out_set); const promise = new Promise(out_set_js); proxy_convert_js_to_mp_obj_jsside(promise, out_promise); }
+function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len)); }
 
 // end include: preamble.js
 
@@ -5741,6 +5735,8 @@ var wasmImports = {
   /** @export */
   call2,
   /** @export */
+  call_amy_js,
+  /** @export */
   calln,
   /** @export */
   create_promise,
@@ -6466,7 +6462,7 @@ for (const prop of Object.keys(Module)) {
 })();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://amyboard-20250323191540.org/
+ * This file is part of the MicroPython project, http://amyboard-20250325142152.org/
  *
  * The MIT License (MIT)
  *
@@ -6494,7 +6490,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `amyboard-20250323191540.mjs`.
+// - url: location to load `amyboard-20250325142152.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -6856,7 +6852,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node amyboard-20250323191540.mjs`.
+    // Check if this module is run from the command line via `node amyboard-20250325142152.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -6880,7 +6876,7 @@ if (
 }
 
 /*
- * This file is part of the MicroPython project, http://amyboard-20250323191540.org/
+ * This file is part of the MicroPython project, http://amyboard-20250325142152.org/
  *
  * The MIT License (MIT)
  *
@@ -7121,7 +7117,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://amyboard-20250323191540.org/
+ * This file is part of the MicroPython project, http://amyboard-20250325142152.org/
  *
  * The MIT License (MIT)
  *
