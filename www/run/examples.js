@@ -114,6 +114,217 @@ for i,note in enumerate(music.Chord('F:min7').midinotes()):
     s.note_on(note+24, 1, time=i*4000)
     s.note_off(note+24, time=20000)
 `},{
+    't':'music',
+    'd':'Play all the built in sound patches (by @drepetto)',
+    'c':`
+import patches, upysh
+
+note_length = 0.5
+note_pause = 0.1
+
+drum_nums = [35, 36, 37, 38, 39, 40, 41, 42, 43, 46, 49, 56, 64, 70, 75, 76]
+sound_types = ["PCM samples", "GM drums", "basic waveforms", "Juno-6 patches", "DX7 patches", "DPWE patches"]
+waveform_types = ["sine", "pulse", "saw down", "saw up", "triangle", "noise", "karplus-strong"]
+waveform_amys = [amy.SINE, amy.PULSE, amy.SAW_DOWN, amy.SAW_UP, amy.TRIANGLE, amy.NOISE, amy.KS]
+
+drum_name_for_midi_note = {note: name for _, name, note in patches.drumkit}
+
+sound_type = 0
+sound_number = 0
+
+autoplay = False
+
+quit = False
+
+tulip_analog_synth = None
+tulip_drums = None
+tulip_pcm_synth = None
+tulip_wave_synth = None
+
+def print_instructions():
+    print(upysh.clear)
+    print("\\n\\n\\n")
+    print(" ******************************************************")
+    print(" *             TULIP INTERACTIVE SOUND TOUR           *")
+    print(" *                                                    *")
+    print(" *                  (c) 1987 dooglesoft               *")
+    print(" ******************************************************\\n\\n\\n")
+    print("\\n All the default sounds on Tulip!\\n")
+    print(" Use these keys to navigate the sounds:\\n\\n")
+    print(" NUMBERS to select sound type:\\n")
+    print(" 1: PCM samples  2: GM drums  3: basic waveforms  4: Juno-6 patches 5: DX7 patches 6: DWPE Piano\\n\\n")
+    print(" , (comma) / . (period)  for previous / next sound\\n")
+    print(" SPACEBAR to repeat current sound\\n\\n\\n")
+    print(" Quit with q\\n\\n")
+
+
+def print_sound_info_and_play(play):
+    global sound_type, sound_number, sound_types, tulip_analog_synth, tulip_drums, tulip_pcm_synth, tulip_wave_synth
+    
+    print(" *************\\n\\n")
+    print(" current sound type:", sound_types[sound_type])
+
+    if sound_type == 0:
+        print(" PCM sample name:", patches.drumkit[sound_number][1])
+        print(" PCM sample number:", sound_number)
+        print(" note number:", patches.drumkit[sound_number][0])
+        if play:
+            tulip_pcm_synth.update_oscs(patch=sound_number,freq=0)
+            tulip_pcm_synth.note_on(patches.drumkit[sound_number][0])
+
+    elif sound_type == 1: 
+        GMNN = drum_nums[sound_number]
+        print(" GM drum name:", drum_name_for_midi_note[GMNN])
+        print(" GM drum note number:", GMNN)
+        if play:
+            tulip_drums.note_on(GMNN,0.75)
+
+    elif sound_type == 2:
+        print(" waveform name:", waveform_types[sound_number])
+        if play:
+            if waveform_amys[sound_number] == amy.KS:
+                tulip_wave_synth = midi.OscSynth(wave=amy.KS,feedback=0.996)
+            else:
+                tulip_wave_synth = midi.OscSynth(wave=waveform_amys[sound_number])
+            tulip_wave_synth.note_on(60,0.75,time=tulip.amy_ticks_ms() + 10)
+            tulip_wave_synth.note_off(60, time=tulip.amy_ticks_ms() + 510)
+
+    elif sound_type == 3 or sound_type == 4 or sound_type == 5:
+        if sound_type == 3:
+            print(" Juno-6 patch name:", patches.patches[sound_number])
+        elif sound_type == 4:
+            print(" DX7 patch name:", patches.patches[sound_number])
+        elif sound_type == 5:
+            print(" DPWE piano model")
+        print(" synth patches number:", sound_number)
+        if play:
+            tulip_analog_synth.program_change(sound_number)
+            
+            tulip_analog_synth.note_on(50,0.75,time=tulip.amy_ticks_ms() + 10)
+            tulip_analog_synth.note_off(50, time=tulip.amy_ticks_ms() + 510)
+
+            tulip_analog_synth.note_on(52,0.75,time=tulip.amy_ticks_ms() + 520)
+            tulip_analog_synth.note_off(52, time=tulip.amy_ticks_ms() + 1020)
+
+            tulip_analog_synth.note_on(54,0.75,time=tulip.amy_ticks_ms() + 1030)
+            tulip_analog_synth.note_off(54, time=tulip.amy_ticks_ms() + 1530)
+
+def update_sound_number(scan):
+    global sound_type, sound_number, sound_types, tulip_analog_synth, tulip_drums, tulip_pcm_synth, tulip_wave_synth
+
+
+    if sound_type == 0:
+        if scan == '.':
+            sound_number = (sound_number + 1) % 29
+        elif scan == ',':
+            sound_number = (sound_number - 1) % 29
+    elif sound_type == 1:
+        if scan == '.':
+            sound_number = (sound_number + 1) % len(drum_nums)
+        elif scan == ',':
+            sound_number = (sound_number -1) % len(drum_nums)
+    elif sound_type == 2:
+        if scan == '.':
+            sound_number = (sound_number + 1) % len(waveform_types)
+        elif scan == ',':
+            sound_number = (sound_number -1) % len(waveform_types)
+    elif sound_type == 3:
+        if scan == '.':
+            sound_number = (sound_number + 1) % 128
+        elif scan == ',':
+            sound_number = (sound_number -1) % 128
+    elif sound_type == 4:
+        if scan == '.':
+            sound_number -= 128
+            sound_number = (sound_number + 1) % 128
+            sound_number += 128
+        elif scan == ',':
+            sound_number -= 128
+            sound_number = (sound_number - 1) % 128
+            sound_number += 128
+    elif sound_type == 5:
+        pass
+
+def print_quit():
+    print(upysh.clear)
+    print("\\n\\n\\n")
+    print(" ******************************************************")
+    print(" *             TULIP INTERACTIVE SOUND TOUR           *")
+    print(" *                                                    *")
+    print(" *                  (c) 1987 dooglesoft               *")
+    print(" ******************************************************\\n\\n\\n")
+    print("BYE BYE!\\n\\n\\n")
+
+
+def do_key(c):
+    global sound_type, sound_number, sound_types, tulip_analog_synth, tulip_drums, tulip_pcm_synth, tulip_wave_synth
+
+    play = False 
+    quit = False
+
+    char = chr(c)
+
+    if char == 'q':
+        quit = True
+        tulip.keyboard_callback() 
+        amy.reset()
+        print_quit()
+    elif char == '1':
+        note_length = 0.5
+        sound_type = 0
+        sound_number = 0
+        amy.reset()
+        tulip_pcm_synth = midi.OscSynth(wave=amy.PCM)
+        play = True
+    elif char == '2':
+        note_length = 0.5
+        sound_type = 1
+        sound_number = 0
+        amy.reset()
+        tulip_drums = midi.config.get_synth(channel=10)
+        play = True
+    elif char == '3':
+        note_length = 0.5
+        sound_type = 2
+        sound_number = 0
+        amy.reset()
+        play = True
+    elif char == '4':
+        note_length = 0.25
+        sound_type = 3  
+        sound_number = 0    
+        amy.reset()
+        tulip_analog_synth = midi.Synth(num_voices = 1, patch_number = 0)
+        play = True
+    elif char == '5':
+        note_length = 0.25
+        sound_type = 4  
+        sound_number = 128
+        amy.reset()
+        tulip_analog_synth = midi.Synth(num_voices = 1, patch_number = 0)
+        play = True
+    elif char == '6':
+        note_length = 0.25
+        sound_type = 5
+        sound_number = 256
+        amy.reset()
+        tulip_analog_synth = midi.Synth(num_voices = 1, patch_number = 0)
+        play = True
+    #elif c in [259,260,261]:
+    elif char in [',','.', ' ']:
+        update_sound_number(char)
+        play = True
+
+    if not quit:
+        print_instructions()
+        print_sound_info_and_play(play)
+
+amy.reset()
+tulip_pcm_synth = midi.OscSynth(wave=amy.PCM)
+print_instructions()
+print_sound_info_and_play(False)
+tulip.keyboard_callback(do_key)
+`},{
     't':'games',
     'd':"A small holiday animation with MIDI file playback",
     'c':`
