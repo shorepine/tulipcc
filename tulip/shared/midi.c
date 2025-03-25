@@ -73,6 +73,8 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
     1 0xFF reset         | XXXX
 */
 
+extern void alles_send_message(char * message, uint16_t len);
+
 // let's use 0x00 0x03 0x45 for SPSS
 #define MAX_SYSEX_BYTES (MAX_MESSAGE_LEN+3)
 uint8_t sysex_buffer[MAX_SYSEX_BYTES];
