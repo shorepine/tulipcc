@@ -203,7 +203,7 @@ uint8_t mouse_buttons[3];
 static void midi_transfer_cb(usb_transfer_t *transfer) {
     #ifdef DEBUG_USB
     #endif
-    fprintf(stderr, "**midi_transfer_cb context: %p, num_bytes %d\n", transfer->context, transfer->actual_num_bytes);
+    //fprintf(stderr, "**midi_transfer_cb context: %p, num_bytes %d\n", transfer->context, transfer->actual_num_bytes);
     if (Device_Handle == transfer->device_handle) {
         int in_xfer = transfer->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK;
         if ((transfer->status == 0) && in_xfer) {
