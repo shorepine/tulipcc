@@ -73,23 +73,36 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
     1 0xFF reset         | XXXX
 */
 
+uint16_t sysex_len = 0;
+
 extern void alles_send_message(char * message, uint16_t len);
 
-// let's use 0x00 0x03 0x45 for SPSS
+#ifndef MAX_MESSAGE_LEN
+#define MAX_MESSAGE_LEN 1024
+#endif
+
+#ifdef __EMSCRIPTEN__
+EM_JS(void, call_amy_js, (const char *message, int len), {
+    amy_play_message(UTF8ToString(message, len));
+});
+#endif
+
 #define MAX_SYSEX_BYTES (MAX_MESSAGE_LEN+3)
 uint8_t sysex_buffer[MAX_SYSEX_BYTES];
-uint16_t sysex_len = 0;
 void parse_sysex() {
     if(sysex_len>3) {
-        //fprintf(stderr, "Parsing SYSEX, %d bytes: ", sysex_len);
-        //for(uint16_t i=0;i<sysex_len;i++) fprintf(stderr, "%02x ", sysex_buffer[i]);
-        //fprintf(stderr, "\n");
+        // let's use 0x00 0x03 0x45 for SPSS
         if(sysex_buffer[0] == 0x00 && sysex_buffer[1] == 0x03 && sysex_buffer[2] == 0x45) {
             sysex_buffer[sysex_len] = 0;
+            #ifndef __EMSCRIPTEN__
             alles_send_message((char*)(sysex_buffer+3), sysex_len-3);
+            #else
+            call_amy_js((char*)sysex_buffer+3, sysex_len-3);
+            #endif
         }
     }
 }
+
 void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
     // i take any amount of bytes and add messages 
     // remember this can start in the middle of a midi message, so act accordingly
