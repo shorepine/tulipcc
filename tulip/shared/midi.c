@@ -73,6 +73,23 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
     1 0xFF reset         | XXXX
 */
 
+extern void alles_send_message(char * message, uint16_t len);
+
+// let's use 0x00 0x03 0x45 for SPSS
+#define MAX_SYSEX_BYTES (MAX_MESSAGE_LEN+3)
+uint8_t sysex_buffer[MAX_SYSEX_BYTES];
+uint16_t sysex_len = 0;
+void parse_sysex() {
+    if(sysex_len>3) {
+        //fprintf(stderr, "Parsing SYSEX, %d bytes: ", sysex_len);
+        //for(uint16_t i=0;i<sysex_len;i++) fprintf(stderr, "%02x ", sysex_buffer[i]);
+        //fprintf(stderr, "\n");
+        if(sysex_buffer[0] == 0x00 && sysex_buffer[1] == 0x03 && sysex_buffer[2] == 0x45) {
+            sysex_buffer[sysex_len] = 0;
+            alles_send_message((char*)(sysex_buffer+3), sysex_len-3);
+        }
+    }
+}
 void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
     // i take any amount of bytes and add messages 
     // remember this can start in the middle of a midi message, so act accordingly
@@ -85,9 +102,16 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
 
         // Skip sysex in this parser until we get an F7. We do not pass sysex over to python (yet)
         if(sysex_flag) {
-            if(byte == 0xF7) sysex_flag = 0;
+            if(byte == 0xF7) {
+                sysex_flag = 0;
+                parse_sysex();
+                sysex_len = 0;
+            } else {
+                sysex_buffer[sysex_len++] = byte;
+            }
         } else {
             if(byte & 0x80) { // new status byte 
+                sysex_flag = 0; sysex_len = 0;
                 // Single byte message?
                 current_midi_message[0] = byte;
                 if(byte == 0xF4 || byte == 0xF5 || byte == 0xF6 || byte == 0xF9 || 
@@ -95,7 +119,7 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
                     callback_midi_message_received(current_midi_message, 1); 
                     if(usb) i = len+1; // exit the loop if usb
                 }  else if(byte == 0xF0) { // sysex start 
-                    // We will ignore sysex for now, but we have to understand it. We'll tell the parser to ignore anything up to F7
+                    // if that's there we then assume everything is an AMY message until 0xF7
                     sysex_flag = 1;
                 } else if(byte == 0xF8) { // clock. don't forward this on to Tulip userspace
                     midi_clock_received();
@@ -182,8 +206,7 @@ void run_midi() {
 
     const int uart_buffer_size = (MAX_MIDI_BYTES_TO_PARSE);
     // Install UART driver using an event queue here
-    ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size, \
-                                          0, 0, NULL, 0));
+    ESP_ERROR_CHECK(uart_driver_install(uart_num, uart_buffer_size,  0, 0, NULL, 0));
 
     uart_intr_config_t uart_intr = {
           .intr_enable_mask = UART_RXFIFO_FULL_INT_ENA_M
@@ -207,11 +230,11 @@ void run_midi() {
         length = uart_read_bytes(uart_num, data, MAX_MIDI_BYTES_TO_PARSE /*MAX_MIDI_BYTES_PER_MESSAGE*MIDI_QUEUE_DEPTH*/, 1/portTICK_PERIOD_MS);
         if(length > 0) {
             //uart_flush(uart_num);
-            //fprintf(stderr, "got raw bytes of %d length:  ", length);
+            //fprintf(stdout, "got raw bytes of %d length:  ", length);
             //for(uint8_t i=0;i<length;i++) {
-            //    fprintf(stderr, "%02x ", data[i]);
+            //    fprintf(stdout, "%02x ", data[i]);
             //}
-            //fprintf(stderr, "\n");
+            //fprintf(stdout, "\n");
             convert_midi_bytes_to_messages(data,length,0);
         }
         #ifdef AMYBOARD
@@ -219,8 +242,14 @@ void run_midi() {
         while ( tud_midi_available() ) {
             uint8_t packet[4];
             tud_midi_packet_read(packet);
+            //fprintf(stderr, "got usb bytes of %d length:  ", 4);
+            //for(uint8_t i=0;i<4;i++) {
+            //    fprintf(stderr, "%02x ", packet[i]);
+            //}
+            //fprintf(stderr, "\n");
             convert_midi_bytes_to_messages(packet+1, 3, 1);
         }
+        //delay_ms(10);
         #endif
 
     } // end loop forever

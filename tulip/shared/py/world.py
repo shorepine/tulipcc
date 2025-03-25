@@ -130,7 +130,7 @@ def download(filename, username=None, limit=5000, chunk_size=4096):
 
         r = tulip.url_save(got['url'], filename)
 
-        print("Downloaded %s by %s [%d bytes, last updated %s] from %s World." % (filename,got['username'], got['size'], age_nice.lstrip()), "AMYboard" if tulip.board()=="AMYBOARD" else "Tulip")
+        print("Downloaded %s by %s [%d bytes, last updated %s] from %s World." % (filename,got['username'], got['size'], age_nice.lstrip(), "AMYboard" if tulip.board()=="AMYBOARD" else "Tulip"))
         if(filename.endswith('.tar')):
             print("Unpacking %s. Run it with run('%s')" % (filename, filename[:-4]))
             tulip.tar_extract(filename, show_progress=False)

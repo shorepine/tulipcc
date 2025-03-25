@@ -98,8 +98,7 @@ if(tulip.board() == "WEB" or tulip.board()=="AMYBOARD_WEB"):
     midi.setup()
     # Override send & bleep are done from JS on web because of click-to-start audio.
 else:
-    if(tulip.board() != "AMYBOARD"):
-        # Override amy's send to work with tulip
-        amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
-        midi.setup()
+    # Override amy's send to work with tulip
+    amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
+    midi.setup()
 

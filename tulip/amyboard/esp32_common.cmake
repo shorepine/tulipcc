@@ -116,8 +116,6 @@ endif()
 list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/main.c
     ${MICROPY_PORT_DIR}/amychip.c
-    ${MICROPY_PORT_DIR}/tusb_midi.c
-    #${MICROPY_PORT_DIR}/esp32-hal-i2c-slave.c
     ${MICROPY_PORT_DIR}/../esp32s3/multicast.c
     ${MICROPY_PORT_DIR}/../esp32s3/help.c
     ${MICROPY_PORT_DIR}/../esp32s3/network_common.c
@@ -126,7 +124,6 @@ list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/mphalport.c
     ${MICROPY_PORT_DIR}/machine_sdcard.c
     ${MICROPY_ESP32_DIR}/usb_serial_jtag.c
-
     ${MICROPY_ESP32_DIR}/panichandler.c
     ${MICROPY_ESP32_DIR}/adc.c
     ${MICROPY_ESP32_DIR}/uart.c

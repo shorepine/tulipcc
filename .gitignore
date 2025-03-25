@@ -29,6 +29,7 @@ tulip/fs/amboard/ex/my_*
 tulip/web/stage
 tulip/amyboardweb/stage
 tulip/amyboard/build
+tulip/amyboard/dist
 tulip/amyboard/managed_components
 tulip/amyboardweb/build-standard
 .python-version
