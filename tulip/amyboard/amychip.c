@@ -68,8 +68,11 @@ TaskHandle_t i2c_check_for_data_handle;
 #define I2C_FOLLOWER_NUM I2C_NUMBER(1) /*!< I2C port number for follower dev */
 #define I2C_FOLLOWER_TX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C follower tx buffer size */
 #define I2C_FOLLOWER_RX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C follower rx buffer size */
-#define AMYCHIP_ADDR 0x58
+
+#define AMYCHIP_ADDR 0x3F
 #define PCM9211_ADDR 0x40
+#define ADS1115_ADDR 0x48
+#define GP8413_ADDR  0x58
 
 static esp_err_t i2c_follower_init() {
     i2c_port_t i2c_follower_port = I2C_FOLLOWER_NUM;
@@ -104,13 +107,82 @@ void i2c_check_for_data() {
 
 
 
+#define ADS1115_REGISTER_CONFIG (0x01)
+#define ADS1115_CQUE_NONE (0x0003)
+#define ADS1115_CLAT_NONLAT (0x0000)
+#define ADS1115_CPOL_ACTVLOW (0x0000)
+#define ADS1115_CMODE_TRAD (0x0000)
+#define ADS1115_DR_1600SPS (0x0080)
+#define ADS1115_MODE_SINGLE (0x0100)
+#define ADS1115_OS_SINGLE (0x8000)
+#define ADS1115_PGA_2_048V (0x0400)
+#define ADS1115_PGA_4_096V (0x0200)
+#define ADS1115_MUX_SINGLE_0 (0x4000) 
+#define ADS1115_MUX_SINGLE_1 (0x5000) 
+#define ADS1115_MUX_SINGLE_2 (0x6000) 
+#define ADS1115_MUX_SINGLE_3 (0x7000) 
+#define ADS1115_REGISTER_CONVERT (0x00)
+
+static esp_err_t ads1115_write_register(uint8_t reg, uint16_t data) {
+  i2c_cmd_handle_t cmd;
+  esp_err_t ret;
+  uint8_t out[2];
+
+  out[0] = data >> 8; // get 8 greater bits
+  out[1] = data & 0xFF; // get 8 lower bits
+  cmd = i2c_cmd_link_create();
+  i2c_master_start(cmd); // generate a start command
+  i2c_master_write_byte(cmd,(ADS1115_ADDR<<1) | I2C_MASTER_WRITE,1); // specify address and write command
+  i2c_master_write_byte(cmd,reg,1); // specify register
+  i2c_master_write(cmd,out,2,1); // write it
+  i2c_master_stop(cmd); // generate a stop command
+  ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
+  i2c_cmd_link_delete(cmd);
+  return ret;
+}
+
+static esp_err_t ads1115_read_register(uint8_t reg, uint8_t* data, uint8_t len) {
+    i2c_cmd_handle_t cmd;
+    esp_err_t ret;
+
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd,(ADS1115_ADDR<<1) | I2C_MASTER_WRITE,1);
+    i2c_master_write_byte(cmd,reg,1);
+    i2c_master_stop(cmd);
+    i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10));
+    i2c_cmd_link_delete(cmd);
+
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd); // generate start command
+    i2c_master_write_byte(cmd,(ADS1115_ADDR<<1) | I2C_MASTER_READ,1); // specify address and read command
+    i2c_master_read(cmd, data, len, 0); // read all wanted data
+    i2c_master_stop(cmd); // generate stop command
+    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
+    i2c_cmd_link_delete(cmd);
+    return ret;
+}
+
+uint16_t read_ads1115_raw(uint8_t channel) {
+    uint16_t data = 0;
+    uint16_t channel_mux = ADS1115_MUX_SINGLE_0;
+    if(channel==1) channel_mux = ADS1115_MUX_SINGLE_1;
+    if(channel==2) channel_mux = ADS1115_MUX_SINGLE_2;
+    if(channel==3) channel_mux = ADS1115_MUX_SINGLE_3;
+    data =  (ADS1115_CQUE_NONE |ADS1115_CLAT_NONLAT |
+             ADS1115_CPOL_ACTVLOW | ADS1115_CMODE_TRAD | ADS1115_DR_1600SPS |
+             ADS1115_MODE_SINGLE | ADS1115_OS_SINGLE | ADS1115_PGA_4_096V |
+             channel_mux);
+    ads1115_write_register(ADS1115_REGISTER_CONFIG, data);
+    uint8_t output[2];
+    ads1115_read_register(ADS1115_REGISTER_CONVERT, output, 2);
+    return ((uint16_t)output[0] << 8) | (uint16_t)output[1];
+}
+
+
 extern int16_t amy_in_block[AMY_BLOCK_SIZE * AMY_NCHANS];
 i2s_sample_type my_int32_block[AMY_BLOCK_SIZE * AMY_NCHANS];
 
-#include "esp_adc/adc_cali.h"
-#include "driver/adc.h"
-#include "esp_adc/adc_cali_scheme.h"
-adc_cali_handle_t cali_scheme;
 #endif // ESP_PLATFORM
 
 extern uint8_t external_map[AMY_OSCS];
@@ -127,52 +199,20 @@ float cv_input_hook(uint16_t channel) {
     if(cv_local_override[channel]) {
         return cv_local_value[channel];
     }
-
-    // Figure out which pin / ADC channel we're using
-    uint8_t channel_id = ADC_CHANNEL_5;
-    if(channel==1) channel_id = ADC_CHANNEL_4;
-    
+    // Read the ADS1115
     #ifdef ESP_PLATFORM
-    // Read the ADC once
-    int raw = 0;
-    int v = 0;
-    adc2_get_raw(channel_id,ADC_WIDTH_BIT_12, &raw);
-    adc_cali_raw_to_voltage(cali_scheme, raw, &v);
-
-    // Convert the voltage to the calibrated -10 to 10 scale
-    float vf = (float)v;
-
-    float lo = 427.0;
-    float hi = 3104.0;
-    float ret;
-    if(vf < lo) {
-        ret = -10;
-    } else if (vf > hi) {
-        ret = 10;
-    } else {
-        ret = (((vf-lo)/(hi-lo)) *20.0)-10.0;
-    }
-
-    // Now smooth the per-AMY block voltage reading to BLOCK_CV_READS 
-    last_cv_reads[channel][cv_reads[channel]] = ret;
-    float myret = 0;
-    for(uint16_t n=0;n<BLOCK_CV_READS;n++) {
-        myret += last_cv_reads[channel][n];
-    }
-
-    cv_reads[channel] = cv_reads[channel] + 1;
-    if(cv_reads[channel] == BLOCK_CV_READS) {
-        //if(channel==0) fprintf(stderr, "cv_reads %ld v %d ret %f avg %f\n", cv_reads[channel], v, ret, myret/(float)BLOCK_CV_READS);
-        cv_reads[channel] = 0;
-    }
-    return myret/(float)BLOCK_CV_READS;
+    uint16_t raw = read_ads1115_raw(channel);
+    uint16_t min = 1058; // -10V
+    uint16_t max = 21312; // 10V
+    float v = ((((float)raw - (float)min)/((float)max-(float)min))*20.0)-10.0;
+    return v;
     #else
     return 0;
     #endif
 }
 
 
-
+// Write to the GP8413
 uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
 #ifdef ESP_PLATFORM
     if(external_map[osc]>0) {
@@ -250,26 +290,6 @@ amy_err_t amyboard_amy_init() {
     amy_external_coef_hook = cv_input_hook;
     amy_external_render_hook = cv_output_hook;
 
-    for(uint8_t n=0;n<BLOCK_CV_READS;n++) { last_cv_reads[0][n] = 0; last_cv_reads[1][n] = 0;  }
-    adc2_config_channel_atten(ADC_CHANNEL_5, ADC_ATTEN_DB_11);
-    adc2_config_channel_atten(ADC_CHANNEL_4, ADC_ATTEN_DB_11);
-
-    #if ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED
-    adc_cali_curve_fitting_config_t cali_config = {
-        .unit_id = ADC_UNIT_2,
-        .atten = ADC_ATTEN_DB_11,
-        .bitwidth = ADC_WIDTH_BIT_12,
-    };
-    adc_cali_create_scheme_curve_fitting(&cali_config, &cali_scheme);
-    #else
-    adc_cali_line_fitting_config_t cali_config = {
-        .unit_id = ADC_UNIT_2,
-        .atten = ADC_ATTEN_DB_11,
-        .bitwidth = ADC_WIDTH_BIT_12,
-    };
-    adc_cali_create_scheme_line_fitting(&cali_config, &cali_scheme);
-    #endif
-    
     amy_start(2, 1, 1, 1);
     // We create a mutex for changing the event queue and pointers as two tasks do it at once
     xQueueSemaphore = xSemaphoreCreateMutex();

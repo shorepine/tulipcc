@@ -41,6 +41,25 @@ def sh1107_oled():
     display.show()
     return display
 
+def adc1115_raw(channel=0):
+    import adc1115
+    adc = adc1115.ADS1115(get_i2c())
+    raw = float(adc.read(channel1=channel))
+    return raw
+
+# Calibrate the ADC1115 against the GP8413. Generates a csv file
+def cv_cal(channel=0):
+    vs = [-10,-9,-8,-7,-6,-5,-4,-3,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,3,4,5,6,7,8,9,10]
+    print("Calibrating...")
+    out = open("cal.csv", "w")
+    for v in vs:
+        cv_out(v, channel=channel)
+        time.sleep(1)
+        raw = adc1115(channel)
+        out.write("%f,%d\n" % (v, raw))
+    out.close()
+    print("Done. Written to cal.csv")
+
 def read_register(addr, reg):
     get_i2c().writeto(addr, bytes([reg]))
     b = get_i2c().readfrom(addr, 1)
@@ -88,18 +107,7 @@ def cv_out(volts, channel=0):
         ch = 0x04
     get_i2c().writeto_mem(addr, ch, bytes([b0,b1]))
 
-def cv_in(channel=0, n=5):
-    from machine import Pin, ADC
-    pin = 15 if channel==1 else 16
-    pot = ADC(Pin(pin))
-    pot.atten(ADC.ATTN_11DB) 
-
-    # Read it n times to smooth it
-    x = 0
-    for i in range(n):
-        x = x + pot.read_uv()
-    x = (x / (float(n))) 
-
-    lo = 427000.0
-    hi = 3104200.0
-    return (((x-lo)/(hi-lo)) *20.0)-10.0
+def cv_in(channel=0):
+    raw = adc1115_raw(channel)
+    (minr,maxr) = (1058.0, 21312.0) # measured -10v to 10v from the gp8413 output 
+    return (((raw - minr) / (maxr-minr))*20.0)-10.0
