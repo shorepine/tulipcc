@@ -44,7 +44,7 @@ void callback_midi_message_received(uint8_t *data, size_t len) {
     }
 
     // We tell Python that a MIDI message has been received
-    if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_none);
+    if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_false);
 }
 
 /*
@@ -77,18 +77,13 @@ uint16_t sysex_len = 0;
 
 extern void alles_send_message(char * message, uint16_t len);
 
-#ifndef MAX_MESSAGE_LEN
-#define MAX_MESSAGE_LEN 1024
-#endif
-
 #ifdef __EMSCRIPTEN__
 EM_JS(void, call_amy_js, (const char *message, int len), {
     amy_play_message(UTF8ToString(message, len));
 });
 #endif
 
-#define MAX_SYSEX_BYTES (MAX_MESSAGE_LEN+3)
-uint8_t sysex_buffer[MAX_SYSEX_BYTES];
+uint8_t * sysex_buffer;
 void parse_sysex() {
     if(sysex_len>3) {
         // let's use 0x00 0x03 0x45 for SPSS
@@ -99,6 +94,11 @@ void parse_sysex() {
             #else
             call_amy_js((char*)sysex_buffer+3, sysex_len-3);
             #endif
+            sysex_len = 0; // handled
+        } else {
+            // alert python there's some sysex to read
+            if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_true);
+            // will be handled when tulip.sysex_in is called
         }
     }
 }
@@ -118,7 +118,6 @@ void convert_midi_bytes_to_messages(uint8_t * data, size_t len, uint8_t usb) {
             if(byte == 0xF7) {
                 sysex_flag = 0;
                 parse_sysex();
-                sysex_len = 0;
             } else {
                 sysex_buffer[sysex_len++] = byte;
             }
@@ -201,6 +200,7 @@ void midi_out(uint8_t * bytes, uint16_t len) {
 }
 
 void run_midi() {
+    sysex_buffer = malloc_caps(MAX_SYSEX_BYTES, MALLOC_CAP_SPIRAM);
     // Setup UART2 to listen for MIDI messages 
     const int uart_num = UART_NUM_1;
     uart_config_t uart_config = {

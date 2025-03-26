@@ -18,6 +18,10 @@ extern mp_obj_t midi_callback;
 #define MAX_MIDI_BYTES_TO_PARSE 1024
 #define MAX_MIDI_BYTES_PER_MESSAGE 3
 #define MIDI_QUEUE_DEPTH 1024
+#define MAX_SYSEX_BYTES (16384)
+extern uint8_t *sysex_buffer;
+extern uint16_t sysex_len;
+extern void parse_sysex();
 extern uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
 extern uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
 extern int16_t midi_queue_tail;

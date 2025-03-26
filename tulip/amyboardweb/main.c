@@ -45,7 +45,7 @@
 #include "proxy_c.h"
 #include "py/ringbuf.h"
 #include "emscripten/html5.h"
-
+#include "midi.h"
 #include "tsequencer.h"
 
 extern void setup_lvgl();
@@ -163,6 +163,7 @@ void mp_js_init(int pystack_size, int heap_size) {
     }
     mp_obj_list_append(mp_sys_path, MP_OBJ_NEW_QSTR(MP_QSTR__slash_lib));
     #endif
+    sysex_buffer = malloc_caps(MAX_SYSEX_BYTES, MALLOC_CAP_SPIRAM);
     tsequencer_init();
     tulip_ready = 1;
 }
