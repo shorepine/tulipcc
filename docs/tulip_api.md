@@ -621,6 +621,8 @@ You can set up your own MIDI callbacks in your own programs. You can call `midi.
 
 On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
 
+Tulip Desktop macOS's SYSEX handling only works on macOS 14.0 (Sonoma, released 2023) and later.
+
 On Tulip Web, MIDI works in many browsers, but not Safari. 
 
 You can also send MIDI messages "locally", e.g. to a running Tulip program that is expecting hardware MIDI input, via `tulip.midi_local()`
@@ -645,7 +647,39 @@ tulip.midi_out(bytes) # Can send bytes or list
 tulip.midi_local((144, 60, 127)) # send note on to local bus
 ```
 
+### MIDI SYSEX
+
+Tulip has special handling for MIDI sysex messages. Because of Tulip's memory constraints, we do not by default parse general MIDI sysex messages that come into MIDI in. We do always parse SYSEX messages for AMY-over-SYSEX, this allows you to send AMY wire messages over MIDI.
+
+If you want to receive and parse MIDI sysex messages in Tulip, set a `midi.sysex_callback`. Like so: 
+
+```python
+def scb(message):
+    print("Received sysex message of %d bytes" % (len(message)))
+
+midi.sysex_callback = scb
+```
+
+Then, any MIDI SYSEX message will call this function with the `message` as the parameter. We limit SYSEX messages to 16KB at a time. 
+
+If you do not set a `sysex_callback`, we will not parse any SYSEX messages other than AMY-over-SYSEX. Your `midi_in` function will never receive SYSEX messages.
+
+To send SYSEX messages, just use `midi_out` like normal: `tulip.midi_out([0xf0, 0x01, 0x02, 0x03, 0xf7])`. 
+
 **See the [music tutorial](music.md) for a LOT more information on music in Tulip.**
+
+### AMY-over-MIDI SYSEX
+
+You can send an AMY message over MIDI on Tulip. This allows you to control another AMY device over a MIDI connection (USB or UART). You can easily route any AMY messages over MIDI SYSEX using `midi.sysex_amy`: 
+
+```python
+amy.override_send = midi.sysex_amy
+amy.reset()
+amy.send(osc=0, vel=1, freq=440) # will send this message over SYSEX
+```
+
+Any connected AMY device (AMYboard, Tulip) will respond to this message.
+
 
 
 ## Graphics system

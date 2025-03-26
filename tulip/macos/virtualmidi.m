@@ -45,6 +45,8 @@ void midi_out(uint8_t * bytes, uint16_t len) {
 
 
 void* run_midi(void*argp){
+    sysex_buffer = malloc(MAX_SYSEX_BYTES);
+
     if (@available(macOS 11, *))  {
         @autoreleasepool {
             //py_midi_callback = 0;
@@ -66,18 +68,33 @@ void* run_midi(void*argp){
                 MIDIEndpointRef source = MIDIGetSource(i);
                 MIDIPortRef in_port;
                 status = MIDIInputPortCreateWithProtocol(midi_client, (__bridge CFStringRef)[NSString stringWithFormat:@"Tulip Input %lu", i], kMIDIProtocol_1_0, &in_port, ^(const MIDIEventList *evtlist, void *srcConnRefCon) {
+                    OSStatus sysex_status = -1;
                     for (uint32_t i = 0; i < evtlist->numPackets; i++) {
                         const MIDIEventPacket* packet = &evtlist->packet[i];
-                        for(uint32_t j=0 ; j < packet->wordCount; j++) {
-                            const unsigned char *bytes = (unsigned char*)(&packet->words[j]);
-                            if(bytes[3] == 0x20) { //  TODO, non-3 packets, then what? 
-                                uint8_t data[3];
-                                data[0] = bytes[2];
-                                data[1] = bytes[1];
-                                data[2] = bytes[0];
-                                convert_midi_bytes_to_messages(data, 3, 1);
-                            } else {
-                               //printf("bytes[3] was not 0x20\n");
+                        if(@available(macos 14, *)) {
+                            CFDataRef  outData;
+                            sysex_status = MIDIEventPacketSysexBytesForGroup(packet,0, &outData);
+                            if(sysex_status == noErr) {
+                                const uint8_t * sysex_bytes = CFDataGetBytePtr(outData);
+                                for(uint16_t i=0;i<CFDataGetLength(outData);i++) {
+                                    sysex_buffer[sysex_len++] = sysex_bytes[i];
+                                    if(sysex_bytes[i]==0xf7) parse_sysex();
+                                }
+                            }
+                        }
+                        // Just a plain ol midi packet
+                        if(sysex_status != noErr) { 
+                            for(uint32_t j=0 ; j < packet->wordCount; j++) {
+                                const unsigned char *bytes = (unsigned char*)(&packet->words[j]);
+                                if(bytes[3] == 0x20) { //  TODO, non-3 packets, then what? 
+                                    uint8_t data[3];
+                                    data[0] = bytes[2];
+                                    data[1] = bytes[1];
+                                    data[2] = bytes[0];
+                                    convert_midi_bytes_to_messages(data, 3, 1);
+                                } else {
+                                   //printf("bytes[3] was not 0x20\n");
+                                }
                             }
                         }
                     }

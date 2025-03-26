@@ -166,6 +166,17 @@ STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_in_obj, 0, 0, tulip_midi_in);
 
+STATIC mp_obj_t tulip_sysex_in(size_t n_args, const mp_obj_t *args) {
+    if(sysex_len) {
+        mp_obj_t sysex_bytes = mp_obj_new_bytes(sysex_buffer, sysex_len);
+        sysex_len = 0; // consumed, move on
+        return sysex_bytes;
+    } 
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sysex_in_obj, 0, 0, tulip_sysex_in);
+
 
 STATIC mp_obj_t tulip_midi_out(size_t n_args, const mp_obj_t *args) {
     if(mp_obj_get_type(args[0]) == &mp_type_bytes) {
@@ -1358,6 +1369,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
+    { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_local), MP_ROM_PTR(&tulip_midi_local_obj) },
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
