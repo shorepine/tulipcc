@@ -69,8 +69,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.substring(0, location.pathname.lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250326204123.data';
-      var REMOTE_PACKAGE_BASE = 'amyboard-20250326204123.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250326204148.data';
+      var REMOTE_PACKAGE_BASE = 'amyboard-20250326204148.data';
       var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
 var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 
@@ -206,10 +206,10 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250326204123.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250326204148.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250326204123.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250326204148.data');
 
       Module['preloadResults'] ??= {};
 
@@ -923,14 +923,14 @@ function createExportWrapper(name, nargs) {
 var wasmBinaryFile;
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'amyboard-20250326204123.wasm';
+    var f = 'amyboard-20250326204148.wasm';
     if (!isDataURI(f)) {
       return locateFile(f);
     }
     return f;
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('amyboard-20250326204123.wasm', import.meta.url).href;
+  return new URL('amyboard-20250326204148.wasm', import.meta.url).href;
 }
 
 function getBinarySync(file) {
@@ -6463,7 +6463,7 @@ for (const prop of Object.keys(Module)) {
 })();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://amyboard-20250326204123.org/
+ * This file is part of the MicroPython project, http://amyboard-20250326204148.org/
  *
  * The MIT License (MIT)
  *
@@ -6491,7 +6491,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `amyboard-20250326204123.mjs`.
+// - url: location to load `amyboard-20250326204148.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -6853,7 +6853,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node amyboard-20250326204123.mjs`.
+    // Check if this module is run from the command line via `node amyboard-20250326204148.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -6877,7 +6877,7 @@ if (
 }
 
 /*
- * This file is part of the MicroPython project, http://amyboard-20250326204123.org/
+ * This file is part of the MicroPython project, http://amyboard-20250326204148.org/
  *
  * The MIT License (MIT)
  *
@@ -7118,7 +7118,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://amyboard-20250326204123.org/
+ * This file is part of the MicroPython project, http://amyboard-20250326204148.org/
  *
  * The MIT License (MIT)
  *

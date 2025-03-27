@@ -1,7 +1,7 @@
 #!/bin/bash
 # deploys web build to github pages
 
-#set -e
+set -e
 
 git rm -f ../../www/amy/*
 mkdir ../../www/amy
