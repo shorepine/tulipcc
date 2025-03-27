@@ -50,7 +50,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpvdruo_d2.js
+// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpl_t38925.js
 
   Module['expectedDataFileDownloads'] ??= 0;
   Module['expectedDataFileDownloads']++;
@@ -69,8 +69,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.substring(0, location.pathname.lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250326143305.data';
-      var REMOTE_PACKAGE_BASE = 'amyboard-20250326143305.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250326204123.data';
+      var REMOTE_PACKAGE_BASE = 'amyboard-20250326204123.data';
       var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
 var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 
@@ -206,10 +206,10 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250326143305.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250326204123.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250326143305.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250326204123.data');
 
       Module['preloadResults'] ??= {};
 
@@ -229,25 +229,25 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/amyboard/sys/.DS_Store", "start": 0, "end": 6148}, {"filename": "/amyboard/sys/ex/bcla3.wav", "start": 6148, "end": 591930, "audio": 1}, {"filename": "/amyboard/sys/ex/vlng3.wav", "start": 591930, "end": 894720, "audio": 1}, {"filename": "/amyboard/sys/ex/vlsa3.wav", "start": 894720, "end": 1353294, "audio": 1}, {"filename": "/amyboard/sys/ex/woodpiano.txt", "start": 1353294, "end": 1353877}], "remote_package_size": 1353877});
+    loadPackage({"files": [{"filename": "/amyboard/sys/ex/bcla3.wav", "start": 0, "end": 585782, "audio": 1}, {"filename": "/amyboard/sys/ex/vlng3.wav", "start": 585782, "end": 888572, "audio": 1}, {"filename": "/amyboard/sys/ex/vlsa3.wav", "start": 888572, "end": 1347146, "audio": 1}, {"filename": "/amyboard/sys/ex/woodpiano.txt", "start": 1347146, "end": 1347729}], "remote_package_size": 1347729});
 
   })();
 
-// end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpvdruo_d2.js
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmp3mwf1brx.js
+// end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpl_t38925.js
+// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpgdq3rch7.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmp3mwf1brx.js
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpekrxww82.js
+  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpgdq3rch7.js
+// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpdjx229cx.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpekrxww82.js
+  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpdjx229cx.js
 
 
 // Sometimes an existing Module object exists with properties
@@ -923,14 +923,14 @@ function createExportWrapper(name, nargs) {
 var wasmBinaryFile;
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'amyboard-20250326143305.wasm';
+    var f = 'amyboard-20250326204123.wasm';
     if (!isDataURI(f)) {
       return locateFile(f);
     }
     return f;
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('amyboard-20250326143305.wasm', import.meta.url).href;
+  return new URL('amyboard-20250326204123.wasm', import.meta.url).href;
 }
 
 function getBinarySync(file) {
@@ -1097,9 +1097,10 @@ async function createWasm() {
 // === Body ===
 
 var ASM_CONSTS = {
-  67362584: () => { FS.syncfs(false, function (err) {}); },  
- 67362621: () => { try { FS.mkdir('/amyboard'); } catch (err) { } try { FS.mkdir('/amyboard/user'); } catch (err) { } FS.mount(IDBFS, {autoPersist:true}, '/amyboard/user'); FS.syncfs(true, function (err) { }); },  
- 67362812: ($0, $1) => { if(midiOutputDevice != null) { midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1)); } }
+  67363032: () => { FS.syncfs(false, function (err) {}); },  
+ 67363069: () => { try { FS.mkdir('/amyboard'); } catch (err) { } try { FS.mkdir('/amyboard/user'); } catch (err) { } FS.mount(IDBFS, {autoPersist:true}, '/amyboard/user'); FS.syncfs(true, function (err) { }); },  
+ 67363260: ($0, $1, $2) => { let data = Module.HEAPU8.slice($0, $0 + $1 * $2 * 4); let context = document.getElementById("canvas").getContext('2d'); context.scale(2, 2); let imageData = context.getImageData(0, 0, $1, $2); imageData.data.set(data); context.putImageData(imageData, 0, 0); },  
+ 67363522: ($0, $1) => { if(midiOutputDevice != null) { midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1)); } }
 };
 function proxy_convert_mp_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); proxy_convert_js_to_mp_obj_jsside_force_double_proxy(ret, out); }
 function proxy_convert_mp_to_js_then_js_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); const js_obj = PyProxy.toJs(ret); proxy_convert_js_to_mp_obj_jsside(js_obj, out); }
@@ -6462,7 +6463,7 @@ for (const prop of Object.keys(Module)) {
 })();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://amyboard-20250326143305.org/
+ * This file is part of the MicroPython project, http://amyboard-20250326204123.org/
  *
  * The MIT License (MIT)
  *
@@ -6490,7 +6491,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `amyboard-20250326143305.mjs`.
+// - url: location to load `amyboard-20250326204123.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -6852,7 +6853,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node amyboard-20250326143305.mjs`.
+    // Check if this module is run from the command line via `node amyboard-20250326204123.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -6876,7 +6877,7 @@ if (
 }
 
 /*
- * This file is part of the MicroPython project, http://amyboard-20250326143305.org/
+ * This file is part of the MicroPython project, http://amyboard-20250326204123.org/
  *
  * The MIT License (MIT)
  *
@@ -7117,7 +7118,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://amyboard-20250326143305.org/
+ * This file is part of the MicroPython project, http://amyboard-20250326204123.org/
  *
  * The MIT License (MIT)
  *
