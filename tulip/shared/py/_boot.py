@@ -102,3 +102,8 @@ else:
     amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
     midi.setup()
 
+
+if(board() == "AMYBOARD" or board()=="AMYBOARD_WEB"):
+    import amyboard
+    amyboard.initdisplay()
+    

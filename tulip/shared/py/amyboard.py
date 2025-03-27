@@ -2,6 +2,12 @@
 import tulip, midi, amy, time
 
 i2c = None
+display_buffer = None
+display_framebuf = None
+hw_display = None
+
+def web():
+    return (tulip.board()=="AMYBOARD_WEB")
 
 def mount_sd():
     # mount the SD card if given
@@ -28,18 +34,36 @@ def get_i2c():
 def adafruit_oled():
     import ssd1327
     display = ssd1327.SSD1327_I2C(128,128,get_i2c(),addr=0x3d)
-    display.text("AMYboard!",0,0,255)
-    display.show()
+    display.fill(0)
     return display
 
 def sh1107_oled():
     import sh1107
     display = sh1107.SH1107_I2C(128, 128, get_i2c(), address=0x3c)
     display.sleep(False)
-    display.fill(0)
-    display.text('AMYboard!', 0, 0, 1)
-    display.show()
     return display
+
+def display_refresh():
+    global hw_display, display_buffer
+    if hw_display is not None: hw_display.show()
+    if(web()): tulip.framebuf_web_update(display_buffer)
+
+def display_startup():
+    global display_buffer, display_framebuf, hw_display
+    display_framebuf.text("AMYboard!",0,0,255)
+    display_refresh()
+
+def initdisplay():
+    global display_buffer, display_framebuf, hw_display
+    if(web()):
+        import framebuf
+        display_buffer = bytearray(128 * 128 // 2)
+        display_framebuf = framebuf.FrameBuffer(display_buffer, 128, 128, framebuf.GS4_HMSB)
+    else:
+        hw_display = adafruit_oled()
+        display_buffer = hw_display.buffer
+        display_framebuf = hw_display.framebuf
+    display_startup()
 
 def adc1115_raw(channel=0):
     import adc1115
