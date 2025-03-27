@@ -47,8 +47,8 @@
       <script type="text/javascript" src="xterm.js"></script>
 
       <!-- These filenames are replaced by the build system -->
-      <script src="amyboard-20250326143305.mjs" type="module"></script>
-      <script type="text/javascript" id="amy_js_include" src="amy-20250326143305.js"></script>
+      <script src="amyboard-20250326204148.mjs" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="amy-20250326204148.js"></script>
       <script type="text/javascript" src="examples.js"></script>
       <script type="text/javascript" src="spss.js"></script>
   </head>
@@ -58,7 +58,7 @@
 
 
     <script type="module">
-      term = new Terminal({rows:20,cols:100, fontSize:12, theme: { background: '#0f0f0f'  }});
+      term = new Terminal({rows:20,cols:80, fontSize:12, theme: { background: '#002b36' , foreground:'#ffffff' }});
       term.open(document.getElementById('terminal'));
       const stdoutWriter = (line) => {
         // While it's called line, it's always one char, line[0].
@@ -188,8 +188,11 @@
           </div>
         </div>
         <div class="row">
-          <div class="col-9">
+          <div class="col-6">
             <div id="terminal"></div>
+          </div>
+          <div class="col-2">
+            <canvas id="canvas" width=256 height=256/>
           </div>
           <div class="col-2">
             <input id="cv-input-1"
