@@ -2,9 +2,9 @@
 import tulip, midi, amy, time
 
 i2c = None
-display_buffer = None
-display_framebuf = None
-hw_display = None
+display_buffer = None # the bytes object storing the display bits
+display = None # The framebuf object to draw to 
+hw_display = None # if there's an I2C display connected
 
 def web():
     return (tulip.board()=="AMYBOARD_WEB")
@@ -20,9 +20,8 @@ def mount_sd():
         pass # it's ok!
 
 def start_amy():
-    initpcm9211()
+    init_pcm9211()
     tulip.start_amyboard_amy()
-
 
 def get_i2c():
     global i2c
@@ -31,17 +30,17 @@ def get_i2c():
         i2c = I2C(0, freq=400000)
     return i2c
 
-def adafruit_oled():
+def ssd1327_oled():
     import ssd1327
-    display = ssd1327.SSD1327_I2C(128,128,get_i2c(),addr=0x3d)
-    display.fill(0)
-    return display
+    d = ssd1327.SSD1327_I2C(128,128,get_i2c(),addr=0x3d)
+    d.fill(0)
+    return d
 
 def sh1107_oled():
     import sh1107
-    display = sh1107.SH1107_I2C(128, 128, get_i2c(), address=0x3c)
-    display.sleep(False)
-    return display
+    d = sh1107.SH1107_I2C(128, 128, get_i2c(), address=0x3c)
+    d.sleep(False)
+    return d
 
 def display_refresh():
     global hw_display, display_buffer
@@ -49,21 +48,29 @@ def display_refresh():
     if(web()): tulip.framebuf_web_update(display_buffer)
 
 def display_startup():
-    global display_buffer, display_framebuf, hw_display
-    display_framebuf.text("AMYboard!",0,0,255)
+    global display
+    display.text("AMYboard!",0,0,255)
     display_refresh()
 
-def initdisplay():
-    global display_buffer, display_framebuf, hw_display
+def init_display():
+    global display_buffer, display, hw_display
     if(web()):
         import framebuf
         display_buffer = bytearray(128 * 128 // 2)
-        display_framebuf = framebuf.FrameBuffer(display_buffer, 128, 128, framebuf.GS4_HMSB)
+        display = framebuf.FrameBuffer(display_buffer, 128, 128, framebuf.GS4_HMSB)
     else:
-        hw_display = adafruit_oled()
-        display_buffer = hw_display.buffer
-        display_framebuf = hw_display.framebuf
-    display_startup()
+        try:
+            hw_display = ssd1327_oled()
+            display_buffer = hw_display.buffer
+            display = hw_display.framebuf
+        except: # not there, try the other one
+            try:
+                hw_display = sh1107_oled()
+                display_buffer = hw_display.displaybuf
+                display = hw_display.super() 
+            except:
+                pass # no physical display
+    if(display is not None): display_startup()
 
 def adc1115_raw(channel=0):
     import adc1115
@@ -94,7 +101,7 @@ def read_register(addr, reg):
 def write_register(addr, reg, val):
     get_i2c().writeto(addr, bytes([reg, val]))
 
-def initpcm9211(addr=0x40):
+def init_pcm9211(addr=0x40):
     registers = [
         [ 0x40, 0x33 ], # Power down ADC, power down DIR, power down DIT, power down OSC
         [ 0x40, 0xc0 ], # Normal operation for all
