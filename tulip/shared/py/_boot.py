@@ -105,5 +105,5 @@ else:
 
 if(board() == "AMYBOARD" or board()=="AMYBOARD_WEB"):
     import amyboard
-    amyboard.initdisplay()
+    amyboard.init_display()
     
