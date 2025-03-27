@@ -281,7 +281,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_map_obj, 0, 0, tulip_alle
 
 #endif
 
-
 #ifndef AMYBOARD_WEB
 extern uint8_t ipv4_quartet;
 STATIC mp_obj_t tulip_set_quartet(size_t n_args, const mp_obj_t *args) {
@@ -350,6 +349,61 @@ STATIC mp_obj_t tulip_cv_local(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cv_local_obj, 1, 2, tulip_cv_local);
 #endif
 
+
+#ifdef AMYBOARD_WEB
+
+uint32_t expand_4bit_oled(uint8_t fourbit) {
+    if(fourbit==1)  return 0xff111111;
+    if(fourbit==2)  return 0xff222222;
+    if(fourbit==3)  return 0xff333333;
+    if(fourbit==4)  return 0xff444444;
+    if(fourbit==5)  return 0xff555555;
+    if(fourbit==6)  return 0xff666666;
+    if(fourbit==7)  return 0xff777777;
+    if(fourbit==8)  return 0xff888888;
+    if(fourbit==9)  return 0xff999999;
+    if(fourbit==10) return 0xffAAAAAA;
+    if(fourbit==11) return 0xffBBBBBB;
+    if(fourbit==12) return 0xffCCCCCC;
+    if(fourbit==13) return 0xffDDDDDD;
+    if(fourbit==14) return 0xffEEEEEE;
+    if(fourbit==15) return 0xffFFFFFF;
+    return 0xff000000;
+}
+
+// Update the web framebuffer if there is one
+STATIC mp_obj_t tulip_framebuf_web_update(size_t n_args, const mp_obj_t *args) {
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+    uint8_t * p = (uint8_t*)bufinfo.buf;
+    uint32_t canvas_pixels[256*256];
+    uint16_t i = 0;
+    for(uint16_t y=0;y<256;y++) {
+        for(uint16_t x=0;x<64;x++) {
+            uint8_t two_pixels = p[(y/2)*64 + x];
+            uint32_t px0 = expand_4bit_oled((two_pixels >> 4) & 0x000F);
+            uint32_t px1 = expand_4bit_oled(two_pixels & 0x000F);
+            canvas_pixels[i++] = px0;
+            canvas_pixels[i++] = px0;
+            canvas_pixels[i++] = px1;
+            canvas_pixels[i++] = px1;
+        }
+    }
+    EM_ASM_({
+      let data = Module.HEAPU8.slice($0, $0 + $1 * $2 * 4);
+      let context = document.getElementById("canvas").getContext('2d');
+      context.scale(2, 2);
+      let imageData = context.getImageData(0, 0, $1, $2);
+      imageData.data.set(data);
+      context.putImageData(imageData, 0, 0);
+    }, canvas_pixels, 256, 256);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_framebuf_web_update_obj, 1, 1, tulip_framebuf_web_update);
+
+#endif
+
 // Just AMYBOARD c code
 #ifdef AMYBOARD
 extern void start_amyboard_amy();
@@ -366,6 +420,7 @@ STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_send_obj, 1, 1, tulip_amyboard_send);
+
 
 
 
@@ -1389,6 +1444,11 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 #if defined(AMYBOARD)
     { MP_ROM_QSTR(MP_QSTR_cv_local), MP_ROM_PTR(&tulip_cv_local_obj) },
 #endif
+
+#ifdef AMYBOARD_WEB
+    { MP_ROM_QSTR(MP_QSTR_framebuf_web_update), MP_ROM_PTR(&tulip_framebuf_web_update_obj) },
+#endif
+
 
 #ifdef AMYBOARD
     { MP_ROM_QSTR(MP_QSTR_start_amyboard_amy), MP_ROM_PTR(&tulip_start_amyboard_amy_obj) },
