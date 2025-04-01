@@ -211,7 +211,6 @@ float cv_input_hook(uint16_t channel) {
     #endif
 }
 
-extern mp_obj_t audio_buffer_callback;
 // Write to the GP8413
 uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
     if(external_map[osc]==1 || external_map[osc]==2) {
@@ -278,9 +277,6 @@ void amyboard_fill_audio_buffer_task() {
 
         if(written != AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS || read != AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS) {
             fprintf(stderr,"i2s underrun: [w %d,r %d] vs %d\n", written, read, AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS);
-        }
-        if(audio_buffer_callback != NULL) {
-            mp_sched_schedule(audio_buffer_callback, mp_obj_new_int(osc));
         }
     }
 }
