@@ -493,7 +493,7 @@ amy.send(voices='0', load_patch=101, note=50, vel=1) # all Alles speakers in a m
 amy.send(voices='0', load_patch=101, note=50, vel=1, client=2) # just a certain client
 ```
 
-To load your own WAVE files as samples, use `amy.load_sample`:
+To load your own WAVE files as samples you can play like an instrument, use `amy.load_sample`:
 
 ```python
 # To save space / RAM, you may want to downsample your WAVE files to 11025 or 22050Hz. We detect SR automatically.
@@ -542,6 +542,54 @@ chord = music.Chord("F:min7")
 for i,note in enumerate(chord.midinotes()):
     amy.send(wave=amy.SINE,osc=i*9,note=note,vel=0.25)
 ```
+
+## Low level sample access and direct audio playback
+
+You can access the audio input (`AUDIO_IN0/1`) sample buffer per frame (on Tulip Desktop, Web, and future devices with audio input support), and you can also set two external audio channels (`AUDIO_EXT0/1`) from Python. This lets you synthesize audio in Python, or do things like stream WAV files from disk to the audio output. 
+
+To do so, you need to register an AMY frame callback in Tulip. In this example, we open a WAV file and read it 256 frames per block, and set those frames to the EXT0/1 oscillators, which we initialize as AMY oscillators 0 and 1, with their pan set to left and right. 
+
+```python
+# Play a wav file through AMY, streaming from disk
+import amy_wave
+f = amy_wave.open(wav_filename,'rb')
+
+def cb(x):
+    frames = f.readframes(256)
+    if(len(frames)!=1024): # file done. stop the AMY frame callback.
+        frames = bytes(1024)
+        tulip.amy_block_done_callback()
+    # Sets the stereo channel buffer EXT0/EXT1 from the frames bytes
+    tulip.amy_set_external_input_buffer(frames)
+
+amy.reset()
+amy.send(osc=0,wave=amy.AUDIO_EXT0, pan=0, vel=1)
+amy.send(osc=1,wave=amy.AUDIO_EXT1, pan=1, vel=1)
+tulip.amy_block_done_callback(cb)
+```
+
+To sample incoming audio (on devices that support it), use `tulip.amy_get_input_buffer`:
+
+```python
+buf = bytes()
+tick_start = 0
+ms = 2000
+
+def sample(x):
+    global buf
+    buf = buf + tulip.amy_get_input_buffer()
+    # stop "recording" to buf after ms
+    if(tulip.ticks_ms() > tick_start + ms): 
+        tulip.amy_block_done_callback()
+        play()
+
+tick_start = tulip.ticks_ms()
+print("Recording for 2s. Make sure audio input is on!")
+tulip.amy_block_done_callback(sample)
+# Then buf will have stereo frames of audio to do whatever you want with.
+```
+
+Please note: on Tulip CC hardware, you do not have much compute time left per block to do much. Reading files, saving to memory or doing simple synthesis works, but most anything more complicated you should write your effects / synthesis code in C, as part of AMY.
 
 ## Music sequencer
 

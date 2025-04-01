@@ -129,7 +129,7 @@ void setup_fs() {
 void mp_js_init(int pystack_size, int heap_size) {
 
     setup_fs();
-    emscripten_set_main_loop(main_loop__tulip, 60, 0);
+    emscripten_set_main_loop(main_loop__tulip, 0, 0);
 
     #if MICROPY_ENABLE_PYSTACK
     mp_obj_t *pystack = (mp_obj_t *)malloc(pystack_size * sizeof(mp_obj_t));

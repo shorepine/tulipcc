@@ -104,17 +104,35 @@ void *mcast_listen_task(void *vargp);
 
 extern char *message_start_pointer;
 extern int16_t message_length;
+#include "py/compile.h"
+#include "py/runtime.h"
+#include "py/builtin.h"
+#include "py/repl.h"
+#include "py/gc.h"
+#include "py/objstr.h"
+#include "py/cstack.h"
+#include "py/mphal.h"
+#include "py/mpthread.h"
+#include "py/objmodule.h"
 
+extern mp_obj_t amy_block_done_callback;
 
 void alles_send_message(char * message, uint16_t len) {
     //fprintf(stderr, "LOG: alles_send_message at time %lld\n", amy_sysclock());
     alles_parse_message(message, len);
 }
 
+void tulip_amy_block_done() {
+    if(amy_block_done_callback != NULL && amy_block_done_callback != mp_const_none) {
+        mp_sched_schedule(amy_block_done_callback, mp_const_none);
+    }
+}
+
 #ifdef ESP_PLATFORM
 // init AMY from the esp. wraps some amy funcs in a task to do multicore rendering on the ESP32 
 amy_err_t esp_amy_init() {
     sync_init();
+    amy_external_block_done_hook = tulip_amy_block_done;
     amy_start(2,1,1,1);
     // We create a mutex for changing the event queue and pointers as two tasks do it at once
     xQueueSemaphore = xSemaphoreCreateMutex();
@@ -127,14 +145,17 @@ amy_err_t esp_amy_init() {
 
     // And the fill audio buffer thread, combines, does volume & filters
     xTaskCreatePinnedToCore(&esp_fill_audio_buffer_task, ALLES_FILL_BUFFER_TASK_NAME, ALLES_FILL_BUFFER_TASK_STACK_SIZE, NULL, ALLES_FILL_BUFFER_TASK_PRIORITY, &alles_fill_buffer_handle, ALLES_FILL_BUFFER_TASK_COREID);
+
     return AMY_OK;
 }
 #else
+
 
 extern void *miniaudio_run(void *vargp);
 #include <pthread.h>
 amy_err_t unix_amy_init() {
     sync_init();
+    amy_external_block_done_hook = tulip_amy_block_done;
     amy_start(1,1,1,1);
     pthread_t thread_id;
     pthread_create(&thread_id, NULL, miniaudio_run, NULL);

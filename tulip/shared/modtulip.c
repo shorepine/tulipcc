@@ -73,14 +73,48 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_board_obj, 0, 0, tulip_board);
 
 mp_obj_t midi_callback = NULL;
 
-
-
-
 STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
     midi_callback = args[0];
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_midi_callback);
+
+
+
+#ifndef __EMSCRIPTEN__
+extern void amy_get_input_buffer(int16_t * samples);
+extern void amy_set_external_input_buffer(int16_t * samples);
+
+mp_obj_t amy_block_done_callback = NULL;
+
+STATIC mp_obj_t tulip_amy_block_done_callback(size_t n_args, const mp_obj_t *args) {
+    if(n_args==0) {
+        amy_block_done_callback = NULL;
+    } else {
+        amy_block_done_callback = args[0];
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_block_done_callback_obj, 0, 1, tulip_amy_block_done_callback);
+
+
+STATIC mp_obj_t tulip_amy_get_input_buffer(size_t n_args, const mp_obj_t *args) {
+    uint8_t buf[1024];
+    amy_get_input_buffer((int16_t*)buf);
+    mp_obj_t input_bytes = mp_obj_new_bytes(buf, 1024);
+    return input_bytes;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_input_buffer_obj, 0, 0, tulip_amy_get_input_buffer);
+
+STATIC mp_obj_t tulip_amy_set_external_input_buffer(size_t n_args, const mp_obj_t *args) {
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+    if(bufinfo.len!=1024) {  mp_raise_ValueError(MP_ERROR_TEXT("bytes len must be 1024")); }
+    amy_set_external_input_buffer((int16_t*)bufinfo.buf);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_external_input_buffer_obj, 1, 1, tulip_amy_set_external_input_buffer);
+#endif
 
 
 STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
@@ -1422,6 +1456,11 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
+#ifndef __EMSCRIPTEN__
+    { MP_ROM_QSTR(MP_QSTR_amy_block_done_callback), MP_ROM_PTR(&tulip_amy_block_done_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_get_input_buffer), MP_ROM_PTR(&tulip_amy_get_input_buffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
+#endif
     { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },

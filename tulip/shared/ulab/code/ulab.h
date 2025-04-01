@@ -830,7 +830,7 @@
 // user-defined module; source of the module and
 // its sub-modules should be placed in code/user/
 #ifndef ULAB_HAS_USER_MODULE
-#define ULAB_HAS_USER_MODULE                (0)
+#define ULAB_HAS_USER_MODULE                (1)
 #endif
 
 #endif

@@ -87,7 +87,7 @@ try:
 except:
     import framebuf
     _fb_variant = 1
-print("SH1107: framebuf is ", ("standard" if _fb_variant ==1 else "extended") )
+#print("SH1107: framebuf is ", ("standard" if _fb_variant ==1 else "extended") )
 
 # a few register definitions with SH1107 data sheet reference numbers
 _LOW_COLUMN_ADDRESS      = const(0x00)   # 1. Set Column Address 4 lower bits (POR = 00H) 
