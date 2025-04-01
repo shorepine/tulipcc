@@ -67,7 +67,7 @@ def init_display():
             try:
                 hw_display = sh1107_oled()
                 display_buffer = hw_display.displaybuf
-                display = hw_display.super() 
+                display = hw_display 
             except:
                 pass # no physical display
     if(display is not None): display_startup()

@@ -273,7 +273,11 @@ void init_window() {
     if (window == NULL) {
         fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
     } else {
+        #ifdef __EMSCRIPTEN__
+        default_renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
+        #else
         default_renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE | SDL_RENDERER_PRESENTVSYNC);
+        #endif        
         framebuffer= SDL_CreateTexture(default_renderer,SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
         #ifndef __EMSCRIPTEN__
         force_rescale();

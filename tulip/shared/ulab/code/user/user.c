@@ -80,9 +80,37 @@ static mp_obj_t user_square(mp_obj_t arg) {
 
 MP_DEFINE_CONST_FUN_OBJ_1(user_square_obj, user_square);
 
+// lut, indices
+static mp_obj_t user_arraymodlut(mp_obj_t arg, mp_obj_t arg2) {
+
+    // raise a TypeError exception, if the input is not an ndarray
+    if(!mp_obj_is_type(arg, &ulab_ndarray_type)) {
+        mp_raise_TypeError(MP_ERROR_TEXT("input must be an ndarray"));
+    }
+    ndarray_obj_t *lutarray = MP_OBJ_TO_PTR(arg);
+    ndarray_obj_t *indarray = MP_OBJ_TO_PTR(arg2);
+
+    // if the input is a dense array, create `results` with the same number of
+    // dimensions, shape, and dtype
+    ndarray_obj_t *results = ndarray_new_dense_ndarray(indarray->ndim, indarray->shape, NDARRAY_INT16);
+
+    // since in a dense array the iteration over the elements is trivial, we
+    // can cast the data arrays ndarray->array and results->array to the actual type
+    mp_float_t *ind = (mp_float_t *)indarray->array;
+    int16_t *lut = (int16_t*)lutarray->array;
+    int16_t *rarray = (int16_t *)results->array;
+    for(size_t i=0; i < indarray->len; i++, ind++) {
+        *rarray++ =  lut[(uint32_t)(*ind) % (lutarray->len)];
+    }
+    return MP_OBJ_FROM_PTR(results);
+}
+
+MP_DEFINE_CONST_FUN_OBJ_2(user_arraymodlut_obj, user_arraymodlut);
+
 static const mp_rom_map_elem_t ulab_user_globals_table[] = {
     { MP_OBJ_NEW_QSTR(MP_QSTR___name__), MP_OBJ_NEW_QSTR(MP_QSTR_user) },
     { MP_OBJ_NEW_QSTR(MP_QSTR_square), (mp_obj_t)&user_square_obj },
+    { MP_OBJ_NEW_QSTR(MP_QSTR_arraymodlut), (mp_obj_t)&user_arraymodlut_obj },
 };
 
 static MP_DEFINE_CONST_DICT(mp_module_ulab_user_globals, ulab_user_globals_table);

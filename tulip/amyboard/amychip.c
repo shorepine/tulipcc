@@ -211,11 +211,11 @@ float cv_input_hook(uint16_t channel) {
     #endif
 }
 
-
+extern mp_obj_t audio_buffer_callback;
 // Write to the GP8413
 uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
+    if(external_map[osc]==1 || external_map[osc]==2) {
 #ifdef ESP_PLATFORM
-    if(external_map[osc]>0) {
         // -5v to +5v? 
         float volts = S2F(buf[0])*5.0;
         int32_t val = (int32_t)(((volts + 10)/20.0) * 0x8000);
@@ -229,13 +229,16 @@ uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {
         uint8_t channel = external_map[osc]-1;
         if(channel == 1) ch = 0x04;
         bytes[0] = ch;
-        //fprintf(stderr, "writing %f volts [%ld] to channel %d\n", volts, val, channel);
         i2c_master_write_to_device(I2C_NUM_0, addr, bytes, 3, pdMS_TO_TICKS(10));
+        // silence this output
         return 1;
-    }
 #endif
+        return 0;
+    } else if(external_map[osc]>2) { // python audio buffer callback, WIP
+        
+        return 0;
+    } 
     return 0;
-
 }
 
 #ifdef ESP_PLATFORM
@@ -276,7 +279,9 @@ void amyboard_fill_audio_buffer_task() {
         if(written != AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS || read != AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS) {
             fprintf(stderr,"i2s underrun: [w %d,r %d] vs %d\n", written, read, AMY_BLOCK_SIZE * sizeof(i2s_sample_type) * AMY_NCHANS);
         }
-
+        if(audio_buffer_callback != NULL) {
+            mp_sched_schedule(audio_buffer_callback, mp_obj_new_int(osc));
+        }
     }
 }
 extern void esp_render_task( void * pvParameters);

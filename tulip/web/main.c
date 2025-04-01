@@ -88,10 +88,11 @@ extern uint8_t display_size_changed;
 extern SDL_Window * window;
 extern void force_rescale();
 uint32_t frame_count = 0;
+uint32_t last_tick = 0;
 void main_loop__tulip() {
     if(tulip_ready) {
         // We seem to be stuck at 60fps (even if we change it in the loop setup), so let's halve that to be more "Tulip-y"
-        if(frame_count++ % 2 == 0)
+        if(frame_count++ % 4 == 0)
             unix_display_draw();
         
         //mp_schedule_lv();
@@ -99,8 +100,9 @@ void main_loop__tulip() {
         // Why run this more than once? Tulip on web updates all its stuff twice a frame. 
         // We schedule at least 1 thing a frame - the LVGL updater
         // So this ensures that anything else scheduled (MIDI, sequencer, frame_callback, touch_callback) still can run
-        for(uint8_t i=0;i<TULIP_FRAME_SCHEDULER_EATS;i++) 
-            mp_handle_pending(true);
+        //for(uint8_t i=0;i<TULIP_FRAME_SCHEDULER_EATS;i++) 
+        MICROPY_EVENT_POLL_HOOK
+        //mp_handle_pending(true);
 
         if(frame_count % TULIP_FS_SYNC_DIVIDER == 0)
             EM_ASM(
@@ -120,7 +122,11 @@ void main_loop__tulip() {
             unix_display_draw();
             display_size_changed = 0;
         }
-
+        if(frame_count%1000==0) {
+            uint32_t ticks = mp_hal_ticks_ms() - last_tick;
+            fprintf(stderr, "frame %d took %d ticks %2.2f FPS\n", frame_count, ticks, 1000.0/(ticks/1000.0));
+            last_tick = mp_hal_ticks_ms();
+        }
 
     }
 }
@@ -157,7 +163,7 @@ extern void unix_display_init();
 void mp_js_init(int pystack_size, int heap_size) {
 
     setup_fs();
-    emscripten_set_main_loop(main_loop__tulip, 60, 0);
+    emscripten_set_main_loop(main_loop__tulip, 0, 0);
 
     #if MICROPY_ENABLE_PYSTACK
     mp_obj_t *pystack = (mp_obj_t *)malloc(pystack_size * sizeof(mp_obj_t));

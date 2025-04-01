@@ -1,6 +1,9 @@
 var amy_play_message = null;
 var amy_live_start = null;
 var audio_started = false;
+var amy_sysclock = null;
+var amy_get_input_buffer = null;
+var amy_set_input_buffer = null;
 var amyboard_started = false;
 var mp = null;
 var midiOutputDevice = null;
@@ -13,6 +16,7 @@ var editor_height = 200;
 var term = null; 
 var cv_1_voltage = 0;
 var cv_2_voltage = 0;
+var amy_module = null;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -37,9 +41,16 @@ amyModule().then(async function(am) {
   amy_sysclock = am.cwrap(
     'amy_sysclock', 'number', [null]
   );
-
+  amy_get_input_buffer = am.cwrap(
+    'amy_get_input_buffer', null, ['number']
+  );
+  amy_set_input_buffer = am.cwrap(
+    'amy_set_external_input_buffer', null, ['number']
+  );
   amy_start(1,1,1,1);
+  amy_module = am;
 });
+
 
 // Called from AMY to update AMYboard about what tick it is, for the sequencer
 function amy_sequencer_js_hook(tick) {
@@ -276,10 +287,10 @@ async function upload() {
         input.onchange = e => { 
             var file = e.target.files[0]; 
             var reader = new FileReader();
-            reader.readAsText(file,'UTF-8');
+            reader.readAsArrayBuffer(file); //,'UTF-8');
             reader.onload = readerEvent => {
                 var content = readerEvent.target.result; // this is the content!
-                mp.FS.writeFile(upload_folder.fullpath + '/' + file.name, content);
+                mp.FS.writeFile(upload_folder.fullpath + '/' + file.name, new Uint8Array(content), {encoding:'binary'});
                 fill_tree();
             }
         }
@@ -311,7 +322,7 @@ async function load_editor() {
     if(file != null) {
         editor.setValue(file.getContents('utf8'));
         // trim the `/amyboard` from here
-        document.getElementById('editor_filename').value = file.fullpath.substring(7);
+        document.getElementById('editor_filename').value = file.fullpath.substring("/amyboard".length); 
         setTimeout(function () { editor.save() }, 100);
         setTimeout(function () { editor.refresh() }, 250);
     }
@@ -435,6 +446,25 @@ async function toggle_audioin() {
     }
 }
 
+ function get_audio_samples() {
+     var res_ptr = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
+     amy_module.ccall('amy_get_input_buffer', null, ["number"], [res_ptr]);
+     var view = amy_module.HEAPU8.subarray(res_ptr , res_ptr + 1024);
+     amy_module._free(res_ptr);
+     return view
+ }
+
+ function set_audio_samples(samples) {
+     var res_ptr = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
+     amy_module.HEAPU8.set(samples, res_ptr);
+     amy_module.ccall('amy_set_external_input_buffer', null, ["number"], [res_ptr]);
+     amy_module._free(res_ptr);
+ }
+
+async function amy_block_processed_js_hook() {
+    mp.runPythonAsync(`if amy.block_cb is not None: amy.block_cb(None)`);
+}
+
 async function start_amyboard() {
   // Don't run this twice
   if(amyboard_started) return;
@@ -446,14 +476,22 @@ async function start_amyboard() {
   await mp.registerJsModule('amy_js_message', amy_play_message);
   await mp.registerJsModule('amy_sysclock', amy_sysclock);
   await mp.registerJsModule('amyboard_world_upload_file', amyboard_world_upload_file);
+  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);
+  await mp.registerJsModule('amy_set_external_input_buffer', set_audio_samples);
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
   mp.registerJsModule("jssleep", sleep_ms);
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import tulip, amy, amy_js_message, amy_sysclock
+    import tulip, amy, amy_js_message, amy_sysclock, amy_get_input_buffer, amy_set_external_input_buffer
     amy.override_send = amy_js_message
     tulip.amy_ticks_ms = amy_sysclock
+    def amy_block_done_callback(f=None):
+        amy.block_cb = f
+    # put the js exported AMY shims in the spot tulip expects 
+    tulip.amy_set_external_input_buffer = amy_set_external_input_buffer
+    tulip.amy_get_input_buffer = amy_get_input_buffer
+    tulip.amy_block_done_callback = amy_block_done_callback
   `);
 
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.

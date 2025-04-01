@@ -65,7 +65,6 @@
 // Command line options, with their defaults
 static bool compile_only = false;
 static uint emit_opt = MP_EMIT_OPT_NONE;
-
 #if MICROPY_ENABLE_GC
 // Heap size of GC heap (if enabled)
 // Make it larger on a 64 bit machine, because pointers are larger.
@@ -330,6 +329,8 @@ static int do_file(const char *file) {
 static int do_str(const char *str) {
     return execute_from_lexer(LEX_SRC_STR, str, MP_PARSE_FILE_INPUT, false);
 }
+
+
 
 static void print_help(char **argv) {
     printf(
@@ -946,7 +947,6 @@ int main(int argc, char **argv) {
     pthread_create(&mp_thread_id, NULL, main_, NULL);
 
     tsequencer_init();
-
     delay_ms(100);
     // Schedule a "turning on" sound
 
