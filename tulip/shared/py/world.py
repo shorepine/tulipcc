@@ -62,7 +62,6 @@ discord_epoch = 1420070400000
 def messages(n=500, chunk_size = 100, mtype='text'):
     ret = []
     before = None
-
     base_url = files_base_url
     if(tulip.board()=="AMYBOARD"):
         base_url = amyboard_base_url
@@ -109,7 +108,7 @@ def messages(n=500, chunk_size = 100, mtype='text'):
                 'filename':a['filename'], 
                 'size':a['size'], 
                 'url':a['url'], 
-                'content_type':a['content_type']
+                'content_type':a.get('content_type', None)
             })
             ret.append(r)
     return ret
@@ -165,8 +164,9 @@ def ls(count=10): # prints latest count files
 
 # uploads a file
 def upload(filename, description=""):
+    base_url = files_base_url
     if(tulip.board()=="AMYBOARD"):
-        files_base_url = amyboard_base_url
+        base_url = amyboard_base_url
 
     u = prompt_username()
     if u is None:
@@ -184,7 +184,7 @@ def upload(filename, description=""):
 
     # First get the url to upload to
     api_response = requests.post(
-        files_base_url+"attachments",
+        base_url+"attachments",
         headers=headers,
         json={"files": [{"filename": filename, "file_size": filesize, "id": 1}]},
     )
@@ -212,7 +212,7 @@ def upload(filename, description=""):
             "filename":filename
         }]
     }
-    r = requests.post(files_base_url+"messages", headers = headers, data = json.dumps(payload))
+    r = requests.post(base_url+"messages", headers = headers, data = json.dumps(payload))
 
     print("Uploaded %s to %s World." % (filename,"AMYboard" if tulip.board()=="AMYBOARD" else "Tulip"))
     if(tar):
