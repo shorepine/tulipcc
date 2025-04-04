@@ -137,8 +137,6 @@ To transfer a file from your computer to Tulip from mpremote, use `mpremote resu
 
 To edit a file on Tulip directly on your computer, just do `mpremote resume edit file.py`. This will open whatever `EDITOR` you have set in your shell's environment. Once you save it in your editor, it'll be saved on Tulip! 
 
-A very useful way to interact with files on your local computer in Tulip is to use `mpremote resume mount`. This lets you "mount" a local folder on your computer on Tulip, and you can run files and interact with them as if they were locally there. Try `mpremote resume mount .` to 'mount' the current directory on your computer to Tulip's `/remote`. `mpremote` will show you a REPL already in the right directory, but you can then move over to your Tulip to continue working there.
-
 [See a lot more about `mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html). Note that we've only confirmed Tulip to work with the `fs`, `mount` and `repl` commands so far.  And on Tulip, you always need to add `resume` to your `mpremote` command. If you have any issues let us know! 
 
 ## Using Wi-Fi
