@@ -24,6 +24,10 @@ cp shared/py/juno6.py fs/tulip/ex/my_juno6.py
 cp shared/py/worldui.py fs/tulip/ex/my_worldui.py
 cp shared/py/voices.py fs/tulip/ex/my_voices.py
 
+# Make sure the submodules are fresh
+rm ../.submodules_ok
+
+# Do the esp32s3 boards
 cd esp32s3
 source ~/esp/esp-idf/export.sh 
 
