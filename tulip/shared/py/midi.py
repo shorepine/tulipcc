@@ -30,7 +30,7 @@ class MidiConfig:
         for channel in self.synth_per_channel.keys():
             self.release_synth_for_channel(channel)
         # For now, for convenience, reset the whole system too, clearing any synth definitions.
-        Synth.reset()
+        PatchSynth.reset()
 
     def release_synth_for_channel(self, channel):
         if channel in self.synth_per_channel:
