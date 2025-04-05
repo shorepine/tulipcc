@@ -50,7 +50,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpk0hqmkyq.js
+// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmp25wvv301.js
 
   Module['expectedDataFileDownloads'] ??= 0;
   Module['expectedDataFileDownloads']++;
@@ -69,8 +69,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.substring(0, location.pathname.lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250401161209.data';
-      var REMOTE_PACKAGE_BASE = 'amyboard-20250401161209.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250405104001.data';
+      var REMOTE_PACKAGE_BASE = 'amyboard-20250405104001.data';
       var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
 var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 
@@ -206,10 +206,10 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250401161209.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250405104001.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250401161209.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250405104001.data');
 
       Module['preloadResults'] ??= {};
 
@@ -229,25 +229,25 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/amyboard/sys/.DS_Store", "start": 0, "end": 6148}, {"filename": "/amyboard/sys/ex/bcla3.wav", "start": 6148, "end": 591930, "audio": 1}, {"filename": "/amyboard/sys/ex/vlng3.wav", "start": 591930, "end": 894720, "audio": 1}, {"filename": "/amyboard/sys/ex/vlsa3.wav", "start": 894720, "end": 1353294, "audio": 1}, {"filename": "/amyboard/sys/ex/woodpiano.txt", "start": 1353294, "end": 1353877}], "remote_package_size": 1353877});
+    loadPackage({"files": [{"filename": "/amyboard/sys/ex/bcla3.wav", "start": 0, "end": 585782, "audio": 1}, {"filename": "/amyboard/sys/ex/vlng3.wav", "start": 585782, "end": 888572, "audio": 1}, {"filename": "/amyboard/sys/ex/vlsa3.wav", "start": 888572, "end": 1347146, "audio": 1}, {"filename": "/amyboard/sys/ex/woodpiano.txt", "start": 1347146, "end": 1347729}], "remote_package_size": 1347729});
 
   })();
 
-// end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpk0hqmkyq.js
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpugrbyngb.js
+// end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmp25wvv301.js
+// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpkf59pu7z.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpugrbyngb.js
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmp1y5k5_nt.js
+  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpkf59pu7z.js
+// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpu91lj7iv.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmp1y5k5_nt.js
+  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpu91lj7iv.js
 
 
 // Sometimes an existing Module object exists with properties
@@ -923,14 +923,14 @@ function createExportWrapper(name, nargs) {
 var wasmBinaryFile;
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'amyboard-20250401161209.wasm';
+    var f = 'amyboard-20250405104001.wasm';
     if (!isDataURI(f)) {
       return locateFile(f);
     }
     return f;
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('amyboard-20250401161209.wasm', import.meta.url).href;
+  return new URL('amyboard-20250405104001.wasm', import.meta.url).href;
 }
 
 function getBinarySync(file) {
@@ -6463,7 +6463,7 @@ for (const prop of Object.keys(Module)) {
 })();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://amyboard-20250401161209.org/
+ * This file is part of the MicroPython project, http://amyboard-20250405104001.org/
  *
  * The MIT License (MIT)
  *
@@ -6491,7 +6491,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `amyboard-20250401161209.mjs`.
+// - url: location to load `amyboard-20250405104001.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -6853,7 +6853,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node amyboard-20250401161209.mjs`.
+    // Check if this module is run from the command line via `node amyboard-20250405104001.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -6877,7 +6877,7 @@ if (
 }
 
 /*
- * This file is part of the MicroPython project, http://amyboard-20250401161209.org/
+ * This file is part of the MicroPython project, http://amyboard-20250405104001.org/
  *
  * The MIT License (MIT)
  *
@@ -7118,7 +7118,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://amyboard-20250401161209.org/
+ * This file is part of the MicroPython project, http://amyboard-20250405104001.org/
  *
  * The MIT License (MIT)
  *
