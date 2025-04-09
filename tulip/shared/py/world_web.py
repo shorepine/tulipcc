@@ -18,16 +18,9 @@ def options(d):
     return js.JSON.parse(json.dumps(d))
 
 def as_bytearray(buffer):
-    """
-    Given a JavaScript ArrayBuffer, convert it to a Python bytearray in a
-    MicroPython friendly manner.
-    """
+    # Note: we have a patch in Tulip so that Uint8Array == bytes
     ui8a = js.Uint8Array.new(buffer)
-    size = ui8a.length
-    ba = bytearray(size)
-    for i in range(0, size):
-        ba[i] = ui8a[i]
-    return ba
+    return ui8a
 
 URL_RFC_3986 = {
     "!": "%21", "#": "%23", "$": "%24", "&": "%26", "'": "%27", "(": "%28", ")": "%29", "*": "%2A", "+": "%2B", 
