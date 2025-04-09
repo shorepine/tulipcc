@@ -99,7 +99,6 @@ if(tulip.board() == "WEB" or tulip.board()=="AMYBOARD_WEB"):
     amy.AMY_SAMPLE_RATE=48000
     # Override send & bleep are done from JS on web because of click-to-start audio.
 else:
-    tulip.amy_block_done_callback(amy.block_cb)
     amy.AMY_SAMPLE_RATE=44100
     # Override amy's send to work with tulip
     amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
