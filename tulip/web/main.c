@@ -124,7 +124,7 @@ void main_loop__tulip() {
         }
         if(frame_count%1000==0) {
             uint32_t ticks = mp_hal_ticks_ms() - last_tick;
-            fprintf(stderr, "frame %d took %d ticks %2.2f FPS\n", frame_count, ticks, 1000.0/(ticks/1000.0));
+            //fprintf(stderr, "frame %d took %d ticks %2.2f FPS\n", frame_count, ticks, 1000.0/(ticks/1000.0));
             last_tick = mp_hal_ticks_ms();
         }
 
