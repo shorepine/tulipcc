@@ -18,6 +18,9 @@ EXTMOD_SRC_C += $(addprefix $(TOP)/../amy/src/, \
 	pcm.c \
 	log2_exp2.c \
 	interp_partials.c \
+	parse.c \
+	midi.c \
+	instrument.c \
 )
 
 EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
@@ -33,8 +36,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	tulip_helpers.c \
 	editor.c \
 	keyscan.c \
-	midi.c \
-	alles.c \
+	amy_connector.c \
 	sounds.c \
 	lodepng.c \
 	tsequencer.c \

@@ -7,7 +7,7 @@
 uint8_t board_level;
 uint8_t status;
 uint8_t mesh_local_playback  = 1; 
-uint8_t external_map[AMY_OSCS];
+uint8_t * external_map;
 
 #ifdef ESP_PLATFORM
 // mutex that locks writes to the delta queue
@@ -130,37 +130,10 @@ void tulip_amy_block_done() {
 
 #ifdef ESP_PLATFORM
 // init AMY from the esp. wraps some amy funcs in a task to do multicore rendering on the ESP32 
-amy_err_t esp_amy_init() {
-    sync_init();
-    amy_external_block_done_hook = tulip_amy_block_done;
-    amy_start(2,1,1,1);
-    // We create a mutex for changing the event queue and pointers as two tasks do it at once
-    xQueueSemaphore = xSemaphoreCreateMutex();
 
-    // Create the second core rendering task
-    xTaskCreatePinnedToCore(&esp_render_task, ALLES_RENDER_TASK_NAME, ALLES_RENDER_TASK_STACK_SIZE, NULL, ALLES_RENDER_TASK_PRIORITY, &amy_render_handle, ALLES_RENDER_TASK_COREID);
-
-    // Wait for the render tasks to get going before starting the i2s task
-    delay_ms(100);
-
-    // And the fill audio buffer thread, combines, does volume & filters
-    xTaskCreatePinnedToCore(&esp_fill_audio_buffer_task, ALLES_FILL_BUFFER_TASK_NAME, ALLES_FILL_BUFFER_TASK_STACK_SIZE, NULL, ALLES_FILL_BUFFER_TASK_PRIORITY, &alles_fill_buffer_handle, ALLES_FILL_BUFFER_TASK_COREID);
-
-    return AMY_OK;
-}
 #else
 
 
-extern void *miniaudio_run(void *vargp);
-#include <pthread.h>
-amy_err_t unix_amy_init() {
-    sync_init();
-    amy_external_block_done_hook = tulip_amy_block_done;
-    amy_start(1,1,1,1);
-    pthread_t thread_id;
-    pthread_create(&thread_id, NULL, miniaudio_run, NULL);
-    return AMY_OK;
-}
 #endif
 
 
@@ -233,28 +206,24 @@ uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
 void run_alles() {
     check_init(&esp_event_loop_create_default, "Event");
     // We turn off writing to i2s on r10 when doing on chip debugging because of pins
-    #ifndef TULIP_R10_DEBUG
-    #ifndef AMYBOARD
-        check_init(&setup_i2s, "i2s");
-    #endif
-    #endif
     // clear the external map
     for(uint16_t i=0;i<AMY_OSCS;i++) external_map[i] = 0;
     amy_external_render_hook = external_cv_render;
 
+    amy_config_t config = amy_default_config();
+    config.cores = 2;
+    config.has_audio_in = 0;
+    config.lrc = CONFIG_I2S_LRCLK;
+    config.bclk = CONFIG_I2S_BCLK;
+    config.dout = CONFIG_I2S_DIN; // badly named
+    amy_start(config);
+    amy_live_start();
 
-
-    esp_amy_init();
-    amy_reset_oscs();
-    //
-    // Spin this core until the power off button is pressed, parsing events and making sounds
-    //while(status & RUNNING) {
-    //    delay_ms(10);
-    //}
 }
 
 #else
 
+/*
 void * alles_start(void *vargs) {
     alles_local_ip = malloc(256);
     alles_local_ip[0] = 0;
@@ -266,7 +235,7 @@ void * alles_start(void *vargs) {
     }
     return 0;
 }
-
+*/
 #endif
 
 #ifdef ESP_PLATFORM
@@ -312,64 +281,6 @@ void alles_init_multicast() {
 
 
 
-
-
-
-void alles_parse_message(char *message, uint16_t length) {
-    uint8_t mode = 0;
-    int16_t client = -1;
-    int32_t sync = -1;
-    int8_t sync_index = -1;
-    uint8_t ipv4 = 0;
-    uint16_t start = 0;
-    uint16_t c = 0;
-    uint8_t sync_response = 0;
-
-    // Parse the AMY stuff out of the message first
-    struct event e = amy_parse_message(message);
-    if(e.status == EVENT_TRANSFER_DATA) {
-        // transfer data already dealt with. we skip this followon check.
-        length = 0;
-    } else {
-        //fprintf(stderr, "message is %s len is %d\n", message, length);
-        // Then pull out any alles-specific modes in this message 
-        while(c < length+1) {
-            uint8_t b = message[c];
-            if(b == '_' && c==0) sync_response = 1;
-            if( ((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')) || b == 0) {  // new mode or end
-                if(mode=='g') client = atoi(message + start); 
-                if(mode=='U') sync = atol(message + start); 
-                if(mode=='W') external_map[e.osc] = atoi(message+start);
-                if(sync_response) if(mode=='r') ipv4=atoi(message + start);
-                if(mode=='i') sync_index = atoi(message + start);
-                mode = b;
-                start = c + 1;
-            } 
-            c++;
-        }
-    }
-    if(sync_response) {
-        // If this is a sync response, let's update our local map of who is booted
-        //fprintf(stderr, "sync response message was %s\n", message);
-        update_map(client, ipv4, sync);
-        length = 0; // don't need to do the rest
-    } else {
-        // Note, we DO NOT do anything with computed_delta in Tulip. Tulip cannot receive alles mesh messages for playback.
-    }
-    // Only do this if we got some data
-    if(length >0) {
-        // TODO -- not that it matters, but the below could probably be one or two lines long instead
-        // Don't add sync messages to the event queue
-        if(sync >= 0 && sync_index >= 0) {
-            handle_sync(sync, sync_index);
-        } else {
-            // Don't parse events other than sync messages if i'm in mesh mode. 
-            if(!mesh_flag) {
-                amy_add_event(e);
-            }
-        }
-    }
-}
 
 void update_map(uint8_t client, uint8_t ipv4, int32_t time) {
     // I'm called when I get a sync response or a regular ping packet
