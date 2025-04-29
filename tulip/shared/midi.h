@@ -1,3 +1,4 @@
+#if 0
 // midi.h
 #ifdef ESP_PLATFORM 
 #include "alles.h"
@@ -34,4 +35,6 @@ void midi_local(uint8_t * bytes, uint16_t len);
 void run_midi();
 #else
 void *run_midi(void*vargp);
+#endif
+
 #endif

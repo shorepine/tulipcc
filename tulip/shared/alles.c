@@ -1,7 +1,7 @@
 // Alles multicast synthesizer
 // Brian Whitman
 // brian@variogr.am
-
+#if 0
 #include "alles.h"
 
 uint8_t board_level;
@@ -213,11 +213,13 @@ void run_alles() {
     amy_config_t config = amy_default_config();
     config.cores = 2;
     config.has_audio_in = 0;
-    config.lrc = CONFIG_I2S_LRCLK;
-    config.bclk = CONFIG_I2S_BCLK;
-    config.dout = CONFIG_I2S_DIN; // badly named
+    config.i2s_lrc = CONFIG_I2S_LRCLK;
+    config.i2s_bclk = CONFIG_I2S_BCLK;
+    config.i2s_dout = CONFIG_I2S_DIN; // badly named
     amy_start(config);
+    #ifndef ESP_PLATFORM
     amy_live_start();
+    #endif
 
 }
 
@@ -312,4 +314,4 @@ void handle_sync(int32_t time, int8_t index) {
 }
 
 
-
+#endif
