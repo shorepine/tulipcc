@@ -1,4 +1,5 @@
 // midi.c
+#if 0
 #include "midi.h"
 #include "polyfills.h"
 uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
@@ -285,6 +286,8 @@ void midi_out(uint8_t * bytes, uint16_t len) {
     // nothing yet for linux
     #endif
 }
+#endif
+
 #endif
 
 #endif

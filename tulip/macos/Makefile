@@ -100,7 +100,7 @@ INC += -I$(BUILD)
 
 # compiler settings
 CWARN = -Wall -Werror
-CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
+CWARN += -Wextra -Wno-c2x-extensions -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA) 
 CFLAGS += -DTULIP_DESKTOP -DMACOS -DAMY_HAS_AUDIO_IN
 CFLAGS += $(ARCHFLAGS) 
@@ -260,12 +260,12 @@ endif
 
 
 
+#	../shared/desktop/multicast.c \
 
 # source files
 SRC_C += \
 	main.c \
 	../shared/desktop/unix_display.c \
-	../shared/desktop/multicast.c \
 	../shared/desktop/unix_mphal.c \
 	../../amy/src/libminiaudio-audio.c \
 	$(MICROPY_PORT_DIR)/mpthreadport.c \
@@ -297,7 +297,7 @@ SHARED_SRC_C += $(addprefix ../../micropython/shared/,\
 SRC_CXX += \
 	$(SRC_MOD_CXX)
 
-SRC_M = virtualmidi.m
+SRC_M = ../../amy/src/macos_midi.m
 
 OBJ = $(PY_O)
 OBJ += $(addprefix $(BUILD)/, $(SRC_C:.c=.o))

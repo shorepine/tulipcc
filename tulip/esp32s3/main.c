@@ -111,12 +111,6 @@ TaskHandle_t display_handle;
 TaskHandle_t usb_handle;
 TaskHandle_t touchscreen_handle;
 TaskHandle_t tulip_mp_handle;
-TaskHandle_t midi_handle;
-TaskHandle_t alles_handle;
-TaskHandle_t alles_parse_handle;
-TaskHandle_t alles_receive_handle;
-TaskHandle_t amy_render_handle;
-TaskHandle_t alles_fill_buffer_handle;
 TaskHandle_t idle_0_handle;
 TaskHandle_t idle_1_handle;
 TaskHandle_t sequencer_handle;
@@ -372,6 +366,36 @@ extern void run_gt911();
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
 
+#define AMY_TASK_COREID (1)
+#define AMY_TASK_STACK_SIZE    (16 * 1024) 
+#define AMY_TASK_NAME "amy_task"
+#define AMY_TASK_PRIORITY (ESP_TASK_PRIO_MAX)
+TaskHandle_t amy_handle;
+
+void run_amy() {
+    amy_config_t amy_config = amy_default_config();
+    amy_config.has_audio_in = 0;
+    amy_config.has_midi_uart = 1;
+    amy_config.set_default_synth = 1;
+    amy_config.cores = 2;
+    amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
+    amy_config.i2s_bclk = CONFIG_I2S_BCLK;
+    amy_config.i2s_dout = CONFIG_I2S_DIN; // badly named
+    amy_config.midi_out = MIDI_OUT_PIN;
+    amy_config.midi_in = MIDI_IN_PIN;
+    amy_start(amy_config);
+    amy_live_start();
+    while(1) {
+        vTaskDelay(10);
+    }
+}
+
+void startup_amy() {
+    //esp_err_t err = esp_event_loop_create_default();
+    xTaskCreatePinnedToCore(run_amy, AMY_TASK_NAME, (AMY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, AMY_TASK_PRIORITY, &amy_handle, AMY_TASK_COREID);
+}
+
+
 void app_main(void) {
     // Hook for a board to run code at start up.
     // This defaults to initialising NVS.
@@ -393,15 +417,7 @@ void app_main(void) {
     gpio_set_level(TDECK_PERI_GPIO, 1);
     delay_ms(500);
     #endif
-
-    #ifndef TDECK
-    fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
-    xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
-    fflush(stderr);
-    delay_ms(100);
-    #endif
     
-
     #ifndef TULIP4_R10_V0 // v0 doesn't do usb
     #ifndef TDECK // TDECK doesn't send power to USB
     fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
@@ -434,8 +450,8 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(100);
 
-    fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
-    run_alles();
+    fprintf(stderr,"Starting AMY on core %d\n", ALLES_TASK_COREID);
+    startup_amy();
 
     //xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
