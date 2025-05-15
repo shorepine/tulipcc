@@ -211,12 +211,13 @@ STATIC mp_obj_t tulip_sysex_in(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sysex_in_obj, 0, 0, tulip_sysex_in);
 
+extern void tulip_send_midi_out(uint8_t *, uint16_t);
 
 STATIC mp_obj_t tulip_midi_out(size_t n_args, const mp_obj_t *args) {
     if(mp_obj_get_type(args[0]) == &mp_type_bytes) {
         mp_buffer_info_t bufinfo;
         mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
-        midi_out((uint8_t*)bufinfo.buf, bufinfo.len);
+        tulip_send_midi_out((uint8_t*)bufinfo.buf, bufinfo.len);
     } else {
         mp_obj_t *items;
         size_t len;

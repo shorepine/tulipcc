@@ -368,27 +368,7 @@ StaticTask_t static_mp_handle;
 TaskHandle_t amy_handle;
 
 
-void run_amy() {
-    //uint64_t initial_sp = 0;
-    amy_config_t amy_config = amy_default_config();
-    amy_config.has_audio_in = 0;
-    amy_config.has_midi_uart = 1;
-    amy_config.set_default_synth = 1;
-    amy_config.cores = 2;
-    amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
-    amy_config.i2s_bclk = CONFIG_I2S_BCLK;
-    amy_config.i2s_dout = CONFIG_I2S_DIN; // badly named
-    amy_config.midi_out = MIDI_OUT_PIN;
-    amy_config.midi_in = MIDI_IN_PIN;
-    amy_start(amy_config);
-    amy_live_start();
-    //uint32_t c = 0;
-    while(1) {
-        vTaskDelay(10);
-        //if(c++ % 500 == 0) fprintf(stderr, "stack size for %s [%d] is actually %d\n",AMY_TASK_NAME,AMY_TASK_STACK_SIZE,(uint16_t)(initial_sp-get_stack_pointer() ));
-
-    }
-}
+extern void run_amy();
 
 void startup_amy() {
     //esp_err_t err = esp_event_loop_create_default();

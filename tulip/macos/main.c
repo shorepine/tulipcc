@@ -898,6 +898,8 @@ soft_reset_exit:
 
 #include "lvgl.h"
 
+extern void run_amy(uint8_t capture_device_id, uint8_t playback_device_id);
+
 int main(int argc, char **argv) {
     // Get the resources folder loc
     // So thread out alles and then micropython tasks
@@ -941,13 +943,7 @@ int main(int argc, char **argv) {
     }
     unix_display_init();
 
-    amy_config_t amy_config = amy_default_config();
-    amy_config.has_midi_mac = 1;
-    amy_config.capture_device_id = capture_device_id;
-    amy_config.playback_device_id = playback_device_id;
-    amy_config.has_audio_in = 1;
-    amy_start(amy_config);
-    amy_live_start();
+    run_amy(capture_device_id, playback_device_id);
 
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
