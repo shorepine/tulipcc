@@ -144,12 +144,11 @@ float compute_cpu_usage(uint8_t debug) {
 
     const char* const tasks[] = {
          "IDLE0", "IDLE1", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "esp_timer", "sys_evt", "tiT",
-         DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
-         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, SEQUENCER_TASK_NAME, 0
+         DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, AMY_TASK_NAME,
+         AMY_RENDER_TASK_NAME, AMY_FILL_BUFFER_TASK_NAME, SEQUENCER_TASK_NAME, 0
     };
     const uint8_t cores[] = {0, 1, 0, 0, 1, 0, 0, 0, 1, 0, DISPLAY_TASK_COREID, USB_TASK_COREID, TOUCHSCREEN_TASK_COREID, TULIP_MP_TASK_COREID,
-        MIDI_TASK_COREID, ALLES_TASK_COREID, ALLES_PARSE_TASK_COREID, ALLES_RECEIVE_TASK_COREID, ALLES_RENDER_TASK_COREID, ALLES_FILL_BUFFER_TASK_COREID, 
-        SEQUENCER_TASK_COREID};
+        AMY_TASK_COREID, AMY_RENDER_TASK_COREID, AMY_FILL_BUFFER_TASK_COREID,  SEQUENCER_TASK_COREID};
 
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
@@ -366,13 +365,11 @@ extern void run_gt911();
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
 
-#define AMY_TASK_COREID (1)
-#define AMY_TASK_STACK_SIZE    (16 * 1024) 
-#define AMY_TASK_NAME "amy_task"
-#define AMY_TASK_PRIORITY (ESP_TASK_PRIO_MAX)
 TaskHandle_t amy_handle;
 
+
 void run_amy() {
+    //uint64_t initial_sp = 0;
     amy_config_t amy_config = amy_default_config();
     amy_config.has_audio_in = 0;
     amy_config.has_midi_uart = 1;
@@ -385,8 +382,11 @@ void run_amy() {
     amy_config.midi_in = MIDI_IN_PIN;
     amy_start(amy_config);
     amy_live_start();
+    //uint32_t c = 0;
     while(1) {
         vTaskDelay(10);
+        //if(c++ % 500 == 0) fprintf(stderr, "stack size for %s [%d] is actually %d\n",AMY_TASK_NAME,AMY_TASK_STACK_SIZE,(uint16_t)(initial_sp-get_stack_pointer() ));
+
     }
 }
 
@@ -394,6 +394,7 @@ void startup_amy() {
     //esp_err_t err = esp_event_loop_create_default();
     xTaskCreatePinnedToCore(run_amy, AMY_TASK_NAME, (AMY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, AMY_TASK_PRIORITY, &amy_handle, AMY_TASK_COREID);
 }
+uint8_t tulip_ready = 0;
 
 
 void app_main(void) {
@@ -450,10 +451,8 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(100);
 
-    fprintf(stderr,"Starting AMY on core %d\n", ALLES_TASK_COREID);
+    fprintf(stderr,"Starting AMY\n");
     startup_amy();
-
-    //xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
     fflush(stderr);
     delay_ms(500);
     
@@ -471,6 +470,8 @@ void app_main(void) {
     #endif
 
     tsequencer_init();
+
+    tulip_ready = 1;
 
 
 }

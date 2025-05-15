@@ -24,4 +24,5 @@ uint32_t tulip_fwrite(mp_obj_t file, uint8_t * buf, uint32_t len);
 void tulip_fclose(mp_obj_t file);
 uint32_t tulip_fseek(mp_obj_t file, uint32_t seekpoint, int32_t whence);
 int32_t tulip_getline(char * line, uint32_t * len, mp_obj_t file );
+uint64_t get_stack_pointer();
 #endif

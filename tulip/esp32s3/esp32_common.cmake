@@ -131,6 +131,7 @@ list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/help.c
     ${MICROPY_PORT_DIR}/build/lv_mpy.c
     ${MICROPY_PORT_DIR}/network_common.c
+    ${MICROPY_PORT_DIR}/network_wlan.c
     ${MICROPY_PORT_DIR}/esp_lcd_touch.c
     ${MICROPY_PORT_DIR}/modsocket.c
     ${MICROPY_PORT_DIR}/mphalport.c
@@ -150,7 +151,6 @@ list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_ESP32_DIR}/machine_dac.c
     ${MICROPY_ESP32_DIR}/machine_i2c.c
     ${MICROPY_ESP32_DIR}/network_lan.c
-    ${MICROPY_ESP32_DIR}/network_wlan.c
     ${MICROPY_ESP32_DIR}/modesp.c
     ${MICROPY_ESP32_DIR}/esp32_nvs.c
     ${MICROPY_ESP32_DIR}/esp32_partition.c

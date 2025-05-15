@@ -11,7 +11,10 @@
 #include "freertos/FreeRTOS.h"
 #include "driver/i2s_std.h"
 #include "esp_wifi_types.h"
-
+// Modifier for function which doesn't return
+#ifndef MP_NORETURN
+#define MP_NORETURN __attribute__((noreturn))
+#endif
 
 // This is Tulip specific stuff. Unfortunately we cannot override some of this in ports/esp32, 
 // so we have to copy it over there as a build step.
