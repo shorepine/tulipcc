@@ -232,10 +232,10 @@ void mp_task(void *pvParameter) {
     
     machine_init();
 
-    //esp_err_t err = esp_event_loop_create_default();
-    //if (err != ESP_OK) {
-    //    ESP_LOGE("esp_init", "can't create event loop: 0x%x\n", err);
-    //}
+    esp_err_t err = esp_event_loop_create_default();
+    if (err != ESP_OK) {
+        ESP_LOGE("esp_init", "can't create event loop: 0x%x\n", err);
+    }
 
     heap_caps_register_failed_alloc_callback(esp_alloc_failed);
     uint32_t caps = MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM;
