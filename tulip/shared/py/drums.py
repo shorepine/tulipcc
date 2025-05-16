@@ -51,7 +51,11 @@ class DrumSwitch(UIElement):
     def update_amy(self):
         row = app.rows[self.row]
         if(self.on):
-            self.sequencer_event = app.drum_seq.add(self.col, app.synth.note_on, [row.midi_note])
+            self.sequencer_event = app.drum_seq.add(
+                self.col, app.synth.note_on, [],
+                note=row.midi_note, velocity=row.get_vel() * 2.0, pan=row.get_pan(),
+                freq=520 * row.get_pitch(),
+            )
             length = int((amy.AMY_SEQUENCER_PPQ/2) * 16) 
             offset = int(amy.AMY_SEQUENCER_PPQ/2) * self.col
         else:
@@ -117,11 +121,12 @@ class DrumRow(UIElement):
     def __init__(self, items, row, midi_note=0):
         super().__init__()
         self.midi_note = midi_note
-        self.preset = 0
+        self.preset = ''
         self.vel = 1.0
         self.pitch = 60
         self.pan = 0.5
         self.objs = []
+        self.items = items
         # Droodown on left
         self.group.set_size((DrumSwitch.button_width+12)*16+175+100,DrumSwitch.button_height+65)
         self.dropdown = lv.dropdown(self.group)
@@ -200,24 +205,16 @@ class DrumRow(UIElement):
         #return self.dropdown.get_selected()
         return self.preset
 
-    def set_preset(self, idx):
+    def set_preset(self, name):
+        idx = self.items.index(name)
         self.dropdown.set_selected(idx)
-        self.preset = idx
+        self.preset = name
+        drumkit_index = [d[1] for d in drumkit].index(name)
+        self.midi_note = drumkit[drumkit_index][2]
+        #print("set_preset preset %s note %d" % (self.preset, self.midi_note))
         self.update_note()
 
     def update_note(self):
-        base_note = drumkit[self.preset][0]
-        note_for_pitch = int(base_note + (self.pitch - 0.5)*24.0)
-        params_dict={
-            'amp': self.vel*2.0,
-            'wave': amy.PCM,
-            'patch': self.preset,
-            'freq': 0,
-            'note': note_for_pitch,
-            'pan': self.pan,
-        }
-        app.synth.setup_midi_note(midi_note=self.midi_note, params_dict=params_dict)
-
         # For each on switch in the row, we have to update the sequence with the new params
         for switch in self.objs:
             switch.update_amy()
@@ -236,7 +233,8 @@ class DrumRow(UIElement):
         self.update_note()
 
     def dropdown_cb(self, e):
-        self.preset = e.get_target_obj().get_selected()
+        name = self.items[e.get_target_obj().get_selected()]
+        self.set_preset(name)
         self.update_note()
 
 
@@ -274,10 +272,12 @@ def run(screen):
     app.quit_callback = quit
     app.leds = LEDStrip()
     app.add(app.leds, direction=lv.ALIGN.OUT_BOTTOM_LEFT, pad_y=0)
-    app.rows = [DrumRow([x[1] for x in drumkit], i, midi_note=i) for i in range(7)]
+    drum_items = [x[1] for x in drumkit if x[1] is not None]
+    app.rows = [DrumRow(drum_items, row=i) for i in range(7)]
     app.add(app.rows, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
+    initial_voices = ['Std Kick', 'Snare2', 'Maraca', 'Closed Hat', 'Open Hat', 'Cowbell', 'Congo Low']
     for i,row in enumerate(app.rows):
-        row.set_preset([1, 2, 0, 6, 7, 9, 10][i])
+        row.set_preset(initial_voices[i])
         row.set_vel(.5)
         row.set_pan(.5)
         row.set_pitch(.5)

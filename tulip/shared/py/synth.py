@@ -56,6 +56,8 @@ class PatchSynth:
     def deferred_init(self):
         """Finish synth initialization once we can assume all voices are available."""
         if not self._initialized:
+            if self.patch_number is None and self.patch_string is None:
+                raise ValueError('Neither patch_number nor patch_string are set')
             amy_send_args = {'num_voices': self.num_voices, 'synth_flags': self.synth_flags}
             if self.patch_string:
                 amy_send_args['patch'] = self.patch_string
@@ -65,7 +67,6 @@ class PatchSynth:
             self._initialized = True
             # Fields used by UI
             #self.num_voices = num_voices
-            self.program_change(self.patch_number)
 
     # send an AMY message to the voices in this synth
     def amy_send(self, **kwargs):
@@ -77,7 +78,7 @@ class PatchSynth:
     def all_notes_off(self):
         self.note_off(note=0)  # Note=0 means all notes off.
 
-    def note_on(self, note, velocity=1, time=None, sequence=None):
+    def note_on(self, note, velocity=1, time=None, sequence=None, **kwargs):
         self.deferred_init()
         if self.synth is None:
             # Note on after synth.release()?
@@ -85,7 +86,7 @@ class PatchSynth:
         if velocity == 0:
             self.note_off(note, time=time, sequence=sequence)
         else:  # Velocity > 0, note on.
-            self.amy_send(note=note, vel=velocity, time=time, sequence=sequence)
+            self.amy_send(note=note, vel=velocity, time=time, sequence=sequence, **kwargs)
 
     def sustain(self, state):
         """Turn sustain on/off."""
@@ -102,13 +103,12 @@ class PatchSynth:
 
     def program_change(self, patch_number):
         import time
-        self.deferred_init()
         if patch_number != self.patch_number:
             self.patch_number = patch_number
             # Reset any modified state due to previous patch modifications.
             self.patch_state = None
             time.sleep(0.1)  # "AMY queue will fill if not slept."
-            self.amy_send(patch_number=patch_number)
+            self.deferred_init()
 
     def control_change(self, control, value):
         print('control_change not implemented for amy-managed voices.')

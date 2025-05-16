@@ -33,7 +33,7 @@ class SequenceEvent:
         self.sequence.events.remove(self)
 
     def update(self, position, func, args=[], **kwargs):
-        self.tick = self.sequence.event_length_ticks*position
+        self.tick = self.sequence.event_length_ticks * position
         self.func = func
         self.g_args = args
         self.g_kwargs = kwargs
@@ -66,6 +66,7 @@ class Sequence:
             e.remove()
 
     def add(self, position, func, args=[], **kwargs):
+        #print('seq %s add: pos %d func %s args %s kwargs %s' % (self, position, func, args, kwargs))
         e = SequenceEvent(self)
         e.update(position, func, args, **kwargs)
         self.events = self.events + [e]
