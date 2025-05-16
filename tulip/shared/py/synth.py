@@ -36,8 +36,6 @@ class PatchSynth:
         amy.reset()
 
     def __init__(self, num_voices=4, patch_number=None, patch_string=None, channel=None, synth_flags=0, synth_already_initialized=False):
-        if (patch_number is None) == (patch_string is None):
-            raise ValueError('You must specify either patch_number (' + str(patch_number) + ') or patch_string (' + str(patch_string) + ') but not both.')
         if channel is not None:
             self.synth = channel
         else:
