@@ -129,9 +129,9 @@ class Settings(tulip.UIElement):
 
     def arpegg_cb(self, e):
         if(self.arpegg.get_state()==3):
-            midi.arpeggiator.set('on', True)
+            midi.arpeggiator.set('active', True)
         else:
-            midi.arpeggiator.set('on', False)
+            midi.arpeggiator.set('active', False)
 
 
 class ListColumn(tulip.UIElement):
@@ -206,13 +206,17 @@ def play_note_from_coord(app, x, y, up):
             if(x >= black_x and x < black_x+app.black_key_w):
                 note_idx = black_key_notes[i]
     if note_idx is not None:
+        channel = 1 + app.channels.selected
+        note = note_idx + 48
         if(up):
-            app.held_note[note_idx+48] = False
-            tulip.midi_local((128+app.channels.selected, note_idx+48, 127))
+            app.held_note[note] = False
+            midi.config.get_synth(channel).note_off(note)
+            #tulip.midi_local((128+app.channels.selected, note, 127))
         else:
-            if app.held_note.get(note_idx+48, False) == False:
-                app.held_note[note_idx+48] = True
-                tulip.midi_local((144+app.channels.selected, note_idx+48, 127))
+            if app.held_note.get(note, False) == False:
+                app.held_note[note] = True
+                midi.config.get_synth(channel).note_on(note, 1)
+                #tulip.midi_local((144+app.channels.selected, note, 127))
 
 
 
@@ -265,8 +269,7 @@ def update_map():
         channel = app.channels.selected + 1
         polyphony = app.polyphony.selected + 1
         # Check if this is a new thing
-        channel_patch, amy_voices = midi.config.channel_info(channel)
-        channel_polyphony = 0 if amy_voices is None else len(amy_voices)
+        channel_patch, channel_polyphony = midi.config.channel_info(channel)
         if (channel_patch, channel_polyphony) != (patch_no, polyphony):
             midi.config.add_synth(channel=channel, synth=synth.PatchSynth(patch_number=patch_no, num_voices=polyphony))
 
@@ -287,10 +290,8 @@ def update_patches(synth):
 def sync_ui_for_channel(channel):
     """Synchronize the UI to the state for this channel per midi.py."""
     global app
-    channel_patch, amy_voices = midi.config.channel_info(channel)
-
+    channel_patch, polyphony = midi.config.channel_info(channel)
     if channel_patch is not None:
-        polyphony = len(amy_voices)
         if channel_patch < 128:
             # We defer here so that setting the UI component doesn't trigger an update before it updates
             app.synths.select(0, defer=True)

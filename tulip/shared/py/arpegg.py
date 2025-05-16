@@ -35,7 +35,9 @@ class ArpeggiatorSynth:
         self.step_callback = self.arp_step  # Ensure bound_method_obj created just once.
 
     def note_on(self, note, vel):
-        if not self.active or note >= self.split_note:
+        if not self.active:
+            return
+        if note >= self.split_note:
             return self.synth.note_on(note, vel)
         if self.hold and not self.current_active_notes:
             # First note after all keys off resets hold set.
@@ -47,7 +49,9 @@ class ArpeggiatorSynth:
         self._update_full_sequence()
 
     def note_off(self, note):
-        if not self.active or note >= self.split_note:
+        if not self.active:
+            return
+        if note >= self.split_note:
             return self.synth.note_off(note)
         #print(self.current_active_notes, self.arpeggiate_base_notes)
         # Update our internal record of keys currently held down.
@@ -124,10 +128,12 @@ class ArpeggiatorSynth:
 
     def set(self, arg, val=None):
         """Callback for external control."""
-        if arg == 'on':
+        if arg == 'active':
             self.active = val
             # Reset hold state when on/off changes.
             self.arpeggiate_base_notes = set()
+            # Turn off AMY synth midi note grabbing when arpeggiator active.
+            self.synth.amy_send(grab_midi_notes=int(not val))
         elif arg == 'hold':
             self.hold = val
             # Copy across the current_active_notes after a change in hold.
