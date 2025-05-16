@@ -22,12 +22,9 @@ int16_t midi_queue_head = 0;
 int16_t midi_queue_tail = 0;
 
 
-void midi_local(uint8_t * bytes, uint16_t len) {
-    // send these bytes to AMY
-}
-
-
-void amy_midi_message_received(uint8_t *data, size_t len) {
+// I am called when AMY receives MIDI in, whether it has been processed (played in a instrument) or not 
+// In tulip i just fill up the last_midi queue so that MIDI input is accessible to Python
+void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
     //fprintf(stderr, "adding midi message of %d bytes to queue: ", len);
     for(uint32_t i = 0; i < (uint32_t)len; i++) {
         if(i < MAX_MIDI_BYTES_PER_MESSAGE) {
@@ -48,6 +45,58 @@ void amy_midi_message_received(uint8_t *data, size_t len) {
     if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_false);
 }
 
+void midi_local(uint8_t * bytes, uint16_t len) {
+    convert_midi_bytes_to_messages(bytes, len, 0);
+}
+
+extern bool midi_has_out;
+extern void send_usb_midi_out(uint8_t * data, uint16_t len);
+
+void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
+    // check if we have USB HOST midi, which is handled by Tulip
+#ifdef ESP_PLATFORM
+    if(midi_has_out) {
+        send_usb_midi_out(buf, len);
+    }
+#endif
+    // Also send out via AMY
+    amy_external_midi_output(buf, len);
+}
+
+#ifdef ESP_PLATFORM
+void run_amy() {
+    amy_external_midi_input_hook = tulip_midi_input_hook;
+    amy_config_t amy_config = amy_default_config();
+    amy_config.has_audio_in = 0;
+    amy_config.has_midi_uart = 1;
+    amy_config.set_default_synth = 1;
+    amy_config.cores = 2;
+    amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
+    amy_config.i2s_bclk = CONFIG_I2S_BCLK;
+    amy_config.i2s_dout = CONFIG_I2S_DIN; // badly named
+    amy_config.midi_out = MIDI_OUT_PIN;
+    amy_config.midi_in = MIDI_IN_PIN;
+    amy_start(amy_config);
+    amy_live_start();
+    while(1) {
+        vTaskDelay(10);
+    }
+}
+
+#elif defined TULIP_DESKTOP
+
+void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
+    amy_external_midi_input_hook = tulip_midi_input_hook;
+    amy_config_t amy_config = amy_default_config();
+    amy_config.has_midi_mac = 1;
+    amy_config.capture_device_id = capture_device_id;
+    amy_config.playback_device_id = playback_device_id;
+    amy_config.has_audio_in = 1;
+    amy_start(amy_config);
+    amy_live_start();
+}
+
+#endif
 
 
 

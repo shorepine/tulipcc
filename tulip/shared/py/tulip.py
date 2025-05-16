@@ -340,8 +340,6 @@ def ip():
         return "127.0.0.1" # we are on local and it's ok
     sta_if = network.WLAN(network.STA_IF)
     if(sta_if.isconnected()):
-        ipv4 = sta_if.ifconfig()[0]
-        set_quartet(int(ipv4.split('.')[3]))
         return sta_if.ifconfig()[0]
     else:
         return None

@@ -25,6 +25,13 @@ int check_rx_char() {
 }
 #endif
 
+uint64_t get_stack_pointer() {
+    char dummy[64];
+    uint64_t val = (uint64_t)dummy;
+    return val;
+}
+
+
 // Returns 0 if file doesn't exist, 2 if it's a file, XXX if it's a directory
 uint8_t file_exists(const char *filename) {
     uint8_t response = mp_vfs_import_stat(filename);

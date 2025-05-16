@@ -15,6 +15,8 @@
 #include "display.h"
 #include "midi.h"  // from extmod/tulip/
 
+extern uint8_t tulip_ready;
+
 void usbh_setup();
 void run_usb();
 
