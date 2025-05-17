@@ -124,8 +124,8 @@ class DrumRow(UIElement):
     def __init__(self, items, row, synth=None):
         super().__init__()
         self.preset = ''
-        self.vel = 1.0
-        self.pitch = 60
+        self.vel = 0.5
+        self.pitch = 0.5
         self.pan = 0.5
         self.row = row
         self.objs = []
@@ -223,8 +223,8 @@ class DrumRow(UIElement):
             _NOTE_OF_ROW[self.row] = drumkit[drumkit_index][0]
         amy.send(
             synth=self.synth,
-            amp=self.vel * 2,
-            freq=65.3 * (2 ** (4 * self.pitch)),  # -2..+2 octaves
+            amp=0.001 + self.vel * 2,  # amp_coef of 0 is ignored.
+            freq=amy.ZERO_LOGFREQ_IN_HZ * (2 ** (4 * (self.pitch - 0.5))),  # -2..+2 octaves
             pan=self.pan
         )
 
