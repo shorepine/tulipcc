@@ -293,9 +293,9 @@ def run(screen):
     app.quit_callback = quit
     app.leds = LEDStrip()
     app.add(app.leds, direction=lv.ALIGN.OUT_BOTTOM_LEFT, pad_y=0)
-    drum_items = [x[1] for x in drumkit if x[1] is not None]
+    drum_items = [x[1] for x in drumkit]
     _NOTE_OF_ROW = [0] * _NUM_ROWS
-    initial_voices = ['Std Kick', 'Snare2', 'Maraca', 'Closed Hat', 'Open Hat', 'Cowbell', 'Congo Low']
+    initial_voices = ['Std Kick', 'Snare', 'Maraca', 'Closed Hat', 'Open Hat', 'Cowbell', 'Congo Low']
     app.rows = []
     for i in range(_NUM_ROWS):
         row = DrumRow(drum_items, row=i)
