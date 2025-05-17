@@ -3,7 +3,6 @@
 
 from tulip import UIScreen, UIElement, pal_to_lv, lv_depad, lv, frame_callback, ticks_ms, seq_ticks
 import amy
-import midi
 import sequencer
 from patches import drumkit
 
@@ -276,12 +275,6 @@ def run(screen):
     global app 
     global _NOTE_OF_ROW
     app = screen # we can use the screen obj passed in as a general "store stuff here" class, as well as inspect the UI 
-    try:
-        app.synth = midi.config.synth_per_channel[10]
-    except KeyError:
-        midi.config.reset()
-        midi.add_default_synths()
-        app.synth = midi.config.synth_per_channel[10]
 
     # Drum machine sequencer - plays notes
     app.drum_seq = sequencer.Sequence(16, 8)

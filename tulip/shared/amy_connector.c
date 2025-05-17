@@ -153,7 +153,9 @@ void tulip_parse_amy_message(char *message, uint16_t length) {
         } else {
             // Don't parse events other than sync messages if i'm in mesh mode. 
             //if(!mesh_flag) {
+            if(e.status == EVENT_SCHEDULED) {
                 amy_add_event(&e);
+            }
             //}
         }
     }
