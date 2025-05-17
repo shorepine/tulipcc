@@ -71,10 +71,8 @@ Also, clone this Tulip repository. We'll assume it's in `~/tulipcc`.
 cd ~
 mkdir esp
 cd esp
-git clone https://github.com/espressif/esp-idf.git
-cd esp-idf
-git checkout 5.4.1
-git submodule update --init --recursive
+git clone -b v5.4.1 --recursive https://github.com/espressif/esp-idf.git esp-idf-v5.4.1
+cd esp-idf-v5.4.1
 ./install.sh esp32s3
 source export.sh
 
