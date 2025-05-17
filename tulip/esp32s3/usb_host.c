@@ -5,6 +5,7 @@
 
 // Turn this on if you want more USB debug info
 #define DEBUG_USB
+#define TULIP_HAS_MOUSE_SUPPORT 0
 
 
 typedef union {
@@ -125,7 +126,9 @@ const TickType_t CLIENT_EVENT_TIMEOUT = 1;
 const size_t USB_HID_DESC_SIZE = 9;
 
 usb_host_client_handle_t Client_Handle;
-usb_device_handle_t Device_Handle;
+usb_device_handle_t Device_Handle_kb;
+usb_device_handle_t Device_Handle_midi;
+usb_device_handle_t Device_Handle_mouse;
 
 uint8_t Interface_Number_kb;
 uint8_t Interface_Number_midi;
@@ -201,28 +204,28 @@ uint8_t mouse_buttons[3];
 //
 
 static void midi_transfer_cb(usb_transfer_t *transfer) {
-    #ifdef DEBUG_USB
-    #endif
     //fprintf(stderr, "**midi_transfer_cb context: %p, num_bytes %d\n", transfer->context, transfer->actual_num_bytes);
-    if (Device_Handle == transfer->device_handle) {
+    if (Device_Handle_midi == transfer->device_handle) {
         int in_xfer = transfer->bEndpointAddress & USB_B_ENDPOINT_ADDRESS_EP_DIR_MASK;
         if ((transfer->status == 0) && in_xfer) {
             uint8_t *const p = transfer->data_buffer;
             for (int i = 0; i < transfer->actual_num_bytes; i += 4) {
                 if ((p[i] + p[i + 1] + p[i + 2] + p[i + 3]) == 0) break;
-                DBGPRINTF4("midi: %02x %02x %02x %02x\n",
-                            p[i], p[i + 1], p[i + 2], p[i + 3]);
+                //DBGPRINTF4("midi: %02x %02x %02x %02x\n",
+                //            p[i], p[i + 1], p[i + 2], p[i + 3]);
                 // Strip the first byte which is the USB-MIDI virtual wire ID,
                 // rest is MIDI message (at least for 3-byte messages).
-                convert_midi_bytes_to_messages(p + i + 1, 3,1);
+                if(tulip_ready) convert_midi_bytes_to_messages(p + i + 1, 3,1);
             }
             esp_err_t err = usb_host_transfer_submit(transfer);
             if (err != ESP_OK) {
                 fprintf(stderr, "midi usb_host_transfer_submit err: 0x%x\n", err);
             }
         } else {
-            //fprintf(stderr, "midi transfer->status %d\n", transfer->status);
+            fprintf(stderr, "midi transfer->status %d, in_xfer %d\n", transfer->status, in_xfer);
         }
+    } else {
+        fprintf(stderr, "Device_Handle_midi is %p but transfer is %p\n", Device_Handle_midi, transfer->device_handle);
     }
 }
 
@@ -233,7 +236,7 @@ static void midi_out_transfer_cb(usb_transfer_t *transfer) {
 }
 
 
-bool check_interface_desc_MIDI(const void *p) {
+bool check_interface_desc_MIDI(const void *p, usb_device_handle_t Device_Handle) {
     const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
 
     // USB MIDI
@@ -241,9 +244,10 @@ bool check_interface_desc_MIDI(const void *p) {
             (intf->bInterfaceSubClass == 3) &&
             (intf->bInterfaceProtocol == 0)) {
         midi_claimed = true;
+        Device_Handle_midi = Device_Handle;
         fprintf(stderr, "Claiming a MIDI device!\n");
         Interface_Number_midi = intf->bInterfaceNumber;
-        esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle,
+        esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle_midi,
                 Interface_Number_midi, intf->bAlternateSetting);
         if (err != ESP_OK) fprintf(stderr, "midi usb_host_interface_claim failed: %x\n", err);
         return true;
@@ -404,7 +408,7 @@ void prepare_endpoint_midi(const void *p) {
                 }
             }
             if (MIDIIn[i] != NULL) {
-                MIDIIn[i]->device_handle = Device_Handle;
+                MIDIIn[i]->device_handle = Device_Handle_midi;
                 MIDIIn[i]->bEndpointAddress = endpoint->bEndpointAddress;
                 MIDIIn[i]->callback = midi_transfer_cb;
                 MIDIIn[i]->context = (void *)i;
@@ -429,7 +433,7 @@ void prepare_endpoint_midi(const void *p) {
         }
         if (MIDIOut != NULL) {
             fprintf(stderr, "MIDI USB Out data_buffer_size: %d\n", MIDIOut->data_buffer_size);
-            MIDIOut->device_handle = Device_Handle;
+            MIDIOut->device_handle = Device_Handle_midi;
             MIDIOut->bEndpointAddress = endpoint->bEndpointAddress;
             MIDIOut->callback = midi_out_transfer_cb;
             MIDIOut->context = NULL;
@@ -441,12 +445,14 @@ void prepare_endpoint_midi(const void *p) {
     midi_ready = midi_has_in && midi_has_out;
 }
 
-void new_enumeration_config_fn(const usb_config_desc_t *config_desc);
+void new_enumeration_config_fn(const usb_config_desc_t *config_desc, usb_device_handle_t);
 
 
 void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *arg)
 {
     esp_err_t err;
+    usb_device_handle_t Device_Handle;
+
     switch (event_msg->event)
     {
         /**< A new device has been enumerated and added to the USB Host Library */
@@ -470,7 +476,7 @@ void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *
             err = usb_host_get_active_config_descriptor(Device_Handle, &config_desc);
             if (err != ESP_OK) fprintf(stderr,"usb_host_get_config_desc: 0x%x\n", err);
             // Finally, we get to inspect the new device and maybe connect to it.
-            new_enumeration_config_fn(config_desc);
+            new_enumeration_config_fn(config_desc, Device_Handle);
             break;
 
         /**< A device opened by the client is now gone */
@@ -478,29 +484,33 @@ void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *
             fprintf(stderr,"Device Gone handle: 0x%lx\n", (uint32_t)event_msg->dev_gone.dev_hdl);
             // Mark everything de-initialized so it will re-initialized on another connect.
             esp_err_t err;
-            if (midi_claimed && (uint32_t)Device_Handle == (uint32_t)event_msg->dev_gone.dev_hdl) {
-                err = usb_host_interface_release(Client_Handle, Device_Handle, Interface_Number_midi);
+            if (midi_claimed && (uint32_t)Device_Handle_midi == (uint32_t)event_msg->dev_gone.dev_hdl) {
+                err = usb_host_interface_release(Client_Handle, Device_Handle_midi, Interface_Number_midi);
                 if (err != ESP_OK) fprintf(stderr,"usb_host_interface_release err: 0x%x\n", err);
                 midi_claimed = false;
                 midi_ready = false;
                 midi_has_in = false;
                 midi_has_out = false;
+                err = usb_host_device_close(Client_Handle, Device_Handle_midi);
+                if (err != ESP_OK) fprintf(stderr,"usb_host_device_close err: 0x%x\n", err);
             }
-            if (keyboard_claimed && (uint32_t)Device_Handle == (uint32_t)event_msg->dev_gone.dev_hdl) {
-                err = usb_host_interface_release(Client_Handle, Device_Handle, Interface_Number_kb);
+            if (keyboard_claimed && (uint32_t)Device_Handle_kb == (uint32_t)event_msg->dev_gone.dev_hdl) {
+                err = usb_host_interface_release(Client_Handle, Device_Handle_kb, Interface_Number_kb);
                 if (err != ESP_OK) fprintf(stderr,"usb_host_interface_release err: 0x%x\n", err);
                 keyboard_claimed = false;
                 keyboard_ready = false;
+                err = usb_host_device_close(Client_Handle, Device_Handle_kb);
+                if (err != ESP_OK) fprintf(stderr,"usb_host_device_close err: 0x%x\n", err);
             }
-            if (mouse_claimed && (uint32_t)Device_Handle == (uint32_t)event_msg->dev_gone.dev_hdl) {
-                err = usb_host_interface_release(Client_Handle, Device_Handle, Interface_Number_mouse);
+            if (mouse_claimed && (uint32_t)Device_Handle_mouse == (uint32_t)event_msg->dev_gone.dev_hdl) {
+                err = usb_host_interface_release(Client_Handle, Device_Handle_mouse, Interface_Number_mouse);
                 if (err != ESP_OK) fprintf(stderr,"usb_host_interface_release err: 0x%x\n", err);
                 mouse_claimed = false;
                 mouse_ready = false;
                 disable_mouse_pointer();
+                err = usb_host_device_close(Client_Handle, Device_Handle_mouse);
+                if (err != ESP_OK) fprintf(stderr,"usb_host_device_close err: 0x%x\n", err);
             }
-            err = usb_host_device_close(Client_Handle, Device_Handle);
-            if (err != ESP_OK) fprintf(stderr,"usb_host_device_close err: 0x%x\n", err);
             break;
         default:
             fprintf(stderr,"Unknown USB event: %d\n", event_msg->event);
@@ -634,7 +644,7 @@ void decode_keyboard_report(uint8_t *p) {
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 void keyboard_transfer_cb(usb_transfer_t *transfer)
 {
-    if (Device_Handle == transfer->device_handle) {
+    if (Device_Handle_kb == transfer->device_handle) {
         isKeyboardPolling = false;
         if (transfer->status == 0) {
             #ifdef DEBUG_USB 
@@ -684,7 +694,7 @@ void mouse_transfer_cb(usb_transfer_t *transfer)
     //fprintf(stderr,"mouse decode report %d %d %d %d %d %d %d %d\n", p[0], p[1], p[2],p[3],p[4],p[5],p[6],p[7]);
 
    
-    if (Device_Handle == transfer->device_handle) {
+    if (Device_Handle_mouse == transfer->device_handle) {
         isMousePolling = false;
         if (transfer->status == 0) {
             hid_mouse_input_report_boot_t *mouse_report = (hid_mouse_input_report_boot_t *)(transfer->data_buffer+1);
@@ -712,15 +722,16 @@ void mouse_transfer_cb(usb_transfer_t *transfer)
     }
 }
 
-bool check_interface_desc_boot_keyboard(const void *p) {
+bool check_interface_desc_boot_keyboard(const void *p, usb_device_handle_t Device_Handle) {
     const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
     if ((intf->bInterfaceClass == USB_CLASS_HID) &&
             (intf->bInterfaceSubClass == 1) &&
             (intf->bInterfaceProtocol == 1)) {
         keyboard_claimed = true;
+        Device_Handle_kb = Device_Handle;
         Interface_Number_kb = intf->bInterfaceNumber;
         //fprintf(stderr, "claiming for kb %d\n", Interface_Number_kb);
-        esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle,
+        esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle_kb,
                                                 Interface_Number_kb, intf->bAlternateSetting);
         if (err != ESP_OK) fprintf(stderr, "usb_host_interface_claim failed: 0x%x\n", err);
         return true;
@@ -728,14 +739,15 @@ bool check_interface_desc_boot_keyboard(const void *p) {
     return false;
 }
 
-bool check_interface_desc_boot_mouse(const void *p) {
+bool check_interface_desc_boot_mouse(const void *p, usb_device_handle_t Device_Handle) {
     const usb_intf_desc_t *intf = (const usb_intf_desc_t *)p;
-    if ((intf->bInterfaceClass == USB_CLASS_HID) &&
+    if (TULIP_HAS_MOUSE_SUPPORT && (intf->bInterfaceClass == USB_CLASS_HID) &&
             (intf->bInterfaceSubClass == 1) &&
             (intf->bInterfaceProtocol == 2)) {
         mouse_claimed = true;
+        Device_Handle_mouse = Device_Handle;
         Interface_Number_mouse = intf->bInterfaceNumber;
-        esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle,
+        esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle_mouse,
                                                 Interface_Number_mouse, intf->bAlternateSetting);
         if (err != ESP_OK) fprintf(stderr, "usb_host_interface_claim failed: 0x%x\n", err);
         return true;
@@ -746,7 +758,7 @@ bool check_interface_desc_boot_mouse(const void *p) {
         fprintf(stderr, "0x03 0x0 0x0 mouse claim\n");
         mouse_claimed = true;
         Interface_Number_mouse = intf->bInterfaceNumber;
-        esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle,
+        esp_err_t err = usb_host_interface_claim(Client_Handle, Device_Handle_mouse,
                                                 Interface_Number_mouse, intf->bAlternateSetting);
         if (err != ESP_OK) fprintf(stderr, "usb_host_interface_claim failed: 0x%x\n", err);
         return true;
@@ -758,7 +770,7 @@ static void boot_protocol_cb(usb_transfer_t *transfer) {
     // nothing needed here
 }
 
-void request_boot_protocol() {
+void request_boot_protocol(usb_device_handle_t Device_Handle) {
     // SETUP packet that requests boot protocol
     uint8_t setup[8];
     setup[0]= 0x21; // SETUP
@@ -811,7 +823,7 @@ void prepare_endpoint_hid_kb(const void *p)
             }
         }
         if (KeyboardIn != NULL) {
-            KeyboardIn->device_handle = Device_Handle;
+            KeyboardIn->device_handle = Device_Handle_kb;
             KeyboardIn->timeout_ms = DEFAULT_TIMEOUT_MS;
             KeyboardIn->num_bytes = keyboard_bytes;
             KeyboardIn->bEndpointAddress = endpoint->bEndpointAddress;
@@ -821,7 +833,7 @@ void prepare_endpoint_hid_kb(const void *p)
             KeyboardInterval = endpoint->bInterval;
             if(!boot_protocol_requested) {
                 fprintf(stderr, "requesting boot protocol\n");
-                request_boot_protocol();
+                request_boot_protocol(Device_Handle_kb);
             }
 
             DBGPRINTF("USB boot keyboard ready\n");
@@ -852,7 +864,7 @@ void prepare_endpoint_hid_mouse(const void *p)
             }
         }
         if (MouseIn != NULL) {
-            MouseIn->device_handle = Device_Handle;
+            MouseIn->device_handle = Device_Handle_mouse;
             MouseIn->bEndpointAddress = endpoint->bEndpointAddress;
             MouseIn->callback = mouse_transfer_cb;
             MouseIn->context = NULL;
@@ -862,7 +874,7 @@ void prepare_endpoint_hid_mouse(const void *p)
             MouseInterval = endpoint->bInterval;
             if(!boot_protocol_requested) {
                 fprintf(stderr, "requesting boot protocol\n");
-                request_boot_protocol();
+                request_boot_protocol(Device_Handle_mouse);
             }
 
             DBGPRINTF("USB boot mouse ready\n");
@@ -874,7 +886,7 @@ void prepare_endpoint_hid_mouse(const void *p)
 }
 
 
-void new_enumeration_config_fn(const usb_config_desc_t *config_desc) {
+void new_enumeration_config_fn(const usb_config_desc_t *config_desc, usb_device_handle_t Device_Handle) {
     // We just retrieved the config of a newly-connected device.
     // Read through it and see if we can claim a recognized device.
     //
@@ -909,9 +921,9 @@ void new_enumeration_config_fn(const usb_config_desc_t *config_desc) {
                     if ((last_descriptor == USB_B_DESCRIPTOR_TYPE_INTERFACE)
                             || (last_descriptor == USB_B_DESCRIPTOR_TYPE_ENDPOINT)) --indent;
                     show_interface_desc(p, indent++);
-                    if(!midi_claimed) { check_interface_desc_MIDI(p); }
-                    if(!keyboard_claimed) { check_interface_desc_boot_keyboard(p); }
-                    if(!mouse_claimed) { check_interface_desc_boot_mouse(p); }
+                    if(!midi_claimed) { check_interface_desc_MIDI(p, Device_Handle); }
+                    if(!keyboard_claimed) { check_interface_desc_boot_keyboard(p, Device_Handle); }
+                    if(!mouse_claimed) { check_interface_desc_boot_mouse(p, Device_Handle); }
                     last_descriptor = bDescriptorType;
                     break;
                 case USB_B_DESCRIPTOR_TYPE_ENDPOINT:
