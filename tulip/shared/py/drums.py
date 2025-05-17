@@ -6,7 +6,9 @@ import amy
 import midi
 import sequencer
 from patches import drumkit
-AMY_TAG_OFFSET = 4385 # random offset to allow other apps to share
+
+# Use AMY synths starting at this number (avoid MIDI channels and system synth)
+_BASE_SYNTH = 20
 
 # A single drum machine switch with LED
 class DrumSwitch(UIElement):
@@ -17,11 +19,11 @@ class DrumSwitch(UIElement):
     button_width = 30
     button_height = 40
 
-    def __init__(self, row, col, switch_color_idx=0):
+    def __init__(self, row, col, synth, switch_color_idx=0):
         super().__init__() 
         self.row = row
         self.col = col
-        #self.tag = (self.row * 16) + self.col + AMY_TAG_OFFSET
+        self.synth = synth
         self.sequencer_event = None
         self.group.set_size(DrumSwitch.button_width+10,DrumSwitch.button_height+25)
         lv_depad(self.group)
@@ -48,18 +50,19 @@ class DrumSwitch(UIElement):
         self.led.off()
         self.on = False
 
-    def update_amy(self):
+    def update_sequencer(self):
+        """Update the sequencer entry when switch is turned on or off. Also has to be done when row voice changes, because _NOTE_OF_ROW changes."""
         row = app.rows[self.row]
         if(self.on):
-            self.sequencer_event = app.drum_seq.add(
-                self.col, app.synth.note_on, [],
-                note=row.midi_note, velocity=row.get_vel() * 2.0, pan=row.get_pan(),
-                freq=520 * row.get_pitch(),
-            )
+            kwargs = {'position': self.col, 'amy_sequenceable': True, 'func': amy.send, 'args': [], 'synth': self.synth, 'note': _NOTE_OF_ROW[self.row], 'vel': 1.0}
+            if self.sequencer_event is None:
+                self.sequencer_event = app.drum_seq.add(**kwargs)
+            else:
+                self.sequencer_event.update(**kwargs)
             length = int((amy.AMY_SEQUENCER_PPQ/2) * 16) 
             offset = int(amy.AMY_SEQUENCER_PPQ/2) * self.col
         else:
-            if(self.sequencer_event is not None):
+            if self.sequencer_event is not None:
                 self.sequencer_event.remove()
             self.sequencer_event = None
 
@@ -70,7 +73,7 @@ class DrumSwitch(UIElement):
         else:
             self.on = False
             self.led.off()
-        self.update_amy()
+        self.update_sequencer()
 
     def get(self):
         return self.on
@@ -80,6 +83,7 @@ class DrumSwitch(UIElement):
             self.set(False)
         else:
             self.set(True)
+
 
 # A row of LEDs to keep time with and some labels
 class LEDStrip(UIElement): 
@@ -118,15 +122,16 @@ class LEDStrip(UIElement):
 # and some knobs on the right for pitch / vol / pan
 class DrumRow(UIElement):
     knob_color = 209
-    def __init__(self, items, row, midi_note=0):
+    def __init__(self, items, row, synth=None):
         super().__init__()
-        self.midi_note = midi_note
         self.preset = ''
         self.vel = 1.0
         self.pitch = 60
         self.pan = 0.5
+        self.row = row
         self.objs = []
         self.items = items
+        self.synth = _BASE_SYNTH + self.row if synth is None else synth
         # Droodown on left
         self.group.set_size((DrumSwitch.button_width+12)*16+175+100,DrumSwitch.button_height+65)
         self.dropdown = lv.dropdown(self.group)
@@ -139,7 +144,7 @@ class DrumRow(UIElement):
         lv_depad(self.dropdown)
         for i in range(4):
             for j in range(4):
-                d = DrumSwitch(switch_color_idx=i, row=row, col = j + i*4)
+                d = DrumSwitch(switch_color_idx=i, row=row, col = j + i*4, synth=self.synth)
                 self.objs.append(d)
                 d.group.set_parent(self.group)
                 d.group.set_style_bg_color(pal_to_lv(UIScreen.default_bg_color),lv.PART.MAIN)
@@ -179,8 +184,7 @@ class DrumRow(UIElement):
     def set_vel(self, val):
         self.knobs[0].set_value(int(val*100.0))
         self.vel = val
-        self.update_note()
-
+        self.update_synth()
 
     def get_vel(self):
         return self.knobs[0].get_value()/100.0
@@ -188,7 +192,7 @@ class DrumRow(UIElement):
     def set_pitch(self, val):
         self.knobs[1].set_value(int(val*100.0))
         self.pitch = val
-        self.update_note()
+        self.update_synth()
 
     def get_pitch(self):
         return self.knobs[1].get_value()/100.0
@@ -196,7 +200,7 @@ class DrumRow(UIElement):
     def set_pan(self, val):
         self.knobs[2].set_value(int(val*100.0))
         self.pan = val
-        self.update_note()
+        self.update_synth()
 
     def get_pan(self):
         return self.knobs[2].get_value()/100.0
@@ -209,33 +213,42 @@ class DrumRow(UIElement):
         idx = self.items.index(name)
         self.dropdown.set_selected(idx)
         self.preset = name
-        drumkit_index = [d[1] for d in drumkit].index(name)
-        self.midi_note = drumkit[drumkit_index][2]
-        #print("set_preset preset %s note %d" % (self.preset, self.midi_note))
-        self.update_note()
+        self.update_synth(name)
+        self.update_switches()
 
-    def update_note(self):
-        # For each on switch in the row, we have to update the sequence with the new params
+    def update_synth(self, name=None):
+        if name is not None:
+            # Potentially new drum voice.
+            drumkit_index = drumkit_index_of_name(name)
+            amy.send(synth=self.synth, preset=drumkit_index)
+            _NOTE_OF_ROW[self.row] = drumkit[drumkit_index][0]
+        amy.send(
+            synth=self.synth,
+            amp=self.vel * 2,
+            freq=65.3 * (2 ** (4 * self.pitch)),  # -2..+2 octaves
+            pan=self.pan
+        )
+
+    def update_switches(self):
+        """For each on switch in the row, we have to update the sequencer with the new midi base_note."""
         for switch in self.objs:
-            switch.update_amy()
-
+            switch.update_sequencer()
 
     def vel_cb(self, e):
         self.vel = e.get_target_obj().get_value() / 100.0
-        self.update_note()
+        self.update_synth()
 
     def pitch_cb(self, e):
         self.pitch = e.get_target_obj().get_value() / 100.0
-        self.update_note()
+        self.update_synth()
 
     def pan_cb(self, e):
         self.pan = e.get_target_obj().get_value() / 100.0
-        self.update_note()
+        self.update_synth()
 
     def dropdown_cb(self, e):
         name = self.items[e.get_target_obj().get_selected()]
         self.set_preset(name)
-        self.update_note()
 
 
 # Called from AMY's sequencer, just updates the LEDs
@@ -252,8 +265,16 @@ def quit(screen):
     screen.led_seq.clear()
 
 
+def drumkit_index_of_name(name):
+    global drumkit
+    return [d[1] for d in drumkit].index(name)
+
+
+_NUM_ROWS = 7
+
 def run(screen):
     global app 
+    global _NOTE_OF_ROW
     app = screen # we can use the screen obj passed in as a general "store stuff here" class, as well as inspect the UI 
     try:
         app.synth = midi.config.synth_per_channel[10]
@@ -273,14 +294,21 @@ def run(screen):
     app.leds = LEDStrip()
     app.add(app.leds, direction=lv.ALIGN.OUT_BOTTOM_LEFT, pad_y=0)
     drum_items = [x[1] for x in drumkit if x[1] is not None]
-    app.rows = [DrumRow(drum_items, row=i) for i in range(7)]
-    app.add(app.rows, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
+    _NOTE_OF_ROW = [0] * _NUM_ROWS
     initial_voices = ['Std Kick', 'Snare2', 'Maraca', 'Closed Hat', 'Open Hat', 'Cowbell', 'Congo Low']
-    for i,row in enumerate(app.rows):
+    app.rows = []
+    for i in range(_NUM_ROWS):
+        row = DrumRow(drum_items, row=i)
+        app.rows.append(row)
+        drumkit_index = drumkit_index_of_name(initial_voices[i])
+        _NOTE_OF_ROW[i] = drumkit[drumkit_index][0]  # drumkit entries are (base_note, name, general_midi_note_if_any).
+        amy.send(synth=_BASE_SYNTH + i, num_voices=1, patch=amy.message(wave=amy.PCM, preset=drumkit_index))
         row.set_preset(initial_voices[i])
         row.set_vel(.5)
         row.set_pan(.5)
         row.set_pitch(.5)
+    app.add(app.rows, direction=lv.ALIGN.OUT_BOTTOM_LEFT)
+    # Have some notes present as default.
     for i in range(16):
         app.rows[2].objs[i].set(True)
 
