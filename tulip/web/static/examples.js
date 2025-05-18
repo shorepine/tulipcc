@@ -1281,7 +1281,7 @@ def run(screen):
 if __name__ == '__main__':
         run(tulip.UIScreen())
 `},{
-    't':'music',
+    't':'deprecated',
     'd':'Directly play a wav file',
     'c':`
 # wav.py
@@ -1307,7 +1307,7 @@ if(f is not None):
     amy.send(osc=1,wave=amy.AUDIO_EXT1, pan=1, vel=1)
     tulip.amy_block_done_callback(cb)
 `},{
-    't':'music',
+    't':'deprecated',
     'd':'Sample audio in and play it as an instrument',
     'c':`
 # sample.py 
@@ -1342,7 +1342,7 @@ tulip.amy_block_done_callback(sample)
 `
 },{
     'd':'Generate audio buffers in Python',
-    't':'music',
+    't':'deprecated',
     'c':`
 # makes a sine wave. obviously, it's easier to do this in AMY directly! 
 # but just showing how to do it for any audio synthesis in python
