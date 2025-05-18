@@ -286,11 +286,6 @@ export async function loadMicroPython(options) {
                 "tulip_tick", "null", ["number"], [tick], {async:true}
             );
         },
-        midiByte(byte) {
-            return Module.ccall(
-                "process_single_midi_byte", "null", ["number"], [byte], {async:true}
-            );
-        },
         // Needed if the GC/asyncify is enabled.
         async replProcessCharWithAsyncify(chr) {
             return Module.ccall(
