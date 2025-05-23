@@ -260,8 +260,6 @@ endif
 
 
 
-#	../shared/desktop/multicast.c \
-
 # source files
 SRC_C += \
 	main.c \

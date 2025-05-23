@@ -186,7 +186,6 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	lodepng.c \
 	lvgl_u8g2.c \
 	tsequencer.c \
-	midi.c \
 	desktop/unix_display.c \
 	)
 

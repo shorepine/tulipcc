@@ -2,7 +2,6 @@
 #include "esp_task.h"
 #ifndef TASKS_H
 #define TASKS_H
-#include "alles.h"
 
 
 #define SEQUENCER_TASK_PRIORITY (ESP_TASK_PRIO_MAX - 1) // Can be low because it sets its own timers?

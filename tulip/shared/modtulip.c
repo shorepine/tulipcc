@@ -10,9 +10,7 @@
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #ifndef __EMSCRIPTEN__
-#include "alles.h"
 #endif
-#include "midi.h"
 #include "tsequencer.h"
 #if !defined(AMYBOARD) && !defined(AMYBOARD_WEB)
 #include "ui.h"

@@ -148,7 +148,6 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	help.c \
 	tulip_helpers.c \
 	tsequencer.c \
-	midi.c \
 	)
 
 EXTMOD_SRC_C += $(addprefix $(ULAB_DIR)/, \

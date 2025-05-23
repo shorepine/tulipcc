@@ -55,8 +55,6 @@
 #include "input.h"
 #include "mpthreadport.h"
 #include "display.h"
-#include "alles.h"
-#include "midi.h"
 #include "shared/runtime/pyexec.h"
 
 

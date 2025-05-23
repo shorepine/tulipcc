@@ -116,7 +116,6 @@ endif()
 list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/main.c
     ${MICROPY_PORT_DIR}/amychip.c
-    ${MICROPY_PORT_DIR}/../esp32s3/multicast.c
     ${MICROPY_PORT_DIR}/../esp32s3/help.c
     ${MICROPY_PORT_DIR}/../esp32s3/network_common.c
     ${MICROPY_PORT_DIR}/../esp32s3/modsocket.c
@@ -161,9 +160,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/polyfills.c
     ${TULIP_SHARED_DIR}/tulip_helpers.c
     ${TULIP_SHARED_DIR}/help.c
-    ${TULIP_SHARED_DIR}/midi.c
     ${TULIP_SHARED_DIR}/sounds.c
-    ${TULIP_SHARED_DIR}/alles.c
     ${TULIP_SHARED_DIR}/tsequencer.c
     ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
     ${AMY_DIR}/src/algorithms.c
@@ -176,6 +173,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/filters.c
     ${AMY_DIR}/src/oscillators.c
     ${AMY_DIR}/src/transfer.c
+    ${AMY_DIR}/src/api.c
     ${AMY_DIR}/src/sequencer.c
     ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c

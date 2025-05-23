@@ -22,6 +22,34 @@ int16_t midi_queue_head = 0;
 int16_t midi_queue_tail = 0;
 
 
+#ifdef ESP_PLATFORM
+#include "driver/i2c.h"
+
+// An AMY hook to send values out to a CV DAC over i2c, only on ESP 
+uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
+    if(external_map[osc]>0) {
+        float volts = S2F(buf[0])*2.5f + 2.5f;
+        // do the thing
+        uint16_t value_int = (uint16_t)((volts/10.0) * 65535.0);
+        uint8_t bytes[3];
+        bytes[2] = (value_int & 0xff00) >> 8;
+        bytes[1] = (value_int & 0x00ff);
+
+        uint8_t ch = 0x02;
+        uint8_t addr = 89;
+        uint8_t channel = external_map[osc]-1;
+        if(channel == 1) ch = 0x04;
+        if(channel == 2) addr = 88;
+        if(channel == 3) {ch = 0x04; addr=88; }
+        bytes[0] = ch;
+        i2c_master_write_to_device(I2C_NUM_0, addr, bytes, 3, pdMS_TO_TICKS(10));
+        return 1;
+    }
+    return 0;
+
+}
+#endif
+
 // I am called when AMY receives MIDI in, whether it has been processed (played in a instrument) or not 
 // In tulip i just fill up the last_midi queue so that MIDI input is accessible to Python
 void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
@@ -78,9 +106,6 @@ void run_amy() {
     amy_config.midi_in = MIDI_IN_PIN;
     amy_start(amy_config);
     amy_live_start();
-    while(1) {
-        vTaskDelay(10);
-    }
 }
 
 #elif defined TULIP_DESKTOP

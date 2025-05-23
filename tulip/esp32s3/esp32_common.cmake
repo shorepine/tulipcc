@@ -127,7 +127,6 @@ endif()
 
 list(APPEND MICROPY_SOURCE_PORT
     ${MICROPY_PORT_DIR}/main.c
-    ${MICROPY_PORT_DIR}/multicast.c
     ${MICROPY_PORT_DIR}/help.c
     ${MICROPY_PORT_DIR}/build/lv_mpy.c
     ${MICROPY_PORT_DIR}/network_common.c
@@ -199,6 +198,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/oscillators.c
     ${AMY_DIR}/src/midi.c
     ${AMY_DIR}/src/transfer.c
+    ${AMY_DIR}/src/api.c
     ${AMY_DIR}/src/sequencer.c
     ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c

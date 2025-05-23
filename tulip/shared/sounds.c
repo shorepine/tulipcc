@@ -1,7 +1,6 @@
 // sounds.c
 // various little "make a sound in firmware" methods
-#include "alles.h"
-
+#include "amy.h"
 void note_on(int8_t osc, int64_t time) {
     amy_event e = amy_default_event();
     e.osc = osc;

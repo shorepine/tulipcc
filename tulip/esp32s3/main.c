@@ -93,7 +93,6 @@
 #endif
 
 #include "display.h"
-#include "alles.h"
 #include "tasks.h"
 
 #ifdef TULIP_DIY
@@ -144,11 +143,11 @@ float compute_cpu_usage(uint8_t debug) {
 
     const char* const tasks[] = {
          "IDLE0", "IDLE1", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "esp_timer", "sys_evt", "tiT",
-         DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, AMY_TASK_NAME,
+         DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, 
          AMY_RENDER_TASK_NAME, AMY_FILL_BUFFER_TASK_NAME, SEQUENCER_TASK_NAME, 0
     };
     const uint8_t cores[] = {0, 1, 0, 0, 1, 0, 0, 0, 1, 0, DISPLAY_TASK_COREID, USB_TASK_COREID, TOUCHSCREEN_TASK_COREID, TULIP_MP_TASK_COREID,
-        AMY_TASK_COREID, AMY_RENDER_TASK_COREID, AMY_FILL_BUFFER_TASK_COREID,  SEQUENCER_TASK_COREID};
+        AMY_RENDER_TASK_COREID, AMY_FILL_BUFFER_TASK_COREID,  SEQUENCER_TASK_COREID};
 
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
@@ -370,10 +369,6 @@ TaskHandle_t amy_handle;
 
 extern void run_amy();
 
-void startup_amy() {
-    //esp_err_t err = esp_event_loop_create_default();
-    xTaskCreatePinnedToCore(run_amy, AMY_TASK_NAME, (AMY_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, AMY_TASK_PRIORITY, &amy_handle, AMY_TASK_COREID);
-}
 uint8_t tulip_ready = 0;
 
 
@@ -432,7 +427,7 @@ void app_main(void) {
     delay_ms(100);
 
     fprintf(stderr,"Starting AMY\n");
-    startup_amy();
+    run_amy();
     fflush(stderr);
     delay_ms(500);
     
