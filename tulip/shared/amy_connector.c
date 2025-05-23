@@ -113,8 +113,9 @@ void tulip_parse_amy_message(char *message, uint16_t length) {
     uint8_t sync_response = 0;
 
     // Parse the AMY stuff out of the message first
-    struct event e = amy_default_event();
+    amy_event e = amy_default_event();
     amy_parse_message(message, &e);
+    amy_process_event(&e);
     if(e.status == EVENT_TRANSFER_DATA) {
         // transfer data already dealt with. we skip this followon check.
         length = 0;
@@ -146,17 +147,6 @@ void tulip_parse_amy_message(char *message, uint16_t length) {
     }
     // Only do this if we got some data
     if(length >0) {
-        // TODO -- not that it matters, but the below could probably be one or two lines long instead
-        // Don't add sync messages to the event queue
-        if(sync >= 0 && sync_index >= 0) {
-            //handle_sync(sync, sync_index);
-        } else {
-            // Don't parse events other than sync messages if i'm in mesh mode. 
-            //if(!mesh_flag) {
-            if(e.status == EVENT_SCHEDULED) {
-                amy_add_event(&e);
-            }
-            //}
-        }
+        amy_add_event(&e);
     }
 }

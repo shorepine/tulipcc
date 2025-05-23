@@ -3,7 +3,7 @@
 #include "alles.h"
 
 void note_on(int8_t osc, int64_t time) {
-    struct event e = amy_default_event();
+    amy_event e = amy_default_event();
     e.osc = osc;
     e.time = time;
     e.velocity = 1;
@@ -14,7 +14,7 @@ void note_on(int8_t osc, int64_t time) {
 // Play a pew -- upgdrading
 
 void upgrade_tone() {
-    struct event e = amy_default_event();
+    amy_event e = amy_default_event();
     int64_t sysclock = amy_sysclock();
     e.osc = 0;
     e.time = sysclock;
@@ -32,7 +32,7 @@ void upgrade_tone() {
 
 // Play a sonar ping -- searching for wifi
 void wifi_tone() {
-    struct event e = amy_default_event();
+    amy_event e = amy_default_event();
     int64_t sysclock = amy_sysclock();
     e.osc = 0;
     e.time = sysclock;
@@ -50,7 +50,7 @@ void wifi_tone() {
 
 // Schedule a bleep now
 void bleep() {
-    struct event e = amy_default_event();
+    amy_event e = amy_default_event();
     int64_t sysclock = amy_sysclock();
     e.osc = 0;
     e.time = sysclock;
@@ -71,7 +71,7 @@ void bleep() {
 }
 
 void debleep() {
-    struct event e = amy_default_event();
+    amy_event e = amy_default_event();
     int64_t sysclock = amy_sysclock();
     e.osc = 0;
     e.time = sysclock;
@@ -90,7 +90,7 @@ void debleep() {
 
 // Plays a short scale 
 void scale(uint8_t wave) {
-    struct event e = amy_default_event();
+    amy_event e = amy_default_event();
     int64_t sysclock = amy_sysclock();
     for(uint8_t i=0;i<12;i++) {
         e.time = sysclock + (i*250);
