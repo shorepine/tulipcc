@@ -9,9 +9,25 @@
 #include "polyfills.h"
 #include "py/mphal.h"
 #include "py/runtime.h"
-
+#include "amy_connector.h"
+#include <stdio.h>
 uint8_t * external_map;
 
+#ifdef AMY_IS_EXTERNAL
+uint8_t * sysex_buffer;
+#endif
+
+#ifdef __EMSCRIPTEN__
+
+void midi_out(uint8_t * bytes, uint16_t len) {
+    EM_ASM(
+            if(midiOutputDevice != null) {
+                midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1));
+            }, bytes, len
+        );
+}
+
+#endif
 
 // A queue to store the AMY midi messages coming IN
 uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
@@ -74,7 +90,9 @@ void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
 }
 
 void midi_local(uint8_t * bytes, uint16_t len) {
+#ifndef AMY_IS_EXTERNAL
     convert_midi_bytes_to_messages(bytes, len, 0);
+#endif
 }
 
 extern bool midi_has_out;
@@ -87,9 +105,13 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
         send_usb_midi_out(buf, len);
     }
 #endif
+#ifndef AMY_IS_EXTERNAL
     // Also send out via AMY
     amy_external_midi_output(buf, len);
+#endif
 }
+
+#ifndef AMY_IS_EXTERNAL
 
 #ifdef ESP_PLATFORM
 void run_amy() {
@@ -122,8 +144,6 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
 }
 
 #endif
-
-
 
 // Parse extra stuff out of an AMY message. Used for alles
 
@@ -175,3 +195,4 @@ void tulip_parse_amy_message(char *message, uint16_t length) {
         amy_add_event(&e);
     }
 }
+#endif

@@ -53,7 +53,7 @@ class DrumSwitch(UIElement):
         """Update the sequencer entry when switch is turned on or off. Also has to be done when row voice changes, because _NOTE_OF_ROW changes."""
         row = app.rows[self.row]
         if(self.on):
-            kwargs = {'position': self.col, 'amy_sequenceable': True, 'func': amy.send, 'args': [], 'synth': self.synth, 'note': _NOTE_OF_ROW[self.row], 'vel': 1.0}
+            kwargs = {'position': self.col, 'func': amy.send, 'args': [], 'synth': self.synth, 'note': _NOTE_OF_ROW[self.row], 'vel': 1.0}
             if self.sequencer_event is None:
                 self.sequencer_event = app.drum_seq.add(**kwargs)
             else:
@@ -277,9 +277,7 @@ def run(screen):
     app = screen # we can use the screen obj passed in as a general "store stuff here" class, as well as inspect the UI 
 
     # Drum machine sequencer - plays notes
-    app.drum_seq = sequencer.Sequence(16, 8)
-    # Graphical update sequencer -- moves the LEDs
-    app.led_seq = sequencer.Sequence(1, 8)
+    app.drum_seq = sequencer.AMYSequence(16, 8)
 
     app.offset_y = 10
     app.set_bg_color(0)
@@ -306,7 +304,8 @@ def run(screen):
         app.rows[2].objs[i].set(True)
 
     app.current_beat = int((seq_ticks() / 24) % 16)
-    app.led_seq.add(0, beat_callback)
+    # Graphical update sequencer -- moves the LEDs
+    app.led_seq = sequencer.TulipSequence(8, beat_callback)
     app.present()
 
 

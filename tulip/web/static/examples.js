@@ -389,7 +389,7 @@ sequencer.tempo(140)
 syn = synth.PatchSynth(1, 0)
 midi.config.add_synth(channel=2, synth=syn)
 arp_notes = [48,50,None,49,56,None,46,44,None,None,49,56,58,60,None,56]
-seq= sequencer.Sequence(16,8)
+seq= sequencer.AMYSequence(16,8)
 for i in range(16):
     note = arp_notes[i%len(arp_notes)]
     if note is not None:
@@ -1250,8 +1250,7 @@ def run(screen):
     app = screen
     app.synth = midi.config.synth_per_channel[1]
     app.current_beat = 0
-    app.seq = sequencer.Sequence(1,16)
-    app.seq.add(0, beat_callback)
+    app.seq = sequencer.TulioSequence(16, beat_callback)
     app.set_bg_color(0)
     app.grid = NoteGrid()
     '''
@@ -1281,7 +1280,7 @@ def run(screen):
 if __name__ == '__main__':
         run(tulip.UIScreen())
 `},{
-    't':'music',
+    't':'deprecated',
     'd':'Directly play a wav file',
     'c':`
 # wav.py
@@ -1307,7 +1306,7 @@ if(f is not None):
     amy.send(osc=1,wave=amy.AUDIO_EXT1, pan=1, vel=1)
     tulip.amy_block_done_callback(cb)
 `},{
-    't':'music',
+    't':'deprecated',
     'd':'Sample audio in and play it as an instrument',
     'c':`
 # sample.py 
@@ -1342,7 +1341,7 @@ tulip.amy_block_done_callback(sample)
 `
 },{
     'd':'Generate audio buffers in Python',
-    't':'music',
+    't':'deprecated',
     'c':`
 # makes a sine wave. obviously, it's easier to do this in AMY directly! 
 # but just showing how to do it for any audio synthesis in python

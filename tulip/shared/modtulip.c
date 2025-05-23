@@ -12,6 +12,7 @@
 #ifndef __EMSCRIPTEN__
 #endif
 #include "tsequencer.h"
+#include "amy_connector.h"
 #if !defined(AMYBOARD) && !defined(AMYBOARD_WEB)
 #include "ui.h"
 #include "keyscan.h"
@@ -179,11 +180,20 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_remove_callbacks_obj, 0, 0,
 
 
 STATIC mp_obj_t tulip_seq_ticks(size_t n_args, const mp_obj_t *args) {
+#ifdef AMY_IS_EXTERNAL
+    return mp_obj_new_int(sequencer_tick_count);
+#else
     return mp_obj_new_int(amy_global.sequencer_tick_count);
+#endif
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_seq_ticks_obj, 0, 0, tulip_seq_ticks);
 
+extern uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
+extern uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
+
+extern int16_t midi_queue_head;
+extern int16_t midi_queue_tail ;
 
 STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
     if(midi_queue_head != midi_queue_tail) {
@@ -198,6 +208,7 @@ STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_in_obj, 0, 0, tulip_midi_in);
 
+#ifndef __EMSCRIPTEN__
 STATIC mp_obj_t tulip_sysex_in(size_t n_args, const mp_obj_t *args) {
     if(sysex_len) {
         mp_obj_t sysex_bytes = mp_obj_new_bytes(sysex_buffer, sysex_len);
@@ -208,6 +219,7 @@ STATIC mp_obj_t tulip_sysex_in(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_sysex_in_obj, 0, 0, tulip_sysex_in);
+#endif
 
 extern void tulip_send_midi_out(uint8_t *, uint16_t);
 
@@ -1460,10 +1472,10 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amy_block_done_callback), MP_ROM_PTR(&tulip_amy_block_done_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_input_buffer), MP_ROM_PTR(&tulip_amy_get_input_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
 #endif
     { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },
-    { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_local), MP_ROM_PTR(&tulip_midi_local_obj) },
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
