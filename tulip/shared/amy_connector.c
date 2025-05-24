@@ -115,6 +115,7 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 
 #ifdef ESP_PLATFORM
 void run_amy() {
+    fprintf(stderr, "1\n");
     amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_config_t amy_config = amy_default_config();
     amy_config.has_audio_in = 0;
@@ -126,8 +127,11 @@ void run_amy() {
     amy_config.i2s_dout = CONFIG_I2S_DIN; // badly named
     amy_config.midi_out = MIDI_OUT_PIN;
     amy_config.midi_in = MIDI_IN_PIN;
+    fprintf(stderr, "2\n");
     amy_start(amy_config);
+    fprintf(stderr, "3\n");
     amy_live_start();
+    fprintf(stderr, "4\n");
 }
 
 #elif defined TULIP_DESKTOP
@@ -149,13 +153,8 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
 
 void tulip_parse_amy_message(char *message, uint16_t length) {
     uint8_t mode = 0;
-    int16_t client = -1;
-    int32_t sync = -1;
-    int8_t sync_index = -1;
-    uint8_t ipv4 = 0;
     uint16_t start = 0;
     uint16_t c = 0;
-    uint8_t sync_response = 0;
 
     // Parse the AMY stuff out of the message first
     amy_event e = amy_default_event();
@@ -165,30 +164,15 @@ void tulip_parse_amy_message(char *message, uint16_t length) {
         // transfer data already dealt with. we skip this followon check.
         length = 0;
     } else {
-        //fprintf(stderr, "message is %s len is %d\n", message, length);
-        // Then pull out any alles-specific modes in this message 
         while(c < length+1) {
             uint8_t b = message[c];
-            if(b == '_' && c==0) sync_response = 1;
             if( ((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')) || b == 0) {  // new mode or end
-                if(mode=='g') client = atoi(message + start); 
-                if(mode=='U') sync = atol(message + start); 
                 if(mode=='W') external_map[e.osc] = atoi(message+start);
-                if(sync_response) if(mode=='r') ipv4=atoi(message + start);
-                if(mode=='i') sync_index = atoi(message + start);
                 mode = b;
                 start = c + 1;
             } 
             c++;
         }
-    }
-    if(sync_response) {
-        // If this is a sync response, let's update our local map of who is booted
-        //fprintf(stderr, "sync response message was %s\n", message);
-        //update_map(client, ipv4, sync);
-        length = 0; // don't need to do the rest
-    } else {
-        // Note, we DO NOT do anything with computed_delta in Tulip. Tulip cannot receive alles mesh messages for playback.
     }
     // Only do this if we got some data
     if(length >0) {
