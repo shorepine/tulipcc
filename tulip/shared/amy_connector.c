@@ -115,7 +115,6 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 
 #ifdef ESP_PLATFORM
 void run_amy() {
-    fprintf(stderr, "1\n");
     amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_config_t amy_config = amy_default_config();
     amy_config.has_audio_in = 0;
@@ -127,11 +126,8 @@ void run_amy() {
     amy_config.i2s_dout = CONFIG_I2S_DIN; // badly named
     amy_config.midi_out = MIDI_OUT_PIN;
     amy_config.midi_in = MIDI_IN_PIN;
-    fprintf(stderr, "2\n");
     amy_start(amy_config);
-    fprintf(stderr, "3\n");
     amy_live_start();
-    fprintf(stderr, "4\n");
 }
 
 #elif defined TULIP_DESKTOP
