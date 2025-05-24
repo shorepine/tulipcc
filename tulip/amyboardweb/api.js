@@ -289,7 +289,7 @@ export async function loadMicroPython(options) {
         },
         midiByte(byte) {
             return Module.ccall(
-                "process_single_midi_byte", "null", ["number"], [byte], {async:true}
+                "amy_process_single_midi_byte", "null", ["number"], [byte], {async:true}
             );
         },
         // Needed if the GC/asyncify is enabled.

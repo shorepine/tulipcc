@@ -1,7 +1,7 @@
 # patches.py
 # maybe one day automated list of patches in AMY
 
-# Drumkit is [base_midi_note, name, general_midi_note]
+# Drumkit is [base_midi_note, name, general_midi_note], index is preset number.
 drumkit = [ 
     (89, "Maraca", 70),
     (39, "Kick", None),

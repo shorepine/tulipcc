@@ -61,7 +61,7 @@ Linux:
 sudo apt install cmake ninja-build dfu-util virtualenv
 ```
 
-For both macOS & Linux, next, download the supported version of ESP-IDF. That is currently a pre-release of 5.4. You need to get this with `git`, so install that if you don't already have it. Once Espressif updates the release, we can provide a direct download link that's a bit easier. 
+For both macOS & Linux, next, download the supported version of ESP-IDF. That is release 5.4.1. You need to get this with `git`, so install that if you don't already have it. Once Espressif updates the release, we can provide a direct download link that's a bit easier. 
 
 I like to keep them in `~/esp/`, as you'll likely want to use different versions eventually. So we'll assume it's in `~/esp/esp-idf`.
 
@@ -71,10 +71,8 @@ Also, clone this Tulip repository. We'll assume it's in `~/tulipcc`.
 cd ~
 mkdir esp
 cd esp
-git clone https://github.com/espressif/esp-idf.git
-cd esp-idf
-git checkout 70f222e5d29df8ffe5da25057601708c8097bcd1
-git submodule update --init --recursive
+git clone -b v5.4.1 --recursive https://github.com/espressif/esp-idf.git esp-idf-v5.4.1
+cd esp-idf-v5.4.1
 ./install.sh esp32s3
 source export.sh
 

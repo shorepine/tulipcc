@@ -4,6 +4,7 @@ import tulip, midi
 import lvgl as lv
 import time
 import patches
+import juno
 
 class JunoSection(tulip.UIElement):
     """A group of elements in an red-header group with a title."""
@@ -359,9 +360,6 @@ class JunoDropDown(tulip.UIElement):
         self.set_selected_without_callback(index)
 
 
-
-import juno
-
 # Midi channel 0 is not accessible, it's used to store "initial state" juno. Actual UI switches to a real MIDI channel (1 up) once the UI is up.
 midi_channel = 0
 juno_patch_for_midi_channel = {0: juno.JunoPatch.from_patch_number(0)}
@@ -483,11 +481,10 @@ def setup_from_patch_number(patch_number):
     #num_amy_voices = 0 if amy_voices == None else len(amy_voices)
     #polyphony = max(4, num_amy_voices)
     midi.config.program_change(midi_channel, patch_number)
-    _, amy_voices = midi.config.channel_info(midi_channel)
     #jp = juno.JunoPatch()  #.from_patch_number(patch_number)
     #juno_patch_for_midi_channel[midi_channel] = jp
     jp = juno_patch_for_midi_channel[midi_channel]
-    jp.set_voices(amy_voices)
+    jp.set_synth(midi_channel)  # The AMY synth number matches the MIDI channel
     update_patch_including_state(jp, patch_number, midi_channel)
     setup_ui_from_juno_patch(jp)
 
@@ -523,13 +520,13 @@ def get_active_midi_channels_as_str():
     global midi_channel
     juno_midi_channels = []
     for chan in midi.config.get_active_channels():
-        patch_num, amy_voices = midi.config.channel_info(chan)
+        patch_num, polyphony = midi.config.channel_info(chan)
         if patch_num is not None and patch_num < 128:
             juno_midi_channels.append(chan)
             if chan not in juno_patch_for_midi_channel:
                 # We didn't know this channel was a juno, make a new one
                 jp = juno.JunoPatch()
-                jp.set_voices(amy_voices)
+                jp.set_synth(chan)
                 juno_patch_for_midi_channel[chan] = jp
             # While we're here, make sure this synth has the current patch
             # which may have been modified by the voices app.

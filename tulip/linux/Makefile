@@ -236,7 +236,6 @@ endif
 SRC_C += \
 	main.c \
 	../shared/desktop/unix_display.c \
-	../shared/desktop/multicast.c \
 	../shared/desktop/unix_mphal.c \
 	../../amy/src/libminiaudio-audio.c \
 	$(MICROPY_PORT_DIR)/mpthreadport.c \
