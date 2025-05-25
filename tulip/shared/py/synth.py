@@ -132,6 +132,7 @@ class PatchSynth:
     def update_oscs(self, **kwargs):
         """Update all our oscs with the params in the dict."""
         # Pass the commands to all the voices.
+        self.deferred_init()
         self.amy_send(**kwargs)
 
 

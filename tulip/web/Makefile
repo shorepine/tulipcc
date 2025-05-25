@@ -108,7 +108,9 @@ EXPORTED_FUNCTIONS_EXTRA += ,\
 	_proxy_c_to_js_resume,\
 	_proxy_c_to_js_store_attr,\
 	_proxy_convert_mp_to_js_obj_cside,\
-	_tulip_tick
+	_tulip_tick,\
+	_tulip_midi_input_hook
+
 
 EXPORTED_RUNTIME_METHODS_EXTRA += ,\
 	PATH,\

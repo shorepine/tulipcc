@@ -13,6 +13,7 @@ tulip.run('drums')
     't':'music',
     'd':"Set up a MIDI channel to play a piano",
     'c':`
+import midi, synth
 midi.config.reset()
 midi.config.add_synth(synth.PatchSynth(6, 256))
 # Now set your MIDI device on this page and play a note!
@@ -108,8 +109,8 @@ if __name__ == '__main__':
     'c':`
 # some stuart dempster in your browser
 import music, tulip
-amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', patch=50)
-s = synth.OscSynth(wave=amy.PCM, patch=50)
+amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', preset=50)
+s = synth.OscSynth(wave=amy.PCM, preset=50)
 for i,note in enumerate(music.Chord('F:min7').midinotes()):
     s.note_on(note+24, 1, time=i*4000)
     s.note_off(note+24, time=20000)
@@ -169,7 +170,7 @@ def print_sound_info_and_play(play):
         print(" PCM sample number:", sound_number)
         print(" note number:", patches.drumkit[sound_number][0])
         if play:
-            tulip_pcm_synth.update_oscs(patch=sound_number,freq=0)
+            tulip_pcm_synth.update_oscs(preset=sound_number,freq=0)
             tulip_pcm_synth.note_on(patches.drumkit[sound_number][0])
 
     elif sound_type == 1: 

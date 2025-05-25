@@ -1,4 +1,4 @@
-var amy_play_message = null;
+var amy_add_message = null;
 var amy_live_start_web = null;
 var amy_live_start_web_audioin = null;
 var amy_process_single_midi_byte = null;
@@ -34,8 +34,8 @@ amyModule().then(async function(am) {
   amy_start_web = am.cwrap(
     'amy_start_web', null, null
   );
-  amy_play_message = am.cwrap(
-    'amy_play_message', null, ['string']
+  amy_add_message = am.cwrap(
+    'amy_add_message', null, ['string']
   );
   amy_reset_sysclock = am.cwrap(
     'amy_reset_sysclock', null, null
@@ -73,6 +73,11 @@ async function clear_storage() {
     location.reload(true);
   }
 }
+
+async function amy_external_midi_input_js_hook(bytes, len, sysex) {
+    console.log("got midi len  " + len + " bytes " + bytes);
+    mp.midiInHook(bytes, len, sysex);
+} 
 
 async function setup_midi_devices() {
   var midi_in = document.tulip_settings.midi_input;
@@ -478,7 +483,7 @@ async function start_tulip() {
   await start_midi();
 
   // Let micropython call an exported AMY function
-  await mp.registerJsModule('amy_js_message', amy_play_message);
+  await mp.registerJsModule('amy_js_message', amy_add_message);
   await mp.registerJsModule('amy_sysclock', amy_sysclock);
   await mp.registerJsModule('tulip_world_upload_file', tulip_world_upload_file);
 //  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);

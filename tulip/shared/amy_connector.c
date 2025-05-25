@@ -69,14 +69,14 @@ uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
 // I am called when AMY receives MIDI in, whether it has been processed (played in a instrument) or not 
 // In tulip i just fill up the last_midi queue so that MIDI input is accessible to Python
 void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
-    //fprintf(stderr, "adding midi message of %d bytes to queue: ", len);
+    fprintf(stderr, "adding midi message of %d bytes to queue: ", len);
     for(uint32_t i = 0; i < (uint32_t)len; i++) {
         if(i < MAX_MIDI_BYTES_PER_MESSAGE) {
-            //fprintf(stderr, "%02x ", data[i]);
+            fprintf(stderr, "%02x ", data[i]);
             last_midi[midi_queue_tail][i] = data[i];
         }
     }
-    //fprintf(stderr, "\n");
+    fprintf(stderr, "\n");
     last_midi_len[midi_queue_tail] = (uint16_t)len;
     midi_queue_tail = (midi_queue_tail + 1) % MIDI_QUEUE_DEPTH;
     if (midi_queue_tail == midi_queue_head) {

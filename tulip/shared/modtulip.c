@@ -462,7 +462,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_start_amyboard_amy_obj, 0, 0, t
 
 
 STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {
-    amy_play_message((char*)mp_obj_str_get_str(args[0]));
+    amy_add_message((char*)mp_obj_str_get_str(args[0]));
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_send_obj, 1, 1, tulip_amyboard_send);

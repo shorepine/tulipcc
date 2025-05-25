@@ -100,7 +100,7 @@ void i2c_check_for_data() {
         if(size>0) {
             i2c_buffer[size] = 0;
             //fprintf(stderr, "%s\n", i2c_buffer);
-            amy_play_message((char*)i2c_buffer);
+            amy_add_message((char*)i2c_buffer);
         }
     }
 }
