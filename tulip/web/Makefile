@@ -83,7 +83,8 @@ INC += -I$(TOP)/../lv_binding_micropython_tulip/lvgl/src/libs/lodepng
 
 CFLAGS += -Wall -Werror -Wdouble-promotion -Wfloat-conversion -DSTATIC=static -Wno-unused-variable -Wno-unused-function
 CFLAGS += -O3 -DNDEBUG
-CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
+CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  \
+	-Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal -Wno-unterminated-string-initialization
 CFLAGS += $(INC) $(CWARN)
 CFLAGS += -DTULIP_WEB -DTULIP -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 -DAMY_IS_EXTERNAL -DMODULE_ULAB_ENABLED=1 -DAMY_HAS_AUDIO_IN
 
@@ -114,6 +115,7 @@ EXPORTED_FUNCTIONS_EXTRA += ,\
 
 EXPORTED_RUNTIME_METHODS_EXTRA += ,\
 	PATH,\
+	HEAPU8,\
 	PATH_FS,\
 	UTF8ToString,\
 	getValue,\
@@ -127,6 +129,7 @@ JSFLAGS += \
 	-s ASYNCIFY \
 	-s ASYNCIFY_STACK_SIZE=16000 \
 	-s ASSERTIONS \
+	-s IMPORTED_MEMORY=1 \
 	-s EXPORTED_FUNCTIONS="\
 	_free,\
 	_malloc,\

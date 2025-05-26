@@ -196,6 +196,7 @@ extern int16_t midi_queue_head;
 extern int16_t midi_queue_tail ;
 
 STATIC mp_obj_t tulip_midi_in(size_t n_args, const mp_obj_t *args) {
+
     if(midi_queue_head != midi_queue_tail) {
         int16_t prev_head = midi_queue_head;
         // Step on the head, hope no-one notices before we pop it.

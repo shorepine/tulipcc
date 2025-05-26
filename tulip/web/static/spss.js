@@ -75,7 +75,6 @@ async function clear_storage() {
 }
 
 async function amy_external_midi_input_js_hook(bytes, len, sysex) {
-    console.log("got midi len  " + len + " bytes " + bytes);
     mp.midiInHook(bytes, len, sysex);
 } 
 
