@@ -104,7 +104,6 @@ class PatchSynth:
     def program_change(self, patch_number):
         import time
         if patch_number != self.patch_number:
-            print("changing patch number")
             self.patch_number = patch_number
             # Reset any modified state due to previous patch modifications.
             self.patch_state = None
@@ -112,7 +111,7 @@ class PatchSynth:
                 self.deferred_init()
             else:
                 self.amy_send(patch_number=patch_number) 
-            
+
     def control_change(self, control, value):
         print('control_change not implemented for amy-managed voices.')
 

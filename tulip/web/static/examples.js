@@ -566,7 +566,7 @@ def process_key( key ):
             note_num = 36 + 12 * math.log( ratio ) / math.log( 2 )
             print( f"note_num: {note_num}" )
                   
-            amy.send(voices=0,load_patch=patch_num,note=note_num,vel=1)
+            amy.send(voices=0,patch_number=patch_num,note=note_num,vel=1)
             
         pass
     
@@ -596,7 +596,7 @@ def process_key( key ):
 
 
 patch_num = 129
-amy.send(voices=0,load_patch=patch_num,note=45,vel=1)
+amy.send(voices=0,patch_number=patch_num,note=45,vel=1)
 
 tulip.key_scan(1)
 tulip.keyboard_callback( process_key )
@@ -1251,7 +1251,7 @@ def run(screen):
     app = screen
     app.synth = midi.config.synth_per_channel[1]
     app.current_beat = 0
-    app.seq = sequencer.TulioSequence(16, beat_callback)
+    app.seq = sequencer.TulipSequence(16, beat_callback)
     app.set_bg_color(0)
     app.grid = NoteGrid()
     '''
