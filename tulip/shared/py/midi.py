@@ -17,13 +17,14 @@ class Synth(PatchSynth):
 class MidiConfig:
     """System-wide Midi input config."""
 
-    def __init__(self, voices_per_channel={}, patch_per_channel={}, show_warnings=True):
+    def __init__(self, voices_per_channel={}, patch_per_channel={}, show_warnings=True, synths_already_initialized=False):
         self.show_warnings = show_warnings
         self.synth_per_channel = dict()
-        self.arpeggiator_per_channel = {}
-        for channel, num_voices in voices_per_channel.items():
-            patch = patch_per_channel[channel] if channel in patch_per_channel else None
-            self.add_synth(channel=channel, synth=PatchSynth(patch_number=patch, num_voices=num_voices))
+        self.arpeggiator_per_channel = dict()
+        for channel, patch_number in patch_per_channel.items():
+            num_voices = voices_per_channel[channel] if channel in voices_per_channel else 4  # Default 4 voices per synth.
+            synth = PatchSynth(patch_number=patch_number, num_voices=num_voices, synth_already_initialized=synths_already_initialized)
+            self.add_synth(channel=channel, synth=synth)
 
     def reset(self):
         """Clear the midi config, release all the synths."""
@@ -34,7 +35,7 @@ class MidiConfig:
 
     def release_synth_for_channel(self, channel):
         if channel in self.synth_per_channel:
-            # Old synth allocated - Expicitly return the amy_voices to the pool.
+            # Explcitly release the synth; doesn't really do anything with new AMY synths.
             self.synth_per_channel[channel].release()
             del self.synth_per_channel[channel]
         if channel in self.arpeggiator_per_channel:
@@ -48,11 +49,12 @@ class MidiConfig:
             print('add_synth(patch_number=..) is deprecated and will be removed.  Use add_synth(PatchSynth(patch_number=..)) instead.')
             if num_voices is None:
                 num_voices = 6  # Default
-            synth = PatchSynth(num_voices=num_voices, patch_number=patch_number)
+            synth = PatchSynth(num_voices=num_voices, patch_number=patch_number, channel=channel)
         elif patch_number is not None or num_voices is not None:
             raise ValueError('You cannot specify both synth and patch_number/num_voices')
             # .. because we can't reconfigure num_voices which you might be expecting.
         self.synth_per_channel[channel] = synth
+        synth.set_channel(channel)
         if channel in self.arpeggiator_per_channel:
             self.arpeggiator_per_channel[channel].synth = synth
         if hasattr(synth, 'deferred_init'):
@@ -83,12 +85,12 @@ class MidiConfig:
         return self.synth_per_channel[channel] if channel in self.synth_per_channel else None
 
     def channel_info(self, channel):
-        """Report the current patch_num and list of amy_voices for this channel."""
+        """Report the current patch_num and polyphony."""
         if channel not in self.synth_per_channel:
             return (None, None)
         return (
             self.synth_per_channel[channel].patch_number,
-            self.synth_per_channel[channel].amy_voices,
+            self.synth_per_channel[channel].num_voices
         )
 
     def get_channel_state(self, channel):
@@ -102,13 +104,6 @@ class MidiConfig:
             return
         self.synth_per_channel[channel].set_patch_state(state)
 
-    def voices_for_channel(self, channel):
-        """Return a list of AMY voices assigned to a channel."""
-        if channel not in self.synth_per_channel:
-            return []
-        return self.synth_per_channel[channel].amy_voices()
-                  
-
 
 # Global MidiConfig object.
 config = None
@@ -117,13 +112,14 @@ arpeggiator = arpegg.ArpeggiatorSynth(synth=None)
 
 def add_default_synths():
     """Add the default synths (Juno on Chan1, drums on 10) e.g. after config.reset()."""
+    # This now duplicates amy.c:amy_default_setup(), but it should be harmless.
     global config
     # utility sine wave bleeper on channel 16 - the "system bleep" synth
     # (which for the moment steals one of the drum machine oscs, I think).
-    config.add_synth(channel=16, synth=OscSynth(num_voices=1))
+    config.add_synth(channel=16, synth=OscSynth(wave=amy.SINE, num_voices=1))
     # drum machine always on channel 10
     # GeneralMidi Drums.
-    config.add_synth(channel=10, synth=DrumSynth(num_voices=10))
+    config.add_synth(channel=10, synth=DrumSynth(num_voices=6))
     # Default Juno synth on Channel 1.
     config.add_synth(channel=1, synth=PatchSynth(patch_number=0, num_voices=6))
     config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
@@ -144,7 +140,7 @@ def tempo_update(midi_value):
         get_voices_app().settings.set_tempo(new_bpm)
 
 def arp_on():
-    arpeggiator.set('on', not arpeggiator.active)
+    arpeggiator.set('active', not arpeggiator.active)
     if get_voices_app():
         get_voices_app().settings.update_from_arp(arpeggiator)
 
@@ -235,9 +231,9 @@ def sysex_amy(m):
 
 # midi.py's own python midi callback. you can remove this if you don't want it active
 def midi_event_cb(midi_message):
-    """Callback that takes MIDI note on/off to create Note objects."""
+    """Callback that takes MIDI events not already trapped by AMY."""
     # Ignore single value messages (clock, etc) for now.
-    if(len(midi_message)<2): 
+    if len(midi_message) < 2: 
         return
 
     message = midi_message[0] & 0xF0
@@ -257,27 +253,16 @@ def midi_event_cb(midi_message):
     # We have a populated channel.
     synth = config.synth_per_channel[channel]
     # Fetch the arpeggiator for this channel, or use synth if there isn't one.
-    note_receiver = config.arpeggiator_per_channel.get(channel, synth)
+    arp = config.arpeggiator_per_channel.get(channel, None)
     midinote = control
-    if message == 0x90:  # Note on (or note off, if vel = 0)
-        vel = value / 127.
-        note_receiver.note_on(midinote, vel)
-    elif message == 0x80:  # Note off.
-        note_receiver.note_off(midinote)
-    elif message == 0xc0:  # Program change
-        synth.program_change(control)
-    elif message == 0xb0 and control == 0x40:
-        # Sustain pedal.
-        synth.sustain(value)
-    elif message == 0xe0:  # Pitch bend goes direct to AMY.
-        # m[2] is MSB, m[1] is LSB. 14 bits
-        pb_value = ((midi_message[2] << 7) | (midi_message[1])) - 8192 # -8192-8192, where 0 is nothing
-        amy_value = float(pb_value)/(8192*6.0) # convert to -2 / +2 semitones
-        amy.send(pitch_bend=amy_value)
-    elif message == 0xB0 and control == 123: # all notes off
-        synth.all_notes_off()
-
-
+    if arp and arp.active:
+        if message == 0x90:  # Note on (or note off, if vel = 0)
+            vel = value / 127.
+            arp.note_on(midinote, vel)
+        elif message == 0x80:  # Note off.
+            arp.note_off(midinote)
+    if message == 0xc0:  # Program change
+        synth.program_change(control)  # AMY will have done this already, but this way we update the Python-level state too.
 
 
 MIDI_CALLBACKS = set()
@@ -337,6 +322,4 @@ def deferred_midi_config(t):
 
 def setup():
     deferred_midi_config(None)
-    # we can't setup on boot right away as we need to get the bleep going and the alles setup done, so wait on a defer
-    #tulip.defer(deferred_midi_config, None, 500)
 

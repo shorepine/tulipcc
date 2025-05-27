@@ -9,7 +9,7 @@ timestamp=$(date +%Y%m%d%H%M%S)
 
 cd ../../amy
 make docs/amy.js
-make docs/amy-audioin.js
+#make docs/amy-audioin.js
 cd ../tulip/web
 make
 
@@ -27,17 +27,17 @@ cp ../../amy/docs/amy.js stage/run/amy-$timestamp.js
 cp ../../amy/docs/amy.wasm stage/run/amy-$timestamp.wasm
 cp ../../amy/docs/amy.aw.js stage/run/amy-$timestamp.aw.js
 
-cp ../../amy/docs/amy-audioin.js stage/run/amy-audioin-$timestamp.js
-cp ../../amy/docs/amy-audioin.wasm stage/run/amy-audioin-$timestamp.wasm
-cp ../../amy/docs/amy-audioin.aw.js stage/run/amy-audioin-$timestamp.aw.js
+#cp ../../amy/docs/amy-audioin.js stage/run/amy-audioin-$timestamp.js
+#cp ../../amy/docs/amy-audioin.wasm stage/run/amy-audioin-$timestamp.wasm
+#cp ../../amy/docs/amy-audioin.aw.js stage/run/amy-audioin-$timestamp.aw.js
 
 cp build-standard/tulip/obj/micropython.wasm stage/run/tulipcc-$timestamp.wasm
 cp build-standard/tulip/obj/micropython.mjs stage/run/tulipcc-$timestamp.mjs
 cp build-standard/tulip/obj/micropython.data stage/run/tulipcc-$timestamp.data
 
 sed -i '' -e "s/TULIPCCMJS/tulipcc\-${timestamp}.mjs/g" -e "s/AMYJS/amy\-${timestamp}.js/g" stage/run/index.html
-sed -i '' -e "s/amy.aw.js/amy\-${timestamp}.aw.js/g" -e "s/amy.wasm/amy\-${timestamp}.wasm/g" stage/run/amy-$timestamp.js
-sed -i '' -e "s/amy\-audioin.aw.js/amy\-audioin\-${timestamp}.aw.js/g" -e "s/amy\-audioin.wasm/amy\-audioin\-${timestamp}.wasm/g" stage/run/amy-audioin-$timestamp.js
+sed -i '' -e "s/amy.js/amy\-${timestamp}.js/g" -e "s/amy.aw.js/amy\-${timestamp}.aw.js/g" -e "s/amy.wasm/amy\-${timestamp}.wasm/g" stage/run/amy-$timestamp.js
+#sed -i '' -e "s/amy\-audioin.aw.js/amy\-audioin\-${timestamp}.aw.js/g" -e "s/amy\-audioin.wasm/amy\-audioin\-${timestamp}.wasm/g" stage/run/amy-audioin-$timestamp.js
 sed -i '' -e "s/micropython./tulipcc\-${timestamp}./g" stage/run/tulipcc-$timestamp.mjs
 
 python3 server.py

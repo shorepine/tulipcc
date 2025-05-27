@@ -93,7 +93,6 @@
 #endif
 
 #include "display.h"
-#include "alles.h"
 #include "tasks.h"
 
 #ifdef TULIP_DIY
@@ -111,12 +110,6 @@ TaskHandle_t display_handle;
 TaskHandle_t usb_handle;
 TaskHandle_t touchscreen_handle;
 TaskHandle_t tulip_mp_handle;
-TaskHandle_t midi_handle;
-TaskHandle_t alles_handle;
-TaskHandle_t alles_parse_handle;
-TaskHandle_t alles_receive_handle;
-TaskHandle_t amy_render_handle;
-TaskHandle_t alles_fill_buffer_handle;
 TaskHandle_t idle_0_handle;
 TaskHandle_t idle_1_handle;
 TaskHandle_t sequencer_handle;
@@ -150,12 +143,11 @@ float compute_cpu_usage(uint8_t debug) {
 
     const char* const tasks[] = {
          "IDLE0", "IDLE1", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "esp_timer", "sys_evt", "tiT",
-         DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
-         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, SEQUENCER_TASK_NAME, 0
+         DISPLAY_TASK_NAME, USB_TASK_NAME, TOUCHSCREEN_TASK_NAME, TULIP_MP_TASK_NAME, 
+         AMY_RENDER_TASK_NAME, AMY_FILL_BUFFER_TASK_NAME, SEQUENCER_TASK_NAME, 0
     };
     const uint8_t cores[] = {0, 1, 0, 0, 1, 0, 0, 0, 1, 0, DISPLAY_TASK_COREID, USB_TASK_COREID, TOUCHSCREEN_TASK_COREID, TULIP_MP_TASK_COREID,
-        MIDI_TASK_COREID, ALLES_TASK_COREID, ALLES_PARSE_TASK_COREID, ALLES_RECEIVE_TASK_COREID, ALLES_RENDER_TASK_COREID, ALLES_FILL_BUFFER_TASK_COREID, 
-        SEQUENCER_TASK_COREID};
+        AMY_RENDER_TASK_COREID, AMY_FILL_BUFFER_TASK_COREID,  SEQUENCER_TASK_COREID};
 
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
@@ -239,10 +231,10 @@ void mp_task(void *pvParameter) {
     
     machine_init();
 
-    //esp_err_t err = esp_event_loop_create_default();
-    //if (err != ESP_OK) {
-    //    ESP_LOGE("esp_init", "can't create event loop: 0x%x\n", err);
-    //}
+    esp_err_t err = esp_event_loop_create_default();
+    if (err != ESP_OK) {
+        ESP_LOGE("esp_init", "can't create event loop: 0x%x\n", err);
+    }
 
     heap_caps_register_failed_alloc_callback(esp_alloc_failed);
     uint32_t caps = MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM;
@@ -372,6 +364,14 @@ extern void run_gt911();
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
 
+TaskHandle_t amy_handle;
+
+
+extern void run_amy();
+
+uint8_t tulip_ready = 0;
+
+
 void app_main(void) {
     // Hook for a board to run code at start up.
     // This defaults to initialising NVS.
@@ -393,15 +393,7 @@ void app_main(void) {
     gpio_set_level(TDECK_PERI_GPIO, 1);
     delay_ms(500);
     #endif
-
-    #ifndef TDECK
-    fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
-    xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
-    fflush(stderr);
-    delay_ms(100);
-    #endif
     
-
     #ifndef TULIP4_R10_V0 // v0 doesn't do usb
     #ifndef TDECK // TDECK doesn't send power to USB
     fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
@@ -434,10 +426,8 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(100);
 
-    fprintf(stderr,"Starting Alles on core %d\n", ALLES_TASK_COREID);
-    run_alles();
-
-    //xTaskCreatePinnedToCore(run_alles, ALLES_TASK_NAME, (ALLES_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, ALLES_TASK_PRIORITY, &alles_handle, ALLES_TASK_COREID);
+    fprintf(stderr,"Starting AMY\n");
+    run_amy();
     fflush(stderr);
     delay_ms(500);
     
@@ -455,6 +445,8 @@ void app_main(void) {
     #endif
 
     tsequencer_init();
+
+    tulip_ready = 1;
 
 
 }

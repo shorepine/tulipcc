@@ -102,6 +102,7 @@
           setTimeout(function () { editor.save() }, 100);
           setTimeout(function () { editor.refresh() }, 250);
           setTimeout(function () { window.scrollTo(0,0) }, 300);
+          if(url_params.get('run') != null) setTimeout(function () { runEditorBlock() }, 500);
         } catch (e) {
           console.log("Couldn't decode share");
         }

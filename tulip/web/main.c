@@ -46,9 +46,8 @@
 #include "py/ringbuf.h"
 #include "SDL.h"
 #include "emscripten/html5.h"
-#include "midi.h"
 #include "tsequencer.h"
-
+#include "amy_connector.h"
 extern void setup_lvgl();
 void tulip_start();
 

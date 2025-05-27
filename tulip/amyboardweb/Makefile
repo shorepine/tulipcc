@@ -107,7 +107,7 @@ JSFLAGS += \
 	_mp_js_repl_process_char,\
 	_mp_hal_get_interrupt_char,\
 	_mp_handle_pending,\
-	_process_single_midi_byte,\
+	_amy_process_single_midi_byte,\
 	_mp_sched_keyboard_interrupt$(EXPORTED_FUNCTIONS_EXTRA)"
 JSFLAGS += -s EXPORTED_RUNTIME_METHODS="\
 	ccall,\
@@ -148,7 +148,6 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	help.c \
 	tulip_helpers.c \
 	tsequencer.c \
-	midi.c \
 	)
 
 EXTMOD_SRC_C += $(addprefix $(ULAB_DIR)/, \

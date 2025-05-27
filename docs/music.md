@@ -85,34 +85,33 @@ For now, let's make a `Sequence` of 8 quarter notes -- the `4` defines the `1/4`
 (When finishing typing this, hit enter a few times at the end until you see a `>>>` prompt again (not a `...`.) )
 
 ```python
-seq = sequencer.Sequence(8, 4) 
+seq = sequencer.AMYSequence(8, 4) 
 for i in range(8):
     seq.add(i, syn.note_on, [random.choice(chord), 0.6])
 ```
 
-To unpack this a litte, we're creating a 8 1/4 note long pattern `(4,8)` and then adding 8 random notes of the F:min7 chord we created earlier to it. The `seq.add` first takes a parameter of which element to schedule (here, just 0, 1, 2, 3.... 7) and then the function to call (`syn.note_on`), then the arguments for that function (`random.choice(chord)` chooses a random midi note, and 0.6 is the velocity.)
+To unpack this a litte, we're creating a 8 1/4 note long pattern `(8,4)` and then adding 8 random notes of the F:min7 chord we created earlier to it. The `seq.add` first takes a parameter of which element to schedule (here, just 0, 1, 2, 3.... 7) and then the function to call (`syn.note_on`), then the arguments for that function (`random.choice(chord)` chooses a random midi note, and 0.6 is the velocity.)
 
-You should now be hearing a synth pattern play every quarter note in time with the drums. It will keep going! The first parameter of `sequencer.Sequence` is the `divider` of the callback. This tells Tulip how often to call the callback. A `4` means `1/4`, a quarter note. If you made it `8`, it would be an eighth note. 
+You should now be hearing a synth pattern play every quarter note in time with the drums. It will keep going! The first parameter of `sequencer.AMYSequence` is the `divider` of the callback. This tells Tulip how often to call the callback. A `4` means `1/4`, a quarter note. If you made it `8`, it would be an eighth note. 
 
 ```python
 seq.clear() # the sequence should stop 
-seq = sequencer.Sequence(8, 8)  
+seq = sequencer.AMYSequence(8, 8)  
 for i in range(8):
     seq.add(i, syn.note_on, [random.choice(chord), 0.6])
 ```
 
 This should be twice as fast! 
 
-(If you want to do more complex things that aren't in even time, you can set your divider up to `192` and it will be called every single tick (with roughly 10ms between ticks) and you can decide when to emit notes. You can also run multiple `Sequence`s at once for polyrhythms.
+(If you want to do more complex things that aren't in even time, you can set your divider up to `192` and it will be called every single tick (with roughly 10ms between ticks) and you can decide when to emit notes. You can also run multiple `AMYSequence`s at once for polyrhythms.
 
-You can also schedule any python function with a sequencer, not just a music note. This will be useful to do things like update the screen, or send something to a CV channel, or anything you can imagine. Instead of `syn.note_on` as the function, just make your own function!
+You can also schedule any python function with a sequencer, not just a music note. You can do this with `TulipSequence` instead of `AMYSequence`. This will be useful to do things like update the screen, or send something to an external device, or anything you can imagine. The two sequencers stay in sync. Instead of `syn.note_on` as the function, just make your own function!
 
 ```python
 def p(x):
     print("hey!")
 
-print_seq = sequencer.Sequence(1, 2)
-print_seq.add(0,p)
+print_seq = sequencer.TulipSequence(2, p)
 ```
 
 To stop this printing every half note, type `print_seq.clear()`. Your programs should end in a `seq.clear()` so that you can clean up after yourself!
@@ -215,8 +214,7 @@ def note(t):
 
 def start():
     global seq
-    seq = sequencer.Sequence(1, 8)
-    seq.add(0,note)
+    seq = sequencer.TulipSequence(8, note)
 
 def stop():
     global seq
@@ -249,8 +247,7 @@ def note(t):
     app.syn.note_on(random.choice(app.chord), 0.6, time=t)
 
 def start(app):
-    app.seq = sequencer.Sequence(1, 8)
-    app.seq.add(0,note)
+    app.seq = sequencer.TulipSequence(8, note)
 
 def stop(app):
     app.seq.clear()
@@ -391,21 +388,27 @@ You can write functions that respond to MIDI inputs easily on Tulip. Let's say y
 ```python
 import midi, amy
 def sine(m):
-    if m[0] == 144: # MIDI message byte 0 note on
+    if m[0] == 144: # MIDI message channel 1 byte 0 note on
         # send a sine wave to osc 30, with midi note and velocity
         amy.send(osc=30, wave=amy.SINE, note=m[1], vel=m[2] / 127.0)
 
-# Stop the default MIDI callback that plays e.g. Juno notes, so we can hear ours 
-midi.stop_default_callback()
+# turn off Tulip's native handling of MIDI so we can hear our synth
+midi.config.reset()
 
 # Add our callback
 midi.add_callback(sine)
 
 # Now play a MIDI note into Tulip. If you don't have a KB attached, use midi_local to send the message:
-tulip.midi_local((144, 40, 100))
+tulip.midi_local((144, 60, 100))
+
 # You should hear a sine wave
 
-midi.start_default_callback()
+# Turn off the midi callback 
+midi.remove_callback(sine)
+
+# reset back to the default synths
+midi.add_default_synths()
+
 ```
 
 To send MIDI out, just use `tulip.midi_send(message)`. You can, for example, send a MIDI message out every sequencer tick on Tulip.

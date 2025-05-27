@@ -1,6 +1,6 @@
 import gc
 import uos
-import tulip, sys, midi, synth, amy, world, alles, sequencer
+import tulip, sys, midi, synth, amy, world,  sequencer
 from upysh import *
 from tulip import board
 
@@ -101,9 +101,8 @@ if(tulip.board() == "WEB" or tulip.board()=="AMYBOARD_WEB"):
 else:
     amy.AMY_SAMPLE_RATE=44100
     # Override amy's send to work with tulip
-    amy.override_send = lambda x: tulip.alles_send(x, alles.mesh_flag)
-    midi.setup()
-
+    amy.override_send = lambda x: tulip.amy_send(x)
+    midi.setup() # Just mirrors the setup mostly managed by AMY
 
 if(board() == "AMYBOARD" or board()=="AMYBOARD_WEB"):
     import amyboard

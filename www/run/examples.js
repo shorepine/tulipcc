@@ -13,6 +13,7 @@ tulip.run('drums')
     't':'music',
     'd':"Set up a MIDI channel to play a piano",
     'c':`
+import midi, synth
 midi.config.reset()
 midi.config.add_synth(synth.PatchSynth(6, 256))
 # Now set your MIDI device on this page and play a note!
@@ -108,8 +109,8 @@ if __name__ == '__main__':
     'c':`
 # some stuart dempster in your browser
 import music, tulip
-amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', patch=50)
-s = synth.OscSynth(wave=amy.PCM, patch=50)
+amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', preset=50)
+s = synth.OscSynth(wave=amy.PCM, preset=50)
 for i,note in enumerate(music.Chord('F:min7').midinotes()):
     s.note_on(note+24, 1, time=i*4000)
     s.note_off(note+24, time=20000)
@@ -169,7 +170,7 @@ def print_sound_info_and_play(play):
         print(" PCM sample number:", sound_number)
         print(" note number:", patches.drumkit[sound_number][0])
         if play:
-            tulip_pcm_synth.update_oscs(patch=sound_number,freq=0)
+            tulip_pcm_synth.update_oscs(preset=sound_number,freq=0)
             tulip_pcm_synth.note_on(patches.drumkit[sound_number][0])
 
     elif sound_type == 1: 
@@ -332,6 +333,11 @@ tulip.keyboard_callback(do_key)
 tulip.download_and_run('xmas')
 `},{
     't':'music',
+    'd':"A euclidean melody generator (by @ITD)",
+    'c':`
+tulip.download_and_run('euclid2.py')
+`},{
+    't':'music',
     'd':"Construct a custom FM synth",
     'c':`
 import midi, music
@@ -389,7 +395,7 @@ sequencer.tempo(140)
 syn = synth.PatchSynth(1, 0)
 midi.config.add_synth(channel=2, synth=syn)
 arp_notes = [48,50,None,49,56,None,46,44,None,None,49,56,58,60,None,56]
-seq= sequencer.Sequence(16,8)
+seq= sequencer.AMYSequence(16,8)
 for i in range(16):
     note = arp_notes[i%len(arp_notes)]
     if note is not None:
@@ -565,7 +571,7 @@ def process_key( key ):
             note_num = 36 + 12 * math.log( ratio ) / math.log( 2 )
             print( f"note_num: {note_num}" )
                   
-            amy.send(voices=0,load_patch=patch_num,note=note_num,vel=1)
+            amy.send(voices=0,patch_number=patch_num,note=note_num,vel=1)
             
         pass
     
@@ -595,7 +601,7 @@ def process_key( key ):
 
 
 patch_num = 129
-amy.send(voices=0,load_patch=patch_num,note=45,vel=1)
+amy.send(voices=0,patch_number=patch_num,note=45,vel=1)
 
 tulip.key_scan(1)
 tulip.keyboard_callback( process_key )
@@ -1250,8 +1256,7 @@ def run(screen):
     app = screen
     app.synth = midi.config.synth_per_channel[1]
     app.current_beat = 0
-    app.seq = sequencer.Sequence(1,16)
-    app.seq.add(0, beat_callback)
+    app.seq = sequencer.TulipSequence(16, beat_callback)
     app.set_bg_color(0)
     app.grid = NoteGrid()
     '''
@@ -1281,7 +1286,7 @@ def run(screen):
 if __name__ == '__main__':
         run(tulip.UIScreen())
 `},{
-    't':'music',
+    't':'deprecated',
     'd':'Directly play a wav file',
     'c':`
 # wav.py
@@ -1307,7 +1312,7 @@ if(f is not None):
     amy.send(osc=1,wave=amy.AUDIO_EXT1, pan=1, vel=1)
     tulip.amy_block_done_callback(cb)
 `},{
-    't':'music',
+    't':'deprecated',
     'd':'Sample audio in and play it as an instrument',
     'c':`
 # sample.py 
@@ -1342,7 +1347,7 @@ tulip.amy_block_done_callback(sample)
 `
 },{
     'd':'Generate audio buffers in Python',
-    't':'music',
+    't':'deprecated',
     'c':`
 # makes a sine wave. obviously, it's easier to do this in AMY directly! 
 # but just showing how to do it for any audio synthesis in python

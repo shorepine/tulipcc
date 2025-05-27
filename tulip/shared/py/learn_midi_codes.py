@@ -82,7 +82,6 @@ def save_json_file(data):
   print("Mapping written to", file_name)
 
 
-midi.stop_default_callback()
 midi.add_callback(midi_callback)
 
 try:
@@ -94,7 +93,6 @@ except KeyboardInterrupt:
   pass
   
 midi.remove_callback(midi_callback)
-midi.start_default_callback()
 
 
 

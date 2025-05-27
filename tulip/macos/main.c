@@ -55,8 +55,6 @@
 #include "input.h"
 #include "mpthreadport.h"
 #include "display.h"
-#include "alles.h"
-#include "midi.h"
 #include "shared/runtime/pyexec.h"
 
 #include "tsequencer.h"
@@ -898,21 +896,26 @@ soft_reset_exit:
 
 #include "lvgl.h"
 
+extern void run_amy(uint8_t capture_device_id, uint8_t playback_device_id);
+
 int main(int argc, char **argv) {
     // Get the resources folder loc
     // So thread out alles and then micropython tasks
 
     // Display has to run on main thread on macos
     int opt;
+    int capture_device_id = -1;
+    int playback_device_id = -1;
+
     while((opt = getopt(argc, argv, ":d:c:lh")) != -1) 
     { 
         switch(opt) 
         { 
             case 'd': 
-                amy_playback_device_id = atoi(optarg);
+                playback_device_id = atoi(optarg);
                 break;
             case 'c': 
-                amy_capture_device_id = atoi(optarg);
+                capture_device_id = atoi(optarg);
                 break;
             case 'l':
                 amy_print_devices();
@@ -937,18 +940,14 @@ int main(int argc, char **argv) {
         } 
     }
     unix_display_init();
-    pthread_t alles_thread_id;
-    pthread_create(&alles_thread_id, NULL, alles_start, NULL);
 
-    pthread_t midi_thread_id;
-    pthread_create(&midi_thread_id, NULL, run_midi, NULL);
+    run_amy(capture_device_id, playback_device_id);
 
     pthread_t mp_thread_id;
     pthread_create(&mp_thread_id, NULL, main_, NULL);
 
     tsequencer_init();
     delay_ms(100);
-    // Schedule a "turning on" sound
 
 
 display_jump:

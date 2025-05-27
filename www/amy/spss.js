@@ -1,5 +1,6 @@
 var amy_play_message = null;
-var amy_live_start = null;
+var amy_live_start_web_audioin = null;
+var amy_live_start_web = null;
 var audio_started = false;
 var amy_sysclock = null;
 var amy_get_input_buffer = null;
@@ -20,14 +21,17 @@ var amy_module = null;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
-  amy_live_start = am.cwrap(
-    'amy_live_start', null, ['number'], {async: true}    
+  amy_live_start_web_audioin = am.cwrap(
+    'amy_live_start_web_audioin', null, null, {async: true}    
+  );
+  amy_live_start_web = am.cwrap(
+    'amy_live_start_web', null, null, {async: true}    
   );
   amy_live_stop = am.cwrap(
     'amy_live_stop', null,  null, {async: true}    
   );
-  amy_start = am.cwrap(
-    'amy_start', null, ['number', 'number', 'number']
+  amy_start_web = am.cwrap(
+    'amy_start_web', null, null
   );
   amy_play_message = am.cwrap(
     'amy_play_message', null, ['string']
@@ -47,7 +51,7 @@ amyModule().then(async function(am) {
   amy_set_input_buffer = am.cwrap(
     'amy_set_external_input_buffer', null, ['number']
   );
-  amy_start(1,1,1,1);
+  amy_start_web();
   amy_module = am;
 });
 
@@ -439,10 +443,10 @@ async function toggle_audioin() {
     await amy_live_stop();
     if (document.getElementById('amy_audioin').checked) {
         amy_audioin_toggle = true;
-        await amy_live_start(1);
+        await amy_live_start_web_audioin();
     } else {
         amy_audioin_toggle = false;
-        await amy_live_start(0);
+        await amy_live_start_web();
     }
 }
 
@@ -511,9 +515,9 @@ async function start_audio() {
 
   // Start the audio worklet (miniaudio)
   if(amy_audioin_toggle) {
-      await amy_live_start(1);
+      await amy_live_start_web_audioin();
   } else {
-      await amy_live_start(0);    
+      await amy_live_start_web();    
   }
   audio_started = true;
 }

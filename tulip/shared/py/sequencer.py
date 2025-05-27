@@ -16,40 +16,30 @@ def clear():
     amy.send(reset=amy.RESET_SEQUENCER)
     tulip.seq_remove_callbacks()
 
-class SequenceEvent:
+class AMYSequenceEvent:
     SEQUENCE_TAG = 0
     def __init__(self, sequence):
         self.sequence = sequence
-        self.amy_sequenceable = False
+        self.tag = None
 
     def amy_sequence_string(self):
         return "%d,%d,%d" % (self.tick, self.sequence.period, self.tag)
 
     def remove(self):
-        if(self.amy_sequenceable):
-            amy.send(sequence=",,%d" % (self.tag))
-        else:
-            tulip.seq_remove_callback(self.tag)
+        amy.send(sequence=",,%d" % (self.tag))
         self.sequence.events.remove(self)
 
-    def update(self, position, func, args=[], **kwargs):
-        self.tick = self.sequence.event_length_ticks*position
+    def update(self, position, func, args=[], amy_sequenceable=False, **kwargs):
+        self.tick = self.sequence.event_length_ticks * position
         self.func = func
         self.g_args = args
         self.g_kwargs = kwargs
-        self.tag = None
-        try:
-            self.tag = SequenceEvent.SEQUENCE_TAG 
-            self.func(*self.g_args, **self.g_kwargs, sequence=self.amy_sequence_string())
-            SequenceEvent.SEQUENCE_TAG = SequenceEvent.SEQUENCE_TAG + 1
-            self.amy_sequenceable = True
-        except TypeError:
-            if(self.tag != None):
-                tulip.seq_remove_callback(self.tag)
-            self.tag = tulip.seq_add_callback(self.func, self.tick, self.sequence.period)
-            if(self.tag == -1):
-                raise Exception("No more Python sequencer callbacks available")
-            self.amy_sequenceable = False
+        if self.tag is None:
+            self.tag = AMYSequenceEvent.SEQUENCE_TAG
+            AMYSequenceEvent.SEQUENCE_TAG = AMYSequenceEvent.SEQUENCE_TAG + 1
+        sequence = self.amy_sequence_string()
+        self.func(*self.g_args, **self.g_kwargs, sequence=sequence)
+
 
 class Sequence:
     # Divider: 8 = 1/8th note, 4 = 1/4 note, 64 = 1/64 note, etc 
@@ -61,13 +51,25 @@ class Sequence:
         self.period = self.event_length_ticks*self.length
 
     def clear(self):
-        c = self.events.copy()
-        for e in c:
-            e.remove()
+        for e in list(self.events):  # list makes a temporary copy before we modify self.events.
+            e.remove()  # reflexively removes e from self.events too.
 
-    def add(self, position, func, args=[], **kwargs):
-        e = SequenceEvent(self)
-        e.update(position, func, args, **kwargs)
+class TulipSequence(Sequence):
+    def __init__(self, divider, func):
+        super().__init__(1, divider)
+        self.func = func
+        self.tag = tulip.seq_add_callback(self.func, 0, self.period)
+
+    def clear(self):
+        tulip.seq_remove_callback(self.tag)
+
+class AMYSequence(Sequence):
+    def __init__(self, length=1, divider=8):
+        super().__init__(length, divider)
+    
+    def add(self, position, func, args=[], amy_sequenceable=False, **kwargs):
+        e = AMYSequenceEvent(self)
+        e.update(position, func=func, args=args, amy_sequenceable=amy_sequenceable, **kwargs)
         self.events = self.events + [e]
         return e
 
