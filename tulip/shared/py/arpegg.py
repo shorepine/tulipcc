@@ -71,8 +71,7 @@ class ArpeggiatorSynth:
         self.current_step = -1
         # Semaphore to the run loop to start going.
         self.running = True
-        self.seq = sequencer.Sequence(1, 8)
-        self.seq.add(0, self.step_callback)
+        self.seq = sequencer.TulipSequence(8, self.step_callback)
 
     def stop(self):
         self.running = False

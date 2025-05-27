@@ -263,18 +263,6 @@ def midi_event_cb(midi_message):
             arp.note_off(midinote)
     if message == 0xc0:  # Program change
         synth.program_change(control)  # AMY will have done this already, but this way we update the Python-level state too.
-    #elif message == 0xb0 and control == 0x40:
-    #    # Sustain pedal.
-    #    synth.sustain(value)
-    #elif message == 0xe0:  # Pitch bend goes direct to AMY.
-    #    # m[2] is MSB, m[1] is LSB. 14 bits
-    #    pb_value = ((midi_message[2] << 7) | (midi_message[1])) - 8192 # -8192-8192, where 0 is nothing
-    #    amy_value = float(pb_value)/(8192*6.0) # convert to -2 / +2 semitones
-    #    amy.send(pitch_bend=amy_value)
-    #elif message == 0xB0 and control == 123: # all notes off
-    #    synth.all_notes_off()
-
-
 
 
 MIDI_CALLBACKS = set()
@@ -285,6 +273,12 @@ def add_callback(fn):
 
 def remove_callback(fn):
     MIDI_CALLBACKS.remove(fn)
+
+def start_default_callback():
+    add_callback(midi_event_cb)
+
+def stop_default_callback():
+    remove_callback(midi_event_cb)
 
 sysex_callback = None
 

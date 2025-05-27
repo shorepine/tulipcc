@@ -392,9 +392,6 @@ def sine(m):
         # send a sine wave to osc 30, with midi note and velocity
         amy.send(osc=30, wave=amy.SINE, note=m[1], vel=m[2] / 127.0)
 
-# Stop the default MIDI callback that plays e.g. Juno notes, so we can hear ours 
-midi.stop_default_callback()
-
 # Add our callback
 midi.add_callback(sine)
 
@@ -402,7 +399,6 @@ midi.add_callback(sine)
 tulip.midi_local((144, 40, 100))
 # You should hear a sine wave
 
-midi.start_default_callback()
 ```
 
 To send MIDI out, just use `tulip.midi_send(message)`. You can, for example, send a MIDI message out every sequencer tick on Tulip.
