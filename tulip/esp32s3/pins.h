@@ -39,7 +39,8 @@
 #define ESP_INTR_FLAG_DEFAULT 0
 #define CONFIG_I2S_LRCLK 5
 #define CONFIG_I2S_BCLK 7
-#define CONFIG_I2S_DIN 6
+#define CONFIG_I2S_DOUT 6
+#define CONFIG_I2S_DIN -1
 #define CONFIG_I2S_NUM 0
 #define MIDI_OUT_PIN UART_PIN_NO_CHANGE
 #define MIDI_IN_PIN UART_PIN_NO_CHANGE 
@@ -88,7 +89,8 @@
 // This assumes you've used a SD card adapter to get I2s audio 
 #define CONFIG_I2S_LRCLK 13 //2
 #define CONFIG_I2S_BCLK 12 //20 
-#define CONFIG_I2S_DIN 11 //19
+#define CONFIG_I2S_DOUT 11 //19
+#define CONFIG_I2S_DIN -1
 #define CONFIG_I2S_NUM 0 
 
 // No MIDI on Matouch7
@@ -117,40 +119,11 @@
 #define ESP_INTR_FLAG_DEFAULT 0
 #define CONFIG_I2S_LRCLK 2
 #define CONFIG_I2S_BCLK 8 
-#define CONFIG_I2S_DIN 5 
+#define CONFIG_I2S_DOUT 5 
+#define CONFIG_I2S_DIN -1 
 #define CONFIG_I2S_NUM 0 
 #define MIDI_OUT_PIN 11
 #define MIDI_IN_PIN 12
-
-#elif defined TULIP4_R10_V0
-#define TOUCH_RST 48
-#define PIN_NUM_BK_PWM 47
-#define PIN_R7 14
-#define PIN_R6 21
-#define PIN_R5 10
-#define PIN_R4 13
-#define PIN_R3 45
-#define PIN_G7 4
-#define PIN_G6 16
-#define PIN_G5 15
-#define PIN_G4 7
-#define PIN_G3 6
-#define PIN_G2 5
-#define PIN_B7 1
-#define PIN_B6 9
-#define PIN_B5 46
-#define PIN_B4 38
-#define PIN_B3 8
-#define ESP_INTR_FLAG_DEFAULT 0
-#define CONFIG_I2S_LRCLK 2
-
-// Note, r10 v0 shares I2S pins with USB on accident
-#define CONFIG_I2S_BCLK 20 
-#define CONFIG_I2S_DIN 19 
-#define CONFIG_I2S_NUM 0 
-#define MIDI_OUT_PIN 11
-#define MIDI_IN_PIN 12
-#endif
 
 #define PIN_NUM_DISP_EN        -1
 #endif // MAKERFABS
@@ -201,7 +174,8 @@
 #define ESP_INTR_FLAG_DEFAULT 0
 #define CONFIG_I2S_LRCLK 4
 #define CONFIG_I2S_BCLK 1
-#define CONFIG_I2S_DIN 2
+#define CONFIG_I2S_DOUT 2
+#define CONFIG_I2S_DIN -1
 #define CONFIG_I2S_NUM 0 
 #define MIDI_OUT_PIN 11
 #define MIDI_IN_PIN 47

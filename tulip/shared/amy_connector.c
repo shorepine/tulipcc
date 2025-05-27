@@ -69,23 +69,24 @@ uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
 
 // I am called when AMY receives MIDI in, whether it has been processed (played in a instrument) or not 
 // In tulip i just fill up the last_midi queue so that MIDI input is accessible to Python
+// I also process sysex if given
 void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
     if(is_sysex) {
-        #ifdef __EMSCRIPTEN__
-            // f0/f7 is stripped on web
-            // TODO -- is this also happening on usb gadget?
-            sysex_buffer[0] = 0xf0;
+        // f0 and f7 are stripped on some platforms
+        if(data[0]!=0xf0) {
+            uint16_t c = 0;
+            sysex_buffer[c++] = 0xf0;
             for(uint16_t i = 0; i< len; i++) {
-                sysex_buffer[i] = data[i];
+                sysex_buffer[c++] = data[i];
             }
-            sysex_buffer[len] = 0xf7;
-            sysex_len = len+2;
-        #else
+            sysex_buffer[c++] = 0xf7;
+            sysex_len = c;
+        } else {
             for(uint16_t i = 0; i< len; i++) {
                 sysex_buffer[i] = data[i];
             }
             sysex_len = len;
-        #endif            
+        }          
         if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_true);
     } else {
         for(uint32_t i = 0; i < (uint32_t)len; i++) {
@@ -149,7 +150,8 @@ void run_amy() {
     amy_config.cores = 2;
     amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
     amy_config.i2s_bclk = CONFIG_I2S_BCLK;
-    amy_config.i2s_dout = CONFIG_I2S_DIN; // badly named
+    amy_config.i2s_dout = CONFIG_I2S_DOUT;
+    if(CONFIG_I2S_DIN>=0) amy_config.i2s_din = CONFIG_I2S_DIN;
     amy_config.midi_out = MIDI_OUT_PIN;
     amy_config.midi_in = MIDI_IN_PIN;
     amy_start(amy_config);
