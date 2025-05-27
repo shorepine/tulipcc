@@ -92,12 +92,6 @@
 
 
 TaskHandle_t tulip_mp_handle;
-TaskHandle_t midi_handle;
-//TaskHandle_t alles_handle;
-//TaskHandle_t alles_parse_handle;
-//TaskHandle_t alles_receive_handle;
-//TaskHandle_t amy_render_handle;
-//TaskHandle_t alles_fill_buffer_handle;
 TaskHandle_t idle_0_handle;
 TaskHandle_t idle_1_handle;
 TaskHandle_t sequencer_handle;
@@ -124,19 +118,17 @@ void esp_alloc_failed(size_t size, uint32_t caps, const char *function_name) {
 }
 
 
-
 float compute_cpu_usage(uint8_t debug) {
     TaskStatus_t *pxTaskStatusArray;
     volatile UBaseType_t uxArraySize, x, i;
 
     const char* const tasks[] = {
          "IDLE0", "IDLE1", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "esp_timer", "sys_evt", "tiT",
-         TULIP_MP_TASK_NAME, MIDI_TASK_NAME, ALLES_TASK_NAME,
-         ALLES_PARSE_TASK_NAME, ALLES_RECEIVE_TASK_NAME, ALLES_RENDER_TASK_NAME, ALLES_FILL_BUFFER_TASK_NAME, SEQUENCER_TASK_NAME, 0
+         TULIP_MP_TASK_NAME, 
+         AMY_RENDER_TASK_NAME, AMY_FILL_BUFFER_TASK_NAME, 0
     };
     const uint8_t cores[] = {0, 1, 0, 0, 1, 0, 0, 0, 1, 0, TULIP_MP_TASK_COREID,
-        MIDI_TASK_COREID, ALLES_TASK_COREID, ALLES_PARSE_TASK_COREID, ALLES_RECEIVE_TASK_COREID, ALLES_RENDER_TASK_COREID, ALLES_FILL_BUFFER_TASK_COREID, 
-        SEQUENCER_TASK_COREID};
+        AMY_RENDER_TASK_COREID, AMY_FILL_BUFFER_TASK_COREID};
 
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
@@ -187,6 +179,7 @@ float compute_cpu_usage(uint8_t debug) {
     return 100.0 - (((float)freeTime/(float)ulTotalRunTime) * 100.0); // return CPU usage
 
 }
+
 
 
 int vprintf_null(const char *format, va_list ap) {
@@ -325,17 +318,13 @@ void boardctrl_startup(void) {
 }
 
 
-extern void run_midi();
-
-
+extern void run_amy();
+extern esp_err_t i2c_follower_init();
 
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
 
 
-//esp_err_t i2c_master_init(void);
-//esp_err_t i2c_slave_init(void);
-//esp_err_t setup_pcm9211(void);
 
 void app_main(void) {
     // Hook for a board to run code at start up.
@@ -347,29 +336,13 @@ void app_main(void) {
     idle_0_handle = xTaskGetIdleTaskHandleForCPU(0);
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
-
-
-
-    // TODO -- USB gadget 
-
-    /*
-    fprintf(stderr,"Starting AMY on core %d\n", ALLES_TASK_COREID);
-    check_init(&i2c_master_init, "i2c_master");
-    check_init(&i2c_slave_init, "i2c_slave");
-    check_init(&setup_pcm9211, "pcm9211");
-    */
-
-    //run_alles();
+    i2c_follower_init();
+    run_amy();
     fflush(stderr);
     delay_ms(500);
     
-
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
-    fflush(stderr);
-    delay_ms(100);
-    fprintf(stderr,"Starting MIDI on core %d\n", MIDI_TASK_COREID);
-    xTaskCreatePinnedToCore(run_midi, MIDI_TASK_NAME, MIDI_TASK_STACK_SIZE / sizeof(StackType_t), NULL, MIDI_TASK_PRIORITY, &midi_handle, MIDI_TASK_COREID);
     fflush(stderr);
     delay_ms(100);
     tsequencer_init();

@@ -12,6 +12,10 @@
 #include "driver/i2s_std.h"
 #include "esp_wifi_types.h"
 
+#ifndef MP_NORETURN
+#define MP_NORETURN __attribute__((noreturn))
+#endif
+
 #define CFG_TUD_MIDI 1
 
 // This is Tulip specific stuff. Unfortunately we cannot override some of this in ports/esp32, 

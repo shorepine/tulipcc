@@ -8,15 +8,15 @@
 #define ESP_INTR_FLAG_DEFAULT 0
 
 // stuff in the eagle
-#define I2S_MCLK  3
-#define I2S_BCLK  8
-#define I2S_LRCLK 2
-#define AMYOUT 6 // data going to the codec, eg DAC data
+#define CONFIG_I2S_MCLK  3
+#define CONFIG_I2S_BCLK  8
+#define CONFIG_I2S_LRCLK 2
+#define CONFIG_I2S_DOUT 6 // data going to the codec, eg DAC data, also called AMYOUT
 #define I2C_FOLLOWER_SCL 5
 #define I2C_FOLLOWER_SDA 4 
 #define I2C_MASTER_SCL 18
 #define I2C_MASTER_SDA 17
-#define AMYIN 9 // data coming from the codec, eg ADC  data
+#define CONFIG_I2S_DIN 9 // data coming from the codec, eg ADC  data, also called AMYIN
 #define MIDI_OUT_PIN 14
 #define MIDI_IN_PIN 21
 #define MPIO_C0 7
