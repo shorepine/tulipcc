@@ -286,14 +286,6 @@ def add_callback(fn):
 def remove_callback(fn):
     MIDI_CALLBACKS.remove(fn)
 
-def start_default_callback():
-    pass # I don't think we need this anymore? 
-    #add_callback(midi_event_cb)
-
-def stop_default_callback():
-    pass
-    #remove_callback(midi_event_cb)
-
 sysex_callback = None
 
 # The midi callback sent over from C, fires all the other ones if set.

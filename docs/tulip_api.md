@@ -605,7 +605,7 @@ You can set `divider` from 1 up to 192 and `length` can be any number you want. 
 
 **You can only sequence AMY music events (MIDI, note ons, `synth`, `amy.send`, parameter changes) with the AMY sequencer.**
 
-**To schedule any Python function**, for example, if you want to update the display to show a LED animation as a drum pattern plays, you can use `sequence.TulipSequence(divider)`. You can only have up to 8 `TulipSequence`s overall in Tulip, so your app should only use one -- if your app wants to sequence arbitrary Python, set up a single `sequence_callback` at the divider you want. The clock is shared between `TulipSequence` and `AMYSequence`. For example, if your drum machine is `AMYSequence(16, 8)`, use `TulipSequence(8)` for your graphical update code -- it will be called every 1/8th note, in time with the drum pattern.)
+**To schedule any Python function**, for example, if you want to update the display to show a LED animation as a drum pattern plays, you can use `sequence.TulipSequence(divider)`. You can only have up to 8 `TulipSequence`s overall in Tulip, so your app should only use one -- if your app wants to sequence arbitrary Python, set up a single `sequence_callback` at the divider you want. The clock is shared between `TulipSequence` and `AMYSequence`. For example, if your drum machine is `AMYSequence(16, 8)`, use `TulipSequence(8)` for your graphical update code -- it will be called every 1/8th note, in time with the drum pattern. 
 
 See how we do this in the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) app.
 
@@ -661,7 +661,7 @@ You can adjust which voices are sent with `midi.config.add_synth(channel, patch_
 
 These mappings will get reset to default on boot. If you want to save them, put `add_synth` commands in your boot.py.
 
-You can set up your own MIDI callbacks in your own programs. You can call `midi.add_callback(function)`, which will call your `function` with a list of a (2 or 3-byte) MIDI message. These callbacks will get called alongside the default MIDI callback (that plays synth notes on MIDI in). You can stop the default MIDI callback with `midi.stop_default_callback()` and start it again with `midi.start_default_callback()`. 
+You can set up your own MIDI callbacks in your own programs. You can call `midi.add_callback(function)`, which will call your `function` with a list of a (2 or 3-byte) MIDI message. These callbacks will get called alongside the default MIDI callback (that plays synth notes on MIDI in). 
 
 On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later ports using the "IAC" MIDI bus. (It does not yet work at all on Linux or Windows.) This lets you send and receive MIDI with Tulip to any program running on the same computer. If you don't see "IAC" in your MIDI programs' list of MIDI ports, enable it by opening Audio MIDI Setup, then showing MIDI Studio, double click on the "IAC Driver" icon, and ensure it is set to "Device is online." 
 
@@ -681,9 +681,6 @@ midi.remove_callback(callback) # turns off callback
 
 def callback(message):
     print(message[0]) # first byte of MIDI in message
-
-midi.stop_default_callback() # turn off the default MIDI receiver
-midi.start_default_callback() # turn on the default MIDI receiver
 
 tulip.midi_out((144,60,127)) # sends a note on message
 tulip.midi_out(bytes) # Can send bytes or list
