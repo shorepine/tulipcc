@@ -3,6 +3,8 @@
 # runtime (with setTimeout an Promise's) to contrtol the scheduling.
 freeze("../../../../amy", "amy.py")
 freeze("../../../../amy", "juno.py")
+freeze("../../../../amy", "amy_constants.py")
+freeze("../../../../amy/experiments", "piano_params.py")
 
 package(
     "asyncio",

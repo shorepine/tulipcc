@@ -126,6 +126,7 @@
 #define MIDI_IN_PIN 12
 
 #define PIN_NUM_DISP_EN        -1
+#endif
 #endif // MAKERFABS
 
 

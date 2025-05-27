@@ -143,6 +143,8 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 #ifdef ESP_PLATFORM
 void run_amy() {
     amy_external_midi_input_hook = tulip_midi_input_hook;
+    amy_external_render_hook = external_cv_render;
+
     amy_config_t amy_config = amy_default_config();
     amy_config.has_audio_in = 0;
     amy_config.has_midi_uart = 1;
@@ -155,6 +157,7 @@ void run_amy() {
     amy_config.midi_out = MIDI_OUT_PIN;
     amy_config.midi_in = MIDI_IN_PIN;
     amy_start(amy_config);
+    external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
     amy_live_start();
 }
 
@@ -173,34 +176,4 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
 
 #endif
 
-// Parse extra stuff out of an AMY message. Used for alles
-
-void tulip_parse_amy_message(char *message, uint16_t length) {
-    uint8_t mode = 0;
-    uint16_t start = 0;
-    uint16_t c = 0;
-
-    // Parse the AMY stuff out of the message first
-    amy_event e = amy_default_event();
-    amy_parse_message(message, &e);
-    amy_process_event(&e);
-    if(e.status == EVENT_TRANSFER_DATA) {
-        // transfer data already dealt with. we skip this followon check.
-        length = 0;
-    } else {
-        while(c < length+1) {
-            uint8_t b = message[c];
-            if( ((b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')) || b == 0) {  // new mode or end
-                if(mode=='W') external_map[e.osc] = atoi(message+start);
-                mode = b;
-                start = c + 1;
-            } 
-            c++;
-        }
-    }
-    // Only do this if we got some data
-    if(length >0) {
-        amy_add_event(&e);
-    }
-}
 #endif

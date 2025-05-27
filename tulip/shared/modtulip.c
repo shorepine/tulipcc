@@ -115,6 +115,15 @@ STATIC mp_obj_t tulip_amy_set_external_input_buffer(size_t n_args, const mp_obj_
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_external_input_buffer_obj, 1, 1, tulip_amy_set_external_input_buffer);
 #endif
 
+#ifdef ESP_PLATFORM
+extern uint8_t * external_map;
+STATIC mp_obj_t tulip_amy_set_external_channel(size_t n_args, const mp_obj_t *args) {
+    external_map[mp_obj_get_int(args[0])] = mp_obj_get_int(args[1]);
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_external_channel_obj, 2, 2, tulip_amy_set_external_channel);
+#endif
 
 STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
     int8_t index = -1;
@@ -268,23 +277,13 @@ STATIC mp_obj_t tulip_midi_local(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_local_obj, 1, 1, tulip_midi_local);
 
-extern void tulip_parse_amy_message(char *message, uint16_t length);
-
 
 #ifndef __EMSCRIPTEN__
-//extern void mcast_send(char*, uint16_t len);
-STATIC mp_obj_t tulip_alles_send(size_t n_args, const mp_obj_t *args) {
-//    if(n_args > 1) {
-//        if(mp_obj_get_int(args[1])) { // mesh
-//            mcast_send( (char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
-//            return mp_const_none;
-//        }
-//    }
-    tulip_parse_amy_message((char*)mp_obj_str_get_str(args[0]), strlen(mp_obj_str_get_str(args[0])));
+STATIC mp_obj_t tulip_amy_send(size_t n_args, const mp_obj_t *args) {
+    amy_add_message((char*)mp_obj_str_get_str(args[0]));
     return mp_const_none;
 }
-
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_alles_send_obj, 1, 2, tulip_alles_send);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
 #endif
 
 
@@ -1488,8 +1487,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 #endif
 
 #ifndef __EMSCRIPTEN__
-    { MP_ROM_QSTR(MP_QSTR_alles_send), MP_ROM_PTR(&tulip_alles_send_obj) },
-    //{ MP_ROM_QSTR(MP_QSTR_set_quartet), MP_ROM_PTR(&tulip_set_quartet_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_send), MP_ROM_PTR(&tulip_amy_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
 #endif
 
@@ -1501,6 +1499,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_framebuf_web_update), MP_ROM_PTR(&tulip_framebuf_web_update_obj) },
 #endif
 
+#ifdef ESP_PLATFORM
+    { MP_ROM_QSTR(MP_QSTR_amy_set_external_channel), MP_ROM_PTR(&tulip_amy_set_external_channel)},
+#endif
 
 #ifdef AMYBOARD
     { MP_ROM_QSTR(MP_QSTR_start_amyboard_amy), MP_ROM_PTR(&tulip_start_amyboard_amy_obj) },

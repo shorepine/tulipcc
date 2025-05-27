@@ -511,7 +511,7 @@ amy.unload_sample(patch) # frees the RAM and the patch slot
 amy.reset() # frees all allocated PCM patches
 ```
 
-On Tulip Desktop, or with an [AMYboard / AMYchip](https://github.com/shorepine/amychip) connected to a hardware Tulip over I2C, you can use audio input as well. This is brand new and we're still working out a good API for it. For now, you can set any oscillator to be fed by the L or R channel of an audio input. 
+On Tulip Desktop or Web, or with an AMYboard / AMYchip connected to a hardware Tulip over I2C, you can use audio input as well. This is brand new and we're still working out a good API for it. For now, you can set any oscillator to be fed by the L or R channel of an audio input. 
 
 ```python
 amy.send(osc=0, wave=amy.AUDIO_IN0, vel=1)
@@ -522,8 +522,9 @@ amy.echo(1, 250, 500, 0.8) # echo effect on the audio input
 To send signals over CV on Tulip CC (hardware only):
 
 ```python
-amy.send(osc=100, wave=amy.SAW_DOWN, freq=2.5, vel=1, external_channel=1)
-# external_channel = 0 - no CV output, will route to audio
+amy.send(osc=100, wave=amy.SAW_DOWN, freq=2.5, vel=1)
+tulip.set_amy_external_channel(100, 1) # osc, channel
+# external_channel = 0 - no CV output, will route to audio (default)
 # external_channel = 1 - 1st channel of the first connected GP8413 / dac
 # external_channel = 2 - 2nd channel of the first connected GP8413
 # external_channel = 3 - 1st channel of the second connected GP8413
@@ -544,6 +545,8 @@ for i,note in enumerate(chord.midinotes()):
 ```
 
 ## Low level sample access and direct audio playback
+
+**[PLEASE NOTE -- LOW LEVEL SAMPLE ACCESS DOES NOT CURRENTLY WORK, BUT WE ARE WORKING ON IT](https://github.com/shorepine/amy/issues/349)**
 
 You can access the audio input (`AUDIO_IN0/1`) sample buffer per frame (on Tulip Desktop, Web, and future devices with audio input support), and you can also set two external audio channels (`AUDIO_EXT0/1`) from Python. This lets you synthesize audio in Python, or do things like stream WAV files from disk to the audio output. 
 
@@ -593,7 +596,7 @@ Please note: on Tulip CC hardware, you do not have much compute time left per bl
 
 ## Music sequencer
 
-Tulip is always running AMY's live sequencer, which allows you to have multiple music programs running sharing a common clock. You can use `seq = sequence.AMYSequence(length, divider)` to control an AMY sequence.
+Tulip is always running AMY's live sequencer, which allows you to have multiple music programs running sharing a common clock. You can use `seq = sequence.AMYSequence(length, divider)` and then `seq.add(offset, function, args)` to control an AMY sequence.
 
 A sequence in AMY is defined as a `length` and `divider`. The `divider` is set as the musical note length's denominator. If you want this sequence to be a pattern of events, you can specify that in `length`, which indicates how many of those events happen in a loop. For an example of a 16 position 1/8th note drum machine, `length` is 16 and `divider` is 8. For a 8 note long quarter note pattern, `length` is 8 and `divider` is 4. 
 
@@ -605,15 +608,19 @@ You can set `divider` from 1 up to 192 and `length` can be any number you want. 
 
 **You can only sequence AMY music events (MIDI, note ons, `synth`, `amy.send`, parameter changes) with the AMY sequencer.**
 
-**To schedule any Python function**, for example, if you want to update the display to show a LED animation as a drum pattern plays, you can use `sequence.TulipSequence(divider)`. You can only have up to 8 `TulipSequence`s overall in Tulip, so your app should only use one -- if your app wants to sequence arbitrary Python, set up a single `sequence_callback` at the divider you want. The clock is shared between `TulipSequence` and `AMYSequence`. For example, if your drum machine is `AMYSequence(16, 8)`, use `TulipSequence(8)` for your graphical update code -- it will be called every 1/8th note, in time with the drum pattern. 
+To use the music sequencer, use `seq = sequencer.AMYSequence(length, divider)`. Then add new events using `seq.add(position, function, [args])`. `position` is the position within the pattern (or any future position, if `length` is 0) to schedule `function` in. In the drum machine example, you set up a pattern of 16 1/8th notes, so index 0 would be the first hit, and 15 the last). You lastly pass whatever arguments you want to give to that function. `synth.note_on` takes 2 - a note number and a velocity. You can optionally pass other parameters like `pan=0.1` as keyword arguments. `seq.add()` returns the event that was added. You can keep this event around to later update or remove an individual event. `e = seq.add(0, func)` can then be used to update the sequence with a new function: `e.update(0, new_func)` or remove it with: `e.remove()`.
+
+### Python sequencer
+
+**To schedule any Python function in time with the music sequencer**, for example, if you want to update the display to show a LED animation as a drum pattern plays, you can use `sequence.TulipSequence(divider)`. You can only have up to 8 `TulipSequence`s overall in Tulip, so your app should only use one -- if your app wants to sequence arbitrary Python, set up a single `sequence_callback` at the divider you want. The clock is shared between `TulipSequence` and `AMYSequence`. For example, if your drum machine is `AMYSequence(16, 8)`, use `TulipSequence(8)` for your graphical update code -- it will be called every 1/8th note, in time with the drum pattern. 
 
 See how we do this in the [`drums`](https://github.com/shorepine/tulipcc/blob/main/tulip/shared/py/drums.py) app.
 
-To use the music sequencer, use `seq = sequencer.AMYSequence(length, divider)`. Then add new events using `seq.add(position, function, [args])`. `position` is the position within the pattern (or any future position, if `length` is 0) to schedule `function` in. In the drum machine example, you set up a pattern of 16 1/8th notes, so index 0 would be the first hit, and 15 the last). You lastly pass whatever arguments you want to give to that function. `synth.note_on` takes 2 - a note number and a velocity. You can optionally pass other parameters like `pan=0.1` as keyword arguments. `seq.add()` returns the event that was added. You can keep this event around to later update or remove an individual event. `e = seq.add(0, func)` can then be used to update the sequence with a new function: `e.update(0, new_func)` or remove it with: `e.remove()`.
+To use the Tulip sequencer, use `seq = sequence.TulipSequence(divider, func)`. `func` will be called every `divider`, in time with the AMY sequencer. You can stop it with `seq.clear()`. 
 
-To use the Tulip sequencer, use `seq = sequence.TulipSequence(divider, func)`. `func` will be called every `divider`, in time wiht the AMY sequencer. You can stop it with `seq.clear()`. 
+### Sequencers example 
 
-Here's an example:
+Here's an example of using both sequencers:
 
 ```python
 import sequencer
@@ -635,7 +642,7 @@ for i in range(16):
 
 def stop():
     music_seq.clear() # Removes all scheduled notes from this sequence
-    print_seq.clear() # Removes all scheduled notes from this sequence
+    print_seq.clear() # Removes all scheduled events from this sequence
     syn.release() # Stops the synth
 ```
 
@@ -645,17 +652,17 @@ You can set or see the system-wide BPM (beats, or quarters per minute) with AMY'
 
 ## MIDI
 
-Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
+Via [AMY](https://github.com/shorepine/amy), Tulip supports MIDI in and out to connect to external music hardware. You can set up a python callback to respond immediately to any incoming MIDI message. You can also send messages out to MIDI out. 
 
-You can use MIDI over USB as well, using the `USB-KB` connector. Note this is meant as a **host** connector: you can connect USB MIDI keyboards or USB MIDI interfaces to Tulip. You cannot connect Tulip directly to a computer as a "USB MIDI gadget". If you want your Tulip to control your computer, use a MIDI interface on your computer and wire Tulip's MIDI out to it. 
+You can use MIDI over serial (the 3.5mm connectors on Tulip CC) or USB as well, using the `USB-KB` connector. Note this USB is meant as a **host** connector: you can connect USB MIDI keyboards or USB MIDI interfaces to Tulip. You cannot connect Tulip directly to a computer as a "USB MIDI gadget". If you want your Tulip to control your computer, use a MIDI interface on your computer and wire Tulip's MIDI out to it. 
 
-If you have a USB MIDI adapter connected, MIDI out from Tulip will go to USB, not the TRS MIDI connectors. MIDI in can come into either TRS or USB. 
+If you have a USB MIDI adapter connected, MIDI out from Tulip will go to both USB and TRS MIDI connectors. MIDI in can come into either TRS or USB. 
 
-By default, Tulip boots into a live MIDI synthesizer mode. Any note-ons, note-offs, program changes or pitch bend messages will be processed automatically with polyphony and voice stealing, and Tulip will play the tones with no other user intervention needed.
+By default, Tulip boots into AMY's live MIDI synthesizer mode. Any note-ons, note-offs, program changes or pitch bend messages will be processed automatically with polyphony and voice stealing, and Tulip will play the tones with no other user intervention needed.
 
 By default, MIDI notes on channel 1 will map to Juno-6 patch 0. And MIDI notes on channel 10 will play the PCM samples (like a drum machine).
 
-You can adjust which voices are sent with `midi.config.add_synth(channel, patch_number, num_voices)`. For example, you can have Tulip play DX7 patch 129 on channel 2 with `midi.config.add_synth(channel=2, patch_number=129, num_voices=1)`. `channel=2` is a MIDI channel (we use 1-16 indexing), `patch=129` is an AMY patch number, `num_voices=1` is the number of voices (polyphony) you want to support for that channel and patch. 
+You can adjust which voices are sent with `midi.config.add_synth(channel, patch_number, num_voices)`. For example, you can have Tulip play DX7 patch 129 on channel 2 with `midi.config.add_synth(channel=2, patch_number=129, num_voices=1)`. `channel=2` is a MIDI channel (we use 1-16 indexing), `patch_number=129` is an AMY patch number, `num_voices=1` is the number of voices (polyphony) you want to support for that channel and patch. 
 
 (A good rule of thumb is Tulip CC can support about 6 simultaneous total voices for Juno-6, 8-10 for DX7, and 20-30 total voices for PCM and more for other simpler oscillator patches.)
 
@@ -667,7 +674,7 @@ On Tulip Desktop, MIDI works on macOS 11.0 (Big Sur, released 2020) and later po
 
 Tulip Desktop macOS's SYSEX handling only works on macOS 14.0 (Sonoma, released 2023) and later.
 
-On Tulip Web, MIDI works in many browsers, but not Safari. 
+On Tulip Web, MIDI (including SYSEX) "just works" in many browsers, but not Safari. 
 
 You can also send MIDI messages "locally", e.g. to a running Tulip program that is expecting hardware MIDI input, via `tulip.midi_local()`
 
@@ -690,7 +697,7 @@ tulip.midi_local((144, 60, 127)) # send note on to local bus
 
 ### MIDI SYSEX
 
-Tulip has special handling for MIDI sysex messages. Because of Tulip's memory constraints, we do not by default parse general MIDI sysex messages that come into MIDI in. We do always parse SYSEX messages for AMY-over-SYSEX, this allows you to send AMY wire messages over MIDI.
+Tulip has special handling for MIDI sysex messages. Because of Tulip's memory constraints, we do not return SYSEX messages in `tulip.midi_in()`. We do always parse SYSEX messages for AMY-over-SYSEX, this allows you to send AMY wire messages over MIDI.
 
 If you want to receive and parse MIDI sysex messages in Tulip, set a `midi.sysex_callback`. Like so: 
 
@@ -719,7 +726,7 @@ amy.reset()
 amy.send(osc=0, vel=1, freq=440) # will send this message over SYSEX
 ```
 
-Any connected AMY device (AMYboard, Tulip) will respond to this message.
+Any connected AMY device (AMYboard, Tulip, Python on a computer) will respond to this message.
 
 
 
