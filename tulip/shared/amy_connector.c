@@ -15,6 +15,7 @@ uint8_t * external_map;
 
 #ifdef AMY_IS_EXTERNAL
 uint8_t * sysex_buffer;
+uint16_t sysex_len = 0;
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -69,22 +70,41 @@ uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
 // I am called when AMY receives MIDI in, whether it has been processed (played in a instrument) or not 
 // In tulip i just fill up the last_midi queue so that MIDI input is accessible to Python
 void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
-    for(uint32_t i = 0; i < (uint32_t)len; i++) {
-        if(i < MAX_MIDI_BYTES_PER_MESSAGE) {
-            //fprintf(stderr, "%02x ", data[i]);
-            last_midi[midi_queue_tail][i] = data[i];
+    if(is_sysex) {
+        #ifdef __EMSCRIPTEN__
+            // f0/f7 is stripped on web
+            // TODO -- is this also happening on usb gadget?
+            sysex_buffer[0] = 0xf0;
+            for(uint16_t i = 0; i< len; i++) {
+                sysex_buffer[i] = data[i];
+            }
+            sysex_buffer[len] = 0xf7;
+            sysex_len = len+2;
+        #else
+            for(uint16_t i = 0; i< len; i++) {
+                sysex_buffer[i] = data[i];
+            }
+            sysex_len = len;
+        #endif            
+        if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_true);
+    } else {
+        for(uint32_t i = 0; i < (uint32_t)len; i++) {
+            if(i < MAX_MIDI_BYTES_PER_MESSAGE) {
+                //fprintf(stderr, "%02x ", data[i]);
+                last_midi[midi_queue_tail][i] = data[i];
+            }
         }
-    }
-    last_midi_len[midi_queue_tail] = (uint16_t)len;
-    midi_queue_tail = (midi_queue_tail + 1) % MIDI_QUEUE_DEPTH;
-    if (midi_queue_tail == midi_queue_head) {
-        // Queue wrap, drop oldest item.
-        midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
-        //fprintf(stderr, "dropped midi message\n");
-    }
+        last_midi_len[midi_queue_tail] = (uint16_t)len;
+        midi_queue_tail = (midi_queue_tail + 1) % MIDI_QUEUE_DEPTH;
+        if (midi_queue_tail == midi_queue_head) {
+            // Queue wrap, drop oldest item.
+            midi_queue_head = (midi_queue_head + 1) % MIDI_QUEUE_DEPTH;
+            //fprintf(stderr, "dropped midi message\n");
+        }
 
-    // We tell Python that a MIDI message has been received
-    if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_false);
+        // We tell Python that a MIDI message has been received
+        if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_false);
+    }
 }
 
 void midi_local(uint8_t * bytes, uint16_t len) {

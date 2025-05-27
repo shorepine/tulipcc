@@ -90,7 +90,7 @@ for i in range(8):
     seq.add(i, syn.note_on, [random.choice(chord), 0.6])
 ```
 
-To unpack this a litte, we're creating a 8 1/4 note long pattern `(4,8)` and then adding 8 random notes of the F:min7 chord we created earlier to it. The `seq.add` first takes a parameter of which element to schedule (here, just 0, 1, 2, 3.... 7) and then the function to call (`syn.note_on`), then the arguments for that function (`random.choice(chord)` chooses a random midi note, and 0.6 is the velocity.)
+To unpack this a litte, we're creating a 8 1/4 note long pattern `(8,4)` and then adding 8 random notes of the F:min7 chord we created earlier to it. The `seq.add` first takes a parameter of which element to schedule (here, just 0, 1, 2, 3.... 7) and then the function to call (`syn.note_on`), then the arguments for that function (`random.choice(chord)` chooses a random midi note, and 0.6 is the velocity.)
 
 You should now be hearing a synth pattern play every quarter note in time with the drums. It will keep going! The first parameter of `sequencer.AMYSequence` is the `divider` of the callback. This tells Tulip how often to call the callback. A `4` means `1/4`, a quarter note. If you made it `8`, it would be an eighth note. 
 
