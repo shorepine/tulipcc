@@ -683,7 +683,7 @@ def callback(message):
     print(message[0]) # first byte of MIDI in message
 
 tulip.midi_out((144,60,127)) # sends a note on message
-tulip.midi_out(bytes) # Can send bytes or list
+# tulip.midi_out(bytes) # Can send bytes or list
 
 tulip.midi_local((144, 60, 127)) # send note on to local bus
 ```

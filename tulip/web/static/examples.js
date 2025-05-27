@@ -333,6 +333,11 @@ tulip.keyboard_callback(do_key)
 tulip.download_and_run('xmas')
 `},{
     't':'music',
+    'd':"A euclidean melody generator (by @ITD)",
+    'c':`
+tulip.download_and_run('euclid2.py')
+`},{
+    't':'music',
     'd':"Construct a custom FM synth",
     'c':`
 import midi, music

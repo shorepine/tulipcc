@@ -388,16 +388,26 @@ You can write functions that respond to MIDI inputs easily on Tulip. Let's say y
 ```python
 import midi, amy
 def sine(m):
-    if m[0] == 144: # MIDI message byte 0 note on
+    if m[0] == 144: # MIDI message channel 1 byte 0 note on
         # send a sine wave to osc 30, with midi note and velocity
         amy.send(osc=30, wave=amy.SINE, note=m[1], vel=m[2] / 127.0)
+
+# turn off Tulip's native handling of MIDI so we can hear our synth
+midi.config.reset()
 
 # Add our callback
 midi.add_callback(sine)
 
 # Now play a MIDI note into Tulip. If you don't have a KB attached, use midi_local to send the message:
-tulip.midi_local((144, 40, 100))
+tulip.midi_local((144, 60, 100))
+
 # You should hear a sine wave
+
+# Turn off the midi callback 
+midi.remove_callback(sine)
+
+# reset back to the default synths
+midi.add_default_synths()
 
 ```
 
