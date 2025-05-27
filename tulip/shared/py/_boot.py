@@ -104,8 +104,6 @@ else:
     amy.override_send = lambda x: tulip.amy_send(x)
     midi.setup() # Just mirrors the setup mostly managed by AMY
 
-tulip.startup_bleep()
-
 if(board() == "AMYBOARD" or board()=="AMYBOARD_WEB"):
     import amyboard
     amyboard.init_display()

@@ -118,7 +118,9 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_external_input_buffer_o
 #ifdef ESP_PLATFORM
 extern uint8_t * external_map;
 STATIC mp_obj_t tulip_amy_set_external_channel(size_t n_args, const mp_obj_t *args) {
-    external_map[mp_obj_get_int(args[0])] = mp_obj_get_int(args[1]);
+    uint16_t osc = mp_obj_get_int(args[0]);
+    uint8_t ch = mp_obj_get_int(args[1]);
+    external_map[osc] = ch;
     return mp_const_none;
 }
 
@@ -1500,7 +1502,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 #endif
 
 #ifdef ESP_PLATFORM
-    { MP_ROM_QSTR(MP_QSTR_amy_set_external_channel), MP_ROM_PTR(&tulip_amy_set_external_channel)},
+    { MP_ROM_QSTR(MP_QSTR_amy_set_external_channel), MP_ROM_PTR(&tulip_amy_set_external_channel_obj)},
 #endif
 
 #ifdef AMYBOARD

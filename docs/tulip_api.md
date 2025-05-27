@@ -523,7 +523,7 @@ To send signals over CV on Tulip CC (hardware only):
 
 ```python
 amy.send(osc=100, wave=amy.SAW_DOWN, freq=2.5, vel=1)
-tulip.set_amy_external_channel(100, 1) # osc, channel
+tulip.amy_set_external_channel(100, 1) # osc, channel
 # external_channel = 0 - no CV output, will route to audio (default)
 # external_channel = 1 - 1st channel of the first connected GP8413 / dac
 # external_channel = 2 - 2nd channel of the first connected GP8413

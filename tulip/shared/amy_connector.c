@@ -148,7 +148,7 @@ void run_amy() {
     amy_config_t amy_config = amy_default_config();
     amy_config.has_audio_in = 0;
     amy_config.has_midi_uart = 1;
-    amy_config.set_default_synth = 1;
+    amy_config.set_default_synth = 0; // midi.py does this for us
     amy_config.cores = 2;
     amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
     amy_config.i2s_bclk = CONFIG_I2S_BCLK;
@@ -158,6 +158,7 @@ void run_amy() {
     amy_config.midi_in = MIDI_IN_PIN;
     amy_start(amy_config);
     external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
+    for(uint16_t i=0;i<amy_config.max_oscs;i++) external_map[i] = 0;
     amy_live_start();
 }
 
@@ -167,6 +168,7 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_config_t amy_config = amy_default_config();
     amy_config.has_midi_mac = 1;
+    amy_config.set_default_synth = 0; // midi.py does this for us
     amy_config.capture_device_id = capture_device_id;
     amy_config.playback_device_id = playback_device_id;
     amy_config.has_audio_in = 1;

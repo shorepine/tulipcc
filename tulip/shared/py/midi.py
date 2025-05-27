@@ -116,7 +116,7 @@ def add_default_synths():
     global config
     # utility sine wave bleeper on channel 16 - the "system bleep" synth
     # (which for the moment steals one of the drum machine oscs, I think).
-    config.add_synth(channel=16, synth=OscSynth(num_voices=1))
+    config.add_synth(channel=16, synth=OscSynth(wave=amy.SINE, num_voices=1))
     # drum machine always on channel 10
     # GeneralMidi Drums.
     config.add_synth(channel=10, synth=DrumSynth(num_voices=6))
