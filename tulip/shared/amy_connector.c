@@ -128,9 +128,11 @@ extern void send_usb_midi_out(uint8_t * data, uint16_t len);
 void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
     // check if we have USB HOST midi, which is handled by Tulip
 #ifdef ESP_PLATFORM
+#ifndef TDECK
     if(midi_has_out) {
         send_usb_midi_out(buf, len);
     }
+#endif
 #endif
 #ifndef AMY_IS_EXTERNAL
     // Also send out via AMY

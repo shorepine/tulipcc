@@ -29,7 +29,7 @@ rm ../.submodules_ok
 
 # Do the esp32s3 boards
 cd esp32s3
-source ~/esp/esp-idf/export.sh 
+source ~/esp/esp-idf-v5.4.1/export.sh 
 
 # Otherwise, compile all boards. If upload set, upload them
 declare -a boards=("TULIP4_R11" "TDECK" "N16R8" "N32R8")
