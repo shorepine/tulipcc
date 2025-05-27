@@ -126,12 +126,14 @@ extern bool midi_has_out;
 extern void send_usb_midi_out(uint8_t * data, uint16_t len);
 
 void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
-    // check if we have USB HOST midi, which is handled by Tulip
+    // check if we have USB HOST midi, which is handled by Tulip only - not AMYBOARD or TDECK
 #ifdef ESP_PLATFORM
 #ifndef TDECK
+#ifndef AMYBOARD
     if(midi_has_out) {
         send_usb_midi_out(buf, len);
     }
+#endif
 #endif
 #endif
 #ifndef AMY_IS_EXTERNAL
@@ -148,14 +150,19 @@ void run_amy() {
     amy_external_render_hook = external_cv_render;
 
     amy_config_t amy_config = amy_default_config();
+#ifdef AMYBOARD
+    amy_config.has_audio_in = 1;
+#else
     amy_config.has_audio_in = 0;
+#endif
     amy_config.has_midi_uart = 1;
     amy_config.set_default_synth = 0; // midi.py does this for us
     amy_config.cores = 2;
     amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
     amy_config.i2s_bclk = CONFIG_I2S_BCLK;
     amy_config.i2s_dout = CONFIG_I2S_DOUT;
-    if(CONFIG_I2S_DIN>=0) amy_config.i2s_din = CONFIG_I2S_DIN;
+    amy_config.i2s_din = CONFIG_I2S_DIN;
+    amy_config.i2s_mclk = CONFIG_I2S_MCLK;
     amy_config.midi_out = MIDI_OUT_PIN;
     amy_config.midi_in = MIDI_IN_PIN;
     amy_start(amy_config);
