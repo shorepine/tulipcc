@@ -141,8 +141,8 @@ JSFLAGS += -s EXPORTED_RUNTIME_METHODS="\
 	FS$(EXPORTED_RUNTIME_METHODS_EXTRA)"
 JSFLAGS += --js-library library.js
 JSFLAGS += -s SUPPORT_LONGJMP=emscripten
-JSFLAGS += -s INITIAL_MEMORY=128mb -s TOTAL_STACK=64mb -s ALLOW_MEMORY_GROWTH=1 
-JSFLAGS += -s MODULARIZE -s EXPORT_NAME=_createMicroPythonModule -s ASYNCIFY -s ASYNCIFY_STACK_SIZE=128000 -s ASSERTIONS
+#JSFLAGS += -s INITIAL_MEMORY=128mb -s TOTAL_STACK=64mb -s ALLOW_MEMORY_GROWTH=1 
+JSFLAGS += -s MODULARIZE -s EXPORT_NAME=_createMicroPythonModule -s ASYNCIFY -s ASYNCIFY_STACK_SIZE=128000 #-s ASSERTIONS
 ################################################################################
 # Source files and libraries.
 
