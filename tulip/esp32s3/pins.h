@@ -183,7 +183,7 @@
 #endif
 
 
-
+#define CONFIG_I2S_MCLK -1
 
 
 
