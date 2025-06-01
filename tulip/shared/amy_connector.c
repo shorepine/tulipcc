@@ -86,7 +86,7 @@ void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
                 sysex_buffer[i] = data[i];
             }
             sysex_len = len;
-        }          
+        }
         if(midi_callback!=NULL) mp_sched_schedule(midi_callback, mp_const_true);
     } else {
         for(uint32_t i = 0; i < (uint32_t)len; i++) {

@@ -47,27 +47,7 @@ void wifi_tone() {
     note_on(1, e.time+1);
 }
 
-// Schedule a bleep now
-void bleep() {
-    amy_event e = amy_default_event();
-    int64_t sysclock = amy_sysclock();
-    e.osc = 0;
-    e.time = sysclock;
-    e.wave = SINE;
-    e.freq_coefs[COEF_CONST] = 220;
-    //amy_add_event(&e);
-    e.velocity = 1;
-    e.pan_coefs[COEF_CONST] = 0.9;
-    amy_add_event(&e);
-    e.time = sysclock + 150;
-    e.freq_coefs[COEF_CONST] = 440;
-    e.pan_coefs[COEF_CONST] = 0.1;
-    amy_add_event(&e);
-    e.time = sysclock + 300;
-    e.velocity = 0;
-    e.pan_coefs[COEF_CONST] = 0.5;  // Restore default pan to osc 0.
-    amy_add_event(&e);
-}
+// bleep() is now in amy/src/api.c
 
 void debleep() {
     amy_event e = amy_default_event();

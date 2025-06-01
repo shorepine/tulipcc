@@ -5,7 +5,7 @@ from _tulip import *
 from upysh import cd, pwd
 import amy
 
-if(board()!='AMYBOARD' and board()!="AMYBOARD_WEB"):
+if board() != 'AMYBOARD' and board() != "AMYBOARD_WEB":
     from tulip_graphics import *
     from ui import *
     from editor import edit
@@ -17,11 +17,11 @@ import midi
 
 # prompt for y/n and return true if Y
 def prompt(prompt):
-    if(board()=="WEB"):
+    if board() == "WEB":
         return webnyi()
     print(prompt + " [Yy/Nn]: ", end='')
     r = input()
-    if(r=='Y' or r=='y'): 
+    if r == 'Y' or r == 'y':
         return True
     return
 
@@ -52,12 +52,12 @@ def seq_bpm(bpm=None):
         amy_bpm = bpm
 
 def seq_ppq(ppq=None):
-    if(ppq is not None):
+    if ppq is not None:
         print("You can no longer set PPQ in Tulip. It's fixed at %d" % (amy.AMY_SEQUENCER_PPQ))
     return amy.AMY_SEQUENCER_PPQ    
 
 def remap():
-    if(board()=="WEB"):
+    if board() == "WEB":
         return webnyi()
     print("Type key or key combo you wish to remap: ",end='')
     (_, scan, mod) = key_wait()
@@ -66,7 +66,7 @@ def remap():
     code = int(input())
     cmd = "tulip.key_remap(%d,%d,%d)" % (scan, mod, code)
     key_remap(scan, mod, code)
-    if(prompt("Remapped. Add \"%s\" to your boot.py?" % (cmd))):
+    if prompt("Remapped. Add \"%s\" to your boot.py?" % (cmd)):
         add_to_bootpy(cmd)
         print("All done. Reboot Tulip!")
 
@@ -106,7 +106,7 @@ def root_dir():
 # For iOS we work in the app folder, so no need to copy
 def desktop_copy_sys(dest):
     import os
-    if (app_path().endswith(".app")): # running from an app bundle
+    if app_path().endswith(".app"): # running from an app bundle
         print("Copying system folder from app bundle on first run... ")
         tulip_home = app_path()+"/Contents/Resources/tulip_home"
         cmd = "cp -Rf \"%s/\" \"%s\"" % (tulip_home, dest)
@@ -122,7 +122,7 @@ def get_latest_release():
     mine = None
     sys = None
     for i in j['assets']:
-        if(board()=="AMYBOARD"):
+        if board() == "AMYBOARD":
             if i['name'] == 'amyboard-firmware-AMYBOARD.bin':
                 mine = i
             if i['name'] == 'amyboard-sys.bin':
@@ -132,7 +132,7 @@ def get_latest_release():
                 mine = i
             if i['name'] == 'tulip-sys.bin':
                 sys = i
-    if(mine and sys):
+    if mine and sys:
         return (mine['browser_download_url'], mine['updated_at'], sys['browser_download_url'], sys['updated_at'])
     return (None, None, None, None)
 

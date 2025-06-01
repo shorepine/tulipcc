@@ -114,9 +114,9 @@ def add_default_synths():
     """Add the default synths (Juno on Chan1, drums on 10) e.g. after config.reset()."""
     # This now duplicates amy.c:amy_default_setup(), but it should be harmless.
     global config
-    # utility sine wave bleeper on channel 16 - the "system bleep" synth
+    # utility sine wave bleeper on channel 0 - the "system bleep" synth
     # (which for the moment steals one of the drum machine oscs, I think).
-    config.add_synth(channel=16, synth=OscSynth(wave=amy.SINE, num_voices=1))
+    config.add_synth(channel=0, synth=OscSynth(num_voices=1, wave=amy.SINE))
     # drum machine always on channel 10
     # GeneralMidi Drums.
     config.add_synth(channel=10, synth=DrumSynth(num_voices=6))
