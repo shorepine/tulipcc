@@ -14,7 +14,6 @@ EXTMOD_SRC_C += $(addprefix $(TOP)/../amy/src/, \
 	oscillators.c \
 	transfer.c \
 	sequencer.c \
-	partials.c \
 	pcm.c \
 	log2_exp2.c \
 	interp_partials.c \

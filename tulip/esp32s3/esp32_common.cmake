@@ -200,7 +200,6 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/transfer.c
     ${AMY_DIR}/src/api.c
     ${AMY_DIR}/src/sequencer.c
-    ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c
     ${AMY_DIR}/src/i2s.c
     ${AMY_DIR}/src/log2_exp2.c
@@ -371,7 +370,6 @@ target_compile_options(${MICROPY_TARGET} PUBLIC
     -fsingle-precision-constant
     -Wno-strict-aliasing
     -DESP_PLATFORM
-    -DAMY_HAS_AUDIO_IN
     -DSTATIC=static
     -DLFS2_NO_DEBUG
 )

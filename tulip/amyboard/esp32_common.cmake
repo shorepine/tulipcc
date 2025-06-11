@@ -181,7 +181,6 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/transfer.c
     ${AMY_DIR}/src/api.c
     ${AMY_DIR}/src/sequencer.c
-    ${AMY_DIR}/src/partials.c
     ${AMY_DIR}/src/pcm.c
     ${AMY_DIR}/src/log2_exp2.c
     ${AMY_DIR}/src/interp_partials.c
