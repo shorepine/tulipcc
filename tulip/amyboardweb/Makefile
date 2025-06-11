@@ -60,7 +60,7 @@ CFLAGS += -Wall -Werror -Wdouble-promotion -Wfloat-conversion -DSTATIC=static -W
 CFLAGS += -O3 -DNDEBUG
 CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN)
-CFLAGS += -DAMYBOARD_WEB -DTULIP -DMA_ENABLE_AUDIO_WORKLETS -DAMY_IS_EXTERNAL -DMODULE_ULAB_ENABLED=1 -DAMY_HAS_AUDIO_IN
+CFLAGS += -DAMYBOARD_WEB -DTULIP -DMA_ENABLE_AUDIO_WORKLETS -DAMY_IS_EXTERNAL -DMODULE_ULAB_ENABLED=1
 
 EXPORTED_FUNCTIONS_EXTRA += ,\
 	_mp_js_do_exec,\

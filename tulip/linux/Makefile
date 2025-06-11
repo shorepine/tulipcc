@@ -88,7 +88,7 @@ INC += -I$(BUILD)
 CWARN = -Wall -Werror
 CWARN += -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-old-style-declaration -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wno-float-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA) 
-CFLAGS += -DTULIP_DESKTOP -DAMY_HAS_AUDIO_IN
+CFLAGS += -DTULIP_DESKTOP
 CFLAGS += $(ARCHFLAGS) 
 
 # Debugging/Optimization
