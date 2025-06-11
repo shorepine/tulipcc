@@ -7,6 +7,7 @@ freeze("../../../amy", "amy.py")
 freeze("../../../amy", "juno.py")
 freeze("../../../amy", "amy_wave.py")
 freeze("../../../amy", "amy_constants.py")
+freeze("../../../amy", "example_patches.py")
 
 package(
     "asyncio",

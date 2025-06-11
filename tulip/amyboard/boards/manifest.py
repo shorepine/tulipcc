@@ -24,5 +24,6 @@ freeze("$(MPY_DIR)/../amy", "amy.py")
 freeze("$(MPY_DIR)/../amy", "juno.py")
 freeze("$(MPY_DIR)/../amy", "amy_wave.py")
 freeze("$(MPY_DIR)/../amy", "amy_constants.py")
+freeze("$(MPY_DIR)/../amy", "example_patches.py")
 
 #freeze("$(MPY_DIR)/lib/micropython-lib/micropython/utarfile", "utarfile.py")

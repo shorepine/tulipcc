@@ -179,7 +179,6 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/keyscan.c
     ${TULIP_SHARED_DIR}/help.c
     ${TULIP_SHARED_DIR}/ui.c
-    ${TULIP_SHARED_DIR}/sounds.c
     ${TULIP_SHARED_DIR}/tsequencer.c
     ${TULIP_SHARED_DIR}/lodepng.c
     ${TULIP_SHARED_DIR}/lvgl_u8g2.c
@@ -206,6 +205,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/interp_partials.c
     ${AMY_DIR}/src/parse.c
     ${AMY_DIR}/src/instrument.c
+    ${AMY_DIR}/src/midi_mappings.c
     ${ULAB_DIR}/scipy/integrate/integrate.c
     ${ULAB_DIR}/scipy/linalg/linalg.c
     ${ULAB_DIR}/scipy/optimize/optimize.c
