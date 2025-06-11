@@ -110,7 +110,7 @@ class PatchSynth:
             if not self._initialized:
                 self.deferred_init()
             else:
-                self.amy_send(patch_number=patch_number) 
+                self.amy_send(patch_number=patch_number)
 
     def control_change(self, control, value):
         print('control_change not implemented for amy-managed voices.')
