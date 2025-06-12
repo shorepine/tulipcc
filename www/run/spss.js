@@ -1,5 +1,6 @@
 var amy_add_message = null;
 var amy_live_start_web = null;
+var amy_bleep = null;
 var amy_live_start_web_audioin = null;
 var amy_process_single_midi_byte = null;
 var audio_started = false;
@@ -31,8 +32,11 @@ amyModule().then(async function(am) {
   amy_live_stop = am.cwrap(
     'amy_live_stop', null,  null, {async: true}    
   );
-  amy_start_web = am.cwrap(
-    'amy_start_web', null, null
+  amy_bleep = am.cwrap(
+    'amy_bleep', null, ['number']
+  );
+  amy_start_web_no_synths = am.cwrap(
+    'amy_start_web_no_synths', null, null
   );
   amy_add_message = am.cwrap(
     'amy_add_message', null, ['string']
@@ -46,16 +50,11 @@ amyModule().then(async function(am) {
   amy_sysclock = am.cwrap(
     'amy_sysclock', 'number', [null]
   );
-//  amy_get_input_buffer = am.cwrap(
-//    'amy_get_input_buffer', null, ['number']
-//  );
-//  amy_set_input_buffer = am.cwrap(
-//    'amy_set_external_input_buffer', null, ['number']
-//  );
   amy_process_single_midi_byte = am.cwrap(
     'amy_process_single_midi_byte', null, ['number, number']
   );
-  amy_start_web();
+  amy_start_web_no_synths();
+  amy_bleep(0); // won't play until live audio starts
   amy_module = am;
   res_ptr_in = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
   res_ptr_out = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
