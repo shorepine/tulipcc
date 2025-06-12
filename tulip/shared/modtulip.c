@@ -461,7 +461,7 @@ STATIC mp_obj_t tulip_amyboard_start(size_t n_args, const mp_obj_t *args) {
     run_amy();
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_start_obj, 1, 1, tulip_amyboard_start);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_start_obj, 0, 0, tulip_amyboard_start);
 
 
 STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {

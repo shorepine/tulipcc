@@ -337,7 +337,7 @@ void app_main(void) {
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
     i2c_follower_init();
-    run_amy();
+    //run_amy();  // Needs to be done in Python so we can init_pcm9211 first (for now)
     fflush(stderr);
     delay_ms(500);
     

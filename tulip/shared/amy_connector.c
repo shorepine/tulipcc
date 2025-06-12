@@ -155,6 +155,7 @@ void run_amy() {
 #else
     amy_config.features.audio_in = 0;
 #endif
+    amy_config.features.startup_bleep = 1;
     amy_config.midi = AMY_MIDI_IS_UART;
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.features.dualcore = 1;
