@@ -162,7 +162,6 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/help.c
     ${TULIP_SHARED_DIR}/tsequencer.c
     ${TULIP_SHARED_DIR}/amy_connector.c
-    ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
     ${AMY_DIR}/src/algorithms.c
     ${AMY_DIR}/src/custom.c
     ${AMY_DIR}/src/patches.c
