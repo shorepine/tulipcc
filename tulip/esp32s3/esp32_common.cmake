@@ -185,7 +185,6 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/u8fontdata.c
     ${TULIP_SHARED_DIR}/u8g2_fonts.c
     ${TULIP_SHARED_DIR}/amy_connector.c
-    ${AMY_DIR}/src/dsps_biquad_f32_ae32.S
     ${AMY_DIR}/src/algorithms.c
     ${AMY_DIR}/src/custom.c
     ${AMY_DIR}/src/patches.c

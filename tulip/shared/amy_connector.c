@@ -165,6 +165,7 @@ void run_amy() {
     amy_config.i2s_mclk = CONFIG_I2S_MCLK;
     amy_config.midi_out = MIDI_OUT_PIN;
     amy_config.midi_in = MIDI_IN_PIN;
+    amy_config.features.startup_bleep = 1;
     amy_start(amy_config);
     external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
     for(uint16_t i=0;i<amy_config.max_oscs;i++) external_map[i] = 0;
@@ -180,6 +181,7 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_config.capture_device_id = capture_device_id;
     amy_config.playback_device_id = playback_device_id;
     amy_config.features.audio_in = 1;
+    amy_config.features.startup_bleep = 1;
     amy_start(amy_config);
     amy_live_start();
 }
