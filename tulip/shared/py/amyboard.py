@@ -21,7 +21,7 @@ def mount_sd():
 
 def start_amy():
     init_pcm9211()
-    tulip.start_amyboard_amy()
+    tulip.amyboard_start()
 
 def get_i2c():
     global i2c
