@@ -293,7 +293,7 @@ def run(screen):
         app.rows.append(row)
         drumkit_index = drumkit_index_of_name(initial_voices[i])
         _NOTE_OF_ROW[i] = drumkit[drumkit_index][0]  # drumkit entries are (base_note, name, general_midi_note_if_any).
-        amy.send(synth=_BASE_SYNTH + i, num_voices=1, patch=amy.message(wave=amy.PCM, preset=drumkit_index))
+        amy.send(synth=_BASE_SYNTH + i, num_voices=1, patch_string=amy.message(wave=amy.PCM, preset=drumkit_index))
         row.set_preset(initial_voices[i])
         row.set_vel(.5)
         row.set_pan(.5)
