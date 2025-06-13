@@ -15,10 +15,10 @@ class PatchSynth:
       synth.note_on(midi_note, velocity, time=None, sequence=None)
       synth.note_off(midi_note, time=None, sequence=None)
       synth.all_notes_off()
-      synth.program_change(patch_num) changes preset for all voices.
+      synth.program_change(patch) changes preset for all voices.
       synth.control_change(control, value) modifies a parameter for all voices.
     Provides read-back attributes (for voices.py UI):
-      synth.patch_number
+      synth.patch
       synth.patch_state  - patch-specific data only used by clients e.g. UI state
     """
 
@@ -35,7 +35,7 @@ class PatchSynth:
         cls.amy_synth_next = 16
         amy.reset()
 
-    def __init__(self, num_voices=4, patch_number=None, patch_string=None, channel=None, synth_flags=0, synth_already_initialized=False):
+    def __init__(self, num_voices=4, patch=None, patch_string=None, channel=None, synth_flags=0, synth_already_initialized=False):
         if channel is not None:
             self.synth = channel
         else:
@@ -43,7 +43,7 @@ class PatchSynth:
             PatchSynth.amy_synth_next += 1
         self.num_voices = num_voices
         self.patch_string = patch_string
-        self.patch_number = patch_number
+        self.patch = patch
         self.patch_state = None
         self.synth_flags = synth_flags
         # The actual setup of the synth is deferred until the first time this
@@ -56,13 +56,13 @@ class PatchSynth:
     def deferred_init(self):
         """Finish synth initialization once we can assume all voices are available."""
         if not self._initialized:
-            if self.patch_number is None and self.patch_string is None:
-                raise ValueError('Neither patch_number nor patch_string are set')
+            if self.patch is None and self.patch_string is None:
+                raise ValueError('Neither patch nor patch_string are set')
             amy_send_args = {'num_voices': self.num_voices, 'synth_flags': self.synth_flags}
             if self.patch_string:
-                amy_send_args['patch'] = self.patch_string
+                amy_send_args['patch_string'] = self.patch_string
             else:   # Assume patch_number is set
-                amy_send_args['patch_number'] = self.patch_number
+                amy_send_args['patch'] = self.patch
             self.amy_send(**amy_send_args)
             self._initialized = True
             # Fields used by UI
@@ -101,16 +101,16 @@ class PatchSynth:
         self.deferred_init()
         self.patch_state = state
 
-    def program_change(self, patch_number):
+    def program_change(self, patch):
         import time
-        if patch_number != self.patch_number:
-            self.patch_number = patch_number
+        if patch != self.patch:
+            self.patch = patch
             # Reset any modified state due to previous patch modifications.
             self.patch_state = None
             if not self._initialized:
                 self.deferred_init()
             else:
-                self.amy_send(patch_number=patch_number)
+                self.amy_send(patch=patch)
 
     def control_change(self, control, value):
         print('control_change not implemented for amy-managed voices.')

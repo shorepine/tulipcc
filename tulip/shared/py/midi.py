@@ -21,9 +21,9 @@ class MidiConfig:
         self.show_warnings = show_warnings
         self.synth_per_channel = dict()
         self.arpeggiator_per_channel = dict()
-        for channel, patch_number in patch_per_channel.items():
+        for channel, patch in patch_per_channel.items():
             num_voices = voices_per_channel[channel] if channel in voices_per_channel else 4  # Default 4 voices per synth.
-            synth = PatchSynth(patch_number=patch_number, num_voices=num_voices, synth_already_initialized=synths_already_initialized)
+            synth = PatchSynth(patch=patch, num_voices=num_voices, synth_already_initialized=synths_already_initialized)
             self.add_synth(channel=channel, synth=synth)
 
     def reset(self):
@@ -41,17 +41,17 @@ class MidiConfig:
         if channel in self.arpeggiator_per_channel:
             self.arpeggiator_per_channel[channel].synth = None
 
-    def add_synth(self, synth=None, patch_number=None, channel=1, num_voices=None):
-        if synth is None and patch_number is None:
-            raise ValueError('No synth (or patch_number) specified')
+    def add_synth(self, synth=None, patch=None, channel=1, num_voices=None):
+        if synth is None and patch is None:
+            raise ValueError('No synth (or patch) specified')
         self.release_synth_for_channel(channel)
         if synth is None:
-            print('add_synth(patch_number=..) is deprecated and will be removed.  Use add_synth(PatchSynth(patch_number=..)) instead.')
+            print('add_synth(patch=..) is deprecated and will be removed.  Use add_synth(PatchSynth(patch=..)) instead.')
             if num_voices is None:
                 num_voices = 6  # Default
-            synth = PatchSynth(num_voices=num_voices, patch_number=patch_number, channel=channel)
-        elif patch_number is not None or num_voices is not None:
-            raise ValueError('You cannot specify both synth and patch_number/num_voices')
+            synth = PatchSynth(num_voices=num_voices, patch=patch, channel=channel)
+        elif patch is not None or num_voices is not None:
+            raise ValueError('You cannot specify both synth and patch/num_voices')
             # .. because we can't reconfigure num_voices which you might be expecting.
         self.synth_per_channel[channel] = synth
         synth.set_channel(channel)
@@ -72,9 +72,9 @@ class MidiConfig:
             self.arpeggiator_per_channel.synth = None
             del self.arpeggiator_per_channel[channel]
 
-    def program_change(self, channel, patch_number):
+    def program_change(self, channel, patch):
         # update the map
-        self.synth_per_channel[channel].program_change(patch_number)
+        self.synth_per_channel[channel].program_change(patch)
 
     def get_active_channels(self):
         """Return numbers of MIDI channels with allocated synths."""
@@ -85,11 +85,11 @@ class MidiConfig:
         return self.synth_per_channel[channel] if channel in self.synth_per_channel else None
 
     def channel_info(self, channel):
-        """Report the current patch_num and polyphony."""
+        """Report the current patch and polyphony."""
         if channel not in self.synth_per_channel:
             return (None, None)
         return (
-            self.synth_per_channel[channel].patch_number,
+            self.synth_per_channel[channel].patch,
             self.synth_per_channel[channel].num_voices
         )
 
@@ -121,7 +121,7 @@ def add_default_synths():
     # GeneralMidi Drums.
     config.add_synth(channel=10, synth=DrumSynth(num_voices=6))
     # Default Juno synth on Channel 1.
-    config.add_synth(channel=1, synth=PatchSynth(patch_number=0, num_voices=6))
+    config.add_synth(channel=1, synth=PatchSynth(patch=0, num_voices=6))
     config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)
 
 
