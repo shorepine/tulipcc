@@ -1,11 +1,8 @@
 # The asyncio package is built from the standard implementation but with the
 # core scheduler replaced with a custom scheduler that uses the JavaScript
 # runtime (with setTimeout an Promise's) to contrtol the scheduling.
-freeze("../../../../amy", "amy.py")
-freeze("../../../../amy", "juno.py")
-freeze("../../../../amy", "amy_constants.py")
-freeze("../../../../amy", "example_patches.py")
-freeze("../../../../amy/experiments", "piano_params.py")
+package("amy", base_path="$(MPY_DIR)/../amy")
+
 
 package(
     "asyncio",
