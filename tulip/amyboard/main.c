@@ -318,7 +318,6 @@ void boardctrl_startup(void) {
 }
 
 
-extern void run_amy();
 extern esp_err_t i2c_follower_init();
 
 uint8_t * xStack;
@@ -337,7 +336,6 @@ void app_main(void) {
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
     i2c_follower_init();
-    run_amy();
     fflush(stderr);
     delay_ms(500);
     
