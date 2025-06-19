@@ -105,7 +105,7 @@ def init_pcm9211(addr=0x40):
     registers = [
         [ 0x40, 0x33 ], # Power down ADC, power down DIR, power down DIT, power down OSC
         [ 0x40, 0xc0 ], # Normal operation for all
-        [ 0x34, 0x00 ], # Initialize DIR - both biphase amps on, input from RXIN0
+        [ 0x34, 0x40 ], # Initialize DIR - RXIN0 biphase amp on, RXIN1 off, input from RXIN0
         [ 0x26, 0x01 ], # Main Out is DIR/ADC if no DIR sync (these match power-on default, repeated for clarity).
         [ 0x6B, 0x00 ], # Main output pins are DIR/ADC AUTO
         [ 0x30, 0x04 ], # PLL sends 512fs as SCK

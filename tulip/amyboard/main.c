@@ -323,6 +323,7 @@ extern esp_err_t i2c_follower_init();
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
 
+extern void juno_filter_midi_handler(uint8_t * bytes, uint16_t len, uint8_t is_sysex);
 
 
 void app_main(void) {
@@ -344,6 +345,8 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(100);
     tsequencer_init();
+    // Add some MIDI CCs for the Juno (defined in midi_mappings.c).
+    amy_external_midi_input_hook = juno_filter_midi_handler;
 }
 
 void nlr_jump_fail(void *val) {
