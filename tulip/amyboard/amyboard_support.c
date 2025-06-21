@@ -40,11 +40,27 @@ TaskHandle_t i2c_check_for_data_handle;
 #define I2C_FOLLOWER_NUM I2C_NUMBER(1) /*!< I2C port number for follower dev */
 #define I2C_FOLLOWER_TX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C follower tx buffer size */
 #define I2C_FOLLOWER_RX_BUF_LEN (2 * DATA_LENGTH)              /*!< I2C follower rx buffer size */
+// dpwe
+#define I2C_FOLLOWER_STACK_SIZE (4 * 1024)
+#define I2C_FOLLOWER_TASK_COREID (0)
 
 #define AMYCHIP_ADDR 0x3F
 #define PCM9211_ADDR 0x40
 #define ADS1115_ADDR 0x48
 #define GP8413_ADDR  0x58
+
+uint8_t i2c_buffer[MAX_MESSAGE_LEN];
+
+void i2c_check_for_data() {
+    while(1) {
+        size_t size = i2c_slave_read_buffer(I2C_FOLLOWER_NUM, i2c_buffer, MAX_MESSAGE_LEN, 10 / portTICK_PERIOD_MS);
+        if(size>0) {
+            i2c_buffer[size] = 0;
+            //fprintf(stderr, "%s\n", i2c_buffer);
+            amy_add_message((char*)i2c_buffer);
+        }
+    }
+}
 
 esp_err_t i2c_follower_init() {
     i2c_port_t i2c_follower_port = I2C_FOLLOWER_NUM;
@@ -59,22 +75,10 @@ esp_err_t i2c_follower_init() {
     conf_follower.slave.maximum_speed = I2C_CLK_FREQ; // expected maximum clock speed
     conf_follower.clk_flags =0;
     i2c_param_config(i2c_follower_port, &conf_follower);
-    return i2c_driver_install(i2c_follower_port, conf_follower.mode,
+    esp_err_t e = i2c_driver_install(i2c_follower_port, conf_follower.mode,
                             I2C_FOLLOWER_RX_BUF_LEN, I2C_FOLLOWER_TX_BUF_LEN, 0);
-}
-
-
-uint8_t i2c_buffer[MAX_MESSAGE_LEN];
-
-void i2c_check_for_data() {
-    while(1) {
-        size_t size = i2c_slave_read_buffer(I2C_FOLLOWER_NUM, i2c_buffer, MAX_MESSAGE_LEN, 10 / portTICK_PERIOD_MS);
-        if(size>0) {
-            i2c_buffer[size] = 0;
-            //fprintf(stderr, "%s\n", i2c_buffer);
-            amy_add_message((char*)i2c_buffer);
-        }
-    }
+    xTaskCreatePinnedToCore(i2c_check_for_data, "i2c_follower", (I2C_FOLLOWER_STACK_SIZE) / sizeof(StackType_t), NULL, (ESP_TASK_PRIO_MIN + 1), &i2c_check_for_data_handle, I2C_FOLLOWER_TASK_COREID);
+    return e;
 }
 
 
