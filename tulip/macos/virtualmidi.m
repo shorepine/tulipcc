@@ -13,7 +13,7 @@
 #import <CoreMidi/CoreMidi.h>
 #include <mach/mach_time.h>
 #undef unichar
-#import "midi.h"
+#import "amy_midi.h"
 
 static CGEventSourceRef eventSource;
 MIDIClientRef midi_client;

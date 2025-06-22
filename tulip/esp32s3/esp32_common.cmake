@@ -194,7 +194,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/envelope.c
     ${AMY_DIR}/src/filters.c
     ${AMY_DIR}/src/oscillators.c
-    ${AMY_DIR}/src/midi.c
+    ${AMY_DIR}/src/amy_midi.c
     ${AMY_DIR}/src/transfer.c
     ${AMY_DIR}/src/api.c
     ${AMY_DIR}/src/sequencer.c

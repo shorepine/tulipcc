@@ -170,7 +170,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${AMY_DIR}/src/api.c
     ${AMY_DIR}/src/instrument.c
     ${AMY_DIR}/src/i2s.c
-    ${AMY_DIR}/src/midi.c
+    ${AMY_DIR}/src/amy_midi.c
     ${AMY_DIR}/src/parse.c
     ${AMY_DIR}/src/delay.c
     ${AMY_DIR}/src/envelope.c

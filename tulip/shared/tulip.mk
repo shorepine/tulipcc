@@ -18,7 +18,7 @@ EXTMOD_SRC_C += $(addprefix $(TOP)/../amy/src/, \
 	log2_exp2.c \
 	interp_partials.c \
 	parse.c \
-	midi.c \
+	amy_midi.c \
 	instrument.c \
 	api.c \
 	midi_mappings.c \
