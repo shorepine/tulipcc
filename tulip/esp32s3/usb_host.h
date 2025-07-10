@@ -13,7 +13,7 @@
 #include "tulip_helpers.h"
 #include "esp_timer.h"
 #include "display.h"
-#include "midi.h"  // from extmod/tulip/
+#include "amy_midi.h"  // from extmod/tulip/
 
 extern uint8_t tulip_ready;
 
