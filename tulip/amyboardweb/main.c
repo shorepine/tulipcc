@@ -45,7 +45,7 @@
 #include "proxy_c.h"
 #include "py/ringbuf.h"
 #include "emscripten/html5.h"
-#include "midi.h"
+#include "amy_midi.h"
 #include "tsequencer.h"
 
 extern void setup_lvgl();

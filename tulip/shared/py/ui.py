@@ -590,10 +590,13 @@ class UIButton(UIElement):
             self.button.add_event_cb(callback, lv.EVENT.CLICKED, None)
 
 class UILabel(UIElement):
-    def __init__(self, text, fg_color=None, font=None, **kwargs):
+    def __init__(self, text, fg_color=None, w=None, font=None, **kwargs):
         super().__init__(**kwargs) 
         self.label = lv.label(self.group)
         self.label.set_text(text)
+        if(w is not None):
+            self.label.set_width(w)
+            self.group.set_width(w)
         self.label.set_style_text_align(lv.TEXT_ALIGN.CENTER,0)
         if(font is not None):
             self.label.set_style_text_font(font, 0)
