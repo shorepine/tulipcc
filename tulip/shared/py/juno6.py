@@ -4,7 +4,7 @@ import tulip, midi
 import lvgl as lv
 import time
 import patches
-import juno
+from amy import juno
 
 class JunoSection(tulip.UIElement):
     """A group of elements in an red-header group with a title."""
