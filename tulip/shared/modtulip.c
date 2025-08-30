@@ -248,7 +248,7 @@ STATIC mp_obj_t tulip_midi_out(size_t n_args, const mp_obj_t *args) {
         for(uint16_t i=0;i<(uint16_t)len;i++) {
             b[i] = mp_obj_get_int(items[i]);
         }
-        midi_out(b, len);
+        tulip_send_midi_out(b, len);
         free_caps(b);
     }
     return mp_const_none;
