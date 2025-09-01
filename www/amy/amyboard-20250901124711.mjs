@@ -50,7 +50,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmp2ok4kybw.js
+// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpsijdt7re.js
 
   Module['expectedDataFileDownloads'] ??= 0;
   Module['expectedDataFileDownloads']++;
@@ -69,8 +69,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.substring(0, location.pathname.lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250409142314.data';
-      var REMOTE_PACKAGE_BASE = 'amyboard-20250409142314.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250901124711.data';
+      var REMOTE_PACKAGE_BASE = 'amyboard-20250901124711.data';
       var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
 var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 
@@ -206,10 +206,10 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250409142314.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250901124711.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250409142314.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250901124711.data');
 
       Module['preloadResults'] ??= {};
 
@@ -233,21 +233,21 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
 
   })();
 
-// end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmp2ok4kybw.js
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpuzb18vu4.js
+// end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpsijdt7re.js
+// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpq_vb64i1.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpuzb18vu4.js
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpxj1wzd1z.js
+  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpq_vb64i1.js
+// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpn1y6qi_y.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpxj1wzd1z.js
+  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpn1y6qi_y.js
 
 
 // Sometimes an existing Module object exists with properties
@@ -923,14 +923,14 @@ function createExportWrapper(name, nargs) {
 var wasmBinaryFile;
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'amyboard-20250409142314.wasm';
+    var f = 'amyboard-20250901124711.wasm';
     if (!isDataURI(f)) {
       return locateFile(f);
     }
     return f;
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('amyboard-20250409142314.wasm', import.meta.url).href;
+  return new URL('amyboard-20250901124711.wasm', import.meta.url).href;
 }
 
 function getBinarySync(file) {
@@ -1097,10 +1097,11 @@ async function createWasm() {
 // === Body ===
 
 var ASM_CONSTS = {
-  67363512: () => { FS.syncfs(false, function (err) {}); },  
- 67363549: () => { try { FS.mkdir('/amyboard'); } catch (err) { } try { FS.mkdir('/amyboard/user'); } catch (err) { } FS.mount(IDBFS, {autoPersist:true}, '/amyboard/user'); FS.syncfs(true, function (err) { }); },  
- 67363740: ($0, $1, $2) => { let data = Module.HEAPU8.slice($0, $0 + $1 * $2 * 4); let context = document.getElementById("canvas").getContext('2d'); context.scale(2, 2); let imageData = context.getImageData(0, 0, $1, $2); imageData.data.set(data); context.putImageData(imageData, 0, 0); },  
- 67364002: ($0, $1) => { if(midiOutputDevice != null) { midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1)); } }
+  67453048: () => { FS.syncfs(false, function (err) {}); },  
+ 67453085: () => { try { FS.mkdir('/amyboard'); } catch (err) { } try { FS.mkdir('/amyboard/user'); } catch (err) { } FS.mount(IDBFS, {autoPersist:true}, '/amyboard/user'); FS.syncfs(true, function (err) { }); },  
+ 67453276: ($0, $1, $2) => { let data = Module.HEAPU8.slice($0, $0 + $1 * $2 * 4); let context = document.getElementById("canvas").getContext('2d'); context.scale(2, 2); let imageData = context.getImageData(0, 0, $1, $2); imageData.data.set(data); context.putImageData(imageData, 0, 0); },  
+ 67453538: ($0, $1) => { if(midiOutputDevice != null) { midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1)); } },  
+ 67453624: ($0) => { if(typeof amy_process_single_midi_byte === 'function') { amy_process_single_midi_byte($0, 1); } }
 };
 function proxy_convert_mp_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); proxy_convert_js_to_mp_obj_jsside_force_double_proxy(ret, out); }
 function proxy_convert_mp_to_js_then_js_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); const js_obj = PyProxy.toJs(ret); proxy_convert_js_to_mp_obj_jsside(js_obj, out); }
@@ -1126,7 +1127,6 @@ function js_then_resolve(ret_value,resolve) { const ret_value_js = proxy_convert
 function js_then_reject(ret_value,reject) { let ret_value_js; try { ret_value_js = proxy_convert_mp_to_js_obj_jsside(ret_value); } catch(error) { ret_value_js = error; } const reject_js = proxy_convert_mp_to_js_obj_jsside(reject); reject_js(ret_value_js); }
 function js_then_continue(jsref,py_resume,resolve,reject,out) { const py_resume_js = proxy_convert_mp_to_js_obj_jsside(py_resume); const resolve_js = proxy_convert_mp_to_js_obj_jsside(resolve); const reject_js = proxy_convert_mp_to_js_obj_jsside(reject); const ret = proxy_js_ref[jsref].then( (result) => { py_resume_js(result, null, resolve_js, reject_js); }, (reason) => { py_resume_js(null, reason, resolve_js, reject_js); }, ); proxy_convert_js_to_mp_obj_jsside(ret, out); }
 function create_promise(out_set,out_promise) { const out_set_js = proxy_convert_mp_to_js_obj_jsside(out_set); const promise = new Promise(out_set_js); proxy_convert_js_to_mp_obj_jsside(promise, out_promise); }
-function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len)); }
 
 // end include: preamble.js
 
@@ -5736,8 +5736,6 @@ var wasmImports = {
   /** @export */
   call2,
   /** @export */
-  call_amy_js,
-  /** @export */
   calln,
   /** @export */
   create_promise,
@@ -5855,7 +5853,7 @@ var _proxy_c_to_js_get_dict = Module['_proxy_c_to_js_get_dict'] = createExportWr
 var _proxy_c_to_js_get_iter = Module['_proxy_c_to_js_get_iter'] = createExportWrapper('proxy_c_to_js_get_iter', 1);
 var _proxy_c_to_js_iternext = Module['_proxy_c_to_js_iternext'] = createExportWrapper('proxy_c_to_js_iternext', 2);
 var _proxy_c_to_js_resume = Module['_proxy_c_to_js_resume'] = createExportWrapper('proxy_c_to_js_resume', 2);
-var _process_single_midi_byte = Module['_process_single_midi_byte'] = createExportWrapper('process_single_midi_byte', 1);
+var _tulip_midi_input_hook = Module['_tulip_midi_input_hook'] = createExportWrapper('tulip_midi_input_hook', 3);
 var _emscripten_stack_get_base = wasmExports['emscripten_stack_get_base']
 var _emscripten_stack_get_current = wasmExports['emscripten_stack_get_current']
 var _fflush = createExportWrapper('fflush', 1);
@@ -6463,7 +6461,7 @@ for (const prop of Object.keys(Module)) {
 })();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://amyboard-20250409142314.org/
+ * This file is part of the MicroPython project, http://amyboard-20250901124711.org/
  *
  * The MIT License (MIT)
  *
@@ -6491,7 +6489,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `amyboard-20250409142314.mjs`.
+// - url: location to load `amyboard-20250901124711.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -6751,10 +6749,13 @@ export async function loadMicroPython(options) {
                 "tulip_tick", "null", ["number"], [tick], {async:true}
             );
         },
-        midiByte(byte) {
-            return Module.ccall(
-                "process_single_midi_byte", "null", ["number"], [byte], {async:true}
+        midiInHook(bytes, len, sysex) {
+            const midi_ptr_out = Module._malloc(len); // max midi message len
+            Module.HEAPU8.set(bytes, midi_ptr_out);
+            Module.ccall(
+                'tulip_midi_input_hook', null, ["number", "number", "number"], [midi_ptr_out, len, sysex]
             );
+            Module._free(midi_ptr_out);
         },
         // Needed if the GC/asyncify is enabled.
         async replProcessCharWithAsyncify(chr) {
@@ -6853,7 +6854,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node amyboard-20250409142314.mjs`.
+    // Check if this module is run from the command line via `node amyboard-20250901124711.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -6877,7 +6878,7 @@ if (
 }
 
 /*
- * This file is part of the MicroPython project, http://amyboard-20250409142314.org/
+ * This file is part of the MicroPython project, http://amyboard-20250901124711.org/
  *
  * The MIT License (MIT)
  *
@@ -7118,7 +7119,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://amyboard-20250409142314.org/
+ * This file is part of the MicroPython project, http://amyboard-20250901124711.org/
  *
  * The MIT License (MIT)
  *
