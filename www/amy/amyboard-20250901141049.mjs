@@ -50,7 +50,7 @@ if (ENVIRONMENT_IS_NODE) {
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpsijdt7re.js
+// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpw4x0ppxl.js
 
   Module['expectedDataFileDownloads'] ??= 0;
   Module['expectedDataFileDownloads']++;
@@ -69,8 +69,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.substring(0, location.pathname.lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250901124711.data';
-      var REMOTE_PACKAGE_BASE = 'amyboard-20250901124711.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250901141049.data';
+      var REMOTE_PACKAGE_BASE = 'amyboard-20250901141049.data';
       var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
 var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 
@@ -206,10 +206,10 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250901124711.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250901141049.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250901124711.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250901141049.data');
 
       Module['preloadResults'] ??= {};
 
@@ -233,21 +233,21 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
 
   })();
 
-// end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpsijdt7re.js
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpq_vb64i1.js
+// end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpw4x0ppxl.js
+// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpa4z7l23d.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
     if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpq_vb64i1.js
-// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpn1y6qi_y.js
+  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpa4z7l23d.js
+// include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpff0j58j6.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpn1y6qi_y.js
+  // end include: /var/folders/fv/_b_ck_wx2_15p7yrlgn0svh80000gn/T/tmpff0j58j6.js
 
 
 // Sometimes an existing Module object exists with properties
@@ -923,14 +923,14 @@ function createExportWrapper(name, nargs) {
 var wasmBinaryFile;
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'amyboard-20250901124711.wasm';
+    var f = 'amyboard-20250901141049.wasm';
     if (!isDataURI(f)) {
       return locateFile(f);
     }
     return f;
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('amyboard-20250901124711.wasm', import.meta.url).href;
+  return new URL('amyboard-20250901141049.wasm', import.meta.url).href;
 }
 
 function getBinarySync(file) {
@@ -6461,7 +6461,7 @@ for (const prop of Object.keys(Module)) {
 })();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://amyboard-20250901124711.org/
+ * This file is part of the MicroPython project, http://amyboard-20250901141049.org/
  *
  * The MIT License (MIT)
  *
@@ -6489,7 +6489,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `amyboard-20250901124711.mjs`.
+// - url: location to load `amyboard-20250901141049.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -6854,7 +6854,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node amyboard-20250901124711.mjs`.
+    // Check if this module is run from the command line via `node amyboard-20250901141049.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -6878,7 +6878,7 @@ if (
 }
 
 /*
- * This file is part of the MicroPython project, http://amyboard-20250901124711.org/
+ * This file is part of the MicroPython project, http://amyboard-20250901141049.org/
  *
  * The MIT License (MIT)
  *
@@ -7119,7 +7119,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://amyboard-20250901124711.org/
+ * This file is part of the MicroPython project, http://amyboard-20250901141049.org/
  *
  * The MIT License (MIT)
  *

@@ -12,8 +12,8 @@ midi.config.add_synth(synth.PatchSynth(6, 256))
     'c':`
 # some stuart dempster in your browser
 import music, tulip
-amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', patch=50)
-s = synth.OscSynth(wave=amy.PCM, patch=50)
+amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', preset=50)
+s = synth.OscSynth(wave=amy.PCM, preset=50)
 for i,note in enumerate(music.Chord('F:min7').midinotes()):
     s.note_on(note+24, 1, time=i*4000)
     s.note_off(note+24, time=20000)
@@ -72,96 +72,5 @@ js.fetch(url).then(lambda r: r.text()).then(lambda x: json.loads(x)).then(lambda
 amy.send(osc=30, pan=0, wave=amy.AUDIO_IN0, vel=1)
 amy.send(osc=31, pan=1, wave=amy.AUDIO_IN1, vel=1)
 amy.echo(level=1, delay_ms=400, max_delay_ms=1500, feedback=0.8, filter_coef=None)
-`},{
-    't':'music',
-    'd':'Directly play a wav file',
-    'c':`
-# wav.py
-# plays a wavfile from amy external audio
-
-import amy_wave
-f = None
-try:
-    f = amy_wave.open(wav_filename,'rb')
-except:
-    print("Upload a wav file and type >>> wav_filename='file.wav' first.")
-
-def cb(x):
-    frames = f.readframes(256)
-    if(len(frames)!=1024):
-        frames = bytes(1024)
-        tulip.amy_block_done_callback()
-    tulip.amy_set_external_input_buffer(frames)
-
-if(f is not None):
-    amy.reset()
-    amy.send(osc=0,wave=amy.AUDIO_EXT0, pan=0, vel=1)
-    amy.send(osc=1,wave=amy.AUDIO_EXT1, pan=1, vel=1)
-    tulip.amy_block_done_callback(cb)
-`},{
-    't':'music',
-    'd':'Sample audio in and play it as an instrument',
-    'c':`
-# sample.py 
-# try sampling audio to pcm memorypcm
-
-import tulip, amy, synth, music
-
-buf = bytes()
-t = 0
-tick_start = 0
-ms = 2000
-syn = None
-
-def play():
-    amy.send(reset=amy.RESET_TIMEBASE+amy.RESET_ALL_OSCS)
-    amy.load_sample_bytes(buf, stereo=True, patch=50, loopstart=0, loopend=int(amy.AMY_SAMPLE_RATE*(ms/1000.0)))
-    syn = synth.OscSynth(wave=amy.PCM, patch=50)
-    for i,note in enumerate(music.Chord('F:min7').midinotes()):
-        syn.note_on(note+24, 1, time=i*1000)
-        syn.note_off(note+24, time=5000)
-
-def sample(x):
-    global buf, syn
-    buf = buf + tulip.amy_get_input_buffer()
-    if(tulip.ticks_ms() > tick_start + ms): 
-        tulip.amy_block_done_callback()
-        play()
-
-tick_start = tulip.ticks_ms()
-print("Recording for 2s. Make sure audio input is on!")
-tulip.amy_block_done_callback(sample)
-`
-},{
-    'd':'Generate audio buffers in Python',
-    't':'music',
-    'c':`
-# makes a sine wave. obviously, it's easier to do this in AMY directly! 
-# but just showing how to do it for any audio synthesis in python
-from ulab import numpy as np
-import ulab
-freq = 440.0
-amp = 32767
-lut_size = 512
-count = 0
-lut = np.array(amp * np.sin(np.linspace(0,2*np.pi,lut_size,endpoint=False)), dtype=np.int16)
-# freq/2 because we send stereo buffer in this example
-step_size = ((freq/2.0) * lut_size) / float(amy.AMY_SAMPLE_RATE)
-index = 0
-
-def cb(x):
-    global count
-    t = np.array(np.arange(count*512,count*512+512)*step_size)
-    samples = ulab.user.arraymodlut(lut, t);
-    tulip.amy_set_external_input_buffer(samples.tobytes())
-    if(count==1000):  # stop
-        tulip.amy_block_done_callback()
-        amy.reset()
-    count = count + 1
-
-amy.reset()
-amy.send(osc=0,wave=amy.AUDIO_EXT0, pan=0, vel=1)
-amy.send(osc=1,wave=amy.AUDIO_EXT1, pan=1, vel=1)
-tulip.amy_block_done_callback(cb)
-`
-}]
+`}
+]
