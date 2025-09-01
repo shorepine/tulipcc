@@ -9,7 +9,6 @@ timestamp=$(date +%Y%m%d%H%M%S)
 
 cd ../../amy
 make docs/amy.js
-make docs/amy-audioin.js
 cd ../tulip/amyboardweb
 make
 
@@ -27,17 +26,12 @@ cp ../../amy/docs/amy.js stage/amy/amy-$timestamp.js
 cp ../../amy/docs/amy.wasm stage/amy/amy-$timestamp.wasm
 cp ../../amy/docs/amy.aw.js stage/amy/amy-$timestamp.aw.js
 
-cp ../../amy/docs/amy-audioin.js stage/amy/amy-audioin-$timestamp.js
-cp ../../amy/docs/amy-audioin.wasm stage/amy/amy-audioin-$timestamp.wasm
-cp ../../amy/docs/amy-audioin.aw.js stage/amy/amy-audioin-$timestamp.aw.js
-
 cp build-standard/tulip/obj/micropython.wasm stage/amy/amyboard-$timestamp.wasm
 cp build-standard/tulip/obj/micropython.mjs stage/amy/amyboard-$timestamp.mjs
 cp build-standard/tulip/obj/micropython.data stage/amy/amyboard-$timestamp.data
 
 sed -i '' -e "s/AMYBOARDMJS/amyboard\-${timestamp}.mjs/g" -e "s/AMYJS/amy\-${timestamp}.js/g" stage/amy/index.html
 sed -i '' -e "s/amy.aw.js/amy\-${timestamp}.aw.js/g" -e "s/amy.wasm/amy\-${timestamp}.wasm/g" stage/amy/amy-$timestamp.js
-sed -i '' -e "s/amy\-audioin.aw.js/amy\-audioin\-${timestamp}.aw.js/g" -e "s/amy\-audioin.wasm/amy\-audioin\-${timestamp}.wasm/g" stage/amy/amy-audioin-$timestamp.js
 sed -i '' -e "s/micropython./amyboard\-${timestamp}./g" stage/amy/amyboard-$timestamp.mjs
 
 python3 server.py

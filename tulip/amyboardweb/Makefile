@@ -83,7 +83,8 @@ EXPORTED_FUNCTIONS_EXTRA += ,\
 	_proxy_c_to_js_resume,\
 	_proxy_c_to_js_store_attr,\
 	_proxy_convert_mp_to_js_obj_cside,\
-	_tulip_tick
+	_tulip_tick,\
+	_tulip_midi_input_hook
 
 EXPORTED_RUNTIME_METHODS_EXTRA += ,\
 	PATH,\
@@ -107,7 +108,6 @@ JSFLAGS += \
 	_mp_js_repl_process_char,\
 	_mp_hal_get_interrupt_char,\
 	_mp_handle_pending,\
-	_amy_process_single_midi_byte,\
 	_mp_sched_keyboard_interrupt$(EXPORTED_FUNCTIONS_EXTRA)"
 JSFLAGS += -s EXPORTED_RUNTIME_METHODS="\
 	ccall,\
@@ -148,6 +148,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	help.c \
 	tulip_helpers.c \
 	tsequencer.c \
+	amy_connector.c \
 	)
 
 EXTMOD_SRC_C += $(addprefix $(ULAB_DIR)/, \
