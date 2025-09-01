@@ -287,10 +287,13 @@ export async function loadMicroPython(options) {
                 "tulip_tick", "null", ["number"], [tick], {async:true}
             );
         },
-        midiByte(byte) {
-            return Module.ccall(
-                "amy_process_single_midi_byte", "null", ["number"], [byte], {async:true}
+        midiInHook(bytes, len, sysex) {
+            const midi_ptr_out = Module._malloc(len); // max midi message len
+            Module.HEAPU8.set(bytes, midi_ptr_out);
+            Module.ccall(
+                'tulip_midi_input_hook', null, ["number", "number", "number"], [midi_ptr_out, len, sysex]
             );
+            Module._free(midi_ptr_out);
         },
         // Needed if the GC/asyncify is enabled.
         async replProcessCharWithAsyncify(chr) {

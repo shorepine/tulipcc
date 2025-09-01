@@ -1,10 +1,13 @@
-var amy_play_message = null;
-var amy_live_start = null;
+
+var amy_add_message = null;
+var amy_live_start_web = null;
+var amy_bleep = null;
+var amy_live_start_web_audioin = null;
+var amy_process_single_midi_byte = null;
 var audio_started = false;
 var amy_sysclock = null;
-var amy_get_input_buffer = null;
-var amy_set_input_buffer = null;
 var amyboard_started = false;
+
 var mp = null;
 var midiOutputDevice = null;
 var midiInputDevice = null;
@@ -18,19 +21,26 @@ var cv_1_voltage = 0;
 var cv_2_voltage = 0;
 var amy_module = null;
 
+
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
-  amy_live_start = am.cwrap(
-    'amy_live_start', null, ['number'], {async: true}    
+  amy_live_start_web = am.cwrap(
+    'amy_live_start_web', null, null, {async: true}    
+  );
+  amy_live_start_web_audioin = am.cwrap(
+    'amy_live_start_web_audioin', null, null, {async: true}    
   );
   amy_live_stop = am.cwrap(
     'amy_live_stop', null,  null, {async: true}    
   );
-  amy_start = am.cwrap(
-    'amy_start', null, ['number', 'number', 'number']
+  amy_bleep = am.cwrap(
+    'amy_bleep', null, ['number']
   );
-  amy_play_message = am.cwrap(
-    'amy_play_message', null, ['string']
+  amy_start_web_no_synths = am.cwrap(
+    'amy_start_web_no_synths', null, null
+  );
+  amy_add_message = am.cwrap(
+    'amy_add_message', null, ['string']
   );
   amy_reset_sysclock = am.cwrap(
     'amy_reset_sysclock', null, null
@@ -41,16 +51,16 @@ amyModule().then(async function(am) {
   amy_sysclock = am.cwrap(
     'amy_sysclock', 'number', [null]
   );
-  amy_get_input_buffer = am.cwrap(
-    'amy_get_input_buffer', null, ['number']
+  amy_process_single_midi_byte = am.cwrap(
+    'amy_process_single_midi_byte', null, ['number, number']
   );
-  amy_set_input_buffer = am.cwrap(
-    'amy_set_external_input_buffer', null, ['number']
-  );
-  amy_start(1,1,1,1);
+  amy_start_web_no_synths();
+  amy_bleep(0); // won't play until live audio starts
   amy_module = am;
-});
+  res_ptr_in = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
+  res_ptr_out = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
 
+});
 
 // Called from AMY to update AMYboard about what tick it is, for the sequencer
 function amy_sequencer_js_hook(tick) {
@@ -64,6 +74,11 @@ async function clear_storage() {
   }
 }
 
+async function amy_external_midi_input_js_hook(bytes, len, sysex) {
+    mp.midiInHook(bytes, len, sysex);
+} 
+
+
 async function setup_midi_devices() {
   var midi_in = document.amyboard_settings.midi_input;
   var midi_out = document.amyboard_settings.midi_output;
@@ -72,7 +87,7 @@ async function setup_midi_devices() {
     midiInputDevice = WebMidi.getInputById(WebMidi.inputs[midi_in.selectedIndex].id);
     midiInputDevice.addListener("midimessage", e => {
       for(byte in e.message.data) {
-        mp.midiByte(e.message.data[byte]);
+        amy_process_single_midi_byte(e.message.data[byte], 1);
       }
     });
   }
@@ -439,10 +454,10 @@ async function toggle_audioin() {
     await amy_live_stop();
     if (document.getElementById('amy_audioin').checked) {
         amy_audioin_toggle = true;
-        await amy_live_start(1);
+        await amy_live_start_web_audioin();
     } else {
         amy_audioin_toggle = false;
-        await amy_live_start(0);
+        await amy_live_start_web();
     }
 }
 
@@ -473,25 +488,20 @@ async function start_amyboard() {
   await start_midi();
 
   // Let micropython call an exported AMY function
-  await mp.registerJsModule('amy_js_message', amy_play_message);
+  await mp.registerJsModule('amy_js_message', amy_add_message);
   await mp.registerJsModule('amy_sysclock', amy_sysclock);
   await mp.registerJsModule('amyboard_world_upload_file', amyboard_world_upload_file);
-  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);
-  await mp.registerJsModule('amy_set_external_input_buffer', set_audio_samples);
+//  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);
+//  await mp.registerJsModule('amy_set_external_input_buffer', set_audio_samples);
+
   // time.sleep on this would block the browser from executing anything, so we override it to a JS thing
   mp.registerJsModule("jssleep", sleep_ms);
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import tulip, amy, amy_js_message, amy_sysclock, amy_get_input_buffer, amy_set_external_input_buffer
+    import tulip, amy, amy_js_message, amy_sysclock
     amy.override_send = amy_js_message
     tulip.amy_ticks_ms = amy_sysclock
-    def amy_block_done_callback(f=None):
-        amy.block_cb = f
-    # put the js exported AMY shims in the spot tulip expects 
-    tulip.amy_set_external_input_buffer = amy_set_external_input_buffer
-    tulip.amy_get_input_buffer = amy_get_input_buffer
-    tulip.amy_block_done_callback = amy_block_done_callback
   `);
 
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
@@ -506,14 +516,14 @@ async function start_amyboard() {
 async function start_audio() {
   document.body.removeEventListener('click', start_audio, true); 
   document.body.removeEventListener('keydown', start_audio, true); 
+
   // Don't run this twice
   if(audio_started) return;
-
   // Start the audio worklet (miniaudio)
   if(amy_audioin_toggle) {
-      await amy_live_start(1);
+      await amy_live_start_web_audioin();
   } else {
-      await amy_live_start(0);    
+      await amy_live_start_web();    
   }
   audio_started = true;
 }
