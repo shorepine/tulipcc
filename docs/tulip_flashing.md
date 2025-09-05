@@ -18,12 +18,13 @@ It will ask you if you want to upgrade your firmware and/or your `/sys` folder (
 
 ## Flash Tulip from a compiled release
 
-If you've got an unflashed Tulip, just finished a DIY, or somehow messed up the flash / firmware, you can flash the entire Tulip and filesystem with one file from our releases. We aim to release versions of Tulip regularly. You can find the latest in our [releases section](https://github.com/shorepine/tulipcc/releases). Find the `.bin` file for your type of Tulip:
+If you've got an unflashed Tulip, just finished a DIY, or somehow messed up the flash / firmware, you can flash the entire Tulip and filesystem with one file from our releases. We aim to release versions of Tulip regularly. You can find the latest in our [releases section](https://github.com/shorepine/tulipcc/releases/latest). 
 
- * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
- * Any DIY Tulip board based on the N32R8 (32MB flash): `N32R8`
- * The [T-Deck](../tulip/tdeck/README.md): `TDECK`
- * Tulip CC (our integrated board with display): `TULIP4_R11`
+First, find the `.bin` file for your type of Tulip. If you've got a [Tulip from Makerfabs](https://tulip.computer/), it is `TULIP4_R11`. 
+
+If you didn't buy a Tulip: it's `N16R8` if you've got a 16MB flash, or `N32R8` if a 32MB flash. If you have a [T-Deck](../tulip/tdeck/README.md) it's `TDECK`.
+
+Download the `-full` version from our [releases section](https://github.com/shorepine/tulipcc/releases/latest). For example, most of you will be downloading the latest release for `TULIP4_R11`, for the Makerfabs Tulip, that's `tulip-full-TULIP4_R11.bin`. 
 
 Connect your Tulip to your computer with a USB cable. **Note**: Many Tulip-capable boards have two USB ports, one called UART, TTL or Serial, and one called NATIVE, JTAG, or Host. You should use the UART one if available and try the NATIVE one if not. For example, on the Tulip CC, you can use either USB port, but if you use the NATIVE port you have to hold down the BOOT button while attaching the USB cable. We recommend flashing using the top UART USB connector. On the T-Deck, you only have access to the NATIVE port, and you may need to hold down the BOOT button (the trackball button) while you turn it on. If you've tried both ports and the following commands can't find a serial port to flash to, ensure that you've [installed a driver.](https://github.com/WCHSoftGroup/ch34xser_macos)
 
@@ -89,10 +90,10 @@ Now connect your Tulip to your computer over USB. See the notes about which USB 
 
 Choose the right `MICROPY_BOARD` value for your board. 
 
+ * [Tulip CC](https://tulip.computer/) (our integrated board with display): `TULIP4_R11`
  * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
  * Any DIY Tulip board based on the N32R8 (32MB flash): `N32R8`
  * The [T-Deck](../tulip/tdeck/README.md): `TDECK`
- * Tulip CC (our integrated board with display): `TULIP4_R11`
 
 The default is `TULIP4_R11`, so if you omit it that's what it'll use.
 
