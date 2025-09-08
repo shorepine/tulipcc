@@ -4,7 +4,7 @@
 
 Welcome to the Tulip Creative Computer (Tulip CC)!
  
-Tulip is a low power and afforable self-contained portable computer, with a touchscreen display and sound. It's fully programmable - you write code to define your music, games or anything else you can think of. It boots instantaneously into a Python prompt with a lot of built in support for music synthesis, fast graphics and text, hardware MIDI, network access and external sensors. Dive right into making something without distractions or complications. 
+Tulip is a low power and affordable self-contained portable computer, with a touchscreen display and sound. It's fully programmable - you write code to define your music, games or anything else you can think of. It boots instantaneously into a Python prompt with a lot of built in support for music synthesis, fast graphics and text, hardware MIDI, network access and external sensors. Dive right into making something without distractions or complications. 
 
 The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://tulip.computer/) or [build one](docs/tulip_build.md). You can use Tulip to make music, code, art, games, or just write. 
 
