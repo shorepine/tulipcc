@@ -138,7 +138,7 @@ def game_loop(app):
             tulip.bg_circle(center_x, center_y,2,253,1)
             p_select = random.randrange(0,len(app.flower_notes))
             p = app.flower_notes[p_select]
-            amy.send(osc=get_osc(), wave=amy.PCM, patch=p, vel=0.25)
+            amy.send(osc=get_osc(), wave=amy.PCM, preset=p, vel=0.25)
 
 
     if tulip.ticks_ms() > app.start_time + app.time_til_shrooms:
@@ -155,7 +155,7 @@ def game_loop(app):
                                 w,5,1,random.choice(app.shroom_colors),1)
             p_select = random.randrange(0,len(app.shroom_notes))
             p = app.shroom_notes[p_select]
-            amy.send(osc=get_osc(), wave=amy.PCM, patch=p, vel=0.25)
+            amy.send(osc=get_osc(), wave=amy.PCM, preset=p, vel=0.25)
 
     app.d["x"] += app.d["x_incr"]
     app.d["y"] += app.d["y_incr"]
@@ -163,7 +163,7 @@ def game_loop(app):
     if app.d["x"] + app.rabbit_w >= WIDTH or app.d["x"] <= 0:
         app.d["x_incr"] *= -1
         twiddle_path(app)
-        amy.send(osc=get_osc(), wave=amy.PCM, patch=13, note=app.d["curr_note"], vel=0.25)
+        amy.send(osc=get_osc(), wave=amy.PCM, preset=13, note=app.d["curr_note"], vel=0.25)
         app.ringing_pan += (random.random() - 0.5) * 0.1
         if app.ringing_pan > 0.75:
             app.ringing_pan = 0.75
@@ -175,7 +175,7 @@ def game_loop(app):
     if app.d["y"] + app.rabbit_h >= HEIGHT or app.d["y"] <= 0:
         app.d["y_incr"] *= -1
         twiddle_path(app)
-        amy.send(osc=get_osc(), wave=amy.PCM, patch=13, note=app.d["curr_note"], vel=0.25)
+        amy.send(osc=get_osc(), wave=amy.PCM, preset=13, note=app.d["curr_note"], vel=0.25)
         app.ringing_pan += (random.random() - 0.5) * 0.1
         if app.ringing_pan > 0.75:
             app.ringing_pan = 0.75
@@ -208,7 +208,7 @@ def game_loop(app):
         tulip.bg_pixel(g_x,g_y,random.choice(app.grass_colors))
 
     #14
-    amy.send(osc=0, wave=amy.PCM, patch=18,  vel=0.25, feedback=1)
+    amy.send(osc=0, wave=amy.PCM, preset=18,  vel=0.25, feedback=1)
 
 
 def deactivate_callback(app):
