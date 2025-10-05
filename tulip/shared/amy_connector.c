@@ -157,7 +157,6 @@ void run_amy() {
 #endif
     amy_config.midi = AMY_MIDI_IS_UART;
     amy_config.features.default_synths = 0; // midi.py does this for us
-    amy_config.features.dualcore = 1;
     amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
     amy_config.i2s_bclk = CONFIG_I2S_BCLK;
     amy_config.i2s_dout = CONFIG_I2S_DOUT;
