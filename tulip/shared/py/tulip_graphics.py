@@ -332,5 +332,5 @@ def download_and_run(name):
         import world
     def rt():
         run(name)
-    world.download(name,done_cb=rt)
+    world.download(name, done_cb=rt)
     print("Downloading '%s'... please wait..." % (name))

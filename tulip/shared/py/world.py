@@ -113,7 +113,7 @@ def messages(n=500, chunk_size = 100, mtype='text'):
             ret.append(r)
     return ret
 
-def download(filename, username=None, limit=5000, chunk_size=4096):
+def download(filename, username=None, limit=5000, chunk_size=4096, done_cb=None):
     got = None
     # Check for an extension
     if('.' not in filename[-5:]):
@@ -139,7 +139,8 @@ def download(filename, username=None, limit=5000, chunk_size=4096):
             print("Could not find %s on Tulip World" % (filename))
         else:
             print("Could not find %s by %s on Tulip World" % (filename, username))
-
+    if done_cb:
+        done_cb()
 
 # get unique files
 def unique_files(count=10, overquery=10):
