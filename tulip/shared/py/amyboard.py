@@ -142,3 +142,57 @@ def cv_in(channel=0):
     raw = adc1115_raw(channel)
     (minr,maxr) = (1058.0, 21312.0) # measured -10v to 10v from the gp8413 output 
     return (((raw - minr) / (maxr-minr))*20.0)-10.0
+
+# Adafruit I2C Quad Rotary Encoder Breakout
+# https://www.adafruit.com/product/5752
+# Four rotary encoders with built-in push buttons.
+# read_encoder(encoder=0)  # reads the current value of the encoder
+# init_buttons()  # must be called to configure pullup of encoder buttons
+# read_buttons()  # returns a boolean list of the state of the 4 buttons.
+
+def read_encoder(encoder=0, seesaw_dev=0x49):
+    """Read the cumulated value of encoder 0..3."""
+    i2c = get_i2c()
+    result = bytearray(4)
+    ENCODER_BASE = 0x11
+    ENCODER_POSITION = 0x30
+    i2c.writeto(seesaw_dev, bytes([ENCODER_BASE, ENCODER_POSITION + encoder]))
+    i2c.readfrom_into(seesaw_dev, result)
+    return struct.unpack(">i", result)[0]
+
+def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
+    """Setup the seesaw quad encoder button pins to input_pullup."""
+    mask = 0
+    for p in pins:
+        mask |= (1 << p)
+    mask_bytes = struct.pack('>I', mask)
+    i2c = get_i2c()
+    GPIO_BASE = 0x01
+    GPIO_DIRCLR_BULK = 0x03
+    GPIO_PULLENSET = 0x0B
+    GPIO_BULK_SET = 0x05
+    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_DIRCLR_BULK]) + mask_bytes)
+    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_PULLENSET]) + mask_bytes)
+    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK_SET]) + mask_bytes)
+
+def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
+    """Read the 4 seesaw encoder push buttons."""
+    delay = 0.008
+    i2c = get_i2c()
+    GPIO_BASE = 0x01
+    GPIO_BULK = 0x04
+    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK]))
+    time.sleep(delay)
+    buffer = bytearray(4)
+    i2c.readfrom_into(seesaw_dev, buffer)
+    mask = struct.unpack('>I', buffer)[0]
+    result = []
+    for p in pins:
+        state = True
+        if (mask & (1 << p)):
+            # bit set means button not pressed.
+            state = False
+        result.append(state)
+    return result
+
+    
