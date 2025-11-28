@@ -1,5 +1,5 @@
 # amyboard.py
-import tulip, midi, amy, time
+import tulip, midi, amy, time, struct, time
 
 i2c = None
 display_buffer = None # the bytes object storing the display bits
@@ -195,4 +195,31 @@ def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
         result.append(state)
     return result
 
-    
+def monitor_encoders():
+    """Show status of encoders on display."""
+    # You can run this in a loop to get continuous display of encoders
+    # e.g.
+    # >>> while True:
+    # ...     monitor_encoders()
+    # ...
+    bar_top = 20
+    bar_height = 8
+    bar_space = 12
+    bar_center = 64
+    buttons = read_buttons()
+    for encoder in range(4):
+        width = read_encoder(encoder)
+        top = bar_top + encoder * bar_space
+        # Clear existing bar
+        display.fill_rect(0, top, 128, bar_space, 0)
+        # Draw new bar
+        if width < 0:
+            center = bar_center + width
+            width = -width
+        else:
+            center = bar_center
+        display.fill_rect(center, top, width, bar_height, 1)
+        if buttons[encoder]:
+            # Small box at the left.
+            display.fill_rect(2, top + 2, 2, 2, 1)
+    display.show()
