@@ -146,9 +146,11 @@ def cv_in(channel=0):
 # Adafruit I2C Quad Rotary Encoder Breakout
 # https://www.adafruit.com/product/5752
 # Four rotary encoders with built-in push buttons.
-# read_encoder(encoder=0)  # reads the current value of the encoder
-# init_buttons()  # must be called to configure pullup of encoder buttons
-# read_buttons()  # returns a boolean list of the state of the 4 buttons.
+#  read_encoder(encoder=0)  # reads the current value of the encoder
+#  init_buttons()  # must be called to configure pullup of encoder buttons
+#  read_buttons()  # returns a boolean list of the state of the 4 buttons.
+# Code based on abstracting
+# https://github.com/adafruit/Adafruit_CircuitPython_seesaw/blob/main/adafruit_seesaw/seesaw.py.
 
 def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
     """Read the cumulated value of encoder 0..3."""
