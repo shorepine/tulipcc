@@ -150,13 +150,14 @@ def cv_in(channel=0):
 # init_buttons()  # must be called to configure pullup of encoder buttons
 # read_buttons()  # returns a boolean list of the state of the 4 buttons.
 
-def read_encoder(encoder=0, seesaw_dev=0x49):
+def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
     """Read the cumulated value of encoder 0..3."""
     i2c = get_i2c()
     result = bytearray(4)
     ENCODER_BASE = 0x11
     ENCODER_POSITION = 0x30
     i2c.writeto(seesaw_dev, bytes([ENCODER_BASE, ENCODER_POSITION + encoder]))
+    time.sleep(delay)
     i2c.readfrom_into(seesaw_dev, result)
     return struct.unpack(">i", result)[0]
 
@@ -175,9 +176,8 @@ def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
     i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_PULLENSET]) + mask_bytes)
     i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK_SET]) + mask_bytes)
 
-def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
+def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.008):
     """Read the 4 seesaw encoder push buttons."""
-    delay = 0.008
     i2c = get_i2c()
     GPIO_BASE = 0x01
     GPIO_BULK = 0x04
