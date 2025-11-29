@@ -344,6 +344,7 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(100);
     tsequencer_init();
+    i2c_follower_init();
 }
 
 void nlr_jump_fail(void *val) {
