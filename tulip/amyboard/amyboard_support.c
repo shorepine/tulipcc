@@ -74,12 +74,13 @@ esp_err_t i2c_follower_init() {
     conf_follower.slave.maximum_speed = I2C_CLK_FREQ; // expected maximum clock speed
     conf_follower.clk_flags =0;
     i2c_param_config(i2c_follower_port, &conf_follower);
-    i2c_driver_install(i2c_follower_port, conf_follower.mode,
-		       I2C_FOLLOWER_RX_BUF_LEN, I2C_FOLLOWER_TX_BUF_LEN, 0);
-    return xTaskCreatePinnedToCore(&i2c_check_for_data, "i2c_check_for_data", /* stack size */8192, NULL, /* priority */ 20, &i2c_check_handle, /* coreid */0);
+    return i2c_driver_install(i2c_follower_port, conf_follower.mode,
+			      I2C_FOLLOWER_RX_BUF_LEN, I2C_FOLLOWER_TX_BUF_LEN, 0);
 }
 
-
+esp_err_t i2c_follower_start_task() {
+    return xTaskCreatePinnedToCore(&i2c_check_for_data, "i2c_check_for_data", /* stack size */8192, NULL, /* priority */ 20, &i2c_check_handle, /* coreid */0);
+}
 
 
 #define ADS1115_REGISTER_CONFIG (0x01)

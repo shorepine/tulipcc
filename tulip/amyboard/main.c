@@ -319,6 +319,7 @@ void boardctrl_startup(void) {
 
 
 extern esp_err_t i2c_follower_init();
+extern esp_err_t i2c_follower_start_task();
 
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
@@ -344,7 +345,7 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(100);
     tsequencer_init();
-    i2c_follower_init();
+    i2c_follower_start_task();
 }
 
 void nlr_jump_fail(void *val) {
