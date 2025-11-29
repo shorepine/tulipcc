@@ -390,3 +390,10 @@ def tar_extract(file_name, show_progress=True):
                         dest.close()
                 except OSError as error:
                     if(show_progress): print("borked on:", i.name)
+
+# AMYboard control
+def use_amyboard():
+    """Redirect AMY commands to AMYboard on the I2C port."""
+    from machine import I2C
+    i2c = I2C(0, freq=400000)
+    amy.override_send = lambda x: i2c.writeto(0x3F, x)
