@@ -150,11 +150,12 @@ void run_amy() {
     amy_external_render_hook = external_cv_render;
 
     amy_config_t amy_config = amy_default_config();
-#ifdef AMYBOARD
-    amy_config.features.audio_in = 1;
-#else
-    amy_config.features.audio_in = 0;
-#endif
+    // For now, audio_in is denoted by i2s_din != -1
+    //#ifdef AMYBOARD
+    //amy_config.features.audio_in = 1;
+    //#else
+    //amy_config.features.audio_in = 0;
+    //#endif
     amy_config.midi = AMY_MIDI_IS_UART;
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
@@ -168,7 +169,7 @@ void run_amy() {
     amy_start(amy_config);
     external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
     for(uint16_t i=0;i<amy_config.max_oscs;i++) external_map[i] = 0;
-    amy_live_start();
+    //amy_live_start();
 }
 
 #elif defined TULIP_DESKTOP
@@ -179,10 +180,11 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.capture_device_id = capture_device_id;
     amy_config.playback_device_id = playback_device_id;
-    amy_config.features.audio_in = 1;
+    //amy_config.features.audio_in = 1;
+    //amy_config.i2s_din = 0;  // Dummy to indicate has audio in.
     amy_config.features.startup_bleep = 1;
     amy_start(amy_config);
-    amy_live_start();
+    //amy_live_start();
 }
 
 #endif

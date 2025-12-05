@@ -225,3 +225,33 @@ def monitor_encoders():
             # Small box at the left.
             display.fill_rect(2, top + 2, 2, 2, 1)
     display.show()
+
+WAVEFORM_MAX = 32767.0
+
+def draw_waveform():
+    """Plot some of the output waveform on the oled."""
+    waveform = struct.unpack('<' + (512 * 'h'), tulip.amy_get_output_buffer())
+    waveform_top = 0
+    waveform_left = 0
+    waveform_height = 64
+    waveform_width = 128
+    display.fill_rect(waveform_left, waveform_top, waveform_width, waveform_height, 0)
+    # center the largest sample
+    max_value = 0
+    max_value_pos = 0
+    for x in range(len(waveform) // 2 - waveform_width):
+        pos = waveform_width // 2 + x
+        value = (waveform[2 * pos] + waveform[2 * pos + 1])
+        if value > max_value:
+            max_value = value
+            max_value_pos = pos
+    # Pos marks middle; shift it to the left edge
+    pos = max_value_pos - waveform_width // 2
+    for x in range(waveform_width):
+        value = (waveform[2 * (pos + x)] + waveform[2 * (pos + x) + 1]) // 2
+        y = waveform_top + int((waveform_height // 2) * (1.0 - value / WAVEFORM_MAX))
+        if x > 0:
+            display.line(waveform_left + last_x, last_y, waveform_left + x, y, 1)
+        last_x = x
+        last_y = y
+    display.show()
