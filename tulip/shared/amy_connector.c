@@ -152,10 +152,11 @@ void run_amy() {
     amy_config_t amy_config = amy_default_config();
 #ifdef AMYBOARD
     amy_config.features.audio_in = 1;
+    amy_config.midi = AMY_MIDI_IS_UART | AMY_MIDI_IS_USB_GADGET
 #else
+    amy_config.midi = AMY_MIDI_IS_UART;
     amy_config.features.audio_in = 0;
 #endif
-    amy_config.midi = AMY_MIDI_IS_UART;
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
     amy_config.i2s_bclk = CONFIG_I2S_BCLK;
