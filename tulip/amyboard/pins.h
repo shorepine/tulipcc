@@ -17,7 +17,10 @@
 #define I2C_MASTER_SCL 18
 #define I2C_MASTER_SDA 17
 #define CONFIG_I2S_DIN 9 // data coming from the codec, eg ADC  data, also called AMYIN
-#define MIDI_OUT_PIN 14
+
+#define MIDI_OUT_PIN_A 14
+#define MIDI_OUT_PIN_B 15
+
 #define MIDI_IN_PIN 21
 #define MPIO_C0 7
 

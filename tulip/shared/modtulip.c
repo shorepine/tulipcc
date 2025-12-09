@@ -455,13 +455,14 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_framebuf_web_update_obj, 1, 1, 
 // Just AMYBOARD c code
 #ifdef AMYBOARD
 
-extern void run_amy();
+extern void run_amy(uint8_t);
 
 STATIC mp_obj_t tulip_amyboard_start(size_t n_args, const mp_obj_t *args) {
-    run_amy();
+    uint8_t midi_out_pin = mp_obj_get_int(args[0]);
+    run_amy(midi_out_pin);
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_start_obj, 0, 0, tulip_amyboard_start);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_start_obj, 1, 1, tulip_amyboard_start);
 
 
 STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {
