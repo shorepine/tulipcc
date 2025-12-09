@@ -367,8 +367,11 @@ StaticTask_t static_mp_handle;
 TaskHandle_t amy_handle;
 
 
+#ifdef AMYBOARD
+extern void run_amy(uint8_t);
+#else
 extern void run_amy();
-
+#endif
 uint8_t tulip_ready = 0;
 
 
