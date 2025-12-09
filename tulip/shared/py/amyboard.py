@@ -1,5 +1,5 @@
 # amyboard.py
-import tulip, midi, amy, time
+import tulip, midi, amy, time, struct, time
 
 i2c = None
 display_buffer = None # the bytes object storing the display bits
@@ -142,3 +142,86 @@ def cv_in(channel=0):
     raw = adc1115_raw(channel)
     (minr,maxr) = (1058.0, 21312.0) # measured -10v to 10v from the gp8413 output 
     return (((raw - minr) / (maxr-minr))*20.0)-10.0
+
+# Adafruit I2C Quad Rotary Encoder Breakout
+# https://www.adafruit.com/product/5752
+# Four rotary encoders with built-in push buttons.
+#  read_encoder(encoder=0)  # reads the current value of the encoder
+#  init_buttons()  # must be called to configure pullup of encoder buttons
+#  read_buttons()  # returns a boolean list of the state of the 4 buttons.
+# Code based on abstracting
+# https://github.com/adafruit/Adafruit_CircuitPython_seesaw/blob/main/adafruit_seesaw/seesaw.py.
+
+def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
+    """Read the cumulated value of encoder 0..3."""
+    i2c = get_i2c()
+    result = bytearray(4)
+    ENCODER_BASE = 0x11
+    ENCODER_POSITION = 0x30
+    i2c.writeto(seesaw_dev, bytes([ENCODER_BASE, ENCODER_POSITION + encoder]))
+    time.sleep(delay)
+    i2c.readfrom_into(seesaw_dev, result)
+    return struct.unpack(">i", result)[0]
+
+def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
+    """Setup the seesaw quad encoder button pins to input_pullup."""
+    mask = 0
+    for p in pins:
+        mask |= (1 << p)
+    mask_bytes = struct.pack('>I', mask)
+    i2c = get_i2c()
+    GPIO_BASE = 0x01
+    GPIO_DIRCLR_BULK = 0x03
+    GPIO_PULLENSET = 0x0B
+    GPIO_BULK_SET = 0x05
+    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_DIRCLR_BULK]) + mask_bytes)
+    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_PULLENSET]) + mask_bytes)
+    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK_SET]) + mask_bytes)
+
+def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.008):
+    """Read the 4 seesaw encoder push buttons."""
+    i2c = get_i2c()
+    GPIO_BASE = 0x01
+    GPIO_BULK = 0x04
+    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK]))
+    time.sleep(delay)
+    buffer = bytearray(4)
+    i2c.readfrom_into(seesaw_dev, buffer)
+    mask = struct.unpack('>I', buffer)[0]
+    result = []
+    for p in pins:
+        state = True
+        if (mask & (1 << p)):
+            # bit set means button not pressed.
+            state = False
+        result.append(state)
+    return result
+
+def monitor_encoders():
+    """Show status of encoders on display."""
+    # You can run this in a loop to get continuous display of encoders
+    # e.g.
+    # >>> while True:
+    # ...     monitor_encoders()
+    # ...
+    bar_top = 20
+    bar_height = 8
+    bar_space = 12
+    bar_center = 64
+    buttons = read_buttons()
+    for encoder in range(4):
+        width = read_encoder(encoder)
+        top = bar_top + encoder * bar_space
+        # Clear existing bar
+        display.fill_rect(0, top, 128, bar_space, 0)
+        # Draw new bar
+        if width < 0:
+            center = bar_center + width
+            width = -width
+        else:
+            center = bar_center
+        display.fill_rect(center, top, width, bar_height, 1)
+        if buttons[encoder]:
+            # Small box at the left.
+            display.fill_rect(2, top + 2, 2, 2, 1)
+    display.show()
