@@ -22,6 +22,7 @@ int check_rx_char();
 void tx_char(int c);
 mp_obj_t tulip_fopen(const char *filename, const char *mode);
 uint32_t tulip_fwrite(mp_obj_t file, uint8_t * buf, uint32_t len);
+uint32_t tulip_fread(mp_obj_t file, uint8_t * buf, uint32_t len);
 void tulip_fclose(mp_obj_t file);
 uint32_t tulip_fseek(mp_obj_t file, uint32_t seekpoint, int32_t whence);
 int32_t tulip_getline(char * line, uint32_t * len, mp_obj_t file );

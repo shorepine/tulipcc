@@ -144,10 +144,91 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 
 #ifndef AMY_IS_EXTERNAL
 
-#ifdef AMYBOARD
+#if (defined AMYBOARD) || (defined TULIP)
+#include "tulip_helpers.h"
+// map the mp_obj_t to a file handle
+
+static mp_obj_t *g_files[MAX_OPEN_FILES]; // index 1..MAX_OPEN_FILES-1 used
+
+static uint32_t alloc_handle(mp_obj_t f) {
+    for (uint32_t i = 1; i < MAX_OPEN_FILES; i++) {
+        if (g_files[i] == NULL) {
+            g_files[i] = f;
+            return i;
+        }
+    }
+    return HANDLE_INVALID; // table full
+}
+
+static mp_obj_t lookup_handle(uint32_t h) {
+    if (h == 0 || h >= MAX_OPEN_FILES) return NULL;
+    return g_files[h];
+}
+
+static void free_handle(uint32_t h) {
+    if (h == 0 || h >= MAX_OPEN_FILES) return;
+    g_files[h] = NULL;
+}
+
+
+uint32_t mp_fopen_hook(char * filename, char * mode) {
+    mp_obj_t f = tulip_fopen(filename, mode);
+    if (!f) {
+        return HANDLE_INVALID;
+    }
+    uint32_t h = alloc_handle(f);
+    if (h == HANDLE_INVALID) {
+        tulip_fclose(f);
+        return HANDLE_INVALID;
+    }
+    return h;
+}
+
+uint32_t mp_fwrite_hook(uint32_t fptr, uint8_t * bytes, uint32_t len) {
+
+    mp_obj_t f = lookup_handle(fptr);
+    if (!f) {
+        return 0;
+    }
+    uint32_t w = tulip_fwrite(f, bytes, len);
+    return w;
+}
+
+uint32_t mp_fread_hook(uint32_t fptr, uint8_t * bytes, uint32_t len) {
+    mp_obj_t f = lookup_handle(fptr);
+    if (!f) {
+        return 0;
+    }
+    uint32_t r = tulip_fread(f, bytes,len);
+    return r;
+}
+
+void mp_fclose_hook(uint32_t fptr) {
+    mp_obj_t f = lookup_handle(fptr);
+    if (f) {
+        tulip_fclose(f);
+        free_handle(fptr);
+    }
+}
+
+void mp_file_transfer_done_hook(const char *filename) {
+    // notify python that file transfer is done
+    // we can do this by scheduling a call to a python function
+    // untar if we need to
+    // and reboot
+    
+}
+
+
+
 void run_amy(uint8_t midi_out_pin) {
     amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_external_render_hook = external_cv_render;
+    amy_external_fopen_hook = mp_fopen_hook;
+    amy_external_fclose_hook = mp_fclose_hook;
+    amy_external_fread_hook = mp_fread_hook;
+    amy_external_fwrite_hook = mp_fwrite_hook;
+    amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
 
     amy_config_t amy_config = amy_default_config();
     amy_config.features.audio_in = 1;
