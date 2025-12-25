@@ -148,6 +148,7 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 #include "tulip_helpers.h"
 // map the mp_obj_t to a file handle
 
+
 static mp_obj_t *g_files[MAX_OPEN_FILES]; // index 1..MAX_OPEN_FILES-1 used
 
 static uint32_t alloc_handle(mp_obj_t f) {
@@ -218,7 +219,6 @@ void mp_file_transfer_done_hook(const char *filename) {
     // and reboot
     
 }
-
 
 
 void run_amy(uint8_t midi_out_pin) {

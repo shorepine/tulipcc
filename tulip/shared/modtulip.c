@@ -285,8 +285,15 @@ STATIC mp_obj_t tulip_amy_send(size_t n_args, const mp_obj_t *args) {
     amy_add_message((char*)mp_obj_str_get_str(args[0]));
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
+
+STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
+    amy_add_message((char*)sysex_buffer+3) ;
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_sysex_obj, 0, 1, tulip_amy_send_sysex);
 #endif
+
 
 
 /*
@@ -1492,6 +1499,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 
 #ifndef __EMSCRIPTEN__
     { MP_ROM_QSTR(MP_QSTR_amy_send), MP_ROM_PTR(&tulip_amy_send_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_send_sysex), MP_ROM_PTR(&tulip_amy_send_sysex_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
 #endif
 

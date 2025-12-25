@@ -99,7 +99,6 @@ int mp_stream_posix_fsync(void *stream);
 void tulip_fclose(mp_obj_t file) {
     mp_stream_close(file);
 }
-
 mp_obj_t tulip_fopen(const char *filename, const char *mode) {
     mp_obj_t m_args[2];
     m_args[0] = mp_obj_new_str(filename, strlen(filename));
@@ -149,5 +148,4 @@ int32_t tulip_getline(char * line, uint32_t * len, mp_obj_t file ) {
     line[254] = 0;
     return rbytes;
 }
-
 
