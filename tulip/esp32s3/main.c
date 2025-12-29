@@ -367,8 +367,7 @@ StaticTask_t static_mp_handle;
 TaskHandle_t amy_handle;
 
 
-extern void run_amy();
-
+extern void run_amy(uint8_t);
 uint8_t tulip_ready = 0;
 
 
@@ -427,7 +426,7 @@ void app_main(void) {
     delay_ms(100);
 
     fprintf(stderr,"Starting AMY\n");
-    run_amy();
+    run_amy(MIDI_OUT_PIN);
     fflush(stderr);
     delay_ms(500);
     

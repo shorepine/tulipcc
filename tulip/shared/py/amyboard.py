@@ -19,9 +19,26 @@ def mount_sd():
     except OSError:
         pass # it's ok!
 
+def init_midi(type='A'):
+    from machine import Pin
+    # set up MIDI, default to type A
+    # only have to set up MIDI OUT. MIDI IN will work either way
+    if(type=='A'):
+        # Type A: GPIO15 held high, MIDI OUT pin is 14
+        pin = Pin(15, Pin.OUT)
+        pin.value(1)
+        return 14
+    else:
+        # Type B: GPIO14 held high, MIDI OUT pin is 15
+        pin = Pin(14, Pin.OUT)  
+        pin.value(1)
+        return 15
+
+
 def start_amy():
     init_pcm9211()
-    tulip.amyboard_start()
+    midi_out_pin = init_midi()
+    tulip.amyboard_start(midi_out_pin)
 
 def get_i2c():
     global i2c

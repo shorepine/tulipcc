@@ -145,31 +145,31 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 #ifndef AMY_IS_EXTERNAL
 
 #ifdef ESP_PLATFORM
-void run_amy() {
+void run_amy(uint8_t midi_out_pin) {
     amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_external_render_hook = external_cv_render;
 
     amy_config_t amy_config = amy_default_config();
-    // For now, audio_in is denoted by i2s_din != -1
-    //#ifdef AMYBOARD
-    //amy_config.features.audio_in = 1;
-    //#else
-    //amy_config.features.audio_in = 0;
-    //#endif
+    amy_config.audio = AMY_AUDIO_IS_I2S;
+#ifdef AMYBOARD
+    amy_config.features.audio_in = 1;
+    amy_config.midi = AMY_MIDI_IS_UART | AMY_MIDI_IS_USB_GADGET;
+#else
+    amy_config.features.audio_in = 0;
     amy_config.midi = AMY_MIDI_IS_UART;
+#endif
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
     amy_config.i2s_bclk = CONFIG_I2S_BCLK;
     amy_config.i2s_dout = CONFIG_I2S_DOUT;
     amy_config.i2s_din = CONFIG_I2S_DIN;
     amy_config.i2s_mclk = CONFIG_I2S_MCLK;
-    amy_config.midi_out = MIDI_OUT_PIN;
+    amy_config.midi_out = midi_out_pin;
     amy_config.midi_in = MIDI_IN_PIN;
     amy_config.features.startup_bleep = 1;
     amy_start(amy_config);
     external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
     for(uint16_t i=0;i<amy_config.max_oscs;i++) external_map[i] = 0;
-    //amy_live_start();
 }
 
 #elif defined TULIP_DESKTOP
@@ -184,7 +184,6 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     //amy_config.i2s_din = 0;  // Dummy to indicate has audio in.
     amy_config.features.startup_bleep = 1;
     amy_start(amy_config);
-    //amy_live_start();
 }
 
 #endif
