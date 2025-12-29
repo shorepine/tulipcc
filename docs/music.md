@@ -411,7 +411,7 @@ midi.add_default_synths()
 
 ```
 
-To send MIDI out, just use `tulip.midi_send(message)`. You can, for example, send a MIDI message out every sequencer tick on Tulip.
+To send MIDI out, just use `tulip.midi_out(message)`, e.g. `tulip.midi_out([0x90, 0x40, 0x7F])` to send a note-on at velocity 127 and note 64 to the first MIDI channel.   You can, for example, use this to send a MIDI message out every sequencer tick on Tulip.
 
 ## Outputting CV signals to modular and analog synths
 
