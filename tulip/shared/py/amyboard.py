@@ -218,8 +218,9 @@ def monitor_encoders():
     """Show status of encoders on display."""
     # You can run this in a loop to get continuous display of encoders
     # e.g.
-    # >>> while True:
-    # ...     monitor_encoders()
+    # >>> amyboard.init_buttons()
+    # >>> for _ in range(100):
+    # ...     amyboard.monitor_encoders()
     # ...
     bar_top = 20
     bar_height = 8
@@ -247,12 +248,16 @@ WAVEFORM_MAX = 32767.0
 
 def draw_waveform():
     """Plot some of the output waveform on the oled."""
+    # e.g.
+    # >>> for _ in range(100):
+    # ...     amyboard.draw_waveform()
     waveform = struct.unpack('<' + (512 * 'h'), tulip.amy_get_output_buffer())
     waveform_top = 0
     waveform_left = 0
     waveform_height = 64
     waveform_width = 128
-    display.fill_rect(waveform_left, waveform_top, waveform_width, waveform_height, 0)
+    display.fill_rect(waveform_left, waveform_top,
+                      waveform_width, waveform_height, 0)
     # center the largest sample
     max_value = 0
     max_value_pos = 0
@@ -266,9 +271,11 @@ def draw_waveform():
     pos = max_value_pos - waveform_width // 2
     for x in range(waveform_width):
         value = (waveform[2 * (pos + x)] + waveform[2 * (pos + x) + 1]) // 2
-        y = waveform_top + int((waveform_height // 2) * (1.0 - value / WAVEFORM_MAX))
+        y = waveform_top + int((waveform_height // 2)
+                               * (1.0 - value / WAVEFORM_MAX))
         if x > 0:
-            display.line(waveform_left + last_x, last_y, waveform_left + x, y, 1)
+            display.line(waveform_left + last_x, last_y,
+                         waveform_left + x, y, 1)
         last_x = x
         last_y = y
     display.show()
