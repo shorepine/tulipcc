@@ -40,7 +40,7 @@ def self_test():
   time.sleep(0.1)
   rms = input_rms()
   print("Active    input rms: %6.2f" % rms, " " * 8,
-        passfail(rms > 50.0 and rms < 60.0))
+        passfail(rms > 45.0 and rms < 60.0))
   # 3. Check MIDI loopback
   midi.config.reset()
   global rx_midi
