@@ -81,7 +81,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_
 
 
 #ifndef __EMSCRIPTEN__
-extern void amy_get_input_buffer(int16_t * samples);
+extern int amy_get_input_buffer(int16_t * samples);
 extern void amy_set_external_input_buffer(int16_t * samples);
 
 mp_obj_t amy_block_done_callback = NULL;
