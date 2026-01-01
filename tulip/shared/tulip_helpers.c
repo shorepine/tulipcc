@@ -119,11 +119,11 @@ uint32_t tulip_fread(mp_obj_t file, uint8_t * buf, uint32_t len) {
     return bytes_read;
 }
 
-uint32_t tulip_fseek(mp_obj_t file, uint32_t seekpoint, int32_t whence) {
+uint32_t tulip_fseek(mp_obj_t file, uint32_t seekpoint) {
     #ifdef __EMSCRIPTEN__
     return 0;
     #else
-    return mp_stream_posix_lseek(file, seekpoint, whence);
+    return mp_stream_posix_lseek(file, seekpoint, SEEK_SET);
     #endif
 }
 

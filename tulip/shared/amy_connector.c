@@ -194,14 +194,32 @@ uint32_t mp_fwrite_hook(uint32_t fptr, uint8_t * bytes, uint32_t len) {
     uint32_t w = tulip_fwrite(f, bytes, len);
     return w;
 }
-
+#define MAX_MP_FREAD_SIZE 64
 uint32_t mp_fread_hook(uint32_t fptr, uint8_t * bytes, uint32_t len) {
     mp_obj_t f = lookup_handle(fptr);
     if (!f) {
         return 0;
     }
-    uint32_t r = tulip_fread(f, bytes,len);
-    return r;
+    uint32_t total = 0;
+    while (total < len) {
+        uint32_t chunk = len - total;
+        if (chunk > MAX_MP_FREAD_SIZE) {
+            chunk = MAX_MP_FREAD_SIZE;
+        }
+        uint32_t r = tulip_fread(f, bytes + total, chunk);
+        total += r;
+        if (r < chunk) {
+            break;
+        }
+    }
+    return total;
+}
+void mp_fseek_hook(uint32_t fptr, uint32_t pos) {
+    mp_obj_t f = lookup_handle(fptr);
+    if (!f) {
+        return;
+    }
+    (void)tulip_fseek(f, pos);
 }
 
 void mp_fclose_hook(uint32_t fptr) {
@@ -225,6 +243,7 @@ void run_amy(uint8_t midi_out_pin) {
     amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_external_render_hook = external_cv_render;
     amy_external_fopen_hook = mp_fopen_hook;
+    amy_external_fseek_hook = mp_fseek_hook;
     amy_external_fclose_hook = mp_fclose_hook;
     amy_external_fread_hook = mp_fread_hook;
     amy_external_fwrite_hook = mp_fwrite_hook;
