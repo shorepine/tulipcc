@@ -1,0 +1,22 @@
+amy.send(osc=170, wave=amy.AUDIO_IN0, pan=0, vel=1)
+amy.send(osc=171, wave=amy.AUDIO_IN1, pan=1, vel=1)
+amyboard.init_pcm9211()
+amyboard.write_register(0x40, 0x34, 0x00)
+
+
+
+
+import sh1107
+amyboard.hw_display = sh1107.SH1107_I2C(128, 128, amyboard.get_i2c(), address=0x3d)
+amyboard.display = amyboard.hw_display
+amyboard.display.sleep(False)
+amyboard.display.text("AMYboard!", 0, 0, 255)
+amyboard.display.show()
+
+
+from machine import I2C
+i2c = I2C(0, freq=400000)
+i2c.scan()
+amy.override_send = lambda x: i2c.writeto(0x3f, x)
+amy.send(synth=1, note=60, vel=1)
+amy.send(synth=1, note=60, vel=0)
