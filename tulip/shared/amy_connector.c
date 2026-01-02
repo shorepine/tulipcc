@@ -144,14 +144,120 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 
 #ifndef AMY_IS_EXTERNAL
 
-#ifdef AMYBOARD
+#if (defined AMYBOARD) || (defined TULIP)
+#include "tulip_helpers.h"
+// map the mp_obj_t to a file handle
+
+
+static mp_obj_t *g_files[MAX_OPEN_FILES]; // index 1..MAX_OPEN_FILES-1 used
+
+static uint32_t alloc_handle(mp_obj_t f) {
+    for (uint32_t i = 1; i < MAX_OPEN_FILES; i++) {
+        if (g_files[i] == NULL) {
+            g_files[i] = f;
+            return i;
+        }
+    }
+    return HANDLE_INVALID; // table full
+}
+
+static mp_obj_t lookup_handle(uint32_t h) {
+    if (h == 0 || h >= MAX_OPEN_FILES) return NULL;
+    return g_files[h];
+}
+
+static void free_handle(uint32_t h) {
+    if (h == 0 || h >= MAX_OPEN_FILES) return;
+    g_files[h] = NULL;
+}
+
+
+uint32_t mp_fopen_hook(char * filename, char * mode) {
+    mp_obj_t f = tulip_fopen(filename, mode);
+    if (!f) {
+        return HANDLE_INVALID;
+    }
+    uint32_t h = alloc_handle(f);
+    if (h == HANDLE_INVALID) {
+        tulip_fclose(f);
+        return HANDLE_INVALID;
+    }
+    return h;
+}
+
+uint32_t mp_fwrite_hook(uint32_t fptr, uint8_t * bytes, uint32_t len) {
+
+    mp_obj_t f = lookup_handle(fptr);
+    if (!f) {
+        return 0;
+    }
+    uint32_t w = tulip_fwrite(f, bytes, len);
+    return w;
+}
+#define MAX_MP_FREAD_SIZE 64
+uint32_t mp_fread_hook(uint32_t fptr, uint8_t * bytes, uint32_t len) {
+    mp_obj_t f = lookup_handle(fptr);
+    if (!f) {
+        return 0;
+    }
+    uint32_t total = 0;
+    while (total < len) {
+        uint32_t chunk = len - total;
+        if (chunk > MAX_MP_FREAD_SIZE) {
+            chunk = MAX_MP_FREAD_SIZE;
+        }
+        uint32_t r = tulip_fread(f, bytes + total, chunk);
+        total += r;
+        if (r < chunk) {
+            break;
+        }
+    }
+    return total;
+}
+void mp_fseek_hook(uint32_t fptr, uint32_t pos) {
+    mp_obj_t f = lookup_handle(fptr);
+    if (!f) {
+        return;
+    }
+    (void)tulip_fseek(f, pos);
+}
+
+void mp_fclose_hook(uint32_t fptr) {
+    mp_obj_t f = lookup_handle(fptr);
+    if (f) {
+        tulip_fclose(f);
+        free_handle(fptr);
+    }
+}
+
+void mp_file_transfer_done_hook(const char *filename) {
+    // notify python that file transfer is done
+    // we can do this by scheduling a call to a python function
+    // untar if we need to
+    // and reboot
+    
+}
+
+
 void run_amy(uint8_t midi_out_pin) {
     amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_external_render_hook = external_cv_render;
+    amy_external_fopen_hook = mp_fopen_hook;
+    amy_external_fseek_hook = mp_fseek_hook;
+    amy_external_fclose_hook = mp_fclose_hook;
+    amy_external_fread_hook = mp_fread_hook;
+    amy_external_fwrite_hook = mp_fwrite_hook;
+    amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
 
     amy_config_t amy_config = amy_default_config();
+    amy_config.audio = AMY_AUDIO_IS_I2S;
+#ifdef AMYBOARD
     amy_config.features.audio_in = 1;
     amy_config.midi = AMY_MIDI_IS_UART | AMY_MIDI_IS_USB_GADGET;
+#else
+    amy_config.features.audio_in = 0;
+    amy_config.midi = AMY_MIDI_IS_UART;
+#endif
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
     amy_config.i2s_bclk = CONFIG_I2S_BCLK;
@@ -164,30 +270,6 @@ void run_amy(uint8_t midi_out_pin) {
     amy_start(amy_config);
     external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
     for(uint16_t i=0;i<amy_config.max_oscs;i++) external_map[i] = 0;
-    amy_live_start();
-}
-
-#elif defined ESP_PLATFORM
-void run_amy() {
-    amy_external_midi_input_hook = tulip_midi_input_hook;
-    amy_external_render_hook = external_cv_render;
-
-    amy_config_t amy_config = amy_default_config();
-    amy_config.midi = AMY_MIDI_IS_UART;
-    amy_config.features.audio_in = 0;
-    amy_config.features.default_synths = 0; // midi.py does this for us
-    amy_config.i2s_lrc = CONFIG_I2S_LRCLK;
-    amy_config.i2s_bclk = CONFIG_I2S_BCLK;
-    amy_config.i2s_dout = CONFIG_I2S_DOUT;
-    amy_config.i2s_din = CONFIG_I2S_DIN;
-    amy_config.i2s_mclk = CONFIG_I2S_MCLK;
-    amy_config.midi_out = MIDI_OUT_PIN;
-    amy_config.midi_in = MIDI_IN_PIN;
-    amy_config.features.startup_bleep = 1;
-    amy_start(amy_config);
-    external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
-    for(uint16_t i=0;i<amy_config.max_oscs;i++) external_map[i] = 0;
-    amy_live_start();
 }
 
 #elif defined TULIP_DESKTOP
@@ -198,10 +280,10 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.capture_device_id = capture_device_id;
     amy_config.playback_device_id = playback_device_id;
-    amy_config.features.audio_in = 1;
+    //amy_config.features.audio_in = 1;
+    //amy_config.i2s_din = 0;  // Dummy to indicate has audio in.
     amy_config.features.startup_bleep = 1;
     amy_start(amy_config);
-    amy_live_start();
 }
 
 #endif

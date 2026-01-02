@@ -190,6 +190,9 @@ int vprintf_null(const char *format, va_list ap) {
 extern void setup_lvgl();
 uint8_t lvgl_setup = 0;
 
+
+
+
 void mp_task(void *pvParameter) {
 
     volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();

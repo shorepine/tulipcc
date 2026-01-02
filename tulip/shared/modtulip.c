@@ -10,9 +10,10 @@
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #ifndef __EMSCRIPTEN__
+#include "amy.h"
 #endif
-#include "tsequencer.h"
 #include "amy_connector.h"
+#include "tsequencer.h"
 #if !defined(AMYBOARD) && !defined(AMYBOARD_WEB)
 #include "ui.h"
 #include "keyscan.h"
@@ -81,7 +82,8 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_
 
 
 #ifndef __EMSCRIPTEN__
-extern void amy_get_input_buffer(int16_t * samples);
+extern int amy_get_output_buffer(int16_t *samples);
+extern int amy_get_input_buffer(int16_t *samples);
 extern void amy_set_external_input_buffer(int16_t * samples);
 
 mp_obj_t amy_block_done_callback = NULL;
@@ -97,10 +99,20 @@ STATIC mp_obj_t tulip_amy_block_done_callback(size_t n_args, const mp_obj_t *arg
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_block_done_callback_obj, 0, 1, tulip_amy_block_done_callback);
 
 
+STATIC mp_obj_t tulip_amy_get_output_buffer(size_t n_args, const mp_obj_t *args) {
+    uint8_t buf[1024];
+    int n = amy_get_output_buffer((int16_t*)buf);
+    if (n == 0) return mp_const_none;
+    mp_obj_t output_bytes = mp_obj_new_bytes(buf, n);
+    return output_bytes;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_output_buffer_obj, 0, 0, tulip_amy_get_output_buffer);
+
 STATIC mp_obj_t tulip_amy_get_input_buffer(size_t n_args, const mp_obj_t *args) {
     uint8_t buf[1024];
-    amy_get_input_buffer((int16_t*)buf);
-    mp_obj_t input_bytes = mp_obj_new_bytes(buf, 1024);
+    int n = amy_get_input_buffer((int16_t*)buf);
+    if (n == 0) return mp_const_none;
+    mp_obj_t input_bytes = mp_obj_new_bytes(buf, n);
     return input_bytes;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_input_buffer_obj, 0, 0, tulip_amy_get_input_buffer);
@@ -285,8 +297,21 @@ STATIC mp_obj_t tulip_amy_send(size_t n_args, const mp_obj_t *args) {
     amy_add_message((char*)mp_obj_str_get_str(args[0]));
     return mp_const_none;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
+
+STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
+    amy_add_message((char*)sysex_buffer+3) ;
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_sysex_obj, 0, 1, tulip_amy_send_sysex);
+
+STATIC mp_obj_t tulip_pcm_load_file(size_t n_args, const mp_obj_t *args) {
+    int result = pcm_load_file();
+    return mp_obj_new_int(result);
+}
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_pcm_load_file_obj, 0, 1, tulip_pcm_load_file);
 #endif
+
 
 
 /*
@@ -1475,6 +1500,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 #ifndef __EMSCRIPTEN__
     { MP_ROM_QSTR(MP_QSTR_amy_block_done_callback), MP_ROM_PTR(&tulip_amy_block_done_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_input_buffer), MP_ROM_PTR(&tulip_amy_get_input_buffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_get_output_buffer), MP_ROM_PTR(&tulip_amy_get_output_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
 #endif
     { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
@@ -1492,7 +1518,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 
 #ifndef __EMSCRIPTEN__
     { MP_ROM_QSTR(MP_QSTR_amy_send), MP_ROM_PTR(&tulip_amy_send_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_send_sysex), MP_ROM_PTR(&tulip_amy_send_sysex_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
+    { MP_ROM_QSTR(MP_QSTR_pcm_load_file), MP_ROM_PTR(&tulip_pcm_load_file_obj) },
 #endif
 
 #if defined(AMYBOARD)

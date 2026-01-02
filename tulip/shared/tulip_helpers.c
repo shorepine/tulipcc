@@ -99,7 +99,6 @@ int mp_stream_posix_fsync(void *stream);
 void tulip_fclose(mp_obj_t file) {
     mp_stream_close(file);
 }
-
 mp_obj_t tulip_fopen(const char *filename, const char *mode) {
     mp_obj_t m_args[2];
     m_args[0] = mp_obj_new_str(filename, strlen(filename));
@@ -120,11 +119,11 @@ uint32_t tulip_fread(mp_obj_t file, uint8_t * buf, uint32_t len) {
     return bytes_read;
 }
 
-uint32_t tulip_fseek(mp_obj_t file, uint32_t seekpoint, int32_t whence) {
+uint32_t tulip_fseek(mp_obj_t file, uint32_t seekpoint) {
     #ifdef __EMSCRIPTEN__
     return 0;
     #else
-    return mp_stream_posix_lseek(file, seekpoint, whence);
+    return mp_stream_posix_lseek(file, seekpoint, SEEK_SET);
     #endif
 }
 
@@ -149,5 +148,4 @@ int32_t tulip_getline(char * line, uint32_t * len, mp_obj_t file ) {
     line[254] = 0;
     return rbytes;
 }
-
 

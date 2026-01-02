@@ -1,13 +1,13 @@
 import gc
 import uos
-import tulip, sys, midi, synth, amy, world,  sequencer
+import tulip, sys, midi, synth, amy, world, sequencer
 from upysh import *
 from tulip import board
 
 if board()!="AMYBOARD" and board()!="AMYBOARD_WEB":
     from tulip import edit, run
 else:
-    if(board()=="AMYBOARD"):
+    if board()=="AMYBOARD":
         import amyboard
         amyboard.mount_sd()
         amyboard.start_amy()
@@ -48,11 +48,11 @@ except ImportError:
     # Not a hardware Tulip
     try:
         tulipcc = tulip.root_dir()
-        if(not tulip.exists(tulipcc)):
+        if not tulip.exists(tulipcc):
             mkdir(tulipcc)
     
         # On Desktop, we can put sys in sys/ and user in user/
-        if(tulip.board()=='DESKTOP'):
+        if tulip.board()=='DESKTOP':
             try:
                 mkdir(tulipcc+"sys")
                 tulip.desktop_copy_sys(tulipcc+"sys")
@@ -77,7 +77,7 @@ except ImportError:
 
 # Make sure user/lib exists and add it to sys.path
 libdir = tulip.root_dir()+"user/lib"
-if(not tulip.exists(libdir)):
+if not tulip.exists(libdir):
     mkdir(libdir)
 sys.path.append(libdir)
 
@@ -94,7 +94,7 @@ except ValueError:
 gc.collect()
 
 # Set up audio/midi. 
-if(tulip.board() == "WEB" or tulip.board()=="AMYBOARD_WEB"):
+if tulip.board() == "WEB" or tulip.board()=="AMYBOARD_WEB":
     midi.setup()
     amy.AMY_SAMPLE_RATE=48000
     # Override send & bleep are done from JS on web because of click-to-start audio.
@@ -104,7 +104,11 @@ else:
     amy.override_send = lambda x: tulip.amy_send(x)
     midi.setup() # Just mirrors the setup mostly managed by AMY
 
-if(board() == "AMYBOARD" or board()=="AMYBOARD_WEB"):
+if board() == "AMYBOARD" or board()=="AMYBOARD_WEB":
     import amyboard
     amyboard.init_display()
     
+if board() == "AMYBOARD":
+    # Run the self-test if the boot button is now held down.
+    import self_test
+    self_test.self_test_if_button()
