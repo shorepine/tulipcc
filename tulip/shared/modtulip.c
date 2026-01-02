@@ -10,10 +10,10 @@
 #include "extmod/vfs.h"
 #include "py/stream.h"
 #ifndef __EMSCRIPTEN__
-#endif
-#include "tsequencer.h"
 #include "amy.h"
+#endif
 #include "amy_connector.h"
+#include "tsequencer.h"
 #if !defined(AMYBOARD) && !defined(AMYBOARD_WEB)
 #include "ui.h"
 #include "keyscan.h"
