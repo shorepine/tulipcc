@@ -144,7 +144,7 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 
 #ifndef AMY_IS_EXTERNAL
 
-#if (defined AMYBOARD) || (defined TULIP)
+#if (defined AMYBOARD) || (defined TULIP) 
 #include "tulip_helpers.h"
 // map the mp_obj_t to a file handle
 

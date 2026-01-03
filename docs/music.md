@@ -500,6 +500,12 @@ s.note_on(55, 1)
 Try saving these setup commands (including the `store_patch`, which gets cleared on power / boot) to a python file, like `woodpiano.py`, and `execfile("woodpiano.py")` on reboot to set it up for you!
 
 
+## WAV file playback from disk
 
+If you want to stream a wav file from disk as a sampler, instead of using "memory PCM", you can do that with:
 
-
+```python
+amy.disk_sample('/sys/ex/vlng3.wav',1024,60)
+amy.send(osc=53,vel=3,wave=amy.PCM_MIX,note=60,preset=1024)
+amy.send(osc=53,vel=3,wave=amy.PCM_MIX,note=62,preset=1024)
+```

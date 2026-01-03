@@ -20,6 +20,127 @@ var tulip_height = null; // gets set on launch
 var amy_module = null;
 var res_ptr_in = null;
 var res_ptr_out = null;
+var pending_fs_sync = false;
+var fs_sync_in_flight = false;
+var amy_shared_files = new Map();
+var amy_shared_next_handle = 1;
+
+function amy_shared_open(path) {
+  console.log("openinng "+ path);
+  if (!mp || !mp.FS) {
+    return 0;
+  }
+  try {
+    const data = mp.FS.readFile(path, {encoding: "binary"});
+    const buf = (typeof SharedArrayBuffer !== "undefined")
+      ? new SharedArrayBuffer(data.length)
+      : new ArrayBuffer(data.length);
+    const view = new Uint8Array(buf);
+    view.set(data);
+    const handle = amy_shared_next_handle++;
+    amy_shared_files.set(handle, {view: view, size: view.length});
+    console.log("opened " + path + " " + view.length);
+    return handle;
+  } catch (err) {
+    console.log("amy_shared_open error", path, err);
+    return 0;
+  }
+}
+
+function amy_shared_read(handle, pos, ptr, len) {
+  console.log("reading from " + pos + " to len " + len);
+  const entry = amy_shared_files.get(handle);
+  if (!entry || !amy_module || !amy_module.HEAPU8) {
+    return 0;
+  }
+  const remaining = entry.size - pos;
+  const toRead = remaining > len ? len : remaining;
+  if (toRead <= 0) {
+    return 0;
+  }
+  amy_module.HEAPU8.set(entry.view.subarray(pos, pos + toRead), ptr);
+  console.log("read " + toRead);
+  return toRead;
+}
+
+function amy_shared_close(handle) {
+  amy_shared_files.delete(handle);
+}
+
+function ensure_dir(fs, path) {
+  try {
+    fs.mkdir(path);
+  } catch (err) {
+    // OK if it already exists.
+  }
+}
+
+async function copy_idbfs_to_amy_memfs() {
+  if (fs_sync_in_flight) {
+    return;
+  }
+  const srcFS = mp && (mp.FS || mp.fs);
+  const dstFS = amy_module && amy_module.FS;
+  if (!srcFS || !dstFS) {
+    pending_fs_sync = true;
+    return;
+  }
+  pending_fs_sync = false;
+  fs_sync_in_flight = true;
+
+  const src_root = "/tulip4/user";
+  const dst_root = "/tulip4/user";
+
+  await new Promise((resolve) => {
+    if (typeof srcFS.syncfs !== "function") {
+      resolve();
+      return;
+    }
+    srcFS.syncfs(true, function(err) {
+      if (err) {
+        console.log("FS syncfs error:", err);
+      }
+      resolve();
+    });
+  });
+
+  ensure_dir(dstFS, "/tulip4");
+  ensure_dir(dstFS, dst_root);
+
+  function copy_node(src_path, dst_path) {
+    const node = srcFS.lookupPath(src_path).node;
+    const mode = node.mode;
+    if (srcFS.isFile(mode)) {
+      const data = srcFS.readFile(src_path, { encoding: "binary" });
+      dstFS.writeFile(dst_path, data, { encoding: "binary" });
+      return;
+    }
+    if (srcFS.isDir(mode)) {
+      ensure_dir(dstFS, dst_path);
+      for (const name of srcFS.readdir(src_path)) {
+        if (name === "." || name === "..") {
+          continue;
+        }
+        copy_node(src_path + "/" + name, dst_path + "/" + name);
+      }
+    }
+  }
+
+  try {
+    copy_node(src_root, dst_root);
+  } catch (err) {
+    console.log("FS copy error:", err);
+  } finally {
+    fs_sync_in_flight = false;
+  }
+}
+
+
+window.addEventListener('message', function(ev) {
+  if (ev && ev.data && ev.data.type === 'amy_sync_idbfs_to_memfs') {
+    copy_idbfs_to_amy_memfs();
+  }
+});
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -58,6 +179,10 @@ amyModule().then(async function(am) {
   amy_module = am;
   res_ptr_in = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
   res_ptr_out = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
+  if (pending_fs_sync) {
+    pending_fs_sync = false;
+    copy_idbfs_to_amy_memfs();
+  }
 
 });
 
@@ -479,6 +604,9 @@ async function start_tulip() {
 
   // Start midi
   await start_midi();
+  if (pending_fs_sync) {
+    copy_idbfs_to_amy_memfs();
+  }
 
   // Let micropython call an exported AMY function
   await mp.registerJsModule('amy_js_message', amy_add_message);
