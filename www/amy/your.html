@@ -1,0 +1,356 @@
+<!doctype html>
+<html>
+  <head>
+      <link rel="stylesheet" href="amyrepl.css"/>
+      <title>AMYboard Web</title>
+      <meta charset="UTF-8">
+
+      <meta property="og:title" content="Your AMYboard">
+      <meta property="og:image" content="https://tulip.computer/img/tulip_hero.jpg">
+      <meta property="og:description" content="AMYboard on the web. Run and test your AMYboard setup. Share your creations with others.">
+      <meta property="og:type" content="product" />
+      <meta property="og:url" content="https://amyboard.com"/>
+      <meta property="og:site_name" content="Your AMYboard"/>
+      <meta property="product:price:amount" content="29.90"/>
+      <meta property="product:price:currency" content="USD"/>
+      <meta property="og:availability" content="instock" />
+      <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+      <meta name="description" content="AMYboard on the web. Run and test your AMYboard setup. Share your creations with others.">
+      <meta name="author" content="shore pine sound systems">
+      <meta name="HandheldFriendly" content="true">
+      <meta name="twitter:card" content="summary_large_image">
+      <meta name="twitter:site" content="@shorepinesound">
+      <meta name="twitter:creator" content="@shorepinesound">
+      <meta name="twitter:title" content="AMYboard Web">
+      <meta name="twitter:description" content="AMYboard on the web. Run and test your AMYboard setup. Share your creations with others.">
+      <meta name="twitter:image" content="https://tulip.computer/img/tulip_hero.jpg">
+
+      <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+      <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32x32.png">
+      <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon-16x16.png">
+      <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon.png">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.48.4/codemirror.min.css" /> 
+      <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous"> 
+      
+      <link rel="stylesheet" href="/css/all.css" id="treejs_styles">
+      <script src="tree.js"></script>
+      <link rel="stylesheet" href="treejs.css" id="treejs_styles">
+      <link rel="stylesheet" href="knobs.css">
+      <script src="knobs.js"></script>
+      <script src="./mini-coi.js" scope="./"></script>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+      <script src="https://cdn.jsdelivr.net/npm/webmidi@latest/dist/iife/webmidi.iife.js"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+      <link rel="stylesheet" href="xterm.css" />
+      <script type="text/javascript" src="xterm.js"></script>
+
+      <!-- These filenames are replaced by the build system -->
+      <script src="AMYBOARDMJS" type="module"></script>
+      <script type="text/javascript" id="amy_js_include" src="AMYJS"></script>
+      <script type="text/javascript" src="examples.js"></script>
+      <script type="text/javascript" src="spss.js"></script>
+  </head>
+
+  <body>
+
+
+
+    <script type="module">
+      term = new Terminal({rows:20,cols:80, fontSize:12, theme: { background: '#002b36' , foreground:'#ffffff' }});
+      term.open(document.getElementById('terminal'));
+      const stdoutWriter = (line) => {
+        // While it's called line, it's always one char, line[0].
+        // Writing a 10 to xterm does LF but not CR, so we use its writeln to LFCR
+        if(line[0]==10) {
+          term.writeln([0]);
+        } else {
+          term.write(line);
+        }
+      };
+
+      term.onKey(e => {
+        var code = e.key.charCodeAt(0);
+        mp.replProcessCharWithAsyncify(code).then((response) => {
+        });
+      });
+
+      mp = await loadMicroPython({
+        stdout:stdoutWriter, 
+        linebuffer: false,
+        pystack: 64 * 1024, 
+        heapsize: 8 * 1024 * 1024
+      });
+
+      // Clear the terminal
+      await term.clear();
+
+      // Tell MP to start serving a REPL
+      await mp.replInit();
+
+      // Start up the AMYboard stuff
+      await start_amyboard();
+      
+      // Fill the ree
+      await fill_tree();
+
+      // Create the editor and see if there's a share URL to decompress into it
+      var editorElement = document.getElementById('collapseEditor');
+      editor = CodeMirror.fromTextArea(document.getElementById(`code`), { 
+        mode: { 
+          name: "python", 
+          version: 3, 
+          singleLineStringErrors: false,
+          lint: false
+        }, 
+        lineNumbers: true, 
+        indentUnit: 4, 
+        matchBrackets: true,
+        spellCheck: false,
+        autocorrect: false,
+        theme: "lucario",
+        lint: false,
+      }); 
+      editor.setSize(null,editor_height);
+    
+      // Load in the share code if given
+      const queryString = window.location.search;
+      const url_params = new URLSearchParams(queryString);
+      var share = url_params.get('share');
+      if(share != null) {
+        var bsCollapse = new bootstrap.Collapse(editorElement, { toggle: true });
+        show_editor();
+        try {
+          var code = await decompress(decodeURIComponent(share));
+          editor.setValue(code);
+          var fn = url_params.get('fn');
+          if(fn != null) {
+            document.getElementById('editor_filename').value = fn;
+          }
+          setTimeout(function () { editor.save() }, 100);
+          setTimeout(function () { editor.refresh() }, 250);
+          setTimeout(function () { window.scrollTo(0,0) }, 300);
+        } catch (e) {
+          console.log("Couldn't decode share");
+        }
+      }
+    </script>
+
+    <div class="container my-2">
+      <div class="px-2 maintulipview">
+        <h1><A HREF="https://tulip.computer/"><img src="/img/favicon.png"/ width=40></A>AMYboard Web</h1> 
+        <p>
+          <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="show_editor();">
+            Show code editor
+          </button>
+        </p>
+      
+
+        <div class="editor collapse" id="collapseEditor">
+          <div class="alert fixed-top d-none" id="alert_box"></div>
+          <div class="row g-0 headertext">
+            <div class="col-3 headertext">
+              <span class="px-1 small align-middle">AMYboard files</span>
+              <div id="treecontainer"></div>
+            </div>
+            <div class="col-9 headertext">
+              <span class="px-1 small align-middle">Code editor</span>
+              <section class="input">
+                <div><textarea id="code" name="code"></textarea></div> 
+              </section>
+            </div>
+          </div>
+          <div class="row g-0 py-0 my-0 grippierow">
+            <p class="text-center grippie" id="editor_grippie">• • •</p>
+          </div>
+          <div class="row mb-4 mt-1">
+            <div class="col-3">
+                <button type="button" title="Refresh AMYboard file list" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
+                <button type="button" title="Download file from AMYboard" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
+                <button type="button" title="Upload file into the selected folder" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
+                <button type="button" title="Load selected AMYboard file into editor" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
+            </div>
+            <div class="col-3">
+                <button type="button" title="Save editor contents to file" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-floppy-disk"></i></button>
+                <button type="button" title="Run editor contents in AMYboard" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="runEditorBlock()"><i class="fas fa-running"></i></button> 
+                <button type="share" title="Share editor contents (and filename, if given) as a URL" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
+            </div>
+            <div class="col-4">
+                <input type='text' title="Filename for saving or sharing" data-toggle="tooltip" data-placement="top"  id="editor_filename" class="small form-control" placeholder="Filename"/>
+            </div>
+            <div class="col-2">
+              <button type="button" class="btn btn-sm btn-primary float-end" onclick="hide_editor();"
+              data-bs-toggle="collapse" title="Hide editor" data-toggle="tooltip" data-placement="top"  data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor">
+              Hide
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-6">
+            <div id="terminal"></div>
+          </div>
+          <div class="col-2">
+            <canvas id="canvas" width=256 height=256/>
+          </div>
+          <div class="col-2">
+            <input id="cv-input-1"
+               name="cv-input-1"
+               type="range"
+               min="0" max="1000"
+               value="500"
+               data-angle-start="90"
+               data-angle-end="450"
+               data-indicator-auto-position="true"
+               data-indicator-auto-rotate="true"
+               data-indicator-radius="22"
+            />
+            <p id="cv-input-1-label" class='text-center small'>CV1: 0.0V</p>
+            <input id="cv-input-2"
+              name="cv-input-2"
+              type="range"
+              min="0" max="1000"
+              value="500"
+              data-angle-start="90"
+              data-angle-end="450"
+              data-indicator-auto-position="true"
+              data-indicator-auto-rotate="true"
+              data-indicator-radius="22"
+            />
+            <p id="cv-input-2-label" class='text-center small'>CV2: 0.0V</p>
+        </div>
+  
+        <form name="amyboard_settings">
+          <div class="row align-items-start pt-1">
+            <div class="col-md-auto align-top small" id="audioin_grow">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
+                <label class="form-check-label" for="amy_audioin">Allow audio input</label>
+              </div>
+            </div>
+            <!-- MIDI settings panel if MIDI is available -->
+            <div class="col-4 align-self-start small">
+              <div id="midi-input-panel">
+                <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                  <option selected>[Not available]</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-4 align-self-start small">
+              <div id="midi-output-panel">
+                <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                  <option selected>[Not available]</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="container my-2">
+      <div class="px-2 py-4">
+        <h2>Welcome to a version of <a href="https://tulip.computer/amyboard">AMYboard</a> running locally in your browser.</h2>
+        <!-- Tutorial pills block -->
+        <div class="py-2">
+          <div class="card">
+            <div class="card-header">
+              Try some examples! They'll load and run in the AMYboard window above.
+            </div>
+            <div class="card-body" id="tutorials"></div>
+          </div>
+        </div>
+        <p>
+          AMYboard is a .... <A HREF="https://tulip.computer/amyboard">You can buy a hardware AMYboard for $XX.</A> 
+        </p>
+        <P>
+          This version of AMYboard runs locally in your browser. The files are stored in your browsers' storage. 
+        </p>
+        <p>If you've never used AMYboard before, please check out the examples above and these getting started tips:</p>
+
+        <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
+          <div class="col-4 py-vh-3" data-aos="fade-up">
+            <a href="https://tulip.computer/amyboard"><img src="/img/tulip.svg" width=42 height=42></a>
+            <a href="https://tulip.computer/amyboard"><h3 class="h5 my-2">Want more? Get an AMYboard</h3></a>
+            <p>Get your own hardware AMYboard for only US$XX.</p>
+          </div>
+
+          <div class="col-4 py-vh-3" data-aos="fade-up">
+            <a href="https://discord.com/invite/TzBFkUb8pG"><img src="/img/discord-mark-black.svg" width=42 height=42></a>
+            <a href="https://discord.com/invite/TzBFkUb8pG"><h3 class="h5 my-2">Discord</h3></a>
+            <p>Join the <strong>shore pine sound systems</strong> Discord to chat about Tulip, AMYboard, AMY and Alles. A fun small community!</p>
+          </div>
+
+          <div class="col-4 py-vh-3" data-aos="fade-up" data-aos-delay="200">
+            <a href="https://github.com/shorepine/tulipcc"><img src="/img/github-mark.svg" width=42 height=42/></a>
+            <a href="https://github.com/shorepine/tulipcc"><h3 class="h5 my-2">Github</h3></a>
+            <p>Check out the Tulip Github page for issues, discussions and the code.</p>
+          </div>
+        </div>
+
+        <div class="row py-3 my-5 px-1 mx-1 bg-light bg-gradient">
+          <h3 class="h5 my-2"><A href="https://confirmsubscription.com/h/y/204B1B40E85DDBA3">Join our email list</A></h3>
+          <p>We'll send you <A HREF="https://confirmsubscription.com/h/y/204B1B40E85DDBA3"><strong>very rare</strong> updates</A> about Tulip, Alles, AMY and other projects we're working on.</p>
+        </div>
+      </div>
+    </div>
+    <script type="text/javascript" src="knob2.js"></script>
+
+
+    <script language="javascript">     
+      // On keypress or click anywhere, start audio worklet
+      document.body.addEventListener('click', start_audio, true); 
+      document.body.addEventListener('keydown', start_audio, true); 
+
+      // Handle the grippie bars on the page for the editor & Tulip blocks
+      var editor_grippie_held = false;
+      var editor_grippie_y_start = 0;
+
+      $('body').on('mouseup', function mouseState(e) {
+        editor_grippie_held = false;
+      });
+      $('#editor_grippie').on('mousedown mousemove', function mouseState(e) {
+        if (e.type == "mousedown") {
+          e.preventDefault();
+          editor_grippie_held = true;
+          editor_grippie_y_start = e.clientY;
+        }
+        if(e.type == "mousemove") {
+          if(editor_grippie_held) {
+            e.preventDefault();
+            editor_height = editor_height + (e.clientY - editor_grippie_y_start);
+            if(editor_height < 200) editor_height = 200;
+            editor.setSize(null, editor_height);
+            document.getElementById('treecontainer').setAttribute("style","height:"+editor_height.toString()+"px");
+          }
+        }
+      });
+
+      // Set up the tooltips
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip({delay: { "show": 3000, "hide": 500 }, trigger:'hover'})
+      }) 
+      $('[rel="tooltip"]').on('click', function () {
+        $(this).tooltip('hide')
+      });
+
+      // Populate the example pills
+      fill_examples();
+
+      // Handle the CV knobs
+      ['cv-input-1', 'cv-input-2'].map((name) => {
+        KnobHelper.createKnobCSS(document.getElementById(name), name)
+      })
+      $('#cv-input-1').on('change', function knob_change(e) { 
+        change_cv(1, document.getElementById('cv-input-1').value);
+      });
+      $('#cv-input-2').on('change', function knob_change(e) { 
+        change_cv(2, document.getElementById('cv-input-2').value);
+      });
+
+    </script>
+  </body>
+</html>
+
+

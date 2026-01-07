@@ -1,5 +1,4 @@
 var _createMicroPythonModule = (() => {
-  var _scriptName = import.meta.url;
   
   return (
 async function(moduleArg = {}) {
@@ -36,7 +35,7 @@ var ENVIRONMENT_IS_WEB = typeof window == 'object';
 var ENVIRONMENT_IS_WORKER = typeof WorkerGlobalScope != 'undefined';
 // N.b. Electron.js environment is simultaneously a NODE-environment, but
 // also a web environment.
-var ENVIRONMENT_IS_NODE = typeof process == 'object' && typeof process.versions == 'object' && typeof process.versions.node == 'string' && process.type != 'renderer';
+var ENVIRONMENT_IS_NODE = typeof process == 'object' && process.versions?.node && process.type != 'renderer';
 var ENVIRONMENT_IS_SHELL = !ENVIRONMENT_IS_WEB && !ENVIRONMENT_IS_NODE && !ENVIRONMENT_IS_WORKER;
 
 if (ENVIRONMENT_IS_NODE) {
@@ -44,13 +43,13 @@ if (ENVIRONMENT_IS_NODE) {
   // We need to use `createRequire()` to construct the require()` function.
   const { createRequire } = await import('module');
   /** @suppress{duplicate} */
-  var require = createRequire('/');
+  var require = createRequire(import.meta.url);
 
 }
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
-// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmp60h2f_fn.js
+// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpm6s5bn_1.js
 
   Module['expectedDataFileDownloads'] ??= 0;
   Module['expectedDataFileDownloads']++;
@@ -69,8 +68,8 @@ if (ENVIRONMENT_IS_NODE) {
         // web worker
         PACKAGE_PATH = encodeURIComponent(location.pathname.substring(0, location.pathname.lastIndexOf('/')) + '/');
       }
-      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20250409074218.data';
-      var REMOTE_PACKAGE_BASE = 'amyboard-20250409074218.data';
+      var PACKAGE_NAME = 'build-standard/tulip/obj/amyboard-20260106175641.data';
+      var REMOTE_PACKAGE_BASE = 'amyboard-20260106175641.data';
       var REMOTE_PACKAGE_NAME = Module['locateFile'] ? Module['locateFile'](REMOTE_PACKAGE_BASE, '') : REMOTE_PACKAGE_BASE;
 var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
 
@@ -206,10 +205,10 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
           var files = metadata['files'];
           for (var i = 0; i < files.length; ++i) {
             DataRequest.prototype.requests[files[i].filename].onload();
-          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250409074218.data');
+          }          Module['removeRunDependency']('datafile_build-standard/tulip/obj/amyboard-20260106175641.data');
 
       };
-      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20250409074218.data');
+      Module['addRunDependency']('datafile_build-standard/tulip/obj/amyboard-20260106175641.data');
 
       Module['preloadResults'] ??= {};
 
@@ -233,35 +232,30 @@ Module['FS_createPath']("/amyboard/sys", "ex", true, true);
 
   })();
 
-// end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmp60h2f_fn.js
-// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpx1hex783.js
+// end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpm6s5bn_1.js
+// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmp0ha6u6xn.js
 
     // All the pre-js content up to here must remain later on, we need to run
     // it.
-    if (Module['$ww'] || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD)) Module['preRun'] = [];
+    if ((typeof ENVIRONMENT_IS_WASM_WORKER != 'undefined' && ENVIRONMENT_IS_WASM_WORKER) || (typeof ENVIRONMENT_IS_PTHREAD != 'undefined' && ENVIRONMENT_IS_PTHREAD) || (typeof ENVIRONMENT_IS_AUDIO_WORKLET != 'undefined' && ENVIRONMENT_IS_AUDIO_WORKLET)) Module['preRun'] = [];
     var necessaryPreJSTasks = Module['preRun'].slice();
-  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpx1hex783.js
-// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpjcnyxmkx.js
+  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmp0ha6u6xn.js
+// include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpxamy9sqm.js
 
     if (!Module['preRun']) throw 'Module.preRun should exist because file support used it; did a pre-js delete it?';
     necessaryPreJSTasks.forEach((task) => {
       if (Module['preRun'].indexOf(task) < 0) throw 'All preRun tasks that exist before user pre-js code should remain after; did you replace Module or modify Module.preRun?';
     });
-  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpjcnyxmkx.js
+  // end include: /var/folders/kd/6nr58rln0xzcjj65fqvsbfs00000gn/T/tmpxamy9sqm.js
 
-
-// Sometimes an existing Module object exists with properties
-// meant to overwrite the default module functionality. Here
-// we collect those properties and reapply _after_ we configure
-// the current environment's defaults to avoid having to be so
-// defensive during initialization.
-var moduleOverrides = Object.assign({}, Module);
 
 var arguments_ = [];
 var thisProgram = './this.program';
 var quit_ = (status, toThrow) => {
   throw toThrow;
 };
+
+var _scriptName = import.meta.url;
 
 // `/` should be present at the end if `scriptDirectory` is not empty
 var scriptDirectory = '';
@@ -276,7 +270,8 @@ function locateFile(path) {
 var readAsync, readBinary;
 
 if (ENVIRONMENT_IS_NODE) {
-  if (typeof process == 'undefined' || !process.release || process.release.name !== 'node') throw new Error('not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)');
+  const isNode = typeof process == 'object' && process.versions?.node && process.type != 'renderer';
+  if (!isNode) throw new Error('not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)');
 
   var nodeVersion = process.versions.node;
   var numericVersion = nodeVersion.split('.').slice(0, 3);
@@ -291,11 +286,8 @@ if (ENVIRONMENT_IS_NODE) {
   var fs = require('fs');
   var nodePath = require('path');
 
-  // EXPORT_ES6 + ENVIRONMENT_IS_NODE always requires use of import.meta.url,
-  // since there's no way getting the current absolute path of the module when
-  // support for that is not available.
-  if (!import.meta.url.startsWith('data:')) {
-    scriptDirectory = nodePath.dirname(require('url').fileURLToPath(import.meta.url)) + '/';
+  if (_scriptName.startsWith('file:')) {
+    scriptDirectory = nodePath.dirname(require('url').fileURLToPath(_scriptName)) + '/';
   }
 
 // include: node_shell_read.js
@@ -315,13 +307,11 @@ readAsync = async (filename, binary = true) => {
   return ret;
 };
 // end include: node_shell_read.js
-  if (!Module['thisProgram'] && process.argv.length > 1) {
+  if (process.argv.length > 1) {
     thisProgram = process.argv[1].replace(/\\/g, '/');
   }
 
   arguments_ = process.argv.slice(2);
-
-  // MODULARIZE will export the module in the proper place outside, we don't need to export here
 
   quit_ = (status, toThrow) => {
     process.exitCode = status;
@@ -331,7 +321,8 @@ readAsync = async (filename, binary = true) => {
 } else
 if (ENVIRONMENT_IS_SHELL) {
 
-  if ((typeof process == 'object' && typeof require === 'function') || typeof window == 'object' || typeof WorkerGlobalScope != 'undefined') throw new Error('not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)');
+  const isNode = typeof process == 'object' && process.versions?.node && process.type != 'renderer';
+  if (isNode || typeof window == 'object' || typeof WorkerGlobalScope != 'undefined') throw new Error('not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)');
 
 } else
 
@@ -339,26 +330,11 @@ if (ENVIRONMENT_IS_SHELL) {
 // Node.js workers are detected as a combination of ENVIRONMENT_IS_WORKER and
 // ENVIRONMENT_IS_NODE.
 if (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER) {
-  if (ENVIRONMENT_IS_WORKER) { // Check worker, not web, since window could be polyfilled
-    scriptDirectory = self.location.href;
-  } else if (typeof document != 'undefined' && document.currentScript) { // web
-    scriptDirectory = document.currentScript.src;
-  }
-  // When MODULARIZE, this JS may be executed later, after document.currentScript
-  // is gone, so we saved it, and we use it here instead of any other info.
-  if (_scriptName) {
-    scriptDirectory = _scriptName;
-  }
-  // blob urls look like blob:http://site.com/etc/etc and we cannot infer anything from them.
-  // otherwise, slice off the final part of the url to find the script directory.
-  // if scriptDirectory does not contain a slash, lastIndexOf will return -1,
-  // and scriptDirectory will correctly be replaced with an empty string.
-  // If scriptDirectory contains a query (starting with ?) or a fragment (starting with #),
-  // they are removed because they could contain a slash.
-  if (scriptDirectory.startsWith('blob:')) {
-    scriptDirectory = '';
-  } else {
-    scriptDirectory = scriptDirectory.substr(0, scriptDirectory.replace(/[?#].*/, '').lastIndexOf('/')+1);
+  try {
+    scriptDirectory = new URL('.', _scriptName).href; // includes trailing slash
+  } catch {
+    // Must be a `blob:` or `data:` URL (e.g. `blob:http://site.com/etc/etc`), we cannot
+    // infer anything from them.
   }
 
   if (!(typeof window == 'object' || typeof WorkerGlobalScope != 'undefined')) throw new Error('not compiled for this environment (did you build to HTML and try to run it not on the web, or set ENVIRONMENT to something - like node - and run it someplace else - like on the web?)');
@@ -409,41 +385,10 @@ if (ENVIRONMENT_IS_WORKER) {
   throw new Error('environment detection error');
 }
 
-var out = Module['print'] || console.log.bind(console);
-var err = Module['printErr'] || console.error.bind(console);
+var out = console.log.bind(console);
+var err = console.error.bind(console);
 
-// Merge back in the overrides
-Object.assign(Module, moduleOverrides);
-// Free the object hierarchy contained in the overrides, this lets the GC
-// reclaim data used.
-moduleOverrides = null;
-checkIncomingModuleAPI();
-
-// Emit code to handle expected values on the Module object. This applies Module.x
-// to the proper local x. This has two benefits: first, we only emit it if it is
-// expected to arrive, and second, by using a local everywhere else that can be
-// minified.
-
-if (Module['arguments']) arguments_ = Module['arguments'];legacyModuleProp('arguments', 'arguments_');
-
-if (Module['thisProgram']) thisProgram = Module['thisProgram'];legacyModuleProp('thisProgram', 'thisProgram');
-
-// perform assertions in shell.js after we set up out() and err(), as otherwise if an assertion fails it cannot print the message
-// Assertions on removed incoming Module JS APIs.
-assert(typeof Module['memoryInitializerPrefixURL'] == 'undefined', 'Module.memoryInitializerPrefixURL option was removed, use Module.locateFile instead');
-assert(typeof Module['pthreadMainPrefixURL'] == 'undefined', 'Module.pthreadMainPrefixURL option was removed, use Module.locateFile instead');
-assert(typeof Module['cdInitializerPrefixURL'] == 'undefined', 'Module.cdInitializerPrefixURL option was removed, use Module.locateFile instead');
-assert(typeof Module['filePackagePrefixURL'] == 'undefined', 'Module.filePackagePrefixURL option was removed, use Module.locateFile instead');
-assert(typeof Module['read'] == 'undefined', 'Module.read option was removed');
-assert(typeof Module['readAsync'] == 'undefined', 'Module.readAsync option was removed (modify readAsync in JS)');
-assert(typeof Module['readBinary'] == 'undefined', 'Module.readBinary option was removed (modify readBinary in JS)');
-assert(typeof Module['setWindowTitle'] == 'undefined', 'Module.setWindowTitle option was removed (modify emscripten_set_window_title in JS)');
-assert(typeof Module['TOTAL_MEMORY'] == 'undefined', 'Module.TOTAL_MEMORY has been renamed Module.INITIAL_MEMORY');
-legacyModuleProp('asm', 'wasmExports');
-legacyModuleProp('readAsync', 'readAsync');
-legacyModuleProp('readBinary', 'readBinary');
-legacyModuleProp('setWindowTitle', 'setWindowTitle');
-
+var IDBFS = 'IDBFS is no longer included by default; build with -lidbfs.js';
 var PROXYFS = 'PROXYFS is no longer included by default; build with -lproxyfs.js';
 var WORKERFS = 'WORKERFS is no longer included by default; build with -lworkerfs.js';
 var FETCHFS = 'FETCHFS is no longer included by default; build with -lfetchfs.js';
@@ -452,6 +397,9 @@ var JSFILEFS = 'JSFILEFS is no longer included by default; build with -ljsfilefs
 var OPFS = 'OPFS is no longer included by default; build with -lopfs.js';
 
 var NODEFS = 'NODEFS is no longer included by default; build with -lnodefs.js';
+
+// perform assertions in shell.js after we set up out() and err(), as otherwise
+// if an assertion fails it cannot print the message
 
 assert(!ENVIRONMENT_IS_SHELL, 'shell environment detected but not enabled at build time.  Add `shell` to `-sENVIRONMENT` to enable.');
 
@@ -468,7 +416,7 @@ assert(!ENVIRONMENT_IS_SHELL, 'shell environment detected but not enabled at bui
 // An online HTML version (which may be of a different version of Emscripten)
 //    is up at http://kripken.github.io/emscripten-site/docs/api_reference/preamble.js.html
 
-var wasmBinary = Module['wasmBinary'];legacyModuleProp('wasmBinary', 'wasmBinary');
+var wasmBinary;
 
 if (typeof WebAssembly != 'object') {
   err('no native wasm support detected');
@@ -533,22 +481,12 @@ var HEAP,
 
 var runtimeInitialized = false;
 
-// include: URIUtils.js
-// Prefix of data URIs emitted by SINGLE_FILE and related options.
-var dataURIPrefix = 'data:application/octet-stream;base64,';
-
-/**
- * Indicates whether filename is a base64 data URI.
- * @noinline
- */
-var isDataURI = (filename) => filename.startsWith(dataURIPrefix);
-
 /**
  * Indicates whether filename is delivered via file protocol (as opposed to http/https)
  * @noinline
  */
 var isFileURI = (filename) => filename.startsWith('file://');
-// end include: URIUtils.js
+
 // include: runtime_shared.js
 // include: runtime_stack_check.js
 // Initializes the stack cookie. Called at the startup of main and at the startup of each thread in pthreads mode.
@@ -591,6 +529,16 @@ function checkStackCookie() {
 // include: runtime_exceptions.js
 // end include: runtime_exceptions.js
 // include: runtime_debug.js
+var runtimeDebug = true; // Switch to false at runtime to disable logging at the right times
+
+// Used by XXXXX_DEBUG settings to output debug messages.
+function dbg(...args) {
+  if (!runtimeDebug && typeof runtimeDebug != 'undefined') return;
+  // TODO(sbc): Make this configurable somehow.  Its not always convenient for
+  // logging to show up as warnings.
+  console.warn(...args);
+}
+
 // Endianness check
 (() => {
   var h16 = new Int16Array(1);
@@ -599,17 +547,12 @@ function checkStackCookie() {
   if (h8[0] !== 0x73 || h8[1] !== 0x63) throw 'Runtime error: expected the system to be little-endian! (Run with -sSUPPORT_BIG_ENDIAN to bypass)';
 })();
 
-if (Module['ENVIRONMENT']) {
-  throw new Error('Module.ENVIRONMENT has been deprecated. To force the environment, use the ENVIRONMENT compile-time option (for example, -sENVIRONMENT=web or -sENVIRONMENT=node)');
-}
-
-function legacyModuleProp(prop, newName, incoming=true) {
+function consumedModuleProp(prop) {
   if (!Object.getOwnPropertyDescriptor(Module, prop)) {
     Object.defineProperty(Module, prop, {
       configurable: true,
-      get() {
-        let extra = incoming ? ' (the initial value can be provided on Module, but after startup the value is only looked for on a local variable of that name)' : '';
-        abort(`\`Module.${prop}\` has been replaced by \`${newName}\`` + extra);
+      set() {
+        abort(`Attempt to set \`Module.${prop}\` after it has already been processed.  This can happen, for example, when code is injected via '--post-js' rather than '--pre-js'`);
 
       }
     });
@@ -700,12 +643,6 @@ function unexportedRuntimeSymbol(sym) {
   }
 }
 
-// Used by XXXXX_DEBUG settings to output debug messages.
-function dbg(...args) {
-  // TODO(sbc): Make this configurable somehow.  Its not always convenient for
-  // logging to show up as warnings.
-  console.warn(...args);
-}
 // end include: runtime_debug.js
 // include: memoryprofiler.js
 // end include: memoryprofiler.js
@@ -713,32 +650,21 @@ function dbg(...args) {
 
 function updateMemoryViews() {
   var b = wasmMemory.buffer;
-  Module['HEAP8'] = HEAP8 = new Int8Array(b);
-  Module['HEAP16'] = HEAP16 = new Int16Array(b);
-  Module['HEAPU8'] = HEAPU8 = new Uint8Array(b);
-  Module['HEAPU16'] = HEAPU16 = new Uint16Array(b);
-  Module['HEAP32'] = HEAP32 = new Int32Array(b);
-  Module['HEAPU32'] = HEAPU32 = new Uint32Array(b);
-  Module['HEAPF32'] = HEAPF32 = new Float32Array(b);
-  Module['HEAPF64'] = HEAPF64 = new Float64Array(b);
-  Module['HEAP64'] = HEAP64 = new BigInt64Array(b);
-  Module['HEAPU64'] = HEAPU64 = new BigUint64Array(b);
+  HEAP8 = new Int8Array(b);
+  HEAP16 = new Int16Array(b);
+  HEAPU8 = new Uint8Array(b);
+  HEAPU16 = new Uint16Array(b);
+  HEAP32 = new Int32Array(b);
+  HEAPU32 = new Uint32Array(b);
+  HEAPF32 = new Float32Array(b);
+  HEAPF64 = new Float64Array(b);
+  HEAP64 = new BigInt64Array(b);
+  HEAPU64 = new BigUint64Array(b);
 }
 
 // end include: runtime_shared.js
-assert(!Module['STACK_SIZE'], 'STACK_SIZE can no longer be set at runtime.  Use -sSTACK_SIZE at link time')
-
 assert(typeof Int32Array != 'undefined' && typeof Float64Array !== 'undefined' && Int32Array.prototype.subarray != undefined && Int32Array.prototype.set != undefined,
        'JS engine does not provide full typed array support');
-
-// If memory is defined in wasm, the user can't provide it, or set INITIAL_MEMORY
-assert(!Module['wasmMemory'], 'Use of `wasmMemory` detected.  Use -sIMPORTED_MEMORY to define wasmMemory externally');
-assert(!Module['INITIAL_MEMORY'], 'Detected runtime INITIAL_MEMORY setting.  Use -sIMPORTED_MEMORY to define wasmMemory dynamically');
-
-var __ATPRERUN__  = []; // functions called before the runtime is initialized
-var __ATINIT__    = []; // functions called during startup
-var __ATEXIT__    = []; // functions called during shutdown
-var __ATPOSTRUN__ = []; // functions called after the main() is called
 
 function preRun() {
   if (Module['preRun']) {
@@ -747,7 +673,10 @@ function preRun() {
       addOnPreRun(Module['preRun'].shift());
     }
   }
-  callRuntimeCallbacks(__ATPRERUN__);
+  consumedModuleProp('preRun');
+  // Begin ATPRERUNS hooks
+  callRuntimeCallbacks(onPreRuns);
+  // End ATPRERUNS hooks
 }
 
 function initRuntime() {
@@ -756,17 +685,21 @@ function initRuntime() {
 
   checkStackCookie();
 
-  
-if (!Module['noFSInit'] && !FS.initialized)
-  FS.init();
-FS.ignorePermissions = false;
-
+  // Begin ATINITS hooks
+  if (!Module['noFSInit'] && !FS.initialized) FS.init();
 TTY.init();
-  callRuntimeCallbacks(__ATINIT__);
+  // End ATINITS hooks
+
+  wasmExports['__wasm_call_ctors']();
+
+  // Begin ATPOSTCTORS hooks
+  FS.ignorePermissions = false;
+  // End ATPOSTCTORS hooks
 }
 
 function postRun() {
   checkStackCookie();
+   // PThreads reuse the runtime from the main thread.
 
   if (Module['postRun']) {
     if (typeof Module['postRun'] == 'function') Module['postRun'] = [Module['postRun']];
@@ -774,23 +707,11 @@ function postRun() {
       addOnPostRun(Module['postRun'].shift());
     }
   }
+  consumedModuleProp('postRun');
 
-  callRuntimeCallbacks(__ATPOSTRUN__);
-}
-
-function addOnPreRun(cb) {
-  __ATPRERUN__.unshift(cb);
-}
-
-function addOnInit(cb) {
-  __ATINIT__.unshift(cb);
-}
-
-function addOnExit(cb) {
-}
-
-function addOnPostRun(cb) {
-  __ATPOSTRUN__.unshift(cb);
+  // Begin ATPOSTRUNS hooks
+  callRuntimeCallbacks(onPostRuns);
+  // End ATPOSTRUNS hooks
 }
 
 // A counter of dependencies for calling run(). If we need to
@@ -921,16 +842,13 @@ function createExportWrapper(name, nargs) {
 }
 
 var wasmBinaryFile;
+
 function findWasmBinary() {
   if (Module['locateFile']) {
-    var f = 'amyboard-20250409074218.wasm';
-    if (!isDataURI(f)) {
-      return locateFile(f);
-    }
-    return f;
+    return locateFile('amyboard-20260106175641.wasm');
   }
   // Use bundler-friendly `new URL(..., import.meta.url)` pattern; works in browsers too.
-  return new URL('amyboard-20250409074218.wasm', import.meta.url).href;
+  return new URL('amyboard-20260106175641.wasm', import.meta.url).href;
 }
 
 function getBinarySync(file) {
@@ -945,8 +863,7 @@ function getBinarySync(file) {
 
 async function getWasmBinary(binaryFile) {
   // If we don't have the binary yet, load it asynchronously using readAsync.
-  if (!wasmBinary
-      ) {
+  if (!wasmBinary) {
     // Fetch the binary using readAsync
     try {
       var response = await readAsync(binaryFile);
@@ -977,9 +894,7 @@ async function instantiateArrayBuffer(binaryFile, imports) {
 }
 
 async function instantiateAsync(binary, binaryFile, imports) {
-  if (!binary &&
-      typeof WebAssembly.instantiateStreaming == 'function' &&
-      !isDataURI(binaryFile)
+  if (!binary && typeof WebAssembly.instantiateStreaming == 'function'
       // Don't use streaming for file:// delivered objects in a webview, fetch them synchronously.
       && !isFileURI(binaryFile)
       // Avoid instantiateStreaming() on Node.js environment for now, as while
@@ -1040,8 +955,6 @@ async function createWasm() {
     
     assert(wasmTable, 'table not found in wasm exports');
 
-    addOnInit(wasmExports['__wasm_call_ctors']);
-
     removeRunDependency('wasm-instantiate');
     return wasmExports;
   }
@@ -1072,17 +985,19 @@ async function createWasm() {
   // Also pthreads and wasm workers initialize the wasm instance through this
   // path.
   if (Module['instantiateWasm']) {
-    try {
-      return Module['instantiateWasm'](info, receiveInstance);
-    } catch(e) {
-      err(`Module.instantiateWasm callback failed with error: ${e}`);
-        // If instantiation fails, reject the module ready promise.
-        readyPromiseReject(e);
-    }
+    return new Promise((resolve, reject) => {
+      try {
+        Module['instantiateWasm'](info, (mod, inst) => {
+          resolve(receiveInstance(mod, inst));
+        });
+      } catch(e) {
+        err(`Module.instantiateWasm callback failed with error: ${e}`);
+        reject(e);
+      }
+    });
   }
 
   wasmBinaryFile ??= findWasmBinary();
-
   try {
     var result = await instantiateAsync(wasmBinary, wasmBinaryFile, info);
     var exports = receiveInstantiationResult(result);
@@ -1094,41 +1009,9 @@ async function createWasm() {
   }
 }
 
-// === Body ===
-
-var ASM_CONSTS = {
-  67363576: () => { FS.syncfs(false, function (err) {}); },  
- 67363613: () => { try { FS.mkdir('/amyboard'); } catch (err) { } try { FS.mkdir('/amyboard/user'); } catch (err) { } FS.mount(IDBFS, {autoPersist:true}, '/amyboard/user'); FS.syncfs(true, function (err) { }); },  
- 67363804: ($0, $1, $2) => { let data = Module.HEAPU8.slice($0, $0 + $1 * $2 * 4); let context = document.getElementById("canvas").getContext('2d'); context.scale(2, 2); let imageData = context.getImageData(0, 0, $1, $2); imageData.data.set(data); context.putImageData(imageData, 0, 0); },  
- 67364066: ($0, $1) => { if(midiOutputDevice != null) { midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1)); } }
-};
-function proxy_convert_mp_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); proxy_convert_js_to_mp_obj_jsside_force_double_proxy(ret, out); }
-function proxy_convert_mp_to_js_then_js_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); const js_obj = PyProxy.toJs(ret); proxy_convert_js_to_mp_obj_jsside(js_obj, out); }
-function js_get_proxy_js_ref_info(out) { let used = 0; for (const elem of proxy_js_ref) { if (elem !== undefined) { ++used; } } Module.setValue(out, proxy_js_ref.length, "i32"); Module.setValue(out + 4, used, "i32"); }
-function has_attr(jsref,str) { const base = proxy_js_ref[jsref]; const attr = UTF8ToString(str); if (attr in base) { return true; } else { return false; } }
-function lookup_attr(jsref,str,out) { const base = proxy_js_ref[jsref]; const attr = UTF8ToString(str); let value = base[attr]; if (value !== undefined || attr in base) { if (typeof value === "function") { if (base !== globalThis) { if ("_ref" in value) { } else { value = value.bind(base); } } } proxy_convert_js_to_mp_obj_jsside(value, out); return true; } else { return false; } }
-function store_attr(jsref,attr_ptr,value_ref) { const attr = UTF8ToString(attr_ptr); const value = proxy_convert_mp_to_js_obj_jsside(value_ref); proxy_js_ref[jsref][attr] = value; }
-function call0(f_ref,out) { const f = proxy_js_ref[f_ref]; const ret = f(); proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function call1(f_ref,a0,out) { const a0_js = proxy_convert_mp_to_js_obj_jsside(a0); const f = proxy_js_ref[f_ref]; const ret = f(a0_js); proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function call2(f_ref,a0,a1,out) { const a0_js = proxy_convert_mp_to_js_obj_jsside(a0); const a1_js = proxy_convert_mp_to_js_obj_jsside(a1); const f = proxy_js_ref[f_ref]; const ret = f(a0_js, a1_js); proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function calln(f_ref,n_args,value,out) { const f = proxy_js_ref[f_ref]; const a = []; for (let i = 0; i < n_args; ++i) { const v = proxy_convert_mp_to_js_obj_jsside(value + i * 3 * 4); a.push(v); } const ret = f(... a); proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function call0_kwarg(f_ref,n_kw,key,value,out) { const f = proxy_js_ref[f_ref]; const a = {}; for (let i = 0; i < n_kw; ++i) { const k = UTF8ToString(getValue(key + i * 4, "i32")); const v = proxy_convert_mp_to_js_obj_jsside(value + i * 3 * 4); a[k] = v; } const ret = f(a); proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function call1_kwarg(f_ref,arg0,n_kw,key,value,out) { const f = proxy_js_ref[f_ref]; const a0 = proxy_convert_mp_to_js_obj_jsside(arg0); const a = {}; for (let i = 0; i < n_kw; ++i) { const k = UTF8ToString(getValue(key + i * 4, "i32")); const v = proxy_convert_mp_to_js_obj_jsside(value + i * 3 * 4); a[k] = v; } const ret = f(a0, a); proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function js_reflect_construct(f_ref,n_args,args,out) { const f = proxy_js_ref[f_ref]; const as = []; for (let i = 0; i < n_args; ++i) { as.push(proxy_convert_mp_to_js_obj_jsside(args + i * 3 * 4)); } const ret = Reflect.construct(f, as); proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function js_get_iter(f_ref,out) { const f = proxy_js_ref[f_ref]; const ret = f[Symbol.iterator](); proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function js_iter_next(f_ref,out) { const f = proxy_js_ref[f_ref]; const ret = f.next(); if (ret.done) { return false; } else { proxy_convert_js_to_mp_obj_jsside(ret.value, out); return true; } }
-function js_subscr_load(f_ref,index_ref,out) { const target = proxy_js_ref[f_ref]; const index = python_index_semantics(target, proxy_convert_mp_to_js_obj_jsside(index_ref)); const ret = target[index]; proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function js_subscr_store(f_ref,idx,value) { const f = proxy_js_ref[f_ref]; f[proxy_convert_mp_to_js_obj_jsside(idx)] = proxy_convert_mp_to_js_obj_jsside(value); }
-function proxy_js_free_obj(js_ref) { if (js_ref >= PROXY_JS_REF_NUM_STATIC) { proxy_js_ref[js_ref] = undefined; if (js_ref < proxy_js_ref_next) { proxy_js_ref_next = js_ref; } } }
-function js_check_existing(c_ref) { return proxy_js_check_existing(c_ref); }
-function js_get_error_info(jsref,out_name,out_message) { const error = proxy_js_ref[jsref]; proxy_convert_js_to_mp_obj_jsside(error.name, out_name); proxy_convert_js_to_mp_obj_jsside(error.message, out_message); }
-function js_then_resolve(ret_value,resolve) { const ret_value_js = proxy_convert_mp_to_js_obj_jsside(ret_value); const resolve_js = proxy_convert_mp_to_js_obj_jsside(resolve); resolve_js(ret_value_js); }
-function js_then_reject(ret_value,reject) { let ret_value_js; try { ret_value_js = proxy_convert_mp_to_js_obj_jsside(ret_value); } catch(error) { ret_value_js = error; } const reject_js = proxy_convert_mp_to_js_obj_jsside(reject); reject_js(ret_value_js); }
-function js_then_continue(jsref,py_resume,resolve,reject,out) { const py_resume_js = proxy_convert_mp_to_js_obj_jsside(py_resume); const resolve_js = proxy_convert_mp_to_js_obj_jsside(resolve); const reject_js = proxy_convert_mp_to_js_obj_jsside(reject); const ret = proxy_js_ref[jsref].then( (result) => { py_resume_js(result, null, resolve_js, reject_js); }, (reason) => { py_resume_js(null, reason, resolve_js, reject_js); }, ); proxy_convert_js_to_mp_obj_jsside(ret, out); }
-function create_promise(out_set,out_promise) { const out_set_js = proxy_convert_mp_to_js_obj_jsside(out_set); const promise = new Promise(out_set_js); proxy_convert_js_to_mp_obj_jsside(promise, out_promise); }
-function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len)); }
-
 // end include: preamble.js
+
+// Begin JS library code
 
 
   class ExitStatus {
@@ -1144,6 +1027,37 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         // Pass the module as the first argument.
         callbacks.shift()(Module);
       }
+    };
+  var onPostRuns = [];
+  var addOnPostRun = (cb) => onPostRuns.push(cb);
+
+  var onPreRuns = [];
+  var addOnPreRun = (cb) => onPreRuns.push(cb);
+
+
+  var dynCallLegacy = (sig, ptr, args) => {
+      sig = sig.replace(/p/g, 'i')
+      assert(('dynCall_' + sig) in Module, `bad function pointer type - dynCall function not found for sig '${sig}'`);
+      if (args?.length) {
+        // j (64-bit integer) is fine, and is implemented as a BigInt. Without
+        // legalization, the number of parameters should match (j is not expanded
+        // into two i's).
+        assert(args.length === sig.length - 1);
+      } else {
+        assert(sig.length == 1);
+      }
+      var f = Module['dynCall_' + sig];
+      return f(ptr, ...args);
+    };
+  var dynCall = (sig, ptr, args = [], promising = false) => {
+      assert(!promising, 'async dynCall is not supported in this mode')
+      var rtn = dynCallLegacy(sig, ptr, args);
+  
+      function convert(rtn) {
+        return rtn;
+      }
+  
+      return convert(rtn);
     };
 
   
@@ -1166,7 +1080,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
     }
   }
 
-  var noExitRuntime = Module['noExitRuntime'] || true;
+  var noExitRuntime = true;
 
   var ptrToString = (ptr) => {
       assert(typeof ptr === 'number');
@@ -1240,7 +1154,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
       },
   normalize:(path) => {
         var isAbsolute = PATH.isAbs(path),
-            trailingSlash = path.substr(-1) === '/';
+            trailingSlash = path.slice(-1) === '/';
         // Normalize the path
         path = PATH.normalizeArray(path.split('/').filter((p) => !!p), !isAbsolute).join('/');
         if (!path && !isAbsolute) {
@@ -1261,7 +1175,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         }
         if (dir) {
           // It has a dirname, strip trailing slash
-          dir = dir.substr(0, dir.length - 1);
+          dir = dir.slice(0, -1);
         }
         return root + dir;
       },
@@ -1307,8 +1221,8 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
       },
   relative:(from, to) => {
-        from = PATH_FS.resolve(from).substr(1);
-        to = PATH_FS.resolve(to).substr(1);
+        from = PATH_FS.resolve(from).slice(1);
+        to = PATH_FS.resolve(to).slice(1);
         function trim(arr) {
           var start = 0;
           for (; start < arr.length; start++) {
@@ -1362,6 +1276,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
       // so that undefined/NaN means Infinity)
       while (heapOrArray[endPtr] && !(endPtr >= endIdx)) ++endPtr;
   
+      // When using conditional TextDecoder, skip it for short strings as the overhead of the native call is not worth it.
       if (endPtr - idx > 16 && heapOrArray.buffer && UTF8Decoder) {
         return UTF8Decoder.decode(heapOrArray.subarray(idx, endPtr));
       }
@@ -1466,13 +1381,13 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
       return outIdx - startIdx;
     };
   /** @type {function(string, boolean=, number=)} */
-  function intArrayFromString(stringy, dontAddNull, length) {
-    var len = length > 0 ? length : lengthBytesUTF8(stringy)+1;
-    var u8array = new Array(len);
-    var numBytesWritten = stringToUTF8Array(stringy, u8array, 0, u8array.length);
-    if (dontAddNull) u8array.length = numBytesWritten;
-    return u8array;
-  }
+  var intArrayFromString = (stringy, dontAddNull, length) => {
+      var len = length > 0 ? length : lengthBytesUTF8(stringy)+1;
+      var u8array = new Array(len);
+      var numBytesWritten = stringToUTF8Array(stringy, u8array, 0, u8array.length);
+      if (dontAddNull) u8array.length = numBytesWritten;
+      return u8array;
+    };
   var FS_stdin_getChar = () => {
       if (!FS_stdin_getChar_buffer.length) {
         var result = null;
@@ -1618,7 +1533,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
           }
         },
   fsync(tty) {
-          if (tty.output && tty.output.length > 0) {
+          if (tty.output?.length > 0) {
             out(UTF8ArrayToString(tty.output));
             tty.output = [];
           }
@@ -1655,7 +1570,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
           }
         },
   fsync(tty) {
-          if (tty.output && tty.output.length > 0) {
+          if (tty.output?.length > 0) {
             err(UTF8ArrayToString(tty.output));
             tty.output = [];
           }
@@ -1664,14 +1579,6 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
   };
   
   
-  var zeroMemory = (address, size) => {
-      HEAPU8.fill(0, address, address + size);
-    };
-  
-  var alignMemory = (size, alignment) => {
-      assert(alignment, "alignment argument is required");
-      return Math.ceil(size / alignment) * alignment;
-    };
   var mmapAlloc = (size) => {
       abort('internal error: mmapAlloc called but `emscripten_builtin_memalign` native symbol not exported');
     };
@@ -1711,7 +1618,6 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
               llseek: MEMFS.stream_ops.llseek,
               read: MEMFS.stream_ops.read,
               write: MEMFS.stream_ops.write,
-              allocate: MEMFS.stream_ops.allocate,
               mmap: MEMFS.stream_ops.mmap,
               msync: MEMFS.stream_ops.msync
             }
@@ -1955,10 +1861,6 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
           }
           return position;
         },
-  allocate(stream, offset, length) {
-          MEMFS.expandFileStorage(stream.node, offset + length);
-          stream.node.usedBytes = Math.max(stream.node.usedBytes, offset + length);
-        },
   mmap(stream, length, position, prot, flags) {
           if (!FS.isFile(stream.node.mode)) {
             throw new FS.ErrnoError(43);
@@ -2008,11 +1910,9 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
   asyncLoad.isAsync = true;
   
   
-  var FS_createDataFile = (parent, name, fileData, canRead, canWrite, canOwn) => {
-      FS.createDataFile(parent, name, fileData, canRead, canWrite, canOwn);
-    };
+  var FS_createDataFile = (...args) => FS.createDataFile(...args);
   
-  var preloadPlugins = Module['preloadPlugins'] || [];
+  var preloadPlugins = [];
   var FS_handledByPreloadPlugin = (byteArray, fullname, finish, onerror) => {
       // Ensure plugins are ready.
       if (typeof Browser != 'undefined') Browser.init();
@@ -2130,7 +2030,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         if (mount?.opts?.autoPersist) {
           mnt.idbPersistState = 0; // IndexedDB sync starts in idle state
           var memfs_node_ops = mnt.node_ops;
-          mnt.node_ops = Object.assign({}, mnt.node_ops); // Clone node_ops to inject write tracking
+          mnt.node_ops = {...mnt.node_ops}; // Clone node_ops to inject write tracking
           mnt.node_ops.mknod = (parent, name, mode, dev) => {
             var node = memfs_node_ops.mknod(parent, name, mode, dev);
             // Propagate injected node_ops to the newly created child node
@@ -2140,7 +2040,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
             // Remember original MEMFS stream_ops for this node
             node.memfs_stream_ops = node.stream_ops;
             // Clone stream_ops to inject write tracking
-            node.stream_ops = Object.assign({}, node.stream_ops);
+            node.stream_ops = {...node.stream_ops};
   
             // Track all file writes
             node.stream_ops.write = (stream, buffer, offset, length, position, canOwn) => {
@@ -2614,6 +2514,10 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
   currentPath:"/",
   initialized:false,
   ignorePermissions:true,
+  filesystems:null,
+  syncFSRequests:0,
+  readFiles:{
+  },
   ErrnoError:class extends Error {
         name = 'ErrnoError';
         // We set the `name` property to be able to identify `FS.ErrnoError`
@@ -2633,10 +2537,6 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
           }
         }
       },
-  filesystems:null,
-  syncFSRequests:0,
-  readFiles:{
-  },
   FSStream:class {
         shared = {};
         get object() {
@@ -2736,7 +2636,12 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
   
             if (parts[i] === '..') {
               current_path = PATH.dirname(current_path);
-              current = current.parent;
+              if (FS.isRoot(current)) {
+                path = current_path + '/' + parts.slice(i + 1).join('/');
+                continue linkloop;
+              } else {
+                current = current.parent;
+              }
               continue;
             }
   
@@ -2990,6 +2895,13 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         stream.stream_ops?.dup?.(stream);
         return stream;
       },
+  doSetAttr(stream, node, attr) {
+        var setattr = stream?.stream_ops.setattr;
+        var arg = setattr ? stream : node;
+        setattr ??= node.node_ops.setattr;
+        FS.checkOpExists(setattr, 63)
+        setattr(arg, attr);
+      },
   chrdev_stream_ops:{
   open(stream) {
           var device = FS.getDevice(stream.node.rdev);
@@ -3218,9 +3130,10 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
   mkdirTree(path, mode) {
         var dirs = path.split('/');
         var d = '';
-        for (var i = 0; i < dirs.length; ++i) {
-          if (!dirs[i]) continue;
-          d += '/' + dirs[i];
+        for (var dir of dirs) {
+          if (!dir) continue;
+          if (d || PATH.isAbs(path)) d += '/';
+          d += dir;
           try {
             FS.mkdir(d, mode);
           } catch(e) {
@@ -3405,8 +3318,24 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         var getattr = FS.checkOpExists(node.node_ops.getattr, 63);
         return getattr(node);
       },
+  fstat(fd) {
+        var stream = FS.getStreamChecked(fd);
+        var node = stream.node;
+        var getattr = stream.stream_ops.getattr;
+        var arg = getattr ? stream : node;
+        getattr ??= node.node_ops.getattr;
+        FS.checkOpExists(getattr, 63)
+        return getattr(arg);
+      },
   lstat(path) {
         return FS.stat(path, true);
+      },
+  doChmod(stream, node, mode, dontFollow) {
+        FS.doSetAttr(stream, node, {
+          mode: (mode & 4095) | (node.mode & ~4095),
+          ctime: Date.now(),
+          dontFollow
+        });
       },
   chmod(path, mode, dontFollow) {
         var node;
@@ -3416,19 +3345,21 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         } else {
           node = path;
         }
-        var setattr = FS.checkOpExists(node.node_ops.setattr, 63);
-        setattr(node, {
-          mode: (mode & 4095) | (node.mode & ~4095),
-          ctime: Date.now(),
-          dontFollow
-        });
+        FS.doChmod(null, node, mode, dontFollow);
       },
   lchmod(path, mode) {
         FS.chmod(path, mode, true);
       },
   fchmod(fd, mode) {
         var stream = FS.getStreamChecked(fd);
-        FS.chmod(stream.node, mode);
+        FS.doChmod(stream, stream.node, mode, false);
+      },
+  doChown(stream, node, dontFollow) {
+        FS.doSetAttr(stream, node, {
+          timestamp: Date.now(),
+          dontFollow
+          // we ignore the uid / gid for now
+        });
       },
   chown(path, uid, gid, dontFollow) {
         var node;
@@ -3438,19 +3369,30 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         } else {
           node = path;
         }
-        var setattr = FS.checkOpExists(node.node_ops.setattr, 63);
-        setattr(node, {
-          timestamp: Date.now(),
-          dontFollow
-          // we ignore the uid / gid for now
-        });
+        FS.doChown(null, node, dontFollow);
       },
   lchown(path, uid, gid) {
         FS.chown(path, uid, gid, true);
       },
   fchown(fd, uid, gid) {
         var stream = FS.getStreamChecked(fd);
-        FS.chown(stream.node, uid, gid);
+        FS.doChown(stream, stream.node, false);
+      },
+  doTruncate(stream, node, len) {
+        if (FS.isDir(node.mode)) {
+          throw new FS.ErrnoError(31);
+        }
+        if (!FS.isFile(node.mode)) {
+          throw new FS.ErrnoError(28);
+        }
+        var errCode = FS.nodePermissions(node, 'w');
+        if (errCode) {
+          throw new FS.ErrnoError(errCode);
+        }
+        FS.doSetAttr(stream, node, {
+          size: len,
+          timestamp: Date.now()
+        });
       },
   truncate(path, len) {
         if (len < 0) {
@@ -3463,28 +3405,14 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         } else {
           node = path;
         }
-        if (FS.isDir(node.mode)) {
-          throw new FS.ErrnoError(31);
-        }
-        if (!FS.isFile(node.mode)) {
-          throw new FS.ErrnoError(28);
-        }
-        var errCode = FS.nodePermissions(node, 'w');
-        if (errCode) {
-          throw new FS.ErrnoError(errCode);
-        }
-        var setattr = FS.checkOpExists(node.node_ops.setattr, 63);
-        setattr(node, {
-          size: len,
-          timestamp: Date.now()
-        });
+        FS.doTruncate(null, node, len);
       },
   ftruncate(fd, len) {
         var stream = FS.getStreamChecked(fd);
-        if ((stream.flags & 2097155) === 0) {
+        if (len < 0 || (stream.flags & 2097155) === 0) {
           throw new FS.ErrnoError(28);
         }
-        FS.truncate(stream.node, len);
+        FS.doTruncate(stream, stream.node, len);
       },
   utime(path, atime, mtime) {
         var lookup = FS.lookupPath(path, { follow: true });
@@ -3683,24 +3611,6 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         var bytesWritten = stream.stream_ops.write(stream, buffer, offset, length, position, canOwn);
         if (!seeking) stream.position += bytesWritten;
         return bytesWritten;
-      },
-  allocate(stream, offset, length) {
-        if (FS.isClosed(stream)) {
-          throw new FS.ErrnoError(8);
-        }
-        if (offset < 0 || length <= 0) {
-          throw new FS.ErrnoError(28);
-        }
-        if ((stream.flags & 2097155) === 0) {
-          throw new FS.ErrnoError(8);
-        }
-        if (!FS.isFile(stream.node.mode) && !FS.isDir(stream.node.mode)) {
-          throw new FS.ErrnoError(43);
-        }
-        if (!stream.stream_ops.allocate) {
-          throw new FS.ErrnoError(138);
-        }
-        stream.stream_ops.allocate(stream, offset, length);
       },
   mmap(stream, length, position, prot, flags) {
         // User requests writing to file (prot & PROT_WRITE != 0).
@@ -3924,12 +3834,10 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         // force-flush all streams, so we get musl std streams printed out
         _fflush(0);
         // close all of our streams
-        for (var i = 0; i < FS.streams.length; i++) {
-          var stream = FS.streams[i];
-          if (!stream) {
-            continue;
+        for (var stream of FS.streams) {
+          if (stream) {
+            FS.close(stream);
           }
-          FS.close(stream);
         }
       },
   findObject(path, dontResolveLastLink) {
@@ -3977,7 +3885,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
           try {
             FS.mkdir(current);
           } catch (e) {
-            // ignore EEXIST
+            if (e.errno != 20) throw e;
           }
           parent = current;
         }
@@ -4351,8 +4259,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
   function ___syscall_fstat64(fd, buf) {
   try {
   
-      var stream = SYSCALLS.getStreamFromFD(fd);
-      return SYSCALLS.writeStat(buf, FS.stat(stream.path));
+      return SYSCALLS.writeStat(buf, FS.fstat(fd));
     } catch (e) {
     if (typeof FS == 'undefined' || !(e.name === 'ErrnoError')) throw e;
     return -e.errno;
@@ -4583,12 +4490,12 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
   
       path = SYSCALLS.getStr(path);
       path = SYSCALLS.calculateAt(dirfd, path);
-      if (flags === 0) {
+      if (!flags) {
         FS.unlink(path);
       } else if (flags === 512) {
         FS.rmdir(path);
       } else {
-        abort('Invalid flags passed to unlinkat');
+        return -28;
       }
       return 0;
     } catch (e) {
@@ -4653,6 +4560,10 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
       // casing all heap size related code to treat 0 specially.
       2147483648;
   
+  var alignMemory = (size, alignment) => {
+      assert(alignment, "alignment argument is required");
+      return Math.ceil(size / alignment) * alignment;
+    };
   
   var growMemory = (size) => {
       var b = wasmMemory.buffer;
@@ -5045,7 +4956,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
       }
   
       if (!noSetTiming) {
-        if (fps && fps > 0) {
+        if (fps > 0) {
           _emscripten_set_main_loop_timing(0, 1000.0 / fps);
         } else {
           // Do rAF by rendering each frame (no decimating)
@@ -5115,7 +5026,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
   function _fd_seek(fd, offset, whence, newOffset) {
     offset = bigintToI53Checked(offset);
   
-    
+  
   try {
   
       if (isNaN(offset)) return 61;
@@ -5143,11 +5054,7 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
           return;
         }
         mount.type.syncfs(mount, false, (err) => {
-          if (err) {
-            wakeUp(29);
-            return;
-          }
-          wakeUp(0);
+          wakeUp(err ? 29 : 0);
         });
       });
     } catch (e) {
@@ -5239,7 +5146,6 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
   var getWasmTableEntry = (funcPtr) => {
       var func = wasmTableMirror[funcPtr];
       if (!func) {
-        if (funcPtr >= wasmTableMirror.length) wasmTableMirror.length = funcPtr + 1;
         /** @suppress {checkTypes} */
         wasmTableMirror[funcPtr] = func = wasmTable.get(funcPtr);
       }
@@ -5527,12 +5433,10 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
         }
         return Asyncify.handleSleepReturnValue;
       },
-  handleAsync(startAsync) {
-        return Asyncify.handleSleep((wakeUp) => {
-          // TODO: add error handling as a second param when handleSleep implements it.
-          startAsync().then(wakeUp);
-        });
-      },
+  handleAsync:(startAsync) => Asyncify.handleSleep((wakeUp) => {
+        // TODO: add error handling as a second param when handleSleep implements it.
+        startAsync().then(wakeUp);
+      }),
   };
 
   var getCFunc = (ident) => {
@@ -5644,7 +5548,6 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
     };
 
   
-  
     /**
      * @param {string=} returnType
      * @param {Array=} argTypes
@@ -5662,36 +5565,524 @@ function call_amy_js(message,len) { amy_play_message(UTF8ToString(message, len))
 
 
 
-  var FS_createPath = FS.createPath;
+  var FS_createPath = (...args) => FS.createPath(...args);
 
 
 
-  var FS_unlink = (path) => FS.unlink(path);
+  var FS_unlink = (...args) => FS.unlink(...args);
 
-  var FS_createLazyFile = FS.createLazyFile;
+  var FS_createLazyFile = (...args) => FS.createLazyFile(...args);
 
-  var FS_createDevice = FS.createDevice;
+  var FS_createDevice = (...args) => FS.createDevice(...args);
 
   FS.createPreloadedFile = FS_createPreloadedFile;
-  FS.staticInit();
-  // Set module methods based on EXPORTED_RUNTIME_METHODS
-  Module["FS_createPath"] = FS.createPath;
-  Module["FS_createDataFile"] = FS.createDataFile;
-  Module["FS_createPreloadedFile"] = FS.createPreloadedFile;
-  Module["FS_unlink"] = FS.unlink;
-  Module["FS_createLazyFile"] = FS.createLazyFile;
-  Module["FS_createDevice"] = FS.createDevice;
-  ;
+  FS.staticInit();;
 
-      Module["requestAnimationFrame"] = MainLoop.requestAnimationFrame;
-      Module["pauseMainLoop"] = MainLoop.pause;
-      Module["resumeMainLoop"] = MainLoop.resume;
+      Module['requestAnimationFrame'] = MainLoop.requestAnimationFrame;
+      Module['pauseMainLoop'] = MainLoop.pause;
+      Module['resumeMainLoop'] = MainLoop.resume;
       MainLoop.init();;
 if (globalThis.crypto === undefined) { globalThis.crypto = require('crypto'); };
 var MP_JS_EPOCH = Date.now();
+// End JS library code
+
+// include: postlibrary.js
+// This file is included after the automatically-generated JS library code
+// but before the wasm module is created.
+
+{
+
+  // Begin ATMODULES hooks
+  if (Module['noExitRuntime']) noExitRuntime = Module['noExitRuntime'];
+if (Module['preloadPlugins']) preloadPlugins = Module['preloadPlugins'];
+if (Module['print']) out = Module['print'];
+if (Module['printErr']) err = Module['printErr'];
+if (Module['wasmBinary']) wasmBinary = Module['wasmBinary'];
+  // End ATMODULES hooks
+
+  checkIncomingModuleAPI();
+
+  if (Module['arguments']) arguments_ = Module['arguments'];
+  if (Module['thisProgram']) thisProgram = Module['thisProgram'];
+
+  // Assertions on removed incoming Module JS APIs.
+  assert(typeof Module['memoryInitializerPrefixURL'] == 'undefined', 'Module.memoryInitializerPrefixURL option was removed, use Module.locateFile instead');
+  assert(typeof Module['pthreadMainPrefixURL'] == 'undefined', 'Module.pthreadMainPrefixURL option was removed, use Module.locateFile instead');
+  assert(typeof Module['cdInitializerPrefixURL'] == 'undefined', 'Module.cdInitializerPrefixURL option was removed, use Module.locateFile instead');
+  assert(typeof Module['filePackagePrefixURL'] == 'undefined', 'Module.filePackagePrefixURL option was removed, use Module.locateFile instead');
+  assert(typeof Module['read'] == 'undefined', 'Module.read option was removed');
+  assert(typeof Module['readAsync'] == 'undefined', 'Module.readAsync option was removed (modify readAsync in JS)');
+  assert(typeof Module['readBinary'] == 'undefined', 'Module.readBinary option was removed (modify readBinary in JS)');
+  assert(typeof Module['setWindowTitle'] == 'undefined', 'Module.setWindowTitle option was removed (modify emscripten_set_window_title in JS)');
+  assert(typeof Module['TOTAL_MEMORY'] == 'undefined', 'Module.TOTAL_MEMORY has been renamed Module.INITIAL_MEMORY');
+  assert(typeof Module['ENVIRONMENT'] == 'undefined', 'Module.ENVIRONMENT has been deprecated. To force the environment, use the ENVIRONMENT compile-time option (for example, -sENVIRONMENT=web or -sENVIRONMENT=node)');
+  assert(typeof Module['STACK_SIZE'] == 'undefined', 'STACK_SIZE can no longer be set at runtime.  Use -sSTACK_SIZE at link time')
+  // If memory is defined in wasm, the user can't provide it, or set INITIAL_MEMORY
+  assert(typeof Module['wasmMemory'] == 'undefined', 'Use of `wasmMemory` detected.  Use -sIMPORTED_MEMORY to define wasmMemory externally');
+  assert(typeof Module['INITIAL_MEMORY'] == 'undefined', 'Detected runtime INITIAL_MEMORY setting.  Use -sIMPORTED_MEMORY to define wasmMemory dynamically');
+
+}
+
+// Begin runtime exports
+  Module['addRunDependency'] = addRunDependency;
+  Module['removeRunDependency'] = removeRunDependency;
+  Module['ccall'] = ccall;
+  Module['cwrap'] = cwrap;
+  Module['setValue'] = setValue;
+  Module['getValue'] = getValue;
+  Module['PATH'] = PATH;
+  Module['PATH_FS'] = PATH_FS;
+  Module['UTF8ToString'] = UTF8ToString;
+  Module['stringToUTF8'] = stringToUTF8;
+  Module['lengthBytesUTF8'] = lengthBytesUTF8;
+  Module['FS_createPreloadedFile'] = FS_createPreloadedFile;
+  Module['FS_unlink'] = FS_unlink;
+  Module['FS_createPath'] = FS_createPath;
+  Module['FS_createDevice'] = FS_createDevice;
+  Module['FS'] = FS;
+  Module['FS_createDataFile'] = FS_createDataFile;
+  Module['FS_createLazyFile'] = FS_createLazyFile;
+  var missingLibrarySymbols = [
+  'writeI53ToI64',
+  'writeI53ToI64Clamped',
+  'writeI53ToI64Signaling',
+  'writeI53ToU64Clamped',
+  'writeI53ToU64Signaling',
+  'readI53FromI64',
+  'readI53FromU64',
+  'convertI32PairToI53',
+  'convertI32PairToI53Checked',
+  'convertU32PairToI53',
+  'getTempRet0',
+  'setTempRet0',
+  'zeroMemory',
+  'inetPton4',
+  'inetNtop4',
+  'inetPton6',
+  'inetNtop6',
+  'readSockaddr',
+  'writeSockaddr',
+  'emscriptenLog',
+  'runMainThreadEmAsm',
+  'jstoi_q',
+  'getExecutableName',
+  'listenOnce',
+  'autoResumeAudioContext',
+  'getDynCaller',
+  'asmjsMangle',
+  'HandleAllocator',
+  'getNativeTypeSize',
+  'addOnInit',
+  'addOnPostCtor',
+  'addOnPreMain',
+  'addOnExit',
+  'STACK_SIZE',
+  'STACK_ALIGN',
+  'POINTER_SIZE',
+  'ASSERTIONS',
+  'uleb128Encode',
+  'generateFuncType',
+  'convertJsFunctionToWasm',
+  'getEmptyTableSlot',
+  'updateTableMap',
+  'getFunctionAddress',
+  'addFunction',
+  'removeFunction',
+  'reallyNegative',
+  'unSign',
+  'strLen',
+  'reSign',
+  'formatString',
+  'intArrayToString',
+  'AsciiToString',
+  'stringToAscii',
+  'UTF16ToString',
+  'stringToUTF16',
+  'lengthBytesUTF16',
+  'UTF32ToString',
+  'stringToUTF32',
+  'lengthBytesUTF32',
+  'stringToNewUTF8',
+  'registerKeyEventCallback',
+  'maybeCStringToJsString',
+  'findEventTarget',
+  'getBoundingClientRect',
+  'fillMouseEventData',
+  'registerMouseEventCallback',
+  'registerWheelEventCallback',
+  'registerUiEventCallback',
+  'registerFocusEventCallback',
+  'fillDeviceOrientationEventData',
+  'registerDeviceOrientationEventCallback',
+  'fillDeviceMotionEventData',
+  'registerDeviceMotionEventCallback',
+  'screenOrientation',
+  'fillOrientationChangeEventData',
+  'registerOrientationChangeEventCallback',
+  'fillFullscreenChangeEventData',
+  'registerFullscreenChangeEventCallback',
+  'JSEvents_requestFullscreen',
+  'JSEvents_resizeCanvasForFullscreen',
+  'registerRestoreOldStyle',
+  'hideEverythingExceptGivenElement',
+  'restoreHiddenElements',
+  'setLetterbox',
+  'softFullscreenResizeWebGLRenderTarget',
+  'doRequestFullscreen',
+  'fillPointerlockChangeEventData',
+  'registerPointerlockChangeEventCallback',
+  'registerPointerlockErrorEventCallback',
+  'requestPointerLock',
+  'fillVisibilityChangeEventData',
+  'registerVisibilityChangeEventCallback',
+  'registerTouchEventCallback',
+  'fillGamepadEventData',
+  'registerGamepadEventCallback',
+  'registerBeforeUnloadEventCallback',
+  'fillBatteryEventData',
+  'battery',
+  'registerBatteryEventCallback',
+  'setCanvasElementSize',
+  'getCanvasElementSize',
+  'jsStackTrace',
+  'getCallstack',
+  'convertPCtoSourceLocation',
+  'getEnvStrings',
+  'checkWasiClock',
+  'wasiRightsToMuslOFlags',
+  'wasiOFlagsToMuslOFlags',
+  'setImmediateWrapped',
+  'safeRequestAnimationFrame',
+  'clearImmediateWrapped',
+  'registerPostMainLoop',
+  'registerPreMainLoop',
+  'getPromise',
+  'makePromise',
+  'idsToPromises',
+  'makePromiseCallback',
+  'ExceptionInfo',
+  'findMatchingCatch',
+  'Browser_asyncPrepareDataCounter',
+  'isLeapYear',
+  'ydayFromDate',
+  'arraySum',
+  'addDays',
+  'getSocketFromFD',
+  'getSocketAddress',
+  'FS_mkdirTree',
+  '_setNetworkCallback',
+  'heapObjectForWebGLType',
+  'toTypedArrayIndex',
+  'webgl_enable_ANGLE_instanced_arrays',
+  'webgl_enable_OES_vertex_array_object',
+  'webgl_enable_WEBGL_draw_buffers',
+  'webgl_enable_WEBGL_multi_draw',
+  'webgl_enable_EXT_polygon_offset_clamp',
+  'webgl_enable_EXT_clip_control',
+  'webgl_enable_WEBGL_polygon_mode',
+  'emscriptenWebGLGet',
+  'computeUnpackAlignedImageSize',
+  'colorChannelsInGlTextureFormat',
+  'emscriptenWebGLGetTexPixelData',
+  'emscriptenWebGLGetUniform',
+  'webglGetUniformLocation',
+  'webglPrepareUniformLocationsBeforeFirstUse',
+  'webglGetLeftBracePos',
+  'emscriptenWebGLGetVertexAttrib',
+  '__glGetActiveAttribOrUniform',
+  'writeGLArray',
+  'registerWebGlEventCallback',
+  'ALLOC_NORMAL',
+  'ALLOC_STACK',
+  'allocate',
+  'writeStringToMemory',
+  'writeAsciiToMemory',
+  'demangle',
+  'stackTrace',
+];
+missingLibrarySymbols.forEach(missingLibrarySymbol)
+
+  var unexportedSymbols = [
+  'run',
+  'out',
+  'err',
+  'callMain',
+  'abort',
+  'wasmMemory',
+  'wasmExports',
+  'HEAPF32',
+  'HEAPF64',
+  'HEAP8',
+  'HEAPU8',
+  'HEAP16',
+  'HEAPU16',
+  'HEAP32',
+  'HEAPU32',
+  'HEAP64',
+  'HEAPU64',
+  'writeStackCookie',
+  'checkStackCookie',
+  'INT53_MAX',
+  'INT53_MIN',
+  'bigintToI53Checked',
+  'stackSave',
+  'stackRestore',
+  'stackAlloc',
+  'ptrToString',
+  'exitJS',
+  'getHeapMax',
+  'growMemory',
+  'ENV',
+  'ERRNO_CODES',
+  'strError',
+  'DNS',
+  'Protocols',
+  'Sockets',
+  'timers',
+  'warnOnce',
+  'readEmAsmArgsArray',
+  'readEmAsmArgs',
+  'runEmAsmFunction',
+  'dynCallLegacy',
+  'dynCall',
+  'handleException',
+  'keepRuntimeAlive',
+  'runtimeKeepalivePush',
+  'runtimeKeepalivePop',
+  'callUserCallback',
+  'maybeExit',
+  'asyncLoad',
+  'alignMemory',
+  'mmapAlloc',
+  'wasmTable',
+  'noExitRuntime',
+  'addOnPreRun',
+  'addOnPostRun',
+  'sigToWasmTypes',
+  'freeTableIndexes',
+  'functionsInTableMap',
+  'UTF8Decoder',
+  'UTF8ArrayToString',
+  'stringToUTF8Array',
+  'intArrayFromString',
+  'UTF16Decoder',
+  'stringToUTF8OnStack',
+  'writeArrayToMemory',
+  'JSEvents',
+  'specialHTMLTargets',
+  'findCanvasEventTarget',
+  'currentFullscreenStrategy',
+  'restoreOldWindowedStyle',
+  'UNWIND_CACHE',
+  'ExitStatus',
+  'doReadv',
+  'doWritev',
+  'initRandomFill',
+  'randomFill',
+  'safeSetTimeout',
+  'emSetImmediate',
+  'emClearImmediate_deps',
+  'emClearImmediate',
+  'promiseMap',
+  'uncaughtExceptionCount',
+  'exceptionLast',
+  'exceptionCaught',
+  'Browser',
+  'requestFullscreen',
+  'requestFullScreen',
+  'setCanvasSize',
+  'getUserMedia',
+  'createContext',
+  'getPreloadedImageData__data',
+  'wget',
+  'MONTH_DAYS_REGULAR',
+  'MONTH_DAYS_LEAP',
+  'MONTH_DAYS_REGULAR_CUMULATIVE',
+  'MONTH_DAYS_LEAP_CUMULATIVE',
+  'SYSCALLS',
+  'preloadPlugins',
+  'FS_modeStringToFlags',
+  'FS_getMode',
+  'FS_stdin_getChar_buffer',
+  'FS_stdin_getChar',
+  'FS_readFile',
+  'FS_root',
+  'FS_mounts',
+  'FS_devices',
+  'FS_streams',
+  'FS_nextInode',
+  'FS_nameTable',
+  'FS_currentPath',
+  'FS_initialized',
+  'FS_ignorePermissions',
+  'FS_filesystems',
+  'FS_syncFSRequests',
+  'FS_readFiles',
+  'FS_lookupPath',
+  'FS_getPath',
+  'FS_hashName',
+  'FS_hashAddNode',
+  'FS_hashRemoveNode',
+  'FS_lookupNode',
+  'FS_createNode',
+  'FS_destroyNode',
+  'FS_isRoot',
+  'FS_isMountpoint',
+  'FS_isFile',
+  'FS_isDir',
+  'FS_isLink',
+  'FS_isChrdev',
+  'FS_isBlkdev',
+  'FS_isFIFO',
+  'FS_isSocket',
+  'FS_flagsToPermissionString',
+  'FS_nodePermissions',
+  'FS_mayLookup',
+  'FS_mayCreate',
+  'FS_mayDelete',
+  'FS_mayOpen',
+  'FS_checkOpExists',
+  'FS_nextfd',
+  'FS_getStreamChecked',
+  'FS_getStream',
+  'FS_createStream',
+  'FS_closeStream',
+  'FS_dupStream',
+  'FS_doSetAttr',
+  'FS_chrdev_stream_ops',
+  'FS_major',
+  'FS_minor',
+  'FS_makedev',
+  'FS_registerDevice',
+  'FS_getDevice',
+  'FS_getMounts',
+  'FS_syncfs',
+  'FS_mount',
+  'FS_unmount',
+  'FS_lookup',
+  'FS_mknod',
+  'FS_statfs',
+  'FS_statfsStream',
+  'FS_statfsNode',
+  'FS_create',
+  'FS_mkdir',
+  'FS_mkdev',
+  'FS_symlink',
+  'FS_rename',
+  'FS_rmdir',
+  'FS_readdir',
+  'FS_readlink',
+  'FS_stat',
+  'FS_fstat',
+  'FS_lstat',
+  'FS_doChmod',
+  'FS_chmod',
+  'FS_lchmod',
+  'FS_fchmod',
+  'FS_doChown',
+  'FS_chown',
+  'FS_lchown',
+  'FS_fchown',
+  'FS_doTruncate',
+  'FS_truncate',
+  'FS_ftruncate',
+  'FS_utime',
+  'FS_open',
+  'FS_close',
+  'FS_isClosed',
+  'FS_llseek',
+  'FS_read',
+  'FS_write',
+  'FS_mmap',
+  'FS_msync',
+  'FS_ioctl',
+  'FS_writeFile',
+  'FS_cwd',
+  'FS_chdir',
+  'FS_createDefaultDirectories',
+  'FS_createDefaultDevices',
+  'FS_createSpecialDirectories',
+  'FS_createStandardStreams',
+  'FS_staticInit',
+  'FS_init',
+  'FS_quit',
+  'FS_findObject',
+  'FS_analyzePath',
+  'FS_createFile',
+  'FS_forceLoadFile',
+  'FS_absolutePath',
+  'FS_createFolder',
+  'FS_createLink',
+  'FS_joinPath',
+  'FS_mmapAlloc',
+  'FS_standardizePath',
+  'MEMFS',
+  'TTY',
+  'PIPEFS',
+  'SOCKFS',
+  'tempFixedLengthArray',
+  'miniTempWebGLFloatBuffers',
+  'miniTempWebGLIntBuffers',
+  'GL',
+  'AL',
+  'GLUT',
+  'EGL',
+  'GLEW',
+  'IDBStore',
+  'runAndAbortIfError',
+  'Asyncify',
+  'Fibers',
+  'SDL',
+  'SDL_gfx',
+  'allocateUTF8',
+  'allocateUTF8OnStack',
+  'print',
+  'printErr',
+  'jstoi_s',
+  'IDBFS',
+];
+unexportedSymbols.forEach(unexportedRuntimeSymbol);
+
+  // End runtime exports
+  // Begin JS library exports
+  // End JS library exports
+
+// end include: postlibrary.js
+
 function checkIncomingModuleAPI() {
   ignoredModuleProp('fetchSettings');
 }
+var ASM_CONSTS = {
+  67460408: () => { FS.syncfs(false, function (err) {}); },  
+ 67460445: () => { try { FS.mkdir('/amyboard'); } catch (err) { } try { FS.mkdir('/amyboard/user'); } catch (err) { } FS.mount(IDBFS, {autoPersist:true}, '/amyboard/user'); FS.syncfs(true, function (err) { }); },  
+ 67460636: ($0, $1, $2) => { let data = Module.HEAPU8.slice($0, $0 + $1 * $2 * 4); let context = document.getElementById("canvas").getContext('2d'); context.scale(2, 2); let imageData = context.getImageData(0, 0, $1, $2); imageData.data.set(data); context.putImageData(imageData, 0, 0); },  
+ 67460898: ($0, $1) => { if(midiOutputDevice != null) { midiOutputDevice.send(HEAPU8.subarray($0, $0 + $1)); } },  
+ 67460984: ($0) => { if(typeof amy_process_single_midi_byte === 'function') { amy_process_single_midi_byte($0, 1); } }
+};
+function proxy_convert_mp_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); proxy_convert_js_to_mp_obj_jsside_force_double_proxy(ret, out); }
+function proxy_convert_mp_to_js_then_js_to_js_then_js_to_mp_obj_jsside(out) { const ret = proxy_convert_mp_to_js_obj_jsside(out); const js_obj = PyProxy.toJs(ret); proxy_convert_js_to_mp_obj_jsside(js_obj, out); }
+function js_get_proxy_js_ref_info(out) { let used = 0; for (const elem of proxy_js_ref) { if (elem !== undefined) { ++used; } } Module.setValue(out, proxy_js_ref.length, "i32"); Module.setValue(out + 4, used, "i32"); }
+function has_attr(jsref,str) { const base = proxy_js_ref[jsref]; const attr = UTF8ToString(str); if (attr in base) { return true; } else { return false; } }
+function lookup_attr(jsref,str,out) { const base = proxy_js_ref[jsref]; const attr = UTF8ToString(str); let value = base[attr]; if (value !== undefined || attr in base) { if (typeof value === "function") { if (base !== globalThis) { if ("_ref" in value) { } else { value = value.bind(base); } } } proxy_convert_js_to_mp_obj_jsside(value, out); return true; } else { return false; } }
+function store_attr(jsref,attr_ptr,value_ref) { const attr = UTF8ToString(attr_ptr); const value = proxy_convert_mp_to_js_obj_jsside(value_ref); proxy_js_ref[jsref][attr] = value; }
+function call0(f_ref,out) { const f = proxy_js_ref[f_ref]; const ret = f(); proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function call1(f_ref,a0,out) { const a0_js = proxy_convert_mp_to_js_obj_jsside(a0); const f = proxy_js_ref[f_ref]; const ret = f(a0_js); proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function call2(f_ref,a0,a1,out) { const a0_js = proxy_convert_mp_to_js_obj_jsside(a0); const a1_js = proxy_convert_mp_to_js_obj_jsside(a1); const f = proxy_js_ref[f_ref]; const ret = f(a0_js, a1_js); proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function calln(f_ref,n_args,value,out) { const f = proxy_js_ref[f_ref]; const a = []; for (let i = 0; i < n_args; ++i) { const v = proxy_convert_mp_to_js_obj_jsside(value + i * 3 * 4); a.push(v); } const ret = f(... a); proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function call0_kwarg(f_ref,n_kw,key,value,out) { const f = proxy_js_ref[f_ref]; const a = {}; for (let i = 0; i < n_kw; ++i) { const k = UTF8ToString(getValue(key + i * 4, "i32")); const v = proxy_convert_mp_to_js_obj_jsside(value + i * 3 * 4); a[k] = v; } const ret = f(a); proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function call1_kwarg(f_ref,arg0,n_kw,key,value,out) { const f = proxy_js_ref[f_ref]; const a0 = proxy_convert_mp_to_js_obj_jsside(arg0); const a = {}; for (let i = 0; i < n_kw; ++i) { const k = UTF8ToString(getValue(key + i * 4, "i32")); const v = proxy_convert_mp_to_js_obj_jsside(value + i * 3 * 4); a[k] = v; } const ret = f(a0, a); proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function js_reflect_construct(f_ref,n_args,args,out) { const f = proxy_js_ref[f_ref]; const as = []; for (let i = 0; i < n_args; ++i) { as.push(proxy_convert_mp_to_js_obj_jsside(args + i * 3 * 4)); } const ret = Reflect.construct(f, as); proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function js_get_iter(f_ref,out) { const f = proxy_js_ref[f_ref]; const ret = f[Symbol.iterator](); proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function js_iter_next(f_ref,out) { const f = proxy_js_ref[f_ref]; const ret = f.next(); if (ret.done) { return false; } else { proxy_convert_js_to_mp_obj_jsside(ret.value, out); return true; } }
+function js_subscr_load(f_ref,index_ref,out) { const target = proxy_js_ref[f_ref]; const index = python_index_semantics(target, proxy_convert_mp_to_js_obj_jsside(index_ref)); const ret = target[index]; proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function js_subscr_store(f_ref,idx,value) { const f = proxy_js_ref[f_ref]; f[proxy_convert_mp_to_js_obj_jsside(idx)] = proxy_convert_mp_to_js_obj_jsside(value); }
+function proxy_js_free_obj(js_ref) { if (js_ref >= PROXY_JS_REF_NUM_STATIC) { proxy_js_ref[js_ref] = undefined; if (js_ref < proxy_js_ref_next) { proxy_js_ref_next = js_ref; } } }
+function js_check_existing(c_ref) { return proxy_js_check_existing(c_ref); }
+function js_get_error_info(jsref,out_name,out_message) { const error = proxy_js_ref[jsref]; proxy_convert_js_to_mp_obj_jsside(error.name, out_name); proxy_convert_js_to_mp_obj_jsside(error.message, out_message); }
+function js_then_resolve(ret_value,resolve) { const ret_value_js = proxy_convert_mp_to_js_obj_jsside(ret_value); const resolve_js = proxy_convert_mp_to_js_obj_jsside(resolve); resolve_js(ret_value_js); }
+function js_then_reject(ret_value,reject) { let ret_value_js; try { ret_value_js = proxy_convert_mp_to_js_obj_jsside(ret_value); } catch(error) { ret_value_js = error; } const reject_js = proxy_convert_mp_to_js_obj_jsside(reject); reject_js(ret_value_js); }
+function js_then_continue(jsref,py_resume,resolve,reject,out) { const py_resume_js = proxy_convert_mp_to_js_obj_jsside(py_resume); const resolve_js = proxy_convert_mp_to_js_obj_jsside(resolve); const reject_js = proxy_convert_mp_to_js_obj_jsside(reject); const ret = proxy_js_ref[jsref].then( (result) => { py_resume_js(result, null, resolve_js, reject_js); }, (reason) => { py_resume_js(null, reason, resolve_js, reject_js); }, ); proxy_convert_js_to_mp_obj_jsside(ret, out); }
+function create_promise(out_set,out_promise) { const out_set_js = proxy_convert_mp_to_js_obj_jsside(out_set); const promise = new Promise(out_set_js); proxy_convert_js_to_mp_obj_jsside(promise, out_promise); }
 var wasmImports = {
   /** @export */
   __syscall_chdir: ___syscall_chdir,
@@ -5735,8 +6126,6 @@ var wasmImports = {
   call1_kwarg,
   /** @export */
   call2,
-  /** @export */
-  call_amy_js,
   /** @export */
   calln,
   /** @export */
@@ -5825,6 +6214,7 @@ var wasmImports = {
   store_attr
 };
 var wasmExports = await createWasm();
+// Imports from the Wasm binary.
 var ___wasm_call_ctors = createExportWrapper('__wasm_call_ctors', 0);
 var _mp_sched_keyboard_interrupt = Module['_mp_sched_keyboard_interrupt'] = createExportWrapper('mp_sched_keyboard_interrupt', 0);
 var _mp_handle_pending = Module['_mp_handle_pending'] = createExportWrapper('mp_handle_pending', 1);
@@ -5855,15 +6245,15 @@ var _proxy_c_to_js_get_dict = Module['_proxy_c_to_js_get_dict'] = createExportWr
 var _proxy_c_to_js_get_iter = Module['_proxy_c_to_js_get_iter'] = createExportWrapper('proxy_c_to_js_get_iter', 1);
 var _proxy_c_to_js_iternext = Module['_proxy_c_to_js_iternext'] = createExportWrapper('proxy_c_to_js_iternext', 2);
 var _proxy_c_to_js_resume = Module['_proxy_c_to_js_resume'] = createExportWrapper('proxy_c_to_js_resume', 2);
-var _process_single_midi_byte = Module['_process_single_midi_byte'] = createExportWrapper('process_single_midi_byte', 1);
+var _tulip_midi_input_hook = Module['_tulip_midi_input_hook'] = createExportWrapper('tulip_midi_input_hook', 3);
 var _emscripten_stack_get_base = wasmExports['emscripten_stack_get_base']
 var _emscripten_stack_get_current = wasmExports['emscripten_stack_get_current']
 var _fflush = createExportWrapper('fflush', 1);
 var _strerror = createExportWrapper('strerror', 1);
+var _emscripten_stack_get_end = wasmExports['emscripten_stack_get_end']
 var _setThrew = createExportWrapper('setThrew', 2);
 var _emscripten_stack_init = wasmExports['emscripten_stack_init']
 var _emscripten_stack_get_free = wasmExports['emscripten_stack_get_free']
-var _emscripten_stack_get_end = wasmExports['emscripten_stack_get_end']
 var __emscripten_stack_restore = wasmExports['_emscripten_stack_restore']
 var __emscripten_stack_alloc = wasmExports['_emscripten_stack_alloc']
 var dynCall_viii = Module['dynCall_viii'] = createExportWrapper('dynCall_viii', 4);
@@ -6013,303 +6403,6 @@ function invoke_iiiiii(index,a1,a2,a3,a4,a5) {
 // include: postamble.js
 // === Auto-generated postamble setup entry stuff ===
 
-Module['addRunDependency'] = addRunDependency;
-Module['removeRunDependency'] = removeRunDependency;
-Module['ccall'] = ccall;
-Module['cwrap'] = cwrap;
-Module['setValue'] = setValue;
-Module['getValue'] = getValue;
-Module['PATH'] = PATH;
-Module['PATH_FS'] = PATH_FS;
-Module['UTF8ToString'] = UTF8ToString;
-Module['stringToUTF8'] = stringToUTF8;
-Module['lengthBytesUTF8'] = lengthBytesUTF8;
-Module['FS_createPreloadedFile'] = FS_createPreloadedFile;
-Module['FS_unlink'] = FS_unlink;
-Module['FS_createPath'] = FS_createPath;
-Module['FS_createDevice'] = FS_createDevice;
-Module['FS'] = FS;
-Module['FS_createDataFile'] = FS_createDataFile;
-Module['FS_createLazyFile'] = FS_createLazyFile;
-var missingLibrarySymbols = [
-  'writeI53ToI64',
-  'writeI53ToI64Clamped',
-  'writeI53ToI64Signaling',
-  'writeI53ToU64Clamped',
-  'writeI53ToU64Signaling',
-  'readI53FromI64',
-  'readI53FromU64',
-  'convertI32PairToI53',
-  'convertI32PairToI53Checked',
-  'convertU32PairToI53',
-  'getTempRet0',
-  'setTempRet0',
-  'inetPton4',
-  'inetNtop4',
-  'inetPton6',
-  'inetNtop6',
-  'readSockaddr',
-  'writeSockaddr',
-  'emscriptenLog',
-  'runMainThreadEmAsm',
-  'jstoi_q',
-  'getExecutableName',
-  'listenOnce',
-  'autoResumeAudioContext',
-  'dynCallLegacy',
-  'getDynCaller',
-  'dynCall',
-  'asmjsMangle',
-  'HandleAllocator',
-  'getNativeTypeSize',
-  'STACK_SIZE',
-  'STACK_ALIGN',
-  'POINTER_SIZE',
-  'ASSERTIONS',
-  'uleb128Encode',
-  'generateFuncType',
-  'convertJsFunctionToWasm',
-  'getEmptyTableSlot',
-  'updateTableMap',
-  'getFunctionAddress',
-  'addFunction',
-  'removeFunction',
-  'reallyNegative',
-  'unSign',
-  'strLen',
-  'reSign',
-  'formatString',
-  'intArrayToString',
-  'AsciiToString',
-  'stringToAscii',
-  'UTF16ToString',
-  'stringToUTF16',
-  'lengthBytesUTF16',
-  'UTF32ToString',
-  'stringToUTF32',
-  'lengthBytesUTF32',
-  'stringToNewUTF8',
-  'registerKeyEventCallback',
-  'maybeCStringToJsString',
-  'findEventTarget',
-  'getBoundingClientRect',
-  'fillMouseEventData',
-  'registerMouseEventCallback',
-  'registerWheelEventCallback',
-  'registerUiEventCallback',
-  'registerFocusEventCallback',
-  'fillDeviceOrientationEventData',
-  'registerDeviceOrientationEventCallback',
-  'fillDeviceMotionEventData',
-  'registerDeviceMotionEventCallback',
-  'screenOrientation',
-  'fillOrientationChangeEventData',
-  'registerOrientationChangeEventCallback',
-  'fillFullscreenChangeEventData',
-  'registerFullscreenChangeEventCallback',
-  'JSEvents_requestFullscreen',
-  'JSEvents_resizeCanvasForFullscreen',
-  'registerRestoreOldStyle',
-  'hideEverythingExceptGivenElement',
-  'restoreHiddenElements',
-  'setLetterbox',
-  'softFullscreenResizeWebGLRenderTarget',
-  'doRequestFullscreen',
-  'fillPointerlockChangeEventData',
-  'registerPointerlockChangeEventCallback',
-  'registerPointerlockErrorEventCallback',
-  'requestPointerLock',
-  'fillVisibilityChangeEventData',
-  'registerVisibilityChangeEventCallback',
-  'registerTouchEventCallback',
-  'fillGamepadEventData',
-  'registerGamepadEventCallback',
-  'registerBeforeUnloadEventCallback',
-  'fillBatteryEventData',
-  'battery',
-  'registerBatteryEventCallback',
-  'setCanvasElementSize',
-  'getCanvasElementSize',
-  'jsStackTrace',
-  'getCallstack',
-  'convertPCtoSourceLocation',
-  'getEnvStrings',
-  'checkWasiClock',
-  'wasiRightsToMuslOFlags',
-  'wasiOFlagsToMuslOFlags',
-  'setImmediateWrapped',
-  'safeRequestAnimationFrame',
-  'clearImmediateWrapped',
-  'registerPostMainLoop',
-  'registerPreMainLoop',
-  'getPromise',
-  'makePromise',
-  'idsToPromises',
-  'makePromiseCallback',
-  'ExceptionInfo',
-  'findMatchingCatch',
-  'Browser_asyncPrepareDataCounter',
-  'isLeapYear',
-  'ydayFromDate',
-  'arraySum',
-  'addDays',
-  'getSocketFromFD',
-  'getSocketAddress',
-  'FS_mkdirTree',
-  '_setNetworkCallback',
-  'heapObjectForWebGLType',
-  'toTypedArrayIndex',
-  'webgl_enable_ANGLE_instanced_arrays',
-  'webgl_enable_OES_vertex_array_object',
-  'webgl_enable_WEBGL_draw_buffers',
-  'webgl_enable_WEBGL_multi_draw',
-  'webgl_enable_EXT_polygon_offset_clamp',
-  'webgl_enable_EXT_clip_control',
-  'webgl_enable_WEBGL_polygon_mode',
-  'emscriptenWebGLGet',
-  'computeUnpackAlignedImageSize',
-  'colorChannelsInGlTextureFormat',
-  'emscriptenWebGLGetTexPixelData',
-  'emscriptenWebGLGetUniform',
-  'webglGetUniformLocation',
-  'webglPrepareUniformLocationsBeforeFirstUse',
-  'webglGetLeftBracePos',
-  'emscriptenWebGLGetVertexAttrib',
-  '__glGetActiveAttribOrUniform',
-  'writeGLArray',
-  'registerWebGlEventCallback',
-  'ALLOC_NORMAL',
-  'ALLOC_STACK',
-  'allocate',
-  'writeStringToMemory',
-  'writeAsciiToMemory',
-  'setErrNo',
-  'demangle',
-  'stackTrace',
-];
-missingLibrarySymbols.forEach(missingLibrarySymbol)
-
-var unexportedSymbols = [
-  'run',
-  'addOnPreRun',
-  'addOnInit',
-  'addOnPreMain',
-  'addOnExit',
-  'addOnPostRun',
-  'out',
-  'err',
-  'callMain',
-  'abort',
-  'wasmMemory',
-  'wasmExports',
-  'writeStackCookie',
-  'checkStackCookie',
-  'INT53_MAX',
-  'INT53_MIN',
-  'bigintToI53Checked',
-  'stackSave',
-  'stackRestore',
-  'stackAlloc',
-  'ptrToString',
-  'zeroMemory',
-  'exitJS',
-  'getHeapMax',
-  'growMemory',
-  'ENV',
-  'ERRNO_CODES',
-  'strError',
-  'DNS',
-  'Protocols',
-  'Sockets',
-  'timers',
-  'warnOnce',
-  'readEmAsmArgsArray',
-  'readEmAsmArgs',
-  'runEmAsmFunction',
-  'jstoi_s',
-  'handleException',
-  'keepRuntimeAlive',
-  'runtimeKeepalivePush',
-  'runtimeKeepalivePop',
-  'callUserCallback',
-  'maybeExit',
-  'asyncLoad',
-  'alignMemory',
-  'mmapAlloc',
-  'wasmTable',
-  'noExitRuntime',
-  'getCFunc',
-  'sigToWasmTypes',
-  'freeTableIndexes',
-  'functionsInTableMap',
-  'UTF8Decoder',
-  'UTF8ArrayToString',
-  'stringToUTF8Array',
-  'intArrayFromString',
-  'UTF16Decoder',
-  'stringToUTF8OnStack',
-  'writeArrayToMemory',
-  'JSEvents',
-  'specialHTMLTargets',
-  'findCanvasEventTarget',
-  'currentFullscreenStrategy',
-  'restoreOldWindowedStyle',
-  'UNWIND_CACHE',
-  'ExitStatus',
-  'doReadv',
-  'doWritev',
-  'initRandomFill',
-  'randomFill',
-  'safeSetTimeout',
-  'emSetImmediate',
-  'emClearImmediate_deps',
-  'emClearImmediate',
-  'promiseMap',
-  'uncaughtExceptionCount',
-  'exceptionLast',
-  'exceptionCaught',
-  'Browser',
-  'getPreloadedImageData__data',
-  'wget',
-  'MONTH_DAYS_REGULAR',
-  'MONTH_DAYS_LEAP',
-  'MONTH_DAYS_REGULAR_CUMULATIVE',
-  'MONTH_DAYS_LEAP_CUMULATIVE',
-  'SYSCALLS',
-  'preloadPlugins',
-  'FS_modeStringToFlags',
-  'FS_getMode',
-  'FS_stdin_getChar_buffer',
-  'FS_stdin_getChar',
-  'FS_readFile',
-  'MEMFS',
-  'TTY',
-  'PIPEFS',
-  'SOCKFS',
-  'tempFixedLengthArray',
-  'miniTempWebGLFloatBuffers',
-  'miniTempWebGLIntBuffers',
-  'GL',
-  'AL',
-  'GLUT',
-  'EGL',
-  'GLEW',
-  'IDBStore',
-  'runAndAbortIfError',
-  'Asyncify',
-  'Fibers',
-  'SDL',
-  'SDL_gfx',
-  'allocateUTF8',
-  'allocateUTF8OnStack',
-  'print',
-  'printErr',
-  'IDBFS',
-];
-unexportedSymbols.forEach(unexportedRuntimeSymbol);
-
-
-
 var calledRun;
 
 function stackCheckInit() {
@@ -6351,6 +6444,7 @@ function run() {
 
     readyPromiseResolve(Module);
     Module['onRuntimeInitialized']?.();
+    consumedModuleProp('onRuntimeInitialized');
 
     assert(!Module['_main'], 'compiled without a main, but one is present. if you added it from JS, use Module["onRuntimeInitialized"]');
 
@@ -6409,13 +6503,17 @@ function checkUnflushedContent() {
   }
 }
 
-if (Module['preInit']) {
-  if (typeof Module['preInit'] == 'function') Module['preInit'] = [Module['preInit']];
-  while (Module['preInit'].length > 0) {
-    Module['preInit'].pop()();
+function preInit() {
+  if (Module['preInit']) {
+    if (typeof Module['preInit'] == 'function') Module['preInit'] = [Module['preInit']];
+    while (Module['preInit'].length > 0) {
+      Module['preInit'].shift()();
+    }
   }
+  consumedModuleProp('preInit');
 }
 
+preInit();
 run();
 
 // end include: postamble.js
@@ -6452,18 +6550,9 @@ for (const prop of Object.keys(Module)) {
 }
 );
 })();
-(() => {
-  // Create a small, never-async wrapper around _createMicroPythonModule which
-  // checks for callers incorrectly using it with `new`.
-  var real__createMicroPythonModule = _createMicroPythonModule;
-  _createMicroPythonModule = function(arg) {
-    if (new.target) throw new Error("_createMicroPythonModule() should not be called with `new _createMicroPythonModule()`");
-    return real__createMicroPythonModule(arg);
-  }
-})();
 export default _createMicroPythonModule;
 /*
- * This file is part of the MicroPython project, http://amyboard-20250409074218.org/
+ * This file is part of the MicroPython project, http://amyboard-20260106175641.org/
  *
  * The MIT License (MIT)
  *
@@ -6491,7 +6580,7 @@ export default _createMicroPythonModule;
 // Options:
 // - pystack: size in words of the MicroPython Python stack.
 // - heapsize: size in bytes of the MicroPython GC heap.
-// - url: location to load `amyboard-20250409074218.mjs`.
+// - url: location to load `amyboard-20260106175641.mjs`.
 // - stdin: function to return input characters.
 // - stdout: function that takes one argument, and is passed lines of stdout
 //   output as they are produced.  By default this is handled by Emscripten
@@ -6751,10 +6840,13 @@ export async function loadMicroPython(options) {
                 "tulip_tick", "null", ["number"], [tick], {async:true}
             );
         },
-        midiByte(byte) {
-            return Module.ccall(
-                "process_single_midi_byte", "null", ["number"], [byte], {async:true}
+        midiInHook(bytes, len, sysex) {
+            const midi_ptr_out = Module._malloc(len); // max midi message len
+            Module.HEAPU8.set(bytes, midi_ptr_out);
+            Module.ccall(
+                'tulip_midi_input_hook', null, ["number", "number", "number"], [midi_ptr_out, len, sysex]
             );
+            Module._free(midi_ptr_out);
         },
         // Needed if the GC/asyncify is enabled.
         async replProcessCharWithAsyncify(chr) {
@@ -6853,7 +6945,7 @@ if (
     typeof process.versions === "object" &&
     typeof process.versions.node === "string"
 ) {
-    // Check if this module is run from the command line via `node amyboard-20250409074218.mjs`.
+    // Check if this module is run from the command line via `node amyboard-20260106175641.mjs`.
     //
     // See https://stackoverflow.com/questions/6398196/detect-if-called-through-require-or-directly-by-command-line/66309132#66309132
     //
@@ -6877,7 +6969,7 @@ if (
 }
 
 /*
- * This file is part of the MicroPython project, http://amyboard-20250409074218.org/
+ * This file is part of the MicroPython project, http://amyboard-20260106175641.org/
  *
  * The MIT License (MIT)
  *
@@ -7118,7 +7210,7 @@ class PyProxyThenable {
     }
 }
 /*
- * This file is part of the MicroPython project, http://amyboard-20250409074218.org/
+ * This file is part of the MicroPython project, http://amyboard-20260106175641.org/
  *
  * The MIT License (MIT)
  *

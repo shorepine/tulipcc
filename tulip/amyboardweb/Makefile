@@ -56,9 +56,9 @@ INC += -I$(TOP)
 INC += -I$(BUILD)
 INC += -I$(VARIANT_DIR)
 
-CFLAGS += -Wall -Werror -Wdouble-promotion -Wfloat-conversion -DSTATIC=static -Wno-unused-variable -Wno-unused-function
+CFLAGS += -Wall -Werror -Wdouble-promotion -Wfloat-conversion -DSTATIC=static -Wno-unused-variable -Wno-unused-function -Wno-unterminated-string-initialization
 CFLAGS += -O3 -DNDEBUG
-CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
+CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wno-unterminated-string-initialization -Wno-double-promotion -Wfloat-conversion -Wno-missing-declarations  -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN)
 CFLAGS += -DAMYBOARD_WEB -DTULIP -DMA_ENABLE_AUDIO_WORKLETS -DAMY_IS_EXTERNAL -DMODULE_ULAB_ENABLED=1
 
