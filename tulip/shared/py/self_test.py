@@ -34,13 +34,13 @@ def self_test():
   time.sleep(0.5)  # Need a little longer to let inputs not see startup chime.
   rms = input_rms()
   print("Quiescent input rms: %6.2f" % rms, " " * 8, 
-        passfail(rms > 1.0 and rms < 4.0))
+        passfail(rms > 0.6 and rms < 2.0))
   # 2. Check that audio-in is large when output is large
   amy.send(osc=0, freq=440, vel=0.1)
   time.sleep(0.1)
   rms = input_rms()
   print("Active    input rms: %6.2f" % rms, " " * 8,
-        passfail(rms > 45.0 and rms < 60.0))
+        passfail(rms > 80.0 and rms < 120.0))
   # 3. Check MIDI loopback
   midi.config.reset()
   global rx_midi
