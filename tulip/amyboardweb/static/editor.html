@@ -1,0 +1,416 @@
+<!doctype html>
+<html class="h-100" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+    <meta name="description" content="AMYboard. The best synth for $29">
+    <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
+    <meta property="og:title" content="AMYboard. The best synth for $29">
+    <meta property="og:image" content="https://amyboard.com/img/tulip_hero.jpg">
+    <meta property="og:description" content="AMYboard. The best synth for $29">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@shorepinesound">
+    <meta name="twitter:creator" content="@shorepinesound">
+    <meta name="twitter:title" content="AMYboard. The best synth for $29">
+    <meta name="twitter:description" content="AMYboard. The best synth for $29">
+    <meta name="twitter:image" content="https://tulip.computer/img/tulip_hero.jpg">
+    <meta property="og:type" content="product" />
+    <meta property="og:url" content="https://amyboard.com/" />
+    <meta property="og:site_name" content="AMYboard" />
+    <meta property="product:price:amount" content="29.90" />
+    <meta property="product:price:currency" content="USD" />
+    <meta property="og:availability" content="instock" />
+    <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="img/favicon.png">
+    <meta name="author" content="shore pine sound systems">
+    <meta name="HandheldFriendly" content="true">
+    <title>AMYboard. Now available</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <link href="css/prism.css" rel="stylesheet" />
+
+    <style>
+      /* inter-300 - latin */
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 300;
+        font-display: swap;
+        src: local(''),
+          url('./fonts/inter-v12-latin-300.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('./fonts/inter-v12-latin-300.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+      }
+
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 500;
+        font-display: swap;
+        src: local(''),
+          url('./fonts/inter-v12-latin-500.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('./fonts/inter-v12-latin-500.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+      }
+
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 700;
+        font-display: swap;
+        src: local(''),
+          url('./fonts/inter-v12-latin-700.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
+          url('./fonts/inter-v12-latin-700.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
+      }
+
+      .knob-grid .ui-knob-container {
+        width: 96px;
+        height: 96px;
+        margin: 0 auto;
+        overflow: visible;
+      }
+
+      .amy-knob {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto;
+        touch-action: none;
+        user-select: none;
+      }
+
+      .amy-knob:focus-visible .amy-knob-face {
+        outline: 2px solid #f2c94c;
+        outline-offset: 4px;
+      }
+
+      .amy-knob-face {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        position: relative;
+        transform: rotate(var(--angle, 135deg));
+        background: radial-gradient(circle at 35% 35%, #515151 0%, #2c2c2c 55%, #1a1a1a 100%);
+        box-shadow: inset -6px -6px 12px rgba(0, 0, 0, 0.35),
+          inset 6px 6px 12px rgba(255, 255, 255, 0.06),
+          0 10px 20px rgba(0, 0, 0, 0.25);
+      }
+
+      .amy-knob-indicator {
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        width: 8px;
+        height: 8px;
+        background: #f2c94c;
+        border-radius: 50%;
+        transform: translateX(-50%);
+        box-shadow: 0 0 6px rgba(242, 201, 76, 0.7);
+      }
+
+      .amy-keyboard {
+        display: flex;
+        align-items: flex-end;
+        height: 140px;
+        position: relative;
+        user-select: none;
+      }
+
+      .amy-key {
+        position: relative;
+        border: 1px solid #111;
+        border-radius: 0 0 6px 6px;
+        cursor: pointer;
+        transition: transform 0.05s ease;
+      }
+
+      .amy-key.is-pressed {
+        transform: translateY(2px);
+      }
+
+      .amy-key-white {
+        background: #f8f8f8;
+        height: 140px;
+        width: 42px;
+        z-index: 1;
+      }
+
+      .amy-key-black {
+        background: #111;
+        height: 90px;
+        width: 26px;
+        position: absolute;
+        top: 0;
+        right: -13px;
+        z-index: 2;
+        border-radius: 0 0 4px 4px;
+      }
+
+      @media (min-width: 800px) {
+        .knob-col {
+          flex: 0 0 12.5%;
+          max-width: 12.5%;
+        }
+      }
+    </style>
+  </head>
+
+  <body data-bs-spy="scroll" data-bs-target="#navScroll">
+    <nav id="navScroll" class="navbar navbar-expand-lg navbar-light fixed-top scrolled" tabindex="0">
+      <div class="container">
+        <a class="navbar-brand pe-4 fs-4" href="/">
+          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
+          <span class="ms-1 fw-bolder">AMYboard</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link" href="#get" aria-label="Get an AMYboard">
+                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" />
+                Get an AMYboard
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://github.com/shorepine/amy">
+                <img src="img/github-mark.svg" width="24" height="24" /> Github
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://discord.com/invite/TzBFkUb8pG">
+                <img src="img/discord-mark-black.svg" width="24" height="24" /> Discord
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://tulip.computer/">
+                <img src="img/favicon.png" width="24" height="24" /> Tulip
+              </a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="your.html">
+                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" /> Your AMYboard online
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <main class="container pt-5 mt-5">
+      <div class="card border-0 bg-light shadow-sm mb-3">
+        <div class="card-body">
+          <form name="amyboard_settings">
+            <div class="row align-items-start">
+              <div class="col-md-auto align-top small" id="audioin_grow">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
+                  <label class="form-check-label" for="amy_audioin">Allow audio input</label>
+                </div>
+              </div>
+              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0">
+                <div id="midi-input-panel">
+                  <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                    <option selected>[Not available]</option>
+                  </select>
+                </div>
+              </div>
+              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0">
+                <div id="midi-output-panel">
+                  <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
+                    <option selected>[Not available]</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="card border-0 bg-light shadow-sm">
+        <div class="card-body">
+          <ul class="nav nav-tabs" id="editorTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="patch-tab" data-bs-toggle="tab" data-bs-target="#patch-pane" type="button" role="tab" aria-controls="patch-pane" aria-selected="true">Patch</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Environment</button>
+            </li>
+          </ul>
+          <div class="tab-content pt-4">
+            <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
+              <div class="row align-items-center mb-4">
+                <div class="col-12 col-md-4">
+                  <label class="form-label fw-semibold" for="patch-select">Patch</label>
+                  <select class="form-select" id="patch-select"></select>
+                </div>
+              </div>
+              <div class="row g-4 knob-grid" id="knob-grid"></div>
+            </div>
+            <div class="tab-pane fade" id="environment-pane" role="tabpanel" aria-labelledby="environment-tab">
+              <p class="lead">Environment controls will appear here. blha blah</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card border-0 bg-light shadow-sm mt-3">
+        <div class="card-body">
+          <div id="amy-keyboard" class="amy-keyboard"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="container small border-top">
+        <div class="row py-5 d-flex justify-content-between">
+          <div class="col-12 col-lg-6 col-xl-3 border-end p-5">
+            <img src="img/shorepine.svg" width="24" height="24" />
+            <address class="text-secondary mt-3">
+              <strong>shore pine sound systems</strong>
+            </address>
+            <ul class="nav flex-column">
+              <li class="nav-item">
+                <a class="nav-link link-secondary ps-0" aria-current="page" href="https://github.com/shorepine">Github</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link link-secondary ps-0" href="https://discord.com/invite/TzBFkUb8pG">Discord</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link link-secondary ps-0" href="https://instagram.com/shorepinesound">Instagram</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link link-secondary ps-0" href="mailto:brian@variogram.com">Email</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script src="js/aos.js"></script>
+    <script src="js/prism.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="patches.js"></script>
+    <script src="editor_knobs.js"></script>
+
+    <script>
+      AOS.init({
+        duration: 800,
+      });
+    </script>
+
+    <script>
+      let scrollpos = window.scrollY;
+      const header = document.querySelector(".navbar");
+      const header_height = header.offsetHeight;
+
+      const add_class_on_scroll = () => header.classList.add("scrolled", "shadow-sm");
+      const remove_class_on_scroll = () => header.classList.remove("scrolled", "shadow-sm");
+
+      window.addEventListener("scroll", function() {
+        scrollpos = window.scrollY;
+
+        if (scrollpos >= header_height) {
+          add_class_on_scroll();
+        } else {
+          remove_class_on_scroll();
+        }
+
+        console.log(scrollpos);
+      });
+    </script>
+    <script>
+      window.addEventListener("DOMContentLoaded", function() {
+        window.amy_knobs = [
+          { min_value: 0, max_value: 10, display_name: "VCF", default_value: 4 },
+          { min_value: 0, max_value: 1, display_name: "VCA", default_value: 0.7 },
+          { min_value: 0.1, max_value: 8, display_name: "LFO", default_value: 2.5 },
+          { min_value: 0, max_value: 100, display_name: "PWM", default_value: 35 },
+          { min_value: -12, max_value: 12, display_name: "TUNE", default_value: 0 },
+          { min_value: 0, max_value: 1, display_name: "MIX", default_value: 0.5 },
+          { min_value: 0, max_value: 1, display_name: "DRIVE", default_value: 0.2 },
+          { min_value: 0, max_value: 5, display_name: "REV", default_value: 1.5 },
+          { min_value: 0, max_value: 1, display_name: "NOISE", default_value: 0.1 },
+          { min_value: 0, max_value: 1, display_name: "RING", default_value: 0.3 },
+          { min_value: 0, max_value: 10, display_name: "MOD", default_value: 6 },
+          { min_value: 0, max_value: 1, display_name: "PAN", default_value: 0.5 },
+          { min_value: 0, max_value: 1, display_name: "SHAPE", default_value: 0.25 },
+          { min_value: 0, max_value: 12, display_name: "DEPTH", default_value: 3 },
+          { min_value: -5, max_value: 5, display_name: "DETUNE", default_value: 0 },
+          { min_value: 0, max_value: 1, display_name: "GLIDE", default_value: 0.15 }
+        ];
+        if (typeof init_knobs === "function") {
+          init_knobs(window.amy_knobs);
+        }
+        if (typeof init_patches_select === "function") {
+          init_patches_select("patch-select");
+        }
+        const keyboard = document.getElementById("amy-keyboard");
+        if (keyboard) {
+          const keyPattern = [
+            { note: "C", black: true },
+            { note: "D", black: true },
+            { note: "E", black: false },
+            { note: "F", black: true },
+            { note: "G", black: true },
+            { note: "A", black: true },
+            { note: "B", black: false }
+          ];
+          const startMidi = 48; // C3
+          const totalWhiteKeys = 14;
+          const whiteNotes = ["C", "D", "E", "F", "G", "A", "B"];
+          for (let i = 0; i < totalWhiteKeys; i += 1) {
+            const whiteKey = document.createElement("div");
+            whiteKey.className = "amy-key amy-key-white";
+            const noteName = whiteNotes[i % 7];
+            const octave = 3 + Math.floor((i + (noteName === "C" ? 0 : 0)) / 7);
+            const midi = startMidi + i * 2 - (i > 1 ? Math.floor((i + 1) / 7) : 0);
+            whiteKey.dataset.midi = String(midi);
+            whiteKey.dataset.note = `${noteName}${octave}`;
+            keyboard.appendChild(whiteKey);
+
+            const patternIndex = i % 7;
+            if (keyPattern[patternIndex].black) {
+              const blackKey = document.createElement("div");
+              blackKey.className = "amy-key amy-key-black";
+              const blackMidi = midi + 1;
+              const blackNote = `${keyPattern[patternIndex].note}#${octave}`;
+              blackKey.dataset.midi = String(blackMidi);
+              blackKey.dataset.note = blackNote;
+              whiteKey.appendChild(blackKey);
+            }
+          }
+
+          let pressedKey = null;
+
+          keyboard.addEventListener("pointerdown", function(event) {
+            const key = event.target.closest(".amy-key");
+            if (!key) return;
+            pressedKey = key;
+            pressedKey.classList.add("is-pressed");
+            const midi = Number(key.dataset.midi);
+            if (typeof window.onKeyboardNote === "function") {
+              window.onKeyboardNote(midi, key.dataset.note || "");
+            }
+          });
+
+          window.addEventListener("pointerup", function() {
+            if (pressedKey) {
+              pressedKey.classList.remove("is-pressed");
+              pressedKey = null;
+            }
+          });
+
+          window.addEventListener("pointercancel", function() {
+            if (pressedKey) {
+              pressedKey.classList.remove("is-pressed");
+              pressedKey = null;
+            }
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

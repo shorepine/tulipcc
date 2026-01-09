@@ -35,17 +35,14 @@
   <link rel="stylesheet" href="/css/all.css" id="treejs_styles">
   <script src="tree.js"></script>
   <link rel="stylesheet" href="treejs.css" id="treejs_styles">
-  <link rel="stylesheet" href="knobs.css">
-  <script src="knobs.js"></script>
+  <script src="editor_knobs.js"></script>
   <script src="./mini-coi.js" scope="./"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/webmidi@latest/dist/iife/webmidi.iife.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-  <link rel="stylesheet" href="xterm.css" />
-  <link rel="stylesheet" href="/css/amyrepl.css" />
-  <script type="text/javascript" src="xterm.js"></script>
+
 
   <!-- These filenames are replaced by the build system -->
   <script src="AMYBOARDMJS" type="module"></script>
@@ -87,6 +84,51 @@
 }
 
 </style>
+  <style>
+    .amy-knob {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .amy-knob:focus-visible .amy-knob-face {
+      outline: 2px solid #f2c94c;
+      outline-offset: 4px;
+    }
+
+    .amy-knob-face {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      position: relative;
+      transform: rotate(var(--angle, 210deg));
+      background: radial-gradient(circle at 35% 35%, #515151 0%, #2c2c2c 55%, #1a1a1a 100%);
+      box-shadow: inset -6px -6px 12px rgba(0, 0, 0, 0.35),
+        inset 6px 6px 12px rgba(255, 255, 255, 0.06),
+        0 10px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .amy-knob-indicator {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      width: 8px;
+      height: 8px;
+      background: #f2c94c;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      box-shadow: 0 0 6px rgba(242, 201, 76, 0.7);
+    }
+
+    @media (min-width: 800px) {
+      .knob-col {
+        flex: 0 0 12.5%;
+        max-width: 12.5%;
+      }
+    }
+  </style>
 
   </head>
 
@@ -149,33 +191,11 @@
 
 
     <script type="module">
-      term = new Terminal({rows:20,cols:80, fontSize:12, theme: { background: '#002b36' , foreground:'#ffffff' }});
-      term.open(document.getElementById('terminal'));
-      const stdoutWriter = (line) => {
-        // While it's called line, it's always one char, line[0].
-        // Writing a 10 to xterm does LF but not CR, so we use its writeln to LFCR
-        if(line[0]==10) {
-          term.writeln([0]);
-        } else {
-          term.write(line);
-        }
-      };
-
-      term.onKey(e => {
-        var code = e.key.charCodeAt(0);
-        mp.replProcessCharWithAsyncify(code).then((response) => {
-        });
-      });
-
       mp = await loadMicroPython({
-        stdout:stdoutWriter, 
         linebuffer: false,
         pystack: 64 * 1024, 
         heapsize: 8 * 1024 * 1024
       });
-
-      // Clear the terminal
-      await term.clear();
 
       // Tell MP to start serving a REPL
       await mp.replInit();
@@ -204,35 +224,12 @@
         lint: false,
       }); 
       editor.setSize(null,editor_height);
-    
-      // Load in the share code if given
-      const queryString = window.location.search;
-      const url_params = new URLSearchParams(queryString);
-      var share = url_params.get('share');
-      if(share != null) {
-        var bsCollapse = new bootstrap.Collapse(editorElement, { toggle: true });
-        show_editor();
-        try {
-          var code = await decompress(decodeURIComponent(share));
-          editor.setValue(code);
-          var fn = url_params.get('fn');
-          if(fn != null) {
-            document.getElementById('editor_filename').value = fn;
-          }
-          setTimeout(function () { editor.save() }, 100);
-          setTimeout(function () { editor.refresh() }, 250);
-          setTimeout(function () { window.scrollTo(0,0) }, 300);
-        } catch (e) {
-          console.log("Couldn't decode share");
-        }
-      }
     </script>
 
   <main>
    
 <div class="py-vh-5 w-100 overflow-hidden" id="more">
   <div class="container">
-
       <div class="px-2 maintulipview">
         <p>
           <button class="btn btn-sm btn-primary" type="button" id="showhideeditor" data-bs-toggle="collapse" data-bs-target="#collapseEditor" aria-expanded="true" aria-controls="collapseEditor" onclick="show_editor();">
@@ -289,31 +286,10 @@
             <canvas id="canvas" width=256 height=256/>
           </div>
           <div class="col-2">
-            <input id="cv-input-1"
-               name="cv-input-1"
-               type="range"
-               min="0" max="1000"
-               value="500"
-               data-angle-start="90"
-               data-angle-end="450"
-               data-indicator-auto-position="true"
-               data-indicator-auto-rotate="true"
-               data-indicator-radius="22"
-            />
-            <p id="cv-input-1-label" class='text-center small'>CV1: 0.0V</p>
-            <input id="cv-input-2"
-              name="cv-input-2"
-              type="range"
-              min="0" max="1000"
-              value="500"
-              data-angle-start="90"
-              data-angle-end="450"
-              data-indicator-auto-position="true"
-              data-indicator-auto-rotate="true"
-              data-indicator-radius="22"
-            />
-            <p id="cv-input-2-label" class='text-center small'>CV2: 0.0V</p>
-        </div>
+            <div id="cv-knob-grid" class="row g-3 justify-content-center"></div>
+            <p id="cv-input-1-label" class="text-center small mb-1">CV1: 0.0V</p>
+            <p id="cv-input-2-label" class="text-center small">CV2: 0.0V</p>
+          </div>
   
         <form name="amyboard_settings">
           <div class="row align-items-start pt-1">
@@ -506,9 +482,6 @@
     console.log(scrollpos)
   })
 </script>
-<script type="text/javascript" src="knob2.js"></script>
-
-
     <script language="javascript">     
       // On keypress or click anywhere, start audio worklet
       document.body.addEventListener('click', start_audio, true); 
@@ -550,15 +523,24 @@
       fill_examples();
 
       // Handle the CV knobs
-      ['cv-input-1', 'cv-input-2'].map((name) => {
-        KnobHelper.createKnobCSS(document.getElementById(name), name)
-      })
-      $('#cv-input-1').on('change', function knob_change(e) { 
-        change_cv(1, document.getElementById('cv-input-1').value);
-      });
-      $('#cv-input-2').on('change', function knob_change(e) { 
-        change_cv(2, document.getElementById('cv-input-2').value);
-      });
+      const cvGrid = document.getElementById("cv-knob-grid");
+      if (cvGrid) {
+        cvGrid.id = "knob-grid";
+        window.amy_knobs = [
+          { min_value: 0, max_value: 1, display_name: "CV1", default_value: 0 },
+          { min_value: 0, max_value: 1, display_name: "CV2", default_value: 0 }
+        ];
+        window.onKnobChange = function(index, value) {
+          change_cv(index + 1, value);
+          const label = document.getElementById(`cv-input-${index + 1}-label`);
+          if (label) {
+            label.textContent = `CV${index + 1}: ${value.toFixed(2)}V`;
+          }
+        };
+        if (typeof init_knobs === "function") {
+          init_knobs(window.amy_knobs);
+        }
+      }
 
     </script>
 
@@ -566,8 +548,6 @@
 
   </body>
 </html>
-
-
 
 
 
