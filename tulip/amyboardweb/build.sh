@@ -8,6 +8,8 @@ build_once() {
 
   timestamp=$(date +%Y%m%d%H%M%S)
 
+  python3 scripts/gen_amy_event_layout.py
+
   cd ../../amy
   make docs/amy.js
   cd ../tulip/amyboardweb
@@ -31,7 +33,7 @@ build_once() {
   cp build-standard/tulip/obj/micropython.mjs stage/amyboard-$timestamp.mjs
   cp build-standard/tulip/obj/micropython.data stage/amyboard-$timestamp.data
 
-  sed -i '' -e "s/AMYBOARDMJS/amyboard\-${timestamp}.mjs/g" -e "s/AMYJS/amy\-${timestamp}.js/g" stage/your.html
+  sed -i '' -e "s/AMYBOARDMJS/amyboard\-${timestamp}.mjs/g" -e "s/AMYJS/amy\-${timestamp}.js/g" stage/editor.html
   sed -i '' -e "s/amy.aw.js/amy\-${timestamp}.aw.js/g" -e "s/amy.wasm/amy\-${timestamp}.wasm/g" -e "s/amy.js/amy\-${timestamp}.js/g" stage/amy-$timestamp.js
   sed -i '' -e "s/micropython./amyboard\-${timestamp}./g" stage/amyboard-$timestamp.mjs
 }
@@ -42,11 +44,14 @@ import hashlib
 import os
 
 root = "static"
+ignore = {"amy_event_layout.js", "patches.js"}
 h = hashlib.sha1()
 for base, dirs, files in os.walk(root):
     dirs.sort()
     files.sort()
     for name in files:
+        if name in ignore:
+            continue
         path = os.path.join(base, name)
         try:
             st = os.stat(path)

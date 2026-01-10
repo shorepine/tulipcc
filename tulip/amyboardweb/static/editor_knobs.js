@@ -1,5 +1,6 @@
-function init_knobs(knobConfigs) {
-  const grid = document.getElementById("knob-grid");
+function init_knobs(knobConfigs, gridId) {
+  const targetId = gridId || "knob-grid";
+  const grid = document.getElementById(targetId);
   if (!grid || !Array.isArray(knobConfigs)) {
     return;
   }
@@ -48,6 +49,50 @@ function init_knobs(knobConfigs) {
   }
 
   knobConfigs.forEach(function(config, index) {
+    const colClass = targetId === "knob-grid" ? "col-6 col-md-3 text-center knob-col" : "col-6 text-center";
+    if (config.knob_type === "selection") {
+      const options = Array.isArray(config.options) ? config.options : [];
+      const defaultIndex = parseNumber(config.default_value, 0);
+      const clampedIndex = clamp(defaultIndex, 0, Math.max(options.length - 1, 0));
+      const displayName = config.display_name || `Select ${index + 1}`;
+
+      const col = document.createElement("div");
+      col.className = colClass;
+
+      const label = document.createElement("div");
+      label.className = "small mb-2";
+      label.textContent = displayName;
+
+      const selectWrap = document.createElement("div");
+      selectWrap.className = "amy-select";
+
+      const select = document.createElement("select");
+      select.size = Math.min(Math.max(options.length, 3), 6);
+      select.setAttribute("data-index", String(index));
+
+      options.forEach(function(option, optIndex) {
+        const opt = document.createElement("option");
+        opt.value = String(optIndex);
+        opt.textContent = String(option);
+        select.appendChild(opt);
+      });
+
+      select.value = String(clampedIndex);
+
+      select.addEventListener("change", function() {
+        const idx = parseNumber(select.value, 0);
+        if (typeof window.onKnobChange === "function") {
+          window.onKnobChange(index, idx);
+        }
+      });
+
+      selectWrap.appendChild(select);
+      col.appendChild(label);
+      col.appendChild(selectWrap);
+      grid.appendChild(col);
+      return;
+    }
+
     const min = parseNumber(config.min_value, 0);
     const max = parseNumber(config.max_value, 1);
     const defaultValue = parseNumber(config.default_value, min);
@@ -56,7 +101,7 @@ function init_knobs(knobConfigs) {
     const decimals = stepDecimals(step);
 
     const col = document.createElement("div");
-    col.className = "col-6 col-md-3 text-center knob-col";
+    col.className = colClass;
 
     const label = document.createElement("div");
     label.className = "small mb-2";

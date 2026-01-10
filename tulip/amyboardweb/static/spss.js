@@ -7,6 +7,7 @@ var amy_process_single_midi_byte = null;
 var audio_started = false;
 var amy_sysclock = null;
 var amyboard_started = false;
+var amy_parse_patch_number_to_events = null;
 
 var mp = null;
 var midiOutputDevice = null;
@@ -54,6 +55,9 @@ amyModule().then(async function(am) {
   amy_process_single_midi_byte = am.cwrap(
     'amy_process_single_midi_byte', null, ['number, number']
   );
+  amy_parse_patch_number_to_events = am.cwrap(
+    'parse_patch_number_to_events', null, ['number', 'number']
+  );
   amy_start_web_no_synths();
   amy_bleep(0); // won't play until live audio starts
   amy_module = am;
@@ -61,6 +65,147 @@ amyModule().then(async function(am) {
   res_ptr_out = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
 
 });
+
+// Converts AMY patch number to list of (JS converted) amy_events
+// This is to let us fill in the preset knobs
+function get_events_for_patch_number(patch_number) {
+  if (!amy_module || !amy_parse_patch_number_to_events) {
+    return [];
+  }
+
+  const layout = window.AMY_EVENT_LAYOUT;
+  if (!layout || !layout.constants || !layout.offsets) {
+    return [];
+  }
+
+  const NUM_COMBO_COEFS = layout.constants.NUM_COMBO_COEFS;
+  const MAX_BREAKPOINT_SETS = layout.constants.MAX_BREAKPOINT_SETS;
+  const MAX_ALGO_OPS = layout.constants.MAX_ALGO_OPS;
+  const MAX_VOICES_PER_INSTRUMENT = layout.constants.MAX_VOICES_PER_INSTRUMENT;
+  const MAX_PARAM_LEN = layout.constants.MAX_PARAM_LEN;
+  const MAX_EVENTS_PER_PATCH = layout.constants.MAX_EVENTS_PER_PATCH;
+  const EVENT_EMPTY = 0;
+  const offsets = layout.offsets;
+
+  const view = new DataView(amy_module.HEAPU8.buffer);
+
+  function readString(ptr, maxLen) {
+    let end = 0;
+    while (end < maxLen) {
+      if (view.getUint8(ptr + end) === 0) break;
+      end += 1;
+    }
+    let out = "";
+    for (let i = 0; i < end; i += 1) {
+      out += String.fromCharCode(view.getUint8(ptr + i));
+    }
+    return out;
+  }
+
+  function readFloatArray(ptr, count) {
+    const arr = new Array(count);
+    for (let i = 0; i < count; i += 1) {
+      arr[i] = view.getFloat32(ptr + i * 4, true);
+    }
+    return arr;
+  }
+
+  function readUint16Array(ptr, count) {
+    const arr = new Array(count);
+    for (let i = 0; i < count; i += 1) {
+      arr[i] = view.getUint16(ptr + i * 2, true);
+    }
+    return arr;
+  }
+
+  function readInt16Array(ptr, count) {
+    const arr = new Array(count);
+    for (let i = 0; i < count; i += 1) {
+      arr[i] = view.getInt16(ptr + i * 2, true);
+    }
+    return arr;
+  }
+
+  function readEvent(base) {
+    return {
+      time: view.getUint32(base + offsets.time, true),
+      osc: view.getUint16(base + offsets.osc, true),
+      wave: view.getUint16(base + offsets.wave, true),
+      preset: view.getInt16(base + offsets.preset, true),
+      midi_note: view.getFloat32(base + offsets.midi_note, true),
+      patch_number: view.getUint16(base + offsets.patch_number, true),
+      amp_coefs: readFloatArray(base + offsets.amp_coefs, NUM_COMBO_COEFS),
+      freq_coefs: readFloatArray(base + offsets.freq_coefs, NUM_COMBO_COEFS),
+      filter_freq_coefs: readFloatArray(base + offsets.filter_freq_coefs, NUM_COMBO_COEFS),
+      duty_coefs: readFloatArray(base + offsets.duty_coefs, NUM_COMBO_COEFS),
+      pan_coefs: readFloatArray(base + offsets.pan_coefs, NUM_COMBO_COEFS),
+      feedback: view.getFloat32(base + offsets.feedback, true),
+      velocity: view.getFloat32(base + offsets.velocity, true),
+      phase: view.getFloat32(base + offsets.phase, true),
+      detune: view.getFloat32(base + offsets.detune, true),
+      volume: view.getFloat32(base + offsets.volume, true),
+      pitch_bend: view.getFloat32(base + offsets.pitch_bend, true),
+      tempo: view.getFloat32(base + offsets.tempo, true),
+      latency_ms: view.getUint16(base + offsets.latency_ms, true),
+      ratio: view.getFloat32(base + offsets.ratio, true),
+      resonance: view.getFloat32(base + offsets.resonance, true),
+      portamento_ms: view.getUint16(base + offsets.portamento_ms, true),
+      chained_osc: view.getUint16(base + offsets.chained_osc, true),
+      mod_source: view.getUint16(base + offsets.mod_source, true),
+      algorithm: view.getUint8(base + offsets.algorithm),
+      filter_type: view.getUint8(base + offsets.filter_type),
+      eq_l: view.getFloat32(base + offsets.eq_l, true),
+      eq_m: view.getFloat32(base + offsets.eq_m, true),
+      eq_h: view.getFloat32(base + offsets.eq_h, true),
+      bp_is_set: readUint16Array(base + offsets.bp_is_set, MAX_BREAKPOINT_SETS),
+      algo_source: readInt16Array(base + offsets.algo_source, MAX_ALGO_OPS),
+      voices: readUint16Array(base + offsets.voices, MAX_VOICES_PER_INSTRUMENT),
+      bp0: readString(base + offsets.bp0, MAX_PARAM_LEN),
+      bp1: readString(base + offsets.bp1, MAX_PARAM_LEN),
+      eg_type: Array.from(amy_module.HEAPU8.subarray(base + offsets.eg_type, base + offsets.eg_type + MAX_BREAKPOINT_SETS)),
+      synth: view.getUint8(base + offsets.synth),
+      synth_flags: view.getUint32(base + offsets.synth_flags, true),
+      synth_delay_ms: view.getUint16(base + offsets.synth_delay_ms, true),
+      to_synth: view.getUint8(base + offsets.to_synth),
+      grab_midi_notes: view.getUint8(base + offsets.grab_midi_notes),
+      pedal: view.getUint8(base + offsets.pedal),
+      num_voices: view.getUint16(base + offsets.num_voices, true),
+      sequence: [
+        view.getUint32(base + offsets.sequence, true),
+        view.getUint32(base + offsets.sequence + 4, true),
+        view.getUint32(base + offsets.sequence + 8, true)
+      ],
+      status: view.getUint8(base + offsets.status),
+      note_source: view.getUint8(base + offsets.note_source),
+      reset_osc: view.getUint32(base + offsets.reset_osc, true)
+    };
+  }
+
+  const outPtr = amy_module._malloc(4);
+  if (!outPtr) {
+    return [];
+  }
+  amy_module.HEAPU32[outPtr >> 2] = 0;
+  amy_parse_patch_number_to_events(patch_number, outPtr);
+  const eventsPtr = amy_module.HEAPU32[outPtr >> 2];
+  amy_module._free(outPtr);
+  if (!eventsPtr) {
+    return [];
+  }
+
+  const events = [];
+  for (let i = 0; i < MAX_EVENTS_PER_PATCH; i += 1) {
+    const base = eventsPtr + i * layout.size;
+    const status = view.getUint8(base + offsets.status);
+    if (status === EVENT_EMPTY) {
+      break;
+    }
+    events.push(readEvent(base));
+  }
+
+  amy_module._free(eventsPtr);
+  return events;
+}
 
 // Called from AMY to update AMYboard about what tick it is, for the sequencer
 function amy_sequencer_js_hook(tick) {
