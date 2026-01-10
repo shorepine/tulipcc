@@ -1,4 +1,4 @@
-function init_knobs(knobConfigs, gridId) {
+function init_knobs(knobConfigs, gridId, onChange) {
   const targetId = gridId || "knob-grid";
   const grid = document.getElementById(targetId);
   if (!grid || !Array.isArray(knobConfigs)) {
@@ -43,7 +43,9 @@ function init_knobs(knobConfigs, gridId) {
   }
 
   function notifyKnobChange(index, value) {
-    if (typeof window.onKnobChange === "function") {
+    if (typeof onChange === "function") {
+      onChange(index, value);
+    } else if (typeof window.onKnobChange === "function") {
       window.onKnobChange(index, value);
     }
   }
@@ -81,9 +83,7 @@ function init_knobs(knobConfigs, gridId) {
 
       select.addEventListener("change", function() {
         const idx = parseNumber(select.value, 0);
-        if (typeof window.onKnobChange === "function") {
-          window.onKnobChange(index, idx);
-        }
+        notifyKnobChange(index, idx);
       });
 
       selectWrap.appendChild(select);

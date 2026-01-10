@@ -56,7 +56,7 @@ amyModule().then(async function(am) {
     'amy_process_single_midi_byte', null, ['number, number']
   );
   amy_parse_patch_number_to_events = am.cwrap(
-    'parse_patch_number_to_events', null, ['number', 'number']
+    'parse_patch_number_to_events', null, ['number', 'number', 'number']
   );
   amy_start_web_no_synths();
   amy_bleep(0); // won't play until live audio starts
@@ -87,7 +87,12 @@ function get_events_for_patch_number(patch_number) {
   const EVENT_EMPTY = 0;
   const offsets = layout.offsets;
 
-  const view = new DataView(amy_module.HEAPU8.buffer);
+  const heapU8 = amy_module.HEAPU8;
+  if (!heapU8) {
+    return [];
+  }
+  const heapU32 = amy_module.HEAPU32 || new Uint32Array(heapU8.buffer);
+  const view = new DataView(heapU8.buffer);
 
   function readString(ptr, maxLen) {
     let end = 0;
@@ -182,19 +187,28 @@ function get_events_for_patch_number(patch_number) {
   }
 
   const outPtr = amy_module._malloc(4);
+  const countPtr = amy_module._malloc(2);
   if (!outPtr) {
     return [];
   }
-  amy_module.HEAPU32[outPtr >> 2] = 0;
-  amy_parse_patch_number_to_events(patch_number, outPtr);
-  const eventsPtr = amy_module.HEAPU32[outPtr >> 2];
+  if (!countPtr) {
+    amy_module._free(outPtr);
+    return [];
+  }
+  heapU32[outPtr >> 2] = 0;
+  view.setUint16(countPtr, 0, true);
+  amy_parse_patch_number_to_events(patch_number, outPtr, countPtr);
+  const eventsPtr = heapU32[outPtr >> 2];
+  const eventCount = view.getUint16(countPtr, true);
   amy_module._free(outPtr);
+  amy_module._free(countPtr);
   if (!eventsPtr) {
     return [];
   }
 
   const events = [];
-  for (let i = 0; i < MAX_EVENTS_PER_PATCH; i += 1) {
+  const limit = eventCount;
+  for (let i = 0; i < limit; i += 1) {
     const base = eventsPtr + i * layout.size;
     const status = view.getUint8(base + offsets.status);
     if (status === EVENT_EMPTY) {
@@ -218,6 +232,10 @@ async function clear_storage() {
     location.reload(true);
   }
 }
+
+window.amy_cv_knob_change = function(index, value) {
+  
+};
 
 async function amy_external_midi_input_js_hook(bytes, len, sysex) {
     mp.midiInHook(bytes, len, sysex);
@@ -518,17 +536,6 @@ async function fill_tree() {
 }
 
 
-async function change_cv(which, value) {
-    voltage = (value / 1000.0) * 10.0 - 5.0;
-    voltage_string = voltage.toFixed(2).toString();
-    if(which==1) {
-        document.getElementById('cv-input-1-label').innerHTML = 'CV1: ' + voltage_string + 'V'
-        cv_1_voltage = voltage;
-    } else {
-        document.getElementById('cv-input-2-label').innerHTML = 'CV2: ' + voltage_string + 'V'        
-        cv_2_voltage = voltage;
-    }
-}
 
 // Create a js File object and upload it to the TW proxy API. This is easier to do here than in python
 async function amyboard_world_upload_file(pwd, filename, username, description) {

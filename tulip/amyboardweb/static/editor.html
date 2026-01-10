@@ -494,10 +494,14 @@
           { min_value: -10, max_value: 10, display_name: "CV1", default_value: 0 },
           { min_value: -10, max_value: 10, display_name: "CV2", default_value: 0 }
         ];
-        init_knobs(window.amy_cv_knobs, "cv-knob-grid");
+        init_knobs(window.amy_cv_knobs, "cv-knob-grid", function(index, value) {
+          if (typeof window.amy_cv_knob_change === "function") {
+            window.amy_cv_knob_change(index, value);
+          }
+        });
       }
 
-      editor.refresh();
+      if(editor) editor.refresh();
       editor_shown = true;
     </script>
     <script>
