@@ -46,6 +46,7 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="examples.js"></script>
     <script type="text/javascript" src="amy_event_layout.js"></script>
+    <script type="text/javascript" src="amy_parameters.js"></script>
     <script type="text/javascript" src="spss.js"></script>
 
     <style>
@@ -124,6 +125,11 @@
         box-shadow: 0 0 6px rgba(242, 201, 76, 0.7);
       }
 
+      .amy-knob-indicator-log {
+        background: #7fd3ff;
+        box-shadow: 0 0 6px rgba(127, 211, 255, 0.75);
+      }
+
       .amy-select {
         width: 112px;
         margin: 0 auto;
@@ -183,10 +189,10 @@
       .amy-key-black {
         background: #111;
         height: 90px;
-        width: 26px;
+        width: 42px;
         position: absolute;
         top: 0;
-        right: -13px;
+        right: -21px;
         z-index: 2;
         border-radius: 0 0 4px 4px;
       }
@@ -195,6 +201,36 @@
         .knob-col {
           flex: 0 0 12.5%;
           max-width: 12.5%;
+        }
+      }
+
+      .knob-section-header {
+        text-align: center;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #f2f2f2;
+        background: #2b2b2b;
+        border-radius: 10px;
+        padding: 6px 12px;
+        margin: 10px 0 4px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      .knob-section {
+        flex: 0 0 100%;
+        max-width: 100%;
+      }
+
+      @media (min-width: 800px) {
+        .knob-section {
+          flex: 0 0 min(100%, calc(var(--knob-count, 8) * 12.5%));
+          max-width: min(100%, calc(var(--knob-count, 8) * 12.5%));
+        }
+        .knob-section .knob-col {
+          flex: 0 0 calc(100% / var(--knob-count, 8));
+          max-width: calc(100% / var(--knob-count, 8));
         }
       }
     </style>
@@ -506,30 +542,6 @@
     </script>
     <script>
       window.addEventListener("DOMContentLoaded", function() {
-        window.amy_knobs = [
-          { knob_type: "selection", display_name: "WAVE", options: ["SINE", "PULSE", "SAW_DOWN", "SAW_UP", "TRIANGLE", "NOISE", "KS", "PCM", "ALGO", "PARTIAL", "BYO_PARTIALS", "INTERP_PARTIALS", "AUDIO_IN0", "AUDIO_IN1", "AUDIO_EXT0", "AUDIO_EXT1", "AMY_MIDI", "PCM_LEFT", "PCM_RIGHT", "CUSTOM", "WAVE_OFF"], default_value: 0 },
-          { min_value: 0, max_value: 10, display_name: "VCF", default_value: 4 },
-          { min_value: 0, max_value: 1, display_name: "VCA", default_value: 0.7 },
-          { min_value: 0.1, max_value: 8, display_name: "LFO", default_value: 2.5 },
-          { min_value: 0, max_value: 100, display_name: "PWM", default_value: 35 },
-          { min_value: -12, max_value: 12, display_name: "TUNE", default_value: 0 },
-          { min_value: 0, max_value: 1, display_name: "MIX", default_value: 0.5 },
-          { min_value: 0, max_value: 1, display_name: "DRIVE", default_value: 0.2 },
-          { min_value: 0, max_value: 5, display_name: "REV", default_value: 1.5 },
-          { min_value: 0, max_value: 1, display_name: "NOISE", default_value: 0.1 },
-          { min_value: 0, max_value: 1, display_name: "RING", default_value: 0.3 },
-          { min_value: 0, max_value: 10, display_name: "MOD", default_value: 6 },
-          { min_value: 0, max_value: 1, display_name: "PAN", default_value: 0.5 },
-          { min_value: 0, max_value: 1, display_name: "SHAPE", default_value: 0.25 },
-          { min_value: 0, max_value: 12, display_name: "DEPTH", default_value: 3 },
-          { min_value: -5, max_value: 5, display_name: "DETUNE", default_value: 0 },
-        ];
-        if (typeof init_knobs === "function") {
-          init_knobs(window.amy_knobs);
-        }
-        if (typeof init_patches_select === "function") {
-          init_patches_select("patch-select");
-        }
         const keyboard = document.getElementById("amy-keyboard");
         if (keyboard) {
           const keyPattern = [
@@ -574,6 +586,9 @@
             pressedKey = key;
             pressedKey.classList.add("is-pressed");
             const midi = Number(key.dataset.midi);
+            if (Number.isFinite(midi)) {
+              amy_add_message("i1l1n" + midi);
+            }
             if (typeof window.onKeyboardNote === "function") {
               window.onKeyboardNote(midi, key.dataset.note || "");
             }
@@ -581,6 +596,10 @@
 
           window.addEventListener("pointerup", function() {
             if (pressedKey) {
+              const midi = Number(pressedKey.dataset.midi);
+              if (Number.isFinite(midi)) {
+                amy_add_message("i1l0n" + midi);
+              }
               pressedKey.classList.remove("is-pressed");
               pressedKey = null;
             }

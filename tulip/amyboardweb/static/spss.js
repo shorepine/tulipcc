@@ -21,6 +21,8 @@ var term = null;
 var cv_1_voltage = 0;
 var cv_2_voltage = 0;
 var amy_module = null;
+var pendingPatchKnobIndex = null;
+var patchKnobSyncAttempts = 0;
 
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
@@ -63,7 +65,7 @@ amyModule().then(async function(am) {
   amy_module = am;
   res_ptr_in = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
   res_ptr_out = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
-
+  attemptPatchKnobSync();
 });
 
 // Converts AMY patch number to list of (JS converted) amy_events
@@ -220,6 +222,39 @@ function get_events_for_patch_number(patch_number) {
   amy_module._free(eventsPtr);
   return events;
 }
+
+function attemptPatchKnobSync() {
+  if (pendingPatchKnobIndex === null) {
+    return;
+  }
+  if (!audio_started) {
+    return;
+  }
+  if (!amy_module || !Array.isArray(window.amy_knobs)) {
+    if (patchKnobSyncAttempts < 60) {
+      patchKnobSyncAttempts += 1;
+      setTimeout(attemptPatchKnobSync, 50);
+    }
+    return;
+  }
+  patchKnobSyncAttempts = 0;
+  set_knobs_from_patch_number(pendingPatchKnobIndex);
+}
+
+function requestPatchKnobSync(patchIndex) {
+  pendingPatchKnobIndex = patchIndex;
+  if (audio_started) {
+    attemptPatchKnobSync();
+  }
+}
+
+window.onPatchChange = function(patchIndex) {
+  requestPatchKnobSync(patchIndex);
+};
+
+window.addEventListener("DOMContentLoaded", function() {
+  requestPatchKnobSync(0);
+});
 
 // Called from AMY to update AMYboard about what tick it is, for the sequencer
 function amy_sequencer_js_hook(tick) {
@@ -678,4 +713,5 @@ async function start_audio() {
       await amy_live_start_web();    
   }
   audio_started = true;
+  attemptPatchKnobSync();
 }

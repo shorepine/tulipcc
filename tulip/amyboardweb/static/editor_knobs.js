@@ -30,27 +30,23 @@ function init_knobs(knobConfigs, gridId, onChange) {
     return Math.max(span / 1000, 0.0001);
   }
 
-  function stepDecimals(step) {
-    const text = String(step);
-    if (text.includes(".")) {
-      return text.split(".")[1].length;
-    }
-    return 0;
-  }
-
   function formatValue(value, decimals) {
     return value.toFixed(decimals);
   }
 
-  function notifyKnobChange(index, value) {
+  function notifyKnobChange(index, value, config, options) {
     if (typeof onChange === "function") {
       onChange(index, value);
     } else if (typeof window.onKnobChange === "function") {
       window.onKnobChange(index, value);
     }
+    const notifyAmy = !options || options.notifyAmy !== false;
+    if (notifyAmy && config && typeof config.onChange === "function") {
+      config.onChange(value);
+    }
   }
 
-  knobConfigs.forEach(function(config, index) {
+  function renderKnob(config, index, targetGrid) {
     const colClass = targetId === "knob-grid" ? "col-6 col-md-3 text-center knob-col" : "col-6 text-center";
     if (config.knob_type === "selection") {
       const options = Array.isArray(config.options) ? config.options : [];
@@ -83,22 +79,25 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
       select.addEventListener("change", function() {
         const idx = parseNumber(select.value, 0);
-        notifyKnobChange(index, idx);
+        notifyKnobChange(index, idx, config, { notifyAmy: true });
       });
 
       selectWrap.appendChild(select);
       col.appendChild(label);
       col.appendChild(selectWrap);
-      grid.appendChild(col);
+      targetGrid.appendChild(col);
       return;
     }
 
-    const min = parseNumber(config.min_value, 0);
-    const max = parseNumber(config.max_value, 1);
+    const isLogKnob = config.knob_type === "log";
+    const logRange = parseNumber(config.range, 1);
+    const logOffset = parseNumber(config.offset, 1);
+    const min = isLogKnob ? 0 : parseNumber(config.min_value, 0);
+    const max = isLogKnob ? 1 : parseNumber(config.max_value, 1);
     const defaultValue = parseNumber(config.default_value, min);
     const displayName = config.display_name || `Knob ${index + 1}`;
     const step = getStep(min, max);
-    const decimals = stepDecimals(step);
+    const displayDecimals = 3;
 
     const col = document.createElement("div");
     col.className = colClass;
@@ -110,8 +109,6 @@ function init_knobs(knobConfigs, gridId, onChange) {
     const knob = document.createElement("div");
     knob.className = "amy-knob";
     knob.setAttribute("role", "slider");
-    knob.setAttribute("aria-valuemin", String(min));
-    knob.setAttribute("aria-valuemax", String(max));
     knob.setAttribute("tabindex", "0");
 
     const face = document.createElement("div");
@@ -119,6 +116,9 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
     const indicator = document.createElement("div");
     indicator.className = "amy-knob-indicator";
+    if (isLogKnob) {
+      indicator.classList.add("amy-knob-indicator-log");
+    }
 
     face.appendChild(indicator);
     knob.appendChild(face);
@@ -126,14 +126,34 @@ function init_knobs(knobConfigs, gridId, onChange) {
     const number = document.createElement("input");
     number.className = "form-control form-control-sm knob-value mt-2 text-center";
     number.type = "number";
-    number.min = String(min);
-    number.max = String(max);
-    number.step = String(step);
+    function logOutputFor(value) {
+      return logOffset * Math.exp(logRange * value) - logOffset;
+    }
+
+    const displayRange = (function() {
+      if (!isLogKnob) {
+        return { min: min, max: max };
+      }
+      const outMin = logOutputFor(min);
+      const outMax = logOutputFor(max);
+      if (!Number.isFinite(outMin) || !Number.isFinite(outMax)) {
+        return { min: 0, max: 1 };
+      }
+      return { min: Math.min(outMin, outMax), max: Math.max(outMin, outMax) };
+    })();
+
+    const displayStep = getStep(displayRange.min, displayRange.max);
+
+    knob.setAttribute("aria-valuemin", String(displayRange.min));
+    knob.setAttribute("aria-valuemax", String(displayRange.max));
+    number.min = String(displayRange.min);
+    number.max = String(displayRange.max);
+    number.step = String(displayStep);
 
     col.appendChild(label);
     col.appendChild(knob);
     col.appendChild(number);
-    grid.appendChild(col);
+    targetGrid.appendChild(col);
 
     const angleStart = 210;
     const angleEnd = 510;
@@ -154,19 +174,38 @@ function init_knobs(knobConfigs, gridId, onChange) {
       return angleStart + clamp(normalized, 0, 1) * angleSpan;
     }
 
-    function setValue(nextValue, commit) {
+    function outputToValue(output) {
+      if (!Number.isFinite(output)) {
+        return state.value;
+      }
+      if (logRange === 0 || logOffset === 0) {
+        return output === 0 ? min : state.value;
+      }
+      const ratio = (output + logOffset) / logOffset;
+      if (!Number.isFinite(ratio) || ratio <= 0) {
+        return state.value;
+      }
+      const raw = Math.log(ratio) / logRange;
+      if (!Number.isFinite(raw)) {
+        return state.value;
+      }
+      return clamp(raw, min, max);
+    }
+
+    function setValue(nextValue, commit, notifyAmy) {
       const clamped = clamp(nextValue, min, max);
       state.value = clamped;
       const angle = valueToAngle(clamped);
       face.style.setProperty("--angle", `${angle}deg`);
-      knob.setAttribute("aria-valuenow", formatValue(clamped, decimals));
+      const outputValue = isLogKnob ? logOutputFor(clamped) : clamped;
+      knob.setAttribute("aria-valuenow", formatValue(outputValue, displayDecimals));
       if (commit) {
-        number.value = formatValue(clamped, decimals);
+        number.value = formatValue(outputValue, displayDecimals);
       }
-      notifyKnobChange(index, clamped);
+      notifyKnobChange(index, outputValue, config, { notifyAmy: notifyAmy });
     }
 
-    setValue(state.value, true);
+    setValue(state.value, true, false);
 
     knob.addEventListener("pointerdown", function(event) {
       event.preventDefault();
@@ -182,7 +221,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
       const dx = event.clientX - state.startX;
       const dy = event.clientY - state.startY;
       const delta = (-dy + dx) * state.dragStep;
-      setValue(state.startValue + delta, true);
+      setValue(state.startValue + delta, true, true);
     });
 
     knob.addEventListener("pointerup", function(event) {
@@ -205,30 +244,91 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
     number.addEventListener("keydown", function(event) {
       if (event.key === "Enter") {
-        const parsed = parseNumber(number.value, state.value);
-        setValue(parsed, true);
+        const parsed = parseNumber(number.value, isLogKnob ? logOutputFor(state.value) : state.value);
+        const rawValue = isLogKnob ? outputToValue(parsed) : parsed;
+        setValue(rawValue, true, true);
       }
     });
 
     number.addEventListener("change", function() {
-      const parsed = parseNumber(number.value, state.value);
-      setValue(parsed, true);
+      const parsed = parseNumber(number.value, isLogKnob ? logOutputFor(state.value) : state.value);
+      const rawValue = isLogKnob ? outputToValue(parsed) : parsed;
+      setValue(rawValue, true, true);
     });
 
     number.addEventListener("blur", function() {
-      const parsed = parseNumber(number.value, state.value);
-      setValue(parsed, true);
+      const parsed = parseNumber(number.value, isLogKnob ? logOutputFor(state.value) : state.value);
+      const rawValue = isLogKnob ? outputToValue(parsed) : parsed;
+      setValue(rawValue, true, true);
     });
 
     knob.addEventListener("keydown", function(event) {
       if (event.key === "ArrowUp" || event.key === "ArrowRight") {
         event.preventDefault();
-        setValue(state.value + step, true);
+        setValue(state.value + step, true, true);
       }
       if (event.key === "ArrowDown" || event.key === "ArrowLeft") {
         event.preventDefault();
-        setValue(state.value - step, true);
+        setValue(state.value - step, true, true);
       }
     });
+  }
+
+  const sections = [];
+  let currentSection = null;
+
+  knobConfigs.forEach(function(config, index) {
+    const sectionName = typeof config.section === "string" ? config.section : "";
+    if (!currentSection || currentSection.name !== sectionName) {
+      currentSection = { name: sectionName, items: [] };
+      sections.push(currentSection);
+    }
+    currentSection.items.push({ config: config, index: index });
   });
+
+  sections.forEach(function(section) {
+    const sectionWrap = document.createElement("div");
+    sectionWrap.className = "col-12 knob-section";
+    sectionWrap.style.setProperty("--knob-count", String(section.items.length));
+
+    const header = document.createElement("div");
+    header.className = "knob-section-header";
+    header.textContent = section.name || "";
+
+    const sectionGrid = document.createElement("div");
+    sectionGrid.className = targetId === "knob-grid" ? "row g-4 knob-section-grid" : "row g-3 knob-section-grid";
+
+    sectionWrap.appendChild(header);
+    sectionWrap.appendChild(sectionGrid);
+    grid.appendChild(sectionWrap);
+
+    section.items.forEach(function(item) {
+      renderKnob(item.config, item.index, sectionGrid);
+    });
+  });
+}
+
+function set_amy_knob_value(knobs, name, value) {
+  if (!Array.isArray(knobs) || !Number.isFinite(value)) {
+    return false;
+  }
+  const knob = knobs.find((entry) => entry.display_name === name);
+  if (!knob) {
+    return false;
+  }
+  if (knob.knob_type === "log") {
+    const offset = Number(knob.offset);
+    const range = Number(knob.range);
+    if (!Number.isFinite(offset) || !Number.isFinite(range) || offset === 0 || range === 0) {
+      return false;
+    }
+    const ratio = (value + offset) / offset;
+    if (!Number.isFinite(ratio) || ratio <= 0) {
+      return false;
+    }
+    knob.default_value = Math.log(ratio) / range;
+  } else {
+    knob.default_value = value;
+  }
+  return true;
 }
