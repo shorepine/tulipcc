@@ -295,21 +295,21 @@ def do_key(c):
         sound_type = 3  
         sound_number = 0    
         amy.reset()
-        tulip_analog_synth = midi.Synth(num_voices = 1, patch_number = 0)
+        tulip_analog_synth = midi.Synth(num_voices = 1, patch = 0)
         play = True
     elif char == '5':
         note_length = 0.25
         sound_type = 4  
         sound_number = 128
         amy.reset()
-        tulip_analog_synth = midi.Synth(num_voices = 1, patch_number = 0)
+        tulip_analog_synth = midi.Synth(num_voices = 1, patch = 0)
         play = True
     elif char == '6':
         note_length = 0.25
         sound_type = 5
         sound_number = 256
         amy.reset()
-        tulip_analog_synth = midi.Synth(num_voices = 1, patch_number = 0)
+        tulip_analog_synth = midi.Synth(num_voices = 1, patch = 0)
         play = True
     #elif c in [259,260,261]:
     elif char in [',','.', ' ']:
@@ -571,7 +571,7 @@ def process_key( key ):
             note_num = 36 + 12 * math.log( ratio ) / math.log( 2 )
             print( f"note_num: {note_num}" )
                   
-            amy.send(voices=0,patch_number=patch_num,note=note_num,vel=1)
+            amy.send(voices=0,patch=patch_num,note=note_num,vel=1)
             
         pass
     
@@ -601,7 +601,7 @@ def process_key( key ):
 
 
 patch_num = 129
-amy.send(voices=0,patch_number=patch_num,note=45,vel=1)
+amy.send(voices=0,patch=patch_num,note=45,vel=1)
 
 tulip.key_scan(1)
 tulip.keyboard_callback( process_key )
