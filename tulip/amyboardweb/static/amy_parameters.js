@@ -3,56 +3,53 @@ window.addEventListener("DOMContentLoaded", function() {
   window.amy_knobs = [
     {
       section: "VCF",
-      knob_type: "log",
       display_name: "freq_const",
+      knob_type: "log",
       default_value: 0,
       offset: 200,
-      range: 5,
+      range: 2.8,
       onChange: function(value) {
         amy_add_message("i1F" + value);
       }
     },
     {
       section: "VCF",
-      knob_type: "log",
       display_name: "freq_note",
       default_value: 0,
-      offset: 200,
-      range: 5,
+      min_value: 0,
+      max_value: 1,
       onChange: function(value) {
         amy_add_message("i1F," + value);
       }
     },
     {
       section: "VCF",
-      knob_type: "log",
       display_name: "freq_eg0",
       default_value: 0,
-      offset: 200,
-      range: 5,
+      min_value: 0,
+      max_value: 10,
       onChange: function(value) {
         amy_add_message("i1F,,," + value);
       }
     },
     {
       section: "VCF",
-      min_value: 0,
-      max_value: 4,
       display_name: "resonance",
-      default_value: 0,
+      knob_type: "log",
+      default_value: 0.7,
+      offset: 0.7,
+      range: 2.8,
       onChange: function(value) {
         amy_add_message("i1R" + value);
       }
     },
     { 
       section: "ADSR", 
-      knob_type: "log", 
       display_name: "attack", 
-      range: 7, 
-      offset: 1, 
-      default_value: 0 ,
+      min_value: 0,
+      max_value: 1000,
       onChange: function(value) {
-        amy_add_message("i1A"+value+",1");
+        amy_add_message("i1A"+Math.round(value)+",1,,,,0");
       }
     },
     { 
@@ -60,27 +57,32 @@ window.addEventListener("DOMContentLoaded", function() {
       knob_type: "log", 
       display_name: "decay", 
       range: 7, 
-      offset: 1, 
-      default_value: 0,
+      offset: 50,
+      default_value: 100,
       onChange: function(value) {
-        amy_add_message("i1A,,"+value+",0");
+        amy_add_message("i1A,1,"+value+",,,0");
       }
     },
     { 
       section: "ADSR", 
-      knob_type: "log", 
       display_name: "sustain", 
-      range: 7, 
-      offset: 1, 
-      default_value: 0 
+      min_value: 0,
+      max_value: 1,
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("i1A,1,,"+value+",,0");
+      }
     },
     { 
       section: "ADSR", 
       knob_type: "log", 
       display_name: "release", 
       range: 7, 
-      offset: 1, 
-      default_value: 0 
+      offset: 50,
+      default_value: 100,
+      onChange: function(value) {
+        amy_add_message("i1A,1,,,"+value+",0");
+      }
     },
     { 
       section: "OSC", 
@@ -109,8 +111,8 @@ function set_knobs_from_patch_number(patch_number) {
 
   let filterEvent = null;
   let resonanceValue = null;
-  let bp0Values = null;
   let bp0Times = null;
+  let bp0Values = null;
 
   for (const event of events) {
     if (!filterEvent && Array.isArray(event.filter_freq_coefs)) {
@@ -119,8 +121,8 @@ function set_knobs_from_patch_number(patch_number) {
         filterEvent = event;
       }
     }
-
-    if (!bp0Values && event.bp0 && typeof event.bp0 === "string") {
+    // DON'T pick up the envelope of the LFO (osc 4).
+    if (!bp0Values && event.bp0 && event.osc != 4 && typeof event.bp0 === "string") {
       // split the comma separated bp0 values and check if any are finite numbers
       const values = event.bp0.split(",").map(parseFloat);
       // values is time,value pairs, we want the a list of bp0Values and bp0Times
@@ -144,7 +146,7 @@ function set_knobs_from_patch_number(patch_number) {
     if (resonanceValue === null && Number.isFinite(event.resonance)) {
       resonanceValue = event.resonance;
     }
-    if (filterEvent && resonanceValue !== null) {
+    if (filterEvent && resonanceValue !== null && bp0Values) {
       break;
     }
   }
@@ -166,6 +168,8 @@ function set_knobs_from_patch_number(patch_number) {
     const bp0T = bp0Times;
     didUpdate = set_amy_knob_value(window.amy_knobs, "attack", bp0T[0]) || didUpdate;
     didUpdate = set_amy_knob_value(window.amy_knobs, "decay", bp0T[1]) || didUpdate;
+    didUpdate = set_amy_knob_value(window.amy_knobs, "sustain", bp0V[1]) || didUpdate;
+    didUpdate = set_amy_knob_value(window.amy_knobs, "release", bp0T[2]) || didUpdate;
   }
 
   if (didUpdate && typeof init_knobs === "function") {
