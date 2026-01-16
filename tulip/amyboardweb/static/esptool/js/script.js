@@ -54,10 +54,10 @@ document.addEventListener("DOMContentLoaded", () => {
         butClear.addEventListener("click", clickClear);
     }
     if (butErase) {
-        butErase.addEventListener("click", () => flashFromUrl(0));
+        butErase.addEventListener("click", () => flashFromUrl(1));
     }
     if (butProgram) {
-        butProgram.addEventListener("click", () => flashFromUrl(1));
+        butProgram.addEventListener("click", () => flashFromUrl(0));
     }
     if (autoscroll) {
         autoscroll.addEventListener("click", clickAutoscroll);
