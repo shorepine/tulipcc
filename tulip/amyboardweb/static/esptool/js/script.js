@@ -20,19 +20,19 @@ const noReset = document.getElementById("noReset");
 
 const upgradeActions = [
     {
-        button: butErase,
-        offsetInput: offsets[0],
-        url: butErase?.dataset?.url,
-        eraseAll: true,
-        eraseOTA: false,
-    },
-    {
         button: butProgram,
-        offsetInput: offsets[1],
+        offsetInput: offsets[0],
         url: butProgram?.dataset?.url,
         eraseAll: false,
         eraseOTA: true,
     },
+    {
+        button: butErase,
+        offsetInput: offsets[1],
+        url: butErase?.dataset?.url,
+        eraseAll: true,
+        eraseOTA: false,
+    }
 ];
 
 let device = null;
@@ -200,7 +200,8 @@ async function clickConnect() {
 
         esploader = new ESPLoader(loaderOptions);
 
-        let resetMode = "default_reset";
+        let resetMode = "hard_reset";
+        /*
         if (noReset && noReset.checked) {
             resetMode = "no_reset";
             try {
@@ -211,7 +212,7 @@ async function clickConnect() {
             } catch (e) {
             }
         }
-
+        */
         chip = await esploader.main(resetMode);
 
         // Temporarily broken
@@ -349,15 +350,21 @@ async function flashFromUrl(actionIndex) {
 }
 
 async function fetchBinaryString(url) {
-    try {
-        return await fetchBinaryStringDirect(url);
-    } catch (e) {
-        const proxyUrl = buildProxyUrl(url);
+    const prefersProxy = shouldUseProxyFirst();
+    const proxyPaths = prefersProxy ? ["/api/firmware"] : ["/proxy"];
+
+    for (const path of proxyPaths) {
+        const proxyUrl = buildProxyUrl(url, path);
         if (!proxyUrl) {
-            throw e;
+            continue;
         }
-        return await fetchBinaryStringDirect(proxyUrl);
+        try {
+            return await fetchBinaryStringDirect(proxyUrl);
+        } catch (e) {
+        }
     }
+
+    return await fetchBinaryStringDirect(url);
 }
 
 async function eraseOTAPartitions() {
@@ -448,13 +455,21 @@ async function fetchBinaryStringDirect(url) {
     return binary;
 }
 
-function buildProxyUrl(url) {
+function buildProxyUrl(url, path = "/proxy") {
     if (!window.location || !window.location.origin) {
         return null;
     }
-    const proxy = new URL("/proxy", window.location.origin);
+    const proxy = new URL(path, window.location.origin);
     proxy.searchParams.set("url", url);
     return proxy.toString();
+}
+
+function shouldUseProxyFirst() {
+    if (!window.location || !window.location.hostname) {
+        return false;
+    }
+    const host = window.location.hostname;
+    return host !== "localhost" && host !== "127.0.0.1";
 }
 
 /**

@@ -28,7 +28,7 @@ class CORSRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path.startswith("/proxy"):
+        if self.path.startswith("/proxy") or self.path.startswith("/api/firmware"):
             self._handle_proxy()
             return
         return SimpleHTTPRequestHandler.do_GET(self)
@@ -67,4 +67,3 @@ if __name__ == '__main__':
     import os
     os.chdir("stage")
     test(CORSRequestHandler, HTTPServer)
-
