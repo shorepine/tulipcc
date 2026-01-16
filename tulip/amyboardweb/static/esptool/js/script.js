@@ -200,8 +200,7 @@ async function clickConnect() {
 
         esploader = new ESPLoader(loaderOptions);
 
-        let resetMode = "hard_reset";
-        /*
+        let resetMode = "default_reset";
         if (noReset && noReset.checked) {
             resetMode = "no_reset";
             try {
@@ -212,7 +211,7 @@ async function clickConnect() {
             } catch (e) {
             }
         }
-        */
+
         chip = await esploader.main(resetMode);
 
         // Temporarily broken
@@ -328,6 +327,7 @@ async function flashFromUrl(actionIndex) {
         progressFill.style.width = "100%";
         await sleep(400);
         writeLogLine("To run the new firmware, please reset your device.");
+        await esploader.after();
     } catch (e) {
         console.error(e);
         errorMsg(e.message || e);
