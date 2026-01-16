@@ -19,7 +19,7 @@ build_once() {
   rm -rf stage
   mkdir stage
 
-  cp static/* stage/
+  cp -R static/. stage/
   cp -Rf ../../www/img stage
   cp -Rf ../../www/fonts stage
   cp -Rf ../../www/css stage
