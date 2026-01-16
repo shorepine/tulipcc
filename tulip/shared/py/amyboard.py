@@ -66,7 +66,8 @@ def display_refresh():
 
 def display_startup():
     global display
-    display.text("AMYboard!",0,0,255)
+    display.text("AMYboard!!!!", 0,0,255)
+    display.text(tulip.version(),0,24,255)
     display_refresh()
 
 def init_display():

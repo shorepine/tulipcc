@@ -19,11 +19,13 @@ build_once() {
   rm -rf stage
   mkdir stage
 
-  cp static/* stage/
+  cp -R static/. stage/
   cp -Rf ../../www/img stage
   cp -Rf ../../www/fonts stage
   cp -Rf ../../www/css stage
   cp -Rf ../../www/js stage
+  cp -Rf api stage
+  cp vercel.json stage/vercel.json
 
   cp ../../amy/docs/amy.js stage/amy-$timestamp.js
   cp ../../amy/docs/amy.wasm stage/amy-$timestamp.wasm

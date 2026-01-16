@@ -53,12 +53,12 @@ if [ "$TYPE" == "upload" ]; then
 fi
 
 # Now do macOS desktop
-cd macos
-./package.sh
-if [ "$TYPE" == "upload" ]; then
-    gh release upload --clobber $RELEASE dist/Tulip_Desktop.zip 
-fi
-cd ..
+#cd macos
+#./package.sh
+#if [ "$TYPE" == "upload" ]; then
+#    gh release upload --clobber $RELEASE dist/Tulip_Desktop.zip 
+#fi
+#cd ..
 
 # Now do AMYboard
 cd amyboard

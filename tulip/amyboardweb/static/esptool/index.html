@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>AMYboard Firmware Upgrade</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      // Redirect to HTTPS if HTTP is requested.
+      if (
+        window.location.hostname !== "localhost" &&
+        window.location.protocol === "http:"
+      ) {
+        window.location.href = "https:" + window.location.href.substring(5);
+      }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.1.1/crypto-js.js"></script>
+    <!-- import the web page's stylesheets along with the themes -->
+    <link rel="stylesheet" href="/css/theme.css" />
+    <link rel="stylesheet" href="/amyrepl.css" />
+    <link rel="stylesheet" href="css/style.css" />
+    <link
+      rel="stylesheet"
+      href="css/light.css"
+      id="light"
+      class="alternate"
+      disabled
+    />
+    <link
+      rel="stylesheet"
+      href="css/dark.css"
+      id="dark"
+      class="alternate"
+      disabled
+    />
+    <script type="module" src="js/script.js" defer></script>
+  </head>
+  <body>
+
+    <main class="main">
+      <div id="notSupported" class="notSupported">
+        Please use a browser that supports WebSerial:
+        <ul>
+          <li>Google Chrome (desktop)</li>
+          <li>Microsoft Edge (desktop)</li>
+          <li>Chromium-based browsers with WebSerial enabled</li>
+        </ul>
+      </div>
+      <div class="subheader">
+        <div class="title left">AMYboard Upgrade</div>
+      </div>
+      <div id="instructions">
+        <UL>
+          <li>Connect your AMYboard to your device over USB.</li>
+          <li>Hold down both buttons on the side, then let go of RST, then let go of BOOT. 
+            <details>
+              <summary>See button locations:</summary>
+              <img src="/img/boot_rst.jpeg" width=400/>
+            </details>
+          </li>
+          <li>Click the <b>Search for AMYboard</b> button below and choose the device that says USB/JTAG <b>or</b> AMYboard when the window pops up, then Connect</li>
+          <li>Choose to either:</li>
+          <ul>
+            <li><B>Upgrade AMYboard firmware.</B> Your stored data should be safe. </li>
+            <li><B>Fully erase and re-flash AMYboard</b>. This will remove any stored patches or environments. (Your SD card is safe.) Use this only if you're having issues.
+          </ul>
+          <li>Wait a minute until the progress bar disappears. Hit RST. Your AMYboard should be updated!</li>
+        </UL>
+        <button id="butConnect" type="button">Search for AMYboard</button>
+      </div>
+      <div id="app">
+        <div id="commands">
+          <div class="upload">
+            <input class="offset" type="hidden" value="10000" />
+            <button
+              id="butProgram"
+              type="button"
+              data-url="https://github.com/shorepine/tulipcc/releases/latest/download/amyboard-firmware-AMYBOARD.bin"
+              disabled="disabled"
+            >
+              Upgrade AMYboard firmware
+            </button>
+            <div class="progress-bar hidden"><div></div></div>
+          </div>
+          <div class="upload">
+            <input class="offset" type="hidden" value="0" />
+            <button
+              id="butErase"
+              type="button"
+              data-url="https://github.com/shorepine/tulipcc/releases/latest/download/amyboard-full-AMYBOARD.bin"
+              disabled="disabled"
+            >
+              Fully erase and re-flash AMYboard
+            </button>
+            <div class="progress-bar hidden"><div></div></div>
+          </div>
+        </div>
+      </div>
+      <div id="instructions">
+        <details class="log-disclosure">
+          <summary>Show log</summary>
+          <div id="log"></div>
+        </details>
+      </div>
+    </main>
+    <footer class="footer">
+        <!--
+      <div class="justify controls">
+        <div>
+          <label for="autoscroll">Autoscroll </label>
+          <div class="onoffswitch">
+            <input
+              type="checkbox"
+              name="autoscroll"
+              class="onoffswitch-checkbox"
+              id="autoscroll"
+            />
+            <label class="onoffswitch-label" for="autoscroll">
+              <span class="onoffswitch-inner"></span>
+              <span class="onoffswitch-switch"></span>
+            </label>
+          </div>
+        </div>
+        <button id="butClear" type="button">Clear Text</button>
+      </div>
+      -->
+      <div>
+        Thanks to <a target="_blank" href="https://github.com/makermelissa">Melissa LeBlanc-Williams</a> at Adafruit Industries.
+      </div>
+    </footer>
+  </body>
+</html>

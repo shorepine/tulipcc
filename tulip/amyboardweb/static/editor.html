@@ -359,6 +359,9 @@
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Environment</button>
             </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
+            </li>
           </ul>
           <div class="tab-content pt-4">
             <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
@@ -415,6 +418,17 @@
                 <div class="card-body" id="tutorials"></div>
               </div>
             </div> <!-- end environment tab -->
+            <div class="tab-pane fade" id="upgrade-pane" role="tabpanel" aria-labelledby="upgrade-tab">
+              <div class="esptool-frame-wrap">
+                <iframe
+                  class="esptool-frame"
+                  src="esptool/index.html"
+                  title="Adafruit WebSerial ESPTool"
+                  allow="serial"
+                  loading="lazy"
+                ></iframe>
+              </div>
+            </div>
           </div>
         </div>
       </div> <!-- end patch / env card -->
