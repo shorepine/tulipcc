@@ -197,6 +197,14 @@
         border-radius: 0 0 4px 4px;
       }
 
+      #canvas {
+        width: 100%;
+        max-width: 256px;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        display: block;
+      }
+
       @media (min-width: 800px) {
         .knob-col {
           flex: 0 0 12.5%;
@@ -224,11 +232,11 @@
       }
 
       @media (min-width: 800px) {
-        .knob-section {
+        .knob-section-main {
           flex: 0 0 min(100%, calc(var(--knob-count, 8) * 12.5%));
           max-width: min(100%, calc(var(--knob-count, 8) * 12.5%));
         }
-        .knob-section .knob-col {
+        .knob-section-main .knob-col {
           flex: 0 0 calc(100% / var(--knob-count, 8));
           max-width: calc(100% / var(--knob-count, 8));
         }
@@ -239,10 +247,14 @@
   <body data-bs-spy="scroll" data-bs-target="#navScroll">
     <nav id="navScroll" class="navbar navbar-expand-lg navbar-light fixed-top scrolled" tabindex="0">
       <div class="container">
-        <a class="navbar-brand pe-4 fs-4" href="/">
-          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
-          <span class="ms-1 fw-bolder">AMYboard</span>
-        </a>
+
+
+              <a class="navbar-brand pe-4 fs-4" href="editor.html">
+                          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
+
+          <span class="ms-1 fw-bolder">AMYboard online</span>
+              </a>
+
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
@@ -250,12 +262,6 @@
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item">
-              <a class="nav-link" href="#get" aria-label="Get an AMYboard">
-                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" />
-                Get an AMYboard
-              </a>
-            </li>
             <li class="nav-item">
               <a class="nav-link" href="https://github.com/shorepine/amy">
                 <img src="img/github-mark.svg" width="24" height="24" /> Github
@@ -266,17 +272,15 @@
                 <img src="img/discord-mark-black.svg" width="24" height="24" /> Discord
               </a>
             </li>
-            <li class="nav-item">
-              <a class="nav-link" href="https://tulip.computer/">
-                <img src="img/favicon.png" width="24" height="24" /> Tulip
-              </a>
-            </li>
           </ul>
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
             <li class="nav-item">
-              <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="your.html">
-                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" /> Your AMYboard online
+
+                            <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="/">
+                <img src="img/amyboard.svg" width="24" height="24" /> AMYboard
               </a>
+
+
             </li>
           </ul>
         </div>
@@ -406,11 +410,11 @@
                 </div>
               </div>
               <div class="row mb-4 mt-1 align-items-start">
-                <div class="col-3">
-                  <canvas id="canvas" width=256 height=256/>
+                <div class="col-6 col-md-4">
+                  <canvas id="canvas" width="256" height="256"></canvas>
                 </div>
-                <div class="col-3">
-                  <div id="cv-knob-grid" class="row g-3"></div>
+                <div class="col-6 col-md-4">
+                  <div id="cv-knob-grid" class="row g-4"></div>
                 </div>
               </div>
               <div class="row mb-4 mt-1">
@@ -541,8 +545,8 @@
       const cvGrid = document.getElementById("cv-knob-grid");
       if (cvGrid && typeof init_knobs === "function") {
         window.amy_cv_knobs = [
-          { min_value: -10, max_value: 10, display_name: "CV1", default_value: 0 },
-          { min_value: -10, max_value: 10, display_name: "CV2", default_value: 0 }
+          { section: "CV Input", min_value: -10, max_value: 10, display_name: "CV1", default_value: 0 },
+          { section: "CV Input", min_value: -10, max_value: 10, display_name: "CV2", default_value: 0 }
         ];
         init_knobs(window.amy_cv_knobs, "cv-knob-grid", function(index, value) {
           if (typeof window.amy_cv_knob_change === "function") {

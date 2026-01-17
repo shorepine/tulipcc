@@ -288,7 +288,8 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
   sections.forEach(function(section) {
     const sectionWrap = document.createElement("div");
-    sectionWrap.className = "col-12 knob-section";
+    const sectionClass = targetId === "knob-grid" ? "col-12 knob-section knob-section-main" : "col-12 knob-section";
+    sectionWrap.className = sectionClass;
     sectionWrap.style.setProperty("--knob-count", String(section.items.length));
 
     const header = document.createElement("div");
