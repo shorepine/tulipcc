@@ -6,8 +6,9 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "freq",
       knob_type: "log",
       default_value: 440,
-      offset: 63,
-      range: 3.5,
+      lowest: 63,
+      offset: 0,
+      range: 5,
       onChange: function(value) {
         amy_add_message("i1v0f" + value);
       }
@@ -37,8 +38,9 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "level",
       knob_type: "log",
       default_value: 1.0,
-      offset: 0.01,
-      range: 5.6,
+      lowest: 0.001,
+      offset: 0,
+      range: 10,
       onChange: function(value) {
         amy_add_message("i1v0a" + value);
       }
@@ -48,8 +50,9 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "freq",
       knob_type: "log",
       default_value: 440,
-      offset: 63,
-      range: 3.5,
+      lowest: 63,
+      offset: 0,
+      range: 5,
       onChange: function(value) {
         amy_add_message("i1v1f" + value);
       }
@@ -79,8 +82,9 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "level",
       knob_type: "log",
       default_value: 1.0,
-      offset: 0.01,
-      range: 5.6,
+      lowest: 0.001,
+      offset: 0,
+      range: 10,
       onChange: function(value) {
         amy_add_message("i1v1a" + value);
       }
@@ -90,8 +94,9 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "freq_const",
       knob_type: "log",
       default_value: 0,
-      offset: 200,
-      range: 2.8,
+      lowest: 10,
+      offset: 0,
+      range: 8,
       onChange: function(value) {
         amy_add_message("i1F" + value);
       }
@@ -101,8 +106,8 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "resonance",
       knob_type: "log",
       default_value: 0.7,
-      offset: 0.7,
-      range: 2.8,
+      lowest: 0.5,
+      range: 5,
       onChange: function(value) {
         amy_add_message("i1R" + value);
       }
@@ -142,6 +147,7 @@ window.addEventListener("DOMContentLoaded", function() {
       knob_type: "log",
       display_name: "decay",
       range: 7,
+      lowest: 50,
       offset: 50,
       default_value: 100,
       onChange: function(value) {
@@ -163,6 +169,7 @@ window.addEventListener("DOMContentLoaded", function() {
       knob_type: "log",
       display_name: "release",
       range: 7,
+      lowest: 50,
       offset: 50,
       default_value: 100,
       onChange: function(value) {
@@ -174,8 +181,9 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "freq",
       knob_type: "log",
       default_value: 4,
-      offset: 0.5,
-      range: 3.5,
+      lowest: 0.25,
+      offset: 0,
+      range: 6,
       onChange: function(value) {
         amy_add_message("i1v2f" + value);
       }
@@ -195,8 +203,9 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "level",
       knob_type: "log",
       default_value: 1.0,
-      offset: 0.05,
-      range: 5.6,
+      lowest: 0.001,
+      offset: 0,
+      range: 12,
       onChange: function(value) {
         amy_add_message("i1v2a" + value);
       }
@@ -248,8 +257,9 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "ADSR",
       knob_type: "log",
       display_name: "decay",
-      range: 7,
-      offset: 50,
+      range: 8,
+      lowest: 50,
+      offset: -50,
       default_value: 100,
       onChange: function(value) {
         bp_string = ",1," + value + ",,,0";
@@ -273,8 +283,9 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "ADSR",
       knob_type: "log",
       display_name: "release",
-      range: 7,
-      offset: 50,
+      range: 8,
+      lowest: 50,
+      offset: -50,
       default_value: 100,
       onChange: function(value) {
         bp_string = ",1,,," + value + ",0";
