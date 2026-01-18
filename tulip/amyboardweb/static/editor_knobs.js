@@ -151,13 +151,14 @@ function init_knobs(knobConfigs, gridId, onChange) {
     }
 
     const isLogKnob = config.knob_type === "log";
-    const logRange = parseNumber(config.range, 1);
-    const logOffset = parseNumber(config.offset, 1);
-    const min = isLogKnob ? 0 : parseNumber(config.min_value, 0);
-    const max = isLogKnob ? 1 : parseNumber(config.max_value, 1);
+    const logOffset = parseNumber(config.offset, 0);
+    const min = parseNumber(config.min_value, 0);
+    const max = parseNumber(config.max_value, 1);
     const defaultValue = parseNumber(config.default_value, min);
     const displayName = config.display_name || `Knob ${index + 1}`;
-    const step = getStep(min, max);
+    const knobMin = isLogKnob ? 0 : min;
+    const knobMax = isLogKnob ? 1 : max;
+    const step = getStep(knobMin, knobMax);
     const displayDecimals = 3;
 
     const col = document.createElement("div");
@@ -189,20 +190,16 @@ function init_knobs(knobConfigs, gridId, onChange) {
     number.className = "form-control form-control-sm knob-value mt-2 text-center";
     number.type = "number";
     function logOutputFor(value) {
-      return logOffset * Math.exp(logRange * value) - logOffset;
+      const minShifted = min + logOffset;
+      const maxShifted = max + logOffset;
+      if (!Number.isFinite(minShifted) || !Number.isFinite(maxShifted) || minShifted <= 0 || maxShifted <= 0) {
+        return min;
+      }
+      const ratio = maxShifted / minShifted;
+      return minShifted * Math.pow(2, value * Math.log2(ratio)) - logOffset;
     }
 
-    const displayRange = (function() {
-      if (!isLogKnob) {
-        return { min: min, max: max };
-      }
-      const outMin = logOutputFor(min);
-      const outMax = logOutputFor(max);
-      if (!Number.isFinite(outMin) || !Number.isFinite(outMax)) {
-        return { min: 0, max: 1 };
-      }
-      return { min: Math.min(outMin, outMax), max: Math.max(outMin, outMax) };
-    })();
+    const displayRange = isLogKnob ? { min: min, max: max } : { min: min, max: max };
 
     const displayStep = getStep(displayRange.min, displayRange.max);
 
@@ -227,12 +224,12 @@ function init_knobs(knobConfigs, gridId, onChange) {
       startX: 0,
       startY: 0,
       startValue: 0,
-      dragStep: Math.abs(max - min) / 150
+      dragStep: Math.abs(knobMax - knobMin) / 150
     };
 
     function valueToAngle(value) {
-      if (max === min) return angleStart;
-      const normalized = (value - min) / (max - min);
+      if (knobMax === knobMin) return angleStart;
+      const normalized = (value - knobMin) / (knobMax - knobMin);
       return angleStart + clamp(normalized, 0, 1) * angleSpan;
     }
 
@@ -240,22 +237,28 @@ function init_knobs(knobConfigs, gridId, onChange) {
       if (!Number.isFinite(output)) {
         return state.value;
       }
-      if (logRange === 0 || logOffset === 0) {
-        return output === 0 ? min : state.value;
+      const minShifted = min + logOffset;
+      const maxShifted = max + logOffset;
+      if (!Number.isFinite(minShifted) || !Number.isFinite(maxShifted) || minShifted <= 0 || maxShifted <= 0) {
+        return state.value;
       }
-      const ratio = (output + logOffset) / logOffset;
+      const ratio = (output + logOffset) / minShifted;
       if (!Number.isFinite(ratio) || ratio <= 0) {
         return state.value;
       }
-      const raw = Math.log(ratio) / logRange;
+      const denom = Math.log2(maxShifted / minShifted);
+      if (!Number.isFinite(denom) || denom === 0) {
+        return state.value;
+      }
+      const raw = Math.log2(ratio) / denom;
       if (!Number.isFinite(raw)) {
         return state.value;
       }
-      return clamp(raw, min, max);
+      return clamp(raw, 0, 1);
     }
 
     function setValue(nextValue, commit, notifyAmy) {
-      const clamped = clamp(nextValue, min, max);
+      const clamped = isLogKnob ? clamp(nextValue, 0, 1) : clamp(nextValue, min, max);
       state.value = clamped;
       const angle = valueToAngle(clamped);
       face.style.setProperty("--angle", `${angle}deg`);
@@ -265,6 +268,19 @@ function init_knobs(knobConfigs, gridId, onChange) {
         number.value = formatValue(outputValue, displayDecimals);
       }
       notifyKnobChange(index, outputValue, config, { notifyAmy: notifyAmy });
+    }
+
+    if (isLogKnob) {
+      const defaultShifted = defaultValue + logOffset;
+      const minShifted = min + logOffset;
+      const maxShifted = max + logOffset;
+      if (Number.isFinite(defaultShifted) && Number.isFinite(minShifted) && Number.isFinite(maxShifted)
+        && minShifted > 0 && maxShifted > 0 && defaultShifted > 0) {
+        const denom = Math.log2(maxShifted / minShifted);
+        state.value = denom === 0 ? 0 : Math.log2(defaultShifted / minShifted) / denom;
+      } else {
+        state.value = 0;
+      }
     }
 
     setValue(state.value, true, false);
@@ -382,16 +398,18 @@ function set_amy_knob_value(knobs, name, value) {
     return false;
   }
   if (knob.knob_type === "log") {
-    const offset = Number(knob.offset);
-    const range = Number(knob.range);
-    if (!Number.isFinite(offset) || !Number.isFinite(range) || offset === 0 || range === 0) {
+    const min = Number(knob.min_value);
+    const max = Number(knob.max_value);
+    const offset = Number(knob.offset || 0);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || !Number.isFinite(offset)) {
       return false;
     }
-    const ratio = (value + offset) / offset;
-    if (!Number.isFinite(ratio) || ratio <= 0) {
+    const minShifted = min + offset;
+    const maxShifted = max + offset;
+    if (minShifted <= 0 || maxShifted <= 0) {
       return false;
     }
-    knob.default_value = Math.log(ratio) / range;
+    knob.default_value = value;
   } else {
     knob.default_value = value;
   }
