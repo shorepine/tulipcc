@@ -12,11 +12,11 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1v0f" + value);
       }
     },
-    { 
-      section: "OSC A", 
-      knob_type: "selection", 
-      display_name: "WAVE", 
-      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"], 
+    {
+      section: "OSC A",
+      knob_type: "selection",
+      display_name: "WAVE",
+      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
       default_value: 0,
       onChange: function(value) {
         amy_add_message("i1v0w" + value);
@@ -54,11 +54,11 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1v1f" + value);
       }
     },
-    { 
-      section: "OSC B", 
-      knob_type: "selection", 
-      display_name: "WAVE", 
-      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"], 
+    {
+      section: "OSC B",
+      knob_type: "selection",
+      display_name: "WAVE",
+      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
       default_value: 0,
       onChange: function(value) {
         amy_add_message("i1v1w" + value);
@@ -127,8 +127,8 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1F,,,," + value);
       }
     },
-    { 
-      section: "VCF", 
+    {
+      section: "VCF",
       display_name: "attack",
       default_value: 0,
       min_value: 0,
@@ -137,20 +137,20 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1B"+Math.round(value)+",1,,,,0");
       }
     },
-    { 
-      section: "VCF", 
-      knob_type: "log", 
-      display_name: "decay", 
-      range: 7, 
+    {
+      section: "VCF",
+      knob_type: "log",
+      display_name: "decay",
+      range: 7,
       offset: 50,
       default_value: 100,
       onChange: function(value) {
         amy_add_message("i1B,1,"+value+",,,0");
       }
     },
-    { 
-      section: "VCF", 
-      display_name: "sustain", 
+    {
+      section: "VCF",
+      display_name: "sustain",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -158,20 +158,52 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1B,1,,"+value+",,0");
       }
     },
-    { 
-      section: "VCF", 
-      knob_type: "log", 
-      display_name: "release", 
-      range: 7, 
+    {
+      section: "VCF",
+      knob_type: "log",
+      display_name: "release",
+      range: 7,
       offset: 50,
       default_value: 100,
       onChange: function(value) {
         amy_add_message("i1B,1,,,"+value+",0");
       }
     },
-    { 
-      section: "ADSR", 
-      display_name: "attack", 
+    {
+      section: "LFO",
+      display_name: "freq",
+      knob_type: "log",
+      default_value: 4,
+      offset: 0.5,
+      range: 3.5,
+      onChange: function(value) {
+        amy_add_message("i1v2f" + value);
+      }
+    },
+    {
+      section: "LFO",
+      knob_type: "selection",
+      display_name: "WAVE",
+      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("i1v2w" + value);
+      }
+    },
+    {
+      section: "LFO",
+      display_name: "level",
+      knob_type: "log",
+      default_value: 1.0,
+      offset: 0.05,
+      range: 5.6,
+      onChange: function(value) {
+        amy_add_message("i1v2a" + value);
+      }
+    },
+    {
+      section: "ADSR",
+      display_name: "attack",
       min_value: 0,
       max_value: 1000,
       onChange: function(value) {
@@ -180,11 +212,11 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1v1A" + bp_string);
       }
     },
-    { 
-      section: "ADSR", 
-      knob_type: "log", 
-      display_name: "decay", 
-      range: 7, 
+    {
+      section: "ADSR",
+      knob_type: "log",
+      display_name: "decay",
+      range: 7,
       offset: 50,
       default_value: 100,
       onChange: function(value) {
@@ -193,9 +225,9 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1v1A" + bp_string);
       }
     },
-    { 
-      section: "ADSR", 
-      display_name: "sustain", 
+    {
+      section: "ADSR",
+      display_name: "sustain",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -205,11 +237,11 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1v1A" + bp_string);
       }
     },
-    { 
-      section: "ADSR", 
-      knob_type: "log", 
-      display_name: "release", 
-      range: 7, 
+    {
+      section: "ADSR",
+      knob_type: "log",
+      display_name: "release",
+      range: 7,
       offset: 50,
       default_value: 100,
       onChange: function(value) {
@@ -266,7 +298,7 @@ function set_knobs_from_patch_number(patch_number) {
         filteredValues.push(Number.isFinite(value) ? value : 0);
       }
       if (hasBP0) {
-        bp0Times = filteredTimes;      
+        bp0Times = filteredTimes;
         bp0Values= filteredValues;
       }
     }
