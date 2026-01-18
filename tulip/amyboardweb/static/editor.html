@@ -366,25 +366,30 @@
       <div class="card border-0 bg-light shadow-sm mb-3">
         <div class="card-body">
           <form name="amyboard_settings">
-            <div class="row align-items-start">
-              <div class="col-md-auto align-top small" id="audioin_grow">
+            <div class="row align-items-center">
+              <div class="col-md-auto align-top small d-flex align-items-center" id="audioin_grow">
                 <div class="form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
                   <label class="form-check-label" for="amy_audioin">Allow audio input</label>
                 </div>
               </div>
-              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0">
+              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0" id="midi-input-col">
                 <div id="midi-input-panel">
                   <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
                     <option selected>[Not available]</option>
                   </select>
                 </div>
               </div>
-              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0">
+              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0" id="midi-output-col">
                 <div id="midi-output-panel">
                   <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
                     <option selected>[Not available]</option>
                   </select>
+                </div>
+              </div>
+              <div class="col-12 col-md-8 align-self-start small mt-2 mt-md-0 d-none" id="midi-warning-col">
+                <div class="alert alert-warning py-2 mb-0">
+                  This page can use WebMIDI on <a href="https://caniuse.com/midi" target="_blank">supported browsers</a>. 
                 </div>
               </div>
             </div>
