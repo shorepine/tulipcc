@@ -202,6 +202,38 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
+      section: "LFO",
+      display_name: "freq",
+      knob_type: "pushbutton",
+      color: "#d04437",
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("i1v0f,,,,," + value);
+        amy_add_message("i1v1f,,,,," + value);
+      }
+    },
+    {
+      section: "LFO",
+      display_name: "pwm",
+      knob_type: "pushbutton",
+      color: "#d04437",
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("i1v0d,,,,," + value);
+        amy_add_message("i1v1d,,,,," + value);
+      }
+    },
+    {
+      section: "LFO",
+      display_name: "filt",
+      knob_type: "pushbutton",
+      color: "#d04437",
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("i1v0F,,,,," + 4 * value);
+      }
+    },
+    {
       section: "ADSR",
       display_name: "attack",
       min_value: 0,
