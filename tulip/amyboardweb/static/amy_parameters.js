@@ -2,6 +2,90 @@
 window.addEventListener("DOMContentLoaded", function() {
   window.amy_knobs = [
     {
+      section: "OSC A",
+      display_name: "freq",
+      knob_type: "log",
+      default_value: 440,
+      offset: 63,
+      range: 3.5,
+      onChange: function(value) {
+        amy_add_message("i1v0f" + value);
+      }
+    },
+    { 
+      section: "OSC A", 
+      knob_type: "selection", 
+      display_name: "WAVE", 
+      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"], 
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("i1v0w" + value);
+      }
+    },
+    {
+      section: "OSC A",
+      display_name: "pulse w",
+      default_value: 0.5,
+      min_value: 0,
+      max_value: 1,
+      onChange: function(value) {
+        amy_add_message("i1v0d" + value);
+      }
+    },
+    {
+      section: "OSC A",
+      display_name: "level",
+      knob_type: "log",
+      default_value: 1.0,
+      offset: 0.01,
+      range: 5.6,
+      onChange: function(value) {
+        amy_add_message("i1v0a" + value);
+      }
+    },
+    {
+      section: "OSC B",
+      display_name: "freq",
+      knob_type: "log",
+      default_value: 440,
+      offset: 63,
+      range: 3.5,
+      onChange: function(value) {
+        amy_add_message("i1v1f" + value);
+      }
+    },
+    { 
+      section: "OSC B", 
+      knob_type: "selection", 
+      display_name: "WAVE", 
+      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"], 
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("i1v1w" + value);
+      }
+    },
+    {
+      section: "OSC B",
+      display_name: "pulse w",
+      default_value: 0.5,
+      min_value: 0,
+      max_value: 1,
+      onChange: function(value) {
+        amy_add_message("i1v1d" + value);
+      }
+    },
+    {
+      section: "OSC B",
+      display_name: "level",
+      knob_type: "log",
+      default_value: 1.0,
+      offset: 0.01,
+      range: 5.6,
+      onChange: function(value) {
+        amy_add_message("i1v1a" + value);
+      }
+    },
+    {
       section: "VCF",
       display_name: "freq_const",
       knob_type: "log",
@@ -10,26 +94,6 @@ window.addEventListener("DOMContentLoaded", function() {
       range: 2.8,
       onChange: function(value) {
         amy_add_message("i1F" + value);
-      }
-    },
-    {
-      section: "VCF",
-      display_name: "freq_note",
-      default_value: 0,
-      min_value: 0,
-      max_value: 1,
-      onChange: function(value) {
-        amy_add_message("i1F," + value);
-      }
-    },
-    {
-      section: "VCF",
-      display_name: "freq_eg0",
-      default_value: 0,
-      min_value: 0,
-      max_value: 10,
-      onChange: function(value) {
-        amy_add_message("i1F,,," + value);
       }
     },
     {
@@ -43,13 +107,77 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1R" + value);
       }
     },
+    {
+      section: "VCF",
+      display_name: "freq_kbd",
+      default_value: 0,
+      min_value: 0,
+      max_value: 1,
+      onChange: function(value) {
+        amy_add_message("i1F," + value);
+      }
+    },
+    {
+      section: "VCF",
+      display_name: "freq_env",
+      default_value: 0,
+      min_value: 0,
+      max_value: 10,
+      onChange: function(value) {
+        amy_add_message("i1F,,,," + value);
+      }
+    },
+    { 
+      section: "VCF", 
+      display_name: "attack",
+      default_value: 0,
+      min_value: 0,
+      max_value: 1000,
+      onChange: function(value) {
+        amy_add_message("i1B"+Math.round(value)+",1,,,,0");
+      }
+    },
+    { 
+      section: "VCF", 
+      knob_type: "log", 
+      display_name: "decay", 
+      range: 7, 
+      offset: 50,
+      default_value: 100,
+      onChange: function(value) {
+        amy_add_message("i1B,1,"+value+",,,0");
+      }
+    },
+    { 
+      section: "VCF", 
+      display_name: "sustain", 
+      min_value: 0,
+      max_value: 1,
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("i1B,1,,"+value+",,0");
+      }
+    },
+    { 
+      section: "VCF", 
+      knob_type: "log", 
+      display_name: "release", 
+      range: 7, 
+      offset: 50,
+      default_value: 100,
+      onChange: function(value) {
+        amy_add_message("i1B,1,,,"+value+",0");
+      }
+    },
     { 
       section: "ADSR", 
       display_name: "attack", 
       min_value: 0,
       max_value: 1000,
       onChange: function(value) {
-        amy_add_message("i1A"+Math.round(value)+",1,,,,0");
+        bp_string = Math.round(value) + ",1,,,,0"
+        amy_add_message("i1v0A" + bp_string);
+        amy_add_message("i1v1A" + bp_string);
       }
     },
     { 
@@ -60,7 +188,9 @@ window.addEventListener("DOMContentLoaded", function() {
       offset: 50,
       default_value: 100,
       onChange: function(value) {
-        amy_add_message("i1A,1,"+value+",,,0");
+        bp_string = ",1," + value + ",,,0";
+        amy_add_message("i1v0A" + bp_string);
+        amy_add_message("i1v1A" + bp_string);
       }
     },
     { 
@@ -70,7 +200,9 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 1,
       default_value: 0,
       onChange: function(value) {
-        amy_add_message("i1A,1,,"+value+",,0");
+        bp_string = ",1,," + value + ",,0";
+        amy_add_message("i1v0A" + bp_string);
+        amy_add_message("i1v1A" + bp_string);
       }
     },
     { 
@@ -81,16 +213,11 @@ window.addEventListener("DOMContentLoaded", function() {
       offset: 50,
       default_value: 100,
       onChange: function(value) {
-        amy_add_message("i1A,1,,,"+value+",0");
+        bp_string = ",1,,," + value + ",0";
+        amy_add_message("i1v0A" + bp_string);
+        amy_add_message("i1v1A" + bp_string);
       }
     },
-    { 
-      section: "OSC", 
-      knob_type: "selection", 
-      display_name: "WAVE", 
-      options: ["SINE", "PULSE", "SAW_DOWN", "SAW_UP", "TRIANGLE", "NOISE", "KS", "PCM", "ALGO", "PARTIAL", "BYO_PARTIALS", "INTERP_PARTIALS", "AUDIO_IN0", "AUDIO_IN1", "AUDIO_EXT0", "AUDIO_EXT1", "AMY_MIDI", "PCM_LEFT", "PCM_RIGHT", "CUSTOM", "WAVE_OFF"], 
-      default_value: 0 
-    }
   ];
 
   if (typeof init_knobs === "function") {

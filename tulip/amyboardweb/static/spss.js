@@ -633,7 +633,6 @@ async function fill_examples() {
         h += ' <a href="#" onclick="run_snippet('+i.toString()+');"><span class="badge rounded-pill ' + colors[example_snippets[i].t] + '">'+example_snippets[i].d+'</span></a>';
     } 
     document.getElementById('tutorials').innerHTML = h;
-
 }
 
 async function toggle_audioin() {
@@ -712,6 +711,8 @@ async function start_audio() {
   } else {
       await amy_live_start_web();    
   }
+  // Initialize to the "amyboardweb" preset (patch 257), 6 voices.
   audio_started = true;
   attemptPatchKnobSync();
+  amy_add_message("i1iv6K257")
 }
