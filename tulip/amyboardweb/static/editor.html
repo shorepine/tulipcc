@@ -130,6 +130,43 @@
         box-shadow: 0 0 6px rgba(127, 211, 255, 0.75);
       }
 
+      .amy-pushbutton {
+        width: 64px;
+        height: 88px;
+        margin: 0 auto;
+        border-radius: 10px;
+        background: var(--pushbutton-color, #d04437);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 8px;
+        cursor: pointer;
+        user-select: none;
+        box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.3),
+          inset 4px 4px 8px rgba(255, 255, 255, 0.12),
+          0 10px 18px rgba(0, 0, 0, 0.28);
+      }
+
+      .amy-pushbutton:focus-visible {
+        outline: 2px solid #f2c94c;
+        outline-offset: 4px;
+      }
+
+      .amy-pushbutton-led {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #3a0a0a;
+        box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.35),
+          inset 2px 2px 4px rgba(255, 255, 255, 0.08);
+      }
+
+      .amy-pushbutton.is-on .amy-pushbutton-led {
+        background: #ff3b2f;
+        box-shadow: 0 0 10px rgba(255, 59, 47, 0.9),
+          inset 0 0 6px rgba(255, 255, 255, 0.45);
+      }
+
       .amy-select {
         width: 112px;
         margin: 0 auto;
@@ -237,8 +274,8 @@
           max-width: min(100%, calc(var(--knob-count, 8) * 12.5%));
         }
         .knob-section-main .knob-col {
-          flex: 0 0 calc(100% / var(--knob-count, 8));
-          max-width: calc(100% / var(--knob-count, 8));
+          flex: 0 0 calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 8)));
+          max-width: calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 8)));
         }
       }
     </style>

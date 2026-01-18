@@ -56,6 +56,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
       const col = document.createElement("div");
       col.className = colClass;
+      col.style.setProperty("--knob-span", "1");
 
       const label = document.createElement("div");
       label.className = "small mb-2";
@@ -89,6 +90,66 @@ function init_knobs(knobConfigs, gridId, onChange) {
       return;
     }
 
+    if (config.knob_type === "pushbutton") {
+      const displayName = config.display_name || `Button ${index + 1}`;
+      const defaultValue = parseNumber(config.default_value, 0);
+      const state = {
+        value: defaultValue === 1 ? 1 : 0
+      };
+
+      const col = document.createElement("div");
+      col.className = `${colClass} knob-col-pushbutton`;
+      col.style.setProperty("--knob-span", "0.5");
+
+      const label = document.createElement("div");
+      label.className = "small mb-2";
+      label.textContent = displayName;
+
+      const button = document.createElement("div");
+      button.className = "amy-pushbutton";
+      button.setAttribute("role", "button");
+      button.setAttribute("tabindex", "0");
+      if (config.color) {
+        button.style.setProperty("--pushbutton-color", String(config.color));
+      }
+
+      const led = document.createElement("div");
+      led.className = "amy-pushbutton-led";
+
+      button.appendChild(led);
+      col.appendChild(label);
+      col.appendChild(button);
+      targetGrid.appendChild(col);
+
+      function setValue(nextValue, notifyAmy) {
+        const clamped = nextValue === 1 ? 1 : 0;
+        state.value = clamped;
+        button.classList.toggle("is-on", clamped === 1);
+        button.setAttribute("aria-pressed", clamped === 1 ? "true" : "false");
+        notifyKnobChange(index, clamped, config, { notifyAmy: notifyAmy });
+      }
+
+      function toggle() {
+        setValue(state.value === 1 ? 0 : 1, true);
+      }
+
+      setValue(state.value, false);
+
+      button.addEventListener("pointerdown", function(event) {
+        event.preventDefault();
+        toggle();
+      });
+
+      button.addEventListener("keydown", function(event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggle();
+        }
+      });
+
+      return;
+    }
+
     const isLogKnob = config.knob_type === "log";
     const logRange = parseNumber(config.range, 1);
     const logOffset = parseNumber(config.offset, 1);
@@ -101,6 +162,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
     const col = document.createElement("div");
     col.className = colClass;
+    col.style.setProperty("--knob-span", "1");
 
     const label = document.createElement("div");
     label.className = "small mb-2";
@@ -280,10 +342,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
   knobConfigs.forEach(function(config, index) {
     const sectionName = typeof config.section === "string" ? config.section : "";
     if (!currentSection || currentSection.name !== sectionName) {
-      currentSection = { name: sectionName, items: [] };
+      currentSection = { name: sectionName, items: [], units: 0 };
       sections.push(currentSection);
     }
     currentSection.items.push({ config: config, index: index });
+    currentSection.units += config.knob_type === "pushbutton" ? 0.5 : 1;
   });
 
   sections.forEach(function(section) {
@@ -291,6 +354,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
     const sectionClass = targetId === "knob-grid" ? "col-12 knob-section knob-section-main" : "col-12 knob-section";
     sectionWrap.className = sectionClass;
     sectionWrap.style.setProperty("--knob-count", String(section.items.length));
+    sectionWrap.style.setProperty("--knob-units", String(section.units || section.items.length));
 
     const header = document.createElement("div");
     header.className = "knob-section-header";

@@ -90,7 +90,37 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "WAVE", 
       options: ["SINE", "PULSE", "SAW_DOWN", "SAW_UP", "TRIANGLE", "NOISE", "KS", "PCM", "ALGO", "PARTIAL", "BYO_PARTIALS", "INTERP_PARTIALS", "AUDIO_IN0", "AUDIO_IN1", "AUDIO_EXT0", "AUDIO_EXT1", "AMY_MIDI", "PCM_LEFT", "PCM_RIGHT", "CUSTOM", "WAVE_OFF"], 
       default_value: 0 
-    }
+    },
+    {
+      section: "OSC",
+      display_name: "TRIG",
+      knob_type: "pushbutton",
+      color: "#d04437",
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("i1T" + value);
+      }
+    },
+    {
+      section: "OSC",
+      display_name: "SYNC",
+      knob_type: "pushbutton",
+      color: "#efa212",
+      default_value: 1,
+      onChange: function(value) {
+        amy_add_message("i1T" + value);
+      }
+    },
+       {
+      section: "OSC",
+      display_name: "RESET",
+      knob_type: "pushbutton",
+      color: "#4e34c2",
+      default_value: 1,
+      onChange: function(value) {
+        amy_add_message("i1T" + value);
+      }
+    },
   ];
 
   if (typeof init_knobs === "function") {
