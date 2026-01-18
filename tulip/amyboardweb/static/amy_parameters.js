@@ -5,7 +5,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "OSC A",
       display_name: "freq",
       knob_type: "log",
-      default_value: 440,
+      default_value: 261.63,
       min_value: 50,
       max_value: 2000,
       onChange: function(value) {
@@ -47,7 +47,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "OSC B",
       display_name: "freq",
       knob_type: "log",
-      default_value: 440,
+      default_value: 261.63,
       min_value: 50,
       max_value: 2000,
       onChange: function(value) {
@@ -110,7 +110,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "VCF",
       display_name: "freq_kbd",
-      default_value: 0,
+      default_value: 1.0,
       min_value: 0,
       max_value: 1,
       onChange: function(value) {
@@ -120,7 +120,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "VCF",
       display_name: "freq_env",
-      default_value: 0,
+      default_value: 4.0,
       min_value: 0,
       max_value: 10,
       onChange: function(value) {
@@ -129,7 +129,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF",
-      display_name: "attack",
+      display_name: "f_attack",
       default_value: 0,
       min_value: 0,
       max_value: 1000,
@@ -140,7 +140,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "VCF",
       knob_type: "log",
-      display_name: "decay",
+      display_name: "f_decay",
       default_value: 100,
       offset: 50,
       min_value: 0,
@@ -151,7 +151,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF",
-      display_name: "sustain",
+      display_name: "f_sustain",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -162,7 +162,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "VCF",
       knob_type: "log",
-      display_name: "release",
+      display_name: "f_release",
       offset: 50,
       min_value: 0,
       max_value: 8000,
@@ -298,7 +298,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
 
 function set_knobs_from_patch_number(patch_number) {
-  amy_add_message("i1K"+patch_number);
+  amy_add_message("i1iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
   const events = get_events_for_patch_number(patch_number);
   if (!Array.isArray(window.amy_knobs) || events.length === 0) {
     return;
@@ -351,8 +351,8 @@ function set_knobs_from_patch_number(patch_number) {
   if (filterEvent) {
     const coefs = filterEvent.filter_freq_coefs;
     didUpdate = set_amy_knob_value(window.amy_knobs, "freq_const", coefs[0]) || didUpdate;
-    didUpdate = set_amy_knob_value(window.amy_knobs, "freq_note", coefs[1]) || didUpdate;
-    didUpdate = set_amy_knob_value(window.amy_knobs, "freq_eg0", coefs[3]) || didUpdate;
+    didUpdate = set_amy_knob_value(window.amy_knobs, "freq_kbd", coefs[1]) || didUpdate;
+    didUpdate = set_amy_knob_value(window.amy_knobs, "freq_env", coefs[3]) || didUpdate;
   }
 
   if (resonanceValue !== null) {
@@ -365,9 +365,17 @@ function set_knobs_from_patch_number(patch_number) {
     didUpdate = set_amy_knob_value(window.amy_knobs, "decay", bp0T[1]) || didUpdate;
     didUpdate = set_amy_knob_value(window.amy_knobs, "sustain", bp0V[1]) || didUpdate;
     didUpdate = set_amy_knob_value(window.amy_knobs, "release", bp0T[2]) || didUpdate;
+    didUpdate = set_amy_knob_value(window.amy_knobs, "f_attack", bp0T[0]) || didUpdate;
+    didUpdate = set_amy_knob_value(window.amy_knobs, "f_decay", bp0T[1]) || didUpdate;
+    didUpdate = set_amy_knob_value(window.amy_knobs, "f_sustain", bp0V[1]) || didUpdate;
+    didUpdate = set_amy_knob_value(window.amy_knobs, "f_release", bp0T[2]) || didUpdate;
   }
 
   if (didUpdate && typeof init_knobs === "function") {
     init_knobs(window.amy_knobs);
   }
 }
+
+/* 1: Juno A12 Brass Swell */
+/*"v4w4a1,,0,1Zv0w1c1L4G4Zv1w3c2L4Zv2w1c3L4Zv3w5L4Zv4f0.609A148,1.0,10000,0Zv0a,,0.001,1,0f261.63,1,,,,0,1d0.72,,,,,0m0Zv1a,,0.591,1,0f261.63,1,,,,0,1m0Zv2a,,0.326,1,0f130.81,1,,,,0,1m0Zv3a,,0.001,1,0Zv0F212.87,0.661,,2.252,,0R1.015Zv0A518,1,83561,0.299,310,0Zv1A518,1,83561,0.299,310,0Zv2A518,1,83561,0.299,310,0Zv3A518,1,83561,0.299,310,0Zx7,-3,-3k1,,0.5,0.5Z",
+*/

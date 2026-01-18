@@ -413,5 +413,6 @@ function set_amy_knob_value(knobs, name, value) {
   } else {
     knob.default_value = value;
   }
+  knob.onChange(value);
   return true;
 }
