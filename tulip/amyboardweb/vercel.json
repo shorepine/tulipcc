@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/proxy",
+      "destination": "/api/firmware"
+    }
+  ]
+}
