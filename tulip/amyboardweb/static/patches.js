@@ -258,7 +258,6 @@
     "DX7 ST.HELENS",
     "DX7 EXPLOSION",
     "dpwe piano",
-    "amyboard web base",
   ];
 
   window.amy_patches = patches;

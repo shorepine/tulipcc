@@ -82,15 +82,19 @@
       }
 
       .knob-grid .ui-knob-container {
-        width: 96px;
-        height: 96px;
+        width: 80px;
+        height: 80px;
         margin: 0 auto;
         overflow: visible;
       }
 
+      .knob-grid {
+        --bs-gutter-y: 0.75rem;
+      }
+
       .amy-knob {
-        width: 72px;
-        height: 72px;
+        width: 60px;
+        height: 60px;
         margin: 0 auto;
         touch-action: none;
         user-select: none;
@@ -115,10 +119,10 @@
 
       .amy-knob-indicator {
         position: absolute;
-        top: 8px;
+        top: 6px;
         left: 50%;
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
         background: #f2c94c;
         border-radius: 50%;
         transform: translateX(-50%);
@@ -131,15 +135,15 @@
       }
 
       .amy-pushbutton {
-        width: 64px;
-        height: 88px;
+        width: 52px;
+        height: 72px;
         margin: 0 auto;
         border-radius: 10px;
         background: var(--pushbutton-color, #d04437);
         display: flex;
         align-items: flex-start;
         justify-content: center;
-        padding-top: 8px;
+        padding-top: 6px;
         cursor: pointer;
         user-select: none;
         box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.3),
@@ -153,8 +157,8 @@
       }
 
       .amy-pushbutton-led {
-        width: 18px;
-        height: 18px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background: #3a0a0a;
         box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.35),
@@ -168,19 +172,19 @@
       }
 
       .amy-select {
-        width: 112px;
+        width: 84px;
         margin: 0 auto;
       }
 
       .amy-select select {
-        width: 112px;
-        height: 112px;
+        width: 84px;
+        height: 84px;
         background: #1e1e1e;
         color: #f8f8f8;
         border: 1px solid #333;
         border-radius: 10px;
-        padding: 6px;
-        font-size: 13px;
+        padding: 4px;
+        font-size: 10px;
         accent-color: #f2c94c;
         box-shadow: inset -4px -4px 8px rgba(0, 0, 0, 0.35),
           inset 4px 4px 8px rgba(255, 255, 255, 0.06);
@@ -244,8 +248,8 @@
 
       @media (min-width: 800px) {
         .knob-col {
-          flex: 0 0 12.5%;
-          max-width: 12.5%;
+          flex: 0 0 8.333%;
+          max-width: 8.333%;
         }
       }
 
@@ -257,10 +261,32 @@
         color: #f2f2f2;
         background: #2b2b2b;
         border-radius: 10px;
-        padding: 6px 12px;
-        margin: 10px 0 4px;
+        padding: 4px 10px;
+        margin: 4px 0 2px;
+        font-size: 11px;
         width: 100%;
         box-sizing: border-box;
+      }
+
+      .nav-tabs .nav-link {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.75rem;
+      }
+
+      .form-control,
+      .form-select,
+      .form-check-label {
+        font-size: 0.85rem;
+      }
+
+      .knob-value {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+      }
+
+      .knob-label {
+        font-size: 0.7rem;
+        line-height: 1.1;
       }
 
       .knob-section {
@@ -270,12 +296,12 @@
 
       @media (min-width: 800px) {
         .knob-section-main {
-          flex: 0 0 min(100%, calc(var(--knob-count, 8) * 12.5%));
-          max-width: min(100%, calc(var(--knob-count, 8) * 12.5%));
+          flex: 0 0 min(100%, calc(var(--knob-count, 12) * 8.333%));
+          max-width: min(100%, calc(var(--knob-count, 12) * 8.333%));
         }
         .knob-section-main .knob-col {
-          flex: 0 0 calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 8)));
-          max-width: calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 8)));
+          flex: 0 0 calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 12)));
+          max-width: calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 12)));
         }
       }
     </style>

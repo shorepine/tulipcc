@@ -59,7 +59,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
       col.style.setProperty("--knob-span", "1");
 
       const label = document.createElement("div");
-      label.className = "small mb-2";
+      label.className = "knob-label small mb-2";
       label.textContent = displayName;
 
       const selectWrap = document.createElement("div");
@@ -102,7 +102,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
       col.style.setProperty("--knob-span", "0.5");
 
       const label = document.createElement("div");
-      label.className = "small mb-2";
+      label.className = "knob-label small mb-2";
       label.textContent = displayName;
 
       const button = document.createElement("div");
@@ -166,7 +166,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
     col.style.setProperty("--knob-span", "1");
 
     const label = document.createElement("div");
-    label.className = "small mb-2";
+    label.className = "knob-label small mb-2";
     label.textContent = displayName;
 
     const knob = document.createElement("div");
