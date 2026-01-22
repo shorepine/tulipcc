@@ -121,7 +121,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF",
       display_name: "freq_env",
       default_value: 4.0,
-      min_value: 0,
+      min_value: -10,
       max_value: 10,
       onChange: function(value) {
         amy_add_message("i1F,,,," + value);
@@ -277,6 +277,69 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1v1A" + bp_string);
       }
     },
+    {
+      section: "Chorus",
+      knob_type: "log",
+      display_name: "ch_level",
+      min_value: 0,
+      max_value: 1,
+      offset: 0.001,
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("k" + value);
+      }
+    },
+    {
+      section: "Chorus",
+      knob_type: "log",
+      display_name: "ch_rate",
+      min_value: 0.1,
+      max_value: 10,
+      default_value: 2,
+      onChange: function(value) {
+        amy_add_message("k,," + value);
+      }
+    },
+    {
+      section: "Chorus",
+      display_name: "ch_depth",
+      min_value: 0,
+      max_value: 1,
+      default_value: 0.5,
+      onChange: function(value) {
+        amy_add_message("k,,," + value);
+      }
+    },
+    {
+      section: "EQ",
+      display_name: "eq_low",
+      min_value: -15,
+      max_value: 15,
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("x" + value);
+      }
+    },
+    {
+      section: "EQ",
+      display_name: "eq_mid",
+      min_value: -15,
+      max_value: 15,
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("x," + value);
+      }
+    },
+    {
+      section: "EQ",
+      display_name: "eq_high",
+      min_value: -15,
+      max_value: 15,
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("x,," + value);
+      }
+    },
   ];
 
   if (typeof init_knobs === "function") {
@@ -315,6 +378,8 @@ function set_knobs_from_patch_number(patch_number) {
   let oscAB_gain = [0, 0];
   // Do the oscs use ADSR, or the juno "gate"?
   let oscGate = 0;
+  let eq = [null, null, null];
+  let chorus = [null, null, null];
   
   for (const event of events) {
     if (event.filter_freq_coefs.some((value) => Number.isFinite(value))) {
@@ -326,6 +391,12 @@ function set_knobs_from_patch_number(patch_number) {
     if (Number.isFinite(event.resonance)) {
       resonanceValue = event.resonance;
     }
+    if (Number.isFinite(event.eq_l))  { eq[0] = event.eq_l; }
+    if (Number.isFinite(event.eq_m))  { eq[1] = event.eq_m; }
+    if (Number.isFinite(event.eq_h))  { eq[2] = event.eq_h; }
+    if (Number.isFinite(event.chorus_level)) { chorus[0] = event.chorus_level; }
+    if (Number.isFinite(event.chorus_lfo_freq)) { chorus[1] = event.chorus_lfo_freq; }
+    if (Number.isFinite(event.chorus_depth)) { chorus[2] = event.chorus_depth; }
     if (event.osc == 4) {
       // LFO
       if (Number.isFinite(event.freq_coefs[0])) {
@@ -410,6 +481,14 @@ function set_knobs_from_patch_number(patch_number) {
   set_amy_knob_value(window.amy_knobs, "decay", adsr[1]);
   set_amy_knob_value(window.amy_knobs, "sustain", adsr[2]);
   set_amy_knob_value(window.amy_knobs, "release", adsr[3]);
+
+  set_amy_knob_value(window.amy_knobs, "eq_l", eq[0]);
+  set_amy_knob_value(window.amy_knobs, "eq_m", eq[1]);
+  set_amy_knob_value(window.amy_knobs, "eq_h", eq[2]);
+
+  set_amy_knob_value(window.amy_knobs, "ch_level", chorus[0]);
+  set_amy_knob_value(window.amy_knobs, "ch_rate", chorus[1]);
+  set_amy_knob_value(window.amy_knobs, "ch_depth", chorus[2]);
 
   if (typeof init_knobs === "function") {
     init_knobs(window.amy_knobs);
