@@ -227,6 +227,39 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
+      section: "Chorus",
+      knob_type: "log",
+      display_name: "ch_level",
+      min_value: 0,
+      max_value: 1,
+      offset: 0.001,
+      default_value: 0,
+      onChange: function(value) {
+        amy_add_message("k" + value);
+      }
+    },
+    {
+      section: "Chorus",
+      knob_type: "log",
+      display_name: "ch_rate",
+      min_value: 0.1,
+      max_value: 10,
+      default_value: 2,
+      onChange: function(value) {
+        amy_add_message("k,," + value);
+      }
+    },
+    {
+      section: "Chorus",
+      display_name: "ch_depth",
+      min_value: 0,
+      max_value: 1,
+      default_value: 0.5,
+      onChange: function(value) {
+        amy_add_message("k,,," + value);
+      }
+    },
+    {
       section: "ADSR",
       display_name: "attack",
       min_value: 0,
@@ -275,39 +308,6 @@ window.addEventListener("DOMContentLoaded", function() {
         bp_string = ",1,,," + value + ",0";
         amy_add_message("i1v0A" + bp_string);
         amy_add_message("i1v1A" + bp_string);
-      }
-    },
-    {
-      section: "Chorus",
-      knob_type: "log",
-      display_name: "ch_level",
-      min_value: 0,
-      max_value: 1,
-      offset: 0.001,
-      default_value: 0,
-      onChange: function(value) {
-        amy_add_message("k" + value);
-      }
-    },
-    {
-      section: "Chorus",
-      knob_type: "log",
-      display_name: "ch_rate",
-      min_value: 0.1,
-      max_value: 10,
-      default_value: 2,
-      onChange: function(value) {
-        amy_add_message("k,," + value);
-      }
-    },
-    {
-      section: "Chorus",
-      display_name: "ch_depth",
-      min_value: 0,
-      max_value: 1,
-      default_value: 0.5,
-      onChange: function(value) {
-        amy_add_message("k,,," + value);
       }
     },
     {
