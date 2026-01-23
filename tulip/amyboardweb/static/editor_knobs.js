@@ -354,6 +354,14 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
   const sections = [];
   let currentSection = null;
+  const sectionStyles = Array.isArray(window.amy_sections)
+    ? window.amy_sections.reduce(function(map, entry) {
+      if (entry && typeof entry.name === "string") {
+        map[entry.name] = entry;
+      }
+      return map;
+    }, {})
+    : {};
 
   knobConfigs.forEach(function(config, index) {
     const sectionName = typeof config.section === "string" ? config.section : "";
@@ -371,10 +379,22 @@ function init_knobs(knobConfigs, gridId, onChange) {
     sectionWrap.className = sectionClass;
     sectionWrap.style.setProperty("--knob-count", String(section.items.length));
     sectionWrap.style.setProperty("--knob-units", String(section.units || section.items.length));
+    const styleConfig = sectionStyles[section.name];
+    if (styleConfig && styleConfig.bg_color) {
+      sectionWrap.style.background = styleConfig.bg_color;
+    }
 
     const header = document.createElement("div");
     header.className = "knob-section-header";
     header.textContent = section.name || "";
+    if (styleConfig) {
+      if (styleConfig.header_bg_color) {
+        header.style.background = styleConfig.header_bg_color;
+      }
+      if (styleConfig.header_fg_color) {
+        header.style.color = styleConfig.header_fg_color;
+      }
+    }
 
     const sectionGrid = document.createElement("div");
     sectionGrid.className = targetId === "knob-grid" ? "row g-4 knob-section-grid" : "row g-3 knob-section-grid";
