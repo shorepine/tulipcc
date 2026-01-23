@@ -546,9 +546,9 @@ function set_knobs_from_patch_number(patch_number) {
   set_amy_knob_value(window.amy_knobs, "sustain", adsr[2]);
   set_amy_knob_value(window.amy_knobs, "release", adsr[3]);
 
-  set_amy_knob_value(window.amy_knobs, "eq_l", eq[0]);
-  set_amy_knob_value(window.amy_knobs, "eq_m", eq[1]);
-  set_amy_knob_value(window.amy_knobs, "eq_h", eq[2]);
+  set_amy_knob_value(window.amy_knobs, "eq_low", eq[0]);
+  set_amy_knob_value(window.amy_knobs, "eq_mid", eq[1]);
+  set_amy_knob_value(window.amy_knobs, "eq_high", eq[2]);
 
   set_amy_knob_value(window.amy_knobs, "ch_level", chorus[0]);
   set_amy_knob_value(window.amy_knobs, "ch_rate", chorus[1]);

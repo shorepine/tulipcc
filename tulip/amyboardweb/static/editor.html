@@ -359,8 +359,9 @@
 
       @media (min-width: 800px) {
         .knob-section-main {
-          flex: 0 0 min(100%, calc(var(--knob-count, 14) * 7.142%));
-          max-width: min(100%, calc(var(--knob-count, 14) * 7.142%));
+          flex: 0 0 min(100%, calc(var(--knob-units, var(--knob-count, 14)) * 7.142%));
+          max-width: min(100%, calc(var(--knob-units, var(--knob-count, 14)) * 7.142%));
+          width: min(100%, calc(var(--knob-units, var(--knob-count, 14)) * 7.142%));
         }
         .knob-section-main .knob-col {
           flex: 0 0 calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 14)));
