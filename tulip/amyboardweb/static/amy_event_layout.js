@@ -16,8 +16,17 @@ window.AMY_EVENT_LAYOUT = {
     "bp1": 596,
     "bp_is_set": 260,
     "chained_osc": 242,
+    "chorus_depth": 920,
+    "chorus_level": 908,
+    "chorus_lfo_freq": 916,
+    "chorus_max_delay": 912,
     "detune": 212,
     "duty_coefs": 128,
+    "echo_delay_ms": 892,
+    "echo_feedback": 900,
+    "echo_filter_coef": 904,
+    "echo_level": 888,
+    "echo_max_delay_ms": 896,
     "eg_type": 852,
     "eq_h": 256,
     "eq_l": 248,
@@ -43,6 +52,10 @@ window.AMY_EVENT_LAYOUT = {
     "ratio": 232,
     "reset_osc": 884,
     "resonance": 236,
+    "reverb_damping": 932,
+    "reverb_level": 924,
+    "reverb_liveness": 928,
+    "reverb_xover_hz": 936,
     "sequence": 868,
     "status": 880,
     "synth": 854,
@@ -56,5 +69,5 @@ window.AMY_EVENT_LAYOUT = {
     "volume": 216,
     "wave": 6
   },
-  "size": 888
+  "size": 940
 };
