@@ -1,5 +1,17 @@
 // Define all the knobs and their parameters here
 window.addEventListener("DOMContentLoaded", function() {
+  window.amy_sections = [
+    { name: "OSC A", bg_color: "rgba(244, 0, 0, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "OSC B", bg_color: "rgba(0, 53, 247, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "ADSR", bg_color: "rgba(5, 243, 45, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "VCF", bg_color: "rgba(220, 235, 8, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "VCF_ENV", bg_color: "rgba(249, 130, 3, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Reverb", bg_color: "rgba(255, 0, 247, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "LFO", bg_color: "rgba(255, 0, 0, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Chorus", bg_color: "rgba(6, 213, 250, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "EQ", bg_color: "rgba(239, 6, 220, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" }
+  ];
+
   window.amy_knobs = [
     {
       section: "OSC A",
