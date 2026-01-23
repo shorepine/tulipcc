@@ -286,10 +286,6 @@
         margin: 0 auto;
       }
 
-      .knob-spacer-half {
-        width: 34px;
-      }
-
       .amy-keyboard {
         width: 100%;
         max-width: 900px;
@@ -327,7 +323,6 @@
         font-size: 10px;
         width: 100%;
         box-sizing: border-box;
-        opacity: 0.5;
       }
 
       .nav-tabs .nav-link {
@@ -352,7 +347,6 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        color: #fff;
       }
 
       .knob-section {
@@ -365,8 +359,8 @@
 
       @media (min-width: 800px) {
         .knob-section-main {
-          flex: 0 0 min(100%, calc(var(--knob-units, var(--knob-count, 14)) * 7.142%));
-          max-width: min(100%, calc(var(--knob-units, var(--knob-count, 14)) * 7.142%));
+          flex: 0 0 min(100%, calc(var(--knob-count, 14) * 7.142%));
+          max-width: min(100%, calc(var(--knob-count, 14) * 7.142%));
         }
         .knob-section-main .knob-col {
           flex: 0 0 calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 14)));
@@ -374,22 +368,16 @@
         }
       }
 
-      @media (max-width: 999px) {
+      @media (max-width: 799px) {
         .knob-col-spacer {
-          display: none;
-        }
-        .knob-col-spacer-half {
           display: none;
         }
       }
 
       #patch-pane {
-        background-color: rgb(59, 58, 57); 
-        background-size: 250px; 
-        background-position: center center;
-        background-image: url("/img/metal.jpg") ;
+        background: linear-gradient(135deg, #e6e6e6 0%, #99918b 100%);
         border-radius: 12px;
-        padding: 12px 22px;
+        padding: 24px;
       }
     </style>
   </head>
