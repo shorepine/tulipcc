@@ -83,6 +83,14 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelector(".subheader")?.classList.add("hidden");
         document.querySelector(".footer")?.classList.add("hidden");
         document.getElementById("app")?.classList.add("hidden");
+        const main = document.querySelector("main.main");
+        if (main) {
+            Array.from(main.children).forEach((child) => {
+                if (child.id !== "notSupported") {
+                    child.classList.add("hidden");
+                }
+            });
+        }
     }
 
     initBaudRate();

@@ -27,6 +27,8 @@ build_once() {
   cp -Rf api stage
   cp vercel.json stage/vercel.json
 
+  
+
   cp ../../amy/docs/amy.js stage/amy-$timestamp.js
   cp ../../amy/docs/amy.wasm stage/amy-$timestamp.wasm
   cp ../../amy/docs/amy.aw.js stage/amy-$timestamp.aw.js

@@ -41,6 +41,7 @@
     <script src="./mini-coi.js" scope="./"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/webmidi@latest/dist/iife/webmidi.iife.js"></script>
+    <script src="vendor/qwerty-hancock.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -82,15 +83,19 @@
       }
 
       .knob-grid .ui-knob-container {
-        width: 96px;
-        height: 96px;
+        width: 80px;
+        height: 80px;
         margin: 0 auto;
         overflow: visible;
       }
 
+      .knob-grid {
+        --bs-gutter-y: 0.75rem;
+      }
+
       .amy-knob {
-        width: 72px;
-        height: 72px;
+        width: 60px;
+        height: 60px;
         margin: 0 auto;
         touch-action: none;
         user-select: none;
@@ -115,10 +120,10 @@
 
       .amy-knob-indicator {
         position: absolute;
-        top: 8px;
+        top: 6px;
         left: 50%;
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
         background: #f2c94c;
         border-radius: 50%;
         transform: translateX(-50%);
@@ -130,20 +135,57 @@
         box-shadow: 0 0 6px rgba(127, 211, 255, 0.75);
       }
 
+      .amy-pushbutton {
+        width: 52px;
+        height: 72px;
+        margin: 0 auto;
+        border-radius: 10px;
+        background: var(--pushbutton-color, #d04437);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 6px;
+        cursor: pointer;
+        user-select: none;
+        box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.3),
+          inset 4px 4px 8px rgba(255, 255, 255, 0.12),
+          0 10px 18px rgba(0, 0, 0, 0.28);
+      }
+
+      .amy-pushbutton:focus-visible {
+        outline: 2px solid #f2c94c;
+        outline-offset: 4px;
+      }
+
+      .amy-pushbutton-led {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #3a0a0a;
+        box-shadow: inset -2px -2px 4px rgba(0, 0, 0, 0.35),
+          inset 2px 2px 4px rgba(255, 255, 255, 0.08);
+      }
+
+      .amy-pushbutton.is-on .amy-pushbutton-led {
+        background: #ff3b2f;
+        box-shadow: 0 0 10px rgba(255, 59, 47, 0.9),
+          inset 0 0 6px rgba(255, 255, 255, 0.45);
+      }
+
       .amy-select {
-        width: 112px;
+        width: 84px;
         margin: 0 auto;
       }
 
       .amy-select select {
-        width: 112px;
-        height: 112px;
+        width: 84px;
+        height: 84px;
         background: #1e1e1e;
         color: #f8f8f8;
         border: 1px solid #333;
         border-radius: 10px;
-        padding: 6px;
-        font-size: 13px;
+        padding: 4px;
+        font-size: 10px;
         accent-color: #f2c94c;
         box-shadow: inset -4px -4px 8px rgba(0, 0, 0, 0.35),
           inset 4px 4px 8px rgba(255, 255, 255, 0.06);
@@ -160,47 +202,26 @@
       }
 
       .amy-keyboard {
-        display: flex;
-        align-items: flex-end;
+        width: 100%;
+        max-width: 900px;
         height: 140px;
+        margin: 0 auto;
         position: relative;
         user-select: none;
       }
 
-      .amy-key {
-        position: relative;
-        border: 1px solid #111;
-        border-radius: 0 0 6px 6px;
-        cursor: pointer;
-        transition: transform 0.05s ease;
-      }
-
-      .amy-key.is-pressed {
-        transform: translateY(2px);
-      }
-
-      .amy-key-white {
-        background: #f8f8f8;
-        height: 140px;
-        width: 42px;
-        z-index: 1;
-      }
-
-      .amy-key-black {
-        background: #111;
-        height: 90px;
-        width: 42px;
-        position: absolute;
-        top: 0;
-        right: -21px;
-        z-index: 2;
-        border-radius: 0 0 4px 4px;
+      #canvas {
+        width: 100%;
+        max-width: 256px;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        display: block;
       }
 
       @media (min-width: 800px) {
         .knob-col {
-          flex: 0 0 12.5%;
-          max-width: 12.5%;
+          flex: 0 0 8.333%;
+          max-width: 8.333%;
         }
       }
 
@@ -212,10 +233,32 @@
         color: #f2f2f2;
         background: #2b2b2b;
         border-radius: 10px;
-        padding: 6px 12px;
-        margin: 10px 0 4px;
+        padding: 4px 10px;
+        margin: 4px 0 2px;
+        font-size: 11px;
         width: 100%;
         box-sizing: border-box;
+      }
+
+      .nav-tabs .nav-link {
+        font-size: 0.85rem;
+        padding: 0.35rem 0.75rem;
+      }
+
+      .form-control,
+      .form-select,
+      .form-check-label {
+        font-size: 0.85rem;
+      }
+
+      .knob-value {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+      }
+
+      .knob-label {
+        font-size: 0.7rem;
+        line-height: 1.1;
       }
 
       .knob-section {
@@ -224,14 +267,20 @@
       }
 
       @media (min-width: 800px) {
-        .knob-section {
-          flex: 0 0 min(100%, calc(var(--knob-count, 8) * 12.5%));
-          max-width: min(100%, calc(var(--knob-count, 8) * 12.5%));
+        .knob-section-main {
+          flex: 0 0 min(100%, calc(var(--knob-count, 12) * 8.333%));
+          max-width: min(100%, calc(var(--knob-count, 12) * 8.333%));
         }
-        .knob-section .knob-col {
-          flex: 0 0 calc(100% / var(--knob-count, 8));
-          max-width: calc(100% / var(--knob-count, 8));
+        .knob-section-main .knob-col {
+          flex: 0 0 calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 12)));
+          max-width: calc(100% * var(--knob-span, 1) / var(--knob-units, var(--knob-count, 12)));
         }
+      }
+
+      #patch-pane {
+        background: linear-gradient(135deg, #e6e6e6 0%, #e0610b 100%);
+        border-radius: 12px;
+        padding: 12px;
       }
     </style>
   </head>
@@ -239,10 +288,14 @@
   <body data-bs-spy="scroll" data-bs-target="#navScroll">
     <nav id="navScroll" class="navbar navbar-expand-lg navbar-light fixed-top scrolled" tabindex="0">
       <div class="container">
-        <a class="navbar-brand pe-4 fs-4" href="/">
-          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
-          <span class="ms-1 fw-bolder">AMYboard</span>
-        </a>
+
+
+              <a class="navbar-brand pe-4 fs-4" href="editor.html">
+                          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
+
+          <span class="ms-1 fw-bolder">AMYboard online</span>
+              </a>
+
 
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
@@ -250,12 +303,6 @@
 
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item">
-              <a class="nav-link" href="#get" aria-label="Get an AMYboard">
-                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" />
-                Get an AMYboard
-              </a>
-            </li>
             <li class="nav-item">
               <a class="nav-link" href="https://github.com/shorepine/amy">
                 <img src="img/github-mark.svg" width="24" height="24" /> Github
@@ -266,17 +313,15 @@
                 <img src="img/discord-mark-black.svg" width="24" height="24" /> Discord
               </a>
             </li>
-            <li class="nav-item">
-              <a class="nav-link" href="https://tulip.computer/">
-                <img src="img/favicon.png" width="24" height="24" /> Tulip
-              </a>
-            </li>
           </ul>
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
             <li class="nav-item">
-              <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="your.html">
-                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" /> Your AMYboard online
+
+                            <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="/">
+                <img src="img/amyboard.svg" width="24" height="24" /> AMYboard
               </a>
+
+
             </li>
           </ul>
         </div>
@@ -325,25 +370,30 @@
       <div class="card border-0 bg-light shadow-sm mb-3">
         <div class="card-body">
           <form name="amyboard_settings">
-            <div class="row align-items-start">
-              <div class="col-md-auto align-top small" id="audioin_grow">
+            <div class="row align-items-center">
+              <div class="col-md-auto align-top small d-flex align-items-center" id="audioin_grow">
                 <div class="form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="amy_audioin" onClick="toggle_audioin();"/>
                   <label class="form-check-label" for="amy_audioin">Allow audio input</label>
                 </div>
               </div>
-              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0">
+              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0" id="midi-input-col">
                 <div id="midi-input-panel">
                   <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
                     <option selected>[Not available]</option>
                   </select>
                 </div>
               </div>
-              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0">
+              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0" id="midi-output-col">
                 <div id="midi-output-panel">
                   <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
                     <option selected>[Not available]</option>
                   </select>
+                </div>
+              </div>
+              <div class="col-12 col-md-8 align-self-start small mt-2 mt-md-0 d-none" id="midi-warning-col">
+                <div class="alert alert-warning py-2 mb-0">
+                  This page can use WebMIDI on <a href="https://caniuse.com/midi" target="_blank">supported browsers</a>. 
                 </div>
               </div>
             </div>
@@ -406,11 +456,11 @@
                 </div>
               </div>
               <div class="row mb-4 mt-1 align-items-start">
-                <div class="col-3">
-                  <canvas id="canvas" width=256 height=256/>
+                <div class="col-6 col-md-4">
+                  <canvas id="canvas" width="256" height="256"></canvas>
                 </div>
-                <div class="col-3">
-                  <div id="cv-knob-grid" class="row g-3"></div>
+                <div class="col-6 col-md-4">
+                  <div id="cv-knob-grid" class="row g-4"></div>
                 </div>
               </div>
               <div class="row mb-4 mt-1">
@@ -541,8 +591,8 @@
       const cvGrid = document.getElementById("cv-knob-grid");
       if (cvGrid && typeof init_knobs === "function") {
         window.amy_cv_knobs = [
-          { min_value: -10, max_value: 10, display_name: "CV1", default_value: 0 },
-          { min_value: -10, max_value: 10, display_name: "CV2", default_value: 0 }
+          { section: "CV Input", min_value: -10, max_value: 10, display_name: "CV1", default_value: 0 },
+          { section: "CV Input", min_value: -10, max_value: 10, display_name: "CV2", default_value: 0 }
         ];
         init_knobs(window.amy_cv_knobs, "cv-knob-grid", function(index, value) {
           if (typeof window.amy_cv_knob_change === "function") {
@@ -558,73 +608,67 @@
       window.addEventListener("DOMContentLoaded", function() {
         const keyboard = document.getElementById("amy-keyboard");
         if (keyboard) {
-          const keyPattern = [
-            { note: "C", black: true },
-            { note: "D", black: true },
-            { note: "E", black: false },
-            { note: "F", black: true },
-            { note: "G", black: true },
-            { note: "A", black: true },
-            { note: "B", black: false }
-          ];
-          const startMidi = 48; // C3
-          const totalWhiteKeys = 14;
-          const whiteNotes = ["C", "D", "E", "F", "G", "A", "B"];
-          for (let i = 0; i < totalWhiteKeys; i += 1) {
-            const whiteKey = document.createElement("div");
-            whiteKey.className = "amy-key amy-key-white";
-            const noteName = whiteNotes[i % 7];
-            const octave = 3 + Math.floor((i + (noteName === "C" ? 0 : 0)) / 7);
-            const midi = startMidi + i * 2 - (i > 1 ? Math.floor((i + 1) / 7) : 0);
-            whiteKey.dataset.midi = String(midi);
-            whiteKey.dataset.note = `${noteName}${octave}`;
-            keyboard.appendChild(whiteKey);
+          const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+          const flatMap = {
+            "DB": "C#",
+            "EB": "D#",
+            "GB": "F#",
+            "AB": "G#",
+            "BB": "A#"
+          };
+          const noteToMidi = function(note) {
+            if (typeof note !== "string") return null;
+            const cleaned = note.trim().toUpperCase();
+            const match = cleaned.match(/^([A-G]#?|[A-G]B)(-?\\d+)$/);
+            if (!match) return null;
+            const normalized = flatMap[match[1]] || match[1];
+            const noteIndex = noteNames.indexOf(normalized);
+            if (noteIndex < 0) return null;
+            const octave = Number(match[2]);
+            return (octave + 1) * 12 + noteIndex;
+          };
+          const freqToMidi = function(freq) {
+            if (!Number.isFinite(freq) || freq <= 0) return null;
+            return Math.round(69 + 12 * Math.log2(freq / 440));
+          };
 
-            const patternIndex = i % 7;
-            if (keyPattern[patternIndex].black) {
-              const blackKey = document.createElement("div");
-              blackKey.className = "amy-key amy-key-black";
-              const blackMidi = midi + 1;
-              const blackNote = `${keyPattern[patternIndex].note}#${octave}`;
-              blackKey.dataset.midi = String(blackMidi);
-              blackKey.dataset.note = blackNote;
-              whiteKey.appendChild(blackKey);
-            }
+          const QwertyCtor = (window.QwertyHancock && (window.QwertyHancock.QwertyHancock || window.QwertyHancock.default)) || window.QwertyHancock;
+          if (!QwertyCtor) {
+            console.error("QwertyHancock constructor not found.");
+            return;
           }
+          const qwerty = new QwertyCtor({
+            id: "amy-keyboard",
+            width: Math.min(900, keyboard.clientWidth || 900),
+            height: 140,
+            octaves: 2,
+            startNote: "C3",
+            whiteKeyColour: "#f8f8f8",
+            blackKeyColour: "#111",
+            activeColour: "#f2c94c",
+            borderColour: "#111"
+          });
 
-          let pressedKey = null;
-
-          keyboard.addEventListener("pointerdown", function(event) {
-            const key = event.target.closest(".amy-key");
-            if (!key) return;
-            pressedKey = key;
-            pressedKey.classList.add("is-pressed");
-            const midi = Number(key.dataset.midi);
-            if (Number.isFinite(midi)) {
-              amy_add_message("i1l1n" + midi);
+          qwerty.keyDown = function(note, freq) {
+            const midi = noteToMidi(note);
+            const midiFromFreq = freqToMidi(freq);
+            const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
+            if (Number.isFinite(finalMidi)) {
+              amy_add_message("i1l1n" + finalMidi);
             }
             if (typeof window.onKeyboardNote === "function") {
-              window.onKeyboardNote(midi, key.dataset.note || "");
+              window.onKeyboardNote(finalMidi, note);
             }
-          });
+          };
 
-          window.addEventListener("pointerup", function() {
-            if (pressedKey) {
-              const midi = Number(pressedKey.dataset.midi);
-              if (Number.isFinite(midi)) {
-                amy_add_message("i1l0n" + midi);
-              }
-              pressedKey.classList.remove("is-pressed");
-              pressedKey = null;
+          qwerty.keyUp = function(note, freq) {
+            const midi = noteToMidi(note);
+            const midiFromFreq = freqToMidi(freq);
+            const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
+            if (Number.isFinite(finalMidi)) {
+              amy_add_message("i1l0n" + finalMidi);
             }
-          });
-
-          window.addEventListener("pointercancel", function() {
-            if (pressedKey) {
-              pressedKey.classList.remove("is-pressed");
-              pressedKey = null;
-            }
-          });
+          };
         }
       });
     </script>
