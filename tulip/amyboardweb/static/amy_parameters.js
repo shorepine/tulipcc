@@ -1,15 +1,15 @@
 // Define all the knobs and their parameters here
 window.addEventListener("DOMContentLoaded", function() {
   window.amy_sections = [
-    { name: "OSC A", bg_color: "rgba(244, 0, 0, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "OSC B", bg_color: "rgba(0, 53, 247, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "ADSR", bg_color: "rgba(5, 243, 45, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "VCF", bg_color: "rgba(220, 235, 8, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "VCF_ENV", bg_color: "rgba(249, 130, 3, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "Reverb", bg_color: "rgba(255, 0, 247, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "LFO", bg_color: "rgba(255, 0, 0, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "Chorus", bg_color: "rgba(6, 213, 250, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "EQ", bg_color: "rgba(239, 6, 220, 0.25)", header_bg_color: "#000", header_fg_color: "#fff" }
+    { name: "OSC A", bg_color: "rgba(244, 0, 0, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "OSC B", bg_color: "rgba(0, 53, 247, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "ADSR", bg_color: "rgba(10, 134, 30, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "VCF", bg_color: "rgba(90, 94, 34, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "VCF_ENV", bg_color: "rgba(90, 94, 34, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Reverb", bg_color: "rgba(173, 14, 222, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "LFO", bg_color: "rgba(239, 133, 4, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Chorus", bg_color: "rgba(173, 14, 222, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "EQ", bg_color: "rgba(173, 14, 222, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" }
   ];
 
   window.amy_knobs = [
@@ -56,91 +56,83 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     { knob_type: "spacer" },
-    { knob_type: "spacer" },
-    {
-      section: "ADSR",
-      display_name: "attack",
-      min_value: 0,
-      max_value: 1000,
-      onChange: function(value) {
-        bp_string = Math.round(value) + ",1,,,,0"
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
-    },
-    {
-      section: "ADSR",
+    { knob_type: "spacer-half" },
+  
+  {
+      section: "VCF",
+      display_name: "freq_const",
       knob_type: "log",
-      display_name: "decay",
-      offset: 50,
-      min_value: 0,
-      max_value: 2000,
-      default_value: 100,
+      default_value: 1000,
+      min_value: 20,
+      max_value: 8000,
       onChange: function(value) {
-        bp_string = ",1," + value + ",,,0";
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
+        amy_add_message("i1F" + value);
       }
     },
     {
-      section: "ADSR",
-      display_name: "sustain",
+      section: "VCF",
+      display_name: "resonance",
+      knob_type: "log",
+      default_value: 0.7,
+      min_value: 0.5,
+      max_value: 16,
+      onChange: function(value) {
+        amy_add_message("i1R" + value);
+      }
+    },
+    {
+      section: "VCF",
+      display_name: "freq_kbd",
+      default_value: 1.0,
       min_value: 0,
       max_value: 1,
+      onChange: function(value) {
+        amy_add_message("i1F," + value);
+      }
+    },
+    {
+      section: "VCF",
+      display_name: "freq_env",
+      default_value: 4.0,
+      min_value: -10,
+      max_value: 10,
+      onChange: function(value) {
+        amy_add_message("i1F,,,," + value);
+      }
+    },
+
+    { knob_type: "spacer-half" },
+    {
+      section: "EQ",
+      display_name: "eq_low",
+      min_value: -15,
+      max_value: 15,
       default_value: 0,
       onChange: function(value) {
-        bp_string = ",1,," + value + ",,0";
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
+        amy_add_message("x" + value);
       }
     },
     {
-      section: "ADSR",
-      knob_type: "log",
-      display_name: "release",
-      offset: 50,
-      min_value: 0,
-      max_value: 8000,
-      default_value: 100,
+      section: "EQ",
+      display_name: "eq_mid",
+      min_value: -15,
+      max_value: 15,
+      default_value: 0,
       onChange: function(value) {
-        bp_string = ",1,,," + value + ",0";
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
-    },
-    { knob_type: "spacer" },
-            {
-      section: "Reverb",
-      knob_type: "log",
-      display_name: "rv_level",
-      min_value: 0.1,
-      max_value: 10,
-      default_value: 0.1,
-      onChange: function(value) {
-        amy_add_message("h" + value);
+        amy_add_message("x," + value);
       }
     },
     {
-      section: "Reverb",
-      knob_type: "log",
-      display_name: "rv_live",
-      min_value: 0.1,
-      max_value: 10,
-      default_value: 2,
+      section: "EQ",
+      display_name: "eq_high",
+      min_value: -15,
+      max_value: 15,
+      default_value: 0,
       onChange: function(value) {
-        amy_add_message("h," + value);
+        amy_add_message("x,," + value);
       }
     },
-    {
-      section: "Reverb",
-      display_name: "rv_damp",
-      min_value: 0,
-      max_value: 1,
-      default_value: 0.5,
-      onChange: function(value) {
-        amy_add_message("h,," + value);
-      }
-    },
+
     {
       section: "OSC B",
       display_name: "b_freq",
@@ -183,51 +175,54 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1v1a" + value);
       }
     },
-    {knob_type: "spacer" },
-    {knob_type: "spacer" },
-    {
-      section: "VCF",
-      display_name: "freq_const",
-      knob_type: "log",
-      default_value: 1000,
-      min_value: 20,
-      max_value: 8000,
+    { knob_type: "spacer" },
+    { knob_type: "spacer-half" },
+
+   {
+      section: "VCF_ENV",
+      display_name: "f_attack",
+      default_value: 0,
+      min_value: 0,
+      max_value: 1000,
       onChange: function(value) {
-        amy_add_message("i1F" + value);
+        amy_add_message("i1B"+Math.round(value)+",1,,,,0");
       }
     },
     {
-      section: "VCF",
-      display_name: "resonance",
+      section: "VCF_ENV",
       knob_type: "log",
-      default_value: 0.7,
-      min_value: 0.5,
-      max_value: 16,
+      display_name: "f_decay",
+      default_value: 100,
+      offset: 50,
+      min_value: 0,
+      max_value: 2000,
       onChange: function(value) {
-        amy_add_message("i1R" + value);
+        amy_add_message("i1B,1,"+value+",,,0");
       }
     },
     {
-      section: "VCF",
-      display_name: "freq_kbd",
-      default_value: 1.0,
+      section: "VCF_ENV",
+      display_name: "f_sustain",
       min_value: 0,
       max_value: 1,
+      default_value: 0,
       onChange: function(value) {
-        amy_add_message("i1F," + value);
+        amy_add_message("i1B,1,,"+value+",,0");
       }
     },
     {
-      section: "VCF",
-      display_name: "freq_env",
-      default_value: 4.0,
-      min_value: -10,
-      max_value: 10,
+      section: "VCF_ENV",
+      knob_type: "log",
+      display_name: "f_release",
+      offset: 50,
+      min_value: 0,
+      max_value: 8000,
+      default_value: 100,
       onChange: function(value) {
-        amy_add_message("i1F,,,," + value);
+        amy_add_message("i1B,1,,,"+value+",0");
       }
-    },
-    {knob_type: "spacer" },
+    },  
+    {knob_type: "spacer-half" },
     {
       section: "Chorus",
       knob_type: "log",
@@ -319,84 +314,96 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1v0F,,,,," + value);
       }
     },
-        {knob_type: "spacer" },
+        {knob_type: "spacer-half" },
 
-     {
-      section: "VCF_ENV",
-      display_name: "f_attack",
-      default_value: 0,
+          {
+      section: "ADSR",
+      display_name: "attack",
       min_value: 0,
       max_value: 1000,
       onChange: function(value) {
-        amy_add_message("i1B"+Math.round(value)+",1,,,,0");
+        bp_string = Math.round(value) + ",1,,,,0"
+        amy_add_message("i1v0A" + bp_string);
+        amy_add_message("i1v1A" + bp_string);
       }
     },
     {
-      section: "VCF_ENV",
+      section: "ADSR",
       knob_type: "log",
-      display_name: "f_decay",
-      default_value: 100,
+      display_name: "decay",
       offset: 50,
       min_value: 0,
       max_value: 2000,
+      default_value: 100,
       onChange: function(value) {
-        amy_add_message("i1B,1,"+value+",,,0");
+        bp_string = ",1," + value + ",,,0";
+        amy_add_message("i1v0A" + bp_string);
+        amy_add_message("i1v1A" + bp_string);
       }
     },
     {
-      section: "VCF_ENV",
-      display_name: "f_sustain",
+      section: "ADSR",
+      display_name: "sustain",
       min_value: 0,
       max_value: 1,
       default_value: 0,
       onChange: function(value) {
-        amy_add_message("i1B,1,,"+value+",,0");
+        bp_string = ",1,," + value + ",,0";
+        amy_add_message("i1v0A" + bp_string);
+        amy_add_message("i1v1A" + bp_string);
       }
     },
     {
-      section: "VCF_ENV",
+      section: "ADSR",
       knob_type: "log",
-      display_name: "f_release",
+      display_name: "release",
       offset: 50,
       min_value: 0,
       max_value: 8000,
       default_value: 100,
       onChange: function(value) {
-        amy_add_message("i1B,1,,,"+value+",0");
+        bp_string = ",1,,," + value + ",0";
+        amy_add_message("i1v0A" + bp_string);
+        amy_add_message("i1v1A" + bp_string);
       }
     },
-        {knob_type: "spacer" },
+  
+        {knob_type: "spacer-half" },
+
 
     {
-      section: "EQ",
-      display_name: "eq_low",
-      min_value: -15,
-      max_value: 15,
-      default_value: 0,
+      section: "Reverb",
+      knob_type: "log",
+      display_name: "rv_level",
+      min_value: 0.1,
+      max_value: 10,
+      default_value: 0.1,
       onChange: function(value) {
-        amy_add_message("x" + value);
+        amy_add_message("h" + value);
       }
     },
     {
-      section: "EQ",
-      display_name: "eq_mid",
-      min_value: -15,
-      max_value: 15,
-      default_value: 0,
+      section: "Reverb",
+      knob_type: "log",
+      display_name: "rv_live",
+      min_value: 0.1,
+      max_value: 10,
+      default_value: 2,
       onChange: function(value) {
-        amy_add_message("x," + value);
+        amy_add_message("h," + value);
       }
     },
     {
-      section: "EQ",
-      display_name: "eq_high",
-      min_value: -15,
-      max_value: 15,
-      default_value: 0,
+      section: "Reverb",
+      display_name: "rv_damp",
+      min_value: 0,
+      max_value: 1,
+      default_value: 0.5,
       onChange: function(value) {
-        amy_add_message("x,," + value);
+        amy_add_message("h,," + value);
       }
     },
+
   ];
 
   if (typeof init_knobs === "function") {

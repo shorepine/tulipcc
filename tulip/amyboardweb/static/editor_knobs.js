@@ -170,6 +170,22 @@ function init_knobs(knobConfigs, gridId, onChange) {
       return;
     }
 
+    if (config.knob_type === "spacer-half") {
+      const col = document.createElement("div");
+      col.className = `${colClass} knob-col-spacer-half`;
+      col.style.setProperty("--knob-span", "0.5");
+      col.style.flex = "0 0 calc(100% * 0.5 / var(--knob-units, var(--knob-count, 14)))";
+      col.style.maxWidth = "calc(100% * 0.5 / var(--knob-units, var(--knob-count, 14)))";
+      col.style.width = "calc(100% * 0.5 / var(--knob-units, var(--knob-count, 14)))";
+
+      const spacer = document.createElement("div");
+      spacer.className = "knob-spacer knob-spacer-half";
+
+      col.appendChild(spacer);
+      targetGrid.appendChild(col);
+      return;
+    }
+
     if (config.knob_type === "pushbutton") {
       const displayName = config.display_name || `Button ${index + 1}`;
       const defaultValue = parseNumber(config.default_value, 0);
@@ -450,7 +466,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
       sections.push(currentSection);
     }
     currentSection.items.push({ config: config, index: index });
-    if (config.knob_type === "pushbutton") {
+    if (config.knob_type === "pushbutton" || config.knob_type === "spacer-half") {
       currentSection.units += 0.5;
     } else {
       currentSection.units += 1;
@@ -471,7 +487,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
     }
 
     const showHeader = section.name && section.items.some(function(item) {
-      return item.config && item.config.knob_type !== "spacer";
+      return item.config && item.config.knob_type !== "spacer" && item.config.knob_type !== "spacer-half";
     });
 
     if (showHeader) {
