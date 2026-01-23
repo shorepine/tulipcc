@@ -1,11 +1,11 @@
 // Define all the knobs and their parameters here
 window.addEventListener("DOMContentLoaded", function() {
   window.amy_sections = [
-    { name: "OSC A", bg_color: "rgba(244, 0, 0, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "OSC B", bg_color: "rgba(0, 53, 247, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Osc A", bg_color: "rgba(244, 0, 0, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Osc B", bg_color: "rgba(0, 53, 247, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "ADSR", bg_color: "rgba(10, 134, 30, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "VCF", bg_color: "rgba(90, 94, 34, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "VCF_ENV", bg_color: "rgba(90, 94, 34, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "VCF ENV", bg_color: "rgba(90, 94, 34, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Reverb", bg_color: "rgba(173, 14, 222, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "LFO", bg_color: "rgba(239, 133, 4, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Chorus", bg_color: "rgba(173, 14, 222, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
@@ -14,8 +14,8 @@ window.addEventListener("DOMContentLoaded", function() {
 
   window.amy_knobs = [
     {
-      section: "OSC A",
-      display_name: "a_freq",
+      section: "Osc A",
+      display_name: "freq",
       knob_type: "log",
       default_value: 261.63,
       min_value: 50,
@@ -25,9 +25,9 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "OSC A",
+      section: "Osc A",
       knob_type: "selection",
-      display_name: "a_wave",
+      display_name: "wave",
       options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
       default_value: 0,
       onChange: function(value) {
@@ -35,8 +35,8 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "OSC A",
-      display_name: "a_duty",
+      section: "Osc A",
+      display_name: "duty",
       default_value: 0.5,
       min_value: 0.5,
       max_value: 0.99,
@@ -45,8 +45,8 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "OSC A",
-      display_name: "a_level",
+      section: "Osc A",
+      display_name: "level",
       knob_type: "log",
       default_value: 1.0,
       min_value: 0.001,
@@ -60,7 +60,7 @@ window.addEventListener("DOMContentLoaded", function() {
   
   {
       section: "VCF",
-      display_name: "freq_const",
+      display_name: "freq",
       knob_type: "log",
       default_value: 1000,
       min_value: 20,
@@ -82,7 +82,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF",
-      display_name: "freq_kbd",
+      display_name: "kbd",
       default_value: 1.0,
       min_value: 0,
       max_value: 1,
@@ -92,7 +92,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF",
-      display_name: "freq_env",
+      display_name: "env",
       default_value: 4.0,
       min_value: -10,
       max_value: 10,
@@ -104,7 +104,7 @@ window.addEventListener("DOMContentLoaded", function() {
     { knob_type: "spacer-half" },
     {
       section: "EQ",
-      display_name: "eq_low",
+      display_name: "low",
       min_value: -15,
       max_value: 15,
       default_value: 0,
@@ -114,7 +114,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "EQ",
-      display_name: "eq_mid",
+      display_name: "mid",
       min_value: -15,
       max_value: 15,
       default_value: 0,
@@ -124,7 +124,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "EQ",
-      display_name: "eq_high",
+      display_name: "high",
       min_value: -15,
       max_value: 15,
       default_value: 0,
@@ -134,8 +134,8 @@ window.addEventListener("DOMContentLoaded", function() {
     },
 
     {
-      section: "OSC B",
-      display_name: "b_freq",
+      section: "Osc B",
+      display_name: "freq",
       knob_type: "log",
       default_value: 261.63,
       min_value: 50,
@@ -145,9 +145,9 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "OSC B",
+      section: "Osc B",
       knob_type: "selection",
-      display_name: "b_wave",
+      display_name: "wave",
       options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
       default_value: 0,
       onChange: function(value) {
@@ -155,8 +155,8 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "OSC B",
-      display_name: "b_duty",
+      section: "Osc B",
+      display_name: "duty",
       default_value: 0.5,
       min_value: 0.5,
       max_value: 0.99,
@@ -165,8 +165,8 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "OSC B",
-      display_name: "b_level",
+      section: "Osc B",
+      display_name: "level",
       knob_type: "log",
       default_value: 1.0,
       min_value: 0.001,
@@ -179,8 +179,8 @@ window.addEventListener("DOMContentLoaded", function() {
     { knob_type: "spacer-half" },
 
    {
-      section: "VCF_ENV",
-      display_name: "f_attack",
+      section: "VCF ENV",
+      display_name: "attack",
       default_value: 0,
       min_value: 0,
       max_value: 1000,
@@ -189,9 +189,9 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF_ENV",
+      section: "VCF ENV",
       knob_type: "log",
-      display_name: "f_decay",
+      display_name: "decay",
       default_value: 100,
       offset: 50,
       min_value: 0,
@@ -201,8 +201,8 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF_ENV",
-      display_name: "f_sustain",
+      section: "VCF ENV",
+      display_name: "sustain",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -211,9 +211,9 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF_ENV",
+      section: "VCF ENV",
       knob_type: "log",
-      display_name: "f_release",
+      display_name: "release",
       offset: 50,
       min_value: 0,
       max_value: 8000,
@@ -226,7 +226,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "Chorus",
       knob_type: "log",
-      display_name: "ch_level",
+      display_name: "level",
       min_value: 0,
       max_value: 1,
       offset: 0.001,
@@ -238,7 +238,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "Chorus",
       knob_type: "log",
-      display_name: "ch_rate",
+      display_name: "rate",
       min_value: 0.1,
       max_value: 10,
       default_value: 2,
@@ -248,7 +248,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Chorus",
-      display_name: "ch_depth",
+      display_name: "depth",
       min_value: 0,
       max_value: 1,
       default_value: 0.5,
@@ -260,7 +260,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
     {
       section: "LFO",
-      display_name: "lfo_freq",
+      display_name: "freq",
       knob_type: "log",
       default_value: 4,
       min_value: 0.1,
@@ -272,7 +272,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "LFO",
       knob_type: "selection",
-      display_name: "lfo_wave",
+      display_name: "wave",
       options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
       default_value: 0,
       onChange: function(value) {
@@ -281,7 +281,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "LFO",
-      display_name: "lfo_osc",
+      display_name: "osc",
       knob_type: "log",
       default_value: 0.0,
       min_value: 0.0,
@@ -294,7 +294,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "LFO",
-      display_name: "lfo_pwm",
+      display_name: "pwm",
       default_value: 0.0,
       min_value: 0.0,
       max_value: 0.49,
@@ -305,7 +305,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "LFO",
-      display_name: "lfo_filt",
+      display_name: "filt",
       default_value: 0.0,
       min_value: 0.0,
       max_value: 4.0,
@@ -374,7 +374,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "Reverb",
       knob_type: "log",
-      display_name: "rv_level",
+      display_name: "level",
       min_value: 0.1,
       max_value: 10,
       default_value: 0.1,
@@ -385,7 +385,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "Reverb",
       knob_type: "log",
-      display_name: "rv_live",
+      display_name: "live",
       min_value: 0.1,
       max_value: 10,
       default_value: 2,
@@ -395,7 +395,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Reverb",
-      display_name: "rv_damp",
+      display_name: "damp",
       min_value: 0,
       max_value: 1,
       default_value: 0.5,
@@ -512,47 +512,47 @@ function set_knobs_from_patch_number(patch_number) {
   }
 
   // Configure the patch.
-  set_amy_knob_value(window.amy_knobs, "a_freq", osc_freq[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "a_wave", osc_wave[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "a_duty", osc_duty[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "a_level", osc_gain[oscAB_osc[0]]);
+  set_amy_knob_value(window.amy_knobs, "OSC A", "freq", osc_freq[oscAB_osc[0]]);
+  set_amy_knob_value(window.amy_knobs, "OSC A", "wave", osc_wave[oscAB_osc[0]]);
+  set_amy_knob_value(window.amy_knobs, "OSC A", "duty", osc_duty[oscAB_osc[0]]);
+  set_amy_knob_value(window.amy_knobs, "OSC A", "level", osc_gain[oscAB_osc[0]]);
 
-  set_amy_knob_value(window.amy_knobs, "b_freq", osc_freq[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "b_wave", osc_wave[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "b_duty", osc_duty[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "b_level", osc_gain[oscAB_osc[1]]);
+  set_amy_knob_value(window.amy_knobs, "OSC B", "freq", osc_freq[oscAB_osc[1]]);
+  set_amy_knob_value(window.amy_knobs, "OSC B", "wave", osc_wave[oscAB_osc[1]]);
+  set_amy_knob_value(window.amy_knobs, "OSC B", "duty", osc_duty[oscAB_osc[1]]);
+  set_amy_knob_value(window.amy_knobs, "OSC B", "level", osc_gain[oscAB_osc[1]]);
 
-  set_amy_knob_value(window.amy_knobs, "freq_const", filterFreq);
-  set_amy_knob_value(window.amy_knobs, "resonance", resonanceValue);
-  set_amy_knob_value(window.amy_knobs, "freq_kbd", filterKbd);
-  set_amy_knob_value(window.amy_knobs, "freq_env", filterEnv);
-  set_amy_knob_value(window.amy_knobs, "f_attack", adsr[0]);
-  set_amy_knob_value(window.amy_knobs, "f_decay", adsr[1]);
-  set_amy_knob_value(window.amy_knobs, "f_sustain", adsr[2]);
-  set_amy_knob_value(window.amy_knobs, "f_release", adsr[3]);
+  set_amy_knob_value(window.amy_knobs, "VCF", "freq", filterFreq);
+  set_amy_knob_value(window.amy_knobs, "VCF", "resonance", resonanceValue);
+  set_amy_knob_value(window.amy_knobs, "VCF", "kbd", filterKbd);
+  set_amy_knob_value(window.amy_knobs, "VCF", "env", filterEnv);
+  set_amy_knob_value(window.amy_knobs, "VCF ENV", "attack", adsr[0]);
+  set_amy_knob_value(window.amy_knobs, "VCF ENV", "decay", adsr[1]);
+  set_amy_knob_value(window.amy_knobs, "VCF ENV", "sustain", adsr[2]);
+  set_amy_knob_value(window.amy_knobs, "VCF ENV", "release", adsr[3]);
 
-  set_amy_knob_value(window.amy_knobs, "lfo_freq", lfoFreq);
-  set_amy_knob_value(window.amy_knobs, "lfo_delay", lfoDelay);
-  set_amy_knob_value(window.amy_knobs, "lfo_wave", 4);   // always triangle
-  set_amy_knob_value(window.amy_knobs, "lfo_osc", lfoOsc);
-  set_amy_knob_value(window.amy_knobs, "lfo_pwm", lfoPwm);
-  set_amy_knob_value(window.amy_knobs, "lfo_filt", filterLfo);
+  set_amy_knob_value(window.amy_knobs, "LFO", "freq", lfoFreq);
+  set_amy_knob_value(window.amy_knobs, "LFO", "delay", lfoDelay);
+  set_amy_knob_value(window.amy_knobs, "LFO", "wave", 4);   // always triangle
+  set_amy_knob_value(window.amy_knobs, "LFO", "osc", lfoOsc);
+  set_amy_knob_value(window.amy_knobs, "LFO", "pwm", lfoPwm);
+  set_amy_knob_value(window.amy_knobs, "LFO", "filt", filterLfo);
 
   if (oscGate) {
     adsr = [0, 0, 1, 0];
   }
-  set_amy_knob_value(window.amy_knobs, "attack", adsr[0]);
-  set_amy_knob_value(window.amy_knobs, "decay", adsr[1]);
-  set_amy_knob_value(window.amy_knobs, "sustain", adsr[2]);
-  set_amy_knob_value(window.amy_knobs, "release", adsr[3]);
+  set_amy_knob_value(window.amy_knobs, "ADSR", "attack", adsr[0]);
+  set_amy_knob_value(window.amy_knobs, "ADSR", "decay", adsr[1]);
+  set_amy_knob_value(window.amy_knobs, "ADSR", "sustain", adsr[2]);
+  set_amy_knob_value(window.amy_knobs, "ADSR", "release", adsr[3]);
 
-  set_amy_knob_value(window.amy_knobs, "eq_low", eq[0]);
-  set_amy_knob_value(window.amy_knobs, "eq_mid", eq[1]);
-  set_amy_knob_value(window.amy_knobs, "eq_high", eq[2]);
+  set_amy_knob_value(window.amy_knobs, "EQ", "low", eq[0]);
+  set_amy_knob_value(window.amy_knobs, "EQ", "mid", eq[1]);
+  set_amy_knob_value(window.amy_knobs, "EQ", "high", eq[2]);
 
-  set_amy_knob_value(window.amy_knobs, "ch_level", chorus[0]);
-  set_amy_knob_value(window.amy_knobs, "ch_rate", chorus[1]);
-  set_amy_knob_value(window.amy_knobs, "ch_depth", chorus[2]);
+  set_amy_knob_value(window.amy_knobs, "Chorus", "level", chorus[0]);
+  set_amy_knob_value(window.amy_knobs, "Chorus", "rate", chorus[1]);
+  set_amy_knob_value(window.amy_knobs, "Chorus", "depth", chorus[2]);
 
   if (typeof init_knobs === "function") {
     init_knobs(window.amy_knobs);
