@@ -512,15 +512,15 @@ function set_knobs_from_patch_number(patch_number) {
   }
 
   // Configure the patch.
-  set_amy_knob_value(window.amy_knobs, "OSC A", "freq", osc_freq[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "OSC A", "wave", osc_wave[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "OSC A", "duty", osc_duty[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "OSC A", "level", osc_gain[oscAB_osc[0]]);
+  set_amy_knob_value(window.amy_knobs, "Osc A", "freq", osc_freq[oscAB_osc[0]]);
+  set_amy_knob_value(window.amy_knobs, "Osc A", "wave", osc_wave[oscAB_osc[0]]);
+  set_amy_knob_value(window.amy_knobs, "Osc A", "duty", osc_duty[oscAB_osc[0]]);
+  set_amy_knob_value(window.amy_knobs, "Osc A", "level", osc_gain[oscAB_osc[0]]);
 
-  set_amy_knob_value(window.amy_knobs, "OSC B", "freq", osc_freq[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "OSC B", "wave", osc_wave[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "OSC B", "duty", osc_duty[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "OSC B", "level", osc_gain[oscAB_osc[1]]);
+  set_amy_knob_value(window.amy_knobs, "Osc B", "freq", osc_freq[oscAB_osc[1]]);
+  set_amy_knob_value(window.amy_knobs, "Osc B", "wave", osc_wave[oscAB_osc[1]]);
+  set_amy_knob_value(window.amy_knobs, "Osc B", "duty", osc_duty[oscAB_osc[1]]);
+  set_amy_knob_value(window.amy_knobs, "Osc B", "level", osc_gain[oscAB_osc[1]]);
 
   set_amy_knob_value(window.amy_knobs, "VCF", "freq", filterFreq);
   set_amy_knob_value(window.amy_knobs, "VCF", "resonance", resonanceValue);
