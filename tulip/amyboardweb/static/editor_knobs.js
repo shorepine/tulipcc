@@ -517,11 +517,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
   });
 }
 
-function set_amy_knob_value(knobs, name, value) {
-  if (!Array.isArray(knobs) || !Number.isFinite(value)) {
+function set_amy_knob_value(knobs, sectionName, name, value) {
+  if (!Array.isArray(knobs) || typeof sectionName !== "string" || typeof name !== "string" || !Number.isFinite(value)) {
     return false;
   }
-  const knob = knobs.find((entry) => entry.display_name === name);
+  const knob = knobs.find((entry) => entry.section === sectionName && entry.display_name === name);
   if (!knob) {
     return false;
   }
