@@ -11,7 +11,7 @@ build_once() {
   python3 scripts/gen_amy_event_layout.py
 
   cd ../../amy
-  make docs/amy.js
+  make web
   cd ../tulip/amyboardweb
   make
 
@@ -29,8 +29,8 @@ build_once() {
 
   
 
-  cp ../../amy/docs/amy.js stage/amy-$timestamp.js
-  cp ../../amy/docs/amy.wasm stage/amy-$timestamp.wasm
+  cp ../../amy/build/amy.js stage/amy-$timestamp.js
+  cp ../../amy/build/amy.wasm stage/amy-$timestamp.wasm
   cp ../../amy/docs/amy.aw.js stage/amy-$timestamp.aw.js
 
   cp build-standard/tulip/obj/micropython.wasm stage/amyboard-$timestamp.wasm

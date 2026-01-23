@@ -8,7 +8,7 @@ source ../shared/grab_submodules.sh
 timestamp=$(date +%Y%m%d%H%M%S)
 
 cd ../../amy
-make docs/amy.js
+make web
 #make docs/amy-audioin.js
 cd ../tulip/web
 make
@@ -23,13 +23,9 @@ cp -Rf ../../www/img stage
 cp -Rf ../../www/webfonts stage
 cp -Rf ../../www/css stage
 
-cp ../../amy/docs/amy.js stage/run/amy-$timestamp.js
-cp ../../amy/docs/amy.wasm stage/run/amy-$timestamp.wasm
+cp ../../amy/build/amy.js stage/run/amy-$timestamp.js
+cp ../../amy/build/amy.wasm stage/run/amy-$timestamp.wasm
 cp ../../amy/docs/amy.aw.js stage/run/amy-$timestamp.aw.js
-
-#cp ../../amy/docs/amy-audioin.js stage/run/amy-audioin-$timestamp.js
-#cp ../../amy/docs/amy-audioin.wasm stage/run/amy-audioin-$timestamp.wasm
-#cp ../../amy/docs/amy-audioin.aw.js stage/run/amy-audioin-$timestamp.aw.js
 
 cp build-standard/tulip/obj/micropython.wasm stage/run/tulipcc-$timestamp.wasm
 cp build-standard/tulip/obj/micropython.mjs stage/run/tulipcc-$timestamp.mjs
