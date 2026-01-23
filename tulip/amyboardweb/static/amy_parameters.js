@@ -179,7 +179,7 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF",
+      section: "VCF_ENV",
       display_name: "f_attack",
       default_value: 0,
       min_value: 0,
@@ -189,7 +189,7 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF",
+      section: "VCF_ENV",
       knob_type: "log",
       display_name: "f_decay",
       default_value: 100,
@@ -201,7 +201,7 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF",
+      section: "VCF_ENV",
       display_name: "f_sustain",
       min_value: 0,
       max_value: 1,
@@ -211,7 +211,7 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF",
+      section: "VCF_ENV",
       knob_type: "log",
       display_name: "f_release",
       offset: 50,
@@ -264,6 +264,7 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 0.49,
       onChange: function(value) {
         amy_add_message("i1v0d,,,,," + value);
+        amy_add_message("i1v1d,,,,," + value);
       }
     },
     {

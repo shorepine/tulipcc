@@ -727,6 +727,6 @@ async function start_audio() {
   }
   // Initialize to the "amyboardweb" preset (patch 257), 6 voices.
   audio_started = true;
-  attemptPatchKnobSync();
   amy_add_message("i1iv6K257")
+  attemptPatchKnobSync();
 }
