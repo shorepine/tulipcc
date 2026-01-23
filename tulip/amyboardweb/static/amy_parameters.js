@@ -311,57 +311,6 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "ADSR",
-      display_name: "attack",
-      min_value: 0,
-      max_value: 1000,
-      onChange: function(value) {
-        bp_string = Math.round(value) + ",1,,,,0"
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
-    },
-    {
-      section: "ADSR",
-      knob_type: "log",
-      display_name: "decay",
-      offset: 50,
-      min_value: 0,
-      max_value: 2000,
-      default_value: 100,
-      onChange: function(value) {
-        bp_string = ",1," + value + ",,,0";
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
-    },
-    {
-      section: "ADSR",
-      display_name: "sustain",
-      min_value: 0,
-      max_value: 1,
-      default_value: 0,
-      onChange: function(value) {
-        bp_string = ",1,," + value + ",,0";
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
-    },
-    {
-      section: "ADSR",
-      knob_type: "log",
-      display_name: "release",
-      offset: 50,
-      min_value: 0,
-      max_value: 8000,
-      default_value: 100,
-      onChange: function(value) {
-        bp_string = ",1,,," + value + ",0";
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
-    },
-    {
       section: "EQ",
       display_name: "eq_low",
       min_value: -15,
