@@ -12,7 +12,6 @@ const butErase = document.getElementById("butErase");
 const butProgram = document.getElementById("butProgram");
 const autoscroll = document.getElementById("autoscroll");
 const lightSS = document.getElementById("light");
-const darkSS = document.getElementById("dark");
 const progress = document.querySelectorAll(".upload .progress-bar");
 const offsets = document.querySelectorAll(".upload .offset");
 const appDiv = document.getElementById("app");
@@ -152,7 +151,7 @@ function errorMsg(text) {
 
 /**
  * @name updateTheme
- * Sets the theme to  Adafruit (dark) mode. Can be refactored later for more themes
+ * Sets the theme to the light mode.
  */
 function updateTheme() {
     // Disable all themes

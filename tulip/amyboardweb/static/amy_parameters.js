@@ -179,7 +179,7 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF",
+      section: "VCF_ENV",
       display_name: "f_attack",
       default_value: 0,
       min_value: 0,
@@ -189,7 +189,7 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF",
+      section: "VCF_ENV",
       knob_type: "log",
       display_name: "f_decay",
       default_value: 100,
@@ -201,7 +201,7 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF",
+      section: "VCF_ENV",
       display_name: "f_sustain",
       min_value: 0,
       max_value: 1,
@@ -211,7 +211,7 @@ window.addEventListener("DOMContentLoaded", function() {
       }
     },
     {
-      section: "VCF",
+      section: "VCF_ENV",
       knob_type: "log",
       display_name: "f_release",
       offset: 50,
@@ -220,6 +220,38 @@ window.addEventListener("DOMContentLoaded", function() {
       default_value: 100,
       onChange: function(value) {
         amy_add_message("i1B,1,,,"+value+",0");
+      }
+    },
+        {
+      section: "Reverb",
+      knob_type: "log",
+      display_name: "rv_level",
+      min_value: 0.1,
+      max_value: 10,
+      default_value: 0.1,
+      onChange: function(value) {
+        amy_add_message("h" + value);
+      }
+    },
+    {
+      section: "Reverb",
+      knob_type: "log",
+      display_name: "rv_live",
+      min_value: 0.1,
+      max_value: 10,
+      default_value: 2,
+      onChange: function(value) {
+        amy_add_message("h," + value);
+      }
+    },
+    {
+      section: "Reverb",
+      display_name: "rv_damp",
+      min_value: 0,
+      max_value: 1,
+      default_value: 0.5,
+      onChange: function(value) {
+        amy_add_message("h,," + value);
       }
     },
     {
@@ -264,6 +296,7 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 0.49,
       onChange: function(value) {
         amy_add_message("i1v0d,,,,," + value);
+        amy_add_message("i1v1d,,,,," + value);
       }
     },
     {
