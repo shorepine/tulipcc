@@ -222,6 +222,38 @@ window.addEventListener("DOMContentLoaded", function() {
         amy_add_message("i1B,1,,,"+value+",0");
       }
     },
+        {
+      section: "Reverb",
+      knob_type: "log",
+      display_name: "rv_level",
+      min_value: 0.1,
+      max_value: 10,
+      default_value: 0.1,
+      onChange: function(value) {
+        amy_add_message("h" + value);
+      }
+    },
+    {
+      section: "Reverb",
+      knob_type: "log",
+      display_name: "rv_live",
+      min_value: 0.1,
+      max_value: 10,
+      default_value: 2,
+      onChange: function(value) {
+        amy_add_message("h," + value);
+      }
+    },
+    {
+      section: "Reverb",
+      display_name: "rv_damp",
+      min_value: 0,
+      max_value: 1,
+      default_value: 0.5,
+      onChange: function(value) {
+        amy_add_message("h,," + value);
+      }
+    },
     {
       section: "LFO",
       display_name: "lfo_freq",

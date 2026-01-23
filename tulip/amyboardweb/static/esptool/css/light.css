@@ -14,8 +14,8 @@ input, select, button {
 }
 
 .notSupported, .notSupported a {
-  background-color: red;
-  color: white;
+  background-color: #fff3cd;
+  color: #664d03;
 }
 
 .footer button {
