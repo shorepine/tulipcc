@@ -184,7 +184,20 @@ function get_events_for_patch_number(patch_number) {
       ],
       status: view.getUint8(base + offsets.status),
       note_source: view.getUint8(base + offsets.note_source),
-      reset_osc: view.getUint32(base + offsets.reset_osc, true)
+      reset_osc: view.getUint32(base + offsets.reset_osc, true),
+      echo_level: view.getFloat32(base + offsets.echo_level, true),
+      echo_delay_ms: view.getFloat32(base + offsets.echo_delay_ms, true),
+      echo_max_delay_ms: view.getFloat32(base + offsets.echo_max_delay_ms, true),
+      echo_feedback: view.getFloat32(base + offsets.echo_feedback, true),
+      echo_filter_coef: view.getFloat32(base + offsets.echo_filter_coef, true),
+      chorus_level: view.getFloat32(base + offsets.chorus_level, true),
+      chorus_max_delay: view.getFloat32(base + offsets.chorus_max_delay, true),
+      chorus_lfo_freq: view.getFloat32(base + offsets.chorus_lfo_freq, true),
+      chorus_depth: view.getFloat32(base + offsets.chorus_depth, true),
+      reverb_level: view.getFloat32(base + offsets.reverb_level, true),
+      reverb_liveness: view.getFloat32(base + offsets.reverb_liveness, true),
+      reverb_damping: view.getFloat32(base + offsets.reverb_damping, true),
+      reverb_xover_hz: view.getFloat32(base + offsets.reverb_xover_hz, true),
     };
   }
 
