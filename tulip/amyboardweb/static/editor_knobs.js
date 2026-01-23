@@ -30,7 +30,17 @@ function init_knobs(knobConfigs, gridId, onChange) {
     return Math.max(span / 1000, 0.0001);
   }
 
-  function formatValue(value, decimals) {
+  function formatValue(value, digits) {
+    if (!Number.isFinite(value)) {
+      return "";
+    }
+    const totalDigits = Number.isFinite(digits) ? Math.max(1, Math.floor(digits)) : 3;
+    const abs = Math.abs(value);
+    if (abs === 0) {
+      return (0).toFixed(Math.max(0, totalDigits - 1));
+    }
+    const intDigits = abs < 1 ? 1 : Math.floor(Math.log10(abs)) + 1;
+    const decimals = Math.max(0, totalDigits - intDigits);
     return value.toFixed(decimals);
   }
 
@@ -65,27 +75,97 @@ function init_knobs(knobConfigs, gridId, onChange) {
       const selectWrap = document.createElement("div");
       selectWrap.className = "amy-select";
 
-      const select = document.createElement("select");
-      select.size = Math.min(Math.max(options.length, 3), 6);
-      select.setAttribute("data-index", String(index));
+      const control = document.createElement("div");
+      control.className = "amy-select-control";
+      control.setAttribute("data-index", String(index));
+      control.setAttribute("tabindex", "0");
 
-      options.forEach(function(option, optIndex) {
-        const opt = document.createElement("option");
-        opt.value = String(optIndex);
-        opt.textContent = String(option);
-        select.appendChild(opt);
+      const upButton = document.createElement("button");
+      upButton.className = "amy-select-btn amy-select-btn-up";
+      upButton.type = "button";
+      upButton.setAttribute("aria-label", "Select previous option");
+
+      const display = document.createElement("div");
+      display.className = "amy-select-display";
+
+      const downButton = document.createElement("button");
+      downButton.className = "amy-select-btn amy-select-btn-down";
+      downButton.type = "button";
+      downButton.setAttribute("aria-label", "Select next option");
+
+      let currentIndex = clampedIndex;
+
+      function updateDisplay() {
+        const optionLabel = options[currentIndex] !== undefined ? String(options[currentIndex]) : "";
+        display.textContent = optionLabel;
+      }
+
+      function updateButtons() {
+        const hasOptions = options.length > 0;
+        const isFirst = !hasOptions || currentIndex <= 0;
+        const isLast = !hasOptions || currentIndex >= options.length - 1;
+
+        upButton.classList.toggle("is-disabled", isFirst);
+        upButton.disabled = isFirst;
+        upButton.setAttribute("aria-disabled", isFirst ? "true" : "false");
+
+        downButton.classList.toggle("is-disabled", isLast);
+        downButton.disabled = isLast;
+        downButton.setAttribute("aria-disabled", isLast ? "true" : "false");
+      }
+
+      function setIndex(nextIndex) {
+        const clamped = clamp(nextIndex, 0, Math.max(options.length - 1, 0));
+        if (clamped === currentIndex) {
+          return;
+        }
+        currentIndex = clamped;
+        updateDisplay();
+        updateButtons();
+        notifyKnobChange(index, currentIndex, config, { notifyAmy: true });
+      }
+
+      upButton.addEventListener("click", function() {
+        setIndex(currentIndex - 1);
       });
 
-      select.value = String(clampedIndex);
-
-      select.addEventListener("change", function() {
-        const idx = parseNumber(select.value, 0);
-        notifyKnobChange(index, idx, config, { notifyAmy: true });
+      downButton.addEventListener("click", function() {
+        setIndex(currentIndex + 1);
       });
 
-      selectWrap.appendChild(select);
+      control.addEventListener("keydown", function(event) {
+        if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+          event.preventDefault();
+          setIndex(currentIndex - 1);
+        }
+        if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+          event.preventDefault();
+          setIndex(currentIndex + 1);
+        }
+      });
+
+      updateDisplay();
+      updateButtons();
+
+      control.appendChild(upButton);
+      control.appendChild(display);
+      control.appendChild(downButton);
+      selectWrap.appendChild(control);
       col.appendChild(label);
       col.appendChild(selectWrap);
+      targetGrid.appendChild(col);
+      return;
+    }
+
+    if (config.knob_type === "spacer") {
+      const col = document.createElement("div");
+      col.className = `${colClass} knob-col-spacer`;
+      col.style.setProperty("--knob-span", "1");
+
+      const spacer = document.createElement("div");
+      spacer.className = "knob-spacer";
+
+      col.appendChild(spacer);
       targetGrid.appendChild(col);
       return;
     }
@@ -370,7 +450,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
       sections.push(currentSection);
     }
     currentSection.items.push({ config: config, index: index });
-    currentSection.units += config.knob_type === "pushbutton" ? 0.5 : 1;
+    if (config.knob_type === "pushbutton") {
+      currentSection.units += 0.5;
+    } else {
+      currentSection.units += 1;
+    }
   });
 
   sections.forEach(function(section) {
@@ -378,28 +462,36 @@ function init_knobs(knobConfigs, gridId, onChange) {
     const sectionClass = targetId === "knob-grid" ? "col-12 knob-section knob-section-main" : "col-12 knob-section";
     sectionWrap.className = sectionClass;
     sectionWrap.style.setProperty("--knob-count", String(section.items.length));
-    sectionWrap.style.setProperty("--knob-units", String(section.units || section.items.length));
+    const sectionUnits = section.units || section.items.length;
+    const rowUnits = targetId === "knob-grid" ? Math.min(14, sectionUnits) : sectionUnits;
+    sectionWrap.style.setProperty("--knob-units", String(rowUnits));
     const styleConfig = sectionStyles[section.name];
     if (styleConfig && styleConfig.bg_color) {
       sectionWrap.style.background = styleConfig.bg_color;
     }
 
-    const header = document.createElement("div");
-    header.className = "knob-section-header";
-    header.textContent = section.name || "";
-    if (styleConfig) {
-      if (styleConfig.header_bg_color) {
-        header.style.background = styleConfig.header_bg_color;
+    const showHeader = section.name && section.items.some(function(item) {
+      return item.config && item.config.knob_type !== "spacer";
+    });
+
+    if (showHeader) {
+      const header = document.createElement("div");
+      header.className = "knob-section-header";
+      header.textContent = section.name || "";
+      if (styleConfig) {
+        if (styleConfig.header_bg_color) {
+          header.style.background = styleConfig.header_bg_color;
+        }
+        if (styleConfig.header_fg_color) {
+          header.style.color = styleConfig.header_fg_color;
+        }
       }
-      if (styleConfig.header_fg_color) {
-        header.style.color = styleConfig.header_fg_color;
-      }
+      sectionWrap.appendChild(header);
     }
 
     const sectionGrid = document.createElement("div");
     sectionGrid.className = targetId === "knob-grid" ? "row g-4 knob-section-grid" : "row g-3 knob-section-grid";
 
-    sectionWrap.appendChild(header);
     sectionWrap.appendChild(sectionGrid);
     grid.appendChild(sectionWrap);
 
