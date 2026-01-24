@@ -1,15 +1,15 @@
 // Define all the knobs and their parameters here
 window.addEventListener("DOMContentLoaded", function() {
   window.amy_sections = [
-    { name: "Osc A", bg_color: "rgba(244, 0, 0, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "Osc B", bg_color: "rgba(0, 53, 247, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "ADSR", bg_color: "rgba(10, 134, 30, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "VCF", bg_color: "rgba(90, 94, 34, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "VCF ENV", bg_color: "rgba(90, 94, 34, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "Reverb", bg_color: "rgba(173, 14, 222, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "LFO", bg_color: "rgba(239, 133, 4, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "Chorus", bg_color: "rgba(173, 14, 222, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
-    { name: "EQ", bg_color: "rgba(173, 14, 222, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" }
+    { name: "Osc A", bg_color: "rgba(240, 180, 180, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Osc B", bg_color: "rgba(240, 180, 180, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "LFO", bg_color: "rgba(240, 200, 180, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "VCF", bg_color: "rgba(150, 190, 240, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "VCF ENV", bg_color: "rgba(150, 190, 240, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "ADSR", bg_color: "rgba(150, 220, 240, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "EQ", bg_color: "rgba(150, 190, 240, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Chorus", bg_color: "rgba(180, 225, 225, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Reverb", bg_color: "rgba(160, 200, 200, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
 
   window.amy_knobs = [
@@ -51,6 +51,7 @@ window.addEventListener("DOMContentLoaded", function() {
       default_value: 1.0,
       min_value: 0.001,
       max_value: 1.0,
+      offset: 0.1,
       onChange: function(value) {
         amy_add_message("i1v0a" + value);
       }
@@ -171,6 +172,7 @@ window.addEventListener("DOMContentLoaded", function() {
       default_value: 1.0,
       min_value: 0.001,
       max_value: 1.0,
+      offset: 0.1,
       onChange: function(value) {
         amy_add_message("i1v1a" + value);
       }
@@ -229,7 +231,7 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "level",
       min_value: 0,
       max_value: 1,
-      offset: 0.001,
+      offset: 0.1,
       default_value: 0,
       onChange: function(value) {
         amy_add_message("k" + value);
@@ -238,10 +240,10 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "Chorus",
       knob_type: "log",
-      display_name: "rate",
+      display_name: "freq",
+      default_value: 4,
       min_value: 0.1,
-      max_value: 10,
-      default_value: 2,
+      max_value: 20,
       onChange: function(value) {
         amy_add_message("k,," + value);
       }
@@ -249,7 +251,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {
       section: "Chorus",
       display_name: "depth",
-      min_value: 0,
+      min_value: 0.01,
       max_value: 1,
       default_value: 0.5,
       onChange: function(value) {
@@ -375,20 +377,20 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Reverb",
       knob_type: "log",
       display_name: "level",
-      min_value: 0.1,
-      max_value: 10,
-      default_value: 0.1,
+      min_value: 0,
+      max_value: 1,
+      default_value: 0,
+      offset: 0.1,
       onChange: function(value) {
         amy_add_message("h" + value);
       }
     },
     {
       section: "Reverb",
-      knob_type: "log",
       display_name: "live",
-      min_value: 0.1,
-      max_value: 10,
-      default_value: 2,
+      min_value: 0,
+      max_value: 1,
+      default_value: 0.5,
       onChange: function(value) {
         amy_add_message("h," + value);
       }
@@ -551,7 +553,7 @@ function set_knobs_from_patch_number(patch_number) {
   set_amy_knob_value(window.amy_knobs, "EQ", "high", eq[2]);
 
   set_amy_knob_value(window.amy_knobs, "Chorus", "level", chorus[0]);
-  set_amy_knob_value(window.amy_knobs, "Chorus", "rate", chorus[1]);
+  set_amy_knob_value(window.amy_knobs, "Chorus", "freq", chorus[1]);
   set_amy_knob_value(window.amy_knobs, "Chorus", "depth", chorus[2]);
 
   if (typeof init_knobs === "function") {
