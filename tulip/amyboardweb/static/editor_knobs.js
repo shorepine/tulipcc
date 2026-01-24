@@ -94,6 +94,9 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
         const label = document.createElement("div");
         label.textContent = "MIDI CC (0-127)";
+        const title = document.createElement("div");
+        title.style.fontWeight = "600";
+        title.style.marginBottom = "4px";
         label.style.marginBottom = "6px";
 
         const input = document.createElement("input");
@@ -125,13 +128,14 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
         actions.appendChild(cancel);
         actions.appendChild(save);
+        container.appendChild(title);
         container.appendChild(label);
         container.appendChild(input);
         container.appendChild(error);
         container.appendChild(actions);
         document.body.appendChild(container);
 
-        editor = { container: container, input: input, error: error, save: save, cancel: cancel, current: null };
+        editor = { container: container, input: input, error: error, save: save, cancel: cancel, current: null, title: title };
 
         function applyValue(value) {
           if (!editor.current) {
@@ -206,6 +210,9 @@ function init_knobs(knobConfigs, gridId, onChange) {
         const editor = ccEditor();
         editor.current = knobConfig;
         editor.error.textContent = "";
+        const sectionName = knobConfig.section ? String(knobConfig.section) : "Knob";
+        const displayName = knobConfig.display_name ? String(knobConfig.display_name) : "";
+        editor.title.textContent = `${sectionName} ${displayName}`.trim();
         editor.input.value = knobConfig.cc === "" || knobConfig.cc === null || knobConfig.cc === undefined
           ? ""
           : String(knobConfig.cc);

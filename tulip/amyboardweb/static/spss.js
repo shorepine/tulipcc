@@ -278,7 +278,6 @@ function send_change_code(synth, value, knob) {
 }
 
 function onKnobCcChange(knob) {
-  console.log("Knob CC changed: " + knob.display_name + " to " + knob.cc);
   /*
   ic<C>,<L>,<N>,<X>,<O>,<CODE>
   where C= MIDI control code (0-127), L = log-scale flag (so the mapping is exponential if L == 1), 
@@ -298,7 +297,7 @@ function onKnobCcChange(knob) {
     knob.offset = 0;
   }
   var m = "i1ic"+knob.cc+","+log+","+knob.min_value+","+knob.max_value+","+knob.offset+","+knob.change_code;
-  console.log(m);
+  console.log("Knob CC updated: " + knob.section + ": " + knob.display_name + " to " + knob.cc + ". Sending: " + m);
   amy_add_message(m)
 }
 
