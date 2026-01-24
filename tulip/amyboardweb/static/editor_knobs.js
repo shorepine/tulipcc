@@ -1,4 +1,17 @@
+function send_change_code(synth, value, knob) {
+  if (!knob || typeof knob.change_code !== "string") {
+    return;
+  }
+  const updated = knob.change_code
+    .replace(/%v/g, String(value))
+    .replace(/%i/g, String(synth));
+  if (typeof window.amy_add_message === "function") {
+    window.amy_add_message(updated);
+  }
+}
+
 function init_knobs(knobConfigs, gridId, onChange) {
+  
   const targetId = gridId || "knob-grid";
   const grid = document.getElementById(targetId);
   if (!grid || !Array.isArray(knobConfigs)) {
@@ -51,10 +64,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
       window.onKnobChange(index, value);
     }
     const notifyAmy = !options || options.notifyAmy !== false;
-    if (notifyAmy && config && typeof config.onChange === "function") {
-      config.onChange(value);
+    if (notifyAmy) {
+      send_change_code(1, value, config);
     }
   }
+
 
   function renderKnob(config, index, targetGrid) {
     const colClass = targetId === "knob-grid" ? "col-6 col-md-3 text-center knob-col" : "col-6 text-center";
@@ -124,6 +138,9 @@ function init_knobs(knobConfigs, gridId, onChange) {
             return;
           }
           editor.current.cc = value;
+          if (typeof window.onKnobCcChange === "function") {
+            window.onKnobCcChange(editor.current);
+          }
           hideCcEditor(editor);
         }
 
@@ -685,6 +702,6 @@ function set_amy_knob_value(knobs, sectionName, name, value) {
   } else {
     knob.default_value = value;
   }
-  knob.onChange(value);
+  send_change_code(1, value, knob);
   return true;
 }

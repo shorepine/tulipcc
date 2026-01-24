@@ -265,6 +265,44 @@ window.onPatchChange = function(patchIndex) {
   requestPatchKnobSync(patchIndex);
 };
 
+
+function send_change_code(synth, value, knob) {
+  if (!knob || typeof knob.change_code !== "string") {
+    return;
+  }
+  const updated = knob.change_code
+    .replace(/%v/g, String(value))
+    .replace(/%i/g, String(synth));
+  
+  amy_add_message(updated);
+}
+
+function onKnobCcChange(knob) {
+  console.log("Knob CC changed: " + knob.display_name + " to " + knob.cc);
+  /*
+  ic<C>,<L>,<N>,<X>,<O>,<CODE>
+  where C= MIDI control code (0-127), L = log-scale flag (so the mapping is exponential if L == 1), 
+  N = min value for the control (corresponding to MIDI value 0), 
+  X = max value (for MIDI value 127), 
+  O = offset for log scale (so if L == 1, value = (min + offset) * exp(log(((max + offset)/(min + offset) * midi_value / 127) - offset), 
+  and CODE is a wire code string with %v as a placeholder for the value to be substituted 
+  (also %i for channel/synth number) and maybe %V to force an integer, 
+  for things like selecting wave, and maybe more.
+  */
+  log = 0;
+  if(knob.knob_type=='log') {
+    log = 1;
+  }
+  // if knob.offset doesn't exist, make it 0
+  if(typeof knob.offset === "undefined") {
+    knob.offset = 0;
+  }
+  var m = "i1ic"+knob.cc+","+log+","+knob.min_value+","+knob.max_value+","+knob.offset+","+knob.change_code;
+  console.log(m);
+  amy_add_message(m)
+}
+
+
 window.addEventListener("DOMContentLoaded", function() {
   requestPatchKnobSync(0);
 });
