@@ -15,6 +15,7 @@ window.addEventListener("DOMContentLoaded", function() {
   window.amy_knobs = [
     {
       section: "Osc A",
+      cc: 70,
       display_name: "freq",
       knob_type: "log",
       default_value: 261.63,
@@ -26,6 +27,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Osc A",
+      cc: 71,
       knob_type: "selection",
       display_name: "wave",
       options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
@@ -36,6 +38,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Osc A",
+      cc: 72,
       display_name: "duty",
       default_value: 0.5,
       min_value: 0.5,
@@ -46,6 +49,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Osc A",
+      cc: 73,
       display_name: "level",
       knob_type: "log",
       default_value: 1.0,
@@ -61,6 +65,7 @@ window.addEventListener("DOMContentLoaded", function() {
   
   {
       section: "VCF",
+      cc: 74,
       display_name: "freq",
       knob_type: "log",
       default_value: 1000,
@@ -72,6 +77,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF",
+      cc: 75,
       display_name: "resonance",
       knob_type: "log",
       default_value: 0.7,
@@ -83,6 +89,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF",
+      cc: 76,
       display_name: "kbd",
       default_value: 1.0,
       min_value: 0,
@@ -93,6 +100,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF",
+      cc: 77,
       display_name: "env",
       default_value: 4.0,
       min_value: -10,
@@ -105,6 +113,7 @@ window.addEventListener("DOMContentLoaded", function() {
     { knob_type: "spacer-half" },
     {
       section: "EQ",
+      cc: 78,
       display_name: "low",
       min_value: -15,
       max_value: 15,
@@ -115,6 +124,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "EQ",
+      cc: 79,
       display_name: "mid",
       min_value: -15,
       max_value: 15,
@@ -125,6 +135,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "EQ",
+      cc: 80,
       display_name: "high",
       min_value: -15,
       max_value: 15,
@@ -136,6 +147,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
     {
       section: "Osc B",
+      cc: 81,
       display_name: "freq",
       knob_type: "log",
       default_value: 261.63,
@@ -147,6 +159,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Osc B",
+      cc: 82,
       knob_type: "selection",
       display_name: "wave",
       options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
@@ -157,6 +170,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Osc B",
+      cc: 83,
       display_name: "duty",
       default_value: 0.5,
       min_value: 0.5,
@@ -167,6 +181,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Osc B",
+      cc: 84,
       display_name: "level",
       knob_type: "log",
       default_value: 1.0,
@@ -182,6 +197,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
    {
       section: "VCF ENV",
+      cc: 85,
       display_name: "attack",
       default_value: 0,
       min_value: 0,
@@ -192,6 +208,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF ENV",
+      cc: 86,
       knob_type: "log",
       display_name: "decay",
       default_value: 100,
@@ -204,6 +221,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF ENV",
+      cc: 87,
       display_name: "sustain",
       min_value: 0,
       max_value: 1,
@@ -214,6 +232,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF ENV",
+      cc: 88,
       knob_type: "log",
       display_name: "release",
       offset: 50,
@@ -227,6 +246,7 @@ window.addEventListener("DOMContentLoaded", function() {
     {knob_type: "spacer-half" },
     {
       section: "Chorus",
+      cc: 89,
       knob_type: "log",
       display_name: "level",
       min_value: 0,
@@ -239,6 +259,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Chorus",
+      cc: 90,
       knob_type: "log",
       display_name: "freq",
       default_value: 4,
@@ -250,6 +271,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Chorus",
+      cc: 91,
       display_name: "depth",
       min_value: 0.01,
       max_value: 1,
@@ -262,6 +284,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
     {
       section: "LFO",
+      cc: 92,
       display_name: "freq",
       knob_type: "log",
       default_value: 4,
@@ -273,6 +296,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "LFO",
+      cc: 93,
       knob_type: "selection",
       display_name: "wave",
       options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
@@ -283,6 +307,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "LFO",
+      cc: 94,
       display_name: "osc",
       knob_type: "log",
       default_value: 0.0,
@@ -296,6 +321,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "LFO",
+      cc: 95,
       display_name: "pwm",
       default_value: 0.0,
       min_value: 0.0,
@@ -307,6 +333,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "LFO",
+      cc: 96,
       display_name: "filt",
       default_value: 0.0,
       min_value: 0.0,
@@ -320,6 +347,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
           {
       section: "ADSR",
+      cc: 97,
       display_name: "attack",
       min_value: 0,
       max_value: 1000,
@@ -331,6 +359,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "ADSR",
+      cc: 98,
       knob_type: "log",
       display_name: "decay",
       offset: 50,
@@ -345,6 +374,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "ADSR",
+      cc: 99,
       display_name: "sustain",
       min_value: 0,
       max_value: 1,
@@ -357,6 +387,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "ADSR",
+      cc: 100,
       knob_type: "log",
       display_name: "release",
       offset: 50,
@@ -375,6 +406,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
     {
       section: "Reverb",
+      cc: 101,
       knob_type: "log",
       display_name: "level",
       min_value: 0,
@@ -387,6 +419,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Reverb",
+      cc: 102,
       display_name: "live",
       min_value: 0,
       max_value: 1,
@@ -397,6 +430,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Reverb",
+      cc: 103,
       display_name: "damp",
       min_value: 0,
       max_value: 1,
