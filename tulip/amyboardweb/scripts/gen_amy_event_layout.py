@@ -6,8 +6,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 AMY_H = ROOT / "amy" / "src" / "amy.h"
-LAYOUT_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "amy_event_layout.js"
-PATCHES_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "patches.js"
+LAYOUT_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "amy_event_layout.generated.js"
+PATCHES_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "patches.generated.js"
 PATCHES_H = ROOT / "amy" / "src" / "patches.h"
 
 TYPE_INFO = {
@@ -141,6 +141,10 @@ def generate_layout():
 def generate_patches():
     text = PATCHES_H.read_text()
     matches = re.findall(r"/\*\s*(\d+)\s*:\s*(.*?)\s*\*/", text)
+    patch_257 = re.search(r"/\*\s*257\s*:\s*.*?\s*\*/\s*\"(.*?)\"", text)
+    if not patch_257:
+        raise RuntimeError("patch_commands[257] not found in patches.h")
+    patch_257_string = patch_257.group(1)
     patches = [(int(num), name) for num, name in matches]
     patches.sort(key=lambda item: item[0])
     if not patches:
@@ -156,6 +160,7 @@ def generate_patches():
         output += f"    {json.dumps(name)},\n"
     output += "  ];\n\n"
     output += "  window.amy_patches = patches;\n\n"
+    output += f"  window.amyboard_patch_string = {json.dumps(patch_257_string)};\n\n"
     output += "  if (typeof window.onPatchChange !== \"function\") {\n"
     output += "    window.onPatchChange = function(_patchIndex) {};\n"
     output += "  }\n\n"
@@ -165,18 +170,16 @@ def generate_patches():
     output += "      return;\n"
     output += "    }\n"
     output += "    select.innerHTML = \"\";\n"
+    output += "    const placeholder = document.createElement(\"option\");\n"
+    output += "    placeholder.value = \"\";\n"
+    output += "    placeholder.textContent = \"-\";\n"
+    output += "    select.appendChild(placeholder);\n"
     output += "    patches.forEach(function(name, index) {\n"
     output += "      const option = document.createElement(\"option\");\n"
     output += "      option.value = String(index);\n"
-    output += "      option.textContent = index + \": \" + name;\n"
+    output += "      option.textContent = name;\n"
     output += "      select.appendChild(option);\n"
     output += "    });\n\n"
-    output += "    select.addEventListener(\"change\", function() {\n"
-    output += "      const value = Number.parseInt(select.value, 10);\n"
-    output += "      if (!Number.isNaN(value) && typeof window.onPatchChange === \"function\") {\n"
-    output += "        window.onPatchChange(value);\n"
-    output += "      }\n"
-    output += "    });\n"
     output += "  };\n"
     output += "})();\n"
     PATCHES_OUTPUT.write_text(output)

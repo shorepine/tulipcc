@@ -258,10 +258,12 @@
     "DX7 ST.HELENS",
     "DX7 EXPLOSION",
     "dpwe piano",
-    "amyboard web base",
+    "amyboard default",
   ];
 
   window.amy_patches = patches;
+
+  window.amyboard_patch_string = "v0w1L2a,,1.0,1,0f130.81,1,,,,0,1m0A30,1,1355,0.354,232,0Zv0c1G4F126.54,0.677,,,5.024,0R0.93B30,1,1355,0.354,232,0Zv1w2L2a,,1.0,1,0f130.81,1,,,,0,1m0A30,1,1355,0.354,232,0Zv2w4a1,0,0,1f4.0,0,0,0,0,0,0A0,1.0,10000,0Zx0,0,0k0,,0.5,0.5Z";
 
   if (typeof window.onPatchChange !== "function") {
     window.onPatchChange = function(_patchIndex) {};
@@ -273,18 +275,16 @@
       return;
     }
     select.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "-";
+    select.appendChild(placeholder);
     patches.forEach(function(name, index) {
       const option = document.createElement("option");
       option.value = String(index);
-      option.textContent = index + ": " + name;
+      option.textContent = name;
       select.appendChild(option);
     });
 
-    select.addEventListener("change", function() {
-      const value = Number.parseInt(select.value, 10);
-      if (!Number.isNaN(value) && typeof window.onPatchChange === "function") {
-        window.onPatchChange(value);
-      }
-    });
   };
 })();

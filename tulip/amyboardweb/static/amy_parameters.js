@@ -12,362 +12,321 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "Reverb", bg_color: "rgba(160, 200, 200, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
 
-  window.amy_knobs = [
+  const amy_knob_definitions = [
     {
       section: "Osc A",
+      cc: 70,
       display_name: "freq",
+      change_code: "i%iv0f%v",
       knob_type: "log",
       default_value: 261.63,
       min_value: 50,
       max_value: 2000,
-      onChange: function(value) {
-        amy_add_message("i1v0f" + value);
-      }
     },
     {
       section: "Osc A",
+      cc: 71,
       knob_type: "selection",
       display_name: "wave",
+      change_code: "i%iv0w%v",
       options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
       default_value: 0,
-      onChange: function(value) {
-        amy_add_message("i1v0w" + value);
-      }
     },
     {
       section: "Osc A",
+      cc: 72,
       display_name: "duty",
+      change_code: "i%iv0d%v",
       default_value: 0.5,
       min_value: 0.5,
       max_value: 0.99,
-      onChange: function(value) {
-        amy_add_message("i1v0d" + value);
-      }
     },
     {
       section: "Osc A",
+      cc: 73,
       display_name: "level",
+      change_code: "i%iv0a%v",
       knob_type: "log",
       default_value: 1.0,
       min_value: 0.001,
       max_value: 1.0,
       offset: 0.1,
-      onChange: function(value) {
-        amy_add_message("i1v0a" + value);
-      }
     },
     { knob_type: "spacer" },
     { knob_type: "spacer-half" },
   
   {
       section: "VCF",
+      cc: 74,
       display_name: "freq",
+      change_code: "i%iF%v",
       knob_type: "log",
       default_value: 1000,
       min_value: 20,
       max_value: 8000,
-      onChange: function(value) {
-        amy_add_message("i1F" + value);
-      }
     },
     {
       section: "VCF",
+      cc: 75,
       display_name: "resonance",
+      change_code: "i%iR%v",
       knob_type: "log",
       default_value: 0.7,
       min_value: 0.5,
       max_value: 16,
-      onChange: function(value) {
-        amy_add_message("i1R" + value);
-      }
     },
     {
       section: "VCF",
+      cc: 76,
       display_name: "kbd",
+      change_code: "i%iF,%v",
       default_value: 1.0,
       min_value: 0,
       max_value: 1,
-      onChange: function(value) {
-        amy_add_message("i1F," + value);
-      }
     },
     {
       section: "VCF",
+      cc: 77,
       display_name: "env",
+      change_code: "i%iF,,,,%v",
       default_value: 4.0,
       min_value: -10,
       max_value: 10,
-      onChange: function(value) {
-        amy_add_message("i1F,,,," + value);
-      }
     },
 
     { knob_type: "spacer-half" },
     {
       section: "EQ",
+      cc: 78,
       display_name: "low",
+      change_code: "x%v",
       min_value: -15,
       max_value: 15,
       default_value: 0,
-      onChange: function(value) {
-        amy_add_message("x" + value);
-      }
     },
     {
       section: "EQ",
+      cc: 79,
       display_name: "mid",
+      change_code: "x,%v",
       min_value: -15,
       max_value: 15,
       default_value: 0,
-      onChange: function(value) {
-        amy_add_message("x," + value);
-      }
     },
     {
       section: "EQ",
+      cc: 80,
       display_name: "high",
+      change_code: "x,,%v",
       min_value: -15,
       max_value: 15,
       default_value: 0,
-      onChange: function(value) {
-        amy_add_message("x,," + value);
-      }
     },
 
     {
       section: "Osc B",
+      cc: 81,
       display_name: "freq",
+      change_code: "i%iv1f%v",
       knob_type: "log",
       default_value: 261.63,
       min_value: 50,
       max_value: 2000,
-      onChange: function(value) {
-        amy_add_message("i1v1f" + value);
-      }
     },
     {
       section: "Osc B",
+      cc: 82,
       knob_type: "selection",
       display_name: "wave",
+      change_code: "i%iv1w%v",
       options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
       default_value: 0,
-      onChange: function(value) {
-        amy_add_message("i1v1w" + value);
-      }
     },
     {
       section: "Osc B",
+      cc: 83,
       display_name: "duty",
+      change_code: "i%iv1d%v",
       default_value: 0.5,
       min_value: 0.5,
       max_value: 0.99,
-      onChange: function(value) {
-        amy_add_message("i1v1d" + value);
-      }
     },
     {
       section: "Osc B",
+      cc: 84,
       display_name: "level",
+      change_code: "i%iv1a%v",
       knob_type: "log",
       default_value: 1.0,
       min_value: 0.001,
       max_value: 1.0,
       offset: 0.1,
-      onChange: function(value) {
-        amy_add_message("i1v1a" + value);
-      }
     },
     { knob_type: "spacer" },
     { knob_type: "spacer-half" },
 
    {
       section: "VCF ENV",
+      cc: 85,
       display_name: "attack",
+      change_code: "i%iB%v,1,,,,0",
       default_value: 0,
       min_value: 0,
       max_value: 1000,
-      onChange: function(value) {
-        amy_add_message("i1B"+Math.round(value)+",1,,,,0");
-      }
     },
     {
       section: "VCF ENV",
+      cc: 86,
       knob_type: "log",
       display_name: "decay",
+      change_code: "i%iB,1,%v,,,0",
       default_value: 100,
       offset: 50,
       min_value: 0,
       max_value: 2000,
-      onChange: function(value) {
-        amy_add_message("i1B,1,"+value+",,,0");
-      }
     },
     {
       section: "VCF ENV",
+      cc: 87,
       display_name: "sustain",
+      change_code: "i%iB,1,,%v,,0",
       min_value: 0,
       max_value: 1,
       default_value: 0,
-      onChange: function(value) {
-        amy_add_message("i1B,1,,"+value+",,0");
-      }
     },
     {
       section: "VCF ENV",
+      cc: 88,
       knob_type: "log",
       display_name: "release",
       offset: 50,
       min_value: 0,
       max_value: 8000,
       default_value: 100,
-      onChange: function(value) {
-        amy_add_message("i1B,1,,,"+value+",0");
-      }
+      change_code: "i%iB,1,,,%v,0",
     },  
     {knob_type: "spacer-half" },
     {
       section: "Chorus",
+      cc: 89,
       knob_type: "log",
       display_name: "level",
+      change_code: "k%v",
       min_value: 0,
       max_value: 1,
       offset: 0.1,
       default_value: 0,
-      onChange: function(value) {
-        amy_add_message("k" + value);
-      }
     },
     {
       section: "Chorus",
+      cc: 90,
       knob_type: "log",
       display_name: "freq",
+      change_code: "k,,%v",
       default_value: 4,
       min_value: 0.1,
       max_value: 20,
-      onChange: function(value) {
-        amy_add_message("k,," + value);
-      }
     },
     {
       section: "Chorus",
+      cc: 91,
       display_name: "depth",
+      change_code: "k,,,%v",
       min_value: 0.01,
       max_value: 1,
       default_value: 0.5,
-      onChange: function(value) {
-        amy_add_message("k,,," + value);
-      }
     },
    
 
     {
       section: "LFO",
+      cc: 92,
       display_name: "freq",
+      change_code: "i%iv2f%v",
       knob_type: "log",
       default_value: 4,
       min_value: 0.1,
       max_value: 20,
-      onChange: function(value) {
-        amy_add_message("i1v2f" + value);
-      }
     },
     {
       section: "LFO",
+      cc: 93,
       knob_type: "selection",
       display_name: "wave",
+      change_code: "i%iv2w%v",
       options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
       default_value: 0,
-      onChange: function(value) {
-        amy_add_message("i1v2w" + value);
-      }
     },
     {
       section: "LFO",
+      cc: 94,
       display_name: "osc",
+      change_code: "i%iv0f,,,,,%v",
       knob_type: "log",
       default_value: 0.0,
       min_value: 0.0,
       max_value: 4.0,
       offset: 0.001,
-      onChange: function(value) {
-        amy_add_message("i1v0f,,,,," + value);
-        amy_add_message("i1v1f,,,,," + value);
-      }
     },
     {
       section: "LFO",
+      cc: 95,
       display_name: "pwm",
+      change_code: "i%iv0d,,,,,%v",
       default_value: 0.0,
       min_value: 0.0,
       max_value: 0.49,
-      onChange: function(value) {
-        amy_add_message("i1v0d,,,,," + value);
-        amy_add_message("i1v1d,,,,," + value);
-      }
     },
     {
       section: "LFO",
+      cc: 96,
       display_name: "filt",
+      change_code: "i%iv0F,,,,,%v",
       default_value: 0.0,
       min_value: 0.0,
       max_value: 4.0,
       offset: 0.001,
-      onChange: function(value) {
-        amy_add_message("i1v0F,,,,," + value);
-      }
     },
         {knob_type: "spacer-half" },
 
           {
       section: "ADSR",
+      cc: 97,
       display_name: "attack",
+      change_code: "i%iv0A%v,1,,,,0",
       min_value: 0,
       max_value: 1000,
-      onChange: function(value) {
-        bp_string = Math.round(value) + ",1,,,,0"
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
     },
     {
       section: "ADSR",
+      cc: 98,
       knob_type: "log",
       display_name: "decay",
+      change_code: "i%iv0A,1,%v,,,0",
       offset: 50,
       min_value: 0,
       max_value: 2000,
       default_value: 100,
-      onChange: function(value) {
-        bp_string = ",1," + value + ",,,0";
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
     },
     {
       section: "ADSR",
+      cc: 99,
       display_name: "sustain",
+      change_code: "i%iv0A,1,,%v,,0",
       min_value: 0,
       max_value: 1,
       default_value: 0,
-      onChange: function(value) {
-        bp_string = ",1,," + value + ",,0";
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
     },
     {
       section: "ADSR",
+      cc: 100,
       knob_type: "log",
       display_name: "release",
+      change_code: "i%iv0A,1,,,%v,0",
       offset: 50,
       min_value: 0,
       max_value: 8000,
       default_value: 100,
-      onChange: function(value) {
-        bp_string = ",1,,," + value + ",0";
-        amy_add_message("i1v0A" + bp_string);
-        amy_add_message("i1v1A" + bp_string);
-      }
     },
   
         {knob_type: "spacer-half" },
@@ -375,52 +334,102 @@ window.addEventListener("DOMContentLoaded", function() {
 
     {
       section: "Reverb",
+      cc: 101,
       knob_type: "log",
       display_name: "level",
+      change_code: "h%v",
       min_value: 0,
       max_value: 1,
       default_value: 0,
       offset: 0.1,
-      onChange: function(value) {
-        amy_add_message("h" + value);
-      }
     },
     {
       section: "Reverb",
+      cc: 102,
       display_name: "live",
+      change_code: "h,%v",
       min_value: 0,
       max_value: 1,
       default_value: 0.5,
-      onChange: function(value) {
-        amy_add_message("h," + value);
-      }
     },
     {
       section: "Reverb",
+      cc: 103,
       display_name: "damp",
+      change_code: "h,,%v",
       min_value: 0,
       max_value: 1,
       default_value: 0.5,
-      onChange: function(value) {
-        amy_add_message("h,," + value);
-      }
     },
 
   ];
 
-  if (typeof init_knobs === "function") {
-    init_knobs(window.amy_knobs);
+  function cloneKnob(entry) {
+    if (!entry || typeof entry !== "object") {
+      return entry;
+    }
+    const clone = Object.assign({}, entry);
+    if (Array.isArray(entry.options)) {
+      clone.options = entry.options.slice();
+    }
+    return clone;
+  }
+
+  function cloneKnobList(list) {
+    return list.map(cloneKnob);
+  }
+
+  window.amy_knobs = new Array(17);
+  for (let i = 1; i <= 16; i += 1) {
+    window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
+  }
+
+  window.get_current_knobs = function() {
+    const idx = Number(window.current_synth);
+    if (Array.isArray(window.amy_knobs) && window.amy_knobs[idx]) {
+      return window.amy_knobs[idx];
+    }
+    if (Array.isArray(window.amy_knobs) && window.amy_knobs[1]) {
+      return window.amy_knobs[1];
+    }
+    return [];
+  };
+
+  window.refresh_knobs_for_channel = function() {
+    const knobs = window.get_current_knobs();
+    if (typeof init_knobs === "function") {
+      init_knobs(knobs);
+    }
+    if (typeof window.onKnobCcChange === "function") {
+      for (const knob of knobs) {
+        if (knob.knob_type !== "spacer" && knob.knob_type !== "spacer-half"
+          && knob.knob_type !== "selection" && knob.knob_type !== "pushbutton") {
+          window.onKnobCcChange(knob);
+        }
+      }
+    }
+  };
+
+  if (typeof window.refresh_knobs_for_channel === "function") {
+    window.refresh_knobs_for_channel();
   }
   if (typeof init_patches_select === "function") {
     init_patches_select("patch-select");
   }
 });
 
-
 function set_knobs_from_patch_number(patch_number) {
-  amy_add_message("i1iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
+  // if this is a memory patch, load it. if not, load the amyboard base patch
+  if(patch_number >= 1024 && patch_number < 1024+32) {
+    amy_add_log_message("i"+window.current_synth+"iv6K"+patch_number);
+    return; // we can't set the knobs from memory patches yet.
+  } else {
+    amy_add_log_message("i"+window.current_synth+"iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
+  }
   const events = get_events_for_patch_number(patch_number);
-  if (!Array.isArray(window.amy_knobs) || events.length === 0) {
+  // console log number of events
+  const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
+  if (!Array.isArray(knobs) || events.length === 0) {
     return;
   }
 
@@ -514,50 +523,50 @@ function set_knobs_from_patch_number(patch_number) {
   }
 
   // Configure the patch.
-  set_amy_knob_value(window.amy_knobs, "Osc A", "freq", osc_freq[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "Osc A", "wave", osc_wave[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "Osc A", "duty", osc_duty[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "Osc A", "level", osc_gain[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "level", osc_gain[oscAB_osc[0]]);
 
-  set_amy_knob_value(window.amy_knobs, "Osc B", "freq", osc_freq[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "Osc B", "wave", osc_wave[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "Osc B", "duty", osc_duty[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "Osc B", "level", osc_gain[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "freq", osc_freq[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "wave", osc_wave[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "duty", osc_duty[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "level", osc_gain[oscAB_osc[1]]);
 
-  set_amy_knob_value(window.amy_knobs, "VCF", "freq", filterFreq);
-  set_amy_knob_value(window.amy_knobs, "VCF", "resonance", resonanceValue);
-  set_amy_knob_value(window.amy_knobs, "VCF", "kbd", filterKbd);
-  set_amy_knob_value(window.amy_knobs, "VCF", "env", filterEnv);
-  set_amy_knob_value(window.amy_knobs, "VCF ENV", "attack", adsr[0]);
-  set_amy_knob_value(window.amy_knobs, "VCF ENV", "decay", adsr[1]);
-  set_amy_knob_value(window.amy_knobs, "VCF ENV", "sustain", adsr[2]);
-  set_amy_knob_value(window.amy_knobs, "VCF ENV", "release", adsr[3]);
+  set_amy_knob_value(knobs, "VCF", "freq", filterFreq);
+  set_amy_knob_value(knobs, "VCF", "resonance", resonanceValue);
+  set_amy_knob_value(knobs, "VCF", "kbd", filterKbd);
+  set_amy_knob_value(knobs, "VCF", "env", filterEnv);
+  set_amy_knob_value(knobs, "VCF ENV", "attack", adsr[0]);
+  set_amy_knob_value(knobs, "VCF ENV", "decay", adsr[1]);
+  set_amy_knob_value(knobs, "VCF ENV", "sustain", adsr[2]);
+  set_amy_knob_value(knobs, "VCF ENV", "release", adsr[3]);
 
-  set_amy_knob_value(window.amy_knobs, "LFO", "freq", lfoFreq);
-  set_amy_knob_value(window.amy_knobs, "LFO", "delay", lfoDelay);
-  set_amy_knob_value(window.amy_knobs, "LFO", "wave", 4);   // always triangle
-  set_amy_knob_value(window.amy_knobs, "LFO", "osc", lfoOsc);
-  set_amy_knob_value(window.amy_knobs, "LFO", "pwm", lfoPwm);
-  set_amy_knob_value(window.amy_knobs, "LFO", "filt", filterLfo);
+  set_amy_knob_value(knobs, "LFO", "freq", lfoFreq);
+  set_amy_knob_value(knobs, "LFO", "delay", lfoDelay);
+  set_amy_knob_value(knobs, "LFO", "wave", 4);   // always triangle
+  set_amy_knob_value(knobs, "LFO", "osc", lfoOsc);
+  set_amy_knob_value(knobs, "LFO", "pwm", lfoPwm);
+  set_amy_knob_value(knobs, "LFO", "filt", filterLfo);
 
   if (oscGate) {
     adsr = [0, 0, 1, 0];
   }
-  set_amy_knob_value(window.amy_knobs, "ADSR", "attack", adsr[0]);
-  set_amy_knob_value(window.amy_knobs, "ADSR", "decay", adsr[1]);
-  set_amy_knob_value(window.amy_knobs, "ADSR", "sustain", adsr[2]);
-  set_amy_knob_value(window.amy_knobs, "ADSR", "release", adsr[3]);
+  set_amy_knob_value(knobs, "ADSR", "attack", adsr[0]);
+  set_amy_knob_value(knobs, "ADSR", "decay", adsr[1]);
+  set_amy_knob_value(knobs, "ADSR", "sustain", adsr[2]);
+  set_amy_knob_value(knobs, "ADSR", "release", adsr[3]);
 
-  set_amy_knob_value(window.amy_knobs, "EQ", "low", eq[0]);
-  set_amy_knob_value(window.amy_knobs, "EQ", "mid", eq[1]);
-  set_amy_knob_value(window.amy_knobs, "EQ", "high", eq[2]);
+  set_amy_knob_value(knobs, "EQ", "low", eq[0]);
+  set_amy_knob_value(knobs, "EQ", "mid", eq[1]);
+  set_amy_knob_value(knobs, "EQ", "high", eq[2]);
 
-  set_amy_knob_value(window.amy_knobs, "Chorus", "level", chorus[0]);
-  set_amy_knob_value(window.amy_knobs, "Chorus", "freq", chorus[1]);
-  set_amy_knob_value(window.amy_knobs, "Chorus", "depth", chorus[2]);
+  set_amy_knob_value(knobs, "Chorus", "level", chorus[0]);
+  set_amy_knob_value(knobs, "Chorus", "freq", chorus[1]);
+  set_amy_knob_value(knobs, "Chorus", "depth", chorus[2]);
 
-  if (typeof init_knobs === "function") {
-    init_knobs(window.amy_knobs);
+  if (typeof window.refresh_knobs_for_channel === "function") {
+    window.refresh_knobs_for_channel();
   }
 }
 

@@ -9,6 +9,13 @@ var amy_sysclock = null;
 var amyboard_started = false;
 var amy_parse_patch_number_to_events = null;
 
+function amy_add_log_message(message) {
+  console.log(message);
+  if (typeof amy_add_message === "function") {
+    amy_add_message(message);
+  }
+}
+
 var mp = null;
 var midiOutputDevice = null;
 var midiInputDevice = null;
@@ -23,6 +30,8 @@ var cv_2_voltage = 0;
 var amy_module = null;
 var pendingPatchKnobIndex = null;
 var patchKnobSyncAttempts = 0;
+window.current_synth = 1;
+var knob_positions = {};
 
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
@@ -243,7 +252,7 @@ function attemptPatchKnobSync() {
   if (!audio_started) {
     return;
   }
-  if (!amy_module || !Array.isArray(window.amy_knobs)) {
+  if (!amy_module || typeof window.get_current_knobs !== "function") {
     if (patchKnobSyncAttempts < 60) {
       patchKnobSyncAttempts += 1;
       setTimeout(attemptPatchKnobSync, 50);
@@ -265,6 +274,34 @@ window.onPatchChange = function(patchIndex) {
   requestPatchKnobSync(patchIndex);
 };
 
+
+function onKnobCcChange(knob) {
+  /*
+  ic<C>,<L>,<N>,<X>,<O>,<CODE>
+  where C= MIDI control code (0-127), L = log-scale flag (so the mapping is exponential if L == 1), 
+  N = min value for the control (corresponding to MIDI value 0), 
+  X = max value (for MIDI value 127), 
+  O = offset for log scale (so if L == 1, value = (min + offset) * exp(log(((max + offset)/(min + offset) * midi_value / 127) - offset), 
+  and CODE is a wire code string with %v as a placeholder for the value to be substituted 
+  (also %i for channel/synth number) and maybe %V to force an integer, 
+  for things like selecting wave, and maybe more.
+  */
+  log = 0;
+  if(knob.knob_type=='log') {
+    log = 1;
+  }
+  // if knob.offset doesn't exist, make it 0
+  if(typeof knob.offset === "undefined") {
+    knob.offset = 0;
+  }
+  var m = "i"+window.current_synth+"ic"+knob.cc+","+log+","+knob.min_value+","+knob.max_value+","+knob.offset+","+knob.change_code;
+  //console.log("Knob CC updated: " + knob.section + ": " + knob.display_name + " to " + knob.cc + ". Sending: " + m);
+  if (typeof amy_add_message === "function") {
+    amy_add_log_message(m);
+  }
+}
+
+
 window.addEventListener("DOMContentLoaded", function() {
   requestPatchKnobSync(0);
 });
@@ -285,6 +322,127 @@ window.amy_cv_knob_change = function(index, value) {
   
 };
 
+function move_knob(channel, cc, value) {
+  // Hook for MIDI CC -> knob mapping.
+  const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
+  if (channel !== window.current_synth || !Array.isArray(knobList)) {
+    return;
+  }
+  for (const knob of knobList) {
+    if (knob.cc != cc) {
+      continue;
+    }
+    let scaled_value = null;
+    if (knob.knob_type === "selection") {
+      const options = Array.isArray(knob.options) ? knob.options : [];
+      if (options.length === 0) {
+        return;
+      }
+      scaled_value = Math.round((options.length - 1) * (value / 127));
+    } else if (knob.knob_type === "pushbutton") {
+      scaled_value = value >= 64 ? 1 : 0;
+    } else {
+      const min = Number(knob.min_value);
+      const max = Number(knob.max_value);
+      const offset = Number(knob.offset || 0);
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        return;
+      }
+      if (knob.knob_type === "log") {
+        const minShifted = min + offset;
+        const maxShifted = max + offset;
+        if (minShifted > 0 && maxShifted > 0) {
+          const ratio = maxShifted / minShifted;
+          scaled_value = minShifted * Math.exp(Math.log(ratio) * (value / 127)) - offset;
+        } else {
+          scaled_value = min;
+        }
+      } else {
+        scaled_value = min + (max - min) * (value / 127);
+      }
+    }
+    set_knob_ui_value(knob, scaled_value, false);
+    return;
+  }
+}
+
+function save_to_patch(patchNumber) {
+  // reset patch
+  amy_add_log_message("K"+patchNumber+"S524288");
+  if (typeof window.amyboard_patch_string !== "string") {
+    return;
+  }
+  const chunks = window.amyboard_patch_string.split("Z");
+  for (const chunk of chunks) {
+    if (!chunk) {
+      continue;
+    }
+    amy_add_log_message("K" + patchNumber + chunk);
+  }
+
+  const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
+  if (!Array.isArray(knobList) || typeof window.make_change_code !== "function") {
+    return;
+  }
+  for (const knob of knobList) {
+    if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
+      continue;
+    }
+    if (knob.knob_type === "selection" || knob.knob_type === "pushbutton") {
+      continue;
+    }
+    const value = Number(knob.default_value);
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+    const payload = window.make_change_code(window.current_synth || 1, value, knob, true);
+    if (!payload) {
+      continue;
+    }
+    amy_add_log_message("K" + patchNumber + payload);
+  }
+  amy_add_log_message("i" + window.current_synth + "K" + patchNumber);
+  // also save the positions of the knobs to a map, like knob_positions[patchNumber] = {knob_index: value, ...}
+  if (Array.isArray(knobList)) {
+    const patchState = {};
+    knobList.forEach(function(knob, index) {
+      if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
+        return;
+      }
+      patchState[index] = Number(knob.default_value);
+    });
+    knob_positions[patchNumber] = patchState;
+  }
+
+}
+
+function load_from_patch(patchNumber) {
+  // Hook for loading a saved memory patch number.
+  // This doesn't set the knobs yet because we don't have access to events from a memory patch number 
+  set_knobs_from_patch_number(patchNumber);
+  // and here reload the positions of the knobs (set them) from the stored knob_posistions[patchNumber] if it is set
+  restore_knobs_from_saved_knobs(patchNumber);
+}
+
+function restore_knobs_from_saved_knobs(patchNumber) {
+  const patchState = knob_positions[patchNumber];
+  const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
+  if (!patchState || !Array.isArray(knobList)) {
+    return;
+  }
+  Object.keys(patchState).forEach(function(key) {
+    const index = Number(key);
+    if (!Number.isInteger(index) || !knobList[index]) {
+      return;
+    }
+    const value = patchState[key];
+    if (!Number.isFinite(value)) {
+      return;
+    }
+    set_knob_ui_value(knobList[index], value, false);
+  });
+}
+
 async function amy_external_midi_input_js_hook(bytes, len, sysex) {
     mp.midiInHook(bytes, len, sysex);
 } 
@@ -297,8 +455,16 @@ async function setup_midi_devices() {
     if(midiInputDevice != null) midiInputDevice.destroy();
     midiInputDevice = WebMidi.getInputById(WebMidi.inputs[midi_in.selectedIndex].id);
     midiInputDevice.addListener("midimessage", e => {
+      const data = e.message && e.message.data ? e.message.data : [];
+      const status = data.length > 0 ? data[0] : null;
+      if (Number.isFinite(status) && (status & 0xF0) === 0xB0 && data.length >= 3) {
+        const channel = (status & 0x0F) + 1;
+        const cc = data[1];
+        const value = data[2];
+        move_knob(channel, cc, value);
+      }
       for(byte in e.message.data) {
-        amy_process_single_midi_byte(e.message.data[byte], 1);
+        if(audio_started) amy_process_single_midi_byte(e.message.data[byte], 1);
       }
     });
   }
@@ -727,6 +893,6 @@ async function start_audio() {
   }
   // Initialize to the "amyboardweb" preset (patch 257), 6 voices.
   audio_started = true;
-  amy_add_message("i1iv6K257")
+  amy_add_log_message("i1iv6K257")
   attemptPatchKnobSync();
 }

@@ -46,7 +46,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="examples.js"></script>
-    <script type="text/javascript" src="amy_event_layout.js"></script>
+    <script type="text/javascript" src="amy_event_layout.generated.js"></script>
     <script type="text/javascript" src="amy_parameters.js"></script>
     <script type="text/javascript" src="spss.js"></script>
 
@@ -380,6 +380,53 @@
         border-radius: 12px;
         padding: 24px;
       }
+
+      .patch-toolbar {
+        background:rgba(44, 55, 55, 0.75);
+        border-radius: 12px;
+        padding: 6px 6px;
+        margin-left: -8px;
+        margin-right: -8px;
+      }
+
+      .patch-select-group .patch-init-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+      }
+
+      .patch-select-group {
+        gap: 4px;
+      }
+
+      .patch-select-group .form-select {
+        font-size: 0.8rem;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+        max-width: 240px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .patch-save-group {
+        gap: 4px;
+        align-items: center;
+      }
+
+      .patch-save-group .patch-save-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+      }
+
+      .patch-save-group .patch-save-input {
+        max-width: 120px;
+        height: calc(1.5em + 0.75rem + 2px);
+      }
+
+      .patch-save-group .patch-load-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+      }
     </style>
   </head>
 
@@ -434,10 +481,10 @@
         pystack: 64 * 1024, 
         heapsize: 8 * 1024 * 1024
       });
-
+      await sleep_ms(50);
       // Tell MP to start serving a REPL
       await mp.replInit();
-
+      await sleep_ms(50);
       // Start up the AMYboard stuff
       await start_amyboard();
       
@@ -513,9 +560,55 @@
           </ul>
           <div class="tab-content pt-4">
             <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
-              <div class="row align-items-center mb-4">
-                <div class="col-12 col-md-4">
-                  <select class="form-select" id="patch-select"></select>
+              <div class="row align-items-center mb-4 patch-toolbar gx-1">
+                <div class="col-12 col-md-auto">
+                  <select class="form-select" id="midi-channel-select" aria-label="MIDI Channel">
+                    <option value="1" selected>Ch 1</option>
+                    <option value="2">Ch 2</option>
+                    <option value="3">Ch 3</option>
+                    <option value="4">Ch 4</option>
+                    <option value="5">Ch 5</option>
+                    <option value="6">Ch 6</option>
+                    <option value="7">Ch 7</option>
+                    <option value="8">Ch 8</option>
+                    <option value="9">Ch 9</option>
+                    <option value="10">Ch 10</option>
+                    <option value="11">Ch 11</option>
+                    <option value="12">Ch 12</option>
+                    <option value="13">Ch 13</option>
+                    <option value="14">Ch 14</option>
+                    <option value="15">Ch 15</option>
+                    <option value="16">Ch 16</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-1 d-none d-md-block"></div>
+                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                  <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Preset</button>
+                </div>
+                <div class="col-12 col-md-auto">
+                  <div class="input-group patch-select-group">
+                    <select class="form-select" id="patch-select"></select>
+                    <button class="btn btn-warning btn-sm rounded-pill patch-init-btn" type="button" id="patch-init-btn">Load into patch</button>
+                  </div>
+                </div>
+                <div class="col-12 col-md-1 d-none d-md-block"></div>
+                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                  <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Patch</button>
+                </div>
+                <div class="col-12 col-md-auto mt-2 mt-md-0">
+                  <div class="d-flex patch-save-group">
+                    <input
+                      class="form-control form-control-sm knob-value text-center patch-save-input"
+                      type="number"
+                      id="patch-save-input"
+                      min="1024"
+                      max="1055"
+                      step="1"
+                      value="1024"
+                    />
+                    <button class="btn btn-warning btn-sm rounded-pill patch-load-btn" type="button" id="patch-load-btn">Load</button>
+                    <button class="btn btn-danger btn-sm rounded-pill patch-save-btn" type="button" id="patch-save-btn">Save</button>
+                  </div>
                 </div>
               </div>
               <div class="row g-4 knob-grid" id="knob-grid"></div>
@@ -619,7 +712,7 @@
     <script src="js/aos.js"></script>
     <script src="js/prism.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="patches.js"></script>
+    <script src="patches.generated.js"></script>
     <script src="editor_knobs.js"></script>
 
     <script>
@@ -704,6 +797,62 @@
     </script>
     <script>
       window.addEventListener("DOMContentLoaded", function() {
+        const midiChannelSelect = document.getElementById("midi-channel-select");
+        if (midiChannelSelect) {
+          midiChannelSelect.value = String(window.current_synth || 1);
+          midiChannelSelect.addEventListener("change", function() {
+            const parsed = Number(midiChannelSelect.value);
+            if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 16) {
+              window.current_synth = parsed;
+              if (typeof window.refresh_knobs_for_channel === "function") {
+                window.refresh_knobs_for_channel();
+              }
+              const patchSelect = document.getElementById("patch-select");
+              if (patchSelect) {
+                patchSelect.selectedIndex = 0;
+              }
+            }
+          });
+        }
+        const patchInitButton = document.getElementById("patch-init-btn");
+        const patchSelect = document.getElementById("patch-select");
+        if (patchInitButton && patchSelect) {
+          patchInitButton.addEventListener("click", function() {
+            const value = Number.parseInt(patchSelect.value, 10);
+            if (!Number.isNaN(value) && typeof window.onPatchChange === "function") {
+              window.onPatchChange(value);
+            }
+          });
+        }
+        const patchSaveButton = document.getElementById("patch-save-btn");
+        const patchSaveInput = document.getElementById("patch-save-input");
+        if (patchSaveButton && patchSaveInput) {
+          function clampPatchSaveValue() {
+            const value = Number.parseInt(patchSaveInput.value, 10);
+            if (Number.isNaN(value) || value < 1024 || value > 1055) {
+              patchSaveInput.value = "1024";
+            }
+          }
+          patchSaveButton.addEventListener("click", function() {
+            clampPatchSaveValue();
+            const value = Number.parseInt(patchSaveInput.value, 10);
+            if (!Number.isNaN(value) && typeof window.save_to_patch === "function") {
+              window.save_to_patch(value);
+            }
+          });
+          patchSaveInput.addEventListener("change", clampPatchSaveValue);
+          patchSaveInput.addEventListener("blur", clampPatchSaveValue);
+        }
+        const patchLoadButton = document.getElementById("patch-load-btn");
+        if (patchLoadButton && patchSaveInput) {
+          patchLoadButton.addEventListener("click", function() {
+            clampPatchSaveValue();
+            const value = Number.parseInt(patchSaveInput.value, 10);
+            if (!Number.isNaN(value) && typeof window.load_from_patch === "function") {
+              window.load_from_patch(value);
+            }
+          });
+        }
         const keyboard = document.getElementById("amy-keyboard");
         if (keyboard) {
           const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -752,7 +901,7 @@
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_add_message("i1l1n" + finalMidi);
+              amy_add_log_message("i"+window.current_synth+"l1n" + finalMidi);
             }
             if (typeof window.onKeyboardNote === "function") {
               window.onKeyboardNote(finalMidi, note);
@@ -764,7 +913,7 @@
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_add_message("i1l0n" + finalMidi);
+              amy_add_log_message("i"+window.current_synth+"l0n" + finalMidi);
             }
           };
         }

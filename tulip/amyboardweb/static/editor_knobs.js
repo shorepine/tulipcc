@@ -1,4 +1,32 @@
+function make_change_code(synth, value, knob, no_instrument) {
+  if (!knob || typeof knob.change_code !== "string") {
+    return;
+  }
+  let updated = knob.change_code.replace(/%v/g, String(value));
+  if (no_instrument) {
+    updated = updated.replace(/i%i/g, "");
+  } else {
+    updated = updated.replace(/%i/g, String(synth));
+  }
+  return updated;
+}
+
+function send_change_code(synth, value, knob) {
+  if (typeof window.amy_add_message === "function") {
+    window.amy_add_log_message(make_change_code(synth, value, knob));
+  }
+}
+
+function set_knob_ui_value(knob, value, notifyAmy) {
+  if (!knob || typeof knob._setValue !== "function") {
+    return false;
+  }
+  knob._setValue(value, notifyAmy === true);
+  return true;
+}
+
 function init_knobs(knobConfigs, gridId, onChange) {
+  
   const targetId = gridId || "knob-grid";
   const grid = document.getElementById(targetId);
   if (!grid || !Array.isArray(knobConfigs)) {
@@ -50,14 +78,169 @@ function init_knobs(knobConfigs, gridId, onChange) {
     } else if (typeof window.onKnobChange === "function") {
       window.onKnobChange(index, value);
     }
+    if (config && typeof config === "object") {
+      config.default_value = value;
+    }
     const notifyAmy = !options || options.notifyAmy !== false;
-    if (notifyAmy && config && typeof config.onChange === "function") {
-      config.onChange(value);
+    if (notifyAmy) {
+      send_change_code(window.current_synth, value, config);
     }
   }
 
+
   function renderKnob(config, index, targetGrid) {
     const colClass = targetId === "knob-grid" ? "col-6 col-md-3 text-center knob-col" : "col-6 text-center";
+    const ccEditor = (function() {
+      let editor = null;
+      return function getCcEditor() {
+        if (editor) {
+          return editor;
+        }
+        const container = document.createElement("div");
+        container.className = "cc-editor-popup";
+        container.style.position = "absolute";
+        container.style.zIndex = "9999";
+        container.style.background = "#1f1f1f";
+        container.style.color = "#fff";
+        container.style.border = "1px solid #444";
+        container.style.borderRadius = "8px";
+        container.style.padding = "8px 10px";
+        container.style.boxShadow = "0 10px 20px rgba(0, 0, 0, 0.35)";
+        container.style.fontSize = "12px";
+        container.style.display = "none";
+        container.style.minWidth = "160px";
+
+        const label = document.createElement("div");
+        label.textContent = "MIDI CC (0-127)";
+        const title = document.createElement("div");
+        title.style.fontWeight = "600";
+        title.style.marginBottom = "4px";
+        label.style.marginBottom = "6px";
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.style.width = "100%";
+        input.style.boxSizing = "border-box";
+        input.style.marginBottom = "6px";
+
+        const error = document.createElement("div");
+        error.style.color = "#f2c94c";
+        error.style.fontSize = "11px";
+        error.style.minHeight = "14px";
+        error.style.marginBottom = "6px";
+
+        const actions = document.createElement("div");
+        actions.style.display = "flex";
+        actions.style.gap = "6px";
+        actions.style.justifyContent = "flex-end";
+
+        const save = document.createElement("button");
+        save.type = "button";
+        save.textContent = "Save";
+        save.style.fontSize = "11px";
+
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.textContent = "Cancel";
+        cancel.style.fontSize = "11px";
+
+        actions.appendChild(cancel);
+        actions.appendChild(save);
+        container.appendChild(title);
+        container.appendChild(label);
+        container.appendChild(input);
+        container.appendChild(error);
+        container.appendChild(actions);
+        document.body.appendChild(container);
+
+        editor = { container: container, input: input, error: error, save: save, cancel: cancel, current: null, title: title };
+
+        function applyValue(value) {
+          if (!editor.current) {
+            return;
+          }
+          editor.current.cc = value;
+          if (typeof window.onKnobCcChange === "function") {
+            window.onKnobCcChange(editor.current);
+          }
+          hideCcEditor(editor);
+        }
+
+        save.addEventListener("click", function() {
+          const trimmed = editor.input.value.trim();
+          if (trimmed === "") {
+            applyValue("");
+            return;
+          }
+          const parsed = Number(trimmed);
+          if (!Number.isInteger(parsed) || parsed < 0 || parsed > 127) {
+            editor.error.textContent = "Enter an integer 0-127.";
+            return;
+          }
+          applyValue(parsed);
+        });
+
+        cancel.addEventListener("click", function() {
+          hideCcEditor(editor);
+        });
+
+        input.addEventListener("keydown", function(event) {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            save.click();
+          }
+          if (event.key === "Escape") {
+            event.preventDefault();
+            hideCcEditor(editor);
+          }
+        });
+
+        document.addEventListener("mousedown", function(event) {
+          if (!editor.container.contains(event.target)) {
+            hideCcEditor(editor);
+          }
+        });
+
+        return editor;
+      };
+    })();
+
+    function hideCcEditor(editor) {
+      editor.container.style.display = "none";
+      editor.current = null;
+    }
+
+    function positionCcEditor(editor, anchor) {
+      const rect = anchor.getBoundingClientRect();
+      const top = rect.bottom + window.scrollY + 6;
+      const left = rect.left + window.scrollX;
+      editor.container.style.top = `${top}px`;
+      editor.container.style.left = `${left}px`;
+    }
+
+    function attachCcEditor(labelEl, knobConfig) {
+      if (!labelEl) {
+        return;
+      }
+      labelEl.style.cursor = "pointer";
+      labelEl.setAttribute("title", "Click to edit MIDI CC");
+      labelEl.addEventListener("click", function() {
+        const editor = ccEditor();
+        editor.current = knobConfig;
+        editor.error.textContent = "";
+        const sectionName = knobConfig.section ? String(knobConfig.section) : "Knob";
+        const displayName = knobConfig.display_name ? String(knobConfig.display_name) : "";
+        editor.title.textContent = `${sectionName} ${displayName}`.trim();
+        editor.input.value = knobConfig.cc === "" || knobConfig.cc === null || knobConfig.cc === undefined
+          ? ""
+          : String(knobConfig.cc);
+        positionCcEditor(editor, labelEl);
+        editor.container.style.display = "block";
+        editor.input.focus();
+        editor.input.select();
+      });
+    }
+
     if (config.knob_type === "selection") {
       const options = Array.isArray(config.options) ? config.options : [];
       const defaultIndex = parseNumber(config.default_value, 0);
@@ -71,6 +254,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
       const label = document.createElement("div");
       label.className = "knob-label small mb-2";
       label.textContent = displayName;
+      attachCcEditor(label, config);
 
       const selectWrap = document.createElement("div");
       selectWrap.className = "amy-select";
@@ -114,7 +298,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
         downButton.setAttribute("aria-disabled", isLast ? "true" : "false");
       }
 
-      function setIndex(nextIndex) {
+      function setIndex(nextIndex, notifyAmy) {
         const clamped = clamp(nextIndex, 0, Math.max(options.length - 1, 0));
         if (clamped === currentIndex) {
           return;
@@ -122,30 +306,35 @@ function init_knobs(knobConfigs, gridId, onChange) {
         currentIndex = clamped;
         updateDisplay();
         updateButtons();
-        notifyKnobChange(index, currentIndex, config, { notifyAmy: true });
+        notifyKnobChange(index, currentIndex, config, { notifyAmy: notifyAmy !== false });
       }
 
       upButton.addEventListener("click", function() {
-        setIndex(currentIndex - 1);
+        setIndex(currentIndex - 1, true);
       });
 
       downButton.addEventListener("click", function() {
-        setIndex(currentIndex + 1);
+        setIndex(currentIndex + 1, true);
       });
 
       control.addEventListener("keydown", function(event) {
         if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
           event.preventDefault();
-          setIndex(currentIndex - 1);
+          setIndex(currentIndex - 1, true);
         }
         if (event.key === "ArrowDown" || event.key === "ArrowRight") {
           event.preventDefault();
-          setIndex(currentIndex + 1);
+          setIndex(currentIndex + 1, true);
         }
       });
 
       updateDisplay();
       updateButtons();
+
+      config._setValue = function(nextValue, notifyAmy) {
+        const parsed = parseNumber(nextValue, currentIndex);
+        setIndex(parsed, notifyAmy);
+      };
 
       control.appendChild(upButton);
       control.appendChild(display);
@@ -200,6 +389,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
       const label = document.createElement("div");
       label.className = "knob-label small mb-2";
       label.textContent = displayName;
+      attachCcEditor(label, config);
 
       const button = document.createElement("div");
       button.className = "amy-pushbutton";
@@ -243,6 +433,10 @@ function init_knobs(knobConfigs, gridId, onChange) {
         }
       });
 
+      config._setValue = function(nextValue, notifyAmy) {
+        setValue(nextValue, notifyAmy);
+      };
+
       return;
     }
 
@@ -264,6 +458,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
     const label = document.createElement("div");
     label.className = "knob-label small mb-2";
     label.textContent = displayName;
+    attachCcEditor(label, config);
 
     const knob = document.createElement("div");
     knob.className = "amy-knob";
@@ -446,6 +641,12 @@ function init_knobs(knobConfigs, gridId, onChange) {
         setValue(state.value - step, true, true);
       }
     });
+
+    config._setValue = function(outputValue, notifyAmy) {
+      const parsed = parseNumber(outputValue, state.value);
+      const rawValue = isLogKnob ? outputToValue(parsed) : parsed;
+      setValue(rawValue, true, notifyAmy);
+    };
   }
 
   const sections = [];
@@ -541,6 +742,6 @@ function set_amy_knob_value(knobs, sectionName, name, value) {
   } else {
     knob.default_value = value;
   }
-  knob.onChange(value);
+  send_change_code(window.current_synth, value, knob);
   return true;
 }
