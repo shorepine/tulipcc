@@ -152,6 +152,8 @@ float compute_cpu_usage(uint8_t debug) {
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
     uxArraySize = uxTaskGetSystemState( pxTaskStatusArray, uxArraySize, NULL );
+//15 tasks running now
+//_tulip_mp_task_ _IDLE0_ _IDLE1_ _usb_task_ _tscreen_task_ _display_task_ _tiT_ _amy_fb_task_ _amy_midi_task_ _sys_evt_ _ipc1_ _ipc0_ _amy_r_task_ _esp_timer_ _Tmr Svc_ 
     if(debug) {
         printf("%d tasks running now\n", uxArraySize);
         for(x=0; x<uxArraySize; x++) { // for each task
@@ -169,17 +171,21 @@ float compute_cpu_usage(uint8_t debug) {
     for(i=0;i<MAX_TASKS;i++) { // for each name
         counter_since_last[i] = 0;
         for(x=0; x<uxArraySize; x++) { // for each task
-            if(strcmp(pxTaskStatusArray[x].pcTaskName, tasks[i])==0) {
-                counter_since_last[i] = pxTaskStatusArray[x].ulRunTimeCounter - last_task_counters[i];
-                last_task_counters[i] = pxTaskStatusArray[x].ulRunTimeCounter;
-                ulTotalRunTime_per_core[cores[i]]= ulTotalRunTime_per_core[cores[i]] + counter_since_last[i];
+            if(tasks[i] !=0 && strlen(tasks[i])) {
+                if(strcmp(pxTaskStatusArray[x].pcTaskName, tasks[i])==0) {
+                    counter_since_last[i] = pxTaskStatusArray[x].ulRunTimeCounter - last_task_counters[i];
+                    last_task_counters[i] = pxTaskStatusArray[x].ulRunTimeCounter;
+                    ulTotalRunTime_per_core[cores[i]]= ulTotalRunTime_per_core[cores[i]] + counter_since_last[i];
+                }
             }
         }
     }
     if(debug) {
         printf("------ CPU usage since last call to tulip.cpu()\n");
         for(i=0;i<MAX_TASKS;i++) {
-            printf("%d %-15s\t%-15ld\t\t%2.2f%%\n", cores[i], tasks[i], counter_since_last[i], ((float)counter_since_last[i])/ulTotalRunTime_per_core[cores[i]] * 100.0);
+            if(tasks[i] !=0 && strlen(tasks[i])) {
+                printf("%d %-15s\t%-15ld\t\t%2.2f%%\n", cores[i], tasks[i], counter_since_last[i], ((float)counter_since_last[i])/ulTotalRunTime_per_core[cores[i]] * 100.0);
+            }
         }   
     }
     vPortFree(pxTaskStatusArray);
