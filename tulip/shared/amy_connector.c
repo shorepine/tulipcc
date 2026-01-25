@@ -275,7 +275,6 @@ void run_amy(uint8_t midi_out_pin) {
 #elif defined TULIP_DESKTOP
 
 void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
-    fprintf(stderr, "run_amy: capture_device_id %d playback_device_id %d\n", capture_device_id, playback_device_id);
     amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_config_t amy_config = amy_default_config();
     amy_config.features.default_synths = 0; // midi.py does this for us
