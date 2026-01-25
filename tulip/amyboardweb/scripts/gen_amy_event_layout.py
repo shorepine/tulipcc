@@ -141,6 +141,10 @@ def generate_layout():
 def generate_patches():
     text = PATCHES_H.read_text()
     matches = re.findall(r"/\*\s*(\d+)\s*:\s*(.*?)\s*\*/", text)
+    patch_257 = re.search(r"/\*\s*257\s*:\s*.*?\s*\*/\s*\"(.*?)\"", text)
+    if not patch_257:
+        raise RuntimeError("patch_commands[257] not found in patches.h")
+    patch_257_string = patch_257.group(1)
     patches = [(int(num), name) for num, name in matches]
     patches.sort(key=lambda item: item[0])
     if not patches:
@@ -156,6 +160,7 @@ def generate_patches():
         output += f"    {json.dumps(name)},\n"
     output += "  ];\n\n"
     output += "  window.amy_patches = patches;\n\n"
+    output += f"  window.amyboard_patch_string = {json.dumps(patch_257_string)};\n\n"
     output += "  if (typeof window.onPatchChange !== \"function\") {\n"
     output += "    window.onPatchChange = function(_patchIndex) {};\n"
     output += "  }\n\n"
@@ -165,6 +170,10 @@ def generate_patches():
     output += "      return;\n"
     output += "    }\n"
     output += "    select.innerHTML = \"\";\n"
+    output += "    const placeholder = document.createElement(\"option\");\n"
+    output += "    placeholder.value = \"\";\n"
+    output += "    placeholder.textContent = \"-\";\n"
+    output += "    select.appendChild(placeholder);\n"
     output += "    patches.forEach(function(name, index) {\n"
     output += "      const option = document.createElement(\"option\");\n"
     output += "      option.value = String(index);\n"

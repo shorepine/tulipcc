@@ -419,7 +419,7 @@ window.addEventListener("DOMContentLoaded", function() {
 });
 
 function set_knobs_from_patch_number(patch_number) {
-  amy_add_message("i"+window.current_synth+"iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
+  amy_add_log_message("i"+window.current_synth+"iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
   const events = get_events_for_patch_number(patch_number);
   const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
   if (!Array.isArray(knobs) || events.length === 0) {

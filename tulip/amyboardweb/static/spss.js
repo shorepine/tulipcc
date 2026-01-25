@@ -9,6 +9,13 @@ var amy_sysclock = null;
 var amyboard_started = false;
 var amy_parse_patch_number_to_events = null;
 
+function amy_add_log_message(message) {
+  console.log(message);
+  if (typeof amy_add_message === "function") {
+    amy_add_message(message);
+  }
+}
+
 var mp = null;
 var midiOutputDevice = null;
 var midiInputDevice = null;
@@ -267,17 +274,6 @@ window.onPatchChange = function(patchIndex) {
 };
 
 
-function send_change_code(synth, value, knob) {
-  if (!knob || typeof knob.change_code !== "string") {
-    return;
-  }
-  const updated = knob.change_code
-    .replace(/%v/g, String(value))
-    .replace(/%i/g, String(synth));
-  
-  amy_add_message(updated);
-}
-
 function onKnobCcChange(knob) {
   /*
   ic<C>,<L>,<N>,<X>,<O>,<CODE>
@@ -300,7 +296,7 @@ function onKnobCcChange(knob) {
   var m = "i"+window.current_synth+"ic"+knob.cc+","+log+","+knob.min_value+","+knob.max_value+","+knob.offset+","+knob.change_code;
   //console.log("Knob CC updated: " + knob.section + ": " + knob.display_name + " to " + knob.cc + ". Sending: " + m);
   if (typeof amy_add_message === "function") {
-    amy_add_message(m);
+    amy_add_log_message(m);
   }
 }
 
@@ -367,6 +363,44 @@ function move_knob(channel, cc, value) {
     set_knob_ui_value(knob, scaled_value, false);
     return;
   }
+}
+
+function save_to_patch(patchNumber) {
+  // reset patch
+  amy_add_log_message("K"+patchNumber+"S524288");
+  if (typeof window.amyboard_patch_string !== "string") {
+    return;
+  }
+  const chunks = window.amyboard_patch_string.split("Z");
+  for (const chunk of chunks) {
+    if (!chunk) {
+      continue;
+    }
+    amy_add_log_message("K" + patchNumber + chunk);
+  }
+
+  const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
+  if (!Array.isArray(knobList) || typeof window.make_change_code !== "function") {
+    return;
+  }
+  for (const knob of knobList) {
+    if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
+      continue;
+    }
+    if (knob.knob_type === "selection" || knob.knob_type === "pushbutton") {
+      continue;
+    }
+    const value = Number(knob.default_value);
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+    const payload = window.make_change_code(window.current_synth || 1, value, knob, true);
+    if (!payload) {
+      continue;
+    }
+    amy_add_log_message("K" + patchNumber + payload);
+  }
+  amy_add_log_message("i" + window.current_synth + "K" + patchNumber);
 }
 
 async function amy_external_midi_input_js_hook(bytes, len, sysex) {
@@ -819,6 +853,6 @@ async function start_audio() {
   }
   // Initialize to the "amyboardweb" preset (patch 257), 6 voices.
   audio_started = true;
-  amy_add_message("i1iv6K257")
+  amy_add_log_message("i1iv6K257")
   attemptPatchKnobSync();
 }

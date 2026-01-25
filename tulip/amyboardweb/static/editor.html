@@ -388,6 +388,39 @@
         margin-left: -8px;
         margin-right: -8px;
       }
+
+      .patch-select-group .patch-init-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+      }
+
+      .patch-select-group {
+        gap: 8px;
+      }
+
+      .patch-select-group .form-select {
+        font-size: 0.8rem;
+        padding-top: 0.25rem;
+        padding-bottom: 0.25rem;
+        max-width: 240px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .patch-save-group {
+        gap: 8px;
+        align-items: center;
+      }
+
+      .patch-save-group .patch-save-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
+      }
+
+      .patch-save-group .patch-save-input {
+        max-width: 120px;
+      }
     </style>
   </head>
 
@@ -542,11 +575,25 @@
                     <option value="16">Ch 16</option>
                   </select>
                 </div>
-                <div class="col-6 col-md-4">
-                  <select class="form-select" id="patch-select"></select>
+                <div class="col-6 col-md-6">
+                  <div class="input-group patch-select-group">
+                    <button class="btn btn-warning btn-sm rounded-pill patch-init-btn" type="button" id="patch-init-btn">Init from preset:</button>
+                    <select class="form-select" id="patch-select"></select>
+                  </div>
                 </div>
-                <div class="col-12 col-md-3 mt-2 mt-md-0">
-                  <button class="btn btn-warning w-100" type="button" id="patch-init-btn">Init from preset</button>
+                <div class="col-12 col-md-4 mt-2 mt-md-0">
+                  <div class="d-flex patch-save-group">
+                    <button class="btn btn-success btn-sm rounded-pill patch-save-btn" type="button" id="patch-save-btn">Save to patch:</button>
+                    <input
+                      class="form-control form-control-sm knob-value text-center patch-save-input"
+                      type="number"
+                      id="patch-save-input"
+                      min="1024"
+                      max="1056"
+                      step="1"
+                      value="1024"
+                    />
+                  </div>
                 </div>
               </div>
               <div class="row g-4 knob-grid" id="knob-grid"></div>
@@ -745,6 +792,10 @@
               if (typeof window.refresh_knobs_for_channel === "function") {
                 window.refresh_knobs_for_channel();
               }
+              const patchSelect = document.getElementById("patch-select");
+              if (patchSelect) {
+                patchSelect.selectedIndex = 0;
+              }
             }
           });
         }
@@ -757,6 +808,25 @@
               window.onPatchChange(value);
             }
           });
+        }
+        const patchSaveButton = document.getElementById("patch-save-btn");
+        const patchSaveInput = document.getElementById("patch-save-input");
+        if (patchSaveButton && patchSaveInput) {
+          function clampPatchSaveValue() {
+            const value = Number.parseInt(patchSaveInput.value, 10);
+            if (Number.isNaN(value) || value < 1024 || value > 1056) {
+              patchSaveInput.value = "1024";
+            }
+          }
+          patchSaveButton.addEventListener("click", function() {
+            clampPatchSaveValue();
+            const value = Number.parseInt(patchSaveInput.value, 10);
+            if (!Number.isNaN(value) && typeof window.save_to_patch === "function") {
+              window.save_to_patch(value);
+            }
+          });
+          patchSaveInput.addEventListener("change", clampPatchSaveValue);
+          patchSaveInput.addEventListener("blur", clampPatchSaveValue);
         }
         const keyboard = document.getElementById("amy-keyboard");
         if (keyboard) {
@@ -806,7 +876,7 @@
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_add_message("i"+window.current_synth+"l1n" + finalMidi);
+              amy_add_log_message("i"+window.current_synth+"l1n" + finalMidi);
             }
             if (typeof window.onKeyboardNote === "function") {
               window.onKeyboardNote(finalMidi, note);
@@ -818,7 +888,7 @@
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_add_message("i"+window.current_synth+"l0n" + finalMidi);
+              amy_add_log_message("i"+window.current_synth+"l0n" + finalMidi);
             }
           };
         }

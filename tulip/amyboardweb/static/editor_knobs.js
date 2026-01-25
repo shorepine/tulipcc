@@ -1,12 +1,19 @@
-function send_change_code(synth, value, knob) {
+function make_change_code(synth, value, knob, no_instrument) {
   if (!knob || typeof knob.change_code !== "string") {
     return;
   }
-  const updated = knob.change_code
-    .replace(/%v/g, String(value))
-    .replace(/%i/g, String(synth));
+  let updated = knob.change_code.replace(/%v/g, String(value));
+  if (no_instrument) {
+    updated = updated.replace(/i%i/g, "");
+  } else {
+    updated = updated.replace(/%i/g, String(synth));
+  }
+  return updated;
+}
+
+function send_change_code(synth, value, knob) {
   if (typeof window.amy_add_message === "function") {
-    window.amy_add_message(updated);
+    window.amy_add_log_message(make_change_code(synth, value, knob));
   }
 }
 
