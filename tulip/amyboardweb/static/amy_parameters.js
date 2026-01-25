@@ -419,8 +419,15 @@ window.addEventListener("DOMContentLoaded", function() {
 });
 
 function set_knobs_from_patch_number(patch_number) {
-  amy_add_log_message("i"+window.current_synth+"iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
+  // if this is a memory patch, load it. if not, load the amyboard base patch
+  if(patch_number >= 1024 && patch_number < 1024+32) {
+    amy_add_log_message("i"+window.current_synth+"iv6K"+patch_number);
+    return; // we can't set the knobs from memory patches yet.
+  } else {
+    amy_add_log_message("i"+window.current_synth+"iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
+  }
   const events = get_events_for_patch_number(patch_number);
+  // console log number of events
   const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
   if (!Array.isArray(knobs) || events.length === 0) {
     return;

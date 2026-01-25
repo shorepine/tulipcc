@@ -395,7 +395,7 @@
       }
 
       .patch-select-group {
-        gap: 8px;
+        gap: 4px;
       }
 
       .patch-select-group .form-select {
@@ -409,7 +409,7 @@
       }
 
       .patch-save-group {
-        gap: 8px;
+        gap: 4px;
         align-items: center;
       }
 
@@ -420,6 +420,12 @@
 
       .patch-save-group .patch-save-input {
         max-width: 120px;
+        height: calc(1.5em + 0.75rem + 2px);
+      }
+
+      .patch-save-group .patch-load-btn {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.6rem;
       }
     </style>
   </head>
@@ -554,8 +560,8 @@
           </ul>
           <div class="tab-content pt-4">
             <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
-              <div class="row align-items-center mb-4 patch-toolbar">
-                <div class="col-6 col-md-2">
+              <div class="row align-items-center mb-4 patch-toolbar gx-1">
+                <div class="col-12 col-md-auto">
                   <select class="form-select" id="midi-channel-select" aria-label="MIDI Channel">
                     <option value="1" selected>Ch 1</option>
                     <option value="2">Ch 2</option>
@@ -575,24 +581,33 @@
                     <option value="16">Ch 16</option>
                   </select>
                 </div>
-                <div class="col-6 col-md-6">
+                <div class="col-12 col-md-1 d-none d-md-block"></div>
+                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                  <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Preset</button>
+                </div>
+                <div class="col-12 col-md-auto">
                   <div class="input-group patch-select-group">
-                    <button class="btn btn-warning btn-sm rounded-pill patch-init-btn" type="button" id="patch-init-btn">Init from preset:</button>
                     <select class="form-select" id="patch-select"></select>
+                    <button class="btn btn-warning btn-sm rounded-pill patch-init-btn" type="button" id="patch-init-btn">Load into patch</button>
                   </div>
                 </div>
-                <div class="col-12 col-md-4 mt-2 mt-md-0">
+                <div class="col-12 col-md-1 d-none d-md-block"></div>
+                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                  <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Patch</button>
+                </div>
+                <div class="col-12 col-md-auto mt-2 mt-md-0">
                   <div class="d-flex patch-save-group">
-                    <button class="btn btn-success btn-sm rounded-pill patch-save-btn" type="button" id="patch-save-btn">Save to patch:</button>
                     <input
                       class="form-control form-control-sm knob-value text-center patch-save-input"
                       type="number"
                       id="patch-save-input"
                       min="1024"
-                      max="1056"
+                      max="1055"
                       step="1"
                       value="1024"
                     />
+                    <button class="btn btn-warning btn-sm rounded-pill patch-load-btn" type="button" id="patch-load-btn">Load</button>
+                    <button class="btn btn-danger btn-sm rounded-pill patch-save-btn" type="button" id="patch-save-btn">Save</button>
                   </div>
                 </div>
               </div>
@@ -814,7 +829,7 @@
         if (patchSaveButton && patchSaveInput) {
           function clampPatchSaveValue() {
             const value = Number.parseInt(patchSaveInput.value, 10);
-            if (Number.isNaN(value) || value < 1024 || value > 1056) {
+            if (Number.isNaN(value) || value < 1024 || value > 1055) {
               patchSaveInput.value = "1024";
             }
           }
@@ -827,6 +842,16 @@
           });
           patchSaveInput.addEventListener("change", clampPatchSaveValue);
           patchSaveInput.addEventListener("blur", clampPatchSaveValue);
+        }
+        const patchLoadButton = document.getElementById("patch-load-btn");
+        if (patchLoadButton && patchSaveInput) {
+          patchLoadButton.addEventListener("click", function() {
+            clampPatchSaveValue();
+            const value = Number.parseInt(patchSaveInput.value, 10);
+            if (!Number.isNaN(value) && typeof window.load_from_patch === "function") {
+              window.load_from_patch(value);
+            }
+          });
         }
         const keyboard = document.getElementById("amy-keyboard");
         if (keyboard) {

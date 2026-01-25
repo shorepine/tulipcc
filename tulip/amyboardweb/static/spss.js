@@ -403,6 +403,12 @@ function save_to_patch(patchNumber) {
   amy_add_log_message("i" + window.current_synth + "K" + patchNumber);
 }
 
+function load_from_patch(patchNumber) {
+  // Hook for loading a saved memory patch number.
+  // This doesn't set the knobs yet because we don't have access to events from a memory patch number 
+  set_knobs_from_patch_number(patchNumber);
+}
+
 async function amy_external_midi_input_js_hook(bytes, len, sysex) {
     mp.midiInHook(bytes, len, sysex);
 } 
