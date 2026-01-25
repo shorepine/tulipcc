@@ -46,7 +46,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="examples.js"></script>
-    <script type="text/javascript" src="amy_event_layout.js"></script>
+    <script type="text/javascript" src="amy_event_layout.generated.js"></script>
     <script type="text/javascript" src="amy_parameters.js"></script>
     <script type="text/javascript" src="spss.js"></script>
 
@@ -380,6 +380,14 @@
         border-radius: 12px;
         padding: 24px;
       }
+
+      .patch-toolbar {
+        background:rgba(44, 55, 55, 0.75);
+        border-radius: 12px;
+        padding: 6px 6px;
+        margin-left: -8px;
+        margin-right: -8px;
+      }
     </style>
   </head>
 
@@ -434,10 +442,10 @@
         pystack: 64 * 1024, 
         heapsize: 8 * 1024 * 1024
       });
-
+      await sleep_ms(50);
       // Tell MP to start serving a REPL
       await mp.replInit();
-
+      await sleep_ms(50);
       // Start up the AMYboard stuff
       await start_amyboard();
       
@@ -513,7 +521,7 @@
           </ul>
           <div class="tab-content pt-4">
             <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
-              <div class="row align-items-center mb-4">
+              <div class="row align-items-center mb-4 patch-toolbar">
                 <div class="col-6 col-md-2">
                   <select class="form-select" id="midi-channel-select" aria-label="MIDI Channel">
                     <option value="1" selected>Ch 1</option>
@@ -536,6 +544,9 @@
                 </div>
                 <div class="col-6 col-md-4">
                   <select class="form-select" id="patch-select"></select>
+                </div>
+                <div class="col-12 col-md-3 mt-2 mt-md-0">
+                  <button class="btn btn-warning w-100" type="button" id="patch-init-btn">Init from preset</button>
                 </div>
               </div>
               <div class="row g-4 knob-grid" id="knob-grid"></div>
@@ -639,7 +650,7 @@
     <script src="js/aos.js"></script>
     <script src="js/prism.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="patches.js"></script>
+    <script src="patches.generated.js"></script>
     <script src="editor_knobs.js"></script>
 
     <script>
@@ -734,6 +745,16 @@
               if (typeof window.refresh_knobs_for_channel === "function") {
                 window.refresh_knobs_for_channel();
               }
+            }
+          });
+        }
+        const patchInitButton = document.getElementById("patch-init-btn");
+        const patchSelect = document.getElementById("patch-select");
+        if (patchInitButton && patchSelect) {
+          patchInitButton.addEventListener("click", function() {
+            const value = Number.parseInt(patchSelect.value, 10);
+            if (!Number.isNaN(value) && typeof window.onPatchChange === "function") {
+              window.onPatchChange(value);
             }
           });
         }

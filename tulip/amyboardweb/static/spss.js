@@ -298,7 +298,7 @@ function onKnobCcChange(knob) {
     knob.offset = 0;
   }
   var m = "i"+window.current_synth+"ic"+knob.cc+","+log+","+knob.min_value+","+knob.max_value+","+knob.offset+","+knob.change_code;
-  console.log("Knob CC updated: " + knob.section + ": " + knob.display_name + " to " + knob.cc + ". Sending: " + m);
+  //console.log("Knob CC updated: " + knob.section + ": " + knob.display_name + " to " + knob.cc + ". Sending: " + m);
   if (typeof amy_add_message === "function") {
     amy_add_message(m);
   }
@@ -390,7 +390,7 @@ async function setup_midi_devices() {
         move_knob(channel, cc, value);
       }
       for(byte in e.message.data) {
-        amy_process_single_midi_byte(e.message.data[byte], 1);
+        if(audio_started) amy_process_single_midi_byte(e.message.data[byte], 1);
       }
     });
   }

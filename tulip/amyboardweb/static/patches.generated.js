@@ -276,15 +276,9 @@
     patches.forEach(function(name, index) {
       const option = document.createElement("option");
       option.value = String(index);
-      option.textContent = index + ": " + name;
+      option.textContent = name;
       select.appendChild(option);
     });
 
-    select.addEventListener("change", function() {
-      const value = Number.parseInt(select.value, 10);
-      if (!Number.isNaN(value) && typeof window.onPatchChange === "function") {
-        window.onPatchChange(value);
-      }
-    });
   };
 })();

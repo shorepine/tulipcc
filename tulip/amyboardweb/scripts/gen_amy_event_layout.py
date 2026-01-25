@@ -6,8 +6,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 AMY_H = ROOT / "amy" / "src" / "amy.h"
-LAYOUT_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "amy_event_layout.js"
-PATCHES_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "patches.js"
+LAYOUT_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "amy_event_layout.generated.js"
+PATCHES_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "patches.generated.js"
 PATCHES_H = ROOT / "amy" / "src" / "patches.h"
 
 TYPE_INFO = {
@@ -168,15 +168,9 @@ def generate_patches():
     output += "    patches.forEach(function(name, index) {\n"
     output += "      const option = document.createElement(\"option\");\n"
     output += "      option.value = String(index);\n"
-    output += "      option.textContent = index + \": \" + name;\n"
+    output += "      option.textContent = name;\n"
     output += "      select.appendChild(option);\n"
     output += "    });\n\n"
-    output += "    select.addEventListener(\"change\", function() {\n"
-    output += "      const value = Number.parseInt(select.value, 10);\n"
-    output += "      if (!Number.isNaN(value) && typeof window.onPatchChange === \"function\") {\n"
-    output += "        window.onPatchChange(value);\n"
-    output += "      }\n"
-    output += "    });\n"
     output += "  };\n"
     output += "})();\n"
     PATCHES_OUTPUT.write_text(output)
