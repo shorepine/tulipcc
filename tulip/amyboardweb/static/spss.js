@@ -388,9 +388,6 @@ function save_to_patch(patchNumber) {
     if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
       continue;
     }
-    if (knob.knob_type === "selection" || knob.knob_type === "pushbutton") {
-      continue;
-    }
     const value = Number(knob.default_value);
     if (!Number.isFinite(value)) {
       continue;
