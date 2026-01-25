@@ -12,7 +12,7 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "Reverb", bg_color: "rgba(160, 200, 200, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
 
-  window.amy_knobs = [
+  const amy_knob_definitions = [
     {
       section: "Osc A",
       cc: 70,
@@ -364,19 +364,65 @@ window.addEventListener("DOMContentLoaded", function() {
 
   ];
 
-  if (typeof init_knobs === "function") {
-    init_knobs(window.amy_knobs);
+  function cloneKnob(entry) {
+    if (!entry || typeof entry !== "object") {
+      return entry;
+    }
+    const clone = Object.assign({}, entry);
+    if (Array.isArray(entry.options)) {
+      clone.options = entry.options.slice();
+    }
+    return clone;
+  }
+
+  function cloneKnobList(list) {
+    return list.map(cloneKnob);
+  }
+
+  window.amy_knobs = new Array(17);
+  for (let i = 1; i <= 16; i += 1) {
+    window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
+  }
+
+  window.get_current_knobs = function() {
+    const idx = Number(window.current_synth);
+    if (Array.isArray(window.amy_knobs) && window.amy_knobs[idx]) {
+      return window.amy_knobs[idx];
+    }
+    if (Array.isArray(window.amy_knobs) && window.amy_knobs[1]) {
+      return window.amy_knobs[1];
+    }
+    return [];
+  };
+
+  window.refresh_knobs_for_channel = function() {
+    const knobs = window.get_current_knobs();
+    if (typeof init_knobs === "function") {
+      init_knobs(knobs);
+    }
+    if (typeof window.onKnobCcChange === "function") {
+      for (const knob of knobs) {
+        if (knob.knob_type !== "spacer" && knob.knob_type !== "spacer-half"
+          && knob.knob_type !== "selection" && knob.knob_type !== "pushbutton") {
+          window.onKnobCcChange(knob);
+        }
+      }
+    }
+  };
+
+  if (typeof window.refresh_knobs_for_channel === "function") {
+    window.refresh_knobs_for_channel();
   }
   if (typeof init_patches_select === "function") {
     init_patches_select("patch-select");
   }
 });
 
-
 function set_knobs_from_patch_number(patch_number) {
-  amy_add_message("i1iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
+  amy_add_message("i"+window.current_synth+"iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
   const events = get_events_for_patch_number(patch_number);
-  if (!Array.isArray(window.amy_knobs) || events.length === 0) {
+  const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
+  if (!Array.isArray(knobs) || events.length === 0) {
     return;
   }
 
@@ -470,60 +516,50 @@ function set_knobs_from_patch_number(patch_number) {
   }
 
   // Configure the patch.
-  set_amy_knob_value(window.amy_knobs, "Osc A", "freq", osc_freq[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "Osc A", "wave", osc_wave[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "Osc A", "duty", osc_duty[oscAB_osc[0]]);
-  set_amy_knob_value(window.amy_knobs, "Osc A", "level", osc_gain[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "level", osc_gain[oscAB_osc[0]]);
 
-  set_amy_knob_value(window.amy_knobs, "Osc B", "freq", osc_freq[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "Osc B", "wave", osc_wave[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "Osc B", "duty", osc_duty[oscAB_osc[1]]);
-  set_amy_knob_value(window.amy_knobs, "Osc B", "level", osc_gain[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "freq", osc_freq[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "wave", osc_wave[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "duty", osc_duty[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "level", osc_gain[oscAB_osc[1]]);
 
-  set_amy_knob_value(window.amy_knobs, "VCF", "freq", filterFreq);
-  set_amy_knob_value(window.amy_knobs, "VCF", "resonance", resonanceValue);
-  set_amy_knob_value(window.amy_knobs, "VCF", "kbd", filterKbd);
-  set_amy_knob_value(window.amy_knobs, "VCF", "env", filterEnv);
-  set_amy_knob_value(window.amy_knobs, "VCF ENV", "attack", adsr[0]);
-  set_amy_knob_value(window.amy_knobs, "VCF ENV", "decay", adsr[1]);
-  set_amy_knob_value(window.amy_knobs, "VCF ENV", "sustain", adsr[2]);
-  set_amy_knob_value(window.amy_knobs, "VCF ENV", "release", adsr[3]);
+  set_amy_knob_value(knobs, "VCF", "freq", filterFreq);
+  set_amy_knob_value(knobs, "VCF", "resonance", resonanceValue);
+  set_amy_knob_value(knobs, "VCF", "kbd", filterKbd);
+  set_amy_knob_value(knobs, "VCF", "env", filterEnv);
+  set_amy_knob_value(knobs, "VCF ENV", "attack", adsr[0]);
+  set_amy_knob_value(knobs, "VCF ENV", "decay", adsr[1]);
+  set_amy_knob_value(knobs, "VCF ENV", "sustain", adsr[2]);
+  set_amy_knob_value(knobs, "VCF ENV", "release", adsr[3]);
 
-  set_amy_knob_value(window.amy_knobs, "LFO", "freq", lfoFreq);
-  set_amy_knob_value(window.amy_knobs, "LFO", "delay", lfoDelay);
-  set_amy_knob_value(window.amy_knobs, "LFO", "wave", 4);   // always triangle
-  set_amy_knob_value(window.amy_knobs, "LFO", "osc", lfoOsc);
-  set_amy_knob_value(window.amy_knobs, "LFO", "pwm", lfoPwm);
-  set_amy_knob_value(window.amy_knobs, "LFO", "filt", filterLfo);
+  set_amy_knob_value(knobs, "LFO", "freq", lfoFreq);
+  set_amy_knob_value(knobs, "LFO", "delay", lfoDelay);
+  set_amy_knob_value(knobs, "LFO", "wave", 4);   // always triangle
+  set_amy_knob_value(knobs, "LFO", "osc", lfoOsc);
+  set_amy_knob_value(knobs, "LFO", "pwm", lfoPwm);
+  set_amy_knob_value(knobs, "LFO", "filt", filterLfo);
 
   if (oscGate) {
     adsr = [0, 0, 1, 0];
   }
-  set_amy_knob_value(window.amy_knobs, "ADSR", "attack", adsr[0]);
-  set_amy_knob_value(window.amy_knobs, "ADSR", "decay", adsr[1]);
-  set_amy_knob_value(window.amy_knobs, "ADSR", "sustain", adsr[2]);
-  set_amy_knob_value(window.amy_knobs, "ADSR", "release", adsr[3]);
+  set_amy_knob_value(knobs, "ADSR", "attack", adsr[0]);
+  set_amy_knob_value(knobs, "ADSR", "decay", adsr[1]);
+  set_amy_knob_value(knobs, "ADSR", "sustain", adsr[2]);
+  set_amy_knob_value(knobs, "ADSR", "release", adsr[3]);
 
-  set_amy_knob_value(window.amy_knobs, "EQ", "low", eq[0]);
-  set_amy_knob_value(window.amy_knobs, "EQ", "mid", eq[1]);
-  set_amy_knob_value(window.amy_knobs, "EQ", "high", eq[2]);
+  set_amy_knob_value(knobs, "EQ", "low", eq[0]);
+  set_amy_knob_value(knobs, "EQ", "mid", eq[1]);
+  set_amy_knob_value(knobs, "EQ", "high", eq[2]);
 
-  set_amy_knob_value(window.amy_knobs, "Chorus", "level", chorus[0]);
-  set_amy_knob_value(window.amy_knobs, "Chorus", "freq", chorus[1]);
-  set_amy_knob_value(window.amy_knobs, "Chorus", "depth", chorus[2]);
+  set_amy_knob_value(knobs, "Chorus", "level", chorus[0]);
+  set_amy_knob_value(knobs, "Chorus", "freq", chorus[1]);
+  set_amy_knob_value(knobs, "Chorus", "depth", chorus[2]);
 
-  if (typeof init_knobs === "function") {
-    init_knobs(window.amy_knobs);
-  }
-
-  // Set the CCs too
-  for (const knob of window.amy_knobs) {
-    if (knob.knob_type !== "spacer" && knob.knob_type !== "spacer-half" 
-      && knob.knob_type !== 'selection' && knob.knob_type !== 'pushbutton') {
-      if (typeof window.onKnobCcChange === "function") {
-        window.onKnobCcChange(knob);
-      }
-    }
+  if (typeof window.refresh_knobs_for_channel === "function") {
+    window.refresh_knobs_for_channel();
   }
 }
 

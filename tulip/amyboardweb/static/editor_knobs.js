@@ -10,6 +10,14 @@ function send_change_code(synth, value, knob) {
   }
 }
 
+function set_knob_ui_value(knob, value, notifyAmy) {
+  if (!knob || typeof knob._setValue !== "function") {
+    return false;
+  }
+  knob._setValue(value, notifyAmy === true);
+  return true;
+}
+
 function init_knobs(knobConfigs, gridId, onChange) {
   
   const targetId = gridId || "knob-grid";
@@ -63,9 +71,12 @@ function init_knobs(knobConfigs, gridId, onChange) {
     } else if (typeof window.onKnobChange === "function") {
       window.onKnobChange(index, value);
     }
+    if (config && typeof config === "object") {
+      config.default_value = value;
+    }
     const notifyAmy = !options || options.notifyAmy !== false;
     if (notifyAmy) {
-      send_change_code(1, value, config);
+      send_change_code(window.current_synth, value, config);
     }
   }
 
@@ -280,7 +291,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
         downButton.setAttribute("aria-disabled", isLast ? "true" : "false");
       }
 
-      function setIndex(nextIndex) {
+      function setIndex(nextIndex, notifyAmy) {
         const clamped = clamp(nextIndex, 0, Math.max(options.length - 1, 0));
         if (clamped === currentIndex) {
           return;
@@ -288,30 +299,35 @@ function init_knobs(knobConfigs, gridId, onChange) {
         currentIndex = clamped;
         updateDisplay();
         updateButtons();
-        notifyKnobChange(index, currentIndex, config, { notifyAmy: true });
+        notifyKnobChange(index, currentIndex, config, { notifyAmy: notifyAmy !== false });
       }
 
       upButton.addEventListener("click", function() {
-        setIndex(currentIndex - 1);
+        setIndex(currentIndex - 1, true);
       });
 
       downButton.addEventListener("click", function() {
-        setIndex(currentIndex + 1);
+        setIndex(currentIndex + 1, true);
       });
 
       control.addEventListener("keydown", function(event) {
         if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
           event.preventDefault();
-          setIndex(currentIndex - 1);
+          setIndex(currentIndex - 1, true);
         }
         if (event.key === "ArrowDown" || event.key === "ArrowRight") {
           event.preventDefault();
-          setIndex(currentIndex + 1);
+          setIndex(currentIndex + 1, true);
         }
       });
 
       updateDisplay();
       updateButtons();
+
+      config._setValue = function(nextValue, notifyAmy) {
+        const parsed = parseNumber(nextValue, currentIndex);
+        setIndex(parsed, notifyAmy);
+      };
 
       control.appendChild(upButton);
       control.appendChild(display);
@@ -409,6 +425,10 @@ function init_knobs(knobConfigs, gridId, onChange) {
           toggle();
         }
       });
+
+      config._setValue = function(nextValue, notifyAmy) {
+        setValue(nextValue, notifyAmy);
+      };
 
       return;
     }
@@ -614,6 +634,12 @@ function init_knobs(knobConfigs, gridId, onChange) {
         setValue(state.value - step, true, true);
       }
     });
+
+    config._setValue = function(outputValue, notifyAmy) {
+      const parsed = parseNumber(outputValue, state.value);
+      const rawValue = isLogKnob ? outputToValue(parsed) : parsed;
+      setValue(rawValue, true, notifyAmy);
+    };
   }
 
   const sections = [];
@@ -709,6 +735,6 @@ function set_amy_knob_value(knobs, sectionName, name, value) {
   } else {
     knob.default_value = value;
   }
-  send_change_code(1, value, knob);
+  send_change_code(window.current_synth, value, knob);
   return true;
 }

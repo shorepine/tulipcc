@@ -23,6 +23,7 @@ var cv_2_voltage = 0;
 var amy_module = null;
 var pendingPatchKnobIndex = null;
 var patchKnobSyncAttempts = 0;
+window.current_synth = 1;
 
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
@@ -243,7 +244,7 @@ function attemptPatchKnobSync() {
   if (!audio_started) {
     return;
   }
-  if (!amy_module || !Array.isArray(window.amy_knobs)) {
+  if (!amy_module || typeof window.get_current_knobs !== "function") {
     if (patchKnobSyncAttempts < 60) {
       patchKnobSyncAttempts += 1;
       setTimeout(attemptPatchKnobSync, 50);
@@ -296,9 +297,11 @@ function onKnobCcChange(knob) {
   if(typeof knob.offset === "undefined") {
     knob.offset = 0;
   }
-  var m = "i1ic"+knob.cc+","+log+","+knob.min_value+","+knob.max_value+","+knob.offset+","+knob.change_code;
+  var m = "i"+window.current_synth+"ic"+knob.cc+","+log+","+knob.min_value+","+knob.max_value+","+knob.offset+","+knob.change_code;
   console.log("Knob CC updated: " + knob.section + ": " + knob.display_name + " to " + knob.cc + ". Sending: " + m);
-  amy_add_message(m)
+  if (typeof amy_add_message === "function") {
+    amy_add_message(m);
+  }
 }
 
 
@@ -322,6 +325,50 @@ window.amy_cv_knob_change = function(index, value) {
   
 };
 
+function move_knob(channel, cc, value) {
+  // Hook for MIDI CC -> knob mapping.
+  const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
+  if (channel !== window.current_synth || !Array.isArray(knobList)) {
+    return;
+  }
+  for (const knob of knobList) {
+    if (knob.cc != cc) {
+      continue;
+    }
+    let scaled_value = null;
+    if (knob.knob_type === "selection") {
+      const options = Array.isArray(knob.options) ? knob.options : [];
+      if (options.length === 0) {
+        return;
+      }
+      scaled_value = Math.round((options.length - 1) * (value / 127));
+    } else if (knob.knob_type === "pushbutton") {
+      scaled_value = value >= 64 ? 1 : 0;
+    } else {
+      const min = Number(knob.min_value);
+      const max = Number(knob.max_value);
+      const offset = Number(knob.offset || 0);
+      if (!Number.isFinite(min) || !Number.isFinite(max)) {
+        return;
+      }
+      if (knob.knob_type === "log") {
+        const minShifted = min + offset;
+        const maxShifted = max + offset;
+        if (minShifted > 0 && maxShifted > 0) {
+          const ratio = maxShifted / minShifted;
+          scaled_value = minShifted * Math.exp(Math.log(ratio) * (value / 127)) - offset;
+        } else {
+          scaled_value = min;
+        }
+      } else {
+        scaled_value = min + (max - min) * (value / 127);
+      }
+    }
+    set_knob_ui_value(knob, scaled_value, false);
+    return;
+  }
+}
+
 async function amy_external_midi_input_js_hook(bytes, len, sysex) {
     mp.midiInHook(bytes, len, sysex);
 } 
@@ -334,6 +381,14 @@ async function setup_midi_devices() {
     if(midiInputDevice != null) midiInputDevice.destroy();
     midiInputDevice = WebMidi.getInputById(WebMidi.inputs[midi_in.selectedIndex].id);
     midiInputDevice.addListener("midimessage", e => {
+      const data = e.message && e.message.data ? e.message.data : [];
+      const status = data.length > 0 ? data[0] : null;
+      if (Number.isFinite(status) && (status & 0xF0) === 0xB0 && data.length >= 3) {
+        const channel = (status & 0x0F) + 1;
+        const cc = data[1];
+        const value = data[2];
+        move_knob(channel, cc, value);
+      }
       for(byte in e.message.data) {
         amy_process_single_midi_byte(e.message.data[byte], 1);
       }

@@ -514,7 +514,27 @@
           <div class="tab-content pt-4">
             <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
               <div class="row align-items-center mb-4">
-                <div class="col-12 col-md-4">
+                <div class="col-6 col-md-2">
+                  <select class="form-select" id="midi-channel-select" aria-label="MIDI Channel">
+                    <option value="1" selected>Ch 1</option>
+                    <option value="2">Ch 2</option>
+                    <option value="3">Ch 3</option>
+                    <option value="4">Ch 4</option>
+                    <option value="5">Ch 5</option>
+                    <option value="6">Ch 6</option>
+                    <option value="7">Ch 7</option>
+                    <option value="8">Ch 8</option>
+                    <option value="9">Ch 9</option>
+                    <option value="10">Ch 10</option>
+                    <option value="11">Ch 11</option>
+                    <option value="12">Ch 12</option>
+                    <option value="13">Ch 13</option>
+                    <option value="14">Ch 14</option>
+                    <option value="15">Ch 15</option>
+                    <option value="16">Ch 16</option>
+                  </select>
+                </div>
+                <div class="col-6 col-md-4">
                   <select class="form-select" id="patch-select"></select>
                 </div>
               </div>
@@ -704,6 +724,19 @@
     </script>
     <script>
       window.addEventListener("DOMContentLoaded", function() {
+        const midiChannelSelect = document.getElementById("midi-channel-select");
+        if (midiChannelSelect) {
+          midiChannelSelect.value = String(window.current_synth || 1);
+          midiChannelSelect.addEventListener("change", function() {
+            const parsed = Number(midiChannelSelect.value);
+            if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 16) {
+              window.current_synth = parsed;
+              if (typeof window.refresh_knobs_for_channel === "function") {
+                window.refresh_knobs_for_channel();
+              }
+            }
+          });
+        }
         const keyboard = document.getElementById("amy-keyboard");
         if (keyboard) {
           const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -752,7 +785,7 @@
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_add_message("i1l1n" + finalMidi);
+              amy_add_message("i"+window.current_synth+"l1n" + finalMidi);
             }
             if (typeof window.onKeyboardNote === "function") {
               window.onKeyboardNote(finalMidi, note);
@@ -764,7 +797,7 @@
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_add_message("i1l0n" + finalMidi);
+              amy_add_message("i"+window.current_synth+"l0n" + finalMidi);
             }
           };
         }
