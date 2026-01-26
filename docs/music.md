@@ -137,14 +137,14 @@ sequencer.tempo(120)
 We're using `midi.config.get_synth(channel=1)` to "borrow" the synth that booted with Tulip. But if you're going to want to share your ideas with others, you should make your own `synth` that doesn't conflict with anything already running on Tulip. That's easy, you can just run:
 
 ```python
-syn = synth.PatchSynth(num_voices=2, patch_number=143) # two note polyphony, patch 143 is DX7 BASS 2
+syn = synth.PatchSynth(num_voices=2, patch=143) # two note polyphony, patch 143 is DX7 BASS 2
 ```
 
 And if you want to play multimbral tones, like a Juno-6 bass alongside a DX7 pad:
 
 ```python
-synth1 = synth.PatchSynth(num_voices=1, patch_number=0)  # Juno
-synth2 = synth.PatchSynth(num_voices=1, patch_number=128)  # DX7
+synth1 = synth.PatchSynth(num_voices=1, patch=0)  # Juno
+synth2 = synth.PatchSynth(num_voices=1, patch=128)  # DX7
 synth1.note_on(50, 1)
 synth2.note_on(50, 0.5)
 ```
@@ -154,7 +154,7 @@ You can also "schedule" notes. This is useful for sequencing fast parameter chan
 ```python
 # play a chord all at once
 import music, midi, tulip
-synth4 = synth.PatchSynth(num_voices=4, patch_number=1)
+synth4 = synth.PatchSynth(num_voices=4, patch=1)
 chord = music.Chord("F:min7").midinotes()
 for i,note in enumerate(chord):
     synth4.note_on(note, 0.5, time=tulip.amy_ticks_ms() + (i * 1000))   # time is i seconds from now
@@ -206,7 +206,7 @@ Type `edit('jam.py')` (or whatever you want to call it.) You'll see a black scre
 import tulip, midi, music, random, sequencer
 
 chord = music.Chord("F:min7").midinotes()
-syn = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
+syn = synth.PatchSynth(num_voices=1, patch=143)  # DX7 BASS 2
 seq = None
 
 def note(t):
@@ -258,7 +258,7 @@ def run(screen):
     app = screen
     app.seq = None
     app.chord = music.Chord("F:min7").midinotes()
-    app.syn = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
+    app.syn = synth.PatchSynth(num_voices=1, patch=143)  # DX7 BASS 2
     app.present()
     app.quit_callback = stop
     start(app)
@@ -274,7 +274,7 @@ def run(screen):
     app = screen
     app.seq = None
     app.chord = music.Chord("F:min7").midinotes()
-    app.syn = synth.PatchSynth(num_voices=1, patch_number=143)  # DX7 BASS 2
+    app.syn = synth.PatchSynth(num_voices=1, patch=143)  # DX7 BASS 2
     bpm_slider = tulip.UISlider(sequencer.tempo()/2.4, w=300, h=25,
         callback=bpm_change, bar_color=123, handle_color=23)
     app.add(bpm_slider, x=300,y=200)

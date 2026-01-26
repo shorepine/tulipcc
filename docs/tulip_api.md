@@ -439,14 +439,14 @@ We provide a wrapper on AMY that manages synthesizers you can allocate. These ha
 You can use `synth.PatchSynth` to create a synthesizer based on our built-in patches. 0-127 are Juno-6 patches, 128-255 are DX-7 patches, 256 is a piano. You can create your own patches as well.
 
 ```python
-syn = synth.PatchSynth(num_voices=2, patch_number=143) # two note polyphony, patch 143 is DX7 BASS 2
+syn = synth.PatchSynth(num_voices=2, patch=143) # two note polyphony, patch 143 is DX7 BASS 2
 ```
 
 If you want to play multimbral tones, like a Juno-6 bass alongside a DX7 pad:
 
 ```python
-synth1 = synth.PatchSynth(num_voices=1, patch_number=0)  # Juno
-synth2 = synth.PatchSynth(num_voices=1, patch_number=128)  # DX7
+synth1 = synth.PatchSynth(num_voices=1, patch=0)  # Juno
+synth2 = synth.PatchSynth(num_voices=1, patch=128)  # DX7
 synth1.note_on(50, 1)
 synth2.note_on(50, 0.5)
 synth1.note_off(50)
