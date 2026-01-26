@@ -10,7 +10,7 @@
 #define MP_TASK_HEAP_SIZE (2 * 1024 * 1024)
 #define TULIP_MP_TASK_NAME          "tulip_mp_task"
 
-#define MAX_TASKS 18 // includes system tasks
+#define MAX_TASKS 17 // includes system tasks
 
 extern TaskHandle_t tulip_mp_handle;
 extern TaskHandle_t idle_0_handle;
