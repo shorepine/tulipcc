@@ -320,6 +320,10 @@ window.amy_cv_knob_change = function(index, value) {
 function move_knob(channel, cc, value) {
   // Hook for MIDI CC -> knob mapping.
   const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
+  if (window.cc_learn_handler && channel === window.current_synth) {
+    window.cc_learn_handler(cc);
+    return;
+  }
   if (channel !== window.current_synth || !Array.isArray(knobList)) {
     return;
   }

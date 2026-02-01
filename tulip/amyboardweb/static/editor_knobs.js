@@ -117,6 +117,59 @@ function init_knobs(knobConfigs, gridId, onChange) {
         title.style.marginBottom = "4px";
         label.style.marginBottom = "6px";
 
+        const rangeWrap = document.createElement("div");
+        rangeWrap.style.display = "none";
+        rangeWrap.style.marginBottom = "6px";
+
+        const rangeRow = document.createElement("div");
+        rangeRow.style.display = "flex";
+        rangeRow.style.gap = "6px";
+        rangeRow.style.marginBottom = "6px";
+
+        const minField = document.createElement("div");
+        minField.style.flex = "1";
+        const minLabel = document.createElement("div");
+        minLabel.textContent = "min_value";
+        minLabel.style.fontSize = "11px";
+        minLabel.style.marginBottom = "2px";
+        const minInput = document.createElement("input");
+        minInput.type = "text";
+        minInput.style.width = "100%";
+        minInput.style.boxSizing = "border-box";
+        minField.appendChild(minLabel);
+        minField.appendChild(minInput);
+
+        const maxField = document.createElement("div");
+        maxField.style.flex = "1";
+        const maxLabel = document.createElement("div");
+        maxLabel.textContent = "max_value";
+        maxLabel.style.fontSize = "11px";
+        maxLabel.style.marginBottom = "2px";
+        const maxInput = document.createElement("input");
+        maxInput.type = "text";
+        maxInput.style.width = "100%";
+        maxInput.style.boxSizing = "border-box";
+        maxField.appendChild(maxLabel);
+        maxField.appendChild(maxInput);
+
+        rangeRow.appendChild(minField);
+        rangeRow.appendChild(maxField);
+
+        const logRow = document.createElement("label");
+        logRow.style.display = "flex";
+        logRow.style.alignItems = "center";
+        logRow.style.gap = "6px";
+        logRow.style.fontSize = "11px";
+        const logCheckbox = document.createElement("input");
+        logCheckbox.type = "checkbox";
+        const logText = document.createElement("span");
+        logText.textContent = "log";
+        logRow.appendChild(logCheckbox);
+        logRow.appendChild(logText);
+
+        rangeWrap.appendChild(rangeRow);
+        rangeWrap.appendChild(logRow);
+
         const input = document.createElement("input");
         input.type = "text";
         input.style.width = "100%";
@@ -128,6 +181,12 @@ function init_knobs(knobConfigs, gridId, onChange) {
         error.style.fontSize = "11px";
         error.style.minHeight = "14px";
         error.style.marginBottom = "6px";
+
+        const learn = document.createElement("button");
+        learn.type = "button";
+        learn.textContent = "Learn";
+        learn.style.fontSize = "11px";
+        learn.style.marginBottom = "6px";
 
         const actions = document.createElement("div");
         actions.style.display = "flex";
@@ -147,13 +206,66 @@ function init_knobs(knobConfigs, gridId, onChange) {
         actions.appendChild(cancel);
         actions.appendChild(save);
         container.appendChild(title);
+        container.appendChild(rangeWrap);
         container.appendChild(label);
         container.appendChild(input);
+        container.appendChild(learn);
         container.appendChild(error);
         container.appendChild(actions);
         document.body.appendChild(container);
 
-        editor = { container: container, input: input, error: error, save: save, cancel: cancel, current: null, title: title };
+        editor = { container: container, input: input, error: error, save: save, cancel: cancel, learn: learn, current: null, title: title, learning: false, minInput: minInput, maxInput: maxInput, logCheckbox: logCheckbox, rangeWrap: rangeWrap };
+
+        function setLearnActive(active) {
+          editor.learning = active === true;
+          if (editor.learn) {
+            editor.learn.style.backgroundColor = editor.learning ? "#1fd17a" : "";
+            editor.learn.style.color = editor.learning ? "#111" : "";
+          }
+          if (!editor.learning && window.cc_learn_handler) {
+            window.cc_learn_handler = null;
+          }
+        }
+
+        function parseNumberField(fieldValue) {
+          if (fieldValue.trim() === "") {
+            return null;
+          }
+          const parsed = Number(fieldValue);
+          return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function applyRangeUpdates() {
+          if (!editor.rangeWrap || editor.rangeWrap.style.display === "none") {
+            return true;
+          }
+          const minValue = parseNumberField(editor.minInput.value);
+          const maxValue = parseNumberField(editor.maxInput.value);
+          if (minValue === null || maxValue === null) {
+            editor.error.textContent = "Enter numeric min/max values.";
+            return false;
+          }
+          if (minValue >= maxValue) {
+            editor.error.textContent = "min_value must be less than max_value.";
+            return false;
+          }
+          const prevMin = editor.current.min_value;
+          const prevMax = editor.current.max_value;
+          const prevType = editor.current.knob_type;
+          editor.current.min_value = minValue;
+          editor.current.max_value = maxValue;
+          if (editor.logCheckbox && editor.logCheckbox.checked) {
+            editor.current.knob_type = "log";
+          } else if (editor.current.knob_type === "log") {
+            editor.current.knob_type = undefined;
+          }
+          const rangeChanged = prevMin !== editor.current.min_value || prevMax !== editor.current.max_value;
+          const typeChanged = prevType !== editor.current.knob_type;
+          if ((rangeChanged || typeChanged) && typeof window.refresh_knobs_for_channel === "function") {
+            window.refresh_knobs_for_channel();
+          }
+          return true;
+        }
 
         function applyValue(value) {
           if (!editor.current) {
@@ -169,6 +281,9 @@ function init_knobs(knobConfigs, gridId, onChange) {
         save.addEventListener("click", function() {
           const trimmed = editor.input.value.trim();
           if (trimmed === "") {
+            if (!applyRangeUpdates()) {
+              return;
+            }
             applyValue("");
             return;
           }
@@ -177,11 +292,36 @@ function init_knobs(knobConfigs, gridId, onChange) {
             editor.error.textContent = "Enter an integer 0-127.";
             return;
           }
+          if (!applyRangeUpdates()) {
+            return;
+          }
           applyValue(parsed);
         });
 
         cancel.addEventListener("click", function() {
           hideCcEditor(editor);
+        });
+
+        learn.addEventListener("click", function() {
+          if (!editor.current) {
+            return;
+          }
+          if (editor.learning) {
+            setLearnActive(false);
+            return;
+          }
+          setLearnActive(true);
+          window.cc_learn_handler = function(cc) {
+            if (!editor.current) {
+              setLearnActive(false);
+              return;
+            }
+            editor.input.value = String(cc);
+            editor.error.textContent = "";
+            setLearnActive(false);
+            editor.input.focus();
+            editor.input.select();
+          };
         });
 
         input.addEventListener("keydown", function(event) {
@@ -206,6 +346,16 @@ function init_knobs(knobConfigs, gridId, onChange) {
     })();
 
     function hideCcEditor(editor) {
+      if (editor && editor.learning) {
+        editor.learning = false;
+        if (editor.learn) {
+          editor.learn.style.backgroundColor = "";
+          editor.learn.style.color = "";
+        }
+        if (window.cc_learn_handler) {
+          window.cc_learn_handler = null;
+        }
+      }
       editor.container.style.display = "none";
       editor.current = null;
     }
@@ -234,6 +384,15 @@ function init_knobs(knobConfigs, gridId, onChange) {
         editor.input.value = knobConfig.cc === "" || knobConfig.cc === null || knobConfig.cc === undefined
           ? ""
           : String(knobConfig.cc);
+        const isRangeType = !knobConfig.knob_type || knobConfig.knob_type === "log";
+        editor.rangeWrap.style.display = isRangeType ? "block" : "none";
+        if (isRangeType) {
+          const minValue = Number.isFinite(Number(knobConfig.min_value)) ? String(knobConfig.min_value) : "";
+          const maxValue = Number.isFinite(Number(knobConfig.max_value)) ? String(knobConfig.max_value) : "";
+          editor.minInput.value = minValue;
+          editor.maxInput.value = maxValue;
+          editor.logCheckbox.checked = knobConfig.knob_type === "log";
+        }
         positionCcEditor(editor, labelEl);
         editor.container.style.display = "block";
         editor.input.focus();
