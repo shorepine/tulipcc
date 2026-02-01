@@ -31,8 +31,6 @@ var amy_module = null;
 var pendingPatchKnobIndex = null;
 var patchKnobSyncAttempts = 0;
 window.current_synth = 1;
-var knob_positions = {};
-
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -235,9 +233,6 @@ function get_events_for_patch_number(patch_number) {
   for (let i = 0; i < limit; i += 1) {
     const base = eventsPtr + i * layout.size;
     const status = view.getUint8(base + offsets.status);
-    if (status === EVENT_EMPTY) {
-      break;
-    }
     events.push(readEvent(base));
   }
 
@@ -399,46 +394,13 @@ function save_to_patch(patchNumber) {
     amy_add_log_message("K" + patchNumber + payload);
   }
   amy_add_log_message("i" + window.current_synth + "K" + patchNumber);
-  // also save the positions of the knobs to a map, like knob_positions[patchNumber] = {knob_index: value, ...}
-  if (Array.isArray(knobList)) {
-    const patchState = {};
-    knobList.forEach(function(knob, index) {
-      if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
-        return;
-      }
-      patchState[index] = Number(knob.default_value);
-    });
-    knob_positions[patchNumber] = patchState;
-  }
-
 }
 
 function load_from_patch(patchNumber) {
   // Hook for loading a saved memory patch number.
-  // This doesn't set the knobs yet because we don't have access to events from a memory patch number 
   set_knobs_from_patch_number(patchNumber);
-  // and here reload the positions of the knobs (set them) from the stored knob_posistions[patchNumber] if it is set
-  restore_knobs_from_saved_knobs(patchNumber);
 }
 
-function restore_knobs_from_saved_knobs(patchNumber) {
-  const patchState = knob_positions[patchNumber];
-  const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
-  if (!patchState || !Array.isArray(knobList)) {
-    return;
-  }
-  Object.keys(patchState).forEach(function(key) {
-    const index = Number(key);
-    if (!Number.isInteger(index) || !knobList[index]) {
-      return;
-    }
-    const value = patchState[key];
-    if (!Number.isFinite(value)) {
-      return;
-    }
-    set_knob_ui_value(knobList[index], value, false);
-  });
-}
 
 async function amy_external_midi_input_js_hook(bytes, len, sysex) {
     mp.midiInHook(bytes, len, sysex);
