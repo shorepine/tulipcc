@@ -34,19 +34,19 @@ image = modal.Image.debian_slim().pip_install("fastapi[standard]", "requests", "
 app = modal.App("tulipworldapi", image=image)
 
 @app.function()
-@modal.web_endpoint()
+@modal.fastapi_endpoint()
 def postmessage(content: str):
     r = requests.post(text_base_url+"messages", headers = headers, data =  json.dumps ( {"content":content} ))
 
 @app.function()
-@modal.web_endpoint()
+@modal.fastapi_endpoint()
 def urlget(url: str):
     r = requests.get(url)
     return Response(content=bytes(r.content), media_type="application/binary")
 
 # get the last n messages
 @app.function()
-@modal.web_endpoint()
+@modal.fastapi_endpoint()
 def messages(n: int=500, chunk_size: int = 100, mtype: str='text'):
     ret = []
     before = None
@@ -101,7 +101,7 @@ def messages(n: int=500, chunk_size: int = 100, mtype: str='text'):
     return ret
 
 @app.function()
-@modal.web_endpoint(method='POST')
+@modal.fastapi_endpoint()
 def upload(username: str = Form(...), description: str = Form(...), which: str = Form(...), file: UploadFile = File(...)):
     contents = file.file.read()
     filename = file.filename
