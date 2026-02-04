@@ -104,11 +104,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
         container.style.color = "#fff";
         container.style.border = "1px solid #444";
         container.style.borderRadius = "8px";
-        container.style.padding = "8px 10px";
+        container.style.padding = "6px 8px";
         container.style.boxShadow = "0 10px 20px rgba(0, 0, 0, 0.35)";
         container.style.fontSize = "12px";
         container.style.display = "none";
-        container.style.minWidth = "160px";
+        container.style.minWidth = "120px";
 
         const label = document.createElement("div");
         label.textContent = "MIDI CC (0-127)";
@@ -129,26 +129,32 @@ function init_knobs(knobConfigs, gridId, onChange) {
         const minField = document.createElement("div");
         minField.style.flex = "1";
         const minLabel = document.createElement("div");
-        minLabel.textContent = "min_value";
+        minLabel.textContent = "min";
         minLabel.style.fontSize = "11px";
         minLabel.style.marginBottom = "2px";
         const minInput = document.createElement("input");
         minInput.type = "text";
-        minInput.style.width = "100%";
+        minInput.style.width = "48px";
         minInput.style.boxSizing = "border-box";
+        minInput.style.height = "18px";
+        minInput.style.padding = "1px 4px";
+        minInput.style.fontSize = "11px";
         minField.appendChild(minLabel);
         minField.appendChild(minInput);
 
         const maxField = document.createElement("div");
         maxField.style.flex = "1";
         const maxLabel = document.createElement("div");
-        maxLabel.textContent = "max_value";
+        maxLabel.textContent = "max";
         maxLabel.style.fontSize = "11px";
         maxLabel.style.marginBottom = "2px";
         const maxInput = document.createElement("input");
         maxInput.type = "text";
-        maxInput.style.width = "100%";
+        maxInput.style.width = "48px";
         maxInput.style.boxSizing = "border-box";
+        maxInput.style.height = "18px";
+        maxInput.style.padding = "1px 4px";
+        maxInput.style.fontSize = "11px";
         maxField.appendChild(maxLabel);
         maxField.appendChild(maxInput);
 
@@ -172,9 +178,12 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
         const input = document.createElement("input");
         input.type = "text";
-        input.style.width = "100%";
+        input.style.width = "48px";
         input.style.boxSizing = "border-box";
         input.style.marginBottom = "6px";
+        input.style.height = "18px";
+        input.style.padding = "1px 4px";
+        input.style.fontSize = "11px";
 
         const error = document.createElement("div");
         error.style.color = "#f2c94c";
