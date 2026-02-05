@@ -99,7 +99,7 @@ void lv_buttonmatrix_set_map(lv_obj_t * obj, const char * map[])
     if(map == NULL) return;
 
     lv_buttonmatrix_t * btnm = (lv_buttonmatrix_t *)obj;
-
+    
     /*Analyze the map and create the required number of buttons*/
     allocate_button_areas_and_controls(obj, map);
     btnm->map_p = map;
