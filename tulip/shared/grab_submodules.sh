@@ -12,6 +12,10 @@ else
     git submodule update --init amy
     git submodule update --init micropython
     cd micropython
+    # Patch mpy-cross warnings for newer clang versions on macOS.
+    if ! grep -q -- "-Wno-gnu-folding-constant" mpy-cross/Makefile; then
+        sed -i.bak 's/^CWARN += /CWARN += -Wno-gnu-folding-constant /' mpy-cross/Makefile
+    fi
     git submodule update --init lib/axtls 
     git submodule update --init lib/libffi 
     git submodule update --init lib/mbedtls
@@ -22,4 +26,3 @@ else
     touch .submodules_ok
 fi
 popd > /dev/null
-
