@@ -134,7 +134,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
         minLabel.style.marginBottom = "2px";
         const minInput = document.createElement("input");
         minInput.type = "text";
-        minInput.style.width = "48px";
+        minInput.style.width = "60px";
         minInput.style.boxSizing = "border-box";
         minInput.style.height = "18px";
         minInput.style.padding = "1px 4px";
@@ -150,7 +150,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
         maxLabel.style.marginBottom = "2px";
         const maxInput = document.createElement("input");
         maxInput.type = "text";
-        maxInput.style.width = "48px";
+        maxInput.style.width = "60px";
         maxInput.style.boxSizing = "border-box";
         maxInput.style.height = "18px";
         maxInput.style.padding = "1px 4px";
@@ -178,7 +178,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
         const input = document.createElement("input");
         input.type = "text";
-        input.style.width = "48px";
+        input.style.width = "60px";
         input.style.boxSizing = "border-box";
         input.style.marginBottom = "6px";
         input.style.height = "18px";
