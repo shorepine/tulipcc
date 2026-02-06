@@ -172,6 +172,7 @@ list(APPEND MICROPY_SOURCE_EXTMOD
     ${TULIP_SHARED_DIR}/modtulip.c
     ${TULIP_SHARED_DIR}/polyfills.c
     ${TULIP_SHARED_DIR}/smallfont.c
+    ${TULIP_SHARED_DIR}/bigfont.c
     ${TULIP_SHARED_DIR}/display.c
     ${TULIP_SHARED_DIR}/bresenham.c
     ${TULIP_SHARED_DIR}/tulip_helpers.c
@@ -424,7 +425,6 @@ add_custom_command(
     VERBATIM
     COMMAND_EXPAND_LISTS
 )
-
 
 
 

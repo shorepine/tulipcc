@@ -28,6 +28,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	modtulip.c \
 	polyfills.c \
 	smallfont.c \
+	bigfont.c \
 	display.c \
 	u8g2_fonts.c \
 	u8fontdata.c \
@@ -89,4 +90,3 @@ CFLAGS_EXTRA += -DMODULE_ULAB_ENABLED=1
 
 
 #$(BUILD)/tulip/%.o: CFLAGS += -Wno-maybe-uninitialized -Wno-pointer-arith -Wno-unused-but-set-variable -Wno-format -Wno-sign-compare -Wno-old-style-declaration
-

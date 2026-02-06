@@ -510,6 +510,7 @@ extern void display_stop();
 extern void save_tfb();
 extern void restore_tfb();
 extern uint8_t tfb_active;
+extern uint8_t tfb_font;
 
 STATIC mp_obj_t tulip_display_clock(size_t n_args, const mp_obj_t *args) {
     if(n_args==1) {
@@ -585,6 +586,28 @@ STATIC mp_obj_t tulip_tfb_update(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_update_obj, 0, 0, tulip_tfb_update);
+
+// tulip.tfb_font() -> current font number
+// tulip.tfb_font(x) -> set font number (0=8x12, 1=portfolio, 2=12x16)
+STATIC mp_obj_t tulip_tfb_font(size_t n_args, const mp_obj_t *args) {
+    if(n_args == 0) {
+        return mp_obj_new_int(tfb_font);
+    }
+    int font_no = mp_obj_get_int(args[0]);
+    if(font_no < TFB_FONT_8X12 || font_no > TFB_FONT_12X16) {
+        mp_raise_ValueError(MP_ERROR_TEXT("tfb_font must be 0, 1, or 2"));
+    }
+    tfb_font = (uint8_t)font_no;
+    uint8_t visible_cols = display_tfb_visible_cols();
+    uint8_t visible_rows = display_tfb_visible_rows();
+    if(visible_cols == 0) visible_cols = 1;
+    if(visible_rows == 0) visible_rows = 1;
+    if(tfb_x_col >= visible_cols) tfb_x_col = visible_cols - 1;
+    if(tfb_y_row >= visible_rows) tfb_y_row = visible_rows - 1;
+    display_tfb_update(-1);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_font_obj, 0, 1, tulip_tfb_font);
 
 // fps = tulip.fps()
 STATIC mp_obj_t tulip_fps(size_t n_args, const mp_obj_t *args) {
@@ -1550,6 +1573,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_tfb_save), MP_ROM_PTR(&tulip_tfb_save_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_restore), MP_ROM_PTR(&tulip_tfb_restore_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_update), MP_ROM_PTR(&tulip_tfb_update_obj) },
+    { MP_ROM_QSTR(MP_QSTR_tfb_font), MP_ROM_PTR(&tulip_tfb_font_obj) },
     { MP_ROM_QSTR(MP_QSTR_fps), MP_ROM_PTR(&tulip_fps_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu), MP_ROM_PTR(&tulip_gpu_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_pixel), MP_ROM_PTR(&tulip_bg_pixel_obj) },

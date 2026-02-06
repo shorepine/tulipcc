@@ -54,8 +54,31 @@ uint32_t **bg_lines;//[V_RES];
 uint16_t PIXEL_CLOCK_MHZ = DEFAULT_PIXEL_CLOCK_MHZ;
 uint8_t tfb_active = 1;
 uint8_t gpu_log = 0;
+uint8_t tfb_font = TFB_FONT_8X12;
 
 int16_t lvgl_is_repl = 0;
+
+static inline uint8_t tfb_font_width_current(void) {
+    if(tfb_font == TFB_FONT_PORTFOLIO) return 6;
+    if(tfb_font == TFB_FONT_12X16) return 12;
+    return 8;
+}
+
+static inline uint8_t tfb_font_height_current(void) {
+    if(tfb_font == TFB_FONT_PORTFOLIO) return 8;
+    if(tfb_font == TFB_FONT_12X16) return 16;
+    return 12;
+}
+
+uint8_t display_tfb_visible_cols(void) {
+    uint8_t cols = H_RES / tfb_font_width_current();
+    return MIN(cols, TFB_COLS);
+}
+
+uint8_t display_tfb_visible_rows(void) {
+    uint8_t rows = V_RES / tfb_font_height_current();
+    return MIN(rows, TFB_ROWS);
+}
 
 // lookup table for Tulip's "pallete" to the 16-bit colorspace needed by LVGL and T-deck
 
@@ -263,83 +286,78 @@ bool IRAM_ATTR display_bounce_empty(void *bounce_buf, int pos_px, int len_bytes,
 void display_tfb_update(int8_t tfb_row_hint) { 
     if(!tfb_active) { return; }
 
+    uint8_t font_width = tfb_font_width_current();
+    uint8_t font_height = tfb_font_height_current();
+    uint8_t visible_cols = display_tfb_visible_cols();
+    uint8_t visible_rows = display_tfb_visible_rows();
+
     uint16_t bounce_row_start = 0;
-    uint16_t bounce_row_end = V_RES;
+    uint16_t bounce_row_end = visible_rows * font_height;
     if(tfb_row_hint >= 0) {
-        bounce_row_start = tfb_row_hint * FONT_HEIGHT;
-        bounce_row_end = bounce_row_start + FONT_HEIGHT;
+        bounce_row_start = tfb_row_hint * font_height;
+        bounce_row_end = bounce_row_start + font_height;
+        if(bounce_row_start >= V_RES) {
+            return;
+        }
+        if(bounce_row_end > V_RES) {
+            bounce_row_end = V_RES;
+        }
     }
     for(uint16_t bounce_row_px=bounce_row_start;bounce_row_px<bounce_row_end;bounce_row_px++) {
         memset(bg_tfb + (bounce_row_px*H_RES), 0, H_RES);
 
-        uint8_t tfb_row = bounce_row_px / FONT_HEIGHT;
-        uint8_t tfb_row_offset_px = bounce_row_px % FONT_HEIGHT; 
+        uint8_t tfb_row = bounce_row_px / font_height;
+        if(tfb_row >= visible_rows) {
+            TFB_pxlen[bounce_row_px] = 0;
+            continue;
+        }
+        uint8_t tfb_row_offset_px = bounce_row_px % font_height;
         uint8_t tfb_col = 0;
-        while(TFB[tfb_row*TFB_COLS+tfb_col]!=0 && tfb_col < TFB_COLS) {
-            #ifndef TDECK
-                uint8_t data = font_8x12_r[TFB[tfb_row*TFB_COLS+tfb_col]][tfb_row_offset_px];
-            #else
-                uint8_t data = portfolio_glyph_bitmap[(TFB[tfb_row*TFB_COLS+tfb_col] -32) * 8 + tfb_row_offset_px];
-            #endif
+        while(tfb_col < visible_cols && TFB[tfb_row*TFB_COLS+tfb_col]!=0) {
             uint8_t format = TFBf[tfb_row*TFB_COLS+tfb_col];
             uint8_t fg_color = TFBfg[tfb_row*TFB_COLS+tfb_col];
             uint8_t bg_color = TFBbg[tfb_row*TFB_COLS+tfb_col];
+            uint8_t glyph = TFB[tfb_row*TFB_COLS+tfb_col];
+            uint16_t data = 0;
 
             // If you're looking at this code just know the unrolled versions were 1.5x faster than loops on esp32s3
             // I'm sure there's more to do but this is the best we could get it for now
-            uint8_t * bptr = bg_tfb + (bounce_row_px*H_RES + tfb_col*FONT_WIDTH);
-            if(bg_color == ALPHA) {
-                if(format & FORMAT_INVERSE) {
-                    if(!((data) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    #ifndef TDECK
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; 
-                    #endif
-                } else {
-                    if((data) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    #ifndef TDECK
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; 
-                    #endif
+            if(tfb_font == TFB_FONT_PORTFOLIO) {
+                if(glyph >= 32 && tfb_row_offset_px < 8) {
+                    data = ((uint16_t)portfolio_glyph_bitmap[(glyph - 32) * 8 + tfb_row_offset_px]) << 8;
+                }
+            } else if(tfb_font == TFB_FONT_12X16) {
+                if(tfb_row_offset_px < 16) {
+                    data = font_12x16_r[glyph][tfb_row_offset_px];
                 }
             } else {
-                if(format & FORMAT_INVERSE) {
-                    if(!((data) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    #ifndef TDECK
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if(!((data <<= 1) & 0x80)) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    #endif
-                } else {
-                    if((data) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    #ifndef TDECK
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                        bptr++; if((data <<=1) & 0x80) *(bptr) = fg_color; else *(bptr) = bg_color;
-                    #endif
+                if(tfb_row_offset_px < 12) {
+                    data = ((uint16_t)font_8x12_r[glyph][tfb_row_offset_px]) << 8;
                 }
+            }
+
+            uint16_t start_px = tfb_col * font_width;
+            uint8_t * bptr = bg_tfb + (bounce_row_px * H_RES + start_px);
+            uint16_t mask = 0x8000;
+            for(uint8_t bit=0; bit<font_width && (start_px + bit) < H_RES; bit++) {
+                uint8_t on = (data & mask) != 0;
+                if(format & FORMAT_INVERSE) {
+                    on = !on;
+                }
+                if(on) {
+                    *(bptr + bit) = fg_color;
+                } else if(bg_color != ALPHA) {
+                    *(bptr + bit) = bg_color;
+                }
+                mask >>= 1;
             }
             tfb_col++;
         }
-        TFB_pxlen[bounce_row_px] = tfb_col*FONT_WIDTH;
+        uint16_t pxlen = tfb_col * font_width;
+        if(pxlen > H_RES) {
+            pxlen = H_RES;
+        }
+        TFB_pxlen[bounce_row_px] = pxlen;
     }
 
 }
@@ -674,37 +692,46 @@ uint8_t display_get_bg_pixel_pal(uint16_t x, uint16_t y) {
 
 
 void display_tfb_cursor(uint16_t x, uint16_t y) {
+    if(x >= TFB_COLS || y >= TFB_ROWS) return;
     // Put a space char in the TFB if there's nothing here; makes the system draw it
-    if(TFB[tfb_y_row*TFB_COLS+tfb_x_col] == 0) TFB[tfb_y_row*TFB_COLS+tfb_x_col] = 32;
-    uint8_t f = TFBf[tfb_y_row*TFB_COLS + tfb_x_col];
+    if(TFB[y*TFB_COLS+x] == 0) TFB[y*TFB_COLS+x] = 32;
+    uint8_t f = TFBf[y*TFB_COLS + x];
     f = f | FORMAT_FLASH;
     f = f | FORMAT_INVERSE;
-    TFBf[tfb_y_row*TFB_COLS + tfb_x_col] = f;
-    TFBfg[tfb_y_row*TFB_COLS + tfb_x_col] = tfb_fg_pal_color;
-    TFBbg[tfb_y_row*TFB_COLS + tfb_x_col] = tfb_bg_pal_color;
+    TFBf[y*TFB_COLS + x] = f;
+    TFBfg[y*TFB_COLS + x] = tfb_fg_pal_color;
+    TFBbg[y*TFB_COLS + x] = tfb_bg_pal_color;
 }
 
 void display_tfb_uncursor(uint16_t x, uint16_t y) {
-    if(tfb_x_col < TFB_COLS) {
-        uint8_t f = TFBf[tfb_y_row*TFB_COLS + tfb_x_col];
+    if(x < TFB_COLS && y < TFB_ROWS) {
+        uint8_t f = TFBf[y*TFB_COLS + x];
         if(f & FORMAT_FLASH) f = f - FORMAT_FLASH;
         if(f & FORMAT_INVERSE) f = f - FORMAT_INVERSE;
-        TFBf[tfb_y_row*TFB_COLS + tfb_x_col] = f;
+        TFBf[y*TFB_COLS + x] = f;
     }
 }
 
 void display_tfb_new_row() {
+    uint8_t visible_rows = display_tfb_visible_rows();
+    uint8_t visible_cols = display_tfb_visible_cols();
+    if(visible_rows == 0 || visible_cols == 0) {
+        tfb_x_col = 0;
+        tfb_y_row = 0;
+        return;
+    }
     display_tfb_uncursor(tfb_x_col, tfb_y_row);
     // Move the pointer to a new row, and scroll the view if necessary
-    if(tfb_y_row == TFB_ROWS-1) {
+    if(tfb_y_row >= visible_rows-1) {
+        tfb_y_row = visible_rows-1;
         // We were in the last row, let's scroll the buffer up by moving the TFB up
-        for(uint8_t i=0;i<TFB_ROWS-1;i++) {
+        for(uint8_t i=0;i<visible_rows-1;i++) {
             memcpy(&TFB[i*TFB_COLS], &TFB[(i+1)*TFB_COLS], TFB_COLS);
             memcpy(&TFBf[i*TFB_COLS], &TFBf[(i+1)*TFB_COLS], TFB_COLS);
             memcpy(&TFBfg[i*TFB_COLS], &TFBfg[(i+1)*TFB_COLS], TFB_COLS);
             memcpy(&TFBbg[i*TFB_COLS], &TFBbg[(i+1)*TFB_COLS], TFB_COLS);
         }
-        for(uint8_t i=0;i<TFB_COLS;i++) { 
+        for(uint8_t i=0;i<visible_cols;i++) {
             TFB[tfb_y_row*TFB_COLS+i] = 0; 
             TFBf[tfb_y_row*TFB_COLS+i] = 0;
             TFBfg[tfb_y_row*TFB_COLS+i] = tfb_fg_pal_color;
@@ -748,6 +775,11 @@ uint8_t ansi_parse_digits( unsigned char*str, uint16_t j, uint16_t k, uint16_t *
 uint32_t utf8_esc = 0;
 uint8_t supress_lf = 0;
 void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color) {
+    uint8_t visible_cols = display_tfb_visible_cols();
+    uint8_t visible_rows = display_tfb_visible_rows();
+    if(visible_cols == 0 || visible_rows == 0) {
+        return;
+    }
 
     //fprintf(stderr,"str len %d format %d is ### ", len, format);
     //for(uint16_t i=0;i<len;i++) fprintf(stderr, "[%c/%d] ", str[i], str[i]);
@@ -786,7 +818,7 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
                         uint16_t k = scan;  unsigned char F=str[k];
                         if(F == 'K') { // clear to end of line
                             //fprintf(stderr, "CLEAR\n");
-                            for(uint8_t col=tfb_x_col;col<TFB_COLS;col++) { 
+                            for(uint8_t col=tfb_x_col;col<visible_cols;col++) {
                                 TFB[tfb_y_row*TFB_COLS+col] = 0; 
                                 TFBf[tfb_y_row*TFB_COLS+col] = 0; 
                                 TFBfg[tfb_y_row*TFB_COLS+col] = tfb_fg_pal_color; 
@@ -798,7 +830,7 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
                         } else if(F=='D') { // move cursor backwards
                             uint8_t d = ansi_parse_digits(str, j, k, digits);
                             if(d==1) { 
-                                tfb_x_col = tfb_x_col - digits[0];
+                                tfb_x_col = (digits[0] > tfb_x_col) ? 0 : (tfb_x_col - digits[0]);
                             }
                             i = k;
                             scan = len;
@@ -830,6 +862,8 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
                                 // Perhaps supress the oncoming LF too? 
                                 supress_lf = 1;
                             }
+                            if(tfb_x_col >= visible_cols) tfb_x_col = visible_cols - 1;
+                            if(tfb_y_row >= visible_rows) tfb_y_row = visible_rows - 1;
                             // I guess because of the drawing optimization, we need to add 32s to the TFB if col is nonzero and there's a 0 col to its left
                             if(tfb_x_col!=0) {
                                 if(TFB[tfb_y_row*TFB_COLS+(tfb_x_col-1)]==0) {
@@ -911,6 +945,9 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
         } else if(str[i]<32) {
             // do nothing with other non-printable chars
         } else { // printable chars
+            if(tfb_x_col >= visible_cols) {
+                display_tfb_new_row();
+            }
             TFB[tfb_y_row*TFB_COLS+tfb_x_col] = str[i];    
             if(ansi_active_format >= 0 ) {
                 TFBf[tfb_y_row*TFB_COLS+tfb_x_col] =ansi_active_format;        
@@ -923,7 +960,7 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
                 TFBbg[tfb_y_row*TFB_COLS+tfb_x_col] = bg_color;        
             }
             tfb_x_col++;
-            if(tfb_x_col == TFB_COLS) {
+            if(tfb_x_col >= visible_cols) {
                 display_tfb_new_row();
             }
         }
@@ -1134,4 +1171,3 @@ void display_init(void) {
 
 
 }
-

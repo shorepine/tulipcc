@@ -52,6 +52,8 @@ void display_reset_sprites();
 void display_reset_tfb();
 void display_reset_bg();
 void display_tfb_update(int8_t tfb_row_hint);
+uint8_t display_tfb_visible_cols(void);
+uint8_t display_tfb_visible_rows(void);
 void display_set_clock(uint8_t mhz) ;
 uint8_t lvgl_focused();
 
@@ -97,7 +99,12 @@ extern int16_t mouse_x_pos, mouse_y_pos;
 #endif
 
 extern const unsigned char font_8x12_r[256][12];
+extern const uint16_t font_12x16_r[256][16];
 extern const unsigned char portfolio_glyph_bitmap[1792];
+
+#define TFB_FONT_8X12 0
+#define TFB_FONT_PORTFOLIO 1
+#define TFB_FONT_12X16 2
 
 #define MAX_LINE_EMITS 60000
 
@@ -163,6 +170,7 @@ extern uint16_t PIXEL_CLOCK_MHZ;
 #define SPRITE_IS_ELLIPSE 0x10
 
 extern uint8_t gpu_log;
+extern uint8_t tfb_font;
 extern uint8_t tfb_active;
 extern uint8_t tfb_y_row; 
 extern uint8_t tfb_x_col; 

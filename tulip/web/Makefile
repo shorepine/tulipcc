@@ -178,6 +178,7 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	modtulip.c \
 	polyfills.c \
 	smallfont.c \
+	bigfont.c \
 	display.c \
 	u8g2_fonts.c \
 	u8fontdata.c \
