@@ -100,6 +100,7 @@ You should **upgrade the firmware on Tulip** whenever you receive it. You should
  - Tap the top right blue "switch" icon to get back to the REPL. Tap it again to get back to the drum machine. You can also use `control-Tab`
  - Tap the red "quit" icon to quit the drum machine.
  - You can `edit('boot.py')` to add anything you want to run on Tulip startup, like wifi, or calibration, or setting up a synth. You can save in the editor with `control-X` and quit with `control-Q`. 
+ - You can switch TFB/REPL font sizes with `tulip.tfb_font(x)`: `0` is the default 8x12 font, `1` is a small 6x8 font, and `2` is a big 12x16 font.
  - After joining Wi-Fi, try out Tulip World with `run('worldui')` or `world.ls()` to see files and messages posted by others! 
  - Other things to try:
    - Some games/animations: `run('bunny_bounce')` or `run('planet_boing')` or `run('parallax')` (use control-C to quit), 
@@ -155,5 +156,4 @@ With Wi-Fi, after you do `tulip.wifi('ssid', 'password')` first, there are two w
 [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
 
 Have fun! See you on Tulip World!
-
 

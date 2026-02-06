@@ -876,7 +876,7 @@ tulip.bg_swap()
 
 There are three types of fonts built into Tulip. 
 
- - TFB font: we ship one fixed size font for the TFB (see below). This cannot be changed at runtime.
+ - TFB fonts: we ship 3 fixed-size fonts for the TFB (see below). You can switch them at runtime with `tulip.tfb_font()`.
  - LVGL fonts: [LVGL ships a few fonts like `lv.font_montserrat_12`](https://docs.lvgl.io/master/details/main-modules/font.html). These fonts have more glyphs, can handle some unicode characters, and also ship with symbols (like the ones we show in the Tulip launcher). 
  - Tulip fonts: we ship 19 fonts to use with `bg_str` etc, and they can also be used in LVGL widgets by referencing them like `lv.tulip_font_13`.
 
@@ -885,12 +885,19 @@ There are three types of fonts built into Tulip.
 
 ## Text frame buffer (TFB)
 
-The TFB is a 128x50 character plane for fast drawing of 8x12 text glyphs. It supports 256 ANSI 
+The TFB supports 3 built-in fixed-width fonts, switchable at runtime with `tulip.tfb_font(x)`:
+
+ - `0`: default 8x12 font
+ - `1`: small 6x8 font
+ - `2`: big 12x16 font
+
+The TFB is a character plane for fast text drawing. The visible row/column count depends on the selected font size. It supports 256 ANSI 
 colors for foreground and background, and supports formatting. TFB is used by the text 
 editor and Python REPL.
 
 ```python
-# Sets a string / gets a character and/or format to the text frame buffer (TFB), 128x50 
+# Sets a string / gets a character and/or format to the text frame buffer (TFB)
+# (default geometry is 128x50 with font 0; changes with other TFB font sizes)
 # Format has ANSI codes for reverse (0x80), underline (0x40), flash (0x20), bold (0x10)
 # fg color is palette index, 0-255, same for bg color
 # Note that the REPL and editor use the TFB
@@ -912,6 +919,10 @@ tulip.tfb_start()
 # If you want to keep the existing TFB around, you can save it to a temporary buffer and recall it
 tulip.tfb_save()
 tulip.tfb_restore()
+
+# Set/get TFB font number (0=8x12, 1=6x8, 2=12x16)
+tulip.tfb_font(x)
+font_num = tulip.tfb_font()
 
 ```
 
@@ -1005,8 +1016,6 @@ Things we've thought of we'd love your help on:
  * Tile / Map editor in Tulip
 
  [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about Tulip on our Discord!**](https://discord.gg/TzBFkUb8pG)
-
-
 
 
 
