@@ -4,6 +4,9 @@ WHICH_ARCH ?= $(shell arch)
 
 DEBUG=1
 
+# Ensure sub-makes (notably micropython/mpy-cross) also suppress this clang warning.
+export CFLAGS_EXTRA += -Wno-gnu-folding-constant
+
 ifeq ($(WHICH_ARCH), arm64)
 	ARCHFLAGS = -target arm64-macos11
 	HOMEBREW = /opt/homebrew

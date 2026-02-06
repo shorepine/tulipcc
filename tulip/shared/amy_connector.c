@@ -240,16 +240,15 @@ void mp_file_transfer_done_hook(const char *filename) {
 
 
 void run_amy(uint8_t midi_out_pin) {
-    amy_external_midi_input_hook = tulip_midi_input_hook;
-    amy_external_render_hook = external_cv_render;
-    amy_external_fopen_hook = mp_fopen_hook;
-    amy_external_fseek_hook = mp_fseek_hook;
-    amy_external_fclose_hook = mp_fclose_hook;
-    amy_external_fread_hook = mp_fread_hook;
-    amy_external_fwrite_hook = mp_fwrite_hook;
-    amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
-
     amy_config_t amy_config = amy_default_config();
+    amy_config.amy_external_midi_input_hook = tulip_midi_input_hook;
+    amy_config.amy_external_render_hook = external_cv_render;
+    amy_config.amy_external_fopen_hook = mp_fopen_hook;
+    amy_config.amy_external_fseek_hook = mp_fseek_hook;
+    amy_config.amy_external_fclose_hook = mp_fclose_hook;
+    amy_config.amy_external_fread_hook = mp_fread_hook;
+    amy_config.amy_external_fwrite_hook = mp_fwrite_hook;
+    amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
     amy_config.audio = AMY_AUDIO_IS_I2S;
 #ifdef AMYBOARD
     amy_config.features.audio_in = 1;
@@ -275,8 +274,8 @@ void run_amy(uint8_t midi_out_pin) {
 #elif defined TULIP_DESKTOP
 
 void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
-    amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_config_t amy_config = amy_default_config();
+    amy_config.amy_external_midi_input_hook = tulip_midi_input_hook;
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.capture_device_id = capture_device_id;
     amy_config.playback_device_id = playback_device_id;
