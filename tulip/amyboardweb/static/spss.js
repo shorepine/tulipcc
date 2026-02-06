@@ -30,6 +30,10 @@ var cv_2_voltage = 0;
 var amy_module = null;
 var pendingPatchKnobIndex = null;
 var patchKnobSyncAttempts = 0;
+var amyboard_world_files = [];
+var amyboard_world_loading_index = null;
+const AMYBOARD_MODAL_MESSAGES_URL = "https://bwhitman--tulipworldapi-messages.modal.run";
+const AMYBOARD_MODAL_URLGET_URL = "https://bwhitman--tulipworldapi-urlget.modal.run";
 window.current_synth = 1;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
@@ -711,6 +715,245 @@ async function fill_tree() {
     TreeConfig.close_icon = '<i class="fas fa-angle-right"></i>';
     treeView.collapseAllNodes();
     treeView.reload();
+}
+
+function normalize_world_filename(filename) {
+    if (!filename || typeof filename !== "string") {
+        return "imported.py";
+    }
+    return filename.split("/").pop().split("\\").pop();
+}
+
+function is_world_tar_filename(filename) {
+    return normalize_world_filename(filename).toLowerCase().endsWith(".tar");
+}
+
+function get_world_package_name(filename) {
+    var normalized = normalize_world_filename(filename);
+    if (is_world_tar_filename(normalized)) {
+        return normalized.substring(0, normalized.length - 4);
+    }
+    return normalized;
+}
+
+function get_world_display_name(filename) {
+    var normalized = normalize_world_filename(filename);
+    if (is_world_tar_filename(normalized)) {
+        return get_world_package_name(normalized) + " (Package)";
+    }
+    return normalized;
+}
+
+function format_world_file_timestamp(time_ms) {
+    if (!Number.isFinite(time_ms)) {
+        return "";
+    }
+    try {
+        return new Date(time_ms).toLocaleString();
+    } catch (e) {
+        return "";
+    }
+}
+
+function escape_html(text) {
+    return String(text)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function tar_header_string(buffer, offset, length) {
+    var out = "";
+    for (var i = 0; i < length; i++) {
+        var byte = buffer[offset + i];
+        if (!byte) break;
+        out += String.fromCharCode(byte);
+    }
+    return out;
+}
+
+function tar_header_octal(buffer, offset, length) {
+    var raw = tar_header_string(buffer, offset, length).trim();
+    if (!raw) return 0;
+    var parsed = parseInt(raw, 8);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function tar_is_zero_block(buffer, offset) {
+    for (var i = 0; i < 512; i++) {
+        if (buffer[offset + i] !== 0) return false;
+    }
+    return true;
+}
+
+function sanitize_tar_entry_path(path) {
+    if (!path) return "";
+    var p = path.replaceAll("\\", "/");
+    while (p.startsWith("/")) p = p.substring(1);
+    if (!p.length) return "";
+    var parts = p.split("/");
+    var safe = [];
+    for (var i = 0; i < parts.length; i++) {
+        var part = parts[i];
+        if (!part || part === "." || part === "..") {
+            continue;
+        }
+        safe.push(part);
+    }
+    return safe.join("/");
+}
+
+function extract_tar_buffer_to_fs(tarBytes, destinationRoot, stripPrefix) {
+    var offset = 0;
+    var normalizedStripPrefix = stripPrefix ? stripPrefix.replaceAll("\\", "/") : "";
+    while (offset + 512 <= tarBytes.length) {
+        if (tar_is_zero_block(tarBytes, offset)) break;
+
+        var name = tar_header_string(tarBytes, offset + 0, 100);
+        var size = tar_header_octal(tarBytes, offset + 124, 12);
+        var typeflag = tar_header_string(tarBytes, offset + 156, 1) || "0";
+        var prefix = tar_header_string(tarBytes, offset + 345, 155);
+        var entryPath = sanitize_tar_entry_path((prefix ? prefix + "/" : "") + name);
+        if (normalizedStripPrefix && entryPath.startsWith(normalizedStripPrefix)) {
+            entryPath = sanitize_tar_entry_path(entryPath.substring(normalizedStripPrefix.length));
+        }
+        var dataOffset = offset + 512;
+
+        if (entryPath) {
+            var fullPath = destinationRoot + "/" + entryPath;
+            if (typeflag === "5") {
+                try { mp.FS.mkdirTree(fullPath); } catch (e) {}
+            } else if (typeflag === "0" || typeflag === "\0") {
+                var slash = fullPath.lastIndexOf("/");
+                if (slash > 0) {
+                    try { mp.FS.mkdirTree(fullPath.substring(0, slash)); } catch (e) {}
+                }
+                mp.FS.writeFile(fullPath, tarBytes.slice(dataOffset, dataOffset + size), { encoding: "binary" });
+            }
+        }
+
+        var blocks = Math.ceil(size / 512);
+        offset = dataOffset + (blocks * 512);
+    }
+}
+
+function render_amyboard_world_file_list() {
+    var list = document.getElementById("amyboard_world_file_list");
+    if (!list) return;
+
+    if (!amyboard_world_files.length) {
+        list.innerHTML = '<div class="border rounded p-2 text-muted">No remote files found.</div>';
+        return;
+    }
+
+    var html = '<div class="row row-cols-2 g-2">';
+    for (var i = 0; i < amyboard_world_files.length; i++) {
+        var item = amyboard_world_files[i];
+        var filename = normalize_world_filename(item.filename);
+        var displayName = get_world_display_name(filename);
+        var description = (typeof item.content === "string") ? item.content.trim() : "";
+        var when = format_world_file_timestamp(item.time);
+        var meta = (item.username || "unknown") + (when ? " • " + when : "");
+        var isLoading = (amyboard_world_loading_index === i);
+        html += '<div class="col">';
+        html += '<button type="button" class="w-100 border rounded p-2 bg-white text-start d-flex justify-content-between align-items-start"' +
+            ' onclick="import_amyboard_world_file(' + i + ')"' + (isLoading ? " disabled" : "") + ">";
+        html += '<div class="me-3 text-start"><div class="fw-bold">' + escape_html(displayName);
+        if (description.length > 0) {
+            html += ' <span class="fw-normal text-muted">- ' + escape_html(description) + "</span>";
+        }
+        html += '</div><div class="small text-muted">' + escape_html(meta) + '</div></div>';
+        if (isLoading) {
+            html += '<span class="d-inline-flex align-items-center text-secondary small"><span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Downloading...</span>';
+        } else {
+            html += '<span class="badge bg-secondary rounded-pill">' + (item.size || 0) + "B</span>";
+        }
+        html += "</button>";
+        html += "</div>";
+    }
+    html += "</div>";
+    list.innerHTML = html;
+}
+
+async function refresh_amyboard_world_files() {
+    var list = document.getElementById("amyboard_world_file_list");
+    if (list) {
+        list.innerHTML = '<div class="border rounded p-2 text-muted">Loading...</div>';
+    }
+
+    try {
+        var response = await fetch(AMYBOARD_MODAL_MESSAGES_URL + "?mtype=amyboard&n=100");
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status.toString());
+        }
+        var data = await response.json();
+        if (!Array.isArray(data)) {
+            throw new Error("Unexpected response");
+        }
+        amyboard_world_files = data;
+        render_amyboard_world_file_list();
+    } catch (e) {
+        amyboard_world_files = [];
+        if (list) {
+            list.innerHTML = '<div class="border rounded p-2 text-danger">Could not load remote files.</div>';
+        }
+    }
+}
+
+async function import_amyboard_world_file(index) {
+    if (amyboard_world_loading_index !== null) {
+        return;
+    }
+    if (index < 0 || index >= amyboard_world_files.length) {
+        show_alert("That remote file is no longer available.");
+        return;
+    }
+
+    var item = amyboard_world_files[index];
+    var filename = normalize_world_filename(item.filename);
+    var isTar = is_world_tar_filename(filename);
+    var packageName = get_world_package_name(filename);
+    var targetPath = "/amyboard/user/" + filename;
+    amyboard_world_loading_index = index;
+    render_amyboard_world_file_list();
+
+    try {
+        try { mp.FS.mkdirTree("/amyboard/user"); } catch (e) {}
+        var response = await fetch(AMYBOARD_MODAL_URLGET_URL + "?url=" + encodeURIComponent(item.url));
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status.toString());
+        }
+
+        var buffer = await response.arrayBuffer();
+        var bytes = new Uint8Array(buffer);
+        if (isTar) {
+            var packageRoot = "/amyboard/user/" + packageName;
+            try { mp.FS.mkdirTree(packageRoot); } catch (e) {}
+            extract_tar_buffer_to_fs(bytes, packageRoot, packageName + "/");
+        } else {
+            mp.FS.writeFile(targetPath, bytes, { encoding: "binary" });
+        }
+        await fill_tree();
+
+        if (!isTar) {
+            var editorText = mp.FS.readFile(targetPath, { encoding: "utf8" });
+            editor.setValue(editorText);
+            document.getElementById("editor_filename").value = "/user/" + filename;
+            setTimeout(function () { editor.save() }, 100);
+            setTimeout(function () { editor.refresh() }, 250);
+        } else {
+            document.getElementById("editor_filename").value = "/user/" + packageName + "/";
+        }
+
+        await refresh_amyboard_world_files();
+    } catch (e) {
+        show_alert("Failed to import remote file.");
+    } finally {
+        amyboard_world_loading_index = null;
+        render_amyboard_world_file_list();
+    }
 }
 
 
