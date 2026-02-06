@@ -490,6 +490,7 @@
       
       // Fill the ree
       await fill_tree();
+      await refresh_amyboard_world_files();
 
       // Create the editor and see if there's a share URL to decompress into it
       var editorElement = document.getElementById('collapseEditor');
@@ -615,6 +616,22 @@
             </div>
             <div class="tab-pane fade" id="environment-pane" role="tabpanel" aria-labelledby="environment-tab">
               <div class="alert fixed-top d-none" id="alert_box"></div>
+              <div class="row mb-3">
+                <div class="col-12">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="px-1 small align-middle">AMYboard world files (latest)</span>
+                    <button
+                      type="button"
+                      title="Refresh AMYboard world files"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-warning"
+                      onclick="refresh_amyboard_world_files()"
+                    ><i class="fas fa-sync"></i></button>
+                  </div>
+                  <div id="amyboard_world_file_list" class="small" style="max-height: 240px; overflow-y: auto;"></div>
+                </div>
+              </div>
               <div class="row g-0 headertext">
                 <div class="col-3 headertext">
                   <span class="px-1 small align-middle">AMYboard files</span>
