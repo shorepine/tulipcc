@@ -95,7 +95,7 @@ function get_events_for_patch_number(patch_number) {
   const MAX_BREAKPOINT_SETS = layout.constants.MAX_BREAKPOINT_SETS;
   const MAX_ALGO_OPS = layout.constants.MAX_ALGO_OPS;
   const MAX_VOICES_PER_INSTRUMENT = layout.constants.MAX_VOICES_PER_INSTRUMENT;
-  const MAX_PARAM_LEN = layout.constants.MAX_PARAM_LEN;
+  const MAX_BPS = layout.constants.MAX_BPS || layout.constants.MAX_BREAKPOINTS;
   const MAX_EVENTS_PER_PATCH = layout.constants.MAX_EVENTS_PER_PATCH;
   const EVENT_EMPTY = 0;
   const offsets = layout.offsets;
@@ -106,19 +106,6 @@ function get_events_for_patch_number(patch_number) {
   }
   const heapU32 = amy_module.HEAPU32 || new Uint32Array(heapU8.buffer);
   const view = new DataView(heapU8.buffer);
-
-  function readString(ptr, maxLen) {
-    let end = 0;
-    while (end < maxLen) {
-      if (view.getUint8(ptr + end) === 0) break;
-      end += 1;
-    }
-    let out = "";
-    for (let i = 0; i < end; i += 1) {
-      out += String.fromCharCode(view.getUint8(ptr + i));
-    }
-    return out;
-  }
 
   function readFloatArray(ptr, count) {
     const arr = new Array(count);
@@ -178,8 +165,10 @@ function get_events_for_patch_number(patch_number) {
       bp_is_set: readUint16Array(base + offsets.bp_is_set, MAX_BREAKPOINT_SETS),
       algo_source: readInt16Array(base + offsets.algo_source, MAX_ALGO_OPS),
       voices: readUint16Array(base + offsets.voices, MAX_VOICES_PER_INSTRUMENT),
-      bp0: readString(base + offsets.bp0, MAX_PARAM_LEN),
-      bp1: readString(base + offsets.bp1, MAX_PARAM_LEN),
+      eg0_times: readInt16Array(base + offsets.eg0_times, MAX_BPS),
+      eg0_values: readFloatArray(base + offsets.eg0_values, MAX_BPS),
+      eg1_times: readInt16Array(base + offsets.eg1_times, MAX_BPS),
+      eg1_values: readFloatArray(base + offsets.eg1_values, MAX_BPS),
       eg_type: Array.from(amy_module.HEAPU8.subarray(base + offsets.eg_type, base + offsets.eg_type + MAX_BREAKPOINT_SETS)),
       synth: view.getUint8(base + offsets.synth),
       synth_flags: view.getUint32(base + offsets.synth_flags, true),
