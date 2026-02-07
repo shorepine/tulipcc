@@ -24,6 +24,8 @@ TYPE_INFO = {
 NEEDED_CONSTANTS = [
     "NUM_COMBO_COEFS",
     "MAX_BREAKPOINT_SETS",
+    "MAX_BPS",
+    "MAX_BREAKPOINTS",
     "MAX_ALGO_OPS",
     "MAX_VOICES_PER_INSTRUMENT",
     "MAX_PARAM_LEN",
@@ -58,6 +60,8 @@ def parse_constants(text: str) -> dict:
             value = parts[2]
             if value.isdigit():
                 constants[name] = int(value)
+            elif value in constants:
+                constants[name] = constants[value]
     for name in NEEDED_CONSTANTS:
         if name not in constants:
             raise RuntimeError(f"Missing constant {name} in {AMY_H}")
