@@ -32,8 +32,15 @@ var pendingPatchKnobIndex = null;
 var patchKnobSyncAttempts = 0;
 var amyboard_world_files = [];
 var amyboard_world_loading_index = null;
+var selected_environment_file = null;
+var pending_environment_editor_load = false;
 const AMYBOARD_MODAL_MESSAGES_URL = "https://bwhitman--tulipworldapi-messages.modal.run";
 const AMYBOARD_MODAL_URLGET_URL = "https://bwhitman--tulipworldapi-urlget.modal.run";
+const CURRENT_ENV_DIR = "/amyboard/user/current/env";
+const CURRENT_PATCH_DIR = "/amyboard/user/current/patch";
+const CURRENT_PATCH_FILE = CURRENT_PATCH_DIR + "/patches.txt";
+const DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n";
+const DEFAULT_PATCH_SOURCE = "# patches.txt, ,AMY messages to load on boot\n";
 window.current_synth = 1;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
@@ -581,140 +588,170 @@ async function show_alert(text) {
 
 }
 
-class DirItem {
-    constructor(fullpath, showpath, is_dir) {
-        this.fullpath = fullpath;
-        this.showpath = showpath;
-        this.is_dir = is_dir
-      }
-    
-    getContents(encoding) {
-        if(!this.is_dir) {
-            return mp.FS.readFile(this.fullpath, {encoding:encoding});
+function ensure_current_environment_layout(seedDefaults) {
+    try { mp.FS.mkdirTree("/amyboard/user/current"); } catch (e) {}
+    try { mp.FS.mkdirTree(CURRENT_ENV_DIR); } catch (e) {}
+    try { mp.FS.mkdirTree(CURRENT_PATCH_DIR); } catch (e) {}
+    if (seedDefaults) {
+        try {
+            mp.FS.readFile(CURRENT_ENV_DIR + "/env.py", { encoding: "utf8" });
+        } catch (e) {
+            mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
         }
-        return null;
-    }
-    toString() {
-        return this.showpath;
+        try {
+            mp.FS.readFile(CURRENT_PATCH_FILE, { encoding: "utf8" });
+        } catch (e) {
+            mp.FS.writeFile(CURRENT_PATCH_FILE, DEFAULT_PATCH_SOURCE);
+        }
     }
 }
 
-// Ask for a selected FS item in the treeview and return it, showing errors if not
-async function request_file_or_folder(want_folder) {
-    if(treeView.getSelectedNodes().length > 0) {
-        thing = treeView.getSelectedNodes()[0].getUserObject();
-        if(want_folder) {
-            if(thing.is_dir) { 
-                if(thing.fullpath.startsWith('/amyboard/sys')) {
-                    show_alert("You can't write to /sys on AMYboard. Try /user.")
-                    return null;
-                }
-                return thing; 
-            } 
-            show_alert("Please select a destination folder (not a file).");
-            return null;
-        } else {
-            if(!thing.is_dir) { 
-                return thing;
+function list_environment_files() {
+    var files = [];
+    function walk(dir, relPrefix) {
+        for (const name of mp.FS.readdir(dir)) {
+            if (name === "." || name === "..") continue;
+            var path = dir + "/" + name;
+            var relPath = relPrefix ? (relPrefix + "/" + name) : name;
+            var mode = mp.FS.lookupPath(path).node.mode;
+            if (mp.FS.isFile(mode)) {
+                files.push(relPath);
+            } else if (mp.FS.isDir(mode)) {
+                walk(path, relPath);
             }
-            show_alert("Please select a file (not a folder).");
-            return null;
-        }       
+        }
     }
-    var t = "file"
-    if(want_folder) t = "folder;"
-    show_alert("Please select a " + t + " first.")
-    return null;
+    walk(CURRENT_ENV_DIR, "");
+    files.sort();
+    return files;
+}
+
+function render_environment_file_list() {
+    var container = document.getElementById("treecontainer");
+    if (!container) return;
+    var files = list_environment_files();
+    if (!files.length) {
+        selected_environment_file = null;
+        container.innerHTML = '<div class="env-file-empty">No files in current environment.</div>';
+        return;
+    }
+    if (!selected_environment_file || files.indexOf(selected_environment_file) === -1) {
+        selected_environment_file = files[0];
+    }
+    var html = '<div class="env-file-list">';
+    for (var i = 0; i < files.length; i++) {
+        var filename = files[i];
+        var active = filename === selected_environment_file;
+        var encoded = encodeURIComponent(filename);
+        html += '<button type="button" class="env-file-item' +
+            (active ? " selected" : "") + '" onclick="select_environment_file(decodeURIComponent(\'' + encoded + '\'), true)">' +
+            '<i class="fas fa-file"></i> ' + escape_html(filename) + "</button>";
+    }
+    html += "</div>";
+    container.innerHTML = html;
+}
+
+async function select_environment_file(filename, loadEditor) {
+    if (!filename) return;
+    selected_environment_file = filename;
+    render_environment_file_list();
+    if (loadEditor) {
+        await load_editor();
+    }
 }
 
 async function download() {
-    file = await request_file_or_folder(false);
-    if(file != null) {
-        var blob=new Blob([file.getContents('binary')], {type: "application/binary"});
-        var link=document.createElement('a');
-        link.href=window.URL.createObjectURL(blob);
-        link.download=file.showpath;
-        link.click();
+    if (!selected_environment_file) {
+        show_alert("Select an environment file first.");
+        return;
     }
+    var fullPath = CURRENT_ENV_DIR + "/" + selected_environment_file;
+    var blob = new Blob([mp.FS.readFile(fullPath, { encoding: "binary" })], { type: "application/octet-stream" });
+    var link = document.createElement("a");
+    link.href = window.URL.createObjectURL(blob);
+    link.download = selected_environment_file;
+    link.click();
 }
 
 async function upload() {
-    upload_folder = await request_file_or_folder(true);
-    if(upload_folder != null) {
-        // Get a file upload window, read the data and write to FS
-        var input = document.createElement('input');
-        input.type = 'file';
-        input.onchange = e => { 
-            var file = e.target.files[0]; 
-            var reader = new FileReader();
-            reader.readAsArrayBuffer(file); //,'UTF-8');
-            reader.onload = readerEvent => {
-                var content = readerEvent.target.result; // this is the content!
-                mp.FS.writeFile(upload_folder.fullpath + '/' + file.name, new Uint8Array(content), {encoding:'binary'});
-                fill_tree();
-            }
-        }
-        input.click();
-    }
+    ensure_current_environment_layout(false);
+    var input = document.createElement("input");
+    input.type = "file";
+    input.onchange = e => {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.readAsArrayBuffer(file);
+        reader.onload = readerEvent => {
+            var content = readerEvent.target.result;
+            mp.FS.writeFile(CURRENT_ENV_DIR + "/" + file.name, new Uint8Array(content), { encoding: "binary" });
+            selected_environment_file = file.name;
+            fill_tree();
+        };
+    };
+    input.click();
 }
 
 async function save_editor() {
-    target_filename = document.getElementById('editor_filename').value;
-    if(target_filename.startsWith("/sys")) {
-        show_alert("You can't write to the /sys folder. Save it to /user.");
-    } else {
-        if(target_filename.length > 0) {
-            if(!target_filename.startsWith("/user")) {
-                target_filename = "/user/" + target_filename;
-            }
-            content = editor.getValue();
-            mp.FS.writeFile("/amyboard"+target_filename, content);
-            document.getElementById('editor_filename').value = target_filename;
-        } else {
-            show_alert('You need to provide a filename before saving.');
-        }
+    ensure_current_environment_layout(false);
+    var targetFilename = selected_environment_file || "env.py";
+    var slash = targetFilename.lastIndexOf("/");
+    if (slash > 0) {
+        try { mp.FS.mkdirTree(CURRENT_ENV_DIR + "/" + targetFilename.substring(0, slash)); } catch (e) {}
     }
+    mp.FS.writeFile(CURRENT_ENV_DIR + "/" + targetFilename, editor.getValue());
+    selected_environment_file = targetFilename;
+    await fill_tree();
 }
-
 
 async function load_editor() {
-    file = await request_file_or_folder(false);
-    if(file != null) {
-        editor.setValue(file.getContents('utf8'));
-        // trim the `/amyboard` from here
-        document.getElementById('editor_filename').value = file.fullpath.substring("/amyboard".length); 
-        setTimeout(function () { editor.save() }, 100);
-        setTimeout(function () { editor.refresh() }, 250);
+    if (!editor) {
+        pending_environment_editor_load = true;
+        return;
+    }
+    if (!selected_environment_file) {
+        show_alert("Select an environment file first.");
+        return;
+    }
+    var fullPath = CURRENT_ENV_DIR + "/" + selected_environment_file;
+    try {
+        editor.setValue(mp.FS.readFile(fullPath, { encoding: "utf8" }));
+        setTimeout(function () { editor.save(); }, 100);
+        setTimeout(function () { editor.refresh(); }, 250);
+        pending_environment_editor_load = false;
+    } catch (e) {
+        show_alert("Could not load that file into the editor.");
     }
 }
 
+async function flush_pending_environment_editor_load() {
+    if (pending_environment_editor_load && editor) {
+        await load_editor();
+    }
+}
 
-async function fill_tree() {
-    var root = new TreeNode(new DirItem("/amyboard", "amyboard"));
-    function impl(curFolder, curNode) {
-        for (const name of mp.FS.readdir(curFolder)) {
-            if (name === '.' || name === '..') continue;
-            const path = `${curFolder}/${name}`;
-            const { mode, timestamp } = mp.FS.lookupPath(path).node;
-            if (mp.FS.isFile(mode)) {
-                var file = new TreeNode(new DirItem(path, name, false));
-                curNode.addChild(file);
-            } else if (mp.FS.isDir(mode)) {
-                var newdir = new TreeNode(new DirItem(path, name, true));
-                curNode.addChild(newdir);
-                impl(path, newdir);
-            }
+async function load_first_environment_file_into_editor() {
+    ensure_current_environment_layout(false);
+    var files = list_environment_files();
+    if (!files.length) {
+        return;
+    }
+    var target = null;
+    for (var i = 0; i < files.length; i++) {
+        if (files[i].toLowerCase().endsWith(".py")) {
+            target = files[i];
+            break;
         }
     }
-    impl('/amyboard', root);
-    treeView = new TreeView(root, "#treecontainer");
-    treeView.changeOption("leaf_icon", '<i class="fas fa-file"></i>');
-    treeView.changeOption("parent_icon", '<i class="fas fa-folder"></i>');
-    treeView.changeOption("show_root", false);
-    TreeConfig.open_icon = '<i class="fas fa-angle-down"></i>';
-    TreeConfig.close_icon = '<i class="fas fa-angle-right"></i>';
-    treeView.collapseAllNodes();
-    treeView.reload();
+    if (!target) {
+        target = files[0];
+    }
+    await select_environment_file(target, true);
+}
+
+async function fill_tree() {
+    ensure_current_environment_layout(false);
+    render_environment_file_list();
 }
 
 function normalize_world_filename(filename) {
@@ -738,10 +775,7 @@ function get_world_package_name(filename) {
 
 function get_world_display_name(filename) {
     var normalized = normalize_world_filename(filename);
-    if (is_world_tar_filename(normalized)) {
-        return get_world_package_name(normalized) + " (Package)";
-    }
-    return normalized;
+    return get_world_package_name(normalized);
 }
 
 function format_world_file_timestamp(time_ms) {
@@ -753,6 +787,14 @@ function format_world_file_timestamp(time_ms) {
     } catch (e) {
         return "";
     }
+}
+
+function format_size_kb(sizeBytes) {
+    var bytes = Number(sizeBytes || 0);
+    if (!Number.isFinite(bytes) || bytes < 0) {
+        bytes = 0;
+    }
+    return (bytes / 1024).toFixed(1) + "KB";
 }
 
 function escape_html(text) {
@@ -839,6 +881,127 @@ function extract_tar_buffer_to_fs(tarBytes, destinationRoot, stripPrefix) {
     }
 }
 
+function remove_fs_path(path) {
+    try {
+        var mode = mp.FS.lookupPath(path).node.mode;
+        if (mp.FS.isDir(mode)) {
+            for (const name of mp.FS.readdir(path)) {
+                if (name === "." || name === "..") continue;
+                remove_fs_path(path + "/" + name);
+            }
+            mp.FS.rmdir(path);
+        } else {
+            mp.FS.unlink(path);
+        }
+    } catch (e) {}
+}
+
+function clear_current_environment_dir() {
+    ensure_current_environment_layout(false);
+    for (const name of mp.FS.readdir(CURRENT_ENV_DIR)) {
+        if (name === "." || name === "..") continue;
+        remove_fs_path(CURRENT_ENV_DIR + "/" + name);
+    }
+}
+
+async function run_current_environment() {
+    await runCodeBlock(
+        "from upysh import *\n" +
+        "cd('/amyboard/user/current/env')\n" +
+        "execfile('env.py')\n"
+    );
+}
+
+function add_octal_to_buffer(buffer, offset, length, value) {
+    var oct = Math.max(0, value).toString(8);
+    var padded = oct.padStart(length - 1, "0");
+    for (var i = 0; i < length; i++) {
+        buffer[offset + i] = 0;
+    }
+    for (var j = 0; j < padded.length && j < (length - 1); j++) {
+        buffer[offset + j] = padded.charCodeAt(j);
+    }
+}
+
+function write_string_to_buffer(buffer, offset, length, text) {
+    for (var i = 0; i < length; i++) {
+        buffer[offset + i] = 0;
+    }
+    var n = Math.min(length, text.length);
+    for (var j = 0; j < n; j++) {
+        buffer[offset + j] = text.charCodeAt(j);
+    }
+}
+
+function tar_build_header(name, size, isDirectory) {
+    var header = new Uint8Array(512);
+    write_string_to_buffer(header, 0, 100, name);
+    add_octal_to_buffer(header, 100, 8, isDirectory ? 0o755 : 0o644);
+    add_octal_to_buffer(header, 108, 8, 0);
+    add_octal_to_buffer(header, 116, 8, 0);
+    add_octal_to_buffer(header, 124, 12, isDirectory ? 0 : size);
+    add_octal_to_buffer(header, 136, 12, Math.floor(Date.now() / 1000));
+    for (var i = 148; i < 156; i++) {
+        header[i] = 32;
+    }
+    header[156] = isDirectory ? "5".charCodeAt(0) : "0".charCodeAt(0);
+    write_string_to_buffer(header, 257, 6, "ustar");
+    write_string_to_buffer(header, 263, 2, "00");
+    var sum = 0;
+    for (var k = 0; k < 512; k++) {
+        sum += header[k];
+    }
+    var checksum = sum.toString(8).padStart(6, "0");
+    write_string_to_buffer(header, 148, 6, checksum);
+    header[154] = 0;
+    header[155] = 32;
+    return header;
+}
+
+function build_environment_tar_bytes(environmentName) {
+    var chunks = [];
+    var totalSize = 0;
+    function pushChunk(bytes) {
+        chunks.push(bytes);
+        totalSize += bytes.length;
+    }
+    function add_entry(relativePath) {
+        var fullPath = CURRENT_ENV_DIR + "/" + relativePath;
+        var mode = mp.FS.lookupPath(fullPath).node.mode;
+        if (mp.FS.isDir(mode)) {
+            var dirPath = relativePath.endsWith("/") ? relativePath : (relativePath + "/");
+            pushChunk(tar_build_header(environmentName + "/" + dirPath, 0, true));
+            for (const child of mp.FS.readdir(fullPath)) {
+                if (child === "." || child === "..") continue;
+                add_entry(relativePath + "/" + child);
+            }
+            return;
+        }
+        var bytes = mp.FS.readFile(fullPath, { encoding: "binary" });
+        pushChunk(tar_build_header(environmentName + "/" + relativePath, bytes.length, false));
+        pushChunk(bytes);
+        var pad = (512 - (bytes.length % 512)) % 512;
+        if (pad > 0) {
+            pushChunk(new Uint8Array(pad));
+        }
+    }
+
+    var entries = mp.FS.readdir(CURRENT_ENV_DIR).filter(function(name) {
+        return name !== "." && name !== "..";
+    }).sort();
+    for (var i = 0; i < entries.length; i++) {
+        add_entry(entries[i]);
+    }
+    pushChunk(new Uint8Array(1024));
+    var out = new Uint8Array(totalSize);
+    var cursor = 0;
+    for (var c = 0; c < chunks.length; c++) {
+        out.set(chunks[c], cursor);
+        cursor += chunks[c].length;
+    }
+    return out;
+}
+
 function render_amyboard_world_file_list() {
     var list = document.getElementById("amyboard_world_file_list");
     if (!list) return;
@@ -868,7 +1031,7 @@ function render_amyboard_world_file_list() {
         if (isLoading) {
             html += '<span class="d-inline-flex align-items-center text-secondary small"><span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Downloading...</span>';
         } else {
-            html += '<span class="badge bg-secondary rounded-pill">' + (item.size || 0) + "B</span>";
+            html += '<span class="badge bg-secondary rounded-pill">' + format_size_kb(item.size) + "</span>";
         }
         html += "</button>";
         html += "</div>";
@@ -892,7 +1055,9 @@ async function refresh_amyboard_world_files() {
         if (!Array.isArray(data)) {
             throw new Error("Unexpected response");
         }
-        amyboard_world_files = data;
+        amyboard_world_files = data.filter(function(item) {
+            return item && is_world_tar_filename(item.filename);
+        });
         render_amyboard_world_file_list();
     } catch (e) {
         amyboard_world_files = [];
@@ -913,14 +1078,12 @@ async function import_amyboard_world_file(index) {
 
     var item = amyboard_world_files[index];
     var filename = normalize_world_filename(item.filename);
-    var isTar = is_world_tar_filename(filename);
     var packageName = get_world_package_name(filename);
-    var targetPath = "/amyboard/user/" + filename;
     amyboard_world_loading_index = index;
     render_amyboard_world_file_list();
 
     try {
-        try { mp.FS.mkdirTree("/amyboard/user"); } catch (e) {}
+        ensure_current_environment_layout(false);
         var response = await fetch(AMYBOARD_MODAL_URLGET_URL + "?url=" + encodeURIComponent(item.url));
         if (!response.ok) {
             throw new Error("HTTP " + response.status.toString());
@@ -928,28 +1091,30 @@ async function import_amyboard_world_file(index) {
 
         var buffer = await response.arrayBuffer();
         var bytes = new Uint8Array(buffer);
-        if (isTar) {
-            var packageRoot = "/amyboard/user/" + packageName;
-            try { mp.FS.mkdirTree(packageRoot); } catch (e) {}
-            extract_tar_buffer_to_fs(bytes, packageRoot, packageName + "/");
-        } else {
-            mp.FS.writeFile(targetPath, bytes, { encoding: "binary" });
+        clear_current_environment_dir();
+        extract_tar_buffer_to_fs(bytes, CURRENT_ENV_DIR, packageName + "/");
+        if (!list_environment_files().length) {
+            // Support tarballs where files are already at tar root.
+            extract_tar_buffer_to_fs(bytes, CURRENT_ENV_DIR, "");
         }
         await fill_tree();
-
-        if (!isTar) {
-            var editorText = mp.FS.readFile(targetPath, { encoding: "utf8" });
-            editor.setValue(editorText);
-            document.getElementById("editor_filename").value = "/user/" + filename;
-            setTimeout(function () { editor.save() }, 100);
-            setTimeout(function () { editor.refresh() }, 250);
-        } else {
-            document.getElementById("editor_filename").value = "/user/" + packageName + "/";
+        var envNameInput = document.getElementById("editor_filename");
+        if (envNameInput) {
+            envNameInput.value = packageName;
         }
+        if (list_environment_files().indexOf("env.py") !== -1) {
+            await select_environment_file("env.py", true);
+        } else {
+            var files = list_environment_files();
+            if (files.length) {
+                await select_environment_file(files[0], true);
+            }
+        }
+        await run_current_environment();
 
         await refresh_amyboard_world_files();
     } catch (e) {
-        show_alert("Failed to import remote file.");
+        show_alert("Failed to import remote environment.");
     } finally {
         amyboard_world_loading_index = null;
         render_amyboard_world_file_list();
@@ -971,6 +1136,95 @@ async function amyboard_world_upload_file(pwd, filename, username, description) 
         method: 'POST',
         body: data,
     });
+}
+
+async function upload_current_environment() {
+    ensure_current_environment_layout(false);
+    var envNameInput = document.getElementById("editor_filename");
+    var usernameInput = document.getElementById("environment_username");
+    var descriptionInput = document.getElementById("environment_description");
+    if (!envNameInput || !usernameInput || !descriptionInput) return;
+
+    var username = (usernameInput.value || "").trim();
+    var environmentName = (envNameInput.value || "").trim();
+    var description = (descriptionInput.value || "").trim();
+
+    if (!/^[A-Za-z0-9]{1,20}$/.test(username)) {
+        show_alert("Username must be 1-20 chars: only A-Z, a-z, 0-9 (no spaces).");
+        return;
+    }
+
+    if (!/^[A-Za-z0-9_-]{1,20}$/.test(environmentName)) {
+        show_alert("Environment Name must be 1-20 chars: only A-Z, a-z, 0-9, - and _.");
+        return;
+    }
+
+    if (description.length < 1 || description.length > 40) {
+        show_alert("Description must be 1-40 characters.");
+        return;
+    }
+
+    var tarBytes = build_environment_tar_bytes(environmentName);
+    var tarFilename = environmentName + ".tar";
+    var file = new File([tarBytes], tarFilename, { type: "application/x-tar" });
+    var data = new FormData();
+    data.append("file", file);
+    data.append("username", username);
+    data.append("description", description);
+    data.append("which", "amyboard");
+    try {
+        var response = await fetch("https://bwhitman--tulipworldapi-upload.modal.run", {
+            method: "POST",
+            body: data,
+        });
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status.toString());
+        }
+        await refresh_amyboard_world_files();
+    } catch (e) {
+        show_alert("Upload failed.");
+    }
+}
+
+function populate_send_to_amyboard_modal() {
+    var unsupported = document.getElementById("send-amyboard-unsupported");
+    var supported = document.getElementById("send-amyboard-supported");
+    var midiOut = document.getElementById("send-amyboard-midi-out");
+    var sendButton = document.getElementById("send-amyboard-send-btn");
+    if (!unsupported || !supported || !midiOut) return;
+    if (!WebMidi.supported) {
+        unsupported.classList.remove("d-none");
+        supported.classList.add("d-none");
+        if (sendButton) {
+            sendButton.classList.add("d-none");
+        }
+        return;
+    }
+    unsupported.classList.add("d-none");
+    supported.classList.remove("d-none");
+    if (sendButton) {
+        sendButton.classList.remove("d-none");
+    }
+    midiOut.options.length = 0;
+    if (WebMidi.outputs.length === 0) {
+        midiOut.options[midiOut.options.length] = new Option("No MIDI outputs found");
+        return;
+    }
+    WebMidi.outputs.forEach(function(output) {
+        midiOut.options[midiOut.options.length] = new Option(output.name, output.id);
+    });
+}
+
+function open_send_to_amyboard_modal() {
+    populate_send_to_amyboard_modal();
+    var modalEl = document.getElementById("sendToAmyboardModal");
+    if (!modalEl) return;
+    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+}
+
+function send_to_amyboard_now() {
+    // Placeholder only: transfer logic comes next.
 }
 
 async function show_editor() {
@@ -1082,6 +1336,18 @@ async function start_amyboard() {
 
   await sleep_ms(400);
   await mp.runFrozenAsync('/amyboard/user/boot.py');
+  ensure_current_environment_layout(true);
+  clear_current_environment_dir();
+  mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
+  await fill_tree();
+  if (list_environment_files().indexOf("env.py") !== -1) {
+      await select_environment_file("env.py", true);
+  } else {
+      var envFiles = list_environment_files();
+      if (envFiles.length) {
+          await select_environment_file(envFiles[0], true);
+      }
+  }
   amyboard_started = true;
 }
 

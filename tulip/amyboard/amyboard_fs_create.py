@@ -47,6 +47,20 @@ fs = lfs.LFSFilesystem()
 lfs.format(fs, cfg)
 lfs.mount(fs, cfg)
 copy_to_lfs('boot.py', 'boot.py')
+try:
+    lfs.mkdir(fs, 'current')
+except:
+    pass
+try:
+    lfs.mkdir(fs, 'current/env')
+except:
+    pass
+try:
+    lfs.mkdir(fs, 'current/patch')
+except:
+    pass
+copy_to_lfs('env.py', 'current/env/env.py')
+copy_to_lfs('patches.txt', 'current/patch/patches.txt')
 
 print("writing VFS .bin file...")
 with open("build/amyboard-vfs.bin","wb") as fh:
@@ -111,4 +125,3 @@ if(len(sys.argv)>1):
             target.write_partition(PartitionName("system"), "build/amyboard-sys.bin")
 else:
     print("All done creating images. You can optionally call me with arguments [full, vfs, sys] to flash those directly.")
-
