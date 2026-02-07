@@ -101,7 +101,7 @@ def messages(n: int=500, chunk_size: int = 100, mtype: str='text'):
     return ret
 
 @app.function()
-@modal.fastapi_endpoint()
+@modal.fastapi_endpoint(method='POST')
 def upload(username: str = Form(...), description: str = Form(...), which: str = Form(...), file: UploadFile = File(...)):
     contents = file.file.read()
     filename = file.filename

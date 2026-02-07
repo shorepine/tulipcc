@@ -427,6 +427,40 @@
         font-size: 0.75rem;
         padding: 0.25rem 0.6rem;
       }
+
+      .env-file-list {
+        background-color: #002b36;
+      }
+
+      .env-file-item {
+        width: 100%;
+        border: 0;
+        margin: 0;
+        padding: 2px 5px;
+        text-align: left;
+        background-color: #002b36;
+        color: #839496;
+        font-size: 12px;
+        border-radius: 0;
+      }
+
+      .env-file-item:hover {
+        background-color: #073642;
+        color: #839496;
+      }
+
+      .env-file-item.selected,
+      .env-file-item.selected:hover {
+        background-color: #606060;
+        color: #fff;
+      }
+
+      .env-file-empty {
+        padding: 6px 8px;
+        font-size: 12px;
+        color: #839496;
+        background-color: #002b36;
+      }
     </style>
   </head>
 
@@ -510,6 +544,12 @@
         lint: false,
       }); 
       editor.setSize(null,editor_height);
+      if (typeof flush_pending_environment_editor_load === "function") {
+        await flush_pending_environment_editor_load();
+      }
+      if (typeof load_first_environment_file_into_editor === "function") {
+        await load_first_environment_file_into_editor();
+      }
     </script>
 
     <main class="container pt-5 mt-5">
@@ -548,17 +588,20 @@
       </div>
       <div class="card border-0 bg-light shadow-sm">
         <div class="card-body">
-          <ul class="nav nav-tabs" id="editorTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-              <button class="nav-link active" id="patch-tab" data-bs-toggle="tab" data-bs-target="#patch-pane" type="button" role="tab" aria-controls="patch-pane" aria-selected="true">Patch</button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Environment</button>
-            </li>
-            <li class="nav-item" role="presentation">
-              <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
-            </li>
-          </ul>
+          <div class="d-flex justify-content-between align-items-center">
+            <ul class="nav nav-tabs" id="editorTabs" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="patch-tab" data-bs-toggle="tab" data-bs-target="#patch-pane" type="button" role="tab" aria-controls="patch-pane" aria-selected="true">Patch</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Environment</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
+              </li>
+            </ul>
+            <button type="button" class="btn btn-sm btn-warning ms-2" onclick="open_send_to_amyboard_modal()">Send to my AMYboard</button>
+          </div>
           <div class="tab-content pt-4">
             <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
               <div class="row align-items-center mb-4 patch-toolbar gx-1">
@@ -618,14 +661,14 @@
               <div class="alert fixed-top d-none" id="alert_box"></div>
               <div class="row mb-3">
                 <div class="col-12">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="px-1 small align-middle">AMYboard world files (latest)</span>
+                  <div class="d-flex align-items-center mb-2">
+                    <span class="px-1 small align-middle">Environments (latest)</span>
                     <button
                       type="button"
-                      title="Refresh AMYboard world files"
+                      title="Refresh environments"
                       data-toggle="tooltip"
                       data-placement="top"
-                      class="btn btn-sm btn-warning"
+                      class="btn btn-sm btn-link text-secondary p-0 ms-2"
                       onclick="refresh_amyboard_world_files()"
                     ><i class="fas fa-sync"></i></button>
                   </div>
@@ -633,11 +676,11 @@
                 </div>
               </div>
               <div class="row g-0 headertext">
-                <div class="col-3 headertext">
-                  <span class="px-1 small align-middle">AMYboard files</span>
+                <div class="col-4 col-md-2 headertext">
+                  <span class="px-1 small align-middle">Environment Files</span>
                   <div id="treecontainer"></div>
                 </div>
-                <div class="col-9 headertext">
+                <div class="col-8 col-md-10 headertext">
                   <span class="px-1 small align-middle">Code editor</span>
                   <section class="input">
                     <div><textarea id="code" name="code"></textarea></div> 
@@ -648,19 +691,28 @@
                 <p class="text-center grippie" id="editor_grippie">• • •</p>
               </div>
               <div class="row mb-4 mt-1">
-                <div class="col-3">
-                  <button type="button" title="Refresh AMYboard file list" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" onclick="fill_tree()"><i class="fas fa-sync"></i></button> 
-                  <button type="button" title="Download file from AMYboard" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="download()"><i class="fas fa-download"></i></button>
-                  <button type="button" title="Upload file into the selected folder" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
-                  <button type="button" title="Load selected AMYboard file into editor" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="load_editor()"><i class="fas fa-chevron-circle-right"></i></button>
+                <div class="col-4 col-md-2">
+                  <button type="button" title="Upload file into current environment" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
                 </div>
-                <div class="col-3">
+                <div class="col-4 col-md-2">
                   <button type="button" title="Save editor contents to file" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-floppy-disk"></i></button>
-                  <button type="button" title="Run editor contents in AMYboard" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="runEditorBlock()"><i class="fas fa-running"></i></button> 
-                  <button type="share" title="Share editor contents (and filename, if given) as a URL" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-warning" id="shareButton" onclick="shareCode()"><i class="fas fa-share-square"></i></button>
+                  <button type="button" title="Run current environment in AMYboard" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="run_current_environment()"><i class="fas fa-running"></i></button> 
                 </div>
-                <div class="col-4">
-                  <input type='text' title="Filename for saving or sharing" data-toggle="tooltip" data-placement="top"  id="editor_filename" class="small form-control" placeholder="Filename"/>
+                <div class="col-12 col-md-8 mt-2 mt-md-0">
+                  <div class="row g-1">
+                    <div class="col-12 col-md-4">
+                      <input type="text" id="environment_username" class="small form-control" placeholder="Username" />
+                    </div>
+                    <div class="col-4 col-md-2">
+                      <input type='text' title="Environment name for upload" data-toggle="tooltip" data-placement="top" id="editor_filename" class="small form-control" placeholder="Environment Name"/>
+                    </div>
+                    <div class="col-8 col-md-4">
+                      <input type="text" id="environment_description" class="small form-control" placeholder="Description" />
+                    </div>
+                    <div class="col-4 col-md-2">
+                      <button type="button" class="btn btn-sm btn-primary w-100" onclick="upload_current_environment()">Upload</button>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="row mb-4 mt-1 align-items-start">
@@ -697,6 +749,31 @@
         </div>
       </div>
     </main>
+
+    <div class="modal fade" id="sendToAmyboardModal" tabindex="-1" aria-labelledby="sendToAmyboardModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="sendToAmyboardModalLabel">Send to my AMYboard</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div id="send-amyboard-unsupported" class="d-none">
+              <p class="mb-0">This browser does not support WebMIDI. Use Chrome, Edge, or Opera to send files to AMYboard.</p>
+            </div>
+            <div id="send-amyboard-supported" class="d-none">
+              <label for="send-amyboard-midi-out" class="form-label">MIDI Out</label>
+              <select id="send-amyboard-midi-out" class="form-select mb-3"></select>
+              <p class="mb-0">Connect your AMYboard to this MIDI port over MIDI or USB, then click Send.</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" id="send-amyboard-send-btn" onclick="send_to_amyboard_now()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <footer>
       <div class="container small border-top">
@@ -907,6 +984,7 @@
             height: 140,
             octaves: 2,
             startNote: "C3",
+            musicalTyping: false,
             whiteKeyColour: "#f8f8f8",
             blackKeyColour: "#111",
             activeColour: "#f2c94c",
