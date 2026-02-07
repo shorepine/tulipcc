@@ -454,6 +454,11 @@ function set_knobs_from_patch_number(patch_number) {
   let oscGate = 0;
   let eq = [null, null, null];
   let chorus = [null, null, null];
+  const BP_UNSET = 32767;
+
+  function bpTimeIsSet(v) {
+    return Number.isFinite(v) && v !== BP_UNSET;
+  }
   
   for (const event of events) {
     if (event.filter_freq_coefs.some((value) => Number.isFinite(value))) {
@@ -476,16 +481,21 @@ function set_knobs_from_patch_number(patch_number) {
       if (Number.isFinite(event.freq_coefs[0])) {
         lfoFreq = event.freq_coefs[0];
       }
-      if (event.bp0) {
-        lfoDelay = parseFloat(event.bp0.split(",")[0]);
+      if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
+        lfoDelay = event.eg0_times[0];
       }
     } else if (event.osc >= 0 && event.osc < 4) {
       // Non-LFO osc, don't assume what order they come in.
-      if (!adsr && event.bp0) {
-        // split the comma separated bp0 values and check if any are finite numbers
-        // values is time,value pairs.
-        const values = event.bp0.split(",").map(parseFloat);
-        adsr = [values[0], values[2], values[3], values[4]];  // times[0], times[1], level[1], times[2]
+      if (!adsr && event.eg0_times && event.eg0_values) {
+        if (bpTimeIsSet(event.eg0_times[0]) || bpTimeIsSet(event.eg0_times[1]) ||
+            Number.isFinite(event.eg0_values[1]) || bpTimeIsSet(event.eg0_times[2])) {
+          adsr = [
+            bpTimeIsSet(event.eg0_times[0]) ? event.eg0_times[0] : 0,
+            bpTimeIsSet(event.eg0_times[1]) ? event.eg0_times[1] : 0,
+            Number.isFinite(event.eg0_values[1]) ? event.eg0_values[1] : 0,
+            bpTimeIsSet(event.eg0_times[2]) ? event.eg0_times[2] : 0,
+          ];
+        }
       }
       // Extract key parameters for each osc
       if (Number.isFinite(event.amp_coefs[2]) && event.amp_coefs[2] > 0) {
@@ -548,6 +558,9 @@ function set_knobs_from_patch_number(patch_number) {
   set_amy_knob_value(knobs, "LFO", "pwm", lfoPwm);
   set_amy_knob_value(knobs, "LFO", "filt", filterLfo);
 
+  if (!adsr) {
+    adsr = [0, 0, 1, 0];
+  }
   if (oscGate) {
     adsr = [0, 0, 1, 0];
   }
