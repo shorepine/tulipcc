@@ -330,10 +330,72 @@
         padding: 0.35rem 0.75rem;
       }
 
+      #send-tab {
+        background: #daf4de;
+        border-color: #a9d8b3;
+        color: #1f5f2b;
+      }
+
+      #send-tab:hover {
+        background: #c9eecf;
+        border-color: #95caa1;
+        color: #184c23;
+      }
+
+      #send-tab.active {
+        background: #3ecf66;
+        border-color: #2aab50;
+        color: #0f3b1a;
+        font-weight: 600;
+      }
+
+      .tab-header-row {
+        border-bottom: 1px solid var(--bs-nav-tabs-border-color, #dee2e6);
+      }
+
+      .tab-header-row .nav-tabs {
+        border-bottom: 0;
+        margin-bottom: -1px;
+      }
+
       .form-control,
       .form-select,
       .form-check-label {
         font-size: 0.85rem;
+      }
+
+      .settings-wrap {
+        max-width: 760px;
+      }
+
+      .settings-list {
+        background: linear-gradient(180deg, #f9fafb 0%, #f2f4f7 100%);
+        border: 1px solid #dde2e7;
+        border-radius: 12px;
+        padding: 0.5rem;
+      }
+
+      .settings-item {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.65rem 0.75rem;
+        border-radius: 10px;
+        background: #ffffff;
+        border: 1px solid #e7ebef;
+      }
+
+      .settings-item + .settings-item {
+        margin-top: 0.45rem;
+      }
+
+      .settings-item .form-check-input {
+        margin-top: 0;
+      }
+
+      .settings-item .form-check-label {
+        color: #1f2937;
+        font-weight: 500;
       }
 
       .knob-value {
@@ -600,7 +662,7 @@
       </div>
       <div class="card border-0 bg-light shadow-sm">
         <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex justify-content-between align-items-center tab-header-row">
             <ul class="nav nav-tabs" id="editorTabs" role="tablist">
               <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="patch-tab" data-bs-toggle="tab" data-bs-target="#patch-pane" type="button" role="tab" aria-controls="patch-pane" aria-selected="true">Patch</button>
@@ -609,10 +671,15 @@
                 <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Environment</button>
               </li>
               <li class="nav-item" role="presentation">
+                <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-pane" type="button" role="tab" aria-controls="settings-pane" aria-selected="false">Settings</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="send-tab" data-bs-toggle="tab" data-bs-target="#send-pane" type="button" role="tab" aria-controls="send-pane" aria-selected="false">Send to my AMYboard</button>
+              </li>
+              <li class="nav-item" role="presentation">
                 <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
               </li>
             </ul>
-            <button type="button" class="btn btn-sm btn-success ms-2" onclick="open_send_to_amyboard_modal()">Send to my AMYboard</button>
           </div>
           <div class="tab-content pt-4">
             <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
@@ -782,6 +849,39 @@
                 </div>
               </div>
             </div> <!-- end environment tab -->
+            <div class="tab-pane fade" id="settings-pane" role="tabpanel" aria-labelledby="settings-tab">
+              <div class="settings-wrap">
+                <h6 class="mb-2">Hardware settings</h6>
+                <div class="small text-muted mb-3">These settings are for your AMYboard hardware behavior.</div>
+                <div class="settings-list">
+                  <div class="settings-item">
+                    <input class="form-check-input" type="checkbox" id="setting-modular-10vpp" />
+                    <label class="form-check-label" for="setting-modular-10vpp">Modular 10vpp Volume (Also set your DIP Switches)</label>
+                  </div>
+                  <div class="settings-item">
+                    <input class="form-check-input" type="checkbox" id="setting-midi-type-b" />
+                    <label class="form-check-label" for="setting-midi-type-b">Use MIDI Type B instead of A</label>
+                  </div>
+                  <div class="settings-item">
+                    <input class="form-check-input" type="checkbox" id="setting-drumkit-channel-10" />
+                    <label class="form-check-label" for="setting-drumkit-channel-10">Drum kit on channel 10</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="send-pane" role="tabpanel" aria-labelledby="send-tab">
+              <div id="send-amyboard-unsupported" class="d-none">
+                <p class="mb-0">This browser does not support WebMIDI. Use Chrome, Edge, or Opera to send files to AMYboard.</p>
+              </div>
+              <div id="send-amyboard-supported" class="d-none">
+                <p class="mb-3">Ensure your AMYboard is connected to the MIDI <strong>out</strong> port selected above. 
+                  If you're connected over USB, the MIDI out port should say "AMYboard."</p>
+                <p class="mb-3">We'll send over the current environment, settings, and the state of the current patches per active 
+                  channel and their MIDI CC assignments. </p>
+                <p class="mb-3">Any existing patches or environments on your AMYboard will be overwritten.</p>
+                <button type="button" class="btn btn-primary" id="send-amyboard-send-btn" onclick="send_to_amyboard_now()">Send</button>
+              </div>
+            </div>
             <div class="tab-pane fade" id="upgrade-pane" role="tabpanel" aria-labelledby="upgrade-tab">
               <div class="esptool-frame-wrap">
                 <iframe
@@ -803,34 +903,6 @@
         </div>
       </div>
     </main>
-
-    <div class="modal fade" id="sendToAmyboardModal" tabindex="-1" aria-labelledby="sendToAmyboardModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="sendToAmyboardModalLabel">Send to my AMYboard</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <div id="send-amyboard-unsupported" class="d-none">
-              <p class="mb-0">This browser does not support WebMIDI. Use Chrome, Edge, or Opera to send files to AMYboard.</p>
-            </div>
-            <div id="send-amyboard-supported" class="d-none">
-              <p class="mb-0">Connect your AMYboard to the MIDI port below (or choose AMYboard if connected over USB)</p>
-              <select id="send-amyboard-midi-out" class="form-select mb-3"></select>
-              <p class="mb-0"></p>
-              <p class="mb-0">We'll send over the current environment (or empty if none), and the state of the current patches per 
-                channel and their MIDI CC assignments. Any existing patches or environments on your AMYboard will be overwritten.
-              </p>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="button" class="btn btn-primary" id="send-amyboard-send-btn" onclick="send_to_amyboard_now()">Send</button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <div class="modal fade" id="renameEnvironmentFileModal" tabindex="-1" aria-labelledby="renameEnvironmentFileModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-sm">
@@ -871,8 +943,8 @@
             </div>
             <div>
               <label for="environment_description" class="form-label mb-1">Description</label>
-              <input type="text" id="environment_description" class="small form-control" maxlength="40" placeholder="Description" />
-              <div class="form-text">1-40 characters.</div>
+              <input type="text" id="environment_description" class="small form-control" maxlength="100" placeholder="Description" />
+              <div class="form-text">1-100 characters.</div>
             </div>
           </div>
           <div class="modal-footer">
@@ -1014,6 +1086,34 @@
     </script>
     <script>
       window.addEventListener("DOMContentLoaded", function() {
+        const hardwareSettingsMap = [
+          { id: "setting-modular-10vpp", key: "amyboard.hardware.modular_10vpp_volume" },
+          { id: "setting-midi-type-b", key: "amyboard.hardware.midi_type_b" },
+          { id: "setting-drumkit-channel-10", key: "amyboard.hardware.drumkit_channel_10" }
+        ];
+        hardwareSettingsMap.forEach(function(setting) {
+          const checkbox = document.getElementById(setting.id);
+          if (!checkbox) {
+            return;
+          }
+          try {
+            checkbox.checked = localStorage.getItem(setting.key) === "1";
+          } catch (e) {}
+          checkbox.addEventListener("change", function() {
+            try {
+              localStorage.setItem(setting.key, checkbox.checked ? "1" : "0");
+            } catch (e) {}
+          });
+        });
+        const sendTab = document.getElementById("send-tab");
+        if (sendTab) {
+          sendTab.addEventListener("shown.bs.tab", function() {
+            if (typeof window.open_send_to_amyboard_modal === "function") {
+              window.open_send_to_amyboard_modal();
+            }
+          });
+        }
+
         const midiChannelSelect = document.getElementById("midi-channel-select");
         const channelActiveCheckbox = document.getElementById("channel-active-checkbox");
         const patchSaveInput = document.getElementById("patch-save-input");

@@ -85,6 +85,9 @@ function init_knobs(knobConfigs, gridId, onChange) {
     if (notifyAmy) {
       send_change_code(window.current_synth, value, config);
     }
+    if (typeof window.request_persist_amy_knobs_state === "function") {
+      window.request_persist_amy_knobs_state();
+    }
   }
 
 
@@ -913,5 +916,8 @@ function set_amy_knob_value(knobs, sectionName, name, value) {
     knob.default_value = value;
   }
   send_change_code(window.current_synth, value, knob);
+  if (typeof window.request_persist_amy_knobs_state === "function") {
+    window.request_persist_amy_knobs_state();
+  }
   return true;
 }

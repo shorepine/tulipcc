@@ -379,10 +379,143 @@ window.addEventListener("DOMContentLoaded", function() {
     return list.map(cloneKnob);
   }
 
+  const AMY_KNOB_STATE_STORAGE_KEY = "amyboard.knob_state.v1";
+  let knobPersistTimer = null;
+
+  function isRangeKnob(knob) {
+    return !!knob
+      && knob.knob_type !== "spacer"
+      && knob.knob_type !== "spacer-half"
+      && knob.knob_type !== "selection"
+      && knob.knob_type !== "pushbutton";
+  }
+
+  function serializeKnobState(knob) {
+    const state = {};
+    if (!knob || typeof knob !== "object") {
+      return state;
+    }
+    if (knob.cc === "" || knob.cc === null || knob.cc === undefined) {
+      state.cc = "";
+    } else {
+      const ccValue = Number(knob.cc);
+      if (Number.isInteger(ccValue) && ccValue >= 0 && ccValue <= 127) {
+        state.cc = ccValue;
+      }
+    }
+    const defaultValue = Number(knob.default_value);
+    if (Number.isFinite(defaultValue)) {
+      state.default_value = defaultValue;
+    }
+    if (isRangeKnob(knob)) {
+      const minValue = Number(knob.min_value);
+      const maxValue = Number(knob.max_value);
+      if (Number.isFinite(minValue) && Number.isFinite(maxValue) && minValue < maxValue) {
+        state.min_value = minValue;
+        state.max_value = maxValue;
+      }
+      state.range_mode = knob.knob_type === "log" ? "log" : "linear";
+    }
+    return state;
+  }
+
+  function applySerializedKnobState(targetKnob, serialized) {
+    if (!targetKnob || !serialized || typeof serialized !== "object") {
+      return;
+    }
+    if (serialized.cc === "") {
+      targetKnob.cc = "";
+    } else {
+      const ccValue = Number(serialized.cc);
+      if (Number.isInteger(ccValue) && ccValue >= 0 && ccValue <= 127) {
+        targetKnob.cc = ccValue;
+      }
+    }
+    const defaultValue = Number(serialized.default_value);
+    if (Number.isFinite(defaultValue)) {
+      targetKnob.default_value = defaultValue;
+    }
+    if (isRangeKnob(targetKnob)) {
+      const minValue = Number(serialized.min_value);
+      const maxValue = Number(serialized.max_value);
+      if (Number.isFinite(minValue) && Number.isFinite(maxValue) && minValue < maxValue) {
+        targetKnob.min_value = minValue;
+        targetKnob.max_value = maxValue;
+      }
+      if (serialized.range_mode === "log") {
+        targetKnob.knob_type = "log";
+      } else if (serialized.range_mode === "linear" && targetKnob.knob_type === "log") {
+        targetKnob.knob_type = undefined;
+      }
+    }
+  }
+
+  window.persist_amy_knobs_state = function() {
+    if (!Array.isArray(window.amy_knobs)) {
+      return false;
+    }
+    const payload = { version: 1, channels: {} };
+    for (let channel = 1; channel <= 16; channel += 1) {
+      const knobs = window.amy_knobs[channel];
+      if (!Array.isArray(knobs)) {
+        continue;
+      }
+      payload.channels[channel] = knobs.map(serializeKnobState);
+    }
+    try {
+      localStorage.setItem(AMY_KNOB_STATE_STORAGE_KEY, JSON.stringify(payload));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  window.request_persist_amy_knobs_state = function() {
+    if (knobPersistTimer) {
+      clearTimeout(knobPersistTimer);
+    }
+    knobPersistTimer = setTimeout(function() {
+      knobPersistTimer = null;
+      if (typeof window.persist_amy_knobs_state === "function") {
+        window.persist_amy_knobs_state();
+      }
+    }, 120);
+  };
+
+  window.restore_amy_knobs_state = function() {
+    if (!Array.isArray(window.amy_knobs)) {
+      return false;
+    }
+    let parsed = null;
+    try {
+      parsed = JSON.parse(localStorage.getItem(AMY_KNOB_STATE_STORAGE_KEY) || "null");
+    } catch (e) {
+      parsed = null;
+    }
+    if (!parsed || !parsed.channels || typeof parsed.channels !== "object") {
+      return false;
+    }
+    let restoredAny = false;
+    for (let channel = 1; channel <= 16; channel += 1) {
+      const storedKnobs = parsed.channels[channel] || parsed.channels[String(channel)];
+      const targetKnobs = window.amy_knobs[channel];
+      if (!Array.isArray(storedKnobs) || !Array.isArray(targetKnobs)) {
+        continue;
+      }
+      const count = Math.min(storedKnobs.length, targetKnobs.length);
+      for (let i = 0; i < count; i += 1) {
+        applySerializedKnobState(targetKnobs[i], storedKnobs[i]);
+        restoredAny = true;
+      }
+    }
+    return restoredAny;
+  };
+
   window.amy_knobs = new Array(17);
   for (let i = 1; i <= 16; i += 1) {
     window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
   }
+  window.has_restored_amy_knobs_state = !!(typeof window.restore_amy_knobs_state === "function" && window.restore_amy_knobs_state());
 
   window.get_current_knobs = function() {
     const idx = Number(window.current_synth);

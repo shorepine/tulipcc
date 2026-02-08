@@ -28,6 +28,7 @@ var term = null;
 var cv_1_voltage = 0;
 var cv_2_voltage = 0;
 var amy_module = null;
+var restored_knob_state_applied = false;
 var pendingPatchKnobIndex = null;
 var patchKnobSyncAttempts = 0;
 var amyboard_world_files = [];
@@ -327,10 +328,53 @@ function onKnobCcChange(knob) {
   if (typeof amy_add_message === "function") {
     amy_add_log_message(m);
   }
+  if (typeof window.request_persist_amy_knobs_state === "function") {
+    window.request_persist_amy_knobs_state();
+  }
+}
+
+function apply_restored_knob_state_to_amy() {
+  if (!window.has_restored_amy_knobs_state || restored_knob_state_applied || !audio_started) {
+    return false;
+  }
+  if (typeof amy_add_message !== "function") {
+    return false;
+  }
+  const activeChannels = [];
+  for (let channel = 1; channel <= 16; channel += 1) {
+    if (is_channel_active(channel)) {
+      activeChannels.push(channel);
+    }
+  }
+  if (!activeChannels.length) {
+    activeChannels.push(Number(window.current_synth || 1));
+  }
+  for (const channel of activeChannels) {
+    amy_add_log_message("i" + channel + "iv6K257");
+  }
+  for (const channel of activeChannels) {
+    send_knob_value_messages_for_channel(channel);
+    const controlMessages = build_channel_control_messages(channel);
+    for (const message of controlMessages) {
+      amy_add_log_message(message);
+    }
+    if (Array.isArray(window.channel_control_mapping_sent)) {
+      window.channel_control_mapping_sent[channel] = true;
+    }
+  }
+  restored_knob_state_applied = true;
+  if (typeof window.write_current_patches_file_from_knobs === "function") {
+    window.write_current_patches_file_from_knobs();
+  }
+  return true;
 }
 
 
 window.addEventListener("DOMContentLoaded", function() {
+  if (window.has_restored_amy_knobs_state) {
+    apply_restored_knob_state_to_amy();
+    return;
+  }
   requestPatchKnobSync(0);
 });
 
@@ -457,6 +501,31 @@ function build_patch_save_messages(channel, patchNumber) {
 
   messages.push("i" + synthChannel + "K" + patch);
   return messages;
+}
+
+function send_knob_value_messages_for_channel(channel) {
+  var synthChannel = Number(channel);
+  if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
+    synthChannel = Number(window.current_synth || 1);
+  }
+  const knobList = get_knobs_for_channel(synthChannel);
+  if (!Array.isArray(knobList) || typeof window.make_change_code !== "function") {
+    return;
+  }
+  for (const knob of knobList) {
+    if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
+      continue;
+    }
+    const value = Number(knob.default_value);
+    if (!Number.isFinite(value)) {
+      continue;
+    }
+    const payload = window.make_change_code(synthChannel, value, knob, false);
+    if (!payload) {
+      continue;
+    }
+    amy_add_log_message(payload);
+  }
 }
 
 function get_knobs_for_channel(channel) {
@@ -1587,8 +1656,8 @@ async function upload_current_environment() {
         return;
     }
 
-    if (description.length < 1 || description.length > 40) {
-        show_alert("Description must be 1-40 characters.");
+    if (description.length < 1 || description.length > 100) {
+        show_alert("Description must be 1-100 characters.");
         return;
     }
 
@@ -1651,9 +1720,8 @@ function open_upload_environment_modal() {
 function populate_send_to_amyboard_modal() {
     var unsupported = document.getElementById("send-amyboard-unsupported");
     var supported = document.getElementById("send-amyboard-supported");
-    var midiOut = document.getElementById("send-amyboard-midi-out");
     var sendButton = document.getElementById("send-amyboard-send-btn");
-    if (!unsupported || !supported || !midiOut) return;
+    if (!unsupported || !supported) return;
     if (!WebMidi.supported) {
         unsupported.classList.remove("d-none");
         supported.classList.add("d-none");
@@ -1667,14 +1735,6 @@ function populate_send_to_amyboard_modal() {
     if (sendButton) {
         sendButton.classList.remove("d-none");
     }
-    midiOut.options.length = 0;
-    if (WebMidi.outputs.length === 0) {
-        midiOut.options[midiOut.options.length] = new Option("No MIDI outputs found");
-        return;
-    }
-    WebMidi.outputs.forEach(function(output) {
-        midiOut.options[midiOut.options.length] = new Option(output.name, output.id);
-    });
 }
 
 async function open_send_to_amyboard_modal() {
@@ -1684,10 +1744,6 @@ async function open_send_to_amyboard_modal() {
         show_alert("Could not update patches.txt");
     }
     populate_send_to_amyboard_modal();
-    var modalEl = document.getElementById("sendToAmyboardModal");
-    if (!modalEl) return;
-    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modal.show();
 }
 
 function send_to_amyboard_now() {
@@ -1799,6 +1855,9 @@ async function start_audio() {
   }
   // Initialize to the "amyboardweb" preset (patch 257), 6 voices.
   audio_started = true;
+  if (apply_restored_knob_state_to_amy()) {
+    return;
+  }
   amy_add_log_message("i1iv6K257")
   attemptPatchKnobSync();
 }
