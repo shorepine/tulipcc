@@ -663,17 +663,20 @@
       <div class="card border-0 bg-light shadow-sm">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-center tab-header-row">
-            <ul class="nav nav-tabs" id="editorTabs" role="tablist">
+            <ul class="nav nav-tabs w-100" id="editorTabs" role="tablist">
               <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="patch-tab" data-bs-toggle="tab" data-bs-target="#patch-pane" type="button" role="tab" aria-controls="patch-pane" aria-selected="true">Patch</button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Environment</button>
+                <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Code</button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-pane" type="button" role="tab" aria-controls="settings-pane" aria-selected="false">Settings</button>
               </li>
               <li class="nav-item" role="presentation">
+                <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#world-pane" type="button" role="tab" aria-controls="world-pane" aria-selected="false">AMYboard World</button>
+              </li>
+              <li class="nav-item ms-auto" role="presentation">
                 <button class="nav-link" id="send-tab" data-bs-toggle="tab" data-bs-target="#send-pane" type="button" role="tab" aria-controls="send-pane" aria-selected="false">Send to my AMYboard</button>
               </li>
               <li class="nav-item" role="presentation">
@@ -744,25 +747,9 @@
             </div>
             <div class="tab-pane fade" id="environment-pane" role="tabpanel" aria-labelledby="environment-tab">
               <div class="alert fixed-top d-none" id="alert_box"></div>
-              <div class="row mb-3">
-                <div class="col-12">
-                  <div class="d-flex align-items-center mb-2">
-                    <span class="px-1 small align-middle">Environments (latest)</span>
-                    <button
-                      type="button"
-                      title="Refresh environments"
-                      data-toggle="tooltip"
-                      data-placement="top"
-                      class="btn btn-sm btn-link text-secondary p-0 ms-2"
-                      onclick="refresh_amyboard_world_files()"
-                    ><i class="fas fa-sync"></i></button>
-                  </div>
-                  <div id="amyboard_world_file_list" class="small" style="max-height: 240px; overflow-y: auto;"></div>
-                </div>
-              </div>
               <div class="row g-0 headertext">
                 <div class="col-4 col-md-2 headertext">
-                  <span class="px-1 small align-middle">Environment Files</span>
+                  <span class="px-1 small align-middle">Your Files</span>
                   <div id="treecontainer"></div>
                   <div class="mt-1 d-flex gap-1">
                     <button
@@ -812,7 +799,6 @@
               <div class="row mb-4 mt-1">
                 <div class="col-12">
                   <div class="border rounded bg-light px-3 py-2 d-flex flex-wrap align-items-center gap-2">
-                    <span class="small text-muted me-2">Environment</span>
                     <button
                       type="button"
                       title="Start environment"
@@ -829,14 +815,6 @@
                       class="btn btn-sm btn-outline-danger"
                       onclick="clear_current_environment_from_default()"
                     >Clear</button>
-                    <button
-                      type="button"
-                      title="Upload environment"
-                      data-toggle="tooltip"
-                      data-placement="top"
-                      class="btn btn-sm btn-primary"
-                      onclick="open_upload_environment_modal()"
-                    >Upload</button>
                   </div>
                 </div>
               </div>
@@ -865,6 +843,54 @@
                   <div class="settings-item">
                     <input class="form-check-input" type="checkbox" id="setting-drumkit-channel-10" />
                     <label class="form-check-label" for="setting-drumkit-channel-10">Drum kit on channel 10</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="world-pane" role="tabpanel" aria-labelledby="world-tab">
+              <div class="row mb-2">
+                <div class="col-12">
+                  <div class="border rounded p-3 bg-light">
+                    <div class="d-flex align-items-center mb-2">
+                      <span class="fw-semibold">Environments (latest)</span>
+                      <button
+                        type="button"
+                        title="Refresh environments"
+                        data-toggle="tooltip"
+                        data-placement="top"
+                        class="btn btn-sm btn-link text-secondary p-0 ms-2"
+                        onclick="refresh_amyboard_world_files()"
+                      ><i class="fas fa-sync"></i></button>
+                    </div>
+                    <div id="amyboard_world_file_list" class="small" style="max-height: 360px; overflow-y: auto;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-12">
+                  <div class="border rounded p-3 bg-light">
+                    <div class="fw-semibold mb-2">Upload your Environment</div>
+                    <div class="mb-2">This will upload your patches and code to AMYboard World for anyone to try!</div>
+                    <div class="row g-2">
+                      <div class="col-12 col-md-4">
+                        <label for="environment_username" class="form-label mb-1">Username</label>
+                        <input type="text" id="environment_username" class="small form-control" maxlength="20" placeholder="Username" />
+                        <div class="form-text">1-20 chars: A-Z, a-z, 0-9.</div>
+                      </div>
+                      <div class="col-12 col-md-4">
+                        <label for="editor_filename" class="form-label mb-1">Environment name</label>
+                        <input type="text" id="editor_filename" class="small form-control" maxlength="20" placeholder="Environment Name" />
+                        <div class="form-text">1-20 chars: A-Z, a-z, 0-9, -, _.</div>
+                      </div>
+                      <div class="col-12 col-md-4">
+                        <label for="environment_description" class="form-label mb-1">Description</label>
+                        <textarea id="environment_description" class="small form-control" maxlength="400" rows="3" placeholder="Description"></textarea>
+                        <div class="form-text">1-400 characters.</div>
+                      </div>
+                    </div>
+                    <div class="mt-2">
+                      <button type="button" id="upload_current_environment_btn" class="btn btn-sm btn-primary" onclick="upload_current_environment()">Upload</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -918,38 +944,6 @@
           <div class="modal-footer">
             <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
             <button type="button" class="btn btn-sm btn-primary" onclick="submit_rename_environment_file()">Rename</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="modal fade" id="uploadEnvironmentModal" tabindex="-1" aria-labelledby="uploadEnvironmentModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="uploadEnvironmentModalLabel">Upload environment</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-2">
-              <label for="environment_username" class="form-label mb-1">Username</label>
-              <input type="text" id="environment_username" class="small form-control" maxlength="20" placeholder="Username" />
-              <div class="form-text">1-20 chars: A-Z, a-z, 0-9.</div>
-            </div>
-            <div class="mb-2">
-              <label for="editor_filename" class="form-label mb-1">Environment name</label>
-              <input type="text" id="editor_filename" class="small form-control" maxlength="20" placeholder="Environment Name" />
-              <div class="form-text">1-20 chars: A-Z, a-z, 0-9, -, _.</div>
-            </div>
-            <div>
-              <label for="environment_description" class="form-label mb-1">Description</label>
-              <input type="text" id="environment_description" class="small form-control" maxlength="100" placeholder="Description" />
-              <div class="form-text">1-100 characters.</div>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" id="upload_current_environment_btn" class="btn btn-sm btn-primary" onclick="upload_current_environment()">Upload</button>
           </div>
         </div>
       </div>

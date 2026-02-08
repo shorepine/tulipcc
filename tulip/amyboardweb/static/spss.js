@@ -31,6 +31,7 @@ var amy_module = null;
 var restored_knob_state_applied = false;
 var pendingPatchKnobIndex = null;
 var patchKnobSyncAttempts = 0;
+var patches_file_rewrite_timer = null;
 var amyboard_world_files = [];
 var amyboard_world_loading_index = null;
 var selected_environment_file = null;
@@ -41,12 +42,10 @@ const AMYBOARD_MODAL_MESSAGES_URL = "https://bwhitman--tulipworldapi-messages.mo
 const AMYBOARD_MODAL_URLGET_URL = "https://bwhitman--tulipworldapi-urlget.modal.run";
 const CURRENT_BASE_DIR = "/amyboard/user/current";
 const CURRENT_ENV_DIR = "/amyboard/user/current/env";
-const CURRENT_PATCH_DIR = "/amyboard/user/current/patches";
-const CURRENT_PATCH_FILE = CURRENT_PATCH_DIR + "/patches.txt";
 const DEFAULT_BASE_DIR = "/amyboard/user/default";
 const DEFAULT_ENV_DIR = "/amyboard/user/default/env";
-const DEFAULT_PATCH_DIR = "/amyboard/user/default/patches";
-const DEFAULT_PATCH_FILE = DEFAULT_PATCH_DIR + "/patches.txt";
+const CURRENT_PATCH_FILE = CURRENT_ENV_DIR + "/patches.txt";
+const DEFAULT_PATCH_FILE = DEFAULT_ENV_DIR + "/patches.txt";
 const DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n";
 const DEFAULT_PATCH_SOURCE = "# patches.txt, ,AMY messages to load on boot\n";
 window.current_synth = 1;
@@ -78,6 +77,19 @@ window.set_channel_active = function(channel, active) {
   }
   window.active_channels[ch] = !!active;
 };
+
+function request_current_patches_file_rewrite() {
+  if (patches_file_rewrite_timer) {
+    clearTimeout(patches_file_rewrite_timer);
+  }
+  patches_file_rewrite_timer = setTimeout(async function() {
+    patches_file_rewrite_timer = null;
+    try {
+      await write_current_patches_file_from_knobs();
+    } catch (e) {}
+  }, 80);
+}
+window.request_current_patches_file_rewrite = request_current_patches_file_rewrite;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -330,6 +342,9 @@ function onKnobCcChange(knob) {
   }
   if (typeof window.request_persist_amy_knobs_state === "function") {
     window.request_persist_amy_knobs_state();
+  }
+  if (typeof window.request_current_patches_file_rewrite === "function") {
+    window.request_current_patches_file_rewrite();
   }
 }
 
@@ -780,10 +795,8 @@ async function show_alert(text) {
 function ensure_current_environment_layout(seedDefaults) {
     try { mp.FS.mkdirTree(CURRENT_BASE_DIR); } catch (e) {}
     try { mp.FS.mkdirTree(CURRENT_ENV_DIR); } catch (e) {}
-    try { mp.FS.mkdirTree(CURRENT_PATCH_DIR); } catch (e) {}
     try { mp.FS.mkdirTree(DEFAULT_BASE_DIR); } catch (e) {}
     try { mp.FS.mkdirTree(DEFAULT_ENV_DIR); } catch (e) {}
-    try { mp.FS.mkdirTree(DEFAULT_PATCH_DIR); } catch (e) {}
     if (seedDefaults) {
         try {
             mp.FS.readFile(DEFAULT_ENV_DIR + "/env.py", { encoding: "utf8" });
@@ -805,9 +818,15 @@ function ensure_current_environment_layout(seedDefaults) {
         } catch (e) {
             var migrated = false;
             try {
-                mp.FS.writeFile(CURRENT_PATCH_FILE, mp.FS.readFile("/amyboard/user/current/patch/patches.txt", { encoding: "utf8" }));
+                mp.FS.writeFile(CURRENT_PATCH_FILE, mp.FS.readFile("/amyboard/user/current/patches/patches.txt", { encoding: "utf8" }));
                 migrated = true;
-            } catch (legacyErr) {}
+            } catch (legacyPatchesDirErr) {}
+            try {
+                if (!migrated) {
+                    mp.FS.writeFile(CURRENT_PATCH_FILE, mp.FS.readFile("/amyboard/user/current/patch/patches.txt", { encoding: "utf8" }));
+                    migrated = true;
+                }
+            } catch (legacyPatchErr) {}
             if (!migrated) {
                 mp.FS.writeFile(CURRENT_PATCH_FILE, mp.FS.readFile(DEFAULT_PATCH_FILE, { encoding: "utf8" }));
             }
@@ -1348,8 +1367,8 @@ function clear_current_environment_dir() {
 async function clear_current_environment_from_default() {
     ensure_current_environment_layout(true);
     var confirmed = await confirm_environment_action(
-        "Clear environment",
-        "Clear current environment and restore from defaults?",
+        "Clear code",
+        "Clear current code and restore from default?",
         "Clear"
     );
     if (!confirmed) {
@@ -1357,11 +1376,8 @@ async function clear_current_environment_from_default() {
     }
     try {
         remove_fs_path(CURRENT_ENV_DIR);
-        remove_fs_path(CURRENT_PATCH_DIR);
         mp.FS.mkdirTree(CURRENT_ENV_DIR);
-        mp.FS.mkdirTree(CURRENT_PATCH_DIR);
         copy_fs_path(DEFAULT_ENV_DIR, CURRENT_ENV_DIR);
-        copy_fs_path(DEFAULT_PATCH_DIR, CURRENT_PATCH_DIR);
         selected_environment_file = null;
         await sync_persistent_fs();
         await fill_tree();
@@ -1635,6 +1651,20 @@ async function amyboard_world_upload_file(pwd, filename, username, description) 
     });
 }
 
+function sanitize_environment_description(raw) {
+    var input = String(raw || "");
+    // Strip any HTML tags/content interpretation by converting through a detached element.
+    var plain = input;
+    try {
+        var node = document.createElement("div");
+        node.innerHTML = input;
+        plain = node.textContent || node.innerText || "";
+    } catch (e) {
+        plain = input.replace(/<[^>]*>/g, "");
+    }
+    return plain.replace(/\s+/g, " ").trim();
+}
+
 async function upload_current_environment() {
     ensure_current_environment_layout(false);
     var envNameInput = document.getElementById("editor_filename");
@@ -1644,7 +1674,8 @@ async function upload_current_environment() {
 
     var username = (usernameInput.value || "").trim();
     var environmentName = (envNameInput.value || "").trim();
-    var description = (descriptionInput.value || "").trim();
+    var description = sanitize_environment_description(descriptionInput.value || "");
+    descriptionInput.value = description;
 
     if (!/^[A-Za-z0-9]{1,20}$/.test(username)) {
         show_alert("Username must be 1-20 chars: only A-Z, a-z, 0-9 (no spaces).");
@@ -1656,8 +1687,8 @@ async function upload_current_environment() {
         return;
     }
 
-    if (description.length < 1 || description.length > 100) {
-        show_alert("Description must be 1-100 characters.");
+    if (description.length < 1 || description.length > 400) {
+        show_alert("Description must be 1-400 characters.");
         return;
     }
 
@@ -1687,10 +1718,6 @@ async function upload_current_environment() {
             throw new Error("HTTP " + response.status.toString());
         }
         await refresh_amyboard_world_files();
-        var uploadModalEl = document.getElementById("uploadEnvironmentModal");
-        if (uploadModalEl && window.bootstrap) {
-            window.bootstrap.Modal.getOrCreateInstance(uploadModalEl).hide();
-        }
     } catch (e) {
         show_alert("Upload failed.");
     } finally {

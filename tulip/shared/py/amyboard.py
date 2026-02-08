@@ -19,19 +19,17 @@ def _ensure_current_env_layout():
     current_base = user_base + "/current"
     default_base = user_base + "/default"
     current_env_dir = current_base + "/env"
-    current_patch_dir = current_base + "/patches"
     default_env_dir = default_base + "/env"
-    default_patch_dir = default_base + "/patches"
-    for path in (current_base, current_env_dir, current_patch_dir, default_base, default_env_dir, default_patch_dir):
+    for path in (current_base, current_env_dir, default_base, default_env_dir):
         try:
             os.mkdir(path)
         except OSError:
             pass
 
     default_env_file = default_env_dir + "/env.py"
-    default_patches_file = default_patch_dir + "/patches.txt"
+    default_patches_file = default_env_dir + "/patches.txt"
     current_env_file = current_env_dir + "/env.py"
-    current_patches_file = current_patch_dir + "/patches.txt"
+    current_patches_file = current_env_dir + "/patches.txt"
 
     try:
         open(default_env_file, "r").close()
@@ -54,6 +52,19 @@ def _ensure_current_env_layout():
         w.close()
 
     # Keep compatibility with old /current/patch/ location if it exists.
+    legacy_patches = current_base + "/patches/patches.txt"
+    try:
+        uos.stat(legacy_patches)
+        try:
+            open(current_patches_file, "r").close()
+        except OSError:
+            w = open(current_patches_file, "w")
+            w.write(open(legacy_patches, "r").read())
+            w.close()
+    except OSError:
+        pass
+
+    # Keep compatibility with older /current/patch/ location if it exists.
     legacy_patch = current_base + "/patch/patches.txt"
     try:
         uos.stat(legacy_patch)

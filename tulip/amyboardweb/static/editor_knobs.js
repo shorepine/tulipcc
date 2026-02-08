@@ -88,6 +88,9 @@ function init_knobs(knobConfigs, gridId, onChange) {
     if (typeof window.request_persist_amy_knobs_state === "function") {
       window.request_persist_amy_knobs_state();
     }
+    if (typeof window.request_current_patches_file_rewrite === "function") {
+      window.request_current_patches_file_rewrite();
+    }
   }
 
 
