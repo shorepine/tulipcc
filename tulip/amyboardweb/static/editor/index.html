@@ -26,6 +26,7 @@
     <meta name="author" content="shore pine sound systems">
     <meta name="HandheldFriendly" content="true">
     <title>AMYboard. Now available</title>
+    <base href="/">
     <link rel="stylesheet" href="css/theme.css">
     <link href="css/prism.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/all.css" id="treejs_styles">
@@ -45,7 +46,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script type="text/javascript" src="examples.js"></script>
     <script type="text/javascript" src="amy_event_layout.generated.js"></script>
     <script type="text/javascript" src="amy_parameters.js"></script>
     <script type="text/javascript" src="spss.js"></script>
@@ -428,6 +428,10 @@
         padding: 0.25rem 0.6rem;
       }
 
+      #channel-active-checkbox + label {
+        color: #fff;
+      }
+
       .env-file-list {
         background-color: #002b36;
       }
@@ -469,7 +473,7 @@
       <div class="container">
 
 
-              <a class="navbar-brand pe-4 fs-4" href="editor.html">
+              <a class="navbar-brand pe-4 fs-4" href="/editor/">
                           <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
 
           <span class="ms-1 fw-bolder">AMYboard online</span>
@@ -543,6 +547,14 @@
         theme: "lucario",
         lint: false,
       }); 
+      editor.on("change", function() {
+        window.environment_editor_dirty = true;
+      });
+      document.addEventListener("click", function() {
+        if (typeof window.save_editor_if_dirty === "function") {
+          window.save_editor_if_dirty();
+        }
+      });
       editor.setSize(null,editor_height);
       if (typeof flush_pending_environment_editor_load === "function") {
         await flush_pending_environment_editor_load();
@@ -600,30 +612,36 @@
                 <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
               </li>
             </ul>
-            <button type="button" class="btn btn-sm btn-warning ms-2" onclick="open_send_to_amyboard_modal()">Send to my AMYboard</button>
+            <button type="button" class="btn btn-sm btn-success ms-2" onclick="open_send_to_amyboard_modal()">Send to my AMYboard</button>
           </div>
           <div class="tab-content pt-4">
             <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
               <div class="row align-items-center mb-4 patch-toolbar gx-1">
                 <div class="col-12 col-md-auto">
                   <select class="form-select" id="midi-channel-select" aria-label="MIDI Channel">
-                    <option value="1" selected>Ch 1</option>
-                    <option value="2">Ch 2</option>
-                    <option value="3">Ch 3</option>
-                    <option value="4">Ch 4</option>
-                    <option value="5">Ch 5</option>
-                    <option value="6">Ch 6</option>
-                    <option value="7">Ch 7</option>
-                    <option value="8">Ch 8</option>
-                    <option value="9">Ch 9</option>
-                    <option value="10">Ch 10</option>
-                    <option value="11">Ch 11</option>
-                    <option value="12">Ch 12</option>
-                    <option value="13">Ch 13</option>
-                    <option value="14">Ch 14</option>
-                    <option value="15">Ch 15</option>
-                    <option value="16">Ch 16</option>
+                    <option value="1" selected>Channel 1</option>
+                    <option value="2">Channel 2</option>
+                    <option value="3">Channel 3</option>
+                    <option value="4">Channel 4</option>
+                    <option value="5">Channel 5</option>
+                    <option value="6">Channel 6</option>
+                    <option value="7">Channel 7</option>
+                    <option value="8">Channel 8</option>
+                    <option value="9">Channel 9</option>
+                    <option value="10">Channel 10</option>
+                    <option value="11">Channel 11</option>
+                    <option value="12">Channel 12</option>
+                    <option value="13">Channel 13</option>
+                    <option value="14">Channel 14</option>
+                    <option value="15">Channel 15</option>
+                    <option value="16">Channel 16</option>
                   </select>
+                </div>
+                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                  <div class="form-check ms-1">
+                    <input class="form-check-input" type="checkbox" id="channel-active-checkbox" checked />
+                    <label class="form-check-label small" for="channel-active-checkbox">Active</label>
+                  </div>
                 </div>
                 <div class="col-12 col-md-1 d-none d-md-block"></div>
                 <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
@@ -635,11 +653,11 @@
                     <button class="btn btn-warning btn-sm rounded-pill patch-init-btn" type="button" id="patch-init-btn">Load into patch</button>
                   </div>
                 </div>
-                <div class="col-12 col-md-1 d-none d-md-block"></div>
-                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                <div class="col-12 col-md-1 d-none d-md-block d-none"></div>
+                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center d-none">
                   <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Patch</button>
                 </div>
-                <div class="col-12 col-md-auto mt-2 mt-md-0">
+                <div class="col-12 col-md-auto mt-2 mt-md-0 d-none">
                   <div class="d-flex patch-save-group">
                     <input
                       class="form-control form-control-sm knob-value text-center patch-save-input"
@@ -679,6 +697,40 @@
                 <div class="col-4 col-md-2 headertext">
                   <span class="px-1 small align-middle">Environment Files</span>
                   <div id="treecontainer"></div>
+                  <div class="mt-1 d-flex gap-1">
+                    <button
+                      type="button"
+                      title="Upload file into current environment"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-primary"
+                      onclick="upload()"
+                    ><i class="fas fa-upload"></i></button>
+                    <button
+                      type="button"
+                      title="New file"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-success"
+                      onclick="create_new_environment_file()"
+                    ><i class="fas fa-plus"></i></button>
+                    <button
+                      type="button"
+                      title="Rename file"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-warning"
+                      onclick="open_rename_environment_file_modal()"
+                    ><i class="fas fa-pen"></i></button>
+                    <button
+                      type="button"
+                      title="Delete file"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-danger"
+                      onclick="delete_selected_environment_file()"
+                    ><i class="fas fa-trash"></i></button>
+                  </div>
                 </div>
                 <div class="col-8 col-md-10 headertext">
                   <span class="px-1 small align-middle">Code editor</span>
@@ -691,27 +743,33 @@
                 <p class="text-center grippie" id="editor_grippie">• • •</p>
               </div>
               <div class="row mb-4 mt-1">
-                <div class="col-4 col-md-2">
-                  <button type="button" title="Upload file into current environment" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-primary" onclick="upload()"><i class="fas fa-upload"></i></button>
-                </div>
-                <div class="col-4 col-md-2">
-                  <button type="button" title="Save editor contents to file" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-danger" onclick="save_editor()"><i class="fas fa-floppy-disk"></i></button>
-                  <button type="button" title="Run current environment in AMYboard" data-toggle="tooltip" data-placement="top" class="btn btn-sm btn-success" onclick="run_current_environment()"><i class="fas fa-running"></i></button> 
-                </div>
-                <div class="col-12 col-md-8 mt-2 mt-md-0">
-                  <div class="row g-1">
-                    <div class="col-12 col-md-4">
-                      <input type="text" id="environment_username" class="small form-control" placeholder="Username" />
-                    </div>
-                    <div class="col-4 col-md-2">
-                      <input type='text' title="Environment name for upload" data-toggle="tooltip" data-placement="top" id="editor_filename" class="small form-control" placeholder="Environment Name"/>
-                    </div>
-                    <div class="col-8 col-md-4">
-                      <input type="text" id="environment_description" class="small form-control" placeholder="Description" />
-                    </div>
-                    <div class="col-4 col-md-2">
-                      <button type="button" class="btn btn-sm btn-primary w-100" onclick="upload_current_environment()">Upload</button>
-                    </div>
+                <div class="col-12">
+                  <div class="border rounded bg-light px-3 py-2 d-flex flex-wrap align-items-center gap-2">
+                    <span class="small text-muted me-2">Environment</span>
+                    <button
+                      type="button"
+                      title="Start environment"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-success"
+                      onclick="run_current_environment()"
+                    >Start</button>
+                    <button
+                      type="button"
+                      title="Clear current environment"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-outline-danger"
+                      onclick="clear_current_environment_from_default()"
+                    >Clear</button>
+                    <button
+                      type="button"
+                      title="Upload environment"
+                      data-toggle="tooltip"
+                      data-placement="top"
+                      class="btn btn-sm btn-primary"
+                      onclick="open_upload_environment_modal()"
+                    >Upload</button>
                   </div>
                 </div>
               </div>
@@ -722,10 +780,6 @@
                 <div class="col-6 col-md-4">
                   <div id="cv-knob-grid" class="row g-4"></div>
                 </div>
-              </div>
-              <div class="row mb-4 mt-1">
-                <P>Try some examples! They'll load and run in the AMYboard window above.</p>
-                <div class="card-body" id="tutorials"></div>
               </div>
             </div> <!-- end environment tab -->
             <div class="tab-pane fade" id="upgrade-pane" role="tabpanel" aria-labelledby="upgrade-tab">
@@ -762,14 +816,86 @@
               <p class="mb-0">This browser does not support WebMIDI. Use Chrome, Edge, or Opera to send files to AMYboard.</p>
             </div>
             <div id="send-amyboard-supported" class="d-none">
-              <label for="send-amyboard-midi-out" class="form-label">MIDI Out</label>
+              <p class="mb-0">Connect your AMYboard to the MIDI port below (or choose AMYboard if connected over USB)</p>
               <select id="send-amyboard-midi-out" class="form-select mb-3"></select>
-              <p class="mb-0">Connect your AMYboard to this MIDI port over MIDI or USB, then click Send.</p>
+              <p class="mb-0"></p>
+              <p class="mb-0">We'll send over the current environment (or empty if none), and the state of the current patches per 
+                channel and their MIDI CC assignments. Any existing patches or environments on your AMYboard will be overwritten.
+              </p>
             </div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             <button type="button" class="btn btn-primary" id="send-amyboard-send-btn" onclick="send_to_amyboard_now()">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="renameEnvironmentFileModal" tabindex="-1" aria-labelledby="renameEnvironmentFileModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="renameEnvironmentFileModalLabel">Rename file</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <label for="rename_environment_filename" class="form-label mb-1">New file name</label>
+            <input type="text" id="rename_environment_filename" class="form-control form-control-sm" />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="submit_rename_environment_file()">Rename</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="uploadEnvironmentModal" tabindex="-1" aria-labelledby="uploadEnvironmentModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="uploadEnvironmentModalLabel">Upload environment</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-2">
+              <label for="environment_username" class="form-label mb-1">Username</label>
+              <input type="text" id="environment_username" class="small form-control" maxlength="20" placeholder="Username" />
+              <div class="form-text">1-20 chars: A-Z, a-z, 0-9.</div>
+            </div>
+            <div class="mb-2">
+              <label for="editor_filename" class="form-label mb-1">Environment name</label>
+              <input type="text" id="editor_filename" class="small form-control" maxlength="20" placeholder="Environment Name" />
+              <div class="form-text">1-20 chars: A-Z, a-z, 0-9, -, _.</div>
+            </div>
+            <div>
+              <label for="environment_description" class="form-label mb-1">Description</label>
+              <input type="text" id="environment_description" class="small form-control" maxlength="40" placeholder="Description" />
+              <div class="form-text">1-40 characters.</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" id="upload_current_environment_btn" class="btn btn-sm btn-primary" onclick="upload_current_environment()">Upload</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="confirmEnvironmentActionModal" tabindex="-1" aria-labelledby="confirmEnvironmentActionModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirm_environment_action_title">Confirm</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p id="confirm_environment_action_body" class="mb-0"></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-sm btn-danger" id="confirm_environment_action_btn">Confirm</button>
           </div>
         </div>
       </div>
@@ -869,9 +995,6 @@
         $(this).tooltip('hide')
       });
 
-      // Populate the example pills
-      fill_examples();
-
       // Handle the CV knobs
       const cvGrid = document.getElementById("cv-knob-grid");
       if (cvGrid && typeof init_knobs === "function") {
@@ -892,19 +1015,58 @@
     <script>
       window.addEventListener("DOMContentLoaded", function() {
         const midiChannelSelect = document.getElementById("midi-channel-select");
+        const channelActiveCheckbox = document.getElementById("channel-active-checkbox");
+        const patchSaveInput = document.getElementById("patch-save-input");
+        function patchForChannel(channel) {
+          return Number(channel) + 1023;
+        }
+        function syncPatchInputForChannel() {
+          if (patchSaveInput) {
+            patchSaveInput.value = String(patchForChannel(window.current_synth || 1));
+          }
+        }
+        function syncActiveCheckboxForChannel() {
+          if (!channelActiveCheckbox) {
+            return;
+          }
+          const active = Array.isArray(window.active_channels) ? !!window.active_channels[window.current_synth || 1] : (window.current_synth || 1) === 1;
+          channelActiveCheckbox.checked = active;
+        }
+
         if (midiChannelSelect) {
           midiChannelSelect.value = String(window.current_synth || 1);
           midiChannelSelect.addEventListener("change", function() {
             const parsed = Number(midiChannelSelect.value);
             if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 16) {
               window.current_synth = parsed;
-              if (typeof window.refresh_knobs_for_channel === "function") {
-                window.refresh_knobs_for_channel();
+              syncActiveCheckboxForChannel();
+              syncPatchInputForChannel();
+              if (channelActiveCheckbox && channelActiveCheckbox.checked) {
+                if (typeof window.refresh_knobs_for_active_channel === "function") {
+                  window.refresh_knobs_for_active_channel({ sendControlMappings: false });
+                }
+              } else if (typeof window.write_current_patches_file_from_knobs === "function") {
+                window.write_current_patches_file_from_knobs();
               }
               const patchSelect = document.getElementById("patch-select");
               if (patchSelect) {
                 patchSelect.selectedIndex = 0;
               }
+            }
+          });
+        }
+        if (channelActiveCheckbox) {
+          channelActiveCheckbox.addEventListener("change", function() {
+            if (typeof window.set_channel_active === "function") {
+              window.set_channel_active(window.current_synth || 1, channelActiveCheckbox.checked);
+            }
+            syncPatchInputForChannel();
+            if (channelActiveCheckbox.checked) {
+              if (typeof window.refresh_knobs_for_active_channel === "function") {
+                window.refresh_knobs_for_active_channel({ sendControlMappings: true });
+              }
+            } else if (typeof window.write_current_patches_file_from_knobs === "function") {
+              window.write_current_patches_file_from_knobs();
             }
           });
         }
@@ -919,34 +1081,40 @@
           });
         }
         const patchSaveButton = document.getElementById("patch-save-btn");
-        const patchSaveInput = document.getElementById("patch-save-input");
         if (patchSaveButton && patchSaveInput) {
           function clampPatchSaveValue() {
-            const value = Number.parseInt(patchSaveInput.value, 10);
-            if (Number.isNaN(value) || value < 1024 || value > 1055) {
-              patchSaveInput.value = "1024";
-            }
+            patchSaveInput.value = String(patchForChannel(window.current_synth || 1));
           }
           patchSaveButton.addEventListener("click", function() {
             clampPatchSaveValue();
-            const value = Number.parseInt(patchSaveInput.value, 10);
-            if (!Number.isNaN(value) && typeof window.save_to_patch === "function") {
-              window.save_to_patch(value);
+            if (typeof window.save_to_patch === "function") {
+              window.save_to_patch(patchForChannel(window.current_synth || 1));
             }
           });
           patchSaveInput.addEventListener("change", clampPatchSaveValue);
           patchSaveInput.addEventListener("blur", clampPatchSaveValue);
+          clampPatchSaveValue();
         }
         const patchLoadButton = document.getElementById("patch-load-btn");
         if (patchLoadButton && patchSaveInput) {
           patchLoadButton.addEventListener("click", function() {
             clampPatchSaveValue();
-            const value = Number.parseInt(patchSaveInput.value, 10);
-            if (!Number.isNaN(value) && typeof window.load_from_patch === "function") {
-              window.load_from_patch(value);
+            if (typeof window.load_from_patch === "function") {
+              window.load_from_patch(patchForChannel(window.current_synth || 1));
             }
           });
         }
+        if (typeof window.set_channel_active === "function") {
+          window.set_channel_active(1, true);
+          for (let ch = 2; ch <= 16; ch += 1) {
+            window.set_channel_active(ch, false);
+          }
+        }
+        if (Array.isArray(window.channel_control_mapping_sent)) {
+          window.channel_control_mapping_sent[1] = true;
+        }
+        syncActiveCheckboxForChannel();
+        syncPatchInputForChannel();
         const keyboard = document.getElementById("amy-keyboard");
         if (keyboard) {
           const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];

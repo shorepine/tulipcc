@@ -8,6 +8,12 @@ To initialize and update submodules for this repo, use:
 
 Do not use ad-hoc/manual recursive submodule commands when this script is available.
 
+## Micropython Submodule Status
+
+The `micropython` submodule is expected to appear dirty after bootstrap/build steps (for example, local warning-flag patching done by `tulip/shared/grab_submodules.sh`).
+
+Treat this as expected local state and ignore `micropython` dirtiness in `git status` unless you are intentionally working on `micropython`.
+
 ## AMY Submodule Policy
 
 We constantly update the `amy` submodule to work with `tulipcc`.

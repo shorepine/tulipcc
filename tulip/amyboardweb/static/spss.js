@@ -34,14 +34,49 @@ var amyboard_world_files = [];
 var amyboard_world_loading_index = null;
 var selected_environment_file = null;
 var pending_environment_editor_load = false;
+var environment_editor_dirty = false;
+var environment_autosave_inflight = false;
 const AMYBOARD_MODAL_MESSAGES_URL = "https://bwhitman--tulipworldapi-messages.modal.run";
 const AMYBOARD_MODAL_URLGET_URL = "https://bwhitman--tulipworldapi-urlget.modal.run";
+const CURRENT_BASE_DIR = "/amyboard/user/current";
 const CURRENT_ENV_DIR = "/amyboard/user/current/env";
-const CURRENT_PATCH_DIR = "/amyboard/user/current/patch";
+const CURRENT_PATCH_DIR = "/amyboard/user/current/patches";
 const CURRENT_PATCH_FILE = CURRENT_PATCH_DIR + "/patches.txt";
+const DEFAULT_BASE_DIR = "/amyboard/user/default";
+const DEFAULT_ENV_DIR = "/amyboard/user/default/env";
+const DEFAULT_PATCH_DIR = "/amyboard/user/default/patches";
+const DEFAULT_PATCH_FILE = DEFAULT_PATCH_DIR + "/patches.txt";
 const DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n";
 const DEFAULT_PATCH_SOURCE = "# patches.txt, ,AMY messages to load on boot\n";
 window.current_synth = 1;
+window.active_channels = Array.isArray(window.active_channels) ? window.active_channels : new Array(17).fill(false);
+window.active_channels[1] = true;
+window.channel_control_mapping_sent = Array.isArray(window.channel_control_mapping_sent) ? window.channel_control_mapping_sent : new Array(17).fill(false);
+window.suppress_knob_cc_send = false;
+
+function get_patch_number_for_channel(channel) {
+  var ch = Number(channel);
+  if (!Number.isInteger(ch) || ch < 1 || ch > 16) {
+    ch = Number(window.current_synth || 1);
+  }
+  return ch + 1023;
+}
+
+function is_channel_active(channel) {
+  var ch = Number(channel);
+  if (!Number.isInteger(ch) || ch < 1 || ch > 16) {
+    return false;
+  }
+  return !!(window.active_channels && window.active_channels[ch]);
+}
+
+window.set_channel_active = function(channel, active) {
+  var ch = Number(channel);
+  if (!Number.isInteger(ch) || ch < 1 || ch > 16) {
+    return;
+  }
+  window.active_channels[ch] = !!active;
+};
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -281,16 +316,14 @@ function onKnobCcChange(knob) {
   (also %i for channel/synth number) and maybe %V to force an integer, 
   for things like selecting wave, and maybe more.
   */
-  log = 0;
-  if(knob.knob_type=='log') {
-    log = 1;
+  var m = build_knob_cc_message(window.current_synth, knob);
+  if (!m) {
+    return;
   }
-  // if knob.offset doesn't exist, make it 0
-  if(typeof knob.offset === "undefined") {
-    knob.offset = 0;
-  }
-  var m = "i"+window.current_synth+"ic"+knob.cc+","+log+","+knob.min_value+","+knob.max_value+","+knob.offset+","+knob.change_code;
   //console.log("Knob CC updated: " + knob.section + ": " + knob.display_name + " to " + knob.cc + ". Sending: " + m);
+  if (window.suppress_knob_cc_send) {
+    return;
+  }
   if (typeof amy_add_message === "function") {
     amy_add_log_message(m);
   }
@@ -366,44 +399,145 @@ function move_knob(channel, cc, value) {
 }
 
 function save_to_patch(patchNumber) {
-  // reset patch
-  amy_add_log_message("K"+patchNumber+"S524288");
-  if (typeof window.amyboard_patch_string !== "string") {
-    return;
+  const channel = Number(window.current_synth || 1);
+  const patch = get_patch_number_for_channel(channel);
+  const messages = build_patch_save_messages(channel, patch);
+  for (const message of messages) {
+    amy_add_log_message(message);
   }
-  const chunks = window.amyboard_patch_string.split("Z");
-  for (const chunk of chunks) {
-    if (!chunk) {
-      continue;
-    }
-    amy_add_log_message("K" + patchNumber + chunk);
-  }
-
-  const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
-  if (!Array.isArray(knobList) || typeof window.make_change_code !== "function") {
-    return;
-  }
-  for (const knob of knobList) {
-    if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
-      continue;
-    }
-    const value = Number(knob.default_value);
-    if (!Number.isFinite(value)) {
-      continue;
-    }
-    const payload = window.make_change_code(window.current_synth || 1, value, knob, true);
-    if (!payload) {
-      continue;
-    }
-    amy_add_log_message("K" + patchNumber + payload);
-  }
-  amy_add_log_message("i" + window.current_synth + "K" + patchNumber);
 }
 
 function load_from_patch(patchNumber) {
   // Hook for loading a saved memory patch number.
-  set_knobs_from_patch_number(patchNumber);
+  const channel = Number(window.current_synth || 1);
+  set_knobs_from_patch_number(get_patch_number_for_channel(channel));
 }
+
+function build_patch_save_messages(channel, patchNumber) {
+  var synthChannel = Number(channel);
+  if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
+    synthChannel = Number(window.current_synth || 1);
+  }
+  var patch = Number(patchNumber);
+  if (!Number.isFinite(patch)) {
+    patch = get_patch_number_for_channel(synthChannel);
+  }
+  patch = Math.max(0, Math.floor(patch));
+
+  var messages = [];
+  messages.push("K" + patch + "S524288");
+
+  if (typeof window.amyboard_patch_string === "string") {
+    var chunks = window.amyboard_patch_string.split("Z");
+    for (const chunk of chunks) {
+      if (!chunk) {
+        continue;
+      }
+      messages.push("K" + patch + chunk);
+    }
+  }
+
+  const knobList = get_knobs_for_channel(synthChannel);
+  if (Array.isArray(knobList) && typeof window.make_change_code === "function") {
+    for (const knob of knobList) {
+      if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
+        continue;
+      }
+      const value = Number(knob.default_value);
+      if (!Number.isFinite(value)) {
+        continue;
+      }
+      const payload = window.make_change_code(synthChannel, value, knob, true);
+      if (!payload) {
+        continue;
+      }
+      messages.push("K" + patch + payload);
+    }
+  }
+
+  messages.push("i" + synthChannel + "K" + patch);
+  return messages;
+}
+
+function get_knobs_for_channel(channel) {
+  var ch = Number(channel);
+  if (Array.isArray(window.amy_knobs) && Array.isArray(window.amy_knobs[ch])) {
+    return window.amy_knobs[ch];
+  }
+  return window.get_current_knobs ? window.get_current_knobs() : [];
+}
+
+function build_knob_cc_message(channel, knob) {
+  if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half"
+    || knob.knob_type === "selection" || knob.knob_type === "pushbutton") {
+    return "";
+  }
+  var synthChannel = Number(channel);
+  if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
+    synthChannel = Number(window.current_synth || 1);
+  }
+  var log = knob.knob_type === "log" ? 1 : 0;
+  var offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
+  return "i" + synthChannel + "ic" + knob.cc + "," + log + "," + knob.min_value + "," + knob.max_value + "," + offset + "," + knob.change_code;
+}
+
+function build_channel_control_messages(channel) {
+  const knobs = get_knobs_for_channel(channel);
+  const messages = [];
+  if (!Array.isArray(knobs)) {
+    return messages;
+  }
+  for (const knob of knobs) {
+    const message = build_knob_cc_message(channel, knob);
+    if (message) {
+      messages.push(message);
+    }
+  }
+  return messages;
+}
+
+async function write_current_patches_file_from_knobs() {
+  ensure_current_environment_layout(true);
+  var allMessages = [];
+  for (var channel = 1; channel <= 16; channel++) {
+    if (!is_channel_active(channel)) {
+      continue;
+    }
+    var patchNumber = get_patch_number_for_channel(channel);
+    var messages = build_patch_save_messages(channel, patchNumber);
+    for (const message of messages) {
+      allMessages.push(message);
+    }
+    var controlMessages = build_channel_control_messages(channel);
+    for (const message of controlMessages) {
+      allMessages.push(message);
+    }
+  }
+  if (!allMessages.length) {
+    allMessages.push("# no active channels");
+  }
+  mp.FS.writeFile(CURRENT_PATCH_FILE, allMessages.join("\n") + "\n");
+  await sync_persistent_fs();
+}
+window.write_current_patches_file_from_knobs = write_current_patches_file_from_knobs;
+
+window.refresh_knobs_for_active_channel = async function(options) {
+  var opts = options || {};
+  var channel = Number(window.current_synth || 1);
+  var active = is_channel_active(channel);
+  var sendControlMappings = !!opts.sendControlMappings && active && !window.channel_control_mapping_sent[channel];
+
+  if (typeof window.refresh_knobs_for_channel === "function") {
+    var previousSuppress = !!window.suppress_knob_cc_send;
+    window.suppress_knob_cc_send = !sendControlMappings;
+    window.refresh_knobs_for_channel();
+    window.suppress_knob_cc_send = previousSuppress;
+  }
+  if (sendControlMappings) {
+    window.channel_control_mapping_sent[channel] = true;
+  }
+  await write_current_patches_file_from_knobs();
+};
 
 
 async function amy_external_midi_input_js_hook(bytes, len, sysex) {
@@ -578,21 +712,63 @@ async function show_alert(text) {
 }
 
 function ensure_current_environment_layout(seedDefaults) {
-    try { mp.FS.mkdirTree("/amyboard/user/current"); } catch (e) {}
+    try { mp.FS.mkdirTree(CURRENT_BASE_DIR); } catch (e) {}
     try { mp.FS.mkdirTree(CURRENT_ENV_DIR); } catch (e) {}
     try { mp.FS.mkdirTree(CURRENT_PATCH_DIR); } catch (e) {}
+    try { mp.FS.mkdirTree(DEFAULT_BASE_DIR); } catch (e) {}
+    try { mp.FS.mkdirTree(DEFAULT_ENV_DIR); } catch (e) {}
+    try { mp.FS.mkdirTree(DEFAULT_PATCH_DIR); } catch (e) {}
     if (seedDefaults) {
+        try {
+            mp.FS.readFile(DEFAULT_ENV_DIR + "/env.py", { encoding: "utf8" });
+        } catch (e) {
+            mp.FS.writeFile(DEFAULT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
+        }
+        try {
+            mp.FS.readFile(DEFAULT_PATCH_FILE, { encoding: "utf8" });
+        } catch (e) {
+            mp.FS.writeFile(DEFAULT_PATCH_FILE, DEFAULT_PATCH_SOURCE);
+        }
         try {
             mp.FS.readFile(CURRENT_ENV_DIR + "/env.py", { encoding: "utf8" });
         } catch (e) {
-            mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
+            mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", mp.FS.readFile(DEFAULT_ENV_DIR + "/env.py", { encoding: "utf8" }));
         }
         try {
             mp.FS.readFile(CURRENT_PATCH_FILE, { encoding: "utf8" });
         } catch (e) {
-            mp.FS.writeFile(CURRENT_PATCH_FILE, DEFAULT_PATCH_SOURCE);
+            var migrated = false;
+            try {
+                mp.FS.writeFile(CURRENT_PATCH_FILE, mp.FS.readFile("/amyboard/user/current/patch/patches.txt", { encoding: "utf8" }));
+                migrated = true;
+            } catch (legacyErr) {}
+            if (!migrated) {
+                mp.FS.writeFile(CURRENT_PATCH_FILE, mp.FS.readFile(DEFAULT_PATCH_FILE, { encoding: "utf8" }));
+            }
         }
     }
+}
+
+async function sync_persistent_fs() {
+    var fs = null;
+    if (mp && mp.FS && typeof mp.FS.syncfs === "function") {
+        fs = mp.FS;
+    } else if (typeof FS !== "undefined" && FS && typeof FS.syncfs === "function") {
+        fs = FS;
+    }
+    if (!fs) {
+        return false;
+    }
+    return await new Promise(function(resolve) {
+        fs.syncfs(false, function(err) {
+            if (err) {
+                console.warn("FS sync failed", err);
+                resolve(false);
+                return;
+            }
+            resolve(true);
+        });
+    });
 }
 
 function list_environment_files() {
@@ -642,6 +818,9 @@ function render_environment_file_list() {
 
 async function select_environment_file(filename, loadEditor) {
     if (!filename) return;
+    if (loadEditor && selected_environment_file && filename !== selected_environment_file) {
+        await save_editor_if_dirty();
+    }
     selected_environment_file = filename;
     render_environment_file_list();
     if (loadEditor) {
@@ -671,14 +850,181 @@ async function upload() {
         if (!file) return;
         var reader = new FileReader();
         reader.readAsArrayBuffer(file);
-        reader.onload = readerEvent => {
+        reader.onload = async readerEvent => {
             var content = readerEvent.target.result;
             mp.FS.writeFile(CURRENT_ENV_DIR + "/" + file.name, new Uint8Array(content), { encoding: "binary" });
             selected_environment_file = file.name;
-            fill_tree();
+            await sync_persistent_fs();
+            await fill_tree();
         };
     };
     input.click();
+}
+
+function next_untitled_environment_filename() {
+    var files = list_environment_files();
+    if (files.indexOf("untitled.py") === -1) {
+        return "untitled.py";
+    }
+    var index = 2;
+    while (files.indexOf("untitled" + index + ".py") !== -1) {
+        index += 1;
+    }
+    return "untitled" + index + ".py";
+}
+
+async function create_new_environment_file() {
+    ensure_current_environment_layout(false);
+    var filename = next_untitled_environment_filename();
+    try {
+        mp.FS.writeFile(CURRENT_ENV_DIR + "/" + filename, "");
+        await sync_persistent_fs();
+        selected_environment_file = filename;
+        await fill_tree();
+        await load_editor();
+    } catch (e) {
+        show_alert("Could not create new file.");
+    }
+}
+
+function environment_file_exists(filename) {
+    if (!filename) return false;
+    try {
+        var mode = mp.FS.lookupPath(CURRENT_ENV_DIR + "/" + filename).node.mode;
+        return mp.FS.isFile(mode);
+    } catch (e) {
+        return false;
+    }
+}
+
+function open_rename_environment_file_modal() {
+    if (!selected_environment_file) {
+        show_alert("Select an environment file first.");
+        return;
+    }
+    var input = document.getElementById("rename_environment_filename");
+    if (!input) return;
+    input.value = selected_environment_file;
+    input.focus();
+    input.select();
+    var modalEl = document.getElementById("renameEnvironmentFileModal");
+    if (!modalEl || !window.bootstrap) return;
+    var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+}
+
+async function confirm_environment_action(title, message, confirmLabel) {
+    var modalEl = document.getElementById("confirmEnvironmentActionModal");
+    var titleEl = document.getElementById("confirm_environment_action_title");
+    var bodyEl = document.getElementById("confirm_environment_action_body");
+    var confirmBtn = document.getElementById("confirm_environment_action_btn");
+    if (!modalEl || !titleEl || !bodyEl || !confirmBtn || !window.bootstrap) {
+        return window.confirm(message || title || "Are you sure?");
+    }
+
+    titleEl.textContent = title || "Confirm";
+    bodyEl.textContent = message || "";
+    confirmBtn.textContent = confirmLabel || "Confirm";
+
+    return await new Promise(function(resolve) {
+        var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        var accepted = false;
+
+        function onConfirm() {
+            accepted = true;
+            modal.hide();
+        }
+
+        function onHidden() {
+            confirmBtn.removeEventListener("click", onConfirm);
+            resolve(accepted);
+        }
+
+        confirmBtn.addEventListener("click", onConfirm);
+        modalEl.addEventListener("hidden.bs.modal", onHidden, { once: true });
+        modal.show();
+    });
+}
+
+async function submit_rename_environment_file() {
+    if (!selected_environment_file) {
+        show_alert("Select an environment file first.");
+        return;
+    }
+    var input = document.getElementById("rename_environment_filename");
+    if (!input) return;
+    var newFilename = input.value.trim();
+    if (!newFilename) {
+        show_alert("Enter a file name.");
+        return;
+    }
+    if (newFilename === selected_environment_file) {
+        var unchangedModal = document.getElementById("renameEnvironmentFileModal");
+        if (unchangedModal && window.bootstrap) {
+            window.bootstrap.Modal.getOrCreateInstance(unchangedModal).hide();
+        }
+        return;
+    }
+    if (newFilename.startsWith("/") || newFilename.includes("..")) {
+        show_alert("Invalid file name.");
+        return;
+    }
+    if (environment_file_exists(newFilename)) {
+        show_alert("A file with that name already exists.");
+        return;
+    }
+
+    var oldPath = CURRENT_ENV_DIR + "/" + selected_environment_file;
+    var newPath = CURRENT_ENV_DIR + "/" + newFilename;
+    var slash = newFilename.lastIndexOf("/");
+    if (slash > 0) {
+        try { mp.FS.mkdirTree(CURRENT_ENV_DIR + "/" + newFilename.substring(0, slash)); } catch (e) {}
+    }
+
+    try {
+        mp.FS.rename(oldPath, newPath);
+        await sync_persistent_fs();
+        selected_environment_file = newFilename;
+        await fill_tree();
+        await load_editor();
+        var modalEl = document.getElementById("renameEnvironmentFileModal");
+        if (modalEl && window.bootstrap) {
+            window.bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        }
+    } catch (e) {
+        show_alert("Could not rename that file.");
+    }
+}
+
+async function delete_selected_environment_file() {
+    if (!selected_environment_file) {
+        show_alert("Select an environment file first.");
+        return;
+    }
+    var confirmed = await confirm_environment_action(
+        "Delete file",
+        "Delete " + selected_environment_file + "?",
+        "Delete"
+    );
+    if (!confirmed) {
+        return;
+    }
+    try {
+        mp.FS.unlink(CURRENT_ENV_DIR + "/" + selected_environment_file);
+        await sync_persistent_fs();
+        selected_environment_file = null;
+        await fill_tree();
+        var files = list_environment_files();
+        if (files.length) {
+            await select_environment_file(files[0], true);
+        } else if (editor) {
+            editor.setValue("");
+            setTimeout(function () { editor.save(); }, 100);
+            setTimeout(function () { editor.refresh(); }, 250);
+        }
+    } catch (e) {
+        show_alert("Could not delete that file.");
+    }
 }
 
 async function save_editor() {
@@ -689,8 +1035,23 @@ async function save_editor() {
         try { mp.FS.mkdirTree(CURRENT_ENV_DIR + "/" + targetFilename.substring(0, slash)); } catch (e) {}
     }
     mp.FS.writeFile(CURRENT_ENV_DIR + "/" + targetFilename, editor.getValue());
+    await sync_persistent_fs();
     selected_environment_file = targetFilename;
+    environment_editor_dirty = false;
     await fill_tree();
+}
+
+async function save_editor_if_dirty() {
+    if (!editor || !environment_editor_dirty || environment_autosave_inflight) {
+        return false;
+    }
+    environment_autosave_inflight = true;
+    try {
+        await save_editor();
+        return true;
+    } finally {
+        environment_autosave_inflight = false;
+    }
 }
 
 async function load_editor() {
@@ -705,6 +1066,7 @@ async function load_editor() {
     var fullPath = CURRENT_ENV_DIR + "/" + selected_environment_file;
     try {
         editor.setValue(mp.FS.readFile(fullPath, { encoding: "utf8" }));
+        environment_editor_dirty = false;
         setTimeout(function () { editor.save(); }, 100);
         setTimeout(function () { editor.refresh(); }, 250);
         pending_environment_editor_load = false;
@@ -726,10 +1088,15 @@ async function load_first_environment_file_into_editor() {
         return;
     }
     var target = null;
-    for (var i = 0; i < files.length; i++) {
-        if (files[i].toLowerCase().endsWith(".py")) {
-            target = files[i];
-            break;
+    if (files.indexOf("env.py") !== -1) {
+        target = "env.py";
+    }
+    if (!target) {
+        for (var i = 0; i < files.length; i++) {
+            if (files[i].toLowerCase().endsWith(".py")) {
+                target = files[i];
+                break;
+            }
         }
     }
     if (!target) {
@@ -885,6 +1252,25 @@ function remove_fs_path(path) {
     } catch (e) {}
 }
 
+function copy_fs_path(sourcePath, destinationPath) {
+    try {
+        var mode = mp.FS.lookupPath(sourcePath).node.mode;
+        if (mp.FS.isDir(mode)) {
+            try { mp.FS.mkdirTree(destinationPath); } catch (e) {}
+            for (const name of mp.FS.readdir(sourcePath)) {
+                if (name === "." || name === "..") continue;
+                copy_fs_path(sourcePath + "/" + name, destinationPath + "/" + name);
+            }
+        } else {
+            var slash = destinationPath.lastIndexOf("/");
+            if (slash > 0) {
+                try { mp.FS.mkdirTree(destinationPath.substring(0, slash)); } catch (e) {}
+            }
+            mp.FS.writeFile(destinationPath, mp.FS.readFile(sourcePath, { encoding: "binary" }), { encoding: "binary" });
+        }
+    } catch (e) {}
+}
+
 function clear_current_environment_dir() {
     ensure_current_environment_layout(false);
     for (const name of mp.FS.readdir(CURRENT_ENV_DIR)) {
@@ -893,7 +1279,43 @@ function clear_current_environment_dir() {
     }
 }
 
+async function clear_current_environment_from_default() {
+    ensure_current_environment_layout(true);
+    var confirmed = await confirm_environment_action(
+        "Clear environment",
+        "Clear current environment and restore from defaults?",
+        "Clear"
+    );
+    if (!confirmed) {
+        return;
+    }
+    try {
+        remove_fs_path(CURRENT_ENV_DIR);
+        remove_fs_path(CURRENT_PATCH_DIR);
+        mp.FS.mkdirTree(CURRENT_ENV_DIR);
+        mp.FS.mkdirTree(CURRENT_PATCH_DIR);
+        copy_fs_path(DEFAULT_ENV_DIR, CURRENT_ENV_DIR);
+        copy_fs_path(DEFAULT_PATCH_DIR, CURRENT_PATCH_DIR);
+        selected_environment_file = null;
+        await sync_persistent_fs();
+        await fill_tree();
+        if (list_environment_files().indexOf("env.py") !== -1) {
+            await select_environment_file("env.py", true);
+        } else {
+            var files = list_environment_files();
+            if (files.length) {
+                await select_environment_file(files[0], true);
+            } else if (editor) {
+                editor.setValue("");
+            }
+        }
+    } catch (e) {
+        show_alert("Could not clear environment.");
+    }
+}
+
 async function run_current_environment() {
+    await save_editor_if_dirty();
     await runCodeBlock(
         "from upysh import *\n" +
         "cd('/amyboard/user/current/env')\n" +
@@ -1044,9 +1466,29 @@ async function refresh_amyboard_world_files() {
         if (!Array.isArray(data)) {
             throw new Error("Unexpected response");
         }
-        amyboard_world_files = data.filter(function(item) {
-            return item && is_world_tar_filename(item.filename);
-        });
+        var maxToShow = 10;
+        var byEnvironment = new Map();
+        for (var i = 0; i < data.length; i++) {
+            var item = data[i];
+            if (!item || !is_world_tar_filename(item.filename)) {
+                continue;
+            }
+            var normalizedFilename = normalize_world_filename(item.filename);
+            var envName = get_world_display_name(normalizedFilename).toLowerCase();
+            var username = String(item.username || "unknown").toLowerCase();
+            var dedupeKey = username + "\n" + envName;
+            var existing = byEnvironment.get(dedupeKey);
+            var itemTime = Number(item.time || 0);
+            var existingTime = existing ? Number(existing.time || 0) : -1;
+            if (!existing || itemTime >= existingTime) {
+                byEnvironment.set(dedupeKey, item);
+            }
+        }
+        amyboard_world_files = Array.from(byEnvironment.values())
+            .sort(function(a, b) {
+                return Number(b.time || 0) - Number(a.time || 0);
+            })
+            .slice(0, maxToShow);
         render_amyboard_world_file_list();
     } catch (e) {
         amyboard_world_files = [];
@@ -1153,6 +1595,15 @@ async function upload_current_environment() {
         return;
     }
 
+    var uploadButton = document.getElementById("upload_current_environment_btn");
+    if (uploadButton && uploadButton.disabled) {
+        return;
+    }
+    if (uploadButton) {
+        uploadButton.disabled = true;
+        uploadButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Uploading...';
+    }
+
     var tarBytes = build_environment_tar_bytes(environmentName);
     var tarFilename = environmentName + ".tar";
     var file = new File([tarBytes], tarFilename, { type: "application/x-tar" });
@@ -1170,8 +1621,33 @@ async function upload_current_environment() {
             throw new Error("HTTP " + response.status.toString());
         }
         await refresh_amyboard_world_files();
+        var uploadModalEl = document.getElementById("uploadEnvironmentModal");
+        if (uploadModalEl && window.bootstrap) {
+            window.bootstrap.Modal.getOrCreateInstance(uploadModalEl).hide();
+        }
     } catch (e) {
         show_alert("Upload failed.");
+    } finally {
+        if (uploadButton) {
+            uploadButton.disabled = false;
+            uploadButton.textContent = "Upload";
+        }
+    }
+}
+
+function open_upload_environment_modal() {
+    var modalEl = document.getElementById("uploadEnvironmentModal");
+    if (!modalEl || !window.bootstrap) {
+        return;
+    }
+    var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+    var usernameInput = document.getElementById("environment_username");
+    if (usernameInput) {
+        setTimeout(function() {
+            usernameInput.focus();
+            usernameInput.select();
+        }, 150);
     }
 }
 
@@ -1204,7 +1680,12 @@ function populate_send_to_amyboard_modal() {
     });
 }
 
-function open_send_to_amyboard_modal() {
+async function open_send_to_amyboard_modal() {
+    try {
+        await write_current_patches_file_from_knobs();
+    } catch (e) {
+        show_alert("Could not update patches.txt");
+    }
     populate_send_to_amyboard_modal();
     var modalEl = document.getElementById("sendToAmyboardModal");
     if (!modalEl) return;
@@ -1231,37 +1712,6 @@ async function hide_editor() {
     //document.getElementById('canvas').classList.add("canvas-solo");
     editor_shown = false;
     //resize_tulip_grippie();
-}
-
-
-async function run_snippet(i) {
-    var code = example_snippets[i].c.trimStart();
-    if(!editor_shown) {
-        var editorElement = document.getElementById('collapseEditor');
-        var bsCollapse = new bootstrap.Collapse(editorElement, { toggle: true });
-        show_editor();
-    }
-    editor.setValue(code);
-    setTimeout(function () { editor.save() }, 100);
-    setTimeout(function () { editor.refresh() }, 250);
-    setTimeout(function () { window.scrollTo(0,0) }, 300);
-    runEditorBlock();
-
-}
-
-async function fill_examples() {
-    colors = {
-        'music':'bg-success',
-        'network':'bg-warning text-dark',
-        'games':'bg-primary',
-        'other':'bg-danger'
-    } // 'bg-info text-dark', 'bg-secondary', 'bg-dark'
-    h = '';
-    var i = 0;
-    for (i=0;i<example_snippets.length;i++) { 
-        h += ' <a href="#" onclick="run_snippet('+i.toString()+');"><span class="badge rounded-pill ' + colors[example_snippets[i].t] + '">'+example_snippets[i].d+'</span></a>';
-    } 
-    document.getElementById('tutorials').innerHTML = h;
 }
 
 async function toggle_audioin() {
@@ -1326,8 +1776,6 @@ async function start_amyboard() {
   await sleep_ms(400);
   await mp.runFrozenAsync('/amyboard/user/boot.py');
   ensure_current_environment_layout(true);
-  clear_current_environment_dir();
-  mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
   await fill_tree();
   if (list_environment_files().indexOf("env.py") !== -1) {
       await select_environment_file("env.py", true);

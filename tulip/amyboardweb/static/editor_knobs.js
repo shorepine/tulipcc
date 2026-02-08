@@ -270,8 +270,10 @@ function init_knobs(knobConfigs, gridId, onChange) {
           }
           const rangeChanged = prevMin !== editor.current.min_value || prevMax !== editor.current.max_value;
           const typeChanged = prevType !== editor.current.knob_type;
-          if ((rangeChanged || typeChanged) && typeof window.refresh_knobs_for_channel === "function") {
-            window.refresh_knobs_for_channel();
+          if (rangeChanged || typeChanged) {
+            if (typeof window.refresh_knobs_for_active_channel === "function") {
+              window.refresh_knobs_for_active_channel();
+            }
           }
           return true;
         }
