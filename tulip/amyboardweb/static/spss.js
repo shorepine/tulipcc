@@ -610,9 +610,6 @@ async function runCodeBlock(py) {
   // If audio hasn't yet started, the on-first-click audio starter is still running, so wait 1s so we don't glitch.
   if(!audio_started) await sleep_ms(1000);
 
-  // Reset AMY's timebase every run here, so people can use absolute sequence / timestamps in AMY code.
-  amy_reset_sysclock();
-  await sleep_ms(50);
   try {
     mp.runPythonAsync(py);
   } catch (e) {
