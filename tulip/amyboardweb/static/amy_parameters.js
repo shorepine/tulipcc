@@ -581,8 +581,11 @@ function set_knobs_from_patch_number(patch_number) {
   let filterEnv = null;
   let filterLfo = null
   let filterKbd = null;
+  let filter_eg = 0;  // Juno: filter env is eg0; updated to 1 for amyboardsynth.
+  let filter_osc = 0;  // Default, but can be updated: which osc defines filter params.
   let resonanceValue = null;
   let adsr = null;
+  let f_adsr = null;
   let lfoFreq = null;
   let lfoDelay = null;
   let lfoOsc = 0;
@@ -592,6 +595,7 @@ function set_knobs_from_patch_number(patch_number) {
   let osc_wave = [null, null, null, null];
   let osc_duty = [null, null, null, null];
   let osc_gain = [null, null, null, null];
+  let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
   // Which Juno oscs are used for oscA and B
   let oscAB_osc = [-1, -1];
   let oscAB_gain = [0, 0];
@@ -607,10 +611,15 @@ function set_knobs_from_patch_number(patch_number) {
   
   for (const event of events) {
     if (event.filter_freq_coefs.some((value) => Number.isFinite(value))) {
+      filter_osc = event.osc;
       filterFreq = event.filter_freq_coefs[0];
       filterKbd = event.filter_freq_coefs[1];  // COEF_NOTE == 1
       filterEnv = event.filter_freq_coefs[3];  // COEF_EG0 == 3
-      filterLfo = event.filter_freq_coefs[5];  // COEF_MOD == 5
+	filterLfo = event.filter_freq_coefs[5];  // COEF_MOD == 5
+	if (event.filter_freq_coefs[4] > 0) { // COEG_EG1 - used for filter on amyboardsynth
+	  filterEnv = event.filter_freq_coefs[4];
+	  filter_eg = 1;
+	}
     }
     if (Number.isFinite(event.resonance)) {
       resonanceValue = event.resonance;
@@ -621,7 +630,7 @@ function set_knobs_from_patch_number(patch_number) {
     if (Number.isFinite(event.chorus_level)) { chorus[0] = event.chorus_level; }
     if (Number.isFinite(event.chorus_lfo_freq)) { chorus[1] = event.chorus_lfo_freq; }
     if (Number.isFinite(event.chorus_depth)) { chorus[2] = event.chorus_depth; }
-    if (event.osc == 4) {
+    if (event.osc == mod_source_osc) {
       // LFO
       if (Number.isFinite(event.freq_coefs[0])) {
         lfoFreq = event.freq_coefs[0];
@@ -629,8 +638,11 @@ function set_knobs_from_patch_number(patch_number) {
       if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
         lfoDelay = event.eg0_times[0];
       }
-    } else if (event.osc >= 0 && event.osc < 4) {
+    } else if (event.osc >= 0) {
       // Non-LFO osc, don't assume what order they come in.
+      if (Number.isFinite(event.mod_source)) {
+        mod_source_osc = event.mod_source;
+      }
       if (!adsr && event.eg0_times && event.eg0_values) {
         if (bpTimeIsSet(event.eg0_times[0]) || bpTimeIsSet(event.eg0_times[1]) ||
             Number.isFinite(event.eg0_values[1]) || bpTimeIsSet(event.eg0_times[2])) {
@@ -639,6 +651,17 @@ function set_knobs_from_patch_number(patch_number) {
             bpTimeIsSet(event.eg0_times[1]) ? event.eg0_times[1] : 0,
             Number.isFinite(event.eg0_values[1]) ? event.eg0_values[1] : 0,
             bpTimeIsSet(event.eg0_times[2]) ? event.eg0_times[2] : 0,
+          ];
+        }
+      }
+      if (!f_adsr && filter_eg == 1 && event.eg1_times && event.eg1_values) {
+        if (bpTimeIsSet(event.eg1_times[0]) || bpTimeIsSet(event.eg1_times[1]) ||
+            Number.isFinite(event.eg1_values[1]) || bpTimeIsSet(event.eg1_times[2])) {
+          f_adsr = [
+            bpTimeIsSet(event.eg1_times[0]) ? event.eg1_times[0] : 0,
+            bpTimeIsSet(event.eg1_times[1]) ? event.eg1_times[1] : 0,
+            Number.isFinite(event.eg1_values[1]) ? event.eg1_values[1] : 0,
+            bpTimeIsSet(event.eg1_times[2]) ? event.eg1_times[2] : 0,
           ];
         }
       }
@@ -662,6 +685,10 @@ function set_knobs_from_patch_number(patch_number) {
         osc_wave[event.osc] = event.wave
       }
     }
+  }
+  // If we didn't set up a separate filter ADSR, it follows the VCA
+  if (f_adsr == null) {
+    f_adsr = adsr;
   }
   // Logic to choose juno oscs for osc A and osc B.
   for (let osc = 0; osc < 4; ++osc) {
@@ -691,10 +718,10 @@ function set_knobs_from_patch_number(patch_number) {
   set_amy_knob_value(knobs, "VCF", "resonance", resonanceValue);
   set_amy_knob_value(knobs, "VCF", "kbd", filterKbd);
   set_amy_knob_value(knobs, "VCF", "env", filterEnv);
-  set_amy_knob_value(knobs, "VCF ENV", "attack", adsr[0]);
-  set_amy_knob_value(knobs, "VCF ENV", "decay", adsr[1]);
-  set_amy_knob_value(knobs, "VCF ENV", "sustain", adsr[2]);
-  set_amy_knob_value(knobs, "VCF ENV", "release", adsr[3]);
+  set_amy_knob_value(knobs, "VCF ENV", "attack", f_adsr[0]);
+  set_amy_knob_value(knobs, "VCF ENV", "decay", f_adsr[1]);
+  set_amy_knob_value(knobs, "VCF ENV", "sustain", f_adsr[2]);
+  set_amy_knob_value(knobs, "VCF ENV", "release", f_adsr[3]);
 
   set_amy_knob_value(knobs, "LFO", "freq", lfoFreq);
   set_amy_knob_value(knobs, "LFO", "delay", lfoDelay);
