@@ -121,7 +121,15 @@ void setup_fs() {
         FS.mount(IDBFS,  {autoPersist:true}, '/amyboard/user');
         // Then sync
         FS.syncfs(true, function (err) {
-            // callback
+            try { FS.mkdirTree('/amyboard/user/current/env'); } catch (e) {}
+            try { FS.mkdirTree('/amyboard/user/current/patch'); } catch (e) {}
+            if (!FS.analyzePath('/amyboard/user/current/env/env.py').exists) {
+                FS.writeFile('/amyboard/user/current/env/env.py', '# Empty environment\\nprint(\"Welcome to AMYboard!\")\\n');
+            }
+            if (!FS.analyzePath('/amyboard/user/current/patch/patches.txt').exists) {
+                FS.writeFile('/amyboard/user/current/patch/patches.txt', '# patches.txt, ,AMY messages to load on boot\\n');
+            }
+            FS.syncfs(false, function (syncErr) {});
         });
     );
 }

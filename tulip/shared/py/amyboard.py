@@ -9,6 +9,45 @@ hw_display = None # if there's an I2C display connected
 def web():
     return (tulip.board()=="AMYBOARD_WEB")
 
+DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n"
+DEFAULT_PATCHES_SOURCE = "# patches.txt, ,AMY messages to load on boot\n"
+
+def _ensure_current_env_layout():
+    import os
+    import uos
+    base = tulip.root_dir() + "user/current"
+    env_dir = base + "/env"
+    patch_dir = base + "/patch"
+    for path in (base, env_dir, patch_dir):
+        try:
+            os.mkdir(path)
+        except OSError:
+            pass
+
+    env_file = env_dir + "/env.py"
+    patches_file = patch_dir + "/patches.txt"
+    try:
+        open(env_file, "r").close()
+    except OSError:
+        w = open(env_file, "w")
+        w.write(DEFAULT_ENV_SOURCE)
+        w.close()
+    try:
+        open(patches_file, "r").close()
+    except OSError:
+        w = open(patches_file, "w")
+        w.write(DEFAULT_PATCHES_SOURCE)
+        w.close()
+
+    # Keep compatibility with any old /current/patches/ location if it exists.
+    legacy = base + "/patches/patches.txt"
+    try:
+        uos.stat(legacy)
+        return (env_dir, legacy)
+    except OSError:
+        pass
+    return (env_dir, patches_file)
+
 def mount_sd():
     # mount the SD card if given
     import machine, uos
@@ -39,6 +78,32 @@ def start_amy():
     init_pcm9211()
     midi_out_pin = init_midi()
     tulip.amyboard_start(midi_out_pin)
+    (_env_dir, patches_file) = _ensure_current_env_layout()
+
+    try:
+        for line in open(patches_file, "r"):
+            message = line.strip()
+            if message and (not message.startswith("#")):
+                amy.send_raw(message)
+    except OSError:
+        pass
+
+    from upysh import cd
+    cd(tulip.root_dir() + "user")
+    cd("current")
+    try:
+        run("env")
+    except:
+        try:
+            import sys
+            if "env" in sys.modules:
+                del sys.modules["env"]
+            import env
+            if hasattr(env, "run"):
+                env.run()
+        except Exception as e:
+            print("Environment start failed:")
+            sys.print_exception(e)
 
 def get_i2c():
     global i2c

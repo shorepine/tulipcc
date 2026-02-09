@@ -10,7 +10,6 @@ else:
     if board()=="AMYBOARD":
         import amyboard
         amyboard.mount_sd()
-        amyboard.start_amy()
 
 if board()=="WEB" or board()=="AMYBOARD_WEB":
     def webnyi():
@@ -109,6 +108,7 @@ if board() == "AMYBOARD" or board()=="AMYBOARD_WEB":
     amyboard.init_display()
     
 if board() == "AMYBOARD":
+    amyboard.start_amy()
     # Run the self-test if the boot button is now held down.
     import self_test
     self_test.self_test_if_button()
