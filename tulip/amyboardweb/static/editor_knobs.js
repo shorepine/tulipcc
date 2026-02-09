@@ -85,6 +85,12 @@ function init_knobs(knobConfigs, gridId, onChange) {
     if (notifyAmy) {
       send_change_code(window.current_synth, value, config);
     }
+    if (typeof window.request_persist_amy_knobs_state === "function") {
+      window.request_persist_amy_knobs_state();
+    }
+    if (typeof window.request_current_patches_file_rewrite === "function") {
+      window.request_current_patches_file_rewrite();
+    }
   }
 
 
@@ -270,8 +276,10 @@ function init_knobs(knobConfigs, gridId, onChange) {
           }
           const rangeChanged = prevMin !== editor.current.min_value || prevMax !== editor.current.max_value;
           const typeChanged = prevType !== editor.current.knob_type;
-          if ((rangeChanged || typeChanged) && typeof window.refresh_knobs_for_channel === "function") {
-            window.refresh_knobs_for_channel();
+          if (rangeChanged || typeChanged) {
+            if (typeof window.refresh_knobs_for_active_channel === "function") {
+              window.refresh_knobs_for_active_channel();
+            }
           }
           return true;
         }
@@ -911,5 +919,8 @@ function set_amy_knob_value(knobs, sectionName, name, value) {
     knob.default_value = value;
   }
   send_change_code(window.current_synth, value, knob);
+  if (typeof window.request_persist_amy_knobs_state === "function") {
+    window.request_persist_amy_knobs_state();
+  }
   return true;
 }

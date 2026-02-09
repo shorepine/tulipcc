@@ -15,38 +15,76 @@ DEFAULT_PATCHES_SOURCE = "# patches.txt, ,AMY messages to load on boot\n"
 def _ensure_current_env_layout():
     import os
     import uos
-    base = tulip.root_dir() + "user/current"
-    env_dir = base + "/env"
-    patch_dir = base + "/patch"
-    for path in (base, env_dir, patch_dir):
+    user_base = tulip.root_dir() + "user"
+    current_base = user_base + "/current"
+    default_base = user_base + "/default"
+    current_env_dir = current_base + "/env"
+    default_env_dir = default_base + "/env"
+    for path in (current_base, current_env_dir, default_base, default_env_dir):
         try:
             os.mkdir(path)
         except OSError:
             pass
 
-    env_file = env_dir + "/env.py"
-    patches_file = patch_dir + "/patches.txt"
+    default_env_file = default_env_dir + "/env.py"
+    default_patches_file = default_env_dir + "/patches.txt"
+    current_env_file = current_env_dir + "/env.py"
+    current_patches_file = current_env_dir + "/patches.txt"
+
     try:
-        open(env_file, "r").close()
+        open(default_env_file, "r").close()
     except OSError:
-        w = open(env_file, "w")
+        w = open(default_env_file, "w")
         w.write(DEFAULT_ENV_SOURCE)
         w.close()
     try:
-        open(patches_file, "r").close()
+        open(default_patches_file, "r").close()
     except OSError:
-        w = open(patches_file, "w")
+        w = open(default_patches_file, "w")
         w.write(DEFAULT_PATCHES_SOURCE)
         w.close()
 
-    # Keep compatibility with any old /current/patches/ location if it exists.
-    legacy = base + "/patches/patches.txt"
     try:
-        uos.stat(legacy)
-        return (env_dir, legacy)
+        open(current_env_file, "r").close()
+    except OSError:
+        w = open(current_env_file, "w")
+        w.write(open(default_env_file, "r").read())
+        w.close()
+
+    # Keep compatibility with old /current/patch/ location if it exists.
+    legacy_patches = current_base + "/patches/patches.txt"
+    try:
+        uos.stat(legacy_patches)
+        try:
+            open(current_patches_file, "r").close()
+        except OSError:
+            w = open(current_patches_file, "w")
+            w.write(open(legacy_patches, "r").read())
+            w.close()
     except OSError:
         pass
-    return (env_dir, patches_file)
+
+    # Keep compatibility with older /current/patch/ location if it exists.
+    legacy_patch = current_base + "/patch/patches.txt"
+    try:
+        uos.stat(legacy_patch)
+        try:
+            open(current_patches_file, "r").close()
+        except OSError:
+            w = open(current_patches_file, "w")
+            w.write(open(legacy_patch, "r").read())
+            w.close()
+    except OSError:
+        pass
+
+    try:
+        open(current_patches_file, "r").close()
+    except OSError:
+        w = open(current_patches_file, "w")
+        w.write(open(default_patches_file, "r").read())
+        w.close()
+
+    return (current_env_dir, current_patches_file)
 
 def mount_sd():
     # mount the SD card if given

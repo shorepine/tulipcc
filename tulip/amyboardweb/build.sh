@@ -37,7 +37,7 @@ build_once() {
   cp build-standard/tulip/obj/micropython.mjs stage/amyboard-$timestamp.mjs
   cp build-standard/tulip/obj/micropython.data stage/amyboard-$timestamp.data
 
-  sed -i '' -e "s/AMYBOARDMJS/amyboard\-${timestamp}.mjs/g" -e "s/AMYJS/amy\-${timestamp}.js/g" stage/editor.html
+  sed -i '' -e "s/AMYBOARDMJS/amyboard\-${timestamp}.mjs/g" -e "s/AMYJS/amy\-${timestamp}.js/g" stage/editor/index.html
   sed -i '' -e "s/amy.aw.js/amy\-${timestamp}.aw.js/g" -e "s/amy.wasm/amy\-${timestamp}.wasm/g" -e "s/amy.js/amy\-${timestamp}.js/g" stage/amy-$timestamp.js
   sed -i '' -e "s/micropython./amyboard\-${timestamp}./g" stage/amyboard-$timestamp.mjs
 }

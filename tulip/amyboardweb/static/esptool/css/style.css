@@ -88,15 +88,32 @@ div.clear {
 }
 
 .subheader {
-  height: 100px;
-  line-height: 100px;
-  padding-left: 70px;
-  padding-right: 70px;
+  height: auto;
+  line-height: 1.2;
+  padding: 16px 20px 8px;
 }
 
 .subheader .title {
-  font-size: 36px;
-  font-weight: 500;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+#instructions {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #374151;
+  padding: 0 20px;
+  margin-bottom: 14px;
+}
+
+#instructions ul {
+  margin: 0.5rem 0 0.75rem 1.1rem;
+  padding: 0;
+}
+
+#instructions li {
+  margin-bottom: 0.45rem;
 }
 
 #app.connected #commands {
@@ -124,7 +141,7 @@ div.clear {
   position: relative;
   margin: 0 auto;
   overflow-y: auto;
-  padding: 0 60px;
+  padding: 0 20px;
 }
 
 #log {
@@ -149,8 +166,8 @@ div.clear {
 }
 
 .footer {
-  padding-left: 70px;
-  padding-right: 70px;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .footer a {
@@ -372,8 +389,8 @@ div.clear {
 }
 
 #instructions {
-  padding-left: 70px;
-  padding-right: 70px;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .log-disclosure {
