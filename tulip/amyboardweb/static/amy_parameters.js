@@ -511,6 +511,18 @@ window.addEventListener("DOMContentLoaded", function() {
     return restoredAny;
   };
 
+  window.reset_amy_knobs_to_defaults = function() {
+    window.amy_knobs = new Array(17);
+    for (let i = 1; i <= 16; i += 1) {
+      window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
+    }
+    window.has_restored_amy_knobs_state = false;
+    try {
+      localStorage.removeItem(AMY_KNOB_STATE_STORAGE_KEY);
+    } catch (e) {}
+    return true;
+  };
+
   window.amy_knobs = new Array(17);
   for (let i = 1; i <= 16; i += 1) {
     window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
@@ -556,7 +568,7 @@ function set_knobs_from_patch_number(patch_number) {
   if(patch_number >= 1024 && patch_number < 1024+32) {
     amy_add_log_message("i"+window.current_synth+"iv6K"+patch_number);
   } else {
-    amy_add_log_message("i"+window.current_synth+"iv6K257");  // The amyboardsynth base patch - 3 oscs, bp2 for filter.
+    amy_add_log_message("i"+window.current_synth+"iv6K257");  // Default AMYboard patch state.
   }
   const events = get_events_for_patch_number(patch_number);
   // console log number of events
