@@ -695,6 +695,22 @@ tulip.midi_out((144,60,127)) # sends a note on message
 tulip.midi_local((144, 60, 127)) # send note on to local bus
 ```
 
+### MIDI Realtime Clock Sync (`F8`/`FA`/`FC`)
+
+External MIDI realtime sync to Tulip's sequencer is **off by default**.
+
+Use `tulip.external_midi_sync(x)` to control this:
+
+```python
+tulip.external_midi_sync(False) # default: ignore external MIDI realtime clock/start/stop
+tulip.external_midi_sync(True)  # enable external MIDI realtime sync
+```
+
+When enabled:
+- MIDI `F8` (Timing Clock) drives external tempo sync for the sequencer.
+- MIDI `FA` (Start) starts the sequencer.
+- MIDI `FC` (Stop) stops the sequencer.
+
 ### MIDI SYSEX
 
 Tulip has special handling for MIDI sysex messages. Because of Tulip's memory constraints, we do not return SYSEX messages in `tulip.midi_in()`. We do always parse SYSEX messages for AMY-over-SYSEX, this allows you to send AMY wire messages over MIDI.
