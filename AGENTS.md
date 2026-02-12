@@ -47,3 +47,22 @@ The easiest ways to test `tulipcc` are:
 Note:
 
 - `./build.sh` in `tulip/web` and `tulip/amyboardweb` keep a server running.
+
+## Tulip Release
+
+Only perform a Tulip release when the user explicitly asks for it.
+
+Release steps:
+
+1. Activate the Espressif virtualenv:
+   - `source ~/.espressif/python_env/idf5.4_py3.13_env/bin/activate`
+2. Change into the `tulip/` directory.
+3. Ensure release tag `v-XXX-2026` exists (where `XXX` is `jan`, `feb`, `mar`, `apr`, etc.).
+   - If the tag does not exist, create it first.
+4. Run:
+   - `./release.sh v-XXX-2026 upload`
+
+Notes:
+
+- This command cleans and compiles all Tulip targets.
+- Typical runtime is about 5 to 10 minutes.
