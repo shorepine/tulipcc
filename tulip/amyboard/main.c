@@ -194,7 +194,6 @@ uint8_t lvgl_setup = 0;
 
 
 void mp_task(void *pvParameter) {
-
     volatile uint32_t sp = (uint32_t)esp_cpu_get_sp();
     #if MICROPY_PY_THREAD
     mp_thread_init(pxTaskGetStackStart(NULL), MICROPY_TASK_STACK_SIZE / sizeof(uintptr_t));

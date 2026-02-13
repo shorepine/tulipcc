@@ -89,21 +89,12 @@ def start_amy():
         pass
 
     from upysh import cd
-    cd(tulip.root_dir() + "user")
-    cd("current")
+    cd(_env_dir)
     try:
-        run("env")
+        execfile("env.py")
     except:
-        try:
-            import sys
-            if "env" in sys.modules:
-                del sys.modules["env"]
-            import env
-            if hasattr(env, "run"):
-                env.run()
-        except Exception as e:
-            print("Environment start failed:")
-            sys.print_exception(e)
+        print("Couldn't load env.py from %s" % (_env_dir))
+    cd(tulip.root_dir()+"user")
 
 def get_i2c():
     global i2c
