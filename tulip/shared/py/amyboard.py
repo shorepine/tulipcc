@@ -12,6 +12,102 @@ def web():
 DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n"
 DEFAULT_PATCHES_SOURCE = "# patches.txt, ,AMY messages to load on boot\n"
 
+def _path_exists(path):
+    import os
+    try:
+        os.stat(path)
+        return True
+    except OSError:
+        return False
+
+def _remove_tree(path):
+    import os
+    try:
+        mode = os.stat(path)[0]
+    except OSError:
+        return
+    if mode & 0x4000:  # directory
+        try:
+            entries = os.ilistdir(path)
+        except OSError:
+            entries = []
+        for entry in entries:
+            name = entry[0]
+            if name == "." or name == "..":
+                continue
+            _remove_tree(path.rstrip("/") + "/" + name)
+        try:
+            os.rmdir(path)
+        except OSError:
+            pass
+    else:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+
+def _clear_directory(path):
+    import os
+    try:
+        entries = os.ilistdir(path)
+    except OSError:
+        return
+    for entry in entries:
+        name = entry[0]
+        if name == "." or name == "..":
+            continue
+        _remove_tree(path.rstrip("/") + "/" + name)
+
+def environment_transfer_done(*_args):
+    import os
+    import machine
+
+    print("Environment transfer done hook called")
+    user_base = tulip.root_dir() + "user"
+    current_base = user_base + "/current"
+    env_dir = current_base + "/env"
+    for path in (user_base, current_base, env_dir):
+        try:
+            os.mkdir(path)
+        except OSError:
+            pass
+
+    env_tar = env_dir + "/environment.tar"
+    incoming_tar = current_base + "/__incoming_environment.tar"
+    cwd_tar = os.getcwd().rstrip("/") + "/environment.tar"
+    source_candidates = ["environment.tar", cwd_tar, current_base + "/environment.tar", env_tar]
+    source_tar = None
+    for candidate in source_candidates:
+        if _path_exists(candidate):
+            source_tar = candidate
+            break
+    if source_tar is None:
+        print("environment transfer done hook: environment.tar not found")
+        return
+
+    if source_tar == env_tar:
+        try:
+            os.rename(env_tar, incoming_tar)
+            source_tar = incoming_tar
+        except OSError:
+            pass
+
+    _clear_directory(env_dir)
+
+    try:
+        os.rename(source_tar, env_tar)
+    except OSError:
+        print("environment transfer done hook: could not move environment.tar into /user/current/env")
+        return
+
+    os.chdir(env_dir)
+    tulip.tar_extract("environment.tar")
+    try:
+        os.remove("environment.tar")
+    except OSError:
+        pass
+    machine.reset()
+
 def _ensure_current_env_layout():
     import os
     import uos
@@ -116,23 +212,29 @@ def start_amy():
     init_pcm9211()
     midi_out_pin = init_midi()
     tulip.amyboard_start(midi_out_pin)
-    (_env_dir, patches_file) = _ensure_current_env_layout()
+    if 0:
+        (_env_dir, patches_file) = _ensure_current_env_layout()
 
-    try:
-        for line in open(patches_file, "r"):
-            message = line.strip()
-            if message and (not message.startswith("#")):
-                amy.send_raw(message)
-    except OSError:
-        pass
+        try:
+            for line in open(patches_file, "r"):
+                message = line.strip()
+                if message and (not message.startswith("#")):
+                    amy.send_raw(message)
+        except OSError:
+            print("No patches.txt in env")
 
-    from upysh import cd
-    cd(_env_dir)
-    try:
-        execfile("env.py")
-    except:
-        print("Couldn't load env.py from %s" % (_env_dir))
-    cd(tulip.root_dir()+"user")
+        from upysh import cd
+        cd(_env_dir)
+        try:
+            execfile("env.py")
+        except Exception as e:
+            print("Environment start failed:")
+            try:
+                import sys
+                sys.print_exception(e)
+            except Exception:
+                print("Couldn't load env.py from %s" % (_env_dir))
+        cd(tulip.root_dir() + "user")
 
 def get_i2c():
     global i2c
