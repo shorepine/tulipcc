@@ -1,5 +1,5 @@
 # amyboard.py
-import tulip, midi, amy, time, struct, time
+import tulip, midi, amy, time, struct, time, sys
 
 i2c = None
 display_buffer = None # the bytes object storing the display bits
@@ -58,55 +58,6 @@ def _clear_directory(path):
             continue
         _remove_tree(path.rstrip("/") + "/" + name)
 
-def environment_transfer_done(*_args):
-    import os
-    import machine
-
-    print("Environment transfer done hook called")
-    user_base = tulip.root_dir() + "user"
-    current_base = user_base + "/current"
-    env_dir = current_base + "/env"
-    for path in (user_base, current_base, env_dir):
-        try:
-            os.mkdir(path)
-        except OSError:
-            pass
-
-    env_tar = env_dir + "/environment.tar"
-    incoming_tar = current_base + "/__incoming_environment.tar"
-    cwd_tar = os.getcwd().rstrip("/") + "/environment.tar"
-    source_candidates = ["environment.tar", cwd_tar, current_base + "/environment.tar", env_tar]
-    source_tar = None
-    for candidate in source_candidates:
-        if _path_exists(candidate):
-            source_tar = candidate
-            break
-    if source_tar is None:
-        print("environment transfer done hook: environment.tar not found")
-        return
-
-    if source_tar == env_tar:
-        try:
-            os.rename(env_tar, incoming_tar)
-            source_tar = incoming_tar
-        except OSError:
-            pass
-
-    _clear_directory(env_dir)
-
-    try:
-        os.rename(source_tar, env_tar)
-    except OSError:
-        print("environment transfer done hook: could not move environment.tar into /user/current/env")
-        return
-
-    os.chdir(env_dir)
-    tulip.tar_extract("environment.tar")
-    try:
-        os.remove("environment.tar")
-    except OSError:
-        pass
-    machine.reset()
 
 def _ensure_current_env_layout():
     import os
@@ -147,32 +98,6 @@ def _ensure_current_env_layout():
         w.write(open(default_env_file, "r").read())
         w.close()
 
-    # Keep compatibility with old /current/patch/ location if it exists.
-    legacy_patches = current_base + "/patches/patches.txt"
-    try:
-        uos.stat(legacy_patches)
-        try:
-            open(current_patches_file, "r").close()
-        except OSError:
-            w = open(current_patches_file, "w")
-            w.write(open(legacy_patches, "r").read())
-            w.close()
-    except OSError:
-        pass
-
-    # Keep compatibility with older /current/patch/ location if it exists.
-    legacy_patch = current_base + "/patch/patches.txt"
-    try:
-        uos.stat(legacy_patch)
-        try:
-            open(current_patches_file, "r").close()
-        except OSError:
-            w = open(current_patches_file, "w")
-            w.write(open(legacy_patch, "r").read())
-            w.close()
-    except OSError:
-        pass
-
     try:
         open(current_patches_file, "r").close()
     except OSError:
@@ -181,6 +106,69 @@ def _ensure_current_env_layout():
         w.close()
 
     return (current_env_dir, current_patches_file)
+
+
+
+def environment_transfer_done(*_args):
+    import os
+    import machine
+    tulip.stderr_write("Environment transfer done hook called")
+
+    # Create the folders if they don't exist (and also empty files)
+    _ensure_current_env_layout() 
+
+    user_base = tulip.root_dir() + "user"
+    current_base = user_base + "/current"
+    env_dir = current_base + "/env"
+
+    env_tar = env_dir + "/environment.tar"
+    incoming_tar = user_base + "/__incoming_environment.tar"
+    cwd = os.getcwd().rstrip("/")
+    cwd_tar = os.getcwd().rstrip("/") + "/environment.tar"
+    source_candidates = ["environment.tar", cwd_tar, current_base + "/environment.tar", env_tar]
+    source_tar = None
+    for candidate in source_candidates:
+        if _path_exists(candidate):
+            source_tar = candidate
+            break
+    if source_tar is None:
+        tulip.stderr_write("environment transfer done hook: environment.tar not found\n")
+        return
+    if source_tar == "environment.tar":
+        source_tar = cwd + "/environment.tar"
+
+    try:
+        os.remove(incoming_tar)
+    except OSError:
+        pass
+
+    os.chdir(user_base)
+
+    try:
+        os.rename(source_tar, incoming_tar)
+    except OSError:
+        tulip.stderr_write("environment transfer done hook: could not stage environment.tar in /user\n")
+        return
+
+    _clear_directory(env_dir)
+
+    try:
+        os.rename(incoming_tar, env_tar)
+    except OSError:
+        tulip.stderr_write("environment transfer done hook: could not move environment.tar into /user/current/env\n")
+        return
+
+    os.chdir(env_dir)
+    tulip.tar_extract("environment.tar", show_progress=False)
+    try:
+        os.remove("environment.tar")
+    except OSError:
+        pass
+    
+    tulip.stderr_write("Resetting AMYboard")
+    time.sleep(1)
+    machine.reset()
+
 
 def mount_sd():
     # mount the SD card if given
@@ -212,29 +200,28 @@ def start_amy():
     init_pcm9211()
     midi_out_pin = init_midi()
     tulip.amyboard_start(midi_out_pin)
-    if 0:
-        (_env_dir, patches_file) = _ensure_current_env_layout()
+    (_env_dir, patches_file) = _ensure_current_env_layout()
 
-        try:
-            for line in open(patches_file, "r"):
-                message = line.strip()
-                if message and (not message.startswith("#")):
-                    amy.send_raw(message)
-        except OSError:
-            print("No patches.txt in env")
+    tulip.stderr_write("Sending patches.txt to AMY")
+    try:
+        for line in open(patches_file, "r"):
+            message = line.strip()
+            if message and (not message.startswith("#")):
+                amy.send_raw(message)
+    except OSError:
+        tulip.stderr_write("No patches.txt")
 
-        from upysh import cd
-        cd(_env_dir)
-        try:
-            execfile("env.py")
-        except Exception as e:
-            print("Environment start failed:")
-            try:
-                import sys
-                sys.print_exception(e)
-            except Exception:
-                print("Couldn't load env.py from %s" % (_env_dir))
-        cd(tulip.root_dir() + "user")
+    from upysh import cd
+    tulip.stderr_write("cding to %s" % (_env_dir))
+    cd(_env_dir)
+    try:
+        tulip.stderr_write("execfile env.py")
+        execfile("env.py")
+    except Exception as e:
+        print("Environment start failed:")
+        sys.print_exception(e)
+    tulip.stderr_write("cding back to %s" % (tulip.root_dir() + "user"))
+    cd(tulip.root_dir() + "user")
 
 def get_i2c():
     global i2c
