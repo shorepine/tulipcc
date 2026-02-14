@@ -11,6 +11,7 @@
 #include "py/runtime.h"
 #include "amy_connector.h"
 #include <stdio.h>
+#include <string.h>
 uint8_t * external_map;
 
 #ifdef AMY_IS_EXTERNAL
@@ -230,12 +231,29 @@ void mp_fclose_hook(uint32_t fptr) {
     }
 }
 
+STATIC mp_obj_t tulip_environment_transfer_done(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
+    mp_obj_t fn = mp_load_attr(mod, MP_QSTR_environment_transfer_done);
+    return mp_call_function_0(fn);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_environment_transfer_done_obj, 0, 0, tulip_environment_transfer_done);
+
 void mp_file_transfer_done_hook(const char *filename) {
-    // notify python that file transfer is done
-    // we can do this by scheduling a call to a python function
-    // untar if we need to
-    // and reboot
-    
+#if defined(AMYBOARD)
+    if (filename == NULL || filename[0] == '\0') {
+        return;
+    }
+    const char *leaf = filename;
+    const char *slash = strrchr(filename, '/');
+    if (slash != NULL && slash[1] != '\0') {
+        leaf = slash + 1;
+    }
+    if (strcmp(leaf, "environment.tar") == 0) {
+        mp_sched_schedule(MP_OBJ_FROM_PTR(&tulip_environment_transfer_done_obj), mp_const_none);
+    }
+#else
+    (void)filename;
+#endif
 }
 
 
