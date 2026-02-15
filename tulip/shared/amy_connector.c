@@ -236,7 +236,7 @@ STATIC mp_obj_t tulip_environment_transfer_done(size_t n_args, const mp_obj_t *a
     mp_obj_t fn = mp_load_attr(mod, MP_QSTR_environment_transfer_done);
     return mp_call_function_0(fn);
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_environment_transfer_done_obj, 0, 0, tulip_environment_transfer_done);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_environment_transfer_done_obj, 0, 1, tulip_environment_transfer_done);
 
 void mp_file_transfer_done_hook(const char *filename) {
 #if defined(AMYBOARD)

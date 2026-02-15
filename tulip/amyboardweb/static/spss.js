@@ -2033,7 +2033,7 @@ async function sysex_write_amy_message(message) {
         throw new Error("Selected MIDI output does not support sysex send.");
     }
     // Matches amy.sysex_write pacing to avoid overrunning USB-MIDI consumers.
-    await sleep_ms(10);
+    await sleep_ms(100);
 }
 
 async function open_send_to_amyboard_modal() {
@@ -2071,10 +2071,8 @@ async function send_to_amyboard_now() {
             throw new Error("No MIDI out port selected.");
         }
 
-        var envNameInput = document.getElementById("editor_filename");
-        var environmentName = sanitize_environment_name_for_tar(envNameInput ? envNameInput.value : "");
-        var tarFilename = environmentName + ".tar";
-        var tarBytes = build_environment_tar_bytes(environmentName);
+        var tarFilename = "environment.tar";
+        var tarBytes = build_environment_tar_bytes();
         var fileSize = tarBytes.length;
 
         send_amyboard_progress_update(0, fileSize);

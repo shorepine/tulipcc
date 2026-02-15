@@ -45,6 +45,14 @@ STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_ticks_ms_obj, 0, 0, tulip_ticks_ms);
 
+STATIC mp_obj_t tulip_stderr_write(size_t n_args, const mp_obj_t *args) {
+    const char *msg = mp_obj_str_get_str(args[0]);
+    fprintf(stderr, "%s\n", msg);
+    fflush(stderr);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_stderr_write_obj, 1, 1, tulip_stderr_write);
+
 
 
 
@@ -1526,6 +1534,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_screen_as_repl_obj, 1,1, tu
 STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR__tulip) },
     { MP_ROM_QSTR(MP_QSTR_ticks_ms), MP_ROM_PTR(&tulip_ticks_ms_obj) },
+    { MP_ROM_QSTR(MP_QSTR_stderr_write), MP_ROM_PTR(&tulip_stderr_write_obj) },
     { MP_ROM_QSTR(MP_QSTR_defer), MP_ROM_PTR(&tulip_defer_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_add_callback), MP_ROM_PTR(&tulip_seq_add_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
