@@ -2,7 +2,7 @@ function make_change_code(synth, value, knob, no_instrument) {
   if (!knob || typeof knob.change_code !== "string") {
     return;
   }
-  let updated = knob.change_code.replace(/%v/g, String(value));
+  let updated = knob.change_code.replace(/%v/g, value.toFixed(3));
   if (no_instrument) {
     updated = updated.replace(/i%i/g, "");
   } else {
