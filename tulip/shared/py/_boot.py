@@ -94,14 +94,12 @@ gc.collect()
 
 # Set up audio/midi. 
 if tulip.board() == "WEB" or tulip.board()=="AMYBOARD_WEB":
-    midi.setup()
     amy.AMY_SAMPLE_RATE=48000
     # Override send & bleep are done from JS on web because of click-to-start audio.
 else:
     amy.AMY_SAMPLE_RATE=44100
     # Override amy's send to work with tulip
     amy.override_send = lambda x: tulip.amy_send(x)
-    midi.setup() # Just mirrors the setup mostly managed by AMY
 
 if board() == "AMYBOARD" or board()=="AMYBOARD_WEB":
     import amyboard
@@ -112,3 +110,6 @@ if board() == "AMYBOARD":
     # Run the self-test if the boot button is now held down.
     import self_test
     self_test.self_test_if_button()
+
+if board() == "TULIP":
+    midi.setup() # Just mirrors the setup mostly managed by AMY

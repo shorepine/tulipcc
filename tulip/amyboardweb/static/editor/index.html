@@ -909,6 +909,21 @@
                   channel and their MIDI CC assignments. </p>
                 <p class="mb-3">Any existing patches or environments on your AMYboard will be overwritten.</p>
                 <button type="button" class="btn btn-primary" id="send-amyboard-send-btn" onclick="send_to_amyboard_now()">Send</button>
+                <div id="send-amyboard-progress-wrap" class="mt-3 d-none">
+                  <div class="progress" style="height: 14px;">
+                    <div
+                      id="send-amyboard-progress-bar"
+                      class="progress-bar progress-bar-striped progress-bar-animated"
+                      role="progressbar"
+                      style="width: 0%;"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow="0"
+                    ></div>
+                  </div>
+                  <div id="send-amyboard-progress-text" class="small text-muted mt-1"></div>
+                </div>
+                <div id="send-amyboard-status" class="small mt-2 d-none"></div>
               </div>
             </div>
             <div class="tab-pane fade" id="upgrade-pane" role="tabpanel" aria-labelledby="upgrade-tab">

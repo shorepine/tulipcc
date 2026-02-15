@@ -19,6 +19,8 @@ function amy_add_log_message(message) {
 var mp = null;
 var midiOutputDevice = null;
 var midiInputDevice = null;
+var midiInputOptionIds = [];
+var midiOutputOptionIds = [];
 var editor = null;
 var treeView = null;
 var editor_shown = false;
@@ -48,6 +50,8 @@ const CURRENT_PATCH_FILE = CURRENT_ENV_DIR + "/patches.txt";
 const DEFAULT_PATCH_FILE = DEFAULT_ENV_DIR + "/patches.txt";
 const DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n";
 const DEFAULT_PATCH_SOURCE = "# patches.txt, ,AMY messages to load on boot\n";
+const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
+const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
 window.current_synth = 1;
 window.active_channels = Array.isArray(window.active_channels) ? window.active_channels : new Array(17).fill(false);
 window.active_channels[1] = true;
@@ -674,13 +678,82 @@ async function amy_external_midi_input_js_hook(bytes, len, sysex) {
     mp.midiInHook(bytes, len, sysex);
 } 
 
+function safe_midi_port_id(port) {
+  try {
+    return port && typeof port.id !== "undefined" ? port.id : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function safe_midi_port_name(port) {
+  try {
+    if (!port) return "Unknown";
+    return port.name || safe_midi_port_id(port) || "Unknown";
+  } catch (e) {
+    return "Unknown";
+  }
+}
+
+function get_selected_midi_input_device() {
+  if (!WebMidi || !Array.isArray(midiInputOptionIds) || midiInputOptionIds.length === 0) {
+    return null;
+  }
+  var midi_in = document.amyboard_settings && document.amyboard_settings.midi_input
+    ? document.amyboard_settings.midi_input
+    : null;
+  var selectedIndex = midi_in ? Number(midi_in.selectedIndex) : 0;
+  if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= midiInputOptionIds.length) {
+    selectedIndex = 0;
+  }
+  var selectedId = midiInputOptionIds[selectedIndex];
+  if (!selectedId) {
+    return null;
+  }
+  var input = null;
+  try {
+    input = WebMidi.getInputById(selectedId);
+  } catch (e) {
+    input = null;
+  }
+  return input || null;
+}
+
+function get_selected_midi_output_device() {
+  if (!WebMidi || !Array.isArray(midiOutputOptionIds) || midiOutputOptionIds.length === 0) {
+    return null;
+  }
+  var midi_out = document.amyboard_settings && document.amyboard_settings.midi_output
+    ? document.amyboard_settings.midi_output
+    : null;
+  var selectedIndex = midi_out ? Number(midi_out.selectedIndex) : 0;
+  if (!Number.isInteger(selectedIndex) || selectedIndex < 0 || selectedIndex >= midiOutputOptionIds.length) {
+    selectedIndex = 0;
+  }
+  var selectedId = midiOutputOptionIds[selectedIndex];
+  if (!selectedId) {
+    return null;
+  }
+  var output = null;
+  try {
+    output = WebMidi.getOutputById(selectedId);
+  } catch (e) {
+    output = null;
+  }
+  if (!output || (typeof output.sendSysex !== "function" && typeof output.send !== "function")) {
+    return null;
+  }
+  return output;
+}
+
 
 async function setup_midi_devices() {
-  var midi_in = document.amyboard_settings.midi_input;
-  var midi_out = document.amyboard_settings.midi_output;
-  if(WebMidi.inputs.length > midi_in.selectedIndex) {
-    if(midiInputDevice != null) midiInputDevice.destroy();
-    midiInputDevice = WebMidi.getInputById(WebMidi.inputs[midi_in.selectedIndex].id);
+  var selectedInput = get_selected_midi_input_device();
+  if (selectedInput) {
+    if (midiInputDevice != null && typeof midiInputDevice.destroy === "function") {
+      try { midiInputDevice.destroy(); } catch (e) {}
+    }
+    midiInputDevice = selectedInput;
     midiInputDevice.addListener("midimessage", e => {
       const data = e.message && e.message.data ? e.message.data : [];
       const status = data.length > 0 ? data[0] : null;
@@ -694,11 +767,10 @@ async function setup_midi_devices() {
         if(audio_started) amy_process_single_midi_byte(e.message.data[byte], 1);
       }
     });
+  } else {
+    midiInputDevice = null;
   }
-  if(WebMidi.outputs.length > midi_out.selectedIndex) {
-    if(midiOutputDevice != null) midiOutputDevice.destroy();
-    midiOutputDevice = WebMidi.getOutputById(WebMidi.outputs[midi_out.selectedIndex].id);
-  }
+  midiOutputDevice = get_selected_midi_output_device();
 }
 
 async function start_midi() {
@@ -706,18 +778,26 @@ async function start_midi() {
     // Populate the dropdowns
     var midi_in = document.amyboard_settings.midi_input;
     var midi_out = document.amyboard_settings.midi_output;
+    midiInputOptionIds = [];
+    midiOutputOptionIds = [];
 
     if(WebMidi.inputs.length>0) {
       midi_in.options.length = 0;
       WebMidi.inputs.forEach(input => {
-        midi_in.options[midi_in.options.length] = new Option("MIDI in: " + input.name);
+        var inputId = safe_midi_port_id(input);
+        if (!inputId) return;
+        midiInputOptionIds.push(inputId);
+        midi_in.options[midi_in.options.length] = new Option("MIDI in: " + safe_midi_port_name(input));
       });
     }
 
     if(WebMidi.outputs.length>0) {
       midi_out.options.length = 0;
       WebMidi.outputs.forEach(output => {
-        midi_out.options[midi_out.options.length] = new Option("MIDI out: "+ output.name);
+        var outputId = safe_midi_port_id(output);
+        if (!outputId) return;
+        midiOutputOptionIds.push(outputId);
+        midi_out.options[midi_out.options.length] = new Option("MIDI out: "+ safe_midi_port_name(output));
       });
     }
     // First run setup 
@@ -1451,14 +1531,20 @@ async function run_current_environment() {
     );
 }
 
-function add_octal_to_buffer(buffer, offset, length, value) {
-    var oct = Math.max(0, value).toString(8);
-    var padded = oct.padStart(length - 1, "0");
+function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
+    var width = Math.max(1, Number(digits) || (length - 1));
+    var oct = Math.max(0, Number(value) || 0).toString(8);
+    var padded = oct.padStart(width, "0");
+    if (padded.length > width) {
+        padded = padded.slice(-width);
+    }
+    var text = padded + (typeof trailer === "string" ? trailer : " ");
     for (var i = 0; i < length; i++) {
         buffer[offset + i] = 0;
     }
-    for (var j = 0; j < padded.length && j < (length - 1); j++) {
-        buffer[offset + j] = padded.charCodeAt(j);
+    var n = Math.min(length, text.length);
+    for (var j = 0; j < n; j++) {
+        buffer[offset + j] = text.charCodeAt(j);
     }
 }
 
@@ -1475,11 +1561,12 @@ function write_string_to_buffer(buffer, offset, length, text) {
 function tar_build_header(name, size, isDirectory) {
     var header = new Uint8Array(512);
     write_string_to_buffer(header, 0, 100, name);
-    add_octal_to_buffer(header, 100, 8, isDirectory ? 0o755 : 0o644);
-    add_octal_to_buffer(header, 108, 8, 0);
-    add_octal_to_buffer(header, 116, 8, 0);
-    add_octal_to_buffer(header, 124, 12, isDirectory ? 0 : size);
-    add_octal_to_buffer(header, 136, 12, Math.floor(Date.now() / 1000));
+    // Match tulip/shared/py/utarfile.py addfile() field formatting.
+    add_octal_to_buffer(header, 100, 7, isDirectory ? 0o755 : 0o644, 6, " ");
+    add_octal_to_buffer(header, 108, 7, 0, 6, " ");
+    add_octal_to_buffer(header, 116, 7, 0, 6, " ");
+    add_octal_to_buffer(header, 124, 12, isDirectory ? 0 : size, 11, " ");
+    add_octal_to_buffer(header, 136, 12, Math.floor(Date.now() / 1000), 11, " ");
     for (var i = 148; i < 156; i++) {
         header[i] = 32;
     }
@@ -1490,10 +1577,7 @@ function tar_build_header(name, size, isDirectory) {
     for (var k = 0; k < 512; k++) {
         sum += header[k];
     }
-    var checksum = sum.toString(8).padStart(6, "0");
-    write_string_to_buffer(header, 148, 6, checksum);
-    header[154] = 0;
-    header[155] = 32;
+    add_octal_to_buffer(header, 148, 7, sum, 6, "\0");
     return header;
 }
 
@@ -1509,7 +1593,7 @@ function build_environment_tar_bytes(environmentName) {
         var mode = mp.FS.lookupPath(fullPath).node.mode;
         if (mp.FS.isDir(mode)) {
             var dirPath = relativePath.endsWith("/") ? relativePath : (relativePath + "/");
-            pushChunk(tar_build_header(environmentName + "/" + dirPath, 0, true));
+            pushChunk(tar_build_header(dirPath, 0, true));
             for (const child of mp.FS.readdir(fullPath)) {
                 if (child === "." || child === "..") continue;
                 add_entry(relativePath + "/" + child);
@@ -1517,7 +1601,7 @@ function build_environment_tar_bytes(environmentName) {
             return;
         }
         var bytes = mp.FS.readFile(fullPath, { encoding: "binary" });
-        pushChunk(tar_build_header(environmentName + "/" + relativePath, bytes.length, false));
+        pushChunk(tar_build_header(relativePath, bytes.length, false));
         pushChunk(bytes);
         var pad = (512 - (bytes.length % 512)) % 512;
         if (pad > 0) {
@@ -1861,17 +1945,161 @@ function populate_send_to_amyboard_modal() {
     }
 }
 
+function sanitize_environment_name_for_tar(rawName) {
+    var name = String(rawName || "").trim();
+    if (!name.length) {
+        return "environment";
+    }
+    name = name.replace(/[^A-Za-z0-9_-]/g, "_");
+    if (!name.length) {
+        return "environment";
+    }
+    return name.slice(0, 20);
+}
+
+function send_amyboard_progress_reset() {
+    var wrapper = document.getElementById("send-amyboard-progress-wrap");
+    var bar = document.getElementById("send-amyboard-progress-bar");
+    var text = document.getElementById("send-amyboard-progress-text");
+    var status = document.getElementById("send-amyboard-status");
+    if (wrapper) {
+        wrapper.classList.add("d-none");
+    }
+    if (bar) {
+        bar.style.width = "0%";
+        bar.setAttribute("aria-valuenow", "0");
+        bar.classList.add("progress-bar-striped", "progress-bar-animated");
+    }
+    if (text) {
+        text.textContent = "";
+    }
+    if (status) {
+        status.textContent = "";
+        status.classList.add("d-none");
+    }
+}
+
+function send_amyboard_progress_update(sentBytes, totalBytes) {
+    var wrapper = document.getElementById("send-amyboard-progress-wrap");
+    var bar = document.getElementById("send-amyboard-progress-bar");
+    var text = document.getElementById("send-amyboard-progress-text");
+    if (!wrapper || !bar || !text) {
+        return;
+    }
+    var safeTotal = Math.max(0, Number(totalBytes) || 0);
+    var safeSent = Math.max(0, Math.min(safeTotal, Number(sentBytes) || 0));
+    var percent = safeTotal > 0 ? Math.floor((safeSent * 100) / safeTotal) : 100;
+    wrapper.classList.remove("d-none");
+    bar.style.width = percent + "%";
+    bar.setAttribute("aria-valuenow", String(percent));
+    if (percent >= 100) {
+        bar.classList.remove("progress-bar-animated");
+    } else {
+        bar.classList.add("progress-bar-animated");
+    }
+    text.textContent = percent + "% (" + safeSent + " / " + safeTotal + " bytes)";
+}
+
+function set_send_amyboard_status(text, isError) {
+    var status = document.getElementById("send-amyboard-status");
+    if (!status) {
+        return;
+    }
+    status.textContent = text || "";
+    status.classList.remove("d-none", "text-danger", "text-success");
+    status.classList.add(isError ? "text-danger" : "text-success");
+}
+
+function bytes_to_base64_ascii(bytes) {
+    var chunk = "";
+    for (var i = 0; i < bytes.length; i++) {
+        chunk += String.fromCharCode(bytes[i]);
+    }
+    return btoa(chunk);
+}
+
+async function sysex_write_amy_message(message) {
+    var outputDevice = get_selected_midi_output_device() || midiOutputDevice;
+    if (!outputDevice) {
+        throw new Error("No MIDI output is selected.");
+    }
+    midiOutputDevice = outputDevice;
+    var payload = Array.from(new TextEncoder().encode(String(message || "")));
+    if (typeof outputDevice.sendSysex === "function") {
+        outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
+    } else if (typeof outputDevice.send === "function") {
+        outputDevice.send([0xF0].concat(AMYBOARD_SYSEX_MFR_ID, payload, [0xF7]));
+    } else {
+        throw new Error("Selected MIDI output does not support sysex send.");
+    }
+    // Matches amy.sysex_write pacing to avoid overrunning USB-MIDI consumers.
+    await sleep_ms(100);
+}
+
 async function open_send_to_amyboard_modal() {
     try {
         await write_current_patches_file_from_knobs();
     } catch (e) {
         show_alert("Could not update patches.txt");
     }
+    send_amyboard_progress_reset();
     populate_send_to_amyboard_modal();
 }
 
-function send_to_amyboard_now() {
-    // Placeholder only: transfer logic comes next.
+async function send_to_amyboard_now() {
+    var sendButton = document.getElementById("send-amyboard-send-btn");
+    if (sendButton && sendButton.disabled) {
+        return;
+    }
+    send_amyboard_progress_reset();
+
+    if (!WebMidi.supported) {
+        show_alert("WebMIDI is not available in this browser.");
+        return;
+    }
+
+    if (sendButton) {
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Sending...';
+    }
+
+    try {
+        await save_editor_if_dirty();
+        await write_current_patches_file_from_knobs();
+        await setup_midi_devices();
+        if (!midiOutputDevice) {
+            throw new Error("No MIDI out port selected.");
+        }
+
+        var tarFilename = "environment.tar";
+        var tarBytes = build_environment_tar_bytes();
+        var fileSize = tarBytes.length;
+
+        send_amyboard_progress_update(0, fileSize);
+        await sysex_write_amy_message("zT" + tarFilename + "," + fileSize + "Z");
+
+        var sentBytes = 0;
+        for (var offset = 0; offset < fileSize; offset += AMYBOARD_TRANSFER_CHUNK_BYTES) {
+            var chunk = tarBytes.slice(offset, offset + AMYBOARD_TRANSFER_CHUNK_BYTES);
+            var b64 = bytes_to_base64_ascii(chunk);
+            await sysex_write_amy_message(b64);
+            sentBytes += chunk.length;
+            send_amyboard_progress_update(sentBytes, fileSize);
+        }
+        set_send_amyboard_status("Environment sent to AMYboard.", false);
+    } catch (e) {
+        var bar = document.getElementById("send-amyboard-progress-bar");
+        if (bar) {
+            bar.classList.remove("progress-bar-animated");
+        }
+        set_send_amyboard_status("Send failed: " + (e && e.message ? e.message : "Unknown error"), true);
+        show_alert("Failed to send to AMYboard.");
+    } finally {
+        if (sendButton) {
+            sendButton.disabled = false;
+            sendButton.textContent = "Send";
+        }
+    }
 }
 
 async function show_editor() {
