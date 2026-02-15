@@ -66,3 +66,44 @@ Notes:
 
 - This command cleans and compiles all Tulip targets.
 - Typical runtime is about 5 to 10 minutes.
+
+## Safe Git Merge Procedure (Required)
+
+When a user asks to commit/push/merge PR changes, treat it as a strict ordered workflow.
+
+### Ordering Rules
+
+- Do not run `git push` and PR merge commands in parallel.
+- Do not run any dependent git steps in parallel.
+- Required order is:
+  1. `git add` / `git commit`
+  2. `git push`
+  3. confirm remote branch tip equals local `HEAD`
+  4. merge PR
+  5. confirm `origin/main` contains expected commit(s)
+
+### Pre-Merge Verification (Required)
+
+Before merging:
+1. Ensure local branch is clean except expected submodule dirtiness.
+2. Ensure all intended files are committed (`git diff --name-only HEAD` should be empty for tracked files intended for merge).
+3. Ensure remote branch includes latest commit:
+   - `git rev-parse HEAD`
+   - `git rev-parse origin/<current-branch>`
+   - These must match before merge.
+
+### Post-Merge Verification (Required)
+
+After merging:
+1. `git fetch origin main`
+2. Verify merged commit SHA is reachable from `origin/main`.
+3. Verify key changed files match expectations (for example with `git diff origin/main -- <path>`).
+4. Report in final response:
+   - merged PR number
+   - merge commit SHA
+   - confirmation that `origin/main` includes the intended changes
+
+### Failure Handling
+
+- If any verification fails, do not claim success.
+- Continue until the intended commit(s) are in `origin/main` (or explain the blocking protection explicitly).
