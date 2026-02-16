@@ -42,6 +42,10 @@ var environment_editor_dirty = false;
 var environment_autosave_inflight = false;
 const AMYBOARD_MODAL_MESSAGES_URL = "https://bwhitman--tulipworldapi-messages.modal.run";
 const AMYBOARD_MODAL_URLGET_URL = "https://bwhitman--tulipworldapi-urlget.modal.run";
+const AMYBOARD_MODAL_UPLOAD_URL = "https://bwhitman--tulipworldapi-upload.modal.run";
+const AMYBOARD_WORLD_API_BASE = (typeof window !== "undefined" && typeof window.AMYBOARD_WORLD_API_BASE === "string")
+    ? String(window.AMYBOARD_WORLD_API_BASE).replace(/\/+$/, "")
+    : "";
 const CURRENT_BASE_DIR = "/amyboard/user/current";
 const CURRENT_ENV_DIR = "/amyboard/user/current/env";
 const DEFAULT_BASE_DIR = "/amyboard/user/default";
@@ -1356,6 +1360,41 @@ function format_world_file_timestamp(time_ms) {
     }
 }
 
+function is_new_amyboard_world_api_enabled() {
+    return AMYBOARD_WORLD_API_BASE.length > 0;
+}
+
+function world_api_url(pathAndQuery) {
+    return AMYBOARD_WORLD_API_BASE + pathAndQuery;
+}
+
+function get_world_search_query() {
+    var el = document.getElementById("amyboard_world_search");
+    if (!el) return "";
+    return String(el.value || "").trim();
+}
+
+function get_world_tag_query() {
+    var el = document.getElementById("amyboard_world_tag");
+    if (!el) return "";
+    return String(el.value || "").trim().toLowerCase();
+}
+
+function resolve_world_download_url(item) {
+    if (item && typeof item.download_url === "string" && item.download_url.length > 0) {
+        if (/^https?:\/\//i.test(item.download_url)) {
+            return item.download_url;
+        }
+        if (is_new_amyboard_world_api_enabled()) {
+            return world_api_url(item.download_url);
+        }
+    }
+    if (item && typeof item.url === "string" && item.url.length > 0) {
+        return AMYBOARD_MODAL_URLGET_URL + "?url=" + encodeURIComponent(item.url);
+    }
+    return "";
+}
+
 function format_size_kb(sizeBytes) {
     var bytes = Number(sizeBytes || 0);
     if (!Number.isFinite(bytes) || bytes < 0) {
@@ -1640,8 +1679,12 @@ function render_amyboard_world_file_list() {
         var filename = normalize_world_filename(item.filename);
         var displayName = get_world_display_name(filename);
         var description = (typeof item.content === "string") ? item.content.trim() : "";
+        if (!description && typeof item.description === "string") {
+            description = item.description.trim();
+        }
         var when = format_world_file_timestamp(item.time);
         var meta = (item.username || "unknown") + (when ? " • " + when : "");
+        var tags = Array.isArray(item.tags) ? item.tags : [];
         var isLoading = (amyboard_world_loading_index === i);
         html += '<div class="col">';
         html += '<button type="button" class="w-100 border rounded p-2 bg-white text-start d-flex justify-content-between align-items-start"' +
@@ -1650,7 +1693,15 @@ function render_amyboard_world_file_list() {
         if (description.length > 0) {
             html += ' <span class="fw-normal text-muted">- ' + escape_html(description) + "</span>";
         }
-        html += '</div><div class="small text-muted">' + escape_html(meta) + '</div></div>';
+        html += '</div><div class="small text-muted">' + escape_html(meta) + '</div>';
+        if (tags.length > 0) {
+            html += '<div class="mt-1">';
+            for (var t = 0; t < tags.length; t++) {
+                html += '<span class="badge bg-light text-secondary border me-1">#' + escape_html(String(tags[t])) + '</span>';
+            }
+            html += '</div>';
+        }
+        html += '</div>';
         if (isLoading) {
             html += '<span class="d-inline-flex align-items-center text-secondary small"><span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Downloading...</span>';
         } else {
@@ -1670,37 +1721,67 @@ async function refresh_amyboard_world_files() {
     }
 
     try {
-        var response = await fetch(AMYBOARD_MODAL_MESSAGES_URL + "?mtype=amyboard&n=100");
-        if (!response.ok) {
-            throw new Error("HTTP " + response.status.toString());
-        }
-        var data = await response.json();
-        if (!Array.isArray(data)) {
-            throw new Error("Unexpected response");
-        }
-        var maxToShow = 10;
-        var byEnvironment = new Map();
-        for (var i = 0; i < data.length; i++) {
-            var item = data[i];
-            if (!item || !is_world_tar_filename(item.filename)) {
-                continue;
+        if (is_new_amyboard_world_api_enabled()) {
+            var params = new URLSearchParams();
+            params.set("limit", "100");
+            params.set("latest_per_user_env", "true");
+            var q = get_world_search_query();
+            var tag = get_world_tag_query();
+            if (q.length) {
+                params.set("q", q);
             }
-            var normalizedFilename = normalize_world_filename(item.filename);
-            var envName = get_world_display_name(normalizedFilename).toLowerCase();
-            var username = String(item.username || "unknown").toLowerCase();
-            var dedupeKey = username + "\n" + envName;
-            var existing = byEnvironment.get(dedupeKey);
-            var itemTime = Number(item.time || 0);
-            var existingTime = existing ? Number(existing.time || 0) : -1;
-            if (!existing || itemTime >= existingTime) {
-                byEnvironment.set(dedupeKey, item);
+            if (tag.length) {
+                params.set("tag", tag);
             }
+            var newApiResponse = await fetch(world_api_url("/api/amyboardworld/files?" + params.toString()));
+            if (!newApiResponse.ok) {
+                throw new Error("HTTP " + newApiResponse.status.toString());
+            }
+            var newApiData = await newApiResponse.json();
+            if (!newApiData || !Array.isArray(newApiData.items)) {
+                throw new Error("Unexpected response");
+            }
+            amyboard_world_files = newApiData.items
+                .filter(function(item) {
+                    return item && is_world_tar_filename(item.filename);
+                })
+                .sort(function(a, b) {
+                    return Number(b.time || 0) - Number(a.time || 0);
+                })
+                .slice(0, 10);
+        } else {
+            var response = await fetch(AMYBOARD_MODAL_MESSAGES_URL + "?mtype=amyboard&n=100");
+            if (!response.ok) {
+                throw new Error("HTTP " + response.status.toString());
+            }
+            var data = await response.json();
+            if (!Array.isArray(data)) {
+                throw new Error("Unexpected response");
+            }
+            var maxToShow = 10;
+            var byEnvironment = new Map();
+            for (var i = 0; i < data.length; i++) {
+                var item = data[i];
+                if (!item || !is_world_tar_filename(item.filename)) {
+                    continue;
+                }
+                var normalizedFilename = normalize_world_filename(item.filename);
+                var envName = get_world_display_name(normalizedFilename).toLowerCase();
+                var username = String(item.username || "unknown").toLowerCase();
+                var dedupeKey = username + "\n" + envName;
+                var existing = byEnvironment.get(dedupeKey);
+                var itemTime = Number(item.time || 0);
+                var existingTime = existing ? Number(existing.time || 0) : -1;
+                if (!existing || itemTime >= existingTime) {
+                    byEnvironment.set(dedupeKey, item);
+                }
+            }
+            amyboard_world_files = Array.from(byEnvironment.values())
+                .sort(function(a, b) {
+                    return Number(b.time || 0) - Number(a.time || 0);
+                })
+                .slice(0, maxToShow);
         }
-        amyboard_world_files = Array.from(byEnvironment.values())
-            .sort(function(a, b) {
-                return Number(b.time || 0) - Number(a.time || 0);
-            })
-            .slice(0, maxToShow);
         render_amyboard_world_file_list();
     } catch (e) {
         amyboard_world_files = [];
@@ -1727,7 +1808,11 @@ async function import_amyboard_world_file(index) {
 
     try {
         ensure_current_environment_layout(false);
-        var response = await fetch(AMYBOARD_MODAL_URLGET_URL + "?url=" + encodeURIComponent(item.url));
+        var downloadUrl = resolve_world_download_url(item);
+        if (!downloadUrl) {
+            throw new Error("Missing file URL");
+        }
+        var response = await fetch(downloadUrl);
         if (!response.ok) {
             throw new Error("HTTP " + response.status.toString());
         }
@@ -1825,8 +1910,10 @@ async function amyboard_world_upload_file(pwd, filename, username, description) 
     data.append('file',file);
     data.append('username', username);
     data.append('description', description);
-    data.append('which', 'amyboard');
-    return fetch('https://bwhitman--tulipworldapi-upload.modal.run', {
+    if (!is_new_amyboard_world_api_enabled()) {
+        data.append('which', 'amyboard');
+    }
+    return fetch(is_new_amyboard_world_api_enabled() ? world_api_url("/api/amyboardworld/upload") : AMYBOARD_MODAL_UPLOAD_URL, {
         method: 'POST',
         body: data,
     });
@@ -1889,9 +1976,11 @@ async function upload_current_environment() {
     data.append("file", file);
     data.append("username", username);
     data.append("description", description);
-    data.append("which", "amyboard");
+    if (!is_new_amyboard_world_api_enabled()) {
+        data.append("which", "amyboard");
+    }
     try {
-        var response = await fetch("https://bwhitman--tulipworldapi-upload.modal.run", {
+        var response = await fetch(is_new_amyboard_world_api_enabled() ? world_api_url("/api/amyboardworld/upload") : AMYBOARD_MODAL_UPLOAD_URL, {
             method: "POST",
             body: data,
         });

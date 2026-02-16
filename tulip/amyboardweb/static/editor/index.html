@@ -865,6 +865,31 @@
                         onclick="refresh_amyboard_world_files()"
                       ><i class="fas fa-sync"></i></button>
                     </div>
+                    <div class="row g-2 mb-2">
+                      <div class="col-12 col-md-7">
+                        <input
+                          type="text"
+                          id="amyboard_world_search"
+                          class="form-control form-control-sm"
+                          maxlength="100"
+                          placeholder="Search by description, filename, or username"
+                          onkeydown="if (event.key === 'Enter') { refresh_amyboard_world_files(); }"
+                        />
+                      </div>
+                      <div class="col-12 col-md-3">
+                        <input
+                          type="text"
+                          id="amyboard_world_tag"
+                          class="form-control form-control-sm"
+                          maxlength="32"
+                          placeholder="Tag (featured)"
+                          onkeydown="if (event.key === 'Enter') { refresh_amyboard_world_files(); }"
+                        />
+                      </div>
+                      <div class="col-12 col-md-2 d-grid">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refresh_amyboard_world_files()">Search</button>
+                      </div>
+                    </div>
                     <div id="amyboard_world_file_list" class="small" style="max-height: 360px; overflow-y: auto;"></div>
                   </div>
                 </div>
