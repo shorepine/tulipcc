@@ -17,6 +17,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+import requests
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -32,6 +33,13 @@ DB_PATH = Path(os.getenv("AMYBOARDWORLD_DB_PATH", "./amyboardworld.db")).expandu
 FILES_DIR = Path(os.getenv("AMYBOARDWORLD_FILES_DIR", "./amyboardworld_files")).expanduser().resolve()
 ADMIN_TOKEN = os.getenv("AMYBOARDWORLD_ADMIN_TOKEN", "")
 ADMIN_UI_PATH = Path(__file__).with_name("amyboardworld_admin.html")
+PUBLIC_BASE_URL = os.getenv("AMYBOARDWORLD_PUBLIC_BASE_URL", "").rstrip("/")
+DISCORD_AMYBOARD_CHANNEL_ID = os.getenv("AMYBOARDWORLD_DISCORD_CHANNEL_ID", "1353327346924388422")
+
+# Keep compatibility with the bot token currently used by tulip/server/modal_api.py.
+_DISCORD_TOKEN_A = "MTIzOTIyNTc4NDU3NzgxODc0NQ.GjGMum"
+_DISCORD_TOKEN_B = "KvPGzKZDr1phrId9iY7LMtIDgMNtI0om8MsWsA"
+DISCORD_BOT_TOKEN = os.getenv("AMYBOARDWORLD_DISCORD_BOT_TOKEN", f"{_DISCORD_TOKEN_A}.{_DISCORD_TOKEN_B}")
 
 app = FastAPI(title="AMYboard World DB API", version="0.1.0")
 app.add_middleware(
@@ -138,6 +146,30 @@ def _public_row(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
+def _discord_notify_new_upload(env_id: int, username: str, filename: str, description: str, size_bytes: int) -> None:
+    if not DISCORD_BOT_TOKEN or not DISCORD_AMYBOARD_CHANNEL_ID:
+        return
+
+    base = PUBLIC_BASE_URL or ""
+    download_url = f"{base}/api/amyboardworld/files/{env_id}/download" if base else f"/api/amyboardworld/files/{env_id}/download"
+    content = (
+        f"{username} ### {description[:MAX_DESCRIPTION]}\n"
+        f"uploaded: `{filename}` ({size_bytes} bytes)\n"
+        f"download: {download_url}"
+    )
+    url = f"https://discordapp.com/api/channels/{DISCORD_AMYBOARD_CHANNEL_ID}/messages"
+    headers = {
+        "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
+        "User-Agent": "TulipCC/4.0 (https://tulip.computer, v0.1)",
+        "Content-Type": "application/json",
+    }
+    try:
+        requests.post(url, headers=headers, data=json.dumps({"content": content}), timeout=8)
+    except requests.RequestException:
+        # Notifications should never block successful uploads.
+        return
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {"ok": True, "ts": _now_ms()}
@@ -232,6 +264,7 @@ async def upload_environment(
         conn.execute("UPDATE environments SET blob_path = ? WHERE id = ?", (str(blob_path), env_id))
         conn.commit()
 
+    _discord_notify_new_upload(env_id, username, filename, description, len(contents))
     return {"ok": True, "id": env_id}
 
 

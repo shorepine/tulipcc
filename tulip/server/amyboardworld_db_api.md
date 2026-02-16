@@ -19,6 +19,9 @@ Optional environment variables:
 - `AMYBOARDWORLD_DB_PATH` (default: `./amyboardworld.db`)
 - `AMYBOARDWORLD_FILES_DIR` (default: `./amyboardworld_files`)
 - `AMYBOARDWORLD_ADMIN_TOKEN` (required for moderation endpoints)
+- `AMYBOARDWORLD_PUBLIC_BASE_URL` (optional base URL used in Discord upload messages)
+- `AMYBOARDWORLD_DISCORD_BOT_TOKEN` (optional override for bot token used to post upload notifications)
+- `AMYBOARDWORLD_DISCORD_CHANNEL_ID` (default: `1353327346924388422`, `#amyboard-world-files`)
 
 ## API surface
 
