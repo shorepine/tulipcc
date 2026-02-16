@@ -2,7 +2,12 @@ function make_change_code(synth, value, knob, no_instrument) {
   if (!knob || typeof knob.change_code !== "string") {
     return;
   }
-  let updated = knob.change_code.replace(/%v/g, value.toFixed(3));
+  if (Math.round(value) == value) {
+    valueStr = String(value);
+  } else {
+    valueStr = value.toFixed(3);
+  }
+  let updated = knob.change_code.replace(/%v/g, valueStr);
   if (no_instrument) {
     updated = updated.replace(/i%i/g, "");
   } else {
@@ -26,7 +31,6 @@ function set_knob_ui_value(knob, value, notifyAmy) {
 }
 
 function init_knobs(knobConfigs, gridId, onChange) {
-  
   const targetId = gridId || "knob-grid";
   const grid = document.getElementById(targetId);
   if (!grid || !Array.isArray(knobConfigs)) {
