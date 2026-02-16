@@ -150,6 +150,42 @@ def admin_ui() -> FileResponse:
     return FileResponse(str(ADMIN_UI_PATH), media_type="text/html; charset=utf-8")
 
 
+@app.get("/api/amyboardworld/debug/storage", dependencies=[Depends(_require_admin)])
+def debug_storage() -> dict[str, Any]:
+    db_exists = DB_PATH.exists()
+    files_dir_exists = FILES_DIR.exists()
+    db_size = DB_PATH.stat().st_size if db_exists else 0
+    files_sample: list[str] = []
+    file_count = 0
+    if files_dir_exists:
+        for p in FILES_DIR.iterdir():
+            file_count += 1
+            if len(files_sample) < 10:
+                files_sample.append(p.name)
+
+    row_count = 0
+    try:
+        with _open_db() as conn:
+            row = conn.execute("SELECT COUNT(*) AS n FROM environments").fetchone()
+            if row:
+                row_count = int(row["n"])
+    except sqlite3.Error:
+        row_count = -1
+
+    return {
+        "db_path": str(DB_PATH),
+        "db_parent": str(DB_PATH.parent),
+        "db_exists": db_exists,
+        "db_size_bytes": db_size,
+        "files_dir": str(FILES_DIR),
+        "files_dir_exists": files_dir_exists,
+        "files_count": file_count,
+        "files_sample": files_sample,
+        "db_row_count": row_count,
+        "cwd": os.getcwd(),
+    }
+
+
 @app.post("/api/amyboardworld/upload")
 async def upload_environment(
     username: str = Form(...),
