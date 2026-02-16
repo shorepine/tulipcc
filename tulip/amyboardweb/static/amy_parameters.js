@@ -45,7 +45,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc A",
       cc: 73,
       display_name: "level",
-      change_code: "i%iv0a%v",
+      change_code: "i%iv0a,,%v",
       knob_type: "log",
       default_value: 1.0,
       min_value: 0.001,
@@ -54,8 +54,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     { knob_type: "spacer" },
     { knob_type: "spacer-half" },
-  
-  {
+    {
       section: "VCF",
       cc: 74,
       display_name: "freq",
@@ -155,7 +154,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc B",
       cc: 84,
       display_name: "level",
-      change_code: "i%iv1a%v",
+      change_code: "i%iv1a,,%v",
       knob_type: "log",
       default_value: 1.0,
       min_value: 0.001,
@@ -592,7 +591,7 @@ function set_knobs_from_patch_number(patch_number) {
   let osc_freq = [null, null, null, null];
   let osc_wave = [null, null, null, null];
   let osc_duty = [null, null, null, null];
-  let osc_gain = [null, null, null, null];
+  let osc_gain = [0, 0, 0, 0];
   let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
   // Which Juno oscs are used for oscA and B
   let oscAB_osc = [-1, -1];
@@ -606,9 +605,8 @@ function set_knobs_from_patch_number(patch_number) {
   function bpTimeIsSet(v) {
     return Number.isFinite(v) && v !== BP_UNSET;
   }
-  
+
   for (const event of events) {
-	
     if (Number.isFinite(event.filter_freq_coefs[0])) {
       filter_osc = event.osc;  // Assume we'll see this at least once
       filterFreq = event.filter_freq_coefs[0];
@@ -655,7 +653,7 @@ function set_knobs_from_patch_number(patch_number) {
       }
       if (event.eg0_values) {
 	if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
-      }	    
+      }
       if (event.eg1_times) {
         if (bpTimeIsSet(event.eg1_times[0])) { f_adsr[0] = event.eg1_times[0]; }   // A time
         if (bpTimeIsSet(event.eg1_times[1])) { f_adsr[1] = event.eg1_times[1]; }   // D time
@@ -694,15 +692,21 @@ function set_knobs_from_patch_number(patch_number) {
     f_adsr = adsr;
   }
   // Logic to choose juno oscs for osc A and osc B.
-  for (let osc = 0; osc < 4; ++osc) {
-    if (oscAB_osc[0] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[0]]) {
-      if (oscAB_osc[1] == -1 || osc_gain[oscAB_osc[0]] > osc_gain[oscAB_osc[1]]) {
-        // Push oscA into oscB
-        oscAB_osc[1] = oscAB_osc[0];
+  if (osc_gain[2] == 0 && osc_gain[3] == 0) {
+    // Only 2 oscs, let them be
+    oscAB_osc[0] = 0;
+    oscAB_osc[1] = 1;
+  } else {
+    for (let osc = 0; osc < 4; ++osc) {
+      if (oscAB_osc[0] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[0]]) {
+        if (oscAB_osc[1] == -1 || osc_gain[oscAB_osc[0]] > osc_gain[oscAB_osc[1]]) {
+          // Push oscA into oscB
+          oscAB_osc[1] = oscAB_osc[0];
+        }
+        oscAB_osc[0] = osc;
+      } else if (oscAB_osc[1] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[1]]) {
+        oscAB_osc[1] = osc;
       }
-      oscAB_osc[0] = osc;
-    } else if (oscAB_osc[1] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[1]]) {
-      oscAB_osc[1] = osc;
     }
   }
 
