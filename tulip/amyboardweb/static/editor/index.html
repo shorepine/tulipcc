@@ -48,6 +48,9 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="amy_event_layout.generated.js"></script>
     <script type="text/javascript" src="amy_parameters.js"></script>
+    <script>
+      window.AMYBOARD_WORLD_API_BASE = "https://tulipcc-production.up.railway.app";
+    </script>
     <script type="text/javascript" src="spss.js"></script>
 
     <style>
@@ -864,6 +867,24 @@
                         class="btn btn-sm btn-link text-secondary p-0 ms-2"
                         onclick="refresh_amyboard_world_files()"
                       ><i class="fas fa-sync"></i></button>
+                    </div>
+                    <div class="row g-2 mb-2">
+                      <div class="col-12 col-md-7">
+                        <input
+                          type="text"
+                          id="amyboard_world_search"
+                          class="form-control form-control-sm"
+                          maxlength="100"
+                          placeholder="Search by description, filename, or username"
+                          onkeydown="if (event.key === 'Enter') { refresh_amyboard_world_files(); }"
+                        />
+                      </div>
+                      <div class="col-12 col-md-3 d-flex align-items-center">
+                        <div id="amyboard_world_tag_pills" class="d-flex flex-wrap gap-1"></div>
+                      </div>
+                      <div class="col-12 col-md-2 d-grid">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refresh_amyboard_world_files()">Search</button>
+                      </div>
                     </div>
                     <div id="amyboard_world_file_list" class="small" style="max-height: 360px; overflow-y: auto;"></div>
                   </div>
