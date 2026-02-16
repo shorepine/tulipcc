@@ -40,12 +40,9 @@ var selected_environment_file = null;
 var pending_environment_editor_load = false;
 var environment_editor_dirty = false;
 var environment_autosave_inflight = false;
-const AMYBOARD_MODAL_MESSAGES_URL = "https://bwhitman--tulipworldapi-messages.modal.run";
-const AMYBOARD_MODAL_URLGET_URL = "https://bwhitman--tulipworldapi-urlget.modal.run";
-const AMYBOARD_MODAL_UPLOAD_URL = "https://bwhitman--tulipworldapi-upload.modal.run";
 const AMYBOARD_WORLD_API_BASE = (typeof window !== "undefined" && typeof window.AMYBOARD_WORLD_API_BASE === "string")
     ? String(window.AMYBOARD_WORLD_API_BASE).replace(/\/+$/, "")
-    : "";
+    : String(window.location.origin || "").replace(/\/+$/, "");
 const CURRENT_BASE_DIR = "/amyboard/user/current";
 const CURRENT_ENV_DIR = "/amyboard/user/current/env";
 const DEFAULT_BASE_DIR = "/amyboard/user/default";
@@ -1360,10 +1357,6 @@ function format_world_file_timestamp(time_ms) {
     }
 }
 
-function is_new_amyboard_world_api_enabled() {
-    return AMYBOARD_WORLD_API_BASE.length > 0;
-}
-
 function world_api_url(pathAndQuery) {
     return AMYBOARD_WORLD_API_BASE + pathAndQuery;
 }
@@ -1385,12 +1378,7 @@ function resolve_world_download_url(item) {
         if (/^https?:\/\//i.test(item.download_url)) {
             return item.download_url;
         }
-        if (is_new_amyboard_world_api_enabled()) {
-            return world_api_url(item.download_url);
-        }
-    }
-    if (item && typeof item.url === "string" && item.url.length > 0) {
-        return AMYBOARD_MODAL_URLGET_URL + "?url=" + encodeURIComponent(item.url);
+        return world_api_url(item.download_url);
     }
     return "";
 }
@@ -1721,67 +1709,33 @@ async function refresh_amyboard_world_files() {
     }
 
     try {
-        if (is_new_amyboard_world_api_enabled()) {
-            var params = new URLSearchParams();
-            params.set("limit", "100");
-            params.set("latest_per_user_env", "true");
-            var q = get_world_search_query();
-            var tag = get_world_tag_query();
-            if (q.length) {
-                params.set("q", q);
-            }
-            if (tag.length) {
-                params.set("tag", tag);
-            }
-            var newApiResponse = await fetch(world_api_url("/api/amyboardworld/files?" + params.toString()));
-            if (!newApiResponse.ok) {
-                throw new Error("HTTP " + newApiResponse.status.toString());
-            }
-            var newApiData = await newApiResponse.json();
-            if (!newApiData || !Array.isArray(newApiData.items)) {
-                throw new Error("Unexpected response");
-            }
-            amyboard_world_files = newApiData.items
-                .filter(function(item) {
-                    return item && is_world_tar_filename(item.filename);
-                })
-                .sort(function(a, b) {
-                    return Number(b.time || 0) - Number(a.time || 0);
-                })
-                .slice(0, 10);
-        } else {
-            var response = await fetch(AMYBOARD_MODAL_MESSAGES_URL + "?mtype=amyboard&n=100");
-            if (!response.ok) {
-                throw new Error("HTTP " + response.status.toString());
-            }
-            var data = await response.json();
-            if (!Array.isArray(data)) {
-                throw new Error("Unexpected response");
-            }
-            var maxToShow = 10;
-            var byEnvironment = new Map();
-            for (var i = 0; i < data.length; i++) {
-                var item = data[i];
-                if (!item || !is_world_tar_filename(item.filename)) {
-                    continue;
-                }
-                var normalizedFilename = normalize_world_filename(item.filename);
-                var envName = get_world_display_name(normalizedFilename).toLowerCase();
-                var username = String(item.username || "unknown").toLowerCase();
-                var dedupeKey = username + "\n" + envName;
-                var existing = byEnvironment.get(dedupeKey);
-                var itemTime = Number(item.time || 0);
-                var existingTime = existing ? Number(existing.time || 0) : -1;
-                if (!existing || itemTime >= existingTime) {
-                    byEnvironment.set(dedupeKey, item);
-                }
-            }
-            amyboard_world_files = Array.from(byEnvironment.values())
-                .sort(function(a, b) {
-                    return Number(b.time || 0) - Number(a.time || 0);
-                })
-                .slice(0, maxToShow);
+        var params = new URLSearchParams();
+        params.set("limit", "100");
+        params.set("latest_per_user_env", "true");
+        var q = get_world_search_query();
+        var tag = get_world_tag_query();
+        if (q.length) {
+            params.set("q", q);
         }
+        if (tag.length) {
+            params.set("tag", tag);
+        }
+        var newApiResponse = await fetch(world_api_url("/api/amyboardworld/files?" + params.toString()));
+        if (!newApiResponse.ok) {
+            throw new Error("HTTP " + newApiResponse.status.toString());
+        }
+        var newApiData = await newApiResponse.json();
+        if (!newApiData || !Array.isArray(newApiData.items)) {
+            throw new Error("Unexpected response");
+        }
+        amyboard_world_files = newApiData.items
+            .filter(function(item) {
+                return item && is_world_tar_filename(item.filename);
+            })
+            .sort(function(a, b) {
+                return Number(b.time || 0) - Number(a.time || 0);
+            })
+            .slice(0, 10);
         render_amyboard_world_file_list();
     } catch (e) {
         amyboard_world_files = [];
@@ -1902,7 +1856,7 @@ async function import_amyboard_world_file(index) {
 
 
 
-// Create a js File object and upload it to the TW proxy API. This is easier to do here than in python
+// Create a js File object and upload it to the AMYboard World API.
 async function amyboard_world_upload_file(pwd, filename, username, description) {
     var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
     var file = await new File([new Uint8Array(contents)], filename, {type: 'application/binary'})
@@ -1910,10 +1864,7 @@ async function amyboard_world_upload_file(pwd, filename, username, description) 
     data.append('file',file);
     data.append('username', username);
     data.append('description', description);
-    if (!is_new_amyboard_world_api_enabled()) {
-        data.append('which', 'amyboard');
-    }
-    return fetch(is_new_amyboard_world_api_enabled() ? world_api_url("/api/amyboardworld/upload") : AMYBOARD_MODAL_UPLOAD_URL, {
+    return fetch(world_api_url("/api/amyboardworld/upload"), {
         method: 'POST',
         body: data,
     });
@@ -1976,11 +1927,8 @@ async function upload_current_environment() {
     data.append("file", file);
     data.append("username", username);
     data.append("description", description);
-    if (!is_new_amyboard_world_api_enabled()) {
-        data.append("which", "amyboard");
-    }
     try {
-        var response = await fetch(is_new_amyboard_world_api_enabled() ? world_api_url("/api/amyboardworld/upload") : AMYBOARD_MODAL_UPLOAD_URL, {
+        var response = await fetch(world_api_url("/api/amyboardworld/upload"), {
             method: "POST",
             body: data,
         });
