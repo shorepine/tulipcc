@@ -150,13 +150,7 @@ def _discord_notify_new_upload(env_id: int, username: str, filename: str, descri
     if not DISCORD_BOT_TOKEN or not DISCORD_AMYBOARD_CHANNEL_ID:
         return
 
-    base = PUBLIC_BASE_URL or ""
-    download_url = f"{base}/api/amyboardworld/files/{env_id}/download" if base else f"/api/amyboardworld/files/{env_id}/download"
-    content = (
-        f"{username} ### {description[:MAX_DESCRIPTION]}\n"
-        f"uploaded: `{filename}` ({size_bytes} bytes)\n"
-        f"download: {download_url}"
-    )
+    content = f"{username} ### {description[:MAX_DESCRIPTION]} ## {filename} ({size_bytes} bytes)"
     url = f"https://discordapp.com/api/channels/{DISCORD_AMYBOARD_CHANNEL_ID}/messages"
     headers = {
         "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
