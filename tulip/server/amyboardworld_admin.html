@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AMYboard World Admin</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; margin: 24px; color: #1f2937; }
+    h1 { margin: 0 0 12px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
+    input, button, textarea { font-size: 14px; padding: 6px 8px; }
+    input[type="text"], textarea { min-width: 240px; }
+    .small { font-size: 12px; color: #6b7280; }
+    .panel { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; vertical-align: top; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .ok { color: #065f46; }
+    .err { color: #991b1b; }
+    .tags { width: 220px; }
+    .desc { max-width: 360px; }
+  </style>
+</head>
+<body>
+  <h1>AMYboard World Admin</h1>
+  <div class="small">Simple moderation UI for upload/download/delete/tag.</div>
+
+  <div class="panel">
+    <div class="row">
+      <label for="adminToken"><strong>Admin token</strong></label>
+      <input id="adminToken" type="text" placeholder="x-admin-token" />
+      <button id="saveTokenBtn" type="button">Save token</button>
+      <span class="small">Stored in this browser's localStorage.</span>
+    </div>
+    <div class="row">
+      <label for="q">Search</label>
+      <input id="q" type="text" placeholder="username / filename / description" />
+      <label for="tag">Tag</label>
+      <input id="tag" type="text" placeholder="featured" />
+      <button id="refreshBtn" type="button">Refresh</button>
+      <label><input id="dedupe" type="checkbox" checked /> latest-per-user-env</label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Upload</h3>
+    <div class="row">
+      <input id="uploadUser" type="text" placeholder="username" maxlength="20" />
+      <input id="uploadDesc" type="text" placeholder="description" maxlength="400" />
+      <input id="uploadFile" type="file" accept=".tar" />
+      <button id="uploadBtn" type="button">Upload</button>
+    </div>
+  </div>
+
+  <div id="status" class="small"></div>
+
+  <div class="panel">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Who / File</th>
+          <th>Description</th>
+          <th>Tags</th>
+          <th>When</th>
+          <th>Size</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+<script>
+(function() {
+  const status = document.getElementById('status');
+  const rows = document.getElementById('rows');
+  const adminTokenEl = document.getElementById('adminToken');
+  const qEl = document.getElementById('q');
+  const tagEl = document.getElementById('tag');
+  const dedupeEl = document.getElementById('dedupe');
+
+  function setStatus(msg, isError) {
+    status.textContent = msg || '';
+    status.className = 'small ' + (isError ? 'err' : 'ok');
+  }
+
+  function getToken() {
+    return (adminTokenEl.value || '').trim();
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
+  }
+
+  function fmtTs(ms) {
+    const n = Number(ms || 0);
+    if (!Number.isFinite(n) || n <= 0) return '';
+    return new Date(n).toLocaleString();
+  }
+
+  function fmtSize(b) {
+    const n = Number(b || 0);
+    if (!Number.isFinite(n)) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  async function api(path, opts) {
+    const res = await fetch(path, opts);
+    let body = null;
+    try { body = await res.json(); } catch (_) {}
+    if (!res.ok) {
+      const detail = body && body.detail ? body.detail : ('HTTP ' + res.status);
+      throw new Error(detail);
+    }
+    return body;
+  }
+
+  async function refresh() {
+    setStatus('Loading...', false);
+    const params = new URLSearchParams();
+    params.set('limit', '200');
+    params.set('latest_per_user_env', dedupeEl.checked ? 'true' : 'false');
+    const q = (qEl.value || '').trim();
+    const tag = (tagEl.value || '').trim();
+    if (q) params.set('q', q);
+    if (tag) params.set('tag', tag);
+
+    try {
+      const data = await api('/api/amyboardworld/files?' + params.toString());
+      const items = Array.isArray(data.items) ? data.items : [];
+      rows.innerHTML = '';
+      for (const item of items) {
+        const tr = document.createElement('tr');
+        const tags = Array.isArray(item.tags) ? item.tags.join(',') : '';
+        tr.innerHTML = '' +
+          '<td class="mono">' + esc(item.id) + '</td>' +
+          '<td><div><strong>' + esc(item.username) + '</strong></div><div class="mono">' + esc(item.filename) + '</div></td>' +
+          '<td class="desc">' + esc(item.description || '') + '</td>' +
+          '<td><input class="tags" type="text" value="' + esc(tags) + '" data-role="tags" /></td>' +
+          '<td>' + esc(fmtTs(item.time)) + '</td>' +
+          '<td>' + esc(fmtSize(item.size)) + '</td>' +
+          '<td>' +
+            '<a href="' + esc(item.download_url) + '"><button type="button">Download</button></a> ' +
+            '<button type="button" data-role="save-tags">Save tags</button> ' +
+            '<button type="button" data-role="delete">Delete</button>' +
+          '</td>';
+
+        tr.querySelector('[data-role="save-tags"]').addEventListener('click', async () => {
+          const token = getToken();
+          if (!token) {
+            setStatus('Admin token required for tag update', true);
+            return;
+          }
+          const input = tr.querySelector('[data-role="tags"]');
+          const tagStr = (input.value || '').trim();
+          const tagsArr = tagStr ? tagStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+          try {
+            await api('/api/amyboardworld/files/' + encodeURIComponent(item.id) + '/tags', {
+              method: 'PATCH',
+              headers: {
+                'content-type': 'application/json',
+                'x-admin-token': token,
+              },
+              body: JSON.stringify({ tags: tagsArr }),
+            });
+            setStatus('Updated tags for #' + item.id, false);
+            refresh();
+          } catch (err) {
+            setStatus('Tag update failed: ' + err.message, true);
+          }
+        });
+
+        tr.querySelector('[data-role="delete"]').addEventListener('click', async () => {
+          const token = getToken();
+          if (!token) {
+            setStatus('Admin token required for delete', true);
+            return;
+          }
+          if (!confirm('Delete #' + item.id + ' ' + item.filename + '?')) return;
+          try {
+            await api('/api/amyboardworld/files/' + encodeURIComponent(item.id), {
+              method: 'DELETE',
+              headers: { 'x-admin-token': token },
+            });
+            setStatus('Deleted #' + item.id, false);
+            refresh();
+          } catch (err) {
+            setStatus('Delete failed: ' + err.message, true);
+          }
+        });
+
+        rows.appendChild(tr);
+      }
+      setStatus('Loaded ' + items.length + ' files', false);
+    } catch (err) {
+      setStatus('Load failed: ' + err.message, true);
+      rows.innerHTML = '';
+    }
+  }
+
+  document.getElementById('saveTokenBtn').addEventListener('click', function() {
+    localStorage.setItem('amyboardworld_admin_token', getToken());
+    setStatus('Saved token locally', false);
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', refresh);
+
+  document.getElementById('uploadBtn').addEventListener('click', async () => {
+    const username = (document.getElementById('uploadUser').value || '').trim();
+    const description = (document.getElementById('uploadDesc').value || '').trim();
+    const fileEl = document.getElementById('uploadFile');
+    const file = fileEl.files && fileEl.files[0];
+    if (!file) {
+      setStatus('Choose a .tar file first', true);
+      return;
+    }
+    const data = new FormData();
+    data.append('username', username);
+    data.append('description', description);
+    data.append('file', file);
+    try {
+      await api('/api/amyboardworld/upload', { method: 'POST', body: data });
+      setStatus('Upload complete', false);
+      fileEl.value = '';
+      refresh();
+    } catch (err) {
+      setStatus('Upload failed: ' + err.message, true);
+    }
+  });
+
+  adminTokenEl.value = localStorage.getItem('amyboardworld_admin_token') || '';
+  refresh();
+})();
+</script>
+</body>
+</html>

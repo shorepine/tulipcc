@@ -29,6 +29,12 @@ Optional environment variables:
 - `PATCH /api/amyboardworld/files/{id}/tags` admin only (`x-admin-token`)
 - `DELETE /api/amyboardworld/files/{id}` admin only (`x-admin-token`)
 
+## Admin UI
+
+- `GET /admin` serves a simple moderation interface.
+- Supports: list/search, upload, download, tag updates, delete.
+- Enter your `AMYBOARDWORLD_ADMIN_TOKEN` in the page to perform admin actions.
+
 ## Amyboardweb integration
 
 `amyboardweb` can use this API by setting:

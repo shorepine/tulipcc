@@ -31,6 +31,7 @@ MAX_FILE_BYTES = 10 * 1024 * 1024
 DB_PATH = Path(os.getenv("AMYBOARDWORLD_DB_PATH", "./amyboardworld.db")).expanduser().resolve()
 FILES_DIR = Path(os.getenv("AMYBOARDWORLD_FILES_DIR", "./amyboardworld_files")).expanduser().resolve()
 ADMIN_TOKEN = os.getenv("AMYBOARDWORLD_ADMIN_TOKEN", "")
+ADMIN_UI_PATH = Path(__file__).with_name("amyboardworld_admin.html")
 
 app = FastAPI(title="AMYboard World DB API", version="0.1.0")
 app.add_middleware(
@@ -140,6 +141,13 @@ def _public_row(row: sqlite3.Row) -> dict[str, Any]:
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {"ok": True, "ts": _now_ms()}
+
+
+@app.get("/admin")
+def admin_ui() -> FileResponse:
+    if not ADMIN_UI_PATH.exists():
+        raise HTTPException(status_code=404, detail="Admin UI not found")
+    return FileResponse(str(ADMIN_UI_PATH), media_type="text/html; charset=utf-8")
 
 
 @app.post("/api/amyboardworld/upload")
