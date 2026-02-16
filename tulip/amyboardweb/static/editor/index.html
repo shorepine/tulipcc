@@ -879,15 +879,8 @@
                           onkeydown="if (event.key === 'Enter') { refresh_amyboard_world_files(); }"
                         />
                       </div>
-                      <div class="col-12 col-md-3">
-                        <input
-                          type="text"
-                          id="amyboard_world_tag"
-                          class="form-control form-control-sm"
-                          maxlength="32"
-                          placeholder="Tag (featured)"
-                          onkeydown="if (event.key === 'Enter') { refresh_amyboard_world_files(); }"
-                        />
+                      <div class="col-12 col-md-3 d-flex align-items-center">
+                        <div id="amyboard_world_tag_pills" class="d-flex flex-wrap gap-1"></div>
                       </div>
                       <div class="col-12 col-md-2 d-grid">
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refresh_amyboard_world_files()">Search</button>

@@ -36,6 +36,8 @@ var patchKnobSyncAttempts = 0;
 var patches_file_rewrite_timer = null;
 var amyboard_world_files = [];
 var amyboard_world_loading_index = null;
+var amyboard_world_selected_tag = "";
+var amyboard_world_tag_palette = {};
 var selected_environment_file = null;
 var pending_environment_editor_load = false;
 var environment_editor_dirty = false;
@@ -1368,9 +1370,59 @@ function get_world_search_query() {
 }
 
 function get_world_tag_query() {
-    var el = document.getElementById("amyboard_world_tag");
-    if (!el) return "";
-    return String(el.value || "").trim().toLowerCase();
+    return String(amyboard_world_selected_tag || "").trim().toLowerCase();
+}
+
+function randomize_world_tag_palette() {
+    var tags = ["featured", "official", "popular", "wild"];
+    var classes = [
+        "bg-primary",
+        "bg-success",
+        "bg-danger",
+        "bg-info text-dark",
+        "bg-warning text-dark",
+        "bg-secondary",
+    ];
+    var shuffled = classes.slice();
+    for (var i = shuffled.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = tmp;
+    }
+    amyboard_world_tag_palette = {};
+    for (var t = 0; t < tags.length; t++) {
+        amyboard_world_tag_palette[tags[t]] = shuffled[t % shuffled.length];
+    }
+}
+
+function render_world_tag_pills() {
+    var container = document.getElementById("amyboard_world_tag_pills");
+    if (!container) return;
+    if (!Object.keys(amyboard_world_tag_palette).length) {
+        randomize_world_tag_palette();
+    }
+    var tags = ["featured", "official", "popular", "wild"];
+    var html = "";
+    for (var i = 0; i < tags.length; i++) {
+        var tag = tags[i];
+        var active = amyboard_world_selected_tag === tag;
+        var colorClass = amyboard_world_tag_palette[tag] || "bg-secondary";
+        html += '<button type="button" class="badge border-0 ' + colorClass + (active ? '' : ' opacity-50') + '"';
+        html += ' onclick="select_amyboard_world_tag(\'' + tag + '\')">#' + escape_html(tag) + '</button>';
+    }
+    container.innerHTML = html;
+}
+
+function select_amyboard_world_tag(tag) {
+    var normalized = String(tag || "").trim().toLowerCase();
+    if (amyboard_world_selected_tag === normalized) {
+        amyboard_world_selected_tag = "";
+    } else {
+        amyboard_world_selected_tag = normalized;
+    }
+    render_world_tag_pills();
+    refresh_amyboard_world_files();
 }
 
 function resolve_world_download_url(item) {
@@ -1703,6 +1755,7 @@ function render_amyboard_world_file_list() {
 }
 
 async function refresh_amyboard_world_files() {
+    render_world_tag_pills();
     var list = document.getElementById("amyboard_world_file_list");
     if (list) {
         list.innerHTML = '<div class="border rounded p-2 text-muted">Loading...</div>';
