@@ -48,6 +48,23 @@ Note:
 
 - `./build.sh` in `tulip/web` and `tulip/amyboardweb` keep a server running.
 
+## ESP-IDF Build Commands (Required)
+
+If the user asks to build `amyboard`, or asks to build `tulip cc` / `tulip esp32s3`, first run:
+
+- `source ~/.espressif/python_env/idf5.4_py3.13_env/bin/activate`
+- `source ~/esp/esp-idf-v5.4.1/export.sh`
+
+For `amyboard` build:
+
+1. `cd tulip/amyboard`
+2. `idf.py -DMICROPY_BOARD=AMYBOARD build`
+
+For `tulip cc` or `tulip esp32s3` build:
+
+1. `cd tulip/esp32s3`
+2. `idf.py -DMICROPY_BOARD=TULIP4_R11 build`
+
 ## Tulip Release
 
 Only perform a Tulip release when the user explicitly asks for it.
