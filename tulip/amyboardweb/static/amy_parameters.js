@@ -11,6 +11,8 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "Chorus", bg_color: "rgba(180, 225, 225, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Reverb", bg_color: "rgba(160, 200, 200, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
+  const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "WAVETABLE"];
+  const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 19];
 
   const amy_knob_definitions = [
     {
@@ -29,7 +31,8 @@ window.addEventListener("DOMContentLoaded", function() {
       knob_type: "selection",
       display_name: "wave",
       change_code: "i%iv0w%v",
-      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
+      options: WAVE_OPTIONS,
+      option_values: WAVE_OPTION_VALUES,
       default_value: 0,
     },
     {
@@ -138,7 +141,8 @@ window.addEventListener("DOMContentLoaded", function() {
       knob_type: "selection",
       display_name: "wave",
       change_code: "i%iv1w%v",
-      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
+      options: WAVE_OPTIONS,
+      option_values: WAVE_OPTION_VALUES,
       default_value: 0,
     },
     {
@@ -251,7 +255,8 @@ window.addEventListener("DOMContentLoaded", function() {
       knob_type: "selection",
       display_name: "wave",
       change_code: "i%iv2w%v",
-      options: ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE"],
+      options: WAVE_OPTIONS,
+      option_values: WAVE_OPTION_VALUES,
       default_value: 0,
     },
     {
