@@ -54,7 +54,7 @@ import hashlib
 import os
 
 root = "static"
-ignore = {"amy_event_layout.generated.js", "patches.generated.js"}
+ignore = {"amy_event_layout.generated.js", "patches.generated.js", "pcm_presets.generated.js"}
 h = hashlib.sha1()
 for base, dirs, files in os.walk(root):
     dirs.sort()

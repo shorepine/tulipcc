@@ -662,8 +662,38 @@ async function write_current_patches_file_from_knobs() {
   }
   mp.FS.writeFile(CURRENT_PATCH_FILE, allMessages.join("\n") + "\n");
   await sync_persistent_fs();
+  refresh_editor_if_viewing_patches_file();
 }
 window.write_current_patches_file_from_knobs = write_current_patches_file_from_knobs;
+
+function is_selected_file_patches_file() {
+  if (!selected_environment_file || typeof selected_environment_file !== "string") {
+    return false;
+  }
+  return selected_environment_file.toLowerCase().endsWith("patches.txt");
+}
+
+function refresh_editor_if_viewing_patches_file() {
+  if (!editor || !is_selected_file_patches_file()) {
+    return false;
+  }
+  try {
+    var latest = mp.FS.readFile(CURRENT_PATCH_FILE, { encoding: "utf8" });
+    if (editor.getValue() !== latest) {
+      editor.setValue(latest);
+    }
+    environment_editor_dirty = false;
+    editor.scrollTo(0, 0);
+    setTimeout(function () { editor.save(); }, 50);
+    setTimeout(function () {
+      editor.refresh();
+      editor.scrollTo(0, 0);
+    }, 100);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 window.refresh_knobs_for_active_channel = async function(options) {
   var opts = options || {};

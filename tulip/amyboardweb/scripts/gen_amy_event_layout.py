@@ -9,6 +9,8 @@ AMY_H = ROOT / "amy" / "src" / "amy.h"
 LAYOUT_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "amy_event_layout.generated.js"
 PATCHES_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "patches.generated.js"
 PATCHES_H = ROOT / "amy" / "src" / "patches.h"
+PCM_TINY_H = ROOT / "amy" / "src" / "pcm_tiny.h"
+PCM_PRESETS_OUTPUT = ROOT / "tulip" / "amyboardweb" / "static" / "pcm_presets.generated.js"
 
 TYPE_INFO = {
     "uint32_t": (4, 4),
@@ -189,9 +191,66 @@ def generate_patches():
     PATCHES_OUTPUT.write_text(output)
 
 
+def generate_pcm_presets():
+    text = PCM_TINY_H.read_text()
+    lines = text.splitlines()
+
+    preset_entries = []
+    in_pcm_map = False
+    in_wt = False
+    current_index = None
+
+    entry_re = re.compile(r"/\*\s*\[(\d+)\]\s*([^\*]+?)\s*\*/")
+    name_re = re.compile(r"/\*\s*([^*]+?)\s*\*/\s*$")
+
+    for raw in lines:
+        line = raw.strip()
+        if "const pcm_map_t pcm_map[PCM_MAP_ENTRIES]" in line:
+            in_pcm_map = True
+            continue
+        if not in_pcm_map:
+            continue
+        if line.startswith("};"):
+            break
+        if line.startswith("#if defined(AMY_WAVETABLE)"):
+            in_wt = True
+            continue
+        if line.startswith("#endif"):
+            in_wt = False
+            continue
+        if "/* [" in line:
+            m = entry_re.search(line)
+            if m:
+                current_index = int(m.group(1))
+            n = name_re.search(line)
+            if current_index is not None and n:
+                name = n.group(1).strip()
+                preset_entries.append({
+                    "value": current_index,
+                    "name": name,
+                    "wave": 19 if in_wt else 7,
+                })
+                current_index = None
+
+    pcm_presets = [p for p in preset_entries if p["wave"] == 7]
+    wavetable_presets = [p for p in preset_entries if p["wave"] == 19]
+
+    payload = {
+        "7": pcm_presets,
+        "19": wavetable_presets,
+    }
+
+    output = "// Auto-generated from amy/src/pcm_tiny.h\n"
+    output += "window.AMY_WAVE_PRESETS = "
+    output += json.dumps(payload, indent=2, sort_keys=True)
+    output += ";\n"
+    PCM_PRESETS_OUTPUT.write_text(output)
+
+
 def main():
     generate_layout()
     generate_patches()
+    generate_pcm_presets()
 
 
 if __name__ == "__main__":
