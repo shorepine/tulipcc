@@ -109,8 +109,8 @@ if __name__ == '__main__':
     'c':`
 # some stuart dempster in your browser
 import music, tulip
-amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', preset=50)
-s = synth.OscSynth(wave=amy.PCM, preset=50)
+amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', preset=10)
+s = synth.OscSynth(wave=amy.PCM, preset=10)
 for i,note in enumerate(music.Chord('F:min7').midinotes()):
     s.note_on(note+24, 1, time=i*4000)
     s.note_off(note+24, time=20000)
@@ -216,9 +216,9 @@ def update_sound_number(scan):
 
     if sound_type == 0:
         if scan == '.':
-            sound_number = (sound_number + 1) % 29
+            sound_number = (sound_number + 1) % len(patches.drumkit)
         elif scan == ',':
-            sound_number = (sound_number - 1) % 29
+            sound_number = (sound_number - 1) % len(patches.drumkit)
     elif sound_type == 1:
         if scan == '.':
             sound_number = (sound_number + 1) % len(drum_nums)

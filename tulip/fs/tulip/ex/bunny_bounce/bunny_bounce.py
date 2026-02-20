@@ -53,8 +53,8 @@ def activate_callback(app):
     app.bounce_base_note = 45
     app.bounce_curr_note = app.bounce_base_note
 
-    app.flower_notes = [3,4,11,12,13]
-    app.shroom_notes = [28,25,1]
+    app.flower_notes = [3, 4, 6, 7, 9]
+    app.shroom_notes = [10, 8, 1]
 
     tulip.bg_clear(random.choice(app.grass_colors))
     (app.rabbit_w, app.rabbit_h) = (48, 32)
@@ -163,7 +163,7 @@ def game_loop(app):
     if app.d["x"] + app.rabbit_w >= WIDTH or app.d["x"] <= 0:
         app.d["x_incr"] *= -1
         twiddle_path(app)
-        amy.send(osc=get_osc(), wave=amy.PCM, preset=13, note=app.d["curr_note"], vel=0.25)
+        amy.send(osc=get_osc(), wave=amy.PCM, preset=9, note=app.d["curr_note"], vel=0.25)
         app.ringing_pan += (random.random() - 0.5) * 0.1
         if app.ringing_pan > 0.75:
             app.ringing_pan = 0.75
@@ -175,7 +175,7 @@ def game_loop(app):
     if app.d["y"] + app.rabbit_h >= HEIGHT or app.d["y"] <= 0:
         app.d["y_incr"] *= -1
         twiddle_path(app)
-        amy.send(osc=get_osc(), wave=amy.PCM, preset=13, note=app.d["curr_note"], vel=0.25)
+        amy.send(osc=get_osc(), wave=amy.PCM, preset=9, note=app.d["curr_note"], vel=0.25)
         app.ringing_pan += (random.random() - 0.5) * 0.1
         if app.ringing_pan > 0.75:
             app.ringing_pan = 0.75
@@ -208,7 +208,7 @@ def game_loop(app):
         tulip.bg_pixel(g_x,g_y,random.choice(app.grass_colors))
 
     #14
-    amy.send(osc=0, wave=amy.PCM, preset=18,  vel=0.25, feedback=1)
+    amy.send(osc=0, wave=amy.PCM, preset=10,  vel=0.25, feedback=1)
 
 
 def deactivate_callback(app):
@@ -221,6 +221,5 @@ def run(app):
     app.activate_callback = activate_callback
     app.deactivate_callback = deactivate_callback
     app.present()
-
 
 

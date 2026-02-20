@@ -86,7 +86,7 @@ class Blob(tulip.Sprite):
             self.y_v = random.randrange(-10, 10)
             p = self.x / tulip.Sprite.SCREEN_WIDTH
             #print("x:", self.x, "pan:", p)
-            amy.send(osc=32+self.sprite_id, wave=amy.PCM, preset=13, note=48+self.sprite_id, vel=0.75, pan=p)
+            amy.send(osc=32+self.sprite_id, wave=amy.PCM, preset=9, note=48+self.sprite_id, vel=0.75, pan=p)
             self.last_bounce = frame
             return True
         else:
@@ -97,7 +97,7 @@ class Blob(tulip.Sprite):
             self.x = wormhole.x
             self.y = wormhole.y
             p = self.x / tulip.Sprite.SCREEN_WIDTH
-            amy.send(osc=32+self.sprite_id, wave=amy.PCM, preset=18, note=48+self.sprite_id, vel=0.75, pan=p)
+            amy.send(osc=32+self.sprite_id, wave=amy.PCM, preset=10, note=48+self.sprite_id, vel=0.75, pan=p)
             self.last_wormhole = frame        
 
 
@@ -487,7 +487,6 @@ def run(app):
     app.activate_callback = activate_callback
     app.deactivate_callback = deactivate_callback
     app.present()
-
 
 
 
