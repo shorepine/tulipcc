@@ -436,7 +436,14 @@ function move_knob(channel, cc, value) {
       if (options.length === 0) {
         return;
       }
-      scaled_value = Math.round((options.length - 1) * (value / 127));
+      const selectedIndex = Math.round((options.length - 1) * (value / 127));
+      const optionValues = Array.isArray(knob.option_values) ? knob.option_values : null;
+      if (optionValues && optionValues[selectedIndex] !== undefined) {
+        const mappedValue = Number(optionValues[selectedIndex]);
+        scaled_value = Number.isFinite(mappedValue) ? mappedValue : selectedIndex;
+      } else {
+        scaled_value = selectedIndex;
+      }
     } else if (knob.knob_type === "pushbutton") {
       scaled_value = value >= 64 ? 1 : 0;
     } else {

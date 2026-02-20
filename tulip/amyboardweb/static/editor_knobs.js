@@ -423,7 +423,30 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
     if (config.knob_type === "selection") {
       const options = Array.isArray(config.options) ? config.options : [];
-      const defaultIndex = parseNumber(config.default_value, 0);
+      const optionValues = Array.isArray(config.option_values) ? config.option_values : null;
+
+      function valueForIndex(idx) {
+        if (optionValues && optionValues[idx] !== undefined) {
+          const parsed = parseNumber(optionValues[idx], idx);
+          return parsed;
+        }
+        return idx;
+      }
+
+      function indexForValue(rawValue, fallbackIndex) {
+        const parsedValue = parseNumber(rawValue, fallbackIndex);
+        if (optionValues) {
+          const mappedIndex = optionValues.findIndex(function(mappedValue) {
+            return parseNumber(mappedValue, NaN) === parsedValue;
+          });
+          if (mappedIndex >= 0) {
+            return mappedIndex;
+          }
+        }
+        return parsedValue;
+      }
+
+      const defaultIndex = indexForValue(config.default_value, 0);
       const clampedIndex = clamp(defaultIndex, 0, Math.max(options.length - 1, 0));
       const displayName = config.display_name || `Select ${index + 1}`;
 
@@ -486,7 +509,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
         currentIndex = clamped;
         updateDisplay();
         updateButtons();
-        notifyKnobChange(index, currentIndex, config, { notifyAmy: notifyAmy !== false });
+        notifyKnobChange(index, valueForIndex(currentIndex), config, { notifyAmy: notifyAmy !== false });
       }
 
       upButton.addEventListener("click", function() {
@@ -512,7 +535,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
       updateButtons();
 
       config._setValue = function(nextValue, notifyAmy) {
-        const parsed = parseNumber(nextValue, currentIndex);
+        const parsed = indexForValue(nextValue, currentIndex);
         setIndex(parsed, notifyAmy);
       };
 
