@@ -2,7 +2,8 @@
 # maybe one day automated list of patches in AMY
 
 # Drumkit is [base_midi_note, name, general_midi_note], index is preset number.
-drumkit = [ 
+# AMY PR #560 uses pcm_tiny only (11 presets, 0..10).
+drumkit = [
     (89, "Maraca", 70),
     (39, "Kick", None),
     (45, "Snare", None),
@@ -14,25 +15,7 @@ drumkit = [
     (61, "Low Tom", 41),
     (94, "Clap", 39),
     (69, "Cowbell", 56),
-    (74, "Congo Low", 64),
-    (82, "Clave", 75),
-    (60, "Block", 76),
-    (60, "Roll", None),
-    (60, "Hit", None),
-    (60, "Crash", 49),
-    (60, "Shell", None),
-    (60, "Chimes", None),
-    (60, "Seashore", None),
-    (60, "Pwr Snare", 40),
-    (60, "Hi Tom", 43),
-    (66, "Shamisen", None),
-    (66, "Koto", None),
-    (72, "Steel", None),
-    (60, "Pwr Kick", 36),
-    (66, "Marimba", None),
-    (60, "Frets", None),
-    (60, "Std Kick", 35)
-    ]
+]
 
 patches =  [
 "A11 Brass Set 1",
