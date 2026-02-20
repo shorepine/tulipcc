@@ -12,8 +12,8 @@ midi.config.add_synth(synth.PatchSynth(6, 256))
     'c':`
 # some stuart dempster in your browser
 import music, tulip
-amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', preset=50)
-s = synth.OscSynth(wave=amy.PCM, preset=50)
+amy.load_sample(tulip.root_dir()+'sys/ex/bcla3.wav', preset=10)
+s = synth.OscSynth(wave=amy.PCM, preset=10)
 for i,note in enumerate(music.Chord('F:min7').midinotes()):
     s.note_on(note+24, 1, time=i*4000)
     s.note_off(note+24, time=20000)
