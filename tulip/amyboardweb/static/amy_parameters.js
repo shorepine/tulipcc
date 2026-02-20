@@ -11,8 +11,8 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "Chorus", bg_color: "rgba(180, 225, 225, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Reverb", bg_color: "rgba(160, 200, 200, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
-  const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "WAVETABLE"];
-  const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 19];
+  const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE"];
+  const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 7, 19];
 
   const amy_knob_definitions = [
     {
@@ -374,6 +374,9 @@ window.addEventListener("DOMContentLoaded", function() {
     if (Array.isArray(entry.options)) {
       clone.options = entry.options.slice();
     }
+    if (entry.wave_preset_by_wave && typeof entry.wave_preset_by_wave === "object") {
+      clone.wave_preset_by_wave = Object.assign({}, entry.wave_preset_by_wave);
+    }
     return clone;
   }
 
@@ -409,6 +412,19 @@ window.addEventListener("DOMContentLoaded", function() {
     if (Number.isFinite(defaultValue)) {
       state.default_value = defaultValue;
     }
+    if (knob.display_name === "wave" && knob.wave_preset_by_wave && typeof knob.wave_preset_by_wave === "object") {
+      const presetByWave = {};
+      for (const key of Object.keys(knob.wave_preset_by_wave)) {
+        const waveValue = Number(key);
+        const presetValue = Number(knob.wave_preset_by_wave[key]);
+        if (Number.isInteger(waveValue) && Number.isInteger(presetValue)) {
+          presetByWave[String(waveValue)] = presetValue;
+        }
+      }
+      if (Object.keys(presetByWave).length > 0) {
+        state.wave_preset_by_wave = presetByWave;
+      }
+    }
     if (isRangeKnob(knob)) {
       const minValue = Number(knob.min_value);
       const maxValue = Number(knob.max_value);
@@ -436,6 +452,19 @@ window.addEventListener("DOMContentLoaded", function() {
     const defaultValue = Number(serialized.default_value);
     if (Number.isFinite(defaultValue)) {
       targetKnob.default_value = defaultValue;
+    }
+    if (targetKnob.display_name === "wave" && serialized.wave_preset_by_wave && typeof serialized.wave_preset_by_wave === "object") {
+      const mapped = {};
+      for (const key of Object.keys(serialized.wave_preset_by_wave)) {
+        const waveValue = Number(key);
+        const presetValue = Number(serialized.wave_preset_by_wave[key]);
+        if (Number.isInteger(waveValue) && Number.isInteger(presetValue)) {
+          mapped[String(waveValue)] = presetValue;
+        }
+      }
+      if (Object.keys(mapped).length > 0) {
+        targetKnob.wave_preset_by_wave = mapped;
+      }
     }
     if (isRangeKnob(targetKnob)) {
       const minValue = Number(serialized.min_value);
@@ -590,11 +619,13 @@ function set_knobs_from_patch_number(patch_number) {
   let f_adsr = [0, 0, 1, 0];
   let lfoFreq = null;
   let lfoDelay = null;
+  let lfoWave = 4;  // default triangle
   let lfoOsc = 0;
   let lfoPwm = 0;
   // Track coefficients for all 4 non-lfo oscs.
   let osc_freq = [null, null, null, null];
   let osc_wave = [null, null, null, null];
+  let osc_preset = [null, null, null, null];
   let osc_duty = [null, null, null, null];
   let osc_gain = [0, 0, 0, 0];
   let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
@@ -643,13 +674,17 @@ function set_knobs_from_patch_number(patch_number) {
       if (Number.isFinite(event.freq_coefs[0])) {
         lfoFreq = event.freq_coefs[0];
       }
+      if (event.wave >= 0 && event.wave < 127) {
+        lfoWave = event.wave;
+      }
       if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
         lfoDelay = event.eg0_times[0];
       }
     } else if (event.osc >= 0) {
       // Non-LFO osc, don't assume what order they come in.
-      if (Number.isFinite(event.mod_source)) {
-        mod_source_osc = event.mod_source;
+      const parsedModSource = Number(event.mod_source);
+      if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
+        mod_source_osc = parsedModSource;
       }
       if (event.eg0_times) {
         if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
@@ -690,6 +725,30 @@ function set_knobs_from_patch_number(patch_number) {
       if (event.wave >= 0 && event.wave < 127) {
         osc_wave[event.osc] = event.wave
       }
+      if (Number.isFinite(event.preset) && event.preset >= 0) {
+        osc_preset[event.osc] = event.preset;
+      }
+    }
+  }
+
+  // Re-scan for LFO so event ordering does not force defaults.
+  // Prefer osc 2 (the editor's dedicated LFO oscillator), then fall back to inferred mod source.
+  var lfoSourceOsc = 2;
+  if (!events.some(function(event) { return event && event.osc === 2; })) {
+    lfoSourceOsc = mod_source_osc;
+  }
+  for (const event of events) {
+    if (!event || event.osc !== lfoSourceOsc) {
+      continue;
+    }
+    if (Number.isFinite(event.freq_coefs[0])) {
+      lfoFreq = event.freq_coefs[0];
+    }
+    if (event.wave >= 0 && event.wave < 127) {
+      lfoWave = event.wave;
+    }
+    if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
+      lfoDelay = event.eg0_times[0];
     }
   }
   // If we didn't set up a separate filter ADSR, it follows the VCA
@@ -718,11 +777,19 @@ function set_knobs_from_patch_number(patch_number) {
   // Configure the patch.
   set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[oscAB_osc[0]]);
   set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[oscAB_osc[0]]);
+  if (typeof set_amy_knob_wave_preset === "function"
+    && Number.isFinite(osc_wave[oscAB_osc[0]]) && Number.isFinite(osc_preset[oscAB_osc[0]])) {
+    set_amy_knob_wave_preset(knobs, "Osc A", osc_wave[oscAB_osc[0]], osc_preset[oscAB_osc[0]], false);
+  }
   set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[oscAB_osc[0]]);
   set_amy_knob_value(knobs, "Osc A", "level", osc_gain[oscAB_osc[0]]);
 
   set_amy_knob_value(knobs, "Osc B", "freq", osc_freq[oscAB_osc[1]]);
   set_amy_knob_value(knobs, "Osc B", "wave", osc_wave[oscAB_osc[1]]);
+  if (typeof set_amy_knob_wave_preset === "function"
+    && Number.isFinite(osc_wave[oscAB_osc[1]]) && Number.isFinite(osc_preset[oscAB_osc[1]])) {
+    set_amy_knob_wave_preset(knobs, "Osc B", osc_wave[oscAB_osc[1]], osc_preset[oscAB_osc[1]], false);
+  }
   set_amy_knob_value(knobs, "Osc B", "duty", osc_duty[oscAB_osc[1]]);
   set_amy_knob_value(knobs, "Osc B", "level", osc_gain[oscAB_osc[1]]);
 
@@ -737,7 +804,7 @@ function set_knobs_from_patch_number(patch_number) {
 
   set_amy_knob_value(knobs, "LFO", "freq", lfoFreq);
   set_amy_knob_value(knobs, "LFO", "delay", lfoDelay);
-  set_amy_knob_value(knobs, "LFO", "wave", 4);   // always triangle
+  set_amy_knob_value(knobs, "LFO", "wave", lfoWave);
   set_amy_knob_value(knobs, "LFO", "osc", lfoOsc);
   set_amy_knob_value(knobs, "LFO", "pwm", lfoPwm);
   set_amy_knob_value(knobs, "LFO", "filt", filterLfo);

@@ -47,6 +47,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/mode/python/python.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="amy_event_layout.generated.js"></script>
+    <script type="text/javascript" src="pcm_presets.generated.js"></script>
     <script type="text/javascript" src="amy_parameters.js"></script>
     <script>
       window.AMYBOARD_WORLD_API_BASE = "https://tulipcc-production.up.railway.app";
@@ -281,6 +282,54 @@
         padding: 0 2px;
         color: #f8f8f8;
         user-select: none;
+      }
+
+      .amy-select-display-clickable {
+        text-decoration: underline;
+        text-underline-offset: 2px;
+        cursor: pointer;
+      }
+
+      .amy-wave-preset-popup {
+        position: absolute;
+        z-index: 10000;
+        width: max-content;
+        max-width: 320px;
+        max-height: 260px;
+        overflow-y: auto;
+        background: #181818;
+        border: 1px solid #444;
+        border-radius: 8px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+        padding: 6px;
+      }
+
+      .amy-wave-preset-popup-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #ddd;
+        margin: 2px 4px 6px;
+      }
+
+      .amy-wave-preset-option {
+        width: 100%;
+        text-align: left;
+        border: none;
+        background: transparent;
+        color: #f0f0f0;
+        border-radius: 6px;
+        padding: 4px 6px;
+        font-size: 11px;
+        line-height: 1.2;
+      }
+
+      .amy-wave-preset-option:hover {
+        background: #2a2a2a;
+      }
+
+      .amy-wave-preset-option.is-selected {
+        background: #2f4737;
+        color: #bfe8c6;
       }
 
       .knob-spacer {

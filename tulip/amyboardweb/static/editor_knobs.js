@@ -3,15 +3,24 @@ function make_change_code(synth, value, knob, no_instrument) {
     return;
   }
   if (Math.round(value) == value) {
-    valueStr = String(value);
+    var valueStr = String(value);
   } else {
-    valueStr = value.toFixed(3);
+    var valueStr = value.toFixed(3);
   }
   let updated = knob.change_code.replace(/%v/g, valueStr);
   if (no_instrument) {
     updated = updated.replace(/i%i/g, "");
   } else {
     updated = updated.replace(/%i/g, String(synth));
+  }
+  const selectedPreset = get_wave_preset_for_value(knob, value, { allowFallback: false });
+  if (selectedPreset !== null) {
+    updated = updated.split("Z").map(function(part) {
+      if (!part) {
+        return part;
+      }
+      return part + "p" + String(selectedPreset);
+    }).join("Z");
   }
   return updated;
 }
@@ -28,6 +37,56 @@ function set_knob_ui_value(knob, value, notifyAmy) {
   }
   knob._setValue(value, notifyAmy === true);
   return true;
+}
+
+function get_wave_preset_options_for_value(waveValue) {
+  const allPresets = (typeof window !== "undefined" && window.AMY_WAVE_PRESETS && typeof window.AMY_WAVE_PRESETS === "object")
+    ? window.AMY_WAVE_PRESETS
+    : null;
+  if (!allPresets) {
+    return [];
+  }
+  const key = String(Number(waveValue));
+  const options = allPresets[key];
+  if (!Array.isArray(options)) {
+    return [];
+  }
+  return options;
+}
+
+function ensure_wave_preset_storage(knob) {
+  if (!knob || typeof knob !== "object") {
+    return null;
+  }
+  if (!knob.wave_preset_by_wave || typeof knob.wave_preset_by_wave !== "object") {
+    knob.wave_preset_by_wave = {};
+  }
+  return knob.wave_preset_by_wave;
+}
+
+function get_wave_preset_for_value(knob, waveValue, opts) {
+  const optionsArg = (opts && typeof opts === "object") ? opts : {};
+  const allowFallback = optionsArg.allowFallback === true;
+  if (!knob || knob.knob_type !== "selection" || knob.display_name !== "wave") {
+    return null;
+  }
+  const options = get_wave_preset_options_for_value(waveValue);
+  if (!options.length) {
+    return null;
+  }
+  const waveKey = String(Number(waveValue));
+  const stored = knob.wave_preset_by_wave && knob.wave_preset_by_wave[waveKey];
+  const storedNum = Number(stored);
+  if (Number.isInteger(storedNum) && options.some(function(entry) { return Number(entry.value) === storedNum; })) {
+    return storedNum;
+  }
+  if (allowFallback) {
+    const first = Number(options[0].value);
+    if (Number.isInteger(first)) {
+      return first;
+    }
+  }
+  return null;
 }
 
 function init_knobs(knobConfigs, gridId, onChange) {
@@ -482,9 +541,116 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
       let currentIndex = clampedIndex;
 
+      const presetPopup = (function() {
+        let popup = null;
+        let currentAnchor = null;
+        function closePopup() {
+          if (!popup) {
+            return;
+          }
+          popup.style.display = "none";
+          popup.setAttribute("data-wave", "");
+          currentAnchor = null;
+        }
+        function openPopup(anchorEl, waveValue, onSelectPreset, currentPreset) {
+          const presetOptions = get_wave_preset_options_for_value(waveValue);
+          if (!presetOptions.length) {
+            return;
+          }
+          if (!popup) {
+            popup = document.createElement("div");
+            popup.className = "amy-wave-preset-popup";
+            popup.style.display = "none";
+            document.body.appendChild(popup);
+            document.addEventListener("mousedown", function(event) {
+              if (!popup || popup.style.display === "none") {
+                return;
+              }
+              if (popup.contains(event.target) || (currentAnchor && currentAnchor.contains(event.target))) {
+                return;
+              }
+              closePopup();
+            });
+          }
+
+          popup.innerHTML = "";
+          const title = document.createElement("div");
+          title.className = "amy-wave-preset-popup-title";
+          title.textContent = Number(waveValue) === 19 ? "Wavetable Presets" : "PCM Presets";
+          popup.appendChild(title);
+
+          for (const preset of presetOptions) {
+            const presetValue = Number(preset.value);
+            if (!Number.isInteger(presetValue)) {
+              continue;
+            }
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "amy-wave-preset-option";
+            if (Number(currentPreset) === presetValue) {
+              button.classList.add("is-selected");
+            }
+            const labelName = preset.name !== undefined ? String(preset.name) : "";
+            button.textContent = String(presetValue) + ": " + labelName;
+            button.addEventListener("click", function() {
+              onSelectPreset(presetValue);
+              closePopup();
+            });
+            popup.appendChild(button);
+          }
+
+          popup.style.display = "block";
+          popup.setAttribute("data-wave", String(waveValue));
+          currentAnchor = anchorEl;
+          const rect = anchorEl.getBoundingClientRect();
+          popup.style.left = `${rect.left + window.scrollX}px`;
+          popup.style.top = `${rect.bottom + window.scrollY + 6}px`;
+        }
+        return { openPopup: openPopup, closePopup: closePopup };
+      })();
+
+      function currentWaveValue() {
+        return valueForIndex(currentIndex);
+      }
+
+      function setWavePresetForWave(waveValue, presetValue, notifyAmy) {
+        const presetOptions = get_wave_preset_options_for_value(waveValue);
+        if (!presetOptions.length) {
+          return false;
+        }
+        const parsedPreset = Number(presetValue);
+        if (!Number.isInteger(parsedPreset)) {
+          return false;
+        }
+        const valid = presetOptions.some(function(entry) {
+          return Number(entry.value) === parsedPreset;
+        });
+        if (!valid) {
+          return false;
+        }
+        const storage = ensure_wave_preset_storage(config);
+        if (!storage) {
+          return false;
+        }
+        storage[String(Number(waveValue))] = parsedPreset;
+        if (notifyAmy) {
+          send_change_code(window.current_synth, currentWaveValue(), config);
+        }
+        if (typeof window.request_persist_amy_knobs_state === "function") {
+          window.request_persist_amy_knobs_state();
+        }
+        if (typeof window.request_current_patches_file_rewrite === "function") {
+          window.request_current_patches_file_rewrite();
+        }
+        return true;
+      }
+
       function updateDisplay() {
         const optionLabel = options[currentIndex] !== undefined ? String(options[currentIndex]) : "";
         display.textContent = optionLabel;
+        const waveValue = currentWaveValue();
+        const hasPresetPopup = get_wave_preset_options_for_value(waveValue).length > 0;
+        display.classList.toggle("amy-select-display-clickable", hasPresetPopup);
       }
 
       function updateButtons() {
@@ -531,12 +697,36 @@ function init_knobs(knobConfigs, gridId, onChange) {
         }
       });
 
+      display.addEventListener("click", function(event) {
+        const waveValue = currentWaveValue();
+        const presetOptions = get_wave_preset_options_for_value(waveValue);
+        if (!presetOptions.length) {
+          return;
+        }
+        event.preventDefault();
+        const selected = get_wave_preset_for_value(config, waveValue, { allowFallback: false });
+        presetPopup.openPopup(
+          display,
+          waveValue,
+          function(presetValue) {
+            setWavePresetForWave(waveValue, presetValue, true);
+          },
+          selected
+        );
+      });
+
       updateDisplay();
       updateButtons();
 
       config._setValue = function(nextValue, notifyAmy) {
         const parsed = indexForValue(nextValue, currentIndex);
         setIndex(parsed, notifyAmy);
+      };
+      config._setWavePreset = function(waveValue, presetValue, notifyAmy) {
+        return setWavePresetForWave(waveValue, presetValue, notifyAmy === true);
+      };
+      config._getWavePreset = function(waveValue) {
+        return get_wave_preset_for_value(config, waveValue, { allowFallback: false });
       };
 
       control.appendChild(upButton);
@@ -946,6 +1136,37 @@ function set_amy_knob_value(knobs, sectionName, name, value) {
     knob.default_value = value;
   }
   send_change_code(window.current_synth, value, knob);
+  if (typeof window.request_persist_amy_knobs_state === "function") {
+    window.request_persist_amy_knobs_state();
+  }
+  return true;
+}
+
+function set_amy_knob_wave_preset(knobs, sectionName, waveValue, presetValue, notifyAmy) {
+  if (!Array.isArray(knobs) || typeof sectionName !== "string") {
+    return false;
+  }
+  const knob = knobs.find(function(entry) {
+    return entry && entry.section === sectionName && entry.display_name === "wave";
+  });
+  if (!knob) {
+    return false;
+  }
+  const presetNum = Number(presetValue);
+  const waveNum = Number(waveValue);
+  if (!Number.isInteger(presetNum) || !Number.isInteger(waveNum)) {
+    return false;
+  }
+  const storage = ensure_wave_preset_storage(knob);
+  if (!storage) {
+    return false;
+  }
+  storage[String(waveNum)] = presetNum;
+  if (typeof knob._setWavePreset === "function") {
+    knob._setWavePreset(waveNum, presetNum, notifyAmy === true);
+  } else if (notifyAmy) {
+    send_change_code(window.current_synth, waveNum, knob);
+  }
   if (typeof window.request_persist_amy_knobs_state === "function") {
     window.request_persist_amy_knobs_state();
   }
