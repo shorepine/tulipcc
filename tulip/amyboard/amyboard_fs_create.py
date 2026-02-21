@@ -64,9 +64,11 @@ try:
 except:
     pass
 copy_to_lfs('env.py', 'current/env/env.py')
-copy_to_lfs('patches.txt', 'current/env/patches.txt')
+copy_to_lfs('web.patch', 'current/env/web.patch')
+copy_to_lfs('other.patch', 'current/env/other.patch')
 copy_to_lfs('env.py', 'default/env/env.py')
-copy_to_lfs('patches.txt', 'default/env/patches.txt')
+copy_to_lfs('web.patch', 'default/env/web.patch')
+copy_to_lfs('other.patch', 'default/env/other.patch')
 
 print("writing VFS .bin file...")
 with open("build/amyboard-vfs.bin","wb") as fh:

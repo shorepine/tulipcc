@@ -1,5 +1,5 @@
 # amyboard.py
-import tulip, midi, amy, time, struct, time, sys
+import tulip, midi, amy, time, struct, time, sys, os
 
 i2c = None
 display_buffer = None # the bytes object storing the display bits
@@ -10,7 +10,8 @@ def web():
     return (tulip.board()=="AMYBOARD_WEB")
 
 DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n"
-DEFAULT_PATCHES_SOURCE = "# patches.txt, ,AMY messages to load on boot\n"
+DEFAULT_WEB_PATCH_SOURCE = "# Do not edit - Set by AMYboard web patch editor\n"
+DEFAULT_OTHER_PATCH_SOURCE = ""
 
 def _path_exists(path):
     import os
@@ -59,6 +60,19 @@ def _clear_directory(path):
         _remove_tree(path.rstrip("/") + "/" + name)
 
 
+def _read_file_or_none(path):
+    try:
+        return open(path, "r").read()
+    except OSError:
+        return None
+
+
+def _write_file(path, value):
+    w = open(path, "w")
+    w.write(value)
+    w.close()
+
+
 def _ensure_current_env_layout():
     import os
     import uos
@@ -74,9 +88,11 @@ def _ensure_current_env_layout():
             pass
 
     default_env_file = default_env_dir + "/env.py"
-    default_patches_file = default_env_dir + "/patches.txt"
+    default_web_patch_file = default_env_dir + "/web.patch"
+    default_other_patch_file = default_env_dir + "/other.patch"
     current_env_file = current_env_dir + "/env.py"
-    current_patches_file = current_env_dir + "/patches.txt"
+    current_web_patch_file = current_env_dir + "/web.patch"
+    current_other_patch_file = current_env_dir + "/other.patch"
 
     try:
         open(default_env_file, "r").close()
@@ -85,11 +101,17 @@ def _ensure_current_env_layout():
         w.write(DEFAULT_ENV_SOURCE)
         w.close()
     try:
-        open(default_patches_file, "r").close()
+        open(default_web_patch_file, "r").close()
     except OSError:
-        w = open(default_patches_file, "w")
-        w.write(DEFAULT_PATCHES_SOURCE)
-        w.close()
+        legacy_default_patch = _read_file_or_none(default_env_dir + "/patches.txt")
+        if legacy_default_patch is None:
+            legacy_default_patch = DEFAULT_WEB_PATCH_SOURCE
+        _write_file(default_web_patch_file, legacy_default_patch)
+
+    try:
+        open(default_other_patch_file, "r").close()
+    except OSError:
+        _write_file(default_other_patch_file, DEFAULT_OTHER_PATCH_SOURCE)
 
     try:
         open(current_env_file, "r").close()
@@ -99,13 +121,24 @@ def _ensure_current_env_layout():
         w.close()
 
     try:
-        open(current_patches_file, "r").close()
+        open(current_web_patch_file, "r").close()
     except OSError:
-        w = open(current_patches_file, "w")
-        w.write(open(default_patches_file, "r").read())
-        w.close()
+        legacy_current_patch = _read_file_or_none(current_env_dir + "/patches.txt")
+        if legacy_current_patch is None:
+            legacy_current_patch = _read_file_or_none(default_web_patch_file)
+        if legacy_current_patch is None:
+            legacy_current_patch = DEFAULT_WEB_PATCH_SOURCE
+        _write_file(current_web_patch_file, legacy_current_patch)
 
-    return (current_env_dir, current_patches_file)
+    try:
+        open(current_other_patch_file, "r").close()
+    except OSError:
+        current_other_source = _read_file_or_none(default_other_patch_file)
+        if current_other_source is None:
+            current_other_source = DEFAULT_OTHER_PATCH_SOURCE
+        _write_file(current_other_patch_file, current_other_source)
+
+    return current_env_dir
 
 
 
@@ -200,16 +233,32 @@ def start_amy():
     init_pcm9211()
     midi_out_pin = init_midi()
     tulip.amyboard_start(midi_out_pin)
-    (_env_dir, patches_file) = _ensure_current_env_layout()
+    _env_dir = _ensure_current_env_layout()
 
-    tulip.stderr_write("Sending patches.txt to AMY")
+    tulip.stderr_write("Sending .patch files to AMY")
+    patch_files = []
     try:
-        for line in open(patches_file, "r"):
-            message = line.strip()
-            if message and (not message.startswith("#")):
-                amy.send_raw(message)
+        for entry in os.ilistdir(_env_dir):
+            name = entry[0]
+            if name.endswith(".patch"):
+                patch_files.append(name)
     except OSError:
-        tulip.stderr_write("No patches.txt")
+        pass
+    patch_files.sort()
+    for i in range(len(patch_files)):
+        if patch_files[i].lower() == "web.patch":
+            if i != 0:
+                patch_files.insert(0, patch_files.pop(i))
+            break
+    for patch_name in patch_files:
+        patch_path = _env_dir + "/" + patch_name
+        try:
+            for line in open(patch_path, "r"):
+                message = line.strip()
+                if message and (not message.startswith("#")):
+                    amy.send_raw(message)
+        except OSError:
+            pass
 
     from upysh import cd
     tulip.stderr_write("cding to %s" % (_env_dir))
