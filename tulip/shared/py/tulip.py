@@ -383,10 +383,12 @@ def tar_extract(file_name, show_progress=True):
             else:
                 if(show_progress): print("extracting:", i.name)
                 sub_file = tar.extractfile(i)
-                data = sub_file.read()
                 try:
                     with open(i.name, "wb") as dest:
-                        dest.write(data)
-                        dest.close()
+                        while True:
+                            data = sub_file.read(4096)
+                            if not data:
+                                break
+                            dest.write(data)
                 except OSError as error:
                     if(show_progress): print("borked on:", i.name)
