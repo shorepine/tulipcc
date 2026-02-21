@@ -53,6 +53,7 @@ const CURRENT_PATCH_FILE = CURRENT_ENV_DIR + "/patches.txt";
 const DEFAULT_PATCH_FILE = DEFAULT_ENV_DIR + "/patches.txt";
 const DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n";
 const DEFAULT_PATCH_SOURCE = "# patches.txt, ,AMY messages to load on boot\n";
+const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json"];
 const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
 window.current_synth = 1;
@@ -1042,6 +1043,19 @@ function list_environment_files() {
     return files;
 }
 
+function is_editor_openable_file(filename) {
+    if (!filename || typeof filename !== "string") {
+        return false;
+    }
+    var lower = filename.toLowerCase();
+    for (var i = 0; i < EDITOR_ALLOWED_EXTENSIONS.length; i++) {
+        if (lower.endsWith(EDITOR_ALLOWED_EXTENSIONS[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function render_environment_file_list() {
     var container = document.getElementById("treecontainer");
     if (!container) return;
@@ -1074,7 +1088,7 @@ async function select_environment_file(filename, loadEditor) {
     }
     selected_environment_file = filename;
     render_environment_file_list();
-    if (loadEditor) {
+    if (loadEditor && is_editor_openable_file(filename)) {
         await load_editor();
     }
 }
@@ -1312,6 +1326,9 @@ async function load_editor() {
     }
     if (!selected_environment_file) {
         show_alert("Select an environment file first.");
+        return;
+    }
+    if (!is_editor_openable_file(selected_environment_file)) {
         return;
     }
     var fullPath = CURRENT_ENV_DIR + "/" + selected_environment_file;
