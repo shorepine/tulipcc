@@ -767,12 +767,13 @@ function set_knobs_from_patch(channel, patch_number, patch_source) {
     if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
       window.apply_knob_cc_mappings_from_patch_source(requestedChannel, patch_source || "");
     }
+    if (typeof window.refresh_knobs_for_channel === "function") {
+      // Keep refresh inside suppression to avoid rewriting web.patch while loading patch files.
+      window.refresh_knobs_for_channel();
+    }
   } finally {
     window.suppress_knob_cc_send = previousSuppress;
     window.current_synth = previousChannel;
-  }
-  if (typeof window.refresh_knobs_for_channel === "function") {
-    window.refresh_knobs_for_channel();
   }
   return true;
 }
