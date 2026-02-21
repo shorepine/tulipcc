@@ -145,13 +145,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
       config.default_value = value;
     }
     const notifyAmy = !options || options.notifyAmy !== false;
-    if (notifyAmy) {
+    if (notifyAmy && !window.suppress_knob_cc_send) {
       send_change_code(window.current_synth, value, config);
     }
-    if (typeof window.request_persist_amy_knobs_state === "function") {
-      window.request_persist_amy_knobs_state();
-    }
-    if (typeof window.request_current_patches_file_rewrite === "function") {
+    if (notifyAmy && !window.suppress_knob_cc_send
+      && typeof window.request_current_patches_file_rewrite === "function") {
       window.request_current_patches_file_rewrite();
     }
   }
@@ -633,13 +631,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
           return false;
         }
         storage[String(Number(waveValue))] = parsedPreset;
-        if (notifyAmy) {
+        if (notifyAmy && !window.suppress_knob_cc_send) {
           send_change_code(window.current_synth, currentWaveValue(), config);
         }
-        if (typeof window.request_persist_amy_knobs_state === "function") {
-          window.request_persist_amy_knobs_state();
-        }
-        if (typeof window.request_current_patches_file_rewrite === "function") {
+        if (notifyAmy && !window.suppress_knob_cc_send
+          && typeof window.request_current_patches_file_rewrite === "function") {
           window.request_current_patches_file_rewrite();
         }
         return true;
@@ -1135,9 +1131,8 @@ function set_amy_knob_value(knobs, sectionName, name, value) {
   } else {
     knob.default_value = value;
   }
-  send_change_code(window.current_synth, value, knob);
-  if (typeof window.request_persist_amy_knobs_state === "function") {
-    window.request_persist_amy_knobs_state();
+  if (!window.suppress_knob_cc_send) {
+    send_change_code(window.current_synth, value, knob);
   }
   return true;
 }
@@ -1164,11 +1159,8 @@ function set_amy_knob_wave_preset(knobs, sectionName, waveValue, presetValue, no
   storage[String(waveNum)] = presetNum;
   if (typeof knob._setWavePreset === "function") {
     knob._setWavePreset(waveNum, presetNum, notifyAmy === true);
-  } else if (notifyAmy) {
+  } else if (notifyAmy && !window.suppress_knob_cc_send) {
     send_change_code(window.current_synth, waveNum, knob);
-  }
-  if (typeof window.request_persist_amy_knobs_state === "function") {
-    window.request_persist_amy_knobs_state();
   }
   return true;
 }

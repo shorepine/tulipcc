@@ -384,9 +384,6 @@ window.addEventListener("DOMContentLoaded", function() {
     return list.map(cloneKnob);
   }
 
-  const AMY_KNOB_STATE_STORAGE_KEY = "amyboard.knob_state.v1";
-  let knobPersistTimer = null;
-
   function isRangeKnob(knob) {
     return !!knob
       && knob.knob_type !== "spacer"
@@ -395,152 +392,81 @@ window.addEventListener("DOMContentLoaded", function() {
       && knob.knob_type !== "pushbutton";
   }
 
-  function serializeKnobState(knob) {
-    const state = {};
-    if (!knob || typeof knob !== "object") {
-      return state;
+  function applyKnobCcMappingMessage(channel, message) {
+    const match = String(message || "").match(/^i(\d+)ic([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
+    if (!match) {
+      return false;
     }
-    if (knob.cc === "" || knob.cc === null || knob.cc === undefined) {
-      state.cc = "";
+    const messageChannel = Number(match[1]);
+    if (!Number.isInteger(messageChannel) || messageChannel !== channel) {
+      return false;
+    }
+    if (!Array.isArray(window.amy_knobs) || !Array.isArray(window.amy_knobs[channel])) {
+      return false;
+    }
+    const changeCode = String(match[7] || "");
+    if (!changeCode) {
+      return false;
+    }
+    const knob = window.amy_knobs[channel].find(function(entry) {
+      return entry && entry.change_code === changeCode;
+    });
+    if (!knob) {
+      return false;
+    }
+
+    const ccField = String(match[2] || "").trim();
+    if (ccField === "") {
+      knob.cc = "";
     } else {
-      const ccValue = Number(knob.cc);
+      const ccValue = Number(ccField);
       if (Number.isInteger(ccValue) && ccValue >= 0 && ccValue <= 127) {
-        state.cc = ccValue;
+        knob.cc = ccValue;
       }
     }
-    const defaultValue = Number(knob.default_value);
-    if (Number.isFinite(defaultValue)) {
-      state.default_value = defaultValue;
-    }
-    if (knob.display_name === "wave" && knob.wave_preset_by_wave && typeof knob.wave_preset_by_wave === "object") {
-      const presetByWave = {};
-      for (const key of Object.keys(knob.wave_preset_by_wave)) {
-        const waveValue = Number(key);
-        const presetValue = Number(knob.wave_preset_by_wave[key]);
-        if (Number.isInteger(waveValue) && Number.isInteger(presetValue)) {
-          presetByWave[String(waveValue)] = presetValue;
-        }
-      }
-      if (Object.keys(presetByWave).length > 0) {
-        state.wave_preset_by_wave = presetByWave;
-      }
-    }
+
     if (isRangeKnob(knob)) {
-      const minValue = Number(knob.min_value);
-      const maxValue = Number(knob.max_value);
+      const minValue = Number(match[4]);
+      const maxValue = Number(match[5]);
       if (Number.isFinite(minValue) && Number.isFinite(maxValue) && minValue < maxValue) {
-        state.min_value = minValue;
-        state.max_value = maxValue;
+        knob.min_value = minValue;
+        knob.max_value = maxValue;
       }
-      state.range_mode = knob.knob_type === "log" ? "log" : "linear";
+      const offsetValue = Number(match[6]);
+      if (Number.isFinite(offsetValue)) {
+        knob.offset = offsetValue;
+      }
+      if (Number(match[3]) === 1) {
+        knob.knob_type = "log";
+      } else if (knob.knob_type === "log") {
+        knob.knob_type = undefined;
+      }
     }
-    return state;
+    return true;
   }
 
-  function applySerializedKnobState(targetKnob, serialized) {
-    if (!targetKnob || !serialized || typeof serialized !== "object") {
-      return;
+  function applyKnobCcMappingsFromPatchSource(channel, patchSource) {
+    const ch = Number(channel);
+    if (!Number.isInteger(ch) || ch < 1 || ch > 16) {
+      return false;
     }
-    if (serialized.cc === "") {
-      targetKnob.cc = "";
-    } else {
-      const ccValue = Number(serialized.cc);
-      if (Number.isInteger(ccValue) && ccValue >= 0 && ccValue <= 127) {
-        targetKnob.cc = ccValue;
+    if (!patchSource) {
+      return false;
+    }
+    let appliedAny = false;
+    const lines = String(patchSource).split("\n");
+    for (const rawLine of lines) {
+      const line = String(rawLine || "").trim();
+      if (!line || line.startsWith("#")) {
+        continue;
+      }
+      if (applyKnobCcMappingMessage(ch, line)) {
+        appliedAny = true;
       }
     }
-    const defaultValue = Number(serialized.default_value);
-    if (Number.isFinite(defaultValue)) {
-      targetKnob.default_value = defaultValue;
-    }
-    if (targetKnob.display_name === "wave" && serialized.wave_preset_by_wave && typeof serialized.wave_preset_by_wave === "object") {
-      const mapped = {};
-      for (const key of Object.keys(serialized.wave_preset_by_wave)) {
-        const waveValue = Number(key);
-        const presetValue = Number(serialized.wave_preset_by_wave[key]);
-        if (Number.isInteger(waveValue) && Number.isInteger(presetValue)) {
-          mapped[String(waveValue)] = presetValue;
-        }
-      }
-      if (Object.keys(mapped).length > 0) {
-        targetKnob.wave_preset_by_wave = mapped;
-      }
-    }
-    if (isRangeKnob(targetKnob)) {
-      const minValue = Number(serialized.min_value);
-      const maxValue = Number(serialized.max_value);
-      if (Number.isFinite(minValue) && Number.isFinite(maxValue) && minValue < maxValue) {
-        targetKnob.min_value = minValue;
-        targetKnob.max_value = maxValue;
-      }
-      if (serialized.range_mode === "log") {
-        targetKnob.knob_type = "log";
-      } else if (serialized.range_mode === "linear" && targetKnob.knob_type === "log") {
-        targetKnob.knob_type = undefined;
-      }
-    }
+    return appliedAny;
   }
-
-  window.persist_amy_knobs_state = function() {
-    if (!Array.isArray(window.amy_knobs)) {
-      return false;
-    }
-    const payload = { version: 1, channels: {} };
-    for (let channel = 1; channel <= 16; channel += 1) {
-      const knobs = window.amy_knobs[channel];
-      if (!Array.isArray(knobs)) {
-        continue;
-      }
-      payload.channels[channel] = knobs.map(serializeKnobState);
-    }
-    try {
-      localStorage.setItem(AMY_KNOB_STATE_STORAGE_KEY, JSON.stringify(payload));
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-
-  window.request_persist_amy_knobs_state = function() {
-    if (knobPersistTimer) {
-      clearTimeout(knobPersistTimer);
-    }
-    knobPersistTimer = setTimeout(function() {
-      knobPersistTimer = null;
-      if (typeof window.persist_amy_knobs_state === "function") {
-        window.persist_amy_knobs_state();
-      }
-    }, 120);
-  };
-
-  window.restore_amy_knobs_state = function() {
-    if (!Array.isArray(window.amy_knobs)) {
-      return false;
-    }
-    let parsed = null;
-    try {
-      parsed = JSON.parse(localStorage.getItem(AMY_KNOB_STATE_STORAGE_KEY) || "null");
-    } catch (e) {
-      parsed = null;
-    }
-    if (!parsed || !parsed.channels || typeof parsed.channels !== "object") {
-      return false;
-    }
-    let restoredAny = false;
-    for (let channel = 1; channel <= 16; channel += 1) {
-      const storedKnobs = parsed.channels[channel] || parsed.channels[String(channel)];
-      const targetKnobs = window.amy_knobs[channel];
-      if (!Array.isArray(storedKnobs) || !Array.isArray(targetKnobs)) {
-        continue;
-      }
-      const count = Math.min(storedKnobs.length, targetKnobs.length);
-      for (let i = 0; i < count; i += 1) {
-        applySerializedKnobState(targetKnobs[i], storedKnobs[i]);
-        restoredAny = true;
-      }
-    }
-    return restoredAny;
-  };
+  window.apply_knob_cc_mappings_from_patch_source = applyKnobCcMappingsFromPatchSource;
 
   window.reset_amy_knobs_to_defaults = function() {
     window.amy_knobs = new Array(17);
@@ -548,9 +474,6 @@ window.addEventListener("DOMContentLoaded", function() {
       window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
     }
     window.has_restored_amy_knobs_state = false;
-    try {
-      localStorage.removeItem(AMY_KNOB_STATE_STORAGE_KEY);
-    } catch (e) {}
     return true;
   };
 
@@ -558,7 +481,7 @@ window.addEventListener("DOMContentLoaded", function() {
   for (let i = 1; i <= 16; i += 1) {
     window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
   }
-  window.has_restored_amy_knobs_state = !!(typeof window.restore_amy_knobs_state === "function" && window.restore_amy_knobs_state());
+  window.has_restored_amy_knobs_state = false;
 
   window.get_current_knobs = function() {
     const idx = Number(window.current_synth);
@@ -587,14 +510,17 @@ window.addEventListener("DOMContentLoaded", function() {
   };
 
   if (typeof window.refresh_knobs_for_channel === "function") {
+    var previousSuppress = !!window.suppress_knob_cc_send;
+    window.suppress_knob_cc_send = true;
     window.refresh_knobs_for_channel();
+    window.suppress_knob_cc_send = previousSuppress;
   }
   if (typeof init_patches_select === "function") {
     init_patches_select("patch-select");
   }
 });
 
-function set_knobs_from_patch_number(patch_number) {
+function set_knobs_from_patch_number_impl(patch_number) {
   // if this is a memory patch, load it. if not, load the amyboard base patch
   if(patch_number >= 1024 && patch_number < 1024+32) {
     amy_add_log_message("i"+window.current_synth+"iv6K"+patch_number);
@@ -825,9 +751,36 @@ function set_knobs_from_patch_number(patch_number) {
   set_amy_knob_value(knobs, "Chorus", "freq", chorus[1]);
   set_amy_knob_value(knobs, "Chorus", "depth", chorus[2]);
 
+}
+
+function set_knobs_from_patch(channel, patch_number, patch_source) {
+  const requestedChannel = Number(channel);
+  if (!Number.isInteger(requestedChannel) || requestedChannel < 1 || requestedChannel > 16) {
+    return false;
+  }
+  const previousChannel = Number(window.current_synth || 1);
+  const previousSuppress = !!window.suppress_knob_cc_send;
+  window.current_synth = requestedChannel;
+  window.suppress_knob_cc_send = true;
+  try {
+    set_knobs_from_patch_number_impl(patch_number);
+    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
+      window.apply_knob_cc_mappings_from_patch_source(requestedChannel, patch_source || "");
+    }
+  } finally {
+    window.suppress_knob_cc_send = previousSuppress;
+    window.current_synth = previousChannel;
+  }
   if (typeof window.refresh_knobs_for_channel === "function") {
     window.refresh_knobs_for_channel();
   }
+  return true;
+}
+window.set_knobs_from_patch = set_knobs_from_patch;
+
+function set_knobs_from_patch_number(patch_number) {
+  const channel = Number(window.current_synth || 1);
+  return set_knobs_from_patch(channel, patch_number, "");
 }
 
 /* 1: Juno A12 Brass Swell */
