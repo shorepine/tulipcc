@@ -87,6 +87,7 @@ Web release steps (run when the user asks to release/deploy web targets):
    - Ensure compile/build succeeded.
    - Kill the `./build.sh` server process.
    - `./deploy.sh`
+   - Merge the deploy branch to `main` so GitHub Pages publishes updated `www/run` artifacts.
 2. For Amyboard Web:
    - `cd tulip/amyboardweb`
    - `./build.sh`
