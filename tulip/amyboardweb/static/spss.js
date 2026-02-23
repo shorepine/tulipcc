@@ -7,7 +7,8 @@ var amy_process_single_midi_byte = null;
 var audio_started = false;
 var amy_sysclock = null;
 var amyboard_started = false;
-var amy_parse_patch_number_to_events = null;
+var amy_event_generator_for_patch_number = null;
+var amy_size_of_amy_event = null;
 
 function amy_add_log_message(message) {
   console.log(message);
@@ -134,8 +135,11 @@ amyModule().then(async function(am) {
   amy_process_single_midi_byte = am.cwrap(
     'amy_process_single_midi_byte', null, ['number, number']
   );
-  amy_parse_patch_number_to_events = am.cwrap(
-    'parse_patch_number_to_events', null, ['number', 'number', 'number']
+  amy_event_generator_for_patch_number = am.cwrap(
+    'event_generator_for_patch_number', 'number', ['number', 'number', 'number']
+  );
+  amy_size_of_amy_event = am.cwrap(
+    'size_of_amy_event', 'number',
   );
   amy_start_web_no_synths();
   amy_bleep(0); // won't play until live audio starts
@@ -148,7 +152,7 @@ amyModule().then(async function(am) {
 // Converts AMY patch number to list of (JS converted) amy_events
 // This is to let us fill in the preset knobs
 function get_events_for_patch_number(patch_number) {
-  if (!amy_module || !amy_parse_patch_number_to_events) {
+  if (!amy_module || !amy_event_generator_for_patch_number) {
     return [];
   }
 
@@ -267,35 +271,17 @@ function get_events_for_patch_number(patch_number) {
     };
   }
 
-  const outPtr = amy_module._malloc(4);
-  const countPtr = amy_module._malloc(2);
-  if (!outPtr) {
-    return [];
-  }
-  if (!countPtr) {
-    amy_module._free(outPtr);
-    return [];
-  }
-  heapU32[outPtr >> 2] = 0;
-  view.setUint16(countPtr, 0, true);
-  amy_parse_patch_number_to_events(patch_number, outPtr, countPtr);
-  const eventsPtr = heapU32[outPtr >> 2];
-  const eventCount = view.getUint16(countPtr, true);
-  amy_module._free(outPtr);
-  amy_module._free(countPtr);
-  if (!eventsPtr) {
-    return [];
-  }
-
+  const SIZEOF_EVENT_STRUCT = amy_size_of_amy_event();
+  const eventPtr = amy_module._malloc(SIZEOF_EVENT_STRUCT);
   const events = [];
-  const limit = eventCount;
-  for (let i = 0; i < limit; i += 1) {
-    const base = eventsPtr + i * layout.size;
-    const status = view.getUint8(base + offsets.status);
-    events.push(readEvent(base));
-  }
+  let state = 0;
+  do {
+    state = amy_event_generator_for_patch_number(patch_number, eventPtr, state);
+    events.push(readEvent(eventPtr));
+  } while (state != 0);
 
-  amy_module._free(eventsPtr);
+  amy_module._free(eventPtr);
+
   return events;
 }
 
