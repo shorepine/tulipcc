@@ -528,7 +528,6 @@ function set_knobs_from_patch_number_impl(patch_number) {
     amy_add_log_message("i"+window.current_synth+"iv6K257");  // Default AMYboard patch state.
   }
   const events = get_events_for_patch_number(patch_number);
-  // console log number of events
   const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
   if (!Array.isArray(knobs) || events.length === 0) {
     return;
@@ -761,7 +760,7 @@ function set_knobs_from_patch(channel, patch_number, patch_source) {
   const previousChannel = Number(window.current_synth || 1);
   const previousSuppress = !!window.suppress_knob_cc_send;
   window.current_synth = requestedChannel;
-  window.suppress_knob_cc_send = true;
+  window.suppress_knob_cc_send = false;
   try {
     set_knobs_from_patch_number_impl(patch_number);
     if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
