@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+*.db
+*.db-shm
+*.db-wal
+amyboardworld_files/
+tulipworld_files/
