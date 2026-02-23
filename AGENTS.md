@@ -79,6 +79,21 @@ Release steps:
 4. Run:
    - `./release.sh v-XXX-2026 upload`
 
+Web release steps (run when the user asks to release/deploy web targets):
+
+1. For Tulip Web:
+   - `cd tulip/web`
+   - `./build.sh`
+   - Ensure compile/build succeeded.
+   - Kill the `./build.sh` server process.
+   - `./deploy.sh`
+2. For Amyboard Web:
+   - `cd tulip/amyboardweb`
+   - `./build.sh`
+   - Ensure compile/build succeeded.
+   - Kill the `./build.sh` server process.
+   - `./deploy.sh`
+
 Notes:
 
 - This command cleans and compiles all Tulip targets.
