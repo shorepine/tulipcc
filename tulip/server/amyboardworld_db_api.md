@@ -1,6 +1,6 @@
-# AMYboard World DB API
+# World DB API (Railway)
 
-This is a DB-backed replacement for the current Discord-backed AMYboard World proxy.
+DB-backed replacement for legacy Discord/Modal Tulip World and AMYboard World flows.
 
 ## Run locally
 
@@ -8,7 +8,7 @@ This is a DB-backed replacement for the current Discord-backed AMYboard World pr
 cd tulip/server
 python3 -m venv .venv
 source .venv/bin/activate
-pip install fastapi "uvicorn[standard]" python-multipart
+pip install fastapi "uvicorn[standard]" python-multipart requests
 uvicorn amyboardworld_db_api:app --reload --port 8090
 ```
 
@@ -16,36 +16,61 @@ uvicorn amyboardworld_db_api:app --reload --port 8090
 
 Optional environment variables:
 
-- `AMYBOARDWORLD_DB_PATH` (default: `./amyboardworld.db`)
+- `WORLD_DB_PATH` (default: `./amyboardworld.db`)
 - `AMYBOARDWORLD_FILES_DIR` (default: `./amyboardworld_files`)
-- `AMYBOARDWORLD_ADMIN_TOKEN` (required for moderation endpoints)
-- `AMYBOARDWORLD_PUBLIC_BASE_URL` (optional base URL used in Discord upload messages)
-- `AMYBOARDWORLD_DISCORD_BOT_TOKEN` (optional override for bot token used to post upload notifications)
-- `AMYBOARDWORLD_DISCORD_CHANNEL_ID` (default: `1353327346924388422`, `#amyboard-world-files`)
+- `TULIPWORLD_FILES_DIR` (default: `./tulipworld_files`)
+- `WORLD_ADMIN_TOKEN` (shared admin token for moderation routes)
+- `WORLD_DISCORD_BOT_TOKEN` (optional Discord mirror-post token)
+- `AMYBOARDWORLD_DISCORD_CHANNEL_ID` (default: `#amyboard-world-files`)
+- `TULIPWORLD_DISCORD_TEXT_CHANNEL_ID` (default: `#tulip-world`)
+- `TULIPWORLD_DISCORD_FILES_CHANNEL_ID` (default: `#tulip-world-files`)
 
 ## API surface
 
-- `POST /api/amyboardworld/upload` multipart upload (`username`, `description`, `file`)
-- `GET /api/amyboardworld/files` list/search (`q`, `tag`, `username`, `limit`)
-- `GET /api/amyboardworld/files/{id}` metadata for one file
-- `GET /api/amyboardworld/files/{id}/download` file bytes
-- `PATCH /api/amyboardworld/files/{id}/tags` admin only (`x-admin-token`)
-- `DELETE /api/amyboardworld/files/{id}` admin only (`x-admin-token`)
+AMYboard World file API (existing):
+
+- `POST /api/amyboardworld/upload` (optional `created_at_ms` for backfills)
+- `GET /api/amyboardworld/files`
+- `GET /api/amyboardworld/files/{id}`
+- `GET /api/amyboardworld/files/{id}/download`
+- `PATCH /api/amyboardworld/files/{id}/tags` (admin)
+- `DELETE /api/amyboardworld/files/{id}` (admin)
+
+Tulip World file API (new):
+
+- `POST /api/tulipworld/upload` (optional `created_at_ms` for backfills)
+- `GET /api/tulipworld/files`
+- `GET /api/tulipworld/files/{id}`
+- `GET /api/tulipworld/files_latest?filename=...&username=...` (optional `username`; returns latest match)
+- `GET /api/tulipworld/files/{id}/download`
+- `PATCH /api/tulipworld/files/{id}/tags` (admin)
+- `DELETE /api/tulipworld/files/{id}` (admin)
+
+Tulip World text API (new):
+
+- `POST /api/tulipworld/messages` (JSON or form, optional `created_at_ms` for backfills)
+- `GET /api/tulipworld/messages`
+- `DELETE /api/tulipworld/messages/{id}` (admin)
+
+Unified admin API (new):
+
+- `GET /api/admin/items` (admin; scopes: `all`, `amyboard_files`, `tulip_files`, `tulip_messages`)
 
 ## Admin UI
 
-- `GET /admin` serves a simple moderation interface.
-- Supports: list/search, upload, download, tag updates, delete.
-- Enter your `AMYBOARDWORLD_ADMIN_TOKEN` in the page to perform admin actions.
+- `GET /admin` serves a unified moderation interface.
+- One admin token can moderate AMY files, Tulip files, and Tulip messages.
 
-## Amyboardweb integration
+## Migration script
 
-`amyboardweb` can use this API by setting:
+Use `tulip/server/migrate_tulipworld_from_discord.py` to import legacy Tulip data:
 
-```html
-<script>
-  window.AMYBOARD_WORLD_API_BASE = "https://your-host";
-</script>
+```bash
+cd tulip/server
+python3 migrate_tulipworld_from_discord.py \
+  --api-base https://tulipcc-production.up.railway.app \
+  --max-messages 100
 ```
 
-When unset, the app falls back to the current Modal/Discord endpoints.
+By default it imports all file attachments from legacy Tulip files channel and latest 100 Tulip text messages.
+Use `--dry-run` first to verify parsing and counts.

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "deploy": {
+    "startCommand": "uvicorn amyboardworld_db_api:app --host 0.0.0.0 --port $PORT"
+  }
+}

@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AMYboard World Admin</title>
+  <title>World Admin</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif; margin: 24px; color: #1f2937; }
     h1 { margin: 0 0 12px; }
     .row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
-    input, button, textarea { font-size: 14px; padding: 6px 8px; }
+    input, button, textarea, select { font-size: 14px; padding: 6px 8px; }
     input[type="text"], textarea { min-width: 240px; }
     .small { font-size: 12px; color: #6b7280; }
     .panel { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
@@ -18,12 +18,12 @@
     .ok { color: #065f46; }
     .err { color: #991b1b; }
     .tags { width: 220px; }
-    .desc { max-width: 360px; }
+    .desc { max-width: 400px; }
   </style>
 </head>
 <body>
-  <h1>AMYboard World Admin</h1>
-  <div class="small">Simple moderation UI for upload/download/delete/tag.</div>
+  <h1>World Admin</h1>
+  <div class="small">Unified moderation UI for AMYboard files, Tulip files, and Tulip messages.</div>
 
   <div class="panel">
     <div class="row">
@@ -33,22 +33,39 @@
       <span class="small">Stored in this browser's localStorage.</span>
     </div>
     <div class="row">
+      <label for="scope">Scope</label>
+      <select id="scope">
+        <option value="all">All</option>
+        <option value="amyboard_files">AMYboard files</option>
+        <option value="tulip_files">Tulip files</option>
+        <option value="tulip_messages">Tulip messages</option>
+      </select>
       <label for="q">Search</label>
-      <input id="q" type="text" placeholder="username / filename / description" />
-      <label for="tag">Tag</label>
-      <input id="tag" type="text" placeholder="featured" />
+      <input id="q" type="text" placeholder="username / filename / text" />
       <button id="refreshBtn" type="button">Refresh</button>
-      <label><input id="dedupe" type="checkbox" checked /> latest-per-user-env</label>
     </div>
   </div>
 
   <div class="panel">
-    <h3>Upload</h3>
+    <h3>Upload File</h3>
     <div class="row">
+      <select id="uploadScope">
+        <option value="amyboardworld">AMYboard file</option>
+        <option value="tulipworld">Tulip file</option>
+      </select>
       <input id="uploadUser" type="text" placeholder="username" maxlength="20" />
       <input id="uploadDesc" type="text" placeholder="description" maxlength="400" />
       <input id="uploadFile" type="file" accept=".tar" />
       <button id="uploadBtn" type="button">Upload</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>Post Tulip Message</h3>
+    <div class="row">
+      <input id="msgUser" type="text" placeholder="username" maxlength="20" />
+      <input id="msgText" type="text" placeholder="message" maxlength="800" />
+      <button id="msgBtn" type="button">Post</button>
     </div>
   </div>
 
@@ -59,8 +76,9 @@
       <thead>
         <tr>
           <th>ID</th>
-          <th>Who / File</th>
-          <th>Description</th>
+          <th>Type</th>
+          <th>Who / Name</th>
+          <th>Description / Message</th>
           <th>Tags</th>
           <th>When</th>
           <th>Size</th>
@@ -77,8 +95,7 @@
   const rows = document.getElementById('rows');
   const adminTokenEl = document.getElementById('adminToken');
   const qEl = document.getElementById('q');
-  const tagEl = document.getElementById('tag');
-  const dedupeEl = document.getElementById('dedupe');
+  const scopeEl = document.getElementById('scope');
 
   function setStatus(msg, isError) {
     status.textContent = msg || '';
@@ -105,7 +122,7 @@
 
   function fmtSize(b) {
     const n = Number(b || 0);
-    if (!Number.isFinite(n)) return '';
+    if (!Number.isFinite(n) || n <= 0) return '';
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
     return (n / (1024 * 1024)).toFixed(2) + ' MB';
@@ -124,68 +141,86 @@
 
   async function refresh() {
     setStatus('Loading...', false);
+    const token = getToken();
+    if (!token) {
+      setStatus('Admin token required', true);
+      rows.innerHTML = '';
+      return;
+    }
+
     const params = new URLSearchParams();
-    params.set('limit', '200');
-    params.set('latest_per_user_env', dedupeEl.checked ? 'true' : 'false');
+    params.set('limit', '250');
+    params.set('scope', scopeEl.value);
     const q = (qEl.value || '').trim();
-    const tag = (tagEl.value || '').trim();
     if (q) params.set('q', q);
-    if (tag) params.set('tag', tag);
 
     try {
-      const data = await api('/api/amyboardworld/files?' + params.toString());
+      const data = await api('/api/admin/items?' + params.toString(), {
+        headers: { 'x-admin-token': token },
+      });
       const items = Array.isArray(data.items) ? data.items : [];
       rows.innerHTML = '';
       for (const item of items) {
         const tr = document.createElement('tr');
         const tags = Array.isArray(item.tags) ? item.tags.join(',') : '';
+        const kind = item.kind === 'message' ? 'message' : 'file';
+        const scope = item.scope || '';
+        const desc = kind === 'message' ? (item.content || '') : (item.description || item.content || '');
+        const who = kind === 'message'
+          ? '<div><strong>' + esc(item.username) + '</strong></div>'
+          : '<div><strong>' + esc(item.username) + '</strong></div><div class="mono">' + esc(item.filename || '') + '</div>';
+
         tr.innerHTML = '' +
           '<td class="mono">' + esc(item.id) + '</td>' +
-          '<td><div><strong>' + esc(item.username) + '</strong></div><div class="mono">' + esc(item.filename) + '</div></td>' +
-          '<td class="desc">' + esc(item.description || '') + '</td>' +
-          '<td><input class="tags" type="text" value="' + esc(tags) + '" data-role="tags" /></td>' +
+          '<td><span class="mono">' + esc(scope + ':' + kind) + '</span></td>' +
+          '<td>' + who + '</td>' +
+          '<td class="desc">' + esc(desc) + '</td>' +
+          '<td>' + (kind === 'file' ? '<input class="tags" type="text" value="' + esc(tags) + '" data-role="tags" />' : '') + '</td>' +
           '<td>' + esc(fmtTs(item.time)) + '</td>' +
           '<td>' + esc(fmtSize(item.size)) + '</td>' +
           '<td>' +
-            '<a href="' + esc(item.download_url) + '"><button type="button">Download</button></a> ' +
-            '<button type="button" data-role="save-tags">Save tags</button> ' +
+            (kind === 'file' && item.download_url ? '<a href="' + esc(item.download_url) + '"><button type="button">Download</button></a> ' : '') +
+            (kind === 'file' ? '<button type="button" data-role="save-tags">Save tags</button> ' : '') +
             '<button type="button" data-role="delete">Delete</button>' +
           '</td>';
 
-        tr.querySelector('[data-role="save-tags"]').addEventListener('click', async () => {
-          const token = getToken();
-          if (!token) {
-            setStatus('Admin token required for tag update', true);
-            return;
-          }
-          const input = tr.querySelector('[data-role="tags"]');
-          const tagStr = (input.value || '').trim();
-          const tagsArr = tagStr ? tagStr.split(',').map(s => s.trim()).filter(Boolean) : [];
-          try {
-            await api('/api/amyboardworld/files/' + encodeURIComponent(item.id) + '/tags', {
-              method: 'PATCH',
-              headers: {
-                'content-type': 'application/json',
-                'x-admin-token': token,
-              },
-              body: JSON.stringify({ tags: tagsArr }),
-            });
-            setStatus('Updated tags for #' + item.id, false);
-            refresh();
-          } catch (err) {
-            setStatus('Tag update failed: ' + err.message, true);
-          }
-        });
+        if (kind === 'file') {
+          tr.querySelector('[data-role="save-tags"]').addEventListener('click', async () => {
+            const input = tr.querySelector('[data-role="tags"]');
+            const tagStr = (input.value || '').trim();
+            const tagsArr = tagStr ? tagStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+            const path = scope === 'tulipworld'
+              ? '/api/tulipworld/files/' + encodeURIComponent(item.id) + '/tags'
+              : '/api/amyboardworld/files/' + encodeURIComponent(item.id) + '/tags';
+            try {
+              await api(path, {
+                method: 'PATCH',
+                headers: {
+                  'content-type': 'application/json',
+                  'x-admin-token': token,
+                },
+                body: JSON.stringify({ tags: tagsArr }),
+              });
+              setStatus('Updated tags for #' + item.id, false);
+              refresh();
+            } catch (err) {
+              setStatus('Tag update failed: ' + err.message, true);
+            }
+          });
+        }
 
         tr.querySelector('[data-role="delete"]').addEventListener('click', async () => {
-          const token = getToken();
-          if (!token) {
-            setStatus('Admin token required for delete', true);
-            return;
+          if (!confirm('Delete #' + item.id + '?')) return;
+          let path = '';
+          if (kind === 'message') {
+            path = '/api/tulipworld/messages/' + encodeURIComponent(item.id);
+          } else if (scope === 'tulipworld') {
+            path = '/api/tulipworld/files/' + encodeURIComponent(item.id);
+          } else {
+            path = '/api/amyboardworld/files/' + encodeURIComponent(item.id);
           }
-          if (!confirm('Delete #' + item.id + ' ' + item.filename + '?')) return;
           try {
-            await api('/api/amyboardworld/files/' + encodeURIComponent(item.id), {
+            await api(path, {
               method: 'DELETE',
               headers: { 'x-admin-token': token },
             });
@@ -198,7 +233,7 @@
 
         rows.appendChild(tr);
       }
-      setStatus('Loaded ' + items.length + ' files', false);
+      setStatus('Loaded ' + items.length + ' items', false);
     } catch (err) {
       setStatus('Load failed: ' + err.message, true);
       rows.innerHTML = '';
@@ -206,7 +241,7 @@
   }
 
   document.getElementById('saveTokenBtn').addEventListener('click', function() {
-    localStorage.setItem('amyboardworld_admin_token', getToken());
+    localStorage.setItem('world_admin_token', getToken());
     setStatus('Saved token locally', false);
   });
 
@@ -215,6 +250,7 @@
   document.getElementById('uploadBtn').addEventListener('click', async () => {
     const username = (document.getElementById('uploadUser').value || '').trim();
     const description = (document.getElementById('uploadDesc').value || '').trim();
+    const scope = (document.getElementById('uploadScope').value || 'amyboardworld').trim();
     const fileEl = document.getElementById('uploadFile');
     const file = fileEl.files && fileEl.files[0];
     if (!file) {
@@ -226,7 +262,7 @@
     data.append('description', description);
     data.append('file', file);
     try {
-      await api('/api/amyboardworld/upload', { method: 'POST', body: data });
+      await api('/api/' + scope + '/upload', { method: 'POST', body: data });
       setStatus('Upload complete', false);
       fileEl.value = '';
       refresh();
@@ -235,7 +271,24 @@
     }
   });
 
-  adminTokenEl.value = localStorage.getItem('amyboardworld_admin_token') || '';
+  document.getElementById('msgBtn').addEventListener('click', async () => {
+    const username = (document.getElementById('msgUser').value || '').trim();
+    const content = (document.getElementById('msgText').value || '').trim();
+    try {
+      await api('/api/tulipworld/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ username, content }),
+      });
+      setStatus('Message posted', false);
+      document.getElementById('msgText').value = '';
+      refresh();
+    } catch (err) {
+      setStatus('Message post failed: ' + err.message, true);
+    }
+  });
+
+  adminTokenEl.value = localStorage.getItem('world_admin_token') || localStorage.getItem('amyboardworld_admin_token') || '';
   refresh();
 })();
 </script>
