@@ -639,9 +639,6 @@
       await sleep_ms(50);
       // Start up the AMYboard stuff
       await start_amyboard();
-      
-      // Fill the ree
-      await fill_tree();
       await refresh_amyboard_world_files();
 
       // Create the editor and see if there's a share URL to decompress into it
@@ -672,9 +669,6 @@
       editor.setSize(null,editor_height);
       if (typeof flush_pending_environment_editor_load === "function") {
         await flush_pending_environment_editor_load();
-      }
-      if (typeof load_first_environment_file_into_editor === "function") {
-        await load_first_environment_file_into_editor();
       }
     </script>
 
@@ -1227,8 +1221,6 @@
                 if (typeof window.refresh_knobs_for_active_channel === "function") {
                   window.refresh_knobs_for_active_channel({ sendControlMappings: false });
                 }
-              } else if (typeof window.write_current_patches_file_from_knobs === "function") {
-                window.write_current_patches_file_from_knobs();
               }
               const patchSelect = document.getElementById("patch-select");
               if (patchSelect) {
@@ -1247,8 +1239,6 @@
               if (typeof window.refresh_knobs_for_active_channel === "function") {
                 window.refresh_knobs_for_active_channel({ sendControlMappings: true });
               }
-            } else if (typeof window.write_current_patches_file_from_knobs === "function") {
-              window.write_current_patches_file_from_knobs();
             }
           });
         }

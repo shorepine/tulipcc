@@ -30,9 +30,6 @@ var term = null;
 var cv_1_voltage = 0;
 var cv_2_voltage = 0;
 var amy_module = null;
-var pendingPatchKnobIndex = null;
-var patchKnobSyncAttempts = 0;
-var patches_file_rewrite_timer = null;
 var amyboard_world_files = [];
 var amyboard_world_loading_index = null;
 var amyboard_world_selected_tag = "";
@@ -49,13 +46,7 @@ const CURRENT_ENV_DIR = "/amyboard/user/current/env";
 const DEFAULT_BASE_DIR = "/amyboard/user/default";
 const DEFAULT_ENV_DIR = "/amyboard/user/default/env";
 const CURRENT_WEB_PATCH_FILE = CURRENT_ENV_DIR + "/web.patch";
-const DEFAULT_WEB_PATCH_FILE = DEFAULT_ENV_DIR + "/web.patch";
-const CURRENT_OTHER_PATCH_FILE = CURRENT_ENV_DIR + "/other.patch";
-const DEFAULT_OTHER_PATCH_FILE = DEFAULT_ENV_DIR + "/other.patch";
 const DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n";
-const WEB_PATCH_EDITOR_HEADER = "# Do not edit - Set by AMYboard web patch editor";
-const DEFAULT_WEB_PATCH_SOURCE = WEB_PATCH_EDITOR_HEADER + "\n";
-const DEFAULT_OTHER_PATCH_SOURCE = "";
 const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json", ".patch"];
 const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
@@ -88,19 +79,6 @@ window.set_channel_active = function(channel, active) {
   }
   window.active_channels[ch] = !!active;
 };
-
-function request_current_patches_file_rewrite() {
-  if (patches_file_rewrite_timer) {
-    clearTimeout(patches_file_rewrite_timer);
-  }
-  patches_file_rewrite_timer = setTimeout(async function() {
-    patches_file_rewrite_timer = null;
-    try {
-      await write_current_patches_file_from_knobs();
-    } catch (e) {}
-  }, 80);
-}
-window.request_current_patches_file_rewrite = request_current_patches_file_rewrite;
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
@@ -142,7 +120,6 @@ amyModule().then(async function(am) {
   amy_module = am;
   res_ptr_in = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
   res_ptr_out = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
-  attemptPatchKnobSync();
 });
 
 // Converts AMY patch number to list of (JS converted) amy_events
@@ -299,33 +276,13 @@ function get_events_for_patch_number(patch_number) {
   return events;
 }
 
-function attemptPatchKnobSync() {
-  if (pendingPatchKnobIndex === null) {
-    return;
-  }
-  if (!audio_started) {
-    return;
-  }
-  if (!amy_module || typeof window.get_current_knobs !== "function") {
-    if (patchKnobSyncAttempts < 60) {
-      patchKnobSyncAttempts += 1;
-      setTimeout(attemptPatchKnobSync, 50);
-    }
-    return;
-  }
-  patchKnobSyncAttempts = 0;
-  set_knobs_from_patch_number(pendingPatchKnobIndex);
-}
-
-function requestPatchKnobSync(patchIndex) {
-  pendingPatchKnobIndex = patchIndex;
-  if (audio_started) {
-    attemptPatchKnobSync();
-  }
-}
-
 window.onPatchChange = function(patchIndex) {
-  requestPatchKnobSync(patchIndex);
+  const patch = Number(patchIndex);
+  if (!Number.isInteger(patch) || patch < 0) {
+    return;
+  }
+  const channel = Number(window.current_synth || 1);
+  amy_add_log_message("i" + channel + "iv6K" + patch);
 };
 
 
@@ -350,9 +307,6 @@ function onKnobCcChange(knob) {
   }
   if (typeof amy_add_message === "function") {
     amy_add_log_message(m);
-  }
-  if (typeof window.request_current_patches_file_rewrite === "function") {
-    window.request_current_patches_file_rewrite();
   }
 }
 
@@ -437,9 +391,12 @@ function save_to_patch(patchNumber) {
 }
 
 function load_from_patch(patchNumber) {
-  // Hook for loading a saved memory patch number.
   const channel = Number(window.current_synth || 1);
-  set_knobs_from_patch_number(get_patch_number_for_channel(channel));
+  const patch = Number(patchNumber);
+  if (!Number.isInteger(patch) || patch < 0) {
+    return;
+  }
+  amy_add_log_message("i" + channel + "iv6K" + patch);
 }
 
 function build_patch_save_messages(channel, patchNumber) {
@@ -534,16 +491,10 @@ async function apply_default_patch_state_from_clear_patches() {
       window.channel_control_mapping_sent[ch] = false;
     }
   }
-  if (typeof set_knobs_from_patch_number === "function") {
-    set_knobs_from_patch_number(0);
-  }
   if (typeof window.refresh_knobs_for_active_channel === "function") {
     await window.refresh_knobs_for_active_channel({ sendControlMappings: true });
   } else if (typeof window.refresh_knobs_for_channel === "function") {
     window.refresh_knobs_for_channel();
-  }
-  if (typeof window.write_current_patches_file_from_knobs === "function") {
-    await window.write_current_patches_file_from_knobs();
   }
   return true;
 }
@@ -583,77 +534,6 @@ function build_knob_cc_message(channel, knob) {
   return "i" + synthChannel + "ic" + knob.cc + "," + log + "," + knob.min_value + "," + knob.max_value + "," + offset + "," + knob.change_code;
 }
 
-function build_channel_control_messages(channel) {
-  const knobs = get_knobs_for_channel(channel);
-  const messages = [];
-  if (!Array.isArray(knobs)) {
-    return messages;
-  }
-  for (const knob of knobs) {
-    const message = build_knob_cc_message(channel, knob);
-    if (message) {
-      messages.push(message);
-    }
-  }
-  return messages;
-}
-
-async function write_current_patches_file_from_knobs() {
-  ensure_current_environment_layout(true);
-  var allMessages = [];
-  for (var channel = 1; channel <= 16; channel++) {
-    if (!is_channel_active(channel)) {
-      continue;
-    }
-    var patchNumber = get_patch_number_for_channel(channel);
-    var messages = build_patch_save_messages(channel, patchNumber);
-    for (const message of messages) {
-      allMessages.push(message);
-    }
-    var controlMessages = build_channel_control_messages(channel);
-    for (const message of controlMessages) {
-      allMessages.push(message);
-    }
-  }
-  if (!allMessages.length) {
-    allMessages.push("# no active channels");
-  }
-  var outputLines = [WEB_PATCH_EDITOR_HEADER].concat(allMessages);
-  mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, outputLines.join("\n") + "\n");
-  await sync_persistent_fs();
-  refresh_editor_if_viewing_web_patch_file();
-}
-window.write_current_patches_file_from_knobs = write_current_patches_file_from_knobs;
-
-function is_selected_file_web_patch_file() {
-  if (!selected_environment_file || typeof selected_environment_file !== "string") {
-    return false;
-  }
-  return selected_environment_file.toLowerCase() === "web.patch";
-}
-
-function refresh_editor_if_viewing_web_patch_file() {
-  if (!editor || !is_selected_file_web_patch_file()) {
-    return false;
-  }
-  try {
-    var latest = mp.FS.readFile(CURRENT_WEB_PATCH_FILE, { encoding: "utf8" });
-    if (editor.getValue() !== latest) {
-      editor.setValue(latest);
-    }
-    environment_editor_dirty = false;
-    editor.scrollTo(0, 0);
-    setTimeout(function () { editor.save(); }, 50);
-    setTimeout(function () {
-      editor.refresh();
-      editor.scrollTo(0, 0);
-    }, 100);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
 window.refresh_knobs_for_active_channel = async function(options) {
   var opts = options || {};
   var channel = Number(window.current_synth || 1);
@@ -669,7 +549,6 @@ window.refresh_knobs_for_active_channel = async function(options) {
   if (sendControlMappings) {
     window.channel_control_mapping_sent[channel] = true;
   }
-  await write_current_patches_file_from_knobs();
 };
 
 
@@ -929,55 +808,9 @@ function ensure_current_environment_layout(seedDefaults) {
             mp.FS.writeFile(DEFAULT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
         }
         try {
-            mp.FS.readFile(DEFAULT_WEB_PATCH_FILE, { encoding: "utf8" });
-        } catch (e) {
-            var defaultWebPatch = null;
-            try {
-                defaultWebPatch = mp.FS.readFile(DEFAULT_ENV_DIR + "/patches.txt", { encoding: "utf8" });
-            } catch (legacyDefaultPatchErr) {}
-            if (defaultWebPatch === null || defaultWebPatch === undefined) {
-                defaultWebPatch = DEFAULT_WEB_PATCH_SOURCE;
-            }
-            mp.FS.writeFile(DEFAULT_WEB_PATCH_FILE, String(defaultWebPatch));
-        }
-        try {
-            mp.FS.readFile(DEFAULT_OTHER_PATCH_FILE, { encoding: "utf8" });
-        } catch (e) {
-            mp.FS.writeFile(DEFAULT_OTHER_PATCH_FILE, DEFAULT_OTHER_PATCH_SOURCE);
-        }
-        try {
             mp.FS.readFile(CURRENT_ENV_DIR + "/env.py", { encoding: "utf8" });
         } catch (e) {
             mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", mp.FS.readFile(DEFAULT_ENV_DIR + "/env.py", { encoding: "utf8" }));
-        }
-        try {
-            mp.FS.readFile(CURRENT_WEB_PATCH_FILE, { encoding: "utf8" });
-        } catch (e) {
-            var migrated = false;
-            try {
-                mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, mp.FS.readFile("/amyboard/user/current/patches/patches.txt", { encoding: "utf8" }));
-                migrated = true;
-            } catch (legacyPatchesDirErr) {}
-            try {
-                if (!migrated) {
-                    mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, mp.FS.readFile("/amyboard/user/current/patch/patches.txt", { encoding: "utf8" }));
-                    migrated = true;
-                }
-            } catch (legacyPatchErr) {}
-            try {
-                if (!migrated) {
-                    mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, mp.FS.readFile(CURRENT_ENV_DIR + "/patches.txt", { encoding: "utf8" }));
-                    migrated = true;
-                }
-            } catch (legacyCurrentPatchFileErr) {}
-            if (!migrated) {
-                mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, mp.FS.readFile(DEFAULT_WEB_PATCH_FILE, { encoding: "utf8" }));
-            }
-        }
-        try {
-            mp.FS.readFile(CURRENT_OTHER_PATCH_FILE, { encoding: "utf8" });
-        } catch (e) {
-            mp.FS.writeFile(CURRENT_OTHER_PATCH_FILE, mp.FS.readFile(DEFAULT_OTHER_PATCH_FILE, { encoding: "utf8" }));
         }
     }
 }
@@ -2268,11 +2101,6 @@ async function sysex_write_amy_message(message) {
 }
 
 async function open_send_to_amyboard_modal() {
-    try {
-        await write_current_patches_file_from_knobs();
-    } catch (e) {
-        show_alert("Could not update web.patch");
-    }
     send_amyboard_progress_reset();
     populate_send_to_amyboard_modal();
 }
@@ -2296,7 +2124,6 @@ async function send_to_amyboard_now() {
 
     try {
         await save_editor_if_dirty();
-        await write_current_patches_file_from_knobs();
         await setup_midi_devices();
         if (!midiOutputDevice) {
             throw new Error("No MIDI out port selected.");
@@ -2408,24 +2235,6 @@ async function start_amyboard() {
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
   await sleep_ms(400);
   await mp.runFrozenAsync('_boot.py');
-
-  await sleep_ms(400);
-  await mp.runFrozenAsync('/amyboard/user/boot.py');
-  ensure_current_environment_layout(true);
-  var startupPatchExecution = await execute_current_patch_files();
-  if (should_initialize_default_patch_state(startupPatchExecution)) {
-      await apply_default_patch_state_from_clear_patches();
-  }
-  await run_current_environment();
-  await fill_tree();
-  if (list_environment_files().indexOf("env.py") !== -1) {
-      await select_environment_file("env.py", true);
-  } else {
-      var envFiles = list_environment_files();
-      if (envFiles.length) {
-          await select_environment_file(envFiles[0], true);
-      }
-  }
   amyboard_started = true;
 }
 
@@ -2441,7 +2250,6 @@ async function start_audio() {
   } else {
       await amy_live_start_web();    
   }
-  // Initialize default channel state, then sync preset/knobs.
+  // Keep startup simple: knobs are local UI state until user moves them.
   audio_started = true;
-  attemptPatchKnobSync();
 }

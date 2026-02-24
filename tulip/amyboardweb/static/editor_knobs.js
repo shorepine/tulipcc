@@ -148,10 +148,6 @@ function init_knobs(knobConfigs, gridId, onChange) {
     if (notifyAmy && !window.suppress_knob_cc_send) {
       send_change_code(window.current_synth, value, config);
     }
-    if (notifyAmy && !window.suppress_knob_cc_send
-      && typeof window.request_current_patches_file_rewrite === "function") {
-      window.request_current_patches_file_rewrite();
-    }
   }
 
 
@@ -633,10 +629,6 @@ function init_knobs(knobConfigs, gridId, onChange) {
         storage[String(Number(waveValue))] = parsedPreset;
         if (notifyAmy && !window.suppress_knob_cc_send) {
           send_change_code(window.current_synth, currentWaveValue(), config);
-        }
-        if (notifyAmy && !window.suppress_knob_cc_send
-          && typeof window.request_current_patches_file_rewrite === "function") {
-          window.request_current_patches_file_rewrite();
         }
         return true;
       }

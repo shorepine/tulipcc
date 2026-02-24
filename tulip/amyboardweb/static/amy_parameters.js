@@ -768,7 +768,7 @@ function set_knobs_from_patch(channel, patch_number, patch_source) {
       window.apply_knob_cc_mappings_from_patch_source(requestedChannel, patch_source || "");
     }
     if (typeof window.refresh_knobs_for_channel === "function") {
-      // Keep refresh inside suppression to avoid rewriting web.patch while loading patch files.
+      // Keep refresh inside suppression so loading a patch doesn't immediately emit updates back to AMY.
       window.refresh_knobs_for_channel();
     }
   } finally {
