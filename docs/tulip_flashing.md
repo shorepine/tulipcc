@@ -18,7 +18,7 @@ It will ask you if you want to upgrade your firmware and/or your `/sys` folder (
 
 ## Flash Tulip from a compiled release
 
-If you've got an unflashed Tulip, just finished a DIY, or somehow messed up the flash / firmware, you can flash the entire Tulip and filesystem with one file from our releases. We aim to release versions of Tulip regularly. You can find the latest in our [releases section](https://github.com/shorepine/tulipcc/releases/latest). 
+If you've got an unflashed Tulip, just finished a DIY, or somehow messed up the flash / firmware, you can flash the entire Tulip and filesystem with one file from our releases. We aim to release versions of Tulip regularly. You can find the latest in our [releases section](https://github.com/shorepine/tulipcc/releases/latest).
 
 **If you have the [Tulip from Makerfabs](https://tulip.computer/)**, you can directly download the latest full firmware binary here: [TULIP4_R11](https://github.com/shorepine/tulipcc/releases/latest/download/tulip-full-TULIP4_R11.bin).
 
@@ -60,7 +60,10 @@ Linux:
 sudo apt install cmake ninja-build dfu-util virtualenv
 ```
 
-For both macOS & Linux, next, download the supported version of ESP-IDF. That is release 5.4.1. You need to get this with `git`, so install that if you don't already have it. Once Espressif updates the release, we can provide a direct download link that's a bit easier. 
+Nix:
+A devshell is provided through `direnv` or through `nix develop`.
+
+For both macOS & Linux, next, download the supported version of ESP-IDF. That is release 5.4.1. You need to get this with `git`, so install that if you don't already have it. Once Espressif updates the release, we can provide a direct download link that's a bit easier.
 
 I like to keep them in `~/esp/`, as you'll likely want to use different versions eventually. So we'll assume it's in `~/esp/esp-idf`.
 
@@ -76,7 +79,7 @@ cd esp-idf-v5.4.1
 source export.sh
 
 cd ~
-git clone https://github.com/shorepine/tulipcc.git 
+git clone https://github.com/shorepine/tulipcc.git
 pip3 install Cython
 pip3 install littlefs-python # needed to flash the filesystem
 cd ~/tulipcc/tulip/esp32s3
@@ -84,9 +87,9 @@ cd ~/tulipcc/tulip/esp32s3
 
 ### Flash Tulip after compiling
 
-Now connect your Tulip to your computer over USB. See the notes about which USB port to use above. 
+Now connect your Tulip to your computer over USB. See the notes about which USB port to use above.
 
-Choose the right `MICROPY_BOARD` value for your board. 
+Choose the right `MICROPY_BOARD` value for your board.
 
  * [Tulip CC](https://tulip.computer/) (our integrated board with display): `TULIP4_R11`
  * Any DIY Tulip board based on the N16R8 (16MB flash): `N16R8`
@@ -101,23 +104,23 @@ For example, for a Tulip4 DIY board based on a N32R8:
 
 ```bash
 idf.py -DMICROPY_BOARD=N32R8 build
-# With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem 
+# With a brand new chip or devboard, the first time, you'll want to flash Tulip's filesystem
 # to the flash memory. Run this only once, or each time you modify `fs` if you're developing Tulip itself.
 cd ..
 python fs_create.py tulip flash
 ```
 
-You may need to restart Tulip after the flash, but Tulip should now just turn on whenever you connect USB or power it on. 
+You may need to restart Tulip after the flash, but Tulip should now just turn on whenever you connect USB or power it on.
 
 To build and flash going forward, without modifying the filesystem:
 
 ```bash
 cd tulip/esp32s3
 source ~/esp/esp-idf/export.sh # do this once per terminal window
-idf.py -DMICROPY_BOARD=[X] flash 
+idf.py -DMICROPY_BOARD=[X] flash
 idf.py monitor # shows stderr and stdin for controlling Tulip, use control-] to quit
 
-# If you (or we!) make changes to the underlying libraries on AMY or micropython, you want to fully clean the build 
+# If you (or we!) make changes to the underlying libraries on AMY or micropython, you want to fully clean the build
 rm ../../.submodules_ok # this forces the submodules to re-init
 idf.py fullclean
 idf.py -DMICROPY_BOARD=[X] flash
