@@ -19,6 +19,8 @@ TYPE_INFO = {
     "int16_t": (2, 2),
     "uint8_t": (1, 1),
     "int8_t": (1, 1),
+    "unsigned": (4, 4),
+    "int": (4, 4),
     "float": (4, 4),
     "char": (1, 1),
 }
@@ -146,26 +148,38 @@ def generate_layout():
 
 def generate_patches():
     text = PATCHES_H.read_text()
-    matches = re.findall(r"/\*\s*(\d+)\s*:\s*(.*?)\s*\*/", text)
-    patch_257 = re.search(r"/\*\s*257\s*:\s*.*?\s*\*/\s*\"(.*?)\"", text)
+    entry_matches = re.findall(r"/\*\s*(\d+)\s*:\s*(.*?)\s*\*/\s*\"((?:\\.|[^\"\\])*)\"", text)
+    matches = [(int(num), name) for num, name, _ in entry_matches]
+    patch_codes = [(int(num), code) for num, _, code in entry_matches]
+    patch_257 = re.search(r"/\*\s*257\s*:\s*.*?\s*\*/\s*\"((?:\\.|[^\"\\])*)\"", text)
     if not patch_257:
         raise RuntimeError("patch_commands[257] not found in patches.h")
     patch_257_string = patch_257.group(1)
     patches = [(int(num), name) for num, name in matches]
     patches.sort(key=lambda item: item[0])
+    patch_codes.sort(key=lambda item: item[0])
     if not patches:
         raise RuntimeError("No patch names found in patches.h")
     for idx, (num, _) in enumerate(patches):
         if num != idx:
             raise RuntimeError(f"Missing patch index {idx} in patches.h")
+    for idx, (num, _) in enumerate(patch_codes):
+        if num != idx:
+            raise RuntimeError(f"Missing patch code index {idx} in patches.h")
     names = [name for _, name in patches]
+    codes = [code for _, code in patch_codes]
     output = "// Auto-generated from amy/src/patches.h\n"
     output += "(function() {\n"
     output += "  const patches = [\n"
     for name in names:
         output += f"    {json.dumps(name)},\n"
     output += "  ];\n\n"
+    output += "  const patchCodes = [\n"
+    for code in codes:
+        output += f"    {json.dumps(code)},\n"
+    output += "  ];\n\n"
     output += "  window.amy_patches = patches;\n\n"
+    output += "  window.patch_code_for_patch_number = patchCodes;\n\n"
     output += f"  window.amyboard_patch_string = {json.dumps(patch_257_string)};\n\n"
     output += "  if (typeof window.onPatchChange !== \"function\") {\n"
     output += "    window.onPatchChange = function(_patchIndex) {};\n"

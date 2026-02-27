@@ -82,6 +82,85 @@ def ensure_user_environment():
 def _ensure_current_env_layout():
     return ensure_user_environment()
 
+def _parse_editor_state_synth_map(editor_state_path):
+    try:
+        raw = open(editor_state_path, "r").read()
+    except OSError:
+        return None
+    if not raw:
+        return {}
+    try:
+        import ujson as json
+    except ImportError:
+        import json
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    synths = parsed.get("synths", {})
+    if not isinstance(synths, dict):
+        return {}
+    return synths
+
+def _iter_patch_messages(path):
+    try:
+        for line in open(path, "r"):
+            msg = line.strip()
+            if msg and (not msg.startswith("#")):
+                yield msg
+    except OSError:
+        return
+
+def restore_patch_state_from_files(env_dir=None, send_default_if_missing=True):
+    _env_dir = env_dir or _ensure_current_env_layout()
+    editor_state_file = _env_dir + "/editor_state.json"
+    synth_map = _parse_editor_state_synth_map(editor_state_file)
+    result = {
+        "has_editor_state": synth_map is not None,
+        "loaded_channels": [],
+        "dirty_channels": [],
+    }
+    if synth_map is None:
+        if send_default_if_missing:
+            amy.send_raw("i1K257iv6")
+        return result
+
+    for key in synth_map:
+        try:
+            synth = int(key)
+        except Exception:
+            continue
+        if synth < 1 or synth > 16:
+            continue
+        name = str(synth_map.get(key, "")).strip()
+        if not name:
+            continue
+        if name.lower().endswith(".patch"):
+            name = name[:-6]
+
+        dirty_path = _env_dir + "/" + str(synth) + ".dirty"
+        patch_path = _env_dir + "/" + name + ".patch"
+        source_path = None
+        is_dirty = False
+        if _path_exists(dirty_path):
+            source_path = dirty_path
+            is_dirty = True
+        elif _path_exists(patch_path):
+            source_path = patch_path
+
+        if source_path is None:
+            continue
+
+        amy.send_raw("i%dK257iv6" % (synth))
+        for msg in _iter_patch_messages(source_path):
+            amy.send_raw("i%d%s" % (synth, msg))
+        result["loaded_channels"].append(synth)
+        if is_dirty:
+            result["dirty_channels"].append(synth)
+
+    return result
 
 
 def environment_transfer_done(*_args):
@@ -176,30 +255,7 @@ def start_amy():
     midi_out_pin = init_midi()
     tulip.amyboard_start(midi_out_pin)
     _env_dir = _ensure_current_env_layout()
-    editor_state_file = _env_dir + "/editor_state.json"
-
-    if not _path_exists(editor_state_file):
-        amy.send_raw("i1K257iv6")
-
-    tulip.stderr_write("Sending .patch files to AMY")
-    patch_files = []
-    try:
-        for entry in os.ilistdir(_env_dir):
-            name = entry[0]
-            if name.endswith(".patch"):
-                patch_files.append(name)
-    except OSError:
-        pass
-    patch_files.sort()
-    for patch_name in patch_files:
-        patch_path = _env_dir + "/" + patch_name
-        try:
-            for line in open(patch_path, "r"):
-                message = line.strip()
-                if message and (not message.startswith("#")):
-                    amy.send_raw(message)
-        except OSError:
-            pass
+    restore_patch_state_from_files(_env_dir, send_default_if_missing=True)
 
     from upysh import cd
     tulip.stderr_write("cding to %s" % (_env_dir))
