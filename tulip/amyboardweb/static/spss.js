@@ -8,6 +8,7 @@ var audio_started = false;
 var amy_sysclock = null;
 var amyboard_started = false;
 var amy_parse_patch_number_to_events = null;
+var amy_yield_synth_commands = null;
 
 function amy_add_log_message(message) {
   console.log(message);
@@ -42,11 +43,8 @@ const AMYBOARD_WORLD_API_BASE = (typeof window !== "undefined" && typeof window.
     ? String(window.AMYBOARD_WORLD_API_BASE).replace(/\/+$/, "")
     : String(window.location.origin || "").replace(/\/+$/, "");
 const CURRENT_BASE_DIR = "/amyboard/user/current";
-const CURRENT_ENV_DIR = "/amyboard/user/current/env";
-const DEFAULT_BASE_DIR = "/amyboard/user/default";
-const DEFAULT_ENV_DIR = "/amyboard/user/default/env";
-const CURRENT_WEB_PATCH_FILE = CURRENT_ENV_DIR + "/web.patch";
-const DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n";
+const CURRENT_ENV_DIR = CURRENT_BASE_DIR;
+const DEFAULT_ENV_SOURCE = "# Put your own code here to run in your environment\n";
 const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json", ".patch"];
 const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
@@ -54,7 +52,9 @@ window.current_synth = 1;
 window.active_channels = Array.isArray(window.active_channels) ? window.active_channels : new Array(17).fill(false);
 window.active_channels[1] = true;
 window.channel_control_mapping_sent = Array.isArray(window.channel_control_mapping_sent) ? window.channel_control_mapping_sent : new Array(17).fill(false);
+window.channel_patch_names = Array.isArray(window.channel_patch_names) ? window.channel_patch_names : new Array(17).fill(null);
 window.suppress_knob_cc_send = false;
+const EDITOR_STATE_FILENAME = "editor_state.json";
 
 function get_patch_number_for_channel(channel) {
   var ch = Number(channel);
@@ -115,6 +115,13 @@ amyModule().then(async function(am) {
   amy_parse_patch_number_to_events = am.cwrap(
     'parse_patch_number_to_events', null, ['number', 'number', 'number']
   );
+  try {
+    amy_yield_synth_commands = am.cwrap(
+      'yield_synth_commands', 'number', ['number', 'number', 'number', 'number']
+    );
+  } catch (e) {
+    amy_yield_synth_commands = null;
+  }
   amy_start_web_no_synths();
   amy_bleep(0); // won't play until live audio starts
   amy_module = am;
@@ -275,6 +282,274 @@ function get_events_for_patch_number(patch_number) {
   amy_module._free(eventsPtr);
   return events;
 }
+
+function read_c_string_from_heap(ptr, maxLen) {
+  if (!amy_module || !amy_module.HEAPU8) {
+    return "";
+  }
+  const heap = amy_module.HEAPU8;
+  const start = Number(ptr);
+  const limit = Math.max(0, Number(maxLen) || 0);
+  if (!Number.isInteger(start) || start <= 0 || limit <= 0) {
+    return "";
+  }
+  const end = Math.min(heap.length, start + limit);
+  let out = "";
+  for (let i = start; i < end; i += 1) {
+    const b = heap[i];
+    if (b === 0) {
+      break;
+    }
+    out += String.fromCharCode(b);
+  }
+  return out;
+}
+
+function read_editor_state_json() {
+  let raw = "";
+  try {
+    raw = mp.FS.readFile(CURRENT_ENV_DIR + "/" + EDITOR_STATE_FILENAME, { encoding: "utf8" });
+  } catch (e) {
+    raw = "";
+  }
+  let parsed = {};
+  try {
+    parsed = raw ? JSON.parse(String(raw)) : {};
+  } catch (e) {
+    parsed = {};
+  }
+  if (!parsed || typeof parsed !== "object") {
+    parsed = {};
+  }
+  if (!parsed.synths || typeof parsed.synths !== "object" || Array.isArray(parsed.synths)) {
+    parsed.synths = {};
+  }
+  return parsed;
+}
+
+function write_editor_state_json(state) {
+  const payload = JSON.stringify(state || { synths: {} }, null, 2) + "\n";
+  mp.FS.writeFile(CURRENT_ENV_DIR + "/" + EDITOR_STATE_FILENAME, payload);
+}
+
+function set_editor_state_patch_name(channel, patchName) {
+  const synth = Number(channel);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+    return;
+  }
+  const state = read_editor_state_json();
+  if (!state.synths || typeof state.synths !== "object" || Array.isArray(state.synths)) {
+    state.synths = {};
+  }
+  const key = String(synth);
+  const name = (patchName == null) ? "" : String(patchName).trim();
+  if (name) {
+    state.synths[key] = name;
+  } else {
+    delete state.synths[key];
+  }
+  write_editor_state_json(state);
+}
+
+window.save_current_synth_patch_file = async function(rawName) {
+  ensure_current_environment_layout(true);
+  if (!amy_module || typeof amy_yield_synth_commands !== "function") {
+    throw new Error("AMY patch command generator is unavailable.");
+  }
+
+  let name = String(rawName || "").trim();
+  if (name.toLowerCase().endsWith(".patch")) {
+    name = name.slice(0, -6);
+  }
+  if (!/^[A-Za-z0-9._-]{1,25}$/.test(name)) {
+    throw new Error("Patch name must be 1-25 chars: letters, numbers, dot, underscore, dash.");
+  }
+
+  const synth = Number(window.current_synth || 1);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+    throw new Error("Invalid channel.");
+  }
+
+  const maxMessageLen = 1024;
+  const bufferPtr = amy_module._malloc(maxMessageLen);
+  if (!bufferPtr) {
+    throw new Error("Failed to allocate AMY message buffer.");
+  }
+
+  const lines = [];
+  let state = 0;
+  try {
+    for (let i = 0; i < 2048; i += 1) {
+      state = amy_yield_synth_commands(synth, bufferPtr, maxMessageLen, state);
+      const wire = read_c_string_from_heap(bufferPtr, maxMessageLen).trim();
+      if (wire) {
+        lines.push(wire);
+      }
+      if (!state) {
+        break;
+      }
+    }
+  } finally {
+    amy_module._free(bufferPtr);
+  }
+
+  if (!lines.length) {
+    throw new Error("No synth commands were generated for this channel.");
+  }
+
+  const filename = name + ".patch";
+  mp.FS.writeFile(CURRENT_ENV_DIR + "/" + filename, lines.join("\n") + "\n");
+  window.channel_patch_names[synth] = name;
+  set_editor_state_patch_name(synth, name);
+  await sync_persistent_fs();
+  await fill_tree();
+  return filename;
+};
+
+window.load_saved_patch_file_into_current_channel = async function(rawFilename) {
+  ensure_current_environment_layout(true);
+
+  let filename = String(rawFilename || "").trim();
+  if (!filename) {
+    throw new Error("No patch selected.");
+  }
+  if (!filename.toLowerCase().endsWith(".patch")) {
+    filename += ".patch";
+  }
+  if (!/^[A-Za-z0-9._-]+\.patch$/i.test(filename)) {
+    throw new Error("Invalid patch filename.");
+  }
+
+  const synth = Number(window.current_synth || 1);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+    throw new Error("Invalid channel.");
+  }
+
+  let source = "";
+  try {
+    source = mp.FS.readFile(CURRENT_ENV_DIR + "/" + filename, { encoding: "utf8" });
+  } catch (e) {
+    throw new Error("Could not read patch file.");
+  }
+
+  amy_add_log_message("i" + synth + "K257iv6");
+  const lines = String(source || "").split(/\r?\n/);
+  for (const line of lines) {
+    const wire = String(line || "").trim();
+    if (!wire) {
+      continue;
+    }
+    amy_add_log_message("i" + synth + wire);
+  }
+  const patchName = filename.replace(/\.patch$/i, "");
+  window.channel_patch_names[synth] = patchName;
+  set_editor_state_patch_name(synth, patchName);
+  await sync_persistent_fs();
+  return filename;
+};
+
+function apply_channel_active_ui_from_loaded_map(loadedMap) {
+  var anyActive = false;
+  for (var ch = 1; ch <= 16; ch++) {
+    var active = !!loadedMap[ch];
+    if (typeof window.set_channel_active === "function") {
+      window.set_channel_active(ch, active);
+    } else if (Array.isArray(window.active_channels)) {
+      window.active_channels[ch] = active;
+    }
+    if (active) {
+      anyActive = true;
+    }
+  }
+  if (!anyActive) {
+    return;
+  }
+  var current = Number(window.current_synth || 1);
+  if (!Number.isInteger(current) || current < 1 || current > 16 || !loadedMap[current]) {
+    for (var pick = 1; pick <= 16; pick++) {
+      if (loadedMap[pick]) {
+        current = pick;
+        break;
+      }
+    }
+    window.current_synth = current;
+  }
+  var channelSelect = document.getElementById("midi-channel-select");
+  if (channelSelect) {
+    channelSelect.value = String(window.current_synth || 1);
+  }
+  var activeCheckbox = document.getElementById("channel-active-checkbox");
+  if (activeCheckbox) {
+    activeCheckbox.checked = !!(Array.isArray(window.active_channels) && window.active_channels[window.current_synth || 1]);
+  }
+}
+
+async function restore_patches_from_editor_state_if_present() {
+  let hasEditorState = false;
+  try {
+    mp.FS.readFile(CURRENT_ENV_DIR + "/" + EDITOR_STATE_FILENAME, { encoding: "utf8" });
+    hasEditorState = true;
+  } catch (e) {
+    hasEditorState = false;
+  }
+  if (!hasEditorState) {
+    return { hasEditorState: false, loadedCount: 0 };
+  }
+
+  const state = read_editor_state_json();
+  const synthMap = (state && state.synths && typeof state.synths === "object") ? state.synths : {};
+  const loadedMap = new Array(17).fill(false);
+  let loadedCount = 0;
+
+  for (const key in synthMap) {
+    if (!Object.prototype.hasOwnProperty.call(synthMap, key)) {
+      continue;
+    }
+    const synth = Number(key);
+    if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+      continue;
+    }
+    const name = String(synthMap[key] || "").trim();
+    if (!name) {
+      continue;
+    }
+    const filename = name.toLowerCase().endsWith(".patch") ? name : (name + ".patch");
+    let source = "";
+    try {
+      source = mp.FS.readFile(CURRENT_ENV_DIR + "/" + filename, { encoding: "utf8" });
+    } catch (e) {
+      continue;
+    }
+    amy_add_log_message("i" + synth + "K257iv6");
+    const lines = String(source || "").split(/\r?\n/);
+    for (const line of lines) {
+      const wire = String(line || "").trim();
+      if (!wire || wire.startsWith("#")) {
+        continue;
+      }
+      amy_add_log_message("i" + synth + wire);
+    }
+    window.channel_patch_names[synth] = filename.replace(/\.patch$/i, "");
+    loadedMap[synth] = true;
+    loadedCount += 1;
+  }
+
+  apply_channel_active_ui_from_loaded_map(loadedMap);
+  return { hasEditorState: true, loadedCount: loadedCount };
+}
+
+window.clear_current_channel_patch = async function() {
+  ensure_current_environment_layout(true);
+  const synth = Number(window.current_synth || 1);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+    throw new Error("Invalid channel.");
+  }
+  amy_add_log_message("i" + synth + "K257iv6");
+  window.channel_patch_names[synth] = null;
+  set_editor_state_patch_name(synth, null);
+  await sync_persistent_fs();
+  return synth;
+};
 
 window.onPatchChange = function(patchIndex) {
   const patch = Number(patchIndex);
@@ -798,20 +1073,13 @@ async function show_alert(text) {
 
 function ensure_current_environment_layout(seedDefaults) {
     try { mp.FS.mkdirTree(CURRENT_BASE_DIR); } catch (e) {}
-    try { mp.FS.mkdirTree(CURRENT_ENV_DIR); } catch (e) {}
-    try { mp.FS.mkdirTree(DEFAULT_BASE_DIR); } catch (e) {}
-    try { mp.FS.mkdirTree(DEFAULT_ENV_DIR); } catch (e) {}
+    try {
+        mp.FS.readFile(CURRENT_ENV_DIR + "/env.py", { encoding: "utf8" });
+    } catch (e) {
+        mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
+    }
     if (seedDefaults) {
-        try {
-            mp.FS.readFile(DEFAULT_ENV_DIR + "/env.py", { encoding: "utf8" });
-        } catch (e) {
-            mp.FS.writeFile(DEFAULT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
-        }
-        try {
-            mp.FS.readFile(CURRENT_ENV_DIR + "/env.py", { encoding: "utf8" });
-        } catch (e) {
-            mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", mp.FS.readFile(DEFAULT_ENV_DIR + "/env.py", { encoding: "utf8" }));
-        }
+        // Reserved for future seed-only setup.
     }
 }
 
@@ -839,20 +1107,18 @@ async function sync_persistent_fs() {
 
 function list_environment_files() {
     var files = [];
-    function walk(dir, relPrefix) {
-        for (const name of mp.FS.readdir(dir)) {
-            if (name === "." || name === "..") continue;
-            var path = dir + "/" + name;
-            var relPath = relPrefix ? (relPrefix + "/" + name) : name;
-            var mode = mp.FS.lookupPath(path).node.mode;
-            if (mp.FS.isFile(mode)) {
-                files.push(relPath);
-            } else if (mp.FS.isDir(mode)) {
-                walk(path, relPath);
-            }
+    for (const name of mp.FS.readdir(CURRENT_ENV_DIR)) {
+        if (name === "." || name === "..") continue;
+        var lower = String(name || "").toLowerCase();
+        if (lower.endsWith(".dirty")) {
+            continue;
+        }
+        var path = CURRENT_ENV_DIR + "/" + name;
+        var mode = mp.FS.lookupPath(path).node.mode;
+        if (mp.FS.isFile(mode)) {
+            files.push(name);
         }
     }
-    walk(CURRENT_ENV_DIR, "");
     files.sort();
     return files;
 }
@@ -861,17 +1127,7 @@ function list_current_patch_files() {
     var files = list_environment_files().filter(function(filename) {
         return String(filename || "").toLowerCase().endsWith(".patch");
     });
-    files.sort(function(a, b) {
-        var al = String(a || "").toLowerCase();
-        var bl = String(b || "").toLowerCase();
-        if (al === "web.patch" && bl !== "web.patch") {
-            return -1;
-        }
-        if (bl === "web.patch" && al !== "web.patch") {
-            return 1;
-        }
-        return al < bl ? -1 : (al > bl ? 1 : 0);
-    });
+    files.sort();
     return files;
 }
 
@@ -916,20 +1172,13 @@ function apply_active_channels_from_patch_map(channelPatchMap) {
 }
 
 async function execute_current_patch_files() {
-    var webPatchMissingBeforeLayout = false;
-    try {
-        mp.FS.readFile(CURRENT_WEB_PATCH_FILE, { encoding: "utf8" });
-    } catch (missingWebPatchErr) {
-        webPatchMissingBeforeLayout = true;
-    }
     ensure_current_environment_layout(true);
     var patchFiles = list_current_patch_files();
     var channelPatchMap = new Array(17).fill(null);
     var combinedPatchSources = [];
-    var webPatchHasMessages = false;
+    var hasPatchMessages = false;
     for (var i = 0; i < patchFiles.length; i++) {
         var filename = patchFiles[i];
-        var filenameLower = String(filename || "").toLowerCase();
         var source = "";
         try {
             source = mp.FS.readFile(CURRENT_ENV_DIR + "/" + filename, { encoding: "utf8" });
@@ -943,9 +1192,7 @@ async function execute_current_patch_files() {
             if (!message || message.startsWith("#")) {
                 continue;
             }
-            if (filenameLower === "web.patch") {
-                webPatchHasMessages = true;
-            }
+            hasPatchMessages = true;
             amy_add_log_message(message);
             var bindMatch = message.match(/^i(\d+)iv6K(\d+)/);
             if (bindMatch) {
@@ -986,8 +1233,7 @@ async function execute_current_patch_files() {
         channelPatchMap: channelPatchMap,
         combinedPatchSource: combinedPatchSource,
         hasActiveChannels: hasActiveChannels,
-        webPatchHasMessages: webPatchHasMessages,
-        webPatchMissingBeforeLayout: webPatchMissingBeforeLayout,
+        hasPatchMessages: hasPatchMessages,
     };
 }
 
@@ -995,10 +1241,7 @@ function should_initialize_default_patch_state(patchExecution) {
     if (!patchExecution || typeof patchExecution !== "object") {
         return false;
     }
-    if (patchExecution.webPatchMissingBeforeLayout) {
-        return true;
-    }
-    return (!patchExecution.webPatchHasMessages) && (!patchExecution.hasActiveChannels);
+    return (!patchExecution.hasPatchMessages) && (!patchExecution.hasActiveChannels);
 }
 
 function is_editor_openable_file(filename) {
@@ -1585,16 +1828,15 @@ async function clear_current_environment_from_default() {
     ensure_current_environment_layout(true);
     var confirmed = await confirm_environment_action(
         "Clear code",
-        "Clear current code and restore from default?",
+        "Clear current code and create a fresh env.py?",
         "Clear"
     );
     if (!confirmed) {
         return;
     }
     try {
-        remove_fs_path(CURRENT_ENV_DIR);
-        mp.FS.mkdirTree(CURRENT_ENV_DIR);
-        copy_fs_path(DEFAULT_ENV_DIR, CURRENT_ENV_DIR);
+        clear_current_environment_dir();
+        mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
         selected_environment_file = null;
         await sync_persistent_fs();
         await fill_tree();
@@ -1619,7 +1861,7 @@ async function run_current_environment() {
         "from upysh import *\n" +
         "import sys\n" +
         "_amyboard_user_dir = '/amyboard/user'\n" +
-        "_amyboard_env_dir = '/amyboard/user/current/env'\n" +
+        "_amyboard_env_dir = '/amyboard/user/current'\n" +
         "cd(_amyboard_env_dir)\n" +
         "try:\n" +
         "    execfile('env.py')\n" +
@@ -2235,6 +2477,15 @@ async function start_amyboard() {
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
   await sleep_ms(400);
   await mp.runFrozenAsync('_boot.py');
+  ensure_current_environment_layout(true);
+  const restored = await restore_patches_from_editor_state_if_present();
+  if (!restored.hasEditorState) {
+    amy_add_log_message("i1K257iv6");
+  }
+  await fill_tree();
+  if (typeof window.refresh_patch_active_name_label === "function") {
+    window.refresh_patch_active_name_label();
+  }
   amyboard_started = true;
 }
 

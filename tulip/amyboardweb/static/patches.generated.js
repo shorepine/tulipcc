@@ -275,10 +275,6 @@
       return;
     }
     select.innerHTML = "";
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "-";
-    select.appendChild(placeholder);
     patches.forEach(function(name, index) {
       const option = document.createElement("option");
       option.value = String(index);

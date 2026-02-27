@@ -761,35 +761,15 @@
                 </div>
                 <div class="col-12 col-md-1 d-none d-md-block"></div>
                 <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
-                  <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Preset</button>
+                  <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Patch: <span id="patch-active-name">None</span></button>
                 </div>
-                <div class="col-12 col-md-auto">
-                  <div class="input-group patch-select-group">
-                    <select class="form-select" id="patch-select"></select>
-                    <button class="btn btn-warning btn-sm rounded-pill patch-init-btn" type="button" id="patch-init-btn">Load into patch</button>
+                <div class="col-12 col-md-auto mt-2 mt-md-0">
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-warning btn-sm rounded-pill" type="button" id="patch-open-load-modal-btn">Load</button>
+                    <button class="btn btn-danger btn-sm rounded-pill" type="button" id="patch-save-action-btn">Save</button>
+                    <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-revert-action-btn">Revert</button>
+                    <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-clear-channel-btn">Clear</button>
                   </div>
-                </div>
-                <div class="col-12 col-md-1 d-none d-md-block d-none"></div>
-                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center d-none">
-                  <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Patch</button>
-                </div>
-                <div class="col-12 col-md-auto mt-2 mt-md-0 d-none">
-                  <div class="d-flex patch-save-group">
-                    <input
-                      class="form-control form-control-sm knob-value text-center patch-save-input"
-                      type="number"
-                      id="patch-save-input"
-                      min="1024"
-                      max="1055"
-                      step="1"
-                      value="1024"
-                    />
-                    <button class="btn btn-warning btn-sm rounded-pill patch-load-btn" type="button" id="patch-load-btn">Load</button>
-                    <button class="btn btn-danger btn-sm rounded-pill patch-save-btn" type="button" id="patch-save-btn">Save</button>
-                  </div>
-                </div>
-                <div class="col-12 col-md-auto mt-2 mt-md-0 ms-md-auto d-flex justify-content-md-end">
-                  <button class="btn btn-danger btn-sm rounded-pill" type="button" id="patch-clear-btn" onclick="clear_patch_state()">Clear Patches</button>
                 </div>
               </div>
               <div class="row g-4 knob-grid" id="knob-grid"></div>
@@ -1049,6 +1029,60 @@
       </div>
     </div>
 
+    <div class="modal fade" id="loadPatchModal" tabindex="-1" aria-labelledby="loadPatchModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <h5 class="modal-title" id="loadPatchModalLabel">Load Patch</h5>
+              <div class="small text-muted" id="load-patch-channel-label">Into Channel 1</div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <label for="load-patch-your-patches" class="form-label mb-1">Your Patches</label>
+            <select class="form-select form-select-sm mb-3" id="load-patch-your-patches"></select>
+            <div class="mb-3">
+              <button type="button" class="btn btn-sm btn-primary" id="load-your-patch-btn">Load</button>
+            </div>
+            <label for="load-patch-presets" class="form-label mb-1">Presets</label>
+            <select class="form-select form-select-sm" id="load-patch-presets"></select>
+            <div class="mt-2">
+              <button type="button" class="btn btn-sm btn-primary" id="load-preset-btn">Load</button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="savePatchModal" tabindex="-1" aria-labelledby="savePatchModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="savePatchModalLabel">Save Patch</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <label for="save-patch-name" class="form-label mb-1">Name</label>
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              id="save-patch-name"
+              maxlength="25"
+              title="Use 1-25 ASCII characters: letters, numbers, dot, underscore, or dash."
+            />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-sm btn-primary" id="save-patch-confirm-btn">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <footer>
       <div class="container small border-top">
         <div class="row py-5 d-flex justify-content-between">
@@ -1189,18 +1223,26 @@
             }
           });
         }
+        const environmentTab = document.getElementById("environment-tab");
+        if (environmentTab) {
+          environmentTab.addEventListener("shown.bs.tab", function() {
+            Promise.resolve()
+              .then(function() {
+                if (typeof window.sync_persistent_fs === "function") {
+                  return window.sync_persistent_fs();
+                }
+              })
+              .then(function() {
+                if (typeof window.fill_tree === "function") {
+                  return window.fill_tree();
+                }
+              })
+              .catch(function() {});
+          });
+        }
 
         const midiChannelSelect = document.getElementById("midi-channel-select");
         const channelActiveCheckbox = document.getElementById("channel-active-checkbox");
-        const patchSaveInput = document.getElementById("patch-save-input");
-        function patchForChannel(channel) {
-          return Number(channel) + 1023;
-        }
-        function syncPatchInputForChannel() {
-          if (patchSaveInput) {
-            patchSaveInput.value = String(patchForChannel(window.current_synth || 1));
-          }
-        }
         function syncActiveCheckboxForChannel() {
           if (!channelActiveCheckbox) {
             return;
@@ -1216,15 +1258,12 @@
             if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 16) {
               window.current_synth = parsed;
               syncActiveCheckboxForChannel();
-              syncPatchInputForChannel();
+              refreshLoadPatchChannelLabel();
+              refreshPatchActiveNameLabel();
               if (channelActiveCheckbox && channelActiveCheckbox.checked) {
                 if (typeof window.refresh_knobs_for_active_channel === "function") {
                   window.refresh_knobs_for_active_channel({ sendControlMappings: false });
                 }
-              }
-              const patchSelect = document.getElementById("patch-select");
-              if (patchSelect) {
-                patchSelect.selectedIndex = 0;
               }
             }
           });
@@ -1234,7 +1273,6 @@
             if (typeof window.set_channel_active === "function") {
               window.set_channel_active(window.current_synth || 1, channelActiveCheckbox.checked);
             }
-            syncPatchInputForChannel();
             if (channelActiveCheckbox.checked) {
               if (typeof window.refresh_knobs_for_active_channel === "function") {
                 window.refresh_knobs_for_active_channel({ sendControlMappings: true });
@@ -1242,37 +1280,287 @@
             }
           });
         }
-        const patchInitButton = document.getElementById("patch-init-btn");
-        const patchSelect = document.getElementById("patch-select");
-        if (patchInitButton && patchSelect) {
-          patchInitButton.addEventListener("click", function() {
-            const value = Number.parseInt(patchSelect.value, 10);
-            if (!Number.isNaN(value) && typeof window.onPatchChange === "function") {
-              window.onPatchChange(value);
-            }
-          });
-        }
-        const patchSaveButton = document.getElementById("patch-save-btn");
-        if (patchSaveButton && patchSaveInput) {
-          function clampPatchSaveValue() {
-            patchSaveInput.value = String(patchForChannel(window.current_synth || 1));
+        const patchLoadModalButton = document.getElementById("patch-open-load-modal-btn");
+        const loadPatchModalEl = document.getElementById("loadPatchModal");
+        const patchSaveActionButton = document.getElementById("patch-save-action-btn");
+        const patchRevertActionButton = document.getElementById("patch-revert-action-btn");
+        const patchClearChannelButton = document.getElementById("patch-clear-channel-btn");
+        const savePatchModalEl = document.getElementById("savePatchModal");
+        const savePatchNameInput = document.getElementById("save-patch-name");
+        const savePatchConfirmButton = document.getElementById("save-patch-confirm-btn");
+        const yourPatchesSelect = document.getElementById("load-patch-your-patches");
+        const presetsSelect = document.getElementById("load-patch-presets");
+        const loadYourPatchButton = document.getElementById("load-your-patch-btn");
+        const loadPatchChannelLabel = document.getElementById("load-patch-channel-label");
+        const patchActiveNameEl = document.getElementById("patch-active-name");
+        function refreshPatchActiveNameLabel() {
+          if (!patchActiveNameEl) return;
+          const channel = Number(window.current_synth || 1);
+          let name = null;
+          if (Array.isArray(window.channel_patch_names) && typeof window.channel_patch_names[channel] === "string") {
+            name = String(window.channel_patch_names[channel] || "").trim();
           }
-          patchSaveButton.addEventListener("click", function() {
-            clampPatchSaveValue();
-            if (typeof window.save_to_patch === "function") {
-              window.save_to_patch(patchForChannel(window.current_synth || 1));
+          patchActiveNameEl.textContent = name ? name : "None";
+        }
+        window.refresh_patch_active_name_label = refreshPatchActiveNameLabel;
+        function refreshLoadPatchChannelLabel() {
+          if (!loadPatchChannelLabel) return;
+          const channel = Number(window.current_synth || 1);
+          loadPatchChannelLabel.textContent = "Into Channel " + String(channel);
+        }
+        function refreshYourPatchesDropdown() {
+          if (!yourPatchesSelect) return;
+          let files = [];
+          if (typeof window.list_environment_files === "function") {
+            files = window.list_environment_files();
+          }
+          const patchFiles = (Array.isArray(files) ? files : [])
+            .filter(function(filename) {
+              return String(filename || "").toLowerCase().endsWith(".patch");
+            })
+            .sort(function(a, b) {
+              return String(a || "").localeCompare(String(b || ""));
+            });
+          yourPatchesSelect.innerHTML = "";
+          if (!patchFiles.length) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "No patches found";
+            yourPatchesSelect.appendChild(option);
+            yourPatchesSelect.disabled = true;
+            return;
+          }
+          yourPatchesSelect.disabled = false;
+          patchFiles.forEach(function(filename) {
+            const option = document.createElement("option");
+            option.value = filename;
+            option.textContent = String(filename).replace(/\.patch$/i, "");
+            yourPatchesSelect.appendChild(option);
+          });
+        }
+        if (typeof init_patches_select === "function" && presetsSelect) {
+          init_patches_select("load-patch-presets");
+        }
+        refreshLoadPatchChannelLabel();
+        refreshPatchActiveNameLabel();
+        if (patchLoadModalButton && loadPatchModalEl && window.bootstrap) {
+          function positionLoadPatchModalNearButton() {
+            const dialog = loadPatchModalEl.querySelector(".modal-dialog");
+            if (!dialog) return;
+            const rect = patchLoadModalButton.getBoundingClientRect();
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const dialogWidth = Math.min(360, Math.max(280, viewportWidth - 24));
+            const estimatedHeight = 360;
+            let left = rect.left;
+            if (left + dialogWidth > viewportWidth - 12) {
+              left = viewportWidth - dialogWidth - 12;
+            }
+            if (left < 12) {
+              left = 12;
+            }
+            let top = rect.bottom + 8;
+            if (top + estimatedHeight > viewportHeight - 12) {
+              top = Math.max(12, rect.top - estimatedHeight - 8);
+            }
+            dialog.style.position = "fixed";
+            dialog.style.margin = "0";
+            dialog.style.width = dialogWidth + "px";
+            dialog.style.maxWidth = dialogWidth + "px";
+            dialog.style.left = left + "px";
+            dialog.style.top = top + "px";
+            dialog.style.transform = "none";
+          }
+          patchLoadModalButton.addEventListener("click", function() {
+            refreshLoadPatchChannelLabel();
+            refreshYourPatchesDropdown();
+            positionLoadPatchModalNearButton();
+            const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
+            modal.show();
+          });
+          loadPatchModalEl.addEventListener("shown.bs.modal", positionLoadPatchModalNearButton);
+          window.addEventListener("resize", function() {
+            if (loadPatchModalEl.classList.contains("show")) {
+              positionLoadPatchModalNearButton();
             }
           });
-          patchSaveInput.addEventListener("change", clampPatchSaveValue);
-          patchSaveInput.addEventListener("blur", clampPatchSaveValue);
-          clampPatchSaveValue();
+          if (loadYourPatchButton && yourPatchesSelect) {
+            loadYourPatchButton.addEventListener("click", async function() {
+              const selected = String(yourPatchesSelect.value || "").trim();
+              if (!selected) {
+                if (typeof show_alert === "function") {
+                  show_alert("Select a patch to load.");
+                }
+                return;
+              }
+              if (typeof window.load_saved_patch_file_into_current_channel !== "function") {
+                if (typeof show_alert === "function") {
+                  show_alert("Load patch is not available.");
+                }
+                return;
+              }
+              loadYourPatchButton.disabled = true;
+              try {
+                await window.load_saved_patch_file_into_current_channel(selected);
+                refreshPatchActiveNameLabel();
+                const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
+                modal.hide();
+              } catch (e) {
+                if (typeof show_alert === "function") {
+                  show_alert("Could not load patch.");
+                }
+              } finally {
+                loadYourPatchButton.disabled = false;
+              }
+            });
+          }
         }
-        const patchLoadButton = document.getElementById("patch-load-btn");
-        if (patchLoadButton && patchSaveInput) {
-          patchLoadButton.addEventListener("click", function() {
-            clampPatchSaveValue();
-            if (typeof window.load_from_patch === "function") {
-              window.load_from_patch(patchForChannel(window.current_synth || 1));
+        if (patchSaveActionButton && savePatchModalEl && window.bootstrap) {
+          if (savePatchNameInput) {
+            savePatchNameInput.addEventListener("input", function() {
+              const cleaned = String(savePatchNameInput.value || "")
+                .replace(/[^A-Za-z0-9._-]/g, "")
+                .slice(0, 25);
+              if (savePatchNameInput.value !== cleaned) {
+                savePatchNameInput.value = cleaned;
+              }
+            });
+          }
+          function positionSavePatchModalNearButton() {
+            const dialog = savePatchModalEl.querySelector(".modal-dialog");
+            if (!dialog) return;
+            const rect = patchSaveActionButton.getBoundingClientRect();
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const dialogWidth = Math.min(360, Math.max(280, viewportWidth - 24));
+            const estimatedHeight = 220;
+            let left = rect.left;
+            if (left + dialogWidth > viewportWidth - 12) {
+              left = viewportWidth - dialogWidth - 12;
+            }
+            if (left < 12) {
+              left = 12;
+            }
+            let top = rect.bottom + 8;
+            if (top + estimatedHeight > viewportHeight - 12) {
+              top = Math.max(12, rect.top - estimatedHeight - 8);
+            }
+            dialog.style.position = "fixed";
+            dialog.style.margin = "0";
+            dialog.style.width = dialogWidth + "px";
+            dialog.style.maxWidth = dialogWidth + "px";
+            dialog.style.left = left + "px";
+            dialog.style.top = top + "px";
+            dialog.style.transform = "none";
+          }
+          patchSaveActionButton.addEventListener("click", function() {
+            const channel = Number(window.current_synth || 1);
+            if (savePatchNameInput) {
+              let existingName = "";
+              if (Array.isArray(window.channel_patch_names) && typeof window.channel_patch_names[channel] === "string") {
+                existingName = String(window.channel_patch_names[channel] || "").trim();
+              }
+              savePatchNameInput.value = existingName;
+            }
+            positionSavePatchModalNearButton();
+            const modal = window.bootstrap.Modal.getOrCreateInstance(savePatchModalEl);
+            modal.show();
+            if (savePatchNameInput) {
+              setTimeout(function() {
+                savePatchNameInput.focus();
+                savePatchNameInput.select();
+              }, 120);
+            }
+          });
+          savePatchModalEl.addEventListener("shown.bs.modal", positionSavePatchModalNearButton);
+          window.addEventListener("resize", function() {
+            if (savePatchModalEl.classList.contains("show")) {
+              positionSavePatchModalNearButton();
+            }
+          });
+          if (savePatchConfirmButton && savePatchNameInput) {
+            savePatchConfirmButton.addEventListener("click", async function() {
+              const name = String(savePatchNameInput.value || "").trim();
+              if (!/^[A-Za-z0-9._-]{1,25}$/.test(name)) {
+                if (typeof show_alert === "function") {
+                  show_alert("Patch name must be 1-25 chars: letters, numbers, dot, underscore, dash.");
+                }
+                savePatchNameInput.focus();
+                return;
+              }
+              if (typeof window.save_current_synth_patch_file !== "function") {
+                if (typeof show_alert === "function") {
+                  show_alert("Save patch is not available.");
+                }
+                return;
+              }
+              savePatchConfirmButton.disabled = true;
+              try {
+                await window.save_current_synth_patch_file(name);
+                refreshPatchActiveNameLabel();
+                const modal = window.bootstrap.Modal.getOrCreateInstance(savePatchModalEl);
+                modal.hide();
+                savePatchNameInput.value = "";
+              } catch (e) {
+                if (typeof show_alert === "function") {
+                  show_alert("Could not save patch.");
+                }
+              } finally {
+                savePatchConfirmButton.disabled = false;
+              }
+            });
+          }
+        }
+        if (patchRevertActionButton) {
+          patchRevertActionButton.addEventListener("click", async function() {
+            const channel = Number(window.current_synth || 1);
+            let patchName = null;
+            if (Array.isArray(window.channel_patch_names) && typeof window.channel_patch_names[channel] === "string") {
+              patchName = String(window.channel_patch_names[channel] || "").trim();
+            }
+            if (!patchName) {
+              if (typeof show_alert === "function") {
+                show_alert("No saved patch to revert to.");
+              }
+              return;
+            }
+            if (typeof window.load_saved_patch_file_into_current_channel !== "function") {
+              if (typeof show_alert === "function") {
+                show_alert("Revert is not available.");
+              }
+              return;
+            }
+            patchRevertActionButton.disabled = true;
+            try {
+              await window.load_saved_patch_file_into_current_channel(patchName + ".patch");
+              refreshPatchActiveNameLabel();
+            } catch (e) {
+              if (typeof show_alert === "function") {
+                show_alert("Could not revert patch. Saved file may be missing.");
+              }
+            } finally {
+              patchRevertActionButton.disabled = false;
+            }
+          });
+        }
+        if (patchClearChannelButton) {
+          patchClearChannelButton.addEventListener("click", async function() {
+            if (typeof window.clear_current_channel_patch !== "function") {
+              if (typeof show_alert === "function") {
+                show_alert("Clear patch is not available.");
+              }
+              return;
+            }
+            patchClearChannelButton.disabled = true;
+            try {
+              await window.clear_current_channel_patch();
+              refreshPatchActiveNameLabel();
+            } catch (e) {
+              if (typeof show_alert === "function") {
+                show_alert("Could not clear patch.");
+              }
+            } finally {
+              patchClearChannelButton.disabled = false;
             }
           });
         }
@@ -1286,7 +1574,6 @@
           window.channel_control_mapping_sent[1] = true;
         }
         syncActiveCheckboxForChannel();
-        syncPatchInputForChannel();
         const keyboard = document.getElementById("amy-keyboard");
         if (keyboard) {
           const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
