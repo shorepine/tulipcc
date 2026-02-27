@@ -1260,6 +1260,7 @@
               syncActiveCheckboxForChannel();
               refreshLoadPatchChannelLabel();
               refreshPatchActiveNameLabel();
+              refreshSavePatchDirtyIndicator();
               if (channelActiveCheckbox && channelActiveCheckbox.checked) {
                 if (typeof window.refresh_knobs_for_active_channel === "function") {
                   window.refresh_knobs_for_active_channel({ sendControlMappings: false });
@@ -1303,6 +1304,14 @@
           patchActiveNameEl.textContent = name ? name : "None";
         }
         window.refresh_patch_active_name_label = refreshPatchActiveNameLabel;
+        function refreshSavePatchDirtyIndicator() {
+          if (!patchSaveActionButton) return;
+          const channel = Number(window.current_synth || 1);
+          const isDirty = !!(Array.isArray(window.channel_patch_dirty) && window.channel_patch_dirty[channel]);
+          patchSaveActionButton.textContent = isDirty ? "Save*" : "Save";
+          patchSaveActionButton.title = isDirty ? "This channel has unsaved changes." : "";
+        }
+        window.refresh_save_patch_dirty_indicator = refreshSavePatchDirtyIndicator;
         function refreshLoadPatchChannelLabel() {
           if (!loadPatchChannelLabel) return;
           const channel = Number(window.current_synth || 1);
@@ -1343,6 +1352,7 @@
         }
         refreshLoadPatchChannelLabel();
         refreshPatchActiveNameLabel();
+        refreshSavePatchDirtyIndicator();
         if (patchLoadModalButton && loadPatchModalEl && window.bootstrap) {
           function positionLoadPatchModalNearButton() {
             const dialog = loadPatchModalEl.querySelector(".modal-dialog");
@@ -1403,6 +1413,7 @@
               try {
                 await window.load_saved_patch_file_into_current_channel(selected);
                 refreshPatchActiveNameLabel();
+                refreshSavePatchDirtyIndicator();
                 const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
                 modal.hide();
               } catch (e) {
@@ -1498,6 +1509,7 @@
               try {
                 await window.save_current_synth_patch_file(name);
                 refreshPatchActiveNameLabel();
+                refreshSavePatchDirtyIndicator();
                 const modal = window.bootstrap.Modal.getOrCreateInstance(savePatchModalEl);
                 modal.hide();
                 savePatchNameInput.value = "";
@@ -1534,6 +1546,7 @@
             try {
               await window.load_saved_patch_file_into_current_channel(patchName + ".patch");
               refreshPatchActiveNameLabel();
+              refreshSavePatchDirtyIndicator();
             } catch (e) {
               if (typeof show_alert === "function") {
                 show_alert("Could not revert patch. Saved file may be missing.");
@@ -1555,6 +1568,7 @@
             try {
               await window.clear_current_channel_patch();
               refreshPatchActiveNameLabel();
+              refreshSavePatchDirtyIndicator();
             } catch (e) {
               if (typeof show_alert === "function") {
                 show_alert("Could not clear patch.");

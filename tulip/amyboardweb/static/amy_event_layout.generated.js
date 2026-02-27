@@ -45,6 +45,7 @@ window.AMY_EVENT_LAYOUT = {
     "note_source": 653,
     "num_voices": 638,
     "osc": 4,
+    "oscs_per_voice": 712,
     "pan_coefs": 164,
     "patch_number": 16,
     "pedal": 636,
@@ -72,5 +73,5 @@ window.AMY_EVENT_LAYOUT = {
     "volume": 212,
     "wave": 6
   },
-  "size": 712
+  "size": 716
 };
