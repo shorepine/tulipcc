@@ -7,7 +7,7 @@ var amy_process_single_midi_byte = null;
 var audio_started = false;
 var amy_sysclock = null;
 var amyboard_started = false;
-var amy_parse_patch_number_to_events = null;
+var amy_yield_patch_events = null;
 var amy_yield_synth_commands = null;
 
 function amy_add_log_message(message) {
@@ -112,16 +112,12 @@ amyModule().then(async function(am) {
   amy_process_single_midi_byte = am.cwrap(
     'amy_process_single_midi_byte', null, ['number, number']
   );
-  amy_parse_patch_number_to_events = am.cwrap(
-    'parse_patch_number_to_events', null, ['number', 'number', 'number']
+  amy_yield_patch_events = am.cwrap(
+    'yield_patch_events', 'number', ['number', 'number', 'number']
   );
-  try {
-    amy_yield_synth_commands = am.cwrap(
-      'yield_synth_commands', 'number', ['number', 'number', 'number', 'number']
-    );
-  } catch (e) {
-    amy_yield_synth_commands = null;
-  }
+  amy_yield_synth_commands = am.cwrap(
+    'yield_synth_commands', 'number', ['number', 'number', 'number', 'number']
+  );
   amy_start_web_no_synths();
   amy_bleep(0); // won't play until live audio starts
   amy_module = am;
@@ -132,7 +128,7 @@ amyModule().then(async function(am) {
 // Converts AMY patch number to list of (JS converted) amy_events
 // This is to let us fill in the preset knobs
 function get_events_for_patch_number(patch_number) {
-  if (!amy_module || !amy_parse_patch_number_to_events) {
+  if (!amy_module || !amy_yield_patch_events) {
     return [];
   }
 
@@ -251,35 +247,17 @@ function get_events_for_patch_number(patch_number) {
     };
   }
 
-  const outPtr = amy_module._malloc(4);
-  const countPtr = amy_module._malloc(2);
-  if (!outPtr) {
-    return [];
-  }
-  if (!countPtr) {
-    amy_module._free(outPtr);
-    return [];
-  }
-  heapU32[outPtr >> 2] = 0;
-  view.setUint16(countPtr, 0, true);
-  amy_parse_patch_number_to_events(patch_number, outPtr, countPtr);
-  const eventsPtr = heapU32[outPtr >> 2];
-  const eventCount = view.getUint16(countPtr, true);
-  amy_module._free(outPtr);
-  amy_module._free(countPtr);
-  if (!eventsPtr) {
-    return [];
-  }
-
+  const SIZEOF_EVENT_STRUCT = amy_size_of_amy_event();
+  const eventPtr = amy_module._malloc(SIZEOF_EVENT_STRUCT);
   const events = [];
-  const limit = eventCount;
-  for (let i = 0; i < limit; i += 1) {
-    const base = eventsPtr + i * layout.size;
-    const status = view.getUint8(base + offsets.status);
-    events.push(readEvent(base));
-  }
+  let state = 0;
+  do {
+    state = amy_event_generator_for_patch_number(patch_number, eventPtr, state);
+    events.push(readEvent(eventPtr));
+  } while (state != 0);
 
-  amy_module._free(eventsPtr);
+  amy_module._free(eventPtr);
+
   return events;
 }
 
@@ -351,6 +329,32 @@ function set_editor_state_patch_name(channel, patchName) {
   write_editor_state_json(state);
 }
 
+
+function get_wire_commands_for_synth(synth) {
+  const maxMessageLen = 1024;
+  const bufferPtr = amy_module._malloc(maxMessageLen);
+  if (!bufferPtr) {
+    throw new Error("Failed to allocate AMY message buffer.");
+  }
+  const lines = [];
+  let state = 0;
+  do {
+    state = amy_yield_synth_commands(synth, bufferPtr, maxMessageLen, state);
+    const wire = read_c_string_from_heap(bufferPtr, maxMessageLen).trim();
+    if (wire) {
+      lines.push(wire);
+    }
+  } while (state != 0);
+  amy_module._free(bufferPtr);
+  return lines;
+}
+
+function get_wire_commands_for_patch(patch) {
+  // We expect a list of wire commands, but this is all one Z-separated string; return a 1-element list.
+  return [patch_code_for_patch_number[patch]];
+}
+
+
 window.save_current_synth_patch_file = async function(rawName) {
   ensure_current_environment_layout(true);
   if (!amy_module || typeof amy_yield_synth_commands !== "function") {
@@ -370,29 +374,8 @@ window.save_current_synth_patch_file = async function(rawName) {
     throw new Error("Invalid channel.");
   }
 
-  const maxMessageLen = 1024;
-  const bufferPtr = amy_module._malloc(maxMessageLen);
-  if (!bufferPtr) {
-    throw new Error("Failed to allocate AMY message buffer.");
-  }
-
-  const lines = [];
-  let state = 0;
-  try {
-    for (let i = 0; i < 2048; i += 1) {
-      state = amy_yield_synth_commands(synth, bufferPtr, maxMessageLen, state);
-      const wire = read_c_string_from_heap(bufferPtr, maxMessageLen).trim();
-      if (wire) {
-        lines.push(wire);
-      }
-      if (!state) {
-        break;
-      }
-    }
-  } finally {
-    amy_module._free(bufferPtr);
-  }
-
+  const lines = get_wire_commands_for_synth(window.current_synth);
+  
   if (!lines.length) {
     throw new Error("No synth commands were generated for this channel.");
   }
@@ -2503,4 +2486,256 @@ async function start_audio() {
   }
   // Keep startup simple: knobs are local UI state until user moves them.
   audio_started = true;
+}
+
+// ---- wire_code_parser.js ----
+function parse_wire_code(message) {
+
+  // Local variables.
+  let _KW_MAP_LIST = [   // Order matters because patch_string must come last.
+      ['osc', 'vI'], ['wave', 'wI'], ['note', 'nF'], ['vel', 'lF'], ['amp', 'aC'], ['freq', 'fC'], ['duty', 'dC'], 
+      ['feedback', 'bF'], ['time', 'tI'],  ['reset', 'SI'], ['phase', 'PF'], ['pan', 'QC'], ['client', 'gI'], 
+      ['volume', 'VF'], ['pitch_bend', 'sF'], ['filter_freq', 'FC'], ['resonance', 'RF'], ['bp0', 'AL'], 
+      ['bp1', 'BL'], ['eg0_type', 'TI'], ['eg1_type', 'XI'], ['debug', 'DI'], ['chained_osc', 'cI'], 
+      ['mod_source', 'LI'],  ['eq', 'xL'], ['filter_type', 'GI'], ['ratio', 'IF'], ['latency_ms', 'NI'],
+      ['algo_source', 'OL'], ['load_sample', 'zL'], ['transfer_file', 'zTL'], ['disk_sample', 'zFL'], 
+      ['algorithm', 'oI'], ['chorus', 'kL'], ['reverb', 'hL'], ['echo', 'ML'], ['patch', 'KI'], ['voices', 'rL'],
+      ['external_channel', 'WI'], ['portamento', 'mI'], ['sequence', 'HL'], ['tempo', 'jF'],
+      ['synth', 'iI'], ['pedal', 'ipI'], ['synth_flags', 'ifI'], ['num_voices', 'ivI'], ['oscs_per_voice', 'inI'],
+      ['to_synth', 'itI'], ['grab_midi_notes', 'imI'],  ['synth_delay', 'idI'],
+      ['preset', 'pI'], ['num_partials', 'pI'], // note aliasing
+      ['start_sample', 'zSL'], ['stop_sample', 'zOI'],
+      ['midi_cc', 'icL'],
+      ['patch_string', 'uS'],  // patch_string MUST be last because we can't identify when it ends except by end-of-message.
+      ['end', 'ZZ'],
+  ]
+
+  const Lex = {
+    END: 0,
+    ALPHA: 1,
+    NUMBER: 2,
+    SEP: 3,
+  };
+
+  const Expecting = {
+    END: 0,
+    COMMAND: 1,
+    NUMARG: 2,
+    LISTSEP: 3,
+    LISTARG: 4,
+    STRARG: 5,
+  };
+
+  function numeric_prefix(s) {
+    let len = s.length;
+    let i = 0;
+    while (i < len && ((s[i] >= "0" && s[i] <= "9") || s[i] == "." || s[i] == "-")) {
+      ++i;
+    }
+    return s.slice(0, i);
+  }
+
+  function alpha_prefix(s) {
+    let len = s.length;
+    let i = 0;
+    while (i < len && ((s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z'))) {
+      ++i;
+    }
+    return s.slice(0, i);
+  }
+
+  function next_token(message) {
+    // Segment the next token - sequence of chars, numeric value, or comma.
+    // returns [LexCode, token, remaining_string]
+    let len = message.length;
+    let index = 0;
+    let result = "";
+    var p;
+    while ((message[index] == " " || message[index] == "\n") && index < len) {
+      index++;
+    }
+    if (index >= len) return [Lex.END, "Z", ""];  // Virtual Z.
+    if (message[index] == ",") return [Lex.SEP, ",", message.slice(index + 1)];
+    // 'u' is a special case, meaning rest of input is a string
+    if (message[index] == "u") return [Lex.ALPHA, "u", message.slice(index + 1)];
+    if (message[index] == "Z") return [Lex.ALPHA, "Z", message.slice(index + 1)];
+    p = numeric_prefix(message.slice(index));
+    if (p.length > 0) return [Lex.NUMBER, p, message.slice(index + p.length)];
+    p = alpha_prefix(message.slice(index));
+    if (p.length > 0) return [Lex.ALPHA, p, message.slice(index + p.length)];
+    throw new Error("Unable to find token in \"" + message + "\"");
+  }
+
+  function debug_message(message, token, rest) {
+    // The parser had a problem working through message at tok, when the unprocessed part is rest.
+    return message.slice(0, message.length - token.length - rest.length) + " ** " + token + " ** " + rest;
+  }
+
+  // Build the rule set.
+  let codes = new Map();
+  for (const [fieldname, code] of _KW_MAP_LIST) {
+    let type = code.slice(-1);  
+    let wirecode = code.slice(0, -1);
+    codes.set(wirecode, [fieldname, type]);
+  }
+  var code, token;
+  let fieldname = "?";
+  let pending_list = [];
+  let type = "?";
+  let result = {};
+  let expecting = Expecting.COMMAND;
+  let rest = message;
+  let pushback = null;
+  let value = null;
+  while (expecting != Expecting.END) {
+    //console.log("pushback= ", pushback, " fieldname=", fieldname, " pending_list=", pending_list);
+    if (pushback != null) {
+      [lexcode, token, rest] = pushback;
+      pushback = null;
+    } else {
+      [lexcode, token, rest] = next_token(rest);0
+    }
+    //console.log("expecting: ", expecting, " lexcode: " + lexcode + " " + debug_message(message, token, rest));
+    switch (expecting) {
+    case Expecting.COMMAND:
+      if (lexcode == Lex.END) {
+        expecting = Expecting.END;
+        break;
+      }
+      if (!(lexcode == Lex.ALPHA && codes.has(token))) {
+        throw new Error("Unrecognized wire code: " + debug_message(message, token, rest));
+      }
+      [fieldname, type] = codes.get(token);
+      switch (type) {
+      case "I":
+      case "F":
+        expecting = Expecting.NUMARG;
+        break;
+      case "L":
+      case "C":
+        expecting = Expecting.LISTARG;
+        type = "F";  // without more annotation....
+        break;
+      case "S":
+        expecting = Expecting.STRARG;
+        result[fieldname] = rest;
+        rest = "";
+        expecting = Expecting.END;
+        break;
+      case "Z":
+        expecting = Expecting.END;
+        break;
+      default:
+        throw new Error("Unexpected code type " + type + " in " + debug_message(message, token, rest));
+      }
+      break;
+    case Expecting.LISTARG:
+      if (lexcode == Lex.SEP) {
+        pending_list.push(null);
+        break;
+      }
+      else if (lexcode == Lex.ALPHA) {
+        // list is over, the ARG we expected was empty.
+        pending_list.push(null);
+        // handle end of list.
+        result[fieldname] = pending_list;
+        pending_list = [];
+        expecting = Expecting.COMMAND;
+        pushback = [lexcode, token, rest];
+        break;
+      }
+      // else fall through
+    case Expecting.NUMARG:
+      if (!(lexcode == Lex.NUMBER)) {throw new Error("Expected number in: "  + debug_message(message, token, rest)); }
+      if (type == "I")
+        value = parseInt(token, 10);
+      else if (type == "F")
+        value = parseFloat(token);
+      else throw new Error("Unrecognized type " + type);
+      if (expecting == Expecting.NUMARG) {
+        result[fieldname] = value;
+        expecting = Expecting.COMMAND;
+      } else {
+        // LISTARG
+        pending_list.push(value);
+        expecting = Expecting.LISTSEP;
+      }
+      break;
+    case Expecting.LISTSEP:
+      if (lexcode == Lex.SEP) {
+        // Hacky special case for string at end of 'ic'
+        if (!(fieldname == "midi_cc" && pending_list.length == 5)) {
+          expecting = Expecting.LISTARG;
+          break;
+        } else {
+          pending_list.push(rest);
+          rest = "";
+          token = "Z";
+          lexcode = Lex.END;
+          // but fall through to list termination.
+        }
+      }
+      result[fieldname] = pending_list;
+      pending_list = [];
+      expecting = Expecting.COMMAND;
+      pushback = [lexcode, token, rest];
+      break;
+    default:
+      throw new Error("Unknown expecting " + expecting);
+    }
+  }
+  // Special-case handling of bp0, bp1
+  for (const [field, timefield, valfield] of [["bp0", "eg0_times", "eg0_values"], ["bp1", "eg1_times", "eg1_values"]]) {
+    if (field in result) {
+      result[timefield] = result[field].filter((element, index) => {return index % 2 === 0;});
+      result[valfield] = result[field].filter((element, index) => {return index % 2 === 1;});
+      Reflect.deleteProperty(result, field);
+    }
+  }
+  return [result, rest];
+}
+
+function events_from_wire_code_message(message) {
+  // Message is a single wire-code string, but may contain multiple events with Z separators.
+  console.log("message=", message);
+  events = [];
+  let rest = message;
+  while (rest != "") {
+    [event, rest] = parse_wire_code(rest);
+    events.push(event);
+  }
+  console.log("events=", events);
+  return events;
+}
+
+function events_from_wire_code_messages(messages) {
+  // Messages is an array of wire code message strings; all the events contained are concatenated.
+  var all_events = [];
+  for (const message of messages) {
+    let message_events = events_from_wire_code_message(message);
+    for (const event of message_events) {
+      console.log("efwcm: event=", event);
+      all_events.push(event);
+    }
+  }
+  return all_events;
+}
+
+// Test
+if (true) {
+  for (const message of [
+    "v0w1c1L4G4ic10,13.3,,7",
+    "v0w1c1L4G4ic10,13.3,,7Z",
+    "v0w1c1L4G4d,,,,R0.913",
+    "v0w1c1L4G4ic10,13.3,,7urest,of,itZ",
+    "i1ic5,0,0,1,0",
+    "i1ic5,0,0,1,0R123",
+    "i1ic5,0,0,1,0,i%1d,,%v,0",
+    "i1ic5,0,0,1,0R123Zi1ic5,0,0,1,0R123",
+    "v0A0,1,100,0.5,1000,0Z",
+    "v0A0,,,0.5,,Z",
+    "v4w4a1,,0,1Zv0w1c1L4G4Zv1w3c2L4Zv2w1c3L4Zv3w5L4Zv4f0.609A148,1.0,10000,0Zv0a,,0.001,1,0f261.63,1,,,,0,1d0.72,,,,,0m0Zv1a,,0.591,1,0f261.63,1,,,,0,1m0Zv2a,,0.326,1,0f130.81,1,,,,0,1m0Zv3a,,0.001,1,0Zv0F212.87,0.661,,2.252,,0R1.015Zv0A518,1,83561,0.299,310,0Zv1A518,1,83561,0.299,310,0Zv2A518,1,83561,0.299,310,0Zv3A518,1,83561,0.299,310,0Zx7,-3,-3k1,,0.5,0.5Z",
+  ]) {
+    console.log(message, events_from_wire_code_message(message));
+  };
 }
