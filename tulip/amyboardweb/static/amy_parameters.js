@@ -627,13 +627,18 @@ window.addEventListener("DOMContentLoaded", function() {
 
 function set_knobs_from_patch_number_impl(patch_number) {
   // if this is a memory patch, load it. if not, load the amyboard base patch
-  if(patch_number >= 1024 && patch_number < 1024+32) {
-    amy_add_log_message("i"+window.current_synth+"iv6K"+patch_number);
-  } else {
-    amy_add_log_message("i"+window.current_synth+"iv6K257");  // Default AMYboard patch state.
-  }
-  const events = get_events_for_patch_number(patch_number);
-  // console log number of events
+  let wire_commands = get_wire_commands_for_patch(patch_number);
+  let events = events_from_wire_code_messages(wire_commands);
+  return set_knobs_from_events(events);
+}
+
+function set_knobs_from_synth(synth) {
+  let wire_commands = get_wire_commands_for_channel(synth);
+  let events = events_from_wire_code_messages(wire_commands);
+  return set_knobs_from_events(events);
+}
+
+function set_knobs_from_events(events) {
   const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
   if (!Array.isArray(knobs) || events.length === 0) {
     return;
@@ -674,36 +679,48 @@ function set_knobs_from_patch_number_impl(patch_number) {
   }
 
   for (const event of events) {
-    if (Number.isFinite(event.filter_freq_coefs[0])) {
-      filter_osc = event.osc;  // Assume we'll see this at least once
-      filterFreq = event.filter_freq_coefs[0];
+
+    // non-osc values.
+    if (event.eq) {
+      if (Number.isFinite(event.eq[0]))  { eq[0] = event.eq[0]; }
+      if (Number.isFinite(event.eq[1]))  { eq[1] = event.eq[1]; }
+      if (Number.isFinite(event.eq[2]))  { eq[2] = event.eq[2]; }
     }
-    if (Number.isFinite(event.filter_freq_coefs[1])) {
-      filterKbd = event.filter_freq_coefs[1];  // COEF_NOTE
+    if (event.chorus) {
+      if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }
+      if (Number.isFinite(event.chorus[1])) { chorus[1] = event.chorus[1]; }
+      if (Number.isFinite(event.chorus[2])) { chorus[2] = event.chorus[2]; }
     }
-    if (Number.isFinite(event.filter_freq_coefs[3])) {
-      filterEnv = event.filter_freq_coefs[3];  // COEF_EG0, Juno filter env
-    }
-    if (Number.isFinite(event.filter_freq_coefs[4])) {
-      filterEnv = event.filter_freq_coefs[4];  // COEF_EG1, amyboard filter env
-      filter_eg = 1;
-    }
-    if (Number.isFinite(event.filter_freq_coefs[5])) {
-      filterLfo = event.filter_freq_coefs[5];  // COEF_MOD
+
+    // Remainder of block assumes osc is set.
+    if (!Number.isFinite(event.osc)) continue;
+
+    if (event.filter_freq) {
+      if (Number.isFinite(event.filter_freq[0])) {
+        filter_osc = event.osc;  // Assume we'll see this at least once
+        filterFreq = event.filter_freq[0];
+      }
+      if (Number.isFinite(event.filter_freq[1])) {
+        filterKbd = event.filter_freq[1];  // COEF_NOTE
+      }
+      if (Number.isFinite(event.filter_freq[3])) {
+        filterEnv = event.filter_freq[3];  // COEF_EG0, Juno filter env
+      }
+      if (Number.isFinite(event.filter_freq[4])) {
+        filterEnv = event.filter_freq[4];  // COEF_EG1, amyboard filter env
+        filter_eg = 1;
+      }
+      if (Number.isFinite(event.filter_freq[5])) {
+        filterLfo = event.filter_freq[5];  // COEF_MOD
+      }
     }
     if (Number.isFinite(event.resonance)) {
       resonanceValue = event.resonance;
     }
-    if (Number.isFinite(event.eq_l))  { eq[0] = event.eq_l; }
-    if (Number.isFinite(event.eq_m))  { eq[1] = event.eq_m; }
-    if (Number.isFinite(event.eq_h))  { eq[2] = event.eq_h; }
-    if (Number.isFinite(event.chorus_level)) { chorus[0] = event.chorus_level; }
-    if (Number.isFinite(event.chorus_lfo_freq)) { chorus[1] = event.chorus_lfo_freq; }
-    if (Number.isFinite(event.chorus_depth)) { chorus[2] = event.chorus_depth; }
     if (event.osc == mod_source_osc) {
       // LFO
-      if (Number.isFinite(event.freq_coefs[0])) {
-        lfoFreq = event.freq_coefs[0];
+      if (event.Freq && Number.isFinite(event.freq[0])) {
+        lfoFreq = event.freq[0];
       }
       if (event.wave >= 0 && event.wave < 127) {
         lfoWave = event.wave;
@@ -723,7 +740,7 @@ function set_knobs_from_patch_number_impl(patch_number) {
         if (bpTimeIsSet(event.eg0_times[2])) { adsr[3] = event.eg0_times[2]; }   // R time
       }
       if (event.eg0_values) {
-	if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
+        if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
       }
       if (event.eg1_times) {
         if (bpTimeIsSet(event.eg1_times[0])) { f_adsr[0] = event.eg1_times[0]; }   // A time
@@ -731,29 +748,35 @@ function set_knobs_from_patch_number_impl(patch_number) {
         if (bpTimeIsSet(event.eg1_times[2])) { f_adsr[3] = event.eg1_times[2]; }   // R time
       }
       if (event.eg1_values) {
-	if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
+        if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
       }
       // Extract key parameters for each osc
-      if (Number.isFinite(event.amp_coefs[2]) && event.amp_coefs[2] > 0) {
-        osc_gain[event.osc] = event.amp_coefs[2];
+      if (event.amp) {
+        if (Number.isFinite(event.amp[2]) && event.amp[2] > 0) {
+          osc_gain[event.osc] = event.amp[2];
+        }
+        if (Number.isFinite(event.amp[3]) && event.amp[3] == 0) {
+          // Juno patches decouple amp from EG0 for "gate" mode.
+          oscGate = 1;
+        }
       }
-      if (Number.isFinite(event.amp_coefs[3]) && event.amp_coefs[3] == 0) {
-        // Juno patches decouple amp from EG0 for "gate" mode.
-        oscGate = 1;
+      if (event.freq) {
+        if (Number.isFinite(event.freq[0]) && event.freq[0] > 0) {
+          osc_freq[event.osc] = event.freq[0];
+        }
+        if (Number.isFinite(event.freq[5]) && event.freq[5] > 0) {
+          lfoOsc = event.freq[5];  // freq COEF_MOD == 5
+        }
       }
-      if (Number.isFinite(event.freq_coefs[0]) && event.freq_coefs[0] > 0) {
-        osc_freq[event.osc] = event.freq_coefs[0];
+      if (event.duty) {
+        if (Number.isFinite(event.duty[0]) && event.duty[0] > 0) {
+          osc_duty[event.osc] = event.duty[0];
+        }
+        if (Number.isFinite(event.duty[5]) && event.duty[5] > lfoPwm) {
+          lfoPwm = event.duty[5];  // duty COEF_MOD == 5
+        }
       }
-      if (Number.isFinite(event.freq_coefs[5]) && event.freq_coefs[5] > 0) {
-        lfoOsc = event.freq_coefs[5];  // freq COEF_MOD == 5
-      }
-      if (Number.isFinite(event.duty_coefs[0]) && event.duty_coefs[0] > 0) {
-        osc_duty[event.osc] = event.duty_coefs[0];
-      }
-      if (Number.isFinite(event.duty_coefs[5]) && event.duty_coefs[5] > lfoPwm) {
-        lfoPwm = event.duty_coefs[5];  // duty COEF_MOD == 5
-      }
-      if (event.wave >= 0 && event.wave < 127) {
+      if (event.wave && event.wave >= 0 && event.wave < 127) {
         osc_wave[event.osc] = event.wave
       }
       if (Number.isFinite(event.preset) && event.preset >= 0) {
@@ -772,8 +795,8 @@ function set_knobs_from_patch_number_impl(patch_number) {
     if (!event || event.osc !== lfoSourceOsc) {
       continue;
     }
-    if (Number.isFinite(event.freq_coefs[0])) {
-      lfoFreq = event.freq_coefs[0];
+    if (event.freq && Number.isFinite(event.freq[0])) {
+      lfoFreq = event.freq[0];
     }
     if (event.wave >= 0 && event.wave < 127) {
       lfoWave = event.wave;
@@ -805,6 +828,9 @@ function set_knobs_from_patch_number_impl(patch_number) {
     }
   }
 
+  //console.log("set_knobs: osc A amp=", osc_gain[oscAB_osc[0]], "wave=", osc_wave[oscAB_osc[0]]);
+  //console.log("set_knobs: osc B amp=", osc_gain[oscAB_osc[1]], "wave=", osc_wave[oscAB_osc[1]]);
+  
   // Configure the patch.
   set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[oscAB_osc[0]]);
   set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[oscAB_osc[0]]);
