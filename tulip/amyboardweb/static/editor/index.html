@@ -360,6 +360,16 @@
           flex: 0 0 8.333%;
           max-width: 8.333%;
         }
+        #knob-grid-channel .knob-section-main {
+          flex: 0 0 50%;
+          max-width: 50%;
+          width: 50%;
+        }
+        #knob-grid-global .knob-col {
+          flex: 0 0 33.333%;
+          max-width: 33.333%;
+          width: 33.333%;
+        }
       }
 
       .knob-section-header {
@@ -484,23 +494,79 @@
       }
 
       @media (max-width: 799px) {
+        .patch-layout-header,
+        .patch-layout-body {
+          grid-template-columns: 1fr;
+          gap: 10px;
+        }
+        .patch-global-title,
+        .patch-global-panel,
+        .patch-channel-panel,
+        .patch-toolbar {
+          grid-column: 1;
+        }
         .knob-col-spacer {
           display: none;
         }
       }
 
       #patch-pane {
-        background: linear-gradient(135deg, #e6e6e6 0%, #99918b 100%);
+        background: #f2f3f5;
         border-radius: 12px;
-        padding: 24px;
+        padding: 16px;
+      }
+
+      .patch-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .patch-layout-header {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+        align-items: stretch;
       }
 
       .patch-toolbar {
         background:rgba(44, 55, 55, 0.75);
         border-radius: 12px;
         padding: 6px 6px;
-        margin-left: -8px;
-        margin-right: -8px;
+        margin: 0;
+        grid-column: 1;
+      }
+
+      .patch-global-title {
+        grid-column: 3;
+        background: #1f2937;
+        border-radius: 12px;
+        color: #fff;
+        font-size: 0.75rem;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .patch-layout-body {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+        align-items: start;
+      }
+
+      .patch-channel-panel {
+        grid-column: 1;
+        background: linear-gradient(145deg, #e0ebe7 0%, #c8dbd5 100%);
+        border-radius: 14px;
+        padding: 12px;
+      }
+
+      .patch-global-panel {
+        grid-column: 3;
+        background: linear-gradient(145deg, #f5f7fb 0%, #dce5ef 100%);
+        border-radius: 14px;
+        padding: 12px;
       }
 
       .patch-select-group .patch-init-btn {
@@ -732,47 +798,59 @@
           </div>
           <div class="tab-content pt-4">
             <div class="tab-pane fade show active" id="patch-pane" role="tabpanel" aria-labelledby="patch-tab">
-              <div class="row align-items-center mb-4 patch-toolbar gx-1">
-                <div class="col-12 col-md-auto">
-                  <select class="form-select" id="midi-channel-select" aria-label="MIDI Channel">
-                    <option value="1" selected>Channel 1</option>
-                    <option value="2">Channel 2</option>
-                    <option value="3">Channel 3</option>
-                    <option value="4">Channel 4</option>
-                    <option value="5">Channel 5</option>
-                    <option value="6">Channel 6</option>
-                    <option value="7">Channel 7</option>
-                    <option value="8">Channel 8</option>
-                    <option value="9">Channel 9</option>
-                    <option value="10">Channel 10</option>
-                    <option value="11">Channel 11</option>
-                    <option value="12">Channel 12</option>
-                    <option value="13">Channel 13</option>
-                    <option value="14">Channel 14</option>
-                    <option value="15">Channel 15</option>
-                    <option value="16">Channel 16</option>
-                  </select>
-                </div>
-                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
-                  <div class="form-check ms-1">
-                    <input class="form-check-input" type="checkbox" id="channel-active-checkbox" checked />
-                    <label class="form-check-label small" for="channel-active-checkbox">Active</label>
+              <div class="patch-layout">
+                <div class="patch-layout-header">
+                  <div class="row align-items-center patch-toolbar gx-1">
+                    <div class="col-12 col-md-auto">
+                      <select class="form-select" id="midi-channel-select" aria-label="MIDI Channel">
+                        <option value="1" selected>Channel 1</option>
+                        <option value="2">Channel 2</option>
+                        <option value="3">Channel 3</option>
+                        <option value="4">Channel 4</option>
+                        <option value="5">Channel 5</option>
+                        <option value="6">Channel 6</option>
+                        <option value="7">Channel 7</option>
+                        <option value="8">Channel 8</option>
+                        <option value="9">Channel 9</option>
+                        <option value="10">Channel 10</option>
+                        <option value="11">Channel 11</option>
+                        <option value="12">Channel 12</option>
+                        <option value="13">Channel 13</option>
+                        <option value="14">Channel 14</option>
+                        <option value="15">Channel 15</option>
+                        <option value="16">Channel 16</option>
+                      </select>
+                    </div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                      <div class="form-check ms-1">
+                        <input class="form-check-input" type="checkbox" id="channel-active-checkbox" checked />
+                        <label class="form-check-label small" for="channel-active-checkbox">Active</label>
+                      </div>
+                    </div>
+                    <div class="col-12 col-md-1 d-none d-md-block"></div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                      <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Patch: <span id="patch-active-name">None</span></button>
+                    </div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0">
+                      <div class="d-flex gap-2">
+                        <button class="btn btn-warning btn-sm rounded-pill" type="button" id="patch-open-load-modal-btn">Load</button>
+                        <button class="btn btn-danger btn-sm rounded-pill" type="button" id="patch-save-action-btn">Save</button>
+                        <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-revert-action-btn">Revert</button>
+                        <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-clear-channel-btn">Clear</button>
+                      </div>
+                    </div>
                   </div>
+                  <div class="patch-global-title">Effects</div>
                 </div>
-                <div class="col-12 col-md-1 d-none d-md-block"></div>
-                <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
-                  <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Patch: <span id="patch-active-name">None</span></button>
-                </div>
-                <div class="col-12 col-md-auto mt-2 mt-md-0">
-                  <div class="d-flex gap-2">
-                    <button class="btn btn-warning btn-sm rounded-pill" type="button" id="patch-open-load-modal-btn">Load</button>
-                    <button class="btn btn-danger btn-sm rounded-pill" type="button" id="patch-save-action-btn">Save</button>
-                    <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-revert-action-btn">Revert</button>
-                    <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-clear-channel-btn">Clear</button>
+                <div class="patch-layout-body">
+                  <div class="patch-channel-panel">
+                    <div class="row g-4 knob-grid" id="knob-grid-channel"></div>
+                  </div>
+                  <div class="patch-global-panel">
+                    <div class="row g-4 knob-grid" id="knob-grid-global"></div>
                   </div>
                 </div>
               </div>
-              <div class="row g-4 knob-grid" id="knob-grid"></div>
             </div>
             <div class="tab-pane fade" id="environment-pane" role="tabpanel" aria-labelledby="environment-tab">
               <div class="alert fixed-top d-none" id="alert_box"></div>

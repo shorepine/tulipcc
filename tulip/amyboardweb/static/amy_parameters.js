@@ -10,7 +10,9 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "EQ", bg_color: "rgba(150, 190, 240, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Chorus", bg_color: "rgba(180, 225, 225, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Reverb", bg_color: "rgba(160, 200, 200, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Echo", bg_color: "rgba(176, 208, 232, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
+  const GLOBAL_SECTION_NAMES = ["EQ", "Chorus", "Reverb", "Echo"];
   const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE"];
   const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 7, 19];
 
@@ -55,8 +57,6 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 1.0,
       offset: 0.1,
     },
-    { knob_type: "spacer" },
-    { knob_type: "spacer-half" },
     {
       section: "VCF",
       cc: 74,
@@ -96,7 +96,6 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 10,
     },
 
-    { knob_type: "spacer-half" },
     {
       section: "EQ",
       cc: 78,
@@ -165,8 +164,6 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 1.0,
       offset: 0.1,
     },
-    { knob_type: "spacer" },
-    { knob_type: "spacer-half" },
 
    {
       section: "VCF ENV",
@@ -208,7 +205,6 @@ window.addEventListener("DOMContentLoaded", function() {
       default_value: 100,
       change_code: "i%iv0B,1,,,%v,0",
     },
-    {knob_type: "spacer-half" },
     {
       section: "Chorus",
       cc: 89,
@@ -289,7 +285,6 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 4.0,
       offset: 0.001,
     },
-        {knob_type: "spacer-half" },
 
           {
       section: "ADSR",
@@ -331,7 +326,6 @@ window.addEventListener("DOMContentLoaded", function() {
       default_value: 100,
     },
 
-        {knob_type: "spacer-half" },
 
 
     {
@@ -363,8 +357,98 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 1,
       default_value: 0.5,
     },
+    {
+      section: "Echo",
+      cc: 104,
+      display_name: "level",
+      change_code: "M%v",
+      min_value: 0,
+      max_value: 2,
+      default_value: 0,
+    },
+    {
+      section: "Echo",
+      cc: 105,
+      display_name: "delay",
+      change_code: "M,%v",
+      min_value: 0,
+      max_value: 5000,
+      default_value: 0,
+    },
+    {
+      section: "Echo",
+      cc: 106,
+      display_name: "feedback",
+      change_code: "M,,,%v",
+      min_value: 0,
+      max_value: 1,
+      default_value: 0,
+    },
 
   ];
+
+  function isGlobalSection(sectionName) {
+    return GLOBAL_SECTION_NAMES.indexOf(String(sectionName || "")) !== -1;
+  }
+
+  function nearestSectionName(list, start, direction) {
+    for (let i = start; i >= 0 && i < list.length; i += direction) {
+      const entry = list[i];
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      if (entry.knob_type === "spacer" || entry.knob_type === "spacer-half") {
+        continue;
+      }
+      if (typeof entry.section === "string") {
+        return entry.section;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  function build_channel_knob_definitions(list) {
+    const out = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const entry = list[i];
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      if (entry.knob_type === "spacer" || entry.knob_type === "spacer-half") {
+        const prevSection = nearestSectionName(list, i - 1, -1);
+        const nextSection = nearestSectionName(list, i + 1, 1);
+        if (prevSection && nextSection && !isGlobalSection(prevSection) && !isGlobalSection(nextSection)) {
+          out.push(entry);
+        }
+        continue;
+      }
+      if (!isGlobalSection(entry.section)) {
+        out.push(entry);
+      }
+    }
+    return out;
+  }
+
+  function build_global_knob_definitions(list) {
+    const out = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const entry = list[i];
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      if (entry.knob_type === "spacer" || entry.knob_type === "spacer-half") {
+        continue;
+      }
+      if (isGlobalSection(entry.section)) {
+        out.push(entry);
+      }
+    }
+    return out;
+  }
+
+  const channel_knob_definitions = build_channel_knob_definitions(amy_knob_definitions);
+  const global_knob_definitions = build_global_knob_definitions(amy_knob_definitions);
 
   function cloneKnob(entry) {
     if (!entry || typeof entry !== "object") {
@@ -401,16 +485,21 @@ window.addEventListener("DOMContentLoaded", function() {
     if (!Number.isInteger(messageChannel) || messageChannel !== channel) {
       return false;
     }
-    if (!Array.isArray(window.amy_knobs) || !Array.isArray(window.amy_knobs[channel])) {
-      return false;
-    }
     const changeCode = String(match[7] || "");
     if (!changeCode) {
       return false;
     }
-    const knob = window.amy_knobs[channel].find(function(entry) {
+    const perChannelKnobs = (Array.isArray(window.amy_channel_knobs) && Array.isArray(window.amy_channel_knobs[channel]))
+      ? window.amy_channel_knobs[channel] : [];
+    const globalKnobs = Array.isArray(window.amy_global_knobs) ? window.amy_global_knobs : [];
+    let knob = perChannelKnobs.find(function(entry) {
       return entry && entry.change_code === changeCode;
     });
+    if (!knob) {
+      knob = globalKnobs.find(function(entry) {
+        return entry && entry.change_code === changeCode;
+      });
+    }
     if (!knob) {
       return false;
     }
@@ -469,35 +558,51 @@ window.addEventListener("DOMContentLoaded", function() {
   window.apply_knob_cc_mappings_from_patch_source = applyKnobCcMappingsFromPatchSource;
 
   window.reset_amy_knobs_to_defaults = function() {
-    window.amy_knobs = new Array(17);
+    window.amy_channel_knobs = new Array(17);
     for (let i = 1; i <= 16; i += 1) {
-      window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
+      window.amy_channel_knobs[i] = cloneKnobList(channel_knob_definitions);
     }
+    window.amy_global_knobs = cloneKnobList(global_knob_definitions);
     window.has_restored_amy_knobs_state = false;
     return true;
   };
 
-  window.amy_knobs = new Array(17);
+  window.amy_channel_knobs = new Array(17);
   for (let i = 1; i <= 16; i += 1) {
-    window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
+    window.amy_channel_knobs[i] = cloneKnobList(channel_knob_definitions);
   }
+  window.amy_global_knobs = cloneKnobList(global_knob_definitions);
   window.has_restored_amy_knobs_state = false;
 
-  window.get_current_knobs = function() {
-    const idx = Number(window.current_synth);
-    if (Array.isArray(window.amy_knobs) && window.amy_knobs[idx]) {
-      return window.amy_knobs[idx];
+  window.get_channel_knobs = function(channel) {
+    const idx = Number(channel);
+    if (Array.isArray(window.amy_channel_knobs) && window.amy_channel_knobs[idx]) {
+      return window.amy_channel_knobs[idx];
     }
-    if (Array.isArray(window.amy_knobs) && window.amy_knobs[1]) {
-      return window.amy_knobs[1];
+    if (Array.isArray(window.amy_channel_knobs) && window.amy_channel_knobs[1]) {
+      return window.amy_channel_knobs[1];
     }
     return [];
   };
 
+  window.get_global_knobs = function() {
+    if (Array.isArray(window.amy_global_knobs)) {
+      return window.amy_global_knobs;
+    }
+    return [];
+  };
+
+  window.get_current_knobs = function() {
+    return window.get_channel_knobs(window.current_synth).concat(window.get_global_knobs());
+  };
+
   window.refresh_knobs_for_channel = function() {
-    const knobs = window.get_current_knobs();
+    const channelKnobs = window.get_channel_knobs(window.current_synth);
+    const globalKnobs = window.get_global_knobs();
+    const knobs = channelKnobs.concat(globalKnobs);
     if (typeof init_knobs === "function") {
-      init_knobs(knobs);
+      init_knobs(channelKnobs, "knob-grid-channel");
+      init_knobs(globalKnobs, "knob-grid-global");
     }
     if (typeof window.onKnobCcChange === "function") {
       for (const knob of knobs) {

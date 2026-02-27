@@ -907,8 +907,8 @@ window.clear_patch_state = clear_patch_state;
 
 function get_knobs_for_channel(channel) {
   var ch = Number(channel);
-  if (Array.isArray(window.amy_knobs) && Array.isArray(window.amy_knobs[ch])) {
-    return window.amy_knobs[ch];
+  if (typeof window.get_channel_knobs === "function" && typeof window.get_global_knobs === "function") {
+    return window.get_channel_knobs(ch).concat(window.get_global_knobs());
   }
   return window.get_current_knobs ? window.get_current_knobs() : [];
 }
