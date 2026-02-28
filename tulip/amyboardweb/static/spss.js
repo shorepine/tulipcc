@@ -389,6 +389,69 @@ function write_channel_dirty_patch_file(channel) {
   return filename;
 }
 
+const pending_channel_knob_sync = new Array(17).fill(false);
+
+function schedule_channel_knob_sync_after_ui_ready(channel) {
+  const synth = normalize_synth_channel(channel);
+  if (!synth) {
+    return false;
+  }
+  if (pending_channel_knob_sync[synth]) {
+    return true;
+  }
+  pending_channel_knob_sync[synth] = true;
+  const runSync = async function() {
+    pending_channel_knob_sync[synth] = false;
+    try {
+      await sync_channel_knobs_from_synth_to_ui(synth);
+    } catch (e) {}
+  };
+  if (document.readyState !== "complete") {
+    window.addEventListener("DOMContentLoaded", runSync, { once: true });
+  } else {
+    setTimeout(runSync, 25);
+  }
+  return true;
+}
+
+async function sync_channel_knobs_from_synth_to_ui(channel) {
+  const synth = normalize_synth_channel(channel);
+  if (!synth) {
+    return false;
+  }
+  if (typeof set_knobs_from_synth !== "function"
+    || typeof window.refresh_knobs_for_channel !== "function"
+    || typeof window.get_current_knobs !== "function") {
+    schedule_channel_knob_sync_after_ui_ready(synth);
+    return false;
+  }
+  const previousChannel = Number(window.current_synth || 1);
+  const previousSuppress = !!window.suppress_knob_cc_send;
+  window.current_synth = synth;
+  window.suppress_knob_cc_send = true;
+  try {
+    let lastError = null;
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      // AMY applies queued wire messages asynchronously; keep retrying briefly during startup.
+      await new Promise(function(resolve) { setTimeout(resolve, attempt === 0 ? 20 : 40); });
+      try {
+        set_knobs_from_synth(synth);
+        window.refresh_knobs_for_channel();
+        return true;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    if (lastError) {
+      console.warn("Failed to sync knobs from synth " + synth + ".", lastError);
+    }
+    return false;
+  } finally {
+    window.suppress_knob_cc_send = previousSuppress;
+    window.current_synth = previousChannel;
+  }
+}
+
 function schedule_dirty_autosave_for_channel(channel) {
   const synth = normalize_synth_channel(channel);
   if (!synth || window.suppress_knob_cc_send) {
@@ -505,6 +568,7 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
     }
     amy_add_log_message("i" + synth + wire);
   }
+  await sync_channel_knobs_from_synth_to_ui(synth);
   const patchName = filename.replace(/\.patch$/i, "");
   window.channel_patch_names[synth] = patchName;
   set_editor_state_patch_name(synth, patchName);
@@ -567,6 +631,7 @@ async function restore_patches_from_editor_state_if_present(options) {
   const state = read_editor_state_json();
   const synthMap = (state && state.synths && typeof state.synths === "object") ? state.synths : {};
   const loadedMap = new Array(17).fill(false);
+  const loadedSynths = [];
   let loadedCount = 0;
   for (let ch = 1; ch <= 16; ch += 1) {
     set_channel_patch_dirty_state(ch, false);
@@ -618,8 +683,19 @@ async function restore_patches_from_editor_state_if_present(options) {
         amy_add_log_message("i" + synth + wire);
       }
     }
+    await sync_channel_knobs_from_synth_to_ui(synth);
     loadedMap[synth] = true;
+    loadedSynths.push(synth);
     loadedCount += 1;
+  }
+
+  if (!sendToAmy && loadedSynths.length > 0) {
+    // On startup, Python may still be streaming patch messages into AMY while we read synth state.
+    // Run a second sync pass shortly after to capture final settled values.
+    await new Promise(function(resolve) { setTimeout(resolve, 350); });
+    for (const synth of loadedSynths) {
+      await sync_channel_knobs_from_synth_to_ui(synth);
+    }
   }
 
   apply_channel_active_ui_from_loaded_map(loadedMap);
@@ -640,16 +716,6 @@ window.clear_current_channel_patch = async function() {
   await sync_persistent_fs();
   return synth;
 };
-
-window.onPatchChange = function(patchIndex) {
-  const patch = Number(patchIndex);
-  if (!Number.isInteger(patch) || patch < 0) {
-    return;
-  }
-  const channel = Number(window.current_synth || 1);
-  amy_add_log_message("i" + channel + "iv6K" + patch);
-};
-
 
 function onKnobCcChange(knob) {
   /*
@@ -2593,6 +2659,17 @@ async function start_amyboard() {
   if (typeof window.refresh_save_patch_dirty_indicator === "function") {
     window.refresh_save_patch_dirty_indicator();
   }
+  setTimeout(async function() {
+    try {
+      await restore_patches_from_editor_state_if_present({ sendToAmy: false });
+      if (typeof window.refresh_patch_active_name_label === "function") {
+        window.refresh_patch_active_name_label();
+      }
+      if (typeof window.refresh_save_patch_dirty_indicator === "function") {
+        window.refresh_save_patch_dirty_indicator();
+      }
+    } catch (e) {}
+  }, 800);
   amyboard_started = true;
 }
 
@@ -2608,6 +2685,15 @@ async function start_audio() {
   } else {
       await amy_live_start_web();    
   }
+  try {
+    await restore_patches_from_editor_state_if_present({ sendToAmy: false });
+    if (typeof window.refresh_patch_active_name_label === "function") {
+      window.refresh_patch_active_name_label();
+    }
+    if (typeof window.refresh_save_patch_dirty_indicator === "function") {
+      window.refresh_save_patch_dirty_indicator();
+    }
+  } catch (e) {}
   // Keep startup simple: knobs are local UI state until user moves them.
   audio_started = true;
 }

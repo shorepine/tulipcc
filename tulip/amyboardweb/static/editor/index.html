@@ -1370,6 +1370,7 @@
         const yourPatchesSelect = document.getElementById("load-patch-your-patches");
         const presetsSelect = document.getElementById("load-patch-presets");
         const loadYourPatchButton = document.getElementById("load-your-patch-btn");
+        const loadPresetButton = document.getElementById("load-preset-btn");
         const loadPatchChannelLabel = document.getElementById("load-patch-channel-label");
         const patchActiveNameEl = document.getElementById("patch-active-name");
         function refreshPatchActiveNameLabel() {
@@ -1501,6 +1502,40 @@
               } finally {
                 loadYourPatchButton.disabled = false;
               }
+            });
+          }
+          if (loadPresetButton && presetsSelect) {
+            loadPresetButton.addEventListener("click", function() {
+              const patch = Number(presetsSelect.value);
+              if (!Number.isInteger(patch) || patch < 0) {
+                if (typeof show_alert === "function") {
+                  show_alert("Select a preset to load.");
+                }
+                return;
+              }
+              if (typeof window.set_knobs_from_patch_number_impl !== "function"
+                  && typeof set_knobs_from_patch_number_impl !== "function") {
+                if (typeof show_alert === "function") {
+                  show_alert("Preset load is not available.");
+                }
+                return;
+              }
+              if (typeof window.set_knobs_from_patch_number_impl === "function") {
+                window.set_knobs_from_patch_number_impl(patch);
+              } else {
+                set_knobs_from_patch_number_impl(patch);
+              }
+              if (typeof window.refresh_knobs_for_channel === "function") {
+                const previousSuppress = !!window.suppress_knob_cc_send;
+                window.suppress_knob_cc_send = true;
+                try {
+                  window.refresh_knobs_for_channel();
+                } finally {
+                  window.suppress_knob_cc_send = previousSuppress;
+                }
+              }
+              const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
+              modal.hide();
             });
           }
         }
