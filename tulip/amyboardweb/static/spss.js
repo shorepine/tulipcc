@@ -373,7 +373,7 @@ function get_wire_commands_for_juno_patch(patch) {
     // Do the oscs use ADSR, or the juno "gate"?
     let oscGate = 0;
     let eq = [null, null, null];
-    let chorus = [null, null, null];
+    let chorus = [0, 0.5, 0.5];
     const BP_UNSET = 32767;
 
     function bpTimeIsSet(v) {
