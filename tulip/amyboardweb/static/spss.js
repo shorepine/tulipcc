@@ -543,7 +543,7 @@ function get_wire_commands_for_juno_patch(patch) {
           + "f" + osc_freq[src_osc] + ",1,,,," + lfoOsc + ",1"
           + "d" + osc_duty[src_osc] + ",,,,," + lfoPwm
           + "a,," + osc_gain[src_osc] + ",1,0"
-          + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + "0";
+          + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
       if (osc_wave[src_osc] == WAVETABLE || osc_wave[src_osc] == PCM) {
         command += "p" + osc_preset[src_osc];
       }
@@ -553,7 +553,7 @@ function get_wire_commands_for_juno_patch(patch) {
         // Osc 0 has the filter controls.
         command += "G4R" + resonanceValue
             + "F" + filterFreq + "," + filterKbd + ",,," + filterEnv + "," + filterLfo
-            + "B" + f_adsr[0] + ",1," + f_adsr[1] + "," + f_adsr[2] + "," + f_adsr[3] + "0";
+            + "B" + f_adsr[0] + ",1," + f_adsr[1] + "," + f_adsr[2] + "," + f_adsr[3] + ",0";
       }
       wire_commands.push(command + "Z");
     }
