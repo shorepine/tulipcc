@@ -851,6 +851,9 @@ async function restore_patches_from_editor_state_if_present(options) {
     hasEditorState = false;
   }
   if (!hasEditorState) {
+    if (sendToAmy) {
+      amy_add_log_message("i1K257iv6");
+    }
     return { hasEditorState: false, loadedCount: 0 };
   }
 
