@@ -27,7 +27,7 @@ var treeView = null;
 var editor_shown = false;
 var amy_audioin_toggle = false;
 var editor_height = 200;
-var term = null; 
+var term = null;
 var cv_1_voltage = 0;
 var cv_2_voltage = 0;
 var amy_module = null;
@@ -86,13 +86,13 @@ window.set_channel_active = function(channel, active) {
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
   amy_live_start_web = am.cwrap(
-    'amy_live_start_web', null, null, {async: true}    
+    'amy_live_start_web', null, null, {async: true}
   );
   amy_live_start_web_audioin = am.cwrap(
-    'amy_live_start_web_audioin', null, null, {async: true}    
+    'amy_live_start_web_audioin', null, null, {async: true}
   );
   amy_live_stop = am.cwrap(
-    'amy_live_stop', null,  null, {async: true}    
+    'amy_live_stop', null,  null, {async: true}
   );
   amy_bleep = am.cwrap(
     'amy_bleep', null, ['number']
@@ -364,7 +364,7 @@ function get_wire_commands_for_juno_patch(patch) {
     let osc_freq = [null, null, null, null];
     let osc_wave = [null, null, null, null];
     let osc_preset = [null, null, null, null];
-    let osc_duty = [null, null, null, null];
+    let osc_duty = [0.5, 0.5, 0.5, 0.5];
     let osc_gain = [0, 0, 0, 0];
     let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
     // Which Juno oscs are used for oscA and B
@@ -570,7 +570,7 @@ function get_wire_commands_for_juno_patch(patch) {
 
   // The concatenated Z-separated string defining the Juno patch.
   let message = patch_code_for_patch_number[patch];
-  let events = events_from_wire_code_messages(message);
+  let events = events_from_wire_code_message(message);
   wire_commands = translate_juno_events_to_webeditor_wire_commands(events);
   return wire_commands;
 }
