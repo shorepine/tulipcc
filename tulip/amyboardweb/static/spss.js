@@ -343,11 +343,237 @@ function set_channel_patch_dirty_state(channel, dirty) {
   }
 }
 
-function get_wire_commands_for_patch(patch) {
-  // We expect a list of wire commands, but this is all one Z-separated string; return a 1-element list.
-  return [patch_code_for_patch_number[patch]];
-}
+function get_wire_commands_for_juno_patch(patch) {
 
+  function translate_juno_events_to_webeditor_wire_commands(events) {
+    let filterFreq = null;
+    let filterEnv = null;
+    let filterLfo = null
+    let filterKbd = null;
+    let filter_eg = 0;  // Juno: filter env is eg0; updated to 1 for amyboardsynth.
+    let filter_osc = 0;  // Default, but can be updated: which osc defines filter params.
+    let resonanceValue = null;
+    let adsr = [0, 0, 1, 0];
+    let f_adsr = [0, 0, 1, 0];
+    let lfoFreq = null;
+    let lfoDelay = null;
+    let lfoWave = 4;  // default triangle
+    let lfoOsc = 0;
+    let lfoPwm = 0;
+    // Track coefficients for all 4 non-lfo oscs.
+    let osc_freq = [null, null, null, null];
+    let osc_wave = [null, null, null, null];
+    let osc_preset = [null, null, null, null];
+    let osc_duty = [null, null, null, null];
+    let osc_gain = [0, 0, 0, 0];
+    let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
+    // Which Juno oscs are used for oscA and B
+    let oscAB_osc = [-1, -1];
+    let oscAB_gain = [0, 0];
+    // Do the oscs use ADSR, or the juno "gate"?
+    let oscGate = 0;
+    let eq = [null, null, null];
+    let chorus = [null, null, null];
+    const BP_UNSET = 32767;
+
+    function bpTimeIsSet(v) {
+      return Number.isFinite(v) && v !== BP_UNSET;
+    }
+
+    for (const event of events) {
+
+      // non-osc values.
+      if (event.eq) {
+        if (Number.isFinite(event.eq[0]))  { eq[0] = event.eq[0]; }
+        if (Number.isFinite(event.eq[1]))  { eq[1] = event.eq[1]; }
+        if (Number.isFinite(event.eq[2]))  { eq[2] = event.eq[2]; }
+      }
+      if (event.chorus) {
+        if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }
+        if (Number.isFinite(event.chorus[1])) { chorus[1] = event.chorus[1]; }
+        if (Number.isFinite(event.chorus[2])) { chorus[2] = event.chorus[2]; }
+      }
+
+      // Remainder of block assumes osc is set.
+      if (!Number.isFinite(event.osc)) continue;
+
+      if (event.filter_freq) {
+        if (Number.isFinite(event.filter_freq[0])) {
+          filter_osc = event.osc;  // Assume we'll see this at least once
+          filterFreq = event.filter_freq[0];
+        }
+        if (Number.isFinite(event.filter_freq[1])) {
+          filterKbd = event.filter_freq[1];  // COEF_NOTE
+        }
+        if (Number.isFinite(event.filter_freq[3])) {
+          filterEnv = event.filter_freq[3];  // COEF_EG0, Juno filter env
+        }
+        if (Number.isFinite(event.filter_freq[4])) {
+          filterEnv = event.filter_freq[4];  // COEF_EG1, amyboard filter env
+          filter_eg = 1;
+        }
+        if (Number.isFinite(event.filter_freq[5])) {
+          filterLfo = event.filter_freq[5];  // COEF_MOD
+        }
+      }
+      if (Number.isFinite(event.resonance)) {
+        resonanceValue = event.resonance;
+      }
+      if (event.osc == mod_source_osc) {
+        // LFO
+        if (event.Freq && Number.isFinite(event.freq[0])) {
+          lfoFreq = event.freq[0];
+        }
+        if (event.wave >= 0 && event.wave < 127) {
+          lfoWave = event.wave;
+        }
+        if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
+          lfoDelay = event.eg0_times[0];
+        }
+      } else if (event.osc >= 0) {
+        // Non-LFO osc, don't assume what order they come in.
+        const parsedModSource = Number(event.mod_source);
+        if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
+          mod_source_osc = parsedModSource;
+        }
+        if (event.eg0_times) {
+          if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
+          if (bpTimeIsSet(event.eg0_times[1])) { adsr[1] = event.eg0_times[1]; }   // D time
+          if (bpTimeIsSet(event.eg0_times[2])) { adsr[3] = event.eg0_times[2]; }   // R time
+        }
+        if (event.eg0_values) {
+          if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
+        }
+        if (event.eg1_times) {
+          if (bpTimeIsSet(event.eg1_times[0])) { f_adsr[0] = event.eg1_times[0]; }   // A time
+          if (bpTimeIsSet(event.eg1_times[1])) { f_adsr[1] = event.eg1_times[1]; }   // D time
+          if (bpTimeIsSet(event.eg1_times[2])) { f_adsr[3] = event.eg1_times[2]; }   // R time
+        }
+        if (event.eg1_values) {
+          if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
+        }
+        // Extract key parameters for each osc
+        if (event.amp) {
+          if (Number.isFinite(event.amp[2]) && event.amp[2] > 0) {
+            osc_gain[event.osc] = event.amp[2];
+          }
+          if (Number.isFinite(event.amp[3]) && event.amp[3] == 0) {
+            // Juno patches decouple amp from EG0 for "gate" mode.
+            oscGate = 1;
+          }
+        }
+        if (event.freq) {
+          if (Number.isFinite(event.freq[0]) && event.freq[0] > 0) {
+            osc_freq[event.osc] = event.freq[0];
+          }
+          if (Number.isFinite(event.freq[5]) && event.freq[5] > 0) {
+            lfoOsc = event.freq[5];  // freq COEF_MOD == 5
+          }
+        }
+        if (event.duty) {
+          if (Number.isFinite(event.duty[0]) && event.duty[0] > 0) {
+            osc_duty[event.osc] = event.duty[0];
+          }
+          if (Number.isFinite(event.duty[5]) && event.duty[5] > lfoPwm) {
+            lfoPwm = event.duty[5];  // duty COEF_MOD == 5
+          }
+        }
+        if (event.wave && event.wave >= 0 && event.wave < 127) {
+          osc_wave[event.osc] = event.wave
+        }
+        if (Number.isFinite(event.preset) && event.preset >= 0) {
+          osc_preset[event.osc] = event.preset;
+        }
+      }
+    }
+
+    // Re-scan for LFO so event ordering does not force defaults.
+    // Prefer osc 2 (the editor's dedicated LFO oscillator), then fall back to inferred mod source.
+    var lfoSourceOsc = 2;
+    if (!events.some(function(event) { return event && event.osc === 2; })) {
+      lfoSourceOsc = mod_source_osc;
+    }
+    for (const event of events) {
+      if (!event || event.osc !== lfoSourceOsc) {
+        continue;
+      }
+      if (event.freq && Number.isFinite(event.freq[0])) {
+        lfoFreq = event.freq[0];
+      }
+      if (event.wave >= 0 && event.wave < 127) {
+        lfoWave = event.wave;
+      }
+      if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
+        lfoDelay = event.eg0_times[0];
+      }
+    }
+    // If we didn't set up a separate filter ADSR, it follows the VCA
+    if (filter_eg == 0) {
+      f_adsr = [adsr[0], adsr[1], adsr[2], adsr[3]];
+    }
+    if (oscGate) {
+      adsr = [0, 0, 1, 0];
+    }
+    // Logic to choose juno oscs for osc A and osc B.
+    if (osc_gain[2] == 0 && osc_gain[3] == 0) {
+      // Only 2 oscs, let them be
+      oscAB_osc[0] = 0;
+      oscAB_osc[1] = 1;
+    } else {
+      for (let osc = 0; osc < 4; ++osc) {
+        if (oscAB_osc[0] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[0]]) {
+          if (oscAB_osc[1] == -1 || osc_gain[oscAB_osc[0]] > osc_gain[oscAB_osc[1]]) {
+            // Push oscA into oscB
+            oscAB_osc[1] = oscAB_osc[0];
+          }
+          oscAB_osc[0] = osc;
+        } else if (oscAB_osc[1] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[1]]) {
+          oscAB_osc[1] = osc;
+        }
+      }
+    }
+
+    // Format the final wire commands for the 3-osc config.
+    wire_commands = [];
+    const PCM = 7;  // from amy/src/amy.h
+    const WAVETABLE = 19;  // from amy/src/amy.h
+    for (const osc of [0, 1]) {
+      let src_osc = oscAB_osc[osc];
+      let command = "v" + osc + "w" + osc_wave[src_osc] + "L2" + "m0"
+          + "f" + osc_freq[src_osc] + ",1,,,," + lfoOsc + ",1"
+          + "d" + osc_duty[src_osc] + ",,,,," + lfoPwm
+          + "a,," + osc_gain[src_osc] + ",1,0"
+          + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + "0";
+      if (osc_wave[src_osc] == WAVETABLE || osc_wave[src_osc] == PCM) {
+        command += "p" + osc_preset[src_osc];
+      }
+      if (osc == 0) {
+        // Osc 0 must chain to osc 1
+        command += "c1";
+        // Osc 0 has the filter controls.
+        command += "G4R" + resonanceValue
+            + "F" + filterFreq + "," + filterKbd + ",,," + filterEnv + "," + filterLfo
+            + "B" + f_adsr[0] + ",1," + f_adsr[1] + "," + f_adsr[2] + "," + f_adsr[3] + "0";
+      }
+      wire_commands.push(command + "Z");
+    }
+    // LFO command
+    let command = "v2w" + lfoWave + "a1,0,0,1" + "f" + lfoFreq + ",0,,0,0,0,0"
+        + "A" + lfoDelay + ",1,100,1,10000,0";
+    wire_commands.push(command + "Z");
+    // Global FX commands
+    command = "x" + eq[0] + "," + eq[1] + "," + eq[2]
+      + "k" + chorus[0] + ",," + chorus[1] + "," + chorus[2];
+    wire_commands.push(command + "Z");
+    return wire_commands;
+  }
+
+  // The concatenated Z-separated string defining the Juno patch.
+  let message = patch_code_for_patch_number[patch];
+  let events = events_from_wire_code_messages(message);
+  wire_commands = translate_juno_events_to_webeditor_wire_commands(events);
+  return wire_commands;
+}
 
 function get_wire_commands_for_channel(channel) {
   const synth = normalize_synth_channel(channel);
