@@ -477,15 +477,19 @@ window.addEventListener("DOMContentLoaded", function() {
   }
 
   function applyKnobCcMappingMessage(channel, message) {
-    const match = String(message || "").match(/^i(\d+)ic([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
+    // Match both prefixed (i1ic70,...) and unprefixed (ic70,...) formats.
+    const match = String(message || "").match(/^(?:i(\d+))?ic([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
     if (!match) {
       return false;
     }
-    const messageChannel = Number(match[1]);
-    if (!Number.isInteger(messageChannel) || messageChannel !== channel) {
-      return false;
+    if (match[1] !== undefined) {
+      const messageChannel = Number(match[1]);
+      if (!Number.isInteger(messageChannel) || messageChannel !== channel) {
+        return false;
+      }
     }
-    const changeCode = String(match[7] || "");
+    // Strip trailing Z (AMY wire protocol terminator) from the template.
+    const changeCode = String(match[7] || "").replace(/Z+$/, "");
     if (!changeCode) {
       return false;
     }
@@ -607,7 +611,7 @@ window.addEventListener("DOMContentLoaded", function() {
     if (typeof window.onKnobCcChange === "function") {
       for (const knob of knobs) {
         if (knob.knob_type !== "spacer" && knob.knob_type !== "spacer-half"
-          && knob.knob_type !== "selection" && knob.knob_type !== "pushbutton") {
+          && knob.knob_type !== "pushbutton") {
           window.onKnobCcChange(knob);
         }
       }

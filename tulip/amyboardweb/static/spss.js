@@ -794,6 +794,10 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
     }
     amy_add_log_message("i" + synth + wire);
   }
+  if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
+    window.apply_knob_cc_mappings_from_patch_source(synth, source);
+  }
+  send_all_knob_cc_mappings(synth);
   await sync_channel_knobs_from_synth_to_ui(synth);
   const patchName = filename.replace(/\.patch$/i, "");
   window.channel_patch_names[synth] = patchName;
@@ -853,6 +857,7 @@ async function restore_patches_from_editor_state_if_present(options) {
   if (!hasEditorState) {
     if (sendToAmy) {
       amy_add_log_message("i1K257iv6");
+      send_all_knob_cc_mappings(1);
     }
     return { hasEditorState: false, loadedCount: 0 };
   }
@@ -912,6 +917,12 @@ async function restore_patches_from_editor_state_if_present(options) {
         amy_add_log_message("i" + synth + wire);
       }
     }
+    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
+      window.apply_knob_cc_mappings_from_patch_source(synth, source);
+    }
+    if (sendToAmy) {
+      send_all_knob_cc_mappings(synth);
+    }
     await sync_channel_knobs_from_synth_to_ui(synth);
     loadedMap[synth] = true;
     loadedSynths.push(synth);
@@ -927,6 +938,13 @@ async function restore_patches_from_editor_state_if_present(options) {
     }
   }
 
+  // If the active channel had no patch mapping, initialize it with a clean slate.
+  const activeCh = Number(window.current_synth || 1);
+  if (!loadedMap[activeCh] && sendToAmy) {
+    amy_add_log_message("i" + activeCh + "K257iv6");
+    send_all_knob_cc_mappings(activeCh);
+  }
+
   apply_channel_active_ui_from_loaded_map(loadedMap);
   return { hasEditorState: true, loadedCount: loadedCount };
 }
@@ -938,6 +956,7 @@ window.clear_current_channel_patch = async function() {
     throw new Error("Invalid channel.");
   }
   amy_add_log_message("i" + synth + "K257iv6");
+  send_all_knob_cc_mappings(synth);
   window.channel_patch_names[synth] = null;
   set_editor_state_patch_name(synth, null);
   remove_current_environment_file_if_exists(String(synth) + ".dirty");
@@ -946,24 +965,31 @@ window.clear_current_channel_patch = async function() {
   return synth;
 };
 
-function onKnobCcChange(knob) {
+function onKnobCcChange(knob, previousCc) {
   /*
   ic<C>,<L>,<N>,<X>,<O>,<CODE>
-  where C= MIDI control code (0-127), L = log-scale flag (so the mapping is exponential if L == 1), 
-  N = min value for the control (corresponding to MIDI value 0), 
-  X = max value (for MIDI value 127), 
-  O = offset for log scale (so if L == 1, value = (min + offset) * exp(log(((max + offset)/(min + offset) * midi_value / 127) - offset), 
-  and CODE is a wire code string with %v as a placeholder for the value to be substituted 
-  (also %i for channel/synth number) and maybe %V to force an integer, 
+  where C= MIDI control code (0-127), L = log-scale flag (so the mapping is exponential if L == 1),
+  N = min value for the control (corresponding to MIDI value 0),
+  X = max value (for MIDI value 127),
+  O = offset for log scale (so if L == 1, value = (min + offset) * exp(log(((max + offset)/(min + offset) * midi_value / 127) - offset),
+  and CODE is a wire code string with %v as a placeholder for the value to be substituted
+  (also %i for channel/synth number) and maybe %V to force an integer,
   for things like selecting wave, and maybe more.
   */
   var m = build_knob_cc_message(window.current_synth, knob);
   if (!m) {
     return;
   }
-  //console.log("Knob CC updated: " + knob.section + ": " + knob.display_name + " to " + knob.cc + ". Sending: " + m);
   if (window.suppress_knob_cc_send) {
     return;
+  }
+  // If the CC number changed, remove the old CC mapping from AMY first.
+  if (previousCc !== undefined && previousCc !== "" && previousCc !== knob.cc) {
+    var synthChannel = Number(window.current_synth || 1);
+    if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
+      synthChannel = 1;
+    }
+    amy_add_log_message("i" + synthChannel + "ic" + previousCc + ",0,0,0,0,");
   }
   if (typeof amy_add_message === "function") {
     amy_add_log_message(m);
@@ -1193,16 +1219,41 @@ function get_knobs_for_channel(channel) {
 
 function build_knob_cc_message(channel, knob) {
   if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half"
-    || knob.knob_type === "selection" || knob.knob_type === "pushbutton") {
+    || knob.knob_type === "pushbutton") {
     return "";
   }
   var synthChannel = Number(channel);
   if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
     synthChannel = Number(window.current_synth || 1);
   }
-  var log = knob.knob_type === "log" ? 1 : 0;
-  var offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
-  return "i" + synthChannel + "ic" + knob.cc + "," + log + "," + knob.min_value + "," + knob.max_value + "," + offset + "," + knob.change_code;
+  var log, min_val, max_val, offset;
+  if (knob.knob_type === "selection") {
+    log = 0;
+    min_val = 0;
+    max_val = Array.isArray(knob.options) ? knob.options.length : 0;
+    offset = 0;
+  } else {
+    log = knob.knob_type === "log" ? 1 : 0;
+    min_val = knob.min_value;
+    max_val = knob.max_value;
+    offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
+  }
+  return "i" + synthChannel + "ic" + knob.cc + "," + log + "," + min_val + "," + max_val + "," + offset + "," + knob.change_code;
+}
+
+function send_all_knob_cc_mappings(channel) {
+  var ch = Number(channel);
+  if (!Number.isInteger(ch) || ch < 1 || ch > 16) ch = 1;
+  var knobs = get_knobs_for_channel(ch);
+  for (var i = 0; i < knobs.length; i++) {
+    var m = build_knob_cc_message(ch, knobs[i]);
+    if (m) {
+      amy_add_log_message(m);
+    }
+  }
+  if (Array.isArray(window.channel_control_mapping_sent)) {
+    window.channel_control_mapping_sent[ch] = true;
+  }
 }
 
 window.refresh_knobs_for_active_channel = async function(options) {

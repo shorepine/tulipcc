@@ -1528,6 +1528,9 @@
                 for (var wi = 0; wi < presetWireCommands.length; wi++) {
                   amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
                 }
+                if (typeof send_all_knob_cc_mappings === "function") {
+                  send_all_knob_cc_mappings(presetSynth);
+                }
               }
               if (typeof window.set_knobs_from_patch_number_impl === "function") {
                 window.set_knobs_from_patch_number_impl(patch);
@@ -1705,9 +1708,6 @@
           for (let ch = 2; ch <= 16; ch += 1) {
             window.set_channel_active(ch, false);
           }
-        }
-        if (Array.isArray(window.channel_control_mapping_sent)) {
-          window.channel_control_mapping_sent[1] = true;
         }
         syncActiveCheckboxForChannel();
         const keyboard = document.getElementById("amy-keyboard");

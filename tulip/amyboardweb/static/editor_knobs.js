@@ -347,9 +347,10 @@ function init_knobs(knobConfigs, gridId, onChange) {
           if (!editor.current) {
             return;
           }
+          var previousCc = editor.current.cc;
           editor.current.cc = value;
           if (typeof window.onKnobCcChange === "function") {
-            window.onKnobCcChange(editor.current);
+            window.onKnobCcChange(editor.current, previousCc);
           }
           hideCcEditor(editor);
         }
