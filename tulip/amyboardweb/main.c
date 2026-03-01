@@ -121,25 +121,9 @@ void setup_fs() {
         FS.mount(IDBFS,  {autoPersist:true}, '/amyboard/user');
         // Then sync
         FS.syncfs(true, function (err) {
-            try { FS.mkdirTree('/amyboard/user/default/env'); } catch (e) {}
-            try { FS.mkdirTree('/amyboard/user/current/env'); } catch (e) {}
-            if (!FS.analyzePath('/amyboard/user/default/env/env.py').exists) {
-                FS.writeFile('/amyboard/user/default/env/env.py', '# Empty environment\\nprint(\"Welcome to AMYboard!\")\\n');
-            }
-            if (!FS.analyzePath('/amyboard/user/default/env/web.patch').exists) {
-                FS.writeFile('/amyboard/user/default/env/web.patch', '# Do not edit - Set by AMYboard web patch editor\\n');
-            }
-            if (!FS.analyzePath('/amyboard/user/default/env/other.patch').exists) {
-                FS.writeFile('/amyboard/user/default/env/other.patch', "");
-            }
-            if (!FS.analyzePath('/amyboard/user/current/env/env.py').exists) {
-                FS.writeFile('/amyboard/user/current/env/env.py', FS.readFile('/amyboard/user/default/env/env.py', { encoding: 'utf8' }));
-            }
-            if (!FS.analyzePath('/amyboard/user/current/env/web.patch').exists) {
-                FS.writeFile('/amyboard/user/current/env/web.patch', FS.readFile('/amyboard/user/default/env/web.patch', { encoding: 'utf8' }));
-            }
-            if (!FS.analyzePath('/amyboard/user/current/env/other.patch').exists) {
-                FS.writeFile('/amyboard/user/current/env/other.patch', FS.readFile('/amyboard/user/default/env/other.patch', { encoding: 'utf8' }));
+            try { FS.mkdirTree('/amyboard/user/current'); } catch (e) {}
+            if (!FS.analyzePath('/amyboard/user/current/env.py').exists) {
+                FS.writeFile('/amyboard/user/current/env.py', '# Put your own code here to run in your environment\\n');
             }
             FS.syncfs(false, function (syncErr) {});
         });

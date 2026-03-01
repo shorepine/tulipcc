@@ -10,7 +10,9 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "EQ", bg_color: "rgba(150, 190, 240, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Chorus", bg_color: "rgba(180, 225, 225, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Reverb", bg_color: "rgba(160, 200, 200, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
+    { name: "Echo", bg_color: "rgba(176, 208, 232, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
+  const GLOBAL_SECTION_NAMES = ["EQ", "Chorus", "Reverb", "Echo"];
   const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE"];
   const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 7, 19];
 
@@ -55,8 +57,6 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 1.0,
       offset: 0.1,
     },
-    { knob_type: "spacer" },
-    { knob_type: "spacer-half" },
     {
       section: "VCF",
       cc: 74,
@@ -96,7 +96,6 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 10,
     },
 
-    { knob_type: "spacer-half" },
     {
       section: "EQ",
       cc: 78,
@@ -165,8 +164,6 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 1.0,
       offset: 0.1,
     },
-    { knob_type: "spacer" },
-    { knob_type: "spacer-half" },
 
    {
       section: "VCF ENV",
@@ -208,7 +205,6 @@ window.addEventListener("DOMContentLoaded", function() {
       default_value: 100,
       change_code: "i%iv0B,1,,,%v,0",
     },
-    {knob_type: "spacer-half" },
     {
       section: "Chorus",
       cc: 89,
@@ -289,7 +285,6 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 4.0,
       offset: 0.001,
     },
-        {knob_type: "spacer-half" },
 
           {
       section: "ADSR",
@@ -331,7 +326,6 @@ window.addEventListener("DOMContentLoaded", function() {
       default_value: 100,
     },
 
-        {knob_type: "spacer-half" },
 
 
     {
@@ -363,8 +357,98 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 1,
       default_value: 0.5,
     },
+    {
+      section: "Echo",
+      cc: 104,
+      display_name: "level",
+      change_code: "M%v",
+      min_value: 0,
+      max_value: 2,
+      default_value: 0,
+    },
+    {
+      section: "Echo",
+      cc: 105,
+      display_name: "delay",
+      change_code: "M,%v",
+      min_value: 0,
+      max_value: 5000,
+      default_value: 0,
+    },
+    {
+      section: "Echo",
+      cc: 106,
+      display_name: "feedback",
+      change_code: "M,,,%v",
+      min_value: 0,
+      max_value: 1,
+      default_value: 0,
+    },
 
   ];
+
+  function isGlobalSection(sectionName) {
+    return GLOBAL_SECTION_NAMES.indexOf(String(sectionName || "")) !== -1;
+  }
+
+  function nearestSectionName(list, start, direction) {
+    for (let i = start; i >= 0 && i < list.length; i += direction) {
+      const entry = list[i];
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      if (entry.knob_type === "spacer" || entry.knob_type === "spacer-half") {
+        continue;
+      }
+      if (typeof entry.section === "string") {
+        return entry.section;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  function build_channel_knob_definitions(list) {
+    const out = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const entry = list[i];
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      if (entry.knob_type === "spacer" || entry.knob_type === "spacer-half") {
+        const prevSection = nearestSectionName(list, i - 1, -1);
+        const nextSection = nearestSectionName(list, i + 1, 1);
+        if (prevSection && nextSection && !isGlobalSection(prevSection) && !isGlobalSection(nextSection)) {
+          out.push(entry);
+        }
+        continue;
+      }
+      if (!isGlobalSection(entry.section)) {
+        out.push(entry);
+      }
+    }
+    return out;
+  }
+
+  function build_global_knob_definitions(list) {
+    const out = [];
+    for (let i = 0; i < list.length; i += 1) {
+      const entry = list[i];
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      if (entry.knob_type === "spacer" || entry.knob_type === "spacer-half") {
+        continue;
+      }
+      if (isGlobalSection(entry.section)) {
+        out.push(entry);
+      }
+    }
+    return out;
+  }
+
+  const channel_knob_definitions = build_channel_knob_definitions(amy_knob_definitions);
+  const global_knob_definitions = build_global_knob_definitions(amy_knob_definitions);
 
   function cloneKnob(entry) {
     if (!entry || typeof entry !== "object") {
@@ -393,24 +477,33 @@ window.addEventListener("DOMContentLoaded", function() {
   }
 
   function applyKnobCcMappingMessage(channel, message) {
-    const match = String(message || "").match(/^i(\d+)ic([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
+    // Match both prefixed (i1ic70,...) and unprefixed (ic70,...) formats.
+    const match = String(message || "").match(/^(?:i(\d+))?ic([^,]*),([^,]*),([^,]*),([^,]*),([^,]*),(.*)$/);
     if (!match) {
       return false;
     }
-    const messageChannel = Number(match[1]);
-    if (!Number.isInteger(messageChannel) || messageChannel !== channel) {
-      return false;
+    if (match[1] !== undefined) {
+      const messageChannel = Number(match[1]);
+      if (!Number.isInteger(messageChannel) || messageChannel !== channel) {
+        return false;
+      }
     }
-    if (!Array.isArray(window.amy_knobs) || !Array.isArray(window.amy_knobs[channel])) {
-      return false;
-    }
-    const changeCode = String(match[7] || "");
+    // Strip trailing Z (AMY wire protocol terminator) from the template.
+    const changeCode = String(match[7] || "").replace(/Z+$/, "");
     if (!changeCode) {
       return false;
     }
-    const knob = window.amy_knobs[channel].find(function(entry) {
+    const perChannelKnobs = (Array.isArray(window.amy_channel_knobs) && Array.isArray(window.amy_channel_knobs[channel]))
+      ? window.amy_channel_knobs[channel] : [];
+    const globalKnobs = Array.isArray(window.amy_global_knobs) ? window.amy_global_knobs : [];
+    let knob = perChannelKnobs.find(function(entry) {
       return entry && entry.change_code === changeCode;
     });
+    if (!knob) {
+      knob = globalKnobs.find(function(entry) {
+        return entry && entry.change_code === changeCode;
+      });
+    }
     if (!knob) {
       return false;
     }
@@ -469,40 +562,56 @@ window.addEventListener("DOMContentLoaded", function() {
   window.apply_knob_cc_mappings_from_patch_source = applyKnobCcMappingsFromPatchSource;
 
   window.reset_amy_knobs_to_defaults = function() {
-    window.amy_knobs = new Array(17);
+    window.amy_channel_knobs = new Array(17);
     for (let i = 1; i <= 16; i += 1) {
-      window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
+      window.amy_channel_knobs[i] = cloneKnobList(channel_knob_definitions);
     }
+    window.amy_global_knobs = cloneKnobList(global_knob_definitions);
     window.has_restored_amy_knobs_state = false;
     return true;
   };
 
-  window.amy_knobs = new Array(17);
+  window.amy_channel_knobs = new Array(17);
   for (let i = 1; i <= 16; i += 1) {
-    window.amy_knobs[i] = cloneKnobList(amy_knob_definitions);
+    window.amy_channel_knobs[i] = cloneKnobList(channel_knob_definitions);
   }
+  window.amy_global_knobs = cloneKnobList(global_knob_definitions);
   window.has_restored_amy_knobs_state = false;
 
-  window.get_current_knobs = function() {
-    const idx = Number(window.current_synth);
-    if (Array.isArray(window.amy_knobs) && window.amy_knobs[idx]) {
-      return window.amy_knobs[idx];
+  window.get_channel_knobs = function(channel) {
+    const idx = Number(channel);
+    if (Array.isArray(window.amy_channel_knobs) && window.amy_channel_knobs[idx]) {
+      return window.amy_channel_knobs[idx];
     }
-    if (Array.isArray(window.amy_knobs) && window.amy_knobs[1]) {
-      return window.amy_knobs[1];
+    if (Array.isArray(window.amy_channel_knobs) && window.amy_channel_knobs[1]) {
+      return window.amy_channel_knobs[1];
     }
     return [];
   };
 
+  window.get_global_knobs = function() {
+    if (Array.isArray(window.amy_global_knobs)) {
+      return window.amy_global_knobs;
+    }
+    return [];
+  };
+
+  window.get_current_knobs = function() {
+    return window.get_channel_knobs(window.current_synth).concat(window.get_global_knobs());
+  };
+
   window.refresh_knobs_for_channel = function() {
-    const knobs = window.get_current_knobs();
+    const channelKnobs = window.get_channel_knobs(window.current_synth);
+    const globalKnobs = window.get_global_knobs();
+    const knobs = channelKnobs.concat(globalKnobs);
     if (typeof init_knobs === "function") {
-      init_knobs(knobs);
+      init_knobs(channelKnobs, "knob-grid-channel");
+      init_knobs(globalKnobs, "knob-grid-global");
     }
     if (typeof window.onKnobCcChange === "function") {
       for (const knob of knobs) {
         if (knob.knob_type !== "spacer" && knob.knob_type !== "spacer-half"
-          && knob.knob_type !== "selection" && knob.knob_type !== "pushbutton") {
+          && knob.knob_type !== "pushbutton") {
           window.onKnobCcChange(knob);
         }
       }
@@ -522,13 +631,18 @@ window.addEventListener("DOMContentLoaded", function() {
 
 function set_knobs_from_patch_number_impl(patch_number) {
   // if this is a memory patch, load it. if not, load the amyboard base patch
-  if(patch_number >= 1024 && patch_number < 1024+32) {
-    amy_add_log_message("i"+window.current_synth+"iv6K"+patch_number);
-  } else {
-    amy_add_log_message("i"+window.current_synth+"iv6K257");  // Default AMYboard patch state.
-  }
-  const events = get_events_for_patch_number(patch_number);
-  // console log number of events
+  let wire_commands = get_wire_commands_for_juno_patch(patch_number);
+  let events = events_from_wire_code_messages(wire_commands);
+  return set_knobs_from_events(events);
+}
+
+function set_knobs_from_synth(synth) {
+  let wire_commands = get_wire_commands_for_channel(synth);
+  let events = events_from_wire_code_messages(wire_commands);
+  return set_knobs_from_events(events);
+}
+
+function set_knobs_from_events(events) {
   const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
   if (!Array.isArray(knobs) || events.length === 0) {
     return;
@@ -538,8 +652,6 @@ function set_knobs_from_patch_number_impl(patch_number) {
   let filterEnv = null;
   let filterLfo = null
   let filterKbd = null;
-  let filter_eg = 0;  // Juno: filter env is eg0; updated to 1 for amyboardsynth.
-  let filter_osc = 0;  // Default, but can be updated: which osc defines filter params.
   let resonanceValue = null;
   let adsr = [0, 0, 1, 0];
   let f_adsr = [0, 0, 1, 0];
@@ -548,18 +660,13 @@ function set_knobs_from_patch_number_impl(patch_number) {
   let lfoWave = 4;  // default triangle
   let lfoOsc = 0;
   let lfoPwm = 0;
-  // Track coefficients for all 4 non-lfo oscs.
-  let osc_freq = [null, null, null, null];
-  let osc_wave = [null, null, null, null];
-  let osc_preset = [null, null, null, null];
-  let osc_duty = [null, null, null, null];
-  let osc_gain = [0, 0, 0, 0];
-  let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
-  // Which Juno oscs are used for oscA and B
-  let oscAB_osc = [-1, -1];
-  let oscAB_gain = [0, 0];
-  // Do the oscs use ADSR, or the juno "gate"?
-  let oscGate = 0;
+  // Track coefficients for the 2 non-lfo oscs.
+  let osc_freq = [null, null];
+  let osc_wave = [null, null];
+  let osc_preset = [null, null];
+  let osc_duty = [null, null];
+  let osc_gain = [0, 0];
+  let mod_source_osc = 2;  // webeditor patch LFO
   let eq = [null, null, null];
   let chorus = [null, null, null];
   const BP_UNSET = 32767;
@@ -569,36 +676,43 @@ function set_knobs_from_patch_number_impl(patch_number) {
   }
 
   for (const event of events) {
-    if (Number.isFinite(event.filter_freq_coefs[0])) {
-      filter_osc = event.osc;  // Assume we'll see this at least once
-      filterFreq = event.filter_freq_coefs[0];
+
+    // non-osc values.
+    if (event.eq) {
+      if (Number.isFinite(event.eq[0]))  { eq[0] = event.eq[0]; }
+      if (Number.isFinite(event.eq[1]))  { eq[1] = event.eq[1]; }
+      if (Number.isFinite(event.eq[2]))  { eq[2] = event.eq[2]; }
     }
-    if (Number.isFinite(event.filter_freq_coefs[1])) {
-      filterKbd = event.filter_freq_coefs[1];  // COEF_NOTE
+    if (event.chorus) {
+      if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }
+      if (Number.isFinite(event.chorus[1])) { chorus[1] = event.chorus[1]; }
+      if (Number.isFinite(event.chorus[2])) { chorus[2] = event.chorus[2]; }
     }
-    if (Number.isFinite(event.filter_freq_coefs[3])) {
-      filterEnv = event.filter_freq_coefs[3];  // COEF_EG0, Juno filter env
-    }
-    if (Number.isFinite(event.filter_freq_coefs[4])) {
-      filterEnv = event.filter_freq_coefs[4];  // COEF_EG1, amyboard filter env
-      filter_eg = 1;
-    }
-    if (Number.isFinite(event.filter_freq_coefs[5])) {
-      filterLfo = event.filter_freq_coefs[5];  // COEF_MOD
+
+    // Remainder of block assumes osc is set.
+    if (!Number.isFinite(event.osc)) continue;
+
+    if (event.filter_freq) {
+      if (Number.isFinite(event.filter_freq[0])) {
+        filterFreq = event.filter_freq[0];
+      }
+      if (Number.isFinite(event.filter_freq[1])) {
+        filterKbd = event.filter_freq[1];  // COEF_NOTE
+      }
+      if (Number.isFinite(event.filter_freq[4])) {
+        filterEnv = event.filter_freq[4];  // COEF_EG1, amyboard filter env
+      }
+      if (Number.isFinite(event.filter_freq[5])) {
+        filterLfo = event.filter_freq[5];  // COEF_MOD
+      }
     }
     if (Number.isFinite(event.resonance)) {
       resonanceValue = event.resonance;
     }
-    if (Number.isFinite(event.eq_l))  { eq[0] = event.eq_l; }
-    if (Number.isFinite(event.eq_m))  { eq[1] = event.eq_m; }
-    if (Number.isFinite(event.eq_h))  { eq[2] = event.eq_h; }
-    if (Number.isFinite(event.chorus_level)) { chorus[0] = event.chorus_level; }
-    if (Number.isFinite(event.chorus_lfo_freq)) { chorus[1] = event.chorus_lfo_freq; }
-    if (Number.isFinite(event.chorus_depth)) { chorus[2] = event.chorus_depth; }
     if (event.osc == mod_source_osc) {
       // LFO
-      if (Number.isFinite(event.freq_coefs[0])) {
-        lfoFreq = event.freq_coefs[0];
+      if (event.Freq && Number.isFinite(event.freq[0])) {
+        lfoFreq = event.freq[0];
       }
       if (event.wave >= 0 && event.wave < 127) {
         lfoWave = event.wave;
@@ -608,17 +722,13 @@ function set_knobs_from_patch_number_impl(patch_number) {
       }
     } else if (event.osc >= 0) {
       // Non-LFO osc, don't assume what order they come in.
-      const parsedModSource = Number(event.mod_source);
-      if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
-        mod_source_osc = parsedModSource;
-      }
       if (event.eg0_times) {
         if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
         if (bpTimeIsSet(event.eg0_times[1])) { adsr[1] = event.eg0_times[1]; }   // D time
         if (bpTimeIsSet(event.eg0_times[2])) { adsr[3] = event.eg0_times[2]; }   // R time
       }
       if (event.eg0_values) {
-	if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
+        if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
       }
       if (event.eg1_times) {
         if (bpTimeIsSet(event.eg1_times[0])) { f_adsr[0] = event.eg1_times[0]; }   // A time
@@ -626,29 +736,31 @@ function set_knobs_from_patch_number_impl(patch_number) {
         if (bpTimeIsSet(event.eg1_times[2])) { f_adsr[3] = event.eg1_times[2]; }   // R time
       }
       if (event.eg1_values) {
-	if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
+        if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
       }
       // Extract key parameters for each osc
-      if (Number.isFinite(event.amp_coefs[2]) && event.amp_coefs[2] > 0) {
-        osc_gain[event.osc] = event.amp_coefs[2];
+      if (event.amp) {
+        if (Number.isFinite(event.amp[2]) && event.amp[2] > 0) {
+          osc_gain[event.osc] = event.amp[2];
+        }
       }
-      if (Number.isFinite(event.amp_coefs[3]) && event.amp_coefs[3] == 0) {
-        // Juno patches decouple amp from EG0 for "gate" mode.
-        oscGate = 1;
+      if (event.freq) {
+        if (Number.isFinite(event.freq[0]) && event.freq[0] > 0) {
+          osc_freq[event.osc] = event.freq[0];
+        }
+        if (Number.isFinite(event.freq[5]) && event.freq[5] > 0) {
+          lfoOsc = event.freq[5];  // freq COEF_MOD == 5
+        }
       }
-      if (Number.isFinite(event.freq_coefs[0]) && event.freq_coefs[0] > 0) {
-        osc_freq[event.osc] = event.freq_coefs[0];
+      if (event.duty) {
+        if (Number.isFinite(event.duty[0]) && event.duty[0] > 0) {
+          osc_duty[event.osc] = event.duty[0];
+        }
+        if (Number.isFinite(event.duty[5]) && event.duty[5] > lfoPwm) {
+          lfoPwm = event.duty[5];  // duty COEF_MOD == 5
+        }
       }
-      if (Number.isFinite(event.freq_coefs[5]) && event.freq_coefs[5] > 0) {
-        lfoOsc = event.freq_coefs[5];  // freq COEF_MOD == 5
-      }
-      if (Number.isFinite(event.duty_coefs[0]) && event.duty_coefs[0] > 0) {
-        osc_duty[event.osc] = event.duty_coefs[0];
-      }
-      if (Number.isFinite(event.duty_coefs[5]) && event.duty_coefs[5] > lfoPwm) {
-        lfoPwm = event.duty_coefs[5];  // duty COEF_MOD == 5
-      }
-      if (event.wave >= 0 && event.wave < 127) {
+      if (event.wave && event.wave >= 0 && event.wave < 127) {
         osc_wave[event.osc] = event.wave
       }
       if (Number.isFinite(event.preset) && event.preset >= 0) {
@@ -656,68 +768,24 @@ function set_knobs_from_patch_number_impl(patch_number) {
       }
     }
   }
-
-  // Re-scan for LFO so event ordering does not force defaults.
-  // Prefer osc 2 (the editor's dedicated LFO oscillator), then fall back to inferred mod source.
-  var lfoSourceOsc = 2;
-  if (!events.some(function(event) { return event && event.osc === 2; })) {
-    lfoSourceOsc = mod_source_osc;
-  }
-  for (const event of events) {
-    if (!event || event.osc !== lfoSourceOsc) {
-      continue;
-    }
-    if (Number.isFinite(event.freq_coefs[0])) {
-      lfoFreq = event.freq_coefs[0];
-    }
-    if (event.wave >= 0 && event.wave < 127) {
-      lfoWave = event.wave;
-    }
-    if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
-      lfoDelay = event.eg0_times[0];
-    }
-  }
-  // If we didn't set up a separate filter ADSR, it follows the VCA
-  if (filter_eg == 0) {
-    f_adsr = adsr;
-  }
-  // Logic to choose juno oscs for osc A and osc B.
-  if (osc_gain[2] == 0 && osc_gain[3] == 0) {
-    // Only 2 oscs, let them be
-    oscAB_osc[0] = 0;
-    oscAB_osc[1] = 1;
-  } else {
-    for (let osc = 0; osc < 4; ++osc) {
-      if (oscAB_osc[0] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[0]]) {
-        if (oscAB_osc[1] == -1 || osc_gain[oscAB_osc[0]] > osc_gain[oscAB_osc[1]]) {
-          // Push oscA into oscB
-          oscAB_osc[1] = oscAB_osc[0];
-        }
-        oscAB_osc[0] = osc;
-      } else if (oscAB_osc[1] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[1]]) {
-        oscAB_osc[1] = osc;
-      }
-    }
-  }
-
   // Configure the patch.
-  set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[oscAB_osc[0]]);
-  set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[0]);
+  set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[0]);
   if (typeof set_amy_knob_wave_preset === "function"
-    && Number.isFinite(osc_wave[oscAB_osc[0]]) && Number.isFinite(osc_preset[oscAB_osc[0]])) {
-    set_amy_knob_wave_preset(knobs, "Osc A", osc_wave[oscAB_osc[0]], osc_preset[oscAB_osc[0]], false);
+    && Number.isFinite(osc_wave[0]) && Number.isFinite(osc_preset[0])) {
+    set_amy_knob_wave_preset(knobs, "Osc A", osc_wave[0], osc_preset[0], false);
   }
-  set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[oscAB_osc[0]]);
-  set_amy_knob_value(knobs, "Osc A", "level", osc_gain[oscAB_osc[0]]);
+  set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[0]);
+  set_amy_knob_value(knobs, "Osc A", "level", osc_gain[0]);
 
-  set_amy_knob_value(knobs, "Osc B", "freq", osc_freq[oscAB_osc[1]]);
-  set_amy_knob_value(knobs, "Osc B", "wave", osc_wave[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "freq", osc_freq[1]);
+  set_amy_knob_value(knobs, "Osc B", "wave", osc_wave[1]);
   if (typeof set_amy_knob_wave_preset === "function"
-    && Number.isFinite(osc_wave[oscAB_osc[1]]) && Number.isFinite(osc_preset[oscAB_osc[1]])) {
-    set_amy_knob_wave_preset(knobs, "Osc B", osc_wave[oscAB_osc[1]], osc_preset[oscAB_osc[1]], false);
+    && Number.isFinite(osc_wave[1]) && Number.isFinite(osc_preset[1])) {
+    set_amy_knob_wave_preset(knobs, "Osc B", osc_wave[1], osc_preset[1], false);
   }
-  set_amy_knob_value(knobs, "Osc B", "duty", osc_duty[oscAB_osc[1]]);
-  set_amy_knob_value(knobs, "Osc B", "level", osc_gain[oscAB_osc[1]]);
+  set_amy_knob_value(knobs, "Osc B", "duty", osc_duty[1]);
+  set_amy_knob_value(knobs, "Osc B", "level", osc_gain[1]);
 
   set_amy_knob_value(knobs, "VCF", "freq", filterFreq);
   set_amy_knob_value(knobs, "VCF", "resonance", resonanceValue);
@@ -735,9 +803,6 @@ function set_knobs_from_patch_number_impl(patch_number) {
   set_amy_knob_value(knobs, "LFO", "pwm", lfoPwm);
   set_amy_knob_value(knobs, "LFO", "filt", filterLfo);
 
-  if (oscGate) {
-    adsr = [0, 0, 1, 0];
-  }
   set_amy_knob_value(knobs, "ADSR", "attack", adsr[0]);
   set_amy_knob_value(knobs, "ADSR", "decay", adsr[1]);
   set_amy_knob_value(knobs, "ADSR", "sustain", adsr[2]);
@@ -750,7 +815,6 @@ function set_knobs_from_patch_number_impl(patch_number) {
   set_amy_knob_value(knobs, "Chorus", "level", chorus[0]);
   set_amy_knob_value(knobs, "Chorus", "freq", chorus[1]);
   set_amy_knob_value(knobs, "Chorus", "depth", chorus[2]);
-
 }
 
 function set_knobs_from_patch(channel, patch_number, patch_source) {
@@ -768,7 +832,7 @@ function set_knobs_from_patch(channel, patch_number, patch_source) {
       window.apply_knob_cc_mappings_from_patch_source(requestedChannel, patch_source || "");
     }
     if (typeof window.refresh_knobs_for_channel === "function") {
-      // Keep refresh inside suppression to avoid rewriting web.patch while loading patch files.
+      // Keep refresh inside suppression so loading a patch doesn't immediately emit updates back to AMY.
       window.refresh_knobs_for_channel();
     }
   } finally {

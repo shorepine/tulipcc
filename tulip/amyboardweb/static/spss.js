@@ -7,7 +7,8 @@ var amy_process_single_midi_byte = null;
 var audio_started = false;
 var amy_sysclock = null;
 var amyboard_started = false;
-var amy_parse_patch_number_to_events = null;
+var amy_yield_patch_events = null;
+var amy_yield_synth_commands = null;
 
 function amy_add_log_message(message) {
   console.log(message);
@@ -26,13 +27,10 @@ var treeView = null;
 var editor_shown = false;
 var amy_audioin_toggle = false;
 var editor_height = 200;
-var term = null; 
+var term = null;
 var cv_1_voltage = 0;
 var cv_2_voltage = 0;
 var amy_module = null;
-var pendingPatchKnobIndex = null;
-var patchKnobSyncAttempts = 0;
-var patches_file_rewrite_timer = null;
 var amyboard_world_files = [];
 var amyboard_world_loading_index = null;
 var amyboard_world_selected_tag = "";
@@ -45,17 +43,8 @@ const AMYBOARD_WORLD_API_BASE = (typeof window !== "undefined" && typeof window.
     ? String(window.AMYBOARD_WORLD_API_BASE).replace(/\/+$/, "")
     : String(window.location.origin || "").replace(/\/+$/, "");
 const CURRENT_BASE_DIR = "/amyboard/user/current";
-const CURRENT_ENV_DIR = "/amyboard/user/current/env";
-const DEFAULT_BASE_DIR = "/amyboard/user/default";
-const DEFAULT_ENV_DIR = "/amyboard/user/default/env";
-const CURRENT_WEB_PATCH_FILE = CURRENT_ENV_DIR + "/web.patch";
-const DEFAULT_WEB_PATCH_FILE = DEFAULT_ENV_DIR + "/web.patch";
-const CURRENT_OTHER_PATCH_FILE = CURRENT_ENV_DIR + "/other.patch";
-const DEFAULT_OTHER_PATCH_FILE = DEFAULT_ENV_DIR + "/other.patch";
-const DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n";
-const WEB_PATCH_EDITOR_HEADER = "# Do not edit - Set by AMYboard web patch editor";
-const DEFAULT_WEB_PATCH_SOURCE = WEB_PATCH_EDITOR_HEADER + "\n";
-const DEFAULT_OTHER_PATCH_SOURCE = "";
+const CURRENT_ENV_DIR = CURRENT_BASE_DIR;
+const DEFAULT_ENV_SOURCE = "# Put your own code here to run in your environment\n";
 const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json", ".patch"];
 const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
@@ -63,7 +52,12 @@ window.current_synth = 1;
 window.active_channels = Array.isArray(window.active_channels) ? window.active_channels : new Array(17).fill(false);
 window.active_channels[1] = true;
 window.channel_control_mapping_sent = Array.isArray(window.channel_control_mapping_sent) ? window.channel_control_mapping_sent : new Array(17).fill(false);
+window.channel_patch_names = Array.isArray(window.channel_patch_names) ? window.channel_patch_names : new Array(17).fill(null);
+window.channel_patch_dirty = Array.isArray(window.channel_patch_dirty) ? window.channel_patch_dirty : new Array(17).fill(false);
 window.suppress_knob_cc_send = false;
+const EDITOR_STATE_FILENAME = "editor_state.json";
+const DIRTY_AUTOSAVE_DELAY_MS = 180;
+const channel_dirty_autosave_timers = new Array(17).fill(null);
 
 function get_patch_number_for_channel(channel) {
   var ch = Number(channel);
@@ -89,29 +83,16 @@ window.set_channel_active = function(channel, active) {
   window.active_channels[ch] = !!active;
 };
 
-function request_current_patches_file_rewrite() {
-  if (patches_file_rewrite_timer) {
-    clearTimeout(patches_file_rewrite_timer);
-  }
-  patches_file_rewrite_timer = setTimeout(async function() {
-    patches_file_rewrite_timer = null;
-    try {
-      await write_current_patches_file_from_knobs();
-    } catch (e) {}
-  }, 80);
-}
-window.request_current_patches_file_rewrite = request_current_patches_file_rewrite;
-
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
 amyModule().then(async function(am) {
   amy_live_start_web = am.cwrap(
-    'amy_live_start_web', null, null, {async: true}    
+    'amy_live_start_web', null, null, {async: true}
   );
   amy_live_start_web_audioin = am.cwrap(
-    'amy_live_start_web_audioin', null, null, {async: true}    
+    'amy_live_start_web_audioin', null, null, {async: true}
   );
   amy_live_stop = am.cwrap(
-    'amy_live_stop', null,  null, {async: true}    
+    'amy_live_stop', null,  null, {async: true}
   );
   amy_bleep = am.cwrap(
     'amy_bleep', null, ['number']
@@ -134,21 +115,23 @@ amyModule().then(async function(am) {
   amy_process_single_midi_byte = am.cwrap(
     'amy_process_single_midi_byte', null, ['number, number']
   );
-  amy_parse_patch_number_to_events = am.cwrap(
-    'parse_patch_number_to_events', null, ['number', 'number', 'number']
+  amy_yield_patch_events = am.cwrap(
+    'yield_patch_events', 'number', ['number', 'number', 'number']
+  );
+  amy_yield_synth_commands = am.cwrap(
+    'yield_synth_commands', 'number', ['number', 'number', 'number', 'number']
   );
   amy_start_web_no_synths();
   amy_bleep(0); // won't play until live audio starts
   amy_module = am;
   res_ptr_in = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
   res_ptr_out = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
-  attemptPatchKnobSync();
 });
 
 // Converts AMY patch number to list of (JS converted) amy_events
 // This is to let us fill in the preset knobs
 function get_events_for_patch_number(patch_number) {
-  if (!amy_module || !amy_parse_patch_number_to_events) {
+  if (!amy_module || !amy_yield_patch_events) {
     return [];
   }
 
@@ -267,94 +250,762 @@ function get_events_for_patch_number(patch_number) {
     };
   }
 
-  const outPtr = amy_module._malloc(4);
-  const countPtr = amy_module._malloc(2);
-  if (!outPtr) {
-    return [];
-  }
-  if (!countPtr) {
-    amy_module._free(outPtr);
-    return [];
-  }
-  heapU32[outPtr >> 2] = 0;
-  view.setUint16(countPtr, 0, true);
-  amy_parse_patch_number_to_events(patch_number, outPtr, countPtr);
-  const eventsPtr = heapU32[outPtr >> 2];
-  const eventCount = view.getUint16(countPtr, true);
-  amy_module._free(outPtr);
-  amy_module._free(countPtr);
-  if (!eventsPtr) {
-    return [];
-  }
-
+  const SIZEOF_EVENT_STRUCT = amy_size_of_amy_event();
+  const eventPtr = amy_module._malloc(SIZEOF_EVENT_STRUCT);
   const events = [];
-  const limit = eventCount;
-  for (let i = 0; i < limit; i += 1) {
-    const base = eventsPtr + i * layout.size;
-    const status = view.getUint8(base + offsets.status);
-    events.push(readEvent(base));
-  }
+  let state = 0;
+  do {
+    state = amy_event_generator_for_patch_number(patch_number, eventPtr, state);
+    events.push(readEvent(eventPtr));
+  } while (state != 0);
 
-  amy_module._free(eventsPtr);
+  amy_module._free(eventPtr);
+
   return events;
 }
 
-function attemptPatchKnobSync() {
-  if (pendingPatchKnobIndex === null) {
-    return;
+function read_c_string_from_heap(ptr, maxLen) {
+  if (!amy_module || !amy_module.HEAPU8) {
+    return "";
   }
-  if (!audio_started) {
-    return;
+  const heap = amy_module.HEAPU8;
+  const start = Number(ptr);
+  const limit = Math.max(0, Number(maxLen) || 0);
+  if (!Number.isInteger(start) || start <= 0 || limit <= 0) {
+    return "";
   }
-  if (!amy_module || typeof window.get_current_knobs !== "function") {
-    if (patchKnobSyncAttempts < 60) {
-      patchKnobSyncAttempts += 1;
-      setTimeout(attemptPatchKnobSync, 50);
+  const end = Math.min(heap.length, start + limit);
+  let out = "";
+  for (let i = start; i < end; i += 1) {
+    const b = heap[i];
+    if (b === 0) {
+      break;
     }
+    out += String.fromCharCode(b);
+  }
+  return out;
+}
+
+function read_editor_state_json() {
+  let raw = "";
+  try {
+    raw = mp.FS.readFile(CURRENT_ENV_DIR + "/" + EDITOR_STATE_FILENAME, { encoding: "utf8" });
+  } catch (e) {
+    raw = "";
+  }
+  let parsed = {};
+  try {
+    parsed = raw ? JSON.parse(String(raw)) : {};
+  } catch (e) {
+    parsed = {};
+  }
+  if (!parsed || typeof parsed !== "object") {
+    parsed = {};
+  }
+  if (!parsed.synths || typeof parsed.synths !== "object" || Array.isArray(parsed.synths)) {
+    parsed.synths = {};
+  }
+  return parsed;
+}
+
+function normalize_synth_channel(channel) {
+  const synth = Number(channel);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+    return null;
+  }
+  return synth;
+}
+
+function remove_current_environment_file_if_exists(filename) {
+  const name = String(filename || "").trim();
+  if (!name) {
+    return false;
+  }
+  try {
+    const fullPath = CURRENT_ENV_DIR + "/" + name;
+    const node = mp.FS.lookupPath(fullPath).node;
+    if (mp.FS.isFile(node.mode)) {
+      mp.FS.unlink(fullPath);
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function set_channel_patch_dirty_state(channel, dirty) {
+  const synth = normalize_synth_channel(channel);
+  if (!synth) {
     return;
   }
-  patchKnobSyncAttempts = 0;
-  set_knobs_from_patch_number(pendingPatchKnobIndex);
-}
-
-function requestPatchKnobSync(patchIndex) {
-  pendingPatchKnobIndex = patchIndex;
-  if (audio_started) {
-    attemptPatchKnobSync();
+  window.channel_patch_dirty[synth] = !!dirty;
+  if (typeof window.refresh_save_patch_dirty_indicator === "function") {
+    window.refresh_save_patch_dirty_indicator();
   }
 }
 
-window.onPatchChange = function(patchIndex) {
-  requestPatchKnobSync(patchIndex);
+function get_wire_commands_for_juno_patch(patch) {
+
+  function translate_juno_events_to_webeditor_wire_commands(events) {
+    let filterFreq = null;
+    let filterEnv = null;
+    let filterLfo = null
+    let filterKbd = null;
+    let filter_eg = 0;  // Juno: filter env is eg0; updated to 1 for amyboardsynth.
+    let filter_osc = 0;  // Default, but can be updated: which osc defines filter params.
+    let resonanceValue = null;
+    let adsr = [0, 0, 1, 0];
+    let f_adsr = [0, 0, 1, 0];
+    let lfoFreq = null;
+    let lfoDelay = null;
+    let lfoWave = 4;  // default triangle
+    let lfoOsc = 0;
+    let lfoPwm = 0;
+    // Track coefficients for all 4 non-lfo oscs.
+    let osc_freq = [null, null, null, null];
+    let osc_wave = [null, null, null, null];
+    let osc_preset = [null, null, null, null];
+    let osc_duty = [0.5, 0.5, 0.5, 0.5];
+    let osc_gain = [0, 0, 0, 0];
+    let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
+    // Which Juno oscs are used for oscA and B
+    let oscAB_osc = [-1, -1];
+    let oscAB_gain = [0, 0];
+    // Do the oscs use ADSR, or the juno "gate"?
+    let oscGate = 0;
+    let eq = [null, null, null];
+    let chorus = [0, 0.5, 0.5];
+    const BP_UNSET = 32767;
+
+    function bpTimeIsSet(v) {
+      return Number.isFinite(v) && v !== BP_UNSET;
+    }
+
+    for (const event of events) {
+
+      // non-osc values.
+      if (event.eq) {
+        if (Number.isFinite(event.eq[0]))  { eq[0] = event.eq[0]; }
+        if (Number.isFinite(event.eq[1]))  { eq[1] = event.eq[1]; }
+        if (Number.isFinite(event.eq[2]))  { eq[2] = event.eq[2]; }
+      }
+      if (event.chorus) {
+        if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }
+        if (Number.isFinite(event.chorus[1])) { chorus[1] = event.chorus[1]; }
+        if (Number.isFinite(event.chorus[2])) { chorus[2] = event.chorus[2]; }
+      }
+
+      // Remainder of block assumes osc is set.
+      if (!Number.isFinite(event.osc)) continue;
+
+      if (event.filter_freq) {
+        if (Number.isFinite(event.filter_freq[0])) {
+          filter_osc = event.osc;  // Assume we'll see this at least once
+          filterFreq = event.filter_freq[0];
+        }
+        if (Number.isFinite(event.filter_freq[1])) {
+          filterKbd = event.filter_freq[1];  // COEF_NOTE
+        }
+        if (Number.isFinite(event.filter_freq[3])) {
+          filterEnv = event.filter_freq[3];  // COEF_EG0, Juno filter env
+        }
+        if (Number.isFinite(event.filter_freq[4])) {
+          filterEnv = event.filter_freq[4];  // COEF_EG1, amyboard filter env
+          filter_eg = 1;
+        }
+        if (Number.isFinite(event.filter_freq[5])) {
+          filterLfo = event.filter_freq[5];  // COEF_MOD
+        }
+      }
+      if (Number.isFinite(event.resonance)) {
+        resonanceValue = event.resonance;
+      }
+      if (event.osc == mod_source_osc) {
+        // LFO
+        if (event.Freq && Number.isFinite(event.freq[0])) {
+          lfoFreq = event.freq[0];
+        }
+        if (event.wave >= 0 && event.wave < 127) {
+          lfoWave = event.wave;
+        }
+        if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
+          lfoDelay = event.eg0_times[0];
+        }
+      } else if (event.osc >= 0) {
+        // Non-LFO osc, don't assume what order they come in.
+        const parsedModSource = Number(event.mod_source);
+        if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
+          mod_source_osc = parsedModSource;
+        }
+        if (event.eg0_times) {
+          if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
+          if (bpTimeIsSet(event.eg0_times[1])) { adsr[1] = event.eg0_times[1]; }   // D time
+          if (bpTimeIsSet(event.eg0_times[2])) { adsr[3] = event.eg0_times[2]; }   // R time
+        }
+        if (event.eg0_values) {
+          if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
+        }
+        if (event.eg1_times) {
+          if (bpTimeIsSet(event.eg1_times[0])) { f_adsr[0] = event.eg1_times[0]; }   // A time
+          if (bpTimeIsSet(event.eg1_times[1])) { f_adsr[1] = event.eg1_times[1]; }   // D time
+          if (bpTimeIsSet(event.eg1_times[2])) { f_adsr[3] = event.eg1_times[2]; }   // R time
+        }
+        if (event.eg1_values) {
+          if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
+        }
+        // Extract key parameters for each osc
+        if (event.amp) {
+          if (Number.isFinite(event.amp[2]) && event.amp[2] > 0) {
+            osc_gain[event.osc] = event.amp[2];
+          }
+          if (Number.isFinite(event.amp[3]) && event.amp[3] == 0) {
+            // Juno patches decouple amp from EG0 for "gate" mode.
+            oscGate = 1;
+          }
+        }
+        if (event.freq) {
+          if (Number.isFinite(event.freq[0]) && event.freq[0] > 0) {
+            osc_freq[event.osc] = event.freq[0];
+          }
+          if (Number.isFinite(event.freq[5]) && event.freq[5] > 0) {
+            lfoOsc = event.freq[5];  // freq COEF_MOD == 5
+          }
+        }
+        if (event.duty) {
+          if (Number.isFinite(event.duty[0]) && event.duty[0] > 0) {
+            osc_duty[event.osc] = event.duty[0];
+          }
+          if (Number.isFinite(event.duty[5]) && event.duty[5] > lfoPwm) {
+            lfoPwm = event.duty[5];  // duty COEF_MOD == 5
+          }
+        }
+        if (event.wave && event.wave >= 0 && event.wave < 127) {
+          osc_wave[event.osc] = event.wave
+        }
+        if (Number.isFinite(event.preset) && event.preset >= 0) {
+          osc_preset[event.osc] = event.preset;
+        }
+      }
+    }
+
+    // Re-scan for LFO so event ordering does not force defaults.
+    // Prefer osc 2 (the editor's dedicated LFO oscillator), then fall back to inferred mod source.
+    var lfoSourceOsc = 2;
+    if (!events.some(function(event) { return event && event.osc === 2; })) {
+      lfoSourceOsc = mod_source_osc;
+    }
+    for (const event of events) {
+      if (!event || event.osc !== lfoSourceOsc) {
+        continue;
+      }
+      if (event.freq && Number.isFinite(event.freq[0])) {
+        lfoFreq = event.freq[0];
+      }
+      if (event.wave >= 0 && event.wave < 127) {
+        lfoWave = event.wave;
+      }
+      if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
+        lfoDelay = event.eg0_times[0];
+      }
+    }
+    // If we didn't set up a separate filter ADSR, it follows the VCA
+    if (filter_eg == 0) {
+      f_adsr = [adsr[0], adsr[1], adsr[2], adsr[3]];
+    }
+    if (oscGate) {
+      adsr = [0, 0, 1, 0];
+    }
+    // Logic to choose juno oscs for osc A and osc B.
+    if (osc_gain[2] == 0 && osc_gain[3] == 0) {
+      // Only 2 oscs, let them be
+      oscAB_osc[0] = 0;
+      oscAB_osc[1] = 1;
+    } else {
+      for (let osc = 0; osc < 4; ++osc) {
+        if (oscAB_osc[0] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[0]]) {
+          if (oscAB_osc[1] == -1 || osc_gain[oscAB_osc[0]] > osc_gain[oscAB_osc[1]]) {
+            // Push oscA into oscB
+            oscAB_osc[1] = oscAB_osc[0];
+          }
+          oscAB_osc[0] = osc;
+        } else if (oscAB_osc[1] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[1]]) {
+          oscAB_osc[1] = osc;
+        }
+      }
+    }
+
+    // Format the final wire commands for the 3-osc config.
+    wire_commands = [];
+    const PCM = 7;  // from amy/src/amy.h
+    const WAVETABLE = 19;  // from amy/src/amy.h
+    for (const osc of [0, 1]) {
+      let src_osc = oscAB_osc[osc];
+      let command = "v" + osc + "w" + osc_wave[src_osc] + "L2" + "m0"
+          + "f" + osc_freq[src_osc] + ",1,,,," + lfoOsc + ",1"
+          + "d" + osc_duty[src_osc] + ",,,,," + lfoPwm
+          + "a,," + osc_gain[src_osc] + ",1,0"
+          + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
+      if (osc_wave[src_osc] == WAVETABLE || osc_wave[src_osc] == PCM) {
+        command += "p" + osc_preset[src_osc];
+      }
+      if (osc == 0) {
+        // Osc 0 must chain to osc 1
+        command += "c1";
+        // Osc 0 has the filter controls.
+        command += "G4R" + resonanceValue
+            + "F" + filterFreq + "," + filterKbd + ",,," + filterEnv + "," + filterLfo
+            + "B" + f_adsr[0] + ",1," + f_adsr[1] + "," + f_adsr[2] + "," + f_adsr[3] + ",0";
+      }
+      wire_commands.push(command + "Z");
+    }
+    // LFO command
+    let command = "v2w" + lfoWave + "a1,0,0,1" + "f" + lfoFreq + ",0,,0,0,0,0"
+        + "A" + lfoDelay + ",1,100,1,10000,0";
+    wire_commands.push(command + "Z");
+    // Global FX commands
+    command = "x" + eq[0] + "," + eq[1] + "," + eq[2]
+      + "k" + chorus[0] + ",," + chorus[1] + "," + chorus[2];
+    wire_commands.push(command + "Z");
+    return wire_commands;
+  }
+
+  // The concatenated Z-separated string defining the Juno patch.
+  let message = patch_code_for_patch_number[patch];
+  let events = events_from_wire_code_message(message);
+  wire_commands = translate_juno_events_to_webeditor_wire_commands(events);
+  return wire_commands;
+}
+
+function get_wire_commands_for_channel(channel) {
+  const synth = normalize_synth_channel(channel);
+  if (!synth) {
+    throw new Error("Invalid channel.");
+  }
+  if (!amy_module || typeof amy_yield_synth_commands !== "function") {
+    throw new Error("AMY patch command generator is unavailable.");
+  }
+  const maxMessageLen = 1024;
+  const bufferPtr = amy_module._malloc(maxMessageLen);
+  if (!bufferPtr) {
+    throw new Error("Failed to allocate AMY message buffer.");
+  }
+  const lines = [];
+  let state = 0;
+  do {
+    state = amy_yield_synth_commands(synth, bufferPtr, maxMessageLen, state);
+    const wire = read_c_string_from_heap(bufferPtr, maxMessageLen).trim();
+    if (wire) {
+      lines.push(wire);
+    }
+  } while (state != 0);
+  amy_module._free(bufferPtr);
+  if (!lines.length) {
+    throw new Error("No synth commands were generated for this channel.");
+  }
+  return lines;
+}
+
+function write_channel_dirty_patch_file(channel) {
+  const synth = normalize_synth_channel(channel);
+  if (!synth) {
+    throw new Error("Invalid channel.");
+  }
+  const lines = get_wire_commands_for_channel(synth);
+  const filename = String(synth) + ".dirty";
+  mp.FS.writeFile(CURRENT_ENV_DIR + "/" + filename, lines.join("\n") + "\n");
+  return filename;
+}
+
+const pending_channel_knob_sync = new Array(17).fill(false);
+
+function schedule_channel_knob_sync_after_ui_ready(channel) {
+  const synth = normalize_synth_channel(channel);
+  if (!synth) {
+    return false;
+  }
+  if (pending_channel_knob_sync[synth]) {
+    return true;
+  }
+  pending_channel_knob_sync[synth] = true;
+  const runSync = async function() {
+    pending_channel_knob_sync[synth] = false;
+    try {
+      await sync_channel_knobs_from_synth_to_ui(synth);
+    } catch (e) {}
+  };
+  if (document.readyState !== "complete") {
+    window.addEventListener("DOMContentLoaded", runSync, { once: true });
+  } else {
+    setTimeout(runSync, 25);
+  }
+  return true;
+}
+
+async function sync_channel_knobs_from_synth_to_ui(channel) {
+  const synth = normalize_synth_channel(channel);
+  if (!synth) {
+    return false;
+  }
+  if (typeof set_knobs_from_synth !== "function"
+    || typeof window.refresh_knobs_for_channel !== "function"
+    || typeof window.get_current_knobs !== "function") {
+    schedule_channel_knob_sync_after_ui_ready(synth);
+    return false;
+  }
+  const previousChannel = Number(window.current_synth || 1);
+  const previousSuppress = !!window.suppress_knob_cc_send;
+  window.current_synth = synth;
+  window.suppress_knob_cc_send = true;
+  try {
+    let lastError = null;
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      // AMY applies queued wire messages asynchronously; keep retrying briefly during startup.
+      await new Promise(function(resolve) { setTimeout(resolve, attempt === 0 ? 20 : 40); });
+      try {
+        set_knobs_from_synth(synth);
+        window.refresh_knobs_for_channel();
+        return true;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+    if (lastError) {
+      console.warn("Failed to sync knobs from synth " + synth + ".", lastError);
+    }
+    return false;
+  } finally {
+    window.suppress_knob_cc_send = previousSuppress;
+    window.current_synth = previousChannel;
+  }
+}
+
+function schedule_dirty_autosave_for_channel(channel) {
+  const synth = normalize_synth_channel(channel);
+  if (!synth || window.suppress_knob_cc_send) {
+    return;
+  }
+  set_channel_patch_dirty_state(synth, true);
+  const existingTimer = channel_dirty_autosave_timers[synth];
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+  channel_dirty_autosave_timers[synth] = setTimeout(async function() {
+    channel_dirty_autosave_timers[synth] = null;
+    try {
+      ensure_current_environment_layout(true);
+      write_channel_dirty_patch_file(synth);
+      await sync_persistent_fs();
+    } catch (e) {}
+  }, DIRTY_AUTOSAVE_DELAY_MS);
+}
+
+function write_editor_state_json(state) {
+  const payload = JSON.stringify(state || { synths: {} }, null, 2) + "\n";
+  mp.FS.writeFile(CURRENT_ENV_DIR + "/" + EDITOR_STATE_FILENAME, payload);
+}
+
+function set_editor_state_patch_name(channel, patchName) {
+  const synth = Number(channel);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+    return;
+  }
+  const state = read_editor_state_json();
+  if (!state.synths || typeof state.synths !== "object" || Array.isArray(state.synths)) {
+    state.synths = {};
+  }
+  const key = String(synth);
+  const name = (patchName == null) ? "" : String(patchName).trim();
+  if (name) {
+    state.synths[key] = name;
+  } else {
+    delete state.synths[key];
+  }
+  write_editor_state_json(state);
+}
+
+
+window.save_current_synth_patch_file = async function(rawName) {
+  ensure_current_environment_layout(true);
+  if (!amy_module || typeof amy_yield_synth_commands !== "function") {
+    throw new Error("AMY patch command generator is unavailable.");
+  }
+
+  let name = String(rawName || "").trim();
+  if (name.toLowerCase().endsWith(".patch")) {
+    name = name.slice(0, -6);
+  }
+  if (!/^[A-Za-z0-9._-]{1,25}$/.test(name)) {
+    throw new Error("Patch name must be 1-25 chars: letters, numbers, dot, underscore, dash.");
+  }
+
+  const synth = Number(window.current_synth || 1);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+    throw new Error("Invalid channel.");
+  }
+
+  const lines = get_wire_commands_for_channel(synth);
+  
+  if (!lines.length) {
+    throw new Error("No synth commands were generated for this channel.");
+  }
+
+  const filename = name + ".patch";
+  mp.FS.writeFile(CURRENT_ENV_DIR + "/" + filename, lines.join("\n") + "\n");
+  window.channel_patch_names[synth] = name;
+  set_editor_state_patch_name(synth, name);
+  remove_current_environment_file_if_exists(String(synth) + ".dirty");
+  set_channel_patch_dirty_state(synth, false);
+  await sync_persistent_fs();
+  await fill_tree();
+  return filename;
 };
 
+window.load_saved_patch_file_into_current_channel = async function(rawFilename) {
+  ensure_current_environment_layout(true);
 
-function onKnobCcChange(knob) {
+  let filename = String(rawFilename || "").trim();
+  if (!filename) {
+    throw new Error("No patch selected.");
+  }
+  if (!filename.toLowerCase().endsWith(".patch")) {
+    filename += ".patch";
+  }
+  if (!/^[A-Za-z0-9._-]+\.patch$/i.test(filename)) {
+    throw new Error("Invalid patch filename.");
+  }
+
+  const synth = Number(window.current_synth || 1);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+    throw new Error("Invalid channel.");
+  }
+
+  let source = "";
+  try {
+    source = mp.FS.readFile(CURRENT_ENV_DIR + "/" + filename, { encoding: "utf8" });
+  } catch (e) {
+    throw new Error("Could not read patch file.");
+  }
+
+  amy_add_log_message("i" + synth + "K257iv6");
+  const lines = String(source || "").split(/\r?\n/);
+  for (const line of lines) {
+    const wire = String(line || "").trim();
+    if (!wire) {
+      continue;
+    }
+    amy_add_log_message("i" + synth + wire);
+  }
+  if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
+    window.apply_knob_cc_mappings_from_patch_source(synth, source);
+  }
+  send_all_knob_cc_mappings(synth);
+  await sync_channel_knobs_from_synth_to_ui(synth);
+  const patchName = filename.replace(/\.patch$/i, "");
+  window.channel_patch_names[synth] = patchName;
+  set_editor_state_patch_name(synth, patchName);
+  remove_current_environment_file_if_exists(String(synth) + ".dirty");
+  set_channel_patch_dirty_state(synth, false);
+  await sync_persistent_fs();
+  return filename;
+};
+
+function apply_channel_active_ui_from_loaded_map(loadedMap) {
+  var anyActive = false;
+  for (var ch = 1; ch <= 16; ch++) {
+    var active = !!loadedMap[ch];
+    if (typeof window.set_channel_active === "function") {
+      window.set_channel_active(ch, active);
+    } else if (Array.isArray(window.active_channels)) {
+      window.active_channels[ch] = active;
+    }
+    if (active) {
+      anyActive = true;
+    }
+  }
+  if (!anyActive) {
+    return;
+  }
+  var current = Number(window.current_synth || 1);
+  if (!Number.isInteger(current) || current < 1 || current > 16 || !loadedMap[current]) {
+    for (var pick = 1; pick <= 16; pick++) {
+      if (loadedMap[pick]) {
+        current = pick;
+        break;
+      }
+    }
+    window.current_synth = current;
+  }
+  var channelSelect = document.getElementById("midi-channel-select");
+  if (channelSelect) {
+    channelSelect.value = String(window.current_synth || 1);
+  }
+  var activeCheckbox = document.getElementById("channel-active-checkbox");
+  if (activeCheckbox) {
+    activeCheckbox.checked = !!(Array.isArray(window.active_channels) && window.active_channels[window.current_synth || 1]);
+  }
+}
+
+async function restore_patches_from_editor_state_if_present(options) {
+  const opts = options || {};
+  const sendToAmy = opts.sendToAmy !== false;
+  let hasEditorState = false;
+  try {
+    mp.FS.readFile(CURRENT_ENV_DIR + "/" + EDITOR_STATE_FILENAME, { encoding: "utf8" });
+    hasEditorState = true;
+  } catch (e) {
+    hasEditorState = false;
+  }
+  if (!hasEditorState) {
+    if (sendToAmy) {
+      amy_add_log_message("i1K257iv6");
+      send_all_knob_cc_mappings(1);
+    }
+    return { hasEditorState: false, loadedCount: 0 };
+  }
+
+  const state = read_editor_state_json();
+  const synthMap = (state && state.synths && typeof state.synths === "object") ? state.synths : {};
+  const loadedMap = new Array(17).fill(false);
+  const loadedSynths = [];
+  let loadedCount = 0;
+  for (let ch = 1; ch <= 16; ch += 1) {
+    set_channel_patch_dirty_state(ch, false);
+  }
+
+  for (const key in synthMap) {
+    if (!Object.prototype.hasOwnProperty.call(synthMap, key)) {
+      continue;
+    }
+    const synth = Number(key);
+    if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+      continue;
+    }
+    const name = String(synthMap[key] || "").trim();
+    if (!name) {
+      continue;
+    }
+    window.channel_patch_names[synth] = name.replace(/\.patch$/i, "");
+    const dirtyFilename = String(synth) + ".dirty";
+    let dirtySource = "";
+    try {
+      dirtySource = mp.FS.readFile(CURRENT_ENV_DIR + "/" + dirtyFilename, { encoding: "utf8" });
+    } catch (e) {
+      dirtySource = "";
+    }
+    let filename = name.toLowerCase().endsWith(".patch") ? name : (name + ".patch");
+    let source = "";
+    if (dirtySource) {
+      source = dirtySource;
+      set_channel_patch_dirty_state(synth, true);
+    } else {
+      try {
+        source = mp.FS.readFile(CURRENT_ENV_DIR + "/" + filename, { encoding: "utf8" });
+      } catch (e) {
+        continue;
+      }
+      set_channel_patch_dirty_state(synth, false);
+    }
+    if (sendToAmy) {
+      amy_add_log_message("i" + synth + "K257iv6");
+    }
+    const lines = String(source || "").split(/\r?\n/);
+    for (const line of lines) {
+      const wire = String(line || "").trim();
+      if (!wire || wire.startsWith("#")) {
+        continue;
+      }
+      if (sendToAmy) {
+        amy_add_log_message("i" + synth + wire);
+      }
+    }
+    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
+      window.apply_knob_cc_mappings_from_patch_source(synth, source);
+    }
+    if (sendToAmy) {
+      send_all_knob_cc_mappings(synth);
+    }
+    await sync_channel_knobs_from_synth_to_ui(synth);
+    loadedMap[synth] = true;
+    loadedSynths.push(synth);
+    loadedCount += 1;
+  }
+
+  if (!sendToAmy && loadedSynths.length > 0) {
+    // On startup, Python may still be streaming patch messages into AMY while we read synth state.
+    // Run a second sync pass shortly after to capture final settled values.
+    await new Promise(function(resolve) { setTimeout(resolve, 350); });
+    for (const synth of loadedSynths) {
+      await sync_channel_knobs_from_synth_to_ui(synth);
+    }
+  }
+
+  // If the active channel had no patch mapping, initialize it with a clean slate.
+  const activeCh = Number(window.current_synth || 1);
+  if (!loadedMap[activeCh] && sendToAmy) {
+    amy_add_log_message("i" + activeCh + "K257iv6");
+    send_all_knob_cc_mappings(activeCh);
+  }
+
+  apply_channel_active_ui_from_loaded_map(loadedMap);
+  return { hasEditorState: true, loadedCount: loadedCount };
+}
+
+window.clear_current_channel_patch = async function() {
+  ensure_current_environment_layout(true);
+  const synth = Number(window.current_synth || 1);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
+    throw new Error("Invalid channel.");
+  }
+  amy_add_log_message("i" + synth + "K257iv6");
+  send_all_knob_cc_mappings(synth);
+  window.channel_patch_names[synth] = null;
+  set_editor_state_patch_name(synth, null);
+  remove_current_environment_file_if_exists(String(synth) + ".dirty");
+  set_channel_patch_dirty_state(synth, false);
+  await sync_persistent_fs();
+  return synth;
+};
+
+function onKnobCcChange(knob, previousCc) {
   /*
   ic<C>,<L>,<N>,<X>,<O>,<CODE>
-  where C= MIDI control code (0-127), L = log-scale flag (so the mapping is exponential if L == 1), 
-  N = min value for the control (corresponding to MIDI value 0), 
-  X = max value (for MIDI value 127), 
-  O = offset for log scale (so if L == 1, value = (min + offset) * exp(log(((max + offset)/(min + offset) * midi_value / 127) - offset), 
-  and CODE is a wire code string with %v as a placeholder for the value to be substituted 
-  (also %i for channel/synth number) and maybe %V to force an integer, 
+  where C= MIDI control code (0-127), L = log-scale flag (so the mapping is exponential if L == 1),
+  N = min value for the control (corresponding to MIDI value 0),
+  X = max value (for MIDI value 127),
+  O = offset for log scale (so if L == 1, value = (min + offset) * exp(log(((max + offset)/(min + offset) * midi_value / 127) - offset),
+  and CODE is a wire code string with %v as a placeholder for the value to be substituted
+  (also %i for channel/synth number) and maybe %V to force an integer,
   for things like selecting wave, and maybe more.
   */
   var m = build_knob_cc_message(window.current_synth, knob);
   if (!m) {
     return;
   }
-  //console.log("Knob CC updated: " + knob.section + ": " + knob.display_name + " to " + knob.cc + ". Sending: " + m);
   if (window.suppress_knob_cc_send) {
     return;
+  }
+  // If the CC number changed, remove the old CC mapping from AMY first.
+  if (previousCc !== undefined && previousCc !== "" && previousCc !== knob.cc) {
+    var synthChannel = Number(window.current_synth || 1);
+    if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
+      synthChannel = 1;
+    }
+    amy_add_log_message("i" + synthChannel + "ic" + previousCc + ",0,0,0,0,");
   }
   if (typeof amy_add_message === "function") {
     amy_add_log_message(m);
   }
-  if (typeof window.request_current_patches_file_rewrite === "function") {
-    window.request_current_patches_file_rewrite();
-  }
 }
+
+window.onKnobChange = function(_index, _value) {
+  if (window.suppress_knob_cc_send) {
+    return;
+  }
+  const synth = normalize_synth_channel(window.current_synth || 1);
+  if (!synth) {
+    return;
+  }
+  schedule_dirty_autosave_for_channel(synth);
+};
 
 // Called from AMY to update AMYboard about what tick it is, for the sequencer
 function amy_sequencer_js_hook(tick) {
@@ -437,9 +1088,12 @@ function save_to_patch(patchNumber) {
 }
 
 function load_from_patch(patchNumber) {
-  // Hook for loading a saved memory patch number.
   const channel = Number(window.current_synth || 1);
-  set_knobs_from_patch_number(get_patch_number_for_channel(channel));
+  const patch = Number(patchNumber);
+  if (!Number.isInteger(patch) || patch < 0) {
+    return;
+  }
+  amy_add_log_message("i" + channel + "iv6K" + patch);
 }
 
 function build_patch_save_messages(channel, patchNumber) {
@@ -534,16 +1188,10 @@ async function apply_default_patch_state_from_clear_patches() {
       window.channel_control_mapping_sent[ch] = false;
     }
   }
-  if (typeof set_knobs_from_patch_number === "function") {
-    set_knobs_from_patch_number(0);
-  }
   if (typeof window.refresh_knobs_for_active_channel === "function") {
     await window.refresh_knobs_for_active_channel({ sendControlMappings: true });
   } else if (typeof window.refresh_knobs_for_channel === "function") {
     window.refresh_knobs_for_channel();
-  }
-  if (typeof window.write_current_patches_file_from_knobs === "function") {
-    await window.write_current_patches_file_from_knobs();
   }
   return true;
 }
@@ -563,94 +1211,48 @@ window.clear_patch_state = clear_patch_state;
 
 function get_knobs_for_channel(channel) {
   var ch = Number(channel);
-  if (Array.isArray(window.amy_knobs) && Array.isArray(window.amy_knobs[ch])) {
-    return window.amy_knobs[ch];
+  if (typeof window.get_channel_knobs === "function" && typeof window.get_global_knobs === "function") {
+    return window.get_channel_knobs(ch).concat(window.get_global_knobs());
   }
   return window.get_current_knobs ? window.get_current_knobs() : [];
 }
 
 function build_knob_cc_message(channel, knob) {
   if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half"
-    || knob.knob_type === "selection" || knob.knob_type === "pushbutton") {
+    || knob.knob_type === "pushbutton") {
     return "";
   }
   var synthChannel = Number(channel);
   if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
     synthChannel = Number(window.current_synth || 1);
   }
-  var log = knob.knob_type === "log" ? 1 : 0;
-  var offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
-  return "i" + synthChannel + "ic" + knob.cc + "," + log + "," + knob.min_value + "," + knob.max_value + "," + offset + "," + knob.change_code;
+  var log, min_val, max_val, offset;
+  if (knob.knob_type === "selection") {
+    log = 0;
+    min_val = 0;
+    max_val = Array.isArray(knob.options) ? knob.options.length : 0;
+    offset = 0;
+  } else {
+    log = knob.knob_type === "log" ? 1 : 0;
+    min_val = knob.min_value;
+    max_val = knob.max_value;
+    offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
+  }
+  return "i" + synthChannel + "ic" + knob.cc + "," + log + "," + min_val + "," + max_val + "," + offset + "," + knob.change_code;
 }
 
-function build_channel_control_messages(channel) {
-  const knobs = get_knobs_for_channel(channel);
-  const messages = [];
-  if (!Array.isArray(knobs)) {
-    return messages;
-  }
-  for (const knob of knobs) {
-    const message = build_knob_cc_message(channel, knob);
-    if (message) {
-      messages.push(message);
+function send_all_knob_cc_mappings(channel) {
+  var ch = Number(channel);
+  if (!Number.isInteger(ch) || ch < 1 || ch > 16) ch = 1;
+  var knobs = get_knobs_for_channel(ch);
+  for (var i = 0; i < knobs.length; i++) {
+    var m = build_knob_cc_message(ch, knobs[i]);
+    if (m) {
+      amy_add_log_message(m);
     }
   }
-  return messages;
-}
-
-async function write_current_patches_file_from_knobs() {
-  ensure_current_environment_layout(true);
-  var allMessages = [];
-  for (var channel = 1; channel <= 16; channel++) {
-    if (!is_channel_active(channel)) {
-      continue;
-    }
-    var patchNumber = get_patch_number_for_channel(channel);
-    var messages = build_patch_save_messages(channel, patchNumber);
-    for (const message of messages) {
-      allMessages.push(message);
-    }
-    var controlMessages = build_channel_control_messages(channel);
-    for (const message of controlMessages) {
-      allMessages.push(message);
-    }
-  }
-  if (!allMessages.length) {
-    allMessages.push("# no active channels");
-  }
-  var outputLines = [WEB_PATCH_EDITOR_HEADER].concat(allMessages);
-  mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, outputLines.join("\n") + "\n");
-  await sync_persistent_fs();
-  refresh_editor_if_viewing_web_patch_file();
-}
-window.write_current_patches_file_from_knobs = write_current_patches_file_from_knobs;
-
-function is_selected_file_web_patch_file() {
-  if (!selected_environment_file || typeof selected_environment_file !== "string") {
-    return false;
-  }
-  return selected_environment_file.toLowerCase() === "web.patch";
-}
-
-function refresh_editor_if_viewing_web_patch_file() {
-  if (!editor || !is_selected_file_web_patch_file()) {
-    return false;
-  }
-  try {
-    var latest = mp.FS.readFile(CURRENT_WEB_PATCH_FILE, { encoding: "utf8" });
-    if (editor.getValue() !== latest) {
-      editor.setValue(latest);
-    }
-    environment_editor_dirty = false;
-    editor.scrollTo(0, 0);
-    setTimeout(function () { editor.save(); }, 50);
-    setTimeout(function () {
-      editor.refresh();
-      editor.scrollTo(0, 0);
-    }, 100);
-    return true;
-  } catch (e) {
-    return false;
+  if (Array.isArray(window.channel_control_mapping_sent)) {
+    window.channel_control_mapping_sent[ch] = true;
   }
 }
 
@@ -669,7 +1271,6 @@ window.refresh_knobs_for_active_channel = async function(options) {
   if (sendControlMappings) {
     window.channel_control_mapping_sent[channel] = true;
   }
-  await write_current_patches_file_from_knobs();
 };
 
 
@@ -919,66 +1520,13 @@ async function show_alert(text) {
 
 function ensure_current_environment_layout(seedDefaults) {
     try { mp.FS.mkdirTree(CURRENT_BASE_DIR); } catch (e) {}
-    try { mp.FS.mkdirTree(CURRENT_ENV_DIR); } catch (e) {}
-    try { mp.FS.mkdirTree(DEFAULT_BASE_DIR); } catch (e) {}
-    try { mp.FS.mkdirTree(DEFAULT_ENV_DIR); } catch (e) {}
+    try {
+        mp.FS.readFile(CURRENT_ENV_DIR + "/env.py", { encoding: "utf8" });
+    } catch (e) {
+        mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
+    }
     if (seedDefaults) {
-        try {
-            mp.FS.readFile(DEFAULT_ENV_DIR + "/env.py", { encoding: "utf8" });
-        } catch (e) {
-            mp.FS.writeFile(DEFAULT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
-        }
-        try {
-            mp.FS.readFile(DEFAULT_WEB_PATCH_FILE, { encoding: "utf8" });
-        } catch (e) {
-            var defaultWebPatch = null;
-            try {
-                defaultWebPatch = mp.FS.readFile(DEFAULT_ENV_DIR + "/patches.txt", { encoding: "utf8" });
-            } catch (legacyDefaultPatchErr) {}
-            if (defaultWebPatch === null || defaultWebPatch === undefined) {
-                defaultWebPatch = DEFAULT_WEB_PATCH_SOURCE;
-            }
-            mp.FS.writeFile(DEFAULT_WEB_PATCH_FILE, String(defaultWebPatch));
-        }
-        try {
-            mp.FS.readFile(DEFAULT_OTHER_PATCH_FILE, { encoding: "utf8" });
-        } catch (e) {
-            mp.FS.writeFile(DEFAULT_OTHER_PATCH_FILE, DEFAULT_OTHER_PATCH_SOURCE);
-        }
-        try {
-            mp.FS.readFile(CURRENT_ENV_DIR + "/env.py", { encoding: "utf8" });
-        } catch (e) {
-            mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", mp.FS.readFile(DEFAULT_ENV_DIR + "/env.py", { encoding: "utf8" }));
-        }
-        try {
-            mp.FS.readFile(CURRENT_WEB_PATCH_FILE, { encoding: "utf8" });
-        } catch (e) {
-            var migrated = false;
-            try {
-                mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, mp.FS.readFile("/amyboard/user/current/patches/patches.txt", { encoding: "utf8" }));
-                migrated = true;
-            } catch (legacyPatchesDirErr) {}
-            try {
-                if (!migrated) {
-                    mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, mp.FS.readFile("/amyboard/user/current/patch/patches.txt", { encoding: "utf8" }));
-                    migrated = true;
-                }
-            } catch (legacyPatchErr) {}
-            try {
-                if (!migrated) {
-                    mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, mp.FS.readFile(CURRENT_ENV_DIR + "/patches.txt", { encoding: "utf8" }));
-                    migrated = true;
-                }
-            } catch (legacyCurrentPatchFileErr) {}
-            if (!migrated) {
-                mp.FS.writeFile(CURRENT_WEB_PATCH_FILE, mp.FS.readFile(DEFAULT_WEB_PATCH_FILE, { encoding: "utf8" }));
-            }
-        }
-        try {
-            mp.FS.readFile(CURRENT_OTHER_PATCH_FILE, { encoding: "utf8" });
-        } catch (e) {
-            mp.FS.writeFile(CURRENT_OTHER_PATCH_FILE, mp.FS.readFile(DEFAULT_OTHER_PATCH_FILE, { encoding: "utf8" }));
-        }
+        // Reserved for future seed-only setup.
     }
 }
 
@@ -1006,20 +1554,18 @@ async function sync_persistent_fs() {
 
 function list_environment_files() {
     var files = [];
-    function walk(dir, relPrefix) {
-        for (const name of mp.FS.readdir(dir)) {
-            if (name === "." || name === "..") continue;
-            var path = dir + "/" + name;
-            var relPath = relPrefix ? (relPrefix + "/" + name) : name;
-            var mode = mp.FS.lookupPath(path).node.mode;
-            if (mp.FS.isFile(mode)) {
-                files.push(relPath);
-            } else if (mp.FS.isDir(mode)) {
-                walk(path, relPath);
-            }
+    for (const name of mp.FS.readdir(CURRENT_ENV_DIR)) {
+        if (name === "." || name === "..") continue;
+        var lower = String(name || "").toLowerCase();
+        if (lower.endsWith(".dirty")) {
+            continue;
+        }
+        var path = CURRENT_ENV_DIR + "/" + name;
+        var mode = mp.FS.lookupPath(path).node.mode;
+        if (mp.FS.isFile(mode)) {
+            files.push(name);
         }
     }
-    walk(CURRENT_ENV_DIR, "");
     files.sort();
     return files;
 }
@@ -1028,17 +1574,7 @@ function list_current_patch_files() {
     var files = list_environment_files().filter(function(filename) {
         return String(filename || "").toLowerCase().endsWith(".patch");
     });
-    files.sort(function(a, b) {
-        var al = String(a || "").toLowerCase();
-        var bl = String(b || "").toLowerCase();
-        if (al === "web.patch" && bl !== "web.patch") {
-            return -1;
-        }
-        if (bl === "web.patch" && al !== "web.patch") {
-            return 1;
-        }
-        return al < bl ? -1 : (al > bl ? 1 : 0);
-    });
+    files.sort();
     return files;
 }
 
@@ -1083,20 +1619,13 @@ function apply_active_channels_from_patch_map(channelPatchMap) {
 }
 
 async function execute_current_patch_files() {
-    var webPatchMissingBeforeLayout = false;
-    try {
-        mp.FS.readFile(CURRENT_WEB_PATCH_FILE, { encoding: "utf8" });
-    } catch (missingWebPatchErr) {
-        webPatchMissingBeforeLayout = true;
-    }
     ensure_current_environment_layout(true);
     var patchFiles = list_current_patch_files();
     var channelPatchMap = new Array(17).fill(null);
     var combinedPatchSources = [];
-    var webPatchHasMessages = false;
+    var hasPatchMessages = false;
     for (var i = 0; i < patchFiles.length; i++) {
         var filename = patchFiles[i];
-        var filenameLower = String(filename || "").toLowerCase();
         var source = "";
         try {
             source = mp.FS.readFile(CURRENT_ENV_DIR + "/" + filename, { encoding: "utf8" });
@@ -1110,9 +1639,7 @@ async function execute_current_patch_files() {
             if (!message || message.startsWith("#")) {
                 continue;
             }
-            if (filenameLower === "web.patch") {
-                webPatchHasMessages = true;
-            }
+            hasPatchMessages = true;
             amy_add_log_message(message);
             var bindMatch = message.match(/^i(\d+)iv6K(\d+)/);
             if (bindMatch) {
@@ -1153,8 +1680,7 @@ async function execute_current_patch_files() {
         channelPatchMap: channelPatchMap,
         combinedPatchSource: combinedPatchSource,
         hasActiveChannels: hasActiveChannels,
-        webPatchHasMessages: webPatchHasMessages,
-        webPatchMissingBeforeLayout: webPatchMissingBeforeLayout,
+        hasPatchMessages: hasPatchMessages,
     };
 }
 
@@ -1162,10 +1688,7 @@ function should_initialize_default_patch_state(patchExecution) {
     if (!patchExecution || typeof patchExecution !== "object") {
         return false;
     }
-    if (patchExecution.webPatchMissingBeforeLayout) {
-        return true;
-    }
-    return (!patchExecution.webPatchHasMessages) && (!patchExecution.hasActiveChannels);
+    return (!patchExecution.hasPatchMessages) && (!patchExecution.hasActiveChannels);
 }
 
 function is_editor_openable_file(filename) {
@@ -1752,16 +2275,15 @@ async function clear_current_environment_from_default() {
     ensure_current_environment_layout(true);
     var confirmed = await confirm_environment_action(
         "Clear code",
-        "Clear current code and restore from default?",
+        "Clear current code and create a fresh env.py?",
         "Clear"
     );
     if (!confirmed) {
         return;
     }
     try {
-        remove_fs_path(CURRENT_ENV_DIR);
-        mp.FS.mkdirTree(CURRENT_ENV_DIR);
-        copy_fs_path(DEFAULT_ENV_DIR, CURRENT_ENV_DIR);
+        clear_current_environment_dir();
+        mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
         selected_environment_file = null;
         await sync_persistent_fs();
         await fill_tree();
@@ -1786,7 +2308,7 @@ async function run_current_environment() {
         "from upysh import *\n" +
         "import sys\n" +
         "_amyboard_user_dir = '/amyboard/user'\n" +
-        "_amyboard_env_dir = '/amyboard/user/current/env'\n" +
+        "_amyboard_env_dir = '/amyboard/user/current'\n" +
         "cd(_amyboard_env_dir)\n" +
         "try:\n" +
         "    execfile('env.py')\n" +
@@ -2268,11 +2790,6 @@ async function sysex_write_amy_message(message) {
 }
 
 async function open_send_to_amyboard_modal() {
-    try {
-        await write_current_patches_file_from_knobs();
-    } catch (e) {
-        show_alert("Could not update web.patch");
-    }
     send_amyboard_progress_reset();
     populate_send_to_amyboard_modal();
 }
@@ -2296,7 +2813,6 @@ async function send_to_amyboard_now() {
 
     try {
         await save_editor_if_dirty();
-        await write_current_patches_file_from_knobs();
         await setup_midi_devices();
         if (!midiOutputDevice) {
             throw new Error("No MIDI out port selected.");
@@ -2408,24 +2924,32 @@ async function start_amyboard() {
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
   await sleep_ms(400);
   await mp.runFrozenAsync('_boot.py');
-
-  await sleep_ms(400);
-  await mp.runFrozenAsync('/amyboard/user/boot.py');
   ensure_current_environment_layout(true);
-  var startupPatchExecution = await execute_current_patch_files();
-  if (should_initialize_default_patch_state(startupPatchExecution)) {
-      await apply_default_patch_state_from_clear_patches();
+  try {
+    await mp.runPythonAsync("import amyboard; amyboard.restore_patch_state_from_files(send_default_if_missing=True)");
+  } catch (e) {
+    // Fallback for environments where the shared helper is unavailable.
+    await restore_patches_from_editor_state_if_present({ sendToAmy: true });
   }
-  await run_current_environment();
+  await restore_patches_from_editor_state_if_present({ sendToAmy: false });
   await fill_tree();
-  if (list_environment_files().indexOf("env.py") !== -1) {
-      await select_environment_file("env.py", true);
-  } else {
-      var envFiles = list_environment_files();
-      if (envFiles.length) {
-          await select_environment_file(envFiles[0], true);
-      }
+  if (typeof window.refresh_patch_active_name_label === "function") {
+    window.refresh_patch_active_name_label();
   }
+  if (typeof window.refresh_save_patch_dirty_indicator === "function") {
+    window.refresh_save_patch_dirty_indicator();
+  }
+  setTimeout(async function() {
+    try {
+      await restore_patches_from_editor_state_if_present({ sendToAmy: false });
+      if (typeof window.refresh_patch_active_name_label === "function") {
+        window.refresh_patch_active_name_label();
+      }
+      if (typeof window.refresh_save_patch_dirty_indicator === "function") {
+        window.refresh_save_patch_dirty_indicator();
+      }
+    } catch (e) {}
+  }, 800);
   amyboard_started = true;
 }
 
@@ -2441,7 +2965,264 @@ async function start_audio() {
   } else {
       await amy_live_start_web();    
   }
-  // Initialize default channel state, then sync preset/knobs.
+  try {
+    await restore_patches_from_editor_state_if_present({ sendToAmy: false });
+    if (typeof window.refresh_patch_active_name_label === "function") {
+      window.refresh_patch_active_name_label();
+    }
+    if (typeof window.refresh_save_patch_dirty_indicator === "function") {
+      window.refresh_save_patch_dirty_indicator();
+    }
+  } catch (e) {}
+  // Keep startup simple: knobs are local UI state until user moves them.
   audio_started = true;
-  attemptPatchKnobSync();
+}
+
+// ---- wire_code_parser.js ----
+function parse_wire_code(message) {
+
+  // Local variables.
+  let _KW_MAP_LIST = [   // Order matters because patch_string must come last.
+      ['osc', 'vI'], ['wave', 'wI'], ['note', 'nF'], ['vel', 'lF'], ['amp', 'aC'], ['freq', 'fC'], ['duty', 'dC'], 
+      ['feedback', 'bF'], ['time', 'tI'],  ['reset', 'SI'], ['phase', 'PF'], ['pan', 'QC'], ['client', 'gI'], 
+      ['volume', 'VF'], ['pitch_bend', 'sF'], ['filter_freq', 'FC'], ['resonance', 'RF'], ['bp0', 'AL'], 
+      ['bp1', 'BL'], ['eg0_type', 'TI'], ['eg1_type', 'XI'], ['debug', 'DI'], ['chained_osc', 'cI'], 
+      ['mod_source', 'LI'],  ['eq', 'xL'], ['filter_type', 'GI'], ['ratio', 'IF'], ['latency_ms', 'NI'],
+      ['algo_source', 'OL'], ['load_sample', 'zL'], ['transfer_file', 'zTL'], ['disk_sample', 'zFL'], 
+      ['algorithm', 'oI'], ['chorus', 'kL'], ['reverb', 'hL'], ['echo', 'ML'], ['patch', 'KI'], ['voices', 'rL'],
+      ['external_channel', 'WI'], ['portamento', 'mI'], ['sequence', 'HL'], ['tempo', 'jF'],
+      ['synth', 'iI'], ['pedal', 'ipI'], ['synth_flags', 'ifI'], ['num_voices', 'ivI'], ['oscs_per_voice', 'inI'],
+      ['to_synth', 'itI'], ['grab_midi_notes', 'imI'],  ['synth_delay', 'idI'],
+      ['preset', 'pI'], ['num_partials', 'pI'], // note aliasing
+      ['start_sample', 'zSL'], ['stop_sample', 'zOI'],
+      ['midi_cc', 'icL'],
+      ['patch_string', 'uS'],  // patch_string MUST be last because we can't identify when it ends except by end-of-message.
+      ['end', 'ZZ'],
+  ]
+
+  const Lex = {
+    END: 0,
+    ALPHA: 1,
+    NUMBER: 2,
+    SEP: 3,
+  };
+
+  const Expecting = {
+    END: 0,
+    COMMAND: 1,
+    NUMARG: 2,
+    LISTSEP: 3,
+    LISTARG: 4,
+    STRARG: 5,
+  };
+
+  function numeric_prefix(s) {
+    let len = s.length;
+    let i = 0;
+    while (i < len && ((s[i] >= "0" && s[i] <= "9") || s[i] == "." || s[i] == "-")) {
+      ++i;
+    }
+    return s.slice(0, i);
+  }
+
+  function alpha_prefix(s) {
+    let len = s.length;
+    let i = 0;
+    while (i < len && ((s[i] >= 'a' && s[i] <= 'z') || (s[i] >= 'A' && s[i] <= 'Z'))) {
+      ++i;
+    }
+    return s.slice(0, i);
+  }
+
+  function next_token(message) {
+    // Segment the next token - sequence of chars, numeric value, or comma.
+    // returns [LexCode, token, remaining_string]
+    let len = message.length;
+    let index = 0;
+    let result = "";
+    var p;
+    while ((message[index] == " " || message[index] == "\n") && index < len) {
+      index++;
+    }
+    if (index >= len) return [Lex.END, "Z", ""];  // Virtual Z.
+    if (message[index] == ",") return [Lex.SEP, ",", message.slice(index + 1)];
+    // 'u' is a special case, meaning rest of input is a string
+    if (message[index] == "u") return [Lex.ALPHA, "u", message.slice(index + 1)];
+    if (message[index] == "Z") return [Lex.ALPHA, "Z", message.slice(index + 1)];
+    p = numeric_prefix(message.slice(index));
+    if (p.length > 0) return [Lex.NUMBER, p, message.slice(index + p.length)];
+    p = alpha_prefix(message.slice(index));
+    if (p.length > 0) return [Lex.ALPHA, p, message.slice(index + p.length)];
+    throw new Error("Unable to find token in \"" + message + "\"");
+  }
+
+  function debug_message(message, token, rest) {
+    // The parser had a problem working through message at tok, when the unprocessed part is rest.
+    return message.slice(0, message.length - token.length - rest.length) + " ** " + token + " ** " + rest;
+  }
+
+  // Build the rule set.
+  let codes = new Map();
+  for (const [fieldname, code] of _KW_MAP_LIST) {
+    let type = code.slice(-1);  
+    let wirecode = code.slice(0, -1);
+    codes.set(wirecode, [fieldname, type]);
+  }
+  var code, token;
+  let fieldname = "?";
+  let pending_list = [];
+  let type = "?";
+  let result = {};
+  let expecting = Expecting.COMMAND;
+  let rest = message;
+  let pushback = null;
+  let value = null;
+  while (expecting != Expecting.END) {
+    //console.log("pushback= ", pushback, " fieldname=", fieldname, " pending_list=", pending_list);
+    if (pushback != null) {
+      [lexcode, token, rest] = pushback;
+      pushback = null;
+    } else {
+      [lexcode, token, rest] = next_token(rest);0
+    }
+    //console.log("expecting: ", expecting, " lexcode: " + lexcode + " " + debug_message(message, token, rest));
+    switch (expecting) {
+    case Expecting.COMMAND:
+      if (lexcode == Lex.END) {
+        expecting = Expecting.END;
+        break;
+      }
+      if (!(lexcode == Lex.ALPHA && codes.has(token))) {
+        throw new Error("Unrecognized wire code: " + debug_message(message, token, rest));
+      }
+      [fieldname, type] = codes.get(token);
+      switch (type) {
+      case "I":
+      case "F":
+        expecting = Expecting.NUMARG;
+        break;
+      case "L":
+      case "C":
+        expecting = Expecting.LISTARG;
+        type = "F";  // without more annotation....
+        break;
+      case "S":
+        expecting = Expecting.STRARG;
+        result[fieldname] = rest;
+        rest = "";
+        expecting = Expecting.END;
+        break;
+      case "Z":
+        expecting = Expecting.END;
+        break;
+      default:
+        throw new Error("Unexpected code type " + type + " in " + debug_message(message, token, rest));
+      }
+      break;
+    case Expecting.LISTARG:
+      if (lexcode == Lex.SEP) {
+        pending_list.push(null);
+        break;
+      }
+      else if (lexcode == Lex.ALPHA) {
+        // list is over, the ARG we expected was empty.
+        pending_list.push(null);
+        // handle end of list.
+        result[fieldname] = pending_list;
+        pending_list = [];
+        expecting = Expecting.COMMAND;
+        pushback = [lexcode, token, rest];
+        break;
+      }
+      // else fall through
+    case Expecting.NUMARG:
+      if (!(lexcode == Lex.NUMBER)) {throw new Error("Expected number in: "  + debug_message(message, token, rest)); }
+      if (type == "I")
+        value = parseInt(token, 10);
+      else if (type == "F")
+        value = parseFloat(token);
+      else throw new Error("Unrecognized type " + type);
+      if (expecting == Expecting.NUMARG) {
+        result[fieldname] = value;
+        expecting = Expecting.COMMAND;
+      } else {
+        // LISTARG
+        pending_list.push(value);
+        expecting = Expecting.LISTSEP;
+      }
+      break;
+    case Expecting.LISTSEP:
+      if (lexcode == Lex.SEP) {
+        // Hacky special case for string at end of 'ic'
+        if (!(fieldname == "midi_cc" && pending_list.length == 5)) {
+          expecting = Expecting.LISTARG;
+          break;
+        } else {
+          pending_list.push(rest);
+          rest = "";
+          token = "Z";
+          lexcode = Lex.END;
+          // but fall through to list termination.
+        }
+      }
+      result[fieldname] = pending_list;
+      pending_list = [];
+      expecting = Expecting.COMMAND;
+      pushback = [lexcode, token, rest];
+      break;
+    default:
+      throw new Error("Unknown expecting " + expecting);
+    }
+  }
+  // Special-case handling of bp0, bp1
+  for (const [field, timefield, valfield] of [["bp0", "eg0_times", "eg0_values"], ["bp1", "eg1_times", "eg1_values"]]) {
+    if (field in result) {
+      result[timefield] = result[field].filter((element, index) => {return index % 2 === 0;});
+      result[valfield] = result[field].filter((element, index) => {return index % 2 === 1;});
+      Reflect.deleteProperty(result, field);
+    }
+  }
+  return [result, rest];
+}
+
+function events_from_wire_code_message(message) {
+  // Message is a single wire-code string, but may contain multiple events with Z separators.
+  events = [];
+  let rest = message;
+  while (rest != "") {
+    [event, rest] = parse_wire_code(rest);
+    events.push(event);
+  }
+  return events;
+}
+
+function events_from_wire_code_messages(messages) {
+  // Messages is an array of wire code message strings; all the events contained are concatenated.
+  var all_events = [];
+  for (const message of messages) {
+    let message_events = events_from_wire_code_message(message);
+    for (const event of message_events) {
+      all_events.push(event);
+    }
+  }
+  return all_events;
+}
+
+// Test
+if (false) {
+  for (const message of [
+    "v0w1c1L4G4ic10,13.3,,7",
+    "v0w1c1L4G4ic10,13.3,,7Z",
+    "v0w1c1L4G4d,,,,R0.913",
+    "v0w1c1L4G4ic10,13.3,,7urest,of,itZ",
+    "i1ic5,0,0,1,0",
+    "i1ic5,0,0,1,0R123",
+    "i1ic5,0,0,1,0,i%1d,,%v,0",
+    "i1ic5,0,0,1,0R123Zi1ic5,0,0,1,0R123",
+    "v0A0,1,100,0.5,1000,0Z",
+    "v0A0,,,0.5,,Z",
+    "v4w4a1,,0,1Zv0w1c1L4G4Zv1w3c2L4Zv2w1c3L4Zv3w5L4Zv4f0.609A148,1.0,10000,0Zv0a,,0.001,1,0f261.63,1,,,,0,1d0.72,,,,,0m0Zv1a,,0.591,1,0f261.63,1,,,,0,1m0Zv2a,,0.326,1,0f130.81,1,,,,0,1m0Zv3a,,0.001,1,0Zv0F212.87,0.661,,2.252,,0R1.015Zv0A518,1,83561,0.299,310,0Zv1A518,1,83561,0.299,310,0Zv2A518,1,83561,0.299,310,0Zv3A518,1,83561,0.299,310,0Zx7,-3,-3k1,,0.5,0.5Z",
+  ]) {
+    console.log(message, events_from_wire_code_message(message));
+  };
 }

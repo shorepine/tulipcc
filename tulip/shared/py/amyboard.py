@@ -9,9 +9,7 @@ hw_display = None # if there's an I2C display connected
 def web():
     return (tulip.board()=="AMYBOARD_WEB")
 
-DEFAULT_ENV_SOURCE = "# Empty environment\nprint(\"Welcome to AMYboard!\")\n"
-DEFAULT_WEB_PATCH_SOURCE = "# Do not edit - Set by AMYboard web patch editor\n"
-DEFAULT_OTHER_PATCH_SOURCE = ""
+DEFAULT_ENV_SOURCE = "# Put your own code here to run in your environment\n"
 
 def _path_exists(path):
     import os
@@ -60,86 +58,109 @@ def _clear_directory(path):
         _remove_tree(path.rstrip("/") + "/" + name)
 
 
-def _read_file_or_none(path):
-    try:
-        return open(path, "r").read()
-    except OSError:
-        return None
-
-
-def _write_file(path, value):
-    w = open(path, "w")
-    w.write(value)
-    w.close()
-
-
-def _ensure_current_env_layout():
+def ensure_user_environment():
     import os
-    import uos
     user_base = tulip.root_dir() + "user"
     current_base = user_base + "/current"
-    default_base = user_base + "/default"
-    current_env_dir = current_base + "/env"
-    default_env_dir = default_base + "/env"
-    for path in (current_base, current_env_dir, default_base, default_env_dir):
+    for path in (user_base, current_base):
         try:
             os.mkdir(path)
         except OSError:
             pass
 
-    default_env_file = default_env_dir + "/env.py"
-    default_web_patch_file = default_env_dir + "/web.patch"
-    default_other_patch_file = default_env_dir + "/other.patch"
-    current_env_file = current_env_dir + "/env.py"
-    current_web_patch_file = current_env_dir + "/web.patch"
-    current_other_patch_file = current_env_dir + "/other.patch"
-
-    try:
-        open(default_env_file, "r").close()
-    except OSError:
-        w = open(default_env_file, "w")
-        w.write(DEFAULT_ENV_SOURCE)
-        w.close()
-    try:
-        open(default_web_patch_file, "r").close()
-    except OSError:
-        legacy_default_patch = _read_file_or_none(default_env_dir + "/patches.txt")
-        if legacy_default_patch is None:
-            legacy_default_patch = DEFAULT_WEB_PATCH_SOURCE
-        _write_file(default_web_patch_file, legacy_default_patch)
-
-    try:
-        open(default_other_patch_file, "r").close()
-    except OSError:
-        _write_file(default_other_patch_file, DEFAULT_OTHER_PATCH_SOURCE)
+    current_env_file = current_base + "/env.py"
 
     try:
         open(current_env_file, "r").close()
     except OSError:
         w = open(current_env_file, "w")
-        w.write(open(default_env_file, "r").read())
+        w.write(DEFAULT_ENV_SOURCE)
         w.close()
 
+    return current_base
+
+def _ensure_current_env_layout():
+    return ensure_user_environment()
+
+def _parse_editor_state_synth_map(editor_state_path):
     try:
-        open(current_web_patch_file, "r").close()
+        raw = open(editor_state_path, "r").read()
     except OSError:
-        legacy_current_patch = _read_file_or_none(current_env_dir + "/patches.txt")
-        if legacy_current_patch is None:
-            legacy_current_patch = _read_file_or_none(default_web_patch_file)
-        if legacy_current_patch is None:
-            legacy_current_patch = DEFAULT_WEB_PATCH_SOURCE
-        _write_file(current_web_patch_file, legacy_current_patch)
-
+        return None
+    if not raw:
+        return {}
     try:
-        open(current_other_patch_file, "r").close()
+        import ujson as json
+    except ImportError:
+        import json
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    synths = parsed.get("synths", {})
+    if not isinstance(synths, dict):
+        return {}
+    return synths
+
+def _iter_patch_messages(path):
+    try:
+        for line in open(path, "r"):
+            msg = line.strip()
+            if msg and (not msg.startswith("#")):
+                yield msg
     except OSError:
-        current_other_source = _read_file_or_none(default_other_patch_file)
-        if current_other_source is None:
-            current_other_source = DEFAULT_OTHER_PATCH_SOURCE
-        _write_file(current_other_patch_file, current_other_source)
+        return
 
-    return current_env_dir
+def restore_patch_state_from_files(env_dir=None, send_default_if_missing=True):
+    _env_dir = env_dir or _ensure_current_env_layout()
+    editor_state_file = _env_dir + "/editor_state.json"
+    synth_map = _parse_editor_state_synth_map(editor_state_file)
+    result = {
+        "has_editor_state": synth_map is not None,
+        "loaded_channels": [],
+        "dirty_channels": [],
+    }
+    if synth_map is None:
+        if send_default_if_missing:
+            amy.send_raw("i1K257iv6")
+        return result
 
+    for key in synth_map:
+        try:
+            synth = int(key)
+        except Exception:
+            continue
+        if synth < 1 or synth > 16:
+            continue
+        name = str(synth_map.get(key, "")).strip()
+        if not name:
+            continue
+        if name.lower().endswith(".patch"):
+            name = name[:-6]
+
+        dirty_path = _env_dir + "/" + str(synth) + ".dirty"
+        patch_path = _env_dir + "/" + name + ".patch"
+        source_path = None
+        is_dirty = False
+        if _path_exists(dirty_path):
+            source_path = dirty_path
+            is_dirty = True
+        elif _path_exists(patch_path):
+            source_path = patch_path
+
+        if source_path is None:
+            continue
+
+        amy.send_raw("i%dK257iv6" % (synth))
+        for msg in _iter_patch_messages(source_path):
+            amy.send_raw("i%d%s" % (synth, msg))
+        result["loaded_channels"].append(synth)
+        if is_dirty:
+            result["dirty_channels"].append(synth)
+
+    return result
 
 
 def environment_transfer_done(*_args):
@@ -152,7 +173,7 @@ def environment_transfer_done(*_args):
 
     user_base = tulip.root_dir() + "user"
     current_base = user_base + "/current"
-    env_dir = current_base + "/env"
+    env_dir = current_base
 
     env_tar = env_dir + "/environment.tar"
     incoming_tar = user_base + "/__incoming_environment.tar"
@@ -188,7 +209,7 @@ def environment_transfer_done(*_args):
     try:
         os.rename(incoming_tar, env_tar)
     except OSError:
-        tulip.stderr_write("environment transfer done hook: could not move environment.tar into /user/current/env\n")
+        tulip.stderr_write("environment transfer done hook: could not move environment.tar into /user/current\n")
         return
 
     os.chdir(env_dir)
@@ -234,31 +255,7 @@ def start_amy():
     midi_out_pin = init_midi()
     tulip.amyboard_start(midi_out_pin)
     _env_dir = _ensure_current_env_layout()
-
-    tulip.stderr_write("Sending .patch files to AMY")
-    patch_files = []
-    try:
-        for entry in os.ilistdir(_env_dir):
-            name = entry[0]
-            if name.endswith(".patch"):
-                patch_files.append(name)
-    except OSError:
-        pass
-    patch_files.sort()
-    for i in range(len(patch_files)):
-        if patch_files[i].lower() == "web.patch":
-            if i != 0:
-                patch_files.insert(0, patch_files.pop(i))
-            break
-    for patch_name in patch_files:
-        patch_path = _env_dir + "/" + patch_name
-        try:
-            for line in open(patch_path, "r"):
-                message = line.strip()
-                if message and (not message.startswith("#")):
-                    amy.send_raw(message)
-        except OSError:
-            pass
+    restore_patch_state_from_files(_env_dir, send_default_if_missing=True)
 
     from upysh import cd
     tulip.stderr_write("cding to %s" % (_env_dir))
