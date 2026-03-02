@@ -961,8 +961,17 @@ window.clear_current_channel_patch = async function() {
   }
   amy_add_log_message("i" + synth + "iv0");
   amy_add_log_message("i" + synth + "K257iv6");
+  if (typeof window.reset_channel_knobs_to_defaults === "function") {
+    window.reset_channel_knobs_to_defaults(synth);
+  }
   send_all_knob_cc_mappings(synth);
   reset_global_effects();
+  if (typeof window.refresh_knobs_for_channel === "function") {
+    var previousSuppress = !!window.suppress_knob_cc_send;
+    window.suppress_knob_cc_send = true;
+    window.refresh_knobs_for_channel();
+    window.suppress_knob_cc_send = previousSuppress;
+  }
   window.channel_patch_names[synth] = null;
   set_editor_state_patch_name(synth, null);
   remove_current_environment_file_if_exists(String(synth) + ".dirty");

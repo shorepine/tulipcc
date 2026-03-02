@@ -571,6 +571,15 @@ window.addEventListener("DOMContentLoaded", function() {
     return true;
   };
 
+  window.reset_channel_knobs_to_defaults = function(channel) {
+    const idx = Number(channel);
+    if (!Number.isInteger(idx) || idx < 1 || idx > 16) return;
+    if (!Array.isArray(window.amy_channel_knobs)) {
+      window.amy_channel_knobs = new Array(17);
+    }
+    window.amy_channel_knobs[idx] = cloneKnobList(channel_knob_definitions);
+  };
+
   window.amy_channel_knobs = new Array(17);
   for (let i = 1; i <= 16; i += 1) {
     window.amy_channel_knobs[i] = cloneKnobList(channel_knob_definitions);
