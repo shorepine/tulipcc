@@ -25,9 +25,9 @@ int check_rx_char() {
 }
 #endif
 
-uint64_t get_stack_pointer() {
+uintptr_t get_stack_pointer() {
     char dummy[64];
-    uint64_t val = (uint64_t)dummy;
+    uintptr_t val = (uintptr_t)dummy;
     return val;
 }
 
