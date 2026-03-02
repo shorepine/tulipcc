@@ -103,6 +103,7 @@ else:
 
 if board() == "AMYBOARD" or board()=="AMYBOARD_WEB":
     import amyboard
+    amyboard.ensure_user_environment()
     amyboard.init_display()
     
 if board() == "AMYBOARD":

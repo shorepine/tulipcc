@@ -51,24 +51,7 @@ try:
     lfs.mkdir(fs, 'current')
 except:
     pass
-try:
-    lfs.mkdir(fs, 'default')
-except:
-    pass
-try:
-    lfs.mkdir(fs, 'current/env')
-except:
-    pass
-try:
-    lfs.mkdir(fs, 'default/env')
-except:
-    pass
-copy_to_lfs('env.py', 'current/env/env.py')
-copy_to_lfs('web.patch', 'current/env/web.patch')
-copy_to_lfs('other.patch', 'current/env/other.patch')
-copy_to_lfs('env.py', 'default/env/env.py')
-copy_to_lfs('web.patch', 'default/env/web.patch')
-copy_to_lfs('other.patch', 'default/env/other.patch')
+copy_to_lfs('env.py', 'current/env.py')
 
 print("writing VFS .bin file...")
 with open("build/amyboard-vfs.bin","wb") as fh:

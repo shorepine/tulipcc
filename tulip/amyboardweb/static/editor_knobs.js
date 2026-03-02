@@ -91,6 +91,8 @@ function get_wave_preset_for_value(knob, waveValue, opts) {
 
 function init_knobs(knobConfigs, gridId, onChange) {
   const targetId = gridId || "knob-grid";
+  const isMainGrid = targetId !== "cv-knob-grid";
+  const isGlobalGrid = targetId === "knob-grid-global";
   const grid = document.getElementById(targetId);
   if (!grid || !Array.isArray(knobConfigs)) {
     return;
@@ -148,15 +150,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
     if (notifyAmy && !window.suppress_knob_cc_send) {
       send_change_code(window.current_synth, value, config);
     }
-    if (notifyAmy && !window.suppress_knob_cc_send
-      && typeof window.request_current_patches_file_rewrite === "function") {
-      window.request_current_patches_file_rewrite();
-    }
   }
 
 
   function renderKnob(config, index, targetGrid) {
-    const colClass = targetId === "knob-grid" ? "col-6 col-md-3 text-center knob-col" : "col-6 text-center";
+    const colClass = isMainGrid ? "col-6 col-md-3 text-center knob-col" : "col-6 text-center";
     const ccEditor = (function() {
       let editor = null;
       return function getCcEditor() {
@@ -349,9 +347,10 @@ function init_knobs(knobConfigs, gridId, onChange) {
           if (!editor.current) {
             return;
           }
+          var previousCc = editor.current.cc;
           editor.current.cc = value;
           if (typeof window.onKnobCcChange === "function") {
-            window.onKnobCcChange(editor.current);
+            window.onKnobCcChange(editor.current, previousCc);
           }
           hideCcEditor(editor);
         }
@@ -633,10 +632,6 @@ function init_knobs(knobConfigs, gridId, onChange) {
         storage[String(Number(waveValue))] = parsedPreset;
         if (notifyAmy && !window.suppress_knob_cc_send) {
           send_change_code(window.current_synth, currentWaveValue(), config);
-        }
-        if (notifyAmy && !window.suppress_knob_cc_send
-          && typeof window.request_current_patches_file_rewrite === "function") {
-          window.request_current_patches_file_rewrite();
         }
         return true;
       }
@@ -1065,11 +1060,13 @@ function init_knobs(knobConfigs, gridId, onChange) {
 
   sections.forEach(function(section) {
     const sectionWrap = document.createElement("div");
-    const sectionClass = targetId === "knob-grid" ? "col-12 knob-section knob-section-main" : "col-12 knob-section";
+    const sectionClass = (isMainGrid && !isGlobalGrid)
+      ? "col-12 knob-section knob-section-main"
+      : "col-12 knob-section";
     sectionWrap.className = sectionClass;
     sectionWrap.style.setProperty("--knob-count", String(section.items.length));
     const sectionUnits = section.units || section.items.length;
-    const rowUnits = targetId === "knob-grid" ? Math.min(14, sectionUnits) : sectionUnits;
+    const rowUnits = isMainGrid ? Math.min(14, sectionUnits) : sectionUnits;
     sectionWrap.style.setProperty("--knob-units", String(rowUnits));
     const styleConfig = sectionStyles[section.name];
     if (styleConfig && styleConfig.bg_color) {
@@ -1096,7 +1093,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
     }
 
     const sectionGrid = document.createElement("div");
-    sectionGrid.className = targetId === "knob-grid" ? "row g-4 knob-section-grid" : "row g-3 knob-section-grid";
+    sectionGrid.className = isMainGrid ? "row g-4 knob-section-grid" : "row g-3 knob-section-grid";
 
     sectionWrap.appendChild(sectionGrid);
     grid.appendChild(sectionWrap);
