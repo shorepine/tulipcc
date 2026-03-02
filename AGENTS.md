@@ -44,9 +44,10 @@ The easiest ways to test `tulipcc` are:
 - `./build.sh` in `tulip/web`
 - `./build.sh` in `tulip/amyboardweb`
 
-Note:
+Important:
 
-- `./build.sh` in `tulip/web` and `tulip/amyboardweb` keep a server running.
+- `./build.sh` in `tulip/web` and `tulip/amyboardweb` **never exits** — after compiling, it starts a dev server on port 8000 that runs indefinitely. Always run these in the background and check for compilation success by verifying the server is listening on port 8000, rather than waiting for the process to finish.
+- `./build.sh` in `tulip/macos` does exit after building.
 
 ## ESP-IDF Build Commands (Required)
 
