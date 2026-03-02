@@ -669,6 +669,8 @@ function set_knobs_from_events(events) {
   let mod_source_osc = 2;  // webeditor patch LFO
   let eq = [null, null, null];
   let chorus = [null, null, null];
+  let reverb = [null, null, null];
+  let echo = [null, null, null];
   const BP_UNSET = 32767;
 
   function bpTimeIsSet(v) {
@@ -684,9 +686,19 @@ function set_knobs_from_events(events) {
       if (Number.isFinite(event.eq[2]))  { eq[2] = event.eq[2]; }
     }
     if (event.chorus) {
-      if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }
-      if (Number.isFinite(event.chorus[1])) { chorus[1] = event.chorus[1]; }
-      if (Number.isFinite(event.chorus[2])) { chorus[2] = event.chorus[2]; }
+      if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }  // level
+      if (Number.isFinite(event.chorus[2])) { chorus[1] = event.chorus[2]; }  // lfo_freq
+      if (Number.isFinite(event.chorus[3])) { chorus[2] = event.chorus[3]; }  // depth
+    }
+    if (event.reverb) {
+      if (Number.isFinite(event.reverb[0])) { reverb[0] = event.reverb[0]; }
+      if (Number.isFinite(event.reverb[1])) { reverb[1] = event.reverb[1]; }
+      if (Number.isFinite(event.reverb[2])) { reverb[2] = event.reverb[2]; }
+    }
+    if (event.echo) {
+      if (Number.isFinite(event.echo[0])) { echo[0] = event.echo[0]; }
+      if (Number.isFinite(event.echo[1])) { echo[1] = event.echo[1]; }
+      if (Number.isFinite(event.echo[3])) { echo[2] = event.echo[3]; }
     }
 
     // Remainder of block assumes osc is set.
@@ -815,6 +827,14 @@ function set_knobs_from_events(events) {
   set_amy_knob_value(knobs, "Chorus", "level", chorus[0]);
   set_amy_knob_value(knobs, "Chorus", "freq", chorus[1]);
   set_amy_knob_value(knobs, "Chorus", "depth", chorus[2]);
+
+  set_amy_knob_value(knobs, "Reverb", "level", reverb[0]);
+  set_amy_knob_value(knobs, "Reverb", "live", reverb[1]);
+  set_amy_knob_value(knobs, "Reverb", "damp", reverb[2]);
+
+  set_amy_knob_value(knobs, "Echo", "level", echo[0]);
+  set_amy_knob_value(knobs, "Echo", "delay", echo[1]);
+  set_amy_knob_value(knobs, "Echo", "feedback", echo[2]);
 }
 
 function set_knobs_from_patch(channel, patch_number, patch_source) {

@@ -389,9 +389,9 @@ function get_wire_commands_for_juno_patch(patch) {
         if (Number.isFinite(event.eq[2]))  { eq[2] = event.eq[2]; }
       }
       if (event.chorus) {
-        if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }
-        if (Number.isFinite(event.chorus[1])) { chorus[1] = event.chorus[1]; }
-        if (Number.isFinite(event.chorus[2])) { chorus[2] = event.chorus[2]; }
+        if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }  // level
+        if (Number.isFinite(event.chorus[2])) { chorus[1] = event.chorus[2]; }  // lfo_freq
+        if (Number.isFinite(event.chorus[3])) { chorus[2] = event.chorus[3]; }  // depth
       }
 
       // Remainder of block assumes osc is set.
@@ -957,6 +957,7 @@ window.clear_current_channel_patch = async function() {
   }
   amy_add_log_message("i" + synth + "K257iv6");
   send_all_knob_cc_mappings(synth);
+  reset_global_effects();
   window.channel_patch_names[synth] = null;
   set_editor_state_patch_name(synth, null);
   remove_current_environment_file_if_exists(String(synth) + ".dirty");
@@ -1167,11 +1168,35 @@ function send_knob_value_messages_for_channel(channel) {
   }
 }
 
+function reset_global_effects() {
+  // Reset all global effect knobs to 0 in AMY and refresh the UI.
+  var globalKnobs = typeof window.get_global_knobs === "function"
+    ? window.get_global_knobs() : [];
+  for (var i = 0; i < globalKnobs.length; i++) {
+    var knob = globalKnobs[i];
+    if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
+      continue;
+    }
+    knob.default_value = 0;
+    var payload = window.make_change_code(1, 0, knob, false);
+    if (payload) {
+      amy_add_log_message(payload);
+    }
+  }
+  if (typeof window.refresh_knobs_for_channel === "function") {
+    var previousSuppress = !!window.suppress_knob_cc_send;
+    window.suppress_knob_cc_send = true;
+    window.refresh_knobs_for_channel();
+    window.suppress_knob_cc_send = previousSuppress;
+  }
+}
+
 async function apply_default_patch_state_from_clear_patches() {
   if (typeof window.reset_amy_knobs_to_defaults !== "function") {
     return false;
   }
   window.reset_amy_knobs_to_defaults();
+  reset_global_effects();
   if (typeof window.set_channel_active === "function") {
     window.set_channel_active(1, true);
     for (let ch = 2; ch <= 16; ch += 1) {
@@ -2963,8 +2988,13 @@ async function start_audio() {
   if(amy_audioin_toggle) {
       await amy_live_start_web_audioin();
   } else {
-      await amy_live_start_web();    
+      await amy_live_start_web();
   }
+  // Allow a few audio callbacks to fire so amy_execute_deltas processes
+  // any wire commands that were queued before audio started (e.g. from
+  // restore_patch_state_from_files during boot).  Without this delay,
+  // yield_synth_commands would read stale default values for global effects.
+  await new Promise(function(resolve) { setTimeout(resolve, 150); });
   try {
     await restore_patches_from_editor_state_if_present({ sendToAmy: false });
     if (typeof window.refresh_patch_active_name_label === "function") {
