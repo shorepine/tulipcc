@@ -1523,6 +1523,7 @@
               // Send AMY reset + wire commands for the preset patch.
               var presetSynth = Number(window.current_synth || 1);
               if (typeof amy_add_log_message === "function" && typeof get_wire_commands_for_juno_patch === "function") {
+                amy_add_log_message("i" + presetSynth + "iv0");
                 amy_add_log_message("i" + presetSynth + "K257iv6");
                 var presetWireCommands = get_wire_commands_for_juno_patch(patch);
                 for (var wi = 0; wi < presetWireCommands.length; wi++) {

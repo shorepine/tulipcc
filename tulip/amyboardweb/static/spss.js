@@ -785,6 +785,7 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
     throw new Error("Could not read patch file.");
   }
 
+  amy_add_log_message("i" + synth + "iv0");
   amy_add_log_message("i" + synth + "K257iv6");
   const lines = String(source || "").split(/\r?\n/);
   for (const line of lines) {
@@ -856,6 +857,7 @@ async function restore_patches_from_editor_state_if_present(options) {
   }
   if (!hasEditorState) {
     if (sendToAmy) {
+      amy_add_log_message("i1iv0");
       amy_add_log_message("i1K257iv6");
       send_all_knob_cc_mappings(1);
     }
@@ -905,6 +907,7 @@ async function restore_patches_from_editor_state_if_present(options) {
       set_channel_patch_dirty_state(synth, false);
     }
     if (sendToAmy) {
+      amy_add_log_message("i" + synth + "iv0");
       amy_add_log_message("i" + synth + "K257iv6");
     }
     const lines = String(source || "").split(/\r?\n/);
@@ -941,6 +944,7 @@ async function restore_patches_from_editor_state_if_present(options) {
   // If the active channel had no patch mapping, initialize it with a clean slate.
   const activeCh = Number(window.current_synth || 1);
   if (!loadedMap[activeCh] && sendToAmy) {
+    amy_add_log_message("i" + activeCh + "iv0");
     amy_add_log_message("i" + activeCh + "K257iv6");
     send_all_knob_cc_mappings(activeCh);
   }
@@ -955,6 +959,7 @@ window.clear_current_channel_patch = async function() {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
+  amy_add_log_message("i" + synth + "iv0");
   amy_add_log_message("i" + synth + "K257iv6");
   send_all_knob_cc_mappings(synth);
   reset_global_effects();
