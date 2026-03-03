@@ -15,6 +15,7 @@ build_once() {
   timestamp=$(date +%Y%m%d%H%M%S)
 
   python3 scripts/gen_amy_event_layout.py
+  python3 scripts/gen_amy_js_api.py
 
   cd ../../amy
   make web
@@ -54,7 +55,7 @@ import hashlib
 import os
 
 root = "static"
-ignore = {"amy_event_layout.generated.js", "patches.generated.js", "pcm_presets.generated.js"}
+ignore = {"amy_event_layout.generated.js", "patches.generated.js", "pcm_presets.generated.js", "amy_api.generated.js"}
 h = hashlib.sha1()
 for base, dirs, files in os.walk(root):
     dirs.sort()
