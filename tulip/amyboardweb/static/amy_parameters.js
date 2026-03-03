@@ -16,6 +16,9 @@ window.addEventListener("DOMContentLoaded", function() {
   const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE"];
   const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 7, 19];
 
+  // amy_default: the value AMY's reset_osc() sets for this parameter.
+  // Used to initialize knob state before applying patch changes, since
+  // AMY's EVENT_FROM_OSC_ARRAY only emits values that differ from reset defaults.
   const amy_knob_definitions = [
     {
       section: "Osc A",
@@ -24,6 +27,7 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "i%iv0f%v",
       knob_type: "log",
       default_value: 261.63,
+      amy_default: 261.63,    // logfreq_coefs[CONST]=0; display as middle C
       min_value: 50,
       max_value: 2000,
     },
@@ -36,6 +40,7 @@ window.addEventListener("DOMContentLoaded", function() {
       options: WAVE_OPTIONS,
       option_values: WAVE_OPTION_VALUES,
       default_value: 0,
+      amy_default: 0,         // wave = SINE
     },
     {
       section: "Osc A",
@@ -43,6 +48,7 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "duty",
       change_code: "i%iv0d%v",
       default_value: 0.5,
+      amy_default: 0.5,       // duty_coefs[CONST] = 0.5
       min_value: 0.5,
       max_value: 0.99,
     },
@@ -53,6 +59,7 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "i%iv0a,,%v",
       knob_type: "log",
       default_value: 1.0,
+      amy_default: 1.0,       // amp_coefs[EG0] = 1.0
       min_value: 0.001,
       max_value: 1.0,
       offset: 0.1,
@@ -64,6 +71,7 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "i%iv0F%v",
       knob_type: "log",
       default_value: 1000,
+      amy_default: 1000,      // filter_type=NONE after reset; display default
       min_value: 20,
       max_value: 8000,
     },
@@ -74,6 +82,7 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "i%iv0R%v",
       knob_type: "log",
       default_value: 0.7,
+      amy_default: 0.7,       // resonance = 0.7
       min_value: 0.5,
       max_value: 16,
     },
@@ -83,6 +92,7 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "kbd",
       change_code: "i%iv0F,%v",
       default_value: 1.0,
+      amy_default: 0,         // filter_logfreq_coefs[NOTE] = 0
       min_value: 0,
       max_value: 1,
     },
@@ -92,6 +102,7 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "env",
       change_code: "i%iv0F,,,,%v",
       default_value: 4.0,
+      amy_default: 0,         // filter_logfreq_coefs[EG1] = 0
       min_value: -10,
       max_value: 10,
     },
@@ -104,6 +115,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: -15,
       max_value: 15,
       default_value: 0,
+      amy_default: 0,         // EQ bands default to 0
     },
     {
       section: "EQ",
@@ -113,6 +125,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: -15,
       max_value: 15,
       default_value: 0,
+      amy_default: 0,
     },
     {
       section: "EQ",
@@ -122,6 +135,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: -15,
       max_value: 15,
       default_value: 0,
+      amy_default: 0,
     },
 
     {
@@ -131,6 +145,7 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "i%iv1f%v",
       knob_type: "log",
       default_value: 261.63,
+      amy_default: 261.63,
       min_value: 50,
       max_value: 2000,
     },
@@ -143,6 +158,7 @@ window.addEventListener("DOMContentLoaded", function() {
       options: WAVE_OPTIONS,
       option_values: WAVE_OPTION_VALUES,
       default_value: 0,
+      amy_default: 0,         // wave = SINE
     },
     {
       section: "Osc B",
@@ -150,6 +166,7 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "duty",
       change_code: "i%iv1d%v",
       default_value: 0.5,
+      amy_default: 0.5,       // duty_coefs[CONST] = 0.5
       min_value: 0.5,
       max_value: 0.99,
     },
@@ -160,17 +177,19 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "i%iv1a,,%v",
       knob_type: "log",
       default_value: 1.0,
+      amy_default: 1.0,       // amp_coefs[EG0] = 1.0
       min_value: 0.001,
       max_value: 1.0,
       offset: 0.1,
     },
 
-   {
+    {
       section: "VCF ENV",
       cc: 85,
       display_name: "attack",
       change_code: "i%iv0B%v,1,,,,0",
       default_value: 0,
+      amy_default: 0,         // breakpoints UNSET → no envelope
       min_value: 0,
       max_value: 1000,
     },
@@ -181,6 +200,7 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "decay",
       change_code: "i%iv0B,1,%v,,,0",
       default_value: 100,
+      amy_default: 0,         // breakpoints UNSET → no envelope
       offset: 50,
       min_value: 0,
       max_value: 2000,
@@ -193,6 +213,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 1,
       default_value: 0,
+      amy_default: 0,         // no filter envelope → sustain 0
     },
     {
       section: "VCF ENV",
@@ -203,6 +224,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 8000,
       default_value: 100,
+      amy_default: 0,         // breakpoints UNSET → no envelope
       change_code: "i%iv0B,1,,,%v,0",
     },
     {
@@ -215,6 +237,7 @@ window.addEventListener("DOMContentLoaded", function() {
       max_value: 1,
       offset: 0.1,
       default_value: 0,
+      amy_default: 0,         // chorus off
     },
     {
       section: "Chorus",
@@ -223,6 +246,7 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "freq",
       change_code: "k,,%v",
       default_value: 4,
+      amy_default: 4,         // chorus default LFO freq
       min_value: 0.1,
       max_value: 20,
     },
@@ -234,6 +258,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0.01,
       max_value: 1,
       default_value: 0.5,
+      amy_default: 0.5,       // chorus default depth
     },
     {
       section: "LFO",
@@ -242,6 +267,7 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "i%iv2f%v",
       knob_type: "log",
       default_value: 4,
+      amy_default: 4,         // LFO display default (logfreq_coefs[CONST]=0)
       min_value: 0.1,
       max_value: 20,
     },
@@ -254,6 +280,7 @@ window.addEventListener("DOMContentLoaded", function() {
       options: WAVE_OPTIONS,
       option_values: WAVE_OPTION_VALUES,
       default_value: 0,
+      amy_default: 0,         // wave = SINE
     },
     {
       section: "LFO",
@@ -262,6 +289,7 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "i%iv0f,,,,,%vZi%iv1f,,,,,%v",
       knob_type: "log",
       default_value: 0.0,
+      amy_default: 0,         // logfreq_coefs[MOD] = 0
       min_value: 0.0,
       max_value: 4.0,
       offset: 0.001,
@@ -272,6 +300,7 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "pwm",
       change_code: "i%iv0d,,,,,%vZi%iv1d,,,,,%v",
       default_value: 0.0,
+      amy_default: 0,         // duty_coefs[MOD] = 0
       min_value: 0.0,
       max_value: 0.49,
     },
@@ -281,18 +310,21 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "filt",
       change_code: "i%iv0F,,,,,%v",
       default_value: 0.0,
+      amy_default: 0,         // filter_logfreq_coefs[MOD] = 0
       min_value: 0.0,
       max_value: 4.0,
       offset: 0.001,
     },
 
-          {
+    {
       section: "ADSR",
       cc: 97,
       display_name: "attack",
       change_code: "i%iv0A%v,1,,,,0Zi%iv1A%v,1,,,,0",
       min_value: 0,
       max_value: 1000,
+      default_value: 0,
+      amy_default: 0,         // breakpoints UNSET → no envelope
     },
     {
       section: "ADSR",
@@ -304,6 +336,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 2000,
       default_value: 100,
+      amy_default: 0,         // breakpoints UNSET → no envelope
     },
     {
       section: "ADSR",
@@ -313,6 +346,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 1,
       default_value: 0,
+      amy_default: 1,         // no breakpoints → EG0 = constant 1.0
     },
     {
       section: "ADSR",
@@ -324,6 +358,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 8000,
       default_value: 100,
+      amy_default: 0,         // breakpoints UNSET → no envelope
     },
 
 
@@ -337,6 +372,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 1,
       default_value: 0,
+      amy_default: 0,         // reverb off
       offset: 0.1,
     },
     {
@@ -347,6 +383,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 1,
       default_value: 0.5,
+      amy_default: 0.5,       // reverb default liveness
     },
     {
       section: "Reverb",
@@ -356,6 +393,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 1,
       default_value: 0.5,
+      amy_default: 0.5,       // reverb default damping
     },
     {
       section: "Echo",
@@ -365,6 +403,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 2,
       default_value: 0,
+      amy_default: 0,         // echo off
     },
     {
       section: "Echo",
@@ -374,6 +413,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 5000,
       default_value: 0,
+      amy_default: 0,
     },
     {
       section: "Echo",
@@ -383,6 +423,7 @@ window.addEventListener("DOMContentLoaded", function() {
       min_value: 0,
       max_value: 1,
       default_value: 0,
+      amy_default: 0,
     },
 
   ];
@@ -657,29 +698,32 @@ function set_knobs_from_events(events) {
     return;
   }
 
-  let filterFreq = null;
-  let filterEnv = null;
-  let filterLfo = null
-  let filterKbd = null;
-  let resonanceValue = null;
-  let adsr = [0, 0, 1, 0];
-  let f_adsr = [0, 0, 1, 0];
-  let lfoFreq = null;
-  let lfoDelay = null;
-  let lfoWave = 4;  // default triangle
-  let lfoOsc = 0;
-  let lfoPwm = 0;
+  // Initialize all working variables to AMY reset defaults (from reset_osc in amy.c).
+  // AMY's EVENT_FROM_OSC_ARRAY only emits values that differ from reset defaults,
+  // so any field not present in the events should remain at the AMY default.
+  let filterFreq = 1000;      // filter_type=NONE after reset; use display default
+  let filterEnv = 0;          // filter_logfreq_coefs[EG1] = 0
+  let filterLfo = 0;          // filter_logfreq_coefs[MOD] = 0
+  let filterKbd = 0;          // filter_logfreq_coefs[NOTE] = 0
+  let resonanceValue = 0.7;   // resonance = 0.7
+  let adsr = [0, 0, 1, 0];   // no breakpoints → EG0 = constant 1.0 (sustain=1)
+  let f_adsr = [0, 0, 0, 0]; // no breakpoints → no filter envelope (sustain=0)
+  let lfoFreq = 4;            // LFO display default (logfreq_coefs[CONST]=0)
+  let lfoDelay = null;        // no knob for this
+  let lfoWave = 0;            // wave = SINE (AMY reset default)
+  let lfoOsc = 0;             // logfreq_coefs[MOD] = 0
+  let lfoPwm = 0;             // duty_coefs[MOD] = 0
   // Track coefficients for the 2 non-lfo oscs.
-  let osc_freq = [null, null];
-  let osc_wave = [null, null];
+  let osc_freq = [261.63, 261.63]; // display default (logfreq_coefs[CONST]=0)
+  let osc_wave = [0, 0];      // wave = SINE = 0
   let osc_preset = [null, null];
-  let osc_duty = [null, null];
-  let osc_gain = [0, 0];
-  let mod_source_osc = 2;  // webeditor patch LFO
-  let eq = [null, null, null];
-  let chorus = [null, null, null];
-  let reverb = [null, null, null];
-  let echo = [null, null, null];
+  let osc_duty = [0.5, 0.5];  // duty_coefs[CONST] = 0.5
+  let osc_gain = [1, 1];      // amp_coefs[EG0] = 1.0
+  let mod_source_osc = 2;     // webeditor patch LFO
+  let eq = [0, 0, 0];         // EQ bands default to 0
+  let chorus = [0, 4, 0.5];   // chorus off (level=0, freq=4, depth=0.5)
+  let reverb = [0, 0.5, 0.5]; // reverb off (level=0, live=0.5, damp=0.5)
+  let echo = [0, 0, 0];       // echo off (level=0, delay=0, feedback=0)
   const BP_UNSET = 32767;
 
   function bpTimeIsSet(v) {
@@ -732,7 +776,7 @@ function set_knobs_from_events(events) {
     }
     if (event.osc == mod_source_osc) {
       // LFO
-      if (event.Freq && Number.isFinite(event.freq[0])) {
+      if (event.freq && Number.isFinite(event.freq[0])) {
         lfoFreq = event.freq[0];
       }
       if (event.wave >= 0 && event.wave < 127) {
@@ -761,7 +805,7 @@ function set_knobs_from_events(events) {
       }
       // Extract key parameters for each osc
       if (event.amp) {
-        if (Number.isFinite(event.amp[2]) && event.amp[2] > 0) {
+        if (Number.isFinite(event.amp[2])) {
           osc_gain[event.osc] = event.amp[2];
         }
       }
@@ -781,8 +825,8 @@ function set_knobs_from_events(events) {
           lfoPwm = event.duty[5];  // duty COEF_MOD == 5
         }
       }
-      if (event.wave && event.wave >= 0 && event.wave < 127) {
-        osc_wave[event.osc] = event.wave
+      if (Number.isFinite(event.wave) && event.wave >= 0 && event.wave < 127) {
+        osc_wave[event.osc] = event.wave;
       }
       if (Number.isFinite(event.preset) && event.preset >= 0) {
         osc_preset[event.osc] = event.preset;
