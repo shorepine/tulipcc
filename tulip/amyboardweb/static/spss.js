@@ -861,6 +861,7 @@ async function restore_patches_from_editor_state_if_present(options) {
       amy_add_log_message("i1K257iv6");
       send_all_knob_cc_mappings(1);
     }
+    await sync_channel_knobs_from_synth_to_ui(1);
     return { hasEditorState: false, loadedCount: 0 };
   }
 
@@ -961,17 +962,9 @@ window.clear_current_channel_patch = async function() {
   }
   amy_add_log_message("i" + synth + "iv0");
   amy_add_log_message("i" + synth + "K257iv6");
-  if (typeof window.reset_channel_knobs_to_defaults === "function") {
-    window.reset_channel_knobs_to_defaults(synth);
-  }
   send_all_knob_cc_mappings(synth);
   reset_global_effects();
-  if (typeof window.refresh_knobs_for_channel === "function") {
-    var previousSuppress = !!window.suppress_knob_cc_send;
-    window.suppress_knob_cc_send = true;
-    window.refresh_knobs_for_channel();
-    window.suppress_knob_cc_send = previousSuppress;
-  }
+  await sync_channel_knobs_from_synth_to_ui(synth);
   window.channel_patch_names[synth] = null;
   set_editor_state_patch_name(synth, null);
   remove_current_environment_file_if_exists(String(synth) + ".dirty");
@@ -2594,9 +2587,12 @@ async function import_amyboard_world_file(index) {
                 await select_environment_file(files[0], true);
             }
         }
-        var importPatchExecution = await execute_current_patch_files();
-        if (should_initialize_default_patch_state(importPatchExecution)) {
-            await apply_default_patch_state_from_clear_patches();
+        await restore_patches_from_editor_state_if_present({ sendToAmy: true });
+        if (typeof window.refresh_patch_active_name_label === "function") {
+            window.refresh_patch_active_name_label();
+        }
+        if (typeof window.refresh_save_patch_dirty_indicator === "function") {
+            window.refresh_save_patch_dirty_indicator();
         }
         await run_current_environment();
 
