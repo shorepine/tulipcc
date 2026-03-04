@@ -3431,6 +3431,8 @@ async function refresh_amyboard_world_patches() {
             list.innerHTML = '<div class="border rounded p-2 text-danger">Could not load patches.</div>';
         }
     }
+    // Always refresh the upload dropdown so the user sees their saved patches
+    refresh_patch_upload_dropdown();
 }
 
 async function download_world_patch(index) {
