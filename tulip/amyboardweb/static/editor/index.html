@@ -708,6 +708,19 @@
       await start_amyboard();
       await refresh_amyboard_world_files();
 
+      // Load patches on first visit to the Patches sub-tab.
+      var worldPatchTab = document.getElementById("world-patch-tab");
+      if (worldPatchTab) {
+        worldPatchTab.addEventListener("shown.bs.tab", function() {
+          if (typeof refresh_amyboard_world_patches === "function") {
+            refresh_amyboard_world_patches();
+          }
+          if (typeof refresh_patch_upload_dropdown === "function") {
+            refresh_patch_upload_dropdown();
+          }
+        });
+      }
+
       // Create the editor and see if there's a share URL to decompress into it
       var editorElement = document.getElementById('collapseEditor');
       editor = CodeMirror.fromTextArea(document.getElementById(`code`), { 
@@ -956,6 +969,16 @@
               </div>
             </div>
             <div class="tab-pane fade" id="world-pane" role="tabpanel" aria-labelledby="world-tab">
+              <ul class="nav nav-tabs nav-fill mb-2" id="world-sub-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" id="world-env-tab" data-bs-toggle="tab" data-bs-target="#world-environments-pane" type="button" role="tab" aria-controls="world-environments-pane" aria-selected="true">Environments</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" id="world-patch-tab" data-bs-toggle="tab" data-bs-target="#world-patches-pane" type="button" role="tab" aria-controls="world-patches-pane" aria-selected="false">Patches</button>
+                </li>
+              </ul>
+              <div class="tab-content">
+              <div class="tab-pane fade show active" id="world-environments-pane" role="tabpanel" aria-labelledby="world-env-tab">
               <div class="row mb-2">
                 <div class="col-12">
                   <div class="border rounded p-3 bg-light">
@@ -1019,6 +1042,74 @@
                     </div>
                   </div>
                 </div>
+              </div>
+              </div>
+              <div class="tab-pane fade" id="world-patches-pane" role="tabpanel" aria-labelledby="world-patch-tab">
+              <div class="row mb-2">
+                <div class="col-12">
+                  <div class="border rounded p-3 bg-light">
+                    <div class="d-flex align-items-center mb-2">
+                      <span class="fw-semibold">Patches (latest)</span>
+                      <button
+                        type="button"
+                        title="Refresh patches"
+                        data-toggle="tooltip"
+                        data-placement="top"
+                        class="btn btn-sm btn-link text-secondary p-0 ms-2"
+                        onclick="refresh_amyboard_world_patches()"
+                      ><i class="fas fa-sync"></i></button>
+                    </div>
+                    <div class="row g-2 mb-2">
+                      <div class="col-12 col-md-7">
+                        <input
+                          type="text"
+                          id="amyboard_world_patch_search"
+                          class="form-control form-control-sm"
+                          maxlength="100"
+                          placeholder="Search by description, patch name, or username"
+                          onkeydown="if (event.key === 'Enter') { refresh_amyboard_world_patches(); }"
+                        />
+                      </div>
+                      <div class="col-12 col-md-3 d-flex align-items-center">
+                        <div id="amyboard_world_patch_tag_pills" class="d-flex flex-wrap gap-1"></div>
+                      </div>
+                      <div class="col-12 col-md-2 d-grid">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refresh_amyboard_world_patches()">Search</button>
+                      </div>
+                    </div>
+                    <div id="amyboard_world_patch_list" class="small" style="max-height: 360px; overflow-y: auto;"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-12">
+                  <div class="border rounded p-3 bg-light">
+                    <div class="fw-semibold mb-2">Upload a Patch</div>
+                    <div class="mb-2">Share a single synth patch with the community.</div>
+                    <div class="row g-2">
+                      <div class="col-12 col-md-4">
+                        <label for="patch_upload_username" class="form-label mb-1">Username</label>
+                        <input type="text" id="patch_upload_username" class="small form-control" maxlength="20" placeholder="Username" />
+                        <div class="form-text">1-20 chars: A-Z, a-z, 0-9.</div>
+                      </div>
+                      <div class="col-12 col-md-4">
+                        <label for="patch_upload_select" class="form-label mb-1">Patch</label>
+                        <select class="form-select form-select-sm" id="patch_upload_select"></select>
+                        <div class="form-text">Select a saved patch to upload.</div>
+                      </div>
+                      <div class="col-12 col-md-4">
+                        <label for="patch_upload_description" class="form-label mb-1">Description</label>
+                        <textarea id="patch_upload_description" class="small form-control" maxlength="400" rows="3" placeholder="Description"></textarea>
+                        <div class="form-text">1-400 characters.</div>
+                      </div>
+                    </div>
+                    <div class="mt-2">
+                      <button type="button" id="upload_patch_btn" class="btn btn-sm btn-primary" onclick="upload_patch_to_world()">Upload</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </div>
               </div>
             </div>
             <div class="tab-pane fade" id="send-pane" role="tabpanel" aria-labelledby="send-tab">
@@ -1427,6 +1518,7 @@
             yourPatchesSelect.appendChild(option);
           });
         }
+        window.refreshYourPatchesDropdown = refreshYourPatchesDropdown;
         if (typeof init_patches_select === "function" && presetsSelect) {
           init_patches_select("load-patch-presets");
         }

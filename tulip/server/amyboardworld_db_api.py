@@ -28,6 +28,7 @@ from pydantic import BaseModel
 
 USERNAME_RE = re.compile(r"^[A-Za-z0-9]{1,20}$")
 ENV_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
+PATCH_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,25}$")
 FILE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 TAG_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 MAX_DESCRIPTION = 400
@@ -98,7 +99,19 @@ def _ensure_schema() -> None:
             CREATE INDEX IF NOT EXISTS idx_env_username ON environments(username);
             CREATE INDEX IF NOT EXISTS idx_env_filename ON environments(filename);
             CREATE INDEX IF NOT EXISTS idx_env_deleted ON environments(deleted_at_ms);
+            """
+        )
 
+        # Add item_type column to environments (for patch vs environment distinction).
+        # SQLite has no ALTER TABLE ... ADD COLUMN IF NOT EXISTS, so catch the error.
+        try:
+            conn.execute("ALTER TABLE environments ADD COLUMN item_type TEXT NOT NULL DEFAULT 'environment'")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_env_item_type ON environments(item_type)")
+
+        conn.executescript(
+            """
             CREATE TABLE IF NOT EXISTS tulip_files (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               username TEXT NOT NULL,
@@ -221,6 +234,20 @@ def _validate_amyboard_upload(filename: str, contents: bytes) -> str:
     return clean_name
 
 
+def _validate_amyboard_patch_upload(filename: str, contents: bytes) -> str:
+    clean_name = (filename or "").strip()
+    if not clean_name.lower().endswith(".patch"):
+        raise HTTPException(status_code=400, detail="File must be a .patch")
+    patch_name = clean_name[:-6]
+    if not PATCH_NAME_RE.match(patch_name):
+        raise HTTPException(status_code=400, detail="Patch name must be 1-25 chars: A-Z, a-z, 0-9, ., -, _")
+    if len(contents) < 1:
+        raise HTTPException(status_code=400, detail="Empty upload")
+    if len(contents) > MAX_FILE_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large (max {MAX_FILE_BYTES} bytes)")
+    return clean_name
+
+
 def _validate_tulip_upload(filename: str, contents: bytes) -> str:
     clean_name = (filename or "").strip().split("/")[-1].split("\\")[-1]
     if not FILE_NAME_RE.match(clean_name):
@@ -236,10 +263,16 @@ def _file_row_to_public(row: sqlite3.Row, scope: str) -> dict[str, Any]:
     file_id = int(row["id"])
     tags = _parse_tags(row["tags_json"])
     t = int(row["created_at_ms"])
+    # item_type is only present in the environments table; default to "environment" for others.
+    try:
+        item_type = row["item_type"]
+    except (IndexError, KeyError):
+        item_type = "environment"
     return {
         "id": file_id,
         "scope": scope,
         "kind": "file",
+        "item_type": item_type,
         "username": row["username"],
         "filename": row["filename"],
         "description": row["description"],
@@ -291,17 +324,28 @@ def _insert_file_row(
     contents: bytes,
     *,
     created_at_ms: int | None = None,
+    item_type: str = "environment",
 ) -> int:
     ts_ms = _normalize_created_at_ms(created_at_ms)
     digest = hashlib.sha256(contents).hexdigest()
     with _open_db() as conn:
-        cur = conn.execute(
-            f"""
-            INSERT INTO {table}(username, filename, description, tags_json, created_at_ms, size_bytes, sha256, blob_path)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (username, filename, description, "[]", ts_ms, len(contents), digest, ""),
-        )
+        # Use item_type column only for the environments table.
+        if table == "environments":
+            cur = conn.execute(
+                f"""
+                INSERT INTO {table}(username, filename, description, tags_json, created_at_ms, size_bytes, sha256, blob_path, item_type)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (username, filename, description, "[]", ts_ms, len(contents), digest, "", item_type),
+            )
+        else:
+            cur = conn.execute(
+                f"""
+                INSERT INTO {table}(username, filename, description, tags_json, created_at_ms, size_bytes, sha256, blob_path)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (username, filename, description, "[]", ts_ms, len(contents), digest, ""),
+            )
         item_id = int(cur.lastrowid)
         safe_filename = f"{item_id:09d}-{filename}"
         blob_path = files_dir / safe_filename
@@ -320,9 +364,16 @@ def _list_file_rows(
     tag: str,
     username: str,
     latest_per_user_env: bool,
+    item_type: str = "",
 ) -> dict[str, Any]:
     clauses = ["deleted_at_ms IS NULL"]
     params: list[Any] = []
+
+    # item_type filter (only meaningful for environments table)
+    item_type_s = item_type.strip().lower()
+    if item_type_s and table == "environments":
+        clauses.append("item_type = ?")
+        params.append(item_type_s)
 
     q_s = q.strip().lower()
     if q_s:
@@ -344,10 +395,13 @@ def _list_file_rows(
 
     where_sql = " AND ".join(clauses)
 
+    # Include item_type in SELECT for environments table.
+    extra_cols = ", item_type" if table == "environments" else ""
+
     with _open_db() as conn:
         rows = conn.execute(
             f"""
-            SELECT id, username, filename, description, tags_json, created_at_ms, size_bytes
+            SELECT id, username, filename, description, tags_json, created_at_ms, size_bytes{extra_cols}
             FROM {table}
             WHERE {where_sql}
             ORDER BY created_at_ms DESC
@@ -426,7 +480,18 @@ async def upload_amyboard_environment(
     user = _normalize_username(username)
     desc = _normalize_description(description)
     contents = await file.read()
-    filename = _validate_amyboard_upload(file.filename or "", contents)
+    raw_filename = (file.filename or "").strip()
+
+    # Accept both .tar (environment) and .patch (single patch) uploads.
+    if raw_filename.lower().endswith(".patch"):
+        filename = _validate_amyboard_patch_upload(raw_filename, contents)
+        upload_item_type = "patch"
+    elif raw_filename.lower().endswith(".tar"):
+        filename = _validate_amyboard_upload(raw_filename, contents)
+        upload_item_type = "environment"
+    else:
+        raise HTTPException(status_code=400, detail="File must be a .tar or .patch")
+
     item_id = _insert_file_row(
         "environments",
         AMYBOARD_FILES_DIR,
@@ -435,6 +500,7 @@ async def upload_amyboard_environment(
         filename,
         contents,
         created_at_ms=created_at_ms,
+        item_type=upload_item_type,
     )
     _discord_notify(DISCORD_AMYBOARD_CHANNEL_ID, f"{user} ### {desc[:MAX_DESCRIPTION]} ## {filename} ({len(contents)} bytes)")
     return {"ok": True, "id": item_id}
@@ -447,6 +513,7 @@ def list_amyboard_files(
     tag: str = Query(default=""),
     username: str = Query(default=""),
     latest_per_user_env: bool = Query(default=True),
+    item_type: str = Query(default=""),
 ) -> dict[str, Any]:
     return _list_file_rows(
         "environments",
@@ -456,6 +523,7 @@ def list_amyboard_files(
         tag=tag,
         username=username,
         latest_per_user_env=latest_per_user_env,
+        item_type=item_type,
     )
 
 
@@ -464,7 +532,7 @@ def get_amyboard_file(item_id: int) -> dict[str, Any]:
     with _open_db() as conn:
         row = conn.execute(
             """
-            SELECT id, username, filename, description, tags_json, created_at_ms, size_bytes
+            SELECT id, username, filename, description, tags_json, created_at_ms, size_bytes, item_type
             FROM environments
             WHERE id = ? AND deleted_at_ms IS NULL
             """,
@@ -487,7 +555,9 @@ def download_amyboard_file(item_id: int) -> FileResponse:
     blob_path = Path(str(row["blob_path"]))
     if not blob_path.exists():
         raise HTTPException(status_code=404, detail="File missing")
-    return FileResponse(str(blob_path), media_type="application/x-tar", filename=str(row["filename"]))
+    fname = str(row["filename"])
+    mime = "text/plain" if fname.lower().endswith(".patch") else "application/x-tar"
+    return FileResponse(str(blob_path), media_type=mime, filename=fname)
 
 
 @app.patch("/api/amyboardworld/files/{item_id}/tags", dependencies=[Depends(_require_admin)])
