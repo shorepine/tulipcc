@@ -3490,7 +3490,7 @@ async function preview_world_patch(index) {
         var text = await response.text();
 
         // Init synth 32 with 6 voices, 3-note polyphony
-        amy_add_log_message("i32v6in3");
+        amy_add_log_message("i32iv6in3");
 
         // Load each patch line prepended with i32
         var lines = String(text || "").split(/\r?\n/);
@@ -3499,6 +3499,9 @@ async function preview_world_patch(index) {
             if (!wire || wire.startsWith("#")) continue;
             amy_add_log_message("i32" + wire);
         }
+
+        // Brief pause to let the patch settle before playing
+        await new Promise(function(r) { setTimeout(r, 250); });
 
         // Play 3 notes with 300ms spacing
         var notes = [58, 60, 62];
@@ -3509,7 +3512,7 @@ async function preview_world_patch(index) {
 
         // Let notes ring briefly, then clear the synth
         await new Promise(function(r) { setTimeout(r, 800); });
-        amy_add_log_message("i32v6in3");
+        amy_add_log_message("i32iv6in3");
     } catch (e) {
         show_alert("Preview failed.");
     } finally {
