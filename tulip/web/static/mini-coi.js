@@ -14,6 +14,8 @@
     addEventListener('fetch', e => {
       const { request: r } = e;
       if (r.cache === 'only-if-cached' && r.mode !== 'same-origin') return;
+      // Skip cross-origin requests so CORS responses keep their 'cors' type.
+      if (new URL(r.url).origin !== self.location.origin) return;
       e.respondWith(fetch(r).then(r => {
         const { body, status, statusText } = r;
         if (!status || status > 399) return r;
