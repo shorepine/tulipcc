@@ -35,6 +35,11 @@ var amyboard_world_files = [];
 var amyboard_world_loading_index = null;
 var amyboard_world_selected_tag = "";
 var amyboard_world_tag_palette = {};
+var amyboard_world_patches = [];
+var amyboard_world_patch_loading_index = null;
+var amyboard_world_patch_selected_tag = "";
+var amyboard_world_patch_tag_palette = {};
+var amyboard_world_patch_previewing_index = null;
 var selected_environment_file = null;
 var pending_environment_editor_load = false;
 var environment_editor_dirty = false;
@@ -2507,6 +2512,7 @@ async function refresh_amyboard_world_files() {
         var params = new URLSearchParams();
         params.set("limit", "100");
         params.set("latest_per_user_env", "true");
+        params.set("item_type", "environment");
         var q = get_world_search_query();
         var tag = get_world_tag_query();
         if (q.length) {
@@ -3265,4 +3271,330 @@ if (false) {
   ]) {
     console.log(message, events_from_wire_code_message(message));
   };
+}
+
+
+// ──────────────────────────────────────────────────────────────────────────
+// AMYboard World — Patches sub-tab
+// ──────────────────────────────────────────────────────────────────────────
+
+function get_world_patch_search_query() {
+    var el = document.getElementById("amyboard_world_patch_search");
+    return el ? el.value.trim() : "";
+}
+
+function get_world_patch_tag_query() {
+    return amyboard_world_patch_selected_tag || "";
+}
+
+function get_world_patch_display_name(filename) {
+    var name = normalize_world_filename(filename);
+    return name.replace(/\.patch$/i, "");
+}
+
+function randomize_world_patch_tag_palette() {
+    var tags = ["featured", "official", "popular", "wild"];
+    var colors = ["bg-primary", "bg-success", "bg-danger", "bg-info", "bg-warning", "bg-secondary"];
+    for (var i = colors.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = colors[i]; colors[i] = colors[j]; colors[j] = tmp;
+    }
+    amyboard_world_patch_tag_palette = {};
+    for (var t = 0; t < tags.length; t++) {
+        amyboard_world_patch_tag_palette[tags[t]] = colors[t % colors.length];
+    }
+}
+
+function render_world_patch_tag_pills() {
+    var container = document.getElementById("amyboard_world_patch_tag_pills");
+    if (!container) return;
+    if (!Object.keys(amyboard_world_patch_tag_palette).length) {
+        randomize_world_patch_tag_palette();
+    }
+    var tags = ["featured", "official", "popular", "wild"];
+    var html = "";
+    for (var i = 0; i < tags.length; i++) {
+        var tag = tags[i];
+        var color = amyboard_world_patch_tag_palette[tag] || "bg-secondary";
+        var active = (amyboard_world_patch_selected_tag === tag);
+        html += '<button type="button" class="badge border-0 ' + color + (active ? "" : " opacity-50") + '"' +
+            ' onclick="select_amyboard_world_patch_tag(\'' + tag + '\')">#' + tag + '</button>';
+    }
+    container.innerHTML = html;
+}
+
+function select_amyboard_world_patch_tag(tag) {
+    tag = String(tag || "").toLowerCase();
+    amyboard_world_patch_selected_tag = (amyboard_world_patch_selected_tag === tag) ? "" : tag;
+    render_world_patch_tag_pills();
+    refresh_amyboard_world_patches();
+}
+
+function render_amyboard_world_patch_list() {
+    var list = document.getElementById("amyboard_world_patch_list");
+    if (!list) return;
+
+    if (!amyboard_world_patches.length) {
+        list.innerHTML = '<div class="border rounded p-2 text-muted">No patches found.</div>';
+        return;
+    }
+
+    var html = '<div class="row row-cols-2 g-2">';
+    for (var i = 0; i < amyboard_world_patches.length; i++) {
+        var item = amyboard_world_patches[i];
+        var displayName = get_world_patch_display_name(item.filename);
+        var description = (typeof item.content === "string") ? item.content.trim() : "";
+        if (!description && typeof item.description === "string") {
+            description = item.description.trim();
+        }
+        var when = format_world_file_timestamp(item.time);
+        var meta = (item.username || "unknown") + (when ? " \u2022 " + when : "");
+        var tags = Array.isArray(item.tags) ? item.tags : [];
+        var isLoading = (amyboard_world_patch_loading_index === i);
+        var isPreviewing = (amyboard_world_patch_previewing_index === i);
+
+        html += '<div class="col">';
+        html += '<div class="w-100 border rounded p-2 bg-white text-start">';
+        html += '<div class="fw-bold">' + escape_html(displayName);
+        if (description.length > 0) {
+            html += ' <span class="fw-normal text-muted">- ' + escape_html(description) + '</span>';
+        }
+        html += '</div>';
+        html += '<div class="small text-muted">' + escape_html(meta) + '</div>';
+        if (tags.length > 0) {
+            html += '<div class="mt-1">';
+            for (var t = 0; t < tags.length; t++) {
+                html += '<span class="badge bg-light text-secondary border me-1">#' + escape_html(String(tags[t])) + '</span>';
+            }
+            html += '</div>';
+        }
+        html += '<div class="mt-1 d-flex gap-1">';
+        // Download button
+        if (isLoading) {
+            html += '<button type="button" class="btn btn-sm btn-outline-primary" disabled>' +
+                '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Downloading...</button>';
+        } else {
+            html += '<button type="button" class="btn btn-sm btn-outline-primary" onclick="download_world_patch(' + i + ')">Download</button>';
+        }
+        // Preview button
+        if (isPreviewing) {
+            html += '<button type="button" class="btn btn-sm btn-outline-secondary" disabled>' +
+                '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span></button>';
+        } else {
+            html += '<button type="button" class="btn btn-sm btn-outline-secondary" onclick="preview_world_patch(' + i + ')" title="Preview">' +
+                '\u25B6</button>';
+        }
+        html += '</div>';
+        html += '</div></div>';
+    }
+    html += '</div>';
+    list.innerHTML = html;
+}
+
+async function refresh_amyboard_world_patches() {
+    render_world_patch_tag_pills();
+    var list = document.getElementById("amyboard_world_patch_list");
+    if (list) {
+        list.innerHTML = '<div class="border rounded p-2 text-muted">Loading...</div>';
+    }
+
+    try {
+        var params = new URLSearchParams();
+        params.set("limit", "100");
+        params.set("latest_per_user_env", "true");
+        params.set("item_type", "patch");
+        var q = get_world_patch_search_query();
+        var tag = get_world_patch_tag_query();
+        if (q.length) {
+            params.set("q", q);
+        }
+        if (tag.length) {
+            params.set("tag", tag);
+        }
+        var response = await fetch(world_api_url("/api/amyboardworld/files?" + params.toString()));
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status.toString());
+        }
+        var data = await response.json();
+        if (!data || !Array.isArray(data.items)) {
+            throw new Error("Unexpected response");
+        }
+        amyboard_world_patches = data.items
+            .sort(function(a, b) {
+                return Number(b.time || 0) - Number(a.time || 0);
+            })
+            .slice(0, 20);
+        render_amyboard_world_patch_list();
+    } catch (e) {
+        amyboard_world_patches = [];
+        if (list) {
+            list.innerHTML = '<div class="border rounded p-2 text-danger">Could not load patches.</div>';
+        }
+    }
+}
+
+async function download_world_patch(index) {
+    if (amyboard_world_patch_loading_index !== null) return;
+    if (index < 0 || index >= amyboard_world_patches.length) {
+        show_alert("That patch is no longer available.");
+        return;
+    }
+
+    var item = amyboard_world_patches[index];
+    amyboard_world_patch_loading_index = index;
+    render_amyboard_world_patch_list();
+
+    try {
+        var downloadUrl = resolve_world_download_url(item);
+        if (!downloadUrl) throw new Error("Missing file URL");
+        var response = await fetch(downloadUrl);
+        if (!response.ok) throw new Error("HTTP " + response.status.toString());
+        var text = await response.text();
+
+        var filename = normalize_world_filename(item.filename);
+        if (!filename.toLowerCase().endsWith(".patch")) {
+            filename = filename + ".patch";
+        }
+        ensure_current_environment_layout(false);
+        mp.FS.writeFile(CURRENT_ENV_DIR + "/" + filename, text);
+        await sync_persistent_fs();
+
+        // Refresh the Load Patch dropdown so the new patch appears immediately.
+        if (typeof window.refreshYourPatchesDropdown === "function") {
+            window.refreshYourPatchesDropdown();
+        }
+        show_alert("Patch '" + filename.replace(/\.patch$/i, "") + "' saved. It's now available in Load Patch.");
+    } catch (e) {
+        show_alert("Failed to download patch.");
+    } finally {
+        amyboard_world_patch_loading_index = null;
+        render_amyboard_world_patch_list();
+    }
+}
+
+async function preview_world_patch(index) {
+    if (amyboard_world_patch_previewing_index !== null) return;
+    if (index < 0 || index >= amyboard_world_patches.length) return;
+
+    amyboard_world_patch_previewing_index = index;
+    render_amyboard_world_patch_list();
+
+    try {
+        var item = amyboard_world_patches[index];
+        var downloadUrl = resolve_world_download_url(item);
+        if (!downloadUrl) throw new Error("Missing file URL");
+        var response = await fetch(downloadUrl);
+        if (!response.ok) throw new Error("HTTP " + response.status.toString());
+        var text = await response.text();
+
+        // Init synth 32 with 6 voices, 3-note polyphony
+        amy_add_log_message("i32v6in3");
+
+        // Load each patch line prepended with i32
+        var lines = String(text || "").split(/\r?\n/);
+        for (var i = 0; i < lines.length; i++) {
+            var wire = lines[i].trim();
+            if (!wire || wire.startsWith("#")) continue;
+            amy_add_log_message("i32" + wire);
+        }
+
+        // Play 3 notes with 300ms spacing
+        var notes = [58, 60, 62];
+        for (var n = 0; n < notes.length; n++) {
+            amy_add_log_message("i32l1n" + notes[n]);
+            await new Promise(function(r) { setTimeout(r, 300); });
+        }
+
+        // Let notes ring briefly, then clear the synth
+        await new Promise(function(r) { setTimeout(r, 800); });
+        amy_add_log_message("i32v6in3");
+    } catch (e) {
+        show_alert("Preview failed.");
+    } finally {
+        amyboard_world_patch_previewing_index = null;
+        render_amyboard_world_patch_list();
+    }
+}
+
+function refresh_patch_upload_dropdown() {
+    var select = document.getElementById("patch_upload_select");
+    if (!select) return;
+    var files = [];
+    if (typeof list_current_patch_files === "function") {
+        files = list_current_patch_files();
+    }
+    select.innerHTML = "";
+    if (!files.length) {
+        var opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No saved patches";
+        select.appendChild(opt);
+        select.disabled = true;
+        return;
+    }
+    select.disabled = false;
+    files.forEach(function(filename) {
+        var opt = document.createElement("option");
+        opt.value = filename;
+        opt.textContent = String(filename).replace(/\.patch$/i, "");
+        select.appendChild(opt);
+    });
+}
+
+async function upload_patch_to_world() {
+    var usernameInput = document.getElementById("patch_upload_username");
+    var patchSelect = document.getElementById("patch_upload_select");
+    var descriptionInput = document.getElementById("patch_upload_description");
+    if (!usernameInput || !patchSelect || !descriptionInput) return;
+
+    var username = (usernameInput.value || "").trim();
+    var patchFilename = (patchSelect.value || "").trim();
+    var description = sanitize_environment_description(descriptionInput.value || "");
+    descriptionInput.value = description;
+
+    if (!/^[A-Za-z0-9]{1,20}$/.test(username)) {
+        show_alert("Username must be 1-20 chars: only A-Z, a-z, 0-9 (no spaces).");
+        return;
+    }
+    if (!patchFilename) {
+        show_alert("Select a patch to upload.");
+        return;
+    }
+    if (description.length < 1 || description.length > 400) {
+        show_alert("Description must be 1-400 characters.");
+        return;
+    }
+
+    var uploadButton = document.getElementById("upload_patch_btn");
+    if (uploadButton && uploadButton.disabled) return;
+    if (uploadButton) {
+        uploadButton.disabled = true;
+        uploadButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Uploading...';
+    }
+
+    try {
+        ensure_current_environment_layout(false);
+        var contents = mp.FS.readFile(CURRENT_ENV_DIR + "/" + patchFilename, { encoding: "utf8" });
+        var file = new File([contents], patchFilename, { type: "text/plain" });
+        var data = new FormData();
+        data.append("file", file);
+        data.append("username", username);
+        data.append("description", description);
+
+        var response = await fetch(world_api_url("/api/amyboardworld/upload"), {
+            method: "POST",
+            body: data,
+        });
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status.toString());
+        }
+        await refresh_amyboard_world_patches();
+    } catch (e) {
+        show_alert("Upload failed.");
+    } finally {
+        if (uploadButton) {
+            uploadButton.disabled = false;
+            uploadButton.textContent = "Upload";
+        }
+    }
 }
