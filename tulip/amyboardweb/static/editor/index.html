@@ -721,6 +721,21 @@
         });
       }
 
+      // When the main World tab is shown, refresh the patch dropdown if
+      // the Patches sub-tab is currently active (Bootstrap won't re-fire
+      // shown.bs.tab on the sub-tab in that case).
+      var mainWorldTab = document.getElementById("world-tab");
+      if (mainWorldTab) {
+        mainWorldTab.addEventListener("shown.bs.tab", function() {
+          var patchSubTab = document.getElementById("world-patch-tab");
+          if (patchSubTab && patchSubTab.classList.contains("active")) {
+            if (typeof refresh_patch_upload_dropdown === "function") {
+              refresh_patch_upload_dropdown();
+            }
+          }
+        });
+      }
+
       // Create the editor and see if there's a share URL to decompress into it
       var editorElement = document.getElementById('collapseEditor');
       editor = CodeMirror.fromTextArea(document.getElementById(`code`), { 
