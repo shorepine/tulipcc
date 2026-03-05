@@ -15,11 +15,10 @@ build_once() {
   timestamp=$(date +%Y%m%d%H%M%S)
 
   python3 scripts/gen_amy_event_layout.py
-  python3 scripts/gen_amy_js_api.py
-
   cd ../../amy
   make web
   cd ../tulip/amyboardweb
+  cp ../../amy/build/amy_api.generated.js static/amy_api.generated.js
   make
 
   # Now modify the static html and copy everything to a stage area 
