@@ -82,6 +82,7 @@
           <th>Tags</th>
           <th>When</th>
           <th>Size</th>
+          <th>IP</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -178,6 +179,7 @@
           '<td>' + (kind === 'file' ? '<input class="tags" type="text" value="' + esc(tags) + '" data-role="tags" />' : '') + '</td>' +
           '<td>' + esc(fmtTs(item.time)) + '</td>' +
           '<td>' + esc(fmtSize(item.size)) + '</td>' +
+          '<td class="mono small">' + esc(item.client_ip || '') + '</td>' +
           '<td>' +
             (kind === 'file' && item.download_url ? '<a href="' + esc(item.download_url) + '"><button type="button">Download</button></a> ' : '') +
             (kind === 'file' ? '<button type="button" data-role="save-tags">Save tags</button> ' : '') +
