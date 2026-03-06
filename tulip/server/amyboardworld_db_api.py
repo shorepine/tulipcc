@@ -49,10 +49,7 @@ DISCORD_AMYBOARD_CHANNEL_ID = os.getenv("AMYBOARDWORLD_DISCORD_CHANNEL_ID", "135
 DISCORD_TULIP_TEXT_CHANNEL_ID = os.getenv("TULIPWORLD_DISCORD_TEXT_CHANNEL_ID", "1239226672046407824")
 DISCORD_TULIP_FILES_CHANNEL_ID = os.getenv("TULIPWORLD_DISCORD_FILES_CHANNEL_ID", "1239512482025050204")
 
-# Keep compatibility with historical Tulip World Discord bot token usage.
-_DISCORD_TOKEN_A = "MTIzOTIyNTc4NDU3NzgxODc0NQ.GjGMum"
-_DISCORD_TOKEN_B = "KvPGzKZDr1phrId9iY7LMtIDgMNtI0om8MsWsA"
-DISCORD_BOT_TOKEN = os.getenv("WORLD_DISCORD_BOT_TOKEN", os.getenv("AMYBOARDWORLD_DISCORD_BOT_TOKEN", f"{_DISCORD_TOKEN_A}.{_DISCORD_TOKEN_B}"))
+DISCORD_BOT_TOKEN = os.getenv("WORLD_DISCORD_BOT_TOKEN", os.getenv("AMYBOARDWORLD_DISCORD_BOT_TOKEN", ""))
 
 app = FastAPI(title="World DB API", version="0.2.0")
 app.add_middleware(
@@ -101,6 +98,13 @@ def _ensure_schema() -> None:
             CREATE INDEX IF NOT EXISTS idx_env_deleted ON environments(deleted_at_ms);
             """
         )
+
+        # Add client_ip column to all tables.
+        for tbl in ("environments", "tulip_files", "tulip_messages"):
+            try:
+                conn.execute(f"ALTER TABLE {tbl} ADD COLUMN client_ip TEXT NOT NULL DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass  # column already exists
 
         # Add item_type column to environments (for patch vs environment distinction).
         # SQLite has no ALTER TABLE ... ADD COLUMN IF NOT EXISTS, so catch the error.
@@ -155,6 +159,15 @@ def _require_admin(x_admin_token: str | None = Header(default=None)) -> None:
         raise HTTPException(status_code=503, detail="Admin moderation token not configured")
     if not x_admin_token or x_admin_token != ADMIN_TOKEN:
         raise HTTPException(status_code=403, detail="Admin token required")
+
+
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host
+    return ""
 
 
 def _normalize_username(raw: str) -> str:
@@ -268,7 +281,7 @@ def _file_row_to_public(row: sqlite3.Row, scope: str) -> dict[str, Any]:
         item_type = row["item_type"]
     except (IndexError, KeyError):
         item_type = "environment"
-    return {
+    result = {
         "id": file_id,
         "scope": scope,
         "kind": "file",
@@ -284,12 +297,17 @@ def _file_row_to_public(row: sqlite3.Row, scope: str) -> dict[str, Any]:
         "size": int(row["size_bytes"]),
         "download_url": f"/api/{scope}/files/{file_id}/download",
     }
+    try:
+        result["client_ip"] = row["client_ip"]
+    except (IndexError, KeyError):
+        pass
+    return result
 
 
 def _message_row_to_public(row: sqlite3.Row) -> dict[str, Any]:
     now_ms = _now_ms()
     t = int(row["created_at_ms"])
-    return {
+    result = {
         "id": int(row["id"]),
         "scope": "tulipworld",
         "kind": "message",
@@ -298,6 +316,11 @@ def _message_row_to_public(row: sqlite3.Row) -> dict[str, Any]:
         "time": t,
         "age_ms": max(0, now_ms - t),
     }
+    try:
+        result["client_ip"] = row["client_ip"]
+    except (IndexError, KeyError):
+        pass
+    return result
 
 
 def _discord_notify(channel_id: str, content: str) -> None:
@@ -325,6 +348,7 @@ def _insert_file_row(
     *,
     created_at_ms: int | None = None,
     item_type: str = "environment",
+    client_ip: str = "",
 ) -> int:
     ts_ms = _normalize_created_at_ms(created_at_ms)
     digest = hashlib.sha256(contents).hexdigest()
@@ -333,18 +357,18 @@ def _insert_file_row(
         if table == "environments":
             cur = conn.execute(
                 f"""
-                INSERT INTO {table}(username, filename, description, tags_json, created_at_ms, size_bytes, sha256, blob_path, item_type)
-                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO {table}(username, filename, description, tags_json, created_at_ms, size_bytes, sha256, blob_path, item_type, client_ip)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (username, filename, description, "[]", ts_ms, len(contents), digest, "", item_type),
+                (username, filename, description, "[]", ts_ms, len(contents), digest, "", item_type, client_ip),
             )
         else:
             cur = conn.execute(
                 f"""
-                INSERT INTO {table}(username, filename, description, tags_json, created_at_ms, size_bytes, sha256, blob_path)
-                VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO {table}(username, filename, description, tags_json, created_at_ms, size_bytes, sha256, blob_path, client_ip)
+                VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (username, filename, description, "[]", ts_ms, len(contents), digest, ""),
+                (username, filename, description, "[]", ts_ms, len(contents), digest, "", client_ip),
             )
         item_id = int(cur.lastrowid)
         safe_filename = f"{item_id:09d}-{filename}"
@@ -365,6 +389,7 @@ def _list_file_rows(
     username: str,
     latest_per_user_env: bool,
     item_type: str = "",
+    include_ip: bool = False,
 ) -> dict[str, Any]:
     clauses = ["deleted_at_ms IS NULL"]
     params: list[Any] = []
@@ -397,6 +422,8 @@ def _list_file_rows(
 
     # Include item_type in SELECT for environments table.
     extra_cols = ", item_type" if table == "environments" else ""
+    if include_ip:
+        extra_cols += ", client_ip"
 
     with _open_db() as conn:
         rows = conn.execute(
@@ -472,6 +499,7 @@ def debug_storage_legacy() -> dict[str, Any]:
 
 @app.post("/api/amyboardworld/upload")
 async def upload_amyboard_environment(
+    request: Request,
     username: str = Form(...),
     description: str = Form(...),
     file: UploadFile = File(...),
@@ -501,6 +529,7 @@ async def upload_amyboard_environment(
         contents,
         created_at_ms=created_at_ms,
         item_type=upload_item_type,
+        client_ip=_client_ip(request),
     )
     _discord_notify(DISCORD_AMYBOARD_CHANNEL_ID, f"{user} ### {desc[:MAX_DESCRIPTION]} ## {filename} ({len(contents)} bytes)")
     return {"ok": True, "id": item_id}
@@ -581,6 +610,7 @@ def delete_amyboard_file(item_id: int) -> dict[str, Any]:
 
 @app.post("/api/tulipworld/upload")
 async def upload_tulip_file(
+    request: Request,
     username: str = Form(...),
     description: str = Form(...),
     file: UploadFile = File(...),
@@ -598,6 +628,7 @@ async def upload_tulip_file(
         filename,
         contents,
         created_at_ms=created_at_ms,
+        client_ip=_client_ip(request),
     )
     _discord_notify(DISCORD_TULIP_FILES_CHANNEL_ID, f"{user} ### {desc[:MAX_DESCRIPTION]} ## {filename} ({len(contents)} bytes)")
     return {"ok": True, "id": item_id}
@@ -752,10 +783,11 @@ async def post_tulip_message(
     msg = _normalize_message(content_raw)
     ts_ms = _normalize_created_at_ms(created_at_ms)
 
+    ip = _client_ip(request)
     with _open_db() as conn:
         cur = conn.execute(
-            "INSERT INTO tulip_messages(username, content, created_at_ms) VALUES (?, ?, ?)",
-            (user, msg, ts_ms),
+            "INSERT INTO tulip_messages(username, content, created_at_ms, client_ip) VALUES (?, ?, ?, ?)",
+            (user, msg, ts_ms, ip),
         )
         msg_id = int(cur.lastrowid)
         conn.commit()
@@ -834,6 +866,7 @@ def list_admin_items(
                 tag="",
                 username="",
                 latest_per_user_env=False,
+                include_ip=True,
             )["items"]
         )
     if scope_s in {"all", "tulip_files"}:
@@ -846,13 +879,14 @@ def list_admin_items(
                 tag="",
                 username="",
                 latest_per_user_env=False,
+                include_ip=True,
             )["items"]
         )
     if scope_s in {"all", "tulip_messages"}:
         with _open_db() as conn:
             rows = conn.execute(
                 """
-                SELECT id, username, content, created_at_ms
+                SELECT id, username, content, created_at_ms, client_ip
                 FROM tulip_messages
                 WHERE deleted_at_ms IS NULL
                 ORDER BY created_at_ms DESC
