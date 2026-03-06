@@ -355,20 +355,17 @@ function get_wire_commands_for_juno_patch(patch) {
     let filterEnv = null;
     let filterLfo = null
     let filterKbd = null;
-    let filter_eg = 0;  // Juno: filter env is eg0; updated to 1 for amyboardsynth.
-    let filter_osc = 0;  // Default, but can be updated: which osc defines filter params.
+    let filter_osc = 0;  // The osc with the filter.  It's always 0.
     let resonanceValue = null;
     let adsr = [0, 0, 1, 0];
-    let f_adsr = [0, 0, 1, 0];
     let lfoFreq = null;
     let lfoDelay = null;
-    let lfoWave = 4;  // default triangle
+    let lfoWave = 4;  // always triangle
     let lfoOsc = 0;
     let lfoPwm = 0;
     // Track coefficients for all 4 non-lfo oscs.
     let osc_freq = [null, null, null, null];
-    let osc_wave = [null, null, null, null];
-    let osc_preset = [null, null, null, null];
+    let osc_wave = [0, 0, 0, 0];
     let osc_duty = [0.5, 0.5, 0.5, 0.5];
     let osc_gain = [0, 0, 0, 0];
     let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
@@ -413,10 +410,6 @@ function get_wire_commands_for_juno_patch(patch) {
         if (Number.isFinite(event.filter_freq[3])) {
           filterEnv = event.filter_freq[3];  // COEF_EG0, Juno filter env
         }
-        if (Number.isFinite(event.filter_freq[4])) {
-          filterEnv = event.filter_freq[4];  // COEF_EG1, amyboard filter env
-          filter_eg = 1;
-        }
         if (Number.isFinite(event.filter_freq[5])) {
           filterLfo = event.filter_freq[5];  // COEF_MOD
         }
@@ -426,7 +419,7 @@ function get_wire_commands_for_juno_patch(patch) {
       }
       if (event.osc == mod_source_osc) {
         // LFO
-        if (event.Freq && Number.isFinite(event.freq[0])) {
+        if (event.freq && Number.isFinite(event.freq[0])) {
           lfoFreq = event.freq[0];
         }
         if (event.wave >= 0 && event.wave < 127) {
@@ -448,14 +441,6 @@ function get_wire_commands_for_juno_patch(patch) {
         }
         if (event.eg0_values) {
           if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
-        }
-        if (event.eg1_times) {
-          if (bpTimeIsSet(event.eg1_times[0])) { f_adsr[0] = event.eg1_times[0]; }   // A time
-          if (bpTimeIsSet(event.eg1_times[1])) { f_adsr[1] = event.eg1_times[1]; }   // D time
-          if (bpTimeIsSet(event.eg1_times[2])) { f_adsr[3] = event.eg1_times[2]; }   // R time
-        }
-        if (event.eg1_values) {
-          if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
         }
         // Extract key parameters for each osc
         if (event.amp) {
@@ -486,36 +471,9 @@ function get_wire_commands_for_juno_patch(patch) {
         if (event.wave && event.wave >= 0 && event.wave < 127) {
           osc_wave[event.osc] = event.wave
         }
-        if (Number.isFinite(event.preset) && event.preset >= 0) {
-          osc_preset[event.osc] = event.preset;
-        }
       }
     }
 
-    // Re-scan for LFO so event ordering does not force defaults.
-    // Prefer osc 2 (the editor's dedicated LFO oscillator), then fall back to inferred mod source.
-    var lfoSourceOsc = 2;
-    if (!events.some(function(event) { return event && event.osc === 2; })) {
-      lfoSourceOsc = mod_source_osc;
-    }
-    for (const event of events) {
-      if (!event || event.osc !== lfoSourceOsc) {
-        continue;
-      }
-      if (event.freq && Number.isFinite(event.freq[0])) {
-        lfoFreq = event.freq[0];
-      }
-      if (event.wave >= 0 && event.wave < 127) {
-        lfoWave = event.wave;
-      }
-      if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
-        lfoDelay = event.eg0_times[0];
-      }
-    }
-    // If we didn't set up a separate filter ADSR, it follows the VCA
-    if (filter_eg == 0) {
-      f_adsr = [adsr[0], adsr[1], adsr[2], adsr[3]];
-    }
     if (oscGate) {
       adsr = [0, 0, 1, 0];
     }
@@ -540,8 +498,6 @@ function get_wire_commands_for_juno_patch(patch) {
 
     // Format the final wire commands for the 3-osc config.
     wire_commands = [];
-    const PCM = 7;  // from amy/src/amy.h
-    const WAVETABLE = 19;  // from amy/src/amy.h
     for (const osc of [0, 1]) {
       let src_osc = oscAB_osc[osc];
       let command = "v" + osc + "w" + osc_wave[src_osc] + "L2" + "m0"
@@ -549,16 +505,13 @@ function get_wire_commands_for_juno_patch(patch) {
           + "d" + osc_duty[src_osc] + ",,,,," + lfoPwm
           + "a,," + osc_gain[src_osc] + ",1,0"
           + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
-      if (osc_wave[src_osc] == WAVETABLE || osc_wave[src_osc] == PCM) {
-        command += "p" + osc_preset[src_osc];
-      }
       if (osc == 0) {
         // Osc 0 must chain to osc 1
         command += "c1";
-        // Osc 0 has the filter controls.
+        // Osc 0 has the filter controls, including EG1, which is in fact the same as EG0
         command += "G4R" + resonanceValue
             + "F" + filterFreq + "," + filterKbd + ",,," + filterEnv + "," + filterLfo
-            + "B" + f_adsr[0] + ",1," + f_adsr[1] + "," + f_adsr[2] + "," + f_adsr[3] + ",0";
+            + "B" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
       }
       wire_commands.push(command + "Z");
     }
@@ -791,7 +744,8 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
   }
 
   amy_send({synth: synth, midi_cc: "255"});
-  amy_send({synth: synth, patch: 257, num_voices: 6});
+  // Reset the oscs to reset state.
+  amy_send({synth: synth, oscs_per_voice: 3, num_voices: 6});
   const lines = String(source || "").split(/\r?\n/);
   for (const line of lines) {
     const wire = String(line || "").trim();
@@ -3124,14 +3078,12 @@ function parse_wire_code(message) {
   let pushback = null;
   let value = null;
   while (expecting != Expecting.END) {
-    //console.log("pushback= ", pushback, " fieldname=", fieldname, " pending_list=", pending_list);
     if (pushback != null) {
       [lexcode, token, rest] = pushback;
       pushback = null;
     } else {
       [lexcode, token, rest] = next_token(rest);0
     }
-    //console.log("expecting: ", expecting, " lexcode: " + lexcode + " " + debug_message(message, token, rest));
     switch (expecting) {
     case Expecting.COMMAND:
       if (lexcode == Lex.END) {
