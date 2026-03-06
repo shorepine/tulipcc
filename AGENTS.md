@@ -70,14 +70,17 @@ For `tulip cc` or `tulip esp32s3` build:
 
 Only perform a Tulip release when the user explicitly asks for it.
 
+**Important:** Releases must always be built from the `main` branch (or a worktree reset to `origin/main`). Before starting a release, ensure the working tree is on `main` with all intended changes merged. Never release from an unmerged feature branch.
+
 Release steps:
 
-1. Activate the Espressif virtualenv:
+1. Ensure you are on the `main` branch (or reset to `origin/main`).
+2. Activate the Espressif virtualenv:
    - `source ~/.espressif/python_env/idf5.4_py3.13_env/bin/activate`
-2. Change into the `tulip/` directory.
-3. Ensure release tag `v-XXX-2026` exists (where `XXX` is `jan`, `feb`, `mar`, `apr`, etc.).
+3. Change into the `tulip/` directory.
+4. Ensure release tag `v-XXX-2026` exists (where `XXX` is `jan`, `feb`, `mar`, `apr`, etc.).
    - If the tag does not exist, create it first.
-4. Run:
+5. Run:
    - `./release.sh v-XXX-2026 upload`
 
 Web release steps (run when the user asks to release/deploy web targets):
