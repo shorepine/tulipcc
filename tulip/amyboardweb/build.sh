@@ -48,51 +48,5 @@ build_once() {
   sed "${SED_INPLACE[@]}" -e "s/micropython./amyboard\-${timestamp}./g" stage/amyboard-$timestamp.mjs
 }
 
-snapshot_static() {
-  python3 - <<'PY'
-import hashlib
-import os
-
-root = "static"
-ignore = {"amy_event_layout.generated.js", "patches.generated.js", "pcm_presets.generated.js", "amy_api.generated.js"}
-h = hashlib.sha1()
-for base, dirs, files in os.walk(root):
-    dirs.sort()
-    files.sort()
-    for name in files:
-        if name in ignore:
-            continue
-        path = os.path.join(base, name)
-        try:
-            st = os.stat(path)
-        except FileNotFoundError:
-            continue
-        h.update(path.encode())
-        h.update(str(st.st_mtime_ns).encode())
-print(h.hexdigest())
-PY
-}
-
-if [ "$1" = "--once" ]; then
-  build_once
-  python3 server.py
-  exit 0
-fi
-
 build_once
-python3 server.py &
-server_pid=$!
-trap 'kill $server_pid' EXIT
-
-last_snapshot=$(snapshot_static)
-while true; do
-  sleep 1
-  next_snapshot=$(snapshot_static)
-  if [ "$next_snapshot" != "$last_snapshot" ]; then
-    last_snapshot=$next_snapshot
-    kill $server_pid
-    build_once
-    python3 server.py &
-    server_pid=$!
-  fi
-done
+python3 server.py

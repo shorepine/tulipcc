@@ -858,11 +858,10 @@
                     </div>
                     <div class="col-12 col-md-1 d-none d-md-block"></div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
-                      <button class="btn btn-light btn-sm rounded-0" type="button" disabled>Patch: <span id="patch-active-name">None</span></button>
+                      <button class="btn btn-light btn-sm rounded-0" type="button" id="patch-open-load-modal-btn">Patch: <span id="patch-active-name">None</span></button>
                     </div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0">
                       <div class="d-flex gap-2">
-                        <button class="btn btn-warning btn-sm rounded-pill" type="button" id="patch-open-load-modal-btn">Load</button>
                         <button class="btn btn-danger btn-sm rounded-pill" type="button" id="patch-save-action-btn">Save</button>
                         <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-revert-action-btn">Revert</button>
                         <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-clear-channel-btn">Clear</button>
@@ -1218,27 +1217,24 @@
     <div class="modal fade" id="loadPatchModal" tabindex="-1" aria-labelledby="loadPatchModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-sm">
         <div class="modal-content">
-          <div class="modal-header">
-            <div>
-              <h5 class="modal-title" id="loadPatchModalLabel">Load Patch</h5>
-              <div class="small text-muted" id="load-patch-channel-label">Into Channel 1</div>
-            </div>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <label for="load-patch-your-patches" class="form-label mb-1">Your Patches</label>
-            <select class="form-select form-select-sm mb-3" id="load-patch-your-patches"></select>
-            <div class="mb-3">
+          <div class="modal-body py-2 px-3">
+            <button type="button" class="btn-close float-end" data-bs-dismiss="modal" aria-label="Close" style="margin:-2px -4px 0 0"></button>
+            <div id="load-patch-channel-label" style="display:none"></div>
+            <label for="load-patch-your-patches" class="form-label mb-1 small fw-bold">Your Patches</label>
+            <div class="d-flex gap-2 align-items-center mb-2">
+              <select class="form-select form-select-sm flex-grow-1" id="load-patch-your-patches"></select>
               <button type="button" class="btn btn-sm btn-primary" id="load-your-patch-btn">Load</button>
             </div>
-            <label for="load-patch-presets" class="form-label mb-1">Presets</label>
-            <select class="form-select form-select-sm" id="load-patch-presets"></select>
-            <div class="mt-2">
+            <label for="load-patch-presets" class="form-label mb-1 small fw-bold">Presets</label>
+            <div class="d-flex gap-2 align-items-center mb-2">
+              <select class="form-select form-select-sm flex-grow-1" id="load-patch-presets"></select>
               <button type="button" class="btn btn-sm btn-primary" id="load-preset-btn">Load</button>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <label class="form-label mb-1 small fw-bold"><a href="#" id="load-patch-world-link">AMYboard World ↗</a></label>
+            <div class="d-flex gap-2 align-items-center">
+              <select class="form-select form-select-sm flex-grow-1" id="load-patch-world-select"><option value="">Loading...</option></select>
+              <button type="button" class="btn btn-sm btn-primary" id="load-world-patch-btn">Load</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1549,7 +1545,7 @@
             const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
             const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
             const dialogWidth = Math.min(360, Math.max(280, viewportWidth - 24));
-            const estimatedHeight = 360;
+            const estimatedHeight = 160;
             let left = rect.left;
             if (left + dialogWidth > viewportWidth - 12) {
               left = viewportWidth - dialogWidth - 12;
@@ -1572,6 +1568,7 @@
           patchLoadModalButton.addEventListener("click", function() {
             refreshLoadPatchChannelLabel();
             refreshYourPatchesDropdown();
+            refreshWorldPatchesDropdown();
             positionLoadPatchModalNearButton();
             const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
             modal.show();
@@ -1658,6 +1655,108 @@
               }
               const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
               modal.hide();
+            });
+          }
+
+          // --- AMYboard World patches in Load Patch dialog ---
+          var worldPatchSelect = document.getElementById("load-patch-world-select");
+          var loadWorldPatchButton = document.getElementById("load-world-patch-btn");
+          var worldPatchLink = document.getElementById("load-patch-world-link");
+          var worldPatchCache = [];
+
+          if (worldPatchLink) {
+            worldPatchLink.addEventListener("click", function(e) {
+              e.preventDefault();
+              var modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
+              modal.hide();
+              var worldTab = document.getElementById("world-tab");
+              if (worldTab) {
+                var tab = window.bootstrap.Tab.getOrCreateInstance(worldTab);
+                tab.show();
+              }
+              var patchSubTab = document.getElementById("world-patch-tab");
+              if (patchSubTab) {
+                var sub = window.bootstrap.Tab.getOrCreateInstance(patchSubTab);
+                sub.show();
+              }
+            });
+          }
+
+          async function refreshWorldPatchesDropdown() {
+            if (!worldPatchSelect) return;
+            worldPatchSelect.innerHTML = '<option value="">Loading...</option>';
+            try {
+              var params = new URLSearchParams();
+              params.set("limit", "50");
+              params.set("latest_per_user_env", "true");
+              params.set("item_type", "patch");
+              var response = await fetch(world_api_url("/api/amyboardworld/files?" + params.toString()));
+              if (!response.ok) throw new Error("HTTP " + response.status);
+              var data = await response.json();
+              if (!data || !Array.isArray(data.items)) throw new Error("Unexpected response");
+              worldPatchCache = data.items
+                .sort(function(a, b) { return Number(b.time || 0) - Number(a.time || 0); })
+                .slice(0, 50);
+              worldPatchSelect.innerHTML = "";
+              if (worldPatchCache.length === 0) {
+                worldPatchSelect.innerHTML = '<option value="">No patches found</option>';
+                return;
+              }
+              for (var i = 0; i < worldPatchCache.length; i++) {
+                var item = worldPatchCache[i];
+                var name = String(item.filename || "").replace(/\.patch$/i, "");
+                var user = item.username || "";
+                var label = name + (user ? " (" + user + ")" : "");
+                var opt = document.createElement("option");
+                opt.value = String(i);
+                opt.textContent = label;
+                worldPatchSelect.appendChild(opt);
+              }
+            } catch (e) {
+              worldPatchCache = [];
+              worldPatchSelect.innerHTML = '<option value="">Could not load</option>';
+            }
+          }
+          window.refreshWorldPatchesDropdown = refreshWorldPatchesDropdown;
+
+          if (loadWorldPatchButton && worldPatchSelect) {
+            loadWorldPatchButton.addEventListener("click", async function() {
+              var idx = Number(worldPatchSelect.value);
+              if (!Number.isFinite(idx) || idx < 0 || idx >= worldPatchCache.length) {
+                if (typeof show_alert === "function") show_alert("Select a patch to load.");
+                return;
+              }
+              var item = worldPatchCache[idx];
+              loadWorldPatchButton.disabled = true;
+              try {
+                var downloadUrl = resolve_world_download_url(item);
+                if (!downloadUrl) throw new Error("Missing file URL");
+                var response = await fetch(downloadUrl);
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                var text = await response.text();
+
+                var filename = normalize_world_filename(item.filename);
+                if (!filename.toLowerCase().endsWith(".patch")) {
+                  filename = filename + ".patch";
+                }
+                ensure_current_environment_layout(false);
+                mp.FS.writeFile(CURRENT_ENV_DIR + "/" + filename, text);
+                await sync_persistent_fs();
+
+                // Load the downloaded patch into the current channel.
+                await window.load_saved_patch_file_into_current_channel(filename);
+                refreshPatchActiveNameLabel();
+                refreshSavePatchDirtyIndicator();
+                if (typeof window.refreshYourPatchesDropdown === "function") {
+                  window.refreshYourPatchesDropdown();
+                }
+                var modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
+                modal.hide();
+              } catch (e) {
+                if (typeof show_alert === "function") show_alert("Could not load patch.");
+              } finally {
+                loadWorldPatchButton.disabled = false;
+              }
             });
           }
         }
