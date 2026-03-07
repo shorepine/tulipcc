@@ -538,12 +538,13 @@
       return;
     }
     select.innerHTML = "";
-    patches.forEach(function(name, index) {
+    var limit = Math.min(patches.length, 128);
+    for (var index = 0; index < limit; index++) {
       const option = document.createElement("option");
       option.value = String(index);
-      option.textContent = name;
+      option.textContent = patches[index];
       select.appendChild(option);
-    });
+    }
 
   };
 })();

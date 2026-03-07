@@ -497,11 +497,14 @@ function get_wire_commands_for_juno_patch(patch) {
     }
 
     // Format the final wire commands for the 3-osc config.
+    // Helper: null/undefined → "" for safe wire code concatenation.
+    const s = (v) => v != null ? v : "";
+
     wire_commands = [];
     for (const osc of [0, 1]) {
       let src_osc = oscAB_osc[osc];
       let command = "v" + osc + "w" + osc_wave[src_osc] + "L2" + "m0"
-          + "f" + osc_freq[src_osc] + ",1,,,," + lfoOsc + ",1"
+          + "f" + s(osc_freq[src_osc]) + ",1,,,," + lfoOsc + ",1"
           + "d" + osc_duty[src_osc] + ",,,,," + lfoPwm
           + "a,," + osc_gain[src_osc] + ",1,0"
           + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
@@ -509,18 +512,19 @@ function get_wire_commands_for_juno_patch(patch) {
         // Osc 0 must chain to osc 1
         command += "c1";
         // Osc 0 has the filter controls, including EG1, which is in fact the same as EG0
-        command += "G4R" + resonanceValue
-            + "F" + filterFreq + "," + filterKbd + ",,," + filterEnv + "," + filterLfo
+        command += "G4";
+        if (resonanceValue != null) command += "R" + resonanceValue;
+        command += "F" + s(filterFreq) + "," + s(filterKbd) + ",,," + s(filterEnv) + "," + s(filterLfo)
             + "B" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
       }
       wire_commands.push(command + "Z");
     }
     // LFO command
-    let command = "v2w" + lfoWave + "a1,0,0,1" + "f" + lfoFreq + ",0,,0,0,0,0"
-        + "A" + lfoDelay + ",1,100,1,10000,0";
+    let command = "v2w" + lfoWave + "a1,0,0,1" + "f" + s(lfoFreq) + ",0,,0,0,0,0"
+        + "A" + s(lfoDelay) + ",1,100,1,10000,0";
     wire_commands.push(command + "Z");
     // Global FX commands
-    command = "x" + eq[0] + "," + eq[1] + "," + eq[2]
+    command = "x" + s(eq[0]) + "," + s(eq[1]) + "," + s(eq[2])
       + "k" + chorus[0] + ",," + chorus[1] + "," + chorus[2];
     wire_commands.push(command + "Z");
     return wire_commands;
@@ -2981,25 +2985,6 @@ async function start_audio() {
 // ---- wire_code_parser.js ----
 function parse_wire_code(message) {
 
-  // Local variables.
-  let _KW_MAP_LIST = [   // Order matters because patch_string must come last.
-      ['osc', 'vI'], ['wave', 'wI'], ['note', 'nF'], ['vel', 'lF'], ['amp', 'aC'], ['freq', 'fC'], ['duty', 'dC'], 
-      ['feedback', 'bF'], ['time', 'tI'],  ['reset', 'SI'], ['phase', 'PF'], ['pan', 'QC'], ['client', 'gI'], 
-      ['volume', 'VF'], ['pitch_bend', 'sF'], ['filter_freq', 'FC'], ['resonance', 'RF'], ['bp0', 'AL'], 
-      ['bp1', 'BL'], ['eg0_type', 'TI'], ['eg1_type', 'XI'], ['debug', 'DI'], ['chained_osc', 'cI'], 
-      ['mod_source', 'LI'],  ['eq', 'xL'], ['filter_type', 'GI'], ['ratio', 'IF'], ['latency_ms', 'NI'],
-      ['algo_source', 'OL'], ['load_sample', 'zL'], ['transfer_file', 'zTL'], ['disk_sample', 'zFL'], 
-      ['algorithm', 'oI'], ['chorus', 'kL'], ['reverb', 'hL'], ['echo', 'ML'], ['patch', 'KI'], ['voices', 'rL'],
-      ['external_channel', 'WI'], ['portamento', 'mI'], ['sequence', 'HL'], ['tempo', 'jF'],
-      ['synth', 'iI'], ['pedal', 'ipI'], ['synth_flags', 'ifI'], ['num_voices', 'ivI'], ['oscs_per_voice', 'inI'],
-      ['to_synth', 'itI'], ['grab_midi_notes', 'imI'],  ['synth_delay', 'idI'],
-      ['preset', 'pI'], ['num_partials', 'pI'], // note aliasing
-      ['start_sample', 'zSL'], ['stop_sample', 'zOI'],
-      ['midi_cc', 'icL'],
-      ['patch_string', 'uS'],  // patch_string MUST be last because we can't identify when it ends except by end-of-message.
-      ['end', 'ZZ'],
-  ]
-
   const Lex = {
     END: 0,
     ALPHA: 1,
@@ -3061,13 +3046,12 @@ function parse_wire_code(message) {
     return message.slice(0, message.length - token.length - rest.length) + " ** " + token + " ** " + rest;
   }
 
-  // Build the rule set.
+  // Build reverse lookup (wire code → [fieldname, type]) from AMY_KW_MAP (source of truth from __init__.py).
   let codes = new Map();
-  for (const [fieldname, code] of _KW_MAP_LIST) {
-    let type = code.slice(-1);  
-    let wirecode = code.slice(0, -1);
-    codes.set(wirecode, [fieldname, type]);
+  for (const [fieldname, mapping] of Object.entries(AMY_KW_MAP)) {
+    codes.set(mapping.wire, [fieldname, mapping.type]);
   }
+  codes.set("Z", ["end", "Z"]);
   var code, token;
   let fieldname = "?";
   let pending_list = [];
