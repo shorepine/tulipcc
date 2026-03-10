@@ -2395,7 +2395,16 @@ function build_environment_tar_bytes(environmentName) {
     var entries = mp.FS.readdir(CURRENT_ENV_DIR).filter(function(name) {
         return name !== "." && name !== "..";
     }).sort();
+    console.log("[send-to-amyboard] Files in tar:", entries);
     for (var i = 0; i < entries.length; i++) {
+        if (entries[i].endsWith(".dirty")) {
+            try {
+                var dirtyContents = mp.FS.readFile(CURRENT_ENV_DIR + "/" + entries[i], { encoding: "utf8" });
+                console.log("[send-to-amyboard] " + entries[i] + " contents:", dirtyContents);
+            } catch (e) {
+                console.log("[send-to-amyboard] " + entries[i] + " read error:", e);
+            }
+        }
         add_entry(entries[i]);
     }
     pushChunk(new Uint8Array(1024));
