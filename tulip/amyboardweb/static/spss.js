@@ -817,23 +817,37 @@ async function restore_patches_from_editor_state_if_present(options) {
   } catch (e) {
     hasEditorState = false;
   }
-  if (!hasEditorState) {
-    if (sendToAmy) {
-      amy_send({synth: 1, midi_cc: "255"});
-      amy_send({synth: 1, patch: 257, num_voices: 6});
-      send_all_knob_cc_mappings(1);
-    }
-    await sync_channel_knobs_from_synth_to_ui(1);
-    return { hasEditorState: false, loadedCount: 0 };
-  }
-
-  const state = read_editor_state_json();
+  const state = hasEditorState ? read_editor_state_json() : null;
   const synthMap = (state && state.synths && typeof state.synths === "object") ? state.synths : {};
   const loadedMap = new Array(17).fill(false);
   const loadedSynths = [];
   let loadedCount = 0;
   for (let ch = 1; ch <= 16; ch += 1) {
     set_channel_patch_dirty_state(ch, false);
+  }
+
+  // Scan for .dirty files not covered by editor_state.json
+  try {
+    var envEntries = mp.FS.readdir(CURRENT_ENV_DIR);
+    for (var ei = 0; ei < envEntries.length; ei++) {
+      var entry = envEntries[ei];
+      if (entry.endsWith(".dirty")) {
+        var dsynth = parseInt(entry.slice(0, -6), 10);
+        if (dsynth >= 1 && dsynth <= 16 && !synthMap[String(dsynth)]) {
+          synthMap[String(dsynth)] = "";
+        }
+      }
+    }
+  } catch (e) {}
+
+  if (!Object.keys(synthMap).length) {
+    if (sendToAmy) {
+      amy_send({synth: 1, midi_cc: "255"});
+      amy_send({synth: 1, patch: 257, num_voices: 6});
+      send_all_knob_cc_mappings(1);
+    }
+    await sync_channel_knobs_from_synth_to_ui(1);
+    return { hasEditorState: hasEditorState, loadedCount: 0 };
   }
 
   for (const key in synthMap) {
@@ -845,10 +859,9 @@ async function restore_patches_from_editor_state_if_present(options) {
       continue;
     }
     const name = String(synthMap[key] || "").trim();
-    if (!name) {
-      continue;
+    if (name) {
+      window.channel_patch_names[synth] = name.replace(/\.patch$/i, "");
     }
-    window.channel_patch_names[synth] = name.replace(/\.patch$/i, "");
     const dirtyFilename = String(synth) + ".dirty";
     let dirtySource = "";
     try {
@@ -856,18 +869,20 @@ async function restore_patches_from_editor_state_if_present(options) {
     } catch (e) {
       dirtySource = "";
     }
-    let filename = name.toLowerCase().endsWith(".patch") ? name : (name + ".patch");
+    let filename = name ? (name.toLowerCase().endsWith(".patch") ? name : (name + ".patch")) : "";
     let source = "";
     if (dirtySource) {
       source = dirtySource;
       set_channel_patch_dirty_state(synth, true);
-    } else {
+    } else if (filename) {
       try {
         source = mp.FS.readFile(CURRENT_ENV_DIR + "/" + filename, { encoding: "utf8" });
       } catch (e) {
         continue;
       }
       set_channel_patch_dirty_state(synth, false);
+    } else {
+      continue;
     }
     if (sendToAmy) {
       amy_send({synth: synth, midi_cc: "255"});
