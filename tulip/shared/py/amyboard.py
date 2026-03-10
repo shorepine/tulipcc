@@ -123,6 +123,27 @@ def restore_patch_state_from_files(env_dir=None, send_default_if_missing=True):
         "dirty_channels": [],
     }
     if synth_map is None:
+        synth_map = {}
+
+    # Scan for .dirty files not covered by editor_state.json
+    import os
+    try:
+        entries = os.listdir(_env_dir)
+    except OSError:
+        entries = []
+    for entry in entries:
+        if entry.endswith(".dirty"):
+            try:
+                synth = int(entry[:-6])
+            except Exception:
+                continue
+            if synth < 1 or synth > 16:
+                continue
+            key = str(synth)
+            if key not in synth_map:
+                synth_map[key] = ""
+
+    if not synth_map:
         if send_default_if_missing:
             amy.send_raw("i1K257iv6")
         return result
@@ -135,19 +156,17 @@ def restore_patch_state_from_files(env_dir=None, send_default_if_missing=True):
         if synth < 1 or synth > 16:
             continue
         name = str(synth_map.get(key, "")).strip()
-        if not name:
-            continue
-        if name.lower().endswith(".patch"):
+        if name and name.lower().endswith(".patch"):
             name = name[:-6]
 
         dirty_path = _env_dir + "/" + str(synth) + ".dirty"
-        patch_path = _env_dir + "/" + name + ".patch"
+        patch_path = _env_dir + "/" + name + ".patch" if name else None
         source_path = None
         is_dirty = False
         if _path_exists(dirty_path):
             source_path = dirty_path
             is_dirty = True
-        elif _path_exists(patch_path):
+        elif patch_path and _path_exists(patch_path):
             source_path = patch_path
 
         if source_path is None:

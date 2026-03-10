@@ -2395,16 +2395,7 @@ function build_environment_tar_bytes(environmentName) {
     var entries = mp.FS.readdir(CURRENT_ENV_DIR).filter(function(name) {
         return name !== "." && name !== "..";
     }).sort();
-    console.log("[send-to-amyboard] Files in tar:", entries);
     for (var i = 0; i < entries.length; i++) {
-        if (entries[i].endsWith(".dirty")) {
-            try {
-                var dirtyContents = mp.FS.readFile(CURRENT_ENV_DIR + "/" + entries[i], { encoding: "utf8" });
-                console.log("[send-to-amyboard] " + entries[i] + " contents:", dirtyContents);
-            } catch (e) {
-                console.log("[send-to-amyboard] " + entries[i] + " read error:", e);
-            }
-        }
         add_entry(entries[i]);
     }
     pushChunk(new Uint8Array(1024));
@@ -2793,7 +2784,7 @@ async function sysex_write_amy_message(message) {
         throw new Error("Selected MIDI output does not support sysex send.");
     }
     // Matches amy.sysex_write pacing to avoid overrunning USB-MIDI consumers.
-    await sleep_ms(100);
+    await sleep_ms(50);
 }
 
 async function open_send_to_amyboard_modal() {
