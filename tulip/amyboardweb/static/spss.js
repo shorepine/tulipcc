@@ -2945,6 +2945,11 @@ async function start_amyboard() {
     await restore_patches_from_editor_state_if_present({ sendToAmy: true });
   }
   await restore_patches_from_editor_state_if_present({ sendToAmy: false });
+  try {
+    await mp.runPythonAsync("from upysh import cd; cd('" + CURRENT_ENV_DIR + "'); execfile('env.py')");
+  } catch (e) {
+    // env.py may not exist or may fail — that's OK.
+  }
   await fill_tree();
   if (typeof window.refresh_patch_active_name_label === "function") {
     window.refresh_patch_active_name_label();
