@@ -316,7 +316,8 @@ def deferred_midi_config(t):
     setup_global_midi_cc_bindings()
     tulip.midi_callback(c_fired_midi_event)
     start_default_callback()
-    startup_bleep()
+    if tulip.board() != "AMYBOARD" and tulip.board() != "AMYBOARD_WEB":
+        startup_bleep()
 
 
 

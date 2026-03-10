@@ -283,7 +283,9 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.i2s_mclk = CONFIG_I2S_MCLK;
     amy_config.midi_out = midi_out_pin;
     amy_config.midi_in = MIDI_IN_PIN;
+#ifndef AMYBOARD
     amy_config.features.startup_bleep = 1;
+#endif
     amy_start(amy_config);
     external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
     for(uint16_t i=0;i<amy_config.max_oscs;i++) external_map[i] = 0;
