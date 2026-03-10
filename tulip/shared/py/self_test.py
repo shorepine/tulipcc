@@ -67,7 +67,7 @@ def self_test(have_loopbacks=False):
     print("CV%d volts_bias %5.2f" % (channel, volts_bias),
           " " * 15,
           passfail(volts_bias > -1.5 and volts_bias < 1.5))
-    if have_loopback:
+    if have_loopbacks:
       for volts in [-5, 5]:
         amyboard.cv_out(volts=volts, channel=channel)
         time.sleep(0.1)
