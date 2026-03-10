@@ -2785,7 +2785,7 @@ async function sysex_write_amy_message(message) {
         throw new Error("Selected MIDI output does not support sysex send.");
     }
     // Matches amy.sysex_write pacing to avoid overrunning USB-MIDI consumers.
-    await sleep_ms(25);
+    await sleep_ms(100);
 }
 
 async function open_send_to_amyboard_modal() {
