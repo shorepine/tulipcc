@@ -319,7 +319,9 @@ STATIC mp_obj_t tulip_amy_send(size_t n_args, const mp_obj_t *args) {
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
 
 STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
-    amy_add_message((char*)sysex_buffer+3) ;
+    // Read from sysex_message_copy which was snapshot by parse_sysex()
+    // before scheduling, avoiding a race with the MIDI task reusing sysex_buffer.
+    amy_add_message(sysex_message_copy);
     return mp_const_none;
 }
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_sysex_obj, 0, 1, tulip_amy_send_sysex);
