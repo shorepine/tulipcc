@@ -127,7 +127,6 @@ amyModule().then(async function(am) {
     'yield_synth_commands', 'number', ['number', 'number', 'number', 'number']
   );
   amy_start_web_no_synths();
-  amy_bleep(0); // won't play until live audio starts
   amy_module = am;
   res_ptr_in = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
   res_ptr_out = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
