@@ -49,4 +49,3 @@ build_once() {
 }
 
 build_once
-python3 server.py
