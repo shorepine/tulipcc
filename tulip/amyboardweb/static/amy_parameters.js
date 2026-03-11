@@ -602,12 +602,23 @@ window.addEventListener("DOMContentLoaded", function() {
   }
   window.apply_knob_cc_mappings_from_patch_source = applyKnobCcMappingsFromPatchSource;
 
+  function restoreAmyDefaults(knobList) {
+    for (let i = 0; i < knobList.length; i += 1) {
+      var knob = knobList[i];
+      if (knob && typeof knob === "object" && knob.amy_default !== undefined) {
+        knob.default_value = knob.amy_default;
+      }
+    }
+  }
+
   window.reset_amy_knobs_to_defaults = function() {
     window.amy_channel_knobs = new Array(17);
     for (let i = 1; i <= 16; i += 1) {
       window.amy_channel_knobs[i] = cloneKnobList(channel_knob_definitions);
+      restoreAmyDefaults(window.amy_channel_knobs[i]);
     }
     window.amy_global_knobs = cloneKnobList(global_knob_definitions);
+    restoreAmyDefaults(window.amy_global_knobs);
     window.has_restored_amy_knobs_state = false;
     return true;
   };
@@ -619,13 +630,16 @@ window.addEventListener("DOMContentLoaded", function() {
       window.amy_channel_knobs = new Array(17);
     }
     window.amy_channel_knobs[idx] = cloneKnobList(channel_knob_definitions);
+    restoreAmyDefaults(window.amy_channel_knobs[idx]);
   };
 
   window.amy_channel_knobs = new Array(17);
   for (let i = 1; i <= 16; i += 1) {
     window.amy_channel_knobs[i] = cloneKnobList(channel_knob_definitions);
+    restoreAmyDefaults(window.amy_channel_knobs[i]);
   }
   window.amy_global_knobs = cloneKnobList(global_knob_definitions);
+  restoreAmyDefaults(window.amy_global_knobs);
   window.has_restored_amy_knobs_state = false;
 
   window.get_channel_knobs = function(channel) {
@@ -720,10 +734,17 @@ function set_knobs_from_events(events) {
   let osc_duty = [0.5, 0.5];  // duty_coefs[CONST] = 0.5
   let osc_gain = [1, 1];      // amp_coefs[EG0] = 1.0
   let mod_source_osc = 2;     // webeditor patch LFO
-  let eq = [0, 0, 0];         // EQ bands default to 0
-  let chorus = [0, 4, 0.5];   // chorus off (level=0, freq=4, depth=0.5)
-  let reverb = [0, 0.5, 0.5]; // reverb off (level=0, live=0.5, damp=0.5)
-  let echo = [0, 0, 0];       // echo off (level=0, delay=0, feedback=0)
+  function knobDefault(section, name) {
+    for (var i = 0; i < amy_knob_definitions.length; i++) {
+      var k = amy_knob_definitions[i];
+      if (k && k.section === section && k.display_name === name && k.amy_default !== undefined) return k.amy_default;
+    }
+    return 0;
+  }
+  let eq = [knobDefault("EQ","low"), knobDefault("EQ","mid"), knobDefault("EQ","high")];
+  let chorus = [knobDefault("Chorus","level"), knobDefault("Chorus","freq"), knobDefault("Chorus","depth")];
+  let reverb = [knobDefault("Reverb","level"), knobDefault("Reverb","live"), knobDefault("Reverb","damp")];
+  let echo = [knobDefault("Echo","level"), knobDefault("Echo","delay"), knobDefault("Echo","feedback")];
   const BP_UNSET = 32767;
 
   function bpTimeIsSet(v) {
