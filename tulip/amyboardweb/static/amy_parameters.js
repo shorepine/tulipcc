@@ -245,8 +245,8 @@ window.addEventListener("DOMContentLoaded", function() {
       knob_type: "log",
       display_name: "freq",
       change_code: "k,,%v",
-      default_value: 4,
-      amy_default: 4,         // chorus default LFO freq
+      default_value: 0.5,
+      amy_default: 0.5,       // CHORUS_DEFAULT_LFO_FREQ
       min_value: 0.1,
       max_value: 20,
     },
@@ -382,8 +382,8 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "h,%v",
       min_value: 0,
       max_value: 1,
-      default_value: 0.5,
-      amy_default: 0.5,       // reverb default liveness
+      default_value: 0.85,
+      amy_default: 0.85,      // REVERB_DEFAULT_LIVENESS
     },
     {
       section: "Reverb",
@@ -412,8 +412,8 @@ window.addEventListener("DOMContentLoaded", function() {
       change_code: "M,%v",
       min_value: 0,
       max_value: 5000,
-      default_value: 0,
-      amy_default: 0,
+      default_value: 500,
+      amy_default: 500,       // ECHO_DEFAULT_DELAY_MS
     },
     {
       section: "Echo",

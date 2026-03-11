@@ -44,10 +44,7 @@ The easiest ways to test `tulipcc` are:
 - `./build.sh` in `tulip/web`
 - `./build.sh` in `tulip/amyboardweb`
 
-Important:
-
-- `./build.sh` in `tulip/web` and `tulip/amyboardweb` **never exits** — after compiling, it starts a dev server on port 8000 that runs indefinitely. Always run these in the background and check for compilation success by verifying the server is listening on port 8000, rather than waiting for the process to finish.
-- `./build.sh` in `tulip/macos` does exit after building.
+All three `build.sh` scripts exit after building. To start a local dev server on port 8000 after building, run `./serve.sh` in `tulip/web` or `tulip/amyboardweb`.
 
 ## ESP-IDF Build Commands (Required)
 
@@ -89,14 +86,12 @@ Web release steps (run when the user asks to release/deploy web targets):
    - `cd tulip/web`
    - `./build.sh`
    - Ensure compile/build succeeded.
-   - Kill the `./build.sh` server process.
    - `./deploy.sh`
    - Merge the deploy branch to `main` so GitHub Pages publishes updated `www/run` artifacts.
 2. For Amyboard Web:
    - `cd tulip/amyboardweb`
    - `./build.sh`
    - Ensure compile/build succeeded.
-   - Kill the `./build.sh` server process.
    - `./deploy.sh`
 
 Notes:
