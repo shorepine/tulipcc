@@ -735,8 +735,9 @@ function set_knobs_from_events(events) {
   let osc_gain = [1, 1];      // amp_coefs[EG0] = 1.0
   let mod_source_osc = 2;     // webeditor patch LFO
   function knobDefault(section, name) {
-    for (var i = 0; i < amy_knob_definitions.length; i++) {
-      var k = amy_knob_definitions[i];
+    var allKnobs = (window.amy_global_knobs || []).concat(knobs || []);
+    for (var i = 0; i < allKnobs.length; i++) {
+      var k = allKnobs[i];
       if (k && k.section === section && k.display_name === name && k.amy_default !== undefined) return k.amy_default;
     }
     return 0;
