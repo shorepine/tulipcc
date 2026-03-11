@@ -1161,8 +1161,8 @@ function reset_global_effects() {
     if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
       continue;
     }
-    knob.default_value = 0;
-    var payload = window.make_change_code(1, 0, knob, false);
+    knob.default_value = (knob.amy_default !== undefined) ? knob.amy_default : 0;
+    var payload = window.make_change_code(1, knob.default_value, knob, false);
     if (payload) {
       amy_add_log_message(payload);
     }
