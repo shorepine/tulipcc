@@ -95,6 +95,7 @@ TaskHandle_t tulip_mp_handle;
 TaskHandle_t idle_0_handle;
 TaskHandle_t idle_1_handle;
 TaskHandle_t sequencer_handle;
+TaskHandle_t cv_read_handle;
 
 // For CPU usage
 unsigned long last_task_counters[MAX_TASKS];
@@ -124,11 +125,11 @@ float compute_cpu_usage(uint8_t debug) {
 
     const char* const tasks[] = {
          "IDLE0", "IDLE1", "Tmr Svc", "ipc0", "ipc1", "main", "wifi", "esp_timer", "sys_evt", "tiT",
-         TULIP_MP_TASK_NAME, 
-         AMY_RENDER_TASK_NAME, AMY_FILL_BUFFER_TASK_NAME, 0
+         TULIP_MP_TASK_NAME,
+         AMY_RENDER_TASK_NAME, AMY_FILL_BUFFER_TASK_NAME, CV_READ_TASK_NAME, 0
     };
     const uint8_t cores[] = {0, 1, 0, 0, 1, 0, 0, 0, 1, 0, TULIP_MP_TASK_COREID,
-        AMY_RENDER_TASK_COREID, AMY_FILL_BUFFER_TASK_COREID};
+        AMY_RENDER_TASK_COREID, AMY_FILL_BUFFER_TASK_COREID, CV_READ_TASK_COREID};
 
     uxArraySize = uxTaskGetNumberOfTasks();
     pxTaskStatusArray = pvPortMalloc( uxArraySize * sizeof( TaskStatus_t ) );
@@ -149,6 +150,7 @@ float compute_cpu_usage(uint8_t debug) {
     // We have to check for the names we want to track
     for(i=0;i<MAX_TASKS;i++) { // for each name
         counter_since_last[i] = 0;
+        if(tasks[i] == 0) break;
         for(x=0; x<uxArraySize; x++) { // for each task
             if(strcmp(pxTaskStatusArray[x].pcTaskName, tasks[i])==0) {
                 counter_since_last[i] = pxTaskStatusArray[x].ulRunTimeCounter - last_task_counters[i];
@@ -160,8 +162,9 @@ float compute_cpu_usage(uint8_t debug) {
     if(debug) {
         printf("------ CPU usage since last call to tulip.cpu()\n");
         for(i=0;i<MAX_TASKS;i++) {
+            if(tasks[i] == 0) break;
             printf("%d %-15s\t%-15ld\t\t%2.2f%%\n", cores[i], tasks[i], counter_since_last[i], ((float)counter_since_last[i])/ulTotalRunTime_per_core[cores[i]] * 100.0);
-        }   
+        }
     }
     vPortFree(pxTaskStatusArray);
 
@@ -340,7 +343,11 @@ void app_main(void) {
     i2c_follower_init();
     fflush(stderr);
     delay_ms(500);
-    
+
+    // Start the CV ADC reader task (reads ADS1115 over I2C, updates cached values)
+    extern void cv_read_task(void *pvParameter);
+    xTaskCreatePinnedToCore(cv_read_task, CV_READ_TASK_NAME, CV_READ_TASK_STACK_SIZE / sizeof(StackType_t), NULL, CV_READ_TASK_PRIORITY, &cv_read_handle, CV_READ_TASK_COREID);
+
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);
     fflush(stderr);
