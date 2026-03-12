@@ -158,23 +158,34 @@ extern uint8_t * external_map;
 float cv_local_value[2];
 uint8_t cv_local_override[2];
 
-float cv_input_hook(uint16_t channel) {
+// Cached CV input values — updated by a dedicated FreeRTOS task so the
+// audio render thread never blocks on I2C.
+float cv_cached_value[2] = {0, 0};
 
-    // If they used cv_local, just return that, skip everything else
+// Called from the coef hook on the audio thread — just returns the cached value.
+float cv_input_hook(uint16_t channel) {
     if(cv_local_override[channel]) {
         return cv_local_value[channel];
     }
-    // Read the ADS1115
-    #ifdef ESP_PLATFORM
-    uint16_t raw = read_ads1115_raw(channel);
-    uint16_t min = 1058; // -10V
-    uint16_t max = 21312; // 10V
-    float v = ((((float)raw - (float)min)/((float)max-(float)min))*20.0)-10.0;
-    return v;
-    #else
-    return 0;
-    #endif
+    return cv_cached_value[channel];
 }
+
+#ifdef ESP_PLATFORM
+// FreeRTOS task: reads both ADS1115 channels in a loop, updates cv_cached_value.
+void cv_read_task(void *pvParameter) {
+    uint16_t min = 1058;  // -10V
+    uint16_t max = 21312; // 10V
+    for(;;) {
+        for(uint8_t ch = 0; ch < 2; ch++) {
+            if(!cv_local_override[ch]) {
+                uint16_t raw = read_ads1115_raw(ch);
+                cv_cached_value[ch] = ((((float)raw - (float)min)/((float)max-(float)min))*20.0)-10.0;
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+#endif
 
 // Write to the GP8413
 uint8_t cv_output_hook(uint16_t osc, SAMPLE * buf, uint16_t len) {

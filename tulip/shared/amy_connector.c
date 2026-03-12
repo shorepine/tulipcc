@@ -269,8 +269,10 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
     amy_config.audio = AMY_AUDIO_IS_I2S;
 #ifdef AMYBOARD
+    extern float cv_input_hook(uint16_t channel);
     amy_config.features.audio_in = 1;
     amy_config.midi = AMY_MIDI_IS_UART | AMY_MIDI_IS_USB_GADGET;
+    amy_config.amy_external_coef_hook = cv_input_hook;
 #else
     amy_config.features.audio_in = 0;
     amy_config.midi = AMY_MIDI_IS_UART;

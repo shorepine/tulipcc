@@ -59,23 +59,41 @@ raw = amyboard.adc1115_raw(channel=0)
  - **Gate detection**: Read a gate signal and trigger AMY notes
  - **Sensor input**: Connect any voltage source (-10V to +10V range) and read it from Python
 
-### Example: CV input controls AMY filter
+### Example: CV input controls AMY filter with CtrlCoefs
 
-(BRIAN TODO: write this better)
+AMY's CtrlCoef system lets you map CV inputs directly to synth parameters without any Python polling loop. For frequency parameters like `filter_freq`, CtrlCoefs work in **log2 (1V/oct) space** -- the `const` value sets a center frequency in Hz, and the `ext0` coefficient scales how many octaves the CV shifts per volt.
+
+The formula for the final frequency is:
+
+```
+freq = const * 2^(ext0 * cv_voltage)
+```
+
+So to sweep a low-pass filter between roughly 100 Hz and 1000 Hz using CV input 1 (-10V to +10V):
+
+1. Pick the **geometric center** of your range: `sqrt(100 * 1000) ≈ 316 Hz`
+2. Solve for `ext0`: you need `316 * 2^(ext0 * 10) = 1000`, so `ext0 = log2(1000/316) / 10 ≈ 0.166`
+
+In practice, round numbers like `const=300, ext0=0.15` get you close (roughly 106 Hz to 849 Hz):
 
 ```python
-import amyboard, amy, time
+import amy
 
-# Set up a Juno patch on synth 1
-amy.send(synth=1, patch=0, num_voices=6)
+# Set up a saw wave with a CV-controlled low-pass filter
+amy.send(synth=1, wave=amy.SAW_DOWN)
+amy.send(synth=1, filter_freq={'const': 300, 'ext0': 0.15}, filter_type=amy.FILTER_LPF24)
 
-# Map CV in 1 to filter frequency
-while True:
-    v = amyboard.cv_in(channel=0)
-    # Map -10..+10V to 100..8000 Hz
-    freq = 100 + ((v + 10) / 20.0) * 7900
-    amy.send(osc=0, filter_freq=freq)
-    time.sleep(0.02)
+# Play a note -- the filter cutoff now tracks CV in 1
+amy.send(synth=1, vel=1, note=48)
+```
+
+With nothing patched to CV in 1 (0V), the filter sits at 300 Hz. Patch in a modular LFO or envelope and the cutoff sweeps exponentially -- just like a hardware filter with a 1V/oct CV input.
+
+For exact 100–1000 Hz range, use `const=316, ext0=0.166`. For a wider sweep (e.g. 50–5000 Hz), increase `ext0`:
+
+```python
+# Wider sweep: geometric center ~500 Hz, ±10V covers 50 to 5000 Hz
+amy.send(synth=1, filter_freq={'const': 500, 'ext0': 0.33}, filter_type=amy.FILTER_LPF24)
 ```
 
 ## CV calibration
