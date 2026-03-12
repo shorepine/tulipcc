@@ -1631,6 +1631,7 @@
               if (typeof amy_add_log_message === "function" && typeof get_wire_commands_for_juno_patch === "function") {
                 amy_add_log_message("i" + presetSynth + "iv0");
                 amy_add_log_message("i" + presetSynth + "K257iv6");
+                if (typeof reset_global_effects === "function") { reset_global_effects(); }
                 var presetWireCommands = get_wire_commands_for_juno_patch(patch);
                 for (var wi = 0; wi < presetWireCommands.length; wi++) {
                   amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);

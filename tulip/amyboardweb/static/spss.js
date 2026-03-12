@@ -749,6 +749,7 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
   amy_send({synth: synth, midi_cc: "255"});
   // Reset the oscs to reset state.
   amy_send({synth: synth, oscs_per_voice: 3});
+  reset_global_effects();
   const lines = String(source || "").split(/\r?\n/);
   for (const line of lines) {
     const wire = String(line || "").trim();
@@ -887,6 +888,7 @@ async function restore_patches_from_editor_state_if_present(options) {
     if (sendToAmy) {
       amy_send({synth: synth, midi_cc: "255"});
       amy_send({synth: synth, patch: 257, num_voices: 6});
+      reset_global_effects();
     }
     const lines = String(source || "").split(/\r?\n/);
     for (const line of lines) {
