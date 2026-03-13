@@ -2,17 +2,17 @@
 
 AMYboard is designed to integrate directly with Eurorack and other modular synth systems. It has a 10-pin modular power connector, analog CV inputs and outputs, MIDI I/O, and an I2C bus for expansion. 
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/tulip/amyboardweb/stage/img/amyboard_modular_2.jpg" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_modular_2.jpg" width=600>
 
 ## Accessories
 
 You can add an optional [OLED screen or knob](accessories.md) yourself by just connecting them to the I2C port on the front of the AMYboard. 
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/tulip/amyboardweb/stage/img/dip_switches.png" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/dip_switches.png" width=600>
 
 Your AMYboard ships with a plexiglass "front panel" with cutouts for the jacks and an optional screen and knob. The panel can be attached to the AMYboard through the jack screws. The front panel then screws into your Eurorack case. 
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/tulip/amyboardweb/stage/img/amyboard_bambu.png" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_bambu.png" width=600>
 
 You can also 3D print your own front panel for whatever use case you have in mind! [You can grab a BambuLab 3MF file here](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Or build from the [DXF file for the provided front panel]((https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.dxf).
 
@@ -21,7 +21,7 @@ You can also 3D print your own front panel for whatever use case you have in min
 
 Most modular synthesis units operate at "5vpp", where an audio signal swings between -2.5v and 2.5v. Out of the box, AMYboard is "line level" at 1vpp. To change the audio input and output of AMYboard to 5vpp, you need to change the DIP switches on the back of the board to "OFF" / closed. 
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/tulip/amyboardweb/stage/pics/dip_switches.png" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/dip_switches.png" width=600>
 
  - **Switches 1 & 2** (input): When closed, attenuate the inputs -- making line in friendly to 5Vpp Eurorack signals.
  - **Switches 3 & 4** (output): When closed, increase the gain of the output buffer -- making line out more friendly to 5Vpp Eurorack.
