@@ -698,9 +698,23 @@ window.addEventListener("DOMContentLoaded", function() {
   }
 });
 
+const PatchType = {
+  AMYBOARD: 0,
+  JUNO: 1,   // not used - Juno patches are translated to AMYBOARD.
+  DX7: 2,
+};
+
 function set_knobs_from_patch_number_impl(patch_number) {
-  // if this is a memory patch, load it. if not, load the amyboard base patch
-  let wire_commands = get_wire_commands_for_juno_patch(patch_number);
+  if (patch_number > 256) {
+    console.log("patch number", patch_number, "out of range.");
+    return;
+  }
+  let wire_commands = patch_code_for_patch_number[patch_number];
+  window.patchType = PatchType.DX7;
+  if (patch_number < 128) {
+    wire_commands = get_wire_commands_for_juno_patch(patch_number);
+    window.patchType = PatchType.AMYBOARD;
+  }
   let events = events_from_wire_code_messages(wire_commands);
   return set_knobs_from_events(events);
 }
@@ -863,7 +877,7 @@ function set_knobs_from_events(events) {
   set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[OSCA_OSC]);
   set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[OSCA_OSC]);
   if (typeof set_amy_knob_wave_preset === "function"
-    && Number.isFinite(osc_wave[0OSCA_OSC) && Number.isFinite(osc_preset[OSCA_OSC])) {
+      && Number.isFinite(osc_wave[OSCA_OSC]) && Number.isFinite(osc_preset[OSCA_OSC])) {
     set_amy_knob_wave_preset(knobs, "Osc A", osc_wave[OSCA_OSC], osc_preset[OSCA_OSC], false);
   }
   set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[OSCA_OSC]);
