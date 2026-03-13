@@ -427,9 +427,21 @@ STATIC mp_obj_t tulip_build_strings(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_build_strings_obj, 0,0, tulip_build_strings);
 
 
-#if defined(AMYBOARD) 
+#if defined(AMYBOARD)
 extern float cv_local_value[2];
 extern uint8_t cv_local_override[2];
+extern float cv_input_hook(uint16_t channel);
+#endif
+
+#if defined(AMYBOARD_WEB)
+float cv_local_value[2] = {0, 0};
+uint8_t cv_local_override[2] = {0, 0};
+float cv_input_hook(uint16_t channel) {
+    return cv_local_value[channel];
+}
+#endif
+
+#if defined(AMYBOARD) || defined(AMYBOARD_WEB)
 STATIC mp_obj_t tulip_cv_local(size_t n_args, const mp_obj_t *args) {
     uint8_t channel = mp_obj_get_int(args[0]);
     if(n_args>1) {
@@ -441,6 +453,12 @@ STATIC mp_obj_t tulip_cv_local(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cv_local_obj, 1, 2, tulip_cv_local);
+
+STATIC mp_obj_t tulip_cv_in(size_t n_args, const mp_obj_t *args) {
+    uint8_t channel = (n_args > 0) ? mp_obj_get_int(args[0]) : 0;
+    return mp_obj_new_float(cv_input_hook(channel));
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cv_in_obj, 0, 1, tulip_cv_in);
 #endif
 
 
@@ -1569,8 +1587,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_pcm_load_file), MP_ROM_PTR(&tulip_pcm_load_file_obj) },
 #endif
 
-#if defined(AMYBOARD)
+#if defined(AMYBOARD) || defined(AMYBOARD_WEB)
     { MP_ROM_QSTR(MP_QSTR_cv_local), MP_ROM_PTR(&tulip_cv_local_obj) },
+    { MP_ROM_QSTR(MP_QSTR_cv_in), MP_ROM_PTR(&tulip_cv_in_obj) },
 #endif
 
 #ifdef AMYBOARD_WEB
