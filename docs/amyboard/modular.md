@@ -8,13 +8,11 @@ AMYboard is designed to integrate directly with Eurorack and other modular synth
 
 You can add an optional [OLED screen or knob](accessories.md) yourself by just connecting them to the I2C port on the front of the AMYboard. 
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/dip_switches.png" width=600>
-
 Your AMYboard ships with a plexiglass "front panel" with cutouts for the jacks and an optional screen and knob. The panel can be attached to the AMYboard through the jack screws. The front panel then screws into your Eurorack case. 
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_bambu.png" width=600>
 
-You can also 3D print your own front panel for whatever use case you have in mind! [You can grab a BambuLab 3MF file here](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Or build from the [DXF file for the provided front panel]((https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.dxf).
+You can also 3D print your own front panel for whatever use case you have in mind! [You can grab a BambuLab 3MF file here](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Or build from the [DXF file for the provided front panel](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.dxf).
 
 
 ## 10vpp Operation
