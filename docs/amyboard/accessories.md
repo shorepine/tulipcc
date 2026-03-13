@@ -2,6 +2,23 @@
 
 AMYboard has a front panel I2C port (STEMMA QT / Qwiic connector) for plugging in accessories. These connect with a simple cable -- no soldering required.
 
+The I2C bus (SCL=18, SDA=17, 400kHz) is available for connecting additional hardware:
+
+```python
+import amyboard
+i2c = amyboard.get_i2c()
+
+# Scan for connected devices
+print(i2c.scan())
+
+# Read/write registers on any I2C device
+val = amyboard.read_register(addr, reg)
+amyboard.write_register(addr, reg, val)
+```
+
+You can add more DACs, ADCs, displays, or sensors to expand AMYboard's capabilities.
+
+
 ## Known compatible accessories
 
 ### Displays
