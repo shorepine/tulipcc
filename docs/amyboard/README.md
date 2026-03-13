@@ -25,7 +25,7 @@ AMYboard ships from [Makerfabs](https://amyboard.com). In the box you'll get the
 
 ## Board overview
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_preview.png" width=500>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_front_panel_annotated.png" width=500>
 
 **Front panel connectors** (top to bottom, 10 jacks):
 
@@ -35,12 +35,15 @@ AMYboard ships from [Makerfabs](https://amyboard.com). In the box you'll get the
 | **S/PDIF out** | 3.5mm digital audio output |
 | **Line in** | 3.5mm stereo analog audio input |
 | **Line out** | 3.5mm stereo analog audio output |
-| **MIDI in** | 3.5mm TRS MIDI input |
-| **MIDI out** | 3.5mm TRS Type-A MIDI output |
+| **MIDI in** | 3.5mm TRS MIDI Type-A or B input |
+| **MIDI out** | 3.5mm TRS Type-A or B MIDI output (software switchable) |
 | **CV1 in** | 3.5mm analog input, -10V to +10V (ADS1115 ADC) |
 | **CV1 out** | 3.5mm analog output, -10V to +10V (GP8413 DAC) |
 | **CV2 in** | 3.5mm analog input, -10V to +10V (ADS1115 ADC) |
 | **CV2 out** | 3.5mm analog output, -10V to +10V (GP8413 DAC) |
+
+
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_back_panel_annotated.png" width=500>
 
 **Other connectors:**
 
@@ -53,95 +56,34 @@ AMYboard ships from [Makerfabs](https://amyboard.com). In the box you'll get the
 | **Modular power** | Back | 10-pin Eurorack power supply connector |
 | **Debug header** | Back | For firmware development |
 
-**What you'll need:**
+## Upgrading firmware
 
- - A USB-C cable (for power and connection to your computer)
- - Headphones or powered speakers / a mixer (3.5mm audio cable)
- - Optionally: MIDI controller, modular synth cables, USB power adapter, SP/DIF connection, SD card, I2C accessories
+Before you do anything else, upgrade your firmware! You can do this online. Plug your AMYboard into your computer with a USB-C cable. Open Chrome, and go to [AMYboard Online](https://amyboard.com/editor), then click on Upgrade Firmware. Follow the instructions there!
 
-## Quick start
+## Quick start - Standalone
 
 1. **Plug in USB-C** from your computer to AMYboard. It powers the board and gives you a serial connection.
 2. **Plug in headphones or speakers** to the audio out jack.
-3. **Connect a MIDI controller** (USB MIDI or TRS MIDI) and play! AMYboard boots with Juno-6 patch #0 on MIDI channel 1.
+3. **Connect a MIDI controller** (To your DAW using USB MIDI or TRS MIDI) and play! AMYboard boots with Juno-6 patch #0 on MIDI channel 1.
 
-No MIDI controller? No problem -- head to [amyboard.com](https://amyboard.com) and use the web editor to design sounds and send them to your board, or use the Python REPL to play notes directly.
+## Quick start - Modular Synth
 
-## Upgrading firmware
+1. **Flip the DIP switches for modular 5vpp output**. See our [Modular page](modular.md) for more info.
+2. **Connect 10-pin modular power.** Make sure to use a cable that has a "key" for the correct orientation. 
+3. **Connect your CV and audio and MIDI cables**. By default AMYboard plays a synth patch on MIDI channel 1. But it can do SO MUCH MORE
 
-You should upgrade AMYboard's firmware when you first receive it, and periodically after that. We constantly add features and fix bugs.
+## Quick start - Tulip
 
-Connect AMYboard to your computer via USB-C. Install [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html) on your computer (`pip install mpremote`). Then check the [releases page](https://github.com/shorepine/tulipcc/releases) for the latest AMYboard firmware and follow the flashing instructions.
+If you have a [Tulip Creative Computer](https://tulip.computer), you can directly connect your AMYboard to it via the GROVE port and the back I2C HOST connector. Tulip will power and communicate with the AMYboard! 
 
-
-
-## MIDI
-
-AMYboard supports MIDI in and out on 3.5mm TRS jacks (Type A by default).
-
-### MIDI input
-
-Just plug in a MIDI controller. AMYboard listens on all channels by default and plays the assigned patch. Channel 1 boots with Juno-6 patch #0.
-
-### MIDI output
+In Tulip, just
 
 ```python
-import amyboard
-# Initialize MIDI output (Type A is default)
-amyboard.init_midi(type='A')
-
-# For Type B connectors, use:
-# amyboard.init_midi(type='B')
+from machine import I2C
+i2c = I2C(0, freq=400000)
+amy.override_send = lambda x: i2c.writeto(0x3f, x)
 ```
-
-AMYboard supports both **Type A** and **Type B** TRS MIDI wiring. Most modern gear uses Type A. If your gear uses the older Type B standard, just change the init call.
-
-### USB MIDI
-
-AMYboard also appears as a USB MIDI device when connected to your computer. You can send MIDI from a DAW or other software directly over USB -- no adapter needed.
-
-
-## I2C expansion
-
-The I2C bus (SCL=18, SDA=17, 400kHz) is available for connecting additional hardware:
-
-```python
-import amyboard
-i2c = amyboard.get_i2c()
-
-# Scan for connected devices
-print(i2c.scan())
-
-# Read/write registers on any I2C device
-val = amyboard.read_register(addr, reg)
-amyboard.write_register(addr, reg, val)
-```
-
-You can add more DACs, ADCs, displays, or sensors to expand AMYboard's capabilities.
-
-## I2C follower mode
-
-AMYboard also listens as an I2C follower device at address **`0x3F`**. This means an external microcontroller can send AMY wire protocol commands directly to AMYboard over I2C, making it act as a synth module controlled by your own hardware. This is especially useful for Tulip.
-
-```c
-// From an external Arduino/microcontroller:
-Wire.beginTransmission(0x3F);
-Wire.write("v0w1f440l1");  // Play A4 on voice 0
-Wire.endTransmission();
-```
-
-## SD card
-
-Mount a MicroSD card for additional patch storage or sample playback:
-
-```python
-import amyboard
-amyboard.mount_sd()
-# Card is now available at /sd
-```
-
-[Back to Getting Started](index.md)
-
+And all sound will come from the AMYboard. 
 
 ## Guides
 
@@ -163,3 +105,6 @@ AMYboard is powered by AMY, an open-source synthesizer engine. To learn more abo
 ## Community
 
 [![shore pine sound systems discord](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/shorepine100.png) **Chat about AMYboard on our Discord!**](https://discord.gg/TzBFkUb8pG)
+
+
+
