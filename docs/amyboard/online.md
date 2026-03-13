@@ -2,6 +2,9 @@
 
 The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you design patches, write Python code, and manage your AMYboard -- all from your browser. You can also use it as a standalone browser-based synthesizer without any hardware at all.
 
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_online.png" width=600>
+
+
 ## Getting started
 
 Just open [amyboard.com](https://amyboard.com/editor) in Chrome, Edge, or Firefox (Safari works but MIDI will not work there). Click anywhere on the page to unlock audio, and you're ready to go.
@@ -27,6 +30,9 @@ If you have a MIDI controller and a browser that supports WebMIDI, AMYboard Onli
 
 ### Write Python code
 
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_online_code.png" width=600>
+
+
 AMYboard Online includes a full MicroPython REPL running in your browser. You can:
 
  - Type Python code to control the synth
@@ -42,24 +48,21 @@ If you have an AMYboard connected via USB:
 
 This is the easiest way to set up your hardware AMYboard from a comfortable editing environment.
 
+Make sure your MIDI out is set your AMYboard! Either directly over USB or via a MIDI cable, choose the correct MIDI output first.
+
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/send_to_amyboard.png" width=600>
+
 ### AMYboard World
 
 AMYboard World is a community sharing hub built into the web editor. You can browse, download, and upload both full environments and individual patches.
 
- - **Environments**: Complete setups including patch assignments, modified patches, audio files, and `env.py` scripts -- all packed as a `.tar` archive. Import one and your entire editor state is replaced with the shared environment.
+ - **Environments**: Complete setups including patch assignments, modified patches, audio files, and `env.py` scripts. Import one and your entire editor state is replaced with the shared environment.
  - **Patches**: Individual `.patch` files you can preview and import into any channel. Click a patch to hear it before committing.
 
 To share your own work:
 
  1. Give your environment a name and fill in your username and a short description
  2. Click **Upload** to publish it to AMYboard World
- 3. Others can find it by browsing or searching by tags
-
-## Tips
-
- - **Chrome** gives the best experience for Web MIDI and audio
- - If you don't hear sound, click anywhere on the page to unlock the browser's AudioContext
- - Your patches and scripts are saved locally in the browser -- clearing browser data will erase them
- - Use `env.py` in your environment to set up anything you want to run automatically on boot (both online and on hardware)
+ 3. Others can find it by browsing or searching
 
 [Back to Getting Started](index.md)
