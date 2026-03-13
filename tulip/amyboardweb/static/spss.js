@@ -1007,7 +1007,7 @@ async function clear_storage() {
 }
 
 window.amy_cv_knob_change = function(index, value) {
-  
+  if (mp) mp.runPythonAsync("tulip.cv_local(" + index + ", " + value + ")");
 };
 
 function move_knob(channel, cc, value) {

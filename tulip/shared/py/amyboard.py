@@ -405,9 +405,7 @@ def cv_out(volts, channel=0):
     get_i2c().writeto_mem(addr, ch, bytes([b0,b1]))
 
 def cv_in(channel=0):
-    raw = adc1115_raw(channel)
-    (minr,maxr) = (1058.0, 21312.0) # measured -10v to 10v from the gp8413 output 
-    return (((raw - minr) / (maxr-minr))*20.0)-10.0
+    return tulip.cv_in(channel)
 
 # Adafruit I2C Quad Rotary Encoder Breakout
 # https://www.adafruit.com/product/5752

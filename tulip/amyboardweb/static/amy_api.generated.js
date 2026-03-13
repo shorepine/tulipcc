@@ -121,7 +121,7 @@ var AMY_KW_PRIORITY = {
   patch_string: 55
 };
 
-var AMY_COEF_FIELDS = ["const", "note", "vel", "eg0", "eg1", "mod", "bend"];
+var AMY_COEF_FIELDS = ["const", "note", "vel", "eg0", "eg1", "mod", "bend", "ext0", "ext1"];
 
 // --- type handlers (mirror Python's str_of_int, trunc, parse_list_or_comma_string, parse_ctrl_coefs) ---
 
@@ -367,7 +367,15 @@ var AMY = {
   AMY_MIDI_IS_UART: 1,
   AMY_MIDI_IS_USB_GADGET: 2,
   AMY_MIDI_IS_MACOS: 4,
-  AMY_MIDI_IS_WEBMIDI: 8
+  AMY_MIDI_IS_WEBMIDI: 8,
+  AMYBOARD_LRC: 2,
+  AMYBOARD_BCLK: 8,
+  AMYBOARD_DOUT: 6,
+  AMYBOARD_DIN: 9,
+  AMYBOARD_MCLK: 3,
+  AMYBOARD_MIDI_OUT_TYPE_A: 14,
+  AMYBOARD_MIDI_OUT_TYPE_B: 15,
+  AMYBOARD_MIDI_IN: 21
 };
 
 window.amy_message = amy_message;
