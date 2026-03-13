@@ -348,6 +348,10 @@ function set_channel_patch_dirty_state(channel, dirty) {
 }
 
 function get_wire_commands_for_juno_patch(patch) {
+  // The new convention for AMYboard voice osc usage.
+  const OSCA_OSC = 0;
+  const OSCB_OSC = 2;
+  const LFO_OSC = 1;
 
   function translate_juno_events_to_webeditor_wire_commands(events) {
     let filterFreq = null;
@@ -362,12 +366,12 @@ function get_wire_commands_for_juno_patch(patch) {
     let lfoWave = 4;  // always triangle
     let lfoOsc = 0;
     let lfoPwm = 0;
-    // Track coefficients for all 4 non-lfo oscs.
-    let osc_freq = [null, null, null, null];
-    let osc_wave = [0, 0, 0, 0];
-    let osc_duty = [0.5, 0.5, 0.5, 0.5];
-    let osc_gain = [0, 0, 0, 0];
-    let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
+    // Track coefficients for all 5 oscs.  Not sure which one is LFO.
+    let osc_freq = [null, null, null, null, null];
+    let osc_wave = [0, 0, 0, 0, 0];
+    let osc_duty = [0.5, 0.5, 0.5, 0.5, 0.5];
+    let osc_gain = [0, 0, 0, 0, 0];
+    let mod_source_osc = LFO_OSC;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
     // Which Juno oscs are used for oscA and B
     let oscAB_osc = [-1, -1];
     let oscAB_gain = [0, 0];
@@ -431,7 +435,7 @@ function get_wire_commands_for_juno_patch(patch) {
         // Non-LFO osc, don't assume what order they come in.
         const parsedModSource = Number(event.mod_source);
         if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
-          mod_source_osc = parsedModSource;
+          mod_source_osc = parsedModSource;  // Should never happen.
         }
         if (event.eg0_times) {
           if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
@@ -477,6 +481,11 @@ function get_wire_commands_for_juno_patch(patch) {
       adsr = [0, 0, 1, 0];
     }
     // Logic to choose juno oscs for osc A and osc B.
+    // Remove the LFO from the lists
+    osc_gain.splice(mod_source_osc, 1);
+    osc_freq.splice(mod_source_osc, 1);
+    osc_wav.splice(mod_source_osc, 1);
+    osc_duty.splice(mod_source_osc, 1);
     if (osc_gain[2] == 0 && osc_gain[3] == 0) {
       // Only 2 oscs, let them be
       oscAB_osc[0] = 0;
@@ -499,10 +508,12 @@ function get_wire_commands_for_juno_patch(patch) {
     // Helper: null/undefined → "" for safe wire code concatenation.
     const s = (v) => v != null ? v : "";
 
+    const AMY_OSC_OF_LOGICAL_OSC = [OSCA_OSC, OSCB_OSC];
     wire_commands = [];
     for (const osc of [0, 1]) {
       let src_osc = oscAB_osc[osc];
-      let command = "v" + osc + "w" + osc_wave[src_osc] + "L2" + "m0"
+      let amy_osc = AMY_OSC_OF_LOGICAL_OSC[osc];  // too many osc numbers.
+	let command = "v" + amy_osc + "w" + osc_wave[src_osc] + "L2" + "m0"
           + "f" + s(osc_freq[src_osc]) + ",1,,,," + lfoOsc + ",1"
           + "d" + osc_duty[src_osc] + ",,,,," + lfoPwm
           + "a,," + osc_gain[src_osc] + ",1,0"
@@ -519,7 +530,7 @@ function get_wire_commands_for_juno_patch(patch) {
       wire_commands.push(command + "Z");
     }
     // LFO command
-    let command = "v2w" + lfoWave + "a1,0,0,1" + "f" + s(lfoFreq) + ",0,,0,0,0,0"
+    let command = "v" + LFO_OSC + "w" + lfoWave + "a1,0,0,1" + "f" + s(lfoFreq) + ",0,,0,0,0,0"
         + "A" + s(lfoDelay) + ",1,100,1,10000,0";
     wire_commands.push(command + "Z");
     // Global FX commands
