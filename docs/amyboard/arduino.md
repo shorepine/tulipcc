@@ -65,4 +65,4 @@ amy_add_event(&e);
  - [AMY API reference](https://github.com/shorepine/amy/blob/main/docs/api.md) -- full C API documentation
  - [Supported boards and features matrix](https://github.com/shorepine/amy/issues/354)
 
-[Back to Getting Started](index.md)
+[Back to Getting Started](README.md)

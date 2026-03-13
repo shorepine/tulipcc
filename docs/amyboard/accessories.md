@@ -65,4 +65,4 @@ print(i2c.scan())
 
 See [Using Python](python.md) and [Modular Synth Setup](modular.md) for more on using I2C devices with AMYboard.
 
-[Back to Getting Started](index.md)
+[Back to Getting Started](README.md)

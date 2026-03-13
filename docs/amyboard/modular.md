@@ -1,6 +1,30 @@
 # Modular Synth Setup
 
-AMYboard is designed to integrate directly with Eurorack and other modular synth systems. It has analog CV inputs and outputs, MIDI I/O, and an I2C bus for expansion -- all controllable from Python.
+AMYboard is designed to integrate directly with Eurorack and other modular synth systems. It has a 10-pin modular power connector, analog CV inputs and outputs, MIDI I/O, and an I2C bus for expansion. 
+
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_modular_2.jpg" width=600>
+
+## Accessories
+
+You can add an optional [OLED screen or knob](accessories.md) yourself by just connecting them to the I2C port on the front of the AMYboard. 
+
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/dip_switches.png" width=600>
+
+Your AMYboard ships with a plexiglass "front panel" with cutouts for the jacks and an optional screen and knob. The panel can be attached to the AMYboard through the jack screws. The front panel then screws into your Eurorack case. 
+
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_bambu.png" width=600>
+
+You can also 3D print your own front panel for whatever use case you have in mind! [You can grab a BambuLab 3MF file here](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Or build from the [DXF file for the provided front panel]((https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.dxf).
+
+
+## 10vpp Operation
+
+Most modular synthesis units operate at "5vpp", where an audio signal swings between -2.5v and 2.5v. Out of the box, AMYboard is "line level" at 1vpp. To change the audio input and output of AMYboard to 5vpp, you need to change the DIP switches on the back of the board to "OFF" / closed. 
+
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/dip_switches.png" width=600>
+
+ - **Switches 1 & 2** (input): When closed, attenuate the inputs -- making line in friendly to 5Vpp Eurorack signals.
+ - **Switches 3 & 4** (output): When closed, increase the gain of the output buffer -- making line out more friendly to 5Vpp Eurorack.
 
 ## CV outputs
 
@@ -16,26 +40,27 @@ amyboard.cv_out(3.3, channel=0)
 amyboard.cv_out(-5.0, channel=1)
 ```
 
+You can send low-frequency waveforms over the CV bus using AMY itself:
+
+```python
+amy.send(osc=30, external_channel=1, wave=amy.SAW_DOWN, vel=1, freq=0.5, amp=1)
+```
+This sends a saw wave out the first CV output at 0.5Hz with amplitude of 1, so will be -10-10V peak to peak. 
+
+Send
+
+```python
+amy.send(osc=30, amp=0)
+```
+
+To stop it.
+
+
 ### Use cases
 
  - **Pitch CV**: Output 1V/oct pitch voltages to control an external oscillator
  - **Modulation**: Generate LFOs, envelopes, or sequenced voltages in Python
  - **Sample & hold**: Read a value, process it, and output the result
-
-### Example: Python LFO to CV
-
-```python
-import amyboard, time, math
-
-# Output a slow sine LFO on CV out 1
-for i in range(1000):
-    volts = 5.0 * math.sin(i * 0.05)
-    amyboard.cv_out(volts, channel=0)
-    time.sleep(0.01)
-```
-
-
-(BRIAN TODO: Show how to generate wave output in AMY to CV ports)
 
 
 ## CV inputs
@@ -96,25 +121,6 @@ For exact 100–1000 Hz range, use `const=316, ext0=0.166`. For a wider sweep (e
 amy.send(synth=1, filter_freq={'const': 500, 'ext0': 0.33}, filter_type=amy.FILTER_LPF24)
 ```
 
-## CV calibration
 
-The CV outputs and inputs can be calibrated for accuracy. AMYboard ships with default calibration values, but you can refine them:
+[Back to Getting Started](README.md)
 
-```python
-import amyboard
-
-# Run calibration for CV out channel 0
-# This outputs test voltages -- measure with a multimeter and follow prompts
-amyboard.cv_cal(channel=0)
-```
-
-This generates a `cal.csv` file with measured vs. expected values.
-
-## DIP switches
-
-AMYboard has a 4-position DIP switch on the back of the board that switches the gain of the line in and the line out between 1Vpp and 5Vpp. This is useful for modular synthesizer setups that expect "hotter" outputs and inputs.
-
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/amyboard/pics/dip_switches.png" width=600>
-
- - **Switches 1 & 2** (input): When closed, attenuate the inputs -- making line in friendly to 5Vpp Eurorack signals.
- - **Switches 3 & 4** (output): When closed, increase the gain of the output buffer -- making line out more friendly to 5Vpp Eurorack.
