@@ -484,7 +484,7 @@ function get_wire_commands_for_juno_patch(patch) {
     // Remove the LFO from the lists
     osc_gain.splice(mod_source_osc, 1);
     osc_freq.splice(mod_source_osc, 1);
-    osc_wav.splice(mod_source_osc, 1);
+    osc_wave.splice(mod_source_osc, 1);
     osc_duty.splice(mod_source_osc, 1);
     if (osc_gain[2] == 0 && osc_gain[3] == 0) {
       // Only 2 oscs, let them be
@@ -513,16 +513,16 @@ function get_wire_commands_for_juno_patch(patch) {
     for (const osc of [0, 1]) {
       let src_osc = oscAB_osc[osc];
       let amy_osc = AMY_OSC_OF_LOGICAL_OSC[osc];  // too many osc numbers.
-	let command = "v" + amy_osc + "w" + osc_wave[src_osc] + "L2" + "m0"
+	let command = "v" + amy_osc + "w" + osc_wave[src_osc] + "L" + LFO_OSC + "m0"
           + "f" + s(osc_freq[src_osc]) + ",1,,,," + lfoOsc + ",1"
           + "d" + osc_duty[src_osc] + ",,,,," + lfoPwm
           + "a,," + osc_gain[src_osc] + ",1,0"
           + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
       if (osc == 0) {
         // Osc 0 must chain to osc 1
-        command += "c1";
+        command += "c" + AMY_OSC_OF_LOGICAL_OSC[1];
         // Osc 0 has the filter controls, including EG1, which is in fact the same as EG0
-        command += "G4";
+        command += "G" + AMY.FILTER_LPF24;
         if (resonanceValue != null) command += "R" + resonanceValue;
         command += "F" + s(filterFreq) + "," + s(filterKbd) + ",,," + s(filterEnv) + "," + s(filterLfo)
             + "B" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
