@@ -234,6 +234,11 @@
         --arrow-hole-opacity: 1;
       }
 
+      .knob-section.section-disabled {
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
       .amy-select-btn::before {
         content: "";
         position: absolute;
@@ -1628,13 +1633,29 @@
               }
               // Send AMY reset + wire commands for the preset patch.
               var presetSynth = Number(window.current_synth || 1);
-              if (typeof amy_add_log_message === "function" && typeof get_wire_commands_for_juno_patch === "function") {
+              if (typeof amy_add_log_message === "function") {
                 amy_add_log_message("i" + presetSynth + "iv0");
                 amy_add_log_message("i" + presetSynth + "K257iv6");
                 if (typeof reset_global_effects === "function") { reset_global_effects(); }
-                var presetWireCommands = get_wire_commands_for_juno_patch(patch);
-                for (var wi = 0; wi < presetWireCommands.length; wi++) {
-                  amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
+                var isDX7Preset = patch >= 128;
+                if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
+                  var presetWireCommands = get_wire_commands_for_juno_patch(patch);
+                  for (var wi = 0; wi < presetWireCommands.length; wi++) {
+                    amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
+                  }
+                } else if (isDX7Preset && Array.isArray(window.patch_code_for_patch_number)) {
+                  var dx7Code = window.patch_code_for_patch_number[patch] || "";
+                  var dx7Parts = dx7Code.split("Z");
+                  for (var di = 0; di < dx7Parts.length; di++) {
+                    var part = dx7Parts[di].trim();
+                    if (part) {
+                      amy_add_log_message("i" + presetSynth + part + "Z");
+                    }
+                  }
+                  // Apply VCF coda so analog filter controls work with DX7
+                  if (typeof amy_send === "function") {
+                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, bp1: "30,1,500,0.33,1000,0"});
+                  }
                 }
                 if (typeof send_all_knob_cc_mappings === "function") {
                   send_all_knob_cc_mappings(presetSynth);
@@ -1642,7 +1663,7 @@
               }
               if (typeof window.set_knobs_from_patch_number_impl === "function") {
                 window.set_knobs_from_patch_number_impl(patch);
-              } else {
+              } else if (typeof set_knobs_from_patch_number_impl === "function") {
                 set_knobs_from_patch_number_impl(patch);
               }
               if (typeof window.refresh_knobs_for_channel === "function") {
@@ -1653,6 +1674,11 @@
                 } finally {
                   window.suppress_knob_cc_send = previousSuppress;
                 }
+              }
+              // Enable/disable sections based on patch type
+              if (typeof window.set_section_disabled === "function") {
+                window.set_section_disabled("Osc B", isDX7Preset);
+                window.set_section_disabled("ADSR", isDX7Preset);
               }
               const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
               modal.hide();
