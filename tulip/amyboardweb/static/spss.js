@@ -771,9 +771,9 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
   }
 
   var oscs_per_voice = num_oscs_from_patch_file_content(source);
-  amy_send({synth: synth, midi_cc: "255"});
+  amy_send({synth: synth, midi_cc: "255"}, true);
   // Reset the oscs to reset state.
-  amy_send({synth: synth, oscs_per_voice: oscs_per_voice});
+  amy_send({synth: synth, oscs_per_voice: oscs_per_voice}, true);
   reset_global_effects();
   const lines = String(source || "").split(/\r?\n/);
   for (const line of lines) {
@@ -873,8 +873,8 @@ async function restore_patches_from_editor_state_if_present(options) {
 
   if (!Object.keys(synthMap).length) {
     if (sendToAmy) {
-      amy_send({synth: 1, midi_cc: "255"});
-      amy_send({synth: 1, patch: 257, num_voices: 6});
+      amy_send({synth: 1, midi_cc: "255"}, true);
+      amy_send({synth: 1, patch: 257, num_voices: 6}, true);
       send_all_knob_cc_mappings(1);
     }
     await sync_channel_knobs_from_synth_to_ui(1);
@@ -916,8 +916,8 @@ async function restore_patches_from_editor_state_if_present(options) {
       continue;
     }
     if (sendToAmy) {
-      amy_send({synth: synth, midi_cc: "255"});
-      amy_send({synth: synth, patch: 257, num_voices: 6});
+      amy_send({synth: synth, midi_cc: "255"}, true);
+      amy_send({synth: synth, patch: 257, num_voices: 6}, true);
       reset_global_effects();
     }
     const lines = String(source || "").split(/\r?\n/);
@@ -954,8 +954,8 @@ async function restore_patches_from_editor_state_if_present(options) {
   // If the active channel had no patch mapping, initialize it with a clean slate.
   const activeCh = Number(window.current_synth || 1);
   if (!loadedMap[activeCh] && sendToAmy) {
-    amy_send({synth: activeCh, midi_cc: "255"});
-    amy_send({synth: activeCh, patch: 257, num_voices: 6});
+    amy_send({synth: activeCh, midi_cc: "255"}, true);
+    amy_send({synth: activeCh, patch: 257, num_voices: 6}, true);
     send_all_knob_cc_mappings(activeCh);
   }
 
@@ -969,8 +969,8 @@ window.clear_current_channel_patch = async function() {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
-  amy_send({synth: synth, midi_cc: "255"});
-  amy_send({synth: synth, patch: 257, num_voices: 6});
+  amy_send({synth: synth, midi_cc: "255"}, true);
+  amy_send({synth: synth, patch: 257, num_voices: 6}, true);
   send_all_knob_cc_mappings(synth);
   reset_global_effects();
   await sync_channel_knobs_from_synth_to_ui(synth);
@@ -1010,7 +1010,7 @@ function onKnobCcChange(knob, previousCc) {
     if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
       synthChannel = 1;
     }
-    amy_send({synth: synthChannel, midi_cc: previousCc + ",0,0,0,0,"});
+    amy_send({synth: synthChannel, midi_cc: previousCc + ",0,0,0,0,"}, true);
   }
   if (typeof amy_add_message === "function") {
     amy_add_log_message(m);
@@ -1114,7 +1114,7 @@ function load_from_patch(patchNumber) {
   if (!Number.isInteger(patch) || patch < 0) {
     return;
   }
-  amy_send({synth: channel, num_voices: 6, patch: patch});
+  amy_send({synth: channel, num_voices: 6, patch: patch}, true);
 }
 
 function build_patch_save_messages(channel, patchNumber) {
@@ -3481,7 +3481,7 @@ async function preview_world_patch(index) {
         var text = await response.text();
 
         // Init synth 32 with 6 voices, 3-note polyphony
-        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3});
+        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3}, true);
 
         // Load each patch line prepended with i32
         var lines = String(text || "").split(/\r?\n/);
@@ -3497,13 +3497,13 @@ async function preview_world_patch(index) {
         // Play 3 notes with 300ms spacing
         var notes = [58, 60, 62];
         for (var n = 0; n < notes.length; n++) {
-            amy_send({synth: 32, vel: 1, note: notes[n]});
+            amy_send({synth: 32, vel: 1, note: notes[n]}, true);
             await new Promise(function(r) { setTimeout(r, 300); });
         }
 
         // Let notes ring briefly, then clear the synth
         await new Promise(function(r) { setTimeout(r, 800); });
-        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3});
+        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3}, true);
     } catch (e) {
         show_alert("Preview failed.");
     } finally {
