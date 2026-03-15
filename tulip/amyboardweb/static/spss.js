@@ -772,8 +772,8 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
 
   var oscs_per_voice = num_oscs_from_patch_file_content(source);
   amy_send({synth: synth, midi_cc: "255"}, true);
-  // Reset the oscs to reset state.
-  amy_send({synth: synth, oscs_per_voice: oscs_per_voice}, true);
+  amy_send({synth: synth, num_voices: 0}, true);
+  amy_send({synth: synth, num_voices: 6, oscs_per_voice: oscs_per_voice}, true);
   reset_global_effects();
   const lines = String(source || "").split(/\r?\n/);
   for (const line of lines) {
