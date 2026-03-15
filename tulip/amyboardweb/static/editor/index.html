@@ -234,6 +234,11 @@
         --arrow-hole-opacity: 1;
       }
 
+      .knob-section.section-disabled {
+        opacity: 0.35;
+        pointer-events: none;
+      }
+
       .amy-select-btn::before {
         content: "";
         position: absolute;
@@ -1619,8 +1624,7 @@
                 }
                 return;
               }
-              if (typeof window.set_knobs_from_patch_number_impl !== "function"
-                  && typeof set_knobs_from_patch_number_impl !== "function") {
+              if (typeof set_knobs_from_synth !== "function") {
                 if (typeof show_alert === "function") {
                   show_alert("Preset load is not available.");
                 }
@@ -1628,31 +1632,65 @@
               }
               // Send AMY reset + wire commands for the preset patch.
               var presetSynth = Number(window.current_synth || 1);
-              if (typeof amy_add_log_message === "function" && typeof get_wire_commands_for_juno_patch === "function") {
+              if (typeof amy_add_log_message === "function") {
                 amy_add_log_message("i" + presetSynth + "iv0");
-                amy_add_log_message("i" + presetSynth + "K257iv6");
+                var isDX7Preset = patch >= 128;
+                amy_add_log_message("i" + presetSynth + (isDX7Preset ? "in8iv6" : "K257iv6"));
                 if (typeof reset_global_effects === "function") { reset_global_effects(); }
-                var presetWireCommands = get_wire_commands_for_juno_patch(patch);
-                for (var wi = 0; wi < presetWireCommands.length; wi++) {
-                  amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
+                if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
+                  var presetWireCommands = get_wire_commands_for_juno_patch(patch);
+                  for (var wi = 0; wi < presetWireCommands.length; wi++) {
+                    amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
+                  }
+                } else if (isDX7Preset && Array.isArray(window.patch_code_for_patch_number)) {
+                  var dx7Code = window.patch_code_for_patch_number[patch] || "";
+                  var dx7Parts = dx7Code.split("Z");
+                  for (var di = 0; di < dx7Parts.length; di++) {
+                    var part = dx7Parts[di].trim();
+                    if (part) {
+                      amy_add_log_message("i" + presetSynth + part + "Z");
+                    }
+                  }
+                  // Apply VCF coda so analog filter controls work with DX7:
+                  // enable filter + envelope on osc 0, then send each VCF/VCF ENV
+                  // knob's default value as a changeCode so AMY has sensible filter state.
+                  if (typeof amy_send === "function") {
+                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24}, true);
+                  }
+                  // Send default values for all VCF and VCF ENV knobs to AMY
+                  var vcfKnobs = (window.get_current_knobs ? window.get_current_knobs() : []).filter(function(k) {
+                    return k && (k.section === "VCF" || k.section === "VCF ENV");
+                  });
+                  for (var ki = 0; ki < vcfKnobs.length; ki++) {
+                    var code = make_change_code(presetSynth, vcfKnobs[ki].default_value, vcfKnobs[ki]);
+                    if (code) {
+                      amy_add_log_message(code);
+                    }
+                  }
                 }
                 if (typeof send_all_knob_cc_mappings === "function") {
                   send_all_knob_cc_mappings(presetSynth);
                 }
               }
-              if (typeof window.set_knobs_from_patch_number_impl === "function") {
-                window.set_knobs_from_patch_number_impl(patch);
-              } else {
-                set_knobs_from_patch_number_impl(patch);
-              }
-              if (typeof window.refresh_knobs_for_channel === "function") {
-                const previousSuppress = !!window.suppress_knob_cc_send;
-                window.suppress_knob_cc_send = true;
-                try {
-                  window.refresh_knobs_for_channel();
-                } finally {
-                  window.suppress_knob_cc_send = previousSuppress;
+              // Read knob values from AMY's live synth state so knobs
+              // reflect what AMY actually has (including VCF coda defaults for DX7).
+              var previousSuppress = !!window.suppress_knob_cc_send;
+              window.suppress_knob_cc_send = true;
+              try {
+                window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
+                if (typeof set_knobs_from_synth === "function") {
+                  set_knobs_from_synth(presetSynth);
                 }
+                if (typeof window.refresh_knobs_for_channel === "function") {
+                  window.refresh_knobs_for_channel();
+                }
+              } finally {
+                window.suppress_knob_cc_send = previousSuppress;
+              }
+              // Enable/disable sections based on patch type
+              if (typeof window.set_section_disabled === "function") {
+                window.set_section_disabled("Osc B", isDX7Preset);
+                window.set_section_disabled("ADSR", isDX7Preset);
               }
               const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
               modal.hide();

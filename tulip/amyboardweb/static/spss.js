@@ -347,7 +347,24 @@ function set_channel_patch_dirty_state(channel, dirty) {
   }
 }
 
+function num_oscs_from_patch_file_content(source) {
+  var maxOsc = -1;
+  var lines = String(source || "").split(/\r?\n/);
+  for (var i = 0; i < lines.length; i++) {
+    var m = lines[i].match(/^v(\d+)/);
+    if (m) {
+      var osc = parseInt(m[1], 10);
+      if (osc > maxOsc) maxOsc = osc;
+    }
+  }
+  return maxOsc < 0 ? 3 : maxOsc + 1;
+}
+
 function get_wire_commands_for_juno_patch(patch) {
+  // The new convention for AMYboard voice osc usage.
+  const OSCA_OSC = 0;
+  const OSCB_OSC = 2;
+  const LFO_OSC = 1;
 
   function translate_juno_events_to_webeditor_wire_commands(events) {
     let filterFreq = null;
@@ -362,12 +379,12 @@ function get_wire_commands_for_juno_patch(patch) {
     let lfoWave = 4;  // always triangle
     let lfoOsc = 0;
     let lfoPwm = 0;
-    // Track coefficients for all 4 non-lfo oscs.
-    let osc_freq = [null, null, null, null];
-    let osc_wave = [0, 0, 0, 0];
-    let osc_duty = [0.5, 0.5, 0.5, 0.5];
-    let osc_gain = [0, 0, 0, 0];
-    let mod_source_osc = 4;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
+    // Track coefficients for all 5 oscs.  Not sure which one is LFO.
+    let osc_freq = [null, null, null, null, null];
+    let osc_wave = [0, 0, 0, 0, 0];
+    let osc_duty = [0.5, 0.5, 0.5, 0.5, 0.5];
+    let osc_gain = [0, 0, 0, 0, 0];
+    let mod_source_osc = LFO_OSC;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
     // Which Juno oscs are used for oscA and B
     let oscAB_osc = [-1, -1];
     let oscAB_gain = [0, 0];
@@ -431,7 +448,7 @@ function get_wire_commands_for_juno_patch(patch) {
         // Non-LFO osc, don't assume what order they come in.
         const parsedModSource = Number(event.mod_source);
         if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
-          mod_source_osc = parsedModSource;
+          mod_source_osc = parsedModSource;  // Should never happen.
         }
         if (event.eg0_times) {
           if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
@@ -477,6 +494,11 @@ function get_wire_commands_for_juno_patch(patch) {
       adsr = [0, 0, 1, 0];
     }
     // Logic to choose juno oscs for osc A and osc B.
+    // Remove the LFO from the lists
+    osc_gain.splice(mod_source_osc, 1);
+    osc_freq.splice(mod_source_osc, 1);
+    osc_wave.splice(mod_source_osc, 1);
+    osc_duty.splice(mod_source_osc, 1);
     if (osc_gain[2] == 0 && osc_gain[3] == 0) {
       // Only 2 oscs, let them be
       oscAB_osc[0] = 0;
@@ -499,19 +521,21 @@ function get_wire_commands_for_juno_patch(patch) {
     // Helper: null/undefined → "" for safe wire code concatenation.
     const s = (v) => v != null ? v : "";
 
+    const AMY_OSC_OF_LOGICAL_OSC = [OSCA_OSC, OSCB_OSC];
     wire_commands = [];
     for (const osc of [0, 1]) {
       let src_osc = oscAB_osc[osc];
-      let command = "v" + osc + "w" + osc_wave[src_osc] + "L2" + "m0"
+      let amy_osc = AMY_OSC_OF_LOGICAL_OSC[osc];  // too many osc numbers.
+	let command = "v" + amy_osc + "w" + osc_wave[src_osc] + "L" + LFO_OSC + "m0"
           + "f" + s(osc_freq[src_osc]) + ",1,,,," + lfoOsc + ",1"
           + "d" + osc_duty[src_osc] + ",,,,," + lfoPwm
           + "a,," + osc_gain[src_osc] + ",1,0"
           + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
       if (osc == 0) {
         // Osc 0 must chain to osc 1
-        command += "c1";
+        command += "c" + AMY_OSC_OF_LOGICAL_OSC[1];
         // Osc 0 has the filter controls, including EG1, which is in fact the same as EG0
-        command += "G4";
+        command += "G" + AMY.FILTER_LPF24;
         if (resonanceValue != null) command += "R" + resonanceValue;
         command += "F" + s(filterFreq) + "," + s(filterKbd) + ",,," + s(filterEnv) + "," + s(filterLfo)
             + "B" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
@@ -519,7 +543,7 @@ function get_wire_commands_for_juno_patch(patch) {
       wire_commands.push(command + "Z");
     }
     // LFO command
-    let command = "v2w" + lfoWave + "a1,0,0,1" + "f" + s(lfoFreq) + ",0,,0,0,0,0"
+    let command = "v" + LFO_OSC + "w" + lfoWave + "a1,0,0,1" + "f" + s(lfoFreq) + ",0,,0,0,0,0"
         + "A" + s(lfoDelay) + ",1,100,1,10000,0";
     wire_commands.push(command + "Z");
     // Global FX commands
@@ -746,9 +770,10 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
     throw new Error("Could not read patch file.");
   }
 
-  amy_send({synth: synth, midi_cc: "255"});
+  var oscs_per_voice = num_oscs_from_patch_file_content(source);
+  amy_send({synth: synth, midi_cc: "255"}, true);
   // Reset the oscs to reset state.
-  amy_send({synth: synth, oscs_per_voice: 3});
+  amy_send({synth: synth, oscs_per_voice: oscs_per_voice}, true);
   reset_global_effects();
   const lines = String(source || "").split(/\r?\n/);
   for (const line of lines) {
@@ -763,6 +788,11 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
   }
   send_all_knob_cc_mappings(synth);
   await sync_channel_knobs_from_synth_to_ui(synth);
+  if (typeof window.set_section_disabled === "function") {
+    var isDX7 = oscs_per_voice >= 8;
+    window.set_section_disabled("Osc B", isDX7);
+    window.set_section_disabled("ADSR", isDX7);
+  }
   const patchName = filename.replace(/\.patch$/i, "");
   window.channel_patch_names[synth] = patchName;
   set_editor_state_patch_name(synth, patchName);
@@ -843,8 +873,8 @@ async function restore_patches_from_editor_state_if_present(options) {
 
   if (!Object.keys(synthMap).length) {
     if (sendToAmy) {
-      amy_send({synth: 1, midi_cc: "255"});
-      amy_send({synth: 1, patch: 257, num_voices: 6});
+      amy_send({synth: 1, midi_cc: "255"}, true);
+      amy_send({synth: 1, patch: 257, num_voices: 6}, true);
       send_all_knob_cc_mappings(1);
     }
     await sync_channel_knobs_from_synth_to_ui(1);
@@ -886,8 +916,8 @@ async function restore_patches_from_editor_state_if_present(options) {
       continue;
     }
     if (sendToAmy) {
-      amy_send({synth: synth, midi_cc: "255"});
-      amy_send({synth: synth, patch: 257, num_voices: 6});
+      amy_send({synth: synth, midi_cc: "255"}, true);
+      amy_send({synth: synth, patch: 257, num_voices: 6}, true);
       reset_global_effects();
     }
     const lines = String(source || "").split(/\r?\n/);
@@ -924,8 +954,8 @@ async function restore_patches_from_editor_state_if_present(options) {
   // If the active channel had no patch mapping, initialize it with a clean slate.
   const activeCh = Number(window.current_synth || 1);
   if (!loadedMap[activeCh] && sendToAmy) {
-    amy_send({synth: activeCh, midi_cc: "255"});
-    amy_send({synth: activeCh, patch: 257, num_voices: 6});
+    amy_send({synth: activeCh, midi_cc: "255"}, true);
+    amy_send({synth: activeCh, patch: 257, num_voices: 6}, true);
     send_all_knob_cc_mappings(activeCh);
   }
 
@@ -939,11 +969,15 @@ window.clear_current_channel_patch = async function() {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
-  amy_send({synth: synth, midi_cc: "255"});
-  amy_send({synth: synth, patch: 257, num_voices: 6});
+  amy_send({synth: synth, midi_cc: "255"}, true);
+  amy_send({synth: synth, patch: 257, num_voices: 6}, true);
   send_all_knob_cc_mappings(synth);
   reset_global_effects();
   await sync_channel_knobs_from_synth_to_ui(synth);
+  if (typeof window.set_section_disabled === "function") {
+    window.set_section_disabled("Osc B", false);
+    window.set_section_disabled("ADSR", false);
+  }
   window.channel_patch_names[synth] = null;
   set_editor_state_patch_name(synth, null);
   remove_current_environment_file_if_exists(String(synth) + ".dirty");
@@ -976,7 +1010,7 @@ function onKnobCcChange(knob, previousCc) {
     if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
       synthChannel = 1;
     }
-    amy_send({synth: synthChannel, midi_cc: previousCc + ",0,0,0,0,"});
+    amy_send({synth: synthChannel, midi_cc: previousCc + ",0,0,0,0,"}, true);
   }
   if (typeof amy_add_message === "function") {
     amy_add_log_message(m);
@@ -1080,7 +1114,7 @@ function load_from_patch(patchNumber) {
   if (!Number.isInteger(patch) || patch < 0) {
     return;
   }
-  amy_send({synth: channel, num_voices: 6, patch: patch});
+  amy_send({synth: channel, num_voices: 6, patch: patch}, true);
 }
 
 function build_patch_save_messages(channel, patchNumber) {
@@ -3447,7 +3481,7 @@ async function preview_world_patch(index) {
         var text = await response.text();
 
         // Init synth 32 with 6 voices, 3-note polyphony
-        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3});
+        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3}, true);
 
         // Load each patch line prepended with i32
         var lines = String(text || "").split(/\r?\n/);
@@ -3463,13 +3497,13 @@ async function preview_world_patch(index) {
         // Play 3 notes with 300ms spacing
         var notes = [58, 60, 62];
         for (var n = 0; n < notes.length; n++) {
-            amy_send({synth: 32, vel: 1, note: notes[n]});
+            amy_send({synth: 32, vel: 1, note: notes[n]}, true);
             await new Promise(function(r) { setTimeout(r, 300); });
         }
 
         // Let notes ring briefly, then clear the synth
         await new Promise(function(r) { setTimeout(r, 800); });
-        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3});
+        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3}, true);
     } catch (e) {
         show_alert("Preview failed.");
     } finally {

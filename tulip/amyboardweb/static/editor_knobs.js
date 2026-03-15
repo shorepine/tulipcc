@@ -1162,3 +1162,24 @@ function set_amy_knob_wave_preset(knobs, sectionName, waveValue, presetValue, no
   }
   return true;
 }
+
+window.set_section_disabled = function(sectionName, disabled) {
+  if (!window._disabled_sections) {
+    window._disabled_sections = {};
+  }
+  window._disabled_sections[sectionName] = !!disabled;
+  var grid = document.getElementById("knob-grid-channel");
+  if (!grid) return;
+  var sections = grid.querySelectorAll(".knob-section");
+  for (var i = 0; i < sections.length; i++) {
+    var header = sections[i].querySelector(".knob-section-header");
+    if (header && header.textContent.trim() === sectionName) {
+      if (disabled) {
+        sections[i].classList.add("section-disabled");
+      } else {
+        sections[i].classList.remove("section-disabled");
+      }
+      break;
+    }
+  }
+};

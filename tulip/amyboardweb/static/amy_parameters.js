@@ -1,3 +1,8 @@
+// amyboard default patch (K257) conventions.
+const OSCA_OSC = 0;
+const OSCB_OSC = 2;
+const LFO_OSC = 1;
+
 // Define all the knobs and their parameters here
 window.addEventListener("DOMContentLoaded", function() {
   window.amy_sections = [
@@ -13,8 +18,8 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "Echo", bg_color: "rgba(176, 208, 232, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
   const GLOBAL_SECTION_NAMES = ["EQ", "Chorus", "Reverb", "Echo"];
-  const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE"];
-  const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 7, 19];
+  const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE", "ALGO"];
+  const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 7, 19, 8];
 
   // amy_default: the value AMY's reset_osc() sets for this parameter.
   // Used to initialize knob state before applying patch changes, since
@@ -24,7 +29,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc A",
       cc: 70,
       display_name: "freq",
-      change_code: "i%iv0f%v",
+      change_code: "i%iv" + OSCA_OSC + "f%v",
       knob_type: "log",
       default_value: 261.63,
       amy_default: 261.63,    // logfreq_coefs[CONST]=0; display as middle C
@@ -36,7 +41,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 71,
       knob_type: "selection",
       display_name: "wave",
-      change_code: "i%iv0w%v",
+      change_code: "i%iv" + OSCA_OSC + "w%v",
       options: WAVE_OPTIONS,
       option_values: WAVE_OPTION_VALUES,
       default_value: 0,
@@ -46,7 +51,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc A",
       cc: 72,
       display_name: "duty",
-      change_code: "i%iv0d%v",
+      change_code: "i%iv" + OSCA_OSC + "d%v",
       default_value: 0.5,
       amy_default: 0.5,       // duty_coefs[CONST] = 0.5
       min_value: 0.5,
@@ -56,7 +61,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc A",
       cc: 73,
       display_name: "level",
-      change_code: "i%iv0a,,%v",
+      change_code: "i%iv" + OSCA_OSC + "a,,%v",
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,       // amp_coefs[EG0] = 1.0
@@ -68,7 +73,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF",
       cc: 74,
       display_name: "freq",
-      change_code: "i%iv0F%v",
+      change_code: "i%iv" + OSCA_OSC + "F%v",
       knob_type: "log",
       default_value: 1000,
       amy_default: 1000,      // filter_type=NONE after reset; display default
@@ -79,7 +84,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF",
       cc: 75,
       display_name: "resonance",
-      change_code: "i%iv0R%v",
+      change_code: "i%iv" + OSCA_OSC + "R%v",
       knob_type: "log",
       default_value: 0.7,
       amy_default: 0.7,       // resonance = 0.7
@@ -90,7 +95,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF",
       cc: 76,
       display_name: "kbd",
-      change_code: "i%iv0F,%v",
+      change_code: "i%iv" + OSCA_OSC + "F,%v",
       default_value: 1.0,
       amy_default: 0,         // filter_logfreq_coefs[NOTE] = 0
       min_value: 0,
@@ -100,7 +105,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF",
       cc: 77,
       display_name: "env",
-      change_code: "i%iv0F,,,,%v",
+      change_code: "i%iv" + OSCA_OSC + "F,,,,%v",
       default_value: 4.0,
       amy_default: 0,         // filter_logfreq_coefs[EG1] = 0
       min_value: -10,
@@ -142,7 +147,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc B",
       cc: 81,
       display_name: "freq",
-      change_code: "i%iv1f%v",
+      change_code: "i%iv" + OSCB_OSC + "f%v",
       knob_type: "log",
       default_value: 261.63,
       amy_default: 261.63,
@@ -154,7 +159,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 82,
       knob_type: "selection",
       display_name: "wave",
-      change_code: "i%iv1w%v",
+      change_code: "i%iv" + OSCB_OSC + "w%v",
       options: WAVE_OPTIONS,
       option_values: WAVE_OPTION_VALUES,
       default_value: 0,
@@ -164,7 +169,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc B",
       cc: 83,
       display_name: "duty",
-      change_code: "i%iv1d%v",
+      change_code: "i%iv" + OSCB_OSC + "d%v",
       default_value: 0.5,
       amy_default: 0.5,       // duty_coefs[CONST] = 0.5
       min_value: 0.5,
@@ -174,7 +179,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc B",
       cc: 84,
       display_name: "level",
-      change_code: "i%iv1a,,%v",
+      change_code: "i%iv" + OSCB_OSC + "a,,%v",
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,       // amp_coefs[EG0] = 1.0
@@ -187,7 +192,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF ENV",
       cc: 85,
       display_name: "attack",
-      change_code: "i%iv0B%v,1,,,,0",
+      change_code: "i%iv" + OSCA_OSC + "B%v,1,,,,0",
       default_value: 0,
       amy_default: 0,         // breakpoints UNSET → no envelope
       min_value: 0,
@@ -198,7 +203,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 86,
       knob_type: "log",
       display_name: "decay",
-      change_code: "i%iv0B,1,%v,,,0",
+      change_code: "i%iv" + OSCA_OSC + "B,1,%v,,,0",
       default_value: 100,
       amy_default: 0,         // breakpoints UNSET → no envelope
       offset: 50,
@@ -209,7 +214,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF ENV",
       cc: 87,
       display_name: "sustain",
-      change_code: "i%iv0B,1,,%v,,0",
+      change_code: "i%iv" + OSCA_OSC + "B,1,,%v,,0",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -220,12 +225,12 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 88,
       knob_type: "log",
       display_name: "release",
+      change_code: "i%iv" + OSCA_OSC + "B,1,,,%v,0",
       offset: 50,
       min_value: 0,
       max_value: 8000,
       default_value: 100,
       amy_default: 0,         // breakpoints UNSET → no envelope
-      change_code: "i%iv0B,1,,,%v,0",
     },
     {
       section: "Chorus",
@@ -264,7 +269,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "LFO",
       cc: 92,
       display_name: "freq",
-      change_code: "i%iv2f%v",
+      change_code: "i%iv" + LFO_OSC + "f%v",
       knob_type: "log",
       default_value: 4,
       amy_default: 4,         // LFO display default (logfreq_coefs[CONST]=0)
@@ -276,7 +281,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 93,
       knob_type: "selection",
       display_name: "wave",
-      change_code: "i%iv2w%v",
+      change_code: "i%iv" + LFO_OSC + "w%v",
       options: WAVE_OPTIONS,
       option_values: WAVE_OPTION_VALUES,
       default_value: 0,
@@ -286,7 +291,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "LFO",
       cc: 94,
       display_name: "osc",
-      change_code: "i%iv0f,,,,,%vZi%iv1f,,,,,%v",
+      change_code: "i%iv" + OSCA_OSC + "f,,,,,%vZi%iv" + OSCB_OSC + "f,,,,,%v",
       knob_type: "log",
       default_value: 0.0,
       amy_default: 0,         // logfreq_coefs[MOD] = 0
@@ -298,7 +303,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "LFO",
       cc: 95,
       display_name: "pwm",
-      change_code: "i%iv0d,,,,,%vZi%iv1d,,,,,%v",
+      change_code: "i%iv" + OSCA_OSC + "d,,,,,%vZi%iv" + OSCB_OSC + "d,,,,,%v",
       default_value: 0.0,
       amy_default: 0,         // duty_coefs[MOD] = 0
       min_value: 0.0,
@@ -308,7 +313,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "LFO",
       cc: 96,
       display_name: "filt",
-      change_code: "i%iv0F,,,,,%v",
+      change_code: "i%iv" + OSCA_OSC + "F,,,,,%v",
       default_value: 0.0,
       amy_default: 0,         // filter_logfreq_coefs[MOD] = 0
       min_value: 0.0,
@@ -320,7 +325,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "ADSR",
       cc: 97,
       display_name: "attack",
-      change_code: "i%iv0A%v,1,,,,0Zi%iv1A%v,1,,,,0",
+      change_code: "i%iv" + OSCA_OSC + "A%v,1,,,,0Zi%iv" + OSCB_OSC + "A%v,1,,,,0",
       min_value: 0,
       max_value: 1000,
       default_value: 0,
@@ -331,7 +336,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 98,
       knob_type: "log",
       display_name: "decay",
-      change_code: "i%iv0A,1,%v,,,0Zi%iv1A,1,%v,,,0",
+      change_code: "i%iv" + OSCA_OSC + "A,1,%v,,,0Zi%iv" + OSCB_OSC + "A,1,%v,,,0",
       offset: 50,
       min_value: 0,
       max_value: 2000,
@@ -342,7 +347,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "ADSR",
       cc: 99,
       display_name: "sustain",
-      change_code: "i%iv0A,1,,%v,,0Zi%iv1A,1,,%v,,0",
+      change_code: "i%iv" + OSCA_OSC + "A,1,,%v,,0Zi%iv" + OSCB_OSC + "A,1,,%v,,0",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -353,7 +358,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 100,
       knob_type: "log",
       display_name: "release",
-      change_code: "i%iv0A,1,,,%v,0Zi%iv1A,1,,,%v,0",
+      change_code: "i%iv" + OSCA_OSC + "A,1,,,%v,0Zi%iv" + OSCB_OSC + "A,1,,,%v,0",
       offset: 50,
       min_value: 0,
       max_value: 8000,
@@ -693,11 +698,35 @@ window.addEventListener("DOMContentLoaded", function() {
   }
 });
 
+const PatchType = {
+  AMYBOARD: 0,
+  JUNO: 1,   // not used - Juno patches are translated to AMYBOARD.
+  DX7: 2,
+};
+
 function set_knobs_from_patch_number_impl(patch_number) {
-  // if this is a memory patch, load it. if not, load the amyboard base patch
-  let wire_commands = get_wire_commands_for_juno_patch(patch_number);
+  if (patch_number > 256) {
+    console.log("patch number", patch_number, "out of range.");
+    return;
+  }
+  let wire_commands;
+  window.patchType = PatchType.DX7;
+  if (patch_number < 128) {
+    wire_commands = get_wire_commands_for_juno_patch(patch_number);
+    window.patchType = PatchType.AMYBOARD;
+  } else {
+    // patch_code_for_patch_number is a single Z-separated string; wrap it in an array
+    // so events_from_wire_code_messages can iterate over messages, not characters.
+    wire_commands = [patch_code_for_patch_number[patch_number]];
+  }
   let events = events_from_wire_code_messages(wire_commands);
-  return set_knobs_from_events(events);
+  var result = set_knobs_from_events(events);
+  if (typeof window.set_section_disabled === "function") {
+    var isDX7 = window.patchType === PatchType.DX7;
+    window.set_section_disabled("Osc B", isDX7);
+    window.set_section_disabled("ADSR", isDX7);
+  }
+  return result;
 }
 
 function set_knobs_from_synth(synth) {
@@ -711,7 +740,6 @@ function set_knobs_from_events(events) {
   if (!Array.isArray(knobs) || events.length === 0) {
     return;
   }
-
   // Initialize all working variables to AMY reset defaults (from reset_osc in amy.c).
   // AMY's EVENT_FROM_OSC_ARRAY only emits values that differ from reset defaults,
   // so any field not present in the events should remain at the AMY default.
@@ -727,13 +755,13 @@ function set_knobs_from_events(events) {
   let lfoWave = 0;            // wave = SINE (AMY reset default)
   let lfoOsc = 0;             // logfreq_coefs[MOD] = 0
   let lfoPwm = 0;             // duty_coefs[MOD] = 0
-  // Track coefficients for the 2 non-lfo oscs.
-  let osc_freq = [261.63, 261.63]; // display default (logfreq_coefs[CONST]=0)
-  let osc_wave = [0, 0];      // wave = SINE = 0
-  let osc_preset = [null, null];
-  let osc_duty = [0.5, 0.5];  // duty_coefs[CONST] = 0.5
-  let osc_gain = [1, 1];      // amp_coefs[EG0] = 1.0
-  let mod_source_osc = 2;     // webeditor patch LFO
+  // Track coefficients for the 2 non-lfo oscs.  Because LFO is now osc 1, we need index [2]
+  let osc_freq = [261.63, 261.63, 261.63]; // display default (logfreq_coefs[CONST]=0)
+  let osc_wave = [0, 0, 0];      // wave = SINE = 0
+  let osc_preset = [null, null, null];
+  let osc_duty = [0.5, 0.5, 0.5];  // duty_coefs[CONST] = 0.5
+  let osc_gain = [1, 1, 1];      // amp_coefs[EG0] = 1.0
+  let mod_source_osc = LFO_OSC;     // webeditor patch LFO
   function knobDefault(section, name) {
     var allKnobs = (window.amy_global_knobs || []).concat(knobs || []);
     for (var i = 0; i < allKnobs.length; i++) {
@@ -856,23 +884,23 @@ function set_knobs_from_events(events) {
     }
   }
   // Configure the patch.
-  set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[0]);
-  set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[0]);
+  set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[OSCA_OSC]);
+  set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[OSCA_OSC]);
   if (typeof set_amy_knob_wave_preset === "function"
-    && Number.isFinite(osc_wave[0]) && Number.isFinite(osc_preset[0])) {
-    set_amy_knob_wave_preset(knobs, "Osc A", osc_wave[0], osc_preset[0], false);
+      && Number.isFinite(osc_wave[OSCA_OSC]) && Number.isFinite(osc_preset[OSCA_OSC])) {
+    set_amy_knob_wave_preset(knobs, "Osc A", osc_wave[OSCA_OSC], osc_preset[OSCA_OSC], false);
   }
-  set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[0]);
-  set_amy_knob_value(knobs, "Osc A", "level", osc_gain[0]);
+  set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[OSCA_OSC]);
+  set_amy_knob_value(knobs, "Osc A", "level", osc_gain[OSCA_OSC]);
 
-  set_amy_knob_value(knobs, "Osc B", "freq", osc_freq[1]);
-  set_amy_knob_value(knobs, "Osc B", "wave", osc_wave[1]);
+  set_amy_knob_value(knobs, "Osc B", "freq", osc_freq[OSCB_OSC]);
+  set_amy_knob_value(knobs, "Osc B", "wave", osc_wave[OSCB_OSC]);
   if (typeof set_amy_knob_wave_preset === "function"
-    && Number.isFinite(osc_wave[1]) && Number.isFinite(osc_preset[1])) {
-    set_amy_knob_wave_preset(knobs, "Osc B", osc_wave[1], osc_preset[1], false);
+    && Number.isFinite(osc_wave[OSCB_OSC]) && Number.isFinite(osc_preset[OSCB_OSC])) {
+    set_amy_knob_wave_preset(knobs, "Osc B", osc_wave[OSCB_OSC], osc_preset[OSCB_OSC], false);
   }
-  set_amy_knob_value(knobs, "Osc B", "duty", osc_duty[1]);
-  set_amy_knob_value(knobs, "Osc B", "level", osc_gain[1]);
+  set_amy_knob_value(knobs, "Osc B", "duty", osc_duty[OSCB_OSC]);
+  set_amy_knob_value(knobs, "Osc B", "level", osc_gain[OSCB_OSC]);
 
   set_amy_knob_value(knobs, "VCF", "freq", filterFreq);
   set_amy_knob_value(knobs, "VCF", "resonance", resonanceValue);
