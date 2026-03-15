@@ -1651,46 +1651,25 @@
                       amy_add_log_message("i" + presetSynth + part + "Z");
                     }
                   }
-                  // Apply VCF coda so analog filter controls work with DX7:
-                  // enable filter + envelope on osc 0, then send each VCF/VCF ENV
-                  // knob's default value as a changeCode so AMY has sensible filter state.
+                  // Apply VCF coda so analog filter controls work with DX7
                   if (typeof amy_send === "function") {
-                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24}, true);
-                  }
-                  // Send default values for all VCF and VCF ENV knobs to AMY
-                  var vcfKnobs = (window.get_current_knobs ? window.get_current_knobs() : []).filter(function(k) {
-                    return k && (k.section === "VCF" || k.section === "VCF ENV");
-                  });
-                  for (var ki = 0; ki < vcfKnobs.length; ki++) {
-                    var code = make_change_code(presetSynth, vcfKnobs[ki].default_value, vcfKnobs[ki]);
-                    if (code) {
-                      amy_add_log_message(code);
-                    }
+                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
                   }
                 }
                 if (typeof send_all_knob_cc_mappings === "function") {
                   send_all_knob_cc_mappings(presetSynth);
                 }
               }
-              // Read knob values from AMY's live synth state so knobs
-              // reflect what AMY actually has (including VCF coda defaults for DX7).
-              var previousSuppress = !!window.suppress_knob_cc_send;
-              window.suppress_knob_cc_send = true;
-              try {
-                window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
-                if (typeof set_knobs_from_synth === "function") {
-                  set_knobs_from_synth(presetSynth);
-                }
-                if (typeof window.refresh_knobs_for_channel === "function") {
-                  window.refresh_knobs_for_channel();
-                }
-              } finally {
-                window.suppress_knob_cc_send = previousSuppress;
-              }
-              // Enable/disable sections based on patch type
-              if (typeof window.set_section_disabled === "function") {
-                window.set_section_disabled("Osc B", isDX7Preset);
-                window.set_section_disabled("ADSR", isDX7Preset);
+              // Read knob values from AMY's live synth state (async, waits
+              // for AMY to process queued deltas including VCF coda).
+              window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
+              if (typeof sync_channel_knobs_from_synth_to_ui === "function") {
+                sync_channel_knobs_from_synth_to_ui(presetSynth).then(function() {
+                  if (typeof window.set_section_disabled === "function") {
+                    window.set_section_disabled("Osc B", isDX7Preset);
+                    window.set_section_disabled("ADSR", isDX7Preset);
+                  }
+                });
               }
               const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
               modal.hide();
