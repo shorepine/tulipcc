@@ -347,6 +347,19 @@ function set_channel_patch_dirty_state(channel, dirty) {
   }
 }
 
+function num_oscs_from_patch_file_content(source) {
+  var maxOsc = -1;
+  var lines = String(source || "").split(/\r?\n/);
+  for (var i = 0; i < lines.length; i++) {
+    var m = lines[i].match(/^v(\d+)/);
+    if (m) {
+      var osc = parseInt(m[1], 10);
+      if (osc > maxOsc) maxOsc = osc;
+    }
+  }
+  return maxOsc < 0 ? 3 : maxOsc + 1;
+}
+
 function get_wire_commands_for_juno_patch(patch) {
   // The new convention for AMYboard voice osc usage.
   const OSCA_OSC = 0;
@@ -757,9 +770,10 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
     throw new Error("Could not read patch file.");
   }
 
+  var oscs_per_voice = num_oscs_from_patch_file_content(source);
   amy_send({synth: synth, midi_cc: "255"});
   // Reset the oscs to reset state.
-  amy_send({synth: synth, oscs_per_voice: 3});
+  amy_send({synth: synth, oscs_per_voice: oscs_per_voice});
   reset_global_effects();
   const lines = String(source || "").split(/\r?\n/);
   for (const line of lines) {
@@ -774,6 +788,11 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
   }
   send_all_knob_cc_mappings(synth);
   await sync_channel_knobs_from_synth_to_ui(synth);
+  if (typeof window.set_section_disabled === "function") {
+    var isDX7 = oscs_per_voice >= 8;
+    window.set_section_disabled("Osc B", isDX7);
+    window.set_section_disabled("ADSR", isDX7);
+  }
   const patchName = filename.replace(/\.patch$/i, "");
   window.channel_patch_names[synth] = patchName;
   set_editor_state_patch_name(synth, patchName);
@@ -955,6 +974,10 @@ window.clear_current_channel_patch = async function() {
   send_all_knob_cc_mappings(synth);
   reset_global_effects();
   await sync_channel_knobs_from_synth_to_ui(synth);
+  if (typeof window.set_section_disabled === "function") {
+    window.set_section_disabled("Osc B", false);
+    window.set_section_disabled("ADSR", false);
+  }
   window.channel_patch_names[synth] = null;
   set_editor_state_patch_name(synth, null);
   remove_current_environment_file_if_exists(String(synth) + ".dirty");

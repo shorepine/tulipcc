@@ -18,8 +18,8 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "Echo", bg_color: "rgba(176, 208, 232, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
   const GLOBAL_SECTION_NAMES = ["EQ", "Chorus", "Reverb", "Echo"];
-  const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE"];
-  const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 7, 19];
+  const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE", "ALGO"];
+  const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 7, 19, 8];
 
   // amy_default: the value AMY's reset_osc() sets for this parameter.
   // Used to initialize knob state before applying patch changes, since
@@ -709,14 +709,24 @@ function set_knobs_from_patch_number_impl(patch_number) {
     console.log("patch number", patch_number, "out of range.");
     return;
   }
-  let wire_commands = patch_code_for_patch_number[patch_number];
+  let wire_commands;
   window.patchType = PatchType.DX7;
   if (patch_number < 128) {
     wire_commands = get_wire_commands_for_juno_patch(patch_number);
     window.patchType = PatchType.AMYBOARD;
+  } else {
+    // patch_code_for_patch_number is a single Z-separated string; wrap it in an array
+    // so events_from_wire_code_messages can iterate over messages, not characters.
+    wire_commands = [patch_code_for_patch_number[patch_number]];
   }
   let events = events_from_wire_code_messages(wire_commands);
-  return set_knobs_from_events(events);
+  var result = set_knobs_from_events(events);
+  if (typeof window.set_section_disabled === "function") {
+    var isDX7 = window.patchType === PatchType.DX7;
+    window.set_section_disabled("Osc B", isDX7);
+    window.set_section_disabled("ADSR", isDX7);
+  }
+  return result;
 }
 
 function set_knobs_from_synth(synth) {

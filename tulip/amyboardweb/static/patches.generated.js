@@ -538,13 +538,22 @@
       return;
     }
     select.innerHTML = "";
-    var limit = Math.min(patches.length, 128);
-    for (var index = 0; index < limit; index++) {
-      const option = document.createElement("option");
-      option.value = String(index);
-      option.textContent = patches[index];
-      select.appendChild(option);
+    var groups = [
+      { label: "AMYboard", start: 0, end: Math.min(patches.length, 128) },
+      { label: "DX7", start: 128, end: patches.length },
+    ];
+    for (var g = 0; g < groups.length; g++) {
+      var grp = groups[g];
+      if (grp.start >= patches.length) continue;
+      var optgroup = document.createElement("optgroup");
+      optgroup.label = grp.label;
+      for (var index = grp.start; index < grp.end; index++) {
+        var option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = patches[index];
+        optgroup.appendChild(option);
+      }
+      select.appendChild(optgroup);
     }
-
   };
 })();
