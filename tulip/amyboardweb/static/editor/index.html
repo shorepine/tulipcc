@@ -1655,7 +1655,7 @@
                   // enable filter + envelope on osc 0, then send each VCF/VCF ENV
                   // knob's default value as a changeCode so AMY has sensible filter state.
                   if (typeof amy_send === "function") {
-                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24});
+                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24}, true);
                   }
                   // Send default values for all VCF and VCF ENV knobs to AMY
                   var vcfKnobs = (window.get_current_knobs ? window.get_current_knobs() : []).filter(function(k) {

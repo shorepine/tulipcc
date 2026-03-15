@@ -235,9 +235,11 @@ function amy_message(params) {
  * Build and send an AMY wire code message.
  * Equivalent to Python's amy.send().
  */
-function amy_send(params) {
+function amy_send(params, log) {
   var msg = amy_message(params);
-  if (typeof amy_add_message === "function") {
+  if (log && typeof amy_add_log_message === "function") {
+    amy_add_log_message(msg);
+  } else if (typeof amy_add_message === "function") {
     amy_add_message(msg);
   } else {
     console.warn("amy_send: no AMY message handler found (is amy.js loaded?)");
