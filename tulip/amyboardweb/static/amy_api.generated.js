@@ -380,12 +380,10 @@ var AMY = {
   AMYBOARD_MIDI_IN: 21
 };
 
-if (typeof globalThis !== "undefined") {
-  globalThis.amy_message = amy_message;
-  globalThis.amy_send = amy_send;
-  globalThis.AMY = AMY;
-  globalThis.AMY_KW_MAP = AMY_KW_MAP;
-  globalThis.AMY_COEF_FIELDS = AMY_COEF_FIELDS;
-}
+window.amy_message = amy_message;
+window.amy_send = amy_send;
+window.AMY = AMY;
+window.AMY_KW_MAP = AMY_KW_MAP;
+window.AMY_COEF_FIELDS = AMY_COEF_FIELDS;
 
 })();
