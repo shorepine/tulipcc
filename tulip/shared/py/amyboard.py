@@ -113,6 +113,25 @@ def _iter_patch_messages(path):
     except OSError:
         return
 
+def _num_oscs_from_patch_file(path):
+    """Scan a .patch/.dirty file for highest v<N> line to determine oscs_per_voice."""
+    max_osc = -1
+    try:
+        for line in open(path, "r"):
+            msg = line.strip()
+            if msg and msg.startswith("v"):
+                # Extract osc number from e.g. "v0o0w0..." or "v7..."
+                i = 1
+                while i < len(msg) and msg[i].isdigit():
+                    i += 1
+                if i > 1:
+                    osc = int(msg[1:i])
+                    if osc > max_osc:
+                        max_osc = osc
+    except OSError:
+        pass
+    return 3 if max_osc < 0 else max_osc + 1
+
 def restore_patch_state_from_files(env_dir=None, send_default_if_missing=True):
     _env_dir = env_dir or _ensure_current_env_layout()
     editor_state_file = _env_dir + "/editor_state.json"
@@ -172,7 +191,9 @@ def restore_patch_state_from_files(env_dir=None, send_default_if_missing=True):
         if source_path is None:
             continue
 
-        amy.send_raw("i%dK257iv6" % (synth))
+        oscs_per_voice = _num_oscs_from_patch_file(source_path)
+        amy.send_raw("i%dic255" % (synth))
+        amy.send_raw("i%div6in%d" % (synth, oscs_per_voice))
         for msg in _iter_patch_messages(source_path):
             amy.send_raw("i%d%s" % (synth, msg))
         result["loaded_channels"].append(synth)
