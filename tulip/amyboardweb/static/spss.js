@@ -719,6 +719,7 @@ async function restore_patches_from_editor_state_if_present(options) {
   const state = hasEditorState ? read_editor_state_json() : null;
   const synthMap = (state && state.synths && typeof state.synths === "object") ? state.synths : {};
   const loadedMap = new Array(17).fill(false);
+  const loadedOscsMap = new Array(17).fill(0);
   const loadedSynths = [];
   let loadedCount = 0;
   for (let ch = 1; ch <= 16; ch += 1) {
@@ -783,9 +784,10 @@ async function restore_patches_from_editor_state_if_present(options) {
     } else {
       continue;
     }
+    var oscs_per_voice = num_oscs_from_patch_file_content(source);
     if (sendToAmy) {
       amy_send({synth: synth, midi_cc: "255"}, true);
-      amy_send({synth: synth, patch: 257, num_voices: 6}, true);
+      amy_send({synth: synth, num_voices: 6, oscs_per_voice: oscs_per_voice}, true);
       reset_global_effects();
     }
     const lines = String(source || "").split(/\r?\n/);
@@ -806,6 +808,7 @@ async function restore_patches_from_editor_state_if_present(options) {
     }
     await sync_channel_knobs_from_synth_to_ui(synth);
     loadedMap[synth] = true;
+    loadedOscsMap[synth] = oscs_per_voice;
     loadedSynths.push(synth);
     loadedCount += 1;
   }
@@ -825,6 +828,14 @@ async function restore_patches_from_editor_state_if_present(options) {
     amy_send({synth: activeCh, midi_cc: "255"}, true);
     amy_send({synth: activeCh, patch: 257, num_voices: 6}, true);
     send_all_knob_cc_mappings(activeCh);
+  }
+
+  // Apply section blur for the active channel only (once, after all syncing is done).
+  if (typeof window.set_section_disabled === "function") {
+    var activeOscs = loadedOscsMap[activeCh] || 0;
+    var activeIsDX7 = activeOscs >= 8;
+    window.set_section_disabled("Osc B", activeIsDX7);
+    window.set_section_disabled("ADSR", activeIsDX7);
   }
 
   apply_channel_active_ui_from_loaded_map(loadedMap);

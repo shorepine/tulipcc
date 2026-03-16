@@ -556,4 +556,19 @@
       select.appendChild(optgroup);
     }
   };
+  window.init_patches_select_range = function(selectId, rangeStart, rangeEnd) {
+    const select = document.getElementById(selectId);
+    if (!select) {
+      return;
+    }
+    select.innerHTML = "";
+    var start = Math.max(0, rangeStart || 0);
+    var end = Math.min(patches.length, rangeEnd || patches.length);
+    for (var index = start; index < end; index++) {
+      var option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = patches[index];
+      select.appendChild(option);
+    }
+  };
 })();

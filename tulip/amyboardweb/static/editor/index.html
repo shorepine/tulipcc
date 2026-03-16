@@ -1230,10 +1230,15 @@
               <select class="form-select form-select-sm flex-grow-1" id="load-patch-your-patches"></select>
               <button type="button" class="btn btn-sm btn-primary" id="load-your-patch-btn">Load</button>
             </div>
-            <label for="load-patch-presets" class="form-label mb-1 small fw-bold">Presets</label>
+            <label for="load-patch-juno-presets" class="form-label mb-1 small fw-bold">Juno-6 Presets</label>
             <div class="d-flex gap-2 align-items-center mb-2">
-              <select class="form-select form-select-sm flex-grow-1" id="load-patch-presets"></select>
-              <button type="button" class="btn btn-sm btn-primary" id="load-preset-btn">Load</button>
+              <select class="form-select form-select-sm flex-grow-1" id="load-patch-juno-presets"></select>
+              <button type="button" class="btn btn-sm btn-primary" id="load-juno-preset-btn">Load</button>
+            </div>
+            <label for="load-patch-dx7-presets" class="form-label mb-1 small fw-bold">DX-7 Presets</label>
+            <div class="d-flex gap-2 align-items-center mb-2">
+              <select class="form-select form-select-sm flex-grow-1" id="load-patch-dx7-presets"></select>
+              <button type="button" class="btn btn-sm btn-primary" id="load-dx7-preset-btn">Load</button>
             </div>
             <label class="form-label mb-1 small fw-bold"><a href="#" id="load-patch-world-link">AMYboard World ↗</a></label>
             <div class="d-flex gap-2 align-items-center">
@@ -1477,9 +1482,11 @@
         const savePatchNameInput = document.getElementById("save-patch-name");
         const savePatchConfirmButton = document.getElementById("save-patch-confirm-btn");
         const yourPatchesSelect = document.getElementById("load-patch-your-patches");
-        const presetsSelect = document.getElementById("load-patch-presets");
+        const junoPresetsSelect = document.getElementById("load-patch-juno-presets");
+        const dx7PresetsSelect = document.getElementById("load-patch-dx7-presets");
         const loadYourPatchButton = document.getElementById("load-your-patch-btn");
-        const loadPresetButton = document.getElementById("load-preset-btn");
+        const loadJunoPresetButton = document.getElementById("load-juno-preset-btn");
+        const loadDx7PresetButton = document.getElementById("load-dx7-preset-btn");
         const loadPatchChannelLabel = document.getElementById("load-patch-channel-label");
         const patchActiveNameEl = document.getElementById("patch-active-name");
         function refreshPatchActiveNameLabel() {
@@ -1536,8 +1543,9 @@
           });
         }
         window.refreshYourPatchesDropdown = refreshYourPatchesDropdown;
-        if (typeof init_patches_select === "function" && presetsSelect) {
-          init_patches_select("load-patch-presets");
+        if (typeof init_patches_select_range === "function") {
+          init_patches_select_range("load-patch-juno-presets", 0, 128);
+          init_patches_select_range("load-patch-dx7-presets", 128, 256);
         }
         refreshLoadPatchChannelLabel();
         refreshPatchActiveNameLabel();
@@ -1615,9 +1623,8 @@
               }
             });
           }
-          if (loadPresetButton && presetsSelect) {
-            loadPresetButton.addEventListener("click", function() {
-              const patch = Number(presetsSelect.value);
+          function handlePresetLoad(selectEl) {
+              const patch = Number(selectEl.value);
               if (!Number.isInteger(patch) || patch < 0) {
                 if (typeof show_alert === "function") {
                   show_alert("Select a preset to load.");
@@ -1669,10 +1676,23 @@
                     window.set_section_disabled("Osc B", isDX7Preset);
                     window.set_section_disabled("ADSR", isDX7Preset);
                   }
+                  // Mark channel dirty after preset load so Save shows * and .dirty file is written.
+                  if (typeof schedule_dirty_autosave_for_channel === "function") {
+                    schedule_dirty_autosave_for_channel(presetSynth);
+                  }
                 });
               }
               const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
               modal.hide();
+          }
+          if (loadJunoPresetButton && junoPresetsSelect) {
+            loadJunoPresetButton.addEventListener("click", function() {
+              handlePresetLoad(junoPresetsSelect);
+            });
+          }
+          if (loadDx7PresetButton && dx7PresetsSelect) {
+            loadDx7PresetButton.addEventListener("click", function() {
+              handlePresetLoad(dx7PresetsSelect);
             });
           }
 
