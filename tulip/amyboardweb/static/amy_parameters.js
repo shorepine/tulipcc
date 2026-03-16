@@ -705,320 +705,218 @@ const PatchType = {
   DX7: 2,
 };
 
-function set_knobs_from_patch_number_impl(patch_number) {
-  if (patch_number > 256) {
-    console.log("patch number", patch_number, "out of range.");
-    return;
-  }
-  let wire_commands;
-  window.patchType = PatchType.DX7;
-  if (patch_number < 128) {
-    wire_commands = get_wire_commands_for_juno_patch(patch_number);
-    window.patchType = PatchType.AMYBOARD;
-  } else {
-    // patch_code_for_patch_number is a single Z-separated string; wrap it in an array
-    // so events_from_wire_code_messages can iterate over messages, not characters.
-    wire_commands = [patch_code_for_patch_number[patch_number]];
-  }
-  let events = events_from_wire_code_messages(wire_commands);
-  var result = set_knobs_from_events(events);
-  if (typeof window.set_section_disabled === "function") {
-    var isDX7 = window.patchType === PatchType.DX7;
-    window.set_section_disabled("Osc B", isDX7);
-    window.set_section_disabled("ADSR", isDX7);
-  }
-  return result;
-}
-
+// Called from editor/index.html as part of servicing the Load Preset button.
+// Also called from spss.sync_channel_knobs_from_synth_to_ui called in many places.
 function set_knobs_from_synth(synth) {
+
+  function set_knobs_from_events(events) {
+    const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
+    if (!Array.isArray(knobs) || events.length === 0) {
+      return;
+    }
+    // Initialize all working variables to AMY reset defaults (from reset_osc in amy.c).
+    // AMY's EVENT_FROM_OSC_ARRAY only emits values that differ from reset defaults,
+    // so any field not present in the events should remain at the AMY default.
+    let filterFreq = 1000;      // filter_type=NONE after reset; use display default
+    let filterEnv = 0;          // filter_logfreq_coefs[EG1] = 0
+    let filterLfo = 0;          // filter_logfreq_coefs[MOD] = 0
+    let filterKbd = 0;          // filter_logfreq_coefs[NOTE] = 0
+    let resonanceValue = 0.7;   // resonance = 0.7
+    let adsr = [0, 0, 1, 0];   // no breakpoints → EG0 = constant 1.0 (sustain=1)
+    let f_adsr = [0, 0, 0, 0]; // no breakpoints → no filter envelope (sustain=0)
+    let lfoFreq = 4;            // LFO display default (logfreq_coefs[CONST]=0)
+    let lfoDelay = null;        // no knob for this
+    let lfoWave = 0;            // wave = SINE (AMY reset default)
+    let lfoOsc = 0;             // logfreq_coefs[MOD] = 0
+    let lfoPwm = 0;             // duty_coefs[MOD] = 0
+    // Track coefficients for the 2 non-lfo oscs.  Because LFO is now osc 1, we need index [2]
+    let osc_freq = [261.63, 261.63, 261.63]; // display default (logfreq_coefs[CONST]=0)
+    let osc_wave = [0, 0, 0];      // wave = SINE = 0
+    let osc_preset = [null, null, null];
+    let osc_duty = [0.5, 0.5, 0.5];  // duty_coefs[CONST] = 0.5
+    let osc_gain = [1, 1, 1];      // amp_coefs[EG0] = 1.0
+    function knobDefault(section, name) {
+      var allKnobs = (window.amy_global_knobs || []).concat(knobs || []);
+      for (var i = 0; i < allKnobs.length; i++) {
+        var k = allKnobs[i];
+        if (k && k.section === section && k.display_name === name && k.amy_default !== undefined) return k.amy_default;
+      }
+      return 0;
+    }
+    let eq = [knobDefault("EQ","low"), knobDefault("EQ","mid"), knobDefault("EQ","high")];
+    let chorus = [knobDefault("Chorus","level"), knobDefault("Chorus","freq"), knobDefault("Chorus","depth")];
+    let reverb = [knobDefault("Reverb","level"), knobDefault("Reverb","live"), knobDefault("Reverb","damp")];
+    let echo = [knobDefault("Echo","level"), knobDefault("Echo","delay"), knobDefault("Echo","feedback")];
+    const BP_UNSET = 32767;
+
+    function bpTimeIsSet(v) {
+      return Number.isFinite(v) && v !== BP_UNSET;
+    }
+
+    for (const event of events) {
+
+      // non-osc values.
+      if (event.eq) {
+        if (Number.isFinite(event.eq[0]))  { eq[0] = event.eq[0]; }
+        if (Number.isFinite(event.eq[1]))  { eq[1] = event.eq[1]; }
+        if (Number.isFinite(event.eq[2]))  { eq[2] = event.eq[2]; }
+      }
+      if (event.chorus) {
+        if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }  // level
+        if (Number.isFinite(event.chorus[2])) { chorus[1] = event.chorus[2]; }  // lfo_freq
+        if (Number.isFinite(event.chorus[3])) { chorus[2] = event.chorus[3]; }  // depth
+      }
+      if (event.reverb) {
+        if (Number.isFinite(event.reverb[0])) { reverb[0] = event.reverb[0]; }
+        if (Number.isFinite(event.reverb[1])) { reverb[1] = event.reverb[1]; }
+        if (Number.isFinite(event.reverb[2])) { reverb[2] = event.reverb[2]; }
+      }
+      if (event.echo) {
+        if (Number.isFinite(event.echo[0])) { echo[0] = event.echo[0]; }
+        if (Number.isFinite(event.echo[1])) { echo[1] = event.echo[1]; }
+        if (Number.isFinite(event.echo[3])) { echo[2] = event.echo[3]; }
+      }
+
+      // Remainder of block assumes osc is set.
+      if (!Number.isFinite(event.osc)) continue;
+
+      if (event.osc == LFO_OSC) {
+        // LFO
+        if (event.freq && Number.isFinite(event.freq[0])) {
+          lfoFreq = event.freq[0];
+        }
+        if (event.wave >= 0 && event.wave < 127) {
+          lfoWave = event.wave;
+        }
+        if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
+          lfoDelay = event.eg0_times[0];
+        }
+      }
+      if (event.osc == FILTER_OSC) {
+        if (event.filter_freq) {
+          if (Number.isFinite(event.filter_freq[0])) {
+            filterFreq = event.filter_freq[0];
+          }
+          if (Number.isFinite(event.filter_freq[1])) {
+            filterKbd = event.filter_freq[1];  // COEF_NOTE
+          }
+          if (Number.isFinite(event.filter_freq[4])) {
+            filterEnv = event.filter_freq[4];  // COEF_EG1, amyboard filter env
+          }
+          if (Number.isFinite(event.filter_freq[5])) {
+            filterLfo = event.filter_freq[5];  // COEF_MOD
+          }
+        }
+        if (Number.isFinite(event.resonance)) {
+          resonanceValue = event.resonance;
+        }
+        if (event.eg1_times) {
+          if (bpTimeIsSet(event.eg1_times[0])) { f_adsr[0] = event.eg1_times[0]; }   // A time
+          if (bpTimeIsSet(event.eg1_times[1])) { f_adsr[1] = event.eg1_times[1]; }   // D time
+          if (bpTimeIsSet(event.eg1_times[2])) { f_adsr[3] = event.eg1_times[2]; }   // R time
+        }
+        if (event.eg1_values) {
+          if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
+        }
+      }
+      if (event.osc == OSCA_OSC || event.osc == OSCB_OSC) {
+        // Extract key parameters for each osc
+        if (event.amp && Number.isFinite(event.amp[2])) {
+          osc_gain[event.osc] = event.amp[2];
+        }
+        if (event.freq && Number.isFinite(event.freq[0]) && event.freq[0] > 0) {
+          osc_freq[event.osc] = event.freq[0];
+        }
+        if (event.duty) {
+          if (Number.isFinite(event.duty[0]) && event.duty[0] > 0) {
+            osc_duty[event.osc] = event.duty[0];
+          }
+          if (Number.isFinite(event.duty[5]) && event.duty[5] > lfoPwm) {
+            lfoPwm = event.duty[5];  // duty COEF_MOD == 5
+          }
+        }
+        if (Number.isFinite(event.wave) && event.wave >= 0 && event.wave < 127) {
+          osc_wave[event.osc] = event.wave;
+        }
+        if (Number.isFinite(event.preset) && event.preset >= 0) {
+          osc_preset[event.osc] = event.preset;
+        }
+        if (event.osc == OSCA_OSC) {
+          // Pull some values explicitly from OSCA (typ osc 0).
+          if (event.eg0_times) {
+            if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
+            if (bpTimeIsSet(event.eg0_times[1])) { adsr[1] = event.eg0_times[1]; }   // D time
+            if (bpTimeIsSet(event.eg0_times[2])) { adsr[3] = event.eg0_times[2]; }   // R time
+          }
+          if (event.eg0_values) {
+            if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
+          }
+          if (event.freq && Number.isFinite(event.freq[5]) && event.freq[5] > 0) {
+            lfoOsc = event.freq[5];  // freq COEF_MOD == 5
+          }
+        }
+      }
+    }
+    // Configure the patch.
+    set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[OSCA_OSC]);
+    set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[OSCA_OSC]);
+    if (typeof set_amy_knob_wave_preset === "function"
+        && Number.isFinite(osc_wave[OSCA_OSC]) && Number.isFinite(osc_preset[OSCA_OSC])) {
+      set_amy_knob_wave_preset(knobs, "Osc A", osc_wave[OSCA_OSC], osc_preset[OSCA_OSC], false);
+    }
+    set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[OSCA_OSC]);
+    set_amy_knob_value(knobs, "Osc A", "level", osc_gain[OSCA_OSC]);
+
+    set_amy_knob_value(knobs, "Osc B", "freq", osc_freq[OSCB_OSC]);
+    set_amy_knob_value(knobs, "Osc B", "wave", osc_wave[OSCB_OSC]);
+    if (typeof set_amy_knob_wave_preset === "function"
+      && Number.isFinite(osc_wave[OSCB_OSC]) && Number.isFinite(osc_preset[OSCB_OSC])) {
+      set_amy_knob_wave_preset(knobs, "Osc B", osc_wave[OSCB_OSC], osc_preset[OSCB_OSC], false);
+    }
+    set_amy_knob_value(knobs, "Osc B", "duty", osc_duty[OSCB_OSC]);
+    set_amy_knob_value(knobs, "Osc B", "level", osc_gain[OSCB_OSC]);
+
+    set_amy_knob_value(knobs, "VCF", "freq", filterFreq);
+    set_amy_knob_value(knobs, "VCF", "resonance", resonanceValue);
+    set_amy_knob_value(knobs, "VCF", "kbd", filterKbd);
+    set_amy_knob_value(knobs, "VCF", "env", filterEnv);
+    set_amy_knob_value(knobs, "VCF ENV", "attack", f_adsr[0]);
+    set_amy_knob_value(knobs, "VCF ENV", "decay", f_adsr[1]);
+    set_amy_knob_value(knobs, "VCF ENV", "sustain", f_adsr[2]);
+    set_amy_knob_value(knobs, "VCF ENV", "release", f_adsr[3]);
+
+    set_amy_knob_value(knobs, "LFO", "freq", lfoFreq);
+    set_amy_knob_value(knobs, "LFO", "delay", lfoDelay);
+    set_amy_knob_value(knobs, "LFO", "wave", lfoWave);
+    set_amy_knob_value(knobs, "LFO", "osc", lfoOsc);
+    set_amy_knob_value(knobs, "LFO", "pwm", lfoPwm);
+    set_amy_knob_value(knobs, "LFO", "filt", filterLfo);
+
+    set_amy_knob_value(knobs, "ADSR", "attack", adsr[0]);
+    set_amy_knob_value(knobs, "ADSR", "decay", adsr[1]);
+    set_amy_knob_value(knobs, "ADSR", "sustain", adsr[2]);
+    set_amy_knob_value(knobs, "ADSR", "release", adsr[3]);
+
+    set_amy_knob_value(knobs, "EQ", "low", eq[0]);
+    set_amy_knob_value(knobs, "EQ", "mid", eq[1]);
+    set_amy_knob_value(knobs, "EQ", "high", eq[2]);
+
+    set_amy_knob_value(knobs, "Chorus", "level", chorus[0]);
+    set_amy_knob_value(knobs, "Chorus", "freq", chorus[1]);
+    set_amy_knob_value(knobs, "Chorus", "depth", chorus[2]);
+
+    set_amy_knob_value(knobs, "Reverb", "level", reverb[0]);
+    set_amy_knob_value(knobs, "Reverb", "live", reverb[1]);
+    set_amy_knob_value(knobs, "Reverb", "damp", reverb[2]);
+
+    set_amy_knob_value(knobs, "Echo", "level", echo[0]);
+    set_amy_knob_value(knobs, "Echo", "delay", echo[1]);
+    set_amy_knob_value(knobs, "Echo", "feedback", echo[2]);
+  }
+
+  // The actual set_knobs_from_synth.
   let wire_commands = get_wire_commands_for_channel(synth);
   let events = events_from_wire_code_messages(wire_commands);
   return set_knobs_from_events(events);
 }
 
-function set_knobs_from_events(events) {
-  const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
-  if (!Array.isArray(knobs) || events.length === 0) {
-    return;
-  }
-  // Initialize all working variables to AMY reset defaults (from reset_osc in amy.c).
-  // AMY's EVENT_FROM_OSC_ARRAY only emits values that differ from reset defaults,
-  // so any field not present in the events should remain at the AMY default.
-  let filterFreq = 1000;      // filter_type=NONE after reset; use display default
-  let filterEnv = 0;          // filter_logfreq_coefs[EG1] = 0
-  let filterLfo = 0;          // filter_logfreq_coefs[MOD] = 0
-  let filterKbd = 0;          // filter_logfreq_coefs[NOTE] = 0
-  let resonanceValue = 0.7;   // resonance = 0.7
-  let adsr = [0, 0, 1, 0];   // no breakpoints → EG0 = constant 1.0 (sustain=1)
-  let f_adsr = [0, 0, 0, 0]; // no breakpoints → no filter envelope (sustain=0)
-  let lfoFreq = 4;            // LFO display default (logfreq_coefs[CONST]=0)
-  let lfoDelay = null;        // no knob for this
-  let lfoWave = 0;            // wave = SINE (AMY reset default)
-  let lfoOsc = 0;             // logfreq_coefs[MOD] = 0
-  let lfoPwm = 0;             // duty_coefs[MOD] = 0
-  // Track coefficients for the 2 non-lfo oscs.  Because LFO is now osc 1, we need index [2]
-  let osc_freq = [261.63, 261.63, 261.63]; // display default (logfreq_coefs[CONST]=0)
-  let osc_wave = [0, 0, 0];      // wave = SINE = 0
-  let osc_preset = [null, null, null];
-  let osc_duty = [0.5, 0.5, 0.5];  // duty_coefs[CONST] = 0.5
-  let osc_gain = [1, 1, 1];      // amp_coefs[EG0] = 1.0
-  function knobDefault(section, name) {
-    var allKnobs = (window.amy_global_knobs || []).concat(knobs || []);
-    for (var i = 0; i < allKnobs.length; i++) {
-      var k = allKnobs[i];
-      if (k && k.section === section && k.display_name === name && k.amy_default !== undefined) return k.amy_default;
-    }
-    return 0;
-  }
-  let eq = [knobDefault("EQ","low"), knobDefault("EQ","mid"), knobDefault("EQ","high")];
-  let chorus = [knobDefault("Chorus","level"), knobDefault("Chorus","freq"), knobDefault("Chorus","depth")];
-  let reverb = [knobDefault("Reverb","level"), knobDefault("Reverb","live"), knobDefault("Reverb","damp")];
-  let echo = [knobDefault("Echo","level"), knobDefault("Echo","delay"), knobDefault("Echo","feedback")];
-  const BP_UNSET = 32767;
-
-  function bpTimeIsSet(v) {
-    return Number.isFinite(v) && v !== BP_UNSET;
-  }
-
-  for (const event of events) {
-
-    // non-osc values.
-    if (event.eq) {
-      if (Number.isFinite(event.eq[0]))  { eq[0] = event.eq[0]; }
-      if (Number.isFinite(event.eq[1]))  { eq[1] = event.eq[1]; }
-      if (Number.isFinite(event.eq[2]))  { eq[2] = event.eq[2]; }
-    }
-    if (event.chorus) {
-      if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }  // level
-      if (Number.isFinite(event.chorus[2])) { chorus[1] = event.chorus[2]; }  // lfo_freq
-      if (Number.isFinite(event.chorus[3])) { chorus[2] = event.chorus[3]; }  // depth
-    }
-    if (event.reverb) {
-      if (Number.isFinite(event.reverb[0])) { reverb[0] = event.reverb[0]; }
-      if (Number.isFinite(event.reverb[1])) { reverb[1] = event.reverb[1]; }
-      if (Number.isFinite(event.reverb[2])) { reverb[2] = event.reverb[2]; }
-    }
-    if (event.echo) {
-      if (Number.isFinite(event.echo[0])) { echo[0] = event.echo[0]; }
-      if (Number.isFinite(event.echo[1])) { echo[1] = event.echo[1]; }
-      if (Number.isFinite(event.echo[3])) { echo[2] = event.echo[3]; }
-    }
-
-    // Remainder of block assumes osc is set.
-    if (!Number.isFinite(event.osc)) continue;
-
-    if (event.osc == LFO_OSC) {
-      // LFO
-      if (event.freq && Number.isFinite(event.freq[0])) {
-        lfoFreq = event.freq[0];
-      }
-      if (event.wave >= 0 && event.wave < 127) {
-        lfoWave = event.wave;
-      }
-      if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
-        lfoDelay = event.eg0_times[0];
-      }
-    }
-    if (event.osc == FILTER_OSC) {
-      if (event.filter_freq) {
-        if (Number.isFinite(event.filter_freq[0])) {
-          filterFreq = event.filter_freq[0];
-        }
-        if (Number.isFinite(event.filter_freq[1])) {
-          filterKbd = event.filter_freq[1];  // COEF_NOTE
-        }
-        if (Number.isFinite(event.filter_freq[4])) {
-          filterEnv = event.filter_freq[4];  // COEF_EG1, amyboard filter env
-        }
-        if (Number.isFinite(event.filter_freq[5])) {
-          filterLfo = event.filter_freq[5];  // COEF_MOD
-        }
-      }
-      if (Number.isFinite(event.resonance)) {
-        resonanceValue = event.resonance;
-      }
-      if (event.eg1_times) {
-        if (bpTimeIsSet(event.eg1_times[0])) { f_adsr[0] = event.eg1_times[0]; }   // A time
-        if (bpTimeIsSet(event.eg1_times[1])) { f_adsr[1] = event.eg1_times[1]; }   // D time
-        if (bpTimeIsSet(event.eg1_times[2])) { f_adsr[3] = event.eg1_times[2]; }   // R time
-      }
-      if (event.eg1_values) {
-        if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
-      }
-    }
-    if (event.osc == OSCA_OSC || event.osc == OSCB_OSC) {
-      // Extract key parameters for each osc
-      if (event.amp && Number.isFinite(event.amp[2])) {
-        osc_gain[event.osc] = event.amp[2];
-      }
-      if (event.freq && Number.isFinite(event.freq[0]) && event.freq[0] > 0) {
-        osc_freq[event.osc] = event.freq[0];
-      }
-      if (event.duty) {
-        if (Number.isFinite(event.duty[0]) && event.duty[0] > 0) {
-          osc_duty[event.osc] = event.duty[0];
-        }
-        if (Number.isFinite(event.duty[5]) && event.duty[5] > lfoPwm) {
-          lfoPwm = event.duty[5];  // duty COEF_MOD == 5
-        }
-      }
-      if (Number.isFinite(event.wave) && event.wave >= 0 && event.wave < 127) {
-        osc_wave[event.osc] = event.wave;
-      }
-      if (Number.isFinite(event.preset) && event.preset >= 0) {
-        osc_preset[event.osc] = event.preset;
-      }
-      if (event.osc == OSCA_OSC) {
-        // Pull some values explicitly from OSCA (typ osc 0).
-        if (event.eg0_times) {
-          if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
-          if (bpTimeIsSet(event.eg0_times[1])) { adsr[1] = event.eg0_times[1]; }   // D time
-          if (bpTimeIsSet(event.eg0_times[2])) { adsr[3] = event.eg0_times[2]; }   // R time
-        }
-        if (event.eg0_values) {
-          if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
-        }
-        if (event.freq && Number.isFinite(event.freq[5]) && event.freq[5] > 0) {
-          lfoOsc = event.freq[5];  // freq COEF_MOD == 5
-        }
-      }
-    }
-  }
-  // Configure the patch.
-  set_amy_knob_value(knobs, "Osc A", "freq", osc_freq[OSCA_OSC]);
-  set_amy_knob_value(knobs, "Osc A", "wave", osc_wave[OSCA_OSC]);
-  if (typeof set_amy_knob_wave_preset === "function"
-      && Number.isFinite(osc_wave[OSCA_OSC]) && Number.isFinite(osc_preset[OSCA_OSC])) {
-    set_amy_knob_wave_preset(knobs, "Osc A", osc_wave[OSCA_OSC], osc_preset[OSCA_OSC], false);
-  }
-  set_amy_knob_value(knobs, "Osc A", "duty", osc_duty[OSCA_OSC]);
-  set_amy_knob_value(knobs, "Osc A", "level", osc_gain[OSCA_OSC]);
-
-  set_amy_knob_value(knobs, "Osc B", "freq", osc_freq[OSCB_OSC]);
-  set_amy_knob_value(knobs, "Osc B", "wave", osc_wave[OSCB_OSC]);
-  if (typeof set_amy_knob_wave_preset === "function"
-    && Number.isFinite(osc_wave[OSCB_OSC]) && Number.isFinite(osc_preset[OSCB_OSC])) {
-    set_amy_knob_wave_preset(knobs, "Osc B", osc_wave[OSCB_OSC], osc_preset[OSCB_OSC], false);
-  }
-  set_amy_knob_value(knobs, "Osc B", "duty", osc_duty[OSCB_OSC]);
-  set_amy_knob_value(knobs, "Osc B", "level", osc_gain[OSCB_OSC]);
-
-  set_amy_knob_value(knobs, "VCF", "freq", filterFreq);
-  set_amy_knob_value(knobs, "VCF", "resonance", resonanceValue);
-  set_amy_knob_value(knobs, "VCF", "kbd", filterKbd);
-  set_amy_knob_value(knobs, "VCF", "env", filterEnv);
-  set_amy_knob_value(knobs, "VCF ENV", "attack", f_adsr[0]);
-  set_amy_knob_value(knobs, "VCF ENV", "decay", f_adsr[1]);
-  set_amy_knob_value(knobs, "VCF ENV", "sustain", f_adsr[2]);
-  set_amy_knob_value(knobs, "VCF ENV", "release", f_adsr[3]);
-
-  set_amy_knob_value(knobs, "LFO", "freq", lfoFreq);
-  set_amy_knob_value(knobs, "LFO", "delay", lfoDelay);
-  set_amy_knob_value(knobs, "LFO", "wave", lfoWave);
-  set_amy_knob_value(knobs, "LFO", "osc", lfoOsc);
-  set_amy_knob_value(knobs, "LFO", "pwm", lfoPwm);
-  set_amy_knob_value(knobs, "LFO", "filt", filterLfo);
-
-  set_amy_knob_value(knobs, "ADSR", "attack", adsr[0]);
-  set_amy_knob_value(knobs, "ADSR", "decay", adsr[1]);
-  set_amy_knob_value(knobs, "ADSR", "sustain", adsr[2]);
-  set_amy_knob_value(knobs, "ADSR", "release", adsr[3]);
-
-  set_amy_knob_value(knobs, "EQ", "low", eq[0]);
-  set_amy_knob_value(knobs, "EQ", "mid", eq[1]);
-  set_amy_knob_value(knobs, "EQ", "high", eq[2]);
-
-  set_amy_knob_value(knobs, "Chorus", "level", chorus[0]);
-  set_amy_knob_value(knobs, "Chorus", "freq", chorus[1]);
-  set_amy_knob_value(knobs, "Chorus", "depth", chorus[2]);
-
-  set_amy_knob_value(knobs, "Reverb", "level", reverb[0]);
-  set_amy_knob_value(knobs, "Reverb", "live", reverb[1]);
-  set_amy_knob_value(knobs, "Reverb", "damp", reverb[2]);
-
-  set_amy_knob_value(knobs, "Echo", "level", echo[0]);
-  set_amy_knob_value(knobs, "Echo", "delay", echo[1]);
-  set_amy_knob_value(knobs, "Echo", "feedback", echo[2]);
-}
-
-function set_knobs_from_patch(channel, patch_number, patch_source) {
-  const requestedChannel = Number(channel);
-  if (!Number.isInteger(requestedChannel) || requestedChannel < 1 || requestedChannel > 16) {
-    return false;
-  }
-  const previousChannel = Number(window.current_synth || 1);
-  const previousSuppress = !!window.suppress_knob_cc_send;
-  window.current_synth = requestedChannel;
-  window.suppress_knob_cc_send = true;
-  try {
-    set_knobs_from_patch_number_impl(patch_number);
-    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
-      window.apply_knob_cc_mappings_from_patch_source(requestedChannel, patch_source || "");
-    }
-    if (typeof window.refresh_knobs_for_channel === "function") {
-      // Keep refresh inside suppression so loading a patch doesn't immediately emit updates back to AMY.
-      window.refresh_knobs_for_channel();
-    }
-  } finally {
-    window.suppress_knob_cc_send = previousSuppress;
-    window.current_synth = previousChannel;
-  }
-  return true;
-}
-window.set_knobs_from_patch = set_knobs_from_patch;
-
-function set_knobs_from_patch_number(patch_number) {
-  const channel = Number(window.current_synth || 1);
-  return set_knobs_from_patch(channel, patch_number, "");
-}
-
-/* 1: Juno A12 Brass Swell */
-/*"
-  v0
-   w1c1L4G4Z  // PULSE, chain to 1, modsrc 4, LPF24, 
-  v0
-   a,,0.001,1,0  // off
-   f261.63,1,,,,0,1
-   d0.72,,,,,0
-   m0Z  // no portamento
-  v0
-   F212.87,0.661,,2.252,,0  // filter freq
-   R1.015Z  // resonance
-  v0
-   A518,1,83561,0.299,310,0Z  // ADSR
-
-  v1
-   w3c2L4Z  // SAW_UP, chain to 2, modsrc 4
-  v1
-   a,,0.591,1,0
-   f261.63,1,,,,0,1
-   m0Z
-  v1
-   A518,1,83561,0.299,310,0Z
-
-  v2
-   w1c3L4Z // PULSE
-  v2
-   a,,0.326,1,0
-   f130.81,1,,,,0,1  // freq 1 octave below
-   m0Z
-  v2
-   A518,1,83561,0.299,310,0Z
-
-  v3
-   w5L4Z  // NOISE, end of chain
-  v3
-   a,,0.001,1,0Z
-  v3
-   A518,1,83561,0.299,310,0Z
-
-  v4  // LFO
-   w4  // TRIANGLE
-   a1,,0,1Z  // amp NOT from vel, YES from eg0
-  v4f0.609  // LFO 0.609 Hz
-   A148,1.0,10000,0Z  // 148 ms delay
-
-  x7,-3,-3  // EQ high
-  k1,,0.5,0.5Z // 0.5 Hz chorus
-",
-*/

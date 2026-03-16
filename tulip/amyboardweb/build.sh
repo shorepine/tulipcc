@@ -14,7 +14,6 @@ build_once() {
 
   timestamp=$(date +%Y%m%d%H%M%S)
 
-  python3 scripts/gen_amy_event_layout.py
   cd ../../amy
   make web
   cd ../tulip/amyboardweb
