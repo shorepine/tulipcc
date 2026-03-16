@@ -1639,10 +1639,9 @@
               }
               // Send AMY reset + wire commands for the preset patch.
               var presetSynth = Number(window.current_synth || 1);
-              if (typeof amy_add_log_message === "function") {
-                amy_add_log_message("i" + presetSynth + "iv0");
+              if (typeof amy_send === "function") {
                 var isDX7Preset = patch >= 128;
-                amy_add_log_message("i" + presetSynth + (isDX7Preset ? "in8iv6" : "K257iv6"));
+                amy_send({synth: presetSynth, oscs_per_voice: isDX7Preset ? 8 : 3, num_voices: 6}, true);
                 if (typeof reset_global_effects === "function") { reset_global_effects(); }
                 if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
                   var presetWireCommands = get_wire_commands_for_juno_patch(patch);
@@ -2006,7 +2005,7 @@
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_add_log_message("i"+window.current_synth+"l1n" + finalMidi);
+              amy_send({synth: window.current_synth, vel: 1, note: finalMidi}, true);
             }
             if (typeof window.onKeyboardNote === "function") {
               window.onKeyboardNote(finalMidi, note);
@@ -2018,7 +2017,7 @@
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_add_log_message("i"+window.current_synth+"l0n" + finalMidi);
+              amy_send({synth: window.current_synth, vel: 0, note: finalMidi}, true);
             }
           };
         }

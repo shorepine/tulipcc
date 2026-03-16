@@ -848,10 +848,10 @@ window.clear_current_channel_patch = async function() {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
+  reset_global_effects();
   amy_send({synth: synth, midi_cc: "255"}, true);
   amy_send({synth: synth, patch: 257, num_voices: 6}, true);
   send_all_knob_cc_mappings(synth);
-  reset_global_effects();
   await sync_channel_knobs_from_synth_to_ui(synth);
   if (typeof window.set_section_disabled === "function") {
     window.set_section_disabled("Osc B", false);
@@ -876,24 +876,22 @@ function onKnobCcChange(knob, previousCc) {
   (also %i for channel/synth number) and maybe %V to force an integer,
   for things like selecting wave, and maybe more.
   */
-  var m = build_knob_cc_message(window.current_synth, knob);
-  if (!m) {
+  var ccVal = build_knob_cc_value(knob);
+  if (!ccVal) {
     return;
   }
   if (window.suppress_knob_cc_send) {
     return;
   }
+  var synthChannel = Number(window.current_synth || 1);
+  if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
+    synthChannel = 1;
+  }
   // If the CC number changed, remove the old CC mapping from AMY first.
   if (previousCc !== undefined && previousCc !== "" && previousCc !== knob.cc) {
-    var synthChannel = Number(window.current_synth || 1);
-    if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
-      synthChannel = 1;
-    }
     amy_send({synth: synthChannel, midi_cc: previousCc + ",0,0,0,0,"}, true);
   }
-  if (typeof amy_add_message === "function") {
-    amy_add_log_message(m);
-  }
+  amy_send({synth: synthChannel, midi_cc: ccVal}, true);
 }
 
 window.onKnobChange = function(_index, _value) {
@@ -1123,14 +1121,10 @@ function get_knobs_for_channel(channel) {
   return window.get_current_knobs ? window.get_current_knobs() : [];
 }
 
-function build_knob_cc_message(channel, knob) {
+function build_knob_cc_value(knob) {
   if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half"
     || knob.knob_type === "pushbutton") {
     return "";
-  }
-  var synthChannel = Number(channel);
-  if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
-    synthChannel = Number(window.current_synth || 1);
   }
   var log, min_val, max_val, offset;
   if (knob.knob_type === "selection") {
@@ -1144,7 +1138,7 @@ function build_knob_cc_message(channel, knob) {
     max_val = knob.max_value;
     offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
   }
-  return "i" + synthChannel + "ic" + knob.cc + "," + log + "," + min_val + "," + max_val + "," + offset + "," + knob.change_code;
+  return knob.cc + "," + log + "," + min_val + "," + max_val + "," + offset + "," + knob.change_code;
 }
 
 function send_all_knob_cc_mappings(channel) {
@@ -1152,9 +1146,9 @@ function send_all_knob_cc_mappings(channel) {
   if (!Number.isInteger(ch) || ch < 1 || ch > 16) ch = 1;
   var knobs = get_knobs_for_channel(ch);
   for (var i = 0; i < knobs.length; i++) {
-    var m = build_knob_cc_message(ch, knobs[i]);
-    if (m) {
-      amy_add_log_message(m);
+    var ccVal = build_knob_cc_value(knobs[i]);
+    if (ccVal) {
+      amy_send({synth: ch, midi_cc: ccVal}, true);
     }
   }
   if (Array.isArray(window.channel_control_mapping_sent)) {
