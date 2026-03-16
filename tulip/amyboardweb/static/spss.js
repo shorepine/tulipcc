@@ -363,6 +363,7 @@ function num_oscs_from_patch_file_content(source) {
 function get_wire_commands_for_juno_patch(patch) {
   // The new convention for AMYboard voice osc usage.
   const OSCA_OSC = 0;
+  const FILTER_OSC = 0;  // Osc with filter commands.
   const OSCB_OSC = 2;
   const LFO_OSC = 1;
 
@@ -534,6 +535,8 @@ function get_wire_commands_for_juno_patch(patch) {
       if (osc == 0) {
         // Osc 0 must chain to osc 1
         command += "c" + AMY_OSC_OF_LOGICAL_OSC[1];
+      }
+      if (amy_osc == FILTER_OSC) {
         // Osc 0 has the filter controls, including EG1, which is in fact the same as EG0
         command += "G" + AMY.FILTER_LPF24;
         if (resonanceValue != null) command += "R" + resonanceValue;
