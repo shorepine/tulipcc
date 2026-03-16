@@ -1466,7 +1466,7 @@ function list_environment_files() {
             files.push(name);
         }
     }
-    files.sort();
+    files.sort(function(a, b) { return String(a).localeCompare(String(b)); });
     return files;
 }
 
@@ -1474,7 +1474,6 @@ function list_current_patch_files() {
     var files = list_environment_files().filter(function(filename) {
         return String(filename || "").toLowerCase().endsWith(".patch");
     });
-    files.sort();
     return files;
 }
 
