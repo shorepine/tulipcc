@@ -225,6 +225,8 @@ function num_oscs_from_patch_file_content(source) {
 }
 
 function get_wire_commands_for_juno_patch(patch) {
+  console.log("get_wire_commands_for_juno_patch");
+
   // The new convention for AMYboard voice osc usage.
   const OSCA_OSC = 0;
   const FILTER_OSC = 0;  // Osc with filter commands.
@@ -639,7 +641,6 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
 
   var oscs_per_voice = num_oscs_from_patch_file_content(source);
   amy_send({synth: synth, midi_cc: "255"}, true);
-  amy_send({synth: synth, num_voices: 0}, true);
   amy_send({synth: synth, num_voices: 6, oscs_per_voice: oscs_per_voice}, true);
   reset_global_effects();
   const lines = String(source || "").split(/\r?\n/);
@@ -964,24 +965,6 @@ function move_knob(channel, cc, value) {
     set_knob_ui_value(knob, scaled_value, false);
     return;
   }
-}
-
-function save_to_patch(patchNumber) {
-  const channel = Number(window.current_synth || 1);
-  const patch = get_patch_number_for_channel(channel);
-  const messages = build_patch_save_messages(channel, patch);
-  for (const message of messages) {
-    amy_add_log_message(message);
-  }
-}
-
-function load_from_patch(patchNumber) {
-  const channel = Number(window.current_synth || 1);
-  const patch = Number(patchNumber);
-  if (!Number.isInteger(patch) || patch < 0) {
-    return;
-  }
-  amy_send({synth: channel, num_voices: 6, patch: patch}, true);
 }
 
 function build_patch_save_messages(channel, patchNumber) {
@@ -1528,72 +1511,6 @@ function apply_active_channels_from_patch_map(channelPatchMap) {
         activeCheckbox.checked = !!(Array.isArray(window.active_channels) && window.active_channels[window.current_synth || 1]);
     }
     return true;
-}
-
-async function execute_current_patch_files() {
-    ensure_current_environment_layout(true);
-    var patchFiles = list_current_patch_files();
-    var channelPatchMap = new Array(17).fill(null);
-    var combinedPatchSources = [];
-    var hasPatchMessages = false;
-    for (var i = 0; i < patchFiles.length; i++) {
-        var filename = patchFiles[i];
-        var source = "";
-        try {
-            source = mp.FS.readFile(CURRENT_ENV_DIR + "/" + filename, { encoding: "utf8" });
-        } catch (readErr) {
-            continue;
-        }
-        combinedPatchSources.push(String(source || ""));
-        var lines = String(source || "").split("\n");
-        for (var j = 0; j < lines.length; j++) {
-            var message = String(lines[j] || "").trim();
-            if (!message || message.startsWith("#")) {
-                continue;
-            }
-            hasPatchMessages = true;
-            amy_add_log_message(message);
-            var bindMatch = message.match(/^i(\d+)iv6K(\d+)/);
-            if (bindMatch) {
-                var bindChannel = Number(bindMatch[1]);
-                var bindPatch = Number(bindMatch[2]);
-                if (Number.isInteger(bindChannel) && bindChannel >= 1 && bindChannel <= 16 && Number.isInteger(bindPatch)) {
-                    channelPatchMap[bindChannel] = bindPatch;
-                }
-                continue;
-            }
-            var patchMatch = message.match(/^K(\d+)/);
-            if (patchMatch) {
-                var patchNum = Number(patchMatch[1]);
-                if (Number.isInteger(patchNum) && patchNum >= 1024 && patchNum <= 1055) {
-                    var inferredChannel = patchNum - 1023;
-                    if (!Number.isInteger(channelPatchMap[inferredChannel])) {
-                        channelPatchMap[inferredChannel] = patchNum;
-                    }
-                }
-            }
-        }
-    }
-
-    var combinedPatchSource = combinedPatchSources.join("\n");
-    var hasActiveChannels = apply_active_channels_from_patch_map(channelPatchMap);
-    if (hasActiveChannels
-        && typeof window.set_knobs_from_patch === "function"
-        && combinedPatchSource) {
-        for (var channel = 1; channel <= 16; channel++) {
-            if (!Number.isInteger(channelPatchMap[channel])) {
-                continue;
-            }
-            window.set_knobs_from_patch(channel, channelPatchMap[channel], combinedPatchSource);
-        }
-    }
-    return {
-        files: patchFiles,
-        channelPatchMap: channelPatchMap,
-        combinedPatchSource: combinedPatchSource,
-        hasActiveChannels: hasActiveChannels,
-        hasPatchMessages: hasPatchMessages,
-    };
 }
 
 function should_initialize_default_patch_state(patchExecution) {
