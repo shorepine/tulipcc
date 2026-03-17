@@ -301,8 +301,11 @@ def start_amy():
     tulip.stderr_write("cding to %s" % (_env_dir))
     cd(_env_dir)
     try:
-        tulip.stderr_write("execfile env.py")
-        execfile("env.py")
+        from machine import Pin
+        button = Pin(0, Pin.IN, Pin.PULL_UP)
+        if button.value() != 0:  # Skip env.py if boot button held
+            tulip.stderr_write("execfile env.py")
+            execfile("env.py")
     except Exception as e:
         print("Environment start failed:")
         sys.print_exception(e)
