@@ -68,10 +68,15 @@ uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
 }
 #endif
 
-// I am called when AMY receives MIDI in, whether it has been processed (played in a instrument) or not 
+// defined in amy/src/midi_mappings.c — processes ic (MIDI CC mapping) commands
+extern void midi_cc_handler(uint8_t * bytes, uint16_t len, uint8_t is_sysex);
+
+// I am called when AMY receives MIDI in, whether it has been processed (played in a instrument) or not
 // In tulip i just fill up the last_midi queue so that MIDI input is accessible to Python
-// I also process sysex if given
+// I also process sysex if given, and dispatch CC mappings via midi_cc_handler
 void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
+    // Process ic (MIDI CC mapping) commands before queuing to Python
+    midi_cc_handler(data, len, is_sysex);
     if(is_sysex) {
         // f0 and f7 are stripped on some platforms
         if(data[0]!=0xf0) {
