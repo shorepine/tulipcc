@@ -301,8 +301,11 @@ def start_amy():
     tulip.stderr_write("cding to %s" % (_env_dir))
     cd(_env_dir)
     try:
-        tulip.stderr_write("execfile env.py")
-        execfile("env.py")
+        from machine import Pin
+        button = Pin(0, Pin.IN, Pin.PULL_UP)
+        if button.value() != 0:  # Skip env.py if boot button held
+            tulip.stderr_write("execfile env.py")
+            execfile("env.py")
     except Exception as e:
         print("Environment start failed:")
         sys.print_exception(e)
@@ -547,3 +550,100 @@ def draw_waveform():
         last_x = x
         last_y = y
     display.show()
+
+
+# Patch Selector -
+# If you have a display and a rotary encoder on I2C
+# this function will let you scroll through your available patches
+# and load each one by clicking the rotary encoder.
+#
+# You can launch it from env.py like this:
+#
+#   amyboard.patch_selector()
+
+def patch_selector():
+    """Endless loop scrolling through patch files and installing on click."""
+    SYNTH = 1
+    PATCHDIR = '/user/current'
+    EXTENSION = '.patch'
+    ENCODER = 0
+    BUTTON = 12
+    SEESAW = 0x49
+
+    def _num_oscs_for_patch(patch):
+        """Scan for how many oscs are used in a patch."""
+        top_osc = 0
+        for line in patch.split('\n'):
+            if not line:
+                continue
+            if line[0] == 'v':
+                osc_num = int(line[1])  # Cannot see osc nums > 9.
+            if osc_num > top_osc:
+                top_osc = osc_num
+        return top_osc + 1
+
+    def _load_patch_file(patchname, synth=1, num_voices=6):
+        """Set up a synth with a patch file."""
+        filename = PATCHDIR + '/' + patchname + EXTENSION
+        with open(filename, 'r') as f:
+            patch = f.read()
+        oscs_per_voice = _num_oscs_for_patch(patch)
+        amy.send_raw('i%div%din%d' % (synth, num_voices, oscs_per_voice))
+        for line in patch.split('\n'):
+            if line:
+                amy.send_raw('i%d%s' % (synth, line))
+
+    def _list_patches():
+        """List of the patch files."""
+        files = [f[:-len(EXTENSION)] for f in os.listdir(PATCHDIR) if f.endswith(EXTENSION)]
+        return files
+
+    LINEHEIGHT = 12
+
+    def _disp(message, row=0, inverse=False):
+        """Display some text on a row on the display."""
+        top_y = LINEHEIGHT * row
+        black = 0
+        white = 255
+        if inverse:
+            black = 255
+            white = 0
+        display.fill_rect(0, top_y, 128, LINEHEIGHT, black)
+        display.text(message, 0, top_y, white)
+        display.show()
+
+    _disp("PATCH SELECTOR", 0)
+
+    patches = _list_patches()
+
+    if not patches:
+        raise ValueError('No .patch files found in ' + PATCHDIR)
+
+    loaded_patch = ""
+
+    init_buttons(pins=(BUTTON,), seesaw_dev=SEESAW)
+
+    buttonhold = 0
+
+    while True:
+        current_index = read_encoder(ENCODER, seesaw_dev=SEESAW) % len(patches)
+        current_patch = patches[current_index]
+        buttonstate = read_buttons(pins=(BUTTON,), seesaw_dev=SEESAW)[0]
+        _disp(current_patch, 2, inverse=buttonstate)
+        if not buttonstate:
+            # Button not down, reset button-down timer
+            buttonhold = 0
+        else:
+            # Button is down, do we have a new patch to load?
+            if current_patch != loaded_patch:
+                _load_patch_file(current_patch, synth=SYNTH)
+                loaded_patch = current_patch
+            buttonhold += 1
+            if buttonhold >= 50:
+                # Exit if button held down a long time (~3 sec)
+                break
+        time.sleep(0.01)  # Time for background events?
+
+    _disp("", 0)
+    _disp("finished", 2)
+
