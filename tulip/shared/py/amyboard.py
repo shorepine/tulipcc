@@ -636,9 +636,7 @@ def draw_waveform():
 #
 #   amyboard.patch_selector()
 
-def patch_selector(synth=1, seesaw_dev=0x36, encoder=0, button_pin=24, patchdir='/user/current', extension='.patch'):
-    """Endless loop scrolling through patch files and installing on click."""
-    # NB: For adafruit 4-knob encoder, using top knob, that's seesaw_dev=0x49, button_pin=12
+def load_patch_file(filename, synth=1, num_voices=6):
 
     def _num_oscs_for_patch(patch):
         """Scan for how many oscs are used in a patch."""
@@ -652,16 +650,19 @@ def patch_selector(synth=1, seesaw_dev=0x36, encoder=0, button_pin=24, patchdir=
                 top_osc = osc_num
         return top_osc + 1
 
-    def _load_patch_file(patchname, synth=1, num_voices=6):
-        """Set up a synth with a patch file."""
-        filename = patchdir + '/' + patchname + extension
-        with open(filename, 'r') as f:
-            patch = f.read()
-        oscs_per_voice = _num_oscs_for_patch(patch)
-        amy.send_raw('i%div%din%d' % (synth, num_voices, oscs_per_voice))
-        for line in patch.split('\n'):
-            if line:
-                amy.send_raw('i%d%s' % (synth, line))
+    """Set up a synth with a patch file."""
+    with open(filename, 'r') as f:
+        patch = f.read()
+    oscs_per_voice = _num_oscs_for_patch(patch)
+    amy.send_raw('i%div%din%d' % (synth, num_voices, oscs_per_voice))
+    for line in patch.split('\n'):
+        if line:
+            amy.send_raw('i%d%s' % (synth, line))
+
+
+def patch_selector(synth=1, seesaw_dev=0x36, encoder=0, button_pin=24, patchdir='/user/current', extension='.patch'):
+    """Endless loop scrolling through patch files and installing on click."""
+    # NB: For adafruit 4-knob encoder, using top knob, that's seesaw_dev=0x49, button_pin=12
 
     def _list_patches():
         """List of the patch files."""
@@ -669,6 +670,10 @@ def patch_selector(synth=1, seesaw_dev=0x36, encoder=0, button_pin=24, patchdir=
         return files
 
     LINEHEIGHT = 12
+
+    def _disp_clear():
+        display.fill(0)
+        display.show()
 
     def _disp(message, row=0, inverse=False):
         """Display some text on a row on the display."""
@@ -682,6 +687,7 @@ def patch_selector(synth=1, seesaw_dev=0x36, encoder=0, button_pin=24, patchdir=
         display.text(message, 0, top_y, white)
         display.show()
 
+    _disp_clear()
     _disp("PATCH SELECTOR", 0)
 
     patches = _list_patches()
@@ -710,7 +716,7 @@ def patch_selector(synth=1, seesaw_dev=0x36, encoder=0, button_pin=24, patchdir=
         else:
             # Button is down, do we have a new patch to load?
             if current_patch != loaded_patch:
-                _load_patch_file(current_patch, synth=synth)
+                load_patch_file(patchdir + '/' + current_patch + extension, synth=synth)
                 loaded_patch = current_patch
             buttonhold += 1
             if buttonhold >= 20:
