@@ -2,12 +2,102 @@
 import tulip, midi, amy, time, struct, time, sys, os
 
 i2c = None
-display_buffer = None # the bytes object storing the display bits
-display = None # The framebuf object to draw to 
-hw_display = None # if there's an I2C display connected
+display = None # Display instance (unified interface for all display types)
 
 def web():
     return (tulip.board()=="AMYBOARD_WEB")
+
+
+class Display:
+    """Unified display interface for ssd1327, sh1107, and web framebuffer.
+
+    Drawing methods (text, fill_rect, line, fill, pixel, rect, scroll) are
+    forwarded to the underlying framebuf.  ``show()`` does the right thing
+    for each backend so callers never need to know which hardware is present.
+    """
+    WIDTH = 128
+    HEIGHT = 128
+
+    def __init__(self):
+        self._hw = None        # hardware driver (ssd1327 or sh1107), None for web
+        self._fb = None        # framebuf used for drawing
+        self._buf = None       # raw byte buffer backing the framebuf
+        self._is_web = web()
+
+        if self._is_web:
+            import framebuf
+            self._buf = bytearray(self.WIDTH * self.HEIGHT // 2)
+            self._fb = framebuf.FrameBuffer(self._buf, self.WIDTH, self.HEIGHT, framebuf.GS4_HMSB)
+        else:
+            # Try ssd1327 first, then sh1107
+            try:
+                hw = ssd1327_oled()
+                self._hw = hw
+                self._buf = hw.buffer
+                self._fb = hw.framebuf
+            except Exception:
+                try:
+                    hw = sh1107_oled()
+                    self._hw = hw
+                    self._buf = hw.displaybuf
+                    self._fb = hw  # sh1107 *is* a FrameBuffer subclass
+                except Exception:
+                    pass  # no physical display
+
+    @property
+    def buffer(self):
+        return self._buf
+
+    @property
+    def available(self):
+        return self._fb is not None
+
+    # -- drawing primitives (forwarded to framebuf) --
+
+    def text(self, string, x, y, col=255):
+        if self._fb is not None:
+            self._fb.text(string, x, y, col)
+
+    def fill(self, col):
+        if self._fb is not None:
+            self._fb.fill(col)
+
+    def fill_rect(self, x, y, w, h, col):
+        if self._fb is not None:
+            self._fb.fill_rect(x, y, w, h, col)
+
+    def line(self, x1, y1, x2, y2, col):
+        if self._fb is not None:
+            self._fb.line(x1, y1, x2, y2, col)
+
+    def pixel(self, x, y, col=None):
+        if self._fb is None:
+            return None
+        if col is None:
+            return self._fb.pixel(x, y)
+        self._fb.pixel(x, y, col)
+
+    def rect(self, x, y, w, h, col):
+        if self._fb is not None:
+            self._fb.rect(x, y, w, h, col)
+
+    def scroll(self, dx, dy):
+        if self._fb is not None:
+            self._fb.scroll(dx, dy)
+
+    # -- refresh --
+
+    def show(self):
+        """Push the framebuffer to the display hardware (or web bridge)."""
+        if self._fb is None:
+            return
+        if self._is_web:
+            tulip.framebuf_web_update(self._buf)
+        elif self._hw is not None:
+            self._hw.show()
+
+    # convenience alias so old code calling display_refresh() on a Display works
+    refresh = show
 
 DEFAULT_ENV_SOURCE = "# Put your own code here to run in your environment\n"
 
@@ -301,8 +391,11 @@ def start_amy():
     tulip.stderr_write("cding to %s" % (_env_dir))
     cd(_env_dir)
     try:
-        tulip.stderr_write("execfile env.py")
-        execfile("env.py")
+        from machine import Pin
+        button = Pin(0, Pin.IN, Pin.PULL_UP)
+        if button.value() != 0:  # Skip env.py if boot button held
+            tulip.stderr_write("execfile env.py")
+            execfile("env.py")
     except Exception as e:
         print("Environment start failed:")
         sys.print_exception(e)
@@ -329,35 +422,20 @@ def sh1107_oled():
     return d
 
 def display_refresh():
-    global hw_display, display_buffer
-    if hw_display is not None: hw_display.show()
-    if(web()): tulip.framebuf_web_update(display_buffer)
+    """Legacy helper — calls display.show() if a display exists."""
+    if display is not None:
+        display.show()
 
 def display_startup():
-    global display
-    display.text("AMYboard!!!!", 0,0,255)
-    display.text(tulip.version(),0,24,255)
-    display_refresh()
+    display.text("AMYboard!!!!", 0, 0, 255)
+    display.text(tulip.version(), 0, 24, 255)
+    display.show()
 
 def init_display():
-    global display_buffer, display, hw_display
-    if(web()):
-        import framebuf
-        display_buffer = bytearray(128 * 128 // 2)
-        display = framebuf.FrameBuffer(display_buffer, 128, 128, framebuf.GS4_HMSB)
-    else:
-        try:
-            hw_display = ssd1327_oled()
-            display_buffer = hw_display.buffer
-            display = hw_display.framebuf
-        except: # not there, try the other one
-            try:
-                hw_display = sh1107_oled()
-                display_buffer = hw_display.displaybuf
-                display = hw_display 
-            except:
-                pass # no physical display
-    if(display is not None): display_startup()
+    global display
+    display = Display()
+    if display.available:
+        display_startup()
 
 def adc1115_raw(channel=0):
     import adc1115
@@ -547,3 +625,100 @@ def draw_waveform():
         last_x = x
         last_y = y
     display.show()
+
+
+# Patch Selector -
+# If you have a display and a rotary encoder on I2C
+# this function will let you scroll through your available patches
+# and load each one by clicking the rotary encoder.
+#
+# You can launch it from env.py like this:
+#
+#   amyboard.patch_selector()
+
+def patch_selector():
+    """Endless loop scrolling through patch files and installing on click."""
+    SYNTH = 1
+    PATCHDIR = '/user/current'
+    EXTENSION = '.patch'
+    ENCODER = 0
+    BUTTON = 12
+    SEESAW = 0x49
+
+    def _num_oscs_for_patch(patch):
+        """Scan for how many oscs are used in a patch."""
+        top_osc = 0
+        for line in patch.split('\n'):
+            if not line:
+                continue
+            if line[0] == 'v':
+                osc_num = int(line[1])  # Cannot see osc nums > 9.
+            if osc_num > top_osc:
+                top_osc = osc_num
+        return top_osc + 1
+
+    def _load_patch_file(patchname, synth=1, num_voices=6):
+        """Set up a synth with a patch file."""
+        filename = PATCHDIR + '/' + patchname + EXTENSION
+        with open(filename, 'r') as f:
+            patch = f.read()
+        oscs_per_voice = _num_oscs_for_patch(patch)
+        amy.send_raw('i%div%din%d' % (synth, num_voices, oscs_per_voice))
+        for line in patch.split('\n'):
+            if line:
+                amy.send_raw('i%d%s' % (synth, line))
+
+    def _list_patches():
+        """List of the patch files."""
+        files = [f[:-len(EXTENSION)] for f in os.listdir(PATCHDIR) if f.endswith(EXTENSION)]
+        return files
+
+    LINEHEIGHT = 12
+
+    def _disp(message, row=0, inverse=False):
+        """Display some text on a row on the display."""
+        top_y = LINEHEIGHT * row
+        black = 0
+        white = 255
+        if inverse:
+            black = 255
+            white = 0
+        display.fill_rect(0, top_y, 128, LINEHEIGHT, black)
+        display.text(message, 0, top_y, white)
+        display.show()
+
+    _disp("PATCH SELECTOR", 0)
+
+    patches = _list_patches()
+
+    if not patches:
+        raise ValueError('No .patch files found in ' + PATCHDIR)
+
+    loaded_patch = ""
+
+    init_buttons(pins=(BUTTON,), seesaw_dev=SEESAW)
+
+    buttonhold = 0
+
+    while True:
+        current_index = read_encoder(ENCODER, seesaw_dev=SEESAW) % len(patches)
+        current_patch = patches[current_index]
+        buttonstate = read_buttons(pins=(BUTTON,), seesaw_dev=SEESAW)[0]
+        _disp(current_patch, 2, inverse=buttonstate)
+        if not buttonstate:
+            # Button not down, reset button-down timer
+            buttonhold = 0
+        else:
+            # Button is down, do we have a new patch to load?
+            if current_patch != loaded_patch:
+                _load_patch_file(current_patch, synth=SYNTH)
+                loaded_patch = current_patch
+            buttonhold += 1
+            if buttonhold >= 50:
+                # Exit if button held down a long time (~3 sec)
+                break
+        time.sleep(0.01)  # Time for background events?
+
+    _disp("", 0)
+    _disp("finished", 2)
+
