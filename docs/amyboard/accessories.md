@@ -63,6 +63,25 @@ buttons = amyboard.read_buttons()
 amyboard.monitor_encoders()
 ```
 
+ - [**Adafruit I2C QT Quad Rotary Encoder Breakout**](https://www.adafruit.com/product/5752) -- Four rotary encoders with built-in push buttons on a single I2C breakout, running seesaw firmware. AMYboard has built-in support via `read_encoder()`, `init_buttons()`, and `read_buttons()`. With a display connected, you can use `patch_selector()` to scroll through your `.patch` files with one encoder and load them with a click.
+
+```python
+import amyboard
+
+# Read any of the 4 encoders (0-3)
+pos = amyboard.read_encoder(encoder=0)
+
+# Initialize and read all 4 push buttons
+amyboard.init_buttons()
+buttons = amyboard.read_buttons()
+# Returns list of 4 booleans (True = pressed)
+
+# Patch selector: scroll through patches and load on click
+# (requires a display to be connected)
+amyboard.init_display()
+amyboard.patch_selector()
+```
+
  - [**M5Stack 8-Encoder Unit (STM32F030)**](https://shop.m5stack.com/products/8-encoder-unit-stm32f030) -- Eight rotary encoders with RGB LEDs and a toggle switch, all on one I2C unit. Great for controlling multiple synth parameters at once.
 
 ## Connecting accessories
