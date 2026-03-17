@@ -636,14 +636,9 @@ def draw_waveform():
 #
 #   amyboard.patch_selector()
 
-def patch_selector():
+def patch_selector(synth=1, seesaw_dev=0x36, encoder=0, button_pin=24, patchdir='/user/current', extension='.patch'):
     """Endless loop scrolling through patch files and installing on click."""
-    SYNTH = 1
-    PATCHDIR = '/user/current'
-    EXTENSION = '.patch'
-    ENCODER = 0
-    BUTTON = 12
-    SEESAW = 0x49
+    # NB: For adafruit 4-knob encoder, using top knob, that's seesaw_dev=0x49, button_pin=12
 
     def _num_oscs_for_patch(patch):
         """Scan for how many oscs are used in a patch."""
@@ -659,7 +654,7 @@ def patch_selector():
 
     def _load_patch_file(patchname, synth=1, num_voices=6):
         """Set up a synth with a patch file."""
-        filename = PATCHDIR + '/' + patchname + EXTENSION
+        filename = patchdir + '/' + patchname + extension
         with open(filename, 'r') as f:
             patch = f.read()
         oscs_per_voice = _num_oscs_for_patch(patch)
@@ -670,7 +665,7 @@ def patch_selector():
 
     def _list_patches():
         """List of the patch files."""
-        files = [f[:-len(EXTENSION)] for f in os.listdir(PATCHDIR) if f.endswith(EXTENSION)]
+        files = [f[:-len(extension)] for f in os.listdir(patchdir) if f.endswith(extension)]
         return files
 
     LINEHEIGHT = 12
@@ -692,19 +687,19 @@ def patch_selector():
     patches = _list_patches()
 
     if not patches:
-        raise ValueError('No .patch files found in ' + PATCHDIR)
+        raise ValueError('No .patch files found in ' + patchdir)
 
     loaded_patch = ""
 
-    init_buttons(pins=(BUTTON,), seesaw_dev=SEESAW)
+    init_buttons(pins=(button_pin,), seesaw_dev=seesaw_dev)
 
     buttonhold = 0
     dispstate = None
 
     while True:
-        current_index = read_encoder(ENCODER, seesaw_dev=SEESAW) % len(patches)
+        current_index = read_encoder(encoder, seesaw_dev=seesaw_dev) % len(patches)
         current_patch = patches[current_index]
-        buttonstate = read_buttons(pins=(BUTTON,), seesaw_dev=SEESAW)[0]
+        buttonstate = read_buttons(pins=(button_pin,), seesaw_dev=seesaw_dev)[0]
         if dispstate != (current_patch, buttonstate):
             # Only rewrite display if it's out of sync.
             _disp(current_patch, 2, inverse=buttonstate)
@@ -715,10 +710,10 @@ def patch_selector():
         else:
             # Button is down, do we have a new patch to load?
             if current_patch != loaded_patch:
-                _load_patch_file(current_patch, synth=SYNTH)
+                _load_patch_file(current_patch, synth=synth)
                 loaded_patch = current_patch
             buttonhold += 1
-            if buttonhold >= 50:
+            if buttonhold >= 20:
                 # Exit if button held down a long time (~3 sec)
                 break
         time.sleep(0.05)  # Time for background events?
