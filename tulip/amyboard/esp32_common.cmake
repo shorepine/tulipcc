@@ -311,6 +311,9 @@ set(MICROPY_TARGET ${COMPONENT_TARGET})
 # Define mpy-cross flags, for use with frozen code.
 set(MICROPY_CROSS_FLAGS -march=xtensawin)
 
+# Suppress -Wgnu-folding-constant when building mpy-cross on macOS clang.
+set(ENV{CFLAGS_EXTRA} "$ENV{CFLAGS_EXTRA} -Wno-gnu-folding-constant")
+
 # Set compile options for this port.
 target_compile_definitions(${MICROPY_TARGET} PUBLIC
     ${MICROPY_DEF_CORE}
