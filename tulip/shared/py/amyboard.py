@@ -699,12 +699,16 @@ def patch_selector():
     init_buttons(pins=(BUTTON,), seesaw_dev=SEESAW)
 
     buttonhold = 0
+    dispstate = None
 
     while True:
         current_index = read_encoder(ENCODER, seesaw_dev=SEESAW) % len(patches)
         current_patch = patches[current_index]
         buttonstate = read_buttons(pins=(BUTTON,), seesaw_dev=SEESAW)[0]
-        _disp(current_patch, 2, inverse=buttonstate)
+        if dispstate != (current_patch, buttonstate):
+            # Only rewrite display if it's out of sync.
+            _disp(current_patch, 2, inverse=buttonstate)
+            dispstate = (current_patch, buttonstate)
         if not buttonstate:
             # Button not down, reset button-down timer
             buttonhold = 0
@@ -717,7 +721,7 @@ def patch_selector():
             if buttonhold >= 50:
                 # Exit if button held down a long time (~3 sec)
                 break
-        time.sleep(0.01)  # Time for background events?
+        time.sleep(0.05)  # Time for background events?
 
     _disp("", 0)
     _disp("finished", 2)
