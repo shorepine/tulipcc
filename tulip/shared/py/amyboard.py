@@ -2,12 +2,102 @@
 import tulip, midi, amy, time, struct, time, sys, os
 
 i2c = None
-display_buffer = None # the bytes object storing the display bits
-display = None # The framebuf object to draw to 
-hw_display = None # if there's an I2C display connected
+display = None # Display instance (unified interface for all display types)
 
 def web():
     return (tulip.board()=="AMYBOARD_WEB")
+
+
+class Display:
+    """Unified display interface for ssd1327, sh1107, and web framebuffer.
+
+    Drawing methods (text, fill_rect, line, fill, pixel, rect, scroll) are
+    forwarded to the underlying framebuf.  ``show()`` does the right thing
+    for each backend so callers never need to know which hardware is present.
+    """
+    WIDTH = 128
+    HEIGHT = 128
+
+    def __init__(self):
+        self._hw = None        # hardware driver (ssd1327 or sh1107), None for web
+        self._fb = None        # framebuf used for drawing
+        self._buf = None       # raw byte buffer backing the framebuf
+        self._is_web = web()
+
+        if self._is_web:
+            import framebuf
+            self._buf = bytearray(self.WIDTH * self.HEIGHT // 2)
+            self._fb = framebuf.FrameBuffer(self._buf, self.WIDTH, self.HEIGHT, framebuf.GS4_HMSB)
+        else:
+            # Try ssd1327 first, then sh1107
+            try:
+                hw = ssd1327_oled()
+                self._hw = hw
+                self._buf = hw.buffer
+                self._fb = hw.framebuf
+            except Exception:
+                try:
+                    hw = sh1107_oled()
+                    self._hw = hw
+                    self._buf = hw.displaybuf
+                    self._fb = hw  # sh1107 *is* a FrameBuffer subclass
+                except Exception:
+                    pass  # no physical display
+
+    @property
+    def buffer(self):
+        return self._buf
+
+    @property
+    def available(self):
+        return self._fb is not None
+
+    # -- drawing primitives (forwarded to framebuf) --
+
+    def text(self, string, x, y, col=255):
+        if self._fb is not None:
+            self._fb.text(string, x, y, col)
+
+    def fill(self, col):
+        if self._fb is not None:
+            self._fb.fill(col)
+
+    def fill_rect(self, x, y, w, h, col):
+        if self._fb is not None:
+            self._fb.fill_rect(x, y, w, h, col)
+
+    def line(self, x1, y1, x2, y2, col):
+        if self._fb is not None:
+            self._fb.line(x1, y1, x2, y2, col)
+
+    def pixel(self, x, y, col=None):
+        if self._fb is None:
+            return None
+        if col is None:
+            return self._fb.pixel(x, y)
+        self._fb.pixel(x, y, col)
+
+    def rect(self, x, y, w, h, col):
+        if self._fb is not None:
+            self._fb.rect(x, y, w, h, col)
+
+    def scroll(self, dx, dy):
+        if self._fb is not None:
+            self._fb.scroll(dx, dy)
+
+    # -- refresh --
+
+    def show(self):
+        """Push the framebuffer to the display hardware (or web bridge)."""
+        if self._fb is None:
+            return
+        if self._is_web:
+            tulip.framebuf_web_update(self._buf)
+        elif self._hw is not None:
+            self._hw.show()
+
+    # convenience alias so old code calling display_refresh() on a Display works
+    refresh = show
 
 DEFAULT_ENV_SOURCE = "# Put your own code here to run in your environment\n"
 
@@ -332,35 +422,20 @@ def sh1107_oled():
     return d
 
 def display_refresh():
-    global hw_display, display_buffer
-    if hw_display is not None: hw_display.show()
-    if(web()): tulip.framebuf_web_update(display_buffer)
+    """Legacy helper — calls display.show() if a display exists."""
+    if display is not None:
+        display.show()
 
 def display_startup():
-    global display
-    display.text("AMYboard!!!!", 0,0,255)
-    display.text(tulip.version(),0,24,255)
-    display_refresh()
+    display.text("AMYboard!!!!", 0, 0, 255)
+    display.text(tulip.version(), 0, 24, 255)
+    display.show()
 
 def init_display():
-    global display_buffer, display, hw_display
-    if(web()):
-        import framebuf
-        display_buffer = bytearray(128 * 128 // 2)
-        display = framebuf.FrameBuffer(display_buffer, 128, 128, framebuf.GS4_HMSB)
-    else:
-        try:
-            hw_display = ssd1327_oled()
-            display_buffer = hw_display.buffer
-            display = hw_display.framebuf
-        except: # not there, try the other one
-            try:
-                hw_display = sh1107_oled()
-                display_buffer = hw_display.displaybuf
-                display = hw_display 
-            except:
-                pass # no physical display
-    if(display is not None): display_startup()
+    global display
+    display = Display()
+    if display.available:
+        display_startup()
 
 def adc1115_raw(channel=0):
     import adc1115
