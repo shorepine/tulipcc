@@ -17,6 +17,7 @@ class Display:
     """
     WIDTH = 128
     HEIGHT = 128
+    LINEHEIGHT = 12
 
     def __init__(self):
         self._hw = None        # hardware driver (ssd1327 or sh1107), None for web
@@ -85,6 +86,19 @@ class Display:
         if self._fb is not None:
             self._fb.scroll(dx, dy)
 
+    # Next-layer-up API
+    def clear(self):
+        self.fill(0)
+        self.show()
+
+    def message(self, message, row=0, inverse=False):
+        """Display some text on a row on the display."""
+        top_y = self.LINEHEIGHT * row
+        bw = (255, 0) if inverse else (0, 255)
+        self.fill_rect(0, top_y, self.WIDTH, self.LINEHEIGHT, bw[0])
+        self.text(message, 0, top_y, bw[1])
+        self.show()
+
     # -- refresh --
 
     def show(self):
@@ -146,6 +160,31 @@ def _clear_directory(path):
         if name == "." or name == "..":
             continue
         _remove_tree(path.rstrip("/") + "/" + name)
+
+
+def load_patch_file(filename, synth=1, num_voices=6):
+    """Load a .patch file (list of AMY wire commands) into a given synth."""
+
+    def _num_oscs_for_patch(patch):
+        """Scan for how many oscs are used in a patch."""
+        top_osc = 0
+        for line in patch.split('\n'):
+            if not line:
+                continue
+            if line[0] == 'v':
+                osc_num = int(line[1])  # Cannot see osc nums > 9.
+            if osc_num > top_osc:
+                top_osc = osc_num
+        return top_osc + 1
+
+    """Set up a synth with a patch file."""
+    with open(filename, 'r') as f:
+        patch = f.read()
+    oscs_per_voice = _num_oscs_for_patch(patch)
+    amy.send_raw('i%div%din%d' % (synth, num_voices, oscs_per_voice))
+    for line in patch.split('\n'):
+        if line and not line.startswith('#'):
+            amy.send_raw('i%d%s' % (synth, line))
 
 
 def ensure_user_environment():
@@ -281,11 +320,8 @@ def restore_patch_state_from_files(env_dir=None, send_default_if_missing=True):
         if source_path is None:
             continue
 
-        oscs_per_voice = _num_oscs_from_patch_file(source_path)
         amy.send_raw("i%dic255" % (synth))
-        amy.send_raw("i%div6in%d" % (synth, oscs_per_voice))
-        for msg in _iter_patch_messages(source_path):
-            amy.send_raw("i%d%s" % (synth, msg))
+        load_patch_file(source_path)
         result["loaded_channels"].append(synth)
         if is_dirty:
             result["dirty_channels"].append(synth)
@@ -635,89 +671,87 @@ def draw_waveform():
 # You can launch it from env.py like this:
 #
 #   amyboard.patch_selector()
+#
+# or, for the 4-knob Adafruit rotary encoder:
+#
+#   amyboard.patch_selector(seesaw_dev=0x49, button_pin=12)
 
-def patch_selector(synth=1, seesaw_dev=0x36, encoder=0, button_pin=24, patchdir='/user/current', extension='.patch'):
-    """Endless loop scrolling through patch files and installing on click."""
-    # NB: For adafruit 4-knob encoder, using top knob, that's seesaw_dev=0x49, button_pin=12
+class PatchSelector:
 
-    def _num_oscs_for_patch(patch):
-        """Scan for how many oscs are used in a patch."""
-        top_osc = 0
-        for line in patch.split('\n'):
-            if not line:
-                continue
-            if line[0] == 'v':
-                osc_num = int(line[1])  # Cannot see osc nums > 9.
-            if osc_num > top_osc:
-                top_osc = osc_num
-        return top_osc + 1
+    def __init__(
+            self, synth=1, seesaw_dev=0x36, encoder=0, button_pin=24,
+            patch_dir='/user/current', extension='.patch',
+            hold_max=10, exit_callback=lambda: True
+    ):
+        """Endless loop scrolling through patch files and installing on click."""
+        self.synth = synth
+        self.seesaw_dev = seesaw_dev
+        self.encoder = encoder
+        self.button_pin = button_pin
+        self.patch_dir = patch_dir
+        self.extension = extension
+        self.hold_max = hold_max
+        self.exit_callback = exit_callback
+        # State
+        self.patches = self._list_patches()
+        if not self.patches:
+            raise ValueError('No .patch files found in ' + self.patch_dir)
+        self.index = 0  # within patches
+        self.button_state = False
+        self.hold_count = 0
+        # Initialize
+        display.clear()
+        display.message("PATCH SELECTOR", 0)
+        init_buttons(pins=(self.button_pin,), seesaw_dev=self.seesaw_dev)
 
-    def _load_patch_file(patchname, synth=1, num_voices=6):
-        """Set up a synth with a patch file."""
-        filename = patchdir + '/' + patchname + extension
-        with open(filename, 'r') as f:
-            patch = f.read()
-        oscs_per_voice = _num_oscs_for_patch(patch)
-        amy.send_raw('i%div%din%d' % (synth, num_voices, oscs_per_voice))
-        for line in patch.split('\n'):
-            if line:
-                amy.send_raw('i%d%s' % (synth, line))
-
-    def _list_patches():
+    def _list_patches(self):
         """List of the patch files."""
-        files = [f[:-len(extension)] for f in os.listdir(patchdir) if f.endswith(extension)]
+        files = [f[:-len(self.extension)] for f in os.listdir(self.patch_dir) if f.endswith(self.extension)]
         return files
 
-    LINEHEIGHT = 12
-
-    def _disp(message, row=0, inverse=False):
-        """Display some text on a row on the display."""
-        top_y = LINEHEIGHT * row
-        black = 0
-        white = 255
-        if inverse:
-            black = 255
-            white = 0
-        display.fill_rect(0, top_y, 128, LINEHEIGHT, black)
-        display.text(message, 0, top_y, white)
-        display.show()
-
-    _disp("PATCH SELECTOR", 0)
-
-    patches = _list_patches()
-
-    if not patches:
-        raise ValueError('No .patch files found in ' + patchdir)
-
-    loaded_patch = ""
-
-    init_buttons(pins=(button_pin,), seesaw_dev=seesaw_dev)
-
-    buttonhold = 0
-    dispstate = None
-
-    while True:
-        current_index = read_encoder(encoder, seesaw_dev=seesaw_dev) % len(patches)
-        current_patch = patches[current_index]
-        buttonstate = read_buttons(pins=(button_pin,), seesaw_dev=seesaw_dev)[0]
-        if dispstate != (current_patch, buttonstate):
+    def update(self):
+        index = read_encoder(self.encoder, seesaw_dev=self.seesaw_dev) % len(self.patches)
+        button_state = read_buttons(pins=(self.button_pin,), seesaw_dev=self.seesaw_dev)[0]
+        if (index, button_state) != (self.index, self.button_state):
             # Only rewrite display if it's out of sync.
-            _disp(current_patch, 2, inverse=buttonstate)
-            dispstate = (current_patch, buttonstate)
-        if not buttonstate:
-            # Button not down, reset button-down timer
-            buttonhold = 0
-        else:
-            # Button is down, do we have a new patch to load?
-            if current_patch != loaded_patch:
-                _load_patch_file(current_patch, synth=synth)
-                loaded_patch = current_patch
-            buttonhold += 1
-            if buttonhold >= 20:
-                # Exit if button held down a long time (~3 sec)
-                break
-        time.sleep(0.05)  # Time for background events?
+            display.message(self.patches[index], 2, inverse=button_state)
+        if button_state and not self.button_state:
+            # Button transitioned to down
+            load_patch_file(self.patch_dir + '/' + self.patches[index] + self.extension, synth=self.synth)
+        self.hold_count = self.hold_count + 1 if button_state else 0
+        if self.hold_count > self.hold_max:
+            self.exit_callback()
+        self.index = index
+        self.button_state = button_state
 
-    _disp("", 0)
-    _disp("finished", 2)
 
+def patch_selector(synth=1, duration=30, seesaw_dev=0x36, encoder=0, button_pin=24,
+                   patch_dir='/user/current', extension='.patch'):
+    """Run the PATCH SELECTOR app using asyncio."""
+    import asyncio
+    import machine
+
+    event = asyncio.Event()
+
+    def exit_callback():
+        event.set()
+
+    patchsel_obj = PatchSelector(synth=synth, seesaw_dev=seesaw_dev, encoder=encoder, button_pin=button_pin,
+                                 patch_dir=patch_dir, extension=extension, exit_callback=exit_callback)
+
+    async def periodic_task(interval):
+        while True:
+            patchsel_obj.update()
+            machine.idle()  # Maybe give other background tasks a chance to run?
+            await asyncio.sleep(interval)
+
+    async def main():
+        task = asyncio.create_task(periodic_task(interval=0.1))
+        await event.wait()
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            display.clear()
+
+    asyncio.run(main())
