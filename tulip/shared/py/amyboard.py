@@ -177,11 +177,14 @@ def load_patch_file(filename, synth=1, num_voices=6):
                 top_osc = osc_num
         return top_osc + 1
 
-    """Set up a synth with a patch file."""
     with open(filename, 'r') as f:
         patch = f.read()
+    # Reset global FX.
+    amy.send_raw("V1x0,0,0M0,500,,0,0k0,320,0.5,0.5h0,0.85,0.5,3000")
+    # Reset the synth.
     oscs_per_voice = _num_oscs_for_patch(patch)
     amy.send_raw('i%div%din%d' % (synth, num_voices, oscs_per_voice))
+    # Execute the patch.
     for line in patch.split('\n'):
         if line and not line.startswith('#'):
             amy.send_raw('i%d%s' % (synth, line))
@@ -727,31 +730,21 @@ class PatchSelector:
 
 def patch_selector(synth=1, duration=30, seesaw_dev=0x36, encoder=0, button_pin=24,
                    patch_dir='/user/current', extension='.patch'):
-    """Run the PATCH SELECTOR app using asyncio."""
-    import asyncio
+    """Run the PATCH SELECTOR app using Tulip sequencer."""
+    import sequencer
     import machine
-
-    event = asyncio.Event()
-
+    seq = None
+    
     def exit_callback():
-        event.set()
-
+        # Terminate the sequencing
+        if seq:
+            # Stop sequencer
+            seq.clear()
+            # Clear screen
+            display.clear()
+    # Initialize the patch selector
     patchsel_obj = PatchSelector(synth=synth, seesaw_dev=seesaw_dev, encoder=encoder, button_pin=button_pin,
                                  patch_dir=patch_dir, extension=extension, exit_callback=exit_callback)
+    # Arrange for it to be called every 32nd note
+    seq = sequencer.TulipSequence(32, lambda x: patchsel_obj.update())
 
-    async def periodic_task(interval):
-        while True:
-            patchsel_obj.update()
-            machine.idle()  # Maybe give other background tasks a chance to run?
-            await asyncio.sleep(interval)
-
-    async def main():
-        task = asyncio.create_task(periodic_task(interval=0.1))
-        await event.wait()
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            display.clear()
-
-    asyncio.run(main())
