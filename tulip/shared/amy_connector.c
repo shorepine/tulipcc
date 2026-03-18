@@ -69,14 +69,19 @@ uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
 #endif
 
 // defined in amy/src/midi_mappings.c — processes ic (MIDI CC mapping) commands
+// On web, AMY runs in a separate wasm worker so midi_cc_handler is not linkable
+#ifndef __EMSCRIPTEN__
 extern void midi_cc_handler(uint8_t * bytes, uint16_t len, uint8_t is_sysex);
+#endif
 
 // I am called when AMY receives MIDI in, whether it has been processed (played in a instrument) or not
 // In tulip i just fill up the last_midi queue so that MIDI input is accessible to Python
 // I also process sysex if given, and dispatch CC mappings via midi_cc_handler
 void tulip_midi_input_hook(uint8_t * data, uint16_t len, uint8_t is_sysex) {
     // Process ic (MIDI CC mapping) commands before queuing to Python
+    #ifndef __EMSCRIPTEN__
     midi_cc_handler(data, len, is_sysex);
+    #endif
     if(is_sysex) {
         // f0 and f7 are stripped on some platforms
         if(data[0]!=0xf0) {
@@ -272,6 +277,8 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.amy_external_fread_hook = mp_fread_hook;
     amy_config.amy_external_fwrite_hook = mp_fwrite_hook;
     amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
+    extern void tulip_amy_sequencer_hook(uint32_t tick_count);
+    amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     amy_config.audio = AMY_AUDIO_IS_I2S;
 #ifdef AMYBOARD
     extern float cv_input_hook(uint16_t channel);
@@ -303,6 +310,8 @@ void run_amy(uint8_t midi_out_pin) {
 void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_config_t amy_config = amy_default_config();
     amy_config.amy_external_midi_input_hook = tulip_midi_input_hook;
+    extern void tulip_amy_sequencer_hook(uint32_t tick_count);
+    amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.capture_device_id = capture_device_id;
     amy_config.playback_device_id = playback_device_id;
