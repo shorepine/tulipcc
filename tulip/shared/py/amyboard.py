@@ -4,6 +4,10 @@ import tulip, midi, amy, time, struct, time, sys, os
 i2c = None
 display = None # Display instance (unified interface for all display types)
 
+# Web encoder emulation state (used when running on AMYBOARD_WEB)
+_web_encoder_pos = 0      # cumulative encoder position
+_web_encoder_button = False  # current button state
+
 def web():
     return (tulip.board()=="AMYBOARD_WEB")
 
@@ -545,6 +549,19 @@ def cv_out(volts, channel=0):
 def cv_in(channel=0):
     return tulip.cv_in(channel)
 
+# --- Web encoder emulation helpers (called from JS) ---
+
+def _web_encoder_turn(delta):
+    """Called from JS when the web encoder UI is turned."""
+    global _web_encoder_pos
+    _web_encoder_pos += delta
+
+def _web_encoder_press(state):
+    """Called from JS when the web encoder push button is pressed/released."""
+    global _web_encoder_button
+    _web_encoder_button = state
+
+
 # Adafruit I2C Quad Rotary Encoder Breakout
 # https://www.adafruit.com/product/5752
 # Four rotary encoders with built-in push buttons.
@@ -556,6 +573,8 @@ def cv_in(channel=0):
 
 def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
     """Read the cumulated value of encoder 0..3."""
+    if web():
+        return _web_encoder_pos
     i2c = get_i2c()
     result = bytearray(4)
     ENCODER_BASE = 0x11
@@ -567,6 +586,8 @@ def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
 
 def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
     """Setup the seesaw quad encoder button pins to input_pullup."""
+    if web():
+        return
     mask = 0
     for p in pins:
         mask |= (1 << p)
@@ -582,6 +603,8 @@ def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
 
 def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.008):
     """Read the 4 seesaw encoder push buttons."""
+    if web():
+        return [_web_encoder_button] * len(pins)
     i2c = get_i2c()
     GPIO_BASE = 0x01
     GPIO_BULK = 0x04
@@ -709,7 +732,10 @@ class PatchSelector:
 
     def _list_patches(self):
         """List of the patch files."""
-        files = [f[:-len(self.extension)] for f in os.listdir(self.patch_dir) if f.endswith(self.extension)]
+        try:
+            files = [f[:-len(self.extension)] for f in os.listdir(self.patch_dir) if f.endswith(self.extension)]
+        except OSError:
+            files = []
         return files
 
     def update(self):
@@ -729,10 +755,11 @@ class PatchSelector:
 
 
 def patch_selector(synth=1, duration=30, seesaw_dev=0x36, encoder=0, button_pin=24,
-                   patch_dir='/user/current', extension='.patch'):
+                   patch_dir=None, extension='.patch'):
     """Run the PATCH SELECTOR app using Tulip sequencer."""
     import sequencer
-    import machine
+    if patch_dir is None:
+        patch_dir = tulip.root_dir() + 'user/current'
     seq = None
     
     def exit_callback():

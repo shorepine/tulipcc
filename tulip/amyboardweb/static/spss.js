@@ -921,6 +921,52 @@ window.amy_cv_knob_change = function(index, value) {
   if (mp) mp.runPythonAsync("tulip.cv_local(" + index + ", " + value + ")");
 };
 
+// --- Rotary encoder emulation (24 pulses, wraps 0-23) ---
+(function() {
+  var encoderPos = 0;
+  var ENCODER_STEPS = 24;
+  var valueEl = null;
+
+  function updateDisplay() {
+    if (!valueEl) valueEl = document.getElementById('encoder-value');
+    if (valueEl) valueEl.textContent = encoderPos;
+  }
+
+  function encoderTurn(delta) {
+    encoderPos = ((encoderPos + delta) % ENCODER_STEPS + ENCODER_STEPS) % ENCODER_STEPS;
+    updateDisplay();
+    if (mp) mp.runPythonAsync("amyboard._web_encoder_turn(" + delta + ")");
+  }
+
+  function encoderPress(down) {
+    if (mp) mp.runPythonAsync("amyboard._web_encoder_press(" + (down ? "True" : "False") + ")");
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var leftBtn = document.getElementById('encoder-left');
+    var rightBtn = document.getElementById('encoder-right');
+    var pushBtn = document.getElementById('encoder-push');
+    if (leftBtn) leftBtn.addEventListener('click', function() { encoderTurn(-1); });
+    if (rightBtn) rightBtn.addEventListener('click', function() { encoderTurn(1); });
+    if (pushBtn) {
+      pushBtn.addEventListener('mousedown', function() {
+        pushBtn.classList.add('pressed');
+        encoderPress(true);
+      });
+      pushBtn.addEventListener('mouseup', function() {
+        pushBtn.classList.remove('pressed');
+        encoderPress(false);
+      });
+      pushBtn.addEventListener('mouseleave', function() {
+        if (pushBtn.classList.contains('pressed')) {
+          pushBtn.classList.remove('pressed');
+          encoderPress(false);
+        }
+      });
+    }
+  });
+})();
+
 function move_knob(channel, cc, value) {
   // Hook for MIDI CC -> knob mapping.
   const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
