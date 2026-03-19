@@ -375,7 +375,7 @@ Here's how to make an 808-style bass drum tone in pure AMY oscillators:
 
 ```python
 amy.send(osc=31, wave=amy.SINE, amp=0.5, freq=0.25, phase=0.5)
-amy.send(osc=32, wave=amy.SINE, bp0="0,1,500,0,0,0", freq="261.63,1,0,0,0,1", mod_source=31, vel=1)
+amy.send(osc=32, wave=amy.SINE, bp0="0,1,500,0,0,0", freq="150,1,0,0,0,1", mod_source=31, vel=1)
 ```
 
 If you're interested in going deeper on all that AMY can do, [check out AMY's README](https://github.com/shorepine/amy/blob/main/README.md). 
