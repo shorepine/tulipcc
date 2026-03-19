@@ -32,8 +32,8 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "freq",
       change_code: "i%iv" + OSCA_OSC + "f%v",
       knob_type: "log",
-      default_value: 261.63,
-      amy_default: 261.63,    // logfreq_coefs[CONST]=0; display as middle C
+      default_value: 440.0,
+      amy_default: 440.0,    // logfreq_coefs[CONST]=0; display as middle C
       min_value: 50,
       max_value: 2000,
     },
@@ -150,8 +150,8 @@ window.addEventListener("DOMContentLoaded", function() {
       display_name: "freq",
       change_code: "i%iv" + OSCB_OSC + "f%v",
       knob_type: "log",
-      default_value: 261.63,
-      amy_default: 261.63,
+      default_value: 440.0,
+      amy_default: 440.0,
       min_value: 50,
       max_value: 2000,
     },
@@ -730,7 +730,7 @@ function set_knobs_from_synth(synth) {
     let lfoOsc = 0;             // logfreq_coefs[MOD] = 0
     let lfoPwm = 0;             // duty_coefs[MOD] = 0
     // Track coefficients for the 2 non-lfo oscs.  Because LFO is now osc 1, we need index [2]
-    let osc_freq = [261.63, 261.63, 261.63]; // display default (logfreq_coefs[CONST]=0)
+    let osc_freq = [440.0, 440.0, 440.0, 440.0]; // display default (logfreq_coefs[CONST]=0)
     let osc_wave = [0, 0, 0];      // wave = SINE = 0
     let osc_preset = [null, null, null];
     let osc_duty = [0.5, 0.5, 0.5];  // duty_coefs[CONST] = 0.5

@@ -18,6 +18,7 @@ build_once() {
   make web
   cd ../tulip/amyboardweb
   cp ../../amy/build/amy_api.generated.js static/amy_api.generated.js
+  cp ../../amy/build/patches.generated.js static/patches.generated.js
   make
 
   # Now modify the static html and copy everything to a stage area 
