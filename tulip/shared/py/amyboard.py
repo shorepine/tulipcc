@@ -113,7 +113,16 @@ class Display:
     # convenience alias so old code calling display_refresh() on a Display works
     refresh = show
 
-DEFAULT_ENV_SOURCE = "# Put your own code here to run in your environment\n"
+DEFAULT_SKETCH_SOURCE = """\
+# AMYboard Sketch -- Arduino-style setup() and loop()
+# setup() runs once at boot. loop() runs repeatedly (~60ms).
+
+def setup():
+    pass
+
+def loop():
+    pass
+"""
 
 def _path_exists(path):
     import os
@@ -200,13 +209,12 @@ def ensure_user_environment():
         except OSError:
             pass
 
-    current_env_file = current_base + "/env.py"
-
+    current_sketch_file = current_base + "/sketch.py"
     try:
-        open(current_env_file, "r").close()
+        open(current_sketch_file, "r").close()
     except OSError:
-        w = open(current_env_file, "w")
-        w.write(DEFAULT_ENV_SOURCE)
+        w = open(current_sketch_file, "w")
+        w.write(DEFAULT_SKETCH_SOURCE)
         w.close()
 
     return current_base
@@ -427,19 +435,87 @@ def start_amy():
     restore_patch_state_from_files(_env_dir, send_default_if_missing=True)
 
     from upysh import cd
-    tulip.stderr_write("cding to %s" % (_env_dir))
-    cd(_env_dir)
     try:
         from machine import Pin
         button = Pin(0, Pin.IN, Pin.PULL_UP)
-        if button.value() != 0:  # Skip env.py if boot button held
-            tulip.stderr_write("execfile env.py")
-            execfile("env.py")
+        if button.value() != 0:  # Skip sketch if boot button held
+            run_sketch()
     except Exception as e:
         print("Environment start failed:")
         sys.print_exception(e)
-    tulip.stderr_write("cding back to %s" % (tulip.root_dir() + "user"))
+
+
+# -- sketch.py support (Arduino-style setup/loop) --
+
+_sketch_seq = None  # Keep reference to prevent GC
+
+def run_sketch():
+    """Import sketch.py and run setup(), start loop(). Called from boot."""
+    _env_dir = _ensure_current_env_layout()
+    from upysh import cd
+    tulip.stderr_write("cding to %s" % (_env_dir))
+    cd(_env_dir)
+    tulip.stderr_write("import sketch")
+    try:
+        if _env_dir not in sys.path:
+            sys.path.insert(0, _env_dir)
+        import sketch
+    except Exception as e:
+        print("sketch.py load failed:")
+        sys.print_exception(e)
+        cd(tulip.root_dir() + "user")
+        return
+
+    if hasattr(sketch, 'setup'):
+        try:
+            sketch.setup()
+        except Exception as e:
+            print("sketch.setup() failed:")
+            sys.print_exception(e)
+
+    if hasattr(sketch, 'loop'):
+        _start_sketch_loop(sketch.loop)
+
     cd(tulip.root_dir() + "user")
+
+
+def _start_sketch_loop(loop_fn):
+    """Schedule loop_fn via TulipSequence (every 32nd note, ~60ms)."""
+    import sequencer
+    global _sketch_seq
+    _loop_running = False
+
+    def _guarded_loop(tick):
+        nonlocal _loop_running
+        if _loop_running:
+            return
+        _loop_running = True
+        try:
+            loop_fn()
+        except Exception as e:
+            print("sketch.loop() error:")
+            sys.print_exception(e)
+        finally:
+            _loop_running = False
+
+    _sketch_seq = sequencer.TulipSequence(32, _guarded_loop)
+
+
+def stop_sketch():
+    """Stop the sketch loop."""
+    global _sketch_seq
+    if _sketch_seq is not None:
+        _sketch_seq.clear()
+        _sketch_seq = None
+
+
+def restart_sketch():
+    """Reload and restart sketch.py."""
+    stop_sketch()
+    if 'sketch' in sys.modules:
+        del sys.modules['sketch']
+    run_sketch()
+
 
 def get_i2c():
     global i2c
@@ -671,7 +747,7 @@ def draw_waveform():
 # this function will let you scroll through your available patches
 # and load each one by clicking the rotary encoder.
 #
-# You can launch it from env.py like this:
+# You can launch it from sketch.py setup() like this:
 #
 #   amyboard.patch_selector()
 #

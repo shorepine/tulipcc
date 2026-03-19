@@ -122,8 +122,8 @@ void setup_fs() {
         // Then sync
         FS.syncfs(true, function (err) {
             try { FS.mkdirTree('/amyboard/user/current'); } catch (e) {}
-            if (!FS.analyzePath('/amyboard/user/current/env.py').exists) {
-                FS.writeFile('/amyboard/user/current/env.py', '# Put your own code here to run in your environment\\n');
+            if (!FS.analyzePath('/amyboard/user/current/sketch.py').exists) {
+                FS.writeFile('/amyboard/user/current/sketch.py', '# AMYboard Sketch\\n# setup() runs once at boot. loop() runs repeatedly (~60ms).\\n\\ndef setup():\\n    pass\\n\\ndef loop():\\n    pass\\n');
             }
             FS.syncfs(false, function (syncErr) {});
         });
