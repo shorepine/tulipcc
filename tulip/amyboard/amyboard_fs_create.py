@@ -51,7 +51,7 @@ try:
     lfs.mkdir(fs, 'current')
 except:
     pass
-copy_to_lfs('env.py', 'current/env.py')
+copy_to_lfs('sketch.py', 'current/sketch.py')
 
 print("writing VFS .bin file...")
 with open("build/amyboard-vfs.bin","wb") as fh:

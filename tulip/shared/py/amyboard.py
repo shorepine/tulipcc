@@ -4,6 +4,10 @@ import tulip, midi, amy, time, struct, time, sys, os
 i2c = None
 display = None # Display instance (unified interface for all display types)
 
+# Web encoder emulation state (used when running on AMYBOARD_WEB)
+_web_encoder_pos = 0      # cumulative encoder position
+_web_encoder_button = False  # current button state
+
 def web():
     return (tulip.board()=="AMYBOARD_WEB")
 
@@ -113,7 +117,13 @@ class Display:
     # convenience alias so old code calling display_refresh() on a Display works
     refresh = show
 
-DEFAULT_ENV_SOURCE = "# Put your own code here to run in your environment\n"
+DEFAULT_SKETCH_SOURCE = """\
+# AMYboard Sketch
+# Top-level code runs once at boot. loop() runs repeatedly (~60ms).
+
+def loop():
+    pass
+"""
 
 def _path_exists(path):
     import os
@@ -190,6 +200,13 @@ def load_patch_file(filename, synth=1, num_voices=6):
             amy.send_raw('i%d%s' % (synth, line))
 
 
+def save_patch_file(filename, synth=1):
+    """Write the current state of a synth out to a patch file."""
+    patch_commands = amy.get_synth_commands(synth)
+    with open(filename, 'w') as f:
+        f.write(patch_commands)
+
+
 def ensure_user_environment():
     import os
     user_base = tulip.root_dir() + "user"
@@ -200,13 +217,12 @@ def ensure_user_environment():
         except OSError:
             pass
 
-    current_env_file = current_base + "/env.py"
-
+    current_sketch_file = current_base + "/sketch.py"
     try:
-        open(current_env_file, "r").close()
+        open(current_sketch_file, "r").close()
     except OSError:
-        w = open(current_env_file, "w")
-        w.write(DEFAULT_ENV_SOURCE)
+        w = open(current_sketch_file, "w")
+        w.write(DEFAULT_SKETCH_SOURCE)
         w.close()
 
     return current_base
@@ -427,19 +443,80 @@ def start_amy():
     restore_patch_state_from_files(_env_dir, send_default_if_missing=True)
 
     from upysh import cd
-    tulip.stderr_write("cding to %s" % (_env_dir))
-    cd(_env_dir)
     try:
         from machine import Pin
         button = Pin(0, Pin.IN, Pin.PULL_UP)
-        if button.value() != 0:  # Skip env.py if boot button held
-            tulip.stderr_write("execfile env.py")
-            execfile("env.py")
+        if button.value() != 0:  # Skip sketch if boot button held
+            run_sketch()
     except Exception as e:
         print("Environment start failed:")
         sys.print_exception(e)
-    tulip.stderr_write("cding back to %s" % (tulip.root_dir() + "user"))
+
+
+# -- sketch.py support (top-level init + loop) --
+
+_sketch_seq = None  # Keep reference to prevent GC
+
+def run_sketch():
+    """Import sketch.py (top-level code runs once), start loop(). Called from boot."""
+    _env_dir = _ensure_current_env_layout()
+    from upysh import cd
+    tulip.stderr_write("cding to %s" % (_env_dir))
+    cd(_env_dir)
+    tulip.stderr_write("import sketch")
+    try:
+        if _env_dir not in sys.path:
+            sys.path.insert(0, _env_dir)
+        import sketch
+    except Exception as e:
+        print("sketch.py load failed:")
+        sys.print_exception(e)
+        cd(tulip.root_dir() + "user")
+        return
+
+    if hasattr(sketch, 'loop'):
+        _start_sketch_loop(sketch.loop)
+
     cd(tulip.root_dir() + "user")
+
+
+def _start_sketch_loop(loop_fn):
+    """Schedule loop_fn via TulipSequence (every 32nd note, ~60ms)."""
+    import sequencer
+    global _sketch_seq
+    _loop_running = False
+
+    def _guarded_loop(tick):
+        nonlocal _loop_running
+        if _loop_running:
+            return
+        _loop_running = True
+        try:
+            loop_fn()
+        except Exception as e:
+            print("sketch.loop() error:")
+            sys.print_exception(e)
+        finally:
+            _loop_running = False
+
+    _sketch_seq = sequencer.TulipSequence(32, _guarded_loop)
+
+
+def stop_sketch():
+    """Stop the sketch loop."""
+    global _sketch_seq
+    if _sketch_seq is not None:
+        _sketch_seq.clear()
+        _sketch_seq = None
+
+
+def restart_sketch():
+    """Reload and restart sketch.py."""
+    stop_sketch()
+    if 'sketch' in sys.modules:
+        del sys.modules['sketch']
+    run_sketch()
+
 
 def get_i2c():
     global i2c
@@ -545,6 +622,19 @@ def cv_out(volts, channel=0):
 def cv_in(channel=0):
     return tulip.cv_in(channel)
 
+# --- Web encoder emulation helpers (called from JS) ---
+
+def _web_encoder_turn(delta):
+    """Called from JS when the web encoder UI is turned."""
+    global _web_encoder_pos
+    _web_encoder_pos += delta
+
+def _web_encoder_press(state):
+    """Called from JS when the web encoder push button is pressed/released."""
+    global _web_encoder_button
+    _web_encoder_button = state
+
+
 # Adafruit I2C Quad Rotary Encoder Breakout
 # https://www.adafruit.com/product/5752
 # Four rotary encoders with built-in push buttons.
@@ -556,6 +646,8 @@ def cv_in(channel=0):
 
 def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
     """Read the cumulated value of encoder 0..3."""
+    if web():
+        return _web_encoder_pos
     i2c = get_i2c()
     result = bytearray(4)
     ENCODER_BASE = 0x11
@@ -567,6 +659,8 @@ def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
 
 def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
     """Setup the seesaw quad encoder button pins to input_pullup."""
+    if web():
+        return
     mask = 0
     for p in pins:
         mask |= (1 << p)
@@ -582,6 +676,8 @@ def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
 
 def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.008):
     """Read the 4 seesaw encoder push buttons."""
+    if web():
+        return [_web_encoder_button] * len(pins)
     i2c = get_i2c()
     GPIO_BASE = 0x01
     GPIO_BULK = 0x04
@@ -671,7 +767,7 @@ def draw_waveform():
 # this function will let you scroll through your available patches
 # and load each one by clicking the rotary encoder.
 #
-# You can launch it from env.py like this:
+# You can launch it from sketch.py like this:
 #
 #   amyboard.patch_selector()
 #
@@ -684,57 +780,86 @@ class PatchSelector:
     def __init__(
             self, synth=1, seesaw_dev=0x36, encoder=0, button_pin=24,
             patch_dir='/user/current', extension='.patch',
-            hold_max=10, exit_callback=lambda: True
+            hold_max=30, exit_callback=lambda: True
     ):
-        """Endless loop scrolling through patch files and installing on click."""
+        """Endless loop scrolling through patch files and installing on click.  Long click rewrites the file."""
         self.synth = synth
         self.seesaw_dev = seesaw_dev
         self.encoder = encoder
         self.button_pin = button_pin
         self.patch_dir = patch_dir
         self.extension = extension
-        self.hold_max = hold_max
-        self.exit_callback = exit_callback
+        self.hold_max = hold_max  # Count before "long press" action in ~ deciseconds
+        self.exit_callback = exit_callback  # Not currently used.
         # State
         self.patches = self._list_patches()
-        if not self.patches:
-            raise ValueError('No .patch files found in ' + self.patch_dir)
         self.index = 0  # within patches
         self.button_state = False
         self.hold_count = 0
         # Initialize
         display.clear()
         display.message("PATCH SELECTOR", 0)
+        if self.patches:
+            display.message(self.patches[0], 2)
         init_buttons(pins=(self.button_pin,), seesaw_dev=self.seesaw_dev)
 
     def _list_patches(self):
         """List of the patch files."""
-        files = [f[:-len(self.extension)] for f in os.listdir(self.patch_dir) if f.endswith(self.extension)]
+        try:
+            files = [f[:-len(self.extension)] for f in os.listdir(self.patch_dir) if f.endswith(self.extension)]
+        except OSError:
+            files = []
         return files
 
     def update(self):
+        if not self.patches:
+            # Re-scan in case patches were added at runtime
+            self.patches = self._list_patches()
+            if not self.patches:
+                return
         index = read_encoder(self.encoder, seesaw_dev=self.seesaw_dev) % len(self.patches)
         button_state = read_buttons(pins=(self.button_pin,), seesaw_dev=self.seesaw_dev)[0]
         if (index, button_state) != (self.index, self.button_state):
             # Only rewrite display if it's out of sync.
             display.message(self.patches[index], 2, inverse=button_state)
-        if button_state and not self.button_state:
-            # Button transitioned to down
-            load_patch_file(self.patch_dir + '/' + self.patches[index] + self.extension, synth=self.synth)
-        self.hold_count = self.hold_count + 1 if button_state else 0
-        if self.hold_count > self.hold_max:
-            self.exit_callback()
+        if button_state:
+            # Button is still down.
+            self.hold_count += 1
+            if self.hold_count == self.hold_max:  # Only act once, at the exact count.
+                # Long hold - perform action (save)
+                save_patch_file(self.patch_dir + '/' + self.patches[index] + self.extension, synth=self.synth)
+                # Flash non-inverse
+                display.message(self.patches[index], 2, inverse=False)
+                time.sleep(0.1)
+                display.message(self.patches[index], 2, inverse=True)
+        else:
+            # Button is released.
+            if self.button_state and self.hold_count < self.hold_max:
+                # The button was just released *and* it wasn't a long-hold - perform laod.
+                load_patch_file(self.patch_dir + '/' + self.patches[index] + self.extension, synth=self.synth)
+            # Ensure count is reset
+            self.hold_count = 0
         self.index = index
         self.button_state = button_state
 
 
 def patch_selector(synth=1, duration=30, seesaw_dev=0x36, encoder=0, button_pin=24,
-                   patch_dir='/user/current', extension='.patch'):
+                   patch_dir=None, extension='.patch'):
     """Run the PATCH SELECTOR app using Tulip sequencer."""
     import sequencer
-    import machine
+    if not web():
+        if display is None or not display.available:
+            print("You need a rotary encoder and OLED display connected")
+            return
+        try:
+            read_encoder(encoder, seesaw_dev=seesaw_dev)
+        except OSError:
+            print("You need a rotary encoder and OLED display connected")
+            return
+    if patch_dir is None:
+        patch_dir = tulip.root_dir() + 'user/current'
     seq = None
-    
+
     def exit_callback():
         # Terminate the sequencing
         if seq:
