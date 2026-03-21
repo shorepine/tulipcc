@@ -288,8 +288,8 @@ def c_fired_midi_event(is_sysex):
         if sysex_callback is not None:
             s = tulip.sysex_in()
             sysex_callback(s)
-            
-    m = tulip.midi_in() 
+
+    m = tulip.midi_in()
     while m is not None and len(m) > 0:
         # call the other callbacks
         for c in MIDI_CALLBACKS:

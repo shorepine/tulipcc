@@ -111,7 +111,9 @@ if board() == "AMYBOARD":
     # Run the self-test if the boot button is now held down.
     import self_test
     self_test.self_test_if_button()
-    # We don't do most of Tulip's MIDI, but setup the MIDI callback hook so midi.add_callback(fn) will work.
+
+# We don't do most of Tulip's MIDI, but setup the MIDI callback hook so midi.add_callback(fn) will work.
+if board() == "AMYBOARD" or board() == "AMYBOARD_WEB":
     tulip.midi_callback(midi.c_fired_midi_event)
 
 if board() == "TULIP":
