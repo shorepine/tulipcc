@@ -144,6 +144,25 @@ STATIC mp_obj_t tulip_amy_set_external_input_buffer(size_t n_args, const mp_obj_
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_external_input_buffer_obj, 1, 1, tulip_amy_set_external_input_buffer);
+
+STATIC mp_obj_t tulip_amy_get_synth_commands(size_t n_args, const mp_obj_t *args) {
+    // MicroPython version of amy/src/pyamy.c:get_synth_commands, to retrieve synth config from MP.
+    // We know we have exactlu one arg from the MP_DEFINE_CONST_FUN declaration below.
+    char s[MAX_MESSAGE_LEN];
+    void *state = NULL;
+    int synth = mp_obj_get_int(args[0]);
+    // Make a new list object, append the retrieved (and converted) strings to it.
+    mp_obj_t list = mp_obj_new_list(0, NULL);
+    do {
+        state = yield_synth_commands(synth, s, MAX_MESSAGE_LEN, state);
+        int slen = strlen(s);
+        if (slen)
+            mp_obj_list_append(list, mp_obj_new_str(s, slen));
+    } while (state != NULL);
+    return list;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_synth_commands_obj, 1, 1, tulip_amy_get_synth_commands);
+
 #endif
 
 #ifdef ESP_PLATFORM
@@ -1566,6 +1585,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amy_get_input_buffer), MP_ROM_PTR(&tulip_amy_get_input_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_output_buffer), MP_ROM_PTR(&tulip_amy_get_output_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_get_synth_commands), MP_ROM_PTR(&tulip_amy_get_synth_commands_obj) },
 #endif
     { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
