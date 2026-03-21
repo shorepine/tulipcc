@@ -1309,8 +1309,15 @@ async function setup_midi_devices() {
         const value = data[2];
         move_knob(channel, cc, value);
       }
+      // Feed bytes to AMY audioworklet for sound processing
       for(byte in e.message.data) {
         if(audio_started) amy_process_single_midi_byte(e.message.data[byte], 1);
+      }
+      // Also forward complete message to MicroPython for Python midi callbacks.
+      // AMY's EM_ASM hook can't cross the audioworklet boundary, so we do it here.
+      if (audio_started && typeof mp !== 'undefined' && mp.midiInHook) {
+        const sysex = (data.length > 0 && data[0] === 0xF0) ? 1 : 0;
+        mp.midiInHook(new Uint8Array(data), data.length, sysex);
       }
     });
   } else {

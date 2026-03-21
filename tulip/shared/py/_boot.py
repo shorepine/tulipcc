@@ -112,5 +112,9 @@ if board() == "AMYBOARD":
     import self_test
     self_test.self_test_if_button()
 
+# We don't do most of Tulip's MIDI, but setup the MIDI callback hook so midi.add_callback(fn) will work.
+if board() == "AMYBOARD" or board() == "AMYBOARD_WEB":
+    tulip.midi_callback(midi.c_fired_midi_event)
+
 if board() == "TULIP":
     midi.setup() # Just mirrors the setup mostly managed by AMY
