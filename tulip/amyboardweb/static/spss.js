@@ -49,7 +49,7 @@ const AMYBOARD_WORLD_API_BASE = (typeof window !== "undefined" && typeof window.
     : String(window.location.origin || "").replace(/\/+$/, "");
 const CURRENT_BASE_DIR = "/amyboard/user/current";
 const CURRENT_ENV_DIR = CURRENT_BASE_DIR;
-const DEFAULT_ENV_SOURCE = "# Put your own code here to run in your environment\n";
+const DEFAULT_SKETCH_SOURCE = "# AMYboard Sketch -- Arduino-style setup() and loop()\n# setup() runs once at boot. loop() runs repeatedly (~60ms).\n\ndef setup():\n    pass\n\ndef loop():\n    pass\n";
 const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json", ".patch"];
 const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
@@ -1421,9 +1421,9 @@ async function show_alert(text) {
 function ensure_current_environment_layout(seedDefaults) {
     try { mp.FS.mkdirTree(CURRENT_BASE_DIR); } catch (e) {}
     try {
-        mp.FS.readFile(CURRENT_ENV_DIR + "/env.py", { encoding: "utf8" });
+        mp.FS.readFile(CURRENT_ENV_DIR + "/sketch.py", { encoding: "utf8" });
     } catch (e) {
-        mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
+        mp.FS.writeFile(CURRENT_ENV_DIR + "/sketch.py", DEFAULT_SKETCH_SOURCE);
     }
     if (seedDefaults) {
         // Reserved for future seed-only setup.
@@ -1775,7 +1775,7 @@ async function delete_selected_environment_file() {
 
 async function save_editor() {
     ensure_current_environment_layout(false);
-    var targetFilename = selected_environment_file || "env.py";
+    var targetFilename = selected_environment_file || "sketch.py";
     var slash = targetFilename.lastIndexOf("/");
     if (slash > 0) {
         try { mp.FS.mkdirTree(CURRENT_ENV_DIR + "/" + targetFilename.substring(0, slash)); } catch (e) {}
@@ -1837,8 +1837,8 @@ async function load_first_environment_file_into_editor() {
         return;
     }
     var target = null;
-    if (files.indexOf("env.py") !== -1) {
-        target = "env.py";
+    if (files.indexOf("sketch.py") !== -1) {
+        target = "sketch.py";
     }
     if (!target) {
         for (var i = 0; i < files.length; i++) {
@@ -2108,7 +2108,7 @@ async function clear_current_environment_from_default() {
     ensure_current_environment_layout(true);
     var confirmed = await confirm_environment_action(
         "Clear code",
-        "Clear current code and create a fresh env.py?",
+        "Clear current code and create a fresh sketch.py?",
         "Clear"
     );
     if (!confirmed) {
@@ -2116,12 +2116,12 @@ async function clear_current_environment_from_default() {
     }
     try {
         clear_current_environment_dir();
-        mp.FS.writeFile(CURRENT_ENV_DIR + "/env.py", DEFAULT_ENV_SOURCE);
+        mp.FS.writeFile(CURRENT_ENV_DIR + "/sketch.py", DEFAULT_SKETCH_SOURCE);
         selected_environment_file = null;
         await sync_persistent_fs();
         await fill_tree();
-        if (list_environment_files().indexOf("env.py") !== -1) {
-            await select_environment_file("env.py", true);
+        if (list_environment_files().indexOf("sketch.py") !== -1) {
+            await select_environment_file("sketch.py", true);
         } else {
             var files = list_environment_files();
             if (files.length) {
@@ -2137,20 +2137,7 @@ async function clear_current_environment_from_default() {
 
 async function run_current_environment() {
     await save_editor_if_dirty();
-    await runCodeBlock(
-        "from upysh import *\n" +
-        "import sys\n" +
-        "_amyboard_user_dir = '/amyboard/user'\n" +
-        "_amyboard_env_dir = '/amyboard/user/current'\n" +
-        "cd(_amyboard_env_dir)\n" +
-        "try:\n" +
-        "    execfile('env.py')\n" +
-        "except Exception as e:\n" +
-        "    print('Environment start failed:')\n" +
-        "    sys.print_exception(e)\n" +
-        "finally:\n" +
-        "    cd(_amyboard_user_dir)\n"
-    );
+    await runCodeBlock("import amyboard; amyboard.restart_sketch()");
 }
 
 function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
@@ -2381,8 +2368,8 @@ async function import_amyboard_world_file(index) {
         if (envNameInput) {
             envNameInput.value = packageName;
         }
-        if (list_environment_files().indexOf("env.py") !== -1) {
-            await select_environment_file("env.py", true);
+        if (list_environment_files().indexOf("sketch.py") !== -1) {
+            await select_environment_file("sketch.py", true);
         } else {
             var files = list_environment_files();
             if (files.length) {
@@ -2770,9 +2757,9 @@ async function start_amyboard() {
   }
   await restore_patches_from_editor_state_if_present({ sendToAmy: false });
   try {
-    await mp.runPythonAsync("from upysh import cd; cd('" + CURRENT_ENV_DIR + "'); execfile('env.py')");
+    await mp.runPythonAsync("import amyboard; amyboard.run_sketch()");
   } catch (e) {
-    // env.py may not exist or may fail — that's OK.
+    // sketch.py may not exist or may fail — that's OK.
   }
   await fill_tree();
   if (typeof window.refresh_patch_active_name_label === "function") {
