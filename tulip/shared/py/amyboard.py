@@ -118,11 +118,8 @@ class Display:
     refresh = show
 
 DEFAULT_SKETCH_SOURCE = """\
-# AMYboard Sketch -- Arduino-style setup() and loop()
-# setup() runs once at boot. loop() runs repeatedly (~60ms).
-
-def setup():
-    pass
+# AMYboard Sketch
+# Top-level code runs once at boot. loop() runs repeatedly (~60ms).
 
 def loop():
     pass
@@ -456,12 +453,12 @@ def start_amy():
         sys.print_exception(e)
 
 
-# -- sketch.py support (Arduino-style setup/loop) --
+# -- sketch.py support (top-level init + loop) --
 
 _sketch_seq = None  # Keep reference to prevent GC
 
 def run_sketch():
-    """Import sketch.py and run setup(), start loop(). Called from boot."""
+    """Import sketch.py (top-level code runs once), start loop(). Called from boot."""
     _env_dir = _ensure_current_env_layout()
     from upysh import cd
     tulip.stderr_write("cding to %s" % (_env_dir))
@@ -476,13 +473,6 @@ def run_sketch():
         sys.print_exception(e)
         cd(tulip.root_dir() + "user")
         return
-
-    if hasattr(sketch, 'setup'):
-        try:
-            sketch.setup()
-        except Exception as e:
-            print("sketch.setup() failed:")
-            sys.print_exception(e)
 
     if hasattr(sketch, 'loop'):
         _start_sketch_loop(sketch.loop)
@@ -777,7 +767,7 @@ def draw_waveform():
 # this function will let you scroll through your available patches
 # and load each one by clicking the rotary encoder.
 #
-# You can launch it from sketch.py setup() like this:
+# You can launch it from sketch.py like this:
 #
 #   amyboard.patch_selector()
 #
@@ -803,14 +793,14 @@ class PatchSelector:
         self.exit_callback = exit_callback  # Not currently used.
         # State
         self.patches = self._list_patches()
-        if not self.patches:
-            raise ValueError('No .patch files found in ' + self.patch_dir)
         self.index = 0  # within patches
         self.button_state = False
         self.hold_count = 0
         # Initialize
         display.clear()
         display.message("PATCH SELECTOR", 0)
+        if self.patches:
+            display.message(self.patches[0], 2)
         init_buttons(pins=(self.button_pin,), seesaw_dev=self.seesaw_dev)
 
     def _list_patches(self):
@@ -822,6 +812,11 @@ class PatchSelector:
         return files
 
     def update(self):
+        if not self.patches:
+            # Re-scan in case patches were added at runtime
+            self.patches = self._list_patches()
+            if not self.patches:
+                return
         index = read_encoder(self.encoder, seesaw_dev=self.seesaw_dev) % len(self.patches)
         button_state = read_buttons(pins=(self.button_pin,), seesaw_dev=self.seesaw_dev)[0]
         if (index, button_state) != (self.index, self.button_state):
@@ -852,10 +847,19 @@ def patch_selector(synth=1, duration=30, seesaw_dev=0x36, encoder=0, button_pin=
                    patch_dir=None, extension='.patch'):
     """Run the PATCH SELECTOR app using Tulip sequencer."""
     import sequencer
+    if not web():
+        if display is None or not display.available:
+            print("You need a rotary encoder and OLED display connected")
+            return
+        try:
+            read_encoder(encoder, seesaw_dev=seesaw_dev)
+        except OSError:
+            print("You need a rotary encoder and OLED display connected")
+            return
     if patch_dir is None:
         patch_dir = tulip.root_dir() + 'user/current'
     seq = None
-    
+
     def exit_callback():
         # Terminate the sequencing
         if seq:
