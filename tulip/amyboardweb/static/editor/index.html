@@ -361,6 +361,51 @@
         display: block;
       }
 
+      .encoder-widget {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .encoder-arrow {
+        background: none;
+        border: 1px solid #666;
+        border-radius: 8px;
+        color: #ccc;
+        cursor: pointer;
+        padding: 6px;
+        line-height: 0;
+        transition: background 0.1s, color 0.1s;
+      }
+      .encoder-arrow:hover {
+        background: #333;
+        color: #fff;
+      }
+      .encoder-arrow:active {
+        background: #555;
+      }
+      .encoder-push {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: 2px solid #888;
+        background: #222;
+        color: #ccc;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.1s, border-color 0.1s;
+      }
+      .encoder-push:hover {
+        border-color: #aaa;
+      }
+      .encoder-push:active, .encoder-push.pressed {
+        background: #555;
+        border-color: #fff;
+      }
+
       @media (min-width: 800px) {
         .knob-col {
           flex: 0 0 8.333%;
@@ -961,6 +1006,25 @@
               <div class="row mb-4 mt-1 align-items-start">
                 <div class="col-6 col-md-4">
                   <canvas id="canvas" width="256" height="256"></canvas>
+                </div>
+                <div class="col-12 col-md-4 d-flex align-items-center justify-content-center my-3 my-md-0">
+                  <div class="encoder-widget" id="encoder-widget">
+                    <button class="encoder-arrow encoder-left" id="encoder-left" title="Turn left">
+                      <svg viewBox="0 0 32 32" width="36" height="36">
+                        <path d="M22 8 A12 12 0 0 0 10 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <polygon points="7,17 10,23 13,17" fill="currentColor"/>
+                      </svg>
+                    </button>
+                    <button class="encoder-push" id="encoder-push" title="Push encoder">
+                      <span class="encoder-value" id="encoder-value">0</span>
+                    </button>
+                    <button class="encoder-arrow encoder-right" id="encoder-right" title="Turn right">
+                      <svg viewBox="0 0 32 32" width="36" height="36">
+                        <path d="M10 8 A12 12 0 0 1 22 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <polygon points="19,17 22,23 25,17" fill="currentColor"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="col-6 col-md-4">
                   <div id="cv-knob-grid" class="row g-4"></div>
