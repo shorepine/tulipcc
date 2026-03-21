@@ -187,8 +187,13 @@ def load_patch_file(filename, synth=1, num_voices=6):
                 top_osc = osc_num
         return top_osc + 1
 
-    with open(filename, 'r') as f:
-        patch = f.read()
+    try:
+        with open(filename, 'r') as f:
+            patch = f.read()
+    except OSError:
+        print("error reading", filename)
+        return
+
     # Reset global FX.
     amy.send_raw("V1x0,0,0M0,500,,0,0k0,320,0.5,0.5h0,0.85,0.5,3000")
     # Reset the synth.
@@ -719,11 +724,30 @@ def monitor_encoders():
             width = -width
         else:
             center = bar_center
-        display.fill_rect(center, top, width, bar_height, 1)
+        display.fill_rect(center, top, width, bar_height, 255)
         if buttons[encoder]:
             # Small box at the left.
-            display.fill_rect(2, top + 2, 2, 2, 1)
+            display.fill_rect(2, top + 2, 2, 2, 255)
     display.show()
+
+# To see when MIDI CCs are being changed, add to your sketch.py:
+#   midi.add_callback(amyboard.show_midi_cc)
+def show_midi_cc(midi):
+    """If a MIDI message includes a MIDI CC change, show it on display."""
+    top_row = 4
+    # Clear the pane. Calling with a non-CC midi just clears.
+    #display.fill_rect(0, top_row * display.LINEHEIGHT, display.WIDTH, 2 * display.LINEHEIGHT, 0)
+    if midi and (midi[0] & 0xF0) == 0xB0:
+        # We have a control code.
+        channel = midi[0] & 0x0F
+        code = midi[1]
+        value = midi[2]
+        display.message("CH %02d CC %03d" % (channel, code), top_row)
+        # Make the bar skinny so it draws quicker.
+        display.fill_rect(0, (top_row + 1) * display.LINEHEIGHT + 1, value, 2, 1)
+        display.fill_rect(value, (top_row + 1) * display.LINEHEIGHT + 1, display.WIDTH - value, 2, 0)
+    display.show()
+
 
 WAVEFORM_MAX = 32767.0
 
@@ -783,6 +807,7 @@ class PatchSelector:
             hold_max=30, exit_callback=lambda: True
     ):
         """Endless loop scrolling through patch files and installing on click.  Long click rewrites the file."""
+        self.new_file_prefix = '* '
         self.synth = synth
         self.seesaw_dev = seesaw_dev
         self.encoder = encoder
@@ -796,6 +821,9 @@ class PatchSelector:
         self.index = 0  # within patches
         self.button_state = False
         self.hold_count = 0
+        # Make sure we always start at the top of the list.
+        self.last_encoder_value = 0
+        self.encoder_offset = -self.read_encoder()
         # Initialize
         display.clear()
         display.message("PATCH SELECTOR", 0)
@@ -806,37 +834,59 @@ class PatchSelector:
     def _list_patches(self):
         """List of the patch files."""
         try:
-            files = [f[:-len(self.extension)] for f in os.listdir(self.patch_dir) if f.endswith(self.extension)]
+            patches = [f[:-len(self.extension)] for f in os.listdir(self.patch_dir) if f.endswith(self.extension)]
         except OSError:
-            files = []
-        return files
+            patches = []
+        for new_patch_num in range(100):
+            new_patch_name = '~NEW PATCH %02d' % new_patch_num
+            if new_patch_name not in patches:
+                patches.append(self.new_file_prefix + new_patch_name)
+                break
+        return patches
 
+    def patch_name(self, index, remove_star=False):
+        """Return the index'th patch name from the stored list, removing "* " prefix if needed."""
+        name = self.patches[index % len(self.patches)]
+        if remove_star and name and name[:len(self.new_file_prefix)] == self.new_file_prefix:
+            name = name[len(self.new_file_prefix):]
+        return name
+
+    def read_encoder(self):
+        value = self.last_encoder_value
+        try:
+            value = read_encoder(self.encoder, seesaw_dev=self.seesaw_dev)
+        except OSError:
+            # Ignore I2C errors
+            pass
+        self.last_encoder_vale = value
+        return value
+    
     def update(self):
-        if not self.patches:
-            # Re-scan in case patches were added at runtime
-            self.patches = self._list_patches()
-            if not self.patches:
-                return
-        index = read_encoder(self.encoder, seesaw_dev=self.seesaw_dev) % len(self.patches)
+        index = (self.read_encoder() + self.encoder_offset) % len(self.patches)
         button_state = read_buttons(pins=(self.button_pin,), seesaw_dev=self.seesaw_dev)[0]
         if (index, button_state) != (self.index, self.button_state):
             # Only rewrite display if it's out of sync.
-            display.message(self.patches[index], 2, inverse=button_state)
+            display.message(self.patch_name(index), 2, inverse=button_state)
         if button_state:
             # Button is still down.
             self.hold_count += 1
             if self.hold_count == self.hold_max:  # Only act once, at the exact count.
                 # Long hold - perform action (save)
-                save_patch_file(self.patch_dir + '/' + self.patches[index] + self.extension, synth=self.synth)
+                name = self.patch_name(index, remove_star=True)
+                save_patch_file(self.patch_dir + '/' + name + self.extension, synth=self.synth)
                 # Flash non-inverse
-                display.message(self.patches[index], 2, inverse=False)
+                display.message(name, 2, inverse=False)
                 time.sleep(0.1)
-                display.message(self.patches[index], 2, inverse=True)
+                display.message(name, 2, inverse=True)
+                # Rescan the files (and add a new NEW PATCH if we just materialized one)
+                self.patches = self._list_patches()
+                # Update the offset so that we're still on NEW PATCH if we just wrote it.
+                self.encoder_offset = self.patches.index(name) - self.read_encoder()
         else:
             # Button is released.
             if self.button_state and self.hold_count < self.hold_max:
                 # The button was just released *and* it wasn't a long-hold - perform laod.
-                load_patch_file(self.patch_dir + '/' + self.patches[index] + self.extension, synth=self.synth)
+                load_patch_file(self.patch_dir + '/' + self.patch_name(index) + self.extension, synth=self.synth)
             # Ensure count is reset
             self.hold_count = 0
         self.index = index
@@ -867,6 +917,7 @@ def patch_selector(synth=1, duration=30, seesaw_dev=0x36, encoder=0, button_pin=
             seq.clear()
             # Clear screen
             display.clear()
+
     # Initialize the patch selector
     patchsel_obj = PatchSelector(synth=synth, seesaw_dev=seesaw_dev, encoder=encoder, button_pin=button_pin,
                                  patch_dir=patch_dir, extension=extension, exit_callback=exit_callback)
