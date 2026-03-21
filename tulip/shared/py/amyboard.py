@@ -190,6 +190,13 @@ def load_patch_file(filename, synth=1, num_voices=6):
             amy.send_raw('i%d%s' % (synth, line))
 
 
+def save_patch_file(filename, synth=1):
+    """Write the current state of a synth out to a patch file."""
+    patch_commands = amy.get_synth_commands(synth)
+    with open(filename, 'w') as f:
+        f.write(patch_commands)
+
+
 def ensure_user_environment():
     import os
     user_base = tulip.root_dir() + "user"
@@ -684,17 +691,17 @@ class PatchSelector:
     def __init__(
             self, synth=1, seesaw_dev=0x36, encoder=0, button_pin=24,
             patch_dir='/user/current', extension='.patch',
-            hold_max=10, exit_callback=lambda: True
+            hold_max=30, exit_callback=lambda: True
     ):
-        """Endless loop scrolling through patch files and installing on click."""
+        """Endless loop scrolling through patch files and installing on click.  Long click rewrites the file."""
         self.synth = synth
         self.seesaw_dev = seesaw_dev
         self.encoder = encoder
         self.button_pin = button_pin
         self.patch_dir = patch_dir
         self.extension = extension
-        self.hold_max = hold_max
-        self.exit_callback = exit_callback
+        self.hold_max = hold_max  # Count before "long press" action in ~ deciseconds
+        self.exit_callback = exit_callback  # Not currently used.
         # State
         self.patches = self._list_patches()
         if not self.patches:
@@ -718,12 +725,23 @@ class PatchSelector:
         if (index, button_state) != (self.index, self.button_state):
             # Only rewrite display if it's out of sync.
             display.message(self.patches[index], 2, inverse=button_state)
-        if button_state and not self.button_state:
-            # Button transitioned to down
-            load_patch_file(self.patch_dir + '/' + self.patches[index] + self.extension, synth=self.synth)
-        self.hold_count = self.hold_count + 1 if button_state else 0
-        if self.hold_count > self.hold_max:
-            self.exit_callback()
+        if button_state:
+            # Button is still down.
+            self.hold_count += 1
+            if self.hold_count == self.hold_max:  # Only act once, at the exact count.
+                # Long hold - perform action (save)
+                save_patch_file(self.patch_dir + '/' + self.patches[index] + self.extension, synth=self.synth)
+                # Flash non-inverse
+                display.message(self.patches[index], 2, inverse=False)
+                time.sleep(0.1)
+                display.message(self.patches[index], 2, inverse=True)
+        else:
+            # Button is released.
+            if self.button_state and self.hold_count < self.hold_max:
+                # The button was just released *and* it wasn't a long-hold - perform laod.
+                load_patch_file(self.patch_dir + '/' + self.patches[index] + self.extension, synth=self.synth)
+            # Ensure count is reset
+            self.hold_count = 0
         self.index = index
         self.button_state = button_state
 
