@@ -731,6 +731,7 @@ def monitor_encoders():
     display.show()
 
 # To see when MIDI CCs are being changed, add to your sketch.py:
+#   import midi
 #   midi.add_callback(amyboard.show_midi_cc)
 def show_midi_cc(midi):
     """If a MIDI message includes a MIDI CC change, show it on display."""
@@ -793,6 +794,7 @@ def draw_waveform():
 #
 # You can launch it from sketch.py like this:
 #
+#   import amyboard
 #   amyboard.patch_selector()
 #
 # or, for the 4-knob Adafruit rotary encoder:
