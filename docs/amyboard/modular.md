@@ -17,12 +17,12 @@ You can also 3D print your own front panel for whatever use case you have in min
 
 ## 10vpp Operation
 
-Most modular synthesis units operate at "5vpp", where an audio signal swings between -2.5v and 2.5v. Out of the box, AMYboard is "line level" at 1vpp. To change the audio input and output of AMYboard to 5vpp, you need to change the DIP switches on the back of the board to "OFF" / closed. 
+Most modular synthesis units operate at 10Vpp, where an audio signal swings between -10V and +10V. Out of the box, AMYboard is "line level" at 1Vpp. To change the audio input and output of AMYboard to 10Vpp, you need to change the DIP switches on the back of the board to "OFF" / closed.
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/dip_switches.png" width=600>
 
- - **Switches 1 & 2** (input): When closed, attenuate the inputs -- making line in friendly to 5Vpp Eurorack signals.
- - **Switches 3 & 4** (output): When closed, increase the gain of the output buffer -- making line out more friendly to 5Vpp Eurorack.
+ - **Switches 1 & 2** (input): When closed, attenuate the inputs -- making line in friendly to 10Vpp Eurorack signals.
+ - **Switches 3 & 4** (output): When closed, increase the gain of the output buffer -- making line out more friendly to 10Vpp Eurorack.
 
 ## CV outputs
 
