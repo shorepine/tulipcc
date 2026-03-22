@@ -597,6 +597,7 @@ def init_pcm9211(addr=0x40):
         [ 0x30, 0x04 ], # PLL sends 512fs as SCK
         [ 0x31, 0x0A ], # XTI SCK as 512fs too
         [ 0x60, 0x44 ], # Initialize PCM9211 DIT to send SPDIF from AUXIN1 through MPO0 (pin15).  MPO1 (pin16) is VOUT (Valid)
+        [ 0x61, 0x20 ], # DIT SCK ratio = 512fs (must match PLL config in 0x30/0x31)
         [ 0x78, 0x3d ], # MPO0 = 0b1101 = TXOUT, MPO1 = 0b0011 = VOUT
         [ 0x6F, 0x40 ]  # MPIO_A = CLKST etc / MPIO_B = AUXIN2 / MPIO_C = AUXIN1
     ]
