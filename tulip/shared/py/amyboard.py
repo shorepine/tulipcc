@@ -731,24 +731,51 @@ def monitor_encoders():
     display.show()
 
 # To see when MIDI CCs are being changed, add to your sketch.py:
-#   import midi
-#   midi.add_callback(amyboard.show_midi_cc)
-def show_midi_cc(midi):
-    """If a MIDI message includes a MIDI CC change, show it on display."""
-    top_row = 4
-    # Clear the pane. Calling with a non-CC midi just clears.
-    #display.fill_rect(0, top_row * display.LINEHEIGHT, display.WIDTH, 2 * display.LINEHEIGHT, 0)
-    if midi and (midi[0] & 0xF0) == 0xB0:
-        # We have a control code.
-        channel = midi[0] & 0x0F
-        code = midi[1]
-        value = midi[2]
-        display.message("CH %02d CC %03d" % (channel, code), top_row)
-        # Make the bar skinny so it draws quicker.
-        display.fill_rect(0, (top_row + 1) * display.LINEHEIGHT + 1, value, 2, 1)
-        display.fill_rect(value, (top_row + 1) * display.LINEHEIGHT + 1, display.WIDTH - value, 2, 0)
-    display.show()
+# amyboard.show_midi_ccs()
+class ShowMidiCcs:
+    """Class to manage state of deferred-display MIDI CC change tracker."""
+    def __init__(self, ticks_to_display=20, top_row=4, bar_height=4):
+        self.channel = None
+        self.code = None
+        self.value = None
+        self.ticks_to_display = ticks_to_display
+        self.ticks_to_live = 0
+        # Where on display to place result
+        self.top_row = top_row
+        self.bar_height = bar_height
 
+    def midi_hook(self, midi):
+        """Attached to midi callback."""
+        if midi and (midi[0] & 0xF0) == 0xB0:
+            # We have a control code.
+            self.channel = midi[0] & 0x0F
+            self.code = midi[1]
+            self.value = midi[2]
+
+    def update(self):
+        if self.channel is not None:
+            display.message("CH %02d CC %03d" % (self.channel, self.code), self.top_row)
+            display.fill_rect(0, (self.top_row + 1) * display.LINEHEIGHT + 1, self.value, self.bar_height, 1)
+            display.fill_rect(self.value, (self.top_row + 1) * display.LINEHEIGHT + 1, display.WIDTH - self.value, self.bar_height, 0)
+            display.show()
+            self.channel = None  # Mark update as handled
+            self.ticks_to_live = self.ticks_to_display  # Reset blanking counter
+        elif self.ticks_to_live:
+            self.ticks_to_live -= 1
+            if self.ticks_to_live == 0:
+                # Clear the old display.
+                display.fill_rect(0, self.top_row * display.LINEHEIGHT, display.WIDTH, 2 * display.LINEHEIGHT, 0)
+                display.show()
+
+def show_midi_ccs(ticks_to_display=20, top_row=4, bar_height=4):
+    """Setup hook to show last MIDI CC on the display."""
+    import midi
+    import sequencer
+    show_midi_obj = ShowMidiCcs(ticks_to_display, top_row, bar_height)
+    midi.add_callback(show_midi_obj.midi_hook)
+    seq = sequencer.TulipSequence(32, lambda x: show_midi_obj.update())
+    return seq, show_midi_obj
+    
 
 WAVEFORM_MAX = 32767.0
 
@@ -863,9 +890,18 @@ class PatchSelector:
         self.last_encoder_vale = value
         return value
     
+    def read_button(self):
+        value = False
+        try:
+            value = read_buttons(pins=(self.button_pin,), seesaw_dev=self.seesaw_dev)[0]
+        except OSError:
+            # Ignore I2C errors
+            pass
+        return value
+
     def update(self):
         index = (self.read_encoder() + self.encoder_offset) % len(self.patches)
-        button_state = read_buttons(pins=(self.button_pin,), seesaw_dev=self.seesaw_dev)[0]
+        button_state = self.read_button()
         if (index, button_state) != (self.index, self.button_state):
             # Only rewrite display if it's out of sync.
             display.message(self.patch_name(index), 2, inverse=button_state)
@@ -925,4 +961,4 @@ def patch_selector(synth=1, duration=30, seesaw_dev=0x36, encoder=0, button_pin=
                                  patch_dir=patch_dir, extension=extension, exit_callback=exit_callback)
     # Arrange for it to be called every 32nd note
     seq = sequencer.TulipSequence(32, lambda x: patchsel_obj.update())
-
+    return seq, patchsel_obj
