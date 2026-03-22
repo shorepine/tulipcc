@@ -26,6 +26,16 @@ We constantly update the `amy` submodule to work with `tulipcc`.
 
 Before pushing anything in `tulipcc` to `main`, the `amy` submodule must be pinned to the latest known working git version.
 
+### Checking if AMY is up to date
+
+When asked to update to the latest commits, always fetch the AMY remote and compare against its remote main — do not assume the pinned commit is current:
+
+1. `cd amy && git fetch amy-origin main`
+2. Compare `git rev-parse amy-origin/main` vs `git rev-parse HEAD`
+3. If they differ, checkout the latest and update the pin in `tulipcc`
+
+### Making changes to AMY
+
 If an agent makes changes to `amy`, the agent must follow this exact sequence:
 
 1. Open a PR in the `amy` repository for those `amy` changes.
