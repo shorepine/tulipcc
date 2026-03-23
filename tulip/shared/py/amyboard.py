@@ -749,7 +749,7 @@ class ShowMidiCcs:
         """Attached to midi callback."""
         if midi and (midi[0] & 0xF0) == 0xB0:
             # We have a control code.
-            self.channel = midi[0] & 0x0F
+            self.channel = 1 + (midi[0] & 0x0F)  # MIDI channels are numbered 1..16.
             self.code = midi[1]
             self.value = midi[2]
 
