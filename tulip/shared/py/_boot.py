@@ -116,5 +116,5 @@ if board() == "AMYBOARD":
 if board() == "AMYBOARD" or board() == "AMYBOARD_WEB":
     tulip.midi_callback(midi.c_fired_midi_event)
 
-if board() == "TULIP":
-    midi.setup() # Just mirrors the setup mostly managed by AMY
+if board() == "TULIP" or board() == "DESKTOP" or board() == "WEB":
+    midi.setup() # Just mirrors the setup mostly managed by AMY for Tulip-REPL systems.
