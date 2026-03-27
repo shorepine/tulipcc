@@ -421,6 +421,24 @@
           max-width: 33.333%;
           width: 33.333%;
         }
+        .patch-layout-header,
+        .patch-layout-body {
+          grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+          gap: 0;
+        }
+        .patch-toolbar {
+          grid-column: 1;
+        }
+        .patch-global-title {
+          display: flex;
+          grid-column: 3;
+        }
+        .patch-channel-panel {
+          grid-column: 1;
+        }
+        .patch-global-panel {
+          grid-column: 3;
+        }
       }
 
       .knob-section-header {
@@ -545,16 +563,18 @@
       }
 
       @media (max-width: 799px) {
-        .patch-layout-header,
-        .patch-layout-body {
-          grid-template-columns: 1fr;
-          gap: 10px;
-        }
-        .patch-global-title,
-        .patch-global-panel,
-        .patch-channel-panel,
-        .patch-toolbar {
-          grid-column: 1;
+        .patch-global-panel::before {
+          content: "Effects";
+          display: block;
+          background: #1f2937;
+          border-radius: 12px;
+          color: #fff;
+          font-size: 0.75rem;
+          letter-spacing: 0.12em;
+          font-weight: 700;
+          text-align: center;
+          padding: 6px 10px;
+          margin-bottom: 10px;
         }
         .knob-col-spacer {
           display: none;
@@ -575,7 +595,8 @@
 
       .patch-layout-header {
         display: grid;
-        grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+        grid-template-columns: 1fr;
+        gap: 10px;
         align-items: stretch;
       }
 
@@ -584,37 +605,34 @@
         border-radius: 12px;
         padding: 6px 6px;
         margin: 0;
-        grid-column: 1;
       }
 
       .patch-global-title {
-        grid-column: 3;
+        display: none;
         background: #1f2937;
         border-radius: 12px;
         color: #fff;
         font-size: 0.75rem;
         letter-spacing: 0.12em;
         font-weight: 700;
-        display: flex;
         align-items: center;
         justify-content: center;
       }
 
       .patch-layout-body {
         display: grid;
-        grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+        grid-template-columns: 1fr;
+        gap: 10px;
         align-items: start;
       }
 
       .patch-channel-panel {
-        grid-column: 1;
         background: linear-gradient(145deg, #e0ebe7 0%, #c8dbd5 100%);
         border-radius: 14px;
         padding: 12px;
       }
 
       .patch-global-panel {
-        grid-column: 3;
         background: linear-gradient(145deg, #f5f7fb 0%, #dce5ef 100%);
         border-radius: 14px;
         padding: 12px;
@@ -731,6 +749,33 @@
         font-weight: 700;
       }
 
+      /* ── MOBILE NAV ── */
+      @media (max-width: 991px) {
+        .navbar .navbar-collapse,
+        .navbar .navbar-collapse.collapsing,
+        .navbar .navbar-collapse.show {
+          background: #000 !important;
+          padding: 1rem 1.5rem;
+          margin: 0.5rem -1rem 0;
+          border-radius: 4px;
+        }
+        .navbar .navbar-collapse .nav-link {
+          color: #fff !important;
+          font-size: 1.1rem;
+          padding: 0.6rem 0 !important;
+        }
+        .navbar .navbar-collapse .btn-warning {
+          color: #000 !important;
+        }
+        .navbar .navbar-toggler {
+          border-color: #FFDD00;
+        }
+        .navbar .navbar-toggler-icon {
+          background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='white' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+          filter: none;
+        }
+      }
+
       /* ── FOOTER (match marketing site) ── */
       .site-footer {
         background: #000;
@@ -810,7 +855,10 @@
       </div>
     </nav>
 
-
+    <div class="alert alert-warning alert-dismissible fade show d-block d-md-none text-center mx-3 mt-2" style="position:relative;z-index:1020;font-size:0.85rem;" role="alert">
+      AMYboard online will work on mobile but you'll have a much better experience in a desktop browser.
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size:0.65rem;"></button>
+    </div>
 
     <script type="module">
       mp = await loadMicroPython({
@@ -828,6 +876,15 @@
 
       // Check if URL has env params to auto-load an environment
       check_url_env_params();
+
+      // Auto-open a tab if URL has a hash (e.g. #world)
+      if (window.location.hash) {
+        var hashTab = document.getElementById(window.location.hash.substring(1) + "-tab");
+        if (hashTab) {
+          var tab = new bootstrap.Tab(hashTab);
+          tab.show();
+        }
+      }
 
       // Load patches on first visit to the Patches sub-tab.
       var worldPatchTab = document.getElementById("world-patch-tab");
