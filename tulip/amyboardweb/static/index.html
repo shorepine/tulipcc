@@ -162,6 +162,13 @@
       background: #fff;
       color: #111;
     }
+    #whatis .col-md-4 a,
+    #whatis .col-md-4 a:visited,
+    #whatis .col-md-4 a:hover {
+      color: #FFD700 !important;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
     .section-accent {
       background: #FFDD00;
       color: #000;
@@ -241,6 +248,13 @@
       font-weight: 500;
       line-height: 1.4;
     }
+    .feature-item a,
+    .feature-item a:visited,
+    .feature-item a:hover {
+      color: #FFD700 !important;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
 
     /* ── WHAT IT CAN DO ── */
     .can-do-grid {
@@ -252,13 +266,24 @@
       background: #1a1a1a;
       border: 2px solid #333;
       padding: 2rem;
-      font-size: 1.2rem;
-      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
       transition: border-color 0.15s, background 0.15s;
     }
     .can-do-item:hover {
       border-color: #FFDD00;
       background: #222;
+    }
+    .can-do-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .can-do-desc {
+      font-size: 0.9rem;
+      font-weight: 400;
+      opacity: 0.7;
+      line-height: 1.4;
     }
 
     /* ── VIDEO ── */
@@ -488,9 +513,29 @@
 <section class="section section-light" id="whatis">
   <div class="container">
     <h2 class="section-title">What's an AMYboard?</h2>
-    <p style="font-size:clamp(1.3rem, 2.5vw, 1.8rem); font-weight:500; line-height:1.5; max-width:900px;">
-      AMYboard is a complete synthesizer module with jacks and a front panel powered by <a href="https://github.com/shorepine/amy" style="color:#000; text-decoration:underline; text-underline-offset:3px;">AMY</a>. You can use it standalone, or as a Eurorack module (10HP), or with your <a href="https://tulip.computer/" style="color:#000; text-decoration:underline; text-underline-offset:3px;">Tulip</a> or as a dev board for your own DIY synth. It's cheap, and open source, and can be programmed over the web. You can write your music and synth setup in code, control it with CV or MIDI, and add your own accessories like knobs or a screen. Join our <a href="https://discord.com/invite/TzBFkUb8pG" style="color:#000; text-decoration:underline; text-underline-offset:3px;">fun community</a> and make some great music.
+    <p style="font-size:1.2rem; font-weight:500; margin-bottom:2rem; opacity:0.85;">
+      It's fully complete audio synthesizer for US$29 that can be at least three things:
     </p>
+    <div class="row g-4" style="margin-top:1.5rem;">
+      <div class="col-md-4">
+        <div style="background:#000; color:#fff; border-radius:12px; padding:2rem; height:100%; display:flex; flex-direction:column;">
+          <h3 style="font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:clamp(1.4rem,2vw,1.7rem); margin-bottom:1rem; color:#FFD700;">🎹 Synthesizer</h3>
+          <p style="font-size:1.1rem; line-height:1.6; flex:1;">A full-featured, ready-to-play synthesizer module with lush 80s polyphonic synthesizer emulation. <A href="/editor">Load shared patches and presets and tweak your synth online.</A></p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div style="background:#000; color:#fff; border-radius:12px; padding:2rem; height:100%; display:flex; flex-direction:column;">
+          <h3 style="font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:clamp(1.4rem,2vw,1.7rem); margin-bottom:1rem; color:#FFD700;">🛠️ Dev Board</h3>
+          <p style="font-size:1.1rem; line-height:1.6; flex:1;">A maxed-out audio development board with full analog and digital IO, support under Arduino and native dev tools, and an out-of-the-box on-device Micropython shell.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div style="background:#000; color:#fff; border-radius:12px; padding:2rem; height:100%; display:flex; flex-direction:column;">
+          <h3 style="font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:clamp(1.4rem,2vw,1.7rem); margin-bottom:1rem; color:#FFD700;">🎛️ Eurorack</h3>
+          <p style="font-size:1.1rem; line-height:1.6; flex:1;">A 10HP Eurorack module that can be reprogrammed for almost any conceivable modular synth function from oscillators, filters, and envelopes to nonlinear effects and CV transformations.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -529,16 +574,21 @@
   <div class="container">
     <h2 class="section-title">What you get</h2>
     <div class="feature-grid">
-      <div class="feature-item">Run standalone or in a 10HP Eurorack module</div>
-      <div class="feature-item">Nearly perfect recreation of classic analog synths</div>
+      <div class="feature-item">Online <a href="/editor/">patch and code editor</a> to transfer to your AMYboard</div>
+      <div class="feature-item"><a href="/editor/#world">AMYboard World</a> for sharing patches and code</div>
+      <div class="feature-item">Nearly perfect recreation of classic analog synths with presets</div>
       <div class="feature-item">Fully controllable FM synthesis</div>
-      <div class="feature-item">Effects, sampler and PCM playback</div>
-      <div class="feature-item">Make your own synths and music in code</div>
-      <div class="feature-item">Edit your patches and code online and send to your AMYboard</div>
-      <div class="feature-item">Digital audio in and out, line in and out, two CV in and out, MIDI in and out</div>
-      <div class="feature-item">Audio switchable to modular 10Vpp</div>
-      <div class="feature-item">WiFi, SD Card, I2C for DIY accessories</div>
-      <div class="feature-item">Ships with Micropython firmware, compatible with our online Editor, or use Arduino</div>
+      <div class="feature-item">Audio input, effects and sampler</div>
+      <div class="feature-item">PCM and wavetable playback</div>
+      <div class="feature-item">MicroSD card slot</div>
+      <div class="feature-item">Wi-Fi for communicating online or to other AMYboards</div>
+      <div class="feature-item">Make your own synths and music in Python or Arduino code</div>
+      <div class="feature-item">S/PDIF digital audio in and out</div>
+      <div class="feature-item">Switchable line or 10vpp modular audio in and out</div>
+      <div class="feature-item">Two CV in and out jacks</div>
+      <div class="feature-item">MIDI in and out (Type A or B switchable)</div>
+      <div class="feature-item">I2C port for <a href="https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/accessories.md">DIY accessories</a></div>
+      <div class="feature-item">Ships with Micropython firmware, compatible with our <a href="/editor/">online editor</a>, or use <a href="https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/accessories.md">Arduino</a> or your own firmware</div>
     </div>
   </div>
 </section>
@@ -567,11 +617,30 @@
     <h2 class="section-title">What it can do</h2>
     <p style="font-size:1.2rem; font-weight:500; margin-bottom:2rem; opacity:0.85;">Try out some examples on <a href="/editor/" style="color:#FFDD00; text-decoration:underline; text-underline-offset:3px;">AMYboard online</a>, and send them to your AMYboard in seconds!</p>
     <div class="can-do-grid">
-      <a href="/editor/?env=woodpiano&user=bwhitman" class="can-do-item" style="text-decoration:none; color:#fff;">A custom 4-op FM synth</a>
-      <div class="can-do-item">Control your filters with CV input</div>
-      <div class="can-do-item">Convert SPDIF to analog audio, and vice versa</div>
-      <div class="can-do-item">MIDI controller to CV</div>
-      <div class="can-do-item">Make algorithmic music in Python</div>
+      <a href="/editor/?env=woodpiano&user=dpwe&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">A custom 4-op FM synth</span>
+        <span class="can-do-desc">We set up a custom ALGO patch in Python modeled after the infamous WOOD PIANO preset.</span>
+      </a>
+      <a href="/editor/?env=spacey&user=dpwe&tab=patch" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">A spacey synth patch</span>
+        <span class="can-do-desc">Global effects (echo, reverb) on top of a slow envelope over PWM.</span>
+      </a>
+      <div class="can-do-item">
+        <span class="can-do-title">Control your filters with CV input</span>
+        <span class="can-do-desc">We use the AMY CtrlCoef EXT0 to have CV input modulate the filter frequency.</span>
+      </div>
+      <div class="can-do-item">
+        <span class="can-do-title">Convert SPDIF to analog audio</span>
+        <span class="can-do-desc">Set up AMY to pass AUDIO_IN to AUDIO_OUT so that S/PDIF outputs over analog line-out.</span>
+      </div>
+      <div class="can-do-item">
+        <span class="can-do-title">MIDI controller to CV</span>
+        <span class="can-do-desc">We set up a callback to get MIDI controller data and output scaled CV values.</span>
+      </div>
+      <div class="can-do-item">
+        <span class="can-do-title">Make algorithmic music in Python</span>
+        <span class="can-do-desc">A generative music composition in Python</span>
+      </div>
     </div>
   </div>
 </section>

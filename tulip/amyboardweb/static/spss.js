@@ -2453,9 +2453,10 @@ async function import_amyboard_world_file(index) {
 // Called from URL params: /editor/?env=woodpiano&user=bwhitman
 async function load_world_environment_by_name(username, envName) {
     try {
+        // Fetch all environments for this user and filter client-side
+        // (the API does not reliably filter by filename)
         var params = new URLSearchParams();
         params.set("username", username);
-        params.set("filename", envName);
         params.set("item_type", "environment");
         var response = await fetch(world_api_url("/api/amyboardworld/files?" + params.toString()));
         if (!response.ok) throw new Error("HTTP " + response.status.toString());
@@ -2464,7 +2465,20 @@ async function load_world_environment_by_name(username, envName) {
             show_alert("Environment '" + envName + "' by " + username + " not found.");
             return;
         }
-        var item = data.items[0];
+        // Match by filename stem (e.g. "spacey" matches "spacey.tar")
+        var item = null;
+        for (var i = 0; i < data.items.length; i++) {
+            var fn = data.items[i].filename || "";
+            var stem = fn.replace(/\.tar$/, "");
+            if (fn === envName || stem === envName || fn === envName + ".tar") {
+                item = data.items[i];
+                break;
+            }
+        }
+        if (!item) {
+            show_alert("Environment '" + envName + "' by " + username + " not found.");
+            return;
+        }
         var filename = normalize_world_filename(item.filename);
         var packageName = get_world_package_name(filename);
 
@@ -2524,10 +2538,30 @@ function check_url_env_params() {
     var params = new URLSearchParams(window.location.search);
     var env = params.get("env");
     var user = params.get("user");
+    var tab = params.get("tab"); // "code" or "patch"
     if (env && user) {
         // Delay slightly to let micropython init complete
-        setTimeout(function() {
-            load_world_environment_by_name(user, env);
+        setTimeout(async function() {
+            await load_world_environment_by_name(user, env);
+            // Switch to requested tab after environment loads
+            if (tab === "code") {
+                var codeTab = document.getElementById("environment-tab");
+                if (codeTab) {
+                    new bootstrap.Tab(codeTab).show();
+                    // Re-select sketch.py and refresh CodeMirror after tab is visible
+                    setTimeout(async function() {
+                        if (list_environment_files().indexOf("sketch.py") !== -1) {
+                            await select_environment_file("sketch.py", true);
+                        }
+                        if (editor) {
+                            editor.refresh();
+                        }
+                    }, 300);
+                }
+            } else if (tab === "patch") {
+                var patchTab = document.getElementById("patch-tab");
+                if (patchTab) new bootstrap.Tab(patchTab).show();
+            }
         }, 1500);
         // Clean up URL without reload
         window.history.replaceState({}, document.title, window.location.pathname);
