@@ -10,6 +10,28 @@ var amyboard_started = false;
 var amy_yield_patch_events = null;
 var amy_yield_synth_commands = null;
 
+var _python_error_buffer = "";
+var _python_error_timer = null;
+
+// Intercept console.log to catch Python errors printed by micropython WASM
+var _orig_console_log = console.log.bind(console);
+console.log = function() {
+  _orig_console_log.apply(console, arguments);
+  var msg = Array.from(arguments).join(" ");
+  if (msg.indexOf("Traceback") !== -1 || msg.indexOf("sketch.py load failed") !== -1 ||
+      msg.indexOf("sketch.loop() error") !== -1 || _python_error_buffer.length > 0) {
+    _python_error_buffer += msg + "\n";
+    if (_python_error_timer) clearTimeout(_python_error_timer);
+    _python_error_timer = setTimeout(function() {
+      if (_python_error_buffer.trim().length > 0 && typeof show_python_error === "function") {
+        show_python_error(_python_error_buffer.trim());
+      }
+      _python_error_buffer = "";
+      _python_error_timer = null;
+    }, 500);
+  }
+};
+
 function amy_add_log_message(message) {
   console.log(message);
   if (typeof amy_add_message === "function") {
@@ -1377,6 +1399,7 @@ async function runCodeBlock(py) {
     await mp.runPythonAsync(py);
   } catch (e) {
     console.log("Error in Python: " + e.message)
+    show_python_error(e.message);
     // Print any error message to the REPL. Maybe there's a more direct way to raise JS errors to MPY
     await mp.runPythonAsync("print(\"\"\"" + e.message + "\"\"\")");
   }
@@ -1461,6 +1484,32 @@ async function sleep_ms(ms) {
     await new Promise((r) => setTimeout(r, ms));
 }
 
+
+function show_python_error(message) {
+    var existing = document.getElementById("python_error_modal");
+    if (existing) existing.remove();
+    var overlay = document.createElement("div");
+    overlay.id = "python_error_modal";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;";
+    overlay.addEventListener("click", function(e) { if (e.target === overlay) overlay.remove(); });
+    var box = document.createElement("div");
+    box.style.cssText = "background:#1a1a1a;border:3px solid #ff4444;color:#fff;padding:1.5rem 2rem;max-width:700px;width:90vw;max-height:70vh;overflow:auto;font-family:monospace;font-size:0.85rem;position:relative;box-shadow:0 8px 32px rgba(0,0,0,0.5);";
+    var header = document.createElement("div");
+    header.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;";
+    header.innerHTML = '<span style="color:#ff4444;font-weight:700;font-size:1.1rem;font-family:sans-serif;">Python Error</span>';
+    var closeBtn = document.createElement("button");
+    closeBtn.textContent = "✕";
+    closeBtn.style.cssText = "background:none;border:none;color:#888;font-size:1.3rem;cursor:pointer;padding:0 0.25rem;";
+    closeBtn.onclick = function() { overlay.remove(); };
+    header.appendChild(closeBtn);
+    box.appendChild(header);
+    var pre = document.createElement("pre");
+    pre.style.cssText = "margin:0;white-space:pre-wrap;word-break:break-word;color:#ffcccc;line-height:1.5;";
+    pre.textContent = message;
+    box.appendChild(pre);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+}
 
 async function show_alert(text) {
     const alertbox = document.querySelector("#alert_box");
