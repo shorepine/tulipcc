@@ -855,11 +855,6 @@
       </div>
     </nav>
 
-    <div class="alert alert-warning alert-dismissible fade show d-block d-md-none text-center mx-3 mt-2" style="position:relative;z-index:1020;font-size:0.85rem;" role="alert">
-      AMYboard online will work on mobile but you'll have a much better experience in a desktop browser.
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size:0.65rem;"></button>
-    </div>
-
     <script type="module">
       mp = await loadMicroPython({
         linebuffer: false,
@@ -945,7 +940,11 @@
       }
     </script>
 
-    <main class="container pt-5 mt-5">
+    <main class="container pt-3 pt-md-5 mt-2 mt-md-5">
+      <div class="alert alert-warning alert-dismissible fade show d-block d-md-none text-center mb-3" style="font-size:0.85rem;" role="alert">
+        AMYboard online will work on mobile but you'll have a much better experience in a desktop browser.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size:0.65rem;"></button>
+      </div>
       <div class="card border-0 bg-light shadow-sm mb-3">
         <div class="card-body">
           <form name="amyboard_settings">
