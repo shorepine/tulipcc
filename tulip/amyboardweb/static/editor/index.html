@@ -696,46 +696,114 @@
         color: #839496;
         background-color: #002b36;
       }
+
+      /* Push content below fixed navbar */
+      body {
+        padding-top: 70px;
+      }
+
+      /* ── NAV OVERRIDES (match marketing site) ── */
+      .navbar.scrolled {
+        background: rgba(0,0,0,0.92) !important;
+        backdrop-filter: blur(8px);
+      }
+      .navbar {
+        background: rgba(0,0,0,0.92) !important;
+        transition: background 0.3s;
+      }
+      .navbar .navbar-brand,
+      .navbar .nav-link {
+        color: #fff !important;
+      }
+      .navbar .nav-link:hover {
+        color: #FFDD00 !important;
+      }
+      .navbar .navbar-toggler {
+        border-color: rgba(255,255,255,0.5);
+      }
+      .navbar .navbar-toggler-icon {
+        filter: invert(1);
+      }
+      .navbar .btn-warning {
+        background: #FFDD00 !important;
+        border-color: #FFDD00 !important;
+        color: #000 !important;
+        font-weight: 700;
+      }
+
+      /* ── FOOTER (match marketing site) ── */
+      .site-footer {
+        background: #000;
+        color: #999;
+        padding: 3rem 0 2rem;
+      }
+      .site-footer a {
+        color: #ccc;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .site-footer a:hover {
+        color: #FFDD00;
+      }
+      .footer-links {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin: 0;
+      }
+      .footer-links li {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .footer-links img {
+        filter: invert(1);
+        opacity: 0.7;
+      }
     </style>
   </head>
 
   <body>
-    <nav id="navScroll" class="navbar navbar-expand-lg navbar-light fixed-top scrolled" tabindex="0">
+    <nav id="navScroll" class="navbar navbar-expand-lg navbar-dark fixed-top scrolled" tabindex="0">
       <div class="container">
-
-
-              <a class="navbar-brand pe-4 fs-4" href="/editor/">
-                          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
-
+        <a class="navbar-brand pe-4 fs-4" href="/editor/">
+          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
           <span class="ms-1 fw-bolder">AMYboard online</span>
-              </a>
-
-
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
-
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item">
+              <a class="nav-link" href="/#get">
+                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" style="filter:invert(1)" />
+                Get one
+              </a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href="https://github.com/shorepine/amy">
-                <img src="img/github-mark.svg" width="24" height="24" /> Github
+                <img src="img/github-mark.svg" width="24" height="24" style="filter:invert(1)" /> Github
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="https://discord.com/invite/TzBFkUb8pG">
-                <img src="img/discord-mark-black.svg" width="24" height="24" /> Discord
+                <img src="img/discord-mark-black.svg" width="24" height="24" style="filter:invert(1)" /> Discord
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://tulip.computer/">
+                <img src="img/favicon.png" width="24" height="24" /> Tulip
               </a>
             </li>
           </ul>
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
             <li class="nav-item">
-
-                            <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="/">
-                <img src="img/amyboard.svg" width="24" height="24" /> AMYboard
+              <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="/">
+                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" /> AMYboard home
               </a>
-
-
             </li>
           </ul>
         </div>
@@ -757,6 +825,9 @@
       // Start up the AMYboard stuff
       await start_amyboard();
       await refresh_amyboard_world_files();
+
+      // Check if URL has env params to auto-load an environment
+      check_url_env_params();
 
       // Load patches on first visit to the Patches sub-tab.
       var worldPatchTab = document.getElementById("world-patch-tab");
@@ -1339,30 +1410,32 @@
       </div>
     </div>
 
-    <footer>
-      <div class="container small border-top">
-        <div class="row py-5 d-flex justify-content-between">
-          <div class="col-12 col-lg-6 col-xl-3 border-end p-5">
-            <img src="img/shorepine.svg" width="24" height="24" />
-            <address class="text-secondary mt-3">
-              <strong>shore pine sound systems</strong>
-            </address>
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <a class="nav-link link-secondary ps-0" aria-current="page" href="https://github.com/shorepine">Github</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link link-secondary ps-0" href="https://discord.com/invite/TzBFkUb8pG">Discord</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link link-secondary ps-0" href="https://instagram.com/shorepinesound">Instagram</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link link-secondary ps-0" href="mailto:brian@variogram.com">Email</a>
-              </li>
-            </ul>
-          </div>
-        </div>
+    <footer class="site-footer">
+      <div class="container">
+        <ul class="footer-links">
+          <li>
+            <img src="img/github-mark.svg" width="20" height="20" />
+            <a href="https://github.com/shorepine/amy">Github</a>
+          </li>
+          <li>
+            <img src="img/discord-mark-black.svg" width="20" height="20" />
+            <a href="https://discord.com/invite/TzBFkUb8pG">Discord</a>
+          </li>
+          <li>
+            <img src="img/instagram-seeklogo.svg" width="20" height="20" />
+            <a href="https://instagram.com/shorepinesound">Instagram</a>
+          </li>
+          <li>
+            <a href="mailto:brian@variogram.com">Email us</a>
+          </li>
+          <li>
+            <a href="https://tulip.computer/">Tulip Creative Computer</a>
+          </li>
+        </ul>
+        <p style="margin-top:2rem; font-size:0.85rem;">
+          <img src="img/shorepine.svg" width="18" height="18" style="filter:invert(1); opacity:0.5; vertical-align:middle;" />
+          shore pine sound systems
+        </p>
       </div>
     </footer>
 

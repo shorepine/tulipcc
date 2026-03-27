@@ -2449,6 +2449,91 @@ async function import_amyboard_world_file(index) {
 
 
 
+// Load an AMYboard World environment by username and environment name.
+// Called from URL params: /editor/?env=woodpiano&user=bwhitman
+async function load_world_environment_by_name(username, envName) {
+    try {
+        var params = new URLSearchParams();
+        params.set("username", username);
+        params.set("filename", envName);
+        params.set("item_type", "environment");
+        var response = await fetch(world_api_url("/api/amyboardworld/files?" + params.toString()));
+        if (!response.ok) throw new Error("HTTP " + response.status.toString());
+        var data = await response.json();
+        if (!data || !Array.isArray(data.items) || !data.items.length) {
+            show_alert("Environment '" + envName + "' by " + username + " not found.");
+            return;
+        }
+        var item = data.items[0];
+        var filename = normalize_world_filename(item.filename);
+        var packageName = get_world_package_name(filename);
+
+        // Show toast
+        show_world_toast(item.description || envName, username);
+
+        ensure_current_environment_layout(false);
+        var downloadUrl = resolve_world_download_url(item);
+        if (!downloadUrl) throw new Error("Missing file URL");
+        var dlResponse = await fetch(downloadUrl);
+        if (!dlResponse.ok) throw new Error("HTTP " + dlResponse.status.toString());
+        var buffer = await dlResponse.arrayBuffer();
+        var bytes = new Uint8Array(buffer);
+        clear_current_environment_dir();
+        extract_tar_buffer_to_fs(bytes, CURRENT_ENV_DIR, packageName + "/");
+        if (!list_environment_files().length) {
+            extract_tar_buffer_to_fs(bytes, CURRENT_ENV_DIR, "");
+        }
+        await fill_tree();
+        var envNameInput = document.getElementById("editor_filename");
+        if (envNameInput) envNameInput.value = packageName;
+        if (list_environment_files().indexOf("sketch.py") !== -1) {
+            await select_environment_file("sketch.py", true);
+        } else {
+            var files = list_environment_files();
+            if (files.length) await select_environment_file(files[0], true);
+        }
+        await restore_patches_from_editor_state_if_present({ sendToAmy: true });
+        if (typeof window.refresh_patch_active_name_label === "function") {
+            window.refresh_patch_active_name_label();
+        }
+        if (typeof window.refresh_save_patch_dirty_indicator === "function") {
+            window.refresh_save_patch_dirty_indicator();
+        }
+        await run_current_environment();
+    } catch (e) {
+        show_alert("Failed to load environment '" + envName + "' by " + username + ".");
+    }
+}
+
+function show_world_toast(description, username) {
+    var existing = document.getElementById("world_toast");
+    if (existing) existing.remove();
+    var toast = document.createElement("div");
+    toast.id = "world_toast";
+    toast.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;background:#FFDD00;color:#000;padding:1rem 2rem;font-weight:700;font-size:1.1rem;border:3px solid #000;box-shadow:4px 4px 0 #000;max-width:90vw;text-align:center;transition:opacity 0.5s;";
+    toast.innerHTML = "Loading <strong>" + description + "</strong> by " + username;
+    document.body.appendChild(toast);
+    setTimeout(function() {
+        toast.style.opacity = "0";
+        setTimeout(function() { toast.remove(); }, 500);
+    }, 4000);
+}
+
+// Check URL params on startup for environment loading
+function check_url_env_params() {
+    var params = new URLSearchParams(window.location.search);
+    var env = params.get("env");
+    var user = params.get("user");
+    if (env && user) {
+        // Delay slightly to let micropython init complete
+        setTimeout(function() {
+            load_world_environment_by_name(user, env);
+        }, 1500);
+        // Clean up URL without reload
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
 // Create a js File object and upload it to the AMYboard World API.
 async function amyboard_world_upload_file(pwd, filename, username, description) {
     var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
