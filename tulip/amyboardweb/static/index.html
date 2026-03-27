@@ -498,7 +498,7 @@
 <div class="photo-strip">
   <img src="img/amyboard_front_moss.jpg" alt="AMYboard jacks on moss">
   <img src="img/amyboard_back_desk.jpg" alt="AMYboard PCB detail">
-  <img src="img/amyboard_plexi.jpeg" alt="AMYboard Eurorack faceplate">
+  <img src="img/amyboard_modular.jpg" alt="AMYboard modular setup">
   <img src="img/amyboard_accessories_back.jpg" alt="AMYboard with accessories">
 </div>
 
@@ -643,6 +643,18 @@
   }
   window.addEventListener('scroll', updateNav);
   updateNav();
+
+  // Close mobile nav on tap outside or link tap
+  const navCollapse = document.getElementById('navbarSupportedContent');
+  const bsCollapse = bootstrap.Collapse.getOrCreateInstance(navCollapse, {toggle: false});
+  navCollapse.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => { if (navCollapse.classList.contains('show')) bsCollapse.hide(); });
+  });
+  document.addEventListener('click', (e) => {
+    if (navCollapse.classList.contains('show') && !e.target.closest('.navbar')) {
+      bsCollapse.hide();
+    }
+  });
 </script>
 
 </body>
