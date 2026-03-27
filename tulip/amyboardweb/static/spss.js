@@ -2519,13 +2519,23 @@ async function load_world_environment_by_name(username, envName) {
     }
 }
 
+function show_world_toast_loading(envName) {
+    var existing = document.getElementById("world_toast");
+    if (existing) existing.remove();
+    var toast = document.createElement("div");
+    toast.id = "world_toast";
+    toast.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;background:#FFDD00;color:#000;padding:1rem 2rem;font-weight:700;font-size:1.1rem;border:3px solid #000;box-shadow:4px 4px 0 #000;max-width:90vw;text-align:center;transition:opacity 0.5s;";
+    toast.innerHTML = "Loading <strong>" + envName + "</strong>&hellip;";
+    document.body.appendChild(toast);
+}
+
 function show_world_toast(description, username) {
     var existing = document.getElementById("world_toast");
     if (existing) existing.remove();
     var toast = document.createElement("div");
     toast.id = "world_toast";
     toast.style.cssText = "position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9999;background:#FFDD00;color:#000;padding:1rem 2rem;font-weight:700;font-size:1.1rem;border:3px solid #000;box-shadow:4px 4px 0 #000;max-width:90vw;text-align:center;transition:opacity 0.5s;";
-    toast.innerHTML = "Loading <strong>" + description + "</strong> by " + username;
+    toast.innerHTML = "Loaded <strong>" + description + "</strong> by " + username;
     document.body.appendChild(toast);
     setTimeout(function() {
         toast.style.opacity = "0";
@@ -2540,6 +2550,8 @@ function check_url_env_params() {
     var user = params.get("user");
     var tab = params.get("tab"); // "code" or "patch"
     if (env && user) {
+        // Show immediate loading toast
+        show_world_toast_loading(env);
         // Delay slightly to let micropython init complete
         setTimeout(async function() {
             await load_world_environment_by_name(user, env);
