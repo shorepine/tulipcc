@@ -22,6 +22,7 @@ the user asks you to.
 
 import os
 import shutil
+import subprocess
 import threading
 import time
 from datetime import datetime
@@ -44,6 +45,7 @@ WWW_FONTS       = os.path.join(REPO_ROOT, "www", "fonts")
 WWW_CSS         = os.path.join(REPO_ROOT, "www", "css")
 WWW_JS          = os.path.join(REPO_ROOT, "www", "js")
 
+AMY_DIR         = os.path.join(REPO_ROOT, "amy")
 AMY_BUILD       = os.path.join(REPO_ROOT, "amy", "build")
 AMY_DOCS        = os.path.join(REPO_ROOT, "amy", "docs")
 MICROPYTHON_DIR = os.path.join(SCRIPT_DIR, "build-standard", "tulip", "obj")
@@ -84,6 +86,20 @@ def copy_to_stage(src, stage_rel):
 def full_build():
     ts = SESSION_TS
     print(f"[dev] Building stage/ (session timestamp {ts}) …")
+
+    # Compile AMY for web (emscripten)
+    print("[dev] Building AMY (make web) …")
+    subprocess.run(["make", "web"], cwd=AMY_DIR, check=True)
+
+    # Copy generated JS files from AMY build into static/
+    for name in ("amy_api.generated.js", "patches.generated.js"):
+        src = os.path.join(AMY_BUILD, name)
+        if os.path.exists(src):
+            shutil.copy2(src, os.path.join(STATIC_DIR, name))
+
+    # Compile MicroPython/AMYboard for web (emscripten)
+    print("[dev] Building AMYboard (make) …")
+    subprocess.run(["make"], cwd=SCRIPT_DIR, check=True)
 
     if os.path.exists(STAGE_DIR):
         shutil.rmtree(STAGE_DIR)

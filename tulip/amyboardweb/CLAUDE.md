@@ -4,7 +4,7 @@
 
 `dev.py` is the only script needed for local development. It does everything:
 
-1. On startup: does a full build — wipes and recreates `stage/`, copies `static/` and `www/img/fonts/css/js`, substitutes timestamped WASM/JS filenames into `editor/index.html`.
+1. On startup: compiles AMY (`make web` in `amy/`) and AMYboard MicroPython (`make` in `tulip/amyboardweb/`), then builds `stage/` — copies `static/` and `www/img/fonts/css/js`, substitutes timestamped WASM/JS filenames into `editor/index.html`.
 2. While running: polls `static/` and `www/` every second and incrementally syncs any changed files to `stage/`. Re-applies timestamp substitutions automatically if `editor/index.html` changes.
 3. Serves `stage/` on port 8000 with correct CORS headers for WASM.
 
