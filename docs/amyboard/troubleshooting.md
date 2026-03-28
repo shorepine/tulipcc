@@ -6,7 +6,6 @@ Here are solutions to common issues with AMYboard. If you're stuck, reach out to
 
  - [Discord](https://discord.gg/TzBFkUb8pG) -- quickest way to get help from the community
  - [GitHub Issues](https://github.com/shorepine/tulipcc/issues) -- bug reports and feature requests
- - [GitHub Discussions](https://github.com/shorepine/tulipcc/discussions) -- general questions
  - [Makerfabs contact](https://makerfabs.com/contact.html) -- hardware defect / shipping issues
 
 **Please remember**: AMYboard is supported by volunteers. We'll do our best to help, but please be patient and try the steps below first.
