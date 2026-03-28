@@ -474,39 +474,6 @@
         font-size: 0.85rem;
       }
 
-      .settings-wrap {
-        max-width: 760px;
-      }
-
-      .settings-list {
-        background: linear-gradient(180deg, #f9fafb 0%, #f2f4f7 100%);
-        border: 1px solid #dde2e7;
-        border-radius: 12px;
-        padding: 0.5rem;
-      }
-
-      .settings-item {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.65rem 0.75rem;
-        border-radius: 10px;
-        background: #ffffff;
-        border: 1px solid #e7ebef;
-      }
-
-      .settings-item + .settings-item {
-        margin-top: 0.45rem;
-      }
-
-      .settings-item .form-check-input {
-        margin-top: 0;
-      }
-
-      .settings-item .form-check-label {
-        color: #1f2937;
-        font-weight: 500;
-      }
 
       .knob-value {
         font-size: 0.62rem;
@@ -989,9 +956,6 @@
                 <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Code</button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-pane" type="button" role="tab" aria-controls="settings-pane" aria-selected="false">Settings</button>
-              </li>
-              <li class="nav-item" role="presentation">
                 <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#world-pane" type="button" role="tab" aria-controls="world-pane" aria-selected="false">AMYboard World</button>
               </li>
               <li class="nav-item ms-auto" role="presentation">
@@ -1158,26 +1122,6 @@
                 </div>
               </div>
             </div> <!-- end environment tab -->
-            <div class="tab-pane fade" id="settings-pane" role="tabpanel" aria-labelledby="settings-tab">
-              <div class="settings-wrap">
-                <h6 class="mb-2">Hardware settings</h6>
-                <div class="small text-muted mb-3">These settings are for your AMYboard hardware behavior.</div>
-                <div class="settings-list">
-                  <div class="settings-item">
-                    <input class="form-check-input" type="checkbox" id="setting-modular-10vpp" />
-                    <label class="form-check-label" for="setting-modular-10vpp">Modular 10vpp Volume (Also set your DIP Switches)</label>
-                  </div>
-                  <div class="settings-item">
-                    <input class="form-check-input" type="checkbox" id="setting-midi-type-b" />
-                    <label class="form-check-label" for="setting-midi-type-b">Use MIDI Type B instead of A</label>
-                  </div>
-                  <div class="settings-item">
-                    <input class="form-check-input" type="checkbox" id="setting-drumkit-channel-10" />
-                    <label class="form-check-label" for="setting-drumkit-channel-10">Drum kit on channel 10</label>
-                  </div>
-                </div>
-              </div>
-            </div>
             <div class="tab-pane fade" id="world-pane" role="tabpanel" aria-labelledby="world-tab">
               <p class="text-muted mb-2">Here you can see the community's shared environments and individual patches, or upload your own!</p>
               <ul class="nav nav-tabs mb-2" id="world-sub-tabs" role="tablist">
@@ -1330,7 +1274,7 @@
               <div id="send-amyboard-supported" class="d-none">
                 <p class="mb-3">Ensure your AMYboard is connected to the MIDI <strong>out</strong> port selected above. 
                   If you're connected over USB, the MIDI out port should say "AMYboard."</p>
-                <p class="mb-3">We'll send over the current environment, settings, and the state of the current patches per active 
+                <p class="mb-3">We'll send over the current environment and the state of the current patches per active 
                   channel and their MIDI CC assignments. </p>
                 <p class="mb-3">Any existing patches or environments on your AMYboard will be overwritten.</p>
                 <button type="button" class="btn btn-primary" id="send-amyboard-send-btn" onclick="send_to_amyboard_now()">Send</button>
@@ -1581,25 +1525,6 @@
     </script>
     <script>
       window.addEventListener("DOMContentLoaded", function() {
-        const hardwareSettingsMap = [
-          { id: "setting-modular-10vpp", key: "amyboard.hardware.modular_10vpp_volume" },
-          { id: "setting-midi-type-b", key: "amyboard.hardware.midi_type_b" },
-          { id: "setting-drumkit-channel-10", key: "amyboard.hardware.drumkit_channel_10" }
-        ];
-        hardwareSettingsMap.forEach(function(setting) {
-          const checkbox = document.getElementById(setting.id);
-          if (!checkbox) {
-            return;
-          }
-          try {
-            checkbox.checked = localStorage.getItem(setting.key) === "1";
-          } catch (e) {}
-          checkbox.addEventListener("change", function() {
-            try {
-              localStorage.setItem(setting.key, checkbox.checked ? "1" : "0");
-            } catch (e) {}
-          });
-        });
         const sendTab = document.getElementById("send-tab");
         if (sendTab) {
           sendTab.addEventListener("shown.bs.tab", function() {
