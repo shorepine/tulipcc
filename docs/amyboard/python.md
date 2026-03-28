@@ -200,4 +200,4 @@ while True:
  - [AMY synth architecture](https://github.com/shorepine/amy/blob/main/docs/synth.md) -- deep dive into oscillators, filters, modulation
  - [MicroPython documentation](https://docs.micropython.org/en/latest/) -- general MicroPython reference
 
-[Back to Getting Started](index.md)
+[Back to Getting Started](README.md)

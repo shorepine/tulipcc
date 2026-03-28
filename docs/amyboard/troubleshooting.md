@@ -12,17 +12,13 @@ Here are solutions to common issues with AMYboard. If you're stuck, reach out to
 
 ## Always upgrade first
 
-Many issues are fixed in newer firmware. Before troubleshooting, update to the latest release:
-
-1. Check the [releases page](https://github.com/shorepine/tulipcc/releases) for the latest AMYboard firmware
-2. Flash it to your board using `esptool` or `mpremote`
+Many issues are fixed in newer firmware. Before troubleshooting, [update to the latest release](firmware.md).
 
 ## No sound
 
 **Check the basics:**
- - Is the USB-C cable connected? AMYboard needs power.
- - Are headphones or speakers plugged into the **audio out** jack (not audio in)?
- - Try turning the volume up on your headphones/speakers.
+ - Is the USB-C cable, modular power or I2c power connected? AMYboard needs power.
+ - Are cables plugged into the **audio out** jack (not audio in)?
 
 **Check the synth:**
  - Connect via `mpremote resume` and try:
@@ -68,9 +64,7 @@ Many issues are fixed in newer firmware. Before troubleshooting, update to the l
  - On some systems, you may need to grant MIDI access permission.
 
 ### "Send to AMYboard" fails
- - Make sure AMYboard is connected via USB and no other program is using the serial port.
- - Close any `mpremote` sessions before transferring.
- - Try refreshing the page and reconnecting.
+ - Make sure AMYboard is connected via USB or MIDI.
 
 ## MIDI issues
 
@@ -89,9 +83,9 @@ Many issues are fixed in newer firmware. Before troubleshooting, update to the l
    esptool.py --chip esp32s3 erase_flash
    ```
    Then flash the latest firmware.
- - If your `env.py` or `boot.py` has a bug, it can prevent the board from booting properly. You can delete it via `mpremote`:
+ - If your `sketch.py` or `boot.py` has a bug, it can prevent the board from booting properly. You can delete it via `mpremote`:
    ```bash
-   mpremote resume fs rm :user/current/env.py
+   mpremote resume fs rm :user/current/sketch.py
    ```
 
 ## SD card not mounting
@@ -117,4 +111,4 @@ Many issues are fixed in newer firmware. Before troubleshooting, update to the l
  - Check your wiring -- SDA and SCL may be swapped.
  - Make sure pull-up resistors are present on your I2C lines (AMYboard has them built in for the onboard devices).
 
-[Back to Getting Started](index.md)
+[Back to Getting Started](README.md)
