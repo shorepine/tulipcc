@@ -67,6 +67,32 @@
       background: #fff;
     }
 
+    /* ── LIGHTBOX ── */
+    .lightbox-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0,0,0,0.9);
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+    }
+    .lightbox-overlay.active {
+      display: flex;
+    }
+    .lightbox-overlay img {
+      max-width: 92vw;
+      max-height: 92vh;
+      object-fit: contain;
+      border-radius: 4px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.5);
+    }
+    .photo-strip img,
+    .product-shots img {
+      cursor: zoom-in;
+    }
+
     /* ── HERO ── */
     .hero {
       position: relative;
@@ -692,6 +718,10 @@
   </div>
 </footer>
 
+<div class="lightbox-overlay" id="lightbox">
+  <img src="" alt="">
+</div>
+
 <script src="js/bootstrap.bundle.min.js"></script>
 <script src="js/aos.js"></script>
 
@@ -722,6 +752,18 @@
       bsCollapse.hide();
     }
   });
+
+  // Lightbox
+  const lb = document.getElementById('lightbox');
+  const lbImg = lb.querySelector('img');
+  document.querySelectorAll('.photo-strip img, .product-shots img').forEach(img => {
+    img.addEventListener('click', () => {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lb.classList.add('active');
+    });
+  });
+  lb.addEventListener('click', () => lb.classList.remove('active'));
 </script>
 
 </body>
