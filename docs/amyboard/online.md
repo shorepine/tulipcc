@@ -2,7 +2,7 @@
 
 The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you design patches, write Python code, manage your AMYboard and see shared patches and code -- all from your browser. You can also use it as a standalone browser-based synthesizer without any hardware at all.
 
-<img src="img/amyboard_editor_preview.png">
+<img src="img/amyboard_online.png">
 
 
 ## Getting started
@@ -28,6 +28,11 @@ The channel strip runs across the top of the Patch tab and controls which synth 
 | **Revert** | Reset the current channel back to the last saved or loaded patch, discarding any unsaved edits. |
 | **Clear** | Reset all knobs on this channel to their default values and remove the patch name. |
 | **Effects** | The global effects panel (EQ, Chorus, Reverb, Echo). Effects are shared across all channels. |
+
+
+<img src="img/load_patches.png" width=400>
+
+The patch browser lets you load from your own patches, Juno-6 and DX-7 presets, and community patches from AMYboard World.
 
 
 <img src="img/patch_knobs.png" width=700>
@@ -92,10 +97,6 @@ The patch knob panel contains six sections organized into two columns. The left 
 | **decay** | Time (ms) for the volume to fall from peak to the sustain level. |
 | **sustain** | Volume level held while a key is held (0–1). |
 | **release** | Time (ms) for the note to fade to silence after note-off. |
-
-
-<img src="img/load_patches.png" width=400>
-*The patch browser lets you load from your own patches, Juno-6 and DX-7 presets, and community patches from AMYboard World.*
 
 
 If you have a MIDI controller and a browser that supports WebMIDI, AMYboard Online can use it directly:
@@ -221,4 +222,4 @@ You can upload your own environments or patches here. Choose a memorable usernam
 
 
 
-[Back to Getting Started](index.md)
+[Back to Getting Started](README.md)
