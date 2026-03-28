@@ -2,8 +2,9 @@
 
 The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you design patches, write Python code, and manage your AMYboard -- all from your browser. You can also use it as a standalone browser-based synthesizer without any hardware at all.
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_online.png" width=600>
+<img src="img/load_patches.png" width=400>
 
+*The patch browser lets you load from your own patches, Juno-6 and DX-7 presets, and community patches from AMYboard World.*
 
 ## Getting started
 
@@ -30,13 +31,18 @@ If you have a MIDI controller and a browser that supports WebMIDI, AMYboard Onli
 
 ### Write Python code
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_online_code.png" width=600>
+<img src="img/code_editor.png" width=600>
 
+*The Code editor with syntax highlighting, file management, and live execution. Write and edit Python scripts that control AMY directly.*
 
 AMYboard Online includes a full MicroPython REPL running in your browser. You can:
 
  - Type Python code to control the synth
  - Write and test scripts before deploying them to hardware
+
+<img src="img/terminal_repl.png" width=600>
+
+*The Terminal REPL gives you an interactive MicroPython prompt where you can type AMY commands and see results immediately.*
 
 ### Transfer environments to hardware
 
@@ -50,7 +56,9 @@ This is the easiest way to set up your hardware AMYboard from a comfortable edit
 
 Make sure your MIDI out is set your AMYboard! Either directly over USB or via a MIDI cable, choose the correct MIDI output first.
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/send_to_amyboard.png" width=600>
+<img src="img/oled_rotary_cv.png" width=600>
+
+*The hardware interface: OLED display showing firmware info, rotary encoder for patch selection, and CV input knobs for modular integration.*
 
 ### AMYboard World
 
@@ -102,6 +110,10 @@ The patch knob panel contains six sections organized into two columns. The left 
 | **duty** | Pulse width for PULSE and SQUARE waveforms (0–1). Has no effect on other waveforms. |
 | **level** | Output level (amplitude) of oscillator A (0–1). |
 
+<img src="img/wavetable_presets.png" width=250>
+
+*When you select a wavetable waveform, the Wavetable Presets dropdown lets you choose from built-in wavetable files.*
+
 #### OSC B — Oscillator B
 
 | Knob | Description |
@@ -152,7 +164,9 @@ The patch knob panel contains six sections organized into two columns. The left 
 
 ### Knob editor (MIDI CC and range)
 
-<img src="img/knob_modal.png" width=200>
+<img src="img/knob_modal.png" width=250>
+
+*The knob settings popup showing min/max range, log scaling toggle, and MIDI CC assignment with Learn mode.*
 
 Click any knob **label** (the text above or below the knob, e.g. "freq") to open its parameter editor popup.
 
