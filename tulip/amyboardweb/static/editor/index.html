@@ -28,6 +28,8 @@
     <link href="css/prism.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/all.css" id="treejs_styles">
     <link rel="stylesheet" href="amyrepl.css">
+    <link rel="stylesheet" href="xterm.css" />
+    <script src="xterm.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.48.4/codemirror.min.css" />
     <script src="tree.js"></script>
     <link rel="stylesheet" href="treejs.css" id="treejs_styles">
@@ -774,6 +776,28 @@
         filter: invert(1);
         opacity: 0.7;
       }
+      /* Terminal REPL */
+      .repl-summary {
+        cursor: pointer;
+        user-select: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #555;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      .repl-summary::-webkit-details-marker { display: none; }
+      details[open] .repl-summary { color: #222; }
+      .repl-summary::before { content: "▶"; font-size: 0.7rem; transition: transform 0.15s; }
+      details[open] .repl-summary::before { transform: rotate(90deg); }
+      .repl-wrap {
+        background: #0f0f0f;
+        border-radius: 6px;
+        padding: 4px 6px;
+        overflow: hidden;
+      }
     </style>
   </head>
 
@@ -823,14 +847,39 @@
     </nav>
 
     <script type="module">
+      // Initialize Terminal REPL (xterm.js)
+      const replTerm = new Terminal({
+        rows: 12,
+        cols: 120,
+        fontSize: 12,
+        theme: { background: '#0f0f0f' }
+      });
+      replTerm.open(document.getElementById('repl-terminal'));
+      window.replClear = () => replTerm.clear();
+
+      const stdoutWriter = (line) => {
+        // MicroPython sends one char at a time; char 10 is LF — xterm needs CRLF
+        if (line[0] == 10) {
+          replTerm.writeln('');
+        } else {
+          replTerm.write(line);
+        }
+      };
+
+      replTerm.onKey(e => {
+        mp.replProcessCharWithAsyncify(e.key.charCodeAt(0));
+      });
+
       mp = await loadMicroPython({
+        stdout: stdoutWriter,
         linebuffer: false,
-        pystack: 64 * 1024, 
+        pystack: 64 * 1024,
         heapsize: 8 * 1024 * 1024
       });
       await sleep_ms(50);
       // Tell MP to start serving a REPL
       await mp.replInit();
+      await replTerm.clear();
       await sleep_ms(50);
       // Start up the AMYboard stuff
       await start_amyboard();
@@ -1023,6 +1072,16 @@
             </div>
             <div class="tab-pane fade" id="environment-pane" role="tabpanel" aria-labelledby="environment-tab">
               <div class="alert fixed-top d-none" id="alert_box"></div>
+              <!-- Terminal REPL — hidden by default under disclosure triangle -->
+              <details class="mb-3">
+                <summary class="repl-summary">Terminal REPL</summary>
+                <div class="mt-2">
+                  <div class="repl-wrap">
+                    <div id="repl-terminal"></div>
+                  </div>
+                  <button class="btn btn-sm btn-outline-secondary mt-1" onclick="replClear()">Clear</button>
+                </div>
+              </details>
               <div class="row g-0 headertext">
                 <div class="col-4 col-md-2 headertext">
                   <span class="px-1 small align-middle">Your Files</span>
