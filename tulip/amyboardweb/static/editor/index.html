@@ -418,24 +418,6 @@
           max-width: 33.333%;
           width: 33.333%;
         }
-        .patch-layout-header,
-        .patch-layout-body {
-          grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
-          gap: 0;
-        }
-        .patch-toolbar {
-          grid-column: 1;
-        }
-        .patch-global-title {
-          display: flex;
-          grid-column: 3;
-        }
-        .patch-channel-panel {
-          grid-column: 1;
-        }
-        .patch-global-panel {
-          grid-column: 3;
-        }
       }
 
       .knob-section-header {
@@ -633,6 +615,27 @@
         background: linear-gradient(145deg, #f5f7fb 0%, #dce5ef 100%);
         border-radius: 14px;
         padding: 12px;
+      }
+
+      @media (min-width: 800px) {
+        .patch-layout-header,
+        .patch-layout-body {
+          grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+          gap: 0;
+        }
+        .patch-toolbar {
+          grid-column: 1;
+        }
+        .patch-global-title {
+          display: flex;
+          grid-column: 3;
+        }
+        .patch-channel-panel {
+          grid-column: 1;
+        }
+        .patch-global-panel {
+          grid-column: 3;
+        }
       }
 
       .patch-select-group .patch-init-btn {
