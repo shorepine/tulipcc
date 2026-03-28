@@ -866,12 +866,23 @@
         }
       };
 
-      replTerm.onKey(e => {
-        // Send all chars so escape sequences (e.g. arrow keys = \x1b[A) work fully.
-        // MicroPython's REPL handles VT100 sequences for history (up/down arrows).
-        for (let i = 0; i < e.key.length; i++) {
-          mp.replProcessCharWithAsyncify(e.key.charCodeAt(i));
+      // Use onData instead of onKey — fires for keypresses AND paste (Cmd+V).
+      // Queue input so async replProcessCharWithAsyncify calls stay in order.
+      const replInputQueue = [];
+      let replProcessing = false;
+      async function drainReplQueue() {
+        if (replProcessing) return;
+        replProcessing = true;
+        while (replInputQueue.length > 0) {
+          await mp.replProcessCharWithAsyncify(replInputQueue.shift());
         }
+        replProcessing = false;
+      }
+      replTerm.onData(data => {
+        for (let i = 0; i < data.length; i++) {
+          replInputQueue.push(data.charCodeAt(i));
+        }
+        drainReplQueue();
       });
 
       mp = await loadMicroPython({
