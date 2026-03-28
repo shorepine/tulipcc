@@ -280,11 +280,13 @@ void run_amy(uint8_t midi_out_pin) {
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     amy_config.audio = AMY_AUDIO_IS_I2S;
-#ifdef AMYBOARD
+#if defined(AMYBOARD) || defined(AMYBOARD_WEB)
     extern float cv_input_hook(uint16_t channel);
+    amy_config.amy_external_coef_hook = cv_input_hook;
+#endif
+#ifdef AMYBOARD
     amy_config.features.audio_in = 1;
     amy_config.midi = AMY_MIDI_IS_UART | AMY_MIDI_IS_USB_GADGET;
-    amy_config.amy_external_coef_hook = cv_input_hook;
 #else
     amy_config.features.audio_in = 0;
     amy_config.midi = AMY_MIDI_IS_UART;

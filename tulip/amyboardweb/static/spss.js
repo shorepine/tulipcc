@@ -940,6 +940,10 @@ async function clear_storage() {
 }
 
 window.amy_cv_knob_change = function(index, value) {
+  // Set the JS globals that amy.wasm reads in its audio loop
+  if (index === 0) cv_1_voltage = value;
+  else if (index === 1) cv_2_voltage = value;
+  // Also update the Python/MicroPython side
   if (mp) mp.runPythonAsync("tulip.cv_local(" + index + ", " + value + ")");
 };
 
