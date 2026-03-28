@@ -1,83 +1,19 @@
 # Using AMYboard Online
 
-The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you design patches, write Python code, and manage your AMYboard -- all from your browser. You can also use it as a standalone browser-based synthesizer without any hardware at all.
+The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you design patches, write Python code, manage your AMYboard and see shared patches and code -- all from your browser. You can also use it as a standalone browser-based synthesizer without any hardware at all.
 
-<img src="img/load_patches.png" width=400>
+<img src="img/amyboard_editor_preview.png">
 
-*The patch browser lets you load from your own patches, Juno-6 and DX-7 presets, and community patches from AMYboard World.*
 
 ## Getting started
 
-Just open [amyboard.com](https://amyboard.com/editor) in Chrome, Edge, or Firefox (Safari works but MIDI will not work there). Click anywhere on the page to unlock audio, and you're ready to go.
+Just open [amyboard.com](https://amyboard.com/editor) in Chrome, Edge, or Firefox (Safari works but MIDI will not work there). Click anywhere once on the page to unlock audio, and you're ready to go.
 
-## What you can do online
+The online editor can be used to both set up a code environment and patches for your AMYboard, or you can just the site on its own to make music. It can respond to MIDI like a synth, and the sketches you write will work there too. It can't do _everything_ a real AMYboard can - but it's close enough for most things. 
 
-### Play and edit patches
+## Play and edit patches
 
-The web editor gives you a knob-per-function interface for Juno-6 like patches
-
- - Browse and load any of the 128 patches into the interface
- - Tweak every parameter with on-screen knobs
- - Assign patches to any of the 16 MIDI channels
- - Set min & max & CC assignments per knob (click on the knob title)
-
-### Use Web MIDI
-
-If you have a MIDI controller and a browser that supports WebMIDI, AMYboard Online can use it directly:
-
- - Click the MIDI device selector to choose your input and output devices
- - Play notes on your controller and hear them through AMYboard's synth engine
- - MIDI CC messages can control patch parameters in real time
-
-### Write Python code
-
-<img src="img/code_editor.png" width=600>
-
-*The Code editor with syntax highlighting, file management, and live execution. Write and edit Python scripts that control AMY directly.*
-
-AMYboard Online includes a full MicroPython REPL running in your browser. You can:
-
- - Type Python code to control the synth
- - Write and test scripts before deploying them to hardware
-
-<img src="img/terminal_repl.png" width=600>
-
-*The Terminal REPL gives you an interactive MicroPython prompt where you can type AMY commands and see results immediately.*
-
-### Transfer environments to hardware
-
-If you have an AMYboard connected via USB:
-
- 1. Click **Send to AMYboard** in the web editor
- 2. Your current patch assignments, modified patches, and any audio files or python files like `env.py` script are packed into an archive and transferred over MIDI SysEx
- 3. The hardware AMYboard unpacks and applies everything automatically, then reboots
-
-This is the easiest way to set up your hardware AMYboard from a comfortable editing environment.
-
-Make sure your MIDI out is set your AMYboard! Either directly over USB or via a MIDI cable, choose the correct MIDI output first.
-
-<img src="img/oled_rotary_cv.png" width=600>
-
-*The hardware interface: OLED display showing firmware info, rotary encoder for patch selection, and CV input knobs for modular integration.*
-
-### AMYboard World
-
-AMYboard World is a community sharing hub built into the web editor. You can browse, download, and upload both full environments and individual patches.
-
- - **Environments**: Complete setups including patch assignments, modified patches, audio files, and `env.py` scripts. Import one and your entire editor state is replaced with the shared environment.
- - **Patches**: Individual `.patch` files you can preview and import into any channel. Click a patch to hear it before committing.
-
-To share your own work:
-
- 1. Give your environment a name and fill in your username and a short description
- 2. Click **Upload** to publish it to AMYboard World
- 3. Others can find it by browsing or searching
-
----
-
-## Patch editor in depth
-
-### Channel strip
+The web editor gives you a knob-per-function interface for Juno-6 and DX7 style patches.
 
 <img src="img/channel_strip.png" width=700>
 
@@ -87,15 +23,12 @@ The channel strip runs across the top of the Patch tab and controls which synth 
 |---------|-------------|
 | **Channel 1** (dropdown) | Select which of the 16 independent synth channels to edit. Each channel has its own patch, MIDI assignment, and parameter set. |
 | **Active** (checkbox) | Enable or disable this channel. Unchecking it silences the channel without losing its settings. |
-| **Patch: None** (button) | Click to open the patch browser and load one of the 128 built-in preset patches into the current channel. The button shows the name of the currently loaded patch. |
-| **Save** (red button) | Save the current knob values as a named patch. You can recall it later from the patch browser. |
+| **Patch: None** (button) | Click to open the patch browser and load one of the 256 built-in presets into the current channel. The button shows the name of the currently loaded patch for this channel. |
+| **Save** (red button) | Save the current knob values as a named patch. You can recall it later from the patch browser. An asterisk will appear if the patch is "dirty" (has changes that haven't been saved.) |
 | **Revert** | Reset the current channel back to the last saved or loaded patch, discarding any unsaved edits. |
 | **Clear** | Reset all knobs on this channel to their default values and remove the patch name. |
-| **Effects** (right, dark) | Scrolls to the global effects panel (EQ, Chorus, Reverb, Echo). Effects are shared across all channels. |
+| **Effects** | The global effects panel (EQ, Chorus, Reverb, Echo). Effects are shared across all channels. |
 
----
-
-### Per-patch knobs
 
 <img src="img/patch_knobs.png" width=700>
 
@@ -160,9 +93,17 @@ The patch knob panel contains six sections organized into two columns. The left 
 | **sustain** | Volume level held while a key is held (0–1). |
 | **release** | Time (ms) for the note to fade to silence after note-off. |
 
----
 
-### Knob editor (MIDI CC and range)
+<img src="img/load_patches.png" width=400>
+*The patch browser lets you load from your own patches, Juno-6 and DX-7 presets, and community patches from AMYboard World.*
+
+
+If you have a MIDI controller and a browser that supports WebMIDI, AMYboard Online can use it directly:
+
+ - Click the MIDI device selector to choose your input and output devices
+ - Play notes on your controller and hear them through AMYboard's synth engine
+ - MIDI CC messages can control patch parameters in real time
+
 
 <img src="img/knob_modal.png" width=250>
 
@@ -178,9 +119,6 @@ Click any knob **label** (the text above or below the knob, e.g. "freq") to open
 | **Learn** | Click Learn, then move a knob or fader on your MIDI controller. The CC number is detected automatically and filled in. |
 | **Save / Cancel** | Save commits the new range and CC assignment. Cancel closes without changing anything. |
 
----
-
-### Global effects knobs
 
 <img src="img/effects_knobs.png" width=220>
 
@@ -217,5 +155,70 @@ The Effects panel (right side of the Patch tab) contains four global processors 
 | **level** | Echo wet/dry mix (0–1). |
 | **delay** | Echo delay time in milliseconds. |
 | **feedback** | How much of the echo signal feeds back into itself (0–1). Higher values create longer, repeating echoes. Keep below 1 to avoid runaway feedback. |
+
+
+## Write and run Python sketches
+
+When AMYboard starts up, either on web or hardware, it sets up whatever patches are set to each channel (using a file called `editor_state.json` that you can see in the code editor) and then runs a "sketch" set up in `sketch.py`. These are Python programs that run setup code (in the main part of the code file) and then call `loop()` every so often (about every 50ms). 
+
+<img src="img/code_editor.png" width=600>
+
+*The Code editor with syntax highlighting, file management, and live execution. Write and edit Python scripts that control AMY directly.*
+
+The code tab of AMYboard online has a code editor. You should see a default `sketch.py` that you can edit. Once you make changes, click the green Start button to re-run the code. The other buttons on the Your Files section are:
+
+ - Upload a file from your computer into AMYboard storage
+ - Add a new blank file
+ - Rename an existing file
+ - Delete a file
+
+The code editor auto-saves, so there's no save button. 
+
+Above the code editor is an option "REPL" - a way to interactive type commands into AYMboard online. Remember, this is not directly communicating with your hardware AMYboard, it is talking to the emulated AMYboard running online. If you want to write code directly on your AMYboard, [see our Python documentation](python.md). 
+
+<img src="img/terminal_repl.png" width=600>
+
+*The Terminal REPL gives you an interactive MicroPython prompt where you can type AMY commands and see results immediately.*
+
+Under the code editor is a row of simulated [AMYboard accessories](accessories.md). This includes an OLED display, a rotary encoder with push button, and two CV input knobs. These help you verify your hardware hookups before deploying to a real AMYboard with acessories.
+
+<img src="img/oled_rotary_cv.png" width=600>
+
+*The hardware interface: OLED display showing firmware info, rotary encoder for patch selection, and CV input knobs for modular integration.*
+
+## Transfer environments to your AMYboard hardware
+
+You can transfer the state of your AMYboard online session directly to a real AMYboard over MIDI SYSEX. You can use either USB MIDI (AMYboard device) or TRS MIDI cable from your own MIDI hardware. 
+
+<img src="img/send_to_amyboard.png" width=600>
+
+If you have an AMYboard connected via USB:
+
+ 1. Click **Send to AMYboard** in the web editor
+ 2. Make sure your MIDI out is set your AMYboard! If your AMYboard is connected over USB, MIDI out should say "AMYboard". If you're using TRS MIDI, connect it from your MIDI out port to your AMYboard MIDI in.
+ 3. Your current patch assignments, modified patches, and any audio files or python files like `sketch.py` script are packed into an archive and transferred over MIDI SysEx
+ 4. The hardware AMYboard unpacks and applies everything automatically, then reboots
+
+This is the easiest way to set up your hardware AMYboard from a comfortable editing environment.
+
+
+## AMYboard World
+
+We provide a file sharing network for AMYboard called "AMYboard World." People can share their own environments and patches. It's up to you if you want to share your code with others, but we recommend it! Make sure to join us on our [Discord](https://discord.gg/TzBFkUb8pG) to let people know about your uploads. 
+
+
+<img src="img/amyboard_world_environments.png" width=600>
+
+You can search or see everyone's uploaded environments. Enviroments contain everything in the file list -- both patches and code. An AMYboard online or hardware runs a single environment at a time. Click on an environment to replace your current setup with one from AMYboard World. 
+
+<img src="img/amyboard_world_patches.png" width=600>
+
+You can also download individual patches for synths from the community. This will just update your current patch settings. You can also preview a few notes of a patch before downloading it.
+
+<img src="img/amyboard_world_upload.png" width=600>
+
+You can upload your own environments or patches here. Choose a memorable username and describe your work!
+
+
 
 [Back to Getting Started](index.md)

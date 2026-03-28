@@ -7,21 +7,32 @@ Welcome to **AMYboard** -- a powerful music synthesizer on a small modular-compa
 AMYboard gives you:
 
  - **128 Juno-6 analog patches** and **128 DX7 FM patches**, plus piano, drums, and custom synthesis
- - **MIDI in and out** (USB and TRS)
+ - **MIDI in and out** (USB gadget and TRS)
  - **CV in and out** for modular synth integration (-10V to +10V)
  - **S/PDIF in and out** for digital audio
  - **SD card** for extra storage and samples
  - **I2C port** for [accessories](accessories.md) -- encoders, displays, and more
  - **Python programmability** -- write code to control every parameter of the synth
- - **Web editor** at [amyboard.com](https://amyboard.com) for patch design and environment management
+ - **Web editor** at [amyboard.com](https://amyboard.com/editor) for patch design and environment management
 
-If you have problems with AMYboard, you can find us on GitHub [issues](https://github.com/shorepine/tulipcc/issues) or the [Discord](https://discord.gg/TzBFkUb8pG). We'll do our best to help out!
+If you have problems with AMYboard, check out the [troubleshooting page](troubleshooting.md). 
 
 -- DAn and Brian
 
 ## What's in the box
 
-AMYboard ships from [Makerfabs](https://amyboard.com). In the box you'll get the board itself with the connectors already on, and an optional front panel. See [Modular Synth Setup](modular.md) for details on the front panel and Eurorack mounting.
+AMYboard ships from [Makerfabs](https://amyboard.com/#get). In the box you'll get the board itself with the connectors already on, and an optional front panel that you can use if you want to mount your AMYboard in a Eurorrack case. See [Modular Synth Setup](modular.md) for details on the front panel and Eurorack mounting.
+
+
+## How AMYboard works - patches and sketches
+
+By default, our firmware boots your AMYboard up with what we call an "environment" - a list of patch to MIDI channel assignments and some default Python code that can run on startup. If you use [AMYboard online](online.md) you can change the patches, load new presets, load patches from others on our file sharing network AMYboard World, or write your own code to run on your AMYboard. 
+
+When AMYboard starts up, it sets up whatever patches are set to each channel and then runs the code that the user set up, if any. The code lets you build great interactive environments: you can load default patches and then have code modify them or change how inputs from CV or MIDI affect the patches, for example. 
+
+You can browse AMYboard World to find other environments to get inspiration! Download them and change them to fit your needs.
+
+You can also remove our custom firmware (it's easy to put back!) and run AMYboard under [Arduino](arduino.md) where you'll have full control over everything on AMYboard. 
 
 ## Board overview
 
@@ -33,8 +44,8 @@ AMYboard ships from [Makerfabs](https://amyboard.com). In the box you'll get the
 |-----------|-------------|
 | **S/PDIF in** | 3.5mm digital audio input |
 | **S/PDIF out** | 3.5mm digital audio output |
-| **Line in** | 3.5mm stereo analog audio input |
-| **Line out** | 3.5mm stereo analog audio output |
+| **Line in** | 3.5mm stereo analog audio input - can be 10vpp via DIP switch |
+| **Line out** | 3.5mm stereo analog audio output - can be 10vpp via DIP switch |
 | **MIDI in** | 3.5mm TRS MIDI Type-A or B input |
 | **MIDI out** | 3.5mm TRS Type-A or B MIDI output (software switchable) |
 | **CV1 in** | 3.5mm analog input, -10V to +10V (ADS1115 ADC) |
@@ -49,28 +60,41 @@ AMYboard ships from [Makerfabs](https://amyboard.com). In the box you'll get the
 
 | Connector | Location | Description |
 |-----------|----------|-------------|
-| **USB-C** | Side | Power, serial REPL, USB MIDI, firmware updates |
+| **USB-C** | Side | Power, serial REPL, USB MIDI (gadget mode, NOT HOST), firmware updates |
 | **I2C front panel** | Front | I2C / Grove / STEMMA QT / Qwiic port for [accessories](accessories.md) (encoders, displays) |
 | **I2C host** | Back | For connecting to a [Tulip Creative Computer](https://github.com/shorepine/tulipcc) |
 | **MicroSD card** | Side | Extra storage for samples and patches |
 | **Modular power** | Back | 10-pin Eurorack power supply connector |
 | **Debug header** | Back | For firmware development |
 
+
+## Power Supplies
+
+AMYboard can be powered 3 ways:
+
+ * USB-C connector: standard 5V input via USB
+ * Modular 10-pin connector: a standard Eurorack connector can power AMYboard via the +12V connector
+ * I2C host: a Tulip Creative Computer or other 3.3V i2c connection
+
+If multiple power supplies are connected AMYboard will just use one.
+
 ## Upgrading firmware
 
-Before you do anything else, upgrade your firmware! You can do this online. Plug your AMYboard into your computer with a USB-C cable. Open Chrome, and go to [AMYboard Online](https://amyboard.com/editor), then click on Upgrade Firmware. Follow the instructions there!
+Before you do anything else, upgrade your firmware! The easiest way is online via your browser. See our [firmware upgrading page](firmware.md) for more info on how to upgrade.
 
 ## Quick start - Standalone
 
-1. **Plug in USB-C** from your computer to AMYboard. It powers the board and gives you a serial connection.
+1. **Plug in USB-C** from your computer to AMYboard. It powers the board and gives you a serial and MIDI connection.
 2. **Plug in headphones or speakers** to the audio out jack.
-3. **Connect a MIDI controller** (To your DAW using USB MIDI or TRS MIDI) and play! AMYboard boots with Juno-6 patch #0 on MIDI channel 1.
+3. **Connect a MIDI controller** (To your DAW using USB MIDI or TRS MIDI) and play! AMYboard boots with Juno-6 patch #0 on MIDI channel 1 by default. 
+4. **Try out AMYboard online**. Use [AMYboard online](online.md) to change synth patches, try out code environments and see other people's patches and code on AMYboard World. You can send code and patches right to your AMYboard over a MIDI connection (TRS MIDI or USB) online.
 
 ## Quick start - Modular Synth
 
 1. **Flip the DIP switches for modular 5vpp output**. See our [Modular page](modular.md) for more info.
 2. **Connect 10-pin modular power.** Make sure to use a cable that has a "key" for the correct orientation. 
-3. **Connect your CV and audio and MIDI cables**. By default AMYboard plays a synth patch on MIDI channel 1. But it can do SO MUCH MORE
+3. **Connect your CV and audio and MIDI cables**. By default AMYboard plays a synth patch on MIDI channel 1. But it can do SO MUCH MORE. 
+4. Since the USB connection on your AMYboard will be hidden during a Eurorack install, use TRS MIDI to transfer patches and code between [AMYboard online](online.md) and your AMYboard in a case. 
 
 ## Quick start - Tulip
 

@@ -6,7 +6,7 @@ There are three ways to upgrade the firmware on your AMYboard. The easiest is us
 
 ## Option 1: AMYboard Online firmware upgrader (easiest)
 
-The [AMYboard Online editor](https://amyboard.com/editor) includes a built-in firmware upgrader that works right from your browser using WebSerial.
+The [AMYboard Online editor](https://amyboard.com/editor) includes a built-in firmware upgrader that works right from your browser using WebSerial. We recommend using Google Chrome for this. 
 
 1. Connect your AMYboard to your computer over USB.
 2. Hold down both buttons on the side of the AMYboard, then release RST first, then release BOOT. This puts the board into bootloader mode.
@@ -14,12 +14,12 @@ The [AMYboard Online editor](https://amyboard.com/editor) includes a built-in fi
 
 <img src="img/upgrade_firmware.png" width=600>
 
-4. Choose the serial port that corresponds to your AMYboard (it may show up as "USB/JTAG" or "AMYboard" or "CP2102").
+4. Choose the serial port that corresponds to your AMYboard (it may show up as "USB/JTAG" or "AMYboard")
 
 <img src="img/choose_serial_port.png" width=400>
 
 5. Choose to either **Upgrade AMYboard firmware** (keeps your files) or **Fully erase and re-flash AMYboard** (fresh start).
-6. Wait for the process to complete. Your AMYboard will reboot automatically.
+6. Wait for the process to complete. You can then hit the RST button to restart your AMYboard into the upgraded firmware!
 
 ---
 
@@ -68,7 +68,7 @@ esptool.py write_flash 0x0 amyboard-full-AMYBOARD.bin
 
 **Note: This will erase everything on the board, including any saved files.**
 
-The AMYboard should reboot when flashing is complete (you may need to unplug and replug the USB cable). After this initial flash, you can use `amyboard.upgrade()` for future updates.
+The AMYboard should reboot when flashing is complete (you may need to unplug and replug the USB cable). After this initial flash, you can use `amyboard.upgrade()` or the web firmware upgrader for future updates.
 
 ---
 
