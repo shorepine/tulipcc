@@ -1,5 +1,6 @@
 # amyboard.py
 import tulip, midi, amy, time, struct, time, sys, os
+from tulip import wifi, upgrade
 
 i2c = None
 display = None # Display instance (unified interface for all display types)
