@@ -50,12 +50,20 @@ Check out the other examples in **File > Examples > AMY** for more ideas, includ
 
 ## Playing notes from Arduino
 
+Loading a preset synth patch:
 ```c
 amy_event e = amy_default_event();
-e.synth = 1;
-e.patch_number = 0;      // Juno-6 patch #0
-e.velocity = 1;
-e.midi_note = 60;        // Middle C
+e.synth = 1;         // The synth to be set up.
+e.patch_number = 6;  // Juno A17 Choir preset patch.
+e.num_voices = 4;    // How many simultaneous voices to provision.
+amy_add_event(&e);
+```
+Playing a note on a configured synth:
+```c
+amy_event e = amy_default_event();
+e.synth = 1;         // Which synth to use
+e.midi_note = 60;    // Middle C
+e.velocity = 1;      // Full strike
 amy_add_event(&e);
 ```
 
