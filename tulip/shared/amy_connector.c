@@ -43,28 +43,74 @@ int16_t midi_queue_tail = 0;
 #ifdef ESP_PLATFORM
 #include "driver/i2c.h"
 
-// An AMY hook to send values out to a CV DAC over i2c, only on ESP 
+// Maps synth number -> CV channel (0 = not mapped, 1 = CV1, 2 = CV2)
+// Set from Python via amyboard.set_cv_out(channel, synth)
+#define MAX_CV_SYNTHS 32
+uint8_t cv_synth_map[MAX_CV_SYNTHS];
+
+// Look up which synth owns this osc, return synth number or -1
+static int synth_for_osc(uint16_t osc) {
+    extern uint8_t *osc_to_voice;
+    if (osc_to_voice == NULL) return -1;
+    uint8_t voice = osc_to_voice[osc];
+    if (voice == 255) return -1;  // AMY_UNSET for uint8
+    uint16_t voices[MAX_VOICES_PER_INSTRUMENT];
+    for (int s = 0; s < MAX_CV_SYNTHS; s++) {
+        if (cv_synth_map[s] == 0) continue;  // skip unmapped synths
+        int nv = instrument_get_num_voices(s, voices);
+        for (int v = 0; v < nv; v++) {
+            if (voices[v] == voice) return s;
+        }
+    }
+    return -1;
+}
+
+// AMY render hook: route osc audio to CV DAC if its synth is mapped
 uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
+    // First check old per-osc map for backward compat
     if(external_map[osc]>0) {
+        uint8_t cv_channel = external_map[osc] - 1;
+#ifdef AMYBOARD
+        // AMYboard GP8413 DAC at address 88, channels 0x02/0x04
+        // Sample range [-1,1] -> volts [-10,+10] -> DAC [0x0000, 0x7FFF]
+        float volts = S2F(buf[0]) * 10.0f;
+        uint16_t value_int = (uint16_t)(((volts + 10.0f) / 20.0f) * 0x8000);
+        if (value_int > 0x7FFF) value_int = 0x7FFF;
+        uint8_t reg = (cv_channel == 0) ? 0x02 : 0x04;
+        uint8_t bytes[3] = { reg, value_int & 0xFF, (value_int >> 8) & 0xFF };
+        i2c_master_write_to_device(I2C_NUM_0, 88, bytes, 3, pdMS_TO_TICKS(10));
+#else
+        // Tulip CC DAC (different address/format)
         float volts = S2F(buf[0])*2.5f + 2.5f;
-        // do the thing
         uint16_t value_int = (uint16_t)((volts/10.0) * 65535.0);
         uint8_t bytes[3];
         bytes[2] = (value_int & 0xff00) >> 8;
         bytes[1] = (value_int & 0x00ff);
-
         uint8_t ch = 0x02;
         uint8_t addr = 89;
-        uint8_t channel = external_map[osc]-1;
-        if(channel == 1) ch = 0x04;
-        if(channel == 2) addr = 88;
-        if(channel == 3) {ch = 0x04; addr=88; }
+        if(cv_channel == 1) ch = 0x04;
+        if(cv_channel == 2) addr = 88;
+        if(cv_channel == 3) {ch = 0x04; addr=88; }
         bytes[0] = ch;
         i2c_master_write_to_device(I2C_NUM_0, addr, bytes, 3, pdMS_TO_TICKS(10));
+#endif
+        return 1;
+    }
+    // Check synth-based CV map
+    int s = synth_for_osc(osc);
+    if (s >= 0 && s < MAX_CV_SYNTHS && cv_synth_map[s] > 0) {
+        uint8_t cv_channel = cv_synth_map[s] - 1;
+#ifdef AMYBOARD
+        float volts = S2F(buf[0]) * 10.0f;
+        uint16_t value_int = (uint16_t)(((volts + 10.0f) / 20.0f) * 0x8000);
+        if (value_int > 0x7FFF) value_int = 0x7FFF;
+        uint8_t reg = (cv_channel == 0) ? 0x02 : 0x04;
+        uint8_t bytes[3] = { reg, value_int & 0xFF, (value_int >> 8) & 0xFF };
+        i2c_master_write_to_device(I2C_NUM_0, 88, bytes, 3, pdMS_TO_TICKS(10));
+#endif
         return 1;
     }
     return 0;
-
 }
 #endif
 
@@ -305,6 +351,7 @@ void run_amy(uint8_t midi_out_pin) {
     amy_start(amy_config);
     external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
     for(uint16_t i=0;i<amy_config.max_oscs;i++) external_map[i] = 0;
+    for(uint8_t i=0;i<MAX_CV_SYNTHS;i++) cv_synth_map[i] = 0;
 }
 
 #elif defined TULIP_DESKTOP

@@ -173,8 +173,20 @@ STATIC mp_obj_t tulip_amy_set_external_channel(size_t n_args, const mp_obj_t *ar
     external_map[osc] = ch;
     return mp_const_none;
 }
-
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_external_channel_obj, 2, 2, tulip_amy_set_external_channel);
+
+// Map a synth number to a CV output channel (1-based, 0 = clear)
+#define MAX_CV_SYNTHS 32
+extern uint8_t cv_synth_map[MAX_CV_SYNTHS];
+STATIC mp_obj_t tulip_set_cv_synth(size_t n_args, const mp_obj_t *args) {
+    uint8_t synth = mp_obj_get_int(args[0]);
+    uint8_t cv_channel = mp_obj_get_int(args[1]);  // 1 = CV1, 2 = CV2, 0 = clear
+    if (synth < MAX_CV_SYNTHS) {
+        cv_synth_map[synth] = cv_channel;
+    }
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_set_cv_synth_obj, 2, 2, tulip_set_cv_synth);
 #endif
 
 STATIC mp_obj_t tulip_defer(size_t n_args, const mp_obj_t *args) {
@@ -521,11 +533,13 @@ STATIC mp_obj_t tulip_framebuf_web_update(size_t n_args, const mp_obj_t *args) {
         }
     }
     EM_ASM_({
-      let data = Module.HEAPU8.slice($0, $0 + $1 * $2 * 4);
-      let context = document.getElementById("canvas").getContext('2d');
-      context.scale(2, 2);
-      let imageData = context.getImageData(0, 0, $1, $2);
-      imageData.data.set(data);
+      let canvas = document.getElementById("canvas");
+      if (!canvas) return;
+      let context = canvas.getContext('2d');
+      let imageData = context.createImageData($1, $2);
+      // .slice() to copy from SharedArrayBuffer into a regular ArrayBuffer
+      let src = Module.HEAPU8.slice($0, $0 + $1 * $2 * 4);
+      imageData.data.set(src);
       context.putImageData(imageData, 0, 0);
     }, canvas_pixels, 256, 256);
     return mp_const_none;
@@ -1618,6 +1632,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 
 #ifdef ESP_PLATFORM
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_channel), MP_ROM_PTR(&tulip_amy_set_external_channel_obj)},
+    { MP_ROM_QSTR(MP_QSTR_set_cv_synth), MP_ROM_PTR(&tulip_set_cv_synth_obj)},
 #endif
 
 #ifdef AMYBOARD
