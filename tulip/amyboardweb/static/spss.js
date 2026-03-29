@@ -152,6 +152,9 @@ amyModule().then(async function(am) {
   amy_module = am;
   res_ptr_in = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
   res_ptr_out = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
+  // Expose on globalThis so MicroPython JS module calls can access them
+  globalThis._amy_module_ref = amy_module;
+  globalThis._amy_res_ptr_out = res_ptr_out;
 });
 
 function read_c_string_from_heap(ptr, maxLen) {
@@ -2947,6 +2950,20 @@ async function toggle_audioin() {
      return view
  }
 
+ function get_output_audio_samples() {
+     var am = globalThis._amy_module_ref;
+     var ptr = globalThis._amy_res_ptr_out;
+     if (!am || !am._amy_get_output_buffer || !ptr) {
+         return new Uint8Array(1024);
+     }
+     var n = am._amy_get_output_buffer(ptr);
+     var result = new Uint8Array(1024);
+     if (n > 0) {
+         result.set(am.HEAPU8.subarray(ptr, ptr + 1024));
+     }
+     return result;
+ }
+
  function set_audio_samples(samples) {
      var res_ptr = amy_module._malloc(2 * 256 * 2); // 2 channels, 256 frames, int16s
      amy_module.HEAPU8.set(samples, res_ptr);
@@ -2969,6 +2986,7 @@ async function start_amyboard() {
   await mp.registerJsModule('amy_js_message', amy_add_message);
   await mp.registerJsModule('amy_sysclock', amy_sysclock);
   await mp.registerJsModule('amyboard_world_upload_file', amyboard_world_upload_file);
+  await mp.registerJsModule('amy_get_output_buffer', get_output_audio_samples);
 //  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);
 //  await mp.registerJsModule('amy_set_external_input_buffer', set_audio_samples);
 
@@ -2977,9 +2995,10 @@ async function start_amyboard() {
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import tulip, amy, amy_js_message, amy_sysclock
+    import tulip, amy, amy_js_message, amy_sysclock, amy_get_output_buffer as _amy_get_output_buf_js
     amy.override_send = amy_js_message
     tulip.amy_ticks_ms = amy_sysclock
+    tulip.amy_get_output_buffer = _amy_get_output_buf_js
   `);
 
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
@@ -3045,6 +3064,27 @@ async function start_audio() {
       window.refresh_save_patch_dirty_indicator();
     }
   } catch (e) {}
+  // Set up AnalyserNode to capture output waveform for Python
+  try {
+    if (typeof emAudio !== 'undefined') {
+      var actx = null, workletNode = null;
+      for (var k in emAudio) {
+        var obj = emAudio[k];
+        if (obj && obj.constructor && obj.constructor.name === 'AudioContext') actx = obj;
+        if (obj && obj.constructor && obj.constructor.name === 'AudioWorkletNode') workletNode = obj;
+      }
+      console.log("emAudio scan: AudioContext=", !!actx, "WorkletNode=", !!workletNode);
+      if (actx && workletNode) {
+        var analyser = actx.createAnalyser();
+        analyser.fftSize = 512;
+        workletNode.connect(analyser);
+        // Don't disconnect workletNode from destination - just add a parallel tap
+        globalThis._amy_analyser = analyser;
+        console.log("AnalyserNode connected for waveform capture");
+      }
+    }
+  } catch(e) { console.warn("AnalyserNode setup failed:", e); }
+
   // Keep startup simple: knobs are local UI state until user moves them.
   audio_started = true;
 }
