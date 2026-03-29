@@ -38,20 +38,23 @@ amyboard.cv_out(3.3, channel=0)
 amyboard.cv_out(-5.0, channel=1)
 ```
 
-You can send low-frequency waveforms over the CV bus using AMY itself:
+You can route an entire AMY synth's audio to a CV output using `set_cv_out`. The synth's audio is silenced from the speakers and sent to the DAC instead, so you can use any AMY waveform as a CV source:
 
 ```python
-amy.send(osc=30, external_channel=1, wave=amy.SAW_DOWN, vel=1, freq=0.5, amp=1)
-```
-This sends a saw wave out the first CV output at 0.5Hz with amplitude of 1, so will be -10-10V peak to peak. 
+import amy, amyboard
 
-Send
+# Create a synth and route it to CV1
+amy.send(synth=5, wave=amy.SAW_DOWN, vel=1, freq=0.5)
+amyboard.set_cv_out(channel=0, synth=5)
+```
+
+This sends a 0.5Hz saw wave out CV1 at full range (-10V to +10V). You can change the waveform, frequency, or amplitude at any time with `amy.send(synth=5, ...)`.
+
+To stop it, release the note or clear the mapping:
 
 ```python
-amy.send(osc=30, amp=0)
+amyboard.set_cv_out(channel=0, synth=0)  # clear the CV mapping
 ```
-
-To stop it.
 
 
 ### Use cases
