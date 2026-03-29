@@ -1,6 +1,6 @@
 # AMYboard Accessories
 
-AMYboard has a front panel I2C port (STEMMA QT / Qwiic connector) for plugging in accessories. These connect with a simple cable -- no soldering required.
+AMYboard has a front panel I2C port for plugging in accessories. These connect with a simple cable (GROVE connector) -- no soldering required.
 
 The I2C bus (SCL=18, SDA=17, 400kHz) is available for connecting additional hardware:
 
@@ -17,6 +17,15 @@ amyboard.write_register(addr, reg, val)
 ```
 
 You can add more DACs, ADCs, displays, or sensors to expand AMYboard's capabilities.
+
+**Note:** For the AdaFruit units below, you'll need a [GROVE to Stemma QT Adapter Cable](). They can be hard to find in-stock, but you can make one (or two) yourself if you have a soldering iron: Take an existing GROVE cable and an existing Stemma QT cable, cut them both in the middle, then connect the bare ends together. (Note that, for Grove cables, the SDA and SCL colors depend on manufacturer.  The ordering below should be correct, however, i.e. SCL is the "edge" cable).
+
+|Signal|Stemma QT color|Grove color|
+|--|--|--|
+|GND|Black|Black|
+|Vcc|Red|Red|
+|SDA|Blue|White (Seeed) or Yellow (M5) or White (AdaFruit)|
+|SCL|Yellow|Yellow (Seeed) or White (M5) or Green (AdaFruit)|
 
 
 ## Known compatible accessories
