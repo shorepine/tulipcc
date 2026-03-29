@@ -245,13 +245,13 @@ def midi_event_cb(midi_message):
         # Accept GLOBAL_MIDI_CC_BINDINGS regardless of channel.
         GLOBAL_MIDI_CC_BINDINGS[control](value)
         return  # Early exit
-    if channel not in config.synth_per_channel:
+    synth = config.get_synth(channel=channel)
+    if synth is None:
         if config.show_warnings and channel not in WARNED_MISSING_CHANNELS:
             print("Warning: No synth configured for MIDI channel %d. message was %s %s" %(channel, hex(midi_message[0]), hex(midi_message[1])))
             WARNED_MISSING_CHANNELS.add(channel)
         return  # Early exit
     # We have a populated channel.
-    synth = config.synth_per_channel[channel]
     # Fetch the arpeggiator for this channel, or use synth if there isn't one.
     arp = config.arpeggiator_per_channel.get(channel, None)
     midinote = control
@@ -299,10 +299,11 @@ def c_fired_midi_event(is_sysex):
 
 # Resets AMY timebase and plays the bleep
 def startup_bleep():
-    if 16 in config.synth_per_channel:
-        config.synth_per_channel[16].note_on(57, 1, time=tulip.amy_ticks_ms()+0)
-        config.synth_per_channel[16].note_on(69, 1, time=tulip.amy_ticks_ms()+150)
-        config.synth_per_channel[16].note_off(69, time=tulip.amy_ticks_ms()+300)
+    synth = config.get_synth(channel=16)
+    if synth:
+        synth.note_on(57, 1, time=tulip.amy_ticks_ms()+0)
+        synth.note_on(69, 1, time=tulip.amy_ticks_ms()+150)
+        synth.note_off(69, time=tulip.amy_ticks_ms()+300)
 
 
 def deferred_midi_config(t):

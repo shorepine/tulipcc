@@ -17,6 +17,7 @@ class PatchSynth:
       synth.all_notes_off()
       synth.program_change(patch) changes preset for all voices.
       synth.control_change(control, value) modifies a parameter for all voices.
+      synth.amy_send(**kwargs)  prepends the synth number, sends args to AMY.
     Provides read-back attributes (for voices.py UI):
       synth.patch
       synth.patch_state  - patch-specific data only used by clients e.g. UI state
@@ -35,17 +36,21 @@ class PatchSynth:
         cls.amy_synth_next = 16
         amy.reset()
 
-    def __init__(self, num_voices=4, patch=None, patch_string=None, channel=None, synth_flags=0, synth_already_initialized=False):
+    def __init__(self, num_voices=4, channel=None,
+                 patch=None, patch_string=None, oscs_per_voice=None,
+                 synth_flags=0, synth_already_initialized=False):
         if channel is not None:
             self.synth = channel
         else:
             self.synth = PatchSynth.amy_synth_next
             PatchSynth.amy_synth_next += 1
         self.num_voices = num_voices
+        self.oscs_per_voice = oscs_per_voice
         self.patch_string = patch_string
         self.patch = patch
         self.patch_state = None
         self.synth_flags = synth_flags
+        self.synth_init_args = None
         # The actual setup of the synth is deferred until the first time this
         # synth is used.  The MIDI channel is not part of this API, but for AMY
         # the MIDI channel determines the synth number, so before allocating a
@@ -56,13 +61,27 @@ class PatchSynth:
     def deferred_init(self):
         """Finish synth initialization once we can assume all voices are available."""
         if not self._initialized:
-            if self.patch is None and self.patch_string is None:
-                raise ValueError('Neither patch nor patch_string are set')
+            how_many_ways_are_patches_specified = (
+                (self.patch is not None)
+                + (self.patch_string is not None)
+                + (self.oscs_per_voice is not None)
+            )
+            if how_many_ways_are_patches_specified != 1:
+                raise ValueError(
+                    'Just 1 of patch (%s) patch_string (%s) or oscs_per_voice (%s) needed.' % (
+                        self.patch, self.patch_string, self.oscs_per_voice
+                    )
+                )
             amy_send_args = {'num_voices': self.num_voices, 'synth_flags': self.synth_flags}
-            if self.patch_string:
+            # Maybe append additional init args (e.g. set by subclasses).
+            if self.synth_init_args:
+                amy_send_args |= self.synth_init_args
+            if self.patch_string is not None:
                 amy_send_args['patch_string'] = self.patch_string
-            else:   # Assume patch_number is set
+            elif self.patch is not None:
                 amy_send_args['patch'] = self.patch
+            else:
+                amy_send_args['oscs_per_voice'] = self.oscs_per_voice
             self.amy_send(**amy_send_args)
             self._initialized = True
             # Fields used by UI
@@ -143,20 +162,24 @@ class OscSynth(PatchSynth):
     """PatchSynth that uses one osc per note.  Osc parameters are specified at initialization."""
 
     def __init__(self, num_voices=4, channel=None, synth_flags=0, **kwargs):
-        """Create a synth that plays the specified note on a single osc configured with keyword args."""
-        # Make sure the patch string isn't empty.
-        if 'osc' not in kwargs:
-            kwargs['osc'] = 0
-        patch_string = amy.message(**kwargs)
-        super().__init__(num_voices=num_voices, channel=channel, synth_flags=synth_flags, patch_string=patch_string)
+        """Create a synth that plays a single osc configured with keyword args."""
+        super().__init__(
+            oscs_per_voice=1, num_voices=num_voices, channel=channel, synth_flags=synth_flags
+        )
+        # Configure the synth's single osc per voice with the following args.
+        #self.amy_send(**kwargs)
+        # Make sure the args are used during the deferred_init.
+        self.synth_init_args = kwargs
 
 
-class DrumSynth(PatchSynth):
+class DrumSynth(OscSynth):
     """Synth for Drum channel (10).
     Each MIDI note plays a separately-configured sound.
     """
 
     def __init__(self, num_voices=4, channel=None):
-        super().__init__(num_voices=num_voices, channel=channel, patch_string='w7f0', synth_flags=3)  # synth_flags 3 means do the drum translation and ignore note offs.
+        # synth_flags 3 means do the drum translation and ignore note offs.
+        # We scale the PCM drums by 5 to make them comparable in level to Juno voices.
+        super().__init__(num_voices=num_voices, channel=channel, synth_flags=3, amp=5.0)
 
 
