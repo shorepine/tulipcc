@@ -196,7 +196,7 @@ You can transfer the state of your AMYboard online session directly to a real AM
 If you have an AMYboard connected via USB:
 
  1. Click **Send to AMYboard** in the web editor
- 2. Make sure your MIDI out (the pull-down menu in the top-right of the editor window) is set your AMYboard! If your AMYboard is connected over USB, MIDI out should say "MIDI out: AMYboard". If you're using TRS MIDI, connect it from your MIDI out port to your AMYboard MIDI in.  *Note:* You may need to quit and reopen your web browser to make it recognize the AMYboard USB MIDI device
+ 2. Make sure your MIDI out (the pull-down menu in the top-right of the editor window) is set to your AMYboard! If your AMYboard is connected over USB, MIDI out should say "MIDI out: AMYboard". If you're using TRS MIDI, connect it from your MIDI out port to your AMYboard MIDI in.  *Note:* You may need to quit and reopen your web browser to make it recognize the AMYboard USB MIDI device
  3. Your current patch assignments, modified patches, and any audio files or python files including `sketch.py` are packed into an archive and transferred over MIDI SysEx
  4. The hardware AMYboard unpacks and applies everything automatically, then reboots
 
