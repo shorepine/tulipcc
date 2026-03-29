@@ -168,10 +168,10 @@ When AMYboard starts up, either on web or hardware, it sets up whatever patches 
 
 The code tab of AMYboard online has a code editor. You should see a default `sketch.py` that you can edit. Once you make changes, click the green Start button to re-run the code. The other buttons on the Your Files section are:
 
- - Upload a file from your computer into AMYboard storage
- - Add a new blank file
- - Rename an existing file
- - Delete a file
+ - <img src="img/icon_upload.png" width=32> Upload a file from your computer into AMYboard storage
+ - <img src="img/icon_plus.png" width=32> Add a new blank file
+ - <img src="img/icon_edit.png" width=32> Rename an existing file
+ - <img src="img/icon_trash.png" width=32> Delete a file
 
 The code editor auto-saves, so there's no save button. 
 
