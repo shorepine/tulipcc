@@ -7,9 +7,9 @@ The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you 
 
 ## Getting started
 
-Just open [amyboard.com](https://amyboard.com/editor) in Chrome, Edge, or Firefox (Safari works but MIDI will not work there). Click anywhere once on the page to unlock audio, and you're ready to go.
+Just open [amyboard.com](https://amyboard.com/editor) in Chrome, Edge, or Firefox (Safari works but MIDI is not available). Click anywhere once on the page to unlock audio, and you're ready to go.
 
-The online editor can be used to both set up a code environment and patches for your AMYboard, or you can just the site on its own to make music. It can respond to MIDI like a synth, and the sketches you write will work there too. It can't do _everything_ a real AMYboard can - but it's close enough for most things. 
+The online editor can be used to both set up a code environment and patches for your AMYboard, or you can just use the site on its own to make music. It can respond to MIDI like a synth, and the sketches you write will work there too. It can't do _everything_ a real AMYboard can - but it's close enough for most things. 
 
 ## Play and edit patches
 
@@ -44,8 +44,8 @@ The patch knob panel contains six sections organized into two columns. The left 
 | Knob | Description |
 |------|-------------|
 | **freq** | Base frequency of oscillator A in Hz. Default 440 (concert A). |
-| **wave** | Waveform selector. Click to cycle through: SINE, SAW, SAW\_DOWN, SQUARE, PULSE, TRIANGLE, NOISE, and more. |
-| **duty** | Pulse width for PULSE and SQUARE waveforms (0–1). Has no effect on other waveforms. |
+| **wave** | Waveform selector. Click to cycle through: SINE, PULSE, SAW\_UP, SAW\_DOWN, TRIANGLE, NOISE, and more. |
+| **duty** | Pulse width for PULSE waveform (0–1). Has no effect on other waveforms. |
 | **level** | Output level (amplitude) of oscillator A (0–1). |
 
 <img src="img/wavetable_presets.png" width=250>
@@ -58,7 +58,7 @@ The patch knob panel contains six sections organized into two columns. The left 
 |------|-------------|
 | **freq** | Base frequency of oscillator B in Hz. Default 220 (one octave below OSC A). Detune this slightly from OSC A for a thicker sound. |
 | **wave** | Waveform selector for oscillator B. Independent of OSC A. |
-| **duty** | Pulse width for oscillator B. |
+| **duty** | Pulse width for oscillator B PULSE waveform. |
 | **level** | Output level of oscillator B (0–1). |
 
 #### LFO — Low Frequency Oscillator
@@ -66,7 +66,7 @@ The patch knob panel contains six sections organized into two columns. The left 
 | Knob | Description |
 |------|-------------|
 | **freq** | LFO rate in Hz. Typical values are below 10 Hz for vibrato/tremolo effects. |
-| **wave** | LFO waveform (TRIANGLE, SINE, SAW, SQUARE, etc.). |
+| **wave** | LFO waveform (TRIANGLE, SINE, SAW, PULSE, etc.). |
 | **osc** | How much the LFO modulates oscillator pitch (0–1). Creates vibrato. |
 | **pwm** | How much the LFO modulates pulse width of OSC A and B (0–1). Creates pulse-width modulation. |
 | **filt** | How much the LFO modulates the VCF cutoff frequency (0–1). Creates filter wobble. |
@@ -76,15 +76,15 @@ The patch knob panel contains six sections organized into two columns. The left 
 | Knob | Description |
 |------|-------------|
 | **freq** | Filter cutoff frequency in Hz. Lower values make the sound darker/bassier; higher values open the filter. |
-| **resonance** | Filter resonance (Q factor, 0–1). Higher values create a sharper peak at the cutoff and can produce self-oscillation. |
+| **resonance** | Filter resonance (Q factor, 0–1). Higher values create a sharper peak at the cutoff and can cause clipping. |
 | **kbd** | Keyboard tracking amount (0–1). At 1.0, the filter cutoff tracks your MIDI note so higher notes are brighter. |
-| **env** | How much the VCF ENV (see below) modulates the filter cutoff. Higher values give more filter sweep per note. |
+| **env** | How much the VCF ENV (see below) modulates the filter cutoff. Higher values give more filter sweep per note. Negative values make filter sweep downwards on attack. |
 
 #### VCF ENV — Filter Envelope
 
 | Knob | Description |
 |------|-------------|
-| **attack** | Time (ms) for the filter envelope to rise from zero to its peak after a note-on. |
+| **attack** | Time (ms) for the filter envelope to rise to its peak after a note-on. |
 | **decay** | Time (ms) for the filter envelope to fall from peak to sustain level. |
 | **sustain** | The filter envelope level held while a key is held down (0–1). |
 | **release** | Time (ms) for the filter envelope to fall from sustain to zero after note-off. |
@@ -129,9 +129,9 @@ The Effects panel (right side of the Patch tab) contains four global processors 
 
 | Knob | Description |
 |------|-------------|
-| **low** | Low-frequency shelf gain (dB). Positive boosts bass; negative cuts it. |
-| **mid** | Mid-frequency gain. |
-| **high** | High-frequency shelf gain. Positive adds brightness; negative rolls off treble. |
+| **low** | Low-frequency (\< 800 Hz) shelf gain (dB). Positive boosts bass; negative cuts it. |
+| **mid** | Mid-frequency gain (800 - 7000 Hz). |
+| **high** | High-frequency (\> 7000 Hz) shelf gain. Positive adds brightness; negative rolls off treble. |
 
 #### Chorus
 
@@ -160,7 +160,7 @@ The Effects panel (right side of the Patch tab) contains four global processors 
 
 ## Write and run Python sketches
 
-When AMYboard starts up, either on web or hardware, it sets up whatever patches are set to each channel (using a file called `editor_state.json` that you can see in the code editor) and then runs a "sketch" set up in `sketch.py`. These are Python programs that run setup code (in the main part of the code file) and then call `loop()` every so often (about every 50ms). 
+When AMYboard starts up, either on web or hardware, it sets up whatever patches are set to each channel (using a file called `editor_state.json` that you can see in the code editor) and then runs a "sketch" set up in `sketch.py`. This is a Python program that runs setup code (in the top level of the code file) and then calls `loop()` periodically (about every 50ms). 
 
 <img src="img/code_editor.png" width=600>
 
@@ -175,7 +175,7 @@ The code tab of AMYboard online has a code editor. You should see a default `ske
 
 The code editor auto-saves, so there's no save button. 
 
-Above the code editor is an option "REPL" - a way to interactive type commands into AYMboard online. Remember, this is not directly communicating with your hardware AMYboard, it is talking to the emulated AMYboard running online. If you want to write code directly on your AMYboard, [see our Python documentation](python.md). 
+Above the code editor is an option "REPL" - a way to interactively type commands into AYMboard online. Remember, this is not directly communicating with your hardware AMYboard, it is talking to the AMYboard emulator running in your web browser. If you want to write code directly on your AMYboard, [see our Python documentation](python.md). 
 
 <img src="img/terminal_repl.png" width=600>
 
@@ -196,8 +196,8 @@ You can transfer the state of your AMYboard online session directly to a real AM
 If you have an AMYboard connected via USB:
 
  1. Click **Send to AMYboard** in the web editor
- 2. Make sure your MIDI out is set your AMYboard! If your AMYboard is connected over USB, MIDI out should say "AMYboard". If you're using TRS MIDI, connect it from your MIDI out port to your AMYboard MIDI in.
- 3. Your current patch assignments, modified patches, and any audio files or python files like `sketch.py` script are packed into an archive and transferred over MIDI SysEx
+ 2. Make sure your MIDI out (the pull-down menu in the top-right of the editor window) is set your AMYboard! If your AMYboard is connected over USB, MIDI out should say "MIDI out: AMYboard". If you're using TRS MIDI, connect it from your MIDI out port to your AMYboard MIDI in.  *Note:* You may need to quit and reopen your web browser to make it recognize the AMYboard USB MIDI device
+ 3. Your current patch assignments, modified patches, and any audio files or python files including `sketch.py`  are packed into an archive and transferred over MIDI SysEx
  4. The hardware AMYboard unpacks and applies everything automatically, then reboots
 
 This is the easiest way to set up your hardware AMYboard from a comfortable editing environment.
@@ -210,7 +210,7 @@ We provide a file sharing network for AMYboard called "AMYboard World." People c
 
 <img src="img/amyboard_world_environments.png" width=600>
 
-You can search or see everyone's uploaded environments. Enviroments contain everything in the file list -- both patches and code. An AMYboard online or hardware runs a single environment at a time. Click on an environment to replace your current setup with one from AMYboard World. 
+You can search or see everyone's uploaded environments. Enviroments contain everything in the file list -- both patches and code. An online or hardware AMYboard runs a single environment at a time. Click on an environment to replace your current setup with one from AMYboard World. 
 
 <img src="img/amyboard_world_patches.png" width=600>
 
