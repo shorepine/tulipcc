@@ -78,15 +78,12 @@ Many issues are fixed in newer firmware. Before troubleshooting, [update to the 
 
 ## Board won't boot / crashes on startup
 
- - Try a "factory reset" by erasing the flash and reflashing:
-   ```bash
-   esptool.py --chip esp32s3 erase_flash
-   ```
-   Then flash the latest firmware.
- - If your `sketch.py` or `boot.py` has a bug, it can prevent the board from booting properly. You can delete it via `mpremote`:
+ - **Safe mode**: Hold the BOOT button while AMYboard is powering up. This skips running your `sketch.py` and also runs a hardware self-test (audio input, CV in/out). You'll hear a chime if all tests pass. Once it finishes you'll have a normal REPL where you can fix or delete your sketch.
+ - If your `sketch.py` or `boot.py` has a bug, hold BOOT to skip it, then delete it via the REPL or `mpremote`:
    ```bash
    mpremote resume fs rm :user/current/sketch.py
    ```
+ - Try a full "factory reset" by erasing the flash and reflashing. See our [firmware upgrade page](firmware.md).
 
 ## SD card not mounting
 
