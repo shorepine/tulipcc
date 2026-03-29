@@ -170,8 +170,8 @@ The code tab of AMYboard online has a code editor. You should see a default `ske
 
  - <img src="img/icon_upload.png" width=32> Upload a file from your computer into AMYboard storage
  - <img src="img/icon_plus.png" width=32> Add a new blank file
- - <img src="img/icon_edit.png" width=32> Rename an existing file
- - <img src="img/icon_trash.png" width=32> Delete a file
+ - <img src="img/icon_edit.png" width=32> Rename the selected file
+ - <img src="img/icon_trash.png" width=32> Delete the selected file
 
 The code editor auto-saves, so there's no save button. 
 
