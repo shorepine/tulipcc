@@ -163,13 +163,19 @@ mpremote resume edit env.py
 import tulip
 
 # Set up a MIDI callback
-def my_midi_callback(message):
-    # message is a bytes object
-    status = message[0]
-    if status & 0xF0 == 0x90:  # Note on
-        note = message[1]
-        vel = message[2]
-        print(f"Note on: {note} velocity: {vel}")
+def my_midi_callback(is_sysex):
+    if is_sysex:
+        return  # Ignore sysex
+    message = tulip.midi_in()
+    while message is not None and len(message) > 0:
+        # message is a bytes object
+        status = message[0]
+        if status & 0xF0 == 0x90:  # Note on
+            note = message[1]
+            vel = message[2]
+            print(f"Note on: {note} velocity: {vel}")
+        # Maybe there are more messages queued?
+        message = tulip.midi_in()
 
 tulip.midi_callback(my_midi_callback)
 ```
@@ -180,29 +186,31 @@ tulip.midi_callback(my_midi_callback)
 import amy, time
 
 notes = [60, 64, 67, 72]  # C major arpeggio
-amy.send(osc=0, patch=0)   # Juno patch 0
+amy.send(synth=1, patch=0, num_voices=4)   # Juno patch 0
 
-while True:
+for _ in range(10):
     for note in notes:
-        amy.send(osc=0, note=note, vel=1)
+        amy.send(synth=1, note=note, vel=1)
         time.sleep(0.15)
-        amy.send(osc=0, vel=0)
+        amy.send(synth=1, note=note, vel=0)
         time.sleep(0.05)
 ```
+**Note:** Keyboard interrupt (Ctrl-C) doesn't work while the loop is running, so beware of getting stuck.  Pressing the "Reset" button will start you over.
 
 ## Example: CV-controlled pitch
 
 ```python
 import amy, amyboard, time
 
+amy.reset()
 amy.send(osc=0, wave=amy.SINE, vel=1)  # Sine wave, on
 
-while True:
+for _ in range(100):
     v = amyboard.cv_in(channel=0)
     # Map -10..+10V to 100..1000 Hz
     freq = 100 + ((v + 10) / 20.0) * 900
     amy.send(osc=0, freq=freq)
-    time.sleep(0.01)
+    time.sleep(0.05)
 ```
 
 ## More resources
