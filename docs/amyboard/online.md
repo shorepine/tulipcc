@@ -1,6 +1,6 @@
 # Using AMYboard Online
 
-The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you design patches, write Python code, manage your AMYboard and see shared patches and code -- all from your browser. You can also use it as a standalone browser-based synthesizer without any hardware at all.
+The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you design patches, write Python code, manage your AMYboard, and see shared patches and code -- all from your browser. You can also use it as a standalone browser-based synthesizer without any hardware at all.
 
 <img src="img/amyboard_online.png">
 
@@ -76,7 +76,7 @@ The patch knob panel contains six sections organized into two columns. The left 
 | Knob | Description |
 |------|-------------|
 | **freq** | Filter cutoff frequency in Hz. Lower values make the sound darker/bassier; higher values open the filter. |
-| **resonance** | Filter resonance (Q factor, 0–1). Higher values create a sharper peak at the cutoff and can cause clipping. |
+| **resonance** | Filter resonance (Q factor, 0–1). Higher values create a sharper peak at the cutoff. Extreme values can cause clipping. |
 | **kbd** | Keyboard tracking amount (0–1). At 1.0, the filter cutoff tracks your MIDI note so higher notes are brighter. |
 | **env** | How much the VCF ENV (see below) modulates the filter cutoff. Higher values give more filter sweep per note. Negative values make filter sweep downwards on attack. |
 
@@ -130,8 +130,8 @@ The Effects panel (right side of the Patch tab) contains four global processors 
 | Knob | Description |
 |------|-------------|
 | **low** | Low-frequency (\< 800 Hz) shelf gain (dB). Positive boosts bass; negative cuts it. |
-| **mid** | Mid-frequency gain (800 - 7000 Hz). |
-| **high** | High-frequency (\> 7000 Hz) shelf gain. Positive adds brightness; negative rolls off treble. |
+| **mid** | Mid-frequency gain (800 Hz - 7 kHz). |
+| **high** | High-frequency (\> 7 kHz) shelf gain. Positive adds brightness; negative rolls off treble. |
 
 #### Chorus
 
@@ -197,7 +197,7 @@ If you have an AMYboard connected via USB:
 
  1. Click **Send to AMYboard** in the web editor
  2. Make sure your MIDI out (the pull-down menu in the top-right of the editor window) is set your AMYboard! If your AMYboard is connected over USB, MIDI out should say "MIDI out: AMYboard". If you're using TRS MIDI, connect it from your MIDI out port to your AMYboard MIDI in.  *Note:* You may need to quit and reopen your web browser to make it recognize the AMYboard USB MIDI device
- 3. Your current patch assignments, modified patches, and any audio files or python files including `sketch.py`  are packed into an archive and transferred over MIDI SysEx
+ 3. Your current patch assignments, modified patches, and any audio files or python files including `sketch.py` are packed into an archive and transferred over MIDI SysEx
  4. The hardware AMYboard unpacks and applies everything automatically, then reboots
 
 This is the easiest way to set up your hardware AMYboard from a comfortable editing environment.
