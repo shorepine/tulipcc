@@ -61,7 +61,7 @@ You can also remove our custom firmware (it's easy to put back!) and run AMYboar
 | Connector | Location | Description |
 |-----------|----------|-------------|
 | **USB-C** | Side | Power, serial REPL, USB MIDI (gadget mode, NOT HOST), firmware updates |
-| **I2C front panel** | Front | I2C / Grove / STEMMA QT / Qwiic port for [accessories](accessories.md) (encoders, displays) |
+| **I2C front panel** | Front | I2C Grove port for [accessories](accessories.md) (encoders, displays) |
 | **I2C host** | Back | For connecting to a [Tulip Creative Computer](https://github.com/shorepine/tulipcc) |
 | **MicroSD card** | Side | Extra storage for samples and patches |
 | **Modular power** | Back | 10-pin Eurorack power supply connector |
@@ -74,9 +74,9 @@ AMYboard can be powered 3 ways:
 
  * USB-C connector: standard 5V input via USB
  * Modular 10-pin connector: a standard Eurorack connector can power AMYboard via the +12V connector
- * I2C host: a Tulip Creative Computer or other 3.3V i2c connection
+ * I2C host: a Tulip Creative Computer or other 3.3V i2c connection via the Grove connector
 
-If multiple power supplies are connected AMYboard will just use one.
+If multiple power supplies are connected AMYboard will use the highest available voltage. 
 
 ## Upgrading firmware
 
@@ -91,7 +91,7 @@ Before you do anything else, upgrade your firmware! The easiest way is online vi
 
 ## Quick start - Modular Synth
 
-1. **Flip the DIP switches for modular 5vpp output**. See our [Modular page](modular.md) for more info.
+1. **Flip the DIP switches for modular 10vpp output**. See our [Modular page](modular.md) for more info.
 2. **Connect 10-pin modular power.** Make sure to use a cable that has a "key" for the correct orientation. 
 3. **Connect your CV and audio and MIDI cables**. By default AMYboard plays a synth patch on MIDI channel 1. But it can do SO MUCH MORE. 
 4. Since the USB connection on your AMYboard will be hidden during a Eurorack install, use TRS MIDI to transfer patches and code between [AMYboard online](online.md) and your AMYboard in a case. 
