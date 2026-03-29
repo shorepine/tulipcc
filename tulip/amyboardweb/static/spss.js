@@ -3005,17 +3005,22 @@ async function start_amyboard() {
   await sleep_ms(400);
   await mp.runFrozenAsync('_boot.py');
   ensure_current_environment_layout(true);
-  try {
-    await mp.runPythonAsync("import amyboard; amyboard.restore_patch_state_from_files(send_default_if_missing=True)");
-  } catch (e) {
-    // Fallback for environments where the shared helper is unavailable.
-    await restore_patches_from_editor_state_if_present({ sendToAmy: true });
-  }
-  await restore_patches_from_editor_state_if_present({ sendToAmy: false });
-  try {
-    await mp.runPythonAsync("import amyboard; amyboard.run_sketch()");
-  } catch (e) {
-    // sketch.py may not exist or may fail — that's OK.
+  // Skip restoring saved environment if ?env= param is present — the URL
+  // environment will be loaded by check_url_env_params() after startup.
+  var urlEnvPending = !!(new URLSearchParams(window.location.search).get("env"));
+  if (!urlEnvPending) {
+    try {
+      await mp.runPythonAsync("import amyboard; amyboard.restore_patch_state_from_files(send_default_if_missing=True)");
+    } catch (e) {
+      // Fallback for environments where the shared helper is unavailable.
+      await restore_patches_from_editor_state_if_present({ sendToAmy: true });
+    }
+    await restore_patches_from_editor_state_if_present({ sendToAmy: false });
+    try {
+      await mp.runPythonAsync("import amyboard; amyboard.run_sketch()");
+    } catch (e) {
+      // sketch.py may not exist or may fail — that's OK.
+    }
   }
   await fill_tree();
   if (typeof window.refresh_patch_active_name_label === "function") {
