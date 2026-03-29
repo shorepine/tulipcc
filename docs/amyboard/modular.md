@@ -115,7 +115,7 @@ amy.send(synth=1, vel=1, note=48)
 
 With nothing patched to CV in 1 (0V), the filter sits at 300 Hz. Patch in a modular LFO or envelope and the cutoff sweeps exponentially -- just like a hardware filter with a 1V/oct CV input.
 
-For exact 100–1000 Hz range, use `const=316, ext0=0.166`. For a wider sweep (e.g. 50–5000 Hz), increase `ext0`:
+For exact 100–1000 Hz range, use `'const': 316, 'ext0': 0.166`. For a wider sweep (e.g. 50–5000 Hz), increase `ext0`:
 
 ```python
 # Wider sweep: geometric center ~500 Hz, ±10V covers 50 to 5000 Hz
