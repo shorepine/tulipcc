@@ -17,8 +17,6 @@ except:
 
 C0_FREQ = 440.0 / math.pow(2.0, 4 + 9/12)
 
-synths = []
-
 def pitch2freq(pitch):
     """Convert pitch in OCT.(STEP/100) to Hz."""
     oct = math.floor(pitch)
@@ -55,11 +53,15 @@ def amy_message_of_send_args(list_of_arg_dicts):
 def note1_patch(pan=0.5):
     """Return the setup string for note1 (guitar string)."""
     osc = 0
+    modosc = 1
+    message = []
     return amy_message_of_send_args([
-        {'osc': osc, 'wave': amy.PULSE,
-         'filter_freq': '200,1,0,0,0', 'filter_type': amy.FILTER_LPF24, 'resonance': 2,
+        {'osc': modosc, 'wave': amy.SINE, 'freq': 5, 'amp': 0.005},
+        {'osc': osc, 'wave': amy.SAW_DOWN, 'freq': '440,1,0,0,0,1', 'mod_source': modosc,
+         'filter_freq': '200,0,0,0,4', 'filter_type': amy.FILTER_LPF24, 'resonance': 0.7,
          'pan': pan},
-        {'osc': osc, 'bp0': '0,1,1600,0,100,0'},
+        {'osc': osc, 'bp0': '0,1,8000,0,100,0'},
+        {'osc': osc, 'bp1': '0,1,3000,0.1,100,0'},
     ])
 
 
@@ -69,18 +71,21 @@ def note2_patch(pitch_dev=0.1, pan=0.5):
     modosc = 1
     return amy_message_of_send_args([
         {'osc': modosc, 'wave': amy.SINE, 'freq': 0.1, 'phase': 0, 'amp': pitch_dev},
-        {'osc': osc, 'wave': amy.SINE, 'freq': '261,1,0,0,0,-1', 'mod_source': modosc,
+        {'osc': osc, 'wave': amy.SAW_DOWN, 'freq': '440,1,0,0,0,-1', 'mod_source': modosc,
+         'filter_freq': '200,0,0,0,4', 'filter_type': amy.FILTER_LPF24, 'resonance': 0.7,
          'pan': pan},
-        {'osc': osc, 'bp0': '0,1,300,0.4,2000,0,0,0'},
+        {'osc': osc, 'bp0': '0,1,8000,0,100,0'},
+        {'osc': osc, 'bp1': '0,1,3000,0.1,100,0'},
     ])
 
 
 def fm_note_patch(duration=7.5):
     """Patch for hand-made 2-operator FM note."""
     return amy_message_of_send_args([
-        {'osc': 2, 'wave': amy.SINE, 'ratio': 1, 'amp': '1.2,0,0,1', 'bp0': '0,0,2000,1,5000,0.6,3000,0.4,4000,0,0,0', 'eg0_type': amy.ENVELOPE_LINEAR},
-        {'osc': 1, 'wave': amy.SINE, 'ratio': 1.005, 'amp': '1,0,0,1,', 'bp0': '0,0,4000,1,5000,1,5000,0,0,0'},
-        {'osc': 0, 'wave': amy.ALGO, 'algorithm': 1, 'algo_source': ',,,,2,1'},
+        {'osc': 3, 'wave': amy.SINE, 'freq': 1.0 / duration, 'phase': 0.75, 'amp': 1},
+        {'osc': 2, 'wave': amy.SINE, 'ratio': 1, 'amp': '0.5,0,0,0,0,1', 'mod_source': 3},
+        {'osc': 1, 'wave': amy.SINE, 'ratio': 1, 'amp': '1,0,0,1,', 'bp0': '0,0,1000,1,4000,0'},
+        {'osc': 0, 'wave': amy.ALGO, 'algorithm': 1, 'algo_source': ',,,,2,1', 'bp0': '0,1,1000,1,2000,0'},
     ])
 
 
@@ -98,11 +103,9 @@ def Note(pitch, vel=1.0, time=0, pitch_shift=0, second_delay=200, use_third=Fals
 def NoteFM(pitch, vel=1.0, time=0, duration=8000):
     """Play a note on the FM voice."""
     global synths
-    timestamp = time
-    synths[3].note_on(pitch2note(pitch), vel, timestamp)
+    synths[3].note_on(pitch2note(pitch), vel, time)
     # Note off
-    #synth3.note_off(pitch2note(pitch), timestamp + duration)
-    # Note offs aren't needed because we always end up stealing all the voices on each chord.
+    synths[3].note_off(pitch2note(pitch), time + duration)
 
 
 def broken_chord(base_pitch, intervals, start_time, **kwargs):
@@ -113,45 +116,56 @@ def broken_chord(base_pitch, intervals, start_time, **kwargs):
         Note(pitch, 1, start_time + 100 * index, **kwargs)
 
 def xanadu_stage1(x):
-    global synths
     amy.chorus(1)
+    global synths
+    synths = []
     synths.append(synth.PatchSynth(num_voices=6, patch_string=note1_patch()))
     synths.append(synth.PatchSynth(num_voices=6, patch_string=note1_patch(pan=0.8)))
     synths.append(synth.PatchSynth(num_voices=6, patch_string=note2_patch(pan=0.2)))
-    synths.append(synth.PatchSynth(num_voices=18, patch_string=fm_note_patch()))
+    synths.append(synth.PatchSynth(num_voices=12, patch_string=fm_note_patch()))
     for s in synths:
         s.deferred_init()
-
     amy.send(volume=0.5)
-    tulip.defer(xanadu_stage2, None, 250)
+    tulip.defer(xanadu_stage2, 0, 250)
 
-def xanadu_stage2(x):    
-    amy.send(reset=amy.RESET_TIMEBASE)
-
-    # F#7addB chord on a guitar
-    broken_chord(4.06, [.07, 1.0, 1.04, 1.05, 1.10], start_time=1000, pitch_shift=0.029, second_delay=1000, use_third=True)
-
-    # D6add9 chord on a guitar
-    broken_chord(4.02, [.07, 1.0, 1.04, 0.09, 1.02], start_time=9500)
-
-    # Bmajadd11 chord on a guitar
-    broken_chord(4.11, [.07, 1.0, 1.04, 2.00, 1.05], start_time=16000)
-
-    # Amajadd9 chord on a guitar
-    broken_chord(4.09, [.07, 2.0, 1.04, 1.02, 1.07], start_time=23500)
-
-    # Bmajadd11 chord on a guitar
-    broken_chord(4.11, [.07, 1.0, 1.04, 2.0, 1.05], start_time=31000)
-
-    # Gmaj6 chord on a guitar
-    broken_chord(4.07, [.07, 1.0, 1.04, 2.04, 1.09], start_time=38500)
-
-    # F#7addB chord on a guitar
-    broken_chord(5.06, [.07, 1.0, 1.04, 1.05, 1.10], start_time=46000, pitch_shift=0.029, second_delay=1000, use_third=True)
-    tulip.defer(xanadu_stage3, None, 61000)
+def xanadu_stage2(chord):
+    chords = [
+        # F#7addB chord on a guitar
+        {'base_pitch': 4.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
+         'start_time': 2000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third' :True},
+        # D6add9 chord on a guitar
+        {'base_pitch': 4.02, 'intervals': [.07, 1.0, 1.04, 0.09, 1.02],
+         'start_time': 9500},
+        # Bmajadd11 chord on a guitar
+        {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.00, 1.05],
+         'start_time': 17000},
+        # Amajadd9 chord on a guitar
+        {'base_pitch': 4.09, 'intervals': [.07, 2.0, 1.04, 1.02, 1.07],
+         'start_time': 24500},
+        # Bmajadd11 chord on a guitar
+        {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.0, 1.05],
+         'start_time': 32000},
+        # Gmaj6 chord on a guitar
+        {'base_pitch': 4.07, 'intervals': [.07, 1.0, 1.04, 2.04, 1.09],
+         'start_time': 39500},
+        # F#7addB chord on a guitar
+        {'base_pitch': 5.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
+         'start_time': 47000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third': True},
+    ]
+    #if chord < len(chords):
+    #    broken_chord(**chords[chord])
+    #    tulip.defer(xanadu_stage2, chord + 1, 8500)
+    #else:
+    #    tulip.defer(xanadu_stage3, None, 8500)
+    for c in chords:
+        broken_chord(**c)
+    #tulip.defer(xanadu_stage3, None, 66000)
+    
 
 def xanadu_stage3(x):
-    synth.PatchSynth.reset()
+    #synth.PatchSynth.reset()
+    pass
 
-
+amy.send(reset=amy.RESET_TIMEBASE)
+synth.PatchSynth.reset()  # includes amy.reset()
 tulip.defer(xanadu_stage1, None, 250)
