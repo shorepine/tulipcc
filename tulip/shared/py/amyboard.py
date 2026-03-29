@@ -787,10 +787,11 @@ def draw_waveform():
     # >>> for _ in range(100):
     # ...     amyboard.draw_waveform()
     waveform = struct.unpack('<' + (512 * 'h'), tulip.amy_get_output_buffer())
-    waveform_top = 0
     waveform_left = 0
-    waveform_height = 64
+    waveform_height = 128
+    waveform_top = 0
     waveform_width = 128
+    gain = 2.0
     display.fill_rect(waveform_left, waveform_top,
                       waveform_width, waveform_height, 0)
     # center the largest sample
@@ -806,11 +807,12 @@ def draw_waveform():
     pos = max_value_pos - waveform_width // 2
     for x in range(waveform_width):
         value = (waveform[2 * (pos + x)] + waveform[2 * (pos + x) + 1]) // 2
+        scaled = max(-1.0, min(1.0, gain * value / WAVEFORM_MAX))
         y = waveform_top + int((waveform_height // 2)
-                               * (1.0 - value / WAVEFORM_MAX))
+                               * (1.0 - scaled))
         if x > 0:
             display.line(waveform_left + last_x, last_y,
-                         waveform_left + x, y, 1)
+                         waveform_left + x, y, 255)
         last_x = x
         last_y = y
     display.show()
