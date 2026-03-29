@@ -610,6 +610,20 @@ def init_pcm9211(addr=0x40):
         else:
             print("Write 0x%02x to 0x%02x returned 0x%02x" % (val, reg, r))
 
+def set_cv_out(channel=0, synth=1):
+    """Route a synth's audio output to a CV channel instead of speakers.
+
+    channel: 0 for CV1, 1 for CV2
+    synth: AMY synth number whose audio will be sent to this CV output
+
+    The synth's oscillators will be silenced from the audio mix and their
+    waveform sent to the DAC instead. Use amy.send(synth=N, ...) to control
+    the CV waveform shape, frequency, etc.
+
+    Call set_cv_out(channel, synth=0) to clear the mapping.
+    """
+    tulip.set_cv_synth(synth, channel + 1 if synth > 0 else 0)
+
 def cv_out(volts, channel=0):
     """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1)"""
     addr = 88 # GP8413
@@ -787,11 +801,10 @@ def draw_waveform():
     # >>> for _ in range(100):
     # ...     amyboard.draw_waveform()
     waveform = struct.unpack('<' + (512 * 'h'), tulip.amy_get_output_buffer())
-    waveform_left = 0
-    waveform_height = 128
     waveform_top = 0
+    waveform_left = 0
+    waveform_height = 64
     waveform_width = 128
-    gain = 2.0
     display.fill_rect(waveform_left, waveform_top,
                       waveform_width, waveform_height, 0)
     # center the largest sample
@@ -807,12 +820,11 @@ def draw_waveform():
     pos = max_value_pos - waveform_width // 2
     for x in range(waveform_width):
         value = (waveform[2 * (pos + x)] + waveform[2 * (pos + x) + 1]) // 2
-        scaled = max(-1.0, min(1.0, gain * value / WAVEFORM_MAX))
         y = waveform_top + int((waveform_height // 2)
-                               * (1.0 - scaled))
+                               * (1.0 - value / WAVEFORM_MAX))
         if x > 0:
             display.line(waveform_left + last_x, last_y,
-                         waveform_left + x, y, 255)
+                         waveform_left + x, y, 15)
         last_x = x
         last_y = y
     display.show()
