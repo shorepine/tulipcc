@@ -31,6 +31,7 @@ ENV_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
 PATCH_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,25}$")
 FILE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 TAG_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
+RESERVED_USERNAMES = {"shorepine"}
 MAX_DESCRIPTION = 400
 MAX_MESSAGE = 800
 MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -504,8 +505,14 @@ async def upload_amyboard_environment(
     description: str = Form(...),
     file: UploadFile = File(...),
     created_at_ms: int | None = Form(default=None),
+    x_admin_token: str | None = Header(default=None),
 ) -> dict[str, Any]:
     user = _normalize_username(username)
+    if user.lower() in RESERVED_USERNAMES:
+        if not ADMIN_TOKEN:
+            raise HTTPException(status_code=503, detail="Admin token not configured")
+        if not x_admin_token or x_admin_token != ADMIN_TOKEN:
+            raise HTTPException(status_code=403, detail="Admin token required for reserved username")
     desc = _normalize_description(description)
     contents = await file.read()
     raw_filename = (file.filename or "").strip()
