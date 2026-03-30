@@ -139,16 +139,16 @@ Then at the REPL:
 amyboard.edit('sketch.py')
 ```
 
-This opens a full-screen text editor. Basic commands:
+This opens a full-screen text editor. On macOS, use **Esc then the key** instead of Ctrl (macOS terminals intercept many Ctrl sequences):
 
- - **Ctrl-S** — Save
- - **Ctrl-Q** — Quit
- - **Ctrl-X** — Cut line
- - **Ctrl-V** — Paste
- - **Ctrl-Z** — Undo
- - **Ctrl-F** — Find
+ - **Esc, S** — Save
+ - **Esc, Q** — Quit
+ - **Esc, X** — Cut line
+ - **Esc, V** — Paste
+ - **Esc, Z** — Undo
+ - **Esc, F** — Find
 
-See the [pye documentation](https://github.com/robert-hh/Micropython-Editor) for the full list of key bindings.
+On Linux or Windows terminals, Ctrl-S, Ctrl-Q, etc. work as usual. See the [pye documentation](https://github.com/robert-hh/Micropython-Editor) for the full list of key bindings.
 
 You can also create or edit files from [AMYboard Online](https://amyboard.com/editor) and send them to hardware with **Send to AMYboard**.
 
