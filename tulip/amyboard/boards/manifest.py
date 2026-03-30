@@ -20,6 +20,7 @@ require("umqtt.robust")
 require("umqtt.simple")
 
 freeze("$(PORT_DIR)/../shared/py")
+freeze("$(PORT_DIR)/../shared/amyboard-py")
 package("amy", base_path="$(MPY_DIR)/../amy")
 
 #freeze("$(MPY_DIR)/lib/micropython-lib/micropython/utarfile", "utarfile.py")
