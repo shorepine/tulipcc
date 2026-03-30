@@ -2641,6 +2641,48 @@ function check_url_env_params() {
     }
 }
 
+// Prompt for admin token via modal. Resolves with token string or null if cancelled.
+function prompt_admin_token() {
+    return new Promise(function(resolve) {
+        var modalEl = document.getElementById("adminTokenModal");
+        var input = document.getElementById("admin-token-input");
+        var errorDiv = document.getElementById("admin_token_error");
+        var submitBtn = document.getElementById("admin-token-submit-btn");
+        if (!modalEl || !input || !submitBtn) { resolve(null); return; }
+        input.value = "";
+        errorDiv.style.display = "none";
+        errorDiv.textContent = "";
+        var modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        var resolved = false;
+        function cleanup() {
+            freshBtn.removeEventListener("click", onSubmit);
+            modalEl.removeEventListener("hidden.bs.modal", onDismiss);
+        }
+        function onSubmit() {
+            var token = (input.value || "").trim();
+            if (!token) {
+                errorDiv.textContent = "Token cannot be empty.";
+                errorDiv.style.display = "block";
+                return;
+            }
+            resolved = true;
+            cleanup();
+            modal.hide();
+            resolve(token);
+        }
+        function onDismiss() {
+            cleanup();
+            if (!resolved) resolve(null);
+        }
+        // Replace button to clear old listeners
+        var freshBtn = submitBtn.cloneNode(true);
+        submitBtn.parentNode.replaceChild(freshBtn, submitBtn);
+        freshBtn.addEventListener("click", onSubmit);
+        modalEl.addEventListener("hidden.bs.modal", onDismiss, { once: true });
+        modal.show();
+    });
+}
+
 // Create a js File object and upload it to the AMYboard World API.
 async function amyboard_world_upload_file(pwd, filename, username, description) {
     var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
@@ -2696,6 +2738,12 @@ async function upload_current_environment() {
         return;
     }
 
+    var adminToken = null;
+    if (username.toLowerCase() === "shorepine") {
+        adminToken = await prompt_admin_token();
+        if (adminToken === null) return;
+    }
+
     var uploadButton = document.getElementById("upload_current_environment_btn");
     if (uploadButton && uploadButton.disabled) {
         return;
@@ -2712,13 +2760,19 @@ async function upload_current_environment() {
     data.append("file", file);
     data.append("username", username);
     data.append("description", description);
+    var fetchOpts = { method: "POST", body: data };
+    if (adminToken) fetchOpts.headers = { "X-Admin-Token": adminToken };
     try {
-        var response = await fetch(world_api_url("/api/amyboardworld/upload"), {
-            method: "POST",
-            body: data,
-        });
+        var response = await fetch(world_api_url("/api/amyboardworld/upload"), fetchOpts);
         if (!response.ok) {
-            throw new Error("HTTP " + response.status.toString());
+            var detail = "";
+            try { detail = (await response.json()).detail || ""; } catch (_) {}
+            if (response.status === 403) {
+                show_alert(detail || "Wrong token.");
+            } else {
+                show_alert(detail || "Upload failed.");
+            }
+            return;
         }
         await refresh_amyboard_world_files();
     } catch (e) {
@@ -3623,6 +3677,12 @@ async function upload_patch_to_world() {
         return;
     }
 
+    var adminToken = null;
+    if (username.toLowerCase() === "shorepine") {
+        adminToken = await prompt_admin_token();
+        if (adminToken === null) return;
+    }
+
     var uploadButton = document.getElementById("upload_patch_btn");
     if (uploadButton && uploadButton.disabled) return;
     if (uploadButton) {
@@ -3638,13 +3698,19 @@ async function upload_patch_to_world() {
         data.append("file", file);
         data.append("username", username);
         data.append("description", description);
+        var fetchOpts = { method: "POST", body: data };
+        if (adminToken) fetchOpts.headers = { "X-Admin-Token": adminToken };
 
-        var response = await fetch(world_api_url("/api/amyboardworld/upload"), {
-            method: "POST",
-            body: data,
-        });
+        var response = await fetch(world_api_url("/api/amyboardworld/upload"), fetchOpts);
         if (!response.ok) {
-            throw new Error("HTTP " + response.status.toString());
+            var detail = "";
+            try { detail = (await response.json()).detail || ""; } catch (_) {}
+            if (response.status === 403) {
+                show_alert(detail || "Wrong token.");
+            } else {
+                show_alert(detail || "Upload failed.");
+            }
+            return;
         }
         await refresh_amyboard_world_patches();
     } catch (e) {
