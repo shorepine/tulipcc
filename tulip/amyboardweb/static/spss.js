@@ -1338,6 +1338,11 @@ async function setup_midi_devices() {
         const value = data[2];
         move_knob(channel, cc, value);
       }
+      // MIDI Thru: forward raw message to output device
+      var thruToggle = document.getElementById("midi_thru_toggle");
+      if (thruToggle && thruToggle.checked && midiOutputDevice && data.length > 0) {
+        try { midiOutputDevice.send(data); } catch (err) {}
+      }
       // Feed bytes to AMY audioworklet for sound processing
       for(byte in e.message.data) {
         if(audio_started) amy_process_single_midi_byte(e.message.data[byte], 1);
