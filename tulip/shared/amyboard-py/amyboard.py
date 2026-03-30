@@ -624,6 +624,14 @@ def set_cv_out(channel=0, synth=1):
     """
     tulip.set_cv_synth(synth, channel + 1 if synth > 0 else 0)
 
+def edit(filename=None):
+    """Open the pye text editor. Pass a filename to edit, or None for a new file."""
+    from pye import pye
+    if filename is not None:
+        pye(filename)
+    else:
+        pye()
+
 def cv_out(volts, channel=0):
     """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1)"""
     addr = 88 # GP8413
