@@ -1,5 +1,9 @@
 # Agent Instructions for `tulipcc`
 
+## Worktree File Editing
+
+When working in a worktree, **always use relative paths** or the full worktree path for file edits. Never use `/Users/bwhitman/outside/tulipcc/tulip/...` — that's the main repo, not the worktree. The worktree is at the current working directory. Using main repo paths will silently edit the wrong copy and the changes won't appear in your build or in VS Code. This applies to all files including submodules like `amy/`.
+
 ## Submodule Setup
 
 To initialize and update submodules for this repo, use:
