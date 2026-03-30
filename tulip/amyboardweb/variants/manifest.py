@@ -3,6 +3,7 @@
 # runtime (with setTimeout an Promise's) to contrtol the scheduling.
 
 freeze("../../shared/py")
+freeze("../../shared/amyboard-py")
 package("amy", base_path="$(MPY_DIR)/../amy")
 
 
