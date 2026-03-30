@@ -136,7 +136,7 @@ mpremote connect /dev/YOUR_SERIAL_PORT
 Then at the REPL:
 
 ```python
-amyboard.edit('sketch.py')
+amyboard.edit('current/sketch.py')
 ```
 
 This opens a full-screen text editor. On macOS, use **Esc then the key** instead of Ctrl (macOS terminals intercept many Ctrl sequences):
