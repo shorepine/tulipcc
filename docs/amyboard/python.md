@@ -125,14 +125,32 @@ def loop():
     pass
 ```
 
-You can edit `sketch.py` on the hardware REPL:
+You can edit `sketch.py` directly on the hardware using the built-in text editor. Connect to your AMYboard with `screen` or `mpremote` (not `idf.py monitor`, which doesn't support full terminal emulation):
 
-**TODO: make this real**
-```python
-edit('sketch.py')
+```bash
+screen /dev/YOUR_SERIAL_PORT 115200
+# or
+mpremote connect /dev/YOUR_SERIAL_PORT
 ```
 
-Or create it from the web editor and send it to hardware with **Send to AMYboard**.
+Then at the REPL:
+
+```python
+amyboard.edit('sketch.py')
+```
+
+This opens a full-screen text editor. Basic commands:
+
+ - **Ctrl-S** — Save
+ - **Ctrl-Q** — Quit
+ - **Ctrl-X** — Cut line
+ - **Ctrl-V** — Paste
+ - **Ctrl-Z** — Undo
+ - **Ctrl-F** — Find
+
+See the [pye documentation](https://github.com/robert-hh/Micropython-Editor) for the full list of key bindings.
+
+You can also create or edit files from [AMYboard Online](https://amyboard.com/editor) and send them to hardware with **Send to AMYboard**.
 
 ## File management
 
