@@ -106,12 +106,12 @@ amyboard.mount_sd()
 
 See the [Modular Synth Setup](modular.md) page for detailed CV and encoder examples.
 
-## The env.py startup script
+## The sketch.py startup script
 
-AMYboard automatically runs `env.py` from your current environment directory on boot. Use it to set up your default configuration:
+AMYboard automatically runs `sketch.py` from your current environment directory on boot. The top-level code runs once at startup, and if you define a `loop()` function it will be called repeatedly (~60ms interval). Use it to set up your default configuration:
 
 ```python
-# /user/current/env.py
+# /user/current/sketch.py
 import amy, amyboard
 
 # Set up my preferred patches
@@ -120,13 +120,16 @@ amy.send(synth=10, num_voices=1, oscs_per_voice=1, synth_flags=3)    # Channel 1
 
 # Set CV out 1 to 0V on startup
 amyboard.cv_out(0.0, channel=0)
+
+def loop():
+    pass
 ```
 
-You can edit `env.py` on the hardware REPL:
+You can edit `sketch.py` on the hardware REPL:
 
 **TODO: make this real**
 ```python
-edit('env.py')
+edit('sketch.py')
 ```
 
 Or create it from the web editor and send it to hardware with **Send to AMYboard**.
@@ -138,10 +141,10 @@ Or create it from the web editor and send it to hardware with **Send to AMYboard
 ```python
 from upysh import *
 
-ls              # List files
-cat('env.py')   # Print file contents
-cd('/user')     # Change directory
-pwd             # Print working directory
+ls                  # List files
+cat('sketch.py')    # Print file contents
+cd('/user')         # Change directory
+pwd                 # Print working directory
 ```
 
 ### Transfer files with mpremote
@@ -151,10 +154,10 @@ pwd             # Print working directory
 mpremote resume fs cp my_script.py :my_script.py
 
 # Copy a file from AMYboard to your computer
-mpremote resume fs cp :env.py env.py
+mpremote resume fs cp :sketch.py sketch.py
 
 # Edit a file on AMYboard with your local editor
-mpremote resume edit env.py
+mpremote resume edit sketch.py
 ```
 
 ## Working with MIDI in Python
