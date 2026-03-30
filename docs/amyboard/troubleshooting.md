@@ -74,7 +74,7 @@ Many issues are fixed in newer firmware. Before troubleshooting, [update to the 
    import amyboard
    amyboard.init_midi(type='B')
    ```
- - Add this to your `env.py` to make it permanent.
+ - Add this to your `sketch.py` to make it permanent.
 
 ## Board won't boot / crashes on startup
 
