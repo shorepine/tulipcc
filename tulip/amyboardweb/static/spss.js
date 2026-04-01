@@ -2254,6 +2254,11 @@ async function run_current_environment() {
     await runCodeBlock("import amyboard; amyboard.restart_sketch()");
 }
 
+async function stop_current_environment() {
+    // Stop the sketch loop, silence all oscillators, and reset the sequencer.
+    await runCodeBlock("import amyboard, amy; amyboard.stop_sketch(); amy.send(reset=" + (8192 + 4096) + ")");
+}
+
 function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
     var width = Math.max(1, Number(digits) || (length - 1));
     var oct = Math.max(0, Number(value) || 0).toString(8);
