@@ -2255,8 +2255,8 @@ async function run_current_environment() {
 }
 
 async function stop_current_environment() {
-    // Stop the sketch loop and reset the sequencer.
-    await runCodeBlock("import amyboard, amy; amyboard.stop_sketch(); amy.send(reset=4096)");
+    // Stop the sketch loop, all notes off, and reset the sequencer.
+    await runCodeBlock("import amyboard, amy; amyboard.stop_sketch(); amy.send(reset=" + (4096 + 131072) + ")");
 }
 
 function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
