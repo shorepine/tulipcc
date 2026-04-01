@@ -71,7 +71,7 @@ const AMYBOARD_WORLD_API_BASE = (typeof window !== "undefined" && typeof window.
     : String(window.location.origin || "").replace(/\/+$/, "");
 const CURRENT_BASE_DIR = "/amyboard/user/current";
 const CURRENT_ENV_DIR = CURRENT_BASE_DIR;
-const DEFAULT_SKETCH_SOURCE = "# AMYboard Sketch\n# Top-level code runs once at boot. loop() runs repeatedly (~60ms).\n\ndef loop():\n    pass\n";
+const DEFAULT_SKETCH_SOURCE = "# AMYboard Sketch\n# Top-level code runs once at boot. loop() is called every 32nd note.\n\ndef loop():\n    pass\n";
 const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json", ".patch"];
 const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
