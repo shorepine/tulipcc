@@ -2910,9 +2910,8 @@ async function sysex_write_amy_message(message) {
     } else {
         throw new Error("Selected MIDI output does not support sysex send.");
     }
-    // Pace sends to avoid overrunning the hardware USB-MIDI RX buffer,
-    // especially when a sketch loop() is consuming scheduler time.
-    await sleep_ms(150);
+    // Pace sends to avoid overrunning the hardware USB-MIDI RX buffer.
+    await sleep_ms(50);
 }
 
 async function open_send_to_amyboard_modal() {
@@ -2950,6 +2949,9 @@ async function send_to_amyboard_now() {
 
         send_amyboard_progress_update(0, fileSize);
         await sysex_write_amy_message("zT" + tarFilename + "," + fileSize + "Z");
+        // Wait for hardware to process zT and stop the sequencer/loop(),
+        // even if loop() is blocking the scheduler for a while.
+        await sleep_ms(1000);
 
         var sentBytes = 0;
         for (var offset = 0; offset < fileSize; offset += AMYBOARD_TRANSFER_CHUNK_BYTES) {
