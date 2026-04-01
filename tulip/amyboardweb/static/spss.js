@@ -2275,9 +2275,11 @@ function write_string_to_buffer(buffer, offset, length, text) {
     for (var i = 0; i < length; i++) {
         buffer[offset + i] = 0;
     }
-    var n = Math.min(length, text.length);
+    // Encode as UTF-8 bytes so multi-byte characters are preserved correctly.
+    var encoded = new TextEncoder().encode(text);
+    var n = Math.min(length, encoded.length);
     for (var j = 0; j < n; j++) {
-        buffer[offset + j] = text.charCodeAt(j);
+        buffer[offset + j] = encoded[j];
     }
 }
 

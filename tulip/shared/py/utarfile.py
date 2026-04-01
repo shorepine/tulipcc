@@ -113,7 +113,8 @@ class TarFile:
             return None
 
         d = TarInfo()
-        d.name = str(h.name, "utf-8").rstrip("\0")
+        # Use latin-1 to decode filenames so non-UTF-8 bytes never crash extraction.
+        d.name = str(bytes(h.name), "latin-1").rstrip("\0")
         d.size = int(bytes(h.size), 8)
         d.type = [REGTYPE, DIRTYPE][d.name[-1] == "/"]
         self.subf = d.subf = FileSection(self.f, d.size, roundup(d.size, BLOCKSIZE))
