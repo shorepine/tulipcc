@@ -27,8 +27,8 @@ function make_change_code(synth, value, knob, no_instrument) {
 
 function send_change_code(synth, value, knob) {
   var code = make_change_code(synth, value, knob);
-  if (code && typeof amy_add_log_message === "function") {
-    amy_add_log_message(code);
+  if (code && typeof window.amy_add_message === "function") {
+    window.amy_add_log_message(code);
   }
 }
 
