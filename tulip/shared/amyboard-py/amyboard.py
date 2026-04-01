@@ -189,8 +189,8 @@ def load_patch_file(filename, synth=1, num_voices=6):
         return top_osc + 1
 
     try:
-        with open(filename, 'r') as f:
-            patch = f.read()
+        with open(filename, 'rb') as f:
+            patch = f.read().decode('latin-1')
     except OSError:
         print("error reading", filename)
         return
@@ -624,14 +624,6 @@ def set_cv_out(channel=0, synth=1):
     """
     tulip.set_cv_synth(synth, channel + 1 if synth > 0 else 0)
 
-def edit(filename=None):
-    """Open the pye text editor. Pass a filename to edit, or None for a new file."""
-    from pye import pye
-    if filename is not None:
-        pye(filename)
-    else:
-        pye()
-
 def cv_out(volts, channel=0):
     """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1)"""
     addr = 88 # GP8413
@@ -665,24 +657,15 @@ def _web_encoder_press(state):
 
 
 # Adafruit I2C Quad Rotary Encoder Breakout
-# https://www.adafruit.com/product/5880
-# I2C single rotary encoder, seesaw_dev=0x36, encoder=0, button pins=(24,)
 # https://www.adafruit.com/product/5752
-# Four rotary encoders with built-in push buttons, seesaw_dev=0x49, button pins=(12, 14, 17, 9)
+# Four rotary encoders with built-in push buttons.
 #  read_encoder(encoder=0)  # reads the current value of the encoder
 #  init_buttons()  # must be called to configure pullup of encoder buttons
 #  read_buttons()  # returns a boolean list of the state of the 4 buttons.
 # Code based on abstracting
 # https://github.com/adafruit/Adafruit_CircuitPython_seesaw/blob/main/adafruit_seesaw/seesaw.py.
 
-# Single encoder
-SEESAW_DEV = 0x36
-BUTTON_PINS = (24,)
-# 4-way encoder
-#SEESAW_DEV = 0x49
-#BUTTON_PINS = (12, 14, 17, 9)
-
-def read_encoder(encoder=0, seesaw_dev=SEESAW_DEV, delay=0.008):
+def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
     """Read the cumulated value of encoder 0..3."""
     if web():
         return _web_encoder_pos
@@ -695,7 +678,7 @@ def read_encoder(encoder=0, seesaw_dev=SEESAW_DEV, delay=0.008):
     i2c.readfrom_into(seesaw_dev, result)
     return struct.unpack(">i", result)[0]
 
-def init_buttons(pins=BUTTON_PINS, seesaw_dev=SEESAW_DEV):
+def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
     """Setup the seesaw quad encoder button pins to input_pullup."""
     if web():
         return
@@ -712,7 +695,7 @@ def init_buttons(pins=BUTTON_PINS, seesaw_dev=SEESAW_DEV):
     i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_PULLENSET]) + mask_bytes)
     i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK_SET]) + mask_bytes)
 
-def read_buttons(pins=BUTTON_PINS, seesaw_dev=SEESAW_DEV, delay=0.008):
+def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.008):
     """Read the 4 seesaw encoder push buttons."""
     if web():
         return [_web_encoder_button] * len(pins)
@@ -864,7 +847,7 @@ def draw_waveform():
 class PatchSelector:
 
     def __init__(
-            self, synth=1, seesaw_dev=SEESAW_DEV, encoder=0, button_pin=BUTTON_PINS[0],
+            self, synth=1, seesaw_dev=0x36, encoder=0, button_pin=24,
             patch_dir='/user/current', extension='.patch',
             hold_max=30, exit_callback=lambda: True
     ):
@@ -964,8 +947,7 @@ class PatchSelector:
         self.button_state = button_state
 
 
-def patch_selector(synth=1, duration=30,
-                   seesaw_dev=SEESAW_DEV, encoder=0, button_pin=BUTTON_PINS[0],
+def patch_selector(synth=1, duration=30, seesaw_dev=0x36, encoder=0, button_pin=24,
                    patch_dir=None, extension='.patch'):
     """Run the PATCH SELECTOR app using Tulip sequencer."""
     import sequencer
