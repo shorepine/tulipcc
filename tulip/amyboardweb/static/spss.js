@@ -2497,6 +2497,8 @@ async function import_amyboard_world_file(index) {
                 await select_environment_file(files[0], true);
             }
         }
+        // Reset all of AMY (oscs, sequencer, patches) before starting, like hardware does on reboot.
+        await runCodeBlock("import amy; amy.reset()");
         await restore_patches_from_editor_state_if_present({ sendToAmy: true });
         if (typeof window.refresh_patch_active_name_label === "function") {
             window.refresh_patch_active_name_label();
@@ -2504,8 +2506,6 @@ async function import_amyboard_world_file(index) {
         if (typeof window.refresh_save_patch_dirty_indicator === "function") {
             window.refresh_save_patch_dirty_indicator();
         }
-        // Reset all of AMY (oscs, sequencer, patches) before starting, like hardware does on reboot.
-        await runCodeBlock("import amy; amy.reset()");
         await run_current_environment();
 
         await refresh_amyboard_world_files();
@@ -2576,6 +2576,8 @@ async function load_world_environment_by_name(username, envName) {
             var files = list_environment_files();
             if (files.length) await select_environment_file(files[0], true);
         }
+        // Reset all of AMY (oscs, sequencer, patches) before starting, like hardware does on reboot.
+        await runCodeBlock("import amy; amy.reset()");
         await restore_patches_from_editor_state_if_present({ sendToAmy: true });
         if (typeof window.refresh_patch_active_name_label === "function") {
             window.refresh_patch_active_name_label();
@@ -2583,8 +2585,6 @@ async function load_world_environment_by_name(username, envName) {
         if (typeof window.refresh_save_patch_dirty_indicator === "function") {
             window.refresh_save_patch_dirty_indicator();
         }
-        // Reset all of AMY (oscs, sequencer, patches) before starting, like hardware does on reboot.
-        await runCodeBlock("import amy; amy.reset()");
         await run_current_environment();
     } catch (e) {
         show_alert("Failed to load environment '" + envName + "' by " + username + ".");
