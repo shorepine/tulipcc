@@ -693,6 +693,7 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
   await sync_channel_knobs_from_synth_to_ui(synth);
   if (typeof window.set_section_disabled === "function") {
     var isDX7 = oscs_per_voice >= 8;
+    window.set_section_disabled("Osc A", isDX7);
     window.set_section_disabled("Osc B", isDX7);
     window.set_section_disabled("ADSR", isDX7);
   }
@@ -869,6 +870,7 @@ async function restore_patches_from_editor_state_if_present(options) {
   if (typeof window.set_section_disabled === "function") {
     var activeOscs = loadedOscsMap[activeCh] || 0;
     var activeIsDX7 = activeOscs >= 8;
+    window.set_section_disabled("Osc A", activeIsDX7);
     window.set_section_disabled("Osc B", activeIsDX7);
     window.set_section_disabled("ADSR", activeIsDX7);
   }
@@ -889,6 +891,7 @@ window.clear_current_channel_patch = async function() {
   send_all_knob_cc_mappings(synth);
   await sync_channel_knobs_from_synth_to_ui(synth);
   if (typeof window.set_section_disabled === "function") {
+    window.set_section_disabled("Osc A", false);
     window.set_section_disabled("Osc B", false);
     window.set_section_disabled("ADSR", false);
   }
