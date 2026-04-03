@@ -1872,7 +1872,11 @@
               var presetSynth = Number(window.current_synth || 1);
               if (typeof amy_send === "function") {
                 var isDX7Preset = patch >= 128;
-                amy_send({synth: presetSynth, oscs_per_voice: isDX7Preset ? 8 : 3, num_voices: 6}, true);
+                if (isDX7Preset) {
+                  amy_send({synth: presetSynth, num_voices: 6, oscs_per_voice: 8}, true);
+                } else {
+                  amy_send({synth: presetSynth, num_voices: 6, patch: 257}, true);
+                }
                 if (typeof reset_global_effects === "function") { reset_global_effects(); }
                 if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
                   var presetWireCommands = get_wire_commands_for_juno_patch(patch);

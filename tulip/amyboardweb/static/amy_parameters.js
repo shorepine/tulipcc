@@ -1,8 +1,8 @@
 // amyboard default patch (K257) conventions.
-const OSCA_OSC = 0;
-const FILTER_OSC = 0;  // Osc with filter commands.
-const OSCB_OSC = 2;
+const CTL_OSC = 0;  // Osc with filter & envelope commands.c
 const LFO_OSC = 1;
+const OSCA_OSC = 2;
+const OSCB_OSC = 3;
 
 // Define all the knobs and their parameters here
 window.addEventListener("DOMContentLoaded", function() {
@@ -20,7 +20,7 @@ window.addEventListener("DOMContentLoaded", function() {
   ];
   const GLOBAL_SECTION_NAMES = ["EQ", "Chorus", "Reverb", "Echo"];
   const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE", "ALGO"];
-  const WAVE_OPTION_VALUES = [0, 1, 3, 2, 4, 5, 7, 19, 8];
+  const WAVE_OPTION_VALUES = [AMY.SINE, 1, 3, 2, 4, 5, 7, 19, 8];
 
   // amy_default: the value AMY's reset_osc() sets for this parameter.
   // Used to initialize knob state before applying patch changes, since
@@ -62,7 +62,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc A",
       cc: 73,
       display_name: "level",
-      change_code: "i%iv" + OSCA_OSC + "a,,%v",
+      change_code: "i%iv" + OSCA_OSC + "a%v,,0,0",
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,       // amp_coefs[EG0] = 1.0
@@ -74,7 +74,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF",
       cc: 74,
       display_name: "freq",
-      change_code: "i%iv" + FILTER_OSC + "F%v",
+      change_code: "i%iv" + CTL_OSC + "F%v",
       knob_type: "log",
       default_value: 1000,
       amy_default: 1000,      // filter_type=NONE after reset; display default
@@ -85,7 +85,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF",
       cc: 75,
       display_name: "resonance",
-      change_code: "i%iv" + FILTER_OSC + "R%v",
+      change_code: "i%iv" + CTL_OSC + "R%v",
       knob_type: "log",
       default_value: 0.7,
       amy_default: 0.7,       // resonance = 0.7
@@ -96,7 +96,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF",
       cc: 76,
       display_name: "kbd",
-      change_code: "i%iv" + FILTER_OSC + "F,%v",
+      change_code: "i%iv" + CTL_OSC + "F,%v",
       default_value: 1.0,
       amy_default: 0,         // filter_logfreq_coefs[NOTE] = 0
       min_value: 0,
@@ -106,7 +106,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF",
       cc: 77,
       display_name: "env",
-      change_code: "i%iv" + FILTER_OSC + "F,,,,%v",
+      change_code: "i%iv" + CTL_OSC + "F,,,,%v",
       default_value: 4.0,
       amy_default: 0,         // filter_logfreq_coefs[EG1] = 0
       min_value: -10,
@@ -180,7 +180,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc B",
       cc: 84,
       display_name: "level",
-      change_code: "i%iv" + OSCB_OSC + "a,,%v",
+      change_code: "i%iv" + OSCB_OSC + "a%v,,0,0",
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,       // amp_coefs[EG0] = 1.0
@@ -193,7 +193,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF ENV",
       cc: 85,
       display_name: "attack",
-      change_code: "i%iv" + FILTER_OSC + "B%v,1,,,,0",
+      change_code: "i%iv" + CTL_OSC + "B%v,1,,,,0",
       default_value: 0,
       amy_default: 0,         // breakpoints UNSET → no envelope
       min_value: 0,
@@ -204,7 +204,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 86,
       knob_type: "log",
       display_name: "decay",
-      change_code: "i%iv" + FILTER_OSC + "B,1,%v,,,0",
+      change_code: "i%iv" + CTL_OSC + "B,1,%v,,,0",
       default_value: 100,
       amy_default: 0,         // breakpoints UNSET → no envelope
       offset: 50,
@@ -215,7 +215,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "VCF ENV",
       cc: 87,
       display_name: "sustain",
-      change_code: "i%iv" + FILTER_OSC + "B,1,,%v,,0",
+      change_code: "i%iv" + CTL_OSC + "B,1,,%v,,0",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -226,7 +226,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 88,
       knob_type: "log",
       display_name: "release",
-      change_code: "i%iv" + FILTER_OSC + "B,1,,,%v,0",
+      change_code: "i%iv" + CTL_OSC + "B,1,,,%v,0",
       offset: 50,
       min_value: 0,
       max_value: 8000,
@@ -314,7 +314,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "LFO",
       cc: 96,
       display_name: "filt",
-      change_code: "i%iv" + OSCA_OSC + "F,,,,,%v",
+      change_code: "i%iv" + CTL_OSC + "F,,,,,%v",
       default_value: 0.0,
       amy_default: 0,         // filter_logfreq_coefs[MOD] = 0
       min_value: 0.0,
@@ -326,7 +326,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "ADSR",
       cc: 97,
       display_name: "attack",
-      change_code: "i%iv" + OSCA_OSC + "A%v,1,,,,0Zi%iv" + OSCB_OSC + "A%v,1,,,,0",
+      change_code: "i%iv" + CTL_OSC + "A%v,1,,,,0",
       min_value: 0,
       max_value: 1000,
       default_value: 0,
@@ -337,7 +337,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 98,
       knob_type: "log",
       display_name: "decay",
-      change_code: "i%iv" + OSCA_OSC + "A,1,%v,,,0Zi%iv" + OSCB_OSC + "A,1,%v,,,0",
+      change_code: "i%iv" + CTL_OSC + "A,1,%v,,,0",
       offset: 50,
       min_value: 0,
       max_value: 2000,
@@ -348,7 +348,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "ADSR",
       cc: 99,
       display_name: "sustain",
-      change_code: "i%iv" + OSCA_OSC + "A,1,,%v,,0Zi%iv" + OSCB_OSC + "A,1,,%v,,0",
+      change_code: "i%iv" + CTL_OSC + "A,1,,%v,,0",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -359,7 +359,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 100,
       knob_type: "log",
       display_name: "release",
-      change_code: "i%iv" + OSCA_OSC + "A,1,,,%v,0Zi%iv" + OSCB_OSC + "A,1,,,%v,0",
+      change_code: "i%iv" + CTL_OSC + "A,1,,,%v,0",
       offset: 50,
       min_value: 0,
       max_value: 8000,
@@ -792,7 +792,7 @@ function set_knobs_from_synth(synth) {
           lfoDelay = event.eg0_times[0];
         }
       }
-      if (event.osc == FILTER_OSC) {
+      if (event.osc == CTL_OSC) {
         if (event.filter_freq) {
           if (Number.isFinite(event.filter_freq[0])) {
             filterFreq = event.filter_freq[0];
@@ -818,11 +818,20 @@ function set_knobs_from_synth(synth) {
         if (event.eg1_values) {
           if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
         }
+        // Pull ADSR env values
+        if (event.eg0_times) {
+          if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
+          if (bpTimeIsSet(event.eg0_times[1])) { adsr[1] = event.eg0_times[1]; }   // D time
+          if (bpTimeIsSet(event.eg0_times[2])) { adsr[3] = event.eg0_times[2]; }   // R time
+        }
+        if (event.eg0_values) {
+          if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
+        }
       }
       if (event.osc == OSCA_OSC || event.osc == OSCB_OSC) {
         // Extract key parameters for each osc
         if (event.amp && Number.isFinite(event.amp[2])) {
-          osc_gain[event.osc] = event.amp[2];
+          osc_gain[event.osc] = event.amp[0];
         }
         if (event.freq && Number.isFinite(event.freq[0]) && event.freq[0] > 0) {
           osc_freq[event.osc] = event.freq[0];
@@ -841,19 +850,8 @@ function set_knobs_from_synth(synth) {
         if (Number.isFinite(event.preset) && event.preset >= 0) {
           osc_preset[event.osc] = event.preset;
         }
-        if (event.osc == OSCA_OSC) {
-          // Pull some values explicitly from OSCA (typ osc 0).
-          if (event.eg0_times) {
-            if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
-            if (bpTimeIsSet(event.eg0_times[1])) { adsr[1] = event.eg0_times[1]; }   // D time
-            if (bpTimeIsSet(event.eg0_times[2])) { adsr[3] = event.eg0_times[2]; }   // R time
-          }
-          if (event.eg0_values) {
-            if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
-          }
-          if (event.freq && Number.isFinite(event.freq[5]) && event.freq[5] > 0) {
-            lfoOsc = event.freq[5];  // freq COEF_MOD == 5
-          }
+        if (event.freq && Number.isFinite(event.freq[5]) && event.freq[5] > 0) {
+          lfoOsc = event.freq[5];  // freq COEF_MOD == 5
         }
       }
     }
