@@ -250,13 +250,11 @@ function num_oscs_from_patch_file_content(source) {
 }
 
 function get_wire_commands_for_juno_patch(patch) {
-  console.log("get_wire_commands_for_juno_patch");
-
   // The new convention for AMYboard voice osc usage.
-  const OSCA_OSC = 0;
-  const FILTER_OSC = 0;  // Osc with filter commands.
-  const OSCB_OSC = 2;
+  const CTL_OSC = 0;  // Osc with filter & env commands.
   const LFO_OSC = 1;
+  const OSCA_OSC = 2;
+  const OSCB_OSC = 3;
 
   function translate_juno_events_to_webeditor_wire_commands(events) {
     let filterFreq = null;
@@ -266,16 +264,18 @@ function get_wire_commands_for_juno_patch(patch) {
     let filter_osc = 0;  // The osc with the filter.  It's always 0.
     let resonanceValue = null;
     let adsr = [0, 0, 1, 0];
+    let f_adsr = [0, 0, 1, 0];
     let lfoFreq = null;
     let lfoDelay = null;
     let lfoWave = 4;  // always triangle
     let lfoOsc = 0;
     let lfoPwm = 0;
+    let vcaGain = 1.0;
     // Track coefficients for all 5 oscs.  Not sure which one is LFO.
-    let osc_freq = [null, null, null, null, null];
-    let osc_wave = [0, 0, 0, 0, 0];
-    let osc_duty = [0.5, 0.5, 0.5, 0.5, 0.5];
-    let osc_gain = [0, 0, 0, 0, 0];
+    let osc_freq = [null, null, null, null, null, null];
+    let osc_wave = [0, 0, 0, 0, 0, 0];
+    let osc_duty = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
+    let osc_gain = [0, 0, 0, 0, 0, 0];
     let mod_source_osc = LFO_OSC;  // Start with Juno LFO osc, but may get updated if it's an amyboardsynth patch.
     // Which Juno oscs are used for oscA and B
     let oscAB_osc = [-1, -1];
@@ -315,8 +315,12 @@ function get_wire_commands_for_juno_patch(patch) {
         if (Number.isFinite(event.filter_freq[1])) {
           filterKbd = event.filter_freq[1];  // COEF_NOTE
         }
-        if (Number.isFinite(event.filter_freq[3])) {
+        if (Number.isFinite(event.filter_freq[3]) && event.filter_freq[3] > 0) {
           filterEnv = event.filter_freq[3];  // COEF_EG0, Juno filter env
+        }
+        if (Number.isFinite(event.filter_freq[4]) && event.filter_freq[4] > 0) {
+          filterEnv = event.filter_freq[4];  // COEF_EG1, Juno filter env, gate mode
+          oscGate = 1;
         }
         if (Number.isFinite(event.filter_freq[5])) {
           filterLfo = event.filter_freq[5];  // COEF_MOD
@@ -340,7 +344,7 @@ function get_wire_commands_for_juno_patch(patch) {
         // Non-LFO osc, don't assume what order they come in.
         const parsedModSource = Number(event.mod_source);
         if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
-          mod_source_osc = parsedModSource;  // Should never happen.
+          mod_source_osc = parsedModSource;  // Should never change the original value.
         }
         if (event.eg0_times) {
           if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
@@ -350,14 +354,22 @@ function get_wire_commands_for_juno_patch(patch) {
         if (event.eg0_values) {
           if (Number.isFinite(event.eg0_values[1])) { adsr[2] = event.eg0_values[1]; }  // S level
         }
+        if (event.eg1_times) {
+          if (bpTimeIsSet(event.eg1_times[0])) { f_adsr[0] = event.eg1_times[0]; }   // A time
+          if (bpTimeIsSet(event.eg1_times[1])) { f_adsr[1] = event.eg1_times[1]; }   // D time
+          if (bpTimeIsSet(event.eg1_times[2])) { f_adsr[3] = event.eg1_times[2]; }   // R time
+        }
+        if (event.eg1_values) {
+          if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
+        }
         // Extract key parameters for each osc
         if (event.amp) {
-          if (Number.isFinite(event.amp[2]) && event.amp[2] > 0) {
-            osc_gain[event.osc] = event.amp[2];
+          if (Number.isFinite(event.amp[0]) && event.amp[0] > 0) {
+            osc_gain[event.osc] = event.amp[0];
           }
-          if (Number.isFinite(event.amp[3]) && event.amp[3] == 0) {
-            // Juno patches decouple amp from EG0 for "gate" mode.
-            oscGate = 1;
+          if (Number.isFinite(event.amp[2]) && event.amp[2] > 0) {
+            // CtlOsc only gets vca gain applied to velocity (scales all other oscs).
+            vcaGain = event.amp[2];
           }
         }
         if (event.freq) {
@@ -384,19 +396,17 @@ function get_wire_commands_for_juno_patch(patch) {
 
     if (oscGate) {
       adsr = [0, 0, 1, 0];
-    }
-    // Logic to choose juno oscs for osc A and osc B.
-    // Remove the LFO from the lists
-    osc_gain.splice(mod_source_osc, 1);
-    osc_freq.splice(mod_source_osc, 1);
-    osc_wave.splice(mod_source_osc, 1);
-    osc_duty.splice(mod_source_osc, 1);
-    if (osc_gain[2] == 0 && osc_gain[3] == 0) {
-      // Only 2 oscs, let them be
-      oscAB_osc[0] = 0;
-      oscAB_osc[1] = 1;
     } else {
-      for (let osc = 0; osc < 4; ++osc) {
+      f_adsr = adsr;
+    }
+    // Logic to choose juno oscs for osc A and osc B
+    // among original oscs 2 (pulse), 3 (saw), 4 (subosc), and 5 (noise).
+    if (osc_gain[4] == 0 && osc_gain[5] == 0) {
+      // Only 2 oscs, let them be
+      oscAB_osc[0] = 2;
+      oscAB_osc[1] = 3;
+    } else {
+      for (let osc = 2; osc < 6; ++osc) {
         if (oscAB_osc[0] == -1 || osc_gain[osc] > osc_gain[oscAB_osc[0]]) {
           if (oscAB_osc[1] == -1 || osc_gain[oscAB_osc[0]] > osc_gain[oscAB_osc[1]]) {
             // Push oscA into oscB
@@ -415,29 +425,29 @@ function get_wire_commands_for_juno_patch(patch) {
 
     const AMY_OSC_OF_LOGICAL_OSC = [OSCA_OSC, OSCB_OSC];
     wire_commands = [];
+    // Osc 0 has the filter and envelope controls, including both EG0 (vca) and EG1 (vcf)
+    let command = "v" + CTL_OSC + "w" + AMY.SILENT + "L" + LFO_OSC + "c" + OSCA_OSC;
+    command += "G" + AMY.FILTER_LPF24;
+    command += "a1,0,1,1,0" + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0"
+    if (resonanceValue != null) command += "R" + resonanceValue;
+    command += "F" + s(filterFreq) + "," + s(filterKbd) + ",,," + s(filterEnv) + "," + s(filterLfo);
+    command += "B" + f_adsr[0] + ",1," + f_adsr[1] + "," + f_adsr[2] + "," + f_adsr[3] + ",0";
+    wire_commands.push(command + "Z");
     for (const osc of [0, 1]) {
       let src_osc = oscAB_osc[osc];
       let amy_osc = AMY_OSC_OF_LOGICAL_OSC[osc];  // too many osc numbers.
-	let command = "v" + amy_osc + "w" + osc_wave[src_osc] + "L" + LFO_OSC + "m0"
+      let command = "v" + amy_osc + "w" + osc_wave[src_osc] + "L" + LFO_OSC
           + "f" + s(osc_freq[src_osc]) + ",1,,,," + lfoOsc + ",1"
           + "d" + osc_duty[src_osc] + ",,,,," + lfoPwm
-          + "a,," + osc_gain[src_osc] + ",1,0"
-          + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
+          + "a" + vcaGain * osc_gain[src_osc] + ",,0,0";
       if (osc == 0) {
         // Osc 0 must chain to osc 1
         command += "c" + AMY_OSC_OF_LOGICAL_OSC[1];
       }
-      if (amy_osc == FILTER_OSC) {
-        // Osc 0 has the filter controls, including EG1, which is in fact the same as EG0
-        command += "G" + AMY.FILTER_LPF24;
-        if (resonanceValue != null) command += "R" + resonanceValue;
-        command += "F" + s(filterFreq) + "," + s(filterKbd) + ",,," + s(filterEnv) + "," + s(filterLfo)
-            + "B" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0";
-      }
       wire_commands.push(command + "Z");
     }
     // LFO command
-    let command = "v" + LFO_OSC + "w" + lfoWave + "a1,0,0,1" + "f" + s(lfoFreq) + ",0,,0,0,0,0"
+    command = "v" + LFO_OSC + "w" + lfoWave + "a1,0,0,1" + "f" + s(lfoFreq) + ",0,,0,0,0,0"
         + "A" + s(lfoDelay) + ",1,100,1,10000,0";
     wire_commands.push(command + "Z");
     // Global FX commands
@@ -683,6 +693,7 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
   await sync_channel_knobs_from_synth_to_ui(synth);
   if (typeof window.set_section_disabled === "function") {
     var isDX7 = oscs_per_voice >= 8;
+    window.set_section_disabled("Osc A", isDX7);
     window.set_section_disabled("Osc B", isDX7);
     window.set_section_disabled("ADSR", isDX7);
   }
@@ -859,6 +870,7 @@ async function restore_patches_from_editor_state_if_present(options) {
   if (typeof window.set_section_disabled === "function") {
     var activeOscs = loadedOscsMap[activeCh] || 0;
     var activeIsDX7 = activeOscs >= 8;
+    window.set_section_disabled("Osc A", activeIsDX7);
     window.set_section_disabled("Osc B", activeIsDX7);
     window.set_section_disabled("ADSR", activeIsDX7);
   }
@@ -879,6 +891,7 @@ window.clear_current_channel_patch = async function() {
   send_all_knob_cc_mappings(synth);
   await sync_channel_knobs_from_synth_to_ui(synth);
   if (typeof window.set_section_disabled === "function") {
+    window.set_section_disabled("Osc A", false);
     window.set_section_disabled("Osc B", false);
     window.set_section_disabled("ADSR", false);
   }
@@ -3606,8 +3619,8 @@ async function preview_world_patch(index) {
         if (!response.ok) throw new Error("HTTP " + response.status.toString());
         var text = await response.text();
 
-        // Init synth 32 with 6 voices, 3-note polyphony
-        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3}, true);
+        // Init synth 32 with 6 voices, initialized with patch 257 (ABW)
+        amy_send({synth: 32, num_voices: 6, patch: 257}, true);
 
         // Load each patch line prepended with i32
         var lines = String(text || "").split(/\r?\n/);
@@ -3629,7 +3642,7 @@ async function preview_world_patch(index) {
 
         // Let notes ring briefly, then clear the synth
         await new Promise(function(r) { setTimeout(r, 800); });
-        amy_send({synth: 32, num_voices: 6, oscs_per_voice: 3}, true);
+        amy_send({synth: 32, num_voices: 6, patch: 257}, true);
     } catch (e) {
         show_alert("Preview failed.");
     } finally {
