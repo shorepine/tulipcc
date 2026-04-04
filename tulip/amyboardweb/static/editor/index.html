@@ -1067,8 +1067,7 @@
                         <label class="form-check-label small" for="channel-active-checkbox">Active</label>
                       </div>
                     </div>
-                    <div class="col-12 col-md-1 d-none d-md-block"></div>
-                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center ms-md-2">
                       <button class="btn btn-light btn-sm rounded-0" type="button" id="patch-open-load-modal-btn">Patch: <span id="patch-active-name">None</span></button>
                     </div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0">
@@ -1077,6 +1076,11 @@
                         <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-revert-action-btn">Revert</button>
                         <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-clear-channel-btn">Clear</button>
                       </div>
+                    </div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center gap-2 ms-md-2">
+                      <label class="text-nowrap mb-0 text-white" for="synth-level-slider" style="font-size:0.875rem;">Level</label>
+                      <input type="range" class="form-range" id="synth-level-slider" min="0.001" max="7" step="0.001" value="1" style="width:100px;">
+                      <input type="number" class="form-control text-center knob-value" id="synth-level-number" min="0.001" max="7" step="0.001" value="1" style="width:60px; font-size:0.7rem; padding:2px 4px;">
                     </div>
                   </div>
                   <div class="patch-global-title">Effects</div>
@@ -1681,6 +1685,7 @@
             if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 16) {
               window.current_synth = parsed;
               syncActiveCheckboxForChannel();
+              syncSynthLevelForChannel();
               refreshLoadPatchChannelLabel();
               refreshPatchActiveNameLabel();
               refreshSavePatchDirtyIndicator();
@@ -1709,6 +1714,43 @@
         const patchSaveActionButton = document.getElementById("patch-save-action-btn");
         const patchRevertActionButton = document.getElementById("patch-revert-action-btn");
         const patchClearChannelButton = document.getElementById("patch-clear-channel-btn");
+        const synthLevelSlider = document.getElementById("synth-level-slider");
+        const synthLevelNumber = document.getElementById("synth-level-number");
+        const _synthLevels = {};  // per-channel level storage
+        function getSynthLevel(ch) { return _synthLevels[ch] != null ? _synthLevels[ch] : 1; }
+        function setSynthLevel(val, send) {
+          const ch = Number(window.current_synth || 1);
+          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          _synthLevels[ch] = val;
+          if (synthLevelSlider) synthLevelSlider.value = val;
+          if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+          if (send && typeof window.amy_add_log_message === "function") {
+            var code = "i" + ch + "v0a" + val.toFixed(3);
+            window.amy_add_log_message(code);
+          }
+        }
+        function syncSynthLevelForChannel() {
+          var ch = Number(window.current_synth || 1);
+          var val = getSynthLevel(ch);
+          if (synthLevelSlider) synthLevelSlider.value = val;
+          if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+        }
+        if (synthLevelSlider) {
+          synthLevelSlider.addEventListener("input", function() { setSynthLevel(synthLevelSlider.value, true); });
+        }
+        if (synthLevelNumber) {
+          synthLevelNumber.addEventListener("change", function() { setSynthLevel(synthLevelNumber.value, true); });
+          synthLevelNumber.addEventListener("keydown", function(e) { if (e.key === "Enter") setSynthLevel(synthLevelNumber.value, true); });
+        }
+        window.syncSynthLevelForChannel = syncSynthLevelForChannel;
+        window.setSynthLevelFromAmy = function(ch, val) {
+          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          _synthLevels[ch] = val;
+          if (Number(window.current_synth || 1) === ch) {
+            if (synthLevelSlider) synthLevelSlider.value = val;
+            if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+          }
+        };
         const savePatchModalEl = document.getElementById("savePatchModal");
         const savePatchNameInput = document.getElementById("save-patch-name");
         const savePatchConfirmButton = document.getElementById("save-patch-confirm-btn");

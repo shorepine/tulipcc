@@ -735,6 +735,7 @@ function set_knobs_from_synth(synth) {
     let osc_preset = [null, null, null];
     let osc_duty = [0.5, 0.5, 0.5];  // duty_coefs[CONST] = 0.5
     let osc_gain = [1, 1, 1];      // amp_coefs[EG0] = 1.0
+    let synthLevel = 1;            // amp_coefs[CONST] on osc 0 (CTL_OSC)
     function knobDefault(section, name) {
       var allKnobs = (window.amy_global_knobs || []).concat(knobs || []);
       for (var i = 0; i < allKnobs.length; i++) {
@@ -793,6 +794,9 @@ function set_knobs_from_synth(synth) {
         }
       }
       if (event.osc == CTL_OSC) {
+        if (event.amp && Number.isFinite(event.amp[0])) {
+          synthLevel = event.amp[0];
+        }
         if (event.filter_freq) {
           if (Number.isFinite(event.filter_freq[0])) {
             filterFreq = event.filter_freq[0];
@@ -910,6 +914,11 @@ function set_knobs_from_synth(synth) {
     set_amy_knob_value(knobs, "Echo", "level", echo[0]);
     set_amy_knob_value(knobs, "Echo", "delay", echo[1]);
     set_amy_knob_value(knobs, "Echo", "feedback", echo[2]);
+
+    // Update synth level slider from osc 0 amp[CONST]
+    if (typeof window.setSynthLevelFromAmy === "function") {
+      window.setSynthLevelFromAmy(synth, synthLevel);
+    }
   }
 
   // The actual set_knobs_from_synth.
