@@ -834,7 +834,7 @@ function set_knobs_from_synth(synth) {
       }
       if (event.osc == OSCA_OSC || event.osc == OSCB_OSC) {
         // Extract key parameters for each osc
-        if (event.amp && Number.isFinite(event.amp[2])) {
+        if (event.amp && Number.isFinite(event.amp[0])) {
           osc_gain[event.osc] = event.amp[0];
         }
         if (event.freq && Number.isFinite(event.freq[0]) && event.freq[0] > 0) {
