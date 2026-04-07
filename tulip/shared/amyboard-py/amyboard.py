@@ -120,10 +120,15 @@ class Display:
 
 DEFAULT_SKETCH_SOURCE = """\
 # AMYboard Sketch
-# Top-level code runs once at boot. loop() runs repeatedly (~60ms).
+# Code put here runs first, then loop() is called every 32nd note.
+import amyboard, amy
 
 def loop():
     pass
+
+# Do not edit. Set automatically by the knobs on AMYboard Online.
+_auto_generated_knobs = \"\"\"
+\"\"\"
 """
 
 def _path_exists(path):
@@ -236,183 +241,85 @@ def ensure_user_environment():
 def _ensure_current_env_layout():
     return ensure_user_environment()
 
-def _parse_editor_state_synth_map(editor_state_path):
-    try:
-        raw = open(editor_state_path, "r").read()
-    except OSError:
-        return None
-    if not raw:
-        return {}
-    try:
-        import ujson as json
-    except ImportError:
-        import json
-    try:
-        parsed = json.loads(raw)
-    except Exception:
-        return {}
-    if not isinstance(parsed, dict):
-        return {}
-    synths = parsed.get("synths", {})
-    if not isinstance(synths, dict):
-        return {}
-    return synths
 
-def _iter_patch_messages(path):
+# -- _auto_generated_knobs helpers --
+
+_KNOBS_MARKER = '_auto_generated_knobs = """'
+_KNOBS_END = '"""'
+
+def generate_knobs_text():
+    """Return the full AMY state text (same as zW output) using the C helper."""
+    return tulip.amy_dump_state()
+
+def update_sketch_knobs(sketch_path=None):
+    """Read sketch.py, replace _auto_generated_knobs section with current AMY state, write back."""
+    if sketch_path is None:
+        sketch_path = tulip.root_dir() + "user/current/sketch.py"
+    tulip.stderr_write("update_sketch_knobs: path=%s" % sketch_path)
     try:
-        for line in open(path, "r"):
-            msg = line.strip()
-            if msg and (not msg.startswith("#")):
-                yield msg
+        text = open(sketch_path, "r").read()
     except OSError:
+        tulip.stderr_write("update_sketch_knobs: could not read file")
         return
+    knobs = generate_knobs_text()
+    tulip.stderr_write("update_sketch_knobs: knobs=%d bytes" % len(knobs))
+    start = text.find(_KNOBS_MARKER)
+    if start >= 0:
+        end = text.find(_KNOBS_END, start + len(_KNOBS_MARKER))
+        if end >= 0:
+            text = text[:start + len(_KNOBS_MARKER)] + "\n" + knobs + text[end:]
+        else:
+            text += "\n" + _KNOBS_MARKER + "\n" + knobs + _KNOBS_END + "\n"
+    else:
+        text += "\n" + _KNOBS_MARKER + "\n" + knobs + _KNOBS_END + "\n"
+    with open(sketch_path, "w") as f:
+        f.write(text)
 
-def _num_oscs_from_patch_file(path):
-    """Scan a .patch/.dirty file for highest v<N> line to determine oscs_per_voice."""
-    max_osc = -1
+def _extract_knobs_from_file(filepath):
+    """Read sketch.py as text and extract the _auto_generated_knobs content without importing."""
     try:
-        for line in open(path, "r"):
-            msg = line.strip()
-            if msg and msg.startswith("v"):
-                # Extract osc number from e.g. "v0o0w0..." or "v7..."
-                i = 1
-                while i < len(msg) and msg[i].isdigit():
-                    i += 1
-                if i > 1:
-                    osc = int(msg[1:i])
-                    if osc > max_osc:
-                        max_osc = osc
+        text = open(filepath, "r").read()
     except OSError:
-        pass
-    return 3 if max_osc < 0 else max_osc + 1
+        return ''
+    start = text.find(_KNOBS_MARKER)
+    if start < 0:
+        return ''
+    body_start = start + len(_KNOBS_MARKER)
+    end = text.find(_KNOBS_END, body_start)
+    if end < 0:
+        return ''
+    return text[body_start:end].strip()
 
-def restore_patch_state_from_files(env_dir=None, send_default_if_missing=True):
-    _env_dir = env_dir or _ensure_current_env_layout()
-    editor_state_file = _env_dir + "/editor_state.json"
-    synth_map = _parse_editor_state_synth_map(editor_state_file)
-    result = {
-        "has_editor_state": synth_map is not None,
-        "loaded_channels": [],
-        "dirty_channels": [],
-    }
-    if synth_map is None:
-        synth_map = {}
+def _apply_knobs_text(knobs_text):
+    """Send each line of knobs text to AMY."""
+    if not knobs_text:
+        # First run: set up channel 1 with default Juno patch.
+        amy.send_raw("i1K257iv6Z")
+        amy.send_raw("i1ic255Z")
+        return
+    for line in knobs_text.strip().split('\n'):
+        line = line.strip()
+        if line and not line.startswith('#'):
+            amy.send_raw(line)
 
-    # Scan for .dirty files not covered by editor_state.json
-    import os
-    try:
-        entries = os.listdir(_env_dir)
-    except OSError:
-        entries = []
-    for entry in entries:
-        if entry.endswith(".dirty"):
-            try:
-                synth = int(entry[:-6])
-            except Exception:
-                continue
-            if synth < 1 or synth > 16:
-                continue
-            key = str(synth)
-            if key not in synth_map:
-                synth_map[key] = ""
 
-    if not synth_map:
-        if send_default_if_missing:
-            amy.send_raw("i1K257iv6")
-        return result
-
-    for key in synth_map:
-        try:
-            synth = int(key)
-        except Exception:
-            continue
-        if synth < 1 or synth > 16:
-            continue
-        name = str(synth_map.get(key, "")).strip()
-        if name and name.lower().endswith(".patch"):
-            name = name[:-6]
-
-        dirty_path = _env_dir + "/" + str(synth) + ".dirty"
-        patch_path = _env_dir + "/" + name + ".patch" if name else None
-        source_path = None
-        is_dirty = False
-        if _path_exists(dirty_path):
-            source_path = dirty_path
-            is_dirty = True
-        elif patch_path and _path_exists(patch_path):
-            source_path = patch_path
-
-        if source_path is None:
-            continue
-
-        amy.send_raw("i%dic255" % (synth))
-        load_patch_file(source_path)
-        result["loaded_channels"].append(synth)
-        if is_dirty:
-            result["dirty_channels"].append(synth)
-
-    return result
-
+def factory_reset(*_args):
+    """Reset AMYboard to defaults: write default sketch.py and restart sketch."""
+    tulip.stderr_write("factory reset — writing default sketch.py")
+    env_dir = _ensure_current_env_layout()
+    sketch_path = env_dir + "/sketch.py"
+    with open(sketch_path, "w") as f:
+        f.write(DEFAULT_SKETCH_SOURCE)
+    restart_sketch()
 
 def environment_transfer_done(*_args):
-    import os
-    import machine
-    tulip.stderr_write("Environment transfer done hook called")
-
-    # Create the folders if they don't exist (and also empty files)
-    _ensure_current_env_layout() 
-
-    user_base = tulip.root_dir() + "user"
-    current_base = user_base + "/current"
-    env_dir = current_base
-
-    env_tar = env_dir + "/environment.tar"
-    incoming_tar = user_base + "/__incoming_environment.tar"
-    cwd = os.getcwd().rstrip("/")
-    cwd_tar = os.getcwd().rstrip("/") + "/environment.tar"
-    source_candidates = ["environment.tar", cwd_tar, current_base + "/environment.tar", env_tar]
-    source_tar = None
-    for candidate in source_candidates:
-        if _path_exists(candidate):
-            source_tar = candidate
-            break
-    if source_tar is None:
-        tulip.stderr_write("environment transfer done hook: environment.tar not found\n")
-        return
-    if source_tar == "environment.tar":
-        source_tar = cwd + "/environment.tar"
-
-    try:
-        os.remove(incoming_tar)
-    except OSError:
-        pass
-
-    os.chdir(user_base)
-
-    try:
-        os.rename(source_tar, incoming_tar)
-    except OSError:
-        tulip.stderr_write("environment transfer done hook: could not stage environment.tar in /user\n")
-        return
-
-    _clear_directory(env_dir)
-
-    try:
-        os.rename(incoming_tar, env_tar)
-    except OSError:
-        tulip.stderr_write("environment transfer done hook: could not move environment.tar into /user/current\n")
-        return
-
-    os.chdir(env_dir)
-    tulip.tar_extract("environment.tar", show_progress=False)
-    try:
-        os.remove("environment.tar")
-    except OSError:
-        pass
-    
-    tulip.stderr_write("Resetting AMYboard")
-    time.sleep(1)
-    machine.reset()
+    """Called after sketch.py is received via zT file transfer.
+    The transferred file already has the correct _auto_generated_knobs,
+    so we just restart the sketch without re-injecting the (stale) AMY state."""
+    tulip.stderr_write("sketch.py transfer done — restarting sketch")
+    # zT stops the sequencer during transfer — restart it before running the sketch.
+    tulip.sequencer_start()
+    restart_sketch()
 
 
 def mount_sd():
@@ -446,7 +353,6 @@ def start_amy():
     midi_out_pin = init_midi()
     tulip.amyboard_start(midi_out_pin)
     _env_dir = _ensure_current_env_layout()
-    restore_patch_state_from_files(_env_dir, send_default_if_missing=True)
 
     from upysh import cd
     try:
@@ -464,11 +370,21 @@ def start_amy():
 _sketch_seq = None  # Keep reference to prevent GC
 
 def run_sketch():
-    """Import sketch.py (top-level code runs once), start loop(). Called from boot."""
+    """Apply knobs from sketch.py, then import it (top-level code runs), start loop()."""
     _env_dir = _ensure_current_env_layout()
     from upysh import cd
     tulip.stderr_write("cding to %s" % (_env_dir))
     cd(_env_dir)
+
+    # Restore AMY synth state BEFORE importing sketch.py so user code
+    # can rely on the synth being fully configured.
+    knobs_text = _extract_knobs_from_file(_env_dir + "/sketch.py")
+    _apply_knobs_text(knobs_text)
+
+    # Clear cached sketch module so we always load fresh from disk
+    # (important after soft_reset which preserves sys.modules).
+    if 'sketch' in sys.modules:
+        del sys.modules['sketch']
     tulip.stderr_write("import sketch")
     try:
         if _env_dir not in sys.path:
@@ -623,6 +539,14 @@ def set_cv_out(channel=0, synth=1):
     Call set_cv_out(channel, synth=0) to clear the mapping.
     """
     tulip.set_cv_synth(synth, channel + 1 if synth > 0 else 0)
+
+def edit(filename=None):
+    """Open the pye text editor. Pass a filename to edit, or None for a new file."""
+    from pye import pye
+    if filename is not None:
+        pye(filename)
+    else:
+        pye()
 
 def cv_out(volts, channel=0):
     """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1)"""

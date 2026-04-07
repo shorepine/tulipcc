@@ -163,6 +163,25 @@ STATIC mp_obj_t tulip_amy_get_synth_commands(size_t n_args, const mp_obj_t *args
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_synth_commands_obj, 1, 1, tulip_amy_get_synth_commands);
 
+STATIC mp_obj_t tulip_sequencer_start(void) {
+    extern void sequencer_midi_start(void);
+    sequencer_midi_start();
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_sequencer_start_obj, tulip_sequencer_start);
+
+STATIC mp_obj_t tulip_amy_dump_state(void) {
+    int len = 0;
+    char *buf = amy_dump_state_to_string(&len);
+    if (!buf || len <= 0) {
+        return mp_obj_new_str("", 0);
+    }
+    mp_obj_t result = mp_obj_new_str(buf, len);
+    free(buf);
+    return result;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_amy_dump_state_obj, tulip_amy_dump_state);
+
 #endif
 
 #ifdef ESP_PLATFORM
@@ -1600,6 +1619,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amy_get_output_buffer), MP_ROM_PTR(&tulip_amy_get_output_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_synth_commands), MP_ROM_PTR(&tulip_amy_get_synth_commands_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_dump_state), MP_ROM_PTR(&tulip_amy_dump_state_obj) },
+    { MP_ROM_QSTR(MP_QSTR_sequencer_start), MP_ROM_PTR(&tulip_sequencer_start_obj) },
 #endif
     { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },

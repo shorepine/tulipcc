@@ -707,9 +707,8 @@ const PatchType = {
 
 // Called from editor/index.html as part of servicing the Load Preset button.
 // Also called from spss.sync_channel_knobs_from_synth_to_ui called in many places.
-function set_knobs_from_synth(synth) {
-
-  function set_knobs_from_events(events) {
+function set_knobs_from_events(events, synth) {
+  {
     const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
     if (!Array.isArray(knobs) || events.length === 0) {
       return;
@@ -920,10 +919,13 @@ function set_knobs_from_synth(synth) {
       window.setSynthLevelFromAmy(synth, synthLevel);
     }
   }
+}
 
-  // The actual set_knobs_from_synth.
+window.set_knobs_from_events = set_knobs_from_events;
+
+function set_knobs_from_synth(synth) {
   let wire_commands = get_wire_commands_for_channel(synth);
   let events = events_from_wire_code_messages(wire_commands);
-  return set_knobs_from_events(events);
+  return set_knobs_from_events(events, synth);
 }
 

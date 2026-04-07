@@ -294,6 +294,31 @@ STATIC mp_obj_t tulip_environment_transfer_done(size_t n_args, const mp_obj_t *a
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_environment_transfer_done_obj, 0, 1, tulip_environment_transfer_done);
 
+STATIC mp_obj_t tulip_factory_reset(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
+    mp_obj_t fn = mp_load_attr(mod, MP_QSTR_factory_reset);
+    return mp_call_function_0(fn);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_factory_reset_obj, 0, 1, tulip_factory_reset);
+
+void mp_update_file_hook(const char *filename) {
+#if defined(AMYBOARD)
+    // Call amyboard.update_sketch_knobs(filename) synchronously.
+    mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
+    mp_obj_t fn = mp_load_attr(mod, MP_QSTR_update_sketch_knobs);
+    mp_obj_t path = mp_obj_new_str(filename, strlen(filename));
+    mp_call_function_1(fn, path);
+#else
+    (void)filename;
+#endif
+}
+
+void mp_factory_reset_hook(void) {
+#if defined(AMYBOARD)
+    mp_sched_schedule(MP_OBJ_FROM_PTR(&tulip_factory_reset_obj), mp_const_none);
+#endif
+}
+
 void mp_file_transfer_done_hook(const char *filename) {
 #if defined(AMYBOARD)
     if (filename == NULL || filename[0] == '\0') {
@@ -304,7 +329,7 @@ void mp_file_transfer_done_hook(const char *filename) {
     if (slash != NULL && slash[1] != '\0') {
         leaf = slash + 1;
     }
-    if (strcmp(leaf, "environment.tar") == 0) {
+    if (strcmp(leaf, "sketch.py") == 0) {
         mp_sched_schedule(MP_OBJ_FROM_PTR(&tulip_environment_transfer_done_obj), mp_const_none);
     }
 #else
@@ -323,6 +348,8 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.amy_external_fread_hook = mp_fread_hook;
     amy_config.amy_external_fwrite_hook = mp_fwrite_hook;
     amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
+    amy_config.amy_external_factory_reset_hook = mp_factory_reset_hook;
+    amy_config.amy_external_update_file_hook = mp_update_file_hook;
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     amy_config.audio = AMY_AUDIO_IS_I2S;

@@ -234,6 +234,20 @@ def _parse_tags(raw: Any) -> list[str]:
     return out
 
 
+def _validate_amyboard_sketch_upload(filename: str, contents: bytes) -> str:
+    clean_name = (filename or "").strip()
+    if not clean_name.lower().endswith(".py"):
+        raise HTTPException(status_code=400, detail="File must be a .py")
+    env_name = clean_name[:-3]
+    if not ENV_NAME_RE.match(env_name):
+        raise HTTPException(status_code=400, detail="Environment name must be 1-20 chars: A-Z, a-z, 0-9, -, _")
+    if len(contents) < 1:
+        raise HTTPException(status_code=400, detail="Empty upload")
+    if len(contents) > MAX_FILE_BYTES:
+        raise HTTPException(status_code=413, detail=f"File too large (max {MAX_FILE_BYTES} bytes)")
+    return clean_name
+
+
 def _validate_amyboard_upload(filename: str, contents: bytes) -> str:
     clean_name = (filename or "").strip()
     if not clean_name.lower().endswith(".tar"):
@@ -517,15 +531,18 @@ async def upload_amyboard_environment(
     contents = await file.read()
     raw_filename = (file.filename or "").strip()
 
-    # Accept both .tar (environment) and .patch (single patch) uploads.
-    if raw_filename.lower().endswith(".patch"):
+    # Accept .py (sketch), .tar (legacy environment), and .patch (legacy) uploads.
+    if raw_filename.lower().endswith(".py"):
+        filename = _validate_amyboard_sketch_upload(raw_filename, contents)
+        upload_item_type = "environment"
+    elif raw_filename.lower().endswith(".patch"):
         filename = _validate_amyboard_patch_upload(raw_filename, contents)
         upload_item_type = "patch"
     elif raw_filename.lower().endswith(".tar"):
         filename = _validate_amyboard_upload(raw_filename, contents)
         upload_item_type = "environment"
     else:
-        raise HTTPException(status_code=400, detail="File must be a .tar or .patch")
+        raise HTTPException(status_code=400, detail="File must be a .py, .tar, or .patch")
 
     item_id = _insert_file_row(
         "environments",

@@ -10,6 +10,7 @@ else:
     if board()=="AMYBOARD":
         import amyboard
         amyboard.mount_sd()
+        edit = amyboard.edit
 
 if board()=="WEB" or board()=="AMYBOARD_WEB":
     def webnyi():
