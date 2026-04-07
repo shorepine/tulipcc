@@ -49,7 +49,7 @@ var editor = null;
 var treeView = null;
 var editor_shown = false;
 var amy_audioin_toggle = false;
-var editor_height = 200;
+var editor_height = 300;
 var term = null;
 var cv_1_voltage = 0;
 var cv_2_voltage = 0;
@@ -3169,15 +3169,30 @@ async function _send_text_file_to_amyboard(path, text) {
 
 async function save_amy_state() {
     if (amyboard_mode === 'control') {
-        // Control mode: upload sketch.py with current editor contents.
-        // The hardware hook will inject _auto_generated_knobs from live AMY state and reboot.
+        // Control mode: get live AMY state from hardware via zDZ (state-only dump),
+        // splice it into the editor's current sketch text, then upload to hardware.
+        // This preserves any code edits the user made in the editor.
         if (!editor) return;
-        var sketchText = editor.getValue();
-        if (!sketchText || !sketchText.trim().length) return;
         _show_saving_modal();
+        // Request state-only dump to get fresh knobs.
+        var knobsText = '';
+        try {
+            knobsText = await _request_state_dump();
+        } catch (e) {
+            console.warn('save: state dump failed, saving without fresh knobs', e);
+        }
+        var sketchText = editor.getValue();
+        if (!sketchText || !sketchText.trim().length) {
+            _hide_saving_modal();
+            return;
+        }
+        if (knobsText) {
+            sketchText = splice_knobs_into_sketch(sketchText, knobsText);
+            editor.setValue(sketchText);
+        }
         try {
             await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
-            console.log('save: sketch.py sent to AMYboard, it will inject knobs and reboot');
+            console.log('save: sketch.py sent to AMYboard');
         } catch (e) {
             console.warn('save: sketch upload failed', e);
         }
@@ -3338,6 +3353,28 @@ function sync_knobs_from_hardware() {
     amy_add_log_message('zDZ');
 }
 
+// Request a state-only dump (zDZ) and return the text as a promise.
+var _state_dump_resolve = null;
+var _state_dump_reject = null;
+
+function _request_state_dump() {
+    return new Promise(function(resolve, reject) {
+        _state_dump_resolve = resolve;
+        _state_dump_reject = reject;
+        _sync_stage = 'state_dump';
+        amy_add_log_message('zDZ');
+        setTimeout(function() {
+            if (_state_dump_reject) {
+                var r = _state_dump_reject;
+                _state_dump_resolve = null;
+                _state_dump_reject = null;
+                _sync_stage = null;
+                r(new Error('state dump timeout'));
+            }
+        }, 5000);
+    });
+}
+
 function sync_amy_state() {
     // Single request: zD updates sketch.py with live AMY state on hardware, then sends it.
     _sync_stage = 'pending';
@@ -3373,6 +3410,18 @@ function _handle_sync_sysex_payload(payload) {
         _sync_stage = null;
         console.log('sync: knobs received ' + payload.length + ' bytes');
         apply_zd_dump_to_knobs(payload);
+        return;
+    }
+    if (_sync_stage === 'state_dump') {
+        // State-only dump requested by _request_state_dump (used by Save).
+        _sync_stage = null;
+        console.log('sync: state dump received ' + payload.length + ' bytes');
+        if (_state_dump_resolve) {
+            var r = _state_dump_resolve;
+            _state_dump_resolve = null;
+            _state_dump_reject = null;
+            r(payload);
+        }
         return;
     }
     if (_sync_stage === 'pending') {

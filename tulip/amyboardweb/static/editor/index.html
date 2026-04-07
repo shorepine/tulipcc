@@ -961,11 +961,10 @@
       var mainWorldTab = document.getElementById("world-tab");
       if (mainWorldTab) {
         mainWorldTab.addEventListener("shown.bs.tab", function() {
-          var patchSubTab = document.getElementById("world-patch-tab");
-          if (patchSubTab && patchSubTab.classList.contains("active")) {
-            if (typeof refresh_patch_upload_dropdown === "function") {
-              refresh_patch_upload_dropdown();
-            }
+          // Load environments on first visit to the World tab.
+          if (typeof refresh_amyboard_world_files === "function" &&
+              (!amyboard_world_files || !amyboard_world_files.length)) {
+            refresh_amyboard_world_files();
           }
         });
       }
@@ -1038,7 +1037,7 @@
           <div class="modal-content">
             <div class="modal-body text-center py-4">
               <div class="spinner-border text-danger mb-3" style="width:2.5rem;height:2.5rem;" role="status"></div>
-              <div class="fw-semibold">Saving&hellip;</div>
+              <div class="fw-semibold">Sending to AMYboard&hellip;</div>
             </div>
           </div>
         </div>
@@ -1052,7 +1051,7 @@
               <!-- Spinner (shown while syncing) -->
               <div id="sync-modal-spinner">
                 <div class="spinner-border text-primary mb-3" style="width:2.5rem;height:2.5rem;" role="status"></div>
-                <div class="fw-semibold mb-3">Syncing with AMYboard&hellip;</div>
+                <div class="fw-semibold mb-3">Pulling from AMYboard&hellip;</div>
               </div>
               <!-- Error (shown on timeout) -->
               <div id="sync-modal-error" class="d-none">
@@ -1242,6 +1241,7 @@
               <div class="row mb-4 mt-1 d-none" id="control-run-controls">
                 <div class="col-12">
                   <div class="border rounded bg-light px-3 py-2 d-flex flex-wrap align-items-center gap-2">
+                    <span class="small fw-semibold">Sequencer:</span>
                     <button type="button" class="btn btn-sm btn-success" onclick="control_sequencer_start();">Start</button>
                     <button type="button" class="btn btn-sm btn-danger" onclick="control_sequencer_stop();">Stop</button>
                   </div>

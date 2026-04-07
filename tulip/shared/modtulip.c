@@ -154,7 +154,7 @@ STATIC mp_obj_t tulip_amy_get_synth_commands(size_t n_args, const mp_obj_t *args
     // Make a new list object, append the retrieved (and converted) strings to it.
     mp_obj_t list = mp_obj_new_list(0, NULL);
     do {
-        state = yield_synth_commands(synth, s, MAX_MESSAGE_LEN, state);
+        state = yield_synth_commands(synth, s, MAX_MESSAGE_LEN, true, state);
         int slen = strlen(s);
         if (slen)
             mp_obj_list_append(list, mp_obj_new_str(s, slen));
