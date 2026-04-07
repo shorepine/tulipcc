@@ -307,44 +307,28 @@ function get_wire_commands_for_juno_patch(patch) {
       // Remainder of block assumes osc is set.
       if (!Number.isFinite(event.osc)) continue;
 
-      if (event.filter_freq) {
-        if (Number.isFinite(event.filter_freq[0])) {
-          filter_osc = event.osc;  // Assume we'll see this at least once
-          filterFreq = event.filter_freq[0];
+      if (event.osc == CTL_OSC) {
+        if (event.filter_freq) {
+          if (Number.isFinite(event.filter_freq[0])) {
+            filter_osc = event.osc;  // Assume we'll see this at least once
+            filterFreq = event.filter_freq[0];
+          }
+          if (Number.isFinite(event.filter_freq[1])) {
+            filterKbd = event.filter_freq[1];  // COEF_NOTE
+          }
+          if (Number.isFinite(event.filter_freq[3]) && event.filter_freq[3] > 0) {
+            filterEnv = event.filter_freq[3];  // COEF_EG0, Juno filter env
+          }
+          if (Number.isFinite(event.filter_freq[4]) && event.filter_freq[4] > 0) {
+            filterEnv = event.filter_freq[4];  // COEF_EG1, Juno filter env, gate mode
+            oscGate = 1;
+          }
+          if (Number.isFinite(event.filter_freq[5])) {
+            filterLfo = event.filter_freq[5];  // COEF_MOD
+          }
         }
-        if (Number.isFinite(event.filter_freq[1])) {
-          filterKbd = event.filter_freq[1];  // COEF_NOTE
-        }
-        if (Number.isFinite(event.filter_freq[3]) && event.filter_freq[3] > 0) {
-          filterEnv = event.filter_freq[3];  // COEF_EG0, Juno filter env
-        }
-        if (Number.isFinite(event.filter_freq[4]) && event.filter_freq[4] > 0) {
-          filterEnv = event.filter_freq[4];  // COEF_EG1, Juno filter env, gate mode
-          oscGate = 1;
-        }
-        if (Number.isFinite(event.filter_freq[5])) {
-          filterLfo = event.filter_freq[5];  // COEF_MOD
-        }
-      }
-      if (Number.isFinite(event.resonance)) {
-        resonanceValue = event.resonance;
-      }
-      if (event.osc == mod_source_osc) {
-        // LFO
-        if (event.freq && Number.isFinite(event.freq[0])) {
-          lfoFreq = event.freq[0];
-        }
-        if (event.wave >= 0 && event.wave < 127) {
-          lfoWave = event.wave;
-        }
-        if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
-          lfoDelay = event.eg0_times[0];
-        }
-      } else if (event.osc >= 0) {
-        // Non-LFO osc, don't assume what order they come in.
-        const parsedModSource = Number(event.mod_source);
-        if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
-          mod_source_osc = parsedModSource;  // Should never change the original value.
+        if (Number.isFinite(event.resonance)) {
+          resonanceValue = event.resonance;
         }
         if (event.eg0_times) {
           if (bpTimeIsSet(event.eg0_times[0])) { adsr[0] = event.eg0_times[0]; }   // A time
@@ -362,14 +346,31 @@ function get_wire_commands_for_juno_patch(patch) {
         if (event.eg1_values) {
           if (Number.isFinite(event.eg1_values[1])) { f_adsr[2] = event.eg1_values[1]; }  // S level
         }
+        if (event.amp && Number.isFinite(event.amp[0])) {
+          // CtlOsc only gets vca gain applied to velocity (scales all other oscs).
+          vcaGain = event.amp[0];
+        }
+      } else if (event.osc == mod_source_osc) {
+        // LFO
+        if (event.freq && Number.isFinite(event.freq[0])) {
+          lfoFreq = event.freq[0];
+        }
+        if (event.wave >= 0 && event.wave < 127) {
+          lfoWave = event.wave;
+        }
+        if (event.eg0_times && bpTimeIsSet(event.eg0_times[0])) {
+          lfoDelay = event.eg0_times[0];
+        }
+      } else if (event.osc >= 0) {
+        // Non-CTL, non-LFO osc, don't assume what order they come in.
+        const parsedModSource = Number(event.mod_source);
+        if (Number.isInteger(parsedModSource) && parsedModSource >= 0 && parsedModSource < 64) {
+          mod_source_osc = parsedModSource;  // Should never change the original value.
+        }
         // Extract key parameters for each osc
         if (event.amp) {
-          if (Number.isFinite(event.amp[0]) && event.amp[0] > 0) {
+          if (Number.isFinite(event.amp[0])) {
             osc_gain[event.osc] = event.amp[0];
-          }
-          if (Number.isFinite(event.amp[2]) && event.amp[2] > 0) {
-            // CtlOsc only gets vca gain applied to velocity (scales all other oscs).
-            vcaGain = event.amp[2];
           }
         }
         if (event.freq) {
@@ -394,7 +395,7 @@ function get_wire_commands_for_juno_patch(patch) {
       }
     }
 
-    if (oscGate) {
+    if (oscGate == 1) {
       adsr = [0, 0, 1, 0];
     } else {
       f_adsr = adsr;
@@ -3350,7 +3351,10 @@ function parse_wire_code(message) {
       throw new Error("Unknown expecting " + expecting);
     }
   }
-  // Special-case handling of bp0, bp1
+  // Special-case handling of eg/bp0 and 1
+  // Accept eg0/1 as aliases of bp0/1, but normalize here.
+  if ("eg0" in result) {result["bp0"] = result["eg0"]; delete result["eg0"]; }
+  if ("eg1" in result) {result["bp1"] = result["eg1"]; delete result["eg1"]; }
   for (const [field, timefield, valfield] of [["bp0", "eg0_times", "eg0_values"], ["bp1", "eg1_times", "eg1_values"]]) {
     if (field in result) {
       result[timefield] = result[field].filter((element, index) => {return index % 2 === 0;});
