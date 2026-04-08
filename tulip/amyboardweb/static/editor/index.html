@@ -902,6 +902,8 @@
       // The modal buttons call select_mode() which reloads the page with ?mode=X.
       if (_detected_mode === null) {
         show_mode_modal();
+        // Don't proceed further — wait for user to pick a mode.
+        // The modal buttons reload the page with ?mode=X.
       } else if (amyboard_mode === 'simulate') {
         mp = await loadMicroPython({
           stdout: stdoutWriter,
@@ -1143,6 +1145,9 @@
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="send-tab" data-bs-toggle="tab" data-bs-target="#send-pane" type="button" role="tab" aria-controls="send-pane" aria-selected="false">Send to my AMYboard</button>
               </li>
+              <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="simulate-controls-li" role="presentation">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="reset_amyboard();">Clear</button>
+              </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="amyboard-controls-li" role="presentation">
                 <span class="small text-muted fw-semibold">Your AMYboard:</span>
                 <button type="button" class="btn btn-danger btn-sm" id="save-state-btn" onclick="save_amy_state();"><span id="save-btn-label">Save To</span></button>
@@ -1248,6 +1253,7 @@
               <div class="row mb-4 mt-1" id="run-controls">
                 <div class="col-12">
                   <div class="border rounded bg-light px-3 py-2 d-flex flex-wrap align-items-center gap-2">
+                    <span class="small fw-semibold">Sequencer:</span>
                     <button
                       type="button"
                       title="Start environment"
@@ -1264,14 +1270,6 @@
                       class="btn btn-sm btn-danger"
                       onclick="stop_current_environment()"
                     >Stop</button>
-                    <button
-                      type="button"
-                      title="Clear current environment"
-                      data-toggle="tooltip"
-                      data-placement="top"
-                      class="btn btn-sm btn-outline-danger"
-                      onclick="clear_current_environment_from_default()"
-                    >Clear</button>
                   </div>
                 </div>
               </div>
@@ -1625,7 +1623,7 @@
 
     <script>
       // On keypress or click anywhere, start audio worklet
-      document.body.addEventListener('click', start_audio, true); 
+      document.body.addEventListener('click', start_audio, true);
       document.body.addEventListener('keydown', start_audio, true); 
   
       let scrollpos = window.scrollY;
@@ -2320,6 +2318,7 @@
           });
 
           qwerty.keyDown = function(note, freq) {
+            if (!audio_started && amyboard_mode !== 'control') return;
             const midi = noteToMidi(note);
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;

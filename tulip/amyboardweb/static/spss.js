@@ -573,15 +573,17 @@ async function sync_channel_knobs_from_synth_to_ui(channel) {
   window.suppress_knob_cc_send = true;
   try {
     let lastError = null;
-    for (let attempt = 0; attempt < 24; attempt += 1) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       // AMY applies queued wire messages asynchronously; keep retrying briefly during startup.
-      await new Promise(function(resolve) { setTimeout(resolve, attempt === 0 ? 20 : 40); });
+      await new Promise(function(resolve) { setTimeout(resolve, attempt === 0 ? 50 : 200); });
       try {
         set_knobs_from_synth(synth);
         window.refresh_knobs_for_channel();
         return true;
       } catch (e) {
         lastError = e;
+        // If the synth has no voices, don't keep retrying — it won't appear.
+        if (e && e.message && e.message.indexOf('No synth commands') !== -1) break;
       }
     }
     if (lastError) {
@@ -703,7 +705,8 @@ window.clear_current_channel_patch = async function() {
   } else {
     reset_global_effects();
     send_all_knob_cc_mappings(synth);
-    await sync_channel_knobs_from_synth_to_ui(synth);
+    // Don't sync knobs — K257 is a queued delta that needs a render cycle.
+    // Knobs are reset to defaults which is correct for Clear.
   }
   if (typeof window.set_section_disabled === "function") {
     window.set_section_disabled("Osc A", false);
@@ -3048,9 +3051,13 @@ function switch_amyboard_mode() {
 // Show the mode selection modal (called if no URL param and no cookie)
 function show_mode_modal() {
     var modalEl = document.getElementById('modeSelectionModal');
-    if (modalEl) {
+    if (modalEl && window.bootstrap) {
         var modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: 'static', keyboard: false });
         modal.show();
+    } else {
+        // Fallback if Bootstrap not loaded yet — redirect to simulate mode.
+        console.warn('show_mode_modal: bootstrap or modal not available, defaulting to simulate');
+        window.location.href = window.location.pathname + '?mode=simulate';
     }
 }
 
@@ -3066,6 +3073,9 @@ function apply_mode_ui() {
     // "Your AMYboard" controls: control mode only.
     var amyboardControls = document.getElementById('amyboard-controls-li');
     if (amyboardControls) { if (isControl) amyboardControls.classList.remove('d-none'); else amyboardControls.classList.add('d-none'); }
+    // Simulate controls: simulate mode only.
+    var simulateControls = document.getElementById('simulate-controls-li');
+    if (simulateControls) { if (!isControl) simulateControls.classList.remove('d-none'); else simulateControls.classList.add('d-none'); }
     // Run controls: simulate has start/stop/clear, control has start/stop (sequencer via MIDI).
     var runControls = document.getElementById('run-controls');
     if (runControls) runControls.style.display = isControl ? 'none' : '';
@@ -3089,12 +3099,12 @@ function apply_mode_ui() {
     if (modeSwitchBtn) modeSwitchBtn.parentElement.style.display = isControl ? 'none' : '';
     var portWarning = document.getElementById('amyboard-port-warning');
     if (portWarning) portWarning.style.display = isControl ? 'none' : '';
-    // Send to AMYboard: hidden in both modes (Save replaces it in control mode).
+    // Send to AMYboard: hidden in both modes.
     var sendTab = document.getElementById('send-tab');
-    if (sendTab) sendTab.parentElement.style.display = 'none';
-    // Upgrade Firmware: only in control mode.
+    if (sendTab) sendTab.parentElement.classList.add('d-none');
+    // Upgrade Firmware: control mode only.
     var upgradeTab = document.getElementById('upgrade-tab');
-    if (upgradeTab) upgradeTab.parentElement.style.display = isControl ? '' : 'none';
+    if (upgradeTab) { if (isControl) upgradeTab.parentElement.classList.remove('d-none'); else upgradeTab.parentElement.classList.add('d-none'); }
     // AMYboard World: hide Patches sub-tab bar, only show Environments
     var worldSubTabs = document.getElementById('world-sub-tabs');
     if (worldSubTabs) worldSubTabs.style.display = 'none';
@@ -3351,15 +3361,30 @@ function sync_modal_retry() {
 }
 
 async function reset_amyboard() {
-    if (amyboard_mode !== 'control') return;
-    _show_saving_modal();
-    // Send factory reset command — hardware writes default sketch.py and restarts.
-    amy_add_log_message('zRZ');
-    console.log('reset: zR sent, waiting for restart...');
-    await sleep_ms(1000);
-    _hide_saving_modal();
-    // Pull fresh state (zA + zD).
-    sync_amy_state();
+    if (amyboard_mode === 'control') {
+        _show_saving_modal();
+        amy_add_log_message('zRZ');
+        console.log('reset: zR sent, waiting for restart...');
+        await sleep_ms(1000);
+        _hide_saving_modal();
+        sync_amy_state();
+    } else {
+        // Simulate mode: write default sketch, restart.
+        if (mp) {
+            ensure_current_environment_layout(false);
+            mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', DEFAULT_SKETCH_SOURCE);
+            sync_persistent_fs();
+            try {
+                await mp.runPythonAsync("import amyboard; amyboard.restart_sketch()");
+            } catch (e) {}
+            // Don't sync knobs here — AMY needs a render cycle to process the
+            // K257 delta. Knobs will be at defaults which is correct for a reset.
+            if (editor) {
+                editor.setValue(DEFAULT_SKETCH_SOURCE);
+                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+            }
+        }
+    }
 }
 
 // Promise-based sync that resolves when both sketch + state are received.
@@ -3614,8 +3639,9 @@ async function start_amyboard() {
     } catch (e) {
       // sketch.py may not exist or may fail — that's OK.
     }
-    // Sync knobs from AMY state to UI for the current channel.
-    await sync_channel_knobs_from_synth_to_ui(window.current_synth);
+    // Sync knobs from AMY state to UI once audio starts (AMY only processes
+    // deltas during render, so the synth doesn't exist until first click).
+    // We skip here and let start_audio handle it.
     // Load sketch.py into the editor.
     if (editor) {
       try {
