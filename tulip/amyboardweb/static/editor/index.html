@@ -1067,8 +1067,9 @@
               </div>
               <!-- Try Again (shown on error) -->
               <button type="button" class="btn btn-primary btn-sm d-none mb-2" id="sync-modal-retry-btn" onclick="sync_modal_retry();">Try again</button>
-              <div>
+              <div class="d-flex gap-2 justify-content-center">
                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="switch_amyboard_mode();">Switch to Simulate</button>
+                <button type="button" class="btn btn-outline-warning btn-sm" onclick="dismiss_sync_modal_and_upgrade();">Upgrade Firmware</button>
               </div>
             </div>
           </div>
@@ -1136,20 +1137,17 @@
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#world-pane" type="button" role="tab" aria-controls="world-pane" aria-selected="false">AMYboard World</button>
               </li>
-              <li class="nav-item d-flex align-items-center ms-2" role="presentation">
-                <button type="button" class="btn btn-danger btn-sm" id="save-state-btn" onclick="save_amy_state();"><span id="save-btn-label">Save</span></button>
-              </li>
-              <li class="nav-item d-flex align-items-center ms-2" role="presentation">
-                <button type="button" class="btn btn-primary btn-sm" id="sync-state-btn" onclick="sync_amy_state();"><span id="sync-btn-label">Sync</span></button>
-              </li>
-              <li class="nav-item d-flex align-items-center ms-2 d-none" id="reset-state-li" role="presentation">
-                <button type="button" class="btn btn-outline-danger btn-sm" id="reset-state-btn" onclick="reset_amyboard();">Reset</button>
-              </li>
-              <li class="nav-item ms-auto" role="presentation">
-                <button class="nav-link" id="send-tab" data-bs-toggle="tab" data-bs-target="#send-pane" type="button" role="tab" aria-controls="send-pane" aria-selected="false">Send to my AMYboard</button>
-              </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="send-tab" data-bs-toggle="tab" data-bs-target="#send-pane" type="button" role="tab" aria-controls="send-pane" aria-selected="false">Send to my AMYboard</button>
+              </li>
+              <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="amyboard-controls-li" role="presentation">
+                <span class="small text-muted fw-semibold">Your AMYboard:</span>
+                <button type="button" class="btn btn-danger btn-sm" id="save-state-btn" onclick="save_amy_state();"><span id="save-btn-label">Save To</span></button>
+                <button type="button" class="btn btn-dark btn-sm" id="sync-state-btn" onclick="sync_amy_state();"><span id="sync-btn-label">Pull From</span></button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="reset-state-btn" onclick="reset_amyboard();">Reset</button>
               </li>
             </ul>
           </div>
@@ -1185,7 +1183,7 @@
                       </div>
                     </div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center ms-md-2">
-                      <button class="btn btn-light btn-sm rounded-0" type="button" id="patch-open-load-modal-btn">Load Preset</button>
+                      <button class="btn btn-sm text-white" type="button" id="patch-open-load-modal-btn" style="background-color:#2e7d32;">Load Preset</button>
                     </div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0">
                       <div class="d-flex gap-2">
@@ -1955,31 +1953,28 @@
               if (typeof amy_send === "function") {
                 var isDX7Preset = patch >= 128;
                 if (isDX7Preset) {
-                  amy_send({synth: presetSynth, num_voices: 6, oscs_per_voice: 8}, true);
+                  // Use K (patch_number) to load the DX7 preset — AMY applies all
+                  // wire commands internally in one call, avoiding sysex races.
+                  amy_send({synth: presetSynth, num_voices: 6, patch: patch}, true);
                 } else {
                   amy_send({synth: presetSynth, num_voices: 6, patch: 257}, true);
                 }
-                if (typeof reset_global_effects === "function") { reset_global_effects(); }
+                // In control mode, skip reset_global_effects — it floods sysex with
+                // default knob values that race with the K command via sysex_message_copy.
+                if (amyboard_mode !== 'control' && typeof reset_global_effects === "function") { reset_global_effects(); }
                 if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
                   var presetWireCommands = get_wire_commands_for_juno_patch(patch);
                   for (var wi = 0; wi < presetWireCommands.length; wi++) {
                     amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
                   }
-                } else if (isDX7Preset && Array.isArray(window.patch_code_for_patch_number)) {
-                  var dx7Code = window.patch_code_for_patch_number[patch] || "";
-                  var dx7Parts = dx7Code.split("Z");
-                  for (var di = 0; di < dx7Parts.length; di++) {
-                    var part = dx7Parts[di].trim();
-                    if (part) {
-                      amy_add_log_message("i" + presetSynth + part + "Z");
-                    }
-                  }
+                } else if (isDX7Preset) {
                   // Apply VCF coda so analog filter controls work with DX7
-                  if (typeof amy_send === "function") {
-                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
-                  }
+                  amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
                 }
-                if (typeof send_all_knob_cc_mappings === "function") {
+                // In control mode, skip sending knob CC mappings — they race with the
+                // patch load over sysex and can overwrite the K command. The hardware
+                // doesn't need them; knob state is read back via sync_knobs_from_hardware.
+                if (amyboard_mode !== 'control' && typeof send_all_knob_cc_mappings === "function") {
                   send_all_knob_cc_mappings(presetSynth);
                 }
               }
@@ -2004,17 +1999,17 @@
           if (loadJunoPresetButton && junoPresetsSelect) {
             loadJunoPresetButton.addEventListener("click", function() {
               handlePresetLoad(junoPresetsSelect);
-              // In control mode, refresh knobs from hardware state after preset load.
-              if (amyboard_mode === 'control' && typeof sync_knobs_from_hardware === 'function') {
-                setTimeout(sync_knobs_from_hardware, 300);
+              // In control mode, do a full Pull to update both knobs and code editor.
+              if (amyboard_mode === 'control' && typeof sync_amy_state === 'function') {
+                setTimeout(sync_amy_state, 500);
               }
             });
           }
           if (loadDx7PresetButton && dx7PresetsSelect) {
             loadDx7PresetButton.addEventListener("click", function() {
               handlePresetLoad(dx7PresetsSelect);
-              if (amyboard_mode === 'control' && typeof sync_knobs_from_hardware === 'function') {
-                setTimeout(sync_knobs_from_hardware, 300);
+              if (amyboard_mode === 'control' && typeof sync_amy_state === 'function') {
+                setTimeout(sync_amy_state, 500);
               }
             });
           }

@@ -695,13 +695,14 @@ window.clear_current_channel_patch = async function() {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
-  reset_global_effects();
   amy_add_log_message("i" + synth + "ic255Z");
   amy_add_log_message("i" + synth + "K257iv6Z");
-  send_all_knob_cc_mappings(synth);
   if (amyboard_mode === 'control') {
-    setTimeout(sync_knobs_from_hardware, 300);
+    // Pull after a delay to get fresh state (skip effects/CC flood — sysex race).
+    setTimeout(sync_amy_state, 500);
   } else {
+    reset_global_effects();
+    send_all_knob_cc_mappings(synth);
     await sync_channel_knobs_from_synth_to_ui(synth);
   }
   if (typeof window.set_section_disabled === "function") {
@@ -2416,7 +2417,10 @@ async function import_amyboard_world_file(index) {
 
         var sketchText = await response.text();
         if (amyboard_mode === 'control') {
-            // Control mode: transfer sketch to hardware, restart, then pull.
+            // Control mode: transfer sketch to hardware as-is (it has its own knobs).
+            // The hardware restart_sketch will apply the knobs from the file.
+            // Then fetch the file back for the editor via zD (no zA — don't overwrite
+            // the downloaded sketch's knobs with stale AMY state).
             _show_saving_modal();
             try {
                 await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
@@ -2425,7 +2429,15 @@ async function import_amyboard_world_file(index) {
                 console.warn('import: sketch upload to AMYboard failed', e);
             }
             _hide_saving_modal();
-            sync_amy_state();
+            // Fetch the file back + set knobs from it (no zA needed).
+            _sync_stage = 'pending';
+            _show_syncing_modal();
+            if (_sync_timeout) clearTimeout(_sync_timeout);
+            _sync_timeout = setTimeout(function() {
+                _sync_timeout = null;
+                if (_sync_stage !== null) { _sync_stage = null; _show_syncing_modal_error(); }
+            }, 5000);
+            amy_add_log_message('zD/user/current/sketch.pyZ');
         } else {
             // Simulate mode: write to local FS and restart.
             if (editor) editor.setValue(sketchText);
@@ -2500,7 +2512,8 @@ async function load_world_environment_by_name(username, envName) {
 
         var sketchText = await dlResponse.text();
         if (amyboard_mode === 'control') {
-            // Control mode: transfer sketch to hardware, restart, then pull.
+            // Control mode: transfer sketch as-is (has its own knobs), restart,
+            // then fetch back via zD (no zA — preserve the file's knobs).
             _show_saving_modal();
             try {
                 await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
@@ -2509,7 +2522,14 @@ async function load_world_environment_by_name(username, envName) {
                 console.warn('load_world: sketch upload to AMYboard failed', e);
             }
             _hide_saving_modal();
-            sync_amy_state();
+            _sync_stage = 'pending';
+            _show_syncing_modal();
+            if (_sync_timeout) clearTimeout(_sync_timeout);
+            _sync_timeout = setTimeout(function() {
+                _sync_timeout = null;
+                if (_sync_stage !== null) { _sync_stage = null; _show_syncing_modal_error(); }
+            }, 5000);
+            amy_add_log_message('zD/user/current/sketch.pyZ');
         } else {
             // Simulate mode: write to local FS and restart.
             if (editor) editor.setValue(sketchText);
@@ -2710,11 +2730,23 @@ async function upload_current_environment() {
         uploadButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Uploading...';
     }
 
-    // In control mode, pull fresh sketch + live AMY state from hardware,
-    // then splice the live state into the sketch before uploading.
+    // In control mode: Pull (zA + zD) to get sketch.py with fresh knobs from
+    // hardware. Then splice those fresh knobs into the editor's text (which may
+    // have code edits). This avoids zT which would restart the sketch and
+    // overwrite the live AMY state with stale editor knobs.
     if (amyboard_mode === 'control') {
         try {
             await sync_amy_state_async();
+            // _last_sketch_text has the hardware's sketch with fresh knobs.
+            // Extract fresh knobs and splice into the editor's code.
+            if (_last_sketch_text) {
+                var freshKnobs = extract_knobs_from_sketch(_last_sketch_text);
+                if (freshKnobs && editor) {
+                    var editorText = editor.getValue();
+                    var spliced = splice_knobs_into_sketch(editorText, freshKnobs);
+                    editor.setValue(spliced);
+                }
+            }
         } catch (e) {
             show_alert("Could not pull from AMYboard before upload.");
             if (uploadButton) { uploadButton.disabled = false; uploadButton.textContent = "Upload"; }
@@ -3031,14 +3063,9 @@ function apply_mode_ui() {
         if (isControl && _last_sketch_text === null) syncSketchBtn.classList.remove('d-none');
         else syncSketchBtn.classList.add('d-none');
     }
-    // Reset button: control mode only.
-    var resetLi = document.getElementById('reset-state-li');
-    if (resetLi) { if (isControl) resetLi.classList.remove('d-none'); else resetLi.classList.add('d-none'); }
-    // Rename Save/Sync buttons for control mode.
-    var saveLabel = document.getElementById('save-btn-label');
-    if (saveLabel) saveLabel.textContent = isControl ? 'Save to AMYboard' : 'Save';
-    var syncLabel = document.getElementById('sync-btn-label');
-    if (syncLabel) syncLabel.textContent = isControl ? 'Pull from AMYboard' : 'Sync';
+    // "Your AMYboard" controls: control mode only.
+    var amyboardControls = document.getElementById('amyboard-controls-li');
+    if (amyboardControls) { if (isControl) amyboardControls.classList.remove('d-none'); else amyboardControls.classList.add('d-none'); }
     // Run controls: simulate has start/stop/clear, control has start/stop (sequencer via MIDI).
     var runControls = document.getElementById('run-controls');
     if (runControls) runControls.style.display = isControl ? 'none' : '';
@@ -3169,32 +3196,21 @@ async function _send_text_file_to_amyboard(path, text) {
 
 async function save_amy_state() {
     if (amyboard_mode === 'control') {
-        // Control mode: get live AMY state from hardware via zDZ (state-only dump),
-        // splice it into the editor's current sketch text, then upload to hardware.
-        // This preserves any code edits the user made in the editor.
+        // Control mode: send editor's sketch.py to hardware, then zA to
+        // update the knobs section on disk with the live AMY state.
         if (!editor) return;
-        _show_saving_modal();
-        // Request state-only dump to get fresh knobs.
-        var knobsText = '';
-        try {
-            knobsText = await _request_state_dump();
-        } catch (e) {
-            console.warn('save: state dump failed, saving without fresh knobs', e);
-        }
         var sketchText = editor.getValue();
-        if (!sketchText || !sketchText.trim().length) {
-            _hide_saving_modal();
-            return;
-        }
-        if (knobsText) {
-            sketchText = splice_knobs_into_sketch(sketchText, knobsText);
-            editor.setValue(sketchText);
-        }
+        if (!sketchText || !sketchText.trim().length) return;
+        _show_saving_modal();
         try {
             await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
             console.log('save: sketch.py sent to AMYboard');
+            // Wait for hardware to process the transfer, then update knobs on disk.
+            await sleep_ms(500);
+            amy_add_log_message('zAZ');
+            console.log('save: zA sent to update knobs on disk');
         } catch (e) {
-            console.warn('save: sketch upload failed', e);
+            console.warn('save: failed', e);
         }
         _hide_saving_modal();
     } else {
@@ -3311,6 +3327,17 @@ function _hide_syncing_modal() {
     document.body.style.removeProperty('padding-right');
 }
 
+function dismiss_sync_modal_and_upgrade() {
+    _sync_stage = null;
+    if (_sync_timeout) { clearTimeout(_sync_timeout); _sync_timeout = null; }
+    _hide_syncing_modal();
+    var upgradeTab = document.getElementById('upgrade-tab');
+    if (upgradeTab && window.bootstrap) {
+        var tab = new bootstrap.Tab(upgradeTab);
+        tab.show();
+    }
+}
+
 function sync_modal_retry() {
     // Apply the modal's dropdown selections back to the main dropdowns, then re-sync.
     var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
@@ -3326,12 +3353,12 @@ function sync_modal_retry() {
 async function reset_amyboard() {
     if (amyboard_mode !== 'control') return;
     _show_saving_modal();
-    // Send factory reset command — hardware writes default sketch.py and reboots.
+    // Send factory reset command — hardware writes default sketch.py and restarts.
     amy_add_log_message('zRZ');
-    console.log('reset: zR sent, waiting for reboot...');
-    // Wait for hardware to restart sketch (~1s).
+    console.log('reset: zR sent, waiting for restart...');
     await sleep_ms(1000);
     _hide_saving_modal();
+    // Pull fresh state (zA + zD).
     sync_amy_state();
 }
 
@@ -3347,36 +3374,13 @@ function sync_amy_state_async() {
     });
 }
 
-function sync_knobs_from_hardware() {
-    // Lightweight: just request AMY state dump and apply to knobs. No sketch fetch.
-    _sync_stage = 'knobs';
-    amy_add_log_message('zDZ');
-}
-
-// Request a state-only dump (zDZ) and return the text as a promise.
-var _state_dump_resolve = null;
-var _state_dump_reject = null;
-
-function _request_state_dump() {
-    return new Promise(function(resolve, reject) {
-        _state_dump_resolve = resolve;
-        _state_dump_reject = reject;
-        _sync_stage = 'state_dump';
-        amy_add_log_message('zDZ');
-        setTimeout(function() {
-            if (_state_dump_reject) {
-                var r = _state_dump_reject;
-                _state_dump_resolve = null;
-                _state_dump_reject = null;
-                _sync_stage = null;
-                r(new Error('state dump timeout'));
-            }
-        }, 5000);
-    });
-}
+// ── Control mode: Pull from AMYboard ────────────────────────────────────────
+// Pull = zA (update sketch.py with AMY state on disk) then zD (send it back).
+// The zA runs update_sketch_knobs() on hardware, then zD reads the file.
 
 function sync_amy_state() {
-    // Single request: zD updates sketch.py with live AMY state on hardware, then sends it.
+    // Send zA to update sketch.py on disk with current AMY state,
+    // then zD to get the updated file back.
     _sync_stage = 'pending';
     _show_syncing_modal();
     if (_sync_timeout) clearTimeout(_sync_timeout);
@@ -3388,46 +3392,22 @@ function sync_amy_state() {
             if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('sync timeout')); }
         }
     }, 5000);
-    amy_add_log_message('zD/user/current/sketch.pyZ');
-}
-
-function show_sync_error_dialog() {
-    var msg = 'Could not connect to your AMYboard. Make sure it is plugged in via USB and both MIDI ports are set to AMYboard.';
-    if (typeof show_alert === 'function') {
-        show_alert(msg);
-    } else {
-        alert(msg);
-    }
+    // Step 1: update sketch.py on disk with AMY state.
+    amy_add_log_message('zAZ');
+    // Step 2: after a short delay for zA to complete, request the file.
+    setTimeout(function() {
+        amy_add_log_message('zD/user/current/sketch.pyZ');
+    }, 300);
 }
 
 function _handle_sync_sysex_payload(payload) {
-    // payload is the sketch.py text (with fresh _auto_generated_knobs), base64-decoded.
-    // Cancel the timeout — we got a response.
+    // payload is the sketch.py text, base64-decoded.
     if (_sync_timeout) { clearTimeout(_sync_timeout); _sync_timeout = null; }
 
-    if (_sync_stage === 'knobs') {
-        // Lightweight knob-only sync (state dump, no sketch).
-        _sync_stage = null;
-        console.log('sync: knobs received ' + payload.length + ' bytes');
-        apply_zd_dump_to_knobs(payload);
-        return;
-    }
-    if (_sync_stage === 'state_dump') {
-        // State-only dump requested by _request_state_dump (used by Save).
-        _sync_stage = null;
-        console.log('sync: state dump received ' + payload.length + ' bytes');
-        if (_state_dump_resolve) {
-            var r = _state_dump_resolve;
-            _state_dump_resolve = null;
-            _state_dump_reject = null;
-            r(payload);
-        }
-        return;
-    }
     if (_sync_stage === 'pending') {
         _sync_stage = null;
         _last_sketch_text = payload;
-        console.log('sync: received ' + payload.length + ' bytes');
+        console.log('pull: received ' + payload.length + ' bytes');
         // Set editor content.
         if (editor) {
             editor.setValue(payload);
