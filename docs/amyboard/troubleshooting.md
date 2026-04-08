@@ -6,24 +6,19 @@ Here are solutions to common issues with AMYboard. If you're stuck, reach out to
 
  - [Discord](https://discord.gg/TzBFkUb8pG) -- quickest way to get help from the community
  - [GitHub Issues](https://github.com/shorepine/tulipcc/issues) -- bug reports and feature requests
- - [GitHub Discussions](https://github.com/shorepine/tulipcc/discussions) -- general questions
  - [Makerfabs contact](https://makerfabs.com/contact.html) -- hardware defect / shipping issues
 
 **Please remember**: AMYboard is supported by volunteers. We'll do our best to help, but please be patient and try the steps below first.
 
 ## Always upgrade first
 
-Many issues are fixed in newer firmware. Before troubleshooting, update to the latest release:
-
-1. Check the [releases page](https://github.com/shorepine/tulipcc/releases) for the latest AMYboard firmware
-2. Flash it to your board using `esptool` or `mpremote`
+Many issues are fixed in newer firmware. Before troubleshooting, [update to the latest release](firmware.md).
 
 ## No sound
 
 **Check the basics:**
- - Is the USB-C cable connected? AMYboard needs power.
- - Are headphones or speakers plugged into the **audio out** jack (not audio in)?
- - Try turning the volume up on your headphones/speakers.
+ - Is the USB-C cable, modular power or I2c power connected? AMYboard needs power.
+ - Are cables plugged into the **audio out** jack (not audio in)?
 
 **Check the synth:**
  - Connect via `mpremote resume` and try:
@@ -69,9 +64,7 @@ Many issues are fixed in newer firmware. Before troubleshooting, update to the l
  - On some systems, you may need to grant MIDI access permission.
 
 ### "Send to AMYboard" fails
- - Make sure AMYboard is connected via USB and no other program is using the serial port.
- - Close any `mpremote` sessions before transferring.
- - Try refreshing the page and reconnecting.
+ - Make sure AMYboard is connected via USB or MIDI.
 
 ## MIDI issues
 
@@ -81,19 +74,16 @@ Many issues are fixed in newer firmware. Before troubleshooting, update to the l
    import amyboard
    amyboard.init_midi(type='B')
    ```
- - Add this to your `env.py` to make it permanent.
+ - Add this to your `sketch.py` to make it permanent.
 
 ## Board won't boot / crashes on startup
 
- - Try a "factory reset" by erasing the flash and reflashing:
+ - **Safe mode**: Hold the BOOT button while AMYboard is powering up. This skips running your `sketch.py` and also runs a hardware self-test (audio input, CV in/out). You'll hear a chime if all tests pass. Once it finishes you'll have a normal REPL where you can fix or delete your sketch.
+ - If your `sketch.py` or `boot.py` has a bug, hold BOOT to skip it, then delete it via the REPL or `mpremote`:
    ```bash
-   esptool.py --chip esp32s3 erase_flash
+   mpremote resume fs rm :user/current/sketch.py
    ```
-   Then flash the latest firmware.
- - If your `env.py` or `boot.py` has a bug, it can prevent the board from booting properly. You can delete it via `mpremote`:
-   ```bash
-   mpremote resume fs rm :user/current/env.py
-   ```
+ - Try a full "factory reset" by erasing the flash and reflashing. See our [firmware upgrade page](firmware.md).
 
 ## SD card not mounting
 
@@ -118,4 +108,4 @@ Many issues are fixed in newer firmware. Before troubleshooting, update to the l
  - Check your wiring -- SDA and SCL may be swapped.
  - Make sure pull-up resistors are present on your I2C lines (AMYboard has them built in for the onboard devices).
 
-[Back to Getting Started](index.md)
+[Back to Getting Started](README.md)

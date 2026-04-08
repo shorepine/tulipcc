@@ -1,165 +1,510 @@
 <!doctype html>
-<html class="h-100" lang="en">
-
-  <head>
-      <meta charset="utf-8">
+<html lang="en">
+<head>
+  <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
-  <meta name="description" content="AMYboard. The best synth for $29">
+  <meta name="description" content="AMYboard — the do-it-all synth for US$29.90. Synthesizer, Eurorack module, and audio dev board with MIDI, CV, S/PDIF, Wi-Fi, and MicroPython.">
   <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
-  <meta property="og:title" content="AMYboard. The best synth for $29">
+  <meta property="og:title" content="AMYboard. The do-it-all synth for US$29.90">
   <meta property="og:image" content="https://amyboard.com/img/amyboard_preview.png">
-  <meta property="og:description" content="AMYboard. The best synth for $29">
-
+  <meta property="og:description" content="Synthesizer, Eurorack module, and audio dev board with MIDI, CV, S/PDIF, Wi-Fi, and MicroPython. Ships worldwide.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@shorepinesound">
   <meta name="twitter:creator" content="@shorepinesound">
-  <meta name="twitter:title" content="AMYboard. The best synth for $29">
-  <meta name="twitter:description" content="AMYboard. The best synth for $29">
+  <meta name="twitter:title" content="AMYboard. The do-it-all synth for US$29.90">
+  <meta name="twitter:description" content="Synthesizer, Eurorack module, and audio dev board with MIDI, CV, S/PDIF, Wi-Fi, and MicroPython. Ships worldwide.">
   <meta name="twitter:image" content="https://amyboard.com/img/amyboard_preview.png">
-
   <meta property="og:type" content="product" />
   <meta property="og:url" content="https://amyboard.com/"/>
   <meta property="og:site_name" content="AMYboard"/>
   <meta property="product:price:amount" content="29.90"/>
   <meta property="product:price:currency" content="USD"/>
   <meta property="og:availability" content="instock" />
-
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="96x96" href="img/favicon.png">
   <meta name="author" content="shore pine sound systems">
   <meta name="HandheldFriendly" content="true">
-  <title>AMYboard. Now available</title>
+  <title>AMYboard. The do-it-all synth for US$29.90</title>
   <link rel="stylesheet" href="css/theme.css">
-  <link href="css/prism.css" rel="stylesheet"/>
 
-
-   <style>
-
-/* inter-300 - latin */
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: local(''),
-       url('./fonts/inter-v12-latin-300.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-       url('./fonts/inter-v12-latin-300.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: local(''),
-       url('./fonts/inter-v12-latin-500.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-       url('./fonts/inter-v12-latin-500.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: local(''),
-       url('./fonts/inter-v12-latin-700.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-       url('./fonts/inter-v12-latin-700.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
-}
-
-</style>
   <style>
-    html,
-    body {
-      height: 100%;
-      overflow: hidden;
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 300;
+      font-display: swap;
+      src: url('./fonts/inter-v12-latin-300.woff2') format('woff2'),
+           url('./fonts/inter-v12-latin-300.woff') format('woff');
+    }
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 500;
+      font-display: swap;
+      src: url('./fonts/inter-v12-latin-500.woff2') format('woff2'),
+           url('./fonts/inter-v12-latin-500.woff') format('woff');
+    }
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 700;
+      font-display: swap;
+      src: url('./fonts/inter-v12-latin-700.woff2') format('woff2'),
+           url('./fonts/inter-v12-latin-700.woff') format('woff');
+    }
+    @font-face {
+      font-family: 'Inter';
+      font-style: normal;
+      font-weight: 900;
+      font-display: swap;
+      src: url('./fonts/inter-v12-latin-700.woff2') format('woff2'),
+           url('./fonts/inter-v12-latin-700.woff') format('woff');
     }
 
-    .coming-soon-overlay {
+    html, body {
+      overflow-x: hidden;
+      background: #fff;
+    }
+
+    /* ── LIGHTBOX ── */
+    .lightbox-overlay {
+      display: none;
       position: fixed;
       inset: 0;
-      z-index: 99999;
-      background: rgba(8, 12, 20, 0.92);
-      display: flex;
+      z-index: 9999;
+      background: rgba(0,0,0,0.9);
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      cursor: zoom-out;
+    }
+    .lightbox-overlay.active {
+      display: flex;
+    }
+    .lightbox-overlay img {
+      max-width: 92vw;
+      max-height: 92vh;
+      object-fit: contain;
+      border-radius: 4px;
+      box-shadow: 0 0 40px rgba(0,0,0,0.5);
+    }
+    .photo-strip img,
+    .product-shots img {
+      cursor: zoom-in;
     }
 
-    .coming-soon-card {
-      max-width: 560px;
+    /* ── HERO ── */
+    .hero {
+      position: relative;
       width: 100%;
-      background: #ffffff;
-      color: #0f172a;
-      border-radius: 16px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
-      padding: 28px 24px;
-      text-align: center;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      background: #000;
     }
-
-    .coming-soon-title {
-      font-size: 1.8rem;
+    .hero-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.55;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      padding: 2rem;
+      max-width: 900px;
+      margin-left: 6vw;
+    }
+    .hero-title {
+      font-size: clamp(4rem, 12vw, 10rem);
+      font-weight: 900;
+      line-height: 0.9;
+      letter-spacing: -0.04em;
+      color: #fff;
+      margin: 0;
+    }
+    .hero-sub {
+      font-size: clamp(1.3rem, 3vw, 2.4rem);
+      font-weight: 500;
+      color: #fff;
+      margin-top: 1rem;
+      line-height: 1.2;
+    }
+    .hero-price {
+      color: #FFDD00;
+    }
+    .hero-cta {
+      margin-top: 2.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .btn-loud {
+      display: inline-block;
+      padding: 1rem 2.5rem;
+      font-size: 1.15rem;
       font-weight: 700;
-      margin-bottom: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      border: 3px solid #fff;
+      transition: all 0.15s;
+    }
+    .btn-loud-primary {
+      background: #FFDD00;
+      color: #000;
+      border-color: #FFDD00;
+    }
+    .btn-loud-primary:hover {
+      background: #fff;
+      color: #000;
+      border-color: #fff;
+    }
+    .btn-loud-secondary {
+      background: transparent;
+      color: #fff;
+      border-color: #fff;
+    }
+    .btn-loud-secondary:hover {
+      background: #fff;
+      color: #000;
     }
 
-    .coming-soon-note {
-      margin-bottom: 0;
-      color: #475569;
+    /* ── SECTIONS ── */
+    .section {
+      padding: 6rem 0;
+    }
+    .section-dark {
+      background: #111;
+      color: #fff;
+    }
+    .section-light {
+      background: #fff;
+      color: #111;
+    }
+    #whatis .col-md-4 a,
+    #whatis .col-md-4 a:visited,
+    #whatis .col-md-4 a:hover {
+      color: #FFD700 !important;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .section-accent {
+      background: #FFDD00;
+      color: #000;
+    }
+    .section-title {
+      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 2rem;
+    }
+    .section-title-sm {
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── GET SECTION ── */
+    .get-card {
+      display: block;
+      background: #FFDD00;
+      padding: 3rem;
+      text-decoration: none;
+      color: #000;
+      transition: transform 0.15s, box-shadow 0.15s;
+      border: 3px solid #000;
+    }
+    .get-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 8px 8px 0 #000;
+      color: #000;
+    }
+    .get-card h3 {
+      font-size: 2rem;
+      font-weight: 900;
+      margin: 0 0 0.5rem;
+    }
+    .get-card .price {
+      font-size: 3.5rem;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .get-card p {
+      font-size: 1.1rem;
+      margin-top: 0.75rem;
+      font-weight: 500;
+    }
+
+    /* ── PRODUCT SHOTS ── */
+    .product-shots {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 2.5rem;
+    }
+    .product-shots img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: contain;
+      background: #fff;
+      border: 3px solid #000;
+      padding: 0.75rem;
+    }
+
+    /* ── FEATURES ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+    }
+    .feature-item {
+      border-left: 4px solid #FFDD00;
+      padding: 1.25rem 1.5rem;
+      font-size: 1.15rem;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+    .feature-item a,
+    .feature-item a:visited,
+    .feature-item a:hover {
+      color: #FFD700 !important;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* ── WHAT IT CAN DO ── */
+    .can-do-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+    }
+    .can-do-item {
+      background: #1a1a1a;
+      border: 2px solid #333;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .can-do-item:hover {
+      border-color: #FFDD00;
+      background: #222;
+    }
+    .can-do-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .can-do-desc {
+      font-size: 0.9rem;
+      font-weight: 400;
+      opacity: 0.7;
+      line-height: 1.4;
+    }
+
+    /* ── VIDEO ── */
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      padding-bottom: 56.25%;
+      height: 0;
+    }
+    .video-wrapper iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: 4px solid #FFDD00;
+    }
+
+    /* ── PHOTO STRIP ── */
+    .photo-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 0;
+    }
+    .photo-strip img {
+      width: 100%;
+      height: 300px;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* ── FOOTER ── */
+    .site-footer {
+      background: #000;
+      color: #999;
+      padding: 4rem 0 2rem;
+    }
+    .site-footer a {
+      color: #ccc;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .site-footer a:hover {
+      color: #FFDD00;
+    }
+    .footer-links {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+      margin: 0 0 2rem;
+    }
+    .footer-links li {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .footer-links img {
+      filter: invert(1);
+      opacity: 0.7;
+    }
+    .footer-form input[type="email"] {
+      background: #1a1a1a;
+      border: 2px solid #333;
+      color: #fff;
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      width: 280px;
+      max-width: 100%;
+    }
+    .footer-form input[type="email"]::placeholder {
+      color: #666;
+    }
+    .footer-form button {
+      padding: 0.75rem 2rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: #FFDD00;
+      color: #000;
+      border: 2px solid #FFDD00;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .footer-form button:hover {
+      background: #fff;
+      border-color: #fff;
+    }
+
+    /* ── NAV OVERRIDES ── */
+    .navbar.scrolled {
+      background: rgba(0,0,0,0.92) !important;
+      backdrop-filter: blur(8px);
+    }
+    .navbar {
+      background: transparent !important;
+      transition: background 0.3s;
+    }
+    .navbar .navbar-brand,
+    .navbar .nav-link {
+      color: #fff !important;
+    }
+    .navbar .nav-link:hover {
+      color: #FFDD00 !important;
+    }
+    .navbar .navbar-toggler {
+      border-color: rgba(255,255,255,0.5);
+    }
+    .navbar .navbar-toggler-icon {
+      filter: invert(1);
+    }
+    .navbar .btn-warning {
+      background: #FFDD00 !important;
+      border-color: #FFDD00 !important;
+      color: #000 !important;
+      font-weight: 700;
+    }
+
+    /* ── MOBILE NAV ── */
+    @media (max-width: 991px) {
+      .navbar .navbar-collapse,
+      .navbar .navbar-collapse.collapsing,
+      .navbar .navbar-collapse.show {
+        background: #000 !important;
+        padding: 1rem 1.5rem;
+        margin: 0.5rem -1rem 0;
+        border-radius: 4px;
+      }
+      .navbar .navbar-collapse .nav-link {
+        color: #fff !important;
+        font-size: 1.1rem;
+        padding: 0.6rem 0 !important;
+      }
+      .navbar .navbar-collapse .btn-warning {
+        color: #000 !important;
+      }
+      .navbar .navbar-toggler {
+        border-color: #FFDD00;
+      }
+      .navbar .navbar-toggler-icon {
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='white' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+        filter: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .hero-content {
+        margin-left: 1.5rem;
+        margin-right: 1.5rem;
+      }
+      .section {
+        padding: 4rem 0;
+      }
+      .photo-strip img {
+        height: 200px;
+      }
     }
   </style>
+</head>
 
-  </head>
+<body>
 
-  <body data-bs-spy="scroll" data-bs-target="#navScroll">
-    <div class="coming-soon-overlay" role="dialog" aria-modal="true" aria-label="AMYboard Coming Soon">
-      <div class="coming-soon-card">
-        <h1 class="coming-soon-title">AMYboard is Coming Soon</h1>
-        <p class="mb-3"><a href="/editor/index.html">Try it online</a></p>
-      </div>
-    </div>
-
-    <nav id="navScroll" class="navbar navbar-expand-lg navbar-light fixed-top scrolled" tabindex="0">
+<!-- ── NAV (kept) ── -->
+<nav id="navScroll" class="navbar navbar-expand-lg navbar-dark fixed-top" tabindex="0">
   <div class="container">
     <a class="navbar-brand pe-4 fs-4" href="/">
-
-
-
-
-  <img src="img/amyboard.svg" width=32 height=32 alt="AMYboard logo"/>
-  <span class="ms-1 fw-bolder">AMYboard</span>
-</a>
-
+      <img src="img/amyboard.svg" width=32 height=32 alt="AMYboard logo"/>
+      <span class="ms-1 fw-bolder">AMYboard</span>
+    </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-
-      <li class="nav-item">
-    <a class="nav-link" href="#get" aria-label="Get an AMYboard">
-       <img src="img/amyboard-favicon-jbw.svg" width=24 height=24/>
-      Get an AMYboard
-    </a>
-  </li>
-  
-<li class="nav-item">
-    <a class="nav-link" href="https://github.com/shorepine/amy">
-      <img src="img/github-mark.svg" width=24 height=24/> Github
-    </a>
-  </li>
-  
-<li class="nav-item">
-    <a class="nav-link" href="https://discord.com/invite/TzBFkUb8pG">
-      <img src="img/discord-mark-black.svg" width=24 height=24/> Discord
-    </a>
-  </li>
-
-
-<li class="nav-item">
-    <a class="nav-link" href="https://tulip.computer/">
-      <img src="img/favicon.png" width=24 height=24/> Tulip
-    </a>
-  </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#get">
+            <img src="img/amyboard-favicon-jbw.svg" width=24 height=24 style="filter:invert(1)"/>
+            Get one
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://github.com/shorepine/amy">
+            <img src="img/github-mark.svg" width=24 height=24 style="filter:invert(1)"/> Github
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://discord.com/invite/TzBFkUb8pG">
+            <img src="img/discord-mark-black.svg" width=24 height=24 style="filter:invert(1)"/> Discord
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="https://tulip.computer/">
+            <img src="img/favicon.png" width=24 height=24/> Tulip
+          </a>
+        </li>
       </ul>
       <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
         <li class="nav-item">
@@ -168,374 +513,313 @@
           </a>
         </li>
       </ul>
-
     </div>
-</div>
+  </div>
 </nav>
 
-  <main>
-      <div class="w-100 overflow-hidden bg-gray-100" id="top">
-  
-<div class="container position-relative">
-  <div class="col-12 col-lg-8 mt-0 h-100 position-absolute top-0 end-0 bg-cover" style="background-image: url(img/amyboard_hero.png);">
-    
+<main>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <img src="img/amyboards_moss.jpg" alt="AMYboard" class="hero-img">
+  <div class="hero-content">
+    <h1 class="hero-title">AMYboard</h1>
+    <p class="hero-sub">The do-it-all complete synth for <span class="hero-price">US$29.90</span></p>
+    <div class="hero-cta">
+      <a href="#get" class="btn-loud btn-loud-primary">Get one now</a>
+      <a href="/editor/" class="btn-loud btn-loud-secondary">Try it online</a>
+    </div>
   </div>
+</section>
+
+<!-- ── WHAT'S AN AMYBOARD ── -->
+<section class="section section-light" id="whatis">
+  <div class="container">
+    <h2 class="section-title">What's an AMYboard?</h2>
+    <p style="font-size:1.2rem; font-weight:500; margin-bottom:2rem; opacity:0.85;">
+      It's fully complete audio synthesizer for US$29.90 that can be at least three things:
+    </p>
+    <div class="row g-4" style="margin-top:1.5rem;">
+      <div class="col-md-4">
+        <div style="background:#000; color:#fff; border-radius:12px; padding:2rem; height:100%; display:flex; flex-direction:column;">
+          <h3 style="font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:clamp(1.4rem,2vw,1.7rem); margin-bottom:1rem; color:#FFD700;">🎹 Synthesizer</h3>
+          <p style="font-size:1.1rem; line-height:1.6; flex:1;">A full-featured, ready-to-play synthesizer module with lush 80s polyphonic synthesizer emulation. <A href="/editor">Load shared patches and presets and tweak your synth online.</A></p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div style="background:#000; color:#fff; border-radius:12px; padding:2rem; height:100%; display:flex; flex-direction:column;">
+          <h3 style="font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:clamp(1.4rem,2vw,1.7rem); margin-bottom:1rem; color:#FFD700;">🛠️ Dev Board</h3>
+          <p style="font-size:1.1rem; line-height:1.6; flex:1;">A maxed-out audio development board with full analog and digital IO, support under Arduino and native dev tools, and an out-of-the-box on-device Micropython shell.</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div style="background:#000; color:#fff; border-radius:12px; padding:2rem; height:100%; display:flex; flex-direction:column;">
+          <h3 style="font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:clamp(1.4rem,2vw,1.7rem); margin-bottom:1rem; color:#FFD700;">🎛️ Eurorack</h3>
+          <p style="font-size:1.1rem; line-height:1.6; flex:1;">
+            A 10HP Eurorack module that can be reprogrammed for almost any conceivable modular synth function from oscillators, filters, 
+            and envelopes to nonlinear effects and CV transformations. It's a tenth of the price of similar modules. Get two!</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PHOTO STRIP 1 ── -->
+<div class="photo-strip">
+  <img src="img/amyboard_front_moss.jpg" alt="AMYboard jacks on moss">
+  <img src="img/amyboard_back_desk.jpg" alt="AMYboard PCB detail">
+  <img src="img/amyboard_modular.jpg" alt="AMYboard modular setup">
+  <img src="img/amyboard_accessories_back.jpg" alt="AMYboard with accessories">
+</div>
+
+<!-- ── GET AN AMYBOARD ── -->
+<section class="section section-accent" id="get">
+  <div class="container">
+    <h2 class="section-title">Get an AMYboard</h2>
     <div class="row">
-
-        <div class="col-lg-7 py-vh-6 position-relative">
-          <h1 class="display-1 fw-bold mt-5"><span style="background-color: white">AMYboard</span></h1>
-          <p class="lead"><span style="background-color: white">An affordable synth</span></p>
-          <a href="#get" class="btn btn-success btn-xl shadow me-3 rounded-0 mt-5">Get an AMYboard for only US$29</a><br/>
-          <a href="/editor/" class="btn btn-warning btn-xl shadow me-3 rounded-0 mt-2">Use AMYboard online</a>
-
-        </div>
+      <div class="col-md-8 col-lg-6">
+        <a href="https://www.makerfabs.com/amyboard.html" class="get-card" target="_blank" rel="noopener">
+          <h3>AMYboard</h3>
+          <div class="price">$29.90</div>
+          <p>Ships worldwide from Makerfabs. Order now.</p>
+          <p style="font-size:0.75rem; opacity:0.7; max-width:500px; margin:0.5rem 0 0; text-align:left;">Please note: Makerfabs ships in batches. When a batch sells out they make more on demand with a lead time of usually a couple of weeks. As of March 2026 we're <strong>IN STOCK</strong> of a batch but dwindling!</p>
+        </a>
+      </div>
     </div>
-</div>
+    <div class="product-shots">
+      <img src="img/amyboard-1.jpg" alt="AMYboard top view">
+      <img src="img/amyboard-3.jpg" alt="AMYboard with jacks">
+      <img src="img/amyboard-7.jpg" alt="AMYboard front panel">
+    </div>
+    <a href="https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/README.md" class="btn-loud btn-loud-primary" style="margin-top:2.5rem; display:inline-block; border-color:#000; color:#000;">Get started with your new AMYboard</a>
+  </div>
+</section>
 
-</div>
-
-
-
-<div class="py-vh-5 w-100 overflow-hidden" id="more">
+<!-- ── FEATURES ── -->
+<section class="section section-dark" id="features">
   <div class="container">
-    <div class="row d-flex">
-        <div class="col-lg-8" data-aos="fade-down"><h2 class="display-6">AMYboard is a thing that ....</h2></div>
-    </div>
-    <div class="row">
-      <img src="img/amyboard_preview.png"/>
-    </div>
-
-    <div class="row d-flex align-items-top py-vh-3">
-
-      <div class="col-md-6 col-lg-3 py-vh-2 " data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Thing 1</span>
-        <p class="border-top border-dark">Description 1</p>
-      </div>
-
-      <div class="col-md-6 col-lg-3 py-vh-2 " data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Thing 2</span>
-        <p class="border-top border-dark">asdads</p>
-      </div>
-
-      <div class="col-md-6 col-lg-3 py-vh-2" data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Completely open source and cheap as possible</span>
-        <p class="border-top border-dark">You're paying the cost of the parts and manufacturing for your US$29 AMYboard, with a tiny fee added on to support future development</p>
-      </div>
+    <h2 class="section-title">What you get</h2>
+    <div class="feature-grid">
+      <div class="feature-item"><a href="https://github.com/shorepine/tulipcc/tree/main/docs/pcbs/amyboard">Open source hardware</a> synth with ports and jacks, and an acrylic front panel for optionally mounting in a Eurorack case</div>
+      <div class="feature-item">Online <a href="/editor/">patch and code editor</a> to transfer to your AMYboard. including <a href="/editor/#world">AMYboard World</a> for sharing patches and code</div>
+      <div class="feature-item">Nearly perfect recreation of classic analog synths with presets</div>
+      <div class="feature-item">Fully controllable FM synthesis</div>
+      <div class="feature-item">Audio input, effects and sampler</div>
+      <div class="feature-item">PCM and wavetable playback</div>
+      <div class="feature-item">MicroSD card slot</div>
+      <div class="feature-item">Wi-Fi for communicating online or to other AMYboards</div>
+      <div class="feature-item">Make your own synths and music in Python or Arduino code</div>
+      <div class="feature-item">S/PDIF digital audio in and out</div>
+      <div class="feature-item">Switchable line or 10vpp modular audio in and out</div>
+      <div class="feature-item">Two CV in and out jacks</div>
+      <div class="feature-item">MIDI in and out (Type A or B switchable)</div>
+      <div class="feature-item">I2C port for <a href="https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/accessories.md">DIY accessories</a></div>
+      <div class="feature-item">Ships with Micropython firmware, compatible with our <a href="/editor/">online editor</a>, or use <a href="https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/accessories.md">Arduino</a> or your own firmware</div>
     </div>
   </div>
+</section>
+
+<!-- ── PHOTO STRIP ── -->
+<div class="photo-strip">
+  <img src="img/amyboard_modular.jpg" alt="AMYboard in Eurorack">
+  <img src="img/amyboard_moss.jpg" alt="AMYboard on moss">
+  <img src="img/two_amyboards.jpg" alt="Two AMYboards">
+  <img src="img/amyboard_panels.jpg" alt="AMYboard panels">
 </div>
 
-<div class="position-relative overflow-hidden w-100 bg-light" id="gallery">
-  <div class="container-fluid">
-  <div class="row overflow-hidden">
-    <div class="col-12">
-      <div class="row vw-50 px-0 py-vh-5 d-flex align-items-center">
-        <div class="col-md-4" data-aos="fade-up">
-            <img src="img/tulip-shop-1.jpg" class="rounded shadow img-fluid" alt="nice gallery image">
-        </div>
-
-        <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
-            <img src="img/tulip-shop-3.jpg" class="img-fluid rounded shadow" alt="nice gallery image">
-        </div>
-
-        <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
-            <img src="img/tulip-shop-5.jpg" class="img-fluid rounded shadow" alt="nice gallery image">
-        </div>
-      </div>
-    </div>
-   </div>
- </div>
-
-</div>
-
-<div class="py-vh-5 w-100 overflow-hidden" id="more">
+<!-- ── HEAR IT ── -->
+<section class="section section-light" id="hear">
   <div class="container">
-    <div class="row d-flex">
-        <div class="col-lg-8" data-aos="fade-down"><h2 class="display-6">AMYboard is....</h2></div>
-    </div>
-    <div class="row">
-      <img src="img/tulipcc-voices.jpeg"/>
-    </div>
-
-    <div class="row d-flex align-items-top py-vh-3">
-
-      <div class="col-md-6 col-lg-3  py-vh-2" data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Synthesizer</span>
-        <p class="border-top border-dark"><A HREF="https://github.com/shorepine/amy">AMY</A>, supports up to 120 oscillators, stereo sound, filters, reverb, chorus, FM, PCM samples (baked in or loaded from a file), and comes with a Python library for managing voices and patches for polyphony and multitimbral operation. <A href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md">You can write all your patches, music or interactions with other synths in pure Python.</A></p>
-        <p><a href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md" class="btn btn-info">Make music in code on AMYboard</a></p>
-
-
-      </div>
-
-      <div class="col-md-6 col-lg-3 py-vh-2" data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Thing 2</span>
-        <p class="border-top border-dark">xxxxx </p>
-        <p><a href="https://github.com/shorepine/tulipcc/blob/main/docs/tulip_api.md" class="btn btn-info">Check out the XXXX API</a></p>
-      </div>
-
-      <div class="col-md-6 col-lg-3 py-vh-2" data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Thing 3</span>
-        <p class="border-top border-dark">TXXXX</p>
-        <p><a href="https://github.com/shorepine/tulipcc/blob/main/docs/getting_started.md" class="btn btn-info">Getting Started on a XX</a></p>
-
-      </div>    
+    <h2 class="section-title">Hear it in action</h2>
+    <div class="video-wrapper">
+      <iframe src="https://www.youtube.com/embed/1lYFjQp7Xrw?si=FaSXGabzvbs0BGeF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
   </div>
-</div>
+</section>
 
-<div class="py-vh-1 w-100 overflow-hidden">
+<!-- ── WHAT IT CAN DO ── -->
+<section class="section section-dark" id="cando">
   <div class="container">
-      <div class="row d-flex justify-content-center">
-    <h2 class="display-6">Write your music in Python. <a href="https://github.com/shorepine/tulipcc/blob/main/docs/music.md">See more</a></h2>
-  </div>
-    <div class="row d">
-      <pre><code class="language-python"> 
-# Play a random note of an F minor 7 chord. 
-# Beat syncs with other running music programs
-import synth, music, random, sequencer
-
-chord = music.Chord("F:min7").midinotes()
-synth = synth.PatchSynth(1) # single note polyphony
-synth.program_change(143) # DX7 BASS 2 patch
-
-# Play random note every quarter note
-seq = sequencer.Sequence(4, 8) 
-for i in range(8):
-    seq.add(i, syn.note_on, [random.choice(chord), 0.6])
-      </code></pre>
+    <h2 class="section-title">What it can do</h2>
+    <p style="font-size:1.2rem; font-weight:500; margin-bottom:2rem; opacity:0.85;">Try out some examples on <a href="/editor/" style="color:#FFDD00; text-decoration:underline; text-underline-offset:3px;">AMYboard online</a>, and send them to your AMYboard in seconds!</p>
+    <div class="can-do-grid">
+      <a href="/editor/?env=acid_generator&user=shorepine&tab=patch" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Generative Acid patch (303 + 808)</span>
+        <span class="can-do-desc">We set up a TB303 and 808 and play a generative pattern. Twiddle the knobs!!</span>
+      </a>
+      <a href="/editor/?env=woodpiano&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">A custom 4-op FM synth</span>
+        <span class="can-do-desc">We set up a custom ALGO patch in Python modeled after the infamous WOOD PIANO preset.</span>
+      </a>
+      <a href="/editor/?env=methodical_mid&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Play a MIDI file</span>
+        <span class="can-do-desc">We load a MIDI file from disk and play it with a synth patch.</span>
+      </a>
+      <a href="/editor/?env=spacey&user=shorepine&tab=patch" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">A spacey synth patch</span>
+        <span class="can-do-desc">Global effects (echo, reverb) on top of a slow envelope over PWM.</span>
+      </a>
+      <a href="/editor/?env=cvfilter&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Control your filters with CV input</span>
+        <span class="can-do-desc">We use the AMY CtrlCoef EXT0 to have CV input modulate the filter frequency.</span>
+      </a>
+      <a href="/editor/?env=audiopassthru&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Convert between SPDIF and analog audio</span>
+        <span class="can-do-desc">Set up AMY to pass AUDIO_IN to AUDIO_OUT so that S/PDIF outputs over analog line-out, and vice versa.</span>
+      </a>
+      <a href="/editor/?env=midi2cv&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">MIDI controller to CV</span>
+        <span class="can-do-desc">We set up a callback to get MIDI controller data and output scaled CV values.</span>
+      </a>
+      <a href="/editor/?env=dx7filt&user=shorepine&tab=patch" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">DX7 setup with filter and reverb</span>
+        <span class="can-do-desc">Try setting the MIDI CC for VCF freq!</span>
+      </a>
+      <a href="/editor/?env=arp&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Arpeggiator</span>
+        <span class="can-do-desc">Uses MIDI input callbacks and the AMY sequencer to set up an arpeggiator</span>
+      </a>
+      <a href="/editor/?env=audiopassthru&user=shorepine&tab=patch" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Echo / reverb on live audio</span>
+        <span class="can-do-desc">Shows how to use AUDIO_IN to add effects on live audio. Turn on "allow audio input" on the web and move the effects!</span>
+      </a>
+      <a href="/editor/?env=chords&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Chord computer</span>
+        <span class="can-do-desc">Plays chords based on a root note.</span>
+      </a>
+      <a href="/editor/?env=wavfile&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Load a wav file into a sampler</span>
+        <span class="can-do-desc">Loads a WAVE file from disk (can also be SD card) and plays it back as a sampler.</span>
+      </a>
+      <a href="/editor/?env=xanadu&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Xanadu</span>
+        <span class="can-do-desc">Joseph Kung's "Xanadu" for Csound, ported to AMY commands in code.</span>
+      </a>
+      <a href="/editor/?env=wavetable&user=shorepine&tab=patch" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Wavetable patch</span>
+        <span class="can-do-desc">Uses our WAVETABLE oscillator type to play wavetable synthesis.</span>
+      </a>
+      <a href="/editor/?env=patchselector&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Patch Selector on OLED</span>
+        <span class="can-do-desc">Our built in patch selector, use the rotary encoder to select different saved patches, press to select.</span>
+      </a>
+      <a href="/editor/?env=preset_selector&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Preset Selector</span>
+        <span class="can-do-desc">Sets up the rotary encoder to cycle through all 257 AMYboard presets.</span>
+      </a>
+      <a href="/editor/?env=piano&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Additive-synthesis piano</span>
+        <span class="can-do-desc">Uses the AMY dpwe piano patch, fully synthesized from partial analysis.</span>
+      </a>
+      <a href="/editor/?env=house_generator&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Generative House</span>
+        <span class="can-do-desc">A generative house track with 808 drums, Wood Piano bassline, and piano chords over evolving progressions.</span>
+      </a>
+      <a href="/editor/?env=universal_hair&user=shorepine&tab=code" class="can-do-item" style="text-decoration:none; color:#fff;">
+        <span class="can-do-title">Evolving Chords</span>
+        <span class="can-do-desc">Lush evolving chord progressions with layered synths and generative voice leading.</span>
+      </a>
     </div>
+    <a href="https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/README.md" class="btn-loud btn-loud-primary" style="margin-top:2.5rem; display:inline-block;">Get started with your new AMYboard</a>
   </div>
+</section>
+
+<!-- ── PHOTO STRIP 2 ── -->
+<div class="photo-strip">
+  <img src="img/amyboard_outside.jpg" alt="AMYboard outside">
+  <img src="img/amyboard_back_moss.jpg" alt="AMYboard back">
+  <img src="img/amyboard_front_desk.jpg" alt="AMYboard on desk">
+  <img src="img/amyboard_box.jpg" alt="AMYboard in box">
 </div>
 
-<div class="container py-vh-3 border-top" data-aos="fade" data-aos-delay="200">
-  <div class="row d-flex justify-content-center">
-    <h2 class="display-6">How does it sound? Check it out:</h2>
-  </div>
-  <div class="row d-flex justify-content-center">
+</main>
 
-
-        <iframe width="700" height="540" src="https://www.youtube.com/embed/1lYFjQp7Xrw?si=FaSXGabzvbs0BGeF" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-
-  </div>
-</div>
-
-
-
-<div class="py-vh-2 w-100 overflow-hidden" id="more">
+<!-- ── FOOTER ── -->
+<footer class="site-footer">
   <div class="container">
-    <div class="row d-flex">
-        <div class="col-lg-10" data-aos="fade-down"><h2 class="display-6">Make multichannel sound installations with an optional Alles speaker, or 30</h2></div>
-    </div>
-    <div class="row">
-      <img src="img/nicoboard-alles.jpg"/>
-    </div>
+    <ul class="footer-links">
+      <li>
+        <img src="img/github-mark.svg" width=20 height=20/>
+        <a href="https://github.com/shorepine/amy">Github</a>
+      </li>
+      <li>
+        <img src="img/discord-mark-black.svg" width=20 height=20/>
+        <a href="https://discord.com/invite/TzBFkUb8pG">Discord</a>
+      </li>
+      <li>
+        <img src="img/instagram-seeklogo.svg" width=20 height=20/>
+        <a href="https://instagram.com/shorepinesound">Instagram</a>
+      </li>
+      <li>
+        <a href="mailto:brian@variogram.com">Email us</a>
+      </li>
+      <li>
+        <a href="https://tulip.computer/">Tulip Creative Computer</a>
+      </li>
+    </ul>
 
-    <div class="row d-flex align-items-top py-vh-3">
+    <h3 style="color:#fff; font-weight:700; font-size:1.2rem; margin-bottom:1rem;">Stay in the loop</h3>
+    <p style="margin-bottom:1rem;">Very rare updates about AMYboard, Tulip, AMY, and what we're building next.</p>
+    <form class="footer-form js-cm-form" id="subForm" action="https://www.createsend.com/t/subscribeerror?description=" method="post" data-id="191722FC90141D02184CB1B62AB3DC2675654653F2206D9D3DFDDFF93FE33CA318B9F25CD29BC4D6DF178F98DE91C79343FC6537030C0474A872D9DDB02E0FE8" style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+      <input autocomplete="Email" aria-label="Email" class="js-cm-email-input qa-input-email" id="fieldEmail" maxlength="200" name="cm-trwtdh-trwtdh" required="" placeholder="your@email.com" type="email">
+      <button type="submit">Subscribe</button>
+    </form>
+    <script type="text/javascript" src="https://js.createsend1.com/javascript/copypastesubscribeformlogic.js"></script>
 
-      <div class="col-md-6 col-lg-6  py-vh-2" data-aos="fade-up" data-aos-delay="200">
-        <span class="h5 fw-lighter">Alles</span>
-        <p class="border-top border-dark">xxx</p>
-        <p><a href="https://notes.variogram.com/2022/09/23/alles-amy/" class="btn btn-info">Read more about Alles</a></p>
-
-
-      </div>
-    </div>
+    <p style="margin-top:3rem; font-size:0.85rem;">
+      <img src="img/shorepine.svg" width=18 height=18 style="filter:invert(1); opacity:0.5; vertical-align:middle;"/>
+      shore pine sound systems
+    </p>
   </div>
-</div>
-
-
-
-<div class="py-vh-4 w-100 overflow-hidden" id="get">
-  <div class="container">
-        <div class="row d-flex justify-content-center">
-          <h2 class="display-6">Buy a AMYboard. Ships anywhere in the world.</h2>
-        </div>
-
-        <div class="alert alert-secondary" role="alert">
-          <strong>January 2026:</strong> Makerfabs are now shipping AMYboards from the <strong>first batch</strong>. They will continue to produce AMYboards in batches, so order now to get your AMYboard as soon as possible! Please contact <A HREF="https://www.makerfabs.com/contact.html">Makerfabs</A> with any questions about your order or timing!
-      </div>
-    <div class="row vw-100 px-0 py-vh-1  align-items-top">
-
-        <div class=" col-md-8 col-lg-4" >
-          <a href="https://www.makerfabs.com/the-tulip-creative-computer.html">
-            <img src="img/tulip-shop-3.jpg" style="width:400px; height: 400px; object-fit:cover" class="card-img-top" alt="Tulip Creative Computer"></a>
-          <div class="card-body py-vh-2">
-            <h5 class="card-title">AMYboard</h5>
-            <p class="card-text">AMYboard... .. getting Started Page</a>.</p>
-            <a href="https://www.makerfabs.com/the-tulip-creative-computer.html" class="btn btn-success">US$29.90 on Makerfabs</a>
-          </div>
-        </div>
-        <div class=" col-md-8 col-lg-4" >
-          <a href="https://www.makerfabs.com/the-tulip-creative-computer.html"><img src="img/tulip-shop-3.jpg" style="width:400px; height: 400px; object-fit:cover" class="card-img-top" alt="Tulip Creative Computer"></a>
-          <div class="card-body py-vh-2">
-            <h5 class="card-title">Tulip</h5>
-            <p class="card-text">The Tulip ... getting Started Page</a>.</p>
-            <a href="https://www.makerfabs.com/the-tulip-creative-computer.html" class="btn btn-success">US$59.90 on Makerfabs</a>
-          </div>
-        </div>
-
-
-      </div>
-  </div>
-</div>
-</div>
-
-<div class="position-relative overflow-hidden w-100 bg-light">
-  <div class="container-fluid">
-  <div class="row overflow-hidden">
-    <div class="col-8">
-      <div class="row vw-100 px-0 py-vh-2 d-flex align-items-center">
-        <div class="col-md-4" data-aos="fade-up">
-            <img src="img/tulipcc-digitakt.jpeg" class="rounded shadow img-fluid" alt="nice gallery image">
-        </div>
-
-        <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
-            <img src="img/tulipcc-repl.jpeg" class="img-fluid rounded shadow" alt="nice gallery image">
-        </div>
-
-        <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
-            <img src="img/tulipcc-editor.jpeg" class="img-fluid rounded shadow" alt="nice gallery image">
-        </div>
-      </div>
-
-      <div class="row vw-100 px-0 py-vh-2 d-flex align-items-center">
-        <div class="col-md-4" data-aos="fade-up">
-            <img src="img/nicoboard-alles.jpg" class="rounded shadow img-fluid" alt="nice gallery image">
-        </div>
-
-        <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
-            <img src="img/tulipcc-writing.jpeg" class="rounded shadow img-fluid" alt="nice gallery image">
-        </div>
-
-        <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
-            <img src="img/tulipcc-waves.jpeg" class="rounded shadow img-fluid" alt="nice gallery image">
-        </div>
-
-      </div>
-    </div>
-   </div>
- </div>
-
-</div>
-
-
-<div class="small py-vh-3 w-100 overflow-hidden" id="involved">
-  <div class="container">
-
-    <div class="row d-flex justify-content-center">
-    <div class="col-8 col-lg-8 text-center">
-      <h3 class="fs-2 fw-light">Get involved</h3>
-    </div>
-
-    
-    <div class="row">
-
-      <div class="col-md-6 py-vh-3 col-lg-6 border-end" data-aos="fade-up">
-        <div class="d-flex">
-          <div class="col-md-3 flex-fill pt-3 pe-3 pe-md-0">
-            <a href="https://discord.com/invite/TzBFkUb8pG"><img src="img/discord-mark-black.svg" width=42 height=42></a>
-          </div>
-          <div class="col-md-6 flex-fill">
-            <a href="https://discord.com/invite/TzBFkUb8pG"><h3 class="h5 my-2">Discord</h3></a>
-            <p>Join the <strong>shore pine sound systems</strong> Discord to chat about AMYboard, Tulip, and AMY. A fun small community of people experimenting with AMYboard.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-6 col-lg-6 py-vh-3" data-aos="fade-up" data-aos-delay="200">
-        <div class="d-flex">
-          <div class="col-md-3 flex-fill pt-3 pt-3 pe-3 pe-md-0">
-            <a href="https://github.com/shorepine/amy"><img src="img/github-mark.svg" width=42 height=42/></a>
-          </div>
-          <div class="col-md-6 flex-fill">
-             <a href="https://github.com/shorepine/amy"><h3 class="h5 my-2">Github</h3></a>
-            <p>Check out the AMY Github page for issues, discussions and the code.</p>
-          </div>
-        </div>
-      </div>
-
-
-    </div>
-  </div>
-</div>
-
-<div class="container py-vh-3 border-top" data-aos="fade" data-aos-delay="200">
-  <div class="row d-flex justify-content-center">
-    <div class="col-12 col-lg-8 text-center">
-      <h3 class="fs-2 fw-light">Join our email list</h3>
-      <p>We'll send you <strong>very rare</strong> updates about Tulip, Alles, AMY and other projects we're working on.</p>
-    </h3></div>
-    <div class="col-12 col-lg-8 text-center">
-      <div class="row">
-        <div class="grouped-inputs border bg-light p-2">
-  <div class="row">
-    <div class="col">
-
-<div><form class="js-cm-form  form-floating" id="subForm" action="https://www.createsend.com/t/subscribeerror?description=" method="post" data-id="191722FC90141D02184CB1B62AB3DC2675654653F2206D9D3DFDDFF93FE33CA318B9F25CD29BC4D6DF178F98DE91C79343FC6537030C0474A872D9DDB02E0FE8"><div><div><input autocomplete="Email" aria-label="Email" class="h5 my-3 js-cm-email-input qa-input-email" id="fieldEmail" maxlength="200" name="cm-trwtdh-trwtdh" required="" placeholder="email@address" type="email"></div></div><button type="submit" class="btn btn-success btn-xl shadow me-3 rounded-0 my-5">Subscribe</button></form></div><script type="text/javascript" src="https://js.createsend1.com/javascript/copypastesubscribeformlogic.js"></script>
-
-  </div>
-</div>
-
-
-    </main>
-
-    <footer>
-  <div class="container small border-top">
-    <div class="row py-5 d-flex justify-content-between">
-
-<div class="col-12 col-lg-6 col-xl-3 border-end p-5">
-    <img src="img/shorepine.svg" width=24 height=24/>
-  <address class="text-secondary mt-3">
-    <strong>shore pine sound systems
-  </address>
-  <ul class="nav flex-column">
-    <li class="nav-item">
-      <a class="nav-link link-secondary ps-0" aria-current="page" href="https://github.com/shorepine">Github</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link link-secondary ps-0" href="https://discord.com/invite/TzBFkUb8pG">Discord</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link link-secondary ps-0" href="https://instagram.com/shorepinesound">Instagram</a>
-    </li>
-    <li class="nav-item">
-      <a class="nav-link link-secondary ps-0" href="mailto:brian@variogram.com">Email</a>
-    </li>
-  </ul>
-</div>
-
 </footer>
+
+<div class="lightbox-overlay" id="lightbox">
+  <img src="" alt="">
+</div>
 
 <script src="js/bootstrap.bundle.min.js"></script>
 <script src="js/aos.js"></script>
-<script src="js/prism.js"></script>
 
- <script>
- AOS.init({
-   duration: 800, // values from 0 to 3000, with step 50ms
- });
- </script>
+<script>
+  AOS.init({ duration: 800 });
 
- <script>
-  let scrollpos = window.scrollY
-  const header = document.querySelector(".navbar")
-  const header_height = header.offsetHeight
+  const header = document.querySelector(".navbar");
+  const hero = document.querySelector(".hero");
+  function updateNav() {
+    const threshold = hero ? hero.getBoundingClientRect().bottom : 80;
+    if (threshold <= header.offsetHeight) {
+      header.classList.add("scrolled", "shadow-sm");
+    } else {
+      header.classList.remove("scrolled", "shadow-sm");
+    }
+  }
+  window.addEventListener('scroll', updateNav);
+  updateNav();
 
-//  const add_class_on_scroll = () => header.classList.add("scrolled", "shadow-sm")
-//  const remove_class_on_scroll = () => header.classList.remove("scrolled", "shadow-sm")
+  // Close mobile nav on tap outside or link tap
+  const navCollapse = document.getElementById('navbarSupportedContent');
+  const bsCollapse = bootstrap.Collapse.getOrCreateInstance(navCollapse, {toggle: false});
+  navCollapse.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => { if (navCollapse.classList.contains('show')) bsCollapse.hide(); });
+  });
+  document.addEventListener('click', (e) => {
+    if (navCollapse.classList.contains('show') && !e.target.closest('.navbar')) {
+      bsCollapse.hide();
+    }
+  });
 
-  window.addEventListener('scroll', function() {
-    scrollpos = window.scrollY;
-
-    if (scrollpos >= header_height) { add_class_on_scroll() }
-    else { remove_class_on_scroll() }
-
-    console.log(scrollpos)
-  })
-
-
-
+  // Lightbox
+  const lb = document.getElementById('lightbox');
+  const lbImg = lb.querySelector('img');
+  document.querySelectorAll('.photo-strip img, .product-shots img').forEach(img => {
+    img.addEventListener('click', () => {
+      lbImg.src = img.src;
+      lbImg.alt = img.alt;
+      lb.classList.add('active');
+    });
+  });
+  lb.addEventListener('click', () => lb.classList.remove('active'));
 </script>
 
-  </body>
+</body>
 </html>

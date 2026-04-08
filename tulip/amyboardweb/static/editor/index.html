@@ -3,40 +3,52 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
-    <meta name="description" content="AMYboard. The best synth for $29">
+    <meta name="description" content="AMYboard Online Editor — create, tweak, and share synth patches and Python code for AMYboard right in your browser.">
     <link rel="apple-touch-icon" sizes="180x180" href="/img/apple-touch-icon.png">
-    <meta property="og:title" content="AMYboard. The best synth for $29">
-    <meta property="og:image" content="https://amyboard.com/img/amyboard_preview.png">
-    <meta property="og:description" content="AMYboard. The best synth for $29">
+    <meta property="og:title" content="AMYboard Online Editor">
+    <meta property="og:image" content="https://amyboard.com/img/amyboard_editor_preview.png">
+    <meta property="og:description" content="Create, tweak, and share synth patches and Python code for AMYboard right in your browser. Send to your board in seconds.">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:site" content="@shorepinesound">
     <meta name="twitter:creator" content="@shorepinesound">
-    <meta name="twitter:title" content="AMYboard. The best synth for $29">
-    <meta name="twitter:description" content="AMYboard. The best synth for $29">
-    <meta name="twitter:image" content="https://amyboard.com/img/amyboard_preview.png">
-    <meta property="og:type" content="product" />
-    <meta property="og:url" content="https://amyboard.com/" />
+    <meta name="twitter:title" content="AMYboard Online Editor">
+    <meta name="twitter:description" content="Create, tweak, and share synth patches and Python code for AMYboard right in your browser. Send to your board in seconds.">
+    <meta name="twitter:image" content="https://amyboard.com/img/amyboard_editor_preview.png">
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://amyboard.com/editor/" />
     <meta property="og:site_name" content="AMYboard" />
-    <meta property="product:price:amount" content="29.90" />
-    <meta property="product:price:currency" content="USD" />
-    <meta property="og:availability" content="instock" />
     <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
     <link rel="icon" type="image/png" sizes="96x96" href="img/favicon.png">
     <meta name="author" content="shore pine sound systems">
     <meta name="HandheldFriendly" content="true">
-    <title>AMYboard. Now available</title>
+    <title>AMYboard Online Editor</title>
     <base href="/">
     <link rel="stylesheet" href="css/theme.css">
     <link href="css/prism.css" rel="stylesheet" />
     <link rel="stylesheet" href="/css/all.css" id="treejs_styles">
     <link rel="stylesheet" href="amyrepl.css">
+    <link rel="stylesheet" href="xterm.css" />
+    <script src="xterm.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.48.4/codemirror.min.css" />
     <script src="tree.js"></script>
     <link rel="stylesheet" href="treejs.css" id="treejs_styles">
-    <!-- These filenames are replaced by the build system -->
-    <script src="AMYBOARDMJS" type="module"></script>
-    <script type="text/javascript" id="amy_js_include" src="AMYJS"></script>
+    <!-- These filenames are replaced by the build system.
+         In control mode we skip loading AMY WASM and MicroPython. -->
+    <script>
+      (function() {
+        var params = new URLSearchParams(window.location.search);
+        var urlMode = params.get('mode');
+        if (!urlMode) {
+          var cookie = document.cookie.split('; ').find(function(c) { return c.startsWith('amyboard_mode='); });
+          if (cookie) urlMode = cookie.split('=')[1];
+        }
+        if (urlMode === 'simulate') {
+          document.write('<script src="AMYBOARDMJS" type="module"><\/script>');
+          document.write('<script type="text/javascript" id="amy_js_include" src="AMYJS"><\/script>');
+        }
+      })();
+    </script>
 
     <script src="editor_knobs.js"></script>
     <script src="./mini-coi.js" scope="./"></script>
@@ -51,7 +63,7 @@
     <script type="text/javascript" src="amy_api.generated.js"></script>
     <script type="text/javascript" src="amy_parameters.js"></script>
     <script>
-      window.AMYBOARD_WORLD_API_BASE = "https://tulipcc-production.up.railway.app";
+      window.AMYBOARD_WORLD_API_BASE = "https://api-production-4bfd.up.railway.app";
     </script>
     <script type="text/javascript" src="spss.js"></script>
 
@@ -361,6 +373,51 @@
         display: block;
       }
 
+      .encoder-widget {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .encoder-arrow {
+        background: none;
+        border: 1px solid #666;
+        border-radius: 8px;
+        color: #ccc;
+        cursor: pointer;
+        padding: 6px;
+        line-height: 0;
+        transition: background 0.1s, color 0.1s;
+      }
+      .encoder-arrow:hover {
+        background: #333;
+        color: #fff;
+      }
+      .encoder-arrow:active {
+        background: #555;
+      }
+      .encoder-push {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        border: 2px solid #888;
+        background: #222;
+        color: #ccc;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.1s, border-color 0.1s;
+      }
+      .encoder-push:hover {
+        border-color: #aaa;
+      }
+      .encoder-push:active, .encoder-push.pressed {
+        background: #555;
+        border-color: #fff;
+      }
+
       @media (min-width: 800px) {
         .knob-col {
           flex: 0 0 8.333%;
@@ -432,39 +489,6 @@
         font-size: 0.85rem;
       }
 
-      .settings-wrap {
-        max-width: 760px;
-      }
-
-      .settings-list {
-        background: linear-gradient(180deg, #f9fafb 0%, #f2f4f7 100%);
-        border: 1px solid #dde2e7;
-        border-radius: 12px;
-        padding: 0.5rem;
-      }
-
-      .settings-item {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 0.65rem 0.75rem;
-        border-radius: 10px;
-        background: #ffffff;
-        border: 1px solid #e7ebef;
-      }
-
-      .settings-item + .settings-item {
-        margin-top: 0.45rem;
-      }
-
-      .settings-item .form-check-input {
-        margin-top: 0;
-      }
-
-      .settings-item .form-check-label {
-        color: #1f2937;
-        font-weight: 500;
-      }
 
       .knob-value {
         font-size: 0.62rem;
@@ -500,16 +524,18 @@
       }
 
       @media (max-width: 799px) {
-        .patch-layout-header,
-        .patch-layout-body {
-          grid-template-columns: 1fr;
-          gap: 10px;
-        }
-        .patch-global-title,
-        .patch-global-panel,
-        .patch-channel-panel,
-        .patch-toolbar {
-          grid-column: 1;
+        .patch-global-panel::before {
+          content: "Effects";
+          display: block;
+          background: #1f2937;
+          border-radius: 12px;
+          color: #fff;
+          font-size: 0.75rem;
+          letter-spacing: 0.12em;
+          font-weight: 700;
+          text-align: center;
+          padding: 6px 10px;
+          margin-bottom: 10px;
         }
         .knob-col-spacer {
           display: none;
@@ -530,7 +556,8 @@
 
       .patch-layout-header {
         display: grid;
-        grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+        grid-template-columns: 1fr;
+        gap: 10px;
         align-items: stretch;
       }
 
@@ -539,40 +566,58 @@
         border-radius: 12px;
         padding: 6px 6px;
         margin: 0;
-        grid-column: 1;
       }
 
       .patch-global-title {
-        grid-column: 3;
+        display: none;
         background: #1f2937;
         border-radius: 12px;
         color: #fff;
         font-size: 0.75rem;
         letter-spacing: 0.12em;
         font-weight: 700;
-        display: flex;
         align-items: center;
         justify-content: center;
       }
 
       .patch-layout-body {
         display: grid;
-        grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+        grid-template-columns: 1fr;
+        gap: 10px;
         align-items: start;
       }
 
       .patch-channel-panel {
-        grid-column: 1;
         background: linear-gradient(145deg, #e0ebe7 0%, #c8dbd5 100%);
         border-radius: 14px;
         padding: 12px;
       }
 
       .patch-global-panel {
-        grid-column: 3;
         background: linear-gradient(145deg, #f5f7fb 0%, #dce5ef 100%);
         border-radius: 14px;
         padding: 12px;
+      }
+
+      @media (min-width: 800px) {
+        .patch-layout-header,
+        .patch-layout-body {
+          grid-template-columns: minmax(0, 3fr) 20px minmax(220px, 1fr);
+          gap: 0;
+        }
+        .patch-toolbar {
+          grid-column: 1;
+        }
+        .patch-global-title {
+          display: flex;
+          grid-column: 3;
+        }
+        .patch-channel-panel {
+          grid-column: 1;
+        }
+        .patch-global-panel {
+          grid-column: 3;
+        }
       }
 
       .patch-select-group .patch-init-btn {
@@ -651,67 +696,253 @@
         color: #839496;
         background-color: #002b36;
       }
+
+      /* Push content below fixed navbar */
+      body {
+        padding-top: 70px;
+      }
+
+      /* ── NAV OVERRIDES (match marketing site) ── */
+      .navbar.scrolled {
+        background: rgba(0,0,0,0.92) !important;
+        backdrop-filter: blur(8px);
+      }
+      .navbar {
+        background: rgba(0,0,0,0.92) !important;
+        transition: background 0.3s;
+      }
+      .navbar .navbar-brand,
+      .navbar .nav-link {
+        color: #fff !important;
+      }
+      .navbar .nav-link:hover {
+        color: #FFDD00 !important;
+      }
+      .navbar .navbar-toggler {
+        border-color: rgba(255,255,255,0.5);
+      }
+      .navbar .navbar-toggler-icon {
+        filter: invert(1);
+      }
+      .navbar .btn-warning {
+        background: #FFDD00 !important;
+        border-color: #FFDD00 !important;
+        color: #000 !important;
+        font-weight: 700;
+      }
+
+      /* ── MOBILE NAV ── */
+      @media (max-width: 991px) {
+        .navbar .navbar-collapse,
+        .navbar .navbar-collapse.collapsing,
+        .navbar .navbar-collapse.show {
+          background: #000 !important;
+          padding: 1rem 1.5rem;
+          margin: 0.5rem -1rem 0;
+          border-radius: 4px;
+        }
+        .navbar .navbar-collapse .nav-link {
+          color: #fff !important;
+          font-size: 1.1rem;
+          padding: 0.6rem 0 !important;
+        }
+        .navbar .navbar-collapse .btn-warning {
+          color: #000 !important;
+        }
+        .navbar .navbar-toggler {
+          border-color: #FFDD00;
+        }
+        .navbar .navbar-toggler-icon {
+          background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='white' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+          filter: none;
+        }
+      }
+
+      /* ── FOOTER (match marketing site) ── */
+      .site-footer {
+        background: #000;
+        color: #999;
+        padding: 3rem 0 2rem;
+      }
+      .site-footer a {
+        color: #ccc;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .site-footer a:hover {
+        color: #FFDD00;
+      }
+      .footer-links {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin: 0;
+      }
+      .footer-links li {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .footer-links img {
+        filter: invert(1);
+        opacity: 0.7;
+      }
+      /* Terminal REPL */
+      .repl-summary {
+        cursor: pointer;
+        user-select: none;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #555;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      .repl-summary::-webkit-details-marker { display: none; }
+      details[open] .repl-summary { color: #222; }
+      .repl-summary::before { content: "▶"; font-size: 0.7rem; transition: transform 0.15s; }
+      details[open] .repl-summary::before { transform: rotate(90deg); }
+      .repl-wrap {
+        background: #0f0f0f;
+        border-radius: 6px;
+        padding: 4px 6px;
+        overflow: hidden;
+      }
     </style>
   </head>
 
   <body>
-    <nav id="navScroll" class="navbar navbar-expand-lg navbar-light fixed-top scrolled" tabindex="0">
+    <nav id="navScroll" class="navbar navbar-expand-lg navbar-dark fixed-top scrolled" tabindex="0">
       <div class="container">
-
-
-              <a class="navbar-brand pe-4 fs-4" href="/editor/">
-                          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
-
+        <a class="navbar-brand pe-4 fs-4" href="/editor/">
+          <img src="img/amyboard.svg" width="32" height="32" alt="AMYboard logo" />
           <span class="ms-1 fw-bolder">AMYboard online</span>
-              </a>
-
-
+        </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
-
         <div class="collapse navbar-collapse" id="navbarSupportedContent">
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item">
+              <a class="nav-link" href="/#get">
+                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" style="filter:invert(1)" />
+                Get one
+              </a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link" href="https://github.com/shorepine/amy">
-                <img src="img/github-mark.svg" width="24" height="24" /> Github
+                <img src="img/github-mark.svg" width="24" height="24" style="filter:invert(1)" /> Github
               </a>
             </li>
             <li class="nav-item">
               <a class="nav-link" href="https://discord.com/invite/TzBFkUb8pG">
-                <img src="img/discord-mark-black.svg" width="24" height="24" /> Discord
+                <img src="img/discord-mark-black.svg" width="24" height="24" style="filter:invert(1)" /> Discord
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://tulip.computer/">
+                <img src="img/favicon.png" width="24" height="24" /> Tulip
               </a>
             </li>
           </ul>
           <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
             <li class="nav-item">
-
-                            <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="/">
-                <img src="img/amyboard.svg" width="24" height="24" /> AMYboard
+              <a class="nav-link btn btn-warning btn-xl shadow me-3 rounded-0 mt-2" href="/">
+                <img src="img/amyboard-favicon-jbw.svg" width="24" height="24" /> AMYboard home
               </a>
-
-
             </li>
           </ul>
         </div>
       </div>
     </nav>
 
-
-
     <script type="module">
-      mp = await loadMicroPython({
-        linebuffer: false,
-        pystack: 64 * 1024, 
-        heapsize: 8 * 1024 * 1024
+      // Initialize Terminal REPL (xterm.js)
+      const replTerm = new Terminal({
+        rows: 12,
+        cols: 120,
+        fontSize: 12,
+        theme: { background: '#0f0f0f' }
       });
-      await sleep_ms(50);
-      // Tell MP to start serving a REPL
-      await mp.replInit();
-      await sleep_ms(50);
-      // Start up the AMYboard stuff
-      await start_amyboard();
-      await refresh_amyboard_world_files();
+      replTerm.open(document.getElementById('repl-terminal'));
+      window.replClear = () => replTerm.clear();
+
+      const stdoutWriter = (line) => {
+        // MicroPython sends one char at a time; char 10 is LF — xterm needs CRLF
+        if (line[0] == 10) {
+          replTerm.writeln('');
+        } else {
+          replTerm.write(line);
+        }
+      };
+
+      // Use onData instead of onKey — fires for keypresses AND paste (Cmd+V).
+      // Queue input so async replProcessCharWithAsyncify calls stay in order.
+      const replInputQueue = [];
+      let replProcessing = false;
+      async function drainReplQueue() {
+        if (replProcessing) return;
+        replProcessing = true;
+        while (replInputQueue.length > 0) {
+          await mp.replProcessCharWithAsyncify(replInputQueue.shift());
+        }
+        replProcessing = false;
+      }
+      replTerm.onData(data => {
+        for (let i = 0; i < data.length; i++) {
+          replInputQueue.push(data.charCodeAt(i));
+        }
+        drainReplQueue();
+      });
+
+      // If no mode was detected (no URL param, no cookie), show modal and stop.
+      // The modal buttons call select_mode() which reloads the page with ?mode=X.
+      if (_detected_mode === null) {
+        show_mode_modal();
+        // Don't proceed further — wait for user to pick a mode.
+        // The modal buttons reload the page with ?mode=X.
+      } else if (amyboard_mode === 'simulate') {
+        mp = await loadMicroPython({
+          stdout: stdoutWriter,
+          linebuffer: false,
+          pystack: 64 * 1024,
+          heapsize: 8 * 1024 * 1024
+        });
+        await sleep_ms(50);
+        // Tell MP to start serving a REPL
+        await mp.replInit();
+        await replTerm.clear();
+        await sleep_ms(50);
+        // Start up the AMYboard stuff
+        await start_amyboard();
+        await refresh_amyboard_world_files();
+
+        // Check if URL has env params to auto-load an environment
+        check_url_env_params();
+        apply_mode_ui();
+      } else {
+        // Control mode: sysex routing, MIDI init, no WASM/MicroPython
+        apply_mode_ui();
+        // Set default sketch content in editor (will be replaced by sync).
+        if (editor) {
+          editor.setValue(DEFAULT_SKETCH_SOURCE);
+        }
+        // Auto-sync from hardware once MIDI devices are ready.
+        _on_midi_ready = function() { sync_amy_state(); };
+        await start_midi();
+      }
+
+      // Auto-open a tab if URL has a hash (e.g. #world)
+      if (window.location.hash) {
+        var hashTab = document.getElementById(window.location.hash.substring(1) + "-tab");
+        if (hashTab) {
+          var tab = new bootstrap.Tab(hashTab);
+          tab.show();
+        }
+      }
 
       // Load patches on first visit to the Patches sub-tab.
       var worldPatchTab = document.getElementById("world-patch-tab");
@@ -732,11 +963,10 @@
       var mainWorldTab = document.getElementById("world-tab");
       if (mainWorldTab) {
         mainWorldTab.addEventListener("shown.bs.tab", function() {
-          var patchSubTab = document.getElementById("world-patch-tab");
-          if (patchSubTab && patchSubTab.classList.contains("active")) {
-            if (typeof refresh_patch_upload_dropdown === "function") {
-              refresh_patch_upload_dropdown();
-            }
+          // Load environments on first visit to the World tab.
+          if (typeof refresh_amyboard_world_files === "function" &&
+              (!amyboard_world_files || !amyboard_world_files.length)) {
+            refresh_amyboard_world_files();
           }
         });
       }
@@ -772,7 +1002,82 @@
       }
     </script>
 
-    <main class="container pt-5 mt-5">
+    <main class="container pt-3 pt-md-5 mt-2 mt-md-5">
+      <div class="alert alert-warning alert-dismissible fade show d-block d-md-none text-center mb-3" style="font-size:0.85rem;" role="alert">
+        AMYboard online will work on mobile but you'll have a much better experience in a desktop browser.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close" style="font-size:0.65rem;"></button>
+      </div>
+      <!-- Mode selection modal (shown on first visit if no cookie/URL param) -->
+      <div class="modal fade" id="modeSelectionModal" tabindex="-1" aria-labelledby="modeSelectionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+              <h4 class="modal-title w-100 text-center" id="modeSelectionModalLabel">How would you like to use AMYboard?</h4>
+            </div>
+            <div class="modal-body text-center">
+              <p class="text-muted mb-4">You can change this later at any time.</p>
+              <div class="d-flex justify-content-center gap-3 mb-3">
+                <button type="button" class="btn btn-success btn-lg px-4" onclick="select_mode('simulate');">
+                  Simulate an AMYboard
+                </button>
+                <button type="button" class="btn btn-primary btn-lg px-4" onclick="select_mode('control');">
+                  Control your AMYboard
+                </button>
+              </div>
+              <div class="form-check d-inline-flex align-items-center gap-1">
+                <input class="form-check-input" type="checkbox" id="mode_remember" checked>
+                <label class="form-check-label text-muted small" for="mode_remember">Remember my choice</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saving modal (control mode) -->
+      <div class="modal fade" id="savingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-body text-center py-4">
+              <div class="spinner-border text-danger mb-3" style="width:2.5rem;height:2.5rem;" role="status"></div>
+              <div class="fw-semibold">Sending to AMYboard&hellip;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Syncing modal (control mode) -->
+      <div class="modal fade" id="syncingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+          <div class="modal-content">
+            <div class="modal-body text-center px-4 py-4">
+              <!-- Spinner (shown while syncing) -->
+              <div id="sync-modal-spinner">
+                <div class="spinner-border text-primary mb-3" style="width:2.5rem;height:2.5rem;" role="status"></div>
+                <div class="fw-semibold mb-3">Pulling from AMYboard&hellip;</div>
+              </div>
+              <!-- Error (shown on timeout) -->
+              <div id="sync-modal-error" class="d-none">
+                <div class="text-danger fw-semibold mb-2">Could not connect to AMYboard</div>
+                <p class="text-muted small mb-3">Make sure your AMYboard is connected either by USB (and choose AMYboard for MIDI in and out) or via MIDI interface (connect your computer's MIDI out to AMYboard's MIDI in and vice versa.)</p>
+              </div>
+              <!-- MIDI dropdowns (always visible) -->
+              <div class="text-start mb-3">
+                <label class="form-label small fw-bold mb-1">MIDI In</label>
+                <select id="sync-modal-midi-in" class="form-select form-select-sm mb-2" disabled></select>
+                <label class="form-label small fw-bold mb-1">MIDI Out</label>
+                <select id="sync-modal-midi-out" class="form-select form-select-sm" disabled></select>
+              </div>
+              <!-- Try Again (shown on error) -->
+              <button type="button" class="btn btn-primary btn-sm d-none mb-2" id="sync-modal-retry-btn" onclick="sync_modal_retry();">Try again</button>
+              <div class="d-flex gap-2 justify-content-center">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="switch_amyboard_mode();">Switch to Simulate</button>
+                <button type="button" class="btn btn-outline-warning btn-sm" onclick="dismiss_sync_modal_and_upgrade();">Upgrade Firmware</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card border-0 bg-light shadow-sm mb-3">
         <div class="card-body">
           <form name="amyboard_settings">
@@ -783,23 +1088,38 @@
                   <label class="form-check-label" for="amy_audioin">Allow audio input</label>
                 </div>
               </div>
-              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0" id="midi-input-col">
+              <div class="col-12 col-md-3 align-self-start small mt-2 mt-md-0" id="midi-input-col">
                 <div id="midi-input-panel">
                   <select onchange="setup_midi_devices()" name="midi_input" class="form-select form-select-sm" aria-label=".form-select-sm example">
-                    <option selected>[Not available]</option>
+                    <option selected>MIDI in: [Not available]</option>
                   </select>
                 </div>
               </div>
-              <div class="col-12 col-md-4 align-self-start small mt-2 mt-md-0" id="midi-output-col">
+              <div class="col-12 col-md-3 align-self-start small mt-2 mt-md-0" id="midi-output-col">
                 <div id="midi-output-panel">
                   <select onchange="setup_midi_devices()" name="midi_output" class="form-select form-select-sm" aria-label=".form-select-sm example">
-                    <option selected>[Not available]</option>
+                    <option selected>MIDI out: [Not available]</option>
                   </select>
                 </div>
+              </div>
+              <div class="col-12 col-md-auto small mt-2 mt-md-0 d-none" id="amyboard-port-warning">
+                <div class="d-flex align-items-start gap-2 py-1 px-2 rounded" style="background:#fff3cd;border:1px solid #ffe69c;color:#664d03;">
+                  <span style="display:inline-block;width:8px;height:8px;background:#ffc107;border-radius:50%;margin-top:4px;flex-shrink:0;"></span>
+                  <span style="line-height:1.3;">
+                    Make sure your selected MIDI ports are connected to your AMYboard<br>
+                    (computer IN to AMYboard OUT, and vice versa)
+                  </span>
+                  <button type="button" class="btn-close btn-sm ms-1" aria-label="Dismiss" onclick="dismiss_amyboard_port_warning();" style="font-size:0.65rem;"></button>
+                </div>
+              </div>
+              <div class="col-md-auto align-top small d-flex align-items-center mt-2 mt-md-0">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="mode-switch-btn" onclick="switch_amyboard_mode();">
+                  Switch to Control
+                </button>
               </div>
               <div class="col-12 col-md-8 align-self-start small mt-2 mt-md-0 d-none" id="midi-warning-col">
                 <div class="alert alert-warning py-2 mb-0">
-                  This page can use WebMIDI on <a href="https://caniuse.com/midi" target="_blank">supported browsers</a>. 
+                  This page can use WebMIDI on <a href="https://caniuse.com/midi" target="_blank">supported browsers</a>.
                 </div>
               </div>
             </div>
@@ -817,16 +1137,22 @@
                 <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Code</button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-pane" type="button" role="tab" aria-controls="settings-pane" aria-selected="false">Settings</button>
-              </li>
-              <li class="nav-item" role="presentation">
                 <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#world-pane" type="button" role="tab" aria-controls="world-pane" aria-selected="false">AMYboard World</button>
-              </li>
-              <li class="nav-item ms-auto" role="presentation">
-                <button class="nav-link" id="send-tab" data-bs-toggle="tab" data-bs-target="#send-pane" type="button" role="tab" aria-controls="send-pane" aria-selected="false">Send to my AMYboard</button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="send-tab" data-bs-toggle="tab" data-bs-target="#send-pane" type="button" role="tab" aria-controls="send-pane" aria-selected="false">Send to my AMYboard</button>
+              </li>
+              <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="simulate-controls-li" role="presentation">
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="reset_amyboard();">Clear</button>
+              </li>
+              <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="amyboard-controls-li" role="presentation">
+                <span class="small text-muted fw-semibold">Your AMYboard:</span>
+                <button type="button" class="btn btn-danger btn-sm" id="save-state-btn" onclick="save_amy_state();"><span id="save-btn-label">Save To</span></button>
+                <button type="button" class="btn btn-dark btn-sm" id="sync-state-btn" onclick="sync_amy_state();"><span id="sync-btn-label">Pull From</span></button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="reset-state-btn" onclick="reset_amyboard();">Reset</button>
               </li>
             </ul>
           </div>
@@ -861,16 +1187,18 @@
                         <label class="form-check-label small" for="channel-active-checkbox">Active</label>
                       </div>
                     </div>
-                    <div class="col-12 col-md-1 d-none d-md-block"></div>
-                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center">
-                      <button class="btn btn-light btn-sm rounded-0" type="button" id="patch-open-load-modal-btn">Patch: <span id="patch-active-name">None</span></button>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center ms-md-2">
+                      <button class="btn btn-sm text-white" type="button" id="patch-open-load-modal-btn" style="background-color:#2e7d32;">Load Preset</button>
                     </div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0">
                       <div class="d-flex gap-2">
-                        <button class="btn btn-danger btn-sm rounded-pill" type="button" id="patch-save-action-btn">Save</button>
-                        <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-revert-action-btn">Revert</button>
                         <button class="btn btn-secondary btn-sm rounded-pill" type="button" id="patch-clear-channel-btn">Clear</button>
                       </div>
+                    </div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center gap-2 ms-md-2">
+                      <label class="text-nowrap mb-0 text-white" for="synth-level-slider" style="font-size:0.875rem;">Level</label>
+                      <input type="range" class="form-range" id="synth-level-slider" min="0.001" max="7" step="0.001" value="1" style="width:100px;">
+                      <input type="number" class="form-control text-center knob-value" id="synth-level-number" min="0.001" max="7" step="0.001" value="1" style="width:60px; font-size:0.7rem; padding:2px 4px;">
                     </div>
                   </div>
                   <div class="patch-global-title">Effects</div>
@@ -887,58 +1215,45 @@
             </div>
             <div class="tab-pane fade" id="environment-pane" role="tabpanel" aria-labelledby="environment-tab">
               <div class="alert fixed-top d-none" id="alert_box"></div>
-              <div class="row g-0 headertext">
-                <div class="col-4 col-md-2 headertext">
-                  <span class="px-1 small align-middle">Your Files</span>
-                  <div id="treecontainer"></div>
-                  <div class="mt-1 d-flex gap-1">
-                    <button
-                      type="button"
-                      title="Upload file into current environment"
-                      data-toggle="tooltip"
-                      data-placement="top"
-                      class="btn btn-sm btn-primary"
-                      onclick="upload()"
-                    ><i class="fas fa-upload"></i></button>
-                    <button
-                      type="button"
-                      title="New file"
-                      data-toggle="tooltip"
-                      data-placement="top"
-                      class="btn btn-sm btn-success"
-                      onclick="create_new_environment_file()"
-                    ><i class="fas fa-plus"></i></button>
-                    <button
-                      type="button"
-                      title="Rename file"
-                      data-toggle="tooltip"
-                      data-placement="top"
-                      class="btn btn-sm btn-warning"
-                      onclick="open_rename_environment_file_modal()"
-                    ><i class="fas fa-pen"></i></button>
-                    <button
-                      type="button"
-                      title="Delete file"
-                      data-toggle="tooltip"
-                      data-placement="top"
-                      class="btn btn-sm btn-danger"
-                      onclick="delete_selected_environment_file()"
-                    ><i class="fas fa-trash"></i></button>
+              <!-- Terminal REPL — hidden by default under disclosure triangle -->
+              <details class="mb-3" id="repl-disclosure">
+                <summary class="repl-summary">Terminal REPL</summary>
+                <div class="mt-2">
+                  <div class="repl-wrap">
+                    <div id="repl-terminal"></div>
                   </div>
+                  <button class="btn btn-sm btn-outline-secondary mt-1" onclick="replClear()">Clear</button>
                 </div>
-                <div class="col-8 col-md-10 headertext">
-                  <span class="px-1 small align-middle">Code editor</span>
+              </details>
+              <div class="row g-0 headertext">
+                <div class="col-12 headertext" id="code-editor-col">
+                  <div class="d-flex align-items-center justify-content-between px-1">
+                    <span class="small align-middle" id="code-editor-label">sketch.py</span>
+                    <button type="button" class="btn btn-sm btn-primary d-none" id="sync-sketch-btn" onclick="sync_amy_state();">
+                      Sync to show your AMYboard's current sketch
+                    </button>
+                  </div>
                   <section class="input">
-                    <div><textarea id="code" name="code"></textarea></div> 
+                    <div><textarea id="code" name="code"></textarea></div>
                   </section>
                 </div>
               </div>
               <div class="row g-0 py-0 my-0 grippierow">
                 <p class="text-center grippie" id="editor_grippie">• • •</p>
               </div>
-              <div class="row mb-4 mt-1">
+              <div class="row mb-4 mt-1 d-none" id="control-run-controls">
                 <div class="col-12">
                   <div class="border rounded bg-light px-3 py-2 d-flex flex-wrap align-items-center gap-2">
+                    <span class="small fw-semibold">Sequencer:</span>
+                    <button type="button" class="btn btn-sm btn-success" onclick="control_sequencer_start();">Start</button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="control_sequencer_stop();">Stop</button>
+                  </div>
+                </div>
+              </div>
+              <div class="row mb-4 mt-1" id="run-controls">
+                <div class="col-12">
+                  <div class="border rounded bg-light px-3 py-2 d-flex flex-wrap align-items-center gap-2">
+                    <span class="small fw-semibold">Sequencer:</span>
                     <button
                       type="button"
                       title="Start environment"
@@ -949,44 +1264,43 @@
                     >Start</button>
                     <button
                       type="button"
-                      title="Clear current environment"
+                      title="Stop environment"
                       data-toggle="tooltip"
                       data-placement="top"
-                      class="btn btn-sm btn-outline-danger"
-                      onclick="clear_current_environment_from_default()"
-                    >Clear</button>
+                      class="btn btn-sm btn-danger"
+                      onclick="stop_current_environment()"
+                    >Stop</button>
                   </div>
                 </div>
               </div>
-              <div class="row mb-4 mt-1 align-items-start">
+              <div class="row mb-4 mt-1 align-items-start" id="amyboard-hardware-widgets">
                 <div class="col-6 col-md-4">
                   <canvas id="canvas" width="256" height="256"></canvas>
+                </div>
+                <div class="col-12 col-md-4 d-flex align-items-center justify-content-center my-3 my-md-0">
+                  <div class="encoder-widget" id="encoder-widget">
+                    <button class="encoder-arrow encoder-left" id="encoder-left" title="Turn left">
+                      <svg viewBox="0 0 32 32" width="36" height="36">
+                        <path d="M22 8 A12 12 0 0 0 10 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <polygon points="7,17 10,23 13,17" fill="currentColor"/>
+                      </svg>
+                    </button>
+                    <button class="encoder-push" id="encoder-push" title="Push encoder">
+                      <span class="encoder-value" id="encoder-value">0</span>
+                    </button>
+                    <button class="encoder-arrow encoder-right" id="encoder-right" title="Turn right">
+                      <svg viewBox="0 0 32 32" width="36" height="36">
+                        <path d="M10 8 A12 12 0 0 1 22 20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                        <polygon points="19,17 22,23 25,17" fill="currentColor"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div class="col-6 col-md-4">
                   <div id="cv-knob-grid" class="row g-4"></div>
                 </div>
               </div>
             </div> <!-- end environment tab -->
-            <div class="tab-pane fade" id="settings-pane" role="tabpanel" aria-labelledby="settings-tab">
-              <div class="settings-wrap">
-                <h6 class="mb-2">Hardware settings</h6>
-                <div class="small text-muted mb-3">These settings are for your AMYboard hardware behavior.</div>
-                <div class="settings-list">
-                  <div class="settings-item">
-                    <input class="form-check-input" type="checkbox" id="setting-modular-10vpp" />
-                    <label class="form-check-label" for="setting-modular-10vpp">Modular 10vpp Volume (Also set your DIP Switches)</label>
-                  </div>
-                  <div class="settings-item">
-                    <input class="form-check-input" type="checkbox" id="setting-midi-type-b" />
-                    <label class="form-check-label" for="setting-midi-type-b">Use MIDI Type B instead of A</label>
-                  </div>
-                  <div class="settings-item">
-                    <input class="form-check-input" type="checkbox" id="setting-drumkit-channel-10" />
-                    <label class="form-check-label" for="setting-drumkit-channel-10">Drum kit on channel 10</label>
-                  </div>
-                </div>
-              </div>
-            </div>
             <div class="tab-pane fade" id="world-pane" role="tabpanel" aria-labelledby="world-tab">
               <p class="text-muted mb-2">Here you can see the community's shared environments and individual patches, or upload your own!</p>
               <ul class="nav nav-tabs mb-2" id="world-sub-tabs" role="tablist">
@@ -1139,7 +1453,7 @@
               <div id="send-amyboard-supported" class="d-none">
                 <p class="mb-3">Ensure your AMYboard is connected to the MIDI <strong>out</strong> port selected above. 
                   If you're connected over USB, the MIDI out port should say "AMYboard."</p>
-                <p class="mb-3">We'll send over the current environment, settings, and the state of the current patches per active 
+                <p class="mb-3">We'll send over the current environment and the state of the current patches per active 
                   channel and their MIDI CC assignments. </p>
                 <p class="mb-3">Any existing patches or environments on your AMYboard will be overwritten.</p>
                 <button type="button" class="btn btn-primary" id="send-amyboard-send-btn" onclick="send_to_amyboard_now()">Send</button>
@@ -1225,11 +1539,6 @@
           <div class="modal-body py-2 px-3">
             <button type="button" class="btn-close float-end" data-bs-dismiss="modal" aria-label="Close" style="margin:-2px -4px 0 0"></button>
             <div id="load-patch-channel-label" style="display:none"></div>
-            <label for="load-patch-your-patches" class="form-label mb-1 small fw-bold">Your Patches</label>
-            <div class="d-flex gap-2 align-items-center mb-2">
-              <select class="form-select form-select-sm flex-grow-1" id="load-patch-your-patches"></select>
-              <button type="button" class="btn btn-sm btn-primary" id="load-your-patch-btn">Load</button>
-            </div>
             <label for="load-patch-juno-presets" class="form-label mb-1 small fw-bold">Juno-6 Presets</label>
             <div class="d-flex gap-2 align-items-center mb-2">
               <select class="form-select form-select-sm flex-grow-1" id="load-patch-juno-presets"></select>
@@ -1240,65 +1549,62 @@
               <select class="form-select form-select-sm flex-grow-1" id="load-patch-dx7-presets"></select>
               <button type="button" class="btn btn-sm btn-primary" id="load-dx7-preset-btn">Load</button>
             </div>
-            <label class="form-label mb-1 small fw-bold"><a href="#" id="load-patch-world-link">AMYboard World ↗</a></label>
-            <div class="d-flex gap-2 align-items-center">
-              <select class="form-select form-select-sm flex-grow-1" id="load-patch-world-select"><option value="">Loading...</option></select>
-              <button type="button" class="btn btn-sm btn-primary" id="load-world-patch-btn">Load</button>
-            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="modal fade" id="savePatchModal" tabindex="-1" aria-labelledby="savePatchModalLabel" aria-hidden="true">
+    <div class="modal fade" id="adminTokenModal" tabindex="-1" aria-labelledby="adminTokenModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-sm">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title" id="savePatchModalLabel">Save Patch</h5>
+            <h5 class="modal-title" id="adminTokenModalLabel">Admin Token Required</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            <label for="save-patch-name" class="form-label mb-1">Name</label>
+            <p class="small text-muted mb-2">The username "shorepine" is reserved. Enter the admin token to upload.</p>
             <input
-              type="text"
+              type="password"
               class="form-control form-control-sm"
-              id="save-patch-name"
-              maxlength="25"
-              title="Use 1-25 ASCII characters: letters, numbers, dot, underscore, or dash."
+              id="admin-token-input"
+              placeholder="Admin token"
             />
+            <div id="admin_token_error" class="text-danger small mt-1" style="display:none;"></div>
           </div>
           <div class="modal-footer">
             <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="button" class="btn btn-sm btn-primary" id="save-patch-confirm-btn">Save</button>
+            <button type="button" class="btn btn-sm btn-primary" id="admin-token-submit-btn">Upload</button>
           </div>
         </div>
       </div>
     </div>
 
-    <footer>
-      <div class="container small border-top">
-        <div class="row py-5 d-flex justify-content-between">
-          <div class="col-12 col-lg-6 col-xl-3 border-end p-5">
-            <img src="img/shorepine.svg" width="24" height="24" />
-            <address class="text-secondary mt-3">
-              <strong>shore pine sound systems</strong>
-            </address>
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <a class="nav-link link-secondary ps-0" aria-current="page" href="https://github.com/shorepine">Github</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link link-secondary ps-0" href="https://discord.com/invite/TzBFkUb8pG">Discord</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link link-secondary ps-0" href="https://instagram.com/shorepinesound">Instagram</a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link link-secondary ps-0" href="mailto:brian@variogram.com">Email</a>
-              </li>
-            </ul>
-          </div>
-        </div>
+    <footer class="site-footer">
+      <div class="container">
+        <ul class="footer-links">
+          <li>
+            <img src="img/github-mark.svg" width="20" height="20" />
+            <a href="https://github.com/shorepine/amy">Github</a>
+          </li>
+          <li>
+            <img src="img/discord-mark-black.svg" width="20" height="20" />
+            <a href="https://discord.com/invite/TzBFkUb8pG">Discord</a>
+          </li>
+          <li>
+            <img src="img/instagram-seeklogo.svg" width="20" height="20" />
+            <a href="https://instagram.com/shorepinesound">Instagram</a>
+          </li>
+          <li>
+            <a href="mailto:brian@variogram.com">Email us</a>
+          </li>
+          <li>
+            <a href="https://tulip.computer/">Tulip Creative Computer</a>
+          </li>
+        </ul>
+        <p style="margin-top:2rem; font-size:0.85rem;">
+          <img src="img/shorepine.svg" width="18" height="18" style="filter:invert(1); opacity:0.5; vertical-align:middle;" />
+          shore pine sound systems
+        </p>
       </div>
     </footer>
 
@@ -1317,7 +1623,7 @@
 
     <script>
       // On keypress or click anywhere, start audio worklet
-      document.body.addEventListener('click', start_audio, true); 
+      document.body.addEventListener('click', start_audio, true);
       document.body.addEventListener('keydown', start_audio, true); 
   
       let scrollpos = window.scrollY;
@@ -1356,7 +1662,8 @@
             editor_height = editor_height + (e.clientY - editor_grippie_y_start);
             if(editor_height < 200) editor_height = 200;
             editor.setSize(null, editor_height);
-            document.getElementById('treecontainer').setAttribute("style","height:"+editor_height.toString()+"px");
+            var tc = document.getElementById('treecontainer');
+            if (tc) tc.setAttribute("style","height:"+editor_height.toString()+"px");
           }
         }
       });
@@ -1388,25 +1695,6 @@
     </script>
     <script>
       window.addEventListener("DOMContentLoaded", function() {
-        const hardwareSettingsMap = [
-          { id: "setting-modular-10vpp", key: "amyboard.hardware.modular_10vpp_volume" },
-          { id: "setting-midi-type-b", key: "amyboard.hardware.midi_type_b" },
-          { id: "setting-drumkit-channel-10", key: "amyboard.hardware.drumkit_channel_10" }
-        ];
-        hardwareSettingsMap.forEach(function(setting) {
-          const checkbox = document.getElementById(setting.id);
-          if (!checkbox) {
-            return;
-          }
-          try {
-            checkbox.checked = localStorage.getItem(setting.key) === "1";
-          } catch (e) {}
-          checkbox.addEventListener("change", function() {
-            try {
-              localStorage.setItem(setting.key, checkbox.checked ? "1" : "0");
-            } catch (e) {}
-          });
-        });
         const sendTab = document.getElementById("send-tab");
         if (sendTab) {
           sendTab.addEventListener("shown.bs.tab", function() {
@@ -1418,18 +1706,11 @@
         const environmentTab = document.getElementById("environment-tab");
         if (environmentTab) {
           environmentTab.addEventListener("shown.bs.tab", function() {
-            Promise.resolve()
-              .then(function() {
-                if (typeof window.sync_persistent_fs === "function") {
-                  return window.sync_persistent_fs();
-                }
-              })
-              .then(function() {
-                if (typeof window.fill_tree === "function") {
-                  return window.fill_tree();
-                }
-              })
-              .catch(function() {});
+            // Refresh CodeMirror when the Code tab becomes visible (it can't
+            // measure its layout while hidden in an inactive tab).
+            if (editor && typeof editor.refresh === "function") {
+              setTimeout(function() { editor.refresh(); }, 0);
+            }
           });
         }
 
@@ -1450,6 +1731,7 @@
             if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 16) {
               window.current_synth = parsed;
               syncActiveCheckboxForChannel();
+              syncSynthLevelForChannel();
               refreshLoadPatchChannelLabel();
               refreshPatchActiveNameLabel();
               refreshSavePatchDirtyIndicator();
@@ -1457,6 +1739,10 @@
                 if (typeof window.refresh_knobs_for_active_channel === "function") {
                   window.refresh_knobs_for_active_channel({ sendControlMappings: false });
                 }
+              }
+              // In control mode, repopulate knobs from the cached zD dump.
+              if (typeof window.reapply_last_zd_dump === "function") {
+                window.reapply_last_zd_dump();
               }
             }
           });
@@ -1478,6 +1764,43 @@
         const patchSaveActionButton = document.getElementById("patch-save-action-btn");
         const patchRevertActionButton = document.getElementById("patch-revert-action-btn");
         const patchClearChannelButton = document.getElementById("patch-clear-channel-btn");
+        const synthLevelSlider = document.getElementById("synth-level-slider");
+        const synthLevelNumber = document.getElementById("synth-level-number");
+        const _synthLevels = {};  // per-channel level storage
+        function getSynthLevel(ch) { return _synthLevels[ch] != null ? _synthLevels[ch] : 1; }
+        function setSynthLevel(val, send) {
+          const ch = Number(window.current_synth || 1);
+          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          _synthLevels[ch] = val;
+          if (synthLevelSlider) synthLevelSlider.value = val;
+          if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+          if (send && typeof window.amy_add_log_message === "function") {
+            var code = "i" + ch + "v0a" + val.toFixed(3);
+            window.amy_add_log_message(code);
+          }
+        }
+        function syncSynthLevelForChannel() {
+          var ch = Number(window.current_synth || 1);
+          var val = getSynthLevel(ch);
+          if (synthLevelSlider) synthLevelSlider.value = val;
+          if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+        }
+        if (synthLevelSlider) {
+          synthLevelSlider.addEventListener("input", function() { setSynthLevel(synthLevelSlider.value, true); });
+        }
+        if (synthLevelNumber) {
+          synthLevelNumber.addEventListener("change", function() { setSynthLevel(synthLevelNumber.value, true); });
+          synthLevelNumber.addEventListener("keydown", function(e) { if (e.key === "Enter") setSynthLevel(synthLevelNumber.value, true); });
+        }
+        window.syncSynthLevelForChannel = syncSynthLevelForChannel;
+        window.setSynthLevelFromAmy = function(ch, val) {
+          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          _synthLevels[ch] = val;
+          if (Number(window.current_synth || 1) === ch) {
+            if (synthLevelSlider) synthLevelSlider.value = val;
+            if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+          }
+        };
         const savePatchModalEl = document.getElementById("savePatchModal");
         const savePatchNameInput = document.getElementById("save-patch-name");
         const savePatchConfirmButton = document.getElementById("save-patch-confirm-btn");
@@ -1489,23 +1812,9 @@
         const loadDx7PresetButton = document.getElementById("load-dx7-preset-btn");
         const loadPatchChannelLabel = document.getElementById("load-patch-channel-label");
         const patchActiveNameEl = document.getElementById("patch-active-name");
-        function refreshPatchActiveNameLabel() {
-          if (!patchActiveNameEl) return;
-          const channel = Number(window.current_synth || 1);
-          let name = null;
-          if (Array.isArray(window.channel_patch_names) && typeof window.channel_patch_names[channel] === "string") {
-            name = String(window.channel_patch_names[channel] || "").trim();
-          }
-          patchActiveNameEl.textContent = name ? name : "None";
-        }
+        function refreshPatchActiveNameLabel() { /* no-op */ }
         window.refresh_patch_active_name_label = refreshPatchActiveNameLabel;
-        function refreshSavePatchDirtyIndicator() {
-          if (!patchSaveActionButton) return;
-          const channel = Number(window.current_synth || 1);
-          const isDirty = !!(Array.isArray(window.channel_patch_dirty) && window.channel_patch_dirty[channel]);
-          patchSaveActionButton.textContent = isDirty ? "Save*" : "Save";
-          patchSaveActionButton.title = isDirty ? "This channel has unsaved changes." : "";
-        }
+        function refreshSavePatchDirtyIndicator() { /* no-op */ }
         window.refresh_save_patch_dirty_indicator = refreshSavePatchDirtyIndicator;
         function refreshLoadPatchChannelLabel() {
           if (!loadPatchChannelLabel) return;
@@ -1641,28 +1950,29 @@
               var presetSynth = Number(window.current_synth || 1);
               if (typeof amy_send === "function") {
                 var isDX7Preset = patch >= 128;
-                amy_send({synth: presetSynth, oscs_per_voice: isDX7Preset ? 8 : 3, num_voices: 6}, true);
-                if (typeof reset_global_effects === "function") { reset_global_effects(); }
+                if (isDX7Preset) {
+                  // Use K (patch_number) to load the DX7 preset — AMY applies all
+                  // wire commands internally in one call, avoiding sysex races.
+                  amy_send({synth: presetSynth, num_voices: 6, patch: patch}, true);
+                } else {
+                  amy_send({synth: presetSynth, num_voices: 6, patch: 257}, true);
+                }
+                // In control mode, skip reset_global_effects — it floods sysex with
+                // default knob values that race with the K command via sysex_message_copy.
+                if (amyboard_mode !== 'control' && typeof reset_global_effects === "function") { reset_global_effects(); }
                 if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
                   var presetWireCommands = get_wire_commands_for_juno_patch(patch);
                   for (var wi = 0; wi < presetWireCommands.length; wi++) {
                     amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
                   }
-                } else if (isDX7Preset && Array.isArray(window.patch_code_for_patch_number)) {
-                  var dx7Code = window.patch_code_for_patch_number[patch] || "";
-                  var dx7Parts = dx7Code.split("Z");
-                  for (var di = 0; di < dx7Parts.length; di++) {
-                    var part = dx7Parts[di].trim();
-                    if (part) {
-                      amy_add_log_message("i" + presetSynth + part + "Z");
-                    }
-                  }
+                } else if (isDX7Preset) {
                   // Apply VCF coda so analog filter controls work with DX7
-                  if (typeof amy_send === "function") {
-                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
-                  }
+                  amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
                 }
-                if (typeof send_all_knob_cc_mappings === "function") {
+                // In control mode, skip sending knob CC mappings — they race with the
+                // patch load over sysex and can overwrite the K command. The hardware
+                // doesn't need them; knob state is read back via sync_knobs_from_hardware.
+                if (amyboard_mode !== 'control' && typeof send_all_knob_cc_mappings === "function") {
                   send_all_knob_cc_mappings(presetSynth);
                 }
               }
@@ -1687,11 +1997,18 @@
           if (loadJunoPresetButton && junoPresetsSelect) {
             loadJunoPresetButton.addEventListener("click", function() {
               handlePresetLoad(junoPresetsSelect);
+              // In control mode, do a full Pull to update both knobs and code editor.
+              if (amyboard_mode === 'control' && typeof sync_amy_state === 'function') {
+                setTimeout(sync_amy_state, 500);
+              }
             });
           }
           if (loadDx7PresetButton && dx7PresetsSelect) {
             loadDx7PresetButton.addEventListener("click", function() {
               handlePresetLoad(dx7PresetsSelect);
+              if (amyboard_mode === 'control' && typeof sync_amy_state === 'function') {
+                setTimeout(sync_amy_state, 500);
+              }
             });
           }
 
@@ -2001,6 +2318,7 @@
           });
 
           qwerty.keyDown = function(note, freq) {
+            if (!audio_started && amyboard_mode !== 'control') return;
             const midi = noteToMidi(note);
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;

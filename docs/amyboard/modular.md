@@ -17,12 +17,12 @@ You can also 3D print your own front panel for whatever use case you have in min
 
 ## 10vpp Operation
 
-Most modular synthesis units operate at "5vpp", where an audio signal swings between -2.5v and 2.5v. Out of the box, AMYboard is "line level" at 1vpp. To change the audio input and output of AMYboard to 5vpp, you need to change the DIP switches on the back of the board to "OFF" / closed. 
+Most modular synthesis units operate at 10Vpp, where an audio signal swings between -5V and +5V. Out of the box, AMYboard is "line level" at 1Vpp. To change the audio input and output of AMYboard to 10Vpp, you need to change the DIP switches on the back of the board to "OFF" / closed.
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/dip_switches.png" width=600>
 
- - **Switches 1 & 2** (input): When closed, attenuate the inputs -- making line in friendly to 5Vpp Eurorack signals.
- - **Switches 3 & 4** (output): When closed, increase the gain of the output buffer -- making line out more friendly to 5Vpp Eurorack.
+ - **Switches 1 & 2** (input): When closed, attenuate the inputs -- making line in friendly to 10Vpp Eurorack signals.
+ - **Switches 3 & 4** (output): When closed, increase the gain of the output buffer -- making line out more friendly to 10Vpp Eurorack.
 
 ## CV outputs
 
@@ -38,20 +38,23 @@ amyboard.cv_out(3.3, channel=0)
 amyboard.cv_out(-5.0, channel=1)
 ```
 
-You can send low-frequency waveforms over the CV bus using AMY itself:
+You can route an entire AMY synth's audio to a CV output using `set_cv_out`. The synth's audio is silenced from the speakers and sent to the DAC instead, so you can use any AMY waveform as a CV source:
 
 ```python
-amy.send(osc=30, external_channel=1, wave=amy.SAW_DOWN, vel=1, freq=0.5, amp=1)
-```
-This sends a saw wave out the first CV output at 0.5Hz with amplitude of 1, so will be -10-10V peak to peak. 
+import amy, amyboard
 
-Send
+# Create a synth and route it to CV1
+amy.send(synth=5, wave=amy.SAW_DOWN, vel=1, freq=0.5)
+amyboard.set_cv_out(channel=0, synth=5)
+```
+
+This sends a 0.5Hz saw wave out CV1 at full range (-10V to +10V). You can change the waveform, frequency, or amplitude at any time with `amy.send(synth=5, ...)`.
+
+To stop it, release the note or clear the mapping:
 
 ```python
-amy.send(osc=30, amp=0)
+amyboard.set_cv_out(channel=0, synth=0)  # clear the CV mapping
 ```
-
-To stop it.
 
 
 ### Use cases
@@ -112,7 +115,7 @@ amy.send(synth=1, vel=1, note=48)
 
 With nothing patched to CV in 1 (0V), the filter sits at 300 Hz. Patch in a modular LFO or envelope and the cutoff sweeps exponentially -- just like a hardware filter with a 1V/oct CV input.
 
-For exact 100–1000 Hz range, use `const=316, ext0=0.166`. For a wider sweep (e.g. 50–5000 Hz), increase `ext0`:
+For exact 100–1000 Hz range, use `'const': 316, 'ext0': 0.166`. For a wider sweep (e.g. 50–5000 Hz), increase `ext0`:
 
 ```python
 # Wider sweep: geometric center ~500 Hz, ±10V covers 50 to 5000 Hz

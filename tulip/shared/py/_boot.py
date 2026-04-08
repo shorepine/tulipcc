@@ -10,6 +10,7 @@ else:
     if board()=="AMYBOARD":
         import amyboard
         amyboard.mount_sd()
+        edit = amyboard.edit
 
 if board()=="WEB" or board()=="AMYBOARD_WEB":
     def webnyi():
@@ -112,5 +113,9 @@ if board() == "AMYBOARD":
     import self_test
     self_test.self_test_if_button()
 
-if board() == "TULIP":
-    midi.setup() # Just mirrors the setup mostly managed by AMY
+# We don't do most of Tulip's MIDI, but setup the MIDI callback hook so midi.add_callback(fn) will work.
+if board() == "AMYBOARD" or board() == "AMYBOARD_WEB":
+    tulip.midi_callback(midi.c_fired_midi_event)
+
+if board() != "AMYBOARD" and board() != "AMYBOARD_WEB":
+    midi.setup() # Just mirrors the setup mostly managed by AMY for Tulip-REPL systems.
