@@ -458,7 +458,7 @@ function get_wire_commands_for_juno_patch(patch) {
     const AMY_OSC_OF_LOGICAL_OSC = [OSCA_OSC, OSCB_OSC];
     wire_commands = [];
     // Osc 0 has the filter and envelope controls, including both EG0 (vca) and EG1 (vcf)
-    let command = "v" + CTL_OSC + "w" + AMY.SILENT + "L" + LFO_OSC + "c" + OSCA_OSC;
+    let command = "v" + CTL_OSC + "w" + AMY.WAVE_OFF + "L" + LFO_OSC + "c" + OSCA_OSC;
     command += "G" + AMY.FILTER_LPF24;
     command += "a1,0,1,1,0" + "A" + adsr[0] + ",1," + adsr[1] + "," + adsr[2] + "," + adsr[3] + ",0"
     if (resonanceValue != null) command += "R" + resonanceValue;
@@ -3631,7 +3631,17 @@ async function start_amyboard() {
   await mp.runFrozenAsync('_boot.py');
   ensure_current_environment_layout(true);
 
-  // Import sketch.py (runs user code, applies _auto_generated_knobs, starts loop).
+  // First-load init: send default Juno patch via JS (same path as control mode).
+  var _initSketch = "";
+  try { _initSketch = mp.FS.readFile(CURRENT_ENV_DIR + "/sketch.py", { encoding: "utf8" }); } catch (e) {}
+  var _initKnobs = extract_knobs_from_sketch(_initSketch);
+  if (!_initKnobs) {
+    amy_add_log_message("i1ic255Z");
+    amy_add_log_message("i1K257iv6Z");
+    send_all_knob_cc_mappings(1);
+  }
+
+  // Import sketch.py (runs user code, starts loop).
   var urlEnvPending = !!(new URLSearchParams(window.location.search).get("env"));
   if (!urlEnvPending) {
     try {
@@ -3639,9 +3649,6 @@ async function start_amyboard() {
     } catch (e) {
       // sketch.py may not exist or may fail — that's OK.
     }
-    // Sync knobs from AMY state to UI once audio starts (AMY only processes
-    // deltas during render, so the synth doesn't exist until first click).
-    // We skip here and let start_audio handle it.
     // Load sketch.py into the editor.
     if (editor) {
       try {
