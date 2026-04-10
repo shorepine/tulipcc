@@ -246,54 +246,73 @@ def _ensure_current_env_layout():
 
 _KNOBS_MARKER = '_auto_generated_knobs = """'
 _KNOBS_END = '"""'
+_KNOBS_MARKER_B = _KNOBS_MARKER.encode("utf-8")
+_KNOBS_END_B = _KNOBS_END.encode("utf-8")
 
 def generate_knobs_text():
     """Return the full AMY state text (same as zW output) using the C helper."""
     return tulip.amy_dump_state()
 
 def update_sketch_knobs(sketch_path=None):
-    """Read sketch.py, replace _auto_generated_knobs section with current AMY state, write back."""
+    """Read sketch.py, replace _auto_generated_knobs section with current AMY state, write back.
+
+    Works at the byte level so we never trip over non-UTF-8 bytes that may
+    have ended up in the file (e.g. from a previous partial/binary transfer)."""
     if sketch_path is None:
         sketch_path = tulip.root_dir() + "user/current/sketch.py"
     tulip.stderr_write("update_sketch_knobs: path=%s" % sketch_path)
     try:
-        text = open(sketch_path, "r").read()
+        data = open(sketch_path, "rb").read()
     except OSError:
         tulip.stderr_write("update_sketch_knobs: could not read file")
         return
     knobs = generate_knobs_text()
     tulip.stderr_write("update_sketch_knobs: knobs=%d bytes" % len(knobs))
-    start = text.find(_KNOBS_MARKER)
+    knobs_b = knobs.encode("utf-8") if isinstance(knobs, str) else knobs
+    start = data.find(_KNOBS_MARKER_B)
     if start >= 0:
-        end = text.find(_KNOBS_END, start + len(_KNOBS_MARKER))
+        end = data.find(_KNOBS_END_B, start + len(_KNOBS_MARKER_B))
         if end >= 0:
-            text = text[:start + len(_KNOBS_MARKER)] + "\n" + knobs + text[end:]
+            data = data[:start + len(_KNOBS_MARKER_B)] + b"\n" + knobs_b + data[end:]
         else:
-            text += "\n" + _KNOBS_MARKER + "\n" + knobs + _KNOBS_END + "\n"
+            data = data + b"\n" + _KNOBS_MARKER_B + b"\n" + knobs_b + _KNOBS_END_B + b"\n"
     else:
-        text += "\n" + _KNOBS_MARKER + "\n" + knobs + _KNOBS_END + "\n"
-    with open(sketch_path, "w") as f:
-        f.write(text)
+        data = data + b"\n" + _KNOBS_MARKER_B + b"\n" + knobs_b + _KNOBS_END_B + b"\n"
+    with open(sketch_path, "wb") as f:
+        f.write(data)
 
 def _extract_knobs_from_file(filepath):
-    """Read sketch.py as text and extract the _auto_generated_knobs content without importing."""
+    """Read sketch.py as bytes and extract the _auto_generated_knobs content without importing.
+
+    Reads as bytes so non-UTF-8 bytes elsewhere in the file don't break us;
+    the knobs section itself is always ASCII (AMY wire protocol)."""
     try:
-        text = open(filepath, "r").read()
+        data = open(filepath, "rb").read()
     except OSError:
         return ''
-    start = text.find(_KNOBS_MARKER)
+    start = data.find(_KNOBS_MARKER_B)
     if start < 0:
         return ''
-    body_start = start + len(_KNOBS_MARKER)
-    end = text.find(_KNOBS_END, body_start)
+    body_start = start + len(_KNOBS_MARKER_B)
+    end = data.find(_KNOBS_END_B, body_start)
     if end < 0:
         return ''
-    return text[body_start:end].strip()
+    body = data[body_start:end]
+    try:
+        return body.decode("utf-8").strip()
+    except UnicodeError:
+        # Knobs section had bad bytes somehow — fall back to ASCII-only decode.
+        try:
+            return "".join(chr(b) for b in body if b < 128).strip()
+        except Exception:
+            return ''
 
 def _apply_knobs_text(knobs_text):
     """Send each line of knobs text to AMY."""
     if not knobs_text:
-        # First run: set up channel 1 with default Juno patch.
+        # First run / factory reset: clear any previously configured synths
+        # (drums on ch10, etc.) and set up channel 1 with the default Juno patch.
+        amy.send_raw("S%dZ" % amy.RESET_SYNTHS)
         amy.send_raw("i1K257iv6Z")
         amy.send_raw("i1ic255Z")
         return
@@ -386,15 +405,29 @@ def run_sketch():
     if 'sketch' in sys.modules:
         del sys.modules['sketch']
     tulip.stderr_write("import sketch")
+    if _env_dir not in sys.path:
+        sys.path.insert(0, _env_dir)
     try:
-        if _env_dir not in sys.path:
-            sys.path.insert(0, _env_dir)
         import sketch
     except Exception as e:
         print("sketch.py load failed:")
         sys.print_exception(e)
-        cd(tulip.root_dir() + "user")
-        return
+        # Self-heal: if sketch.py is corrupted (SyntaxError from stray bytes,
+        # etc.), overwrite it with the default and try once more so the board
+        # doesn't end up stuck in a bad state across saves/syncs.
+        try:
+            tulip.stderr_write("sketch.py corrupted — restoring default")
+            sketch_path = _env_dir + "/sketch.py"
+            with open(sketch_path, "wb") as f:
+                f.write(DEFAULT_SKETCH_SOURCE.encode("utf-8"))
+            if 'sketch' in sys.modules:
+                del sys.modules['sketch']
+            import sketch
+        except Exception as e2:
+            print("default sketch.py load also failed:")
+            sys.print_exception(e2)
+            cd(tulip.root_dir() + "user")
+            return
 
     if hasattr(sketch, 'loop'):
         _start_sketch_loop(sketch.loop)

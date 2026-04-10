@@ -455,25 +455,6 @@
         padding: 0.35rem 0.75rem;
       }
 
-      #send-tab {
-        background: #daf4de;
-        border-color: #a9d8b3;
-        color: #1f5f2b;
-      }
-
-      #send-tab:hover {
-        background: #c9eecf;
-        border-color: #95caa1;
-        color: #184c23;
-      }
-
-      #send-tab.active {
-        background: #3ecf66;
-        border-color: #2aab50;
-        color: #0f3b1a;
-        font-weight: 600;
-      }
-
       .tab-header-row {
         border-bottom: 1px solid var(--bs-nav-tabs-border-color, #dee2e6);
       }
@@ -923,16 +904,40 @@
         // Check if URL has env params to auto-load an environment
         check_url_env_params();
         apply_mode_ui();
+
+        // Show a welcome modal that forces a click (required by browser audio
+        // policy). A click anywhere on the modal (button, content, or backdrop)
+        // dismisses it and starts audio via start_audio().
+        var welcomeEl = document.getElementById('simulateWelcomeModal');
+        if (welcomeEl && window.bootstrap) {
+          var welcomeModal = bootstrap.Modal.getOrCreateInstance(welcomeEl, { backdrop: 'static', keyboard: false });
+          var dismissed = false;
+          welcomeEl.addEventListener('click', function() {
+            if (dismissed) return;
+            dismissed = true;
+            welcomeModal.hide();
+            if (typeof start_audio === 'function') { start_audio(); }
+          });
+          welcomeModal.show();
+        }
       } else {
         // Control mode: sysex routing, MIDI init, no WASM/MicroPython
         apply_mode_ui();
-        // Set default sketch content in editor (will be replaced by sync).
-        if (editor) {
-          editor.setValue(DEFAULT_SKETCH_SOURCE);
+        if (typeof WebMidi !== 'undefined' && !WebMidi.supported) {
+          // Browser doesn't support WebMIDI — show blocking modal.
+          var noMidiEl = document.getElementById('noWebMidiModal');
+          if (noMidiEl && window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(noMidiEl, { backdrop: 'static', keyboard: false }).show();
+          }
+        } else {
+          // Set default sketch content in editor (will be replaced by sync).
+          if (editor) {
+            editor.setValue(DEFAULT_SKETCH_SOURCE);
+          }
+          // Auto-sync from hardware once MIDI devices are ready.
+          _on_midi_ready = function() { sync_amy_state(); };
+          await start_midi();
         }
-        // Auto-sync from hardware once MIDI devices are ready.
-        _on_midi_ready = function() { sync_amy_state(); };
-        await start_midi();
       }
 
       // Auto-open a tab if URL has a hash (e.g. #world)
@@ -1000,6 +1005,11 @@
       if (typeof flush_pending_environment_editor_load === "function") {
         await flush_pending_environment_editor_load();
       }
+      // Apply deferred sketch content from start_amyboard() if editor wasn't ready then.
+      if (window._deferred_editor_content) {
+        editor.setValue(window._deferred_editor_content);
+        delete window._deferred_editor_content;
+      }
     </script>
 
     <main class="container pt-3 pt-md-5 mt-2 mt-md-5">
@@ -1033,6 +1043,21 @@
         </div>
       </div>
 
+      <!-- Welcome / start-audio modal (simulate mode) -->
+      <div class="modal fade" id="simulateWelcomeModal" tabindex="-1" aria-labelledby="simulateWelcomeModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
+          <div class="modal-content">
+            <div class="modal-header border-0 pb-0">
+              <h4 class="modal-title w-100 text-center" id="simulateWelcomeModalLabel">Welcome to AMYboard Simulator</h4>
+            </div>
+            <div class="modal-body text-center px-4 py-4">
+              <p class="text-muted mb-4">To get started, click the button below to start audio.</p>
+              <button type="button" class="btn btn-success btn-lg px-4" id="simulate-welcome-start-btn">Click anywhere to start</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Saving modal (control mode) -->
       <div class="modal fade" id="savingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -1040,6 +1065,19 @@
             <div class="modal-body text-center py-4">
               <div class="spinner-border text-danger mb-3" style="width:2.5rem;height:2.5rem;" role="status"></div>
               <div class="fw-semibold">Sending to AMYboard&hellip;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- No WebMIDI modal (control mode on unsupported browser) -->
+      <div class="modal fade" id="noWebMidiModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+          <div class="modal-content">
+            <div class="modal-body text-center px-4 py-4">
+              <div class="text-danger fw-semibold mb-2">WebMIDI Not Available</div>
+              <p class="text-muted small mb-3">Control mode requires WebMIDI to communicate with your AMYboard. This browser does not support WebMIDI. Please use Chrome, Edge, or Opera, or switch to Simulate mode.</p>
+              <button type="button" class="btn btn-primary btn-sm" onclick="switch_amyboard_mode();">Switch to Simulate</button>
             </div>
           </div>
         </div>
@@ -1102,6 +1140,13 @@
                   </select>
                 </div>
               </div>
+              <div class="col-12 col-md-3 align-self-start small mt-2 mt-md-0 d-none" id="midi-passthru-col">
+                <div id="midi-passthru-panel">
+                  <select onchange="setup_midi_passthru()" id="midi-passthru-select" class="form-select form-select-sm" aria-label="MIDI Input Pass-Thru">
+                    <option value="" selected>MIDI Input Pass-Thru: [None]</option>
+                  </select>
+                </div>
+              </div>
               <div class="col-12 col-md-auto small mt-2 mt-md-0 d-none" id="amyboard-port-warning">
                 <div class="d-flex align-items-start gap-2 py-1 px-2 rounded" style="background:#fff3cd;border:1px solid #ffe69c;color:#664d03;">
                   <span style="display:inline-block;width:8px;height:8px;background:#ffc107;border-radius:50%;margin-top:4px;flex-shrink:0;"></span>
@@ -1142,10 +1187,9 @@
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
               </li>
-              <li class="nav-item" role="presentation">
-                <button class="nav-link" id="send-tab" data-bs-toggle="tab" data-bs-target="#send-pane" type="button" role="tab" aria-controls="send-pane" aria-selected="false">Send to my AMYboard</button>
-              </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="simulate-controls-li" role="presentation">
+                <span class="small text-muted fw-semibold">Your AMYboard Simulator:</span>
+                <button type="button" class="btn btn-danger btn-sm" id="simulate-save-btn" onclick="save_amy_state();">Save</button>
                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="reset_amyboard();">Reset</button>
               </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="amyboard-controls-li" role="presentation">
@@ -1256,7 +1300,7 @@
                     <span class="small fw-semibold">Sequencer:</span>
                     <button
                       type="button"
-                      title="Start environment"
+                      title="Start sketch"
                       data-toggle="tooltip"
                       data-placement="top"
                       class="btn btn-sm btn-success"
@@ -1264,7 +1308,7 @@
                     >Start</button>
                     <button
                       type="button"
-                      title="Stop environment"
+                      title="Stop sketch"
                       data-toggle="tooltip"
                       data-placement="top"
                       class="btn btn-sm btn-danger"
@@ -1302,10 +1346,10 @@
               </div>
             </div> <!-- end environment tab -->
             <div class="tab-pane fade" id="world-pane" role="tabpanel" aria-labelledby="world-tab">
-              <p class="text-muted mb-2">Here you can see the community's shared environments and individual patches, or upload your own!</p>
+              <p class="text-muted mb-2">Here you can see the community's shared sketches and individual patches, or upload your own!</p>
               <ul class="nav nav-tabs mb-2" id="world-sub-tabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                  <button class="nav-link active fw-bold" id="world-env-tab" data-bs-toggle="tab" data-bs-target="#world-environments-pane" type="button" role="tab" aria-controls="world-environments-pane" aria-selected="true">Environments</button>
+                  <button class="nav-link active fw-bold" id="world-env-tab" data-bs-toggle="tab" data-bs-target="#world-environments-pane" type="button" role="tab" aria-controls="world-environments-pane" aria-selected="true">Sketches</button>
                 </li>
                 <li class="nav-item" role="presentation">
                   <button class="nav-link fw-bold" id="world-patch-tab" data-bs-toggle="tab" data-bs-target="#world-patches-pane" type="button" role="tab" aria-controls="world-patches-pane" aria-selected="false">Patches</button>
@@ -1317,10 +1361,10 @@
                 <div class="col-12">
                   <div class="border rounded p-3 bg-light">
                     <div class="d-flex align-items-center mb-2">
-                      <span class="fw-semibold">Environments (latest)</span>
+                      <span class="fw-semibold">Sketches (latest)</span>
                       <button
                         type="button"
-                        title="Refresh environments"
+                        title="Refresh sketches"
                         data-toggle="tooltip"
                         data-placement="top"
                         class="btn btn-sm btn-link text-secondary p-0 ms-2"
@@ -1352,7 +1396,7 @@
               <div class="row mb-2">
                 <div class="col-12">
                   <div class="border rounded p-3 bg-light">
-                    <div class="fw-semibold mb-2">Upload your Environment</div>
+                    <div class="fw-semibold mb-2">Upload your Sketch</div>
                     <div class="mb-2">This will upload your patches and code to AMYboard World for anyone to try!</div>
                     <div class="row g-2">
                       <div class="col-12 col-md-4">
@@ -1361,8 +1405,8 @@
                         <div class="form-text">1-20 chars: A-Z, a-z, 0-9.</div>
                       </div>
                       <div class="col-12 col-md-4">
-                        <label for="editor_filename" class="form-label mb-1">Environment name</label>
-                        <input type="text" id="editor_filename" class="small form-control" maxlength="20" placeholder="Environment Name" />
+                        <label for="editor_filename" class="form-label mb-1">Sketch name</label>
+                        <input type="text" id="editor_filename" class="small form-control" maxlength="20" placeholder="Sketch Name" />
                         <div class="form-text">1-20 chars: A-Z, a-z, 0-9, -, _.</div>
                       </div>
                       <div class="col-12 col-md-4">
@@ -1444,34 +1488,6 @@
                 </div>
               </div>
               </div>
-              </div>
-            </div>
-            <div class="tab-pane fade" id="send-pane" role="tabpanel" aria-labelledby="send-tab">
-              <div id="send-amyboard-unsupported" class="d-none">
-                <p class="mb-0">This browser does not support WebMIDI. Use Chrome, Edge, or Opera to send files to AMYboard.</p>
-              </div>
-              <div id="send-amyboard-supported" class="d-none">
-                <p class="mb-3">Ensure your AMYboard is connected to the MIDI <strong>out</strong> port selected above. 
-                  If you're connected over USB, the MIDI out port should say "AMYboard."</p>
-                <p class="mb-3">We'll send over the current environment and the state of the current patches per active 
-                  channel and their MIDI CC assignments. </p>
-                <p class="mb-3">Any existing patches or environments on your AMYboard will be overwritten.</p>
-                <button type="button" class="btn btn-primary" id="send-amyboard-send-btn" onclick="send_to_amyboard_now()">Send</button>
-                <div id="send-amyboard-progress-wrap" class="mt-3 d-none">
-                  <div class="progress" style="height: 14px;">
-                    <div
-                      id="send-amyboard-progress-bar"
-                      class="progress-bar progress-bar-striped progress-bar-animated"
-                      role="progressbar"
-                      style="width: 0%;"
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                      aria-valuenow="0"
-                    ></div>
-                  </div>
-                  <div id="send-amyboard-progress-text" class="small text-muted mt-1"></div>
-                </div>
-                <div id="send-amyboard-status" class="small mt-2 d-none"></div>
               </div>
             </div>
             <div class="tab-pane fade" id="upgrade-pane" role="tabpanel" aria-labelledby="upgrade-tab">
@@ -1695,14 +1711,6 @@
     </script>
     <script>
       window.addEventListener("DOMContentLoaded", function() {
-        const sendTab = document.getElementById("send-tab");
-        if (sendTab) {
-          sendTab.addEventListener("shown.bs.tab", function() {
-            if (typeof window.open_send_to_amyboard_modal === "function") {
-              window.open_send_to_amyboard_modal();
-            }
-          });
-        }
         const environmentTab = document.getElementById("environment-tab");
         if (environmentTab) {
           environmentTab.addEventListener("shown.bs.tab", function() {
@@ -1946,53 +1954,58 @@
                 }
                 return;
               }
-              // Send AMY reset + wire commands for the preset patch.
+              var isDX7Preset = patch >= 128;
               var presetSynth = Number(window.current_synth || 1);
-              if (typeof amy_send === "function") {
-                var isDX7Preset = patch >= 128;
-                if (isDX7Preset) {
-                  // Use K (patch_number) to load the DX7 preset — AMY applies all
-                  // wire commands internally in one call, avoiding sysex races.
-                  amy_send({synth: presetSynth, num_voices: 6, patch: patch}, true);
-                } else {
-                  amy_send({synth: presetSynth, num_voices: 6, patch: 257}, true);
-                }
-                // In control mode, skip reset_global_effects — it floods sysex with
-                // default knob values that race with the K command via sysex_message_copy.
-                if (amyboard_mode !== 'control' && typeof reset_global_effects === "function") { reset_global_effects(); }
-                if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
-                  var presetWireCommands = get_wire_commands_for_juno_patch(patch);
-                  for (var wi = 0; wi < presetWireCommands.length; wi++) {
-                    amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
+              try {
+                // Send AMY reset + wire commands for the preset patch.
+                if (typeof amy_send === "function") {
+                  if (isDX7Preset) {
+                    // Use K (patch_number) to load the DX7 preset — AMY applies all
+                    // wire commands internally in one call, avoiding sysex races.
+                    amy_send({synth: presetSynth, num_voices: 6, patch: patch}, true);
+                  } else {
+                    amy_send({synth: presetSynth, num_voices: 6, patch: 257}, true);
                   }
-                } else if (isDX7Preset) {
-                  // Apply VCF coda so analog filter controls work with DX7
-                  amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
+                  // In control mode, skip reset_global_effects — it floods sysex with
+                  // default knob values that race with the K command via sysex_message_copy.
+                  if (amyboard_mode !== 'control' && typeof reset_global_effects === "function") { reset_global_effects(); }
+                  if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
+                    var presetWireCommands = get_wire_commands_for_juno_patch(patch);
+                    for (var wi = 0; wi < presetWireCommands.length; wi++) {
+                      amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
+                    }
+                  } else if (isDX7Preset) {
+                    // Apply VCF coda so analog filter controls work with DX7
+                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
+                  }
+                  // In control mode, skip sending knob CC mappings — they race with the
+                  // patch load over sysex and can overwrite the K command. The hardware
+                  // doesn't need them; knob state is read back via sync_knobs_from_hardware.
+                  if (amyboard_mode !== 'control' && typeof send_all_knob_cc_mappings === "function") {
+                    send_all_knob_cc_mappings(presetSynth);
+                  }
                 }
-                // In control mode, skip sending knob CC mappings — they race with the
-                // patch load over sysex and can overwrite the K command. The hardware
-                // doesn't need them; knob state is read back via sync_knobs_from_hardware.
-                if (amyboard_mode !== 'control' && typeof send_all_knob_cc_mappings === "function") {
-                  send_all_knob_cc_mappings(presetSynth);
+                // Read knob values from AMY's live synth state (async, waits
+                // for AMY to process queued deltas including VCF coda).
+                window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
+                if (typeof sync_channel_knobs_from_synth_to_ui === "function") {
+                  sync_channel_knobs_from_synth_to_ui(presetSynth).then(function() {
+                    if (typeof window.set_section_disabled === "function") {
+                      window.set_section_disabled("Osc B", isDX7Preset);
+                      window.set_section_disabled("ADSR", isDX7Preset);
+                    }
+                    // Mark channel dirty after preset load so Save shows * and .dirty file is written.
+                    if (typeof schedule_dirty_autosave_for_channel === "function") {
+                      schedule_dirty_autosave_for_channel(presetSynth);
+                    }
+                  });
                 }
+              } catch (e) {
+                console.error("handlePresetLoad crashed:", e);
+              } finally {
+                const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
+                modal.hide();
               }
-              // Read knob values from AMY's live synth state (async, waits
-              // for AMY to process queued deltas including VCF coda).
-              window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
-              if (typeof sync_channel_knobs_from_synth_to_ui === "function") {
-                sync_channel_knobs_from_synth_to_ui(presetSynth).then(function() {
-                  if (typeof window.set_section_disabled === "function") {
-                    window.set_section_disabled("Osc B", isDX7Preset);
-                    window.set_section_disabled("ADSR", isDX7Preset);
-                  }
-                  // Mark channel dirty after preset load so Save shows * and .dirty file is written.
-                  if (typeof schedule_dirty_autosave_for_channel === "function") {
-                    schedule_dirty_autosave_for_channel(presetSynth);
-                  }
-                });
-              }
-              const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
-              modal.hide();
           }
           if (loadJunoPresetButton && junoPresetsSelect) {
             loadJunoPresetButton.addEventListener("click", function() {

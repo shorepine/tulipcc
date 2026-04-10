@@ -122,9 +122,7 @@ void setup_fs() {
         // Then sync
         FS.syncfs(true, function (err) {
             try { FS.mkdirTree('/amyboard/user/current'); } catch (e) {}
-            if (!FS.analyzePath('/amyboard/user/current/sketch.py').exists) {
-                FS.writeFile('/amyboard/user/current/sketch.py', '# AMYboard Sketch\\n# Top-level code runs once at boot. loop() runs repeatedly (~60ms).\\n\\ndef loop():\\n    pass\\n');
-            }
+            // sketch.py creation is handled by Python (amyboard.ensure_user_environment).
             FS.syncfs(false, function (syncErr) {});
         });
     );
