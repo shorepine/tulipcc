@@ -253,33 +253,102 @@ def generate_knobs_text():
     """Return the full AMY state text (same as zW output) using the C helper."""
     return tulip.amy_dump_state()
 
+def _strip_all_knobs_blocks(data):
+    """Remove every _auto_generated_knobs = \"\"\"...\"\"\" block from data (bytes).
+    Also strips the preceding comment line on each removed block so we don't
+    leave orphaned comments behind. Returns the cleaned bytes. Idempotent.
+
+    Self-heals files that accidentally ended up with multiple knobs blocks
+    (e.g. from a prior corrupted save that appended instead of replacing)."""
+    comment_b = b"# Do not edit. Set automatically by the knobs on AMYboard Online."
+    while True:
+        start = data.find(_KNOBS_MARKER_B)
+        if start < 0:
+            break
+        end = data.find(_KNOBS_END_B, start + len(_KNOBS_MARKER_B))
+        if end < 0:
+            # Unterminated block — chop from the marker onward.
+            data = data[:start]
+            break
+        # Also absorb the preceding comment line if present, so repeated
+        # strip+re-add doesn't accumulate stray comment lines.
+        cut_from = start
+        comment_idx = data.rfind(comment_b, 0, start)
+        if comment_idx >= 0:
+            # Back up to the newline before the comment (if any) so we remove
+            # the full comment line plus its trailing newline.
+            line_start = data.rfind(b"\n", 0, comment_idx)
+            if line_start < 0:
+                line_start = 0
+            else:
+                line_start += 1  # keep the \n terminating the previous line
+            # Only absorb the comment if the only thing between it and the
+            # marker is whitespace.
+            gap = data[comment_idx + len(comment_b):start]
+            if gap.strip() == b"":
+                cut_from = line_start
+        # Also absorb the closing """ + trailing whitespace up to the next \n.
+        cut_to = end + len(_KNOBS_END_B)
+        # Absorb any trailing whitespace / single newline after the closing quote.
+        while cut_to < len(data) and data[cut_to:cut_to + 1] in (b" ", b"\t"):
+            cut_to += 1
+        if cut_to < len(data) and data[cut_to:cut_to + 1] == b"\n":
+            cut_to += 1
+        data = data[:cut_from] + data[cut_to:]
+    return data
+
+
 def update_sketch_knobs(sketch_path=None):
     """Read sketch.py, replace _auto_generated_knobs section with current AMY state, write back.
 
     Works at the byte level so we never trip over non-UTF-8 bytes that may
-    have ended up in the file (e.g. from a previous partial/binary transfer)."""
-    if sketch_path is None:
-        sketch_path = tulip.root_dir() + "user/current/sketch.py"
-    tulip.stderr_write("update_sketch_knobs: path=%s" % sketch_path)
+    have ended up in the file (e.g. from a previous partial/binary transfer).
+
+    If the file already contains multiple knobs blocks (or fragments from a
+    prior corrupted save), all of them are stripped and a single fresh block
+    is appended. This is self-healing.
+
+    This function is called synchronously from the C-side zA handler via
+    mp_call_function_1, so any uncaught exception would unwind the MicroPython
+    NLR stack and abort the sysex parser mid-message. We wrap the whole thing
+    in a top-level try/except that only emits a stderr log on failure."""
     try:
-        data = open(sketch_path, "rb").read()
-    except OSError:
-        tulip.stderr_write("update_sketch_knobs: could not read file")
-        return
-    knobs = generate_knobs_text()
-    tulip.stderr_write("update_sketch_knobs: knobs=%d bytes" % len(knobs))
-    knobs_b = knobs.encode("utf-8") if isinstance(knobs, str) else knobs
-    start = data.find(_KNOBS_MARKER_B)
-    if start >= 0:
-        end = data.find(_KNOBS_END_B, start + len(_KNOBS_MARKER_B))
-        if end >= 0:
-            data = data[:start + len(_KNOBS_MARKER_B)] + b"\n" + knobs_b + data[end:]
-        else:
-            data = data + b"\n" + _KNOBS_MARKER_B + b"\n" + knobs_b + _KNOBS_END_B + b"\n"
-    else:
-        data = data + b"\n" + _KNOBS_MARKER_B + b"\n" + knobs_b + _KNOBS_END_B + b"\n"
-    with open(sketch_path, "wb") as f:
-        f.write(data)
+        if sketch_path is None:
+            sketch_path = tulip.root_dir() + "user/current/sketch.py"
+        tulip.stderr_write("update_sketch_knobs: path=%s" % sketch_path)
+        try:
+            data = open(sketch_path, "rb").read()
+        except OSError:
+            tulip.stderr_write("update_sketch_knobs: could not read file")
+            return
+        try:
+            knobs = generate_knobs_text()
+        except Exception as e:
+            tulip.stderr_write("update_sketch_knobs: generate_knobs_text failed: %s" % e)
+            return
+        tulip.stderr_write("update_sketch_knobs: knobs=%d bytes" % len(knobs))
+        knobs_b = knobs.encode("utf-8") if isinstance(knobs, str) else knobs
+        # Strip every existing knobs block (defensive — self-heal if the
+        # file picked up duplicates from a prior bad save), then append one
+        # fresh block at the end.
+        data = _strip_all_knobs_blocks(data)
+        # Ensure exactly one trailing newline before we append the fresh block.
+        while data.endswith(b"\n\n"):
+            data = data[:-1]
+        if not data.endswith(b"\n"):
+            data = data + b"\n"
+        data = (
+            data
+            + b"\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n"
+            + _KNOBS_MARKER_B + b"\n"
+            + knobs_b
+            + (b"" if knobs_b.endswith(b"\n") else b"\n")
+            + _KNOBS_END_B + b"\n"
+        )
+        with open(sketch_path, "wb") as f:
+            f.write(data)
+    except Exception as e:
+        tulip.stderr_write("update_sketch_knobs: unexpected error: %s: %s" % (type(e).__name__, e))
 
 def _extract_knobs_from_file(filepath):
     """Read sketch.py as bytes and extract the _auto_generated_knobs content without importing.
@@ -410,8 +479,13 @@ def run_sketch():
     try:
         import sketch
     except Exception as e:
-        print("sketch.py load failed:")
-        sys.print_exception(e)
+        # Route through stderr_write so the web console sees it alongside the
+        # other diagnostics (stdout may not be wired up in some hosts).
+        tulip.stderr_write("sketch.py load failed: %s: %s" % (type(e).__name__, e))
+        try:
+            sys.print_exception(e)
+        except Exception:
+            pass
         # Self-heal: if sketch.py is corrupted (SyntaxError from stray bytes,
         # etc.), overwrite it with the default and try once more so the board
         # doesn't end up stuck in a bad state across saves/syncs.
@@ -424,8 +498,11 @@ def run_sketch():
                 del sys.modules['sketch']
             import sketch
         except Exception as e2:
-            print("default sketch.py load also failed:")
-            sys.print_exception(e2)
+            tulip.stderr_write("default sketch.py load also failed: %s: %s" % (type(e2).__name__, e2))
+            try:
+                sys.print_exception(e2)
+            except Exception:
+                pass
             cd(tulip.root_dir() + "user")
             return
 

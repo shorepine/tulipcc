@@ -303,11 +303,23 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_factory_reset_obj, 0, 1, tulip_
 
 void mp_update_file_hook(const char *filename) {
 #if defined(AMYBOARD)
-    // Call amyboard.update_sketch_knobs(filename) synchronously.
-    mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
-    mp_obj_t fn = mp_load_attr(mod, MP_QSTR_update_sketch_knobs);
-    mp_obj_t path = mp_obj_new_str(filename, strlen(filename));
-    mp_call_function_1(fn, path);
+    // Call amyboard.update_sketch_knobs(filename) synchronously. This runs
+    // from the C-side zA handler, so any unhandled Python exception would
+    // NLR-longjmp out of the sysex parser mid-message and the subsequent zD
+    // would never be processed (Pull would hang). Wrap the call in an NLR
+    // buffer so exceptions get swallowed and the parser can continue.
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
+        mp_obj_t fn = mp_load_attr(mod, MP_QSTR_update_sketch_knobs);
+        mp_obj_t path = mp_obj_new_str(filename, strlen(filename));
+        mp_call_function_1(fn, path);
+        nlr_pop();
+    } else {
+        // Python raised — swallow so the sysex parser can continue to zD.
+        fprintf(stderr, "mp_update_file_hook: update_sketch_knobs raised, ignoring\n");
+        mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
+    }
 #else
     (void)filename;
 #endif

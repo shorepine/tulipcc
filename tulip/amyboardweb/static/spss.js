@@ -1,4 +1,4 @@
-
+console.log('[spss.js] build sentinel: knobs-dedup-v3 loaded');
 var amy_add_message = null;
 var amy_live_start_web = null;
 var amy_bleep = null;
@@ -1207,6 +1207,18 @@ var _raw_sysex_input = null;
 // message.
 var _sysex_reasm = null;
 
+// Application-level reassembly across MULTIPLE sysex frames. AMY's
+// _send_as_sysex_b64 chunks large dumps into multiple sysex messages of
+// ~1 KB each because Chrome's Web MIDI often drops single sysex messages
+// above a few KB. Each chunk payload starts with a 1-byte marker:
+//   '0' (0x30) = single chunk (whole message in one frame)
+//   'C' (0x43) = continue (more chunks follow)
+//   'E' (0x45) = end (last chunk of a multi-chunk message)
+// We accumulate the base64 text from 'C' chunks here and flush on 'E' or
+// single '0'. The accumulator is reset whenever a new chunk protocol frame
+// arrives, and also at the start of each sync_amy_state.
+var _sysex_b64_accum = '';
+
 function _process_complete_sysex(d) {
     if (!d || d.length < 5) return;
     if (d[0] !== 0xF0 || d[d.length - 1] !== 0xF7) return;
@@ -1215,17 +1227,53 @@ function _process_complete_sysex(d) {
         console.log('sysex mfr mismatch: d[1]=' + d[1] + ' d[2]=' + d[2] + ' d[3]=' + d[3]);
         return;
     }
+    // Chunk marker at position 4.
+    var marker = d[4];
+    var payloadStart, isChunked, isEnd;
+    if (marker === 0x30 /* '0' */ || marker === 0x43 /* 'C' */ || marker === 0x45 /* 'E' */) {
+        payloadStart = 5;
+        isChunked = (marker === 0x43 || marker === 0x45);
+        isEnd = (marker === 0x30 || marker === 0x45);
+    } else {
+        // Legacy / backward-compat: no marker, whole payload is base64.
+        payloadStart = 4;
+        isChunked = false;
+        isEnd = true;
+    }
     var b64 = '';
-    for (var i = 4; i < d.length - 1; i++) b64 += String.fromCharCode(d[i]);
-    console.log('sysex complete:', d.length, 'bytes, b64 len:', b64.length, 'stage:', _sync_stage);
+    for (var i = payloadStart; i < d.length - 1; i++) b64 += String.fromCharCode(d[i]);
+    console.log('sysex chunk:', d.length, 'bytes, marker=' + (marker === 0x43 ? 'C' : marker === 0x45 ? 'E' : marker === 0x30 ? '0' : 'legacy') + ', b64 len:', b64.length, 'stage:', _sync_stage);
+
+    if (isChunked && !isEnd) {
+        // 'C' chunk — accumulate and wait for more.
+        _sysex_b64_accum += b64;
+        return;
+    }
+
+    // Single chunk or final chunk of a multi-chunk message — flush.
+    var fullB64;
+    if (marker === 0x45 /* 'E' */) {
+        fullB64 = _sysex_b64_accum + b64;
+        _sysex_b64_accum = '';
+    } else {
+        // Single '0' marker or legacy: any leftover accum is stale from an
+        // interrupted prior sequence; drop it.
+        if (_sysex_b64_accum.length > 0) {
+            console.warn('sysex: dropping stale accumulator ' + _sysex_b64_accum.length + ' chars');
+            _sysex_b64_accum = '';
+        }
+        fullB64 = b64;
+    }
+    console.log('sysex complete: b64 len:', fullB64.length, 'stage:', _sync_stage);
+
     var payloadText = '';
     try {
-        var binaryStr = atob(b64);
+        var binaryStr = atob(fullB64);
         var bytes = new Uint8Array(binaryStr.length);
         for (var j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j);
         payloadText = new TextDecoder('utf-8').decode(bytes);
     } catch (e) {
-        console.warn('sync: base64 decode failed, b64 len:', b64.length, e);
+        console.warn('sync: base64 decode failed, b64 len:', fullB64.length, e);
         return;
     }
     console.log('sysex decoded:', payloadText.length, 'chars');
@@ -1387,6 +1435,10 @@ async function setup_midi_devices() {
                 if (!d || d.length === 0) return;
                 console.log('raw sysex event:', d.length, 'bytes, first:', d[0].toString(16), 'last:', d[d.length-1].toString(16));
                 // Walk the incoming bytes and stitch together complete sysex messages.
+                // Max raw-byte size we'll accumulate before giving up on an
+                // in-progress message; guards against a stuck reassembler
+                // (no 0xF7 ever arrives) eating memory.
+                var SYSEX_REASM_MAX = 131072;
                 for (var k = 0; k < d.length; k++) {
                     var b = d[k];
                     if (b === 0xF0) {
@@ -1398,6 +1450,9 @@ async function setup_midi_devices() {
                             var full = _sysex_reasm;
                             _sysex_reasm = null;
                             _process_complete_sysex(full);
+                        } else if (_sysex_reasm.length > SYSEX_REASM_MAX) {
+                            console.warn('sysex reassembler exceeded ' + SYSEX_REASM_MAX + ' bytes, discarding');
+                            _sysex_reasm = null;
                         }
                     }
                     // Bytes outside of a sysex frame are ignored here (status
@@ -1422,7 +1477,33 @@ async function setup_midi_devices() {
         const value = data[2];
         move_knob(channel, cc, value);
       }
-      // Sysex is handled by the raw listener above to avoid WebMidi.js filtering.
+      // Fallback sysex reassembly via the WebMidi.js "midimessage" path in
+      // case the raw-listener attachment above didn't land (e.g. WebMidi.js
+      // internal property name drift). Feeds the same reassembler — if both
+      // listeners fire, the second one's 0xF0 resets and it still terminates
+      // on the 0xF7 that follows, and _handle_sync_sysex_payload is a no-op
+      // after the first successful dispatch because _sync_stage becomes null.
+      if (data && data.length > 0 && data[0] === 0xF0) {
+        console.log('webmidi.js midimessage sysex:', data.length, 'bytes, first:', data[0].toString(16), 'last:', data[data.length-1].toString(16));
+        var _SYSEX_REASM_MAX_WM = 131072;
+        for (var kk = 0; kk < data.length; kk++) {
+          var bb = data[kk];
+          if (bb === 0xF0) {
+            _sysex_reasm = [0xF0];
+          } else if (_sysex_reasm !== null) {
+            _sysex_reasm.push(bb);
+            if (bb === 0xF7) {
+              var full2 = _sysex_reasm;
+              _sysex_reasm = null;
+              _process_complete_sysex(full2);
+            } else if (_sysex_reasm.length > _SYSEX_REASM_MAX_WM) {
+              console.warn('webmidi.js sysex reassembler exceeded ' + _SYSEX_REASM_MAX_WM + ' bytes, discarding');
+              _sysex_reasm = null;
+            }
+          }
+        }
+      }
+      // Sysex is also handled by the raw listener above to avoid WebMidi.js filtering.
       // MIDI Thru: always on in control mode, off in simulate mode.
       // Skip thru for SPSS sysex (our own protocol) to avoid feedback loop —
       // the AMYboard's sysex response must not echo back to its own input.
@@ -3164,8 +3245,11 @@ function apply_mode_ui() {
 var _KNOBS_MARKER = '_auto_generated_knobs = """';
 var _KNOBS_END = '"""';
 
+// Extract the LAST _auto_generated_knobs = """...""" block from the sketch.
+// Using lastIndexOf defends against files that picked up duplicate marker
+// blocks from a prior corrupted save — the fresh one is always the latest.
 function extract_knobs_from_sketch(text) {
-    var start = text.indexOf(_KNOBS_MARKER);
+    var start = text.lastIndexOf(_KNOBS_MARKER);
     if (start < 0) return '';
     var bodyStart = start + _KNOBS_MARKER.length;
     var end = text.indexOf(_KNOBS_END, bodyStart);
@@ -3173,17 +3257,63 @@ function extract_knobs_from_sketch(text) {
     return text.slice(bodyStart, end).trim();
 }
 
-function splice_knobs_into_sketch(text, knobsText) {
-    var start = text.indexOf(_KNOBS_MARKER);
-    if (start >= 0) {
+var _KNOBS_COMMENT_LINE = '# Do not edit. Set automatically by the knobs on AMYboard Online.';
+
+// Remove ALL _auto_generated_knobs = """...""" blocks from the text (and the
+// preceding "Do not edit" comment when it's adjacent). Idempotent. Self-heals
+// files that accumulated multiple blocks from a prior corrupted save.
+function _strip_all_knobs_blocks_js(text) {
+    while (true) {
+        var start = text.indexOf(_KNOBS_MARKER);
+        if (start < 0) break;
         var bodyStart = start + _KNOBS_MARKER.length;
         var end = text.indexOf(_KNOBS_END, bodyStart);
-        if (end >= 0) {
-            return text.slice(0, bodyStart) + '\n' + knobsText + text.slice(end);
+        if (end < 0) {
+            // Unterminated block — drop from the marker onward.
+            text = text.slice(0, start);
+            break;
         }
+        var cutFrom = start;
+        // Absorb the preceding "# Do not edit..." comment line when it's
+        // adjacent (only whitespace between it and the marker).
+        var commentIdx = text.lastIndexOf(_KNOBS_COMMENT_LINE, start);
+        if (commentIdx >= 0) {
+            var gap = text.slice(commentIdx + _KNOBS_COMMENT_LINE.length, start);
+            if (gap.replace(/\s/g, '') === '') {
+                var lineStart = text.lastIndexOf('\n', commentIdx - 1);
+                cutFrom = (lineStart < 0 ? 0 : lineStart + 1);
+            }
+        }
+        var cutTo = end + _KNOBS_END.length;
+        while (cutTo < text.length && (text.charAt(cutTo) === ' ' || text.charAt(cutTo) === '\t')) {
+            cutTo++;
+        }
+        if (cutTo < text.length && text.charAt(cutTo) === '\n') {
+            cutTo++;
+        }
+        text = text.slice(0, cutFrom) + text.slice(cutTo);
     }
-    // No marker found — append fresh section.
-    return text + '\n' + _KNOBS_MARKER + '\n' + knobsText + _KNOBS_END + '\n';
+    return text;
+}
+
+function splice_knobs_into_sketch(text, knobsText) {
+    // Strip every existing knobs block (defensive self-heal) and append a
+    // single fresh block at the end. This guarantees we never leave orphan
+    // blocks behind when the source text already has duplicates.
+    var cleaned = _strip_all_knobs_blocks_js(text);
+    // Ensure the cleaned text ends with exactly one newline.
+    while (cleaned.endsWith('\n\n')) {
+        cleaned = cleaned.slice(0, -1);
+    }
+    if (!cleaned.endsWith('\n')) {
+        cleaned += '\n';
+    }
+    var knobsBody = String(knobsText || '');
+    if (!knobsBody.endsWith('\n')) knobsBody += '\n';
+    return cleaned + '\n' + _KNOBS_COMMENT_LINE + '\n'
+        + _KNOBS_MARKER + '\n'
+        + knobsBody
+        + _KNOBS_END + '\n';
 }
 
 async function load_knobs_from_sketch() {
@@ -3481,26 +3611,46 @@ function sync_amy_state_async() {
 // Pull = zA (update sketch.py with AMY state on disk) then zD (send it back).
 // The zA runs update_sketch_knobs() on hardware, then zD reads the file.
 
+// Max time to wait for the zD response. Large sketches (e.g. embedded MIDI
+// files) can easily exceed 16 KB once base64-encoded and wrapped in sysex;
+// Chrome's Web MIDI can take several seconds to deliver that to the event
+// handler, so give it plenty of headroom.
+var _SYNC_TIMEOUT_MS = 20000;
+
 function sync_amy_state() {
     // Send zA to update sketch.py on disk with current AMY state,
     // then zD to get the updated file back.
+    console.log('sync_amy_state: start');
     _sync_stage = 'pending';
     _show_syncing_modal();
     if (_sync_timeout) clearTimeout(_sync_timeout);
+    // Drop any stale reassembly state from a previous sync attempt that may
+    // have timed out mid-message. Starting clean guarantees the reassembler
+    // won't accidentally prepend leftover bytes to the fresh zD response.
+    _sysex_reasm = null;
+    _sysex_b64_accum = '';
     _sync_timeout = setTimeout(function() {
         _sync_timeout = null;
         if (_sync_stage !== null) {
+            console.warn('sync_amy_state: TIMEOUT after ' + _SYNC_TIMEOUT_MS + 'ms, stage=' + _sync_stage);
             _sync_stage = null;
             _show_syncing_modal_error();
             if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('sync timeout')); }
         }
-    }, 5000);
+    }, _SYNC_TIMEOUT_MS);
     // Step 1: update sketch.py on disk with AMY state.
+    console.log('sync_amy_state: sending zA');
     amy_add_log_message('zAZ');
-    // Step 2: after a short delay for zA to complete, request the file.
+    // Step 2: wait long enough for the hardware to finish running
+    // update_sketch_knobs() (which is synchronous from the sysex parser's
+    // perspective and blocks the parser until it returns — so the zD
+    // command we send next must arrive AFTER zA's Python hook completes).
+    // 300ms was too short for sketches with large knobs sections; 1500ms
+    // has plenty of headroom for realistic file sizes.
     setTimeout(function() {
+        console.log('sync_amy_state: sending zD');
         amy_add_log_message('zD/user/current/sketch.pyZ');
-    }, 300);
+    }, 1500);
 }
 
 // Strip any leading garbage (U+FFFD replacement chars, control bytes, or
@@ -3535,6 +3685,48 @@ function _handle_sync_sysex_payload(payload) {
 
     if (_sync_stage === 'pending') {
         _sync_stage = null;
+        // Self-heal: if the incoming sketch has multiple _auto_generated_knobs
+        // blocks OR any "AMYboard Online." fragment outside the usual comment
+        // line (from an earlier bad save on hardware that we can't fix until
+        // firmware is reflashed), truncate at the first occurrence of the
+        // canonical comment line and append a single fresh block built from
+        // the most recent wire commands. This normalizes the text before it
+        // lands in the editor.
+        var markerCount = 0;
+        var mcIdx = 0;
+        while (true) {
+            var mcFound = payload.indexOf(_KNOBS_MARKER, mcIdx);
+            if (mcFound < 0) break;
+            markerCount++;
+            mcIdx = mcFound + _KNOBS_MARKER.length;
+        }
+        if (markerCount > 1) {
+            console.warn('pull: sketch has ' + markerCount + ' knobs blocks, collapsing to the newest');
+            // Pull the newest (last) block's content as the canonical knobs.
+            var freshKnobs = extract_knobs_from_sketch(payload);  // lastIndexOf -> newest
+            // Find the first "# Do not edit. ..." comment line — everything
+            // before it is the clean code; everything from it onward is
+            // replaced with a single fresh block.
+            var cleanBefore;
+            var commentStart = payload.indexOf(_KNOBS_COMMENT_LINE);
+            if (commentStart >= 0) {
+                var lineStart = payload.lastIndexOf('\n', commentStart - 1);
+                cleanBefore = payload.slice(0, lineStart < 0 ? 0 : lineStart + 1);
+            } else {
+                var firstMarker = payload.indexOf(_KNOBS_MARKER);
+                cleanBefore = payload.slice(0, firstMarker < 0 ? payload.length : firstMarker);
+            }
+            while (cleanBefore.endsWith('\n\n')) cleanBefore = cleanBefore.slice(0, -1);
+            if (!cleanBefore.endsWith('\n')) cleanBefore += '\n';
+            var fk = String(freshKnobs || '');
+            if (fk && !fk.endsWith('\n')) fk += '\n';
+            payload = cleanBefore
+                + '\n' + _KNOBS_COMMENT_LINE + '\n'
+                + _KNOBS_MARKER + '\n'
+                + fk
+                + _KNOBS_END + '\n';
+            console.warn('pull: normalized sketch length =', payload.length);
+        }
         _last_sketch_text = payload;
         console.log('pull: received ' + payload.length + ' bytes');
         // Set editor content.
@@ -4035,22 +4227,43 @@ function parse_wire_code(message) {
 
 function events_from_wire_code_message(message) {
   // Message is a single wire-code string, but may contain multiple events with Z separators.
+  // Safety-capped: if parse_wire_code ever returns without advancing (or we
+  // blow past a sane event count), bail out so we can never wedge the JS event
+  // loop on a malformed message.
   events = [];
   let rest = message;
+  const MAX_EVENTS = 5000;
+  let iterations = 0;
   while (rest != "") {
+    const prev_rest = rest;
     [event, rest] = parse_wire_code(rest);
     events.push(event);
+    if (rest === prev_rest) {
+      console.warn("events_from_wire_code_message: parse_wire_code did not advance at:", String(rest).substring(0, 80));
+      break;
+    }
+    if (++iterations >= MAX_EVENTS) {
+      console.warn("events_from_wire_code_message: bailed after " + MAX_EVENTS + " events");
+      break;
+    }
   }
   return events;
 }
 
 function events_from_wire_code_messages(messages) {
   // Messages is an array of wire code message strings; all the events contained are concatenated.
+  // Per-message try/catch: if one wire line is malformed (corruption from a
+  // prior partial save, a stray comment that leaked through, etc.), we log
+  // and skip it instead of failing the whole batch.
   var all_events = [];
   for (const message of messages) {
-    let message_events = events_from_wire_code_message(message);
-    for (const event of message_events) {
-      all_events.push(event);
+    try {
+      let message_events = events_from_wire_code_message(message);
+      for (const event of message_events) {
+        all_events.push(event);
+      }
+    } catch (e) {
+      console.warn('events_from_wire_code_messages: skipping malformed line:', message, e && e.message);
     }
   }
   return all_events;
