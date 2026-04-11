@@ -3205,10 +3205,14 @@ function apply_mode_ui() {
     var audioIn = document.getElementById('audioin_grow');
     if (audioIn) { if (isControl) audioIn.classList.add('d-none'); else audioIn.classList.remove('d-none'); }
     // MIDI dropdowns + switch button: in control mode, these live in the sync modal instead.
+    // In simulate mode, hide the dropdowns when WebMIDI isn't available (the
+    // "This page can use WebMIDI on..." notice in #midi-warning-col takes their place).
+    var _webmidi_ok = (typeof WebMidi !== 'undefined') && WebMidi.supported;
+    var _show_midi_dropdowns = !isControl && _webmidi_ok;
     var midiInputCol = document.getElementById('midi-input-col');
-    if (midiInputCol) midiInputCol.style.display = isControl ? 'none' : '';
+    if (midiInputCol) midiInputCol.style.display = _show_midi_dropdowns ? '' : 'none';
     var midiOutputCol = document.getElementById('midi-output-col');
-    if (midiOutputCol) midiOutputCol.style.display = isControl ? 'none' : '';
+    if (midiOutputCol) midiOutputCol.style.display = _show_midi_dropdowns ? '' : 'none';
     // MIDI Input Pass-Thru: control mode only.
     var midiPassthruCol = document.getElementById('midi-passthru-col');
     if (midiPassthruCol) {
@@ -3495,6 +3499,43 @@ function _hide_saving_modal() {
     document.body.style.removeProperty('padding-right');
 }
 
+// Bypass Bootstrap's Modal API for the resetting modal. Bootstrap schedules
+// its show() animation via requestAnimationFrame; for a very fast operation
+// like factory_reset (<120ms), the matching hide() can run before the
+// animation has processed the show, leaving the modal stuck visible after
+// Bootstrap's delayed animation finally fires. Toggling classes/styles
+// directly keeps show/hide strictly synchronous.
+function _show_resetting_modal() {
+    var el = document.getElementById('resettingModal');
+    if (!el) return;
+    el.classList.add('show');
+    el.style.display = 'block';
+    el.removeAttribute('aria-hidden');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('role', 'dialog');
+    // Ensure there's a backdrop (Bootstrap normally adds one).
+    if (!document.querySelector('.modal-backdrop')) {
+        var b = document.createElement('div');
+        b.className = 'modal-backdrop fade show';
+        document.body.appendChild(b);
+    }
+    document.body.classList.add('modal-open');
+}
+
+function _hide_resetting_modal() {
+    var el = document.getElementById('resettingModal');
+    if (!el) return;
+    el.classList.remove('show');
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    el.removeAttribute('aria-modal');
+    el.removeAttribute('role');
+    document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+}
+
 function _show_syncing_modal() {
     if (amyboard_mode !== 'control') return;
     var el = document.getElementById('syncingModal');
@@ -3577,20 +3618,82 @@ async function reset_amyboard() {
         _hide_saving_modal();
         sync_amy_state();
     } else {
-        // Simulate mode: let Python handle the reset (same path as hardware).
-        if (mp) {
+        // Simulate mode: let Python handle the reset (same path as hardware),
+        // then refresh JS-side knob/channel state so the UI matches the
+        // freshly-reset AMY. A "Resetting…" modal is shown for the duration
+        // because mp.runPythonAsync blocks the main thread — without it, the
+        // Reset button visually stays "pressed"/red until Python returns.
+        if (!mp) return;
+        _show_resetting_modal();
+        // Yield one frame so the modal actually paints before Python blocks.
+        await sleep_ms(50);
+        try {
             try {
                 await mp.runPythonAsync("import amyboard; amyboard.factory_reset()");
-            } catch (e) {}
+            } catch (e) {
+                console.warn('reset: amyboard.factory_reset() failed', e);
+            }
             sync_persistent_fs();
             // Reload the sketch into the editor.
             if (editor) {
                 try {
                     var sketchContent = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
                     editor.setValue(sketchContent);
-                } catch (e) {}
+                } catch (e) {
+                    console.warn('reset: failed to reload sketch.py into editor', e);
+                }
                 setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
             }
+            // Rebuild JS-side knob state to clean defaults. factory_reset
+            // already sent RESET_SYNTHS + set up the default Juno patch on
+            // channel 1 in AMY, so channels 2-16 are empty and channel 1
+            // holds the Juno values — we reflect that below.
+            if (typeof window.reset_amy_knobs_to_defaults === "function") {
+                window.reset_amy_knobs_to_defaults();
+            }
+            // Reset global FX (reverb/chorus/echo/EQ) — Python's RESET_SYNTHS
+            // doesn't touch these, so we clear them from the JS side.
+            if (typeof reset_global_effects === "function") {
+                reset_global_effects();
+            }
+            // Reset channel active state: only channel 1 active after reset.
+            // Assign directly rather than calling set_channel_active() so we
+            // don't re-send a redundant Juno init to AMY on channel 1.
+            if (!Array.isArray(window.active_channels)) window.active_channels = [];
+            window.active_channels[1] = true;
+            for (var _ch = 2; _ch <= 16; _ch += 1) {
+                window.active_channels[_ch] = false;
+            }
+            // Reset current synth to 1 and sync the channel-select dropdown.
+            window.current_synth = 1;
+            var channelSelect = document.getElementById("midi-channel-select");
+            if (channelSelect) channelSelect.value = "1";
+            var activeCheckbox = document.getElementById("channel-active-toggle");
+            if (activeCheckbox) activeCheckbox.checked = true;
+            // Drop any cached "already sent knob CC mappings" flags so the
+            // next channel switch re-sends them from the fresh default state.
+            if (Array.isArray(window.channel_control_mapping_sent)) {
+                for (var _ch2 = 1; _ch2 <= 16; _ch2 += 1) {
+                    window.channel_control_mapping_sent[_ch2] = false;
+                }
+            }
+            // Pull live AMY state (the Juno patch factory_reset just loaded)
+            // back into the UI widgets for channel 1. Falls back to a plain
+            // re-render if the synth-side read isn't available.
+            var synced = false;
+            try {
+                synced = await sync_channel_knobs_from_synth_to_ui(1);
+            } catch (e) {
+                console.warn('reset: sync_channel_knobs_from_synth_to_ui failed', e);
+            }
+            if (!synced && typeof window.refresh_knobs_for_channel === "function") {
+                var previousSuppress = !!window.suppress_knob_cc_send;
+                window.suppress_knob_cc_send = true;
+                try { window.refresh_knobs_for_channel(); }
+                finally { window.suppress_knob_cc_send = previousSuppress; }
+            }
+        } finally {
+            _hide_resetting_modal();
         }
     }
 }
