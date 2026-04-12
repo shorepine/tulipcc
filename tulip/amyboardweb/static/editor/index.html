@@ -1200,14 +1200,12 @@
                 <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
               </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="simulate-controls-li" role="presentation">
-                <span class="small text-muted fw-semibold">Your AMYboard Simulator:</span>
-                <button type="button" class="btn btn-danger btn-sm" id="simulate-save-btn" onclick="save_amy_state();">Save</button>
-                <button type="button" class="btn btn-outline-danger btn-sm" onclick="reset_amyboard();">Reset</button>
+                <button type="button" class="btn btn-danger btn-sm" id="simulate-save-btn" onclick="save_amy_state();">Write to Simulator</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="reset_amyboard();">Reset Simulator</button>
               </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="amyboard-controls-li" role="presentation">
-                <span class="small text-muted fw-semibold">Your AMYboard:</span>
-                <button type="button" class="btn btn-danger btn-sm" id="save-state-btn" onclick="save_amy_state();"><span id="save-btn-label">Save To</span></button>
-                <button type="button" class="btn btn-outline-danger btn-sm" id="reset-state-btn" onclick="reset_amyboard();">Reset</button>
+                <button type="button" class="btn btn-danger btn-sm" id="save-state-btn" onclick="save_amy_state();"><span id="save-btn-label">Write to AMYboard</span></button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="reset-state-btn" onclick="reset_amyboard();">Reset AMYboard</button>
               </li>
             </ul>
           </div>

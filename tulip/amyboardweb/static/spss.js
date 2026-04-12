@@ -728,8 +728,8 @@ window.clear_current_channel_patch = async function() {
   } else {
     reset_global_effects();
     send_all_knob_cc_mappings(synth);
-    // Don't sync knobs — K257 is a queued delta that needs a render cycle.
-    // Knobs are reset to defaults which is correct for Clear.
+    // Sync knobs from AMY state after K257 delta is processed.
+    await sync_channel_knobs_from_synth_to_ui(synth);
   }
   if (typeof window.set_section_disabled === "function") {
     window.set_section_disabled("Osc A", false);
@@ -3001,6 +3001,30 @@ async function upload_current_environment() {
             return;
         }
     }
+    // Simulate mode: run the same save routine as "Write to Simulator" so
+    // sketch.py contains the live AMY knob state before we upload it.
+    if (amyboard_mode === 'simulate' && mp) {
+        if (editor) {
+            try {
+                mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', editor.getValue());
+            } catch (e) {
+                console.warn('upload: failed to write editor content to sketch.py', e);
+            }
+        }
+        try {
+            await mp.runPythonAsync("import amyboard; amyboard.update_sketch_knobs()");
+        } catch (e) {
+            console.warn('upload: update_sketch_knobs failed', e);
+        }
+        sync_persistent_fs();
+        // Reload updated sketch.py into the editor so the user sees the knobs block.
+        if (editor) {
+            try {
+                var updatedSketch = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
+                editor.setValue(updatedSketch);
+            } catch (e) {}
+        }
+    }
     // Upload sketch.py content with the environment name as the file key.
     var sketchContent = '';
     if (amyboard_mode === 'simulate' && mp) {
@@ -3694,6 +3718,10 @@ async function reset_amyboard() {
             }
         } finally {
             _hide_resetting_modal();
+            // The modal backdrop intercepts mouseup so the Reset button's
+            // :focus/:active state gets stuck (solid red instead of outline).
+            // Blur whatever has focus so the button returns to its normal style.
+            if (document.activeElement) document.activeElement.blur();
         }
     }
 }
