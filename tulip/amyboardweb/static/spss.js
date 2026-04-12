@@ -3943,6 +3943,13 @@ function apply_zd_dump_to_knobs(dumpText) {
             window.suppress_knob_cc_send = true;
             try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
         }
+        // Check oscillator count and disable sections for DX7 patches.
+        if (typeof window.set_section_disabled === "function") {
+            var oscsPerVoice = num_oscs_from_patch_file_content(wireLines.join('\n'));
+            var isDX7 = oscsPerVoice >= 8;
+            window.set_section_disabled("Osc B", isDX7);
+            window.set_section_disabled("ADSR", isDX7);
+        }
         console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' → ' + wireLines.length + ' wire lines → ' + events.length + ' events');
     } catch (e) {
         console.warn('apply_zd_dump_to_knobs: parse/apply failed', e);
