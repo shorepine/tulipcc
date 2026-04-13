@@ -1233,6 +1233,11 @@ function _process_complete_sysex(d) {
         if (_ping_resolve) { var r = _ping_resolve; _ping_resolve = null; _ping_reject = null; r(); }
         return;
     }
+    // Sysex ACK: F0 00 03 45 'A' 'K' F7
+    if (d.length === 7 && d[4] === 0x41 /* A */ && d[5] === 0x4B /* K */) {
+        if (_sysex_ack_resolve) { var r = _sysex_ack_resolve; _sysex_ack_resolve = null; r(); }
+        return;
+    }
     // Chunk marker at position 4.
     var marker = d[4];
     var payloadStart, isChunked, isEnd;
@@ -3174,6 +3179,8 @@ function bytes_to_base64_ascii(bytes) {
     return btoa(chunk);
 }
 
+var _sysex_ack_resolve = null;
+
 async function sysex_write_amy_message(message) {
     var outputDevice = get_selected_midi_output_device() || midiOutputDevice;
     if (!outputDevice) {
@@ -3181,6 +3188,14 @@ async function sysex_write_amy_message(message) {
     }
     midiOutputDevice = outputDevice;
     var payload = Array.from(new TextEncoder().encode(String(message || "")));
+    // Set up ACK wait before sending so we don't miss a fast reply.
+    var ackPromise = new Promise(function(resolve) {
+        _sysex_ack_resolve = resolve;
+        // Timeout: if no ACK after 2s, proceed anyway.
+        setTimeout(function() {
+            if (_sysex_ack_resolve === resolve) { _sysex_ack_resolve = null; resolve(); }
+        }, 2000);
+    });
     if (typeof outputDevice.sendSysex === "function") {
         outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
     } else if (typeof outputDevice.send === "function") {
@@ -3188,8 +3203,8 @@ async function sysex_write_amy_message(message) {
     } else {
         throw new Error("Selected MIDI output does not support sysex send.");
     }
-    // Pace sends to avoid overrunning the hardware USB-MIDI RX buffer.
-    await sleep_ms(50);
+    // Wait for hardware ACK before sending the next message.
+    await ackPromise;
 }
 
 async function show_editor() {
