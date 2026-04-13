@@ -2469,17 +2469,11 @@ async function stop_current_environment() {
 
 async function restart_sketch() {
     if (amyboard_mode === 'control') {
-        // Reboot into bootloader (stops sketch reliably even when loop()
-        // is hogging the scheduler), then start the sketch.
+        // zB1: normal reboot — runs sketch.py on boot.
         _show_resetting_modal();
-        reboot_to_bootloader();
-        console.log('restart: zB sent, waiting for board...');
+        amy_add_log_message('zB1Z');
+        console.log('restart: zB1 sent, waiting for board...');
         await wait_for_board_ready();
-        // Board rebooted into bootloader mode with sketch.py on disk.
-        // Start the sequencer — this triggers run_sketch() on hardware.
-        control_sequencer_start();
-        console.log('restart: sequencer start sent');
-        await sleep_ms(500);
         _hide_resetting_modal();
         if (document.activeElement) document.activeElement.blur();
     } else {
@@ -2489,7 +2483,7 @@ async function restart_sketch() {
 }
 
 function reboot_to_bootloader() {
-    // zB reboots hardware into bootloader mode (sketch skipped).
+    // zB/zB0: reboot into bootloader mode (sketch skipped).
     // Handled in pure C — works even when loop() is hogging the scheduler.
     amy_add_log_message('zBZ');
 }

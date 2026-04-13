@@ -363,10 +363,21 @@ RTC_NOINIT_ATTR uint32_t amyboard_bootloader_flag;
 #define AMYBOARD_BOOTLOADER_MAGIC 0xABCD0001
 #endif
 
-void mp_reboot_hook(void) {
+void mp_reboot_hook(uint8_t mode) {
 #if defined(AMYBOARD) && defined(ESP_PLATFORM)
-    amyboard_bootloader_flag = AMYBOARD_BOOTLOADER_MAGIC;
-    esp_restart();
+    if (mode == 0) {
+        // Bootloader mode: skip sketch on next boot.
+        amyboard_bootloader_flag = AMYBOARD_BOOTLOADER_MAGIC;
+        esp_restart();
+    } else if (mode == 1) {
+        // Normal reboot: run sketch as usual.
+        esp_restart();
+    } else if (mode == 2) {
+        // ROM download/flash mode.
+        #include "soc/rtc_cntl_reg.h"
+        REG_WRITE(RTC_CNTL_OPTION1_REG, RTC_CNTL_FORCE_DOWNLOAD_BOOT);
+        esp_restart();
+    }
 #endif
 }
 
