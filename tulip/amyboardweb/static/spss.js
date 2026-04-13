@@ -2692,27 +2692,29 @@ async function import_amyboard_world_file(index) {
 
         var sketchText = await response.text();
         if (amyboard_mode === 'control') {
-            // Control mode: transfer sketch to hardware as-is (it has its own knobs).
-            // The hardware restart_sketch will apply the knobs from the file.
-            // Then fetch the file back for the editor via zD (no zA — don't overwrite
-            // the downloaded sketch's knobs with stale AMY state).
+            // Control mode: reboot into bootloader (stops sketch, frees
+            // scheduler), send file via zT, then apply knobs from sketch.
             _show_saving_modal();
+            reboot_to_bootloader();
+            console.log('import: zB sent, waiting for board...');
+            await wait_for_board_ready();
             try {
                 await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
-                await sleep_ms(2000);
+                console.log('import: sketch sent to AMYboard');
+                await sleep_ms(1000);
             } catch (e) {
                 console.warn('import: sketch upload to AMYboard failed', e);
             }
             _hide_saving_modal();
-            // Fetch the file back + set knobs from it (no zA needed).
-            _sync_stage = 'pending';
-            _show_syncing_modal();
-            if (_sync_timeout) clearTimeout(_sync_timeout);
-            _sync_timeout = setTimeout(function() {
-                _sync_timeout = null;
-                if (_sync_stage !== null) { _sync_stage = null; _show_syncing_modal_error(); }
-            }, 5000);
-            amy_add_log_message('zD/user/current/sketch.pyZ');
+            // Set editor to the downloaded sketch and apply knobs.
+            if (editor) {
+                editor.setValue(sketchText);
+                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+            }
+            var knobs = extract_knobs_from_sketch(sketchText);
+            if (knobs) {
+                apply_zd_dump_to_knobs(knobs);
+            }
         } else {
             // Simulate mode: write to local FS and restart.
             if (editor) editor.setValue(sketchText);
