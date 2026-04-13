@@ -1479,11 +1479,10 @@ async function setup_midi_devices() {
       }
       // Fallback sysex reassembly via the WebMidi.js "midimessage" path in
       // case the raw-listener attachment above didn't land (e.g. WebMidi.js
-      // internal property name drift). Feeds the same reassembler — if both
-      // listeners fire, the second one's 0xF0 resets and it still terminates
-      // on the 0xF7 that follows, and _handle_sync_sysex_payload is a no-op
-      // after the first successful dispatch because _sync_stage becomes null.
-      if (data && data.length > 0 && data[0] === 0xF0) {
+      // internal property name drift). SKIP if the raw listener is active —
+      // both listeners share _sysex_b64_accum, so 'C' chunks get doubled
+      // when both fire, corrupting multi-chunk zD responses.
+      if (!_raw_sysex_listener && data && data.length > 0 && data[0] === 0xF0) {
         console.log('webmidi.js midimessage sysex:', data.length, 'bytes, first:', data[0].toString(16), 'last:', data[data.length-1].toString(16));
         var _SYSEX_REASM_MAX_WM = 131072;
         for (var kk = 0; kk < data.length; kk++) {
