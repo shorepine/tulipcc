@@ -2470,7 +2470,7 @@ async function stop_current_environment() {
 async function restart_sketch() {
     if (amyboard_mode === 'control') {
         // zB1: normal reboot — runs sketch.py on boot.
-        _show_resetting_modal();
+        _show_resetting_modal('Restarting\u2026');
         amy_add_log_message('zB1Z');
         console.log('restart: zB1 sent, waiting for board...');
         await wait_for_board_ready();
@@ -3590,7 +3590,9 @@ function _hide_saving_modal() {
 // animation has processed the show, leaving the modal stuck visible after
 // Bootstrap's delayed animation finally fires. Toggling classes/styles
 // directly keeps show/hide strictly synchronous.
-function _show_resetting_modal() {
+function _show_resetting_modal(label) {
+    var lbl = document.getElementById('resetting-modal-label');
+    if (lbl) lbl.textContent = label || 'Resetting\u2026';
     var el = document.getElementById('resettingModal');
     if (!el) return;
     el.classList.add('show');
