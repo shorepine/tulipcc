@@ -484,6 +484,7 @@ def run_sketch():
     # Restore AMY synth state BEFORE importing sketch.py so user code
     # can rely on the synth being fully configured.
     knobs_text = _extract_knobs_from_file(_env_dir + "/sketch.py")
+    tulip.stderr_write("run_sketch: knobs_text=%d bytes" % len(knobs_text))
     _apply_knobs_text(knobs_text)
 
     # Clear cached sketch module so we always load fresh from disk
