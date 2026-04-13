@@ -390,6 +390,24 @@ def _apply_knobs_text(knobs_text):
         amy.send_raw("i1K257iv6Z")
         amy.send_raw("i1ic255Z")
         return
+    # Find all active channels and init each with the default Juno patch
+    # before applying the saved wire code.
+    active_channels = set()
+    for line in knobs_text.strip().split('\n'):
+        line = line.strip()
+        if line and line.startswith('i') and len(line) > 1 and line[1:2].isdigit():
+            # Extract channel number (i1..., i16...)
+            num = ''
+            for c in line[1:]:
+                if c.isdigit():
+                    num += c
+                else:
+                    break
+            if num:
+                active_channels.add(int(num))
+    for ch in sorted(active_channels):
+        amy.send_raw("i%dic255Z" % ch)
+        amy.send_raw("i%dK257iv6Z" % ch)
     for line in knobs_text.strip().split('\n'):
         line = line.strip()
         if line and not line.startswith('#'):
