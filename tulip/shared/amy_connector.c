@@ -373,8 +373,19 @@ void mp_reboot_hook(uint8_t mode) {
         // Normal reboot: run sketch as usual.
         esp_restart();
     } else if (mode == 2) {
-        // ROM download/flash mode.
+        // ROM download/flash mode. Must switch USB PHY back to Serial/JTAG
+        // mode first, otherwise the ROM bootloader inherits the OTG state
+        // and WebSerial sees "AMYboard" instead of "USB JTAG/serial debug unit".
         #include "soc/rtc_cntl_reg.h"
+        #if CONFIG_IDF_TARGET_ESP32S3
+        extern void usb_usj_mode(void);
+        extern void usb_dc_prepare_persist(void);
+        extern void chip_usb_set_persist_flags(uint32_t flags);
+        #define USBDC_BOOT_DFU 0x02
+        usb_usj_mode();
+        usb_dc_prepare_persist();
+        chip_usb_set_persist_flags(USBDC_BOOT_DFU);
+        #endif
         REG_WRITE(RTC_CNTL_OPTION1_REG, RTC_CNTL_FORCE_DOWNLOAD_BOOT);
         esp_restart();
     }
