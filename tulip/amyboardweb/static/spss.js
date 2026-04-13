@@ -2469,9 +2469,11 @@ async function restart_sketch() {
         reboot_to_bootloader();
         console.log('restart: zB sent, waiting for reboot...');
         await sleep_ms(5000);
-        amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
-        console.log('restart: zP restart_sketch sent');
-        await sleep_ms(1000);
+        // Board rebooted into bootloader mode with sketch.py on disk.
+        // Start the sequencer — this triggers run_sketch() on hardware.
+        control_sequencer_start();
+        console.log('restart: sequencer start sent');
+        await sleep_ms(500);
         _hide_resetting_modal();
         if (document.activeElement) document.activeElement.blur();
     } else {
