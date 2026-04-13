@@ -2742,24 +2742,30 @@ async function load_world_environment_by_name(username, envName) {
 
         var sketchText = await dlResponse.text();
         if (amyboard_mode === 'control') {
-            // Control mode: transfer sketch as-is (has its own knobs), restart,
-            // then fetch back via zD (no zA — preserve the file's knobs).
+            // Control mode: reboot into bootloader (stops sketch, frees
+            // scheduler), send file via zT, then start the sketch.
             _show_saving_modal();
+            reboot_to_bootloader();
+            console.log('load_world: zB sent, waiting for reboot...');
+            await sleep_ms(5000);
             try {
                 await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
-                await sleep_ms(2000);
+                console.log('load_world: sketch sent to AMYboard');
+                await sleep_ms(1000);
             } catch (e) {
                 console.warn('load_world: sketch upload to AMYboard failed', e);
             }
             _hide_saving_modal();
-            _sync_stage = 'pending';
-            _show_syncing_modal();
-            if (_sync_timeout) clearTimeout(_sync_timeout);
-            _sync_timeout = setTimeout(function() {
-                _sync_timeout = null;
-                if (_sync_stage !== null) { _sync_stage = null; _show_syncing_modal_error(); }
-            }, 5000);
-            amy_add_log_message('zD/user/current/sketch.pyZ');
+            // Set editor to the downloaded sketch.
+            if (editor) {
+                editor.setValue(sketchText);
+                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+            }
+            // Apply knobs from the sketch to the UI.
+            var knobs = extract_knobs_from_sketch(sketchText);
+            if (knobs) {
+                apply_zd_dump_to_knobs(knobs);
+            }
         } else {
             // Simulate mode: write to local FS and restart.
             if (editor) editor.setValue(sketchText);
