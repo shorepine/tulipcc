@@ -319,8 +319,13 @@ def update_sketch_knobs(sketch_path=None):
         try:
             data = open(sketch_path, "rb").read()
         except OSError:
-            tulip.stderr_write("update_sketch_knobs: could not read file")
-            return
+            tulip.stderr_write("update_sketch_knobs: file missing, creating default")
+            _ensure_current_env_layout()
+            try:
+                data = open(sketch_path, "rb").read()
+            except OSError:
+                tulip.stderr_write("update_sketch_knobs: still can't read, giving up")
+                return
         try:
             knobs = generate_knobs_text()
         except Exception as e:
