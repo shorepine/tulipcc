@@ -935,7 +935,13 @@
             editor.setValue(DEFAULT_SKETCH_SOURCE);
           }
           // Auto-sync from hardware once MIDI devices are ready.
-          _on_midi_ready = function() { sync_amy_state(); };
+          // Reboot into bootloader mode first so zA+zD work reliably.
+          _on_midi_ready = async function() {
+            reboot_to_bootloader();
+            console.log('pageload: zB sent, waiting for reboot...');
+            await sleep_ms(5000);
+            sync_amy_state();
+          };
           await start_midi();
         }
       }
