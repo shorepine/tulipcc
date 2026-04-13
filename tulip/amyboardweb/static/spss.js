@@ -4281,6 +4281,10 @@ except Exception as _e:
     } catch (e) {
       console.warn("apply knobs-text on boot failed:", e);
     }
+    // Wait for AMY audio worklet to process the queued events from
+    // _apply_knobs_text (synth init + wire code). Without this, the synth
+    // has no voices yet and yield_synth_commands fails.
+    await new Promise(function(resolve) { setTimeout(resolve, 200); });
     // Sync UI knobs from the AMY state that run_sketch just applied.
     try { await sync_channel_knobs_from_synth_to_ui(window.current_synth || 1); } catch (e) {}
   }
