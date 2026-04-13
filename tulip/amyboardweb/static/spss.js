@@ -2716,24 +2716,15 @@ async function import_amyboard_world_file(index) {
                 apply_zd_dump_to_knobs(knobs);
             }
         } else {
-            // Simulate mode: write to local FS and restart.
-            if (editor) editor.setValue(sketchText);
+            // Simulate mode: write to local FS, then reload the page to
+            // the patch interface so the sketch starts fresh.
             if (mp) {
                 ensure_current_environment_layout(false);
                 mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', sketchText);
-                var knobs = extract_knobs_from_sketch(sketchText);
-                if (knobs) {
-                    var lines = knobs.split(/\r?\n/);
-                    for (var j = 0; j < lines.length; j++) {
-                        var line = lines[j].trim();
-                        if (line && !line.startsWith('#')) amy_add_log_message(line);
-                    }
-                    await sync_channel_knobs_from_synth_to_ui(window.current_synth);
-                }
-                try {
-                    await mp.runPythonAsync("import amyboard; amyboard.restart_sketch()");
-                } catch (e) {}
+                sync_persistent_fs();
             }
+            window.location.href = '/editor/?tab=patch';
+            return;
         }
         var envNameInput = document.getElementById("editor_filename");
         if (envNameInput) envNameInput.value = packageName;
