@@ -187,6 +187,18 @@ async function clickConnect() {
         return;
     }
 
+    // Try to reboot the board into ROM flash mode (zB2) via the parent page.
+    try {
+        if (window.parent && window.parent.amy_add_log_message) {
+            logMsg("Rebooting AMYboard into flash mode...");
+            window.parent.amy_add_log_message('zB2Z');
+            await new Promise(r => setTimeout(r, 5000));
+            logMsg("Ready. Select USB/JTAG in the port list.");
+        }
+    } catch (e) {
+        // Cross-origin or no parent — skip, user does manual button hold.
+    }
+
     // Set up device and transport
     if (device === null) {
         device = await serialLib.requestPort({});
