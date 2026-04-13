@@ -2463,8 +2463,17 @@ async function stop_current_environment() {
 
 async function restart_sketch() {
     if (amyboard_mode === 'control') {
-        // zP executes Python on the hardware.
+        // Reboot into bootloader (stops sketch reliably even when loop()
+        // is hogging the scheduler), then start the sketch.
+        _show_resetting_modal();
+        reboot_to_bootloader();
+        console.log('restart: zB sent, waiting for reboot...');
+        await sleep_ms(5000);
         amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
+        console.log('restart: zP restart_sketch sent');
+        await sleep_ms(1000);
+        _hide_resetting_modal();
+        if (document.activeElement) document.activeElement.blur();
     } else {
         await save_editor_if_dirty();
         await runCodeBlock("import amyboard; amyboard.restart_sketch()");
