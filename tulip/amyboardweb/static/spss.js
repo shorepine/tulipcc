@@ -4254,6 +4254,12 @@ async function start_audio() {
   // way hardware does: apply _auto_generated_knobs, import sketch.py, start loop().
   var urlEnvPending = !!(new URLSearchParams(window.location.search).get("env"));
   if (mp && !urlEnvPending) {
+    // Init synth 1 with default Juno patch before run_sketch applies knobs.
+    // On main, restore_patch_state_from_files did this. Without it, synth 1
+    // doesn't exist and _apply_knobs_text fails with "synth not defined".
+    amy_add_message("i1K257iv6Z");
+    // Let AMY process the synth init before running Python.
+    await new Promise(function(resolve) { setTimeout(resolve, 100); });
     try {
       await mp.runPythonAsync(`
 import sys, amyboard
