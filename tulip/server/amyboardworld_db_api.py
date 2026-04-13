@@ -149,6 +149,15 @@ def _ensure_schema() -> None:
             """
         )
 
+        # Retry client_ip for tulip_files and tulip_messages — the first
+        # ALTER TABLE pass (above) runs before these tables are created on a
+        # fresh database, so the column may be missing.
+        for tbl in ("tulip_files", "tulip_messages"):
+            try:
+                conn.execute(f"ALTER TABLE {tbl} ADD COLUMN client_ip TEXT NOT NULL DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass
+
 
 @app.on_event("startup")
 def _startup() -> None:
