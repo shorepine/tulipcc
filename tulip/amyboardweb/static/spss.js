@@ -1227,6 +1227,12 @@ function _process_complete_sysex(d) {
         console.log('sysex mfr mismatch: d[1]=' + d[1] + ' d[2]=' + d[2] + ' d[3]=' + d[3]);
         return;
     }
+    // zI ping reply: F0 00 03 45 'O' 'K' F7
+    if (d.length === 7 && d[4] === 0x4F /* O */ && d[5] === 0x4B /* K */) {
+        console.log('zI: board ready');
+        if (_ping_resolve) { var r = _ping_resolve; _ping_resolve = null; _ping_reject = null; r(); }
+        return;
+    }
     // Chunk marker at position 4.
     var marker = d[4];
     var payloadStart, isChunked, isEnd;
@@ -2467,8 +2473,8 @@ async function restart_sketch() {
         // is hogging the scheduler), then start the sketch.
         _show_resetting_modal();
         reboot_to_bootloader();
-        console.log('restart: zB sent, waiting for reboot...');
-        await sleep_ms(5000);
+        console.log('restart: zB sent, waiting for board...');
+        await wait_for_board_ready();
         // Board rebooted into bootloader mode with sketch.py on disk.
         // Start the sequencer — this triggers run_sketch() on hardware.
         control_sequencer_start();
@@ -2486,6 +2492,35 @@ function reboot_to_bootloader() {
     // zB reboots hardware into bootloader mode (sketch skipped).
     // Handled in pure C — works even when loop() is hogging the scheduler.
     amy_add_log_message('zBZ');
+}
+
+// zI ping — wait for the board to be ready after a reboot.
+var _ping_resolve = null;
+var _ping_reject = null;
+
+async function wait_for_board_ready(timeout_ms) {
+    if (!timeout_ms) timeout_ms = 15000;
+    // Poll with zI until the board replies with OK.
+    var deadline = Date.now() + timeout_ms;
+    while (Date.now() < deadline) {
+        // Send zI ping.
+        try { amy_add_log_message('zIZ'); } catch (e) {}
+        // Wait for reply — short timeout per attempt.
+        var got_reply = await new Promise(function(resolve) {
+            _ping_resolve = function() { resolve(true); };
+            _ping_reject = null;
+            setTimeout(function() {
+                if (_ping_resolve) { _ping_resolve = null; resolve(false); }
+            }, 500);
+        });
+        if (got_reply) {
+            console.log('wait_for_board_ready: board is ready');
+            return true;
+        }
+        console.log('wait_for_board_ready: no reply, retrying...');
+    }
+    console.warn('wait_for_board_ready: timed out after ' + timeout_ms + 'ms');
+    return false;
 }
 
 function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
@@ -2757,8 +2792,8 @@ async function load_world_environment_by_name(username, envName) {
             // scheduler), send file via zT, then start the sketch.
             _show_saving_modal();
             reboot_to_bootloader();
-            console.log('load_world: zB sent, waiting for reboot...');
-            await sleep_ms(5000);
+            console.log('load_world: zB sent, waiting for board...');
+            await wait_for_board_ready();
             try {
                 await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
                 console.log('load_world: sketch sent to AMYboard');
@@ -3672,9 +3707,8 @@ async function reset_amyboard() {
         // After reboot, the board skips sketch, scheduler is idle.
         // Then we send zP factory_reset which runs reliably.
         reboot_to_bootloader();
-        console.log('reset: zB sent, waiting for reboot...');
-        // Wait for reboot + WebMIDI re-enumeration.
-        await sleep_ms(5000);
+        console.log('reset: zB sent, waiting for board...');
+        await wait_for_board_ready();
         // Board is now in bootloader mode — scheduler idle, no sketch.
         // Run factory_reset on the clean board.
         amy_add_log_message('zPimport amyboard; amyboard.factory_reset()Z');
