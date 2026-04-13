@@ -3850,8 +3850,15 @@ function _sanitize_sketch_text(text) {
 
 function _handle_sync_sysex_payload(payload) {
     // payload is the sketch.py text, base64-decoded.
-    if (_sync_timeout) { clearTimeout(_sync_timeout); _sync_timeout = null; }
     payload = _sanitize_sketch_text(payload);
+    // Reject empty/garbage payloads — a stale sysex fragment shouldn't
+    // consume the pending sync state and cause the real zD response to
+    // be ignored.
+    if (!payload || !payload.length) {
+        console.warn('sync: ignoring empty payload');
+        return;
+    }
+    if (_sync_timeout) { clearTimeout(_sync_timeout); _sync_timeout = null; }
 
     if (_sync_stage === 'pending') {
         _sync_stage = null;
