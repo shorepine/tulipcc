@@ -390,38 +390,6 @@ def _apply_knobs_text(knobs_text):
         amy.send_raw("i1K257iv6Z")
         amy.send_raw("i1ic255Z")
         return
-    # Find all active channels and their oscillator counts, then init each
-    # with the right voice/osc structure before applying the saved wire code.
-    lines = knobs_text.strip().split('\n')
-    channel_oscs = {}  # channel → max osc index seen
-    for line in lines:
-        line = line.strip()
-        if not line or not line.startswith('i'):
-            continue
-        # Extract channel number (i1..., i16...)
-        num = ''
-        rest = ''
-        for idx, c in enumerate(line[1:], 1):
-            if c.isdigit():
-                num += c
-            else:
-                rest = line[idx:]
-                break
-        if not num:
-            continue
-        ch = int(num)
-        if ch not in channel_oscs:
-            channel_oscs[ch] = 0
-        # Scan for vN (osc number) in this channel's wire code
-        for part in rest.split('v'):
-            if part and part[0].isdigit():
-                osc_num = int(part[0])
-                if osc_num > channel_oscs[ch]:
-                    channel_oscs[ch] = osc_num
-    for ch in sorted(channel_oscs):
-        oscs_per_voice = channel_oscs[ch] + 1
-        amy.send_raw("i%dic255Z" % ch)
-        amy.send_raw("i%div6in%dZ" % (ch, oscs_per_voice))
     for line in knobs_text.strip().split('\n'):
         line = line.strip()
         if line and not line.startswith('#'):
