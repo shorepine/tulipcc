@@ -3644,12 +3644,42 @@ function sync_modal_retry() {
 
 async function reset_amyboard() {
     if (amyboard_mode === 'control') {
-        _show_saving_modal();
+        _show_resetting_modal();
         amy_add_log_message('zPimport amyboard; amyboard.factory_reset()Z');
         console.log('reset: zP factory_reset sent, waiting for restart...');
-        await sleep_ms(1000);
-        _hide_saving_modal();
-        sync_amy_state();
+        await sleep_ms(2000);
+        // After factory_reset the hardware has the default sketch with empty
+        // knobs. We know exactly what it looks like — no need to sync via
+        // zA+zD which is fragile (scheduler contention can cause timeouts).
+        var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop() is called every 32nd note.\nimport amyboard, amy\n\ndef loop():\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
+        if (editor) {
+            editor.setValue(defaultSketch);
+            setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+        }
+        if (typeof window.reset_amy_knobs_to_defaults === "function") {
+            window.reset_amy_knobs_to_defaults();
+        }
+        if (typeof reset_global_effects === "function") {
+            reset_global_effects();
+        }
+        // Reset channel state: only channel 1 active.
+        if (!Array.isArray(window.active_channels)) window.active_channels = [];
+        window.active_channels[1] = true;
+        for (var _ch = 2; _ch <= 16; _ch++) window.active_channels[_ch] = false;
+        window.current_synth = 1;
+        var channelSelect = document.getElementById("midi-channel-select");
+        if (channelSelect) channelSelect.value = "1";
+        var activeCheckbox = document.getElementById("channel-active-toggle");
+        if (activeCheckbox) activeCheckbox.checked = true;
+        if (Array.isArray(window.channel_control_mapping_sent)) {
+            for (var _ch2 = 1; _ch2 <= 16; _ch2++) window.channel_control_mapping_sent[_ch2] = false;
+        }
+        if (typeof window.refresh_knobs_for_channel === "function") {
+            window.suppress_knob_cc_send = true;
+            try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
+        }
+        _hide_resetting_modal();
+        if (document.activeElement) document.activeElement.blur();
     } else {
         // Simulate mode: let Python handle the reset (same path as hardware),
         // then refresh JS-side knob/channel state so the UI matches the
