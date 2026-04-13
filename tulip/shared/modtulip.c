@@ -1642,8 +1642,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_synth_commands), MP_ROM_PTR(&tulip_amy_get_synth_commands_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_dump_state), MP_ROM_PTR(&tulip_amy_dump_state_obj) },
-    { MP_ROM_QSTR(MP_QSTR_sequencer_start), MP_ROM_PTR(&tulip_sequencer_start_obj) },
 #endif
+    { MP_ROM_QSTR(MP_QSTR_sequencer_start), MP_ROM_PTR(&tulip_sequencer_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_in), MP_ROM_PTR(&tulip_midi_in_obj) },

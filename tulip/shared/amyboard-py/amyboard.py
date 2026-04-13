@@ -597,8 +597,7 @@ def restart_sketch():
     if 'sketch' in sys.modules:
         del sys.modules['sketch']
     # Ensure the sequencer is running so TulipSequence callbacks fire.
-    if hasattr(tulip, 'sequencer_start'):
-        tulip.sequencer_start()
+    tulip.sequencer_start()
     run_sketch()
 
 
