@@ -937,6 +937,7 @@
           // Auto-sync from hardware once MIDI devices are ready.
           // Reboot into bootloader mode first so zA+zD work reliably.
           _on_midi_ready = async function() {
+            _show_syncing_modal();
             reboot_to_bootloader();
             console.log('pageload: zB sent, waiting for board...');
             await wait_for_board_ready();
