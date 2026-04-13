@@ -590,6 +590,19 @@ STATIC mp_obj_t tulip_amyboard_start(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_start_obj, 1, 1, tulip_amyboard_start);
 
 
+STATIC mp_obj_t tulip_bootloader_mode(void) {
+#if defined(AMYBOARD) && defined(ESP_PLATFORM)
+    extern uint32_t amyboard_bootloader_flag;
+    #define AMYBOARD_BOOTLOADER_MAGIC 0xABCD0001
+    if (amyboard_bootloader_flag == AMYBOARD_BOOTLOADER_MAGIC) {
+        amyboard_bootloader_flag = 0;  // clear for next boot
+        return mp_const_true;
+    }
+#endif
+    return mp_const_false;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_bootloader_mode_obj, tulip_bootloader_mode);
+
 STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {
     amy_add_message((char*)mp_obj_str_get_str(args[0]));
     return mp_const_none;
@@ -1668,6 +1681,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 #ifdef AMYBOARD
     { MP_ROM_QSTR(MP_QSTR_amyboard_send), MP_ROM_PTR(&tulip_amyboard_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_amyboard_start), MP_ROM_PTR(&tulip_amyboard_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bootloader_mode), MP_ROM_PTR(&tulip_bootloader_mode_obj) },
 #else
     #ifndef AMYBOARD_WEB
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },

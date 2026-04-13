@@ -13,6 +13,10 @@
 #include "amy_connector.h"
 #include <stdio.h>
 #include <string.h>
+#ifdef ESP_PLATFORM
+#include "esp_system.h"
+#include "esp_attr.h"
+#endif
 uint8_t * external_map;
 
 #ifdef AMY_IS_EXTERNAL
@@ -354,6 +358,18 @@ void mp_file_transfer_done_hook(const char *filename) {
 }
 
 
+#ifdef ESP_PLATFORM
+RTC_NOINIT_ATTR uint32_t amyboard_bootloader_flag;
+#define AMYBOARD_BOOTLOADER_MAGIC 0xABCD0001
+#endif
+
+void mp_reboot_hook(void) {
+#if defined(AMYBOARD) && defined(ESP_PLATFORM)
+    amyboard_bootloader_flag = AMYBOARD_BOOTLOADER_MAGIC;
+    esp_restart();
+#endif
+}
+
 void run_amy(uint8_t midi_out_pin) {
     amy_config_t amy_config = amy_default_config();
     amy_config.amy_external_midi_input_hook = tulip_midi_input_hook;
@@ -366,6 +382,7 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
     amy_config.amy_external_update_file_hook = mp_update_file_hook;
     amy_config.amy_external_exec_hook = mp_exec_hook;
+    amy_config.amy_external_reboot_hook = mp_reboot_hook;
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     amy_config.audio = AMY_AUDIO_IS_I2S;

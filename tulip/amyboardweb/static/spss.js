@@ -2471,6 +2471,12 @@ async function restart_sketch() {
     }
 }
 
+function reboot_to_bootloader() {
+    // zB reboots hardware into bootloader mode (sketch skipped).
+    // Handled in pure C — works even when loop() is hogging the scheduler.
+    amy_add_log_message('zBZ');
+}
+
 function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
     var width = Math.max(1, Number(digits) || (length - 1));
     var oct = Math.max(0, Number(value) || 0).toString(8);
@@ -3645,12 +3651,19 @@ function sync_modal_retry() {
 async function reset_amyboard() {
     if (amyboard_mode === 'control') {
         _show_resetting_modal();
+        // zB reboots into bootloader mode (pure C, works even with busy loop()).
+        // After reboot, the board skips sketch, scheduler is idle.
+        // Then we send zP factory_reset which runs reliably.
+        reboot_to_bootloader();
+        console.log('reset: zB sent, waiting for reboot...');
+        // Wait for reboot + WebMIDI re-enumeration.
+        await sleep_ms(5000);
+        // Board is now in bootloader mode — scheduler idle, no sketch.
+        // Run factory_reset on the clean board.
         amy_add_log_message('zPimport amyboard; amyboard.factory_reset()Z');
-        console.log('reset: zP factory_reset sent, waiting for restart...');
+        console.log('reset: zP factory_reset sent');
         await sleep_ms(2000);
-        // After factory_reset the hardware has the default sketch with empty
-        // knobs. We know exactly what it looks like — no need to sync via
-        // zA+zD which is fragile (scheduler contention can cause timeouts).
+        // Set JS state to defaults.
         var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop() is called every 32nd note.\nimport amyboard, amy\n\ndef loop():\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
         if (editor) {
             editor.setValue(defaultSketch);
@@ -3658,9 +3671,6 @@ async function reset_amyboard() {
         }
         if (typeof window.reset_amy_knobs_to_defaults === "function") {
             window.reset_amy_knobs_to_defaults();
-        }
-        if (typeof reset_global_effects === "function") {
-            reset_global_effects();
         }
         // Reset channel state: only channel 1 active.
         if (!Array.isArray(window.active_channels)) window.active_channels = [];

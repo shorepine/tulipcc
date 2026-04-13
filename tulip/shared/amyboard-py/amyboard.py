@@ -455,6 +455,10 @@ def start_amy():
     tulip.amyboard_start(midi_out_pin)
     _env_dir = _ensure_current_env_layout()
 
+    if tulip.bootloader_mode():
+        tulip.stderr_write("bootloader mode — sketch skipped, waiting for commands")
+        return
+
     from upysh import cd
     try:
         from machine import Pin
