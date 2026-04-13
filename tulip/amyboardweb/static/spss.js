@@ -2706,14 +2706,17 @@ async function import_amyboard_world_file(index) {
                 console.warn('import: sketch upload to AMYboard failed', e);
             }
             _hide_saving_modal();
-            // Set editor to the downloaded sketch and apply knobs.
+            // Set editor to the downloaded sketch. Apply knobs to UI only —
+            // don't send to hardware (it already has them from the zT transfer).
             if (editor) {
                 editor.setValue(sketchText);
                 setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
             }
             var knobs = extract_knobs_from_sketch(sketchText);
             if (knobs) {
-                apply_zd_dump_to_knobs(knobs);
+                window.suppress_knob_cc_send = true;
+                try { apply_zd_dump_to_knobs(knobs); }
+                finally { window.suppress_knob_cc_send = false; }
             }
         } else {
             // Simulate mode: write to local FS, then reload the page to
