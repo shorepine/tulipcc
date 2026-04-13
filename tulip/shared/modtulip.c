@@ -373,9 +373,6 @@ STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
     // to sequential slots so that a fast-arriving next sysex doesn't overwrite
     // an unprocessed message (which happens when loop() is CPU-heavy and the
     // mp_sched callback is delayed).
-    extern char * sysex_message_copies[];
-    extern uint8_t sysex_copy_read_idx;
-    #define SYSEX_COPY_SLOTS 4
     char *slot = sysex_message_copies[sysex_copy_read_idx];
     sysex_copy_read_idx = (sysex_copy_read_idx + 1) % SYSEX_COPY_SLOTS;
     if (slot) {
