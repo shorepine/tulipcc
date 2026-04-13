@@ -294,12 +294,21 @@ STATIC mp_obj_t tulip_environment_transfer_done(size_t n_args, const mp_obj_t *a
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_environment_transfer_done_obj, 0, 1, tulip_environment_transfer_done);
 
-STATIC mp_obj_t tulip_factory_reset(size_t n_args, const mp_obj_t *args) {
-    mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
-    mp_obj_t fn = mp_load_attr(mod, MP_QSTR_factory_reset);
-    return mp_call_function_0(fn);
+void mp_exec_hook(const char *code) {
+#if defined(AMYBOARD)
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        mp_obj_t code_str = mp_obj_new_str(code, strlen(code));
+        mp_call_function_1(MP_OBJ_FROM_PTR(&mp_builtin_exec_obj), code_str);
+        nlr_pop();
+    } else {
+        fprintf(stderr, "mp_exec_hook: exec raised, ignoring\n");
+        mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
+    }
+#else
+    (void)code;
+#endif
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_factory_reset_obj, 0, 1, tulip_factory_reset);
 
 void mp_update_file_hook(const char *filename) {
 #if defined(AMYBOARD)
@@ -322,12 +331,6 @@ void mp_update_file_hook(const char *filename) {
     }
 #else
     (void)filename;
-#endif
-}
-
-void mp_factory_reset_hook(void) {
-#if defined(AMYBOARD)
-    mp_sched_schedule(MP_OBJ_FROM_PTR(&tulip_factory_reset_obj), mp_const_none);
 #endif
 }
 
@@ -360,8 +363,8 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.amy_external_fread_hook = mp_fread_hook;
     amy_config.amy_external_fwrite_hook = mp_fwrite_hook;
     amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
-    amy_config.amy_external_factory_reset_hook = mp_factory_reset_hook;
     amy_config.amy_external_update_file_hook = mp_update_file_hook;
+    amy_config.amy_external_exec_hook = mp_exec_hook;
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     amy_config.audio = AMY_AUDIO_IS_I2S;

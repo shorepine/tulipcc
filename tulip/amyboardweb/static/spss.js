@@ -2462,6 +2462,16 @@ async function stop_current_environment() {
     await runCodeBlock("import amyboard, amy; amyboard.stop_sketch(); amy.send(reset=" + (4096 + 131072) + ")");
 }
 
+async function restart_sketch() {
+    if (amyboard_mode === 'control') {
+        // zP executes Python on the hardware.
+        amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
+    } else {
+        await save_editor_if_dirty();
+        await runCodeBlock("import amyboard; amyboard.restart_sketch()");
+    }
+}
+
 function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
     var width = Math.max(1, Number(digits) || (length - 1));
     var oct = Math.max(0, Number(value) || 0).toString(8);
@@ -3636,8 +3646,8 @@ function sync_modal_retry() {
 async function reset_amyboard() {
     if (amyboard_mode === 'control') {
         _show_saving_modal();
-        amy_add_log_message('zRZ');
-        console.log('reset: zR sent, waiting for restart...');
+        amy_add_log_message('zPimport amyboard; amyboard.factory_reset()Z');
+        console.log('reset: zP factory_reset sent, waiting for restart...');
         await sleep_ms(1000);
         _hide_saving_modal();
         sync_amy_state();
