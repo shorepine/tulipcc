@@ -9,6 +9,7 @@
 #include "polyfills.h"
 #include "py/mphal.h"
 #include "py/runtime.h"
+#include "py/builtin.h"
 #include "amy_connector.h"
 #include <stdio.h>
 #include <string.h>
