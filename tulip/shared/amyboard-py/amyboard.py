@@ -392,12 +392,20 @@ def _apply_knobs_text(knobs_text):
 
 
 def factory_reset(*_args):
-    """Reset AMYboard to defaults: write default sketch.py and restart sketch."""
-    tulip.stderr_write("factory reset — writing default sketch.py")
+    """Reset AMYboard to defaults: clear current/ folder and restart sketch."""
+    import os
+    tulip.stderr_write("factory reset — clearing current/ and writing default sketch.py")
+    user_base = tulip.root_dir() + "user"
+    current_base = user_base + "/current"
+    try:
+        for f in os.listdir(current_base):
+            try:
+                os.remove(current_base + "/" + f)
+            except OSError:
+                pass
+    except OSError:
+        pass
     env_dir = _ensure_current_env_layout()
-    sketch_path = env_dir + "/sketch.py"
-    with open(sketch_path, "w") as f:
-        f.write(DEFAULT_SKETCH_SOURCE)
     restart_sketch()
 
 def environment_transfer_done(*_args):
