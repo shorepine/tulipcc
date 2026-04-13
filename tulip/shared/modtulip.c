@@ -369,9 +369,18 @@ STATIC mp_obj_t tulip_amy_send(size_t n_args, const mp_obj_t *args) {
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
 
 STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
-    // Read from sysex_message_copy which was snapshot by parse_sysex()
-    // before scheduling, avoiding a race with the MIDI task reusing sysex_buffer.
-    amy_add_message(sysex_message_copy);
+    // Read from the next slot in the sysex ring buffer. parse_sysex() writes
+    // to sequential slots so that a fast-arriving next sysex doesn't overwrite
+    // an unprocessed message (which happens when loop() is CPU-heavy and the
+    // mp_sched callback is delayed).
+    extern char * sysex_message_copies[];
+    extern uint8_t sysex_copy_read_idx;
+    #define SYSEX_COPY_SLOTS 4
+    char *slot = sysex_message_copies[sysex_copy_read_idx];
+    sysex_copy_read_idx = (sysex_copy_read_idx + 1) % SYSEX_COPY_SLOTS;
+    if (slot) {
+        amy_add_message(slot);
+    }
     return mp_const_none;
 }
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_sysex_obj, 0, 1, tulip_amy_send_sysex);
