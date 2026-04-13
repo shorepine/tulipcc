@@ -940,7 +940,15 @@
             reboot_to_bootloader();
             console.log('pageload: zB sent, waiting for board...');
             await wait_for_board_ready();
-            sync_amy_state();
+            try {
+              await sync_amy_state_async();
+            } catch (e) {
+              console.warn('pageload: sync failed', e);
+            }
+            // Board is in bootloader mode (sketch not running).
+            // Start the sequencer to trigger run_sketch() on hardware.
+            control_sequencer_start();
+            console.log('pageload: sequencer started');
           };
           await start_midi();
         }
