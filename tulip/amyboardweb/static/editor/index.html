@@ -1215,13 +1215,14 @@
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
               </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="reset-tab" data-bs-toggle="tab" data-bs-target="#reset-pane" type="button" role="tab" aria-controls="reset-pane" aria-selected="false">Reset</button>
+              </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="simulate-controls-li" role="presentation">
                 <button type="button" class="btn btn-danger btn-sm" id="simulate-save-btn" onclick="save_amy_state();">Write to Simulator</button>
-                <button type="button" class="btn btn-outline-danger btn-sm" onclick="reset_amyboard();">Reset Simulator</button>
               </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="amyboard-controls-li" role="presentation">
                 <button type="button" class="btn btn-danger btn-sm" id="save-state-btn" onclick="save_amy_state();"><span id="save-btn-label">Write to AMYboard</span></button>
-                <button type="button" class="btn btn-outline-danger btn-sm" id="reset-state-btn" onclick="reset_amyboard();">Reset AMYboard</button>
               </li>
             </ul>
           </div>
@@ -1526,6 +1527,13 @@
                   allow="serial"
                   loading="lazy"
                 ></iframe>
+              </div>
+            </div>
+            <div class="tab-pane fade" id="reset-pane" role="tabpanel" aria-labelledby="reset-tab">
+              <div class="border rounded p-4 bg-white mt-2" style="max-width:500px;">
+                <p class="fw-semibold mb-2">Reset to factory defaults</p>
+                <p class="text-muted small mb-3">This will delete the current sketch and patch settings and reset your AMYboard back to defaults. Are you sure?</p>
+                <button type="button" class="btn btn-danger btn-sm" onclick="reset_amyboard();">Yes, reset</button>
               </div>
             </div>
           </div>
