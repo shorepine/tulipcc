@@ -3478,50 +3478,74 @@ async function _send_text_file_to_amyboard(path, text) {
 
 async function save_amy_state() {
     if (amyboard_mode === 'control') {
-        // Control mode: preserve both the user's live knob state and any code
-        // edits in the editor. The naive "zT editor → zA" flow loses live knob
-        // state because the zT transfer triggers environment_transfer_done →
-        // restart_sketch → _apply_knobs_text(stale knobs from editor) which
-        // overwrites the live AMY state before zA can capture it.
+        // Control mode flow:
+        //   1. zT: send the web editor's sketch.py to hardware.
+        //      environment_transfer_done restarts the sketch with the new code
+        //      and applies knobs from the file (synth 1 now matches the file).
+        //   2. zA: hardware updates the just-sent sketch.py's knobs section
+        //      with live AMY state (captures any subsequent changes).
+        //   3. zB: reboot into bootloader mode so the file is stable.
+        //   4. wait_for_board_ready (zI ping).
+        //   5. zD: pull the merged sketch.py. _handle_sync_sysex_payload
+        //      updates the editor and applies knobs to the UI.
+        //   6. zP: restart sketch on hardware so it runs again.
         //
-        // Correct flow:
-        //   1. Pull (zA+zD) — hardware writes live AMY state into its sketch.py
-        //      disk copy and sends it back. _last_sketch_text has fresh knobs.
-        //   2. Splice fresh knobs into the editor's code (keeping any edits).
-        //   3. Send the merged sketch.py back to hardware via zT so the user's
-        //      code edits land on disk. environment_transfer_done will re-apply
-        //      the (now-fresh) knobs, which is a no-op for AMY state.
+        // NOTE: we do NOT zA again after zB reboot — bootloader mode has no
+        // synths, so zA would capture empty state and overwrite the knobs
+        // we just saved in step 2.
         if (!editor) return;
         var userSketchText = editor.getValue();
         if (!userSketchText || !userSketchText.trim().length) return;
         try {
-            // Step 1: pull — this shows the syncing modal and updates the editor
-            // with the fetched sketch.py. We then overwrite editor below with the
-            // merged version so user code edits aren't lost.
-            await sync_amy_state_async();
-            // Give hardware a moment to fully settle after streaming out the
-            // large zD response before we start sending chunks at it.
-            await sleep_ms(500);
-            var mergedSketch = userSketchText;
-            if (_last_sketch_text) {
-                var freshKnobs = extract_knobs_from_sketch(_last_sketch_text);
-                if (freshKnobs) {
-                    mergedSketch = splice_knobs_into_sketch(userSketchText, freshKnobs);
-                    if (editor) editor.setValue(mergedSketch);
-                }
-            }
-            // Step 2: send merged sketch.py to hardware so user code edits land.
             _show_saving_modal();
+            // Step 1: send editor's sketch.py to hardware.
+            await _send_text_file_to_amyboard('/user/current/sketch.py', userSketchText);
+            console.log('save: sketch.py sent to AMYboard');
+            await sleep_ms(1500);
+            // Step 2: have hardware update knobs in the just-sent file.
+            amy_add_log_message('zAZ');
+            console.log('save: zA sent');
+            await sleep_ms(1500);
+            _hide_saving_modal();
+            // Step 3: reboot into bootloader, wait, pull, restart.
+            _show_syncing_modal();
+            reboot_to_bootloader();
+            console.log('save: zB sent, waiting for board...');
+            await wait_for_board_ready();
+            // Step 5: pull the merged file via zD only (not zA+zD — zA in
+            // bootloader mode would destroy the knobs we just saved).
+            _sync_stage = 'pending';
+            _last_sketch_text = null;
+            _sysex_reasm = null;
+            _sysex_b64_accum = '';
+            if (_sync_timeout) clearTimeout(_sync_timeout);
+            _sync_timeout = setTimeout(function() {
+                _sync_timeout = null;
+                if (_sync_stage !== null) {
+                    _sync_stage = null;
+                    _show_syncing_modal_error();
+                    if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('sync timeout')); }
+                }
+            }, _SYNC_TIMEOUT_MS);
+            var pullPromise = new Promise(function(resolve, reject) {
+                _sync_resolve = resolve;
+                _sync_reject = reject;
+            });
+            console.log('save: sending zD');
+            amy_add_log_message('zD/user/current/sketch.pyZ');
             try {
-                await _send_text_file_to_amyboard('/user/current/sketch.py', mergedSketch);
-                console.log('save: merged sketch.py sent to AMYboard');
-                await sleep_ms(500);
-            } finally {
-                _hide_saving_modal();
+                await pullPromise;
+                console.log('save: zD response received');
+            } catch (e) {
+                console.warn('save: zD pull failed', e);
             }
+            // Step 6: restart sketch on hardware.
+            amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
+            console.log('save: sketch restarted via zP');
         } catch (e) {
             console.warn('save: failed', e);
             _hide_saving_modal();
+            _hide_syncing_modal();
         }
     } else {
         // Simulate mode: let Python dump current AMY state into sketch.py's knobs section.
