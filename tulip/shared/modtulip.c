@@ -381,6 +381,14 @@ STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
         amy_add_message(slot);
     }
     sequencer_midi_start();
+    // ACK the message AFTER processing. The sender (web) waits for this
+    // ACK before sending the next message, ensuring only one message is
+    // in flight at a time and the ring buffer can't overflow.
+    {
+        extern void midi_out(uint8_t *bytes, uint16_t len);
+        uint8_t ack[] = { 0xF0, 0x00, 0x03, 0x45, 'A', 'K', 0xF7 };
+        midi_out(ack, sizeof(ack));
+    }
     return mp_const_none;
 }
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_sysex_obj, 0, 1, tulip_amy_send_sysex);

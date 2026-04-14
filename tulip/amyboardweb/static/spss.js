@@ -3187,10 +3187,12 @@ async function sysex_write_amy_message(message) {
     // Set up ACK wait before sending so we don't miss a fast reply.
     var ackPromise = new Promise(function(resolve) {
         _sysex_ack_resolve = resolve;
-        // Timeout: if no ACK after 2s, proceed anyway.
+        // Timeout: if no ACK after 5s, proceed anyway. Longer than the
+        // 2s we had before because the ACK now fires from the MP callback
+        // (after processing the message) not from parse_sysex (on receipt).
         setTimeout(function() {
             if (_sysex_ack_resolve === resolve) { _sysex_ack_resolve = null; resolve(); }
-        }, 2000);
+        }, 5000);
     });
     if (typeof outputDevice.sendSysex === "function") {
         outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
@@ -3463,9 +3465,10 @@ async function _send_text_file_to_amyboard(path, text) {
     var header = "zT" + path + "," + fileSize + "Z";
     console.log('_send_text_file_to_amyboard: sending header:', header);
     await sysex_write_amy_message(header);
-    // Give hardware time to process zT, stop the sequencer/loop(), and open
-    // the file for writing before we start sending chunks.
-    await sleep_ms(1500);
+    // sysex_write_amy_message already waited for the ACK (sent from the
+    // callback after amy_add_message processed the zT header), so the
+    // hardware has already called start_receiving_file_transfer and opened
+    // the file. No extra sleep needed.
     var chunks = Math.ceil(fileSize / AMYBOARD_TRANSFER_CHUNK_BYTES);
     console.log('_send_text_file_to_amyboard: sending ' + chunks + ' chunks (' + fileSize + ' bytes)');
     for (var offset = 0; offset < fileSize; offset += AMYBOARD_TRANSFER_CHUNK_BYTES) {
