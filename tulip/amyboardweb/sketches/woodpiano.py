@@ -1,6 +1,6 @@
 # AMYboard Sketch
 # Top-level code runs once at boot. loop() runs repeatedly (~60ms).
-# Load a custom DX7 synth (WOOD PIANO) on synth channel 1
+# DESCRIPTION: Load a custom DX7 synth (WOOD PIANO) on synth channel 1
 import amyboard, amy
 
 print("WOOD PIANO!")

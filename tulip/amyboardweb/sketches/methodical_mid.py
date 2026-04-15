@@ -1,6 +1,6 @@
 # AMYboard Sketch
 # Top-level code runs once at boot. loop() runs repeatedly (~60ms).
-# Load a custom DX7 synth (WOOD PIANO) on synth channel 1
+# DESCRIPTION: Play a MIDI file
 import amyboard, amy
 import umidiparser
 
@@ -11,7 +11,8 @@ print('methodical')
 
 # Methodical.MID is by Nurykabe
 # https://ccmixter.org/files/Nurykabe/10176
-song = umidiparser.MidiFile('Methodical.MID')
+song_fn = tulip.root_dir()+"sys/ex/Methodical.MID"
+song = umidiparser.MidiFile(song_fn)
 
 utic = 0
 

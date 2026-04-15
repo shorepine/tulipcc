@@ -2,7 +2,7 @@
 # Top-level code runs once at boot. loop() runs repeatedly (~60ms).
 import amy
 
-# Pass audio in through to audio out
+# DESCRIPTION: Pass audio in through to audio out
 # We just set up AMY to have a synth with two oscs
 # one for left channel and one for right channel. 
 

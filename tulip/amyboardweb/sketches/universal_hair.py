@@ -1,4 +1,4 @@
-# UNIVERSAL HAIR soundtrack  universalhair.net
+# DESCRIPTION: UNIVERSAL HAIR soundtrack  universalhair.net
 # By Douglas Repetto
 # adapted by Dan Ellis
 

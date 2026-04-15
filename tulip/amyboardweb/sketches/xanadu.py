@@ -1,6 +1,6 @@
 # AMYboard Sketch
 # Top-level code runs once at boot. loop() runs repeatedly (~60ms).
-
+# DESCRIPTION: Xanadu for AMYboard
 
 """Joseph T. Kung's XANADU, implemented for tulipcc.
 
@@ -8,11 +8,16 @@ See https://github.com/csound/examples/blob/master/csd/xanadu.csd for original.
 """
 
 import math
-
-import tulip
-import synth
 import amy
 
+# You can run this from the AMY Python module with:
+# $ python3
+# >>> from amy import xanadu
+try:
+  amy.live(playback_device_id=1)
+  running_amyboard = False
+except:
+  running_amyboard = True
 
 C0_FREQ = 440.0 / math.pow(2.0, 4 + 9/12)
 
@@ -81,30 +86,32 @@ def note2_patch(pitch_dev=0.1, pan=0.5):
 def fm_note_patch(duration=7.5):
     """Patch for hand-made 2-operator FM note."""
     return amy_message_of_send_args([
-        {'osc': 3, 'wave': amy.SINE, 'freq': 1.0 / duration, 'phase': 0.75, 'amp': 1},
-        {'osc': 2, 'wave': amy.SINE, 'ratio': 1, 'amp': '0.5,0,0,0,0,1', 'mod_source': 3},
+        {'osc': 3, 'wave': amy.SINE, 'freq': '6.0,0.5', 'phase': 0.75, 'amp': 1},
+        {'osc': 2, 'wave': amy.SINE, 'ratio': 1, 'amp': '1.5,0,0,0.4,0,0.01', 'mod_source': 3, 'bp0': '4000,1,4000,0,1000,0'},
         {'osc': 1, 'wave': amy.SINE, 'ratio': 1, 'amp': '1,0,0,1,', 'bp0': '0,0.1,1000,1,4000,0'},
         {'osc': 0, 'wave': amy.ALGO, 'algorithm': 1, 'algo_source': ',,,,2,1', 'bp0': '0,1,1000,1,2000,0'},
     ])
 
 
+def synth_note_on(synth=0, note=60, vel=1, timestamp=0):
+    amy.send(time=timestamp, synth=synth, note=note, vel=vel)
+
 def Note(pitch, vel=1.0, time=0, pitch_shift=0, second_delay=200, use_third=False):
     """Composite 'note' triggers up to 3 delayed instances."""
-    global synths
     timestamp = time
     pitch += 1.0  # 1 octave up
     note = pitch2note(pitch)
-    synths[0].note_on(note, vel, timestamp)
+    synth_note_on(0, note, vel, timestamp)
     if use_third:
-        synths[1].note_on(pitch2note(shift_pitch(pitch, pitch_shift)), vel * 0.5, timestamp + second_delay)
-        synths[2].note_on(pitch2note(pitch), vel * 0.25, timestamp + 2000)
+        synth_note_on(1, pitch2note(shift_pitch(pitch, pitch_shift)), vel * 0.5, timestamp + second_delay)
+        synth_note_on(2, pitch2note(pitch), vel * 0.25, timestamp + 2000)
 
 def NoteFM(pitch, vel=1.0, time=0, duration=8000):
     """Play a note on the FM voice."""
     global synths
-    synths[3].note_on(pitch2note(pitch), vel, time)
+    synth_note_on(3, pitch2note(pitch), vel, time)
     # Note off
-    synths[3].note_off(pitch2note(pitch), time + duration)
+    synth_note_on(3, pitch2note(pitch), 0, time + duration)  # Note off
 
 
 def broken_chord(base_pitch, intervals, start_time, **kwargs):
@@ -114,48 +121,66 @@ def broken_chord(base_pitch, intervals, start_time, **kwargs):
         NoteFM(pitch - 1.0, 1, start_time)
         Note(pitch, 1, start_time + 100 * index, **kwargs)
 
-def xanadu_stage1(x):
+def xanadu_init():
     amy.chorus(1)
-    global synths
-    synths = []
-    synths.append(synth.PatchSynth(num_voices=6, patch_string=note1_patch()))
-    synths.append(synth.PatchSynth(num_voices=6, patch_string=note1_patch(pan=0.8)))
-    synths.append(synth.PatchSynth(num_voices=6, patch_string=note2_patch(pan=0.2)))
-    synths.append(synth.PatchSynth(num_voices=12, patch_string=fm_note_patch()))
-    for s in synths:
-        s.deferred_init()
+    amy.send(synth=0, num_voices=6, patch_string=note1_patch())
+    amy.send(synth=1, num_voices=6, patch_string=note1_patch(pan=0.8))
+    amy.send(synth=2, num_voices=6, patch_string=note2_patch(pan=0.2))
+    amy.send(synth=3, num_voices=12, patch_string=fm_note_patch())
     amy.send(volume=0.5)
-    tulip.defer(xanadu_stage2, 0, 250)
 
-def xanadu_stage2(chord):
-    chords = [
-        # F#7addB chord on a guitar
-        {'base_pitch': 4.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
-         'start_time': 2000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third' :True},
-        # D6add9 chord on a guitar
-        {'base_pitch': 4.02, 'intervals': [.07, 1.0, 1.04, 0.09, 1.02],
-         'start_time': 9500},
-        # Bmajadd11 chord on a guitar
-        {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.00, 1.05],
-         'start_time': 17000},
-        # Amajadd9 chord on a guitar
-        {'base_pitch': 4.09, 'intervals': [.07, 2.0, 1.04, 1.02, 1.07],
-         'start_time': 24500},
-        # Bmajadd11 chord on a guitar
-        {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.0, 1.05],
-         'start_time': 32000},
-        # Gmaj6 chord on a guitar
-        {'base_pitch': 4.07, 'intervals': [.07, 1.0, 1.04, 2.04, 1.09],
-         'start_time': 39500},
-        # F#7addB chord on a guitar
-        {'base_pitch': 5.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
-         'start_time': 47000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third': True},
-    ]
-    for c in chords:
-        broken_chord(**c)
+chords = [
+  # F#7addB chord on a guitar
+  {'base_pitch': 4.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
+   'start_time': 2000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third' :True},
+  # D6add9 chord on a guitar
+  {'base_pitch': 4.02, 'intervals': [.07, 1.0, 1.04, 0.09, 1.02],
+   'start_time': 9500},
+  # Bmajadd11 chord on a guitar
+  {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.00, 1.05],
+   'start_time': 17000},
+  # Amajadd9 chord on a guitar
+  {'base_pitch': 4.09, 'intervals': [.07, 2.0, 1.04, 1.02, 1.07],
+   'start_time': 24500},
+  # Bmajadd11 chord on a guitar
+  {'base_pitch': 4.11, 'intervals': [.07, 1.0, 1.04, 2.0, 1.05],
+   'start_time': 32000},
+  # Gmaj6 chord on a guitar
+  {'base_pitch': 4.07, 'intervals': [.07, 1.0, 1.04, 2.04, 1.09],
+   'start_time': 39500},
+  # F#7addB chord on a guitar
+  {'base_pitch': 5.06, 'intervals': [.07, 1.0, 1.04, 1.05, 1.10],
+   'start_time': 47000, 'pitch_shift': 0.029, 'second_delay': 1000, 'use_third': True},
+]
 
+amy.send(reset=amy.RESET_TIMEBASE)
 
-tulip.defer(xanadu_stage1, None, 250)
+xanadu_init()
+
+chord_iterator = iter(chords)
+next_chord = next(chord_iterator)
+base_time = amy.millis()
 
 def loop():
-    pass
+    global base_time, next_chord, chord_iterator
+    time_ms = amy.millis()
+    if next_chord and time_ms >= base_time + next_chord['start_time']:
+        print(next_chord)
+        broken_chord(**next_chord)
+        try:
+            next_chord = next(chord_iterator)
+        except StopIteration:
+            next_chord = None
+
+
+if not running_amyboard:
+    # I think we are running in CPython AMY, so no-one is calling loop() for us.
+    import time
+
+    while next_chord:
+        loop()
+        time.sleep(0.02)
+
+# Do not edit. Set automatically by the knobs on AMYboard Online.
+_auto_generated_knobs = """
+"""

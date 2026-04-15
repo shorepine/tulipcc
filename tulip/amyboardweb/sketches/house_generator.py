@@ -1,5 +1,5 @@
 # AMYboard Sketch
-# Generative house track with chord progressions, bass, piano, and 808 drums.
+# DESCRIPTION: Generative house track with chord progressions, bass, piano, and 808 drums.
 # Top-level code runs once at boot. loop() is called every 32nd note.
 import amyboard, amy, sequencer
 from music import Chord, Key, Progression

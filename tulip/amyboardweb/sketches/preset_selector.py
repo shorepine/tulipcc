@@ -1,6 +1,5 @@
 # AMYboard Sketch
-# Preset selector: scroll through all 257 AMY presets with the rotary encoder.
-# Click to load the selected preset on synth 1.
+# DESCRIPTION: scroll and choose all 257 AMY presets with the rotary encoder.
 import amyboard, amy
 from patches import patches as PRESETS
 
