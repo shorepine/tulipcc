@@ -3599,6 +3599,75 @@ function _sync_modal_populate_midi() {
     }
 }
 
+function _refresh_main_midi_dropdowns() {
+    // Re-scan WebMidi.inputs/outputs and rebuild the main MIDI dropdowns,
+    // preserving the user's current selection by port name where possible.
+    // Uses WebMidi.outputs/inputs presence as the enabled check — once the
+    // WebMidi.enable() promise has resolved these are always truthy (arrays).
+    if (typeof WebMidi === 'undefined' || !WebMidi || !WebMidi.outputs || !WebMidi.inputs) {
+        console.warn('_refresh_main_midi_dropdowns: WebMidi not ready');
+        return;
+    }
+    var midi_in = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var midi_out = document.amyboard_settings && document.amyboard_settings.midi_output;
+    if (!midi_in || !midi_out) return;
+
+    function _name_from_opt(opt) {
+        if (!opt) return '';
+        var t = opt.text || '';
+        var idx = t.indexOf(': ');
+        return (idx >= 0) ? t.slice(idx + 2) : t;
+    }
+    var prevInName = _name_from_opt(midi_in.options[midi_in.selectedIndex]);
+    var prevOutName = _name_from_opt(midi_out.options[midi_out.selectedIndex]);
+
+    midiInputOptionIds = [];
+    midiOutputOptionIds = [];
+
+    midi_in.options.length = 0;
+    WebMidi.inputs.forEach(function(input) {
+        var inputId = safe_midi_port_id(input);
+        if (!inputId) return;
+        midiInputOptionIds.push(inputId);
+        midi_in.options[midi_in.options.length] = new Option("MIDI in: " + safe_midi_port_name(input));
+    });
+
+    midi_out.options.length = 0;
+    WebMidi.outputs.forEach(function(output) {
+        var outputId = safe_midi_port_id(output);
+        if (!outputId) return;
+        midiOutputOptionIds.push(outputId);
+        midi_out.options[midi_out.options.length] = new Option("MIDI out: " + safe_midi_port_name(output));
+    });
+
+    // Default to index 0 so the select is always in a valid state, then try
+    // to restore the user's previous selection by port name. If the previous
+    // port is gone (or there was no previous selection), the default stays.
+    if (midi_in.options.length > 0) midi_in.selectedIndex = 0;
+    for (var i = 0; i < midi_in.options.length; i++) {
+        if (_name_from_opt(midi_in.options[i]) === prevInName) {
+            midi_in.selectedIndex = i; break;
+        }
+    }
+    if (midi_out.options.length > 0) midi_out.selectedIndex = 0;
+    for (var j = 0; j < midi_out.options.length; j++) {
+        if (_name_from_opt(midi_out.options[j]) === prevOutName) {
+            midi_out.selectedIndex = j; break;
+        }
+    }
+
+    console.log('_refresh_main_midi_dropdowns: rescanned ' +
+                midiInputOptionIds.length + ' inputs, ' +
+                midiOutputOptionIds.length + ' outputs; ' +
+                'main_in=' + midi_in.selectedIndex +
+                ' main_out=' + midi_out.selectedIndex);
+
+    // Keep the MIDI Input Pass-Thru dropdown in sync with the new port list.
+    if (typeof populate_midi_passthru_dropdown === 'function') {
+        populate_midi_passthru_dropdown();
+    }
+}
+
 function _show_saving_modal() {
     var el = document.getElementById('savingModal');
     if (el && window.bootstrap) {
@@ -3734,15 +3803,57 @@ function dismiss_sync_modal_and_upgrade() {
     }
 }
 
-function sync_modal_retry() {
+async function sync_modal_retry() {
     // Apply the modal's dropdown selections back to the main dropdowns, then re-sync.
     var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
     var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
-    if (mainIn && modalIn) mainIn.selectedIndex = modalIn.selectedIndex;
-    if (mainOut && modalOut) mainOut.selectedIndex = modalOut.selectedIndex;
-    setup_midi_devices();
+
+    // Copy the modal's selection back to the main dropdown, clamping to a
+    // valid index so we never leave the main dropdown at -1 (no selection).
+    if (mainIn && modalIn) {
+        var wantIn = modalIn.selectedIndex;
+        if (wantIn >= 0 && wantIn < mainIn.options.length) {
+            mainIn.selectedIndex = wantIn;
+        } else if (mainIn.options.length > 0) {
+            mainIn.selectedIndex = 0;
+        }
+    }
+    if (mainOut && modalOut) {
+        var wantOut = modalOut.selectedIndex;
+        if (wantOut >= 0 && wantOut < mainOut.options.length) {
+            mainOut.selectedIndex = wantOut;
+        } else if (mainOut.options.length > 0) {
+            mainOut.selectedIndex = 0;
+        }
+    }
+
+    // Wait for setup_midi_devices to finish wiring up the new selections.
+    // It's async but has no internal awaits today, so this resolves synchronously;
+    // awaiting it explicitly is just defensive in case that ever changes.
+    try {
+        await setup_midi_devices();
+    } catch (e) {
+        console.warn('sync_modal_retry: setup_midi_devices threw', e);
+    }
+
+    console.log('sync_modal_retry: main_in=' + (mainIn ? mainIn.selectedIndex : '?') +
+                ' main_out=' + (mainOut ? mainOut.selectedIndex : '?') +
+                ' ids_in=' + midiInputOptionIds.length +
+                ' ids_out=' + midiOutputOptionIds.length +
+                ' midiOutputDevice=', midiOutputDevice,
+                ' midiInputDevice=', midiInputDevice);
+
+    if (!midiOutputDevice || !midiInputDevice) {
+        // Either the port list is empty or WebMidi can't resolve the selected
+        // id. Don't try to send sysex — it will just throw. Leave the modal
+        // in the error state so the user can pick different ports.
+        console.warn('sync_modal_retry: cannot proceed, MIDI devices not ready');
+        _show_syncing_modal_error();
+        return;
+    }
+
     // Reset modal UI to "trying" state and re-run the pageload sync.
     var spinner = document.getElementById('sync-modal-spinner');
     var error = document.getElementById('sync-modal-error');
@@ -3753,7 +3864,12 @@ function sync_modal_retry() {
     if (retryBtn) retryBtn.classList.add('d-none');
     if (modalIn) modalIn.disabled = true;
     if (modalOut) modalOut.disabled = true;
-    if (changeBtn) { changeBtn.textContent = 'Change MIDI Ports'; changeBtn.classList.remove('d-none'); }
+    if (changeBtn) {
+        changeBtn.textContent = 'Change MIDI Ports';
+        changeBtn.classList.remove('d-none');
+        // Re-hook the button back to sync_modal_change_ports for the next cycle.
+        changeBtn.onclick = function() { sync_modal_change_ports(); };
+    }
     // Re-run the pageload sync flow if in control mode, otherwise fall back
     // to the simple zA+zD path.
     if (amyboard_mode === 'control' && typeof pageload_control_sync === 'function') {
@@ -3770,6 +3886,10 @@ function sync_modal_change_ports() {
     if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('cancelled')); }
     // Cancel any pending ping wait from wait_for_board_ready.
     if (_ping_resolve) { var pr = _ping_resolve; _ping_resolve = null; pr(); }
+    // Re-scan WebMidi so any devices connected since page load show up,
+    // then mirror the refreshed list into the modal's dropdowns.
+    _refresh_main_midi_dropdowns();
+    _sync_modal_populate_midi();
     // Enable the dropdowns, hide the spinner, show the error/hint area,
     // and rename the Change button to Try again.
     var spinner = document.getElementById('sync-modal-spinner');
@@ -3784,8 +3904,15 @@ function sync_modal_change_ports() {
     if (modalIn) modalIn.disabled = false;
     if (modalOut) modalOut.disabled = false;
     if (changeBtn) changeBtn.textContent = 'Try again';
-    // Hook the changed button to sync_modal_retry instead.
-    if (changeBtn) changeBtn.onclick = function() { sync_modal_retry(); };
+    // Hook the changed button to sync_modal_retry instead. Wrap so the
+    // async function's rejections surface in the sync-error modal rather
+    // than bubbling up as unhandled promise errors.
+    if (changeBtn) changeBtn.onclick = function() {
+        sync_modal_retry().catch(function(e) {
+            console.warn('sync_modal_retry error:', e);
+            _show_syncing_modal_error();
+        });
+    };
 }
 
 // Cookie helpers for remembering successful MIDI port selections.

@@ -118,9 +118,8 @@ function pruneLog() {
         log.innerHTML = logLines.splice(-maxLogLength).join("<br>\n");
     }
 
-    if (autoscroll && autoscroll.checked) {
-        log.scrollTop = log.scrollHeight;
-    }
+    // Always auto-scroll to the bottom so the log feels like a terminal.
+    log.scrollTop = log.scrollHeight;
 }
 
 function writeLog(text) {
@@ -285,6 +284,10 @@ async function flashFromUrl(actionIndex) {
         butProgram.disabled = true;
         butProgram.classList.add("hidden");
     }
+    const upgradeCompleteEl = document.getElementById("upgradeComplete");
+    if (upgradeCompleteEl) {
+        upgradeCompleteEl.classList.add("hidden");
+    }
     const progressBar = progress[actionIndex];
     const progressFill = progressBar.querySelector("div");
     let progressStarted = false;
@@ -292,6 +295,7 @@ async function flashFromUrl(actionIndex) {
     progressBar.classList.add("indeterminate");
     progressFill.style.width = "100%";
 
+    let flashSucceeded = false;
     try {
         if (action.eraseAll) {
             writeLogLine("Erasing flash memory. Please wait...");
@@ -335,6 +339,7 @@ async function flashFromUrl(actionIndex) {
         await sleep(400);
         writeLogLine("To run the new firmware, please reset your device.");
         await esploader.after();
+        flashSucceeded = true;
     } catch (e) {
         console.error(e);
         errorMsg(e.message || e);
@@ -342,13 +347,20 @@ async function flashFromUrl(actionIndex) {
         progressBar.classList.add("hidden");
         progressBar.classList.remove("indeterminate");
         progressFill.style.width = "0";
-        if (butErase) {
-            butErase.disabled = false;
-            butErase.classList.remove("hidden");
-        }
-        if (butProgram) {
-            butProgram.disabled = false;
-            butProgram.classList.remove("hidden");
+        if (flashSucceeded) {
+            // Keep the upgrade/erase buttons hidden and show the completion banner.
+            if (upgradeCompleteEl) {
+                upgradeCompleteEl.classList.remove("hidden");
+            }
+        } else {
+            if (butErase) {
+                butErase.disabled = false;
+                butErase.classList.remove("hidden");
+            }
+            if (butProgram) {
+                butProgram.disabled = false;
+                butProgram.classList.remove("hidden");
+            }
         }
         if (baudRate) {
             baudRate.disabled = false;
