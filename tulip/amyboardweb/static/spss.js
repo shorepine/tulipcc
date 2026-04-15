@@ -2236,7 +2236,7 @@ function get_world_tag_query() {
 }
 
 function randomize_world_tag_palette() {
-    var tags = ["featured", "official", "popular", "wild"];
+    var tags = ["featured", "official"];
     var classes = [
         "bg-primary",
         "bg-success",
@@ -2264,7 +2264,7 @@ function render_world_tag_pills() {
     if (!Object.keys(amyboard_world_tag_palette).length) {
         randomize_world_tag_palette();
     }
-    var tags = ["featured", "official", "popular", "wild"];
+    var tags = ["featured", "official"];
     var html = "";
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
@@ -2659,7 +2659,7 @@ async function refresh_amyboard_world_files() {
             .sort(function(a, b) {
                 return Number(b.time || 0) - Number(a.time || 0);
             })
-            .slice(0, 10);
+            .slice(0, 12);
         render_amyboard_world_file_list();
     } catch (e) {
         amyboard_world_files = [];
@@ -4584,7 +4584,7 @@ function get_world_patch_display_name(filename) {
 }
 
 function randomize_world_patch_tag_palette() {
-    var tags = ["featured", "official", "popular", "wild"];
+    var tags = ["featured", "official"];
     var colors = ["bg-primary", "bg-success", "bg-danger", "bg-info", "bg-warning", "bg-secondary"];
     for (var i = colors.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
@@ -4602,7 +4602,7 @@ function render_world_patch_tag_pills() {
     if (!Object.keys(amyboard_world_patch_tag_palette).length) {
         randomize_world_patch_tag_palette();
     }
-    var tags = ["featured", "official", "popular", "wild"];
+    var tags = ["featured", "official"];
     var html = "";
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
