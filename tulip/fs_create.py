@@ -26,8 +26,9 @@ if(not os.path.exists('build/flash_args')):
 
 SYSTEM_HOME = "../fs/%s" % (distro)
 
-# Copy over only these extensions 
-good_exts = [".txt", ".png", ".py", ".json", ".obj", ".wav"]
+# Copy over only these extensions (compared case-insensitively, so .MID
+# and .mid both match).
+good_exts = [".txt", ".png", ".py", ".json", ".obj", ".wav", ".mid"]
 # And these folders
 source_folders = ['app','ex','im']
 
@@ -70,7 +71,7 @@ for folder in folders:
     lfs.mkdir(fs,folder)
     for file in os.listdir(folder):
         file_part, ext = os.path.splitext(file)
-        if(ext in good_exts):
+        if(ext.lower() in good_exts):
             copy_to_lfs(folder+'/'+file, folder+'/'+file)
 
 os.chdir(cur_dir)
