@@ -7,6 +7,10 @@ var amy_process_single_midi_byte = null;
 var audio_started = false;
 var amy_sysclock = null;
 var amyboard_started = false;
+// Deep-link guard: set in start_amyboard() when the initial URL has ?env=... ,
+// read later in start_audio() after check_url_env_params() has mutated the URL.
+// Keeps the default run_sketch() path from racing the deferred world-load.
+var _url_env_pending = false;
 var amy_yield_patch_events = null;
 var amy_yield_synth_commands = null;
 var amy_dump_state_to_string_c = null;
@@ -4437,8 +4441,11 @@ async function start_amyboard() {
 
   // Load sketch.py into the editor so the user can see/edit it before clicking to start audio.
   // The actual run_sketch() (applying knobs + starting loop) is deferred to start_audio().
-  var urlEnvPending = !!(new URLSearchParams(window.location.search).get("env"));
-  if (!urlEnvPending) {
+  // Use a persistent module-level flag (set before check_url_env_params mutates
+  // window.location.search) so start_audio() later still knows the deep-link
+  // sketch is pending and doesn't race a default run_sketch() against it.
+  _url_env_pending = !!(new URLSearchParams(window.location.search).get("env"));
+  if (!_url_env_pending) {
     var _pendingSketch = "";
     try { _pendingSketch = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' }); } catch (e) {}
     if (!_pendingSketch) _pendingSketch = _get_default_sketch();
@@ -4498,8 +4505,11 @@ async function start_audio() {
 
   // Audio is now running and AMY can process messages — run sketch.py the same
   // way hardware does: apply _auto_generated_knobs, import sketch.py, start loop().
-  var urlEnvPending = !!(new URLSearchParams(window.location.search).get("env"));
-  if (mp && !urlEnvPending) {
+  // Read the persistent flag (set in start_amyboard before check_url_env_params
+  // cleared the URL query string) — do NOT re-parse window.location.search here,
+  // it's been mutated by that point and would falsely return false, causing us
+  // to race a default run_sketch() against check_url_env_params's deferred load.
+  if (mp && !_url_env_pending) {
     // Init synth 1 with default Juno patch before run_sketch applies knobs.
     // On main, restore_patch_state_from_files did this. Without it, synth 1
     // doesn't exist and _apply_knobs_text fails with "synth not defined".
