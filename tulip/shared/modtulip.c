@@ -373,8 +373,6 @@ STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
     // to sequential slots so that a fast-arriving next sysex doesn't overwrite
     // an unprocessed message (which happens when loop() is CPU-heavy and the
     // mp_sched callback is delayed).
-    // parse_sysex() stopped the sequencer before scheduling this callback so
-    // loop() callbacks don't starve it. Restart after processing.
     char *slot = sysex_message_copies[sysex_copy_read_idx];
     sysex_copy_read_idx = (sysex_copy_read_idx + 1) % SYSEX_COPY_SLOTS;
     if (slot) {
@@ -384,7 +382,6 @@ STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
         // directly and bypass the transfer routing.
         amy_add_message_from_sysex(slot);
     }
-    sequencer_midi_start();
     // ACK the message AFTER processing. The sender (web) waits for this
     // ACK before sending the next message, ensuring only one message is
     // in flight at a time and the ring buffer can't overflow.
