@@ -28,7 +28,6 @@ from pydantic import BaseModel
 
 USERNAME_RE = re.compile(r"^[A-Za-z0-9]{1,20}$")
 ENV_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
-PATCH_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,25}$")
 FILE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 TAG_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 RESERVED_USERNAMES = {"shorepine"}
@@ -264,20 +263,6 @@ def _validate_amyboard_upload(filename: str, contents: bytes) -> str:
     env_name = clean_name[:-4]
     if not ENV_NAME_RE.match(env_name):
         raise HTTPException(status_code=400, detail="Environment name must be 1-20 chars: A-Z, a-z, 0-9, -, _")
-    if len(contents) < 1:
-        raise HTTPException(status_code=400, detail="Empty upload")
-    if len(contents) > MAX_FILE_BYTES:
-        raise HTTPException(status_code=413, detail=f"File too large (max {MAX_FILE_BYTES} bytes)")
-    return clean_name
-
-
-def _validate_amyboard_patch_upload(filename: str, contents: bytes) -> str:
-    clean_name = (filename or "").strip()
-    if not clean_name.lower().endswith(".patch"):
-        raise HTTPException(status_code=400, detail="File must be a .patch")
-    patch_name = clean_name[:-6]
-    if not PATCH_NAME_RE.match(patch_name):
-        raise HTTPException(status_code=400, detail="Patch name must be 1-25 chars: A-Z, a-z, 0-9, ., -, _")
     if len(contents) < 1:
         raise HTTPException(status_code=400, detail="Empty upload")
     if len(contents) > MAX_FILE_BYTES:
@@ -540,18 +525,16 @@ async def upload_amyboard_environment(
     contents = await file.read()
     raw_filename = (file.filename or "").strip()
 
-    # Accept .py (sketch), .tar (legacy environment), and .patch (legacy) uploads.
+    # Accept .py (sketch) and .tar (legacy environment) uploads. .patch
+    # support was removed in Apr 2026 — we no longer use AMYboard patches.
     if raw_filename.lower().endswith(".py"):
         filename = _validate_amyboard_sketch_upload(raw_filename, contents)
         upload_item_type = "environment"
-    elif raw_filename.lower().endswith(".patch"):
-        filename = _validate_amyboard_patch_upload(raw_filename, contents)
-        upload_item_type = "patch"
     elif raw_filename.lower().endswith(".tar"):
         filename = _validate_amyboard_upload(raw_filename, contents)
         upload_item_type = "environment"
     else:
-        raise HTTPException(status_code=400, detail="File must be a .py, .tar, or .patch")
+        raise HTTPException(status_code=400, detail="File must be a .py or .tar")
 
     item_id = _insert_file_row(
         "environments",
@@ -618,7 +601,13 @@ def download_amyboard_file(item_id: int) -> FileResponse:
     if not blob_path.exists():
         raise HTTPException(status_code=404, detail="File missing")
     fname = str(row["filename"])
-    mime = "text/plain" if fname.lower().endswith(".patch") else "application/x-tar"
+    lower = fname.lower()
+    if lower.endswith(".py"):
+        mime = "text/x-python"
+    elif lower.endswith(".tar"):
+        mime = "application/x-tar"
+    else:
+        mime = "application/octet-stream"
     return FileResponse(str(blob_path), media_type=mime, filename=fname)
 
 

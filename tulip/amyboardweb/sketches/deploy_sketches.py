@@ -20,7 +20,7 @@ import uuid
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-DEFAULT_URL = "https://api-production-4bfd.up.railway.app"
+DEFAULT_URL = "https://tulipcc-production.up.railway.app"
 USERNAME = "shorepine"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
