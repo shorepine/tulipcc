@@ -189,6 +189,36 @@ async function clickConnect() {
     // Set up device and transport
     if (device === null) {
         device = await serialLib.requestPort({});
+
+        // Check if the selected port looks like the ESP32-S3 USB/JTAG
+        // interface in download mode (VID 0x303A / PID 0x1001). If not,
+        // the user probably picked the wrong port — warn them and remind
+        // them of the BOOT+RST button sequence.
+        try {
+            var portInfo = device.getInfo();
+            var isUsbJtag = (portInfo.usbVendorId === 0x303A &&
+                             portInfo.usbProductId === 0x1001);
+            if (!isUsbJtag) {
+                var proceed = confirm(
+                    "⚠️ The port you selected doesn't look like the " +
+                    "USB/JTAG debug interface.\n\n" +
+                    "To enter firmware download mode:\n" +
+                    "  1. Hold down BOOT\n" +
+                    "  2. Press and release RST\n" +
+                    "  3. Release BOOT\n\n" +
+                    "Then click Search for AMYboard again and choose " +
+                    "the port labeled \"USB/JTAG\".\n\n" +
+                    "Press Cancel to go back, or OK to proceed anyway."
+                );
+                if (!proceed) {
+                    await device.close();
+                    device = null;
+                    return;
+                }
+            }
+        } catch (e) {
+            // getInfo() may not be available on all browsers; skip the check.
+        }
     }
 
     if (transport === null) {
