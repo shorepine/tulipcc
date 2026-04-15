@@ -1,13 +1,47 @@
 # Using AMYboard Online
 
-The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you design patches, write Python code, manage your AMYboard, and see shared patches and code -- all from your browser. You can also use it as a standalone browser-based synthesizer without any hardware at all.
+The AMYboard web editor at [amyboard.com](https://amyboard.com/editor) lets you both simulate an AMYboard in your browser (and let you design sketches without an AMYboard on hand!) or control your own AMYboard directly over MIDI. You can also see shared sketches from AMYboard World. 
 
-<img src="img/amyboard_online.png">
 
+On first load, you'll see this. It's up to you if you want to simulate an AMYboard or control one you own.
+
+<img src="img/simulate_control.png">
+
+## Control mode
+
+**Before using AMYboard Online in control mode, make sure you've [upgraded your firmware](firmware.md).**
+
+If you want Control mode, you should first ensure your AMYboard is connected to your computer via MIDI. You can use just the USB-C port directly -- it exposes a MIDI in and out port for you. But if your USB-C port is not accessible or you'd rather use direct MIDI, you can choose the MIDI in and out ports that are connected to your AMYboard's MIDI out and in ports (remember to swap the directions -- your computer's MIDI out should be connected to AMYboard's MIDI in, and vice versa.) If you're using USB-C MIDI, we'll detect it for you.
+
+You'll see a brief "syncing" window while we pull the latest sketch and knob settings from your AMYboard over MIDI. If your AMYboard is not connected yet, do it now (and re-choose the MIDI port again.)
+
+<img src="img/pulling.png">
+
+Once it goes away you'll see the main AMYboard Online, with the knobs (described below) and a strip up top:
+
+<img src="img/control.png">
+
+<img src="img/reset.png">
+
+<img src="img/simulate_top.png">
+
+<img src="img/control_top.png">
+
+<img src="img/presets.png">
+
+<img src="img/synth_knobs.png">
+
+<img src="img/sketch.png">
+
+
+
+## Simulate mode
+
+If you choose simulate, you'll be asked to click through a dialog to start audio in your browser. You should then be able to play the piano notes on the screen and hear the default synth. 
 
 ## Getting started
 
-Just open [amyboard.com](https://amyboard.com/editor) in Chrome, Edge, or Firefox (Safari works but MIDI is not available). Click anywhere once on the page to unlock audio, and you're ready to go.
+Just open [amyboard.com](https://amyboard.com/editor) in Chrome, Edge, or Firefox (Safari works but MIDI and therefore "Control Mode" is not available). Click anywhere once on the page to unlock audio, and you're ready to go.
 
 The online editor can be used to both set up a code environment and patches for your AMYboard, or you can just use the site on its own to make music. It can respond to MIDI like a synth, and the sketches you write will work there too. It can't do _everything_ a real AMYboard can - but it's close enough for most things. 
 
