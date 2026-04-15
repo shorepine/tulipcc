@@ -13,9 +13,9 @@ AMYboard gives you:
  - **SD card** for extra storage and samples
  - **I2C port** for [accessories](accessories.md) -- encoders, displays, and more
  - **Python programmability** -- write code to control every parameter of the synth
- - **Web editor** at [amyboard.com](https://amyboard.com/editor) for patch design and environment management
+ - **Web editor** at [amyboard.com](https://amyboard.com/editor) for patch design and sketch management
 
-If you have problems with AMYboard, check out the [troubleshooting page](troubleshooting.md). 
+If you have problems with AMYboard, check out the [troubleshooting page](troubleshooting.md) or find us on [Discord](https://discord.gg/TzBFkUb8pG).
 
 -- DAn and Brian
 
@@ -24,13 +24,15 @@ If you have problems with AMYboard, check out the [troubleshooting page](trouble
 AMYboard ships from [Makerfabs](https://amyboard.com/#get). In the box you'll get the board itself with the connectors already on, and an optional front panel that you can use if you want to mount your AMYboard in a Eurorrack case. See [Modular Synth Setup](modular.md) for details on the front panel and Eurorack mounting.
 
 
-## How AMYboard works - patches and sketches
+## How AMYboard works - knobs and sketches
 
-By default, our firmware boots your AMYboard up with what we call an "environment" - a list of patch to MIDI channel assignments and some default Python code that can run on startup. If you use [AMYboard online](online.md) you can change the patches, load new presets, load patches from others on our file sharing network AMYboard World, or write your own code to run on your AMYboard. 
+By default, our firmware boots your AMYboard up with what we call a sketch. This is code that can do anything you want on your AMYboard - make sequenced music, set up synthesizers, and much more. The sketch also contains the state of your "knobs" - each parameter of the default synth, like filters, frequencies, ADSRs, LFOs and effects. 
+
+You use [AMYboard online](online.md) to change the patches, load new presets, find fun sketches from others on our file sharing network AMYboard World, or write your own code to run on your AMYboard. 
 
 When AMYboard starts up, it sets up whatever patches are set to each channel and then runs the code that the user set up, if any. The code lets you build great interactive environments: you can load default patches and then have code modify them or change how inputs from CV or MIDI affect the patches, for example. 
 
-You can browse AMYboard World to find other environments to get inspiration! Download them and change them to fit your needs.
+You can browse AMYboard World to find other sketches to get inspiration! Download them and change them to fit your needs.
 
 You can also remove our custom firmware (it's easy to put back!) and run AMYboard under [Arduino](arduino.md) where you'll have full control over everything on AMYboard. 
 
@@ -94,7 +96,7 @@ Before you do anything else, upgrade your firmware! The easiest way is online vi
 1. **Flip the DIP switches for modular 10vpp output**. See our [Modular page](modular.md) for more info.
 2. **Connect 10-pin modular power.** Make sure to use a cable that has a "key" for the correct orientation. 
 3. **Connect your CV and audio and MIDI cables**. By default AMYboard plays a synth patch on MIDI channel 1. But it can do SO MUCH MORE. 
-4. Since the USB connection on your AMYboard will be hidden during a Eurorack install, use TRS MIDI to transfer patches and code between [AMYboard online](online.md) and your AMYboard in a case. 
+4. Since the USB connection on your AMYboard will be hidden during a Eurorack install, use TRS MIDI to transfer sketches between [AMYboard online](online.md) and your AMYboard in a case. 
 
 ## Quick start - Tulip
 
@@ -120,7 +122,7 @@ And all sound will come from the AMYboard.
 
 ## Learn more about AMY
 
-AMYboard is powered by AMY, an open-source synthesizer engine. To learn more about synthesis, patches, and the wire protocol:
+AMYboard is powered by [AMY](https://github.com/shorepine/amy), an open-source synthesizer engine. To learn more about synthesis, patches, and the wire protocol:
 
  - [AMY synth documentation](https://github.com/shorepine/amy/blob/main/docs/synth.md)
  - [AMY API reference](https://github.com/shorepine/amy/blob/main/docs/api.md)
