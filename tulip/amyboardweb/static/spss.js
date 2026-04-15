@@ -2676,7 +2676,7 @@ async function refresh_amyboard_world_files() {
             .sort(function(a, b) {
                 return Number(b.time || 0) - Number(a.time || 0);
             })
-            .slice(0, 12);
+            .slice(0, 30);
         render_amyboard_world_file_list();
     } catch (e) {
         amyboard_world_files = [];
