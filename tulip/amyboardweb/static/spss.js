@@ -3488,14 +3488,10 @@ async function _send_text_file_to_amyboard(path, text) {
     // the file. No extra sleep needed.
     var chunks = Math.ceil(fileSize / AMYBOARD_TRANSFER_CHUNK_BYTES);
     console.log('_send_text_file_to_amyboard: sending ' + chunks + ' chunks (' + fileSize + ' bytes)');
-    var chunkIdx = 0;
     for (var offset = 0; offset < fileSize; offset += AMYBOARD_TRANSFER_CHUNK_BYTES) {
         var chunk = bytes.slice(offset, offset + AMYBOARD_TRANSFER_CHUNK_BYTES);
         var b64 = bytes_to_base64_ascii(chunk);
-        var preview = String.fromCharCode(chunk[0] || 0, chunk[1] || 0, chunk[2] || 0, chunk[3] || 0);
-        console.log('chunk ' + chunkIdx + '/' + chunks + ': raw=' + chunk.length + ' b64=' + b64.length + ' first="' + preview + '"');
         await sysex_write_amy_message(b64);
-        chunkIdx++;
     }
     console.log('sent ' + fileSize + ' bytes to ' + path);
 }
