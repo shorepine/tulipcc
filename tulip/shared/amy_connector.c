@@ -9,9 +9,14 @@
 #include "polyfills.h"
 #include "py/mphal.h"
 #include "py/runtime.h"
+#include "py/builtin.h"
 #include "amy_connector.h"
 #include <stdio.h>
 #include <string.h>
+#ifdef ESP_PLATFORM
+#include "esp_system.h"
+#include "esp_attr.h"
+#endif
 uint8_t * external_map;
 
 #ifdef AMY_IS_EXTERNAL
@@ -294,6 +299,46 @@ STATIC mp_obj_t tulip_environment_transfer_done(size_t n_args, const mp_obj_t *a
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_environment_transfer_done_obj, 0, 1, tulip_environment_transfer_done);
 
+void mp_exec_hook(const char *code) {
+#if defined(AMYBOARD)
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        mp_obj_t code_str = mp_obj_new_str(code, strlen(code));
+        mp_call_function_1(MP_OBJ_FROM_PTR(&mp_builtin_exec_obj), code_str);
+        nlr_pop();
+    } else {
+        fprintf(stderr, "mp_exec_hook: exec raised, ignoring\n");
+        mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
+    }
+#else
+    (void)code;
+#endif
+}
+
+void mp_update_file_hook(const char *filename) {
+#if defined(AMYBOARD)
+    // Call amyboard.update_sketch_knobs(filename) synchronously. This runs
+    // from the C-side zA handler, so any unhandled Python exception would
+    // NLR-longjmp out of the sysex parser mid-message and the subsequent zD
+    // would never be processed (Pull would hang). Wrap the call in an NLR
+    // buffer so exceptions get swallowed and the parser can continue.
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
+        mp_obj_t fn = mp_load_attr(mod, MP_QSTR_update_sketch_knobs);
+        mp_obj_t path = mp_obj_new_str(filename, strlen(filename));
+        mp_call_function_1(fn, path);
+        nlr_pop();
+    } else {
+        // Python raised — swallow so the sysex parser can continue to zD.
+        fprintf(stderr, "mp_update_file_hook: update_sketch_knobs raised, ignoring\n");
+        mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
+    }
+#else
+    (void)filename;
+#endif
+}
+
 void mp_file_transfer_done_hook(const char *filename) {
 #if defined(AMYBOARD)
     if (filename == NULL || filename[0] == '\0') {
@@ -304,7 +349,7 @@ void mp_file_transfer_done_hook(const char *filename) {
     if (slash != NULL && slash[1] != '\0') {
         leaf = slash + 1;
     }
-    if (strcmp(leaf, "environment.tar") == 0) {
+    if (strcmp(leaf, "sketch.py") == 0) {
         mp_sched_schedule(MP_OBJ_FROM_PTR(&tulip_environment_transfer_done_obj), mp_const_none);
     }
 #else
@@ -312,6 +357,24 @@ void mp_file_transfer_done_hook(const char *filename) {
 #endif
 }
 
+
+#ifdef ESP_PLATFORM
+RTC_NOINIT_ATTR uint32_t amyboard_bootloader_flag;
+#define AMYBOARD_BOOTLOADER_MAGIC 0xABCD0001
+#endif
+
+void mp_reboot_hook(uint8_t mode) {
+#if defined(AMYBOARD) && defined(ESP_PLATFORM)
+    if (mode == 0) {
+        // Bootloader mode: skip sketch on next boot.
+        amyboard_bootloader_flag = AMYBOARD_BOOTLOADER_MAGIC;
+        esp_restart();
+    } else if (mode == 1) {
+        // Normal reboot: run sketch as usual.
+        esp_restart();
+    }
+#endif
+}
 
 void run_amy(uint8_t midi_out_pin) {
     amy_config_t amy_config = amy_default_config();
@@ -323,6 +386,9 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.amy_external_fread_hook = mp_fread_hook;
     amy_config.amy_external_fwrite_hook = mp_fwrite_hook;
     amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
+    amy_config.amy_external_update_file_hook = mp_update_file_hook;
+    amy_config.amy_external_exec_hook = mp_exec_hook;
+    amy_config.amy_external_reboot_hook = mp_reboot_hook;
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     amy_config.audio = AMY_AUDIO_IS_I2S;

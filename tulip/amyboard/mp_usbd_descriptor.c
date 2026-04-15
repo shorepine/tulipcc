@@ -168,8 +168,8 @@ const uint8_t *tud_descriptor_configuration_cb(uint8_t index) {
 
 #ifdef AMYBOARD
 void amyboard_cdc_print(char * buf) {
-    mp_uint_t cdc_res = mp_usbd_cdc_tx_strn(buf, strlen(buf));
-    cdc_res = mp_usbd_cdc_tx_strn("\r\n", 2);
+    mp_usbd_cdc_tx_strn(buf, strlen(buf));
+    mp_usbd_cdc_tx_strn("\r\n", 2);
 }
 #endif
 

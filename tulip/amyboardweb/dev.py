@@ -50,7 +50,7 @@ AMY_BUILD       = os.path.join(REPO_ROOT, "amy", "build")
 AMY_DOCS        = os.path.join(REPO_ROOT, "amy", "docs")
 MICROPYTHON_DIR = os.path.join(SCRIPT_DIR, "build-standard", "tulip", "obj")
 
-PORT = 8000
+PORT = int(os.environ.get("PORT", 8000))
 
 # Fixed for the whole dev session — WASM filenames stay stable.
 SESSION_TS = datetime.now().strftime("%Y%m%d%H%M%S")

@@ -51,7 +51,7 @@ try:
     lfs.mkdir(fs, 'current')
 except:
     pass
-copy_to_lfs('sketch.py', 'current/sketch.py')
+# sketch.py is created on first boot by amyboard.ensure_user_environment().
 
 print("writing VFS .bin file...")
 with open("build/amyboard-vfs.bin","wb") as fh:

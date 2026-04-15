@@ -1,4 +1,4 @@
-
+console.log('[spss.js] build sentinel: knobs-dedup-v3 loaded');
 var amy_add_message = null;
 var amy_live_start_web = null;
 var amy_bleep = null;
@@ -9,6 +9,7 @@ var amy_sysclock = null;
 var amyboard_started = false;
 var amy_yield_patch_events = null;
 var amy_yield_synth_commands = null;
+var amy_dump_state_to_string_c = null;
 
 var _python_error_buffer = "";
 var _python_error_timer = null;
@@ -42,13 +43,17 @@ function amy_add_log_message(message) {
 var mp = null;
 var midiOutputDevice = null;
 var midiInputDevice = null;
+var midiPassthruDevice = null;
+var midiPassthruOptionIds = [];  // parallel to the pass-thru <option>s; first entry null for [None]
+var _midi_passthru_listener = null;
+var _midi_passthru_input = null;
 var midiInputOptionIds = [];
 var midiOutputOptionIds = [];
 var editor = null;
 var treeView = null;
 var editor_shown = false;
 var amy_audioin_toggle = false;
-var editor_height = 200;
+var editor_height = 300;
 var term = null;
 var cv_1_voltage = 0;
 var cv_2_voltage = 0;
@@ -71,8 +76,15 @@ const AMYBOARD_WORLD_API_BASE = (typeof window !== "undefined" && typeof window.
     : String(window.location.origin || "").replace(/\/+$/, "");
 const CURRENT_BASE_DIR = "/amyboard/user/current";
 const CURRENT_ENV_DIR = CURRENT_BASE_DIR;
-const DEFAULT_SKETCH_SOURCE = "# AMYboard Sketch\n# Top-level code runs once at boot. loop() is called every 32nd note.\n\ndef loop():\n    pass\n";
-const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json", ".patch"];
+// No JS copy of the default sketch — the canonical source is amyboard.DEFAULT_SKETCH_SOURCE in Python.
+// Use _get_default_sketch() to read it at runtime.
+function _get_default_sketch() {
+  if (mp) {
+    try { return mp.runPython("import amyboard; amyboard.DEFAULT_SKETCH_SOURCE"); } catch (e) {}
+  }
+  return "";
+}
+const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json"];
 const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
 window.current_synth = 1;
@@ -82,7 +94,6 @@ window.channel_control_mapping_sent = Array.isArray(window.channel_control_mappi
 window.channel_patch_names = Array.isArray(window.channel_patch_names) ? window.channel_patch_names : new Array(17).fill(null);
 window.channel_patch_dirty = Array.isArray(window.channel_patch_dirty) ? window.channel_patch_dirty : new Array(17).fill(false);
 window.suppress_knob_cc_send = false;
-const EDITOR_STATE_FILENAME = "editor_state.json";
 const DIRTY_AUTOSAVE_DELAY_MS = 180;
 const channel_dirty_autosave_timers = new Array(17).fill(null);
 
@@ -107,11 +118,71 @@ window.set_channel_active = function(channel, active) {
   if (!Number.isInteger(ch) || ch < 1 || ch > 16) {
     return;
   }
+  var wasActive = !!window.active_channels[ch];
   window.active_channels[ch] = !!active;
+  // Initialize a newly activated channel with default Juno patch.
+  if (active && !wasActive) {
+    amy_add_log_message("i" + ch + "ic255Z");
+    amy_add_log_message("i" + ch + "K257iv6Z");
+    send_all_knob_cc_mappings(ch);
+  }
+};
+
+// ── AMY shared file I/O hooks (called from AMY WASM via EM_ASM) ─────────────
+// These bridge AMY's C file operations to the MicroPython Emscripten filesystem.
+var _amy_shared_files = {};  // handle → { filename, mode, chunks }
+var _amy_shared_next_handle = 1;
+
+window.amy_shared_open = function(filename, mode) {
+    var handle = _amy_shared_next_handle++;
+    _amy_shared_files[handle] = { filename: filename, mode: mode || 'r', chunks: [] };
+    return handle;
+};
+
+window.amy_shared_write = function(handle, bufPtr, len) {
+    var file = _amy_shared_files[handle];
+    if (!file) return 0;
+    // Read bytes from AMY WASM heap.
+    var bytes = new Uint8Array(amy_module.HEAPU8.buffer, bufPtr, len);
+    file.chunks.push(new Uint8Array(bytes));  // copy
+    return len;
+};
+
+window.amy_shared_close = function(handle) {
+    var file = _amy_shared_files[handle];
+    if (!file) return;
+    delete _amy_shared_files[handle];
+    // If opened for writing, concatenate chunks and write to mp.FS.
+    if (file.mode && file.mode.indexOf('w') !== -1 && mp) {
+        var totalLen = 0;
+        for (var i = 0; i < file.chunks.length; i++) totalLen += file.chunks[i].length;
+        var combined = new Uint8Array(totalLen);
+        var offset = 0;
+        for (var i = 0; i < file.chunks.length; i++) {
+            combined.set(file.chunks[i], offset);
+            offset += file.chunks[i].length;
+        }
+        var content = new TextDecoder().decode(combined);
+        // Map AMY paths to mp.FS paths (prepend /amyboard if needed for simulate).
+        var fsPath = file.filename;
+        if (amyboard_mode === 'simulate' && !fsPath.startsWith('/amyboard')) {
+            fsPath = '/amyboard' + fsPath;
+        }
+        try {
+            mp.FS.writeFile(fsPath, content);
+            sync_persistent_fs();
+            fill_tree();
+        } catch (e) {
+            console.warn('amy_shared_close: failed to write', fsPath, e);
+        }
+    }
 };
 
 // Once AMY module is loaded, register its functions and start AMY (not yet audio, you need to click for that)
-amyModule().then(async function(am) {
+// In control mode the WASM script tag is omitted so amyModule won't exist.
+// Store the promise so start_amyboard() can await it before sending init messages.
+var _amy_wasm_ready = null;
+if (typeof amyModule === 'function') _amy_wasm_ready = amyModule().then(async function(am) {
   amy_live_start_web = am.cwrap(
     'amy_live_start_web', null, null, {async: true}
   );
@@ -146,7 +217,10 @@ amyModule().then(async function(am) {
     'yield_patch_events', 'number', ['number', 'number', 'number']
   );
   amy_yield_synth_commands = am.cwrap(
-    'yield_synth_commands', 'number', ['number', 'number', 'number', 'number']
+    'yield_synth_commands', 'number', ['number', 'number', 'number', 'boolean', 'number']
+  );
+  amy_dump_state_to_string_c = am.cwrap(
+    'amy_dump_state_to_string', 'number', ['number']
   );
   amy_start_web_no_synths();
   amy_module = am;
@@ -179,27 +253,6 @@ function read_c_string_from_heap(ptr, maxLen) {
   return out;
 }
 
-function read_editor_state_json() {
-  let raw = "";
-  try {
-    raw = mp.FS.readFile(CURRENT_ENV_DIR + "/" + EDITOR_STATE_FILENAME, { encoding: "utf8" });
-  } catch (e) {
-    raw = "";
-  }
-  let parsed = {};
-  try {
-    parsed = raw ? JSON.parse(String(raw)) : {};
-  } catch (e) {
-    parsed = {};
-  }
-  if (!parsed || typeof parsed !== "object") {
-    parsed = {};
-  }
-  if (!parsed.synths || typeof parsed.synths !== "object" || Array.isArray(parsed.synths)) {
-    parsed.synths = {};
-  }
-  return parsed;
-}
 
 function normalize_synth_channel(channel) {
   const synth = Number(channel);
@@ -225,16 +278,7 @@ function remove_current_environment_file_if_exists(filename) {
   return false;
 }
 
-function set_channel_patch_dirty_state(channel, dirty) {
-  const synth = normalize_synth_channel(channel);
-  if (!synth) {
-    return;
-  }
-  window.channel_patch_dirty[synth] = !!dirty;
-  if (typeof window.refresh_save_patch_dirty_indicator === "function") {
-    window.refresh_save_patch_dirty_indicator();
-  }
-}
+function set_channel_patch_dirty_state(channel, dirty) { /* no-op */ }
 
 function num_oscs_from_patch_file_content(source) {
   var maxOsc = -1;
@@ -480,11 +524,17 @@ function get_wire_commands_for_channel(channel) {
   }
   const lines = [];
   let state = 0;
+  const MAX_ITERATIONS = 500;
+  let iterations = 0;
   do {
-    state = amy_yield_synth_commands(synth, bufferPtr, maxMessageLen, state);
+    state = amy_yield_synth_commands(synth, bufferPtr, maxMessageLen, true, state);
     const wire = read_c_string_from_heap(bufferPtr, maxMessageLen).trim();
     if (wire) {
       lines.push(wire);
+    }
+    if (++iterations >= MAX_ITERATIONS) {
+      console.error("get_wire_commands_for_channel: bailed after " + MAX_ITERATIONS + " iterations (state=" + state + ")");
+      break;
     }
   } while (state != 0);
   amy_module._free(bufferPtr);
@@ -494,16 +544,7 @@ function get_wire_commands_for_channel(channel) {
   return lines;
 }
 
-function write_channel_dirty_patch_file(channel) {
-  const synth = normalize_synth_channel(channel);
-  if (!synth) {
-    throw new Error("Invalid channel.");
-  }
-  const lines = get_wire_commands_for_channel(synth);
-  const filename = String(synth) + ".dirty";
-  mp.FS.writeFile(CURRENT_ENV_DIR + "/" + filename, lines.join("\n") + "\n");
-  return filename;
-}
+function write_channel_dirty_patch_file(channel) { /* no-op */ }
 
 const pending_channel_knob_sync = new Array(17).fill(false);
 
@@ -535,6 +576,14 @@ async function sync_channel_knobs_from_synth_to_ui(channel) {
   if (!synth) {
     return false;
   }
+  // In control mode, AMY WASM isn't loaded so we can't read synth state back.
+  if (amyboard_mode === 'control') {
+    return false;
+  }
+  // Audio must be running for AMY to process queued messages; skip if not started.
+  if (!audio_started) {
+    return false;
+  }
   if (typeof set_knobs_from_synth !== "function"
     || typeof window.refresh_knobs_for_channel !== "function"
     || typeof window.get_current_knobs !== "function") {
@@ -547,15 +596,17 @@ async function sync_channel_knobs_from_synth_to_ui(channel) {
   window.suppress_knob_cc_send = true;
   try {
     let lastError = null;
-    for (let attempt = 0; attempt < 24; attempt += 1) {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
       // AMY applies queued wire messages asynchronously; keep retrying briefly during startup.
-      await new Promise(function(resolve) { setTimeout(resolve, attempt === 0 ? 20 : 40); });
+      await new Promise(function(resolve) { setTimeout(resolve, attempt === 0 ? 50 : 200); });
       try {
         set_knobs_from_synth(synth);
         window.refresh_knobs_for_channel();
         return true;
       } catch (e) {
         lastError = e;
+        // If the synth has no voices, don't keep retrying — it won't appear.
+        if (e && e.message && e.message.indexOf('No synth commands') !== -1) break;
       }
     }
     if (lastError) {
@@ -568,86 +619,11 @@ async function sync_channel_knobs_from_synth_to_ui(channel) {
   }
 }
 
-function schedule_dirty_autosave_for_channel(channel) {
-  const synth = normalize_synth_channel(channel);
-  if (!synth || window.suppress_knob_cc_send) {
-    return;
-  }
-  set_channel_patch_dirty_state(synth, true);
-  const existingTimer = channel_dirty_autosave_timers[synth];
-  if (existingTimer) {
-    clearTimeout(existingTimer);
-  }
-  channel_dirty_autosave_timers[synth] = setTimeout(async function() {
-    channel_dirty_autosave_timers[synth] = null;
-    try {
-      ensure_current_environment_layout(true);
-      write_channel_dirty_patch_file(synth);
-      await sync_persistent_fs();
-    } catch (e) {}
-  }, DIRTY_AUTOSAVE_DELAY_MS);
-}
-
-function write_editor_state_json(state) {
-  const payload = JSON.stringify(state || { synths: {} }, null, 2) + "\n";
-  mp.FS.writeFile(CURRENT_ENV_DIR + "/" + EDITOR_STATE_FILENAME, payload);
-}
-
-function set_editor_state_patch_name(channel, patchName) {
-  const synth = Number(channel);
-  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
-    return;
-  }
-  const state = read_editor_state_json();
-  if (!state.synths || typeof state.synths !== "object" || Array.isArray(state.synths)) {
-    state.synths = {};
-  }
-  const key = String(synth);
-  const name = (patchName == null) ? "" : String(patchName).trim();
-  if (name) {
-    state.synths[key] = name;
-  } else {
-    delete state.synths[key];
-  }
-  write_editor_state_json(state);
-}
+function schedule_dirty_autosave_for_channel(channel) { /* no-op */ }
 
 
-window.save_current_synth_patch_file = async function(rawName) {
-  ensure_current_environment_layout(true);
-  if (!amy_module || typeof amy_yield_synth_commands !== "function") {
-    throw new Error("AMY patch command generator is unavailable.");
-  }
 
-  let name = String(rawName || "").trim();
-  if (name.toLowerCase().endsWith(".patch")) {
-    name = name.slice(0, -6);
-  }
-  if (!/^[A-Za-z0-9._-]{1,25}$/.test(name)) {
-    throw new Error("Patch name must be 1-25 chars: letters, numbers, dot, underscore, dash.");
-  }
-
-  const synth = Number(window.current_synth || 1);
-  if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
-    throw new Error("Invalid channel.");
-  }
-
-  const lines = get_wire_commands_for_channel(synth);
-  
-  if (!lines.length) {
-    throw new Error("No synth commands were generated for this channel.");
-  }
-
-  const filename = name + ".patch";
-  mp.FS.writeFile(CURRENT_ENV_DIR + "/" + filename, lines.join("\n") + "\n");
-  window.channel_patch_names[synth] = name;
-  set_editor_state_patch_name(synth, name);
-  remove_current_environment_file_if_exists(String(synth) + ".dirty");
-  set_channel_patch_dirty_state(synth, false);
-  await sync_persistent_fs();
-  await fill_tree();
-  return filename;
-};
+window.save_current_synth_patch_file = async function(rawName) { /* no-op — use Save button (save_amy_state) instead */ };
 
 window.load_saved_patch_file_into_current_channel = async function(rawFilename) {
   ensure_current_environment_layout(true);
@@ -698,12 +674,6 @@ window.load_saved_patch_file_into_current_channel = async function(rawFilename) 
     window.set_section_disabled("Osc B", isDX7);
     window.set_section_disabled("ADSR", isDX7);
   }
-  const patchName = filename.replace(/\.patch$/i, "");
-  window.channel_patch_names[synth] = patchName;
-  set_editor_state_patch_name(synth, patchName);
-  remove_current_environment_file_if_exists(String(synth) + ".dirty");
-  set_channel_patch_dirty_state(synth, false);
-  await sync_persistent_fs();
   return filename;
 };
 
@@ -743,164 +713,29 @@ function apply_channel_active_ui_from_loaded_map(loadedMap) {
   }
 }
 
-async function restore_patches_from_editor_state_if_present(options) {
-  const opts = options || {};
-  const sendToAmy = opts.sendToAmy !== false;
-  let hasEditorState = false;
-  try {
-    mp.FS.readFile(CURRENT_ENV_DIR + "/" + EDITOR_STATE_FILENAME, { encoding: "utf8" });
-    hasEditorState = true;
-  } catch (e) {
-    hasEditorState = false;
-  }
-  const state = hasEditorState ? read_editor_state_json() : null;
-  const synthMap = (state && state.synths && typeof state.synths === "object") ? state.synths : {};
-  const loadedMap = new Array(17).fill(false);
-  const loadedOscsMap = new Array(17).fill(0);
-  const loadedSynths = [];
-  let loadedCount = 0;
-  for (let ch = 1; ch <= 16; ch += 1) {
-    set_channel_patch_dirty_state(ch, false);
-  }
-
-  // Scan for .dirty files not covered by editor_state.json
-  try {
-    var envEntries = mp.FS.readdir(CURRENT_ENV_DIR);
-    for (var ei = 0; ei < envEntries.length; ei++) {
-      var entry = envEntries[ei];
-      if (entry.endsWith(".dirty")) {
-        var dsynth = parseInt(entry.slice(0, -6), 10);
-        if (dsynth >= 1 && dsynth <= 16 && !synthMap[String(dsynth)]) {
-          synthMap[String(dsynth)] = "";
-        }
-      }
-    }
-  } catch (e) {}
-
-  if (!Object.keys(synthMap).length) {
-    if (sendToAmy) {
-      amy_send({synth: 1, midi_cc: "255"}, true);
-      amy_send({synth: 1, patch: 257, num_voices: 6}, true);
-      send_all_knob_cc_mappings(1);
-    }
-    await sync_channel_knobs_from_synth_to_ui(1);
-    return { hasEditorState: hasEditorState, loadedCount: 0 };
-  }
-
-  for (const key in synthMap) {
-    if (!Object.prototype.hasOwnProperty.call(synthMap, key)) {
-      continue;
-    }
-    const synth = Number(key);
-    if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
-      continue;
-    }
-    const name = String(synthMap[key] || "").trim();
-    if (name) {
-      window.channel_patch_names[synth] = name.replace(/\.patch$/i, "");
-    }
-    const dirtyFilename = String(synth) + ".dirty";
-    let dirtySource = "";
-    try {
-      dirtySource = mp.FS.readFile(CURRENT_ENV_DIR + "/" + dirtyFilename, { encoding: "utf8" });
-    } catch (e) {
-      dirtySource = "";
-    }
-    let filename = name ? (name.toLowerCase().endsWith(".patch") ? name : (name + ".patch")) : "";
-    let source = "";
-    if (dirtySource) {
-      source = dirtySource;
-      set_channel_patch_dirty_state(synth, true);
-    } else if (filename) {
-      try {
-        source = mp.FS.readFile(CURRENT_ENV_DIR + "/" + filename, { encoding: "utf8" });
-      } catch (e) {
-        continue;
-      }
-      set_channel_patch_dirty_state(synth, false);
-    } else {
-      continue;
-    }
-    var oscs_per_voice = num_oscs_from_patch_file_content(source);
-    if (sendToAmy) {
-      amy_send({synth: synth, midi_cc: "255"}, true);
-      amy_send({synth: synth, num_voices: 6, oscs_per_voice: oscs_per_voice}, true);
-      reset_global_effects();
-    }
-    const lines = String(source || "").split(/\r?\n/);
-    for (const line of lines) {
-      const wire = String(line || "").trim();
-      if (!wire || wire.startsWith("#")) {
-        continue;
-      }
-      if (sendToAmy) {
-        amy_add_log_message("i" + synth + wire);
-      }
-    }
-    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
-      window.apply_knob_cc_mappings_from_patch_source(synth, source);
-    }
-    if (sendToAmy) {
-      send_all_knob_cc_mappings(synth);
-    }
-    await sync_channel_knobs_from_synth_to_ui(synth);
-    loadedMap[synth] = true;
-    loadedOscsMap[synth] = oscs_per_voice;
-    loadedSynths.push(synth);
-    loadedCount += 1;
-  }
-
-  if (!sendToAmy && loadedSynths.length > 0) {
-    // On startup, Python may still be streaming patch messages into AMY while we read synth state.
-    // Run a second sync pass shortly after to capture final settled values.
-    await new Promise(function(resolve) { setTimeout(resolve, 350); });
-    for (const synth of loadedSynths) {
-      await sync_channel_knobs_from_synth_to_ui(synth);
-    }
-  }
-
-  // If the active channel had no patch mapping, initialize it with a clean slate.
-  const activeCh = Number(window.current_synth || 1);
-  if (!loadedMap[activeCh] && sendToAmy) {
-    amy_send({synth: activeCh, midi_cc: "255"}, true);
-    amy_send({synth: activeCh, patch: 257, num_voices: 6}, true);
-    send_all_knob_cc_mappings(activeCh);
-  }
-
-  // Apply section blur for the active channel only (once, after all syncing is done).
-  if (typeof window.set_section_disabled === "function") {
-    var activeOscs = loadedOscsMap[activeCh] || 0;
-    var activeIsDX7 = activeOscs >= 8;
-    window.set_section_disabled("Osc A", activeIsDX7);
-    window.set_section_disabled("Osc B", activeIsDX7);
-    window.set_section_disabled("ADSR", activeIsDX7);
-  }
-
-  apply_channel_active_ui_from_loaded_map(loadedMap);
-  return { hasEditorState: true, loadedCount: loadedCount };
-}
 
 window.clear_current_channel_patch = async function() {
-  ensure_current_environment_layout(true);
+  if (mp) ensure_current_environment_layout(true);
   const synth = Number(window.current_synth || 1);
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
-  reset_global_effects();
-  amy_send({synth: synth, midi_cc: "255"}, true);
-  amy_send({synth: synth, patch: 257, num_voices: 6}, true);
-  send_all_knob_cc_mappings(synth);
-  await sync_channel_knobs_from_synth_to_ui(synth);
+  amy_add_log_message("i" + synth + "ic255Z");
+  amy_add_log_message("i" + synth + "K257iv6Z");
+  if (amyboard_mode === 'control') {
+    // Pull after a delay to get fresh state (skip effects/CC flood — sysex race).
+    setTimeout(sync_amy_state, 500);
+  } else {
+    reset_global_effects();
+    send_all_knob_cc_mappings(synth);
+    // Sync knobs from AMY state after K257 delta is processed.
+    await sync_channel_knobs_from_synth_to_ui(synth);
+  }
   if (typeof window.set_section_disabled === "function") {
     window.set_section_disabled("Osc A", false);
     window.set_section_disabled("Osc B", false);
     window.set_section_disabled("ADSR", false);
   }
-  window.channel_patch_names[synth] = null;
-  set_editor_state_patch_name(synth, null);
-  remove_current_environment_file_if_exists(String(synth) + ".dirty");
-  set_channel_patch_dirty_state(synth, false);
-  await sync_persistent_fs();
   return synth;
 };
 
@@ -915,22 +750,44 @@ function onKnobCcChange(knob, previousCc) {
   (also %i for channel/synth number) and maybe %V to force an integer,
   for things like selecting wave, and maybe more.
   */
-  var ccVal = build_knob_cc_value(knob);
-  if (!ccVal) {
-    return;
-  }
-  if (window.suppress_knob_cc_send) {
-    return;
-  }
   var synthChannel = Number(window.current_synth || 1);
   if (!Number.isInteger(synthChannel) || synthChannel < 1 || synthChannel > 16) {
     synthChannel = 1;
   }
-  // If the CC number changed, remove the old CC mapping from AMY first.
-  if (previousCc !== undefined && previousCc !== "" && previousCc !== knob.cc) {
+
+  // Deduplicate CC numbers: if the new CC is already assigned to a different
+  // knob on the same channel, unset that older knob (make its UI blank and
+  // skip it in ic output). AMY itself only keeps one mapping per CC so the
+  // newest ic replaces the old one — we just need to clean up knob state.
+  var newCcNum = Number(knob.cc);
+  var hasNewCc = knob.cc !== "" && knob.cc !== null && knob.cc !== undefined
+    && Number.isInteger(newCcNum) && newCcNum >= 0 && newCcNum <= 127;
+  if (hasNewCc) {
+    var allKnobs = get_knobs_for_channel(synthChannel);
+    for (var i = 0; i < allKnobs.length; i++) {
+      var other = allKnobs[i];
+      if (!other || other === knob) continue;
+      var otherCcNum = Number(other.cc);
+      if (other.cc !== "" && other.cc !== null && other.cc !== undefined
+        && Number.isInteger(otherCcNum) && otherCcNum === newCcNum) {
+        other.cc = "";
+      }
+    }
+  }
+
+  var ccVal = build_knob_cc_value(knob);
+  if (window.suppress_knob_cc_send) {
+    return;
+  }
+  // If the CC number changed and the previous CC isn't being re-used by the
+  // same knob, tell AMY to unset the old CC → parameter mapping.
+  if (previousCc !== undefined && previousCc !== "" && previousCc !== null
+    && Number(previousCc) !== newCcNum) {
     amy_send({synth: synthChannel, midi_cc: previousCc + ",0,0,0,0,"}, true);
   }
-  amy_send({synth: synthChannel, midi_cc: ccVal}, true);
+  if (ccVal) {
+    amy_send({synth: synthChannel, midi_cc: ccVal}, true);
+  }
 }
 
 window.onKnobChange = function(_index, _value) {
@@ -1215,6 +1072,12 @@ function build_knob_cc_value(knob) {
     || knob.knob_type === "pushbutton") {
     return "";
   }
+  // Skip knobs with no CC assigned (blank/null/undefined/non-integer or out of range).
+  var ccNum = Number(knob.cc);
+  if (knob.cc === "" || knob.cc === null || knob.cc === undefined
+    || !Number.isInteger(ccNum) || ccNum < 0 || ccNum > 127) {
+    return "";
+  }
   var log, min_val, max_val, offset;
   if (knob.knob_type === "selection") {
     log = 0;
@@ -1227,7 +1090,7 @@ function build_knob_cc_value(knob) {
     max_val = knob.max_value;
     offset = (typeof knob.offset === "undefined") ? 0 : knob.offset;
   }
-  return knob.cc + "," + log + "," + min_val + "," + max_val + "," + offset + "," + knob.change_code;
+  return ccNum + "," + log + "," + min_val + "," + max_val + "," + offset + "," + knob.change_code;
 }
 
 function send_all_knob_cc_mappings(channel) {
@@ -1336,6 +1199,229 @@ function get_selected_midi_output_device() {
 }
 
 
+var _raw_sysex_listener = null;
+var _raw_sysex_input = null;
+// Reassembly buffer for sysex messages that arrive across multiple events
+// (some browsers/drivers fragment large sysex). `_sysex_reasm` accumulates
+// bytes from an 0xF0 up to the matching 0xF7, then dispatches the complete
+// message.
+var _sysex_reasm = null;
+
+// Application-level reassembly across MULTIPLE sysex frames. AMY's
+// _send_as_sysex_b64 chunks large dumps into multiple sysex messages of
+// ~1 KB each because Chrome's Web MIDI often drops single sysex messages
+// above a few KB. Each chunk payload starts with a 1-byte marker:
+//   '0' (0x30) = single chunk (whole message in one frame)
+//   'C' (0x43) = continue (more chunks follow)
+//   'E' (0x45) = end (last chunk of a multi-chunk message)
+// We accumulate the base64 text from 'C' chunks here and flush on 'E' or
+// single '0'. The accumulator is reset whenever a new chunk protocol frame
+// arrives, and also at the start of each sync_amy_state.
+var _sysex_b64_accum = '';
+
+function _process_complete_sysex(d) {
+    if (!d || d.length < 5) return;
+    if (d[0] !== 0xF0 || d[d.length - 1] !== 0xF7) return;
+    // SPSS (AMYboard) sysex manufacturer id: 00 03 45
+    if (d[1] !== 0x00 || d[2] !== 0x03 || d[3] !== 0x45) {
+        console.log('sysex mfr mismatch: d[1]=' + d[1] + ' d[2]=' + d[2] + ' d[3]=' + d[3]);
+        return;
+    }
+    // zI ping reply: F0 00 03 45 'O' 'K' F7
+    if (d.length === 7 && d[4] === 0x4F /* O */ && d[5] === 0x4B /* K */) {
+        console.log('zI: board ready');
+        if (_ping_resolve) { var r = _ping_resolve; _ping_resolve = null; _ping_reject = null; r(); }
+        return;
+    }
+    // Sysex ACK: F0 00 03 45 'A' 'K' F7
+    if (d.length === 7 && d[4] === 0x41 /* A */ && d[5] === 0x4B /* K */) {
+        if (_sysex_ack_resolve) { var r = _sysex_ack_resolve; _sysex_ack_resolve = null; r(); }
+        return;
+    }
+    // Chunk marker at position 4.
+    var marker = d[4];
+    var payloadStart, isChunked, isEnd;
+    if (marker === 0x30 /* '0' */ || marker === 0x43 /* 'C' */ || marker === 0x45 /* 'E' */) {
+        payloadStart = 5;
+        isChunked = (marker === 0x43 || marker === 0x45);
+        isEnd = (marker === 0x30 || marker === 0x45);
+    } else {
+        // Legacy / backward-compat: no marker, whole payload is base64.
+        payloadStart = 4;
+        isChunked = false;
+        isEnd = true;
+    }
+    var b64 = '';
+    for (var i = payloadStart; i < d.length - 1; i++) b64 += String.fromCharCode(d[i]);
+    console.log('sysex chunk:', d.length, 'bytes, marker=' + (marker === 0x43 ? 'C' : marker === 0x45 ? 'E' : marker === 0x30 ? '0' : 'legacy') + ', b64 len:', b64.length, 'stage:', _sync_stage);
+
+    if (isChunked && !isEnd) {
+        // 'C' chunk — accumulate and wait for more.
+        _sysex_b64_accum += b64;
+        return;
+    }
+
+    // Single chunk or final chunk of a multi-chunk message — flush.
+    var fullB64;
+    if (marker === 0x45 /* 'E' */) {
+        fullB64 = _sysex_b64_accum + b64;
+        _sysex_b64_accum = '';
+    } else {
+        // Single '0' marker or legacy: any leftover accum is stale from an
+        // interrupted prior sequence; drop it.
+        if (_sysex_b64_accum.length > 0) {
+            console.warn('sysex: dropping stale accumulator ' + _sysex_b64_accum.length + ' chars');
+            _sysex_b64_accum = '';
+        }
+        fullB64 = b64;
+    }
+    console.log('sysex complete: b64 len:', fullB64.length, 'stage:', _sync_stage);
+
+    var payloadText = '';
+    try {
+        var binaryStr = atob(fullB64);
+        var bytes = new Uint8Array(binaryStr.length);
+        for (var j = 0; j < binaryStr.length; j++) bytes[j] = binaryStr.charCodeAt(j);
+        payloadText = new TextDecoder('utf-8').decode(bytes);
+    } catch (e) {
+        console.warn('sync: base64 decode failed, b64 len:', fullB64.length, e);
+        return;
+    }
+    console.log('sysex decoded:', payloadText.length, 'chars');
+    _handle_sync_sysex_payload(payloadText);
+}
+var _on_midi_ready = null;  // one-shot callback for after WebMIDI init
+var _amyboard_port_warning_dismissed = false;
+
+function refresh_amyboard_port_warning() {
+    var warning = document.getElementById('amyboard-port-warning');
+    if (!warning) return;
+    if (amyboard_mode !== 'control' || _amyboard_port_warning_dismissed) {
+        warning.classList.add('d-none');
+        return;
+    }
+    var midiIn = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var midiOut = document.amyboard_settings && document.amyboard_settings.midi_output;
+    function _pn(sel) {
+        if (!sel || !sel.options[sel.selectedIndex]) return '';
+        var t = sel.options[sel.selectedIndex].text || '';
+        var idx = t.indexOf(': ');
+        return (idx >= 0) ? t.slice(idx + 2) : t;
+    }
+    var inName = _pn(midiIn);
+    var outName = _pn(midiOut);
+    var bothAmy = /amyboard/i.test(inName) && /amyboard/i.test(outName);
+    if (bothAmy) {
+        warning.classList.add('d-none');
+    } else {
+        warning.classList.remove('d-none');
+    }
+}
+
+function dismiss_amyboard_port_warning() {
+    _amyboard_port_warning_dismissed = true;
+    var warning = document.getElementById('amyboard-port-warning');
+    if (warning) warning.classList.add('d-none');
+}
+
+// Populate the MIDI Input Pass-Thru dropdown with all inputs except the one
+// currently selected as the control-mode MIDI in. Preserves the user's current
+// selection if still available; otherwise falls back to [None].
+function populate_midi_passthru_dropdown() {
+  var select = document.getElementById('midi-passthru-select');
+  if (!select || !WebMidi || !WebMidi.supported) return;
+  var midi_in = document.amyboard_settings && document.amyboard_settings.midi_input;
+  var excludedInputId = null;
+  if (midi_in && Array.isArray(midiInputOptionIds) && midiInputOptionIds.length > 0) {
+    var idx = Number(midi_in.selectedIndex);
+    if (Number.isInteger(idx) && idx >= 0 && idx < midiInputOptionIds.length) {
+      excludedInputId = midiInputOptionIds[idx];
+    }
+  }
+  // Remember the currently selected pass-thru port id so we can re-select it
+  // after rebuilding (if it's still in the list).
+  var previousId = null;
+  if (select.selectedIndex >= 0 && select.selectedIndex < midiPassthruOptionIds.length) {
+    previousId = midiPassthruOptionIds[select.selectedIndex];
+  }
+  select.options.length = 0;
+  midiPassthruOptionIds = [];
+  // [None] option first
+  select.options[0] = new Option("MIDI Input Pass-Thru: [None]", "");
+  midiPassthruOptionIds.push(null);
+  if (WebMidi.inputs && WebMidi.inputs.length > 0) {
+    WebMidi.inputs.forEach(function(input) {
+      var inputId = safe_midi_port_id(input);
+      if (!inputId) return;
+      if (inputId === excludedInputId) return;  // exclude the MIDI in port
+      midiPassthruOptionIds.push(inputId);
+      select.options[select.options.length] = new Option(
+        "MIDI Input Pass-Thru: " + safe_midi_port_name(input)
+      );
+    });
+  }
+  // Restore previous selection if still present.
+  if (previousId) {
+    for (var i = 0; i < midiPassthruOptionIds.length; i++) {
+      if (midiPassthruOptionIds[i] === previousId) {
+        select.selectedIndex = i;
+        return;
+      }
+    }
+    // Previous port is gone (disconnected or now selected as MIDI in) — detach.
+    _detach_midi_passthru_listener();
+  }
+  select.selectedIndex = 0;
+}
+
+function _detach_midi_passthru_listener() {
+  if (_midi_passthru_input && _midi_passthru_listener) {
+    try { _midi_passthru_input.removeEventListener('midimessage', _midi_passthru_listener); } catch (e) {}
+  }
+  _midi_passthru_input = null;
+  _midi_passthru_listener = null;
+  midiPassthruDevice = null;
+}
+
+function setup_midi_passthru() {
+  _detach_midi_passthru_listener();
+  var select = document.getElementById('midi-passthru-select');
+  if (!select) return;
+  var idx = Number(select.selectedIndex);
+  if (!Number.isInteger(idx) || idx <= 0 || idx >= midiPassthruOptionIds.length) return;
+  var inputId = midiPassthruOptionIds[idx];
+  if (!inputId) return;
+  var input = null;
+  try { input = WebMidi.getInputById(inputId); } catch (e) { input = null; }
+  if (!input) return;
+  midiPassthruDevice = input;
+  // Attach a raw listener on the underlying MIDIInput to forward every byte
+  // (including sysex) to the current control-mode MIDI out, unchanged.
+  var rawInput = input._midiInput || input.input;
+  if (!rawInput || typeof rawInput.addEventListener !== "function") return;
+  _midi_passthru_input = rawInput;
+  _midi_passthru_listener = function(ev) {
+    var d = ev && ev.data;
+    if (!d || d.length === 0) return;
+    // Forward byte-for-byte to the control-mode MIDI out.
+    var out = get_selected_midi_output_device() || midiOutputDevice;
+    if (out && typeof out.send === "function") {
+      try { out.send(d); } catch (err) {}
+    }
+    // Also feed CC messages into move_knob so CC learn + live knob tracking
+    // work in control mode (the main MIDI in is the AMYboard sysex port and
+    // doesn't route to move_knob in control mode).
+    if (d.length >= 3 && (d[0] & 0xF0) === 0xB0) {
+      var channel = (d[0] & 0x0F) + 1;
+      var cc = d[1];
+      var value = d[2];
+      try { move_knob(channel, cc, value); } catch (err) {}
+    }
+  };
+  rawInput.addEventListener('midimessage', _midi_passthru_listener);
+  console.log('MIDI pass-thru attached:', safe_midi_port_name(input));
+}
+
 async function setup_midi_devices() {
   var selectedInput = get_selected_midi_input_device();
   if (selectedInput) {
@@ -1343,19 +1429,100 @@ async function setup_midi_devices() {
       try { midiInputDevice.destroy(); } catch (e) {}
     }
     midiInputDevice = selectedInput;
+    // Remove previous raw listener (setup_midi_devices can run multiple times).
+    if (_raw_sysex_input && _raw_sysex_listener) {
+        try { _raw_sysex_input.removeEventListener('midimessage', _raw_sysex_listener); } catch (e) {}
+        _raw_sysex_input = null;
+        _raw_sysex_listener = null;
+    }
+    // Also attach a raw listener on the underlying MIDIInput to guarantee we
+    // see sysex even if WebMidi.js filters it from the "midimessage" event.
+    try {
+        var rawInput = midiInputDevice._midiInput || midiInputDevice.input;
+        if (rawInput) {
+            _raw_sysex_input = rawInput;
+            _raw_sysex_listener = function(ev) {
+                var d = ev.data;
+                if (!d || d.length === 0) return;
+                console.log('raw sysex event:', d.length, 'bytes, first:', d[0].toString(16), 'last:', d[d.length-1].toString(16));
+                // Walk the incoming bytes and stitch together complete sysex messages.
+                // Max raw-byte size we'll accumulate before giving up on an
+                // in-progress message; guards against a stuck reassembler
+                // (no 0xF7 ever arrives) eating memory.
+                var SYSEX_REASM_MAX = 131072;
+                for (var k = 0; k < d.length; k++) {
+                    var b = d[k];
+                    if (b === 0xF0) {
+                        // Start (or restart) a new sysex message.
+                        _sysex_reasm = [0xF0];
+                    } else if (_sysex_reasm !== null) {
+                        _sysex_reasm.push(b);
+                        if (b === 0xF7) {
+                            var full = _sysex_reasm;
+                            _sysex_reasm = null;
+                            _process_complete_sysex(full);
+                        } else if (_sysex_reasm.length > SYSEX_REASM_MAX) {
+                            console.warn('sysex reassembler exceeded ' + SYSEX_REASM_MAX + ' bytes, discarding');
+                            _sysex_reasm = null;
+                        }
+                    }
+                    // Bytes outside of a sysex frame are ignored here (status
+                    // bytes / running-status data are handled by the WebMidi
+                    // "midimessage" listener below).
+                }
+            };
+            rawInput.addEventListener('midimessage', _raw_sysex_listener);
+        }
+    } catch (e) { console.warn('raw sysex listener setup failed:', e); }
     midiInputDevice.addListener("midimessage", e => {
       const data = e.message && e.message.data ? e.message.data : [];
       const status = data.length > 0 ? data[0] : null;
-      if (Number.isFinite(status) && (status & 0xF0) === 0xB0 && data.length >= 3) {
+      // In control mode, the main MIDI in is the AMYboard sysex port — skip
+      // move_knob from this path so learn + live knob moves don't trigger on
+      // incidental MIDI coming back from the board. The MIDI Input Pass-Thru
+      // port is the authoritative source for move_knob/learn in control mode.
+      if (amyboard_mode !== 'control'
+        && Number.isFinite(status) && (status & 0xF0) === 0xB0 && data.length >= 3) {
         const channel = (status & 0x0F) + 1;
         const cc = data[1];
         const value = data[2];
         move_knob(channel, cc, value);
       }
-      // MIDI Thru: forward raw message to output device
-      var thruToggle = document.getElementById("midi_thru_toggle");
-      if (thruToggle && thruToggle.checked && midiOutputDevice && data.length > 0) {
-        try { midiOutputDevice.send(data); } catch (err) {}
+      // Fallback sysex reassembly via the WebMidi.js "midimessage" path in
+      // case the raw-listener attachment above didn't land (e.g. WebMidi.js
+      // internal property name drift). SKIP if the raw listener is active —
+      // both listeners share _sysex_b64_accum, so 'C' chunks get doubled
+      // when both fire, corrupting multi-chunk zD responses.
+      if (!_raw_sysex_listener && data && data.length > 0 && data[0] === 0xF0) {
+        console.log('webmidi.js midimessage sysex:', data.length, 'bytes, first:', data[0].toString(16), 'last:', data[data.length-1].toString(16));
+        var _SYSEX_REASM_MAX_WM = 131072;
+        for (var kk = 0; kk < data.length; kk++) {
+          var bb = data[kk];
+          if (bb === 0xF0) {
+            _sysex_reasm = [0xF0];
+          } else if (_sysex_reasm !== null) {
+            _sysex_reasm.push(bb);
+            if (bb === 0xF7) {
+              var full2 = _sysex_reasm;
+              _sysex_reasm = null;
+              _process_complete_sysex(full2);
+            } else if (_sysex_reasm.length > _SYSEX_REASM_MAX_WM) {
+              console.warn('webmidi.js sysex reassembler exceeded ' + _SYSEX_REASM_MAX_WM + ' bytes, discarding');
+              _sysex_reasm = null;
+            }
+          }
+        }
+      }
+      // Sysex is also handled by the raw listener above to avoid WebMidi.js filtering.
+      // MIDI Thru: always on in control mode, off in simulate mode.
+      // Skip thru for SPSS sysex (our own protocol) to avoid feedback loop —
+      // the AMYboard's sysex response must not echo back to its own input.
+      if (amyboard_mode === 'control' && midiOutputDevice && data.length > 0) {
+        var isSpssSysex = (data[0] === 0xF0 && data.length > 3 &&
+                           data[1] === 0x00 && data[2] === 0x03 && data[3] === 0x45);
+        if (!isSpssSysex) {
+          try { midiOutputDevice.send(data); } catch (err) {}
+        }
       }
       // Feed bytes to AMY audioworklet for sound processing
       for(byte in e.message.data) {
@@ -1372,6 +1539,9 @@ async function setup_midi_devices() {
     midiInputDevice = null;
   }
   midiOutputDevice = get_selected_midi_output_device();
+  // Refresh the pass-thru dropdown so it excludes the (possibly new) MIDI in.
+  populate_midi_passthru_dropdown();
+  refresh_amyboard_port_warning();
 }
 
 async function start_midi() {
@@ -1398,17 +1568,63 @@ async function start_midi() {
         var outputId = safe_midi_port_id(output);
         if (!outputId) return;
         midiOutputOptionIds.push(outputId);
-        midi_out.options[midi_out.options.length] = new Option("MIDI out: "+ safe_midi_port_name(output));
+        midi_out.options[midi_out.options.length] = new Option("MIDI out: " + safe_midi_port_name(output));
       });
     }
-    // First run setup 
+    // In control mode: preselect ports. Cookie of last successful pair wins;
+    // otherwise fall back to any port with "amyboard" in the name.
+    function _opt_portname(opt) {
+        var t = opt.text || "";
+        var idx = t.indexOf(": ");
+        return (idx >= 0) ? t.slice(idx + 2) : t;
+    }
+    if (amyboard_mode === 'control') {
+      var savedPorts = _get_midi_cookie();
+      var inSelected = false, outSelected = false;
+      if (savedPorts) {
+        for (var i = 0; i < midi_in.options.length; i++) {
+          if (_opt_portname(midi_in.options[i]) === savedPorts.input) {
+            midi_in.selectedIndex = i; inSelected = true; break;
+          }
+        }
+        for (var j = 0; j < midi_out.options.length; j++) {
+          if (_opt_portname(midi_out.options[j]) === savedPorts.output) {
+            midi_out.selectedIndex = j; outSelected = true; break;
+          }
+        }
+      }
+      if (!inSelected) {
+        for (var i2 = 0; i2 < midi_in.options.length; i2++) {
+          if (/amyboard/i.test(_opt_portname(midi_in.options[i2]))) { midi_in.selectedIndex = i2; break; }
+        }
+      }
+      if (!outSelected) {
+        for (var j2 = 0; j2 < midi_out.options.length; j2++) {
+          if (/amyboard/i.test(_opt_portname(midi_out.options[j2]))) { midi_out.selectedIndex = j2; break; }
+        }
+      }
+    }
+    // Populate the MIDI Input Pass-Thru dropdown (control mode only).
+    populate_midi_passthru_dropdown();
+    // First run setup
     setup_midi_devices();
+    // Show warning if neither port is an AMYboard (control mode only).
+    refresh_amyboard_port_warning();
+    // Fire the post-MIDI-init callback if set (used for initial sync in control mode).
+    if (typeof _on_midi_ready === 'function') {
+        var cb = _on_midi_ready;
+        _on_midi_ready = null;
+        cb();
+    }
   }
 
   if(WebMidi.supported) {
     WebMidi
       .enable({sysex:true})
-      .then(onEnabled)
+      .then(function() {
+          console.log('WebMidi enabled. sysex state:', WebMidi.sysexEnabled);
+          onEnabled();
+      })
       .catch(err => console.log("MIDI: " + err));
   } else {
     document.getElementById('midi-input-col').style.display='none';
@@ -1547,15 +1763,8 @@ async function show_alert(text) {
 }
 
 function ensure_current_environment_layout(seedDefaults) {
+    // Directory creation only — sketch.py is handled by Python (amyboard.ensure_user_environment).
     try { mp.FS.mkdirTree(CURRENT_BASE_DIR); } catch (e) {}
-    try {
-        mp.FS.readFile(CURRENT_ENV_DIR + "/sketch.py", { encoding: "utf8" });
-    } catch (e) {
-        mp.FS.writeFile(CURRENT_ENV_DIR + "/sketch.py", DEFAULT_SKETCH_SOURCE);
-    }
-    if (seedDefaults) {
-        // Reserved for future seed-only setup.
-    }
 }
 
 async function sync_persistent_fs() {
@@ -1671,7 +1880,7 @@ function render_environment_file_list() {
     var files = list_environment_files();
     if (!files.length) {
         selected_environment_file = null;
-        container.innerHTML = '<div class="env-file-empty">No files in current environment.</div>';
+        container.innerHTML = '<div class="env-file-empty">No files in current sketch.</div>';
         return;
     }
     if (!selected_environment_file || files.indexOf(selected_environment_file) === -1) {
@@ -1704,7 +1913,7 @@ async function select_environment_file(filename, loadEditor) {
 
 async function download() {
     if (!selected_environment_file) {
-        show_alert("Select an environment file first.");
+        show_alert("Select a sketch file first.");
         return;
     }
     var fullPath = CURRENT_ENV_DIR + "/" + selected_environment_file;
@@ -1773,7 +1982,7 @@ function environment_file_exists(filename) {
 
 function open_rename_environment_file_modal() {
     if (!selected_environment_file) {
-        show_alert("Select an environment file first.");
+        show_alert("Select a sketch file first.");
         return;
     }
     var input = document.getElementById("rename_environment_filename");
@@ -1822,7 +2031,7 @@ async function confirm_environment_action(title, message, confirmLabel) {
 
 async function submit_rename_environment_file() {
     if (!selected_environment_file) {
-        show_alert("Select an environment file first.");
+        show_alert("Select a sketch file first.");
         return;
     }
     var input = document.getElementById("rename_environment_filename");
@@ -1872,7 +2081,7 @@ async function submit_rename_environment_file() {
 
 async function delete_selected_environment_file() {
     if (!selected_environment_file) {
-        show_alert("Select an environment file first.");
+        show_alert("Select a sketch file first.");
         return;
     }
     var confirmed = await confirm_environment_action(
@@ -1919,6 +2128,11 @@ async function save_editor_if_dirty() {
     if (!editor || !environment_editor_dirty || environment_autosave_inflight) {
         return false;
     }
+    // In control mode there is no filesystem to save to.
+    if (amyboard_mode === 'control' || !mp) {
+        environment_editor_dirty = false;
+        return false;
+    }
     environment_autosave_inflight = true;
     try {
         await save_editor();
@@ -1934,7 +2148,7 @@ async function load_editor() {
         return;
     }
     if (!selected_environment_file) {
-        show_alert("Select an environment file first.");
+        show_alert("Select a sketch file first.");
         return;
     }
     if (!is_editor_openable_file(selected_environment_file)) {
@@ -1998,17 +2212,19 @@ function is_world_tar_filename(filename) {
     return normalize_world_filename(filename).toLowerCase().endsWith(".tar");
 }
 
+function is_world_environment_filename(filename) {
+    var fn = normalize_world_filename(filename).toLowerCase();
+    return fn.endsWith(".py") || fn.endsWith(".tar");
+}
+
 function get_world_package_name(filename) {
     var normalized = normalize_world_filename(filename);
-    if (is_world_tar_filename(normalized)) {
-        return normalized.substring(0, normalized.length - 4);
-    }
-    return normalized;
+    // Strip .py, .tar, or .patch extension for display.
+    return normalized.replace(/\.(py|tar|patch)$/i, "");
 }
 
 function get_world_display_name(filename) {
-    var normalized = normalize_world_filename(filename);
-    return get_world_package_name(normalized);
+    return get_world_package_name(filename);
 }
 
 function format_world_file_timestamp(time_ms) {
@@ -2037,7 +2253,7 @@ function get_world_tag_query() {
 }
 
 function randomize_world_tag_palette() {
-    var tags = ["featured", "official", "popular", "wild"];
+    var tags = ["featured", "official"];
     var classes = [
         "bg-primary",
         "bg-success",
@@ -2065,7 +2281,7 @@ function render_world_tag_pills() {
     if (!Object.keys(amyboard_world_tag_palette).length) {
         randomize_world_tag_palette();
     }
-    var tags = ["featured", "official", "popular", "wild"];
+    var tags = ["featured", "official"];
     var html = "";
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
@@ -2244,7 +2460,7 @@ async function clear_current_environment_from_default() {
     }
     try {
         clear_current_environment_dir();
-        mp.FS.writeFile(CURRENT_ENV_DIR + "/sketch.py", DEFAULT_SKETCH_SOURCE);
+        try { await mp.runPythonAsync("import amyboard; amyboard.ensure_user_environment()"); } catch (e) {}
         selected_environment_file = null;
         await sync_persistent_fs();
         await fill_tree();
@@ -2259,7 +2475,7 @@ async function clear_current_environment_from_default() {
             }
         }
     } catch (e) {
-        show_alert("Could not clear environment.");
+        show_alert("Could not clear sketch.");
     }
 }
 
@@ -2271,6 +2487,56 @@ async function run_current_environment() {
 async function stop_current_environment() {
     // Stop the sketch loop, all notes off, and reset the sequencer.
     await runCodeBlock("import amyboard, amy; amyboard.stop_sketch(); amy.send(reset=" + (4096 + 131072) + ")");
+}
+
+async function restart_sketch() {
+    if (amyboard_mode === 'control') {
+        // zB1: normal reboot — runs sketch.py on boot.
+        _show_resetting_modal('Restarting\u2026');
+        amy_add_log_message('zB1Z');
+        console.log('restart: zB1 sent, waiting for board...');
+        await wait_for_board_ready();
+        _hide_resetting_modal();
+        if (document.activeElement) document.activeElement.blur();
+    } else {
+        await save_editor_if_dirty();
+        await runCodeBlock("import amyboard; amyboard.restart_sketch()");
+    }
+}
+
+function reboot_to_bootloader() {
+    // zB/zB0: reboot into bootloader mode (sketch skipped).
+    // Handled in pure C — works even when loop() is hogging the scheduler.
+    amy_add_log_message('zBZ');
+}
+
+// zI ping — wait for the board to be ready after a reboot.
+var _ping_resolve = null;
+var _ping_reject = null;
+
+async function wait_for_board_ready(timeout_ms) {
+    if (!timeout_ms) timeout_ms = 15000;
+    // Poll with zI until the board replies with OK.
+    var deadline = Date.now() + timeout_ms;
+    while (Date.now() < deadline) {
+        // Send zI ping.
+        try { amy_add_log_message('zIZ'); } catch (e) {}
+        // Wait for reply — short timeout per attempt.
+        var got_reply = await new Promise(function(resolve) {
+            _ping_resolve = function() { resolve(true); };
+            _ping_reject = null;
+            setTimeout(function() {
+                if (_ping_resolve) { _ping_resolve = null; resolve(false); }
+            }, 500);
+        });
+        if (got_reply) {
+            console.log('wait_for_board_ready: board is ready');
+            return true;
+        }
+        console.log('wait_for_board_ready: no reply, retrying...');
+    }
+    console.warn('wait_for_board_ready: timed out after ' + timeout_ms + 'ms');
+    return false;
 }
 
 function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
@@ -2323,50 +2589,6 @@ function tar_build_header(name, size, isDirectory) {
     }
     add_octal_to_buffer(header, 148, 7, sum, 6, "\0");
     return header;
-}
-
-function build_environment_tar_bytes(environmentName) {
-    var chunks = [];
-    var totalSize = 0;
-    function pushChunk(bytes) {
-        chunks.push(bytes);
-        totalSize += bytes.length;
-    }
-    function add_entry(relativePath) {
-        var fullPath = CURRENT_ENV_DIR + "/" + relativePath;
-        var mode = mp.FS.lookupPath(fullPath).node.mode;
-        if (mp.FS.isDir(mode)) {
-            var dirPath = relativePath.endsWith("/") ? relativePath : (relativePath + "/");
-            pushChunk(tar_build_header(dirPath, 0, true));
-            for (const child of mp.FS.readdir(fullPath)) {
-                if (child === "." || child === "..") continue;
-                add_entry(relativePath + "/" + child);
-            }
-            return;
-        }
-        var bytes = mp.FS.readFile(fullPath, { encoding: "binary" });
-        pushChunk(tar_build_header(relativePath, bytes.length, false));
-        pushChunk(bytes);
-        var pad = (512 - (bytes.length % 512)) % 512;
-        if (pad > 0) {
-            pushChunk(new Uint8Array(pad));
-        }
-    }
-
-    var entries = mp.FS.readdir(CURRENT_ENV_DIR).filter(function(name) {
-        return name !== "." && name !== "..";
-    }).sort();
-    for (var i = 0; i < entries.length; i++) {
-        add_entry(entries[i]);
-    }
-    pushChunk(new Uint8Array(1024));
-    var out = new Uint8Array(totalSize);
-    var cursor = 0;
-    for (var c = 0; c < chunks.length; c++) {
-        out.set(chunks[c], cursor);
-        cursor += chunks[c].length;
-    }
-    return out;
 }
 
 function render_amyboard_world_file_list() {
@@ -2449,12 +2671,12 @@ async function refresh_amyboard_world_files() {
         }
         amyboard_world_files = newApiData.items
             .filter(function(item) {
-                return item && is_world_tar_filename(item.filename);
+                return item && is_world_environment_filename(item.filename);
             })
             .sort(function(a, b) {
                 return Number(b.time || 0) - Number(a.time || 0);
             })
-            .slice(0, 10);
+            .slice(0, 30);
         render_amyboard_world_file_list();
     } catch (e) {
         amyboard_world_files = [];
@@ -2475,54 +2697,61 @@ async function import_amyboard_world_file(index) {
 
     var item = amyboard_world_files[index];
     var filename = normalize_world_filename(item.filename);
-    var packageName = get_world_package_name(filename);
+    var packageName = filename.replace(/\.(py|tar)$/, "");
     amyboard_world_loading_index = index;
     render_amyboard_world_file_list();
 
     try {
-        ensure_current_environment_layout(false);
         var downloadUrl = resolve_world_download_url(item);
-        if (!downloadUrl) {
-            throw new Error("Missing file URL");
-        }
+        if (!downloadUrl) throw new Error("Missing file URL");
         var response = await fetch(downloadUrl);
-        if (!response.ok) {
-            throw new Error("HTTP " + response.status.toString());
-        }
+        if (!response.ok) throw new Error("HTTP " + response.status.toString());
 
-        var buffer = await response.arrayBuffer();
-        var bytes = new Uint8Array(buffer);
-        clear_current_environment_dir();
-        extract_tar_buffer_to_fs(bytes, CURRENT_ENV_DIR, packageName + "/");
-        if (!list_environment_files().length) {
-            // Support tarballs where files are already at tar root.
-            extract_tar_buffer_to_fs(bytes, CURRENT_ENV_DIR, "");
-        }
-        await fill_tree();
-        var envNameInput = document.getElementById("editor_filename");
-        if (envNameInput) {
-            envNameInput.value = packageName;
-        }
-        if (list_environment_files().indexOf("sketch.py") !== -1) {
-            await select_environment_file("sketch.py", true);
-        } else {
-            var files = list_environment_files();
-            if (files.length) {
-                await select_environment_file(files[0], true);
+        var sketchText = await response.text();
+        if (amyboard_mode === 'control') {
+            // Control mode: reboot into bootloader (stops sketch, frees
+            // scheduler), send file via zT, then apply knobs from sketch.
+            _show_saving_modal();
+            reboot_to_bootloader();
+            console.log('import: zB sent, waiting for board...');
+            await wait_for_board_ready();
+            try {
+                await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
+                console.log('import: sketch sent to AMYboard');
+                await sleep_ms(1000);
+            } catch (e) {
+                console.warn('import: sketch upload to AMYboard failed', e);
             }
+            _hide_saving_modal();
+            // Set editor to the downloaded sketch. Apply knobs to UI only —
+            // don't send to hardware (it already has them from the zT transfer).
+            if (editor) {
+                editor.setValue(sketchText);
+                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+            }
+            var knobs = extract_knobs_from_sketch(sketchText);
+            if (knobs) {
+                window.suppress_knob_cc_send = true;
+                try { apply_zd_dump_to_knobs(knobs); }
+                finally { window.suppress_knob_cc_send = false; }
+            }
+        } else {
+            // Simulate mode: write to local FS, then reload the page to
+            // the patch interface so the sketch starts fresh.
+            if (mp) {
+                ensure_current_environment_layout(false);
+                mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', sketchText);
+                sync_persistent_fs();
+            }
+            window.location.href = '/editor/?tab=patch';
+            return;
         }
-        await restore_patches_from_editor_state_if_present({ sendToAmy: true });
-        if (typeof window.refresh_patch_active_name_label === "function") {
-            window.refresh_patch_active_name_label();
-        }
-        if (typeof window.refresh_save_patch_dirty_indicator === "function") {
-            window.refresh_save_patch_dirty_indicator();
-        }
-        await run_current_environment();
+        var envNameInput = document.getElementById("editor_filename");
+        if (envNameInput) envNameInput.value = packageName;
 
         await refresh_amyboard_world_files();
     } catch (e) {
-        show_alert("Failed to import remote environment.");
+        show_alert("Failed to import remote sketch.");
     } finally {
         amyboard_world_loading_index = null;
         render_amyboard_world_file_list();
@@ -2535,8 +2764,6 @@ async function import_amyboard_world_file(index) {
 // Called from URL params: /editor/?env=woodpiano&user=bwhitman
 async function load_world_environment_by_name(username, envName) {
     try {
-        // Fetch all environments for this user and filter client-side
-        // (the API does not reliably filter by filename)
         var params = new URLSearchParams();
         params.set("username", username);
         params.set("item_type", "environment");
@@ -2544,60 +2771,83 @@ async function load_world_environment_by_name(username, envName) {
         if (!response.ok) throw new Error("HTTP " + response.status.toString());
         var data = await response.json();
         if (!data || !Array.isArray(data.items) || !data.items.length) {
-            show_alert("Environment '" + envName + "' by " + username + " not found.");
+            show_alert("Sketch '" + envName + "' by " + username + " not found.");
             return;
         }
-        // Match by filename stem (e.g. "spacey" matches "spacey.tar")
+        // Match by filename stem (e.g. "spacey" matches "spacey.py" or legacy "spacey.tar")
         var item = null;
         for (var i = 0; i < data.items.length; i++) {
             var fn = data.items[i].filename || "";
-            var stem = fn.replace(/\.tar$/, "");
-            if (fn === envName || stem === envName || fn === envName + ".tar") {
+            var stem = fn.replace(/\.(py|tar)$/, "");
+            if (fn === envName || stem === envName || fn === envName + ".py" || fn === envName + ".tar") {
                 item = data.items[i];
                 break;
             }
         }
         if (!item) {
-            show_alert("Environment '" + envName + "' by " + username + " not found.");
+            show_alert("Sketch '" + envName + "' by " + username + " not found.");
             return;
         }
         var filename = normalize_world_filename(item.filename);
-        var packageName = get_world_package_name(filename);
+        var packageName = filename.replace(/\.(py|tar)$/, "");
 
-        // Show toast
         show_world_toast(item.description || envName, username);
 
-        ensure_current_environment_layout(false);
         var downloadUrl = resolve_world_download_url(item);
         if (!downloadUrl) throw new Error("Missing file URL");
         var dlResponse = await fetch(downloadUrl);
         if (!dlResponse.ok) throw new Error("HTTP " + dlResponse.status.toString());
-        var buffer = await dlResponse.arrayBuffer();
-        var bytes = new Uint8Array(buffer);
-        clear_current_environment_dir();
-        extract_tar_buffer_to_fs(bytes, CURRENT_ENV_DIR, packageName + "/");
-        if (!list_environment_files().length) {
-            extract_tar_buffer_to_fs(bytes, CURRENT_ENV_DIR, "");
+
+        var sketchText = await dlResponse.text();
+        if (amyboard_mode === 'control') {
+            // Control mode: reboot into bootloader (stops sketch, frees
+            // scheduler), send file via zT, then start the sketch.
+            _show_saving_modal();
+            reboot_to_bootloader();
+            console.log('load_world: zB sent, waiting for board...');
+            await wait_for_board_ready();
+            try {
+                await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
+                console.log('load_world: sketch sent to AMYboard');
+                await sleep_ms(1000);
+            } catch (e) {
+                console.warn('load_world: sketch upload to AMYboard failed', e);
+            }
+            _hide_saving_modal();
+            // Set editor to the downloaded sketch.
+            if (editor) {
+                editor.setValue(sketchText);
+                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+            }
+            // Apply knobs from the sketch to the UI.
+            var knobs = extract_knobs_from_sketch(sketchText);
+            if (knobs) {
+                apply_zd_dump_to_knobs(knobs);
+            }
+        } else {
+            // Simulate mode: write to local FS and restart.
+            if (editor) editor.setValue(sketchText);
+            if (mp) {
+                ensure_current_environment_layout(false);
+                mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', sketchText);
+                var knobs = extract_knobs_from_sketch(sketchText);
+                if (knobs) {
+                    var lines = knobs.split(/\r?\n/);
+                    for (var j = 0; j < lines.length; j++) {
+                        var line = lines[j].trim();
+                        if (line && !line.startsWith('#')) amy_add_log_message(line);
+                    }
+                    await sync_channel_knobs_from_synth_to_ui(window.current_synth);
+                }
+                try {
+                    await mp.runPythonAsync("import amyboard; amyboard.restart_sketch()");
+                } catch (e) {}
+            }
         }
-        await fill_tree();
         var envNameInput = document.getElementById("editor_filename");
         if (envNameInput) envNameInput.value = packageName;
-        if (list_environment_files().indexOf("sketch.py") !== -1) {
-            await select_environment_file("sketch.py", true);
-        } else {
-            var files = list_environment_files();
-            if (files.length) await select_environment_file(files[0], true);
-        }
-        await restore_patches_from_editor_state_if_present({ sendToAmy: true });
-        if (typeof window.refresh_patch_active_name_label === "function") {
-            window.refresh_patch_active_name_label();
-        }
-        if (typeof window.refresh_save_patch_dirty_indicator === "function") {
-            window.refresh_save_patch_dirty_indicator();
-        }
-        await run_current_environment();
     } catch (e) {
-        show_alert("Failed to load environment '" + envName + "' by " + username + ".");
+        show_alert("Failed to load sketch '" + envName + "' by " + username + ".");
     }
 }
 
@@ -2660,6 +2910,33 @@ function check_url_env_params() {
         // Clean up URL without reload
         window.history.replaceState({}, document.title, window.location.pathname);
     }
+}
+
+// Remembered admin token for reserved usernames (e.g. "shorepine"). Stored in
+// a cookie only after a successful upload so a bad token never gets cached.
+var _ADMIN_TOKEN_COOKIE = "amyboard_world_admin_token";
+
+function get_cached_admin_token() {
+    var cookies = document.cookie ? document.cookie.split('; ') : [];
+    for (var i = 0; i < cookies.length; i++) {
+        var c = cookies[i];
+        if (c.indexOf(_ADMIN_TOKEN_COOKIE + '=') === 0) {
+            try { return decodeURIComponent(c.slice(_ADMIN_TOKEN_COOKIE.length + 1)); }
+            catch (e) { return ''; }
+        }
+    }
+    return '';
+}
+
+function set_cached_admin_token(token) {
+    if (!token) return;
+    var value = encodeURIComponent(String(token));
+    document.cookie = _ADMIN_TOKEN_COOKIE + '=' + value
+        + '; max-age=31536000; path=/; SameSite=Lax';
+}
+
+function clear_cached_admin_token() {
+    document.cookie = _ADMIN_TOKEN_COOKIE + '=; max-age=0; path=/; SameSite=Lax';
 }
 
 // Prompt for admin token via modal. Resolves with token string or null if cancelled.
@@ -2733,7 +3010,7 @@ function sanitize_environment_description(raw) {
 }
 
 async function upload_current_environment() {
-    ensure_current_environment_layout(false);
+    if (mp) ensure_current_environment_layout(false);
     var envNameInput = document.getElementById("editor_filename");
     var usernameInput = document.getElementById("environment_username");
     var descriptionInput = document.getElementById("environment_description");
@@ -2750,7 +3027,7 @@ async function upload_current_environment() {
     }
 
     if (!/^[A-Za-z0-9_-]{1,20}$/.test(environmentName)) {
-        show_alert("Environment Name must be 1-20 chars: only A-Z, a-z, 0-9, - and _.");
+        show_alert("Sketch Name must be 1-20 chars: only A-Z, a-z, 0-9, - and _.");
         return;
     }
 
@@ -2760,9 +3037,15 @@ async function upload_current_environment() {
     }
 
     var adminToken = null;
+    var adminTokenFromCache = false;
     if (username.toLowerCase() === "shorepine") {
-        adminToken = await prompt_admin_token();
-        if (adminToken === null) return;
+        adminToken = get_cached_admin_token();
+        if (adminToken) {
+            adminTokenFromCache = true;
+        } else {
+            adminToken = await prompt_admin_token();
+            if (adminToken === null) return;
+        }
     }
 
     var uploadButton = document.getElementById("upload_current_environment_btn");
@@ -2774,17 +3057,94 @@ async function upload_current_environment() {
         uploadButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Uploading...';
     }
 
-    var tarBytes = build_environment_tar_bytes(environmentName);
-    var tarFilename = environmentName + ".tar";
-    var file = new File([tarBytes], tarFilename, { type: "application/x-tar" });
-    var data = new FormData();
-    data.append("file", file);
-    data.append("username", username);
-    data.append("description", description);
-    var fetchOpts = { method: "POST", body: data };
-    if (adminToken) fetchOpts.headers = { "X-Admin-Token": adminToken };
+    // In control mode: Pull (zA + zD) to get sketch.py with fresh knobs from
+    // hardware. Then splice those fresh knobs into the editor's text (which may
+    // have code edits). This avoids zT which would restart the sketch and
+    // overwrite the live AMY state with stale editor knobs.
+    if (amyboard_mode === 'control') {
+        try {
+            await sync_amy_state_async();
+            // _last_sketch_text has the hardware's sketch with fresh knobs.
+            // Extract fresh knobs and splice into the editor's code.
+            if (_last_sketch_text) {
+                var freshKnobs = extract_knobs_from_sketch(_last_sketch_text);
+                if (freshKnobs && editor) {
+                    var editorText = editor.getValue();
+                    var spliced = splice_knobs_into_sketch(editorText, freshKnobs);
+                    editor.setValue(spliced);
+                }
+            }
+        } catch (e) {
+            show_alert("Could not pull from AMYboard before upload.");
+            if (uploadButton) { uploadButton.disabled = false; uploadButton.textContent = "Upload"; }
+            return;
+        }
+    }
+    // Simulate mode: run the same save routine as "Write to Simulator" so
+    // sketch.py contains the live AMY knob state before we upload it.
+    if (amyboard_mode === 'simulate' && mp) {
+        if (editor) {
+            try {
+                mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', editor.getValue());
+            } catch (e) {
+                console.warn('upload: failed to write editor content to sketch.py', e);
+            }
+        }
+        try {
+            await mp.runPythonAsync("import amyboard; amyboard.update_sketch_knobs()");
+        } catch (e) {
+            console.warn('upload: update_sketch_knobs failed', e);
+        }
+        sync_persistent_fs();
+        // Reload updated sketch.py into the editor so the user sees the knobs block.
+        if (editor) {
+            try {
+                var updatedSketch = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
+                editor.setValue(updatedSketch);
+            } catch (e) {}
+        }
+    }
+    // Upload sketch.py content with the environment name as the file key.
+    var sketchContent = '';
+    if (amyboard_mode === 'simulate' && mp) {
+        try {
+            sketchContent = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
+        } catch (e) {
+            sketchContent = editor ? editor.getValue() : _get_default_sketch();
+        }
+    } else if (editor) {
+        sketchContent = editor.getValue();
+    }
+    if (!sketchContent || !sketchContent.trim()) {
+        show_alert("No sketch content to upload.");
+        if (uploadButton) { uploadButton.disabled = false; uploadButton.textContent = "Upload"; }
+        return;
+    }
+    var pyFilename = environmentName + ".py";
+    var uploadUrl = world_api_url("/api/amyboardworld/upload");
+    function buildUploadBody() {
+        var file = new File([sketchContent], pyFilename, { type: "text/x-python" });
+        var data = new FormData();
+        data.append("file", file);
+        data.append("username", username);
+        data.append("description", description);
+        return data;
+    }
+    async function doUpload(token) {
+        var fetchOpts = { method: "POST", body: buildUploadBody() };
+        if (token) fetchOpts.headers = { "X-Admin-Token": token };
+        return fetch(uploadUrl, fetchOpts);
+    }
     try {
-        var response = await fetch(world_api_url("/api/amyboardworld/upload"), fetchOpts);
+        var response = await doUpload(adminToken);
+        // If a cached token was rejected, clear it and prompt for a fresh one.
+        if (!response.ok && response.status === 403 && adminTokenFromCache) {
+            clear_cached_admin_token();
+            adminTokenFromCache = false;
+            adminToken = await prompt_admin_token();
+            if (adminToken === null) return;
+            response = await doUpload(adminToken);
+        }
         if (!response.ok) {
             var detail = "";
             try { detail = (await response.json()).detail || ""; } catch (_) {}
@@ -2795,6 +3155,8 @@ async function upload_current_environment() {
             }
             return;
         }
+        // Upload succeeded — remember the token for next time.
+        if (adminToken) set_cached_admin_token(adminToken);
         await refresh_amyboard_world_files();
     } catch (e) {
         show_alert("Upload failed.");
@@ -2822,91 +3184,6 @@ function open_upload_environment_modal() {
     }
 }
 
-function populate_send_to_amyboard_modal() {
-    var unsupported = document.getElementById("send-amyboard-unsupported");
-    var supported = document.getElementById("send-amyboard-supported");
-    var sendButton = document.getElementById("send-amyboard-send-btn");
-    if (!unsupported || !supported) return;
-    if (!WebMidi.supported) {
-        unsupported.classList.remove("d-none");
-        supported.classList.add("d-none");
-        if (sendButton) {
-            sendButton.classList.add("d-none");
-        }
-        return;
-    }
-    unsupported.classList.add("d-none");
-    supported.classList.remove("d-none");
-    if (sendButton) {
-        sendButton.classList.remove("d-none");
-    }
-}
-
-function sanitize_environment_name_for_tar(rawName) {
-    var name = String(rawName || "").trim();
-    if (!name.length) {
-        return "environment";
-    }
-    name = name.replace(/[^A-Za-z0-9_-]/g, "_");
-    if (!name.length) {
-        return "environment";
-    }
-    return name.slice(0, 20);
-}
-
-function send_amyboard_progress_reset() {
-    var wrapper = document.getElementById("send-amyboard-progress-wrap");
-    var bar = document.getElementById("send-amyboard-progress-bar");
-    var text = document.getElementById("send-amyboard-progress-text");
-    var status = document.getElementById("send-amyboard-status");
-    if (wrapper) {
-        wrapper.classList.add("d-none");
-    }
-    if (bar) {
-        bar.style.width = "0%";
-        bar.setAttribute("aria-valuenow", "0");
-        bar.classList.add("progress-bar-striped", "progress-bar-animated");
-    }
-    if (text) {
-        text.textContent = "";
-    }
-    if (status) {
-        status.textContent = "";
-        status.classList.add("d-none");
-    }
-}
-
-function send_amyboard_progress_update(sentBytes, totalBytes) {
-    var wrapper = document.getElementById("send-amyboard-progress-wrap");
-    var bar = document.getElementById("send-amyboard-progress-bar");
-    var text = document.getElementById("send-amyboard-progress-text");
-    if (!wrapper || !bar || !text) {
-        return;
-    }
-    var safeTotal = Math.max(0, Number(totalBytes) || 0);
-    var safeSent = Math.max(0, Math.min(safeTotal, Number(sentBytes) || 0));
-    var percent = safeTotal > 0 ? Math.floor((safeSent * 100) / safeTotal) : 100;
-    wrapper.classList.remove("d-none");
-    bar.style.width = percent + "%";
-    bar.setAttribute("aria-valuenow", String(percent));
-    if (percent >= 100) {
-        bar.classList.remove("progress-bar-animated");
-    } else {
-        bar.classList.add("progress-bar-animated");
-    }
-    text.textContent = percent + "% (" + safeSent + " / " + safeTotal + " bytes)";
-}
-
-function set_send_amyboard_status(text, isError) {
-    var status = document.getElementById("send-amyboard-status");
-    if (!status) {
-        return;
-    }
-    status.textContent = text || "";
-    status.classList.remove("d-none", "text-danger", "text-success");
-    status.classList.add(isError ? "text-danger" : "text-success");
-}
-
 function bytes_to_base64_ascii(bytes) {
     var chunk = "";
     for (var i = 0; i < bytes.length; i++) {
@@ -2915,6 +3192,8 @@ function bytes_to_base64_ascii(bytes) {
     return btoa(chunk);
 }
 
+var _sysex_ack_resolve = null;
+
 async function sysex_write_amy_message(message) {
     var outputDevice = get_selected_midi_output_device() || midiOutputDevice;
     if (!outputDevice) {
@@ -2922,6 +3201,16 @@ async function sysex_write_amy_message(message) {
     }
     midiOutputDevice = outputDevice;
     var payload = Array.from(new TextEncoder().encode(String(message || "")));
+    // Set up ACK wait before sending so we don't miss a fast reply.
+    var ackPromise = new Promise(function(resolve) {
+        _sysex_ack_resolve = resolve;
+        // Timeout: if no ACK after 5s, proceed anyway. Longer than the
+        // 2s we had before because the ACK now fires from the MP callback
+        // (after processing the message) not from parse_sysex (on receipt).
+        setTimeout(function() {
+            if (_sysex_ack_resolve === resolve) { _sysex_ack_resolve = null; resolve(); }
+        }, 5000);
+    });
     if (typeof outputDevice.sendSysex === "function") {
         outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
     } else if (typeof outputDevice.send === "function") {
@@ -2929,71 +3218,8 @@ async function sysex_write_amy_message(message) {
     } else {
         throw new Error("Selected MIDI output does not support sysex send.");
     }
-    // Pace sends to avoid overrunning the hardware USB-MIDI RX buffer.
-    await sleep_ms(50);
-}
-
-async function open_send_to_amyboard_modal() {
-    send_amyboard_progress_reset();
-    populate_send_to_amyboard_modal();
-}
-
-async function send_to_amyboard_now() {
-    var sendButton = document.getElementById("send-amyboard-send-btn");
-    if (sendButton && sendButton.disabled) {
-        return;
-    }
-    send_amyboard_progress_reset();
-
-    if (!WebMidi.supported) {
-        show_alert("WebMIDI is not available in this browser.");
-        return;
-    }
-
-    if (sendButton) {
-        sendButton.disabled = true;
-        sendButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Sending...';
-    }
-
-    try {
-        await save_editor_if_dirty();
-        await setup_midi_devices();
-        if (!midiOutputDevice) {
-            throw new Error("No MIDI out port selected.");
-        }
-
-        var tarFilename = "environment.tar";
-        var tarBytes = build_environment_tar_bytes();
-        var fileSize = tarBytes.length;
-
-        send_amyboard_progress_update(0, fileSize);
-        await sysex_write_amy_message("zT" + tarFilename + "," + fileSize + "Z");
-        // Wait for hardware to process zT and stop the sequencer/loop(),
-        // even if loop() is blocking the scheduler for a while.
-        await sleep_ms(1000);
-
-        var sentBytes = 0;
-        for (var offset = 0; offset < fileSize; offset += AMYBOARD_TRANSFER_CHUNK_BYTES) {
-            var chunk = tarBytes.slice(offset, offset + AMYBOARD_TRANSFER_CHUNK_BYTES);
-            var b64 = bytes_to_base64_ascii(chunk);
-            await sysex_write_amy_message(b64);
-            sentBytes += chunk.length;
-            send_amyboard_progress_update(sentBytes, fileSize);
-        }
-        set_send_amyboard_status("Environment sent to AMYboard.", false);
-    } catch (e) {
-        var bar = document.getElementById("send-amyboard-progress-bar");
-        if (bar) {
-            bar.classList.remove("progress-bar-animated");
-        }
-        set_send_amyboard_status("Send failed: " + (e && e.message ? e.message : "Unknown error"), true);
-        show_alert("Failed to send to AMYboard.");
-    } finally {
-        if (sendButton) {
-            sendButton.disabled = false;
-            sendButton.textContent = "Send";
-        }
-    }
+    // Wait for hardware ACK before sending the next message.
+    await ackPromise;
 }
 
 async function show_editor() {
@@ -3011,6 +3237,1120 @@ async function hide_editor() {
     //document.getElementById('canvas').classList.add("canvas-solo");
     editor_shown = false;
     //resize_tulip_grippie();
+}
+
+// ── Mode detection ──────────────────────────────────────────────────────────
+// Priority: URL param > cookie > null (show modal)
+function detect_amyboard_mode() {
+    var params = new URLSearchParams(window.location.search);
+    var urlMode = params.get('mode');
+    if (urlMode === 'control' || urlMode === 'simulate') return urlMode;
+    var cookie = document.cookie.split('; ').find(function(c) { return c.startsWith('amyboard_mode='); });
+    if (cookie) {
+        var val = cookie.split('=')[1];
+        if (val === 'control' || val === 'simulate') return val;
+    }
+    return null; // show modal
+}
+
+var _detected_mode = detect_amyboard_mode();
+var amyboard_mode = _detected_mode || 'simulate';
+
+// Called by the mode selection modal buttons
+function select_mode(mode) {
+    var remember = document.getElementById('mode_remember');
+    if (remember && remember.checked) {
+        document.cookie = 'amyboard_mode=' + mode + '; max-age=31536000; path=/; SameSite=Lax';
+    }
+    // Reload into the chosen mode
+    window.location.href = window.location.pathname + '?mode=' + mode;
+}
+
+// Called by the "Switch to X" button on the MIDI bar
+function switch_amyboard_mode() {
+    var newMode = (amyboard_mode === 'control') ? 'simulate' : 'control';
+    // Update cookie if one was previously set
+    var hasCookie = document.cookie.split('; ').some(function(c) { return c.startsWith('amyboard_mode='); });
+    if (hasCookie) {
+        document.cookie = 'amyboard_mode=' + newMode + '; max-age=31536000; path=/; SameSite=Lax';
+    }
+    window.location.href = window.location.pathname + '?mode=' + newMode;
+}
+
+// Show the mode selection modal (called if no URL param and no cookie)
+function show_mode_modal() {
+    var modalEl = document.getElementById('modeSelectionModal');
+    if (modalEl && window.bootstrap) {
+        var modal = bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: 'static', keyboard: false });
+        modal.show();
+    } else {
+        // Fallback if Bootstrap not loaded yet — redirect to simulate mode.
+        console.warn('show_mode_modal: bootstrap or modal not available, defaulting to simulate');
+        window.location.href = window.location.pathname + '?mode=simulate';
+    }
+}
+
+// Apply UI visibility based on mode (called after DOM ready)
+function apply_mode_ui() {
+    var isControl = (amyboard_mode === 'control');
+    // Show the "Sync to show your AMYboard's current sketch" button in control mode (until sync happens).
+    var syncSketchBtn = document.getElementById('sync-sketch-btn');
+    if (syncSketchBtn) {
+        if (isControl && _last_sketch_text === null) syncSketchBtn.classList.remove('d-none');
+        else syncSketchBtn.classList.add('d-none');
+    }
+    // "Your AMYboard" controls: control mode only.
+    var amyboardControls = document.getElementById('amyboard-controls-li');
+    if (amyboardControls) { if (isControl) amyboardControls.classList.remove('d-none'); else amyboardControls.classList.add('d-none'); }
+    // Simulate controls: simulate mode only.
+    var simulateControls = document.getElementById('simulate-controls-li');
+    if (simulateControls) { if (!isControl) simulateControls.classList.remove('d-none'); else simulateControls.classList.add('d-none'); }
+    // Run controls: simulate has start/stop/clear, control has start/stop (sequencer via MIDI).
+    var runControls = document.getElementById('run-controls');
+    if (runControls) runControls.style.display = isControl ? 'none' : '';
+    var controlRunControls = document.getElementById('control-run-controls');
+    if (controlRunControls) { if (isControl) controlRunControls.classList.remove('d-none'); else controlRunControls.classList.add('d-none'); }
+    // Hardware widgets (OLED canvas, rotary encoder, CV knobs) — simulate only.
+    var hwWidgets = document.getElementById('amyboard-hardware-widgets');
+    if (hwWidgets) hwWidgets.style.display = isControl ? 'none' : '';
+    // Terminal REPL — simulate only (MicroPython isn't loaded in control mode).
+    var replDisclosure = document.getElementById('repl-disclosure');
+    if (replDisclosure) replDisclosure.style.display = isControl ? 'none' : '';
+    // Audio input toggle (not needed in control mode) — use d-none to override d-flex !important
+    var audioIn = document.getElementById('audioin_grow');
+    if (audioIn) { if (isControl) audioIn.classList.add('d-none'); else audioIn.classList.remove('d-none'); }
+    // MIDI dropdowns + switch button: in control mode, these live in the sync modal instead.
+    // In simulate mode, hide the dropdowns when WebMIDI isn't available (the
+    // "This page can use WebMIDI on..." notice in #midi-warning-col takes their place).
+    var _webmidi_ok = (typeof WebMidi !== 'undefined') && WebMidi.supported;
+    var _show_midi_dropdowns = !isControl && _webmidi_ok;
+    var midiInputCol = document.getElementById('midi-input-col');
+    if (midiInputCol) midiInputCol.style.display = _show_midi_dropdowns ? '' : 'none';
+    var midiOutputCol = document.getElementById('midi-output-col');
+    if (midiOutputCol) midiOutputCol.style.display = _show_midi_dropdowns ? '' : 'none';
+    // MIDI Input Pass-Thru: control mode only.
+    var midiPassthruCol = document.getElementById('midi-passthru-col');
+    if (midiPassthruCol) {
+        if (isControl) midiPassthruCol.classList.remove('d-none');
+        else midiPassthruCol.classList.add('d-none');
+    }
+    var modeSwitchBtn = document.getElementById('mode-switch-btn');
+    if (modeSwitchBtn) modeSwitchBtn.parentElement.style.display = isControl ? 'none' : '';
+    var portWarning = document.getElementById('amyboard-port-warning');
+    if (portWarning) portWarning.style.display = isControl ? 'none' : '';
+    // Upgrade Firmware: control mode only.
+    var upgradeTab = document.getElementById('upgrade-tab');
+    if (upgradeTab) { if (isControl) upgradeTab.parentElement.classList.remove('d-none'); else upgradeTab.parentElement.classList.add('d-none'); }
+    // AMYboard World: hide Patches sub-tab bar, only show Environments
+    var worldSubTabs = document.getElementById('world-sub-tabs');
+    if (worldSubTabs) worldSubTabs.style.display = 'none';
+    // Switch button label
+    var switchBtn = document.getElementById('mode-switch-btn');
+    if (switchBtn) {
+        switchBtn.textContent = isControl ? 'Switch to Simulate' : 'Switch to Control';
+    }
+    // In control mode, set amy_add_message to sysex wrapper
+    if (isControl) {
+        window.amy_add_message = amy_add_message = function(msg) {
+            sysex_write_amy_message(msg);
+        };
+    }
+    // Refresh CodeMirror layout after visibility changes
+    if (editor && typeof editor.refresh === 'function') {
+        setTimeout(function() { editor.refresh(); }, 50);
+    }
+}
+
+var _KNOBS_MARKER = '_auto_generated_knobs = """';
+var _KNOBS_END = '"""';
+
+// Extract the LAST _auto_generated_knobs = """...""" block from the sketch.
+// Using lastIndexOf defends against files that picked up duplicate marker
+// blocks from a prior corrupted save — the fresh one is always the latest.
+function extract_knobs_from_sketch(text) {
+    var start = text.lastIndexOf(_KNOBS_MARKER);
+    if (start < 0) return '';
+    var bodyStart = start + _KNOBS_MARKER.length;
+    var end = text.indexOf(_KNOBS_END, bodyStart);
+    if (end < 0) return '';
+    return text.slice(bodyStart, end).trim();
+}
+
+var _KNOBS_COMMENT_LINE = '# Do not edit. Set automatically by the knobs on AMYboard Online.';
+
+// Remove ALL _auto_generated_knobs = """...""" blocks from the text (and the
+// preceding "Do not edit" comment when it's adjacent). Idempotent. Self-heals
+// files that accumulated multiple blocks from a prior corrupted save.
+function _strip_all_knobs_blocks_js(text) {
+    while (true) {
+        var start = text.indexOf(_KNOBS_MARKER);
+        if (start < 0) break;
+        var bodyStart = start + _KNOBS_MARKER.length;
+        var end = text.indexOf(_KNOBS_END, bodyStart);
+        if (end < 0) {
+            // Unterminated block — drop from the marker onward.
+            text = text.slice(0, start);
+            break;
+        }
+        var cutFrom = start;
+        // Absorb the preceding "# Do not edit..." comment line when it's
+        // adjacent (only whitespace between it and the marker).
+        var commentIdx = text.lastIndexOf(_KNOBS_COMMENT_LINE, start);
+        if (commentIdx >= 0) {
+            var gap = text.slice(commentIdx + _KNOBS_COMMENT_LINE.length, start);
+            if (gap.replace(/\s/g, '') === '') {
+                var lineStart = text.lastIndexOf('\n', commentIdx - 1);
+                cutFrom = (lineStart < 0 ? 0 : lineStart + 1);
+            }
+        }
+        var cutTo = end + _KNOBS_END.length;
+        while (cutTo < text.length && (text.charAt(cutTo) === ' ' || text.charAt(cutTo) === '\t')) {
+            cutTo++;
+        }
+        if (cutTo < text.length && text.charAt(cutTo) === '\n') {
+            cutTo++;
+        }
+        text = text.slice(0, cutFrom) + text.slice(cutTo);
+    }
+    return text;
+}
+
+function splice_knobs_into_sketch(text, knobsText) {
+    // Strip every existing knobs block (defensive self-heal) and append a
+    // single fresh block at the end. This guarantees we never leave orphan
+    // blocks behind when the source text already has duplicates.
+    var cleaned = _strip_all_knobs_blocks_js(text);
+    // Ensure the cleaned text ends with exactly one newline.
+    while (cleaned.endsWith('\n\n')) {
+        cleaned = cleaned.slice(0, -1);
+    }
+    if (!cleaned.endsWith('\n')) {
+        cleaned += '\n';
+    }
+    var knobsBody = String(knobsText || '');
+    if (!knobsBody.endsWith('\n')) knobsBody += '\n';
+    return cleaned + '\n' + _KNOBS_COMMENT_LINE + '\n'
+        + _KNOBS_MARKER + '\n'
+        + knobsBody
+        + _KNOBS_END + '\n';
+}
+
+async function load_knobs_from_sketch() {
+    // Read sketch.py, extract _auto_generated_knobs, send as wire commands.
+    var content = "";
+    try {
+        content = mp.FS.readFile(CURRENT_ENV_DIR + "/sketch.py", { encoding: "utf8" });
+    } catch (e) {
+        content = "";
+    }
+    var knobs = extract_knobs_from_sketch(content);
+    if (!knobs) {
+        // First run: set up channel 1 with default Juno patch 257, 6 voices.
+        amy_add_log_message("i1ic255Z");
+        amy_add_log_message("i1K257iv6Z");
+        send_all_knob_cc_mappings(1);
+        return;
+    }
+    var lines = knobs.split(/\r?\n/);
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line || line.startsWith("#")) continue;
+        amy_add_log_message(line);
+    }
+}
+
+function generate_knobs_text_js() {
+    // Call the C amy_dump_state_to_string via WASM. Returns the state text.
+    if (!amy_module || !amy_dump_state_to_string_c || !amy_module.HEAPU8) return '';
+    var lenPtr = amy_module._malloc(4);
+    var strPtr = amy_dump_state_to_string_c(lenPtr);
+    // Read 4-byte little-endian length from HEAPU8 (HEAPU32 isn't exported on this module).
+    var h = amy_module.HEAPU8;
+    var len = h[lenPtr] | (h[lenPtr + 1] << 8) | (h[lenPtr + 2] << 16) | (h[lenPtr + 3] << 24);
+    amy_module._free(lenPtr);
+    if (!strPtr || len <= 0) return '';
+    var result = read_c_string_from_heap(strPtr, len + 1);
+    amy_module._free(strPtr);
+    return result;
+}
+
+async function _send_text_file_to_amyboard(path, text) {
+    // Upload a text file to the AMYboard via zT (base64-chunked over sysex).
+    var encoder = new TextEncoder();
+    var bytes = encoder.encode(text);
+    var fileSize = bytes.length;
+    var header = "zT" + path + "," + fileSize + "Z";
+    console.log('_send_text_file_to_amyboard: sending header:', header);
+    await sysex_write_amy_message(header);
+    // sysex_write_amy_message already waited for the ACK (sent from the
+    // callback after amy_add_message processed the zT header), so the
+    // hardware has already called start_receiving_file_transfer and opened
+    // the file. No extra sleep needed.
+    var chunks = Math.ceil(fileSize / AMYBOARD_TRANSFER_CHUNK_BYTES);
+    console.log('_send_text_file_to_amyboard: sending ' + chunks + ' chunks (' + fileSize + ' bytes)');
+    for (var offset = 0; offset < fileSize; offset += AMYBOARD_TRANSFER_CHUNK_BYTES) {
+        var chunk = bytes.slice(offset, offset + AMYBOARD_TRANSFER_CHUNK_BYTES);
+        var b64 = bytes_to_base64_ascii(chunk);
+        await sysex_write_amy_message(b64);
+    }
+    console.log('sent ' + fileSize + ' bytes to ' + path);
+}
+
+async function save_amy_state() {
+    if (amyboard_mode === 'control') {
+        // Control mode flow (stop the sketch BEFORE sending chunks — otherwise
+        // the sketch's loop() keeps firing amy.send(note=..) which goes out as
+        // MIDI wire commands and loops back to hardware as sysex, corrupting
+        // the zT file transfer):
+        //   1. zA: have the running sketch capture live AMY state into its
+        //      sketch.py on disk (so we have the fresh knob values).
+        //   2. zD: pull that sketch.py back so we can splice the fresh knobs
+        //      into the editor's content.
+        //   3. Splice fresh knobs into the editor's text.
+        //   4. zB: reboot into bootloader mode (stops the sketch cleanly).
+        //   5. wait_for_board_ready.
+        //   6. zT: send the merged sketch.py to the idle board.
+        //   7. zP: restart sketch on hardware so it runs again.
+        if (!editor) return;
+        var userSketchText = editor.getValue();
+        if (!userSketchText || !userSketchText.trim().length) return;
+        try {
+            // Step 1+2: pull current live state (sketch still running).
+            await sync_amy_state_async();
+            await sleep_ms(500);
+            // Step 3: splice fresh knobs into editor text.
+            var mergedSketch = userSketchText;
+            if (_last_sketch_text) {
+                var freshKnobs = extract_knobs_from_sketch(_last_sketch_text);
+                if (freshKnobs) {
+                    mergedSketch = splice_knobs_into_sketch(userSketchText, freshKnobs);
+                    if (editor) editor.setValue(mergedSketch);
+                }
+            }
+            // Step 4+5: reboot into bootloader so sketch isn't running.
+            _show_syncing_modal();
+            reboot_to_bootloader();
+            console.log('save: zB sent, waiting for board...');
+            await wait_for_board_ready();
+            _hide_syncing_modal();
+            // Step 6: send merged file to idle board (no drum notes firing).
+            _show_saving_modal();
+            try {
+                await _send_text_file_to_amyboard('/user/current/sketch.py', mergedSketch);
+                console.log('save: merged sketch.py sent to AMYboard');
+                await sleep_ms(500);
+            } finally {
+                _hide_saving_modal();
+            }
+            // Step 7: restart sketch on hardware.
+            amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
+            console.log('save: sketch restarted via zP');
+        } catch (e) {
+            console.warn('save: failed', e);
+            _hide_saving_modal();
+            _hide_syncing_modal();
+        }
+    } else {
+        // Simulate mode: let Python dump current AMY state into sketch.py's knobs section.
+        if (!mp) return;
+        // First write any editor changes to disk so update_sketch_knobs preserves user edits.
+        if (editor) {
+            try {
+                mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', editor.getValue());
+            } catch (e) {
+                console.warn('save: failed to write editor content to sketch.py', e);
+            }
+        }
+        try {
+            await mp.runPythonAsync("import amyboard; amyboard.update_sketch_knobs()");
+        } catch (e) {
+            console.warn('save: update_sketch_knobs failed', e);
+        }
+        sync_persistent_fs();
+        // Reload sketch.py into the editor so the user sees the new knobs block.
+        if (editor) {
+            try {
+                var sketchContent = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
+                editor.setValue(sketchContent);
+            } catch (e) {}
+            setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+        }
+    }
+}
+
+// Sync: single request — zD updates sketch.py with live AMY state on hardware, then sends it.
+var _sync_stage = null;  // null | 'pending'
+var _sync_timeout = null;
+var _last_sketch_text = null;
+
+function _sync_modal_populate_midi() {
+    // Mirror the main MIDI dropdowns into the modal's dropdowns.
+    var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
+    var modalIn = document.getElementById('sync-modal-midi-in');
+    var modalOut = document.getElementById('sync-modal-midi-out');
+    if (mainIn && modalIn) {
+        modalIn.innerHTML = mainIn.innerHTML;
+        modalIn.selectedIndex = mainIn.selectedIndex;
+    }
+    if (mainOut && modalOut) {
+        modalOut.innerHTML = mainOut.innerHTML;
+        modalOut.selectedIndex = mainOut.selectedIndex;
+    }
+}
+
+function _refresh_main_midi_dropdowns() {
+    // Re-scan WebMidi.inputs/outputs and rebuild the main MIDI dropdowns,
+    // preserving the user's current selection by port name where possible.
+    // Uses WebMidi.outputs/inputs presence as the enabled check — once the
+    // WebMidi.enable() promise has resolved these are always truthy (arrays).
+    if (typeof WebMidi === 'undefined' || !WebMidi || !WebMidi.outputs || !WebMidi.inputs) {
+        console.warn('_refresh_main_midi_dropdowns: WebMidi not ready');
+        return;
+    }
+    var midi_in = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var midi_out = document.amyboard_settings && document.amyboard_settings.midi_output;
+    if (!midi_in || !midi_out) return;
+
+    function _name_from_opt(opt) {
+        if (!opt) return '';
+        var t = opt.text || '';
+        var idx = t.indexOf(': ');
+        return (idx >= 0) ? t.slice(idx + 2) : t;
+    }
+    var prevInName = _name_from_opt(midi_in.options[midi_in.selectedIndex]);
+    var prevOutName = _name_from_opt(midi_out.options[midi_out.selectedIndex]);
+
+    midiInputOptionIds = [];
+    midiOutputOptionIds = [];
+
+    midi_in.options.length = 0;
+    WebMidi.inputs.forEach(function(input) {
+        var inputId = safe_midi_port_id(input);
+        if (!inputId) return;
+        midiInputOptionIds.push(inputId);
+        midi_in.options[midi_in.options.length] = new Option("MIDI in: " + safe_midi_port_name(input));
+    });
+
+    midi_out.options.length = 0;
+    WebMidi.outputs.forEach(function(output) {
+        var outputId = safe_midi_port_id(output);
+        if (!outputId) return;
+        midiOutputOptionIds.push(outputId);
+        midi_out.options[midi_out.options.length] = new Option("MIDI out: " + safe_midi_port_name(output));
+    });
+
+    // Default to index 0 so the select is always in a valid state, then try
+    // to restore the user's previous selection by port name. If the previous
+    // port is gone (or there was no previous selection), the default stays.
+    if (midi_in.options.length > 0) midi_in.selectedIndex = 0;
+    for (var i = 0; i < midi_in.options.length; i++) {
+        if (_name_from_opt(midi_in.options[i]) === prevInName) {
+            midi_in.selectedIndex = i; break;
+        }
+    }
+    if (midi_out.options.length > 0) midi_out.selectedIndex = 0;
+    for (var j = 0; j < midi_out.options.length; j++) {
+        if (_name_from_opt(midi_out.options[j]) === prevOutName) {
+            midi_out.selectedIndex = j; break;
+        }
+    }
+
+    console.log('_refresh_main_midi_dropdowns: rescanned ' +
+                midiInputOptionIds.length + ' inputs, ' +
+                midiOutputOptionIds.length + ' outputs; ' +
+                'main_in=' + midi_in.selectedIndex +
+                ' main_out=' + midi_out.selectedIndex);
+
+    // Keep the MIDI Input Pass-Thru dropdown in sync with the new port list.
+    if (typeof populate_midi_passthru_dropdown === 'function') {
+        populate_midi_passthru_dropdown();
+    }
+}
+
+function _show_saving_modal() {
+    var el = document.getElementById('savingModal');
+    if (el && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
+    }
+}
+
+function _hide_saving_modal() {
+    var el = document.getElementById('savingModal');
+    if (!el) return;
+    try {
+        var m = window.bootstrap && bootstrap.Modal.getOrCreateInstance(el);
+        if (m) m.hide();
+    } catch (e) {}
+    el.classList.remove('show');
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+}
+
+// Bypass Bootstrap's Modal API for the resetting modal. Bootstrap schedules
+// its show() animation via requestAnimationFrame; for a very fast operation
+// like factory_reset (<120ms), the matching hide() can run before the
+// animation has processed the show, leaving the modal stuck visible after
+// Bootstrap's delayed animation finally fires. Toggling classes/styles
+// directly keeps show/hide strictly synchronous.
+function _show_resetting_modal(label) {
+    var lbl = document.getElementById('resetting-modal-label');
+    if (lbl) lbl.textContent = label || 'Resetting\u2026';
+    var el = document.getElementById('resettingModal');
+    if (!el) return;
+    el.classList.add('show');
+    el.style.display = 'block';
+    el.removeAttribute('aria-hidden');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('role', 'dialog');
+    // Ensure there's a backdrop (Bootstrap normally adds one).
+    if (!document.querySelector('.modal-backdrop')) {
+        var b = document.createElement('div');
+        b.className = 'modal-backdrop fade show';
+        document.body.appendChild(b);
+    }
+    document.body.classList.add('modal-open');
+}
+
+function _hide_resetting_modal() {
+    var el = document.getElementById('resettingModal');
+    if (!el) return;
+    el.classList.remove('show');
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    el.removeAttribute('aria-modal');
+    el.removeAttribute('role');
+    document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+}
+
+function _show_syncing_modal() {
+    if (amyboard_mode !== 'control') return;
+    var el = document.getElementById('syncingModal');
+    if (!el || !window.bootstrap) return;
+    // Reset to spinner state.
+    var spinner = document.getElementById('sync-modal-spinner');
+    var error = document.getElementById('sync-modal-error');
+    var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
+    var modalIn = document.getElementById('sync-modal-midi-in');
+    var modalOut = document.getElementById('sync-modal-midi-out');
+    if (spinner) spinner.classList.remove('d-none');
+    if (error) error.classList.add('d-none');
+    if (retryBtn) retryBtn.classList.add('d-none');
+    if (modalIn) modalIn.disabled = true;
+    if (modalOut) modalOut.disabled = true;
+    if (changeBtn) {
+        changeBtn.textContent = 'Change MIDI Ports';
+        changeBtn.classList.remove('d-none');
+        changeBtn.onclick = function() { sync_modal_change_ports(); };
+    }
+    _sync_modal_populate_midi();
+    bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
+}
+
+function _show_syncing_modal_error() {
+    var spinner = document.getElementById('sync-modal-spinner');
+    var error = document.getElementById('sync-modal-error');
+    var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
+    var modalIn = document.getElementById('sync-modal-midi-in');
+    var modalOut = document.getElementById('sync-modal-midi-out');
+    if (spinner) spinner.classList.add('d-none');
+    if (error) error.classList.remove('d-none');
+    // Use the change-ports button in Try again mode (same behavior as retry).
+    if (retryBtn) retryBtn.classList.add('d-none');
+    if (modalIn) modalIn.disabled = false;
+    if (modalOut) modalOut.disabled = false;
+    if (changeBtn) {
+        changeBtn.textContent = 'Try again';
+        changeBtn.onclick = function() { sync_modal_retry(); };
+    }
+}
+
+function _hide_syncing_modal() {
+    var el = document.getElementById('syncingModal');
+    if (!el) return;
+    // Bootstrap modal.hide() is unreliable when called from async sysex callbacks.
+    // Force-remove the modal and backdrop directly.
+    try {
+        var m = window.bootstrap && bootstrap.Modal.getOrCreateInstance(el);
+        if (m) m.hide();
+    } catch (e) {}
+    el.classList.remove('show');
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+}
+
+function dismiss_sync_modal_and_upgrade() {
+    _sync_stage = null;
+    if (_sync_timeout) { clearTimeout(_sync_timeout); _sync_timeout = null; }
+    _hide_syncing_modal();
+    var upgradeTab = document.getElementById('upgrade-tab');
+    if (upgradeTab && window.bootstrap) {
+        var tab = new bootstrap.Tab(upgradeTab);
+        tab.show();
+    }
+}
+
+async function sync_modal_retry() {
+    // Apply the modal's dropdown selections back to the main dropdowns, then re-sync.
+    var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
+    var modalIn = document.getElementById('sync-modal-midi-in');
+    var modalOut = document.getElementById('sync-modal-midi-out');
+
+    // Copy the modal's selection back to the main dropdown, clamping to a
+    // valid index so we never leave the main dropdown at -1 (no selection).
+    if (mainIn && modalIn) {
+        var wantIn = modalIn.selectedIndex;
+        if (wantIn >= 0 && wantIn < mainIn.options.length) {
+            mainIn.selectedIndex = wantIn;
+        } else if (mainIn.options.length > 0) {
+            mainIn.selectedIndex = 0;
+        }
+    }
+    if (mainOut && modalOut) {
+        var wantOut = modalOut.selectedIndex;
+        if (wantOut >= 0 && wantOut < mainOut.options.length) {
+            mainOut.selectedIndex = wantOut;
+        } else if (mainOut.options.length > 0) {
+            mainOut.selectedIndex = 0;
+        }
+    }
+
+    // Wait for setup_midi_devices to finish wiring up the new selections.
+    // It's async but has no internal awaits today, so this resolves synchronously;
+    // awaiting it explicitly is just defensive in case that ever changes.
+    try {
+        await setup_midi_devices();
+    } catch (e) {
+        console.warn('sync_modal_retry: setup_midi_devices threw', e);
+    }
+
+    console.log('sync_modal_retry: main_in=' + (mainIn ? mainIn.selectedIndex : '?') +
+                ' main_out=' + (mainOut ? mainOut.selectedIndex : '?') +
+                ' ids_in=' + midiInputOptionIds.length +
+                ' ids_out=' + midiOutputOptionIds.length +
+                ' midiOutputDevice=', midiOutputDevice,
+                ' midiInputDevice=', midiInputDevice);
+
+    if (!midiOutputDevice || !midiInputDevice) {
+        // Either the port list is empty or WebMidi can't resolve the selected
+        // id. Don't try to send sysex — it will just throw. Leave the modal
+        // in the error state so the user can pick different ports.
+        console.warn('sync_modal_retry: cannot proceed, MIDI devices not ready');
+        _show_syncing_modal_error();
+        return;
+    }
+
+    // Reset modal UI to "trying" state and re-run the pageload sync.
+    var spinner = document.getElementById('sync-modal-spinner');
+    var error = document.getElementById('sync-modal-error');
+    var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
+    if (spinner) spinner.classList.remove('d-none');
+    if (error) error.classList.add('d-none');
+    if (retryBtn) retryBtn.classList.add('d-none');
+    if (modalIn) modalIn.disabled = true;
+    if (modalOut) modalOut.disabled = true;
+    if (changeBtn) {
+        changeBtn.textContent = 'Change MIDI Ports';
+        changeBtn.classList.remove('d-none');
+        // Re-hook the button back to sync_modal_change_ports for the next cycle.
+        changeBtn.onclick = function() { sync_modal_change_ports(); };
+    }
+    // Re-run the pageload sync flow if in control mode, otherwise fall back
+    // to the simple zA+zD path.
+    if (amyboard_mode === 'control' && typeof pageload_control_sync === 'function') {
+        pageload_control_sync();
+    } else {
+        sync_amy_state();
+    }
+}
+
+function sync_modal_change_ports() {
+    // Stop the in-progress sync and let the user pick different MIDI ports.
+    _sync_stage = null;
+    if (_sync_timeout) { clearTimeout(_sync_timeout); _sync_timeout = null; }
+    if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('cancelled')); }
+    // Cancel any pending ping wait from wait_for_board_ready.
+    if (_ping_resolve) { var pr = _ping_resolve; _ping_resolve = null; pr(); }
+    // Re-scan WebMidi so any devices connected since page load show up,
+    // then mirror the refreshed list into the modal's dropdowns.
+    _refresh_main_midi_dropdowns();
+    _sync_modal_populate_midi();
+    // Enable the dropdowns, hide the spinner, show the error/hint area,
+    // and rename the Change button to Try again.
+    var spinner = document.getElementById('sync-modal-spinner');
+    var error = document.getElementById('sync-modal-error');
+    var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
+    var modalIn = document.getElementById('sync-modal-midi-in');
+    var modalOut = document.getElementById('sync-modal-midi-out');
+    if (spinner) spinner.classList.add('d-none');
+    if (error) error.classList.remove('d-none');
+    if (retryBtn) retryBtn.classList.add('d-none');
+    if (modalIn) modalIn.disabled = false;
+    if (modalOut) modalOut.disabled = false;
+    if (changeBtn) changeBtn.textContent = 'Try again';
+    // Hook the changed button to sync_modal_retry instead. Wrap so the
+    // async function's rejections surface in the sync-error modal rather
+    // than bubbling up as unhandled promise errors.
+    if (changeBtn) changeBtn.onclick = function() {
+        sync_modal_retry().catch(function(e) {
+            console.warn('sync_modal_retry error:', e);
+            _show_syncing_modal_error();
+        });
+    };
+}
+
+// Cookie helpers for remembering successful MIDI port selections.
+function _set_midi_cookie(inputName, outputName) {
+    try {
+        var value = encodeURIComponent(inputName || '') + '|' + encodeURIComponent(outputName || '');
+        document.cookie = 'amyboard_midi_ports=' + value + '; max-age=31536000; path=/; SameSite=Lax';
+    } catch (e) {}
+}
+
+function _get_midi_cookie() {
+    try {
+        var c = document.cookie.split('; ').find(function(x) { return x.startsWith('amyboard_midi_ports='); });
+        if (!c) return null;
+        var v = c.split('=')[1];
+        var parts = v.split('|');
+        return {
+            input: decodeURIComponent(parts[0] || ''),
+            output: decodeURIComponent(parts[1] || ''),
+        };
+    } catch (e) { return null; }
+}
+
+function _save_successful_midi_ports() {
+    var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
+    function _opt_portname(sel) {
+        if (!sel || !sel.options[sel.selectedIndex]) return '';
+        var t = sel.options[sel.selectedIndex].text || '';
+        var idx = t.indexOf(': ');
+        return (idx >= 0) ? t.slice(idx + 2) : t;
+    }
+    _set_midi_cookie(_opt_portname(mainIn), _opt_portname(mainOut));
+}
+
+async function reset_amyboard() {
+    if (amyboard_mode === 'control') {
+        _show_resetting_modal();
+        // zB reboots into bootloader mode (pure C, works even with busy loop()).
+        // After reboot, the board skips sketch, scheduler is idle.
+        // Then we send zP factory_reset which runs reliably.
+        reboot_to_bootloader();
+        console.log('reset: zB sent, waiting for board...');
+        await wait_for_board_ready();
+        // Board is now in bootloader mode — scheduler idle, no sketch.
+        // Run factory_reset on the clean board.
+        amy_add_log_message('zPimport amyboard; amyboard.factory_reset()Z');
+        console.log('reset: zP factory_reset sent');
+        await sleep_ms(2000);
+        // Set JS state to defaults.
+        var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop() is called every 32nd note.\nimport amyboard, amy\n\ndef loop():\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
+        if (editor) {
+            editor.setValue(defaultSketch);
+            setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+        }
+        if (typeof window.reset_amy_knobs_to_defaults === "function") {
+            window.reset_amy_knobs_to_defaults();
+        }
+        // Reset channel state: only channel 1 active.
+        if (!Array.isArray(window.active_channels)) window.active_channels = [];
+        window.active_channels[1] = true;
+        for (var _ch = 2; _ch <= 16; _ch++) window.active_channels[_ch] = false;
+        window.current_synth = 1;
+        var channelSelect = document.getElementById("midi-channel-select");
+        if (channelSelect) channelSelect.value = "1";
+        var activeCheckbox = document.getElementById("channel-active-toggle");
+        if (activeCheckbox) activeCheckbox.checked = true;
+        if (Array.isArray(window.channel_control_mapping_sent)) {
+            for (var _ch2 = 1; _ch2 <= 16; _ch2++) window.channel_control_mapping_sent[_ch2] = false;
+        }
+        if (typeof window.refresh_knobs_for_channel === "function") {
+            window.suppress_knob_cc_send = true;
+            try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
+        }
+        _hide_resetting_modal();
+        if (document.activeElement) document.activeElement.blur();
+    } else {
+        // Simulate mode: let Python handle the reset (same path as hardware),
+        // then refresh JS-side knob/channel state so the UI matches the
+        // freshly-reset AMY. A "Resetting…" modal is shown for the duration
+        // because mp.runPythonAsync blocks the main thread — without it, the
+        // Reset button visually stays "pressed"/red until Python returns.
+        if (!mp) return;
+        _show_resetting_modal();
+        // Yield one frame so the modal actually paints before Python blocks.
+        await sleep_ms(50);
+        try {
+            try {
+                await mp.runPythonAsync("import amyboard; amyboard.factory_reset()");
+            } catch (e) {
+                console.warn('reset: amyboard.factory_reset() failed', e);
+            }
+            sync_persistent_fs();
+            // Reload the sketch into the editor.
+            if (editor) {
+                try {
+                    var sketchContent = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
+                    editor.setValue(sketchContent);
+                } catch (e) {
+                    console.warn('reset: failed to reload sketch.py into editor', e);
+                }
+                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+            }
+            // Rebuild JS-side knob state to clean defaults. factory_reset
+            // already sent RESET_SYNTHS + set up the default Juno patch on
+            // channel 1 in AMY, so channels 2-16 are empty and channel 1
+            // holds the Juno values — we reflect that below.
+            if (typeof window.reset_amy_knobs_to_defaults === "function") {
+                window.reset_amy_knobs_to_defaults();
+            }
+            // Reset global FX (reverb/chorus/echo/EQ) — Python's RESET_SYNTHS
+            // doesn't touch these, so we clear them from the JS side.
+            if (typeof reset_global_effects === "function") {
+                reset_global_effects();
+            }
+            // Reset channel active state: only channel 1 active after reset.
+            // Assign directly rather than calling set_channel_active() so we
+            // don't re-send a redundant Juno init to AMY on channel 1.
+            if (!Array.isArray(window.active_channels)) window.active_channels = [];
+            window.active_channels[1] = true;
+            for (var _ch = 2; _ch <= 16; _ch += 1) {
+                window.active_channels[_ch] = false;
+            }
+            // Reset current synth to 1 and sync the channel-select dropdown.
+            window.current_synth = 1;
+            var channelSelect = document.getElementById("midi-channel-select");
+            if (channelSelect) channelSelect.value = "1";
+            var activeCheckbox = document.getElementById("channel-active-toggle");
+            if (activeCheckbox) activeCheckbox.checked = true;
+            // Drop any cached "already sent knob CC mappings" flags so the
+            // next channel switch re-sends them from the fresh default state.
+            if (Array.isArray(window.channel_control_mapping_sent)) {
+                for (var _ch2 = 1; _ch2 <= 16; _ch2 += 1) {
+                    window.channel_control_mapping_sent[_ch2] = false;
+                }
+            }
+            // Pull live AMY state (the Juno patch factory_reset just loaded)
+            // back into the UI widgets for channel 1. Falls back to a plain
+            // re-render if the synth-side read isn't available.
+            var synced = false;
+            try {
+                synced = await sync_channel_knobs_from_synth_to_ui(1);
+            } catch (e) {
+                console.warn('reset: sync_channel_knobs_from_synth_to_ui failed', e);
+            }
+            if (!synced && typeof window.refresh_knobs_for_channel === "function") {
+                var previousSuppress = !!window.suppress_knob_cc_send;
+                window.suppress_knob_cc_send = true;
+                try { window.refresh_knobs_for_channel(); }
+                finally { window.suppress_knob_cc_send = previousSuppress; }
+            }
+        } finally {
+            _hide_resetting_modal();
+            // The modal backdrop intercepts mouseup so the Reset button's
+            // :focus/:active state gets stuck (solid red instead of outline).
+            // Blur whatever has focus so the button returns to its normal style.
+            if (document.activeElement) document.activeElement.blur();
+        }
+    }
+}
+
+// Promise-based sync that resolves when both sketch + state are received.
+var _sync_resolve = null;
+var _sync_reject = null;
+
+function sync_amy_state_async() {
+    return new Promise(function(resolve, reject) {
+        _sync_resolve = resolve;
+        _sync_reject = reject;
+        sync_amy_state();
+    });
+}
+
+// ── Control mode: Pull from AMYboard ────────────────────────────────────────
+// Pull = zA (update sketch.py with AMY state on disk) then zD (send it back).
+// The zA runs update_sketch_knobs() on hardware, then zD reads the file.
+
+// Max time to wait for the zD response. Large sketches (e.g. embedded MIDI
+// files) can easily exceed 16 KB once base64-encoded and wrapped in sysex;
+// Chrome's Web MIDI can take several seconds to deliver that to the event
+// handler, so give it plenty of headroom.
+var _SYNC_TIMEOUT_MS = 20000;
+
+function sync_amy_state() {
+    // Send zA to update sketch.py on disk with current AMY state,
+    // then zD to get the updated file back.
+    console.log('sync_amy_state: start');
+    _sync_stage = 'pending';
+    _show_syncing_modal();
+    if (_sync_timeout) clearTimeout(_sync_timeout);
+    // Drop any stale reassembly state from a previous sync attempt that may
+    // have timed out mid-message. Starting clean guarantees the reassembler
+    // won't accidentally prepend leftover bytes to the fresh zD response.
+    _sysex_reasm = null;
+    _sysex_b64_accum = '';
+    _sync_timeout = setTimeout(function() {
+        _sync_timeout = null;
+        if (_sync_stage !== null) {
+            console.warn('sync_amy_state: TIMEOUT after ' + _SYNC_TIMEOUT_MS + 'ms, stage=' + _sync_stage);
+            _sync_stage = null;
+            _show_syncing_modal_error();
+            if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('sync timeout')); }
+        }
+    }, _SYNC_TIMEOUT_MS);
+    // Step 1: update sketch.py on disk with AMY state.
+    console.log('sync_amy_state: sending zA');
+    amy_add_log_message('zAZ');
+    // Step 2: wait long enough for the hardware to finish running
+    // update_sketch_knobs() (which is synchronous from the sysex parser's
+    // perspective and blocks the parser until it returns — so the zD
+    // command we send next must arrive AFTER zA's Python hook completes).
+    // 300ms was too short for sketches with large knobs sections; 1500ms
+    // has plenty of headroom for realistic file sizes.
+    setTimeout(function() {
+        console.log('sync_amy_state: sending zD');
+        amy_add_log_message('zD/user/current/sketch.pyZ');
+    }, 1500);
+}
+
+// Strip any leading garbage (U+FFFD replacement chars, control bytes, or
+// non-ASCII) from a sketch.py text until we find a plausible Python-file
+// starting character. Protects against corruption that would otherwise trip
+// a SyntaxError when the hardware imports sketch.py after receiving it back.
+function _sanitize_sketch_text(text) {
+    if (typeof text !== 'string' || !text.length) return text;
+    var i = 0;
+    var n = text.length;
+    while (i < n) {
+        var c = text.charCodeAt(i);
+        // Accept tab/newline/CR/space, printable ASCII, or any char > 0x7E
+        // that isn't U+FFFD (replacement char emitted by TextDecoder on bad UTF-8).
+        if (c === 0x09 || c === 0x0A || c === 0x0D
+            || (c >= 0x20 && c <= 0x7E)
+            || (c > 0x7E && c !== 0xFFFD)) {
+            break;
+        }
+        i++;
+    }
+    if (i > 0) {
+        console.warn('sync: stripped ' + i + ' leading garbage bytes from sketch.py');
+    }
+    return text.slice(i);
+}
+
+function _handle_sync_sysex_payload(payload) {
+    // payload is the sketch.py text, base64-decoded.
+    payload = _sanitize_sketch_text(payload);
+    // Reject empty/garbage payloads — a stale sysex fragment shouldn't
+    // consume the pending sync state and cause the real zD response to
+    // be ignored.
+    if (!payload || !payload.length) {
+        console.warn('sync: ignoring empty payload');
+        return;
+    }
+    if (_sync_timeout) { clearTimeout(_sync_timeout); _sync_timeout = null; }
+
+    if (_sync_stage === 'pending') {
+        _sync_stage = null;
+        // Self-heal: if the incoming sketch has multiple _auto_generated_knobs
+        // blocks OR any "AMYboard Online." fragment outside the usual comment
+        // line (from an earlier bad save on hardware that we can't fix until
+        // firmware is reflashed), truncate at the first occurrence of the
+        // canonical comment line and append a single fresh block built from
+        // the most recent wire commands. This normalizes the text before it
+        // lands in the editor.
+        var markerCount = 0;
+        var mcIdx = 0;
+        while (true) {
+            var mcFound = payload.indexOf(_KNOBS_MARKER, mcIdx);
+            if (mcFound < 0) break;
+            markerCount++;
+            mcIdx = mcFound + _KNOBS_MARKER.length;
+        }
+        if (markerCount > 1) {
+            console.warn('pull: sketch has ' + markerCount + ' knobs blocks, collapsing to the newest');
+            // Pull the newest (last) block's content as the canonical knobs.
+            var freshKnobs = extract_knobs_from_sketch(payload);  // lastIndexOf -> newest
+            // Find the first "# Do not edit. ..." comment line — everything
+            // before it is the clean code; everything from it onward is
+            // replaced with a single fresh block.
+            var cleanBefore;
+            var commentStart = payload.indexOf(_KNOBS_COMMENT_LINE);
+            if (commentStart >= 0) {
+                var lineStart = payload.lastIndexOf('\n', commentStart - 1);
+                cleanBefore = payload.slice(0, lineStart < 0 ? 0 : lineStart + 1);
+            } else {
+                var firstMarker = payload.indexOf(_KNOBS_MARKER);
+                cleanBefore = payload.slice(0, firstMarker < 0 ? payload.length : firstMarker);
+            }
+            while (cleanBefore.endsWith('\n\n')) cleanBefore = cleanBefore.slice(0, -1);
+            if (!cleanBefore.endsWith('\n')) cleanBefore += '\n';
+            var fk = String(freshKnobs || '');
+            if (fk && !fk.endsWith('\n')) fk += '\n';
+            payload = cleanBefore
+                + '\n' + _KNOBS_COMMENT_LINE + '\n'
+                + _KNOBS_MARKER + '\n'
+                + fk
+                + _KNOBS_END + '\n';
+            console.warn('pull: normalized sketch length =', payload.length);
+        }
+        _last_sketch_text = payload;
+        console.log('pull: received ' + payload.length + ' bytes');
+        // Set editor content.
+        if (editor) {
+            editor.setValue(payload);
+            setTimeout(function() {
+                if (typeof editor.refresh === 'function') editor.refresh();
+            }, 0);
+        }
+        // Hide the "Sync to show..." button.
+        var syncSketchBtn = document.getElementById('sync-sketch-btn');
+        if (syncSketchBtn) syncSketchBtn.classList.add('d-none');
+        // Extract knobs from the sketch and apply to knob UI.
+        var knobsText = extract_knobs_from_sketch(payload);
+        if (knobsText) {
+            apply_zd_dump_to_knobs(knobsText);
+        }
+        _hide_syncing_modal();
+        // Remember the MIDI ports that worked so next page load can preselect.
+        try { _save_successful_midi_ports(); } catch (e) {}
+        if (_sync_resolve) { var r = _sync_resolve; _sync_resolve = null; _sync_reject = null; r(); }
+        return;
+    }
+}
+
+// Given the zD dump text, parse out per-synth wire lines plus the global
+// effects line, mark those synths active, and populate the knob UI for the
+// current synth.
+function apply_zd_dump_to_knobs(dumpText) {
+    if (!dumpText) return;
+    // Apply CC mappings (ic lines) to per-channel knob config first so CC
+    // numbers, ranges, log flag, and offset reflect the saved sketch state.
+    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
+        for (var chCC = 1; chCC <= 16; chCC++) {
+            window.apply_knob_cc_mappings_from_patch_source(chCC, dumpText);
+        }
+    }
+    var lines = dumpText.split('\n');
+    // Group by synth. Lines starting with 'i{N}' belong to that synth.
+    // Global effects lines (no 'i' prefix) apply to all.
+    var perSynth = {};       // synth → array of wire lines (prefix stripped)
+    var effectsLines = [];   // applies to every synth
+    var activeSynths = {};
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        var m = line.match(/^i(\d+)(.*)$/);
+        if (m) {
+            var synth = parseInt(m[1], 10);
+            var rest = m[2];
+            if (!perSynth[synth]) perSynth[synth] = [];
+            perSynth[synth].push(rest);
+            activeSynths[synth] = true;
+        } else {
+            effectsLines.push(line);
+        }
+    }
+    // Mark active channels based on the dump.
+    for (var ch = 1; ch <= 16; ch++) {
+        if (typeof window.set_channel_active === 'function') {
+            // Set active without triggering the default-patch init (since the
+            // real state is coming from the dump).
+            window.active_channels[ch] = !!activeSynths[ch];
+        }
+    }
+    // Refresh the channel-active checkbox/UI for the current channel.
+    var currentSynth = Number(window.current_synth || 1);
+    var checkbox = document.getElementById('channel-active-checkbox');
+    if (checkbox) checkbox.checked = !!activeSynths[currentSynth];
+    // Populate knobs for the current synth.
+    if (!activeSynths[currentSynth]) {
+        console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' is not active in dump');
+        return;
+    }
+    if (typeof window.set_knobs_from_events !== 'function' ||
+        typeof events_from_wire_code_messages !== 'function') {
+        console.warn('apply_zd_dump_to_knobs: knob helpers unavailable');
+        return;
+    }
+    var wireLines = perSynth[currentSynth].concat(effectsLines);
+    try {
+        var events = events_from_wire_code_messages(wireLines);
+        window.set_knobs_from_events(events, currentSynth);
+        if (typeof window.refresh_knobs_for_channel === 'function') {
+            window.suppress_knob_cc_send = true;
+            try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
+        }
+        // Check oscillator count and disable sections for DX7 patches.
+        if (typeof window.set_section_disabled === "function") {
+            var oscsPerVoice = num_oscs_from_patch_file_content(wireLines.join('\n'));
+            var isDX7 = oscsPerVoice >= 8;
+            window.set_section_disabled("Osc B", isDX7);
+            window.set_section_disabled("ADSR", isDX7);
+        }
+        console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' → ' + wireLines.length + ' wire lines → ' + events.length + ' events');
+    } catch (e) {
+        console.warn('apply_zd_dump_to_knobs: parse/apply failed', e);
+    }
+}
+
+// If the user switches channels after a sync, re-apply the cached dump.
+window.reapply_last_zd_dump = function() {
+    if (_last_zd_dump_text && amyboard_mode === 'control') {
+        apply_zd_dump_to_knobs(_last_zd_dump_text);
+    }
+};
+
+function control_sequencer_start() {
+    console.log('sequencer start: midiOutputDevice=', midiOutputDevice);
+    if (midiOutputDevice) {
+        try {
+            // Send MIDI Start (0xFA) via the raw MIDIOutput to avoid WebMidi.js filtering.
+            var raw = midiOutputDevice._midiOutput || midiOutputDevice.output;
+            if (raw && typeof raw.send === 'function') {
+                raw.send([0xFA]);
+                console.log('sequencer start: sent 0xFA via raw output');
+            } else if (typeof midiOutputDevice.send === 'function') {
+                midiOutputDevice.send([0xFA]);
+                console.log('sequencer start: sent 0xFA via WebMidi output');
+            }
+        } catch (e) { console.warn('sequencer start failed:', e); }
+    }
+}
+
+function control_sequencer_stop() {
+    console.log('sequencer stop: midiOutputDevice=', midiOutputDevice);
+    if (midiOutputDevice) {
+        try {
+            var raw = midiOutputDevice._midiOutput || midiOutputDevice.output;
+            if (raw && typeof raw.send === 'function') {
+                raw.send([0xFC]);
+                console.log('sequencer stop: sent 0xFC via raw output');
+            } else if (typeof midiOutputDevice.send === 'function') {
+                midiOutputDevice.send([0xFC]);
+                console.log('sequencer stop: sent 0xFC via WebMidi output');
+            }
+        } catch (e) { console.warn('sequencer stop failed:', e); }
+    }
 }
 
 async function toggle_audioin() {
@@ -3070,6 +4410,8 @@ async function start_amyboard() {
   await mp.registerJsModule('amy_sysclock', amy_sysclock);
   await mp.registerJsModule('amyboard_world_upload_file', amyboard_world_upload_file);
   await mp.registerJsModule('amy_get_output_buffer', get_output_audio_samples);
+  // AMY WASM lives in a separate module; bridge amy_dump_state for Python via JS.
+  await mp.registerJsModule('amy_dump_state_js', generate_knobs_text_js);
 //  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);
 //  await mp.registerJsModule('amy_set_external_input_buffer', set_audio_samples);
 
@@ -3078,60 +4420,48 @@ async function start_amyboard() {
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import tulip, amy, amy_js_message, amy_sysclock, amy_get_output_buffer as _amy_get_output_buf_js
+    import tulip, amy, amy_js_message, amy_sysclock, amy_get_output_buffer as _amy_get_output_buf_js, amy_dump_state_js as _amy_dump_state_js
     amy.override_send = amy_js_message
     tulip.amy_ticks_ms = amy_sysclock
     tulip.amy_get_output_buffer = _amy_get_output_buf_js
+    tulip.amy_dump_state = _amy_dump_state_js
   `);
 
   // If you don't have these sleeps we get a MemoryError with a locked heap. Not sure why yet.
   await sleep_ms(400);
   await mp.runFrozenAsync('_boot.py');
   ensure_current_environment_layout(true);
-  // Skip restoring saved environment if ?env= param is present — the URL
-  // environment will be loaded by check_url_env_params() after startup.
+
+  // Wait for AMY WASM to be ready (so we can read sketch.py and eventually send messages).
+  if (_amy_wasm_ready) await _amy_wasm_ready;
+
+  // Load sketch.py into the editor so the user can see/edit it before clicking to start audio.
+  // The actual run_sketch() (applying knobs + starting loop) is deferred to start_audio().
   var urlEnvPending = !!(new URLSearchParams(window.location.search).get("env"));
   if (!urlEnvPending) {
-    try {
-      await mp.runPythonAsync("import amyboard; amyboard.restore_patch_state_from_files(send_default_if_missing=True)");
-    } catch (e) {
-      // Fallback for environments where the shared helper is unavailable.
-      await restore_patches_from_editor_state_if_present({ sendToAmy: true });
-    }
-    await restore_patches_from_editor_state_if_present({ sendToAmy: false });
-    try {
-      await mp.runPythonAsync("import amyboard; amyboard.run_sketch()");
-    } catch (e) {
-      // sketch.py may not exist or may fail — that's OK.
+    var _pendingSketch = "";
+    try { _pendingSketch = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' }); } catch (e) {}
+    if (!_pendingSketch) _pendingSketch = _get_default_sketch();
+    if (editor) {
+      editor.setValue(_pendingSketch);
+    } else {
+      window._deferred_editor_content = _pendingSketch;
     }
   }
   await fill_tree();
-  if (typeof window.refresh_patch_active_name_label === "function") {
-    window.refresh_patch_active_name_label();
-  }
-  if (typeof window.refresh_save_patch_dirty_indicator === "function") {
-    window.refresh_save_patch_dirty_indicator();
-  }
-  setTimeout(async function() {
-    try {
-      await restore_patches_from_editor_state_if_present({ sendToAmy: false });
-      if (typeof window.refresh_patch_active_name_label === "function") {
-        window.refresh_patch_active_name_label();
-      }
-      if (typeof window.refresh_save_patch_dirty_indicator === "function") {
-        window.refresh_save_patch_dirty_indicator();
-      }
-    } catch (e) {}
-  }, 800);
   amyboard_started = true;
 }
 
+var _audio_starting = false;
 async function start_audio() {
-  document.body.removeEventListener('click', start_audio, true); 
-  document.body.removeEventListener('keydown', start_audio, true); 
+  document.body.removeEventListener('click', start_audio, true);
+  document.body.removeEventListener('keydown', start_audio, true);
 
-  // Don't run this twice
-  if(audio_started) return;
+  // Don't start local audio in control mode
+  if (amyboard_mode === 'control') return;
+  // Don't run this twice (guard both completed and in-progress starts).
+  if (audio_started || _audio_starting) return;
+  _audio_starting = true;
   // Start the audio worklet (miniaudio)
   if(amy_audioin_toggle) {
       await amy_live_start_web_audioin();
@@ -3143,15 +4473,6 @@ async function start_audio() {
   // restore_patch_state_from_files during boot).  Without this delay,
   // yield_synth_commands would read stale default values for global effects.
   await new Promise(function(resolve) { setTimeout(resolve, 150); });
-  try {
-    await restore_patches_from_editor_state_if_present({ sendToAmy: false });
-    if (typeof window.refresh_patch_active_name_label === "function") {
-      window.refresh_patch_active_name_label();
-    }
-    if (typeof window.refresh_save_patch_dirty_indicator === "function") {
-      window.refresh_save_patch_dirty_indicator();
-    }
-  } catch (e) {}
   // Set up AnalyserNode to capture output waveform for Python
   try {
     if (typeof emAudio !== 'undefined') {
@@ -3173,8 +4494,52 @@ async function start_audio() {
     }
   } catch(e) { console.warn("AnalyserNode setup failed:", e); }
 
-  // Keep startup simple: knobs are local UI state until user moves them.
   audio_started = true;
+
+  // Audio is now running and AMY can process messages — run sketch.py the same
+  // way hardware does: apply _auto_generated_knobs, import sketch.py, start loop().
+  var urlEnvPending = !!(new URLSearchParams(window.location.search).get("env"));
+  if (mp && !urlEnvPending) {
+    // Init synth 1 with default Juno patch before run_sketch applies knobs.
+    // On main, restore_patch_state_from_files did this. Without it, synth 1
+    // doesn't exist and _apply_knobs_text fails with "synth not defined".
+    amy_add_message("i1K257iv6Z");
+    // Let AMY process the synth init before running Python.
+    await new Promise(function(resolve) { setTimeout(resolve, 100); });
+    try {
+      await mp.runPythonAsync(`
+import sys, amyboard
+try:
+    amyboard.run_sketch()
+except Exception as _e:
+    print("run_sketch exception:")
+    sys.print_exception(_e)
+`);
+    } catch (e) {
+      console.warn("run_sketch outer failure:", e);
+    }
+    // Pull the _auto_generated_knobs text from sketch.py and update the JS
+    // knob config (CC numbers, ranges, log flag) so the UI reflects the
+    // saved ic mappings. Each knob line is channel-prefixed (i{N}...), so
+    // apply per-channel.
+    try {
+      var sketchText = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
+      var knobsText = extract_knobs_from_sketch(sketchText);
+      if (knobsText && typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
+        for (var ch = 1; ch <= 16; ch++) {
+          window.apply_knob_cc_mappings_from_patch_source(ch, knobsText);
+        }
+      }
+    } catch (e) {
+      console.warn("apply knobs-text on boot failed:", e);
+    }
+    // Wait for AMY audio worklet to process the queued events from
+    // _apply_knobs_text (synth init + wire code). Without this, the synth
+    // has no voices yet and yield_synth_commands fails.
+    await new Promise(function(resolve) { setTimeout(resolve, 200); });
+    // Sync UI knobs from the AMY state that run_sketch just applied.
+    try { await sync_channel_knobs_from_synth_to_ui(window.current_synth || 1); } catch (e) {}
+  }
 }
 
 // ---- wire_code_parser.js ----
@@ -3367,22 +4732,43 @@ function parse_wire_code(message) {
 
 function events_from_wire_code_message(message) {
   // Message is a single wire-code string, but may contain multiple events with Z separators.
+  // Safety-capped: if parse_wire_code ever returns without advancing (or we
+  // blow past a sane event count), bail out so we can never wedge the JS event
+  // loop on a malformed message.
   events = [];
   let rest = message;
+  const MAX_EVENTS = 5000;
+  let iterations = 0;
   while (rest != "") {
+    const prev_rest = rest;
     [event, rest] = parse_wire_code(rest);
     events.push(event);
+    if (rest === prev_rest) {
+      console.warn("events_from_wire_code_message: parse_wire_code did not advance at:", String(rest).substring(0, 80));
+      break;
+    }
+    if (++iterations >= MAX_EVENTS) {
+      console.warn("events_from_wire_code_message: bailed after " + MAX_EVENTS + " events");
+      break;
+    }
   }
   return events;
 }
 
 function events_from_wire_code_messages(messages) {
   // Messages is an array of wire code message strings; all the events contained are concatenated.
+  // Per-message try/catch: if one wire line is malformed (corruption from a
+  // prior partial save, a stray comment that leaked through, etc.), we log
+  // and skip it instead of failing the whole batch.
   var all_events = [];
   for (const message of messages) {
-    let message_events = events_from_wire_code_message(message);
-    for (const event of message_events) {
-      all_events.push(event);
+    try {
+      let message_events = events_from_wire_code_message(message);
+      for (const event of message_events) {
+        all_events.push(event);
+      }
+    } catch (e) {
+      console.warn('events_from_wire_code_messages: skipping malformed line:', message, e && e.message);
     }
   }
   return all_events;
@@ -3427,7 +4813,7 @@ function get_world_patch_display_name(filename) {
 }
 
 function randomize_world_patch_tag_palette() {
-    var tags = ["featured", "official", "popular", "wild"];
+    var tags = ["featured", "official"];
     var colors = ["bg-primary", "bg-success", "bg-danger", "bg-info", "bg-warning", "bg-secondary"];
     for (var i = colors.length - 1; i > 0; i--) {
         var j = Math.floor(Math.random() * (i + 1));
@@ -3445,7 +4831,7 @@ function render_world_patch_tag_pills() {
     if (!Object.keys(amyboard_world_patch_tag_palette).length) {
         randomize_world_patch_tag_palette();
     }
-    var tags = ["featured", "official", "popular", "wild"];
+    var tags = ["featured", "official"];
     var html = "";
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
@@ -3705,9 +5091,15 @@ async function upload_patch_to_world() {
     }
 
     var adminToken = null;
+    var adminTokenFromCache = false;
     if (username.toLowerCase() === "shorepine") {
-        adminToken = await prompt_admin_token();
-        if (adminToken === null) return;
+        adminToken = get_cached_admin_token();
+        if (adminToken) {
+            adminTokenFromCache = true;
+        } else {
+            adminToken = await prompt_admin_token();
+            if (adminToken === null) return;
+        }
     }
 
     var uploadButton = document.getElementById("upload_patch_btn");
@@ -3720,15 +5112,30 @@ async function upload_patch_to_world() {
     try {
         ensure_current_environment_layout(false);
         var contents = mp.FS.readFile(CURRENT_ENV_DIR + "/" + patchFilename, { encoding: "utf8" });
-        var file = new File([contents], patchFilename, { type: "text/plain" });
-        var data = new FormData();
-        data.append("file", file);
-        data.append("username", username);
-        data.append("description", description);
-        var fetchOpts = { method: "POST", body: data };
-        if (adminToken) fetchOpts.headers = { "X-Admin-Token": adminToken };
+        var uploadUrl = world_api_url("/api/amyboardworld/upload");
+        function buildUploadBody() {
+            var file = new File([contents], patchFilename, { type: "text/plain" });
+            var data = new FormData();
+            data.append("file", file);
+            data.append("username", username);
+            data.append("description", description);
+            return data;
+        }
+        async function doUpload(token) {
+            var fetchOpts = { method: "POST", body: buildUploadBody() };
+            if (token) fetchOpts.headers = { "X-Admin-Token": token };
+            return fetch(uploadUrl, fetchOpts);
+        }
 
-        var response = await fetch(world_api_url("/api/amyboardworld/upload"), fetchOpts);
+        var response = await doUpload(adminToken);
+        // If a cached token was rejected, clear it and prompt for a fresh one.
+        if (!response.ok && response.status === 403 && adminTokenFromCache) {
+            clear_cached_admin_token();
+            adminTokenFromCache = false;
+            adminToken = await prompt_admin_token();
+            if (adminToken === null) return;
+            response = await doUpload(adminToken);
+        }
         if (!response.ok) {
             var detail = "";
             try { detail = (await response.json()).detail || ""; } catch (_) {}
@@ -3739,6 +5146,8 @@ async function upload_patch_to_world() {
             }
             return;
         }
+        // Upload succeeded — remember the token for next time.
+        if (adminToken) set_cached_admin_token(adminToken);
         await refresh_amyboard_world_patches();
     } catch (e) {
         show_alert("Upload failed.");

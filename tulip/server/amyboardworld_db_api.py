@@ -28,7 +28,6 @@ from pydantic import BaseModel
 
 USERNAME_RE = re.compile(r"^[A-Za-z0-9]{1,20}$")
 ENV_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
-PATCH_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,25}$")
 FILE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 TAG_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 RESERVED_USERNAMES = {"shorepine"}
@@ -149,6 +148,15 @@ def _ensure_schema() -> None:
             """
         )
 
+        # Retry client_ip for tulip_files and tulip_messages — the first
+        # ALTER TABLE pass (above) runs before these tables are created on a
+        # fresh database, so the column may be missing.
+        for tbl in ("tulip_files", "tulip_messages"):
+            try:
+                conn.execute(f"ALTER TABLE {tbl} ADD COLUMN client_ip TEXT NOT NULL DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass
+
 
 @app.on_event("startup")
 def _startup() -> None:
@@ -234,11 +242,11 @@ def _parse_tags(raw: Any) -> list[str]:
     return out
 
 
-def _validate_amyboard_upload(filename: str, contents: bytes) -> str:
+def _validate_amyboard_sketch_upload(filename: str, contents: bytes) -> str:
     clean_name = (filename or "").strip()
-    if not clean_name.lower().endswith(".tar"):
-        raise HTTPException(status_code=400, detail="File must be a .tar")
-    env_name = clean_name[:-4]
+    if not clean_name.lower().endswith(".py"):
+        raise HTTPException(status_code=400, detail="File must be a .py")
+    env_name = clean_name[:-3]
     if not ENV_NAME_RE.match(env_name):
         raise HTTPException(status_code=400, detail="Environment name must be 1-20 chars: A-Z, a-z, 0-9, -, _")
     if len(contents) < 1:
@@ -248,13 +256,13 @@ def _validate_amyboard_upload(filename: str, contents: bytes) -> str:
     return clean_name
 
 
-def _validate_amyboard_patch_upload(filename: str, contents: bytes) -> str:
+def _validate_amyboard_upload(filename: str, contents: bytes) -> str:
     clean_name = (filename or "").strip()
-    if not clean_name.lower().endswith(".patch"):
-        raise HTTPException(status_code=400, detail="File must be a .patch")
-    patch_name = clean_name[:-6]
-    if not PATCH_NAME_RE.match(patch_name):
-        raise HTTPException(status_code=400, detail="Patch name must be 1-25 chars: A-Z, a-z, 0-9, ., -, _")
+    if not clean_name.lower().endswith(".tar"):
+        raise HTTPException(status_code=400, detail="File must be a .tar")
+    env_name = clean_name[:-4]
+    if not ENV_NAME_RE.match(env_name):
+        raise HTTPException(status_code=400, detail="Environment name must be 1-20 chars: A-Z, a-z, 0-9, -, _")
     if len(contents) < 1:
         raise HTTPException(status_code=400, detail="Empty upload")
     if len(contents) > MAX_FILE_BYTES:
@@ -517,15 +525,16 @@ async def upload_amyboard_environment(
     contents = await file.read()
     raw_filename = (file.filename or "").strip()
 
-    # Accept both .tar (environment) and .patch (single patch) uploads.
-    if raw_filename.lower().endswith(".patch"):
-        filename = _validate_amyboard_patch_upload(raw_filename, contents)
-        upload_item_type = "patch"
+    # Accept .py (sketch) and .tar (legacy environment) uploads. .patch
+    # support was removed in Apr 2026 — we no longer use AMYboard patches.
+    if raw_filename.lower().endswith(".py"):
+        filename = _validate_amyboard_sketch_upload(raw_filename, contents)
+        upload_item_type = "environment"
     elif raw_filename.lower().endswith(".tar"):
         filename = _validate_amyboard_upload(raw_filename, contents)
         upload_item_type = "environment"
     else:
-        raise HTTPException(status_code=400, detail="File must be a .tar or .patch")
+        raise HTTPException(status_code=400, detail="File must be a .py or .tar")
 
     item_id = _insert_file_row(
         "environments",
@@ -592,7 +601,13 @@ def download_amyboard_file(item_id: int) -> FileResponse:
     if not blob_path.exists():
         raise HTTPException(status_code=404, detail="File missing")
     fname = str(row["filename"])
-    mime = "text/plain" if fname.lower().endswith(".patch") else "application/x-tar"
+    lower = fname.lower()
+    if lower.endswith(".py"):
+        mime = "text/x-python"
+    elif lower.endswith(".tar"):
+        mime = "application/x-tar"
+    else:
+        mime = "application/octet-stream"
     return FileResponse(str(blob_path), media_type=mime, filename=fname)
 
 

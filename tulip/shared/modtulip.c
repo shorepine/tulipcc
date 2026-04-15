@@ -154,7 +154,7 @@ STATIC mp_obj_t tulip_amy_get_synth_commands(size_t n_args, const mp_obj_t *args
     // Make a new list object, append the retrieved (and converted) strings to it.
     mp_obj_t list = mp_obj_new_list(0, NULL);
     do {
-        state = yield_synth_commands(synth, s, MAX_MESSAGE_LEN, state);
+        state = yield_synth_commands(synth, s, MAX_MESSAGE_LEN, true, state);
         int slen = strlen(s);
         if (slen)
             mp_obj_list_append(list, mp_obj_new_str(s, slen));
@@ -162,6 +162,25 @@ STATIC mp_obj_t tulip_amy_get_synth_commands(size_t n_args, const mp_obj_t *args
     return list;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_synth_commands_obj, 1, 1, tulip_amy_get_synth_commands);
+
+STATIC mp_obj_t tulip_sequencer_start(void) {
+    extern void sequencer_midi_start(void);
+    sequencer_midi_start();
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_sequencer_start_obj, tulip_sequencer_start);
+
+STATIC mp_obj_t tulip_amy_dump_state(void) {
+    int len = 0;
+    char *buf = amy_dump_state_to_string(&len);
+    if (!buf || len <= 0) {
+        return mp_obj_new_str("", 0);
+    }
+    mp_obj_t result = mp_obj_new_str(buf, len);
+    free(buf);
+    return result;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_amy_dump_state_obj, tulip_amy_dump_state);
 
 #endif
 
@@ -350,9 +369,27 @@ STATIC mp_obj_t tulip_amy_send(size_t n_args, const mp_obj_t *args) {
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
 
 STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
-    // Read from sysex_message_copy which was snapshot by parse_sysex()
-    // before scheduling, avoiding a race with the MIDI task reusing sysex_buffer.
-    amy_add_message(sysex_message_copy);
+    // Read from the next slot in the sysex ring buffer. parse_sysex() writes
+    // to sequential slots so that a fast-arriving next sysex doesn't overwrite
+    // an unprocessed message (which happens when loop() is CPU-heavy and the
+    // mp_sched callback is delayed).
+    char *slot = sysex_message_copies[sysex_copy_read_idx];
+    sysex_copy_read_idx = (sysex_copy_read_idx + 1) % SYSEX_COPY_SLOTS;
+    if (slot) {
+        // Use _from_sysex variant so that during a file transfer,
+        // this data is routed to parse_transfer_message. Internal
+        // amy.send() calls (from sketch loop) use amy_add_message
+        // directly and bypass the transfer routing.
+        amy_add_message_from_sysex(slot);
+    }
+    // ACK the message AFTER processing. The sender (web) waits for this
+    // ACK before sending the next message, ensuring only one message is
+    // in flight at a time and the ring buffer can't overflow.
+    {
+        extern void midi_out(uint8_t *bytes, uint16_t len);
+        uint8_t ack[] = { 0xF0, 0x00, 0x03, 0x45, 'A', 'K', 0xF7 };
+        midi_out(ack, sizeof(ack));
+    }
     return mp_const_none;
 }
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_sysex_obj, 0, 1, tulip_amy_send_sysex);
@@ -561,6 +598,19 @@ STATIC mp_obj_t tulip_amyboard_start(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_start_obj, 1, 1, tulip_amyboard_start);
 
+
+STATIC mp_obj_t tulip_bootloader_mode(void) {
+#if defined(AMYBOARD) && defined(ESP_PLATFORM)
+    extern uint32_t amyboard_bootloader_flag;
+    #define AMYBOARD_BOOTLOADER_MAGIC 0xABCD0001
+    if (amyboard_bootloader_flag == AMYBOARD_BOOTLOADER_MAGIC) {
+        amyboard_bootloader_flag = 0;  // clear for next boot
+        return mp_const_true;
+    }
+#endif
+    return mp_const_false;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_bootloader_mode_obj, tulip_bootloader_mode);
 
 STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {
     amy_add_message((char*)mp_obj_str_get_str(args[0]));
@@ -1600,6 +1650,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amy_get_output_buffer), MP_ROM_PTR(&tulip_amy_get_output_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_input_buffer), MP_ROM_PTR(&tulip_amy_set_external_input_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_synth_commands), MP_ROM_PTR(&tulip_amy_get_synth_commands_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_dump_state), MP_ROM_PTR(&tulip_amy_dump_state_obj) },
+    { MP_ROM_QSTR(MP_QSTR_sequencer_start), MP_ROM_PTR(&tulip_sequencer_start_obj) },
 #endif
     { MP_ROM_QSTR(MP_QSTR_sysex_in), MP_ROM_PTR(&tulip_sysex_in_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_ticks), MP_ROM_PTR(&tulip_seq_ticks_obj) },
@@ -1638,6 +1690,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 #ifdef AMYBOARD
     { MP_ROM_QSTR(MP_QSTR_amyboard_send), MP_ROM_PTR(&tulip_amyboard_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_amyboard_start), MP_ROM_PTR(&tulip_amyboard_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_bootloader_mode), MP_ROM_PTR(&tulip_bootloader_mode_obj) },
 #else
     #ifndef AMYBOARD_WEB
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
