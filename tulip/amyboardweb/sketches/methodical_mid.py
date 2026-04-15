@@ -1,7 +1,7 @@
 # AMYboard Sketch
 # Top-level code runs once at boot. loop() runs repeatedly (~60ms).
 # DESCRIPTION: Play a MIDI file
-import amyboard, amy
+import amyboard, amy, tulip
 import umidiparser
 
 # Render using Juno patch 9
