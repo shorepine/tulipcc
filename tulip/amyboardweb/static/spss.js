@@ -1571,20 +1571,37 @@ async function start_midi() {
         midi_out.options[midi_out.options.length] = new Option("MIDI out: " + safe_midi_port_name(output));
       });
     }
-    // In control mode: auto-select the AMYboard port on each side if present.
-    // Match against the port name only (after the ": " prefix) to avoid matching
-    // the "AMYboard MIDI Port:" label itself.
+    // In control mode: preselect ports. Cookie of last successful pair wins;
+    // otherwise fall back to any port with "amyboard" in the name.
     function _opt_portname(opt) {
         var t = opt.text || "";
         var idx = t.indexOf(": ");
         return (idx >= 0) ? t.slice(idx + 2) : t;
     }
     if (amyboard_mode === 'control') {
-      for (var i = 0; i < midi_in.options.length; i++) {
-        if (/amyboard/i.test(_opt_portname(midi_in.options[i]))) { midi_in.selectedIndex = i; break; }
+      var savedPorts = _get_midi_cookie();
+      var inSelected = false, outSelected = false;
+      if (savedPorts) {
+        for (var i = 0; i < midi_in.options.length; i++) {
+          if (_opt_portname(midi_in.options[i]) === savedPorts.input) {
+            midi_in.selectedIndex = i; inSelected = true; break;
+          }
+        }
+        for (var j = 0; j < midi_out.options.length; j++) {
+          if (_opt_portname(midi_out.options[j]) === savedPorts.output) {
+            midi_out.selectedIndex = j; outSelected = true; break;
+          }
+        }
       }
-      for (var j = 0; j < midi_out.options.length; j++) {
-        if (/amyboard/i.test(_opt_portname(midi_out.options[j]))) { midi_out.selectedIndex = j; break; }
+      if (!inSelected) {
+        for (var i2 = 0; i2 < midi_in.options.length; i2++) {
+          if (/amyboard/i.test(_opt_portname(midi_in.options[i2]))) { midi_in.selectedIndex = i2; break; }
+        }
+      }
+      if (!outSelected) {
+        for (var j2 = 0; j2 < midi_out.options.length; j2++) {
+          if (/amyboard/i.test(_opt_portname(midi_out.options[j2]))) { midi_out.selectedIndex = j2; break; }
+        }
       }
     }
     // Populate the MIDI Input Pass-Thru dropdown (control mode only).
@@ -3656,6 +3673,7 @@ function _show_syncing_modal() {
     var spinner = document.getElementById('sync-modal-spinner');
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
     if (spinner) spinner.classList.remove('d-none');
@@ -3663,6 +3681,11 @@ function _show_syncing_modal() {
     if (retryBtn) retryBtn.classList.add('d-none');
     if (modalIn) modalIn.disabled = true;
     if (modalOut) modalOut.disabled = true;
+    if (changeBtn) {
+        changeBtn.textContent = 'Change MIDI Ports';
+        changeBtn.classList.remove('d-none');
+        changeBtn.onclick = function() { sync_modal_change_ports(); };
+    }
     _sync_modal_populate_midi();
     bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
 }
@@ -3671,13 +3694,19 @@ function _show_syncing_modal_error() {
     var spinner = document.getElementById('sync-modal-spinner');
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
     if (spinner) spinner.classList.add('d-none');
     if (error) error.classList.remove('d-none');
-    if (retryBtn) retryBtn.classList.remove('d-none');
+    // Use the change-ports button in Try again mode (same behavior as retry).
+    if (retryBtn) retryBtn.classList.add('d-none');
     if (modalIn) modalIn.disabled = false;
     if (modalOut) modalOut.disabled = false;
+    if (changeBtn) {
+        changeBtn.textContent = 'Try again';
+        changeBtn.onclick = function() { sync_modal_retry(); };
+    }
 }
 
 function _hide_syncing_modal() {
@@ -3718,7 +3747,82 @@ function sync_modal_retry() {
     if (mainIn && modalIn) mainIn.selectedIndex = modalIn.selectedIndex;
     if (mainOut && modalOut) mainOut.selectedIndex = modalOut.selectedIndex;
     setup_midi_devices();
-    sync_amy_state();
+    // Reset modal UI to "trying" state and re-run the pageload sync.
+    var spinner = document.getElementById('sync-modal-spinner');
+    var error = document.getElementById('sync-modal-error');
+    var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
+    if (spinner) spinner.classList.remove('d-none');
+    if (error) error.classList.add('d-none');
+    if (retryBtn) retryBtn.classList.add('d-none');
+    if (modalIn) modalIn.disabled = true;
+    if (modalOut) modalOut.disabled = true;
+    if (changeBtn) { changeBtn.textContent = 'Change MIDI Ports'; changeBtn.classList.remove('d-none'); }
+    // Re-run the pageload sync flow if in control mode, otherwise fall back
+    // to the simple zA+zD path.
+    if (amyboard_mode === 'control' && typeof pageload_control_sync === 'function') {
+        pageload_control_sync();
+    } else {
+        sync_amy_state();
+    }
+}
+
+function sync_modal_change_ports() {
+    // Stop the in-progress sync and let the user pick different MIDI ports.
+    _sync_stage = null;
+    if (_sync_timeout) { clearTimeout(_sync_timeout); _sync_timeout = null; }
+    if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('cancelled')); }
+    // Cancel any pending ping wait from wait_for_board_ready.
+    if (_ping_resolve) { var pr = _ping_resolve; _ping_resolve = null; pr(); }
+    // Enable the dropdowns, hide the spinner, show the error/hint area,
+    // and rename the Change button to Try again.
+    var spinner = document.getElementById('sync-modal-spinner');
+    var error = document.getElementById('sync-modal-error');
+    var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
+    var modalIn = document.getElementById('sync-modal-midi-in');
+    var modalOut = document.getElementById('sync-modal-midi-out');
+    if (spinner) spinner.classList.add('d-none');
+    if (error) error.classList.remove('d-none');
+    if (retryBtn) retryBtn.classList.add('d-none');
+    if (modalIn) modalIn.disabled = false;
+    if (modalOut) modalOut.disabled = false;
+    if (changeBtn) changeBtn.textContent = 'Try again';
+    // Hook the changed button to sync_modal_retry instead.
+    if (changeBtn) changeBtn.onclick = function() { sync_modal_retry(); };
+}
+
+// Cookie helpers for remembering successful MIDI port selections.
+function _set_midi_cookie(inputName, outputName) {
+    try {
+        var value = encodeURIComponent(inputName || '') + '|' + encodeURIComponent(outputName || '');
+        document.cookie = 'amyboard_midi_ports=' + value + '; max-age=31536000; path=/; SameSite=Lax';
+    } catch (e) {}
+}
+
+function _get_midi_cookie() {
+    try {
+        var c = document.cookie.split('; ').find(function(x) { return x.startsWith('amyboard_midi_ports='); });
+        if (!c) return null;
+        var v = c.split('=')[1];
+        var parts = v.split('|');
+        return {
+            input: decodeURIComponent(parts[0] || ''),
+            output: decodeURIComponent(parts[1] || ''),
+        };
+    } catch (e) { return null; }
+}
+
+function _save_successful_midi_ports() {
+    var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
+    function _opt_portname(sel) {
+        if (!sel || !sel.options[sel.selectedIndex]) return '';
+        var t = sel.options[sel.selectedIndex].text || '';
+        var idx = t.indexOf(': ');
+        return (idx >= 0) ? t.slice(idx + 2) : t;
+    }
+    _set_midi_cookie(_opt_portname(mainIn), _opt_portname(mainOut));
 }
 
 async function reset_amyboard() {
@@ -4004,6 +4108,8 @@ function _handle_sync_sysex_payload(payload) {
             apply_zd_dump_to_knobs(knobsText);
         }
         _hide_syncing_modal();
+        // Remember the MIDI ports that worked so next page load can preselect.
+        try { _save_successful_midi_ports(); } catch (e) {}
         if (_sync_resolve) { var r = _sync_resolve; _sync_resolve = null; _sync_reject = null; r(); }
         return;
     }

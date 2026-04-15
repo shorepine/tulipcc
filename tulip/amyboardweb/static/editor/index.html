@@ -934,16 +934,21 @@
           if (editor) {
             editor.setValue(DEFAULT_SKETCH_SOURCE);
           }
-          // Auto-sync from hardware once MIDI devices are ready.
-          // Reboot into bootloader mode first so zD works reliably.
-          // Skip zA — in bootloader mode the sketch hasn't run yet so
-          // there's no live AMY state to capture, and zA would just
-          // overwrite the on-disk sketch.py's knobs with empty state.
-          _on_midi_ready = async function() {
+          // Pageload sync flow: reboot into bootloader, pull sketch via zD,
+          // then zP restart_sketch. Skip zA — in bootloader mode the sketch
+          // hasn't run yet so there's no live AMY state to capture, and zA
+          // would just overwrite the on-disk sketch.py's knobs with empty
+          // state.
+          window.pageload_control_sync = async function() {
             _show_syncing_modal();
             reboot_to_bootloader();
             console.log('pageload: zB sent, waiting for board...');
-            await wait_for_board_ready();
+            var ready = await wait_for_board_ready();
+            if (!ready) {
+              // Board didn't respond — show the error/change-ports UI.
+              _show_syncing_modal_error();
+              return;
+            }
             // Pull sketch.py from hardware (zD only, no zA).
             _sync_stage = 'pending';
             _last_sketch_text = null;
@@ -969,12 +974,15 @@
               console.log('pageload: zD response received');
             } catch (e) {
               console.warn('pageload: zD pull failed', e);
+              return;
             }
             // Board is in bootloader mode (sketch never imported).
             // Use zP to import and start the sketch.
             amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
             console.log('pageload: sketch started via zP');
           };
+          // Auto-sync from hardware once MIDI devices are ready.
+          _on_midi_ready = window.pageload_control_sync;
           await start_midi();
         }
       }
@@ -1154,7 +1162,8 @@
                 <label class="form-label small fw-bold mb-1">MIDI In</label>
                 <select id="sync-modal-midi-in" class="form-select form-select-sm mb-2" disabled></select>
                 <label class="form-label small fw-bold mb-1">MIDI Out</label>
-                <select id="sync-modal-midi-out" class="form-select form-select-sm" disabled></select>
+                <select id="sync-modal-midi-out" class="form-select form-select-sm mb-2" disabled></select>
+                <button type="button" class="btn btn-outline-primary btn-sm w-100" id="sync-modal-change-btn" onclick="sync_modal_change_ports();">Change MIDI Ports</button>
               </div>
               <!-- Try Again (shown on error) -->
               <button type="button" class="btn btn-primary btn-sm d-none mb-2" id="sync-modal-retry-btn" onclick="sync_modal_retry();">Try again</button>
