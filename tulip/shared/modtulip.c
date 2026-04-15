@@ -378,7 +378,11 @@ STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
     char *slot = sysex_message_copies[sysex_copy_read_idx];
     sysex_copy_read_idx = (sysex_copy_read_idx + 1) % SYSEX_COPY_SLOTS;
     if (slot) {
-        amy_add_message(slot);
+        // Use _from_sysex variant so that during a file transfer,
+        // this data is routed to parse_transfer_message. Internal
+        // amy.send() calls (from sketch loop) use amy_add_message
+        // directly and bypass the transfer routing.
+        amy_add_message_from_sysex(slot);
     }
     sequencer_midi_start();
     // ACK the message AFTER processing. The sender (web) waits for this
