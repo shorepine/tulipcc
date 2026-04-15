@@ -935,16 +935,40 @@
             editor.setValue(DEFAULT_SKETCH_SOURCE);
           }
           // Auto-sync from hardware once MIDI devices are ready.
-          // Reboot into bootloader mode first so zA+zD work reliably.
+          // Reboot into bootloader mode first so zD works reliably.
+          // Skip zA — in bootloader mode the sketch hasn't run yet so
+          // there's no live AMY state to capture, and zA would just
+          // overwrite the on-disk sketch.py's knobs with empty state.
           _on_midi_ready = async function() {
             _show_syncing_modal();
             reboot_to_bootloader();
             console.log('pageload: zB sent, waiting for board...');
             await wait_for_board_ready();
+            // Pull sketch.py from hardware (zD only, no zA).
+            _sync_stage = 'pending';
+            _last_sketch_text = null;
+            _sysex_reasm = null;
+            _sysex_b64_accum = '';
+            if (_sync_timeout) clearTimeout(_sync_timeout);
+            _sync_timeout = setTimeout(function() {
+              _sync_timeout = null;
+              if (_sync_stage !== null) {
+                _sync_stage = null;
+                _show_syncing_modal_error();
+                if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('sync timeout')); }
+              }
+            }, _SYNC_TIMEOUT_MS);
+            var pullPromise = new Promise(function(resolve, reject) {
+              _sync_resolve = resolve;
+              _sync_reject = reject;
+            });
+            console.log('pageload: sending zD');
+            amy_add_log_message('zD/user/current/sketch.pyZ');
             try {
-              await sync_amy_state_async();
+              await pullPromise;
+              console.log('pageload: zD response received');
             } catch (e) {
-              console.warn('pageload: sync failed', e);
+              console.warn('pageload: zD pull failed', e);
             }
             // Board is in bootloader mode (sketch never imported).
             // Use zP to import and start the sketch.
