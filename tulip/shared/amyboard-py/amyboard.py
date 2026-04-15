@@ -716,57 +716,92 @@ def _web_encoder_press(state):
 #  read_buttons()  # returns a boolean list of the state of the 4 buttons.
 # Code based on abstracting
 # https://github.com/adafruit/Adafruit_CircuitPython_seesaw/blob/main/adafruit_seesaw/seesaw.py.
+#
+# Missing-hardware behaviour: if the Seesaw encoder breakout isn't on the
+# I2C bus (user built an AMYboard with no rotary encoder attached), the
+# helpers below catch the resulting OSError on the first try, cache the
+# offending device address in _seesaw_missing, and silently return safe
+# defaults from then on. This lets sketches like preset_selector.py still
+# import and run cleanly — they just don't see encoder motion or button
+# presses instead of crashing the board at sketch import time.
+
+_seesaw_missing = set()  # addresses we've already probed and confirmed absent
 
 def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
-    """Read the cumulated value of encoder 0..3."""
+    """Read the cumulated value of encoder 0..3.
+
+    Returns 0 if the seesaw device isn't present on the I2C bus (see
+    module-level note on missing-hardware behaviour)."""
     if web():
         return _web_encoder_pos
-    i2c = get_i2c()
-    result = bytearray(4)
-    ENCODER_BASE = 0x11
-    ENCODER_POSITION = 0x30
-    i2c.writeto(seesaw_dev, bytes([ENCODER_BASE, ENCODER_POSITION + encoder]))
-    time.sleep(delay)
-    i2c.readfrom_into(seesaw_dev, result)
-    return struct.unpack(">i", result)[0]
+    if seesaw_dev in _seesaw_missing:
+        return 0
+    try:
+        i2c = get_i2c()
+        result = bytearray(4)
+        ENCODER_BASE = 0x11
+        ENCODER_POSITION = 0x30
+        i2c.writeto(seesaw_dev, bytes([ENCODER_BASE, ENCODER_POSITION + encoder]))
+        time.sleep(delay)
+        i2c.readfrom_into(seesaw_dev, result)
+        return struct.unpack(">i", result)[0]
+    except OSError:
+        _seesaw_missing.add(seesaw_dev)
+        return 0
 
 def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
-    """Setup the seesaw quad encoder button pins to input_pullup."""
+    """Setup the seesaw quad encoder button pins to input_pullup.
+
+    Silently no-ops if the seesaw device isn't on the I2C bus."""
     if web():
         return
-    mask = 0
-    for p in pins:
-        mask |= (1 << p)
-    mask_bytes = struct.pack('>I', mask)
-    i2c = get_i2c()
-    GPIO_BASE = 0x01
-    GPIO_DIRCLR_BULK = 0x03
-    GPIO_PULLENSET = 0x0B
-    GPIO_BULK_SET = 0x05
-    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_DIRCLR_BULK]) + mask_bytes)
-    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_PULLENSET]) + mask_bytes)
-    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK_SET]) + mask_bytes)
+    if seesaw_dev in _seesaw_missing:
+        return
+    try:
+        mask = 0
+        for p in pins:
+            mask |= (1 << p)
+        mask_bytes = struct.pack('>I', mask)
+        i2c = get_i2c()
+        GPIO_BASE = 0x01
+        GPIO_DIRCLR_BULK = 0x03
+        GPIO_PULLENSET = 0x0B
+        GPIO_BULK_SET = 0x05
+        i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_DIRCLR_BULK]) + mask_bytes)
+        i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_PULLENSET]) + mask_bytes)
+        i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK_SET]) + mask_bytes)
+    except OSError:
+        _seesaw_missing.add(seesaw_dev)
 
 def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.008):
-    """Read the 4 seesaw encoder push buttons."""
+    """Read the 4 seesaw encoder push buttons.
+
+    Returns [False, False, ...] (one entry per pin) if the seesaw device
+    isn't on the I2C bus."""
     if web():
         return [_web_encoder_button] * len(pins)
-    i2c = get_i2c()
-    GPIO_BASE = 0x01
-    GPIO_BULK = 0x04
-    i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK]))
-    time.sleep(delay)
-    buffer = bytearray(4)
-    i2c.readfrom_into(seesaw_dev, buffer)
-    mask = struct.unpack('>I', buffer)[0]
-    result = []
-    for p in pins:
-        state = True
-        if (mask & (1 << p)):
-            # bit set means button not pressed.
-            state = False
-        result.append(state)
-    return result
+    if seesaw_dev in _seesaw_missing:
+        return [False] * len(pins)
+    try:
+        i2c = get_i2c()
+        GPIO_BASE = 0x01
+        GPIO_BULK = 0x04
+        i2c.writeto(seesaw_dev, bytes([GPIO_BASE, GPIO_BULK]))
+        time.sleep(delay)
+        buffer = bytearray(4)
+        i2c.readfrom_into(seesaw_dev, buffer)
+        mask = struct.unpack('>I', buffer)[0]
+        result = []
+        for p in pins:
+            state = True
+            if (mask & (1 << p)):
+                # bit set means button not pressed.
+                state = False
+            result.append(state)
+        return result
+    except OSError:
+        _seesaw_missing.add(seesaw_dev)
+        return [False] * len(pins)
 
 def monitor_encoders():
     """Show status of encoders on display."""
