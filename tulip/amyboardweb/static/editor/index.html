@@ -1069,16 +1069,18 @@
         <div class="modal-dialog modal-dialog-centered">
           <div class="modal-content">
             <div class="modal-header border-0 pb-0">
-              <h4 class="modal-title w-100 text-center" id="modeSelectionModalLabel">How would you like to use AMYboard?</h4>
+              <h4 class="modal-title w-100 text-center" id="modeSelectionModalLabel">How would you like to use AMYboard Online?</h4>
             </div>
             <div class="modal-body text-center">
-              <p class="text-muted mb-4">You can change this later at any time.</p>
+              <p class="text-muted mb-4">You can switch between modes at any time.</p>
               <div class="d-flex justify-content-center gap-3 mb-3">
-                <button type="button" class="btn btn-success btn-lg px-4" onclick="select_mode('simulate');">
-                  Simulate an AMYboard
+                <button type="button" class="btn btn-success btn-lg px-4 text-start" onclick="select_mode('simulate');" style="max-width:240px;">
+                  <div class="fw-bold">Simulate an AMYboard</div>
+                  <div class="small fw-normal mt-1">Your browser can act as an AMYboard. You can hear the audio and control the simulated synth with Python or MIDI.</div>
                 </button>
-                <button type="button" class="btn btn-primary btn-lg px-4" onclick="select_mode('control');">
-                  Control your AMYboard
+                <button type="button" class="btn btn-dark btn-lg px-4 text-start" onclick="select_mode('control');" style="max-width:240px;">
+                  <div class="fw-bold">Control your AMYboard</div>
+                  <div class="small fw-normal mt-1">Make sure your AMYboard is connected via USB or MIDI. Every knob and code update goes right to your AMYboard.</div>
                 </button>
               </div>
               <div class="form-check d-inline-flex align-items-center gap-1">
