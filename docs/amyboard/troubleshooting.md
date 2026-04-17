@@ -20,11 +20,14 @@ Many issues are fixed in newer firmware. Before troubleshooting, [update to the 
  - Is the USB-C cable, modular power or I2c power connected? AMYboard needs power.
  - Are cables plugged into the **audio out** jack (not audio in)?
 
+**Reset the sketch**
+ - Connect to your AMYboard in [AMYboard Online](online.md) and use the "Reset" tab. This should revert your AMYboard to a default patch.
+
 **Check the synth:**
- - Connect via `mpremote resume` and try:
+ - Connect via [serial connection](python.md) and try:
    ```python
    import amy
-   amy.send(osc=0, wave=amy.SINE, freq=440, vel=1)
+   amy.send(osc=110, wave=amy.SINE, freq=440, vel=1)
    ```
    You should hear a 440Hz sine wave. If you do, the audio hardware is working.
 
@@ -32,6 +35,9 @@ Many issues are fixed in newer firmware. Before troubleshooting, [update to the 
  - AMYboard boots with Juno-6 patch #0 on MIDI channel 1. Make sure your controller is sending on channel 1.
  - Try a different MIDI cable or controller.
  - Check USB MIDI vs TRS MIDI -- are you using the right connection?
+
+
+
 
 ## No serial connection / mpremote can't find the board
 
@@ -44,6 +50,7 @@ Many issues are fixed in newer firmware. Before troubleshooting, [update to the 
 
 ## USB MIDI not recognized
 
+ - Did you hit RST? Try that first.
  - AMYboard appears as a USB MIDI device with VID `0xCAF0` and PID `0x4009`.
  - On macOS, open **Audio MIDI Setup** and check if AMYboard appears.
  - On Windows, check Device Manager under "Sound, video and game controllers".
@@ -52,19 +59,17 @@ Many issues are fixed in newer firmware. Before troubleshooting, [update to the 
 
 ## AMYboard Online issues
 
-### No sound in the browser
- - Click anywhere on the page to unlock the browser's AudioContext. Browsers block audio until user interaction.
- - Check that your browser's audio output is set to the correct device.
- - Try Chrome -- it has the best Web Audio support.
-
 ### Web MIDI not working
  - Web MIDI requires Chrome or Edge. Firefox and Safari do not support Web MIDI.
  - Make sure your MIDI device is connected before opening amyboard.com.
  - Click the MIDI device selector and choose your device.
  - On some systems, you may need to grant MIDI access permission.
 
-### "Send to AMYboard" fails
- - Make sure AMYboard is connected via USB or MIDI.
+### AMYboard Online can't find the board
+
+ - Make sure you are not connected to AYMboard over a serial connection when using AMYboard online.
+ - Look at the browsers' JS console to see helpful diagnostic messages.
+ - [Re-flash your firmware](firmware.md) if you're having issues.
 
 ## MIDI issues
 

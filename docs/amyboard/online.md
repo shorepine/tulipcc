@@ -11,62 +11,80 @@ On first load, you'll see this. It's up to you if you want to simulate an AMYboa
 
 **Before using AMYboard Online in control mode, make sure you've [upgraded your firmware](firmware.md).**
 
-If you want Control mode, you should first ensure your AMYboard is connected to your computer via MIDI. You can use just the USB-C port directly -- it exposes a MIDI in and out port for you. But if your USB-C port is not accessible or you'd rather use direct MIDI, you can choose the MIDI in and out ports that are connected to your AMYboard's MIDI out and in ports (remember to swap the directions -- your computer's MIDI out should be connected to AMYboard's MIDI in, and vice versa.) If you're using USB-C MIDI, we'll detect it for you.
+If you want Control mode, you should first ensure your AMYboard is connected to your computer via MIDI. 
+
+You can use just the USB-C port directly -- it exposes a MIDI in and out port for you. If you're using USB-C MIDI, we'll detect it for you.
+
+But if your USB-C port is not accessible or you'd rather use direct MIDI, you can choose the MIDI in and out ports that are connected to your AMYboard's MIDI out and in ports (remember to swap the directions -- your computer's MIDI out should be connected to AMYboard's MIDI in, and vice versa.) 
 
 You'll see a brief "syncing" window while we pull the latest sketch and knob settings from your AMYboard over MIDI. If your AMYboard is not connected yet, do it now (and re-choose the MIDI port again.)
 
-<img src="img/pulling.png">
+If the sync windows stays up a long time and you're sure you've got MIDI wired up properly, you may need to [reflash your firmware.](firmware.md)
+
+<img src="img/pulling.png" width=600>
 
 Once it goes away you'll see the main AMYboard Online, with the knobs (described below) and a strip up top:
 
-<img src="img/control.png">
+<img src="img/control.png" width=600>
 
-<img src="img/reset.png">
+You can immediately start using your AMYboard. Click a note on the piano keyboard on screen and your AMYboard should respond. Move some knobs and they should respond on the AMYboard. 
 
-<img src="img/simulate_top.png">
+Let's go through the rest of the page:
 
 <img src="img/control_top.png">
 
-<img src="img/presets.png">
+The **MIDI Input Pass-Thru** lets you optionally choose _another MIDI in port on your computer_ to control AMYboard as well as the on-screen knobs and keyboard. This is a convenient way to both control and perform with AMYboard using the web page. It's optional to turn on. but if you have (for example) a MIDI controller hooked up to your computer, select it and you can play directly to the AMYboard.
 
-<img src="img/synth_knobs.png">
+"Switch to Simulate" moves to you Simulate mode. We'll cover that next.
 
-<img src="img/sketch.png">
+The tabs on the top:
+
+ - Patch - the knobs and settings per channel for the sythesizer
+ - Code - the sketch file and control over the sequencer
+ - AMYboard World - browse, download and upload your own sketches
+ - Upgrade Firmware - [flash a new firmware](firmware.md) directly over the web
+ - Reset - will reset and restart your AMYboard to defaults.
+
+"Write Sketch & Knobs to AMYboard" - will replace what is running on the AMYboard with the current state as it is now. You want to do this if you want the AMYboard to sound the same when you next turn it off and on again. 
 
 
+## Simulate Mode
 
-## Simulate mode
+If you choose simulate mode you will have an AMYboard running in your browser. It can make the same sounds and run the same sketches as a real AMYboard (there are a couple of small changes, but most people won't notice.) It's a great way to develop your AMYboard sketches away from your synth setup. 
 
-If you choose simulate, you'll be asked to click through a dialog to start audio in your browser. You should then be able to play the piano notes on the screen and hear the default synth. 
+The simulate page is slightly different:
 
-## Getting started
+<img src="img/simulate_top.png">
 
-Just open [amyboard.com](https://amyboard.com/editor) in Chrome, Edge, or Firefox (Safari works but MIDI and therefore "Control Mode" is not available). Click anywhere once on the page to unlock audio, and you're ready to go.
+- MIDI in and out - this is the MIDI ports of the simulated AMYboard. If you want to control the simulated AMYboard over MIDI, wire up your MIDI in port. If you want to have simulated AMYboard send MIDI out (using [wave=amy.MIDI](https://github.com/shorepine/amy/blob/main/docs/api.md), choose a MIDI out port as well. 
+- Allow Audio Input - on web, you have to manually allow your browser to listen to your audio input. We only use this for AMY effects (e.g. amy.AUDIO_IN0) and sampling.
+- Switch to Control - goes back to Control mode.
 
-The online editor can be used to both set up a code environment and patches for your AMYboard, or you can just use the site on its own to make music. It can respond to MIDI like a synth, and the sketches you write will work there too. It can't do _everything_ a real AMYboard can - but it's close enough for most things. 
+### The patch editor
 
-## Play and edit patches
+The patch editor works the same in both modes. On simulate mode, remember, you're controlling a version of AMYboard running in your browser. In control mode, every knob changes the AMYboard itself in real time.
 
-The web editor gives you a knob-per-function interface for Juno-6 and DX7 style patches.
 
-<img src="img/channel_strip.png" width=700>
+<img src="img/channel_strip.png">
 
-The channel strip runs across the top of the Patch tab and controls which synth channel you're editing.
+The channel strip up top lets you use different patches for each of 16 MIDI channels. 
 
 | Control | Description |
 |---------|-------------|
 | **Channel 1** (dropdown) | Select which of the 16 independent synth channels to edit. Each channel has its own patch, MIDI assignment, and parameter set. |
 | **Active** (checkbox) | Enable or disable this channel. Unchecking it silences the channel without losing its settings. |
-| **Patch: None** (button) | Click to open the patch browser and load one of the 256 built-in presets into the current channel. The button shows the name of the currently loaded patch for this channel. |
-| **Save** (red button) | Save the current knob values as a named patch. You can recall it later from the patch browser. An asterisk will appear if the patch is "dirty" (has changes that haven't been saved.) |
-| **Revert** | Reset the current channel back to the last saved or loaded patch, discarding any unsaved edits. |
-| **Clear** | Reset all knobs on this channel to their default values and remove the patch name. |
-| **Effects** | The global effects panel (EQ, Chorus, Reverb, Echo). Effects are shared across all channels. |
+| **Load Preset** (button) | Click to open the preset browser and load one of the 256 built-in presets into the current channel.  |
+| **Clear** | Reset all knobs on this channel to their default values. |
+| **Level** | Sets the relative volume of this channel |
 
 
-<img src="img/load_patches.png" width=400>
+If you click "Load Preset" you'll see the preset dropdown:
 
-The patch browser lets you load from your own patches, Juno-6 and DX-7 presets, and community patches from AMYboard World.
+<img src="img/presets.png" width=600>
+
+
+Under the channel strip are the knobs that can set the sound parameters.
+
 
 
 <img src="img/patch_knobs.png" width=700>
@@ -133,28 +151,6 @@ The patch knob panel contains six sections organized into two columns. The left 
 | **release** | Time (ms) for the note to fade to silence after note-off. |
 
 
-If you have a MIDI controller and a browser that supports WebMIDI, AMYboard Online can use it directly:
-
- - Click the MIDI device selector to choose your input and output devices
- - Play notes on your controller and hear them through AMYboard's synth engine
- - MIDI CC messages can control patch parameters in real time
-
-
-<img src="img/knob_modal.png" width=250>
-
-*The knob settings popup showing min/max range, log scaling toggle, and MIDI CC assignment with Learn mode.*
-
-Click any knob **label** (the text above or below the knob, e.g. "freq") to open its parameter editor popup.
-
-| Field | Description |
-|-------|-------------|
-| **min / max** | The real-world range this knob covers. For example, OSC A freq defaults to min 50 Hz / max 2000 Hz. Tighten this range to make the knob more precise over a smaller span of values. |
-| **log** | When checked, the knob follows a logarithmic scale — useful for frequency and time parameters where large values are less perceptually important. |
-| **MIDI CC (0-127)** | Assign a MIDI Continuous Controller number to this knob. When your controller sends that CC, the knob moves in real time. |
-| **Learn** | Click Learn, then move a knob or fader on your MIDI controller. The CC number is detected automatically and filled in. |
-| **Save / Cancel** | Save commits the new range and CC assignment. Cancel closes without changing anything. |
-
-
 <img src="img/effects_knobs.png" width=220>
 
 The Effects panel (right side of the Patch tab) contains four global processors shared by all channels.
@@ -192,63 +188,53 @@ The Effects panel (right side of the Patch tab) contains four global processors 
 | **feedback** | How much of the echo signal feeds back into itself (0–1). Higher values create longer, repeating echoes. Keep below 1 to avoid runaway feedback. |
 
 
+### Setting MIDI CCs and Knob parameters
+
+<img src="img/knob_modal.png" width=250>
+
+Click any knob **label** (the text above or below the knob, e.g. "freq") to open its parameter editor popup.
+
+| Field | Description |
+|-------|-------------|
+| **min / max** | The real-world range this knob covers. For example, OSC A freq defaults to min 50 Hz / max 2000 Hz. Tighten this range to make the knob more precise over a smaller span of values. |
+| **log** | When checked, the knob follows a logarithmic scale — useful for frequency and time parameters where large values are less perceptually important. |
+| **MIDI CC (0-127)** | Assign a MIDI Continuous Controller number to this knob. When your controller sends that CC, the knob moves in real time. If empty no CC assignment is made. |
+| **Learn** | Click Learn, then move a knob or fader on your MIDI controller. The CC number is detected automatically and filled in. |
+| **Save / Cancel** | Save commits the new range and CC assignment. Cancel closes without changing anything. |
+
+
+
 ## Write and run Python sketches
 
-When AMYboard starts up, either on web or hardware, it sets up whatever patches are set to each channel (using a file called `editor_state.json` that you can see in the code editor) and then runs a "sketch" set up in `sketch.py`. This is a Python program that runs setup code (in the top level of the code file) and then calls `loop()` periodically (about every 50ms). 
+When AMYboard starts up, either on web or hardware, it sets up whatever patches are set to each channel (using data stored in a sketch) and then runs a "sketch" set up in `sketch.py`. This is a Python program that runs setup code (in the top level of the code file) and then calls `loop()` periodically -- every 32nd note of the sequencer. 
 
-<img src="img/code_editor.png" width=600>
+<img src="img/code.png">
 
-*The Code editor with syntax highlighting, file management, and live execution. Write and edit Python scripts that control AMY directly.*
+The code tab of AMYboard online has a code editor. You should see a default `sketch.py` that you can edit. 
 
-The code tab of AMYboard online has a code editor. You should see a default `sketch.py` that you can edit. Once you make changes, click the green Start button to re-run the code. The other buttons on the Your Files section are:
+To run this code, you have to first write the sketch by clicking "Write Sketch & Knobs to (Simulator / AMYboard)."
 
- - <img src="img/icon_upload.png" width=32> Upload a file from your computer into AMYboard storage
- - <img src="img/icon_plus.png" width=32> Add a new blank file
- - <img src="img/icon_edit.png" width=32> Rename the selected file
- - <img src="img/icon_trash.png" width=32> Delete the selected file
+Under the code editor you'll see "Start", "Stop", "Restart" and a sequencer tempo entry. Those will start/pause the loop() callback in your sketch. 
 
-The code editor auto-saves, so there's no save button. 
-
-Above the code editor is an option "REPL" - a way to interactively type commands into AYMboard online. Remember, this is not directly communicating with your hardware AMYboard, it is talking to the AMYboard emulator running in your web browser. If you want to write code directly on your AMYboard, [see our Python documentation](python.md). 
+In simulate mode only you'll see a disclosure triangle for "Terminal REPL" - this gives you an in-browser Python REPL where you can type in your own Python commands. If you want this REPL in Control mode, you should [connect directly to your AMYboard](python.md) using serial connection. 
 
 <img src="img/terminal_repl.png" width=600>
 
 *The Terminal REPL gives you an interactive MicroPython prompt where you can type AMY commands and see results immediately.*
 
-Under the code editor is a row of simulated [AMYboard accessories](accessories.md). This includes an OLED display, a rotary encoder with push button, and two CV input knobs. These help you verify your hardware hookups before deploying to a real AMYboard with acessories.
+Also only in simulate mode, under the code editor is a row of simulated [AMYboard accessories](accessories.md). This includes an OLED display, a rotary encoder with push button, and two CV input knobs. These help you verify your hardware hookups before deploying to a real AMYboard with acessories.
 
 <img src="img/oled_rotary_cv.png" width=600>
-
-*The hardware interface: OLED display showing firmware info, rotary encoder for patch selection, and CV input knobs for modular integration.*
-
-## Transfer environments to your AMYboard hardware
-
-You can transfer the state of your AMYboard online session directly to a real AMYboard over MIDI SYSEX. You can use either USB MIDI (AMYboard device) or TRS MIDI cable from your own MIDI hardware. 
-
-<img src="img/send_to_amyboard.png" width=600>
-
-If you have an AMYboard connected via USB:
-
- 1. Click **Send to AMYboard** in the web editor
- 2. Make sure your MIDI out (the pull-down menu in the top-right of the editor window) is set to your AMYboard! If your AMYboard is connected over USB, MIDI out should say "MIDI out: AMYboard". If you're using TRS MIDI, connect it from your MIDI out port to your AMYboard MIDI in.  *Note:* You may need to quit and reopen your web browser to make it recognize the AMYboard USB MIDI device
- 3. Your current patch assignments, modified patches, and any audio files or python files including `sketch.py` are packed into an archive and transferred over MIDI SysEx
- 4. The hardware AMYboard unpacks and applies everything automatically, then reboots
-
-This is the easiest way to set up your hardware AMYboard from a comfortable editing environment.
 
 
 ## AMYboard World
 
-We provide a file sharing network for AMYboard called "AMYboard World." People can share their own environments and patches. It's up to you if you want to share your code with others, but we recommend it! Make sure to join us on our [Discord](https://discord.gg/TzBFkUb8pG) to let people know about your uploads. 
+We provide a file sharing network for AMYboard called "AMYboard World." People can share their own sketches. It's up to you if you want to share your code with others, but we recommend it! Make sure to join us on our [Discord](https://discord.gg/TzBFkUb8pG) to let people know about your uploads. 
 
 
-<img src="img/amyboard_world_environments.png" width=600>
+<img src="img/abw_sketches.png" width=600>
 
-You can search or see everyone's uploaded environments. Enviroments contain everything in the file list -- both patches and code. An online or hardware AMYboard runs a single environment at a time. Click on an environment to replace your current setup with one from AMYboard World. 
-
-<img src="img/amyboard_world_patches.png" width=600>
-
-You can also download individual patches for synths from the community. This will just update your current patch settings. You can also preview a few notes of a patch before downloading it.
+You can search or see everyone's uploaded sketches. They contain both patches and code. An online or hardware AMYboard runs a single sketch at a time. Click on an environment to replace your current setup with one from AMYboard World. 
 
 <img src="img/amyboard_world_upload.png" width=600>
 

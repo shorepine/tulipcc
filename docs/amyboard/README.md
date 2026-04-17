@@ -89,7 +89,7 @@ Before you do anything else, upgrade your firmware! The easiest way is online vi
 1. **Plug in USB-C** from your computer to AMYboard. It powers the board and gives you a serial and MIDI connection.
 2. **Plug in headphones or speakers** to the audio out jack.
 3. **Connect a MIDI controller** (To your DAW using USB MIDI or TRS MIDI) and play! AMYboard boots with Juno-6 patch #0 on MIDI channel 1 by default. 
-4. **Try out AMYboard online**. Use [AMYboard online](online.md) to change synth patches, try out code environments and see other people's patches and code on AMYboard World. You can send code and patches right to your AMYboard over a MIDI connection (TRS MIDI or USB) online.
+4. **Try out AMYboard online**. Use [AMYboard online](online.md) in **Control mode** to change synth patches, try out code environments and see other people's patches and code on AMYboard World. You can send code and patches right to your AMYboard over a MIDI connection (TRS MIDI or USB).
 
 ## Quick start - Modular Synth
 
