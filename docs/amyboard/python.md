@@ -136,7 +136,7 @@ mpremote connect /dev/YOUR_SERIAL_PORT
 Then at the REPL:
 
 ```python
-amyboard.edit('current/sketch.py')
+edit('current/sketch.py')
 ```
 
 This opens a full-screen text editor. On macOS, use **Esc then the key** instead of Ctrl (macOS terminals intercept many Ctrl sequences):
@@ -177,6 +177,11 @@ mpremote resume fs cp :sketch.py sketch.py
 # Edit a file on AMYboard with your local editor
 mpremote resume edit sketch.py
 ```
+
+### Transfer files using the microSD card
+
+First, copy the files you want to the card on your computer. Then insert it into the AMYboard and reboot (or try `amyboard.mount_sd()`). Then you can access those files directly from Python or copy them to user storage: `cp('/sd/file.wav', '/user/file.wav')`.
+
 
 ## Working with MIDI in Python
 

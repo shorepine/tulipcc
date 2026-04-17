@@ -16,7 +16,7 @@ The [AMYboard Online editor](https://amyboard.com/editor) includes a built-in fi
 
 4. Choose the serial port that corresponds to your AMYboard (it may show up as "USB/JTAG" or "AMYboard")
 
-<img src="img/choose_serial_port.png" width=400>
+<img src="img/serial_ports.png" width=400>
 
 5. Choose to either **Upgrade AMYboard firmware** (keeps your files) or **Fully erase and re-flash AMYboard** (fresh start).
 6. Wait for the process to complete. You can then hit the RST button to restart your AMYboard into the upgraded firmware!
