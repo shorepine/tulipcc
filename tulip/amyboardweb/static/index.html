@@ -26,6 +26,25 @@
   <meta name="author" content="shore pine sound systems">
   <meta name="HandheldFriendly" content="true">
   <title>AMYboard. The do-it-all synth for US$29.90</title>
+  <script>
+    // Self-heal for users who had an older coi-serviceworker (mini-coi.js)
+    // registered at root scope from a previous version of the editor. Once
+    // installed it intercepts every fetch on amyboard.com and adds
+    // Cross-Origin-Embedder-Policy: require-corp, which breaks cross-origin
+    // iframes like the YouTube hero video below. Unregister any service
+    // worker scoped to this origin on page load and reload once so the
+    // refreshed response has clean headers.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function (regs) {
+        var cleaned = false;
+        for (var i = 0; i < regs.length; i++) {
+          regs[i].unregister();
+          cleaned = true;
+        }
+        if (cleaned) location.reload();
+      }).catch(function () {});
+    }
+  </script>
   <link rel="stylesheet" href="css/theme.css">
 
   <style>
