@@ -1353,6 +1353,9 @@
                     <button type="button" class="btn btn-sm btn-success" onclick="control_sequencer_start();">Start</button>
                     <button type="button" class="btn btn-sm btn-danger" onclick="control_sequencer_stop();">Stop</button>
                     <button type="button" class="btn btn-sm btn-warning" onclick="restart_sketch();">Restart</button>
+                    <span class="ms-2 small fw-semibold">Tempo:</span>
+                    <input type="number" id="tempo-input-control" class="form-control form-control-sm" style="width: 75px;" min="40" max="240" placeholder="BPM">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="set_tempo_from_ui('tempo-input-control');">Set Tempo</button>
                   </div>
                 </div>
               </div>
@@ -1377,6 +1380,9 @@
                       onclick="stop_current_environment()"
                     >Stop</button>
                     <button type="button" class="btn btn-sm btn-warning" onclick="restart_sketch();">Restart</button>
+                    <span class="ms-2 small fw-semibold">Tempo:</span>
+                    <input type="number" id="tempo-input-simulate" class="form-control form-control-sm" style="width: 75px;" min="40" max="240" placeholder="BPM">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="set_tempo_from_ui('tempo-input-simulate');">Set Tempo</button>
                   </div>
                 </div>
               </div>

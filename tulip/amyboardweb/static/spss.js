@@ -2508,6 +2508,21 @@ async function restart_sketch() {
     }
 }
 
+function set_tempo_from_ui(inputId) {
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var val = parseInt(input.value, 10);
+    if (isNaN(val) || val < 40 || val > 240) {
+        if (typeof show_alert === 'function') show_alert('Tempo must be between 40 and 240 BPM.');
+        return;
+    }
+    if (amyboard_mode === 'control') {
+        amy_add_log_message('zPimport sequencer; sequencer.tempo(' + val + ')Z');
+    } else {
+        runCodeBlock('import sequencer; sequencer.tempo(' + val + ')');
+    }
+}
+
 function reboot_to_bootloader() {
     // zB/zB0: reboot into bootloader mode (sketch skipped).
     // Handled in pure C — works even when loop() is hogging the scheduler.
