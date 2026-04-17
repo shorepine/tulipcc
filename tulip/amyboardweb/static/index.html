@@ -330,17 +330,12 @@
 
     /* ── VIDEO ── */
     .video-wrapper {
-      position: relative;
       width: 100%;
-      max-width: 960px;
+      max-width: 720px;       /* ~75% of the old 960px */
+      aspect-ratio: 16 / 9;   /* 16:9 YouTube aspect */
       margin: 0 auto;
-      padding-bottom: 56.25%;
-      height: 0;
     }
     .video-wrapper iframe {
-      position: absolute;
-      top: 0;
-      left: 0;
       width: 100%;
       height: 100%;
       border: 4px solid #FFDD00;
@@ -651,7 +646,7 @@
   <div class="container">
     <h2 class="section-title">Hear it in action</h2>
     <div class="video-wrapper">
-      <iframe src="https://www.youtube.com/embed/00TVvMiIWes" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+      <iframe src="https://www.youtube.com/embed/SZ3yKhryL2s" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
     </div>
   </div>
 </section>
