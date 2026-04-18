@@ -1543,6 +1543,37 @@ async function setup_midi_devices() {
     midiInputDevice = null;
   }
   midiOutputDevice = get_selected_midi_output_device();
+  // Force both the underlying MIDIInput and MIDIOutput to connection='open'.
+  // Per WebMIDI spec, addEventListener('midimessage', ...) and the first
+  // send() should auto-open, but on Windows Chrome has been observed
+  // leaving both at connection='closed' even after listener attach and
+  // sendSysex calls — which silently eats all traffic. Explicit .open()
+  // returns a Promise that resolves when the underlying OS port is really
+  // open. Fire-and-forget (don't await) so setup_midi_devices stays quick.
+  try {
+      var rawIn = _raw_sysex_input;
+      if (rawIn && typeof rawIn.open === 'function') {
+          rawIn.open().then(function() {
+              console.log('midi input opened: id=' + rawIn.id +
+                          ' state=' + rawIn.state +
+                          ' connection=' + rawIn.connection);
+          }).catch(function(e) {
+              console.warn('midi input open failed:', e && e.message ? e.message : e);
+          });
+      }
+  } catch (e) {}
+  try {
+      var rawOut = midiOutputDevice && (midiOutputDevice._midiOutput || midiOutputDevice.output || null);
+      if (rawOut && typeof rawOut.open === 'function') {
+          rawOut.open().then(function() {
+              console.log('midi output opened: id=' + rawOut.id +
+                          ' state=' + rawOut.state +
+                          ' connection=' + rawOut.connection);
+          }).catch(function(e) {
+              console.warn('midi output open failed:', e && e.message ? e.message : e);
+          });
+      }
+  } catch (e) {}
   // Refresh the pass-thru dropdown so it excludes the (possibly new) MIDI in.
   populate_midi_passthru_dropdown();
   refresh_amyboard_port_warning();
@@ -2546,6 +2577,16 @@ function _send_zi_ping() {
     var outputDevice = get_selected_midi_output_device();
     if (!outputDevice) return false;
     try {
+        // Best-effort: force the underlying MIDIOutput to connection='open'
+        // before each send. On Windows Chrome, connection has been observed
+        // stuck at 'closed' through the entire poll window — sendSysex is
+        // then a silent no-op. Fire-and-forget (don't await): if open()
+        // succeeds in time, the send reaches the port; if not, we'll try
+        // again next iteration.
+        var rawOut = outputDevice._midiOutput || outputDevice.output || null;
+        if (rawOut && typeof rawOut.open === 'function') {
+            try { rawOut.open().catch(function() {}); } catch (e) {}
+        }
         var payload = Array.from(new TextEncoder().encode('zIZ'));
         if (typeof outputDevice.sendSysex === 'function') {
             outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
@@ -2601,35 +2642,37 @@ async function _install_raw_midi_statechange_diagnostic() {
 }
 
 async function wait_for_board_ready(timeout_ms) {
-    if (!timeout_ms) timeout_ms = 15000;
+    // Default 30s — Windows repros show Chrome's WebMIDI never fires
+    // statechange to JS across a USB reboot, so a time-based probe
+    // strategy is the only thing that can work. 15s wasn't enough; 30s
+    // gives Chrome more chance to internally settle and also gives the
+    // board time to reboot and the probe-mode cycle to send a couple of
+    // late pings. macOS happy path resolves in < 5s so the ceiling is
+    // a worst-case bound, not a typical wait.
+    if (!timeout_ms) timeout_ms = 30000;
     // Install raw-access diagnostic if we haven't already. No-op on repeat calls.
     _install_raw_midi_statechange_diagnostic();
     // Poll with zI until the board replies with OK.
     var start_time = Date.now();
     var deadline = start_time + timeout_ms;
 
-    // Windows-specific fast-path: when the AMYboard finishes its post-zB
-    // USB reconnect, Chrome creates a fresh MIDIInput/MIDIOutput pair and
-    // our cached references go stale. WebMidi fires "connected" events
-    // for each reappearance. Listen for those so we can rebind the
-    // midimessage listener onto the new input (via setup_midi_devices)
-    // and fire one extra ping on the refreshed output. This RACES against
-    // the normal polling loop — it doesn't replace it — so if connected
-    // events never fire (some WebMidi.js versions, or if the platform
-    // silently reuses the port like macOS CoreMIDI) the existing retry
-    // loop still gets us a reply.
-    // Cap outgoing pings once we've seen a streak of non-replies. On Windows,
-    // Chrome's WebMIDI keeps the stale MIDIOutput reporting state='connected'
-    // for the full 15s window even though the physical device rebooted
-    // underneath it with a fresh USB id. sendSysex against that stale port
-    // silently queues in Chrome's internal worker with ~2s timeouts each;
-    // 30 queued sends drain AFTER our own timeout fires, hanging the
-    // renderer for ~60s. By stopping sends after MAX_FAILURES we bound the
-    // queue to at most MAX_FAILURES items — a few seconds of drain worst
-    // case. We resume sending the instant we see positive evidence the
-    // port is fresh (id change or WebMidi `connected` event).
-    var MAX_FAILURES_BEFORE_PAUSE = 3;
+    // Send strategy:
+    //   - Burst: the first MAX_BURST_PINGS iterations ping every loop tick
+    //     (catches the macOS happy path where the board replies within
+    //     a couple of seconds).
+    //   - Probe: after the burst, send at most one ping every PROBE_INTERVAL_MS.
+    //     This keeps gently nudging Chrome's WebMIDI plumbing (which we've
+    //     seen truly frozen on Windows across USB reboots) without queueing
+    //     up the 30 stale sends that caused the original 60s renderer hang.
+    //
+    // Previous iteration used a hard cap of 3 then silence for the whole
+    // remaining window; that avoided the hang but never sent again, so if
+    // Chrome *eventually* got its state together we never poked it to find
+    // out. Probe mode keeps the nudging alive without the pileup.
+    var MAX_BURST_PINGS = 3;
+    var PROBE_INTERVAL_MS = 5000;
     var consecutive_failures = 0;
+    var last_probe_time = 0;
 
     var connectedHandler = async function() {
         console.log('wait_for_board_ready: WebMidi connected event, refreshing handles');
@@ -2639,8 +2682,9 @@ async function wait_for_board_ready(timeout_ms) {
             }
             await setup_midi_devices();
         } catch (err) {}
-        // Fresh port → re-enable pings even if we'd paused.
+        // Fresh port → reset so the burst fires again.
         consecutive_failures = 0;
+        last_probe_time = 0;
         _send_zi_ping();
     };
     function _attach_connected_listener() {
@@ -2658,69 +2702,26 @@ async function wait_for_board_ready(timeout_ms) {
     // Track the bound input id so we only re-run setup_midi_devices (which
     // destroys and re-attaches the midimessage listener) when the port
     // actually changes. On macOS CoreMIDI re-uses the id across reboots so
-    // this avoids churning listeners; on Windows the id changes post-reboot
-    // and we pick up the new device the iteration it appears.
+    // this avoids churning listeners; on Windows the id has been observed
+    // to stay frozen through the entire window, so this branch rarely
+    // fires there — but if Chrome ever does update, we catch it.
     var initialInput = null;
     try { initialInput = get_selected_midi_input_device(); } catch (e) {}
     var prevInputId = initialInput ? initialInput.id : null;
 
-    // One-shot: halfway through the timeout, force a full WebMidi
-    // re-enumeration. Chrome on Windows has been observed to freeze the
-    // MIDIOutput state (id='output-1', state='connected') for the entire
-    // 15s window even after the physical device reboots — no WebMidi
-    // 'connected' event, no port-id change, no .state transition. A
-    // WebMidi.disable()/enable() cycle re-invokes navigator.requestMIDIAccess()
-    // and in some Chrome builds nudges the platform layer to re-check
-    // the Windows MIDI device list. No-op in the macOS happy path because
-    // the first ping already succeeded well before halfway.
-    var did_reenumerate = false;
-
     try {
         while (Date.now() < deadline) {
-            // Halfway re-enumeration nudge — only fires when we're still
-            // failing, on the way to a full timeout.
-            if (!did_reenumerate && (Date.now() - start_time) > timeout_ms / 2) {
-                did_reenumerate = true;
-                console.log('wait_for_board_ready: halfway with no reply, attempting WebMidi re-enumeration...');
-                _detach_connected_listener();
-                try {
-                    if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.disable === 'function') {
-                        await WebMidi.disable();
-                    }
-                    if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.enable === 'function') {
-                        await WebMidi.enable({ sysex: true });
-                    }
-                    console.log('wait_for_board_ready: re-enumerated; inputs=' +
-                                (WebMidi && WebMidi.inputs ? WebMidi.inputs.length : '?') +
-                                ' outputs=' + (WebMidi && WebMidi.outputs ? WebMidi.outputs.length : '?'));
-                    if (typeof _refresh_main_midi_dropdowns === 'function') {
-                        _refresh_main_midi_dropdowns();
-                    }
-                    await setup_midi_devices();
-                    var freshInput = null;
-                    try { freshInput = get_selected_midi_input_device(); } catch (e) {}
-                    prevInputId = freshInput ? freshInput.id : null;
-                    consecutive_failures = 0;
-                } catch (e) {
-                    console.warn('wait_for_board_ready: re-enumeration failed:', e);
-                }
-                _attach_connected_listener();
-            }
-
             // Refresh midi*OptionIds from current WebMidi.inputs/outputs
-            // every iteration. On Windows the `connected` WebMidi event is
-            // NOT reliably delivered in time (our logs show zero events
-            // within the 15s window), so relying only on the event handler
-            // above to refresh is not sufficient. Cheap operation; safe on
-            // macOS where ids are stable.
+            // every iteration. Cheap. On Windows the `connected` WebMidi
+            // event does not fire within our window (0 events observed
+            // across 30s in repros), so this is the only thing keeping
+            // us in sync if anything ever DOES change.
             if (typeof _refresh_main_midi_dropdowns === 'function') {
                 _refresh_main_midi_dropdowns();
             }
 
-            // If the bound input id changed (post-reboot reconnect with
-            // fresh port ids), rebind listeners on the new device and
-            // reset the failure counter so we retry pings against the
-            // new port.
+            // If the bound input id changed, rebind listeners and restart
+            // the burst.
             var currentInput = null;
             try { currentInput = get_selected_midi_input_device(); } catch (e) {}
             var currentInputId = currentInput ? currentInput.id : null;
@@ -2728,18 +2729,21 @@ async function wait_for_board_ready(timeout_ms) {
                 try { await setup_midi_devices(); } catch (e) {}
                 prevInputId = currentInputId;
                 consecutive_failures = 0;
+                last_probe_time = 0;
             }
 
             var output = get_selected_midi_output_device();
             var port_up = (output && output.state !== 'disconnected');
-            // Only send if:
-            // (a) the port looks up (cheap filter that does help in the
-            //     cases where .state IS honest), AND
-            // (b) we haven't already queued MAX_FAILURES_BEFORE_PAUSE
-            //     sends without a reply (prevents Windows queue pileup).
-            var should_send = port_up && consecutive_failures < MAX_FAILURES_BEFORE_PAUSE;
+            var now = Date.now();
+            // Should we send this iteration?
+            //   - Burst phase: yes, every tick, until MAX_BURST_PINGS failures.
+            //   - Probe phase: yes, once every PROBE_INTERVAL_MS.
+            var in_burst = consecutive_failures < MAX_BURST_PINGS;
+            var probe_due = (now - last_probe_time) >= PROBE_INTERVAL_MS;
+            var should_send = port_up && (in_burst || probe_due);
             if (should_send) {
                 _send_zi_ping();
+                last_probe_time = now;
             }
 
             // Wait for reply — short timeout per attempt.
@@ -2751,13 +2755,17 @@ async function wait_for_board_ready(timeout_ms) {
                 }, 500);
             });
             if (got_reply) {
-                console.log('wait_for_board_ready: board is ready');
+                console.log('wait_for_board_ready: board is ready after ' +
+                            (Date.now() - start_time) + 'ms');
                 return true;
             }
             consecutive_failures++;
-            console.log('wait_for_board_ready: no reply (failures=' + consecutive_failures +
+            console.log('wait_for_board_ready: no reply (t=' + (Date.now() - start_time) + 'ms' +
+                        ', failures=' + consecutive_failures +
                         ', sent=' + should_send +
+                        ', phase=' + (in_burst ? 'burst' : 'probe') +
                         ', out_state=' + (output ? output.state : 'null') +
+                        ', out_conn=' + (output ? output.connection : 'null') +
                         ', out_id=' + (output ? String(output.id).slice(0, 12) : 'null') + ')');
         }
         console.warn('wait_for_board_ready: timed out after ' + timeout_ms + 'ms');
