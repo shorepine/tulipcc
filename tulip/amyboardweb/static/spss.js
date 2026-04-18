@@ -2580,7 +2580,20 @@ async function wait_for_board_ready(timeout_ms) {
     if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.addListener === 'function') {
         connectedHandler = async function() {
             console.log('wait_for_board_ready: WebMidi connected event, refreshing handles');
-            try { await setup_midi_devices(); } catch (err) {}
+            try {
+                // Refresh midiInputOptionIds / midiOutputOptionIds against
+                // current WebMidi.inputs/outputs first — Chrome on Windows
+                // gives the reconnected AMYboard a FRESH port id, so the
+                // id arrays from the pre-reboot page load are stale and
+                // get_selected_midi_input_device() returns null without
+                // this. _refresh_main_midi_dropdowns preserves selection
+                // by port name so the AMYboard entry re-aligns with its
+                // new id automatically.
+                if (typeof _refresh_main_midi_dropdowns === 'function') {
+                    _refresh_main_midi_dropdowns();
+                }
+                await setup_midi_devices();
+            } catch (err) {}
             _send_zi_ping();
         };
         try { WebMidi.addListener('connected', connectedHandler); } catch (e) {}
@@ -3882,6 +3895,19 @@ async function sync_modal_retry() {
     var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
+
+    // Refresh the ID arrays against current WebMidi.inputs/outputs before
+    // doing anything else — on Windows the AMYboard gets a fresh port id
+    // after its post-zB reboot, so the ids in midiInputOptionIds /
+    // midiOutputOptionIds from the initial page load are stale.
+    // _refresh_main_midi_dropdowns preserves selection by port name so the
+    // AMYboard entry auto-aligns with its new id. Without this,
+    // get_selected_midi_input_device() returns null below and Try Again
+    // fails with "cannot proceed, MIDI devices not ready" even though the
+    // dropdowns look right.
+    if (typeof _refresh_main_midi_dropdowns === 'function') {
+        _refresh_main_midi_dropdowns();
+    }
 
     // Copy the modal's selection back to the main dropdown, clamping to a
     // valid index so we never leave the main dropdown at -1 (no selection).
