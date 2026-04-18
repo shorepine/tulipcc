@@ -113,6 +113,70 @@ Notes:
 - This command cleans and compiles all Tulip targets.
 - Typical runtime is about 5 to 10 minutes.
 
+## World DB API Server (Railway)
+
+The FastAPI server in `tulip/server/amyboardworld_db_api.py` backs all
+`/api/amyboardworld/*` and `/api/tulipworld/*` endpoints (sketches, tags,
+admin, Tulip World messages). It runs on Railway, not Vercel — a Vercel
+deploy of `tulip/amyboardweb/` does NOT touch it.
+
+### Railway configuration
+
+- Project: `zestful-love` (Brian Whitman's Projects workspace)
+- Service: `tulipcc`
+- Environment: `production`
+- Config file: `/railway.json` (repo root, NOT `tulip/server/railway.json`
+  — the root one takes precedence and uses `--app-dir tulip/server`)
+- Start command: `uvicorn amyboardworld_db_api:app --host 0.0.0.0 --port $PORT --app-dir tulip/server`
+- Production URL: `https://tulipcc-production.up.railway.app`
+- Dependencies: `tulip/server/requirements.txt` (fastapi, uvicorn[standard],
+  python-multipart, requests)
+
+### Auto-deploy on push to main
+
+Railway watches `main` and auto-deploys on every push. **No manual deploy
+step is needed for server changes merged to main.** To verify a deploy
+picked up a specific commit, run:
+
+```
+railway status --json | python3 -c "import json,sys;d=json.load(sys.stdin); \
+  svc=d['environments']['edges'][0]['node']['serviceInstances']['edges'][0]['node']; \
+  print(svc['latestDeployment']['meta']['commitHash'][:12], svc['latestDeployment']['meta']['commitMessage'].splitlines()[0])"
+```
+
+Or hit the API directly to confirm expected behavior:
+
+```
+curl -s "https://tulipcc-production.up.railway.app/api/amyboardworld/files?limit=1"
+```
+
+### Manual operations
+
+From the repo root (or any worktree):
+
+- `railway status` — current project/service/environment linkage.
+- `railway status --json` — full deploy metadata including latest commit.
+- `railway variables` — list env vars (DB path, blob path, admin token).
+- `railway logs` — stream recent service logs.
+- `railway domain` — show the public URL.
+- `railway up` — manual deploy from local working tree (rarely needed).
+- `railway redeploy` — redeploy the last successful deployment.
+
+### Environment variables (set on Railway, not in the repo)
+
+- `AMYBOARDWORLD_DB_PATH` — currently `/data/files/amyboardworld.db`
+- `AMYBOARDWORLD_FILES_DIR` — currently `/data/files/blobs`
+- `AMYBOARDWORLD_ADMIN_TOKEN` — shared admin bearer for moderation endpoints
+- (Plus `RAILWAY_*` platform-injected vars)
+
+The DB and blob store live on a Railway-attached persistent volume under
+`/data` — do NOT delete or recreate that volume without backing up first.
+
+### Local development
+
+See `tulip/server/amyboardworld_db_api.md` for local-run instructions
+(`python3 -m venv .venv && pip install -r requirements.txt && uvicorn amyboardworld_db_api:app --reload --port 8090`).
+
 ## Safe Git Merge Procedure (Required)
 
 When a user asks to commit/push/merge PR changes, treat it as a strict ordered workflow.
