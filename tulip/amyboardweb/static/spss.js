@@ -1429,7 +1429,20 @@ function setup_midi_passthru() {
 async function setup_midi_devices() {
   var selectedInput = get_selected_midi_input_device();
   if (selectedInput) {
-    if (midiInputDevice != null && typeof midiInputDevice.destroy === "function") {
+    // Only destroy the old wrapper if it's a DIFFERENT Input from the
+    // new selectedInput. WebMidi.js keeps Input wrappers keyed by port
+    // id and returns the same instance for the same port, so on a
+    // "same port came back" connected event selectedInput IS
+    // midiInputDevice. Calling destroy() on it removes the wrapper
+    // from WebMidi.inputs entirely — then the subsequent assignment
+    // leaves midiInputDevice pointing at a dead reference and the
+    // next _refresh_main_midi_dropdowns shows 0 inputs, silently
+    // breaking reply reception. This bit us on Windows post-reload,
+    // where two `connected` events (one per port) fired in quick
+    // succession and the second run wiped out the input set up by
+    // the first.
+    if (midiInputDevice != null && midiInputDevice !== selectedInput &&
+        typeof midiInputDevice.destroy === "function") {
       try { midiInputDevice.destroy(); } catch (e) {}
     }
     midiInputDevice = selectedInput;
