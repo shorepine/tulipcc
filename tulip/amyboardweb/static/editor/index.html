@@ -975,6 +975,30 @@
               }
               return;
             }
+            // Post-upload reload path: any zB+upload flow on Windows Chrome
+            // (import from AMYboard World, load_world_environment_by_name,
+            // save_amy_state / "Send to AMYboard") stashed its options in
+            // sessionStorage and reloaded. Continue the flow here against
+            // the fresh MIDIAccess.
+            var _post_zb_upload_raw = sessionStorage.getItem('amyboard_post_zb_upload');
+            if (_post_zb_upload_raw) {
+              sessionStorage.removeItem('amyboard_post_zb_upload');
+              var _uploadOpts = null;
+              try { _uploadOpts = JSON.parse(_post_zb_upload_raw); } catch (e) {}
+              console.log('pageload: post-zB upload reload — completing upload', _uploadOpts);
+              _show_saving_modal();
+              var uploadReady = await wait_for_board_ready(10000);
+              if (!uploadReady) {
+                _hide_saving_modal();
+                return;
+              }
+              if (_uploadOpts && typeof _upload_sketch_post_bootloader === 'function') {
+                await _upload_sketch_post_bootloader(_uploadOpts);
+              } else {
+                _hide_saving_modal();
+              }
+              return;
+            }
             _show_syncing_modal();
             var _post_zb_reload = sessionStorage.getItem('amyboard_post_zb_reload') === '1';
             if (_post_zb_reload) {

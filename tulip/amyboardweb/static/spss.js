@@ -2573,6 +2573,95 @@ function reboot_to_bootloader() {
     amy_add_log_message('zBZ');
 }
 
+// Windows Chrome WebMIDI can't recover from a USB reboot within the same
+// document: the MIDIOutput handle stays stale, no statechange fires, and
+// sendSysex silently goes into the void. We work around this by sending
+// zB, waiting for the board to finish rebooting, then reloading the page
+// — which gives us a fresh MIDIAccess from scratch. Each zB+wait flow
+// saves its post-bootloader context in sessionStorage and reloads; on the
+// new page, pageload_control_sync picks up the flag and runs the post-
+// bootloader work against the fresh handles. macOS doesn't need this.
+var _IS_WINDOWS_CHROME = typeof navigator !== 'undefined' &&
+                         /Windows/i.test(navigator.userAgent || '') &&
+                         /Chrome/i.test(navigator.userAgent || '');
+
+// Complete the post-bootloader portion of a sketch-upload flow. Shared
+// between the synchronous (macOS) path and the post-reload (Windows) path
+// so both end up doing identical work — upload file, apply knobs to UI,
+// optionally restart the sketch, set filename input, refresh world list.
+// opts fields (all optional unless marked REQUIRED):
+//   sketchText       REQUIRED — file content to upload.
+//   sketchPath       defaults to '/user/current/sketch.py'.
+//   restart          true → send zP restart_sketch after upload.
+//   setEditor        default true → editor.setValue(sketchText) + refresh.
+//   applyKnobs       default true → extract knobs from text and apply to UI.
+//   suppressKnobCc   true → set window.suppress_knob_cc_send around
+//                    apply_zd_dump_to_knobs (avoids echoing CC back when
+//                    the zT transfer already put the knob values on hw).
+//   packageName      string → set #editor_filename input value.
+//   refreshWorldFiles true → re-fetch the world file list after upload.
+async function _upload_sketch_post_bootloader(opts) {
+    if (!opts || typeof opts.sketchText !== 'string') return;
+    var sketchPath = opts.sketchPath || '/user/current/sketch.py';
+    try {
+        await _send_text_file_to_amyboard(sketchPath, opts.sketchText);
+        console.log('post-zb upload: sketch sent to AMYboard');
+        await sleep_ms(opts.restart ? 500 : 1000);
+    } catch (e) {
+        console.warn('post-zb upload: sketch upload to AMYboard failed', e);
+    }
+    try { _hide_saving_modal(); } catch (e) {}
+    try { _hide_syncing_modal(); } catch (e) {}
+    if (opts.setEditor !== false && typeof editor !== 'undefined' && editor) {
+        editor.setValue(opts.sketchText);
+        setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+    }
+    if (opts.applyKnobs !== false) {
+        var knobs = (typeof extract_knobs_from_sketch === 'function')
+                    ? extract_knobs_from_sketch(opts.sketchText) : null;
+        if (knobs && typeof apply_zd_dump_to_knobs === 'function') {
+            if (opts.suppressKnobCc) {
+                window.suppress_knob_cc_send = true;
+                try { apply_zd_dump_to_knobs(knobs); }
+                finally { window.suppress_knob_cc_send = false; }
+            } else {
+                apply_zd_dump_to_knobs(knobs);
+            }
+        }
+    }
+    if (opts.packageName) {
+        var envNameInput = document.getElementById('editor_filename');
+        if (envNameInput) envNameInput.value = opts.packageName;
+    }
+    if (opts.restart) {
+        amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
+        console.log('post-zb upload: sketch restarted via zP');
+    }
+    if (opts.refreshWorldFiles && typeof refresh_amyboard_world_files === 'function') {
+        try { await refresh_amyboard_world_files(); } catch (e) {}
+    }
+}
+
+// Windows Chrome entry point for any zB+wait+upload flow. Stashes the
+// post-bootloader options in sessionStorage, sends zB, waits ~4s for the
+// board to reboot, then reloads the page. Never returns in practice —
+// the reload unloads the current document.
+async function _zb_then_reload_with_upload_context(opts) {
+    try {
+        sessionStorage.setItem('amyboard_post_zb_upload', JSON.stringify(opts));
+    } catch (e) {
+        console.warn('_zb_then_reload_with_upload_context: stash failed:', e);
+    }
+    reboot_to_bootloader();
+    console.log('Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
+    await sleep_ms(4000);
+    console.log('reloading now');
+    window.location.reload();
+    // Block the caller's await in case reload is delayed — we do NOT want
+    // the macOS-path fallthrough to run on Windows.
+    await new Promise(function() {});
+}
+
 // zI ping — wait for the board to be ready after a reboot.
 var _ping_resolve = null;
 var _ping_reject = null;
@@ -3041,29 +3130,24 @@ async function import_amyboard_world_file(index) {
             // Control mode: reboot into bootloader (stops sketch, frees
             // scheduler), send file via zT, then apply knobs from sketch.
             _show_saving_modal();
+            var _importOpts = {
+                sketchText: sketchText,
+                packageName: packageName,
+                restart: false,
+                setEditor: true,
+                applyKnobs: true,
+                suppressKnobCc: true,  // hw already has values from zT transfer
+                refreshWorldFiles: true,
+            };
+            if (_IS_WINDOWS_CHROME) {
+                // Reload across the USB reboot — never returns.
+                await _zb_then_reload_with_upload_context(_importOpts);
+                return;
+            }
             reboot_to_bootloader();
             console.log('import: zB sent, waiting for board...');
             await wait_for_board_ready();
-            try {
-                await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
-                console.log('import: sketch sent to AMYboard');
-                await sleep_ms(1000);
-            } catch (e) {
-                console.warn('import: sketch upload to AMYboard failed', e);
-            }
-            _hide_saving_modal();
-            // Set editor to the downloaded sketch. Apply knobs to UI only —
-            // don't send to hardware (it already has them from the zT transfer).
-            if (editor) {
-                editor.setValue(sketchText);
-                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
-            }
-            var knobs = extract_knobs_from_sketch(sketchText);
-            if (knobs) {
-                window.suppress_knob_cc_send = true;
-                try { apply_zd_dump_to_knobs(knobs); }
-                finally { window.suppress_knob_cc_send = false; }
-            }
+            await _upload_sketch_post_bootloader(_importOpts);
         } else {
             // Simulate mode: write to local FS, then reload the page to
             // the patch interface so the sketch starts fresh.
@@ -3132,27 +3216,23 @@ async function load_world_environment_by_name(username, envName) {
             // Control mode: reboot into bootloader (stops sketch, frees
             // scheduler), send file via zT, then start the sketch.
             _show_saving_modal();
+            var _loadWorldOpts = {
+                sketchText: sketchText,
+                packageName: packageName,
+                restart: false,
+                setEditor: true,
+                applyKnobs: true,
+                suppressKnobCc: false,
+            };
+            if (_IS_WINDOWS_CHROME) {
+                // Reload across the USB reboot — never returns.
+                await _zb_then_reload_with_upload_context(_loadWorldOpts);
+                return;
+            }
             reboot_to_bootloader();
             console.log('load_world: zB sent, waiting for board...');
             await wait_for_board_ready();
-            try {
-                await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
-                console.log('load_world: sketch sent to AMYboard');
-                await sleep_ms(1000);
-            } catch (e) {
-                console.warn('load_world: sketch upload to AMYboard failed', e);
-            }
-            _hide_saving_modal();
-            // Set editor to the downloaded sketch.
-            if (editor) {
-                editor.setValue(sketchText);
-                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
-            }
-            // Apply knobs from the sketch to the UI.
-            var knobs = extract_knobs_from_sketch(sketchText);
-            if (knobs) {
-                apply_zd_dump_to_knobs(knobs);
-            }
+            await _upload_sketch_post_bootloader(_loadWorldOpts);
         } else {
             // Simulate mode: write to local FS and restart.
             if (editor) editor.setValue(sketchText);
@@ -3858,22 +3938,24 @@ async function save_amy_state() {
             }
             // Step 4+5: reboot into bootloader so sketch isn't running.
             _show_syncing_modal();
+            var _saveOpts = {
+                sketchText: mergedSketch,
+                restart: true,       // Step 7: restart sketch on hw
+                setEditor: false,    // editor already has mergedSketch from splice above
+                applyKnobs: false,   // knobs already reflect live state from sync_amy_state_async
+            };
+            if (_IS_WINDOWS_CHROME) {
+                // Reload across the USB reboot — never returns.
+                await _zb_then_reload_with_upload_context(_saveOpts);
+                return;
+            }
             reboot_to_bootloader();
             console.log('save: zB sent, waiting for board...');
             await wait_for_board_ready();
             _hide_syncing_modal();
-            // Step 6: send merged file to idle board (no drum notes firing).
+            // Step 6+7: send merged file + restart sketch.
             _show_saving_modal();
-            try {
-                await _send_text_file_to_amyboard('/user/current/sketch.py', mergedSketch);
-                console.log('save: merged sketch.py sent to AMYboard');
-                await sleep_ms(500);
-            } finally {
-                _hide_saving_modal();
-            }
-            // Step 7: restart sketch on hardware.
-            amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
-            console.log('save: sketch restarted via zP');
+            await _upload_sketch_post_bootloader(_saveOpts);
         } catch (e) {
             console.warn('save: failed', e);
             _hide_saving_modal();
@@ -4351,8 +4433,6 @@ async function reset_amyboard() {
         // flag and calls _reset_amyboard_send_and_cleanup() — which sends
         // zP factory_reset and resets the JS state — against a fresh
         // MIDIAccess.
-        var _IS_WINDOWS_CHROME = /Windows/i.test(navigator.userAgent) &&
-                                 /Chrome/i.test(navigator.userAgent);
         if (_IS_WINDOWS_CHROME) {
             reboot_to_bootloader();
             console.log('reset: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
