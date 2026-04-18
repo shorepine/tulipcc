@@ -1429,7 +1429,20 @@ function setup_midi_passthru() {
 async function setup_midi_devices() {
   var selectedInput = get_selected_midi_input_device();
   if (selectedInput) {
-    if (midiInputDevice != null && typeof midiInputDevice.destroy === "function") {
+    // Only destroy the old wrapper if it's a DIFFERENT Input from the
+    // new selectedInput. WebMidi.js keeps Input wrappers keyed by port
+    // id and returns the same instance for the same port, so on a
+    // "same port came back" connected event selectedInput IS
+    // midiInputDevice. Calling destroy() on it removes the wrapper
+    // from WebMidi.inputs entirely — then the subsequent assignment
+    // leaves midiInputDevice pointing at a dead reference and the
+    // next _refresh_main_midi_dropdowns shows 0 inputs, silently
+    // breaking reply reception. This bit us on Windows post-reload,
+    // where two `connected` events (one per port) fired in quick
+    // succession and the second run wiped out the input set up by
+    // the first.
+    if (midiInputDevice != null && midiInputDevice !== selectedInput &&
+        typeof midiInputDevice.destroy === "function") {
       try { midiInputDevice.destroy(); } catch (e) {}
     }
     midiInputDevice = selectedInput;
@@ -1543,6 +1556,37 @@ async function setup_midi_devices() {
     midiInputDevice = null;
   }
   midiOutputDevice = get_selected_midi_output_device();
+  // Force both the underlying MIDIInput and MIDIOutput to connection='open'.
+  // Per WebMIDI spec, addEventListener('midimessage', ...) and the first
+  // send() should auto-open, but on Windows Chrome has been observed
+  // leaving both at connection='closed' even after listener attach and
+  // sendSysex calls — which silently eats all traffic. Explicit .open()
+  // returns a Promise that resolves when the underlying OS port is really
+  // open. Fire-and-forget (don't await) so setup_midi_devices stays quick.
+  try {
+      var rawIn = _raw_sysex_input;
+      if (rawIn && typeof rawIn.open === 'function') {
+          rawIn.open().then(function() {
+              console.log('midi input opened: id=' + rawIn.id +
+                          ' state=' + rawIn.state +
+                          ' connection=' + rawIn.connection);
+          }).catch(function(e) {
+              console.warn('midi input open failed:', e && e.message ? e.message : e);
+          });
+      }
+  } catch (e) {}
+  try {
+      var rawOut = midiOutputDevice && (midiOutputDevice._midiOutput || midiOutputDevice.output || null);
+      if (rawOut && typeof rawOut.open === 'function') {
+          rawOut.open().then(function() {
+              console.log('midi output opened: id=' + rawOut.id +
+                          ' state=' + rawOut.state +
+                          ' connection=' + rawOut.connection);
+          }).catch(function(e) {
+              console.warn('midi output open failed:', e && e.message ? e.message : e);
+          });
+      }
+  } catch (e) {}
   // Refresh the pass-thru dropdown so it excludes the (possibly new) MIDI in.
   populate_midi_passthru_dropdown();
   refresh_amyboard_port_warning();
@@ -2529,33 +2573,388 @@ function reboot_to_bootloader() {
     amy_add_log_message('zBZ');
 }
 
+// Windows Chrome WebMIDI can't recover from a USB reboot within the same
+// document: the MIDIOutput handle stays stale, no statechange fires, and
+// sendSysex silently goes into the void. We work around this by sending
+// zB, waiting for the board to finish rebooting, then reloading the page
+// — which gives us a fresh MIDIAccess from scratch. Each zB+wait flow
+// saves its post-bootloader context in sessionStorage and reloads; on the
+// new page, pageload_control_sync picks up the flag and runs the post-
+// bootloader work against the fresh handles. macOS doesn't need this.
+var _IS_WINDOWS_CHROME = typeof navigator !== 'undefined' &&
+                         /Windows/i.test(navigator.userAgent || '') &&
+                         /Chrome/i.test(navigator.userAgent || '');
+
+// Complete the post-bootloader portion of a sketch-upload flow. Shared
+// between the synchronous (macOS) path and the post-reload (Windows) path
+// so both end up doing identical work — upload file, apply knobs to UI,
+// optionally restart the sketch, set filename input, refresh world list.
+// opts fields (all optional unless marked REQUIRED):
+//   sketchText       REQUIRED — file content to upload.
+//   sketchPath       defaults to '/user/current/sketch.py'.
+//   restart          true → send zP restart_sketch after upload.
+//   setEditor        default true → editor.setValue(sketchText) + refresh.
+//   applyKnobs       default true → extract knobs from text and apply to UI.
+//   suppressKnobCc   true → set window.suppress_knob_cc_send around
+//                    apply_zd_dump_to_knobs (avoids echoing CC back when
+//                    the zT transfer already put the knob values on hw).
+//   packageName      string → set #editor_filename input value.
+//   refreshWorldFiles true → re-fetch the world file list after upload.
+async function _upload_sketch_post_bootloader(opts) {
+    if (!opts || typeof opts.sketchText !== 'string') return;
+    var sketchPath = opts.sketchPath || '/user/current/sketch.py';
+    try {
+        await _send_text_file_to_amyboard(sketchPath, opts.sketchText);
+        console.log('post-zb upload: sketch sent to AMYboard');
+        await sleep_ms(opts.restart ? 500 : 1000);
+    } catch (e) {
+        console.warn('post-zb upload: sketch upload to AMYboard failed', e);
+    }
+    try { _hide_saving_modal(); } catch (e) {}
+    try { _hide_syncing_modal(); } catch (e) {}
+    if (opts.setEditor !== false && typeof editor !== 'undefined' && editor) {
+        editor.setValue(opts.sketchText);
+        setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+    }
+    if (opts.applyKnobs !== false) {
+        var knobs = (typeof extract_knobs_from_sketch === 'function')
+                    ? extract_knobs_from_sketch(opts.sketchText) : null;
+        if (knobs && typeof apply_zd_dump_to_knobs === 'function') {
+            if (opts.suppressKnobCc) {
+                window.suppress_knob_cc_send = true;
+                try { apply_zd_dump_to_knobs(knobs); }
+                finally { window.suppress_knob_cc_send = false; }
+            } else {
+                apply_zd_dump_to_knobs(knobs);
+            }
+        }
+    }
+    if (opts.packageName) {
+        var envNameInput = document.getElementById('editor_filename');
+        if (envNameInput) envNameInput.value = opts.packageName;
+    }
+    if (opts.restart) {
+        amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
+        console.log('post-zb upload: sketch restarted via zP');
+    }
+    if (opts.refreshWorldFiles && typeof refresh_amyboard_world_files === 'function') {
+        try { await refresh_amyboard_world_files(); } catch (e) {}
+    }
+}
+
+// Windows Chrome entry point for any zB+wait+upload flow. Stashes the
+// post-bootloader options in sessionStorage, sends zB, waits ~4s for the
+// board to reboot, then reloads the page. Never returns in practice —
+// the reload unloads the current document.
+async function _zb_then_reload_with_upload_context(opts) {
+    try {
+        sessionStorage.setItem('amyboard_post_zb_upload', JSON.stringify(opts));
+    } catch (e) {
+        console.warn('_zb_then_reload_with_upload_context: stash failed:', e);
+    }
+    reboot_to_bootloader();
+    console.log('Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
+    await sleep_ms(4000);
+    console.log('reloading now');
+    window.location.reload();
+    // Block the caller's await in case reload is delayed — we do NOT want
+    // the macOS-path fallthrough to run on Windows.
+    await new Promise(function() {});
+}
+
 // zI ping — wait for the board to be ready after a reboot.
 var _ping_resolve = null;
 var _ping_reject = null;
 
-async function wait_for_board_ready(timeout_ms) {
-    if (!timeout_ms) timeout_ms = 15000;
-    // Poll with zI until the board replies with OK.
-    var deadline = Date.now() + timeout_ms;
-    while (Date.now() < deadline) {
-        // Send zI ping.
-        try { amy_add_log_message('zIZ'); } catch (e) {}
-        // Wait for reply — short timeout per attempt.
-        var got_reply = await new Promise(function(resolve) {
-            _ping_resolve = function() { resolve(true); };
-            _ping_reject = null;
-            setTimeout(function() {
-                if (_ping_resolve) { _ping_resolve = null; resolve(false); }
-            }, 500);
-        });
-        if (got_reply) {
-            console.log('wait_for_board_ready: board is ready');
-            return true;
+// Send a single zI ping directly, bypassing sysex_write_amy_message's
+// ackPromise path. zI is handled in pure C on the board and replies with
+// "OK" — it never triggers the "AK" ACK that sysex_write_amy_message
+// waits for, so routing pings through that path would leak a 5-second
+// setTimeout + pending Promise for every retry. Also refreshes the
+// output handle on each call: on Windows the MIDIOutput reference goes
+// stale after the USB reconnect that follows zB, and we need the fresh
+// one from WebMidi.outputs. Returns true if the send was dispatched,
+// false otherwise (no output, or sendSysex threw).
+function _send_zi_ping() {
+    var outputDevice = get_selected_midi_output_device();
+    if (!outputDevice) return false;
+    try {
+        // Best-effort: force the underlying MIDIOutput to connection='open'
+        // before each send. On Windows Chrome, connection has been observed
+        // stuck at 'closed' through the entire poll window — sendSysex is
+        // then a silent no-op. Fire-and-forget (don't await): if open()
+        // succeeds in time, the send reaches the port; if not, we'll try
+        // again next iteration.
+        var rawOut = outputDevice._midiOutput || outputDevice.output || null;
+        if (rawOut && typeof rawOut.open === 'function') {
+            try { rawOut.open().catch(function() {}); } catch (e) {}
         }
-        console.log('wait_for_board_ready: no reply, retrying...');
+        var payload = Array.from(new TextEncoder().encode('zIZ'));
+        if (typeof outputDevice.sendSysex === 'function') {
+            outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
+        } else if (typeof outputDevice.send === 'function') {
+            outputDevice.send([0xF0].concat(AMYBOARD_SYSEX_MFR_ID, payload, [0xF7]));
+        } else {
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.warn('_send_zi_ping: send failed (port likely stale):', e);
+        return false;
     }
-    console.warn('wait_for_board_ready: timed out after ' + timeout_ms + 'ms');
-    return false;
+}
+
+// Install a raw MIDIAccess.statechange listener ONCE per page lifetime.
+// This bypasses WebMidi.js and logs the raw platform events. On Windows,
+// the WebMidi.js 'connected'/'disconnected' wrapper events have been
+// observed not to fire for USB MIDI reconnects; this diagnostic tells us
+// whether the raw MIDIAccess layer sees them (and when) so we can tune
+// our workaround strategy.
+var _raw_midi_statechange_installed = false;
+async function _install_raw_midi_statechange_diagnostic() {
+    if (_raw_midi_statechange_installed) return;
+    _raw_midi_statechange_installed = true;
+    if (typeof navigator === 'undefined' || !navigator.requestMIDIAccess) return;
+    try {
+        var access = await navigator.requestMIDIAccess({ sysex: true });
+        access.addEventListener('statechange', function(e) {
+            var p = e.port;
+            console.log('[MIDIAccess] statechange: id=' + (p ? p.id : 'null') +
+                        ' name=' + (p ? p.name : 'null') +
+                        ' state=' + (p ? p.state : 'null') +
+                        ' connection=' + (p ? p.connection : 'null') +
+                        ' type=' + (p ? p.type : 'null'));
+        });
+        var inputs_count = 0, outputs_count = 0;
+        access.inputs.forEach(function() { inputs_count++; });
+        access.outputs.forEach(function() { outputs_count++; });
+        console.log('[MIDIAccess] diagnostic listener installed; inputs=' +
+                    inputs_count + ' outputs=' + outputs_count);
+        access.inputs.forEach(function(p) {
+            console.log('  [MIDIAccess] input: id=' + p.id + ' name=' + p.name +
+                        ' state=' + p.state + ' connection=' + p.connection);
+        });
+        access.outputs.forEach(function(p) {
+            console.log('  [MIDIAccess] output: id=' + p.id + ' name=' + p.name +
+                        ' state=' + p.state + ' connection=' + p.connection);
+        });
+    } catch (e) {
+        console.warn('[MIDIAccess] diagnostic install failed:', e);
+    }
+}
+
+async function wait_for_board_ready(timeout_ms) {
+    // Default 30s — Windows repros show Chrome's WebMIDI never fires
+    // statechange to JS across a USB reboot until we force it via a
+    // raw-port close() cycle. 30s gives room for burst pings, probe
+    // pings, and the halfway close/open dance. macOS happy path
+    // resolves in < 5s so the ceiling is a worst-case bound.
+    if (!timeout_ms) timeout_ms = 30000;
+    // Install raw-access diagnostic if we haven't already. No-op on repeat calls.
+    _install_raw_midi_statechange_diagnostic();
+    // Poll with zI until the board replies with OK.
+    var start_time = Date.now();
+    var deadline = start_time + timeout_ms;
+
+    // Persistent reply catcher. A previous iteration overwrote
+    // _ping_resolve inside `await new Promise(...)` on every loop tick,
+    // meaning _ping_resolve was NULL during the gaps (e.g. during the
+    // halfway port-cycle's 1.5s sleep). On Windows the zI reply arrived
+    // during that gap, hit `if (_ping_resolve)` at line 1237 with a
+    // null handler, and was silently dropped — wait_for_board_ready
+    // ran to full timeout even though the board was demonstrably ready.
+    //
+    // Fix: install ONE handler at function entry that persists for the
+    // whole wait. The polling loop races its per-iteration 500ms sleep
+    // against this single reply_promise so any reply at any time breaks
+    // us out. Also unifies the sync-modal "Change ports" cancel path
+    // (line 4189 calls _ping_resolve() to abort us) — cancel paths
+    // resolve the same promise and return true, matching prior behavior.
+    var reply_received = false;
+    var reply_promise = new Promise(function(resolve) {
+        _ping_resolve = function() {
+            if (reply_received) return;
+            reply_received = true;
+            resolve(true);
+        };
+    });
+    _ping_reject = null;
+
+    // Send strategy:
+    //   - Burst: the first MAX_BURST_PINGS iterations ping every loop tick
+    //     (catches the macOS happy path where the board replies within
+    //     a couple of seconds).
+    //   - Probe: after the burst, send at most one ping every PROBE_INTERVAL_MS.
+    //     This keeps gently nudging Chrome's WebMIDI plumbing (which we've
+    //     seen truly frozen on Windows across USB reboots) without queueing
+    //     up the 30 stale sends that caused the original 60s renderer hang.
+    //
+    // Previous iteration used a hard cap of 3 then silence for the whole
+    // remaining window; that avoided the hang but never sent again, so if
+    // Chrome *eventually* got its state together we never poked it to find
+    // out. Probe mode keeps the nudging alive without the pileup.
+    var MAX_BURST_PINGS = 3;
+    var PROBE_INTERVAL_MS = 5000;
+    var consecutive_failures = 0;
+    var last_probe_time = 0;
+
+    var connectedHandler = async function() {
+        console.log('wait_for_board_ready: WebMidi connected event, refreshing handles');
+        try {
+            if (typeof _refresh_main_midi_dropdowns === 'function') {
+                _refresh_main_midi_dropdowns();
+            }
+            await setup_midi_devices();
+        } catch (err) {}
+        // Fresh port → reset so the burst fires again.
+        consecutive_failures = 0;
+        last_probe_time = 0;
+        _send_zi_ping();
+    };
+    function _attach_connected_listener() {
+        if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.addListener === 'function') {
+            try { WebMidi.addListener('connected', connectedHandler); } catch (e) {}
+        }
+    }
+    function _detach_connected_listener() {
+        if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.removeListener === 'function') {
+            try { WebMidi.removeListener('connected', connectedHandler); } catch (e) {}
+        }
+    }
+    _attach_connected_listener();
+
+    // Track the bound input id so we only re-run setup_midi_devices (which
+    // destroys and re-attaches the midimessage listener) when the port
+    // actually changes. On macOS CoreMIDI re-uses the id across reboots so
+    // this avoids churning listeners; on Windows the id has been observed
+    // to stay frozen through the entire window, so this branch rarely
+    // fires there — but if Chrome ever does update, we catch it.
+    var initialInput = null;
+    try { initialInput = get_selected_midi_input_device(); } catch (e) {}
+    var prevInputId = initialInput ? initialInput.id : null;
+
+    // One-shot: halfway through the timeout, cycle the raw MIDIOutput/MIDIInput
+    // through close() → pause → open(). Windows repros show Chrome reporting
+    // connection='open' and state='connected' for the full 30s while the
+    // physical device was rebooted underneath — sends go nowhere. The
+    // only remaining lever we have from JS is forcing Chrome to RELEASE
+    // the cached USB endpoint handle via close() and then re-acquire it
+    // via open(), with a pause in between to give Chrome time to notice
+    // the underlying Windows device changed. WebMidi.disable()/enable()
+    // (previous iteration) didn't produce this effect — it has to happen
+    // on the raw MIDIPort. No-op on macOS because the happy path already
+    // succeeded well before halfway.
+    var did_port_cycle = false;
+
+    try {
+        while (Date.now() < deadline) {
+            if (!did_port_cycle && (Date.now() - start_time) > timeout_ms / 2) {
+                did_port_cycle = true;
+                console.log('wait_for_board_ready: halfway, cycling raw ports (close → wait → open)...');
+                try {
+                    var output_ = get_selected_midi_output_device();
+                    var input_ = get_selected_midi_input_device();
+                    var rawOut_ = output_ && (output_._midiOutput || output_.output || null);
+                    var rawIn_ = input_ && (input_._midiInput || input_.input || null);
+                    if (rawOut_ && typeof rawOut_.close === 'function') {
+                        console.log('  output before close: connection=' + rawOut_.connection);
+                        try { await rawOut_.close(); } catch (e) { console.warn('  output close failed:', e && e.message); }
+                        console.log('  output after close: connection=' + rawOut_.connection);
+                    }
+                    if (rawIn_ && typeof rawIn_.close === 'function') {
+                        console.log('  input before close: connection=' + rawIn_.connection);
+                        try { await rawIn_.close(); } catch (e) { console.warn('  input close failed:', e && e.message); }
+                        console.log('  input after close: connection=' + rawIn_.connection);
+                    }
+                    // Give Chrome time to release the underlying Windows USB
+                    // handle. Too short and Chrome re-uses the cached handle;
+                    // ~1.5s has been observed sufficient in similar Chromium
+                    // MIDI workarounds.
+                    await new Promise(function(r) { setTimeout(r, 1500); });
+                    if (rawOut_ && typeof rawOut_.open === 'function') {
+                        try { await rawOut_.open(); } catch (e) { console.warn('  output open failed:', e && e.message); }
+                        console.log('  output after open: connection=' + rawOut_.connection);
+                    }
+                    if (rawIn_ && typeof rawIn_.open === 'function') {
+                        try { await rawIn_.open(); } catch (e) { console.warn('  input open failed:', e && e.message); }
+                        console.log('  input after open: connection=' + rawIn_.connection);
+                    }
+                    // Counters reset so burst mode fires again against the
+                    // hopefully-refreshed ports.
+                    consecutive_failures = 0;
+                    last_probe_time = 0;
+                } catch (e) {
+                    console.warn('wait_for_board_ready: port cycle failed:', e);
+                }
+            }
+            // Refresh midi*OptionIds from current WebMidi.inputs/outputs
+            // every iteration. Cheap. On Windows the `connected` WebMidi
+            // event does not fire within our window (0 events observed
+            // across 30s in repros), so this is the only thing keeping
+            // us in sync if anything ever DOES change.
+            if (typeof _refresh_main_midi_dropdowns === 'function') {
+                _refresh_main_midi_dropdowns();
+            }
+
+            // If the bound input id changed, rebind listeners and restart
+            // the burst.
+            var currentInput = null;
+            try { currentInput = get_selected_midi_input_device(); } catch (e) {}
+            var currentInputId = currentInput ? currentInput.id : null;
+            if (currentInputId !== prevInputId) {
+                try { await setup_midi_devices(); } catch (e) {}
+                prevInputId = currentInputId;
+                consecutive_failures = 0;
+                last_probe_time = 0;
+            }
+
+            var output = get_selected_midi_output_device();
+            var port_up = (output && output.state !== 'disconnected');
+            var now = Date.now();
+            // Should we send this iteration?
+            //   - Burst phase: yes, every tick, until MAX_BURST_PINGS failures.
+            //   - Probe phase: yes, once every PROBE_INTERVAL_MS.
+            var in_burst = consecutive_failures < MAX_BURST_PINGS;
+            var probe_due = (now - last_probe_time) >= PROBE_INTERVAL_MS;
+            var should_send = port_up && (in_burst || probe_due);
+            if (should_send) {
+                _send_zi_ping();
+                last_probe_time = now;
+            }
+
+            // Wait 500ms or until reply arrives — whichever is first.
+            // Uses the persistent reply_promise set up at function entry,
+            // so a reply arriving during any earlier await (e.g. the
+            // halfway close/open cycle's 1.5s sleep) will break us out
+            // here too.
+            await Promise.race([
+                reply_promise,
+                new Promise(function(r) { setTimeout(r, 500); })
+            ]);
+            if (reply_received) {
+                console.log('wait_for_board_ready: board is ready after ' +
+                            (Date.now() - start_time) + 'ms');
+                return true;
+            }
+            consecutive_failures++;
+            console.log('wait_for_board_ready: no reply (t=' + (Date.now() - start_time) + 'ms' +
+                        ', failures=' + consecutive_failures +
+                        ', sent=' + should_send +
+                        ', phase=' + (in_burst ? 'burst' : 'probe') +
+                        ', out_state=' + (output ? output.state : 'null') +
+                        ', out_conn=' + (output ? output.connection : 'null') +
+                        ', out_id=' + (output ? String(output.id).slice(0, 12) : 'null') + ')');
+        }
+        console.warn('wait_for_board_ready: timed out after ' + timeout_ms + 'ms');
+        return false;
+    } finally {
+        _detach_connected_listener();
+        // Release the persistent reply catcher so stray late replies
+        // (e.g. from a ping sent just before timeout) don't fire into
+        // a dead resolver.
+        _ping_resolve = null;
+        _ping_reject = null;
+    }
 }
 
 function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
@@ -2731,29 +3130,24 @@ async function import_amyboard_world_file(index) {
             // Control mode: reboot into bootloader (stops sketch, frees
             // scheduler), send file via zT, then apply knobs from sketch.
             _show_saving_modal();
+            var _importOpts = {
+                sketchText: sketchText,
+                packageName: packageName,
+                restart: false,
+                setEditor: true,
+                applyKnobs: true,
+                suppressKnobCc: true,  // hw already has values from zT transfer
+                refreshWorldFiles: true,
+            };
+            if (_IS_WINDOWS_CHROME) {
+                // Reload across the USB reboot — never returns.
+                await _zb_then_reload_with_upload_context(_importOpts);
+                return;
+            }
             reboot_to_bootloader();
             console.log('import: zB sent, waiting for board...');
             await wait_for_board_ready();
-            try {
-                await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
-                console.log('import: sketch sent to AMYboard');
-                await sleep_ms(1000);
-            } catch (e) {
-                console.warn('import: sketch upload to AMYboard failed', e);
-            }
-            _hide_saving_modal();
-            // Set editor to the downloaded sketch. Apply knobs to UI only —
-            // don't send to hardware (it already has them from the zT transfer).
-            if (editor) {
-                editor.setValue(sketchText);
-                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
-            }
-            var knobs = extract_knobs_from_sketch(sketchText);
-            if (knobs) {
-                window.suppress_knob_cc_send = true;
-                try { apply_zd_dump_to_knobs(knobs); }
-                finally { window.suppress_knob_cc_send = false; }
-            }
+            await _upload_sketch_post_bootloader(_importOpts);
         } else {
             // Simulate mode: write to local FS, then reload the page to
             // the patch interface so the sketch starts fresh.
@@ -2822,27 +3216,23 @@ async function load_world_environment_by_name(username, envName) {
             // Control mode: reboot into bootloader (stops sketch, frees
             // scheduler), send file via zT, then start the sketch.
             _show_saving_modal();
+            var _loadWorldOpts = {
+                sketchText: sketchText,
+                packageName: packageName,
+                restart: false,
+                setEditor: true,
+                applyKnobs: true,
+                suppressKnobCc: false,
+            };
+            if (_IS_WINDOWS_CHROME) {
+                // Reload across the USB reboot — never returns.
+                await _zb_then_reload_with_upload_context(_loadWorldOpts);
+                return;
+            }
             reboot_to_bootloader();
             console.log('load_world: zB sent, waiting for board...');
             await wait_for_board_ready();
-            try {
-                await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
-                console.log('load_world: sketch sent to AMYboard');
-                await sleep_ms(1000);
-            } catch (e) {
-                console.warn('load_world: sketch upload to AMYboard failed', e);
-            }
-            _hide_saving_modal();
-            // Set editor to the downloaded sketch.
-            if (editor) {
-                editor.setValue(sketchText);
-                setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
-            }
-            // Apply knobs from the sketch to the UI.
-            var knobs = extract_knobs_from_sketch(sketchText);
-            if (knobs) {
-                apply_zd_dump_to_knobs(knobs);
-            }
+            await _upload_sketch_post_bootloader(_loadWorldOpts);
         } else {
             // Simulate mode: write to local FS and restart.
             if (editor) editor.setValue(sketchText);
@@ -3548,22 +3938,24 @@ async function save_amy_state() {
             }
             // Step 4+5: reboot into bootloader so sketch isn't running.
             _show_syncing_modal();
+            var _saveOpts = {
+                sketchText: mergedSketch,
+                restart: true,       // Step 7: restart sketch on hw
+                setEditor: false,    // editor already has mergedSketch from splice above
+                applyKnobs: false,   // knobs already reflect live state from sync_amy_state_async
+            };
+            if (_IS_WINDOWS_CHROME) {
+                // Reload across the USB reboot — never returns.
+                await _zb_then_reload_with_upload_context(_saveOpts);
+                return;
+            }
             reboot_to_bootloader();
             console.log('save: zB sent, waiting for board...');
             await wait_for_board_ready();
             _hide_syncing_modal();
-            // Step 6: send merged file to idle board (no drum notes firing).
+            // Step 6+7: send merged file + restart sketch.
             _show_saving_modal();
-            try {
-                await _send_text_file_to_amyboard('/user/current/sketch.py', mergedSketch);
-                console.log('save: merged sketch.py sent to AMYboard');
-                await sleep_ms(500);
-            } finally {
-                _hide_saving_modal();
-            }
-            // Step 7: restart sketch on hardware.
-            amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
-            console.log('save: sketch restarted via zP');
+            await _upload_sketch_post_bootloader(_saveOpts);
         } catch (e) {
             console.warn('save: failed', e);
             _hide_saving_modal();
@@ -3684,6 +4076,17 @@ function _refresh_main_midi_dropdowns() {
     // Keep the MIDI Input Pass-Thru dropdown in sync with the new port list.
     if (typeof populate_midi_passthru_dropdown === 'function') {
         populate_midi_passthru_dropdown();
+    }
+
+    // Mirror the refreshed dropdowns into the sync modal's dropdowns.
+    // _show_syncing_modal() snapshots main dropdown innerHTML into the
+    // modal the moment it's shown — on Windows post-reload that happens
+    // before WebMidi has enumerated the ports, so the modal captures the
+    // HTML-default "MIDI in: [Not available]" labels. Re-mirroring here
+    // keeps the modal in lockstep with the real dropdowns as ports come
+    // online, so users see "MIDI in: AMYboard" instead of [Not available].
+    if (typeof _sync_modal_populate_midi === 'function') {
+        try { _sync_modal_populate_midi(); } catch (e) {}
     }
 }
 
@@ -3829,6 +4232,19 @@ async function sync_modal_retry() {
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
 
+    // Refresh the ID arrays against current WebMidi.inputs/outputs before
+    // doing anything else — on Windows the AMYboard gets a fresh port id
+    // after its post-zB reboot, so the ids in midiInputOptionIds /
+    // midiOutputOptionIds from the initial page load are stale.
+    // _refresh_main_midi_dropdowns preserves selection by port name so the
+    // AMYboard entry auto-aligns with its new id. Without this,
+    // get_selected_midi_input_device() returns null below and Try Again
+    // fails with "cannot proceed, MIDI devices not ready" even though the
+    // dropdowns look right.
+    if (typeof _refresh_main_midi_dropdowns === 'function') {
+        _refresh_main_midi_dropdowns();
+    }
+
     // Copy the modal's selection back to the main dropdown, clamping to a
     // valid index so we never leave the main dropdown at -1 (no selection).
     if (mainIn && modalIn) {
@@ -3967,47 +4383,70 @@ function _save_successful_midi_ports() {
     _set_midi_cookie(_opt_portname(mainIn), _opt_portname(mainOut));
 }
 
+// Post-bootloader portion of reset_amyboard: send zP factory_reset to the
+// (already-rebooted) board and reset JS-side state to factory defaults.
+// Extracted so it can be called both from the macOS/synchronous path and
+// from pageload_control_sync's post-reset-reload branch on Windows, where
+// the reset straddles a page reload forced by the Chrome WebMIDI stale-
+// handle workaround.
+async function _reset_amyboard_send_and_cleanup() {
+    amy_add_log_message('zPimport amyboard; amyboard.factory_reset()Z');
+    console.log('reset: zP factory_reset sent');
+    await sleep_ms(2000);
+    // Set JS state to defaults.
+    var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop() is called every 32nd note.\nimport amyboard, amy\n\ndef loop():\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
+    if (editor) {
+        editor.setValue(defaultSketch);
+        setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+    }
+    if (typeof window.reset_amy_knobs_to_defaults === "function") {
+        window.reset_amy_knobs_to_defaults();
+    }
+    // Reset channel state: only channel 1 active.
+    if (!Array.isArray(window.active_channels)) window.active_channels = [];
+    window.active_channels[1] = true;
+    for (var _ch = 2; _ch <= 16; _ch++) window.active_channels[_ch] = false;
+    window.current_synth = 1;
+    var channelSelect = document.getElementById("midi-channel-select");
+    if (channelSelect) channelSelect.value = "1";
+    var activeCheckbox = document.getElementById("channel-active-toggle");
+    if (activeCheckbox) activeCheckbox.checked = true;
+    if (Array.isArray(window.channel_control_mapping_sent)) {
+        for (var _ch2 = 1; _ch2 <= 16; _ch2++) window.channel_control_mapping_sent[_ch2] = false;
+    }
+    if (typeof window.refresh_knobs_for_channel === "function") {
+        window.suppress_knob_cc_send = true;
+        try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
+    }
+    _hide_resetting_modal();
+    if (document.activeElement) document.activeElement.blur();
+}
+
 async function reset_amyboard() {
     if (amyboard_mode === 'control') {
         _show_resetting_modal();
-        // zB reboots into bootloader mode (pure C, works even with busy loop()).
-        // After reboot, the board skips sketch, scheduler is idle.
-        // Then we send zP factory_reset which runs reliably.
+        // Windows Chrome workaround: the zB USB reboot leaves Chrome holding
+        // a stale MIDI handle with no statechange event, so a post-zB zP
+        // factory_reset silently goes into the void. Same fix as pageload:
+        // send zB, wait for the board to reboot, reload the page. Post-
+        // reload, pageload_control_sync notices the amyboard_post_reset_reload
+        // flag and calls _reset_amyboard_send_and_cleanup() — which sends
+        // zP factory_reset and resets the JS state — against a fresh
+        // MIDIAccess.
+        if (_IS_WINDOWS_CHROME) {
+            reboot_to_bootloader();
+            console.log('reset: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
+            sessionStorage.setItem('amyboard_post_reset_reload', '1');
+            await sleep_ms(4000);
+            console.log('reset: reloading now');
+            window.location.reload();
+            return;  // unreachable after reload
+        }
+        // macOS / others: zB, wait, then send + cleanup synchronously.
         reboot_to_bootloader();
         console.log('reset: zB sent, waiting for board...');
         await wait_for_board_ready();
-        // Board is now in bootloader mode — scheduler idle, no sketch.
-        // Run factory_reset on the clean board.
-        amy_add_log_message('zPimport amyboard; amyboard.factory_reset()Z');
-        console.log('reset: zP factory_reset sent');
-        await sleep_ms(2000);
-        // Set JS state to defaults.
-        var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop() is called every 32nd note.\nimport amyboard, amy\n\ndef loop():\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
-        if (editor) {
-            editor.setValue(defaultSketch);
-            setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
-        }
-        if (typeof window.reset_amy_knobs_to_defaults === "function") {
-            window.reset_amy_knobs_to_defaults();
-        }
-        // Reset channel state: only channel 1 active.
-        if (!Array.isArray(window.active_channels)) window.active_channels = [];
-        window.active_channels[1] = true;
-        for (var _ch = 2; _ch <= 16; _ch++) window.active_channels[_ch] = false;
-        window.current_synth = 1;
-        var channelSelect = document.getElementById("midi-channel-select");
-        if (channelSelect) channelSelect.value = "1";
-        var activeCheckbox = document.getElementById("channel-active-toggle");
-        if (activeCheckbox) activeCheckbox.checked = true;
-        if (Array.isArray(window.channel_control_mapping_sent)) {
-            for (var _ch2 = 1; _ch2 <= 16; _ch2++) window.channel_control_mapping_sent[_ch2] = false;
-        }
-        if (typeof window.refresh_knobs_for_channel === "function") {
-            window.suppress_knob_cc_send = true;
-            try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
-        }
-        _hide_resetting_modal();
-        if (document.activeElement) document.activeElement.blur();
+        await _reset_amyboard_send_and_cleanup();
     } else {
         // Simulate mode: let Python handle the reset (same path as hardware),
         // then refresh JS-side knob/channel state so the UI matches the

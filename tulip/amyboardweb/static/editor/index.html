@@ -939,15 +939,103 @@
           // hasn't run yet so there's no live AMY state to capture, and zA
           // would just overwrite the on-disk sketch.py's knobs with empty
           // state.
+          //
+          // Windows Chrome workaround: Chrome's WebMIDI on Windows holds a
+          // stale USB endpoint handle across USB disconnect/reconnect — no
+          // statechange events fire, sendSysex goes into the void for up
+          // to ~60s. Rather than fight Chrome's cache from JS, we force a
+          // full page reload AFTER sending zB: the fresh document calls
+          // navigator.requestMIDIAccess() again from a clean slate, which
+          // releases Chrome's cached handle and picks up the rebooted
+          // board's fresh USB descriptor. A sessionStorage flag tells the
+          // post-reload page to skip zB (avoiding an infinite reboot loop)
+          // and go straight into the sync.
+          var _IS_WINDOWS_CHROME = /Windows/i.test(navigator.userAgent) &&
+                                   /Chrome/i.test(navigator.userAgent);
           window.pageload_control_sync = async function() {
-            _show_syncing_modal();
-            reboot_to_bootloader();
-            console.log('pageload: zB sent, waiting for board...');
-            var ready = await wait_for_board_ready();
-            if (!ready) {
-              // Board didn't respond — show the error/change-ports UI.
-              _show_syncing_modal_error();
+            // Post-reset reload path: reset_amyboard() on Windows Chrome
+            // sends zB, sets this flag, and reloads — we land here on the
+            // fresh document. Pick up where reset_amyboard left off by
+            // waiting for the board and sending zP factory_reset against
+            // the now-fresh MIDIAccess.
+            var _post_reset_reload = sessionStorage.getItem('amyboard_post_reset_reload') === '1';
+            if (_post_reset_reload) {
+              sessionStorage.removeItem('amyboard_post_reset_reload');
+              console.log('pageload: post-reset reload — completing reset');
+              _show_resetting_modal();
+              var resetReady = await wait_for_board_ready(10000);
+              if (!resetReady) {
+                _hide_resetting_modal();
+                return;
+              }
+              if (typeof _reset_amyboard_send_and_cleanup === 'function') {
+                await _reset_amyboard_send_and_cleanup();
+              } else {
+                _hide_resetting_modal();
+              }
               return;
+            }
+            // Post-upload reload path: any zB+upload flow on Windows Chrome
+            // (import from AMYboard World, load_world_environment_by_name,
+            // save_amy_state / "Send to AMYboard") stashed its options in
+            // sessionStorage and reloaded. Continue the flow here against
+            // the fresh MIDIAccess.
+            var _post_zb_upload_raw = sessionStorage.getItem('amyboard_post_zb_upload');
+            if (_post_zb_upload_raw) {
+              sessionStorage.removeItem('amyboard_post_zb_upload');
+              var _uploadOpts = null;
+              try { _uploadOpts = JSON.parse(_post_zb_upload_raw); } catch (e) {}
+              console.log('pageload: post-zB upload reload — completing upload', _uploadOpts);
+              _show_saving_modal();
+              var uploadReady = await wait_for_board_ready(10000);
+              if (!uploadReady) {
+                _hide_saving_modal();
+                return;
+              }
+              if (_uploadOpts && typeof _upload_sketch_post_bootloader === 'function') {
+                await _upload_sketch_post_bootloader(_uploadOpts);
+              } else {
+                _hide_saving_modal();
+              }
+              return;
+            }
+            _show_syncing_modal();
+            var _post_zb_reload = sessionStorage.getItem('amyboard_post_zb_reload') === '1';
+            if (_post_zb_reload) {
+              // Second load of this session, after the Windows reload trick.
+              // The board should already be in bootloader mode from the zB
+              // we sent pre-reload; skip zB and just confirm readiness.
+              sessionStorage.removeItem('amyboard_post_zb_reload');
+              console.log('pageload: post-zB reload — skipping zB, waiting for board...');
+              var ready = await wait_for_board_ready(10000);
+              if (!ready) {
+                _show_syncing_modal_error();
+                return;
+              }
+            } else if (_IS_WINDOWS_CHROME) {
+              // Windows Chrome path: send zB, wait a few seconds for the
+              // board to finish rebooting into bootloader mode, then force
+              // a full page reload so Chrome hands us a fresh MIDIAccess.
+              reboot_to_bootloader();
+              console.log('pageload: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
+              sessionStorage.setItem('amyboard_post_zb_reload', '1');
+              // 4s chosen to comfortably cover the ~3s board reboot budget
+              // without leaving the user staring at an empty spinner for
+              // noticeably longer than necessary.
+              await new Promise(function(r) { setTimeout(r, 4000); });
+              console.log('pageload: reloading now');
+              window.location.reload();
+              return;  // unreachable after reload
+            } else {
+              // macOS and others: standard path — zB then poll for reply.
+              reboot_to_bootloader();
+              console.log('pageload: zB sent, waiting for board...');
+              var ready = await wait_for_board_ready();
+              if (!ready) {
+                // Board didn't respond — show the error/change-ports UI.
+                _show_syncing_modal_error();
+                return;
+              }
             }
             // Pull sketch.py from hardware (zD only, no zA).
             _sync_stage = 'pending';
