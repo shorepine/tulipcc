@@ -2576,6 +2576,19 @@ async function wait_for_board_ready(timeout_ms) {
     // events never fire (some WebMidi.js versions, or if the platform
     // silently reuses the port like macOS CoreMIDI) the existing retry
     // loop still gets us a reply.
+    // Cap outgoing pings once we've seen a streak of non-replies. On Windows,
+    // Chrome's WebMIDI keeps the stale MIDIOutput reporting state='connected'
+    // for the full 15s window even though the physical device rebooted
+    // underneath it with a fresh USB id. sendSysex against that stale port
+    // silently queues in Chrome's internal worker with ~2s timeouts each;
+    // 30 queued sends drain AFTER our own timeout fires, hanging the
+    // renderer for ~60s. By stopping sends after MAX_FAILURES we bound the
+    // queue to at most MAX_FAILURES items — a few seconds of drain worst
+    // case. We resume sending the instant we see positive evidence the
+    // port is fresh (id change or WebMidi `connected` event).
+    var MAX_FAILURES_BEFORE_PAUSE = 3;
+    var consecutive_failures = 0;
+
     var connectedHandler = null;
     if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.addListener === 'function') {
         connectedHandler = async function() {
@@ -2586,6 +2599,8 @@ async function wait_for_board_ready(timeout_ms) {
                 }
                 await setup_midi_devices();
             } catch (err) {}
+            // Fresh port → re-enable pings even if we'd paused.
+            consecutive_failures = 0;
             _send_zi_ping();
         };
         try { WebMidi.addListener('connected', connectedHandler); } catch (e) {}
@@ -2613,28 +2628,28 @@ async function wait_for_board_ready(timeout_ms) {
             }
 
             // If the bound input id changed (post-reboot reconnect with
-            // fresh port ids), rebind listeners on the new device.
+            // fresh port ids), rebind listeners on the new device and
+            // reset the failure counter so we retry pings against the
+            // new port.
             var currentInput = null;
             try { currentInput = get_selected_midi_input_device(); } catch (e) {}
             var currentInputId = currentInput ? currentInput.id : null;
             if (currentInputId !== prevInputId) {
                 try { await setup_midi_devices(); } catch (e) {}
                 prevInputId = currentInputId;
+                consecutive_failures = 0;
             }
 
-            // CRITICAL: only attempt a send if the output port is actually
-            // up. On Windows, Chrome's WebMIDI silently queues sendSysex
-            // calls directed at a 'disconnected' MIDIOutput in an internal
-            // worker with ~2s per-transaction timeouts. 30 retries at
-            // 500ms each → 60+ seconds of queue-draining, during which
-            // the renderer is unresponsive. Checking .state before calling
-            // sendSysex avoids the accumulation entirely.
             var output = get_selected_midi_output_device();
-            if (output && output.state !== 'disconnected') {
+            var port_up = (output && output.state !== 'disconnected');
+            // Only send if:
+            // (a) the port looks up (cheap filter that does help in the
+            //     cases where .state IS honest), AND
+            // (b) we haven't already queued MAX_FAILURES_BEFORE_PAUSE
+            //     sends without a reply (prevents Windows queue pileup).
+            var should_send = port_up && consecutive_failures < MAX_FAILURES_BEFORE_PAUSE;
+            if (should_send) {
                 _send_zi_ping();
-            } else {
-                console.log('wait_for_board_ready: output port not ready (state=' +
-                            (output ? output.state : 'null') + '), waiting');
             }
 
             // Wait for reply — short timeout per attempt.
@@ -2649,7 +2664,11 @@ async function wait_for_board_ready(timeout_ms) {
                 console.log('wait_for_board_ready: board is ready');
                 return true;
             }
-            console.log('wait_for_board_ready: no reply, retrying...');
+            consecutive_failures++;
+            console.log('wait_for_board_ready: no reply (failures=' + consecutive_failures +
+                        ', sent=' + should_send +
+                        ', out_state=' + (output ? output.state : 'null') +
+                        ', out_id=' + (output ? String(output.id).slice(0, 12) : 'null') + ')');
         }
         console.warn('wait_for_board_ready: timed out after ' + timeout_ms + 'ms');
         return false;
