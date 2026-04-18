@@ -4301,47 +4301,72 @@ function _save_successful_midi_ports() {
     _set_midi_cookie(_opt_portname(mainIn), _opt_portname(mainOut));
 }
 
+// Post-bootloader portion of reset_amyboard: send zP factory_reset to the
+// (already-rebooted) board and reset JS-side state to factory defaults.
+// Extracted so it can be called both from the macOS/synchronous path and
+// from pageload_control_sync's post-reset-reload branch on Windows, where
+// the reset straddles a page reload forced by the Chrome WebMIDI stale-
+// handle workaround.
+async function _reset_amyboard_send_and_cleanup() {
+    amy_add_log_message('zPimport amyboard; amyboard.factory_reset()Z');
+    console.log('reset: zP factory_reset sent');
+    await sleep_ms(2000);
+    // Set JS state to defaults.
+    var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop() is called every 32nd note.\nimport amyboard, amy\n\ndef loop():\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
+    if (editor) {
+        editor.setValue(defaultSketch);
+        setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+    }
+    if (typeof window.reset_amy_knobs_to_defaults === "function") {
+        window.reset_amy_knobs_to_defaults();
+    }
+    // Reset channel state: only channel 1 active.
+    if (!Array.isArray(window.active_channels)) window.active_channels = [];
+    window.active_channels[1] = true;
+    for (var _ch = 2; _ch <= 16; _ch++) window.active_channels[_ch] = false;
+    window.current_synth = 1;
+    var channelSelect = document.getElementById("midi-channel-select");
+    if (channelSelect) channelSelect.value = "1";
+    var activeCheckbox = document.getElementById("channel-active-toggle");
+    if (activeCheckbox) activeCheckbox.checked = true;
+    if (Array.isArray(window.channel_control_mapping_sent)) {
+        for (var _ch2 = 1; _ch2 <= 16; _ch2++) window.channel_control_mapping_sent[_ch2] = false;
+    }
+    if (typeof window.refresh_knobs_for_channel === "function") {
+        window.suppress_knob_cc_send = true;
+        try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
+    }
+    _hide_resetting_modal();
+    if (document.activeElement) document.activeElement.blur();
+}
+
 async function reset_amyboard() {
     if (amyboard_mode === 'control') {
         _show_resetting_modal();
-        // zB reboots into bootloader mode (pure C, works even with busy loop()).
-        // After reboot, the board skips sketch, scheduler is idle.
-        // Then we send zP factory_reset which runs reliably.
+        // Windows Chrome workaround: the zB USB reboot leaves Chrome holding
+        // a stale MIDI handle with no statechange event, so a post-zB zP
+        // factory_reset silently goes into the void. Same fix as pageload:
+        // send zB, wait for the board to reboot, reload the page. Post-
+        // reload, pageload_control_sync notices the amyboard_post_reset_reload
+        // flag and calls _reset_amyboard_send_and_cleanup() — which sends
+        // zP factory_reset and resets the JS state — against a fresh
+        // MIDIAccess.
+        var _IS_WINDOWS_CHROME = /Windows/i.test(navigator.userAgent) &&
+                                 /Chrome/i.test(navigator.userAgent);
+        if (_IS_WINDOWS_CHROME) {
+            reboot_to_bootloader();
+            console.log('reset: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
+            sessionStorage.setItem('amyboard_post_reset_reload', '1');
+            await sleep_ms(4000);
+            console.log('reset: reloading now');
+            window.location.reload();
+            return;  // unreachable after reload
+        }
+        // macOS / others: zB, wait, then send + cleanup synchronously.
         reboot_to_bootloader();
         console.log('reset: zB sent, waiting for board...');
         await wait_for_board_ready();
-        // Board is now in bootloader mode — scheduler idle, no sketch.
-        // Run factory_reset on the clean board.
-        amy_add_log_message('zPimport amyboard; amyboard.factory_reset()Z');
-        console.log('reset: zP factory_reset sent');
-        await sleep_ms(2000);
-        // Set JS state to defaults.
-        var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop() is called every 32nd note.\nimport amyboard, amy\n\ndef loop():\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
-        if (editor) {
-            editor.setValue(defaultSketch);
-            setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
-        }
-        if (typeof window.reset_amy_knobs_to_defaults === "function") {
-            window.reset_amy_knobs_to_defaults();
-        }
-        // Reset channel state: only channel 1 active.
-        if (!Array.isArray(window.active_channels)) window.active_channels = [];
-        window.active_channels[1] = true;
-        for (var _ch = 2; _ch <= 16; _ch++) window.active_channels[_ch] = false;
-        window.current_synth = 1;
-        var channelSelect = document.getElementById("midi-channel-select");
-        if (channelSelect) channelSelect.value = "1";
-        var activeCheckbox = document.getElementById("channel-active-toggle");
-        if (activeCheckbox) activeCheckbox.checked = true;
-        if (Array.isArray(window.channel_control_mapping_sent)) {
-            for (var _ch2 = 1; _ch2 <= 16; _ch2++) window.channel_control_mapping_sent[_ch2] = false;
-        }
-        if (typeof window.refresh_knobs_for_channel === "function") {
-            window.suppress_knob_cc_send = true;
-            try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
-        }
-        _hide_resetting_modal();
-        if (document.activeElement) document.activeElement.blur();
+        await _reset_amyboard_send_and_cleanup();
     } else {
         // Simulate mode: let Python handle the reset (same path as hardware),
         // then refresh JS-side knob/channel state so the UI matches the

@@ -953,6 +953,28 @@
           var _IS_WINDOWS_CHROME = /Windows/i.test(navigator.userAgent) &&
                                    /Chrome/i.test(navigator.userAgent);
           window.pageload_control_sync = async function() {
+            // Post-reset reload path: reset_amyboard() on Windows Chrome
+            // sends zB, sets this flag, and reloads — we land here on the
+            // fresh document. Pick up where reset_amyboard left off by
+            // waiting for the board and sending zP factory_reset against
+            // the now-fresh MIDIAccess.
+            var _post_reset_reload = sessionStorage.getItem('amyboard_post_reset_reload') === '1';
+            if (_post_reset_reload) {
+              sessionStorage.removeItem('amyboard_post_reset_reload');
+              console.log('pageload: post-reset reload — completing reset');
+              _show_resetting_modal();
+              var resetReady = await wait_for_board_ready(10000);
+              if (!resetReady) {
+                _hide_resetting_modal();
+                return;
+              }
+              if (typeof _reset_amyboard_send_and_cleanup === 'function') {
+                await _reset_amyboard_send_and_cleanup();
+              } else {
+                _hide_resetting_modal();
+              }
+              return;
+            }
             _show_syncing_modal();
             var _post_zb_reload = sessionStorage.getItem('amyboard_post_zb_reload') === '1';
             if (_post_zb_reload) {
