@@ -3995,6 +3995,17 @@ function _refresh_main_midi_dropdowns() {
     if (typeof populate_midi_passthru_dropdown === 'function') {
         populate_midi_passthru_dropdown();
     }
+
+    // Mirror the refreshed dropdowns into the sync modal's dropdowns.
+    // _show_syncing_modal() snapshots main dropdown innerHTML into the
+    // modal the moment it's shown — on Windows post-reload that happens
+    // before WebMidi has enumerated the ports, so the modal captures the
+    // HTML-default "MIDI in: [Not available]" labels. Re-mirroring here
+    // keeps the modal in lockstep with the real dropdowns as ports come
+    // online, so users see "MIDI in: AMYboard" instead of [Not available].
+    if (typeof _sync_modal_populate_midi === 'function') {
+        try { _sync_modal_populate_midi(); } catch (e) {}
+    }
 }
 
 function _show_saving_modal() {
