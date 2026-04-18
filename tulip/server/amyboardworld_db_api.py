@@ -31,6 +31,15 @@ ENV_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
 FILE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 TAG_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
 RESERVED_USERNAMES = {"shorepine"}
+# Sketches uploaded by these usernames are surfaced with the OFFICIAL_TAG
+# automatically — the tag is injected into API responses at serialization
+# time and the ?tag=official filter includes them even if their stored
+# tags_json doesn't literally contain "official". Use this when a user
+# account is considered official/canonical and you want all of its
+# historical uploads to show up under the #official chip without running
+# a database migration to backfill the tag.
+OFFICIAL_USERNAMES = {"shorepine"}
+OFFICIAL_TAG = "official"
 MAX_DESCRIPTION = 400
 MAX_MESSAGE = 800
 MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -284,6 +293,10 @@ def _validate_tulip_upload(filename: str, contents: bytes) -> str:
 def _file_row_to_public(row: sqlite3.Row, scope: str) -> dict[str, Any]:
     file_id = int(row["id"])
     tags = _parse_tags(row["tags_json"])
+    # Inject the official tag for sketches uploaded by OFFICIAL_USERNAMES,
+    # even if their stored tags_json doesn't contain it. See OFFICIAL_USERNAMES.
+    if str(row["username"]).lower() in OFFICIAL_USERNAMES and OFFICIAL_TAG not in tags:
+        tags = [OFFICIAL_TAG] + tags
     t = int(row["created_at_ms"])
     # item_type is only present in the environments table; default to "environment" for others.
     try:
@@ -424,8 +437,20 @@ def _list_file_rows(
     if tag_s:
         if not TAG_RE.match(tag_s):
             raise HTTPException(status_code=400, detail="Invalid tag")
-        clauses.append("lower(tags_json) LIKE ?")
-        params.append(f'%"{tag_s}"%')
+        # For OFFICIAL_TAG, also match rows whose username is in
+        # OFFICIAL_USERNAMES — mirrors the auto-injection in
+        # _file_row_to_public so the #official filter chip returns
+        # the same set of sketches that display the #official badge.
+        if tag_s == OFFICIAL_TAG and OFFICIAL_USERNAMES:
+            placeholders = ",".join(["?"] * len(OFFICIAL_USERNAMES))
+            clauses.append(
+                f"(lower(tags_json) LIKE ? OR lower(username) IN ({placeholders}))"
+            )
+            params.append(f'%"{tag_s}"%')
+            params.extend(sorted(OFFICIAL_USERNAMES))
+        else:
+            clauses.append("lower(tags_json) LIKE ?")
+            params.append(f'%"{tag_s}"%')
 
     where_sql = " AND ".join(clauses)
 
