@@ -4103,21 +4103,53 @@ function _refresh_main_midi_dropdowns() {
         midi_out.options[midi_out.options.length] = new Option("MIDI out: " + safe_midi_port_name(output));
     });
 
-    // Default to index 0 so the select is always in a valid state, then try
-    // to restore the user's previous selection by port name. If the previous
-    // port is gone (or there was no previous selection), the default stays.
-    if (midi_in.options.length > 0) midi_in.selectedIndex = 0;
-    for (var i = 0; i < midi_in.options.length; i++) {
-        if (_name_from_opt(midi_in.options[i]) === prevInName) {
-            midi_in.selectedIndex = i; break;
+    // Preselect priority — mirrors onEnabled's logic so _refresh is
+    // idempotent with the initial page load preselect:
+    //   1. Saved cookie port by name (user's last successful selection).
+    //   2. Any port name matching /amyboard/i (default preference).
+    //   3. Previous selection by name (useful when a non-amyboard port
+    //      is the intended target, e.g. the user pointed at something
+    //      other than AMYboard and there isn't an AMYboard in the list).
+    //   4. Index 0 (last resort when nothing else matches).
+    //
+    // Rationale: during a zB USB reboot, WebMidi.outputs briefly drops
+    // the AMYboard output while keeping all other ports (IAC Driver Bus 1,
+    // etc). The previous "prev-name → 0" logic selected IAC Driver as
+    // the fallback, and the NEXT refresh's prev-name was then "IAC Driver
+    // Bus 1" which matched — sticky on the wrong port forever, silently
+    // routing zI pings and zD/zP sysex into the void. Preferring AMYboard
+    // when it reappears un-sticks the dropdown automatically.
+    var savedPorts = typeof _get_midi_cookie === 'function' ? _get_midi_cookie() : null;
+
+    function _preselect(select, savedName, prevName) {
+        if (!select || select.options.length === 0) return;
+        select.selectedIndex = 0;  // default fallback
+        // 1. Cookie
+        if (savedName) {
+            for (var i = 0; i < select.options.length; i++) {
+                if (_name_from_opt(select.options[i]) === savedName) {
+                    select.selectedIndex = i; return;
+                }
+            }
         }
-    }
-    if (midi_out.options.length > 0) midi_out.selectedIndex = 0;
-    for (var j = 0; j < midi_out.options.length; j++) {
-        if (_name_from_opt(midi_out.options[j]) === prevOutName) {
-            midi_out.selectedIndex = j; break;
+        // 2. Amyboard default preference
+        for (var j = 0; j < select.options.length; j++) {
+            if (/amyboard/i.test(_name_from_opt(select.options[j]))) {
+                select.selectedIndex = j; return;
+            }
         }
+        // 3. Previous selection (only helps non-amyboard-not-present cases)
+        if (prevName) {
+            for (var k = 0; k < select.options.length; k++) {
+                if (_name_from_opt(select.options[k]) === prevName) {
+                    select.selectedIndex = k; return;
+                }
+            }
+        }
+        // 4. selectedIndex stays 0 from above
     }
+    _preselect(midi_in, savedPorts ? savedPorts.input : null, prevInName);
+    _preselect(midi_out, savedPorts ? savedPorts.output : null, prevOutName);
 
     console.log('_refresh_main_midi_dropdowns: rescanned ' +
                 midiInputOptionIds.length + ' inputs, ' +
