@@ -2533,29 +2533,83 @@ function reboot_to_bootloader() {
 var _ping_resolve = null;
 var _ping_reject = null;
 
+// Send a single zI ping directly, bypassing sysex_write_amy_message's
+// ackPromise path. zI is handled in pure C on the board and replies with
+// "OK" — it never triggers the "AK" ACK that sysex_write_amy_message
+// waits for, so routing pings through that path would leak a 5-second
+// setTimeout + pending Promise for every retry. Also refreshes the
+// output handle on each call: on Windows the MIDIOutput reference goes
+// stale after the USB reconnect that follows zB, and we need the fresh
+// one from WebMidi.outputs. Returns true if the send was dispatched,
+// false otherwise (no output, or sendSysex threw).
+function _send_zi_ping() {
+    var outputDevice = get_selected_midi_output_device();
+    if (!outputDevice) return false;
+    try {
+        var payload = Array.from(new TextEncoder().encode('zIZ'));
+        if (typeof outputDevice.sendSysex === 'function') {
+            outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
+        } else if (typeof outputDevice.send === 'function') {
+            outputDevice.send([0xF0].concat(AMYBOARD_SYSEX_MFR_ID, payload, [0xF7]));
+        } else {
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.warn('_send_zi_ping: send failed (port likely stale):', e);
+        return false;
+    }
+}
+
 async function wait_for_board_ready(timeout_ms) {
     if (!timeout_ms) timeout_ms = 15000;
     // Poll with zI until the board replies with OK.
     var deadline = Date.now() + timeout_ms;
-    while (Date.now() < deadline) {
-        // Send zI ping.
-        try { amy_add_log_message('zIZ'); } catch (e) {}
-        // Wait for reply — short timeout per attempt.
-        var got_reply = await new Promise(function(resolve) {
-            _ping_resolve = function() { resolve(true); };
-            _ping_reject = null;
-            setTimeout(function() {
-                if (_ping_resolve) { _ping_resolve = null; resolve(false); }
-            }, 500);
-        });
-        if (got_reply) {
-            console.log('wait_for_board_ready: board is ready');
-            return true;
-        }
-        console.log('wait_for_board_ready: no reply, retrying...');
+
+    // Windows-specific fast-path: when the AMYboard finishes its post-zB
+    // USB reconnect, Chrome creates a fresh MIDIInput/MIDIOutput pair and
+    // our cached references go stale. WebMidi fires "connected" events
+    // for each reappearance. Listen for those so we can rebind the
+    // midimessage listener onto the new input (via setup_midi_devices)
+    // and fire one extra ping on the refreshed output. This RACES against
+    // the normal polling loop — it doesn't replace it — so if connected
+    // events never fire (some WebMidi.js versions, or if the platform
+    // silently reuses the port like macOS CoreMIDI) the existing retry
+    // loop still gets us a reply.
+    var connectedHandler = null;
+    if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.addListener === 'function') {
+        connectedHandler = async function() {
+            console.log('wait_for_board_ready: WebMidi connected event, refreshing handles');
+            try { await setup_midi_devices(); } catch (err) {}
+            _send_zi_ping();
+        };
+        try { WebMidi.addListener('connected', connectedHandler); } catch (e) {}
     }
-    console.warn('wait_for_board_ready: timed out after ' + timeout_ms + 'ms');
-    return false;
+
+    try {
+        while (Date.now() < deadline) {
+            _send_zi_ping();
+            // Wait for reply — short timeout per attempt.
+            var got_reply = await new Promise(function(resolve) {
+                _ping_resolve = function() { resolve(true); };
+                _ping_reject = null;
+                setTimeout(function() {
+                    if (_ping_resolve) { _ping_resolve = null; resolve(false); }
+                }, 500);
+            });
+            if (got_reply) {
+                console.log('wait_for_board_ready: board is ready');
+                return true;
+            }
+            console.log('wait_for_board_ready: no reply, retrying...');
+        }
+        console.warn('wait_for_board_ready: timed out after ' + timeout_ms + 'ms');
+        return false;
+    } finally {
+        if (connectedHandler && typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.removeListener === 'function') {
+            try { WebMidi.removeListener('connected', connectedHandler); } catch (e) {}
+        }
+    }
 }
 
 function add_octal_to_buffer(buffer, offset, length, value, digits, trailer) {
