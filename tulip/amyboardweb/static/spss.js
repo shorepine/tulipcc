@@ -3996,15 +3996,25 @@ var _last_sketch_text = null;
 
 function _sync_modal_populate_midi() {
     // Mirror the main MIDI dropdowns into the modal's dropdowns.
+    // Skip the copy when main has zero options: during a zB USB reboot
+    // WebMidi.inputs transiently goes empty (even on macOS CoreMIDI),
+    // _refresh_main_midi_dropdowns wipes main to 0 options, then calls
+    // us — without the guard we'd propagate the empty state into a
+    // modal that was correctly populated with "MIDI in: AMYboard" at
+    // _show_syncing_modal time. Leaving the modal alone in that case
+    // preserves the last-known-good device list. The Windows post-
+    // reload "[Not available]" path still works: there main starts
+    // empty, so the modal also starts at HTML default, and once the
+    // port reappears a later refresh populates both.
     var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
     var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
-    if (mainIn && modalIn) {
+    if (mainIn && modalIn && mainIn.options.length > 0) {
         modalIn.innerHTML = mainIn.innerHTML;
         modalIn.selectedIndex = mainIn.selectedIndex;
     }
-    if (mainOut && modalOut) {
+    if (mainOut && modalOut && mainOut.options.length > 0) {
         modalOut.innerHTML = mainOut.innerHTML;
         modalOut.selectedIndex = mainOut.selectedIndex;
     }
