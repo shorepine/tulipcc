@@ -2561,10 +2561,52 @@ function _send_zi_ping() {
     }
 }
 
+// Install a raw MIDIAccess.statechange listener ONCE per page lifetime.
+// This bypasses WebMidi.js and logs the raw platform events. On Windows,
+// the WebMidi.js 'connected'/'disconnected' wrapper events have been
+// observed not to fire for USB MIDI reconnects; this diagnostic tells us
+// whether the raw MIDIAccess layer sees them (and when) so we can tune
+// our workaround strategy.
+var _raw_midi_statechange_installed = false;
+async function _install_raw_midi_statechange_diagnostic() {
+    if (_raw_midi_statechange_installed) return;
+    _raw_midi_statechange_installed = true;
+    if (typeof navigator === 'undefined' || !navigator.requestMIDIAccess) return;
+    try {
+        var access = await navigator.requestMIDIAccess({ sysex: true });
+        access.addEventListener('statechange', function(e) {
+            var p = e.port;
+            console.log('[MIDIAccess] statechange: id=' + (p ? p.id : 'null') +
+                        ' name=' + (p ? p.name : 'null') +
+                        ' state=' + (p ? p.state : 'null') +
+                        ' connection=' + (p ? p.connection : 'null') +
+                        ' type=' + (p ? p.type : 'null'));
+        });
+        var inputs_count = 0, outputs_count = 0;
+        access.inputs.forEach(function() { inputs_count++; });
+        access.outputs.forEach(function() { outputs_count++; });
+        console.log('[MIDIAccess] diagnostic listener installed; inputs=' +
+                    inputs_count + ' outputs=' + outputs_count);
+        access.inputs.forEach(function(p) {
+            console.log('  [MIDIAccess] input: id=' + p.id + ' name=' + p.name +
+                        ' state=' + p.state + ' connection=' + p.connection);
+        });
+        access.outputs.forEach(function(p) {
+            console.log('  [MIDIAccess] output: id=' + p.id + ' name=' + p.name +
+                        ' state=' + p.state + ' connection=' + p.connection);
+        });
+    } catch (e) {
+        console.warn('[MIDIAccess] diagnostic install failed:', e);
+    }
+}
+
 async function wait_for_board_ready(timeout_ms) {
     if (!timeout_ms) timeout_ms = 15000;
+    // Install raw-access diagnostic if we haven't already. No-op on repeat calls.
+    _install_raw_midi_statechange_diagnostic();
     // Poll with zI until the board replies with OK.
-    var deadline = Date.now() + timeout_ms;
+    var start_time = Date.now();
+    var deadline = start_time + timeout_ms;
 
     // Windows-specific fast-path: when the AMYboard finishes its post-zB
     // USB reconnect, Chrome creates a fresh MIDIInput/MIDIOutput pair and
@@ -2589,22 +2631,29 @@ async function wait_for_board_ready(timeout_ms) {
     var MAX_FAILURES_BEFORE_PAUSE = 3;
     var consecutive_failures = 0;
 
-    var connectedHandler = null;
-    if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.addListener === 'function') {
-        connectedHandler = async function() {
-            console.log('wait_for_board_ready: WebMidi connected event, refreshing handles');
-            try {
-                if (typeof _refresh_main_midi_dropdowns === 'function') {
-                    _refresh_main_midi_dropdowns();
-                }
-                await setup_midi_devices();
-            } catch (err) {}
-            // Fresh port → re-enable pings even if we'd paused.
-            consecutive_failures = 0;
-            _send_zi_ping();
-        };
-        try { WebMidi.addListener('connected', connectedHandler); } catch (e) {}
+    var connectedHandler = async function() {
+        console.log('wait_for_board_ready: WebMidi connected event, refreshing handles');
+        try {
+            if (typeof _refresh_main_midi_dropdowns === 'function') {
+                _refresh_main_midi_dropdowns();
+            }
+            await setup_midi_devices();
+        } catch (err) {}
+        // Fresh port → re-enable pings even if we'd paused.
+        consecutive_failures = 0;
+        _send_zi_ping();
+    };
+    function _attach_connected_listener() {
+        if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.addListener === 'function') {
+            try { WebMidi.addListener('connected', connectedHandler); } catch (e) {}
+        }
     }
+    function _detach_connected_listener() {
+        if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.removeListener === 'function') {
+            try { WebMidi.removeListener('connected', connectedHandler); } catch (e) {}
+        }
+    }
+    _attach_connected_listener();
 
     // Track the bound input id so we only re-run setup_midi_devices (which
     // destroys and re-attaches the midimessage listener) when the port
@@ -2615,8 +2664,49 @@ async function wait_for_board_ready(timeout_ms) {
     try { initialInput = get_selected_midi_input_device(); } catch (e) {}
     var prevInputId = initialInput ? initialInput.id : null;
 
+    // One-shot: halfway through the timeout, force a full WebMidi
+    // re-enumeration. Chrome on Windows has been observed to freeze the
+    // MIDIOutput state (id='output-1', state='connected') for the entire
+    // 15s window even after the physical device reboots — no WebMidi
+    // 'connected' event, no port-id change, no .state transition. A
+    // WebMidi.disable()/enable() cycle re-invokes navigator.requestMIDIAccess()
+    // and in some Chrome builds nudges the platform layer to re-check
+    // the Windows MIDI device list. No-op in the macOS happy path because
+    // the first ping already succeeded well before halfway.
+    var did_reenumerate = false;
+
     try {
         while (Date.now() < deadline) {
+            // Halfway re-enumeration nudge — only fires when we're still
+            // failing, on the way to a full timeout.
+            if (!did_reenumerate && (Date.now() - start_time) > timeout_ms / 2) {
+                did_reenumerate = true;
+                console.log('wait_for_board_ready: halfway with no reply, attempting WebMidi re-enumeration...');
+                _detach_connected_listener();
+                try {
+                    if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.disable === 'function') {
+                        await WebMidi.disable();
+                    }
+                    if (typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.enable === 'function') {
+                        await WebMidi.enable({ sysex: true });
+                    }
+                    console.log('wait_for_board_ready: re-enumerated; inputs=' +
+                                (WebMidi && WebMidi.inputs ? WebMidi.inputs.length : '?') +
+                                ' outputs=' + (WebMidi && WebMidi.outputs ? WebMidi.outputs.length : '?'));
+                    if (typeof _refresh_main_midi_dropdowns === 'function') {
+                        _refresh_main_midi_dropdowns();
+                    }
+                    await setup_midi_devices();
+                    var freshInput = null;
+                    try { freshInput = get_selected_midi_input_device(); } catch (e) {}
+                    prevInputId = freshInput ? freshInput.id : null;
+                    consecutive_failures = 0;
+                } catch (e) {
+                    console.warn('wait_for_board_ready: re-enumeration failed:', e);
+                }
+                _attach_connected_listener();
+            }
+
             // Refresh midi*OptionIds from current WebMidi.inputs/outputs
             // every iteration. On Windows the `connected` WebMidi event is
             // NOT reliably delivered in time (our logs show zero events
@@ -2673,9 +2763,7 @@ async function wait_for_board_ready(timeout_ms) {
         console.warn('wait_for_board_ready: timed out after ' + timeout_ms + 'ms');
         return false;
     } finally {
-        if (connectedHandler && typeof WebMidi !== 'undefined' && WebMidi && typeof WebMidi.removeListener === 'function') {
-            try { WebMidi.removeListener('connected', connectedHandler); } catch (e) {}
-        }
+        _detach_connected_listener();
     }
 }
 
