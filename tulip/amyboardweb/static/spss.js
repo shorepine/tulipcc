@@ -2888,11 +2888,20 @@ async function wait_for_board_ready(timeout_ms) {
                 }
             }
             // Refresh midi*OptionIds from current WebMidi.inputs/outputs
-            // every iteration. Cheap. On Windows the `connected` WebMidi
-            // event does not fire within our window (0 events observed
-            // across 30s in repros), so this is the only thing keeping
-            // us in sync if anything ever DOES change.
-            if (typeof _refresh_main_midi_dropdowns === 'function') {
+            // every iteration — but only on Windows. The `connected`
+            // WebMidi event is unreliable on Chrome Windows (0 events
+            // observed across 30s in repros), so polling is the only
+            // way to pick up fresh port ids after a USB reboot.
+            //
+            // On macOS polling this loop actively HURTS: WebMidi.inputs
+            // transiently drops AMYboard during the ~1-3s zB USB reboot
+            // while IAC Driver Bus 1 stays present. _refresh_main_midi_dropdowns
+            // rebuilds the dropdown with only IAC Driver, falls back to
+            // index 0, and the main dropdown sticks on IAC Driver for
+            // the rest of the session (prev-name matching is sticky on
+            // the wrong port). Leave macOS on the connected-event path —
+            // CoreMIDI does fire those reliably.
+            if (_IS_WINDOWS_CHROME && typeof _refresh_main_midi_dropdowns === 'function') {
                 _refresh_main_midi_dropdowns();
             }
 
@@ -3996,25 +4005,58 @@ var _last_sketch_text = null;
 
 function _sync_modal_populate_midi() {
     // Mirror the main MIDI dropdowns into the modal's dropdowns.
-    // Skip the copy when main has zero options: during a zB USB reboot
-    // WebMidi.inputs transiently goes empty (even on macOS CoreMIDI),
-    // _refresh_main_midi_dropdowns wipes main to 0 options, then calls
-    // us — without the guard we'd propagate the empty state into a
-    // modal that was correctly populated with "MIDI in: AMYboard" at
-    // _show_syncing_modal time. Leaving the modal alone in that case
-    // preserves the last-known-good device list. The Windows post-
-    // reload "[Not available]" path still works: there main starts
-    // empty, so the modal also starts at HTML default, and once the
-    // port reappears a later refresh populates both.
+    // Two subtleties, both driven by the per-iteration refresh calls
+    // made from wait_for_board_ready:
+    //
+    // 1. Skip when main has zero options. During a zB USB reboot
+    //    WebMidi.inputs transiently goes empty (even on macOS
+    //    CoreMIDI briefly); _refresh_main_midi_dropdowns wipes main
+    //    to 0 options and then calls us — we'd otherwise propagate
+    //    the empty state into a modal that was correctly populated
+    //    at _show_syncing_modal time.
+    //
+    // 2. Don't DOWNGRADE the modal. If main currently has no
+    //    amyboard-matching port selected but the modal does, that
+    //    means main is in a transient bad state (e.g. macOS lost
+    //    AMYboard briefly during the reboot, _refresh fell back to
+    //    index 0 which on macOS is typically "IAC Driver Bus 1").
+    //    Leave the modal alone and wait for main to recover. When
+    //    AMYboard reappears a later refresh will see main is
+    //    amyboard-selected and the copy goes through.
+    //
+    //    This is specifically the regression path: without guard (2),
+    //    the modal shows "IAC Driver Bus 1" in both in/out on macOS
+    //    Chrome even though the board is connected, because the
+    //    moment AMYboard flickers in WebMidi.inputs we overwrite the
+    //    modal's correct state with main's transient wrong state —
+    //    and once the modal selection moves off amyboard there's no
+    //    subsequent refresh that moves it back (main's prev-name
+    //    matcher is sticky on the wrong port too).
+    function _opt_name(sel) {
+        if (!sel || !sel.options || sel.selectedIndex < 0) return '';
+        var opt = sel.options[sel.selectedIndex];
+        if (!opt) return '';
+        var t = opt.text || '';
+        var idx = t.indexOf(': ');
+        return (idx >= 0) ? t.slice(idx + 2) : t;
+    }
+    function _should_mirror(main, modal) {
+        if (!main || !modal) return false;
+        if (main.options.length === 0) return false;  // rule (1)
+        var mainIsAmy = /amyboard/i.test(_opt_name(main));
+        var modalIsAmy = /amyboard/i.test(_opt_name(modal));
+        if (!mainIsAmy && modalIsAmy) return false;   // rule (2)
+        return true;
+    }
     var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
     var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
-    if (mainIn && modalIn && mainIn.options.length > 0) {
+    if (_should_mirror(mainIn, modalIn)) {
         modalIn.innerHTML = mainIn.innerHTML;
         modalIn.selectedIndex = mainIn.selectedIndex;
     }
-    if (mainOut && modalOut && mainOut.options.length > 0) {
+    if (_should_mirror(mainOut, modalOut)) {
         modalOut.innerHTML = mainOut.innerHTML;
         modalOut.selectedIndex = mainOut.selectedIndex;
     }
