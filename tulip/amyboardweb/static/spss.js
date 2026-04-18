@@ -2709,8 +2709,60 @@ async function wait_for_board_ready(timeout_ms) {
     try { initialInput = get_selected_midi_input_device(); } catch (e) {}
     var prevInputId = initialInput ? initialInput.id : null;
 
+    // One-shot: halfway through the timeout, cycle the raw MIDIOutput/MIDIInput
+    // through close() → pause → open(). Windows repros show Chrome reporting
+    // connection='open' and state='connected' for the full 30s while the
+    // physical device was rebooted underneath — sends go nowhere. The
+    // only remaining lever we have from JS is forcing Chrome to RELEASE
+    // the cached USB endpoint handle via close() and then re-acquire it
+    // via open(), with a pause in between to give Chrome time to notice
+    // the underlying Windows device changed. WebMidi.disable()/enable()
+    // (previous iteration) didn't produce this effect — it has to happen
+    // on the raw MIDIPort. No-op on macOS because the happy path already
+    // succeeded well before halfway.
+    var did_port_cycle = false;
+
     try {
         while (Date.now() < deadline) {
+            if (!did_port_cycle && (Date.now() - start_time) > timeout_ms / 2) {
+                did_port_cycle = true;
+                console.log('wait_for_board_ready: halfway, cycling raw ports (close → wait → open)...');
+                try {
+                    var output_ = get_selected_midi_output_device();
+                    var input_ = get_selected_midi_input_device();
+                    var rawOut_ = output_ && (output_._midiOutput || output_.output || null);
+                    var rawIn_ = input_ && (input_._midiInput || input_.input || null);
+                    if (rawOut_ && typeof rawOut_.close === 'function') {
+                        console.log('  output before close: connection=' + rawOut_.connection);
+                        try { await rawOut_.close(); } catch (e) { console.warn('  output close failed:', e && e.message); }
+                        console.log('  output after close: connection=' + rawOut_.connection);
+                    }
+                    if (rawIn_ && typeof rawIn_.close === 'function') {
+                        console.log('  input before close: connection=' + rawIn_.connection);
+                        try { await rawIn_.close(); } catch (e) { console.warn('  input close failed:', e && e.message); }
+                        console.log('  input after close: connection=' + rawIn_.connection);
+                    }
+                    // Give Chrome time to release the underlying Windows USB
+                    // handle. Too short and Chrome re-uses the cached handle;
+                    // ~1.5s has been observed sufficient in similar Chromium
+                    // MIDI workarounds.
+                    await new Promise(function(r) { setTimeout(r, 1500); });
+                    if (rawOut_ && typeof rawOut_.open === 'function') {
+                        try { await rawOut_.open(); } catch (e) { console.warn('  output open failed:', e && e.message); }
+                        console.log('  output after open: connection=' + rawOut_.connection);
+                    }
+                    if (rawIn_ && typeof rawIn_.open === 'function') {
+                        try { await rawIn_.open(); } catch (e) { console.warn('  input open failed:', e && e.message); }
+                        console.log('  input after open: connection=' + rawIn_.connection);
+                    }
+                    // Counters reset so burst mode fires again against the
+                    // hopefully-refreshed ports.
+                    consecutive_failures = 0;
+                    last_probe_time = 0;
+                } catch (e) {
+                    console.warn('wait_for_board_ready: port cycle failed:', e);
+                }
+            }
             // Refresh midi*OptionIds from current WebMidi.inputs/outputs
             // every iteration. Cheap. On Windows the `connected` WebMidi
             // event does not fire within our window (0 events observed
