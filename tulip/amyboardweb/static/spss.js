@@ -2643,18 +2643,40 @@ async function _install_raw_midi_statechange_diagnostic() {
 
 async function wait_for_board_ready(timeout_ms) {
     // Default 30s — Windows repros show Chrome's WebMIDI never fires
-    // statechange to JS across a USB reboot, so a time-based probe
-    // strategy is the only thing that can work. 15s wasn't enough; 30s
-    // gives Chrome more chance to internally settle and also gives the
-    // board time to reboot and the probe-mode cycle to send a couple of
-    // late pings. macOS happy path resolves in < 5s so the ceiling is
-    // a worst-case bound, not a typical wait.
+    // statechange to JS across a USB reboot until we force it via a
+    // raw-port close() cycle. 30s gives room for burst pings, probe
+    // pings, and the halfway close/open dance. macOS happy path
+    // resolves in < 5s so the ceiling is a worst-case bound.
     if (!timeout_ms) timeout_ms = 30000;
     // Install raw-access diagnostic if we haven't already. No-op on repeat calls.
     _install_raw_midi_statechange_diagnostic();
     // Poll with zI until the board replies with OK.
     var start_time = Date.now();
     var deadline = start_time + timeout_ms;
+
+    // Persistent reply catcher. A previous iteration overwrote
+    // _ping_resolve inside `await new Promise(...)` on every loop tick,
+    // meaning _ping_resolve was NULL during the gaps (e.g. during the
+    // halfway port-cycle's 1.5s sleep). On Windows the zI reply arrived
+    // during that gap, hit `if (_ping_resolve)` at line 1237 with a
+    // null handler, and was silently dropped — wait_for_board_ready
+    // ran to full timeout even though the board was demonstrably ready.
+    //
+    // Fix: install ONE handler at function entry that persists for the
+    // whole wait. The polling loop races its per-iteration 500ms sleep
+    // against this single reply_promise so any reply at any time breaks
+    // us out. Also unifies the sync-modal "Change ports" cancel path
+    // (line 4189 calls _ping_resolve() to abort us) — cancel paths
+    // resolve the same promise and return true, matching prior behavior.
+    var reply_received = false;
+    var reply_promise = new Promise(function(resolve) {
+        _ping_resolve = function() {
+            if (reply_received) return;
+            reply_received = true;
+            resolve(true);
+        };
+    });
+    _ping_reject = null;
 
     // Send strategy:
     //   - Burst: the first MAX_BURST_PINGS iterations ping every loop tick
@@ -2798,15 +2820,16 @@ async function wait_for_board_ready(timeout_ms) {
                 last_probe_time = now;
             }
 
-            // Wait for reply — short timeout per attempt.
-            var got_reply = await new Promise(function(resolve) {
-                _ping_resolve = function() { resolve(true); };
-                _ping_reject = null;
-                setTimeout(function() {
-                    if (_ping_resolve) { _ping_resolve = null; resolve(false); }
-                }, 500);
-            });
-            if (got_reply) {
+            // Wait 500ms or until reply arrives — whichever is first.
+            // Uses the persistent reply_promise set up at function entry,
+            // so a reply arriving during any earlier await (e.g. the
+            // halfway close/open cycle's 1.5s sleep) will break us out
+            // here too.
+            await Promise.race([
+                reply_promise,
+                new Promise(function(r) { setTimeout(r, 500); })
+            ]);
+            if (reply_received) {
                 console.log('wait_for_board_ready: board is ready after ' +
                             (Date.now() - start_time) + 'ms');
                 return true;
@@ -2824,6 +2847,11 @@ async function wait_for_board_ready(timeout_ms) {
         return false;
     } finally {
         _detach_connected_listener();
+        // Release the persistent reply catcher so stray late replies
+        // (e.g. from a ping sent just before timeout) don't fire into
+        // a dead resolver.
+        _ping_resolve = null;
+        _ping_reject = null;
     }
 }
 
