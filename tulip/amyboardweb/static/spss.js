@@ -2581,14 +2581,6 @@ async function wait_for_board_ready(timeout_ms) {
         connectedHandler = async function() {
             console.log('wait_for_board_ready: WebMidi connected event, refreshing handles');
             try {
-                // Refresh midiInputOptionIds / midiOutputOptionIds against
-                // current WebMidi.inputs/outputs first — Chrome on Windows
-                // gives the reconnected AMYboard a FRESH port id, so the
-                // id arrays from the pre-reboot page load are stale and
-                // get_selected_midi_input_device() returns null without
-                // this. _refresh_main_midi_dropdowns preserves selection
-                // by port name so the AMYboard entry re-aligns with its
-                // new id automatically.
                 if (typeof _refresh_main_midi_dropdowns === 'function') {
                     _refresh_main_midi_dropdowns();
                 }
@@ -2599,9 +2591,52 @@ async function wait_for_board_ready(timeout_ms) {
         try { WebMidi.addListener('connected', connectedHandler); } catch (e) {}
     }
 
+    // Track the bound input id so we only re-run setup_midi_devices (which
+    // destroys and re-attaches the midimessage listener) when the port
+    // actually changes. On macOS CoreMIDI re-uses the id across reboots so
+    // this avoids churning listeners; on Windows the id changes post-reboot
+    // and we pick up the new device the iteration it appears.
+    var initialInput = null;
+    try { initialInput = get_selected_midi_input_device(); } catch (e) {}
+    var prevInputId = initialInput ? initialInput.id : null;
+
     try {
         while (Date.now() < deadline) {
-            _send_zi_ping();
+            // Refresh midi*OptionIds from current WebMidi.inputs/outputs
+            // every iteration. On Windows the `connected` WebMidi event is
+            // NOT reliably delivered in time (our logs show zero events
+            // within the 15s window), so relying only on the event handler
+            // above to refresh is not sufficient. Cheap operation; safe on
+            // macOS where ids are stable.
+            if (typeof _refresh_main_midi_dropdowns === 'function') {
+                _refresh_main_midi_dropdowns();
+            }
+
+            // If the bound input id changed (post-reboot reconnect with
+            // fresh port ids), rebind listeners on the new device.
+            var currentInput = null;
+            try { currentInput = get_selected_midi_input_device(); } catch (e) {}
+            var currentInputId = currentInput ? currentInput.id : null;
+            if (currentInputId !== prevInputId) {
+                try { await setup_midi_devices(); } catch (e) {}
+                prevInputId = currentInputId;
+            }
+
+            // CRITICAL: only attempt a send if the output port is actually
+            // up. On Windows, Chrome's WebMIDI silently queues sendSysex
+            // calls directed at a 'disconnected' MIDIOutput in an internal
+            // worker with ~2s per-transaction timeouts. 30 retries at
+            // 500ms each → 60+ seconds of queue-draining, during which
+            // the renderer is unresponsive. Checking .state before calling
+            // sendSysex avoids the accumulation entirely.
+            var output = get_selected_midi_output_device();
+            if (output && output.state !== 'disconnected') {
+                _send_zi_ping();
+            } else {
+                console.log('wait_for_board_ready: output port not ready (state=' +
+                            (output ? output.state : 'null') + '), waiting');
+            }
+
             // Wait for reply — short timeout per attempt.
             var got_reply = await new Promise(function(resolve) {
                 _ping_resolve = function() { resolve(true); };
