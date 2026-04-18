@@ -1,14 +1,13 @@
 # AMYboard Arduino Setup
 
-AMYboard runs MicroPython firmware by default, but the underlying **AMY synthesizer engine** is available as a standalone Arduino library. This means you can use AMY's synthesis on AMYboard's ESP32-S3 hardware (or many other boards) from Arduino sketches.
-
+AMYboard runs MicroPython firmware by default, but the underlying **AMY synthesizer engine** is available as a standalone Arduino library. This means you can use AMY's synthesis on AMYboard's ESP32-S3 hardware (or [many other boards](https://github.com/shorepine/amy/blob/main/docs/arduino.md)) from Arduino sketches.
 
 ### 1. Install the AMY library and AMYboard board support
 
 AMY library and AMYboard board support are both available in the Arduino Library Manager. Follow these steps in order:
 
- 1. **Install ESP32 board support**: In the Arduino IDE, go to **File > Preferences** and add the ESP32 board manager URL: `https://espressif.github.io/arduino-esp32/package_esp32_index.json`. Then go to **Tools > Board > Boards Manager**, search for **"esp32"** by Espressif, and install it.
- 2. **Select the AMYboard board**: Go to **Tools > Board > ESP32 Arduino** and select **AMYboard**.
+ 1. **Update or install ESP32 board support**: If you already have the `esp32 by Espressif` board package installed, make sure it's at version 3.3.8 or higher. If you don't yet have it, in the Arduino IDE, go to **File > Preferences** and add the ESP32 board manager URL: `https://espressif.github.io/arduino-esp32/package_esp32_index.json`. Then go to **Tools > Board > Boards Manager**, search for **"esp32"** by Espressif, and install it.
+ 2. **Select the AMYboard board**: Go to **Tools > Board > ESP32 Arduino** and select **AMYboard** (It's all the way at the bottom.)
  3. **Install the AMY library**: Go to **Sketch > Include Library > Manage Libraries**, search for **"AMY"**, and install it.
 
 <img src="https://github.com/shorepine/amy/raw/main/docs/arduino1.png" width="400"/>
@@ -26,7 +25,7 @@ It should flash directly over USB-C without any special steps. If you see an upl
  2. Release **RST** first, then release **BOOT**. It'll feel like "rolling" your finger over both buttons from bottom to top.
  3. Try uploading again.
 
-You can always go back to the stock AMYboard MicroPython firmware using the [web upgrader at amyboard.com](online.md).
+You can always go back to our stock [AMYboard MicroPython firmware](firmware.md).
 
 ## Minimal Arduino sketch
 
