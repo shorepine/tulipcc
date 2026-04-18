@@ -6,6 +6,8 @@ AMYboard runs MicroPython firmware by default, but the underlying **AMY synthesi
 
 AMY library and AMYboard board support are both available in the Arduino Library Manager. Follow these steps in order:
 
+<img src="https://github.com/shorepine/amy/raw/main/docs/amyboard/img/arduino-board.jpg" width="400"/>
+
  1. **Update or install ESP32 board support**: If you already have the `esp32 by Espressif` board package installed, make sure it's at version 3.3.8 or higher. If you don't yet have it, in the Arduino IDE, go to **File > Preferences** and add the ESP32 board manager URL: `https://espressif.github.io/arduino-esp32/package_esp32_index.json`. Then go to **Tools > Board > Boards Manager**, search for **"esp32"** by Espressif, and install it.
  2. **Select the AMYboard board**: Go to **Tools > Board > ESP32 Arduino** and select **AMYboard** (It's all the way at the bottom.)
  3. **Install the AMY library**: Go to **Sketch > Include Library > Manage Libraries**, search for **"AMY"**, and install it.
