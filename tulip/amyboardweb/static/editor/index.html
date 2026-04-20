@@ -2142,6 +2142,13 @@
                     // Apply VCF coda so analog filter controls work with DX7
                     amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
                   }
+                  // Mark disabled panes before sending CC mappings so disabled-section
+                  // knobs don't blast initial ic updates to AMY for DX7 presets.
+                  if (typeof window.set_section_disabled === "function") {
+                    window.set_section_disabled("Osc A", isDX7Preset);
+                    window.set_section_disabled("Osc B", isDX7Preset);
+                    window.set_section_disabled("ADSR", isDX7Preset);
+                  }
                   // In control mode, skip sending knob CC mappings — they race with the
                   // patch load over sysex and can overwrite the K command. The hardware
                   // doesn't need them; knob state is read back via sync_knobs_from_hardware.
@@ -2155,6 +2162,7 @@
                 if (typeof sync_channel_knobs_from_synth_to_ui === "function") {
                   sync_channel_knobs_from_synth_to_ui(presetSynth).then(function() {
                     if (typeof window.set_section_disabled === "function") {
+                      window.set_section_disabled("Osc A", isDX7Preset);
                       window.set_section_disabled("Osc B", isDX7Preset);
                       window.set_section_disabled("ADSR", isDX7Preset);
                     }

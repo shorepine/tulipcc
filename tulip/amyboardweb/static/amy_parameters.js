@@ -62,7 +62,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc A",
       cc: "",
       display_name: "level",
-      change_code: "i%iv" + OSCA_OSC + "a%v,,0,0",
+      change_code: "i%iv" + OSCA_OSC + "a%v",
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,       // amp_coefs[EG0] = 1.0
@@ -180,7 +180,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Osc B",
       cc: "",
       display_name: "level",
-      change_code: "i%iv" + OSCB_OSC + "a%v,,0,0",
+      change_code: "i%iv" + OSCB_OSC + "a%v",
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,       // amp_coefs[EG0] = 1.0
@@ -679,7 +679,9 @@ window.addEventListener("DOMContentLoaded", function() {
       init_knobs(globalKnobs, "knob-grid-global");
     }
     if (typeof window.onKnobCcChange === "function") {
+      const disabledSections = window._disabled_sections || {};
       for (const knob of knobs) {
+        if (disabledSections[knob.section]) continue;
         if (knob.knob_type !== "spacer" && knob.knob_type !== "spacer-half"
           && knob.knob_type !== "pushbutton") {
           window.onKnobCcChange(knob);
