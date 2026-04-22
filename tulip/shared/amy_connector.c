@@ -234,7 +234,7 @@ static void free_handle(uint32_t h) {
 }
 
 
-uint32_t mp_fopen_hook(char * filename, char * mode) {
+uint32_t mp_fopen_hook(char * filename, const char * mode) {
     mp_obj_t f = tulip_fopen(filename, mode);
     if (!f) {
         return HANDLE_INVALID;
