@@ -1101,7 +1101,9 @@ function send_all_knob_cc_mappings(channel) {
   var ch = Number(channel);
   if (!Number.isInteger(ch) || ch < 1 || ch > 16) ch = 1;
   var knobs = get_knobs_for_channel(ch);
+  var disabledSections = window._disabled_sections || {};
   for (var i = 0; i < knobs.length; i++) {
+    if (knobs[i] && disabledSections[knobs[i].section]) continue;
     var ccVal = build_knob_cc_value(knobs[i]);
     if (ccVal) {
       amy_send({synth: ch, midi_cc: ccVal}, true);
@@ -4846,6 +4848,7 @@ function apply_zd_dump_to_knobs(dumpText) {
         if (typeof window.set_section_disabled === "function") {
             var oscsPerVoice = num_oscs_from_patch_file_content(wireLines.join('\n'));
             var isDX7 = oscsPerVoice >= 8;
+            window.set_section_disabled("Osc A", isDX7);
             window.set_section_disabled("Osc B", isDX7);
             window.set_section_disabled("ADSR", isDX7);
         }
