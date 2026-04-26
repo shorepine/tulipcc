@@ -3936,6 +3936,10 @@ async function save_amy_state() {
         if (!userSketchText || !userSketchText.trim().length) return;
         try {
             // Step 1+2: pull current live state (sketch still running).
+            // The user clicked Save, so this internal pull is implicit —
+            // skip the green-button gate on the modal and go straight to
+            // busy state. The second modal (zB reboot wait) still gates.
+            _skip_pull_gate = true;
             await sync_amy_state_async();
             await sleep_ms(500);
             // Step 3: splice fresh knobs into editor text.
