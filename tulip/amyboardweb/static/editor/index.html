@@ -999,42 +999,54 @@
               }
               return;
             }
-            _show_syncing_modal();
+            // Post-zB reload: continuation of a previous green-button click
+            // on Windows Chrome. The board is already rebooting into
+            // bootloader mode — go straight to busy state, skip the gate
+            // and skip zB.
             var _post_zb_reload = sessionStorage.getItem('amyboard_post_zb_reload') === '1';
             if (_post_zb_reload) {
-              // Second load of this session, after the Windows reload trick.
-              // The board should already be in bootloader mode from the zB
-              // we sent pre-reload; skip zB and just confirm readiness.
               sessionStorage.removeItem('amyboard_post_zb_reload');
+              _show_syncing_modal_busy();
               console.log('pageload: post-zB reload — skipping zB, waiting for board...');
               var ready = await wait_for_board_ready(10000);
               if (!ready) {
                 _show_syncing_modal_error();
                 return;
               }
-            } else if (_IS_WINDOWS_CHROME) {
-              // Windows Chrome path: send zB, wait a few seconds for the
-              // board to finish rebooting into bootloader mode, then force
-              // a full page reload so Chrome hands us a fresh MIDIAccess.
-              reboot_to_bootloader();
-              console.log('pageload: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
-              sessionStorage.setItem('amyboard_post_zb_reload', '1');
-              // 4s chosen to comfortably cover the ~3s board reboot budget
-              // without leaving the user staring at an empty spinner for
-              // noticeably longer than necessary.
-              await new Promise(function(r) { setTimeout(r, 4000); });
-              console.log('pageload: reloading now');
-              window.location.reload();
-              return;  // unreachable after reload
             } else {
-              // macOS and others: standard path — zB then poll for reply.
-              reboot_to_bootloader();
-              console.log('pageload: zB sent, waiting for board...');
-              var ready = await wait_for_board_ready();
-              if (!ready) {
-                // Board didn't respond — show the error/change-ports UI.
-                _show_syncing_modal_error();
+              // Fresh start: gate behind the green Pull button. The user
+              // confirms MIDI port selections (or changes them) and clicks
+              // Pull from AMYboard before any sysex traffic.
+              try {
+                await _show_syncing_modal();
+              } catch (e) {
+                console.log('pageload: pull cancelled', e && e.message);
                 return;
+              }
+              if (_IS_WINDOWS_CHROME) {
+                // Windows Chrome path: send zB, wait a few seconds for the
+                // board to finish rebooting into bootloader mode, then force
+                // a full page reload so Chrome hands us a fresh MIDIAccess.
+                reboot_to_bootloader();
+                console.log('pageload: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
+                sessionStorage.setItem('amyboard_post_zb_reload', '1');
+                // 4s chosen to comfortably cover the ~3s board reboot budget
+                // without leaving the user staring at an empty spinner for
+                // noticeably longer than necessary.
+                await new Promise(function(r) { setTimeout(r, 4000); });
+                console.log('pageload: reloading now');
+                window.location.reload();
+                return;  // unreachable after reload
+              } else {
+                // macOS and others: standard path — zB then poll for reply.
+                reboot_to_bootloader();
+                console.log('pageload: zB sent, waiting for board...');
+                var ready = await wait_for_board_ready();
+                if (!ready) {
+                  // Board didn't respond — show the error/change-ports UI.
+                  _show_syncing_modal_error();
+                  return;
+                }
               }
             }
             // Pull sketch.py from hardware (zD only, no zA).
@@ -1069,7 +1081,10 @@
             amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
             console.log('pageload: sketch started via zP');
           };
-          // Auto-sync from hardware once MIDI devices are ready.
+          // pageload_control_sync handles continuations (post-reset,
+          // post-zB-upload, post-zB reload) inline and gates fresh page
+          // loads behind the green Pull button via _show_syncing_modal,
+          // so the post-MIDI-init callback can call it directly.
           _on_midi_ready = window.pageload_control_sync;
           await start_midi();
         }
@@ -1255,6 +1270,8 @@
                 <select id="sync-modal-midi-out" class="form-select form-select-sm mb-2" disabled></select>
                 <button type="button" class="btn btn-outline-primary btn-sm w-100" id="sync-modal-change-btn" onclick="sync_modal_change_ports();">Change MIDI Ports</button>
               </div>
+              <!-- Pull from AMYboard (shown on fresh page load; user clicks to start the pull) -->
+              <button type="button" class="btn btn-success btn-lg w-100 d-none mb-3" id="sync-modal-pull-btn" onclick="start_pull_from_amyboard();">Pull from AMYboard</button>
               <!-- Try Again (shown on error) -->
               <button type="button" class="btn btn-primary btn-sm d-none mb-2" id="sync-modal-retry-btn" onclick="sync_modal_retry();">Try again</button>
               <div class="d-flex gap-2 justify-content-center">
