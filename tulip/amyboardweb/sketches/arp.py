@@ -1,6 +1,8 @@
 # AMYboard Sketch
-# Top-level code runs once at boot. loop() runs repeatedly (~60ms).
+# Top-level code runs once at boot. loop() is called every 32nd note.
 # DESCRIPTION: Hold MIDI keys; plays them in order as 8th-note arpeggios.
+# In simulate mode, you have to use MIDI input, not the onscreen keyboard.
+
 import amy, midi, tulip
 
 # Tell synth 1 to not grab midi notes - we'll play them from this sketch.

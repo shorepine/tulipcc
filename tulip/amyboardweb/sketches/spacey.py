@@ -1,5 +1,5 @@
 # AMYboard Sketch
-# Top-level code runs once at boot. loop() runs repeatedly (~60ms).
+# Code put here runs first, then loop() is called every 32nd note.
 # DESCRIPTION: A spacey-like patch with reverb and echo
 def loop():
     pass
