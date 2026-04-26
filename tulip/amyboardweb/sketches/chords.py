@@ -1,6 +1,8 @@
 # AMYboard Sketch
-# Top-level code runs once at boot. loop() runs repeatedly (~60ms).
+# Top-level code runs once at boot. loop() is called every 32nd note.
 # DESCRIPTION: Each MIDI key triggers a major chord rooted at that key.
+# In simulate mode, you have to use MIDI input, not the onscreen keyboard.
+
 import amy, midi
 from music import Chord
 

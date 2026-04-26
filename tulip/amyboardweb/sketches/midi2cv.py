@@ -1,5 +1,5 @@
 # AMYboard Sketch
-# Top-level code runs once at boot. loop() runs repeatedly (~60ms).
+# Top-level code runs once at boot. loop() is called every 32nd note.
 # DESCRIPTION: MIDI to CV: notes -> 1V/oct on CV2, CC23 -> -10..10V on CV1.
 import amy, amyboard, midi
 

@@ -1,4 +1,5 @@
 # AMYboard Sketch
+# Top-level code runs once at boot. loop() is called every 32nd note.
 # DESCRIPTION: scroll and choose all 257 AMY presets with the rotary encoder.
 import amyboard, amy
 from patches import patches as PRESETS
