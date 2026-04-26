@@ -4247,11 +4247,13 @@ function _show_syncing_modal() {
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
     var changeBtn = document.getElementById('sync-modal-change-btn');
+    var pullBtn = document.getElementById('sync-modal-pull-btn');
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
     if (spinner) spinner.classList.remove('d-none');
     if (error) error.classList.add('d-none');
     if (retryBtn) retryBtn.classList.add('d-none');
+    if (pullBtn) pullBtn.classList.add('d-none');
     if (modalIn) modalIn.disabled = true;
     if (modalOut) modalOut.disabled = true;
     if (changeBtn) {
@@ -4263,20 +4265,63 @@ function _show_syncing_modal() {
     bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
 }
 
+// Initial "ready to pull" state on a fresh page load. No spinner, no
+// auto-sync — user picks MIDI ports and clicks the green Pull button to
+// actually start the zB+zD work via start_pull_from_amyboard().
+function _show_syncing_modal_ready() {
+    if (amyboard_mode !== 'control') return;
+    var el = document.getElementById('syncingModal');
+    if (!el || !window.bootstrap) return;
+    var spinner = document.getElementById('sync-modal-spinner');
+    var error = document.getElementById('sync-modal-error');
+    var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
+    var pullBtn = document.getElementById('sync-modal-pull-btn');
+    var modalIn = document.getElementById('sync-modal-midi-in');
+    var modalOut = document.getElementById('sync-modal-midi-out');
+    if (spinner) spinner.classList.add('d-none');
+    if (error) error.classList.add('d-none');
+    if (retryBtn) retryBtn.classList.add('d-none');
+    if (changeBtn) changeBtn.classList.add('d-none');
+    if (modalIn) modalIn.disabled = false;
+    if (modalOut) modalOut.disabled = false;
+    if (pullBtn) pullBtn.classList.remove('d-none');
+    _sync_modal_populate_midi();
+    bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
+}
+
+// Click handler for the green Pull button on initial page load. Reuses
+// sync_modal_retry, which copies the modal's MIDI port selections back
+// to the main dropdowns, calls setup_midi_devices(), and then runs the
+// regular pageload_control_sync zB+zD flow.
+async function start_pull_from_amyboard() {
+    var pullBtn = document.getElementById('sync-modal-pull-btn');
+    if (pullBtn) pullBtn.classList.add('d-none');
+    try {
+        await sync_modal_retry();
+    } catch (e) {
+        console.warn('start_pull_from_amyboard error:', e);
+        _show_syncing_modal_error();
+    }
+}
+
 function _show_syncing_modal_error() {
     var spinner = document.getElementById('sync-modal-spinner');
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
     var changeBtn = document.getElementById('sync-modal-change-btn');
+    var pullBtn = document.getElementById('sync-modal-pull-btn');
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
     if (spinner) spinner.classList.add('d-none');
     if (error) error.classList.remove('d-none');
     // Use the change-ports button in Try again mode (same behavior as retry).
     if (retryBtn) retryBtn.classList.add('d-none');
+    if (pullBtn) pullBtn.classList.add('d-none');
     if (modalIn) modalIn.disabled = false;
     if (modalOut) modalOut.disabled = false;
     if (changeBtn) {
+        changeBtn.classList.remove('d-none');
         changeBtn.textContent = 'Try again';
         changeBtn.onclick = function() { sync_modal_retry(); };
     }
@@ -4417,14 +4462,19 @@ function sync_modal_change_ports() {
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
     var changeBtn = document.getElementById('sync-modal-change-btn');
+    var pullBtn = document.getElementById('sync-modal-pull-btn');
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
     if (spinner) spinner.classList.add('d-none');
     if (error) error.classList.remove('d-none');
     if (retryBtn) retryBtn.classList.add('d-none');
+    if (pullBtn) pullBtn.classList.add('d-none');
     if (modalIn) modalIn.disabled = false;
     if (modalOut) modalOut.disabled = false;
-    if (changeBtn) changeBtn.textContent = 'Try again';
+    if (changeBtn) {
+        changeBtn.classList.remove('d-none');
+        changeBtn.textContent = 'Try again';
+    }
     // Hook the changed button to sync_modal_retry instead. Wrap so the
     // async function's rejections surface in the sync-error modal rather
     // than bubbling up as unhandled promise errors.

@@ -1069,8 +1069,23 @@
             amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
             console.log('pageload: sketch started via zP');
           };
-          // Auto-sync from hardware once MIDI devices are ready.
-          _on_midi_ready = window.pageload_control_sync;
+          // On a fresh page load, do NOT auto-sync. Show the modal in its
+          // ready-to-pull state and wait for the user to pick MIDI ports
+          // and click "Pull from AMYboard". Only continuation reload paths
+          // (post-reset, post-zB-upload, post-zB) auto-run pageload_control_sync,
+          // which consumes their sessionStorage flags and finishes the
+          // previously-initiated flow.
+          _on_midi_ready = function() {
+            var has_continuation =
+              sessionStorage.getItem('amyboard_post_reset_reload') === '1' ||
+              sessionStorage.getItem('amyboard_post_zb_upload') !== null ||
+              sessionStorage.getItem('amyboard_post_zb_reload') === '1';
+            if (has_continuation) {
+              window.pageload_control_sync();
+            } else {
+              _show_syncing_modal_ready();
+            }
+          };
           await start_midi();
         }
       }
@@ -1255,6 +1270,8 @@
                 <select id="sync-modal-midi-out" class="form-select form-select-sm mb-2" disabled></select>
                 <button type="button" class="btn btn-outline-primary btn-sm w-100" id="sync-modal-change-btn" onclick="sync_modal_change_ports();">Change MIDI Ports</button>
               </div>
+              <!-- Pull from AMYboard (shown on fresh page load; user clicks to start the pull) -->
+              <button type="button" class="btn btn-success btn-lg w-100 d-none mb-3" id="sync-modal-pull-btn" onclick="start_pull_from_amyboard();">Pull from AMYboard</button>
               <!-- Try Again (shown on error) -->
               <button type="button" class="btn btn-primary btn-sm d-none mb-2" id="sync-modal-retry-btn" onclick="sync_modal_retry();">Try again</button>
               <div class="d-flex gap-2 justify-content-center">
