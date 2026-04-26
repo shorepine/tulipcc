@@ -4,9 +4,9 @@
 import amy, midi
 from music import Chord
 
-# Free up channel 1 (default synth) and put our voice on synth 17.
-amy.send(synth=1, num_voices=0)
-amy.send(synth=17, patch=257, num_voices=6)
+# Tell synth 1 to not grab midi notes - we'll play them from this sketch.
+amy.send(synth=1, grab_midi_notes=0)
+
 
 ROOT_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
@@ -32,10 +32,10 @@ def midi_cb(m):
         active[note] = notes
         v = vel / 127.0
         for n in notes:
-            amy.send(synth=17, note=n, vel=v)
+            amy.send(synth=1, note=n, vel=v)
     elif status == 0x80 or (status == 0x90 and vel == 0):
         for n in active.pop(note, ()):
-            amy.send(synth=17, note=n, vel=0)
+            amy.send(synth=1, note=n, vel=0)
 
 
 midi.add_callback(midi_cb)

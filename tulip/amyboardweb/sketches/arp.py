@@ -3,9 +3,8 @@
 # DESCRIPTION: Hold MIDI keys; plays them in order as 8th-note arpeggios.
 import amy, midi, tulip
 
-# Free up channel 1 (default synth) and put our voice on synth 17.
-amy.send(synth=1, num_voices=0)
-amy.send(synth=17, patch=257, num_voices=6)
+# Tell synth 1 to not grab midi notes - we'll play them from this sketch.
+amy.send(synth=1, grab_midi_notes=0)
 
 # 8th note at 120 BPM = 250 ms per step.
 STEP_MS = 250
@@ -40,7 +39,7 @@ def loop():
 
     # Release the previous step's note before triggering the next one.
     if last_played is not None:
-        amy.send(synth=17, note=last_played, vel=0)
+        amy.send(synth=1, note=last_played, vel=0)
         last_played = None
 
     if not held:
@@ -50,7 +49,7 @@ def loop():
     notes = sorted(held)
     arp_idx %= len(notes)
     n = notes[arp_idx]
-    amy.send(synth=17, note=n, vel=0.8)
+    amy.send(synth=1, note=n, vel=0.8)
     last_played = n
     arp_idx += 1
 
