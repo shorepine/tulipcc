@@ -3948,7 +3948,14 @@ async function save_amy_state() {
                 }
             }
             // Step 4+5: reboot into bootloader so sketch isn't running.
-            _show_syncing_modal();
+            // Modal gates behind the green Pull button — user confirms
+            // MIDI ports before any sysex traffic for the upload.
+            try {
+                await _show_syncing_modal();
+            } catch (e) {
+                console.log('save: zB-reboot gate cancelled', e && e.message);
+                return;
+            }
             var _saveOpts = {
                 sketchText: mergedSketch,
                 restart: true,       // Step 7: restart sketch on hw
@@ -4238,11 +4245,86 @@ function _hide_resetting_modal() {
     document.body.style.removeProperty('padding-right');
 }
 
+// Pending green-button gate. _show_syncing_modal returns a promise tied
+// to these handles; start_pull_from_amyboard resolves them when the user
+// clicks the green button, and modal-dismiss paths reject them.
+var _pull_button_resolve = null;
+var _pull_button_reject = null;
+
+// One-shot flag: set by sync_modal_retry before re-invoking the work
+// path so the next _show_syncing_modal call goes straight to busy state
+// instead of re-prompting with the green button. The user already
+// chose ports and hit Try again — bouncing them back to a green button
+// would force two clicks per retry.
+var _skip_pull_gate = false;
+
+function _clear_pull_button_gate(reason) {
+    if (_pull_button_reject) {
+        var rj = _pull_button_reject;
+        _pull_button_resolve = null;
+        _pull_button_reject = null;
+        rj(new Error(reason || 'cancelled'));
+    } else {
+        _pull_button_resolve = null;
+        _pull_button_reject = null;
+    }
+}
+
+// Show the syncing modal in its "ready to act" state — green Pull button
+// visible, MIDI dropdowns enabled, no spinner. Returns a promise that
+// resolves when the user clicks the green button (after MIDI port
+// selections have been applied to the main dropdowns and the modal has
+// transitioned to the busy/spinner state). Rejects if the modal is
+// dismissed via _hide_syncing_modal or an exit button.
+//
+// Every caller awaits this before issuing sysex traffic — the user
+// always has the chance to confirm/change MIDI ports first. This is the
+// ONE syncing modal the editor exposes; no separate auto-spinner path.
 function _show_syncing_modal() {
-    if (amyboard_mode !== 'control') return;
+    if (amyboard_mode !== 'control') return Promise.resolve();
     var el = document.getElementById('syncingModal');
-    if (!el || !window.bootstrap) return;
-    // Reset to spinner state.
+    if (!el || !window.bootstrap) return Promise.resolve();
+    // sync_modal_retry has already applied MIDI ports and validated; go
+    // straight to busy state and resolve so the caller's work continues.
+    if (_skip_pull_gate) {
+        _skip_pull_gate = false;
+        _show_syncing_modal_busy();
+        return Promise.resolve();
+    }
+    // Reset to ready-to-act state with green Pull button visible.
+    var spinner = document.getElementById('sync-modal-spinner');
+    var error = document.getElementById('sync-modal-error');
+    var retryBtn = document.getElementById('sync-modal-retry-btn');
+    var changeBtn = document.getElementById('sync-modal-change-btn');
+    var pullBtn = document.getElementById('sync-modal-pull-btn');
+    var modalIn = document.getElementById('sync-modal-midi-in');
+    var modalOut = document.getElementById('sync-modal-midi-out');
+    if (spinner) spinner.classList.add('d-none');
+    if (error) error.classList.add('d-none');
+    if (retryBtn) retryBtn.classList.add('d-none');
+    if (changeBtn) changeBtn.classList.add('d-none');
+    if (modalIn) modalIn.disabled = false;
+    if (modalOut) modalOut.disabled = false;
+    if (pullBtn) pullBtn.classList.remove('d-none');
+    _sync_modal_populate_midi();
+    bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
+    // Replace any prior pending gate (only one click handler in flight).
+    _clear_pull_button_gate('superseded');
+    return new Promise(function(resolve, reject) {
+        _pull_button_resolve = resolve;
+        _pull_button_reject = reject;
+    });
+}
+
+// Internal helper: transition the modal to its busy/spinner state.
+// Used after the green button click and from continuation paths
+// (Windows-Chrome post-zB reload) where the click already happened on
+// the previous page and we need to resume in busy state.
+function _show_syncing_modal_busy() {
+    var el = document.getElementById('syncingModal');
+    if (el && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
+    }
     var spinner = document.getElementById('sync-modal-spinner');
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
@@ -4261,47 +4343,54 @@ function _show_syncing_modal() {
         changeBtn.classList.remove('d-none');
         changeBtn.onclick = function() { sync_modal_change_ports(); };
     }
-    _sync_modal_populate_midi();
-    bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
 }
 
-// Initial "ready to pull" state on a fresh page load. No spinner, no
-// auto-sync — user picks MIDI ports and clicks the green Pull button to
-// actually start the zB+zD work via start_pull_from_amyboard().
-function _show_syncing_modal_ready() {
-    if (amyboard_mode !== 'control') return;
-    var el = document.getElementById('syncingModal');
-    if (!el || !window.bootstrap) return;
-    var spinner = document.getElementById('sync-modal-spinner');
-    var error = document.getElementById('sync-modal-error');
-    var retryBtn = document.getElementById('sync-modal-retry-btn');
-    var changeBtn = document.getElementById('sync-modal-change-btn');
-    var pullBtn = document.getElementById('sync-modal-pull-btn');
+// Click handler for the green "Pull from AMYboard" button. Applies the
+// modal's MIDI port selections back to the main dropdowns, runs
+// setup_midi_devices, transitions to busy state, then resolves the
+// pending _show_syncing_modal promise so the awaiting caller proceeds.
+async function start_pull_from_amyboard() {
+    var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
     var modalIn = document.getElementById('sync-modal-midi-in');
     var modalOut = document.getElementById('sync-modal-midi-out');
-    if (spinner) spinner.classList.add('d-none');
-    if (error) error.classList.add('d-none');
-    if (retryBtn) retryBtn.classList.add('d-none');
-    if (changeBtn) changeBtn.classList.add('d-none');
-    if (modalIn) modalIn.disabled = false;
-    if (modalOut) modalOut.disabled = false;
-    if (pullBtn) pullBtn.classList.remove('d-none');
-    _sync_modal_populate_midi();
-    bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
-}
 
-// Click handler for the green Pull button on initial page load. Reuses
-// sync_modal_retry, which copies the modal's MIDI port selections back
-// to the main dropdowns, calls setup_midi_devices(), and then runs the
-// regular pageload_control_sync zB+zD flow.
-async function start_pull_from_amyboard() {
-    var pullBtn = document.getElementById('sync-modal-pull-btn');
-    if (pullBtn) pullBtn.classList.add('d-none');
+    // Refresh main against current WebMidi state, then copy the modal
+    // selection over (clamped to a valid index).
+    if (typeof _refresh_main_midi_dropdowns === 'function') {
+        _refresh_main_midi_dropdowns();
+    }
+    if (mainIn && modalIn) {
+        var wantIn = modalIn.selectedIndex;
+        if (wantIn >= 0 && wantIn < mainIn.options.length) {
+            mainIn.selectedIndex = wantIn;
+        } else if (mainIn.options.length > 0) {
+            mainIn.selectedIndex = 0;
+        }
+    }
+    if (mainOut && modalOut) {
+        var wantOut = modalOut.selectedIndex;
+        if (wantOut >= 0 && wantOut < mainOut.options.length) {
+            mainOut.selectedIndex = wantOut;
+        } else if (mainOut.options.length > 0) {
+            mainOut.selectedIndex = 0;
+        }
+    }
     try {
-        await sync_modal_retry();
+        await setup_midi_devices();
     } catch (e) {
-        console.warn('start_pull_from_amyboard error:', e);
+        console.warn('start_pull_from_amyboard: setup_midi_devices threw', e);
+    }
+    if (!midiOutputDevice || !midiInputDevice) {
         _show_syncing_modal_error();
+        return;
+    }
+    _show_syncing_modal_busy();
+    if (_pull_button_resolve) {
+        var r = _pull_button_resolve;
+        _pull_button_resolve = null;
+        _pull_button_reject = null;
+        r();
     }
 }
 
@@ -4330,6 +4419,10 @@ function _show_syncing_modal_error() {
 function _hide_syncing_modal() {
     var el = document.getElementById('syncingModal');
     if (!el) return;
+    // Reject any pending green-button gate so awaiting callers stop
+    // waiting (instead of silently leaving an orphaned promise that
+    // could resolve later if the modal is reshown).
+    _clear_pull_button_gate('hidden');
     // Bootstrap modal.hide() is unreliable when called from async sysex callbacks.
     // Force-remove the modal and backdrop directly.
     try {
@@ -4420,24 +4513,11 @@ async function sync_modal_retry() {
         return;
     }
 
-    // Reset modal UI to "trying" state and re-run the pageload sync.
-    var spinner = document.getElementById('sync-modal-spinner');
-    var error = document.getElementById('sync-modal-error');
-    var retryBtn = document.getElementById('sync-modal-retry-btn');
-    var changeBtn = document.getElementById('sync-modal-change-btn');
-    if (spinner) spinner.classList.remove('d-none');
-    if (error) error.classList.add('d-none');
-    if (retryBtn) retryBtn.classList.add('d-none');
-    if (modalIn) modalIn.disabled = true;
-    if (modalOut) modalOut.disabled = true;
-    if (changeBtn) {
-        changeBtn.textContent = 'Change MIDI Ports';
-        changeBtn.classList.remove('d-none');
-        // Re-hook the button back to sync_modal_change_ports for the next cycle.
-        changeBtn.onclick = function() { sync_modal_change_ports(); };
-    }
-    // Re-run the pageload sync flow if in control mode, otherwise fall back
-    // to the simple zA+zD path.
+    // Skip the green-button gate on the next _show_syncing_modal call —
+    // the user already chose ports and clicked Try again. Reuse the work
+    // path (pageload_control_sync / sync_amy_state) so retries converge
+    // with the initial flow.
+    _skip_pull_gate = true;
     if (amyboard_mode === 'control' && typeof pageload_control_sync === 'function') {
         pageload_control_sync();
     } else {
@@ -4690,12 +4770,21 @@ function sync_amy_state_async() {
 // handler, so give it plenty of headroom.
 var _SYNC_TIMEOUT_MS = 20000;
 
-function sync_amy_state() {
+async function sync_amy_state() {
     // Send zA to update sketch.py on disk with current AMY state,
-    // then zD to get the updated file back.
+    // then zD to get the updated file back. Gates behind the green
+    // Pull button before sending any sysex.
     console.log('sync_amy_state: start');
+    try {
+        await _show_syncing_modal();
+    } catch (e) {
+        console.log('sync_amy_state: gate cancelled', e && e.message);
+        // Surface the cancellation to sync_amy_state_async's promise so
+        // its caller (e.g. save()) doesn't hang forever.
+        if (_sync_reject) { var sr = _sync_reject; _sync_resolve = null; _sync_reject = null; sr(e); }
+        return;
+    }
     _sync_stage = 'pending';
-    _show_syncing_modal();
     if (_sync_timeout) clearTimeout(_sync_timeout);
     // Drop any stale reassembly state from a previous sync attempt that may
     // have timed out mid-message. Starting clean guarantees the reassembler
