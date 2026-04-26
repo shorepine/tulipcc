@@ -23,10 +23,12 @@ import amy, midi
 PRESET = 50
 SR = 44100
 
-amy.send(synth=1, wave=amy.PCM, preset=PRESET, num_voices=4)
 
 # Track which note is driving the one-shot recording. None once we've stopped.
 recording_note = None
+
+# For now stop midi notes coming in on synth 1 so it doesn't play when you trigger a sample
+amy.send(synth=1, grab_midi_notes=0)
 
 
 def midi_cb(m):
@@ -39,16 +41,21 @@ def midi_cb(m):
     if recording_note is None and status == 0x90 and vel > 0:
         # First note-on: start the one-shot recording into preset PRESET.
         recording_note = note
-        amy.start_sample(preset=PRESET, max_frames=SR * 5, midinote=note)
+        print("sampling to note %d" % (note))
+        # bus = 2 : AUDIO_IN
+        amy.start_sample(preset=PRESET, max_frames=SR * 5, bus=2, midinote=note)
     elif recording_note is not None and note == recording_note and (
         status == 0x80 or (status == 0x90 and vel == 0)
     ):
         # Matching note-off ends the recording. Detach the callback so all
         # subsequent MIDI notes go straight to synth 1 and play the captured
         # sample without re-triggering start_sample.
+        print("stopping sample")
         amy.stop_sample()
         midi.remove_callback(midi_cb)
-
+        # Set up the synth to play the sample
+        amy.send(synth=1, wave=amy.PCM, preset=PRESET, oscs_per_voice=1, 
+                 num_voices=4, grab_midi_notes=1)
 
 midi.add_callback(midi_cb)
 
@@ -58,4 +65,8 @@ def loop():
 
 # Do not edit. Set automatically by the knobs on AMYboard Online.
 _auto_generated_knobs = """
+i1ic255Z
+i1iv4in1Z
+i1v0w7p50Z
+i1V1.000x0.000,0.000,0.000M0.000,500.000,,0.000,0.000k0.000,320.000,0.500,0.500h0.000,0.850,0.500,3000.000Z
 """
