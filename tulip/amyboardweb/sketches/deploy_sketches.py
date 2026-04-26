@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
-"""Upload all official sketches to AMYboard World.
+"""Upload or verify official sketches against AMYboard World.
 
 Usage:
     WORLD_ADMIN_TOKEN=xxx python3 deploy_sketches.py
     WORLD_ADMIN_TOKEN=xxx WORLD_API_URL=https://... python3 deploy_sketches.py
+    python3 deploy_sketches.py --verify
 
 Uploads every .py file in this directory (except this script) to
 AMYboard World as username "shorepine". Parses "# DESCRIPTION: ..."
 from each file for the description field. Uses the filename stem as
 the sketch name.
 
-Requires WORLD_ADMIN_TOKEN for the reserved "shorepine" username.
+With --verify, fetches each shorepine sketch from ABW and compares
+content + description to the local copy. Reports mismatches and exits
+non-zero if any are found. No admin token is required for verify.
+
+Requires WORLD_ADMIN_TOKEN for the reserved "shorepine" username (upload only).
 """
 
+import json
 import os
 import re
 import sys
@@ -54,21 +60,124 @@ def upload(url, username, filename, description, file_data, admin_token):
     return urlopen(req, timeout=30)
 
 
+def collect_local_sketches():
+    """Return sorted list of local .py sketch filenames (excluding this script)."""
+    script_name = os.path.basename(__file__)
+    return sorted(
+        f for f in os.listdir(SCRIPT_DIR)
+        if f.endswith(".py") and f != script_name
+    )
+
+
+def fetch_remote_shorepine(api_url):
+    """Return dict mapping filename -> item metadata for shorepine ABW sketches."""
+    list_url = api_url + "/api/amyboardworld/files?limit=1000"
+    with urlopen(list_url, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    items = data.get("items", [])
+    return {
+        i["filename"]: i
+        for i in items
+        if i.get("username") == USERNAME and i.get("item_type") == "environment"
+    }
+
+
+def fetch_remote_content(api_url, item):
+    """Return raw bytes of an ABW item's file content."""
+    url = api_url + item["download_url"]
+    with urlopen(url, timeout=30) as resp:
+        return resp.read()
+
+
+def verify(api_url):
+    """Compare each local sketch to its ABW shorepine counterpart.
+
+    Returns (mismatches, missing_remote, extra_remote) where each is a list.
+    """
+    local_files = collect_local_sketches()
+    remote = fetch_remote_shorepine(api_url)
+
+    print(f"Verifying {len(local_files)} local sketches against {api_url}")
+    print(f"Username: {USERNAME}")
+    print(f"Remote shorepine sketches: {len(remote)}")
+    print()
+
+    mismatches = []
+    missing_remote = []
+    ok = 0
+
+    for filename in local_files:
+        filepath = os.path.join(SCRIPT_DIR, filename)
+        with open(filepath, "rb") as f:
+            local_bytes = f.read()
+        local_desc = extract_description(local_bytes.decode("utf-8", errors="replace"))
+
+        item = remote.get(filename)
+        if item is None:
+            print(f"  {filename}: MISSING on ABW")
+            missing_remote.append(filename)
+            continue
+
+        try:
+            remote_bytes = fetch_remote_content(api_url, item)
+        except Exception as e:
+            print(f"  {filename}: FAILED to fetch remote: {e}")
+            mismatches.append((filename, f"fetch error: {e}"))
+            continue
+
+        remote_desc = item.get("description", "") or ""
+        problems = []
+        if remote_bytes != local_bytes:
+            problems.append(
+                f"content differs (local {len(local_bytes)}b, remote {len(remote_bytes)}b)"
+            )
+        if remote_desc != local_desc:
+            problems.append(
+                f"description differs (local={local_desc!r}, remote={remote_desc!r})"
+            )
+
+        if problems:
+            print(f"  {filename}: MISMATCH")
+            for p in problems:
+                print(f"    - {p}")
+            mismatches.append((filename, "; ".join(problems)))
+        else:
+            print(f"  {filename}: OK")
+            ok += 1
+
+    extra_remote = sorted(set(remote) - set(local_files))
+    if extra_remote:
+        print()
+        print("Remote shorepine sketches with no local file:")
+        for f in extra_remote:
+            print(f"  + {f}")
+
+    print()
+    print(
+        f"Summary: {ok} OK, {len(mismatches)} mismatched, "
+        f"{len(missing_remote)} missing on ABW, {len(extra_remote)} extra on ABW"
+    )
+    return mismatches, missing_remote, extra_remote
+
+
 def main():
+    args = sys.argv[1:]
+    api_url = os.environ.get("WORLD_API_URL", DEFAULT_URL)
+
+    if "--verify" in args:
+        mismatches, missing_remote, extra_remote = verify(api_url)
+        if mismatches or missing_remote or extra_remote:
+            sys.exit(1)
+        sys.exit(0)
+
     token = os.environ.get("WORLD_ADMIN_TOKEN", "")
     if not token:
         print("Error: WORLD_ADMIN_TOKEN environment variable must be set.")
         sys.exit(1)
 
-    api_url = os.environ.get("WORLD_API_URL", DEFAULT_URL)
     upload_url = api_url + "/api/amyboardworld/upload"
 
-    # Collect all .py files except this script
-    script_name = os.path.basename(__file__)
-    sketch_files = sorted(
-        f for f in os.listdir(SCRIPT_DIR)
-        if f.endswith(".py") and f != script_name
-    )
+    sketch_files = collect_local_sketches()
 
     if not sketch_files:
         print("No sketch files found.")
