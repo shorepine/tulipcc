@@ -19,7 +19,7 @@ The [AMYboard Online editor](https://amyboard.com/editor) includes a built-in fi
 <img src="img/serial_ports.png" width=400>
 
 5. Choose to either **Upgrade AMYboard firmware** (keeps your files) or **Fully erase and re-flash AMYboard** (fresh start).
-6. Wait for the process to complete. You then need to hit the RST button to restart your AMYboard into the upgraded firmware!
+6. Wait for the process to complete. You then need to hit BOOT, then RST to restart your AMYboard into the upgraded firmware!
 
 ---
 
