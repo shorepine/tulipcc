@@ -80,6 +80,15 @@ AMYboard can be powered 3 ways:
 
 If multiple power supplies are connected AMYboard will use the highest available voltage. 
 
+## DIP switches
+
+There are 4 DIP switches on the back of the AMYboard that set the audio input and output levels. All 4 switches should be set the same way, depending on how you're using AMYboard:
+
+ - **Line level equipment** (headphones, speakers, audio interface, mixer): set all 4 DIP switches to **ON** -- each switch pushed toward the **bottom** of the board, toward the white opto-isolator chip.
+ - **Modular synth** (10Vpp Eurorack signals): set all 4 DIP switches to **OFF** -- each switch pushed toward the **top** of the back of the board, toward the 10-pin power jack.
+
+See the [Modular Synth Setup](modular.md) page for more details on 10Vpp operation.
+
 ## Upgrading firmware
 
 Before you do anything else, upgrade your firmware! The easiest way is online via your browser. See our [firmware upgrading page](firmware.md) for more info on how to upgrade.
