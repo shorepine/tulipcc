@@ -324,6 +324,8 @@ void boardctrl_startup(void) {
 
 
 extern esp_err_t i2c_follower_init();
+extern void i2c_check_for_data();
+extern TaskHandle_t i2c_check_for_data_handle;
 
 uint8_t * xStack;
 StaticTask_t static_mp_handle;
@@ -341,6 +343,7 @@ void app_main(void) {
     idle_1_handle = xTaskGetIdleTaskHandleForCPU(1);
 
     i2c_follower_init();
+    xTaskCreatePinnedToCore(i2c_check_for_data, "i2c_check_for_data", 8192, NULL, 20, &i2c_check_for_data_handle, 0);
     fflush(stderr);
     delay_ms(500);
 
