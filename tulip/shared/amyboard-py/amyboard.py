@@ -710,12 +710,16 @@ def _web_encoder_press(state):
 
 # Adafruit I2C Quad Rotary Encoder Breakout
 # https://www.adafruit.com/product/5752
-# Four rotary encoders with built-in push buttons.
+# Four rotary encoders with built-in push buttons and one NeoPixel per encoder.
 #  read_encoder(encoder=0)  # reads the current value of the encoder
 #  init_buttons()  # must be called to configure pullup of encoder buttons
 #  read_buttons()  # returns a boolean list of the state of the 4 buttons.
+#  init_neopixels()  # must be called once before driving the on-board NeoPixels.
+#  set_neopixel(index, r, g, b)  # stage a pixel color; call show_neopixels() to latch.
+#  show_neopixels()  # latch pending pixel writes to the LEDs.
 # Code based on abstracting
-# https://github.com/adafruit/Adafruit_CircuitPython_seesaw/blob/main/adafruit_seesaw/seesaw.py.
+# https://github.com/adafruit/Adafruit_CircuitPython_seesaw/blob/main/adafruit_seesaw/seesaw.py
+# and https://github.com/adafruit/Adafruit_CircuitPython_seesaw/blob/main/adafruit_seesaw/neopixel.py.
 #
 # Missing-hardware behaviour: if the Seesaw encoder breakout isn't on the
 # I2C bus (user built an AMYboard with no rotary encoder attached), the
@@ -802,6 +806,66 @@ def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.008):
     except OSError:
         _seesaw_missing.add(seesaw_dev)
         return [False] * len(pins)
+
+def init_neopixels(num=4, pin=18, seesaw_dev=0x49):
+    """Configure the seesaw NeoPixels.
+
+    Defaults match the Adafruit Quad Rotary Encoder Breakout: 4 pixels on
+    seesaw pin 18 at 800 kHz. Call once before set_neopixel()/show_neopixels().
+    Silently no-ops if the seesaw device isn't on the I2C bus."""
+    if web():
+        return
+    if seesaw_dev in _seesaw_missing:
+        return
+    try:
+        i2c = get_i2c()
+        NEOPIXEL_BASE = 0x0E
+        NEOPIXEL_PIN = 0x01
+        NEOPIXEL_SPEED = 0x02
+        NEOPIXEL_BUF_LENGTH = 0x03
+        i2c.writeto(seesaw_dev, bytes([NEOPIXEL_BASE, NEOPIXEL_PIN, pin]))
+        i2c.writeto(seesaw_dev, bytes([NEOPIXEL_BASE, NEOPIXEL_SPEED, 1]))  # 1 = 800 kHz
+        i2c.writeto(seesaw_dev, bytes([NEOPIXEL_BASE, NEOPIXEL_BUF_LENGTH]) + struct.pack('>H', num * 3))
+    except OSError:
+        _seesaw_missing.add(seesaw_dev)
+
+def set_neopixel(index, r, g, b, seesaw_dev=0x49):
+    """Stage seesaw NeoPixel `index` to color (r, g, b) (0..255 each).
+
+    Call show_neopixels() afterwards to latch the staged buffer to the LEDs.
+    Assumes init_neopixels() has already been called. Color order on the
+    wire is GRB (the standard for these Adafruit NeoPixels). Silently
+    no-ops if the seesaw device isn't on the I2C bus."""
+    if web():
+        return
+    if seesaw_dev in _seesaw_missing:
+        return
+    try:
+        i2c = get_i2c()
+        NEOPIXEL_BASE = 0x0E
+        NEOPIXEL_BUF = 0x04
+        i2c.writeto(
+            seesaw_dev,
+            bytes([NEOPIXEL_BASE, NEOPIXEL_BUF]) + struct.pack('>H', index * 3) + bytes([g, r, b]),
+        )
+    except OSError:
+        _seesaw_missing.add(seesaw_dev)
+
+def show_neopixels(seesaw_dev=0x49):
+    """Latch any pending set_neopixel() writes to the LEDs.
+
+    Silently no-ops if the seesaw device isn't on the I2C bus."""
+    if web():
+        return
+    if seesaw_dev in _seesaw_missing:
+        return
+    try:
+        i2c = get_i2c()
+        NEOPIXEL_BASE = 0x0E
+        NEOPIXEL_SHOW = 0x05
+        i2c.writeto(seesaw_dev, bytes([NEOPIXEL_BASE, NEOPIXEL_SHOW]))
+    except OSError:
+        _seesaw_missing.add(seesaw_dev)
 
 def monitor_encoders():
     """Show status of encoders on display."""
