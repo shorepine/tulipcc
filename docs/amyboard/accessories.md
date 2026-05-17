@@ -32,7 +32,8 @@ You can add more DACs, ADCs, displays, or sensors to expand AMYboard's capabilit
 
 ### Displays
 
- - [**Adafruit Grayscale 1.5" 128x128 OLED Display (STEMMA QT)**](https://www.adafruit.com/product/4741) -- A high-contrast 128x128 grayscale OLED with 16 shades of gray. AMYboard has built-in support for this display, including waveform visualization. Connects directly via the STEMMA QT cable.
+ - ![Adafruit 1.5" 128x128 OLED](img/accessory_adafruit_oled.jpg)  
+   [**Adafruit Grayscale 1.5" 128x128 OLED Display (STEMMA QT)**](https://www.adafruit.com/product/4741) -- A high-contrast 128x128 grayscale OLED with 16 shades of gray. AMYboard has built-in support for this display, including waveform visualization. Connects directly via the STEMMA QT cable.
  - [**Generic SH1107 128x128 OLED displays (I2C)**](https://www.amazon.com/HiLetgo-SH1107-128x128-Display-Module/dp/B0CFF17DGH/) -- Many available generic displays based on the SH1107 or SSD1327 will work out of the box on AMYboard.
    
 ```python
@@ -56,7 +57,8 @@ amyboard.draw_waveform()
 
 ### Rotary encoders
 
- - [**Adafruit I2C STEMMA QT Rotary Encoder Breakout**](https://www.adafruit.com/product/5880) -- A single rotary encoder with push button and NeoPixel LED, running seesaw firmware over I2C. Supports up to 8 on one I2C bus via address jumpers. AMYboard has built-in Python support for reading encoder position and button state.
+ - ![Adafruit STEMMA QT Rotary Encoder](img/accessory_adafruit_encoder.jpg)  
+   [**Adafruit I2C STEMMA QT Rotary Encoder Breakout**](https://www.adafruit.com/product/5880) -- A single rotary encoder with push button and NeoPixel LED, running seesaw firmware over I2C. Supports up to 8 on one I2C bus via address jumpers. AMYboard has built-in Python support for reading encoder position and button state.
 
 ```python
 import amyboard
@@ -73,7 +75,8 @@ buttons = amyboard.read_buttons()
 amyboard.monitor_encoders()
 ```
 
- - [**Adafruit I2C QT Quad Rotary Encoder Breakout**](https://www.adafruit.com/product/5752) -- Four rotary encoders with built-in push buttons on a single I2C breakout, running seesaw firmware. AMYboard has built-in support via `read_encoder()`, `init_buttons()`, and `read_buttons()`. With a display connected, you can use `patch_selector()` to scroll through your `.patch` files with one encoder and load them with a click.
+ - ![Adafruit QT Quad Rotary Encoder](img/accessory_adafruit_quad_encoder.jpg)  
+   [**Adafruit I2C QT Quad Rotary Encoder Breakout**](https://www.adafruit.com/product/5752) -- Four rotary encoders with built-in push buttons on a single I2C breakout, running seesaw firmware. AMYboard has built-in support via `read_encoder()`, `init_buttons()`, and `read_buttons()`. With a display connected, you can use `patch_selector()` to scroll through your `.patch` files with one encoder and load them with a click.
 
 ```python
 import amyboard
@@ -92,7 +95,8 @@ amyboard.init_display()
 amyboard.patch_selector()
 ```
 
- - [**M5Stack 8-Encoder Unit (STM32F030)**](https://shop.m5stack.com/products/8-encoder-unit-stm32f030) -- Eight rotary encoders with RGB LEDs and a toggle switch, all on one I2C unit. Great for controlling multiple synth parameters at once.
+ - ![M5Stack 8-Encoder Unit](img/accessory_m5_8encoder.jpg)  
+   [**M5Stack 8-Encoder Unit (STM32F030)**](https://shop.m5stack.com/products/8-encoder-unit-stm32f030) -- Eight rotary encoders with RGB LEDs and a toggle switch, all on one I2C unit. Great for controlling multiple synth parameters at once.
 
 ```python
 import m5_8encoder
@@ -112,7 +116,8 @@ m5_8encoder.set_led(0, bytes([255, 0, 0]))
 
 ### Knobs and joysticks
 
- - [**M5Stack 8-Angle Unit**](https://shop.m5stack.com/products/8-angle-unit-with-potentiometer) -- Eight potentiometer knobs on one I2C unit. Each knob reads as a float 0.0--1.0.
+ - ![M5Stack 8-Angle Unit](img/accessory_m5_8angle.jpg)  
+   [**M5Stack 8-Angle Unit**](https://shop.m5stack.com/products/8-angle-unit-with-potentiometer) -- Eight potentiometer knobs on one I2C unit. Each knob reads as a float 0.0--1.0.
 
 ```python
 import m58angle
@@ -126,7 +131,8 @@ for ch in range(8):
     amy.send(osc=ch, amp=m58angle.get(ch))
 ```
 
- - [**M5Stack I2C Joystick**](https://shop.m5stack.com/products/i2c-joystick-unit-v1-1-mega8a) -- Two-axis analog stick with a push-button.
+ - ![M5Stack I2C Joystick](img/accessory_m5_joystick.jpg)  
+   [**M5Stack I2C Joystick**](https://shop.m5stack.com/products/i2c-joystick-unit-v1-1-mega8a) -- Two-axis analog stick with a push-button.
 
 ```python
 import m5joy
@@ -139,7 +145,8 @@ x, y, btn = m5joy.get()
 
 These units pair well with AMYboard's CV outputs for driving modular gear, or for reading sensors. See [Modular Synth Setup](modular.md) for more on CV.
 
- - [**Mabee DAC (GP8413, dual channel up to 10V)**](https://www.makerfabs.com/mabee-dac-gp8413.html) -- Two CV outputs per unit, up to four units (8 channels) on one bus by changing the address jumpers.
+ - ![Mabee DAC GP8413](img/accessory_mabee_dac.jpg)  
+   [**Mabee DAC (GP8413, dual channel up to 10V)**](https://www.makerfabs.com/mabee-dac-gp8413.html) -- Two CV outputs per unit, up to four units (8 channels) on one bus by changing the address jumpers.
 
 ```python
 import mabeedac
@@ -149,7 +156,8 @@ mabeedac.set(5.0, channel=0)
 mabeedac.set(2.5, channel=1)
 ```
 
- - [**M5Stack DAC2 Unit (GP8413, dual channel up to 10V)**](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413) -- Same chip as the Mabee DAC, in an M5 enclosure.
+ - ![M5Stack DAC2 Unit](img/accessory_m5_dac2.jpg)  
+   [**M5Stack DAC2 Unit (GP8413, dual channel up to 10V)**](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413) -- Same chip as the Mabee DAC, in an M5 enclosure.
 
 ```python
 import m5dac2
@@ -158,7 +166,8 @@ m5dac2.set(7.5, channel=0)
 m5dac2.set(0.0, channel=1)
 ```
 
- - [**M5Stack DAC Unit (single channel, up to 3.3V)**](https://shop.m5stack.com/products/dac-unit) -- One 12-bit output, 0--3.3V.
+ - ![M5Stack DAC Unit](img/accessory_m5_dac.jpg)  
+   [**M5Stack DAC Unit (single channel, up to 3.3V)**](https://shop.m5stack.com/products/dac-unit) -- One 12-bit output, 0--3.3V.
 
 ```python
 import m5dac
@@ -166,7 +175,8 @@ import m5dac
 m5dac.set(1.65)  # half-scale
 ```
 
- - [**M5Stack ADC Unit (ADS1100, up to 12V)**](https://shop.m5stack.com/products/adc-i2c-unit-v1-1-ads1100?variant=44321440399617) -- Read external voltages (e.g. a CV input) up to 12V.
+ - ![M5Stack ADC Unit](img/accessory_m5_adc.jpg)  
+   [**M5Stack ADC Unit (ADS1100, up to 12V)**](https://shop.m5stack.com/products/adc-i2c-unit-v1-1-ads1100?variant=44321440399617) -- Read external voltages (e.g. a CV input) up to 12V.
 
 ```python
 import m5adc
@@ -177,7 +187,8 @@ print(volts)
 
 ### General-purpose I/O
 
- - [**M5Stack Extend I/O Unit (PCA9554PW)**](https://shop.m5stack.com/products/official-extend-serial-i-o-unit) -- 8 GPIO pins over I2C, each configurable as input or output.
+ - ![M5Stack Extend I/O Unit](img/accessory_m5_extend.jpg)  
+   [**M5Stack Extend I/O Unit (PCA9554PW)**](https://shop.m5stack.com/products/official-extend-serial-i-o-unit) -- 8 GPIO pins over I2C, each configurable as input or output.
 
 ```python
 import m5extend
@@ -193,7 +204,8 @@ state = m5extend.read_pin(1)
 
 ### Clocks
 
- - [**M5Stack 7-Segment Digi-Clock Unit**](https://shop.m5stack.com/products/red-7-segment-digit-clock-unit) -- Four red 7-segment digits over I2C. Pass a 4-character string.
+ - ![M5Stack 7-Segment Digi-Clock Unit](img/accessory_m5_digiclock.jpg)  
+   [**M5Stack 7-Segment Digi-Clock Unit**](https://shop.m5stack.com/products/red-7-segment-digit-clock-unit) -- Four red 7-segment digits over I2C. Pass a 4-character string.
 
 ```python
 import m5digiclock
