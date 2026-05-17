@@ -94,6 +94,122 @@ amyboard.patch_selector()
 
  - [**M5Stack 8-Encoder Unit (STM32F030)**](https://shop.m5stack.com/products/8-encoder-unit-stm32f030) -- Eight rotary encoders with RGB LEDs and a toggle switch, all on one I2C unit. Great for controlling multiple synth parameters at once.
 
+```python
+import m5_8encoder
+
+# Cumulative position of each encoder (-2**31 to +2**31)
+positions = m5_8encoder.read_all_counters()
+
+# Push-button state for each encoder (0 = up, 1 = pressed)
+buttons = m5_8encoder.read_all_buttons()
+
+# Toggle switch on the side (0 or 1)
+switch = m5_8encoder.read_switch()
+
+# Light up encoder 0's LED red
+m5_8encoder.set_led(0, bytes([255, 0, 0]))
+```
+
+### Knobs and joysticks
+
+ - [**M5Stack 8-Angle Unit**](https://shop.m5stack.com/products/8-angle-unit-with-potentiometer) -- Eight potentiometer knobs on one I2C unit. Each knob reads as a float 0.0--1.0.
+
+```python
+import m58angle
+
+# Read knob 0 (range 0.0 to 1.0)
+val = m58angle.get(0)
+
+# Map all 8 knobs to AMY synth parameters
+import amy
+for ch in range(8):
+    amy.send(osc=ch, amp=m58angle.get(ch))
+```
+
+ - [**M5Stack I2C Joystick**](https://shop.m5stack.com/products/i2c-joystick-unit-v1-1-mega8a) -- Two-axis analog stick with a push-button.
+
+```python
+import m5joy
+
+# Returns (x, y, button) -- x and y are 0.0..1.0, button is 0/1
+x, y, btn = m5joy.get()
+```
+
+### Keyboards
+
+ - [**M5Stack CardKB Mini Keyboard**](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a) -- A tiny QWERTY keyboard. Importing the module installs a frame callback that forwards keypresses straight into Tulip. Add the import to `boot.py` if you want it active on startup.
+
+```python
+import m5cardkb  # that's it -- typed characters now reach Tulip
+```
+
+### Analog I/O (DAC, ADC, CV)
+
+These units pair well with AMYboard's CV outputs for driving modular gear, or for reading sensors. See [Modular Synth Setup](modular.md) for more on CV.
+
+ - [**Mabee DAC (GP8413, dual channel up to 10V)**](https://www.makerfabs.com/mabee-dac-gp8413.html) -- Two CV outputs per unit, up to four units (8 channels) on one bus by changing the address jumpers.
+
+```python
+import mabeedac
+
+# Set channel 0 to 5.0 V
+mabeedac.set(5.0, channel=0)
+mabeedac.set(2.5, channel=1)
+```
+
+ - [**M5Stack DAC2 Unit (GP8413, dual channel up to 10V)**](https://shop.m5stack.com/products/dac-2-i2c-unit-gp8413) -- Same chip as the Mabee DAC, in an M5 enclosure.
+
+```python
+import m5dac2
+
+m5dac2.set(7.5, channel=0)
+m5dac2.set(0.0, channel=1)
+```
+
+ - [**M5Stack DAC Unit (single channel, up to 3.3V)**](https://shop.m5stack.com/products/dac-unit) -- One 12-bit output, 0--3.3V.
+
+```python
+import m5dac
+
+m5dac.set(1.65)  # half-scale
+```
+
+ - [**M5Stack ADC Unit (ADS1100, up to 12V)**](https://shop.m5stack.com/products/adc-i2c-unit-v1-1-ads1100?variant=44321440399617) -- Read external voltages (e.g. a CV input) up to 12V.
+
+```python
+import m5adc
+
+volts = m5adc.get()
+print(volts)
+```
+
+### General-purpose I/O
+
+ - [**M5Stack Extend I/O Unit (PCA9554PW)**](https://shop.m5stack.com/products/official-extend-serial-i-o-unit) -- 8 GPIO pins over I2C, each configurable as input or output.
+
+```python
+import m5extend
+
+# Configure pin 0 as output, drive it high
+m5extend.set_pin_mode(0, False)   # False = output
+m5extend.write_pin(0, True)
+
+# Configure pin 1 as input, read it
+m5extend.set_pin_mode(1, True)    # True = input
+state = m5extend.read_pin(1)
+```
+
+### Clocks
+
+ - [**M5Stack 7-Segment Digi-Clock Unit**](https://shop.m5stack.com/products/red-7-segment-digit-clock-unit) -- Four red 7-segment digits over I2C. Pass a 4-character string.
+
+```python
+import m5digiclock
+
+m5digiclock.set("1234")
+m5digiclock.set("AMY ")
+```
+
 ## Connecting accessories
 
 All accessories plug into the front panel I2C port. You can daisy-chain multiple I2C devices together.
