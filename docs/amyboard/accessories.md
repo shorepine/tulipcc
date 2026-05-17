@@ -1,5 +1,7 @@
 # AMYboard Accessories
 
+**Important: plug accessories into the FRONT-panel I2C jack, not the back "tulip" I2C jack.** The back jack is a separate I2C bus reserved for connecting AMYboard to a Tulip CC; accessories plugged in there will not be reachable from your code.
+
 AMYboard has a front panel I2C port for plugging in accessories. These connect with a simple cable (GROVE connector) -- no soldering required.
 
 The I2C bus (SCL=18, SDA=17, 400kHz) is available for connecting additional hardware:
