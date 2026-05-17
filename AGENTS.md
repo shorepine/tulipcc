@@ -56,9 +56,9 @@ The easiest ways to test `tulipcc` are:
 
 - `./build.sh` in `tulip/macos`
 - `./build.sh` in `tulip/web`
-- `./build.sh` in `tulip/amyboardweb`
+- `python3 dev.py` in `tulip/amyboardweb`
 
-All three `build.sh` scripts exit after building. To start a local dev server on port 8000 after building, run `./serve.sh` in `tulip/web` or `tulip/amyboardweb`.
+The `build.sh` scripts exit after building. To start a local dev server on port 8000 after building `tulip/web`, run `./serve.sh` there. For `tulip/amyboardweb`, `dev.py` builds `stage/` on startup, serves it on port 8000, and incrementally re-syncs files as you edit — leave it running during the session. See `tulip/amyboardweb/CLAUDE.md` for the exact invocation.
 
 ## ESP-IDF Build Commands (Required)
 
@@ -104,9 +104,9 @@ Web release steps (run when the user asks to release/deploy web targets):
    - Merge the deploy branch to `main` so GitHub Pages publishes updated `www/run` artifacts.
 2. For Amyboard Web:
    - `cd tulip/amyboardweb`
-   - `./build.sh`
+   - `python3 dev.py` (builds `stage/` on startup and serves it; leave running)
    - Ensure compile/build succeeded.
-   - `./deploy.sh`
+   - `./deploy.sh` (deploys from `stage/`)
 
 Notes:
 
