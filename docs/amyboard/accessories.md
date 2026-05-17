@@ -18,7 +18,7 @@ amyboard.write_register(addr, reg, val)
 
 You can add more DACs, ADCs, displays, or sensors to expand AMYboard's capabilities.
 
-**Note:** For the Adafruit units below, you'll need a [GROVE to Stemma QT Adapter Cable](). They can be hard to find in-stock, but you can make one (or two) yourself if you have a soldering iron: Take an existing GROVE cable and an existing Stemma QT cable, cut them both in the middle, then connect the bare ends together. (Note that, for Grove cables, the SDA and SCL colors depend on manufacturer.  The ordering below should be correct, however, i.e. SCL is the "edge" cable).
+**Note:** For the Adafruit units below, you'll need a [GROVE to Stemma QT Adapter Cable](https://www.adafruit.com/product/4528). They can be hard to find in-stock, but you can make one (or two) yourself if you have a soldering iron: Take an existing GROVE cable and an existing Stemma QT cable, cut them both in the middle, then connect the bare ends together. (Note that, for Grove cables, the SDA and SCL colors depend on manufacturer.  The ordering below should be correct, however, i.e. SCL is the "edge" cable).
 
 |Signal|Stemma QT color|Grove color|
 |--|--|--|
