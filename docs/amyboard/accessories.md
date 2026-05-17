@@ -71,12 +71,18 @@ amyboard.init_buttons()
 buttons = amyboard.read_buttons()
 # Returns tuple of 4 booleans (True = pressed)
 
+# Drive the single on-board NeoPixel. The defaults target the Quad
+# breakout, so pass the 5880's seesaw address (0x36) and NeoPixel pin (6).
+amyboard.init_neopixels(num=1, pin=6, seesaw_dev=0x36)
+amyboard.set_neopixel(0, 0, 64, 0, seesaw_dev=0x36)  # dim green
+amyboard.show_neopixels(seesaw_dev=0x36)
+
 # Monitor all encoders on the OLED display
 amyboard.monitor_encoders()
 ```
 
  - ![Adafruit QT Quad Rotary Encoder](img/accessory_adafruit_quad_encoder.jpg)  
-   [**Adafruit I2C QT Quad Rotary Encoder Breakout**](https://www.adafruit.com/product/5752) -- Four rotary encoders with built-in push buttons on a single I2C breakout, running seesaw firmware. AMYboard has built-in support via `read_encoder()`, `init_buttons()`, and `read_buttons()`. With a display connected, you can use `patch_selector()` to scroll through your `.patch` files with one encoder and load them with a click.
+   [**Adafruit I2C QT Quad Rotary Encoder Breakout**](https://www.adafruit.com/product/5752) -- Four rotary encoders with built-in push buttons and one RGB NeoPixel per encoder on a single I2C breakout, running seesaw firmware. AMYboard has built-in support via `read_encoder()`, `init_buttons()`, `read_buttons()`, and `init_neopixels()`/`set_neopixel()`/`show_neopixels()`. With a display connected, you can use `patch_selector()` to scroll through your `.patch` files with one encoder and load them with a click.
 
 ```python
 import amyboard
@@ -88,6 +94,15 @@ pos = amyboard.read_encoder(encoder=0)
 amyboard.init_buttons()
 buttons = amyboard.read_buttons()
 # Returns list of 4 booleans (True = pressed)
+
+# Drive the 4 on-board NeoPixels (one per encoder).
+# Defaults match this breakout (num=4, pin=18, seesaw_dev=0x49).
+amyboard.init_neopixels()
+amyboard.set_neopixel(0, 64, 0, 0)   # encoder 0 -> dim red
+amyboard.set_neopixel(1, 0, 64, 0)   # encoder 1 -> dim green
+amyboard.set_neopixel(2, 0, 0, 64)   # encoder 2 -> dim blue
+amyboard.set_neopixel(3, 32, 32, 0)  # encoder 3 -> dim yellow
+amyboard.show_neopixels()            # latch staged colors to the LEDs
 
 # Patch selector: scroll through patches and load on click
 # (requires a display to be connected)
