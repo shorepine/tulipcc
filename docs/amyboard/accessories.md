@@ -135,14 +135,6 @@ import m5joy
 x, y, btn = m5joy.get()
 ```
 
-### Keyboards
-
- - [**M5Stack CardKB Mini Keyboard**](https://shop.m5stack.com/products/cardkb-mini-keyboard-programmable-unit-v1-1-mega8a) -- A tiny QWERTY keyboard. Importing the module installs a frame callback that forwards keypresses straight into Tulip. Add the import to `boot.py` if you want it active on startup.
-
-```python
-import m5cardkb  # that's it -- typed characters now reach Tulip
-```
-
 ### Analog I/O (DAC, ADC, CV)
 
 These units pair well with AMYboard's CV outputs for driving modular gear, or for reading sensors. See [Modular Synth Setup](modular.md) for more on CV.
