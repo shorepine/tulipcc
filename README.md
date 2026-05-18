@@ -1,19 +1,24 @@
-# Tulip Creative Computer - a portable programmable device for music, graphics, code and writing
+# Tulip Creative Computer and AMYboard - portable programmable devices for music, graphics, code and writing
 
 ![Tulip](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulip_hero.jpg)
+![AMYboard](https://amyboard.com/img/amyboard_preview.png)
 
-Welcome to the Tulip Creative Computer (Tulip CC)!
+Welcome to the Tulip Creative Computer (Tulip CC) and AMYboard!
  
 Tulip is a low power and affordable self-contained portable computer, with a touchscreen display and sound. It's fully programmable - you write code to define your music, games or anything else you can think of. It boots instantaneously into a Python prompt with a lot of built in support for music synthesis, fast graphics and text, hardware MIDI, network access and external sensors. Dive right into making something without distractions or complications. 
 
 The entire system is dedicated to your code, the display and sound, running in real time, on specialized hardware. The hardware and software are fully open source and anyone can [buy one](https://tulip.computer/) or [build one](docs/tulip_build.md). You can use Tulip to make music, code, art, games, or just write. 
 
-You can now even [run Tulip on the web](https://tulip.computer/run) and share your creations with anyone!
+[AMYboard](https://amyboard.com) is a headless (no screen) version of Tulip with more audio capability - audio input, modular 10hp and 10vpp audio, S/PDIF digital audio, CV jacks, SD card. It's based on the Tulip code but focused on music synthesis. 
 
-Tulip is powered by [MicroPython](https://micropython.org), [AMY](https://github.com/shorepine/amy), and [LVGL](https://lvgl.io). The Tulip hardware runs on the ESP32-S3 chip using the [ESP-IDF](https://github.com/espressif/esp-idf).
+You can now even [run Tulip on the web](https://tulip.computer/run) and [AMYboard on the web](https://amyboard.com/editor) and share your creations with anyone!
+
+Tulip and AMYboard are powered by [MicroPython](https://micropython.org), [AMY](https://github.com/shorepine/amy), and [LVGL](https://lvgl.io). The Tulip hardware runs on the ESP32-S3 chip using the [ESP-IDF](https://github.com/espressif/esp-idf).
 
  * [**Get a Tulip** from our friends at Makerfabs for only US$59](https://tulip.computer)
+ * [**Get an AMYboard** from our friends at Makerfabs for only $29.90](https://amyboard.com)
  * [Just got a Tulip CC? **Check out our getting started guide!**](docs/getting_started.md)
+ * [Just got an AMYboard? **Check out our getting started guide!**](docs/amyboard/README.md)
  * [Want to make music with your Tulip? **See our music tutorial**](docs/music.md)
  * [See the full **Tulip API**](docs/tulip_api.md)
  * [**Try out Tulip on the web!**](https://tulip.computer/run/)
