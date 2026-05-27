@@ -80,11 +80,11 @@ If you edit the AMY or AMYboard software and want to flash your locally-modified
 
 2. Connect your AMYboard over USB and put it in bootloader mode (hold both buttons, release RST first, then BOOT).
 
-3. Move to the `tulip/amyboard` directory and run `idf.py flash`.  This should automatically find your AMYboard's serial connection, recompile the firmware, and write it to the AMYboard. (If it has trouble finding your AMYboard, you can try adding `-p /dev/cu.usbmodem.XXXX` or similar to explicitly specify the AMYboard's serial connection.)
+3. Move to the `tulip/amyboard` directory and run `idf.py flash`.  This should automatically find your AMYboard's serial connection, recompile the firmware, and write it to the AMYboard. (If it has trouble finding your AMYboard, you can try adding `-p /dev/cu.usbmodemXXXX` or similar to explicitly specify the AMYboard's serial connection.)
 
 4. Press RST on the AMYboard to reboot it.  It should then work normally.
 
-5. You can open a serial connection to the AMYboard serial port to directly interact with the MicroPython REPL (and possibly to see error messages): `screen /dev/cy.usbmodem.XXXX 115200`.  (`mpremote` does not work for AMYboard.)
+5. You can open a serial connection to the AMYboard serial port to directly interact with the MicroPython REPL (and possibly to see error messages): `screen /dev/cy.usbmodemXXXX 115200`.  `mpremote connect /dev/cu.usbmodemXXXX` should also work.
 
 6. If you need to rewrite the AMYboard file system (rare and slow, and removes any saved files you have written), it's `idf.py erase-flash` followed by `python amyboard_fs_create.py full`.
 
