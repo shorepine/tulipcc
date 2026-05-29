@@ -37,7 +37,8 @@ You can add more DACs, ADCs, displays, or sensors to expand AMYboard's capabilit
  - ![Adafruit 1.5" 128x128 OLED](img/accessory_adafruit_oled.jpg)  
    [**Adafruit Grayscale 1.5" 128x128 OLED Display (STEMMA QT)**](https://www.adafruit.com/product/4741) -- A high-contrast 128x128 grayscale OLED with 16 shades of gray. AMYboard has built-in support for this display, including waveform visualization. Connects directly via the STEMMA QT cable.
 
-   The AMYboard front panel has a sized cutout for this display, with 4 M2 sized nut/bolt holes that will easily attach through the bolt holes on the display as well.
+   The AMYboard front panel has a sized cutout for this display, with four M2-sized nut/bolt holes that will easily attach through the bolt holes on the display as well.  We strongly recommend using spacers to make sure the screen glass doesn't press against the front panel, else it can crack (and die) when you tighten the nuts.
+
  - [**Generic SH1107 128x128 OLED displays (I2C)**](https://www.amazon.com/HiLetgo-SH1107-128x128-Display-Module/dp/B0CFF17DGH/) -- Many available generic displays based on the SH1107 or SSD1327 will work out of the box on AMYboard.
    
 ```python
