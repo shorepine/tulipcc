@@ -58,7 +58,8 @@ do_firmware() {
     gh release upload --clobber --repo "$GH_REPO" "$DEV_TAG" \
         amyboard/dist/amyboard-firmware-AMYBOARD.bin \
         amyboard/dist/amyboard-full-AMYBOARD.bin \
-        amyboard/dist/amyboard-sys.bin
+        amyboard/dist/amyboard-sys.bin \
+        amyboard/dist/amyboard-version.json
     echo "[dev] Firmware uploaded to '$DEV_TAG' prerelease."
 }
 

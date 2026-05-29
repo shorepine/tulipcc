@@ -1244,6 +1244,20 @@ function _process_complete_sysex(d) {
         if (_sysex_ack_resolve) { var r = _sysex_ack_resolve; _sysex_ack_resolve = null; r(); }
         return;
     }
+    // zY firmware-version reply: F0 00 03 45 'Y' <ascii decimal epoch> F7.
+    // Must be handled before the chunk/base64 branch below or the digits would
+    // be misread as a base64 chunk payload.
+    if (d[4] === 0x59 /* Y */) {
+        var vs = '';
+        for (var vi = 5; vi < d.length - 1; vi++) vs += String.fromCharCode(d[vi]);
+        var vepoch = parseInt(vs, 10);
+        if (!isNaN(vepoch)) {
+            _board_firmware_epoch = vepoch;
+            console.log('zY: board firmware epoch =', vepoch, '(' + _fmt_epoch(vepoch) + ')');
+        }
+        if (_version_resolve) { var vr = _version_resolve; _version_resolve = null; vr(_board_firmware_epoch); }
+        return;
+    }
     // Chunk marker at position 4.
     var marker = d[4];
     var payloadStart, isChunked, isEnd;
@@ -2706,6 +2720,192 @@ function _send_zi_ping() {
     }
 }
 
+// ─── Firmware version check (zY) ──────────────────────────────────────────
+// The board's firmware is stamped at build time with a UTC unix epoch (seconds
+// precision; see AMYBOARD_BUILD_EPOCH in amyboard/esp32_common.cmake). We query
+// it over sysex with 'zY'; the board replies
+//   F0 00 03 45 'Y' <ascii decimal epoch> F7
+// (parsed in _process_complete_sysex above). We compare that against the epoch
+// baked into the LATEST RELEASE firmware — published as amyboard-version.json
+// alongside the release .bin — and, if the board is older, nudge the user to
+// upgrade. Firmware that predates this feature never answers 'zY'; we treat a
+// missing reply as "out of date" (it is, by definition).
+var _board_firmware_epoch = null;        // epoch reported by the connected board, or null
+var _version_resolve = null;             // one-shot resolver for an in-flight zY query
+var _latest_release_epoch = undefined;   // cached: undefined=unfetched, null=fetch failed, number=epoch
+var _firmware_outdated_notified = false; // only show the modal once per session
+// Always compare against the LATEST RELEASE, regardless of dev/release channel.
+var LATEST_VERSION_JSON_URL = 'https://github.com/shorepine/tulipcc/releases/latest/download/amyboard-version.json';
+
+// Format a unix epoch (seconds) as a short local date+time for log/UI display.
+function _fmt_epoch(epoch) {
+    if (epoch === null || epoch === undefined || isNaN(epoch)) return 'unknown';
+    try {
+        return new Date(epoch * 1000).toLocaleString();
+    } catch (e) {
+        return String(epoch);
+    }
+}
+
+// Send a single 'zY' firmware-version query. Mirrors _send_zi_ping: zY is
+// answered in C (modtulip.c, guarded by AMYBOARD_BUILD_EPOCH) and replies with
+// 'Y'<epoch>, never the 'AK' ACK, so we send it directly rather than through
+// sysex_write_amy_message's ack path. Returns true if the send was dispatched.
+function _send_zv_query() {
+    var outputDevice = get_selected_midi_output_device();
+    if (!outputDevice) return false;
+    try {
+        var rawOut = outputDevice._midiOutput || outputDevice.output || null;
+        if (rawOut && typeof rawOut.open === 'function') {
+            try { rawOut.open().catch(function() {}); } catch (e) {}
+        }
+        var payload = Array.from(new TextEncoder().encode('zYZ'));
+        if (typeof outputDevice.sendSysex === 'function') {
+            outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
+        } else if (typeof outputDevice.send === 'function') {
+            outputDevice.send([0xF0].concat(AMYBOARD_SYSEX_MFR_ID, payload, [0xF7]));
+        } else {
+            return false;
+        }
+        return true;
+    } catch (e) {
+        console.warn('_send_zv_query: send failed:', e);
+        return false;
+    }
+}
+
+// Send 'zY' and wait up to timeout_ms for the board's epoch reply. Resolves to
+// the epoch number, or null if no parseable reply arrived in time. If we
+// already have _board_firmware_epoch (from a pre-warm during wait_for_board_ready
+// or an earlier query), returns it immediately.
+function _query_firmware_epoch(timeout_ms) {
+    if (_board_firmware_epoch !== null) return Promise.resolve(_board_firmware_epoch);
+    if (!timeout_ms) timeout_ms = 2000;
+    return new Promise(function(resolve) {
+        var done = false;
+        _version_resolve = function(epoch) {
+            if (done) return;
+            done = true;
+            resolve(epoch === undefined ? null : epoch);
+        };
+        if (!_send_zv_query()) {
+            if (!done) { done = true; _version_resolve = null; resolve(null); }
+            return;
+        }
+        setTimeout(function() {
+            if (done) return;
+            done = true;
+            _version_resolve = null;
+            resolve(_board_firmware_epoch); // may still be null (no reply)
+        }, timeout_ms);
+    });
+}
+
+// Fetch the epoch baked into the latest RELEASE firmware from its
+// amyboard-version.json release asset, through the same /api/firmware proxy the
+// flasher uses for cross-origin GitHub fetches. Cached for the session.
+// Resolves to the epoch number, or null on any failure (in which case we stay
+// quiet — we never warn about being out of date if we can't establish a baseline).
+async function _fetch_latest_release_epoch() {
+    if (_latest_release_epoch !== undefined) return _latest_release_epoch;
+    try {
+        var proxied = '/api/firmware?url=' + encodeURIComponent(LATEST_VERSION_JSON_URL);
+        var resp = await fetch(proxied, { cache: 'no-store' });
+        if (!resp.ok) { _latest_release_epoch = null; return null; }
+        var obj = JSON.parse(await resp.text());
+        var ep = parseInt(obj.epoch, 10);
+        _latest_release_epoch = isNaN(ep) ? null : ep;
+    } catch (e) {
+        console.warn('firmware version check: could not fetch latest release epoch:', e);
+        _latest_release_epoch = null;
+    }
+    return _latest_release_epoch;
+}
+
+// Called at the end of a successful sync/pull. Compares the connected board's
+// firmware epoch against the latest release; if the board is older (or never
+// answered the zY query — firmware predating this feature), shows the
+// "firmware out of date" modal once per session. No-op outside control mode.
+async function _check_firmware_up_to_date() {
+    if (amyboard_mode !== 'control') return;
+    if (_firmware_outdated_notified) return;
+
+    var latest;
+    try {
+        latest = await _fetch_latest_release_epoch();
+    } catch (e) {
+        return;
+    }
+    // Can't establish a baseline → don't nag.
+    if (latest === null || latest === undefined) return;
+
+    var boardEpoch = _board_firmware_epoch;
+    if (boardEpoch === null) {
+        try { boardEpoch = await _query_firmware_epoch(2000); } catch (e) { boardEpoch = null; }
+    }
+    // boardEpoch===null means old firmware that doesn't answer zY → out of date.
+    var outdated = (boardEpoch === null) || (boardEpoch < latest);
+    console.log('firmware version check: board=' + _fmt_epoch(boardEpoch) +
+                ' latest_release=' + _fmt_epoch(latest) + ' outdated=' + outdated);
+    if (outdated) {
+        _firmware_outdated_notified = true;
+        show_firmware_outdated_modal(boardEpoch, latest);
+    }
+}
+
+// Show the "your AMYboard firmware is out of date" modal. The user can ignore
+// it (dismiss_firmware_outdated_modal) or jump to the firmware upgrade tab
+// (firmware_outdated_upgrade).
+function show_firmware_outdated_modal(boardEpoch, latestEpoch) {
+    var info = document.getElementById('firmware-outdated-info');
+    if (info) {
+        var boardStr = (boardEpoch === null || boardEpoch === undefined)
+            ? 'an unknown version (it predates firmware version reporting)'
+            : _fmt_epoch(boardEpoch);
+        info.textContent = 'Your AMYboard is running firmware from ' + boardStr +
+            '. The latest release is from ' + _fmt_epoch(latestEpoch) +
+            '. Upgrading is recommended.';
+    }
+    var el = document.getElementById('firmwareOutdatedModal');
+    if (!el) return;
+    try {
+        if (window.bootstrap) {
+            bootstrap.Modal.getOrCreateInstance(el).show();
+            return;
+        }
+    } catch (e) {}
+    // Fallback if bootstrap JS isn't available.
+    el.classList.add('show');
+    el.style.display = 'block';
+    el.removeAttribute('aria-hidden');
+}
+
+function dismiss_firmware_outdated_modal() {
+    var el = document.getElementById('firmwareOutdatedModal');
+    if (!el) return;
+    try {
+        var m = window.bootstrap && bootstrap.Modal.getOrCreateInstance(el);
+        if (m) m.hide();
+    } catch (e) {}
+    el.classList.remove('show');
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+}
+
+// "Upgrade Firmware" button in the outdated modal: dismiss, then switch to the
+// firmware upgrade tab (same navigation dismiss_sync_modal_and_upgrade uses).
+function firmware_outdated_upgrade() {
+    dismiss_firmware_outdated_modal();
+    var upgradeTab = document.getElementById('upgrade-tab');
+    if (upgradeTab && window.bootstrap) {
+        try { new bootstrap.Tab(upgradeTab).show(); } catch (e) {}
+    }
+}
+
 // Install a raw MIDIAccess.statechange listener ONCE per page lifetime.
 // This bypasses WebMidi.js and logs the raw platform events. On Windows,
 // the WebMidi.js 'connected'/'disconnected' wrapper events have been
@@ -2777,6 +2977,11 @@ async function wait_for_board_ready(timeout_ms) {
         _ping_resolve = function() {
             if (reply_received) return;
             reply_received = true;
+            // Board just answered the readiness ping — opportunistically ask
+            // for its firmware epoch (zY) so a later sync can compare versions
+            // without an extra round-trip. Fire-and-forget; the reply lands in
+            // _process_complete_sysex and populates _board_firmware_epoch.
+            try { _send_zv_query(); } catch (e) {}
             resolve(true);
         };
     });
@@ -4921,6 +5126,15 @@ function _handle_sync_sysex_payload(payload) {
         // Remember the MIDI ports that worked so next page load can preselect.
         try { _save_successful_midi_ports(); } catch (e) {}
         if (_sync_resolve) { var r = _sync_resolve; _sync_resolve = null; _sync_reject = null; r(); }
+        // After a successful pull, check whether the board's firmware is older
+        // than the latest release and, if so, nudge the user to upgrade. Slight
+        // delay so the editor/knob UI settles and the syncing modal is fully
+        // gone before we (maybe) pop the outdated-firmware modal.
+        setTimeout(function() {
+            _check_firmware_up_to_date().catch(function(e) {
+                console.warn('firmware version check failed:', e);
+            });
+        }, 400);
         return;
     }
 }

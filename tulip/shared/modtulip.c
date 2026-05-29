@@ -375,6 +375,33 @@ STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
     // mp_sched callback is delayed).
     char *slot = sysex_message_copies[sysex_copy_read_idx];
     sysex_copy_read_idx = (sysex_copy_read_idx + 1) % SYSEX_COPY_SLOTS;
+#ifdef AMYBOARD_BUILD_EPOCH
+    // zY: firmware-version query. The AMYboard editor sends this (framed as
+    // F0 00 03 45 'z' 'Y' 'Z' F7) right after detecting the board so it can
+    // warn when the connected firmware is older than the latest release.
+    // Reply with the compile-time build epoch (UTC unix seconds) as ASCII
+    // decimal digits:  F0 00 03 45 'Y' <digits> F7.
+    //
+    // Handled here in the tulip layer (not in the amy submodule) so amy stays
+    // untouched, and the build epoch — a tulip/board build concept — lives
+    // where it's defined. We intercept BEFORE amy_add_message_from_sysex so
+    // AMY never parses 'zY', and we send NO 'AK' ACK (the editor waits for the
+    // 'Y' reply, not an ACK). 'Y'/'y' are unused AMY wire opcodes, so older
+    // firmware lacking this handler simply logs and ignores the request.
+    if (slot && slot[0] == 'z' && slot[1] == 'Y') {
+        extern void midi_out(uint8_t *bytes, uint16_t len);
+        char digits[16];
+        int nd = snprintf(digits, sizeof(digits), "%lu", (unsigned long)AMYBOARD_BUILD_EPOCH);
+        uint8_t frame[24];
+        int fi = 0;
+        frame[fi++] = 0xF0; frame[fi++] = 0x00; frame[fi++] = 0x03; frame[fi++] = 0x45;
+        frame[fi++] = 'Y';
+        for (int i = 0; i < nd && fi < (int)sizeof(frame) - 1; i++) frame[fi++] = (uint8_t)digits[i];
+        frame[fi++] = 0xF7;
+        midi_out(frame, (uint16_t)fi);
+        return mp_const_none;
+    }
+#endif
     if (slot) {
         // Use _from_sysex variant so that during a file transfer,
         // this data is routed to parse_transfer_message. Internal

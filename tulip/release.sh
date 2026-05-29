@@ -70,6 +70,9 @@ if [ "$TYPE" == "upload" ]; then
     gh release upload --clobber $RELEASE amyboard/dist/amyboard-full-AMYBOARD.bin
     gh release upload --clobber $RELEASE amyboard/dist/amyboard-firmware-AMYBOARD.bin
     gh release upload --clobber $RELEASE amyboard/dist/amyboard-sys.bin
+    # Firmware build epoch manifest — the web editor fetches
+    # releases/latest/download/amyboard-version.json to detect out-of-date boards.
+    gh release upload --clobber $RELEASE amyboard/dist/amyboard-version.json
 fi
 
 

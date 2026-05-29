@@ -3,6 +3,7 @@
 from littlefs import lfs
 import os
 import sys
+import json
 
 if(len(sys.argv)<2):
     print("Usage: python fs_create.py (amyboard,tulip) [flash]")
@@ -101,6 +102,34 @@ os.system("mkdir -p dist")
 os.system("cp build/%s.bin dist/%s-full-%s.bin" % (distro, distro, MICROPY_BOARD))
 os.system("cp build/micropython.bin dist/%s-firmware-%s.bin" % (distro, MICROPY_BOARD))
 os.system("cp build/%s-sys.bin dist/%s-sys.bin" %(distro, distro))
+
+# Emit a small version manifest for AMYboard so the web editor can tell when a
+# connected board is running firmware older than the latest release. The epoch
+# is the same UTC unix-seconds value compiled into the firmware — esp32_common.cmake
+# writes build/amyboard_build_epoch.txt at configure time and also defines
+# AMYBOARD_BUILD_EPOCH for the C code, so the JSON and the running firmware agree.
+# release.sh uploads this to the version tag (-> releases/latest/download/) and
+# dev.sh uploads it to the rolling 'dev' prerelease.
+if distro == 'amyboard':
+    version = {"board": MICROPY_BOARD}
+    try:
+        with open('build/amyboard_build_epoch.txt') as f:
+            version["epoch"] = int(f.read().strip())
+    except (OSError, ValueError) as e:
+        print("warning: could not read build/amyboard_build_epoch.txt:", e)
+        version["epoch"] = 0
+    try:
+        with open('build/genhdr/mpversion.h') as f:
+            for line in f:
+                if 'MICROPY_GIT_HASH' in line:
+                    version["git_hash"] = line.split('"')[1]
+                elif 'MICROPY_BUILD_DATE' in line:
+                    version["build_date"] = line.split('"')[1]
+    except OSError:
+        pass
+    with open('dist/amyboard-version.json', 'w') as f:
+        json.dump(version, f)
+    print("wrote dist/amyboard-version.json:", version)
 
 # Optionally do the flash of the whole image
 if(len(sys.argv)>2):

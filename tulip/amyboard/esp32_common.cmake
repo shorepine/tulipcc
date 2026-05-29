@@ -314,6 +314,15 @@ set(MICROPY_CROSS_FLAGS -march=xtensawin)
 # Suppress -Wgnu-folding-constant when building mpy-cross on macOS clang.
 set(ENV{CFLAGS_EXTRA} "$ENV{CFLAGS_EXTRA} -Wno-gnu-folding-constant")
 
+# Stamp the firmware with its build time (UTC unix epoch, seconds precision)
+# so the AMYboard editor can tell when a connected board is running firmware
+# older than the latest release. Recomputed on every CMake configure; both
+# release.sh and dev.sh clean-build (rm -rf build), so each published firmware
+# gets a fresh epoch. Also written to a file so fs_create.py can emit the
+# matching amyboard-version.json release asset with the same value.
+string(TIMESTAMP AMYBOARD_BUILD_EPOCH "%s" UTC)
+file(WRITE ${CMAKE_BINARY_DIR}/amyboard_build_epoch.txt "${AMYBOARD_BUILD_EPOCH}")
+
 # Set compile options for this port.
 target_compile_definitions(${MICROPY_TARGET} PUBLIC
     ${MICROPY_DEF_CORE}
@@ -327,6 +336,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     LFS2_NO_MALLOC LFS2_NO_ASSERT
     ESP_PLATFORM
     AMYBOARD
+    AMYBOARD_BUILD_EPOCH=${AMYBOARD_BUILD_EPOCH}
     AMY_WAVETABLE
     #AMY_DEBUG
     ${MICROPY_DEF_TINYUSB}
