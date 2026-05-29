@@ -1284,6 +1284,30 @@
         </div>
       </div>
 
+      <!-- Firmware out-of-date modal. Shown after a successful pull/sync when the
+           connected AMYboard's firmware build epoch (queried over sysex via zY)
+           is older than the latest GitHub release. The user can ignore it or
+           jump to the firmware upgrade tab. See _check_firmware_up_to_date() and
+           show_firmware_outdated_modal() in spss.js. -->
+      <div class="modal fade" id="firmwareOutdatedModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Firmware update available</h5>
+              <button type="button" class="btn-close" aria-label="Close" onclick="dismiss_firmware_outdated_modal();"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+              <p id="firmware-outdated-info" class="mb-2">Your AMYboard firmware is out of date.</p>
+              <p class="text-muted small mb-0">You can keep using the editor with your current firmware, or upgrade to the latest release for the newest features and fixes.</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="dismiss_firmware_outdated_modal();">Ignore</button>
+              <button type="button" class="btn btn-warning btn-sm" onclick="firmware_outdated_upgrade();">Upgrade Firmware</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="card border-0 bg-light shadow-sm mb-3">
         <div class="card-body">
           <form name="amyboard_settings">
