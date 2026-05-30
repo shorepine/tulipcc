@@ -128,6 +128,7 @@ And all sound will come from the AMYboard.
  - **[Using Python](python.md)** -- Programming AMYboard with MicroPython
  - **[Accessories](accessories.md)** -- Compatible displays, encoders, and other I2C accessories
  - **[Troubleshooting](troubleshooting.md)** -- Common issues and how to fix them
+ - **[FAQ](faq.md)** -- Frequently asked questions from the AMYboard community
 
 ## Learn more about AMY
 
