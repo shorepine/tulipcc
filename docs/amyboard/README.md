@@ -2,6 +2,8 @@
 
 Welcome to **AMYboard** -- a powerful music synthesizer on a small modular-compatible board, for $29. AMYboard is built on the [AMY synthesizer](https://github.com/shorepine/amy) and runs [MicroPython](https://micropython.org) on an ESP32-S3.
 
+**[See our AMYboard FAQ!](faq.md)**
+
 <img src="https://amyboard.com/img/amyboard_preview.png" width=500>
 
 AMYboard gives you:
@@ -21,7 +23,7 @@ If you have problems with AMYboard, check out the [troubleshooting page](trouble
 
 ## What's in the box
 
-AMYboard ships from [Makerfabs](https://amyboard.com/#get). In the box you'll get the board itself with the connectors already on, and an optional front panel that you can use if you want to mount your AMYboard in a Eurorrack case. See [Modular Synth Setup](modular.md) for details on the front panel and Eurorack mounting.
+AMYboard ships from [Makerfabs](https://amyboard.com/#get). In the box you'll get the board itself with a plexiglass/acrylic unlabeled front panel, the connectors already on, and screw nuts for attaching the connectors to the panel. The panel is 10HP eurorack width. See [Modular Synth Setup](modular.md) for details on the front panel and Eurorack mounting.
 
 
 ## How AMYboard works - knobs and sketches
