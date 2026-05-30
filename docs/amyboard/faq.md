@@ -8,17 +8,22 @@ See also: [Getting Started](README.md) · [Troubleshooting](troubleshooting.md) 
 
 ## Buying & the board itself
 
-### Is the $29 AMYboard just a bare PCB, or is it assembled?
+### Who makes the AMYboard and how do I buy one?
 
-It's fully assembled -- all parts are pre-soldered. It ships from [Makerfabs](https://amyboard.com/#get) with the board, an optional laser-cut acrylic front panel (for Eurorack mounting), and the nuts for the jacks. The only "assembly" is snapping on the faceplate and fastening the jack nuts if you want to rack it.
+AMYboard is an open source project staffed by volunteers. We worked with [Makerfabs](https://www.makerfabs.com/amyboard.html) to design and produce the AMYboard. Makerfabs handles all fulfilment and purchasing. Contact them with any order related questions! 
 
-### Are AMYboards in stock? I saw an old availability warning.
+### What comes with the $29 AMYboard? Does it need assembly / soldering?
 
-Boards are sold through Makerfabs. If you spot a stale "availability 2024" notice on a product page, ignore it -- it's out of date. Check [amyboard.com](https://amyboard.com) or ask on Discord for current lead times.
+AMYboard comes with 3 things in a box:
+ * A fully assembled AMYboard -- all parts are pre-soldered, including 3.5mm jacks
+ * A plexiglass / acrylic front panel for mounting in 10HP modular setups. The panel has cutouts for an optional display and optional knob. 
+ * Nuts for the 10 3.5mm jacks that screw on over the panel, if you want to attach the panel to the board.
+ 
+ The board ships from [Makerfabs](https://amyboard.com/#get). The only "assembly" is snapping on the faceplate and fastening the jack nuts if you want to rack it, along with any optional modules you want to install.
 
-### Did the hardware change between early boards and the official release?
+### Are AMYboards in stock? 
 
-The hardware is identical, with one cosmetic exception: the front panel is now **0.5 mm shorter** so it fits more snugly in tight modular cases. The screw holes still line up, and trimming the panel height doesn't affect anything functionally.
+Boards are sold through Makerfabs and they ship in "batches" based on order sizes. For example, before AMYboard launched, they made a small batch, which sold out quickly at launch, so they made a bigger batch. Batches take a couple of weeks for them to manufacture boards. You should look at the [AMYboard page on Makerfabs](https://www.makerfabs.com/amyboard.html) to see the latest shipping estimate. 
 
 ### How do I power it?
 
@@ -36,10 +41,7 @@ If AMYboard *only ever* appears as a USB/JTAG device, **it isn't running** -- it
 2. Press **BOOT** to start the firmware. You should get a MicroPython `>>>` prompt, and the board will then enumerate its USB serial (CDC) and USB MIDI ports.
 3. After flashing firmware, the sequence to leave DFU and run the new firmware is **RST, then BOOT**.
 
-A couple of gotchas:
-
-- If you connect and see `Starting MicroPython on core 1` and then nothing more, you're attached to the **UART debug header**, not the USB CDC serial port. Connect to the other serial device.
-- A working board enumerates as a USB MIDI device (VID `0xCAF0`, PID `0x4009`) plus a USB serial port. See [USB MIDI not recognized](troubleshooting.md#usb-midi-not-recognized).
+A working board enumerates as a USB MIDI device (VID `0xCAF0`, PID `0x4009`) plus a USB serial port. See [USB MIDI not recognized](troubleshooting.md#usb-midi-not-recognized).
 
 ### It works on Mac/Linux but not Windows (or the reverse)
 
@@ -73,7 +75,7 @@ Be very careful bolting a display to the faceplate -- hand-tightening can press 
 
 - Use color value **1** (not 255) for text on these OLEDs.
 - Don't refresh the display from a tight `while` loop or update it too often -- the I2C bandwidth will eventually **starve the audio and can crash the board**. Update one thing at a time inside your sketch's `loop()`. See the `preset_selector`, `house_generator`, and `acid_generator` examples for the right pattern.
-- The auto-generated knobs block runs *before* your sketch is imported and only touches AMY parameters -- it won't overwrite your OLED. If the default screen keeps coming back, something in your own display setup isn't running; try a known-good OLED example first.
+- If the default screen keeps coming back, something in your own display setup isn't running; try a known-good OLED example first.
 
 ---
 
@@ -104,30 +106,7 @@ See the [Accessories page](accessories.md) for details.
 
 ### How do I drive the NeoPixel LEDs on the Adafruit encoder board?
 
-This isn't in `amyboard.py` yet, but you can talk to the Seesaw NeoPixel registers directly from your sketch (community-contributed, may land in `amyboard.py` later). Two things to watch: prefix every NeoPixel command with the Seesaw module base (`0x0E`), and **don't** put `time.sleep()` calls inside the I2C writes -- they block the system and stall the display/audio.
-
-```python
-import struct
-from amyboard import get_i2c
-
-SS = 0x49                # default address of the quad-encoder Seesaw (yours may differ)
-NEOPIXEL_BASE = 0x0E
-NEOPIXEL_PIN, NEOPIXEL_SPEED, NEOPIXEL_BUF_LENGTH, NEOPIXEL_BUF, NEOPIXEL_SHOW = 0x01, 0x02, 0x03, 0x04, 0x05
-
-def neopixel_init(pin=18, n=4):
-    i2c = get_i2c()
-    i2c.writeto(SS, bytes([NEOPIXEL_BASE, NEOPIXEL_PIN, pin]))
-    i2c.writeto(SS, bytes([NEOPIXEL_BASE, NEOPIXEL_SPEED, 1]))            # 1 = 800kHz
-    i2c.writeto(SS, bytes([NEOPIXEL_BASE, NEOPIXEL_BUF_LENGTH]) + struct.pack(">H", n * 3))
-
-def neopixel_set(i, r, g, b):
-    # GRB byte order on these encoder boards
-    payload = bytes([NEOPIXEL_BASE, NEOPIXEL_BUF]) + struct.pack(">H", i * 3) + bytes([g, r, b])
-    get_i2c().writeto(SS, payload)
-
-def neopixel_show():
-    get_i2c().writeto(SS, bytes([NEOPIXEL_BASE, NEOPIXEL_SHOW]))
-```
+You can talk to the Seesaw NeoPixel registers directly from your sketch with `amyboard.neopixel_init(pin=18, n=4)` and `amyboard.neopixel_set(i, r,g,b)` and `amyboard.neopixel_show()`. 
 
 ### Should I read encoders / update the display in `loop()` or with `tulip.defer()`?
 
@@ -264,15 +243,11 @@ There's no commercial desktop case yet, but the community has shared several 3D-
 
 ### What's the panel with the labels/text I've seen in photos?
 
-The board ships with a plain laser-cut acrylic faceplate. The **bicolor labeled panel** in some Discord photos is a custom 3D print (ask on Discord for the source files). Everything works the same with or without a faceplate.
+The board ships with a plain laser-cut acrylic faceplate. The **bicolor labeled panel** in some Discord photos is a custom 3D print with the [3mf file here](https://github.com/shorepine/tulipcc/blob/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Everything works the same with or without a faceplate.
 
 ### Two AMYboards in a small case -- how much room do I need?
 
 The PCB itself is only ~47 mm wide (under 10HP); the **front panel** is 10HP. In a rack nothing is plugged into USB-C, and an I2C "tulip" cable still fits between two adjacent boards. A 20HP case (e.g. a 4ms Pod) fits two. If you want USB-C accessible in the rack, leave a little extra HP on that side -- many people add a right-angle USB-C panel-mount cable (and an external reset button) to their faceplate.
-
-### Is there a reset button I can wire to the front?
-
-The 6-pin debug header is a UART (its RTS/DTR lines can trigger reset/DFU, but that needs proper signal control, not just a button). The simplest external reset is to solder a wire from the bottom pin of the on-board **RST** button to a ground pin.
 
 ### Can I program the board once it's mounted in a rack?
 
