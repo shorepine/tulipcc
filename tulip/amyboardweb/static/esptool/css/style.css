@@ -81,6 +81,15 @@ div.clear {
   display: none;
 }
 
+.channel-badge {
+  margin: 0 0 1em;
+  padding: 0.6em 0.9em;
+  border-radius: 6px;
+  font-weight: 600;
+  background: #b35900;
+  color: #fff;
+}
+
 .notSupported {
   padding: 1em;
   margin-top: 1em;

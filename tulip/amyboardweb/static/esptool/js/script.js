@@ -17,18 +17,58 @@ const offsets = document.querySelectorAll(".upload .offset");
 const appDiv = document.getElementById("app");
 const noReset = document.getElementById("noReset");
 
+// Firmware channel: the "dev" site flashes test builds from the rolling 'dev'
+// GitHub prerelease; everywhere else flashes the real (latest) release.
+const FIRMWARE_BASES = {
+    release: "https://github.com/shorepine/tulipcc/releases/latest/download",
+    dev:     "https://github.com/shorepine/tulipcc/releases/download/dev",
+};
+
+function channelFromSearch(search) {
+    try {
+        const v = new URLSearchParams(search || "").get("channel");
+        return v === "dev" || v === "release" ? v : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function resolveFirmwareChannel() {
+    // Explicit ?channel= override on this frame or the parent editor frame.
+    let override = channelFromSearch(window.location.search);
+    if (!override) {
+        try { override = channelFromSearch(window.parent.location.search); } catch (e) {}
+    }
+    if (override) return override;
+
+    const host = (window.location.hostname || "").toLowerCase();
+    if (host === "amyboard.com" || host === "www.amyboard.com") return "release";
+    if (host.includes("amyboard-dev")) return "dev";
+    if (host === "localhost" || host === "127.0.0.1") return "dev";
+    return "release";
+}
+
+const firmwareChannel = resolveFirmwareChannel();
+
+function firmwareUrl(button) {
+    const bin = button?.dataset?.bin;
+    if (!bin) return undefined;
+    const base = FIRMWARE_BASES[firmwareChannel] || FIRMWARE_BASES.release;
+    return `${base}/${bin}`;
+}
+
 const upgradeActions = [
     {
         button: butProgram,
         offsetInput: offsets[0],
-        url: butProgram?.dataset?.url,
+        url: firmwareUrl(butProgram),
         eraseAll: false,
         eraseOTA: true,
     },
     {
         button: butErase,
         offsetInput: offsets[1],
-        url: butErase?.dataset?.url,
+        url: firmwareUrl(butErase),
         eraseAll: true,
         eraseOTA: false,
     }
@@ -96,6 +136,17 @@ document.addEventListener("DOMContentLoaded", () => {
     loadAllSettings();
     updateTheme();
     writeLogLine("ESP Web Flasher loaded.");
+
+    const channelBadge = document.getElementById("channelBadge");
+    if (channelBadge) {
+        if (firmwareChannel === "dev") {
+            channelBadge.textContent =
+                "DEV channel — flashing test builds from the rolling 'dev' release, not a stable version.";
+            channelBadge.classList.remove("hidden");
+        } else {
+            channelBadge.classList.add("hidden");
+        }
+    }
 });
 
 function initBaudRate() {

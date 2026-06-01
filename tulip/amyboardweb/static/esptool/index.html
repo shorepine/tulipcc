@@ -67,13 +67,14 @@
         <button id="butConnect" type="button">Search for AMYboard</button>
       </div>
       <div id="app">
+        <div id="channelBadge" class="channel-badge hidden"></div>
         <div id="commands">
           <div class="upload">
             <input class="offset" type="hidden" value="10000" />
             <button
               id="butProgram"
               type="button"
-              data-url="https://github.com/shorepine/tulipcc/releases/latest/download/amyboard-firmware-AMYBOARD.bin"
+              data-bin="amyboard-firmware-AMYBOARD.bin"
               disabled="disabled"
             >
               Upgrade AMYboard firmware
@@ -85,7 +86,7 @@
             <button
               id="butErase"
               type="button"
-              data-url="https://github.com/shorepine/tulipcc/releases/latest/download/amyboard-full-AMYBOARD.bin"
+              data-bin="amyboard-full-AMYBOARD.bin"
               disabled="disabled"
             >
               Fully erase and re-flash AMYboard

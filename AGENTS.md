@@ -113,6 +113,49 @@ Notes:
 - This command cleans and compiles all Tulip targets.
 - Typical runtime is about 5 to 10 minutes.
 
+## AMYboard Dev Channel (`dev.sh`)
+
+AMYboard has two firmware/web channels:
+
+- **release** — the real GitHub release (`releases/latest`), flashed from
+  `amyboard.com`. Promoted via `release.sh` (firmware) + `amyboardweb/deploy.sh` (web).
+- **dev** — rolling test builds, flashed from `https://amyboard-dev.vercel.app`.
+  Published via `tulip/dev.sh`.
+
+### Publishing dev builds
+
+Run from `tulip/` (ESP-IDF env active, see above):
+
+- `./dev.sh` — firmware + web
+- `./dev.sh firmware` — firmware only
+- `./dev.sh web` — web only
+
+`dev.sh`:
+
+1. Builds AMYboard firmware and uploads `amyboard-{firmware,full,sys}-AMYBOARD.bin`
+   to a GitHub **prerelease tagged `dev`** (created on first run, `--clobber`ed after).
+   Because it's a prerelease, it never becomes `releases/latest`.
+2. Builds `amyboardweb/stage/` via `python3 dev.py --build-only` and deploys it to
+   the **`amyboard-dev`** Vercel project (scope `bwhitmans-projects`, `--prod`).
+
+### How the flasher chooses a channel
+
+`amyboardweb/static/esptool/js/script.js` resolves the channel at runtime:
+`amyboard.com` → release, any host containing `amyboard-dev` → dev, localhost → dev,
+anything else → release. A `?channel=dev|release` query param (on the flasher page or
+the parent editor page) overrides this for testing. So the **dev site only ever flashes
+dev firmware and amyboard.com only ever flashes the latest release** — the same web
+artifact is deployed to both; only the hostname differs.
+
+### Promotion (dev → release)
+
+Once a dev build is tested, promote with the existing scripts:
+
+1. Firmware: `./release.sh v-XXX-2026 upload` (rebuilds from `main`, uploads to the
+   version tag, which becomes `releases/latest`).
+2. Web: `cd amyboardweb && ./deploy.sh` (deploys `stage/` to the `amyboard` Vercel
+   project / amyboard.com).
+
 ## World DB API Server (Railway)
 
 The FastAPI server in `tulip/server/amyboardworld_db_api.py` backs all

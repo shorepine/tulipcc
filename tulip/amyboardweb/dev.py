@@ -279,9 +279,23 @@ class DevHandler(SimpleHTTPRequestHandler):
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="AMYboard Web dev server / builder")
+    parser.add_argument(
+        "--build-only",
+        action="store_true",
+        help="Build stage/ once and exit (no watcher, no HTTP server). Used by dev.sh.",
+    )
+    args = parser.parse_args()
+
     os.chdir(SCRIPT_DIR)
 
     full_build()
+
+    if args.build_only:
+        print("[dev] --build-only: stage/ built, exiting.")
+        raise SystemExit(0)
 
     watcher = threading.Thread(target=watcher_loop, daemon=True)
     watcher.start()
