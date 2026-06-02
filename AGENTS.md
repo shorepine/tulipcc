@@ -58,6 +58,8 @@ The easiest ways to test `tulipcc` are:
 - `./build.sh` in `tulip/web`
 - `python3 dev.py` in `tulip/amyboardweb`
 
+**Web builds require submodules first.** `tulip/web` and `tulip/amyboardweb/dev.py` compile the `amy` and `micropython` submodules to WASM, so the submodules must be bootstrapped before building — run `tulip/shared/grab_submodules.sh` (see Submodule Setup). If `amy/` is empty, `dev.py`'s `make web` step fails with `make: *** No rule to make target 'web'`.
+
 The `build.sh` scripts exit after building. To start a local dev server on port 8000 after building `tulip/web`, run `./serve.sh` there. For `tulip/amyboardweb`, `dev.py` builds `stage/` on startup, serves it on port 8000, and incrementally re-syncs files as you edit — leave it running during the session. See `tulip/amyboardweb/CLAUDE.md` for the exact invocation.
 
 ## ESP-IDF Build Commands (Required)
@@ -113,6 +115,49 @@ Notes:
 - This command cleans and compiles all Tulip targets.
 - Typical runtime is about 5 to 10 minutes.
 
+## AMYboard Dev Channel (`dev.sh`)
+
+AMYboard has two firmware/web channels:
+
+- **release** — the real GitHub release (`releases/latest`), flashed from
+  `amyboard.com`. Promoted via `release.sh` (firmware) + `amyboardweb/deploy.sh` (web).
+- **dev** — rolling test builds, flashed from `https://amyboard-dev.vercel.app`.
+  Published via `tulip/dev.sh`.
+
+### Publishing dev builds
+
+Run from `tulip/` (ESP-IDF env active, see above):
+
+- `./dev.sh` — firmware + web
+- `./dev.sh firmware` — firmware only
+- `./dev.sh web` — web only
+
+`dev.sh`:
+
+1. Builds AMYboard firmware and uploads `amyboard-{firmware,full,sys}-AMYBOARD.bin`
+   to a GitHub **prerelease tagged `dev`** (created on first run, `--clobber`ed after).
+   Because it's a prerelease, it never becomes `releases/latest`.
+2. Builds `amyboardweb/stage/` via `python3 dev.py --build-only` and deploys it to
+   the **`amyboard-dev`** Vercel project (scope `bwhitmans-projects`, `--prod`).
+
+### How the flasher chooses a channel
+
+`amyboardweb/static/esptool/js/script.js` resolves the channel at runtime:
+`amyboard.com` → release, any host containing `amyboard-dev` → dev, localhost → dev,
+anything else → release. A `?channel=dev|release` query param (on the flasher page or
+the parent editor page) overrides this for testing. So the **dev site only ever flashes
+dev firmware and amyboard.com only ever flashes the latest release** — the same web
+artifact is deployed to both; only the hostname differs.
+
+### Promotion (dev → release)
+
+Once a dev build is tested, promote with the existing scripts:
+
+1. Firmware: `./release.sh v-XXX-2026 upload` (rebuilds from `main`, uploads to the
+   version tag, which becomes `releases/latest`).
+2. Web: `cd amyboardweb && ./deploy.sh` (deploys `stage/` to the `amyboard` Vercel
+   project / amyboard.com).
+
 ## World DB API Server (Railway)
 
 The FastAPI server in `tulip/server/amyboardworld_db_api.py` backs all
@@ -129,8 +174,12 @@ deploy of `tulip/amyboardweb/` does NOT touch it.
   — the root one takes precedence and uses `--app-dir tulip/server`)
 - Start command: `uvicorn amyboardworld_db_api:app --host 0.0.0.0 --port $PORT --app-dir tulip/server`
 - Production URL: `https://tulipcc-production.up.railway.app`
-- Dependencies: `tulip/server/requirements.txt` (fastapi, uvicorn[standard],
-  python-multipart, requests)
+- Dependencies: the **root** `/requirements.txt` is the file Railway/Nixpacks
+  actually installs (auto-detected at the repo root). Keep it in sync with
+  `tulip/server/requirements.txt` (the local-dev copy). Currently: fastapi,
+  uvicorn[standard], python-multipart, requests, anthropic. **Adding a dep to
+  only `tulip/server/requirements.txt` will NOT install it on Railway** — it
+  must also go in the root `/requirements.txt`.
 
 ### Auto-deploy on push to main
 

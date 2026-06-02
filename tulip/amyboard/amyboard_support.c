@@ -87,6 +87,7 @@ void i2c_check_for_data() {
 #define ADS1115_DR_1600SPS (0x0080)
 #define ADS1115_MODE_SINGLE (0x0100)
 #define ADS1115_OS_SINGLE (0x8000)
+#define ADS1115_OS_NOTBUSY (0x8000) // OS bit reads 1 when no conversion is in progress
 #define ADS1115_PGA_2_048V (0x0400)
 #define ADS1115_PGA_4_096V (0x0200)
 #define ADS1115_MUX_SINGLE_0 (0x4000) 
@@ -146,6 +147,18 @@ uint16_t read_ads1115_raw(uint8_t channel) {
              ADS1115_MODE_SINGLE | ADS1115_OS_SINGLE | ADS1115_PGA_4_096V |
              channel_mux);
     ads1115_write_register(ADS1115_REGISTER_CONFIG, data);
+    // Wait for the single-shot conversion on the just-selected mux channel to
+    // finish before reading the result. The OS bit reads 0 while converting and
+    // 1 when done; at 1600 SPS a conversion takes ~625us. Without this wait the
+    // CONVERT register still holds the *previous* conversion (the other channel),
+    // which made cv_in(0) and cv_in(1) return the same input. Bound the poll so a
+    // missing/unresponsive ADC can't stall the cv_read_task forever.
+    uint8_t cfg[2];
+    for(int i = 0; i < 20; i++) {
+        if(ads1115_read_register(ADS1115_REGISTER_CONFIG, cfg, 2) != ESP_OK) break;
+        if((((uint16_t)cfg[0] << 8) | cfg[1]) & ADS1115_OS_NOTBUSY) break; // conversion done
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
     uint8_t output[2];
     ads1115_read_register(ADS1115_REGISTER_CONVERT, output, 2);
     return ((uint16_t)output[0] << 8) | (uint16_t)output[1];
@@ -175,15 +188,23 @@ float cv_input_hook(uint16_t channel) {
 void cv_read_task(void *pvParameter) {
     uint16_t min = 1058;  // -10V
     uint16_t max = 21312; // 10V
+    // Scan both CV channels once per AMY audio block (AMY_BLOCK_SIZE / AMY_SAMPLE_RATE,
+    // ~5.8ms at 256/44100) so CV tracks the audio block cadence. Expressed in RTOS ticks,
+    // rounded to nearest, so it follows the audio rate regardless of tick rate; clamped to
+    // >=1 tick. (At configTICK_RATE_HZ=1000 this is 6 ticks; 5.8ms can't be hit exactly.)
+    TickType_t cv_period = (AMY_BLOCK_SIZE * configTICK_RATE_HZ + AMY_SAMPLE_RATE / 2) / AMY_SAMPLE_RATE;
+    if(cv_period == 0) cv_period = 1;
+    // xTaskDelayUntil holds a fixed period regardless of how long the two ADS1115
+    // conversions take, unlike vTaskDelay which would add the read time on top.
+    TickType_t last_wake = xTaskGetTickCount();
     for(;;) {
         for(uint8_t ch = 0; ch < 2; ch++) {
             if(!cv_local_override[ch]) {
                 uint16_t raw = read_ads1115_raw(ch);
                 cv_cached_value[ch] = ((((float)raw - (float)min)/((float)max-(float)min))*20.0)-10.0;
             }
-            vTaskDelay(pdMS_TO_TICKS(25));
         }
-        //vTaskDelay(pdMS_TO_TICKS(50));
+        xTaskDelayUntil(&last_wake, cv_period);
     }
 }
 #endif
