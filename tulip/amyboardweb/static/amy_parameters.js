@@ -346,7 +346,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "ADSR",
-      cc: "",
+      cc: 79,
       display_name: "sustain",
       change_code: "i%iv" + CTL_OSC + "A,1,,%v,,0",
       min_value: 0,
