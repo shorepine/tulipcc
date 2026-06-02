@@ -188,6 +188,15 @@ float cv_input_hook(uint16_t channel) {
 void cv_read_task(void *pvParameter) {
     uint16_t min = 1058;  // -10V
     uint16_t max = 21312; // 10V
+    // Scan both CV channels once per AMY audio block (AMY_BLOCK_SIZE / AMY_SAMPLE_RATE,
+    // ~5.8ms at 256/44100) so CV tracks the audio block cadence. Expressed in RTOS ticks,
+    // rounded to nearest, so it follows the audio rate regardless of tick rate; clamped to
+    // >=1 tick. (At configTICK_RATE_HZ=1000 this is 6 ticks; 5.8ms can't be hit exactly.)
+    TickType_t cv_period = (AMY_BLOCK_SIZE * configTICK_RATE_HZ + AMY_SAMPLE_RATE / 2) / AMY_SAMPLE_RATE;
+    if(cv_period == 0) cv_period = 1;
+    // xTaskDelayUntil holds a fixed period regardless of how long the two ADS1115
+    // conversions take, unlike vTaskDelay which would add the read time on top.
+    TickType_t last_wake = xTaskGetTickCount();
     for(;;) {
         for(uint8_t ch = 0; ch < 2; ch++) {
             if(!cv_local_override[ch]) {
@@ -195,7 +204,7 @@ void cv_read_task(void *pvParameter) {
                 cv_cached_value[ch] = ((((float)raw - (float)min)/((float)max-(float)min))*20.0)-10.0;
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(50));
+        xTaskDelayUntil(&last_wake, cv_period);
     }
 }
 #endif
