@@ -58,6 +58,8 @@ The easiest ways to test `tulipcc` are:
 - `./build.sh` in `tulip/web`
 - `python3 dev.py` in `tulip/amyboardweb`
 
+**Web builds require submodules first.** `tulip/web` and `tulip/amyboardweb/dev.py` compile the `amy` and `micropython` submodules to WASM, so the submodules must be bootstrapped before building — run `tulip/shared/grab_submodules.sh` (see Submodule Setup). If `amy/` is empty, `dev.py`'s `make web` step fails with `make: *** No rule to make target 'web'`.
+
 The `build.sh` scripts exit after building. To start a local dev server on port 8000 after building `tulip/web`, run `./serve.sh` there. For `tulip/amyboardweb`, `dev.py` builds `stage/` on startup, serves it on port 8000, and incrementally re-syncs files as you edit — leave it running during the session. See `tulip/amyboardweb/CLAUDE.md` for the exact invocation.
 
 ## ESP-IDF Build Commands (Required)

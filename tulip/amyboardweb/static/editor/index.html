@@ -63,7 +63,24 @@
     <script type="text/javascript" src="amy_api.generated.js"></script>
     <script type="text/javascript" src="amy_parameters.js"></script>
     <script>
-      window.AMYBOARD_WORLD_API_BASE = "https://tulipcc-production.up.railway.app";
+      // Default to the production World API. For local development, override with
+      // ?api=http://localhost:8090 (persisted), or ?api= (empty) to clear it.
+      // The production default is unchanged for normal users.
+      (function () {
+        var DEFAULT_BASE = "https://tulipcc-production.up.railway.app";
+        var override = "";
+        try {
+          var param = new URLSearchParams(window.location.search).get("api");
+          if (param !== null) {
+            if (param) window.localStorage.setItem("AMYBOARD_WORLD_API_BASE", param);
+            else window.localStorage.removeItem("AMYBOARD_WORLD_API_BASE");
+          }
+          override = window.localStorage.getItem("AMYBOARD_WORLD_API_BASE") || "";
+        } catch (e) {
+          override = "";
+        }
+        window.AMYBOARD_WORLD_API_BASE = override || DEFAULT_BASE;
+      })();
     </script>
     <script type="text/javascript" src="spss.js"></script>
 
@@ -1433,6 +1450,23 @@
                     <div id="repl-terminal"></div>
                   </div>
                   <button class="btn btn-sm btn-outline-secondary mt-1" onclick="replClear()">Clear</button>
+                </div>
+              </details>
+              <!-- Prompt to sketch — hidden by default under disclosure triangle -->
+              <details class="mb-3" id="prompt-to-sketch-disclosure">
+                <summary class="repl-summary">✨ Prompt to sketch (beta)</summary>
+                <div class="mt-2">
+                  <textarea id="prompt-to-sketch-input" class="form-control form-control-sm mb-1" rows="2"
+                    placeholder="Describe a sketch, e.g. 'a slow ambient pad that drifts the filter with CV1'"></textarea>
+                  <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-primary" id="prompt-to-sketch-btn"
+                      onclick="generate_sketch_from_prompt()">Generate</button>
+                    <span class="small text-muted" id="prompt-to-sketch-status"></span>
+                  </div>
+                  <div class="form-text">
+                    Generates an AMYboard sketch from your description and loads it into the editor.
+                    Review it before running. Limited uses per day.
+                  </div>
                 </div>
               </details>
               <div class="row g-0 headertext">

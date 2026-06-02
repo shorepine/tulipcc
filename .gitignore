@@ -35,6 +35,10 @@ tulip/amyboard/managed_components
 tulip/amyboardweb/build-standard
 .python-version
 
+# Local secrets — never commit (e.g. CLAUDE_KEY for sketch generation)
+.env
+.env.local
+
 # Prerequisites
 *.d
 

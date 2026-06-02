@@ -10,6 +10,7 @@ It provides separate storage for:
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -25,6 +26,33 @@ from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+
+
+def _load_dotenv() -> None:
+    """Best-effort load of a repo-root .env for local development.
+
+    Only fills variables that are not already set, so real environment
+    variables (e.g. those injected by the production host) always win. Does
+    nothing if no .env file is present.
+    """
+    try:
+        env_path = Path(__file__).resolve().parents[2] / ".env"
+        if not env_path.is_file():
+            return
+        for raw_line in env_path.read_text().splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key:
+                os.environ.setdefault(key, value)
+    except Exception:
+        pass
+
+
+_load_dotenv()
 
 USERNAME_RE = re.compile(r"^[A-Za-z0-9]{1,20}$")
 ENV_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
@@ -59,6 +87,17 @@ DISCORD_TULIP_TEXT_CHANNEL_ID = os.getenv("TULIPWORLD_DISCORD_TEXT_CHANNEL_ID", 
 DISCORD_TULIP_FILES_CHANNEL_ID = os.getenv("TULIPWORLD_DISCORD_FILES_CHANNEL_ID", "1239512482025050204")
 
 DISCORD_BOT_TOKEN = os.getenv("WORLD_DISCORD_BOT_TOKEN", os.getenv("AMYBOARDWORLD_DISCORD_BOT_TOKEN", ""))
+
+# --- AMYboard sketch generation (Claude API) -------------------------------
+# API key for the Anthropic API. Local dev reads CLAUDE_KEY from the repo-root
+# .env (see _load_dotenv); a host may instead provide ANTHROPIC_API_KEY.
+CLAUDE_API_KEY = os.getenv("CLAUDE_KEY", os.getenv("ANTHROPIC_API_KEY", ""))
+GENERATE_MODEL = os.getenv("AMYBOARD_GENERATE_MODEL", "claude-sonnet-4-6")
+GENERATE_MAX_TOKENS = int(os.getenv("AMYBOARD_GENERATE_MAX_TOKENS", "4096"))
+# Abuse / cost controls, enforced per rolling 24h window.
+GENERATE_PER_IP_PER_DAY = int(os.getenv("AMYBOARD_GENERATE_PER_IP_PER_DAY", "10"))
+GENERATE_GLOBAL_PER_DAY = int(os.getenv("AMYBOARD_GENERATE_GLOBAL_PER_DAY", "200"))
+GENERATE_MAX_PROMPT_CHARS = int(os.getenv("AMYBOARD_GENERATE_MAX_PROMPT_CHARS", "1000"))
 
 app = FastAPI(title="World DB API", version="0.2.0")
 app.add_middleware(
@@ -165,6 +204,24 @@ def _ensure_schema() -> None:
                 conn.execute(f"ALTER TABLE {tbl} ADD COLUMN client_ip TEXT NOT NULL DEFAULT ''")
             except sqlite3.OperationalError:
                 pass
+
+        # Log of AMYboard sketch generations (for rate limiting + audit).
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS generations (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              created_at_ms INTEGER NOT NULL,
+              client_ip TEXT NOT NULL DEFAULT '',
+              prompt TEXT NOT NULL DEFAULT '',
+              ok INTEGER NOT NULL DEFAULT 0,
+              model TEXT NOT NULL DEFAULT '',
+              input_tokens INTEGER NOT NULL DEFAULT 0,
+              output_tokens INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE INDEX IF NOT EXISTS idx_gen_created ON generations(created_at_ms DESC);
+            CREATE INDEX IF NOT EXISTS idx_gen_ip ON generations(client_ip);
+            """
+        )
 
 
 @app.on_event("startup")
@@ -955,3 +1012,354 @@ def list_admin_items(
 
     items.sort(key=lambda i: int(i.get("time", 0)), reverse=True)
     return {"items": items[:limit]}
+
+
+# ---------------------------------------------------------------------------
+# AMYboard sketch generation via the Claude API
+# ---------------------------------------------------------------------------
+
+# Static, cacheable system prompt. Keep this byte-stable across requests so the
+# Anthropic prompt cache stays warm (the user's description is the only part
+# that varies, and it goes in the user turn). The examples below are trimmed
+# real sketches from tulip/amyboardweb/sketches/.
+_AMYBOARD_SYSTEM_PROMPT = """You are an expert sound designer and MicroPython programmer for the AMYboard, a small hardware + web synthesizer that runs the AMY audio-synthesis engine. Your ONLY job is to write AMYboard "sketches": short MicroPython programs (the contents of a sketch.py file) that make sound and music on the AMYboard or its in-browser simulator.
+
+OUTPUT CONTRACT (strict):
+- Respond with ONLY the contents of sketch.py as plain MicroPython source.
+- No Markdown, no code fences, no explanation before or after the code.
+- Begin with comment lines, including one line of the form: # DESCRIPTION: <short summary>
+- You MUST define a top-level loop() function. It may just `pass`. loop() is called repeatedly (about every 32nd note) while the sketch runs; use it for sequencing, timing, and reading inputs.
+- Top-level code runs once at boot (set up synths, effects, callbacks there).
+- Only use the APIs documented below. Do NOT invent functions, modules, or parameters.
+- Keep sketches self-contained and runnable in the web simulator: no network, no filesystem, no SD card, no long blocking loops, and never call time.sleep() inside loop().
+
+SCOPE GUARD:
+- You only produce AMYboard music/synthesis sketches. If the request is not about making sound, music, or a synth/instrument/effect on the AMYboard (for example it asks for an essay, a web page, general-purpose code, math help, or anything unrelated), do NOT comply. Instead output a minimal valid sketch whose # DESCRIPTION line politely states that the request is outside the scope of AMYboard sketch generation.
+
+THE AMY ENGINE (import amy)
+Everything is driven by amy.send(...) with keyword arguments. The most reliable way to make sound is the patch + synth model:
+- amy.send(synth=N, patch=P, num_voices=V): configure synth N (N=1..16 also map to MIDI channels) with built-in patch P and V-voice polyphony.
+    Patch ranges: 0-127 = Juno-6 analog, 128-255 = DX7 FM, 256 = grand piano, 257+ = PCM drum kits.
+- amy.send(synth=N, note=MIDI, vel=V): play a note. note is a MIDI number 0-127. vel is 0.0-1.0 (velocity). vel=0 is note-off.
+- amy.send(synth=N, vel=0): all notes off for that synth.
+- amy.send(synth=N, grab_midi_notes=0): stop synth N from auto-playing incoming MIDI, so your sketch can play notes itself (use this whenever you handle MIDI in a callback).
+Common per-synth parameters you may pass to amy.send(synth=N, ...): filter_freq, filter_type (amy.FILTER_LPF, amy.FILTER_LPF24, amy.FILTER_HPF, amy.FILTER_BPF), resonance, amp, pan, bend, portamento, chorus, reverb, echo.
+Low-level oscillators (advanced): amy.send(osc=K, wave=W, freq=Hz, vel=V) where wave W is one of amy.SINE, amy.PULSE, amy.SAW_DOWN, amy.SAW_UP, amy.TRIANGLE, amy.NOISE, amy.PCM. amy.reset() clears all state.
+Modulation routing: a parameter may be a dict to mix a constant with a control source, e.g. filter_freq={'const': 300, 'ext0': 0.25} routes CV1 (ext0) into cutoff; ext1 is CV2.
+Global effects are strings, e.g. amy.send(reverb="0.5,0.3,0.05"), amy.send(chorus="0.6,2,0.3"), amy.send(echo="0.4,200,0.3,0.3").
+
+THE amyboard MODULE (import amyboard) -- physical I/O (present on hardware; safe to call in the simulator)
+- amyboard.cv_in(channel) -> volts (-10..10). channel 0 = CV1, 1 = CV2.
+- amyboard.cv_out(volts, channel): write a CV output.
+- amyboard.read_encoder(), amyboard.init_buttons(), amyboard.read_buttons(): rotary encoder + buttons.
+- amyboard.init_display(); amyboard.display.fill(0); amyboard.display.text("hi", 0, 0, 255); amyboard.display_refresh(): optional OLED.
+
+OTHER MODULES
+- import midi: midi.add_callback(fn) registers fn(msg) for incoming MIDI. msg is a 3-byte sequence [status, data1, data2]; note-on is (status & 0xF0)==0x90 with vel>0, note-off is 0x80 (or 0x90 with vel==0).
+- import tulip: tulip.amy_ticks_ms() returns a millisecond clock. Use it in loop() to schedule events instead of sleeping.
+- from music import Chord, Key: Chord("C:maj").annotations is a list of semitone offsets; Key("A:min") for scales. Root note names are 'C','C#','D','D#','E','F','F#','G','G#','A','A#','B'.
+- import sequencer: sequencer.tempo(bpm) sets the sketch tempo.
+- Standard library available: random, math.
+
+CONVENTIONS
+- For onscreen-keyboard playing in the simulator, a synth with default grab_midi_notes will already respond to MIDI channel 1; sketches that play their own notes should set grab_midi_notes=0 first.
+- The web editor may append a trailing block named _auto_generated_knobs; never write one yourself and never depend on it.
+
+EXAMPLES (each is a complete, valid sketch.py)
+
+# AMYboard Sketch
+# DESCRIPTION: Play an additive-voiced grand piano on MIDI channel 1.
+import amy
+amy.send(synth=1, patch=256, num_voices=6)
+
+def loop():
+    pass
+
+# AMYboard Sketch
+# DESCRIPTION: Each MIDI key triggers a major chord rooted at that key.
+import amy, midi
+from music import Chord
+
+amy.send(synth=1, grab_midi_notes=0)
+ROOT_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+active = {}
+
+def chord_for_root(root_midi):
+    name = ROOT_NAMES[root_midi % 12]
+    c = Chord(name + ":maj")
+    return [root_midi + offset for offset in c.annotations]
+
+def midi_cb(m):
+    if not m or len(m) < 3:
+        return
+    status = m[0] & 0xF0
+    note = m[1]
+    vel = m[2]
+    if status == 0x90 and vel > 0:
+        notes = chord_for_root(note)
+        active[note] = notes
+        v = vel / 127.0
+        for n in notes:
+            amy.send(synth=1, note=n, vel=v)
+    elif status == 0x80 or (status == 0x90 and vel == 0):
+        for n in active.pop(note, ()):
+            amy.send(synth=1, note=n, vel=0)
+
+midi.add_callback(midi_cb)
+
+def loop():
+    pass
+
+# AMYboard Sketch
+# DESCRIPTION: Hold MIDI keys; plays them in order as 8th-note arpeggios.
+import amy, midi, tulip
+
+amy.send(synth=1, grab_midi_notes=0)
+STEP_MS = 250  # 8th note at 120 BPM
+held = set()
+arp_idx = 0
+last_played = None
+last_step_ms = 0
+
+def midi_cb(m):
+    if not m or len(m) < 3:
+        return
+    status = m[0] & 0xF0
+    note = m[1]
+    vel = m[2]
+    if status == 0x90 and vel > 0:
+        held.add(note)
+    elif status == 0x80 or (status == 0x90 and vel == 0):
+        held.discard(note)
+
+midi.add_callback(midi_cb)
+
+def loop():
+    global arp_idx, last_played, last_step_ms
+    now = tulip.amy_ticks_ms()
+    if now - last_step_ms < STEP_MS:
+        return
+    last_step_ms = now
+    if last_played is not None:
+        amy.send(synth=1, note=last_played, vel=0)
+        last_played = None
+    if not held:
+        arp_idx = 0
+        return
+    notes = sorted(held)
+    arp_idx %= len(notes)
+    n = notes[arp_idx]
+    amy.send(synth=1, note=n, vel=0.8)
+    last_played = n
+    arp_idx += 1
+
+# AMYboard Sketch
+# DESCRIPTION: CV1 controls filter cutoff, CV2 controls resonance.
+import amy, amyboard
+
+amy.send(synth=1, filter_freq={'const': 300, 'ext0': 0.25}, filter_type=amy.FILTER_LPF24)
+
+def loop():
+    r = (amyboard.cv_in(1) + 10.0) / 5.0  # map CV2 to roughly 0-4
+    amy.send(synth=1, resonance=r)
+"""
+
+
+def _extract_sketch_code(text: str) -> str:
+    """Strip Markdown fences the model may have added, returning bare source."""
+    s = (text or "").strip()
+    if s.startswith("```"):
+        lines = s.split("\n")
+        if lines and lines[0].startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        s = "\n".join(lines).strip()
+    return s
+
+
+def _validate_sketch(code: str) -> tuple[bool, str]:
+    """Structural check that the output is a real AMYboard sketch.
+
+    This both guards quality and blocks "free Claude" abuse: the output must
+    parse as Python, import amy/amyboard, and define a loop() function.
+    """
+    if not code or not code.strip():
+        return False, "empty output"
+    try:
+        tree = ast.parse(code)
+    except SyntaxError as exc:
+        return False, f"syntax error: {exc}"
+    imports_amy = False
+    defines_loop = False
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(alias.name.split(".")[0] in ("amy", "amyboard") for alias in node.names):
+                imports_amy = True
+        elif isinstance(node, ast.ImportFrom):
+            if (node.module or "").split(".")[0] in ("amy", "amyboard"):
+                imports_amy = True
+        elif isinstance(node, ast.FunctionDef) and node.name == "loop":
+            defines_loop = True
+    if not imports_amy:
+        return False, "does not import amy or amyboard"
+    if not defines_loop:
+        return False, "does not define a loop() function"
+    return True, ""
+
+
+def _count_generations_since(ip: str, since_ms: int) -> tuple[int, int]:
+    """Return (count for this ip, total count) in the window since since_ms."""
+    with _open_db() as conn:
+        ip_row = conn.execute(
+            "SELECT COUNT(*) AS n FROM generations WHERE created_at_ms >= ? AND client_ip = ?",
+            (since_ms, ip),
+        ).fetchone()
+        all_row = conn.execute(
+            "SELECT COUNT(*) AS n FROM generations WHERE created_at_ms >= ?",
+            (since_ms,),
+        ).fetchone()
+    return (int(ip_row["n"]) if ip_row else 0, int(all_row["n"]) if all_row else 0)
+
+
+def _log_generation(ip: str, prompt: str, result: dict[str, Any]) -> None:
+    with _open_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO generations(created_at_ms, client_ip, prompt, ok, model, input_tokens, output_tokens)
+            VALUES(?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                _now_ms(),
+                ip,
+                prompt[:MAX_DESCRIPTION],
+                1 if result.get("ok") else 0,
+                GENERATE_MODEL,
+                int(result.get("input_tokens", 0)),
+                int(result.get("output_tokens", 0)),
+            ),
+        )
+        conn.commit()
+
+
+def _generate_sketch_via_claude(description: str, current_code: str | None) -> dict[str, Any]:
+    """Call the Anthropic API once (with one corrective retry) and return the
+    extracted, validated sketch plus token usage. Raises on API errors."""
+    import anthropic  # lazy: server still imports if the dep is absent
+
+    client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
+    system = [{"type": "text", "text": _AMYBOARD_SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}]
+
+    frame = (
+        "Write a complete AMYboard sketch.py for this request.\n\n"
+        "<request>\n" + description.strip() + "\n</request>"
+    )
+    if current_code and current_code.strip():
+        frame += (
+            "\n\nThe user is currently editing this sketch; modify it to satisfy the "
+            "request rather than starting over:\n<current_sketch>\n"
+            + current_code.strip()[:8000]
+            + "\n</current_sketch>"
+        )
+    frame += "\n\nOutput only the contents of sketch.py."
+    messages: list[dict[str, Any]] = [{"role": "user", "content": frame}]
+
+    def _call() -> Any:
+        return client.messages.create(
+            model=GENERATE_MODEL,
+            max_tokens=GENERATE_MAX_TOKENS,
+            system=system,
+            messages=messages,
+        )
+
+    resp = _call()
+    raw = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
+    code = _extract_sketch_code(raw)
+    ok, reason = _validate_sketch(code)
+
+    if not ok:
+        # One corrective retry — cheaper than failing the user outright.
+        messages.append({"role": "assistant", "content": raw})
+        messages.append(
+            {
+                "role": "user",
+                "content": (
+                    f"That was not a valid AMYboard sketch ({reason}). Output ONLY a "
+                    "corrected, complete sketch.py that imports amy (or amyboard) and "
+                    "defines a loop() function. No markdown, no commentary."
+                ),
+            }
+        )
+        resp = _call()
+        raw = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
+        code = _extract_sketch_code(raw)
+        ok, reason = _validate_sketch(code)
+
+    usage = getattr(resp, "usage", None)
+    return {
+        "ok": ok,
+        "reason": reason,
+        "code": code,
+        "input_tokens": getattr(usage, "input_tokens", 0) or 0,
+        "output_tokens": getattr(usage, "output_tokens", 0) or 0,
+        "cache_read_input_tokens": getattr(usage, "cache_read_input_tokens", 0) or 0,
+    }
+
+
+class GenerateRequest(BaseModel):
+    description: str
+    current_code: str | None = None
+
+
+@app.post("/api/amyboardworld/generate")
+def generate_amyboard_sketch(body: GenerateRequest, request: Request) -> dict[str, Any]:
+    if not CLAUDE_API_KEY:
+        raise HTTPException(status_code=503, detail="Sketch generation is not configured on this server")
+
+    description = " ".join((body.description or "").split()).strip()
+    if len(description) < 3:
+        raise HTTPException(status_code=400, detail="Describe what you want the sketch to do (a few words at least)")
+    if len(description) > GENERATE_MAX_PROMPT_CHARS:
+        raise HTTPException(status_code=400, detail=f"Description too long (max {GENERATE_MAX_PROMPT_CHARS} characters)")
+
+    ip = _client_ip(request)
+    since_ms = _now_ms() - 24 * 60 * 60 * 1000
+    ip_count, global_count = _count_generations_since(ip, since_ms)
+    if global_count >= GENERATE_GLOBAL_PER_DAY:
+        raise HTTPException(status_code=429, detail="Sketch generation is busy today — please try again tomorrow")
+    if ip_count >= GENERATE_PER_IP_PER_DAY:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Daily limit reached ({GENERATE_PER_IP_PER_DAY} sketches/day). Try again tomorrow.",
+        )
+
+    try:
+        result = _generate_sketch_via_claude(description, body.current_code)
+    except Exception as exc:  # noqa: BLE001 — map any API failure to an HTTP error
+        status = 502
+        try:
+            import anthropic
+
+            if isinstance(exc, anthropic.RateLimitError):
+                status = 429
+            elif isinstance(exc, anthropic.AuthenticationError):
+                status = 503
+        except Exception:
+            pass
+        raise HTTPException(status_code=status, detail=f"Sketch generation failed: {exc}") from exc
+
+    # Every billed attempt (success or validation failure) counts toward limits.
+    _log_generation(ip, description, result)
+
+    if not result["ok"]:
+        raise HTTPException(
+            status_code=422,
+            detail="Could not produce a valid sketch for that request. Try rephrasing it as a musical or synth idea.",
+        )
+
+    return {
+        "ok": True,
+        "code": result["code"],
+        "remaining_today": max(0, GENERATE_PER_IP_PER_DAY - (ip_count + 1)),
+        "model": GENERATE_MODEL,
+    }

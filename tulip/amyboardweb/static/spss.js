@@ -2292,6 +2292,66 @@ function world_api_url(pathAndQuery) {
     return AMYBOARD_WORLD_API_BASE + pathAndQuery;
 }
 
+// "Prompt to sketch": send the user's description to the World API, which calls
+// the Claude API server-side and returns a generated AMYboard sketch. The result
+// is loaded into the editor (not auto-run) so the user can review it first.
+async function generate_sketch_from_prompt() {
+    var input = document.getElementById("prompt-to-sketch-input");
+    var btn = document.getElementById("prompt-to-sketch-btn");
+    var statusEl = document.getElementById("prompt-to-sketch-status");
+    if (!input || !btn) return;
+
+    function setStatus(text, kind) {
+        if (!statusEl) return;
+        statusEl.textContent = text || "";
+        statusEl.className = "small " + (kind || "text-muted");
+    }
+
+    var description = String(input.value || "").trim();
+    if (description.length < 3) {
+        setStatus("Describe what you want the sketch to do.", "text-danger");
+        return;
+    }
+
+    var prevLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Generating…";
+    setStatus("Generating…", "text-muted");
+
+    try {
+        var currentCode = (typeof editor !== "undefined" && editor) ? editor.getValue() : "";
+        var resp = await fetch(world_api_url("/api/amyboardworld/generate"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description: description, current_code: currentCode }),
+        });
+
+        var data = {};
+        try { data = await resp.json(); } catch (e) { data = {}; }
+
+        if (!resp.ok) {
+            setStatus((data && data.detail) ? data.detail : ("Error " + resp.status), "text-danger");
+            return;
+        }
+
+        if (data && data.code && typeof editor !== "undefined" && editor) {
+            editor.setValue(data.code);
+            var remaining = (typeof data.remaining_today === "number") ? data.remaining_today : null;
+            setStatus(
+                "Loaded into the editor." + (remaining !== null ? (" " + remaining + " left today.") : ""),
+                "text-success"
+            );
+        } else {
+            setStatus("No sketch was returned.", "text-danger");
+        }
+    } catch (e) {
+        setStatus("Network error: " + e, "text-danger");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = prevLabel;
+    }
+}
+
 function get_world_search_query() {
     var el = document.getElementById("amyboard_world_search");
     if (!el) return "";
