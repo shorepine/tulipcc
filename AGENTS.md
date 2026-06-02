@@ -174,8 +174,12 @@ deploy of `tulip/amyboardweb/` does NOT touch it.
   — the root one takes precedence and uses `--app-dir tulip/server`)
 - Start command: `uvicorn amyboardworld_db_api:app --host 0.0.0.0 --port $PORT --app-dir tulip/server`
 - Production URL: `https://tulipcc-production.up.railway.app`
-- Dependencies: `tulip/server/requirements.txt` (fastapi, uvicorn[standard],
-  python-multipart, requests)
+- Dependencies: the **root** `/requirements.txt` is the file Railway/Nixpacks
+  actually installs (auto-detected at the repo root). Keep it in sync with
+  `tulip/server/requirements.txt` (the local-dev copy). Currently: fastapi,
+  uvicorn[standard], python-multipart, requests, anthropic. **Adding a dep to
+  only `tulip/server/requirements.txt` will NOT install it on Railway** — it
+  must also go in the root `/requirements.txt`.
 
 ### Auto-deploy on push to main
 
