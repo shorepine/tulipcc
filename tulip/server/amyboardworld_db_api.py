@@ -1242,13 +1242,36 @@ def _log_generation(ip: str, prompt: str, result: dict[str, Any]) -> None:
         conn.commit()
 
 
+_AMY_AGENTS_PATH = Path(__file__).resolve().parents[2] / "AMY_AGENTS.md"
+
+
+def _load_amy_agents_guidance() -> str:
+    """Read the maintainer-edited AMY_AGENTS.md (repo root), if present, and return
+    it as an appended system-prompt section. Lets the team steer generated sketches
+    toward correct AMY idioms without code changes. Returns '' if absent / empty /
+    unreadable. Read per request so edits apply on the next deploy (or immediately
+    in local dev); when the file is unchanged the prompt bytes are stable, so the
+    Anthropic prompt cache stays warm."""
+    try:
+        text = _AMY_AGENTS_PATH.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    if not text:
+        return ""
+    return (
+        "\n\n# PROJECT GUIDANCE (from AMY_AGENTS.md) — authoritative; prefer these "
+        "patterns over naive ones:\n\n" + text
+    )
+
+
 def _generate_sketch_via_claude(description: str, current_code: str | None) -> dict[str, Any]:
     """Call the Anthropic API once (with one corrective retry) and return the
     extracted, validated sketch plus token usage. Raises on API errors."""
     import anthropic  # lazy: server still imports if the dep is absent
 
     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
-    system = [{"type": "text", "text": _AMYBOARD_SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}]
+    system_text = _AMYBOARD_SYSTEM_PROMPT + _load_amy_agents_guidance()
+    system = [{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}]
 
     frame = (
         "Write a complete AMYboard sketch.py for this request.\n\n"
