@@ -44,5 +44,17 @@ if [ -f micropython/mpy-cross/Makefile ]; then
     if ! grep -q -- "-Wno-unterminated-string-initialization" micropython/mpy-cross/Makefile; then
         sed -i.bak 's/^CWARN += /CWARN += -Wno-unknown-warning-option -Wno-unterminated-string-initialization /' micropython/mpy-cross/Makefile
     fi
+    # The seds above prepend the suppressions, but newer Apple clang (macOS Tahoe
+    # / clang >= 19) re-enables -Wunterminated-string-initialization through
+    # -Wextra, which the upstream CWARN line applies *after* them — so -Werror
+    # still trips on py/emitinlinethumb.c. Append the suppressions to the end of
+    # the Makefile so they are the last CFLAGS entries and win. Idempotent.
+    if ! grep -q -- "amyboard-clang-overrides" micropython/mpy-cross/Makefile; then
+        cat >> micropython/mpy-cross/Makefile <<'MK'
+
+# amyboard-clang-overrides: keep last so they win over -Wextra (see grab_submodules.sh)
+CFLAGS += -Wno-unknown-warning-option -Wno-unterminated-string-initialization -Wno-gnu-folding-constant
+MK
+    fi
 fi
 popd > /dev/null
