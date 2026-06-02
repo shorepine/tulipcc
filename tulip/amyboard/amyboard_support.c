@@ -87,6 +87,7 @@ void i2c_check_for_data() {
 #define ADS1115_DR_1600SPS (0x0080)
 #define ADS1115_MODE_SINGLE (0x0100)
 #define ADS1115_OS_SINGLE (0x8000)
+#define ADS1115_OS_NOTBUSY (0x8000) // OS bit reads 1 when no conversion is in progress
 #define ADS1115_PGA_2_048V (0x0400)
 #define ADS1115_PGA_4_096V (0x0200)
 #define ADS1115_MUX_SINGLE_0 (0x4000) 
@@ -146,6 +147,18 @@ uint16_t read_ads1115_raw(uint8_t channel) {
              ADS1115_MODE_SINGLE | ADS1115_OS_SINGLE | ADS1115_PGA_4_096V |
              channel_mux);
     ads1115_write_register(ADS1115_REGISTER_CONFIG, data);
+    // Wait for the single-shot conversion on the just-selected mux channel to
+    // finish before reading the result. The OS bit reads 0 while converting and
+    // 1 when done; at 1600 SPS a conversion takes ~625us. Without this wait the
+    // CONVERT register still holds the *previous* conversion (the other channel),
+    // which made cv_in(0) and cv_in(1) return the same input. Bound the poll so a
+    // missing/unresponsive ADC can't stall the cv_read_task forever.
+    uint8_t cfg[2];
+    for(int i = 0; i < 20; i++) {
+        if(ads1115_read_register(ADS1115_REGISTER_CONFIG, cfg, 2) != ESP_OK) break;
+        if((((uint16_t)cfg[0] << 8) | cfg[1]) & ADS1115_OS_NOTBUSY) break; // conversion done
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
     uint8_t output[2];
     ads1115_read_register(ADS1115_REGISTER_CONVERT, output, 2);
     return ((uint16_t)output[0] << 8) | (uint16_t)output[1];
