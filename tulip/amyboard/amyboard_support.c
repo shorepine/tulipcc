@@ -181,8 +181,9 @@ void cv_read_task(void *pvParameter) {
                 uint16_t raw = read_ads1115_raw(ch);
                 cv_cached_value[ch] = ((((float)raw - (float)min)/((float)max-(float)min))*20.0)-10.0;
             }
+            vTaskDelay(pdMS_TO_TICKS(25));
         }
-        vTaskDelay(pdMS_TO_TICKS(50));
+        //vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 #endif
