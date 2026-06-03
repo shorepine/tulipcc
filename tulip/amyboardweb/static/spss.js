@@ -2315,8 +2315,8 @@ async function generate_sketch_from_prompt() {
 
     var prevLabel = btn.textContent;
     btn.disabled = true;
-    btn.textContent = "Generating…";
-    setStatus("Generating…", "text-muted");
+    btn.textContent = "Writing…";
+    setStatus("Writing…", "text-muted");
 
     try {
         var currentCode = (typeof editor !== "undefined" && editor) ? editor.getValue() : "";
