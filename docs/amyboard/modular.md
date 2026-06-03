@@ -99,7 +99,12 @@ amy.send(cv_trigger='0,3.0,2.0,1,1.0,0.0,i1l1n%v')   # note-on when CV0 passes 3
 amy.send(cv_trigger='0,2.0,3.0,i1l0')                # note-off when CV0 passes 2.0V moving downwards
 ```
 
-There's some indeterminacy in when the pitch CV is sampled at the moment; you can instead make your osc pitches respond to CV1 dynamically (like a regular pitch CV in):
+CV trigger events stack - in the example above, we've associated two events with CV in 0, one for note-on, and one for note-off.  To clear all the events associated with a particular CV input, send an empty command:
+```
+amy.send(cv_trigger='0')   # Clear all triggers associated with CV input 0.
+```
+
+There's some indeterminacy in when the pitch CV is sampled at the moment; sometimes, you get the previous note (we're working on a fix).  Instead, you can instead make your osc pitches respond to CV1 dynamically (like a regular pitch CV-in):
 ```
 amy.send(synth=1, patch=1, num_voices=1)    # Monophonic JUNO patch
 amy.send(synth=1, osc=2, freq={'ext1':1})   # Set all 3 pitched oscillators to track CV1
@@ -107,11 +112,6 @@ amy.send(synth=1, osc=3, freq={'ext1':1})
 amy.send(synth=1, osc=4, freq={'ext1':1})
 amy.send(cv_trigger='0,3,2,i1l1n69')  # CV0 trigger sends a note-on for A4, but actual pitch will include CV1
 amy.send(cv_trigger='0,2,3,i1l0')     # CV0 note-off trigger.
-```
-
-CV trigger events stack.  To clear all the events associated with a particular CV input, send an empty command:
-```
-amy.send(cv_trigger='0')   # Clear all triggers associated with CV input 0.
 ```
 
 ### Use cases

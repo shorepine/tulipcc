@@ -80,20 +80,27 @@ void i2c_check_for_data() {
 
 
 #define ADS1115_REGISTER_CONFIG (0x01)
-#define ADS1115_CQUE_NONE (0x0003)
+#define ADS1115_CQUE_DISABLE (0x0003)
+
 #define ADS1115_CLAT_NONLAT (0x0000)
 #define ADS1115_CPOL_ACTVLOW (0x0000)
 #define ADS1115_CMODE_TRAD (0x0000)
-#define ADS1115_DR_1600SPS (0x0080)
+//#define ADS1115_DR_860SPS (0x0080)
+//#define ADS1115_DR_475SPS (0x00C0)
+#define ADS1115_DR_860SPS (0x00E0)
 #define ADS1115_MODE_SINGLE (0x0100)
-#define ADS1115_OS_SINGLE (0x8000)
-#define ADS1115_OS_NOTBUSY (0x8000) // OS bit reads 1 when no conversion is in progress
+#define ADS1115_MODE_CONT (0x0100)
+#define ADS1115_OS_SINGLE (0x8000)  // initiate single conversion / check converter status
+#define ADS1115_OS_READY (0x8000) // OS bit reads 1 when conversion is complete
 #define ADS1115_PGA_2_048V (0x0400)
 #define ADS1115_PGA_4_096V (0x0200)
-#define ADS1115_MUX_SINGLE_0 (0x4000) 
-#define ADS1115_MUX_SINGLE_1 (0x5000) 
-#define ADS1115_MUX_SINGLE_2 (0x6000) 
-#define ADS1115_MUX_SINGLE_3 (0x7000) 
+#define ADS1115_MUX_SINGLE_0 (0x4000)
+//#define ADS1115_MUX_PER_CHAN (0x1000)
+// To get the offset to ADS1115_MUX_SINGLE_0 for chan C, use (C << ADS1115_MUX_CHAN_SHIFTL)
+#define ADS1115_MUX_CHAN_SHIFTL (12)
+//#define ADS1115_MUX_SINGLE_1 (0x5000)
+//#define ADS1115_MUX_SINGLE_2 (0x6000)
+//#define ADS1115_MUX_SINGLE_3 (0x7000)
 #define ADS1115_REGISTER_CONVERT (0x00)
 
 static esp_err_t ads1115_write_register(uint8_t reg, uint16_t data) {
@@ -136,32 +143,42 @@ static esp_err_t ads1115_read_register(uint8_t reg, uint8_t* data, uint8_t len) 
     return ret;
 }
 
-uint16_t read_ads1115_raw(uint8_t channel) {
-    uint16_t data = 0;
-    uint16_t channel_mux = ADS1115_MUX_SINGLE_0;
-    if(channel==1) channel_mux = ADS1115_MUX_SINGLE_1;
-    if(channel==2) channel_mux = ADS1115_MUX_SINGLE_2;
-    if(channel==3) channel_mux = ADS1115_MUX_SINGLE_3;
-    data =  (ADS1115_CQUE_NONE |ADS1115_CLAT_NONLAT |
-             ADS1115_CPOL_ACTVLOW | ADS1115_CMODE_TRAD | ADS1115_DR_1600SPS |
-             ADS1115_MODE_SINGLE | ADS1115_OS_SINGLE | ADS1115_PGA_4_096V |
-             channel_mux);
+static int ads1115_pending_channel = -1;
+
+void ads1115_start_conversion(uint8_t channel) {
+    uint16_t channel_mux = ADS1115_MUX_SINGLE_0 + (channel << ADS1115_MUX_CHAN_SHIFTL);
+    uint16_t data = (ADS1115_CQUE_DISABLE | ADS1115_CLAT_NONLAT |
+                     ADS1115_CPOL_ACTVLOW | ADS1115_CMODE_TRAD | ADS1115_DR_860SPS |
+                     ADS1115_MODE_SINGLE | ADS1115_OS_SINGLE | ADS1115_PGA_4_096V |
+                     channel_mux);
     ads1115_write_register(ADS1115_REGISTER_CONFIG, data);
-    // Wait for the single-shot conversion on the just-selected mux channel to
+    ads1115_pending_channel = channel;
+}
+
+uint16_t ads1115_get_result(void) {
+    // Wait for the single-shot conversion on the last-selected mux channel to
     // finish before reading the result. The OS bit reads 0 while converting and
-    // 1 when done; at 1600 SPS a conversion takes ~625us. Without this wait the
+    // 1 when done; at 860 SPS each conversion takes ~1.2ms. Without this wait the
     // CONVERT register still holds the *previous* conversion (the other channel),
     // which made cv_in(0) and cv_in(1) return the same input. Bound the poll so a
     // missing/unresponsive ADC can't stall the cv_read_task forever.
-    uint8_t cfg[2];
+    uint8_t buffer[2];
     for(int i = 0; i < 20; i++) {
-        if(ads1115_read_register(ADS1115_REGISTER_CONFIG, cfg, 2) != ESP_OK) break;
-        if((((uint16_t)cfg[0] << 8) | cfg[1]) & ADS1115_OS_NOTBUSY) break; // conversion done
+        if(ads1115_read_register(ADS1115_REGISTER_CONFIG, buffer, 2) != ESP_OK) break;
+        if((((uint16_t)buffer[0] << 8) | buffer[1]) & ADS1115_OS_READY) break; // conversion done
         vTaskDelay(pdMS_TO_TICKS(1));
     }
-    uint8_t output[2];
-    ads1115_read_register(ADS1115_REGISTER_CONVERT, output, 2);
-    return ((uint16_t)output[0] << 8) | (uint16_t)output[1];
+    ads1115_read_register(ADS1115_REGISTER_CONVERT, buffer, 2);
+    return ((uint16_t)buffer[0] << 8) | (uint16_t)buffer[1];
+}
+
+uint16_t read_ads1115_raw(uint8_t channel) {
+    if (channel != ads1115_pending_channel)
+        ads1115_start_conversion(channel);
+    uint16_t result = ads1115_get_result();
+    // Speculatively start conversion on the other channel.
+    ads1115_start_conversion(1 - channel);
+    return result;
 }
 
 
@@ -175,6 +192,13 @@ uint8_t cv_local_override[2];
 // audio render thread never blocks on I2C.
 float cv_cached_value[2] = {0, 0};
 
+// Hysteresis - ignore changes below this threshold
+int32_t cv_cached_raw[2] = {0x8000, 0x8000};
+// ADS1015 has bottom 4 bits zero.
+#define CV_RAW_HYSTERESIS (0x10)
+
+#define ABS(a) ((a > 0)? (a) : (-a))
+
 // Called from the coef hook on the audio thread — just returns the cached value.
 float cv_input_hook(uint16_t channel) {
     if(cv_local_override[channel]) {
@@ -186,8 +210,8 @@ float cv_input_hook(uint16_t channel) {
 #ifdef ESP_PLATFORM
 // FreeRTOS task: reads both ADS1115 channels in a loop, updates cv_cached_value.
 void cv_read_task(void *pvParameter) {
-    uint16_t min = 1058;  // -10V
-    uint16_t max = 21312; // 10V
+    int32_t min = 1058;  // -10V
+    int32_t max = 21312; // 10V
     // Scan both CV channels once per AMY audio block (AMY_BLOCK_SIZE / AMY_SAMPLE_RATE,
     // ~5.8ms at 256/44100) so CV tracks the audio block cadence. Expressed in RTOS ticks,
     // rounded to nearest, so it follows the audio rate regardless of tick rate; clamped to
@@ -200,8 +224,16 @@ void cv_read_task(void *pvParameter) {
     for(;;) {
         for(uint8_t ch = 0; ch < 2; ch++) {
             if(!cv_local_override[ch]) {
-                uint16_t raw = read_ads1115_raw(ch);
-                cv_cached_value[ch] = ((((float)raw - (float)min)/((float)max-(float)min))*20.0)-10.0;
+                int32_t raw = read_ads1115_raw(ch);  // Put uint16_t into int32_t.
+                if ((raw > (cv_cached_raw[ch] + CV_RAW_HYSTERESIS))
+                    || (raw < (cv_cached_raw[ch] - CV_RAW_HYSTERESIS))) {
+                    cv_cached_raw[ch] = raw;
+                    cv_cached_value[ch] = (
+                        (((float)(raw - min))
+                         / ((float)(max - min)))
+                        * 20.0
+                    ) - 10.0;
+                }
             }
         }
         xTaskDelayUntil(&last_wake, cv_period);
