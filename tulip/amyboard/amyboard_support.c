@@ -93,7 +93,7 @@ void i2c_check_for_data() {
 #define ADS1115_OS_SINGLE (0x8000)  // initiate single conversion / check converter status
 #define ADS1115_OS_READY (0x8000) // OS bit reads 1 when conversion is complete
 #define ADS1115_PGA_2_048V (0x0400)
-#define ADS1115_PGA_4_096V (0x0200)
+//#define ADS1115_PGA_4_096V (0x0200)
 #define ADS1115_MUX_SINGLE_0 (0x4000)
 //#define ADS1115_MUX_PER_CHAN (0x1000)
 // To get the offset to ADS1115_MUX_SINGLE_0 for chan C, use (C << ADS1115_MUX_CHAN_SHIFTL)
@@ -104,21 +104,21 @@ void i2c_check_for_data() {
 #define ADS1115_REGISTER_CONVERT (0x00)
 
 static esp_err_t ads1115_write_register(uint8_t reg, uint16_t data) {
-  i2c_cmd_handle_t cmd;
-  esp_err_t ret;
-  uint8_t out[2];
+    i2c_cmd_handle_t cmd;
+    esp_err_t ret;
+    uint8_t out[2];
 
-  out[0] = data >> 8; // get 8 greater bits
-  out[1] = data & 0xFF; // get 8 lower bits
-  cmd = i2c_cmd_link_create();
-  i2c_master_start(cmd); // generate a start command
-  i2c_master_write_byte(cmd,(ADS1115_ADDR<<1) | I2C_MASTER_WRITE,1); // specify address and write command
-  i2c_master_write_byte(cmd,reg,1); // specify register
-  i2c_master_write(cmd,out,2,1); // write it
-  i2c_master_stop(cmd); // generate a stop command
-  ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
-  i2c_cmd_link_delete(cmd);
-  return ret;
+    out[0] = data >> 8; // get 8 greater bits
+    out[1] = data & 0xFF; // get 8 lower bits
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd); // generate a start command
+    i2c_master_write_byte(cmd,(ADS1115_ADDR<<1) | I2C_MASTER_WRITE,1); // specify address and write command
+    i2c_master_write_byte(cmd,reg,1); // specify register
+    i2c_master_write(cmd,out,2,1); // write it
+    i2c_master_stop(cmd); // generate a stop command
+    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
+    i2c_cmd_link_delete(cmd);
+    return ret;
 }
 
 static esp_err_t ads1115_read_register(uint8_t reg, uint8_t* data, uint8_t len) {
@@ -149,7 +149,7 @@ void ads1115_start_conversion(uint8_t channel) {
     uint16_t channel_mux = ADS1115_MUX_SINGLE_0 + (channel << ADS1115_MUX_CHAN_SHIFTL);
     uint16_t data = (ADS1115_CQUE_DISABLE | ADS1115_CLAT_NONLAT |
                      ADS1115_CPOL_ACTVLOW | ADS1115_CMODE_TRAD | ADS1115_DR_860SPS |
-                     ADS1115_MODE_SINGLE | ADS1115_OS_SINGLE | ADS1115_PGA_4_096V |
+                     ADS1115_MODE_SINGLE | ADS1115_OS_SINGLE | ADS1115_PGA_2_048V |
                      channel_mux);
     ads1115_write_register(ADS1115_REGISTER_CONFIG, data);
     ads1115_pending_channel = channel;
@@ -176,8 +176,8 @@ uint16_t read_ads1115_raw(uint8_t channel) {
     if (channel != ads1115_pending_channel)
         ads1115_start_conversion(channel);
     uint16_t result = ads1115_get_result();
-    // Speculatively start conversion on the other channel.
-    ads1115_start_conversion(1 - channel);
+    // Speculatively start conversion on the other channel.  Assumes we're just using channels 0 and 1.
+    ads1115_start_conversion((channel + 1) % 2);
     return result;
 }
 
@@ -192,13 +192,6 @@ uint8_t cv_local_override[2];
 // audio render thread never blocks on I2C.
 float cv_cached_value[2] = {0, 0};
 
-// Hysteresis - ignore changes below this threshold
-int32_t cv_cached_raw[2] = {0x8000, 0x8000};
-// ADS1015 has bottom 4 bits zero.
-#define CV_RAW_HYSTERESIS (0x10)
-
-#define ABS(a) ((a > 0)? (a) : (-a))
-
 // Called from the coef hook on the audio thread — just returns the cached value.
 float cv_input_hook(uint16_t channel) {
     if(cv_local_override[channel]) {
@@ -210,8 +203,8 @@ float cv_input_hook(uint16_t channel) {
 #ifdef ESP_PLATFORM
 // FreeRTOS task: reads both ADS1115 channels in a loop, updates cv_cached_value.
 void cv_read_task(void *pvParameter) {
-    int32_t min = 1058;  // -10V
-    int32_t max = 21312; // 10V
+    int32_t min = 1058;  // -5V
+    int32_t max = 21312; // 5V
     // Scan both CV channels once per AMY audio block (AMY_BLOCK_SIZE / AMY_SAMPLE_RATE,
     // ~5.8ms at 256/44100) so CV tracks the audio block cadence. Expressed in RTOS ticks,
     // rounded to nearest, so it follows the audio rate regardless of tick rate; clamped to
@@ -225,15 +218,11 @@ void cv_read_task(void *pvParameter) {
         for(uint8_t ch = 0; ch < 2; ch++) {
             if(!cv_local_override[ch]) {
                 int32_t raw = read_ads1115_raw(ch);  // Put uint16_t into int32_t.
-                if ((raw > (cv_cached_raw[ch] + CV_RAW_HYSTERESIS))
-                    || (raw < (cv_cached_raw[ch] - CV_RAW_HYSTERESIS))) {
-                    cv_cached_raw[ch] = raw;
-                    cv_cached_value[ch] = (
-                        (((float)(raw - min))
-                         / ((float)(max - min)))
-                        * 20.0
-                    ) - 10.0;
-                }
+                cv_cached_value[ch] = (
+                    (((float)(raw - min))
+                     / ((float)(max - min)))
+                    * 10.0
+                ) - 10.0;
             }
         }
         xTaskDelayUntil(&last_wake, cv_period);
