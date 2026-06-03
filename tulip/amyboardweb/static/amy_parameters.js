@@ -72,7 +72,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF",
-      cc: "",
+      cc: 74,
       display_name: "freq",
       change_code: "i%iv" + CTL_OSC + "F%v",
       knob_type: "log",
@@ -83,7 +83,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "VCF",
-      cc: "",
+      cc: 71,
       display_name: "resonance",
       change_code: "i%iv" + CTL_OSC + "R%v",
       knob_type: "log",
@@ -235,7 +235,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Chorus",
-      cc: "",
+      cc: 93,
       knob_type: "log",
       display_name: "level",
       change_code: "k%v",
@@ -268,7 +268,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "LFO",
-      cc: "",
+      cc: 76,
       display_name: "freq",
       change_code: "i%iv" + LFO_OSC + "f%v",
       knob_type: "log",
@@ -290,7 +290,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "LFO",
-      cc: "",
+      cc: 77,
       display_name: "osc",
       change_code: "i%iv" + OSCA_OSC + "f,,,,,%vZi%iv" + OSCB_OSC + "f,,,,,%v",
       knob_type: "log",
@@ -324,7 +324,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
     {
       section: "ADSR",
-      cc: "",
+      cc: 73,
       display_name: "attack",
       change_code: "i%iv" + CTL_OSC + "A%v,1,,,,0",
       min_value: 0,
@@ -334,7 +334,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "ADSR",
-      cc: "",
+      cc: 75,
       knob_type: "log",
       display_name: "decay",
       change_code: "i%iv" + CTL_OSC + "A,1,%v,,,0",
@@ -346,7 +346,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "ADSR",
-      cc: "",
+      cc: 79,
       display_name: "sustain",
       change_code: "i%iv" + CTL_OSC + "A,1,,%v,,0",
       min_value: 0,
@@ -356,7 +356,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "ADSR",
-      cc: "",
+      cc: 72,
       knob_type: "log",
       display_name: "release",
       change_code: "i%iv" + CTL_OSC + "A,1,,,%v,0",
@@ -371,7 +371,7 @@ window.addEventListener("DOMContentLoaded", function() {
 
     {
       section: "Reverb",
-      cc: "",
+      cc: 91,
       knob_type: "log",
       display_name: "level",
       change_code: "h%v",
@@ -403,7 +403,7 @@ window.addEventListener("DOMContentLoaded", function() {
     },
     {
       section: "Echo",
-      cc: "",
+      cc: 94,
       display_name: "level",
       change_code: "M%v",
       min_value: 0,
