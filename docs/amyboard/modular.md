@@ -76,8 +76,45 @@ volts = amyboard.cv_in(channel=0)
 print(f"CV in 1: {volts:.2f}V")
 
 # Read raw ADC value
-raw = amyboard.adc1115_raw(channel=0)
+raw = amyboard.ads1115_raw(channel=0)
 ```
+
+### CV triggering
+
+You can generate AMY events by setting wire-code commands to be issued in response to CV input transitions (rising or falling):
+
+```
+amy.send(cv_trigger='<CV>,<V_TRIG>,<V_RESET>[,<PITCH_CV>,<SCALE>,<OFFSET>],<WIRE_COMMAND_TEMPLATE>')
+```
+where `<CV>` is the CV input to watch, `<V_TRIG>` is the voltage at which the event is triggered, and `<V_RESET>` is the voltage at which the event is "armed".  If `<V_TRIG>` is higher than `<V_RESET>`, then it is a rising voltage that triggers the event, otherwise it is a falling voltage.
+
+The optional `<PITCH_CV>` is a second CV channel to sample on trigger to obtain a "pitch" voltage.  Its voltage is multiplied by `<SCALE>` and then has `<OFFSET>` added to obtain a "pitch" value which is substituted for `%v` in the wire command template.
+
+`<WIRE_COMMAND_TEMPLATE>` is an AMY wire command that, when the event triggers, is substituted with `%v`, then issued.
+
+To have CV 0 trigger a note on synth 1 (with e.g. 0 to 5V transitions), and CV 1 control pitch (at 1V per octave), the setup would be:
+
+```
+amy.send(cv_trigger='0,3.0,2.0,1,1.0,0.0,i1l1n%v')   # note-on when CV0 passes 3.0V moving upwards
+amy.send(cv_trigger='0,2.0,3.0,i1l0')                # note-off when CV0 passes 2.0V moving downwards
+```
+
+CV trigger events stack - in the example above, we've associated two events with CV in 0, one for note-on, and one for note-off.  To clear all the events associated with a particular CV input, send an empty command:
+```
+amy.send(cv_trigger='0')   # Clear all triggers associated with CV input 0.
+```
+
+Instead of sampling a single pitch value at onset time, you can instead make your osc pitches respond to CV1 dynamically (like a traditional pitch CV-in):
+```
+amy.send(synth=1, patch=1, num_voices=1)    # Monophonic JUNO patch
+amy.send(synth=1, osc=2, freq={'ext1':1})   # Set all 3 pitched oscillators to track CV1
+amy.send(synth=1, osc=3, freq={'ext1':1})
+amy.send(synth=1, osc=4, freq={'ext1':1})
+amy.send(cv_trigger='0,3,2,i1l1n69')  # CV0 trigger sends a note-on for A4, but actual pitch will include CV1
+amy.send(cv_trigger='0,2,3,i1l0')     # CV0 note-off trigger.
+```
+
+Note: The CV_IN has 12 bit resolution for a 20-volt range, which corresponds to a minimum step of around 6 cents — sometimes too coarse for fine vibrato via CV pitch modulation.
 
 ### Use cases
 
