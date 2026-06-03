@@ -109,7 +109,7 @@ Many issues are fixed in newer firmware. Before troubleshooting, [update to the 
    i2c = amyboard.get_i2c()
    print(i2c.scan())
    ```
- - Expected addresses: `0x40` (PCM9211), `0x48` (ADS1115 ADC), `0x58` (GP8413 DAC), `0x49` (Seesaw encoders).
+ - Expected addresses: `0x40` (PCM9211), `0x48` (ADS1015 ADC), `0x58` (GP8413 DAC), `0x49` (Seesaw encoders).
  - Check your wiring -- SDA and SCL may be swapped.
  - Make sure pull-up resistors are present on your I2C lines (AMYboard has them built in for the onboard devices).
 

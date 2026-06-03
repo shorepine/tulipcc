@@ -347,7 +347,7 @@ void app_main(void) {
     fflush(stderr);
     delay_ms(500);
 
-    // Start the CV ADC reader task (reads ADS1115 over I2C, updates cached values)
+    // Start the CV ADC reader task (reads ADS1015 over I2C, updates cached values)
     extern void cv_read_task(void *pvParameter);
     xTaskCreatePinnedToCore(cv_read_task, CV_READ_TASK_NAME, CV_READ_TASK_STACK_SIZE / sizeof(StackType_t), NULL, CV_READ_TASK_PRIORITY, &cv_read_handle, CV_READ_TASK_COREID);
 

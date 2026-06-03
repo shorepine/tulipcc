@@ -52,9 +52,9 @@ You can also remove our custom firmware (it's easy to put back!) and run AMYboar
 | **Line out** | 3.5mm stereo analog audio output - can be 10vpp via DIP switch |
 | **MIDI in** | 3.5mm TRS MIDI Type-A or B input |
 | **MIDI out** | 3.5mm TRS Type-A or B MIDI output (software switchable) |
-| **CV1 in** | 3.5mm analog input, -10V to +10V (ADS1115 ADC) |
+| **CV1 in** | 3.5mm analog input, -10V to +10V (ADS1015 ADC) |
 | **CV1 out** | 3.5mm analog output, -10V to +10V (GP8413 DAC) |
-| **CV2 in** | 3.5mm analog input, -10V to +10V (ADS1115 ADC) |
+| **CV2 in** | 3.5mm analog input, -10V to +10V (ADS1015 ADC) |
 | **CV2 out** | 3.5mm analog output, -10V to +10V (GP8413 DAC) |
 
 
