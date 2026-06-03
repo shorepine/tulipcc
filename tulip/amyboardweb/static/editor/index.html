@@ -1452,20 +1452,19 @@
                   <button class="btn btn-sm btn-outline-secondary mt-1" onclick="replClear()">Clear</button>
                 </div>
               </details>
-              <!-- Prompt to sketch — hidden by default under disclosure triangle -->
+              <!-- "Help write your sketch" panel — hidden by default under disclosure triangle -->
               <details class="mb-3" id="prompt-to-sketch-disclosure">
-                <summary class="repl-summary">✨ Prompt to sketch (beta)</summary>
+                <summary class="repl-summary">Help write your sketch by describing it (alpha)</summary>
                 <div class="mt-2">
                   <textarea id="prompt-to-sketch-input" class="form-control form-control-sm mb-1" rows="2"
-                    placeholder="Describe a sketch, e.g. 'a slow ambient pad that drifts the filter with CV1'"></textarea>
+                    placeholder='Describe what you want AMYboard to do, e.g. "slow ambient pad with filter cutoff controlled by MIDI CC 23" or "Pass through audio input to output with a reverb effect"'></textarea>
                   <div class="d-flex align-items-center gap-2">
                     <button type="button" class="btn btn-sm btn-primary" id="prompt-to-sketch-btn"
-                      onclick="generate_sketch_from_prompt()">Generate</button>
+                      onclick="generate_sketch_from_prompt()">Write the sketch</button>
                     <span class="small text-muted" id="prompt-to-sketch-status"></span>
                   </div>
                   <div class="form-text">
-                    Generates an AMYboard sketch from your description and loads it into the editor.
-                    Review it before running. Limited uses per day.
+                    This will create a sketch.py for you if you describe it to us. We'll help you understand how to control AMY by looking up the documentation. Won't always work great.
                   </div>
                 </div>
               </details>
