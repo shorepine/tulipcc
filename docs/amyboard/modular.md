@@ -76,7 +76,7 @@ volts = amyboard.cv_in(channel=0)
 print(f"CV in 1: {volts:.2f}V")
 
 # Read raw ADC value
-raw = amyboard.adc1115_raw(channel=0)
+raw = amyboard.ads1115_raw(channel=0)
 ```
 
 ### CV triggering
