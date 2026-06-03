@@ -104,7 +104,7 @@ CV trigger events stack - in the example above, we've associated two events with
 amy.send(cv_trigger='0')   # Clear all triggers associated with CV input 0.
 ```
 
-There's some indeterminacy in when the pitch CV is sampled at the moment; sometimes, you get the previous note (we're working on a fix).  Instead, you can instead make your osc pitches respond to CV1 dynamically (like a regular pitch CV-in):
+Instead of sampling a single pitch value at onset time, you can instead make your osc pitches respond to CV1 dynamically (like a traditional pitch CV-in):
 ```
 amy.send(synth=1, patch=1, num_voices=1)    # Monophonic JUNO patch
 amy.send(synth=1, osc=2, freq={'ext1':1})   # Set all 3 pitched oscillators to track CV1
@@ -113,6 +113,8 @@ amy.send(synth=1, osc=4, freq={'ext1':1})
 amy.send(cv_trigger='0,3,2,i1l1n69')  # CV0 trigger sends a note-on for A4, but actual pitch will include CV1
 amy.send(cv_trigger='0,2,3,i1l0')     # CV0 note-off trigger.
 ```
+
+Note: The CV_IN has 12 bit resolution for a 20-volt range, which corresponds to a minimum step of around 6 cents — sometimes too coarse for fine vibrato via CV pitch modulation.
 
 ### Use cases
 
