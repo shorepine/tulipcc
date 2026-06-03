@@ -9,7 +9,9 @@ SEESAW = 0x36
 BTN_PIN = 24
 
 # --- State ---
-enc_offset = -amyboard.read_encoder(seesaw_dev=SEESAW)
+# Seesaw encoder counts down when turned clockwise, so we subtract the live
+# reading from the boot reading below to make clockwise increment the preset.
+enc_offset = amyboard.read_encoder(seesaw_dev=SEESAW)
 current_index = 0
 prev_btn = False
 loaded_patch = -1
@@ -42,7 +44,7 @@ draw()
 
 def loop():
     global current_index, prev_btn
-    raw = amyboard.read_encoder(seesaw_dev=SEESAW) + enc_offset
+    raw = enc_offset - amyboard.read_encoder(seesaw_dev=SEESAW)
     idx = raw % NUM_PRESETS
     btn = amyboard.read_buttons(pins=(BTN_PIN,), seesaw_dev=SEESAW)[0]
 
