@@ -123,6 +123,23 @@
     </div>
   </div>
 
+  <div class="panel">
+    <div class="row">
+      <h3 style="margin:0">Debug: prompt &rarr; code</h3>
+      <span class="small">Admin only &middot; no character cap &middot; no rate limit &middot; runs the live AMY sketch generator &middot; spends API credits &middot; not logged.</span>
+    </div>
+    <textarea id="dbgPrompt" rows="4" style="width:100%;box-sizing:border-box" placeholder="Enter any prompt (no length limit)&hellip;"></textarea>
+    <details>
+      <summary class="small">Optional: current sketch (debug edit mode)</summary>
+      <textarea id="dbgCurrent" rows="6" style="width:100%;box-sizing:border-box" placeholder="(optional) existing sketch.py to modify"></textarea>
+    </details>
+    <div class="row">
+      <button id="dbgRunBtn" type="button">Generate</button>
+      <span id="dbgMeta" class="small"></span>
+    </div>
+    <pre class="code" id="dbgOut" style="max-width:none;max-height:480px"></pre>
+  </div>
+
 <script>
 (function() {
   const status = document.getElementById('status');
@@ -363,6 +380,45 @@
   }
 
   document.getElementById('genRefreshBtn').addEventListener('click', refreshGenerations);
+
+  async function runDebugGenerate() {
+    const token = getToken();
+    if (!token) { setStatus('Admin token required', true); return; }
+    const prompt = document.getElementById('dbgPrompt').value;
+    if (!prompt.trim()) { setStatus('Enter a prompt for the debug generator', true); return; }
+    const current = document.getElementById('dbgCurrent').value;
+    const meta = document.getElementById('dbgMeta');
+    const out = document.getElementById('dbgOut');
+    const btn = document.getElementById('dbgRunBtn');
+    meta.textContent = ''; out.textContent = ''; btn.disabled = true;
+    setStatus('Generating...', false);
+    try {
+      const data = await api('/api/admin/generate_debug', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ description: prompt, current_code: current.trim() ? current : null }),
+      });
+      if (data.error) {
+        meta.innerHTML = '<span class="err">error</span>';
+        out.textContent = data.error;
+      } else {
+        const verdict = data.ok
+          ? '<span class="ok">valid sketch</span>'
+          : '<span class="err">invalid: ' + esc(data.reason || '') + '</span>';
+        meta.innerHTML = verdict + ' &middot; ' + esc(data.model || '') + ' &middot; ' +
+          esc(data.input_tokens) + ' in / ' + esc(data.output_tokens) + ' out &middot; ' +
+          esc((data.code || '').length) + ' chars';
+        out.textContent = data.code || '(no code returned)';
+      }
+      setStatus('Debug generate done', false);
+    } catch (err) {
+      setStatus('Debug generate failed: ' + err.message, true);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById('dbgRunBtn').addEventListener('click', runDebugGenerate);
 
   adminTokenEl.value = localStorage.getItem('world_admin_token') || localStorage.getItem('amyboardworld_admin_token') || '';
   refresh();
