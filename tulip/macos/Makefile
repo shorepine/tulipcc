@@ -4,8 +4,10 @@ WHICH_ARCH ?= $(shell arch)
 
 DEBUG=1
 
-# Ensure sub-makes (notably micropython/mpy-cross) also suppress this clang warning.
-export CFLAGS_EXTRA += -Wno-gnu-folding-constant
+# Ensure sub-makes (notably micropython/mpy-cross) also suppress these clang tightenings
+# (Apple clang / clang >= 19, e.g. macOS Tahoe). CFLAGS_EXTRA is appended after -Werror,
+# so these downgrade the otherwise-fatal warnings (e.g. moductypes.c type2char[16]).
+export CFLAGS_EXTRA += -Wno-gnu-folding-constant -Wno-unknown-warning-option -Wno-unterminated-string-initialization
 
 ifeq ($(WHICH_ARCH), arm64)
 	ARCHFLAGS = -target arm64-macos11
