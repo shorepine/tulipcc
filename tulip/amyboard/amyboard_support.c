@@ -85,9 +85,7 @@ void i2c_check_for_data() {
 #define ADS1015_CLAT_NONLAT (0x0000)
 #define ADS1015_CPOL_ACTVLOW (0x0000)
 #define ADS1015_CMODE_TRAD (0x0000)
-//#define ADS1015_DR_860SPS (0x0080)
-//#define ADS1015_DR_475SPS (0x00C0)
-#define ADS1015_DR_860SPS (0x00E0)
+#define ADS1015_DR_3300SPS (0x00E0)  // 0x00E0 = 3300 SPS (max) on the ADS1015
 #define ADS1015_MODE_SINGLE (0x0100)
 #define ADS1015_MODE_CONT (0x0100)
 #define ADS1015_OS_SINGLE (0x8000)  // initiate single conversion / check converter status
@@ -148,7 +146,7 @@ static int ads1015_pending_channel = -1;
 void ads1015_start_conversion(uint8_t channel) {
     uint16_t channel_mux = ADS1015_MUX_SINGLE_0 + (channel << ADS1015_MUX_CHAN_SHIFTL);
     uint16_t data = (ADS1015_CQUE_DISABLE | ADS1015_CLAT_NONLAT |
-                     ADS1015_CPOL_ACTVLOW | ADS1015_CMODE_TRAD | ADS1015_DR_860SPS |
+                     ADS1015_CPOL_ACTVLOW | ADS1015_CMODE_TRAD | ADS1015_DR_3300SPS |
                      ADS1015_MODE_SINGLE | ADS1015_OS_SINGLE | ADS1015_PGA_2_048V |
                      channel_mux);
     ads1015_write_register(ADS1015_REGISTER_CONFIG, data);
@@ -158,7 +156,7 @@ void ads1015_start_conversion(uint8_t channel) {
 uint16_t ads1015_get_result(void) {
     // Wait for the single-shot conversion on the last-selected mux channel to
     // finish before reading the result. The OS bit reads 0 while converting and
-    // 1 when done; at 860 SPS each conversion takes ~1.2ms. Without this wait the
+    // 1 when done; at 3300 SPS each conversion takes ~0.3ms. Without this wait the
     // CONVERT register still holds the *previous* conversion (the other channel),
     // which made cv_in(0) and cv_in(1) return the same input. Bound the poll so a
     // missing/unresponsive ADC can't stall the cv_read_task forever.
