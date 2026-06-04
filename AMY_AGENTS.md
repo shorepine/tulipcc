@@ -13,6 +13,35 @@ over prose.
 
 ---
 
+## Before writing code: lean on the provided examples + guidance, and emit only **real** kwargs
+
+You are single-shot — you can't open files, run code, or browse. The EXAMPLES and API
+notes in the prompt above, plus this guidance, are your only references: **prefer a
+pattern you can see in them over one you're guessing at**, and copy a working example's
+shape rather than inventing one.
+
+**Every `amy.send(...)` keyword must be one of these** (AMY's `_KW_MAP_LIST`) — never
+invent names like `lfo_osc` / `lfo0_osc`:
+
+```
+osc wave note vel amp freq duty feedback time reset phase pan client volume
+pitch_bend filter_freq resonance bp0 bp1 eg0 eg1 eg0_type eg1_type debug
+chained_osc mod_source eq filter_type ratio latency_ms algo_source load_sample
+transfer_file disk_sample algorithm chorus reverb echo patch voices
+external_channel portamento sequence tempo synth pedal synth_flags num_voices
+oscs_per_voice to_synth grab_midi_notes note_source synth_delay preset
+num_partials start_sample stop_sample bus midi_cc midi_note_cmd cv_trigger
+patch_string
+```
+
+The keys *inside* a coefficient dict (e.g. `duty={'const':…, 'mod':…}`) are a **separate**
+set — `const, note, vel, eg0, eg1, mod, bend, ext0, ext1` — not interchangeable with the
+kwargs above (see the LFO section). If a name isn't in the right list, it doesn't exist.
+
+> Maintainers: resync this list from `_KW_MAP_LIST` in `amy/amy/__init__.py` when AMY adds kwargs.
+
+---
+
 ## MIDI-controlled parameters: map the CC inside AMY (`midi_cc` / `ic`), don't poll in `loop()`
 
 When the user asks for a synth parameter (resonance, filter cutoff, amp, pan,
@@ -68,6 +97,53 @@ message — no `loop()` code, no callback.
 > (`tulip/amyboardweb/static/spss.js`); per-knob `change_code` wire commands live in
 > `tulip/amyboardweb/static/amy_parameters.js`; the full field spec is the `ic` row
 > of `amy/docs/api.md`.
+
+---
+
+## LFOs / modulation: a silent osc + `mod_source` + a `'mod'` coefficient (there is no `lfo_osc` / `'lfo0'`)
+
+An LFO is just another oscillator routed into a *carrier* osc. To modulate a carrier
+parameter with it:
+
+1. Make a low-freq osc and **don't** give it `vel`/`note` — an osc used as a mod source is silent.
+2. On the carrier, route it in with **`mod_source=<lfo osc number>`** — the kwarg is `mod_source`, **not** `lfo_osc`/`lfoN_osc`.
+3. Add a **`'mod'`** entry to the *target parameter's* coefficient dict, e.g. `duty={'const': 0.5, 'mod': 0.4}` — the key is `'mod'`, **not** `'lfo0'`. Depth ≈ LFO `amp` × the `'mod'` value.
+
+Only `amp`, `freq`, `filter_freq`, `duty`, `pan` accept coefficient dicts. The keys, in
+wire order, are: `const, note, vel, eg0, eg1, mod, bend, ext0, ext1`. (Full list:
+`amy/docs/synth.md#ctrlcoefficients`.) **Before emitting any `amy.send(...)`, check each
+kwarg is a real AMY keyword** (`_KW_MAP_LIST` in `amy/amy/__init__.py`) — don't invent ones like `lfo0_osc`.
+
+### A "synth" is MIDI-driven: set the voice shape first, never send `note`/`vel`/`freq`
+
+When the user says **synth**, build a MIDI-playable instrument, not a free osc:
+- **First** command sets the voice shape: `amy.send(synth=N, num_voices=M, oscs_per_voice=K)`.
+- Put `synth=N` on **every** following command.
+- **Don't** send `note`/`vel`/`freq` — MIDI note-ons (channel = synth number) supply pitch and velocity. Sending them yourself fights the synth.
+- The LFO is an extra osc *inside the voice*: `oscs_per_voice=2` → osc 0 = carrier, osc 1 = LFO.
+
+### Example — "pulse-wave synth, pulse width modulated by a 0.5 Hz sine; CC 1 sets the sine's rate 0.1–5 Hz"
+
+```python
+import amy
+
+amy.send(synth=1, num_voices=6, oscs_per_voice=2)        # osc0 = carrier, osc1 = LFO
+amy.send(synth=1, osc=1, wave=amy.SINE, freq=0.5, amp=1) # the LFO: no vel -> silent
+amy.send(synth=1, osc=0, wave=amy.PULSE,
+         duty={'const': 0.5, 'mod': 0.4}, mod_source=1)  # PWM driven by osc1
+# CC 1 -> LFO rate, 0.1..5 Hz.  CMD i%iv1f%v == amy.send(synth=%i, osc=1, freq=%v)
+amy.send(synth=1, midi_cc="1,0,0.1,5,0,i%iv1f%v")
+
+def loop():
+    pass
+```
+
+No `note`/`vel`/`freq`, no `midi.add_callback` — the synth sounds from incoming MIDI and
+`midi_cc` (see the section above) retunes the LFO at control rate.
+
+> Source of truth: `tulip/amyboardweb/sketches/universal_hair.py` (synth + `amy.PULSE` + `mod_source`)
+> and `sineclock.py` (`mod_source` + `freq={'const':…, 'mod':…}`); coefficient sources in
+> `amy/docs/synth.md` (ctrl/coefficients); wire codes `osc`→`v`, `freq`→`f`, `synth`→`i` in `_KW_MAP_LIST`.
 
 ---
 
