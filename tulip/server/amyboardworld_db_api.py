@@ -216,12 +216,18 @@ def _ensure_schema() -> None:
               ok INTEGER NOT NULL DEFAULT 0,
               model TEXT NOT NULL DEFAULT '',
               input_tokens INTEGER NOT NULL DEFAULT 0,
-              output_tokens INTEGER NOT NULL DEFAULT 0
+              output_tokens INTEGER NOT NULL DEFAULT 0,
+              code TEXT NOT NULL DEFAULT ''
             );
             CREATE INDEX IF NOT EXISTS idx_gen_created ON generations(created_at_ms DESC);
             CREATE INDEX IF NOT EXISTS idx_gen_ip ON generations(client_ip);
             """
         )
+        # Add the generated-code column to pre-existing generations tables.
+        try:
+            conn.execute("ALTER TABLE generations ADD COLUMN code TEXT NOT NULL DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
 
 @app.on_event("startup")
@@ -1014,6 +1020,53 @@ def list_admin_items(
     return {"items": items[:limit]}
 
 
+@app.get("/api/admin/generations", dependencies=[Depends(_require_admin)])
+def list_admin_generations(
+    limit: int = Query(default=200, ge=1, le=500),
+    q: str = Query(default=""),
+    ip: str = Query(default=""),
+) -> dict[str, Any]:
+    """Audit log of 'prompt to sketch' generations: input prompt, output code, IP, time."""
+    clauses: list[str] = []
+    args: list[Any] = []
+    q_s = q.strip()
+    if q_s:
+        clauses.append("(prompt LIKE ? OR code LIKE ?)")
+        args.extend([f"%{q_s}%", f"%{q_s}%"])
+    ip_s = ip.strip()
+    if ip_s:
+        clauses.append("client_ip = ?")
+        args.append(ip_s)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    args.append(limit)
+    with _open_db() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT id, created_at_ms, client_ip, prompt, code, ok, model, input_tokens, output_tokens
+            FROM generations{where}
+            ORDER BY created_at_ms DESC
+            LIMIT ?
+            """,
+            tuple(args),
+        ).fetchall()
+    return {
+        "generations": [
+            {
+                "id": r["id"],
+                "time": r["created_at_ms"],
+                "client_ip": r["client_ip"],
+                "prompt": r["prompt"],
+                "code": r["code"],
+                "ok": bool(r["ok"]),
+                "model": r["model"],
+                "input_tokens": r["input_tokens"],
+                "output_tokens": r["output_tokens"],
+            }
+            for r in rows
+        ]
+    }
+
+
 # ---------------------------------------------------------------------------
 # AMYboard sketch generation via the Claude API
 # ---------------------------------------------------------------------------
@@ -1226,17 +1279,18 @@ def _log_generation(ip: str, prompt: str, result: dict[str, Any]) -> None:
     with _open_db() as conn:
         conn.execute(
             """
-            INSERT INTO generations(created_at_ms, client_ip, prompt, ok, model, input_tokens, output_tokens)
-            VALUES(?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO generations(created_at_ms, client_ip, prompt, ok, model, input_tokens, output_tokens, code)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 _now_ms(),
                 ip,
-                prompt[:MAX_DESCRIPTION],
+                prompt[:GENERATE_MAX_PROMPT_CHARS],
                 1 if result.get("ok") else 0,
                 GENERATE_MODEL,
                 int(result.get("input_tokens", 0)),
                 int(result.get("output_tokens", 0)),
+                (result.get("code") or "")[:20000],
             ),
         )
         conn.commit()
