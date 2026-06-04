@@ -43,7 +43,7 @@ TaskHandle_t i2c_check_for_data_handle;
 
 #define AMYCHIP_ADDR 0x3F
 #define PCM9211_ADDR 0x40
-#define ADS1115_ADDR 0x48
+#define ADS1015_ADDR 0x48
 #define GP8413_ADDR  0x58
 
 esp_err_t i2c_follower_init() {
@@ -79,47 +79,53 @@ void i2c_check_for_data() {
 
 
 
-#define ADS1115_REGISTER_CONFIG (0x01)
-#define ADS1115_CQUE_NONE (0x0003)
-#define ADS1115_CLAT_NONLAT (0x0000)
-#define ADS1115_CPOL_ACTVLOW (0x0000)
-#define ADS1115_CMODE_TRAD (0x0000)
-#define ADS1115_DR_1600SPS (0x0080)
-#define ADS1115_MODE_SINGLE (0x0100)
-#define ADS1115_OS_SINGLE (0x8000)
-#define ADS1115_PGA_2_048V (0x0400)
-#define ADS1115_PGA_4_096V (0x0200)
-#define ADS1115_MUX_SINGLE_0 (0x4000) 
-#define ADS1115_MUX_SINGLE_1 (0x5000) 
-#define ADS1115_MUX_SINGLE_2 (0x6000) 
-#define ADS1115_MUX_SINGLE_3 (0x7000) 
-#define ADS1115_REGISTER_CONVERT (0x00)
+#define ADS1015_REGISTER_CONFIG (0x01)
+#define ADS1015_CQUE_DISABLE (0x0003)
 
-static esp_err_t ads1115_write_register(uint8_t reg, uint16_t data) {
-  i2c_cmd_handle_t cmd;
-  esp_err_t ret;
-  uint8_t out[2];
+#define ADS1015_CLAT_NONLAT (0x0000)
+#define ADS1015_CPOL_ACTVLOW (0x0000)
+#define ADS1015_CMODE_TRAD (0x0000)
+#define ADS1015_DR_3300SPS (0x00E0)  // 0x00E0 = 3300 SPS (max) on the ADS1015
+#define ADS1015_MODE_SINGLE (0x0100)
+#define ADS1015_MODE_CONT (0x0100)
+#define ADS1015_OS_SINGLE (0x8000)  // initiate single conversion / check converter status
+#define ADS1015_OS_READY (0x8000) // OS bit reads 1 when conversion is complete
+#define ADS1015_PGA_2_048V (0x0400)
+//#define ADS1015_PGA_4_096V (0x0200)
+#define ADS1015_MUX_SINGLE_0 (0x4000)
+//#define ADS1015_MUX_PER_CHAN (0x1000)
+// To get the offset to ADS1015_MUX_SINGLE_0 for chan C, use (C << ADS1015_MUX_CHAN_SHIFTL)
+#define ADS1015_MUX_CHAN_SHIFTL (12)
+//#define ADS1015_MUX_SINGLE_1 (0x5000)
+//#define ADS1015_MUX_SINGLE_2 (0x6000)
+//#define ADS1015_MUX_SINGLE_3 (0x7000)
+#define ADS1015_REGISTER_CONVERT (0x00)
 
-  out[0] = data >> 8; // get 8 greater bits
-  out[1] = data & 0xFF; // get 8 lower bits
-  cmd = i2c_cmd_link_create();
-  i2c_master_start(cmd); // generate a start command
-  i2c_master_write_byte(cmd,(ADS1115_ADDR<<1) | I2C_MASTER_WRITE,1); // specify address and write command
-  i2c_master_write_byte(cmd,reg,1); // specify register
-  i2c_master_write(cmd,out,2,1); // write it
-  i2c_master_stop(cmd); // generate a stop command
-  ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
-  i2c_cmd_link_delete(cmd);
-  return ret;
+static esp_err_t ads1015_write_register(uint8_t reg, uint16_t data) {
+    i2c_cmd_handle_t cmd;
+    esp_err_t ret;
+    uint8_t out[2];
+
+    out[0] = data >> 8; // get 8 greater bits
+    out[1] = data & 0xFF; // get 8 lower bits
+    cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd); // generate a start command
+    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_WRITE,1); // specify address and write command
+    i2c_master_write_byte(cmd,reg,1); // specify register
+    i2c_master_write(cmd,out,2,1); // write it
+    i2c_master_stop(cmd); // generate a stop command
+    ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
+    i2c_cmd_link_delete(cmd);
+    return ret;
 }
 
-static esp_err_t ads1115_read_register(uint8_t reg, uint8_t* data, uint8_t len) {
+static esp_err_t ads1015_read_register(uint8_t reg, uint8_t* data, uint8_t len) {
     i2c_cmd_handle_t cmd;
     esp_err_t ret;
 
     cmd = i2c_cmd_link_create();
     i2c_master_start(cmd);
-    i2c_master_write_byte(cmd,(ADS1115_ADDR<<1) | I2C_MASTER_WRITE,1);
+    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_WRITE,1);
     i2c_master_write_byte(cmd,reg,1);
     i2c_master_stop(cmd);
     i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10));
@@ -127,7 +133,7 @@ static esp_err_t ads1115_read_register(uint8_t reg, uint8_t* data, uint8_t len) 
 
     cmd = i2c_cmd_link_create();
     i2c_master_start(cmd); // generate start command
-    i2c_master_write_byte(cmd,(ADS1115_ADDR<<1) | I2C_MASTER_READ,1); // specify address and read command
+    i2c_master_write_byte(cmd,(ADS1015_ADDR<<1) | I2C_MASTER_READ,1); // specify address and read command
     i2c_master_read(cmd, data, len, 0); // read all wanted data
     i2c_master_stop(cmd); // generate stop command
     ret = i2c_master_cmd_begin(I2C_NUM_0, cmd, pdMS_TO_TICKS(10)); // send the i2c command
@@ -135,20 +141,42 @@ static esp_err_t ads1115_read_register(uint8_t reg, uint8_t* data, uint8_t len) 
     return ret;
 }
 
-uint16_t read_ads1115_raw(uint8_t channel) {
-    uint16_t data = 0;
-    uint16_t channel_mux = ADS1115_MUX_SINGLE_0;
-    if(channel==1) channel_mux = ADS1115_MUX_SINGLE_1;
-    if(channel==2) channel_mux = ADS1115_MUX_SINGLE_2;
-    if(channel==3) channel_mux = ADS1115_MUX_SINGLE_3;
-    data =  (ADS1115_CQUE_NONE |ADS1115_CLAT_NONLAT |
-             ADS1115_CPOL_ACTVLOW | ADS1115_CMODE_TRAD | ADS1115_DR_1600SPS |
-             ADS1115_MODE_SINGLE | ADS1115_OS_SINGLE | ADS1115_PGA_4_096V |
-             channel_mux);
-    ads1115_write_register(ADS1115_REGISTER_CONFIG, data);
-    uint8_t output[2];
-    ads1115_read_register(ADS1115_REGISTER_CONVERT, output, 2);
-    return ((uint16_t)output[0] << 8) | (uint16_t)output[1];
+static int ads1015_pending_channel = -1;
+
+void ads1015_start_conversion(uint8_t channel) {
+    uint16_t channel_mux = ADS1015_MUX_SINGLE_0 + (channel << ADS1015_MUX_CHAN_SHIFTL);
+    uint16_t data = (ADS1015_CQUE_DISABLE | ADS1015_CLAT_NONLAT |
+                     ADS1015_CPOL_ACTVLOW | ADS1015_CMODE_TRAD | ADS1015_DR_3300SPS |
+                     ADS1015_MODE_SINGLE | ADS1015_OS_SINGLE | ADS1015_PGA_2_048V |
+                     channel_mux);
+    ads1015_write_register(ADS1015_REGISTER_CONFIG, data);
+    ads1015_pending_channel = channel;
+}
+
+uint16_t ads1015_get_result(void) {
+    // Wait for the single-shot conversion on the last-selected mux channel to
+    // finish before reading the result. The OS bit reads 0 while converting and
+    // 1 when done; at 3300 SPS each conversion takes ~0.3ms. Without this wait the
+    // CONVERT register still holds the *previous* conversion (the other channel),
+    // which made cv_in(0) and cv_in(1) return the same input. Bound the poll so a
+    // missing/unresponsive ADC can't stall the cv_read_task forever.
+    uint8_t buffer[2];
+    for(int i = 0; i < 20; i++) {
+        if(ads1015_read_register(ADS1015_REGISTER_CONFIG, buffer, 2) != ESP_OK) break;
+        if((((uint16_t)buffer[0] << 8) | buffer[1]) & ADS1015_OS_READY) break; // conversion done
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
+    ads1015_read_register(ADS1015_REGISTER_CONVERT, buffer, 2);
+    return ((uint16_t)buffer[0] << 8) | (uint16_t)buffer[1];
+}
+
+uint16_t read_ads1015_raw(uint8_t channel) {
+    if (channel != ads1015_pending_channel)
+        ads1015_start_conversion(channel);
+    uint16_t result = ads1015_get_result();
+    // Speculatively start conversion on the other channel.  Assumes we're just using channels 0 and 1.
+    ads1015_start_conversion((channel + 1) % 2);
+    return result;
 }
 
 
@@ -171,18 +199,31 @@ float cv_input_hook(uint16_t channel) {
 }
 
 #ifdef ESP_PLATFORM
-// FreeRTOS task: reads both ADS1115 channels in a loop, updates cv_cached_value.
+// FreeRTOS task: reads both ADS1015 channels in a loop, updates cv_cached_value.
 void cv_read_task(void *pvParameter) {
-    uint16_t min = 1058;  // -10V
-    uint16_t max = 21312; // 10V
+    int32_t min = 1058;  // -5V
+    int32_t max = 21312; // 5V
+    // Scan both CV channels once per AMY audio block (AMY_BLOCK_SIZE / AMY_SAMPLE_RATE,
+    // ~5.8ms at 256/44100) so CV tracks the audio block cadence. Expressed in RTOS ticks,
+    // rounded to nearest, so it follows the audio rate regardless of tick rate; clamped to
+    // >=1 tick. (At configTICK_RATE_HZ=1000 this is 6 ticks; 5.8ms can't be hit exactly.)
+    TickType_t cv_period = (AMY_BLOCK_SIZE * configTICK_RATE_HZ + AMY_SAMPLE_RATE / 2) / AMY_SAMPLE_RATE;
+    if(cv_period == 0) cv_period = 1;
+    // xTaskDelayUntil holds a fixed period regardless of how long the two ADS1015
+    // conversions take, unlike vTaskDelay which would add the read time on top.
+    TickType_t last_wake = xTaskGetTickCount();
     for(;;) {
         for(uint8_t ch = 0; ch < 2; ch++) {
             if(!cv_local_override[ch]) {
-                uint16_t raw = read_ads1115_raw(ch);
-                cv_cached_value[ch] = ((((float)raw - (float)min)/((float)max-(float)min))*20.0)-10.0;
+                int32_t raw = read_ads1015_raw(ch);  // Put uint16_t into int32_t.
+                cv_cached_value[ch] = (
+                    (((float)(raw - min))
+                     / ((float)(max - min)))
+                    * 10.0
+                ) - 10.0;
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(50));
+        xTaskDelayUntil(&last_wake, cv_period);
     }
 }
 #endif

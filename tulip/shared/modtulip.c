@@ -369,12 +369,19 @@ STATIC mp_obj_t tulip_amy_send(size_t n_args, const mp_obj_t *args) {
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_send_obj, 1, 1, tulip_amy_send);
 
 STATIC mp_obj_t tulip_amy_send_sysex(size_t n_args, const mp_obj_t *args) {
+#if SYSEX_COPY_SLOTS > 0
     // Read from the next slot in the sysex ring buffer. parse_sysex() writes
     // to sequential slots so that a fast-arriving next sysex doesn't overwrite
     // an unprocessed message (which happens when loop() is CPU-heavy and the
     // mp_sched callback is delayed).
     char *slot = sysex_message_copies[sysex_copy_read_idx];
     sysex_copy_read_idx = (sysex_copy_read_idx + 1) % SYSEX_COPY_SLOTS;
+#else
+    // No sysex copy ring on this platform: amy (parse_sysex) gates the ring to
+    // TULIP/AMYBOARD and dispatches sysex synchronously otherwise, so this
+    // scheduled callback is never armed here. Guard avoids a `% 0` (desktop build).
+    char *slot = NULL;
+#endif
     if (slot) {
         // Use _from_sysex variant so that during a file transfer,
         // this data is routed to parse_transfer_message. Internal

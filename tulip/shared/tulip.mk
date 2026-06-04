@@ -22,6 +22,7 @@ EXTMOD_SRC_C += $(addprefix $(TOP)/../amy/src/, \
 	instrument.c \
 	api.c \
 	midi_mappings.c \
+	cv_trigger.c \
 )
 
 EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \

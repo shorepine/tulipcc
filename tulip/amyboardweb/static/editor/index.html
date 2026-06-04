@@ -1452,19 +1452,19 @@
                   <button class="btn btn-sm btn-outline-secondary mt-1" onclick="replClear()">Clear</button>
                 </div>
               </details>
-              <!-- "Help write your sketch" panel — hidden by default under disclosure triangle -->
+              <!-- "Help create your sketch" panel — hidden by default under disclosure triangle -->
               <details class="mb-3" id="prompt-to-sketch-disclosure">
-                <summary class="repl-summary">Help write your sketch by describing it (alpha)</summary>
+                <summary class="repl-summary">Help create your sketch by describing it (alpha)</summary>
                 <div class="mt-2">
-                  <textarea id="prompt-to-sketch-input" class="form-control form-control-sm mb-1" rows="2"
-                    placeholder='Describe what you want AMYboard to do, e.g. "slow ambient pad with filter cutoff controlled by MIDI CC 23" or "Pass through audio input to output with a reverb effect"'></textarea>
+                  <textarea id="prompt-to-sketch-input" class="form-control form-control-sm mb-1" rows="2" maxlength="500"
+                    placeholder='Describe what you want AMYboard to do, e.g. "slow ambient pad with filter cutoff controlled by MIDI CC 23", "Pass through audio input to output with a reverb effect", or "Play a DX7 patch on MIDI channel 1 and a Juno-6 patch on MIDI channel 2"'></textarea>
                   <div class="d-flex align-items-center gap-2">
                     <button type="button" class="btn btn-sm btn-primary" id="prompt-to-sketch-btn"
-                      onclick="generate_sketch_from_prompt()">Write the sketch</button>
+                      onclick="generate_sketch_from_prompt()">Create the sketch</button>
                     <span class="small text-muted" id="prompt-to-sketch-status"></span>
                   </div>
                   <div class="form-text">
-                    This will create a sketch.py for you if you describe it to us. We'll help you understand how to control AMY by looking up the documentation. Won't always work great.
+                    This will create a sketch.py for you if you describe it to us. We'll help you understand how to work with your AMYboard by looking up the documentation. Won't always be perfect, find us on Discord for more help!
                   </div>
                 </div>
               </details>
