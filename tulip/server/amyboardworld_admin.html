@@ -19,6 +19,8 @@
     .err { color: #991b1b; }
     .tags { width: 220px; }
     .desc { max-width: 400px; }
+    pre.code { white-space: pre-wrap; max-width: 640px; max-height: 320px; overflow: auto; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; margin: 4px 0 0; font-size: 12px; }
+    details summary { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -87,6 +89,30 @@
         </tr>
       </thead>
       <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <h3 style="margin:0">Sketch generations</h3>
+      <input id="genQ" type="text" placeholder="filter prompt / code" />
+      <input id="genIp" type="text" placeholder="filter IP" />
+      <button id="genRefreshBtn" type="button">Refresh generations</button>
+    </div>
+    <div class="small">"Prompt to sketch" audit log (newest first). Output code is captured going forward.</div>
+    <table>
+      <thead>
+        <tr>
+          <th>When</th>
+          <th>IP</th>
+          <th>Prompt</th>
+          <th>OK</th>
+          <th>Model</th>
+          <th>Tokens (in/out)</th>
+          <th>Output code</th>
+        </tr>
+      </thead>
+      <tbody id="genRows"></tbody>
     </table>
   </div>
 
@@ -290,8 +316,50 @@
     }
   });
 
+  async function refreshGenerations() {
+    const token = getToken();
+    if (!token) { setStatus('Admin token required', true); return; }
+    const params = new URLSearchParams();
+    params.set('limit', '250');
+    const gq = (document.getElementById('genQ').value || '').trim();
+    if (gq) params.set('q', gq);
+    const gip = (document.getElementById('genIp').value || '').trim();
+    if (gip) params.set('ip', gip);
+    const genRows = document.getElementById('genRows');
+    try {
+      const data = await api('/api/admin/generations?' + params.toString(), {
+        headers: { 'x-admin-token': token },
+      });
+      const gens = Array.isArray(data.generations) ? data.generations : [];
+      genRows.innerHTML = '';
+      for (const g of gens) {
+        const tr = document.createElement('tr');
+        const okHtml = g.ok ? '<span class="ok">ok</span>' : '<span class="err">fail</span>';
+        const code = g.code || '';
+        const codeCell = code
+          ? '<details><summary class="small">' + esc(code.length) + ' chars</summary><pre class="code">' + esc(code) + '</pre></details>'
+          : '<span class="small">&mdash;</span>';
+        tr.innerHTML = '' +
+          '<td class="small">' + esc(fmtTs(g.time)) + '</td>' +
+          '<td class="mono small">' + esc(g.client_ip || '') + '</td>' +
+          '<td class="desc">' + esc(g.prompt || '') + '</td>' +
+          '<td>' + okHtml + '</td>' +
+          '<td class="mono small">' + esc(g.model || '') + '</td>' +
+          '<td class="mono small">' + esc(g.input_tokens) + ' / ' + esc(g.output_tokens) + '</td>' +
+          '<td>' + codeCell + '</td>';
+        genRows.appendChild(tr);
+      }
+      setStatus('Loaded ' + gens.length + ' generations', false);
+    } catch (err) {
+      setStatus('Generations load failed: ' + err.message, true);
+    }
+  }
+
+  document.getElementById('genRefreshBtn').addEventListener('click', refreshGenerations);
+
   adminTokenEl.value = localStorage.getItem('world_admin_token') || localStorage.getItem('amyboardworld_admin_token') || '';
   refresh();
+  refreshGenerations();
 })();
 </script>
 </body>
