@@ -605,7 +605,7 @@ def init_display():
 
 def ads1015_raw(channel=0):
     import ads1115
-    adc = ads1115.ADS1015(get_i2c())
+    adc = ads1115.ADS1115(get_i2c())
     raw = float(adc.read(channel1=channel))
     return raw
 

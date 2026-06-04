@@ -85,11 +85,9 @@ void i2c_check_for_data() {
 #define ADS1015_CLAT_NONLAT (0x0000)
 #define ADS1015_CPOL_ACTVLOW (0x0000)
 #define ADS1015_CMODE_TRAD (0x0000)
-// DR (data-rate) bits. On the 12-bit ADS1015, 0x00C0 and 0x00E0 both select 3300 SPS;
-// the old "860 SPS"/"475 SPS" labels were the 16-bit ADS1115 values for those codes.
-//#define ADS1015_DR_1600SPS (0x0080)
-//#define ADS1015_DR_3300SPS_ALT (0x00C0)
-#define ADS1015_DR_3300SPS (0x00E0)
+//#define ADS1015_DR_860SPS (0x0080)
+//#define ADS1015_DR_475SPS (0x00C0)
+#define ADS1015_DR_860SPS (0x00E0)
 #define ADS1015_MODE_SINGLE (0x0100)
 #define ADS1015_MODE_CONT (0x0100)
 #define ADS1015_OS_SINGLE (0x8000)  // initiate single conversion / check converter status
@@ -150,7 +148,7 @@ static int ads1015_pending_channel = -1;
 void ads1015_start_conversion(uint8_t channel) {
     uint16_t channel_mux = ADS1015_MUX_SINGLE_0 + (channel << ADS1015_MUX_CHAN_SHIFTL);
     uint16_t data = (ADS1015_CQUE_DISABLE | ADS1015_CLAT_NONLAT |
-                     ADS1015_CPOL_ACTVLOW | ADS1015_CMODE_TRAD | ADS1015_DR_3300SPS |
+                     ADS1015_CPOL_ACTVLOW | ADS1015_CMODE_TRAD | ADS1015_DR_860SPS |
                      ADS1015_MODE_SINGLE | ADS1015_OS_SINGLE | ADS1015_PGA_2_048V |
                      channel_mux);
     ads1015_write_register(ADS1015_REGISTER_CONFIG, data);
@@ -160,7 +158,7 @@ void ads1015_start_conversion(uint8_t channel) {
 uint16_t ads1015_get_result(void) {
     // Wait for the single-shot conversion on the last-selected mux channel to
     // finish before reading the result. The OS bit reads 0 while converting and
-    // 1 when done; at 3300 SPS each conversion takes ~0.3ms. Without this wait the
+    // 1 when done; at 860 SPS each conversion takes ~1.2ms. Without this wait the
     // CONVERT register still holds the *previous* conversion (the other channel),
     // which made cv_in(0) and cv_in(1) return the same input. Bound the poll so a
     // missing/unresponsive ADC can't stall the cv_read_task forever.
@@ -171,9 +169,7 @@ uint16_t ads1015_get_result(void) {
         vTaskDelay(pdMS_TO_TICKS(1));
     }
     ads1015_read_register(ADS1015_REGISTER_CONVERT, buffer, 2);
-    // ADS1015 returns a 12-bit sample left-justified in the 16-bit register (low 4 bits 0);
-    // shift to the true 12-bit value (the cv_read_task min/max are on this 12-bit scale).
-    return (((uint16_t)buffer[0] << 8) | (uint16_t)buffer[1]) >> 4;
+    return ((uint16_t)buffer[0] << 8) | (uint16_t)buffer[1];
 }
 
 uint16_t read_ads1015_raw(uint8_t channel) {
@@ -207,8 +203,8 @@ float cv_input_hook(uint16_t channel) {
 #ifdef ESP_PLATFORM
 // FreeRTOS task: reads both ADS1015 channels in a loop, updates cv_cached_value.
 void cv_read_task(void *pvParameter) {
-    int32_t min = 66;    // -5V  (12-bit; was 1058 on the unshifted 16-bit reading, i.e. 1058 >> 4)
-    int32_t max = 1332;  // 5V   (12-bit; was 21312, i.e. 21312 >> 4)
+    int32_t min = 1058;  // -5V
+    int32_t max = 21312; // 5V
     // Scan both CV channels once per AMY audio block (AMY_BLOCK_SIZE / AMY_SAMPLE_RATE,
     // ~5.8ms at 256/44100) so CV tracks the audio block cadence. Expressed in RTOS ticks,
     // rounded to nearest, so it follows the audio rate regardless of tick rate; clamped to
