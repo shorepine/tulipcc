@@ -68,3 +68,39 @@ message — no `loop()` code, no callback.
 > (`tulip/amyboardweb/static/spss.js`); per-knob `change_code` wire commands live in
 > `tulip/amyboardweb/static/amy_parameters.js`; the full field spec is the `ic` row
 > of `amy/docs/api.md`.
+
+---
+
+## Audio pass-through: a synth >16 with two `AUDIO_IN0`/`AUDIO_IN1` oscs at `amp=10`
+
+To pass audio input through to the output (e.g. so a global effect like reverb is
+applied to live/external audio), make **one synth numbered >16** with **two oscs** —
+one per stereo channel — using the `AUDIO_IN0`/`AUDIO_IN1` wave types. **Do not** use a
+bare `amy.AUDIO_IN` (no such constant), a single mono osc, the default synth, or `amp<1`.
+
+Why each piece:
+- **`synth=18` (any 17–31):** synths 1–16 are bound to MIDI channels; 17+ are free for sketch-owned synths.
+- **`AUDIO_IN0` (left) + `AUDIO_IN1` (right):** audio-in is stereo — one osc per channel; there is no mono `AUDIO_IN`.
+- **two separate oscs, not chained:** send every per-osc setting (`wave`, `amp`, `pan`, `vel`, `note`) to *each* osc.
+- **`amp=10` per osc:** AMY's default volume attenuates ~−20 dB for synth headroom; `amp=10` restores unity (so `amp=0.9` is nearly silent).
+- **`vel=1, note=<any>`:** turns the osc on; the note number is required but ignored for `AUDIO_IN`.
+
+### Example — "pass audio input through with reverb"
+
+```python
+import amy
+amy.send(synth=18, num_voices=1, oscs_per_voice=2)
+amy.send(synth=18, osc=0, wave=amy.AUDIO_IN0, pan=0, amp=10)   # left
+amy.send(synth=18, osc=1, wave=amy.AUDIO_IN1, pan=1, amp=10)   # right
+amy.send(synth=18, osc=0, vel=1, note=60)   # note number required but ignored
+amy.send(synth=18, osc=1, vel=1, note=60)
+amy.send(reverb="0.8,0.85,0.5")             # global: level, liveness, damping[, xover_hz]
+
+def loop():
+    pass
+```
+
+Global effects (`reverb`, `chorus`, `echo`) then process the passed-through audio.
+
+> Source of truth: `tulip/amyboardweb/sketches/audiopassthru.py`; wave types and the
+> reverb (`h`) fields are in `amy/docs/api.md`.
