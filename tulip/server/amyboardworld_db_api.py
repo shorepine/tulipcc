@@ -1462,3 +1462,34 @@ def generate_amyboard_sketch(body: GenerateRequest, request: Request) -> dict[st
         "remaining_today": max(0, GENERATE_PER_IP_PER_DAY - (ip_count + 1)),
         "model": GENERATE_MODEL,
     }
+
+
+class DebugGenerateRequest(BaseModel):
+    description: str
+    current_code: str | None = None
+
+
+@app.post("/api/admin/generate_debug", dependencies=[Depends(_require_admin)])
+def admin_generate_debug(body: DebugGenerateRequest) -> dict[str, Any]:
+    """Admin-only debug box: run the real sketch-generation pipeline on an arbitrary
+    prompt with NO character cap and NO rate limit, returning the generated code plus
+    the validation verdict (never a 422). Same system prompt + AMY_AGENTS guidance +
+    model as the public endpoint, so it shows exactly what the live generator produces.
+    Spends API credits and is NOT written to the generations audit log."""
+    if not CLAUDE_API_KEY:
+        raise HTTPException(status_code=503, detail="Sketch generation is not configured on this server")
+    description = (body.description or "").strip()
+    if not description:
+        raise HTTPException(status_code=400, detail="Enter a prompt")
+    try:
+        result = _generate_sketch_via_claude(description, body.current_code)
+    except Exception as exc:  # noqa: BLE001 — surface the real failure to the admin
+        return {"ok": False, "error": _redact_secrets(f"{type(exc).__name__}: {exc}"), "code": "", "reason": "api error"}
+    return {
+        "ok": result["ok"],
+        "reason": result.get("reason", ""),
+        "code": result["code"],
+        "model": GENERATE_MODEL,
+        "input_tokens": result.get("input_tokens", 0),
+        "output_tokens": result.get("output_tokens", 0),
+    }
