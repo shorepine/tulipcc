@@ -66,7 +66,7 @@ amyboard.set_cv_out(channel=0, synth=0)  # clear the CV mapping
 
 ## CV inputs
 
-AMYboard has **two CV inputs** on 3.5mm jacks, powered by an ADS1115 16-bit ADC (I2C address `0x48`). They accept **-10V to +10V**.
+AMYboard has **two CV inputs** on 3.5mm jacks, powered by an ADS1015 12-bit ADC (I2C address `0x48`). They accept **-10V to +10V**.
 
 ```python
 import amyboard
@@ -76,7 +76,7 @@ volts = amyboard.cv_in(channel=0)
 print(f"CV in 1: {volts:.2f}V")
 
 # Read raw ADC value
-raw = amyboard.ads1115_raw(channel=0)
+raw = amyboard.ads1015_raw(channel=0)
 ```
 
 ### CV triggering

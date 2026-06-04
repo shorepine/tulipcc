@@ -603,13 +603,13 @@ def init_display():
     if display.available:
         display_startup()
 
-def ads1115_raw(channel=0):
+def ads1015_raw(channel=0):
     import ads1115
     adc = ads1115.ADS1115(get_i2c())
     raw = float(adc.read(channel1=channel))
     return raw
 
-# Calibrate the ADS1115 against the GP8413. Generates a csv file
+# Calibrate the ADS1015 against the GP8413. Generates a csv file
 def cv_cal(channel=0):
     vs = [-10,-9,-8,-7,-6,-5,-4,-3,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,3,4,5,6,7,8,9,10]
     print("Calibrating...")
@@ -617,7 +617,7 @@ def cv_cal(channel=0):
     for v in vs:
         cv_out(v, channel=channel)
         time.sleep(1)
-        raw = ads1115(channel)
+        raw = ads1015_raw(channel)
         out.write("%f,%d\n" % (v, raw))
     out.close()
     print("Done. Written to cal.csv")
