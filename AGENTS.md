@@ -50,6 +50,18 @@ If an agent makes changes to `amy`, the agent must follow this exact sequence:
 6. Commit the submodule pointer update in `tulipcc`.
 7. Merge/push `tulipcc` to `main`.
 
+### Refresh the generator's vendored AMY docs when the pin changes
+
+The AMYboard sketch generator (`tulip/server/amyboardworld_db_api.py`) reads a
+**committed snapshot** of `amy/docs/*.md` from `tulip/server/refdocs/amy/`, because
+the `amy` submodule is not checked out in the Railway deploy. Whenever you bump the
+`amy` pin (either flow above), refresh that snapshot so the generator's docs match the
+pinned commit:
+
+1. `python3 tulip/server/sync_amy_docs.py` (sources from the pinned commit — the local
+   submodule if checked out, else GitHub raw at the pinned SHA).
+2. Commit the updated `tulip/server/refdocs/amy/`.
+
 ## Testing `tulipcc`
 
 The easiest ways to test `tulipcc` are:
