@@ -2294,7 +2294,8 @@ function world_api_url(pathAndQuery) {
 
 // "Prompt to sketch": send the user's description to the World API, which calls
 // the Claude API server-side and returns a generated AMYboard sketch. The result
-// is loaded into the editor (not auto-run) so the user can review it first.
+// is loaded into the editor and then auto-started (same as the Restart Sketch
+// button) so the user hears it right away.
 async function generate_sketch_from_prompt() {
     var input = document.getElementById("prompt-to-sketch-input");
     var btn = document.getElementById("prompt-to-sketch-btn");
@@ -2316,7 +2317,7 @@ async function generate_sketch_from_prompt() {
     var prevLabel = btn.textContent;
     btn.disabled = true;
     btn.textContent = "Creating…";
-    setStatus("Creating…", "text-muted");
+    setStatus("Creating sketch. May take a couple of minutes…", "text-muted");
 
     try {
         var currentCode = (typeof editor !== "undefined" && editor) ? editor.getValue() : "";
@@ -2341,6 +2342,13 @@ async function generate_sketch_from_prompt() {
                 "Loaded into the editor." + (remaining !== null ? (" " + remaining + " left today.") : ""),
                 "text-success"
             );
+            // Start the freshly generated sketch automatically, exactly as the
+            // "Restart Sketch" button does, so the user hears it right away.
+            try {
+                await restart_sketch();
+            } catch (e) {
+                console.warn("auto-start after generate failed:", e);
+            }
         } else {
             setStatus("No sketch was returned.", "text-danger");
         }
