@@ -209,6 +209,59 @@ No `note`/`vel`/`freq`, no `midi.add_callback` — the synth sounds from incomin
 
 ---
 
+## Multiple *audible* oscs per voice: a note-on reaches only osc 0 — chain the rest (or trigger each), and mind the velocity-multiplied `amp`
+
+When a voice has more than one **audible** osc (e.g. two detuned saws for a fat or
+phasing pad), a single synth note-on — MIDI, or `amy.send(synth=N, note=…, vel=…)` —
+lands on **only the base osc (osc 0)**. The other audible oscs stay **silent** until
+they get their own note-on. (A `mod_source`/LFO osc is the exception: it's silent by
+design and needs no note-on — see the LFO section.) Drive every audible osc from one
+note in one of two ways:
+
+- **Prefer `chained_osc`:** set `chained_osc=1` on osc 0 so its note/velocity
+  propagate to osc 1 (chain on, `chained_osc=2` on osc 1, etc.). Each osc keeps its own
+  `wave`/`freq`/`pan`; the chain shares one filter. Once chained, the **default `amp`
+  just works** — don't override it.
+- **`midi_note_cmd`** when you want each osc triggered *independently* (e.g. hard-panned
+  L/R layers): give the synth a note handler that fires a note-on at every osc.
+  Substitutions: `%i`=channel, `%v`=velocity, `%n`=note. Wire codes: `i`=synth, `v`=osc,
+  `l`=vel, `n`=note; `Z` separates phrases. So
+  `'i%iv0l%vn%nZi%iv1l%vn%n'` = "on each note, note-on osc 0 **and** osc 1."
+
+Why silence happens: the default `amp='0,0,1,1,0,0,0'` is amplitude = `vel × eg0` — amp
+coefficients **multiply**, so an osc that never receives a note-on velocity computes
+`amp = 0`. If an osc genuinely won't get a note-on, give `amp` a non-zero **const**
+(the 1st coefficient) instead, `amp='1,0,1,1,0,0,0'`, so it sounds from its envelope.
+
+### Example — "a phasing saw voice" (two detuned saws per voice + a pitch-drift LFO)
+
+```python
+import amy
+# 5-voice synth, 3 oscs/voice: osc0 + osc1 = detuned saws, osc2 = silent pitch-drift LFO
+amy.send(synth=1, num_voices=5, oscs_per_voice=3)
+# osc 0: saw A, left.  chain to osc 1 so ONE note-on triggers both audible oscs.
+amy.send(synth=1, osc=0, wave=amy.SAW_DOWN, pan=0.2, chained_osc=1)
+# osc 1: saw B, right, ~8 cents sharp; osc2 LFO drifts its pitch -> phasing
+amy.send(synth=1, osc=1, wave=amy.SAW_DOWN, pan=0.8,
+         freq='442,1,0,0,0,0.01,1', mod_source=2)
+# osc 2: slow sine LFO.  a mod_source osc is silent, so it needs NO note-on.
+amy.send(synth=1, osc=2, wave=amy.SINE, freq=0.15, amp=1)
+
+def loop():
+    pass
+```
+
+Both saws sound on every note (they're chained, so the default `amp` works). To trigger
+them independently instead, drop `chained_osc=1` and add
+`amy.send(synth=1, midi_note_cmd='i%iv0l%vn%nZi%iv1l%vn%n')`.
+
+> Source of truth: `chained_osc` note/velocity propagation in `amy/docs/juno_patches.md`
+> and `amy/docs/api.md` (`c`); "Oscillators will not become audible until a `velocity`
+> over 0 is set" plus synth→base-osc routing in `amy/docs/synth.md`; `amp` default/multiply
+> and `midi_note_cmd` (`io`) with wire codes `i`/`v`/`l`/`n` in `amy/docs/api.md`.
+
+---
+
 ## Audio pass-through: a synth >16 with two `AUDIO_IN0`/`AUDIO_IN1` oscs at `amp=10`
 
 To pass audio input through to the output (e.g. so a global effect like reverb is
