@@ -42,6 +42,40 @@ kwargs above (see the LFO section). If a name isn't in the right list, it doesn'
 
 ---
 
+## Timing & rhythm: `loop()` runs every 32nd note from the always-on sequencer — count calls, don't clock-math beats
+
+AMY's sequencer is always running and calls `loop()` once per **32nd note**. For anything
+tempo- or beat-based, schedule events by counting `loop()` calls on that grid — **don't**
+convert BPM to milliseconds and measure the gap between beats with a wall clock
+(`tulip.amy_ticks_ms()` / `time`). The grid is tempo-locked for you, so hand-rolled beat
+math is just extra code that drifts.
+
+Set the tempo with **`sequencer.tempo(bpm)`** (`import sequencer`). The grid is always in
+32nd notes: 1 beat (quarter) = **8** calls, 8th = 4, 16th = 2, a 4/4 bar = 32.
+
+### Example — "a four-on-the-floor kick drum, 4/4 at 120 BPM"
+
+```python
+import amy, sequencer
+
+sequencer.tempo(120)
+# GM drum synth: synth_flags=3 = GM note map, note 36 = kick
+amy.send(synth=10, num_voices=1, oscs_per_voice=1, synth_flags=3, wave=amy.PCM, amp=5)
+
+KICK = 36
+step = 0
+def loop():
+    global step
+    if step % 8 == 0:        # every 8 thirty-second notes = one beat -> four-on-the-floor
+        amy.send(synth=10, note=KICK, vel=1)
+    step += 1
+```
+
+> Source of truth: `tulip/amyboardweb/sketches/house_generator.py`, `acid_generator.py`
+> (`sequencer.tempo(...)` + 32-steps-per-bar patterns driven by a `loop()` step counter).
+
+---
+
 ## MIDI-controlled parameters: map the CC inside AMY (`midi_cc` / `ic`), don't poll in `loop()`
 
 When the user asks for a synth parameter (resonance, filter cutoff, amp, pan,
@@ -97,6 +131,34 @@ message — no `loop()` code, no callback.
 > (`tulip/amyboardweb/static/spss.js`); per-knob `change_code` wire commands live in
 > `tulip/amyboardweb/static/amy_parameters.js`; the full field spec is the `ic` row
 > of `amy/docs/api.md`.
+
+---
+
+## Polyphony & note stealing are automatic: `num_voices` sets them; `num_voices=1` is monophonic
+
+The synth allocates and steals voices for you as MIDI notes arrive — you never track
+held notes or implement note priority yourself. A **monophonic** synth is simply
+`num_voices=1`: the single voice is reused for each new note, automatically. Add
+`portamento` for a gliding mono lead.
+
+**Don't** hand-roll a held-note stack in `midi.add_callback` to fake monophony, and
+**don't** set `grab_midi_notes=0` — a synth plays incoming MIDI by default. (Reach for
+`grab_midi_notes=0` + a callback only for genuinely custom per-note behavior the engine
+can't express, e.g. one key → a whole chord.)
+
+### Example — "a monophonic synth"
+
+```python
+import amy
+
+amy.send(synth=1, patch=0, num_voices=1)   # num_voices=1 -> mono; voice stealing is automatic
+amy.send(synth=1, portamento=80)           # optional: glide between notes for a mono lead
+
+def loop():
+    pass
+```
+
+That whole sketch is a playable mono synth — MIDI on channel 1 drives it, no callback.
 
 ---
 
