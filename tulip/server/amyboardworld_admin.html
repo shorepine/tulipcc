@@ -406,9 +406,11 @@
           ? '<span class="ok">valid sketch</span>'
           : '<span class="err">invalid: ' + esc(data.reason || '') + '</span>';
         const lookups = data.tool_calls || 0;
+        const cached = data.cache_read_input_tokens || 0;
         meta.innerHTML = verdict + ' &middot; ' + esc(data.model || '') + ' &middot; ' +
           esc(lookups) + ' lookup' + (lookups === 1 ? '' : 's') + ' &middot; ' +
-          esc(data.input_tokens) + ' in / ' + esc(data.output_tokens) + ' out &middot; ' +
+          esc(data.input_tokens) + ' in' + (cached ? ' (+' + esc(cached) + ' cached)' : '') +
+          ' / ' + esc(data.output_tokens) + ' out &middot; ' +
           esc((data.code || '').length) + ' chars';
         out.textContent = data.code || '(no code returned)';
       }

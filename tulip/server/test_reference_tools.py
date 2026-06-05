@@ -76,6 +76,35 @@ check("dispatch search", m._run_reference_tool("search_reference", {"query": "re
 check("dispatch unknown is error", m._run_reference_tool("nope", {}).get("is_error") is True)
 check("dispatch bad input type tolerated", m._run_reference_tool("list_reference", None).get("content") is not None)
 
+# --- rolling prompt-cache breakpoint ---
+
+def _count_cc(msgs):
+    n = 0
+    for msg in msgs:
+        c = msg.get("content")
+        if isinstance(c, list):
+            n += sum(1 for b in c if isinstance(b, dict) and "cache_control" in b)
+    return n
+
+
+_msgs = [
+    {"role": "user", "content": "frame string"},
+    {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "a", "content": "x"}]},
+]
+m._apply_rolling_cache_breakpoint(_msgs)
+check("cache: marks newest message", _msgs[-1]["content"][-1].get("cache_control") == {"type": "ephemeral"})
+check("cache: exactly one breakpoint", _count_cc(_msgs) == 1)
+# advance a turn — breakpoint must move, not accumulate
+_msgs.append({"role": "user", "content": [{"type": "tool_result", "tool_use_id": "b", "content": "y"}]})
+m._apply_rolling_cache_breakpoint(_msgs)
+check("cache: still exactly one breakpoint after advancing", _count_cc(_msgs) == 1)
+check("cache: breakpoint moved to newest", _msgs[-1]["content"][-1].get("cache_control") == {"type": "ephemeral"})
+check("cache: old breakpoint cleared", "cache_control" not in _msgs[1]["content"][-1])
+# string-only last message (initial frame / corrective retry): no crash, no breakpoint
+_msgs_str = [{"role": "user", "content": "hello"}]
+m._apply_rolling_cache_breakpoint(_msgs_str)
+check("cache: string content tolerated", _count_cc(_msgs_str) == 0)
+
 # --- agentic loop control flow (mocked Anthropic client, no network) ---
 import types  # noqa: E402
 
@@ -87,7 +116,7 @@ def _ns(**kw):
 
 
 def _usage():
-    return _ns(input_tokens=10, output_tokens=5, cache_read_input_tokens=2)
+    return _ns(input_tokens=10, output_tokens=5, cache_read_input_tokens=2, cache_creation_input_tokens=3)
 
 
 def _tool_use(name="search_reference", inp=None, _id="t1"):
@@ -130,7 +159,12 @@ try:
     check("loop: 2 tool calls serviced", res["tool_calls"] == 2)
     check("loop: returns the sketch", "import amy" in res["code"])
     check("loop: tokens accumulated across turns", res["input_tokens"] == 30 and res["output_tokens"] == 15)
+    check("loop: cache fields accumulated", res["cache_read_input_tokens"] == 6 and res["cache_creation_input_tokens"] == 9)
     check("loop: first call sent tools", "tools" in rec["calls"][0])
+    check("loop: a cache breakpoint was set on a later turn",
+          any(isinstance(msg.get("content"), list)
+              and any(isinstance(b, dict) and "cache_control" in b for b in msg["content"])
+              for call in rec["calls"] for msg in call["messages"]))
 
     # Turn cap: model keeps calling tools forever; loop must stop and force a final answer.
     cap = m.GENERATE_MAX_TOOL_TURNS
