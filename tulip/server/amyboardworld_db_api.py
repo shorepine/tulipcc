@@ -95,6 +95,12 @@ DISCORD_BOT_TOKEN = os.getenv("WORLD_DISCORD_BOT_TOKEN", os.getenv("AMYBOARDWORL
 CLAUDE_API_KEY = os.getenv("CLAUDE_KEY", os.getenv("ANTHROPIC_API_KEY", ""))
 GENERATE_MODEL = os.getenv("AMYBOARD_GENERATE_MODEL", "claude-sonnet-4-6")
 GENERATE_MAX_TOKENS = int(os.getenv("AMYBOARD_GENERATE_MAX_TOKENS", "4096"))
+# Agentic reference tools: let the generator search/read this repo's example
+# sketches, AMY/AMYboard docs, and MicroPython libs before writing (see the
+# _reference_* helpers). Set AMYBOARD_GENERATE_USE_TOOLS=0 to fall back to the
+# single-shot generator. MAX_TOOL_TURNS bounds cost/latency per request.
+GENERATE_USE_TOOLS = os.getenv("AMYBOARD_GENERATE_USE_TOOLS", "1").strip().lower() not in ("0", "false", "no", "")
+GENERATE_MAX_TOOL_TURNS = int(os.getenv("AMYBOARD_GENERATE_MAX_TOOL_TURNS", "6"))
 # Abuse / cost controls, enforced per rolling 24h window.
 GENERATE_PER_IP_PER_DAY = int(os.getenv("AMYBOARD_GENERATE_PER_IP_PER_DAY", "10"))
 GENERATE_GLOBAL_PER_DAY = int(os.getenv("AMYBOARD_GENERATE_GLOBAL_PER_DAY", "200"))
@@ -1338,13 +1344,274 @@ def _redact_secrets(text: str) -> str:
     return out
 
 
+# --- Reference tools: let the generator consult real project source ---------
+# The generator can search/read this repo's example sketches, AMY + AMYboard
+# docs, and importable MicroPython libraries before writing a sketch. This is
+# the "Tier 2" upgrade: instead of one blind completion, Claude runs a tool-use
+# loop (search -> read -> write) against ground-truth source, the same way the
+# Claude Code app works. All roots are READ-ONLY and the path is allowlisted, so
+# a request can never read server source, secrets, or anything off-list.
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_SERVER_DIR = Path(__file__).resolve().parent
+
+# category -> (root dirs, allowed file suffixes). amy_docs is a vendored snapshot
+# (see sync_amy_docs.py) because the amy submodule isn't checked out in deploys.
+_REFERENCE_ROOTS: dict[str, tuple[tuple[Path, ...], tuple[str, ...]]] = {
+    "sketches": ((_REPO_ROOT / "tulip" / "amyboardweb" / "sketches",), (".py",)),
+    "amy_docs": ((_SERVER_DIR / "refdocs" / "amy",), (".md",)),
+    "amyboard_docs": ((_REPO_ROOT / "docs" / "amyboard",), (".md",)),
+    "py_libs": (
+        (_REPO_ROOT / "tulip" / "shared" / "py", _REPO_ROOT / "tulip" / "shared" / "amyboard-py"),
+        (".py",),
+    ),
+}
+_REFERENCE_CATEGORIES = list(_REFERENCE_ROOTS.keys())
+
+_REF_MAX_HITS = 60          # cap search hits returned to the model
+_REF_MAX_READ_CHARS = 60000  # cap a single read_reference payload
+_REF_MAX_QUERY = 200
+
+_REFERENCE_TOOL_GUIDANCE = """
+
+REFERENCE TOOLS (use them before writing — don't guess):
+You can call tools to consult this project's real source. Prefer looking up exact
+APIs/examples over guessing, and verify any amy.send() kwarg, library function, or
+patch you're unsure about.
+- list_reference(category?) — list available reference files.
+- search_reference(query, category?) — find where a topic/kwarg/function appears (file:line snippets).
+- read_reference(path) — read a reference file in full.
+Categories: sketches (complete example sketch.py files), amy_docs (the AMY engine
+docs incl. synth.md API + ctrl/coefficients and api.md), amyboard_docs (AMYboard
+hardware/usage docs), py_libs (importable MicroPython modules: music, sequencer,
+midi, drums, juno6, patches, synth, tulip, …). Keep lookups focused (a few targeted
+calls), then output ONLY the final sketch.py.
+"""
+
+_REFERENCE_TOOLS = [
+    {
+        "name": "list_reference",
+        "description": (
+            "List available reference files (real project source the generator can consult: "
+            "example sketches, AMY/AMYboard docs, MicroPython libraries). Optionally filter by "
+            "category. Use this to discover what exists before searching or reading."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "category": {"type": "string", "enum": _REFERENCE_CATEGORIES, "description": "Optional category filter."}
+            },
+        },
+    },
+    {
+        "name": "search_reference",
+        "description": (
+            "Search the project's reference files for a keyword and return matching file:line "
+            "snippets. Use it to find where an AMY kwarg, library function, patch, or technique is "
+            "actually used (e.g. 'mod_source', 'sequencer.tempo', 'synth_flags'), then read_reference "
+            "the most relevant file."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Keyword or phrase to search for (case-insensitive)."},
+                "category": {"type": "string", "enum": _REFERENCE_CATEGORIES, "description": "Optional category filter."},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "read_reference",
+        "description": (
+            "Read the full contents of one reference file by its repo-relative path (as returned by "
+            "search_reference/list_reference). Use it to study a real example sketch or read the exact "
+            "AMY/AMYboard documentation before writing code."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {
+                    "type": "string",
+                    "description": "Repo-relative path, e.g. 'tulip/amyboardweb/sketches/house_generator.py' or 'tulip/server/refdocs/amy/synth.md'.",
+                }
+            },
+            "required": ["path"],
+        },
+    },
+]
+
+
+def _is_within(child: Path, parent: Path) -> bool:
+    try:
+        child.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
+def _norm_category(category: Any) -> Any:
+    """None/'' -> None (all); a valid key -> itself; anything else -> 'INVALID'."""
+    if category in (None, "", "all"):
+        return None
+    if category in _REFERENCE_ROOTS:
+        return category
+    return "INVALID"
+
+
+def _iter_reference_files(category: str | None = None):
+    for cat, (roots, suffixes) in _REFERENCE_ROOTS.items():
+        if category and cat != category:
+            continue
+        for root in roots:
+            if not root.is_dir():
+                continue
+            for path in sorted(root.rglob("*")):
+                if path.is_file() and path.suffix in suffixes:
+                    yield cat, path
+
+
+def _ref_rel(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(_REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _resolve_reference_path(rel_path: str) -> Path | None:
+    """Map a requested path to a real file, but ONLY if it lives inside an
+    allowlisted reference root with an allowed suffix. Blocks traversal,
+    absolute paths, and symlink escapes (everything is resolved first)."""
+    rel = (rel_path or "").strip().lstrip("/")
+    if not rel or "\x00" in rel or "\\" in rel:
+        return None
+    candidate = (_REPO_ROOT / rel).resolve()
+    if not candidate.is_file():
+        return None
+    for roots, suffixes in _REFERENCE_ROOTS.values():
+        if candidate.suffix not in suffixes:
+            continue
+        for root in roots:
+            if _is_within(candidate, root.resolve()):
+                return candidate
+    return None
+
+
+def _ref_first_hint(path: Path) -> str:
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    first_nonempty = ""
+    for line in text.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if not first_nonempty:
+            first_nonempty = s
+        if path.suffix == ".py" and s.upper().startswith("# DESCRIPTION:"):
+            return s.split(":", 1)[1].strip()[:100]
+        if path.suffix == ".md" and s.startswith("#"):
+            return s.lstrip("#").strip()[:100]
+    return first_nonempty[:100]
+
+
+def _ref_list(category: Any) -> dict[str, Any]:
+    category = _norm_category(category)
+    if category == "INVALID":
+        return {"content": "Unknown category. Use one of: " + ", ".join(_REFERENCE_CATEGORIES), "is_error": True}
+    lines = []
+    for _cat, path in _iter_reference_files(category):
+        hint = _ref_first_hint(path)
+        lines.append(_ref_rel(path) + (f"  — {hint}" if hint else ""))
+    if not lines:
+        return {"content": "No reference files found" + (f" in {category}" if category else "") + "."}
+    header = f"{len(lines)} reference file(s)" + (f" in {category}" if category else "") + ":\n"
+    return {"content": header + "\n".join(lines)}
+
+
+def _ref_search(query: str, category: Any) -> dict[str, Any]:
+    q = (query or "").strip()[:_REF_MAX_QUERY]
+    if not q:
+        return {"content": "Provide a non-empty query (e.g. 'mod_source', 'reverb', 'sequencer.tempo').", "is_error": True}
+    category = _norm_category(category)
+    if category == "INVALID":
+        return {"content": "Unknown category. Use one of: " + ", ".join(_REFERENCE_CATEGORIES), "is_error": True}
+    ql = q.lower()
+    hits: list[str] = []
+    truncated = False
+    for _cat, path in _iter_reference_files(category):
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        rel = _ref_rel(path)
+        for i, line in enumerate(text.splitlines(), 1):
+            if ql in line.lower():
+                hits.append(f"{rel}:{i}: {line.strip()[:200]}")
+                if len(hits) >= _REF_MAX_HITS:
+                    truncated = True
+                    break
+        if truncated:
+            break
+    if not hits:
+        files = [_ref_rel(p) for _c, p in _iter_reference_files(category)]
+        listing = "\n".join(files[:80])
+        return {
+            "content": f"No matches for '{q}'" + (f" in {category}" if category else "")
+            + ".\nFiles you can read_reference:\n" + listing
+        }
+    header = f"{len(hits)}{'+' if truncated else ''} match(es) for '{q}'" + (f" in {category}" if category else "") + ":\n"
+    return {"content": header + "\n".join(hits)}
+
+
+def _ref_read(path: str) -> dict[str, Any]:
+    resolved = _resolve_reference_path(path)
+    if resolved is None:
+        return {
+            "content": f"Not an allowed reference file: {path!r}. Use list_reference/search_reference to find valid "
+            f"paths (categories: {', '.join(_REFERENCE_CATEGORIES)}).",
+            "is_error": True,
+        }
+    try:
+        text = resolved.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        return {"content": f"Could not read {path}: {exc}", "is_error": True}
+    if len(text) > _REF_MAX_READ_CHARS:
+        text = text[:_REF_MAX_READ_CHARS] + f"\n\n…[truncated at {_REF_MAX_READ_CHARS} chars]"
+    return {"content": f"# {_ref_rel(resolved)}\n{text}"}
+
+
+def _run_reference_tool(name: str, tool_input: Any) -> dict[str, Any]:
+    """Dispatch a tool_use to its handler. Always returns {content, is_error?}."""
+    if not isinstance(tool_input, dict):
+        tool_input = {}
+    try:
+        if name == "list_reference":
+            return _ref_list(tool_input.get("category"))
+        if name == "search_reference":
+            return _ref_search(tool_input.get("query", ""), tool_input.get("category"))
+        if name == "read_reference":
+            return _ref_read(tool_input.get("path", ""))
+        return {"content": f"Unknown tool: {name}", "is_error": True}
+    except Exception as exc:  # noqa: BLE001 — never let a tool bug break the loop
+        return {"content": f"Tool error: {type(exc).__name__}: {exc}", "is_error": True}
+
+
 def _generate_sketch_via_claude(description: str, current_code: str | None) -> dict[str, Any]:
-    """Call the Anthropic API once (with one corrective retry) and return the
-    extracted, validated sketch plus token usage. Raises on API errors."""
+    """Generate a sketch via the Anthropic API, running an agentic reference-tool
+    loop (search/read this repo's sketches+docs+libs) until the model produces a
+    final answer, then a structural-validation corrective retry. Returns the
+    extracted, validated sketch plus token/tool usage. Raises on API errors."""
     import anthropic  # lazy: server still imports if the dep is absent
 
     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
-    system_text = _AMYBOARD_SYSTEM_PROMPT + _load_amy_agents_guidance()
+    system_text = _AMYBOARD_SYSTEM_PROMPT
+    if GENERATE_USE_TOOLS:
+        system_text += _REFERENCE_TOOL_GUIDANCE
+    system_text += _load_amy_agents_guidance()
+    # One cache breakpoint on the system block caches the tools prefix too (the
+    # cache prefix order is tools -> system -> messages), so the loop's repeated
+    # turns get cache reads on the big stable prefix.
     system = [{"type": "text", "text": system_text, "cache_control": {"type": "ephemeral"}}]
 
     frame = (
@@ -1361,22 +1628,66 @@ def _generate_sketch_via_claude(description: str, current_code: str | None) -> d
     frame += "\n\nOutput only the contents of sketch.py."
     messages: list[dict[str, Any]] = [{"role": "user", "content": frame}]
 
-    def _call() -> Any:
-        return client.messages.create(
+    totals = {"in": 0, "out": 0, "cache": 0}
+
+    def _create(use_tools: bool) -> Any:
+        kwargs: dict[str, Any] = dict(
             model=GENERATE_MODEL,
             max_tokens=GENERATE_MAX_TOKENS,
             system=system,
             messages=messages,
         )
+        if use_tools and GENERATE_USE_TOOLS:
+            kwargs["tools"] = _REFERENCE_TOOLS
+        r = client.messages.create(**kwargs)
+        u = getattr(r, "usage", None)
+        totals["in"] += getattr(u, "input_tokens", 0) or 0
+        totals["out"] += getattr(u, "output_tokens", 0) or 0
+        totals["cache"] += getattr(u, "cache_read_input_tokens", 0) or 0
+        return r
 
-    resp = _call()
+    tool_calls = 0
+    resp = _create(use_tools=True)
+
+    # Agentic loop: keep servicing tool calls until the model stops asking.
+    turns = 0
+    while getattr(resp, "stop_reason", "") == "tool_use":
+        messages.append({"role": "assistant", "content": resp.content})
+        tool_results: list[dict[str, Any]] = []
+        for block in resp.content:
+            if getattr(block, "type", "") == "tool_use":
+                tool_calls += 1
+                out = _run_reference_tool(block.name, block.input)
+                tr: dict[str, Any] = {
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": out.get("content", ""),
+                }
+                if out.get("is_error"):
+                    tr["is_error"] = True
+                tool_results.append(tr)
+        turns += 1
+        capped = turns >= GENERATE_MAX_TOOL_TURNS
+        if capped:
+            tool_results.append(
+                {
+                    "type": "text",
+                    "text": "You've used the maximum number of reference lookups. Output ONLY the final sketch.py now — no more tool calls.",
+                }
+            )
+        messages.append({"role": "user", "content": tool_results})
+        # After the cap, drop the tools so the model must answer with text.
+        resp = _create(use_tools=not capped)
+        if capped:
+            break
+
     raw = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
     code = _extract_sketch_code(raw)
     ok, reason = _validate_sketch(code)
 
     if not ok:
         # One corrective retry — cheaper than failing the user outright.
-        messages.append({"role": "assistant", "content": raw})
+        messages.append({"role": "assistant", "content": resp.content})
         messages.append(
             {
                 "role": "user",
@@ -1387,20 +1698,20 @@ def _generate_sketch_via_claude(description: str, current_code: str | None) -> d
                 ),
             }
         )
-        resp = _call()
+        resp = _create(use_tools=False)
         raw = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
         code = _extract_sketch_code(raw)
         ok, reason = _validate_sketch(code)
 
     code = _redact_secrets(code)
-    usage = getattr(resp, "usage", None)
     return {
         "ok": ok,
         "reason": reason,
         "code": code,
-        "input_tokens": getattr(usage, "input_tokens", 0) or 0,
-        "output_tokens": getattr(usage, "output_tokens", 0) or 0,
-        "cache_read_input_tokens": getattr(usage, "cache_read_input_tokens", 0) or 0,
+        "input_tokens": totals["in"],
+        "output_tokens": totals["out"],
+        "cache_read_input_tokens": totals["cache"],
+        "tool_calls": tool_calls,
     }
 
 
@@ -1492,4 +1803,5 @@ def admin_generate_debug(body: DebugGenerateRequest) -> dict[str, Any]:
         "model": GENERATE_MODEL,
         "input_tokens": result.get("input_tokens", 0),
         "output_tokens": result.get("output_tokens", 0),
+        "tool_calls": result.get("tool_calls", 0),
     }
