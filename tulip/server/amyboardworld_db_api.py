@@ -1597,6 +1597,28 @@ def _run_reference_tool(name: str, tool_input: Any) -> dict[str, Any]:
         return {"content": f"Tool error: {type(exc).__name__}: {exc}", "is_error": True}
 
 
+def _apply_rolling_cache_breakpoint(messages: list[dict[str, Any]]) -> None:
+    """Keep ONE rolling prompt-cache breakpoint on the most recent message so the
+    tool-loop history (big re-sent tool results like a whole doc) is read from
+    cache at ~0.1x on later turns instead of re-sent at full price. The static
+    system/tools breakpoint plus this one is 2 total — well under the 4 limit.
+
+    We only ever attach cache_control to the plain dict blocks we build (the
+    tool_result / text turns); assistant turns hold SDK block objects and are left
+    untouched (they're still covered by the prefix that the breakpoint caches)."""
+    for msg in messages:
+        content = msg.get("content")
+        if isinstance(content, list):
+            for blk in content:
+                if isinstance(blk, dict):
+                    blk.pop("cache_control", None)
+    if not messages:
+        return
+    last_content = messages[-1].get("content")
+    if isinstance(last_content, list) and last_content and isinstance(last_content[-1], dict):
+        last_content[-1]["cache_control"] = {"type": "ephemeral"}
+
+
 def _generate_sketch_via_claude(description: str, current_code: str | None) -> dict[str, Any]:
     """Generate a sketch via the Anthropic API, running an agentic reference-tool
     loop (search/read this repo's sketches+docs+libs) until the model produces a
@@ -1628,9 +1650,12 @@ def _generate_sketch_via_claude(description: str, current_code: str | None) -> d
     frame += "\n\nOutput only the contents of sketch.py."
     messages: list[dict[str, Any]] = [{"role": "user", "content": frame}]
 
-    totals = {"in": 0, "out": 0, "cache": 0}
+    totals = {"in": 0, "out": 0, "cache": 0, "cache_create": 0}
 
     def _create(use_tools: bool) -> Any:
+        # Roll the cache breakpoint to the newest message so the loop's growing
+        # history is cache-read on later turns instead of re-sent at full price.
+        _apply_rolling_cache_breakpoint(messages)
         kwargs: dict[str, Any] = dict(
             model=GENERATE_MODEL,
             max_tokens=GENERATE_MAX_TOKENS,
@@ -1644,6 +1669,7 @@ def _generate_sketch_via_claude(description: str, current_code: str | None) -> d
         totals["in"] += getattr(u, "input_tokens", 0) or 0
         totals["out"] += getattr(u, "output_tokens", 0) or 0
         totals["cache"] += getattr(u, "cache_read_input_tokens", 0) or 0
+        totals["cache_create"] += getattr(u, "cache_creation_input_tokens", 0) or 0
         return r
 
     tool_calls = 0
@@ -1711,6 +1737,7 @@ def _generate_sketch_via_claude(description: str, current_code: str | None) -> d
         "input_tokens": totals["in"],
         "output_tokens": totals["out"],
         "cache_read_input_tokens": totals["cache"],
+        "cache_creation_input_tokens": totals["cache_create"],
         "tool_calls": tool_calls,
     }
 
@@ -1735,11 +1762,11 @@ def generate_amyboard_sketch(body: GenerateRequest, request: Request) -> dict[st
     since_ms = _now_ms() - 24 * 60 * 60 * 1000
     ip_count, global_count = _count_generations_since(ip, since_ms)
     if global_count >= GENERATE_GLOBAL_PER_DAY:
-        raise HTTPException(status_code=429, detail="Sketch generation is busy today — please try again tomorrow")
+        raise HTTPException(status_code=429, detail="Sketch generation is busy right now — please try again later")
     if ip_count >= GENERATE_PER_IP_PER_DAY:
         raise HTTPException(
             status_code=429,
-            detail=f"Daily limit reached ({GENERATE_PER_IP_PER_DAY} sketches/day). Try again tomorrow.",
+            detail=f"Limit reached ({GENERATE_PER_IP_PER_DAY} sketches per 24 hours). Please try again later.",
         )
 
     try:
@@ -1803,5 +1830,6 @@ def admin_generate_debug(body: DebugGenerateRequest) -> dict[str, Any]:
         "model": GENERATE_MODEL,
         "input_tokens": result.get("input_tokens", 0),
         "output_tokens": result.get("output_tokens", 0),
+        "cache_read_input_tokens": result.get("cache_read_input_tokens", 0),
         "tool_calls": result.get("tool_calls", 0),
     }
