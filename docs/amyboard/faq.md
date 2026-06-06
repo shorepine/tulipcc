@@ -25,6 +25,14 @@ AMYboard comes with 3 things in a box:
 
 Boards are sold through Makerfabs and they ship in "batches" based on order sizes. For example, before AMYboard launched, they made a small batch, which sold out quickly at launch, so they made a bigger batch. Batches take a couple of weeks for them to manufacture boards. You should look at the [AMYboard page on Makerfabs](https://www.makerfabs.com/amyboard.html) to see the latest shipping estimate. 
 
+### How do I check my order or shipping status? (And the Makerfabs login won't work!)
+
+All orders, payments, and shipping are handled by [Makerfabs](https://www.makerfabs.com/amyboard.html) -- we (the AMYboard team) can't look up or change orders. For anything about your order or delivery:
+
+- **Order & tracking questions:** use the [Makerfabs contact page](https://www.makerfabs.com/contact) -- they're responsive.
+- **Tracking number:** it arrives in a **separate email** from your order confirmation, often a little later. Check your inbox (and spam) before assuming nothing shipped.
+- **Can't log in to the Makerfabs site?** Their login has been intermittent lately -- let the page fully load and try a couple of times.
+
 ### How do I power it?
 
 Three ways, and AMYboard uses the highest voltage present: **USB-C** (5V), **Eurorack 10-pin** (+12V), or the **I2C host / Grove** port (3.3V, e.g. from a Tulip). You don't need a computer -- a plain USB power supply is fine. See [Power Supplies](README.md#power-supplies).
