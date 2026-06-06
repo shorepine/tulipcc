@@ -69,8 +69,8 @@ Run from the repo root so the relative paths below resolve.
 
 **✅ Simple — recommended actions**
 Numbered, concrete, low-risk actions you *recommend*: file a clear bug,
-comment/cross-link an issue, add an FAQ/doc line, pin a canned answer. Each
-item = what + who reported it + the link. Keep them genuinely simple and
+comment/cross-link an issue, or add an FAQ/doc line (e.g. to
+`docs/amyboard/faq.md`). Each item = what + who reported it + the link. Keep them genuinely simple and
 high-confidence. Keep them numbered so Brian can reference an item by number,
 but do NOT invite readers to reply in Discord to trigger anything — nothing
 acts on Discord replies yet (that's v2).
@@ -89,9 +89,15 @@ the question + brief context + link.
   not write temp files, run other shell commands, or use file-edit tools — they
   will be blocked.
 - **Read-only except posting to #admin-actions.** Do NOT comment on, label,
-  close, or otherwise modify any GitHub issue/PR/discussion. Do NOT post to any
-  Discord channel other than #admin-actions. You only *recommend* actions; Brian
+  close, or otherwise modify any GitHub issue/PR/discussion. The bot must
+  **never write to any Discord channel other than #admin-actions** — no posting
+  or pinning in #amyboard, #general, etc. You only *recommend* actions; Brian
   executes them.
+- **Recommend FAQ/doc or GitHub fixes, never Discord ones.** For recurring
+  community questions, propose adding to the docs/FAQ (e.g.
+  `docs/amyboard/faq.md`) or filing/commenting on a GitHub issue — never
+  "post/pin a canned answer in #channel". The bot does not speak to the
+  community.
 - Never print or echo the bot token.
 - If nothing notable turned up, post a single line ("Quiet period — nothing
   needs you") rather than padding the digest.
