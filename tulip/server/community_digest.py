@@ -235,9 +235,10 @@ def _discord_recent(channel_id, token, cutoff_dt):
 
 
 def cmd_gather(args):
-    cutoff_dt = (datetime.datetime.now(datetime.timezone.utc)
-                 - datetime.timedelta(hours=args.hours))
+    now = datetime.datetime.now(datetime.timezone.utc)
+    cutoff_dt = now - datetime.timedelta(hours=args.hours)
     result = {
+        "generated_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "generated_since": cutoff_dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
         "window_hours": args.hours,
         "github": {},

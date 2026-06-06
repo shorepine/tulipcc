@@ -19,7 +19,8 @@ Run from the repo root so the relative paths below resolve.
    This emits JSON of recent GitHub activity (open issues/PRs/discussions updated
    in the window, for shorepine/tulipcc and shorepine/amy) plus Discord messages
    from the community channels. The 14h window overlaps the 12h cadence so
-   nothing slips between runs.
+   nothing slips between runs. Read its stdout directly — do not redirect it to a
+   file.
 
 2. **Avoid repeats.** Read your own most recent digest so you don't repeat
    unchanged items:
@@ -40,16 +41,21 @@ Run from the repo root so the relative paths below resolve.
    - Prefer GitHub items and concrete Discord problem reports over showcase/FYI
      chatter.
 
-4. **Post** the digest to #admin-actions. Write it to a temp file and pipe it:
+4. **Post** the digest to #admin-actions by piping each message to `post` on
+   stdin — one `python3` call per message, no temp files:
 
    ```
-   python3 tulip/server/community_digest.py post 1512856165321670719 < /tmp/digest.txt
+   python3 tulip/server/community_digest.py post 1512856165321670719 <<'MSG'
+   ...one message's text...
+   MSG
    ```
 
-   **Discord caps a message at 2000 characters** — split into multiple posts by
-   section if needed (e.g. one for "What's going on" + "Simple", a second for
-   "Needs your call"). Use **bare URLs** (Discord does not render `[text](url)`
-   in normal messages). Use `**bold**` for section headers.
+   **Discord caps a message at 2000 characters** — split into multiple such
+   calls by section if needed (e.g. one for "What's going on" + "Simple", a
+   second for "Needs your call"). Use **bare URLs** (Discord does not render
+   `[text](url)` in normal messages) and `**bold**` for section headers. Put the
+   `generated_at` date from the gather output in the header — do not shell out to
+   `date`.
 
 ## Format (match this shape and altitude)
 
@@ -76,6 +82,11 @@ the question + brief context + link.
 
 ## Hard rules (v1)
 
+- **You may only run `python3 tulip/server/community_digest.py …`.** That single
+  command (with its subcommands: gather, read-channel, post) is all you're
+  granted under the scheduled task's `dontAsk` mode. Do everything through it; do
+  not write temp files, run other shell commands, or use file-edit tools — they
+  will be blocked.
 - **Read-only except posting to #admin-actions.** Do NOT comment on, label,
   close, or otherwise modify any GitHub issue/PR/discussion. Do NOT post to any
   Discord channel other than #admin-actions. You only *recommend* actions; Brian
@@ -83,4 +94,3 @@ the question + brief context + link.
 - Never print or echo the bot token.
 - If nothing notable turned up, post a single line ("Quiet period — nothing
   needs you") rather than padding the digest.
-```
