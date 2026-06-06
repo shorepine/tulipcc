@@ -13,14 +13,15 @@ Run from the repo root so the relative paths below resolve.
 1. **Gather.** Run:
 
    ```
-   python3 tulip/server/community_digest.py gather --hours 14
+   python3 tulip/server/community_digest.py gather --hours 26
    ```
 
    This emits JSON of recent GitHub activity (open issues/PRs/discussions updated
    in the window, for shorepine/tulipcc and shorepine/amy) plus Discord messages
-   from the community channels. The 14h window overlaps the 12h cadence so
-   nothing slips between runs. Read its stdout directly — do not redirect it to a
-   file.
+   from the community channels. The 26h window is a full day plus ~2h of overlap,
+   so nothing slips through the gap between daily runs (the "avoid repeats" step
+   below soaks up the overlap). Read its stdout directly — do not redirect it to
+   a file.
 
 2. **Avoid repeats.** Read your own most recent digest so you don't repeat
    unchanged items:
