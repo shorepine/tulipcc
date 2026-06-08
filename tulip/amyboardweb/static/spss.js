@@ -2321,10 +2321,12 @@ async function generate_sketch_from_prompt() {
 
     try {
         var currentCode = (typeof editor !== "undefined" && editor) ? editor.getValue() : "";
+        var shareEl = document.getElementById("prompt-to-sketch-share");
+        var share = shareEl ? !!shareEl.checked : false;
         var resp = await fetch(world_api_url("/api/amyboardworld/generate"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ description: description, current_code: currentCode }),
+            body: JSON.stringify({ description: description, current_code: currentCode, share: share }),
         });
 
         var data = {};

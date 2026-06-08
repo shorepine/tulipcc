@@ -224,7 +224,8 @@ def _ensure_schema() -> None:
               model TEXT NOT NULL DEFAULT '',
               input_tokens INTEGER NOT NULL DEFAULT 0,
               output_tokens INTEGER NOT NULL DEFAULT 0,
-              code TEXT NOT NULL DEFAULT ''
+              code TEXT NOT NULL DEFAULT '',
+              share INTEGER NOT NULL DEFAULT 0
             );
             CREATE INDEX IF NOT EXISTS idx_gen_created ON generations(created_at_ms DESC);
             CREATE INDEX IF NOT EXISTS idx_gen_ip ON generations(client_ip);
@@ -233,6 +234,12 @@ def _ensure_schema() -> None:
         # Add the generated-code column to pre-existing generations tables.
         try:
             conn.execute("ALTER TABLE generations ADD COLUMN code TEXT NOT NULL DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+        # Add the share-consent column ("Let others see my prompt and result").
+        # Defaults to 0 (no consent) for old rows, which predate the checkbox.
+        try:
+            conn.execute("ALTER TABLE generations ADD COLUMN share INTEGER NOT NULL DEFAULT 0")
         except sqlite3.OperationalError:
             pass  # column already exists
 
@@ -1049,7 +1056,7 @@ def list_admin_generations(
     with _open_db() as conn:
         rows = conn.execute(
             f"""
-            SELECT id, created_at_ms, client_ip, prompt, code, ok, model, input_tokens, output_tokens
+            SELECT id, created_at_ms, client_ip, prompt, code, ok, model, input_tokens, output_tokens, share
             FROM generations{where}
             ORDER BY created_at_ms DESC
             LIMIT ?
@@ -1068,6 +1075,7 @@ def list_admin_generations(
                 "model": r["model"],
                 "input_tokens": r["input_tokens"],
                 "output_tokens": r["output_tokens"],
+                "share": bool(r["share"]),
             }
             for r in rows
         ]
@@ -1283,12 +1291,12 @@ def _count_generations_since(ip: str, since_ms: int) -> tuple[int, int]:
     return (int(ip_row["n"]) if ip_row else 0, int(all_row["n"]) if all_row else 0)
 
 
-def _log_generation(ip: str, prompt: str, result: dict[str, Any]) -> None:
+def _log_generation(ip: str, prompt: str, result: dict[str, Any], share: bool) -> None:
     with _open_db() as conn:
         conn.execute(
             """
-            INSERT INTO generations(created_at_ms, client_ip, prompt, ok, model, input_tokens, output_tokens, code)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO generations(created_at_ms, client_ip, prompt, ok, model, input_tokens, output_tokens, code, share)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 _now_ms(),
@@ -1299,6 +1307,7 @@ def _log_generation(ip: str, prompt: str, result: dict[str, Any]) -> None:
                 int(result.get("input_tokens", 0)),
                 int(result.get("output_tokens", 0)),
                 (result.get("code") or "")[:20000],
+                1 if share else 0,
             ),
         )
         conn.commit()
@@ -1745,6 +1754,10 @@ def _generate_sketch_via_claude(description: str, current_code: str | None) -> d
 class GenerateRequest(BaseModel):
     description: str
     current_code: str | None = None
+    # "Let others see my prompt and result" consent. Default False so any client
+    # that omits it is treated as no-consent; the editor's checkbox is checked by
+    # default and sends share=true explicitly.
+    share: bool = False
 
 
 @app.post("/api/amyboardworld/generate")
@@ -1786,7 +1799,7 @@ def generate_amyboard_sketch(body: GenerateRequest, request: Request) -> dict[st
         raise HTTPException(status_code=status, detail="Sketch generation failed. Please try again later.") from exc
 
     # Every billed attempt (success or validation failure) counts toward limits.
-    _log_generation(ip, description, result)
+    _log_generation(ip, description, result, body.share)
 
     if not result["ok"]:
         raise HTTPException(
