@@ -59,7 +59,10 @@ USERNAME_RE = re.compile(r"^[A-Za-z0-9]{1,20}$")
 ENV_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
 FILE_NAME_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 TAG_RE = re.compile(r"^[A-Za-z0-9_-]{1,32}$")
-RESERVED_USERNAMES = {"shorepine"}
+# Username that consented ("share") sketch generations are published under.
+# Reserved so a regular upload can't impersonate the generator.
+GENERATOR_USERNAME = "generator"
+RESERVED_USERNAMES = {"shorepine", GENERATOR_USERNAME}
 # Sketches uploaded by these usernames are surfaced with the OFFICIAL_TAG
 # automatically — the tag is injected into API responses at serialization
 # time and the ?tag=official filter includes them even if their stored
@@ -240,6 +243,13 @@ def _ensure_schema() -> None:
         # Defaults to 0 (no consent) for old rows, which predate the checkbox.
         try:
             conn.execute("ALTER TABLE generations ADD COLUMN share INTEGER NOT NULL DEFAULT 0")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+        # environments.id of the AMYboard World sketch published from this
+        # generation (share=1 only). NULL/0 = not published yet; the publish
+        # paths stamp it so the backfill endpoint never double-uploads.
+        try:
+            conn.execute("ALTER TABLE generations ADD COLUMN uploaded_file_id INTEGER")
         except sqlite3.OperationalError:
             pass  # column already exists
 
@@ -1056,7 +1066,7 @@ def list_admin_generations(
     with _open_db() as conn:
         rows = conn.execute(
             f"""
-            SELECT id, created_at_ms, client_ip, prompt, code, ok, model, input_tokens, output_tokens, share
+            SELECT id, created_at_ms, client_ip, prompt, code, ok, model, input_tokens, output_tokens, share, uploaded_file_id
             FROM generations{where}
             ORDER BY created_at_ms DESC
             LIMIT ?
@@ -1076,10 +1086,66 @@ def list_admin_generations(
                 "input_tokens": r["input_tokens"],
                 "output_tokens": r["output_tokens"],
                 "share": bool(r["share"]),
+                "uploaded_file_id": r["uploaded_file_id"],
             }
             for r in rows
         ]
     }
+
+
+@app.post("/api/admin/generations/publish_shared", dependencies=[Depends(_require_admin)])
+def publish_shared_generations(
+    dry_run: bool = Query(default=False),
+    limit: int = Query(default=1000, ge=1, le=5000),
+) -> dict[str, Any]:
+    """Backfill: publish every consented (share=1), valid (ok=1) generation that
+    has not been uploaded to AMYboard World yet. Idempotent — published rows are
+    stamped with uploaded_file_id and skipped on later runs. Discord notifications
+    are suppressed so a backfill can't flood the channel."""
+    with _open_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, created_at_ms, client_ip, prompt, code
+            FROM generations
+            WHERE share = 1 AND ok = 1 AND code != ''
+              AND (uploaded_file_id IS NULL OR uploaded_file_id = 0)
+            ORDER BY created_at_ms ASC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+    items: list[dict[str, Any]] = []
+    published = 0
+    for r in rows:
+        gen_id = int(r["id"])
+        code = str(r["code"] or "")
+        description = _sketch_description_from_code(code, str(r["prompt"] or ""))
+        entry: dict[str, Any] = {"generation_id": gen_id, "description": description}
+        # The logged copy is truncated at 20000 chars; never publish a sketch
+        # the truncation (or anything else) has rendered invalid.
+        valid, reason = _validate_sketch(code)
+        if not valid:
+            entry["error"] = f"stored code invalid: {reason}"
+            items.append(entry)
+            continue
+        if dry_run:
+            entry["name"] = _short_sketch_name(description)
+        else:
+            try:
+                entry["item_id"] = _publish_shared_generation(
+                    gen_id,
+                    code,
+                    str(r["prompt"] or ""),
+                    str(r["client_ip"] or ""),
+                    created_at_ms=int(r["created_at_ms"]),
+                    notify=False,
+                )
+                published += 1
+            except Exception as exc:  # noqa: BLE001
+                entry["error"] = _redact_secrets(f"{type(exc).__name__}: {exc}")
+        items.append(entry)
+    return {"ok": True, "dry_run": dry_run, "pending": len(items), "published": published, "items": items}
 
 
 # ---------------------------------------------------------------------------
@@ -1291,9 +1357,9 @@ def _count_generations_since(ip: str, since_ms: int) -> tuple[int, int]:
     return (int(ip_row["n"]) if ip_row else 0, int(all_row["n"]) if all_row else 0)
 
 
-def _log_generation(ip: str, prompt: str, result: dict[str, Any], share: bool) -> None:
+def _log_generation(ip: str, prompt: str, result: dict[str, Any], share: bool) -> int:
     with _open_db() as conn:
-        conn.execute(
+        cur = conn.execute(
             """
             INSERT INTO generations(created_at_ms, client_ip, prompt, ok, model, input_tokens, output_tokens, code, share)
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1311,6 +1377,109 @@ def _log_generation(ip: str, prompt: str, result: dict[str, Any], share: bool) -
             ),
         )
         conn.commit()
+        return int(cur.lastrowid)
+
+
+# --- Publishing consented generations to AMYboard World ---------------------
+
+_DESCRIPTION_COMMENT_RE = re.compile(r"^\s*#\s*DESCRIPTION\s*:\s*(.+)$", re.IGNORECASE | re.MULTILINE)
+# Filler words skipped when packing a sketch name from its description.
+_NAME_STOPWORDS = {
+    "a", "an", "and", "as", "at", "by", "each", "every", "for", "from", "in",
+    "into", "is", "it", "its", "my", "of", "off", "on", "or", "over", "that",
+    "the", "then", "this", "to", "via", "when", "while", "with", "your",
+    "control", "controls", "create", "creates", "make", "makes", "play",
+    "playing", "plays", "use", "uses", "using", "amyboard", "sketch",
+}
+
+
+def _sketch_description_from_code(code: str, fallback: str) -> str:
+    """The '# DESCRIPTION: ...' comment the generator always writes, else the
+    user's prompt, clamped to the World description limit."""
+    m = _DESCRIPTION_COMMENT_RE.search(code or "")
+    desc = m.group(1).strip() if m else ""
+    if not desc:
+        desc = (fallback or "").strip()
+    if not desc:
+        desc = "Generated AMYboard sketch"
+    return " ".join(desc.split())[:MAX_DESCRIPTION]
+
+
+def _short_sketch_name(text: str) -> str:
+    """Pack a description into a short sketch name: lowercase words joined by
+    underscores (matching the bundled example sketches), 20 chars max."""
+    max_len = 20  # ENV_NAME_RE limit
+    words = [w.lower() for w in re.findall(r"[A-Za-z0-9]+", text or "")]
+    name = ""
+    for w in words:
+        if w in _NAME_STOPWORDS:
+            continue
+        candidate = f"{name}_{w}" if name else w
+        if len(candidate) > max_len:
+            if name:
+                break
+            candidate = w[:max_len]  # single long word
+        name = candidate
+    return name or "generated"
+
+
+def _unique_generator_filename(base: str, gen_id: int) -> str:
+    """A .py filename not already used by the generator user — name collisions
+    would otherwise hide older sketches behind the latest_per_user_env dedup."""
+    max_len = 20
+    candidates = [base]
+    for i in range(2, 10):
+        suffix = f"-{i}"
+        candidates.append(base[: max_len - len(suffix)] + suffix)
+    suffix = f"-{gen_id}"
+    candidates.append(base[: max_len - len(suffix)] + suffix)
+    with _open_db() as conn:
+        for candidate in candidates:
+            filename = candidate + ".py"
+            row = conn.execute(
+                "SELECT 1 FROM environments WHERE lower(username) = ? AND lower(filename) = ? LIMIT 1",
+                (GENERATOR_USERNAME.lower(), filename.lower()),
+            ).fetchone()
+            if not row:
+                return filename
+    return f"gen-{gen_id}.py"
+
+
+def _publish_shared_generation(
+    gen_id: int,
+    code: str,
+    prompt: str,
+    client_ip: str,
+    *,
+    created_at_ms: int | None = None,
+    notify: bool = True,
+) -> int:
+    """Upload a consented ('Let others see my prompt and result') generation to
+    AMYboard World as the reserved generator user, and stamp the new item id
+    onto the generation row so it is never published twice."""
+    description = _sketch_description_from_code(code, prompt)
+    filename = _unique_generator_filename(_short_sketch_name(description), gen_id)
+    contents = code.encode("utf-8")
+    item_id = _insert_file_row(
+        "environments",
+        AMYBOARD_FILES_DIR,
+        GENERATOR_USERNAME,
+        description,
+        filename,
+        contents,
+        created_at_ms=created_at_ms,
+        item_type="environment",
+        client_ip=client_ip,
+    )
+    with _open_db() as conn:
+        conn.execute("UPDATE generations SET uploaded_file_id = ? WHERE id = ?", (item_id, gen_id))
+        conn.commit()
+    if notify:
+        _discord_notify(
+            DISCORD_AMYBOARD_CHANNEL_ID,
+            f"{GENERATOR_USERNAME} ### {description[:MAX_DESCRIPTION]} ## {filename} ({len(contents)} bytes)",
+        )
+    return item_id
 
 
 _AMY_AGENTS_PATH = Path(__file__).resolve().parents[2] / "AMY_AGENTS.md"
@@ -1799,7 +1968,7 @@ def generate_amyboard_sketch(body: GenerateRequest, request: Request) -> dict[st
         raise HTTPException(status_code=status, detail="Sketch generation failed. Please try again later.") from exc
 
     # Every billed attempt (success or validation failure) counts toward limits.
-    _log_generation(ip, description, result, body.share)
+    gen_id = _log_generation(ip, description, result, body.share)
 
     if not result["ok"]:
         raise HTTPException(
@@ -1807,12 +1976,22 @@ def generate_amyboard_sketch(body: GenerateRequest, request: Request) -> dict[st
             detail="Could not produce a valid sketch for that request. Try rephrasing it as a musical or synth idea.",
         )
 
-    return {
+    response: dict[str, Any] = {
         "ok": True,
         "code": result["code"],
         "remaining_today": max(0, GENERATE_PER_IP_PER_DAY - (ip_count + 1)),
         "model": GENERATE_MODEL,
     }
+
+    # Consent given: publish the sketch to AMYboard World under the generator
+    # user. A publish failure must never fail the generation the user paid for.
+    if body.share:
+        try:
+            response["shared_item_id"] = _publish_shared_generation(gen_id, result["code"], description, ip)
+        except Exception as exc:  # noqa: BLE001
+            print("[generate] share publish failed:", _redact_secrets(f"{type(exc).__name__}: {exc}"), flush=True)
+
+    return response
 
 
 class DebugGenerateRequest(BaseModel):
