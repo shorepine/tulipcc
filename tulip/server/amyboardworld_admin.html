@@ -114,6 +114,7 @@
           <th>Prompt</th>
           <th>OK</th>
           <th>Share</th>
+          <th>Uploaded</th>
           <th>Model</th>
           <th>Tokens (in/out)</th>
           <th>Output code</th>
@@ -361,6 +362,9 @@
         const tr = document.createElement('tr');
         const okHtml = g.ok ? '<span class="ok">ok</span>' : '<span class="err">fail</span>';
         const shareHtml = g.share ? '<span class="ok">yes</span>' : '<span class="small">no</span>';
+        const uploadedHtml = g.uploaded_file_id
+          ? '<span class="ok">#' + esc(g.uploaded_file_id) + '</span>'
+          : '<span class="small">&mdash;</span>';
         const code = g.code || '';
         const codeCell = code
           ? '<details><summary class="small">' + esc(code.length) + ' chars</summary><pre class="code">' + esc(code) + '</pre></details>'
@@ -371,6 +375,7 @@
           '<td class="desc">' + esc(g.prompt || '') + '</td>' +
           '<td>' + okHtml + '</td>' +
           '<td>' + shareHtml + '</td>' +
+          '<td>' + uploadedHtml + '</td>' +
           '<td class="mono small">' + esc(g.model || '') + '</td>' +
           '<td class="mono small">' + esc(g.input_tokens) + ' / ' + esc(g.output_tokens) + '</td>' +
           '<td>' + codeCell + '</td>';
