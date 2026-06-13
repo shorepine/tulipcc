@@ -51,6 +51,10 @@ If AMYboard *only ever* appears as a USB/JTAG device, **it isn't running** -- it
 
 A working board enumerates as a USB MIDI device (VID `0xCAF0`, PID `0x4009`) plus a USB serial port. See [USB MIDI not recognized](troubleshooting.md#usb-midi-not-recognized).
 
+### The online editor / "Control" can't find my AMYboard
+
+The editor talks to the board over **WebSerial/WebMIDI**, which only work in **Chrome or Edge** (desktop). Safari and Firefox don't support them, so the board won't show up at all. Also plug the board in and finish any DFU/BOOT step **before** clicking Connect/Control, and pick the right port when the browser prompts.
+
 ### It works on Mac/Linux but not Windows (or the reverse)
 
 We're actively chasing OS-specific USB issues. Known data points:
@@ -62,6 +66,10 @@ We're actively chasing OS-specific USB issues. Known data points:
 
 If you have AMYboard on Windows, please report on Discord whether it works -- it helps us narrow the driver issue. More steps in [Troubleshooting](troubleshooting.md).
 
+### Can I plug a USB-MIDI keyboard straight into the AMYboard? (USB host)
+
+No -- AMYboard is **USB device/gadget mode only**: it appears to a computer as a MIDI device, but it **can't host** a USB controller plugged into it. (Tulip does USB host; AMYboard's hardware doesn't.) To play it from a keyboard without a computer, use the **TRS/DIN MIDI in** jack, or put a small **USB-host-to-TRS-MIDI bridge** in between -- an RP2040/RP2350 board works well for this (a community member built exactly that).
+
 ---
 
 ## Displays (OLED)
@@ -69,6 +77,8 @@ If you have AMYboard on Windows, please report on Discord whether it works -- it
 ### Which displays are supported?
 
 Out of the box our firmware supports **SH1107** and **SSD1327** OLEDs. The Adafruit 128×128 monochrome OLED ([#4741](https://www.adafruit.com/product/4741)) is an SH1107 and works great -- by default the AMY version number shows on it at boot, so you know right away it's wired correctly.
+
+**If the Adafruit display is out of stock**, any **SH1107 128×128** OLED works -- community members have sourced the same panel from **Pimoroni** and **Mouser**. Non-Adafruit ones usually come with a bare 4-pin header instead of a JST/STEMMA socket, so you'll need a **Dupont-to-Grove/STEMMA** cable to connect it (only the Adafruit part is JST-to-JST).
 
 ### My SSD1306 / off-brand OLED doesn't light up
 
@@ -97,6 +107,10 @@ The front-panel **I2C (Grove)** port drives [accessories](accessories.md). Popul
 - a **Stemma-to-Stemma QT** cable to daisy-chain the next accessory (e.g. knob → display).
 
 Use the **front-panel** I2C port for accessories -- not the back "tulip"/host port.
+
+### What exact I2C connector/cable does the front-panel port use?
+
+It's a **Grove / MABEE-style** 4-pin connector at **2.0 mm** pitch (also called HY2.0 / DL20005) -- **not** STEMMA QT, which is the smaller 1.0 mm JST-SH. A plain STEMMA QT cable won't plug in directly, so use a **Grove-to-STEMMA QT** cable ([Adafruit #4528](https://www.adafruit.com/product/4528)) to adapt. Most MicroPython I2C drivers for these parts "just work" -- copy the driver `.py` into `/user/current/` and `import` it.
 
 ### How do I split or daisy-chain several I2C accessories?
 
@@ -168,6 +182,10 @@ Yes -- it's more expressive than 0–127 CC values. Send `0xF0 0x00 0x03 0x45` (
 ```
 
 That lets you send precise values like `424.12456`. If you only need 0–127 knob values, use the MIDI CC support instead.
+
+### Is AMYboard multitimbral? Can I run different patches on different MIDI channels at once?
+
+Yes. You can put a different synth/patch on each of the **16 MIDI channels**, and they're **all active at the same time** -- the web editor only *shows* one channel at a time, but the rest keep responding on their channels. You're limited by RAM and by the total oscillator count (AMY caps at ~250 oscs), and by CPU as patches get richer, so very dense multitimbral setups run out of voices before all 16 are heavy. (Pitch bend is currently global across channels -- see AMY [#684](https://github.com/shorepine/amy/issues/684).)
 
 ---
 
