@@ -446,6 +446,41 @@ function init_knobs(knobConfigs, gridId, onChange) {
       editor.container.style.left = `${left}px`;
     }
 
+    function openCcEditor(knobConfig, labelEl) {
+      if (!knobConfig || !labelEl) {
+        return;
+      }
+      const editor = ccEditor();
+      editor.current = knobConfig;
+      editor.error.textContent = "";
+      const sectionName = knobConfig.section ? String(knobConfig.section) : "Knob";
+      const displayName = knobConfig.display_name ? String(knobConfig.display_name) : "";
+      editor.title.textContent = `${sectionName} ${displayName}`.trim();
+      editor.input.value = knobConfig.cc === "" || knobConfig.cc === null || knobConfig.cc === undefined
+        ? ""
+        : String(knobConfig.cc);
+      const isRangeType = !knobConfig.knob_type || knobConfig.knob_type === "log";
+      editor.rangeWrap.style.display = isRangeType ? "block" : "none";
+      if (isRangeType) {
+        const minValue = Number.isFinite(Number(knobConfig.min_value)) ? String(knobConfig.min_value) : "";
+        const maxValue = Number.isFinite(Number(knobConfig.max_value)) ? String(knobConfig.max_value) : "";
+        editor.minInput.value = minValue;
+        editor.maxInput.value = maxValue;
+        editor.logCheckbox.checked = knobConfig.knob_type === "log";
+      }
+      positionCcEditor(editor, labelEl);
+      editor.container.style.display = "block";
+      editor.input.focus();
+      editor.input.select();
+    }
+
+    // Expose one opener globally so an externally-rendered label (e.g. the
+    // channel-strip Level slider's label) can open the same CC popup the grid
+    // knobs use. Registered once; the closure keeps a valid ccEditor instance.
+    if (typeof window !== "undefined" && !window.amy_open_cc_editor) {
+      window.amy_open_cc_editor = openCcEditor;
+    }
+
     function attachCcEditor(labelEl, knobConfig) {
       if (!labelEl) {
         return;
@@ -453,28 +488,7 @@ function init_knobs(knobConfigs, gridId, onChange) {
       labelEl.style.cursor = "pointer";
       labelEl.setAttribute("title", "Click to edit MIDI CC");
       labelEl.addEventListener("click", function() {
-        const editor = ccEditor();
-        editor.current = knobConfig;
-        editor.error.textContent = "";
-        const sectionName = knobConfig.section ? String(knobConfig.section) : "Knob";
-        const displayName = knobConfig.display_name ? String(knobConfig.display_name) : "";
-        editor.title.textContent = `${sectionName} ${displayName}`.trim();
-        editor.input.value = knobConfig.cc === "" || knobConfig.cc === null || knobConfig.cc === undefined
-          ? ""
-          : String(knobConfig.cc);
-        const isRangeType = !knobConfig.knob_type || knobConfig.knob_type === "log";
-        editor.rangeWrap.style.display = isRangeType ? "block" : "none";
-        if (isRangeType) {
-          const minValue = Number.isFinite(Number(knobConfig.min_value)) ? String(knobConfig.min_value) : "";
-          const maxValue = Number.isFinite(Number(knobConfig.max_value)) ? String(knobConfig.max_value) : "";
-          editor.minInput.value = minValue;
-          editor.maxInput.value = maxValue;
-          editor.logCheckbox.checked = knobConfig.knob_type === "log";
-        }
-        positionCcEditor(editor, labelEl);
-        editor.container.style.display = "block";
-        editor.input.focus();
-        editor.input.select();
+        openCcEditor(knobConfig, labelEl);
       });
     }
 
@@ -1046,6 +1060,12 @@ function init_knobs(knobConfigs, gridId, onChange) {
     : {};
 
   knobConfigs.forEach(function(config, index) {
+    if (config && config.dedicated_slider) {
+      // Shown by a dedicated control (the channel-strip Level slider), not the
+      // grid. Skip during section grouping so no empty section header appears;
+      // other knobs keep their indices (onKnobChange ignores the index anyway).
+      return;
+    }
     const sectionName = typeof config.section === "string" ? config.section : "";
     if (!currentSection || currentSection.name !== sectionName) {
       currentSection = { name: sectionName, items: [], units: 0 };

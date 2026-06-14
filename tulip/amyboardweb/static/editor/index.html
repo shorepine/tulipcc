@@ -1423,7 +1423,7 @@
                       </div>
                     </div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center gap-2 ms-md-2">
-                      <label class="text-nowrap mb-0 text-white" for="synth-level-slider" style="font-size:0.875rem;">Level</label>
+                      <label class="text-nowrap mb-0 text-white" id="synth-level-label" for="synth-level-slider" style="font-size:0.875rem; cursor:pointer;" title="Click to set a MIDI CC for this channel's level">Level</label>
                       <input type="range" class="form-range" id="synth-level-slider" min="0.001" max="7" step="0.001" value="1" style="width:100px;">
                       <input type="number" class="form-control text-center knob-value" id="synth-level-number" min="0.001" max="7" step="0.001" value="1" style="width:60px; font-size:0.7rem; padding:2px 4px;">
                     </div>
@@ -2030,6 +2030,27 @@
             if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
           }
         };
+        // Clicking the "Level" label opens the same MIDI-CC popup the knobs use,
+        // targeting the current channel's dedicated_slider "level" knob (defined
+        // in amy_parameters.js). That knob carries only the CC mapping; the slider
+        // above still drives the value.
+        const synthLevelLabel = document.getElementById("synth-level-label");
+        if (synthLevelLabel) {
+          synthLevelLabel.addEventListener("click", function() {
+            var ch = Number(window.current_synth || 1);
+            var list = (window.amy_channel_knobs && window.amy_channel_knobs[ch]) || [];
+            var levelKnob = null;
+            for (var i = 0; i < list.length; i++) {
+              if (list[i] && list[i].dedicated_slider && list[i].display_name === "level") {
+                levelKnob = list[i];
+                break;
+              }
+            }
+            if (levelKnob && typeof window.amy_open_cc_editor === "function") {
+              window.amy_open_cc_editor(levelKnob, synthLevelLabel);
+            }
+          });
+        }
         const savePatchModalEl = document.getElementById("savePatchModal");
         const savePatchNameInput = document.getElementById("save-patch-name");
         const savePatchConfirmButton = document.getElementById("save-patch-confirm-btn");
