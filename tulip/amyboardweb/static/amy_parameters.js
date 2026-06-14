@@ -27,6 +27,25 @@ window.addEventListener("DOMContentLoaded", function() {
   // AMY's EVENT_FROM_OSC_ARRAY only emits values that differ from reset defaults.
   const amy_knob_definitions = [
     {
+      // Per-channel overall level (VCA). Shown by the dedicated "Level" slider in
+      // the channel strip (dedicated_slider -> kept out of the knob grid), but
+      // registered as a channel knob so its MIDI CC rides the same
+      // save/restore/bulk-send path as every other knob. Same AMY command as the
+      // Level slider: i<ch>v0a<val> (amp on the control osc). Default CC 7 = the
+      // MIDI standard "Channel Volume".
+      section: "Synth",
+      cc: 7,
+      display_name: "level",
+      change_code: "i%iv" + CTL_OSC + "a%v",
+      knob_type: "log",
+      default_value: 1.0,
+      amy_default: 1.0,
+      min_value: 0.001,
+      max_value: 7,
+      offset: 0.1,
+      dedicated_slider: true,
+    },
+    {
       section: "Osc A",
       cc: "",
       display_name: "freq",
