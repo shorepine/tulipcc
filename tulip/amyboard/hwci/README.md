@@ -1,62 +1,78 @@
 # AMYboard hardware-in-the-loop (HW CI)
 
-`hwci.py` runs a real AMYboard through a full firmware test: flash → reboot →
-drive over USB-MIDI + AMY `zP` sysex → record the analog audio out → RMS-compare
-to a committed reference (same idea as `amy/test.py`, but on real hardware).
+`hwci.py` runs a real AMYboard through a full firmware test: **flash → reboot →
+drive over USB-MIDI + AMY `zP` sysex → record the analog audio out → spectral
+compare to a committed reference** (the hardware analogue of `amy/test.py`).
+Exit code 0 = pass, 1 = fail.
 
-Prototype runs on a **Mac**; the eventual target is a **Raspberry Pi** acting as
-a self-hosted GitHub Actions runner so it runs per-PR.
+Validated on a **Raspberry Pi 5 / Debian 13** (the intended self-hosted CI
+runner); also runs on macOS for dev.
 
-## Bench setup
-- **Serial debug header → USB**: carries RTS/DTR, so esptool can enter download
-  mode and reboot the board with no buttons.
-- **Audio out → a USB audio interface input** wired into the host. `hwci.py
-  --list-devices` shows the input devices; pass it with `--input-device`.
-- **USB-MIDI**: the board enumerates as the `AMYboard` MIDI device after boot.
+## Bench wiring (validated)
+- **Flashing — USB-serial dongle on the AMYboard debug header.** A Pi's GPIO
+  UART can't drive the DTR/RTS lines esptool needs for auto-reset, so flashing
+  goes through a cheap USB-serial dongle (tested: **CH9102F**, `1a86:55d4`). The
+  dongle's DTR/RTS hit the board's auto-reset circuit (DTR→IO0, RTS→EN), so
+  esptool enters the ROM bootloader and flashes **over the dongle UART** —
+  robust, and recovers a bricked board. (Flashing over the board's *own* native
+  USB is unreliable: the stub upload fails and the device re-enumerates mid-reset.)
 
-## Install
+  | AMYboard debug header | CH9102F dongle |
+  |---|---|
+  | TX | RXD |
+  | RX | TXD |
+  | DTR | DTR |
+  | RTS | RTS |
+  | GND | GND |
+
+  (TX/RX cross; DTR/RTS straight; do **not** connect the dongle's VCC — the board
+  is powered over its own USB.)
+- **Audio** — AMYboard analog out → a USB audio interface input (tested: C-Media
+  `0d8c:0014`), recorded with `arecord`.
+- **MIDI** — the AMYboard's own USB (MIDI + CDC) is plugged into the Pi; it
+  enumerates as ALSA MIDI `AMYboard`.
+
+## Install (Pi, no root)
 ```
-pip install -r requirements.txt
+python3 -m venv ~/hwci-venv
+~/hwci-venv/bin/pip install esptool numpy        # ALSA tools (amidi/arecord) are already present
 ```
-(`esptool` must be importable by the same Python: `python3 -m esptool version`.)
+macOS dev: `pip install -r requirements.txt` (adds mido/python-rtmidi/sounddevice).
 
 ## Use
 ```
-# discover serial / MIDI / audio devices
 python3 hwci.py --list-devices
 
-# first good run: capture the golden reference (then LISTEN to the wav!)
-python3 hwci.py --pr 993 --port /dev/cu.usbserial-XXX \
-    --input-device "Your Interface" --update-reference
+# capture the golden reference once (then LISTEN to *-recording.wav to confirm):
+python3 hwci.py --pr 993 --port /dev/ttyACM1 --update-reference
 
-# pass/fail vs the reference
-python3 hwci.py --pr 993 --port /dev/cu.usbserial-XXX --input-device "Your Interface"
+# pass/fail run (full loop: flash + drive + record + compare):
+python3 hwci.py --pr 993 --port /dev/ttyACM1
 ```
+- `--port` is the **dongle** serial port. MIDI (`--midi-port`, auto-detected) and
+  audio (`--audio-device`, default `hw:1,0`) default to the validated bench.
+- Firmware comes from the per-PR preview (`amyboard-pr-<N>.vercel.app/firmware/`);
+  use `--firmware <path>` / `--url`. `--no-flash` skips flashing to iterate on the
+  drive/record/compare against an already-flashed board.
 
-Firmware comes from the **per-PR preview** (`amyboard-pr-<N>.vercel.app/firmware/
-amyboard-full-AMYBOARD.bin`); use `--firmware <path>` or `--url <url>` instead.
+## The stimulus & metric
+- **Stimulus** (`run_test_sequence()`, editable): a quick USB-MIDI note to prove
+  the MIDI path is alive, then a **sustained 3-osc chord scheduled on the board
+  via `zP`**. Host-timed MIDI arpeggios are too jittery to compare audio on; a
+  sustained, board-scheduled tone is reproducible.
+- **Metric**: averaged-magnitude-spectrum **cosine similarity** (`compare()`) —
+  timing/phase-invariant, so the same notes/timbre match regardless of capture
+  jitter. Pass needs `similarity ≥ --min-similarity` (default 0.90) **and**
+  `level ≥ --min-level-db`. On this bench, same-firmware runs score **~0.99**
+  repeatably.
 
-Bring-up in stages: `--list-devices`, then `--flash-only`, then `--no-flash`
-(skip flashing to iterate on the MIDI/record/compare steps against an
-already-flashed board).
+## Reference: `ref/hwci_basic.wav`
+Committed golden for the `hwci_basic` test. It's **bench-specific** (depends on
+this board + audio interface + gain); re-capture with `--update-reference` if the
+hardware changes.
 
-## The test stimulus
-`run_test_sequence()` in `hwci.py` is the editable definition of what the test
-exercises — currently a C-major arpeggio over USB-MIDI on channel 1 (the board
-boots with the K257 default patch + default CCs) plus a `zP` AMY bleep. The
-reference wav captures whatever it produces, so keep the sequence deterministic.
-
-## The compare
-Hardware audio is **not** sample-exact (capture latency, noise floor, levels,
-DAC/ADC clock drift), so `compare()` onset-aligns, peak-normalizes, and takes the
-RMS difference in dB against `--threshold` (default −12 dB). Expect to calibrate
-the threshold on your bench once you have a stable reference.
-
-## Open items / next steps
-- **PR upload**: GitHub's API can't attach binaries to PR *comments*. Plan: when
-  this runs in CI on the Pi, upload the recording as a **workflow artifact** and
-  comment the run/artifact link with the RMS pass/fail; locally we just save the
-  wav for now.
-- **CI wiring**: a self-hosted-runner workflow (label- or dispatch-triggered) on
-  the Pi that runs `hwci.py --pr <N>` and posts results.
-- **Reference management**: store per-test reference wavs under `ref/`.
+## Next steps
+- **CI workflow**: a self-hosted-runner job on the Pi (label/dispatch-triggered)
+  that runs `hwci.py --pr <N>` and reports pass/fail.
+- **Audio to the PR**: GitHub's API can't attach binaries to PR *comments*, so
+  upload `*-recording.wav` as a **workflow artifact** and link it in the comment.

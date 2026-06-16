@@ -1,8 +1,10 @@
+# Core (both the Pi/ALSA runner and macOS) — installable in a venv, no root:
 esptool
+numpy
+
+# macOS / non-Linux backend only. The Pi uses ALSA's `amidi` + `arecord` (already
+# present on Raspberry Pi OS / Debian) instead of these, so it needs neither root
+# nor these libs — only esptool + numpy above.
 mido
 python-rtmidi
 sounddevice
-soundfile
-numpy
-requests
-pyserial

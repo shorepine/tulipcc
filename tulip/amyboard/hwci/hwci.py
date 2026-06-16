@@ -1,69 +1,43 @@
 #!/usr/bin/env python3
 """AMYboard hardware-in-the-loop (HW CI) test.
 
-Flashes a built AMYboard firmware onto a physically connected board (over the
-serial debug header, which carries RTS/DTR for auto-reset + download mode),
-reboots it, drives it with USB-MIDI notes and AMY `zP` sysex commands, records
-the analog audio out from a connected audio input device, and RMS-compares the
-recording against a committed reference (like amy/test.py) for pass/fail.
+Flashes a built AMYboard firmware onto a physically connected board, reboots it,
+drives it with USB-MIDI notes and AMY `zP` sysex, records the analog audio out,
+and RMS-compares the recording against a committed reference (like amy/test.py)
+for pass/fail.
 
-Prototype target: a Mac with the board on USB-serial + audio out wired into a
-USB audio interface. Eventually: a self-hosted GitHub Actions runner (Pi).
+Two backends, auto-selected:
+  * ALSA CLI (`amidi` + `arecord`)  — Linux / Raspberry Pi CI runner. No extra
+    Python libs or root needed; only pip `esptool numpy` in a venv.
+  * Python libs (`mido` + `sounddevice`) — macOS / dev bring-up.
 
-Quick start
------------
-    pip install -r requirements.txt
-    # 1) find your devices:
+Flashing is over a USB-serial dongle wired to the AMYboard debug header (the
+dongle's DTR/RTS drive the board's auto-reset circuit, so esptool enters the
+ROM bootloader and flashes over the dongle UART — robust, and recovers a
+bricked board, unlike flashing over the board's own native USB).
+
+Quick start (Pi):
     python3 hwci.py --list-devices
-    # 2) first good run captures the golden reference (listen to the wav!):
-    python3 hwci.py --pr 993 --port /dev/cu.usbserial-XXX \\
-        --input-device "Your Interface" --update-reference
-    # 3) thereafter, pass/fail vs the reference:
-    python3 hwci.py --pr 993 --port /dev/cu.usbserial-XXX \\
-        --input-device "Your Interface"
-
-Stages can be isolated: --no-flash (test an already-flashed board),
---flash-only, --list-devices.
+    python3 hwci.py --pr 993 --port /dev/ttyACM1 \\
+        --midi-port hw:0,0,0 --audio-device hw:1,0 --update-reference
+    python3 hwci.py --pr 993 --port /dev/ttyACM1 --midi-port hw:0,0,0 --audio-device hw:1,0
 """
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.request
+import wave
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REF_DIR = os.path.join(HERE, "ref")
 PREVIEW_URL = "https://amyboard-pr-{pr}.vercel.app/firmware/amyboard-full-AMYBOARD.bin"
-AMY_SYSEX_PREFIX = [0x00, 0x03, 0x45]  # AMYboard sysex manufacturer-ish prefix
+AMY_SYSEX_PREFIX = [0x00, 0x03, 0x45]
 MIDI_NAME = "AMYboard"
-
-
-# ── device discovery ────────────────────────────────────────────────────────
-def list_devices():
-    import serial.tools.list_ports
-    import sounddevice as sd
-    import mido
-    print("Serial ports:")
-    for p in serial.tools.list_ports.comports():
-        print(f"  {p.device}   {p.description}")
-    print("\nMIDI outputs:")
-    for n in mido.get_output_names():
-        print(f"  {n}")
-    print("\nAudio input devices:")
-    for i, d in enumerate(sd.query_devices()):
-        if d["max_input_channels"] > 0:
-            print(f"  [{i}] {d['name']}  ({d['max_input_channels']}ch @ {int(d['default_samplerate'])}Hz)")
-
-
-def autodetect_serial():
-    import serial.tools.list_ports
-    # ESP32-S3 USB-serial bridges: CP210x, CH34x, or the native USB-JTAG.
-    for p in serial.tools.list_ports.comports():
-        blob = f"{p.description} {p.manufacturer or ''} {p.device}".lower()
-        if any(k in blob for k in ("cp210", "ch34", "usbserial", "uart", "esp32", "jtag")):
-            return p.device
-    return None
+ALSA = bool(shutil.which("amidi") and shutil.which("arecord"))
 
 
 # ── firmware ────────────────────────────────────────────────────────────────
@@ -72,179 +46,252 @@ def resolve_firmware(args):
         return args.firmware, False
     url = args.url or (PREVIEW_URL.format(pr=args.pr) if args.pr else None)
     if not url:
-        sys.exit("Need one of --firmware <path>, --url <url>, or --pr <N> (or --no-flash).")
-    import requests
+        sys.exit("Need --firmware <path>, --url <url>, or --pr <N> (or --no-flash).")
     print(f"[fw] downloading {url}")
-    r = requests.get(url, timeout=60)
-    if r.status_code != 200:
-        sys.exit(f"[fw] download failed: HTTP {r.status_code} (is the PR preview deployed + public?)")
-    if r.content[:64].lstrip().startswith(b"<"):
-        sys.exit("[fw] got HTML, not a .bin — bad URL or the preview is auth-gated.")
     fd, path = tempfile.mkstemp(suffix="-amyboard-full.bin")
-    os.write(fd, r.content)
-    os.close(fd)
-    print(f"[fw] {len(r.content)} bytes -> {path}")
+    with urllib.request.urlopen(url, timeout=120) as r, os.fdopen(fd, "wb") as f:
+        data = r.read()
+        if data[:64].lstrip().startswith(b"<"):
+            sys.exit("[fw] got HTML, not a .bin — bad URL or preview is auth-gated.")
+        f.write(data)
+    print(f"[fw] {len(data)} bytes -> {path}")
     return path, True
 
 
 def flash(port, bin_path, baud):
-    # The merged "full" image flashes at offset 0x0. esptool uses RTS/DTR on the
-    # debug header to enter download mode (--before) and reboot after (--after).
     cmd = [sys.executable, "-m", "esptool", "--chip", "esp32s3", "--port", port,
-           "--baud", str(baud), "--before", "default_reset", "--after", "hard_reset",
-           "write_flash", "0x0", bin_path]
+           "--baud", str(baud), "--before", "default-reset", "--after", "hard-reset",
+           "write-flash", "0x0", bin_path]
     print("[flash]", " ".join(cmd))
     subprocess.run(cmd, check=True)
 
 
-# ── board comms ─────────────────────────────────────────────────────────────
-def wait_for_midi(timeout=40):
-    import mido
-    print(f"[boot] waiting for USB-MIDI '{MIDI_NAME}' to enumerate...")
+# ── MIDI / sysex backends ───────────────────────────────────────────────────
+def alsa_find_midi():
+    out = subprocess.run(["amidi", "-l"], capture_output=True, text=True).stdout
+    for line in out.splitlines():
+        if MIDI_NAME in line:
+            return line.split()[1]  # e.g. hw:0,0,0
+    return None
+
+
+class Midi:
+    """Send-only MIDI to the board, via amidi (ALSA) or mido."""
+    def __init__(self, port):
+        self.port = port
+        self._mido_out = None
+        if not ALSA:
+            import mido
+            self._mido = mido
+            self._mido_out = mido.open_output(port)
+
+    def _raw(self, data):
+        if ALSA:
+            subprocess.run(["amidi", "-p", self.port, "-S",
+                            " ".join("%02X" % b for b in data)], check=True)
+        else:
+            # split running-status-free messages; data is one message here
+            self._mido_out.send(self._mido.Message.from_bytes(data))
+
+    def note(self, n, vel, dur):
+        self._raw([0x90, n, vel]); time.sleep(dur); self._raw([0x80, n, 0])
+
+    def sysex(self, code):
+        self._raw([0xF0] + AMY_SYSEX_PREFIX + list(code.encode("ascii")) + [0xF7])
+        time.sleep(0.02)
+
+    def close(self):
+        if self._mido_out:
+            self._mido_out.close()
+
+
+def wait_for_board(timeout=40):
+    """Wait for the board's USB-MIDI to (re)enumerate; return its port."""
+    print(f"[boot] waiting for '{MIDI_NAME}' MIDI ...")
     deadline = time.time() + timeout
     while time.time() < deadline:
-        for n in mido.get_output_names():
-            if MIDI_NAME in n:
-                print(f"[boot] found {n}")
-                return n
+        port = alsa_find_midi() if ALSA else _mido_find()
+        if port:
+            print(f"[boot] found MIDI at {port}")
+            return port
         time.sleep(0.5)
-    sys.exit(f"[boot] '{MIDI_NAME}' MIDI device never appeared (board didn't boot / no USB MIDI?).")
+    sys.exit("[boot] board MIDI never appeared (didn't boot?).")
 
 
-def amy_sysex(out, msg):
-    """Send an AMY wire message (e.g. a zP command) over sysex."""
+def _mido_find():
     import mido
-    out.send(mido.Message("sysex", data=AMY_SYSEX_PREFIX + list(msg.encode("ascii"))))
-    time.sleep(0.02)
-
-
-def run_test_sequence(out):
-    """The actual stimulus. EDIT ME to define what the HW CI exercises.
-
-    On boot the board sets up channel 1 with the amyboard default patch (K257)
-    and its default CC map, so MIDI notes on ch1 make sound immediately. Then we
-    run a couple of AMY commands via zP. Keep this deterministic + reproducible;
-    the reference wav captures whatever it produces.
-    """
-    import mido
-    # 1) USB-MIDI: a C-major arpeggio on channel 1.
-    for note in (60, 64, 67, 72):
-        out.send(mido.Message("note_on", channel=0, note=note, velocity=100))
-        time.sleep(0.25)
-        out.send(mido.Message("note_off", channel=0, note=note, velocity=0))
-    time.sleep(0.3)
-    # 2) AMY via zP: a distinctive bleep on a fresh osc.
-    amy_sysex(out, "zPimport amy; amy.send(osc=0, wave=amy.SINE, freq=330, vel=1)Z")
-    time.sleep(0.6)
-    amy_sysex(out, "zPimport amy; amy.send(osc=0, vel=0)Z")
-    time.sleep(0.3)
+    for n in mido.get_output_names():
+        if MIDI_NAME in n:
+            return n
+    return None
 
 
 # ── audio ───────────────────────────────────────────────────────────────────
-def record_and_drive(input_device, samplerate, channels, duration, drive_fn):
+def read_wav_mono(path):
+    import numpy as np
+    w = wave.open(path, "rb")
+    d = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
+    if w.getnchannels() > 1:
+        d = d.reshape(-1, w.getnchannels()).mean(axis=1)
+    return d, w.getframerate()
+
+
+def write_wav_mono(path, samples, sr):
+    import numpy as np
+    w = wave.open(path, "wb")
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
+    w.writeframes((np.clip(samples, -1, 1) * 32767).astype(np.int16).tobytes())
+    w.close()
+
+
+def record_and_drive(args, duration, drive_fn):
+    import numpy as np
+    sr, dev = args.samplerate, args.audio_device
+    print(f"[audio] recording {duration}s @ {sr}Hz from {dev!r}")
+    if ALSA:
+        tmp = tempfile.mktemp(suffix=".wav")
+        proc = subprocess.Popen(["arecord", "-D", dev, "-f", "S16_LE", "-r", str(sr),
+                                 "-c", str(args.channels), "-d", str(int(duration + 1)), tmp],
+                                stderr=subprocess.DEVNULL)
+        time.sleep(0.3)
+        drive_fn()
+        proc.wait()
+        d, _ = read_wav_mono(tmp)
+        os.unlink(tmp)
+        return d[:int(duration * sr)]
     import sounddevice as sd
-    import numpy as np
-    print(f"[audio] recording {duration}s @ {samplerate}Hz from device {input_device!r}")
-    frames = int(duration * samplerate)
-    rec = sd.rec(frames, samplerate=samplerate, channels=channels, device=input_device, dtype="float32")
-    time.sleep(0.25)  # let recording settle before stimulus
-    drive_fn()
-    sd.wait()
-    return np.mean(rec, axis=1) if channels > 1 else rec[:, 0]
+    rec = sd.rec(int(duration * sr), samplerate=sr, channels=args.channels,
+                 device=dev, dtype="float32")
+    time.sleep(0.3); drive_fn(); sd.wait()
+    return rec.mean(axis=1) if args.channels > 1 else rec[:, 0]
 
 
-def _onset(x, thresh=0.02):
+def list_devices():
+    if ALSA:
+        print("=== serial ports ==="); os.system("ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null")
+        print("=== MIDI (amidi -l) ==="); os.system("amidi -l")
+        print("=== audio capture (arecord -l) ==="); os.system("arecord -l")
+    else:
+        import serial.tools.list_ports, sounddevice as sd, mido
+        for p in serial.tools.list_ports.comports():
+            print("serial:", p.device, p.description)
+        print("midi out:", mido.get_output_names())
+        for i, d in enumerate(sd.query_devices()):
+            if d["max_input_channels"]:
+                print(f"audio in [{i}] {d['name']}")
+
+
+# ── stimulus + compare ──────────────────────────────────────────────────────
+def run_test_sequence(m):
+    """Deterministic stimulus. EDIT to change what the HW CI exercises.
+
+    Host-timed MIDI arpeggios are too jittery to compare audio on (timing/drops
+    shift the spectrum run-to-run). Instead we play a *sustained* board-scheduled
+    chord via zP, so the averaged spectrum is stable. We still poke the USB-MIDI
+    path first (a quick note) to confirm it's alive; its ring-out is cleared
+    before the recorded chord."""
+    # 1) exercise USB-MIDI (not part of the spectral compare)
+    m.note(60, 100, 0.15)
+    m.sysex("zPimport amy; amy.reset()Z")   # clean slate, kill any ring-out
+    time.sleep(0.5)
+    # 2) sustained 3-osc chord (A4/C#5/E5) — deterministic, reproducible spectrum
+    m.sysex("zPimport amy; amy.send(osc=0,wave=amy.SINE,freq=440,vel=1); "
+            "amy.send(osc=1,wave=amy.SINE,freq=554,vel=1); "
+            "amy.send(osc=2,wave=amy.SINE,freq=659,vel=1)Z")
+    time.sleep(2.6)
+    m.sysex("zPimport amy; amy.send(osc=0,vel=0); amy.send(osc=1,vel=0); amy.send(osc=2,vel=0)Z")
+
+
+def avg_spectrum(x, nfft=4096):
+    """Average magnitude spectrum (Welch-ish) — timing/phase invariant, so two
+    recordings of the same notes/timbre match even with host timing jitter."""
     import numpy as np
-    above = np.flatnonzero(np.abs(x) > thresh)
-    return int(above[0]) if above.size else 0
+    win = np.hanning(nfft); step = nfft // 2; mags = []
+    for i in range(0, max(1, len(x) - nfft + 1), step):
+        seg = x[i:i + nfft]
+        if len(seg) == nfft:
+            mags.append(np.abs(np.fft.rfft(seg * win)))
+    if not mags:
+        seg = np.zeros(nfft); seg[:min(len(x), nfft)] = x[:nfft]
+        mags = [np.abs(np.fft.rfft(seg * win))]
+    s = np.mean(mags, axis=0)
+    return s / (np.linalg.norm(s) + 1e-9)
 
 
 def compare(rec, ref):
-    """RMS-difference in dB after onset-align + peak-normalize. Hardware audio
-    isn't sample-exact (latency, noise floor, levels, clock drift), so this is a
-    looser, tunable metric than amy/test.py's bit-exact compare."""
+    """Returns (spectral cosine similarity in 0..1, recording level in dB)."""
     import numpy as np
-    a, b = rec[_onset(rec):], ref[_onset(ref):]
-    n = min(len(a), len(b))
-    a, b = a[:n], b[:n]
-    pa, pb = np.max(np.abs(a)) or 1.0, np.max(np.abs(b)) or 1.0
-    a, b = a / pa, b / pb
-    rms = lambda s: float(np.sqrt(np.mean(s ** 2)))
-    db = lambda v: 20 * np.log10(v + 1e-9)
-    return db(rms(a - b)), db(rms(rec))
+    sim = float(np.dot(avg_spectrum(rec), avg_spectrum(ref)))  # 1.0 == identical
+    level_db = 20 * np.log10(float(np.sqrt(np.mean(rec ** 2))) + 1e-9)
+    return sim, level_db
 
 
 # ── main ────────────────────────────────────────────────────────────────────
 def main():
     ap = argparse.ArgumentParser(description="AMYboard hardware-in-the-loop test")
-    ap.add_argument("--list-devices", action="store_true", help="list serial/MIDI/audio devices and exit")
-    src = ap.add_argument_group("firmware source")
-    src.add_argument("--pr", type=int, help="download firmware from amyboard-pr-<N>.vercel.app")
-    src.add_argument("--url", help="download firmware from this URL")
-    src.add_argument("--firmware", help="local firmware .bin (full image, flashed at 0x0)")
-    ap.add_argument("--port", help="serial debug port (auto-detected if omitted)")
+    ap.add_argument("--list-devices", action="store_true")
+    ap.add_argument("--pr", type=int); ap.add_argument("--url"); ap.add_argument("--firmware")
+    ap.add_argument("--port", help="esptool serial port (the USB-serial dongle)")
     ap.add_argument("--baud", type=int, default=921600)
-    ap.add_argument("--no-flash", action="store_true", help="skip flashing; test the board as-is")
-    ap.add_argument("--flash-only", action="store_true", help="flash then exit")
-    ap.add_argument("--input-device", help="audio input device name or index")
+    ap.add_argument("--no-flash", action="store_true")
+    ap.add_argument("--flash-only", action="store_true")
+    ap.add_argument("--midi-port", help="ALSA hw:X,Y or mido name (auto if omitted)")
+    ap.add_argument("--audio-device", default="hw:1,0" if ALSA else None,
+                    help="ALSA hw:X,Y or sounddevice index/name")
     ap.add_argument("--samplerate", type=int, default=48000)
     ap.add_argument("--channels", type=int, default=1)
-    ap.add_argument("--duration", type=float, default=4.0, help="record window (s)")
-    ap.add_argument("--name", default="hwci_basic", help="test name (reference wav basename)")
-    ap.add_argument("--reference", help="reference wav (default ref/<name>.wav)")
-    ap.add_argument("--update-reference", action="store_true", help="save this run as the reference")
-    ap.add_argument("--threshold", type=float, default=-12.0, help="max RMS-diff dB to pass")
-    ap.add_argument("--out", help="where to save the recording (default ./<name>-recording.wav)")
+    ap.add_argument("--duration", type=float, default=4.0)
+    ap.add_argument("--name", default="hwci_basic")
+    ap.add_argument("--reference"); ap.add_argument("--update-reference", action="store_true")
+    ap.add_argument("--min-similarity", type=float, default=0.90,
+                    help="min spectral cosine similarity to pass (0..1)")
+    ap.add_argument("--min-level-db", type=float, default=-30.0,
+                    help="min recording RMS level (dB) to pass")
+    ap.add_argument("--out")
     args = ap.parse_args()
+    print(f"[hwci] backend: {'ALSA cli' if ALSA else 'python libs'}")
 
     if args.list_devices:
-        list_devices()
-        return 0
-
-    import soundfile as sf
-    import numpy as np
+        list_devices(); return 0
 
     if not args.no_flash:
-        port = args.port or autodetect_serial()
-        if not port:
-            sys.exit("No serial port found; pass --port (see --list-devices).")
+        if not args.port:
+            sys.exit("--port (the USB-serial dongle) is required to flash.")
         bin_path, tmp = resolve_firmware(args)
         try:
-            flash(port, bin_path, args.baud)
+            flash(args.port, bin_path, args.baud)
         finally:
             if tmp:
                 os.unlink(bin_path)
         if args.flash_only:
-            print("[done] flashed.")
-            return 0
+            print("[done] flashed."); return 0
 
-    out_name = wait_for_midi()
-
-    import mido
-    with mido.open_output(out_name) as out:
-        rec = record_and_drive(args.input_device, args.samplerate, args.channels,
-                               args.duration, lambda: run_test_sequence(out))
+    args.midi_port = args.midi_port or wait_for_board()
+    if not args.audio_device:
+        sys.exit("--audio-device required (see --list-devices).")
+    m = Midi(args.midi_port)
+    try:
+        rec = record_and_drive(args, args.duration, lambda: run_test_sequence(m))
+    finally:
+        m.close()
 
     out_wav = args.out or f"{args.name}-recording.wav"
-    sf.write(out_wav, rec, args.samplerate)
+    write_wav_mono(out_wav, rec, args.samplerate)
     print(f"[audio] saved {out_wav}")
 
     ref_path = args.reference or os.path.join(REF_DIR, f"{args.name}.wav")
     if args.update_reference:
         os.makedirs(REF_DIR, exist_ok=True)
-        sf.write(ref_path, rec, args.samplerate)
-        print(f"[ref] wrote reference {ref_path} — LISTEN to it to confirm it's correct.")
+        write_wav_mono(ref_path, rec, args.samplerate)
+        print(f"[ref] wrote {ref_path} — LISTEN to confirm it's correct.")
         return 0
-
     if not os.path.exists(ref_path):
         sys.exit(f"[ref] no reference at {ref_path}; run once with --update-reference.")
-    ref, _ = sf.read(ref_path, dtype="float32")
-    if ref.ndim > 1:
-        ref = np.mean(ref, axis=1)
-    diff_db, sig_db = compare(rec, ref)
-    ok = diff_db <= args.threshold
-    print(f"\n{args.name}: signal={sig_db:.1f}dB  rms_diff={diff_db:.1f}dB  "
-          f"threshold={args.threshold:.1f}dB  ->  {'PASS' if ok else 'FAIL'}")
+    ref, _ = read_wav_mono(ref_path)
+    sim, level_db = compare(rec, ref)
+    ok = sim >= args.min_similarity and level_db >= args.min_level_db
+    print(f"\n{args.name}: spectral_similarity={sim:.4f} (min {args.min_similarity})  "
+          f"level={level_db:.1f}dB (min {args.min_level_db})  ->  {'PASS' if ok else 'FAIL'}")
     return 0 if ok else 1
 
 
