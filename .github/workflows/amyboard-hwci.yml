@@ -82,7 +82,9 @@ jobs:
           SHA="${{ steps.ctx.outputs.sha }}"
           curl -fsSL "https://codeload.github.com/${{ github.repository }}/tar.gz/${SHA}" -o /tmp/hwci-src.tgz
           rm -rf hwci && mkdir hwci
-          TOP="$(tar tzf /tmp/hwci-src.tgz | head -1 | cut -d/ -f1)"
+          # codeload's top dir is "<repo>-<full-sha>"; compute it directly (don't
+          # pipe `tar | head`, which SIGPIPEs and fails the step under pipefail).
+          TOP="${GITHUB_REPOSITORY##*/}-${SHA}"
           tar xzf /tmp/hwci-src.tgz -C hwci --strip-components=4 "${TOP}/tulip/amyboard/hwci"
           echo "Extracted:"; ls -R hwci
 
