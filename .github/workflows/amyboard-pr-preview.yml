@@ -61,6 +61,16 @@ jobs:
             cd .. &&
             python fs_create.py amyboard
 
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amyboard-firmware
+          if-no-files-found: error
+          path: |
+            tulip/amyboard/dist/amyboard-firmware-AMYBOARD.bin
+            tulip/amyboard/dist/amyboard-full-AMYBOARD.bin
+            tulip/amyboard/dist/amyboard-sys.bin
+
       # --- Web stage/ (amy + amyboard WASM + static) ---
       - uses: actions/setup-python@v5
         with:
