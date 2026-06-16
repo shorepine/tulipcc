@@ -385,10 +385,12 @@ def _apply_knobs_text(knobs_text):
     """Send each line of knobs text to AMY."""
     if not knobs_text:
         # First run / factory reset: clear any previously configured synths
-        # (drums on ch10, etc.) and set up channel 1 with the default Juno patch.
+        # (drums on ch10, etc.) and set up channel 1 with the amyboard default
+        # patch. S<RESET_SYNTHS> already clears all MIDI CC maps, and loading
+        # K257 reinstalls the default CC map on channel 1, so a plugged-in MIDI
+        # controller works out of the box before the website pushes anything.
         amy.send_raw("S%dZ" % amy.RESET_SYNTHS)
         amy.send_raw("i1K257iv6Z")
-        amy.send_raw("i1ic255Z")
         return
     for line in knobs_text.strip().split('\n'):
         line = line.strip()
