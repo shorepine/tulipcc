@@ -30,6 +30,20 @@ jobs:
   preview:
     runs-on: ubuntu-latest
     steps:
+      # Fail fast on a missing/mis-scoped token, before the ~15-min build.
+      - name: Verify Vercel token can access the team
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN secret is not set — add it (scope bwhitmans-projects)."; exit 1
+          fi
+          npm i -g vercel@latest >/dev/null 2>&1
+          if ! vercel project ls --scope bwhitmans-projects --token "$VERCEL_TOKEN" >/dev/null 2>&1; then
+            echo "::error::VERCEL_TOKEN cannot access the 'bwhitmans-projects' team — recreate the token with that scope."; exit 1
+          fi
+          echo "Vercel token OK for bwhitmans-projects."
+
       - uses: actions/checkout@v4
         with:
           submodules: recursive
