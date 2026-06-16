@@ -11,7 +11,6 @@ var amyboard_started = false;
 // read later in start_audio() after check_url_env_params() has mutated the URL.
 // Keeps the default run_sketch() path from racing the deferred world-load.
 var _url_env_pending = false;
-var amy_yield_patch_events = null;
 var amy_yield_synth_commands = null;
 var amy_dump_state_to_string_c = null;
 
@@ -216,9 +215,6 @@ if (typeof amyModule === 'function') _amy_wasm_ready = amyModule().then(async fu
   );
   amy_process_single_midi_byte = am.cwrap(
     'amy_process_single_midi_byte', null, ['number, number']
-  );
-  amy_yield_patch_events = am.cwrap(
-    'yield_patch_events', 'number', ['number', 'number', 'number']
   );
   amy_yield_synth_commands = am.cwrap(
     'yield_synth_commands', 'number', ['number', 'number', 'number', 'boolean', 'number']
