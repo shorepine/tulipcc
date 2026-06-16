@@ -18,6 +18,26 @@ Important:
 - The script creates `.submodules_ok` at repo root after first successful setup. If submodule pointers change and you need to force a resync, remove `.submodules_ok` and rerun the script from `tulip/shared`.
 - `micropython` is expected to appear dirty after running submodule setup. `grab_submodules.sh` intentionally patches `micropython/mpy-cross/Makefile` (`-Wno-gnu-folding-constant`) so it compiles on newer macOS clang versions.
 
+### Worktrees start with empty submodules (read this BEFORE searching `amy/`)
+
+Git worktrees do **not** inherit the main checkout's submodules. In a fresh worktree
+(e.g. anything under `.claude/worktrees/*`) the submodules are uninitialized:
+`git submodule status` lists `amy` and `micropython` with a leading `-`, and
+`amy/src/`, `micropython/`, etc. are empty. **This is expected** — do not burn a turn
+"discovering" it by grepping `amy/`, finding nothing, and then reasoning your way to the
+fix. When you need amy (or micropython) content, go straight to the right resolution:
+
+- **Building anything (`amyboard`, `tulip/web`, `tulip/amyboardweb`), or you need the
+  worktree's exact pinned commit:** bootstrap *in the worktree* —
+  `cd tulip/shared && ./grab_submodules.sh`. A fresh worktree has no `.submodules_ok`, so
+  it runs a full init. (Web/WASM builds require this first — see "Testing `tulipcc`".)
+- **Read-only source inspection only** (e.g. "where is `yield_synth_commands` defined?"):
+  the main checkout at `/Users/bwhitman/outside/tulipcc/amy` already has `amy/` checked
+  out — just read it there. Caveat: it may be at a **different commit** than this
+  worktree's pin. Verify with `git ls-tree HEAD amy` in the worktree and compare the SHA;
+  if exact-pin fidelity matters, bootstrap instead. **Read-only only — never edit the
+  main checkout** (see "Worktree File Editing").
+
 ## Micropython Submodule Status
 
 The `micropython` submodule is expected to appear dirty after bootstrap/build steps (for example, local warning-flag patching done by `tulip/shared/grab_submodules.sh`).
