@@ -1,0 +1,118 @@
+name: AMYboard PR preview
+
+# Per-PR preview of the AMYboard web editor + flasher, with this PR's firmware
+# bundled in, deployed to a unique URL (amyboard-pr-<N>.vercel.app). The bundled
+# firmware means the preview flasher can ONLY flash this PR's build. Torn down
+# by amyboard-pr-preview-cleanup.yml when the PR closes.
+#
+# Requires repo secret VERCEL_TOKEN (scope: bwhitmans-projects). The amyboard-pr
+# Vercel project is deployed to as preview deployments and aliased per PR.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'amy'
+      - 'tulip/amyboard/**'
+      - 'tulip/amyboardweb/**'
+      - 'tulip/shared/amyboard-py/**'
+      - '.github/workflows/amyboard-pr-preview.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: amyboard-pr-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # --- Firmware (.bin set) ---
+      - name: Build AMYboard firmware
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.4.1
+          target: esp32s3
+          path: tulip/amyboard
+          command: >-
+            python -m pip install littlefs-python &&
+            idf.py -DMICROPY_BOARD=AMYBOARD build &&
+            cd .. &&
+            python fs_create.py amyboard
+
+      # --- Web stage/ (amy + amyboard WASM + static) ---
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install web build deps
+        run: pip install numpy
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.22
+      - name: Build amyboardweb stage/
+        run: |
+          cd tulip/amyboardweb
+          python3 dev.py --build-only
+
+      # --- Bundle this PR's firmware into the site ---
+      - name: Bundle firmware into stage/
+        run: |
+          mkdir -p tulip/amyboardweb/stage/firmware
+          cp tulip/amyboard/dist/amyboard-full-AMYBOARD.bin \
+             tulip/amyboard/dist/amyboard-firmware-AMYBOARD.bin \
+             tulip/amyboard/dist/amyboard-sys.bin \
+             tulip/amyboardweb/stage/firmware/
+
+      # --- Deploy preview + stable per-PR alias ---
+      - name: Deploy preview to Vercel
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN secret is not set — add it (scope bwhitmans-projects) to enable PR previews."
+            exit 1
+          fi
+          npm i -g vercel@latest >/dev/null 2>&1
+          cd tulip/amyboardweb
+          vercel link --yes --token "$VERCEL_TOKEN" --scope bwhitmans-projects --project amyboard-pr --cwd stage
+          url=$(vercel deploy stage --token "$VERCEL_TOKEN" --scope bwhitmans-projects --yes)
+          alias="amyboard-pr-${PR}.vercel.app"
+          vercel alias set "$url" "$alias" --token "$VERCEL_TOKEN" --scope bwhitmans-projects
+          echo "url=https://$alias" >> "$GITHUB_OUTPUT"
+
+      # --- Comment (upsert) the preview URL on the PR ---
+      - name: Comment preview URL
+        if: success()
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+        with:
+          script: |
+            const url = process.env.PREVIEW_URL;
+            const marker = '<!-- amyboard-pr-preview -->';
+            const body = [
+              marker,
+              '### 🔌 AMYboard PR preview',
+              '',
+              `**Editor + flasher:** ${url}/editor/`,
+              '',
+              "This preview bundles **this PR's firmware** — its flasher only flashes this build (not release/dev). Rebuilt on every push; removed when the PR closes.",
+            ].join('\n');
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body });
+            }

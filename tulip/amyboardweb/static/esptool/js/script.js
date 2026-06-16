@@ -19,15 +19,19 @@ const noReset = document.getElementById("noReset");
 
 // Firmware channel: the "dev" site flashes test builds from the rolling 'dev'
 // GitHub prerelease; everywhere else flashes the real (latest) release.
+// Per-PR preview sites (amyboard-pr-<N>.vercel.app) bundle their own firmware
+// under /firmware on the same origin, so a preview can only ever flash that
+// PR's build.
 const FIRMWARE_BASES = {
     release: "https://github.com/shorepine/tulipcc/releases/latest/download",
     dev:     "https://github.com/shorepine/tulipcc/releases/download/dev",
+    pr:      "/firmware",
 };
 
 function channelFromSearch(search) {
     try {
         const v = new URLSearchParams(search || "").get("channel");
-        return v === "dev" || v === "release" ? v : null;
+        return (v === "dev" || v === "release" || v === "pr") ? v : null;
     } catch (e) {
         return null;
     }
@@ -43,6 +47,7 @@ function resolveFirmwareChannel() {
 
     const host = (window.location.hostname || "").toLowerCase();
     if (host === "amyboard.com" || host === "www.amyboard.com") return "release";
+    if (host.includes("amyboard-pr")) return "pr";
     if (host.includes("amyboard-dev")) return "dev";
     if (host === "localhost" || host === "127.0.0.1") return "dev";
     return "release";
@@ -142,6 +147,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (firmwareChannel === "dev") {
             channelBadge.textContent =
                 "DEV channel — flashing test builds from the rolling 'dev' release, not a stable version.";
+            channelBadge.classList.remove("hidden");
+        } else if (firmwareChannel === "pr") {
+            channelBadge.textContent =
+                "PR PREVIEW — flashing this pull request's firmware build, not a stable version.";
             channelBadge.classList.remove("hidden");
         } else {
             channelBadge.classList.add("hidden");

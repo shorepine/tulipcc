@@ -1,0 +1,29 @@
+name: AMYboard PR preview cleanup
+
+# Removes the per-PR preview alias (amyboard-pr-<N>.vercel.app) when the PR is
+# merged or closed. The underlying preview deployments age out on Vercel.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove preview alias
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN not set — nothing to clean up."
+            exit 0
+          fi
+          npm i -g vercel@latest >/dev/null 2>&1
+          vercel alias rm "amyboard-pr-${PR}.vercel.app" --yes \
+            --token "$VERCEL_TOKEN" --scope bwhitmans-projects || \
+            echo "alias amyboard-pr-${PR}.vercel.app not found (already gone) — ok"
