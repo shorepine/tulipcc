@@ -34,6 +34,7 @@ jobs:
           # Build the AMYBOARD board, then assemble the flashable .bin set
           # (fs_create.py lives in tulip/ and writes tulip/amyboard/dist/).
           command: >-
+            python -m pip install littlefs-python &&
             idf.py -DMICROPY_BOARD=AMYBOARD build &&
             cd .. &&
             python fs_create.py amyboard
