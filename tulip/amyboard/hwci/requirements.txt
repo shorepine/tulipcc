@@ -1,6 +1,7 @@
 # Core (both the Pi/ALSA runner and macOS) — installable in a venv, no root:
 esptool
 numpy
+pyserial   # serial-console capture (debug UART + CDC); also an esptool dep
 
 # macOS / non-Linux backend only. The Pi uses ALSA's `amidi` + `arecord` (already
 # present on Raspberry Pi OS / Debian) instead of these, so it needs neither root

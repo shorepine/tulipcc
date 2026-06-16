@@ -3,7 +3,9 @@
 `hwci.py` runs a real AMYboard through a full firmware test: **flash → reboot →
 drive over USB-MIDI + AMY `zP` sysex → record the analog audio out → spectral
 compare to a committed reference** (the hardware analogue of `amy/test.py`).
-Exit code 0 = pass, 1 = fail.
+Throughout the run it also tails both serial consoles — the **debug UART**
+(ESP-IDF console / stderr) and the native **CDC** (MicroPython stdout) — into a
+combined `*-serial.log`. Exit code 0 = pass, 1 = fail.
 
 Validated on a **Raspberry Pi 5 / Debian 13** (the intended self-hosted CI
 runner); also runs on macOS for dev.
@@ -54,6 +56,10 @@ python3 hwci.py --pr 993 --port /dev/ttyACM1
 - Firmware comes from the per-PR preview (`amyboard-pr-<N>.vercel.app/firmware/`);
   use `--firmware <path>` / `--url`. `--no-flash` skips flashing to iterate on the
   drive/record/compare against an already-flashed board.
+- Each run writes `{name}-recording.wav` **and** `{name}-serial.log` (both meant
+  to be attached to the PR). The log captures the debug UART (`--debug-port`,
+  default `--port` else `/dev/ttyACM1`) and the native CDC (`--cdc-port`, default
+  `/dev/ttyACM0`); `--no-serial-log` disables it.
 
 ## The stimulus & metric
 - **Stimulus** (`run_test_sequence()`, editable): a quick USB-MIDI note to prove
@@ -66,6 +72,17 @@ python3 hwci.py --pr 993 --port /dev/ttyACM1
   `level ≥ --min-level-db`. On this bench, same-firmware runs score **~0.99**
   repeatably.
 
+## Serial logs: `*-serial.log`
+Two consoles are tailed for the whole run and written to one combined text file:
+- **Debug UART** — the dongle on the board's debug header is a stable hardware
+  UART carrying the ESP-IDF console (boot log, `ESP_LOGx`, panics): the board's
+  "stderr". Connecting pulses the auto-reset line, so the board reboots as we
+  attach — that's how we capture a clean boot log.
+- **CDC** — the board's native USB is MicroPython's stdout (`print()`,
+  tracebacks). It re-enumerates during boot (ROM USB-Serial-JTAG → TinyUSB CDC),
+  so we start tailing it only *after* the board is back up; the stimulus prints a
+  marker line so the capture is always exercised.
+
 ## Reference: `ref/hwci_basic.wav`
 Committed golden for the `hwci_basic` test. It's **bench-specific** (depends on
 this board + audio interface + gain); re-capture with `--update-reference` if the
@@ -74,5 +91,6 @@ hardware changes.
 ## Next steps
 - **CI workflow**: a self-hosted-runner job on the Pi (label/dispatch-triggered)
   that runs `hwci.py --pr <N>` and reports pass/fail.
-- **Audio to the PR**: GitHub's API can't attach binaries to PR *comments*, so
-  upload `*-recording.wav` as a **workflow artifact** and link it in the comment.
+- **Artifacts to the PR**: GitHub's API can't attach binaries to PR *comments*,
+  so upload `*-recording.wav` and `*-serial.log` as **workflow artifacts** and
+  link them in the comment.

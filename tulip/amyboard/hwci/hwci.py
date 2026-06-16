@@ -4,7 +4,10 @@
 Flashes a built AMYboard firmware onto a physically connected board, reboots it,
 drives it with USB-MIDI notes and AMY `zP` sysex, records the analog audio out,
 and RMS-compares the recording against a committed reference (like amy/test.py)
-for pass/fail.
+for pass/fail. The two serial consoles are tailed for the whole run — the debug
+UART (ESP-IDF console / stderr) and the native CDC (MicroPython stdout) — and
+saved to a combined `{name}-serial.log` next to `{name}-recording.wav`, so a CI
+run can attach both the audio and the logs to the PR.
 
 Two backends, auto-selected:
   * ALSA CLI (`amidi` + `arecord`)  — Linux / Raspberry Pi CI runner. No extra
@@ -28,6 +31,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.request
 import wave
@@ -93,8 +97,14 @@ class Midi:
             # split running-status-free messages; data is one message here
             self._mido_out.send(self._mido.Message.from_bytes(data))
 
+    def note_on(self, n, vel=100):
+        self._raw([0x90, n, vel])
+
+    def note_off(self, n):
+        self._raw([0x80, n, 0])
+
     def note(self, n, vel, dur):
-        self._raw([0x90, n, vel]); time.sleep(dur); self._raw([0x80, n, 0])
+        self.note_on(n, vel); time.sleep(dur); self.note_off(n)
 
     def sysex(self, code):
         self._raw([0xF0] + AMY_SYSEX_PREFIX + list(code.encode("ascii")) + [0xF7])
@@ -124,6 +134,98 @@ def _mido_find():
         if MIDI_NAME in n:
             return n
     return None
+
+
+# ── serial console capture ───────────────────────────────────────────────────
+class SerialLog:
+    """Tail a serial port into memory on a background thread, for the run's log.
+
+    Opens with DTR/RTS de-asserted to minimize line disturbance. Note the
+    kernel still briefly raises the modem lines as the tty opens, so on the
+    debug-header dongle (whose DTR/RTS feed the board's auto-reset circuit:
+    DTR->IO0, RTS->EN) connecting reboots the board — which is how we get a
+    clean boot log. Retries the open for a few seconds because the port may
+    still be re-enumerating right after a flash/reset."""
+    def __init__(self, port, baud, label):
+        self.port, self.baud, self.label = port, baud, label
+        self.buf = bytearray()
+        self.opened = False
+        self._stop = threading.Event()
+        self._t = threading.Thread(target=self._run, daemon=True)
+
+    def start(self):
+        self._t.start()
+
+    def _run(self):
+        try:
+            import serial  # pyserial (ships with esptool)
+        except ImportError:
+            print(f"[log] pyserial missing; cannot capture {self.port}")
+            return
+        ser = None
+        deadline = time.monotonic() + 8.0
+        while ser is None and not self._stop.is_set() and time.monotonic() < deadline:
+            try:
+                ser = serial.Serial()
+                ser.port = self.port
+                ser.baudrate = self.baud
+                ser.timeout = 0.2
+                ser.dtr = False  # don't trigger auto-reset on open
+                ser.rts = False
+                ser.open()
+            except Exception:
+                ser = None
+                time.sleep(0.3)
+        if ser is None:
+            print(f"[log] could not open {self.port} ({self.label})")
+            return
+        self.opened = True
+        while not self._stop.is_set():
+            try:
+                data = ser.read(4096)
+            except Exception:
+                break
+            if data:
+                self.buf.extend(data)
+        try:
+            ser.close()
+        except Exception:
+            pass
+
+    def stop(self):
+        self._stop.set()
+        self._t.join(timeout=3)
+
+    def text(self):
+        return self.buf.decode("utf-8", "replace")
+
+
+def start_serial_log(port, baud, label):
+    """Start tailing one serial port in the background; returns the SerialLog
+    (or None if no port given)."""
+    if not port:
+        return None
+    sl = SerialLog(port, baud, label)
+    sl.start()
+    print(f"[log] capturing {port} ({label})")
+    return sl
+
+
+def write_serial_logs(logs, path):
+    """Stop the tailers and write one combined text log (one section per port)."""
+    for sl in logs:
+        sl.stop()
+    with open(path, "w", encoding="utf-8") as f:
+        for sl in logs:
+            f.write(f"===== {sl.label}  [{sl.port} @ {sl.baud} baud] =====\n")
+            if not sl.opened:
+                f.write(f"(could not open {sl.port})\n")
+            body = sl.text()
+            f.write(body)
+            if not body.endswith("\n"):
+                f.write("\n")
+            f.write("\n")
+    print(f"[log] wrote serial log -> {path}")
 
 
 # ── audio ───────────────────────────────────────────────────────────────────
@@ -190,15 +292,34 @@ def run_test_sequence(m):
     chord via zP, so the averaged spectrum is stable. We still poke the USB-MIDI
     path first (a quick note) to confirm it's alive; its ring-out is cleared
     before the recorded chord."""
-    # 1) exercise USB-MIDI (not part of the spectral compare)
-    m.note(60, 100, 0.15)
-    m.sysex("zPimport amy; amy.reset()Z")   # clean slate, kill any ring-out
+    # Ensure ch1 has the default patch (K257, 6 voices) so the USB-MIDI notes
+    # make sound even if a previous run's amy.reset() cleared it (there's no
+    # reboot between --no-flash runs).
+    m.sysex("i1K257iv6Z")
     time.sleep(0.5)
-    # 2) sustained 3-osc chord (A4/C#5/E5) — deterministic, reproducible spectrum
-    m.sysex("zPimport amy; amy.send(osc=0,wave=amy.SINE,freq=440,vel=1); "
-            "amy.send(osc=1,wave=amy.SINE,freq=554,vel=1); "
-            "amy.send(osc=2,wave=amy.SINE,freq=659,vel=1)Z")
-    time.sleep(2.6)
+    # Emit a marker on MicroPython stdout (the CDC port) so the serial log proves
+    # the stdout-capture path and carries a little board provenance.
+    m.sysex("zPimport gc; print('hwci: stdout ok, mem_free', gc.mem_free())Z")
+    time.sleep(0.2)
+    # 1) C-major scale over USB-MIDI (vel 100) on ch1's patch
+    for n in (60, 62, 64, 65, 67, 69, 71, 72):
+        m.note(n, 100, 0.22); time.sleep(0.05)
+    time.sleep(0.3)
+    # 2) hold a C-major chord (C/E/G) over USB-MIDI
+    for n in (60, 64, 67):
+        m.note_on(n, 100)
+    time.sleep(1.5)
+    for n in (60, 64, 67):
+        m.note_off(n)
+    # 3) pause
+    time.sleep(1.0)
+    # 4) reset, then a sustained 3-osc chord (A4/C#5/E5) via zP
+    m.sysex("zPimport amy; amy.reset()Z")
+    time.sleep(0.5)
+    m.sysex("zPimport amy; amy.send(osc=0,wave=amy.SINE,freq=440,vel=0.3); "
+            "amy.send(osc=1,wave=amy.SINE,freq=554,vel=0.3); "
+            "amy.send(osc=2,wave=amy.SINE,freq=659,vel=0.3)Z")
+    time.sleep(2.0)
     m.sysex("zPimport amy; amy.send(osc=0,vel=0); amy.send(osc=1,vel=0); amy.send(osc=2,vel=0)Z")
 
 
@@ -240,7 +361,7 @@ def main():
                     help="ALSA hw:X,Y or sounddevice index/name")
     ap.add_argument("--samplerate", type=int, default=48000)
     ap.add_argument("--channels", type=int, default=1)
-    ap.add_argument("--duration", type=float, default=4.0)
+    ap.add_argument("--duration", type=float, default=10.0)
     ap.add_argument("--name", default="hwci_basic")
     ap.add_argument("--reference"); ap.add_argument("--update-reference", action="store_true")
     ap.add_argument("--min-similarity", type=float, default=0.90,
@@ -248,6 +369,16 @@ def main():
     ap.add_argument("--min-level-db", type=float, default=-30.0,
                     help="min recording RMS level (dB) to pass")
     ap.add_argument("--out")
+    ap.add_argument("--debug-port", default=None,
+                    help="serial debug UART to log (ESP-IDF console/stderr); "
+                         "default: --port, else /dev/ttyACM1 on Linux")
+    ap.add_argument("--cdc-port", default="/dev/ttyACM0" if ALSA else None,
+                    help="board native CDC to log (MicroPython stdout)")
+    ap.add_argument("--debug-baud", type=int, default=115200)
+    ap.add_argument("--serial-log", default=None,
+                    help="combined serial log path (default: {name}-serial.log)")
+    ap.add_argument("--no-serial-log", action="store_true",
+                    help="don't capture the serial console")
     args = ap.parse_args()
     print(f"[hwci] backend: {'ALSA cli' if ALSA else 'python libs'}")
 
@@ -266,14 +397,39 @@ def main():
         if args.flash_only:
             print("[done] flashed."); return 0
 
-    args.midi_port = args.midi_port or wait_for_board()
-    if not args.audio_device:
-        sys.exit("--audio-device required (see --list-devices).")
-    m = Midi(args.midi_port)
+    # Tail the serial consoles for the run. The debug UART (the dongle on the
+    # board's debug header) is a stable hardware UART carrying the ESP-IDF
+    # console; opening it pulses DTR/RTS through the board's auto-reset circuit,
+    # so the board reboots as we connect — which is exactly how we capture a
+    # clean boot log. The native CDC, by contrast, re-enumerates during boot
+    # (ROM USB-Serial-JTAG -> TinyUSB CDC), so we start tailing it only *after*
+    # the board is back up, to record clean MicroPython stdout.
+    debug_port = args.debug_port or args.port or ("/dev/ttyACM1" if ALSA else None)
+    loggers = []
+    if not args.no_serial_log:
+        dbg = start_serial_log(debug_port, args.debug_baud,
+                               "DEBUG UART (ESP-IDF console / stderr)")
+        if dbg:
+            loggers.append(dbg)
     try:
-        rec = record_and_drive(args, args.duration, lambda: run_test_sequence(m))
+        if loggers:
+            time.sleep(2.0)  # let the connect-reset drop the old USB enumeration
+        args.midi_port = args.midi_port or wait_for_board()
+        time.sleep(1.5)      # let the MIDI endpoint + synth settle post-boot
+        if not args.no_serial_log:
+            cdc = start_serial_log(args.cdc_port, 115200, "CDC (MicroPython stdout)")
+            if cdc:
+                loggers.append(cdc)
+        if not args.audio_device:
+            sys.exit("--audio-device required (see --list-devices).")
+        m = Midi(args.midi_port)
+        try:
+            rec = record_and_drive(args, args.duration, lambda: run_test_sequence(m))
+        finally:
+            m.close()
     finally:
-        m.close()
+        if loggers:
+            write_serial_logs(loggers, args.serial_log or f"{args.name}-serial.log")
 
     out_wav = args.out or f"{args.name}-recording.wav"
     write_wav_mono(out_wav, rec, args.samplerate)
