@@ -1,15 +1,14 @@
 name: AMYboard firmware
 
-# Build the AMYboard ESP32-S3 firmware on every PR and on main, so firmware
-# breakage is caught in CI (the existing desktop-linux job only builds the SDL
-# desktop target). On PRs the built images are uploaded as downloadable
-# artifacts; on main they are also published to the rolling `dev` prerelease
-# (the same assets `tulip/dev.sh firmware` publishes).
+# Build the AMYboard ESP32-S3 firmware on main and publish it to the rolling
+# `dev` prerelease (the same assets `tulip/dev.sh firmware` publishes).
+#
+# PRs are covered by amyboard-pr-preview.yml, which builds the same firmware,
+# uploads it as an artifact, and deploys a flashable preview site — so this
+# workflow no longer runs on pull_request to avoid building the firmware twice.
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
     branches: [ "main" ]
 
 # Allow the main-branch run to upload release assets to the `dev` prerelease.
