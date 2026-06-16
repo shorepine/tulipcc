@@ -1,0 +1,64 @@
+name: AMYboard firmware
+
+# Build the AMYboard ESP32-S3 firmware on every PR and on main, so firmware
+# breakage is caught in CI (the existing desktop-linux job only builds the SDL
+# desktop target). On PRs the built images are uploaded as downloadable
+# artifacts; on main they are also published to the rolling `dev` prerelease
+# (the same assets `tulip/dev.sh firmware` publishes).
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# Allow the main-branch run to upload release assets to the `dev` prerelease.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # amy + micropython (and their nested submodules) are needed to build.
+          submodules: recursive
+
+      - name: Build AMYboard firmware + assemble images
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.4.1
+          target: esp32s3
+          path: tulip/amyboard
+          # Build the AMYBOARD board, then assemble the flashable .bin set
+          # (fs_create.py lives in tulip/ and writes tulip/amyboard/dist/).
+          command: >-
+            python -m pip install littlefs-python &&
+            idf.py -DMICROPY_BOARD=AMYBOARD build &&
+            cd .. &&
+            python fs_create.py amyboard
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: amyboard-firmware
+          if-no-files-found: error
+          path: |
+            tulip/amyboard/dist/amyboard-firmware-AMYBOARD.bin
+            tulip/amyboard/dist/amyboard-full-AMYBOARD.bin
+            tulip/amyboard/dist/amyboard-sys.bin
+
+      - name: Publish to the rolling 'dev' prerelease (main only)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view dev >/dev/null 2>&1 || \
+            gh release create dev --prerelease \
+              --title "AMYboard dev (rolling)" \
+              --notes "Rolling AMYboard development build. Flash from https://amyboard-dev.vercel.app — this is NOT a stable release."
+          gh release upload --clobber dev \
+            tulip/amyboard/dist/amyboard-firmware-AMYBOARD.bin \
+            tulip/amyboard/dist/amyboard-full-AMYBOARD.bin \
+            tulip/amyboard/dist/amyboard-sys.bin
