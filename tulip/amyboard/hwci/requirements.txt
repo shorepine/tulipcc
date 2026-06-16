@@ -1,0 +1,8 @@
+esptool
+mido
+python-rtmidi
+sounddevice
+soundfile
+numpy
+requests
+pyserial
