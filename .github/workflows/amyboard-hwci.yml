@@ -1,0 +1,131 @@
+name: AMYboard HW CI
+
+# Flash THIS PR's firmware onto the physical AMYboard (self-hosted Pi runner),
+# drive it over USB-MIDI + AMY zP sysex, record the analog audio out plus both
+# serial consoles, and spectral-compare the audio to the committed reference.
+# The hardware analogue of amy/test.py.
+#
+# Chains off "AMYboard PR preview" via workflow_run: that workflow builds the
+# PR's firmware and deploys it to amyboard-pr-<N>.vercel.app, so by the time this
+# runs the firmware is ready to flash (hwci.py --pr <N> downloads it from there).
+#
+# SECURITY: shorepine/tulipcc is PUBLIC and this runs on a self-hosted runner,
+# so it is gated to SAME-REPO PRs only — fork PR code never executes on the Pi.
+
+on:
+  workflow_run:
+    workflows: ["AMYboard PR preview"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: "PR number to flash + test (its amyboard-pr-<N> preview must exist)"
+        required: true
+  # TEMPORARY (testing on the PR branch before merge — workflow_run/dispatch only
+  # fire from the default branch). Remove before merging to main.
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/amyboard-hwci.yml'
+      - 'tulip/amyboard/hwci/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: amyboard-hwci          # one physical board → serialize every run
+  cancel-in-progress: false
+
+jobs:
+  hwci:
+    # workflow_dispatch (manual), or a same-repo PR whose preview succeeded, or
+    # (temporarily) a same-repo pull_request. Fork PRs never run on the Pi.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: [self-hosted, amyboard-hwci]
+    timeout-minutes: 20
+    steps:
+      - name: Resolve PR number + head SHA
+        id: ctx
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let pr, sha;
+            if (context.eventName === 'workflow_dispatch') {
+              pr = Number(context.payload.inputs.pr);
+              const { data } = await github.rest.pulls.get({ owner: context.repo.owner, repo: context.repo.repo, pull_number: pr });
+              sha = data.head.sha;
+            } else if (context.eventName === 'pull_request') {
+              pr = context.payload.pull_request.number;
+              sha = context.payload.pull_request.head.sha;
+            } else { // workflow_run
+              const run = context.payload.workflow_run;
+              const assoc = run.pull_requests && run.pull_requests[0];
+              if (!assoc) { core.setFailed('workflow_run has no associated same-repo PR; skipping.'); return; }
+              pr = assoc.number;
+              sha = run.head_sha;
+            }
+            core.setOutput('pr', String(pr));
+            core.setOutput('sha', sha);
+            core.info(`HW CI for PR #${pr} @ ${sha}`);
+
+      - name: Fetch hwci/ at the PR head (public tarball; runner has no git)
+        run: |
+          set -euo pipefail
+          SHA="${{ steps.ctx.outputs.sha }}"
+          curl -fsSL "https://codeload.github.com/${{ github.repository }}/tar.gz/${SHA}" -o /tmp/hwci-src.tgz
+          rm -rf hwci && mkdir hwci
+          TOP="$(tar tzf /tmp/hwci-src.tgz | head -1 | cut -d/ -f1)"
+          tar xzf /tmp/hwci-src.tgz -C hwci --strip-components=4 "${TOP}/tulip/amyboard/hwci"
+          echo "Extracted:"; ls -R hwci
+
+      - name: Flash + drive + record + compare
+        id: hwci
+        working-directory: hwci
+        run: |
+          set -o pipefail
+          ~/hwci-venv/bin/python hwci.py --pr "${{ steps.ctx.outputs.pr }}" --port /dev/ttyACM1 2>&1 | tee hwci-run.log
+
+      - name: Upload artifacts (recording + serial log + run log)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hwci-pr${{ steps.ctx.outputs.pr }}
+          if-no-files-found: warn
+          path: |
+            hwci/hwci_basic-recording.wav
+            hwci/hwci_basic-serial.log
+            hwci/hwci-run.log
+
+      - name: Comment result on the PR
+        if: always() && steps.ctx.outputs.pr != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = Number('${{ steps.ctx.outputs.pr }}');
+            const pass = '${{ steps.hwci.outcome }}' === 'success';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const marker = '<!-- amyboard-hwci -->';
+            const body = [
+              marker,
+              '### 🎛️ AMYboard HW CI (physical bench)',
+              '',
+              pass
+                ? '✅ **PASS** — flashed this PR’s firmware on the bench; the recorded audio matched the reference.'
+                : '❌ **FAIL** — the recorded audio did not match the reference, or the run errored. See the log.',
+              '',
+              `**[⬇️ Artifacts: recording.wav · serial.log · run log](${runUrl})**`,
+              '',
+              '<sub>Self-hosted AMYboard bench: USB-MIDI + AMY `zP` stimulus, spectral-compared to `ref/hwci_basic.wav`. Serial log = debug UART (stderr) + CDC (stdout).</sub>',
+            ].join('\n');
+            const { data: comments } = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existing.id, body });
+            else await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr, body });
