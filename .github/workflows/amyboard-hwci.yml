@@ -21,13 +21,6 @@ on:
       pr:
         description: "PR number to flash + test (its amyboard-pr-<N> preview must exist)"
         required: true
-  # TEMPORARY (testing on the PR branch before merge — workflow_run/dispatch only
-  # fire from the default branch). Remove before merging to main.
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - '.github/workflows/amyboard-hwci.yml'
-      - 'tulip/amyboard/hwci/**'
 
 permissions:
   contents: read
@@ -39,14 +32,11 @@ concurrency:
 
 jobs:
   hwci:
-    # workflow_dispatch (manual), or a same-repo PR whose preview succeeded, or
-    # (temporarily) a same-repo pull_request. Fork PRs never run on the Pi.
+    # workflow_dispatch (manual), or a same-repo PR whose preview succeeded.
+    # Fork PRs never run on the self-hosted Pi.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'pull_request' &&
-       github.event.pull_request.head.repo.full_name == github.repository) ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.event == 'pull_request' &&
+      (github.event.workflow_run.event == 'pull_request' &&
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: [self-hosted, amyboard-hwci]
@@ -62,9 +52,6 @@ jobs:
               pr = Number(context.payload.inputs.pr);
               const { data } = await github.rest.pulls.get({ owner: context.repo.owner, repo: context.repo.repo, pull_number: pr });
               sha = data.head.sha;
-            } else if (context.eventName === 'pull_request') {
-              pr = context.payload.pull_request.number;
-              sha = context.payload.pull_request.head.sha;
             } else { // workflow_run
               const run = context.payload.workflow_run;
               const assoc = run.pull_requests && run.pull_requests[0];
