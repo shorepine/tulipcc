@@ -70,7 +70,7 @@ A number of boards get **stuck re-enumerating** instead of finishing boot. Tell-
 A strong clue this is firmware and not your computer: the **Arduino** AMY firmware on the *same board* enumerates fine (as `caf0:0001`, USB MIDI works), while the **MicroPython** `amyboard-full` firmware gets stuck. To get going right now:
 
  - **First, just retry:** unplug, replug, hit **RST**. It often comes up on the 2nd or 3rd try.
- - **Most reliable workaround -- use a phone or tablet:** plug AMYboard into an **Android phone or an iPad** with a USB-C cable and open [amyboard.com](https://amyboard.com/editor/) in Chrome there. This works for many people for whom Windows doesn't, and lets you load sketches and patches in the meantime.
+ - **Most reliable workaround -- use an Android phone:** plug AMYboard into an **Android phone** with a USB-C cable and open [amyboard.com](https://amyboard.com/editor/) in Chrome there. This works for many people for whom Windows doesn't, and lets you load sketches and patches in the meantime. (iPhones/iPads don't do USB MIDI, so they won't work for this.)
  - **Linux:** force a clean re-enumeration without cutting power -- `sudo usbreset 303a:1001`, or `sudo usb_modeswitch -v303a -p1001 -W -R`. The `caf0:4009` MIDI device then appears.
  - Try a **known-good data cable** and a **rear/motherboard USB port** -- a port that can't supply enough current can trigger the reboot loop.
 

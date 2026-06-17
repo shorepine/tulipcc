@@ -66,7 +66,7 @@ We're actively chasing OS-specific USB issues. Known data points:
 - **Older Intel Macs** sometimes need a replug or restart after each reset before the MIDI port reappears; Apple-silicon Macs don't.
 - **Linux:** add your user to the `dialout` group, then e.g. `screen /dev/ttyACM0 115200`. If `lsusb` only shows the `303a:...` Espressif/JTAG device and never `caf0:4009`, `sudo usbreset 303a:1001` (or `usb_modeswitch -v303a -p1001 -W -R`) often forces the MIDI device to appear.
 
-**Workarounds while we fix the firmware:** the most reliable is to plug AMYboard into an **Android phone or iPad** with a USB-C cable and use [amyboard.com](https://amyboard.com/editor/) there. On Windows, running `msdt.exe -id DeviceDiagnostic` and rebooting often forces it to show up. Full steps in [Troubleshooting](troubleshooting.md#usb-midi-not-recognized).
+**Workarounds while we fix the firmware:** the most reliable is to plug AMYboard into an **Android phone** with a USB-C cable and use [amyboard.com](https://amyboard.com/editor/) there (iPhones/iPads don't do USB MIDI). On Windows, running `msdt.exe -id DeviceDiagnostic` and rebooting often forces it to show up. Full steps in [Troubleshooting](troubleshooting.md#usb-midi-not-recognized).
 
 If you have AMYboard on Windows, please report on Discord (or on [issue #952](https://github.com/shorepine/tulipcc/issues/952)) whether it works -- it helps us narrow the issue.
 
