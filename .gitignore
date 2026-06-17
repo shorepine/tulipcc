@@ -113,3 +113,7 @@ _autosave-*
 *-save.kicad_pcb
 fp-info-cache
 *.lck
+
+# Nix files
+/.direnv
+result
