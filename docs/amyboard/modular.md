@@ -12,7 +12,7 @@ Your AMYboard ships with a plexiglass "front panel" with cutouts for the jacks a
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_bambu.png" width=600>
 
-You can also 3D print your own front panel for whatever use case you have in mind! [You can grab a BambuLab 3MF file here](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Or build from the [DXF file for the provided front panel](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.dxf).
+You can also 3D print your own front panel for whatever use case you have in mind! [You can grab a BambuLab 3MF file here](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Or build from the front panel [DXF file](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.dxf), [EPS Vector File](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.eps) or [SVG vector file](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.svg).
 
 
 ## 10vpp Operation
