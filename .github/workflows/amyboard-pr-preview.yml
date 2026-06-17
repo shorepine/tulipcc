@@ -130,6 +130,8 @@ jobs:
               `**Editor + flasher:** ${url}/editor/`,
               '',
               "This preview bundles **this PR's firmware** — its flasher only flashes this build (not release/dev). Rebuilt on every push; removed when the PR closes.",
+              '',
+              'The hardware CI has been kicked off and should return within a few minutes, stand by!',
             ].join('\n');
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
