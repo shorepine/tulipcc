@@ -61,10 +61,14 @@ We're actively chasing OS-specific USB issues. Known data points:
 
 - **Works:** Windows 11 ARM, Ubuntu 26 desktop, modern Apple-silicon Macs.
 - Some **Windows 10/11 x64** machines only ever see the USB/JTAG device. First make sure it isn't just stuck in DFU (above). Check **Settings → Bluetooth & devices → Other devices** for "AMYboard", and try a known **data** USB-C cable (many cables are charge-only).
+- The **same board** usually works under the **Arduino** AMY firmware (it enumerates as `caf0:0001`) even when the **MicroPython** `amyboard-full` firmware gets stuck as a `303a:...` JTAG device. So this is a firmware USB/boot issue we can fix -- not your computer.
+- A faint **click/pop in the audio about once per second** means the board is **boot-looping** (seen on some Android phones too, not just Windows). See [Is it a boot loop?](troubleshooting.md#is-it-a-boot-loop).
 - **Older Intel Macs** sometimes need a replug or restart after each reset before the MIDI port reappears; Apple-silicon Macs don't.
-- **Linux:** add your user to the `dialout` group, then e.g. `screen /dev/ttyACM0 115200`. If `dmesg` only shows the Espressif device and never a CDC/ACM serial + MIDI port, tell us your distro on Discord.
+- **Linux:** add your user to the `dialout` group, then e.g. `screen /dev/ttyACM0 115200`. If `lsusb` only shows the `303a:...` Espressif/JTAG device and never `caf0:4009`, `sudo usbreset 303a:1001` (or `usb_modeswitch -v303a -p1001 -W -R`) often forces the MIDI device to appear.
 
-If you have AMYboard on Windows, please report on Discord whether it works -- it helps us narrow the driver issue. More steps in [Troubleshooting](troubleshooting.md).
+**Workarounds while we fix the firmware:** the most reliable is to plug AMYboard into an **Android phone** with a USB-C cable and use [amyboard.com](https://amyboard.com/editor/) there (iPhones/iPads don't do USB MIDI). On Windows, running `msdt.exe -id DeviceDiagnostic` and rebooting often forces it to show up. Full steps in [Troubleshooting](troubleshooting.md#usb-midi-not-recognized).
+
+If you have AMYboard on Windows, please report on Discord (or on [issue #952](https://github.com/shorepine/tulipcc/issues/952)) whether it works -- it helps us narrow the issue.
 
 ### Can I plug a USB-MIDI keyboard straight into the AMYboard? (USB host)
 
