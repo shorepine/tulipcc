@@ -41,6 +41,20 @@ python3 -m venv ~/hwci-venv
 ```
 macOS dev: `pip install -r requirements.txt` (adds mido/python-rtmidi/sounddevice).
 
+## Stable device names (udev, recommended on the Pi)
+`ttyACM*` numbering and ALSA card indices are assigned in probe order, so a reboot
+can swap them and make the runner flash or record the wrong device. Install
+[`99-amyboard.rules`](99-amyboard.rules) to pin names by USB vendor:product:
+```
+sudo install -m 0644 99-amyboard.rules /etc/udev/rules.d/99-amyboard.rules
+sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=tty
+```
+That gives `/dev/amyboard-dongle` (the CH9102F flashing dongle) and
+`/dev/amyboard-cdc` (the board's native CDC). Audio is referenced by its stable
+ALSA card id `hw:CARD=Device,DEV=0` (the C-Media capture) rather than `hw:1,0`.
+The CI workflow uses all three; for manual runs pass them with `--port`,
+`--cdc-port`, `--audio-device`.
+
 ## Use
 ```
 python3 hwci.py --list-devices
