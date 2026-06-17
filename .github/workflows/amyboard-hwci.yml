@@ -78,9 +78,16 @@ jobs:
       - name: Flash + drive + record + compare
         id: hwci
         working-directory: hwci
+        # Stable device names from the bench's udev rule (99-amyboard.rules) +
+        # ALSA card id, so a reboot that re-orders ttyACM/card indices can't make
+        # us flash or record the wrong device.
         run: |
           set -o pipefail
-          ~/hwci-venv/bin/python hwci.py --pr "${{ steps.ctx.outputs.pr }}" --port /dev/ttyACM1 2>&1 | tee hwci-run.log
+          ~/hwci-venv/bin/python hwci.py --pr "${{ steps.ctx.outputs.pr }}" \
+            --port /dev/amyboard-dongle \
+            --cdc-port /dev/amyboard-cdc \
+            --audio-device hw:CARD=Device,DEV=0 \
+            2>&1 | tee hwci-run.log
 
       - name: Upload artifacts (recording + serial log + run log)
         if: always()
