@@ -285,7 +285,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--build-only",
         action="store_true",
-        help="Build stage/ once and exit (no watcher, no HTTP server). Used by dev.sh.",
+        help="Build stage/ once and exit (no watcher, no HTTP server). Used by the amyboard-release CI workflow.",
     )
     args = parser.parse_args()
 

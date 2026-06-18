@@ -55,7 +55,7 @@ The upgrade will download the latest firmware and system files over Wi-Fi. Your 
 
 If your AMYboard won't boot or you need a completely fresh flash, you can use `esptool` to write the full firmware image directly.
 
-1. Download the latest `amyboard-full-AMYBOARD.bin` from the [releases page](https://github.com/shorepine/tulipcc/releases/latest).
+1. Download the latest `amyboard-full-AMYBOARD.bin` from the [`amyboard` release](https://github.com/shorepine/tulipcc/releases/tag/amyboard) (the rolling AMYboard release, updated on every push to main).
 
 2. Connect your AMYboard over USB and put it in bootloader mode (hold both buttons, release RST first, then BOOT).
 

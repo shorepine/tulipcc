@@ -1,0 +1,139 @@
+name: AMYboard release
+
+# Continuous AMYboard release on push to main. Now that every PR gets its own
+# preview site + firmware (amyboard-pr-<N>.vercel.app) and HW CI before merge,
+# each main commit is treated as releasable:
+#
+#   - firmware -> the rolling 'amyboard' GitHub release, kept NON-latest so it
+#                 never displaces releases/latest (the monthly combined Tulip
+#                 release that tulip.upgrade() + Tulip downloads depend on).
+#                 amyboard.com's web flasher reads releases/download/amyboard;
+#                 on-device amyboard.upgrade() reads releases/tags/amyboard
+#                 (see get_latest_release() in tulip/shared/py/tulip.py).
+#   - web      -> amyboardweb/stage/ deployed --prod to the 'amyboard' Vercel
+#                 project (amyboard.com).
+#
+# Tulip is NOT released here — it stays on the monthly release.sh cadence and
+# keeps releases/latest. This replaces the old 'dev' channel (rolling 'dev'
+# prerelease + amyboard-dev.vercel.app), which PR previews made redundant.
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'amy'
+      - 'tulip/amyboard/**'
+      - 'tulip/amyboardweb/**'
+      - 'tulip/shared/**'
+      - '.github/workflows/amyboard-release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: amyboard-release          # serialize releases; never cancel a half-done one
+  cancel-in-progress: false
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write              # create + clobber the 'amyboard' release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # amy + micropython (and their nested submodules) are needed to build.
+          submodules: recursive
+
+      - name: Build AMYboard firmware + assemble images
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.4.1
+          target: esp32s3
+          path: tulip/amyboard
+          command: >-
+            python -m pip install littlefs-python &&
+            idf.py -DMICROPY_BOARD=AMYBOARD build &&
+            cd .. &&
+            python fs_create.py amyboard
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: amyboard-firmware
+          if-no-files-found: error
+          path: |
+            tulip/amyboard/dist/amyboard-firmware-AMYBOARD.bin
+            tulip/amyboard/dist/amyboard-full-AMYBOARD.bin
+            tulip/amyboard/dist/amyboard-sys.bin
+
+      - name: Publish to the rolling 'amyboard' release (kept non-latest)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Create the rolling release once, explicitly NOT 'latest' so it never
+          # displaces the monthly combined Tulip release at releases/latest (which
+          # tulip.upgrade() + Tulip downloads depend on).
+          if ! gh release view amyboard >/dev/null 2>&1; then
+            gh release create amyboard \
+              --latest=false \
+              --target "$GITHUB_SHA" \
+              --title "AMYboard (rolling release)" \
+              --notes "Rolling AMYboard release built from main. Flashed by amyboard.com and on-device amyboard.upgrade(). Updated on every push to main; not a tagged version."
+          fi
+          gh release upload --clobber amyboard \
+            tulip/amyboard/dist/amyboard-firmware-AMYBOARD.bin \
+            tulip/amyboard/dist/amyboard-full-AMYBOARD.bin \
+            tulip/amyboard/dist/amyboard-sys.bin
+          # Refresh the release body with the exact released commit for provenance.
+          gh release edit amyboard \
+            --notes "Rolling AMYboard release, built from main @ ${GITHUB_SHA}. Flashed by amyboard.com and on-device amyboard.upgrade(). Updated on every push to main; not a tagged version."
+
+  web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # Fail fast on a missing/mis-scoped token, before the ~15-min build.
+      - name: Verify Vercel token can access the team
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN secret is not set — add it (scope bwhitmans-projects)."; exit 1
+          fi
+          npm i -g vercel@latest >/dev/null 2>&1
+          if ! vercel project ls --scope bwhitmans-projects --token "$VERCEL_TOKEN" >/dev/null 2>&1; then
+            echo "::error::VERCEL_TOKEN cannot access the 'bwhitmans-projects' team — recreate the token with that scope."; exit 1
+          fi
+          echo "Vercel token OK for bwhitmans-projects."
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # --- Web stage/ (amy + amyboard WASM + static) ---
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install web build deps
+        run: pip install numpy
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.22
+      - name: Build amyboardweb stage/
+        run: |
+          cd tulip/amyboardweb
+          python3 dev.py --build-only
+
+      # --- Deploy stage/ to Vercel production (amyboard.com) ---
+      # No firmware is bundled: the release flasher reads from the 'amyboard'
+      # GitHub release, not from the same origin (only PR previews bundle).
+      - name: Deploy to Vercel production (amyboard.com)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          npm i -g vercel@latest >/dev/null 2>&1
+          cd tulip/amyboardweb
+          vercel link --yes --token "$VERCEL_TOKEN" --scope bwhitmans-projects --project amyboard --cwd stage
+          vercel deploy stage --prod --yes --token "$VERCEL_TOKEN" --scope bwhitmans-projects

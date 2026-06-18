@@ -17,21 +17,19 @@ const offsets = document.querySelectorAll(".upload .offset");
 const appDiv = document.getElementById("app");
 const noReset = document.getElementById("noReset");
 
-// Firmware channel: the "dev" site flashes test builds from the rolling 'dev'
-// GitHub prerelease; everywhere else flashes the real (latest) release.
-// Per-PR preview sites (amyboard-pr-<N>.vercel.app) bundle their own firmware
-// under /firmware on the same origin, so a preview can only ever flash that
-// PR's build.
+// Firmware channel: amyboard.com flashes the real release — the rolling
+// 'amyboard' GitHub release, updated on every push to main. Per-PR preview
+// sites (amyboard-pr-<N>.vercel.app) bundle their own firmware under /firmware
+// on the same origin, so a preview can only ever flash that PR's build.
 const FIRMWARE_BASES = {
-    release: "https://github.com/shorepine/tulipcc/releases/latest/download",
-    dev:     "https://github.com/shorepine/tulipcc/releases/download/dev",
+    release: "https://github.com/shorepine/tulipcc/releases/download/amyboard",
     pr:      "/firmware",
 };
 
 function channelFromSearch(search) {
     try {
         const v = new URLSearchParams(search || "").get("channel");
-        return (v === "dev" || v === "release" || v === "pr") ? v : null;
+        return (v === "release" || v === "pr") ? v : null;
     } catch (e) {
         return null;
     }
@@ -45,11 +43,10 @@ function resolveFirmwareChannel() {
     }
     if (override) return override;
 
+    // Per-PR preview hosts flash their own bundled build; everywhere else
+    // (amyboard.com, localhost, …) flashes the rolling 'amyboard' release.
     const host = (window.location.hostname || "").toLowerCase();
-    if (host === "amyboard.com" || host === "www.amyboard.com") return "release";
     if (host.includes("amyboard-pr")) return "pr";
-    if (host.includes("amyboard-dev")) return "dev";
-    if (host === "localhost" || host === "127.0.0.1") return "dev";
     return "release";
 }
 
@@ -144,11 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const channelBadge = document.getElementById("channelBadge");
     if (channelBadge) {
-        if (firmwareChannel === "dev") {
-            channelBadge.textContent =
-                "DEV channel — flashing test builds from the rolling 'dev' release, not a stable version.";
-            channelBadge.classList.remove("hidden");
-        } else if (firmwareChannel === "pr") {
+        if (firmwareChannel === "pr") {
             channelBadge.textContent =
                 "PR PREVIEW — flashing this pull request's firmware build, not a stable version.";
             channelBadge.classList.remove("hidden");

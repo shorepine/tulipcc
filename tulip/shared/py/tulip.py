@@ -116,7 +116,15 @@ def desktop_copy_sys(dest):
 def get_latest_release():
     import json
     from upysh import rm
-    url_save('https://api.github.com/repos/shorepine/tulipcc/releases/latest','releases_temp.json')
+    # AMYboard releases continuously from main to its own rolling 'amyboard'
+    # release; Tulip boards track the monthly combined 'latest' release. (The
+    # 'amyboard' release is kept non-latest so it never displaces releases/latest,
+    # which Tulip OTA depends on.)
+    if board() == "AMYBOARD":
+        release_api = 'https://api.github.com/repos/shorepine/tulipcc/releases/tags/amyboard'
+    else:
+        release_api = 'https://api.github.com/repos/shorepine/tulipcc/releases/latest'
+    url_save(release_api,'releases_temp.json')
     j = json.load(open('releases_temp.json','r'))
     rm('releases_temp.json')
     mine = None

@@ -147,48 +147,39 @@ Notes:
 - This command cleans and compiles all Tulip targets.
 - Typical runtime is about 5 to 10 minutes.
 
-## AMYboard Dev Channel (`dev.sh`)
+## AMYboard Release (auto on push to main)
 
-AMYboard has two firmware/web channels:
+AMYboard is **released continuously**: every push to `main` builds the firmware and
+web editor and publishes them as the real release. Now that each PR gets its own
+preview site + firmware (`amyboard-pr-<N>.vercel.app`) and HW CI before merge, `main`
+is always treated as releasable. **There is no longer a separate `dev` channel** — PR
+previews replaced it.
 
-- **release** — the real GitHub release (`releases/latest`), flashed from
-  `amyboard.com`. Promoted via `release.sh` (firmware) + `amyboardweb/deploy.sh` (web).
-- **dev** — rolling test builds, flashed from `https://amyboard-dev.vercel.app`.
-  Published via `tulip/dev.sh`.
+The workflow is `.github/workflows/amyboard-release.yml` (push to `main` on
+AMYboard-affecting paths; also `workflow_dispatch`):
 
-### Publishing dev builds
+1. **firmware** → built and uploaded to the rolling **`amyboard`** GitHub release. That
+   release is kept **non-latest** (`gh release create --latest=false`) so it never
+   displaces `releases/latest` — which stays the monthly combined Tulip release that
+   `tulip.upgrade()` and Tulip firmware downloads depend on. amyboard.com's flasher
+   reads `releases/download/amyboard`, and on-device `amyboard.upgrade()` reads
+   `releases/tags/amyboard` (see `get_latest_release()` in `tulip/shared/py/tulip.py`).
+2. **web** → `amyboardweb/stage/` is built and deployed `--prod` to the **`amyboard`**
+   Vercel project (amyboard.com). Requires repo secret `VERCEL_TOKEN`
+   (scope `bwhitmans-projects`), same as the PR-preview workflow.
 
-Run from `tulip/` (ESP-IDF env active, see above):
-
-- `./dev.sh` — firmware + web
-- `./dev.sh firmware` — firmware only
-- `./dev.sh web` — web only
-
-`dev.sh`:
-
-1. Builds AMYboard firmware and uploads `amyboard-{firmware,full,sys}-AMYBOARD.bin`
-   to a GitHub **prerelease tagged `dev`** (created on first run, `--clobber`ed after).
-   Because it's a prerelease, it never becomes `releases/latest`.
-2. Builds `amyboardweb/stage/` via `python3 dev.py --build-only` and deploys it to
-   the **`amyboard-dev`** Vercel project (scope `bwhitmans-projects`, `--prod`).
+Tulip is **not** released here — Tulip firmware/web stay on the monthly cadence (see
+"Tulip Release"), and `releases/latest` remains the monthly `v-XXX-2026` release.
+`release.sh` still also uploads AMYboard assets to that monthly release, which older
+firmware (from before this decoupling) OTAs from `releases/latest` until it is flashed
+once to pick up the new `amyboard`-tag upgrade path.
 
 ### How the flasher chooses a channel
 
-`amyboardweb/static/esptool/js/script.js` resolves the channel at runtime:
-`amyboard.com` → release, any host containing `amyboard-dev` → dev, localhost → dev,
-anything else → release. A `?channel=dev|release` query param (on the flasher page or
-the parent editor page) overrides this for testing. So the **dev site only ever flashes
-dev firmware and amyboard.com only ever flashes the latest release** — the same web
-artifact is deployed to both; only the hostname differs.
-
-### Promotion (dev → release)
-
-Once a dev build is tested, promote with the existing scripts:
-
-1. Firmware: `./release.sh v-XXX-2026 upload` (rebuilds from `main`, uploads to the
-   version tag, which becomes `releases/latest`).
-2. Web: `cd amyboardweb && ./deploy.sh` (deploys `stage/` to the `amyboard` Vercel
-   project / amyboard.com).
+`amyboardweb/static/esptool/js/script.js` resolves the channel at runtime: any host
+containing `amyboard-pr` → **pr** (flashes that PR's bundled firmware), everything else
+(amyboard.com, localhost) → **release** (the rolling `amyboard` GitHub release). A
+`?channel=pr|release` query param overrides this for testing.
 
 ## World DB API Server (Railway)
 
