@@ -24,7 +24,7 @@ class Display:
     HEIGHT = 128
     LINEHEIGHT = 12
 
-    def __init__(self):
+    def __init__(self, rotate=0):
         self._hw = None        # hardware driver (ssd1327 or sh1107), None for web
         self._fb = None        # framebuf used for drawing
         self._buf = None       # raw byte buffer backing the framebuf
@@ -35,7 +35,8 @@ class Display:
             self._buf = bytearray(self.WIDTH * self.HEIGHT // 2)
             self._fb = framebuf.FrameBuffer(self._buf, self.WIDTH, self.HEIGHT, framebuf.GS4_HMSB)
         else:
-            # Try ssd1327 first, then sh1107
+            # Try ssd1327 first, then sh1107.  rotate only applies to the sh1107
+            # (the panel is square, so WIDTH/HEIGHT are unchanged by rotation).
             try:
                 hw = ssd1327_oled()
                 self._hw = hw
@@ -43,7 +44,7 @@ class Display:
                 self._fb = hw.framebuf
             except Exception:
                 try:
-                    hw = sh1107_oled()
+                    hw = sh1107_oled(rotate=rotate)
                     self._hw = hw
                     self._buf = hw.displaybuf
                     self._fb = hw  # sh1107 *is* a FrameBuffer subclass
@@ -583,11 +584,43 @@ def ssd1327_oled():
     d.fill(0)
     return d
 
-def sh1107_oled():
+def sh1107_oled(rotate=0):
     import sh1107
-    d = sh1107.SH1107_I2C(128, 128, get_i2c(), address=0x3c)
+    d = sh1107.SH1107_I2C(128, 128, get_i2c(), address=0x3c, rotate=rotate)
     d.sleep(False)
     return d
+
+# Valid screen rotations, in degrees.  The sh1107 driver supports all four.
+DISPLAY_ROTATIONS = (0, 90, 180, 270)
+
+def _display_rotate_path():
+    return tulip.root_dir() + "user/display_rotate"
+
+def display_rotation():
+    """Return the saved display rotation in degrees (one of 0, 90, 180, 270).
+
+    Defaults to 0 when nothing has been saved (or the saved value is bad)."""
+    try:
+        value = int(open(_display_rotate_path()).read().strip())
+    except Exception:
+        return 0
+    return value if value in DISPLAY_ROTATIONS else 0
+
+def set_display_rotation(degrees):
+    """Persist the display rotation and re-initialize the display now.
+
+    ``degrees`` must be one of 0, 90, 180, 270.  The setting is saved under
+    user/ and re-applied automatically on every boot by init_display().  Only
+    the sh1107 OLED is rotated; ssd1327 and the web framebuffer ignore it."""
+    degrees = int(degrees)
+    if degrees not in DISPLAY_ROTATIONS:
+        raise ValueError("display rotation must be one of %s" % (DISPLAY_ROTATIONS,))
+    try:
+        with open(_display_rotate_path(), "w") as f:
+            f.write(str(degrees))
+    except Exception as e:
+        print("amyboard: could not save display rotation:", e)
+    init_display(degrees)  # apply live regardless of whether the save succeeded
 
 def display_refresh():
     """Legacy helper — calls display.show() if a display exists."""
@@ -599,9 +632,11 @@ def display_startup():
     display.text(tulip.version(), 0, 24, 255)
     display.show()
 
-def init_display():
+def init_display(rotate=None):
     global display
-    display = Display()
+    if rotate is None:
+        rotate = display_rotation()  # use the persisted setting at boot
+    display = Display(rotate=rotate)
     if display.available:
         display_startup()
 
