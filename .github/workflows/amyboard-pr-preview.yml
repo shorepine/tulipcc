@@ -14,6 +14,9 @@ on:
     paths:
       - 'amy'
       - 'tulip/amyboard/**'
+      # AMYboard firmware also compiles shared ESP32-S3 sources from here
+      # (e.g. tulip/esp32s3/usb.c), so changes there must rebuild the preview.
+      - 'tulip/esp32s3/**'
       - 'tulip/amyboardweb/**'
       - 'tulip/shared/amyboard-py/**'
       - '.github/workflows/amyboard-pr-preview.yml'
