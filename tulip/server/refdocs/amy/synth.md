@@ -79,7 +79,16 @@ amy.send(synth=10, num_voices=3, patch_string='w7f0Z', synth_flags=3)
 amy.send(synth=10, note=40, vel=1)  # MIDI drums 'electric snare'
 ```
 
-(Note: Although `note` can take on real values -- e.g. `note=60.5` for 50 cents above C4 -- the voice management tracks voices by integer note numbers (i.e., midi notes) so it rounds note values to the nearest integer when deciding which note-off goes with which note-on.  Note also that note-on events that also set the `preset` parameter (e.g. to select PCM samples) will fold the patch number into the note integer used as the key for note-on, note-off matching.)
+Note 1: Although `note` can take on real values -- e.g. `note=60.5` for 50 cents above C4 -- the voice management tracks voices by integer note numbers (i.e., midi notes) so it rounds note values to the nearest integer when deciding which note-off goes with which note-on.  Note also that note-on events that also set the `preset` parameter (e.g. to select PCM samples) will fold the patch number into the note integer used as the key for note-on, note-off matching.
+
+Note 2: note-on events to synths (or their component voices) have a specific behavior: `amy.send(synth=0, osc=0, note=48, vel=1)` sends a note-on to osc 0 within the synth voice; for a typical patch, this will trigger all the sounding oscs if they are chained via `chained_osc`.  However, `amy.send(synth=0, note=48, vel=1)` (no `osc` parameter) will send note-ons to *all* the oscs in that voice, not just osc 0.  When all the sounding oscs were already chained together, this has the same effect (since the oscs already received the note-on).  But if your voice contains multiple, independent oscs, they will all be triggered.  For instance,
+```
+amy.reset()
+amy.send(synth=1, num_voices=2, oscs_per_voice=2)
+amy.send(synth=1, osc=1, freq=660)
+amy.send(synth=1, note=60, vel=1)
+```
+.. will sound two sine tones a fifth apart, even though the two oscs are not chained and we only issued a single note-one.
 
 
 
