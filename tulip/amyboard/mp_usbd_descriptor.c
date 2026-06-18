@@ -28,7 +28,10 @@
 #include "py/mpconfig.h"
 
 #if MICROPY_HW_ENABLE_USBDEV
-#define CONFIG_TOTAL_LEN_MIDI  (TUD_CONFIG_DESC_LEN + TUD_MIDI_DESC_LEN + TUD_CDC_DESC_LEN)
+// + 8 for the MIDI/Audio Interface Association Descriptor added by hand in the
+// config array below (TUD_MIDI_DESCRIPTOR doesn't emit one). An IAD is 8 bytes;
+// this must be counted here or wTotalLength is short and enumeration breaks.
+#define CONFIG_TOTAL_LEN_MIDI  (TUD_CONFIG_DESC_LEN + TUD_MIDI_DESC_LEN + TUD_CDC_DESC_LEN + 8)
 
 #include "amyboard_usbd.h"
 #include "tusb.h"
@@ -78,6 +81,20 @@ const uint8_t mp_usbd_builtin_desc_cfg[CONFIG_TOTAL_LEN_MIDI] = {
     // Interface number, string index, EP Out & EP In address, EP size
     TUD_CDC_DESCRIPTOR(ITF_NUM_CDC, 4, EPNUM_CDC_NOTIF,
         8, EPNUM_CDC_OUT, EPNUM_CDC_IN, 64),
+
+    // Interface Association Descriptor for the MIDI (USB Audio) function.
+    // TUD_MIDI_DESCRIPTOR emits the Audio-Control + MIDI-Streaming interfaces but
+    // NO IAD. The CDC function above has one, so the device advertises IADs -- and
+    // when IADs are present, Windows' usbccgp groups *every* function by IAD. An
+    // audio function with no IAD makes some Windows builds bind the generic USB
+    // Audio driver to the WHOLE device (no composite parent -> no CDC serial port,
+    // no WebMIDI-visible MIDI port), which is the AMYboard "shows up as a sound
+    // card, not composite" report. Associate ITF_NUM_MIDI + ITF_NUM_MIDI_STREAMING
+    // as one Audio function so usbccgp enumerates it cleanly on every Windows.
+    // 8 bytes: bLength, bDescriptorType(IAD=0x0B), bFirstInterface, bInterfaceCount,
+    //          bFunctionClass(AUDIO=1), bFunctionSubClass(AUDIO_CONTROL=1),
+    //          bFunctionProtocol(0), iFunction(0).
+    0x08, TUSB_DESC_INTERFACE_ASSOCIATION, ITF_NUM_MIDI, 0x02, TUSB_CLASS_AUDIO, 0x01, 0x00, 0x00,
 
     TUD_MIDI_DESCRIPTOR(ITF_NUM_MIDI, 0, EPNUM_MIDI, 0x80 | EPNUM_MIDI, 64),
 
