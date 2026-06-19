@@ -9,7 +9,11 @@ else
   SED_INPLACE=(-i '')
 fi
 
-source ../shared/grab_submodules.sh
+# In CI the checkout already provides submodules (and Linux needs no mpy-cross
+# patch); only bootstrap them for local builds.
+if [ -z "${CI:-}" ]; then
+  source ../shared/grab_submodules.sh
+fi
 
 timestamp=$(date +%Y%m%d%H%M%S)
 
@@ -25,9 +29,13 @@ mkdir stage
 mkdir stage/run
 
 cp static/* stage/run
-cp -Rf ../../www/img stage
-cp -Rf ../../www/webfonts stage
-cp -Rf ../../www/css stage
+
+# Full tulip.computer landing (the site root): index.html + assets. Sourced from
+# www/ for now — www/ moves into tulip/web after the Vercel/DNS cutover. The web
+# app lives under stage/run (below); www/run build output is NOT copied (it's
+# regenerated here).
+cp ../../www/index.html stage/
+cp -Rf ../../www/css ../../www/fonts ../../www/img ../../www/js ../../www/webfonts stage/
 
 cp ../../amy/build/amy.js stage/run/amy-$timestamp.js
 cp ../../amy/build/amy.wasm stage/run/amy-$timestamp.wasm

@@ -1,0 +1,83 @@
+name: Tulip firmware release
+
+# Continuous Tulip FIRMWARE release on push to main: build TULIP4_R11 and publish
+# to the rolling 'tulip' GitHub release, kept NON-latest (--latest=false) so it
+# never displaces releases/latest (the monthly combined release). On-device
+# tulip.upgrade() reads releases/tags/tulip (see get_latest_release() in
+# tulip/shared/py/tulip.py). Mirrors the firmware job of amyboard-release.yml.
+#
+# Only TULIP4_R11 is shipped; TDECK/N16R8/N32R8 are developer-only (build them by
+# hand with `idf.py -DMICROPY_BOARD=<board> build`).
+#
+# Paths are firmware-only (NOT tulip/web/**) so a web-only change doesn't bump the
+# firmware release date; the web app is deployed separately by tulip-web-release.yml.
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'amy'
+      - 'tulip/esp32s3/**'
+      - 'tulip/shared/**'
+      - 'tulip/fs/tulip/**'
+      - '.github/workflows/tulip-release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: tulip-firmware-release      # serialize releases; never cancel a half-done one
+  cancel-in-progress: false
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write                # create + clobber the 'tulip' release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # amy + micropython (and nested submodules) are needed to build.
+          submodules: recursive
+
+      - name: Build TULIP4_R11 firmware + assemble images
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.4.1
+          target: esp32s3
+          path: tulip/esp32s3
+          command: >-
+            python -m pip install littlefs-python &&
+            idf.py -DMICROPY_BOARD=TULIP4_R11 build &&
+            cd .. &&
+            python fs_create.py tulip
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tulip-firmware
+          if-no-files-found: error
+          path: |
+            tulip/esp32s3/dist/tulip-firmware-TULIP4_R11.bin
+            tulip/esp32s3/dist/tulip-full-TULIP4_R11.bin
+            tulip/esp32s3/dist/tulip-sys.bin
+
+      - name: Publish to the rolling 'tulip' release (kept non-latest)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Create the rolling release once, explicitly NOT 'latest' so it never
+          # displaces releases/latest (the monthly combined Tulip release).
+          if ! gh release view tulip >/dev/null 2>&1; then
+            gh release create tulip \
+              --latest=false \
+              --target "$GITHUB_SHA" \
+              --title "Tulip (rolling release)" \
+              --notes "Rolling Tulip release built from main (TULIP4_R11). OTA'd by tulip.upgrade(). Updated on every push to main; not a tagged version."
+          fi
+          gh release upload --clobber tulip \
+            tulip/esp32s3/dist/tulip-firmware-TULIP4_R11.bin \
+            tulip/esp32s3/dist/tulip-full-TULIP4_R11.bin \
+            tulip/esp32s3/dist/tulip-sys.bin
+          # Refresh the body with the exact released commit for provenance.
+          gh release edit tulip \
+            --notes "Rolling Tulip release (TULIP4_R11), built from main @ ${GITHUB_SHA}. OTA'd by tulip.upgrade(). Updated on every push to main; not a tagged version."

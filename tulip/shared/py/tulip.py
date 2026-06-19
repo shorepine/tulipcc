@@ -116,14 +116,15 @@ def desktop_copy_sys(dest):
 def get_latest_release():
     import json
     from upysh import rm
-    # AMYboard releases continuously from main to its own rolling 'amyboard'
-    # release; Tulip boards track the monthly combined 'latest' release. (The
-    # 'amyboard' release is kept non-latest so it never displaces releases/latest,
-    # which Tulip OTA depends on.)
+    # AMYboard and Tulip each release continuously from main to their own rolling
+    # release tag ('amyboard' / 'tulip'), kept non-latest so they never displace
+    # releases/latest (the monthly combined release). Only TULIP4_R11 firmware is
+    # published to the 'tulip' release; the developer-only boards (TDECK/N16R8/
+    # N32R8) aren't there, so their upgrade() finds nothing and returns None.
     if board() == "AMYBOARD":
         release_api = 'https://api.github.com/repos/shorepine/tulipcc/releases/tags/amyboard'
     else:
-        release_api = 'https://api.github.com/repos/shorepine/tulipcc/releases/latest'
+        release_api = 'https://api.github.com/repos/shorepine/tulipcc/releases/tags/tulip'
     url_save(release_api,'releases_temp.json')
     j = json.load(open('releases_temp.json','r'))
     rm('releases_temp.json')

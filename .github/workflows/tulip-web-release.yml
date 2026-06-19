@@ -1,0 +1,74 @@
+name: Tulip web release
+
+# Continuous Tulip WEB release on push to main: build tulip/web/stage/ and deploy
+# it --prod to the 'tulip' Vercel project (tulip.computer). Mirrors the web job of
+# amyboard-release.yml. Firmware is released separately by tulip-release.yml.
+#
+# Paths are web-only (+ amy/shared, which the WASM is built from) so a firmware-only
+# change doesn't redeploy the site. During the gh-pages -> Vercel cutover, static.yml
+# still also publishes www/ to GitHub Pages; once tulip.computer is served by Vercel,
+# remove static.yml + www/ (and this workflow's www/** path).
+#
+# Requires repo secret VERCEL_TOKEN (scope: bwhitmans-projects).
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'amy'
+      - 'tulip/web/**'
+      - 'tulip/shared/**'
+      - 'www/**'
+      - '.github/workflows/tulip-web-release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: tulip-web-release          # serialize prod deploys; never cancel a half-done one
+  cancel-in-progress: false
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Verify Vercel token can access the team
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::VERCEL_TOKEN secret is not set (scope bwhitmans-projects)."; exit 1
+          fi
+          npm i -g vercel@latest >/dev/null 2>&1
+          if ! vercel project ls --scope bwhitmans-projects --token "$VERCEL_TOKEN" >/dev/null 2>&1; then
+            echo "::error::VERCEL_TOKEN cannot access the 'bwhitmans-projects' team."; exit 1
+          fi
+          echo "Vercel token OK for bwhitmans-projects."
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install web build deps
+        run: pip install numpy
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 4.0.22
+
+      - name: Build Tulip web stage/
+        run: |
+          cd tulip/web
+          ./build.sh
+
+      - name: Deploy to Vercel production (tulip.computer)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          set -euo pipefail
+          npm i -g vercel@latest >/dev/null 2>&1
+          cd tulip/web
+          vercel link --yes --token "$VERCEL_TOKEN" --scope bwhitmans-projects --project tulip --cwd stage
+          vercel deploy stage --prod --yes --token "$VERCEL_TOKEN" --scope bwhitmans-projects
