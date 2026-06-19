@@ -87,12 +87,11 @@ pinned commit:
 The easiest ways to test `tulipcc` are:
 
 - `./build.sh` in `tulip/macos`
-- `./build.sh` in `tulip/web`
-- `python3 dev.py` in `tulip/amyboardweb`
+- `python3 webdev.py` in `tulip/` — builds and serves **both** web apps at once: Tulip Web on `:8001/run/` and AMYboard Web on `:8000/editor/`, sharing a single AMY build.
 
-**Web builds require submodules first.** `tulip/web` and `tulip/amyboardweb/dev.py` compile the `amy` and `micropython` submodules to WASM, so the submodules must be bootstrapped before building — run `tulip/shared/grab_submodules.sh` (see Submodule Setup). If `amy/` is empty, `dev.py`'s `make web` step fails with `make: *** No rule to make target 'web'`.
+**Web builds require submodules first.** `webdev.py` (and the per-app `tulip/web/build.sh` and `tulip/amyboardweb/dev.py` it wraps) compile the `amy` and `micropython` submodules to WASM, so the submodules must be bootstrapped before building — run `tulip/shared/grab_submodules.sh` (see Submodule Setup). If `amy/` is empty, the `make web` step fails with `make: *** No rule to make target 'web'`.
 
-The `build.sh` scripts exit after building. To start a local dev server on port 8000 after building `tulip/web`, run `./serve.sh` there. For `tulip/amyboardweb`, `dev.py` builds `stage/` on startup, serves it on port 8000, and incrementally re-syncs files as you edit — leave it running during the session. See `tulip/amyboardweb/CLAUDE.md` for the exact invocation.
+`webdev.py` builds AMY once, builds each app's `stage/`, serves each at its own document root (so absolute `/img`, `/editor/`, `/run/` paths match production), and rebuilds an app when its `static/`, `site/` or the shared `assets/` change. To work on a single app instead: `python3 dev.py` in `tulip/amyboardweb` (AMYboard Web, live file-watching — see its `CLAUDE.md`), or `./build.sh` in `tulip/web` to build Tulip Web's `stage/` (what CI runs).
 
 ## ESP-IDF Build Commands (Required)
 
@@ -128,18 +127,19 @@ Release steps:
 5. Run:
    - `./release.sh v-XXX-2026 upload`
 
-Web release steps (run when the user asks to release/deploy web targets):
+Web release steps:
 
-1. Tulip Web — released automatically on push to `main` (no gh-pages): the
-   `tulip-web-release.yml` workflow builds `stage/` and deploys it `--prod` to the
-   `tulip` Vercel project (tulip.computer); PRs get a `tulip-pr-<N>.vercel.app`
-   preview via `tulip-pr-preview.yml`. To deploy manually: `cd tulip/web`,
-   `./build.sh`, `./deploy.sh`. (Shared site assets live in repo-root `assets/`.)
-2. For Amyboard Web:
-   - `cd tulip/amyboardweb`
-   - `python3 dev.py` (builds `stage/` on startup and serves it; leave running)
-   - Ensure compile/build succeeded.
-   - `./deploy.sh` (deploys from `stage/`)
+Both web apps are released automatically on push to `main` (no gh-pages, no manual
+deploy step) and get per-PR previews:
+
+1. Tulip Web — `tulip-web-release.yml` builds `stage/` and deploys it `--prod` to the
+   `tulip` Vercel project (tulip.computer); PRs get a `tulip-pr-<N>.vercel.app` preview
+   via `tulip-pr-preview.yml`.
+2. AMYboard Web — `amyboard-release.yml` deploys to the `amyboard` Vercel project
+   (amyboard.com); PRs get an `amyboard-pr-<N>.vercel.app` preview.
+
+Shared site assets live in repo-root `assets/`. For local development of both apps at
+once, run `python3 webdev.py` in `tulip/`.
 
 Notes:
 

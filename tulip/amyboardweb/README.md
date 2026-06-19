@@ -6,19 +6,30 @@ Our _goal_ is to have this be the official tulip desktop experience, if we can g
 
 This will help us lessen our support load and also expose Tulip to people on other platforms (windows!) without having to download anything. 
 
-## Build
+## Build & run locally
+
+Use the unified dev server (in `tulip/`), which builds **both** web apps —
+sharing a single AMY build — and serves them at once:
 
 ```
-./build.sh
-# go to localhost:8000 
+cd ..            # tulip/
+python3 webdev.py
+# AMYboard Web -> http://localhost:8000/editor/
+# Tulip Web    -> http://localhost:8001/run/
 ```
 
-## deploy
+To work on **just** AMYboard Web with live file-watching, run `dev.py` directly
+(see `CLAUDE.md` for details):
 
 ```
-(first make sure you've build.sh)
-./deploy.sh
+python3 dev.py
 ```
+
+## Deploy
+
+No manual step: every push to `main` builds `stage/` and deploys it to the
+`amyboard` Vercel project (amyboard.com) via `.github/workflows/amyboard-release.yml`,
+and each PR gets an `amyboard-pr-<N>.vercel.app` preview.
 
 ## Use
 

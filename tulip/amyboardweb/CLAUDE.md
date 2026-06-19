@@ -2,7 +2,7 @@
 
 ## Dev Server (`dev.py`)
 
-`dev.py` is the only script needed for local development. It does everything:
+`dev.py` is all you need to develop AMYboard Web on its own — to run it alongside Tulip Web in one command, use `python3 tulip/webdev.py` instead (see the top-level `AGENTS.md`). `dev.py` does everything:
 
 1. On startup: compiles AMY (`make web` in `amy/`) and AMYboard MicroPython (`make` in `tulip/amyboardweb/`), then builds `stage/` — copies `static/` and `assets/img/fonts/css/js`, substitutes timestamped WASM/JS filenames into `editor/index.html`.
 2. While running: polls `static/` and `assets/` every second and incrementally syncs any changed files to `stage/`. Re-applies timestamp substitutions automatically if `editor/index.html` changes.
@@ -26,15 +26,11 @@ Check the log with: `cat /tmp/amyboard-dev.log`
 - `dev.py` detects changes within 1 second and syncs them to `stage/` automatically.
 - No manual rebuild or server restart needed after edits.
 
-### Deploying to Vercel
+### Deploying
 
-`dev.py` keeps `stage/` up to date, so deploying is always safe:
-
-```
-cd tulip/amyboardweb && ./deploy.sh
-```
-
-Vercel deploys from `stage/` which always reflects the latest build.
+No manual deploy step: pushing to `main` builds and deploys AMYboard Web to the
+`amyboard` Vercel project (amyboard.com) via `.github/workflows/amyboard-release.yml`,
+and every PR gets an `amyboard-pr-<N>.vercel.app` preview. Just open a PR.
 
 ## Workflow Notes
 
