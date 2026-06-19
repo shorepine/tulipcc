@@ -18,7 +18,10 @@ on:
       # (e.g. tulip/esp32s3/usb.c), so changes there must rebuild the preview.
       - 'tulip/esp32s3/**'
       - 'tulip/amyboardweb/**'
-      - 'tulip/shared/amyboard-py/**'
+      # All of shared/ (py + C) is frozen into AMYboard firmware, so any change must
+      # rebuild the preview. It also produces the tulip-firmware artifact that
+      # tulip-pr-preview reuses for tulip.upgrade(pr=N).
+      - 'tulip/shared/**'
       - '.github/workflows/amyboard-pr-preview.yml'
 
 permissions:

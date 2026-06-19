@@ -1,0 +1,16 @@
+{
+  "headers": [
+    {
+      "source": "/run/(amy|tulipcc)-(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/((?!run/(amy|tulipcc)-).*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
+    }
+  ]
+}

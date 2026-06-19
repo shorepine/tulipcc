@@ -31,8 +31,10 @@ rm ../.submodules_ok
 cd esp32s3
 source ~/esp/esp-idf-v5.4.1/export.sh 
 
-# Otherwise, compile all boards. If upload set, upload them
-declare -a boards=("TULIP4_R11" "TDECK" "N16R8" "N32R8")
+# Otherwise, compile all boards. If upload set, upload them.
+# TDECK / N16R8 / N32R8 are developer-only now (build them manually with
+# `idf.py -DMICROPY_BOARD=<board> build`); releases ship only TULIP4_R11.
+declare -a boards=("TULIP4_R11")
 for i in "${boards[@]}"
 do
     rm -rf build
