@@ -63,40 +63,35 @@ def _post_json(path, payload):
 
 def _post_multipart(path, data, file_field, file_path, upload_name=None):
     boundary = "----tulipworldboundary"
-    file_size = os.stat(file_path)[6]
     upload_filename = upload_name if upload_name else file_path
     media_type = "application/x-tar" if upload_filename.lower().endswith(".tar") else "application/octet-stream"
 
-    def parts():
-        for k in data.keys():
-            yield ("--%s\r\n" % boundary).encode()
-            yield ("Content-Disposition: form-data; name=\"%s\"\r\n\r\n" % k).encode()
-            yield (str(data[k]) + "\r\n").encode()
+    # Build the whole multipart body as one bytes object so tuliprequests sends it
+    # with a Content-Length. Streaming a generator instead makes tuliprequests use
+    # `Transfer-Encoding: chunked`, but its requests are HTTP/1.0 where chunked is
+    # invalid, so the server resets the connection (OSError -104) and the upload
+    # fails. The body is small (a screenshot / sketch), so buffering it is fine.
+    parts = []
+    for k in data.keys():
+        parts.append(("--%s\r\n" % boundary).encode())
+        parts.append(("Content-Disposition: form-data; name=\"%s\"\r\n\r\n" % k).encode())
+        parts.append((str(data[k]) + "\r\n").encode())
+    parts.append(("--%s\r\n" % boundary).encode())
+    parts.append(
+        ("Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n" % (file_field, upload_filename)).encode()
+    )
+    parts.append(("Content-Type: %s\r\n\r\n" % media_type).encode())
+    with open(file_path, "rb") as f:
+        parts.append(f.read())
+    parts.append(b"\r\n")
+    parts.append(("--%s--\r\n" % boundary).encode())
+    body = b"".join(parts)
 
-        yield ("--%s\r\n" % boundary).encode()
-        yield (
-            "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n" % (file_field, upload_filename)
-        ).encode()
-        yield ("Content-Type: %s\r\n\r\n" % media_type).encode()
-
-        f = open(file_path, "rb")
-        while True:
-            chunk = f.read(4096)
-            if not chunk:
-                break
-            yield chunk
-        f.close()
-
-        yield b"\r\n"
-        yield ("--%s--\r\n" % boundary).encode()
-
-    # tuliprequests sends generators as chunked transfer encoding.
-    # Keep header keys/values as str to avoid bytes/str comparison warnings.
     headers = {
         "Content-Type": "multipart/form-data; boundary=%s" % (boundary),
     }
 
-    r = requests.post(WORLD_API_BASE + path, headers=headers, data=parts())
+    r = requests.post(WORLD_API_BASE + path, headers=headers, data=body)
     if r.status_code < 200 or r.status_code >= 300:
         raise Exception("HTTP %d" % (r.status_code))
     return r.json()

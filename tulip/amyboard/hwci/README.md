@@ -1,14 +1,20 @@
-# AMYboard hardware-in-the-loop (HW CI)
+# Hardware-in-the-loop (HW CI): AMYboard + Tulip
 
-`hwci.py` runs a real AMYboard through a full firmware test: **flash → reboot →
-drive over USB-MIDI + AMY `zP` sysex → record the analog audio out → spectral
-compare to a committed reference** (the hardware analogue of `amy/test.py`).
-Throughout the run it also tails both serial consoles — the **debug UART**
-(ESP-IDF console / stderr) and the native **CDC** (MicroPython stdout) — into a
-combined `*-serial.log`. Exit code 0 = pass, 1 = fail.
+Two physical boards share one Pi bench, each with its own runner script:
 
-Validated on a **Raspberry Pi 5 / Debian 13** (the intended self-hosted CI
-runner); also runs on macOS for dev.
+- **`hwci.py`** runs a real **AMYboard** through a full firmware test: **flash →
+  reboot → drive over USB-MIDI + AMY `zP` sysex → record the analog audio out →
+  spectral compare to a committed reference** (the hardware analogue of
+  `amy/test.py`). It tails both serial consoles — the **debug UART** (ESP-IDF
+  console / stderr) and the native **CDC** (MicroPython stdout) — into a combined
+  `*-serial.log`.
+- **`tulip_hwci.py`** does the same for a **Tulip (TULIP4_R11)**, but driven over
+  the **MicroPython serial REPL** instead of MIDI (Tulip has no USB-MIDI). See the
+  [Tulip](#tulip-tulip4_r11) section below.
+
+Exit code 0 = pass, 1 = fail. Validated on a **Raspberry Pi 5 / Debian 13** (the
+intended self-hosted CI runner); also runs on macOS for dev. The CI workflow that
+drives both on every PR is `.github/workflows/amyboard-hwci.yml`.
 
 ## Bench wiring (validated)
 - **Flashing — USB-serial dongle on the AMYboard debug header.** A Pi's GPIO
@@ -102,9 +108,82 @@ Committed golden for the `hwci_basic` test. It's **bench-specific** (depends on
 this board + audio interface + gain); re-capture with `--update-reference` if the
 hardware changes.
 
-## Next steps
-- **CI workflow**: a self-hosted-runner job on the Pi (label/dispatch-triggered)
-  that runs `hwci.py --pr <N>` and reports pass/fail.
-- **Artifacts to the PR**: GitHub's API can't attach binaries to PR *comments*,
-  so upload `*-recording.wav` and `*-serial.log` as **workflow artifacts** and
-  link them in the comment.
+## Tulip (TULIP4_R11)
+
+`tulip_hwci.py` is the Tulip analogue of `hwci.py`. The Tulip differs from the
+AMYboard in three ways that shape the script:
+
+- **One serial port does everything.** Tulip's USB is an **onboard CH340K**
+  USB-UART (not a separate debug dongle). esptool flashes over it (its DTR/RTS
+  drive the auto-reset circuit → ROM bootloader), and the *same* port is the
+  MicroPython REPL we drive the test from **and** the ESP-IDF/boot console we log.
+  TULIP4_R11 builds with `MICROPY_HW_ENABLE_UART_REPL` and no native USB.
+- **No USB-MIDI** — the whole stimulus is REPL lines.
+- **Firmware is a built artifact**, not a Vercel preview: pass `--firmware
+  <tulip-firmware-TULIP4_R11.bin>` (CI downloads the `tulip-firmware` artifact the
+  preview workflow builds).
+
+It runs two checks:
+
+1. **WiFi + screenshot (graphics):** join WiFi, set `world.username`, `execfile`
+   `sys/ex/rgb332.py` (a static RGB332 palette), `tulip.tfb_stop()`, then
+   `tulip.screenshot()` (uploads a PNG to Tulip World). The harness downloads that
+   PNG from the **public** world API — requiring a row *newer* than the pre-run id,
+   so a failed upload can't pass against a stale image — and pixel-compares it to
+   `ref/tulip_screenshot.png`. **`tfb_stop()` is essential:** it keeps the REPL
+   transcript (including the echoed WiFi password) out of the screenshot and makes
+   the image deterministic (`mean_pixel_diff` is 0 run-to-run). The uploaded copy
+   is then deleted from Tulip World (admin token) so CI runs don't clutter it.
+2. **Audio (synth):** `amy.send(synth=1, patch=0, num_voices=6)` to define a synth,
+   then a chromatic scale (notes 60–72) and a sustained 440 Hz sine; record the
+   analog out and spectral-compare to `ref/tulip_basic.wav`.
+
+**WiFi creds** come from `$TULIP_WIFI_SSID` / `$TULIP_WIFI_PASSWORD` (preferred over
+CLI args, which show in `ps`). The REPL echoes the `tulip.wifi(...)` line, so the
+harness **redacts** those values from the serial-log artifact + stdout. In CI
+they're repo secrets and the job passes `--require-wifi` (a missing secret fails
+loudly); `--no-wifi` runs audio-only.
+
+Bench wiring: Tulip's analog out is summed into the **same** capture card as the
+AMYboard, so the two tests must run sequentially (the CI job does this). Power the
+Tulip from a **separate 5V supply** (a USB power-injection cable: D+/D-/GND to the
+Pi, GND common, VBUS from the external adapter) — a Tulip on the Pi's own USB
+power can trip the Pi 5's shared USB over-current protection and drop the whole
+bench.
+
+```
+# capture references once (audio always; screenshot too if WiFi creds are set):
+TULIP_WIFI_SSID=net TULIP_WIFI_PASSWORD=pw python3 tulip_hwci.py \
+    --firmware ../../esp32s3/dist/tulip-firmware-TULIP4_R11.bin --update-reference
+# pass/fail run (flash + wifi/screenshot + audio + compare):
+TULIP_WIFI_SSID=net TULIP_WIFI_PASSWORD=pw python3 tulip_hwci.py \
+    --firmware tulip-firmware-TULIP4_R11.bin
+```
+
+`--port` is the Tulip's CH340K (udev pins it to `/dev/tulip-repl`; raw it's a
+`ttyUSB*`). `--no-flash` skips flashing to iterate on the checks. References are
+**bench-specific** (board + audio gain); re-capture with `--update-reference`.
+
+**Flashing is app-only by default** (`--flash-offset 0x10000`, the micropython
+partition, ~30 s), since the bootloader/partition-table/filesystem rarely change.
+To recover a wiped board, flash the **full** image:
+`--firmware tulip-full-TULIP4_R11.bin --flash-offset 0x0` (~3 min — esptool erases
+the whole 32 MB).
+
+> **Note:** screenshot/file uploads from Tulip *and* AMYboard hardware
+> (`world.upload`) require the `world.py` Content-Length fix in this change —
+> older firmware sent HTTP/1.0 + chunked, which the server resets (`-104`).
+
+## CI
+`.github/workflows/amyboard-hwci.yml` drives both boards on the self-hosted Pi
+after the "AMYboard PR preview" workflow builds the firmware (`workflow_run`), and
+on manual `workflow_dispatch`. It flashes + tests the AMYboard, then the Tulip
+(downloading the `tulip-firmware` artifact from the preview run), uploads each
+board's recording + serial log + run log + the Tulip screenshot as the
+`hwci-pr<N>` artifact, and upserts one combined PASS/FAIL comment. The Tulip step
+needs repo secrets `TULIP_WIFI_SSID` / `TULIP_WIFI_PASSWORD` (+ optional
+`WORLD_ADMIN_TOKEN` to delete each run's uploaded screenshot from Tulip World).
+Gated to same-repo
+PRs (the runner is on a public repo). Stable `/dev` names come from
+[`99-amyboard.rules`](99-amyboard.rules); install it on the Pi (needs sudo) after
+adding a board.
