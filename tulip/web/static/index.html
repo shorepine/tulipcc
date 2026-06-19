@@ -76,13 +76,39 @@
           lint: false
         }, 
         lineNumbers: true, 
-        indentUnit: 4, 
+        indentUnit: 4,
+        // #580: Tab inserts spaces (never a literal tab) so Python indentation
+        // is valid; Tab/Shift-Tab indent/dedent the selection. Matches the
+        // AMYboard web editor.
+        extraKeys: {
+          Tab: function(cm) {
+            if (cm.somethingSelected()) {
+              cm.indentSelection("add");
+            } else {
+              cm.replaceSelection(" ".repeat(cm.getOption("indentUnit") || 4), "end");
+            }
+          },
+          "Shift-Tab": function(cm) {
+            cm.indentSelection("subtract");
+          }
+        },
         matchBrackets: true,
         spellCheck: false,
         autocorrect: false,
         theme: "lucario",
         lint: false,
       }); 
+      // #580: keep this editor's buffer tab-free (same as the AMYboard web
+      // editor) -- convert any tab arriving via setValue (share links) or paste
+      // into spaces, so editor.save() / run / download produce valid Python.
+      editor.on("beforeChange", function(cm, change) {
+        if (change.update && change.text.some(function(line) { return line.indexOf("\t") !== -1; })) {
+          var spaces = " ".repeat(cm.getOption("indentUnit") || 4);
+          change.update(change.from, change.to, change.text.map(function(line) {
+            return line.split("\t").join(spaces);
+          }));
+        }
+      });
       editor.setSize(null,editor_height);
     
       // Load in the share code if given
