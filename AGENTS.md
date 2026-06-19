@@ -130,12 +130,11 @@ Release steps:
 
 Web release steps (run when the user asks to release/deploy web targets):
 
-1. For Tulip Web:
-   - `cd tulip/web`
-   - `./build.sh`
-   - Ensure compile/build succeeded.
-   - `./deploy.sh`
-   - Merge the deploy branch to `main` so GitHub Pages publishes updated `www/run` artifacts.
+1. Tulip Web — released automatically on push to `main` (no gh-pages): the
+   `tulip-web-release.yml` workflow builds `stage/` and deploys it `--prod` to the
+   `tulip` Vercel project (tulip.computer); PRs get a `tulip-pr-<N>.vercel.app`
+   preview via `tulip-pr-preview.yml`. To deploy manually: `cd tulip/web`,
+   `./build.sh`, `./deploy.sh`. (Shared site assets live in repo-root `assets/`.)
 2. For Amyboard Web:
    - `cd tulip/amyboardweb`
    - `python3 dev.py` (builds `stage/` on startup and serves it; leave running)

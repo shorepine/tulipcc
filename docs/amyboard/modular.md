@@ -2,7 +2,7 @@
 
 AMYboard is designed to integrate directly with Eurorack and other modular synth systems. It has a 10-pin modular power connector, analog CV inputs and outputs, MIDI I/O, and an I2C bus for expansion. 
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_modular_2.jpg" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/assets/img/amyboard_modular_2.jpg" width=600>
 
 ## Accessories
 
@@ -10,7 +10,7 @@ You can add an optional [OLED screen or knob](accessories.md) yourself by just c
 
 Your AMYboard ships with a plexiglass "front panel" with cutouts for the jacks and an optional screen and knob. The panel can be attached to the AMYboard through the jack screws. The front panel then screws into your Eurorack case. 
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_bambu.png" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/assets/img/amyboard_bambu.png" width=600>
 
 You can also 3D print your own front panel for whatever use case you have in mind! [You can grab a BambuLab 3MF file here](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.3mf). Or build from the front panel [DXF file](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.dxf), [EPS Vector File](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.eps) or [SVG vector file](https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pcbs/amyboard/amyboard_front_panel.svg).
 
@@ -19,7 +19,7 @@ You can also 3D print your own front panel for whatever use case you have in min
 
 Most modular synthesis units operate at 10Vpp, where an audio signal swings between -5V and +5V. Out of the box, AMYboard is "line level" at 1Vpp. To change the audio input and output of AMYboard to 10Vpp, you need to change the DIP switches on the back of the board to "ON" / closed.
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/dip_switches.png" width=600>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/assets/img/dip_switches.png" width=600>
 
  - **Switches 1 & 2** (input): When closed, attenuate the inputs -- making line in friendly to 10Vpp Eurorack signals.
  - **Switches 3 & 4** (output): When closed, increase the gain of the output buffer -- making line out more friendly to 10Vpp Eurorack.
