@@ -132,7 +132,8 @@ It runs two checks:
    so a failed upload can't pass against a stale image — and pixel-compares it to
    `ref/tulip_screenshot.png`. **`tfb_stop()` is essential:** it keeps the REPL
    transcript (including the echoed WiFi password) out of the screenshot and makes
-   the image deterministic (`mean_pixel_diff` is 0 run-to-run).
+   the image deterministic (`mean_pixel_diff` is 0 run-to-run). The uploaded copy
+   is then deleted from Tulip World (admin token) so CI runs don't clutter it.
 2. **Audio (synth):** `amy.send(synth=1, patch=0, num_voices=6)` to define a synth,
    then a chromatic scale (notes 60–72) and a sustained 440 Hz sine; record the
    analog out and spectral-compare to `ref/tulip_basic.wav`.
@@ -180,7 +181,9 @@ on manual `workflow_dispatch`. It flashes + tests the AMYboard, then the Tulip
 (downloading the `tulip-firmware` artifact from the preview run), uploads each
 board's recording + serial log + run log + the Tulip screenshot as the
 `hwci-pr<N>` artifact, and upserts one combined PASS/FAIL comment. The Tulip step
-needs repo secrets `TULIP_WIFI_SSID` / `TULIP_WIFI_PASSWORD`. Gated to same-repo
+needs repo secrets `TULIP_WIFI_SSID` / `TULIP_WIFI_PASSWORD` (+ optional
+`WORLD_ADMIN_TOKEN` to delete each run's uploaded screenshot from Tulip World).
+Gated to same-repo
 PRs (the runner is on a public repo). Stable `/dev` names come from
 [`99-amyboard.rules`](99-amyboard.rules); install it on the Pi (needs sudo) after
 adding a board.

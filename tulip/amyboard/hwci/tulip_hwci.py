@@ -348,6 +348,25 @@ def fetch_screenshot(username, out_path, base=WORLD_BASE, min_id=-1, tries=6):
     return meta
 
 
+def delete_world_file(item_id, base, token):
+    """Best-effort: remove the uploaded screenshot from Tulip World (admin) so CI
+    runs don't clutter it — we keep the downloaded local copy for the artifact."""
+    if not token:
+        print(f"[shot] no admin token (set $WORLD_ADMIN_TOKEN) — leaving id {item_id} on Tulip World")
+        return False
+    try:
+        req = urllib.request.Request(f"{base}/api/tulipworld/files/{item_id}",
+                                     method="DELETE", headers={"X-Admin-Token": token})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            ok = 200 <= r.status < 300
+        print(f"[shot] deleted uploaded id {item_id} from Tulip World"
+              if ok else f"[shot] delete id {item_id} -> HTTP {r.status}")
+        return ok
+    except Exception as e:
+        print(f"[shot] could not delete id {item_id} from Tulip World: {e}")
+        return False
+
+
 def compare_images(a_path, b_path):
     """Mean absolute per-pixel difference (0..255 scale) between two PNGs, plus
     each shape. Lower = more identical; mismatched shapes return (None, shapes)."""
@@ -457,6 +476,9 @@ def main():
                     help="fail if WiFi creds are missing or the connection fails (use in CI)")
     ap.add_argument("--world-username", default="tulipci")
     ap.add_argument("--world-base", default=WORLD_BASE)
+    ap.add_argument("--world-admin-token", default=os.environ.get("WORLD_ADMIN_TOKEN"),
+                    help="admin token to delete the uploaded screenshot from Tulip World "
+                         "after download (default: $WORLD_ADMIN_TOKEN)")
     ap.add_argument("--screenshot-name", default="tulip_screenshot")
     ap.add_argument("--screenshot-reference")
     ap.add_argument("--max-pixel-diff", type=float, default=8.0,
@@ -514,13 +536,18 @@ def main():
             write_serial_log(repl, args.serial_log or f"{args.name}-serial.log")
         repl.close()
 
-    # Download the screenshot the board just uploaded (must be newer than pre_shot_id).
+    # Download the screenshot the board just uploaded (must be newer than pre_shot_id),
+    # then delete it from Tulip World so CI runs don't clutter it. We keep the local
+    # copy (for the artifact + compare); the World delete is best-effort.
     shot_path = None
     if wifi_connected:
         shot_path = f"{args.screenshot_name}-capture.png"
-        if fetch_screenshot(args.world_username, shot_path, args.world_base,
-                            min_id=pre_shot_id) is None:
+        meta = fetch_screenshot(args.world_username, shot_path, args.world_base,
+                                min_id=pre_shot_id)
+        if meta is None:
             shot_path = None
+        elif meta.get("id") is not None:
+            delete_world_file(meta["id"], args.world_base, args.world_admin_token)
 
     out_wav = args.out or f"{args.name}-recording.wav"
     write_wav_mono(out_wav, rec, args.samplerate)

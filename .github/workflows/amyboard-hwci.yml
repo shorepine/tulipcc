@@ -136,6 +136,9 @@ jobs:
         env:
           TULIP_WIFI_SSID: ${{ secrets.TULIP_WIFI_SSID }}
           TULIP_WIFI_PASSWORD: ${{ secrets.TULIP_WIFI_PASSWORD }}
+          # Lets the harness delete its uploaded screenshot from Tulip World after
+          # downloading it (cleanup). Optional — skipped (with a warning) if unset.
+          WORLD_ADMIN_TOKEN: ${{ secrets.WORLD_ADMIN_TOKEN }}
         run: |
           set -o pipefail
           # App-only flash (~20s): the bootloader/partition-table/filesystem rarely
