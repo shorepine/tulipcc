@@ -30,12 +30,13 @@ mkdir stage/run
 
 cp static/* stage/run
 
-# Full tulip.computer landing (the site root): index.html + assets. Sourced from
-# www/ for now — www/ moves into tulip/web after the Vercel/DNS cutover. The web
-# app lives under stage/run (below); www/run build output is NOT copied (it's
-# regenerated here).
-cp ../../www/index.html stage/
-cp -Rf ../../www/css ../../www/fonts ../../www/img ../../www/js ../../www/webfonts stage/
+# Assemble the full tulip.computer site root. The Tulip-specific landing + its
+# webfonts live in site/; the marketing assets (img/css/fonts/js) are shared with
+# AMYboard Web + the docs, so they live in repo-root assets/. The web app itself
+# goes under stage/run (below).
+cp site/index.html stage/
+cp -Rf site/webfonts stage/
+cp -Rf ../../assets/css ../../assets/fonts ../../assets/img ../../assets/js stage/
 
 cp ../../amy/build/amy.js stage/run/amy-$timestamp.js
 cp ../../amy/build/amy.wasm stage/run/amy-$timestamp.wasm

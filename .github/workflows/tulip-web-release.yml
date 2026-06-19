@@ -4,10 +4,8 @@ name: Tulip web release
 # it --prod to the 'tulip' Vercel project (tulip.computer). Mirrors the web job of
 # amyboard-release.yml. Firmware is released separately by tulip-release.yml.
 #
-# Paths are web-only (+ amy/shared, which the WASM is built from) so a firmware-only
-# change doesn't redeploy the site. During the gh-pages -> Vercel cutover, static.yml
-# still also publishes www/ to GitHub Pages; once tulip.computer is served by Vercel,
-# remove static.yml + www/ (and this workflow's www/** path).
+# Paths are web-only (+ amy/shared for the WASM, assets/ for the shared site assets)
+# so a firmware-only change doesn't redeploy the site.
 #
 # Requires repo secret VERCEL_TOKEN (scope: bwhitmans-projects).
 
@@ -18,7 +16,7 @@ on:
       - 'amy'
       - 'tulip/web/**'
       - 'tulip/shared/**'
-      - 'www/**'
+      - 'assets/**'
       - '.github/workflows/tulip-web-release.yml'
   workflow_dispatch:
 

@@ -4,8 +4,8 @@
 
 `dev.py` is the only script needed for local development. It does everything:
 
-1. On startup: compiles AMY (`make web` in `amy/`) and AMYboard MicroPython (`make` in `tulip/amyboardweb/`), then builds `stage/` — copies `static/` and `www/img/fonts/css/js`, substitutes timestamped WASM/JS filenames into `editor/index.html`.
-2. While running: polls `static/` and `www/` every second and incrementally syncs any changed files to `stage/`. Re-applies timestamp substitutions automatically if `editor/index.html` changes.
+1. On startup: compiles AMY (`make web` in `amy/`) and AMYboard MicroPython (`make` in `tulip/amyboardweb/`), then builds `stage/` — copies `static/` and `assets/img/fonts/css/js`, substitutes timestamped WASM/JS filenames into `editor/index.html`.
+2. While running: polls `static/` and `assets/` every second and incrementally syncs any changed files to `stage/`. Re-applies timestamp substitutions automatically if `editor/index.html` changes.
 3. Serves `stage/` on port 8000 with correct CORS headers for WASM.
 
 ### Starting the dev server
@@ -40,7 +40,7 @@ Vercel deploys from `stage/` which always reflects the latest build.
 
 - `static/` is where you and Claude edit source files.
 - `stage/` is the built output — served locally and deployed to Vercel. Never edit files in `stage/` directly.
-- All marketing site images live in `www/img/` at the repo root. `dev.py` copies them into `stage/img/`.
+- All marketing site images live in `assets/img/` at the repo root. `dev.py` copies them into `stage/img/`.
 - The WASM/JS timestamp is fixed for the entire dev session — WASM filenames stay stable even as you edit HTML/JS.
 
 ## What Not to Touch

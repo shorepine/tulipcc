@@ -40,7 +40,7 @@ You can also remove our custom firmware (it's easy to put back!) and run AMYboar
 
 ## Board overview
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_front_panel_annotated.jpg" width=500>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/assets/img/amyboard_front_panel_annotated.jpg" width=500>
 
 **Front panel connectors** (top to bottom, 10 jacks):
 
@@ -58,7 +58,7 @@ You can also remove our custom firmware (it's easy to put back!) and run AMYboar
 | **CV2 out** | 3.5mm analog output, -10V to +10V (GP8413 DAC) |
 
 
-<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/www/img/amyboard_back_panel_annotated.jpg" width=500>
+<img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/assets/img/amyboard_back_panel_annotated.jpg" width=500>
 
 **Other connectors:**
 

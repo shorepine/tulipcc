@@ -16,7 +16,7 @@ on:
       - 'tulip/web/**'
       - 'tulip/esp32s3/**'
       - 'tulip/shared/**'
-      - 'www/**'
+      - 'assets/**'
       - '.github/workflows/tulip-pr-preview.yml'
 
 permissions:

@@ -10,7 +10,7 @@ On startup:
   - Picks a timestamp once and keeps it for the whole session (WASM names stay stable).
 
 While running:
-  - Polls static/, www/img, www/fonts, www/css, www/js, api/ every second.
+  - Polls static/, assets/img, assets/fonts, assets/css, assets/js, api/ every second.
   - On any change, syncs just the changed files to stage/ and re-applies the
     sed substitution to editor/index.html if that file changed.
   - HTTP server serves stage/ via absolute path, so it never breaks when files
@@ -40,10 +40,10 @@ STATIC_DIR      = os.path.join(SCRIPT_DIR, "static")
 API_DIR         = os.path.join(SCRIPT_DIR, "api")
 VERCEL_JSON     = os.path.join(SCRIPT_DIR, "vercel.json")
 
-WWW_IMG         = os.path.join(REPO_ROOT, "www", "img")
-WWW_FONTS       = os.path.join(REPO_ROOT, "www", "fonts")
-WWW_CSS         = os.path.join(REPO_ROOT, "www", "css")
-WWW_JS          = os.path.join(REPO_ROOT, "www", "js")
+WWW_IMG         = os.path.join(REPO_ROOT, "assets", "img")
+WWW_FONTS       = os.path.join(REPO_ROOT, "assets", "fonts")
+WWW_CSS         = os.path.join(REPO_ROOT, "assets", "css")
+WWW_JS          = os.path.join(REPO_ROOT, "assets", "js")
 
 AMY_DIR         = os.path.join(REPO_ROOT, "amy")
 AMY_BUILD       = os.path.join(REPO_ROOT, "amy", "build")
