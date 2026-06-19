@@ -1265,7 +1265,11 @@
       </div>
 
       <!-- Syncing modal (control mode) -->
-      <div class="modal fade" id="syncingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+      <!-- No 'fade': Bootstrap's fade defers display:block to an async animation
+           callback, which races _hide_syncing_modal() when a pull completes
+           faster than the ~150ms fade and leaves the spinner stuck on screen
+           (#952). Synchronous show/hide avoids the race. -->
+      <div class="modal" id="syncingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
           <div class="modal-content">
             <div class="modal-body text-center px-4 py-4">
