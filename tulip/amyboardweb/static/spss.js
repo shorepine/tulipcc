@@ -1128,9 +1128,17 @@ window.refresh_knobs_for_active_channel = async function(options) {
 };
 
 
-async function amy_external_midi_input_js_hook(bytes, len, sysex) {
-    mp.midiInHook(bytes, len, sysex);
-} 
+// AMY's main-thread WASM module calls this (via EM_ASM in
+// amy_event_midi_message_received) for every NON-sysex MIDI message it parses
+// out of amy_process_single_midi_byte(). We deliberately do NOT forward to
+// mp.midiInHook here: the "midimessage" listener in setup_midi_devices() below
+// already forwards every complete message (sysex included) to MicroPython
+// explicitly. Forwarding here as well delivered every non-sysex message to
+// Python twice — the "MIDI CC repeated 2x" bug. Kept as a no-op (not removed)
+// so AMY's `typeof amy_external_midi_input_js_hook === 'function'` check still
+// passes. NOTE: tulip/web (not this file) still relies on this hook as its only
+// path, so don't "fix" it the same way there.
+function amy_external_midi_input_js_hook(bytes, len, sysex) { /* no-op: see comment above */ } 
 
 function safe_midi_port_id(port) {
   try {
@@ -1489,6 +1497,17 @@ async function setup_midi_devices() {
             rawInput.addEventListener('midimessage', _raw_sysex_listener);
         }
     } catch (e) { console.warn('raw sysex listener setup failed:', e); }
+    // setup_midi_devices() runs again on dropdown onchange, statechange, and the
+    // sync/pull flows — and WebMidi.js addListener() APPENDS (it does not
+    // replace). Without clearing first, each re-run stacked another
+    // "midimessage" handler on the same Input, so every incoming message got
+    // delivered (and forwarded to MicroPython + move_knob) N times — the "MIDI
+    // messages repeated 4x/2x" bug. Remove any handler we attached on a previous
+    // run before adding the new one. (No callback arg = remove all "midimessage"
+    // listeners on this WebMidi.js Input wrapper; the raw-sysex and passthru
+    // listeners live on the underlying native MIDIInput via addEventListener and
+    // are unaffected.)
+    try { midiInputDevice.removeListener("midimessage"); } catch (e) {}
     midiInputDevice.addListener("midimessage", e => {
       const data = e.message && e.message.data ? e.message.data : [];
       const status = data.length > 0 ? data[0] : null;
