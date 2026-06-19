@@ -1225,8 +1225,8 @@ class Editor:
             pos = 0
             for c in s:
                 if c == "\t":
-                    sb.write(" " * (8 - pos % 8))
-                    pos += 8 - pos % 8
+                    sb.write(" " * (self.tab_size - pos % self.tab_size))
+                    pos += self.tab_size - pos % self.tab_size
                 else:
                     sb.write(c)
                     pos += 1

@@ -329,6 +329,29 @@ void editor_open_file(const char *filename) {
         new_lines = 1;
         //if(text[bytes_read-1]!='\n') { new_lines = 0; dbg("adding n\n"); text[bytes_read] = '\n'; bytes_read++; }
 		text[bytes_read] = 0; // end
+
+		// #580: expand tab characters to spaces so files saved with tabs (e.g.
+		// from the web editors) are editable here. The editor stores indentation
+		// as spaces (Tab inserts EDITOR_TAB_SPACES spaces), so a literal tab
+		// would otherwise show as a single un-editable character.
+		uint32_t tab_count = 0;
+		for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\t') tab_count++;
+		if(tab_count) {
+			uint32_t expanded_len = bytes_read + tab_count*(EDITOR_TAB_SPACES-1);
+			char * expanded = (char*) editor_malloc(expanded_len+3);
+			uint32_t j = 0;
+			for(uint32_t i=0;i<bytes_read;i++) {
+				if(text[i]=='\t') {
+					for(uint8_t s=0;s<EDITOR_TAB_SPACES;s++) expanded[j++] = ' ';
+				} else {
+					expanded[j++] = text[i];
+				}
+			}
+			expanded[j] = 0;
+			editor_free(text);
+			text = expanded;
+			bytes_read = j;
+		}
 		for(uint32_t i=0;i<bytes_read;i++) if(text[i]=='\n') new_lines++;
 		//dbg("File %s has %d lines. %d bytes\n", filename, new_lines,bytes_read);
 		char ** incoming_text_lines = (char**)editor_malloc(sizeof(char*)*(new_lines));

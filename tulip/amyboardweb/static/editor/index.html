@@ -1153,13 +1153,39 @@
           lint: false
         }, 
         lineNumbers: true, 
-        indentUnit: 4, 
+        indentUnit: 4,
+        // #580: Tab inserts spaces (never a literal tab) so Python indentation
+        // is valid; Tab/Shift-Tab indent/dedent the current selection.
+        extraKeys: {
+          Tab: function(cm) {
+            if (cm.somethingSelected()) {
+              cm.indentSelection("add");
+            } else {
+              cm.replaceSelection(" ".repeat(cm.getOption("indentUnit") || 4), "end");
+            }
+          },
+          "Shift-Tab": function(cm) {
+            cm.indentSelection("subtract");
+          }
+        },
         matchBrackets: true,
         spellCheck: false,
         autocorrect: false,
         theme: "lucario",
         lint: false,
       }); 
+      // #580: never let a literal tab into the document. Content loaded via
+      // setValue (files, shared sketches) or pasted text can contain tabs;
+      // convert each to spaces so getValue() -- and thus every saved file --
+      // stays tab-free and valid Python (and editable in the Tulip CC editor).
+      editor.on("beforeChange", function(cm, change) {
+        if (change.update && change.text.some(function(line) { return line.indexOf("\t") !== -1; })) {
+          var spaces = " ".repeat(cm.getOption("indentUnit") || 4);
+          change.update(change.from, change.to, change.text.map(function(line) {
+            return line.split("\t").join(spaces);
+          }));
+        }
+      });
       editor.on("change", function() {
         window.environment_editor_dirty = true;
       });
