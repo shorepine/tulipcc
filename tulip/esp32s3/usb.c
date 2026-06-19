@@ -54,6 +54,7 @@ static usb_phy_handle_t phy_hdl;
 #include "soc/rtc_cntl_struct.h"
 #include "soc/usb_wrap_struct.h"
 #include "driver/gpio.h"
+#include "esp_rom_sys.h"
 #endif
 
 
@@ -79,6 +80,15 @@ void usb_init(void) {
 
     gpio_set_drive_capability(USBPHY_DM_NUM, GPIO_DRIVE_CAP_3);
     gpio_set_drive_capability(USBPHY_DP_NUM, GPIO_DRIVE_CAP_3);
+
+    // Switching the mux above moves the PHY off the ROM USB-Serial-JTAG, dropping
+    // that device's D+ pull-up -- i.e. the host sees the 303a:1001 JTAG device
+    // disconnect. Hold here before TinyUSB (mp_usbd_init below) re-asserts the
+    // pull-up as caf0:4009, so a stubborn host has time to register the
+    // disconnect and re-enumerate the new device instead of keeping the JTAG one.
+    // Confirmed via USBView (#952) that a bare USB3 root port otherwise stays on
+    // 303a:1001 forever and never sees AMYboard's MIDI device.
+    esp_rom_delay_us(250 * 1000);  // 250 ms disconnect window
     #else
     usb_phy_config_t phy_conf = {
         .controller = USB_PHY_CTRL_OTG,
