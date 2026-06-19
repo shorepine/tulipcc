@@ -83,13 +83,18 @@ def copy_to_stage(src, stage_rel):
 
 # ── Initial full build ─────────────────────────────────────────────────────────
 
-def full_build():
+def full_build(skip_amy=False):
     ts = SESSION_TS
     print(f"[dev] Building stage/ (session timestamp {ts}) …")
 
-    # Compile AMY for web (emscripten)
-    print("[dev] Building AMY (make web) …")
-    subprocess.run(["make", "web"], cwd=AMY_DIR, check=True)
+    # Compile AMY for web (emscripten). ../webdev.py builds AMY once and shares
+    # it across both web apps, so it passes --skip-amy-build to avoid a second
+    # identical compile.
+    if skip_amy:
+        print("[dev] Skipping AMY build (make web) — caller already built it.")
+    else:
+        print("[dev] Building AMY (make web) …")
+        subprocess.run(["make", "web"], cwd=AMY_DIR, check=True)
 
     # Copy generated JS files from AMY build into static/
     for name in ("amy_api.generated.js", "patches.generated.js"):
@@ -287,11 +292,16 @@ if __name__ == "__main__":
         action="store_true",
         help="Build stage/ once and exit (no watcher, no HTTP server). Used by the amyboard-release CI workflow.",
     )
+    parser.add_argument(
+        "--skip-amy-build",
+        action="store_true",
+        help="Skip 'make web' in amy/ — the caller already built it. Used by ../webdev.py to build AMY once and share it across both web apps.",
+    )
     args = parser.parse_args()
 
     os.chdir(SCRIPT_DIR)
 
-    full_build()
+    full_build(skip_amy=args.skip_amy_build)
 
     if args.build_only:
         print("[dev] --build-only: stage/ built, exiting.")

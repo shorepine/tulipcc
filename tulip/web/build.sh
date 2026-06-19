@@ -17,10 +17,15 @@ fi
 
 timestamp=$(date +%Y%m%d%H%M%S)
 
-cd ../../amy
-make web
-#make docs/amy-audioin.js
-cd ../tulip/web
+# AMY for web (emscripten). Shared by both web apps — ../webdev.py builds it
+# once and sets SKIP_AMY_WEB=1 so this run reuses amy/build/ instead of
+# recompiling the identical WASM a second time.
+if [ -z "${SKIP_AMY_WEB:-}" ]; then
+  cd ../../amy
+  make web
+  #make docs/amy-audioin.js
+  cd ../tulip/web
+fi
 make
 
 # Now modify the static html and copy everything to a stage area 
