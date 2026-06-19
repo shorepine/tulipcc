@@ -113,9 +113,20 @@ def desktop_copy_sys(dest):
         os.system(cmd)
 
 
-def get_latest_release():
+def get_latest_release(pr=None):
     import json
     from upysh import rm
+    # A specific PR's firmware comes from that PR's Vercel preview bundle, not a
+    # GitHub release: upgrade(pr=N) lets a pro OTA a PR build. The preview must
+    # exist (an open PR that built + bundled firmware); otherwise the download 404s.
+    if pr is not None:
+        if board() == "AMYBOARD":
+            base = 'https://amyboard-pr-%d.vercel.app/firmware' % pr
+            return ('%s/amyboard-firmware-AMYBOARD.bin' % base, 'pr-%d' % pr,
+                    '%s/amyboard-sys.bin' % base, 'pr-%d' % pr)
+        base = 'https://tulip-pr-%d.vercel.app/firmware' % pr
+        return ('%s/tulip-firmware-%s.bin' % (base, board()), 'pr-%d' % pr,
+                '%s/tulip-sys.bin' % base, 'pr-%d' % pr)
     # AMYboard and Tulip each release continuously from main to their own rolling
     # release tag ('amyboard' / 'tulip'), kept non-latest so they never displace
     # releases/latest (the monthly combined release). Only TULIP4_R11 firmware is
@@ -145,7 +156,9 @@ def get_latest_release():
         return (mine['browser_download_url'], mine['updated_at'], sys['browser_download_url'], sys['updated_at'])
     return (None, None, None, None)
 
-def upgrade():
+def upgrade(pr=None):
+    # pr=N OTAs to PR #N's firmware (from tulip-pr-<N>/amyboard-pr-<N>.vercel.app);
+    # otherwise the rolling release for this board. Pros can test a PR build directly.
     import time, sys, os
     import tuliprequests as urequests
     try:
@@ -173,11 +186,13 @@ def upgrade():
     # Checks for a new firmware from Github, asks if you want to upgrade to it
     sec_size = 4096
 
-    (latest_mine_url, latest_mine_date, latest_sys_url, latest_sys_date) = get_latest_release()
+    (latest_mine_url, latest_mine_date, latest_sys_url, latest_sys_date) = get_latest_release(pr)
     if(latest_mine_url is None):
         print("Could not find firmware and system folder for board %s" % (board()))
         return
 
+    if pr is not None:
+        print("Upgrading to PR #%d firmware (from its Vercel preview)." % (pr))
     print("For board: %s" % (board()))
     print("Latest firmware: %s" % (latest_mine_date))
     print("Latest /sys    : %s" % (latest_sys_date))

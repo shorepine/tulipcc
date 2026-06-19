@@ -1,9 +1,10 @@
 name: Tulip web PR preview
 
 # Per-PR preview of Tulip Web, deployed to a unique URL (tulip-pr-<N>.vercel.app)
-# on the 'tulip-pr' Vercel project. Mirrors amyboard-pr-preview.yml (web half only —
-# Tulip Web has no flasher, so no firmware is bundled). Torn down when the PR closes
-# by amyboard-pr-preview-cleanup.yml (extend that to tulip-pr if desired).
+# on the 'tulip-pr' Vercel project. It also bundles this PR's TULIP4_R11 firmware at
+# /firmware/ (reused from the AMYboard-PR-preview run's tulip-firmware artifact — not
+# rebuilt here) so a pro can `tulip.upgrade(pr=<N>)` to the PR build. Torn down when
+# the PR closes by amyboard-pr-preview-cleanup.yml (extend that to tulip-pr if desired).
 #
 # Requires repo secret VERCEL_TOKEN (scope: bwhitmans-projects).
 
@@ -13,12 +14,14 @@ on:
     paths:
       - 'amy'
       - 'tulip/web/**'
+      - 'tulip/esp32s3/**'
       - 'tulip/shared/**'
       - 'www/**'
       - '.github/workflows/tulip-pr-preview.yml'
 
 permissions:
   contents: read
+  actions: read            # download the tulip-firmware artifact from the AMYboard PR preview run
   pull-requests: write
 
 concurrency:
@@ -60,6 +63,49 @@ jobs:
           cd tulip/web
           ./build.sh
 
+      # Bundle this PR's TULIP4_R11 firmware at /firmware/ so a pro can
+      # tulip.upgrade(pr=<N>). It's already built by the AMYboard PR preview (for HW
+      # CI), so we reuse that run's tulip-firmware artifact instead of rebuilding.
+      # Best-effort: web-only PRs don't run the AMYboard preview → deploy without it.
+      # (build.sh wipes stage/, so this must run AFTER the build.)
+      - name: Find the AMYboard PR preview run (has the tulip-firmware artifact)
+        id: fw
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner, repo = context.repo.repo;
+            const sha = context.payload.pull_request.head.sha;
+            for (let i = 0; i < 50; i++) {  // wait up to ~25 min (it's heavier than this job)
+              const { data } = await github.rest.actions.listWorkflowRunsForRepo({ owner, repo, head_sha: sha, per_page: 50 });
+              const run = data.workflow_runs.find(r => r.name === 'AMYboard PR preview');
+              if (run && run.status === 'completed') {
+                core.info(`AMYboard PR preview run ${run.id}: ${run.conclusion}`);
+                core.setOutput('run_id', run.conclusion === 'success' ? String(run.id) : '');
+                return;
+              }
+              if (i === 0) core.info('waiting for the AMYboard PR preview (it builds the Tulip firmware)…');
+              await new Promise(r => setTimeout(r, 30000));
+            }
+            core.info('AMYboard PR preview not finished in time — deploying web only (no PR firmware).');
+            core.setOutput('run_id', '');
+
+      - name: Download this PR's tulip-firmware artifact
+        if: steps.fw.outputs.run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: tulip-firmware
+          path: tulip/web/stage/firmware
+          run-id: ${{ steps.fw.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Flatten firmware into stage/firmware/
+        if: steps.fw.outputs.run_id != ''
+        run: |
+          cd tulip/web/stage/firmware
+          # ensure the .bin files sit at the root of /firmware/ (not nested)
+          find . -mindepth 2 -name '*.bin' -exec mv -f {} . \; 2>/dev/null || true
+          echo "bundled firmware:"; ls -la
+
       - name: Deploy preview + per-PR alias
         id: deploy
         env:
@@ -80,18 +126,23 @@ jobs:
         uses: actions/github-script@v7
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
+          HAS_FW: ${{ steps.fw.outputs.run_id != '' }}
         with:
           script: |
             const url = process.env.PREVIEW_URL;
+            const pr = context.issue.number;
             const marker = '<!-- tulip-pr-preview -->';
-            const body = [
+            const lines = [
               marker,
               '### 🌷 Tulip Web PR preview',
               '',
               `**Tulip Web:** ${url}/run/`,
-              '',
-              "This preview builds **this PR's** Tulip Web. Rebuilt on every push; removed when the PR closes.",
-            ].join('\n');
+            ];
+            if (process.env.HAS_FW === 'true') {
+              lines.push('', `**Flash a Tulip to this build:** on-device run \`tulip.upgrade(pr=${pr})\`.`);
+            }
+            lines.push('', "Rebuilt on every push; removed when the PR closes.");
+            const body = lines.join('\n');
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
             });
