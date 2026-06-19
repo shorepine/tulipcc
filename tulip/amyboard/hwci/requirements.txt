@@ -2,6 +2,7 @@
 esptool
 numpy
 pyserial   # serial-console capture (debug UART + CDC); also an esptool dep
+pillow     # decode + pixel-compare the Tulip screenshot (tulip_hwci.py)
 
 # macOS / non-Linux backend only. The Pi uses ALSA's `amidi` + `arecord` (already
 # present on Raspberry Pi OS / Debian) instead of these, so it needs neither root

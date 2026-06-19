@@ -1,12 +1,15 @@
-# AMYboard HW CI bench — stable /dev names so flashing + serial logging do not
-# depend on ttyACM enumeration order across reboots. Match by USB vendor:product
-# (one of each device on this bench).
+# AMYboard + Tulip HW CI bench — stable /dev names so flashing + serial logging do
+# not depend on ttyUSB/ttyACM enumeration order across reboots. Match by USB
+# vendor:product (one of each device on this bench; the two 1a86 chips have
+# distinct product IDs so they never collide).
 #
 # Install on the runner Pi:
 #   sudo install -m 0644 99-amyboard.rules /etc/udev/rules.d/99-amyboard.rules
 #   sudo udevadm control --reload && sudo udevadm trigger --subsystem-match=tty
 #
-# Debug-header USB-serial dongle (esptool flashing): CH9102F
+# AMYboard debug-header USB-serial dongle (esptool flashing): CH9102F
 SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d4", SYMLINK+="amyboard-dongle"
 # AMYboard native USB CDC (MicroPython stdout)
 SUBSYSTEM=="tty", ATTRS{idVendor}=="caf0", ATTRS{idProduct}=="4009", SYMLINK+="amyboard-cdc"
+# Tulip CC onboard CH340K — one port for esptool flashing + MicroPython REPL + console
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7522", SYMLINK+="tulip-repl"

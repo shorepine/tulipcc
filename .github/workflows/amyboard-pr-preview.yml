@@ -51,20 +51,30 @@ jobs:
         with:
           submodules: recursive
 
-      # --- Firmware (.bin set) ---
-      - name: Build AMYboard firmware
+      # --- Firmware (.bin sets) ---
+      # Build AMYBOARD then TULIP4_R11 in ONE esp-idf container: the two targets
+      # share most sources, so the second build hits ccache for the common units
+      # (we enable IDF_CCACHE_ENABLE) instead of recompiling from scratch. The
+      # Tulip firmware is what the HW CI bench flashes onto the physical Tulip
+      # (it shares the AMYboard bench); see tulip/amyboard/hwci/tulip_hwci.py.
+      - name: Build AMYboard + Tulip firmware
         uses: espressif/esp-idf-ci-action@v1
         with:
           esp_idf_version: v5.4.1
           target: esp32s3
           path: tulip/amyboard
           command: >-
+            export IDF_CCACHE_ENABLE=1 &&
             python -m pip install littlefs-python &&
             idf.py -DMICROPY_BOARD=AMYBOARD build &&
             cd .. &&
-            python fs_create.py amyboard
+            python fs_create.py amyboard &&
+            cd esp32s3 &&
+            idf.py -DMICROPY_BOARD=TULIP4_R11 build &&
+            cd .. &&
+            python fs_create.py tulip
 
-      - name: Upload firmware artifact
+      - name: Upload AMYboard firmware artifact
         uses: actions/upload-artifact@v4
         with:
           name: amyboard-firmware
@@ -73,6 +83,18 @@ jobs:
             tulip/amyboard/dist/amyboard-firmware-AMYBOARD.bin
             tulip/amyboard/dist/amyboard-full-AMYBOARD.bin
             tulip/amyboard/dist/amyboard-sys.bin
+
+      # The HW CI workflow (chained off this one via workflow_run) downloads this
+      # to flash the physical Tulip — there's no Vercel preview for Tulip firmware.
+      - name: Upload Tulip firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tulip-firmware
+          if-no-files-found: error
+          path: |
+            tulip/esp32s3/dist/tulip-firmware-TULIP4_R11.bin
+            tulip/esp32s3/dist/tulip-full-TULIP4_R11.bin
+            tulip/esp32s3/dist/tulip-sys.bin
 
       # --- Web stage/ (amy + amyboard WASM + static) ---
       - uses: actions/setup-python@v5
