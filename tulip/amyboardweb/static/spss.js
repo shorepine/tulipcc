@@ -4351,6 +4351,7 @@ function _clear_pull_button_gate(reason) {
 // always has the chance to confirm/change MIDI ports first. This is the
 // ONE syncing modal the editor exposes; no separate auto-spinner path.
 function _show_syncing_modal() {
+    console.log('[DBG-MODAL] GATE _show_syncing_modal() skip_gate=' + _skip_pull_gate + '\n' + new Error().stack);
     if (amyboard_mode !== 'control') return Promise.resolve();
     var el = document.getElementById('syncingModal');
     if (!el || !window.bootstrap) return Promise.resolve();
@@ -4391,6 +4392,7 @@ function _show_syncing_modal() {
 // (Windows-Chrome post-zB reload) where the click already happened on
 // the previous page and we need to resume in busy state.
 function _show_syncing_modal_busy() {
+    console.log('[DBG-MODAL] BUSY _show_syncing_modal_busy()\n' + new Error().stack);
     var el = document.getElementById('syncingModal');
     if (el && window.bootstrap) {
         bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
@@ -4465,6 +4467,7 @@ async function start_pull_from_amyboard() {
 }
 
 function _show_syncing_modal_error() {
+    console.log('[DBG-MODAL] ERROR _show_syncing_modal_error()\n' + new Error().stack);
     var spinner = document.getElementById('sync-modal-spinner');
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
@@ -4487,6 +4490,7 @@ function _show_syncing_modal_error() {
 }
 
 function _hide_syncing_modal() {
+    console.log('[DBG-MODAL] HIDE _hide_syncing_modal()\n' + new Error().stack);
     var el = document.getElementById('syncingModal');
     if (!el) return;
     // Reject any pending green-button gate so awaiting callers stop
