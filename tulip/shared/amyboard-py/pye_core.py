@@ -1335,8 +1335,8 @@ class Editor:
             pos = 0
             for c in s:
                 if c == "\t":  ## tab is seen
-                    sb.write(" " * (8 - pos % 8))  ## replace by space
-                    pos += 8 - pos % 8
+                    sb.write(" " * (self.tab_size - pos % self.tab_size))  ## replace by space, tab_size wide
+                    pos += self.tab_size - pos % self.tab_size
                 else:
                     sb.write(c)
                     pos += 1
