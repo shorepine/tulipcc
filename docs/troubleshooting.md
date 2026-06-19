@@ -19,7 +19,7 @@ For help, the community of people that can help out with Tulip are
 
 ## Always upgrade Tulip first
 
-First, always [upgrade your Tulip to the latest firmware](tulip_flashing.md). If your Tulip is running, and the keyboard and Wi-Fi are working, try to first upgrade to a release by running `tulip.wifi(ssid, password)` and then `tulip.upgrade()`. Take a note of the date of the Tulip OS that shows on the screen after you reboot it. The date should match the [latest release of Tulip](https://github.com/shorepine/tulipcc/releases).  If it's older, try again, or try to flash manually. 
+First, always [upgrade your Tulip to the latest firmware](tulip_flashing.md). If your Tulip is running, and the keyboard and Wi-Fi are working, try to first upgrade to a release by running `tulip.wifi(ssid, password)` and then `tulip.upgrade()`. Take a note of the date of the Tulip OS that shows on the screen after you reboot it. The date should match our [rolling `tulip` release](https://github.com/shorepine/tulipcc/releases/tag/tulip), which we update on every change.  If it's older, try again, or try to flash manually. 
 
 <img src="https://raw.githubusercontent.com/shorepine/tulipcc/main/docs/pics/tulipv4r11_front.png" width=600>
 
