@@ -764,7 +764,10 @@ async def upload_tulip_file(
         created_at_ms=created_at_ms,
         client_ip=_client_ip(request),
     )
-    _discord_notify(DISCORD_TULIP_FILES_CHANNEL_ID, f"{user} ### {desc[:MAX_DESCRIPTION]} ## {filename} ({len(contents)} bytes)")
+    # Don't forward Tulip screenshots to the Discord files channel — too noisy.
+    # The file is still stored and served by the API; we just skip the notification.
+    if not (filename == "screenshot.png" and desc == "Tulip Screenshot"):
+        _discord_notify(DISCORD_TULIP_FILES_CHANNEL_ID, f"{user} ### {desc[:MAX_DESCRIPTION]} ## {filename} ({len(contents)} bytes)")
     return {"ok": True, "id": item_id}
 
 
