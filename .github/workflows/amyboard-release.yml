@@ -23,6 +23,9 @@ on:
     paths:
       - 'amy'
       - 'tulip/amyboard/**'
+      # AMYboard firmware also compiles shared ESP32-S3 sources from here
+      # (e.g. tulip/esp32s3/usb.c), so changes there must trigger a release.
+      - 'tulip/esp32s3/**'
       - 'tulip/amyboardweb/**'
       - 'tulip/shared/**'
       - '.github/workflows/amyboard-release.yml'
