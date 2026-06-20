@@ -1116,19 +1116,6 @@
         }
       }
 
-      // Load patches on first visit to the Patches sub-tab.
-      var worldPatchTab = document.getElementById("world-patch-tab");
-      if (worldPatchTab) {
-        worldPatchTab.addEventListener("shown.bs.tab", function() {
-          if (typeof refresh_amyboard_world_patches === "function") {
-            refresh_amyboard_world_patches();
-          }
-          if (typeof refresh_patch_upload_dropdown === "function") {
-            refresh_patch_upload_dropdown();
-          }
-        });
-      }
-
       // When the main World tab is shown, refresh the patch dropdown if
       // the Patches sub-tab is currently active (Bootstrap won't re-fire
       // shown.bs.tab on the sub-tab in that case).
@@ -1590,13 +1577,10 @@
               </div>
             </div> <!-- end environment tab -->
             <div class="tab-pane fade" id="world-pane" role="tabpanel" aria-labelledby="world-tab">
-              <p class="text-muted mb-2">Here you can see the community's shared sketches and individual patches, or upload your own!</p>
+              <p class="text-muted mb-2">Here you can see the community's shared sketches, or upload your own!</p>
               <ul class="nav nav-tabs mb-2" id="world-sub-tabs" role="tablist">
                 <li class="nav-item" role="presentation">
                   <button class="nav-link active fw-bold" id="world-env-tab" data-bs-toggle="tab" data-bs-target="#world-environments-pane" type="button" role="tab" aria-controls="world-environments-pane" aria-selected="true">Sketches</button>
-                </li>
-                <li class="nav-item" role="presentation">
-                  <button class="nav-link fw-bold" id="world-patch-tab" data-bs-toggle="tab" data-bs-target="#world-patches-pane" type="button" role="tab" aria-controls="world-patches-pane" aria-selected="false">Patches</button>
                 </li>
               </ul>
               <div class="tab-content">
@@ -1661,72 +1645,6 @@
                     </div>
                     <div class="mt-2">
                       <button type="button" id="upload_current_environment_btn" class="btn btn-sm btn-primary" onclick="upload_current_environment()">Upload</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              </div>
-              <div class="tab-pane fade" id="world-patches-pane" role="tabpanel" aria-labelledby="world-patch-tab">
-              <div class="row mb-2">
-                <div class="col-12">
-                  <div class="border rounded p-3 bg-light">
-                    <div class="d-flex align-items-center mb-2">
-                      <span class="fw-semibold">Patches (latest)</span>
-                      <button
-                        type="button"
-                        title="Refresh patches"
-                        data-toggle="tooltip"
-                        data-placement="top"
-                        class="btn btn-sm btn-link text-secondary p-0 ms-2"
-                        onclick="refresh_amyboard_world_patches()"
-                      ><i class="fas fa-sync"></i></button>
-                    </div>
-                    <div class="row g-2 mb-2">
-                      <div class="col-12 col-md-7">
-                        <input
-                          type="text"
-                          id="amyboard_world_patch_search"
-                          class="form-control form-control-sm"
-                          maxlength="100"
-                          placeholder="Search by description, patch name, or username"
-                          onkeydown="if (event.key === 'Enter') { refresh_amyboard_world_patches(); }"
-                        />
-                      </div>
-                      <div class="col-12 col-md-3 d-flex align-items-center">
-                        <div id="amyboard_world_patch_tag_pills" class="d-flex flex-wrap gap-1"></div>
-                      </div>
-                      <div class="col-12 col-md-2 d-grid">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="refresh_amyboard_world_patches()">Search</button>
-                      </div>
-                    </div>
-                    <div id="amyboard_world_patch_list" class="small" style="max-height: 360px; overflow-y: auto;"></div>
-                  </div>
-                </div>
-              </div>
-              <div class="row mb-2">
-                <div class="col-12">
-                  <div class="border rounded p-3 bg-light">
-                    <div class="fw-semibold mb-2">Upload a Patch</div>
-                    <div class="mb-2">Share a single synth patch with the community.</div>
-                    <div class="row g-2">
-                      <div class="col-12 col-md-4">
-                        <label for="patch_upload_username" class="form-label mb-1">Username</label>
-                        <input type="text" id="patch_upload_username" class="small form-control" maxlength="20" placeholder="Username" />
-                        <div class="form-text">1-20 chars: A-Z, a-z, 0-9.</div>
-                      </div>
-                      <div class="col-12 col-md-4">
-                        <label for="patch_upload_select" class="form-label mb-1">Patch</label>
-                        <select class="form-select form-select-sm" id="patch_upload_select"></select>
-                        <div class="form-text">Select a saved patch to upload.</div>
-                      </div>
-                      <div class="col-12 col-md-4">
-                        <label for="patch_upload_description" class="form-label mb-1">Description</label>
-                        <textarea id="patch_upload_description" class="small form-control" maxlength="400" rows="3" placeholder="Description"></textarea>
-                        <div class="form-text">1-400 characters.</div>
-                      </div>
-                    </div>
-                    <div class="mt-2">
-                      <button type="button" id="upload_patch_btn" class="btn btn-sm btn-primary" onclick="upload_patch_to_world()">Upload</button>
                     </div>
                   </div>
                 </div>
@@ -2008,10 +1926,16 @@
         }
         if (channelActiveCheckbox) {
           channelActiveCheckbox.addEventListener("change", function() {
+            const ch = window.current_synth || 1;
             if (typeof window.set_channel_active === "function") {
-              window.set_channel_active(window.current_synth || 1, channelActiveCheckbox.checked);
+              window.set_channel_active(ch, channelActiveCheckbox.checked, { userToggle: true });
             }
             if (channelActiveCheckbox.checked) {
+              // Restore this channel's level (stored outside the knob grid, so
+              // set_channel_active's knob-value replay doesn't cover it).
+              if (typeof setSynthLevel === "function" && typeof getSynthLevel === "function") {
+                setSynthLevel(getSynthLevel(ch), true);
+              }
               if (typeof window.refresh_knobs_for_active_channel === "function") {
                 window.refresh_knobs_for_active_channel({ sendControlMappings: true });
               }
@@ -2020,8 +1944,6 @@
         }
         const patchLoadModalButton = document.getElementById("patch-open-load-modal-btn");
         const loadPatchModalEl = document.getElementById("loadPatchModal");
-        const patchSaveActionButton = document.getElementById("patch-save-action-btn");
-        const patchRevertActionButton = document.getElementById("patch-revert-action-btn");
         const patchClearChannelButton = document.getElementById("patch-clear-channel-btn");
         const synthLevelSlider = document.getElementById("synth-level-slider");
         const synthLevelNumber = document.getElementById("synth-level-number");
@@ -2081,13 +2003,8 @@
             }
           });
         }
-        const savePatchModalEl = document.getElementById("savePatchModal");
-        const savePatchNameInput = document.getElementById("save-patch-name");
-        const savePatchConfirmButton = document.getElementById("save-patch-confirm-btn");
-        const yourPatchesSelect = document.getElementById("load-patch-your-patches");
         const junoPresetsSelect = document.getElementById("load-patch-juno-presets");
         const dx7PresetsSelect = document.getElementById("load-patch-dx7-presets");
-        const loadYourPatchButton = document.getElementById("load-your-patch-btn");
         const loadJunoPresetButton = document.getElementById("load-juno-preset-btn");
         const loadDx7PresetButton = document.getElementById("load-dx7-preset-btn");
         const loadPatchChannelLabel = document.getElementById("load-patch-channel-label");
@@ -2101,37 +2018,6 @@
           const channel = Number(window.current_synth || 1);
           loadPatchChannelLabel.textContent = "Into Channel " + String(channel);
         }
-        function refreshYourPatchesDropdown() {
-          if (!yourPatchesSelect) return;
-          let files = [];
-          if (typeof window.list_environment_files === "function") {
-            files = window.list_environment_files();
-          }
-          const patchFiles = (Array.isArray(files) ? files : [])
-            .filter(function(filename) {
-              return String(filename || "").toLowerCase().endsWith(".patch");
-            })
-            .sort(function(a, b) {
-              return String(a || "").localeCompare(String(b || ""));
-            });
-          yourPatchesSelect.innerHTML = "";
-          if (!patchFiles.length) {
-            const option = document.createElement("option");
-            option.value = "";
-            option.textContent = "No patches found";
-            yourPatchesSelect.appendChild(option);
-            yourPatchesSelect.disabled = true;
-            return;
-          }
-          yourPatchesSelect.disabled = false;
-          patchFiles.forEach(function(filename) {
-            const option = document.createElement("option");
-            option.value = filename;
-            option.textContent = String(filename).replace(/\.patch$/i, "");
-            yourPatchesSelect.appendChild(option);
-          });
-        }
-        window.refreshYourPatchesDropdown = refreshYourPatchesDropdown;
         if (typeof init_patches_select_range === "function") {
           init_patches_select_range("load-patch-juno-presets", 0, 128);
           init_patches_select_range("load-patch-dx7-presets", 128, 256);
@@ -2169,8 +2055,6 @@
           }
           patchLoadModalButton.addEventListener("click", function() {
             refreshLoadPatchChannelLabel();
-            refreshYourPatchesDropdown();
-            refreshWorldPatchesDropdown();
             positionLoadPatchModalNearButton();
             const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
             modal.show();
@@ -2181,37 +2065,6 @@
               positionLoadPatchModalNearButton();
             }
           });
-          if (loadYourPatchButton && yourPatchesSelect) {
-            loadYourPatchButton.addEventListener("click", async function() {
-              const selected = String(yourPatchesSelect.value || "").trim();
-              if (!selected) {
-                if (typeof show_alert === "function") {
-                  show_alert("Select a patch to load.");
-                }
-                return;
-              }
-              if (typeof window.load_saved_patch_file_into_current_channel !== "function") {
-                if (typeof show_alert === "function") {
-                  show_alert("Load patch is not available.");
-                }
-                return;
-              }
-              loadYourPatchButton.disabled = true;
-              try {
-                await window.load_saved_patch_file_into_current_channel(selected);
-                refreshPatchActiveNameLabel();
-                refreshSavePatchDirtyIndicator();
-                const modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
-                modal.hide();
-              } catch (e) {
-                if (typeof show_alert === "function") {
-                  show_alert("Could not load patch.");
-                }
-              } finally {
-                loadYourPatchButton.disabled = false;
-              }
-            });
-          }
           function handlePresetLoad(selectEl) {
               const patch = Number(selectEl.value);
               if (!Number.isInteger(patch) || patch < 0) {
@@ -2304,238 +2157,6 @@
               }
             });
           }
-
-          // --- AMYboard World patches in Load Patch dialog ---
-          var worldPatchSelect = document.getElementById("load-patch-world-select");
-          var loadWorldPatchButton = document.getElementById("load-world-patch-btn");
-          var worldPatchLink = document.getElementById("load-patch-world-link");
-          var worldPatchCache = [];
-
-          if (worldPatchLink) {
-            worldPatchLink.addEventListener("click", function(e) {
-              e.preventDefault();
-              var modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
-              modal.hide();
-              var worldTab = document.getElementById("world-tab");
-              if (worldTab) {
-                var tab = window.bootstrap.Tab.getOrCreateInstance(worldTab);
-                tab.show();
-              }
-              var patchSubTab = document.getElementById("world-patch-tab");
-              if (patchSubTab) {
-                var sub = window.bootstrap.Tab.getOrCreateInstance(patchSubTab);
-                sub.show();
-              }
-            });
-          }
-
-          async function refreshWorldPatchesDropdown() {
-            if (!worldPatchSelect) return;
-            worldPatchSelect.innerHTML = '<option value="">Loading...</option>';
-            try {
-              var params = new URLSearchParams();
-              params.set("limit", "50");
-              params.set("latest_per_user_env", "true");
-              params.set("item_type", "patch");
-              var response = await fetch(world_api_url("/api/amyboardworld/files?" + params.toString()));
-              if (!response.ok) throw new Error("HTTP " + response.status);
-              var data = await response.json();
-              if (!data || !Array.isArray(data.items)) throw new Error("Unexpected response");
-              worldPatchCache = data.items
-                .sort(function(a, b) { return Number(b.time || 0) - Number(a.time || 0); })
-                .slice(0, 50);
-              worldPatchSelect.innerHTML = "";
-              if (worldPatchCache.length === 0) {
-                worldPatchSelect.innerHTML = '<option value="">No patches found</option>';
-                return;
-              }
-              for (var i = 0; i < worldPatchCache.length; i++) {
-                var item = worldPatchCache[i];
-                var name = String(item.filename || "").replace(/\.patch$/i, "");
-                var user = item.username || "";
-                var label = name + (user ? " (" + user + ")" : "");
-                var opt = document.createElement("option");
-                opt.value = String(i);
-                opt.textContent = label;
-                worldPatchSelect.appendChild(opt);
-              }
-            } catch (e) {
-              worldPatchCache = [];
-              worldPatchSelect.innerHTML = '<option value="">Could not load</option>';
-            }
-          }
-          window.refreshWorldPatchesDropdown = refreshWorldPatchesDropdown;
-
-          if (loadWorldPatchButton && worldPatchSelect) {
-            loadWorldPatchButton.addEventListener("click", async function() {
-              var idx = Number(worldPatchSelect.value);
-              if (!Number.isFinite(idx) || idx < 0 || idx >= worldPatchCache.length) {
-                if (typeof show_alert === "function") show_alert("Select a patch to load.");
-                return;
-              }
-              var item = worldPatchCache[idx];
-              loadWorldPatchButton.disabled = true;
-              try {
-                var downloadUrl = resolve_world_download_url(item);
-                if (!downloadUrl) throw new Error("Missing file URL");
-                var response = await fetch(downloadUrl);
-                if (!response.ok) throw new Error("HTTP " + response.status);
-                var text = await response.text();
-
-                var filename = normalize_world_filename(item.filename);
-                if (!filename.toLowerCase().endsWith(".patch")) {
-                  filename = filename + ".patch";
-                }
-                ensure_current_environment_layout(false);
-                mp.FS.writeFile(CURRENT_ENV_DIR + "/" + filename, text);
-                await sync_persistent_fs();
-
-                // Load the downloaded patch into the current channel.
-                await window.load_saved_patch_file_into_current_channel(filename);
-                refreshPatchActiveNameLabel();
-                refreshSavePatchDirtyIndicator();
-                if (typeof window.refreshYourPatchesDropdown === "function") {
-                  window.refreshYourPatchesDropdown();
-                }
-                var modal = window.bootstrap.Modal.getOrCreateInstance(loadPatchModalEl);
-                modal.hide();
-              } catch (e) {
-                if (typeof show_alert === "function") show_alert("Could not load patch.");
-              } finally {
-                loadWorldPatchButton.disabled = false;
-              }
-            });
-          }
-        }
-        if (patchSaveActionButton && savePatchModalEl && window.bootstrap) {
-          if (savePatchNameInput) {
-            savePatchNameInput.addEventListener("input", function() {
-              const cleaned = String(savePatchNameInput.value || "")
-                .replace(/[^A-Za-z0-9._-]/g, "")
-                .slice(0, 25);
-              if (savePatchNameInput.value !== cleaned) {
-                savePatchNameInput.value = cleaned;
-              }
-            });
-          }
-          function positionSavePatchModalNearButton() {
-            const dialog = savePatchModalEl.querySelector(".modal-dialog");
-            if (!dialog) return;
-            const rect = patchSaveActionButton.getBoundingClientRect();
-            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
-            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
-            const dialogWidth = Math.min(360, Math.max(280, viewportWidth - 24));
-            const estimatedHeight = 220;
-            let left = rect.left;
-            if (left + dialogWidth > viewportWidth - 12) {
-              left = viewportWidth - dialogWidth - 12;
-            }
-            if (left < 12) {
-              left = 12;
-            }
-            let top = rect.bottom + 8;
-            if (top + estimatedHeight > viewportHeight - 12) {
-              top = Math.max(12, rect.top - estimatedHeight - 8);
-            }
-            dialog.style.position = "fixed";
-            dialog.style.margin = "0";
-            dialog.style.width = dialogWidth + "px";
-            dialog.style.maxWidth = dialogWidth + "px";
-            dialog.style.left = left + "px";
-            dialog.style.top = top + "px";
-            dialog.style.transform = "none";
-          }
-          patchSaveActionButton.addEventListener("click", function() {
-            const channel = Number(window.current_synth || 1);
-            if (savePatchNameInput) {
-              let existingName = "";
-              if (Array.isArray(window.channel_patch_names) && typeof window.channel_patch_names[channel] === "string") {
-                existingName = String(window.channel_patch_names[channel] || "").trim();
-              }
-              savePatchNameInput.value = existingName;
-            }
-            positionSavePatchModalNearButton();
-            const modal = window.bootstrap.Modal.getOrCreateInstance(savePatchModalEl);
-            modal.show();
-            if (savePatchNameInput) {
-              setTimeout(function() {
-                savePatchNameInput.focus();
-                savePatchNameInput.select();
-              }, 120);
-            }
-          });
-          savePatchModalEl.addEventListener("shown.bs.modal", positionSavePatchModalNearButton);
-          window.addEventListener("resize", function() {
-            if (savePatchModalEl.classList.contains("show")) {
-              positionSavePatchModalNearButton();
-            }
-          });
-          if (savePatchConfirmButton && savePatchNameInput) {
-            savePatchConfirmButton.addEventListener("click", async function() {
-              const name = String(savePatchNameInput.value || "").trim();
-              if (!/^[A-Za-z0-9._-]{1,25}$/.test(name)) {
-                if (typeof show_alert === "function") {
-                  show_alert("Patch name must be 1-25 chars: letters, numbers, dot, underscore, dash.");
-                }
-                savePatchNameInput.focus();
-                return;
-              }
-              if (typeof window.save_current_synth_patch_file !== "function") {
-                if (typeof show_alert === "function") {
-                  show_alert("Save patch is not available.");
-                }
-                return;
-              }
-              savePatchConfirmButton.disabled = true;
-              try {
-                await window.save_current_synth_patch_file(name);
-                refreshPatchActiveNameLabel();
-                refreshSavePatchDirtyIndicator();
-                const modal = window.bootstrap.Modal.getOrCreateInstance(savePatchModalEl);
-                modal.hide();
-                savePatchNameInput.value = "";
-              } catch (e) {
-                if (typeof show_alert === "function") {
-                  show_alert("Could not save patch.");
-                }
-              } finally {
-                savePatchConfirmButton.disabled = false;
-              }
-            });
-          }
-        }
-        if (patchRevertActionButton) {
-          patchRevertActionButton.addEventListener("click", async function() {
-            const channel = Number(window.current_synth || 1);
-            let patchName = null;
-            if (Array.isArray(window.channel_patch_names) && typeof window.channel_patch_names[channel] === "string") {
-              patchName = String(window.channel_patch_names[channel] || "").trim();
-            }
-            if (!patchName) {
-              if (typeof show_alert === "function") {
-                show_alert("No saved patch to revert to.");
-              }
-              return;
-            }
-            if (typeof window.load_saved_patch_file_into_current_channel !== "function") {
-              if (typeof show_alert === "function") {
-                show_alert("Revert is not available.");
-              }
-              return;
-            }
-            patchRevertActionButton.disabled = true;
-            try {
-              await window.load_saved_patch_file_into_current_channel(patchName + ".patch");
-              refreshPatchActiveNameLabel();
-              refreshSavePatchDirtyIndicator();
-            } catch (e) {
-              if (typeof show_alert === "function") {
-                show_alert("Could not revert patch. Saved file may be missing.");
-              }
-            } finally {
-              patchRevertActionButton.disabled = false;
-            }
-          });
         }
         if (patchClearChannelButton) {
           patchClearChannelButton.addEventListener("click", async function() {
