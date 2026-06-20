@@ -43,13 +43,18 @@ concurrency:
 
 jobs:
   hwci:
-    # workflow_dispatch (manual), or a same-repo PR whose preview succeeded.
-    # Fork PRs never run on the self-hosted Pi.
+    # workflow_dispatch (manual), or a preview that succeeded in THIS repo's
+    # context. head_repository == this repo means the preview ran AS tulipcc (not
+    # a fork) — true for a Tulip PR (pull_request) and for an AMY PR (repository_
+    # dispatch / workflow_dispatch, already same-repo-gated on the amy side). Fork
+    # code never runs on the self-hosted Pi.
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.event == 'pull_request' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       (github.event.workflow_run.event == 'pull_request' ||
+        github.event.workflow_run.event == 'repository_dispatch' ||
+        github.event.workflow_run.event == 'workflow_dispatch'))
     runs-on: [self-hosted, amyboard-hwci]
     timeout-minutes: 30
     steps:
@@ -59,7 +64,7 @@ jobs:
         with:
           script: |
             const owner = context.repo.owner, repo = context.repo.repo;
-            let pr, sha, previewRunId;
+            let pr, sha, previewRunId, isAmy = false;
             if (context.eventName === 'workflow_dispatch') {
               pr = Number(context.payload.inputs.pr);
               const { data } = await github.rest.pulls.get({ owner, repo, pull_number: pr });
@@ -76,18 +81,48 @@ jobs:
                 return;
               }
               previewRunId = preview.id;
-            } else { // workflow_run
+            } else { // workflow_run (a preview build completed)
               const run = context.payload.workflow_run;
-              const assoc = run.pull_requests && run.pull_requests[0];
-              if (!assoc) { core.setFailed('workflow_run has no associated same-repo PR; skipping.'); return; }
-              pr = assoc.number;
               sha = run.head_sha;
               previewRunId = run.id;
+              if (run.event === 'pull_request') {           // Tulip PR
+                const assoc = run.pull_requests && run.pull_requests[0];
+                if (!assoc) { core.setFailed('workflow_run has no associated same-repo PR; skipping.'); return; }
+                pr = assoc.number;
+              } else {                                       // AMY PR (dispatch/manual)
+                isAmy = true;   // PR number + repo + firmware URL come from the amy-ctx artifact
+              }
             }
-            core.setOutput('pr', String(pr));
+            core.setOutput('is_amy', String(isAmy));
+            core.setOutput('pr', pr ? String(pr) : '');
             core.setOutput('sha', sha);
             core.setOutput('preview_run_id', String(previewRunId));
-            core.info(`HW CI for PR #${pr} @ ${sha} (preview run ${previewRunId})`);
+            core.info(`HW CI: amy=${isAmy} pr=${pr || '-'} @ ${sha} (preview run ${previewRunId})`);
+
+      # AMY runs only: pull the identity the preview stashed — which AMY PR built
+      # this firmware, where to fetch it, and where to comment. Required (we can't
+      # flash without the firmware URL), so no continue-on-error.
+      - name: Download AMY context (AMY runs only)
+        if: steps.ctx.outputs.is_amy == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: amy-ctx
+          path: amy-ctx
+          run-id: ${{ steps.ctx.outputs.preview_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Set PR / TARGET_REPO / FW_ARG once, so every step below is event-agnostic.
+      # AMY: firmware from the amyboard-amypr-<N> Vercel preview (hwci.py --url);
+      # Tulip: firmware from amyboard-pr-<N> (hwci.py --pr). The python parse
+      # validates repo/alias before they reach $GITHUB_ENV.
+      - name: Resolve run params (PR number, comment repo, firmware source)
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.ctx.outputs.is_amy }}" = "true" ]; then
+            python3 -c 'import json,re; d=json.load(open("amy-ctx/ctx.json")); pr=int(d["amy_pr"]); repo=d["amy_repo"]; alias=d["alias"]; assert re.fullmatch(r"[\w.-]+/[\w.-]+",repo) and re.fullmatch(r"[\w-]+",alias); print(f"PR={pr}\nTARGET_REPO={repo}\nFW_ARG=--url https://{alias}.vercel.app/firmware/amyboard-full-AMYBOARD.bin")' >> "$GITHUB_ENV"
+          else
+            { echo "PR=${{ steps.ctx.outputs.pr }}"; echo "TARGET_REPO=${{ github.repository }}"; echo "FW_ARG=--pr ${{ steps.ctx.outputs.pr }}"; } >> "$GITHUB_ENV"
+          fi
 
       - name: Fetch hwci/ at the PR head (public tarball; runner has no git)
         run: |
@@ -120,7 +155,9 @@ jobs:
         working-directory: hwci
         run: |
           set -o pipefail
-          ~/hwci-venv/bin/python hwci.py --pr "${{ steps.ctx.outputs.pr }}" \
+          # $FW_ARG is `--pr <N>` (Tulip) or `--url <amyboard-amypr-N…/…AMYBOARD.bin>`
+          # (AMY) — set by "Resolve run params". Unquoted so it splits into 2 args.
+          ~/hwci-venv/bin/python hwci.py $FW_ARG \
             --port /dev/amyboard-dongle \
             --cdc-port /dev/amyboard-cdc \
             --audio-device hw:CARD=Device,DEV=0 \
@@ -159,7 +196,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: hwci-pr${{ steps.ctx.outputs.pr }}
+          name: hwci-${{ steps.ctx.outputs.is_amy == 'true' && 'amy' || 'tulip' }}-pr${{ env.PR }}
           if-no-files-found: warn
           path: |
             hwci/hwci_basic-recording.wav
@@ -171,21 +208,33 @@ jobs:
             hwci/tulip-run.log
 
       - name: Comment results on the PR
-        if: always() && steps.ctx.outputs.pr != ''
+        if: always() && env.PR != ''
         uses: actions/github-script@v7
+        env:
+          IS_AMY: ${{ steps.ctx.outputs.is_amy }}
+          AMY_OUTCOME: ${{ steps.amy.outcome }}
+          TULIP_OUTCOME: ${{ steps.tulip.outcome }}
         with:
+          # AMY runs comment cross-repo on the AMY PR → need a token with write on
+          # shorepine/amy. Tulip runs comment in-repo with the default token.
+          github-token: ${{ steps.ctx.outputs.is_amy == 'true' && secrets.HWCI_BRIDGE_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
-            const pr = Number('${{ steps.ctx.outputs.pr }}');
-            const amyPass = '${{ steps.amy.outcome }}' === 'success';
-            const tulipPass = '${{ steps.tulip.outcome }}' === 'success';
+            const isAmy = process.env.IS_AMY === 'true';
+            const [owner, repo] = process.env.TARGET_REPO.split('/');   // amy or tulipcc
+            const pr = Number(process.env.PR);
+            const amyPass = process.env.AMY_OUTCOME === 'success';
+            const tulipPass = process.env.TULIP_OUTCOME === 'success';
             const line = (ok) => ok
               ? '✅ **PASS** — flashed this PR’s firmware; all checks matched the references.'
               : '❌ **FAIL** — a check did not match, or the run errored. See the log/artifacts.';
+            // Artifacts/logs live on this run, which is always in tulipcc.
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             const marker = '<!-- hwci-bench -->';
+            const head = ['### 🎛️ HW CI (physical bench)'];
+            if (isAmy) head.push('_Built from this AMY PR, pinned into the tulipcc `amy` submodule._');
             const body = [
               marker,
-              '### 🎛️ HW CI (physical bench)',
+              ...head,
               '',
               `**AMYboard** (USB-MIDI + AMY \`zP\` → audio): ${line(amyPass)}`,
               '',
@@ -195,14 +244,14 @@ jobs:
               '',
               '<sub>Self-hosted bench. Audio spectral-compared to `ref/hwci_basic.wav` + `ref/tulip_basic.wav`; Tulip screenshot pixel-compared to `ref/tulip_screenshot.png`. Both analog outs share one capture card, so the tests run sequentially.</sub>',
             ].join('\n');
-            const { data: comments } = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr });
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number: pr });
             const existing = comments.find(c => c.body && c.body.includes(marker));
             // Post a fresh comment every run rather than editing in place: GitHub
             // only notifies on NEW comments, and a new comment lands at the bottom
             // of the thread where it's visible. Create first, then delete the
             // previous one, so there's always exactly one and never zero.
-            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr, body });
-            if (existing) await github.rest.issues.deleteComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existing.id });
+            await github.rest.issues.createComment({ owner, repo, issue_number: pr, body });
+            if (existing) await github.rest.issues.deleteComment({ owner, repo, comment_id: existing.id });
 
       - name: Mark job failed if either board failed
         if: always()

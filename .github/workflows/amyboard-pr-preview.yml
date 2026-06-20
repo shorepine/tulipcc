@@ -24,18 +24,64 @@ on:
       - 'tulip/shared/**'
       - '.github/workflows/amyboard-pr-preview.yml'
 
+  # Fired by shorepine/amy's amyboard-hwci-trigger.yml on an AMY PR: build this
+  # pipeline with the `amy` submodule pinned to client_payload.amy_sha, then chain
+  # to HW CI (which comments back on the AMY PR). See the AMY-PR plumbing below.
+  repository_dispatch:
+    types: [amy-pr]
+
+  # Manual fallback for an AMY *fork* PR (auto-dispatch is same-repo only): a
+  # maintainer supplies the fork's amy PR number + SHA after reviewing the diff.
+  workflow_dispatch:
+    inputs:
+      amy_pr:
+        description: "AMY PR number (for the preview alias + result comment)"
+        required: true
+      amy_sha:
+        description: "AMY commit SHA to pin the submodule to"
+        required: true
+
 permissions:
   contents: read
   pull-requests: write
 
 concurrency:
-  group: amyboard-pr-preview-${{ github.event.pull_request.number }}
+  # Namespace by event so an AMY PR #N and a Tulip PR #N never cancel each other.
+  group: amyboard-pr-preview-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.client_payload.amy_pr || github.event.inputs.amy_pr }}
   cancel-in-progress: true
 
 jobs:
   preview:
     runs-on: ubuntu-latest
     steps:
+      # Normalize the trigger: a Tulip PR (pull_request) vs an AMY PR (dispatched
+      # from shorepine/amy, or manual for a fork). Everything downstream keys off
+      # these outputs instead of github.event.pull_request.* directly.
+      - name: Resolve PR context (Tulip PR vs AMY PR)
+        id: ctx
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ev = context.eventName;
+            let isAmy = false, num, amySha = '', amyRepo = 'shorepine/amy';
+            if (ev === 'pull_request') {
+              num = context.payload.pull_request.number;            // Tulip PR
+            } else if (ev === 'repository_dispatch') {               // AMY PR (auto)
+              isAmy = true;
+              const cp = context.payload.client_payload || {};
+              num = cp.amy_pr; amySha = cp.amy_sha || ''; amyRepo = cp.amy_repo || amyRepo;
+            } else if (ev === 'workflow_dispatch') {                 // AMY fork PR (manual)
+              isAmy = true;
+              num = context.payload.inputs.amy_pr; amySha = context.payload.inputs.amy_sha || '';
+            }
+            if (isAmy && !amySha) { core.setFailed('AMY run requires an amy SHA'); return; }
+            core.setOutput('is_amy', String(isAmy));
+            core.setOutput('num', String(num));
+            core.setOutput('amy_sha', amySha);
+            core.setOutput('amy_repo', amyRepo);
+            core.setOutput('alias', `${isAmy ? 'amyboard-amypr' : 'amyboard-pr'}-${num}`);
+            core.info(`event=${ev} pr=${num} amy=${isAmy} sha=${amySha || '-'}`);
+
       # Fail fast on a missing/mis-scoped token, before the ~15-min build.
       - name: Verify Vercel token can access the team
         env:
@@ -53,6 +99,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+
+      # For an AMY PR, point the `amy` submodule at the PR's commit so the firmware
+      # is built from THIS PR's AMY code — the whole reason for the dispatch. The
+      # build reads amy sources by path (esp32_common.cmake → ../../amy/src), so
+      # checking out the working tree is all that's needed.
+      - name: Pin amy submodule to the PR SHA (AMY runs only)
+        if: steps.ctx.outputs.is_amy == 'true'
+        env:
+          AMY_SHA: ${{ steps.ctx.outputs.amy_sha }}
+        run: |
+          set -euo pipefail
+          case "$AMY_SHA" in
+            ""|*[!0-9a-fA-F]*) echo "::error::bad amy SHA: '$AMY_SHA'"; exit 1 ;;
+          esac
+          cd amy
+          git fetch origin "$AMY_SHA"
+          git checkout --detach "$AMY_SHA"
+          echo "amy pinned to:"; git log -1 --oneline
 
       # --- Firmware (.bin sets) ---
       # Build AMYBOARD then TULIP4_R11 in ONE esp-idf container: the two targets
@@ -127,7 +191,10 @@ jobs:
         id: deploy
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          PR: ${{ github.event.pull_request.number }}
+          # amyboard-pr-<N> for Tulip PRs, amyboard-amypr-<N> for AMY PRs — one
+          # Vercel project, a distinct per-PR alias, so the two PR-number spaces
+          # can never collide on the same hostname.
+          ALIAS_HOST: ${{ steps.ctx.outputs.alias }}
         run: |
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "::error::VERCEL_TOKEN secret is not set — add it (scope bwhitmans-projects) to enable PR previews."
@@ -137,13 +204,46 @@ jobs:
           cd tulip/amyboardweb
           vercel link --yes --token "$VERCEL_TOKEN" --scope bwhitmans-projects --project amyboard-pr --cwd stage
           url=$(vercel deploy stage --token "$VERCEL_TOKEN" --scope bwhitmans-projects --yes)
-          alias="amyboard-pr-${PR}.vercel.app"
+          alias="${ALIAS_HOST}.vercel.app"
           vercel alias set "$url" "$alias" --token "$VERCEL_TOKEN" --scope bwhitmans-projects
           echo "url=https://$alias" >> "$GITHUB_OUTPUT"
 
+      # Thread the AMY-PR identity to the HW CI run. HW CI chains off this run via
+      # workflow_run and otherwise has no way to know which AMY PR built the
+      # firmware, where to fetch it, or where to comment — so hand it off here.
+      - name: Publish AMY context for HW CI
+        if: steps.ctx.outputs.is_amy == 'true'
+        env:
+          AMY_PR: ${{ steps.ctx.outputs.num }}
+          AMY_REPO: ${{ steps.ctx.outputs.amy_repo }}
+          AMY_SHA: ${{ steps.ctx.outputs.amy_sha }}
+          ALIAS_HOST: ${{ steps.ctx.outputs.alias }}
+        run: |
+          mkdir -p amy-ctx
+          python3 - <<'PY' > amy-ctx/ctx.json
+          import json, os
+          json.dump({
+              "amy_pr":   int(os.environ["AMY_PR"]),   # int() validates it's numeric
+              "amy_repo": os.environ["AMY_REPO"],
+              "amy_sha":  os.environ["AMY_SHA"],
+              "alias":    os.environ["ALIAS_HOST"],
+          }, open(1, "w"))
+          PY
+          cat amy-ctx/ctx.json
+
+      - name: Upload AMY context artifact
+        if: steps.ctx.outputs.is_amy == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: amy-ctx
+          path: amy-ctx/ctx.json
+          if-no-files-found: error
+
       # --- Comment (upsert) the preview URL on the PR ---
+      # Tulip PRs only. AMY-PR runs get a single result comment posted on the AMY
+      # PR by the HW CI workflow instead (this run has no Tulip PR to comment on).
       - name: Comment preview URL
-        if: success()
+        if: success() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
