@@ -60,42 +60,16 @@ Only **one** program can use the serial port at a time, so before flashing make 
 
 ## USB MIDI not recognized
 
-A healthy AMYboard enumerates as **two** USB things at once: a USB **MIDI** device *and* a USB **serial** (CDC) port, with USB VID `0xCAF0` and PID `0x4009`. If you only ever see a *"USB JTAG/serial debug unit"* (VID `0x303A`), the firmware's USB stack never came up -- see [Is it a boot loop?](#is-it-a-boot-loop) below. That is the most common cause of "no USB MIDI" right now, and we're actively working on it ([#952](https://github.com/shorepine/tulipcc/issues/952), [#980](https://github.com/shorepine/tulipcc/issues/980)).
+A healthy AMYboard enumerates as **two** USB things at once: a USB **MIDI** device *and* a USB **serial** (CDC) port, with USB VID `0xCAF0` and PID `0x4009`. If you only ever see a *"USB JTAG/serial debug unit"* (VID `0x303A`), the board hasn't started its firmware yet -- it's sitting in DFU mode. Press **BOOT** to run it (after flashing, the sequence is **RST**, then **BOOT**), and it will come up as MIDI + serial.
 
- - Did you hit **RST** after flashing? Try that first.
- - Use a **data** USB-C cable (many cables are charge-only) and plug **directly** into the computer -- no hubs or extension cables.
+ - Did you hit **RST** after flashing? Try that first, then **BOOT**.
+ - Use a **data** USB-C cable -- many cables are charge-only and carry no data.
  - Make sure **nothing else is holding the port**: close `mpremote`, serial terminals, the Python REPL, and any DAW that grabbed it. Only one program can own the connection at a time.
  - On **macOS**, open **Audio MIDI Setup** and check if AMYboard appears.
- - On **Windows**, check Device Manager under **Sound, video and game controllers** (see the [Windows](#windows) section below).
+ - On **Windows**, check Device Manager under **Sound, video and game controllers**.
  - On **Linux**, check `aplaymidi -l` / `amidi -l` and `lsusb` -- you want to see `caf0:4009`, not `303a:...`.
 
-### Is it a boot loop?
-
-A number of boards get **stuck re-enumerating** instead of finishing boot. Tell-tale signs:
-
- - It appears **only** as a `303a:...` *USB JTAG/serial debug unit*, never as `caf0:4009`.
- - You hear a faint **click/pop in the audio out about once per second** -- that's the board rebooting over and over.
- - `mpremote` connects but hangs with **no `>>>` prompt**, and Ctrl-C won't break in.
-
-A strong clue this is firmware and not your computer: the **Arduino** AMY firmware on the *same board* enumerates fine (as `caf0:0001`, USB MIDI works), while the **MicroPython** `amyboard-full` firmware gets stuck. To get going right now:
-
- - **First, just retry:** unplug, replug, hit **RST**. It often comes up on the 2nd or 3rd try.
- - **Most reliable workaround -- use an Android phone:** plug AMYboard into an **Android phone** with a USB-C cable and open [amyboard.com](https://amyboard.com/editor/) in Chrome there. This works for many people for whom Windows doesn't, and lets you load sketches and patches in the meantime. (iPhones/iPads don't do USB MIDI, so they won't work for this.)
- - **Linux:** force a clean re-enumeration without cutting power -- `sudo usbreset 303a:1001`, or `sudo usb_modeswitch -v303a -p1001 -W -R`. The `caf0:4009` MIDI device then appears.
- - Try a **known-good data cable** and a **rear/motherboard USB port** -- a port that can't supply enough current can trigger the reboot loop.
-
-### Windows
-
-Windows is the hardest case: once it has cached the board as a JTAG/serial device it tends to keep doing so, even after the board itself is fine.
-
- - **Confirm the symptom** in Device Manager. A broken board shows as **"USB JTAG/serial debug unit"** (and a **"USB Composite Device"** under *Universal Serial Bus controllers*) but has **nothing** under **Sound, video and game controllers**. A working board shows **AMYboard** under *Sound, video and game controllers*.
- - **Force a re-detect** (this has worked for several people): run the built-in hardware troubleshooter, apply its fix, and **reboot**:
-   ```
-   msdt.exe -id DeviceDiagnostic
-   ```
-   After the reboot, AMYboard often appears under *Sound, video and game controllers* and the online editor can connect. You may have to repeat this after each unplug/replug until the firmware fix lands.
- - **Remove ghost devices:** in Device Manager choose **View → Show hidden devices**, then uninstall any greyed-out AMYboard / "USB Serial Device" / JTAG entries and re-scan for hardware. Windows sometimes assigns a **new COM port each time** (COM4 vs COM6, etc.) and only binds MIDI on some of them.
- - If it works in a **DAW** but not the editor, the board is fine -- it's a browser/WebMIDI issue; see the editor steps below.
+We've fixed a lot of USB issues recently, so [upgrade to the latest firmware](firmware.md) first. **Still having USB trouble? Ask on the [Discord](https://discord.gg/TzBFkUb8pG) `#amyboard` channel** -- it's the fastest way to get help, and it helps us catch any remaining edge cases.
 
 ## AMYboard Online issues
 
