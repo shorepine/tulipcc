@@ -48,6 +48,16 @@ Many issues are fixed in newer firmware. Before troubleshooting, [update to the 
  - On Windows, check Device Manager for COM ports.
  - Make sure no other program (serial monitor, DAW) is using the port.
 
+## Can't flash / the firmware upgrader won't connect
+
+Only **one** program can use the serial port at a time, so before flashing make sure nothing else has it open. A port held by another program is the most common reason **Search for AMYboard** never connects.
+
+ - **Close the Arduino IDE** (or at least its **Serial Monitor**) -- it holds the port open and blocks flashing.
+ - **Quit any `mpremote` session** connected to the board, and close the Python REPL or any serial terminal.
+ - **Quit any `screen` session** on the port -- `Ctrl-A` then `K` to kill it.
+ - Any **DAW** that grabbed the port will block flashing too -- close it.
+ - When in doubt, unplug and replug the AMYboard, then click **Search for AMYboard** again.
+
 ## USB MIDI not recognized
 
 A healthy AMYboard enumerates as **two** USB things at once: a USB **MIDI** device *and* a USB **serial** (CDC) port, with USB VID `0xCAF0` and PID `0x4009`. If you only ever see a *"USB JTAG/serial debug unit"* (VID `0x303A`), the firmware's USB stack never came up -- see [Is it a boot loop?](#is-it-a-boot-loop) below. That is the most common cause of "no USB MIDI" right now, and we're actively working on it ([#952](https://github.com/shorepine/tulipcc/issues/952), [#980](https://github.com/shorepine/tulipcc/issues/980)).
