@@ -155,6 +155,7 @@ amy_start(amy_config);
 | `i2s_lrc`, `i2s_dout`, `i2s_din`, `i2s_bclk`, `i2s_mclk` | Int | -1 | Pin numbers for the I2S interface |
 | `midi_out`, `midi_in` | Int | -1 | Pin number for the MIDI UART pins |
 | `midi_uart` | 0,1,[2] | -1 | UART device index for MCU. Default 1 (`UART1`) on Pi Pico and ESP. Teensy is always `8` |
+| `midi_thru` | `0=off, 1=on` | Off | If set, every incoming MIDI byte is echoed straight to MIDI out, in addition to being processed normally. Can be toggled at runtime via `amy_global.config.midi_thru` |
 | `capture_device_id`, `playback_device_id` | Int | -1 | Which miniaudio device to use, -1 is auto |
 
 
@@ -217,7 +218,7 @@ A note on list parameters:  When an argument is a list of parameters, you can in
 | `if`   | `synth_flags` | `synth_flags` | uint | Flags for synth creation: 1 = Use MIDI drum note->preset translation; 2 = Drop note-off events. |
 | `ig`   | `cv_trigger` | `cv_trigger` | uint,uint | Configure external CV event triggering: Gate CV, trigger threshold, reset threshold, pitch CV, pitch scale, pitch offset, wire command template, %v gets pitch value. |
 | `im`   | `grab_midi_notes` | `grab_midi_notes` | 0/1 | Use `amy.send(synth=CHANNEL, grab_midi_notes=0)` to prevent the default direct forwarding of MIDI note-on/offs to synth CHANNEL. |
-| `iM`   | `note_source` | 0/1 | Mark the note-ons for this synth as MIDI-derived, meaning they won't get forwarded to MIDI out (or clear that marking). |
+| `iM`   | `note_source` | `note_source` | 0/1 | Mark the note-ons for this synth as MIDI-derived, meaning they won't get forwarded to MIDI out (or clear that marking). |
 | `in`   | `oscs_per_voice`  | `oscs_per_voice`  | >0  | Reserve this many oscs for each voice.  Needed when initializing a synth (or voice) withouth an initial patch. Setting `oscs_per_voice` on an existing synth resets all oscs to their default state. |
 | `io`   | **TODO** | `midi_note_cmd`  | M,L,N,X,O,CMD | MIDI Note on/off command for this synth.  M=MIDI note number, or -1 for all notes.  Other args map the velocity, as for `ic`. `%n` is substituted with the note number. |
 | `ip`   | `pedal` | `pedal` | int | Non-zero means pedal is down (i.e., sustain).  Must be used with `synth`. |

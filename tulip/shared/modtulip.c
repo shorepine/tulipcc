@@ -96,6 +96,14 @@ STATIC mp_obj_t tulip_external_midi_sync(size_t n_args, const mp_obj_t *args) {
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_external_midi_sync_obj, 1, 1, tulip_external_midi_sync);
+
+// tulip.amy_midi_thru(True/False) -- when on, AMY echoes every incoming MIDI
+// byte straight to MIDI out (in addition to processing it). Off by default.
+STATIC mp_obj_t tulip_amy_midi_thru(size_t n_args, const mp_obj_t *args) {
+    amy_global.config.midi_thru = mp_obj_is_true(args[0]) ? 1 : 0;
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_midi_thru_obj, 1, 1, tulip_amy_midi_thru);
 #endif
 
 
@@ -1665,6 +1673,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
 #ifndef __EMSCRIPTEN__
     { MP_ROM_QSTR(MP_QSTR_external_midi_sync), MP_ROM_PTR(&tulip_external_midi_sync_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_midi_thru), MP_ROM_PTR(&tulip_amy_midi_thru_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_block_done_callback), MP_ROM_PTR(&tulip_amy_block_done_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_input_buffer), MP_ROM_PTR(&tulip_amy_get_input_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_output_buffer), MP_ROM_PTR(&tulip_amy_get_output_buffer_obj) },
