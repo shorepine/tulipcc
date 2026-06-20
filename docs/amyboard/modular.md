@@ -43,12 +43,14 @@ You can route an entire AMY synth's audio to a CV output using `set_cv_out`. The
 ```python
 import amy, amyboard
 
-# Create a synth and route it to CV1
-amy.send(synth=5, wave=amy.SAW_DOWN, vel=1, freq=0.5)
+# Create a synth (num_voices + oscs_per_voice define it) and route it to CV1
+amy.send(synth=5, num_voices=1, oscs_per_voice=1, wave=amy.SAW_DOWN, vel=1, freq=0.5)
 amyboard.set_cv_out(channel=0, synth=5)
 ```
 
 This sends a 0.5Hz saw wave out CV1 at full range (-10V to +10V). You can change the waveform, frequency, or amplitude at any time with `amy.send(synth=5, ...)`.
+
+> **The first `amy.send` must actually create the synth.** A synth only exists once it has voices, so the creating command needs `num_voices` **and** `oscs_per_voice` (or a `patch`, which supplies `oscs_per_voice` for you). Without them the synth is never allocated — `set_cv_out` then has no oscillators to read and the CV output never changes.
 
 To stop it, release the note or clear the mapping:
 
