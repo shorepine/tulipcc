@@ -90,8 +90,6 @@ window.active_channels = Array.isArray(window.active_channels) ? window.active_c
 window.active_channels[1] = true;
 window.channel_control_mapping_sent = Array.isArray(window.channel_control_mapping_sent) ? window.channel_control_mapping_sent : new Array(17).fill(false);
 window.suppress_knob_cc_send = false;
-const DIRTY_AUTOSAVE_DELAY_MS = 180;
-const channel_dirty_autosave_timers = new Array(17).fill(null);
 
 function get_patch_number_for_channel(channel) {
   var ch = Number(channel);
