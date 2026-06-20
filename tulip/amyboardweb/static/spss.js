@@ -89,8 +89,6 @@ window.current_synth = 1;
 window.active_channels = Array.isArray(window.active_channels) ? window.active_channels : new Array(17).fill(false);
 window.active_channels[1] = true;
 window.channel_control_mapping_sent = Array.isArray(window.channel_control_mapping_sent) ? window.channel_control_mapping_sent : new Array(17).fill(false);
-window.channel_patch_names = Array.isArray(window.channel_patch_names) ? window.channel_patch_names : new Array(17).fill(null);
-window.channel_patch_dirty = Array.isArray(window.channel_patch_dirty) ? window.channel_patch_dirty : new Array(17).fill(false);
 window.suppress_knob_cc_send = false;
 const DIRTY_AUTOSAVE_DELAY_MS = 180;
 const channel_dirty_autosave_timers = new Array(17).fill(null);
@@ -294,8 +292,6 @@ function remove_current_environment_file_if_exists(filename) {
   } catch (e) {}
   return false;
 }
-
-function set_channel_patch_dirty_state(channel, dirty) { /* no-op */ }
 
 function num_oscs_from_patch_file_content(source) {
   var maxOsc = -1;
