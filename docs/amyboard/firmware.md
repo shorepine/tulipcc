@@ -8,6 +8,8 @@ There are three ways to upgrade the firmware on your AMYboard. The easiest is us
 
 The [AMYboard Online editor](https://amyboard.com/editor) includes a built-in firmware upgrader that works right from your browser using WebSerial. We recommend using Google Chrome for this. 
 
+**Before you start, close anything else that's using the serial port.** Only one program can talk to the board at a time. Quit the **Arduino IDE** (including its Serial Monitor), any `mpremote` or `screen` session, the Python REPL, and any DAW or serial terminal first. Otherwise the browser won't be able to connect when you click **Search for AMYboard**.
+
 1. Connect your AMYboard to your computer over USB.
 2. Hold down both buttons on the side of the AMYboard, then release RST first, then release BOOT. This puts the board into bootloader mode.
 3. Open the firmware upgrade page and click **Search for AMYboard**.
@@ -58,6 +60,8 @@ If your AMYboard won't boot or you need a completely fresh flash, you can use `e
 1. Download the latest `amyboard-full-AMYBOARD.bin` from the [`amyboard` release](https://github.com/shorepine/tulipcc/releases/tag/amyboard) (the rolling AMYboard release, updated on every push to main).
 
 2. Connect your AMYboard over USB and put it in bootloader mode (hold both buttons, release RST first, then BOOT).
+
+   Make sure nothing else is using the serial port first — close the Arduino IDE, any `mpremote` or `screen` session, and any serial monitor, or `esptool` won't be able to open the port.
 
 3. Install `esptool` if you haven't already, and flash the image:
 
