@@ -82,6 +82,8 @@ AMYboard can be powered 3 ways:
 
 If multiple power supplies are connected AMYboard will use the highest available voltage. 
 
+When powered only over the I2C host / Grove port (for example, from a Tulip), AMYboard draws about **350 mA** from that 3.3V line. Make sure whatever supplies the port can spare it. If your Tulip reboots in a loop after you connect an AMYboard, see [Quick start - Tulip](#quick-start---tulip) below.
+
 ## DIP switches
 
 There are 4 DIP switches on the back of the AMYboard that set the audio input and output levels. All 4 switches should be set the same way, depending on how you're using AMYboard:
@@ -112,6 +114,8 @@ Before you do anything else, upgrade your firmware! The easiest way is online vi
 ## Quick start - Tulip
 
 If you have a [Tulip Creative Computer](https://tulip.computer), you can directly connect your AMYboard to it via the GROVE port and the back I2C HOST connector. Tulip will power and communicate with the AMYboard! 
+
+> **⚠️ Power note:** when the AMYboard is powered this way it pulls about **350 mA** off the Tulip's 3.3V rail, on top of the Tulip's own ~575 mA. A weak USB charger, a charge-only or thin USB-C cable, an unpowered hub, or a low battery may then sag the Tulip's supply enough to brown out the ESP32-S3 -- which shows up as the Tulip **rebooting in a loop**. If that happens, power the Tulip from a solid **1–2 A** 5V supply with a good data USB-C cable (no hub), or **power the AMYboard from its own USB-C** -- it uses the highest voltage present, so it'll run off its own 5V instead of drawing from the Tulip.
 
 In Tulip, just
 

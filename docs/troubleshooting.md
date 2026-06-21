@@ -27,9 +27,24 @@ First, always [upgrade your Tulip to the latest firmware](tulip_flashing.md). If
 
 First be certain that your Tulip is switched on (the switch to the right, facing your Tulip) and being powered properly. Even if your Tulip is not showing the REPL screen, it should be showing an LCD backlight glow (there are no other LEDs on Tulip.) Make sure your USB connector or battery is seated properly. The USB adapter should support at least 1A of power. 
 
+If this only started after you connected an **AMYboard** or another Grove / I2C accessory, it's likely a power problem -- see [Tulip reboots in a loop after connecting an AMYboard or I2C accessory](#tulip-reboots-in-a-loop-after-connecting-an-amyboard-or-i2c-accessory).
+
 If you think your Tulip is powered properly but not booting, try to first reset the Tulip. Flip the power switch on and off a few times. Hit the RESET button a few times. Try unplugging your USB keyboard if you have one. Wait a few seconds. There are rare instances (usually temperature related) where the chip may not boot properly, but a reboot or two will usually fix it. 
 
 If your Tulip makes a startup noise but doesn't show the screen, there may be an issue with your screen. The startup "bleep" should only happen if the system boots properly.
+
+## Tulip reboots in a loop after connecting an AMYboard or I2C accessory
+
+If your Tulip boots fine on its own but starts **rebooting in a loop** (or won't reach the REPL) once you connect an [AMYboard](amyboard/README.md) or another I2C / Grove accessory, it's almost always a **power** problem -- not a fault with either board.
+
+Powered accessories draw current from the Tulip's 3.3V rail through the Grove port. An AMYboard, for example, pulls about **350 mA** on top of the Tulip's own ~575 mA. If your power source can't supply both, the Tulip's voltage sags and the ESP32-S3's brownout protection resets the chip, over and over.
+
+To fix it:
+
+ * Use a **strong 5V supply (1–2 A)** and a known-good **data** USB-C cable, plugged in directly -- not through a hub.
+ * **Power the accessory separately** if it can be -- an AMYboard, for instance, has its own USB-C and will run off that (it uses the highest voltage present) instead of drawing from the Tulip.
+ * [Check the diagnostic output](#see-the-diagnostic-output-of-a-tulip) over the serial port -- a `Brownout detector was triggered` message confirms it's power.
+ * Try a freshly charged battery, or USB vs. battery, to rule out a weak source.
 
 ## Flash a Tulip manually
 
