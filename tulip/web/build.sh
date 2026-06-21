@@ -43,6 +43,12 @@ cp site/index.html stage/
 cp -Rf site/webfonts stage/
 cp -Rf ../../assets/css ../../assets/fonts ../../assets/img ../../assets/js stage/
 
+# vercel.json must sit at the deploy root: the release/preview workflows run
+# `vercel deploy stage`, so a vercel.json left in tulip/web/ is ignored. Copy it
+# in so its headers (COOP/COEP cross-origin isolation for /run, plus cache rules)
+# actually get served. (amyboardweb's dev.py does the equivalent copy.)
+cp vercel.json stage/
+
 cp ../../amy/build/amy.js stage/run/amy-$timestamp.js
 cp ../../amy/build/amy.wasm stage/run/amy-$timestamp.wasm
 cp ../../amy/docs/amy.aw.js stage/run/amy-$timestamp.aw.js
