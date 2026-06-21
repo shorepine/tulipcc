@@ -211,6 +211,34 @@ def my_midi_callback(is_sysex):
 tulip.midi_callback(my_midi_callback)
 ```
 
+### Sending MIDI out
+
+There are two ways to send MIDI out of AMYboard.
+
+For one-off or arbitrary messages, use `tulip.midi_out()` with the raw MIDI bytes (a list, tuple or `bytes`). It sends immediately, out the MIDI out jack and the USB MIDI connection:
+
+```python
+import tulip
+
+tulip.midi_out([0x90, 60, 127])  # note on,  channel 1, note 60, velocity 127
+tulip.midi_out([0x80, 60, 0])    # note off, channel 1, note 60
+tulip.midi_out([0xB0, 74, 64])   # control change, channel 1, CC 74 = 64
+```
+
+For musically-timed output, let AMY send the MIDI for you. Set an oscillator's `wave` to `amy.AMY_MIDI`: instead of making a sound, that osc emits a MIDI note on/off whenever it receives a note. Because it's an ordinary osc, you can drive it from AMY's sequencer to get sample-accurate MIDI output that stays locked to AMY's tempo — for example, a pattern that plays an external synth:
+
+```python
+import amy
+
+amy.send(osc=0, wave=amy.AMY_MIDI)                    # osc 0 now sends MIDI instead of audio
+
+# Play a MIDI note on channel 1 every quarter note (48 ticks), held for an eighth note.
+amy.send(osc=0, note=60, vel=1, sequence="0,48,1")    # note on  at tick 0  of each period
+amy.send(osc=0, note=60, vel=0, sequence="24,48,2")   # note off at tick 24 of each period
+```
+
+`amy.AMY_MIDI` always sends on MIDI channel 1, and notes that arrived over MIDI in are not echoed back out. See the [AMY MIDI docs](https://github.com/shorepine/amy/blob/main/docs/midi.md#sending-midi-out) for the full details.
+
 ## Example: simple arpeggiator
 
 ```python
