@@ -239,6 +239,49 @@ amy.send(osc=0, note=60, vel=0, sequence="24,48,2")   # note off at tick 24 of e
 
 `amy.AMY_MIDI` always sends on MIDI channel 1, and notes that arrived over MIDI in are not echoed back out. See the [AMY MIDI docs](https://github.com/shorepine/amy/blob/main/docs/midi.md#sending-midi-out) for the full details.
 
+### Syncing to MIDI clock
+
+AMYboard's sequencer runs on its own internal clock by default. You can instead **follow** an external MIDI clock — slaving AMYboard to a DAW or drum machine — or **send** MIDI clock out to drive other gear from AMYboard.
+
+**Following an external clock.** External realtime sync is off by default: incoming clock is ignored so AMYboard keeps its own tempo. Turn it on with `tulip.external_midi_sync()`:
+
+```python
+import tulip
+
+tulip.external_midi_sync(True)   # follow incoming MIDI clock
+tulip.external_midi_sync(False)  # back to AMYboard's internal clock (the default)
+```
+
+While following is on, realtime messages arriving on MIDI in (DIN jack or USB) drive the sequencer: `F8` (Timing Clock) sets the tempo and advances the sequencer in lock-step (24 clocks per quarter note), `FA` (Start) starts it, and `FC` (Stop) stops it. Start/Stop only take effect while sync is enabled, so a connected DAW can't start or stop your AMYboard pattern unless you've opted in. Turn sync back off to return to the internal clock.
+
+**Sending clock.** There's no separate "send sync" switch — emit the realtime bytes yourself with `tulip.midi_out()` (out the MIDI out jack and USB, as above):
+
+```python
+tulip.midi_out([0xFA])   # Start
+tulip.midi_out([0xF8])   # one Timing Clock tick — send 24 per quarter note
+tulip.midi_out([0xFC])   # Stop
+```
+
+To send a steady clock locked to AMYboard's own tempo, drive `F8` from a sequencer callback. The sequencer runs at 48 ticks per quarter note (as above) and MIDI clock is 24, so send on every other tick (`period=2`):
+
+```python
+import tulip, sequencer
+
+sequencer.tempo(120)             # AMYboard's sequencer tempo, in BPM
+
+def send_clock(tick):
+    tulip.midi_out([0xF8])
+
+tulip.midi_out([0xFA])                           # tell downstream gear to start
+slot = tulip.seq_add_callback(send_clock, 0, 2)  # fire every 2nd tick -> 24 / quarter
+
+# ...later, to stop:
+# tulip.midi_out([0xFC])
+# tulip.seq_remove_callback(slot)
+```
+
+`tulip.seq_add_callback(fn, tick, period)` calls `fn(tick_count)` whenever `tick_count % period == tick`, and returns a slot id you pass to `tulip.seq_remove_callback()` to stop.
+
 ## Example: simple arpeggiator
 
 ```python
