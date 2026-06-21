@@ -23,7 +23,7 @@
       ]
     },
     {
-      "source": "/((?!run/(amy|tulipcc)-).*)",
+      "source": "/((?!run/amy-|run/tulipcc-).*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache" }
       ]
