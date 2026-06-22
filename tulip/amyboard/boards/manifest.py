@@ -9,7 +9,7 @@ include("$(MPY_DIR)/extmod/asyncio")
 # Useful networking-related packages.
 #require("mip")
 require("ntptime")
-#require("webrepl")
+require("webrepl")  # WebREPL server (REPL over WiFi); _webrepl C module is enabled in mpconfigport.h
 
 # Require some micropython-lib modules.
 # require("aioespnow")

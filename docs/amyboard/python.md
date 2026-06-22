@@ -19,6 +19,29 @@ You'll see the MicroPython `>>>` prompt. You can type Python commands directly.
 
 Open [amyboard.com](https://amyboard.com) -- it includes a Python REPL running in the browser. You can test code online before deploying it to hardware.
 
+### Over WiFi (WebREPL)
+
+AMYboard can also expose its REPL over your WiFi network with MicroPython's **WebREPL**, so you can connect wirelessly from a browser -- no USB cable. Join a network, then start the WebREPL server with a password (up to 9 characters):
+
+```python
+import amyboard, webrepl
+
+amyboard.wifi('your_ssid', 'your_password')  # join WiFi (returns the board's IP)
+webrepl.start(password='amyboard')           # start the server on port 8266
+```
+
+`webrepl.start()` prints the address it's listening on, for example:
+
+```
+WebREPL server started on http://192.168.1.42:8266/
+```
+
+To connect, open the WebREPL client at [micropython.org/webrepl](https://micropython.org/webrepl/), enter `ws://192.168.1.42:8266/` (use your board's IP), click **Connect**, and type the password. You now have a full `>>>` prompt over the network. The same client can also transfer files to and from the board.
+
+To start WebREPL automatically on every boot, add the three lines above (including `amyboard.wifi(...)`) to your `sketch.py` -- see [The sketch.py startup script](#the-sketchpy-startup-script) below.
+
+> **Security:** WebREPL gives anyone on the network with the password full control of your AMYboard. Use it only on trusted networks, and pick a non-trivial password.
+
 ## Playing sounds with AMY
 
 The `amy` module gives you direct access to the synthesizer engine:
