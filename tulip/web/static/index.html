@@ -1,6 +1,10 @@
 <!doctype html>
 <html>
   <head>
+      <!-- This page lives at /run/ and references its assets relatively, so pin the
+           base path. Without this, loading /run (no trailing slash) resolves every
+           asset against / and 404s them. Mirrors amyboardweb/editor's <base href="/">. -->
+      <base href="/run/">
       <link rel="stylesheet" href="amyrepl.css"/>
       <title>Tulip Web</title>
       <meta charset="UTF-8">

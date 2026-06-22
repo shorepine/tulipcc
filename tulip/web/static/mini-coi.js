@@ -2,6 +2,12 @@
 /*! mini-coi - Andrea Giammarchi and contributors, licensed under MIT */
 (({ document: d, navigator: { serviceWorker: s } }) => {
   if (d) {
+    // If the server already sends COOP/COEP (Vercel prod/preview + webdev.py),
+    // the page is cross-origin isolated without us. Registering the SW then only
+    // adds a harmful first-load location.reload() that can interrupt the WASM
+    // boot (observed as a blank app / stray textarea on iOS Safari & WKWebView).
+    // Only fall back to the service-worker shim on header-less static hosts.
+    if (self.crossOriginIsolated) return;
     const { currentScript: c } = d;
     s.register(c.src, { scope: c.getAttribute('scope') || '.' }).then(r => {
       r.addEventListener('updatefound', () => location.reload());
