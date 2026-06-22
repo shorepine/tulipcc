@@ -151,17 +151,19 @@ STATIC mp_obj_t tulip_amy_get_synth_commands(size_t n_args, const mp_obj_t *args
     char s[MAX_MESSAGE_LEN];
     void *state = NULL;
     int synth = mp_obj_get_int(args[0]);
+    bool include_fx = true;
+    if (n_args > 1)  include_fx = mp_obj_get_int(args[1]);
     // Make a new list object, append the retrieved (and converted) strings to it.
     mp_obj_t list = mp_obj_new_list(0, NULL);
     do {
-        state = yield_synth_commands(synth, s, MAX_MESSAGE_LEN, true, state);
+        state = yield_synth_commands(synth, s, MAX_MESSAGE_LEN, include_fx, state);
         int slen = strlen(s);
         if (slen)
             mp_obj_list_append(list, mp_obj_new_str(s, slen));
     } while (state != NULL);
     return list;
 }
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_synth_commands_obj, 1, 1, tulip_amy_get_synth_commands);
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_get_synth_commands_obj, 1, 2, tulip_amy_get_synth_commands);
 
 STATIC mp_obj_t tulip_sequencer_start(void) {
     extern void sequencer_midi_start(void);
