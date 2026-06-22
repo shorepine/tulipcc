@@ -116,7 +116,8 @@ class Midi:
 
 
 def wait_for_board(timeout=40):
-    """Wait for the board's USB-MIDI to (re)enumerate; return its port."""
+    """Wait for the board's USB-MIDI to (re)enumerate; return its port, or None
+    if it doesn't appear within `timeout` (so the caller can reset + retry)."""
     print(f"[boot] waiting for '{MIDI_NAME}' MIDI ...")
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -125,7 +126,8 @@ def wait_for_board(timeout=40):
             print(f"[boot] found MIDI at {port}")
             return port
         time.sleep(0.5)
-    sys.exit("[boot] board MIDI never appeared (didn't boot?).")
+    print("[boot] board MIDI never appeared (didn't boot?).")
+    return None
 
 
 def _mido_find():
@@ -354,6 +356,10 @@ def main():
     ap.add_argument("--pr", type=int); ap.add_argument("--url"); ap.add_argument("--firmware")
     ap.add_argument("--port", help="esptool serial port (the USB-serial dongle)")
     ap.add_argument("--baud", type=int, default=921600)
+    ap.add_argument("--boot-attempts", type=int, default=3,
+                    help="flash+boot tries before failing. Retries the bench's "
+                         "intermittent early-boot flake (a real boot failure fails "
+                         "every try).")
     ap.add_argument("--no-flash", action="store_true")
     ap.add_argument("--flash-only", action="store_true")
     ap.add_argument("--midi-port", help="ALSA hw:X,Y or mido name (auto if omitted)")
@@ -385,36 +391,55 @@ def main():
     if args.list_devices:
         list_devices(); return 0
 
-    if not args.no_flash:
-        if not args.port:
-            sys.exit("--port (the USB-serial dongle) is required to flash.")
-        bin_path, tmp = resolve_firmware(args)
-        try:
-            flash(args.port, bin_path, args.baud)
-        finally:
-            if tmp:
-                os.unlink(bin_path)
-        if args.flash_only:
-            print("[done] flashed."); return 0
+    if not args.no_flash and not args.port:
+        sys.exit("--port (the USB-serial dongle) is required to flash.")
+    bin_path, tmp = resolve_firmware(args) if not args.no_flash else (None, False)
 
-    # Tail the serial consoles for the run. The debug UART (the dongle on the
-    # board's debug header) is a stable hardware UART carrying the ESP-IDF
-    # console; opening it pulses DTR/RTS through the board's auto-reset circuit,
-    # so the board reboots as we connect — which is exactly how we capture a
-    # clean boot log. The native CDC, by contrast, re-enumerates during boot
-    # (ROM USB-Serial-JTAG -> TinyUSB CDC), so we start tailing it only *after*
-    # the board is back up, to record clean MicroPython stdout.
+    # The debug UART (the dongle on the board's debug header) is a stable hardware
+    # UART carrying the ESP-IDF console; opening it pulses DTR/RTS through the
+    # board's auto-reset circuit, so the board reboots as we connect — which is
+    # exactly how we capture a clean boot log. The native CDC, by contrast,
+    # re-enumerates during boot (ROM USB-Serial-JTAG -> TinyUSB CDC), so we start
+    # tailing it only *after* the board is back up, for clean MicroPython stdout.
     debug_port = args.debug_port or args.port or ("/dev/ttyACM1" if ALSA else None)
     loggers = []
-    if not args.no_serial_log:
-        dbg = start_serial_log(debug_port, args.debug_baud,
-                               "DEBUG UART (ESP-IDF console / stderr)")
-        if dbg:
-            loggers.append(dbg)
     try:
-        if loggers:
-            time.sleep(2.0)  # let the connect-reset drop the old USB enumeration
-        args.midi_port = args.midi_port or wait_for_board()
+        # Flash + boot, retrying the bench's intermittent early-boot flake. The
+        # firmware is fine — its 2nd-stage bootloader is byte-identical to builds
+        # that boot — but a transient flash-read/power/reset glitch after the long
+        # USB flash can panic-loop the board before USB-MIDI enumerates. Re-flashing
+        # forces ROM download mode (a known-good reset) and usually clears it; a
+        # genuinely broken build instead fails on every attempt.
+        for attempt in range(1, args.boot_attempts + 1):
+            if not args.no_flash:
+                flash(args.port, bin_path, args.baud)
+                if args.flash_only:
+                    print("[done] flashed."); return 0
+            dbg = None
+            if not args.no_serial_log:
+                label = "DEBUG UART (ESP-IDF console / stderr)"
+                if args.boot_attempts > 1:
+                    label += f" [boot {attempt}/{args.boot_attempts}]"
+                dbg = start_serial_log(debug_port, args.debug_baud, label)
+                if dbg:
+                    loggers.append(dbg)
+                    time.sleep(2.0)  # let the connect-reset drop the old USB enumeration
+            args.midi_port = args.midi_port or wait_for_board()
+            if args.midi_port:
+                break
+            # Boot failed: stop this attempt's logger so esptool can drive the
+            # dongle's reset lines, then retry. The crash log stays in `loggers`.
+            if dbg:
+                dbg.stop()
+                time.sleep(0.5)  # let the OS release the port before re-flashing
+            if attempt < args.boot_attempts:
+                print(f"[boot] attempt {attempt}/{args.boot_attempts} failed; "
+                      "re-flashing and retrying")
+        else:
+            sys.exit(f"[boot] board never enumerated MIDI after {args.boot_attempts} "
+                     "attempt(s) — bench boot flake that didn't clear, or a real "
+                     "boot failure (see serial log).")
+
         time.sleep(1.5)      # let the MIDI endpoint + synth settle post-boot
         if not args.no_serial_log:
             cdc = start_serial_log(args.cdc_port, 115200, "CDC (MicroPython stdout)")
@@ -430,6 +455,8 @@ def main():
     finally:
         if loggers:
             write_serial_logs(loggers, args.serial_log or f"{args.name}-serial.log")
+        if tmp and bin_path:
+            os.unlink(bin_path)
 
     out_wav = args.out or f"{args.name}-recording.wav"
     write_wav_mono(out_wav, rec, args.samplerate)
