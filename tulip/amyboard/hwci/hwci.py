@@ -70,6 +70,25 @@ def flash(port, bin_path, baud):
     subprocess.run(cmd, check=True)
 
 
+def reset_via_chipid(port):
+    """Clean-boot the board with an esptool `chip-id`: it enters download mode,
+    reads the chip id (returning the MAC), then hard-resets and releases the
+    port. On this bench the flash's own `--after hard-reset` can leave the board
+    wedged in a boot-loop, but a chip-id cycle reliably boots it. Returns True
+    only if the MAC came back -- i.e. esptool actually completed the handshake
+    and reset the board (a bare `chip-id` defaults to --before default-reset /
+    --after hard-reset). Give the board a few seconds afterward to boot and
+    enumerate USB-MIDI before looking for it (see --boot-settle)."""
+    cmd = [sys.executable, "-m", "esptool", "--chip", "esp32s3", "--port", port, "chip-id"]
+    print("[reset]", " ".join(cmd))
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    sys.stdout.write(r.stdout)
+    ok = r.returncode == 0 and "MAC:" in r.stdout
+    if not ok:
+        print("[reset] chip-id did not return a MAC -- board/dongle not responding")
+    return ok
+
+
 # ── MIDI / sysex backends ───────────────────────────────────────────────────
 def alsa_find_midi():
     out = subprocess.run(["amidi", "-l"], capture_output=True, text=True).stdout
@@ -357,9 +376,12 @@ def main():
     ap.add_argument("--port", help="esptool serial port (the USB-serial dongle)")
     ap.add_argument("--baud", type=int, default=921600)
     ap.add_argument("--boot-attempts", type=int, default=3,
-                    help="flash+boot tries before failing. Retries the bench's "
-                         "intermittent early-boot flake (a real boot failure fails "
+                    help="chip-id reset + boot tries before failing. Retries the "
+                         "bench's intermittent boot-wedge (a real boot failure fails "
                          "every try).")
+    ap.add_argument("--boot-settle", type=float, default=5.0,
+                    help="seconds to wait after a chip-id reset for the board to "
+                         "boot and enumerate USB-MIDI before looking for it.")
     ap.add_argument("--no-flash", action="store_true")
     ap.add_argument("--flash-only", action="store_true")
     ap.add_argument("--midi-port", help="ALSA hw:X,Y or mido name (auto if omitted)")
@@ -395,53 +417,50 @@ def main():
         sys.exit("--port (the USB-serial dongle) is required to flash.")
     bin_path, tmp = resolve_firmware(args) if not args.no_flash else (None, False)
 
-    # The debug UART (the dongle on the board's debug header) is a stable hardware
-    # UART carrying the ESP-IDF console; opening it pulses DTR/RTS through the
-    # board's auto-reset circuit, so the board reboots as we connect — which is
-    # exactly how we capture a clean boot log. The native CDC, by contrast,
-    # re-enumerates during boot (ROM USB-Serial-JTAG -> TinyUSB CDC), so we start
-    # tailing it only *after* the board is back up, for clean MicroPython stdout.
+    # We deliberately do NOT hold the debug UART open while the board boots: the
+    # proven-good reset on this bench is `esptool chip-id` (hard-reset + release
+    # the port), wait a few seconds, then `amidi -l` -- holding the dongle's
+    # DTR/RTS lines across boot is what left the board wedged in a boot-loop. The
+    # consoles are tailed only *after* MIDI is up.
     debug_port = args.debug_port or args.port or ("/dev/ttyACM1" if ALSA else None)
     loggers = []
     try:
-        # Flash + boot, retrying the bench's intermittent early-boot flake. The
-        # firmware is fine — its 2nd-stage bootloader is byte-identical to builds
-        # that boot — but a transient flash-read/power/reset glitch after the long
-        # USB flash can panic-loop the board before USB-MIDI enumerates. Re-flashing
-        # forces ROM download mode (a known-good reset) and usually clears it; a
-        # genuinely broken build instead fails on every attempt.
+        # Flash once, then bring the board up with a clean esptool chip-id reset
+        # cycle. A plain flash hard-reset can leave it wedged in a boot-loop on
+        # this bench; a chip-id cycle reliably boots it. Retries do the (cheap)
+        # reset again, not a re-flash -- the firmware is already written + verified.
+        if not args.no_flash:
+            flash(args.port, bin_path, args.baud)
+            if args.flash_only:
+                print("[done] flashed."); return 0
         for attempt in range(1, args.boot_attempts + 1):
-            if not args.no_flash:
-                flash(args.port, bin_path, args.baud)
-                if args.flash_only:
-                    print("[done] flashed."); return 0
-            dbg = None
-            if not args.no_serial_log:
-                label = "DEBUG UART (ESP-IDF console / stderr)"
-                if args.boot_attempts > 1:
-                    label += f" [boot {attempt}/{args.boot_attempts}]"
-                dbg = start_serial_log(debug_port, args.debug_baud, label)
-                if dbg:
-                    loggers.append(dbg)
-                    time.sleep(2.0)  # let the connect-reset drop the old USB enumeration
+            if args.port:
+                reset_via_chipid(args.port)
+            time.sleep(args.boot_settle)   # board boots + USB-MIDI enumerates
             args.midi_port = args.midi_port or wait_for_board()
             if args.midi_port:
                 break
-            # Boot failed: stop this attempt's logger so esptool can drive the
-            # dongle's reset lines, then retry. The crash log stays in `loggers`.
-            if dbg:
-                dbg.stop()
-                time.sleep(0.5)  # let the OS release the port before re-flashing
             if attempt < args.boot_attempts:
-                print(f"[boot] attempt {attempt}/{args.boot_attempts} failed; "
-                      "re-flashing and retrying")
+                print(f"[boot] attempt {attempt}/{args.boot_attempts}: MIDI not up; "
+                      "re-resetting (chip-id) and retrying")
         else:
+            # Real boot failure -- grab a short debug-UART snapshot so it's still
+            # debuggable (the only time we open the dongle before MIDI is up).
+            if not args.no_serial_log:
+                snap = start_serial_log(debug_port, args.debug_baud,
+                                        "DEBUG UART (post-failure snapshot)")
+                if snap:
+                    loggers.append(snap)
+                    time.sleep(3.0)
             sys.exit(f"[boot] board never enumerated MIDI after {args.boot_attempts} "
-                     "attempt(s) — bench boot flake that didn't clear, or a real "
-                     "boot failure (see serial log).")
+                     "chip-id reset attempt(s) — see serial log.")
 
         time.sleep(1.5)      # let the MIDI endpoint + synth settle post-boot
         if not args.no_serial_log:
+            # CDC is the board's own USB (no reset lines), so opening it mid-run
+            # can't perturb the board or the recording. We skip the debug UART
+            # here for the same reason -- its log only matters on boot failure
+            # (captured in the snapshot above).
             cdc = start_serial_log(args.cdc_port, 115200, "CDC (MicroPython stdout)")
             if cdc:
                 loggers.append(cdc)
