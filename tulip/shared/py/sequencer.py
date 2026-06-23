@@ -16,6 +16,17 @@ def clear():
     amy.send(reset=amy.RESET_SEQUENCER)
     tulip.seq_remove_callbacks()
 
+# Start/stop the sequencer transport, independent of MIDI clock sync
+# (tulip.external_midi_sync). Sent as an AMY wire command (sequencer_run), so it
+# works identically on firmware and the AMYboard web (wasm) build, where AMY is
+# a separate module reachable only via the wire protocol. Used by the AMYboard
+# Online Start/Stop buttons.
+def start():
+    amy.send(sequencer_run=1)
+
+def stop():
+    amy.send(sequencer_run=0)
+
 class AMYSequenceEvent:
     SEQUENCE_TAG = 0
     def __init__(self, sequence):
