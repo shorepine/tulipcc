@@ -5068,36 +5068,26 @@ window.reapply_last_zd_dump = function() {
     }
 };
 
+// Start/stop the sequencer transport. Mirrors set_tempo_from_ui(): in control
+// mode we send a zP python-exec sysex to the board; in simulate mode we run the
+// same python directly in the wasm MicroPython. Both call sequencer.start()/stop()
+// (-> tulip.sequencer_start/stop -> AMY sequencer_midi_start/stop), which works
+// regardless of MIDI clock sync state (tulip.external_midi_sync). We deliberately
+// no longer send raw MIDI Start/Stop (0xFA/0xFC): AMY now ignores those unless the
+// user has enabled external MIDI sync, which is what broke these buttons.
 function control_sequencer_start() {
-    console.log('sequencer start: midiOutputDevice=', midiOutputDevice);
-    if (midiOutputDevice) {
-        try {
-            // Send MIDI Start (0xFA) via the raw MIDIOutput to avoid WebMidi.js filtering.
-            var raw = midiOutputDevice._midiOutput || midiOutputDevice.output;
-            if (raw && typeof raw.send === 'function') {
-                raw.send([0xFA]);
-                console.log('sequencer start: sent 0xFA via raw output');
-            } else if (typeof midiOutputDevice.send === 'function') {
-                midiOutputDevice.send([0xFA]);
-                console.log('sequencer start: sent 0xFA via WebMidi output');
-            }
-        } catch (e) { console.warn('sequencer start failed:', e); }
+    if (amyboard_mode === 'control') {
+        amy_add_log_message('zPimport sequencer; sequencer.start()Z');
+    } else {
+        runCodeBlock('import sequencer; sequencer.start()');
     }
 }
 
 function control_sequencer_stop() {
-    console.log('sequencer stop: midiOutputDevice=', midiOutputDevice);
-    if (midiOutputDevice) {
-        try {
-            var raw = midiOutputDevice._midiOutput || midiOutputDevice.output;
-            if (raw && typeof raw.send === 'function') {
-                raw.send([0xFC]);
-                console.log('sequencer stop: sent 0xFC via raw output');
-            } else if (typeof midiOutputDevice.send === 'function') {
-                midiOutputDevice.send([0xFC]);
-                console.log('sequencer stop: sent 0xFC via WebMidi output');
-            }
-        } catch (e) { console.warn('sequencer stop failed:', e); }
+    if (amyboard_mode === 'control') {
+        amy_add_log_message('zPimport sequencer; sequencer.stop()Z');
+    } else {
+        runCodeBlock('import sequencer; sequencer.stop()');
     }
 }
 
