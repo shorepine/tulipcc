@@ -74,14 +74,74 @@ const AMYBOARD_WORLD_API_BASE = (typeof window !== "undefined" && typeof window.
     : String(window.location.origin || "").replace(/\/+$/, "");
 const CURRENT_BASE_DIR = "/amyboard/user/current";
 const CURRENT_ENV_DIR = CURRENT_BASE_DIR;
-// No JS copy of the default sketch — the canonical source is amyboard.DEFAULT_SKETCH_SOURCE in Python.
-// Use _get_default_sketch() to read it at runtime.
+// Default sketch. The canonical source is amyboard.DEFAULT_SKETCH_SOURCE in Python
+// (read via mp in simulate); this JS copy is the fallback for control mode, where
+// there is no MicroPython. Keep it in sync with amyboard.py's DEFAULT_SKETCH_SOURCE.
+var AMYBOARD_DEFAULT_SKETCH =
+  "# AMYboard Sketch\n" +
+  "# Code put here runs first, then loop() is called every 32nd note.\n" +
+  "import amyboard, amy\n\n" +
+  "def loop():\n    pass\n\n" +
+  "# Do not edit. Set automatically by the knobs on AMYboard Online.\n" +
+  "_auto_generated_knobs = \"\"\"\n\"\"\"\n";
 function _get_default_sketch() {
   if (mp) {
     try { return mp.runPython("import amyboard; amyboard.DEFAULT_SKETCH_SOURCE"); } catch (e) {}
   }
-  return "";
+  return AMYBOARD_DEFAULT_SKETCH;
 }
+
+// ── Persistent editor draft ─────────────────────────────────────────────────
+// The sketch in the CodeMirror editor persists locally across reloads, separate
+// from "writing to the AMYboard" (which targets the device — zT over sysex in
+// control, the MicroPython FS in simulate). On page load we restore this draft
+// instead of pulling from the board; with no draft we show the default sketch.
+// Stored in localStorage rather than a cookie because a sketch (code + knob
+// block) can exceed the ~4KB cookie limit, which would silently truncate it.
+var SKETCH_DRAFT_KEY = 'amyboard_sketch_draft';
+function save_sketch_draft(text) {
+  try { localStorage.setItem(SKETCH_DRAFT_KEY, String(text == null ? '' : text)); } catch (e) {}
+}
+function load_sketch_draft() {
+  try { return localStorage.getItem(SKETCH_DRAFT_KEY); } catch (e) { return null; }
+}
+function clear_sketch_draft() {
+  try { localStorage.removeItem(SKETCH_DRAFT_KEY); } catch (e) {}
+}
+window.save_sketch_draft = save_sketch_draft;
+window.clear_sketch_draft = clear_sketch_draft;
+
+// set_knobs_from_sketch() needs the channel knob grid to be rendered. On page
+// load the restore can run before that, so poll briefly until the knobs exist,
+// then position. (User-triggered callers — Reset, Read, file-load — call
+// set_knobs_from_sketch directly since the grid is already up.)
+function position_knobs_from_sketch_when_ready(attempts) {
+  attempts = attempts || 0;
+  var knobs = (typeof window.get_current_knobs === 'function') ? window.get_current_knobs() : null;
+  var ready = Array.isArray(knobs) && knobs.length > 0;
+  if (ready || attempts >= 50) {
+    if (typeof set_knobs_from_sketch === 'function') set_knobs_from_sketch();
+  } else {
+    setTimeout(function() { position_knobs_from_sketch_when_ready(attempts + 1); }, 100);
+  }
+}
+window.position_knobs_from_sketch_when_ready = position_knobs_from_sketch_when_ready;
+
+// Restore the editor from the persisted draft (or the default sketch if none) and
+// position the knobs. Used on page load for both modes — no Pull dialog.
+function restore_sketch_into_editor() {
+  var draft = load_sketch_draft();
+  var text = (draft != null && draft.length) ? draft : _get_default_sketch();
+  if (typeof editor !== 'undefined' && editor) {
+    editor.setValue(text);
+    window.environment_editor_dirty = false;
+    setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+    position_knobs_from_sketch_when_ready();
+  } else {
+    window._deferred_editor_content = text;
+  }
+}
+window.restore_sketch_into_editor = restore_sketch_into_editor;
 const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json"];
 const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
@@ -90,6 +150,318 @@ window.active_channels = Array.isArray(window.active_channels) ? window.active_c
 window.active_channels[1] = true;
 window.channel_control_mapping_sent = Array.isArray(window.channel_control_mapping_sent) ? window.channel_control_mapping_sent : new Array(17).fill(false);
 window.suppress_knob_cc_send = false;
+
+// ============================================================================
+// Knob log — the single source of truth for the _auto_generated_knobs block.
+//
+// SYNC 2 MODEL: the sketch is ground truth. The knob block is NOT a dump of live
+// AMY state; it is a log of UI-originated actions only (knob moves, knob/CC
+// settings, preset loads, channel activate/deactivate). We NEVER grab AMY state
+// to build it — external MIDI/CV moves and sketch-code effects are deliberately
+// not captured.
+//
+// window.knob_log is an insertion-ordered Map(key -> {line, synth}). Each value
+// is one wire line (or a Z-joined pair, for the compound pitch/detune knobs).
+// Serializing the values in order yields the block; on boot the device replays
+// the lines on top of a freshly reset default synth-1 (see amyboard.py
+// _apply_knobs_text), so the sketch alone fully determines the sound.
+//
+//   - Knob moves/settings collapse last-value-wins, keyed by the knob identity
+//     (channel + section + name), so wiggling a knob never grows the block.
+//   - Setup/preset lines are per-synth; reset_synth_in_sketch() clears a synth's
+//     lines before a (re)activate / Clear / preset load rebuilds them, so they
+//     never accumulate across loads.
+//   - Reading a sketch (Read / download / pageload) rebuilds the log from the
+//     block text verbatim, then positions the visible knobs via the existing
+//     apply_zd_dump_to_knobs() parser (legacy combined-dump lines included), so a
+//     later Write re-emits what was loaded with knob tweaks layered on top.
+// ============================================================================
+window.knob_log = (window.knob_log instanceof Map) ? window.knob_log : new Map();
+var _KNOB_LOG_SEP = '';  // unit separator — never appears in section/name
+
+function _knob_log_parse_synth(line) {
+  var m = /^i(\d+)/.exec(String(line || ''));
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function _knob_log_ensure_z(line) {
+  line = String(line == null ? '' : line);
+  return line.charAt(line.length - 1) === 'Z' ? line : line + 'Z';
+}
+
+// Serialize the log to the block body: one Z-terminated wire line per entry.
+function serialize_knob_log() {
+  var out = [];
+  window.knob_log.forEach(function(entry) {
+    if (entry && entry.line) out.push(_knob_log_ensure_z(entry.line));
+  });
+  return out.join('\n');
+}
+window.serialize_knob_log = serialize_knob_log;
+
+// Upsert (or delete) a UI-originated wire message in the log, optionally sending
+// it live to AMY. opts.key identifies the slot (so repeats collapse). opts.synth
+// scopes it for per-synth clearing (defaults to the i<N> prefix in the message).
+// opts.silent skips the live AMY send; opts.remove deletes opts.key.
+function send_amy_message_in_sketch(message, opts) {
+  opts = opts || {};
+  var msg = String(message == null ? '' : message);
+  var key = opts.key;
+  var synth = (opts.synth !== undefined) ? opts.synth : _knob_log_parse_synth(msg);
+  if (opts.remove) {
+    if (key !== undefined) window.knob_log.delete(key);
+  } else if (key !== undefined && msg) {
+    window.knob_log.set(key, { line: msg.replace(/Z+$/, ''), synth: synth });
+  }
+  if (!opts.silent && msg) {
+    amy_add_log_message(_knob_log_ensure_z(msg));
+  }
+  schedule_knob_block_reflect();
+  return msg;
+}
+window.send_amy_message_in_sketch = send_amy_message_in_sketch;
+
+// Stable identity key for a knob. Global knobs (EQ/echo/reverb/etc. — change_code
+// has no i%i prefix) are channel-independent; per-synth knobs are scoped by synth.
+function knob_log_key_for_knob(synth, knob) {
+  if (!knob) return undefined;
+  var isGlobal = typeof knob.change_code !== 'string' || knob.change_code.indexOf('i%i') < 0;
+  var who = (knob.section || '') + _KNOB_LOG_SEP + (knob.display_name || '');
+  return isGlobal ? ('kg' + _KNOB_LOG_SEP + who)
+                  : ('k' + _KNOB_LOG_SEP + synth + _KNOB_LOG_SEP + who);
+}
+
+// Record a knob's current value in the log (collapse by knob identity). This is
+// RECORD-ONLY (silent): the live AMY send is done by send_change_code's existing
+// path, so the funnel sends once and records once. Called from send_change_code,
+// so it inherits the same suppress_knob_cc_send gating at every call site.
+function record_knob_value(synth, value, knob) {
+  if (!knob || typeof window.make_change_code !== 'function') return;
+  var code = window.make_change_code(synth, value, knob);
+  if (!code) return;
+  var isGlobal = typeof knob.change_code === 'string' && knob.change_code.indexOf('i%i') < 0;
+  send_amy_message_in_sketch(code, {
+    key: knob_log_key_for_knob(synth, knob),
+    synth: isGlobal ? null : synth,
+    silent: true,
+  });
+}
+window.record_knob_value = record_knob_value;
+
+// Log (and optionally remove) a knob's MIDI CC mapping line: i<synth>c<ccVal>.
+function log_knob_cc(synth, knob, ccVal) {
+  if (!knob) return;
+  var key = 'cc' + _KNOB_LOG_SEP + synth + _KNOB_LOG_SEP
+          + (knob.section || '') + _KNOB_LOG_SEP + (knob.display_name || '');
+  if (!ccVal) {
+    send_amy_message_in_sketch('', { key: key, remove: true, silent: true });
+    return;
+  }
+  // Only the block bookkeeping here; the live ic send is done by the caller via
+  // amy_send({synth, midi_cc}) (it has the unset-old-CC handling).
+  send_amy_message_in_sketch('i' + synth + 'c' + ccVal, { key: key, synth: synth, silent: true });
+}
+window.log_knob_cc = log_knob_cc;
+
+// Delete all of a synth's lines (setup + knob + preset + cc), keeping globals.
+function _knob_log_clear_synth(synth) {
+  var doomed = [];
+  window.knob_log.forEach(function(entry, key) {
+    if (entry && entry.synth === synth) doomed.push(key);
+  });
+  for (var i = 0; i < doomed.length; i++) window.knob_log.delete(doomed[i]);
+}
+
+// Reset a synth in the block to the amyboard default (clear CC maps + default
+// Juno patch, 6 voices) and send the same live. Used by channel-activate, the
+// per-synth Clear button, and as the first step of a preset load.
+function reset_synth_in_sketch(synth) {
+  synth = Number(synth);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) return;
+  _knob_log_clear_synth(synth);
+  send_amy_message_in_sketch('i' + synth + 'ic255', { key: 'setup-ic' + _KNOB_LOG_SEP + synth, synth: synth });
+  send_amy_message_in_sketch('i' + synth + 'K257iv6', { key: 'setup-k' + _KNOB_LOG_SEP + synth, synth: synth });
+}
+window.reset_synth_in_sketch = reset_synth_in_sketch;
+
+// Remove a synth from the block and silence it. We log an explicit i<synth>iv0 so
+// that on boot — where the device always starts a default synth on channel 1 —
+// a removed channel 1 stays off (the block is applied on top of that default).
+function remove_synth_from_sketch(synth) {
+  synth = Number(synth);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) return;
+  _knob_log_clear_synth(synth);
+  send_amy_message_in_sketch('i' + synth + 'iv0', { key: 'deact' + _KNOB_LOG_SEP + synth, synth: synth });
+}
+window.remove_synth_from_sketch = remove_synth_from_sketch;
+
+// Record every set CC mapping for a channel into the log (silent). Knob VALUES
+// are recorded automatically when send_all_knob_values() replays them through
+// send_change_code; only the CC lines (sent via amy_send, not send_change_code)
+// need this. Used when (re)activating a channel so its CC assignments persist.
+function record_all_cc_for_channel(ch) {
+  ch = Number(ch);
+  if (!Number.isInteger(ch) || ch < 1 || ch > 16) return;
+  if (typeof get_knobs_for_channel !== 'function' || typeof build_knob_cc_value !== 'function') return;
+  var knobs = get_knobs_for_channel(ch);
+  var disabled = window._disabled_sections || {};
+  for (var i = 0; i < knobs.length; i++) {
+    var knob = knobs[i];
+    if (!knob || disabled[knob.section]) continue;
+    var ccVal = build_knob_cc_value(knob);
+    if (ccVal) log_knob_cc(ch, knob, ccVal);
+  }
+}
+window.record_all_cc_for_channel = record_all_cc_for_channel;
+
+// Record one preset wire command into the log (silent — the caller already sent
+// it live via amy_send/amy_add_log_message). Keys are unique per synth+sequence
+// and scoped to the synth, so a later reset_synth_in_sketch() clears the whole
+// preset before another one is loaded. Used by the Load Preset handler.
+var _preset_log_seq = 0;
+function log_preset_message(synth, message) {
+  if (!message) return;
+  send_amy_message_in_sketch(message, {
+    key: 'preset' + _KNOB_LOG_SEP + synth + _KNOB_LOG_SEP + (_preset_log_seq++),
+    synth: synth,
+    silent: true,
+  });
+}
+window.log_preset_message = log_preset_message;
+
+// Reflect the in-memory log into the editor's _auto_generated_knobs block. Done
+// on a short debounce so dragging a knob stays smooth; the code above the block
+// (and the cursor/scroll) is preserved. The log — not this text — is canonical;
+// Write re-splices from the log regardless.
+var _knob_block_reflect_timer = null;
+function schedule_knob_block_reflect() {
+  if (typeof editor === 'undefined' || !editor || typeof editor.getValue !== 'function') return;
+  if (_knob_block_reflect_timer) return;
+  _knob_block_reflect_timer = setTimeout(function() {
+    _knob_block_reflect_timer = null;
+    reflect_knob_log_to_editor();
+  }, 200);
+}
+
+function reflect_knob_log_to_editor() {
+  if (typeof editor === 'undefined' || !editor || typeof editor.getValue !== 'function') return;
+  // Don't rewrite the buffer while the user is typing in it (would disrupt the
+  // caret/undo). The log is still spliced in at Write time regardless, and a
+  // later knob move re-schedules this once the editor loses focus.
+  if (typeof editor.hasFocus === 'function' && editor.hasFocus()) return;
+  try {
+    var cur = editor.getValue();
+    var merged = splice_knobs_into_sketch(cur, serialize_knob_log());
+    if (merged === cur) return;
+    var pos = (typeof editor.getCursor === 'function') ? editor.getCursor() : null;
+    var scroll = (typeof editor.getScrollInfo === 'function') ? editor.getScrollInfo() : null;
+    editor.setValue(merged);
+    if (pos && typeof editor.setCursor === 'function') editor.setCursor(pos);
+    if (scroll && typeof editor.scrollTo === 'function') editor.scrollTo(scroll.left, scroll.top);
+  } catch (e) {
+    console.warn('reflect_knob_log_to_editor failed', e);
+  }
+}
+window.reflect_knob_log_to_editor = reflect_knob_log_to_editor;
+
+// Rebuild the in-memory log from a block of wire lines (verbatim). Used after
+// Read / download / pageload so a subsequent Write re-emits exactly what was
+// loaded, with later knob tweaks layered on top.
+function rebuild_knob_log_from_block(blockText) {
+  window.knob_log.clear();
+  var lines = String(blockText || '').split(/\r?\n/);
+  var seq = 0;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line || line.charAt(0) === '#') continue;
+    window.knob_log.set('load' + _KNOB_LOG_SEP + (seq++), {
+      line: line.replace(/Z+$/, ''),
+      synth: _knob_log_parse_synth(line),
+    });
+  }
+}
+window.rebuild_knob_log_from_block = rebuild_knob_log_from_block;
+
+// Position the visible knobs + active checkboxes from the sketch's knob block,
+// WITHOUT sending anything to AMY, and rebuild the in-memory log. Parses both the
+// new one-line-per-knob format and legacy combined-dump lines (apply_zd_dump_to_knobs).
+// Decide which channels are active from a knob block, matching the device boot
+// contract: a synth is active iff its last iv<N> in the block is N>0. Channel 1
+// defaults to active when it has NO lines (the board always starts a default
+// synth on channel 1 before applying the block); other channels default off when
+// absent. So an empty block ⇒ only channel 1 active, and an explicit i<ch>iv0
+// ⇒ that channel off.
+function _compute_active_from_block(block) {
+  var voices = {};   // synth -> last num_voices seen
+  var hasLines = {};
+  var lines = String(block || '').split(/\r?\n/);
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line || line.charAt(0) === '#') continue;
+    var m = /^i(\d+)/.exec(line);
+    if (!m) continue;  // global effect line (no i prefix) — not a synth
+    var synth = parseInt(m[1], 10);
+    if (synth < 1 || synth > 16) continue;
+    hasLines[synth] = true;
+    var iv = line.match(/iv(\d+)/g);  // num_voices token (e.g. iv6, iv0)
+    if (iv && iv.length) voices[synth] = parseInt(iv[iv.length - 1].slice(2), 10);
+  }
+  var active = new Array(17).fill(false);
+  for (var ch = 1; ch <= 16; ch++) {
+    if (voices[ch] !== undefined) active[ch] = voices[ch] > 0;
+    else if (hasLines[ch]) active[ch] = true;   // lines but no iv -> assume active
+    else active[ch] = (ch === 1);               // channel 1 is on by default at boot
+  }
+  return active;
+}
+
+function set_knobs_from_sketch() {
+  if (typeof editor === 'undefined' || !editor || typeof editor.getValue !== 'function') return;
+  var block = extract_knobs_from_sketch(editor.getValue());
+  rebuild_knob_log_from_block(block);
+  // Compute boot-aware active state FIRST (an empty/default block keeps channel 1
+  // on; i<ch>iv0 reads as off). apply_zd_dump_to_knobs reads window.active_channels
+  // to decide which synth to position, so a default channel 1 with no explicit
+  // lines still gets positioned to the K257 baseline.
+  var active = _compute_active_from_block(block);
+  if (!Array.isArray(window.active_channels)) window.active_channels = new Array(17).fill(false);
+  for (var ch = 1; ch <= 16; ch++) window.active_channels[ch] = active[ch];
+  if (typeof apply_zd_dump_to_knobs === 'function') {
+    // Suppress live sends AND log recording while we position the UI: set_knobs_from_events
+    // → set_amy_knob_value → send_change_code would otherwise re-send every value to AMY
+    // and re-record it. Reading a sketch only moves knobs; Write/restart makes sound.
+    var prev = window.suppress_knob_cc_send;
+    window.suppress_knob_cc_send = true;
+    try {
+      apply_zd_dump_to_knobs(block);
+    } finally {
+      window.suppress_knob_cc_send = prev;
+    }
+  }
+  var cb = document.getElementById('channel-active-checkbox');
+  if (cb) cb.checked = !!active[Number(window.current_synth || 1)];
+}
+window.set_knobs_from_sketch = set_knobs_from_sketch;
+
+// The K257 "amyboard default" patch as an AMY wire string is the implicit
+// baseline every synth starts from (the device loads K257 before applying the
+// knob block — see amyboard.py). We use only its oscillator + global-FX setup
+// (everything before the first `ic` MIDI-CC mapping) to position the knobs; the
+// ic mappings carry %v/%i change_code templates that aren't real wire commands,
+// and the knobs already hold their default CC numbers from amy_parameters.js.
+// Sourced at runtime from patch_code_for_patch_number[257] (generated from
+// amy/src/patches.h), so it stays in sync with the amy pin.
+var _k257_baseline_cache = null;
+function k257_default_wire_baseline() {
+  if (_k257_baseline_cache) return _k257_baseline_cache;
+  var codes = window.patch_code_for_patch_number;
+  var s = (codes && typeof codes[257] === 'string') ? codes[257] : '';
+  if (!s) return '';                    // patches not loaded yet — don't cache empty
+  var idx = s.indexOf('Zic');           // first ic MIDI-CC mapping
+  _k257_baseline_cache = (idx >= 0) ? s.slice(0, idx + 1) : s;
+  return _k257_baseline_cache;
+}
+window.k257_default_wire_baseline = k257_default_wire_baseline;
 
 function get_patch_number_for_channel(channel) {
   var ch = Number(channel);
@@ -119,18 +491,20 @@ window.set_channel_active = function(channel, active, opts) {
   // The user toggled this channel's "Active" checkbox.
   if (opts.userToggle) {
     if (active && !wasActive) {
-      // Re-enable: rebuild the synth and restore the channel's existing patch
-      // from its knobs (not the bare default K257 sound). Re-sending the CC
-      // mappings is required because num_voices=0 cleared them on teardown.
-      // The "level" slider is restored by the checkbox handler (see index.html).
-      amy_add_log_message("i" + ch + "ic255Z");   // clear any stale CC maps
-      amy_add_log_message("i" + ch + "K257iv6Z");  // rebuild 4-osc, 6-voice alloc
-      send_all_knob_cc_mappings(ch);               // re-send CC->param mappings
-      send_all_knob_values(ch);                    // re-apply existing knob values
+      // Re-enable: rebuild the synth to the default patch in BOTH AMY and the
+      // knob log, then re-apply (and record) the channel's existing knob values
+      // and CC maps so it sounds the way it did — not the bare default K257.
+      // Re-sending the CC mappings is required because num_voices=0 cleared them
+      // on teardown. The "level" slider is restored by the checkbox handler.
+      reset_synth_in_sketch(ch);          // records + sends i<ch>ic255, i<ch>K257iv6
+      send_all_knob_cc_mappings(ch);      // re-send CC->param mappings (live)
+      send_all_knob_values(ch);           // re-apply existing knob values (live + records)
+      record_all_cc_for_channel(ch);      // record the CC maps into the block
     } else if (!active && wasActive) {
-      // Disable: tear the synth down so it stops playing and frees its voices.
-      // num_voices=0 releases the instrument's oscillators and clears its CC maps.
-      amy_send({synth: ch, num_voices: 0}, true);
+      // Disable: tear the synth down so it stops playing and frees its voices,
+      // and remove it from the block (with an explicit i<ch>iv0 so a removed
+      // channel 1 stays off past the boot-time default synth — see amyboard.py).
+      remove_synth_from_sketch(ch);       // records i<ch>iv0 + sends num_voices=0
     }
     return;
   }
@@ -678,16 +1052,19 @@ window.clear_current_channel_patch = async function() {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
-  amy_add_log_message("i" + synth + "ic255Z");
-  amy_add_log_message("i" + synth + "K257iv6Z");
-  if (amyboard_mode === 'control') {
-    // Pull after a delay to get fresh state (skip effects/CC flood — sysex race).
-    setTimeout(sync_amy_state, 500);
-  } else {
+  // SYNC 2: reset this channel to the default patch in both AMY and the knob log
+  // (no zA AMY-state pull).
+  reset_synth_in_sketch(synth);          // sends + records i<synth>ic255, K257iv6
+  send_all_knob_cc_mappings(synth);      // re-send default CC->param maps (live)
+  record_all_cc_for_channel(synth);      // record them in the block
+  if (amyboard_mode !== 'control') {
     reset_global_effects();
-    send_all_knob_cc_mappings(synth);
-    // Sync knobs from AMY state after K257 delta is processed.
-    await sync_channel_knobs_from_synth_to_ui(synth);
+    // Position the knobs to the default patch from the local AMY (UI only — the
+    // values just sent are the defaults; don't re-send/re-record them).
+    var _prevSuppress = window.suppress_knob_cc_send;
+    window.suppress_knob_cc_send = true;
+    try { await sync_channel_knobs_from_synth_to_ui(synth); }
+    finally { window.suppress_knob_cc_send = _prevSuppress; }
   }
   if (typeof window.set_section_disabled === "function") {
     window.set_section_disabled("Osc A", false);
@@ -745,6 +1122,10 @@ function onKnobCcChange(knob, previousCc) {
   }
   if (ccVal) {
     amy_send({synth: synthChannel, midi_cc: ccVal}, true);
+  }
+  // SYNC 2: record (or remove) this knob's CC mapping in the knob log.
+  if (typeof window.log_knob_cc === "function") {
+    window.log_knob_cc(synthChannel, knob, ccVal);
   }
 }
 
@@ -2201,6 +2582,12 @@ async function load_editor() {
         setTimeout(function () { editor.save(); }, 100);
         setTimeout(function () { editor.refresh(); }, 250);
         pending_environment_editor_load = false;
+        // SYNC 2: when the main sketch is loaded, position the knobs and rebuild
+        // the knob log from its _auto_generated_knobs block (UI only — no AMY
+        // send). Gated to sketch.py so opening another file doesn't wipe the log.
+        if (selected_environment_file === "sketch.py" && typeof set_knobs_from_sketch === "function") {
+            set_knobs_from_sketch();
+        }
     } catch (e) {
         show_alert("Could not load that file into the editor.");
     }
@@ -3187,6 +3574,12 @@ async function import_amyboard_world_file(index) {
     var item = amyboard_world_files[index];
     var filename = normalize_world_filename(item.filename);
     var packageName = filename.replace(/\.(py|tar)$/, "");
+    // SYNC 2: downloading replaces the current sketch — confirm first.
+    var _dlOk = await confirm_environment_action(
+        "Download sketch",
+        "This will replace your sketch with “" + packageName + "”. Continue?",
+        "Download");
+    if (!_dlOk) return;
     amyboard_world_loading_index = index;
     render_amyboard_world_file_list();
 
@@ -3198,27 +3591,20 @@ async function import_amyboard_world_file(index) {
 
         var sketchText = await response.text();
         if (amyboard_mode === 'control') {
-            // Control mode: reboot into bootloader (stops sketch, frees
-            // scheduler), send file via zT, then apply knobs from sketch.
-            _show_saving_modal();
-            var _importOpts = {
-                sketchText: sketchText,
-                packageName: packageName,
-                restart: false,
-                setEditor: true,
-                applyKnobs: true,
-                suppressKnobCc: true,  // hw already has values from zT transfer
-                refreshWorldFiles: true,
-            };
-            if (_IS_WINDOWS_CHROME) {
-                // Reload across the USB reboot — never returns.
-                await _zb_then_reload_with_upload_context(_importOpts);
-                return;
+            // SYNC 2: load into the editor, rebuild the knob log + position the
+            // knobs from the block, then Write to the board (no reboot). The
+            // board becomes exactly this sketch.
+            if (editor) {
+                editor.setValue(sketchText);
+                setTimeout(function () { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
             }
-            reboot_to_bootloader();
-            console.log('import: zB sent, waiting for board...');
-            await wait_for_board_ready();
-            await _upload_sketch_post_bootloader(_importOpts);
+            var envNameInput = document.getElementById("editor_filename");
+            if (envNameInput) envNameInput.value = packageName;
+            if (typeof set_knobs_from_sketch === 'function') set_knobs_from_sketch();
+            if (typeof write_sketch_to_amyboard === 'function') await write_sketch_to_amyboard();
+            if (typeof refresh_amyboard_world_files === 'function') {
+                try { await refresh_amyboard_world_files(); } catch (e) {}
+            }
         } else {
             // Simulate mode: write to local FS, then reload the page to
             // the patch interface so the sketch starts fresh.
@@ -3537,51 +3923,18 @@ async function upload_current_environment() {
         uploadButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Uploading...';
     }
 
-    // In control mode: Pull (zA + zD) to get sketch.py with fresh knobs from
-    // hardware. Then splice those fresh knobs into the editor's text (which may
-    // have code edits). This avoids zT which would restart the sketch and
-    // overwrite the live AMY state with stale editor knobs.
-    if (amyboard_mode === 'control') {
-        try {
-            await sync_amy_state_async();
-            // _last_sketch_text has the hardware's sketch with fresh knobs.
-            // Extract fresh knobs and splice into the editor's code.
-            if (_last_sketch_text) {
-                var freshKnobs = extract_knobs_from_sketch(_last_sketch_text);
-                if (freshKnobs && editor) {
-                    var editorText = editor.getValue();
-                    var spliced = splice_knobs_into_sketch(editorText, freshKnobs);
-                    editor.setValue(spliced);
-                }
-            }
-        } catch (e) {
-            show_alert("Could not pull from AMYboard before upload.");
-            if (uploadButton) { uploadButton.disabled = false; uploadButton.textContent = "Upload"; }
-            return;
-        }
+    // SYNC 2: the knob log is the single source of truth — splice it into the
+    // editor's code so the uploaded sketch.py carries the current knobs. No
+    // AMY-state grab (zA / update_sketch_knobs) in either mode.
+    if (editor) {
+        editor.setValue(splice_knobs_into_sketch(editor.getValue(), serialize_knob_log()));
     }
-    // Simulate mode: run the same save routine as "Write to Simulator" so
-    // sketch.py contains the live AMY knob state before we upload it.
-    if (amyboard_mode === 'simulate' && mp) {
-        if (editor) {
-            try {
-                mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', editor.getValue());
-            } catch (e) {
-                console.warn('upload: failed to write editor content to sketch.py', e);
-            }
-        }
+    if (amyboard_mode === 'simulate' && mp && editor) {
         try {
-            await mp.runPythonAsync("import amyboard; amyboard.update_sketch_knobs()");
+            mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', editor.getValue());
+            sync_persistent_fs();
         } catch (e) {
-            console.warn('upload: update_sketch_knobs failed', e);
-        }
-        sync_persistent_fs();
-        // Reload updated sketch.py into the editor so the user sees the knobs block.
-        if (editor) {
-            try {
-                var updatedSketch = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
-                editor.setValue(updatedSketch);
-            } catch (e) {}
+            console.warn('upload: failed to write sketch.py', e);
         }
     }
     // Upload sketch.py content with the environment name as the file key.
@@ -3976,100 +4329,76 @@ async function _send_text_file_to_amyboard(path, text) {
     console.log('sent ' + fileSize + ' bytes to ' + path);
 }
 
-async function save_amy_state() {
+// SYNC 2 — Write to your AMYboard. The knob log is the single source of truth:
+// splice it into the editor's code to form the sketch, then transfer it and
+// restart the Python sketch (which resets AMY and replays the knob block on top
+// of a default synth 1 — see amyboard.py _apply_knobs_text). No implicit pull, no
+// merge, no zA, no bootloader reboot: the board becomes exactly what's in this
+// editor. Live MIDI/CV tweaks and sketch-code effects are deliberately NOT saved.
+async function write_sketch_to_amyboard() {
+    if (!editor) return;
+    var sketchText = splice_knobs_into_sketch(editor.getValue(), serialize_knob_log());
+    editor.setValue(sketchText);
     if (amyboard_mode === 'control') {
-        // Control mode flow (stop the sketch BEFORE sending chunks — otherwise
-        // the sketch's loop() keeps firing amy.send(note=..) which goes out as
-        // MIDI wire commands and loops back to hardware as sysex, corrupting
-        // the zT file transfer):
-        //   1. zA: have the running sketch capture live AMY state into its
-        //      sketch.py on disk (so we have the fresh knob values).
-        //   2. zD: pull that sketch.py back so we can splice the fresh knobs
-        //      into the editor's content.
-        //   3. Splice fresh knobs into the editor's text.
-        //   4. zB: reboot into bootloader mode (stops the sketch cleanly).
-        //   5. wait_for_board_ready.
-        //   6. zT: send the merged sketch.py to the idle board.
-        //   7. zP: restart sketch on hardware so it runs again.
-        if (!editor) return;
-        var userSketchText = editor.getValue();
-        if (!userSketchText || !userSketchText.trim().length) return;
+        // Use the race-free resetting modal (toggles classes synchronously). The
+        // bootstrap-API saving modal can stick open when show()/hide() bracket a
+        // fast operation like this transfer — see _show_resetting_modal's comment.
+        _show_resetting_modal('Writing to AMYboard…');
         try {
-            // Step 1+2: pull current live state (sketch still running).
-            // The user clicked Save, so this internal pull is implicit —
-            // skip the green-button gate on the modal and go straight to
-            // busy state. The second modal (zB reboot wait) still gates.
-            _skip_pull_gate = true;
-            await sync_amy_state_async();
-            await sleep_ms(500);
-            // Step 3: splice fresh knobs into editor text.
-            var mergedSketch = userSketchText;
-            if (_last_sketch_text) {
-                var freshKnobs = extract_knobs_from_sketch(_last_sketch_text);
-                if (freshKnobs) {
-                    mergedSketch = splice_knobs_into_sketch(userSketchText, freshKnobs);
-                    if (editor) editor.setValue(mergedSketch);
-                }
-            }
-            // Step 4+5: reboot into bootloader so sketch isn't running.
-            // Modal gates behind the green Pull button — user confirms
-            // MIDI ports before any sysex traffic for the upload.
-            try {
-                await _show_syncing_modal();
-            } catch (e) {
-                console.log('save: zB-reboot gate cancelled', e && e.message);
-                return;
-            }
-            var _saveOpts = {
-                sketchText: mergedSketch,
-                restart: true,       // Step 7: restart sketch on hw
-                setEditor: false,    // editor already has mergedSketch from splice above
-                applyKnobs: false,   // knobs already reflect live state from sync_amy_state_async
-            };
-            if (_IS_WINDOWS_CHROME) {
-                // Reload across the USB reboot — never returns.
-                await _zb_then_reload_with_upload_context(_saveOpts);
-                return;
-            }
-            reboot_to_bootloader();
-            console.log('save: zB sent, waiting for board...');
-            await wait_for_board_ready();
-            _hide_syncing_modal();
-            // Step 6+7: send merged file + restart sketch.
-            _show_saving_modal();
-            await _upload_sketch_post_bootloader(_saveOpts);
+            // zT stops the sequencer on the board during the transfer, so the
+            // running sketch's loop() can't corrupt it — no reboot required.
+            await _send_text_file_to_amyboard('/user/current/sketch.py', sketchText);
+            // Restart the sketch: resets AMY, replays the knob block, runs code.
+            amy_add_log_message('zPimport amyboard; amyboard.environment_transfer_done()Z');
         } catch (e) {
-            console.warn('save: failed', e);
-            _hide_saving_modal();
-            _hide_syncing_modal();
+            console.warn('write_sketch_to_amyboard: control failed', e);
+        } finally {
+            _hide_resetting_modal();
+            if (document.activeElement) document.activeElement.blur();
         }
     } else {
-        // Simulate mode: let Python dump current AMY state into sketch.py's knobs section.
+        // Simulate: write the file to the in-browser MicroPython FS and restart
+        // the sketch — the SAME restart_sketch primitive as hardware (reset AMY,
+        // replay knobs, run sketch). No AMY-state dump (update_sketch_knobs).
         if (!mp) return;
-        // First write any editor changes to disk so update_sketch_knobs preserves user edits.
-        if (editor) {
-            try {
-                mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', editor.getValue());
-            } catch (e) {
-                console.warn('save: failed to write editor content to sketch.py', e);
-            }
-        }
         try {
-            await mp.runPythonAsync("import amyboard; amyboard.update_sketch_knobs()");
+            mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', sketchText);
+            sync_persistent_fs();
+            await mp.runPythonAsync("import amyboard; amyboard.restart_sketch()");
         } catch (e) {
-            console.warn('save: update_sketch_knobs failed', e);
+            console.warn('write_sketch_to_amyboard: simulate failed', e);
         }
-        sync_persistent_fs();
-        // Reload sketch.py into the editor so the user sees the new knobs block.
-        if (editor) {
-            try {
-                var sketchContent = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
-                editor.setValue(sketchContent);
-            } catch (e) {}
-            setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
-        }
+        if (editor) setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
     }
 }
+window.write_sketch_to_amyboard = write_sketch_to_amyboard;
+
+// SYNC 2 — Read from your AMYboard. Pull-only: replace the editor with the
+// board's sketch.py and position the knobs from its _auto_generated_knobs block.
+// Never writes to the board and never grabs live AMY state (no zA).
+async function read_sketch_from_amyboard() {
+    if (amyboard_mode === 'control') {
+        // The "Pull from AMYboard" box gates this (it carries the "replace your
+        // sketch" warning and a dismiss X). zD pull only; _handle_sync_sysex_payload
+        // sets the editor and calls set_knobs_from_sketch() when the response arrives.
+        await sync_amy_state();
+    } else {
+        if (!mp) return;
+        var content = '';
+        try {
+            content = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' });
+        } catch (e) { content = ''; }
+        if (editor) {
+            editor.setValue(content);
+            setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+        }
+        set_knobs_from_sketch();
+    }
+}
+window.read_sketch_from_amyboard = read_sketch_from_amyboard;
+
+// Back-compat alias for existing onclick handlers that still call save_amy_state.
+function save_amy_state() { return write_sketch_to_amyboard(); }
 
 // Sync: single request — zD updates sketch.py with live AMY state on hardware, then sends it.
 var _sync_stage = null;  // null | 'pending'
@@ -4370,6 +4699,8 @@ function _show_syncing_modal() {
     if (modalIn) modalIn.disabled = false;
     if (modalOut) modalOut.disabled = false;
     if (pullBtn) pullBtn.classList.remove('d-none');
+    var pullWarn = document.getElementById('sync-modal-pull-warning');
+    if (pullWarn) pullWarn.classList.remove('d-none');  // warn: pull replaces the sketch
     _sync_modal_populate_midi();
     bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
     // Replace any prior pending gate (only one click handler in flight).
@@ -4400,6 +4731,8 @@ function _show_syncing_modal_busy() {
     if (error) error.classList.add('d-none');
     if (retryBtn) retryBtn.classList.add('d-none');
     if (pullBtn) pullBtn.classList.add('d-none');
+    var pullWarnBusy = document.getElementById('sync-modal-pull-warning');
+    if (pullWarnBusy) pullWarnBusy.classList.add('d-none');
     if (modalIn) modalIn.disabled = true;
     if (modalOut) modalOut.disabled = true;
     if (changeBtn) {
@@ -4471,6 +4804,8 @@ function _show_syncing_modal_error() {
     // Use the change-ports button in Try again mode (same behavior as retry).
     if (retryBtn) retryBtn.classList.add('d-none');
     if (pullBtn) pullBtn.classList.add('d-none');
+    var pullWarnErr = document.getElementById('sync-modal-pull-warning');
+    if (pullWarnErr) pullWarnErr.classList.add('d-none');
     if (modalIn) modalIn.disabled = false;
     if (modalOut) modalOut.disabled = false;
     if (changeBtn) {
@@ -4675,6 +5010,10 @@ async function _reset_amyboard_send_and_cleanup() {
     await sleep_ms(2000);
     // Set JS state to defaults.
     var defaultSketch = "# AMYboard Sketch\n# Code put here runs first, then loop() is called every 32nd note.\nimport amyboard, amy\n\ndef loop():\n    pass\n\n# Do not edit. Set automatically by the knobs on AMYboard Online.\n_auto_generated_knobs = \"\"\"\n\"\"\"\n";
+    // SYNC 2: clear the knob log so a later Write doesn't re-emit the old
+    // session's knobs (the default sketch has an empty knobs block).
+    if (window.knob_log && typeof window.knob_log.clear === 'function') window.knob_log.clear();
+    if (typeof clear_sketch_draft === 'function') clear_sketch_draft();
     if (editor) {
         editor.setValue(defaultSketch);
         setTimeout(function() { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
@@ -4694,7 +5033,11 @@ async function _reset_amyboard_send_and_cleanup() {
     if (Array.isArray(window.channel_control_mapping_sent)) {
         for (var _ch2 = 1; _ch2 <= 16; _ch2++) window.channel_control_mapping_sent[_ch2] = false;
     }
-    if (typeof window.refresh_knobs_for_channel === "function") {
+    // SYNC 2: position the knobs from the default sketch via the K257 baseline
+    // (correct waveforms etc.) instead of leaving them at generic defaults.
+    if (typeof set_knobs_from_sketch === "function") {
+        set_knobs_from_sketch();
+    } else if (typeof window.refresh_knobs_for_channel === "function") {
         window.suppress_knob_cc_send = true;
         try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
     }
@@ -4744,6 +5087,11 @@ async function reset_amyboard() {
                 console.warn('reset: amyboard.factory_reset() failed', e);
             }
             sync_persistent_fs();
+            // SYNC 2: clear the knob log so a later Write doesn't re-emit the old
+            // session's knobs. factory_reset wrote a default sketch.py (empty
+            // knobs block); the UI is reset to defaults below.
+            if (window.knob_log && typeof window.knob_log.clear === 'function') window.knob_log.clear();
+            if (typeof clear_sketch_draft === 'function') clear_sketch_draft();
             // Reload the sketch into the editor.
             if (editor) {
                 try {
@@ -4787,16 +5135,13 @@ async function reset_amyboard() {
                     window.channel_control_mapping_sent[_ch2] = false;
                 }
             }
-            // Pull live AMY state (the Juno patch factory_reset just loaded)
-            // back into the UI widgets for channel 1. Falls back to a plain
-            // re-render if the synth-side read isn't available.
-            var synced = false;
-            try {
-                synced = await sync_channel_knobs_from_synth_to_ui(1);
-            } catch (e) {
-                console.warn('reset: sync_channel_knobs_from_synth_to_ui failed', e);
-            }
-            if (!synced && typeof window.refresh_knobs_for_channel === "function") {
+            // SYNC 2: position the knobs from the (default) sketch. The K257
+            // baseline inside set_knobs_from_sketch gives the amyboard-default knob
+            // positions (correct waveforms, filter, ADSR, …) without reading live
+            // AMY state.
+            if (typeof set_knobs_from_sketch === "function") {
+                set_knobs_from_sketch();
+            } else if (typeof window.refresh_knobs_for_channel === "function") {
                 var previousSuppress = !!window.suppress_knob_cc_send;
                 window.suppress_knob_cc_send = true;
                 try { window.refresh_knobs_for_channel(); }
@@ -4835,9 +5180,10 @@ function sync_amy_state_async() {
 var _SYNC_TIMEOUT_MS = 20000;
 
 async function sync_amy_state() {
-    // Send zA to update sketch.py on disk with current AMY state,
-    // then zD to get the updated file back. Gates behind the green
-    // Pull button before sending any sysex.
+    // SYNC 2: pull-only. Read sketch.py straight off the board with zD — the
+    // board's sketch.py is the single source of truth, so we no longer send zA
+    // to dump live AMY state into it first. Gates behind the green Pull button
+    // before sending any sysex.
     console.log('sync_amy_state: start');
     try {
         await _show_syncing_modal();
@@ -4864,19 +5210,10 @@ async function sync_amy_state() {
             if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('sync timeout')); }
         }
     }, _SYNC_TIMEOUT_MS);
-    // Step 1: update sketch.py on disk with AMY state.
-    console.log('sync_amy_state: sending zA');
-    amy_add_log_message('zAZ');
-    // Step 2: wait long enough for the hardware to finish running
-    // update_sketch_knobs() (which is synchronous from the sysex parser's
-    // perspective and blocks the parser until it returns — so the zD
-    // command we send next must arrive AFTER zA's Python hook completes).
-    // 300ms was too short for sketches with large knobs sections; 1500ms
-    // has plenty of headroom for realistic file sizes.
-    setTimeout(function() {
-        console.log('sync_amy_state: sending zD');
-        amy_add_log_message('zD/user/current/sketch.pyZ');
-    }, 1500);
+    // Pull the file directly. No zA AMY-state grab, so no wait for a device-side
+    // update_sketch_knobs() hook — just request sketch.py off the board.
+    console.log('sync_amy_state: sending zD');
+    amy_add_log_message('zD/user/current/sketch.pyZ');
 }
 
 // Strip any leading garbage (U+FFFD replacement chars, control bytes, or
@@ -4972,11 +5309,10 @@ function _handle_sync_sysex_payload(payload) {
         // Hide the "Sync to show..." button.
         var syncSketchBtn = document.getElementById('sync-sketch-btn');
         if (syncSketchBtn) syncSketchBtn.classList.add('d-none');
-        // Extract knobs from the sketch and apply to knob UI.
-        var knobsText = extract_knobs_from_sketch(payload);
-        if (knobsText) {
-            apply_zd_dump_to_knobs(knobsText);
-        }
+        // SYNC 2: rebuild the in-memory knob log from the pulled sketch and
+        // position the knobs from it. set_knobs_from_sketch() reads the editor we
+        // just set, so a later Write re-emits exactly what we pulled (plus tweaks).
+        set_knobs_from_sketch();
         _hide_syncing_modal();
         // Remember the MIDI ports that worked so next page load can preselect.
         try { _save_successful_midi_ports(); } catch (e) {}
@@ -4989,7 +5325,9 @@ function _handle_sync_sysex_payload(payload) {
 // effects line, mark those synths active, and populate the knob UI for the
 // current synth.
 function apply_zd_dump_to_knobs(dumpText) {
-    if (!dumpText) return;
+    // An empty block is valid in SYNC 2: a default channel has no explicit knob
+    // lines, but the K257 baseline (prepended below) still positions every knob.
+    dumpText = dumpText || '';
     // Apply CC mappings (ic lines) to per-channel knob config first so CC
     // numbers, ranges, log flag, and offset reflect the saved sketch state.
     if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
@@ -5017,21 +5355,21 @@ function apply_zd_dump_to_knobs(dumpText) {
             effectsLines.push(line);
         }
     }
-    // Mark active channels based on the dump.
-    for (var ch = 1; ch <= 16; ch++) {
-        if (typeof window.set_channel_active === 'function') {
-            // Set active without triggering the default-patch init (since the
-            // real state is coming from the dump).
-            window.active_channels[ch] = !!activeSynths[ch];
-        }
-    }
-    // Refresh the channel-active checkbox/UI for the current channel.
+    // Active state is OWNED by the caller: set_knobs_from_sketch sets the
+    // boot-aware window.active_channels before calling us (channel 1 on by
+    // default; i<ch>iv0 off). We must NOT overwrite it from the dump's "has any
+    // i<N> line" signal — that would clear channel 1 for an empty/default block
+    // (the very case that broke), and wrongly mark a deactivated i<ch>iv0 channel
+    // as active. Fall back to the dump only for channels the caller never set.
     var currentSynth = Number(window.current_synth || 1);
+    var bootActive = (Array.isArray(window.active_channels) && window.active_channels[currentSynth] !== undefined)
+        ? !!window.active_channels[currentSynth]
+        : !!activeSynths[currentSynth];
     var checkbox = document.getElementById('channel-active-checkbox');
-    if (checkbox) checkbox.checked = !!activeSynths[currentSynth];
+    if (checkbox) checkbox.checked = bootActive;
     // Populate knobs for the current synth.
-    if (!activeSynths[currentSynth]) {
-        console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' is not active in dump');
+    if (!bootActive) {
+        console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' is not active');
         return;
     }
     if (typeof window.set_knobs_from_events !== 'function' ||
@@ -5039,7 +5377,11 @@ function apply_zd_dump_to_knobs(dumpText) {
         console.warn('apply_zd_dump_to_knobs: knob helpers unavailable');
         return;
     }
-    var wireLines = perSynth[currentSynth].concat(effectsLines);
+    // Prepend the K257 amyboard-default baseline so a synth with no (or only
+    // setup) lines still positions every knob; the synth's own lines then
+    // override specific knobs on top (last-wins in set_knobs_from_events).
+    var baseline = (typeof k257_default_wire_baseline === 'function') ? k257_default_wire_baseline() : '';
+    var wireLines = (baseline ? [baseline] : []).concat(perSynth[currentSynth] || []).concat(effectsLines);
     try {
         var events = events_from_wire_code_messages(wireLines);
         window.set_knobs_from_events(events, currentSynth);
@@ -5047,10 +5389,20 @@ function apply_zd_dump_to_knobs(dumpText) {
             window.suppress_knob_cc_send = true;
             try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
         }
-        // Check oscillator count and disable sections for DX7 patches.
+        // Disable Osc/ADSR sections for DX7 patches. In SYNC 2 the block carries
+        // only the patch number (K128-255 = DX7 presets), not the full per-voice
+        // osc dump the old osc-count heuristic relied on — so detect from the
+        // synth's last K patch number instead.
         if (typeof window.set_section_disabled === "function") {
-            var oscsPerVoice = num_oscs_from_patch_file_content(wireLines.join('\n'));
-            var isDX7 = oscsPerVoice >= 8;
+            var isDX7 = false;
+            var synthLines = perSynth[currentSynth] || [];
+            for (var li = 0; li < synthLines.length; li++) {
+                var km = /K(\d+)/.exec(synthLines[li]);
+                if (km) {
+                    var pn = parseInt(km[1], 10);
+                    isDX7 = (pn >= 128 && pn <= 255);  // last K wins (e.g. K257 default re-enables)
+                }
+            }
             window.set_section_disabled("Osc A", isDX7);
             window.set_section_disabled("Osc B", isDX7);
             window.set_section_disabled("ADSR", isDX7);
@@ -5180,14 +5532,9 @@ async function start_amyboard() {
   // sketch is pending and doesn't race a default run_sketch() against it.
   _url_env_pending = !!(new URLSearchParams(window.location.search).get("env"));
   if (!_url_env_pending) {
-    var _pendingSketch = "";
-    try { _pendingSketch = mp.FS.readFile(CURRENT_ENV_DIR + '/sketch.py', { encoding: 'utf8' }); } catch (e) {}
-    if (!_pendingSketch) _pendingSketch = _get_default_sketch();
-    if (editor) {
-      editor.setValue(_pendingSketch);
-    } else {
-      window._deferred_editor_content = _pendingSketch;
-    }
+    // SYNC 2: restore the editor from the local draft (or default) — not the FS
+    // sketch.py. The draft is the persistent editor content across reloads.
+    restore_sketch_into_editor();
   }
   await fill_tree();
   amyboard_started = true;

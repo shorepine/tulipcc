@@ -947,9 +947,11 @@
             bootstrap.Modal.getOrCreateInstance(noMidiEl, { backdrop: 'static', keyboard: false }).show();
           }
         } else {
-          // Set default sketch content in editor (will be replaced by sync).
-          if (editor) {
-            editor.setValue(DEFAULT_SKETCH_SOURCE);
+          // SYNC 2: restore the editor from the local draft (or the default
+          // sketch if none) instead of pulling from the board on load. No Pull
+          // dialog on page load; the user can pull on demand with "Read".
+          if (typeof restore_sketch_into_editor === "function") {
+            restore_sketch_into_editor();
           }
           // Pageload sync flow: reboot into bootloader, pull sketch via zD,
           // then zP restart_sketch. Skip zA — in bootloader mode the sketch
@@ -1031,40 +1033,10 @@
                 return;
               }
             } else {
-              // Fresh start: gate behind the green Pull button. The user
-              // confirms MIDI port selections (or changes them) and clicks
-              // Pull from AMYboard before any sysex traffic.
-              try {
-                await _show_syncing_modal();
-              } catch (e) {
-                console.log('pageload: pull cancelled', e && e.message);
-                return;
-              }
-              if (_IS_WINDOWS_CHROME) {
-                // Windows Chrome path: send zB, wait a few seconds for the
-                // board to finish rebooting into bootloader mode, then force
-                // a full page reload so Chrome hands us a fresh MIDIAccess.
-                reboot_to_bootloader();
-                console.log('pageload: Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
-                sessionStorage.setItem('amyboard_post_zb_reload', '1');
-                // 4s chosen to comfortably cover the ~3s board reboot budget
-                // without leaving the user staring at an empty spinner for
-                // noticeably longer than necessary.
-                await new Promise(function(r) { setTimeout(r, 4000); });
-                console.log('pageload: reloading now');
-                window.location.reload();
-                return;  // unreachable after reload
-              } else {
-                // macOS and others: standard path — zB then poll for reply.
-                reboot_to_bootloader();
-                console.log('pageload: zB sent, waiting for board...');
-                var ready = await wait_for_board_ready();
-                if (!ready) {
-                  // Board didn't respond — show the error/change-ports UI.
-                  _show_syncing_modal_error();
-                  return;
-                }
-              }
+              // SYNC 2: no automatic pull on a fresh page load. The editor was
+              // restored from the local draft above; the user pulls on demand via
+              // the "Read from your AMYboard" button.
+              return;
             }
             // Pull sketch.py from hardware (zD only, no zA).
             _sync_stage = 'pending';
@@ -1175,6 +1147,14 @@
       });
       editor.on("change", function() {
         window.environment_editor_dirty = true;
+        // SYNC 2: persist the editor's sketch locally so it survives a page
+        // reload (restored on load instead of pulling from the board).
+        if (typeof window.save_sketch_draft === "function") {
+          clearTimeout(window._sketch_draft_timer);
+          window._sketch_draft_timer = setTimeout(function() {
+            window.save_sketch_draft(editor.getValue());
+          }, 400);
+        }
       });
       document.addEventListener("click", function() {
         if (typeof window.save_editor_if_dirty === "function") {
@@ -1185,10 +1165,15 @@
       if (typeof flush_pending_environment_editor_load === "function") {
         await flush_pending_environment_editor_load();
       }
-      // Apply deferred sketch content from start_amyboard() if editor wasn't ready then.
+      // Apply deferred sketch content (draft/default) from a restore that ran
+      // before the editor existed, then position the knobs once the grid is up.
       if (window._deferred_editor_content) {
         editor.setValue(window._deferred_editor_content);
         delete window._deferred_editor_content;
+        window.environment_editor_dirty = false;
+        if (typeof window.position_knobs_from_sketch_when_ready === "function") {
+          window.position_knobs_from_sketch_when_ready();
+        }
       }
     </script>
 
@@ -1284,7 +1269,8 @@
            (#952). Synchronous show/hide avoids the race. -->
       <div class="modal" id="syncingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
-          <div class="modal-content">
+          <div class="modal-content position-relative">
+            <button type="button" class="btn-close position-absolute top-0 end-0 m-2" style="z-index:10;" aria-label="Close" onclick="_hide_syncing_modal();"></button>
             <div class="modal-body text-center px-4 py-4">
               <!-- Spinner (shown while syncing) -->
               <div id="sync-modal-spinner">
@@ -1305,6 +1291,7 @@
                 <button type="button" class="btn btn-outline-primary btn-sm w-100" id="sync-modal-change-btn" onclick="sync_modal_change_ports();">Change MIDI Ports</button>
               </div>
               <!-- Pull from AMYboard (shown on fresh page load; user clicks to start the pull) -->
+              <p id="sync-modal-pull-warning" class="text-danger small fw-semibold mb-2 d-none">This will replace your sketch with the one on your AMYboard.</p>
               <button type="button" class="btn btn-success btn-lg w-100 d-none mb-3" id="sync-modal-pull-btn" onclick="start_pull_from_amyboard();">Pull from AMYboard</button>
               <!-- Try Again (shown on error) -->
               <button type="button" class="btn btn-primary btn-sm d-none mb-2" id="sync-modal-retry-btn" onclick="sync_modal_retry();">Try again</button>
@@ -1393,10 +1380,12 @@
                 <button class="nav-link" id="reset-tab" data-bs-toggle="tab" data-bs-target="#reset-pane" type="button" role="tab" aria-controls="reset-pane" aria-selected="false">Reset</button>
               </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="simulate-controls-li" role="presentation">
-                <button type="button" class="btn btn-danger btn-sm" id="simulate-save-btn" onclick="save_amy_state();">Write Sketch &amp; Knobs to Simulator</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="simulate-read-btn" onclick="read_sketch_from_amyboard();">Read from Simulator</button>
+                <button type="button" class="btn btn-primary btn-sm" id="simulate-save-btn" onclick="write_sketch_to_amyboard();">Write to Simulator</button>
               </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="amyboard-controls-li" role="presentation">
-                <button type="button" class="btn btn-danger btn-sm" id="save-state-btn" onclick="save_amy_state();"><span id="save-btn-label">Write Sketch &amp; Knobs to AMYboard</span></button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="read-state-btn" onclick="read_sketch_from_amyboard();">Read from your AMYboard</button>
+                <button type="button" class="btn btn-primary btn-sm" id="save-state-btn" onclick="write_sketch_to_amyboard();"><span id="save-btn-label">Write to your AMYboard</span></button>
               </li>
             </ul>
           </div>
@@ -2082,26 +2071,38 @@
               var isDX7Preset = patch >= 128;
               var presetSynth = Number(window.current_synth || 1);
               try {
+                // SYNC 2: clear this synth's lines in the knob log first, then
+                // record every preset wire command we send so the preset's full
+                // patch detail (including DX7, which the visible knobs can't
+                // represent) is captured in the sketch.
+                if (typeof reset_synth_in_sketch === "function") {
+                  reset_synth_in_sketch(presetSynth);
+                }
                 // Send AMY reset + wire commands for the preset patch.
                 if (typeof amy_send === "function") {
+                  var _patchMsg;
                   if (isDX7Preset) {
                     // Use K (patch_number) to load the DX7 preset — AMY applies all
                     // wire commands internally in one call, avoiding sysex races.
-                    amy_send({synth: presetSynth, num_voices: 6, patch: patch}, true);
+                    _patchMsg = amy_send({synth: presetSynth, num_voices: 6, patch: patch}, true);
                   } else {
-                    amy_send({synth: presetSynth, num_voices: 6, patch: 257}, true);
+                    _patchMsg = amy_send({synth: presetSynth, num_voices: 6, patch: 257}, true);
                   }
+                  if (typeof log_preset_message === "function") log_preset_message(presetSynth, _patchMsg);
                   // In control mode, skip reset_global_effects — it floods sysex with
                   // default knob values that race with the K command via sysex_message_copy.
                   if (amyboard_mode !== 'control' && typeof reset_global_effects === "function") { reset_global_effects(); }
                   if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
                     var presetWireCommands = get_wire_commands_for_juno_patch(patch);
                     for (var wi = 0; wi < presetWireCommands.length; wi++) {
-                      amy_add_log_message("i" + presetSynth + presetWireCommands[wi]);
+                      var _pcmd = "i" + presetSynth + presetWireCommands[wi];
+                      amy_add_log_message(_pcmd);
+                      if (typeof log_preset_message === "function") log_preset_message(presetSynth, _pcmd);
                     }
                   } else if (isDX7Preset) {
                     // Apply VCF coda so analog filter controls work with DX7
-                    amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
+                    var _codaMsg = amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
+                    if (typeof log_preset_message === "function") log_preset_message(presetSynth, _codaMsg);
                   }
                   // Mark disabled panes before sending CC mappings so disabled-section
                   // knobs don't blast initial ic updates to AMY for DX7 presets.
@@ -2143,18 +2144,13 @@
           if (loadJunoPresetButton && junoPresetsSelect) {
             loadJunoPresetButton.addEventListener("click", function() {
               handlePresetLoad(junoPresetsSelect);
-              // In control mode, do a full Pull to update both knobs and code editor.
-              if (amyboard_mode === 'control' && typeof sync_amy_state === 'function') {
-                setTimeout(sync_amy_state, 500);
-              }
+              // SYNC 2: no pull after a preset — the preset's wire commands are
+              // already recorded in the knob log (and sent live to the board).
             });
           }
           if (loadDx7PresetButton && dx7PresetsSelect) {
             loadDx7PresetButton.addEventListener("click", function() {
               handlePresetLoad(dx7PresetsSelect);
-              if (amyboard_mode === 'control' && typeof sync_amy_state === 'function') {
-                setTimeout(sync_amy_state, 500);
-              }
             });
           }
         }

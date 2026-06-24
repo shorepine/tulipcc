@@ -383,15 +383,20 @@ def _extract_knobs_from_file(filepath):
             return ''
 
 def _apply_knobs_text(knobs_text):
-    """Send each line of knobs text to AMY."""
+    """Reset AMY to a known default, then apply the sketch's knob lines on top.
+
+    The sketch is the single source of truth, so every restart starts from a
+    clean slate: S<RESET_SYNTHS> clears all synths and MIDI CC maps, and
+    i1K257iv6 installs the amyboard default synth on channel 1 (which also
+    reinstalls the default CC map so a plugged-in MIDI controller works out of
+    the box before the website pushes anything). The _auto_generated_knobs lines
+    are then applied on top, and may override channel 1, configure other
+    channels, or deactivate a channel with iv0. We never grab or merge live AMY
+    state here — what the sketch says is exactly what the board becomes.
+    """
+    amy.send_raw("S%dZ" % amy.RESET_SYNTHS)
+    amy.send_raw("i1K257iv6Z")
     if not knobs_text:
-        # First run / factory reset: clear any previously configured synths
-        # (drums on ch10, etc.) and set up channel 1 with the amyboard default
-        # patch. S<RESET_SYNTHS> already clears all MIDI CC maps, and loading
-        # K257 reinstalls the default CC map on channel 1, so a plugged-in MIDI
-        # controller works out of the box before the website pushes anything.
-        amy.send_raw("S%dZ" % amy.RESET_SYNTHS)
-        amy.send_raw("i1K257iv6Z")
         return
     for line in knobs_text.strip().split('\n'):
         line = line.strip()

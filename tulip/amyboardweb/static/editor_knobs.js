@@ -30,6 +30,14 @@ function send_change_code(synth, value, knob) {
   if (code && typeof window.amy_add_message === "function") {
     window.amy_add_log_message(code);
   }
+  // SYNC 2: record this UI-originated knob change in the knob log — the single
+  // source of truth for the sketch's _auto_generated_knobs block. Record-only
+  // (the live send is above). Every caller already gates this function behind
+  // suppress_knob_cc_send, so a silent state-application (loading a sketch or a
+  // dump into the UI) neither sends to AMY nor records here.
+  if (code && typeof window.record_knob_value === "function") {
+    window.record_knob_value(synth, value, knob);
+  }
 }
 
 function set_knob_ui_value(knob, value, notifyAmy) {
