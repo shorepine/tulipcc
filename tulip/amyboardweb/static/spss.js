@@ -520,35 +520,62 @@ function get_wire_commands_for_juno_patch(patch) {
   return wire_commands;
 }
 
+// Canonical JS bridge for AMY's get_synth_commands. The C convenience wrapper
+// exists for CPython (amy/src/pyamy.c) and for MicroPython as
+// tulip.amy_get_synth_commands (modtulip.c) -- but the MicroPython one is compiled
+// out on web (#ifndef __EMSCRIPTEN__) because here micropython does not link AMY;
+// AMY runs in a separate WASM worklet. So we bridge it from JS instead, driving
+// AMY's exported low-level generator yield_synth_commands. Reads back the wirecode
+// commands that reconstruct synth `synth` (1..16) from AMY's current state and
+// returns them as an array of strings (empty if the synth has no state).
+// include_fx (default true) also emits the global FX commands. Throws if AMY's
+// WASM module is not loaded or `synth` is out of range.
+function get_synth_commands(synth, include_fx = true) {
+  const s = Number(synth);
+  if (!Number.isInteger(s) || s < 1 || s > 16) {
+    throw new Error("get_synth_commands: synth must be an integer 1..16.");
+  }
+  if (!amy_module || typeof amy_yield_synth_commands !== "function") {
+    throw new Error("get_synth_commands: AMY WASM module is not loaded.");
+  }
+  const maxMessageLen = 1024;
+  const bufferPtr = amy_module._malloc(maxMessageLen);
+  if (!bufferPtr) {
+    throw new Error("get_synth_commands: failed to allocate AMY message buffer.");
+  }
+  const lines = [];
+  let state = 0;
+  let iterations = 0;
+  const MAX_ITERATIONS = 500;
+  try {
+    do {
+      state = amy_yield_synth_commands(s, bufferPtr, maxMessageLen, !!include_fx, state);
+      const wire = read_c_string_from_heap(bufferPtr, maxMessageLen).trim();
+      if (wire) {
+        lines.push(wire);
+      }
+      if (++iterations >= MAX_ITERATIONS) {
+        console.error("get_synth_commands: bailed after " + MAX_ITERATIONS + " iterations (state=" + state + ")");
+        break;
+      }
+    } while (state != 0);
+  } finally {
+    amy_module._free(bufferPtr);
+  }
+  return lines;
+}
+// spss.js is loaded as a plain <script>, so this is already a global, but be
+// explicit that it is the intended JS entry point for reading synth commands.
+globalThis.get_synth_commands = get_synth_commands;
+
+// Editor helper: get_synth_commands for a UI channel (1..16), but treats an empty
+// result as an error (a configured channel always yields at least one command).
 function get_wire_commands_for_channel(channel) {
   const synth = normalize_synth_channel(channel);
   if (!synth) {
     throw new Error("Invalid channel.");
   }
-  if (!amy_module || typeof amy_yield_synth_commands !== "function") {
-    throw new Error("AMY patch command generator is unavailable.");
-  }
-  const maxMessageLen = 1024;
-  const bufferPtr = amy_module._malloc(maxMessageLen);
-  if (!bufferPtr) {
-    throw new Error("Failed to allocate AMY message buffer.");
-  }
-  const lines = [];
-  let state = 0;
-  const MAX_ITERATIONS = 500;
-  let iterations = 0;
-  do {
-    state = amy_yield_synth_commands(synth, bufferPtr, maxMessageLen, true, state);
-    const wire = read_c_string_from_heap(bufferPtr, maxMessageLen).trim();
-    if (wire) {
-      lines.push(wire);
-    }
-    if (++iterations >= MAX_ITERATIONS) {
-      console.error("get_wire_commands_for_channel: bailed after " + MAX_ITERATIONS + " iterations (state=" + state + ")");
-      break;
-    }
-  } while (state != 0);
-  amy_module._free(bufferPtr);
+  const lines = get_synth_commands(synth, true);
   if (!lines.length) {
     throw new Error("No synth commands were generated for this channel.");
   }
