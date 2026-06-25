@@ -99,12 +99,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Flatten firmware into stage/firmware/
+        id: flat
         if: steps.fw.outputs.run_id != ''
         run: |
           cd tulip/web/stage/firmware
           # ensure the .bin files sit at the root of /firmware/ (not nested)
           find . -mindepth 2 -name '*.bin' -exec mv -f {} . \; 2>/dev/null || true
           echo "bundled firmware:"; ls -la
+          # expose the bundled .bin filenames so the PR comment can link each one
+          echo "bins=$(ls *.bin 2>/dev/null | paste -sd, -)" >> "$GITHUB_OUTPUT"
 
       - name: Deploy preview + per-PR alias
         id: deploy
@@ -127,6 +130,7 @@ jobs:
         env:
           PREVIEW_URL: ${{ steps.deploy.outputs.url }}
           HAS_FW: ${{ steps.fw.outputs.run_id != '' }}
+          FW_BINS: ${{ steps.flat.outputs.bins }}
         with:
           script: |
             const url = process.env.PREVIEW_URL;
@@ -139,7 +143,17 @@ jobs:
               `**Tulip Web:** ${url}/run/`,
             ];
             if (process.env.HAS_FW === 'true') {
-              lines.push('', `**Flash a Tulip to this build:** on-device run \`tulip.upgrade(pr=${pr})\`.`);
+              // Direct links to each firmware file bundled at /firmware/, ordered
+              // full -> app -> sys so the full image (USB-flash at 0x0, no Wi-Fi
+              // needed) is first. The per-file note says which to use.
+              const rank = (b) => b.includes('full') ? 0 : b.includes('sys') ? 2 : 1;
+              const note = (b) => b.includes('full') ? 'full image, USB-flash at `0x0` with esptool (no Wi‑Fi needed)'
+                                : b.includes('sys')  ? 'filesystem/system partition'
+                                : 'app image (OTA partition)';
+              const bins = (process.env.FW_BINS || '').split(',').filter(Boolean).sort((a, b) => rank(a) - rank(b));
+              lines.push('', '**Firmware (this PR build):**');
+              for (const b of bins) lines.push(`- [\`${b}\`](${url}/firmware/${b}) — ${note(b)}`);
+              lines.push('', `On-device OTA: \`tulip.upgrade(pr=${pr})\` (needs Wi‑Fi).`);
             }
             lines.push('', "Rebuilt on every push; removed when the PR closes.");
             const body = lines.join('\n');
