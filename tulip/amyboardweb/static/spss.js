@@ -3595,7 +3595,7 @@ async function refresh_amyboard_world_files() {
 
     try {
         var params = new URLSearchParams();
-        params.set("limit", "100");
+        params.set("limit", "200");  // headroom so we still have ~100 after filtering
         params.set("latest_per_user_env", "true");
         params.set("item_type", "environment");
         var q = get_world_search_query();
@@ -3625,7 +3625,7 @@ async function refresh_amyboard_world_files() {
             .sort(function(a, b) {
                 return Number(b.time || 0) - Number(a.time || 0);
             })
-            .slice(0, 30);
+            .slice(0, 100);
         render_amyboard_world_file_list();
     } catch (e) {
         amyboard_world_files = [];
