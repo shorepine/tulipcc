@@ -327,3 +327,27 @@ amy.send(synth=1, osc=3, wave=amy.PULSE,
          duty={'const': 0.72, 'mod': 0.1},
          mod_source=1)
 ```
+
+## MicroPython lacks some Python functions
+
+The script environment is MicroPython which attempts to match regular Python but does not 
+include all the standard library functions.  One place this comes up is in the use of 
+`random` functions: MicroPython lacks `random.shuffle`; instead, you could do this:
+```python
+import random
+
+def rand_perm(n):
+    """Random permutation of numbers 0..n-1"""
+    values = list(range(n))
+    result = []
+    for _ in range(n):
+        index = random.randrange(len(values))
+        result.append(values[index])
+        del values[index]
+    return result
+
+def shuffle(input):
+    return [input[i] for i in rand_perm(len(input))]
+
+l = shuffle(['A', 'B', 'C', 'D'])  # l gets the list items in shuffled order.
+```
