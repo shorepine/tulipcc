@@ -262,6 +262,22 @@ amy.send(osc=0, note=60, vel=0, sequence="24,48,2")   # note off at tick 24 of e
 
 `amy.AMY_MIDI` always sends on MIDI channel 1, and notes that arrived over MIDI in are not echoed back out. See the [AMY MIDI docs](https://github.com/shorepine/amy/blob/main/docs/midi.md#sending-midi-out) for the full details.
 
+#### MIDI out TRS type (A vs B)
+
+The MIDI out jack is a 3.5mm TRS connector, and there are two incompatible wiring standards for these: **Type A** (the official MIDI-spec standard, used by most modern gear) and **Type B** (older, used by some early Arturia/Novation/Akai devices). They swap the TRS tip and ring, so if your external device isn't receiving MIDI, it likely expects the other type. AMYboard defaults to **Type A**; only MIDI out is affected — MIDI in works with either type.
+
+Switch it at runtime with `amyboard.set_midi_type()` (no reboot needed; AMY keeps running):
+
+```python
+import amyboard
+
+amyboard.set_midi_type('B')   # switch MIDI out to Type B
+amyboard.set_midi_type('A')   # back to Type A (the default)
+amyboard.midi_type()          # -> 'A' or 'B', whichever is currently active
+```
+
+This is not persisted across reboots — AMYboard always comes up as Type A.
+
 ### Syncing to MIDI clock
 
 AMYboard's sequencer runs on its own internal clock by default. You can instead **follow** an external MIDI clock — slaving AMYboard to a DAW or drum machine — or **send** MIDI clock out to drive other gear from AMYboard.
