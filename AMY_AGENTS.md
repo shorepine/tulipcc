@@ -209,14 +209,14 @@ No `note`/`vel`/`freq`, no `midi.add_callback` — the synth sounds from incomin
 
 ---
 
-## Multiple *audible* oscs per voice: note-ons are sent to all available oscs, but mind the velocity-multiplied `amp`
+## Multiple *audible* oscs per voice: note-ons are sent to all available oscs
 
 When a voice has more than one **audible** osc (e.g. two detuned saws for a fat or
 phasing pad), a single synth note-on — MIDI, or `amy.send(synth=N, note=…, vel=…)` —
 is sent to **each separate osc in the voice** (excluding oscs that are controlled by 
 other means, e.g. by being the `mod_osc` for another osc, or being part of a `chained_osc` chain). 
 
-(This used to be different, so you will see examples that make extra effort to send note-ons
+(We changed this behavior in May 2026, so you may see examples that make extra effort to send note-ons
 to each individual osc in a voice, but this is no longer necessary).
 
 ### Example — "a phasing saw voice" (two detuned saws per voice + a pitch-drift LFO)
@@ -283,7 +283,8 @@ To allow a single filter and envelope to be applied to the sum of multiple oscil
 analog synth), the `chained_osc` mechanism accumulates the waveforms for mulitple oscs in a chain. Then 
 if the first osc in the chain has `wave=amy.SILENT`, it is a special osc that does not contribute any 
 waveform of its own, but instead applies its VCF and envelope to the accumulated waveform from the subsequent
-chained oscs.  In addition, `vel` and `note` parameters sent to the osc at the head of the chain propagate 
+chained oscs.  The entire chain inherits the `pan` of the osc at the head; `pan` values in subsequent `chained_osc`s 
+are ignored.  In addition, `vel` and `note` parameters sent to the osc at the head of the chain propagate 
 down the chain, so all oscs receive the same note-ons.
 
 ### Example - classic analog 2-osc synth voice
