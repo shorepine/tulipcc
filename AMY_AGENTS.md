@@ -209,29 +209,15 @@ No `note`/`vel`/`freq`, no `midi.add_callback` — the synth sounds from incomin
 
 ---
 
-## Multiple *audible* oscs per voice: a note-on reaches only osc 0 — chain the rest (or trigger each), and mind the velocity-multiplied `amp`
+## Multiple *audible* oscs per voice: note-ons are sent to all available oscs, but mind the velocity-multiplied `amp`
 
 When a voice has more than one **audible** osc (e.g. two detuned saws for a fat or
 phasing pad), a single synth note-on — MIDI, or `amy.send(synth=N, note=…, vel=…)` —
-lands on **only the base osc (osc 0)**. The other audible oscs stay **silent** until
-they get their own note-on. (A `mod_source`/LFO osc is the exception: it's silent by
-design and needs no note-on — see the LFO section.) Drive every audible osc from one
-note in one of two ways:
+is sent to **each separate osc in the voice** (excluding oscs that are controlled by 
+other means, e.g. by being the `mod_osc` for another osc, or being part of a `chained_osc` chain). 
 
-- **Prefer `chained_osc`:** set `chained_osc=1` on osc 0 so its note/velocity
-  propagate to osc 1 (chain on, `chained_osc=2` on osc 1, etc.). Each osc keeps its own
-  `wave`/`freq`/`pan`; the chain shares one filter. Once chained, the **default `amp`
-  just works** — don't override it.
-- **`midi_note_cmd`** when you want each osc triggered *independently* (e.g. hard-panned
-  L/R layers): give the synth a note handler that fires a note-on at every osc.
-  Substitutions: `%i`=channel, `%v`=velocity, `%n`=note. Wire codes: `i`=synth, `v`=osc,
-  `l`=vel, `n`=note; `Z` separates phrases. So
-  `'i%iv0l%vn%nZi%iv1l%vn%n'` = "on each note, note-on osc 0 **and** osc 1."
-
-Why silence happens: the default `amp='0,0,1,1,0,0,0'` is amplitude = `vel × eg0` — amp
-coefficients **multiply**, so an osc that never receives a note-on velocity computes
-`amp = 0`. If an osc genuinely won't get a note-on, give `amp` a non-zero **const**
-(the 1st coefficient) instead, `amp='1,0,1,1,0,0,0'`, so it sounds from its envelope.
+(This used to be different, so you will see examples that make extra effort to send note-ons
+to each individual osc in a voice, but this is no longer necessary).
 
 ### Example — "a phasing saw voice" (two detuned saws per voice + a pitch-drift LFO)
 
@@ -239,8 +225,8 @@ coefficients **multiply**, so an osc that never receives a note-on velocity comp
 import amy
 # 5-voice synth, 3 oscs/voice: osc0 + osc1 = detuned saws, osc2 = silent pitch-drift LFO
 amy.send(synth=1, num_voices=5, oscs_per_voice=3)
-# osc 0: saw A, left.  chain to osc 1 so ONE note-on triggers both audible oscs.
-amy.send(synth=1, osc=0, wave=amy.SAW_DOWN, pan=0.2, chained_osc=1)
+# osc 0: saw A, left. 
+amy.send(synth=1, osc=0, wave=amy.SAW_DOWN, pan=0.2)
 # osc 1: saw B, right, ~8 cents sharp; osc2 LFO drifts its pitch -> phasing
 amy.send(synth=1, osc=1, wave=amy.SAW_DOWN, pan=0.8,
          freq='442,1,0,0,0,0.01,1', mod_source=2)
@@ -251,15 +237,11 @@ def loop():
     pass
 ```
 
-Both saws sound on every note (they're chained, so the default `amp` works). To trigger
-them independently instead, drop `chained_osc=1` and add
-`amy.send(synth=1, midi_note_cmd='i%iv0l%vn%nZi%iv1l%vn%n')`.
+Both saws sound on every note.
 
 > Source of truth: `chained_osc` note/velocity propagation in `amy/docs/juno_patches.md`
 > and `amy/docs/api.md` (`c`); "Oscillators will not become audible until a `velocity`
-> over 0 is set" plus synth→base-osc routing in `amy/docs/synth.md`; `amp` default/multiply
-> and `midi_note_cmd` (`io`) with wire codes `i`/`v`/`l`/`n` in `amy/docs/api.md`.
-
+> greater than 0 is set".
 ---
 
 ## Audio pass-through: a synth >16 with two `AUDIO_IN0`/`AUDIO_IN1` oscs at `amp=10`
@@ -272,7 +254,7 @@ bare `amy.AUDIO_IN` (no such constant), a single mono osc, the default synth, or
 Why each piece:
 - **`synth=18` (any 17–31):** synths 1–16 are bound to MIDI channels; 17+ are free for sketch-owned synths.
 - **`AUDIO_IN0` (left) + `AUDIO_IN1` (right):** audio-in is stereo — one osc per channel; there is no mono `AUDIO_IN`.
-- **two separate oscs, not chained:** send every per-osc setting (`wave`, `amp`, `pan`, `vel`, `note`) to *each* osc.
+- **two separate oscs:** send every per-osc setting (`wave`, `amp`, `pan`, `vel`, `note`) to *each* osc.
 - **`amp=10` per osc:** AMY's default volume attenuates ~−20 dB for synth headroom; `amp=10` restores unity (so `amp=0.9` is nearly silent).
 - **`vel=1, note=<any>`:** turns the osc on; the note number is required but ignored for `AUDIO_IN`.
 
@@ -283,8 +265,7 @@ import amy
 amy.send(synth=18, num_voices=1, oscs_per_voice=2)
 amy.send(synth=18, osc=0, wave=amy.AUDIO_IN0, pan=0, amp=10)   # left
 amy.send(synth=18, osc=1, wave=amy.AUDIO_IN1, pan=1, amp=10)   # right
-amy.send(synth=18, osc=0, vel=1, note=60)   # note number required but ignored
-amy.send(synth=18, osc=1, vel=1, note=60)
+amy.send(synth=18, vel=1, note=60)          # note-on sent to both active oscs. note number required but ignored
 amy.send(reverb="0.8,0.85,0.5")             # global: level, liveness, damping[, xover_hz]
 
 def loop():
@@ -295,3 +276,53 @@ Global effects (`reverb`, `chorus`, `echo`) then process the passed-through audi
 
 > Source of truth: `tulip/amyboardweb/sketches/audiopassthru.py`; wave types and the
 > reverb (`h`) fields are in `amy/docs/api.md`.
+
+## `chained_osc` and `wave=amy.SILENT`
+
+To allow a single filter and envelope to be applied to the sum of multiple oscillators (as with a classic
+analog synth), the `chained_osc` mechanism accumulates the waveforms for mulitple oscs in a chain. Then 
+if the first osc in the chain has `wave=amy.SILENT`, it is a special osc that does not contribute any 
+waveform of its own, but instead applies its VCF and envelope to the accumulated waveform from the subsequent
+chained oscs.  In addition, `vel` and `note` parameters sent to the osc at the head of the chain propagate 
+down the chain, so all oscs receive the same note-ons.
+
+### Example - classic analog 2-osc synth voice
+
+Below is equivalebt to the  AMYboard Web Editor UI default voice (built-in patch 257).  Where appropriate,
+following this exact allocation of oscs will allow user-defined patches to be controlled by the Editor UI.
+Specifically, osc 0 is the `SILENT` osc, receiving VCF and envelope controls; osc 1 is the LFO `mod_osc`, 
+oscs 2 and 3 are the "sounding" oscs that are chained to osc 0 (and thus experience its VCF and envelope).
+
+```python
+import amy
+amy.send(synth=1, num_voices=6, oscs_per_voice=4)
+
+# Osc 1 is the LFO.  The attack envelope causes fade-in.
+amy.send(synth=1, osc=1, wave=amy.TRIANGLE, freq=0.609)
+amy.send(synth=1, osc=1, bp1='148,1.0,10000,0')
+
+# Osc 0 is the "control" osc applying filter and envelope to the sounding oscs (2 and 3).
+amy.send(synth=1, osc=0, wave=amy.SILENT, chained_osc=2,
+         mod_source=1, filter_type=amy.FILTER_LPF24)
+# Overall note envelope.
+amy.send(synth=1, osc=0,
+         amp={'const': 0.591, 'vel': 1, 'eg0': 1},
+         bp0='518,1,83561,0.299,310,0')
+# Filter setup, including envelope shaping with bp1.
+amy.send(synth=1, osc=0,
+         filter_freq={'const': 300.23, 'eg1': 1.8},
+         resonance=1.015,
+         bp1='2252,1,1000,0.5,500,0')
+# OSCA A (osc 2) is a SAW_UP (sawtooth) wave -- the main harmonic source for this patch.
+# It also extends the `chained_osc` chain to include osc 3.
+amy.send(synth=1, osc=2, wave=amy.SAW_UP,
+         amp={'const': 1, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod': 0},
+         freq={'const': 440, 'note': 1, 'mod': 0, 'bend': 1},
+         mod_source=1, chained_osc=3)
+# OSC B (osc 3) is a PULSE (square/PWM) wave tuned one octave below OSC B
+amy.send(synth=1, osc=3, wave=amy.PULSE,
+         amp={'const': 0.5, 'note': 0, 'vel': 0, 'eg0': 0, 'eg1': 0, 'mod': 0},
+         freq={'const': 220, 'note': 1, 'mod': 0, 'bend': 1},
+         duty={'const': 0.72, 'mod': 0.1},
+         mod_source=1)
+```
