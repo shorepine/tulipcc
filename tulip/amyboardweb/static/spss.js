@@ -1638,6 +1638,23 @@ function _process_complete_sysex(d) {
         if (_sysex_ack_resolve) { var r = _sysex_ack_resolve; _sysex_ack_resolve = null; r(); }
         return;
     }
+    // Sketch error report from the device: F0 00 03 45 'X' <base64 error text> F7.
+    // Sent by amyboard.run_sketch() when a sketch fails to load (control mode —
+    // simulate catches it off the JS console). Surface it: error modal + Code-tab
+    // badge. An empty payload clears the indicator.
+    if (d[4] === 0x58 /* 'X' */) {
+        var errB64 = '';
+        for (var xi = 5; xi < d.length - 1; xi++) errB64 += String.fromCharCode(d[xi]);
+        var errText = '';
+        if (errB64) { try { errText = decodeURIComponent(escape(atob(errB64))); } catch (e) { errText = errB64; } }
+        if (errText && errText.trim().length) {
+            show_python_error('Your sketch could not run on the AMYboard:\n\n' + errText.trim()
+                + '\n\nThe board reverted to the default sketch.');
+        } else if (typeof clear_python_error === 'function') {
+            clear_python_error();
+        }
+        return;
+    }
     // Chunk marker at position 4.
     var marker = d[4];
     var payloadStart, isChunked, isEnd;
@@ -2182,7 +2199,32 @@ async function sleep_ms(ms) {
 }
 
 
+var _last_python_error = "";
+
+function _set_code_tab_error_badge(show) {
+    var badge = document.getElementById("code-tab-error-badge");
+    if (badge) badge.classList.toggle("d-none", !show);
+}
+
+// Clear the sketch-error indicator (the Code-tab badge + the error modal).
+// Called at the start of every Write so each attempt starts clean; the device
+// (control) or the console interceptor (simulate) re-raises it if the new sketch
+// fails to load.
+function clear_python_error() {
+    _last_python_error = "";
+    window._last_python_error = "";
+    _set_code_tab_error_badge(false);
+    var existing = document.getElementById("python_error_modal");
+    if (existing) existing.remove();
+}
+window.clear_python_error = clear_python_error;
+
 function show_python_error(message) {
+    // Remember the error and flag the Code tab so it's visible from any tab
+    // (e.g. after downloading a broken sketch from AMYboard World).
+    _last_python_error = message;
+    window._last_python_error = message;
+    _set_code_tab_error_badge(true);
     var existing = document.getElementById("python_error_modal");
     if (existing) existing.remove();
     var overlay = document.createElement("div");
@@ -3617,36 +3659,23 @@ async function import_amyboard_world_file(index) {
         if (!response.ok) throw new Error("HTTP " + response.status.toString());
 
         var sketchText = await response.text();
-        if (amyboard_mode === 'control') {
-            // SYNC 2: load into the editor, rebuild the knob log + position the
-            // knobs from the block, then Write to the board (no reboot). The
-            // board becomes exactly this sketch.
-            if (editor) {
-                editor.setValue(sketchText);
-                setTimeout(function () { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
-            }
-            var envNameInput = document.getElementById("editor_filename");
-            if (envNameInput) envNameInput.value = packageName;
-            if (typeof set_knobs_from_sketch === 'function') set_knobs_from_sketch();
-            if (typeof write_sketch_to_amyboard === 'function') await write_sketch_to_amyboard();
-            if (typeof refresh_amyboard_world_files === 'function') {
-                try { await refresh_amyboard_world_files(); } catch (e) {}
-            }
-        } else {
-            // Simulate mode: write to local FS, then reload the page to
-            // the patch interface so the sketch starts fresh.
-            if (mp) {
-                ensure_current_environment_layout(false);
-                mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', sketchText);
-                sync_persistent_fs();
-            }
-            window.location.href = '/editor/?tab=patch';
-            return;
+        // SYNC 2: a download only LOADS the sketch into the editor — it does NOT
+        // write to the AMYboard (or the simulator). The user reviews it on the
+        // Code tab and clicks "Write to your AMYboard" when ready, so any sketch
+        // error surfaces only after an explicit write.
+        if (editor) {
+            editor.setValue(sketchText);
+            setTimeout(function () { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
         }
         var envNameInput = document.getElementById("editor_filename");
         if (envNameInput) envNameInput.value = packageName;
-
-        await refresh_amyboard_world_files();
+        if (typeof set_knobs_from_sketch === 'function') set_knobs_from_sketch();
+        // Move to the Code tab so the user can review the sketch and then Write.
+        var codeTabBtn = document.getElementById('environment-tab');
+        if (codeTabBtn && window.bootstrap) {
+            try { new window.bootstrap.Tab(codeTabBtn).show(); } catch (e) {}
+        }
+        try { await refresh_amyboard_world_files(); } catch (e) {}
     } catch (e) {
         show_alert("Failed to import remote sketch.");
     } finally {
@@ -3696,49 +3725,20 @@ async function load_world_environment_by_name(username, envName) {
         if (!dlResponse.ok) throw new Error("HTTP " + dlResponse.status.toString());
 
         var sketchText = await dlResponse.text();
-        if (amyboard_mode === 'control') {
-            // Control mode: reboot into bootloader (stops sketch, frees
-            // scheduler), send file via zT, then start the sketch.
-            _show_saving_modal();
-            var _loadWorldOpts = {
-                sketchText: sketchText,
-                packageName: packageName,
-                restart: false,
-                setEditor: true,
-                applyKnobs: true,
-                suppressKnobCc: false,
-            };
-            if (_IS_WINDOWS_CHROME) {
-                // Reload across the USB reboot — never returns.
-                await _zb_then_reload_with_upload_context(_loadWorldOpts);
-                return;
-            }
-            reboot_to_bootloader();
-            console.log('load_world: zB sent, waiting for board...');
-            await wait_for_board_ready();
-            await _upload_sketch_post_bootloader(_loadWorldOpts);
-        } else {
-            // Simulate mode: write to local FS and restart.
-            if (editor) editor.setValue(sketchText);
-            if (mp) {
-                ensure_current_environment_layout(false);
-                mp.FS.writeFile(CURRENT_ENV_DIR + '/sketch.py', sketchText);
-                var knobs = extract_knobs_from_sketch(sketchText);
-                if (knobs) {
-                    var lines = knobs.split(/\r?\n/);
-                    for (var j = 0; j < lines.length; j++) {
-                        var line = lines[j].trim();
-                        if (line && !line.startsWith('#')) amy_add_log_message(line);
-                    }
-                    await sync_channel_knobs_from_synth_to_ui(window.current_synth);
-                }
-                try {
-                    await mp.runPythonAsync("import amyboard; amyboard.restart_sketch()");
-                } catch (e) {}
-            }
+        // SYNC 2: a shared-link load only LOADS the sketch into the editor — it
+        // does not write to the AMYboard (or simulator). The user reviews it on
+        // the Code tab and clicks "Write to your AMYboard" when ready.
+        if (editor) {
+            editor.setValue(sketchText);
+            setTimeout(function () { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
         }
         var envNameInput = document.getElementById("editor_filename");
         if (envNameInput) envNameInput.value = packageName;
+        if (typeof set_knobs_from_sketch === 'function') set_knobs_from_sketch();
+        var codeTabBtn = document.getElementById('environment-tab');
+        if (codeTabBtn && window.bootstrap) {
+            try { new window.bootstrap.Tab(codeTabBtn).show(); } catch (e) {}
+        }
     } catch (e) {
         show_alert("Failed to load sketch '" + envName + "' by " + username + ".");
     }
@@ -4364,6 +4364,9 @@ async function _send_text_file_to_amyboard(path, text) {
 // editor. Live MIDI/CV tweaks and sketch-code effects are deliberately NOT saved.
 async function write_sketch_to_amyboard() {
     if (!editor) return;
+    // Clear any prior sketch-error indicator — this Write is a fresh attempt; it's
+    // re-raised (banner + Code-tab badge) if the new sketch fails to load.
+    if (typeof clear_python_error === 'function') clear_python_error();
     var sketchText = splice_knobs_into_sketch(editor.getValue(), serialize_knob_log());
     editor.setValue(sketchText);
     if (amyboard_mode === 'control') {

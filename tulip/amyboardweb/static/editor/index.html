@@ -1368,7 +1368,7 @@
                 <button class="nav-link active" id="patch-tab" data-bs-toggle="tab" data-bs-target="#patch-pane" type="button" role="tab" aria-controls="patch-pane" aria-selected="true">Patch</button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Code</button>
+                <button class="nav-link" id="environment-tab" data-bs-toggle="tab" data-bs-target="#environment-pane" type="button" role="tab" aria-controls="environment-pane" aria-selected="false">Code <span id="code-tab-error-badge" class="d-none" title="Your sketch has an error — click to view" style="color:#ff4444;font-weight:700;cursor:pointer;" onclick="if(window._last_python_error){ show_python_error(window._last_python_error); }">(!)</span></button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#world-pane" type="button" role="tab" aria-controls="world-pane" aria-selected="false">AMYboard World</button>
@@ -1690,7 +1690,7 @@
     </div>
 
     <div class="modal fade" id="confirmEnvironmentActionModal" tabindex="-1" aria-labelledby="confirmEnvironmentActionModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-sm">
+      <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content">
           <div class="modal-header">
             <h5 class="modal-title" id="confirm_environment_action_title">Confirm</h5>

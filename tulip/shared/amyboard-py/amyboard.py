@@ -482,6 +482,21 @@ def start_amy():
 
 _sketch_seq = None  # Keep reference to prevent GC
 
+def _report_sketch_error(detail):
+    """Push a sketch load error back to the web editor over sysex, framed as
+    F0 00 03 45 'X' <base64 text> F7, so the UI can surface the failure (banner +
+    a red marker on the Code tab) instead of it only appearing on the serial
+    console. Best-effort and self-contained: a reporting failure must never mask
+    the original error or break the self-heal. In simulate the web already catches
+    the error off the JS console, so this matters mainly for control mode (where
+    stderr goes to the serial port, not the browser)."""
+    try:
+        import binascii
+        payload = binascii.b2a_base64(str(detail).encode('utf-8')).rstrip()
+        tulip.midi_out(bytes([0xF0, 0x00, 0x03, 0x45, 0x58]) + payload + bytes([0xF7]))
+    except Exception:
+        pass
+
 def run_sketch():
     """Apply knobs from sketch.py, then import it (top-level code runs), start loop()."""
     _env_dir = _ensure_current_env_layout()
@@ -508,6 +523,7 @@ def run_sketch():
         # Route through stderr_write so the web console sees it alongside the
         # other diagnostics (stdout may not be wired up in some hosts).
         tulip.stderr_write("sketch.py load failed: %s: %s" % (type(e).__name__, e))
+        _report_sketch_error("%s: %s" % (type(e).__name__, e))
         try:
             sys.print_exception(e)
         except Exception:
@@ -525,6 +541,7 @@ def run_sketch():
             import sketch
         except Exception as e2:
             tulip.stderr_write("default sketch.py load also failed: %s: %s" % (type(e2).__name__, e2))
+            _report_sketch_error("%s: %s" % (type(e2).__name__, e2))
             try:
                 sys.print_exception(e2)
             except Exception:
