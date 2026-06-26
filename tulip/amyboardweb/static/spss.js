@@ -2819,7 +2819,7 @@ function get_world_tag_query() {
 }
 
 function randomize_world_tag_palette() {
-    var tags = ["featured", "official"];
+    var tags = ["featured", "official", "generated"];
     var classes = [
         "bg-primary",
         "bg-success",
@@ -2847,7 +2847,7 @@ function render_world_tag_pills() {
     if (!Object.keys(amyboard_world_tag_palette).length) {
         randomize_world_tag_palette();
     }
-    var tags = ["featured", "official"];
+    var tags = ["featured", "official", "generated"];
     var html = "";
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
@@ -3603,7 +3603,11 @@ async function refresh_amyboard_world_files() {
         if (q.length) {
             params.set("q", q);
         }
-        if (tag.length) {
+        if (tag === "generated") {
+            // #generated isn't a real tag — it's a shortcut for every sketch by
+            // the `generator` user, so filter by username instead of tag.
+            params.set("username", "generator");
+        } else if (tag.length) {
             params.set("tag", tag);
         }
         var newApiResponse = await fetch(world_api_url("/api/amyboardworld/files?" + params.toString()));
