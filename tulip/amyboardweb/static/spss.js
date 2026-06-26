@@ -166,8 +166,10 @@ window.suppress_knob_cc_send = false;
 // the lines on top of a freshly reset default synth-1 (see amyboard.py
 // _apply_knobs_text), so the sketch alone fully determines the sound.
 //
-//   - Knob moves/settings collapse last-value-wins, keyed by the knob identity
-//     (channel + section + name), so wiggling a knob never grows the block.
+//   - Knob moves/settings collapse last-value-wins, keyed by the message's
+//     STRUCTURAL key (i<synth>/v<osc> kept literal, other values normalized), so
+//     wiggling a knob never grows the block — and a line loaded from a sketch
+//     keys the same way, so a later move collapses onto it instead of duplicating.
 //   - Setup/preset lines are per-synth; reset_synth_in_sketch() clears a synth's
 //     lines before a (re)activate / Clear / preset load rebuilds them, so they
 //     never accumulate across loads.
@@ -189,6 +191,33 @@ function _knob_log_ensure_z(line) {
   return line.charAt(line.length - 1) === 'Z' ? line : line + 'Z';
 }
 
+// Structural key for a wire message: keep the i<synth> and v<osc> selectors
+// literal (they identify the channel/oscillator) and normalize every other numeric
+// value to '#', preserving comma positions. So the same parameter slot collapses
+// regardless of its value — and a line loaded from a sketch keys the SAME way a
+// live knob move does, so they never duplicate (the i1v0F-written-twice bug).
+function _knob_log_struct_key(message) {
+  var s = String(message == null ? '' : message);
+  var out = '';
+  var i = 0;
+  while (i < s.length) {
+    var c = s.charAt(i);
+    if ((c === 'i' || c === 'v') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
+      // i<synth> / v<osc> selector — keep the letter and its digits literally.
+      out += c; i++;
+      while (i < s.length && s.charCodeAt(i) >= 48 && s.charCodeAt(i) <= 57) { out += s.charAt(i); i++; }
+    } else if ((c >= '0' && c <= '9') ||
+               ((c === '-' || c === '.') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57)) {
+      // value number — collapse the whole run to a single '#'.
+      out += '#';
+      while (i < s.length && ((s.charAt(i) >= '0' && s.charAt(i) <= '9') || s.charAt(i) === '.' || s.charAt(i) === '-')) i++;
+    } else {
+      out += c; i++;
+    }
+  }
+  return out;
+}
+
 // Serialize the log to the block body: one Z-terminated wire line per entry.
 function serialize_knob_log() {
   var out = [];
@@ -206,7 +235,9 @@ window.serialize_knob_log = serialize_knob_log;
 function send_amy_message_in_sketch(message, opts) {
   opts = opts || {};
   var msg = String(message == null ? '' : message);
-  var key = opts.key;
+  // Default to the message's structural key so the same parameter slot always
+  // collapses (live moves AND lines loaded from a sketch land on one key).
+  var key = (opts.key !== undefined) ? opts.key : _knob_log_struct_key(msg);
   var synth = (opts.synth !== undefined) ? opts.synth : _knob_log_parse_synth(msg);
   if (opts.remove) {
     if (key !== undefined) window.knob_log.delete(key);
@@ -240,26 +271,30 @@ function record_knob_value(synth, value, knob) {
   var code = window.make_change_code(synth, value, knob);
   if (!code) return;
   var isGlobal = typeof knob.change_code === 'string' && knob.change_code.indexOf('i%i') < 0;
-  send_amy_message_in_sketch(code, {
-    key: knob_log_key_for_knob(synth, knob),
-    synth: isGlobal ? null : synth,
-    silent: true,
-  });
+  // No explicit key: send_amy_message_in_sketch keys by the message's structural
+  // key, which collapses repeat moves AND matches a line loaded from a sketch.
+  send_amy_message_in_sketch(code, { synth: isGlobal ? null : synth, silent: true });
 }
 window.record_knob_value = record_knob_value;
 
 // Log (and optionally remove) a knob's MIDI CC mapping line: i<synth>c<ccVal>.
 function log_knob_cc(synth, knob, ccVal) {
-  if (!knob) return;
-  var key = 'cc' + _KNOB_LOG_SEP + synth + _KNOB_LOG_SEP
-          + (knob.section || '') + _KNOB_LOG_SEP + (knob.display_name || '');
+  if (!knob || typeof knob.change_code !== 'string') return;
   if (!ccVal) {
-    send_amy_message_in_sketch('', { key: key, remove: true, silent: true });
+    // Remove this knob's CC line: key it by the structural key of a representative
+    // CC line for the knob (CC number/params normalized; change_code identifies it).
+    send_amy_message_in_sketch('', {
+      key: _knob_log_struct_key('i' + synth + 'ic0,0,0,0,0,' + knob.change_code),
+      remove: true, silent: true,
+    });
     return;
   }
-  // Only the block bookkeeping here; the live ic send is done by the caller via
-  // amy_send({synth, midi_cc}) (it has the unset-old-CC handling).
-  send_amy_message_in_sketch('i' + synth + 'c' + ccVal, { key: key, synth: synth, silent: true });
+  // The MIDI-CC mapping command is `ic` (amy_api midi_cc wire="ic"), NOT a bare
+  // `c` — `ic` consumes the whole change_code (commas and all) as a string until
+  // Z; a bare `c` does not, so the sketch fails to boot. Only block bookkeeping
+  // here; the live ic send is done by the caller via amy_send({synth, midi_cc}).
+  // Auto structural key collapses re-assigns and matches a CC line loaded from a sketch.
+  send_amy_message_in_sketch('i' + synth + 'ic' + ccVal, { synth: synth, silent: true });
 }
 window.log_knob_cc = log_knob_cc;
 
@@ -279,8 +314,8 @@ function reset_synth_in_sketch(synth) {
   synth = Number(synth);
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) return;
   _knob_log_clear_synth(synth);
-  send_amy_message_in_sketch('i' + synth + 'ic255', { key: 'setup-ic' + _KNOB_LOG_SEP + synth, synth: synth });
-  send_amy_message_in_sketch('i' + synth + 'K257iv6', { key: 'setup-k' + _KNOB_LOG_SEP + synth, synth: synth });
+  send_amy_message_in_sketch('i' + synth + 'ic255', { synth: synth });
+  send_amy_message_in_sketch('i' + synth + 'K257iv6', { synth: synth });
 }
 window.reset_synth_in_sketch = reset_synth_in_sketch;
 
@@ -291,7 +326,7 @@ function remove_synth_from_sketch(synth) {
   synth = Number(synth);
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) return;
   _knob_log_clear_synth(synth);
-  send_amy_message_in_sketch('i' + synth + 'iv0', { key: 'deact' + _KNOB_LOG_SEP + synth, synth: synth });
+  send_amy_message_in_sketch('i' + synth + 'iv0', { synth: synth });
 }
 window.remove_synth_from_sketch = remove_synth_from_sketch;
 
@@ -315,17 +350,12 @@ function record_all_cc_for_channel(ch) {
 window.record_all_cc_for_channel = record_all_cc_for_channel;
 
 // Record one preset wire command into the log (silent — the caller already sent
-// it live via amy_send/amy_add_log_message). Keys are unique per synth+sequence
-// and scoped to the synth, so a later reset_synth_in_sketch() clears the whole
-// preset before another one is loaded. Used by the Load Preset handler.
-var _preset_log_seq = 0;
+// it live via amy_send/amy_add_log_message). Auto structural key: distinct preset
+// commands have distinct structures, and reset_synth_in_sketch() clears the synth
+// before another preset loads. Used by the Load Preset handler.
 function log_preset_message(synth, message) {
   if (!message) return;
-  send_amy_message_in_sketch(message, {
-    key: 'preset' + _KNOB_LOG_SEP + synth + _KNOB_LOG_SEP + (_preset_log_seq++),
-    synth: synth,
-    silent: true,
-  });
+  send_amy_message_in_sketch(message, { synth: synth, silent: true });
 }
 window.log_preset_message = log_preset_message;
 
@@ -370,12 +400,15 @@ window.reflect_knob_log_to_editor = reflect_knob_log_to_editor;
 function rebuild_knob_log_from_block(blockText) {
   window.knob_log.clear();
   var lines = String(blockText || '').split(/\r?\n/);
-  var seq = 0;
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i].trim();
     if (!line || line.charAt(0) === '#') continue;
-    window.knob_log.set('load' + _KNOB_LOG_SEP + (seq++), {
-      line: line.replace(/Z+$/, ''),
+    var clean = line.replace(/Z+$/, '');
+    // Key by the structural key (same as live knob moves), so a later move
+    // collapses onto the loaded line instead of duplicating it — and any
+    // duplicate already in the loaded block self-heals to a single entry.
+    window.knob_log.set(_knob_log_struct_key(clean), {
+      line: clean,
       synth: _knob_log_parse_synth(line),
     });
   }
@@ -491,15 +524,15 @@ window.set_channel_active = function(channel, active, opts) {
   // The user toggled this channel's "Active" checkbox.
   if (opts.userToggle) {
     if (active && !wasActive) {
-      // Re-enable: rebuild the synth to the default patch in BOTH AMY and the
-      // knob log, then re-apply (and record) the channel's existing knob values
-      // and CC maps so it sounds the way it did — not the bare default K257.
-      // Re-sending the CC mappings is required because num_voices=0 cleared them
-      // on teardown. The "level" slider is restored by the checkbox handler.
-      reset_synth_in_sketch(ch);          // records + sends i<ch>ic255, i<ch>K257iv6
-      send_all_knob_cc_mappings(ch);      // re-send CC->param mappings (live)
-      send_all_knob_values(ch);           // re-apply existing knob values (live + records)
-      record_all_cc_for_channel(ch);      // record the CC maps into the block
+      // SYNC 2: activating a channel loads the amyboard default patch (K257) on
+      // it — that single command configures the synth AND reinstalls its default
+      // CC map on the device. We do NOT replay the channel's knob values/CC maps:
+      // those are generic UI defaults (SINE, f440, …) that would override K257
+      // and silence the Juno (the bug where activating ch2 dumped ~50 commands).
+      // Instead we reset to the K257 default and position the UI knobs to match,
+      // like startup.
+      reset_synth_in_sketch(ch);            // sends + records i<ch>ic255, i<ch>K257iv6
+      position_current_channel_from_log();  // UI knobs -> K257 defaults (no AMY send)
     } else if (!active && wasActive) {
       // Disable: tear the synth down so it stops playing and frees its voices,
       // and remove it from the block (with an explicit i<ch>iv0 so a removed
@@ -1079,19 +1112,13 @@ window.clear_current_channel_patch = async function() {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
-  // SYNC 2: reset this channel to the default patch in both AMY and the knob log
-  // (no zA AMY-state pull).
+  // SYNC 2: reset this channel to the default patch (K257) and position the UI
+  // knobs to its defaults — no knob-value/CC flood (K257 reinstalls the channel's
+  // default CC map on the device), no zA AMY-state pull.
   reset_synth_in_sketch(synth);          // sends + records i<synth>ic255, K257iv6
-  send_all_knob_cc_mappings(synth);      // re-send default CC->param maps (live)
-  record_all_cc_for_channel(synth);      // record them in the block
+  position_current_channel_from_log();   // UI knobs -> K257 defaults (no AMY send)
   if (amyboard_mode !== 'control') {
     reset_global_effects();
-    // Position the knobs to the default patch from the local AMY (UI only — the
-    // values just sent are the defaults; don't re-send/re-record them).
-    var _prevSuppress = window.suppress_knob_cc_send;
-    window.suppress_knob_cc_send = true;
-    try { await sync_channel_knobs_from_synth_to_ui(synth); }
-    finally { window.suppress_knob_cc_send = _prevSuppress; }
   }
   if (typeof window.set_section_disabled === "function") {
     window.set_section_disabled("Osc A", false);
@@ -4157,12 +4184,6 @@ function show_mode_modal() {
 // Apply UI visibility based on mode (called after DOM ready)
 function apply_mode_ui() {
     var isControl = (amyboard_mode === 'control');
-    // Show the "Sync to show your AMYboard's current sketch" button in control mode (until sync happens).
-    var syncSketchBtn = document.getElementById('sync-sketch-btn');
-    if (syncSketchBtn) {
-        if (isControl && _last_sketch_text === null) syncSketchBtn.classList.remove('d-none');
-        else syncSketchBtn.classList.add('d-none');
-    }
     // "Your AMYboard" controls: control mode only.
     var amyboardControls = document.getElementById('amyboard-controls-li');
     if (amyboardControls) { if (isControl) amyboardControls.classList.remove('d-none'); else amyboardControls.classList.add('d-none'); }
@@ -5340,9 +5361,6 @@ function _handle_sync_sysex_payload(payload) {
                 if (typeof editor.refresh === 'function') editor.refresh();
             }, 0);
         }
-        // Hide the "Sync to show..." button.
-        var syncSketchBtn = document.getElementById('sync-sketch-btn');
-        if (syncSketchBtn) syncSketchBtn.classList.add('d-none');
         // SYNC 2: rebuild the in-memory knob log from the pulled sketch and
         // position the knobs from it. set_knobs_from_sketch() reads the editor we
         // just set, so a later Write re-emits exactly what we pulled (plus tweaks).
@@ -5447,11 +5465,28 @@ function apply_zd_dump_to_knobs(dumpText) {
     }
 }
 
-// If the user switches channels after a sync, re-apply the cached dump.
-window.reapply_last_zd_dump = function() {
-    if (_last_zd_dump_text && amyboard_mode === 'control') {
-        apply_zd_dump_to_knobs(_last_zd_dump_text);
+// Position the CURRENT channel's knobs from the in-memory knob log (+ the K257
+// baseline), suppressed so nothing is sent to AMY. Reads the live log rather than
+// the editor text, so it's correct even before the debounced editor reflect has
+// run (e.g. right after (re)activating a channel). Used on channel switch and
+// activate to show a channel's knobs without dumping any commands to AMY.
+function position_current_channel_from_log() {
+    if (typeof apply_zd_dump_to_knobs !== 'function') return;
+    var prev = window.suppress_knob_cc_send;
+    window.suppress_knob_cc_send = true;
+    try {
+        apply_zd_dump_to_knobs(serialize_knob_log());
+    } finally {
+        window.suppress_knob_cc_send = prev;
     }
+}
+window.position_current_channel_from_log = position_current_channel_from_log;
+
+// SYNC 2 legacy alias: there is no cached zD dump any more (that path was removed).
+// Position the current channel's knobs from the knob log instead. Kept so any
+// remaining caller of the old name works (and never throws on _last_zd_dump_text).
+window.reapply_last_zd_dump = function() {
+    position_current_channel_from_log();
 };
 
 // Start/stop the sequencer transport. Mirrors set_tempo_from_ui(): in control

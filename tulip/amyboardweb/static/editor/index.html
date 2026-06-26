@@ -1483,11 +1483,8 @@
               </details>
               <div class="row g-0 headertext">
                 <div class="col-12 headertext" id="code-editor-col">
-                  <div class="d-flex align-items-center justify-content-between px-1">
+                  <div class="d-flex align-items-center px-1">
                     <span class="small align-middle" id="code-editor-label">sketch.py</span>
-                    <button type="button" class="btn btn-sm btn-primary d-none" id="sync-sketch-btn" onclick="sync_amy_state();">
-                      Sync to show your AMYboard's current sketch
-                    </button>
                   </div>
                   <section class="input">
                     <div><textarea id="code" name="code"></textarea></div>
@@ -1906,9 +1903,10 @@
                   window.refresh_knobs_for_active_channel({ sendControlMappings: false });
                 }
               }
-              // In control mode, repopulate knobs from the cached zD dump.
-              if (typeof window.reapply_last_zd_dump === "function") {
-                window.reapply_last_zd_dump();
+              // SYNC 2: position the newly-selected channel's knobs from the knob
+              // log (+ K257 baseline). No AMY send.
+              if (typeof window.position_current_channel_from_log === "function") {
+                window.position_current_channel_from_log();
               }
             }
           });
@@ -1916,18 +1914,11 @@
         if (channelActiveCheckbox) {
           channelActiveCheckbox.addEventListener("change", function() {
             const ch = window.current_synth || 1;
+            // set_channel_active() loads the K257 default patch on the channel and
+            // positions the knobs to its defaults — nothing else to send (K257
+            // reinstalls the channel's default CC map and level on the device).
             if (typeof window.set_channel_active === "function") {
               window.set_channel_active(ch, channelActiveCheckbox.checked, { userToggle: true });
-            }
-            if (channelActiveCheckbox.checked) {
-              // Restore this channel's level (stored outside the knob grid, so
-              // set_channel_active's knob-value replay doesn't cover it).
-              if (typeof setSynthLevel === "function" && typeof getSynthLevel === "function") {
-                setSynthLevel(getSynthLevel(ch), true);
-              }
-              if (typeof window.refresh_knobs_for_active_channel === "function") {
-                window.refresh_knobs_for_active_channel({ sendControlMappings: true });
-              }
             }
           });
         }
@@ -1947,6 +1938,13 @@
           if (send && typeof window.amy_add_log_message === "function") {
             var code = "i" + ch + "v0a" + val.toFixed(3);
             window.amy_add_log_message(code);
+            // Record the level in the knob log so it persists in the sketch — the
+            // dedicated slider bypasses the knob grid's send_change_code path.
+            // silent: the live send already happened above. Structural key
+            // i<ch>v0a# collapses repeats and matches a loaded line.
+            if (typeof window.send_amy_message_in_sketch === "function") {
+              window.send_amy_message_in_sketch(code, { synth: ch, silent: true });
+            }
           }
         }
         function syncSynthLevelForChannel() {
