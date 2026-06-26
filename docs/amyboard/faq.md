@@ -219,6 +219,16 @@ Not yet with the built-in echo -- it's a single delay on the master sum, not a r
 
 In an Arduino sketch, call `amy_simple_fill_buffer()` in `loop()` to get an `int16*` buffer of finished samples, process it, and send it to the I2S out yourself. (`amy_external_render_hook` is for *generating* oscillator buffers, not post-processing the final mix.) See [Arduino Setup](arduino.md).
 
+### I set up a second synth channel, and now my first synth sounds different!
+
+The analog synth patches (modeled on Juno) use the global chorus and EQ FX to shape their sounds, but these FX are shared between all synths by default.  So if you set up Juno patch A11 (Brass set 1) on channel 1, which uses the famous Juno chorus effect, then switch to channel 2 and set up Juno patch A13 (Trumpet), which does not use chorus, it will turn off the chorus for channel 1 as well, which will make it sound very thin.
+
+AMY has a mechanism for separating synths onto separate "buses", each of which can run independent FX, but it is not yet exposed in the AMYboard online web editor.  Essentially you'd need to do something like:
+```python
+amy.send(synth=1, num_voices=6, patch=0, bus=0)  # Set up Brass set 1 on synth 1, bus 0
+amy.send(synth=2, num_voices=6, patch=2, bus=1)  # Set up Trumpet on synth 2, bus 1
+amy.send(volume='1,1')  # Set gains of buses 0 and 1 to 1.0 in output mix.
+```
 ---
 
 ## Chaining multiple AMYboards

@@ -607,6 +607,17 @@ STATIC mp_obj_t tulip_amyboard_start(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_start_obj, 1, 1, tulip_amyboard_start);
 
+#if defined(AMYBOARD)
+// Switch the MIDI OUT TRS standard live (Type A = pin 14, Type B = pin 15). See
+// amyboard.set_midi_type() — AMY keeps running; only the UART TX line moves.
+extern void amyboard_set_midi_out(uint8_t);
+STATIC mp_obj_t tulip_amyboard_set_midi_out(mp_obj_t pin_obj) {
+    amyboard_set_midi_out((uint8_t)mp_obj_get_int(pin_obj));
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_1(tulip_amyboard_set_midi_out_obj, tulip_amyboard_set_midi_out);
+#endif
+
 
 STATIC mp_obj_t tulip_bootloader_mode(void) {
 #if defined(AMYBOARD) && defined(ESP_PLATFORM)
@@ -1699,6 +1710,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 #ifdef AMYBOARD
     { MP_ROM_QSTR(MP_QSTR_amyboard_send), MP_ROM_PTR(&tulip_amyboard_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_amyboard_start), MP_ROM_PTR(&tulip_amyboard_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amyboard_set_midi_out), MP_ROM_PTR(&tulip_amyboard_set_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_bootloader_mode), MP_ROM_PTR(&tulip_bootloader_mode_obj) },
 #else
     #ifndef AMYBOARD_WEB

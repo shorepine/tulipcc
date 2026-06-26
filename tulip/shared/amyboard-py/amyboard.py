@@ -441,20 +441,50 @@ def mount_sd():
     except OSError:
         pass # it's ok!
 
+# Which MIDI OUT TRS standard is live. The two standards swap the TRS tip/ring,
+# so on AMYboard "Type A" vs "Type B" is simply which GPIO carries MIDI OUT (UART TX):
+#   Type A -> pin 14 (GPIO15 held high)
+#   Type B -> pin 15 (GPIO14 held high)
+# Only MIDI OUT differs by type; MIDI IN works for both. Default is Type A.
+_MIDI_OUT_PINS = {'A': 14, 'B': 15}
+_midi_type = 'A'
+
+
+def _normalize_midi_type(type):
+    type = str(type).upper()
+    if type not in _MIDI_OUT_PINS:
+        raise ValueError("MIDI type must be 'A' or 'B'")
+    return type
+
+
 def init_midi(type='A'):
+    # Boot-time MIDI OUT setup, called by start_amy() before AMY starts. Holds the
+    # unused (source) TRS leg high and returns the data pin for amy to bind its UART TX
+    # to. For switching at runtime once AMY is running, use set_midi_type() instead.
     from machine import Pin
-    # set up MIDI, default to type A
-    # only have to set up MIDI OUT. MIDI IN will work either way
-    if(type=='A'):
-        # Type A: GPIO15 held high, MIDI OUT pin is 14
-        pin = Pin(15, Pin.OUT)
-        pin.value(1)
-        return 14
-    else:
-        # Type B: GPIO14 held high, MIDI OUT pin is 15
-        pin = Pin(14, Pin.OUT)  
-        pin.value(1)
-        return 15
+    global _midi_type
+    type = _normalize_midi_type(type)
+    out_pin = _MIDI_OUT_PINS[type]
+    other_pin = _MIDI_OUT_PINS['B' if type == 'A' else 'A']
+    Pin(other_pin, Pin.OUT).value(1)  # hold the non-data leg high (MIDI idle/source)
+    _midi_type = type
+    return out_pin
+
+
+def set_midi_type(type):
+    # Switch the MIDI OUT TRS standard ('A' or 'B') at runtime, without restarting AMY.
+    # AMY keeps running; only the UART TX line moves to the other leg. No persistence —
+    # this resets to the default (Type A) on reboot.
+    global _midi_type
+    type = _normalize_midi_type(type)
+    tulip.amyboard_set_midi_out(_MIDI_OUT_PINS[type])
+    _midi_type = type
+    return type
+
+
+def midi_type():
+    # The MIDI OUT TRS standard currently in use ('A' or 'B').
+    return _midi_type
 
 
 def start_amy():

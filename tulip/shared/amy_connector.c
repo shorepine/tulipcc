@@ -17,6 +17,13 @@
 #include "esp_system.h"
 #include "esp_attr.h"
 #endif
+#ifdef AMYBOARD
+// For amyboard_set_midi_out(): re-point the MIDI UART's TX line at runtime.
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/uart.h"
+#include "driver/gpio.h"
+#endif
 uint8_t * external_map;
 
 #ifdef AMY_IS_EXTERNAL
@@ -421,6 +428,27 @@ void run_amy(uint8_t midi_out_pin) {
     for(uint16_t i=0;i<amy_config.max_oscs;i++) external_map[i] = 0;
     for(uint8_t i=0;i<MAX_CV_SYNTHS;i++) cv_synth_map[i] = 0;
 }
+
+#ifdef AMYBOARD
+// Switch the MIDI OUT TRS standard at runtime (Type A = pin 14, Type B = pin 15)
+// without restarting AMY. AMY transmits MIDI via uart_write_bytes(UART_NUM_1, ...) —
+// keyed on the UART number, not the GPIO — so moving the UART's TX line to the other
+// TRS leg is all that's needed. midi_uart is 1 on AMYboard (amy's esp_get_uart(1) ==
+// UART_NUM_1). Only MIDI OUT differs by type; MIDI IN works for both, so RX (MIDI_IN_PIN)
+// is left unchanged.
+void amyboard_set_midi_out(uint8_t midi_out_pin) {
+    const uint8_t other_pin = (midi_out_pin == MIDI_OUT_PIN_A) ? MIDI_OUT_PIN_B : MIDI_OUT_PIN_A;
+    // Let any in-flight MIDI byte finish before moving the TX line.
+    uart_wait_tx_done(UART_NUM_1, pdMS_TO_TICKS(20));
+    // Re-route the UART's TX to the requested TRS data leg.
+    uart_set_pin(UART_NUM_1, midi_out_pin, MIDI_IN_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    // Disconnect the now-unused leg from the UART and hold it high (MIDI idle/source).
+    // Driving it as a plain GPIO output stops it from mirroring the TX signal.
+    gpio_reset_pin(other_pin);
+    gpio_set_direction(other_pin, GPIO_MODE_OUTPUT);
+    gpio_set_level(other_pin, 1);
+}
+#endif
 
 #elif defined TULIP_DESKTOP
 
