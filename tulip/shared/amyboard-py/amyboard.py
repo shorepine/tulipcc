@@ -527,6 +527,21 @@ def _report_sketch_error(detail):
     except Exception:
         pass
 
+def report_version(*_args):
+    """Reply to the web editor's firmware-compatibility probe over sysex, framed
+    as F0 00 03 45 'V' <ascii tulip.version()> F7 (e.g. "20260627-abc1234"). The
+    web sends `zP amyboard.report_version()` right after the zI ping and reads the
+    leading YYYYMMDD build date to decide whether this firmware is new enough for
+    the current editor protocol; firmware too old to have this function never
+    replies, which the web treats as "too old". Best-effort and self-contained: a
+    reporting failure must never break the editor handshake. The payload is plain
+    7-bit ASCII (digits, '-', hex), so no base64 framing is needed."""
+    try:
+        payload = tulip.version().encode('utf-8')
+        tulip.midi_out(bytes([0xF0, 0x00, 0x03, 0x45, 0x56]) + payload + bytes([0xF7]))
+    except Exception:
+        pass
+
 def run_sketch():
     """Apply knobs from sketch.py, then import it (top-level code runs), start loop()."""
     _env_dir = _ensure_current_env_layout()

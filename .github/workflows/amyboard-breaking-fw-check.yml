@@ -1,0 +1,60 @@
+name: AMYboard breaking-firmware guard
+
+# Enforces the SYNC 2 firmware-compatibility invariant:
+#   a PR labeled `breaking` MUST change MIN_COMPATIBLE_FW_DATE, and a PR that
+#   changes MIN_COMPATIBLE_FW_DATE MUST be labeled `breaking`.
+#
+# MIN_COMPATIBLE_FW_DATE (in tulip/amyboardweb/static/spss.js) is the editor's
+# hard floor: check_amyboard_firmware() shows a blocking "update firmware" modal
+# to any AMYboard whose build date is older than it. This guard keeps that floor
+# honest — it only ever moves on a deliberately-labeled breaking change, and the
+# `breaking` label can't be applied without declaring the new floor in the diff.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check breaking-label / MIN_COMPATIBLE_FW_DATE invariant
+        env:
+          HAS_BREAKING: ${{ contains(github.event.pull_request.labels.*.name, 'breaking') }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          FILE="tulip/amyboardweb/static/spss.js"
+          extract() { grep -oE 'MIN_COMPATIBLE_FW_DATE = [0-9]+' "$1" 2>/dev/null | grep -oE '[0-9]+' | head -1 || true; }
+
+          HEAD_VAL="$(extract "$FILE")"
+          git show "$BASE_SHA:$FILE" > /tmp/base_spss.js 2>/dev/null || : > /tmp/base_spss.js
+          BASE_VAL="$(extract /tmp/base_spss.js)"
+
+          echo "breaking label:        $HAS_BREAKING"
+          echo "MIN_COMPATIBLE_FW_DATE: base=${BASE_VAL:-<none>} head=${HEAD_VAL:-<none>}"
+
+          if [ -z "$HEAD_VAL" ]; then
+            echo "::error file=$FILE::MIN_COMPATIBLE_FW_DATE not found in $FILE"
+            exit 1
+          fi
+
+          CHANGED="false"
+          [ "$BASE_VAL" != "$HEAD_VAL" ] && CHANGED="true"
+          echo "MIN_COMPATIBLE_FW_DATE changed: $CHANGED"
+
+          if [ "$HAS_BREAKING" = "true" ] && [ "$CHANGED" != "true" ]; then
+            echo "::error file=$FILE::PR is labeled 'breaking' but MIN_COMPATIBLE_FW_DATE did not change. Bump it to the AMYboard firmware release date that ships this breaking change."
+            exit 1
+          fi
+          if [ "$HAS_BREAKING" != "true" ] && [ "$CHANGED" = "true" ]; then
+            echo "::error file=$FILE::MIN_COMPATIBLE_FW_DATE changed but the PR is not labeled 'breaking'. Add the 'breaking' label — it forces the hard upgrade modal for older firmware."
+            exit 1
+          fi
+          echo "Invariant satisfied."
