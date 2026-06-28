@@ -1682,17 +1682,6 @@ function _process_complete_sysex(d) {
         }
         return;
     }
-    // Firmware version report: F0 00 03 45 'V' <ascii "YYYYMMDD-<hash>"> F7.
-    // Sent by amyboard.report_version() in reply to check_amyboard_firmware()'s
-    // probe. Intercept before the chunk-marker logic below (0x56 isn't a chunk
-    // marker, so that path would mis-read it as a legacy base64 payload).
-    if (d[4] === 0x56 /* 'V' */) {
-        var verStr = '';
-        for (var vi = 5; vi < d.length - 1; vi++) verStr += String.fromCharCode(d[vi]);
-        console.log('zV: firmware version', verStr);
-        if (_version_resolve) { var vr = _version_resolve; _version_resolve = null; vr(verStr); }
-        return;
-    }
     // Chunk marker at position 4.
     var marker = d[4];
     var payloadStart, isChunked, isEnd;
@@ -4392,184 +4381,6 @@ async function _send_text_file_to_amyboard(path, text) {
     console.log('sent ' + fileSize + ' bytes to ' + path);
 }
 
-// ---- Firmware compatibility gate (SYNC 2) ------------------------------------
-// This editor deploys to amyboard.com the instant it merges, but a board's
-// firmware only changes when the user reflashes. SYNC 2 changed the
-// web<->firmware contract (always-reset _apply_knobs_text, the
-// environment_transfer_done() boot contract, the 'X'/'V' sysex frames), so a
-// board on pre-SYNC-2 firmware silently misbehaves against this editor. On the
-// first Write/Read we probe the board for its firmware build date and hard-block
-// if it predates MIN_COMPATIBLE_FW_DATE. Firmware too old to even know
-// report_version() never replies, so a probe timeout is treated as "too old".
-//
-// MIN_COMPATIBLE_FW_DATE is an integer YYYYMMDD — bump it ONLY when a change
-// breaks the contract with older firmware, and set it to the build date of the
-// firmware release that ships that breaking change. (A softer "your firmware is
-// out of date" notice keyed on the *latest* release date is a separate
-// follow-up; this constant is just the hard floor.)
-// TODO(SYNC2): bump to the AMYboard firmware release date that ships #1041 when
-// #1041 is released (currently a pre-release placeholder of 2026-06-01).
-var MIN_COMPATIBLE_FW_DATE = 20260601;
-
-var _version_resolve = null;       // resolves with the 'V' payload string (or null on timeout)
-var _amyboard_fw_checked = false;  // one-shot latch: a compatible board was verified
-var _amyboard_fw_ok = false;       // result of the last check
-var _amyboard_fw_date = null;      // parsed YYYYMMDD int, or null if unknown
-
-function _fmt_fw_date(yyyymmdd) {
-    if (!yyyymmdd) return 'unknown';
-    var s = String(yyyymmdd);
-    if (s.length === 8) return s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8);
-    return s;
-}
-
-// Send one report_version probe and wait up to timeout_ms for the 'V' reply.
-// Resolves with the version string, or null if nothing replies in time.
-function _probe_amyboard_version(timeout_ms) {
-    return new Promise(function(resolve) {
-        var done = false;
-        var t = setTimeout(function() {
-            if (done) return;
-            done = true;
-            _version_resolve = null;
-            resolve(null);
-        }, timeout_ms);
-        _version_resolve = function(payload) {
-            if (done) return;
-            done = true;
-            clearTimeout(t);
-            resolve(payload);
-        };
-        amy_add_log_message('zPimport amyboard; amyboard.report_version()Z');
-    });
-}
-
-// One-shot firmware compatibility check. Returns true if the board is new enough
-// (always true in simulate / non-control mode). On an incompatible or
-// unverifiable board it shows the blocking upgrade modal and returns false.
-// Cached after the first successful verification so it doesn't re-probe on every
-// Write/Read; a failed check is NOT cached so the user can retry after flashing.
-async function check_amyboard_firmware() {
-    if (amyboard_mode !== 'control') return true;   // simulate has no firmware
-    if (_amyboard_fw_checked && _amyboard_fw_ok) return true;
-
-    // Probe, retrying once — a single dropped sysex shouldn't falsely brand a
-    // board as old.
-    var payload = await _probe_amyboard_version(2000);
-    if (payload === null) payload = await _probe_amyboard_version(2000);
-
-    var fwDate = null;
-    if (payload) {
-        var m = String(payload).match(/(\d{8})/);
-        if (m) fwDate = parseInt(m[1], 10);
-    }
-    _amyboard_fw_date = fwDate;
-
-    // Compatible only if we got a date AND it's >= the floor. A null date (no
-    // reply, or unparseable) means firmware too old to report a version.
-    var ok = (fwDate !== null && fwDate >= MIN_COMPATIBLE_FW_DATE);
-    _amyboard_fw_ok = ok;
-    if (ok) {
-        _amyboard_fw_checked = true;
-        // Compatible, but maybe still behind the latest release — soft, non-
-        // blocking notice on the Upgrade Firmware tab. Fire-and-forget.
-        _maybe_show_fw_out_of_date_badge();
-    } else {
-        show_old_firmware_modal(fwDate);
-    }
-    return ok;
-}
-window.check_amyboard_firmware = check_amyboard_firmware;
-
-// Latest published AMYboard firmware date, fetched lazily from the rolling
-// 'amyboard' GitHub release. Drives only the soft "out of date" notice — the
-// hard floor is MIN_COMPATIBLE_FW_DATE. null until fetched / on failure.
-var _latest_fw_date = null;
-var _latest_fw_fetch_started = false;
-async function _fetch_latest_fw_date() {
-    if (_latest_fw_fetch_started) return _latest_fw_date;
-    _latest_fw_fetch_started = true;
-    try {
-        var resp = await fetch('https://api.github.com/repos/shorepine/tulipcc/releases/tags/amyboard', { cache: 'no-store' });
-        if (!resp.ok) return null;
-        var j = await resp.json();
-        // Prefer the newest firmware-asset updated_at: the rolling release
-        // replaces its assets on each push to main but keeps its original
-        // published_at, so published_at would understate the true latest date.
-        var iso = null;
-        if (j.assets && j.assets.length) {
-            for (var i = 0; i < j.assets.length; i++) {
-                var u = j.assets[i].updated_at;
-                if (u && (!iso || u > iso)) iso = u;
-            }
-        }
-        if (!iso) iso = j.published_at || j.created_at;
-        if (iso) {
-            var m = String(iso).slice(0, 10).replace(/-/g, '');
-            if (/^\d{8}$/.test(m)) _latest_fw_date = parseInt(m, 10);
-        }
-    } catch (e) {
-        console.warn('latest fw date fetch failed:', e);
-    }
-    return _latest_fw_date;
-}
-
-async function _maybe_show_fw_out_of_date_badge() {
-    if (_amyboard_fw_date === null) return;
-    var latest = await _fetch_latest_fw_date();
-    if (latest && _amyboard_fw_date < latest) {
-        set_fw_out_of_date_badge(_amyboard_fw_date, latest);
-    } else {
-        clear_fw_out_of_date_badge();
-    }
-}
-
-function set_fw_out_of_date_badge(yourDate, latestDate) {
-    var badge = document.getElementById('upgrade-tab-badge');
-    if (badge) badge.classList.remove('d-none');
-    var note = document.getElementById('fw-out-of-date-note');
-    if (note) note.classList.remove('d-none');
-    var y = document.getElementById('fw-note-your-date');
-    if (y) y.textContent = _fmt_fw_date(yourDate);
-    var l = document.getElementById('fw-note-latest-date');
-    if (l) l.textContent = _fmt_fw_date(latestDate);
-}
-
-function clear_fw_out_of_date_badge() {
-    var badge = document.getElementById('upgrade-tab-badge');
-    if (badge) badge.classList.add('d-none');
-    var note = document.getElementById('fw-out-of-date-note');
-    if (note) note.classList.add('d-none');
-}
-
-function show_old_firmware_modal(yourDate) {
-    var yoursEl = document.getElementById('old-fw-your-date');
-    if (yoursEl) yoursEl.textContent = yourDate ? _fmt_fw_date(yourDate) : 'too old to detect';
-    var needEl = document.getElementById('old-fw-min-date');
-    if (needEl) needEl.textContent = _fmt_fw_date(MIN_COMPATIBLE_FW_DATE);
-    var el = document.getElementById('oldFirmwareModal');
-    if (el && window.bootstrap) {
-        bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
-    } else {
-        alert('Your AMYboard firmware is out of date and must be updated to use this editor.');
-    }
-}
-window.show_old_firmware_modal = show_old_firmware_modal;
-
-// Hide the old-firmware modal and switch to the Upgrade Firmware tab.
-function old_firmware_modal_upgrade() {
-    var el = document.getElementById('oldFirmwareModal');
-    if (el && window.bootstrap) {
-        var inst = bootstrap.Modal.getInstance(el);
-        if (inst) inst.hide();
-    }
-    var upgradeTab = document.getElementById('upgrade-tab');
-    if (upgradeTab && window.bootstrap) {
-        new bootstrap.Tab(upgradeTab).show();
-    }
-}
-window.old_firmware_modal_upgrade = old_firmware_modal_upgrade;
-
 // SYNC 2 — Write to your AMYboard. The knob log is the single source of truth:
 // splice it into the editor's code to form the sketch, then transfer it and
 // restart the Python sketch (which resets AMY and replays the knob block on top
@@ -4578,10 +4389,6 @@ window.old_firmware_modal_upgrade = old_firmware_modal_upgrade;
 // editor. Live MIDI/CV tweaks and sketch-code effects are deliberately NOT saved.
 async function write_sketch_to_amyboard() {
     if (!editor) return;
-    // Gate on firmware compatibility before touching the editor or the board:
-    // an out-of-date board can't honor the SYNC 2 write contract, so block it
-    // behind the upgrade modal instead of writing a sketch it will mis-apply.
-    if (amyboard_mode === 'control' && !(await check_amyboard_firmware())) return;
     // Clear any prior sketch-error indicator — this Write is a fresh attempt; it's
     // re-raised (banner + Code-tab badge) if the new sketch fails to load.
     if (typeof clear_python_error === 'function') clear_python_error();
@@ -4626,9 +4433,6 @@ window.write_sketch_to_amyboard = write_sketch_to_amyboard;
 // Never writes to the board and never grabs live AMY state (no zA).
 async function read_sketch_from_amyboard() {
     if (amyboard_mode === 'control') {
-        // Same firmware gate as Write — an out-of-date board's sketch.py / knob
-        // block won't match what this editor expects, so block on upgrade first.
-        if (!(await check_amyboard_firmware())) return;
         // The "Pull from AMYboard" box gates this (it carries the "replace your
         // sketch" warning and a dismiss X). zD pull only; _handle_sync_sysex_payload
         // sets the editor and calls set_knobs_from_sketch() when the response arrives.

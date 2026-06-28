@@ -1262,21 +1262,6 @@
         </div>
       </div>
 
-      <!-- Old-firmware block (control mode): shown on the first Write/Read when
-           the board's firmware predates the current editor protocol. -->
-      <div class="modal fade" id="oldFirmwareModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
-          <div class="modal-content">
-            <div class="modal-body text-center px-4 py-4">
-              <div class="text-danger fw-semibold mb-2">Update your AMYboard firmware</div>
-              <p class="text-muted small mb-2">This editor needs newer AMYboard firmware than your board is running. Reading and writing won't work correctly until you update.</p>
-              <p class="text-muted small mb-3">Your firmware: <span id="old-fw-your-date" class="fw-semibold">unknown</span><br>Required: <span id="old-fw-min-date" class="fw-semibold">unknown</span> or newer</p>
-              <button type="button" class="btn btn-primary btn-sm" onclick="old_firmware_modal_upgrade();">Update Firmware</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Syncing modal (control mode) -->
       <!-- No 'fade': Bootstrap's fade defers display:block to an async animation
            callback, which races _hide_syncing_modal() when a pull completes
@@ -1389,7 +1374,7 @@
                 <button class="nav-link" id="world-tab" data-bs-toggle="tab" data-bs-target="#world-pane" type="button" role="tab" aria-controls="world-pane" aria-selected="false">AMYboard World</button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware<span id="upgrade-tab-badge" class="badge rounded-pill bg-warning text-dark ms-1 d-none" title="Firmware update available">!</span></button>
+                <button class="nav-link" id="upgrade-tab" data-bs-toggle="tab" data-bs-target="#upgrade-pane" type="button" role="tab" aria-controls="upgrade-pane" aria-selected="false">Upgrade Firmware</button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="reset-tab" data-bs-toggle="tab" data-bs-target="#reset-pane" type="button" role="tab" aria-controls="reset-pane" aria-selected="false">Reset</button>
@@ -1654,9 +1639,6 @@
               </div>
             </div>
             <div class="tab-pane fade" id="upgrade-pane" role="tabpanel" aria-labelledby="upgrade-tab">
-              <div id="fw-out-of-date-note" class="alert alert-warning py-2 px-3 small d-none mt-2 mb-0" role="alert">
-                Your AMYboard firmware (<span id="fw-note-your-date" class="fw-semibold">unknown</span>) is older than the latest release (<span id="fw-note-latest-date" class="fw-semibold">unknown</span>). Updating is recommended.
-              </div>
               <div class="esptool-frame-wrap">
                 <iframe
                   class="esptool-frame"

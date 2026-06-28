@@ -528,14 +528,16 @@ def _report_sketch_error(detail):
         pass
 
 def report_version(*_args):
-    """Reply to the web editor's firmware-compatibility probe over sysex, framed
-    as F0 00 03 45 'V' <ascii tulip.version()> F7 (e.g. "20260627-abc1234"). The
-    web sends `zP amyboard.report_version()` right after the zI ping and reads the
-    leading YYYYMMDD build date to decide whether this firmware is new enough for
-    the current editor protocol; firmware too old to have this function never
-    replies, which the web treats as "too old". Best-effort and self-contained: a
-    reporting failure must never break the editor handshake. The payload is plain
-    7-bit ASCII (digits, '-', hex), so no base64 framing is needed."""
+    """Report this firmware's build identity over sysex, framed as
+    F0 00 03 45 'V' <ascii tulip.version()> F7 (e.g. "20260627-abc1234").
+
+    Not yet wired to anything: the web-side firmware-compatibility gate that
+    probed this (via `zP amyboard.report_version()`) was removed because it could
+    false-positive and lock users out. This helper is kept so the probe round-trip
+    can be verified on real hardware before the gate is re-introduced — call it
+    over the wire and confirm the 'V' frame arrives. Best-effort and
+    self-contained: a reporting failure must never break anything. The payload is
+    plain 7-bit ASCII (digits, '-', hex), so no base64 framing is needed."""
     try:
         payload = tulip.version().encode('utf-8')
         tulip.midi_out(bytes([0xF0, 0x00, 0x03, 0x45, 0x56]) + payload + bytes([0xF7]))
