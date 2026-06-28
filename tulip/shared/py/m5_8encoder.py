@@ -70,7 +70,7 @@ def read_switch():
     return struct.unpack("B", val)[0]
 
 def set_led(led: int, color: bytes):
-    if not (0 <= led < ENCODERS):
+    if not (0 <= led < LEDS):
         raise ValueError(
             f"Invalid led number {led} (valid values: 0-{LEDS - 1})"
         )
