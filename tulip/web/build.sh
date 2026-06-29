@@ -51,7 +51,13 @@ cp vercel.json stage/
 
 cp ../../amy/build/amy.js stage/run/amy-$timestamp.js
 cp ../../amy/build/amy.wasm stage/run/amy-$timestamp.wasm
-cp ../../amy/docs/amy.aw.js stage/run/amy-$timestamp.aw.js
+# emscripten >=4 inlines the AudioWorklet glue into amy.js, so newer amy no longer
+# ships a separate amy.aw.js (and amy.js never references one). Copy it only if an
+# older pinned amy still has it -- otherwise `set -e` aborts the whole build on the
+# missing file. (amyboardweb's dev.py already guards the same copy with os.path.exists.)
+if [ -f ../../amy/docs/amy.aw.js ]; then
+  cp ../../amy/docs/amy.aw.js stage/run/amy-$timestamp.aw.js
+fi
 
 cp build-standard/tulip/obj/micropython.wasm stage/run/tulipcc-$timestamp.wasm
 cp build-standard/tulip/obj/micropython.mjs stage/run/tulipcc-$timestamp.mjs
