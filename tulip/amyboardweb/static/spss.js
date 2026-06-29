@@ -4410,6 +4410,37 @@ var MIN_COMPATIBLE_FW_DATE = 20260601;   // placeholder floor for bench testing
 var _fw_version_resolve = null;          // resolves with the 'V' payload string
 var _amyboard_fw_date = null;            // last parsed YYYYMMDD int, or null
 
+// Is this a "breaking" deployment? On a breaking build, a board that can't prove
+// its version (no 'V' reply) is HARD-blocked with an upgrade modal instead of
+// being waved through — silence on a breaking release most likely means firmware
+// too old to answer. Derived from the PR's `breaking` label for PR previews
+// (amyboard-pr-<N> host); override with ?breaking=1 / ?breaking=0 for testing.
+var _fw_breaking = false;
+var _fw_breaking_fetched = false;
+async function _is_breaking_build() {
+    try {
+        var q = new URLSearchParams(window.location.search);
+        if (q.has('breaking')) {
+            var v = q.get('breaking');
+            return v === '1' || v === 'true';
+        }
+    } catch (e) {}
+    if (_fw_breaking_fetched) return _fw_breaking;
+    _fw_breaking_fetched = true;
+    var host = (window.location.hostname || '').toLowerCase();
+    var m = host.match(/amyboard-pr-(\d+)/);
+    if (!m) { console.log('[fwdetect] not a PR preview host — breaking=false'); return false; }
+    try {
+        var resp = await fetch('https://api.github.com/repos/shorepine/tulipcc/pulls/' + m[1], { cache: 'no-store' });
+        if (resp.ok) {
+            var j = await resp.json();
+            _fw_breaking = (j.labels || []).some(function (l) { return l.name === 'breaking'; });
+        }
+    } catch (e) { console.warn('[fwdetect] breaking-label fetch failed:', e); }
+    console.log('[fwdetect] PR #' + m[1] + ' breaking =', _fw_breaking);
+    return _fw_breaking;
+}
+
 function _fmt_fw_date(yyyymmdd) {
     if (!yyyymmdd) return 'unknown';
     var s = String(yyyymmdd);
@@ -4478,7 +4509,12 @@ async function check_amyboard_firmware() {
         return await show_old_firmware_block(date);
     }
     if (date === null) {
-        console.warn('[fwdetect] NO version reply. Either firmware predates report_version, or the probe did not round-trip. TEST build: proceeding anyway.');
+        var breaking = await _is_breaking_build();
+        if (breaking) {
+            console.error('[fwdetect] NO version reply on a BREAKING build — board is too old (or report_version is missing). Hard-blocking with upgrade modal.');
+            return await show_old_firmware_block(null, { breakingUnverified: true });
+        }
+        console.warn('[fwdetect] NO version reply. Either firmware predates report_version, or the probe did not round-trip. Non-breaking build: proceeding anyway.');
         return true;
     }
     console.log('[fwdetect] firmware OK (' + _fmt_fw_date(date) + ' >= floor) — proceeding');
@@ -4489,13 +4525,28 @@ window.check_amyboard_firmware = check_amyboard_firmware;
 // Escapable block modal. Resolves true if the user chooses "Proceed anyway",
 // false otherwise. "Retry" re-runs the whole check; "Update Firmware" opens the
 // Upgrade tab and resolves false.
-function show_old_firmware_block(date) {
+function show_old_firmware_block(date, opts) {
+    opts = opts || {};
     return new Promise(function(resolve) {
         var el = document.getElementById('oldFirmwareModal');
+        var titleEl = document.getElementById('old-fw-title');
+        var bodyEl  = document.getElementById('old-fw-body');
+        var datesEl = document.getElementById('old-fw-dates');
         var yEl = document.getElementById('old-fw-your-date');
-        if (yEl) yEl.textContent = date ? _fmt_fw_date(date) : 'too old to detect';
+        if (yEl) yEl.textContent = date ? _fmt_fw_date(date) : 'not reported';
         var nEl = document.getElementById('old-fw-min-date');
         if (nEl) nEl.textContent = _fmt_fw_date(MIN_COMPATIBLE_FW_DATE);
+        if (opts.breakingUnverified) {
+            // Breaking release + the board couldn't prove its version: treat as an
+            // error and push the user to update.
+            if (titleEl) { titleEl.textContent = 'AMYboard firmware update required'; titleEl.className = 'text-danger fw-semibold mb-2'; }
+            if (bodyEl) bodyEl.textContent = 'This editor includes a breaking firmware change, and your AMYboard did not report a compatible firmware version. Update its firmware to continue.';
+            if (datesEl) datesEl.classList.add('d-none');
+        } else {
+            if (titleEl) { titleEl.textContent = 'AMYboard firmware may be out of date'; titleEl.className = 'text-warning fw-semibold mb-2'; }
+            if (bodyEl) bodyEl.textContent = 'Your board reported firmware older than this editor expects. Reading/writing may not work correctly until you update.';
+            if (datesEl) datesEl.classList.remove('d-none');
+        }
         if (!el || !window.bootstrap) { resolve(true); return; }   // fail-safe: no modal -> proceed
         var inst = bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false });
         var proceedBtn = document.getElementById('old-fw-proceed');

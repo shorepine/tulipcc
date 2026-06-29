@@ -1269,9 +1269,9 @@
         <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
           <div class="modal-content">
             <div class="modal-body text-center px-4 py-4">
-              <div class="text-warning fw-semibold mb-2">AMYboard firmware may be out of date</div>
-              <p class="text-muted small mb-2">Your board reported firmware older than this editor expects. Reading/writing may not work correctly until you update.</p>
-              <p class="text-muted small mb-3">Your firmware: <span id="old-fw-your-date" class="fw-semibold">unknown</span><br>Recommended: <span id="old-fw-min-date" class="fw-semibold">unknown</span> or newer</p>
+              <div id="old-fw-title" class="text-warning fw-semibold mb-2">AMYboard firmware may be out of date</div>
+              <p id="old-fw-body" class="text-muted small mb-2">Your board reported firmware older than this editor expects. Reading/writing may not work correctly until you update.</p>
+              <p id="old-fw-dates" class="text-muted small mb-3">Your firmware: <span id="old-fw-your-date" class="fw-semibold">unknown</span><br>Recommended: <span id="old-fw-min-date" class="fw-semibold">unknown</span> or newer</p>
               <div class="d-flex gap-2 justify-content-center">
                 <button type="button" class="btn btn-primary btn-sm" id="old-fw-update">Update Firmware</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="old-fw-retry">Retry</button>
