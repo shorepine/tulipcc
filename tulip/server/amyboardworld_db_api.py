@@ -95,7 +95,9 @@ DISCORD_BOT_TOKEN = os.getenv("WORLD_DISCORD_BOT_TOKEN", os.getenv("AMYBOARDWORL
 # --- AMYboard sketch generation (Claude API) -------------------------------
 # API key for the Anthropic API. Local dev reads CLAUDE_KEY from the repo-root
 # .env (see _load_dotenv); a host may instead provide ANTHROPIC_API_KEY.
-CLAUDE_API_KEY = os.getenv("CLAUDE_KEY", os.getenv("ANTHROPIC_API_KEY", ""))
+CLAUDE_API_KEY = os.getenv("CLAUDE_KEY") or os.getenv("ANTHROPIC_API_KEY") or ""
+if CLAUDE_API_KEY and len(CLAUDE_API_KEY) < 10:
+    CLAUDE_API_KEY = ""
 GENERATE_MODEL = os.getenv("AMYBOARD_GENERATE_MODEL", "claude-sonnet-4-6")
 GENERATE_MAX_TOKENS = int(os.getenv("AMYBOARD_GENERATE_MAX_TOKENS", "4096"))
 # Agentic reference tools: let the generator search/read this repo's example
