@@ -1733,6 +1733,16 @@ function _process_complete_sysex(d) {
         }
         return;
     }
+    // Firmware version report: F0 00 03 45 'V' <ascii "YYYYMMDD-<hash>"> F7,
+    // sent by amyboard.report_version(). Intercept before the chunk-marker logic
+    // (0x56 isn't a chunk marker, so that path would mis-read it as base64).
+    if (d[4] === 0x56 /* 'V' */) {
+        var verStr = '';
+        for (var vi = 5; vi < d.length - 1; vi++) verStr += String.fromCharCode(d[vi]);
+        console.log('[fwdetect] <- V reply: ' + JSON.stringify(verStr));
+        if (_fw_version_resolve) { var vr = _fw_version_resolve; _fw_version_resolve = null; vr(verStr); }
+        return;
+    }
     // Chunk marker at position 4.
     var marker = d[4];
     var payloadStart, isChunked, isEnd;
@@ -4432,6 +4442,188 @@ async function _send_text_file_to_amyboard(path, text) {
     console.log('sent ' + fileSize + ' bytes to ' + path);
 }
 
+// ============================================================================
+// Firmware detector (TEST build — fail-safe, verbose, console-callable)
+// ----------------------------------------------------------------------------
+// Re-added on the claude/amyboard-fw-detect branch to debug the version probe on
+// real hardware. KEY DIFFERENCE from the version that locked users out: this one
+// is FAIL-SAFE — it never blocks on silence. The only hard block is a *positive*
+// reply whose build date is older than the floor, and even that has a "Proceed
+// anyway" escape. No reply (board too old to answer, or a flaky/stale port) ->
+// warn in the console and ALLOW the operation.
+//
+// Everything logs under the [fwdetect] prefix. Two console entry points let you
+// test at the bench without clicking Read/Write:
+//   await probe_amyboard_version()   -> {date, raw} or null  (one round-trip)
+//   await check_amyboard_firmware()  -> true/false           (full decision)
+// ============================================================================
+var MIN_COMPATIBLE_FW_DATE = 20260601;   // placeholder floor for bench testing
+var _fw_version_resolve = null;          // resolves with the 'V' payload string
+var _amyboard_fw_date = null;            // last parsed YYYYMMDD int, or null
+
+// Is this a "breaking" deployment? On a breaking build, a board that can't prove
+// its version (no 'V' reply) is HARD-blocked with an upgrade modal instead of
+// being waved through — silence on a breaking release most likely means firmware
+// too old to answer. Derived from the PR's `breaking` label for PR previews
+// (amyboard-pr-<N> host); override with ?breaking=1 / ?breaking=0 for testing.
+var _fw_breaking = false;
+var _fw_breaking_fetched = false;
+async function _is_breaking_build() {
+    try {
+        var q = new URLSearchParams(window.location.search);
+        if (q.has('breaking')) {
+            var v = q.get('breaking');
+            return v === '1' || v === 'true';
+        }
+    } catch (e) {}
+    if (_fw_breaking_fetched) return _fw_breaking;
+    _fw_breaking_fetched = true;
+    var host = (window.location.hostname || '').toLowerCase();
+    var m = host.match(/amyboard-pr-(\d+)/);
+    if (!m) { console.log('[fwdetect] not a PR preview host — breaking=false'); return false; }
+    try {
+        var resp = await fetch('https://api.github.com/repos/shorepine/tulipcc/pulls/' + m[1], { cache: 'no-store' });
+        if (resp.ok) {
+            var j = await resp.json();
+            _fw_breaking = (j.labels || []).some(function (l) { return l.name === 'breaking'; });
+        }
+    } catch (e) { console.warn('[fwdetect] breaking-label fetch failed:', e); }
+    console.log('[fwdetect] PR #' + m[1] + ' breaking =', _fw_breaking);
+    return _fw_breaking;
+}
+
+function _fmt_fw_date(yyyymmdd) {
+    if (!yyyymmdd) return 'unknown';
+    var s = String(yyyymmdd);
+    return (s.length === 8) ? s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8) : s;
+}
+
+// Direct probe sender — mirrors _send_zi_ping: refresh the MIDIOutput handle
+// (defends against the stale port after a flash/USB re-enumerate), then send the
+// report_version zP as a raw sysex, bypassing the ack path.
+function _send_version_probe() {
+    var outputDevice = get_selected_midi_output_device();
+    if (!outputDevice) { console.warn('[fwdetect] no MIDI output selected — cannot probe'); return false; }
+    try {
+        var rawOut = outputDevice._midiOutput || outputDevice.output || null;
+        if (rawOut && typeof rawOut.open === 'function') { try { rawOut.open().catch(function(){}); } catch (e) {} }
+        var payload = Array.from(new TextEncoder().encode('zPimport amyboard; amyboard.report_version()Z'));
+        if (typeof outputDevice.sendSysex === 'function') {
+            outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
+        } else if (typeof outputDevice.send === 'function') {
+            outputDevice.send([0xF0].concat(AMYBOARD_SYSEX_MFR_ID, payload, [0xF7]));
+        } else { return false; }
+        console.log('[fwdetect] -> version probe sent (zP report_version)');
+        return true;
+    } catch (e) { console.warn('[fwdetect] probe send failed (port likely stale):', e); return false; }
+}
+
+// One round-trip. Resolves {date, raw} on a 'V' reply, or null on timeout.
+function probe_amyboard_version(timeout_ms) {
+    timeout_ms = timeout_ms || 2500;
+    return new Promise(function(resolve) {
+        var done = false;
+        var t = setTimeout(function() {
+            if (done) return; done = true; _fw_version_resolve = null;
+            console.warn('[fwdetect] version probe TIMEOUT after ' + timeout_ms + 'ms (no V reply)');
+            resolve(null);
+        }, timeout_ms);
+        _fw_version_resolve = function(raw) {
+            if (done) return; done = true; clearTimeout(t);
+            var m = String(raw || '').match(/(\d{8})/);
+            var date = m ? parseInt(m[1], 10) : null;
+            console.log('[fwdetect] parsed build date =', date, '(' + _fmt_fw_date(date) + ')');
+            resolve({ date: date, raw: raw });
+        };
+        _send_version_probe();   // on send failure we just let it time out
+    });
+}
+window.probe_amyboard_version = probe_amyboard_version;
+
+// Full fail-safe decision. Returns true to proceed, false to abort the op.
+//   board not answering zI      -> connection issue, NOT firmware  -> proceed
+//   V reply, date >= floor      -> up to date                      -> proceed
+//   V reply, date <  floor      -> confirmed old -> modal (Proceed anyway / Retry / Update)
+//   no V reply (zI was OK)      -> can't confirm; TEST build WARNS + proceeds
+async function check_amyboard_firmware() {
+    if (amyboard_mode !== 'control') return true;
+    console.log('[fwdetect] === firmware check start (floor ' + _fmt_fw_date(MIN_COMPATIBLE_FW_DATE) + ') ===');
+    var alive = await wait_for_board_ready(5000);
+    if (!alive) { console.warn('[fwdetect] board not ready (no zI OK) — treating as a connection issue, NOT blocking'); return true; }
+    console.log('[fwdetect] board alive (zI OK); probing version…');
+    var res = await probe_amyboard_version(2500);
+    if (!res) { console.log('[fwdetect] retrying probe once…'); res = await probe_amyboard_version(2500); }
+    var date = res ? res.date : null;
+    _amyboard_fw_date = date;
+    if (date !== null && date < MIN_COMPATIBLE_FW_DATE) {
+        console.warn('[fwdetect] CONFIRMED OLD: ' + date + ' < ' + MIN_COMPATIBLE_FW_DATE + ' — showing block (escapable)');
+        return await show_old_firmware_block(date);
+    }
+    if (date === null) {
+        var breaking = await _is_breaking_build();
+        if (breaking) {
+            console.error('[fwdetect] NO version reply on a BREAKING build — board is too old (or report_version is missing). Hard-blocking with upgrade modal.');
+            return await show_old_firmware_block(null, { breakingUnverified: true });
+        }
+        console.warn('[fwdetect] NO version reply. Either firmware predates report_version, or the probe did not round-trip. Non-breaking build: proceeding anyway.');
+        return true;
+    }
+    console.log('[fwdetect] firmware OK (' + _fmt_fw_date(date) + ' >= floor) — proceeding');
+    return true;
+}
+window.check_amyboard_firmware = check_amyboard_firmware;
+
+// Escapable block modal. Resolves true if the user chooses "Proceed anyway",
+// false otherwise. "Retry" re-runs the whole check; "Update Firmware" opens the
+// Upgrade tab and resolves false.
+function show_old_firmware_block(date, opts) {
+    opts = opts || {};
+    return new Promise(function(resolve) {
+        var el = document.getElementById('oldFirmwareModal');
+        var titleEl = document.getElementById('old-fw-title');
+        var bodyEl  = document.getElementById('old-fw-body');
+        var datesEl = document.getElementById('old-fw-dates');
+        var yEl = document.getElementById('old-fw-your-date');
+        if (yEl) yEl.textContent = date ? _fmt_fw_date(date) : 'not reported';
+        var nEl = document.getElementById('old-fw-min-date');
+        if (nEl) nEl.textContent = _fmt_fw_date(MIN_COMPATIBLE_FW_DATE);
+        if (opts.breakingUnverified) {
+            // Breaking release + the board couldn't prove its version: treat as an
+            // error and push the user to update.
+            if (titleEl) { titleEl.textContent = 'AMYboard firmware update required'; titleEl.className = 'text-danger fw-semibold mb-2'; }
+            if (bodyEl) bodyEl.textContent = 'This editor includes a breaking firmware change, and your AMYboard did not report a compatible firmware version. Update its firmware to continue.';
+            if (datesEl) datesEl.classList.add('d-none');
+        } else {
+            if (titleEl) { titleEl.textContent = 'AMYboard firmware may be out of date'; titleEl.className = 'text-warning fw-semibold mb-2'; }
+            if (bodyEl) bodyEl.textContent = 'Your board reported firmware older than this editor expects. Reading/writing may not work correctly until you update.';
+            if (datesEl) datesEl.classList.remove('d-none');
+        }
+        if (!el || !window.bootstrap) { resolve(true); return; }   // fail-safe: no modal -> proceed
+        var inst = bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false });
+        var proceedBtn = document.getElementById('old-fw-proceed');
+        var retryBtn   = document.getElementById('old-fw-retry');
+        var updateBtn  = document.getElementById('old-fw-update');
+        function cleanup() {
+            if (proceedBtn) proceedBtn.onclick = null;
+            if (retryBtn)   retryBtn.onclick = null;
+            if (updateBtn)  updateBtn.onclick = null;
+        }
+        if (proceedBtn) proceedBtn.onclick = function() { cleanup(); inst.hide(); console.log('[fwdetect] user: proceed anyway'); resolve(true); };
+        if (updateBtn)  updateBtn.onclick  = function() {
+            cleanup(); inst.hide();
+            var t = document.getElementById('upgrade-tab');
+            if (t && window.bootstrap) new bootstrap.Tab(t).show();
+            resolve(false);
+        };
+        if (retryBtn)   retryBtn.onclick   = function() {
+            cleanup(); inst.hide();
+            console.log('[fwdetect] user: retry');
+            check_amyboard_firmware().then(resolve);
+        };
+        inst.show();
+    });
+}
+
 // SYNC 2 — Write to your AMYboard. The knob log is the single source of truth:
 // splice it into the editor's code to form the sketch, then transfer it and
 // restart the Python sketch (which resets AMY and replays the knob block on top
@@ -4440,6 +4632,8 @@ async function _send_text_file_to_amyboard(path, text) {
 // editor. Live MIDI/CV tweaks and sketch-code effects are deliberately NOT saved.
 async function write_sketch_to_amyboard() {
     if (!editor) return;
+    // Fail-safe firmware check (only aborts if the user declines a confirmed-old board).
+    if (amyboard_mode === 'control' && !(await check_amyboard_firmware())) return;
     // Clear any prior sketch-error indicator — this Write is a fresh attempt; it's
     // re-raised (banner + Code-tab badge) if the new sketch fails to load.
     if (typeof clear_python_error === 'function') clear_python_error();
@@ -4491,6 +4685,8 @@ window.write_sketch_to_amyboard = write_sketch_to_amyboard;
 // Never writes to the board and never grabs live AMY state (no zA).
 async function read_sketch_from_amyboard() {
     if (amyboard_mode === 'control') {
+        // Fail-safe firmware check (only aborts if the user declines a confirmed-old board).
+        if (!(await check_amyboard_firmware())) return;
         // The "Pull from AMYboard" box gates this (it carries the "replace your
         // sketch" warning and a dismiss X). zD pull only; _handle_sync_sysex_payload
         // sets the editor and calls set_knobs_from_sketch() when the response arrives.
