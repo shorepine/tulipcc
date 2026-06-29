@@ -1471,9 +1471,10 @@
                 <div class="mt-2">
                   <textarea id="prompt-to-sketch-input" class="form-control form-control-sm mb-1" rows="2" maxlength="500"
                     placeholder='Describe what you want AMYboard to do, e.g. "slow ambient pad with filter cutoff controlled by MIDI CC 23", "Pass through audio input to output with a reverb effect", or "Play a DX7 patch on MIDI channel 1 and a Juno-6 patch on MIDI channel 2"'></textarea>
-                  <div class="d-flex align-items-center gap-2">
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
                     <button type="button" class="btn btn-sm btn-primary" id="prompt-to-sketch-btn"
-                      onclick="generate_sketch_from_prompt()">Create the sketch</button>
+                      onclick="generate_sketch_from_prompt()">Create or Modify your Sketch</button>
+                    <span class="small text-danger">Could change or remove your sketch. Back up your old sketch if you want to keep it.</span>
                     <span class="small text-muted" id="prompt-to-sketch-status"></span>
                   </div>
                   <div class="form-check mt-2 mb-1">
