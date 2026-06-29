@@ -1145,7 +1145,7 @@
           }));
         }
       });
-      editor.on("change", function() {
+      editor.on("change", function(cm, change) {
         window.environment_editor_dirty = true;
         // SYNC 2: persist the editor's sketch locally so it survives a page
         // reload (restored on load instead of pulling from the board).
@@ -1154,6 +1154,13 @@
           window._sketch_draft_timer = setTimeout(function() {
             window.save_sketch_draft(editor.getValue());
           }, 400);
+        }
+        // SYNC 2: a USER edit/paste (not our own programmatic setValue/reflect)
+        // must rebuild the knob log from the editor's block — otherwise Write (or
+        // the next knob move) would splice a stale log over it and wipe the block.
+        if (change && change.origin && change.origin !== "setValue"
+            && typeof window.schedule_log_rebuild_from_editor === "function") {
+          window.schedule_log_rebuild_from_editor();
         }
       });
       document.addEventListener("click", function() {

@@ -373,11 +373,22 @@ function schedule_knob_block_reflect() {
   }, 200);
 }
 
+// Run any pending knob-block reflect immediately (log -> editor). Called before
+// Write so the editor's block includes the latest knob moves before we send it.
+function flush_knob_block_reflect() {
+  if (_knob_block_reflect_timer) {
+    clearTimeout(_knob_block_reflect_timer);
+    _knob_block_reflect_timer = null;
+    reflect_knob_log_to_editor();
+  }
+}
+window.flush_knob_block_reflect = flush_knob_block_reflect;
+
 function reflect_knob_log_to_editor() {
   if (typeof editor === 'undefined' || !editor || typeof editor.getValue !== 'function') return;
   // Don't rewrite the buffer while the user is typing in it (would disrupt the
-  // caret/undo). The log is still spliced in at Write time regardless, and a
-  // later knob move re-schedules this once the editor loses focus.
+  // caret/undo). A later knob move re-schedules this once the editor loses focus,
+  // and Write flushes it (flush_knob_block_reflect) before sending.
   if (typeof editor.hasFocus === 'function' && editor.hasFocus()) return;
   try {
     var cur = editor.getValue();
@@ -473,8 +484,43 @@ function set_knobs_from_sketch() {
   }
   var cb = document.getElementById('channel-active-checkbox');
   if (cb) cb.checked = !!active[Number(window.current_synth || 1)];
+  _last_synced_editor_block = block;  // log is now in sync with this block
 }
 window.set_knobs_from_sketch = set_knobs_from_sketch;
+
+// --- Editor edits -> knob log (the reverse of reflect_knob_log_to_editor) ------
+// When the USER pastes or hand-edits the sketch, rebuild the knob log from the
+// editor's block so the log stays the source of truth. Without this, Write (and
+// the first knob move after a paste) would splice a stale/empty log over the
+// user's block and wipe it. Gated on the CodeMirror change origin (so our own
+// programmatic setValue/reflect doesn't loop) + a block-changed check (so typing
+// CODE above the block doesn't churn the knob grid).
+var _last_synced_editor_block = null;
+var _editor_edit_sync_timer = null;
+function _rebuild_log_from_editor_now() {
+  if (typeof editor === 'undefined' || !editor || typeof extract_knobs_from_sketch !== 'function') return;
+  var block = extract_knobs_from_sketch(editor.getValue());
+  if (block === _last_synced_editor_block) return;  // block unchanged (code-only edit)
+  // set_knobs_from_sketch rebuilds the log from the editor's block AND repositions
+  // the knobs to match, then updates _last_synced_editor_block.
+  set_knobs_from_sketch();
+}
+function schedule_log_rebuild_from_editor() {
+  if (_editor_edit_sync_timer) clearTimeout(_editor_edit_sync_timer);
+  _editor_edit_sync_timer = setTimeout(function() {
+    _editor_edit_sync_timer = null;
+    _rebuild_log_from_editor_now();
+  }, 300);
+}
+function flush_log_rebuild_from_editor() {
+  if (_editor_edit_sync_timer) {
+    clearTimeout(_editor_edit_sync_timer);
+    _editor_edit_sync_timer = null;
+    _rebuild_log_from_editor_now();
+  }
+}
+window.schedule_log_rebuild_from_editor = schedule_log_rebuild_from_editor;
+window.flush_log_rebuild_from_editor = flush_log_rebuild_from_editor;
 
 // The K257 "amyboard default" patch as an AMY wire string is the implicit
 // baseline every synth starts from (the device loads K257 before applying the
@@ -4392,8 +4438,15 @@ async function write_sketch_to_amyboard() {
     // Clear any prior sketch-error indicator — this Write is a fresh attempt; it's
     // re-raised (banner + Code-tab badge) if the new sketch fails to load.
     if (typeof clear_python_error === 'function') clear_python_error();
-    var sketchText = splice_knobs_into_sketch(editor.getValue(), serialize_knob_log());
-    editor.setValue(sketchText);
+    // Sync the knob log <-> editor BOTH ways, then send the editor's sketch
+    // VERBATIM. Write must never modify the sketch (it used to splice the in-memory
+    // log over the editor's block — which wiped a freshly pasted/edited sketch
+    // whose block hadn't been rebuilt into the log). Flush a pending knob-block
+    // reflect (recent knob moves -> editor) and a pending user-edit rebuild
+    // (pasted/hand-edited block -> log); in practice at most one is pending.
+    if (typeof flush_knob_block_reflect === 'function') flush_knob_block_reflect();
+    if (typeof flush_log_rebuild_from_editor === 'function') flush_log_rebuild_from_editor();
+    var sketchText = editor.getValue();
     if (amyboard_mode === 'control') {
         // Use the race-free resetting modal (toggles classes synchronously). The
         // bootstrap-API saving modal can stick open when show()/hide() bracket a
