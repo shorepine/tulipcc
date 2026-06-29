@@ -447,6 +447,11 @@ function _compute_active_from_block(block) {
     var synth = parseInt(m[1], 10);
     if (synth < 1 || synth > 16) continue;
     hasLines[synth] = true;
+    // num_voices (iv<N>) only appears in a synth's SETUP line (i<ch>K257iv6,
+    // i<ch>iv0) — never in a CC-mapping line, where any "iv<N>" is inside the
+    // change_code template (e.g. i%iv0F, i%iv2f) and must NOT be read as
+    // num_voices, or a channel with CC maps would look deactivated.
+    if (/^i\d+ic/.test(line)) continue;  // CC mapping — skip the num_voices scan
     var iv = line.match(/iv(\d+)/g);  // num_voices token (e.g. iv6, iv0)
     if (iv && iv.length) voices[synth] = parseInt(iv[iv.length - 1].slice(2), 10);
   }
