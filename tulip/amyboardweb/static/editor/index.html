@@ -1262,6 +1262,26 @@
         </div>
       </div>
 
+      <!-- Old-firmware block (TEST build, control mode): shown ONLY when the board
+           positively reports a build date older than the floor. Always escapable
+           via "Proceed anyway" so it can never lock anyone out. -->
+      <div class="modal fade" id="oldFirmwareModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:460px;">
+          <div class="modal-content">
+            <div class="modal-body text-center px-4 py-4">
+              <div class="text-warning fw-semibold mb-2">AMYboard firmware may be out of date</div>
+              <p class="text-muted small mb-2">Your board reported firmware older than this editor expects. Reading/writing may not work correctly until you update.</p>
+              <p class="text-muted small mb-3">Your firmware: <span id="old-fw-your-date" class="fw-semibold">unknown</span><br>Recommended: <span id="old-fw-min-date" class="fw-semibold">unknown</span> or newer</p>
+              <div class="d-flex gap-2 justify-content-center">
+                <button type="button" class="btn btn-primary btn-sm" id="old-fw-update">Update Firmware</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="old-fw-retry">Retry</button>
+                <button type="button" class="btn btn-outline-danger btn-sm" id="old-fw-proceed">Proceed anyway</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Syncing modal (control mode) -->
       <!-- No 'fade': Bootstrap's fade defers display:block to an async animation
            callback, which races _hide_syncing_modal() when a pull completes
