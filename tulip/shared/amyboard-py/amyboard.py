@@ -383,15 +383,20 @@ def _extract_knobs_from_file(filepath):
             return ''
 
 def _apply_knobs_text(knobs_text):
-    """Send each line of knobs text to AMY."""
+    """Reset AMY to a known default, then apply the sketch's knob lines on top.
+
+    The sketch is the single source of truth, so every restart starts from a
+    clean slate: S<RESET_SYNTHS> clears all synths and MIDI CC maps, and
+    i1K257iv6 installs the amyboard default synth on channel 1 (which also
+    reinstalls the default CC map so a plugged-in MIDI controller works out of
+    the box before the website pushes anything). The _auto_generated_knobs lines
+    are then applied on top, and may override channel 1, configure other
+    channels, or deactivate a channel with iv0. We never grab or merge live AMY
+    state here — what the sketch says is exactly what the board becomes.
+    """
+    amy.send_raw("S%dZ" % amy.RESET_SYNTHS)
+    amy.send_raw("i1K257iv6Z")
     if not knobs_text:
-        # First run / factory reset: clear any previously configured synths
-        # (drums on ch10, etc.) and set up channel 1 with the amyboard default
-        # patch. S<RESET_SYNTHS> already clears all MIDI CC maps, and loading
-        # K257 reinstalls the default CC map on channel 1, so a plugged-in MIDI
-        # controller works out of the box before the website pushes anything.
-        amy.send_raw("S%dZ" % amy.RESET_SYNTHS)
-        amy.send_raw("i1K257iv6Z")
         return
     for line in knobs_text.strip().split('\n'):
         line = line.strip()
@@ -507,6 +512,38 @@ def start_amy():
 
 _sketch_seq = None  # Keep reference to prevent GC
 
+def _report_sketch_error(detail):
+    """Push a sketch load error back to the web editor over sysex, framed as
+    F0 00 03 45 'X' <base64 text> F7, so the UI can surface the failure (banner +
+    a red marker on the Code tab) instead of it only appearing on the serial
+    console. Best-effort and self-contained: a reporting failure must never mask
+    the original error or break the self-heal. In simulate the web already catches
+    the error off the JS console, so this matters mainly for control mode (where
+    stderr goes to the serial port, not the browser)."""
+    try:
+        import binascii
+        payload = binascii.b2a_base64(str(detail).encode('utf-8')).rstrip()
+        tulip.midi_out(bytes([0xF0, 0x00, 0x03, 0x45, 0x58]) + payload + bytes([0xF7]))
+    except Exception:
+        pass
+
+def report_version(*_args):
+    """Report this firmware's build identity over sysex, framed as
+    F0 00 03 45 'V' <ascii tulip.version()> F7 (e.g. "20260627-abc1234").
+
+    Not yet wired to anything: the web-side firmware-compatibility gate that
+    probed this (via `zP amyboard.report_version()`) was removed because it could
+    false-positive and lock users out. This helper is kept so the probe round-trip
+    can be verified on real hardware before the gate is re-introduced — call it
+    over the wire and confirm the 'V' frame arrives. Best-effort and
+    self-contained: a reporting failure must never break anything. The payload is
+    plain 7-bit ASCII (digits, '-', hex), so no base64 framing is needed."""
+    try:
+        payload = tulip.version().encode('utf-8')
+        tulip.midi_out(bytes([0xF0, 0x00, 0x03, 0x45, 0x56]) + payload + bytes([0xF7]))
+    except Exception:
+        pass
+
 def run_sketch():
     """Apply knobs from sketch.py, then import it (top-level code runs), start loop()."""
     _env_dir = _ensure_current_env_layout()
@@ -533,6 +570,7 @@ def run_sketch():
         # Route through stderr_write so the web console sees it alongside the
         # other diagnostics (stdout may not be wired up in some hosts).
         tulip.stderr_write("sketch.py load failed: %s: %s" % (type(e).__name__, e))
+        _report_sketch_error("%s: %s" % (type(e).__name__, e))
         try:
             sys.print_exception(e)
         except Exception:
@@ -550,6 +588,7 @@ def run_sketch():
             import sketch
         except Exception as e2:
             tulip.stderr_write("default sketch.py load also failed: %s: %s" % (type(e2).__name__, e2))
+            _report_sketch_error("%s: %s" % (type(e2).__name__, e2))
             try:
                 sys.print_exception(e2)
             except Exception:
