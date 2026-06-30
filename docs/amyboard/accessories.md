@@ -62,6 +62,34 @@ amyboard.draw_waveform()
 
 ### Rotary encoders
 
+AMYboard supports three different rotary-encoder accessories (described below). They
+have different encoder counts, LED layouts, and I2C protocols, so the easiest way to
+use any of them — and to write a sketch that runs unchanged on whichever one you have
+(or in the web simulator) — is the unified `amyboard.encoder()` API. It autodetects
+the connected device and gives you one consistent interface:
+
+```python
+import amyboard
+
+enc = amyboard.encoder()   # autodetect whatever is connected
+print(enc.type)            # "adafruit_single", "adafruit_quad", "m5stack", "web", or None
+print(enc.encoders)        # how many encoders this device has (1, 4, or 8)
+print(enc.leds)            # how many addressable LEDs it has
+
+for i in range(enc.encoders):
+    pos = enc.read(i)          # cumulative position, starts at 0
+    pressed = enc.button(i)    # True while the push button is held
+    if i < enc.leds:
+        enc.led(i, 0, 64, 0)   # light LED i dim green (r, g, b, each 0..255)
+
+enc.reset()                # zero every encoder back to 0 (or enc.reset(i) for just one)
+enc.switch()               # M5Stack toggle-switch state (False on other devices)
+```
+
+If no encoder is attached `enc.encoders` is 0 and every method returns a safe default,
+so sketches still run. The per-device functions documented below still work for
+advanced use, but new code should prefer `amyboard.encoder()`.
+
  - ![Adafruit STEMMA QT Rotary Encoder](img/accessory_adafruit_encoder.jpg)  
    [**Adafruit I2C STEMMA QT Rotary Encoder Breakout**](https://www.adafruit.com/product/5880) -- A single rotary encoder with push button and NeoPixel LED, running seesaw firmware over I2C. Supports up to 8 on one I2C bus via address jumpers. AMYboard has built-in Python support for reading encoder position and button state.
 
@@ -116,7 +144,7 @@ amyboard.patch_selector()
 ```
 
  - ![M5Stack 8-Encoder Unit](img/accessory_m5_8encoder.jpg)  
-   [**M5Stack 8-Encoder Unit (STM32F030)**](https://shop.m5stack.com/products/8-encoder-unit-stm32f030) -- Eight rotary encoders with RGB LEDs and a toggle switch, all on one I2C unit. Great for controlling multiple synth parameters at once.
+   [**M5Stack 8-Encoder Unit (STM32F030)**](https://shop.m5stack.com/products/8-encoder-unit-stm32f030) -- Eight rotary encoders with RGB LEDs and a toggle switch, all on one I2C unit. Great for controlling multiple synth parameters at once. Use `amyboard.encoder()` (above) for portable code, or the lower-level `m5_8encoder` module directly:
 
 ```python
 import m5_8encoder
@@ -124,7 +152,9 @@ import m5_8encoder
 # Cumulative position of each encoder (-2**31 to +2**31)
 positions = m5_8encoder.read_all_counters()
 
-# Push-button state for each encoder (0 = up, 1 = pressed)
+# Push-button state for each encoder. The register is active-low:
+# 0 = pressed, 1 = up. (amyboard.encoder().button(i) normalizes this to
+# True == pressed.)
 buttons = m5_8encoder.read_all_buttons()
 
 # Toggle switch on the side (0 or 1)
