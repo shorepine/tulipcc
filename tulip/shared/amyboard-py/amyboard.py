@@ -512,6 +512,31 @@ def start_amy():
 
 _sketch_seq = None  # Keep reference to prevent GC
 
+# Cap on the traceback text we ship in a single 'X' sysex frame. One sysex
+# frame is reliably delivered over Web MIDI up to ~768 raw bytes (see
+# ZDUMP_STREAM_RAW_CHUNK in amy/src/transfer.c); we stay comfortably under that
+# after base64 expansion. Real MicroPython sketch tracebacks are ~150-300 bytes,
+# so this only ever trims pathologically deep stacks.
+_SKETCH_ERROR_MAX = 700
+
+def _format_exc_for_report(e):
+    """Full traceback (with file/line numbers) as a string, bounded so it fits
+    in a single error sysex frame. MicroPython prints most-recent-call-last, so
+    the exception type/message is the LAST line — when we must truncate we keep
+    the tail (the part the user needs) and drop the outermost frames."""
+    try:
+        from io import StringIO
+        buf = StringIO()
+        sys.print_exception(e, buf)
+        text = buf.getvalue().strip()
+    except Exception:
+        # If capture fails for any reason, fall back to the old one-liner so the
+        # web still gets *something* rather than nothing.
+        text = "%s: %s" % (type(e).__name__, e)
+    if len(text) > _SKETCH_ERROR_MAX:
+        text = "...(traceback truncated)\n" + text[-_SKETCH_ERROR_MAX:]
+    return text
+
 def _report_sketch_error(detail):
     """Push a sketch load error back to the web editor over sysex, framed as
     F0 00 03 45 'X' <base64 text> F7, so the UI can surface the failure (banner +
@@ -570,7 +595,7 @@ def run_sketch():
         # Route through stderr_write so the web console sees it alongside the
         # other diagnostics (stdout may not be wired up in some hosts).
         tulip.stderr_write("sketch.py load failed: %s: %s" % (type(e).__name__, e))
-        _report_sketch_error("%s: %s" % (type(e).__name__, e))
+        _report_sketch_error(_format_exc_for_report(e))
         try:
             sys.print_exception(e)
         except Exception:
@@ -588,7 +613,7 @@ def run_sketch():
             import sketch
         except Exception as e2:
             tulip.stderr_write("default sketch.py load also failed: %s: %s" % (type(e2).__name__, e2))
-            _report_sketch_error("%s: %s" % (type(e2).__name__, e2))
+            _report_sketch_error(_format_exc_for_report(e2))
             try:
                 sys.print_exception(e2)
             except Exception:
