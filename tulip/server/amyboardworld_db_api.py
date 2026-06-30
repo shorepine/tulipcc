@@ -1190,7 +1190,7 @@ THE amyboard MODULE (import amyboard) -- physical I/O (present on hardware; safe
 - amyboard.cv_in(channel) -> volts (-10..10). channel 0 = CV1, 1 = CV2.
 - amyboard.cv_out(volts, channel): write a CV output.
 - amyboard.read_encoder(), amyboard.init_buttons(), amyboard.read_buttons(): rotary encoder + buttons.
-- amyboard.init_display(); amyboard.display.fill(0); amyboard.display.text("hi", 0, 0, 255); amyboard.display_refresh(): optional OLED.
+- amyboard.init_display(); amyboard.display.fill(0); amyboard.display.text("hi", 0, 0, 255); amyboard.display_refresh(): optional 128x128 grayscale OLED. Color is 0-255. The ONLY drawing methods are: fill(col), fill_rect(x,y,w,h,col), rect(x,y,w,h,col), line(x1,y1,x2,y2,col), hline(x,y,w,col), vline(x,y,h,col), pixel(x,y,col), text(str,x,y,col), scroll(dx,dy). There is no circle, ellipse, hline-only-via-line, or print method -- use only the methods listed.
 
 OTHER MODULES
 - import midi: midi.add_callback(fn) registers fn(msg) for incoming MIDI. msg is a 3-byte sequence [status, data1, data2]; note-on is (status & 0xF0)==0x90 with vel>0, note-off is 0x80 (or 0x90 with vel==0).
