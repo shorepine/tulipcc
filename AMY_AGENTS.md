@@ -328,6 +328,44 @@ amy.send(synth=1, osc=3, wave=amy.PULSE,
          mod_source=1)
 ```
 
+## Rotary encoders: one `amyboard.encoder()` for all hardware — never the per-device helpers
+
+There are three encoder accessories (Adafruit single = 1 knob, Adafruit quad = 4,
+M5Stack 8Encoder = 8) plus the simulator's single emulated encoder. **Prefer the
+unified `amyboard.encoder()` over the legacy `read_encoder()`/`read_buttons()` or the
+`m5_8encoder` module**, because those tie a sketch to one device and a hardcoded
+encoder count/I2C address — a sketch that indexes encoder 3 silently breaks on the
+single-knob hardware and in the simulator.
+
+Build it once at top level, then read it in `loop()`. Drive parameters from the
+**delta** of `read(i)` (not its absolute value) and clamp to `range(enc.encoders)` so
+the same sketch scales from 1 to 8 knobs and degrades to a no-op when nothing is
+plugged in (`enc.encoders == 0`). Guard LED writes with `enc.leds`.
+
+```python
+import amyboard, amy
+
+amy.send(synth=1, patch=0, num_voices=4)
+enc = amyboard.encoder()          # autodetect; works on any device or the simulator
+_last = [enc.read(i) for i in range(enc.encoders)]
+
+def loop():
+    for i in range(enc.encoders):
+        pos = enc.read(i)
+        delta = pos - _last[i]
+        _last[i] = pos
+        if delta:
+            # encoder 0 -> cutoff; spread the rest across other params as you like
+            if i == 0:
+                amy.send(synth=1, filter_freq=max(50, min(8000, 1000 + pos * 50)))
+        if i < enc.leds:
+            enc.led(i, 0, 40 if enc.button(i) else 0, 40)
+```
+
+`enc.read(i)` is 0-based and starts at 0; `enc.button(i)` is True while held on every
+device; `enc.led(i, r, g, b)` takes 0..255 and applies immediately. Never reference an
+encoder index `>= enc.encoders` or an LED index `>= enc.leds`.
+
 ## MicroPython lacks some Python functions
 
 The script environment is MicroPython which attempts to match regular Python but does not 

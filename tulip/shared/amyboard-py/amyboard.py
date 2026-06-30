@@ -1006,6 +1006,196 @@ def show_neopixels(seesaw_dev=0x49):
     except OSError:
         _seesaw_missing.add(seesaw_dev)
 
+# ---------------------------------------------------------------------------
+# Unified rotary-encoder API
+# ---------------------------------------------------------------------------
+# AMYboard works with three different rotary-encoder accessories on the I2C bus,
+# each with its own wire protocol, encoder count, and LED layout:
+#
+#   "adafruit_single" - Adafruit I2C QT Rotary Encoder (0x36): 1 encoder, 1 LED
+#   "adafruit_quad"   - Adafruit Quad Rotary Encoder Breakout (0x49): 4 enc, 4 LED
+#   "m5stack"         - M5Stack Unit 8Encoder (0x41): 8 encoders, 8 LEDs + a toggle
+#   "web"             - the in-browser simulator's single emulated encoder
+#
+# Rather than make every sketch (and the sketch generator) special-case each one,
+# amyboard.encoder() autodetects whichever is connected and returns an Encoder
+# whose API is identical across all of them:
+#
+#   enc = amyboard.encoder()   # autodetect
+#   enc.type                   # "adafruit_quad" | "m5stack" | "web" | ... | None
+#   enc.encoders               # number of encoders (int)
+#   enc.leds                   # number of addressable LEDs (int)
+#   enc.read(i)                # cumulative position of encoder i, starts at 0
+#   enc.button(i)              # True while encoder i's push button is held
+#   enc.led(i, r, g, b)        # light encoder i's LED (0..255 each), applied now
+#   enc.reset(i)               # zero encoder i (omit i to zero them all)
+#   enc.switch()               # M5Stack toggle (always False on other devices)
+#
+# If no encoder is attached (type is None) or the I2C bus errors mid-read, every
+# method returns a safe default, so a sketch written for one device runs unchanged
+# on another device, on the web simulator, or on no hardware at all.
+
+_M5_8ENCODER_ADDR = 0x41
+_ADAFRUIT_QUAD_ADDR = 0x49
+_ADAFRUIT_SINGLE_ADDR = 0x36
+
+# Fixed per-device config. button_pins / neopixel_pin only apply to the seesaw
+# (Adafruit) devices; the M5Stack unit exposes everything through one register map.
+_ENCODER_PROFILES = {
+    "adafruit_single": {"addr": _ADAFRUIT_SINGLE_ADDR, "encoders": 1, "leds": 1,
+                        "button_pins": (24,), "neopixel_pin": 6},
+    "adafruit_quad":   {"addr": _ADAFRUIT_QUAD_ADDR, "encoders": 4, "leds": 4,
+                        "button_pins": (12, 14, 17, 9), "neopixel_pin": 18},
+    "m5stack":         {"addr": _M5_8ENCODER_ADDR, "encoders": 8, "leds": 8},
+}
+
+
+def _detect_encoder_type():
+    """Probe the I2C bus and return the connected encoder's type string, or None.
+
+    M5Stack is checked first since it has a distinct address; the two Adafruit
+    seesaw devices use different default addresses too."""
+    if web():
+        return "web"
+    try:
+        present = set(get_i2c().scan())
+    except Exception:
+        return None
+    if _M5_8ENCODER_ADDR in present:
+        return "m5stack"
+    if _ADAFRUIT_QUAD_ADDR in present:
+        return "adafruit_quad"
+    if _ADAFRUIT_SINGLE_ADDR in present:
+        return "adafruit_single"
+    return None
+
+
+class Encoder:
+    """One interface to whichever rotary-encoder accessory is connected.
+
+    Build via amyboard.encoder() (autodetects), or pass type= to force a specific
+    device: "adafruit_single", "adafruit_quad", or "m5stack".
+
+    Encoder positions returned by read() are zeroed at construction time, so the
+    first read() of an untouched encoder is 0 no matter what its raw hardware
+    counter happened to be. Buttons are normalized so button(i) is True while
+    held, regardless of each device's underlying active-high/active-low wiring."""
+
+    def __init__(self, type=None):
+        if type is None:
+            type = _detect_encoder_type()
+        self.type = type
+
+        if type == "web":
+            self.encoders = 1
+            self.leds = 0  # no LED in the simulator
+            self._addr = None
+        elif type in _ENCODER_PROFILES:
+            p = _ENCODER_PROFILES[type]
+            self.encoders = p["encoders"]
+            self.leds = p["leds"]
+            self._addr = p["addr"]
+            self._button_pins = p.get("button_pins")
+            self._neopixel_pin = p.get("neopixel_pin")
+            if type in ("adafruit_single", "adafruit_quad"):
+                init_buttons(pins=self._button_pins, seesaw_dev=self._addr)
+                init_neopixels(num=self.leds, pin=self._neopixel_pin, seesaw_dev=self._addr)
+        else:
+            # No encoder detected — a 0-encoder device whose methods all no-op.
+            self.type = None
+            self.encoders = 0
+            self.leds = 0
+            self._addr = None
+
+        # Snapshot each encoder's raw counter so read() starts at 0.
+        self._offset = [0] * max(self.encoders, 1)
+        for i in range(self.encoders):
+            self._offset[i] = self._raw_read(i)
+
+    # -- raw, offset-free per-device reads --
+
+    def _raw_read(self, i):
+        if self.type == "web":
+            return _web_encoder_pos
+        if self.type in ("adafruit_single", "adafruit_quad"):
+            return read_encoder(i, seesaw_dev=self._addr)
+        if self.type == "m5stack":
+            try:
+                i2c = get_i2c()
+                i2c.writeto(self._addr, bytes([4 * i]))  # counter reg = 4*i, <i (LE)
+                return struct.unpack("<i", i2c.readfrom(self._addr, 4))[0]
+            except OSError:
+                return 0
+        return 0
+
+    # -- public API --
+
+    def read(self, i=0):
+        """Cumulative position of encoder i (0-based), starting at 0."""
+        if not (0 <= i < self.encoders):
+            return 0
+        return self._raw_read(i) - self._offset[i]
+
+    def button(self, i=0):
+        """True while encoder i's push button is held down."""
+        if not (0 <= i < self.encoders):
+            return False
+        if self.type == "web":
+            return _web_encoder_button
+        if self.type in ("adafruit_single", "adafruit_quad"):
+            return read_buttons(pins=(self._button_pins[i],), seesaw_dev=self._addr)[0]
+        if self.type == "m5stack":
+            try:
+                i2c = get_i2c()
+                i2c.writeto(self._addr, bytes([0x50 + i]))  # button reg, active-low
+                return i2c.readfrom(self._addr, 1)[0] == 0  # 0 == pressed
+            except OSError:
+                return False
+        return False
+
+    def led(self, i, r, g, b):
+        """Set encoder i's LED to (r, g, b), each 0..255. Applied immediately."""
+        if not (0 <= i < self.leds):
+            return
+        if self.type in ("adafruit_single", "adafruit_quad"):
+            set_neopixel(i, r, g, b, seesaw_dev=self._addr)
+            show_neopixels(seesaw_dev=self._addr)
+        elif self.type == "m5stack":
+            try:
+                get_i2c().writeto_mem(self._addr, 0x70 + 3 * i, bytes([r, g, b]))  # RGB
+            except OSError:
+                pass
+
+    def reset(self, i=None):
+        """Zero encoder i back to 0 (omit i to zero every encoder)."""
+        if i is None:
+            for j in range(self.encoders):
+                self._offset[j] = self._raw_read(j)
+        elif 0 <= i < self.encoders:
+            self._offset[i] = self._raw_read(i)
+
+    def switch(self):
+        """M5Stack 8Encoder toggle-switch state (always False on other devices)."""
+        if self.type == "m5stack":
+            try:
+                i2c = get_i2c()
+                i2c.writeto(self._addr, bytes([0x60]))  # switch reg
+                return i2c.readfrom(self._addr, 1)[0] != 0
+            except OSError:
+                return False
+        return False
+
+
+def encoder(type=None):
+    """Autodetect the connected rotary-encoder accessory and return an Encoder.
+
+    Detects the Adafruit single (0x36) or quad (0x49) seesaw breakouts and the
+    M5Stack 8Encoder unit (0x41), or the web simulator's emulated encoder. Pass
+    type= ("adafruit_single", "adafruit_quad", "m5stack") to force a device.
+    See the Encoder class for the unified read()/button()/led()/reset() API."""
+    return Encoder(type=type)
+
+
 def monitor_encoders():
     """Show status of encoders on display."""
     # You can run this in a loop to get continuous display of encoders

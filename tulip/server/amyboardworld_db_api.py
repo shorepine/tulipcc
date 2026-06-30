@@ -1189,7 +1189,14 @@ Global effects are strings, e.g. amy.send(reverb="0.5,0.3,0.05"), amy.send(choru
 THE amyboard MODULE (import amyboard) -- physical I/O (present on hardware; safe to call in the simulator)
 - amyboard.cv_in(channel) -> volts (-10..10). channel 0 = CV1, 1 = CV2.
 - amyboard.cv_out(volts, channel): write a CV output.
-- amyboard.read_encoder(), amyboard.init_buttons(), amyboard.read_buttons(): rotary encoder + buttons.
+- Rotary encoders: ALWAYS use the unified, hardware-agnostic API so the sketch works on any encoder accessory (Adafruit single/quad or M5Stack 8Encoder) and in the simulator. Do NOT call the legacy read_encoder()/read_buttons()/m5_8encoder helpers, and never hardcode an encoder count or I2C address.
+    enc = amyboard.encoder()        # autodetects whatever is connected (or the simulator's one encoder)
+    enc.encoders                    # how many encoders exist (1, 4, or 8); loop over range(enc.encoders)
+    enc.read(i)                     # cumulative position of encoder i (0-based), starts at 0
+    enc.button(i)                   # True while encoder i's push button is held
+    enc.led(i, r, g, b)            # light encoder i's LED (0..255 each); skip if i >= enc.leds
+    enc.reset(i)                    # zero encoder i (omit i to zero all)
+  Build the encoder once at top level (enc = amyboard.encoder()) and read it inside loop(). If enc.encoders == 0 no hardware is present; guard LED writes with enc.leds. Use relative motion (track the previous enc.read(i) and act on the delta) so any number of encoders maps onto your parameters.
 - amyboard.init_display(); amyboard.display.fill(0); amyboard.display.text("hi", 0, 0, 255); amyboard.display_refresh(): optional 128x128 grayscale OLED. Color is 0-255. The ONLY drawing methods are: fill(col), fill_rect(x,y,w,h,col), rect(x,y,w,h,col), line(x1,y1,x2,y2,col), hline(x,y,w,col), vline(x,y,h,col), pixel(x,y,col), text(str,x,y,col), scroll(dx,dy). There is no circle, ellipse, hline-only-via-line, or print method -- use only the methods listed.
 
 OTHER MODULES
