@@ -1197,7 +1197,7 @@ THE amyboard MODULE (import amyboard) -- physical I/O (present on hardware; safe
     enc.led(i, r, g, b)            # light encoder i's LED (0..255 each); skip if i >= enc.leds
     enc.reset(i)                    # zero encoder i (omit i to zero all)
   Build the encoder once at top level (enc = amyboard.encoder()) and read it inside loop(). If enc.encoders == 0 no hardware is present; guard LED writes with enc.leds. Use relative motion (track the previous enc.read(i) and act on the delta) so any number of encoders maps onto your parameters.
-- amyboard.init_display(); amyboard.display.fill(0); amyboard.display.text("hi", 0, 0, 255); amyboard.display_refresh(): optional OLED.
+- amyboard.init_display(); amyboard.display.fill(0); amyboard.display.text("hi", 0, 0, 255); amyboard.display_refresh(): optional 128x128 grayscale OLED. Color is 0-255. The ONLY drawing methods are: fill(col), fill_rect(x,y,w,h,col), rect(x,y,w,h,col), line(x1,y1,x2,y2,col), hline(x,y,w,col), vline(x,y,h,col), pixel(x,y,col), text(str,x,y,col), scroll(dx,dy). There is no circle, ellipse, hline-only-via-line, or print method -- use only the methods listed.
 
 OTHER MODULES
 - import midi: midi.add_callback(fn) registers fn(msg) for incoming MIDI. msg is a 3-byte sequence [status, data1, data2]; note-on is (status & 0xF0)==0x90 with vel>0, note-off is 0x80 (or 0x90 with vel==0).

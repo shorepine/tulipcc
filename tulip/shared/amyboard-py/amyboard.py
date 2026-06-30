@@ -77,6 +77,14 @@ class Display:
         if self._fb is not None:
             self._fb.line(x1, y1, x2, y2, col)
 
+    def hline(self, x, y, w, col):
+        if self._fb is not None:
+            self._fb.hline(x, y, w, col)
+
+    def vline(self, x, y, h, col):
+        if self._fb is not None:
+            self._fb.vline(x, y, h, col)
+
     def pixel(self, x, y, col=None):
         if self._fb is None:
             return None
