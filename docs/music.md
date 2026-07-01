@@ -35,7 +35,7 @@ If you're using [Tulip Desktop](tulip_desktop.md) or [Tulip Web](https://tulip.c
 
 When you start up your Tulip, it is configured to receive MIDI messages from the MIDI in port (or the USB MIDI port if connected.) You can plug in any MIDI device that sends MIDI out, like a MIDI keyboard or your computer running a sequencer. 
 
-Try to just play notes once you've turned on Tulip, By default, MIDI channel 1 plays a Juno-6 patch. Notes on channel 10 will play PCM patches, roughly aligned with General MIDI drums. 
+Try to just play notes once you've turned on Tulip, By default, MIDI channel 1 plays a Juno-6 patch. Notes on channel 10 will play PCM patches, roughly aligned with General MIDI drums. (Channel 10 is set up for you as the GM drum kit, AMY `patch=258`, so note 36 is the kick, 38 the snare, 42 the closed hat, and so on. If you configure a drum synth by hand, load that patch — `amy.send(synth=10, num_voices=6, synth_flags=3, patch=258)` — rather than a bare `wave=amy.PCM` osc.)
 
 You can adjust patch assignments per channel, or change patches, using our built in `voices` app. You can type `run('voices')` or tap the bottom right launcher menu and tap `Voices`. 
 
