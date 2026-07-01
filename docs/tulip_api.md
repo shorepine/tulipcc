@@ -711,6 +711,19 @@ When enabled:
 - MIDI `FA` (Start) starts the sequencer.
 - MIDI `FC` (Stop) stops the sequencer.
 
+### MIDI Thru
+
+MIDI thru passes every incoming MIDI byte straight to Tulip's MIDI out, in addition to being processed normally. It is **off by default**.
+
+Use `tulip.amy_midi_thru(x)` to control this:
+
+```python
+tulip.amy_midi_thru(False) # default: do not echo MIDI in to MIDI out
+tulip.amy_midi_thru(True)  # echo every incoming MIDI byte to MIDI out
+```
+
+When enabled, bytes received on any MIDI input (UART or USB) are echoed to all active MIDI outputs as they arrive, while still being parsed and played as usual.
+
 ### MIDI SYSEX
 
 Tulip has special handling for MIDI sysex messages. Because of Tulip's memory constraints, we do not return SYSEX messages in `tulip.midi_in()`. We do always parse SYSEX messages for AMY-over-SYSEX, this allows you to send AMY wire messages over MIDI.
