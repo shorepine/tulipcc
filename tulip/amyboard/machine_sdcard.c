@@ -391,6 +391,12 @@ static mp_obj_t machine_sdcard_writeblocks(mp_obj_t self_in, mp_obj_t block_num,
     mp_get_buffer_raise(buf, &bufinfo, MP_BUFFER_READ);
     err = sdmmc_write_sectors(&(self->card), bufinfo.buf, mp_obj_get_int(block_num), bufinfo.len / _SECTOR_SIZE(self));
 
+    // The VFS block protocol treats any return other than None (or 0) as an
+    // error, so returning True on success made every write fail with EIO.
+    // Same fix as readblocks above (#1065).
+    if (err == ESP_OK) {
+        return mp_const_none;
+    }
     return mp_obj_new_bool(err == ESP_OK);
 }
 static MP_DEFINE_CONST_FUN_OBJ_3(machine_sdcard_writeblocks_obj, machine_sdcard_writeblocks);
