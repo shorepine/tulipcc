@@ -4546,9 +4546,18 @@ window.probe_amyboard_version = probe_amyboard_version;
 // lets them flash). Never blocks on silence; never nags more than once a session.
 async function check_amyboard_firmware() {
     if (amyboard_mode !== 'control') return true;
-    if (_fw_warned) return true;              // already acknowledged this session
+    // Confirm the board is actually responding BEFORE the _fw_warned gate — a
+    // silent board (unplugged, unpowered, or needs RST after a firmware flash)
+    // must surface an error and abort the write every time, even in a session
+    // where we've already acknowledged a firmware notice. Otherwise the
+    // fire-and-forget transfer below "succeeds" against nothing and the user
+    // gets no error (see write_sketch_to_amyboard).
     var alive = await wait_for_board_ready(5000);
-    if (!alive) { console.warn('[fwdetect] board not ready (no zI OK) — connection issue, not warning'); return true; }
+    if (!alive) {
+        console.warn('[fwdetect] board not ready (no zI OK) — not connected; warning + aborting write');
+        return await show_firmware_warning(null, null, 'disconnected');
+    }
+    if (_fw_warned) return true;              // already acknowledged this session
     var res = await probe_amyboard_version(2500);
     if (!res) { console.log('[fwdetect] retrying probe once…'); res = await probe_amyboard_version(2500); }
     var date = res ? res.date : null;
@@ -4567,9 +4576,17 @@ window.check_amyboard_firmware = check_amyboard_firmware;
 // again); "Update Firmware" -> open the Upgrade tab and resolve false.
 function show_firmware_warning(date, latest, reason) {
     return new Promise(function(resolve) {
+        // 'disconnected' means the board never replied (no zI) — not a firmware
+        // *version* issue. Unlike the version notices it can't be dismissed with
+        // "Continue" (there's nothing to write to), so its dismiss button aborts
+        // the write and it never sets _fw_warned (so the next attempt re-checks).
+        var isDisconnect = (reason === 'disconnected');
         var titleEl = document.getElementById('fw-warn-title');
         var bodyEl  = document.getElementById('fw-warn-body');
-        if (reason === 'undetected') {
+        if (isDisconnect) {
+            if (titleEl) titleEl.textContent = 'Can’t reach your AMYboard';
+            if (bodyEl) bodyEl.textContent = 'Your AMYboard didn’t respond. Make sure it’s connected and you’ve pressed RST after upgrading the firmware, then try again.';
+        } else if (reason === 'undetected') {
             if (titleEl) titleEl.textContent = 'Couldn’t detect your AMYboard firmware';
             if (bodyEl) bodyEl.textContent = 'Your AMYboard didn’t report a firmware version, which usually means it’s running older firmware. Updating is recommended so this editor works correctly.';
         } else {
@@ -4577,12 +4594,19 @@ function show_firmware_warning(date, latest, reason) {
             if (bodyEl) bodyEl.textContent = 'Your AMYboard firmware (' + _fmt_fw_date(date) + ') is older than the latest release (' + _fmt_fw_date(latest) + '). Updating is recommended.';
         }
         var el = document.getElementById('fwWarnModal');
-        if (!el || !window.bootstrap) { _fw_warned = true; resolve(true); return; }  // no modal -> proceed
+        // No modal available: abort on disconnect (can't write to a silent board);
+        // for version notices fall back to the old proceed-once behavior.
+        if (!el || !window.bootstrap) { if (isDisconnect) { resolve(false); return; } _fw_warned = true; resolve(true); return; }
         var inst = bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false });
         var contBtn = document.getElementById('fw-warn-continue');
         var updBtn  = document.getElementById('fw-warn-update');
+        if (contBtn) contBtn.textContent = isDisconnect ? 'OK' : 'Continue';
         function cleanup() { if (contBtn) contBtn.onclick = null; if (updBtn) updBtn.onclick = null; }
-        if (contBtn) contBtn.onclick = function() { cleanup(); inst.hide(); _fw_warned = true; console.log('[fwdetect] user: continue'); resolve(true); };
+        if (contBtn) contBtn.onclick = function() {
+            cleanup(); inst.hide();
+            if (isDisconnect) { console.log('[fwdetect] user: dismiss (disconnected) — aborting write'); resolve(false); return; }
+            _fw_warned = true; console.log('[fwdetect] user: continue'); resolve(true);
+        };
         if (updBtn)  updBtn.onclick  = function() {
             cleanup(); inst.hide();
             var t = document.getElementById('upgrade-tab');
