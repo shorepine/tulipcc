@@ -102,8 +102,14 @@ jobs:
 
       # For an AMY PR, point the `amy` submodule at the PR's commit so the firmware
       # is built from THIS PR's AMY code — the whole reason for the dispatch. The
-      # build reads amy sources by path (esp32_common.cmake → ../../amy/src), so
-      # checking out the working tree is all that's needed.
+      # build reads amy sources by path (esp32_common.cmake → ../../amy/src).
+      #
+      # Checking out amy's working tree is NOT enough on its own: the esp-idf
+      # firmware step below runs `git submodule update` inside a root Docker
+      # container, which would reset amy back to the superproject's *recorded*
+      # gitlink (main's pin) — silently building main's amy instead of the PR's.
+      # So we also `git add amy` to record the PR SHA as the gitlink; a later
+      # `git submodule update` then keeps the PR commit.
       - name: Pin amy submodule to the PR SHA (AMY runs only)
         if: steps.ctx.outputs.is_amy == 'true'
         env:
@@ -113,10 +119,12 @@ jobs:
           case "$AMY_SHA" in
             ""|*[!0-9a-fA-F]*) echo "::error::bad amy SHA: '$AMY_SHA'"; exit 1 ;;
           esac
-          cd amy
-          git fetch origin "$AMY_SHA"
-          git checkout --detach "$AMY_SHA"
-          echo "amy pinned to:"; git log -1 --oneline
+          git -C amy fetch origin "$AMY_SHA"
+          git -C amy checkout --detach "$AMY_SHA"
+          echo "amy pinned to:"; git -C amy log -1 --oneline
+          # Record the new gitlink in the superproject index so the container's
+          # `git submodule update` can't revert amy to main's pin.
+          git add amy
 
       # --- Firmware (.bin sets) ---
       # Build AMYBOARD then TULIP4_R11 in ONE esp-idf container: the two targets
@@ -162,6 +170,15 @@ jobs:
             tulip/esp32s3/dist/tulip-firmware-TULIP4_R11.bin
             tulip/esp32s3/dist/tulip-full-TULIP4_R11.bin
             tulip/esp32s3/dist/tulip-sys.bin
+
+      # The esp-idf firmware step above runs in a Docker container as root, so any
+      # file it created or rewrote in the bind-mounted workspace is now owned by
+      # root:root. The web build below runs as the (non-root) runner and, for AMY
+      # PRs, regenerates amy/amy/constants.py via `make web` (the pinned amy.h is
+      # newer than the committed patches.h). That write fails with "Permission
+      # denied" on the root-owned file — so reclaim ownership first.
+      - name: Reclaim workspace ownership after the root container build
+        run: sudo chown -R "$(id -u):$(id -g)" "$GITHUB_WORKSPACE"
 
       # --- Web stage/ (amy + amyboard WASM + static) ---
       - uses: actions/setup-python@v5
