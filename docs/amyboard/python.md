@@ -61,7 +61,7 @@ amy.send(osc=0, vel=0)
 
 ### Using patches
 
-AMY has 256+ built-in patches: 0-127 are Juno-6 analog, 128-255 are DX7 FM, 256 is piano, and 257+ are PCM drum kits.
+AMY has 256+ built-in patches: 0-127 are Juno-6 analog, 128-255 are DX7 FM, 256 is piano, and 257+ are PCM drum kits. Patch 258 is the General MIDI drum kit — load it on a synth with `synth_flags=3` and play GM note numbers (36=kick, 38=snare, 42=hat...) to trigger drums.
 In general, a patch will use multiple oscs.  `synth` is our abstraction to manage multiple oscs at the same time.
 
 ```python
@@ -149,7 +149,7 @@ import amy, amyboard
 
 # Set up my preferred patches
 amy.send(synth=1, patch=0, num_voices=6)      # Channel 1: Juno patch 0, 6-voice poly
-amy.send(synth=10, num_voices=1, oscs_per_voice=1, synth_flags=3)    # Channel 10: Drums (synth_flags magic).
+amy.send(synth=10, num_voices=6, patch=258, synth_flags=3)    # Channel 10: GM drum kit (note 36=kick, ...).
 
 # Set CV out 1 to 0V on startup
 amyboard.cv_out(0.0, channel=0)

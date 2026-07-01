@@ -59,8 +59,9 @@ Set the tempo with **`sequencer.tempo(bpm)`** (`import sequencer`). The grid is 
 import amy, sequencer
 
 sequencer.tempo(120)
-# GM drum synth: synth_flags=3 = GM note map, note 36 = kick
-amy.send(synth=10, num_voices=1, oscs_per_voice=1, synth_flags=3, wave=amy.PCM, amp=5)
+# GM drum synth: patch=258 is the GM drum kit (note 36 = kick, 38 = snare, 42 = hat...);
+# synth_flags=3 routes notes through the GM note map and ignores note-offs.
+amy.send(synth=10, num_voices=1, synth_flags=3, patch=258, amp=5)
 
 KICK = 36
 step = 0
@@ -73,6 +74,16 @@ def loop():
 
 > Source of truth: `tulip/amyboardweb/sketches/house_generator.py`, `acid_generator.py`
 > (`sequencer.tempo(...)` + 32-steps-per-bar patterns driven by a `loop()` step counter).
+
+> **GM drums need `patch=258`.** To play drums by GM note number (36=kick, 38=snare,
+> 42=closed hat, 46=open hat, 49=crash...) load the drum-kit patch: `amy.send(synth=10,
+> num_voices=N, synth_flags=3, patch=258)`. The note→sample mapping lives in patch 258.
+> The older recipe — `wave=amy.PCM` + `oscs_per_voice=1` with **no** patch — no longer
+> makes sound: bare `wave=amy.PCM` needs an explicit `preset=`, and note numbers alone no
+> longer select a drum sample. (`synth_flags` bit 1 used to be a built-in GM-drum note map;
+> it is now `SYNTH_FLAGS_NOTES_VIA_MIDI`, which only maps notes when a patch like 258 sets
+> up the mapping.) If you just want one raw PCM sample pitched by note, use
+> `wave=amy.PCM, preset=P` instead of a patch.
 
 ---
 
