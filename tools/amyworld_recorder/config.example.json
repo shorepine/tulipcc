@@ -1,0 +1,24 @@
+{
+  "api_base": "https://tulipcc-production.up.railway.app",
+  "out_dir": "session_out",
+
+  "capture_video": true,
+  "video_device": "iPhone",
+  "audio_device": "Model 16",
+  "audio_channels": [13, 14],
+
+  "midi_match": "amyboard",
+  "reset": "amy",
+  "oled_reset": "logo",
+  "denylist_on_wedge": true,
+  "amy_volume": 2,
+  "channel": 0,
+
+  "limit": 1000,
+  "tag": "",
+  "q": "",
+
+  "framerate": 30,
+  "video_size": null,
+  "autoplay": false
+}
