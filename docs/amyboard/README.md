@@ -132,6 +132,7 @@ And all sound will come from the AMYboard.
  - **[Arduino Setup](arduino.md)** -- Using the AMY synth engine in Arduino projects
  - **[Modular Synth Setup](modular.md)** -- CV, gate, and MIDI integration with your modular rig
  - **[Using Python](python.md)** -- Programming AMYboard with MicroPython
+ - **[Control API (MIDI SysEx)](control_api.md)** -- Drive AMYboard from your own scripts: transfer files both ways, dump synth state, run Python, reboot, read errors
  - **[Accessories](accessories.md)** -- Compatible displays, encoders, and other I2C accessories
  - **[Troubleshooting](troubleshooting.md)** -- Common issues and how to fix them
  - **[FAQ](faq.md)** -- Frequently asked questions from the AMYboard community

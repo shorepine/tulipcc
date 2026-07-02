@@ -1,0 +1,5 @@
+mido>=1.3
+python-rtmidi>=1.5
+requests>=2.31
+sounddevice>=0.4
+numpy>=1.24
