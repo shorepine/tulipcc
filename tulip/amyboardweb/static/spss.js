@@ -3198,7 +3198,10 @@ var _IS_WINDOWS_CHROME = typeof navigator !== 'undefined' &&
 // opts fields (all optional unless marked REQUIRED):
 //   sketchText       REQUIRED — file content to upload.
 //   sketchPath       defaults to '/user/current/sketch.py'.
-//   restart          true → send zP restart_sketch after upload.
+//   restart          true → send zP restart_sketch after upload;
+//                    'transfer_done' → send zP environment_transfer_done
+//                    instead (Write semantics: also restarts the sequencer
+//                    that the zT transfer stopped).
 //   setEditor        default true → editor.setValue(sketchText) + refresh.
 //   applyKnobs       default true → extract knobs from text and apply to UI.
 //   suppressKnobCc   true → set window.suppress_knob_cc_send around
@@ -3240,8 +3243,9 @@ async function _upload_sketch_post_bootloader(opts) {
         if (envNameInput) envNameInput.value = opts.packageName;
     }
     if (opts.restart) {
-        amy_add_log_message('zPimport amyboard; amyboard.restart_sketch()Z');
-        console.log('post-zb upload: sketch restarted via zP');
+        var restartFn = (opts.restart === 'transfer_done') ? 'environment_transfer_done' : 'restart_sketch';
+        amy_add_log_message('zPimport amyboard; amyboard.' + restartFn + '()Z');
+        console.log('post-zb upload: sketch restarted via zP (' + restartFn + ')');
     }
     if (opts.refreshWorldFiles && typeof refresh_amyboard_world_files === 'function') {
         try { await refresh_amyboard_world_files(); } catch (e) {}
@@ -4443,18 +4447,24 @@ async function _send_text_file_to_amyboard(path, text) {
 }
 
 // ============================================================================
-// Firmware version notice (dismissable warning — never blocks)
+// Pre-op board check: reachability, liveness, firmware version
 // ----------------------------------------------------------------------------
-// On the first Write/Read in control mode we probe the board for its firmware
-// build date (amyboard.report_version() -> 'V' sysex). We show a DISMISSABLE
-// warning, and only in two cases:
-//   (a) the firmware version couldn't be detected (no 'V' reply), or
-//   (b) the board's build date is older than the latest released firmware we
-//       know about (the rolling 'amyboard' GitHub release).
-// It never hard-blocks: "Continue" proceeds with the operation, "Update
-// Firmware" opens the flasher. Dismissed once, it won't nag again this session.
+// Every Write/Read in control mode first verifies the board can actually take
+// the operation, in escalating depth:
+//   1. reachable — replies OK to a zI ping (answered in pure C on the board).
+//      Silent -> "Can't reach your AMYboard", abort. Re-checked every op.
+//   2. responsive — ACKs an inert zP (needs the MicroPython scheduler, which a
+//      runaway sketch loop() starves; such a board still passes check 1).
+//      No ACK -> "stuck" warning offering a zB reboot that skips the sketch,
+//      after which the op continues. Re-checked every op.
+//   3. firmware version — probe the build date (amyboard.report_version() ->
+//      'V' sysex) and show a DISMISSABLE notice if it couldn't be detected or
+//      is older than the rolling 'amyboard' GitHub release. "Continue"
+//      proceeds; "Update Firmware" opens the flasher; dismissed once, it
+//      won't nag again this session (checks 1-2 still run every op).
 //
 // Console entry points for debugging (everything logs under [fwdetect]):
+//   await zp_liveness_ping()         -> true/false             (one zP ACK)
 //   await probe_amyboard_version()   -> {date, raw} or null   (one round-trip)
 //   await check_amyboard_firmware()  -> true/false            (full decision)
 // ============================================================================
@@ -4541,10 +4551,58 @@ function probe_amyboard_version(timeout_ms) {
 }
 window.probe_amyboard_version = probe_amyboard_version;
 
-// Dismissable firmware notice. Always returns true to proceed, except when the
-// user chooses "Update Firmware" (returns false so the caller aborts the op and
-// lets them flash). Never blocks on silence; never nags more than once a session.
-async function check_amyboard_firmware() {
+// Liveness check one level deeper than zI. zI is answered in pure C on the
+// board's MIDI task, so a board wedged by a runaway sketch loop() (which
+// starves the MicroPython scheduler) still replies OK to zI — but never ACKs
+// a zP, and everything a Write actually needs (the transfer completion, the
+// environment_transfer_done restart, the version probe) runs on the
+// MicroPython side. Sends an inert `zPpassZ` raw (same stale-port defenses as
+// _send_version_probe) and resolves true only if the board's AK arrives within
+// timeout_ms. Mirrors ping() in tools/amyworld_recorder/amyboard_link.py.
+function zp_liveness_ping(timeout_ms) {
+    timeout_ms = timeout_ms || 2500;
+    return new Promise(function(resolve) {
+        var done = false;
+        var t = null;
+        var onAck = function() { finish(true); };
+        function finish(ok) {
+            if (done) return;
+            done = true;
+            if (t) clearTimeout(t);
+            if (_sysex_ack_resolve === onAck) _sysex_ack_resolve = null;
+            resolve(ok);
+        }
+        var outputDevice = get_selected_midi_output_device();
+        if (!outputDevice) { console.warn('[fwdetect] no MIDI output selected — cannot liveness-ping'); finish(false); return; }
+        t = setTimeout(function() { finish(false); }, timeout_ms);
+        // Claim the shared ACK slot. Safe: check_amyboard_firmware runs before
+        // any transfer, so no sysex_write_amy_message is in flight here.
+        _sysex_ack_resolve = onAck;
+        try {
+            var rawOut = outputDevice._midiOutput || outputDevice.output || null;
+            if (rawOut && typeof rawOut.open === 'function') { try { rawOut.open().catch(function(){}); } catch (e) {} }
+            var payload = Array.from(new TextEncoder().encode('zPpassZ'));
+            if (typeof outputDevice.sendSysex === 'function') {
+                outputDevice.sendSysex(AMYBOARD_SYSEX_MFR_ID, payload);
+            } else if (typeof outputDevice.send === 'function') {
+                outputDevice.send([0xF0].concat(AMYBOARD_SYSEX_MFR_ID, payload, [0xF7]));
+            } else { finish(false); }
+        } catch (e) {
+            console.warn('[fwdetect] liveness ping send failed (port likely stale):', e);
+            finish(false);
+        }
+    });
+}
+window.zp_liveness_ping = zp_liveness_ping;
+
+// Pre-op board check (see block comment above). Returns true to proceed with
+// the operation. Returns false — aborting the op — when the board is
+// unreachable, when it's wedged and the user declines (or the recovery reboot
+// fails), or when the user chooses "Update Firmware" on a version notice.
+// opts.sketchText (optional): the pending Write's sketch, carried into the
+// wedged-recovery path so Windows Chrome can resume the upload after the
+// page reload its WebMIDI needs following a zB reboot.
+async function check_amyboard_firmware(opts) {
     if (amyboard_mode !== 'control') return true;
     // Confirm the board is actually responding BEFORE the _fw_warned gate — a
     // silent board (unplugged, unpowered, or needs RST after a firmware flash)
@@ -4556,6 +4614,21 @@ async function check_amyboard_firmware() {
     if (!alive) {
         console.warn('[fwdetect] board not ready (no zI OK) — not connected; warning + aborting write');
         return await show_firmware_warning(null, null, 'disconnected');
+    }
+    // The board answered zI — but zI is pure C, so it succeeds even when a
+    // runaway sketch loop() has wedged MicroPython. Require a zP ACK too,
+    // every op (before the _fw_warned gate — a board can wedge mid-session).
+    // Without this, a wedged board fell through to the version probe below and
+    // was misreported as "firmware out of date" — seen in the field on a board
+    // running the latest firmware.
+    var responsive = await zp_liveness_ping(2500);
+    if (!responsive) {
+        console.log('[fwdetect] no zP ACK — retrying liveness ping once…');
+        responsive = await zp_liveness_ping(2500);
+    }
+    if (!responsive) {
+        console.warn('[fwdetect] board replies to zI but not zP — wedged (stuck sketch loop()?); offering reboot');
+        return await show_firmware_warning(null, null, 'wedged', opts);
     }
     if (_fw_warned) return true;              // already acknowledged this session
     var res = await probe_amyboard_version(2500);
@@ -4574,18 +4647,29 @@ window.check_amyboard_firmware = check_amyboard_firmware;
 
 // Dismissable warning modal. "Continue" -> resolve true (proceed, don't nag
 // again); "Update Firmware" -> open the Upgrade tab and resolve false.
-function show_firmware_warning(date, latest, reason) {
+function show_firmware_warning(date, latest, reason, opts) {
     return new Promise(function(resolve) {
         // 'disconnected' means the board never replied (no zI) — not a firmware
         // *version* issue. Unlike the version notices it can't be dismissed with
         // "Continue" (there's nothing to write to), so its dismiss button aborts
         // the write and it never sets _fw_warned (so the next attempt re-checks).
         var isDisconnect = (reason === 'disconnected');
+        // 'wedged' means the board answers zI (pure C) but not zP (MicroPython)
+        // — a runaway sketch loop() is starving the scheduler. Like
+        // 'disconnected' it never sets _fw_warned; unlike it, we can fix it:
+        // zB is also handled in pure C, so a reboot-skipping-the-sketch gets
+        // through even while wedged. The action button sends it, waits for the
+        // board to re-enumerate, and resolves true so the pending op continues
+        // (a Write then replaces the stuck sketch).
+        var isWedged = (reason === 'wedged');
         var titleEl = document.getElementById('fw-warn-title');
         var bodyEl  = document.getElementById('fw-warn-body');
         if (isDisconnect) {
             if (titleEl) titleEl.textContent = 'Can’t reach your AMYboard';
             if (bodyEl) bodyEl.textContent = 'Your AMYboard didn’t respond. Make sure it’s connected and you’ve pressed RST after upgrading the firmware, then try again.';
+        } else if (isWedged) {
+            if (titleEl) titleEl.textContent = 'Your AMYboard is stuck';
+            if (bodyEl) bodyEl.textContent = 'Your AMYboard is connected but not accepting commands — usually a sketch stuck in a tight loop. Reboot it (the stuck sketch will be skipped) and this operation will continue.';
         } else if (reason === 'undetected') {
             if (titleEl) titleEl.textContent = 'Couldn’t detect your AMYboard firmware';
             if (bodyEl) bodyEl.textContent = 'Your AMYboard didn’t report a firmware version, which usually means it’s running older firmware. Updating is recommended so this editor works correctly.';
@@ -4594,20 +4678,61 @@ function show_firmware_warning(date, latest, reason) {
             if (bodyEl) bodyEl.textContent = 'Your AMYboard firmware (' + _fmt_fw_date(date) + ') is older than the latest release (' + _fmt_fw_date(latest) + '). Updating is recommended.';
         }
         var el = document.getElementById('fwWarnModal');
-        // No modal available: abort on disconnect (can't write to a silent board);
-        // for version notices fall back to the old proceed-once behavior.
-        if (!el || !window.bootstrap) { if (isDisconnect) { resolve(false); return; } _fw_warned = true; resolve(true); return; }
+        // No modal available: abort on disconnect/wedge (can't write to a board
+        // that isn't responding); for version notices fall back to the old
+        // proceed-once behavior.
+        if (!el || !window.bootstrap) { if (isDisconnect || isWedged) { resolve(false); return; } _fw_warned = true; resolve(true); return; }
         var inst = bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false });
         var contBtn = document.getElementById('fw-warn-continue');
         var updBtn  = document.getElementById('fw-warn-update');
-        if (contBtn) contBtn.textContent = isDisconnect ? 'OK' : 'Continue';
+        // The modal element is reused across reasons — set both labels every time.
+        if (contBtn) contBtn.textContent = isDisconnect ? 'OK' : (isWedged ? 'Cancel' : 'Continue');
+        if (updBtn)  updBtn.textContent  = isWedged ? 'Reboot AMYboard' : 'Update Firmware';
         function cleanup() { if (contBtn) contBtn.onclick = null; if (updBtn) updBtn.onclick = null; }
         if (contBtn) contBtn.onclick = function() {
             cleanup(); inst.hide();
-            if (isDisconnect) { console.log('[fwdetect] user: dismiss (disconnected) — aborting write'); resolve(false); return; }
+            if (isDisconnect || isWedged) { console.log('[fwdetect] user: dismiss (' + reason + ') — aborting op'); resolve(false); return; }
             _fw_warned = true; console.log('[fwdetect] user: continue'); resolve(true);
         };
-        if (updBtn)  updBtn.onclick  = function() {
+        if (updBtn)  updBtn.onclick  = isWedged ? async function() {
+            cleanup(); inst.hide();
+            console.log('[fwdetect] user: reboot wedged board (zB)');
+            if (_IS_WINDOWS_CHROME) {
+                // Same limitation as every zB flow: Windows Chrome WebMIDI can't
+                // survive the USB reboot in-document (see
+                // _zb_then_reload_with_upload_context). If a Write is pending,
+                // stash its sketch so the fresh page finishes the upload; a Read
+                // just reloads and the user retries against the unwedged board.
+                if (opts && typeof opts.sketchText === 'string') {
+                    // setEditor/applyKnobs default true: the reload wipes the
+                    // page, so restore editor + knob UI from the written sketch
+                    // (suppressKnobCc — the transfer already put them on hw).
+                    await _zb_then_reload_with_upload_context({
+                        sketchText: opts.sketchText,
+                        restart: 'transfer_done',
+                        suppressKnobCc: true
+                    });
+                } else {
+                    reboot_to_bootloader();
+                    console.log('[fwdetect] Windows Chrome — zB sent, reloading in 4s for fresh MIDIAccess');
+                    await sleep_ms(4000);
+                    window.location.reload();
+                }
+                resolve(false);  // unreachable in practice — the reload unloads us
+                return;
+            }
+            _show_resetting_modal('Rebooting AMYboard…');
+            reboot_to_bootloader();   // zB: pure C on the board, gets through while wedged
+            var back = await wait_for_board_ready();
+            _hide_resetting_modal();
+            if (!back) {
+                console.warn('[fwdetect] board did not come back after zB reboot');
+                resolve(await show_firmware_warning(null, null, 'disconnected'));
+                return;
+            }
+            console.log('[fwdetect] board recovered after zB — continuing the op');
+            resolve(true);
+        } : function() {
             cleanup(); inst.hide();
             var t = document.getElementById('upgrade-tab');
             if (t && window.bootstrap) new bootstrap.Tab(t).show();
@@ -4626,20 +4751,23 @@ function show_firmware_warning(date, latest, reason) {
 // editor. Live MIDI/CV tweaks and sketch-code effects are deliberately NOT saved.
 async function write_sketch_to_amyboard() {
     if (!editor) return;
-    // Fail-safe firmware check (only aborts if the user declines a confirmed-old board).
-    if (amyboard_mode === 'control' && !(await check_amyboard_firmware())) return;
-    // Clear any prior sketch-error indicator — this Write is a fresh attempt; it's
-    // re-raised (banner + Code-tab badge) if the new sketch fails to load.
-    if (typeof clear_python_error === 'function') clear_python_error();
     // Sync the knob log <-> editor BOTH ways, then send the editor's sketch
     // VERBATIM. Write must never modify the sketch (it used to splice the in-memory
     // log over the editor's block — which wiped a freshly pasted/edited sketch
     // whose block hadn't been rebuilt into the log). Flush a pending knob-block
     // reflect (recent knob moves -> editor) and a pending user-edit rebuild
     // (pasted/hand-edited block -> log); in practice at most one is pending.
+    // This runs BEFORE the board check so the final sketch text exists when the
+    // wedged-recovery path needs to carry it across a Windows Chrome reload.
     if (typeof flush_knob_block_reflect === 'function') flush_knob_block_reflect();
     if (typeof flush_log_rebuild_from_editor === 'function') flush_log_rebuild_from_editor();
     var sketchText = editor.getValue();
+    // Fail-safe board check — aborts on an unreachable board, a wedged board the
+    // user declines to reboot, or a declined firmware notice.
+    if (amyboard_mode === 'control' && !(await check_amyboard_firmware({ sketchText: sketchText }))) return;
+    // Clear any prior sketch-error indicator — this Write is a fresh attempt; it's
+    // re-raised (banner + Code-tab badge) if the new sketch fails to load.
+    if (typeof clear_python_error === 'function') clear_python_error();
     if (amyboard_mode === 'control') {
         // Use the race-free resetting modal (toggles classes synchronously). The
         // bootstrap-API saving modal can stick open when show()/hide() bracket a
