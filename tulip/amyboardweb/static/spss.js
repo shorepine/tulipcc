@@ -2878,13 +2878,9 @@ async function generate_sketch_from_prompt() {
                 "Loaded into the editor." + (remaining !== null ? (" " + remaining + " left today.") : ""),
                 "text-success"
             );
-            // Start the freshly generated sketch automatically, exactly as the
-            // "Restart Sketch" button does, so the user hears it right away.
-            try {
-                await restart_sketch();
-            } catch (e) {
-                console.warn("auto-start after generate failed:", e);
-            }
+            // Don't touch the board here — just load the code into the editor.
+            // Auto-restarting reboots the AMYboard (zB1), which the user didn't
+            // ask for. They hit "Write to your AMYboard" when they're ready.
         } else {
             setStatus("No sketch was returned.", "text-danger");
         }

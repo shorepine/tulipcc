@@ -61,7 +61,7 @@ amy.send(osc=0, vel=0)
 
 ### Using patches
 
-AMY has 256+ built-in patches: 0-127 are Juno-6 analog, 128-255 are DX7 FM, 256 is piano, and 257+ are PCM drum kits.
+AMY has 256+ built-in patches: 0-127 are Juno-6 analog, 128-255 are DX7 FM, 256 is piano, and 257+ are PCM drum kits. Patch 258 is the General MIDI drum kit — load it on a synth with `synth_flags=3` and play GM note numbers (36=kick, 38=snare, 42=hat...) to trigger drums.
 In general, a patch will use multiple oscs.  `synth` is our abstraction to manage multiple oscs at the same time.
 
 ```python
@@ -108,10 +108,15 @@ import amyboard
 amyboard.cv_out(5.0, channel=0)    # Output 5V on CV out 1
 volts = amyboard.cv_in(channel=0)   # Read CV in 1
 
-# Rotary encoders.  The defaults are for the Adafruit single-encoder https://www.adafruit.com/product/5880
-print(amyboard.read_encoder())
-amyboard.init_buttons()
-print(amyboard.read_buttons())
+# Rotary encoders.  amyboard.encoder() autodetects whichever accessory is
+# connected (Adafruit single/quad or M5Stack 8Encoder) and gives one API for all.
+enc = amyboard.encoder()
+print(enc.type, enc.encoders)       # e.g. "m5stack" 8
+print(enc.read(0))                  # position of encoder 0 (starts at 0)
+print(enc.button(0))                # True while held
+if enc.leds:
+    enc.led(0, 0, 64, 0)            # light encoder 0's LED dim green
+# See accessories.md for the legacy per-device read_encoder()/read_buttons() helpers.
 
 # OLED display (if connected)
 amyboard.init_display()
@@ -144,7 +149,7 @@ import amy, amyboard
 
 # Set up my preferred patches
 amy.send(synth=1, patch=0, num_voices=6)      # Channel 1: Juno patch 0, 6-voice poly
-amy.send(synth=10, num_voices=1, oscs_per_voice=1, synth_flags=3)    # Channel 10: Drums (synth_flags magic).
+amy.send(synth=10, num_voices=6, patch=258, synth_flags=3)    # Channel 10: GM drum kit (note 36=kick, ...).
 
 # Set CV out 1 to 0V on startup
 amyboard.cv_out(0.0, channel=0)

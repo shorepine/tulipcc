@@ -1,0 +1,8 @@
+.venv/
+session_out/
+stitchtest/
+captest/
+*.mp4
+*.mov
+config.json
+__pycache__/

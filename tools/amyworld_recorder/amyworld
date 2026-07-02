@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Convenience wrapper: runs the recorder tools with the bundled venv so you
+# don't have to activate it. Usage:
+#   ./amyworld record  --list-devices
+#   ./amyworld record  --config config.json
+#   ./amyworld stitch  plan --session session_out
+#   ./amyworld stitch  render --session session_out --out montage.mp4
+set -euo pipefail
+here="$(cd "$(dirname "$0")" && pwd)"
+py="$here/.venv/bin/python"
+if [ ! -x "$py" ]; then
+  echo "venv missing — create it with:"
+  echo "  python3.13 -m venv $here/.venv && $here/.venv/bin/pip install -r $here/requirements.txt"
+  exit 1
+fi
+tool="${1:-}"; shift || true
+case "$tool" in
+  record) exec "$py" "$here/record.py" "$@" ;;
+  stitch) exec "$py" "$here/stitch.py" "$@" ;;
+  *) echo "usage: amyworld {record|stitch} [args...]"; exit 1 ;;
+esac
