@@ -3,11 +3,26 @@
 
 Flashes a built AMYboard firmware onto a physically connected board, reboots it,
 drives it with USB-MIDI notes and AMY `zP` sysex, records the analog audio out,
-and RMS-compares the recording against a committed reference (like amy/test.py)
-for pass/fail. The two serial consoles are tailed for the whole run — the debug
-UART (ESP-IDF console / stderr) and the native CDC (MicroPython stdout) — and
-saved to a combined `{name}-serial.log` next to `{name}-recording.wav`, so a CI
-run can attach both the audio and the logs to the PR.
+and spectral-compares the recording against a committed reference (like
+amy/test.py) for pass/fail.
+
+Two phases per run:
+  1. Built-in reference tones (ref/hwci_basic.wav): a scale + chord over USB-MIDI
+     and a sustained board-scheduled `zP` sine chord.
+  2. AMYboard World sketches: download real community sketches from World and push
+     each onto the board over the SysEx "write to sketch" control API (the same
+     flow the web editor uses — see docs/amyboard/control_api.md), drive them with
+     a simple MIDI pattern, and record each to `{name}-recording.wav` /
+     `ref/{name}.wav`. This exercises far more of AMY than the tones — the drum-
+     heavy generators would have caught the PR #1067 drums regression the tone-only
+     test missed. The generators are random, so we compare with the timing/phase-
+     invariant avg-spectrum metric (their timbre is stable even when the notes
+     aren't). Disable with --no-world.
+
+The two serial consoles are tailed for the whole run — the debug UART (ESP-IDF
+console / stderr) and the native CDC (MicroPython stdout) — and saved to a
+combined `{name}-serial.log`, so a CI run can attach the audio and the logs to
+the PR.
 
 Two backends, auto-selected:
   * ALSA CLI (`amidi` + `arecord`)  — Linux / Raspberry Pi CI runner. No extra
@@ -26,6 +41,8 @@ Quick start (Pi):
     python3 hwci.py --pr 993 --port /dev/ttyACM1 --midi-port hw:0,0,0 --audio-device hw:1,0
 """
 import argparse
+import base64
+import json
 import os
 import shutil
 import subprocess
@@ -33,6 +50,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.parse
 import urllib.request
 import wave
 
@@ -42,6 +60,54 @@ PREVIEW_URL = "https://amyboard-pr-{pr}.vercel.app/firmware/amyboard-full-AMYBOA
 AMY_SYSEX_PREFIX = [0x00, 0x03, 0x45]
 MIDI_NAME = "AMYboard"
 ALSA = bool(shutil.which("amidi") and shutil.which("arecord"))
+
+# AMYboard World: the second half of the test loads real community sketches over
+# the SysEx "write to sketch" flow (the same one the web editor uses) and records
+# each one, so the HW CI exercises more than the built-in reference tones. See
+# docs/amyboard/control_api.md and tools/amyworld_recorder/. PR #1067 was a drums
+# regression the tone-only test missed — the drum-heavy generators below cover it.
+WORLD_BASE = "https://tulipcc-production.up.railway.app"
+SKETCH_PATH = "/user/current/sketch.py"
+CHUNK_BYTES = 188          # AMYBOARD_TRANSFER_CHUNK_BYTES (spss.js / transfer.c)
+
+# The World sketches to audition, in order. `generative` sketches drive themselves
+# from loop() (started by the sequencer that environment_transfer_done() kicks off)
+# and use random() — so run-to-run they differ in the notes but not the timbre, and
+# the timing/phase-invariant avg-spectrum compare still matches. `woodpiano` is a
+# bare DX7 patch that only sounds when we send it MIDI notes. We send the simple
+# MIDI pattern to every sketch (it also proves the USB-MIDI note path per sketch).
+WORLD_SUITE = [
+    {"name": "acid_generator",  "author": "shorepine", "generative": True,  "min_sim": 0.80},
+    {"name": "house_generator", "author": "shorepine", "generative": True,  "min_sim": 0.80},
+    {"name": "universal_hair",  "author": "shorepine", "generative": True,  "min_sim": 0.82},
+    {"name": "woodpiano",       "author": "shorepine", "generative": False, "min_sim": 0.85},
+]
+
+
+# ── AMYboard World sketch fetch (stdlib only — the Pi CI venv has no `requests`) ─
+def world_fetch_sketch(name, author, base=WORLD_BASE, timeout=30):
+    """Resolve `author`/`name` to a World sketch and return its python source.
+
+    Resolves by name+author at run time (rather than a hard-coded id) so a
+    re-upload doesn't silently test the wrong file. Backed by the public
+    read-only API in tulip/server/amyboardworld_db_api.py."""
+    params = urllib.parse.urlencode({
+        "limit": 20, "item_type": "environment", "latest_per_user_env": "true",
+        "q": name, "username": author})
+    with urllib.request.urlopen("%s/api/amyboardworld/files?%s" % (base, params),
+                                timeout=timeout) as r:
+        items = json.load(r).get("items", [])
+    want = name + ".py"
+    match = next((it for it in items if str(it.get("filename", "")) == want
+                  and str(it.get("username", "")).lower() == author.lower()), None)
+    match = match or next((it for it in items if str(it.get("filename", "")) == want), None)
+    if not match:
+        raise RuntimeError("World sketch %s/%s not found" % (author, name))
+    url = match.get("download_url") or ("/api/amyboardworld/files/%s/download" % match["id"])
+    if not url.startswith("http"):
+        url = base + url
+    with urllib.request.urlopen(url, timeout=timeout) as r:
+        return r.read().decode("utf-8")
 
 
 # ── firmware ────────────────────────────────────────────────────────────────
@@ -99,39 +165,203 @@ def alsa_find_midi():
 
 
 class Midi:
-    """Send-only MIDI to the board, via amidi (ALSA) or mido."""
+    """MIDI to the board, via amidi (ALSA) or mido.
+
+    Send-only for the built-in reference test. For the AMYboard World sketch
+    transfers (many chunked SysEx frames) we MUST flow-control so the board's
+    SysEx ring buffer can't overflow and drop chunks (a dropped chunk corrupts
+    sketch.py → the board self-heals to the silent default sketch). So we wait for
+    the board's `AK` after every frame — one frame in flight — exactly like the
+    web editor and tools/amyworld_recorder/amyboard_link.py (see
+    docs/amyboard/control_api.md). Both backends read the board's MIDI *input*:
+
+      * mido backend (mac dev): an input port with a callback.
+      * ALSA backend (Pi CI): a persistent `stdbuf -oL amidi -p PORT -d` reader
+        (line-buffered so `AK` frames arrive in real time, not block-buffered)
+        alongside the one-shot `amidi -S` sends — the two coexist fine on the
+        board's rawmidi device.
+
+    If the input reader can't be started, we degrade to pacing the frames with a
+    fixed delay (works for small sketches, may drop chunks on large ones).
+    """
+    ACK_TIMEOUT = 2.0          # wait this long for the board's AK, then proceed
+    PACE = 0.03                # inter-frame delay when we can't wait on AK
+
     def __init__(self, port):
         self.port = port
+        self._mido = None
         self._mido_out = None
+        self._mido_in = None
+        self._ack_proc = None
+        self._ack = threading.Event()
+        self.ack_available = False
         if not ALSA:
             import mido
             self._mido = mido
             self._mido_out = mido.open_output(port)
+            in_name = _mido_find_input()
+            if in_name:
+                self._mido_in = mido.open_input(in_name, callback=self._on_mido_message)
+                self.ack_available = True
+        else:
+            try:
+                self._ack_proc = subprocess.Popen(
+                    ["stdbuf", "-oL", "amidi", "-p", port, "-d"],
+                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+                threading.Thread(target=self._alsa_ack_reader, daemon=True).start()
+                self.ack_available = True
+            except Exception as e:
+                print("[midi] no ACK reader (%s); pacing sysex instead" % e)
 
-    def _raw(self, data):
+    # -- incoming — set the ACK event on the board's `AK` frame -----------------
+    def _on_mido_message(self, msg):
+        if msg.type != "sysex":
+            return
+        d = msg.data
+        if len(d) >= 5 and tuple(d[:3]) == tuple(AMY_SYSEX_PREFIX) \
+                and d[3] == 0x41 and d[4] == 0x4B:      # 'A' 'K'
+            self._ack.set()
+
+    def _alsa_ack_reader(self):
+        """Parse the `amidi -d` hex stream for `F0 00 03 45 41 4B F7` (AK) frames
+        and set the ACK event. Other reply frames (OK/X/…) are ignored."""
+        buf, insx = [], False
+        try:
+            for line in self._ack_proc.stdout:      # line-buffered by stdbuf -oL
+                for tok in line.split():
+                    try:
+                        b = int(tok, 16)
+                    except ValueError:
+                        continue
+                    if b == 0xF0:
+                        insx, buf = True, []
+                    elif b == 0xF7:
+                        if insx and buf[:3] == AMY_SYSEX_PREFIX and buf[3:5] == [0x41, 0x4B]:
+                            self._ack.set()
+                        insx, buf = False, []
+                    elif insx:
+                        buf.append(b)
+        except Exception:
+            pass
+
+    def _raw(self, data, retries=3):
         if ALSA:
-            subprocess.run(["amidi", "-p", self.port, "-S",
-                            " ".join("%02X" % b for b in data)], check=True)
+            # `amidi -S` occasionally exits non-zero for a beat right after a
+            # sketch restart re-inits the board's USB-MIDI endpoint (seen on the
+            # first note after environment_transfer_done). A dropped frame must
+            # not abort the whole capture, so retry briefly then warn + continue
+            # rather than raise.
+            cmd = ["amidi", "-p", self.port, "-S", " ".join("%02X" % b for b in data)]
+            for attempt in range(retries + 1):
+                r = subprocess.run(cmd, capture_output=True, text=True)
+                if r.returncode == 0:
+                    return
+                if attempt < retries:
+                    time.sleep(0.1)
+            print("[midi] amidi -S failed after %d tries (%s); continuing"
+                  % (retries + 1, (r.stderr or "").strip()))
         else:
             # split running-status-free messages; data is one message here
             self._mido_out.send(self._mido.Message.from_bytes(data))
 
-    def note_on(self, n, vel=100):
-        self._raw([0x90, n, vel])
+    def note_on(self, n, vel=100, channel=0):
+        self._raw([0x90 | (channel & 0x0F), n, vel])
 
-    def note_off(self, n):
-        self._raw([0x80, n, 0])
+    def note_off(self, n, channel=0):
+        self._raw([0x80 | (channel & 0x0F), n, 0])
+
+    def all_notes_off(self, channel=0):
+        self._raw([0xB0 | (channel & 0x0F), 123, 0])   # CC 123 = all notes off
 
     def note(self, n, vel, dur):
         self.note_on(n, vel); time.sleep(dur); self.note_off(n)
 
+    def _frame(self, code):
+        return [0xF0] + AMY_SYSEX_PREFIX + list(code.encode("ascii")) + [0xF7]
+
     def sysex(self, code):
-        self._raw([0xF0] + AMY_SYSEX_PREFIX + list(code.encode("ascii")) + [0xF7])
+        """Fire-and-forget one control frame (used by the built-in reference test,
+        whose frames are small and few — its committed ref/hwci_basic.wav depends
+        on this timing, so leave it alone)."""
+        self._raw(self._frame(code))
         time.sleep(0.02)
 
+    def sysex_ack(self, code, timeout=ACK_TIMEOUT):
+        """Send one control frame with flow control: wait for the board's `AK`
+        (mido) or pace with a fixed delay (ALSA). Returns True if acked/sent."""
+        if self.ack_available:
+            self._ack.clear()
+            self._raw(self._frame(code))
+            return self._ack.wait(timeout)
+        self._raw(self._frame(code))
+        time.sleep(self.PACE)
+        return True
+
+    def send_python(self, code, timeout=ACK_TIMEOUT):
+        """Run one line of python on the board via zP (control_api.md)."""
+        return self.sysex_ack("zP" + code + "Z", timeout=timeout)
+
+    # -- push a sketch onto the board (zT header + base64 chunks) ---------------
+    def transfer_sketch(self, text, path=SKETCH_PATH):
+        """Write a sketch to the board, mirroring the web editor's zT flow: a
+        `zT<path>,<size>Z` header then the file bytes in <=188-byte base64 chunks,
+        one frame at a time with flow control."""
+        data = text.encode("utf-8")
+        self.sysex_ack("zT%s,%dZ" % (path, len(data)))
+        for i in range(0, len(data), CHUNK_BYTES):
+            self.sysex_ack(base64.b64encode(data[i:i + CHUNK_BYTES]).decode("ascii"))
+
+    def load_world_sketch(self, text, settle=1.5):
+        """amy.reset() → transfer → environment_transfer_done() (restarts the
+        sketch and starts the sequencer, so generative loop()s begin playing).
+        Give the sketch a moment to init before we start recording it."""
+        self.send_python("import amy; amy.reset()")
+        time.sleep(0.3)
+        self.transfer_sketch(text)
+        self.send_python("import amyboard; amyboard.environment_transfer_done()")
+        time.sleep(settle)
+
+    def play_pattern(self, seconds, channel=0):
+        """A simple, DETERMINISTIC A-minor arpeggio looped for `seconds` on ch1
+        (what World sketches listen on). Deterministic so a patch sketch like
+        woodpiano yields a stable reference; generative sketches self-drive and
+        just get these as extra notes in the same timbre."""
+        root, arp, step = 57, [0, 3, 7, 12, 7, 3], 0.18   # A3, minor triad + octave
+        end = time.time() + seconds
+        i = 0
+        while time.time() < end:
+            n = root + arp[i % len(arp)]
+            self.note_on(n, 100, channel)
+            time.sleep(step * 0.9)
+            self.note_off(n, channel)
+            time.sleep(step * 0.1)
+            i += 1
+        self.all_notes_off(channel)
+
+    def silence(self):
+        """Leave the board quiet after the World suite so it doesn't bleed into
+        the Tulip recording that runs next on the shared capture card: stop the
+        sequencer (halts generative loop()s), reset AMY, kill any held notes."""
+        try:
+            self.sysex("zY0Z")                       # stop sequencer transport
+            self.send_python("import amyboard; amyboard.stop_sketch()")  # kill loop()
+            self.send_python("import amy; amy.reset()")
+            self.all_notes_off(0)
+        except Exception:
+            pass
+
     def close(self):
-        if self._mido_out:
-            self._mido_out.close()
+        for p in (self._mido_out, self._mido_in):
+            try:
+                if p:
+                    p.close()
+            except Exception:
+                pass
+        if self._ack_proc:
+            try:
+                self._ack_proc.terminate()
+            except Exception:
+                pass
 
 
 def wait_for_board(timeout=40):
@@ -152,6 +382,14 @@ def wait_for_board(timeout=40):
 def _mido_find():
     import mido
     for n in mido.get_output_names():
+        if MIDI_NAME in n:
+            return n
+    return None
+
+
+def _mido_find_input():
+    import mido
+    for n in mido.get_input_names():
         if MIDI_NAME in n:
             return n
     return None
@@ -368,6 +606,37 @@ def compare(rec, ref):
     return sim, level_db
 
 
+# ── AMYboard World sketch suite ──────────────────────────────────────────────
+def run_world_suite(args, m):
+    """Download each WORLD_SUITE sketch, push it onto the board, drive it with the
+    simple MIDI pattern, and record it. Returns [(name, recording|None, min_sim)];
+    a None recording means fetch/load failed for that sketch (a test failure, but
+    the run continues so the other sketches + artifacts are still produced)."""
+    results = []
+    for spec in WORLD_SUITE:
+        name, author = spec["name"], spec["author"]
+        min_sim = (args.world_min_similarity if args.world_min_similarity is not None
+                   else spec.get("min_sim", 0.80))
+        print(f"\n[world] === {author}/{name} (generative={spec['generative']}) ===")
+        try:
+            text = world_fetch_sketch(name, author, base=args.world_base)
+        except Exception as e:
+            print(f"[world] fetch failed for {author}/{name}: {e}")
+            results.append((name, None, min_sim))
+            continue
+        print(f"[world] fetched {len(text)} bytes; transferring + starting sketch")
+        try:
+            m.load_world_sketch(text)
+            rec = record_and_drive(args, args.world_duration,
+                                   lambda: m.play_pattern(args.world_duration))
+        except Exception as e:
+            print(f"[world] load/record failed for {author}/{name}: {e}")
+            results.append((name, None, min_sim))
+            continue
+        results.append((name, rec, min_sim))
+    return results
+
+
 # ── main ────────────────────────────────────────────────────────────────────
 def main():
     ap = argparse.ArgumentParser(description="AMYboard hardware-in-the-loop test")
@@ -407,6 +676,16 @@ def main():
                     help="combined serial log path (default: {name}-serial.log)")
     ap.add_argument("--no-serial-log", action="store_true",
                     help="don't capture the serial console")
+    ap.add_argument("--no-world", dest="world", action="store_false",
+                    help="skip the AMYboard World sketch suite (basic tones only)")
+    ap.set_defaults(world=True)
+    ap.add_argument("--world-duration", type=float, default=10.0,
+                    help="seconds to record each World sketch")
+    ap.add_argument("--world-min-similarity", type=float, default=None,
+                    help="override the per-sketch min spectral similarity for the "
+                         "whole World suite (default: each sketch's own threshold)")
+    ap.add_argument("--world-base", default=WORLD_BASE,
+                    help="AMYboard World API base URL")
     args = ap.parse_args()
     print(f"[hwci] backend: {'ALSA cli' if ALSA else 'python libs'}")
 
@@ -466,9 +745,17 @@ def main():
                 loggers.append(cdc)
         if not args.audio_device:
             sys.exit("--audio-device required (see --list-devices).")
+        # Record everything while the serial consoles are tailed and the board is
+        # up: first the built-in reference tones, then (unless --no-world) each
+        # AMYboard World sketch. results = [(name, recording|None, min_sim)].
         m = Midi(args.midi_port)
+        results = []
         try:
             rec = record_and_drive(args, args.duration, lambda: run_test_sequence(m))
+            results.append((args.name, rec, args.min_similarity))
+            if args.world:
+                results += run_world_suite(args, m)
+                m.silence()   # leave the board quiet for the Tulip test that follows
         finally:
             m.close()
     finally:
@@ -477,24 +764,40 @@ def main():
         if tmp and bin_path:
             os.unlink(bin_path)
 
-    out_wav = args.out or f"{args.name}-recording.wav"
-    write_wav_mono(out_wav, rec, args.samplerate)
-    print(f"[audio] saved {out_wav}")
+    # Per-test: save the recording, then either capture the reference
+    # (--update-reference) or spectral-compare against it. The run passes only if
+    # every test passes.
+    overall_ok = True
+    for name, rec, min_sim in results:
+        out_wav = (args.out if name == args.name and args.out else f"{name}-recording.wav")
+        if rec is None:                       # fetch/load failed in the World suite
+            print(f"\n{name}: FAIL (no recording — sketch fetch/load error)")
+            overall_ok = False
+            continue
+        write_wav_mono(out_wav, rec, args.samplerate)
+        print(f"[audio] saved {out_wav}")
+        ref_path = (args.reference if name == args.name and args.reference
+                    else os.path.join(REF_DIR, f"{name}.wav"))
+        if args.update_reference:
+            os.makedirs(REF_DIR, exist_ok=True)
+            write_wav_mono(ref_path, rec, args.samplerate)
+            print(f"[ref] wrote {ref_path} — LISTEN to confirm it's correct.")
+            continue
+        if not os.path.exists(ref_path):
+            print(f"\n{name}: FAIL — no reference at {ref_path}; run once with "
+                  "--update-reference.")
+            overall_ok = False
+            continue
+        ref, _ = read_wav_mono(ref_path)
+        sim, level_db = compare(rec, ref)
+        ok = sim >= min_sim and level_db >= args.min_level_db
+        print(f"\n{name}: spectral_similarity={sim:.4f} (min {min_sim})  "
+              f"level={level_db:.1f}dB (min {args.min_level_db})  ->  {'PASS' if ok else 'FAIL'}")
+        overall_ok = overall_ok and ok
 
-    ref_path = args.reference or os.path.join(REF_DIR, f"{args.name}.wav")
     if args.update_reference:
-        os.makedirs(REF_DIR, exist_ok=True)
-        write_wav_mono(ref_path, rec, args.samplerate)
-        print(f"[ref] wrote {ref_path} — LISTEN to confirm it's correct.")
         return 0
-    if not os.path.exists(ref_path):
-        sys.exit(f"[ref] no reference at {ref_path}; run once with --update-reference.")
-    ref, _ = read_wav_mono(ref_path)
-    sim, level_db = compare(rec, ref)
-    ok = sim >= args.min_similarity and level_db >= args.min_level_db
-    print(f"\n{args.name}: spectral_similarity={sim:.4f} (min {args.min_similarity})  "
-          f"level={level_db:.1f}dB (min {args.min_level_db})  ->  {'PASS' if ok else 'FAIL'}")
-    return 0 if ok else 1
+    return 0 if overall_ok else 1
 
 
 if __name__ == "__main__":
