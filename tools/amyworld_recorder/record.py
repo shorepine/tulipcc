@@ -19,10 +19,11 @@ import termios
 import time
 import tty
 
+import _bootstrap  # noqa: F401  (makes the in-repo amyboardctl importable)
 import capture
 import patterns
-import worldapi
-from amyboard_link import AMYboardLink
+from amyboardctl import AMYboardLink
+from amyboardctl import world as worldapi
 from session import Session
 
 

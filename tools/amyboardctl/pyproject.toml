@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amyboardctl"
+version = "0.1.0"
+description = "Control an AMYboard over USB-MIDI SysEx: upload/download sketches, dump synth state, run Python, reboot. Library + CLI."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+# mido/python-rtmidi are the default (cross-platform) MIDI backend. On Linux
+# the ALSA CLI backend (`amidi`) works with no Python MIDI deps at all — the
+# library imports mido lazily, so an install without these still works there.
+dependencies = [
+    "mido>=1.3",
+    "python-rtmidi>=1.5",
+]
+
+[project.scripts]
+amyboardctl = "amyboardctl.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["amyboardctl*"]

@@ -137,6 +137,10 @@ jobs:
           # pipe `tar | head`, which SIGPIPEs and fails the step under pipefail).
           TOP="${GITHUB_REPOSITORY##*/}-${SHA}"
           tar xzf /tmp/hwci-src.tgz -C hwci --strip-components=4 "${TOP}/tulip/amyboard/hwci"
+          # hwci.py's board control lives in the shared amyboardctl library;
+          # extract its package next to hwci.py so `import amyboardctl` works
+          # (stdlib-only on the Pi — the ALSA backend needs no mido).
+          tar xzf /tmp/hwci-src.tgz -C hwci --strip-components=3 "${TOP}/tools/amyboardctl/amyboardctl"
           echo "Extracted:"; ls -R hwci
 
       - name: Download this PR's Tulip firmware (built by the preview run)

@@ -2,9 +2,14 @@
 
 Backed by tulip/server/amyboardworld_db_api.py; production base is
 https://tulipcc-production.up.railway.app
+
+Stdlib-only (urllib) so environments without `requests` — like the Pi HW-CI
+venv — can use it.
 """
 
-import requests
+import json
+import urllib.parse
+import urllib.request
 
 DEFAULT_BASE = "https://tulipcc-production.up.railway.app"
 
@@ -32,9 +37,9 @@ def list_sketches(base=DEFAULT_BASE, limit=100, tag="", q="", username="",
         params["q"] = q
     if username:
         params["username"] = username
-    r = requests.get(base + "/api/amyboardworld/files", params=params, timeout=timeout)
-    r.raise_for_status()
-    items = r.json().get("items", [])
+    url = "%s/api/amyboardworld/files?%s" % (base, urllib.parse.urlencode(params))
+    with urllib.request.urlopen(url, timeout=timeout) as r:
+        items = json.load(r).get("items", [])
     # only real environment .py sketches
     return [it for it in items if str(it.get("filename", "")).endswith(".py")]
 
@@ -44,6 +49,20 @@ def download_sketch(item, base=DEFAULT_BASE, timeout=30):
     url = item.get("download_url") or ("/api/amyboardworld/files/%s/download" % item["id"])
     if not url.startswith("http"):
         url = base + url
-    r = requests.get(url, timeout=timeout)
-    r.raise_for_status()
-    return r.text
+    with urllib.request.urlopen(url, timeout=timeout) as r:
+        return r.read().decode("utf-8")
+
+
+def fetch_sketch(name, author, base=DEFAULT_BASE, timeout=30):
+    """Resolve `author`/`name` to a World sketch and return its python source.
+
+    Resolves by name+author at run time (rather than a hard-coded id) so a
+    re-upload doesn't silently fetch the wrong file."""
+    items = list_sketches(base=base, limit=20, q=name, username=author, timeout=timeout)
+    want = name + ".py"
+    match = next((it for it in items if str(it.get("filename", "")) == want
+                  and str(it.get("username", "")).lower() == author.lower()), None)
+    match = match or next((it for it in items if str(it.get("filename", "")) == want), None)
+    if not match:
+        raise RuntimeError("World sketch %s/%s not found" % (author, name))
+    return download_sketch(match, base=base, timeout=timeout)

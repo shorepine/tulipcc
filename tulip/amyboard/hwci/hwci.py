@@ -41,8 +41,6 @@ Quick start (Pi):
     python3 hwci.py --pr 993 --port /dev/ttyACM1 --midi-port hw:0,0,0 --audio-device hw:1,0
 """
 import argparse
-import base64
-import json
 import os
 import shutil
 import subprocess
@@ -50,25 +48,34 @@ import sys
 import tempfile
 import threading
 import time
-import urllib.parse
 import urllib.request
 import wave
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+
+# Board control (SysEx protocol, MIDI transports, World API) comes from the
+# shared tools/amyboardctl library — see docs/amyboard/control_api.md. In the
+# repo it's found relative to this file; on the CI runner the workflow extracts
+# the amyboardctl package next to hwci.py (see amyboard-hwci.yml).
+try:
+    import amyboardctl
+except ImportError:
+    sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "tools", "amyboardctl"))
+    import amyboardctl
+from amyboardctl import AMYboardLink, board_present, world
+
 REF_DIR = os.path.join(HERE, "ref")
 PREVIEW_URL = "https://amyboard-pr-{pr}.vercel.app/firmware/amyboard-full-AMYBOARD.bin"
-AMY_SYSEX_PREFIX = [0x00, 0x03, 0x45]
 MIDI_NAME = "AMYboard"
 ALSA = bool(shutil.which("amidi") and shutil.which("arecord"))
+BACKEND = "alsa" if ALSA else "mido"   # keep the Pi on the CLI tools (no mido needed)
 
 # AMYboard World: the second half of the test loads real community sketches over
 # the SysEx "write to sketch" flow (the same one the web editor uses) and records
 # each one, so the HW CI exercises more than the built-in reference tones. See
 # docs/amyboard/control_api.md and tools/amyworld_recorder/. PR #1067 was a drums
 # regression the tone-only test missed — the drum-heavy generators below cover it.
-WORLD_BASE = "https://tulipcc-production.up.railway.app"
-SKETCH_PATH = "/user/current/sketch.py"
-CHUNK_BYTES = 188          # AMYBOARD_TRANSFER_CHUNK_BYTES (spss.js / transfer.c)
+WORLD_BASE = world.DEFAULT_BASE
 
 # The World sketches to audition, in order. `generative` sketches drive themselves
 # from loop() (started by the sequencer that environment_transfer_done() kicks off)
@@ -82,32 +89,6 @@ WORLD_SUITE = [
     {"name": "universal_hair",  "author": "shorepine", "generative": True,  "min_sim": 0.82},
     {"name": "woodpiano",       "author": "shorepine", "generative": False, "min_sim": 0.85},
 ]
-
-
-# ── AMYboard World sketch fetch (stdlib only — the Pi CI venv has no `requests`) ─
-def world_fetch_sketch(name, author, base=WORLD_BASE, timeout=30):
-    """Resolve `author`/`name` to a World sketch and return its python source.
-
-    Resolves by name+author at run time (rather than a hard-coded id) so a
-    re-upload doesn't silently test the wrong file. Backed by the public
-    read-only API in tulip/server/amyboardworld_db_api.py."""
-    params = urllib.parse.urlencode({
-        "limit": 20, "item_type": "environment", "latest_per_user_env": "true",
-        "q": name, "username": author})
-    with urllib.request.urlopen("%s/api/amyboardworld/files?%s" % (base, params),
-                                timeout=timeout) as r:
-        items = json.load(r).get("items", [])
-    want = name + ".py"
-    match = next((it for it in items if str(it.get("filename", "")) == want
-                  and str(it.get("username", "")).lower() == author.lower()), None)
-    match = match or next((it for it in items if str(it.get("filename", "")) == want), None)
-    if not match:
-        raise RuntimeError("World sketch %s/%s not found" % (author, name))
-    url = match.get("download_url") or ("/api/amyboardworld/files/%s/download" % match["id"])
-    if not url.startswith("http"):
-        url = base + url
-    with urllib.request.urlopen(url, timeout=timeout) as r:
-        return r.read().decode("utf-8")
 
 
 # ── firmware ────────────────────────────────────────────────────────────────
@@ -155,170 +136,54 @@ def reset_via_chipid(port):
     return ok
 
 
-# ── MIDI / sysex backends ───────────────────────────────────────────────────
-def alsa_find_midi():
-    out = subprocess.run(["amidi", "-l"], capture_output=True, text=True).stdout
-    for line in out.splitlines():
-        if MIDI_NAME in line:
-            return line.split()[1]  # e.g. hw:0,0,0
-    return None
-
-
+# ── MIDI / sysex (amyboardctl wraps both backends) ──────────────────────────
 class Midi:
-    """MIDI to the board, via amidi (ALSA) or mido.
+    """MIDI to the board, via amyboardctl's AMYboardLink.
 
-    Send-only for the built-in reference test. For the AMYboard World sketch
-    transfers (many chunked SysEx frames) we MUST flow-control so the board's
-    SysEx ring buffer can't overflow and drop chunks (a dropped chunk corrupts
-    sketch.py → the board self-heals to the silent default sketch). So we wait for
-    the board's `AK` after every frame — one frame in flight — exactly like the
-    web editor and tools/amyworld_recorder/amyboard_link.py (see
-    docs/amyboard/control_api.md). Both backends read the board's MIDI *input*:
-
-      * mido backend (mac dev): an input port with a callback.
-      * ALSA backend (Pi CI): a persistent `stdbuf -oL amidi -p PORT -d` reader
-        (line-buffered so `AK` frames arrive in real time, not block-buffered)
-        alongside the one-shot `amidi -S` sends — the two coexist fine on the
-        board's rawmidi device.
-
-    If the input reader can't be started, we degrade to pacing the frames with a
-    fixed delay (works for small sketches, may drop chunks on large ones).
+    The link speaks the SysEx control API with flow control — one frame in
+    flight, waiting for the board's `AK` after each — so multi-frame sketch
+    transfers can't overflow the board's SysEx ring buffer (a dropped chunk
+    corrupts sketch.py → the board self-heals to the silent default sketch).
+    Backend per bench: ALSA CLI (`amidi`) on the Pi CI runner, mido on macOS
+    dev machines. This class only adds the test's own stimulus timing on top.
     """
     ACK_TIMEOUT = 2.0          # wait this long for the board's AK, then proceed
-    PACE = 0.03                # inter-frame delay when we can't wait on AK
 
     def __init__(self, port):
-        self.port = port
-        self._mido = None
-        self._mido_out = None
-        self._mido_in = None
-        self._ack_proc = None
-        self._ack = threading.Event()
-        self.ack_available = False
-        if not ALSA:
-            import mido
-            self._mido = mido
-            self._mido_out = mido.open_output(port)
-            in_name = _mido_find_input()
-            if in_name:
-                self._mido_in = mido.open_input(in_name, callback=self._on_mido_message)
-                self.ack_available = True
-        else:
-            try:
-                self._ack_proc = subprocess.Popen(
-                    ["stdbuf", "-oL", "amidi", "-p", port, "-d"],
-                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
-                threading.Thread(target=self._alsa_ack_reader, daemon=True).start()
-                self.ack_available = True
-            except Exception as e:
-                print("[midi] no ACK reader (%s); pacing sysex instead" % e)
-
-    # -- incoming — set the ACK event on the board's `AK` frame -----------------
-    def _on_mido_message(self, msg):
-        if msg.type != "sysex":
-            return
-        d = msg.data
-        if len(d) >= 5 and tuple(d[:3]) == tuple(AMY_SYSEX_PREFIX) \
-                and d[3] == 0x41 and d[4] == 0x4B:      # 'A' 'K'
-            self._ack.set()
-
-    def _alsa_ack_reader(self):
-        """Parse the `amidi -d` hex stream for `F0 00 03 45 41 4B F7` (AK) frames
-        and set the ACK event. Other reply frames (OK/X/…) are ignored."""
-        buf, insx = [], False
-        try:
-            for line in self._ack_proc.stdout:      # line-buffered by stdbuf -oL
-                for tok in line.split():
-                    try:
-                        b = int(tok, 16)
-                    except ValueError:
-                        continue
-                    if b == 0xF0:
-                        insx, buf = True, []
-                    elif b == 0xF7:
-                        if insx and buf[:3] == AMY_SYSEX_PREFIX and buf[3:5] == [0x41, 0x4B]:
-                            self._ack.set()
-                        insx, buf = False, []
-                    elif insx:
-                        buf.append(b)
-        except Exception:
-            pass
-
-    def _raw(self, data, retries=3):
-        if ALSA:
-            # `amidi -S` occasionally exits non-zero for a beat right after a
-            # sketch restart re-inits the board's USB-MIDI endpoint (seen on the
-            # first note after environment_transfer_done). A dropped frame must
-            # not abort the whole capture, so retry briefly then warn + continue
-            # rather than raise.
-            cmd = ["amidi", "-p", self.port, "-S", " ".join("%02X" % b for b in data)]
-            for attempt in range(retries + 1):
-                r = subprocess.run(cmd, capture_output=True, text=True)
-                if r.returncode == 0:
-                    return
-                if attempt < retries:
-                    time.sleep(0.1)
-            print("[midi] amidi -S failed after %d tries (%s); continuing"
-                  % (retries + 1, (r.stderr or "").strip()))
-        else:
-            # split running-status-free messages; data is one message here
-            self._mido_out.send(self._mido.Message.from_bytes(data))
+        self.link = AMYboardLink(port_match=port, verbose=False, backend=BACKEND,
+                                 ack_timeout=self.ACK_TIMEOUT).open()
 
     def note_on(self, n, vel=100, channel=0):
-        self._raw([0x90 | (channel & 0x0F), n, vel])
+        self.link.note_on(n, vel, channel)
 
     def note_off(self, n, channel=0):
-        self._raw([0x80 | (channel & 0x0F), n, 0])
+        self.link.note_off(n, channel)
 
     def all_notes_off(self, channel=0):
-        self._raw([0xB0 | (channel & 0x0F), 123, 0])   # CC 123 = all notes off
+        self.link.all_notes_off(channel)
 
     def note(self, n, vel, dur):
-        self.note_on(n, vel); time.sleep(dur); self.note_off(n)
-
-    def _frame(self, code):
-        return [0xF0] + AMY_SYSEX_PREFIX + list(code.encode("ascii")) + [0xF7]
+        self.link.note(n, vel, dur)
 
     def sysex(self, code):
         """Fire-and-forget one control frame (used by the built-in reference test,
         whose frames are small and few — its committed ref/hwci_basic.wav depends
         on this timing, so leave it alone)."""
-        self._raw(self._frame(code))
+        self.link.send_nowait(code)
         time.sleep(0.02)
-
-    def sysex_ack(self, code, timeout=ACK_TIMEOUT):
-        """Send one control frame with flow control: wait for the board's `AK`
-        (mido) or pace with a fixed delay (ALSA). Returns True if acked/sent."""
-        if self.ack_available:
-            self._ack.clear()
-            self._raw(self._frame(code))
-            return self._ack.wait(timeout)
-        self._raw(self._frame(code))
-        time.sleep(self.PACE)
-        return True
 
     def send_python(self, code, timeout=ACK_TIMEOUT):
         """Run one line of python on the board via zP (control_api.md)."""
-        return self.sysex_ack("zP" + code + "Z", timeout=timeout)
-
-    # -- push a sketch onto the board (zT header + base64 chunks) ---------------
-    def transfer_sketch(self, text, path=SKETCH_PATH):
-        """Write a sketch to the board, mirroring the web editor's zT flow: a
-        `zT<path>,<size>Z` header then the file bytes in <=188-byte base64 chunks,
-        one frame at a time with flow control."""
-        data = text.encode("utf-8")
-        self.sysex_ack("zT%s,%dZ" % (path, len(data)))
-        for i in range(0, len(data), CHUNK_BYTES):
-            self.sysex_ack(base64.b64encode(data[i:i + CHUNK_BYTES]).decode("ascii"))
+        return self.link.send_python(code, timeout=timeout)
 
     def load_world_sketch(self, text, settle=1.5):
         """amy.reset() → transfer → environment_transfer_done() (restarts the
         sketch and starts the sequencer, so generative loop()s begin playing).
         Give the sketch a moment to init before we start recording it."""
-        self.send_python("import amy; amy.reset()")
+        self.link.reset_amy()
         time.sleep(0.3)
-        self.transfer_sketch(text)
-        self.send_python("import amyboard; amyboard.environment_transfer_done()")
+        self.link.transfer_file(text)
+        self.link.environment_transfer_done()
         time.sleep(settle)
 
     def play_pattern(self, seconds, channel=0):
@@ -351,17 +216,7 @@ class Midi:
             pass
 
     def close(self):
-        for p in (self._mido_out, self._mido_in):
-            try:
-                if p:
-                    p.close()
-            except Exception:
-                pass
-        if self._ack_proc:
-            try:
-                self._ack_proc.terminate()
-            except Exception:
-                pass
+        self.link.close()
 
 
 def wait_for_board(timeout=40):
@@ -370,28 +225,12 @@ def wait_for_board(timeout=40):
     print(f"[boot] waiting for '{MIDI_NAME}' MIDI ...")
     deadline = time.time() + timeout
     while time.time() < deadline:
-        port = alsa_find_midi() if ALSA else _mido_find()
+        port = board_present(MIDI_NAME, backend=BACKEND)
         if port:
             print(f"[boot] found MIDI at {port}")
             return port
         time.sleep(0.5)
     print("[boot] board MIDI never appeared (didn't boot?).")
-    return None
-
-
-def _mido_find():
-    import mido
-    for n in mido.get_output_names():
-        if MIDI_NAME in n:
-            return n
-    return None
-
-
-def _mido_find_input():
-    import mido
-    for n in mido.get_input_names():
-        if MIDI_NAME in n:
-            return n
     return None
 
 
@@ -619,7 +458,7 @@ def run_world_suite(args, m):
                    else spec.get("min_sim", 0.80))
         print(f"\n[world] === {author}/{name} (generative={spec['generative']}) ===")
         try:
-            text = world_fetch_sketch(name, author, base=args.world_base)
+            text = world.fetch_sketch(name, author, base=args.world_base)
         except Exception as e:
             print(f"[world] fetch failed for {author}/{name}: {e}")
             results.append((name, None, min_sim))
