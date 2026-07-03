@@ -49,7 +49,37 @@ AMY supports MIDI realtime transport for the internal sequencer:
 - `0xFA` (Start): starts sequencer playback from tick 0 in external clock mode.
 - `0xFC` (Stop): stops sequencer playback.
 
+External realtime sync is **off by default** — AMY ignores incoming clock/start/stop and keeps its own tempo. Enable it with the C API `amy_external_midi_sync(1)`, or over the wire with `amy.send(external_midi_sync=1)` (wire command `zC1`). Set it back to 0 to return to the internal clock.
+
 MIDI Timing Clock is 24 PPQ. AMY's sequencer runs at 48 PPQ, so AMY advances two sequencer ticks per one MIDI clock pulse.
 
-If you stop the sequencer with MIDI (using `0xFC`) the only way to start the sequencer again is with MIDI `0xFA`. We don't (yet) have AMY controls to stop / start the sequencer. 
+You can also start and stop the sequencer transport directly, independent of MIDI clock sync, with `amy.send(sequencer_run=1)` / `amy.send(sequencer_run=0)` (wire command `zY1` / `zY0`). 
+
+## Sending MIDI out
+
+As well as responding to incoming MIDI, AMY can _send_ MIDI out. Set any oscillator's `wave` to `amy.AMY_MIDI` and it stops producing audio — instead, every note you play on that osc is emitted as a MIDI message out whatever MIDI interface you've configured (`amy_config.midi`, e.g. UART or USB gadget).
+
+```python
+amy.send(osc=0, wave=amy.AMY_MIDI)   # osc 0 is now a MIDI sender, not an audio oscillator
+amy.send(osc=0, note=60, vel=1)      # -> MIDI note on:  channel 1, note 60, velocity 127
+amy.send(osc=0, note=60, vel=0)      # -> MIDI note off (sent as a note on with velocity 0)
+```
+
+- Messages always go out on **MIDI channel 1** (status byte `0x90`).
+- The event's `note` (`midi_note`) and `vel` become the MIDI note number and velocity. Velocity is scaled from AMY's `0.0`–`1.0` range to `0`–`127`. A note-off is sent as a note-on with velocity 0.
+- Notes that AMY received over MIDI *in* are **not** echoed back out, so you won't create a feedback loop. Only notes you generate inside AMY — directly, or from the sequencer — are forwarded.
+
+### Sequencing MIDI out
+
+Because an `AMY_MIDI` osc emits MIDI in response to ordinary note events, you can drive it from [AMY's sequencer](synth.md) to get tightly-timed MIDI output — a step sequencer or drum pattern clocked by AMY that plays an external synth. Schedule note-ons and note-offs on the osc just like you would schedule audio notes:
+
+```python
+amy.send(osc=0, wave=amy.AMY_MIDI)                    # set up the MIDI sender once
+
+# Send a MIDI note on channel 1 every quarter note (48 ticks), held for an eighth note.
+amy.send(osc=0, note=60, vel=1, sequence="0,48,1")    # note on  at tick 0  of each 48-tick period
+amy.send(osc=0, note=60, vel=0, sequence="24,48,2")   # note off at tick 24 of each 48-tick period
+```
+
+AMY keeps sending those MIDI messages out the port at the configured tempo until you remove them (by their `tag`) or reset the sequencer. See [the sequencer docs](synth.md) for `tick` / `period` / `tag` details.
 
