@@ -16,6 +16,13 @@ Exit code 0 = pass, 1 = fail. Validated on a **Raspberry Pi 5 / Debian 13** (the
 intended self-hosted CI runner); also runs on macOS for dev. The CI workflow that
 drives both on every PR is `.github/workflows/amyboard-hwci.yml`.
 
+Board control (the SysEx protocol, MIDI backends, AMYboard World fetch) comes
+from the shared [`tools/amyboardctl`](../../../tools/amyboardctl/) library —
+also usable standalone as the `amyboardctl` CLI. In-repo it's imported via a
+relative path; on the CI runner the workflow extracts the package next to
+`hwci.py`. The wire protocol is documented in
+[`docs/amyboard/control_api.md`](../../../docs/amyboard/control_api.md).
+
 ## Bench wiring (validated)
 - **Flashing — USB-serial dongle on the AMYboard debug header.** A Pi's GPIO
   UART can't drive the DTR/RTS lines esptool needs for auto-reset, so flashing

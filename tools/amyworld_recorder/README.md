@@ -244,4 +244,8 @@ Verified against the tree (`spss.js`, `modtulip.c`, `amy/src/transfer.c`,
 - Sketch load errors come back as `F0 00 03 45 'X' <base64 traceback> F7`.
 - Patterns play via ordinary MIDI note on/off on channel 1.
 
-`amyboard_link.py` is a standalone, importable client for all of this.
+The board link and the World API client live in
+[`tools/amyboardctl`](../amyboardctl/) — the shared AMYboard control library +
+CLI (`amyboardctl upload_sketch …`), also used by the HW CI. The recorder picks
+it up from the repo automatically (no install needed); the full wire protocol is
+documented in [`docs/amyboard/control_api.md`](../../docs/amyboard/control_api.md).

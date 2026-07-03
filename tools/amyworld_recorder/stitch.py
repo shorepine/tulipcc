@@ -22,8 +22,9 @@ import sys
 import tempfile
 import textwrap
 
+import _bootstrap  # noqa: F401  (makes the in-repo amyboardctl importable)
+from amyboardctl.world import display_username
 from session import Session
-from worldapi import display_username
 
 FONT_CANDIDATES = [
     "/System/Library/Fonts/Supplemental/Arial Bold.ttf",

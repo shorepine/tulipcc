@@ -11,8 +11,22 @@ own scripts and programs.
 > `mpremote` (see [Using Python](python.md)). This control API is for *programs*
 > that talk to the board over MIDI — uploaders, automation, test harnesses, CI.
 
-A complete, importable Python reference implementation lives in the repo at
-[`tools/amyworld_recorder/amyboard_link.py`](https://github.com/shorepine/tulipcc/blob/main/tools/amyworld_recorder/amyboard_link.py).
+A complete Python reference implementation lives in the repo at
+[`tools/amyboardctl`](https://github.com/shorepine/tulipcc/tree/main/tools/amyboardctl)
+— an installable library (`from amyboardctl import AMYboardLink`) with a
+command-line front end:
+
+```
+pip install ./tools/amyboardctl
+amyboardctl upload_sketch sketch.py
+amyboardctl download_sketch -o sketch.py
+amyboardctl download_state
+amyboardctl run "import amy; amy.send(volume=0.5)"
+amyboardctl reboot
+```
+
+It's the shared client behind both the AMYboard World recorder
+(`tools/amyworld_recorder`) and the hardware CI (`tulip/amyboard/hwci`).
 
 ---
 
@@ -251,8 +265,10 @@ outp.send(mido.Message("note_off", note=60, channel=0))
 ```
 
 For a fuller implementation — chunked transfers with per-chunk ACK, error
-collection, reboot/re-enumeration handling, state dump reassembly — see
-[`tools/amyworld_recorder/amyboard_link.py`](https://github.com/shorepine/tulipcc/blob/main/tools/amyworld_recorder/amyboard_link.py).
+collection, reboot/re-enumeration handling, state dump reassembly, an ALSA
+`amidi` backend that needs no Python MIDI libraries — use
+[`tools/amyboardctl`](https://github.com/shorepine/tulipcc/tree/main/tools/amyboardctl)
+instead of rolling your own.
 
 ---
 

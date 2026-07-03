@@ -9,7 +9,8 @@ import json
 import os
 import time
 
-import worldapi
+import _bootstrap  # noqa: F401  (makes the in-repo amyboardctl importable)
+from amyboardctl import world as worldapi
 
 # Statuses that count as "handled" — skipped on the next run unless --redo.
 DONE = {"good", "not_interesting", "not_working"}
