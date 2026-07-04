@@ -57,6 +57,18 @@ check("adaptive enc.encoders loop stays plain #encoder", tags("import amyboard\n
 # --- 8angle ---
 check("m58angle module", tags("import m58angle\ndef loop():\n    v = m58angle.get(0)") == ["8angle"])
 
+# --- cv ---
+check("cv_in", tags("import amy, amyboard\ndef loop():\n    r = amyboard.cv_in(1)") == ["cv"])
+check("cv_out", tags("import amy, amyboard\ndef loop():\n    amyboard.cv_out(5.0, channel=0)") == ["cv"])
+check("set_cv_out", tags("import amy, amyboard\namyboard.set_cv_out(0, synth=2)\ndef loop():\n    pass") == ["cv"])
+check("ext0 modulation routing", tags("import amy\namy.send(synth=1, filter_freq={'const': 300, 'ext0': 0.25})\ndef loop():\n    pass") == ["cv"])
+check("ext1 modulation routing", tags('import amy\namy.send(synth=1, amp={"const": 1, "ext1": 0.5})\ndef loop():\n    pass') == ["cv"])
+
+# --- audio-in ---
+check("AUDIO_IN0 wave", tags("import amy\namy.send(synth=18, osc=0, wave=amy.AUDIO_IN0, amp=10)\ndef loop():\n    pass") == ["audio-in"])
+check("start_sample from audio-in bus", tags("import amy\namy.start_sample(preset=30, max_frames=44100, bus=2, midinote=60)\ndef loop():\n    pass") == ["audio-in"])
+check("start_sample from another bus is not audio-in", tags("import amy\namy.start_sample(preset=30, max_frames=44100, bus=0, midinote=60)\ndef loop():\n    pass") == [])
+
 # --- combinations ---
 check("display + encoder", tags("import amyboard\namyboard.init_display()\nenc = amyboard.encoder()\ndef loop():\n    amyboard.display.text(str(enc.read(0)),0,0,255)\n    amyboard.display.show()") == ["display", "encoder"])
 check("patch_selector implies display + encoder", tags("import amyboard\namyboard.patch_selector()\ndef loop():\n    pass") == ["display", "encoder"])
@@ -73,7 +85,11 @@ check("preset_selector.py -> display + encoder", sketch_tags("preset_selector.py
 check("acid_generator.py -> display", sketch_tags("acid_generator.py") == ["display"])
 check("woodpiano.py -> display", sketch_tags("woodpiano.py") == ["display"])
 check("arp.py -> no hardware tags", sketch_tags("arp.py") == [])
-check("cvfilter.py -> no hardware tags", sketch_tags("cvfilter.py") == [])
+check("cvfilter.py -> cv", sketch_tags("cvfilter.py") == ["cv"])
+check("midi2cv.py -> cv", sketch_tags("midi2cv.py") == ["cv"])
+check("audiopassthru.py -> audio-in", sketch_tags("audiopassthru.py") == ["audio-in"])
+check("filter_audio_in.py -> cv + audio-in", sketch_tags("filter_audio_in.py") == ["cv", "audio-in"])
+check("sampler.py -> audio-in", sketch_tags("sampler.py") == ["audio-in"])
 
 # --- merge preserves non-hardware tags ---
 check("merge keeps featured", m._merge_hardware_tags(["featured", "display"], ["encoder"]) == ["featured", "encoder"])

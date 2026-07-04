@@ -1521,7 +1521,12 @@ HW_TAG_ENCODER = "encoder"
 HW_TAG_QUAD_ENCODER = "quad-encoder"       # Adafruit Quad Rotary Encoder (4)
 HW_TAG_8ENCODER = "8encoder"               # M5Stack Unit 8Encoder (8)
 HW_TAG_8ANGLE = "8angle"                   # M5Stack Unit 8Angle
-HARDWARE_TAGS = (HW_TAG_DISPLAY, HW_TAG_ENCODER, HW_TAG_QUAD_ENCODER, HW_TAG_8ENCODER, HW_TAG_8ANGLE)
+HW_TAG_CV = "cv"                           # CV1/CV2 jacks (in or out)
+HW_TAG_AUDIO_IN = "audio-in"               # line/SPDIF audio input
+HARDWARE_TAGS = (
+    HW_TAG_DISPLAY, HW_TAG_ENCODER, HW_TAG_QUAD_ENCODER, HW_TAG_8ENCODER,
+    HW_TAG_8ANGLE, HW_TAG_CV, HW_TAG_AUDIO_IN,
+)
 
 # The 128x128 OLED: direct drawing calls plus the amyboard helpers that draw.
 _HW_DISPLAY_RE = re.compile(
@@ -1554,6 +1559,12 @@ _HW_QUAD_ENCODER_RE = re.compile(
     r"|\brange\s*\(\s*4\s*\)"
 )
 _HW_8ANGLE_RE = re.compile(r"\bm58angle\b")
+# The CV1/CV2 jacks, either direction: the amyboard helpers, or routing the
+# ext0/ext1 control sources (CV inputs) into a parameter dict.
+_HW_CV_RE = re.compile(r"\bcv_in\s*\(|\bcv_out\s*\(|\bset_cv_out\s*\(|['\"]ext[01]['\"]")
+# Line/SPDIF audio input: the AUDIO_IN oscillator waves, or sampling from the
+# audio-in bus (bus=2) with amy.start_sample(...).
+_HW_AUDIO_IN_RE = re.compile(r"\bAUDIO_IN[01]\b|\bstart_sample\s*\([^)\n]*\bbus\s*=\s*2\b")
 
 
 def _strip_python_comments(code: str) -> str:
@@ -1580,6 +1591,10 @@ def _hardware_tags_for_sketch(code: str) -> list[str]:
             tags.append(HW_TAG_QUAD_ENCODER)
     if _HW_8ANGLE_RE.search(src):
         tags.append(HW_TAG_8ANGLE)
+    if _HW_CV_RE.search(src):
+        tags.append(HW_TAG_CV)
+    if _HW_AUDIO_IN_RE.search(src):
+        tags.append(HW_TAG_AUDIO_IN)
     return tags
 
 
