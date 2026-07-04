@@ -54,7 +54,13 @@ amyboard.display_refresh()
 
 # Draw shapes
 amyboard.display.fill_rect(10, 40, 50, 20, 200)
+amyboard.display.hline(0, 70, 128, 255)   # horizontal line: x, y, width, color
+amyboard.display.vline(64, 0, 128, 255)   # vertical line: x, y, height, color
 amyboard.display_refresh()
+
+# Rotate the OLED (sh1107 only).  One of 0, 90, 180, 270 degrees.
+# The setting is saved and re-applied automatically on every boot.
+amyboard.set_display_rotation(90)
 
 # Show a live waveform visualization
 amyboard.draw_waveform()
