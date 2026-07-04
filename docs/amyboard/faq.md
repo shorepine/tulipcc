@@ -241,7 +241,13 @@ Yes -- it's fine to have TRS MIDI, USB MIDI, and multiple power sources (USB + E
 
 ### How do I play drum sounds?
 
-Send MIDI on **channel 10** (in the note range **35–81**) and you get the standard General MIDI drum mapping. Default AMY ships with 11 TR-808 samples -- not a full kit, but it's something.
+Set up a synth with the **GM drum-kit patch (258)** -- the note→sample mapping lives in the patch, so plain note numbers won't make drum sounds without it:
+
+```python
+amy.send(synth=10, patch=258, num_voices=6, synth_flags=3)
+```
+
+`synth_flags=3` routes notes through the GM note map and ignores note-offs. Then play GM drum note numbers (36 = kick, 38 = snare, 42 = closed hat, 46 = open hat, 49 = crash...), either from your sketch with `amy.send(synth=10, note=36, vel=1)` or over **MIDI channel 10**.
 
 ### Can I control AMY directly over SysEx?
 
@@ -294,7 +300,6 @@ A few things to check, roughly in order:
 
 - **Headroom.** High note velocities from your controller/sequencer, or a high per-channel output volume, will clip. Setting the synth output volume around **2.5–3.5** leaves plenty of headroom.
 - **Too many voices.** When AMY runs out of CPU/RAM with lots of simultaneous voices, the output degrades. Reduce `num_voices` or simplify patches.
-- **Persistent bitcrush-y glitching on even the basic presets** (and it survives a firmware reflash and different power supplies) can be a **hardware defect** -- record a short video of it and contact [Makerfabs support](https://www.makerfabs.com/contact); they've confirmed defects from videos and shipped replacement units.
 
 ### I set up a second synth channel, and now my first synth sounds different!
 
