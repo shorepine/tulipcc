@@ -458,9 +458,11 @@ def _insert_file_row(
     created_at_ms: int | None = None,
     item_type: str = "environment",
     client_ip: str = "",
+    tags: list[str] | None = None,
 ) -> int:
     ts_ms = _normalize_created_at_ms(created_at_ms)
     digest = hashlib.sha256(contents).hexdigest()
+    tags_json = json.dumps(_parse_tags(tags or []))
     with _open_db() as conn:
         # Use item_type column only for the environments table.
         if table == "environments":
@@ -469,7 +471,7 @@ def _insert_file_row(
                 INSERT INTO {table}(username, filename, description, tags_json, created_at_ms, size_bytes, sha256, blob_path, item_type, client_ip)
                 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (username, filename, description, "[]", ts_ms, len(contents), digest, "", item_type, client_ip),
+                (username, filename, description, tags_json, ts_ms, len(contents), digest, "", item_type, client_ip),
             )
         else:
             cur = conn.execute(
@@ -477,7 +479,7 @@ def _insert_file_row(
                 INSERT INTO {table}(username, filename, description, tags_json, created_at_ms, size_bytes, sha256, blob_path, client_ip)
                 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (username, filename, description, "[]", ts_ms, len(contents), digest, "", client_ip),
+                (username, filename, description, tags_json, ts_ms, len(contents), digest, "", client_ip),
             )
         item_id = int(cur.lastrowid)
         safe_filename = f"{item_id:09d}-{filename}"
@@ -1151,6 +1153,58 @@ def publish_shared_generations(
     return {"ok": True, "dry_run": dry_run, "pending": len(items), "published": published, "items": items}
 
 
+@app.post("/api/admin/amyboardworld/retag_hardware", dependencies=[Depends(_require_admin)])
+def retag_hardware(
+    dry_run: bool = Query(default=True),
+    username: str = Query(default=GENERATOR_USERNAME),
+) -> dict[str, Any]:
+    """Backfill: recompute the hardware tags (#display, #encoder, #quad-encoder,
+    #8encoder, #8angle) of every live .py sketch by `username` (default: the
+    generator user) from its stored source, preserving all non-hardware tags.
+    Idempotent — rerunning after a detector change converges on the new tags."""
+    username_s = (username or "").strip().lower()
+    if not username_s:
+        raise HTTPException(status_code=400, detail="username required")
+    with _open_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, filename, blob_path, tags_json FROM environments
+            WHERE lower(username) = ? AND deleted_at_ms IS NULL
+              AND lower(filename) LIKE '%.py'
+            ORDER BY id ASC
+            """,
+            (username_s,),
+        ).fetchall()
+
+    items: list[dict[str, Any]] = []
+    changed = 0
+    for r in rows:
+        item_id = int(r["id"])
+        entry: dict[str, Any] = {"id": item_id, "filename": str(r["filename"])}
+        try:
+            code = Path(str(r["blob_path"])).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            entry["error"] = "blob unreadable"
+            items.append(entry)
+            continue
+        old_tags = _parse_tags(r["tags_json"])
+        new_tags = _merge_hardware_tags(old_tags, _hardware_tags_for_sketch(code))
+        if new_tags == old_tags:
+            continue  # already correct — keep the report to actual changes
+        entry["tags"] = new_tags
+        entry["was"] = old_tags
+        if not dry_run:
+            with _open_db() as conn:
+                conn.execute(
+                    "UPDATE environments SET tags_json = ? WHERE id = ? AND deleted_at_ms IS NULL",
+                    (json.dumps(new_tags), item_id),
+                )
+                conn.commit()
+        changed += 1
+        items.append(entry)
+    return {"ok": True, "dry_run": dry_run, "scanned": len(rows), "changed": changed, "items": items}
+
+
 # ---------------------------------------------------------------------------
 # AMYboard sketch generation via the Claude API
 # ---------------------------------------------------------------------------
@@ -1455,6 +1509,86 @@ def _unique_generator_filename(base: str, gen_id: int) -> str:
     return f"gen-{gen_id}.py"
 
 
+# --- Hardware tags ----------------------------------------------------------
+# Published generator sketches are auto-tagged with the hardware accessories
+# they use, so the World UI can filter by accessory (#display, #encoder, ...).
+# Detection is a static scan of the comment-stripped source: deterministic,
+# free, and reusable for backfilling already-published sketches (see
+# /api/admin/amyboardworld/retag_hardware).
+
+HW_TAG_DISPLAY = "display"
+HW_TAG_ENCODER = "encoder"
+HW_TAG_QUAD_ENCODER = "quad-encoder"       # Adafruit Quad Rotary Encoder (4)
+HW_TAG_8ENCODER = "8encoder"               # M5Stack Unit 8Encoder (8)
+HW_TAG_8ANGLE = "8angle"                   # M5Stack Unit 8Angle
+HARDWARE_TAGS = (HW_TAG_DISPLAY, HW_TAG_ENCODER, HW_TAG_QUAD_ENCODER, HW_TAG_8ENCODER, HW_TAG_8ANGLE)
+
+# The 128x128 OLED: direct drawing calls plus the amyboard helpers that draw.
+_HW_DISPLAY_RE = re.compile(
+    r"\binit_display\s*\(|\bdisplay_refresh\s*\("
+    r"|\bdisplay\s*\.\s*(?:text|fill|fill_rect|rect|line|hline|vline|pixel|scroll|show|refresh|clear|message)\b"
+    r"|\bmonitor_encoders\s*\(|\bdraw_waveform\s*\(|\bshow_midi_ccs\s*\(|\bpatch_selector\s*\(|\bPatchSelector\s*\("
+)
+# Any rotary-encoder accessory: the unified amyboard.encoder() API, the legacy
+# seesaw helpers, the legacy m5_8encoder module, and the helpers built on them.
+_HW_ENCODER_RE = re.compile(
+    r"\bencoder\s*\(|\bamyboard\s*\.\s*Encoder\s*\(|\bread_encoder\s*\(|\bread_buttons\s*\(|\binit_buttons\s*\("
+    r"|\bset_neopixel\s*\(|\binit_neopixels\s*\(|\bshow_neopixels\s*\(|\bm5_8encoder\b"
+    r"|\bmonitor_encoders\s*\(|\bpatch_selector\s*\(|\bPatchSelector\s*\("
+)
+# Evidence a sketch is written for the 8-encoder unit specifically: the legacy
+# module, forcing type="m5stack", the m5stack-only toggle switch, touching an
+# encoder index above 3, or iterating/checking for more than 4 encoders.
+_HW_8ENCODER_RE = re.compile(
+    r"\bm5_8encoder\b|['\"]m5stack['\"]|\.switch\s*\(\s*\)"
+    r"|\.(?:read|button|led|reset)\s*\(\s*[4-7]\b"
+    r"|\bencoders\s*(?:==|>=)\s*[5-8]\b"
+    r"|\brange\s*\(\s*8\s*\)"
+)
+# Evidence a sketch is written for 4 encoders: forcing the quad type, the quad
+# seesaw address, touching an encoder index above 0, or iterating/checking 4.
+_HW_QUAD_ENCODER_RE = re.compile(
+    r"['\"]adafruit_quad['\"]|\bseesaw_dev\s*=\s*0x49\b"
+    r"|\.(?:read|button|led|reset)\s*\(\s*[1-3]\b"
+    r"|\bencoders\s*(?:==|>=)\s*4\b"
+    r"|\brange\s*\(\s*4\s*\)"
+)
+_HW_8ANGLE_RE = re.compile(r"\bm58angle\b")
+
+
+def _strip_python_comments(code: str) -> str:
+    """Drop '#'-to-end-of-line so words in comments (e.g. '# needs a display')
+    can't trip hardware detection. A '#' inside a string literal also truncates
+    that line, which only ever removes string content — the API-call names the
+    detectors match always appear before any string argument."""
+    return "\n".join(line.split("#", 1)[0] for line in (code or "").splitlines())
+
+
+def _hardware_tags_for_sketch(code: str) -> list[str]:
+    """The hardware tags (subset of HARDWARE_TAGS) a sketch's source earns."""
+    src = _strip_python_comments(code)
+    tags: list[str] = []
+    if _HW_DISPLAY_RE.search(src):
+        tags.append(HW_TAG_DISPLAY)
+    if _HW_ENCODER_RE.search(src):
+        tags.append(HW_TAG_ENCODER)
+        # Count-specific tags are additive with #encoder and mutually
+        # exclusive with each other; 8-encoder evidence wins.
+        if _HW_8ENCODER_RE.search(src):
+            tags.append(HW_TAG_8ENCODER)
+        elif _HW_QUAD_ENCODER_RE.search(src):
+            tags.append(HW_TAG_QUAD_ENCODER)
+    if _HW_8ANGLE_RE.search(src):
+        tags.append(HW_TAG_8ANGLE)
+    return tags
+
+
+def _merge_hardware_tags(existing: list[str], hw_tags: list[str]) -> list[str]:
+    """Replace the hardware tags in an existing tag list with hw_tags, keeping
+    every non-hardware tag (featured, official, ...) in place. Idempotent."""
+    return [t for t in existing if t not in HARDWARE_TAGS] + list(hw_tags)
+
+
 def _publish_shared_generation(
     gen_id: int,
     code: str,
@@ -1480,6 +1614,7 @@ def _publish_shared_generation(
         created_at_ms=created_at_ms,
         item_type="environment",
         client_ip=client_ip,
+        tags=_hardware_tags_for_sketch(code),
     )
     with _open_db() as conn:
         conn.execute("UPDATE generations SET uploaded_file_id = ? WHERE id = ?", (item_id, gen_id))
