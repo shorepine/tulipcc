@@ -35,6 +35,12 @@ AMYboard World file API (existing):
 - `GET /api/amyboardworld/files/{id}/download`
 - `PATCH /api/amyboardworld/files/{id}/tags` (admin)
 - `DELETE /api/amyboardworld/files/{id}` (admin)
+- `POST /api/admin/amyboardworld/retag_hardware?dry_run=true|false&username=generator`
+  (admin) — recompute the auto hardware tags (`#display`, `#encoder`,
+  `#quad-encoder`, `#8encoder`, `#8angle`, `#cv`, `#audio-in`) of every live `.py` sketch by
+  `username` from its stored source, preserving non-hardware tags. Sketches
+  published from shared generations get these tags automatically; this
+  endpoint backfills/refreshes them (idempotent).
 
 Tulip World file API (new):
 

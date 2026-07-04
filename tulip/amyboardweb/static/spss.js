@@ -65,6 +65,11 @@ var amyboard_world_files = [];
 var amyboard_world_loading_index = null;
 var amyboard_world_selected_tag = "";
 var amyboard_world_tag_palette = {};
+// Tag pills shown in the AMYboard World filter UI. #generated is a shortcut
+// for username=generator (see refresh_amyboard_world_files); the hardware
+// tags (#display, #encoder) are applied automatically by the server when a
+// shared generation is published.
+var AMYBOARD_WORLD_PILL_TAGS = ["featured", "official", "generated", "display", "encoder"];
 var selected_environment_file = null;
 var pending_environment_editor_load = false;
 var environment_editor_dirty = false;
@@ -2903,7 +2908,7 @@ function get_world_tag_query() {
 }
 
 function randomize_world_tag_palette() {
-    var tags = ["featured", "official", "generated"];
+    var tags = AMYBOARD_WORLD_PILL_TAGS;
     var classes = [
         "bg-primary",
         "bg-success",
@@ -2931,7 +2936,7 @@ function render_world_tag_pills() {
     if (!Object.keys(amyboard_world_tag_palette).length) {
         randomize_world_tag_palette();
     }
-    var tags = ["featured", "official", "generated"];
+    var tags = AMYBOARD_WORLD_PILL_TAGS;
     var html = "";
     for (var i = 0; i < tags.length; i++) {
         var tag = tags[i];
