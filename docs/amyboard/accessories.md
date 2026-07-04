@@ -59,7 +59,6 @@ amyboard.display.vline(64, 0, 128, 255)   # vertical line: x, y, height, color
 amyboard.display_refresh()
 
 # Rotate the OLED (sh1107 only).  One of 0, 90, 180, 270 degrees.
-# The setting is saved and re-applied automatically on every boot.
 amyboard.set_display_rotation(90)
 
 # Show a live waveform visualization
