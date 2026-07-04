@@ -55,6 +55,8 @@ A working board enumerates as a USB MIDI device (VID `0xCAF0`, PID `0x4009`) plu
 
 The editor talks to the board over **WebSerial/WebMIDI**, which only work in **Chrome or Edge** (desktop). Safari and Firefox don't support them, so the board won't show up at all. Also plug the board in and finish any DFU/BOOT step **before** clicking Connect/Control, and pick the right port when the browser prompts.
 
+If the **Update firmware** button shows something like "amyboard.com refused to connect," clear your browser cache and reload the page -- a stale cached page has caused exactly this.
+
 ### It works on Mac/Linux but not Windows (or the reverse)
 
 Most setups work across macOS, Linux, and Windows, especially after a firmware update -- we've fixed a lot of USB issues recently, so [upgrade to the latest firmware](firmware.md) first. If one machine sees the board and another doesn't:
@@ -88,7 +90,15 @@ Out of the box our firmware supports **SH1107** and **SSD1327** OLEDs. The Adafr
 
 ### My display cracked or went blank after I mounted it
 
-Be very careful bolting a display to the faceplate -- hand-tightening can press the glass against the panel and crack it. **Use spacers/standoffs** (extra nuts work great) so there's no force on the glass. This has bitten more than one of us.
+Be very careful bolting a display to the faceplate -- hand-tightening can press the glass against the panel and crack it. **Use spacers/standoffs** (extra nuts work great) so there's no force on the glass. This has bitten more than one of us. The mounting holes take **M2** screws; a cheap assortment of M2 screws plus nylon spacers and washers works well, and using just **two diagonal holes** instead of all four gives a bit more tolerance.
+
+### My OLED image is rotated 90°
+
+Some panels (especially off-brand ones) come up sideways. Fix it in your sketch:
+
+```python
+amyboard.set_display_rotation(90)   # or 180 / 270
+```
 
 ### My OLED text shows nothing, or my custom screen gets overwritten
 
@@ -107,7 +117,7 @@ The front-panel **I2C (Grove)** port drives [accessories](accessories.md). Popul
 - a **Grove-to-Stemma QT** cable from the AMYboard front panel to the first accessory ([Adafruit #4528](https://www.adafruit.com/product/4528)), and
 - a **Stemma-to-Stemma QT** cable to daisy-chain the next accessory (e.g. knob → display).
 
-Use the **front-panel** I2C port for accessories -- not the back "tulip"/host port.
+Use the **front-panel** I2C port for accessories -- not the back "tulip"/host port. The back I2C connector is for running the AMYboard itself *as* an accessory (daisy-chained, or driven from a Tulip or similar host), and the back HOST header pins are for serial debugging during firmware development -- neither will talk to your display or encoder.
 
 ### What exact I2C connector/cable does the front-panel port use?
 
@@ -117,6 +127,23 @@ It's a **Grove / MABEE-style** 4-pin connector at **2.0 mm** pitch (also called 
 
 The quad encoder has two Stemma QT jacks so you can chain through it. For a star/hub, M5Stack sells a [mini I2C hub](https://shop.m5stack.com/products/mini-hub-module). You can run many accessories off the single SDA/SCL pair as long as their addresses don't collide.
 
+### Is there one API that works with any encoder? (Adafruit single/quad, M5Stack 8-Encoder)
+
+Yes -- as of the 2026-06-30 firmware, `amyboard.encoder()` autodetects whichever encoder accessory is connected (or the web simulator's emulated encoder) and gives you a single API, so the same sketch works with any of them:
+
+```python
+enc = amyboard.encoder()   # autodetects via I2C scan (or the web simulator)
+enc.type          # "adafruit_single" | "adafruit_quad" | "m5stack" | "web" | None
+enc.encoders      # 1, 4, or 8
+enc.read(i)       # cumulative position, starts at 0
+enc.button(i)     # True while held (normalized across devices)
+enc.led(i, r,g,b) # set encoder i's LED, 0..255 each
+enc.reset(i)      # zero one encoder (or all if i omitted)
+enc.switch()      # M5Stack toggle (False on other devices)
+```
+
+The sketch generator on AMYboard World uses this API too, so generated sketches no longer assume a specific encoder. Note that many older World sketches were written for a *specific* encoder -- if a sketch "runs but nothing happens," check whether it expects a single encoder for preset selection while you only have the 8-pack (or vice versa).
+
 ### How do I read the M5Stack 8-Angle (8 pots) or 8-Encoder?
 
 ```python
@@ -125,11 +152,15 @@ m58angle.get(0)   # first pot/encoder
 m58angle.get(7)   # eighth
 ```
 
-See the [Accessories page](accessories.md) for details.
+See the [Accessories page](accessories.md) for details. For encoders, prefer the unified `amyboard.encoder()` API above.
 
 ### How do I drive the NeoPixel LEDs on the Adafruit encoder board?
 
-You can talk to the Seesaw NeoPixel registers directly from your sketch with `amyboard.neopixel_init(pin=18, n=4)` and `amyboard.neopixel_set(i, r,g,b)` and `amyboard.neopixel_show()`. 
+Easiest is `enc.led(i, r, g, b)` on the unified encoder object above. You can also talk to the Seesaw NeoPixel registers directly from your sketch with `amyboard.neopixel_init(pin=18, n=4)` and `amyboard.neopixel_set(i, r,g,b)` and `amyboard.neopixel_show()`. 
+
+### Can I wire buttons or LEDs to the ESP32's spare GPIO pins?
+
+Not easily -- the unused ESP32-S3 GPIOs aren't broken out to any header, so you'd have to solder directly to the chip. For extra controls and lights, use the I2C accessories above instead.
 
 ### Should I read encoders / update the display in `loop()` or with `tulip.defer()`?
 
@@ -141,11 +172,23 @@ Either works -- `tulip.defer()` uses the same sequencer as `loop()`, it just let
 
 ### I edit `sketch.py` but it reverts to the default on reboot
 
-AMYboard tries to **self-heal**: if your `sketch.py` crashes hard at boot, it restores the default sketch. So a revert usually means your sketch errored. Hold **BOOT** while powering on to skip the sketch (this also runs a hardware self-test), then fix or delete it. The live sketch is at `/user/current/sketch.py`. See [Board won't boot / crashes](troubleshooting.md#board-wont-boot--crashes-on-startup).
+AMYboard tries to **self-heal**: if your `sketch.py` crashes hard at boot, it restores the default sketch. So a revert usually means your sketch errored. Recent firmware + the [web editor](online.md) now **show you the sketch's error** (with a traceback and line number) instead of silently reverting, so upgrade if you're flying blind. Hold **BOOT** while powering on to skip the sketch (this also runs a hardware self-test), then fix or delete it. The live sketch is at `/user/current/sketch.py`. See [Board won't boot / crashes](troubleshooting.md#board-wont-boot--crashes-on-startup).
+
+### The editor used to auto-sync my sketch -- now it asks me to "read" and "write." What changed?
+
+We replaced the old two-way "sync" with an explicit workflow, based on user feedback: you now tell the editor to **"Read from AMYboard"** or **"Write to AMYboard"**. The editor no longer auto-reads your board on page load, it warns before replacing the sketch in the editor, your sketch code stays in the browser until you say otherwise, and sketches downloaded from AMYboard World load into the editor only -- nothing touches your board until you write. You can also swap between Simulate and Control mode with the same sketch.
+
+### My sketch loads without errors but doesn't behave -- how do I debug it?
+
+The editor reports errors when **importing/writing** a sketch, but (deliberately) not errors that happen later **at runtime**. To see those, run the sketch in the **Simulator** and open the **Terminal REPL** there -- runtime tracebacks print right in the terminal. (One caveat: a few hardware-only calls don't exist in the simulator, so you may need to comment those out while debugging.)
 
 ### Where do I put my own Python modules or drivers?
 
 Copy them to `/user/current/` on the board and `import` them from your sketch -- they're found at runtime. You only need to **recompile/flash firmware for C changes**; pure-Python modules (display drivers, helpers) don't require a rebuild.
+
+### Can I patch one of the built-in modules (like `m5_8encoder`)?
+
+The built-in modules are **frozen into the firmware**, so you can't edit them on the board, and a same-named file in `/user/current/` won't shadow the frozen copy. Instead, copy the module under a **new name** (e.g. `my_m5_8encoder.py`) into `/user/current/` and `import my_m5_8encoder`. If you fix a real bug, please PR it against [our copy in the tulipcc repo](https://github.com/shorepine/tulipcc/tree/main/tulip/shared/py) -- firmware releases go out about weekly, so fixes land fast.
 
 ### Do my MIDI channel and CC assignments survive a power cycle?
 
@@ -156,6 +199,7 @@ Yes -- once you click **"Write to AMYboard"** in the [web editor](online.md), yo
 - It restores your **last *saved* state** (the one you wrote to AMYboard), not necessarily the last one you played.
 - A **Program Change (PC)** message switches among the built-in presets (128 Juno + 128 DX7) live, but **does not** write to flash -- after a reboot you're back to your saved setting.
 - In the web editor, a **"preset"** is one of the 256 built-in synth presets; loading one overwrites the current knob settings. A **"patch"** is the full set of knob settings for a channel. To make any of it permanent, "Write to AMYboard."
+- Because a PC reloads the whole preset, it also **wipes any live CC tweaks** you've made since. If your sequencer sends a PC at the top of every pattern loop, your CC changes will reset each time around -- send the PC **once** when the song/pattern starts instead.
 
 ---
 
@@ -163,7 +207,12 @@ Yes -- once you click **"Write to AMYboard"** in the [web editor](online.md), yo
 
 ### How do I assign a hardware knob to a parameter (MIDI CC)?
 
-Easiest: in the [web editor](online.md), click the parameter's label and set its CC number -- it then "just works," including when the board runs standalone. In code you can set CC mappings with AMY's `ic` command (see the [AMY API docs](https://github.com/shorepine/amy/blob/main/docs/api.md#synths-and-voices)); those mappings persist in your sketch. We're also shipping a default Juno-style CC map (e.g. CC 74 → filter cutoff).
+Easiest: in the [web editor](online.md), click the parameter's **label** (the text, e.g. "Freq" -- not the knob itself!) and set its CC number -- it then "just works," including when the board runs standalone. In code you can set CC mappings with AMY's `ic` command (see the [AMY API docs](https://github.com/shorepine/amy/blob/main/docs/api.md#synths-and-voices)); those mappings persist in your sketch. We're also shipping a default Juno-style CC map (e.g. CC 74 → filter cutoff).
+
+Two things worth knowing:
+
+- CC mappings are **per MIDI channel** -- a mapping you set on channel 4 doesn't apply to channel 5.
+- Everything you configure in the web GUI lands in the **config block at the bottom of your sketch** as `ic` lines (e.g. `i10ic86,...` = channel 10, CC 86). So instead of re-clicking mappings for every channel, set one channel up, look at that block, and copy/edit the lines for the others.
 
 ### How do I use a hardware controller without keeping the board tethered to the browser?
 
@@ -173,6 +222,26 @@ Set your CC assignments once, then go standalone:
 2. Tweak the on-screen knobs to confirm the mappings.
 3. **Write to AMYboard.**
 4. Move the controller's MIDI cable to the AMYboard's MIDI in and disconnect the computer -- the knobs keep working on the hardware.
+
+### My TRS MIDI gear doesn't respond -- is it Type A or Type B?
+
+For **MIDI in**, you don't have to care: the AMYboard hardware intrinsically accepts both TRS Type A and Type B. For **MIDI out**, the default is **Type A**; if your downstream gear is Type B, switch at runtime (needs a recent firmware -- late June 2026 or newer):
+
+```python
+import amyboard
+amyboard.set_midi_type('B')   # switch MIDI OUT to Type B
+print(amyboard.midi_type())   # -> 'A' or 'B', whichever is live
+```
+
+This isn't persisted -- it resets to Type A on reboot -- so put the call in your sketch.
+
+### Can I connect several MIDI inputs (and power sources) at the same time?
+
+Yes -- it's fine to have TRS MIDI, USB MIDI, and multiple power sources (USB + Eurorack) all connected at once; notes from all MIDI inputs are handled. Just remember the USB port is **device mode only** -- a USB MIDI connection works to a computer (or USB host), not from a controller plugged into the AMYboard (see [USB host](#can-i-plug-a-usb-midi-keyboard-straight-into-the-amyboard-usb-host)).
+
+### How do I play drum sounds?
+
+Send MIDI on **channel 10** (in the note range **35–81**) and you get the standard General MIDI drum mapping. Default AMY ships with 11 TR-808 samples -- not a full kit, but it's something.
 
 ### Can I control AMY directly over SysEx?
 
@@ -219,6 +288,14 @@ Not yet with the built-in echo -- it's a single delay on the master sum, not a r
 
 In an Arduino sketch, call `amy_simple_fill_buffer()` in `loop()` to get an `int16*` buffer of finished samples, process it, and send it to the I2S out yourself. (`amy_external_render_hook` is for *generating* oscillator buffers, not post-processing the final mix.) See [Arduino Setup](arduino.md).
 
+### My audio clips or distorts on some presets
+
+A few things to check, roughly in order:
+
+- **Headroom.** High note velocities from your controller/sequencer, or a high per-channel output volume, will clip. Setting the synth output volume around **2.5–3.5** leaves plenty of headroom.
+- **Too many voices.** When AMY runs out of CPU/RAM with lots of simultaneous voices, the output degrades. Reduce `num_voices` or simplify patches.
+- **Persistent bitcrush-y glitching on even the basic presets** (and it survives a firmware reflash and different power supplies) can be a **hardware defect** -- record a short video of it and contact [Makerfabs support](https://www.makerfabs.com/contact); they've confirmed defects from videos and shipped replacement units.
+
 ### I set up a second synth channel, and now my first synth sounds different!
 
 The analog synth patches (modeled on Juno) use the global chorus and EQ FX to shape their sounds, but these FX are shared between all synths by default.  So if you set up Juno patch A11 (Brass set 1) on channel 1, which uses the famous Juno chorus effect, then switch to channel 2 and set up Juno patch A13 (Trumpet), which does not use chorus, it will turn off the chorus for channel 1 as well, which will make it sound very thin.
@@ -262,6 +339,14 @@ Roughly **4** is a safe bet, maybe one or two beyond that. Each board draws ~350
 
 ## CV & modular integration
 
+### Can I use CV without a Eurorack setup (e.g. on USB power)?
+
+Yes -- CV works on **any** power supply, including a plain USB brick. Just patch your voltage into **CV1 or CV2 IN**: on the TS patch cable the **tip carries the voltage** and the **sleeve is ground**. The inputs measure **−10 V to +10 V** no matter how the board is powered.
+
+### How do I use CV as gate and pitch inputs?
+
+See the **"CV triggering"** examples in [Modular Synth Setup](modular.md#cv-triggering) -- they set up the first CV input as a **gate** (note-on/note-off) and the second as **pitch**. You can drop those `amy.send(...)` lines into an otherwise unmodified sketch, write it to the AMYboard, and be off and running.
+
 ### How do I add more CV / analog inputs?
 
 AMYboard uses the **ADS1115** ADC for CV in. Easy add-on options over I2C: the [Adafruit ADS1115 breakout](https://www.adafruit.com/product/1085) (needs soldering), an [NCD screw-terminal ADS1115](https://store.ncd.io/product/ads1115-16-bit-4-channel-precision-analog-to-digital-converter-i2c-mini-module/), or the single-channel [M5Stack ADS1110 unit](https://docs.m5stack.com/en/unit/Unit-ADC_V1.1). For CV/DAC out, the GP8413 unit is documented in [Accessories](accessories.md).
@@ -288,7 +373,7 @@ The PCB itself is only ~47 mm wide (under 10HP); the **front panel** is 10HP. In
 
 ### Can I program the board once it's mounted in a rack?
 
-Yes -- you don't need USB. You can send sketches and patches to AMYboard over **TRS MIDI** to the front-panel jacks from the [web editor](online.md), which is handy when the USB-C port is hidden inside a case.
+Yes -- you don't need USB. You can send sketches and patches to AMYboard over **TRS MIDI** to the front-panel jacks from the [web editor](online.md), which is handy when the USB-C port is hidden inside a case. Firmware can also be updated in place: `amyboard.wifi(ssid, password)` then `amyboard.upgrade()` on each board -- much easier than pulling four boards out of a rack for USB flashing.
 
 ---
 
@@ -305,6 +390,10 @@ It's a vanilla MicroPython SD interface: **FAT32** (up to 2 TB volumes / 4 GB fi
 ### Do I need to do anything special to build for AMYboard?
 
 Once the ESP-IDF tools are set up, build and flash from the `tulip/amyboard` directory with `idf.py flash`. You'll usually need to put the board in DFU mode first (hold **BOOT**, press and release **RST**). To rewrite the whole filesystem: `idf.py erase-flash`, then `python amyboard_fs_create.py full`. Full instructions are on the [Firmware page](firmware.md). Remember: for pure-Python changes you don't need to build at all -- just copy files to `/user/current/`.
+
+### Can I build my own control surface / editor that talks to AMYboard?
+
+Yes! The SysEx-based control API the web editor uses for sketch transfer, reading board state, running Python, and rebooting is documented in [control_api.md](control_api.md) -- we use it ourselves for CI/test harnesses. There's a Python reference implementation and CLI at [`tools/amyboardctl`](https://github.com/shorepine/tulipcc/tree/main/tools/amyboardctl). If you're building an alternative to AMYboard Online, start there.
 
 ### Arduino or MicroPython?
 
