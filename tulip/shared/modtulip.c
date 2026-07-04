@@ -90,15 +90,9 @@ STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_midi_callback);
 
-#ifndef __EMSCRIPTEN__
-STATIC mp_obj_t tulip_external_midi_sync(size_t n_args, const mp_obj_t *args) {
-    amy_external_midi_sync(mp_obj_is_true(args[0]) ? 1 : 0);
-    return mp_const_none;
-}
-STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_external_midi_sync_obj, 1, 1, tulip_external_midi_sync);
-#endif
-
-
+// tulip.external_midi_sync() is defined in tulip.py: it sends the AMY wire
+// command (external_midi_sync / zC) so it also works on the web builds, where
+// AMY is a separate WASM module reachable only via the wire protocol.
 
 #ifndef __EMSCRIPTEN__
 extern int amy_get_output_buffer(int16_t *samples);
@@ -1664,7 +1658,6 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
 #ifndef __EMSCRIPTEN__
-    { MP_ROM_QSTR(MP_QSTR_external_midi_sync), MP_ROM_PTR(&tulip_external_midi_sync_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_block_done_callback), MP_ROM_PTR(&tulip_amy_block_done_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_input_buffer), MP_ROM_PTR(&tulip_amy_get_input_buffer_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_output_buffer), MP_ROM_PTR(&tulip_amy_get_output_buffer_obj) },

@@ -54,7 +54,14 @@ def seq_bpm(bpm=None):
 def seq_ppq(ppq=None):
     if ppq is not None:
         print("You can no longer set PPQ in Tulip. It's fixed at %d" % (amy.AMY_SEQUENCER_PPQ))
-    return amy.AMY_SEQUENCER_PPQ    
+    return amy.AMY_SEQUENCER_PPQ
+
+# Follow (or stop following) external MIDI realtime clock/start/stop. Sent as an
+# AMY wire command (external_midi_sync / zC), so it works identically on firmware
+# and the web builds, where AMY is a separate WASM module reachable only via the
+# wire protocol.
+def external_midi_sync(enabled):
+    amy.send(external_midi_sync=1 if enabled else 0)
 
 def remap():
     if board() == "WEB":

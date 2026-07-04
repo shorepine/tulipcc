@@ -123,8 +123,6 @@ AMY works on web exports. The native GDExtension isn't used on web — instead, 
    web_audio/                          # AMY audio engine
      amy.js
      amy.wasm
-     amy.aw.js
-     amy.ww.js
      godot_amy_bridge.js
      enable-threads.js
    ```
