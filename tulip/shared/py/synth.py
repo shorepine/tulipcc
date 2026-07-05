@@ -172,14 +172,17 @@ class OscSynth(PatchSynth):
         self.synth_init_args = kwargs
 
 
-class DrumSynth(OscSynth):
+class DrumSynth(PatchSynth):
     """Synth for Drum channel (10).
     Each MIDI note plays a separately-configured sound.
     """
 
-    def __init__(self, num_voices=4, channel=None):
-        # synth_flags 3 means do the drum translation and ignore note offs.
-        # We scale the PCM drums by 5 to make them comparable in level to Juno voices.
-        super().__init__(num_voices=num_voices, channel=channel, synth_flags=3, amp=5.0)
+    def __init__(self, num_voices=4, channel=None, patch=384):
+        # The GM note->sample mapping lives in the drum kit patches (384 TR-808,
+        # 385 TR-909, 386 Linn 9000, 387 MR-12, 388 Tokyo Synthetics, 389 Power,
+        # 390 Percussion); the patch also bakes in the x5 PCM level scaling.
+        # synth_flags 3 = route notes through the patch's MIDI note map and
+        # ignore note offs.
+        super().__init__(num_voices=num_voices, channel=channel, patch=patch, synth_flags=3)
 
 
