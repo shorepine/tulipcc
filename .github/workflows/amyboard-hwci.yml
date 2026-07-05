@@ -6,8 +6,8 @@ name: HW CI (AMYboard + Tulip)
 # amy/test.py, for BOTH boards that share the bench:
 #   * AMYboard — driven over USB-MIDI + AMY zP sysex; firmware from the per-PR
 #     Vercel preview (amyboard-pr-<N>.vercel.app). Runs the built-in reference
-#     tones, then pushes real AMYboard World sketches (acid/house/universal_hair/
-#     woodpiano) onto the board over the SysEx control API and records each.
+#     tones, then pushes real AMYboard World sketches (acid/house/woodpiano)
+#     onto the board over the SysEx control API and records each.
 #     See hwci.py + docs/amyboard/control_api.md.
 #   * Tulip (TULIP4_R11) — driven over the MicroPython serial REPL (no USB-MIDI);
 #     firmware from the 'tulip-firmware' artifact the preview workflow builds.
@@ -209,7 +209,6 @@ jobs:
             hwci/hwci_basic-recording.wav
             hwci/acid_generator-recording.wav
             hwci/house_generator-recording.wav
-            hwci/universal_hair-recording.wav
             hwci/woodpiano-recording.wav
             hwci/hwci_basic-serial.log
             hwci/hwci-run.log
@@ -247,13 +246,13 @@ jobs:
               marker,
               ...head,
               '',
-              `**AMYboard** (USB-MIDI + AMY \`zP\` → audio; built-in tones + AMYboard World sketches acid/house/universal_hair/woodpiano over the SysEx control API): ${line(amyPass)}`,
+              `**AMYboard** (USB-MIDI + AMY \`zP\` → audio; built-in tones + AMYboard World sketches acid/house/woodpiano over the SysEx control API): ${line(amyPass)}`,
               '',
               `**Tulip** (TULIP4_R11; serial-REPL audio + WiFi screenshot): ${line(tulipPass)}`,
               '',
               `**[⬇️ Artifacts: recordings · screenshot · serial logs · run logs](${runUrl})**`,
               '',
-              '<sub>Self-hosted bench. Audio spectral-compared to `ref/hwci_basic.wav`, the AMYboard World sketch refs (`ref/{acid_generator,house_generator,universal_hair,woodpiano}.wav`) + `ref/tulip_basic.wav`; Tulip screenshot pixel-compared to `ref/tulip_screenshot.png`. Both analog outs share one capture card, so the tests run sequentially.</sub>',
+              '<sub>Self-hosted bench. Audio spectral-compared to `ref/hwci_basic.wav`, the AMYboard World sketch refs (`ref/{acid_generator,house_generator,woodpiano}.wav`) + `ref/tulip_basic.wav`; Tulip screenshot pixel-compared to `ref/tulip_screenshot.png`. Both analog outs share one capture card, so the tests run sequentially.</sub>',
             ].join('\n');
             const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number: pr });
             const existing = comments.find(c => c.body && c.body.includes(marker));

@@ -86,7 +86,6 @@ WORLD_BASE = world.DEFAULT_BASE
 WORLD_SUITE = [
     {"name": "acid_generator",  "author": "shorepine", "generative": True,  "min_sim": 0.80},
     {"name": "house_generator", "author": "shorepine", "generative": True,  "min_sim": 0.80},
-    {"name": "universal_hair",  "author": "shorepine", "generative": True,  "min_sim": 0.82},
     {"name": "woodpiano",       "author": "shorepine", "generative": False, "min_sim": 0.85},
 ]
 
