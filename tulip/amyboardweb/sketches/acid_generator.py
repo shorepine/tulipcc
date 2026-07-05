@@ -16,9 +16,10 @@ amyboard.display_refresh()
 # --- Synth setup ---
 
 # Synth 1: TB-303 bass — already configured via knobs
-# Synth 10: 808 drums. patch=258 is the GM drum kit (maps note 36->kick etc.);
+# Synth 10: 808 drums. patch=384 is the TR-808 GM drum kit (maps note 36->kick
+# etc.; kits 385-390 are 909/Linn/MR-12/Synthetics/Power/Percussion);
 # synth_flags=3 routes notes through the GM note map and ignores note-offs.
-amy.send(synth=10, num_voices=5, synth_flags=3, amp=5, patch=258)
+amy.send(synth=10, num_voices=5, synth_flags=3, amp=5, patch=384)
 
 # A little reverb, plus some chorus for the 303
 amy.send(chorus="0.6,2,0.3")
