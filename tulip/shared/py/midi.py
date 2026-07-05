@@ -221,6 +221,7 @@ def setup_global_midi_cc_bindings():
 
 
 WARNED_MISSING_CHANNELS = set()
+BANK_MSB_PER_CHANNEL = {}  # channel -> last CC0 bank select MSB
 
 # This lets you set amy.override_send to midi.sysex_amy, for sending AMY messages over sysex to a connected AMYboard
 def sysex_amy(m):
@@ -261,8 +262,22 @@ def midi_event_cb(midi_message):
             arp.note_on(midinote, vel)
         elif message == 0x80:  # Note off.
             arp.note_off(midinote)
+    if message == 0xb0 and control == 0x00:
+        # Bank select MSB: remember it for the next program change (mirrors
+        # amy_midi.c's instrument bank handling).
+        BANK_MSB_PER_CHANNEL[channel] = value
     if message == 0xc0:  # Program change
-        synth.program_change(control)  # AMY will have done this already, but this way we update the Python-level state too.
+        # AMY's C layer has already resolved this PC (bank MSB * 128 + program;
+        # an unset bank stays within the current patch's block of 128, so e.g.
+        # a drum synth on kit 384+ stays in the kit bank). Mirror that
+        # resolution here -- passing the raw 0-127 program would clobber the
+        # synth with a Juno patch.
+        bank = BANK_MSB_PER_CHANNEL.get(channel)
+        if bank is None:
+            bank = (synth.patch >> 7) if synth.patch else 0
+            if bank == 2:
+                bank = 0  # 256-383 have no full PC bank; match amy_midi.c's fallback
+        synth.program_change(control + (bank << 7))
 
 
 MIDI_CALLBACKS = set()
