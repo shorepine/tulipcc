@@ -8,4 +8,6 @@ phy_init, data, phy,     0xf000,   0x1000,
 ota_0,    app,  ota_0,   0x10000,  0x390000,
 ota_1,    app,  ota_1,   0x3a0000, 0x390000,
 system,   data, fat,     0x730000, 0x300000,
-vfs,      data, fat,     0xa30000, 0x1492000
+vfs,      data, fat,     0xa30000, 0x1230000,
+# Gamma9001 drum banks (raw int16 PCM, mmapped by AMY; see amy pcm_gamma9001.h)
+drums,    data, undefined, 0x1c60000, 0x3a0000,
