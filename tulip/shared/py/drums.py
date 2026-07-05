@@ -286,9 +286,7 @@ def run(screen):
     app.add(app.leds, direction=lv.ALIGN.OUT_BOTTOM_LEFT, pad_y=0)
     drum_items = [x[1] for x in drumkit]
     _NOTE_OF_ROW = [0] * _NUM_ROWS
-    from patches import drumkit as _dk
-    shaker = 'Shaker' if any(d[1] == 'Shaker' for d in _dk) else 'Maraca'
-    initial_voices = ['Kick', 'Snare', shaker, 'Closed Hat', 'Open Hat', 'Cowbell', 'Low Tom']
+    initial_voices = ['Kick', 'Snare', 'Shaker', 'Closed Hat', 'Open Hat', 'Cowbell', 'Low Tom']
     app.rows = []
     for i in range(_NUM_ROWS):
         row = DrumRow(drum_items, row=i)

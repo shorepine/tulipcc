@@ -494,6 +494,13 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_config.audio = AMY_AUDIO_IS_MINIAUDIO;
     //amy_config.i2s_din = 0;  // Dummy to indicate has audio in.
     amy_config.features.startup_bleep = 1;
+#ifdef GAMMA9001
+    // Tulip Desktop links drums.bin straight into the binary (see tulip.mk).
+    {
+        extern const int16_t gamma9001_pcm_data[];
+        amy_set_gamma9001_pcm(gamma9001_pcm_data);
+    }
+#endif
     amy_start(amy_config);
 }
 

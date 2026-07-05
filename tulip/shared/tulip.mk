@@ -3,6 +3,14 @@
 TULIP_EXTMOD_DIR = $(TOP)/../tulip/shared
 ULAB_DIR = $(TOP)/../tulip/shared/ulab/code
 
+# Tulip Desktop carries the Gamma9001 drum banks like the hardware and web
+# builds: drums.bin is generated from the amy submodule and linked in as C data.
+CFLAGS += -DGAMMA9001
+EXTMOD_SRC_C += $(TOP)/../amy/build/drums_bin.c
+
+$(TOP)/../amy/build/drums_bin.c: $(TOP)/../amy/sounds/gamma9001/manifest.json $(TOP)/../amy/amy/headers.py
+	cd $(TOP)/../amy && python3 -m amy.headers gamma9001
+
 EXTMOD_SRC_C += $(addprefix $(TOP)/../amy/src/, \
 	amy.c \
 	algorithms.c \
