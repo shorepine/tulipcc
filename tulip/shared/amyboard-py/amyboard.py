@@ -394,16 +394,19 @@ def _apply_knobs_text(knobs_text):
     """Reset AMY to a known default, then apply the sketch's knob lines on top.
 
     The sketch is the single source of truth, so every restart starts from a
-    clean slate: S<RESET_SYNTHS> clears all synths and MIDI CC maps, and
+    clean slate: S<RESET_SYNTHS> clears all synths and MIDI CC maps,
     i1K257iv6 installs the amyboard default synth on channel 1 (which also
     reinstalls the default CC map so a plugged-in MIDI controller works out of
-    the box before the website pushes anything). The _auto_generated_knobs lines
-    are then applied on top, and may override channel 1, configure other
-    channels, or deactivate a channel with iv0. We never grab or merge live AMY
-    state here — what the sketch says is exactly what the board becomes.
+    the box before the website pushes anything), and i10K384iv6 installs the
+    GM drum kit (TR-808; kits 385-390 selectable via PC bank MSB 3) on channel
+    10. The _auto_generated_knobs lines are then applied on top, and may
+    override channel 1 or 10, configure other channels, or deactivate a
+    channel with iv0. We never grab or merge live AMY state here — what the
+    sketch says is exactly what the board becomes.
     """
     amy.send_raw("S%dZ" % amy.RESET_SYNTHS)
     amy.send_raw("i1K257iv6Z")
+    amy.send_raw("i10K384iv6Z")
     if not knobs_text:
         return
     for line in knobs_text.strip().split('\n'):
@@ -499,6 +502,11 @@ def start_amy():
     init_pcm9211()
     midi_out_pin = init_midi()
     tulip.amyboard_start(midi_out_pin)
+    # Boot defaults so the board makes sound before (or without) a sketch:
+    # the amyboard patch on channel 1 and GM drums (kit 0, TR-808) on channel
+    # 10. Sketch startup re-applies these via _apply_knobs_text.
+    amy.send_raw("i1K257iv6Z")
+    amy.send_raw("i10K384iv6Z")
     _env_dir = _ensure_current_env_layout()
 
     if tulip.bootloader_mode():
