@@ -93,6 +93,89 @@ def loop():
 
 ---
 
+## Repeating patterns that must stay tight: put them in `sequencer.AMYSequence`, not `loop()`
+
+Notes sent from `loop()` fire only when Python gets there — anything slow in `loop()`
+(display writes, file/World access, heavy math) pushes them late and the groove flams.
+An `AMYSequence` event lives **inside the audio engine** and repeats sample-accurately no
+matter what Python is doing. Prefer it for any fixed, repeating pattern (drum grooves,
+arps, ostinatos); keep `loop()` for UI, knobs, and evolving the pattern.
+
+`sequencer.AMYSequence(length, divider)` is a looping grid of `length` slots, each
+`1/divider` of a whole note (so `AMYSequence(32, 32)` = one 4/4 bar of 32nd-note slots).
+`seq.add(position, amy.send, synth=…, note=…, vel=…)` schedules a repeating note; it
+returns an event with `.update(position, amy.send, …)` to change it and `.remove()` to
+delete it.
+
+### Example — four-on-the-floor kick + 8th hats that keep time no matter what loop() does
+
+```python
+import amy, sequencer
+
+sequencer.tempo(120)
+amy.send(synth=10, patch=384, num_voices=6, synth_flags=3)   # TR-808 GM kit
+
+seq = sequencer.AMYSequence(32, 32)          # one 4/4 bar, 32nd-note grid
+for pos in (0, 8, 16, 24):
+    seq.add(pos, amy.send, synth=10, note=36, vel=1)         # kick on every beat
+for pos in range(0, 32, 4):
+    seq.add(pos, amy.send, synth=10, note=42, vel=0.3)       # 8th-note closed hats
+
+def loop():
+    pass     # free for UI/display/knobs -- the pattern plays itself
+```
+
+> Source of truth: `tulip/shared/py/sequencer.py` (`AMYSequence`) and
+> `tulip/shared/py/drums.py` (`app.drum_seq.add(position=…, func=amy.send, synth=…,
+> note=…, vel=…)` — the drum machine app schedules every switch this way).
+
+---
+
+## The OLED display: draw via `amyboard.display`, refresh with `.show()` — redraws are diffed, but update on musical boundaries, not every `loop()`
+
+`amyboard.display` is a 128×128 grayscale framebuffer: `.text(s, x, y, col)`,
+`.fill(col)`, `.fill_rect(x, y, w, h, col)`, `.rect`, `.line`, `.pixel`, plus
+`.message(s, row=n)` (one text line with background, includes the refresh). `col` is
+0–255. Text rows are 8px tall; `message()` rows are 12px. All methods are safe no-ops
+when no display is attached, and draw to the on-screen panel in the web simulator.
+
+`display.show()` is cheap: the driver diffs against what the panel already shows and
+transfers **only the rows that changed**, and the transfer itself runs on a background
+firmware task — `show()` queues it and returns in ~1ms instead of blocking Python for
+the 100–200ms a full-screen I2C push takes on the wire. The clear-everything-and-redraw
+idiom is fine, and a `show()` where nothing changed costs ~nothing. Still: refresh when
+the *content* changes (once per bar/beat, on a knob turn), not unconditionally every
+`loop()` call — redrawing in Python isn't free — and put must-stay-tight patterns in
+`AMYSequence` (section above).
+
+### Example — kit name + bar counter, updated once per bar
+
+```python
+import amy, amyboard, sequencer
+
+sequencer.tempo(120)
+amy.send(synth=10, patch=384, num_voices=6, synth_flags=3)
+d = amyboard.display
+step = -1
+
+def loop():
+    global step
+    step += 1
+    if step % 8 == 0:
+        amy.send(synth=10, note=36, vel=1)       # (better: AMYSequence, see above)
+    if step % 32 == 0:                           # once per bar, content changed
+        d.fill(0)
+        d.text("TR-808", 0, 0, 255)
+        d.text("bar %d" % (step // 32), 0, 16, 255)
+        d.show()
+```
+
+> Source of truth: the `Display` class in `tulip/shared/amyboard-py/amyboard.py`;
+> shadow-diff partial updates in `tulip/shared/py/ssd1327.py` / `sh1107.py`;
+> `tulip/amyboardweb/sketches/house_generator.py` (bar-boundary display updates).
+
+---
+
 ## MIDI-controlled parameters: map the CC inside AMY (`midi_cc` / `ic`), don't poll in `loop()`
 
 When the user asks for a synth parameter (resonance, filter cutoff, amp, pan,

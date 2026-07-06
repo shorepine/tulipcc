@@ -1,7 +1,7 @@
 # AMYboard Sketch
-# DESCRIPTION: Gamma9001 drum machine: three drum channels at once -- a main kit that rotates through all six banks, TR-909 hats, and a tabla/shaker percussion layer.
+# DESCRIPTION: Gamma9001 drum machine: three drum channels at once -- a main kit that rotates through all six banks, TR-909 hats, and a tabla/shaker percussion layer. The OLED shows the current kit, section position and beat.
 # Top-level code runs once at boot. loop() is called every 32nd note.
-import amy, sequencer
+import amy, amyboard, sequencer
 import random
 
 sequencer.tempo(118)
@@ -21,6 +21,20 @@ amy.send(synth=11, patch=385, num_voices=4, synth_flags=3)               # TR-90
 amy.send(synth=12, patch=390, num_voices=4, synth_flags=3)               # Percussion: tabla/shaker
 
 amy.send(reverb="0.2,0.5,0.1")
+
+# --- OLED display: kit name, section position, beat. Safe no-ops with no
+# display attached; draws to the panel in the simulator. show() only sends
+# the rows that changed, in the background, so per-beat updates are cheap.
+d = amyboard.display
+
+def draw_kit():
+    d.fill_rect(0, 16, 128, 8, 0)
+    d.text(KITS[kit_idx][1], 0, 16, 255)
+
+d.fill(0)
+d.text("DRUM MACHINE", 0, 0, 255)
+draw_kit()
+d.show()
 
 # GM drum note numbers
 KICK, SNARE, CLAP, RIM = 36, 38, 39, 37
@@ -54,6 +68,7 @@ def loop():
         kit_idx = (kit_idx + 1) % len(KITS)
         amy.send(synth=10, patch=KITS[kit_idx][0], num_voices=6, synth_flags=3)
         amy.send(synth=10, note=CRASH, vel=0.7)  # announce the new kit
+        draw_kit()
 
     # --- Main kit (synth 10) ---
     kicks = kick_synco if bar % 4 == 3 else kick_pattern
@@ -85,3 +100,17 @@ def loop():
         amy.send(synth=12, note=TRIANGLE, vel=0.3)
     if bar == 0 and bar_step == 12:
         amy.send(synth=12, note=COWBELL, vel=0.5)
+
+    # --- Display: bar dots + beat blocks, refreshed once per beat ---
+    if bar_step % 8 == 0:
+        beat = bar_step // 8
+        if beat == 0:  # new bar: move the section-position dot
+            for b in range(BARS_PER_SECTION):
+                x = 4 + b * 15
+                d.fill_rect(x, 32, 11, 8, 255 if b == bar else 0)
+                d.rect(x, 32, 11, 8, 255)
+        for b in range(4):
+            x = 4 + b * 32
+            d.fill_rect(x, 52, 22, 12, 255 if b == beat else 0)
+            d.rect(x, 52, 22, 12, 255)
+        d.show()

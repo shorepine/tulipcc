@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <inttypes.h>
+#include <string.h>
 #include "amy.h"
 
 // Stuff just for amyboard -- cv in/out direct , i2c in/out
@@ -8,6 +9,7 @@
 #include "sdkconfig.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/message_buffer.h"
 #include "esp_chip_info.h"
 #include "esp_flash.h"
 #include "esp_system.h"
@@ -78,6 +80,76 @@ void i2c_check_for_data() {
 }
 
 
+
+// ---------------------------------------------------------------------------
+// Background I2C write queue.  The OLED framebuffer flush takes ~200ms of bus
+// time at 400kHz; done synchronously from MicroPython it froze Python (and
+// starved the CV tasks' port mutex) for that long.  Python instead enqueues
+// each transaction here and returns immediately; this low-priority task plays
+// them out in order on I2C_NUM_0.  The legacy IDF driver's per-port mutex
+// serializes us against machine.I2C and the CV read/write hooks, and because
+// Python chunks large payloads into small transactions, those users interleave
+// between chunks instead of timing out.  Single producer (the MicroPython
+// task) / single consumer (this task), which is all a MessageBuffer allows.
+
+#define I2C_BG_QUEUE_BYTES 16384      // > one full 8KB OLED frame incl. overhead
+#define I2C_BG_MAX_PAYLOAD 1024       // per-transaction cap (Python sends ~256B)
+#define I2C_BG_TASK_STACK_SIZE 4096
+#define I2C_BG_TASK_PRIORITY (ESP_TASK_PRIO_MIN + 1)  // same as cv_read_task
+#define I2C_BG_TASK_COREID (0)                        // MicroPython runs on core 1
+
+static MessageBufferHandle_t i2c_bg_mb = NULL;
+static volatile uint32_t i2c_bg_errors_count = 0;
+static volatile uint8_t i2c_bg_in_flight = 0;
+
+static void i2c_bg_task(void *pvParameter) {
+    static uint8_t msg[I2C_BG_MAX_PAYLOAD + 1];  // [addr][payload...]
+    for(;;) {
+        size_t n = xMessageBufferReceive(i2c_bg_mb, msg, sizeof(msg), portMAX_DELAY);
+        if(n < 2) continue;
+        i2c_bg_in_flight = 1;
+        esp_err_t ret = i2c_master_write_to_device(I2C_NUM_0, msg[0], msg + 1, n - 1, pdMS_TO_TICKS(100));
+        i2c_bg_in_flight = 0;
+        if(ret != ESP_OK) i2c_bg_errors_count++;
+    }
+}
+
+// Enqueue one I2C write transaction. Returns 0 on success, 1 if it had to be
+// dropped (queue stayed full / payload too big) -- the failure also bumps
+// i2c_bg_errors() so Python can schedule a full panel resync.
+uint8_t amyboard_i2c_bg_write(uint8_t addr, const uint8_t *buf, uint32_t len) {
+    // Only ever called from the MicroPython task (single producer).
+    static uint8_t msg[I2C_BG_MAX_PAYLOAD + 1];
+    if(len == 0 || len > I2C_BG_MAX_PAYLOAD) {
+        i2c_bg_errors_count++;
+        return 1;
+    }
+    if(i2c_bg_mb == NULL) {
+        i2c_bg_mb = xMessageBufferCreate(I2C_BG_QUEUE_BYTES);
+        xTaskCreatePinnedToCore(i2c_bg_task, "i2c_bg", I2C_BG_TASK_STACK_SIZE / sizeof(StackType_t),
+                                NULL, I2C_BG_TASK_PRIORITY, NULL, I2C_BG_TASK_COREID);
+    }
+    msg[0] = addr;
+    memcpy(msg + 1, buf, len);
+    // Blocking here is backpressure: it only happens when more than a whole
+    // queued frame is outstanding, and it bounds how far Python can run ahead.
+    if(xMessageBufferSend(i2c_bg_mb, msg, len + 1, pdMS_TO_TICKS(500)) != len + 1) {
+        i2c_bg_errors_count++;
+        return 1;
+    }
+    return 0;
+}
+
+// Bytes still queued (plus any transaction currently on the wire); 0 == idle.
+uint32_t amyboard_i2c_bg_pending(void) {
+    if(i2c_bg_mb == NULL) return 0;
+    uint32_t queued = I2C_BG_QUEUE_BYTES - (uint32_t)xMessageBufferSpacesAvailable(i2c_bg_mb);
+    return queued + i2c_bg_in_flight;
+}
+
+uint32_t amyboard_i2c_bg_errors(void) {
+    return i2c_bg_errors_count;
+}
 
 #define ADS1015_REGISTER_CONFIG (0x01)
 #define ADS1015_CQUE_DISABLE (0x0003)

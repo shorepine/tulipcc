@@ -138,6 +138,12 @@ class SH1107(framebuf.FrameBuffer):
         self.displaybuf = bytearray(self.bufsize)
         self.displaybuf_mv = memoryview(self.displaybuf)
         self.pages_to_update = 0
+        # Shadow copy of what the panel currently displays.  show() skips
+        # any page whose content already matches, so idioms like
+        # fill(0)-and-redraw-everything (which mark every page dirty) only
+        # transfer pages whose pixels actually changed.
+        self._shadow = bytearray(self.bufsize)
+        self._shadow_valid = False
         self._is_awake = False
         if self.rotate90:
             super().__init__(self.displaybuf, self.width, self.height,
@@ -225,6 +231,11 @@ class SH1107(framebuf.FrameBuffer):
     def show(self, full_update: bool = False):
 #         _start = time.ticks_us()
         (w, p, db_mv) = (self.width, self.pages, self.displaybuf_mv)
+        sh_mv = memoryview(self._shadow)
+        page_bytes = self.bufsize // p  # both layouts store a page contiguously
+        # full_update bypasses the shadow diff so it can always resync a
+        # panel whose RAM no longer matches (reset, glitch, etc).
+        use_diff = self._shadow_valid and not full_update
         current_page = 1
         if full_update:
             pages_to_update = (1 << p) - 1
@@ -236,23 +247,32 @@ class SH1107(framebuf.FrameBuffer):
             buffer_3Bytes[2] = _HIGH_COLUMN_ADDRESS
             for page in range(p):
                 if pages_to_update & current_page:
-                    buffer_3Bytes[0] = _SET_PAGE_ADDRESS | page
-                    self.write_command(buffer_3Bytes)
                     page_start = w * page
-                    self.write_data(db_mv[page_start : page_start + w])
+                    if not (use_diff and db_mv[page_start : page_start + page_bytes] == sh_mv[page_start : page_start + page_bytes]):
+                        buffer_3Bytes[0] = _SET_PAGE_ADDRESS | page
+                        self.write_command(buffer_3Bytes)
+                        self.write_data(db_mv[page_start : page_start + w])
+                        self._shadow[page_start : page_start + page_bytes] = db_mv[page_start : page_start + page_bytes]
                 current_page <<= 1
         else:
             row_bytes = w // 8
             buffer_2Bytes = bytearray(2)
             for start_row in range(0, p * 8, 8):
                 if pages_to_update & current_page:
-                    for row in range(start_row, start_row + 8):
-                        buffer_2Bytes[0] = row & 0x0f  # low column (low col. cmd is 0x00)
-                        buffer_2Bytes[1] = _HIGH_COLUMN_ADDRESS | (row >> 4) 
-                        self.write_command(buffer_2Bytes)
-                        slice_start = row * row_bytes
-                        self.write_data(db_mv[slice_start : slice_start + row_bytes])
+                    page_start = start_row * row_bytes
+                    if not (use_diff and db_mv[page_start : page_start + page_bytes] == sh_mv[page_start : page_start + page_bytes]):
+                        for row in range(start_row, start_row + 8):
+                            buffer_2Bytes[0] = row & 0x0f  # low column (low col. cmd is 0x00)
+                            buffer_2Bytes[1] = _HIGH_COLUMN_ADDRESS | (row >> 4)
+                            self.write_command(buffer_2Bytes)
+                            slice_start = row * row_bytes
+                            self.write_data(db_mv[slice_start : slice_start + row_bytes])
+                        self._shadow[page_start : page_start + page_bytes] = db_mv[page_start : page_start + page_bytes]
                 current_page <<= 1
+        if pages_to_update == (1 << p) - 1:
+            # every page was either written or verified identical, so the
+            # shadow now reflects the whole panel
+            self._shadow_valid = True
         self.pages_to_update = 0
 #         print("screen update used ", (time.ticks_us() - _start) / 1000, "ms")
 

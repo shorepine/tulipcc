@@ -632,6 +632,33 @@ STATIC mp_obj_t tulip_amyboard_send(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_send_obj, 1, 1, tulip_amyboard_send);
 
+#ifdef ESP_PLATFORM
+// Background I2C write queue (amyboard_support.c): the OLED drivers enqueue
+// their transactions here so display refreshes don't block Python while the
+// bytes clock out at 400kHz.
+extern uint8_t amyboard_i2c_bg_write(uint8_t addr, const uint8_t *buf, uint32_t len);
+extern uint32_t amyboard_i2c_bg_pending(void);
+extern uint32_t amyboard_i2c_bg_errors(void);
+
+STATIC mp_obj_t tulip_i2c_bg_write(mp_obj_t addr_obj, mp_obj_t buf_obj) {
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer_raise(buf_obj, &bufinfo, MP_BUFFER_READ);
+    amyboard_i2c_bg_write((uint8_t)mp_obj_get_int(addr_obj), (const uint8_t *)bufinfo.buf, (uint32_t)bufinfo.len);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_2(tulip_i2c_bg_write_obj, tulip_i2c_bg_write);
+
+STATIC mp_obj_t tulip_i2c_bg_pending(void) {
+    return mp_obj_new_int(amyboard_i2c_bg_pending());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_i2c_bg_pending_obj, tulip_i2c_bg_pending);
+
+STATIC mp_obj_t tulip_i2c_bg_errors(void) {
+    return mp_obj_new_int(amyboard_i2c_bg_errors());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_i2c_bg_errors_obj, tulip_i2c_bg_errors);
+#endif // ESP_PLATFORM
+
 
 
 
@@ -1705,6 +1732,11 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amyboard_start), MP_ROM_PTR(&tulip_amyboard_start_obj) },
     { MP_ROM_QSTR(MP_QSTR_amyboard_set_midi_out), MP_ROM_PTR(&tulip_amyboard_set_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_bootloader_mode), MP_ROM_PTR(&tulip_bootloader_mode_obj) },
+#ifdef ESP_PLATFORM
+    { MP_ROM_QSTR(MP_QSTR_i2c_bg_write), MP_ROM_PTR(&tulip_i2c_bg_write_obj) },
+    { MP_ROM_QSTR(MP_QSTR_i2c_bg_pending), MP_ROM_PTR(&tulip_i2c_bg_pending_obj) },
+    { MP_ROM_QSTR(MP_QSTR_i2c_bg_errors), MP_ROM_PTR(&tulip_i2c_bg_errors_obj) },
+#endif
 #else
     #ifndef AMYBOARD_WEB
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
