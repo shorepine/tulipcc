@@ -74,6 +74,12 @@ class SSD1327:
         # 96x96     32
         # 128x128   0
 
+        # Shadow copy of what the panel currently displays.  show() diffs
+        # against it and only transfers the rows that changed, because a full
+        # 8KB framebuffer push at 400kHz I2C blocks the caller for ~200ms.
+        self._shadow = bytearray(len(self.buffer))
+        self._shadow_valid = False
+
         self.poweron()
         self.init_display()
 
@@ -110,7 +116,7 @@ class SSD1327:
             SET_DISP | 0x01): # Display on
             self.write_cmd(cmd)
         self.fill(0)
-        self.write_data(self.buffer)
+        self.show(True)
 
     def poweroff(self):
         self.write_cmd(SET_FN_SELECT_A)
@@ -137,14 +143,45 @@ class SSD1327:
     def invert(self, invert):
         self.write_cmd(SET_DISP_MODE | (invert & 1) << 1 | (invert & 1)) # 0xA4=Normal, 0xA7=Inverted
 
-    def show(self):
+    def show(self, full=False):
+        """Push the framebuffer to the panel.
+
+        By default only the contiguous band of rows that changed since the
+        last show() is transferred (diffed against a shadow of the panel
+        contents); if nothing changed, nothing is sent.  Pass full=True to
+        force the whole framebuffer out.  The panel's address pointer
+        auto-increments within the row window we set, so a partial band is
+        just a smaller version of the full write.
+        """
+        buf = self.buffer
+        row_bytes = self.width // 2
+        y0 = 0
+        y1 = self.height - 1
+        if not full and self._shadow_valid:
+            mb = memoryview(buf)
+            ms = memoryview(self._shadow)
+            while y0 <= y1 and mb[y0 * row_bytes:(y0 + 1) * row_bytes] == ms[y0 * row_bytes:(y0 + 1) * row_bytes]:
+                y0 += 1
+            if y0 > y1:
+                return  # panel already matches the framebuffer
+            while y1 > y0 and mb[y1 * row_bytes:(y1 + 1) * row_bytes] == ms[y1 * row_bytes:(y1 + 1) * row_bytes]:
+                y1 -= 1
         self.write_cmd(SET_COL_ADDR)
         self.write_cmd(self.col_addr[0])
         self.write_cmd(self.col_addr[1])
         self.write_cmd(SET_ROW_ADDR)
-        self.write_cmd(self.row_addr[0])
-        self.write_cmd(self.row_addr[1])
-        self.write_data(self.buffer)
+        self.write_cmd(self.row_addr[0] + y0)
+        self.write_cmd(self.row_addr[0] + y1)
+        start = y0 * row_bytes
+        end = (y1 + 1) * row_bytes
+        if end - start == len(buf):
+            self.write_data(buf)
+        else:
+            self.write_data(memoryview(buf)[start:end])
+        # write_data raises on I2C errors, so reaching here means the panel
+        # now matches buffer rows y0..y1.
+        self._shadow[start:end] = memoryview(buf)[start:end]
+        self._shadow_valid = True
 
     def fill(self, col):
         self.framebuf.fill(col)

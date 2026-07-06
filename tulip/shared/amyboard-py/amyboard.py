@@ -13,6 +13,46 @@ def web():
     return (tulip.board()=="AMYBOARD_WEB")
 
 
+class _BGWriteI2C:
+    """i2c-shaped adapter that enqueues writes on the firmware's background
+    I2C task (tulip.i2c_bg_write) instead of blocking Python on the bus, so a
+    display refresh returns immediately and the bytes clock out at 400kHz in
+    the background.  Payloads are chunked so the CV tasks' small transactions
+    on the same port interleave between chunks instead of timing out.
+
+    writevto() assumes bufs[0] is a one-byte OLED control prefix that must be
+    repeated on each chunk (true of the ssd1327/sh1107 drivers' write_data);
+    the panel's address pointer carries across transactions, so consecutive
+    chunks land contiguously on the glass."""
+    _CHUNK = 256
+
+    def writeto(self, addr, buf):
+        tulip.i2c_bg_write(addr, buf)
+
+    def writevto(self, addr, bufs):
+        bufs = list(bufs)
+        prefix = bytes(bufs[0])
+        data = bufs[1] if len(bufs) == 2 else b''.join(bytes(b) for b in bufs[1:])
+        step = self._CHUNK - len(prefix)
+        if len(data) <= step:
+            tulip.i2c_bg_write(addr, prefix + bytes(data))
+            return
+        mv = memoryview(data)
+        for off in range(0, len(data), step):
+            tulip.i2c_bg_write(addr, prefix + bytes(mv[off:off + step]))
+
+
+def _i2c_bg_available():
+    return hasattr(tulip, 'i2c_bg_write')
+
+
+def _i2c_bg_drain(max_ms=500):
+    """Wait (briefly, bounded) for the background I2C queue to empty."""
+    while tulip.i2c_bg_pending() and max_ms > 0:
+        time.sleep_ms(5)
+        max_ms -= 5
+
+
 class Display:
     """Unified display interface for ssd1327, sh1107, and web framebuffer.
 
@@ -29,12 +69,18 @@ class Display:
         self._fb = None        # framebuf used for drawing
         self._buf = None       # raw byte buffer backing the framebuf
         self._is_web = web()
+        self._bg = False       # panel writes routed through the background I2C task
+        self._last_bg_err = 0
 
         if self._is_web:
             import framebuf
             self._buf = bytearray(self.WIDTH * self.HEIGHT // 2)
             self._fb = framebuf.FrameBuffer(self._buf, self.WIDTH, self.HEIGHT, framebuf.GS4_HMSB)
         else:
+            if _i2c_bg_available():
+                # a previous Display instance may still have queued panel
+                # writes; let them finish before probing/re-initing
+                _i2c_bg_drain()
             # Try ssd1327 first, then sh1107.  rotate only applies to the sh1107
             # (the panel is square, so WIDTH/HEIGHT are unchanged by rotation).
             try:
@@ -50,6 +96,14 @@ class Display:
                     self._fb = hw  # sh1107 *is* a FrameBuffer subclass
                 except Exception:
                     pass  # no physical display
+            if self._hw is not None and _i2c_bg_available():
+                # Probe + init above ran synchronously (so a missing panel
+                # raises and we fall through).  From here on, route panel
+                # writes through the background queue: show() then returns
+                # immediately instead of blocking on the I2C transfer.
+                self._hw.i2c = _BGWriteI2C()
+                self._bg = True
+                self._last_bg_err = tulip.i2c_bg_errors()
 
     @property
     def buffer(self):
@@ -115,14 +169,28 @@ class Display:
 
     # -- refresh --
 
-    def show(self):
-        """Push the framebuffer to the display hardware (or web bridge)."""
+    def show(self, full=False):
+        """Push the framebuffer to the display hardware (or web bridge).
+
+        Both hardware drivers diff against what the panel already shows and
+        transfer only the changed portion, and on firmware with the
+        background I2C task the transfer itself happens off the Python
+        thread — show() just queues it and returns.  Pass full=True to force
+        the entire framebuffer out.
+        """
         if self._fb is None:
             return
         if self._is_web:
             tulip.framebuf_web_update(self._buf)
         elif self._hw is not None:
-            self._hw.show()
+            if self._bg:
+                err = tulip.i2c_bg_errors()
+                if err != self._last_bg_err:
+                    # a queued write failed, so the panel may no longer match
+                    # the driver's shadow -- resync everything this refresh
+                    self._last_bg_err = err
+                    self._hw._shadow_valid = False
+            self._hw.show(full)
 
     # convenience alias so old code calling display_refresh() on a Display works
     refresh = show
