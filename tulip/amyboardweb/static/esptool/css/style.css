@@ -352,6 +352,12 @@ div.clear {
   white-space: nowrap;
 }
 
+#commands .upload .note {
+  margin-left: 10px;
+  font-size: 0.85em;
+  opacity: 0.75;
+}
+
 .firmware > input {
   width: 0.1px;
   height: 0.1px;

@@ -4673,10 +4673,10 @@ function show_firmware_warning(date, latest, reason, opts) {
             if (bodyEl) bodyEl.textContent = 'Your AMYboard is connected but not accepting commands — usually a sketch stuck in a tight loop. Reboot it (the stuck sketch will be skipped) and this operation will continue.';
         } else if (reason === 'undetected') {
             if (titleEl) titleEl.textContent = 'Couldn’t detect your AMYboard firmware';
-            if (bodyEl) bodyEl.textContent = 'Your AMYboard didn’t report a firmware version, which usually means it’s running older firmware. Updating is recommended so this editor works correctly.';
+            if (bodyEl) bodyEl.textContent = 'Your AMYboard didn’t report a firmware version, which usually means it’s running older firmware. Updating is recommended so this editor works correctly. If you want to upgrade to our new improved drum samples, make sure to press “Fully Erase and Re-flash” when upgrading!';
         } else {
             if (titleEl) titleEl.textContent = 'AMYboard firmware update available';
-            if (bodyEl) bodyEl.textContent = 'Your AMYboard firmware (' + _fmt_fw_date(date) + ') is older than the latest release (' + _fmt_fw_date(latest) + '). Updating is recommended.';
+            if (bodyEl) bodyEl.textContent = 'Your AMYboard firmware (' + _fmt_fw_date(date) + ') is older than the latest release (' + _fmt_fw_date(latest) + '). Updating is recommended. If you want to upgrade to our new improved drum samples, make sure to press “Fully Erase and Re-flash” when upgrading!';
         }
         var el = document.getElementById('fwWarnModal');
         // No modal available: abort on disconnect/wedge (can't write to a board
