@@ -59,9 +59,9 @@ Set the tempo with **`sequencer.tempo(bpm)`** (`import sequencer`). The grid is 
 import amy, sequencer
 
 sequencer.tempo(120)
-# GM drum synth: patch=258 is the GM drum kit (note 36 = kick, 38 = snare, 42 = hat...);
+# GM drum synth: patch=384 is the TR-808 GM drum kit (note 36 = kick, 38 = snare, 42 = hat...);
 # synth_flags=3 routes notes through the GM note map and ignores note-offs.
-amy.send(synth=10, num_voices=1, synth_flags=3, patch=258, amp=5)
+amy.send(synth=10, num_voices=1, synth_flags=3, patch=384, amp=5)
 
 KICK = 36
 step = 0
@@ -75,13 +75,19 @@ def loop():
 > Source of truth: `tulip/amyboardweb/sketches/house_generator.py`, `acid_generator.py`
 > (`sequencer.tempo(...)` + 32-steps-per-bar patterns driven by a `loop()` step counter).
 
-> **GM drums need `patch=258`.** To play drums by GM note number (36=kick, 38=snare,
-> 42=closed hat, 46=open hat, 49=crash...) load the drum-kit patch: `amy.send(synth=10,
-> num_voices=N, synth_flags=3, patch=258)`. The note→sample mapping lives in patch 258.
+> **GM drums need a drum-kit patch (384-390).** To play drums by GM note number (36=kick,
+> 38=snare, 42=closed hat, 46=open hat, 49=crash...) load a drum-kit patch: `amy.send(synth=10,
+> num_voices=N, synth_flags=3, patch=384)`. The note→sample mapping lives in the patch.
+> Seven kits are available: 384 TR-808, 385 TR-909, 386 Linn 9000, 387 Univox MR-12,
+> 388 Tokyo Synthetics, 389 80s Power Kit, 390 Percussion. Switch kits with
+> `amy.send(synth=10, patch=38x)` or over MIDI with bank select MSB 3 (CC0=3) + program
+> change 0-6 on the drum channel. All the kits' raw samples are also playable directly:
+> `wave=amy.PCM, preset=P` with presets 0-18 (the baked 808 bank) and 256-391 (the other
+> banks).
 > The older recipe — `wave=amy.PCM` + `oscs_per_voice=1` with **no** patch — no longer
 > makes sound: bare `wave=amy.PCM` needs an explicit `preset=`, and note numbers alone no
 > longer select a drum sample. (`synth_flags` bit 1 used to be a built-in GM-drum note map;
-> it is now `SYNTH_FLAGS_NOTES_VIA_MIDI`, which only maps notes when a patch like 258 sets
+> it is now `SYNTH_FLAGS_NOTES_VIA_MIDI`, which only maps notes when a patch like 384 sets
 > up the mapping.) If you just want one raw PCM sample pitched by note, use
 > `wave=amy.PCM, preset=P` instead of a patch.
 

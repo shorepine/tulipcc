@@ -2,19 +2,28 @@
 # maybe one day automated list of patches in AMY
 
 # Drumkit is [base_midi_note, name, general_midi_note], index is preset number.
-# AMY PR #560 uses pcm_tiny only (11 presets, 0..10).
+# All Tulip targets (hardware, web, desktop, AMYboard) build AMY with GAMMA9001,
+# which bakes the Gamma9001 TR-808 bank as the ROM set (see amy pcm_gamma808.h).
 drumkit = [
-    (89, "Maraca", 70),
-    (39, "Kick", None),
-    (45, "Snare", None),
-    (52, "Snare2", 37),
-    (51, "Snare3", None),
-    (41, "Snare4", 38),
-    (53, "Closed Hat", 42),
-    (56, "Open Hat", 46),
-    (61, "Low Tom", 41),
-    (94, "Clap", 39),
-    (69, "Cowbell", 56),
+    (60, "Kick", 36),
+    (60, "Kick 2", 35),
+    (60, "Kick 3", None),
+    (60, "Clap", 39),
+    (60, "Clave", 75),
+    (60, "Conga Hi", 63),
+    (60, "Conga Lo", 64),
+    (60, "Conga Mid", 62),
+    (60, "Cowbell", 56),
+    (60, "Closed Hat", 42),
+    (60, "Open Hat", 46),
+    (60, "Shaker", 70),
+    (45, "Snare", 38),
+    (52, "Snare 2", None),
+    (41, "Snare 3", 40),
+    (90, "Rimshot", 37),
+    (61, "Low Tom", 45),
+    (67, "High Tom", 48),
+    (59, "Cymbal", 49),
 ]
 
 patches =  [

@@ -82,10 +82,31 @@ with open("build/%s-sys.bin" % (distro),"wb") as fh:
 print("... done.")
 
 
+# Gamma9001 drum banks: generate drums.bin from the amy submodule and flash it
+# into the `drums` partition (AMY mmaps it at boot; see amy_connector.c).
+drums_partition = None
+try:
+    drums_partition = partition_table.find_by_name('drums')
+except Exception:
+    pass
+if drums_partition is not None:
+    import subprocess
+    subprocess.check_call([sys.executable, '-m', 'amy.headers', 'gamma9001'], cwd='../../amy')
+    drums_bin = open('../../amy/build/drums.bin', 'rb').read()
+    if len(drums_bin) > drums_partition.size:
+        raise SystemExit("drums.bin (%d bytes) does not fit the drums partition (%d bytes)"
+                         % (len(drums_bin), drums_partition.size))
+    with open('build/%s-drums.bin' % (distro), 'wb') as fh:
+        fh.write(drums_bin)
+    print("drums.bin: %d bytes into %s partition at %s" % (
+        len(drums_bin), 'drums', hex(drums_partition.offset)))
+
 # Update the flash_args file to have the sys and user partitions
 flash_args = open('build/flash_args','r').read().split('\n')[:-1]
 flash_args.append('%s %s-sys.bin' % (hex(sys_partition.offset), distro))
 flash_args.append('%s %s-vfs.bin' % (hex(vfs_partition.offset), distro))
+if drums_partition is not None:
+    flash_args.append('%s %s-drums.bin' % (hex(drums_partition.offset), distro))
 new_flash_args = open('build/flash_args_%s' % (distro),'w')
 for f in flash_args:
     new_flash_args.write('%s\n' % (f))

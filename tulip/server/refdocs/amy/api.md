@@ -217,14 +217,14 @@ A note on list parameters:  When an argument is a list of parameters, you can in
 | `if`   | `synth_flags` | `synth_flags` | uint | Flags for synth creation: 1 = Use MIDI drum note->preset translation; 2 = Drop note-off events. |
 | `ig`   | `cv_trigger` | `cv_trigger` | uint,uint | Configure external CV event triggering: Gate CV, trigger threshold, reset threshold, pitch CV, pitch scale, pitch offset, wire command template, %v gets pitch value. |
 | `im`   | `grab_midi_notes` | `grab_midi_notes` | 0/1 | Use `amy.send(synth=CHANNEL, grab_midi_notes=0)` to prevent the default direct forwarding of MIDI note-on/offs to synth CHANNEL. |
-| `iM`   | `note_source` | `note_source` | 0/1 | Mark the note-ons for this synth as MIDI-derived, meaning they won't get forwarded to MIDI out (or clear that marking). |
+| `iM`   | `note_source_channel` | `note_source_channel` | 1-16 | Used internally to mark events that result from MIDI inputs, meaning they won't get forwarded to MIDI out. |
 | `in`   | `oscs_per_voice`  | `oscs_per_voice`  | >0  | Reserve this many oscs for each voice.  Needed when initializing a synth (or voice) withouth an initial patch. Setting `oscs_per_voice` on an existing synth resets all oscs to their default state. |
 | `io`   | **TODO** | `midi_note_cmd`  | M,L,N,X,O,CMD | MIDI Note on/off command for this synth.  M=MIDI note number, or -1 for all notes.  Other args map the velocity, as for `ic`. `%n` is substituted with the note number. |
 | `ip`   | `pedal` | `pedal` | int | Non-zero means pedal is down (i.e., sustain).  Must be used with `synth`. |
 | `it`   | `to_synth` |  `to_synth` | 0-31 | New synth number, when changing the number (MIDI channel for n=1..16) of an entire synth. |
 | `iv`   | `num_voices` | `num_voices` | int | The number of voices to allocate when defining a synth, alternative to directly specifying voice numbers with `voices=`.  Only valid with `synth=X, patch[_number]=Y`. |
 | `iy`   | `bus`   | `bus`   | int | Bus onto which the synth outputs are added (synonym for `y`). |
-| `K`    | `patch_number` | `patch` | uint 0-X | Apply a saved or user patch to a specified synth or voice. |
+| `K`    | `patch_number` | `patch` | uint 0-X | Apply a saved or user patch to a specified synth or voice. Built-ins: 0-127 Juno, 128-255 DX7, 256 piano, 258 legacy GM drums, 384-390 Gamma9001 GM drum kits (see Drum kits below), 1024+ user patches. |
 | `r`    | `voices[]` | `voices` | int[,int] | Comma separated list of voices to send message to, or load patch into. |
 | `u`    | **TODO**| `patch_string` | string | Provide AMY message to define up to 32 patches in RAM with ID numbers (1024-1055) provided via `patch_number`, or directly configure a `synth`. |
 
@@ -288,6 +288,24 @@ These per-oscillator parameters use [CtrlCoefs](synth.md) notation
   - valid presets: `pcm_wavetable_base ... pcm_wavetable_base + pcm_wavetable_samples - 1`
 - Each wavetable preset is expected to be one 64-cycle table (normally `16384` samples total, `256` samples per cycle).
 - `duty` crossfades across the 64 cycles inside the selected wavetable preset.
+
+### Drum kits (GAMMA9001 builds)
+
+Devices built with `-DGAMMA9001` (Tulip, AMYboard, AMY on the web) carry the Gamma9001 drum sample banks: the full TR-808 bank is baked in as PCM presets 0-18, and 136 more samples (TR-909, Linn 9000, Univox MR-12, Tokyo Synthetics, 80s Power Kit, Percussion) live at presets 256-391, served from a platform-provided blob (linked into the wasm on web; an mmapped `drums` flash partition on ESP32-S3). All of them play directly with `wave=PCM, preset=P`.
+
+Patches **384-390** are ready-made General MIDI drum kits over these banks -- load one on a synth with `synth_flags=3` and GM note numbers trigger the mapped samples:
+
+| patch | MIDI PC (bank MSB 3) | kit |
+|-------|----------------------|-----|
+| 384 | 0 | TR-808 (baked; works without the sample banks mounted) |
+| 385 | 1 | TR-909 |
+| 386 | 2 | Linn 9000 |
+| 387 | 3 | Univox Micro Rythmer 12 |
+| 388 | 4 | Tokyo Synthetics |
+| 389 | 5 | 80s Power Kit |
+| 390 | 6 | Percussion |
+
+Switch kits with `amy.send(synth=10, patch=38x)`, or over MIDI with bank select MSB 3 (CC0=3) + program change 0-6 on the drum channel; a synth already on a kit patch stays in the kit bank, so a bare program change also switches kits. Channel 10 defaults to the TR-808 kit when default synths are enabled. Non-GAMMA9001 builds keep the legacy 11-sample kit at patch 258. Patches 259-383 are reserved.
 
 ### Per-bus Effects
 

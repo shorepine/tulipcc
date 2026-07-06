@@ -26,8 +26,11 @@ amy.send(synth=1, osc=0, wave=amy.ALGO, algorithm=5, algo_source=',,4,3,2,1', bp
 # Synth 2: Piano chords (3 voices for triads)
 amy.send(synth=2, patch=256, num_voices=3)
 
-# Synth 10: 808 drums. patch=258 is the GM drum kit (maps note 36->kick etc.);
-# synth_flags=3 routes notes through the GM note map and ignores note-offs.
+# Synth 10: 808 drums. patch=258 is the GM drum kit (maps note 36->kick etc.)
+# and loads on any firmware -- on current builds it's the Gamma9001 TR-808
+# bank; the newer kits at 384-390 need current firmware, so this
+# World-deployed sketch sticks with 258. synth_flags=3 routes notes through
+# the GM note map and ignores note-offs.
 amy.send(synth=10, num_voices=4, synth_flags=3, amp=5, patch=258)
 
 # A little reverb

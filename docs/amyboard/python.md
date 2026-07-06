@@ -61,7 +61,7 @@ amy.send(osc=0, vel=0)
 
 ### Using patches
 
-AMY has 256+ built-in patches: 0-127 are Juno-6 analog, 128-255 are DX7 FM, 256 is piano, and 257+ are PCM drum kits. Patch 258 is the General MIDI drum kit — load it on a synth with `synth_flags=3` and play GM note numbers (36=kick, 38=snare, 42=hat...) to trigger drums.
+AMY has hundreds of built-in patches: 0-127 are Juno-6 analog, 128-255 are DX7 FM, 256 is piano, and 384-390 are the General MIDI drum kits — 384 TR-808, 385 TR-909, 386 Linn 9000, 387 Univox MR-12, 388 Tokyo Synthetics, 389 80s Power Kit, 390 Percussion. Load a kit on a synth with `synth_flags=3` and play GM note numbers (36=kick, 38=snare, 42=hat...) to trigger drums; switch kits with `amy.send(synth=10, patch=38x)` or over MIDI with bank select MSB 3 (CC0=3) + program change 0-6.
 In general, a patch will use multiple oscs.  `synth` is our abstraction to manage multiple oscs at the same time.
 
 ```python
@@ -149,7 +149,7 @@ import amy, amyboard
 
 # Set up my preferred patches
 amy.send(synth=1, patch=0, num_voices=6)      # Channel 1: Juno patch 0, 6-voice poly
-amy.send(synth=10, num_voices=6, patch=258, synth_flags=3)    # Channel 10: GM drum kit (note 36=kick, ...).
+amy.send(synth=10, num_voices=6, patch=384, synth_flags=3)    # Channel 10: TR-808 GM drum kit (note 36=kick, ...). Kits 385-390: 909/Linn/MR-12/Synthetics/Power/Percussion.
 
 # Set CV out 1 to 0V on startup
 amyboard.cv_out(0.0, channel=0)

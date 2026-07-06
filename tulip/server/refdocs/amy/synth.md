@@ -40,7 +40,7 @@ You configure the `voices` in a `synth` by using a `patch`, which is a number re
 
 (Note that when you use voices/synths, you'll need to include the `synth` arg when addressing oscillators, and AMY will automatically route your command to the relevant oscillators in each voice of the synth's set -- there's no other way to tell which oscillators are being used by which voices.)
 
-To play a patch -- for instance the built-in patches emulating Juno and DX7 synthesizers and a piano -- you create a synth configured with that patch, then send note events, or parameter moidifications, to the synth. We ship patches 0-127 for Juno, 128-255 for DX7, and 256 for our [built-in piano](https://shorepine.github.io/amy/piano.html). For example, a multitimbral Juno/DX7 synth can be set up like this:
+To play a patch -- for instance the built-in patches emulating Juno and DX7 synthesizers and a piano -- you create a synth configured with that patch, then send note events, or parameter moidifications, to the synth. We ship patches 0-127 for Juno, 128-255 for DX7, 256 for our [built-in piano](https://shorepine.github.io/amy/piano.html), and -- on devices with the Gamma9001 drum banks (Tulip, AMYboard, AMY on the web) -- seven GM drum kits at patches 384-390 (see [Drum kits](#drum-kits)). For example, a multitimbral Juno/DX7 synth can be set up like this:
 
 ```python
 amy.send(synth=1, num_voices=4, patch=1)     # 4 voices of Juno patch #1 on synth 1
@@ -73,10 +73,13 @@ amy.send(synth=0, patch=13)  # Load a different Juno patch, it will remain 4-voi
 # You can release all the voices/oscs being used by a synth by setting its num_voices to zero.
 amy.send(synth=0, num_voices=0)
 # As a special case, you can use `synth_flags` to set up a MIDI drum synth
-# that will translate note events into PCM presets.
-# You can also use  `patch_string` to directly define a patch using a wire-command string.
-amy.send(synth=10, num_voices=3, patch_string='w7f0Z', synth_flags=3)
-amy.send(synth=10, note=40, vel=1)  # MIDI drums 'electric snare'
+# that will translate GM note events into PCM presets. Load one of the drum kit
+# patches (384-390, see the Drum kits section):
+amy.send(synth=10, num_voices=6, patch=384, synth_flags=3)
+amy.send(synth=10, note=38, vel=1)  # acoustic snare (GM note numbers)
+amy.send(synth=10, patch=389)       # hot-swap the synth to the 80s Power Kit
+# You can also use `patch_string` to directly define a patch using a wire-command string.
+amy.send(synth=11, num_voices=3, patch_string='w7f0Z', synth_flags=3)
 ```
 
 Note 1: Although `note` can take on real values -- e.g. `note=60.5` for 50 cents above C4 -- the voice management tracks voices by integer note numbers (i.e., midi notes) so it rounds note values to the nearest integer when deciding which note-off goes with which note-on.  Note also that note-on events that also set the `preset` parameter (e.g. to select PCM samples) will fold the patch number into the note integer used as the key for note-on, note-off matching.
@@ -315,7 +318,23 @@ Please see our [piano voice documentation](https://shorepine.github.io/amy/piano
 
 ## PCM and Sampler
 
-AMY comes with a set of 67 drum-like and instrument PCM samples to use as well, as they are normally hard to render with additive, subtractive or FM synthesis. You can use the type `PCM` and preset numbers 0-66 to explore them. Their native pitch is used if you don't give a frequency or note parameter. You can update the baked-in PCM sample bank using `amy_headers.py`. 
+AMY comes with a bank of drum-like PCM samples baked in, as they are normally hard to render with additive, subtractive or FM synthesis. Use the type `PCM` with a `preset` number to play them; their native pitch is used if you don't give a frequency or note parameter. The default build bakes in an 11-sample TR-808 set (presets 0-10). Builds with the Gamma9001 banks enabled (Tulip, AMYboard, AMY on the web) instead bake the full 19-sample TR-808 bank as presets 0-18 and add 136 more samples at presets 256-391: TR-909, Linn 9000, Univox MR-12, Tokyo Synthetics, the 80s Power Kit, and a large acoustic percussion bank. You can update the baked-in PCM sample bank using `amy/headers.py`.
+
+### Drum kits
+
+On Gamma9001 devices, patches 384-390 are ready-made General MIDI drum kits: load one on a synth with `synth_flags=3` and GM note numbers (35/36 kick, 38 snare, 42 closed hat, 46 open hat, 49 crash, ...) play the right sound.
+
+| patch | MIDI PC (bank MSB 3) | kit |
+|-------|----------------------|-----|
+| 384 | 0 | TR-808 (works even without the sample banks mounted) |
+| 385 | 1 | TR-909 |
+| 386 | 2 | Linn 9000 |
+| 387 | 3 | Univox Micro Rythmer 12 |
+| 388 | 4 | Tokyo Synthetics |
+| 389 | 5 | 80s Power Kit (gated reverb) |
+| 390 | 6 | Percussion (hand drums / latin) |
+
+Switch kits from code with `amy.send(synth=10, patch=38x)`, or over MIDI with a bank select MSB of 3 (CC0=3) followed by a program change 0-6 on the drum channel. A synth already sitting on a kit patch stays in the kit bank, so a bare program change also switches kits. Channel 10 boots as the TR-808 kit when default synths are on; you can run a second kit polytimbrally on another channel, e.g. `amy.send(synth=11, num_voices=4, patch=390, synth_flags=3)`. 
 
 
 ```python

@@ -16,6 +16,9 @@
 #ifdef ESP_PLATFORM
 #include "esp_system.h"
 #include "esp_attr.h"
+#ifdef GAMMA9001
+#include "esp_partition.h"
+#endif
 #endif
 #ifdef AMYBOARD
 // For amyboard_set_midi_out(): re-point the MIDI UART's TX line at runtime.
@@ -385,6 +388,30 @@ void mp_reboot_hook(uint8_t mode) {
 #endif
 }
 
+#if defined(GAMMA9001) && defined(ESP_PLATFORM)
+// Map the `drums` flash partition (raw drums.bin from the amy repo, flashed by
+// fs_create.py) into the data address space and hand it to AMY, which serves
+// the Gamma9001 bank presets (256+) straight out of it. If the partition is
+// missing or unreadable, those presets stay silent -- the baked TR-808 kit
+// (patch 384) still works.
+static void mount_gamma9001_drums(void) {
+    const esp_partition_t *part = esp_partition_find_first(
+        ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "drums");
+    if (part == NULL) {
+        fprintf(stderr, "gamma9001: no drums partition, bank presets unavailable\n");
+        return;
+    }
+    const void *map = NULL;
+    esp_partition_mmap_handle_t handle;  // never unmapped; the samples live as long as AMY
+    esp_err_t err = esp_partition_mmap(part, 0, part->size, ESP_PARTITION_MMAP_DATA, &map, &handle);
+    if (err != ESP_OK || map == NULL) {
+        fprintf(stderr, "gamma9001: drums partition mmap failed (%d)\n", (int)err);
+        return;
+    }
+    amy_set_gamma9001_pcm((const int16_t *)map);
+}
+#endif
+
 void run_amy(uint8_t midi_out_pin) {
     amy_config_t amy_config = amy_default_config();
     amy_config.amy_external_midi_input_hook = tulip_midi_input_hook;
@@ -422,6 +449,9 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.midi_in = MIDI_IN_PIN;
 #ifndef AMYBOARD
     amy_config.features.startup_bleep = 1;
+#endif
+#if defined(GAMMA9001) && defined(ESP_PLATFORM)
+    mount_gamma9001_drums();
 #endif
     amy_start(amy_config);
     external_map = malloc_caps(amy_config.max_oscs, MALLOC_CAP_INTERNAL);
@@ -464,6 +494,13 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_config.audio = AMY_AUDIO_IS_MINIAUDIO;
     //amy_config.i2s_din = 0;  // Dummy to indicate has audio in.
     amy_config.features.startup_bleep = 1;
+#ifdef GAMMA9001
+    // Tulip Desktop links drums.bin straight into the binary (see tulip.mk).
+    {
+        extern const int16_t gamma9001_pcm_data[];
+        amy_set_gamma9001_pcm(gamma9001_pcm_data);
+    }
+#endif
     amy_start(amy_config);
 }
 
