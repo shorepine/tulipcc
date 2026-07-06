@@ -1,7 +1,7 @@
 # AMYboard Sketch
 # DESCRIPTION: Gamma9001 drum machine: three drum channels at once -- a main kit that rotates through all six banks, TR-909 hats, and a tabla/shaker percussion layer.
 # Top-level code runs once at boot. loop() is called every 32nd note.
-import amyboard, amy, sequencer
+import amy, sequencer
 import random
 
 sequencer.tempo(118)
@@ -42,15 +42,6 @@ tabla_pattern = [6, 14, 22, 30]          # percussion answers on the "e"s
 
 step = -1
 
-def draw(kit_name, bar):
-    amyboard.display.fill(0)
-    amyboard.display.text("DRUM MACHINE", 0, 0, 255)
-    amyboard.display.text(kit_name, 0, 12, 255)
-    amyboard.display.text("bar " + str(bar + 1) + "/" + str(BARS_PER_SECTION), 0, 24, 255)
-    amyboard.display_refresh()
-
-draw(KITS[kit_idx][1], 0)
-
 def loop():
     global step, kit_idx
     step += 1
@@ -63,8 +54,6 @@ def loop():
         kit_idx = (kit_idx + 1) % len(KITS)
         amy.send(synth=10, patch=KITS[kit_idx][0], num_voices=6, synth_flags=3)
         amy.send(synth=10, note=CRASH, vel=0.7)  # announce the new kit
-    if bar_step == 0:
-        draw(KITS[kit_idx][1], bar)
 
     # --- Main kit (synth 10) ---
     kicks = kick_synco if bar % 4 == 3 else kick_pattern
