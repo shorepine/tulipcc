@@ -11,6 +11,12 @@ var amyboard_started = false;
 // read later in start_audio() after check_url_env_params() has mutated the URL.
 // Keeps the default run_sketch() path from racing the deferred world-load.
 var _url_env_pending = false;
+// Deep-link autoplay (?play=1, used by the marketing page's sketch links):
+// once BOTH the deep-link sketch has loaded and audio has started, auto-write
+// it to the simulator so it plays without pressing "Write to Simulator".
+// Simulate mode only — never auto-writes to real hardware.
+var _url_env_autoplay = false;
+var _url_env_loaded = false;
 var amy_yield_synth_commands = null;
 var amy_dump_state_to_string_c = null;
 
@@ -3785,6 +3791,7 @@ async function import_amyboard_world_file(index) {
 
 // Load an AMYboard World environment by username and environment name.
 // Called from URL params: /editor/?env=woodpiano&user=bwhitman
+// Returns true if the sketch was fetched and loaded into the editor.
 async function load_world_environment_by_name(username, envName) {
     try {
         var params = new URLSearchParams();
@@ -3795,7 +3802,7 @@ async function load_world_environment_by_name(username, envName) {
         var data = await response.json();
         if (!data || !Array.isArray(data.items) || !data.items.length) {
             show_alert("Sketch '" + envName + "' by " + username + " not found.");
-            return;
+            return false;
         }
         // Match by filename stem (e.g. "spacey" matches "spacey.py" or legacy "spacey.tar")
         var item = null;
@@ -3809,7 +3816,7 @@ async function load_world_environment_by_name(username, envName) {
         }
         if (!item) {
             show_alert("Sketch '" + envName + "' by " + username + " not found.");
-            return;
+            return false;
         }
         var filename = normalize_world_filename(item.filename);
         var packageName = filename.replace(/\.(py|tar)$/, "");
@@ -3836,8 +3843,10 @@ async function load_world_environment_by_name(username, envName) {
         if (codeTabBtn && window.bootstrap) {
             try { new window.bootstrap.Tab(codeTabBtn).show(); } catch (e) {}
         }
+        return true;
     } catch (e) {
         show_alert("Failed to load sketch '" + envName + "' by " + username + ".");
+        return false;
     }
 }
 
@@ -3872,20 +3881,26 @@ function check_url_env_params() {
     var user = params.get("user");
     var tab = params.get("tab"); // "code" or "patch"
     if (env && user) {
+        // ?play=1 (marketing-page links): auto-write the sketch to the
+        // simulator once it loads and audio starts. Simulate mode only.
+        _url_env_autoplay = params.get("play") === "1" && amyboard_mode !== 'control';
         // Show immediate loading toast
         show_world_toast_loading(env);
         // Delay slightly to let micropython init complete
         setTimeout(async function() {
-            await load_world_environment_by_name(user, env);
+            _url_env_loaded = !!(await load_world_environment_by_name(user, env));
+            maybe_autoplay_url_env();
             // Switch to requested tab after environment loads
             if (tab === "code") {
                 var codeTab = document.getElementById("environment-tab");
                 if (codeTab) {
                     new bootstrap.Tab(codeTab).show();
-                    // Re-select sketch.py and refresh CodeMirror after tab is visible
+                    // Re-select sketch.py and refresh CodeMirror after tab is visible.
+                    // loadEditor must be false: true would re-read FS sketch.py into
+                    // the editor, clobbering the world sketch we just loaded above.
                     setTimeout(async function() {
                         if (list_environment_files().indexOf("sketch.py") !== -1) {
-                            await select_environment_file("sketch.py", true);
+                            await select_environment_file("sketch.py", false);
                         }
                         if (editor) {
                             editor.refresh();
@@ -3899,6 +3914,21 @@ function check_url_env_params() {
         }, 1500);
         // Clean up URL without reload
         window.history.replaceState({}, document.title, window.location.pathname);
+    }
+}
+
+// Deep-link autoplay: fires the same write_sketch_to_amyboard() the "Write to
+// Simulator" button does, once BOTH the deep-link sketch load and start_audio()
+// have completed. Either can finish first, so both call sites invoke this.
+async function maybe_autoplay_url_env() {
+    if (!_url_env_autoplay || !_url_env_loaded || !audio_started) return;
+    if (amyboard_mode === 'control') return;
+    _url_env_autoplay = false;  // one-shot
+    try {
+        await write_sketch_to_amyboard();
+        console.log('deep-link autoplay: sketch written to simulator');
+    } catch (e) {
+        console.warn('deep-link autoplay failed:', e);
     }
 }
 
@@ -6078,6 +6108,9 @@ except Exception as _e:
     // Sync UI knobs from the AMY state that run_sketch just applied.
     try { await sync_channel_knobs_from_synth_to_ui(window.current_synth || 1); } catch (e) {}
   }
+  // Deep-link ?play=1: if the sketch already loaded, write it to the simulator
+  // now that audio is running (the load-side call fires when audio wins the race).
+  await maybe_autoplay_url_env();
 }
 
 // ---- wire_code_parser.js ----
