@@ -5806,6 +5806,7 @@ async function start_amyboard() {
   await mp.runPythonAsync(`
     import tulip, amy, amy_js_message, amy_sysclock, amy_get_output_buffer as _amy_get_output_buf_js, amy_dump_state_js as _amy_dump_state_js
     amy.override_send = amy_js_message
+    amy.ticks_ms = amy_sysclock
     tulip.amy_ticks_ms = amy_sysclock
     tulip.amy_get_output_buffer = _amy_get_output_buf_js
     tulip.amy_dump_state = _amy_dump_state_js
