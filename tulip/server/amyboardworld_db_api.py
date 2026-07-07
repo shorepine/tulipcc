@@ -1286,6 +1286,12 @@ Modulation routing: a parameter may be a dict to mix a constant with a control s
 - In an amp dict, NEVER set 'const' to 0: amp's 'const' is the oscillator's overall gain and 0 mutes it completely. Omit 'const' (it defaults to 1) or set it to 1, e.g. amp={'vel': 1, 'eg0': 1}.
 Global effects are strings, e.g. amy.send(reverb="0.5,0.3,0.05"), amy.send(chorus="0.6,2,0.3"), amy.send(echo="0.4,200,0.3,0.3").
 
+CPU / VOICE BUDGET (hard limit -- overloaded sketches get stopped by the board):
+The AMYboard has a fixed CPU budget. Before writing any amy.send(synth=..., num_voices=...) calls, add up the cost of EVERY voice you allocate across ALL synths:
+- A Juno-6 voice (patch 0-127) costs 1/8 of the budget.
+- A DX7 voice (patch 128-255) costs 1/12 of the budget.
+The total must never exceed 1.0. So the ceiling is 8 Juno-6 voices total, OR 12 DX7 voices total, OR a proportional mixture -- e.g. 4 Juno + 6 DX7 (4/8 + 6/12 = 1.0), or 2 Juno + 9 DX7 (2/8 + 9/12 = 1.0). Any mix of timbres/patches within a family is fine; it is the voice counts that matter. When in doubt, allocate fewer voices -- exceeding the budget causes audio dropouts and the board will stop the sketch and reset the synth.
+
 THE amyboard MODULE (import amyboard) -- physical I/O (present on hardware; safe to call in the simulator)
 - amyboard.cv_in(channel) -> volts (-10..10). channel 0 = CV1, 1 = CV2.
 - amyboard.cv_out(volts, channel): write a CV output.
