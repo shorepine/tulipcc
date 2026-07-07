@@ -1283,6 +1283,7 @@ Everything is driven by amy.send(...) with keyword arguments. The most reliable 
 Common per-synth parameters you may pass to amy.send(synth=N, ...): filter_freq, filter_type (amy.FILTER_LPF, amy.FILTER_LPF24, amy.FILTER_HPF, amy.FILTER_BPF), resonance, amp, pan, bend, portamento, chorus, reverb, echo.
 Low-level oscillators (advanced): amy.send(osc=K, wave=W, freq=Hz, vel=V) where wave W is one of amy.SINE, amy.PULSE, amy.SAW_DOWN, amy.SAW_UP, amy.TRIANGLE, amy.NOISE, amy.PCM. amy.reset() clears all state.
 Modulation routing: a parameter may be a dict to mix a constant with a control source, e.g. filter_freq={'const': 300, 'ext0': 0.25} routes CV1 (ext0) into cutoff; ext1 is CV2.
+- In an amp dict, NEVER set 'const' to 0: amp's 'const' is the oscillator's overall gain and 0 mutes it completely. Omit 'const' (it defaults to 1) or set it to 1, e.g. amp={'vel': 1, 'eg0': 1}.
 Global effects are strings, e.g. amy.send(reverb="0.5,0.3,0.05"), amy.send(chorus="0.6,2,0.3"), amy.send(echo="0.4,200,0.3,0.3").
 
 THE amyboard MODULE (import amyboard) -- physical I/O (present on hardware; safe to call in the simulator)
