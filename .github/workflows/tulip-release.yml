@@ -94,15 +94,17 @@ jobs:
           # Date-coded copy of the full image for manufacturing ("which build is
           # this file?"). One dated copy lives on the release at a time; older
           # date codes are pruned. Same-day rebuilds clobber the same name.
+          # Copy into RUNNER_TEMP: dist/ is root-owned (created inside the
+          # esp-idf-ci-action container), so this step can't create files there.
           DATE_CODE="$(date -u +%Y%m%d)"
           cp tulip/esp32s3/dist/tulip-full-TULIP4_R11.bin \
-             "tulip/esp32s3/dist/tulip-full-TULIP4_R11-${DATE_CODE}.bin"
+             "${RUNNER_TEMP}/tulip-full-TULIP4_R11-${DATE_CODE}.bin"
           gh api "repos/${GITHUB_REPOSITORY}/releases/tags/tulip" --jq '.assets[].name' \
             | { grep -E '^tulip-full-TULIP4_R11-[0-9]{8}\.bin$' || true; } \
             | { grep -v "${DATE_CODE}" || true; } \
             | while read -r stale; do gh release delete-asset tulip "$stale" --yes; done
           gh release upload --clobber tulip \
-            "tulip/esp32s3/dist/tulip-full-TULIP4_R11-${DATE_CODE}.bin"
+            "${RUNNER_TEMP}/tulip-full-TULIP4_R11-${DATE_CODE}.bin"
           # Refresh the body with the exact released commit for provenance, and
           # (re)assert latest so releases/latest keeps serving legacy OTA.
           gh release edit tulip \
