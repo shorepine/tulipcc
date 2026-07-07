@@ -1731,6 +1731,26 @@
       </div>
     </div>
 
+    <!-- "How about one of these?" — existing AMYboard World sketches similar to
+         a generate prompt, offered before a new sketch is generated. -->
+    <div class="modal fade" id="sketchSuggestionsModal" tabindex="-1" aria-labelledby="sketchSuggestionsModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="sketchSuggestionsModalLabel">How about one of these?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted mb-2">Sketches already on AMYboard World that look like what you described. Click one to load it into the editor.</p>
+            <div class="row row-cols-1 row-cols-md-2 g-2" id="sketch-suggestions-list"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-sm btn-primary" onclick="generate_anyway_from_suggestions()">No thanks, I still want to generate a new one</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal fade" id="loadPatchModal" tabindex="-1" aria-labelledby="loadPatchModalLabel" aria-hidden="true">
       <div class="modal-dialog modal-sm">
         <div class="modal-content">
