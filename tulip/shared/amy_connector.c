@@ -50,9 +50,18 @@ void midi_out(uint8_t * bytes, uint16_t len) {
 uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
 uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
 extern mp_obj_t midi_callback;
+extern mp_obj_t amy_overload_callback;
 
 int16_t midi_queue_head = 0;
 int16_t midi_queue_tail = 0;
+
+// AMY calls this from its render task when the CPU overload failsafe trips
+// (it has already reset the synth and played its bleep). Hand off to Python
+// with the load as a percent -- a small int, so no cross-task heap allocation.
+void tulip_amy_overload_hook(float load) {
+    if (amy_overload_callback != NULL)
+        mp_sched_schedule(amy_overload_callback, MP_OBJ_NEW_SMALL_INT((mp_int_t)(load * 100.0f)));
+}
 
 
 #ifdef ESP_PLATFORM
@@ -425,6 +434,7 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.amy_external_update_file_hook = mp_update_file_hook;
     amy_config.amy_external_exec_hook = mp_exec_hook;
     amy_config.amy_external_reboot_hook = mp_reboot_hook;
+    amy_config.amy_external_overload_hook = tulip_amy_overload_hook;
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     amy_config.audio = AMY_AUDIO_IS_I2S;
@@ -487,6 +497,7 @@ void amyboard_set_midi_out(uint8_t midi_out_pin) {
 void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_config_t amy_config = amy_default_config();
     amy_config.amy_external_midi_input_hook = tulip_midi_input_hook;
+    amy_config.amy_external_overload_hook = tulip_amy_overload_hook;
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
     amy_config.features.default_synths = 0; // midi.py does this for us

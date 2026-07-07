@@ -96,6 +96,16 @@ STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_midi_callback);
 
+// Called (via mp_sched_schedule from the AMY render task) when AMY's CPU
+// overload failsafe trips, with the render load percent as a small int.
+mp_obj_t amy_overload_callback = NULL;
+
+STATIC mp_obj_t tulip_amy_overload_callback(size_t n_args, const mp_obj_t *args) {
+    amy_overload_callback = (args[0] == mp_const_none) ? NULL : args[0];
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_overload_callback_obj, 1, 1, tulip_amy_overload_callback);
+
 // tulip.external_midi_sync() is defined in tulip.py: it sends the AMY wire
 // command (external_midi_sync / zC) so it also works on the web builds, where
 // AMY is a separate WASM module reachable only via the wire protocol.
@@ -1690,6 +1700,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callback), MP_ROM_PTR(&tulip_seq_remove_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_seq_remove_callbacks), MP_ROM_PTR(&tulip_seq_remove_callbacks_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_callback), MP_ROM_PTR(&tulip_midi_callback_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_overload_callback), MP_ROM_PTR(&tulip_amy_overload_callback_obj) },
 #ifndef __EMSCRIPTEN__
     { MP_ROM_QSTR(MP_QSTR_amy_block_done_callback), MP_ROM_PTR(&tulip_amy_block_done_callback_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_get_input_buffer), MP_ROM_PTR(&tulip_amy_get_input_buffer_obj) },
