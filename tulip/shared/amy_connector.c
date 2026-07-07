@@ -460,12 +460,14 @@ void run_amy(uint8_t midi_out_pin) {
 }
 
 #ifdef AMYBOARD
-// Switch the MIDI OUT TRS standard at runtime (Type A = pin 14, Type B = pin 15)
-// without restarting AMY. AMY transmits MIDI via uart_write_bytes(UART_NUM_1, ...) —
-// keyed on the UART number, not the GPIO — so moving the UART's TX line to the other
-// TRS leg is all that's needed. midi_uart is 1 on AMYboard (amy's esp_get_uart(1) ==
-// UART_NUM_1). Only MIDI OUT differs by type; MIDI IN works for both, so RX (MIDI_IN_PIN)
-// is left unchanged.
+// Set the MIDI OUT TRS standard (Type A = pin 14, Type B = pin 15). This is the single
+// MIDI OUT pin-init sequence: amyboard.set_midi_type() calls it both at boot (from
+// start_amy(), right after amy_start()) and at runtime, without restarting AMY. AMY
+// transmits MIDI via uart_write_bytes(UART_NUM_1, ...) — keyed on the UART number, not
+// the GPIO — so moving the UART's TX line to the other TRS leg is all that's needed.
+// midi_uart is 1 on AMYboard (amy's esp_get_uart(1) == UART_NUM_1). Only MIDI OUT
+// differs by type; MIDI IN works for both, so RX (MIDI_IN_PIN) is left unchanged.
+// Requires AMY's UART driver to be installed (amy_start() does this synchronously).
 void amyboard_set_midi_out(uint8_t midi_out_pin) {
     const uint8_t other_pin = (midi_out_pin == MIDI_OUT_PIN_A) ? MIDI_OUT_PIN_B : MIDI_OUT_PIN_A;
     // Let any in-flight MIDI byte finish before moving the TX line.

@@ -93,7 +93,7 @@ We've fixed a lot of USB issues recently, so [upgrade to the latest firmware](fi
  - AMYboard defaults to Type A MIDI. If your gear uses Type B:
    ```python
    import amyboard
-   amyboard.init_midi(type='B')
+   amyboard.set_midi_type('B')
    ```
  - Add this to your `sketch.py` to make it permanent.
 

@@ -537,23 +537,16 @@ def _normalize_midi_type(type):
 
 
 def init_midi(type='A'):
-    # Boot-time MIDI OUT setup, called by start_amy() before AMY starts. Holds the
-    # unused (source) TRS leg high and returns the data pin for amy to bind its UART TX
-    # to. For switching at runtime once AMY is running, use set_midi_type() instead.
-    from machine import Pin
-    global _midi_type
-    type = _normalize_midi_type(type)
-    out_pin = _MIDI_OUT_PINS[type]
-    other_pin = _MIDI_OUT_PINS['B' if type == 'A' else 'A']
-    Pin(other_pin, Pin.OUT).value(1)  # hold the non-data leg high (MIDI idle/source)
-    _midi_type = type
-    return out_pin
+    # Deprecated alias for set_midi_type(), kept for older sketches and docs.
+    return set_midi_type(type)
 
 
 def set_midi_type(type):
-    # Switch the MIDI OUT TRS standard ('A' or 'B') at runtime, without restarting AMY.
-    # AMY keeps running; only the UART TX line moves to the other leg. No persistence —
-    # this resets to the default (Type A) on reboot.
+    # Set the MIDI OUT TRS standard ('A' or 'B'). This is the single MIDI OUT init
+    # sequence — start_amy() calls it at boot and sketches call it at runtime — backed
+    # by amyboard_set_midi_out() in amy_connector.c, which points the UART TX line at
+    # the data leg and holds the unused leg high (MIDI idle/source). AMY keeps running.
+    # No persistence — this resets to the default (Type A) on reboot.
     global _midi_type
     type = _normalize_midi_type(type)
     tulip.amyboard_set_midi_out(_MIDI_OUT_PINS[type])
@@ -568,8 +561,11 @@ def midi_type():
 
 def start_amy():
     init_pcm9211()
-    midi_out_pin = init_midi()
-    tulip.amyboard_start(midi_out_pin)
+    # AMY binds its MIDI UART TX to this pin at start; set_midi_type() right after is
+    # the single MIDI OUT init sequence (it also holds the unused TRS leg high). It
+    # needs AMY's UART driver, which amy_start() installs, so it must come second.
+    tulip.amyboard_start(_MIDI_OUT_PINS[_midi_type])
+    set_midi_type(_midi_type)
     # Boot defaults so the board makes sound before (or without) a sketch:
     # the amyboard patch on channel 1 and GM drums (kit 0, TR-808) on channel
     # 10. Sketch startup re-applies these via _apply_knobs_text.
