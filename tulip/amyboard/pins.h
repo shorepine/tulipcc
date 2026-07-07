@@ -29,8 +29,6 @@
 #define SPI0_SCK 12
 #define SPI0_MISO 13
 
-#define CV_IN1 16
-#define CV_IN2 15
 
 
 
