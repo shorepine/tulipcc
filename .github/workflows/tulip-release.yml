@@ -1,16 +1,26 @@
 name: Tulip firmware release
 
-# Continuous Tulip FIRMWARE release on push to main: build TULIP4_R11 and publish
-# to the rolling 'tulip' GitHub release, kept NON-latest (--latest=false) so it
-# never displaces releases/latest (the monthly combined release). On-device
-# tulip.upgrade() reads releases/tags/tulip (see get_latest_release() in
-# tulip/shared/py/tulip.py). Mirrors the firmware job of amyboard-release.yml.
+# Continuous Tulip release on push to main: build TULIP4_R11 firmware (and Tulip
+# Desktop for macOS) and publish to the rolling 'tulip' GitHub release.
+#
+# The rolling 'tulip' release is marked LATEST: it is what the releases page
+# badges and what the GitHub API serves at releases/latest. That matters because
+# firmware shipped in the monthly releases (<= v-jun-2026, before continuous
+# release) OTAs from releases/latest — those Tulips find tulip-firmware-*/
+# tulip-sys.bin here, and legacy AMYboards find the amyboard-* bins that
+# amyboard-release.yml mirrors onto this release. Current firmware reads
+# releases/tags/tulip directly (see get_latest_release() in
+# tulip/shared/py/tulip.py). If a monthly release.sh release is ever cut again,
+# create it with --latest=false so it doesn't steal releases/latest back.
 #
 # Only TULIP4_R11 is shipped; TDECK/N16R8/N32R8 are developer-only (build them by
 # hand with `idf.py -DMICROPY_BOARD=<board> build`).
 #
-# Paths are firmware-only (NOT tulip/web/**) so a web-only change doesn't bump the
-# firmware release date; the web app is deployed separately by tulip-web-release.yml.
+# Paths are firmware/desktop-only (NOT tulip/web/**) so a web-only change doesn't
+# bump the release date; the web app is deployed separately by tulip-web-release.yml.
+#
+# Publishing is gated on main so a workflow_dispatch from a branch is a safe
+# dry-run: everything builds, nothing is uploaded to the release.
 
 on:
   push:
@@ -20,6 +30,7 @@ on:
       - 'tulip/esp32s3/**'
       - 'tulip/shared/**'
       - 'tulip/fs/tulip/**'
+      - 'tulip/macos/**'
       - '.github/workflows/tulip-release.yml'
   workflow_dispatch:
 
@@ -60,24 +71,174 @@ jobs:
             tulip/esp32s3/dist/tulip-full-TULIP4_R11.bin
             tulip/esp32s3/dist/tulip-sys.bin
 
-      - name: Publish to the rolling 'tulip' release (kept non-latest)
+      - name: Publish to the rolling 'tulip' release
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Create the rolling release once, explicitly NOT 'latest' so it never
-          # displaces releases/latest (the monthly combined Tulip release).
+          # Create the rolling release once. It is kept marked LATEST (see the
+          # header comment: legacy pre-jun-2026 devices OTA from releases/latest).
           if ! gh release view tulip >/dev/null 2>&1; then
             gh release create tulip \
-              --latest=false \
               --target "$GITHUB_SHA" \
               --title "Tulip (rolling release)" \
               --notes "Rolling Tulip release built from main (TULIP4_R11). OTA'd by tulip.upgrade(). Updated on every push to main; not a tagged version."
           fi
+          # Stable asset names — consumed by tulip.upgrade(), the docs' direct
+          # download links, and legacy releases/latest OTA. Do not rename.
           gh release upload --clobber tulip \
             tulip/esp32s3/dist/tulip-firmware-TULIP4_R11.bin \
             tulip/esp32s3/dist/tulip-full-TULIP4_R11.bin \
             tulip/esp32s3/dist/tulip-sys.bin
-          # Refresh the body with the exact released commit for provenance.
+          # Date-coded copy of the full image for manufacturing ("which build is
+          # this file?"). One dated copy lives on the release at a time; older
+          # date codes are pruned. Same-day rebuilds clobber the same name.
+          DATE_CODE="$(date -u +%Y%m%d)"
+          cp tulip/esp32s3/dist/tulip-full-TULIP4_R11.bin \
+             "tulip/esp32s3/dist/tulip-full-TULIP4_R11-${DATE_CODE}.bin"
+          gh api "repos/${GITHUB_REPOSITORY}/releases/tags/tulip" --jq '.assets[].name' \
+            | { grep -E '^tulip-full-TULIP4_R11-[0-9]{8}\.bin$' || true; } \
+            | { grep -v "${DATE_CODE}" || true; } \
+            | while read -r stale; do gh release delete-asset tulip "$stale" --yes; done
+          gh release upload --clobber tulip \
+            "tulip/esp32s3/dist/tulip-full-TULIP4_R11-${DATE_CODE}.bin"
+          # Refresh the body with the exact released commit for provenance, and
+          # (re)assert latest so releases/latest keeps serving legacy OTA.
           gh release edit tulip \
+            --latest \
             --notes "Rolling Tulip release (TULIP4_R11), built from main @ ${GITHUB_SHA}. OTA'd by tulip.upgrade(). Updated on every push to main; not a tagged version."
+
+  # Tulip Desktop for macOS (universal arm64+x86_64), mirroring tulip/macos/
+  # package.sh. Signing + notarization run only when the Apple credentials are
+  # present as repo secrets; without them the app is still built (and uploaded
+  # as a workflow artifact) but NOT published to the release, since an unsigned
+  # zip would be blocked by Gatekeeper on download.
+  #
+  # Required secrets for publishing:
+  #   MACOS_SIGNING_CERT_P12      — base64 of the "Developer ID Application"
+  #                                 certificate + private key (.p12)
+  #   MACOS_SIGNING_CERT_PASSWORD — password for the .p12
+  #   MACOS_NOTARY_API_KEY        — App Store Connect API key file contents (.p8)
+  #   MACOS_NOTARY_API_KEY_ID     — key ID for that key
+  #   MACOS_NOTARY_API_ISSUER_ID  — issuer ID for that key
+  desktop:
+    runs-on: macos-14
+    permissions:
+      contents: write                # upload Tulip_Desktop.zip to the 'tulip' release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Build Tulip Desktop (universal binary)
+        run: |
+          set -euo pipefail
+          cd tulip/macos
+          # Mirrors package.sh: build each arch, lipo, assemble the app bundle.
+          make WHICH_ARCH=arm64
+          cp build-standard/tulip/obj/tulip.arm64 .
+          rm -rf build-standard
+          make WHICH_ARCH=x86_64
+          cp build-standard/tulip/obj/tulip.x86_64 .
+          rm -rf build-standard
+          lipo -create -output tulip tulip.x86_64 tulip.arm64
+          rm -rf dist
+          mkdir -p "dist/Tulip Desktop.app/Contents/MacOS" \
+                   "dist/Tulip Desktop.app/Contents/Resources" \
+                   "dist/Tulip Desktop.app/Contents/Frameworks" \
+                   "dist/Tulip Desktop.app/Contents/libs"
+          cp tulip "dist/Tulip Desktop.app/Contents/MacOS/"
+          cp Info.plist "dist/Tulip Desktop.app/Contents/"
+          cp -rf ../fs "dist/Tulip Desktop.app/Contents/Resources/"
+          cp -a SDL2.framework "dist/Tulip Desktop.app/Contents/Frameworks/"
+          install_name_tool -add_rpath @executable_path/../Frameworks \
+            "dist/Tulip Desktop.app/Contents/MacOS/tulip"
+          cp tulip.icns "dist/Tulip Desktop.app/Contents/Resources/"
+
+      - name: Check for signing secrets
+        id: signing
+        env:
+          CERT_P12: ${{ secrets.MACOS_SIGNING_CERT_P12 }}
+          NOTARY_KEY: ${{ secrets.MACOS_NOTARY_API_KEY }}
+        run: |
+          if [ -n "$CERT_P12" ] && [ -n "$NOTARY_KEY" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::macOS signing/notarization secrets not set — building unsigned; Tulip_Desktop.zip will NOT be published to the release."
+          fi
+
+      - name: Sign, notarize, and staple
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          CERT_P12: ${{ secrets.MACOS_SIGNING_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_SIGNING_CERT_PASSWORD }}
+          NOTARY_KEY: ${{ secrets.MACOS_NOTARY_API_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_API_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          cd tulip/macos
+          # Import the Developer ID cert into a throwaway keychain.
+          KEYCHAIN="$RUNNER_TEMP/tulip-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "$CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain
+          DEV_ID="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | awk -F'"' '/Developer ID Application/ {print $2; exit}')"
+          if [ -z "$DEV_ID" ]; then
+            echo "::error::No 'Developer ID Application' identity found in the imported .p12"; exit 1
+          fi
+          # Same signing order as package.sh: framework, binary, then the bundle
+          # with hardened runtime (required for notarization).
+          codesign -s "$DEV_ID" -f \
+            "dist/Tulip Desktop.app/Contents/Frameworks/SDL2.framework/Versions/A/SDL2"
+          codesign -s "$DEV_ID" -f "dist/Tulip Desktop.app/Contents/MacOS/tulip"
+          codesign --force --options runtime --timestamp --sign "$DEV_ID" \
+            "dist/Tulip Desktop.app"
+          # Notarize with an App Store Connect API key, then staple.
+          echo "$NOTARY_KEY" > "$RUNNER_TEMP/notary.p8"
+          cd dist
+          /usr/bin/ditto -c -k --sequesterRsrc --keepParent "Tulip Desktop.app" Tulip_Desktop.zip
+          xcrun notarytool submit Tulip_Desktop.zip \
+            --key "$RUNNER_TEMP/notary.p8" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER_ID" \
+            --wait
+          rm -rf "Tulip Desktop.app"
+          unzip -q Tulip_Desktop.zip
+          xcrun stapler staple "Tulip Desktop.app"
+          /usr/bin/ditto -c -k --sequesterRsrc --keepParent "Tulip Desktop.app" Tulip_Desktop.zip
+
+      - name: Zip unsigned app (no signing secrets)
+        if: steps.signing.outputs.enabled != 'true'
+        run: |
+          set -euo pipefail
+          cd tulip/macos/dist
+          /usr/bin/ditto -c -k --sequesterRsrc --keepParent "Tulip Desktop.app" Tulip_Desktop.zip
+
+      - name: Upload Tulip Desktop artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tulip-desktop-macos
+          if-no-files-found: error
+          path: tulip/macos/dist/Tulip_Desktop.zip
+
+      - name: Publish Tulip_Desktop.zip to the rolling 'tulip' release
+        if: github.ref == 'refs/heads/main' && steps.signing.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! gh release view tulip >/dev/null 2>&1; then
+            echo "::error::rolling 'tulip' release does not exist yet"; exit 1
+          fi
+          gh release upload --clobber tulip tulip/macos/dist/Tulip_Desktop.zip

@@ -112,7 +112,30 @@ For `tulip cc` or `tulip esp32s3` build:
 
 ## Tulip Release
 
-Only perform a Tulip release when the user explicitly asks for it.
+Tulip firmware is **released continuously** by `.github/workflows/tulip-release.yml`
+(push to `main` on firmware-affecting paths; also `workflow_dispatch`): it builds
+TULIP4_R11 and publishes to the rolling **`tulip`** GitHub release, which is kept
+marked **Latest** — it IS `releases/latest`. That matters because firmware from the
+old monthly releases (≤ `v-jun-2026`) OTAs from `releases/latest`; current firmware
+reads `releases/tags/tulip` directly. The same workflow also builds **Tulip Desktop
+for macOS** (universal) and uploads `Tulip_Desktop.zip` to the rolling release —
+signing/notarization requires the `MACOS_SIGNING_CERT_P12`/`MACOS_SIGNING_CERT_PASSWORD`
+and `MACOS_NOTARY_API_KEY`/`MACOS_NOTARY_API_KEY_ID`/`MACOS_NOTARY_API_ISSUER_ID` repo
+secrets; without them the zip is built as a CI artifact but not published.
+
+Both rolling releases also carry a **date-coded copy of the full flash image**
+(`tulip-full-TULIP4_R11-YYYYMMDD.bin`, `amyboard-full-AMYBOARD-YYYYMMDD.bin`) for the
+manufacturing partner; the stable-named bins must never be renamed (the web flasher,
+docs links, and `upgrade()` fetch them by exact name). Only the newest date code is
+kept on the release.
+
+### Monthly release.sh (legacy)
+
+The monthly `release.sh` flow below is legacy — only perform it when the user
+explicitly asks for it. **If a monthly release is ever cut again, create it with
+`--latest=false`**: it must not take the Latest mark back from the rolling `tulip`
+release, or legacy devices and the releases page would point at a stale build again
+(this is exactly why `v-jun-2026` was retired).
 
 **Important:** Releases must always be built from the `main` branch (or a worktree reset to `origin/main`). Before starting a release, ensure the working tree is on `main` with all intended changes merged. Never release from an unmerged feature branch.
 
@@ -158,20 +181,20 @@ The workflow is `.github/workflows/amyboard-release.yml` (push to `main` on
 AMYboard-affecting paths; also `workflow_dispatch`):
 
 1. **firmware** → built and uploaded to the rolling **`amyboard`** GitHub release. That
-   release is kept **non-latest** (`gh release create --latest=false`) so it never
-   displaces `releases/latest` — which stays the monthly combined Tulip release that
-   `tulip.upgrade()` and Tulip firmware downloads depend on. amyboard.com's flasher
-   reads `releases/download/amyboard`, and on-device `amyboard.upgrade()` reads
-   `releases/tags/amyboard` (see `get_latest_release()` in `tulip/shared/py/tulip.py`).
+   release is kept **non-latest** — the rolling `tulip` release owns the Latest mark
+   (`releases/latest`). amyboard.com's flasher reads `releases/download/amyboard`, and
+   on-device `amyboard.upgrade()` reads `releases/tags/amyboard` (see
+   `get_latest_release()` in `tulip/shared/py/tulip.py`). The firmware + sys bins are
+   also **mirrored onto the rolling `tulip` release** so legacy AMYboards (monthly
+   firmware ≤ `v-jun-2026`, which OTA from `releases/latest`) can still upgrade.
 2. **web** → `amyboardweb/stage/` is built and deployed `--prod` to the **`amyboard`**
    Vercel project (amyboard.com). Requires repo secret `VERCEL_TOKEN`
    (scope `bwhitmans-projects`), same as the PR-preview workflow.
 
-Tulip is **not** released here — Tulip firmware/web stay on the monthly cadence (see
-"Tulip Release"), and `releases/latest` remains the monthly `v-XXX-2026` release.
-`release.sh` still also uploads AMYboard assets to that monthly release, which older
-firmware (from before this decoupling) OTAs from `releases/latest` until it is flashed
-once to pick up the new `amyboard`-tag upgrade path.
+Tulip firmware is **not** built here — it has its own continuous release,
+`tulip-release.yml` (see "Tulip Release"). `releases/latest` is the rolling `tulip`
+release; the monthly `v-XXX-2026` releases are retired (the misleading
+"Latest"-badged `v-jun-2026` was demoted in July 2026).
 
 ### How the flasher chooses a channel
 
