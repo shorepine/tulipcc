@@ -81,8 +81,9 @@ WORLD_BASE = world.DEFAULT_BASE
 # from loop() (started by the sequencer that environment_transfer_done() kicks off)
 # and use random() — so run-to-run they differ in the notes but not the timbre, and
 # the timing/phase-invariant avg-spectrum compare still matches. `woodpiano` is a
-# bare DX7 patch that only sounds when we send it MIDI notes. We send the simple
-# MIDI pattern to every sketch (it also proves the USB-MIDI note path per sketch).
+# bare DX7 patch that only sounds when we send it MIDI notes. Only non-generative
+# sketches get the simple MIDI pattern (which also proves the USB-MIDI note path);
+# generative sketches are recorded as-is so the reference is purely their own output.
 WORLD_SUITE = [
     {"name": "acid_generator",  "author": "shorepine", "generative": True,  "min_sim": 0.80},
     {"name": "house_generator", "author": "shorepine", "generative": True,  "min_sim": 0.80},
@@ -176,9 +177,20 @@ class Midi:
         return self.link.send_python(code, timeout=timeout)
 
     def load_world_sketch(self, text, settle=1.5):
-        """amy.reset() → transfer → environment_transfer_done() (restarts the
-        sketch and starts the sequencer, so generative loop()s begin playing).
-        Give the sketch a moment to init before we start recording it."""
+        """Silence the PREVIOUS sketch first, then amy.reset() → transfer →
+        environment_transfer_done() (restarts the sketch and starts the
+        sequencer, so generative loop()s begin playing). The old sketch's
+        loop() keeps executing during the transfer and can re-arm sequencer
+        events after our amy.reset(), so its audio bleeds into the next
+        recording (heard as house_generator under woodpiano) unless the
+        transport is stopped and the loop() killed before transferring.
+        Give the new sketch a moment to init before we start recording it."""
+        try:
+            self.sysex("zY0Z")                       # stop sequencer transport
+            self.send_python("import amyboard; amyboard.stop_sketch()")  # kill loop()
+            self.all_notes_off(0)
+        except Exception:
+            pass
         self.link.reset_amy()
         time.sleep(0.3)
         self.link.transfer_file(text)
@@ -446,8 +458,10 @@ def compare(rec, ref):
 
 # ── AMYboard World sketch suite ──────────────────────────────────────────────
 def run_world_suite(args, m):
-    """Download each WORLD_SUITE sketch, push it onto the board, drive it with the
-    simple MIDI pattern, and record it. Returns [(name, recording|None, min_sim)];
+    """Download each WORLD_SUITE sketch, push it onto the board, and record it.
+    Generative sketches drive themselves and are recorded as-is; only
+    non-generative patch sketches (woodpiano) get the simple MIDI pattern, which
+    also proves the USB-MIDI note path. Returns [(name, recording|None, min_sim)];
     a None recording means fetch/load failed for that sketch (a test failure, but
     the run continues so the other sketches + artifacts are still produced)."""
     results = []
@@ -465,8 +479,11 @@ def run_world_suite(args, m):
         print(f"[world] fetched {len(text)} bytes; transferring + starting sketch")
         try:
             m.load_world_sketch(text)
-            rec = record_and_drive(args, args.world_duration,
-                                   lambda: m.play_pattern(args.world_duration))
+            if spec["generative"]:
+                rec = record_and_drive(args, args.world_duration, lambda: None)
+            else:
+                rec = record_and_drive(args, args.world_duration,
+                                       lambda: m.play_pattern(args.world_duration))
         except Exception as e:
             print(f"[world] load/record failed for {author}/{name}: {e}")
             results.append((name, None, min_sim))
@@ -589,6 +606,12 @@ def main():
         m = Midi(args.midi_port)
         results = []
         try:
+            # The board boots into its SAVED sketch (e.g. woodpiano left over from
+            # a previous run's transfer), which also answers our MIDI notes and
+            # contaminates the built-in-tones recording. Silence it first so
+            # hwci_basic only measures the default patch.
+            m.silence()
+            time.sleep(0.5)
             rec = record_and_drive(args, args.duration, lambda: run_test_sequence(m))
             results.append((args.name, rec, args.min_similarity))
             if args.world:
