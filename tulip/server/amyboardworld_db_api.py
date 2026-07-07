@@ -22,6 +22,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+import threading
+
 import requests
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -108,6 +110,26 @@ GENERATE_MAX_TOOL_TURNS = int(os.getenv("AMYBOARD_GENERATE_MAX_TOOL_TURNS", "6")
 GENERATE_PER_IP_PER_DAY = int(os.getenv("AMYBOARD_GENERATE_PER_IP_PER_DAY", "10"))
 GENERATE_GLOBAL_PER_DAY = int(os.getenv("AMYBOARD_GENERATE_GLOBAL_PER_DAY", "200"))
 GENERATE_MAX_PROMPT_CHARS = int(os.getenv("AMYBOARD_GENERATE_MAX_PROMPT_CHARS", "1000"))
+
+# --- Sketch similarity ("How about one of these?") --------------------------
+# Before spending Claude tokens on /generate, the editor asks
+# /api/amyboardworld/similar for existing World sketches that match the
+# prompt. Embeddings come from a small local model (model2vec static
+# embeddings: numpy-only, no torch/GPU, ~30MB download) so a lookup costs
+# nothing per query. Vectors are persisted in the sketch_embeddings table and
+# searched in RAM. If model2vec isn't installed or the model can't load, the
+# endpoint degrades to {"items": []} and the editor generates as before.
+SIMILAR_MODEL_NAME = os.getenv("AMYBOARD_SIMILAR_MODEL", "minishlab/potion-base-8M")
+# Cosine floor calibrated on the production corpus (2026-07): on-topic prompts
+# score >= ~0.52 against their matches, off-topic prompts ("write me a poem")
+# top out around 0.44, so 0.45 shows a popup only when there's a real match.
+SIMILAR_MIN_SCORE = float(os.getenv("AMYBOARD_SIMILAR_MIN_SCORE", "0.45"))
+SIMILAR_MAX_RESULTS = int(os.getenv("AMYBOARD_SIMILAR_MAX_RESULTS", "10"))
+# Cache the downloaded model next to the DB (the Railway persistent volume in
+# production) so redeploys don't re-fetch it. Must be set before
+# huggingface_hub is first imported, which happens lazily in
+# _load_similar_model().
+os.environ.setdefault("HF_HOME", str(DB_PATH.parent / "hf-cache"))
 
 app = FastAPI(title="World DB API", version="0.2.0")
 app.add_middleware(
@@ -253,10 +275,28 @@ def _ensure_schema() -> None:
         except sqlite3.OperationalError:
             pass  # column already exists
 
+        # Embedding vectors for World sketches, keyed by environments.id.
+        # text_hash covers (embedding model, embedded text) so rows re-embed
+        # automatically when a description/tags change or the model is swapped.
+        conn.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS sketch_embeddings (
+              file_id INTEGER PRIMARY KEY,
+              model TEXT NOT NULL,
+              text_hash TEXT NOT NULL,
+              vector BLOB NOT NULL,
+              updated_at_ms INTEGER NOT NULL
+            );
+            """
+        )
+
 
 @app.on_event("startup")
 def _startup() -> None:
     _ensure_schema()
+    # Warm the similarity index off the request path: load the embedding model
+    # (first boot downloads it) and backfill embeddings for existing sketches.
+    threading.Thread(target=_warm_similar_index, name="similar-warm", daemon=True).start()
 
 
 def _require_admin(x_admin_token: str | None = Header(default=None)) -> None:
@@ -487,6 +527,8 @@ def _insert_file_row(
         blob_path.write_bytes(contents)
         conn.execute(f"UPDATE {table} SET blob_path = ? WHERE id = ?", (str(blob_path), item_id))
         conn.commit()
+    if table == "environments":
+        _invalidate_similar_index()
     return item_id
 
 
@@ -736,6 +778,7 @@ def patch_amyboard_tags(item_id: int, body: TagsPatch) -> dict[str, Any]:
         conn.commit()
         if cur.rowcount < 1:
             raise HTTPException(status_code=404, detail="Not found")
+    _invalidate_similar_index()
     return {"ok": True, "id": item_id, "tags": tags}
 
 
@@ -895,6 +938,8 @@ def _delete_file_row(table: str, item_id: int) -> dict[str, Any]:
                 shutil.rmtree(blob_path)
         except OSError:
             pass
+    if table == "environments":
+        _invalidate_similar_index()
     return {"ok": True, "id": item_id}
 
 
@@ -2185,3 +2230,209 @@ def admin_generate_debug(body: DebugGenerateRequest) -> dict[str, Any]:
         "cache_read_input_tokens": result.get("cache_read_input_tokens", 0),
         "tool_calls": result.get("tool_calls", 0),
     }
+
+
+# --- Sketch similarity ("How about one of these?") --------------------------
+# A tiny local embedding index over the non-deleted AMYboard World sketches.
+# The editor calls /api/amyboardworld/similar with the user's generate prompt
+# and offers matching existing sketches before spending Claude tokens on a
+# fresh generation. Everything here is best-effort: any failure disables
+# similarity (empty results) rather than affecting uploads or generation.
+
+_similar_lock = threading.Lock()
+# The loaded model2vec StaticModel; None = not tried yet, False = unavailable
+# (import or download failed once — don't retry every request).
+_similar_model: Any = None
+# {"ids": [file_id, ...], "matrix": unit-normalized float32 ndarray} rows
+# aligned with ids; None = needs (re)build. Guarded by _similar_lock.
+_similar_index: dict[str, Any] | None = None
+
+
+def _load_similar_model() -> Any:
+    """Lazy-load the local embedding model, or None when unavailable."""
+    global _similar_model
+    if _similar_model is False:
+        return None
+    if _similar_model is not None:
+        return _similar_model
+    try:
+        from model2vec import StaticModel  # lazy: optional dependency
+
+        _similar_model = StaticModel.from_pretrained(SIMILAR_MODEL_NAME)
+        return _similar_model
+    except Exception as exc:  # noqa: BLE001 — any failure just disables similarity
+        print("[similar] embedding model unavailable:", f"{type(exc).__name__}: {exc}", flush=True)
+        _similar_model = False
+        return None
+
+
+def _world_sketch_base(filename: str) -> str:
+    """'rotary_encoder-609.py' -> 'rotary_encoder': strip extension and the
+    numeric suffix _unique_generator_filename() appends, so near-identical
+    generator variants collapse to one suggestion."""
+    stem = filename.rsplit(".", 1)[0] if "." in filename else filename
+    return re.sub(r"-\d+$", "", stem).lower()
+
+
+def _sketch_embed_text(filename: str, description: str, tags: list[str]) -> str:
+    """The text a sketch is embedded under: humanized filename + description
+    + tags. Changing this format re-embeds everything (it changes text_hash)."""
+    words = _world_sketch_base(filename).replace("_", " ").replace("-", " ").strip()
+    parts = [p for p in (words, description.strip(), " ".join(tags)) if p]
+    return ". ".join(parts)
+
+
+def _refresh_similar_index() -> dict[str, Any] | None:
+    """(Re)build the in-RAM index, first syncing the sketch_embeddings table:
+    embed new/changed sketches, drop rows for deleted ones. Fast after the
+    first run — only changed rows are re-embedded. Caller holds _similar_lock."""
+    model = _load_similar_model()
+    if model is None:
+        return None
+    import numpy as np  # model2vec depends on numpy, so it's present here
+
+    with _open_db() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, filename, description, tags_json
+            FROM environments
+            WHERE deleted_at_ms IS NULL AND item_type = 'environment'
+            """
+        ).fetchall()
+        cached = {
+            int(r["file_id"]): str(r["text_hash"])
+            for r in conn.execute("SELECT file_id, text_hash FROM sketch_embeddings").fetchall()
+        }
+
+        texts: dict[int, tuple[str, str]] = {}
+        for row in rows:
+            text = _sketch_embed_text(str(row["filename"]), str(row["description"]), _parse_tags(row["tags_json"]))
+            digest = hashlib.sha256(f"{SIMILAR_MODEL_NAME}\x00{text}".encode("utf-8")).hexdigest()
+            texts[int(row["id"])] = (text, digest)
+
+        stale = [fid for fid, (_, digest) in texts.items() if cached.get(fid) != digest]
+        if stale:
+            vectors = model.encode([texts[fid][0] for fid in stale])
+            now = _now_ms()
+            conn.executemany(
+                "INSERT OR REPLACE INTO sketch_embeddings(file_id, model, text_hash, vector, updated_at_ms)"
+                " VALUES(?, ?, ?, ?, ?)",
+                [
+                    (fid, SIMILAR_MODEL_NAME, texts[fid][1], np.asarray(vec, dtype=np.float32).tobytes(), now)
+                    for fid, vec in zip(stale, vectors)
+                ],
+            )
+        gone = [fid for fid in cached if fid not in texts]
+        if gone:
+            conn.executemany("DELETE FROM sketch_embeddings WHERE file_id = ?", [(fid,) for fid in gone])
+        conn.commit()
+
+        vec_rows = conn.execute("SELECT file_id, vector FROM sketch_embeddings").fetchall()
+
+    ids: list[int] = []
+    vecs: list[Any] = []
+    for r in vec_rows:
+        fid = int(r["file_id"])
+        if fid in texts:
+            ids.append(fid)
+            vecs.append(np.frombuffer(r["vector"], dtype=np.float32))
+    if not ids:
+        return {"ids": [], "matrix": None}
+    matrix = np.vstack(vecs)
+    matrix = matrix / (np.linalg.norm(matrix, axis=1, keepdims=True) + 1e-9)
+    return {"ids": ids, "matrix": matrix}
+
+
+def _get_similar_index() -> dict[str, Any] | None:
+    global _similar_index
+    with _similar_lock:
+        if _similar_index is None:
+            try:
+                _similar_index = _refresh_similar_index()
+            except Exception as exc:  # noqa: BLE001
+                print("[similar] index build failed:", _redact_secrets(f"{type(exc).__name__}: {exc}"), flush=True)
+                return None
+        return _similar_index
+
+
+def _invalidate_similar_index() -> None:
+    """Mark the in-RAM index stale; the next /similar call rebuilds it (cheap:
+    only new/changed sketches are re-embedded)."""
+    global _similar_index
+    with _similar_lock:
+        _similar_index = None
+
+
+def _warm_similar_index() -> None:
+    """Startup background warm so the first /similar request doesn't pay the
+    model download/load + backfill cost."""
+    try:
+        index = _get_similar_index()
+        if index is not None:
+            print(f"[similar] index ready: {len(index['ids'])} sketches", flush=True)
+    except Exception as exc:  # noqa: BLE001
+        print("[similar] warm failed:", _redact_secrets(f"{type(exc).__name__}: {exc}"), flush=True)
+
+
+class SimilarRequest(BaseModel):
+    description: str
+    limit: int = 10
+
+
+@app.post("/api/amyboardworld/similar")
+def similar_amyboard_sketches(body: SimilarRequest) -> dict[str, Any]:
+    """Existing World sketches most similar to a prompt, best first. Local
+    embedding model + in-RAM cosine search, so this is free and fast (no rate
+    limit). Returns {"items": []} whenever similarity is unavailable or nothing
+    clears SIMILAR_MIN_SCORE, so callers can always fall through to /generate."""
+    description = " ".join((body.description or "").split()).strip()
+    if len(description) < 3:
+        return {"items": []}
+    limit = max(1, min(int(body.limit or SIMILAR_MAX_RESULTS), SIMILAR_MAX_RESULTS))
+
+    index = _get_similar_index()
+    model = _load_similar_model()
+    if not index or index.get("matrix") is None or model is None:
+        return {"items": []}
+
+    import numpy as np
+
+    q = np.asarray(model.encode([description])[0], dtype=np.float32)
+    q = q / (np.linalg.norm(q) + 1e-9)
+    scores = index["matrix"] @ q
+
+    # Overselect so collapsing generator variants ("-2", "-609", ...) and any
+    # rows deleted since the index was built still leaves `limit` results.
+    order = np.argsort(-scores)[: limit * 4]
+    candidates = [(index["ids"][i], float(scores[i])) for i in order if float(scores[i]) >= SIMILAR_MIN_SCORE]
+    if not candidates:
+        return {"items": []}
+
+    placeholders = ",".join(["?"] * len(candidates))
+    with _open_db() as conn:
+        rows = conn.execute(
+            f"""
+            SELECT id, username, filename, description, tags_json, created_at_ms, size_bytes, item_type
+            FROM environments
+            WHERE id IN ({placeholders}) AND deleted_at_ms IS NULL
+            """,
+            [fid for fid, _ in candidates],
+        ).fetchall()
+    by_id = {int(r["id"]): r for r in rows}
+
+    items: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for fid, score in candidates:
+        row = by_id.get(fid)
+        if row is None:
+            continue
+        key = f"{str(row['username']).lower()}/{_world_sketch_base(str(row['filename']))}"
+        if key in seen:
+            continue
+        seen.add(key)
+        item = _file_row_to_public(row, "amyboardworld")
+        item["score"] = round(score, 4)
+        items.append(item)
+        if len(items) >= limit:
+            break
+    return {"items": items}

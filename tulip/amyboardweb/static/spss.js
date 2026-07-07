@@ -2837,6 +2837,136 @@ function world_api_url(pathAndQuery) {
     return AMYBOARD_WORLD_API_BASE + pathAndQuery;
 }
 
+// --- "How about one of these?" sketch suggestions ---------------------------
+// Before a prompt is sent to the (token-billed) generator, the editor asks the
+// World API for existing sketches similar to the description and offers them
+// in a popup. Any failure here returns [] so generation always proceeds.
+async function fetch_similar_sketches(description) {
+    try {
+        var resp = await fetch(world_api_url("/api/amyboardworld/similar"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description: description, limit: 10 }),
+        });
+        if (!resp.ok) return [];
+        var data = await resp.json();
+        var items = (data && Array.isArray(data.items)) ? data.items : [];
+        // Only offer plain .py sketches — a .tar package can't be loaded into
+        // the editor as text by load_suggested_sketch().
+        return items.filter(function (item) {
+            return item && normalize_world_filename(item.filename).toLowerCase().endsWith(".py");
+        });
+    } catch (e) {
+        return [];
+    }
+}
+
+var sketch_suggestion_items = [];
+var sketch_suggestions_loading_index = null;
+var sketch_suggestions_choice = null;
+var sketch_suggestions_resolve = null;
+
+function render_sketch_suggestions_list() {
+    var list = document.getElementById("sketch-suggestions-list");
+    if (!list) return;
+    var html = "";
+    for (var i = 0; i < sketch_suggestion_items.length; i++) {
+        var item = sketch_suggestion_items[i];
+        var filename = normalize_world_filename(item.filename);
+        var displayName = get_world_display_name(filename);
+        var description = (typeof item.description === "string") ? item.description.trim() : "";
+        var when = format_world_file_timestamp(item.time);
+        var meta = (item.username || "unknown") + (when ? " • " + when : "");
+        var isLoading = (sketch_suggestions_loading_index === i);
+        html += '<div class="col">';
+        html += '<button type="button" class="w-100 border rounded p-2 bg-white text-start d-flex justify-content-between align-items-start"' +
+            ' onclick="choose_sketch_suggestion(' + i + ')"' + (sketch_suggestions_loading_index !== null ? " disabled" : "") + ">";
+        html += '<div class="me-2 text-start"><div class="fw-bold">' + escape_html(displayName);
+        if (description.length > 0) {
+            html += ' <span class="fw-normal text-muted">- ' + escape_html(description) + "</span>";
+        }
+        html += '</div><div class="small text-muted">' + escape_html(meta) + '</div></div>';
+        if (isLoading) {
+            html += '<span class="d-inline-flex align-items-center text-secondary small"><span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Loading...</span>';
+        }
+        html += "</button></div>";
+    }
+    list.innerHTML = html;
+}
+
+// Show the suggestions popup. Resolves with how it was dismissed:
+// "loaded" (a suggestion was loaded into the editor), "generate" (the
+// "No thanks" button), or "cancel" (closed without choosing).
+function show_sketch_suggestions(items) {
+    return new Promise(function (resolve) {
+        var modalEl = document.getElementById("sketchSuggestionsModal");
+        if (!modalEl || !window.bootstrap) {
+            resolve("generate");
+            return;
+        }
+        sketch_suggestion_items = items;
+        sketch_suggestions_loading_index = null;
+        sketch_suggestions_choice = null;
+        sketch_suggestions_resolve = resolve;
+        render_sketch_suggestions_list();
+        modalEl.addEventListener("hidden.bs.modal", function () {
+            var r = sketch_suggestions_resolve;
+            sketch_suggestions_resolve = null;
+            if (r) r(sketch_suggestions_choice || "cancel");
+        }, { once: true });
+        window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+}
+
+// Download a suggested World sketch into the editor (same behavior as a World
+// tab import, minus the confirm — clicking the suggestion IS the confirmation).
+async function load_suggested_sketch(item) {
+    var downloadUrl = resolve_world_download_url(item);
+    if (!downloadUrl) throw new Error("Missing file URL");
+    var response = await fetch(downloadUrl);
+    if (!response.ok) throw new Error("HTTP " + response.status.toString());
+    var sketchText = await response.text();
+    if (editor) {
+        editor.setValue(sketchText);
+        setTimeout(function () { if (typeof editor.refresh === 'function') editor.refresh(); }, 0);
+    }
+    var packageName = normalize_world_filename(item.filename).replace(/\.(py|tar)$/, "");
+    var envNameInput = document.getElementById("editor_filename");
+    if (envNameInput) envNameInput.value = packageName;
+    if (typeof set_knobs_from_sketch === 'function') set_knobs_from_sketch();
+    // Move to the Code tab so the user can review the sketch and then Write.
+    var codeTabBtn = document.getElementById('environment-tab');
+    if (codeTabBtn && window.bootstrap) {
+        try { new window.bootstrap.Tab(codeTabBtn).show(); } catch (e) {}
+    }
+}
+
+async function choose_sketch_suggestion(index) {
+    if (sketch_suggestions_loading_index !== null) return;
+    var item = sketch_suggestion_items[index];
+    if (!item) return;
+    sketch_suggestions_loading_index = index;
+    render_sketch_suggestions_list();
+    try {
+        await load_suggested_sketch(item);
+        sketch_suggestions_choice = "loaded";
+    } catch (e) {
+        show_alert("Failed to load that sketch.");
+        return; // keep the popup open so the user can pick another or generate
+    } finally {
+        sketch_suggestions_loading_index = null;
+        render_sketch_suggestions_list();
+    }
+    var modalEl = document.getElementById("sketchSuggestionsModal");
+    if (modalEl && window.bootstrap) window.bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+}
+
+function generate_anyway_from_suggestions() {
+    sketch_suggestions_choice = "generate";
+    var modalEl = document.getElementById("sketchSuggestionsModal");
+    if (modalEl && window.bootstrap) window.bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+}
+
 // "Prompt to sketch": send the user's description to the World API, which calls
 // the Claude API server-side and returns a generated AMYboard sketch. The result
 // is loaded into the editor and then auto-started (same as the Restart Sketch
@@ -2860,6 +2990,26 @@ async function generate_sketch_from_prompt() {
     }
 
     var prevLabel = btn.textContent;
+
+    // Before generating, offer existing World sketches that match the prompt.
+    btn.disabled = true;
+    btn.textContent = "Checking…";
+    setStatus("Checking AMYboard World for similar sketches…", "text-muted");
+    var suggestions = await fetch_similar_sketches(description);
+    btn.disabled = false;
+    btn.textContent = prevLabel;
+    if (suggestions.length > 0) {
+        setStatus("", "");
+        var choice = await show_sketch_suggestions(suggestions);
+        if (choice === "loaded") {
+            setStatus("Loaded a sketch from AMYboard World.", "text-success");
+            return;
+        }
+        if (choice !== "generate") {
+            return; // popup dismissed — don't generate
+        }
+    }
+
     btn.disabled = true;
     btn.textContent = "Creating…";
     setStatus("Creating sketch. May take a couple of minutes…", "text-muted");
