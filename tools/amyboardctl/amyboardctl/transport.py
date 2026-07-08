@@ -157,6 +157,7 @@ class AlsaTransport:
         self.ack_available = False
         self.in_name = self.out_name = None
         self._reader = None
+        self._closing = False
 
     def open(self):
         self.port = self.port_match if self.port_match.startswith("hw:") \
@@ -165,21 +166,25 @@ class AlsaTransport:
             raise RuntimeError("Could not find an AMYboard ALSA MIDI device "
                                "(match=%r); see `amidi -l`." % self.port_match)
         self.in_name = self.out_name = self.port
-        # Persistent receive stream: line-buffered so frames arrive in real time
-        # (block buffering would sit on the board's ACKs). Coexists fine with the
-        # one-shot `amidi -S` sends on the same rawmidi device.
         try:
-            self._reader = subprocess.Popen(
-                ["stdbuf", "-oL", "amidi", "-p", self.port, "-d"],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
-            threading.Thread(target=self._read_loop, daemon=True).start()
-            self.ack_available = True
+            self._spawn_reader()
         except Exception as e:
             print("[amyboardctl] no amidi read stream (%s); send-only" % e,
                   file=sys.stderr)
         return self
 
+    def _spawn_reader(self):
+        # Persistent receive stream: line-buffered so frames arrive in real time
+        # (block buffering would sit on the board's ACKs). Coexists fine with the
+        # one-shot `amidi -S` sends on the same rawmidi device.
+        self._reader = subprocess.Popen(
+            ["stdbuf", "-oL", "amidi", "-p", self.port, "-d"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+        threading.Thread(target=self._read_loop, daemon=True).start()
+        self.ack_available = True
+
     def close(self):
+        self._closing = True
         if self._reader:
             try:
                 self._reader.terminate()
@@ -191,9 +196,10 @@ class AlsaTransport:
     def _read_loop(self):
         """Parse the `amidi -d` hex dump into SysEx frames and dispatch each
         frame's payload (the bytes between F0 and F7) to on_sysex."""
+        reader = self._reader
         buf, insx = [], False
         try:
-            for line in self._reader.stdout:
+            for line in reader.stdout:
                 for tok in line.split():
                     try:
                         b = int(tok, 16)
@@ -209,6 +215,33 @@ class AlsaTransport:
                         buf.append(b)
         except Exception:
             pass
+        # `amidi -d` dies when the board re-enumerates (its rawmidi node goes
+        # away). That used to be silent — every later send_and_ack just timed
+        # out and transfers aborted with no trace. Respawn it once the device
+        # is back; if it never comes back, drop to send-only pacing and say so.
+        if self._closing:
+            return
+        print("[amyboardctl] amidi read stream died (rc=%s); respawning"
+              % reader.poll(), file=sys.stderr)
+        self.ack_available = False
+        deadline = time.time() + 15.0
+        while not self._closing and time.time() < deadline:
+            time.sleep(1.0)
+            port = self.port_match if self.port_match.startswith("hw:") \
+                else _alsa_find(self.port_match)
+            if not port:
+                continue
+            self.port = self.in_name = self.out_name = port
+            try:
+                self._spawn_reader()
+                print("[amyboardctl] amidi read stream back on %s" % port,
+                      file=sys.stderr)
+                return
+            except Exception:
+                continue
+        if not self._closing:
+            print("[amyboardctl] amidi read stream gone for good; "
+                  "continuing send-only (paced)", file=sys.stderr)
 
     def send(self, data):
         cmd = ["amidi", "-p", self.port, "-S", " ".join("%02X" % b for b in data)]
