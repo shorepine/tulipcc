@@ -202,3 +202,17 @@ Gated to same-repo
 PRs (the runner is on a public repo). Stable `/dev` names come from
 [`99-amyboard.rules`](99-amyboard.rules); install it on the Pi (needs sudo) after
 adding a board.
+
+## Bench lock (`/tmp/amyboard-bench.lock`)
+The bench is also used by **shorepine/amy's "AMY HW CI"** (and the loadsweep
+tools) through a *separate* runner registration on the same Pi — GitHub's
+per-repo `concurrency:` groups can't serialize across repos, so an amy bench
+job and a tulipcc HW CI job can be scheduled at the same time. Everything that
+touches the bench therefore takes a blocking exclusive **flock on
+`/tmp/amyboard-bench.lock`** for its whole flash+drive+record run, and
+additionally waits for its serial port to have no other holders (`lsof`):
+`hwci.py`, `tulip_hwci.py`, amy's `tools/arduino_loadsweep/measure.py`, and
+tulipcc's `tools/amyboard_loadsweep/measure.py` all cooperate on the same file.
+A colliding run waits (up to 15 min) instead of flashing over the other's
+capture or bleeding audio into the shared card. `--no-bench-lock` skips it for
+local bring-up on a bench nothing else shares.
