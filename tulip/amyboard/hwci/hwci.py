@@ -290,7 +290,20 @@ class Midi:
                 pass
             self.link.reset_amy()
             time.sleep(0.3)
-            self.link.transfer_file(text)
+            # An unACKed transfer means the sketch may not actually be on the
+            # board — recording it anyway just measures 10s of silence with a
+            # clean log (the 2026-07-08 woodpiano incident). Retry once, then
+            # fail this sketch loudly instead of recording nothing.
+            for attempt in (1, 2):
+                sent, acked = self.link.transfer_file(text)
+                if acked == sent:
+                    break
+                print(f"[world] TRANSFER NOT ACKED ({acked}/{sent} frames), "
+                      f"attempt {attempt}/2")
+                if attempt == 2:
+                    raise RuntimeError(
+                        f"sketch transfer failed: {acked}/{sent} frames acked")
+                time.sleep(1.0)
             self.link.environment_transfer_done()
             time.sleep(settle)
         finally:
@@ -365,14 +378,9 @@ class SerialLog:
     def start(self):
         self._t.start()
 
-    def _run(self):
-        try:
-            import serial  # pyserial (ships with esptool)
-        except ImportError:
-            print(f"[log] pyserial missing; cannot capture {self.port}")
-            return
+    def _open(self, serial, window_s):
         ser = None
-        deadline = time.monotonic() + 8.0
+        deadline = time.monotonic() + window_s
         while ser is None and not self._stop.is_set() and time.monotonic() < deadline:
             try:
                 ser = serial.Serial()
@@ -385,21 +393,53 @@ class SerialLog:
             except Exception:
                 ser = None
                 time.sleep(0.3)
-        if ser is None:
-            print(f"[log] could not open {self.port} ({self.label})")
-            return
-        self.opened = True
-        while not self._stop.is_set():
-            try:
-                data = ser.read(4096)
-            except Exception:
-                break
-            if data:
-                self.buf.extend(data)
+        return ser
+
+    def _run(self):
         try:
-            ser.close()
-        except Exception:
-            pass
+            import serial  # pyserial (ships with esptool)
+        except ImportError:
+            print(f"[log] pyserial missing; cannot capture {self.port}")
+            return
+        first = True
+        while not self._stop.is_set():
+            # A read error mid-run usually means the board re-enumerated its
+            # USB (reboot / self-heal). Dying silently here truncated the log
+            # with no trace (the 2026-07-08 woodpiano incident) — instead say
+            # so, mark the log, and reopen so the post-reboot console (boot
+            # log, tracebacks) is captured too. 15s covers a re-enumeration.
+            ser = self._open(serial, 8.0 if first else 15.0)
+            if ser is None:
+                if self._stop.is_set():
+                    return
+                if first:
+                    print(f"[log] could not open {self.port} ({self.label})")
+                else:
+                    print(f"[log] {self.port} ({self.label}) did not come back; "
+                          "capture stops here")
+                    self.buf.extend(b"\n===== [log] port did not come back; "
+                                    b"capture truncated =====\n")
+                return
+            self.opened = True
+            if not first:
+                print(f"[log] {self.port} ({self.label}) reopened")
+                self.buf.extend(b"\n===== [log] reopened after read error =====\n")
+            first = False
+            while not self._stop.is_set():
+                try:
+                    data = ser.read(4096)
+                except Exception as e:
+                    print(f"[log] {self.port} ({self.label}) read error: {e}; "
+                          "reopening")
+                    self.buf.extend(f"\n===== [log] read error: {e}; "
+                                    "reopening =====\n".encode())
+                    break
+                if data:
+                    self.buf.extend(data)
+            try:
+                ser.close()
+            except Exception:
+                pass
 
     def stop(self):
         self._stop.set()
