@@ -24,6 +24,12 @@ console / stderr) and the native CDC (MicroPython stdout) — and saved to a
 combined `{name}-serial.log`, so a CI run can attach the audio and the logs to
 the PR.
 
+While the tests run, AMY's render load (`tulip.amy_render_load()`, 0..1 —
+amy#826 / PR #1105) is polled once a second over `zP`; each sample prints an
+`hwci_load` line on MicroPython stdout (the CDC log), and the mean/max are
+reported next to the pass/fail results. Firmware without the binding reports
+"not supported". Informational only — it does not gate pass/fail.
+
 Two backends, auto-selected:
   * ALSA CLI (`amidi` + `arecord`)  — Linux / Raspberry Pi CI runner. No extra
     Python libs or root needed; only pip `esptool numpy` in a venv.
@@ -42,6 +48,7 @@ Quick start (Pi):
 """
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -176,6 +183,40 @@ class Midi:
         """Run one line of python on the board via zP (control_api.md)."""
         return self.link.send_python(code, timeout=timeout)
 
+    # AMY render load (0..1, ~1.0 = overloaded), tulip.amy_render_load() from
+    # amy#826 / PR #1105. getattr-guarded so firmware without the binding
+    # prints -1 instead of pushing a traceback frame every poll.
+    LOAD_POLL_CODE = ("print('hwci_load %.4f' % getattr(__import__('tulip'), "
+                      "'amy_render_load', lambda: -1.0)())")
+
+    def poll_load_start(self, interval=1.0):
+        """Poll the render load once a second for the rest of the run. Each
+        sample prints an `hwci_load <v>` line on MicroPython stdout, i.e. into
+        the CDC serial log; render_load_report() averages them at the end.
+        send_python serializes on the link's lock, so polls interleave safely
+        between other control frames — but they're paused during sketch
+        transfers anyway (load_world_sketch) to keep multi-frame timing tight."""
+        self._poll_stop = threading.Event()
+        self._poll_pause = threading.Event()
+
+        def _poll():
+            while not self._poll_stop.wait(interval):
+                if self._poll_pause.is_set():
+                    continue
+                try:
+                    self.link.send_python(self.LOAD_POLL_CODE, timeout=1.0)
+                except Exception:
+                    pass   # board busy/rebooting; keep polling
+
+        self._poll_thread = threading.Thread(target=_poll, daemon=True)
+        self._poll_thread.start()
+
+    def poll_load_stop(self):
+        if getattr(self, "_poll_thread", None):
+            self._poll_stop.set()
+            self._poll_thread.join(timeout=3)
+            self._poll_thread = None
+
     def load_world_sketch(self, text, settle=1.5):
         """Silence the PREVIOUS sketch first, then amy.reset() → transfer →
         environment_transfer_done() (restarts the sketch and starts the
@@ -185,17 +226,23 @@ class Midi:
         recording (heard as house_generator under woodpiano) unless the
         transport is stopped and the loop() killed before transferring.
         Give the new sketch a moment to init before we start recording it."""
+        if getattr(self, "_poll_pause", None):
+            self._poll_pause.set()   # no load polls between transfer frames
         try:
-            self.sysex("zY0Z")                       # stop sequencer transport
-            self.send_python("import amyboard; amyboard.stop_sketch()")  # kill loop()
-            self.all_notes_off(0)
-        except Exception:
-            pass
-        self.link.reset_amy()
-        time.sleep(0.3)
-        self.link.transfer_file(text)
-        self.link.environment_transfer_done()
-        time.sleep(settle)
+            try:
+                self.sysex("zY0Z")                   # stop sequencer transport
+                self.send_python("import amyboard; amyboard.stop_sketch()")  # kill loop()
+                self.all_notes_off(0)
+            except Exception:
+                pass
+            self.link.reset_amy()
+            time.sleep(0.3)
+            self.link.transfer_file(text)
+            self.link.environment_transfer_done()
+            time.sleep(settle)
+        finally:
+            if getattr(self, "_poll_pause", None):
+                self._poll_pause.clear()
 
     def play_pattern(self, seconds, channel=0):
         """A simple, DETERMINISTIC A-minor arpeggio looped for `seconds` on ch1
@@ -558,6 +605,7 @@ def main():
     # consoles are tailed only *after* MIDI is up.
     debug_port = args.debug_port or args.port or ("/dev/ttyACM1" if ALSA else None)
     loggers = []
+    cdc = None   # the CDC tail also carries the polled hwci_load samples
     try:
         # Flash once, then bring the board up with a clean esptool chip-id reset
         # cycle. A plain flash hard-reset can leave it wedged in a boot-loop on
@@ -612,12 +660,15 @@ def main():
             # hwci_basic only measures the default patch.
             m.silence()
             time.sleep(0.5)
+            if cdc:   # samples land on the CDC log; without it there's nowhere to read them
+                m.poll_load_start()
             rec = record_and_drive(args, args.duration, lambda: run_test_sequence(m))
             results.append((args.name, rec, args.min_similarity))
             if args.world:
                 results += run_world_suite(args, m)
                 m.silence()   # leave the board quiet for the Tulip test that follows
         finally:
+            m.poll_load_stop()
             m.close()
     finally:
         if loggers:
@@ -655,6 +706,21 @@ def main():
         print(f"\n{name}: spectral_similarity={sim:.4f} (min {min_sim})  "
               f"level={level_db:.1f}dB (min {args.min_level_db})  ->  {'PASS' if ok else 'FAIL'}")
         overall_ok = overall_ok and ok
+
+    # AMY render load polled during the run (informational, doesn't gate
+    # pass/fail): mean/max of the hwci_load samples on the CDC log. -1 samples
+    # mean the firmware predates tulip.amy_render_load() (amy#826 / PR #1105).
+    if cdc is not None:
+        vals = [float(x) for x in re.findall(r"hwci_load (-?[\d.]+)", cdc.text())]
+        good = [v for v in vals if v >= 0]
+        if good:
+            print(f"\namyboard render load: mean={sum(good) / len(good):.3f}  "
+                  f"max={max(good):.3f}  (n={len(good)})")
+        elif vals:
+            print(f"\namyboard render load: not supported by this firmware "
+                  f"({len(vals)} polls)")
+        else:
+            print("\namyboard render load: no samples captured")
 
     if args.update_reference:
         return 0

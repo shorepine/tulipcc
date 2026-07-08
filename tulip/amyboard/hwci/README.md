@@ -98,6 +98,14 @@ python3 hwci.py --pr 993 --port /dev/ttyACM1
   jitter. Pass needs `similarity ≥ --min-similarity` (default 0.90) **and**
   `level ≥ --min-level-db`. On this bench, same-firmware runs score **~0.99**
   repeatably.
+- **Render load** (informational, doesn't gate pass/fail): while the tests run,
+  `tulip.amy_render_load()` (0..1, ~1.0 = AMY can't render realtime; amy#826 /
+  PR #1105) is polled once a second over `zP`. Each sample prints an
+  `hwci_load <v>` line on MicroPython stdout, so the values ride the CDC
+  serial-log capture; the run's mean/max are printed with the results
+  (`amyboard render load: mean=… max=… (n=…)`). Firmware without the binding
+  reports `not supported by this firmware`. Polling pauses during sketch
+  transfers and needs the CDC log (off under `--no-serial-log`).
 
 ## Serial logs: `*-serial.log`
 Two consoles are tailed for the whole run and written to one combined text file:
