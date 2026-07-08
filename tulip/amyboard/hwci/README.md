@@ -202,3 +202,5 @@ Gated to same-repo
 PRs (the runner is on a public repo). Stable `/dev` names come from
 [`99-amyboard.rules`](99-amyboard.rules); install it on the Pi (needs sudo) after
 adding a board.
+
+<!-- HW CI trigger test 2026-07-08: no-op change to exercise the PR preview -> HW CI chain. -->
