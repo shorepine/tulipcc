@@ -1754,6 +1754,20 @@ function _process_complete_sysex(d) {
         if (_fw_version_resolve) { var vr = _fw_version_resolve; _fw_version_resolve = null; vr(verStr); }
         return;
     }
+    // AMY CPU overload report: F0 00 03 45 'L' <base64 load percent> F7.
+    // Sent by amyboard._on_amy_overload() after AMY's failsafe reset the synth
+    // and the sketch loop was stopped. Like 'V', intercept before the
+    // chunk-marker logic.
+    if (d[4] === 0x4C /* 'L' */) {
+        var loadB64 = '';
+        for (var li = 5; li < d.length - 1; li++) loadB64 += String.fromCharCode(d[li]);
+        var loadPct = '';
+        if (loadB64) { try { loadPct = atob(loadB64); } catch (e) { loadPct = ''; } }
+        console.log('AMY overload report from board, load ' + loadPct + '%');
+        show_python_error('This sketch needed more CPU than the AMYboard has, so the sketch was stopped and the synth was reset.\n\n'
+            + 'Try fewer voices, less reverb/chorus, or shorter note releases, then run it again.');
+        return;
+    }
     // Chunk marker at position 4.
     var marker = d[4];
     var payloadStart, isChunked, isEnd;

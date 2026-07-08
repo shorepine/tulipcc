@@ -566,6 +566,7 @@ def start_amy():
     # needs AMY's UART driver, which amy_start() installs, so it must come second.
     tulip.amyboard_start(_MIDI_OUT_PINS[_midi_type])
     set_midi_type(_midi_type)
+    tulip.amy_overload_callback(_on_amy_overload)
     # Boot defaults so the board makes sound before (or without) a sketch:
     # the amyboard patch on channel 1 and GM drums (kit 0, TR-808) on channel
     # 10. Sketch startup re-applies these via _apply_knobs_text.
@@ -629,6 +630,23 @@ def _report_sketch_error(detail):
         import binascii
         payload = binascii.b2a_base64(str(detail).encode('utf-8')).rstrip()
         tulip.midi_out(bytes([0xF0, 0x00, 0x03, 0x45, 0x58]) + payload + bytes([0xF7]))
+    except Exception:
+        pass
+
+def _on_amy_overload(load_pct):
+    """Called (via tulip.amy_overload_callback, scheduled from the AMY render
+    task) after AMY's CPU overload failsafe has already reset the synth and
+    played its bleep. Stop the sketch loop so it can't drive the board back
+    into overload, then tell the web editor over sysex, framed as
+    F0 00 03 45 'L' <base64 load percent> F7, so it can pop the "this sketch
+    took too many resources" message. Best-effort: with no web host attached
+    the send goes nowhere and the bleep was the user's notification."""
+    stop_sketch()
+    tulip.stderr_write("AMY overload (%d%% render load): sketch stopped, synth reset" % load_pct)
+    try:
+        import binascii
+        payload = binascii.b2a_base64(str(load_pct).encode('utf-8')).rstrip()
+        tulip.midi_out(bytes([0xF0, 0x00, 0x03, 0x45, 0x4C]) + payload + bytes([0xF7]))
     except Exception:
         pass
 
