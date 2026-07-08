@@ -53,6 +53,60 @@ ALSA = bool(shutil.which("arecord"))
 WORLD_BASE = "https://tulipcc-production.up.railway.app"
 
 
+# ── bench lock ────────────────────────────────────────────────────────────────
+# The Tulip shares this bench with the AMYboard — their analog outs are summed
+# into ONE capture card — and shorepine/amy's "AMY HW CI" + loadsweep sweeps use
+# the same bench from a SEPARATE runner registration, so GitHub never serializes
+# the two repos' jobs. Every harness that touches the bench takes this flock for
+# its whole run — same path and semantics as hwci.py and amy's
+# tools/arduino_loadsweep/measure.py.
+BENCH_LOCK = "/tmp/amyboard-bench.lock"
+
+
+def acquire_bench(port, timeout_s=900):
+    """Serialize bench access across processes/sessions.
+
+    Holds an flock on BENCH_LOCK for the rest of this process (the caller keeps
+    the returned fd alive) AND waits for the serial port itself to be free —
+    tty devices are not exclusive, so a lock alone doesn't protect against
+    harnesses that don't take it."""
+    import fcntl
+    fd = os.open(BENCH_LOCK, os.O_CREAT | os.O_RDWR, 0o666)
+    deadline = time.time() + timeout_s
+    waited = False
+    while True:
+        got_lock = False
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            got_lock = True
+        except OSError:
+            pass
+        holders = ""
+        if port:
+            try:
+                holders = subprocess.run(
+                    ["lsof", "-t", port, port.replace("/cu.", "/tty.")],
+                    capture_output=True, text=True).stdout.strip()
+            except FileNotFoundError:      # no lsof on this bench: flock only
+                pass
+        if got_lock and not holders:
+            if waited:
+                print("[bench] free, proceeding")
+            return fd   # keep open: lock is held until process exit
+        if got_lock:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        if time.time() > deadline:
+            sys.exit(f"[bench] {port or BENCH_LOCK} still busy after {timeout_s}s "
+                     f"(lock={'ok' if got_lock else 'held'}, "
+                     f"holders={holders or 'none'})")
+        if not waited:
+            print(f"[bench] waiting for {port or BENCH_LOCK} "
+                  f"(lock={'ok' if got_lock else 'held elsewhere'}, "
+                  f"holder pids={holders or '?'})")
+            waited = True
+        time.sleep(5.0)
+
+
 # ── firmware ──────────────────────────────────────────────────────────────────
 def resolve_firmware(args):
     """Return (path, is_temp). Tulip firmware is a built artifact, not a preview."""
@@ -487,6 +541,9 @@ def main():
     ap.add_argument("--serial-log", default=None,
                     help="serial log path (default: {name}-serial.log)")
     ap.add_argument("--no-serial-log", action="store_true")
+    ap.add_argument("--no-bench-lock", action="store_true",
+                    help="skip the /tmp/amyboard-bench.lock flock (local bring-up "
+                         "on a bench nothing else shares)")
     args = ap.parse_args()
     args_g = args
     print(f"[hwci] backend: {'ALSA cli' if ALSA else 'python libs'}")
@@ -503,6 +560,11 @@ def main():
               "skipping WiFi+screenshot check")
         if args.require_wifi:
             sys.exit("[wifi] --require-wifi set but no WiFi creds provided.")
+
+    # Hold the bench lock from before the flash until the process exits (the
+    # firmware here is a local CI artifact, so there's no download to keep
+    # outside the lock).
+    bench_lock = None if args.no_bench_lock else acquire_bench(args.port)
 
     if not args.no_flash:
         bin_path, tmp = resolve_firmware(args)

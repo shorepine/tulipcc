@@ -98,6 +98,59 @@ WORLD_SUITE = [
 ]
 
 
+# ── bench lock ───────────────────────────────────────────────────────────────
+# shorepine/amy's "AMY HW CI" + loadsweep sweeps share this physical bench (same
+# board, same dongle, same summed capture card) from a SEPARATE runner
+# registration, so GitHub never serializes the two repos' jobs. Every harness
+# that touches the bench takes this flock for its whole run — same path and
+# semantics as amy's tools/arduino_loadsweep/measure.py.
+BENCH_LOCK = "/tmp/amyboard-bench.lock"
+
+
+def acquire_bench(port, timeout_s=900):
+    """Serialize bench access across processes/sessions.
+
+    Holds an flock on BENCH_LOCK for the rest of this process (the caller keeps
+    the returned fd alive) AND waits for the serial port itself to be free —
+    tty devices are not exclusive, so a lock alone doesn't protect against
+    harnesses that don't take it."""
+    import fcntl
+    fd = os.open(BENCH_LOCK, os.O_CREAT | os.O_RDWR, 0o666)
+    deadline = time.time() + timeout_s
+    waited = False
+    while True:
+        got_lock = False
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            got_lock = True
+        except OSError:
+            pass
+        holders = ""
+        if port:
+            try:
+                holders = subprocess.run(
+                    ["lsof", "-t", port, port.replace("/cu.", "/tty.")],
+                    capture_output=True, text=True).stdout.strip()
+            except FileNotFoundError:      # no lsof on this bench: flock only
+                pass
+        if got_lock and not holders:
+            if waited:
+                print("[bench] free, proceeding")
+            return fd   # keep open: lock is held until process exit
+        if got_lock:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        if time.time() > deadline:
+            sys.exit(f"[bench] {port or BENCH_LOCK} still busy after {timeout_s}s "
+                     f"(lock={'ok' if got_lock else 'held'}, "
+                     f"holders={holders or 'none'})")
+        if not waited:
+            print(f"[bench] waiting for {port or BENCH_LOCK} "
+                  f"(lock={'ok' if got_lock else 'held elsewhere'}, "
+                  f"holder pids={holders or '?'})")
+            waited = True
+        time.sleep(5.0)
+
+
 # ── firmware ────────────────────────────────────────────────────────────────
 def resolve_firmware(args):
     if args.firmware:
@@ -588,6 +641,9 @@ def main():
                          "whole World suite (default: each sketch's own threshold)")
     ap.add_argument("--world-base", default=WORLD_BASE,
                     help="AMYboard World API base URL")
+    ap.add_argument("--no-bench-lock", action="store_true",
+                    help="skip the /tmp/amyboard-bench.lock flock (local bring-up "
+                         "on a bench nothing else shares)")
     args = ap.parse_args()
     print(f"[hwci] backend: {'ALSA cli' if ALSA else 'python libs'}")
 
@@ -597,6 +653,10 @@ def main():
     if not args.no_flash and not args.port:
         sys.exit("--port (the USB-serial dongle) is required to flash.")
     bin_path, tmp = resolve_firmware(args) if not args.no_flash else (None, False)
+
+    # Take the bench lock AFTER the firmware download (network time shouldn't
+    # hold the bench) and keep the fd referenced until the process exits.
+    bench_lock = None if args.no_bench_lock else acquire_bench(args.port)
 
     # We deliberately do NOT hold the debug UART open while the board boots: the
     # proven-good reset on this bench is `esptool chip-id` (hard-reset + release
