@@ -23,6 +23,7 @@ import argparse
 import csv
 import json
 import os
+import fcntl
 import re
 import subprocess
 import sys
@@ -44,6 +45,28 @@ def esptool(port, *args, timeout=300):
     cmd = [sys.executable, "-m", "esptool", "--chip", "esp32s3",
            "--port", port] + list(args)
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
+
+def acquire_bench_lock(uart_port, lockfile="/tmp/amyboard-bench.lock"):
+    """Serialize board access across processes/sessions sharing this bench.
+
+    Takes a blocking exclusive flock held for the whole flash+capture (the
+    caller keeps the returned file object alive), then waits until nothing
+    else holds the UART -- a cooperating session releases the lock between
+    its own runs, and the lsof wait guards against non-cooperating holders."""
+    f = open(lockfile, "w")
+    print(f"[lock] waiting for {lockfile}")
+    fcntl.flock(f, fcntl.LOCK_EX)
+    while True:
+        r = subprocess.run(["lsof", "-t", uart_port,
+                            uart_port.replace("/cu.", "/tty.")],
+                           capture_output=True, text=True)
+        if r.returncode != 0 or not r.stdout.strip():
+            break
+        print(f"[lock] {uart_port} still held by pid(s) {r.stdout.split()}")
+        time.sleep(1.0)
+    print("[lock] bench acquired")
+    return f
 
 
 class SerialTail:
@@ -175,6 +198,10 @@ def main():
             "firmware": args.firmware, "sketch": args.sketch,
             "seconds": args.seconds, "wedged": False,
             "midi_alive_after": None, "errors": []}
+
+    # held (via the returned file object) until this process exits — one
+    # measurement is one bench turn
+    bench_lock = acquire_bench_lock(args.port)  # noqa: F841
 
     flash(args.firmware, args.port, args.native_port, args.baud)
     reset_via_chipid(args.port)
