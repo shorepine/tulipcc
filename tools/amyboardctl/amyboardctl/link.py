@@ -52,6 +52,7 @@ SKETCH_PATH = "/user/current/sketch.py"
 TAG_ACK = 0x41       # 'A' (followed by 'K')
 TAG_OK = 0x4F        # 'O' (followed by 'K') — zI pong
 TAG_ERROR = 0x58     # 'X'
+TAG_OVERLOAD = 0x4C  # 'L' — AMY overload failsafe tripped (b64 load percent)
 TAG_VERSION = 0x56   # 'V'
 TAG_DUMP_ONE = 0x30  # '0' single-frame dump
 TAG_DUMP_MID = 0x43  # 'C' chunk, more follow
@@ -83,6 +84,7 @@ class AMYboardLink:
         self._dump = bytearray()
         self._dump_done = threading.Event()
         self.errors = []      # decoded sketch-error tracebacks since last clear
+        self.overloads = []   # load percents from 'L' overload-failsafe frames
         self.version = None
         self.in_name = None
         self.out_name = None
@@ -126,6 +128,18 @@ class AMYboardLink:
                 text = "<undecodable sketch error frame>"
             self.errors.append(text)
             self._log("  ⚠ sketch error frame received (%d bytes)" % len(text))
+        elif tag == TAG_OVERLOAD:
+            # amyboard.py's _on_amy_overload: AMY's CPU failsafe tripped on the
+            # board (synth reset + bleep already happened, sketch stopped).
+            # Always loud — a run that hits this has stopped making the sound
+            # under test, whatever the harness thinks it's recording.
+            try:
+                pct = base64.b64decode(bytes(data[4:])).decode("ascii", "replace").strip()
+            except Exception:
+                pct = "?"
+            self.overloads.append(pct)
+            print("[amyboardctl] ⚠ AMY OVERLOAD failsafe tripped on the board "
+                  "(load %s%%) — sketch stopped" % pct, file=sys.stderr)
         elif tag == TAG_VERSION:
             self.version = bytes(data[4:]).decode("ascii", "replace").strip()
             self._version_evt.set()
