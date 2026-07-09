@@ -758,6 +758,17 @@ def stop_sketch():
 def restart_sketch():
     """Reload and restart sketch.py."""
     stop_sketch()
+    # Clear the AMY-side sequences the old sketch registered (AMYSequence drum
+    # loops etc.). Hardware factory reset reboots the board so AMY starts
+    # fresh, but sketch restarts on-device and everything in the web simulator
+    # happen in-place -- without this the old sketch's pattern keeps playing
+    # over the new one. Scoped to AMY sequences only (not sequencer.clear(),
+    # whose seq_remove_callbacks would also kill UI TulipSequences like
+    # show_midi). With all entries gone the sequence tag counter can restart
+    # from 0, so repeated sketch saves don't creep toward AMY's max tag.
+    amy.send(reset=amy.RESET_SEQUENCER)
+    if 'sequencer' in sys.modules:
+        sys.modules['sequencer'].AMYSequenceEvent.SEQUENCE_TAG = 0
     if 'sketch' in sys.modules:
         del sys.modules['sketch']
     run_sketch()
