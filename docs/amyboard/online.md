@@ -206,7 +206,7 @@ Click any knob **label** (the text above or below the knob, e.g. "freq") to open
 
 ## Write and run Python sketches
 
-When AMYboard starts up, either on web or hardware, it sets up whatever patches are set to each channel (using data stored in a sketch) and then runs a "sketch" set up in `sketch.py`. This is a Python program that runs setup code (in the top level of the code file) and then calls `loop()` periodically -- every 32nd note of the sequencer. 
+When AMYboard starts up, either on web or hardware, it sets up whatever patches are set to each channel (using data stored in a sketch) and then runs a "sketch" set up in `sketch.py`. This is a Python program that runs setup code (in the top level of the code file) and then calls `loop(step)` periodically -- every 32nd note of the sequencer, starting on a bar downbeat. `step` is the 32nd-note index on the sequencer's bar-locked grid (`step % 32 == 0` is a downbeat), so patterns built from it stay in sync with `sequencer.AMYSequence` patterns. (A zero-argument `loop()` also works.) 
 
 <img src="img/code.png">
 
