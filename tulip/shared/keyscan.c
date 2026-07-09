@@ -335,9 +335,15 @@ uint32_t keycode_to_ctrl_key(uint16_t key)
         case 9:
             return LV_KEY_NEXT;
         case 22:
+        case 265:
             return LV_KEY_NEXT;
         case 25:
+        case 264:
             return LV_KEY_PREV;
+        case 266:
+            return LV_KEY_HOME;
+        case 267:
+            return LV_KEY_END;
         default:
             return '\0';
     }
@@ -393,12 +399,14 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
         }
     }
     switch(code) {
-        case KEY_ENTER: return 13;  
-        case KEY_ESC: return 27; 
-        case KEY_BACKSPACE: return 8; 
-        case KEY_TAB: if(ctrl) return 263; else return 9; 
-        case KEY_PAGEUP: return 25;
-        case KEY_PAGEDOWN: return 22;
+        case KEY_ENTER: return 13;
+        case KEY_ESC: return 27;
+        case KEY_BACKSPACE: return 8;
+        case KEY_TAB: if(ctrl) return 263; else return 9;
+        case KEY_PAGEUP: return 264;
+        case KEY_PAGEDOWN: return 265;
+        case KEY_HOME: return 266;
+        case KEY_END: return 267;
 
         case KEY_SPACE: return ' '; 
         case KEY_MINUS: if(shift) return '_'; else return '-';
@@ -450,7 +458,7 @@ void send_key_to_micropython(uint16_t c) {
             tx_char(c );
         } else {
             if(lvgl_is_repl) {
-                if(c>257 && c<263) { 
+                if(c>257 && c<268) {
                     tx_char(27);
                     tx_char('[');
                     if(c==258) tx_char('B');
@@ -458,6 +466,10 @@ void send_key_to_micropython(uint16_t c) {
                     if(c==260) tx_char('D');
                     if(c==261) tx_char('C');
                     if(c==262) { tx_char('3'); tx_char(126); }
+                    if(c==264) { tx_char('5'); tx_char(126); }
+                    if(c==265) { tx_char('6'); tx_char(126); }
+                    if(c==266) tx_char('H');
+                    if(c==267) tx_char('F');
                 } else {
                     tx_char(c );
                 }

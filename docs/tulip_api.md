@@ -179,6 +179,11 @@ Tulip ships with a text editor, based on pico/nano. It supports syntax highlight
 # Control-R prompts for a filename to read into the current buffer
 edit("game.py")
 edit() # no filename
+
+# Tulip also ships pye, a more full-featured editor that runs on the REPL screen.
+# Control-S saves, Control-F finds, ESC twice quits. See the pye docs for all keys.
+tulip.pye("game.py")
+tulip.pye() # no filename
 ```
 
 
@@ -939,6 +944,9 @@ tulip.tfb_restore()
 # Set/get TFB font number (0=8x12, 1=6x8, 2=12x16)
 tulip.tfb_font(x)
 font_num = tulip.tfb_font()
+
+# Get the visible TFB size in characters for the current font
+(cols, rows) = tulip.tfb_size()
 
 ```
 

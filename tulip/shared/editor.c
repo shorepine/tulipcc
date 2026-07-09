@@ -839,11 +839,15 @@ void process_char(int c) {
     		editor_linestart();
     	} else if(c == 5) { // control-E, end of line
     		editor_lineend();
-    	} else if(c==25) { // control Y, page up
+    	} else if(c==25 || c==264) { // control Y / page up key
     		editor_page_up();
-    	} else if(c==22) { // control V, page down 
+    	} else if(c==22 || c==265) { // control V / page down key
     		editor_page_down();
-    	} else if(c == 259) { editor_up(); 
+    	} else if(c==266) { // home key
+    		editor_linestart();
+    	} else if(c==267) { // end key
+    		editor_lineend();
+    	} else if(c == 259) { editor_up();
     	} else if(c == 258) { editor_down(); 
     	} else if(c == 260) { editor_left(); 
     	} else if(c == 261) { editor_right(); 

@@ -766,6 +766,15 @@ STATIC mp_obj_t tulip_tfb_update(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_update_obj, 0, 0, tulip_tfb_update);
 
+// (cols, rows) = tulip.tfb_size() -- visible TFB size in characters for the current font
+STATIC mp_obj_t tulip_tfb_size(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t tuple[2];
+    tuple[0] = mp_obj_new_int(display_tfb_visible_cols());
+    tuple[1] = mp_obj_new_int(display_tfb_visible_rows());
+    return mp_obj_new_tuple(2, tuple);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_size_obj, 0, 0, tulip_tfb_size);
+
 // tulip.tfb_font() -> current font number
 // tulip.tfb_font(x) -> set font number (0=8x12, 1=portfolio, 2=12x16)
 STATIC mp_obj_t tulip_tfb_font(size_t n_args, const mp_obj_t *args) {
@@ -1767,6 +1776,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_tfb_save), MP_ROM_PTR(&tulip_tfb_save_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_restore), MP_ROM_PTR(&tulip_tfb_restore_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_update), MP_ROM_PTR(&tulip_tfb_update_obj) },
+    { MP_ROM_QSTR(MP_QSTR_tfb_size), MP_ROM_PTR(&tulip_tfb_size_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_font), MP_ROM_PTR(&tulip_tfb_font_obj) },
     { MP_ROM_QSTR(MP_QSTR_fps), MP_ROM_PTR(&tulip_fps_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu), MP_ROM_PTR(&tulip_gpu_obj) },

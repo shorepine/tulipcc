@@ -10,6 +10,12 @@ if board() != 'AMYBOARD' and board() != "AMYBOARD_WEB":
     from ui import *
     from editor import edit
 
+    def pye(*args, **kwargs):
+        """Open the pye text editor on the TFB. Pass a filename to edit, or nothing for a new file."""
+        # imported lazily so the editor doesn't take up RAM until used
+        from pye_tulip import pye as _pye
+        return _pye(*args, **kwargs)
+
 def sys():
     return root_dir()+"sys/"
 

@@ -2,9 +2,17 @@
 uint8_t bg_pal_color;
 uint8_t tfb_fg_pal_color;
 uint8_t tfb_bg_pal_color;
-uint8_t ansi_active_bg_color; 
-uint8_t ansi_active_fg_color; 
+uint8_t ansi_active_bg_color;
+uint8_t ansi_active_fg_color;
 int16_t ansi_active_format;
+
+// ANSI/VT100 parse state. Kept across display_tfb_str() calls so escape
+// sequences split over multiple stdout writes still parse.
+#define TFB_ANSI_SEQ_MAX 32
+static uint8_t tfb_ansi_state = 0;      // 0: text, 1: got ESC, 2: collecting CSI params
+static unsigned char tfb_ansi_seq[TFB_ANSI_SEQ_MAX];
+static uint8_t tfb_ansi_seq_len = 0;
+static uint8_t tfb_cursor_visible = 1;  // ESC[?25h / ESC[?25l
 
 int16_t last_touch_x[3];
 int16_t last_touch_y[3];
@@ -392,8 +400,11 @@ void display_reset_tfb() {
     tfb_y_row = 0;
     tfb_x_col = 0;
     ansi_active_format = -1; // no override
-    ansi_active_fg_color = tfb_fg_pal_color; 
+    ansi_active_fg_color = tfb_fg_pal_color;
     ansi_active_bg_color = tfb_bg_pal_color;
+    tfb_ansi_state = 0;
+    tfb_ansi_seq_len = 0;
+    tfb_cursor_visible = 1;
     tfb_active = 1;
 }
 
@@ -768,12 +779,133 @@ uint8_t ansi_parse_digits( unsigned char*str, uint16_t j, uint16_t k, uint16_t *
     return d;
 }
 
-// New things to suppport
-// ESC[?25l -- hide cursor
-// ESC[{line};{column}H -- moves to that position
-
 uint32_t utf8_esc = 0;
 uint8_t supress_lf = 0;
+
+// Process one complete CSI sequence ESC [ <tfb_ansi_seq> <F>
+static void display_tfb_csi(unsigned char F, uint8_t visible_cols, uint8_t visible_rows) {
+    uint16_t digits[5] = {0};
+    if(tfb_ansi_seq_len && tfb_ansi_seq[0] == '?') { // private modes, ESC[?{n}h / ESC[?{n}l
+        uint8_t d = ansi_parse_digits(tfb_ansi_seq, 1, tfb_ansi_seq_len, digits);
+        if(d==1 && digits[0]==25) { // cursor visibility
+            if(F=='l' && tfb_cursor_visible) {
+                display_tfb_uncursor(tfb_x_col, tfb_y_row);
+                tfb_cursor_visible = 0;
+            }
+            if(F=='h') tfb_cursor_visible = 1;
+        }
+        // other private modes (mouse reporting etc) are ignored
+        return;
+    }
+    uint8_t d = ansi_parse_digits(tfb_ansi_seq, 0, tfb_ansi_seq_len, digits);
+    if(F == 'K') { // clear line: 0 (or none) cursor->EOL, 1 BOL->cursor, 2 whole line
+        uint16_t mode = (d>=1) ? digits[0] : 0;
+        uint16_t start = (mode==0) ? tfb_x_col : 0;
+        uint16_t end = (mode==1) ? tfb_x_col+1 : visible_cols;
+        for(uint16_t col=start;col<end && col<visible_cols;col++) {
+            TFB[tfb_y_row*TFB_COLS+col] = 0;
+            TFBf[tfb_y_row*TFB_COLS+col] = 0;
+            TFBfg[tfb_y_row*TFB_COLS+col] = tfb_fg_pal_color;
+            TFBbg[tfb_y_row*TFB_COLS+col] = tfb_bg_pal_color;
+        }
+    } else if(F=='A' || F=='B' || F=='C' || F=='D') { // relative cursor moves
+        uint16_t n = (d>=1 && digits[0]>0) ? digits[0] : 1;
+        display_tfb_uncursor(tfb_x_col, tfb_y_row);
+        if(F=='A') tfb_y_row = (n > tfb_y_row) ? 0 : tfb_y_row - n;
+        if(F=='B') tfb_y_row = ((uint16_t)tfb_y_row + n >= visible_rows) ? visible_rows - 1 : tfb_y_row + n;
+        if(F=='C') tfb_x_col = ((uint16_t)tfb_x_col + n >= visible_cols) ? visible_cols - 1 : tfb_x_col + n;
+        if(F=='D') tfb_x_col = (n > tfb_x_col) ? 0 : tfb_x_col - n;
+    } else if(F=='J') { // erase screen: 0 (or none) cursor->end, 1 start->cursor, 2 everything
+        uint16_t mode = (d>=1) ? digits[0] : 0;
+        if(mode == 2) {
+            display_reset_tfb();
+        } else {
+            uint16_t start_row = (mode==0) ? tfb_y_row : 0;
+            uint16_t end_row = (mode==0) ? visible_rows : tfb_y_row+1;
+            for(uint16_t row=start_row;row<end_row && row<visible_rows;row++) {
+                uint16_t start_col = (mode==0 && row==tfb_y_row) ? tfb_x_col : 0;
+                uint16_t end_col = (mode==1 && row==tfb_y_row) ? tfb_x_col+1 : visible_cols;
+                for(uint16_t col=start_col;col<end_col && col<visible_cols;col++) {
+                    TFB[row*TFB_COLS+col] = 0;
+                    TFBf[row*TFB_COLS+col] = 0;
+                    TFBfg[row*TFB_COLS+col] = tfb_fg_pal_color;
+                    TFBbg[row*TFB_COLS+col] = tfb_bg_pal_color;
+                }
+            }
+            display_tfb_update(-1);
+        }
+    } else if(F=='H' || F=='f') { // move cursor. ANSI is 1-indexed; no/0 params mean home
+        display_tfb_uncursor(tfb_x_col, tfb_y_row);
+        uint16_t row = (d>=1 && digits[0]>0) ? digits[0]-1 : 0;
+        uint16_t col = (d>=2 && digits[1]>0) ? digits[1]-1 : 0;
+        if(d==0) {
+            // Bare ESC[H home, as sent by cls(): also eat the LF the REPL echoes after it
+            supress_lf = 1;
+        }
+        tfb_x_col = (col >= visible_cols) ? visible_cols - 1 : col;
+        tfb_y_row = (row >= visible_rows) ? visible_rows - 1 : row;
+        // Because of the drawing optimization, we need to add 32s to the TFB if col is nonzero and there's a 0 col to its left
+        if(tfb_x_col!=0) {
+            if(TFB[tfb_y_row*TFB_COLS+(tfb_x_col-1)]==0) {
+                for(uint16_t col=0;col<tfb_x_col;col++) TFB[tfb_y_row*TFB_COLS+col] = 32;
+            }
+        }
+    } else if(F=='m') { // formatting
+        uint8_t ansi_color_idx = 0;
+        // Check to see if the message is a 256 color setting, as it will confuse the other codes below
+        uint8_t c256 = 0;
+        if(digits[0] == 38 && digits[1] == 5) c256 = 1;
+        if(digits[0] == 48 && digits[1] == 5) c256 = 2;
+        if(d == 0) { // bare ESC[m means reset
+            ansi_active_format = -1;
+            ansi_active_bg_color = tfb_bg_pal_color;
+            ansi_active_fg_color = tfb_fg_pal_color;
+        }
+        for(uint8_t l=0;l<d;l++) {
+            uint8_t code = digits[l];
+            // 256 color mode was sent, so just get the last number in the digits and set color
+            if(c256==1) {
+                if(ansi_active_format < 0) ansi_active_format = 0;
+                if(l==2) {
+                    ansi_active_fg_color = ansi_pal[code];
+                }
+            } else if(c256==2) {
+                if(ansi_active_format < 0) ansi_active_format = 0;
+                if(l==2) {
+                    ansi_active_bg_color = ansi_pal[code];
+                }
+            } else if(code==0)  {
+                // Everything off
+                ansi_active_format = -1;
+                ansi_active_bg_color = tfb_bg_pal_color;
+                ansi_active_fg_color = tfb_fg_pal_color;
+            } else {
+                // Get ready
+                if(ansi_active_format < 0) ansi_active_format = 0;
+                if(code==1)  if (ansi_color_idx < 8) ansi_color_idx += 8; // "bold" color (not font!)
+                if(code==4)  ansi_active_format = ansi_active_format | FORMAT_UNDERLINE;
+                if(code==5)  { if(d==1) { ansi_active_format = ansi_active_format | FORMAT_FLASH; } } // check d=1 because of 256 color guy
+                if(code==6)  ansi_active_format = ansi_active_format | FORMAT_BOLD; // hidden
+                if(code==7)  ansi_active_format = ansi_active_format | FORMAT_INVERSE;
+                if(code==9)  ansi_active_format = ansi_active_format | FORMAT_STRIKE;
+                if(code==22) if (ansi_color_idx >= 8) ansi_color_idx = ansi_color_idx - 8;
+                if(code==24) ansi_active_format = ansi_active_format & ~FORMAT_UNDERLINE;
+                if(code==25) ansi_active_format = ansi_active_format & ~FORMAT_FLASH;
+                if(code==26) ansi_active_format = ansi_active_format & ~FORMAT_BOLD;
+                if(code==27) ansi_active_format = ansi_active_format & ~FORMAT_INVERSE;
+                if(code==29) ansi_active_format = ansi_active_format & ~FORMAT_STRIKE;
+
+                if(code>=30 && code<=37)  ansi_active_fg_color = ansi_pal[ansi_color_idx + (code-30)]; // color, not including bold color
+                if(code==39) ansi_active_fg_color = tfb_fg_pal_color;
+
+                if(code>=40 && code<=47) ansi_active_bg_color = ansi_pal[ansi_color_idx + (code-40)];
+                if(code==49) ansi_active_bg_color = tfb_bg_pal_color; // reset
+            }
+        }
+    } else {
+        fprintf(stderr,"Unsupported ANSI code %c\n", F);
+    }
+}
 void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color) {
     uint8_t visible_cols = display_tfb_visible_cols();
     uint8_t visible_rows = display_tfb_visible_rows();
@@ -786,6 +918,31 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
     //fprintf(stderr, "###\n");
     // For each character incoming from micropython
     for(uint16_t i=0;i<len;i++) {
+        if(tfb_ansi_state == 1) { // last char was ESC, expect '['
+            if(str[i] == '[') {
+                tfb_ansi_state = 2;
+                tfb_ansi_seq_len = 0;
+            } else { // non-CSI escape (ESC M etc) -- consume the byte and carry on
+                fprintf(stderr,"Unsupported no CSI ansi %c\n", str[i]);
+                tfb_ansi_state = 0;
+            }
+            continue;
+        }
+        if(tfb_ansi_state == 2) { // collecting CSI params until the final letter
+            if((str[i]>='A' && str[i]<='Z') || (str[i]>='a' && str[i]<='z')) {
+                display_tfb_csi(str[i], visible_cols, visible_rows);
+                tfb_ansi_state = 0;
+            } else if(tfb_ansi_seq_len < TFB_ANSI_SEQ_MAX) {
+                tfb_ansi_seq[tfb_ansi_seq_len++] = str[i];
+            } else { // runaway sequence, bail out
+                tfb_ansi_state = 0;
+            }
+            continue;
+        }
+        if(str[i] == 27) { // start of an ANSI escape sequence
+            tfb_ansi_state = 1;
+            continue;
+        }
         if(str[i] == 8)  { // backspace , go backwards (don't delete)
             display_tfb_uncursor(tfb_x_col, tfb_y_row);
             if(tfb_x_col > 0) tfb_x_col--;
@@ -799,145 +956,7 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
             }
             str[i] = code;
         }
-        if(str[i] == 27) { // ANSI
-            // we see an esc coming in on stream at i
-            // we check if i+1 is [, save i+2 as j, if not goto B
-            // we then scan ahead from j until we find a character F at pos k within a-zA-Z. 
-            // if F==K: clear to end of line, set stream to k, continue
-            // if F==D: get digits between j and k, move cursor backwards that many, set stream to k, continue
-            // if F==m: foreach item in delimeter by ; between j and k, process format, set stream to k, continue
-            // if F==J: get digit between j and k, do erase per digit code, set stream to k, continue
-            // if F==H: see if digits bwetween j and k, if, move cursor to line;column, if not, move to 0,0, set stream to k, continue
-            // if F==anything else: printf unsupported, set stream to k, continue
-            // B: get next char, print unsupported, set stream to j+1, continue
-            if(str[i+1]=='[') {
-                uint16_t j=i+2;
-                for(uint16_t scan=j;scan<len;scan++) {
-                    if((str[scan]>='A' && str[scan]<='Z') || (str[scan]>='a' && str[scan]<='z')) {
-                        uint16_t digits[5] = {0};
-                        uint16_t k = scan;  unsigned char F=str[k];
-                        if(F == 'K') { // clear to end of line
-                            //fprintf(stderr, "CLEAR\n");
-                            for(uint8_t col=tfb_x_col;col<visible_cols;col++) {
-                                TFB[tfb_y_row*TFB_COLS+col] = 0; 
-                                TFBf[tfb_y_row*TFB_COLS+col] = 0; 
-                                TFBfg[tfb_y_row*TFB_COLS+col] = tfb_fg_pal_color; 
-                                TFBbg[tfb_y_row*TFB_COLS+col] = tfb_bg_pal_color ;
-                            }    
-                            //fprintf(stderr, "CLEAR DONE\n");
-                            i = k;
-                            scan = len;
-                        } else if(F=='D') { // move cursor backwards
-                            uint8_t d = ansi_parse_digits(str, j, k, digits);
-                            if(d==1) { 
-                                tfb_x_col = (digits[0] > tfb_x_col) ? 0 : (tfb_x_col - digits[0]);
-                            }
-                            i = k;
-                            scan = len;
-                        } else if(F=='J') { // erase
-                            uint8_t d = ansi_parse_digits(str, j, k, digits);
-                            if(d==1) {
-                                if(digits[0] == 0) { // erase from cursor until end of screen 
-                                    fprintf(stderr,"nyi , erase from cursor until end of screen\n");
-                                } else if(digits[0] == 1) { // erase from cursor to beginning of screen 
-                                    fprintf(stderr,"nyi, erase from cursor to beginning of screen\n");
-                                } else if(digits[0] == 2) { // erase entire screen 
-                                    display_reset_tfb();
-                                }
-                            }
-                            i = k;
-                            scan = len;
-
-                        } else if(F=='H') { 
-                            uint8_t d = ansi_parse_digits(str, j, k, digits); 
-                            if(d==2) {
-                                // move cursor to line digits[0] and column digits[1]
-                                // these are 1 indexed i think ?? 
-                                tfb_x_col = digits[1];
-                                tfb_y_row = digits[0];
-                            } else if(d==0) {
-                                // move cursor to 0,0
-                                tfb_x_col = 0;
-                                tfb_y_row = 0;
-                                // Perhaps supress the oncoming LF too? 
-                                supress_lf = 1;
-                            }
-                            if(tfb_x_col >= visible_cols) tfb_x_col = visible_cols - 1;
-                            if(tfb_y_row >= visible_rows) tfb_y_row = visible_rows - 1;
-                            // I guess because of the drawing optimization, we need to add 32s to the TFB if col is nonzero and there's a 0 col to its left
-                            if(tfb_x_col!=0) {
-                                if(TFB[tfb_y_row*TFB_COLS+(tfb_x_col-1)]==0) {
-                                    for(uint16_t i=0;i<tfb_x_col;i++) TFB[tfb_y_row*TFB_COLS+i] = 32;
-                                }
-                            }
-                            //fprintf(stderr, "MOVED cursor to %d,%d\n", tfb_x_col, tfb_y_row);
-                            i = k;
-                            scan = len;
-                        } else if(F=='m') { // formatting
-                            uint8_t d = ansi_parse_digits(str, j, k, digits);
-                            uint8_t ansi_color_idx = 0;
-                            // Check to see if the message is a 256 color setting, as it will confuse the other codes below
-                            uint8_t c256 = 0;
-                            if(digits[0] == 38 && digits[1] == 5) c256 = 1;
-                            if(digits[0] == 48 && digits[1] == 5) c256 = 2;
-                            for(uint8_t l=0;l<d;l++) {
-                                uint8_t code = digits[l];
-                                // 256 color mode was sent, so just get the last number in the digits and set color
-                                if(c256==1) { 
-                                    if(ansi_active_format < 0) ansi_active_format = 0;
-                                    if(l==2) {
-                                        ansi_active_fg_color = ansi_pal[code];
-                                    }
-                                } else if(c256==2) {
-                                    if(ansi_active_format < 0) ansi_active_format = 0;
-                                    if(l==2) {
-                                        ansi_active_bg_color = ansi_pal[code];                                    
-                                    }
-                                } else if(code==0)  { 
-                                    // Everything off
-                                    ansi_active_format = -1; 
-                                    ansi_active_bg_color = tfb_bg_pal_color;  
-                                    ansi_active_fg_color = tfb_fg_pal_color; 
-                                } else {
-                                    // Get ready
-                                    if(ansi_active_format < 0) ansi_active_format = 0;
-                                    if(code==1)  if (ansi_color_idx < 8) ansi_color_idx += 8; // "bold" color (not font!)
-                                    if(code==4)  ansi_active_format = ansi_active_format | FORMAT_UNDERLINE;
-                                    if(code==5)  { if(d==1) { ansi_active_format = ansi_active_format | FORMAT_FLASH; } } // check d=1 because of 256 color guy
-                                    if(code==6)  ansi_active_format = ansi_active_format | FORMAT_BOLD; // hidden
-                                    if(code==7)  ansi_active_format = ansi_active_format | FORMAT_INVERSE;
-                                    if(code==9)  ansi_active_format = ansi_active_format | FORMAT_STRIKE;
-                                    if(code==22) if (ansi_color_idx >= 8) ansi_color_idx = ansi_color_idx - 8;
-                                    if(code==24) if(ansi_active_format | FORMAT_UNDERLINE) ansi_active_format =- FORMAT_UNDERLINE;
-                                    if(code==25) if(ansi_active_format | FORMAT_FLASH) ansi_active_format =- FORMAT_FLASH;
-                                    if(code==26) if(ansi_active_format | FORMAT_BOLD) ansi_active_format =- FORMAT_BOLD;
-                                    if(code==27) if(ansi_active_format | FORMAT_INVERSE) ansi_active_format =- FORMAT_INVERSE;
-                                    if(code==29) if(ansi_active_format | FORMAT_STRIKE) ansi_active_format =- FORMAT_STRIKE;
-
-                                    if(code>=30 && code<=37)  ansi_active_fg_color = ansi_pal[ansi_color_idx + (code-30)]; // color, not including bold color
-                                    if(code==39) ansi_active_fg_color = tfb_fg_pal_color;
-
-                                    if(code>=40 && code<=47) ansi_active_bg_color = ansi_pal[ansi_color_idx + (code-40)];
-                                    if(code==49) ansi_active_bg_color = tfb_bg_pal_color; // reset   
-                                }
-                                //fprintf(stderr,"code was %d. aaf is now %d, fg now %d bg now %d. color_idx %d\n", code, ansi_active_format, ansi_active_fg_color, ansi_active_bg_color, ansi_color_idx);
-                            }
-                            i = k;
-                            scan = len;
-                        } else {
-                            fprintf(stderr,"Unsupported ANSI code %c\n", F);
-                            i = k;
-                            scan = len;
-                        }
-                    } // end if found character
-                } // end scan 
-            } else {
-                fprintf(stderr,"Unsupported no CSI ansi %c\n", str[i+1]);
-            }
-
-
-
-        } else if(str[i] == 10) {
+        if(str[i] == 10) {
             // If an LF, start a new row
             if(!supress_lf) {
                 display_tfb_new_row();
@@ -965,8 +984,8 @@ void display_tfb_str(unsigned char*str, uint16_t len, uint8_t format, uint8_t fg
             }
         }
     }
-    // Update the cursor 
-    display_tfb_cursor(tfb_x_col, tfb_y_row);  
+    // Update the cursor
+    if(tfb_cursor_visible) display_tfb_cursor(tfb_x_col, tfb_y_row);
     display_tfb_update(tfb_y_row);
 }
 
