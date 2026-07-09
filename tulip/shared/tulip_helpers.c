@@ -11,11 +11,16 @@ extern int mp_js_repl_process_char(int);
 #endif
 void tx_char(int c) {
         if(keyboard_send_keys_to_micropython) {
+            #ifdef __EMSCRIPTEN__
+            // on web the REPL is push-driven, so a grab_tty app (the editor)
+            // must intercept keys here, before they reach the REPL
+            if(tulip_tty_grab_char(c)) return;
+            #endif
             ringbuf_put(&stdin_ringbuf, c);
             #ifdef __EMSCRIPTEN__
                 mp_js_repl_process_char(c);
             #endif
-        } 
+        }
 }
 
 int check_rx_char() {

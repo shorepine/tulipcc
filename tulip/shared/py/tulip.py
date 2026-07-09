@@ -17,9 +17,9 @@ if board() != 'AMYBOARD' and board() != "AMYBOARD_WEB":
         return _pye(*args, **kwargs)
 
     # pye is the default editor now, like on AMYboard; the old C editor stays
-    # available as old_edit(). pye's blocking key input doesn't work on the
-    # web port, so web keeps the old editor as edit().
-    edit = old_edit if board() == "WEB" else pye
+    # available as old_edit(). On web, pye runs blocking-style with asyncify
+    # yields (no app switcher, but full editing).
+    edit = pye
 
 def sys():
     return root_dir()+"sys/"

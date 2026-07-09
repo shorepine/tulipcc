@@ -1554,6 +1554,29 @@ STATIC mp_obj_t tulip_tty_read(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tty_read_obj, 0, 0, tulip_tty_read);
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+// tulip.js_sleep(ms) -- asyncify-yield to the browser, so blocking-style
+// Python (the editor's key loop) can wait without hanging the tab
+STATIC mp_obj_t tulip_js_sleep(size_t n_args, const mp_obj_t *args) {
+    emscripten_sleep(mp_obj_get_int(args[0]));
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_js_sleep_obj, 1, 1, tulip_js_sleep);
+
+// tulip.js_pump() -- run one display/key-pump tick. The browser pauses the
+// emscripten main loop while asyncify is suspended, so a blocking-style app
+// pumps SDL events and the display itself between js_sleep yields.
+extern int unix_display_draw();
+STATIC mp_obj_t tulip_js_pump(size_t n_args, const mp_obj_t *args) {
+    unix_display_draw();
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_js_pump_obj, 0, 0, tulip_js_pump);
+#endif
+
 extern uint8_t keyboard_send_keys_to_micropython;
 STATIC mp_obj_t tulip_key_scan(size_t n_args, const mp_obj_t *args) {
     keyboard_send_keys_to_micropython = !(mp_obj_get_int(args[0]));
@@ -1851,6 +1874,10 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key_send), MP_ROM_PTR(&tulip_key_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_tty_grab), MP_ROM_PTR(&tulip_tty_grab_obj) },
     { MP_ROM_QSTR(MP_QSTR_tty_read), MP_ROM_PTR(&tulip_tty_read_obj) },
+    #ifdef __EMSCRIPTEN__
+    { MP_ROM_QSTR(MP_QSTR_js_sleep), MP_ROM_PTR(&tulip_js_sleep_obj) },
+    { MP_ROM_QSTR(MP_QSTR_js_pump), MP_ROM_PTR(&tulip_js_pump_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_circle), MP_ROM_PTR(&tulip_bg_circle_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bezier), MP_ROM_PTR(&tulip_bg_bezier_obj) },

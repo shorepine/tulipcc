@@ -249,6 +249,49 @@ def pye_blocking(*args, tab_size=4, undo=50):
     return ret
 
 
+class WebIO:
+    """pye IO for Tulip Web: keys arrive via tty_grab (tx_char intercepts
+    them before the push-driven REPL sees them), and waiting yields to the
+    browser through the asyncify tulip.js_sleep."""
+
+    def wr(self, s):
+        print(s, end="")
+
+    def rd(self):
+        while True:
+            c = tulip.tty_read()
+            if c >= 0:
+                return chr(c)
+            tulip.js_sleep(20)  # yield so browser events (keys) can fire
+            tulip.js_pump()     # main loop is paused while suspended: pump keys+display
+
+    def rd_raw(self):
+        return self.rd()
+
+    def deinit_tty(self):
+        pass
+
+    def get_screen_size(self):
+        cols, rows = tulip.tfb_size()
+        return [rows, cols]
+
+
+def pye_web(*args, tab_size=4, undo=50):
+    """Run pye on Tulip Web: blocking-style, kept alive by asyncify yields."""
+    _setup()
+    io_device = WebIO()
+    tulip.tfb_save()
+    tulip.tty_grab(1)
+    print(_pye.Editor.TERMCMD[4], end="")
+    try:
+        ret = _pye.pye_edit(args, tab_size=tab_size, undo=undo, io_device=io_device)
+    finally:
+        tulip.tty_grab(0)
+        io_device.wr("\x1b[0m\x1b[?25h")
+        tulip.tfb_restore()
+    return ret
+
+
 # --- pye as a Tulip UIScreen app ------------------------------------------
 #
 # pye's edit loop blocks, so the app wrapper runs it on a _thread that reads
@@ -398,8 +441,9 @@ def pye(*args, tab_size=4, undo=50):
     """Open pye as a Tulip app with quit/switch buttons, like the old editor."""
     global _current
     if tulip.board() == "WEB":
-        # no _thread on the web port; web keeps the old editor as edit()
-        raise NotImplementedError("pye isn't available on Tulip Web; use edit()")
+        # no _thread on the web port: run the blocking variant instead, kept
+        # alive by asyncify yields (no app switcher, but full editing)
+        return pye_web(*args, tab_size=tab_size, undo=undo)
     _setup()
     if "edit" in tulip.running_apps:
         tulip.running_apps["edit"].present()
