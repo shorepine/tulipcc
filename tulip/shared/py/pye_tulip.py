@@ -85,9 +85,15 @@ def _colorize(line):
     return "".join(out)
 
 
-# pye's display_window with one change: unmarked lines are written through
-# _colorize() for editor.c-style syntax highlighting. Marked (selected) lines
-# keep the plain selection style, and scrbuf still caches the raw text.
+# pye's display_window with three changes:
+# - unmarked lines are written through _colorize() for editor.c-style syntax
+#   highlighting (marked lines keep the plain selection style; scrbuf still
+#   caches the raw text)
+# - when the cursor crosses the top/bottom edge, the viewport jumps a
+#   quarter-screen like the old C editor, so continued line-by-line movement
+#   doesn't scroll (and repaint) every line
+# - scrolls/pages/full redraws freeze TFB pixel rendering (tfb_stop) and
+#   flush once at the end, instead of re-rendering rows on every write
 def _display_window(self):
     Editor = _pye.Editor
     self.cur_line = min(self.total_lines - 1, max(self.cur_line, 0))
@@ -97,8 +103,29 @@ def _display_window(self):
     elif self.vcol < self.margin:
         self.margin = max(self.vcol - (Editor.width >> 2), 0)
     if not (self.top_line <= self.cur_line < self.top_line + Editor.height):
+        if self.cur_line >= self.top_line + Editor.height:  # crossed the bottom
+            self.row = Editor.height - 1 - (Editor.height >> 2)
+        else:  # crossed the top
+            self.row = Editor.height >> 2
         self.top_line = max(self.cur_line - self.row, 0)
     self.row = self.cur_line - self.top_line
+    big = (
+        getattr(self, "_tulip_top", None) != self.top_line
+        or (Editor.scrbuf and Editor.scrbuf[0] == (False, "\x00"))
+    )
+    self._tulip_top = self.top_line
+    if big:
+        tulip.tfb_stop()
+    try:
+        _display_window_rows(self)
+    finally:
+        if big:
+            tulip.tfb_start()
+            tulip.tfb_update()
+
+
+def _display_window_rows(self):
+    Editor = _pye.Editor
     self.cursor(False)
     line = self.top_line
     if self.mark is None:
