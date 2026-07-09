@@ -227,9 +227,12 @@ def _setup():
     K["\x05"] = _pye.KEY_END     # ctrl-E: end of line, old editor (was redraw)
     K["\x19"] = _pye.KEY_PGUP    # ctrl-Y: page up, old editor (was redo)
     K["\x16"] = _pye.KEY_PGDN    # ctrl-V: page down, old editor (paste is ctrl-U)
+    # ctrl-] forces a full repaint; the app wrapper injects it on alt-tab back
+    K["\x1d"] = _pye.KEY_REDRAW
 
 
-def pye(*args, tab_size=4, undo=50):
+def pye_blocking(*args, tab_size=4, undo=50):
+    """Run pye on the TFB, blocking the caller (for serial/scripted use)."""
     _setup()
     io_device = TFB_IO()
     # Like the old editor: stash the REPL screen and colors, restore on exit
@@ -242,3 +245,150 @@ def pye(*args, tab_size=4, undo=50):
         io_device.wr("\x1b[0m\x1b[?25h")
         tulip.tfb_restore()
     return ret
+
+
+# --- pye as a Tulip UIScreen app ------------------------------------------
+#
+# pye's edit loop blocks, so the app wrapper runs it on a _thread that reads
+# keys from a queue fed by tulip.keyboard_callback while the app is active
+# (keys never touch the REPL stdin stream; set_screen_as_repl(0) gates that).
+# The REPL keeps running on the main thread, so alt-tabbing to it works while
+# the editor stays open -- same multitasking as the old C editor.
+
+# keyboard_callback extended codes -> the escape strings pye's KEYMAP expects
+_EXT_KEYS = {
+    258: "\x1b[B", 259: "\x1b[A", 260: "\x1b[D", 261: "\x1b[C",
+    262: "\x1b[3~", 264: "\x1b[5~", 265: "\x1b[6~", 266: "\x1b[H", 267: "\x1b[F",
+}
+
+
+class QueueIO:
+    """pye IO device fed by the keyboard callback instead of stdin."""
+
+    def __init__(self):
+        import _thread
+        self.lock = _thread.allocate_lock()
+        self.buf = []
+        self.muted = False
+
+    def push(self, s):
+        with self.lock:
+            self.buf.extend(s)
+
+    def wr(self, s):
+        if not self.muted:
+            print(s, end="")
+
+    def rd(self):
+        import time
+        while True:
+            with self.lock:
+                if self.buf:
+                    return self.buf.pop(0)
+            time.sleep_ms(20)
+
+    def rd_raw(self):
+        return self.rd()
+
+    def deinit_tty(self):
+        pass
+
+    def get_screen_size(self):
+        cols, rows = tulip.tfb_size()
+        return [rows, cols]
+
+
+class PyeScreen:
+    def __init__(self, filename, tab_size=4, undo=50):
+        self.filename = filename
+        self.tab_size = tab_size
+        self.undo = undo
+        self.io = QueueIO()
+        self.done = False
+        self.quitting = False
+        self.first_run = True
+        self.tfb_saved = False
+        # hold strong refs to the bound methods handed to C callback slots --
+        # those slots are plain C globals, not GC roots, so a fresh bound
+        # method passed inline can be collected out from under them
+        self.kb_cb_ref = self.keyboard_cb
+        self.screen = tulip.UIScreen(
+            "edit", bg_color=_BG, keep_tfb=True, offset_x=0, offset_y=0
+        )
+        self.screen.quit_callback = self.quit_cb
+        self.screen.activate_callback = self.activate_cb
+        self.screen.deactivate_callback = self.deactivate_cb
+        self.screen.present()
+
+    def keyboard_cb(self, c):
+        s = _EXT_KEYS.get(c)
+        if s is None and 0 < c < 256:
+            s = chr(c)
+        if s:
+            self.io.push(s)
+
+    def run_pye(self):
+        try:
+            _pye.pye_edit(
+                (self.filename,) if self.filename else (),
+                tab_size=self.tab_size, undo=self.undo, io_device=self.io,
+            )
+        finally:
+            self.done = True
+            self.io.muted = True
+            if not self.quitting:
+                # quit came from inside pye (ESC-ESC): close the app screen
+                # from the main thread
+                tulip.defer(lambda x: self.screen.quit(), None, 50)
+
+    def activate_cb(self, screen):
+        if self.tfb_saved:
+            return  # already active (activate can double-fire via defer)
+        tulip.tfb_save()
+        self.tfb_saved = True
+        tulip.keyboard_callback(self.kb_cb_ref)
+        self.io.muted = False
+        print("\x1b[0m", end="")
+        if self.first_run:
+            self.first_run = False
+            import _thread
+            try:
+                _thread.stack_size(16 * 1024)
+            except:
+                pass
+            _thread.start_new_thread(self.run_pye, ())
+        else:
+            self.io.push("\x1d")  # KEY_REDRAW: repaint after alt-tab back
+
+    def deactivate_cb(self, screen):
+        tulip.keyboard_callback()
+        self.io.muted = True
+        if self.tfb_saved:
+            print("\x1b[0m\x1b[?25h", end="")
+            tulip.tfb_restore()
+            self.tfb_saved = False
+
+    def quit_cb(self, screen):
+        # deactivate_cb already ran: output muted, REPL screen restored.
+        # Unwind pye's loop: quit, then blind-answer the possible "File
+        # changed! Quit (y/N/f)?" prompt with force. Repeated in case
+        # multiple files are open (ctrl-O).
+        self.quitting = True
+        for _ in range(4):
+            self.io.push("\x11\x7ff\r")
+
+
+_current = None  # the PyeScreen for the open editor, if any
+
+
+def pye(*args, tab_size=4, undo=50):
+    """Open pye as a Tulip app with quit/switch buttons, like the old editor."""
+    global _current
+    if tulip.board() == "WEB":
+        # no _thread on the web port; web keeps the old editor as edit()
+        raise NotImplementedError("pye isn't available on Tulip Web; use edit()")
+    _setup()
+    if "edit" in tulip.running_apps:
+        tulip.running_apps["edit"].present()
+        return
+    _current = PyeScreen(args[0] if args else None, tab_size=tab_size, undo=undo)

@@ -169,7 +169,7 @@ Big note: Tulip World is hosted by a bot running on the [Tulip/AMY/Alles Discord
 
 ## The Tulip Editor
 
-Tulip's editor is [pye](https://github.com/robert-hh/Micropython-Editor), the same editor AMYboard uses. It runs on the REPL screen, with the same colors and syntax highlighting as the old built-in editor, and supports both pye's own keys and the old editor's shortcuts:
+Tulip's editor is [pye](https://github.com/robert-hh/Micropython-Editor), the same editor AMYboard uses. It runs as a Tulip app (alt-tab and quit buttons work, and the REPL keeps running while it's open), with the same colors and syntax highlighting as the old built-in editor, and supports both pye's own keys and the old editor's shortcuts:
 
 ```python
 # Opens the editor to the given filename. ESC twice quits.

@@ -287,6 +287,7 @@ void save_tfb() {
 }
 
 void restore_tfb() {
+	if(saved_tfb == NULL) return; // no save_tfb() happened; don't deref NULL
 	for(uint16_t y=0;y<TFB_ROWS*TFB_COLS;y++) {
 		TFB[y] = saved_tfb[y];
 		TFBf[y] = saved_tfbf[y];
@@ -298,6 +299,7 @@ void restore_tfb() {
 	editor_free(saved_tfbf);
 	editor_free(saved_tfbfg);
 	editor_free(saved_tfbbg);
+	saved_tfb = NULL; saved_tfbf = NULL; saved_tfbfg = NULL; saved_tfbbg = NULL;
 	tfb_y_row = saved_tfb_y;
 	tfb_x_col = saved_tfb_x;
     for(uint16_t y=0;y<V_RES+OFFSCREEN_Y_PX;y++) {
