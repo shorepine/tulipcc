@@ -434,7 +434,8 @@ uint16_t scan_ascii(uint8_t code, uint32_t modifier) {
 }
 
 extern int16_t lvgl_is_repl;
-extern mp_obj_t keyboard_callback, ui_quit_callback, ui_switch_callback;
+// keyboard_callback, ui_quit_callback and ui_switch_callback are GC root
+// pointers, aliased to MP_STATE_VM slots in tulip_helpers.h (via keyscan.h)
 
 void send_key_to_micropython(uint16_t c) {
     // handle the global system hotkeys before anything else. we have two, ctrl-tab and ctrl-q 

@@ -49,8 +49,9 @@ void midi_out(uint8_t * bytes, uint16_t len) {
 // A queue to store the AMY midi messages coming IN
 uint8_t last_midi[MIDI_QUEUE_DEPTH][MAX_MIDI_BYTES_PER_MESSAGE];
 uint8_t last_midi_len[MIDI_QUEUE_DEPTH];
-extern mp_obj_t midi_callback;
-extern mp_obj_t amy_overload_callback;
+// midi_callback and amy_overload_callback are GC root pointers, aliased to
+// MP_STATE_VM slots in tulip_helpers.h
+#include "tulip_helpers.h"
 
 int16_t midi_queue_head = 0;
 int16_t midi_queue_tail = 0;

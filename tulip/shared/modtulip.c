@@ -88,7 +88,21 @@ STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_board_obj, 0, 0, tulip_board);
 
 
-mp_obj_t midi_callback = NULL;
+// GC-root storage for the callback slots aliased in tulip_helpers.h. The
+// array sizes must match SEQUENCER_SLOTS / DEFER_SLOTS (static_asserts in
+// tsequencer.c); slot-count macros aren't visible where this expands.
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_midi);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_amy_overload);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_amy_block_done);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_frame);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_frame_arg);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_touch);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_keyboard);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_ui_quit);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_ui_switch);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_sequencer[8]);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_defer[32]);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_defer_args[32]);
 
 STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
     midi_callback = args[0];
@@ -98,8 +112,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_
 
 // Called (via mp_sched_schedule from the AMY render task) when AMY's CPU
 // overload failsafe trips, with the render load percent as a small int.
-mp_obj_t amy_overload_callback = NULL;
-
 STATIC mp_obj_t tulip_amy_overload_callback(size_t n_args, const mp_obj_t *args) {
     amy_overload_callback = (args[0] == mp_const_none) ? NULL : args[0];
     return mp_const_none;
@@ -114,8 +126,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_overload_callback_obj, 1, 1
 extern int amy_get_output_buffer(int16_t *samples);
 extern int amy_get_input_buffer(int16_t *samples);
 extern void amy_set_external_input_buffer(int16_t * samples);
-
-mp_obj_t amy_block_done_callback = NULL;
 
 STATIC mp_obj_t tulip_amy_block_done_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args==0) {
@@ -1068,12 +1078,9 @@ STATIC mp_obj_t tulip_screen_size(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_screen_size_obj, 0, 0, tulip_screen_size);
 
 
-mp_obj_t frame_callback = NULL; 
-mp_obj_t frame_arg = NULL; 
-mp_obj_t touch_callback = NULL; 
-mp_obj_t keyboard_callback = NULL;
-mp_obj_t ui_quit_callback = NULL;
-mp_obj_t ui_switch_callback = NULL;
+// frame_callback, frame_arg, touch_callback, keyboard_callback,
+// ui_quit_callback and ui_switch_callback are GC root pointers -- see the
+// MP_REGISTER_ROOT_POINTER block above and the aliases in tulip_helpers.h.
 
 
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
