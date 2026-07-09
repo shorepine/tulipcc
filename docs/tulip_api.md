@@ -169,22 +169,25 @@ Big note: Tulip World is hosted by a bot running on the [Tulip/AMY/Alles Discord
 
 ## The Tulip Editor
 
-Tulip ships with a text editor, based on pico/nano. It supports syntax highlighting, search, save/save-as. 
+Tulip's editor is [pye](https://github.com/robert-hh/Micropython-Editor), the same editor AMYboard uses. It runs on the REPL screen.
 
 ```python
-# Opens the Tulip editor to the given filename. 
-# Control-X saves the file, if no filename give will prompt for one. 
+# Opens the editor to the given filename.
+# Control-S saves, Control-F finds, ESC twice quits. See the pye docs for all keys.
+edit("game.py")
+edit() # no filename
+tulip.pye() # same thing
+
+# The previous built-in editor (based on pico/nano) is still available.
+# Control-X saves the file, if no filename given will prompt for one.
 # Control-O is save as -- will write to new filename given
 # Control-W searches
 # Control-R prompts for a filename to read into the current buffer
-edit("game.py")
-edit() # no filename
-
-# Tulip also ships pye, a more full-featured editor that runs on the REPL screen.
-# Control-S saves, Control-F finds, ESC twice quits. See the pye docs for all keys.
-tulip.pye("game.py")
-tulip.pye() # no filename
+old_edit("game.py")
+old_edit() # no filename
 ```
+
+(On Tulip Web, `edit()` still opens the old editor -- pye needs blocking keyboard reads that the web port doesn't support.)
 
 
 ## User interface

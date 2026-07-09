@@ -5,7 +5,7 @@ from upysh import *
 from tulip import board
 
 if board()!="AMYBOARD" and board()!="AMYBOARD_WEB":
-    from tulip import edit, run
+    from tulip import edit, old_edit, run
 else:
     if board()=="AMYBOARD":
         import amyboard
