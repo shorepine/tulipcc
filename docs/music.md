@@ -183,7 +183,7 @@ You may want to programatically change the MIDI to synth mapping. One example wo
 You can change the parameters of channel synths like this:
 
 ```python
-midi.config.add_synth(channel=c, synth=synth.PatchSynth(patch_number=p, num_voices=n))
+midi.config.add_synth(channel=c, synth=synth.PatchSynth(patch=p, num_voices=n))
 ```
 
 Note that `add_synth` will stop any running synth on that channel and boot a new one in its place. 

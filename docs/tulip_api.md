@@ -624,7 +624,7 @@ Here's an example of using both sequencers:
 
 ```python
 import sequencer
-syn = synth.PatchSynth(1, 0) # make a synthesizer to control
+syn = synth.PatchSynth(num_voices=1, patch=0) # make a synthesizer to control
 
 arp_notes = [48,50,52,49,56,58,60,57]
 
@@ -662,7 +662,7 @@ By default, Tulip boots into AMY's live MIDI synthesizer mode. Any note-ons, not
 
 By default, MIDI notes on channel 1 will map to Juno-6 patch 0. And MIDI notes on channel 10 will play the PCM samples (like a drum machine).
 
-You can adjust which voices are sent with `midi.config.add_synth(channel, patch_number, num_voices)`. For example, you can have Tulip play DX7 patch 129 on channel 2 with `midi.config.add_synth(channel=2, patch_number=129, num_voices=1)`. `channel=2` is a MIDI channel (we use 1-16 indexing), `patch_number=129` is an AMY patch number, `num_voices=1` is the number of voices (polyphony) you want to support for that channel and patch. 
+You can adjust which voices are sent with `midi.config.add_synth(channel=channel, synth=synth)`. For example, you can have Tulip play DX7 patch 129 on channel 2 with `midi.config.add_synth(channel=2, synth=synth.PatchSynth(patch=129, num_voices=1))`. `channel=2` is a MIDI channel (we use 1-16 indexing), `patch=129` is an AMY patch number, `num_voices=1` is the number of voices (polyphony) you want to support for that channel and patch. 
 
 (A good rule of thumb is Tulip CC can support about 6 simultaneous total voices for Juno-6, 8-10 for DX7, and 20-30 total voices for PCM and more for other simpler oscillator patches.)
 
