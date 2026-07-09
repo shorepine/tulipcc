@@ -1532,6 +1532,28 @@ STATIC mp_obj_t tulip_key(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_obj, 0, 0, tulip_key);
 
+// tulip.tty_grab(1) diverts console/serial input away from the REPL; a
+// full-screen app (like the editor) then reads it with tulip.tty_read().
+// tulip.tty_grab(0) gives the console back to the REPL.
+STATIC mp_obj_t tulip_tty_grab(size_t n_args, const mp_obj_t *args) {
+    uint8_t on = mp_obj_get_int(args[0]) ? 1 : 0;
+    if(on && !tty_grab) {
+        // drop anything stale from a previous grab
+        while(ringbuf_get(&tty_grab_ringbuf) != -1) {}
+    }
+    tty_grab = on;
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tty_grab_obj, 1, 1, tulip_tty_grab);
+
+// c = tulip.tty_read() -- next diverted console char, or -1 if none pending
+STATIC mp_obj_t tulip_tty_read(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(ringbuf_get(&tty_grab_ringbuf));
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tty_read_obj, 0, 0, tulip_tty_read);
+
 extern uint8_t keyboard_send_keys_to_micropython;
 STATIC mp_obj_t tulip_key_scan(size_t n_args, const mp_obj_t *args) {
     keyboard_send_keys_to_micropython = !(mp_obj_get_int(args[0]));
@@ -1827,6 +1849,8 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key), MP_ROM_PTR(&tulip_key_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_send), MP_ROM_PTR(&tulip_key_send_obj) },
+    { MP_ROM_QSTR(MP_QSTR_tty_grab), MP_ROM_PTR(&tulip_tty_grab_obj) },
+    { MP_ROM_QSTR(MP_QSTR_tty_read), MP_ROM_PTR(&tulip_tty_read_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_circle), MP_ROM_PTR(&tulip_bg_circle_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bezier), MP_ROM_PTR(&tulip_bg_bezier_obj) },

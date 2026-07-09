@@ -23,6 +23,22 @@ int check_rx_char() {
     c = ringbuf_get(&stdin_ringbuf);
     return c;
 }
+
+// When set (tulip.tty_grab(1)), console/serial input is diverted away from
+// the REPL into this ringbuffer, so a full-screen app like the editor can
+// read the TTY with tulip.tty_read(). Each port's mp_hal_stdin_rx_chr calls
+// tulip_tty_grab_char() on every char it is about to hand to the REPL.
+uint8_t tty_grab = 0;
+static uint8_t tty_grab_buf[256];
+ringbuf_t tty_grab_ringbuf = {tty_grab_buf, sizeof(tty_grab_buf), 0, 0};
+
+int tulip_tty_grab_char(int c) {
+    if(tty_grab) {
+        ringbuf_put(&tty_grab_ringbuf, c);
+        return 1;
+    }
+    return 0;
+}
 #endif
 
 uintptr_t get_stack_pointer() {

@@ -85,7 +85,7 @@ class UIScreen():
     default_offset_y = 100
 
     def __init__(self, name=None, keep_tfb = False, bg_color=default_bg_color, offset_x=default_offset_x, offset_y=default_offset_y, 
-        activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False):
+        activate_callback=None, quit_callback=None, deactivate_callback=None, handle_keyboard=False, grab_tty=False):
 
         # support running run(tulip.UIScreen()) in one-off temporary scripts
         if(name is None):
@@ -103,6 +103,7 @@ class UIScreen():
         self.hide_task_bar = False
         self.keep_tfb = keep_tfb
         self.handle_keyboard = handle_keyboard
+        self.grab_tty = grab_tty
         self.bg_color = bg_color
         self.offset_x = offset_x
         self.offset_y = offset_y
@@ -258,10 +259,14 @@ class UIScreen():
         if(self.name == 'repl'):
             tulip.tfb_start()
             tulip.set_screen_as_repl(1)
+            tulip.tty_grab(0)
             tulip.tfb_update() # force redraw of tfb, maybe tfb_start should do this? 
 
         else:
             tulip.set_screen_as_repl(0)
+            # grab_tty apps read console/serial input themselves (tulip.tty_read());
+            # for everything else typing in a connected terminal drives the REPL
+            tulip.tty_grab(1 if self.grab_tty else 0)
             if(self.keep_tfb):
                 tulip.tfb_start()
             else:

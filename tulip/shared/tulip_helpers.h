@@ -39,6 +39,9 @@ uint32_t read_file(const char *filename, uint8_t *buf, int32_t len, uint8_t bina
 uint32_t write_file(const char *filename, uint8_t *buf, uint32_t len, uint8_t binary);
 int check_rx_char();
 void tx_char(int c);
+extern uint8_t tty_grab;
+extern ringbuf_t tty_grab_ringbuf;
+int tulip_tty_grab_char(int c);
 mp_obj_t tulip_fopen(const char *filename, const char *mode);
 uint32_t tulip_fwrite(mp_obj_t file, uint8_t * buf, uint32_t len);
 uint32_t tulip_fread(mp_obj_t file, uint8_t * buf, uint32_t len);

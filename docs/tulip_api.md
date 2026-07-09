@@ -182,6 +182,11 @@ edit("game.py")
 edit() # no filename
 tulip.pye() # same thing
 
+# If you're connected over serial (or running Tulip Desktop from a terminal),
+# typing in the terminal drives the editor while it's open, like on AMYboard;
+# the console returns to the REPL when you quit or switch away. Apps can opt
+# into this with tulip.UIScreen(..., grab_tty=True).
+
 # The previous built-in editor (based on pico/nano) is still available.
 # Control-X saves the file, if no filename given will prompt for one.
 # Control-O is save as -- will write to new filename given

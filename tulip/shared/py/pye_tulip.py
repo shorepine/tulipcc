@@ -287,6 +287,11 @@ class QueueIO:
             with self.lock:
                 if self.buf:
                     return self.buf.pop(0)
+            # console/serial input diverted by grab_tty (raw bytes; pye
+            # parses its own escape sequences)
+            c = tulip.tty_read()
+            if c >= 0:
+                return chr(c)
             time.sleep_ms(20)
 
     def rd_raw(self):
@@ -315,7 +320,8 @@ class PyeScreen:
         # method passed inline can be collected out from under them
         self.kb_cb_ref = self.keyboard_cb
         self.screen = tulip.UIScreen(
-            "edit", bg_color=_BG, keep_tfb=True, offset_x=0, offset_y=0
+            "edit", bg_color=_BG, keep_tfb=True, offset_x=0, offset_y=0,
+            grab_tty=True,  # typing in a connected terminal drives the editor
         )
         self.screen.quit_callback = self.quit_cb
         self.screen.activate_callback = self.activate_cb
@@ -338,6 +344,9 @@ class PyeScreen:
         finally:
             self.done = True
             self.io.muted = True
+            # give the console back to the REPL right away; the deferred
+            # screen teardown below can lag behind
+            tulip.tty_grab(0)
             if not self.quitting:
                 # quit came from inside pye (ESC-ESC): close the app screen
                 # from the main thread
