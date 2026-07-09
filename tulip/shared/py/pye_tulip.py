@@ -237,6 +237,8 @@ def pye_blocking(*args, tab_size=4, undo=50):
     io_device = TFB_IO()
     # Like the old editor: stash the REPL screen and colors, restore on exit
     tulip.tfb_save()
+    # editor colors on before pye's first paint (see activate_cb note)
+    print(_pye.Editor.TERMCMD[4], end="")
     try:
         ret = _pye.pye_edit(args, tab_size=tab_size, undo=undo, io_device=io_device)
     finally:
@@ -348,7 +350,9 @@ class PyeScreen:
         self.tfb_saved = True
         tulip.keyboard_callback(self.kb_cb_ref)
         self.io.muted = False
-        print("\x1b[0m", end="")
+        # activate the editor colors before pye's first paint, so the initial
+        # rows (drawn before any hilite(0)) don't clear with the REPL bg
+        print(_pye.Editor.TERMCMD[4], end="")
         if self.first_run:
             self.first_run = False
             import _thread

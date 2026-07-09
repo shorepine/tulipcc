@@ -711,8 +711,9 @@ void display_tfb_cursor(uint16_t x, uint16_t y) {
     f = f | FORMAT_FLASH;
     f = f | FORMAT_INVERSE;
     TFBf[y*TFB_COLS + x] = f;
-    TFBfg[y*TFB_COLS + x] = tfb_fg_pal_color;
-    TFBbg[y*TFB_COLS + x] = tfb_bg_pal_color;
+    // Leave the cell's fg/bg alone: inverse of the cell's own colors is
+    // visible, and stamping the default colors here left a trail of
+    // default-bg cells behind the cursor in colored screens like pye
 }
 
 void display_tfb_uncursor(uint16_t x, uint16_t y) {
