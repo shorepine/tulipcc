@@ -9,6 +9,7 @@ int16_t ansi_active_format;
 // ANSI/VT100 parse state. Kept across display_tfb_str() calls so escape
 // sequences split over multiple stdout writes still parse.
 #define TFB_ANSI_SEQ_MAX 32
+#define TFB_ANSI_MAX_PARAMS 8   // enough for 24-bit SGR (38;2;r;g;b = 5)
 static uint8_t tfb_ansi_state = 0;      // 0: text, 1: got ESC, 2: collecting CSI params
 static unsigned char tfb_ansi_seq[TFB_ANSI_SEQ_MAX];
 static uint8_t tfb_ansi_seq_len = 0;
@@ -772,7 +773,7 @@ uint8_t ansi_parse_digits( unsigned char*str, uint16_t j, uint16_t k, uint16_t *
             } else if(i-last_pos == 1) {
                 digits[d++] = (str[i-1]-'0');
             }
-            if(d==5) { fprintf(stderr,"Warning, more than 5 ANSI format commands in a row\n"); d = 4; }
+            if(d==TFB_ANSI_MAX_PARAMS) { fprintf(stderr,"Warning, more than %d ANSI format commands in a row\n", TFB_ANSI_MAX_PARAMS); d = TFB_ANSI_MAX_PARAMS-1; }
             last_pos = i+1;
         }
     }
@@ -784,7 +785,7 @@ uint8_t supress_lf = 0;
 
 // Process one complete CSI sequence ESC [ <tfb_ansi_seq> <F>
 static void display_tfb_csi(unsigned char F, uint8_t visible_cols, uint8_t visible_rows) {
-    uint16_t digits[5] = {0};
+    uint16_t digits[TFB_ANSI_MAX_PARAMS] = {0};
     if(tfb_ansi_seq_len && tfb_ansi_seq[0] == '?') { // private modes, ESC[?{n}h / ESC[?{n}l
         uint8_t d = ansi_parse_digits(tfb_ansi_seq, 1, tfb_ansi_seq_len, digits);
         if(d==1 && digits[0]==25) { // cursor visibility
@@ -798,6 +799,10 @@ static void display_tfb_csi(unsigned char F, uint8_t visible_cols, uint8_t visib
         return;
     }
     uint8_t d = ansi_parse_digits(tfb_ansi_seq, 0, tfb_ansi_seq_len, digits);
+    // Erase with the active ANSI colors when set ("background color erase"),
+    // like real terminals, so full-screen apps can clear in their own colors
+    uint8_t clear_fg = (ansi_active_format >= 0) ? ansi_active_fg_color : tfb_fg_pal_color;
+    uint8_t clear_bg = (ansi_active_format >= 0) ? ansi_active_bg_color : tfb_bg_pal_color;
     if(F == 'K') { // clear line: 0 (or none) cursor->EOL, 1 BOL->cursor, 2 whole line
         uint16_t mode = (d>=1) ? digits[0] : 0;
         uint16_t start = (mode==0) ? tfb_x_col : 0;
@@ -805,8 +810,8 @@ static void display_tfb_csi(unsigned char F, uint8_t visible_cols, uint8_t visib
         for(uint16_t col=start;col<end && col<visible_cols;col++) {
             TFB[tfb_y_row*TFB_COLS+col] = 0;
             TFBf[tfb_y_row*TFB_COLS+col] = 0;
-            TFBfg[tfb_y_row*TFB_COLS+col] = tfb_fg_pal_color;
-            TFBbg[tfb_y_row*TFB_COLS+col] = tfb_bg_pal_color;
+            TFBfg[tfb_y_row*TFB_COLS+col] = clear_fg;
+            TFBbg[tfb_y_row*TFB_COLS+col] = clear_bg;
         }
     } else if(F=='A' || F=='B' || F=='C' || F=='D') { // relative cursor moves
         uint16_t n = (d>=1 && digits[0]>0) ? digits[0] : 1;
@@ -828,8 +833,8 @@ static void display_tfb_csi(unsigned char F, uint8_t visible_cols, uint8_t visib
                 for(uint16_t col=start_col;col<end_col && col<visible_cols;col++) {
                     TFB[row*TFB_COLS+col] = 0;
                     TFBf[row*TFB_COLS+col] = 0;
-                    TFBfg[row*TFB_COLS+col] = tfb_fg_pal_color;
-                    TFBbg[row*TFB_COLS+col] = tfb_bg_pal_color;
+                    TFBfg[row*TFB_COLS+col] = clear_fg;
+                    TFBbg[row*TFB_COLS+col] = clear_bg;
                 }
             }
             display_tfb_update(-1);
@@ -856,6 +861,8 @@ static void display_tfb_csi(unsigned char F, uint8_t visible_cols, uint8_t visib
         uint8_t c256 = 0;
         if(digits[0] == 38 && digits[1] == 5) c256 = 1;
         if(digits[0] == 48 && digits[1] == 5) c256 = 2;
+        if(digits[0] == 38 && digits[1] == 2) c256 = 3; // 24-bit color, mapped onto the 332 pal
+        if(digits[0] == 48 && digits[1] == 2) c256 = 4;
         if(d == 0) { // bare ESC[m means reset
             ansi_active_format = -1;
             ansi_active_bg_color = tfb_bg_pal_color;
@@ -873,6 +880,13 @@ static void display_tfb_csi(unsigned char F, uint8_t visible_cols, uint8_t visib
                 if(ansi_active_format < 0) ansi_active_format = 0;
                 if(l==2) {
                     ansi_active_bg_color = ansi_pal[code];
+                }
+            } else if(c256==3 || c256==4) {
+                if(ansi_active_format < 0) ansi_active_format = 0;
+                if(l==4) {
+                    uint8_t pal = color_332(digits[2], digits[3], digits[4]);
+                    if(c256==3) ansi_active_fg_color = pal;
+                    else ansi_active_bg_color = pal;
                 }
             } else if(code==0)  {
                 // Everything off

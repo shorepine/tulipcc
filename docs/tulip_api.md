@@ -169,11 +169,15 @@ Big note: Tulip World is hosted by a bot running on the [Tulip/AMY/Alles Discord
 
 ## The Tulip Editor
 
-Tulip's editor is [pye](https://github.com/robert-hh/Micropython-Editor), the same editor AMYboard uses. It runs on the REPL screen.
+Tulip's editor is [pye](https://github.com/robert-hh/Micropython-Editor), the same editor AMYboard uses. It runs on the REPL screen, with the same colors and syntax highlighting as the old built-in editor, and supports both pye's own keys and the old editor's shortcuts:
 
 ```python
-# Opens the editor to the given filename.
-# Control-S saves, Control-F finds, ESC twice quits. See the pye docs for all keys.
+# Opens the editor to the given filename. ESC twice quits.
+# Save: Control-S or Control-X (prompts for a filename, so also save-as)
+# Search: Control-F or Control-W; find again: Control-N; replace: Control-R
+# Cut line/selection: Control-K, paste: Control-U, mark: Control-L, copy: Control-C
+# Page up/down: Control-Y / Control-V (or PgUp/PgDn); line start/end: Control-A / Control-E (or Home/End)
+# Undo: Control-Z; open another file: Control-O; goto line: Control-G
 edit("game.py")
 edit() # no filename
 tulip.pye() # same thing
