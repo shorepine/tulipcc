@@ -197,10 +197,12 @@ class Display:
 
 DEFAULT_SKETCH_SOURCE = """\
 # AMYboard Sketch
-# Code put here runs first, then loop() is called every 32nd note.
+# Code put here runs first, then loop(step) is called every 32nd note,
+# starting on a bar downbeat. step counts 32nd notes on the sequencer's
+# bar-locked grid, so step % 32 == 0 is always a downbeat.
 import amyboard, amy
 
-def loop():
+def loop(step):
     pass
 
 # Do not edit. Set automatically by the knobs on AMYboard Online.
@@ -726,23 +728,53 @@ def run_sketch():
 
 
 def _start_sketch_loop(loop_fn):
-    """Schedule loop_fn via TulipSequence (every 32nd note, ~60ms)."""
+    """Schedule loop_fn via TulipSequence (every 32nd note).
+
+    Sketch loops ride the AMY sequencer's absolute tick count -- the same
+    clock AMYSequence events fire on. The first call is held until a bar
+    boundary (4 beats), so a sketch that keeps its own step counter starts
+    on the downbeat, in phase with any AMY-sequenced patterns. A sketch can
+    instead declare loop(step): step is the global 32nd-note index on that
+    bar-locked grid (step % 32 == 0 is always a downbeat), which stays in
+    phase even if a callback is ever dropped.
+    """
     import sequencer
     global _sketch_seq
-    _loop_running = False
+    ticks_per_step = int((4.0 / 32.0) * sequencer.PPQ)  # one 32nd note
+    ticks_per_bar = 4 * sequencer.PPQ
+    _busy = False
+    _started = False
+    _takes_step = None
 
     def _guarded_loop(tick):
-        nonlocal _loop_running
-        if _loop_running:
+        nonlocal _busy, _started, _takes_step
+        if _busy:
             return
-        _loop_running = True
+        _busy = True
         try:
-            loop_fn()
+            if not _started:
+                if tick % ticks_per_bar:
+                    return  # hold loop() until the next downbeat
+                _started = True
+            step = tick // ticks_per_step
+            if _takes_step is None:
+                # First call decides the signature: prefer loop(step), fall
+                # back to loop() for sketches that don't take an argument.
+                try:
+                    loop_fn(step)
+                    _takes_step = True
+                except TypeError:
+                    _takes_step = False
+                    loop_fn()
+            elif _takes_step:
+                loop_fn(step)
+            else:
+                loop_fn()
         except Exception as e:
             print("sketch.loop() error:")
             sys.print_exception(e)
         finally:
-            _loop_running = False
+            _busy = False
 
     _sketch_seq = sequencer.TulipSequence(32, _guarded_loop)
 
