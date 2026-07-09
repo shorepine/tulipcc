@@ -15,7 +15,7 @@ tulip.run('drums')
     'c':`
 import midi, synth
 midi.config.reset()
-midi.config.add_synth(synth.PatchSynth(6, 256))
+midi.config.add_synth(synth.PatchSynth(num_voices=6, patch=256))
 # Now set your MIDI device on this page and play a note!
 `},{
     't':'games',
@@ -353,7 +353,7 @@ def make_patch(x):
     amy.stop_store_patch(1024)
 
 def next(t):
-    s = synth.PatchSynth(8, 1024)
+    s = synth.PatchSynth(num_voices=8, patch=1024)
     p = music.Progression(["I", "vi", "IV", "V"], music.Key("E:maj"))
     chord_len = 2000
     note_len = 500
@@ -392,7 +392,7 @@ import sequencer
 midi.config.reset()
 midi.add_default_synths()
 sequencer.tempo(140)
-syn = synth.PatchSynth(1, 0)
+syn = synth.PatchSynth(num_voices=1, patch=0)
 midi.config.add_synth(channel=2, synth=syn)
 arp_notes = [48,50,None,49,56,None,46,44,None,None,49,56,58,60,None,56]
 seq= sequencer.AMYSequence(16,8)

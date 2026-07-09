@@ -4,7 +4,7 @@ const example_snippets = [{
     'd':"Set up a MIDI channel to play a piano",
     'c':`
 midi.config.reset()
-midi.config.add_synth(synth.PatchSynth(6, 256))
+midi.config.add_synth(synth.PatchSynth(num_voices=6, patch=256))
 # Now set your MIDI device on this page and play a note!
 `},{
     't':'music',
@@ -34,7 +34,7 @@ def make_patch(x):
     amy.stop_store_patch(1024)
 
 def next(t):
-    s = synth.PatchSynth(8, 1024)
+    s = synth.PatchSynth(num_voices=8, patch=1024)
     p = music.Progression(["I", "vi", "IV", "V"], music.Key("E:maj"))
     chord_len = 2000
     note_len = 500
