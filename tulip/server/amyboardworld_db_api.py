@@ -1264,7 +1264,7 @@ OUTPUT CONTRACT (strict):
 - Respond with ONLY the contents of sketch.py as plain MicroPython source.
 - No Markdown, no code fences, no explanation before or after the code.
 - Begin with comment lines, including one line of the form: # DESCRIPTION: <short summary>
-- You MUST define a top-level loop() function. It may just `pass`. loop() is called repeatedly (about every 32nd note) while the sketch runs; use it for sequencing, timing, and reading inputs.
+- You MUST define a top-level loop(step) function. It may just `pass`. loop(step) is called once per 32nd note while the sketch runs, starting on a bar downbeat; use it for sequencing, timing, and reading inputs. step is the global 32nd-note index on the sequencer's bar-locked grid: step % 32 == 0 is always a downbeat, 8 steps = one beat, and it is the same grid AMYSequence events fire on, so derive all rhythm from step (never keep your own call counter and never do BPM-to-milliseconds math).
 - Top-level code runs once at boot (set up synths, effects, callbacks there).
 - Only use the APIs documented below. Do NOT invent functions, modules, or parameters.
 - Keep sketches self-contained and runnable in the web simulator: no network, no filesystem, no SD card, no long blocking loops, and never call time.sleep() inside loop().
@@ -1307,9 +1307,9 @@ THE amyboard MODULE (import amyboard) -- physical I/O (present on hardware; safe
 
 OTHER MODULES
 - import midi: midi.add_callback(fn) registers fn(msg) for incoming MIDI. msg is a 3-byte sequence [status, data1, data2]; note-on is (status & 0xF0)==0x90 with vel>0, note-off is 0x80 (or 0x90 with vel==0).
-- import tulip: tulip.amy_ticks_ms() returns a millisecond clock. Use it in loop() to schedule events instead of sleeping.
+- import tulip: tulip.amy_ticks_ms() returns a millisecond clock. Only for non-musical timing (UI debounce etc.) -- musical timing should always come from loop(step).
 - from music import Chord, Key: Chord("C:maj").annotations is a list of semitone offsets; Key("A:min") for scales. Root note names are 'C','C#','D','D#','E','F','F#','G','G#','A','A#','B'.
-- import sequencer: sequencer.tempo(bpm) sets the sketch tempo.
+- import sequencer: sequencer.tempo(bpm) sets the sketch tempo (the loop(step) grid follows it).
 - Standard library available: random, math.
 
 CONVENTIONS
@@ -1323,7 +1323,7 @@ EXAMPLES (each is a complete, valid sketch.py)
 import amy
 amy.send(synth=1, patch=256, num_voices=6)
 
-def loop():
+def loop(step):
     pass
 
 # AMYboard Sketch
@@ -1358,19 +1358,18 @@ def midi_cb(m):
 
 midi.add_callback(midi_cb)
 
-def loop():
+def loop(step):
     pass
 
 # AMYboard Sketch
 # DESCRIPTION: Hold MIDI keys; plays them in order as 8th-note arpeggios.
-import amy, midi, tulip
+import amy, midi, sequencer
 
 amy.send(synth=1, grab_midi_notes=0)
-STEP_MS = 250  # 8th note at 120 BPM
+sequencer.tempo(120)
 held = set()
 arp_idx = 0
 last_played = None
-last_step_ms = 0
 
 def midi_cb(m):
     if not m or len(m) < 3:
@@ -1385,12 +1384,10 @@ def midi_cb(m):
 
 midi.add_callback(midi_cb)
 
-def loop():
-    global arp_idx, last_played, last_step_ms
-    now = tulip.amy_ticks_ms()
-    if now - last_step_ms < STEP_MS:
+def loop(step):
+    global arp_idx, last_played
+    if step % 4:            # an 8th note is 4 steps on the 32nd-note grid
         return
-    last_step_ms = now
     if last_played is not None:
         amy.send(synth=1, note=last_played, vel=0)
         last_played = None
@@ -1410,7 +1407,7 @@ import amy, amyboard
 
 amy.send(synth=1, filter_freq={'const': 300, 'ext0': 0.25}, filter_type=amy.FILTER_LPF24)
 
-def loop():
+def loop(step):
     r = (amyboard.cv_in(1) + 10.0) / 5.0  # map CV2 to roughly 0-4
     amy.send(synth=1, resonance=r)
 """

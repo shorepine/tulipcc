@@ -42,16 +42,21 @@ kwargs above (see the LFO section). If a name isn't in the right list, it doesn'
 
 ---
 
-## Timing & rhythm: `loop()` runs every 32nd note from the always-on sequencer — count calls, don't clock-math beats
+## Timing & rhythm: `loop(step)` runs every 32nd note on the sequencer's bar-locked grid — use `step`, don't clock-math beats
 
-AMY's sequencer is always running and calls `loop()` once per **32nd note**. For anything
-tempo- or beat-based, schedule events by counting `loop()` calls on that grid — **don't**
-convert BPM to milliseconds and measure the gap between beats with a wall clock
-(`tulip.amy_ticks_ms()` / `time`). The grid is tempo-locked for you, so hand-rolled beat
-math is just extra code that drifts.
+AMY's sequencer is always running and calls `loop(step)` once per **32nd note**, starting
+on a bar downbeat. `step` is the global 32nd-note index on the sequencer's bar-locked
+grid: **`step % 32 == 0` is always a downbeat**, and it is the same grid `AMYSequence`
+events fire on, so patterns built from `step` stay in phase with AMY-sequenced patterns.
+For anything tempo- or beat-based, schedule events from `step` — **don't** keep your own
+call counter (it can drift if a callback is dropped), and **don't** convert BPM to
+milliseconds and measure the gap between beats with a wall clock (`tulip.amy_ticks_ms()`
+/ `time`). The grid is tempo-locked for you, so hand-rolled beat math is just extra code
+that drifts. (A legacy zero-argument `def loop():` still works and starts on a downbeat,
+but new sketches should take `step`.)
 
 Set the tempo with **`sequencer.tempo(bpm)`** (`import sequencer`). The grid is always in
-32nd notes: 1 beat (quarter) = **8** calls, 8th = 4, 16th = 2, a 4/4 bar = 32.
+32nd notes: 1 beat (quarter) = **8** steps, 8th = 4, 16th = 2, a 4/4 bar = 32.
 
 ### Example — "a four-on-the-floor kick drum, 4/4 at 120 BPM"
 
@@ -64,16 +69,15 @@ sequencer.tempo(120)
 amy.send(synth=10, num_voices=1, synth_flags=3, patch=384, amp=5)
 
 KICK = 36
-step = 0
-def loop():
-    global step
+def loop(step):
     if step % 8 == 0:        # every 8 thirty-second notes = one beat -> four-on-the-floor
         amy.send(synth=10, note=KICK, vel=1)
-    step += 1
 ```
 
-> Source of truth: `tulip/amyboardweb/sketches/house_generator.py`, `acid_generator.py`
-> (`sequencer.tempo(...)` + 32-steps-per-bar patterns driven by a `loop()` step counter).
+> Source of truth: `_start_sketch_loop` in `tulip/shared/amyboard-py/amyboard.py`
+> (downbeat-aligned dispatch and the `loop(step)` signature) plus
+> `tulip/amyboardweb/sketches/house_generator.py`, `acid_generator.py`
+> (`sequencer.tempo(...)` + 32-steps-per-bar patterns).
 
 > **GM drums need a drum-kit patch (384-390).** To play drums by GM note number (36=kick,
 > 38=snare, 42=closed hat, 46=open hat, 49=crash...) load a drum-kit patch: `amy.send(synth=10,
@@ -105,7 +109,9 @@ arps, ostinatos); keep `loop()` for UI, knobs, and evolving the pattern.
 `1/divider` of a whole note (so `AMYSequence(32, 32)` = one 4/4 bar of 32nd-note slots).
 `seq.add(position, amy.send, synth=…, note=…, vel=…)` schedules a repeating note; it
 returns an event with `.update(position, amy.send, …)` to change it and `.remove()` to
-delete it.
+delete it. `AMYSequence` slots and `loop(step)` share the same bar-locked grid: slot
+`p` of a one-bar `AMYSequence(32, 32)` fires exactly when `step % 32 == p`, so a
+`loop(step)` part (bass line, chord stabs) stays in phase with an `AMYSequence` groove.
 
 ### Example — four-on-the-floor kick + 8th hats that keep time no matter what loop() does
 
@@ -121,7 +127,7 @@ for pos in (0, 8, 16, 24):
 for pos in range(0, 32, 4):
     seq.add(pos, amy.send, synth=10, note=42, vel=0.3)       # 8th-note closed hats
 
-def loop():
+def loop(step):
     pass     # free for UI/display/knobs -- the pattern plays itself
 ```
 
@@ -156,11 +162,8 @@ import amy, amyboard, sequencer
 sequencer.tempo(120)
 amy.send(synth=10, patch=384, num_voices=6, synth_flags=3)
 d = amyboard.display
-step = -1
 
-def loop():
-    global step
-    step += 1
+def loop(step):
     if step % 8 == 0:
         amy.send(synth=10, note=36, vel=1)       # (better: AMYSequence, see above)
     if step % 32 == 0:                           # once per bar, content changed
@@ -215,7 +218,7 @@ amy.send(synth=1, patch=0, num_voices=4)          # Juno patch (has a filter/res
 # Map CC 42 -> resonance on synth 1, linear, range 0..8:
 amy.send(synth=1, midi_cc="42,0,0,8,0,i%iR%v")
 
-def loop():
+def loop(step):
     pass
 ```
 
@@ -254,7 +257,7 @@ import amy
 amy.send(synth=1, patch=0, num_voices=1)   # num_voices=1 -> mono; voice stealing is automatic
 amy.send(synth=1, portamento=80)           # optional: glide between notes for a mono lead
 
-def loop():
+def loop(step):
     pass
 ```
 
@@ -296,7 +299,7 @@ amy.send(synth=1, osc=0, wave=amy.PULSE,
 # CC 1 -> LFO rate, 0.1..5 Hz.  CMD i%iv1f%v == amy.send(synth=%i, osc=1, freq=%v)
 amy.send(synth=1, midi_cc="1,0,0.1,5,0,i%iv1f%v")
 
-def loop():
+def loop(step):
     pass
 ```
 
@@ -333,7 +336,7 @@ amy.send(synth=1, osc=1, wave=amy.SAW_DOWN, pan=0.8,
 # osc 2: slow sine LFO.  a mod_source osc is silent, so it needs NO note-on.
 amy.send(synth=1, osc=2, wave=amy.SINE, freq=0.15, amp=1)
 
-def loop():
+def loop(step):
     pass
 ```
 
@@ -368,7 +371,7 @@ amy.send(synth=18, osc=1, wave=amy.AUDIO_IN1, pan=1, amp=10)   # right
 amy.send(synth=18, vel=1, note=60)          # note-on sent to both active oscs. note number required but ignored
 amy.send(reverb="0.8,0.85,0.5")             # global: level, liveness, damping[, xover_hz]
 
-def loop():
+def loop(step):
     pass
 ```
 
@@ -449,7 +452,7 @@ amy.send(synth=1, patch=0, num_voices=4)
 enc = amyboard.encoder()          # autodetect; works on any device or the simulator
 _last = [enc.read(i) for i in range(enc.encoders)]
 
-def loop():
+def loop(step):
     for i in range(enc.encoders):
         pos = enc.read(i)
         delta = pos - _last[i]
