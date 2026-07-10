@@ -240,6 +240,15 @@ You can search or see everyone's uploaded sketches. They contain both patches an
 
 You can upload your own environments or patches here. Choose a memorable username and describe your work!
 
+You can also fetch and run AMYboard World sketches straight from any Python REPL — on AMYboard, on Tulip CC / Tulip Desktop, and on both web ports:
+
+```python
+world.amyboard.ls()                          # list recent sketches
+world.amyboard.download("eno_ambient", "dpwe")  # download the sketch and start it
+```
+
+On Tulip, the sketch starts the same way it does on AMYboard (synths reset, saved knob state applied, `loop()` on the sequencer); CV in/out calls no-op, while I2C accessories like the OLED display and rotary encoders work.
+
 
 
 [Back to Getting Started](README.md)

@@ -162,6 +162,19 @@ world.download(package_name) # Downloads a package and extracts it
 
 world.ls() # lists most recent unique filenames/usernames
 world.ls(100) # optional count (most recent)
+
+# AMYboard World: sketches shared on amyboard.com also run on Tulip.
+# download() fetches the latest sketch.py into user/current/ and starts it the
+# AMYboard way: synths reset, the sketch's saved knob state applied, and its
+# loop() scheduled on the sequencer. CV in/out calls no-op on Tulip; I2C
+# accessories (OLED display, rotary encoders) work.
+world.amyboard.download(sketch_name) # e.g. world.amyboard.download("eno_ambient")
+world.amyboard.download(sketch_name, username) # latest version by a specific user
+world.amyboard.download(sketch_name, username, start=False) # just download, don't run
+world.amyboard.ls() # lists most recent AMYboard World sketches
+
+import amyboard
+amyboard.stop_sketch() # stops a running sketch's loop()
 ```
 
 Big note: Tulip World is hosted by a bot running on the [Tulip/AMY/Alles Discord](https://discord.gg/TzBFkUb8pG). If there's any abuse of the system, I'll revoke the key. I'd love more help making Tulip World a more stable and fun experience for everyone. 
