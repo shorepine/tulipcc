@@ -12,6 +12,12 @@ _web_encoder_button = False  # current button state
 def web():
     return (tulip.board()=="AMYBOARD_WEB")
 
+def cv_capable():
+    """True on boards with AMYboard CV hardware. This module is also frozen
+    into Tulip builds (so AMYboard World sketches run there via
+    world.amyboard.download()); on Tulip the CV helpers below just no-op."""
+    return tulip.board() in ("AMYBOARD", "AMYBOARD_WEB")
+
 
 class _BGWriteI2C:
     """i2c-shaped adapter that enqueues writes on the firmware's background
@@ -671,6 +677,16 @@ def report_version(*_args):
 
 def run_sketch():
     """Apply knobs from sketch.py, then import it (top-level code runs), start loop()."""
+    global display
+    if display is None:
+        # AMYboard boots init the display in _boot.py; on Tulip we only get
+        # here via world.amyboard.download(), so probe the I2C OLED now. If
+        # none is attached, amyboard.display is a no-op Display, so sketches
+        # that draw still run.
+        try:
+            init_display()
+        except Exception:
+            pass
     _env_dir = _ensure_current_env_layout()
     from upysh import cd
     tulip.stderr_write("cding to %s" % (_env_dir))
@@ -809,8 +825,14 @@ def restart_sketch():
 def get_i2c():
     global i2c
     if(i2c is None):
-        from machine import I2C
-        i2c = I2C(0, freq=400000)
+        try:
+            from machine import I2C
+            i2c = I2C(0, freq=400000)
+        except Exception as e:
+            # Ports without machine.I2C (Tulip Desktop, web): surface this as
+            # OSError so every accessory helper's missing-hardware path treats
+            # it like an absent device instead of crashing the sketch.
+            raise OSError("I2C unavailable: %s" % e)
     return i2c
 
 def ssd1327_oled():
@@ -937,7 +959,11 @@ def set_cv_out(channel=0, synth=1):
     the CV waveform shape, frequency, etc.
 
     Call set_cv_out(channel, synth=0) to clear the mapping.
+
+    No-op on boards without CV hardware (Tulip).
     """
+    if not cv_capable():
+        return
     tulip.set_cv_synth(synth, channel + 1 if synth > 0 else 0)
 
 def edit(filename=None):
@@ -949,7 +975,11 @@ def edit(filename=None):
         pye()
 
 def cv_out(volts, channel=0):
-    """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1)"""
+    """Output -10.0v to +10.0v (nominal) on CV1 (channel=0) or 2 (channel=1).
+
+    No-op on boards without CV hardware (Tulip)."""
+    if not cv_capable():
+        return
     addr = 88 # GP8413
     # With rev1 scaling, 0x0000 -> -10v, 0x7fff -> +10v
     val = int(((volts + 10)/20.0) * 0x8000)
@@ -965,6 +995,9 @@ def cv_out(volts, channel=0):
     get_i2c().writeto_mem(addr, ch, bytes([b0,b1]))
 
 def cv_in(channel=0):
+    # Boards without CV hardware (Tulip) read a constant 0.
+    if not cv_capable():
+        return 0.0
     return tulip.cv_in(channel)
 
 # --- Web encoder emulation helpers (called from JS) ---

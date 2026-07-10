@@ -187,3 +187,83 @@ def upload(filename, description=""):
             os.remove(filename)
 
     world_upload_file(pwd() + "/", filename, username, description).then(lambda x: clean_up(x))
+
+
+# A M Y B O A R D ~ W O R L D
+# Async version of world.amyboard for the web ports. See world.py for details:
+# world.amyboard.download("eno_ambient", "dpwe") fetches the latest sketch.py
+# into user/current/sketch.py and starts it via amyboard.restart_sketch().
+
+class _AmyboardWorldWeb:
+    def ls(self, count=10):
+        def do_next(payload):
+            for f in payload.get("items", []):
+                name = f["filename"]
+                if name.endswith(".py"):
+                    name = name[:-3]
+                print(
+                    "% 20s % 10s % 8s  %s"
+                    % (
+                        name,
+                        f["username"][:MAX_USERNAME_SIZE],
+                        nice_time(f["age_ms"]),
+                        f["description"][:MAX_DESCRIPTION_SIZE],
+                    )
+                )
+
+        return js.fetch(
+            world_api_url("/api/amyboardworld/files?limit=%d" % (count))
+        ).then(lambda r: r.text()).then(lambda x: json.loads(x)).then(do_next)
+
+    def download(self, sketch, username=None, start=True):
+        filename = sketch if sketch.endswith(".py") else sketch + ".py"
+        # Resolve via the files listing (q= narrows server-side, then exact
+        # filename match below): items come back newest-first, so the first
+        # hit is the latest revision.
+        query = "/api/amyboardworld/files?limit=50&latest_per_user_env=false&q=%s" % (js.encodeURIComponent(filename))
+        if username is not None:
+            query = query + "&username=%s" % (js.encodeURIComponent(username))
+
+        def on_missing(_=None):
+            if username is None:
+                print("Could not find %s on AMYboard World" % (filename))
+            else:
+                print("Could not find %s by %s on AMYboard World" % (filename, username))
+
+        def on_got(got):
+            def save_finished(x):
+                import amyboard as _amyboard
+                env_dir = _amyboard.ensure_user_environment()
+                f = open(env_dir + "/sketch.py", "wb")
+                f.write(bytes(x))
+                f.close()
+                print(
+                    "Downloaded sketch %s by %s [%d bytes, last updated %s] from AMYboard World."
+                    % (filename[:-3], got["username"], got["size"], nice_time(got["age_ms"]).lstrip())
+                )
+                if start:
+                    print("Starting sketch. Stop it with amyboard.stop_sketch()")
+                    _amyboard.restart_sketch()
+
+            grab_url = got["download_url"]
+            if not str(grab_url).startswith("http"):
+                grab_url = world_api_url(grab_url)
+            return grab("urlget", url=grab_url).then(lambda x: save_finished(x))
+
+        def on_items(payload):
+            for f in payload.get("items", []):
+                if f["filename"].lower() == filename.lower():
+                    return on_got(f)
+            on_missing()
+            return js.Promise.resolve(None)
+
+        def on_resp(resp):
+            if not resp.ok:
+                on_missing()
+                return js.Promise.resolve(None)
+            return resp.text().then(lambda x: on_items(json.loads(x)))
+
+        return js.fetch(world_api_url(query)).then(lambda resp: on_resp(resp))
+
+
+amyboard = _AmyboardWorldWeb()
