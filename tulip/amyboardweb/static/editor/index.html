@@ -523,7 +523,7 @@
 
       @media (max-width: 799px) {
         .patch-global-panel::before {
-          content: "Effects";
+          content: "FX";
           display: block;
           background: #1f2937;
           border-radius: 12px;
@@ -576,6 +576,8 @@
         font-weight: 700;
         align-items: center;
         justify-content: center;
+        gap: 10px;
+        padding: 0 12px;
       }
 
       .patch-layout-body {
@@ -1456,11 +1458,23 @@
                     </div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center gap-2 ms-md-2">
                       <label class="text-nowrap mb-0 text-white" id="synth-level-label" for="synth-level-slider" style="font-size:0.875rem; cursor:pointer;" title="Click to set a MIDI CC for this channel's level">Level</label>
-                      <input type="range" class="form-range" id="synth-level-slider" min="0.001" max="7" step="0.001" value="1" style="width:100px;">
-                      <input type="number" class="form-control text-center knob-value" id="synth-level-number" min="0.001" max="7" step="0.001" value="1" style="width:60px; font-size:0.7rem; padding:2px 4px;">
+                      <input type="range" class="form-range" id="synth-level-slider" min="0" max="1" step="0.001" value="0.521" style="width:100px;">
+                    </div>
+                    <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center gap-2 ms-md-2">
+                      <label class="text-nowrap mb-0 text-white" for="bus-select" style="font-size:0.875rem;" title="Which mix bus this channel's synth is routed to. Each bus has its own Effects.">Bus</label>
+                      <select class="form-select" id="bus-select" aria-label="Mix bus" style="width:auto; font-size:0.85rem; padding-top:0.15rem; padding-bottom:0.15rem;">
+                        <option value="0" selected>0</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                      </select>
                     </div>
                   </div>
-                  <div class="patch-global-title">Effects</div>
+                  <div class="patch-global-title">
+                    <span>FX</span>
+                    <label class="text-nowrap mb-0" id="fx-level-label" for="fx-level-slider" style="font-size:0.75rem; font-weight:400; letter-spacing:normal; text-transform:none; cursor:pointer;" title="Master level of this channel's mix bus. Click to set a MIDI CC.">Level</label>
+                    <input type="range" class="form-range" id="fx-level-slider" min="0" max="1" step="0.001" value="0.521" style="width:100px;">
+                  </div>
                 </div>
                 <div class="patch-layout-body">
                   <div class="patch-channel-panel">
@@ -1942,6 +1956,8 @@
               window.current_synth = parsed;
               syncActiveCheckboxForChannel();
               syncSynthLevelForChannel();
+              syncBusSelectForChannel();
+              syncFxLevelForBus();
               refreshLoadPatchChannelLabel();
               refreshPatchActiveNameLabel();
               refreshSavePatchDirtyIndicator();
@@ -1972,16 +1988,32 @@
         const patchLoadModalButton = document.getElementById("patch-open-load-modal-btn");
         const loadPatchModalEl = document.getElementById("loadPatchModal");
         const patchClearChannelButton = document.getElementById("patch-clear-channel-btn");
+        // Pseudo-log mapping for both Level sliders (channel and FX/bus):
+        // slider position p in [0,1] -> level = 10^(2(p-0.5)) - 0.1, so the
+        // level is 0.0 at the left edge, ~1 at mid, 9.9 at the right edge.
+        // Same curve as AMY's log MIDI-CC mapping with min 0, max 9.9,
+        // offset 0.1 (which the dedicated level knobs use), so a hardware CC
+        // sweep and a slider sweep track identically.
+        function levelSliderToValue(p) {
+          p = Math.min(1, Math.max(0, Number(p) || 0));
+          return Math.pow(10, 2 * (p - 0.5)) - 0.1;
+        }
+        function levelValueToSlider(v) {
+          v = Number(v);
+          if (!Number.isFinite(v) || v < 0) v = 0;
+          return Math.min(1, Math.max(0, 0.5 + 0.5 * Math.log10(v + 0.1)));
+        }
+
         const synthLevelSlider = document.getElementById("synth-level-slider");
-        const synthLevelNumber = document.getElementById("synth-level-number");
         const _synthLevels = {};  // per-channel level storage
         function getSynthLevel(ch) { return _synthLevels[ch] != null ? _synthLevels[ch] : 1; }
         function setSynthLevel(val, send) {
           const ch = Number(window.current_synth || 1);
-          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          val = Number(val);
+          if (!Number.isFinite(val)) val = 1;
+          val = Math.min(9.9, Math.max(0, val));
           _synthLevels[ch] = val;
-          if (synthLevelSlider) synthLevelSlider.value = val;
-          if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+          if (synthLevelSlider) synthLevelSlider.value = levelValueToSlider(val);
           if (send && typeof window.amy_add_log_message === "function") {
             var code = "i" + ch + "v0a" + val.toFixed(3);
             window.amy_add_log_message(code);
@@ -1997,23 +2029,18 @@
         function syncSynthLevelForChannel() {
           var ch = Number(window.current_synth || 1);
           var val = getSynthLevel(ch);
-          if (synthLevelSlider) synthLevelSlider.value = val;
-          if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+          if (synthLevelSlider) synthLevelSlider.value = levelValueToSlider(val);
         }
         if (synthLevelSlider) {
-          synthLevelSlider.addEventListener("input", function() { setSynthLevel(synthLevelSlider.value, true); });
-        }
-        if (synthLevelNumber) {
-          synthLevelNumber.addEventListener("change", function() { setSynthLevel(synthLevelNumber.value, true); });
-          synthLevelNumber.addEventListener("keydown", function(e) { if (e.key === "Enter") setSynthLevel(synthLevelNumber.value, true); });
+          synthLevelSlider.addEventListener("input", function() { setSynthLevel(levelSliderToValue(synthLevelSlider.value), true); });
         }
         window.syncSynthLevelForChannel = syncSynthLevelForChannel;
         window.setSynthLevelFromAmy = function(ch, val) {
-          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          val = Number(val);
+          if (!Number.isFinite(val) || val < 0) val = 1;
           _synthLevels[ch] = val;
           if (Number(window.current_synth || 1) === ch) {
-            if (synthLevelSlider) synthLevelSlider.value = val;
-            if (synthLevelNumber) synthLevelNumber.value = val.toFixed(3);
+            if (synthLevelSlider) synthLevelSlider.value = levelValueToSlider(val);
           }
         };
         // Clicking the "Level" label opens the same MIDI-CC popup the knobs use,
@@ -2037,6 +2064,81 @@
             }
           });
         }
+
+        // ── Mix bus controls ─────────────────────────────────────────────
+        // The Bus pull-down assigns the current channel's synth to a mix bus
+        // (i<ch>y<bus>); the Effects column then shows that bus's FX state.
+        const busSelect = document.getElementById("bus-select");
+        function syncBusSelectForChannel() {
+          if (!busSelect || typeof window.get_channel_bus !== "function") return;
+          busSelect.value = String(window.get_channel_bus(window.current_synth || 1));
+        }
+        window.syncBusSelectForChannel = syncBusSelectForChannel;
+        if (busSelect) {
+          busSelect.addEventListener("change", function() {
+            const bus = Number(busSelect.value);
+            const ch = Number(window.current_synth || 1);
+            if (typeof window.set_channel_bus === "function") {
+              window.set_channel_bus(ch, bus);
+            }
+          });
+        }
+
+        // The FX column header's master Level slider: the volume of the bus
+        // the current channel is on (amy volume vector entry for that bus).
+        const fxLevelSlider = document.getElementById("fx-level-slider");
+        function currentBus() {
+          return (typeof window.get_channel_bus === "function")
+            ? window.get_channel_bus(window.current_synth || 1) : 0;
+        }
+        function syncFxLevelForBus() {
+          var bus = currentBus();
+          var vols = Array.isArray(window.amy_bus_volumes) ? window.amy_bus_volumes : [];
+          var val = (vols[bus] != null) ? vols[bus] : 1;
+          if (fxLevelSlider) fxLevelSlider.value = levelValueToSlider(val);
+        }
+        window.syncFxLevelForBus = syncFxLevelForBus;
+        function setFxLevel(val, send) {
+          var bus = currentBus();
+          val = Number(val);
+          if (!Number.isFinite(val)) val = 1;
+          val = Math.min(9.9, Math.max(0, val));
+          if (Array.isArray(window.amy_bus_volumes)) window.amy_bus_volumes[bus] = val;
+          if (fxLevelSlider) fxLevelSlider.value = levelValueToSlider(val);
+          if (send && typeof window.amy_add_log_message === "function") {
+            // Bus-addressed volume: y<bus>V<val> sets that bus's mixdown gain.
+            var code = "y" + bus + "V" + val.toFixed(3);
+            window.amy_add_log_message(code);
+            // Record in the knob log (silent — live send just went out above).
+            if (typeof window.send_amy_message_in_sketch === "function") {
+              window.send_amy_message_in_sketch(code, { synth: null, silent: true });
+            }
+          }
+        }
+        if (fxLevelSlider) {
+          fxLevelSlider.addEventListener("input", function() { setFxLevel(levelSliderToValue(fxLevelSlider.value), true); });
+        }
+        // Clicking the Effects "Level" label opens the MIDI-CC popup for the
+        // bus's dedicated level knob (template i%iV%v — resolves the bus from
+        // the channel at CC time).
+        const fxLevelLabel = document.getElementById("fx-level-label");
+        if (fxLevelLabel) {
+          fxLevelLabel.addEventListener("click", function() {
+            var list = (typeof window.get_global_knobs === "function") ? window.get_global_knobs() : [];
+            var busLevelKnob = null;
+            for (var i = 0; i < list.length; i++) {
+              if (list[i] && list[i].dedicated_slider && list[i].display_name === "level") {
+                busLevelKnob = list[i];
+                break;
+              }
+            }
+            if (busLevelKnob && typeof window.amy_open_cc_editor === "function") {
+              window.amy_open_cc_editor(busLevelKnob, fxLevelLabel);
+            }
+          });
+        }
+        syncBusSelectForChannel();
+        syncFxLevelForBus();
         const junoPresetsSelect = document.getElementById("load-patch-juno-presets");
         const dx7PresetsSelect = document.getElementById("load-patch-dx7-presets");
         const loadJunoPresetButton = document.getElementById("load-juno-preset-btn");

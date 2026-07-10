@@ -40,6 +40,32 @@ function send_change_code(synth, value, knob) {
   }
 }
 
+// Bus-explicit form of a bus-FX knob's wire command: strip the i%i synth
+// prefix and address the bus directly (y<bus>x,,-3.059). Used for the knob
+// log (one last-wins slot per bus per parameter, immune to a channel later
+// moving to another bus) and for bus-targeted live sends that don't go
+// through a channel.
+function make_bus_change_code(bus, value, knob) {
+  var code = make_change_code(0, value, knob, /* no_instrument */ true);
+  if (!code) {
+    return code;
+  }
+  return "y" + String(bus) + code;
+}
+
+function send_bus_change_code(bus, value, knob) {
+  var code = make_bus_change_code(bus, value, knob);
+  if (!code) {
+    return;
+  }
+  if (typeof window.amy_add_log_message === "function") {
+    window.amy_add_log_message(code);
+  }
+  if (typeof window.send_amy_message_in_sketch === "function") {
+    window.send_amy_message_in_sketch(code, { synth: null, silent: true });
+  }
+}
+
 function set_knob_ui_value(knob, value, notifyAmy) {
   if (!knob || typeof knob._setValue !== "function") {
     return false;
@@ -1159,6 +1185,25 @@ function set_amy_knob_value(knobs, sectionName, name, value) {
   }
   if (!window.suppress_knob_cc_send) {
     send_change_code(window.current_synth, value, knob);
+  }
+  return true;
+}
+
+// Set a bus-FX knob's mirror value (and send it to AMY, bus-addressed, unless
+// suppressed). The bus version of set_amy_knob_value: values live per bus, not
+// per channel, so two channels on the same bus see the same FX knob positions.
+function set_bus_knob_value(bus, sectionName, name, value) {
+  if (typeof window.get_bus_knobs !== "function" || !Number.isFinite(value)) {
+    return false;
+  }
+  const busKnobs = window.get_bus_knobs(bus);
+  const knob = busKnobs.find((entry) => entry && entry.section === sectionName && entry.display_name === name);
+  if (!knob) {
+    return false;
+  }
+  knob.default_value = value;
+  if (!window.suppress_knob_cc_send) {
+    send_bus_change_code(bus, value, knob);
   }
   return true;
 }

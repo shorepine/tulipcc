@@ -213,6 +213,14 @@ function _knob_log_struct_key(message) {
   var s = String(message == null ? '' : message);
   var out = '';
   var i = 0;
+  // A LEADING y<bus> is a bus selector (bus-directed FX line, e.g. y1x,,-3) —
+  // keep it literal so each bus gets its own last-wins slot. A y elsewhere is
+  // the bus VALUE of a synth assignment (i1y1) and must normalize to '#' so
+  // re-assignments collapse onto one line.
+  if (s.charAt(0) === 'y' && s.charCodeAt(1) >= 48 && s.charCodeAt(1) <= 57) {
+    out += 'y'; i = 1;
+    while (i < s.length && s.charCodeAt(i) >= 48 && s.charCodeAt(i) <= 57) { out += s.charAt(i); i++; }
+  }
   while (i < s.length) {
     var c = s.charAt(i);
     if ((c === 'i' || c === 'v') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
@@ -281,6 +289,19 @@ function knob_log_key_for_knob(synth, knob) {
 // so it inherits the same suppress_knob_cc_send gating at every call site.
 function record_knob_value(synth, value, knob) {
   if (!knob || typeof window.make_change_code !== 'function') return;
+  if (knob.bus_fx) {
+    // Bus-FX knob (EQ/Chorus/Reverb/Echo/bus level): the live send above went
+    // out synth-prefixed (i<synth>x,,-3 — AMY routes it to the synth's bus),
+    // but the LOG records the bus-explicit form (y<bus>x,,-3). A synth-keyed
+    // log slot couldn't hold more than one bus's history: moving the channel
+    // to another bus and tweaking the knob again would overwrite the old
+    // bus's value in place, replaying against the wrong bus on boot.
+    var bus = (typeof window.get_channel_bus === 'function') ? window.get_channel_bus(synth) : 0;
+    var busCode = window.make_change_code(synth, value, knob, /* no_instrument */ true);
+    if (!busCode) return;
+    send_amy_message_in_sketch('y' + bus + busCode, { synth: null, silent: true });
+    return;
+  }
   var code = window.make_change_code(synth, value, knob);
   if (!code) return;
   var isGlobal = typeof knob.change_code === 'string' && knob.change_code.indexOf('i%i') < 0;
@@ -329,8 +350,49 @@ function reset_synth_in_sketch(synth) {
   _knob_log_clear_synth(synth);
   send_amy_message_in_sketch('i' + synth + 'ic255', { synth: synth });
   send_amy_message_in_sketch('i' + synth + 'K257iv6', { synth: synth });
+  // K257iv6 re-creates the instrument, which puts it back on bus 0 (and the
+  // synth's i<ch>y line was just cleared from the log) — mirror that.
+  _reset_channel_bus_ui(synth);
 }
 window.reset_synth_in_sketch = reset_synth_in_sketch;
+
+// Reset a channel's bus mirror to 0 and refresh the bus UI if it's on display.
+function _reset_channel_bus_ui(synth) {
+  if (typeof window.set_channel_bus_local === 'function') {
+    window.set_channel_bus_local(synth, 0);
+  }
+  if (Number(window.current_synth || 1) === Number(synth)) {
+    if (typeof window.syncBusSelectForChannel === 'function') window.syncBusSelectForChannel();
+    if (typeof window.syncFxLevelForBus === 'function') window.syncFxLevelForBus();
+  }
+}
+
+// Assign a channel (synth) to a mix bus: update the mirror, send + record
+// i<ch>y<bus>, and re-point the Effects column at the new bus's knob state.
+window.set_channel_bus = function(channel, bus, opts) {
+  var ch = Number(channel);
+  if (!Number.isInteger(ch) || ch < 1 || ch > 16) return;
+  bus = (typeof window.clamp_bus === 'function') ? window.clamp_bus(bus) : (Number(bus) || 0);
+  opts = opts || {};
+  if (typeof window.set_channel_bus_local === 'function') {
+    window.set_channel_bus_local(ch, bus);
+  }
+  // Only send/record for an ACTIVE channel: AMY ignores a bus assignment for
+  // a synth that doesn't exist, and a stray i<ch>y line in the block would
+  // make an inactive channel read as active on the next load.
+  if (!opts.silent && is_channel_active(ch)) {
+    send_amy_message_in_sketch('i' + ch + 'y' + bus, { synth: ch });
+  }
+  if (Number(window.current_synth || 1) === ch) {
+    // Re-render the Effects column (and its master Level) from the new bus's
+    // mirrored knob state, without sending anything to AMY.
+    if (typeof window.refresh_knobs_for_active_channel === 'function') {
+      window.refresh_knobs_for_active_channel({ sendControlMappings: false });
+    }
+    if (typeof window.syncBusSelectForChannel === 'function') window.syncBusSelectForChannel();
+    if (typeof window.syncFxLevelForBus === 'function') window.syncFxLevelForBus();
+  }
+};
 
 // Remove a synth from the block and silence it. We log an explicit i<synth>iv0 so
 // that on boot — where the device always starts a default synth on channel 1 —
@@ -340,6 +402,7 @@ function remove_synth_from_sketch(synth) {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) return;
   _knob_log_clear_synth(synth);
   send_amy_message_in_sketch('i' + synth + 'iv0', { synth: synth });
+  _reset_channel_bus_ui(synth);
 }
 window.remove_synth_from_sketch = remove_synth_from_sketch;
 
@@ -1435,21 +1498,42 @@ function send_knob_value_messages_for_channel(channel) {
   }
 }
 
-function reset_global_effects() {
-  // Reset all global effect knobs to 0 in AMY and refresh the UI.
-  var globalKnobs = typeof window.get_global_knobs === "function"
-    ? window.get_global_knobs() : [];
-  for (var i = 0; i < globalKnobs.length; i++) {
-    var knob = globalKnobs[i];
+function reset_global_effects(bus) {
+  // Reset one mix bus's FX knobs (and master volume) to defaults in AMY and
+  // refresh the UI. Defaults to the bus the current channel is on.
+  if (bus === undefined && typeof window.get_channel_bus === "function") {
+    bus = window.get_channel_bus(window.current_synth || 1);
+  }
+  bus = (typeof window.clamp_bus === "function") ? window.clamp_bus(bus) : (Number(bus) || 0);
+  var busKnobs = typeof window.get_bus_knobs === "function"
+    ? window.get_bus_knobs(bus) : [];
+  for (var i = 0; i < busKnobs.length; i++) {
+    var knob = busKnobs[i];
     if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half") {
       continue;
     }
     knob.default_value = (knob.amy_default !== undefined) ? knob.amy_default : 0;
-    var payload = window.make_change_code(1, knob.default_value, knob, false);
+    // Send bus-addressed (y<bus>...) so the reset hits this bus regardless of
+    // which channel is current.
+    var payload = (typeof make_bus_change_code === "function")
+      ? make_bus_change_code(bus, knob.default_value, knob)
+      : null;
     if (payload) {
       amy_add_log_message(payload);
     }
+    if (knob.dedicated_slider && typeof window.setBusVolumeFromAmy === "function") {
+      window.setBusVolumeFromAmy(bus, knob.default_value);
+    }
   }
+  // Drop this bus's FX lines from the knob log: after the reset the bus is at
+  // its boot defaults, which is exactly what an absent line replays to. (Keys
+  // for bus FX lines are structural keys prefixed y<bus> — see record_knob_value.)
+  var doomed = [];
+  window.knob_log.forEach(function(entry, key) {
+    if (typeof key === 'string' && key.indexOf('y' + bus) === 0) doomed.push(key);
+  });
+  for (var d = 0; d < doomed.length; d++) window.knob_log.delete(doomed[d]);
+  if (doomed.length) schedule_knob_block_reflect();
   if (typeof window.refresh_knobs_for_channel === "function") {
     var previousSuppress = !!window.suppress_knob_cc_send;
     window.suppress_knob_cc_send = true;
@@ -1503,6 +1587,11 @@ window.clear_patch_state = clear_patch_state;
 
 function get_knobs_for_channel(channel) {
   var ch = Number(channel);
+  if (typeof window.get_channel_knobs === "function" && typeof window.get_bus_knobs === "function"
+    && typeof window.get_channel_bus === "function") {
+    // FX knobs come from the bus THIS channel is on (not the current channel's).
+    return window.get_channel_knobs(ch).concat(window.get_bus_knobs(window.get_channel_bus(ch)));
+  }
   if (typeof window.get_channel_knobs === "function" && typeof window.get_global_knobs === "function") {
     return window.get_channel_knobs(ch).concat(window.get_global_knobs());
   }
@@ -5938,18 +6027,12 @@ function apply_zd_dump_to_knobs(dumpText) {
     // An empty block is valid in SYNC 2: a default channel has no explicit knob
     // lines, but the K257 baseline (prepended below) still positions every knob.
     dumpText = dumpText || '';
-    // Apply CC mappings (ic lines) to per-channel knob config first so CC
-    // numbers, ranges, log flag, and offset reflect the saved sketch state.
-    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
-        for (var chCC = 1; chCC <= 16; chCC++) {
-            window.apply_knob_cc_mappings_from_patch_source(chCC, dumpText);
-        }
-    }
     var lines = dumpText.split('\n');
     // Group by synth. Lines starting with 'i{N}' belong to that synth.
-    // Global effects lines (no 'i' prefix) apply to all.
+    // FX lines (no 'i' prefix) are bus-directed: y<bus>-prefixed lines target
+    // that bus; legacy unprefixed lines mean bus 0.
     var perSynth = {};       // synth → array of wire lines (prefix stripped)
-    var effectsLines = [];   // applies to every synth
+    var effectsLines = [];   // bus-directed FX lines
     var activeSynths = {};
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i].trim();
@@ -5963,6 +6046,31 @@ function apply_zd_dump_to_knobs(dumpText) {
             activeSynths[synth] = true;
         } else {
             effectsLines.push(line);
+        }
+    }
+    // Compute each channel's mix bus from its own lines (last y<bus> wins;
+    // absent = bus 0, matching a fresh K257 instrument). Done BEFORE the CC
+    // mapping pass below, which files FX mappings under the channel's bus.
+    if (typeof window.set_channel_bus_local === 'function'
+        && typeof events_from_wire_code_messages === 'function') {
+        for (var chB = 1; chB <= 16; chB++) {
+            var chBus = 0;
+            if (perSynth[chB]) {
+                var busEvents = events_from_wire_code_messages(perSynth[chB]);
+                for (var be = 0; be < busEvents.length; be++) {
+                    if (Number.isFinite(busEvents[be].bus)) chBus = busEvents[be].bus;
+                }
+            }
+            window.set_channel_bus_local(chB, chBus);
+        }
+        if (typeof window.syncBusSelectForChannel === 'function') window.syncBusSelectForChannel();
+        if (typeof window.syncFxLevelForBus === 'function') window.syncFxLevelForBus();
+    }
+    // Apply CC mappings (ic lines) to per-channel knob config so CC numbers,
+    // ranges, log flag, and offset reflect the saved sketch state.
+    if (typeof window.apply_knob_cc_mappings_from_patch_source === "function") {
+        for (var chCC = 1; chCC <= 16; chCC++) {
+            window.apply_knob_cc_mappings_from_patch_source(chCC, dumpText);
         }
     }
     // Active state is OWNED by the caller: set_knobs_from_sketch sets the
