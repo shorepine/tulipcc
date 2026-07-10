@@ -18,7 +18,13 @@ window.addEventListener("DOMContentLoaded", function() {
     { name: "Reverb", bg_color: "rgba(160, 200, 200, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
     { name: "Echo", bg_color: "rgba(176, 208, 232, 0.75)", header_bg_color: "#000", header_fg_color: "#fff" },
   ];
-  const GLOBAL_SECTION_NAMES = ["EQ", "Chorus", "Reverb", "Echo"];
+  // "Global" sections are really per-BUS now (AMY #686): each of the
+  // AMY_NUM_BUSES mix buses has its own independent EQ/Chorus/Reverb/Echo (and
+  // a master volume). Their change_codes carry the i%i synth prefix so AMY
+  // routes the command to the sending channel's bus (and so device-side MIDI-CC
+  // templates keep working when a channel is moved to another bus). The knob
+  // log records them bus-prefixed instead (y<bus>...) — see record_knob_value.
+  const GLOBAL_SECTION_NAMES = ["Bus", "EQ", "Chorus", "Reverb", "Echo"];
   const WAVE_OPTIONS = ["SINE", "PULSE", "SAW_UP", "SAW_DOWN", "TRIANGLE", "NOISE", "PCM", "WAVETABLE", "ALGO"];
   const WAVE_OPTION_VALUES = [AMY.SINE, 1, 3, 2, 4, 5, 7, 19, 8];
 
@@ -133,10 +139,28 @@ window.addEventListener("DOMContentLoaded", function() {
     },
 
     {
+      // Per-bus master volume (final mixdown gain for this bus). Shown by the
+      // dedicated "Level" slider in the Effects panel header (dedicated_slider
+      // -> kept out of the knob grid), but registered as a bus knob so it can
+      // carry a MIDI CC mapping like every other knob. The i%i prefix makes
+      // AMY resolve the bus from the sending channel at execution time.
+      section: "Bus",
+      cc: "",
+      display_name: "level",
+      change_code: "i%iV%v",
+      knob_type: "log",
+      default_value: 1.0,
+      amy_default: 1.0,
+      min_value: 0.001,
+      max_value: 7,
+      offset: 0.1,
+      dedicated_slider: true,
+    },
+    {
       section: "EQ",
       cc: "",
       display_name: "low",
-      change_code: "x%v",
+      change_code: "i%ix%v",
       min_value: -15,
       max_value: 15,
       default_value: 0,
@@ -146,7 +170,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "EQ",
       cc: "",
       display_name: "mid",
-      change_code: "x,%v",
+      change_code: "i%ix,%v",
       min_value: -15,
       max_value: 15,
       default_value: 0,
@@ -156,7 +180,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "EQ",
       cc: "",
       display_name: "high",
-      change_code: "x,,%v",
+      change_code: "i%ix,,%v",
       min_value: -15,
       max_value: 15,
       default_value: 0,
@@ -257,7 +281,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 93,
       knob_type: "log",
       display_name: "level",
-      change_code: "k%v",
+      change_code: "i%ik%v",
       min_value: 0,
       max_value: 1,
       offset: 0.1,
@@ -269,7 +293,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: "",
       knob_type: "log",
       display_name: "freq",
-      change_code: "k,,%v",
+      change_code: "i%ik,,%v",
       default_value: 0.5,
       amy_default: 0.5,       // CHORUS_DEFAULT_LFO_FREQ
       min_value: 0.1,
@@ -279,7 +303,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Chorus",
       cc: "",
       display_name: "depth",
-      change_code: "k,,,%v",
+      change_code: "i%ik,,,%v",
       min_value: 0.01,
       max_value: 1,
       default_value: 0.5,
@@ -393,7 +417,7 @@ window.addEventListener("DOMContentLoaded", function() {
       cc: 91,
       knob_type: "log",
       display_name: "level",
-      change_code: "h%v",
+      change_code: "i%ih%v",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -404,7 +428,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Reverb",
       cc: "",
       display_name: "live",
-      change_code: "h,%v",
+      change_code: "i%ih,%v",
       min_value: 0,
       max_value: 1,
       default_value: 0.85,
@@ -414,7 +438,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Reverb",
       cc: "",
       display_name: "damp",
-      change_code: "h,,%v",
+      change_code: "i%ih,,%v",
       min_value: 0,
       max_value: 1,
       default_value: 0.5,
@@ -424,7 +448,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Echo",
       cc: 94,
       display_name: "level",
-      change_code: "M%v",
+      change_code: "i%iM%v",
       min_value: 0,
       max_value: 2,
       default_value: 0,
@@ -434,7 +458,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Echo",
       cc: "",
       display_name: "delay",
-      change_code: "M,%v",
+      change_code: "i%iM,%v",
       min_value: 0,
       max_value: 5000,
       default_value: 500,
@@ -444,7 +468,7 @@ window.addEventListener("DOMContentLoaded", function() {
       section: "Echo",
       cc: "",
       display_name: "feedback",
-      change_code: "M,,,%v",
+      change_code: "i%iM,,,%v",
       min_value: 0,
       max_value: 1,
       default_value: 0,
@@ -507,6 +531,7 @@ window.addEventListener("DOMContentLoaded", function() {
         continue;
       }
       if (isGlobalSection(entry.section)) {
+        entry.bus_fx = true;  // scoped to a mix bus, not a channel
         out.push(entry);
       }
     }
@@ -561,7 +586,8 @@ window.addEventListener("DOMContentLoaded", function() {
     }
     const perChannelKnobs = (Array.isArray(window.amy_channel_knobs) && Array.isArray(window.amy_channel_knobs[channel]))
       ? window.amy_channel_knobs[channel] : [];
-    const globalKnobs = Array.isArray(window.amy_global_knobs) ? window.amy_global_knobs : [];
+    // FX (bus) knobs: apply the CC mapping to the bus this channel is on.
+    const globalKnobs = window.get_bus_knobs(window.get_channel_bus(channel));
     let knob = perChannelKnobs.find(function(entry) {
       return entry && entry.change_code === changeCode;
     });
@@ -636,14 +662,31 @@ window.addEventListener("DOMContentLoaded", function() {
     }
   }
 
+  // Number of independent mix buses (AMY_NUM_BUSES). Each has its own FX
+  // (EQ/Chorus/Reverb/Echo) and master volume; each channel (synth) is
+  // assigned to one bus (default 0).
+  const NUM_BUSES = (typeof AMY !== "undefined" && Number.isInteger(AMY.AMY_NUM_BUSES)) ? AMY.AMY_NUM_BUSES : 4;
+  window.AMY_UI_NUM_BUSES = NUM_BUSES;
+
+  function resetBusState() {
+    window.amy_bus_knobs = [];
+    for (let b = 0; b < NUM_BUSES; b += 1) {
+      window.amy_bus_knobs[b] = cloneKnobList(global_knob_definitions);
+      restoreAmyDefaults(window.amy_bus_knobs[b]);
+    }
+    window.amy_bus_volumes = new Array(NUM_BUSES).fill(1);
+    window.channel_bus = new Array(17).fill(0);
+  }
+
   window.reset_amy_knobs_to_defaults = function() {
     window.amy_channel_knobs = new Array(17);
     for (let i = 1; i <= 16; i += 1) {
       window.amy_channel_knobs[i] = cloneKnobList(channel_knob_definitions);
       restoreAmyDefaults(window.amy_channel_knobs[i]);
     }
-    window.amy_global_knobs = cloneKnobList(global_knob_definitions);
-    restoreAmyDefaults(window.amy_global_knobs);
+    resetBusState();
+    if (typeof window.syncBusSelectForChannel === "function") window.syncBusSelectForChannel();
+    if (typeof window.syncFxLevelForBus === "function") window.syncFxLevelForBus();
     window.has_restored_amy_knobs_state = false;
     return true;
   };
@@ -663,8 +706,7 @@ window.addEventListener("DOMContentLoaded", function() {
     window.amy_channel_knobs[i] = cloneKnobList(channel_knob_definitions);
     restoreAmyDefaults(window.amy_channel_knobs[i]);
   }
-  window.amy_global_knobs = cloneKnobList(global_knob_definitions);
-  restoreAmyDefaults(window.amy_global_knobs);
+  resetBusState();
   window.has_restored_amy_knobs_state = false;
 
   window.get_channel_knobs = function(channel) {
@@ -678,11 +720,51 @@ window.addEventListener("DOMContentLoaded", function() {
     return [];
   };
 
-  window.get_global_knobs = function() {
-    if (Array.isArray(window.amy_global_knobs)) {
-      return window.amy_global_knobs;
+  function clampBus(bus) {
+    const b = Number(bus);
+    if (!Number.isInteger(b) || b < 0) return 0;
+    return Math.min(b, NUM_BUSES - 1);
+  }
+  window.clamp_bus = clampBus;
+
+  window.get_bus_knobs = function(bus) {
+    const b = clampBus(bus);
+    if (Array.isArray(window.amy_bus_knobs) && window.amy_bus_knobs[b]) {
+      return window.amy_bus_knobs[b];
     }
     return [];
+  };
+
+  // Which mix bus a channel (synth) is assigned to. Mirror-only setter; the
+  // wire command (i<ch>y<bus>) is sent by window.set_channel_bus in spss.js.
+  window.get_channel_bus = function(channel) {
+    const ch = Number(channel);
+    if (Array.isArray(window.channel_bus) && Number.isInteger(window.channel_bus[ch])) {
+      return clampBus(window.channel_bus[ch]);
+    }
+    return 0;
+  };
+
+  window.set_channel_bus_local = function(channel, bus) {
+    const ch = Number(channel);
+    if (!Number.isInteger(ch) || ch < 1 || ch > 16) return;
+    if (!Array.isArray(window.channel_bus)) window.channel_bus = new Array(17).fill(0);
+    window.channel_bus[ch] = clampBus(bus);
+  };
+
+  // Update a bus's master volume mirror (and the Effects Level slider when
+  // that bus is the one on display).
+  window.setBusVolumeFromAmy = function(bus, val) {
+    const b = clampBus(bus);
+    val = Math.min(7, Math.max(0.001, Number(val) || 1));
+    if (!Array.isArray(window.amy_bus_volumes)) window.amy_bus_volumes = new Array(NUM_BUSES).fill(1);
+    window.amy_bus_volumes[b] = val;
+    if (typeof window.syncFxLevelForBus === "function") window.syncFxLevelForBus();
+  };
+
+  // The Effects column shows the FX of the bus the CURRENT channel is on.
+  window.get_global_knobs = function() {
+    return window.get_bus_knobs(window.get_channel_bus(window.current_synth || 1));
   };
 
   window.get_current_knobs = function() {
@@ -728,7 +810,11 @@ const PatchType = {
 
 // Called from editor/index.html as part of servicing the Load Preset button.
 // Also called from spss.sync_channel_knobs_from_synth_to_ui called in many places.
-function set_knobs_from_events(events, synth) {
+// opts.onlyDirtyFxBuses: apply FX only to buses that appear in the events
+// (used by synth readback, which carries ONE bus's FX line — the other buses'
+// mirrors must be left alone). Default (sketch positioning) applies every bus:
+// a bus with no lines is at its boot defaults.
+function set_knobs_from_events(events, synth, opts) {
   {
     const knobs = window.get_current_knobs ? window.get_current_knobs() : [];
     if (!Array.isArray(knobs) || events.length === 0) {
@@ -757,17 +843,29 @@ function set_knobs_from_events(events, synth) {
     let osc_gain = [1, 1, 1];      // amp_coefs[EG0] = 1.0
     let synthLevel = 1;            // amp_coefs[CONST] on osc 0 (CTL_OSC)
     function knobDefault(section, name) {
-      var allKnobs = (window.amy_global_knobs || []).concat(knobs || []);
+      var busZero = (typeof window.get_bus_knobs === "function") ? window.get_bus_knobs(0) : [];
+      var allKnobs = busZero.concat(knobs || []);
       for (var i = 0; i < allKnobs.length; i++) {
         var k = allKnobs[i];
         if (k && k.section === section && k.display_name === name && k.amy_default !== undefined) return k.amy_default;
       }
       return 0;
     }
-    let eq = [knobDefault("EQ","low"), knobDefault("EQ","mid"), knobDefault("EQ","high")];
-    let chorus = [knobDefault("Chorus","level"), knobDefault("Chorus","freq"), knobDefault("Chorus","depth")];
-    let reverb = [knobDefault("Reverb","level"), knobDefault("Reverb","live"), knobDefault("Reverb","damp")];
-    let echo = [knobDefault("Echo","level"), knobDefault("Echo","delay"), knobDefault("Echo","feedback")];
+    // FX are per mix bus: one accumulator set per bus, initialized to AMY
+    // defaults, overwritten by fx events routed by their y<bus> (default 0).
+    const numBuses = Number.isInteger(window.AMY_UI_NUM_BUSES) ? window.AMY_UI_NUM_BUSES : 4;
+    const onlyDirtyFxBuses = !!(opts && opts.onlyDirtyFxBuses);
+    let fx = [];
+    for (let b = 0; b < numBuses; b += 1) {
+      fx.push({
+        dirty: false,
+        eq: [knobDefault("EQ","low"), knobDefault("EQ","mid"), knobDefault("EQ","high")],
+        chorus: [knobDefault("Chorus","level"), knobDefault("Chorus","freq"), knobDefault("Chorus","depth")],
+        reverb: [knobDefault("Reverb","level"), knobDefault("Reverb","live"), knobDefault("Reverb","damp")],
+        echo: [knobDefault("Echo","level"), knobDefault("Echo","delay"), knobDefault("Echo","feedback")],
+        volume: null,   // null = leave the mirror untouched
+      });
+    }
     const BP_UNSET = 32767;
 
     function bpTimeIsSet(v) {
@@ -776,26 +874,40 @@ function set_knobs_from_events(events, synth) {
 
     for (const event of events) {
 
-      // non-osc values.
+      // non-osc (FX) values — routed to the bus named by y<bus>, default bus 0
+      // (legacy pre-bus lines carry no y and always meant bus 0).
+      const fxBus = Number.isFinite(event.bus) ? Math.min(Math.max(event.bus, 0), numBuses - 1) : 0;
+      if (event.eq || event.chorus || event.reverb || event.echo) {
+        fx[fxBus].dirty = true;
+      }
       if (event.eq) {
-        if (Number.isFinite(event.eq[0]))  { eq[0] = event.eq[0]; }
-        if (Number.isFinite(event.eq[1]))  { eq[1] = event.eq[1]; }
-        if (Number.isFinite(event.eq[2]))  { eq[2] = event.eq[2]; }
+        if (Number.isFinite(event.eq[0]))  { fx[fxBus].eq[0] = event.eq[0]; }
+        if (Number.isFinite(event.eq[1]))  { fx[fxBus].eq[1] = event.eq[1]; }
+        if (Number.isFinite(event.eq[2]))  { fx[fxBus].eq[2] = event.eq[2]; }
       }
       if (event.chorus) {
-        if (Number.isFinite(event.chorus[0])) { chorus[0] = event.chorus[0]; }  // level
-        if (Number.isFinite(event.chorus[2])) { chorus[1] = event.chorus[2]; }  // lfo_freq
-        if (Number.isFinite(event.chorus[3])) { chorus[2] = event.chorus[3]; }  // depth
+        if (Number.isFinite(event.chorus[0])) { fx[fxBus].chorus[0] = event.chorus[0]; }  // level
+        if (Number.isFinite(event.chorus[2])) { fx[fxBus].chorus[1] = event.chorus[2]; }  // lfo_freq
+        if (Number.isFinite(event.chorus[3])) { fx[fxBus].chorus[2] = event.chorus[3]; }  // depth
       }
       if (event.reverb) {
-        if (Number.isFinite(event.reverb[0])) { reverb[0] = event.reverb[0]; }
-        if (Number.isFinite(event.reverb[1])) { reverb[1] = event.reverb[1]; }
-        if (Number.isFinite(event.reverb[2])) { reverb[2] = event.reverb[2]; }
+        if (Number.isFinite(event.reverb[0])) { fx[fxBus].reverb[0] = event.reverb[0]; }
+        if (Number.isFinite(event.reverb[1])) { fx[fxBus].reverb[1] = event.reverb[1]; }
+        if (Number.isFinite(event.reverb[2])) { fx[fxBus].reverb[2] = event.reverb[2]; }
       }
       if (event.echo) {
-        if (Number.isFinite(event.echo[0])) { echo[0] = event.echo[0]; }
-        if (Number.isFinite(event.echo[1])) { echo[1] = event.echo[1]; }
-        if (Number.isFinite(event.echo[3])) { echo[2] = event.echo[3]; }
+        if (Number.isFinite(event.echo[0])) { fx[fxBus].echo[0] = event.echo[0]; }
+        if (Number.isFinite(event.echo[1])) { fx[fxBus].echo[1] = event.echo[1]; }
+        if (Number.isFinite(event.echo[3])) { fx[fxBus].echo[2] = event.echo[3]; }
+      }
+      if (Array.isArray(event.volume)) {
+        // V is a vector whose slots are RELATIVE to the event's bus:
+        // "y1V0.4" = bus 1 volume 0.4, legacy "V,0.4" = bus 1 too.
+        for (let vi = 0; vi < event.volume.length; vi += 1) {
+          if (!Number.isFinite(event.volume[vi])) continue;
+          const vBus = fxBus + vi;
+          if (vBus >= 0 && vBus < numBuses) fx[vBus].volume = event.volume[vi];
+        }
       }
 
       // Remainder of block assumes osc is set.
@@ -919,21 +1031,34 @@ function set_knobs_from_events(events, synth) {
     set_amy_knob_value(knobs, "ADSR", "sustain", adsr[2]);
     set_amy_knob_value(knobs, "ADSR", "release", adsr[3]);
 
-    set_amy_knob_value(knobs, "EQ", "low", eq[0]);
-    set_amy_knob_value(knobs, "EQ", "mid", eq[1]);
-    set_amy_knob_value(knobs, "EQ", "high", eq[2]);
+    for (let b = 0; b < numBuses; b += 1) {
+      if (onlyDirtyFxBuses && !fx[b].dirty) {
+        // Synth readback: this bus wasn't in the events — leave its mirror alone.
+        if (Number.isFinite(fx[b].volume) && typeof window.setBusVolumeFromAmy === "function") {
+          window.setBusVolumeFromAmy(b, fx[b].volume);
+        }
+        continue;
+      }
+      set_bus_knob_value(b, "EQ", "low", fx[b].eq[0]);
+      set_bus_knob_value(b, "EQ", "mid", fx[b].eq[1]);
+      set_bus_knob_value(b, "EQ", "high", fx[b].eq[2]);
 
-    set_amy_knob_value(knobs, "Chorus", "level", chorus[0]);
-    set_amy_knob_value(knobs, "Chorus", "freq", chorus[1]);
-    set_amy_knob_value(knobs, "Chorus", "depth", chorus[2]);
+      set_bus_knob_value(b, "Chorus", "level", fx[b].chorus[0]);
+      set_bus_knob_value(b, "Chorus", "freq", fx[b].chorus[1]);
+      set_bus_knob_value(b, "Chorus", "depth", fx[b].chorus[2]);
 
-    set_amy_knob_value(knobs, "Reverb", "level", reverb[0]);
-    set_amy_knob_value(knobs, "Reverb", "live", reverb[1]);
-    set_amy_knob_value(knobs, "Reverb", "damp", reverb[2]);
+      set_bus_knob_value(b, "Reverb", "level", fx[b].reverb[0]);
+      set_bus_knob_value(b, "Reverb", "live", fx[b].reverb[1]);
+      set_bus_knob_value(b, "Reverb", "damp", fx[b].reverb[2]);
 
-    set_amy_knob_value(knobs, "Echo", "level", echo[0]);
-    set_amy_knob_value(knobs, "Echo", "delay", echo[1]);
-    set_amy_knob_value(knobs, "Echo", "feedback", echo[2]);
+      set_bus_knob_value(b, "Echo", "level", fx[b].echo[0]);
+      set_bus_knob_value(b, "Echo", "delay", fx[b].echo[1]);
+      set_bus_knob_value(b, "Echo", "feedback", fx[b].echo[2]);
+
+      if (Number.isFinite(fx[b].volume) && typeof window.setBusVolumeFromAmy === "function") {
+        window.setBusVolumeFromAmy(b, fx[b].volume);
+      }
+    }
 
     // Update synth level slider from osc 0 amp[CONST]
     if (typeof window.setSynthLevelFromAmy === "function") {
@@ -947,6 +1072,19 @@ window.set_knobs_from_events = set_knobs_from_events;
 function set_knobs_from_synth(synth) {
   let wire_commands = get_wire_commands_for_channel(synth);
   let events = events_from_wire_code_messages(wire_commands);
-  return set_knobs_from_events(events, synth);
+  // A synth readback identifies the synth's mix bus on its FX line (y<bus>);
+  // adopt it into the UI mirror so the Bus pull-down and Effects column track.
+  let busFound = null;
+  for (const ev of events) {
+    if (Number.isFinite(ev.bus)) busFound = ev.bus;
+  }
+  if (busFound !== null && typeof window.set_channel_bus_local === "function") {
+    window.set_channel_bus_local(synth, busFound);
+    if (typeof window.syncBusSelectForChannel === "function") window.syncBusSelectForChannel();
+    if (typeof window.syncFxLevelForBus === "function") window.syncFxLevelForBus();
+  }
+  // Readback events describe ONE synth (and one bus's FX line) — don't reset
+  // the other buses' FX mirrors to defaults.
+  return set_knobs_from_events(events, synth, { onlyDirtyFxBuses: true });
 }
 
