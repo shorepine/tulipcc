@@ -120,7 +120,7 @@ amyboard.monitor_encoders()
 ```
 
  - ![Adafruit QT Quad Rotary Encoder](img/accessory_adafruit_quad_encoder.jpg)  
-   [**Adafruit I2C QT Quad Rotary Encoder Breakout**](https://www.adafruit.com/product/5752) -- Four rotary encoders with built-in push buttons and one RGB NeoPixel per encoder on a single I2C breakout, running seesaw firmware. AMYboard has built-in support via `read_encoder()`, `init_buttons()`, `read_buttons()`, and `init_neopixels()`/`set_neopixel()`/`show_neopixels()`. With a display connected, you can use `patch_selector()` to scroll through your `.patch` files with one encoder and load them with a click.
+   [**Adafruit I2C QT Quad Rotary Encoder Breakout**](https://www.adafruit.com/product/5752) -- Four rotary encoders with built-in push buttons and one RGB NeoPixel per encoder on a single I2C breakout, running seesaw firmware. AMYboard has built-in support via `read_encoder()`, `init_buttons()`, `read_buttons()`, and `init_neopixels()`/`set_neopixel()`/`show_neopixels()`.
 
 ```python
 import amyboard
@@ -141,11 +141,6 @@ amyboard.set_neopixel(1, 0, 64, 0)   # encoder 1 -> dim green
 amyboard.set_neopixel(2, 0, 0, 64)   # encoder 2 -> dim blue
 amyboard.set_neopixel(3, 32, 32, 0)  # encoder 3 -> dim yellow
 amyboard.show_neopixels()            # latch staged colors to the LEDs
-
-# Patch selector: scroll through patches and load on click
-# (requires a display to be connected)
-amyboard.init_display()
-amyboard.patch_selector()
 ```
 
  - ![M5Stack 8-Encoder Unit](img/accessory_m5_8encoder.jpg)  
