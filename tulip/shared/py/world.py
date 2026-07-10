@@ -225,3 +225,75 @@ def post_message(message):
         _post_json("/api/tulipworld/messages", {"username": u, "content": message[:MAX_MESSAGE_SIZE]})
     except Exception:
         print("Could not post message.")
+
+
+# A M Y B O A R D ~ W O R L D
+# Sketches shared on amyboard.com. world.amyboard.download("eno_ambient", "dpwe")
+# fetches the latest sketch.py by that name (username optional) into
+# user/current/sketch.py and starts it the AMYboard way: synths reset,
+# _auto_generated_knobs applied, loop() scheduled on the sequencer.
+# Works on AMYboard and on Tulip — on Tulip the CV in/out calls in a sketch
+# no-op, while I2C accessories (OLED display, rotary encoders) still work.
+
+def _amyboard_sketch_filename(sketch):
+    return sketch if sketch.endswith(".py") else sketch + ".py"
+
+
+class _AmyboardWorld:
+    def ls(self, count=10):
+        for f in _get_json("/api/amyboardworld/files", limit=count)["items"]:
+            name = f["filename"]
+            if name.endswith(".py"):
+                name = name[:-3]
+            print(
+                "% 20s % 10s % 8s  %s"
+                % (
+                    name,
+                    f["username"][:MAX_USERNAME_SIZE],
+                    nice_time(f["age_ms"]),
+                    f["description"][:MAX_DESCRIPTION_SIZE],
+                )
+            )
+
+    def download(self, sketch, username=None, start=True):
+        filename = _amyboard_sketch_filename(sketch)
+        # Resolve via the files listing (q= narrows server-side, then exact
+        # filename match here): items come back newest-first, so the first
+        # hit is the latest revision.
+        got = None
+        try:
+            if username is None:
+                items = _get_json("/api/amyboardworld/files", q=filename, limit=50, latest_per_user_env="false")["items"]
+            else:
+                items = _get_json("/api/amyboardworld/files", q=filename, username=username, limit=50, latest_per_user_env="false")["items"]
+            for f in items:
+                if f["filename"].lower() == filename.lower():
+                    got = f
+                    break
+        except Exception:
+            got = None
+
+        if got is None:
+            if username is None:
+                print("Could not find %s on AMYboard World" % (filename))
+            else:
+                print("Could not find %s by %s on AMYboard World" % (filename, username))
+            return
+
+        import amyboard as _amyboard
+        env_dir = _amyboard.ensure_user_environment()
+        url = got["download_url"]
+        if not url.startswith("http"):
+            url = WORLD_API_BASE + url
+        r = requests.get(url)
+        r.save(env_dir + "/sketch.py")
+        print(
+            "Downloaded sketch %s by %s [%d bytes, last updated %s] from AMYboard World."
+            % (filename[:-3], got["username"], got["size"], nice_time(got["age_ms"]).lstrip())
+        )
+        if start:
+            print("Starting sketch. Stop it with amyboard.stop_sketch()")
+            _amyboard.restart_sketch()
+
+
+amyboard = _AmyboardWorld()
