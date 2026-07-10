@@ -49,16 +49,19 @@ _SYNTH_STATE_BEGIN = "# -- synth state saved by tulip.save_synth_state() --"
 _SYNTH_STATE_END = "# -- end saved synth state --"
 
 def save_synth_state(fn=None):
-    if "WEB" in board():
-        print("save_synth_state is not available on web builds")
-        return
     if fn is None:
         fn = root_dir() + 'user/boot.py'
     raws = []
-    for synth in range(32):
-        for command in amy_get_synth_commands(synth):
-            if command:
-                raws.append('i%d%s' % (synth, command))
+    try:
+        for synth in range(32):
+            for command in amy_get_synth_commands(synth):
+                if command:
+                    raws.append('i%d%s' % (synth, command))
+    except NameError:
+        # amy_get_synth_commands is compiled out of modtulip.c on web; Tulip
+        # web installs a JS bridge for it at boot, but other web builds don't.
+        print("save_synth_state is not available on this build")
+        return
     try:
         source = open(fn, 'r').read()
     except OSError:
