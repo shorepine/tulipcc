@@ -1458,7 +1458,7 @@
                     </div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center gap-2 ms-md-2">
                       <label class="text-nowrap mb-0 text-white" id="synth-level-label" for="synth-level-slider" style="font-size:0.875rem; cursor:pointer;" title="Click to set a MIDI CC for this channel's level">Level</label>
-                      <input type="range" class="form-range" id="synth-level-slider" min="0.001" max="7" step="0.001" value="1" style="width:100px;">
+                      <input type="range" class="form-range" id="synth-level-slider" min="0" max="1" step="0.001" value="0.521" style="width:100px;">
                     </div>
                     <div class="col-12 col-md-auto mt-2 mt-md-0 d-flex align-items-center gap-2 ms-md-2">
                       <label class="text-nowrap mb-0 text-white" for="bus-select" style="font-size:0.875rem;" title="Which mix bus this channel's synth is routed to. Each bus has its own Effects.">Bus</label>
@@ -1473,7 +1473,7 @@
                   <div class="patch-global-title">
                     <span>FX</span>
                     <label class="text-nowrap mb-0" id="fx-level-label" for="fx-level-slider" style="font-size:0.75rem; font-weight:400; letter-spacing:normal; text-transform:none; cursor:pointer;" title="Master level of this channel's mix bus. Click to set a MIDI CC.">Level</label>
-                    <input type="range" class="form-range" id="fx-level-slider" min="0.001" max="7" step="0.001" value="1" style="width:100px;">
+                    <input type="range" class="form-range" id="fx-level-slider" min="0" max="1" step="0.001" value="0.521" style="width:100px;">
                   </div>
                 </div>
                 <div class="patch-layout-body">
@@ -1988,14 +1988,32 @@
         const patchLoadModalButton = document.getElementById("patch-open-load-modal-btn");
         const loadPatchModalEl = document.getElementById("loadPatchModal");
         const patchClearChannelButton = document.getElementById("patch-clear-channel-btn");
+        // Pseudo-log mapping for both Level sliders (channel and FX/bus):
+        // slider position p in [0,1] -> level = 10^(2(p-0.5)) - 0.1, so the
+        // level is 0.0 at the left edge, ~1 at mid, 9.9 at the right edge.
+        // Same curve as AMY's log MIDI-CC mapping with min 0, max 9.9,
+        // offset 0.1 (which the dedicated level knobs use), so a hardware CC
+        // sweep and a slider sweep track identically.
+        function levelSliderToValue(p) {
+          p = Math.min(1, Math.max(0, Number(p) || 0));
+          return Math.pow(10, 2 * (p - 0.5)) - 0.1;
+        }
+        function levelValueToSlider(v) {
+          v = Number(v);
+          if (!Number.isFinite(v) || v < 0) v = 0;
+          return Math.min(1, Math.max(0, 0.5 + 0.5 * Math.log10(v + 0.1)));
+        }
+
         const synthLevelSlider = document.getElementById("synth-level-slider");
         const _synthLevels = {};  // per-channel level storage
         function getSynthLevel(ch) { return _synthLevels[ch] != null ? _synthLevels[ch] : 1; }
         function setSynthLevel(val, send) {
           const ch = Number(window.current_synth || 1);
-          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          val = Number(val);
+          if (!Number.isFinite(val)) val = 1;
+          val = Math.min(9.9, Math.max(0, val));
           _synthLevels[ch] = val;
-          if (synthLevelSlider) synthLevelSlider.value = val;
+          if (synthLevelSlider) synthLevelSlider.value = levelValueToSlider(val);
           if (send && typeof window.amy_add_log_message === "function") {
             var code = "i" + ch + "v0a" + val.toFixed(3);
             window.amy_add_log_message(code);
@@ -2011,17 +2029,18 @@
         function syncSynthLevelForChannel() {
           var ch = Number(window.current_synth || 1);
           var val = getSynthLevel(ch);
-          if (synthLevelSlider) synthLevelSlider.value = val;
+          if (synthLevelSlider) synthLevelSlider.value = levelValueToSlider(val);
         }
         if (synthLevelSlider) {
-          synthLevelSlider.addEventListener("input", function() { setSynthLevel(synthLevelSlider.value, true); });
+          synthLevelSlider.addEventListener("input", function() { setSynthLevel(levelSliderToValue(synthLevelSlider.value), true); });
         }
         window.syncSynthLevelForChannel = syncSynthLevelForChannel;
         window.setSynthLevelFromAmy = function(ch, val) {
-          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          val = Number(val);
+          if (!Number.isFinite(val) || val < 0) val = 1;
           _synthLevels[ch] = val;
           if (Number(window.current_synth || 1) === ch) {
-            if (synthLevelSlider) synthLevelSlider.value = val;
+            if (synthLevelSlider) synthLevelSlider.value = levelValueToSlider(val);
           }
         };
         // Clicking the "Level" label opens the same MIDI-CC popup the knobs use,
@@ -2076,14 +2095,16 @@
           var bus = currentBus();
           var vols = Array.isArray(window.amy_bus_volumes) ? window.amy_bus_volumes : [];
           var val = (vols[bus] != null) ? vols[bus] : 1;
-          if (fxLevelSlider) fxLevelSlider.value = val;
+          if (fxLevelSlider) fxLevelSlider.value = levelValueToSlider(val);
         }
         window.syncFxLevelForBus = syncFxLevelForBus;
         function setFxLevel(val, send) {
           var bus = currentBus();
-          val = Math.min(7, Math.max(0.001, Number(val) || 1));
+          val = Number(val);
+          if (!Number.isFinite(val)) val = 1;
+          val = Math.min(9.9, Math.max(0, val));
           if (Array.isArray(window.amy_bus_volumes)) window.amy_bus_volumes[bus] = val;
-          if (fxLevelSlider) fxLevelSlider.value = val;
+          if (fxLevelSlider) fxLevelSlider.value = levelValueToSlider(val);
           if (send && typeof window.amy_add_log_message === "function") {
             // Bus-addressed volume: y<bus>V<val> sets that bus's mixdown gain.
             var code = "y" + bus + "V" + val.toFixed(3);
@@ -2095,7 +2116,7 @@
           }
         }
         if (fxLevelSlider) {
-          fxLevelSlider.addEventListener("input", function() { setFxLevel(fxLevelSlider.value, true); });
+          fxLevelSlider.addEventListener("input", function() { setFxLevel(levelSliderToValue(fxLevelSlider.value), true); });
         }
         // Clicking the Effects "Level" label opens the MIDI-CC popup for the
         // bus's dedicated level knob (template i%iV%v — resolves the bus from

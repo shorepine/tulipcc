@@ -38,7 +38,8 @@ window.addEventListener("DOMContentLoaded", function() {
       // registered as a channel knob so its MIDI CC rides the same
       // save/restore/bulk-send path as every other knob. Same AMY command as the
       // Level slider: i<ch>v0a<val> (amp on the control osc). Default CC 7 = the
-      // MIDI standard "Channel Volume".
+      // MIDI standard "Channel Volume". The log range 0..9.9 with offset 0.1 is
+      // the same pseudo-log curve as the UI slider: 10^(2(p-0.5)) - 0.1.
       section: "Synth",
       cc: 7,
       display_name: "level",
@@ -46,8 +47,8 @@ window.addEventListener("DOMContentLoaded", function() {
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,
-      min_value: 0.001,
-      max_value: 7,
+      min_value: 0,
+      max_value: 9.9,
       offset: 0.1,
       dedicated_slider: true,
     },
@@ -140,10 +141,12 @@ window.addEventListener("DOMContentLoaded", function() {
 
     {
       // Per-bus master volume (final mixdown gain for this bus). Shown by the
-      // dedicated "Level" slider in the Effects panel header (dedicated_slider
-      // -> kept out of the knob grid), but registered as a bus knob so it can
+      // dedicated "Level" slider in the FX column header (dedicated_slider ->
+      // kept out of the knob grid), but registered as a bus knob so it can
       // carry a MIDI CC mapping like every other knob. The i%i prefix makes
-      // AMY resolve the bus from the sending channel at execution time.
+      // AMY resolve the bus from the sending channel at execution time. The
+      // log range 0..9.9 with offset 0.1 is the same pseudo-log curve as the
+      // UI slider: 10^(2(p-0.5)) - 0.1.
       section: "Bus",
       cc: "",
       display_name: "level",
@@ -151,8 +154,8 @@ window.addEventListener("DOMContentLoaded", function() {
       knob_type: "log",
       default_value: 1.0,
       amy_default: 1.0,
-      min_value: 0.001,
-      max_value: 7,
+      min_value: 0,
+      max_value: 9.9,
       offset: 0.1,
       dedicated_slider: true,
     },
