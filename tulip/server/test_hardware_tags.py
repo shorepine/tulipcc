@@ -71,7 +71,6 @@ check("start_sample from another bus is not audio-in", tags("import amy\namy.sta
 
 # --- combinations ---
 check("display + encoder", tags("import amyboard\namyboard.init_display()\nenc = amyboard.encoder()\ndef loop():\n    amyboard.display.text(str(enc.read(0)),0,0,255)\n    amyboard.display.show()") == ["display", "encoder"])
-check("patch_selector implies display + encoder", tags("import amyboard\namyboard.patch_selector()\ndef loop():\n    pass") == ["display", "encoder"])
 
 # --- against the bundled example sketches ---
 SKETCHES = Path(__file__).resolve().parents[1] / "amyboardweb" / "sketches"

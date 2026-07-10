@@ -762,19 +762,6 @@ function remove_current_environment_file_if_exists(filename) {
   return false;
 }
 
-function num_oscs_from_patch_file_content(source) {
-  var maxOsc = -1;
-  var lines = String(source || "").split(/\r?\n/);
-  for (var i = 0; i < lines.length; i++) {
-    var m = lines[i].match(/^v(\d+)/);
-    if (m) {
-      var osc = parseInt(m[1], 10);
-      if (osc > maxOsc) maxOsc = osc;
-    }
-  }
-  return maxOsc < 0 ? 3 : maxOsc + 1;
-}
-
 function get_wire_commands_for_juno_patch(patch) {
   // The new convention for AMYboard voice osc usage.
   const CTL_OSC = 0;  // Osc with filter & env commands.
@@ -1052,8 +1039,6 @@ function get_wire_commands_for_channel(channel) {
   }
   return lines;
 }
-
-function write_channel_dirty_patch_file(channel) { /* no-op */ }
 
 const pending_channel_knob_sync = new Array(17).fill(false);
 
@@ -6200,9 +6185,9 @@ async function start_audio() {
       await amy_live_start_web();
   }
   // Allow a few audio callbacks to fire so amy_execute_deltas processes
-  // any wire commands that were queued before audio started (e.g. from
-  // restore_patch_state_from_files during boot).  Without this delay,
-  // yield_synth_commands would read stale default values for global effects.
+  // any wire commands that were queued before audio started.  Without this
+  // delay, yield_synth_commands would read stale default values for global
+  // effects.
   await new Promise(function(resolve) { setTimeout(resolve, 150); });
   // Set up AnalyserNode to capture output waveform for Python
   try {
@@ -6235,8 +6220,8 @@ async function start_audio() {
   // to race a default run_sketch() against check_url_env_params's deferred load.
   if (mp && !_url_env_pending) {
     // Init synth 1 with default Juno patch before run_sketch applies knobs.
-    // On main, restore_patch_state_from_files did this. Without it, synth 1
-    // doesn't exist and _apply_knobs_text fails with "synth not defined".
+    // Without it, synth 1 doesn't exist and _apply_knobs_text fails with
+    // "synth not defined".
     amy_add_message("i1K257iv6Z");
     // Let AMY process the synth init before running Python.
     await new Promise(function(resolve) { setTimeout(resolve, 100); });

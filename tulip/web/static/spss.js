@@ -95,14 +95,14 @@ function read_c_string_from_heap(ptr, maxLen) {
 // out on web (#ifndef __EMSCRIPTEN__) because here micropython does not link AMY;
 // AMY runs in a separate WASM worklet. So we bridge it from JS instead, driving
 // AMY's exported low-level generator yield_synth_commands. Reads back the wirecode
-// commands that reconstruct synth `synth` (1..16) from AMY's current state and
-// returns them as an array of strings (empty if the synth has no state).
-// include_fx (default true) also emits the global FX commands. Throws if AMY's
-// WASM module is not loaded or `synth` is out of range.
+// commands that reconstruct synth `synth` (0..63, AMY's default max_synths) from
+// AMY's current state and returns them as an array of strings (empty if the synth
+// has no state). include_fx (default true) also emits the global FX commands.
+// Throws if AMY's WASM module is not loaded or `synth` is out of range.
 function get_synth_commands(synth, include_fx = true) {
   const s = Number(synth);
-  if (!Number.isInteger(s) || s < 1 || s > 16) {
-    throw new Error("get_synth_commands: synth must be an integer 1..16.");
+  if (!Number.isInteger(s) || s < 0 || s > 63) {
+    throw new Error("get_synth_commands: synth must be an integer 0..63.");
   }
   if (!amy_module || typeof amy_yield_synth_commands !== "function") {
     throw new Error("get_synth_commands: AMY WASM module is not loaded.");
@@ -136,6 +136,18 @@ function get_synth_commands(synth, include_fx = true) {
 // spss.js is loaded as a plain <script>, so this is already a global, but be
 // explicit that it is the intended JS entry point for reading synth commands.
 globalThis.get_synth_commands = get_synth_commands;
+
+// String-returning wrapper for the MicroPython bridge (one wire command per
+// line, "" if the synth is unconfigured or AMY isn't loaded yet). Installed as
+// tulip.amy_get_synth_commands in start_tulip so e.g. tulip.save_synth_state()
+// works on web like it does on firmware.
+function amy_get_synth_commands_js(synth, include_fx) {
+  try {
+    return get_synth_commands(synth, !!include_fx).join('\n');
+  } catch (e) {
+    return "";
+  }
+}
 
 // Called from AMY to update Tulip about what tick it is, for the sequencer
 function amy_sequencer_js_hook(tick) {
@@ -559,6 +571,8 @@ async function start_tulip() {
   await mp.registerJsModule('amy_js_message', amy_add_message);
   await mp.registerJsModule('amy_sysclock', amy_sysclock);
   await mp.registerJsModule('tulip_world_upload_file', tulip_world_upload_file);
+  // AMY WASM lives in a separate module; bridge synth-state readback for Python via JS.
+  await mp.registerJsModule('amy_get_synth_commands_js', amy_get_synth_commands_js);
 //  await mp.registerJsModule('amy_get_input_buffer', get_audio_samples);
 //  await mp.registerJsModule('amy_set_external_input_buffer', set_audio_samples);
 
@@ -567,10 +581,13 @@ async function start_tulip() {
 
   // Set up the micropython context for AMY.
   await mp.runPythonAsync(`
-    import tulip, amy, amy_js_message, amy_sysclock 
+    import tulip, amy, amy_js_message, amy_sysclock
+    import amy_get_synth_commands_js as _amy_gsc_js
     # import amy_get_input_buffer, amy_set_external_input_buffer
     amy.override_send = amy_js_message
     tulip.amy_ticks_ms = amy_sysclock
+    # put the js synth-state readback in the spot tulip.py expects (compiled out of modtulip.c on web)
+    tulip.amy_get_synth_commands = lambda synth, include_fx=True: [c for c in _amy_gsc_js(synth, include_fx).split('\\n') if c]
     #def amy_block_done_callback(f=None):
     #    amy.block_cb = f
     # put the js exported AMY shims in the spot tulip expects 
