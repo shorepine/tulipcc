@@ -43,15 +43,19 @@ For example, to send the wire message `v0f440l1` (sine wave, 440Hz, note on) to 
 
 ## Others
 
-AMY supports MIDI realtime transport for the internal sequencer:
+AMY supports MIDI realtime transport for the internal sequencer, in both directions:
 
 - `0xF8` (Timing Clock): advances the sequencer from external clock input.
 - `0xFA` (Start): starts sequencer playback from tick 0 in external clock mode.
 - `0xFC` (Stop): stops sequencer playback.
 
-External realtime sync is **off by default** — AMY ignores incoming clock/start/stop and keeps its own tempo. Enable it with the C API `amy_external_midi_sync(1)`, or over the wire with `amy.send(external_midi_sync=1)` (wire command `zC1`). Set it back to 0 to return to the internal clock.
+External realtime sync is **off by default** — AMY ignores incoming clock/start/stop and keeps its own tempo. The sync mode is set with the C API `amy_external_midi_sync(mode)`, or over the wire with `amy.send(external_midi_sync=mode)` (wire command `zC`):
 
-MIDI Timing Clock is 24 PPQ. AMY's sequencer runs at 48 PPQ, so AMY advances two sequencer ticks per one MIDI clock pulse.
+- `0` (default): internal clock; incoming realtime messages are ignored and none are sent.
+- `1`: **follow** — the sequencer is slaved to incoming `0xF8`/`0xFA`/`0xFC`.
+- `2`: **send** — AMY is the clock master: it sends `0xF8` at 24 PPQ derived from AMY's own `tempo` out the configured MIDI interface, plus `0xFA`/`0xFC` when the sequencer transport starts or stops (e.g. via `sequencer_run` / `zY`). Clock keeps flowing while the transport is stopped, so downstream gear stays tempo-locked and ready for the next Start.
+
+MIDI Timing Clock is 24 PPQ. AMY's sequencer runs at 48 PPQ, so AMY advances two sequencer ticks per one MIDI clock pulse in follow mode, and sends one clock pulse per two sequencer ticks in send mode.
 
 You can also start and stop the sequencer transport directly, independent of MIDI clock sync, with `amy.send(sequencer_run=1)` / `amy.send(sequencer_run=0)` (wire command `zY1` / `zY0`). 
 
