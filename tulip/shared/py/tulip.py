@@ -41,6 +41,51 @@ def add_to_bootpy(s, only_first_create=False):
         w.write(bootpy)
         w.close()
 
+# Save the current state of every AMY synth (0..31) as amy.send_raw() commands
+# at the bottom of a file that runs at boot (default: your boot.py), so your
+# synth setup comes back on the next boot. Re-saving replaces the previously
+# saved block instead of adding another copy.
+_SYNTH_STATE_BEGIN = "# -- synth state saved by tulip.save_synth_state() --"
+_SYNTH_STATE_END = "# -- end saved synth state --"
+
+def save_synth_state(fn=None):
+    if fn is None:
+        fn = root_dir() + 'user/boot.py'
+    raws = []
+    try:
+        for synth in range(32):
+            for command in amy_get_synth_commands(synth):
+                if command:
+                    raws.append('i%d%s' % (synth, command))
+    except NameError:
+        # amy_get_synth_commands is compiled out of modtulip.c on web; Tulip
+        # web installs a JS bridge for it at boot, but other web builds don't.
+        print("save_synth_state is not available on this build")
+        return
+    try:
+        source = open(fn, 'r').read()
+    except OSError:
+        source = ""  # file doesn't exist yet
+    # Drop any previously saved block so re-saving doesn't stack copies.
+    begin = source.find(_SYNTH_STATE_BEGIN)
+    if begin != -1:
+        end = source.find(_SYNTH_STATE_END, begin)
+        tail = source[end + len(_SYNTH_STATE_END):] if end != -1 else ""
+        source = source[:begin].rstrip('\n') + '\n' + tail.lstrip('\n')
+    if not raws:
+        print("No synths are set up, nothing to save.")
+        return
+    block = [_SYNTH_STATE_BEGIN, "import amy"]
+    block += ["amy.send_raw(%r)" % r for r in raws]
+    block.append(_SYNTH_STATE_END)
+    source = source.rstrip('\n')
+    if source:
+        source += '\n\n'
+    w = open(fn, 'w')
+    w.write(source + '\n'.join(block) + '\n')
+    w.close()
+    print("Saved %d synth commands to %s" % (len(raws), fn))
+
 # Wrapper around AMY tempo to store it
 amy_bpm = 108
 def seq_bpm(bpm=None):
@@ -56,12 +101,17 @@ def seq_ppq(ppq=None):
         print("You can no longer set PPQ in Tulip. It's fixed at %d" % (amy.AMY_SEQUENCER_PPQ))
     return amy.AMY_SEQUENCER_PPQ
 
-# Follow (or stop following) external MIDI realtime clock/start/stop. Sent as an
-# AMY wire command (external_midi_sync / zC), so it works identically on firmware
-# and the web builds, where AMY is a separate WASM module reachable only via the
-# wire protocol.
-def external_midi_sync(enabled):
-    amy.send(external_midi_sync=1 if enabled else 0)
+# MIDI realtime clock sync mode. 0/False (default): internal clock, realtime
+# messages neither followed nor sent. 1/True: follow incoming MIDI realtime
+# clock/start/stop (F8/FA/FC). 2 (or send=True): Tulip is the clock master and
+# sends F8 at 24 PPQ from its own tempo, plus FA/FC on sequencer start/stop.
+# Sent as an AMY wire command (external_midi_sync / zC), so it works identically
+# on firmware and the web builds, where AMY is a separate WASM module reachable
+# only via the wire protocol.
+def external_midi_sync(mode=True, send=False):
+    if send:
+        mode = 2
+    amy.send(external_midi_sync=int(mode))
 
 def remap():
     if board() == "WEB":

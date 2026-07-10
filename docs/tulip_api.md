@@ -481,6 +481,13 @@ s.note_on(60, 1.0)
 
 Use `syn.release()` to free up the resources for a synth.
 
+Once you have your synths set up the way you like, you can save their state so it comes back on the next boot. `tulip.save_synth_state()` reads the current configuration of every AMY synth and appends the commands that restore it to the bottom of your `boot.py` (or any file you give it). Re-saving replaces the previously saved state.
+
+```python
+tulip.save_synth_state()  # adds current synth state to your boot.py
+tulip.save_synth_state('my_setup.py')  # or save it to some other file to execfile() later
+```
+
 
 ### Low level AMY control
 
@@ -710,19 +717,24 @@ tulip.midi_local((144, 60, 127)) # send note on to local bus
 
 ### MIDI Realtime Clock Sync (`F8`/`FA`/`FC`)
 
-External MIDI realtime sync to Tulip's sequencer is **off by default**.
+MIDI realtime sync is **off by default** — Tulip's sequencer keeps its own tempo, and no realtime messages are sent.
 
 Use `tulip.external_midi_sync(x)` to control this:
 
 ```python
-tulip.external_midi_sync(False) # default: ignore external MIDI realtime clock/start/stop
-tulip.external_midi_sync(True)  # enable external MIDI realtime sync
+tulip.external_midi_sync(False)     # default: internal clock; ignore and don't send realtime messages
+tulip.external_midi_sync(True)      # follow external MIDI realtime sync (Tulip is a clock slave)
+tulip.external_midi_sync(send=True) # send MIDI realtime sync (Tulip is the clock master)
 ```
 
-When enabled:
+When following (`True`, or mode `1`):
 - MIDI `F8` (Timing Clock) drives external tempo sync for the sequencer.
 - MIDI `FA` (Start) starts the sequencer.
 - MIDI `FC` (Stop) stops the sequencer.
+
+When sending (`send=True`, or mode `2`):
+- Tulip sends `F8` (Timing Clock) at 24 PPQ derived from its own `tulip.seq_bpm()` tempo, out the configured MIDI interface. Clock keeps flowing even while the sequencer transport is stopped, so downstream gear stays tempo-locked.
+- `FA` (Start) / `FC` (Stop) are sent when the sequencer transport starts or stops (e.g. `sequencer.start()` / `sequencer.stop()`).
 
 ### MIDI SYSEX
 
