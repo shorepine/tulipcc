@@ -1581,14 +1581,14 @@ HARDWARE_TAGS = (
 _HW_DISPLAY_RE = re.compile(
     r"\binit_display\s*\(|\bdisplay_refresh\s*\("
     r"|\bdisplay\s*\.\s*(?:text|fill|fill_rect|rect|line|hline|vline|pixel|scroll|show|refresh|clear|message)\b"
-    r"|\bmonitor_encoders\s*\(|\bdraw_waveform\s*\(|\bshow_midi_ccs\s*\(|\bpatch_selector\s*\(|\bPatchSelector\s*\("
+    r"|\bmonitor_encoders\s*\(|\bdraw_waveform\s*\(|\bshow_midi_ccs\s*\("
 )
 # Any rotary-encoder accessory: the unified amyboard.encoder() API, the legacy
 # seesaw helpers, the legacy m5_8encoder module, and the helpers built on them.
 _HW_ENCODER_RE = re.compile(
     r"\bencoder\s*\(|\bamyboard\s*\.\s*Encoder\s*\(|\bread_encoder\s*\(|\bread_buttons\s*\(|\binit_buttons\s*\("
     r"|\bset_neopixel\s*\(|\binit_neopixels\s*\(|\bshow_neopixels\s*\(|\bm5_8encoder\b"
-    r"|\bmonitor_encoders\s*\(|\bpatch_selector\s*\(|\bPatchSelector\s*\("
+    r"|\bmonitor_encoders\s*\("
 )
 # Evidence a sketch is written for the 8-encoder unit specifically: the legacy
 # module, forcing type="m5stack", the m5stack-only toggle switch, touching an

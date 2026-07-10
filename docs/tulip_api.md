@@ -481,6 +481,13 @@ s.note_on(60, 1.0)
 
 Use `syn.release()` to free up the resources for a synth.
 
+Once you have your synths set up the way you like, you can save their state so it comes back on the next boot. `tulip.save_synth_state()` reads the current configuration of every AMY synth and appends the commands that restore it to the bottom of your `boot.py` (or any file you give it). Re-saving replaces the previously saved state.
+
+```python
+tulip.save_synth_state()  # adds current synth state to your boot.py
+tulip.save_synth_state('my_setup.py')  # or save it to some other file to execfile() later
+```
+
 
 ### Low level AMY control
 
