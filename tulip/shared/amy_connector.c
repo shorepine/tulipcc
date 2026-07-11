@@ -437,6 +437,10 @@ void run_amy(uint8_t midi_out_pin) {
     amy_config.amy_external_overload_hook = tulip_amy_overload_hook;
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
+#ifdef TULIP_USER_C_DSP
+    extern void tulip_bus_dsp_hook(uint8_t bus, SAMPLE *buf, uint16_t len);
+    amy_config.amy_external_bus_dsp_hook = tulip_bus_dsp_hook;
+#endif
     amy_config.audio = AMY_AUDIO_IS_I2S;
 #if defined(AMYBOARD) || defined(AMYBOARD_WEB)
     extern float cv_input_hook(uint16_t channel);
@@ -500,6 +504,10 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     amy_config.amy_external_overload_hook = tulip_amy_overload_hook;
     extern void tulip_amy_sequencer_hook(uint32_t tick_count);
     amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
+#ifdef TULIP_USER_C_DSP
+    extern void tulip_bus_dsp_hook(uint8_t bus, SAMPLE *buf, uint16_t len);
+    amy_config.amy_external_bus_dsp_hook = tulip_bus_dsp_hook;
+#endif
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.capture_device_id = capture_device_id;
     amy_config.playback_device_id = playback_device_id;

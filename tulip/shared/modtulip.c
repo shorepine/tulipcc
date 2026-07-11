@@ -420,6 +420,45 @@ STATIC mp_obj_t tulip_pcm_load_file(size_t n_args, const mp_obj_t *args) {
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_pcm_load_file_obj, 0, 1, tulip_pcm_load_file);
 #endif
 
+#ifdef TULIP_USER_C_DSP
+#include "user_c_dsp.h"
+
+// install_c_process(name, src): compile a C string defining
+// void process(int *buf, int frames, int chans) and install it under name.
+STATIC mp_obj_t tulip_install_c_process(mp_obj_t name_obj, mp_obj_t src_obj) {
+    char err[512];
+    int slot = user_c_dsp_install(mp_obj_str_get_str(name_obj), mp_obj_str_get_str(src_obj), err, sizeof(err));
+    if (slot < 0) mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("install_c_process: %s"), err);
+    return mp_obj_new_int(slot);
+}
+MP_DEFINE_CONST_FUN_OBJ_2(tulip_install_c_process_obj, tulip_install_c_process);
+
+// c_process(name, on, bus=0): enable/disable a named process on a bus.
+STATIC mp_obj_t tulip_c_process(size_t n_args, const mp_obj_t *args) {
+    int bus = (n_args > 2) ? mp_obj_get_int(args[2]) : 0;
+    int r = user_c_dsp_set(mp_obj_str_get_str(args[0]), bus, mp_obj_is_true(args[1]));
+    if (r == -1) mp_raise_ValueError(MP_ERROR_TEXT("no such c_process"));
+    if (r == -2) mp_raise_ValueError(MP_ERROR_TEXT("bad bus"));
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_c_process_obj, 2, 3, tulip_c_process);
+
+// c_process_calls(name): blocks processed since install (is my effect running?)
+STATIC mp_obj_t tulip_c_process_calls(mp_obj_t name_obj) {
+    int64_t calls = user_c_dsp_calls(mp_obj_str_get_str(name_obj));
+    if (calls < 0) mp_raise_ValueError(MP_ERROR_TEXT("no such c_process"));
+    return mp_obj_new_int_from_ll(calls);
+}
+MP_DEFINE_CONST_FUN_OBJ_1(tulip_c_process_calls_obj, tulip_c_process_calls);
+
+STATIC mp_obj_t tulip_uninstall_c_process(mp_obj_t name_obj) {
+    if (user_c_dsp_uninstall(mp_obj_str_get_str(name_obj)) < 0)
+        mp_raise_ValueError(MP_ERROR_TEXT("no such c_process"));
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_1(tulip_uninstall_c_process_obj, tulip_uninstall_c_process);
+#endif  // TULIP_USER_C_DSP
+
 
 
 /*
@@ -1729,6 +1768,13 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_render_load), MP_ROM_PTR(&tulip_amy_render_load_obj) },
     { MP_ROM_QSTR(MP_QSTR_pcm_load_file), MP_ROM_PTR(&tulip_pcm_load_file_obj) },
+#endif
+
+#ifdef TULIP_USER_C_DSP
+    { MP_ROM_QSTR(MP_QSTR_install_c_process), MP_ROM_PTR(&tulip_install_c_process_obj) },
+    { MP_ROM_QSTR(MP_QSTR_c_process), MP_ROM_PTR(&tulip_c_process_obj) },
+    { MP_ROM_QSTR(MP_QSTR_c_process_calls), MP_ROM_PTR(&tulip_c_process_calls_obj) },
+    { MP_ROM_QSTR(MP_QSTR_uninstall_c_process), MP_ROM_PTR(&tulip_uninstall_c_process_obj) },
 #endif
 
 #if defined(AMYBOARD) || defined(AMYBOARD_WEB)

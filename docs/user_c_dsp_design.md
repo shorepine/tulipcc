@@ -143,9 +143,27 @@ v2; don't block on wire-protocol design.
   `external_map` with user-osc entries; expose msynth params to user code as
   fixed-point via exported helpers (`amy_osc_freq_q16(osc)`,
   `amy_osc_amp_q23(osc)`, `amy_osc_phase(osc)`…) since the subset has no floats.
-- **Desktop (macOS Tulip)**: same Python API, but implement with
-  `cc -dynamiclib` + `dlopen` (or build xcc700 for… no — just use clang; it's
-  a dev machine). Instant dev loop for people writing plugins for hardware.
+- **Desktop (macOS Tulip)** — *implemented*: same Python API, backed by an
+  embedded **libtcc** (TinyCC, `tinycc` submodule, LGPL) JIT — no Xcode CLT
+  needed. `tulip/shared/user_c_dsp.c` holds the slot table + dispatcher
+  (registered as `amy_external_bus_dsp_hook`) and the tcc backend;
+  `tulip/macos/build.sh` builds `libtcc.a` and stages the tcc runtime
+  (`libtcc1.a` + headers) into the app bundle's `Resources/tcc`. Compile
+  errors raise `ValueError` with tcc's line numbers; reinstalling the same
+  name swaps code in place and keeps its bus enables (edit + reinstall dev
+  loop); `tulip.c_process_calls(name)` confirms the code is running.
+  Caveats: tcc accepts more C than xcc700 will on hardware (add an xcc700
+  lint pass later); the signed/notarized `package.sh` build needs the
+  `com.apple.security.cs.allow-jit` hardened-runtime entitlement and per-arch
+  libtcc builds before the feature ships in releases (until then it compiles
+  out of that build).
+
+  ```python
+  tulip.install_c_process("crush", src)   # -> slot; ValueError on bad C
+  tulip.c_process("crush", True, 0)       # enable on bus 0 (on, bus=0)
+  tulip.c_process_calls("crush")          # blocks processed so far
+  tulip.uninstall_c_process("crush")
+  ```
 
 ### Failure modes, honestly
 
