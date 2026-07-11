@@ -88,7 +88,21 @@ STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_board_obj, 0, 0, tulip_board);
 
 
-mp_obj_t midi_callback = NULL;
+// GC-root storage for the callback slots aliased in tulip_helpers.h. The
+// array sizes must match SEQUENCER_SLOTS / DEFER_SLOTS (static_asserts in
+// tsequencer.c); slot-count macros aren't visible where this expands.
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_midi);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_amy_overload);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_amy_block_done);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_frame);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_frame_arg);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_touch);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_keyboard);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_ui_quit);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_ui_switch);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_sequencer[8]);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_defer[32]);
+MP_REGISTER_ROOT_POINTER(mp_obj_t cb_defer_args[32]);
 
 STATIC mp_obj_t tulip_midi_callback(size_t n_args, const mp_obj_t *args) {
     midi_callback = args[0];
@@ -98,8 +112,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_midi_callback_obj, 1, 1, tulip_
 
 // Called (via mp_sched_schedule from the AMY render task) when AMY's CPU
 // overload failsafe trips, with the render load percent as a small int.
-mp_obj_t amy_overload_callback = NULL;
-
 STATIC mp_obj_t tulip_amy_overload_callback(size_t n_args, const mp_obj_t *args) {
     amy_overload_callback = (args[0] == mp_const_none) ? NULL : args[0];
     return mp_const_none;
@@ -114,8 +126,6 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_overload_callback_obj, 1, 1
 extern int amy_get_output_buffer(int16_t *samples);
 extern int amy_get_input_buffer(int16_t *samples);
 extern void amy_set_external_input_buffer(int16_t * samples);
-
-mp_obj_t amy_block_done_callback = NULL;
 
 STATIC mp_obj_t tulip_amy_block_done_callback(size_t n_args, const mp_obj_t *args) {
     if(n_args==0) {
@@ -766,6 +776,15 @@ STATIC mp_obj_t tulip_tfb_update(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_update_obj, 0, 0, tulip_tfb_update);
 
+// (cols, rows) = tulip.tfb_size() -- visible TFB size in characters for the current font
+STATIC mp_obj_t tulip_tfb_size(size_t n_args, const mp_obj_t *args) {
+    mp_obj_t tuple[2];
+    tuple[0] = mp_obj_new_int(display_tfb_visible_cols());
+    tuple[1] = mp_obj_new_int(display_tfb_visible_rows());
+    return mp_obj_new_tuple(2, tuple);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tfb_size_obj, 0, 0, tulip_tfb_size);
+
 // tulip.tfb_font() -> current font number
 // tulip.tfb_font(x) -> set font number (0=8x12, 1=portfolio, 2=12x16)
 STATIC mp_obj_t tulip_tfb_font(size_t n_args, const mp_obj_t *args) {
@@ -1059,12 +1078,9 @@ STATIC mp_obj_t tulip_screen_size(size_t n_args, const mp_obj_t *args) {
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_screen_size_obj, 0, 0, tulip_screen_size);
 
 
-mp_obj_t frame_callback = NULL; 
-mp_obj_t frame_arg = NULL; 
-mp_obj_t touch_callback = NULL; 
-mp_obj_t keyboard_callback = NULL;
-mp_obj_t ui_quit_callback = NULL;
-mp_obj_t ui_switch_callback = NULL;
+// frame_callback, frame_arg, touch_callback, keyboard_callback,
+// ui_quit_callback and ui_switch_callback are GC root pointers -- see the
+// MP_REGISTER_ROOT_POINTER block above and the aliases in tulip_helpers.h.
 
 
 STATIC mp_obj_t mp_lv_task_handler(mp_obj_t arg)
@@ -1516,6 +1532,51 @@ STATIC mp_obj_t tulip_key(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_key_obj, 0, 0, tulip_key);
 
+// tulip.tty_grab(1) diverts console/serial input away from the REPL; a
+// full-screen app (like the editor) then reads it with tulip.tty_read().
+// tulip.tty_grab(0) gives the console back to the REPL.
+STATIC mp_obj_t tulip_tty_grab(size_t n_args, const mp_obj_t *args) {
+    uint8_t on = mp_obj_get_int(args[0]) ? 1 : 0;
+    if(on && !tty_grab) {
+        // drop anything stale from a previous grab
+        while(ringbuf_get(&tty_grab_ringbuf) != -1) {}
+    }
+    tty_grab = on;
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tty_grab_obj, 1, 1, tulip_tty_grab);
+
+// c = tulip.tty_read() -- next diverted console char, or -1 if none pending
+STATIC mp_obj_t tulip_tty_read(size_t n_args, const mp_obj_t *args) {
+    return mp_obj_new_int(ringbuf_get(&tty_grab_ringbuf));
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_tty_read_obj, 0, 0, tulip_tty_read);
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+// tulip.js_sleep(ms) -- asyncify-yield to the browser, so blocking-style
+// Python (the editor's key loop) can wait without hanging the tab
+STATIC mp_obj_t tulip_js_sleep(size_t n_args, const mp_obj_t *args) {
+    emscripten_sleep(mp_obj_get_int(args[0]));
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_js_sleep_obj, 1, 1, tulip_js_sleep);
+
+// tulip.js_pump() -- run one display/key-pump tick. The browser pauses the
+// emscripten main loop while asyncify is suspended, so a blocking-style app
+// pumps SDL events and the display itself between js_sleep yields.
+extern int unix_display_draw();
+STATIC mp_obj_t tulip_js_pump(size_t n_args, const mp_obj_t *args) {
+    unix_display_draw();
+    return mp_const_none;
+}
+
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_js_pump_obj, 0, 0, tulip_js_pump);
+#endif
+
 extern uint8_t keyboard_send_keys_to_micropython;
 STATIC mp_obj_t tulip_key_scan(size_t n_args, const mp_obj_t *args) {
     keyboard_send_keys_to_micropython = !(mp_obj_get_int(args[0]));
@@ -1767,6 +1828,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_tfb_save), MP_ROM_PTR(&tulip_tfb_save_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_restore), MP_ROM_PTR(&tulip_tfb_restore_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_update), MP_ROM_PTR(&tulip_tfb_update_obj) },
+    { MP_ROM_QSTR(MP_QSTR_tfb_size), MP_ROM_PTR(&tulip_tfb_size_obj) },
     { MP_ROM_QSTR(MP_QSTR_tfb_font), MP_ROM_PTR(&tulip_tfb_font_obj) },
     { MP_ROM_QSTR(MP_QSTR_fps), MP_ROM_PTR(&tulip_fps_obj) },
     { MP_ROM_QSTR(MP_QSTR_gpu), MP_ROM_PTR(&tulip_gpu_obj) },
@@ -1810,6 +1872,12 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_key), MP_ROM_PTR(&tulip_key_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_scan), MP_ROM_PTR(&tulip_key_scan_obj) },
     { MP_ROM_QSTR(MP_QSTR_key_send), MP_ROM_PTR(&tulip_key_send_obj) },
+    { MP_ROM_QSTR(MP_QSTR_tty_grab), MP_ROM_PTR(&tulip_tty_grab_obj) },
+    { MP_ROM_QSTR(MP_QSTR_tty_read), MP_ROM_PTR(&tulip_tty_read_obj) },
+    #ifdef __EMSCRIPTEN__
+    { MP_ROM_QSTR(MP_QSTR_js_sleep), MP_ROM_PTR(&tulip_js_sleep_obj) },
+    { MP_ROM_QSTR(MP_QSTR_js_pump), MP_ROM_PTR(&tulip_js_pump_obj) },
+    #endif
     { MP_ROM_QSTR(MP_QSTR_gpu_reset), MP_ROM_PTR(&tulip_gpu_reset_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_circle), MP_ROM_PTR(&tulip_bg_circle_obj) },
     { MP_ROM_QSTR(MP_QSTR_bg_bezier), MP_ROM_PTR(&tulip_bg_bezier_obj) },

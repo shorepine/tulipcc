@@ -181,13 +181,17 @@ int mp_hal_stdin_rx_chr(void) {
                 continue; 
             } 
         } 
-        if(ret) return c; 
+        if(ret) {
+            if(tulip_tty_grab_char(c)) continue; // diverted to a grab_tty app
+            return c;
+        }
         int rc = ringbuf_get(&stdin_ringbuf);
         if (rc != -1) {
+            if(tulip_tty_grab_char(rc)) continue;
             return rc;
         }
         MICROPY_EVENT_POLL_HOOK
-    } 
+    }
 }
 
 /*

@@ -287,6 +287,7 @@ void save_tfb() {
 }
 
 void restore_tfb() {
+	if(saved_tfb == NULL) return; // no save_tfb() happened; don't deref NULL
 	for(uint16_t y=0;y<TFB_ROWS*TFB_COLS;y++) {
 		TFB[y] = saved_tfb[y];
 		TFBf[y] = saved_tfbf[y];
@@ -298,6 +299,7 @@ void restore_tfb() {
 	editor_free(saved_tfbf);
 	editor_free(saved_tfbfg);
 	editor_free(saved_tfbbg);
+	saved_tfb = NULL; saved_tfbf = NULL; saved_tfbfg = NULL; saved_tfbbg = NULL;
 	tfb_y_row = saved_tfb_y;
 	tfb_x_col = saved_tfb_x;
     for(uint16_t y=0;y<V_RES+OFFSCREEN_Y_PX;y++) {
@@ -839,11 +841,15 @@ void process_char(int c) {
     		editor_linestart();
     	} else if(c == 5) { // control-E, end of line
     		editor_lineend();
-    	} else if(c==25) { // control Y, page up
+    	} else if(c==25 || c==264) { // control Y / page up key
     		editor_page_up();
-    	} else if(c==22) { // control V, page down 
+    	} else if(c==22 || c==265) { // control V / page down key
     		editor_page_down();
-    	} else if(c == 259) { editor_up(); 
+    	} else if(c==266) { // home key
+    		editor_linestart();
+    	} else if(c==267) { // end key
+    		editor_lineend();
+    	} else if(c == 259) { editor_up();
     	} else if(c == 258) { editor_down(); 
     	} else if(c == 260) { editor_left(); 
     	} else if(c == 261) { editor_right(); 

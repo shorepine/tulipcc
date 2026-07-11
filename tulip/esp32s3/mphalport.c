@@ -138,6 +138,7 @@ int mp_hal_stdin_rx_chr(void) {
         #endif
         int c = ringbuf_get(&stdin_ringbuf);
         if (c != -1) {
+            if(tulip_tty_grab_char(c)) continue; // diverted to a grab_tty app
             return c;
         }
         MICROPY_EVENT_POLL_HOOK

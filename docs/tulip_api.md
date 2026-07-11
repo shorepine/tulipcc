@@ -182,17 +182,34 @@ Big note: Tulip World is hosted by a bot running on the [Tulip/AMY/Alles Discord
 
 ## The Tulip Editor
 
-Tulip ships with a text editor, based on pico/nano. It supports syntax highlighting, search, save/save-as. 
+Tulip's editor is [pye](https://github.com/robert-hh/Micropython-Editor), the same editor AMYboard uses. It runs as a Tulip app (alt-tab and quit buttons work, and the REPL keeps running while it's open), with the same colors and syntax highlighting as the old built-in editor, and supports both pye's own keys and the old editor's shortcuts:
 
 ```python
-# Opens the Tulip editor to the given filename. 
-# Control-X saves the file, if no filename give will prompt for one. 
+# Opens the editor to the given filename. ESC twice quits.
+# Save: Control-S or Control-X (prompts for a filename, so also save-as)
+# Search: Control-F or Control-W; find again: Control-N; replace: Control-R
+# Cut line/selection: Control-K, paste: Control-U, mark: Control-L, copy: Control-C
+# Page up/down: Control-Y / Control-V (or PgUp/PgDn); line start/end: Control-A / Control-E (or Home/End)
+# Undo: Control-Z; open another file: Control-O; goto line: Control-G
+edit("game.py")
+edit() # no filename
+tulip.pye() # same thing
+
+# If you're connected over serial (or running Tulip Desktop from a terminal),
+# typing in the terminal drives the editor while it's open, like on AMYboard;
+# the console returns to the REPL when you quit or switch away. Apps can opt
+# into this with tulip.UIScreen(..., grab_tty=True).
+
+# The previous built-in editor (based on pico/nano) is still available.
+# Control-X saves the file, if no filename given will prompt for one.
 # Control-O is save as -- will write to new filename given
 # Control-W searches
 # Control-R prompts for a filename to read into the current buffer
-edit("game.py")
-edit() # no filename
+old_edit("game.py")
+old_edit() # no filename
 ```
+
+(On Tulip Web, `edit()` still opens the old editor -- pye needs blocking keyboard reads that the web port doesn't support.)
 
 
 ## User interface
@@ -964,6 +981,9 @@ tulip.tfb_restore()
 # Set/get TFB font number (0=8x12, 1=6x8, 2=12x16)
 tulip.tfb_font(x)
 font_num = tulip.tfb_font()
+
+# Get the visible TFB size in characters for the current font
+(cols, rows) = tulip.tfb_size()
 
 ```
 

@@ -8,7 +8,18 @@ import amy
 if board() != 'AMYBOARD' and board() != "AMYBOARD_WEB":
     from tulip_graphics import *
     from ui import *
-    from editor import edit
+    from editor import edit as old_edit
+
+    def pye(*args, **kwargs):
+        """Open the pye text editor on the TFB. Pass a filename to edit, or nothing for a new file."""
+        # imported lazily so the editor doesn't take up RAM until used
+        from pye_tulip import pye as _pye
+        return _pye(*args, **kwargs)
+
+    # pye is the default editor now, like on AMYboard; the old C editor stays
+    # available as old_edit(). On web, pye runs blocking-style with asyncify
+    # yields (no app switcher, but full editing).
+    edit = pye
 
 def sys():
     return root_dir()+"sys/"

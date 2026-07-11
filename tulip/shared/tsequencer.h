@@ -14,13 +14,12 @@
 extern uint32_t sequencer_tick_count;
 #define AMY_SEQUENCER_PPQ 48
 #endif
-extern mp_obj_t sequencer_callbacks[SEQUENCER_SLOTS];
+// sequencer_callbacks, defer_callbacks and defer_args are GC root pointers,
+// aliased to MP_STATE_VM slots in tulip_helpers.h
+#include "tulip_helpers.h"
 extern uint32_t sequencer_period[SEQUENCER_SLOTS];
 extern uint32_t sequencer_tick[SEQUENCER_SLOTS];
-
-extern mp_obj_t defer_callbacks[DEFER_SLOTS];
 extern uint32_t defer_sysclock[DEFER_SLOTS];
-extern mp_obj_t defer_args[DEFER_SLOTS];
 
 
 void tsequencer_init();
