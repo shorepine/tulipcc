@@ -40,7 +40,7 @@ F0  00 03 45  <ASCII payload ...>  F7
 ```
 
 - `F0` … `F7` are the standard SysEx start/end bytes.
-- `00 03 45` is the manufacturer ID ("SPSS" — Shorepine Synth Systems). The board
+- `00 03 45` is the manufacturer ID ("SPSS" — Shorepine Sound Systems). The board
   ignores any SysEx that doesn't start with it.
 - The payload is plain 7-bit ASCII. Binary data (file contents, samples, state
   dumps) is **base64-encoded** so it stays inside the 7-bit SysEx range.
@@ -97,9 +97,10 @@ an end-of-message marker that several commands accept/strip.
 | `zF<preset>,<path>,<note>Z` | **Load a PCM preset from a WAV file** already on the board's filesystem. |
 | `zS<preset>,<bus>,<frames>,<note>,<loopstart>,<loopend>Z` / `zOZ` | **Sample audio from a bus** into a preset / **stop** sampling. |
 
-You can also send **raw AMY wire commands** (the text synth protocol, e.g.
-`v0n60l1Z`) by `zP`-running `amy.send(...)`, or — more directly — most AMY control
-is done by sending MIDI notes/CCs and letting the loaded sketch react.
+You can also send **AMY `send` commands** (the human-readable config protocol, e.g.
+`amy.send(synth=1, num_voices=6, patch=22)`) by `zP`-running those commands, although most real-time control is handled more directly
+by sending MIDI notes/CCs (assuming CCs have been set up accordingly).  If you want to send
+raw wire commands (e.g. `i1nv6K22Z`), you just send them as the encoded sysex payload directly; no need for any `z` wire code wrapping. 
 
 ---
 
