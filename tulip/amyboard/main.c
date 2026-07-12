@@ -97,6 +97,15 @@ TaskHandle_t idle_1_handle;
 TaskHandle_t sequencer_handle;
 TaskHandle_t cv_read_handle;
 
+#ifdef AMYBOARD_USB_HOST
+// USB runs in host (MIDI) mode instead of TinyUSB device mode. usb_host.c
+// gates MIDI input to AMY on tulip_ready; it's set once run_amy() has started
+// AMY (see tulip_amyboard_start in modtulip.c).
+TaskHandle_t usb_handle;
+uint8_t tulip_ready = 0;
+extern void run_usb();
+#endif
+
 // For CPU usage
 unsigned long last_task_counters[MAX_TASKS];
 
@@ -201,7 +210,10 @@ void mp_task(void *pvParameter) {
     #if MICROPY_PY_THREAD
     mp_thread_init(pxTaskGetStackStart(NULL), MICROPY_TASK_STACK_SIZE / sizeof(uintptr_t));
     #endif
-    #if MICROPY_HW_ESP_USB_SERIAL_JTAG
+    #ifdef AMYBOARD_USB_HOST
+    // USB is a MIDI host on this variant (started in app_main); never bring up
+    // the TinyUSB device stack. The REPL is on UART0 instead (with stderr).
+    #elif MICROPY_HW_ESP_USB_SERIAL_JTAG
     usb_serial_jtag_init();
     #elif MICROPY_HW_ENABLE_USBDEV
     usb_init();
@@ -350,6 +362,13 @@ void app_main(void) {
     // Start the CV ADC reader task (reads ADS1015 over I2C, updates cached values)
     extern void cv_read_task(void *pvParameter);
     xTaskCreatePinnedToCore(cv_read_task, CV_READ_TASK_NAME, CV_READ_TASK_STACK_SIZE / sizeof(StackType_t), NULL, CV_READ_TASK_PRIORITY, &cv_read_handle, CV_READ_TASK_COREID);
+
+    #ifdef AMYBOARD_USB_HOST
+    fprintf(stderr,"Starting USB host on core %d\n", USB_TASK_COREID);
+    xTaskCreatePinnedToCore(run_usb, USB_TASK_NAME, (USB_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, USB_TASK_PRIORITY, &usb_handle, USB_TASK_COREID);
+    fflush(stderr);
+    delay_ms(100);
+    #endif
 
     fprintf(stderr,"Starting MicroPython on core %d\n", TULIP_MP_TASK_COREID);
     xTaskCreatePinnedToCore(mp_task, TULIP_MP_TASK_NAME, (TULIP_MP_TASK_STACK_SIZE) / sizeof(StackType_t), NULL, TULIP_MP_TASK_PRIORITY, &tulip_mp_handle, TULIP_MP_TASK_COREID);

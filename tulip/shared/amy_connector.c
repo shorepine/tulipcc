@@ -220,10 +220,11 @@ extern bool midi_has_out;
 extern void send_usb_midi_out(uint8_t * data, uint16_t len);
 
 void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
-    // check if we have USB HOST midi, which is handled by Tulip only - not AMYBOARD or TDECK
+    // check if we have USB HOST midi: Tulip, or the AMYBOARD_USB_HOST variant
+    // — not stock AMYBOARD (USB gadget) or TDECK
 #ifdef ESP_PLATFORM
 #ifndef TDECK
-#ifndef AMYBOARD
+#if !defined(AMYBOARD) || defined(AMYBOARD_USB_HOST)
     if(midi_has_out) {
         send_usb_midi_out(buf, len);
     }
@@ -463,7 +464,13 @@ void run_amy(uint8_t midi_out_pin) {
 #endif
 #ifdef AMYBOARD
     amy_config.features.audio_in = 1;
+    #ifdef AMYBOARD_USB_HOST
+    // USB is a MIDI host here (usb_host.c feeds AMY directly); the TinyUSB
+    // gadget stack is compiled but never initialized, so don't route to it.
+    amy_config.midi = AMY_MIDI_IS_UART;
+    #else
     amy_config.midi = AMY_MIDI_IS_UART | AMY_MIDI_IS_USB_GADGET;
+    #endif
 #else
     amy_config.features.audio_in = 0;
     amy_config.midi = AMY_MIDI_IS_UART;

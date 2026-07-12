@@ -15,6 +15,12 @@
 #define CV_READ_TASK_STACK_SIZE (2 * 1024)
 #define CV_READ_TASK_NAME       "cv_read_task"
 
+// USB MIDI host task (AMYBOARD_USB_HOST variant only) — same shape as Tulip's.
+#define USB_TASK_PRIORITY   (ESP_TASK_PRIO_MIN + 1)
+#define USB_TASK_COREID     (1)
+#define USB_TASK_STACK_SIZE (8 * 1024)
+#define USB_TASK_NAME       "usb_task"
+
 #define MAX_TASKS 17 // includes system tasks
 
 extern TaskHandle_t tulip_mp_handle;

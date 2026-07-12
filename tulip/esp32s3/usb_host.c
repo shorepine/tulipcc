@@ -107,10 +107,27 @@ void show_endpoint_desc(const void *p, int indent)
 
 #endif // DEBUG_USB
 
+#define DEFAULT_TIMEOUT_MS  (5000)
+
+const TickType_t HOST_EVENT_TIMEOUT = 1;
+const TickType_t CLIENT_EVENT_TIMEOUT = 1;
+
+const size_t USB_HID_DESC_SIZE = 9;
+
+usb_host_client_handle_t Client_Handle;
+usb_device_handle_t Device_Handle_midi;
+
+uint8_t Interface_Number_midi;
+
+bool midi_claimed = false;
+bool midi_has_out = false;
+bool midi_has_in = false;
+bool midi_ready = false;
+
+#ifndef USB_HOST_MIDI_ONLY
 #define KEYBOARD_BUFFER_SIZE 64
 #define KEYBOARD_BYTES 8
 #define MOUSE_BYTES 8
-#define DEFAULT_TIMEOUT_MS  (5000)
 uint16_t keyboard_bytes = KEYBOARD_BYTES;
 uint16_t mouse_bytes = MOUSE_BYTES;
 
@@ -119,28 +136,14 @@ uint16_t mouse_bytes = MOUSE_BYTES;
 // How often (in ms) to repeat a key once held
 #define KEY_REPEAT_INTER_MS 90
 
-
-const TickType_t HOST_EVENT_TIMEOUT = 1;
-const TickType_t CLIENT_EVENT_TIMEOUT = 1;
-
-const size_t USB_HID_DESC_SIZE = 9;
-
-usb_host_client_handle_t Client_Handle;
 usb_device_handle_t Device_Handle_kb;
-usb_device_handle_t Device_Handle_midi;
 usb_device_handle_t Device_Handle_mouse;
 
 uint8_t Interface_Number_kb;
-uint8_t Interface_Number_midi;
 uint8_t Interface_Number_mouse;
 
 bool keyboard_claimed = false;
 bool keyboard_ready = false;
-
-bool midi_claimed = false;
-bool midi_has_out = false;
-bool midi_has_in = false;
-bool midi_ready = false;
 
 bool mouse_claimed = false;
 bool mouse_ready = false;
@@ -162,6 +165,7 @@ int64_t KeyRepeatTimer=0;
 uint16_t current_held = 0;
 int64_t current_held_ms = 0;
 int64_t last_inter_trigger_ms = 0;
+#endif // !USB_HOST_MIDI_ONLY
 
 
 #define MIDI_IN_BUFFERS 8
@@ -171,7 +175,8 @@ usb_transfer_t *MIDIOut = NULL;
 usb_transfer_t *MIDIIn[MIDI_IN_BUFFERS] = { NULL };
 
 
-// This identifies a mouse HID report packet for a standard "boot" mouse. 
+#ifndef USB_HOST_MIDI_ONLY
+// This identifies a mouse HID report packet for a standard "boot" mouse.
 typedef struct {
     union {
         struct {
@@ -189,6 +194,7 @@ typedef struct {
 int16_t mouse_x_pos = 0;
 int16_t mouse_y_pos = 0;
 uint8_t mouse_buttons[3];
+#endif // !USB_HOST_MIDI_ONLY
 
 
 
@@ -494,6 +500,7 @@ void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *
                 err = usb_host_device_close(Client_Handle, Device_Handle_midi);
                 if (err != ESP_OK) fprintf(stderr,"usb_host_device_close err: 0x%x\n", err);
             }
+            #ifndef USB_HOST_MIDI_ONLY
             if (keyboard_claimed && (uint32_t)Device_Handle_kb == (uint32_t)event_msg->dev_gone.dev_hdl) {
                 err = usb_host_interface_release(Client_Handle, Device_Handle_kb, Interface_Number_kb);
                 if (err != ESP_OK) fprintf(stderr,"usb_host_interface_release err: 0x%x\n", err);
@@ -511,6 +518,7 @@ void _client_event_callback(const usb_host_client_event_msg_t *event_msg, void *
                 err = usb_host_device_close(Client_Handle, Device_Handle_mouse);
                 if (err != ESP_OK) fprintf(stderr,"usb_host_device_close err: 0x%x\n", err);
             }
+            #endif // !USB_HOST_MIDI_ONLY
             break;
         default:
             fprintf(stderr,"Unknown USB event: %d\n", event_msg->event);
@@ -566,6 +574,8 @@ void usbh_task(void)
 }
 
 
+
+#ifndef USB_HOST_MIDI_ONLY
 
 static char lvgl_kb_buf[KEYBOARD_BUFFER_SIZE];
 
@@ -885,6 +895,8 @@ void prepare_endpoint_hid_mouse(const void *p)
     //}
 }
 
+#endif // !USB_HOST_MIDI_ONLY
+
 
 void new_enumeration_config_fn(const usb_config_desc_t *config_desc, usb_device_handle_t Device_Handle) {
     // We just retrieved the config of a newly-connected device.
@@ -922,18 +934,22 @@ void new_enumeration_config_fn(const usb_config_desc_t *config_desc, usb_device_
                             || (last_descriptor == USB_B_DESCRIPTOR_TYPE_ENDPOINT)) --indent;
                     show_interface_desc(p, indent++);
                     if(!midi_claimed) { check_interface_desc_MIDI(p, Device_Handle); }
+                    #ifndef USB_HOST_MIDI_ONLY
                     if(!keyboard_claimed) { check_interface_desc_boot_keyboard(p, Device_Handle); }
                     if(!mouse_claimed) { check_interface_desc_boot_mouse(p, Device_Handle); }
+                    #endif
                     last_descriptor = bDescriptorType;
                     break;
                 case USB_B_DESCRIPTOR_TYPE_ENDPOINT:
                     show_endpoint_desc(p, indent);
+                    #ifndef USB_HOST_MIDI_ONLY
                     if (keyboard_claimed && !keyboard_ready) {
                         prepare_endpoint_hid_kb(p);
                     }
                     if (mouse_claimed && !mouse_ready) {
                         prepare_endpoint_hid_mouse(p);
                     }
+                    #endif
                     if (midi_claimed && !midi_ready) {
                         prepare_endpoint_midi(p);
                     }
@@ -972,15 +988,18 @@ void new_enumeration_config_fn(const usb_config_desc_t *config_desc, usb_device_
 
 void run_usb()
 {
+    #ifndef USB_HOST_MIDI_ONLY
     // Reset key maps
     for(uint8_t i=0;i<MAX_KEY_REMAPS;i++) {
         key_remaps[i].scan = 0;
         key_remaps[i].mod = 0;
         key_remaps[i].code = 0;
     }
+    #endif
     usbh_setup();
     while(1) {
         usbh_task();
+        #ifndef USB_HOST_MIDI_ONLY
         KeyboardTimer = esp_timer_get_time() / 1000;
         MouseTimer = esp_timer_get_time() / 1000;
         KeyRepeatTimer = esp_timer_get_time() / 1000;
@@ -994,7 +1013,7 @@ void run_usb()
             }
         }
         if (keyboard_ready && !isKeyboardPolling && (KeyboardTimer > KeyboardInterval)) {
-            KeyboardIn->num_bytes = keyboard_bytes; 
+            KeyboardIn->num_bytes = keyboard_bytes;
             esp_err_t err = usb_host_transfer_submit(KeyboardIn);
             if (err != ESP_OK) {
                 fprintf(stderr,"kbd usb_host_transfer_submit/In err: 0x%x\n", err);
@@ -1003,7 +1022,7 @@ void run_usb()
             KeyboardTimer = 0;
         }
         if (mouse_ready && !isMousePolling && (MouseTimer > MouseInterval)) {
-            MouseIn->num_bytes = mouse_bytes; 
+            MouseIn->num_bytes = mouse_bytes;
             esp_err_t err = usb_host_transfer_submit(MouseIn);
             if (err != ESP_OK) {
                 fprintf(stderr, "mouse usb_host_transfer_submit/In err: 0x%x\n", err);
@@ -1011,5 +1030,6 @@ void run_usb()
             isMousePolling = true;
             MouseTimer = 0;
         }
+        #endif // !USB_HOST_MIDI_ONLY
     }
 }

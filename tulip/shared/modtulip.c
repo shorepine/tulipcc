@@ -688,6 +688,11 @@ extern void run_amy(uint8_t);
 STATIC mp_obj_t tulip_amyboard_start(size_t n_args, const mp_obj_t *args) {
     uint8_t midi_out_pin = mp_obj_get_int(args[0]);
     run_amy(midi_out_pin);
+    #ifdef AMYBOARD_USB_HOST
+    // AMY is up; let the USB MIDI host task (usb_host.c) feed it MIDI.
+    extern uint8_t tulip_ready;
+    tulip_ready = 1;
+    #endif
     return mp_const_none;
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amyboard_start_obj, 1, 1, tulip_amyboard_start);
