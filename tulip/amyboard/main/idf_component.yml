@@ -3,3 +3,6 @@ dependencies:
   idf:
     version: ">=5.0.2"
   espressif/mdns: "~1.1.0"
+  # Runtime ELF loading for tulip.install_c_process() user DSP (user code is
+  # compiled on-device by tulip/shared/3rdparty/xcc700 and loaded into PSRAM).
+  espressif/elf_loader: "~1.3.1"

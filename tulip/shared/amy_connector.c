@@ -136,6 +136,17 @@ uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
     }
     return 0;
 }
+
+#ifdef TULIP_USER_C_DSP
+// AMY's render hook has one slot; on ESP it serves both CV output and user
+// C oscillators. CV wins (returns 1 = handled, osc doesn't reach the mix);
+// otherwise fall through to a bound user osc, if any.
+static uint8_t tulip_render_hook_chain(uint16_t osc, SAMPLE *buf, uint16_t len) {
+    if (external_cv_render(osc, buf, len)) return 1;
+    extern uint8_t tulip_user_render_hook(uint16_t osc, SAMPLE *buf, uint16_t len);
+    return tulip_user_render_hook(osc, buf, len);
+}
+#endif
 #endif
 
 // defined in amy/src/midi_mappings.c — processes ic (MIDI CC mapping) commands
@@ -424,7 +435,11 @@ static void mount_gamma9001_drums(void) {
 void run_amy(uint8_t midi_out_pin) {
     amy_config_t amy_config = amy_default_config();
     amy_config.amy_external_midi_input_hook = tulip_midi_input_hook;
+#ifdef TULIP_USER_C_DSP
+    amy_config.amy_external_render_hook = tulip_render_hook_chain;
+#else
     amy_config.amy_external_render_hook = external_cv_render;
+#endif
     amy_config.amy_external_fopen_hook = mp_fopen_hook;
     amy_config.amy_external_fseek_hook = mp_fseek_hook;
     amy_config.amy_external_fclose_hook = mp_fclose_hook;

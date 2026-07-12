@@ -5,16 +5,18 @@
 //            dispatched from amy_external_bus_postprocess_hook per bus
 //   osc    — void render(int16_t *buf, int frames, int osc, int phase_inc_q16, int amp_q15)
 //            dispatched from amy_external_render_hook, replaces an osc's waveform
-// Users may pass just the function *body*; we wrap it in the signature and
-// standard includes (see wrap_source). Samples are plain 16-bit PCM
-// (-32767..32767); conversion to/from AMY's s8.23 happens at this boundary.
-// Compiler backends: libtcc (desktop). ESP32 (xcc700 + elf_loader) planned.
-// See docs/user_c_dsp_design.md.
+// Users may pass just the function *body*; we wrap it in the signature (and,
+// on desktop, standard includes). Samples are plain 16-bit PCM (-32767..32767);
+// conversion to/from AMY's s8.23 happens at this boundary.
+// Compiler backends: libtcc JIT (desktop), xcc700t + esp-idf elf_loader (ESP32,
+// code loaded into PSRAM). See docs/user_c_dsp_design.md.
 
 #ifdef TULIP_USER_C_DSP
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "amy.h"
 #include "user_c_dsp.h"
 
@@ -28,7 +30,7 @@ typedef void (*user_c_osc_fn_t)(int16_t *buf, int32_t frames, int32_t osc, int32
 typedef struct {
     char name[USER_C_DSP_NAME_LEN];
     void *fn;                   // NULL = slot inactive; set last (release) on install
-    void *compiler_state;       // TCCState* on desktop
+    void *compiler_state;       // TCCState* (desktop) / esp_elf_t* (ESP)
     uint8_t kind;               // USER_C_DSP_KIND_*
     uint32_t bus_mask;          // effect kind: which buses to process
     int64_t calls;
@@ -127,14 +129,6 @@ int64_t user_c_dsp_calls(const char *name) {
     return slots[i].calls;
 }
 
-#ifdef TULIP_DESKTOP
-
-#include <stdlib.h>
-#include <unistd.h>
-#include <libgen.h>
-#include <mach-o/dyld.h>
-#include <libtcc.h>
-
 static const char *kind_symbol(uint8_t kind) {
     return kind == USER_C_DSP_KIND_OSC ? "render" : "process";
 }
@@ -145,22 +139,97 @@ static const char *kind_signature(uint8_t kind) {
         : "void process(int16_t *buf, int frames, int chans)";
 }
 
-// If src looks like a bare function body (it never mentions process(/render(),
-// wrap it in the standard includes and signature so users can send just the
-// loop. #line 1 keeps tcc's error messages pointing at the user's own lines.
-// Statics declared inside the body persist between calls (that's how user
-// oscillators keep per-osc phase, etc).
-static char *wrap_source(const char *src, uint8_t kind) {
+// Does src look like a bare function body (never mentions process(/render()?
+static int is_bare_body(const char *src, uint8_t kind) {
     const char *sym = kind_symbol(kind);
     char probe1[16], probe2[24];
     snprintf(probe1, sizeof(probe1), "%s(", sym);
     snprintf(probe2, sizeof(probe2), "void %s", sym);
-    if (strstr(src, probe1) != NULL || strstr(src, probe2) != NULL) return NULL;  // full program: use as-is
+    return strstr(src, probe1) == NULL && strstr(src, probe2) == NULL;
+}
+
+// Per-platform compiler backends implement these.
+static int backend_compile(const char *src, uint8_t kind, void **fn_out, void **state_out, char *err, int errlen);
+static void backend_free(void *state);
+
+// Drop a slot's compiled code, waiting out any in-flight render block.
+static void free_slot_code(user_c_dsp_slot_t *slot) {
+    if (slot->fn != NULL) {
+        __atomic_store_n(&slot->fn, (void *)NULL, __ATOMIC_RELEASE);
+        usleep(3 * 1000 * AMY_BLOCK_SIZE / AMY_SAMPLE_RATE * 1000);  // ~3 block times
+    }
+    if (slot->compiler_state != NULL) {
+        backend_free(slot->compiler_state);
+        slot->compiler_state = NULL;
+    }
+}
+
+int user_c_dsp_install(const char *name, const char *src, uint8_t kind, char *err, int errlen) {
+    err[0] = 0;
+    if (name[0] == 0 || strlen(name) >= USER_C_DSP_NAME_LEN) {
+        snprintf(err, errlen, "name must be 1..%d chars", USER_C_DSP_NAME_LEN - 1);
+        return -1;
+    }
+    int i = find_slot(name);
+    if (i >= 0 && slots[i].kind != kind) {
+        snprintf(err, errlen, "'%s' is already installed as a different kind", name);
+        return -1;
+    }
+    if (i < 0) {
+        for (int j = 0; j < USER_C_DSP_SLOTS; j++) {
+            if (slots[j].name[0] == 0) { i = j; break; }
+        }
+    }
+    if (i < 0) {
+        snprintf(err, errlen, "all %d c_process slots in use", USER_C_DSP_SLOTS);
+        return -1;
+    }
+
+    void *fn = NULL, *state = NULL;
+    if (backend_compile(src, kind, &fn, &state, err, errlen) != 0) return -1;
+
+    // Replace-in-place: keep bus enables / osc bindings so the dev loop is
+    // edit + reinstall.
+    free_slot_code(&slots[i]);
+    snprintf(slots[i].name, USER_C_DSP_NAME_LEN, "%s", name);
+    slots[i].compiler_state = state;
+    slots[i].kind = kind;
+    slots[i].calls = 0;
+    __atomic_store_n(&slots[i].fn, fn, __ATOMIC_RELEASE);
+    return i;
+}
+
+int user_c_dsp_uninstall(const char *name) {
+    int i = find_slot(name);
+    if (i < 0) return -1;
+    slots[i].bus_mask = 0;
+    for (int o = 0; o < USER_C_DSP_MAX_OSCS; o++) {
+        if (osc_map[o] == i + 1) osc_map[o] = 0;
+    }
+    free_slot_code(&slots[i]);
+    slots[i].name[0] = 0;
+    slots[i].calls = 0;
+    return 0;
+}
+
+#if defined(TULIP_DESKTOP)
+// ---------------------------------------------------------------- desktop:
+// libtcc in-memory JIT (full C available to user code).
+
+#include <libgen.h>
+#include <mach-o/dyld.h>
+#include <libtcc.h>
+
+// Bare bodies get the signature plus standard includes; #line 1 keeps tcc's
+// error messages pointing at the user's own lines. Statics declared inside
+// the body persist between calls (that's how user DSP keeps state).
+static char *wrap_source(const char *src, uint8_t kind) {
+    if (!is_bare_body(src, kind)) return NULL;  // full program: use as-is
     const char *prelude = "#include <stdint.h>\n#include <stdio.h>\n#include <math.h>\n";
     size_t n = strlen(prelude) + strlen(kind_signature(kind)) + strlen(src) + 64;
     char *out = malloc(n);
     if (out == NULL) return NULL;
-    snprintf(out, n, "%s%s {\n#line 1 \"%s\"\n%s\n}\n", prelude, kind_signature(kind), sym, src);
+    snprintf(out, n, "%s%s {\n#line 1 \"%s\"\n%s\n}\n", prelude, kind_signature(kind), kind_symbol(kind), src);
     return out;
 }
 
@@ -196,39 +265,7 @@ static void tcc_err_cb(void *opaque, const char *msg) {
     if (sink->buf[0] == 0) snprintf(sink->buf, sink->len, "%s", msg);
 }
 
-// Drop a slot's compiled code, waiting out any in-flight render block.
-static void free_slot_code(user_c_dsp_slot_t *slot) {
-    if (slot->fn != NULL) {
-        __atomic_store_n(&slot->fn, (void *)NULL, __ATOMIC_RELEASE);
-        usleep(3 * 1000 * AMY_BLOCK_SIZE / AMY_SAMPLE_RATE * 1000);  // ~3 block times
-    }
-    if (slot->compiler_state != NULL) {
-        tcc_delete((TCCState *)slot->compiler_state);
-        slot->compiler_state = NULL;
-    }
-}
-
-int user_c_dsp_install(const char *name, const char *src, uint8_t kind, char *err, int errlen) {
-    err[0] = 0;
-    if (name[0] == 0 || strlen(name) >= USER_C_DSP_NAME_LEN) {
-        snprintf(err, errlen, "name must be 1..%d chars", USER_C_DSP_NAME_LEN - 1);
-        return -1;
-    }
-    int i = find_slot(name);
-    if (i >= 0 && slots[i].kind != kind) {
-        snprintf(err, errlen, "'%s' is already installed as a different kind", name);
-        return -1;
-    }
-    if (i < 0) {
-        for (int j = 0; j < USER_C_DSP_SLOTS; j++) {
-            if (slots[j].name[0] == 0) { i = j; break; }
-        }
-    }
-    if (i < 0) {
-        snprintf(err, errlen, "all %d c_process slots in use", USER_C_DSP_SLOTS);
-        return -1;
-    }
-
+static int backend_compile(const char *src, uint8_t kind, void **fn_out, void **state_out, char *err, int errlen) {
     char *wrapped = wrap_source(src, kind);
     tcc_err_sink_t sink = { err, errlen };
     TCCState *s = tcc_new();
@@ -258,44 +295,91 @@ int user_c_dsp_install(const char *name, const char *src, uint8_t kind, char *er
         tcc_delete(s);
         return -1;
     }
-
-    // Replace-in-place: keep bus enables / osc bindings so the dev loop is
-    // edit + reinstall.
-    free_slot_code(&slots[i]);
-    snprintf(slots[i].name, USER_C_DSP_NAME_LEN, "%s", name);
-    slots[i].compiler_state = s;
-    slots[i].kind = kind;
-    slots[i].calls = 0;
-    __atomic_store_n(&slots[i].fn, fn, __ATOMIC_RELEASE);
-    return i;
-}
-
-int user_c_dsp_uninstall(const char *name) {
-    int i = find_slot(name);
-    if (i < 0) return -1;
-    slots[i].bus_mask = 0;
-    for (int o = 0; o < USER_C_DSP_MAX_OSCS; o++) {
-        if (osc_map[o] == i + 1) osc_map[o] = 0;
-    }
-    free_slot_code(&slots[i]);
-    slots[i].name[0] = 0;
-    slots[i].calls = 0;
+    *fn_out = fn;
+    *state_out = s;
     return 0;
 }
 
-#else  // !TULIP_DESKTOP
+static void backend_free(void *state) {
+    tcc_delete((TCCState *)state);
+}
 
-int user_c_dsp_install(const char *name, const char *src, uint8_t kind, char *err, int errlen) {
-    (void)name; (void)src; (void)kind;
+#elif defined(ESP_PLATFORM)
+// ---------------------------------------------------------------- ESP32-S3:
+// xcc700t (vendored mini C compiler, small-C subset: while/if, int + int16_t
+// pointers/arrays, enum, static; no preprocessor/floats/structs) emits an
+// Xtensa REL ELF that esp-idf's elf_loader relocates into PSRAM. e_entry is
+// the user function, so elf->entry is directly callable.
+
+// esp_elf.h lives in a managed component whose include path isn't visible to
+// micropython's qstr preprocess pass; that pass defines NO_QSTR and only needs
+// preprocessing (not types) to succeed.
+#ifndef NO_QSTR
+#include "esp_elf.h"
+#endif
+#include "xcc700t.h"
+
+// Bare bodies get just the signature (xcc700 has no preprocessor). Keeping
+// the body on the same line as the opening brace preserves the user's error
+// line numbers.
+static char *wrap_source(const char *src, uint8_t kind) {
+    if (!is_bare_body(src, kind)) return NULL;
+    size_t n = strlen(kind_signature(kind)) + strlen(src) + 8;
+    char *out = malloc(n);
+    if (out == NULL) return NULL;
+    snprintf(out, n, "%s { %s\n}\n", kind_signature(kind), src);
+    return out;
+}
+
+static int backend_compile(const char *src, uint8_t kind, void **fn_out, void **state_out, char *err, int errlen) {
+    char *wrapped = wrap_source(src, kind);
+    uint8_t *elf_img = NULL;
+    uint32_t elf_size = 0;
+    int r = xcc700_compile(wrapped ? wrapped : src, kind_symbol(kind), &elf_img, &elf_size, err, errlen);
+    free(wrapped);
+    if (r != 0) return -1;
+    esp_elf_t *elf = calloc(1, sizeof(esp_elf_t));
+    if (elf == NULL) {
+        free(elf_img);
+        snprintf(err, errlen, "out of memory");
+        return -1;
+    }
+    if (esp_elf_init(elf) != 0) {
+        free(elf); free(elf_img);
+        snprintf(err, errlen, "elf init failed");
+        return -1;
+    }
+    r = esp_elf_relocate(elf, elf_img);
+    free(elf_img);  // the loader copied the segments out
+    if (r != 0) {
+        esp_elf_deinit(elf); free(elf);
+        snprintf(err, errlen, "elf relocate failed (%d)", r);
+        return -1;
+    }
+    *fn_out = (void *)elf->entry;
+    *state_out = elf;
+    return 0;
+}
+
+static void backend_free(void *state) {
+    esp_elf_t *elf = (esp_elf_t *)state;
+    esp_elf_deinit(elf);
+    free(elf);
+}
+
+#else
+// ---------------------------------------------------------------- fallback:
+
+static int backend_compile(const char *src, uint8_t kind, void **fn_out, void **state_out, char *err, int errlen) {
+    (void)src; (void)kind; (void)fn_out; (void)state_out;
     snprintf(err, errlen, "no C compiler backend on this platform yet");
     return -1;
 }
 
-int user_c_dsp_uninstall(const char *name) {
-    (void)name;
-    return -1;
+static void backend_free(void *state) {
+    (void)state;
 }
 
-#endif  // TULIP_DESKTOP
+#endif
 
 #endif  // TULIP_USER_C_DSP
