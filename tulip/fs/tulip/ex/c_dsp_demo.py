@@ -43,11 +43,19 @@ CZ = """
     int i = 0;
     while (i < frames) {
         int p = phase[osc];
-        int wp;                          // warped phase
-        if (p < dcw) wp = (int)(((long long)p * 32768) / dcw);
-        else wp = 32768 + (int)(((long long)(p - dcw) * 32768) / (65536 - dcw));
-        float angle = (float)wp * (6.2831853f / 65536.0f);
-        buf[i] = (int16_t)(cosf(angle) * (float)amp_q15);
+        int wp;                          // warped phase, Q16
+        // All int32: p*32768 < 2^31 since p < 65536, and (p-dcw)*32768
+        // stays under 2^31 for any dcw >= 1.
+        if (p < dcw) wp = p * 32768 / dcw;
+        else wp = 32768 + (p - dcw) * 32768 / (65536 - dcw);
+        // Integer cosine: cos = sin(quarter cycle later), and sin by the
+        // parabola trick -- t*(half - t) peaks at exactly 1.0 in Q15.
+        int t = wp + 16384;
+        if (t >= 65536) t = t - 65536;
+        int s;
+        if (t < 32768) s = (t * (32768 - t)) >> 13;
+        else { t = t - 32768; s = 0 - ((t * (32768 - t)) >> 13); }
+        buf[i] = (int16_t)((s * amp_q15) >> 15);
         p = p + phase_inc_q16;
         if (p >= 65536) p = p - 65536;
         phase[osc] = p;
