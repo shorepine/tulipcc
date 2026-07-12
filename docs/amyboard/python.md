@@ -97,6 +97,28 @@ amy.send(synth=1, vel=0)
 # You can also play polyphonically with a MIDI keyboard (connected via the "MIDI in" jack) or your computer (writing to the AMYboard USB MIDI gadget) sending notes on channel 1.  
 ```
 
+### Writing your own DSP in C
+
+AMYboard can compile C code **on the board itself** and run it inside the
+synthesizer — custom effects at the end of a bus' FX chain, or whole new
+oscillator types, hot-swapped from Python while audio keeps playing:
+
+```python
+import tulip
+tulip.install_c_process('crush', """
+    int i = 0;
+    while (i < frames * chans) {
+        buf[i] = (buf[i] >> 18) << 18;   // bitcrush!
+        i = i + 1;
+    }
+""")
+tulip.c_process('crush', True)
+```
+
+See [Writing audio effects and oscillators in C](../user_c_dsp.md) for the
+full guide — sample format, oscillator API, and worked examples (bitcrusher,
+heavy distortion, a CZ-101 phase-distortion oscillator, bytebeat).
+
 ## The `amyboard` module
 
 The `amyboard` module provides functions specific to the AMYboard hardware:
