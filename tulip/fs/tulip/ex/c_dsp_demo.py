@@ -38,6 +38,26 @@ CRUSH = """
     }
 """
 
+# --- An effect: heavy distortion --------------------------------------------
+# Overdrive: slam the signal into a ceiling. Multiply by a big drive gain,
+# clamp to +/-1.0, then round the corners off with a cubic soft clip
+# (y = x - x^3/3, the classic saturator) so it growls instead of buzzing.
+# The knee tops out at 2/3, so scale by 3/2 to bring peaks back to 1.0.
+# Stateless -- no statics needed. Crank `drive` for more filth.
+
+DIST = """
+    int drive = 10;                      // 1 = clean boost, 10 = heavy. edit me!
+    int i = 0;
+    while (i < frames * chans) {
+        int s = buf[i] * drive;
+        if (s > 8388608) s = 8388608;    // clamp to +/-1.0 (S8.23)
+        if (s < -8388608) s = -8388608;
+        int y = s - fxmul(fxmul(s, s), s) / 3;
+        buf[i] = y + y / 2;
+        i = i + 1;
+    }
+"""
+
 # --- An oscillator: CZ-101-style phase distortion "saw" --------------------
 # Casio's CZ series makes bright waves without a filter: read a plain cosine
 # with a *bent* phase. The first `dcw` fraction of the cycle sweeps the
@@ -65,6 +85,7 @@ CZ = """
 
 def run():
     tulip.install_c_process('crush', CRUSH)
+    tulip.install_c_process('dist', DIST)
     tulip.install_c_osc('cz', CZ)
 
     # Point AMY osc 200 at our oscillator and set up its envelope. Use a HIGH
@@ -86,7 +107,15 @@ def run():
         time.sleep(0.4)
     time.sleep(1)
     tulip.c_process('crush', False)
+
+    print("same notes, heavy distortion...")
+    tulip.c_process('dist', True)
+    for note in (48, 52, 55, 60):
+        amy.send(osc=200, note=note, vel=1)
+        time.sleep(0.4)
+    time.sleep(1)
+    tulip.c_process('dist', False)
     tulip.c_osc('cz', 200, False)
-    print("done. try editing CZ's dcw and re-running -- reinstalls hot-swap.")
+    print("done. try editing CZ's dcw or DIST's drive and re-running -- reinstalls hot-swap.")
 
 run()
