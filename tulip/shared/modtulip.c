@@ -44,6 +44,14 @@ STATIC mp_obj_t tulip_amy_render_load(size_t n_args, const mp_obj_t *args) {
     return mp_obj_new_float(amy_get_render_load());
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_render_load_obj, 0, 0, tulip_amy_render_load);
+
+STATIC mp_obj_t tulip_amy_set_render_load_threshold(size_t n_args, const mp_obj_t *args) {
+    // MicroPython version of amy/src/pyamy.c:set_render_load_threshold
+    amy_set_render_load_threshold(mp_obj_get_float(args[0]));
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_amy_set_render_load_threshold_obj, 1, 1, tulip_amy_set_render_load_threshold);
+
 #endif
 
 STATIC mp_obj_t tulip_ticks_ms(size_t n_args, const mp_obj_t *args) {
@@ -1795,6 +1803,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_amy_send_sysex), MP_ROM_PTR(&tulip_amy_send_sysex_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_ticks_ms), MP_ROM_PTR(&tulip_amy_ticks_ms_obj) },
     { MP_ROM_QSTR(MP_QSTR_amy_render_load), MP_ROM_PTR(&tulip_amy_render_load_obj) },
+    { MP_ROM_QSTR(MP_QSTR_amy_set_render_load_threshold), MP_ROM_PTR(&tulip_amy_set_render_load_threshold_obj) },
     { MP_ROM_QSTR(MP_QSTR_pcm_load_file), MP_ROM_PTR(&tulip_pcm_load_file_obj) },
 #endif
 
