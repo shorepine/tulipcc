@@ -150,6 +150,12 @@ def full_build(skip_amy=False):
             ("amy.wasm",   f"amy-{ts}.wasm"),
             ("amy.js",     f"amy-{ts}.js"),
         ])
+        # User C DSP web plumbing rides inside amy.js so it runs both on the
+        # page and in AMY's AudioWorklet scope (which only ever loads amy.js).
+        # Appended after the filename substitutions so its comments survive.
+        udsp_js = os.path.join(SCRIPT_DIR, "..", "shared", "user_c_dsp_web.js")
+        with open(amy_js, "a") as out, open(udsp_js) as src:
+            out.write("\n" + src.read())
 
     amy_mjs = os.path.join(STAGE_DIR, f"amyboard-{ts}.mjs")
     if os.path.exists(amy_mjs):

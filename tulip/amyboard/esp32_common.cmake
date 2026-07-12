@@ -65,7 +65,20 @@ list(APPEND MICROPY_SOURCE_SHARED
 
 
 list(APPEND MICROPY_SOURCE_LIB
-    ${MICROPY_DIR}/lib/littlefs/lfs1.c
+    # user C DSP (tulip.install_c_process). esp_elf.h (a managed component
+    # header) isn't on the qstr-preprocess include path; user_c_dsp.c guards
+    # it with NO_QSTR.
+    ${TULIP_SHARED_DIR}/user_c_dsp.c
+    ${TULIP_SHARED_DIR}/3rdparty/xcc700/xcc700t.c
+    ${MICROPY_DIR}/lib/littlefs/lfs1.c)
+# Vendored third-party style (upstream xcc700): keep it diffable, don't restyle.
+# (Guarded: this file is also include()d during IDF's early script-mode pass,
+# where set_source_files_properties is not scriptable.)
+if(NOT CMAKE_BUILD_EARLY_EXPANSION)
+set_source_files_properties(${TULIP_SHARED_DIR}/3rdparty/xcc700/xcc700t.c
+    PROPERTIES COMPILE_OPTIONS "-Wno-misleading-indentation")
+endif()
+list(APPEND MICROPY_SOURCE_LIB
     ${MICROPY_DIR}/lib/littlefs/lfs1_util.c
     ${MICROPY_DIR}/lib/littlefs/lfs2.c
     ${MICROPY_DIR}/lib/littlefs/lfs2_util.c
@@ -299,6 +312,7 @@ idf_component_register(
         ${CMAKE_BINARY_DIR}
         ${MICROPY_INC_TINYUSB}
         ../../tulip/shared
+        ../../tulip/shared/3rdparty/xcc700
         ../../amy/src
         ../../tulip/shared/ulab/code
     REQUIRES
@@ -330,6 +344,7 @@ target_compile_definitions(${MICROPY_TARGET} PUBLIC
     AMYBOARD
     AMY_WAVETABLE
     GAMMA9001
+    TULIP_USER_C_DSP
     #AMY_DEBUG
     ${MICROPY_DEF_TINYUSB}
     ${BOARD_DEFINITION1}

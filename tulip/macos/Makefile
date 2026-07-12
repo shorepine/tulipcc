@@ -288,6 +288,17 @@ SRC_C += \
 #SRC_C += $(LVGL_PP)
 SRC_C += $(LVGL_MPY)
 
+# TinyCC (libtcc) powers tulip.install_c_process() (runtime user C DSP plugins,
+# see docs/user_c_dsp_design.md). build.sh inits/builds the tinycc submodule;
+# if libtcc.a is absent (e.g. package.sh universal/CI builds, which also still
+# need the allow-jit hardened-runtime entitlement) the feature compiles out.
+TCC_DIR = $(TOP)/../tinycc
+ifneq ($(wildcard $(TCC_DIR)/libtcc.a),)
+CFLAGS += -DTULIP_USER_C_DSP -I$(TCC_DIR) -DTULIP_TCC_DEV_PATH="\"$(abspath $(TCC_DIR))\""
+LDFLAGS += $(TCC_DIR)/libtcc.a
+SRC_C += ../shared/user_c_dsp.c
+endif
+
 
 SHARED_SRC_C += $(addprefix ../../micropython/shared/,\
 	runtime/gchelper_generic.c \
