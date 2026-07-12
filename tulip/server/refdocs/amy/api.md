@@ -22,6 +22,11 @@ amy_add_event(amy_event *e);
 amy_add_message(char *message);
 ```
 
+Two sample types appear in this API: `output_sample_type` is a final
+interleaved audio sample, an `int16_t`; `SAMPLE` is AMY's internal sample
+format, S8.23 fixed point in an `int32_t` (so 1.0 is `1<<23` — see
+`src/amy_fixedpoint.h`).
+
 Get and set external audio buffers:
 ```c
 
@@ -174,6 +179,7 @@ Hook fields in `amy_config_t`:
 | Hook | Signature | Used by | Description |
 | ---- | --------- | ------- | ----------- |
 | `amy_external_render_hook` | `uint8_t (uint16_t osc, SAMPLE *buf, uint16_t len)` | — | Custom oscillator renderer for redirecting the output waveforms on an osc-by-osc level. Return 1 if handled, in which case that osc does not contribute to the normal output. |
+| `amy_external_bus_postprocess_hook` | `void (uint8_t bus, SAMPLE *buf, uint16_t len)` | — | Custom effect processing, called at the end of each bus' effects chain (after EQ/chorus/echo/reverb), before buses are mixed to the output. `buf` is `AMY_NCHANS` sequential (non-interleaved) channel blocks of `len` `SAMPLE`s (S8.23 in `int32_t`, see above) each; modify it in place. Called every block for each bus from 0 up to the highest bus activated so far — so bus 0 is always processed, but a hook installed for bus 2 only starts firing once something (an osc assignment, a bus FX setting) has touched bus 2. |
 | `amy_external_coef_hook` | `float (uint16_t channel)` | — | Provide external coefficient values (e.g. CV input). |
 | `amy_external_block_done_hook` | `void (void)` | — | Called after each audio block is rendered. |
 | `amy_external_midi_input_hook` | `void (uint8_t *bytes, uint16_t len, uint8_t is_sysex)` | — | Called when MIDI bytes are received. |
@@ -189,6 +195,27 @@ Hook fields in `amy_config_t`:
 | `amy_external_reboot_hook` | `void (uint8_t mode)` | `zB` | Called by `zB` to reboot the host. `mode` selects which post-reboot state: `0` = bootloader (skip sketch on next boot), `1` = normal reboot (run sketch), `2` = ROM download / flash mode. Handled in pure C before `mp_sched_schedule`. On AMYboard, sets an RTC flag with the requested mode and calls `esp_restart()`. |
 
 All hook fields default to `NULL` in `amy_default_config()`.
+
+### JS hook variants (web build)
+
+On web, AMY renders inside an AudioWorklet, so the render and bus-postprocess
+hooks have JS variants: define a global function in the AudioWorklet scope
+(i.e. in JS loaded as part of `amy.js`, which the worklet also evaluates) and
+AMY calls it per block. Pointers arrive as byte offsets into the module's
+linear memory; `module` is the worklet scope's Emscripten `Module` instance,
+whose `wasmMemory` and exports (`_cos_lut`, `_malloc`, ...) let hook JS read
+the buffers or instantiate further wasm sharing AMY's memory.
+
+| JS global | Signature | Description |
+| --------- | --------- | ----------- |
+| `amy_render_js_hook` | `(osc, buf, len, phase_inc, amp, module) -> handled` | Web version of `amy_external_render_hook`. `phase_inc` is the osc's current pitch as a phase increment in cycles/sample (tracks bend/portamento), `amp` its envelope level 0..1. Return 1 if the osc was handled (skips the normal mix), 0 to let AMY mix `buf` (with pan) as usual. |
+| `amy_bus_postprocess_js_hook` | `(bus, buf, len, nchans, module)` | Web version of `amy_external_bus_postprocess_hook`: process the bus buffer (`nchans` sequential channel blocks of `len` S8.23 samples) in place. |
+
+Because the page's JS and the worklet's hook JS run in separate scopes sharing
+only linear memory, `amy_set_external_hook_context(void *)` /
+`amy_get_external_hook_context()` (both exported on web) hold one opaque
+pointer for embedders: the page `_malloc`s a control block and stores it, and
+worklet hook JS finds it via `module._amy_get_external_hook_context()`.
 
 
 ## `amy_event`, `amy.send`, and `amy_send` API:

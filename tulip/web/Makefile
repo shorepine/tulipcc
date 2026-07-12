@@ -88,6 +88,12 @@ CWARN += -Wextra -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-a
 CFLAGS += $(INC) $(CWARN)
 CFLAGS += -DTULIP_WEB -DTULIP -DMA_ENABLE_AUDIO_WORKLETS -sUSE_SDL=2 -DAMY_IS_EXTERNAL -DMODULE_ULAB_ENABLED=1
 
+# Runtime user C DSP (tulip.install_c_process): xcc700w compiles user C to
+# wasm here; the JS side (user_c_dsp_web.js, appended to amy.js by build.sh)
+# runs it inside AMY's AudioWorklet.
+CFLAGS += -DTULIP_USER_C_DSP
+INC += -I../shared/3rdparty/xcc700
+
 EXPORTED_FUNCTIONS_EXTRA += ,\
 	_mp_js_do_exec,\
 	_mp_js_do_exec_async,\
@@ -193,6 +199,8 @@ EXTMOD_SRC_C += $(addprefix $(TULIP_EXTMOD_DIR)/, \
 	tsequencer.c \
 	desktop/unix_display.c \
 	amy_connector.c \
+	user_c_dsp.c \
+	3rdparty/xcc700/xcc700w.c \
 	)
 
 EXTMOD_SRC_C += $(addprefix $(ULAB_DIR)/, \

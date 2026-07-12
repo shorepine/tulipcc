@@ -68,3 +68,8 @@ sed "${SED_INPLACE[@]}" -e "s/amy.js/amy\-${timestamp}.js/g" -e "s/amy.aw.js/amy
 #sed "${SED_INPLACE[@]}" -e "s/amy\-audioin.aw.js/amy\-audioin\-${timestamp}.aw.js/g" -e "s/amy\-audioin.wasm/amy\-audioin\-${timestamp}.wasm/g" stage/run/amy-audioin-$timestamp.js
 sed "${SED_INPLACE[@]}" -e "s/micropython./tulipcc\-${timestamp}./g" stage/run/tulipcc-$timestamp.mjs
 
+# User C DSP web plumbing rides inside amy.js so it runs both on the page and
+# in AMY's AudioWorklet scope (which only ever loads amy.js). Appended after
+# the filename seds so its comments aren't rewritten.
+cat ../shared/user_c_dsp_web.js >> stage/run/amy-$timestamp.js
+

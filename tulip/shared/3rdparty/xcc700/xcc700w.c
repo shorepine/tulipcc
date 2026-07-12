@@ -765,7 +765,10 @@ static uint8_t *w_write_module(const char *entry_name, uint32_t *out_size) {
     // imports: memory, 3 const globals, undefined funcs
     wbuf_t im = bnew();
     bleb(&im, 4 + n_imports);
-    bname(&im, "env"); bname(&im, "memory"); bbyte(&im, 0x02); bbyte(&im, 0x00); bleb(&im, 1);
+    // memory: declared SHARED (flags 0x03, so a max is required — 65536 pages
+    // = 4GB covers any host) because the real import is AMY's shared memory
+    // (emscripten -sWASM_WORKERS); shared-ness must match the declaration.
+    bname(&im, "env"); bname(&im, "memory"); bbyte(&im, 0x02); bbyte(&im, 0x03); bleb(&im, 1); bleb(&im, 65536);
     bname(&im, "env"); bname(&im, "__stack_base"); bbyte(&im, 0x03); bbyte(&im, 0x7f); bbyte(&im, 0x00);
     bname(&im, "env"); bname(&im, "__bss_base"); bbyte(&im, 0x03); bbyte(&im, 0x7f); bbyte(&im, 0x00);
     bname(&im, "env"); bname(&im, "__rodata_base"); bbyte(&im, 0x03); bbyte(&im, 0x7f); bbyte(&im, 0x00);

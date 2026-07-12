@@ -198,24 +198,28 @@ time (catches the dumbest crashes before it's in the render path); document
 
 ## 6. Web
 
-Harder, but there's a genuinely elegant path:
+**Shipped.** As built it differs from the original sketch in the injection
+mechanism (no structured-cloning through the worklet port, no `addFunction`):
 
-- **The compiler**: xcc700 "treats the Xtensa CPU as a stack machine" — and
-  **WASM *is* a stack machine**. A `wasm700` backend (emit wasm binary sections
-  instead of Xtensa ELF) is a natural small fork — arguably *easier* than the
-  Xtensa backend it already has. Compile that fork itself to wasm/js and the
-  whole compiler runs in the page. (Alternative stopgap: a Railway endpoint
-  that compiles the snippet server-side with clang→wasm; works day 1, needs
-  network.)
-- **The injection**: compile user bytes → `WebAssembly.Module` on the main
-  thread (structured-clone it through the AudioWorklet port), instantiate
-  inside the AMY worklet **importing AMY's `wasmMemory`** so buffer pointers
-  are directly valid, wrap the export into AMY's function table via
-  emscripten `addFunction`, and pass that table index to a tiny C setter for
-  the same hooks. Requires adding `-sALLOW_TABLE_GROWTH` and
-  `addFunction`/`removeFunction` to `EXPORTED_RUNTIME_METHODS` in amy's web
-  Makefile (currently only `cwrap`,`ccall`,`HEAPU8` — Makefile:35).
-- Same Python/JS API on top; same int32 SAMPLE buffers.
+- **The compiler**: `xcc700w.c`, the wasm backend of the vendored xcc700 fork
+  (same small-C front end as the Xtensa `xcc700t`). It runs inside
+  micropython's wasm module on the page and emits a complete standalone wasm
+  module: linear memory imported (`env.memory`), statics/rodata at imported
+  base globals the host allocates from AMY's heap, undeclared functions as
+  `env.*` imports, `fxmul`/`to_int16`/`from_int16` inlined as intrinsics.
+- **The injection**: AMY's render loop runs in an AudioWorklet whose scope
+  only ever evaluates `amy.js`, and the page can't inject code there — so the
+  web builds *append* `tulip/shared/user_c_dsp_web.js` to the copied `amy.js`
+  and it runs in both scopes. AMY's js hooks (`amy_render_js_hook`,
+  `amy_bus_postprocess_js_hook`, called per block on the worklet thread) pass
+  their scope's `Module`, and the page and worklet rendezvous on a shared
+  control block in AMY's linear memory (a SharedArrayBuffer) registered via
+  AMY's `amy_set_external_hook_context()`. Installs mail the module bytes
+  through per-slot mailboxes in that block; the worklet instantiates them
+  importing AMY's `wasmMemory` + exports (`cos_lut` stays wasm-to-wasm) and
+  calls them from the hooks. Bus masks / osc bindings / call counts live in
+  the block too, so enable/bind/calls need no messaging at all.
+- Same Python/JS API on top; same int32 SAMPLE buffers, zero-copy.
 
 ## 7. Staged plan
 
