@@ -423,16 +423,40 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_pcm_load_file_obj, 0, 1, tulip_pcm_loa
 #ifdef TULIP_USER_C_DSP
 #include "user_c_dsp.h"
 
-// install_c_process(name, src): compile a C string defining
+// install_c_process(name, src): compile a C effect —
 // void process(int16_t *buf, int frames, int chans) — plain 16-bit PCM,
-// -32767..32767 — and install it under name.
+// -32767..32767 — and install it under name. src may be a full program or
+// just the function body (the wrapper and includes are added for you).
 STATIC mp_obj_t tulip_install_c_process(mp_obj_t name_obj, mp_obj_t src_obj) {
     char err[512];
-    int slot = user_c_dsp_install(mp_obj_str_get_str(name_obj), mp_obj_str_get_str(src_obj), err, sizeof(err));
+    int slot = user_c_dsp_install(mp_obj_str_get_str(name_obj), mp_obj_str_get_str(src_obj), USER_C_DSP_KIND_EFFECT, err, sizeof(err));
     if (slot < 0) mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("install_c_process: %s"), err);
     return mp_obj_new_int(slot);
 }
 MP_DEFINE_CONST_FUN_OBJ_2(tulip_install_c_process_obj, tulip_install_c_process);
+
+// install_c_osc(name, src): compile a C oscillator —
+// void render(int16_t *buf, int frames, int osc, int phase_inc_q16, int amp_q15)
+// — and install it under name. src may be a full program or just the body.
+STATIC mp_obj_t tulip_install_c_osc(mp_obj_t name_obj, mp_obj_t src_obj) {
+    char err[512];
+    int slot = user_c_dsp_install(mp_obj_str_get_str(name_obj), mp_obj_str_get_str(src_obj), USER_C_DSP_KIND_OSC, err, sizeof(err));
+    if (slot < 0) mp_raise_msg_varg(&mp_type_ValueError, MP_ERROR_TEXT("install_c_osc: %s"), err);
+    return mp_obj_new_int(slot);
+}
+MP_DEFINE_CONST_FUN_OBJ_2(tulip_install_c_osc_obj, tulip_install_c_osc);
+
+// c_osc(name, osc, on=True): replace AMY osc number osc's waveform with the
+// named user oscillator (or restore it with on=False).
+STATIC mp_obj_t tulip_c_osc(size_t n_args, const mp_obj_t *args) {
+    int on = (n_args > 2) ? mp_obj_is_true(args[2]) : 1;
+    int r = user_c_dsp_bind_osc(mp_obj_str_get_str(args[0]), mp_obj_get_int(args[1]), on);
+    if (r == -1) mp_raise_ValueError(MP_ERROR_TEXT("no such c_osc"));
+    if (r == -2) mp_raise_ValueError(MP_ERROR_TEXT("bad osc number"));
+    if (r == -3) mp_raise_ValueError(MP_ERROR_TEXT("not an osc (installed with install_c_process?)"));
+    return mp_const_none;
+}
+MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_c_osc_obj, 2, 3, tulip_c_osc);
 
 // c_process(name, on, bus=0): enable/disable a named process on a bus.
 STATIC mp_obj_t tulip_c_process(size_t n_args, const mp_obj_t *args) {
@@ -440,6 +464,7 @@ STATIC mp_obj_t tulip_c_process(size_t n_args, const mp_obj_t *args) {
     int r = user_c_dsp_set(mp_obj_str_get_str(args[0]), bus, mp_obj_is_true(args[1]));
     if (r == -1) mp_raise_ValueError(MP_ERROR_TEXT("no such c_process"));
     if (r == -2) mp_raise_ValueError(MP_ERROR_TEXT("bad bus"));
+    if (r == -3) mp_raise_ValueError(MP_ERROR_TEXT("not an effect (installed with install_c_osc?)"));
     return mp_const_none;
 }
 MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_c_process_obj, 2, 3, tulip_c_process);
@@ -1773,7 +1798,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 
 #ifdef TULIP_USER_C_DSP
     { MP_ROM_QSTR(MP_QSTR_install_c_process), MP_ROM_PTR(&tulip_install_c_process_obj) },
+    { MP_ROM_QSTR(MP_QSTR_install_c_osc), MP_ROM_PTR(&tulip_install_c_osc_obj) },
     { MP_ROM_QSTR(MP_QSTR_c_process), MP_ROM_PTR(&tulip_c_process_obj) },
+    { MP_ROM_QSTR(MP_QSTR_c_osc), MP_ROM_PTR(&tulip_c_osc_obj) },
     { MP_ROM_QSTR(MP_QSTR_c_process_calls), MP_ROM_PTR(&tulip_c_process_calls_obj) },
     { MP_ROM_QSTR(MP_QSTR_uninstall_c_process), MP_ROM_PTR(&tulip_uninstall_c_process_obj) },
 #endif

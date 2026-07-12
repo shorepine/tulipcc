@@ -168,11 +168,24 @@ v2; don't block on wire-protocol design.
   out of that build).
 
   ```python
-  tulip.install_c_process("crush", src)   # -> slot; ValueError on bad C
+  tulip.install_c_process("crush", src)   # effect -> slot; ValueError on bad C
   tulip.c_process("crush", True, 0)       # enable on bus 0 (on, bus=0)
+  tulip.install_c_osc("cz", osc_src)      # oscillator kind
+  tulip.c_osc("cz", 20)                   # AMY osc 20 now plays your C code
   tulip.c_process_calls("crush")          # blocks processed so far
   tulip.uninstall_c_process("crush")
   ```
+
+  `src` can be a **full program or just the function body** — bodies are
+  wrapped in the signature + standard includes automatically (with `#line`
+  so tcc errors keep the user's line numbers). Effect body sees
+  `buf/frames/chans`; osc body sees `buf/frames/osc/phase_inc_q16/amp_q15`
+  (mono buf; the dispatcher derives phase step + envelope from `msynth` so
+  pitch bend and ADSR just work, and AMY still applies pan). **State between
+  calls** = `static` variables in the body; polyphonic per-osc state =
+  static arrays indexed by `osc`. See the shipped example
+  `tulip/fs/tulip/ex/c_dsp_demo.py` (bitcrusher + CZ-101-style phase
+  distortion osc).
 
 ### Failure modes, honestly
 

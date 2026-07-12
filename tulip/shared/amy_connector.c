@@ -507,6 +507,8 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
 #ifdef TULIP_USER_C_DSP
     extern void tulip_bus_postprocess_hook(uint8_t bus, SAMPLE *buf, uint16_t len);
     amy_config.amy_external_bus_postprocess_hook = tulip_bus_postprocess_hook;
+    extern uint8_t tulip_user_render_hook(uint16_t osc, SAMPLE *buf, uint16_t len);
+    amy_config.amy_external_render_hook = tulip_user_render_hook;
 #endif
     amy_config.features.default_synths = 0; // midi.py does this for us
     amy_config.capture_device_id = capture_device_id;
