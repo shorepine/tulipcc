@@ -1,15 +1,21 @@
 // user_c_dsp.c
 // Runtime-installed user C DSP: compiles a C string from Python and runs it
-// inside AMY's render loop. Two kinds:
-//   effect — void process(int16_t *buf, int frames, int chans)
-//            dispatched from amy_external_bus_postprocess_hook per bus
-//   osc    — void render(int16_t *buf, int frames, int osc, int phase_inc_q16, int amp_q15)
-//            dispatched from amy_external_render_hook, replaces an osc's waveform
-// Users may pass just the function *body*; we wrap it in the signature (and,
-// on desktop, standard includes). Samples are plain 16-bit PCM (-32767..32767);
-// conversion to/from AMY's s8.23 happens at this boundary.
-// Compiler backends: libtcc JIT (desktop), xcc700t + esp-idf elf_loader (ESP32,
-// code loaded into PSRAM). See docs/user_c_dsp_design.md.
+// inside AMY's render loop, directly on AMY's S8.23 fixed-point buffers
+// (int32, 1.0 == 1<<23) -- zero copies. Two kinds:
+//   effect — void process(int *buf, int frames, int chans)
+//            dispatched from amy_external_bus_postprocess_hook; buf is the
+//            bus buffer, chans sequential channel blocks, modify in place
+//   osc    — void render(int *buf, int frames, int osc, int phase_inc_q16, int amp)
+//            dispatched from amy_external_render_hook; fill buf (mono) with
+//            frames samples. phase_inc_q16: per-sample phase step, 65536 ==
+//            one cycle (tracks pitch bend). amp: envelope level in S8.23.
+// Helpers are exported into user code on both backends (see udsp_helper
+// prototypes below): AMY's cos_lut(phase_q23), fxmul(a,b) (S8.23 multiply),
+// to_int16(s)/from_int16(v) conversions for people who think in 16-bit PCM.
+// Users may pass just the function *body*; we wrap it in the signature and
+// helper prototypes. State between calls = statics in the body.
+// Compiler backends: libtcc JIT (desktop), xcc700t + esp-idf elf_loader
+// (ESP32, code loaded into PSRAM). See docs/user_c_dsp_design.md.
 
 #ifdef TULIP_USER_C_DSP
 
@@ -24,8 +30,8 @@
 #define USER_C_DSP_NAME_LEN 32
 #define USER_C_DSP_MAX_OSCS 256
 
-typedef void (*user_c_effect_fn_t)(int16_t *buf, int32_t frames, int32_t chans);
-typedef void (*user_c_osc_fn_t)(int16_t *buf, int32_t frames, int32_t osc, int32_t phase_inc_q16, int32_t amp_q15);
+typedef void (*user_c_effect_fn_t)(int32_t *buf, int32_t frames, int32_t chans);
+typedef void (*user_c_osc_fn_t)(int32_t *buf, int32_t frames, int32_t osc, int32_t phase_inc_q16, int32_t amp);
 
 typedef struct {
     char name[USER_C_DSP_NAME_LEN];
@@ -42,35 +48,47 @@ static user_c_dsp_slot_t slots[USER_C_DSP_SLOTS];
 // map to one slot; user code keeps per-osc state indexed by the osc param.
 static uint8_t osc_map[USER_C_DSP_MAX_OSCS];
 
-// User effects see familiar 16-bit PCM rather than AMY's s8.23 fixed point;
-// we convert at this boundary, only when an effect is enabled on the bus.
-// 2x padding so an effect that mistakenly indexes 32-bit ints reads and
-// writes in-bounds garbage instead of corrupting neighboring state.
-static int16_t pcm_buf[AMY_BLOCK_SIZE * AMY_NCHANS * 2];
-static int16_t osc_pcm_buf[AMY_BLOCK_SIZE * 2];
+// ---- helpers exported into user code (identical on all backends) ----------
+// S8.23 multiply: fxmul(a, b) == a*b with 1.0 == 1<<23.
+static int32_t udsp_fxmul(int32_t a, int32_t b) {
+    return (int32_t)(((int64_t)a * b) >> 23);
+}
+// S8.23 <-> familiar 16-bit PCM (-32767..32767).
+static int32_t udsp_to_int16(int32_t s) {
+    s = s >> 8;
+    if (s > 32767) s = 32767;
+    if (s < -32767) s = -32767;
+    return s;
+}
+static int32_t udsp_from_int16(int32_t v) {
+    return v << 8;
+}
 
-// Runs on the AMY render task, once per bus per block.
+// Prototypes prepended to bare bodies so helpers are just there. Full-program
+// sources declare what they use themselves. cos_lut is AMY's: S8.23 cosine,
+// phase normalized to one cycle in S8.23 (0..1<<23).
+static const char *udsp_helper_protos =
+    "int cos_lut(int phase_q23); int fxmul(int a, int b); int to_int16(int s); int from_int16(int v); ";
+
+typedef struct { const char *name; const void *fn; } udsp_export_t;
+static const udsp_export_t udsp_exports[] = {
+    { "cos_lut", (const void *)cos_lut },
+    { "fxmul", (const void *)udsp_fxmul },
+    { "to_int16", (const void *)udsp_to_int16 },
+    { "from_int16", (const void *)udsp_from_int16 },
+    { NULL, NULL }
+};
+// ----------------------------------------------------------------------------
+
+// Runs on the AMY render task, once per bus per block. buf is the bus'
+// S8.23 buffer, passed to user effects directly.
 void tulip_bus_postprocess_hook(uint8_t bus, int32_t *buf, uint16_t len) {
-    int converted = 0;
     for (int i = 0; i < USER_C_DSP_SLOTS; i++) {
         user_c_effect_fn_t fn = (user_c_effect_fn_t)__atomic_load_n(&slots[i].fn, __ATOMIC_ACQUIRE);
         if (fn != NULL && slots[i].kind == USER_C_DSP_KIND_EFFECT && (slots[i].bus_mask & (1u << bus))) {
-            if (!converted) {
-                // s8.23 -> s.15 with clamp (the bus can exceed 1.0 pre-clip).
-                for (int j = 0; j < len * AMY_NCHANS; j++) {
-                    int32_t v = buf[j] >> 8;
-                    if (v > 32767) v = 32767;
-                    if (v < -32767) v = -32767;
-                    pcm_buf[j] = (int16_t)v;
-                }
-                converted = 1;
-            }
-            fn(pcm_buf, len, AMY_NCHANS);
+            fn(buf, len, AMY_NCHANS);
             slots[i].calls++;
         }
-    }
-    if (converted) {
-        for (int j = 0; j < len * AMY_NCHANS; j++) buf[j] = ((int32_t)pcm_buf[j]) << 8;
     }
 }
 
@@ -83,16 +101,15 @@ uint8_t tulip_user_render_hook(uint16_t osc, int32_t *buf, uint16_t len) {
     user_c_osc_fn_t fn = (user_c_osc_fn_t)__atomic_load_n(&slot->fn, __ATOMIC_ACQUIRE);
     if (fn == NULL || slot->kind != USER_C_DSP_KIND_OSC) return 0;
     // Current pitch (incl. bend/portamento) as a Q16 per-sample phase step
-    // (65536 == one full cycle), and the envelope level as Q15.
+    // (65536 == one full cycle), and the envelope level in S8.23.
     float freq = freq_of_logfreq(msynth[osc]->logfreq);
     int32_t phase_inc_q16 = (int32_t)(freq * 65536.0f / (float)AMY_SAMPLE_RATE);
     float a = msynth[osc]->amp;
     if (a < 0.0f) a = 0.0f;
     if (a > 1.0f) a = 1.0f;
-    int32_t amp_q15 = (int32_t)(a * 32767.0f);
-    memset(osc_pcm_buf, 0, len * sizeof(int16_t));
-    fn(osc_pcm_buf, len, osc, phase_inc_q16, amp_q15);
-    for (int i = 0; i < len; i++) buf[i] = ((int32_t)osc_pcm_buf[i]) << 8;
+    int32_t amp = (int32_t)(a * (float)(1 << 23));
+    memset(buf, 0, len * sizeof(int32_t));  // replace AMY's carrier entirely
+    fn(buf, len, osc, phase_inc_q16, amp);
     slot->calls++;
     return 0;
 }
@@ -135,8 +152,8 @@ static const char *kind_symbol(uint8_t kind) {
 
 static const char *kind_signature(uint8_t kind) {
     return kind == USER_C_DSP_KIND_OSC
-        ? "void render(int16_t *buf, int frames, int osc, int phase_inc_q16, int amp_q15)"
-        : "void process(int16_t *buf, int frames, int chans)";
+        ? "void render(int *buf, int frames, int osc, int phase_inc_q16, int amp)"
+        : "void process(int *buf, int frames, int chans)";
 }
 
 // Does src look like a bare function body (never mentions process(/render()?
@@ -220,16 +237,17 @@ int user_c_dsp_uninstall(const char *name) {
 #include <mach-o/dyld.h>
 #include <libtcc.h>
 
-// Bare bodies get the signature plus standard includes; #line 1 keeps tcc's
-// error messages pointing at the user's own lines. Statics declared inside
-// the body persist between calls (that's how user DSP keeps state).
+// Bare bodies get the signature, standard includes, and the exported-helper
+// prototypes; #line 1 keeps tcc's error messages pointing at the user's own
+// lines. Statics declared inside the body persist between calls.
 static char *wrap_source(const char *src, uint8_t kind) {
     if (!is_bare_body(src, kind)) return NULL;  // full program: use as-is
     const char *prelude = "#include <stdint.h>\n#include <stdio.h>\n#include <math.h>\n";
-    size_t n = strlen(prelude) + strlen(kind_signature(kind)) + strlen(src) + 64;
+    size_t n = strlen(prelude) + strlen(udsp_helper_protos) + strlen(kind_signature(kind)) + strlen(src) + 64;
     char *out = malloc(n);
     if (out == NULL) return NULL;
-    snprintf(out, n, "%s%s {\n#line 1 \"%s\"\n%s\n}\n", prelude, kind_signature(kind), kind_symbol(kind), src);
+    snprintf(out, n, "%s%s\n%s {\n#line 1 \"%s\"\n%s\n}\n",
+             prelude, udsp_helper_protos, kind_signature(kind), kind_symbol(kind), src);
     return out;
 }
 
@@ -277,6 +295,8 @@ static int backend_compile(const char *src, uint8_t kind, void **fn_out, void **
     tcc_set_error_func(s, &sink, tcc_err_cb);
     tcc_set_lib_path(s, tcc_runtime_path());
     tcc_set_output_type(s, TCC_OUTPUT_MEMORY);
+    for (const udsp_export_t *e = udsp_exports; e->name != NULL; e++)
+        tcc_add_symbol(s, e->name, e->fn);
     int compiled = tcc_compile_string(s, wrapped ? wrapped : src);
     free(wrapped);
     if (compiled == -1) {
@@ -309,7 +329,8 @@ static void backend_free(void *state) {
 // xcc700t (vendored mini C compiler, small-C subset: while/if, int + int16_t
 // pointers/arrays, enum, static; no preprocessor/floats/structs) emits an
 // Xtensa REL ELF that esp-idf's elf_loader relocates into PSRAM. e_entry is
-// the user function, so elf->entry is directly callable.
+// the user function, so elf->entry is directly callable. Calls to the
+// exported helpers resolve through the loader's registered symbol table.
 
 // esp_elf.h lives in a managed component whose include path isn't visible to
 // micropython's qstr preprocess pass; that pass defines NO_QSTR and only needs
@@ -319,19 +340,33 @@ static void backend_free(void *state) {
 #endif
 #include "xcc700t.h"
 
-// Bare bodies get just the signature (xcc700 has no preprocessor). Keeping
-// the body on the same line as the opening brace preserves the user's error
-// line numbers.
+// Bare bodies get the helper prototypes + signature (xcc700 has no
+// preprocessor). Keeping the body on the same line as the opening brace
+// preserves the user's error line numbers.
 static char *wrap_source(const char *src, uint8_t kind) {
     if (!is_bare_body(src, kind)) return NULL;
-    size_t n = strlen(kind_signature(kind)) + strlen(src) + 8;
+    size_t n = strlen(udsp_helper_protos) + strlen(kind_signature(kind)) + strlen(src) + 8;
     char *out = malloc(n);
     if (out == NULL) return NULL;
-    snprintf(out, n, "%s { %s\n}\n", kind_signature(kind), src);
+    snprintf(out, n, "%s%s { %s\n}\n", udsp_helper_protos, kind_signature(kind), src);
     return out;
 }
 
 static int backend_compile(const char *src, uint8_t kind, void **fn_out, void **state_out, char *err, int errlen) {
+    static int symbols_registered = 0;
+    if (!symbols_registered) {
+        static struct esp_elfsym udsp_elfsyms[8];
+        int n = 0;
+        for (const udsp_export_t *e = udsp_exports; e->name != NULL; e++) {
+            udsp_elfsyms[n].name = e->name;
+            udsp_elfsyms[n].sym = e->fn;
+            n++;
+        }
+        udsp_elfsyms[n].name = NULL;
+        udsp_elfsyms[n].sym = NULL;
+        esp_elf_register_symbol(udsp_elfsyms);
+        symbols_registered = 1;
+    }
     char *wrapped = wrap_source(src, kind);
     uint8_t *elf_img = NULL;
     uint32_t elf_size = 0;
@@ -353,7 +388,7 @@ static int backend_compile(const char *src, uint8_t kind, void **fn_out, void **
     free(elf_img);  // the loader copied the segments out
     if (r != 0) {
         esp_elf_deinit(elf); free(elf);
-        snprintf(err, errlen, "elf relocate failed (%d)", r);
+        snprintf(err, errlen, "elf relocate failed (%d) -- unknown function called?", r);
         return -1;
     }
     *fn_out = (void *)elf->entry;

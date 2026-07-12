@@ -1,18 +1,25 @@
 # c_dsp_demo.py
 # User C DSP demo: write audio effects and oscillators in C, from Python.
-# (Tulip Desktop only for now -- AMYboard/web support is coming.)
 #
-# You give tulip just the *body* of a C function. Samples are plain 16-bit
-# PCM, -32767..32767, like a WAV file. No fixed point math needed.
+# You give tulip just the *body* of a C function. Samples are AMY's native
+# fixed point: int32, S8.23, so 1.0 == (1 << 23) and the usable range is
+# about +/- 8388608. These helpers are always available in your code:
 #
-# Effect body variables:  int16_t *buf, int frames, int chans
-#   buf is chans sequential channel blocks of frames samples; edit in place.
-# Osc body variables:     int16_t *buf, int frames, int osc,
-#                         int phase_inc_q16, int amp_q15
+#   cos_lut(phase)     AMY's cosine table. phase is S8.23 normalized to one
+#                      cycle (0 .. 1<<23); returns S8.23 in -1.0..1.0.
+#   fxmul(a, b)        multiply two S8.23 numbers (a*b with 1.0 == 1<<23)
+#   to_int16(s)        S8.23 -> plain 16-bit PCM (-32767..32767), clamped
+#   from_int16(v)      16-bit PCM -> S8.23
+#
+# Effect body variables:  int *buf, int frames, int chans
+#   buf is the live bus buffer, chans sequential channel blocks of frames
+#   samples; edit in place.
+# Osc body variables:     int *buf, int frames, int osc,
+#                         int phase_inc_q16, int amp
 #   Fill buf (mono) with frames samples. phase_inc_q16 is the per-sample
 #   phase step for the note's current pitch (65536 = one full cycle) and
-#   amp_q15 is the envelope level right now (0..32767) -- multiply by it so
-#   your osc follows AMY's ADSR.
+#   amp is the envelope level right now in S8.23 -- fxmul by it so your
+#   osc follows AMY's ADSR.
 #
 # KEEPING STATE BETWEEN CALLS: declare variables `static`. They live as long
 # as the install. For oscillators, many AMY oscs can play your code at once
@@ -21,12 +28,12 @@
 
 import tulip, amy, time
 
-# --- An effect: 10-bit bitcrusher ------------------------------------------
+# --- An effect: bitcrusher (keep the top 5 of 23 fraction bits) -------------
 
 CRUSH = """
     int i = 0;
     while (i < frames * chans) {
-        buf[i] = (buf[i] >> 10) << 10;
+        buf[i] = (buf[i] >> 18) << 18;
         i = i + 1;
     }
 """
@@ -36,6 +43,8 @@ CRUSH = """
 # with a *bent* phase. The first `dcw` fraction of the cycle sweeps the
 # cosine's whole first half, the rest sweeps the second half. Small dcw =
 # buzzy and bright (like an open filter); dcw = 32768 = pure cosine.
+# Phase bookkeeping is in Q16 (65536 = one cycle) to keep the warp math in
+# int32 range; << 7 converts to cos_lut's S8.23 phase at the lookup.
 
 CZ = """
     static int phase[256];               // per-osc phase, Q16: state between calls
@@ -44,18 +53,9 @@ CZ = """
     while (i < frames) {
         int p = phase[osc];
         int wp = 0;                      // warped phase, Q16
-        // All int32: p*32768 < 2^31 since p < 65536, and (p-dcw)*32768
-        // stays under 2^31 for any dcw >= 1.
         if (p < dcw) wp = p * 32768 / dcw;
         else wp = 32768 + (p - dcw) * 32768 / (65536 - dcw);
-        // Integer cosine: cos = sin(quarter cycle later), and sin by the
-        // parabola trick -- t*(half - t) peaks at exactly 1.0 in Q15.
-        int t = wp + 16384;
-        if (t >= 65536) t = t - 65536;
-        int s = 0;
-        if (t < 32768) s = (t * (32768 - t)) >> 13;
-        else { t = t - 32768; s = 0 - ((t * (32768 - t)) >> 13); }
-        buf[i] = (int16_t)((s * amp_q15) >> 15);
+        buf[i] = fxmul(cos_lut(wp << 7), amp);
         p = p + phase_inc_q16;
         if (p >= 65536) p = p - 65536;
         phase[osc] = p;

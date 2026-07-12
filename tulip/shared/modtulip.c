@@ -424,9 +424,10 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_pcm_load_file_obj, 0, 1, tulip_pcm_loa
 #include "user_c_dsp.h"
 
 // install_c_process(name, src): compile a C effect —
-// void process(int16_t *buf, int frames, int chans) — plain 16-bit PCM,
-// -32767..32767 — and install it under name. src may be a full program or
-// just the function body (the wrapper and includes are added for you).
+// void process(int *buf, int frames, int chans) — AMY S8.23 samples
+// (1.0 == 1<<23; helpers cos_lut/fxmul/to_int16/from_int16 are available) —
+// and install it under name. src may be a full program or just the function
+// body (the wrapper and helper prototypes are added for you).
 STATIC mp_obj_t tulip_install_c_process(mp_obj_t name_obj, mp_obj_t src_obj) {
     char err[512];
     int slot = user_c_dsp_install(mp_obj_str_get_str(name_obj), mp_obj_str_get_str(src_obj), USER_C_DSP_KIND_EFFECT, err, sizeof(err));
@@ -436,8 +437,9 @@ STATIC mp_obj_t tulip_install_c_process(mp_obj_t name_obj, mp_obj_t src_obj) {
 MP_DEFINE_CONST_FUN_OBJ_2(tulip_install_c_process_obj, tulip_install_c_process);
 
 // install_c_osc(name, src): compile a C oscillator —
-// void render(int16_t *buf, int frames, int osc, int phase_inc_q16, int amp_q15)
-// — and install it under name. src may be a full program or just the body.
+// void render(int *buf, int frames, int osc, int phase_inc_q16, int amp)
+// — S8.23 samples, amp in S8.23, phase_inc_q16 = per-sample step with
+// 65536 == one cycle. Install under name; src may be a full program or body.
 STATIC mp_obj_t tulip_install_c_osc(mp_obj_t name_obj, mp_obj_t src_obj) {
     char err[512];
     int slot = user_c_dsp_install(mp_obj_str_get_str(name_obj), mp_obj_str_get_str(src_obj), USER_C_DSP_KIND_OSC, err, sizeof(err));

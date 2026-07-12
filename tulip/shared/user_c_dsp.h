@@ -1,12 +1,19 @@
 // user_c_dsp.h
-// Runtime-installed user C DSP for Tulip/AMYboard. Two kinds:
-//   effect — void process(int16_t *buf, int frames, int chans)
+// Runtime-installed user C DSP for Tulip/AMYboard. Works directly on AMY's
+// S8.23 fixed-point buffers (int32, 1.0 == 1<<23), zero-copy. Two kinds:
+//   effect — void process(int *buf, int frames, int chans)
 //            runs at the end of a bus' FX chain; modify buf in place
-//   osc    — void render(int16_t *buf, int frames, int osc, int phase_inc_q16, int amp_q15)
-//            replaces the waveform of a bound AMY osc (mono; AMY pans/mixes)
-// Samples are plain 16-bit PCM (-32767..32767, like a WAV file), channels
-// sequential (non-interleaved); the dispatchers convert to/from AMY's s8.23.
-// Sources may be a full program or just the function body (auto-wrapped).
+//            (chans sequential non-interleaved channel blocks)
+//   osc    — void render(int *buf, int frames, int osc, int phase_inc_q16, int amp)
+//            replaces the waveform of a bound AMY osc (mono; AMY pans/mixes).
+//            phase_inc_q16: per-sample phase step, 65536 == one cycle.
+//            amp: current envelope level in S8.23.
+// Helpers exported into user code on all backends: cos_lut(phase_q23) (AMY's
+// S8.23 cosine, phase 0..1<<23 == one cycle), fxmul(a,b) (S8.23 multiply),
+// to_int16(s)/from_int16(v) (S8.23 <-> plain 16-bit PCM).
+// Sources may be a full program or just the function body (auto-wrapped with
+// the signature + helper prototypes). State between calls = statics in the
+// body; per-osc polyphonic state = static arrays indexed by osc.
 // See docs/user_c_dsp_design.md.
 #pragma once
 

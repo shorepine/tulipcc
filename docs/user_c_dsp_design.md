@@ -9,23 +9,22 @@ extension for every effect anyone dreams up.
 
 ```python
 crusher = """
-enum { BITS = 10 };
-void process(int16_t *buf, int frames, int chans) {
     int i = 0;
     while (i < frames * chans) {
-        buf[i] = (buf[i] >> BITS) << BITS;
+        buf[i] = (buf[i] >> 18) << 18;
         i = i + 1;
     }
-}
 """
 tulip.install_c_process("crush", crusher)   # compiles + loads, ~ms
 tulip.c_process("crush", True)              # insert at end of bus 0 FX chain
 ```
 
-User code sees **plain 16-bit PCM** (−32767..32767, like a WAV file — no fixed
-point knowledge needed), `chans` sequential channel blocks of `frames` samples.
-The tulip dispatcher converts to/from AMY's internal s8.23 buffers at the
-boundary, only on buses with an effect enabled.
+User code runs **directly on AMY's S8.23 buffers** (int32, 1.0 == `1<<23`),
+`chans` sequential channel blocks of `frames` samples — zero copies. Exported
+helpers make the fixed point approachable (available in every snippet):
+`cos_lut(phase_q23)` (AMY's cosine table, phase normalized to one cycle in
+S8.23), `fxmul(a, b)` (S8.23 multiply), and `to_int16(s)` / `from_int16(v)`
+for people who prefer thinking in 16-bit PCM.
 
 **Verdict: very feasible on ESP32-S3, trivial on desktop, and plausible on web.**
 Most of the machinery already exists; the genuinely new work is small.
@@ -59,12 +58,12 @@ Most of the machinery already exists; the genuinely new work is small.
 
 AMY's internal sample type is **int32** (S8.23) and the tiny on-device compiler
 (below) supports **only integer math — no floats** — so the whole pipeline stays
-integer, which is also what you want on the S3 anyway. The *user-facing* contract
-is friendlier than raw S8.23 though: the tulip dispatcher hands effects **int16
-PCM at ±32767** and converts at the boundary (a shift+clamp per sample). One
-consequence for the ESP slice: xcc700's type system is int/char only, so the
-fork needs `int16_t` arrays (Xtensa `l16si`/`s16i` — small addition) — or the
-ESP dispatcher widens into int32 arrays holding ±32767 values instead.
+integer, which is also what you want on the S3 anyway. User code gets the raw
+S8.23 buffers (zero-copy, full headroom — bus values can exceed ±1.0 pre-clip),
+with exported helper functions (`cos_lut`, `fxmul`, `to_int16`/`from_int16`)
+resolved by each backend's symbol mechanism so nobody has to *derive* fixed
+point — they call helpers. (The xcc700 fork still supports `int16_t`
+pointers/arrays for effects that want to store 16-bit state compactly.)
 
 ## 2. The on-device compiler + loader (ESP32-S3)
 
