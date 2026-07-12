@@ -1,15 +1,16 @@
 // user_c_dsp.h
 // Runtime-installed user C DSP ("c_process") for Tulip/AMYboard.
-// User code defines: void process(int *buf, int frames, int chans)
-// where buf is AMY's per-bus SAMPLE buffer (int32 s8.23 fixed point),
+// User code defines: void process(int16_t *buf, int frames, int chans)
+// where buf holds plain 16-bit PCM samples (-32767..32767, like a WAV file),
 // laid out as chans sequential (non-interleaved) blocks of frames samples.
+// The dispatcher converts to/from AMY's s8.23 bus buffers at this boundary.
 // See docs/user_c_dsp_design.md.
 #pragma once
 
 #include <stdint.h>
 
-// Registered as amy_config.amy_external_bus_dsp_hook (SAMPLE == int32_t s8.23).
-void tulip_bus_dsp_hook(uint8_t bus, int32_t *buf, uint16_t len);
+// Registered as amy_config.amy_external_bus_postprocess_hook (SAMPLE == int32_t s8.23).
+void tulip_bus_postprocess_hook(uint8_t bus, int32_t *buf, uint16_t len);
 
 // Compile src and install it under name (replacing any existing install of the
 // same name, keeping its bus enables). Returns slot index >= 0, or -1 with a

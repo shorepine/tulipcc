@@ -9,18 +9,23 @@ extension for every effect anyone dreams up.
 
 ```python
 crusher = """
-enum { BITS = 16 };
-void process(int *buf, int frames) {
+enum { BITS = 10 };
+void process(int16_t *buf, int frames, int chans) {
     int i = 0;
-    while (i < frames) {
+    while (i < frames * chans) {
         buf[i] = (buf[i] >> BITS) << BITS;
         i = i + 1;
     }
 }
 """
 tulip.install_c_process("crush", crusher)   # compiles + loads, ~ms
-tulip.c_process("crush", bus=0, on=True)    # insert at end of bus 0 FX chain
+tulip.c_process("crush", True)              # insert at end of bus 0 FX chain
 ```
+
+User code sees **plain 16-bit PCM** (−32767..32767, like a WAV file — no fixed
+point knowledge needed), `chans` sequential channel blocks of `frames` samples.
+The tulip dispatcher converts to/from AMY's internal s8.23 buffers at the
+boundary, only on buses with an effect enabled.
 
 **Verdict: very feasible on ESP32-S3, trivial on desktop, and plausible on web.**
 Most of the machinery already exists; the genuinely new work is small.
@@ -50,12 +55,16 @@ Most of the machinery already exists; the genuinely new work is small.
   example is a different trick (audio-in → user buffer → `AUDIO_EXT0/1` waves) —
   useful, but not a bus insert.
 
-### Fixed point is a feature here
+### Integer audio is a feature here
 
-AMY's internal sample type is **int32** (S8.23). The tiny on-device compiler
-(below) supports **only int/char/pointers — no floats**. These fit each other
-perfectly: user DSP operates on AMY's native buffers with pure integer math,
-which is also what you want on the S3 anyway.
+AMY's internal sample type is **int32** (S8.23) and the tiny on-device compiler
+(below) supports **only integer math — no floats** — so the whole pipeline stays
+integer, which is also what you want on the S3 anyway. The *user-facing* contract
+is friendlier than raw S8.23 though: the tulip dispatcher hands effects **int16
+PCM at ±32767** and converts at the boundary (a shift+clamp per sample). One
+consequence for the ESP slice: xcc700's type system is int/char only, so the
+fork needs `int16_t` arrays (Xtensa `l16si`/`s16i` — small addition) — or the
+ESP dispatcher widens into int32 arrays holding ±32767 values instead.
 
 ## 2. The on-device compiler + loader (ESP32-S3)
 
@@ -114,7 +123,7 @@ Following the existing `amy_external_*_hook` pattern in `amy_config_t`
 // Called at the end of each bus's FX chain (after EQ/chorus/echo/reverb),
 // before buses are mixed to output. buf is AMY_NCHANS sequential channel
 // blocks of len SAMPLEs (S8.23).
-void (*amy_external_bus_dsp_hook)(uint8_t bus, SAMPLE *buf, uint16_t len);
+void (*amy_external_bus_postprocess_hook)(uint8_t bus, SAMPLE *buf, uint16_t len);
 ```
 
 One call site in `amy_fill_buffer()` at the end of the per-bus FX loop.
@@ -146,7 +155,7 @@ v2; don't block on wire-protocol design.
 - **Desktop (macOS Tulip)** — *implemented*: same Python API, backed by an
   embedded **libtcc** (TinyCC, `tinycc` submodule, LGPL) JIT — no Xcode CLT
   needed. `tulip/shared/user_c_dsp.c` holds the slot table + dispatcher
-  (registered as `amy_external_bus_dsp_hook`) and the tcc backend;
+  (registered as `amy_external_bus_postprocess_hook`) and the tcc backend;
   `tulip/macos/build.sh` builds `libtcc.a` and stages the tcc runtime
   (`libtcc1.a` + headers) into the app bundle's `Resources/tcc`. Compile
   errors raise `ValueError` with tcc's line numbers; reinstalling the same
@@ -198,7 +207,7 @@ Harder, but there's a genuinely elegant path:
 
 ## 7. Staged plan
 
-1. **AMY PR**: add `amy_external_bus_dsp_hook` (+ call site). Tiny; follows
+1. **AMY PR**: add `amy_external_bus_postprocess_hook` (+ call site). Tiny; follows
    house pattern. (Standard AMY PR flow: amy PR → `make test` → pin in tulipcc →
    merge → re-pin.)
 2. **ESP spike** (amyboard branch): vendor xcc700, add elf_loader component +

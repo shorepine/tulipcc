@@ -424,7 +424,8 @@ MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_pcm_load_file_obj, 0, 1, tulip_pcm_loa
 #include "user_c_dsp.h"
 
 // install_c_process(name, src): compile a C string defining
-// void process(int *buf, int frames, int chans) and install it under name.
+// void process(int16_t *buf, int frames, int chans) — plain 16-bit PCM,
+// -32767..32767 — and install it under name.
 STATIC mp_obj_t tulip_install_c_process(mp_obj_t name_obj, mp_obj_t src_obj) {
     char err[512];
     int slot = user_c_dsp_install(mp_obj_str_get_str(name_obj), mp_obj_str_get_str(src_obj), err, sizeof(err));

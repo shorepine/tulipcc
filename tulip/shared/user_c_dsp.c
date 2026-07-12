@@ -14,7 +14,7 @@
 #define USER_C_DSP_SLOTS 8
 #define USER_C_DSP_NAME_LEN 32
 
-typedef void (*user_c_dsp_fn_t)(int32_t *buf, int32_t frames, int32_t chans);
+typedef void (*user_c_dsp_fn_t)(int16_t *buf, int32_t frames, int32_t chans);
 
 typedef struct {
     char name[USER_C_DSP_NAME_LEN];
@@ -26,14 +26,34 @@ typedef struct {
 
 static user_c_dsp_slot_t slots[USER_C_DSP_SLOTS];
 
+// User effects see familiar 16-bit PCM (-32767..32767) rather than AMY's s8.23
+// fixed point; we convert at this boundary, only when an effect is enabled on
+// the bus. 2x padding so an effect that mistakenly indexes 32-bit ints reads
+// and writes in-bounds garbage instead of corrupting neighboring state.
+static int16_t pcm_buf[AMY_BLOCK_SIZE * AMY_NCHANS * 2];
+
 // Runs on the AMY render task, once per bus per block.
-void tulip_bus_dsp_hook(uint8_t bus, int32_t *buf, uint16_t len) {
+void tulip_bus_postprocess_hook(uint8_t bus, int32_t *buf, uint16_t len) {
+    int converted = 0;
     for (int i = 0; i < USER_C_DSP_SLOTS; i++) {
         user_c_dsp_fn_t fn = __atomic_load_n(&slots[i].fn, __ATOMIC_ACQUIRE);
         if (fn != NULL && (slots[i].bus_mask & (1u << bus))) {
-            fn(buf, len, AMY_NCHANS);
+            if (!converted) {
+                // s8.23 -> s.15 with clamp (the bus can exceed 1.0 pre-clip).
+                for (int j = 0; j < len * AMY_NCHANS; j++) {
+                    int32_t v = buf[j] >> 8;
+                    if (v > 32767) v = 32767;
+                    if (v < -32767) v = -32767;
+                    pcm_buf[j] = (int16_t)v;
+                }
+                converted = 1;
+            }
+            fn(pcm_buf, len, AMY_NCHANS);
             slots[i].calls++;
         }
+    }
+    if (converted) {
+        for (int j = 0; j < len * AMY_NCHANS; j++) buf[j] = ((int32_t)pcm_buf[j]) << 8;
     }
 }
 
@@ -149,7 +169,7 @@ int user_c_dsp_install(const char *name, const char *src, char *err, int errlen)
     }
     user_c_dsp_fn_t fn = (user_c_dsp_fn_t)tcc_get_symbol(s, "process");
     if (fn == NULL) {
-        snprintf(err, errlen, "no process(int *buf, int frames, int chans) defined");
+        snprintf(err, errlen, "no process(int16_t *buf, int frames, int chans) defined");
         tcc_delete(s);
         return -1;
     }
