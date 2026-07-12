@@ -1,6 +1,9 @@
 # User C DSP plugins for AMYboard / Tulip — design & feasibility
 
-*Status: proposal, 2026-07-11. Core unknowns validated by experiment (see §3).*
+*Status: proposal, 2026-07-11. Core unknowns validated by experiment (see §3).
+Since shipped on all platforms — if you want to **use** this rather than read
+about how it's built, see the user guide: [Writing audio effects and
+oscillators in C](user_c_dsp.md).*
 
 The idea: let people write a tiny C function — a bit-crusher, a weird oscillator —
 as a **string in Python**, compile it **on the device itself**, and inject it into

@@ -25,6 +25,7 @@ Tulip is a **music computer** where everything about the underlying synthesis an
  - Add global EQ, chorus, echo or reverb to the audio output
  - A scale and chord library to define musical notes in code, e.g. `music.Chord("F:min")`
  - Have total low level control of all oscillators, specifying their filters, waveform, modulation sources, ADSRs
+ - Write your own audio effects and oscillators **in C**, compiled and hot-swapped at runtime from Python -- see [Writing audio effects and oscillators in C](user_c_dsp.md)
 
 ## A small note about Tulip Desktop and Tulip Web
 
