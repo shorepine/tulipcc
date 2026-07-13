@@ -1693,7 +1693,33 @@ window.refresh_knobs_for_active_channel = async function(options) {
 // so AMY's `typeof amy_external_midi_input_js_hook === 'function'` check still
 // passes. NOTE: tulip/web (not this file) still relies on this hook as its only
 // path, so don't "fix" it the same way there.
-function amy_external_midi_input_js_hook(bytes, len, sysex) { /* no-op: see comment above */ } 
+function amy_external_midi_input_js_hook(bytes, len, sysex) { /* no-op: see comment above */ }
+
+// Inject raw MIDI bytes from on-page UI (the soft keyboard) into AMY exactly
+// as if they had arrived on a real MIDI input. This does NOT use WebMIDI, so
+// it works on Safari/Firefox. Simulate mode: feed the bytes into the local
+// AMY WASM MIDI parser and forward the complete message to MicroPython's
+// midi callbacks — the same two paths the hardware "midimessage" listener in
+// setup_midi_devices() takes. Control mode: send the bytes out the selected
+// MIDI output so the AMYboard parses them like any other MIDI input.
+function inject_midi_bytes(bytes) {
+  if (!bytes || bytes.length === 0) return;
+  if (amyboard_mode === 'control') {
+    var out = get_selected_midi_output_device() || midiOutputDevice;
+    if (out && typeof out.send === "function") {
+      try { out.send(bytes); } catch (e) {}
+    }
+    return;
+  }
+  if (!audio_started || typeof amy_process_single_midi_byte !== "function") return;
+  for (var i = 0; i < bytes.length; i++) {
+    amy_process_single_midi_byte(bytes[i], 1);
+  }
+  if (typeof mp !== 'undefined' && mp && mp.midiInHook) {
+    var sysex = bytes[0] === 0xF0 ? 1 : 0;
+    mp.midiInHook(new Uint8Array(bytes), bytes.length, sysex);
+  }
+}
 
 function safe_midi_port_id(port) {
   try {

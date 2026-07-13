@@ -2374,13 +2374,23 @@
             borderColour: "#111"
           });
 
+          // The soft keyboard sends real MIDI note on/off bytes into AMY (via
+          // inject_midi_bytes in spss.js) rather than an AMY synth message
+          // (iXnY). That way it behaves exactly like an external MIDI keyboard
+          // on the selected channel: it reaches the user's own MIDI routing
+          // (Python midi callbacks, custom synth setups), and it needs no
+          // WebMIDI, so it works on Safari too.
+          const keyboardMidiChannel = function() {
+            return ((Number(window.current_synth) || 1) - 1) & 0x0F;
+          };
+
           qwerty.keyDown = function(note, freq) {
             if (!audio_started && amyboard_mode !== 'control') return;
             const midi = noteToMidi(note);
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_send({synth: window.current_synth, vel: 1, note: finalMidi}, true);
+              inject_midi_bytes([0x90 | keyboardMidiChannel(), finalMidi & 0x7F, 127]);
             }
             if (typeof window.onKeyboardNote === "function") {
               window.onKeyboardNote(finalMidi, note);
@@ -2392,7 +2402,7 @@
             const midiFromFreq = freqToMidi(freq);
             const finalMidi = Number.isFinite(midi) ? midi : midiFromFreq;
             if (Number.isFinite(finalMidi)) {
-              amy_send({synth: window.current_synth, vel: 0, note: finalMidi}, true);
+              inject_midi_bytes([0x80 | keyboardMidiChannel(), finalMidi & 0x7F, 0]);
             }
           };
         }
