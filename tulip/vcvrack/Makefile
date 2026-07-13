@@ -28,6 +28,9 @@ LDFLAGS += $(MPLIB) -lpthread
 ifdef ARCH_MAC
 LDFLAGS += -framework CoreMIDI -framework CoreFoundation
 endif
+ifdef ARCH_LIN
+LDFLAGS += -lasound
+endif
 
 DISTRIBUTABLES += res
 DISTRIBUTABLES += $(wildcard LICENSE*)

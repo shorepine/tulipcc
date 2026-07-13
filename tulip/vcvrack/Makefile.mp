@@ -42,6 +42,11 @@ INC += -I../../amy/src/
 INC += -I$(TOP)/lib/mbedtls/include
 
 CWARN = -Wall -Werror
+ifneq ($(UNAME_S),Darwin)
+# gcc flags things Apple clang doesn't (double->float literal conversions in
+# amy, etc). Keep warnings visible but not fatal off-mac.
+CWARN += -Wno-error
+endif
 CWARN += -Wno-gnu-folding-constant -Wextra -Wno-c2x-extensions -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
 CFLAGS += -DAMYBOARD_VCV -DGAMMA9001
@@ -51,12 +56,15 @@ CFLAGS += -DSTATIC=static
 # hijack snprintf and abort on AMY's %hu/%g formats in sprint_event/dumps).
 CFLAGS += -DMICROPY_USE_INTERNAL_PRINTF=0
 CFLAGS += -fPIC
+# To amy_midi.c, MACOS just means "the host owns the MIDI device layer"
+# (run_midi/stop_midi/midi_out) — the same trick Tulip Desktop uses to hand
+# it to macos_midi.m. We define it on EVERY platform: the plugin's
+# vcv_midi.c owns midi_out (CoreMIDI on mac, ALSA seq on Linux) and
+# amy_stubs.c provides the no-op run_midi/stop_midi.
+CFLAGS += -DMACOS
 # Match the Rack SDK's deployment target so the final dylib link is clean.
-# MACOS also hands AMY's MIDI device layer (midi_out) to the plugin's
-# vcv_midi.c, the same way Tulip Desktop hands it to macos_midi.m.
 ifeq ($(UNAME_S),Darwin)
 CFLAGS += -mmacosx-version-min=10.9
-CFLAGS += -DMACOS
 endif
 COPT += -fdata-sections -ffunction-sections -O2
 CFLAGS += -g
@@ -131,7 +139,7 @@ ifneq ($(FROZEN_MANIFEST),)
 CFLAGS += -DMPZ_DIG_SIZE=16
 endif
 
-CPU_BRAND_NAME=`sysctl -n machdep.cpu.brand_string`
+CPU_BRAND_NAME=`sysctl -n machdep.cpu.brand_string 2>/dev/null || uname -m`
 CFLAGS += -DMICROPY_HW_MCU_NAME="\"$(CPU_BRAND_NAME)\""
 CFLAGS += -Wno-double-promotion -Wno-unused-function -Wno-unused-variable
 

@@ -16,9 +16,9 @@ size_t amy_i2s_write(const uint8_t* buffer, size_t nbytes) {
     return nbytes;
 }
 
-// --- amy_midi.c device layer: no darwin/generic implementation without
-// -DMACOS (CoreMIDI). Rack delivers MIDI to us via midi::InputQueue, so AMY
-// never opens a device itself. ---
+// --- amy_midi.c device layer: the archive builds with -DMACOS on every
+// platform, which to amy just means "host owns the MIDI device layer" —
+// vcv_midi.c owns midi_out, and these are the no-op open/close. ---
 void run_midi(void) {}
 void stop_midi(void) {}
 
