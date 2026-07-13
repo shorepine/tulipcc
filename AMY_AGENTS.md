@@ -469,6 +469,86 @@ def loop(step):
 device; `enc.led(i, r, g, b)` takes 0..255 and applies immediately. Never reference an
 encoder index `>= enc.encoders` or an LED index `>= enc.leds`.
 
+## Custom C DSP (`tulip.install_c_process` / `tulip.install_c_osc`): AMY first, C only when AMY can't
+
+Sketches can compile and run C audio code inside AMY's engine at runtime — on hardware,
+desktop, and the web simulator alike. **Always prefer AMY's built-in features when they
+can make the requested sound**: patches, filters (`filter_type`/`filter_freq`/`resonance`),
+global `chorus`/`reverb`/`echo`, mod routing, PCM presets. Reach for C DSP **only** when
+AMY has no equivalent — distortion / overdrive / bitcrush / waveshaping, ring-mod-style
+buffer mangling, or a custom oscillator algorithm (phase distortion, bytebeat, chiptune
+tricks). **Never** re-implement in C what AMY already has (no C filters, chorus, echo,
+reverb, or standard waveforms).
+
+API (`import tulip`):
+
+- `tulip.install_c_process(name, src)` — compile `src` as an **effect** on the final mix.
+  Raises `ValueError` with the compiler message if it doesn't compile.
+- `tulip.c_process(name, on, bus=0)` — enable/disable the effect (bus 0 is the main output).
+- `tulip.install_c_osc(name, src)` — compile `src` as an **oscillator**.
+- `tulip.c_osc(name, osc, on=True)` — point AMY osc number `osc` at it. **Use a high osc
+  number (200+)** so the default MIDI synths don't fight you for the osc.
+- `tulip.uninstall_c_process(name)` removes either kind; `tulip.c_process_calls(name)`
+  counts processed blocks (a debugging aid).
+
+You write only the **body** of a C function; the signature is wrapped for you:
+
+- Effect body sees `int *buf, int frames, int chans` — the live output buffer after AMY's
+  FX chain, `chans` sequential channel blocks of `frames` samples (NOT interleaved).
+  Modify in place.
+- Oscillator body sees `int *buf, int frames, int osc, int phase_inc_q16, int amp` — fill
+  mono `buf`. `phase_inc_q16` is the note's per-sample phase step in Q16 (65536 = one
+  cycle, tracks bends live); `amp` is the live envelope level — `fxmul` your output by it
+  so the osc follows AMY's ADSR. Give the osc an envelope (`bp0=...`) and play it like any
+  other osc.
+
+The C environment is strict (the on-device compiler is a deliberately small C):
+
+- Samples are **S8.23 fixed-point `int`s** (1.0 == `1 << 23` == 8388608). Helpers always
+  in scope: `fxmul(a, b)`, `cos_lut(phase)` (S8.23 phase, 0..`1<<23` = one cycle),
+  `to_int16(s)`, `from_int16(v)`.
+- Allowed: `int`/`int16_t`, pointers and arrays, `static`, `while`, `if`/`else`, `return`,
+  helper functions, the full integer operator set. **NO floats, structs, `for` loops, or
+  preprocessor (`#define`)** — write `while` loops with explicit counters.
+- `static` variables persist across calls (zeroed on install) — that's how filters keep
+  memory, oscs keep phase (`static int phase[256];` indexed by `osc` gives per-osc state),
+  delays keep buffers.
+- Keep the body tight: it runs on the audio thread every block; heavy loops cause dropouts.
+
+### Example — "a distortion effect" (AMY makes the sound, C shapes the final mix)
+
+```python
+import amy, tulip
+
+amy.send(synth=1, patch=0, num_voices=4)     # a Juno synth, playable over MIDI
+
+tulip.install_c_process('dist', """
+    int drive = 10;                      // 1 = clean boost, 10 = heavy
+    int i = 0;
+    while (i < frames * chans) {
+        int s = buf[i] * drive;
+        if (s > 8388608) s = 8388608;    // clamp to +/-1.0 (S8.23)
+        if (s < -8388608) s = -8388608;
+        int y = s - fxmul(fxmul(s, s), s) / 3;   // cubic soft clip: growl, not buzz
+        buf[i] = y + y / 2;
+        i = i + 1;
+    }
+""")
+tulip.c_process('dist', True)
+
+def loop(step):
+    pass
+```
+
+A bitcrusher is even shorter: `buf[i] = (buf[i] >> 18) << 18;` in the same while loop.
+
+> Source of truth: `docs/user_c_dsp.md` — the full user guide, with working effect
+> (bitcrusher, distortion) and oscillator (CZ phase distortion, bytebeat) examples plus
+> debugging tips. `read_reference('docs/user_c_dsp.md')` before writing any C DSP sketch.
+> Runnable demo: `tulip/fs/tulip/ex/c_dsp_demo.py`.
+
+---
+
 ## MicroPython lacks some Python functions
 
 The script environment is MicroPython which attempts to match regular Python but does not 

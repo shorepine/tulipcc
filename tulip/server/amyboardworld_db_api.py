@@ -1742,12 +1742,21 @@ def _redact_secrets(text: str) -> str:
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SERVER_DIR = Path(__file__).resolve().parent
 
-# category -> (root dirs, allowed file suffixes). amy_docs is a vendored snapshot
-# (see sync_amy_docs.py) because the amy submodule isn't checked out in deploys.
+# category -> (roots, allowed file suffixes). A root may be a directory (scanned
+# recursively) or a single file (allowlists just that file). amy_docs is a vendored
+# snapshot (see sync_amy_docs.py) because the amy submodule isn't checked out in deploys.
 _REFERENCE_ROOTS: dict[str, tuple[tuple[Path, ...], tuple[str, ...]]] = {
     "sketches": ((_REPO_ROOT / "tulip" / "amyboardweb" / "sketches",), (".py",)),
     "amy_docs": ((_SERVER_DIR / "refdocs" / "amy",), (".md",)),
-    "amyboard_docs": ((_REPO_ROOT / "docs" / "amyboard",), (".md",)),
+    "amyboard_docs": (
+        (
+            _REPO_ROOT / "docs" / "amyboard",
+            # The runtime C DSP guide (install_c_process / install_c_osc) lives in
+            # the shared Tulip docs, not docs/amyboard/.
+            _REPO_ROOT / "docs" / "user_c_dsp.md",
+        ),
+        (".md",),
+    ),
     "py_libs": (
         (_REPO_ROOT / "tulip" / "shared" / "py", _REPO_ROOT / "tulip" / "shared" / "amyboard-py"),
         (".py",),
@@ -1770,9 +1779,11 @@ patch you're unsure about.
 - read_reference(path) — read a reference file in full.
 Categories: sketches (complete example sketch.py files), amy_docs (the AMY engine
 docs incl. synth.md API + ctrl/coefficients and api.md), amyboard_docs (AMYboard
-hardware/usage docs), py_libs (importable MicroPython modules: music, sequencer,
-midi, drums, juno6, patches, synth, tulip, …). Keep lookups focused (a few targeted
-calls), then output ONLY the final sketch.py.
+hardware/usage docs; also docs/user_c_dsp.md, the guide to runtime C DSP effects and
+oscillators via tulip.install_c_process — read it before writing any C DSP), py_libs
+(importable MicroPython modules: music, sequencer, midi, drums, juno6, patches,
+synth, tulip, …). Keep lookups focused (a few targeted calls), then output ONLY the
+final sketch.py.
 """
 
 _REFERENCE_TOOLS = [
@@ -1850,6 +1861,10 @@ def _iter_reference_files(category: str | None = None):
         if category and cat != category:
             continue
         for root in roots:
+            if root.is_file():
+                if root.suffix in suffixes:
+                    yield cat, root
+                continue
             if not root.is_dir():
                 continue
             for path in sorted(root.rglob("*")):
