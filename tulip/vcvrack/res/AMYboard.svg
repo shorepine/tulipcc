@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="40.64mm" height="128.5mm" viewBox="0 0 40.64 128.5">
+  <!-- 8HP panel. Labels are drawn by the module widget (Rack ignores SVG text). -->
+  <rect x="0" y="0" width="40.64" height="128.5" fill="#161a22"/>
+  <rect x="0" y="0" width="40.64" height="20.5" fill="#1c2430"/>
+  <rect x="0" y="20.5" width="40.64" height="0.8" fill="#4fae62"/>
+  <rect x="2.2" y="68.5" width="36.24" height="24.0" rx="2.5" fill="#1c2430"/>
+  <rect x="2.2" y="94.5" width="36.24" height="23.0" rx="2.5" fill="#23303f"/>
+  <rect x="0" y="125.6" width="40.64" height="0.6" fill="#4fae62"/>
+</svg>

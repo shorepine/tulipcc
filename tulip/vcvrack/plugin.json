@@ -1,0 +1,21 @@
+{
+  "slug": "AMYboard",
+  "name": "AMYboard",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Shore Pine Sound Systems",
+  "author": "Shore Pine Sound Systems",
+  "authorEmail": "brian@variogr.am",
+  "authorUrl": "https://shorepine.github.io/",
+  "pluginUrl": "https://amyboard.com",
+  "manualUrl": "https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/README.md",
+  "sourceUrl": "https://github.com/shorepine/tulipcc",
+  "modules": [
+    {
+      "slug": "AMY",
+      "name": "AMY",
+      "description": "AMY polyphonic synthesizer engine (Juno-6, DX7, GM drums, piano) with MIDI in and CV inputs",
+      "tags": ["Synth voice", "Polyphonic", "Drum", "Physical modeling"]
+    }
+  ]
+}
