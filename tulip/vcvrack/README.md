@@ -16,9 +16,12 @@ branches on that exactly as it does for `AMYBOARD` / `AMYBOARD_WEB` /
   AMY's sequencer every 32nd note, bar-locked, exactly as on the board.
 - **OLED**: the 128×128 display renders on the panel; `amyboard.display`
   works as on hardware (text, lines, `draw_waveform()`, …).
-- **Encoders**: four endless knobs + push buttons, readable via
-  `amyboard.encoder()` (`type == "vcv"`, 4 encoders) or the legacy
-  `read_encoder(i)` / `read_buttons()` helpers.
+- **Encoder**: one endless knob + push button (like the web simulator),
+  readable via `amyboard.encoder()` (`type == "vcv"`) or the legacy
+  `read_encoder()` / `read_buttons()` helpers.
+- **AUDIO IN L/R**: host audio fed to AMY as the external input — create an
+  oscillator with `wave=amy.AUDIO_EXT0/1` in a sketch to route it through
+  AMY's filters and effects.
 - **MIDI in** (right-click to pick a device): drives AMY's MIDI engine —
   Juno-6 on ch 1, GM drums (Gamma9001 TR-808 kit) on ch 10 by default —
   and Python `midi.add_callback()` fires as on hardware. Sysex passes
@@ -28,8 +31,9 @@ branches on that exactly as it does for `AMYBOARD` / `AMYBOARD_WEB` /
 - **CV1/CV2 outputs**: `amyboard.set_cv_out(channel, synth)` routes a
   synth's audio to the jack (the hardware DAC path re-pointed at Rack);
   `amyboard.cv_out(volts, channel)` sets a static voltage.
-- **OUT L/R**: AMY's stereo mix (±5 V at unity LEVEL). AMY renders
-  256-frame blocks at 44.1 kHz, resampled to the Rack engine rate.
+- **AUDIO OUT L/R**: AMY's stereo mix (±5 V). AMY renders 256-frame blocks
+  at 44.1 kHz, resampled to/from the Rack engine rate. The panel is 10HP,
+  same as the hardware.
 - One AMY module per patch owns the engine (AMY + MicroPython are global);
   extra instances stay silent.
 - **amyboard.com works against the module** (macOS): the plugin publishes a

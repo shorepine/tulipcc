@@ -1246,7 +1246,7 @@ class Encoder:
             self.leds = 0  # no LED in the simulator
             self._addr = None
         elif type == "vcv":
-            self.encoders = 4  # the four panel encoders on the Rack module
+            self.encoders = 1  # the single panel encoder on the Rack module
             self.leds = 0
             self._addr = None
         elif type in _ENCODER_PROFILES:

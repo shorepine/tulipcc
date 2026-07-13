@@ -5087,9 +5087,11 @@ async function read_sketch_from_amyboard() {
     if (amyboard_mode === 'control') {
         // Fail-safe firmware check (only aborts if the user declines a confirmed-old board).
         if (!(await check_amyboard_firmware())) return;
-        // The "Pull from AMYboard" box gates this (it carries the "replace your
-        // sketch" warning and a dismiss X). zD pull only; _handle_sync_sysex_payload
-        // sets the editor and calls set_knobs_from_sketch() when the response arrives.
+        // Clicking "Read from your AMYboard" IS the consent to replace the
+        // sketch — skip the pull-gate modal and go straight to the busy
+        // spinner. (The gate still fronts the automatic page-load pull.)
+        // On failure the sync error modal offers Try again / Set MIDI Ports.
+        _skip_pull_gate = true;
         await sync_amy_state();
     } else {
         if (!mp) return;
@@ -5297,6 +5299,8 @@ function _show_syncing_modal() {
     if (error) error.classList.add('d-none');
     if (retryBtn) retryBtn.classList.add('d-none');
     if (pullBtn) pullBtn.classList.remove('d-none');
+    var portsBtnReady = document.getElementById('sync-modal-ports-btn');
+    if (portsBtnReady) portsBtnReady.classList.remove('d-none');
     var pullWarn = document.getElementById('sync-modal-pull-warning');
     if (pullWarn) pullWarn.classList.remove('d-none');  // warn: pull replaces the sketch
     bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
@@ -5325,6 +5329,8 @@ function _show_syncing_modal_busy() {
     if (error) error.classList.add('d-none');
     if (retryBtn) retryBtn.classList.add('d-none');
     if (pullBtn) pullBtn.classList.add('d-none');
+    var portsBtnBusy = document.getElementById('sync-modal-ports-btn');
+    if (portsBtnBusy) portsBtnBusy.classList.add('d-none');
     var pullWarnBusy = document.getElementById('sync-modal-pull-warning');
     if (pullWarnBusy) pullWarnBusy.classList.add('d-none');
 }
@@ -5365,6 +5371,8 @@ function _show_syncing_modal_error() {
     if (spinner) spinner.classList.add('d-none');
     if (error) error.classList.remove('d-none');
     if (pullBtn) pullBtn.classList.add('d-none');
+    var portsBtnErr = document.getElementById('sync-modal-ports-btn');
+    if (portsBtnErr) portsBtnErr.classList.remove('d-none');
     var pullWarnErr = document.getElementById('sync-modal-pull-warning');
     if (pullWarnErr) pullWarnErr.classList.add('d-none');
     if (retryBtn) {
