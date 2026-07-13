@@ -1,0 +1,6 @@
+build/
+build-mp/
+dist/
+plugin.dylib
+plugin.so
+plugin.dll

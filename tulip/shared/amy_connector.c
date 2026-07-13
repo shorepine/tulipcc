@@ -149,6 +149,47 @@ static uint8_t tulip_render_hook_chain(uint16_t osc, SAMPLE *buf, uint16_t len) 
 #endif
 #endif
 
+#ifdef AMYBOARD_VCV
+// AMYboard-in-VCV-Rack: same CV-output routing as the hardware (per-osc
+// external_map + synth-based cv_synth_map), but instead of an I2C DAC the
+// volts land in amyboard_vcv_cv_out[] for the Rack module to put on jacks.
+#define MAX_CV_SYNTHS 32
+uint8_t cv_synth_map[MAX_CV_SYNTHS];
+float amyboard_vcv_cv_out[2] = {0, 0};
+
+// Look up which synth owns this osc, return synth number or -1
+static int synth_for_osc(uint16_t osc) {
+    extern uint8_t *osc_to_voice;
+    if (osc_to_voice == NULL) return -1;
+    uint8_t voice = osc_to_voice[osc];
+    if (voice == 255) return -1;  // AMY_UNSET for uint8
+    uint16_t voices[MAX_VOICES_PER_INSTRUMENT];
+    for (int s = 0; s < MAX_CV_SYNTHS; s++) {
+        if (cv_synth_map[s] == 0) continue;  // skip unmapped synths
+        int nv = instrument_get_num_voices(s, voices);
+        for (int v = 0; v < nv; v++) {
+            if (voices[v] == voice) return s;
+        }
+    }
+    return -1;
+}
+
+uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
+    uint8_t cv_channel = 255;
+    if (external_map[osc] > 0) {
+        cv_channel = external_map[osc] - 1;
+    } else {
+        int s = synth_for_osc(osc);
+        if (s >= 0 && s < MAX_CV_SYNTHS && cv_synth_map[s] > 0)
+            cv_channel = cv_synth_map[s] - 1;
+    }
+    if (cv_channel > 1) return 0;
+    // Sample range [-1,1] -> volts [-10,+10], same scaling as the GP8413 path
+    amyboard_vcv_cv_out[cv_channel] = S2F(buf[0]) * 10.0f;
+    return 1;
+}
+#endif
+
 // defined in amy/src/midi_mappings.c — processes ic (MIDI CC mapping) commands
 // On web, AMY runs in a separate wasm worker so midi_msg_handler is not linkable
 #ifndef __EMSCRIPTEN__
@@ -238,7 +279,7 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 
 #ifndef AMY_IS_EXTERNAL
 
-#if (defined AMYBOARD) || (defined TULIP)
+#if (defined AMYBOARD) || (defined TULIP) || (defined AMYBOARD_VCV)
 #include "tulip_helpers.h"
 // map the mp_obj_t to a file handle
 
@@ -266,7 +307,26 @@ static void free_handle(uint32_t h) {
 }
 
 
+#ifdef AMYBOARD_VCV
+// Control-API wire paths are board-absolute (/user/current/sketch.py); the
+// VCV board root is ~/Documents/AMYboard (see tulip.py root_dir()).
+static const char *vcv_relocate_wire_path(const char *filename, char *buf, size_t buflen) {
+    if (filename && filename[0] == '/') {
+        const char *home = getenv("HOME");
+        if (home) {
+            snprintf(buf, buflen, "%s/Documents/AMYboard%s", home, filename);
+            return buf;
+        }
+    }
+    return filename;
+}
+#endif
+
 uint32_t mp_fopen_hook(char * filename, const char * mode) {
+#ifdef AMYBOARD_VCV
+    char vcv_path[512];
+    filename = (char *)vcv_relocate_wire_path(filename, vcv_path, sizeof(vcv_path));
+#endif
     mp_obj_t f = tulip_fopen(filename, mode);
     if (!f) {
         return HANDLE_INVALID;
@@ -332,7 +392,7 @@ STATIC mp_obj_t tulip_environment_transfer_done(size_t n_args, const mp_obj_t *a
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_environment_transfer_done_obj, 0, 1, tulip_environment_transfer_done);
 
 void mp_exec_hook(const char *code) {
-#if defined(AMYBOARD)
+#if defined(AMYBOARD) || defined(AMYBOARD_VCV)
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
         mp_obj_t code_str = mp_obj_new_str(code, strlen(code));
@@ -348,13 +408,17 @@ void mp_exec_hook(const char *code) {
 }
 
 void mp_update_file_hook(const char *filename) {
-#if defined(AMYBOARD)
+#if defined(AMYBOARD) || defined(AMYBOARD_VCV)
     // Call amyboard.update_sketch_knobs(filename) synchronously. This runs
     // from the C-side zA handler, so any unhandled Python exception would
     // NLR-longjmp out of the sysex parser mid-message and the subsequent zD
     // would never be processed (Pull would hang). Wrap the call in an NLR
     // buffer so exceptions get swallowed and the parser can continue.
     nlr_buf_t nlr;
+#ifdef AMYBOARD_VCV
+    char vcv_path[512];
+    filename = vcv_relocate_wire_path(filename, vcv_path, sizeof(vcv_path));
+#endif
     if (nlr_push(&nlr) == 0) {
         mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
         mp_obj_t fn = mp_load_attr(mod, MP_QSTR_update_sketch_knobs);
@@ -372,7 +436,7 @@ void mp_update_file_hook(const char *filename) {
 }
 
 void mp_file_transfer_done_hook(const char *filename) {
-#if defined(AMYBOARD)
+#if defined(AMYBOARD) || defined(AMYBOARD_VCV)
     if (filename == NULL || filename[0] == '\0') {
         return;
     }
@@ -431,6 +495,10 @@ static void mount_gamma9001_drums(void) {
     amy_set_gamma9001_pcm((const int16_t *)map);
 }
 #endif
+
+#endif  // hooks: AMYBOARD || TULIP || AMYBOARD_VCV
+
+#if (defined AMYBOARD) || (defined TULIP)
 
 void run_amy(uint8_t midi_out_pin) {
     amy_config_t amy_config = amy_default_config();
@@ -540,6 +608,67 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     }
 #endif
     amy_start(amy_config);
+}
+
+#elif defined AMYBOARD_VCV
+
+// AMYboard inside a VCV Rack plugin: in-process AMY, but the host (Rack)
+// owns the audio device and MIDI. Rack pulls blocks via
+// amy_simple_fill_buffer() and injects MIDI via
+// amy_event_midi_message_received(); AMY opens nothing itself.
+void run_amy(void) {
+    amy_config_t amy_config = amy_default_config();
+    amy_config.amy_external_midi_input_hook = tulip_midi_input_hook;
+    amy_config.amy_external_render_hook = external_cv_render;
+    amy_config.amy_external_overload_hook = tulip_amy_overload_hook;
+    extern void tulip_amy_sequencer_hook(uint32_t tick_count);
+    amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
+    extern float cv_input_hook(uint16_t channel);
+    amy_config.amy_external_coef_hook = cv_input_hook;
+    amy_config.features.default_synths = 0; // amyboard.start_amy does this
+    amy_config.features.audio_in = 0;
+    amy_config.features.startup_bleep = 1;
+    amy_config.audio = AMY_AUDIO_IS_NONE;
+    // Not NONE: amy_dump_*_to_sysex() early-return when config.midi == 0,
+    // and zD dumps must flow. The UART bit is harmless here — all UART
+    // device code is ESP-only, run_midi() is a stub, and midi_out() is the
+    // plugin's virtual CoreMIDI port (vcv_midi.c).
+    amy_config.midi = AMY_MIDI_IS_UART;
+    amy_config.platform.multicore = 0;
+    amy_config.platform.multithread = 0;
+    // Control-API (sysex) file transfer + exec + knobs hooks, as on hardware.
+    amy_config.amy_external_fopen_hook = mp_fopen_hook;
+    amy_config.amy_external_fseek_hook = mp_fseek_hook;
+    amy_config.amy_external_fclose_hook = mp_fclose_hook;
+    amy_config.amy_external_fread_hook = mp_fread_hook;
+    amy_config.amy_external_fwrite_hook = mp_fwrite_hook;
+    amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
+    amy_config.amy_external_update_file_hook = mp_update_file_hook;
+    amy_config.amy_external_exec_hook = mp_exec_hook;
+    amy_config.amy_external_reboot_hook = mp_reboot_hook;
+#ifdef GAMMA9001
+    // drums_bin.c is linked straight into the plugin (see Makefile.mp).
+    {
+        extern const int16_t gamma9001_pcm_data[];
+        amy_set_gamma9001_pcm(gamma9001_pcm_data);
+    }
+#endif
+    amy_start(amy_config);
+    // amy_start -> transfer_init() force-installs posix file hooks on any
+    // _POSIX_VERSION host, clobbering the ones set above. Re-install ours so
+    // wire paths ("/user/current/sketch.py") resolve through MicroPython's
+    // VFS with the VCV root relocation in mp_fopen_hook.
+    amy_global.config.amy_external_fopen_hook = mp_fopen_hook;
+    amy_global.config.amy_external_fread_hook = mp_fread_hook;
+    amy_global.config.amy_external_fwrite_hook = mp_fwrite_hook;
+    amy_global.config.amy_external_fclose_hook = mp_fclose_hook;
+    amy_global.config.amy_external_fseek_hook = mp_fseek_hook;
+    external_map = malloc(amy_config.max_oscs);
+    for (uint16_t i = 0; i < amy_config.max_oscs; i++) external_map[i] = 0;
+    for (uint8_t i = 0; i < MAX_CV_SYNTHS; i++) cv_synth_map[i] = 0;
+    // AMY's sysex assembly buffer -- normally allocated by the platform MIDI
+    // layer, which doesn't run here (Rack owns MIDI).
+    sysex_buffer = malloc(MAX_SYSEX_BYTES);
 }
 
 #endif

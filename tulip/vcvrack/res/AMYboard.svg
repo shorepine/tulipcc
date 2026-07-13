@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="50.8mm" height="128.5mm" viewBox="0 0 50.8 128.5">
+  <!-- 10HP panel, like the hardware. Labels are drawn by the module widget
+       (Rack ignores SVG text). -->
+  <rect x="0" y="0" width="50.8" height="128.5" fill="#161a22"/>
+  <rect x="8.0" y="5.6" width="34.8" height="34.8" rx="1.5" fill="#0a0c10"/>
+  <rect x="2.2" y="43.2" width="46.4" height="12.6" rx="2.5" fill="#1c2430"/>
+  <rect x="2.2" y="57.2" width="46.4" height="14.4" rx="2.5" fill="#1c2430"/>
+  <rect x="2.2" y="72.2" width="46.4" height="14.4" rx="2.5" fill="#23303f"/>
+  <rect x="2.2" y="87.2" width="46.4" height="14.4" rx="2.5" fill="#1c2430"/>
+  <rect x="2.2" y="102.2" width="46.4" height="14.4" rx="2.5" fill="#23303f"/>
+  <rect x="0" y="119.6" width="50.8" height="0.6" fill="#4fae62"/>
+</svg>

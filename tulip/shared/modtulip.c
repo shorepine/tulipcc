@@ -17,7 +17,7 @@
 #endif
 #include "amy_connector.h"
 #include "tsequencer.h"
-#if !defined(AMYBOARD) && !defined(AMYBOARD_WEB)
+#if !defined(AMYBOARD) && !defined(AMYBOARD_WEB) && !defined(AMYBOARD_VCV)
 #include "ui.h"
 #include "keyscan.h"
 #include "display.h"
@@ -87,6 +87,8 @@ STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
     return mp_obj_new_str("WEB", strlen("WEB"));    
 #elif defined AMYBOARD_WEB
     return mp_obj_new_str("AMYBOARD_WEB", strlen("AMYBOARD_WEB"));    
+#elif defined AMYBOARD_VCV
+    return mp_obj_new_str("AMYBOARD_VCV", strlen("AMYBOARD_VCV"));    
 #elif defined AMYBOARD
     return mp_obj_new_str("AMYBOARD", strlen("AMYBOARD"));    
 #else    
@@ -204,7 +206,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_amy_dump_state_obj, tulip_amy_dump_state)
 
 #endif
 
-#ifdef ESP_PLATFORM
+#if defined(ESP_PLATFORM) || defined(AMYBOARD_VCV)
 extern uint8_t * external_map;
 STATIC mp_obj_t tulip_amy_set_external_channel(size_t n_args, const mp_obj_t *args) {
     uint16_t osc = mp_obj_get_int(args[0]);
@@ -564,6 +566,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_cpu_obj, 0, 1, tulip_cpu);
 #ifndef ESP_PLATFORM
 #ifndef __linux__
 #ifndef __EMSCRIPTEN__
+#ifndef AMYBOARD_VCV
 extern char* get_tulip_home_path();
 STATIC mp_obj_t tulip_app_path(size_t n_args, const mp_obj_t *args) {
     char * path = get_tulip_home_path();
@@ -571,6 +574,7 @@ STATIC mp_obj_t tulip_app_path(size_t n_args, const mp_obj_t *args) {
 }
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_app_path_obj, 0, 0, tulip_app_path);
+#endif
 #endif
 #endif
 #endif
@@ -603,7 +607,20 @@ float cv_input_hook(uint16_t channel) {
 }
 #endif
 
-#if defined(AMYBOARD) || defined(AMYBOARD_WEB)
+#if defined(AMYBOARD_VCV)
+// CV jacks: the Rack module writes the input-jack volts each block;
+// tulip.cv_local() can override them like on web.
+float cv_local_value[2] = {0, 0};
+uint8_t cv_local_override[2] = {0, 0};
+float amyboard_vcv_cv_in[2] = {0, 0};
+float cv_input_hook(uint16_t channel) {
+    if (channel > 1) return 0;
+    if (cv_local_override[channel]) return cv_local_value[channel];
+    return amyboard_vcv_cv_in[channel];
+}
+#endif
+
+#if defined(AMYBOARD) || defined(AMYBOARD_WEB) || defined(AMYBOARD_VCV)
 STATIC mp_obj_t tulip_cv_local(size_t n_args, const mp_obj_t *args) {
     uint8_t channel = mp_obj_get_int(args[0]);
     if(n_args>1) {
@@ -678,6 +695,53 @@ STATIC mp_obj_t tulip_framebuf_web_update(size_t n_args, const mp_obj_t *args) {
 
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_framebuf_web_update_obj, 1, 1, tulip_framebuf_web_update);
 
+#endif
+
+#ifdef AMYBOARD_VCV
+// Same python-facing name as web so amyboard.py's Display can share the push
+// path: snapshot the 128x128 4-bit OLED framebuffer for the Rack panel widget.
+uint8_t amyboard_vcv_framebuf[128 * 64];
+volatile uint32_t amyboard_vcv_framebuf_gen = 0;
+
+STATIC mp_obj_t tulip_framebuf_web_update(size_t n_args, const mp_obj_t *args) {
+    mp_buffer_info_t bufinfo;
+    mp_get_buffer(args[0], &bufinfo, MP_BUFFER_READ);
+    size_t n = bufinfo.len < sizeof(amyboard_vcv_framebuf) ? bufinfo.len : sizeof(amyboard_vcv_framebuf);
+    memcpy(amyboard_vcv_framebuf, bufinfo.buf, n);
+    amyboard_vcv_framebuf_gen++;
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_framebuf_web_update_obj, 1, 1, tulip_framebuf_web_update);
+
+// Encoders/buttons: the Rack module writes these; amyboard.py polls them.
+int32_t amyboard_vcv_encoder_pos[4] = {0, 0, 0, 0};
+uint8_t amyboard_vcv_encoder_btn[4] = {0, 0, 0, 0};
+
+STATIC mp_obj_t tulip_vcv_encoder(size_t n_args, const mp_obj_t *args) {
+    uint8_t i = mp_obj_get_int(args[0]);
+    if (i > 3) return mp_obj_new_int(0);
+    return mp_obj_new_int(amyboard_vcv_encoder_pos[i]);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_vcv_encoder_obj, 1, 1, tulip_vcv_encoder);
+
+STATIC mp_obj_t tulip_vcv_encoder_button(size_t n_args, const mp_obj_t *args) {
+    uint8_t i = mp_obj_get_int(args[0]);
+    if (i > 3) return mp_obj_new_bool(0);
+    return mp_obj_new_bool(amyboard_vcv_encoder_btn[i]);
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_vcv_encoder_button_obj, 1, 1, tulip_vcv_encoder_button);
+
+// Static CV out (amyboard.cv_out): write volts straight to the CV jack.
+// (When a synth is mapped via set_cv_synth, the render hook overwrites this
+// every block, same as the hardware DAC.)
+extern float amyboard_vcv_cv_out[2];
+STATIC mp_obj_t tulip_vcv_cv_out(size_t n_args, const mp_obj_t *args) {
+    uint8_t channel = mp_obj_get_int(args[0]);
+    if (channel > 1) return mp_const_none;
+    amyboard_vcv_cv_out[channel] = mp_obj_get_float(args[1]);
+    return mp_const_none;
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_vcv_cv_out_obj, 2, 2, tulip_vcv_cv_out);
 #endif
 
 // Just AMYBOARD c code
@@ -755,7 +819,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_i2c_bg_errors_obj, tulip_i2c_bg_errors);
 
 #else
 
-#ifndef AMYBOARD_WEB
+#if !defined(AMYBOARD_WEB) && !defined(AMYBOARD_VCV)
 
 /// Tulip-with-screen stuff only below
 extern void unix_display_set_clock(uint8_t);
@@ -1816,7 +1880,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_uninstall_c_process), MP_ROM_PTR(&tulip_uninstall_c_process_obj) },
 #endif
 
-#if defined(AMYBOARD) || defined(AMYBOARD_WEB)
+#if defined(AMYBOARD) || defined(AMYBOARD_WEB) || defined(AMYBOARD_VCV)
     { MP_ROM_QSTR(MP_QSTR_cv_local), MP_ROM_PTR(&tulip_cv_local_obj) },
     { MP_ROM_QSTR(MP_QSTR_cv_in), MP_ROM_PTR(&tulip_cv_in_obj) },
 #endif
@@ -1825,7 +1889,14 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_framebuf_web_update), MP_ROM_PTR(&tulip_framebuf_web_update_obj) },
 #endif
 
-#ifdef ESP_PLATFORM
+#ifdef AMYBOARD_VCV
+    { MP_ROM_QSTR(MP_QSTR_framebuf_web_update), MP_ROM_PTR(&tulip_framebuf_web_update_obj) },
+    { MP_ROM_QSTR(MP_QSTR_vcv_encoder), MP_ROM_PTR(&tulip_vcv_encoder_obj) },
+    { MP_ROM_QSTR(MP_QSTR_vcv_encoder_button), MP_ROM_PTR(&tulip_vcv_encoder_button_obj) },
+    { MP_ROM_QSTR(MP_QSTR_vcv_cv_out), MP_ROM_PTR(&tulip_vcv_cv_out_obj) },
+#endif
+
+#if defined(ESP_PLATFORM) || defined(AMYBOARD_VCV)
     { MP_ROM_QSTR(MP_QSTR_amy_set_external_channel), MP_ROM_PTR(&tulip_amy_set_external_channel_obj)},
     { MP_ROM_QSTR(MP_QSTR_set_cv_synth), MP_ROM_PTR(&tulip_set_cv_synth_obj)},
 #endif
@@ -1841,7 +1912,7 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_i2c_bg_errors), MP_ROM_PTR(&tulip_i2c_bg_errors_obj) },
 #endif
 #else
-    #ifndef AMYBOARD_WEB
+    #if !defined(AMYBOARD_WEB) && !defined(AMYBOARD_VCV)
     { MP_ROM_QSTR(MP_QSTR_display_clock), MP_ROM_PTR(&tulip_display_clock_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_restart), MP_ROM_PTR(&tulip_display_restart_obj) },
     { MP_ROM_QSTR(MP_QSTR_display_stop), MP_ROM_PTR(&tulip_display_stop_obj) },
@@ -1916,7 +1987,9 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
 #ifndef ESP_PLATFORM
 #ifndef __linux__
 #ifndef __EMSCRIPTEN__
+#ifndef AMYBOARD_VCV
     { MP_ROM_QSTR(MP_QSTR_app_path), MP_ROM_PTR(&tulip_app_path_obj) },
+#endif
 #endif
 #endif
 #endif

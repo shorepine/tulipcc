@@ -4,13 +4,15 @@ import tulip, sys, midi, synth, amy, world, sequencer
 from upysh import *
 from tulip import board
 
-if board()!="AMYBOARD" and board()!="AMYBOARD_WEB":
+if board()!="AMYBOARD" and board()!="AMYBOARD_WEB" and board()!="AMYBOARD_VCV":
     from tulip import edit, run
 else:
     if board()=="AMYBOARD":
         import amyboard
         amyboard.mount_sd()
         edit = amyboard.edit
+    elif board()=="AMYBOARD_VCV":
+        import amyboard
 
 if board()=="WEB" or board()=="AMYBOARD_WEB":
     def webnyi():
@@ -51,6 +53,12 @@ except ImportError:
         if not tulip.exists(tulipcc):
             mkdir(tulipcc)
     
+        if tulip.board()=='AMYBOARD_VCV':
+            try:
+                mkdir(tulipcc+"user")
+            except OSError:
+                pass
+
         # On Desktop, we can put sys in sys/ and user in user/
         if tulip.board()=='DESKTOP':
             try:
@@ -102,7 +110,7 @@ else:
     # Override amy's send to work with tulip
     amy.override_send = lambda x: tulip.amy_send(x)
 
-if board() == "AMYBOARD" or board()=="AMYBOARD_WEB":
+if board() == "AMYBOARD" or board()=="AMYBOARD_WEB" or board()=="AMYBOARD_VCV":
     import amyboard
     amyboard.ensure_user_environment()
     amyboard.init_display()
@@ -113,9 +121,13 @@ if board() == "AMYBOARD":
     import self_test
     self_test.self_test_if_button()
 
+if board() == "AMYBOARD_VCV":
+    # In-process AMY was started by the Rack module before MicroPython booted.
+    amyboard.start_amy()
+
 # We don't do most of Tulip's MIDI, but setup the MIDI callback hook so midi.add_callback(fn) will work.
-if board() == "AMYBOARD" or board() == "AMYBOARD_WEB":
+if board() == "AMYBOARD" or board() == "AMYBOARD_WEB" or board() == "AMYBOARD_VCV":
     tulip.midi_callback(midi.c_fired_midi_event)
 
-if board() != "AMYBOARD" and board() != "AMYBOARD_WEB":
+if board() != "AMYBOARD" and board() != "AMYBOARD_WEB" and board() != "AMYBOARD_VCV":
     midi.setup() # Just mirrors the setup mostly managed by AMY for Tulip-REPL systems.

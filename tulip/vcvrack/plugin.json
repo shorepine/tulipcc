@@ -1,0 +1,21 @@
+{
+  "slug": "AMYboard",
+  "name": "AMYboard",
+  "version": "2.0.0",
+  "license": "MIT",
+  "brand": "Shore Pine Sound Systems",
+  "author": "Shore Pine Sound Systems",
+  "authorEmail": "brian@variogr.am",
+  "authorUrl": "https://shorepine.github.io/",
+  "pluginUrl": "https://amyboard.com",
+  "manualUrl": "https://github.com/shorepine/tulipcc/blob/main/docs/amyboard/README.md",
+  "sourceUrl": "https://github.com/shorepine/tulipcc",
+  "modules": [
+    {
+      "slug": "AMY",
+      "name": "AMY",
+      "description": "AMYboard: MicroPython-sketchable AMY synthesizer with OLED, encoders, MIDI, CV in/out",
+      "tags": ["Synth voice", "Polyphonic", "Drum", "Physical modeling"]
+    }
+  ]
+}

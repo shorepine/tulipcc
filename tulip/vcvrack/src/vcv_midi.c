@@ -1,0 +1,183 @@
+// Virtual CoreMIDI endpoint for AMYboard VCV (macOS).
+//
+// Publishes a virtual source + destination named "AMYboard VCV" so
+// amyboard.com's editor (Chrome WebMIDI, "control" mode) sees the Rack
+// module exactly like a hardware AMYboard: sketch transfer (zT), knobs
+// (zA), run-python (zP), dumps (zD), ping (zI) all flow over sysex.
+//
+// Inbound routing:
+//  - channel-voice MIDI -> AMY's byte-stream parser (notes/CCs, as UART)
+//  - shorepine sysex (F0 00 03 45 ...): zI answered here in C (like
+//    parse_sysex does on hardware); everything else is queued to the
+//    MicroPython thread (mp_embed.c), which processes it with
+//    amy_add_message_from_sysex() and then emits the AK — the same
+//    process-on-MP-thread-then-ack design as AMYBOARD's scheduled
+//    tulip_amy_send_sysex, without needing AMY's ring slots.
+//  - other sysex -> amy_event_midi_message_received() so Python
+//    midi.add_callback() sees it, as on hardware.
+//
+// Outbound: AMY and the firmware emit through the global midi_out()
+// (zI OK replies, zT AKs, zD dump frames, Python tulip.midi_out()). The
+// archive is built with -DMACOS so amy_midi.c's empty generic midi_out is
+// compiled out (the same trick Tulip Desktop uses to hand the device layer
+// to macos_midi.m) and this file owns the symbol, sending out the virtual
+// source.
+
+#ifdef __APPLE__
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <pthread.h>
+#include <CoreMIDI/CoreMIDI.h>
+
+extern void convert_midi_bytes_to_messages(uint8_t *data, size_t len, uint8_t usb);
+extern void amy_event_midi_message_received(uint8_t *data, uint32_t len, uint8_t sysex, uint32_t time);
+extern uint32_t amy_sysclock(void);
+// mp_embed.c: queue a shorepine control payload for the MP thread (which
+// processes it and sends the AK)
+extern void amyboard_vcv_sysex_push(const uint8_t *payload, int len);
+extern void amyboard_vcv_exec(const char *code);
+
+static MIDIClientRef vcv_midi_client = 0;
+static MIDIEndpointRef vcv_virt_src = 0;   // "AMYboard VCV": input from the browser's view
+static MIDIEndpointRef vcv_virt_dst = 0;   // ...and the output it sends control frames to
+static pthread_mutex_t vcv_midi_out_lock = PTHREAD_MUTEX_INITIALIZER;
+
+#define VCV_SYSEX_MAX 16384
+static uint8_t frame_buf[VCV_SYSEX_MAX];
+static int frame_len = -1;  // -1 = not inside a sysex frame
+
+static void handle_sysex_frame(uint8_t *frame, int len) {
+    // frame[0]==0xF0 ... frame[len-1]==0xF7
+    if (len >= 7 && frame[1] == 0x00 && frame[2] == 0x03 && frame[3] == 0x45) {
+        uint8_t *payload = frame + 4;
+        int plen = len - 5;
+        if (plen >= 2 && payload[0] == 'z' && payload[1] == 'I') {
+            // ping: reply OK immediately, no ack (mirrors parse_sysex)
+            uint8_t ok[] = {0xF0, 0x00, 0x03, 0x45, 'O', 'K', 0xF7};
+            extern void midi_out(uint8_t *bytes, uint16_t len);
+            midi_out(ok, sizeof(ok));
+            return;
+        }
+        if (plen >= 2 && payload[0] == 'z' && payload[1] == 'B') {
+            // "reboot": no ESP to reset — mode 0 means wait-for-commands,
+            // anything else means run the sketch again. No ack, like hardware.
+            if (plen >= 3 && payload[2] == '0')
+                amyboard_vcv_exec("import amyboard; amyboard.stop_sketch()");
+            else
+                amyboard_vcv_exec("import amyboard; amyboard.restart_sketch()");
+            return;
+        }
+        // Everything else (zT/zD/zP/zA/zY, base64 transfer chunks): process
+        // on the MP thread, which acks after handling.
+        amyboard_vcv_sysex_push(payload, plen);
+        return;
+    }
+    // Non-shorepine sysex: hand to the firmware's Python midi callback path.
+    amy_event_midi_message_received(frame, (uint32_t)len, 1, amy_sysclock());
+}
+
+static void handle_bytes(const uint8_t *data, int len) {
+    int span_start = -1;
+    for (int i = 0; i < len; i++) {
+        uint8_t b = data[i];
+        if (frame_len >= 0) {
+            // inside a sysex frame
+            if (b == 0xF7) {
+                if (frame_len < VCV_SYSEX_MAX)
+                    frame_buf[frame_len++] = b;
+                handle_sysex_frame(frame_buf, frame_len);
+                frame_len = -1;
+            }
+            else if (b >= 0x80 && b < 0xF8) {
+                // non-realtime status byte aborts the frame
+                frame_len = -1;
+                span_start = i;
+            }
+            else if (b < 0x80 && frame_len < VCV_SYSEX_MAX) {
+                frame_buf[frame_len++] = b;
+            }
+            continue;
+        }
+        if (b == 0xF0) {
+            if (span_start >= 0) {
+                convert_midi_bytes_to_messages((uint8_t *)data + span_start, i - span_start, 0);
+                span_start = -1;
+            }
+            frame_len = 0;
+            frame_buf[frame_len++] = b;
+        }
+        else if (span_start < 0) {
+            span_start = i;
+        }
+    }
+    if (span_start >= 0 && frame_len < 0)
+        convert_midi_bytes_to_messages((uint8_t *)data + span_start, len - span_start, 0);
+}
+
+// CoreMIDI read proc (CoreMIDI's own thread). This thread is the only one
+// feeding convert_midi_bytes_to_messages / the frame accumulator; the Rack
+// MIDI-menu path in AmyBoard.cpp uses amy_event_midi_message_received and
+// never touches this state.
+static void vcv_midi_read_proc(const MIDIPacketList *pktlist, void *refCon, void *srcConnRefCon) {
+    (void)refCon; (void)srcConnRefCon;
+    const MIDIPacket *pkt = &pktlist->packet[0];
+    for (UInt32 i = 0; i < pktlist->numPackets; i++) {
+        if (pkt->length)
+            handle_bytes(pkt->data, pkt->length);
+        pkt = MIDIPacketNext(pkt);
+    }
+}
+
+int amyboard_vcv_midi_start(void) {
+    if (vcv_midi_client)
+        return 0;
+    if (MIDIClientCreate(CFSTR("AMYboard VCV"), NULL, NULL, &vcv_midi_client) != noErr) {
+        fprintf(stderr, "AMYboard VCV: MIDIClientCreate failed\n");
+        return -1;
+    }
+    if (MIDISourceCreate(vcv_midi_client, CFSTR("AMYboard VCV"), &vcv_virt_src) != noErr)
+        fprintf(stderr, "AMYboard VCV: MIDISourceCreate failed\n");
+    if (MIDIDestinationCreate(vcv_midi_client, CFSTR("AMYboard VCV"),
+                              vcv_midi_read_proc, NULL, &vcv_virt_dst) != noErr)
+        fprintf(stderr, "AMYboard VCV: MIDIDestinationCreate failed\n");
+    return 0;
+}
+
+void amyboard_vcv_midi_stop(void) {
+    if (vcv_virt_dst) { MIDIEndpointDispose(vcv_virt_dst); vcv_virt_dst = 0; }
+    if (vcv_virt_src) { MIDIEndpointDispose(vcv_virt_src); vcv_virt_src = 0; }
+    if (vcv_midi_client) { MIDIClientDispose(vcv_midi_client); vcv_midi_client = 0; }
+}
+
+// AMY's MIDI OUT: zI OK replies, zT AKs (mp_embed.c), zD dumps (transfer.c),
+// Python tulip.midi_out(). Called from the audio thread, the CoreMIDI
+// thread, or the MP thread — hence the lock.
+void midi_out(uint8_t *bytes, uint16_t len) {
+    if (!vcv_virt_src || !len)
+        return;
+    pthread_mutex_lock(&vcv_midi_out_lock);
+    // Big enough for a full zD dump frame in one packet list.
+    static uint8_t plbuf[65536];
+    MIDIPacketList *pl = (MIDIPacketList *)plbuf;
+    MIDIPacket *p = MIDIPacketListInit(pl);
+    uint16_t off = 0;
+    while (off < len && p) {
+        uint16_t n = (uint16_t)(len - off > 256 ? 256 : len - off);
+        p = MIDIPacketListAdd(pl, sizeof(plbuf), p, 0, n, bytes + off);
+        off += n;
+    }
+    MIDIReceived(vcv_virt_src, pl);
+    pthread_mutex_unlock(&vcv_midi_out_lock);
+}
+
+#else  // !__APPLE__
+
+// No virtual MIDI on this platform yet (Linux: ALSA virtual port, TODO).
+#include <stdint.h>
+int amyboard_vcv_midi_start(void) { return -1; }
+void amyboard_vcv_midi_stop(void) {}
+void midi_out(uint8_t *bytes, uint16_t len) { (void)bytes; (void)len; }
+
+#endif

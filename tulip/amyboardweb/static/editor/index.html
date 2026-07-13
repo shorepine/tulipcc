@@ -1310,14 +1310,8 @@
                 <div class="text-danger fw-semibold mb-2">Could not connect to AMYboard</div>
                 <p class="text-muted small mb-3">Make sure your AMYboard is connected either by USB (and choose AMYboard for MIDI in and out) or via MIDI interface (connect your computer's MIDI out to AMYboard's MIDI in and vice versa.)</p>
               </div>
-              <!-- MIDI dropdowns (always visible) -->
-              <div class="text-start mb-3">
-                <label class="form-label small fw-bold mb-1">MIDI In</label>
-                <select id="sync-modal-midi-in" class="form-select form-select-sm mb-2" disabled></select>
-                <label class="form-label small fw-bold mb-1">MIDI Out</label>
-                <select id="sync-modal-midi-out" class="form-select form-select-sm mb-2" disabled></select>
-                <button type="button" class="btn btn-outline-primary btn-sm w-100" id="sync-modal-change-btn" onclick="sync_modal_change_ports();">Change MIDI Ports</button>
-              </div>
+              <!-- Port selection lives in the single MIDI Ports dialog -->
+              <button type="button" class="btn btn-outline-primary btn-sm w-100 mb-3" id="sync-modal-ports-btn" onclick="sync_modal_open_ports();">Set MIDI Ports&hellip;</button>
               <!-- Pull from AMYboard (shown on fresh page load; user clicks to start the pull) -->
               <p id="sync-modal-pull-warning" class="text-danger small fw-semibold mb-2 d-none">This will replace your sketch with the one on your AMYboard.</p>
               <button type="button" class="btn btn-success btn-lg w-100 d-none mb-3" id="sync-modal-pull-btn" onclick="start_pull_from_amyboard();">Pull from AMYboard</button>
@@ -1328,6 +1322,34 @@
                 <button type="button" class="btn btn-outline-danger btn-sm" onclick="_hide_syncing_modal(); reset_amyboard();">Reset AMYboard</button>
                 <button type="button" class="btn btn-outline-warning btn-sm" onclick="dismiss_sync_modal_and_upgrade();">Upgrade Firmware</button>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- The single place to choose the MIDI ports used to control an
+           AMYboard. Opened from the MIDI Ports button next to Read/Write
+           (control mode) and from the sync modal. Default is always the
+           AMYboard hardware port. -->
+      <div class="modal" id="midiPortsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+          <div class="modal-content">
+            <div class="modal-header py-2">
+              <h6 class="modal-title">AMYboard MIDI Ports</h6>
+              <button type="button" class="btn-close" aria-label="Close" onclick="hide_midi_ports_modal();"></button>
+            </div>
+            <div class="modal-body px-4 py-3">
+              <p class="text-muted small mb-2">Choose the MIDI ports the editor uses to control your AMYboard. The default is the AMYboard hardware (USB) port.</p>
+              <label class="form-label small fw-bold mb-1">MIDI In (from AMYboard)</label>
+              <select id="midi-ports-modal-in" class="form-select form-select-sm mb-2"></select>
+              <label class="form-label small fw-bold mb-1">MIDI Out (to AMYboard)</label>
+              <select id="midi-ports-modal-out" class="form-select form-select-sm mb-2"></select>
+              <div id="midi-ports-modal-status" class="small mt-2"></div>
+            </div>
+            <div class="modal-footer py-2">
+              <button type="button" class="btn btn-outline-secondary btn-sm me-auto" onclick="midi_ports_modal_default();">Use AMYboard (hardware)</button>
+              <button type="button" class="btn btn-outline-secondary btn-sm" onclick="hide_midi_ports_modal();">Cancel</button>
+              <button type="button" class="btn btn-primary btn-sm" id="midi-ports-apply-btn" onclick="midi_ports_modal_apply();">Apply</button>
             </div>
           </div>
         </div>
@@ -1412,6 +1434,7 @@
                 <button type="button" class="btn btn-primary btn-sm" id="simulate-save-btn" onclick="write_sketch_to_amyboard();">Write to Simulator</button>
               </li>
               <li class="nav-item ms-auto d-flex align-items-center gap-2 d-none" id="amyboard-controls-li" role="presentation">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="midi-ports-btn" title="Set the MIDI in/out ports used to control your AMYboard" onclick="show_midi_ports_modal();">MIDI Ports</button>
                 <button type="button" class="btn btn-outline-secondary btn-sm" id="read-state-btn" onclick="read_sketch_from_amyboard();">Read from your AMYboard</button>
                 <button type="button" class="btn btn-primary btn-sm" id="save-state-btn" onclick="write_sketch_to_amyboard();"><span id="save-btn-label">Write to your AMYboard</span></button>
               </li>

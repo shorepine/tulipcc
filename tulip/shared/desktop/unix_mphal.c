@@ -32,7 +32,13 @@
 #include <fcntl.h>
 #include "py/ringbuf.h"
 
+#ifdef AMYBOARD_VCV
+// headless: no Tulip display; stubs live in tulip/vcvrack/src/vcv_mphal_stubs.c
+extern uint8_t tfb_fg_pal_color, tfb_bg_pal_color;
+extern void display_tfb_str(unsigned char *str, uint16_t len, uint8_t format, uint8_t fg_color, uint8_t bg_color);
+#else
 #include "display.h"
+#endif
 #include "py/mphal.h"
 #include "py/mpthread.h"
 #include "py/runtime.h"
