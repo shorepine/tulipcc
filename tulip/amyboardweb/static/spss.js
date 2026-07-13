@@ -2258,8 +2258,8 @@ async function start_midi() {
         midi_out.options[midi_out.options.length] = new Option("MIDI out: " + safe_midi_port_name(output));
       });
     }
-    // In control mode: preselect ports. Cookie of last successful pair wins;
-    // otherwise fall back to any port with "amyboard" in the name.
+    // In control mode: preselect ports. The default is always the AMYboard
+    // hardware port (exact name); see _preselect_control_port for the order.
     function _opt_portname(opt) {
         var t = opt.text || "";
         var idx = t.indexOf(": ");
@@ -2267,29 +2267,10 @@ async function start_midi() {
     }
     if (amyboard_mode === 'control') {
       var savedPorts = _get_midi_cookie();
-      var inSelected = false, outSelected = false;
-      if (savedPorts) {
-        for (var i = 0; i < midi_in.options.length; i++) {
-          if (_opt_portname(midi_in.options[i]) === savedPorts.input) {
-            midi_in.selectedIndex = i; inSelected = true; break;
-          }
-        }
-        for (var j = 0; j < midi_out.options.length; j++) {
-          if (_opt_portname(midi_out.options[j]) === savedPorts.output) {
-            midi_out.selectedIndex = j; outSelected = true; break;
-          }
-        }
-      }
-      if (!inSelected) {
-        for (var i2 = 0; i2 < midi_in.options.length; i2++) {
-          if (/amyboard/i.test(_opt_portname(midi_in.options[i2]))) { midi_in.selectedIndex = i2; break; }
-        }
-      }
-      if (!outSelected) {
-        for (var j2 = 0; j2 < midi_out.options.length; j2++) {
-          if (/amyboard/i.test(_opt_portname(midi_out.options[j2]))) { midi_out.selectedIndex = j2; break; }
-        }
-      }
+      _preselect_control_port(midi_in, savedPorts ? savedPorts.input : null, null,
+                              _midi_ports_user_choice ? _midi_ports_user_choice.input : null);
+      _preselect_control_port(midi_out, savedPorts ? savedPorts.output : null, null,
+                              _midi_ports_user_choice ? _midi_ports_user_choice.output : null);
     }
     // Populate the MIDI Input Pass-Thru dropdown (control mode only).
     populate_midi_passthru_dropdown();
@@ -5133,65 +5114,6 @@ var _sync_stage = null;  // null | 'pending'
 var _sync_timeout = null;
 var _last_sketch_text = null;
 
-function _sync_modal_populate_midi() {
-    // Mirror the main MIDI dropdowns into the modal's dropdowns.
-    // Two subtleties, both driven by the per-iteration refresh calls
-    // made from wait_for_board_ready:
-    //
-    // 1. Skip when main has zero options. During a zB USB reboot
-    //    WebMidi.inputs transiently goes empty (even on macOS
-    //    CoreMIDI briefly); _refresh_main_midi_dropdowns wipes main
-    //    to 0 options and then calls us — we'd otherwise propagate
-    //    the empty state into a modal that was correctly populated
-    //    at _show_syncing_modal time.
-    //
-    // 2. Don't DOWNGRADE the modal. If main currently has no
-    //    amyboard-matching port selected but the modal does, that
-    //    means main is in a transient bad state (e.g. macOS lost
-    //    AMYboard briefly during the reboot, _refresh fell back to
-    //    index 0 which on macOS is typically "IAC Driver Bus 1").
-    //    Leave the modal alone and wait for main to recover. When
-    //    AMYboard reappears a later refresh will see main is
-    //    amyboard-selected and the copy goes through.
-    //
-    //    This is specifically the regression path: without guard (2),
-    //    the modal shows "IAC Driver Bus 1" in both in/out on macOS
-    //    Chrome even though the board is connected, because the
-    //    moment AMYboard flickers in WebMidi.inputs we overwrite the
-    //    modal's correct state with main's transient wrong state —
-    //    and once the modal selection moves off amyboard there's no
-    //    subsequent refresh that moves it back (main's prev-name
-    //    matcher is sticky on the wrong port too).
-    function _opt_name(sel) {
-        if (!sel || !sel.options || sel.selectedIndex < 0) return '';
-        var opt = sel.options[sel.selectedIndex];
-        if (!opt) return '';
-        var t = opt.text || '';
-        var idx = t.indexOf(': ');
-        return (idx >= 0) ? t.slice(idx + 2) : t;
-    }
-    function _should_mirror(main, modal) {
-        if (!main || !modal) return false;
-        if (main.options.length === 0) return false;  // rule (1)
-        var mainIsAmy = /amyboard/i.test(_opt_name(main));
-        var modalIsAmy = /amyboard/i.test(_opt_name(modal));
-        if (!mainIsAmy && modalIsAmy) return false;   // rule (2)
-        return true;
-    }
-    var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
-    var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
-    var modalIn = document.getElementById('sync-modal-midi-in');
-    var modalOut = document.getElementById('sync-modal-midi-out');
-    if (_should_mirror(mainIn, modalIn)) {
-        modalIn.innerHTML = mainIn.innerHTML;
-        modalIn.selectedIndex = mainIn.selectedIndex;
-    }
-    if (_should_mirror(mainOut, modalOut)) {
-        modalOut.innerHTML = mainOut.innerHTML;
-        modalOut.selectedIndex = mainOut.selectedIndex;
-    }
-}
-
 function _refresh_main_midi_dropdowns() {
     // Re-scan WebMidi.inputs/outputs and rebuild the main MIDI dropdowns,
     // preserving the user's current selection by port name where possible.
@@ -5233,53 +5155,17 @@ function _refresh_main_midi_dropdowns() {
         midi_out.options[midi_out.options.length] = new Option("MIDI out: " + safe_midi_port_name(output));
     });
 
-    // Preselect priority — mirrors onEnabled's logic so _refresh is
-    // idempotent with the initial page load preselect:
-    //   1. Saved cookie port by name (user's last successful selection).
-    //   2. Any port name matching /amyboard/i (default preference).
-    //   3. Previous selection by name (useful when a non-amyboard port
-    //      is the intended target, e.g. the user pointed at something
-    //      other than AMYboard and there isn't an AMYboard in the list).
-    //   4. Index 0 (last resort when nothing else matches).
-    //
-    // Rationale: during a zB USB reboot, WebMidi.outputs briefly drops
-    // the AMYboard output while keeping all other ports (IAC Driver Bus 1,
-    // etc). The previous "prev-name → 0" logic selected IAC Driver as
-    // the fallback, and the NEXT refresh's prev-name was then "IAC Driver
-    // Bus 1" which matched — sticky on the wrong port forever, silently
-    // routing zI pings and zD/zP sysex into the void. Preferring AMYboard
-    // when it reappears un-sticks the dropdown automatically.
+    // Preselect via the shared control-port priority (see
+    // _preselect_control_port): explicit dialog choice, then the AMYboard
+    // hardware port, then cookie / regex / previous name. Preferring the
+    // hardware port when it (re)appears also un-sticks the dropdown after
+    // a zB USB reboot, where a transient empty port list used to leave it
+    // stuck on e.g. "IAC Driver Bus 1" forever.
     var savedPorts = typeof _get_midi_cookie === 'function' ? _get_midi_cookie() : null;
-
-    function _preselect(select, savedName, prevName) {
-        if (!select || select.options.length === 0) return;
-        select.selectedIndex = 0;  // default fallback
-        // 1. Cookie
-        if (savedName) {
-            for (var i = 0; i < select.options.length; i++) {
-                if (_name_from_opt(select.options[i]) === savedName) {
-                    select.selectedIndex = i; return;
-                }
-            }
-        }
-        // 2. Amyboard default preference
-        for (var j = 0; j < select.options.length; j++) {
-            if (/amyboard/i.test(_name_from_opt(select.options[j]))) {
-                select.selectedIndex = j; return;
-            }
-        }
-        // 3. Previous selection (only helps non-amyboard-not-present cases)
-        if (prevName) {
-            for (var k = 0; k < select.options.length; k++) {
-                if (_name_from_opt(select.options[k]) === prevName) {
-                    select.selectedIndex = k; return;
-                }
-            }
-        }
-        // 4. selectedIndex stays 0 from above
-    }
-    _preselect(midi_in, savedPorts ? savedPorts.input : null, prevInName);
-    _preselect(midi_out, savedPorts ? savedPorts.output : null, prevOutName);
+    _preselect_control_port(midi_in, savedPorts ? savedPorts.input : null, prevInName,
+                            _midi_ports_user_choice ? _midi_ports_user_choice.input : null);
+    _preselect_control_port(midi_out, savedPorts ? savedPorts.output : null, prevOutName,
+                            _midi_ports_user_choice ? _midi_ports_user_choice.output : null);
 
     console.log('_refresh_main_midi_dropdowns: rescanned ' +
                 midiInputOptionIds.length + ' inputs, ' +
@@ -5292,16 +5178,6 @@ function _refresh_main_midi_dropdowns() {
         populate_midi_passthru_dropdown();
     }
 
-    // Mirror the refreshed dropdowns into the sync modal's dropdowns.
-    // _show_syncing_modal() snapshots main dropdown innerHTML into the
-    // modal the moment it's shown — on Windows post-reload that happens
-    // before WebMidi has enumerated the ports, so the modal captures the
-    // HTML-default "MIDI in: [Not available]" labels. Re-mirroring here
-    // keeps the modal in lockstep with the real dropdowns as ports come
-    // online, so users see "MIDI in: AMYboard" instead of [Not available].
-    if (typeof _sync_modal_populate_midi === 'function') {
-        try { _sync_modal_populate_midi(); } catch (e) {}
-    }
 }
 
 function _show_saving_modal() {
@@ -5416,20 +5292,13 @@ function _show_syncing_modal() {
     var spinner = document.getElementById('sync-modal-spinner');
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
-    var changeBtn = document.getElementById('sync-modal-change-btn');
     var pullBtn = document.getElementById('sync-modal-pull-btn');
-    var modalIn = document.getElementById('sync-modal-midi-in');
-    var modalOut = document.getElementById('sync-modal-midi-out');
     if (spinner) spinner.classList.add('d-none');
     if (error) error.classList.add('d-none');
     if (retryBtn) retryBtn.classList.add('d-none');
-    if (changeBtn) changeBtn.classList.add('d-none');
-    if (modalIn) modalIn.disabled = false;
-    if (modalOut) modalOut.disabled = false;
     if (pullBtn) pullBtn.classList.remove('d-none');
     var pullWarn = document.getElementById('sync-modal-pull-warning');
     if (pullWarn) pullWarn.classList.remove('d-none');  // warn: pull replaces the sketch
-    _sync_modal_populate_midi();
     bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
     // Replace any prior pending gate (only one click handler in flight).
     _clear_pull_button_gate('superseded');
@@ -5451,23 +5320,13 @@ function _show_syncing_modal_busy() {
     var spinner = document.getElementById('sync-modal-spinner');
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
-    var changeBtn = document.getElementById('sync-modal-change-btn');
     var pullBtn = document.getElementById('sync-modal-pull-btn');
-    var modalIn = document.getElementById('sync-modal-midi-in');
-    var modalOut = document.getElementById('sync-modal-midi-out');
     if (spinner) spinner.classList.remove('d-none');
     if (error) error.classList.add('d-none');
     if (retryBtn) retryBtn.classList.add('d-none');
     if (pullBtn) pullBtn.classList.add('d-none');
     var pullWarnBusy = document.getElementById('sync-modal-pull-warning');
     if (pullWarnBusy) pullWarnBusy.classList.add('d-none');
-    if (modalIn) modalIn.disabled = true;
-    if (modalOut) modalOut.disabled = true;
-    if (changeBtn) {
-        changeBtn.textContent = 'Change MIDI Ports';
-        changeBtn.classList.remove('d-none');
-        changeBtn.onclick = function() { sync_modal_change_ports(); };
-    }
 }
 
 // Click handler for the green "Pull from AMYboard" button. Applies the
@@ -5475,31 +5334,10 @@ function _show_syncing_modal_busy() {
 // setup_midi_devices, transitions to busy state, then resolves the
 // pending _show_syncing_modal promise so the awaiting caller proceeds.
 async function start_pull_from_amyboard() {
-    var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
-    var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
-    var modalIn = document.getElementById('sync-modal-midi-in');
-    var modalOut = document.getElementById('sync-modal-midi-out');
-
-    // Refresh main against current WebMidi state, then copy the modal
-    // selection over (clamped to a valid index).
+    // Refresh against current WebMidi state; the main dropdowns are the
+    // single source of truth (port choice lives in the MIDI Ports dialog).
     if (typeof _refresh_main_midi_dropdowns === 'function') {
         _refresh_main_midi_dropdowns();
-    }
-    if (mainIn && modalIn) {
-        var wantIn = modalIn.selectedIndex;
-        if (wantIn >= 0 && wantIn < mainIn.options.length) {
-            mainIn.selectedIndex = wantIn;
-        } else if (mainIn.options.length > 0) {
-            mainIn.selectedIndex = 0;
-        }
-    }
-    if (mainOut && modalOut) {
-        var wantOut = modalOut.selectedIndex;
-        if (wantOut >= 0 && wantOut < mainOut.options.length) {
-            mainOut.selectedIndex = wantOut;
-        } else if (mainOut.options.length > 0) {
-            mainOut.selectedIndex = 0;
-        }
     }
     try {
         await setup_midi_devices();
@@ -5523,23 +5361,20 @@ function _show_syncing_modal_error() {
     var spinner = document.getElementById('sync-modal-spinner');
     var error = document.getElementById('sync-modal-error');
     var retryBtn = document.getElementById('sync-modal-retry-btn');
-    var changeBtn = document.getElementById('sync-modal-change-btn');
     var pullBtn = document.getElementById('sync-modal-pull-btn');
-    var modalIn = document.getElementById('sync-modal-midi-in');
-    var modalOut = document.getElementById('sync-modal-midi-out');
     if (spinner) spinner.classList.add('d-none');
     if (error) error.classList.remove('d-none');
-    // Use the change-ports button in Try again mode (same behavior as retry).
-    if (retryBtn) retryBtn.classList.add('d-none');
     if (pullBtn) pullBtn.classList.add('d-none');
     var pullWarnErr = document.getElementById('sync-modal-pull-warning');
     if (pullWarnErr) pullWarnErr.classList.add('d-none');
-    if (modalIn) modalIn.disabled = false;
-    if (modalOut) modalOut.disabled = false;
-    if (changeBtn) {
-        changeBtn.classList.remove('d-none');
-        changeBtn.textContent = 'Try again';
-        changeBtn.onclick = function() { sync_modal_retry(); };
+    if (retryBtn) {
+        retryBtn.classList.remove('d-none');
+        retryBtn.onclick = function() {
+            sync_modal_retry().catch(function(e) {
+                console.warn('sync_modal_retry error:', e);
+                _show_syncing_modal_error();
+            });
+        };
     }
 }
 
@@ -5577,11 +5412,9 @@ function dismiss_sync_modal_and_upgrade() {
 }
 
 async function sync_modal_retry() {
-    // Apply the modal's dropdown selections back to the main dropdowns, then re-sync.
+    // Re-validate the current (main-dropdown) port selection and re-sync.
     var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
     var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
-    var modalIn = document.getElementById('sync-modal-midi-in');
-    var modalOut = document.getElementById('sync-modal-midi-out');
 
     // Refresh the ID arrays against current WebMidi.inputs/outputs before
     // doing anything else — on Windows the AMYboard gets a fresh port id
@@ -5594,25 +5427,6 @@ async function sync_modal_retry() {
     // dropdowns look right.
     if (typeof _refresh_main_midi_dropdowns === 'function') {
         _refresh_main_midi_dropdowns();
-    }
-
-    // Copy the modal's selection back to the main dropdown, clamping to a
-    // valid index so we never leave the main dropdown at -1 (no selection).
-    if (mainIn && modalIn) {
-        var wantIn = modalIn.selectedIndex;
-        if (wantIn >= 0 && wantIn < mainIn.options.length) {
-            mainIn.selectedIndex = wantIn;
-        } else if (mainIn.options.length > 0) {
-            mainIn.selectedIndex = 0;
-        }
-    }
-    if (mainOut && modalOut) {
-        var wantOut = modalOut.selectedIndex;
-        if (wantOut >= 0 && wantOut < mainOut.options.length) {
-            mainOut.selectedIndex = wantOut;
-        } else if (mainOut.options.length > 0) {
-            mainOut.selectedIndex = 0;
-        }
     }
 
     // Wait for setup_midi_devices to finish wiring up the new selections.
@@ -5652,45 +5466,23 @@ async function sync_modal_retry() {
     }
 }
 
-function sync_modal_change_ports() {
-    // Stop the in-progress sync and let the user pick different MIDI ports.
+function sync_modal_open_ports() {
+    // Pause any in-progress sync and hand port selection to the single
+    // MIDI Ports dialog; on Apply, resume via the normal retry path.
     _sync_stage = null;
     if (_sync_timeout) { clearTimeout(_sync_timeout); _sync_timeout = null; }
     if (_sync_reject) { var r = _sync_reject; _sync_resolve = null; _sync_reject = null; r(new Error('cancelled')); }
     // Cancel any pending ping wait from wait_for_board_ready.
     if (_ping_resolve) { var pr = _ping_resolve; _ping_resolve = null; pr(); }
-    // Re-scan WebMidi so any devices connected since page load show up,
-    // then mirror the refreshed list into the modal's dropdowns.
-    _refresh_main_midi_dropdowns();
-    _sync_modal_populate_midi();
-    // Enable the dropdowns, hide the spinner, show the error/hint area,
-    // and rename the Change button to Try again.
-    var spinner = document.getElementById('sync-modal-spinner');
-    var error = document.getElementById('sync-modal-error');
-    var retryBtn = document.getElementById('sync-modal-retry-btn');
-    var changeBtn = document.getElementById('sync-modal-change-btn');
-    var pullBtn = document.getElementById('sync-modal-pull-btn');
-    var modalIn = document.getElementById('sync-modal-midi-in');
-    var modalOut = document.getElementById('sync-modal-midi-out');
-    if (spinner) spinner.classList.add('d-none');
-    if (error) error.classList.remove('d-none');
-    if (retryBtn) retryBtn.classList.add('d-none');
-    if (pullBtn) pullBtn.classList.add('d-none');
-    if (modalIn) modalIn.disabled = false;
-    if (modalOut) modalOut.disabled = false;
-    if (changeBtn) {
-        changeBtn.classList.remove('d-none');
-        changeBtn.textContent = 'Try again';
-    }
-    // Hook the changed button to sync_modal_retry instead. Wrap so the
-    // async function's rejections surface in the sync-error modal rather
-    // than bubbling up as unhandled promise errors.
-    if (changeBtn) changeBtn.onclick = function() {
-        sync_modal_retry().catch(function(e) {
-            console.warn('sync_modal_retry error:', e);
-            _show_syncing_modal_error();
-        });
-    };
+    show_midi_ports_modal(function() {
+        // Skip the green-button gate — the user just chose ports.
+        _skip_pull_gate = true;
+        if (amyboard_mode === 'control' && typeof pageload_control_sync === 'function') {
+            pageload_control_sync();
+        } else {
+            sync_amy_state();
+        }
+    });
 }
 
 // Cookie helpers for remembering successful MIDI port selections.
@@ -5724,6 +5516,175 @@ function _save_successful_midi_ports() {
         return (idx >= 0) ? t.slice(idx + 2) : t;
     }
     _set_midi_cookie(_opt_portname(mainIn), _opt_portname(mainOut));
+}
+
+// ── MIDI Ports dialog ───────────────────────────────────────────────────────
+// The single place to choose the control-mode MIDI in/out ports. Opened from
+// the "MIDI Ports" button next to Read/Write and from the sync modal. The
+// default is always the AMYboard hardware port (exact name "AMYboard"); an
+// explicit choice made here holds for the rest of the session (including
+// across the port re-scans wait_for_board_ready does during reboots).
+
+var _midi_ports_user_choice = null;   // {input, output} names picked in the dialog
+var _midi_ports_modal_resume = null;  // continuation after Apply (sync-modal path)
+
+// Shared preselect priority for the control-mode port dropdowns:
+//   1. The user's explicit dialog choice this session.
+//   2. The AMYboard hardware port (exact name "AMYboard" — the default;
+//      exact so e.g. "AMYboard VCV" never outranks real hardware).
+//   3. Saved cookie names (covers boards reached via a MIDI interface).
+//   4. Any /amyboard/i port (the VCV plugin's virtual port, etc).
+//   5. Previous selection by name, then index 0.
+function _preselect_control_port(select, savedName, prevName, userName) {
+    if (!select || select.options.length === 0) return;
+    function _name(opt) {
+        var t = (opt && opt.text) || '';
+        var idx = t.indexOf(': ');
+        return (idx >= 0) ? t.slice(idx + 2) : t;
+    }
+    function _pick(test) {
+        for (var i = 0; i < select.options.length; i++) {
+            if (test(_name(select.options[i]))) { select.selectedIndex = i; return true; }
+        }
+        return false;
+    }
+    select.selectedIndex = 0;  // last-resort fallback
+    if (userName && _pick(function(n) { return n === userName; })) return;
+    if (_pick(function(n) { return n === 'AMYboard'; })) return;
+    if (savedName && _pick(function(n) { return n === savedName; })) return;
+    if (_pick(function(n) { return /amyboard/i.test(n); })) return;
+    if (prevName) _pick(function(n) { return n === prevName; });
+}
+
+function _midi_ports_modal_status(text, cls) {
+    var el = document.getElementById('midi-ports-modal-status');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'small mt-2' + (cls ? ' ' + cls : '');
+}
+
+function show_midi_ports_modal(resumeFn) {
+    if (typeof _refresh_main_midi_dropdowns === 'function') {
+        _refresh_main_midi_dropdowns();
+    }
+    var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
+    var mIn = document.getElementById('midi-ports-modal-in');
+    var mOut = document.getElementById('midi-ports-modal-out');
+    if (mIn && mainIn) { mIn.innerHTML = mainIn.innerHTML; mIn.selectedIndex = mainIn.selectedIndex; }
+    if (mOut && mainOut) { mOut.innerHTML = mainOut.innerHTML; mOut.selectedIndex = mainOut.selectedIndex; }
+    _midi_ports_modal_status('');
+    _midi_ports_modal_resume = (typeof resumeFn === 'function') ? resumeFn : null;
+    var el = document.getElementById('midiPortsModal');
+    if (el && window.bootstrap) {
+        bootstrap.Modal.getOrCreateInstance(el).show();
+    }
+}
+
+function hide_midi_ports_modal() {
+    _midi_ports_modal_resume = null;
+    var el = document.getElementById('midiPortsModal');
+    if (!el) return;
+    // Same force-hide pattern as _hide_syncing_modal: bootstrap's hide() is
+    // unreliable from async callbacks, so also clear the DOM state directly.
+    try {
+        var m = window.bootstrap && bootstrap.Modal.getOrCreateInstance(el);
+        if (m) m.hide();
+    } catch (e) {}
+    el.classList.remove('show');
+    el.style.display = 'none';
+    el.setAttribute('aria-hidden', 'true');
+    document.querySelectorAll('.modal-backdrop').forEach(function(b) { b.remove(); });
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('padding-right');
+}
+
+function midi_ports_modal_default() {
+    // Reset both dropdowns to the AMYboard hardware port (exact name first,
+    // then any /amyboard/i port if no hardware is attached).
+    ['midi-ports-modal-in', 'midi-ports-modal-out'].forEach(function(id) {
+        var sel = document.getElementById(id);
+        if (!sel || sel.options.length === 0) return;
+        function _name(opt) {
+            var t = (opt && opt.text) || '';
+            var idx = t.indexOf(': ');
+            return (idx >= 0) ? t.slice(idx + 2) : t;
+        }
+        for (var i = 0; i < sel.options.length; i++) {
+            if (_name(sel.options[i]) === 'AMYboard') { sel.selectedIndex = i; return; }
+        }
+        for (var j = 0; j < sel.options.length; j++) {
+            if (/amyboard/i.test(_name(sel.options[j]))) { sel.selectedIndex = j; return; }
+        }
+    });
+    _midi_ports_modal_status('');
+}
+
+async function midi_ports_modal_apply() {
+    var mainIn = document.amyboard_settings && document.amyboard_settings.midi_input;
+    var mainOut = document.amyboard_settings && document.amyboard_settings.midi_output;
+    var mIn = document.getElementById('midi-ports-modal-in');
+    var mOut = document.getElementById('midi-ports-modal-out');
+    function _sel_name(sel) {
+        if (!sel || !sel.options[sel.selectedIndex]) return '';
+        var t = sel.options[sel.selectedIndex].text || '';
+        var idx = t.indexOf(': ');
+        return (idx >= 0) ? t.slice(idx + 2) : t;
+    }
+    // Record the explicit choice FIRST so the port re-scans that
+    // wait_for_board_ready triggers below preserve it.
+    _midi_ports_user_choice = { input: _sel_name(mIn), output: _sel_name(mOut) };
+
+    // Copy modal selection to the main dropdowns (clamped to valid indexes).
+    if (mainIn && mIn) {
+        var wantIn = mIn.selectedIndex;
+        mainIn.selectedIndex = (wantIn >= 0 && wantIn < mainIn.options.length) ? wantIn
+            : (mainIn.options.length > 0 ? 0 : -1);
+    }
+    if (mainOut && mOut) {
+        var wantOut = mOut.selectedIndex;
+        mainOut.selectedIndex = (wantOut >= 0 && wantOut < mainOut.options.length) ? wantOut
+            : (mainOut.options.length > 0 ? 0 : -1);
+    }
+
+    var applyBtn = document.getElementById('midi-ports-apply-btn');
+    if (applyBtn) applyBtn.disabled = true;
+    try {
+        await setup_midi_devices();
+    } catch (e) {
+        console.warn('midi_ports_modal_apply: setup_midi_devices threw', e);
+    }
+    if (typeof refresh_amyboard_port_warning === 'function') refresh_amyboard_port_warning();
+
+    if (!midiInputDevice || !midiOutputDevice) {
+        _midi_ports_modal_status('Could not open these MIDI ports.', 'text-danger');
+        if (applyBtn) applyBtn.disabled = false;
+        return;
+    }
+
+    // Quick liveness check so the user gets immediate feedback.
+    var alive = false;
+    _midi_ports_modal_status('Checking for an AMYboard on these ports\u2026', 'text-muted');
+    try {
+        if (typeof wait_for_board_ready === 'function') {
+            alive = await wait_for_board_ready(4000);
+        }
+    } catch (e) {
+        console.warn('midi_ports_modal_apply: wait_for_board_ready threw', e);
+    }
+    if (applyBtn) applyBtn.disabled = false;
+
+    if (alive) {
+        _save_successful_midi_ports();
+        var resume = _midi_ports_modal_resume;
+        hide_midi_ports_modal();
+        if (resume) resume();
+    } else {
+        // Keep the ports (the user asked for them) but say the board didn't
+        // answer, so they can fix cabling or pick again.
+        _midi_ports_modal_status('Ports set, but no AMYboard replied. Check the connection, or pick different ports.', 'text-danger');
+    }
 }
 
 // Post-bootloader portion of reset_amyboard: send zP factory_reset to the
