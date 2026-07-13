@@ -21,10 +21,13 @@ RACK_DIR ?= $(HOME)/outside/Rack-SDK
 FLAGS += -Iamy/src -I../shared -DAMY_NO_MINIAUDIO -DGAMMA9001 -DAMYBOARD_VCV
 CFLAGS += -Wno-sign-compare -Wno-missing-field-initializers -Wno-strict-aliasing
 
-SOURCES += src/plugin.cpp src/AmyBoard.cpp src/amy_stubs.c
+SOURCES += src/plugin.cpp src/AmyBoard.cpp src/amy_stubs.c src/vcv_midi.c
 
-MPLIB := build-mp/libamyboardmp.a
+MPLIB := build-mp/tulip/obj/libamyboardmp.a
 LDFLAGS += $(MPLIB) -lpthread
+ifdef ARCH_MAC
+LDFLAGS += -framework CoreMIDI -framework CoreFoundation
+endif
 
 DISTRIBUTABLES += res
 DISTRIBUTABLES += $(wildcard LICENSE*)

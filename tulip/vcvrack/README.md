@@ -32,6 +32,14 @@ branches on that exactly as it does for `AMYBOARD` / `AMYBOARD_WEB` /
   256-frame blocks at 44.1 kHz, resampled to the Rack engine rate.
 - One AMY module per patch owns the engine (AMY + MicroPython are global);
   extra instances stay silent.
+- **amyboard.com works against the module** (macOS): the plugin publishes a
+  virtual CoreMIDI in/out pair named **"AMYboard VCV"**. Open
+  [amyboard.com](https://amyboard.com), switch to control mode, and pick the
+  AMYboard VCV ports — sketch write (zT), knobs (zA), run-python (zP), dumps
+  (zD) and ping (zI) all behave as on hardware, ACK'd per frame. Wire paths
+  like /user/current/sketch.py are relocated onto ~/Documents/AMYboard/.
+  (Don't also select "AMYboard VCV" as the module's Rack MIDI input — that
+  would loop the editor traffic through the note path twice.)
 
 ## Building
 

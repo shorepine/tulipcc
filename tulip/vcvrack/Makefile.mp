@@ -8,7 +8,9 @@
 export CFLAGS_EXTRA += -Wno-gnu-folding-constant -Wno-unknown-warning-option -Wno-unterminated-string-initialization
 
 VARIANT ?= standard
-BUILD ?= build-mp
+# Nested like tulip/macos's build dir so ../../amy and ../shared object
+# paths stay INSIDE the build tree (BUILD/../../amy = build-mp/amy).
+BUILD ?= build-mp/tulip/obj
 
 TOP = ../../micropython
 VARIANT_DIR ?= $(TOP)/ports/unix/variants/$(VARIANT)
@@ -45,10 +47,16 @@ CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DI
 CFLAGS += -DAMYBOARD_VCV -DGAMMA9001
 # tulip sources still use the retired STATIC macro (as does Tulip Desktop)
 CFLAGS += -DSTATIC=static
+# Use system libc printf, not MP's minimal one (shared/libc/printf.c would
+# hijack snprintf and abort on AMY's %hu/%g formats in sprint_event/dumps).
+CFLAGS += -DMICROPY_USE_INTERNAL_PRINTF=0
 CFLAGS += -fPIC
 # Match the Rack SDK's deployment target so the final dylib link is clean.
+# MACOS also hands AMY's MIDI device layer (midi_out) to the plugin's
+# vcv_midi.c, the same way Tulip Desktop hands it to macos_midi.m.
 ifeq ($(UNAME_S),Darwin)
 CFLAGS += -mmacosx-version-min=10.9
+CFLAGS += -DMACOS
 endif
 COPT += -fdata-sections -ffunction-sections -O2
 CFLAGS += -g

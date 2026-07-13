@@ -279,7 +279,7 @@ void tulip_send_midi_out(uint8_t* buf, uint16_t len) {
 
 #ifndef AMY_IS_EXTERNAL
 
-#if (defined AMYBOARD) || (defined TULIP)
+#if (defined AMYBOARD) || (defined TULIP) || (defined AMYBOARD_VCV)
 #include "tulip_helpers.h"
 // map the mp_obj_t to a file handle
 
@@ -307,7 +307,26 @@ static void free_handle(uint32_t h) {
 }
 
 
+#ifdef AMYBOARD_VCV
+// Control-API wire paths are board-absolute (/user/current/sketch.py); the
+// VCV board root is ~/Documents/AMYboard (see tulip.py root_dir()).
+static const char *vcv_relocate_wire_path(const char *filename, char *buf, size_t buflen) {
+    if (filename && filename[0] == '/') {
+        const char *home = getenv("HOME");
+        if (home) {
+            snprintf(buf, buflen, "%s/Documents/AMYboard%s", home, filename);
+            return buf;
+        }
+    }
+    return filename;
+}
+#endif
+
 uint32_t mp_fopen_hook(char * filename, const char * mode) {
+#ifdef AMYBOARD_VCV
+    char vcv_path[512];
+    filename = (char *)vcv_relocate_wire_path(filename, vcv_path, sizeof(vcv_path));
+#endif
     mp_obj_t f = tulip_fopen(filename, mode);
     if (!f) {
         return HANDLE_INVALID;
@@ -373,7 +392,7 @@ STATIC mp_obj_t tulip_environment_transfer_done(size_t n_args, const mp_obj_t *a
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_environment_transfer_done_obj, 0, 1, tulip_environment_transfer_done);
 
 void mp_exec_hook(const char *code) {
-#if defined(AMYBOARD)
+#if defined(AMYBOARD) || defined(AMYBOARD_VCV)
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
         mp_obj_t code_str = mp_obj_new_str(code, strlen(code));
@@ -389,13 +408,17 @@ void mp_exec_hook(const char *code) {
 }
 
 void mp_update_file_hook(const char *filename) {
-#if defined(AMYBOARD)
+#if defined(AMYBOARD) || defined(AMYBOARD_VCV)
     // Call amyboard.update_sketch_knobs(filename) synchronously. This runs
     // from the C-side zA handler, so any unhandled Python exception would
     // NLR-longjmp out of the sysex parser mid-message and the subsequent zD
     // would never be processed (Pull would hang). Wrap the call in an NLR
     // buffer so exceptions get swallowed and the parser can continue.
     nlr_buf_t nlr;
+#ifdef AMYBOARD_VCV
+    char vcv_path[512];
+    filename = vcv_relocate_wire_path(filename, vcv_path, sizeof(vcv_path));
+#endif
     if (nlr_push(&nlr) == 0) {
         mp_obj_t mod = mp_import_name(MP_QSTR_amyboard, mp_const_none, MP_OBJ_NEW_SMALL_INT(0));
         mp_obj_t fn = mp_load_attr(mod, MP_QSTR_update_sketch_knobs);
@@ -413,7 +436,7 @@ void mp_update_file_hook(const char *filename) {
 }
 
 void mp_file_transfer_done_hook(const char *filename) {
-#if defined(AMYBOARD)
+#if defined(AMYBOARD) || defined(AMYBOARD_VCV)
     if (filename == NULL || filename[0] == '\0') {
         return;
     }
@@ -472,6 +495,10 @@ static void mount_gamma9001_drums(void) {
     amy_set_gamma9001_pcm((const int16_t *)map);
 }
 #endif
+
+#endif  // hooks: AMYBOARD || TULIP || AMYBOARD_VCV
+
+#if (defined AMYBOARD) || (defined TULIP)
 
 void run_amy(uint8_t midi_out_pin) {
     amy_config_t amy_config = amy_default_config();
@@ -602,9 +629,23 @@ void run_amy(void) {
     amy_config.features.audio_in = 0;
     amy_config.features.startup_bleep = 1;
     amy_config.audio = AMY_AUDIO_IS_NONE;
-    amy_config.midi = AMY_MIDI_IS_NONE;
+    // Not NONE: amy_dump_*_to_sysex() early-return when config.midi == 0,
+    // and zD dumps must flow. The UART bit is harmless here — all UART
+    // device code is ESP-only, run_midi() is a stub, and midi_out() is the
+    // plugin's virtual CoreMIDI port (vcv_midi.c).
+    amy_config.midi = AMY_MIDI_IS_UART;
     amy_config.platform.multicore = 0;
     amy_config.platform.multithread = 0;
+    // Control-API (sysex) file transfer + exec + knobs hooks, as on hardware.
+    amy_config.amy_external_fopen_hook = mp_fopen_hook;
+    amy_config.amy_external_fseek_hook = mp_fseek_hook;
+    amy_config.amy_external_fclose_hook = mp_fclose_hook;
+    amy_config.amy_external_fread_hook = mp_fread_hook;
+    amy_config.amy_external_fwrite_hook = mp_fwrite_hook;
+    amy_config.amy_external_file_transfer_done_hook = mp_file_transfer_done_hook;
+    amy_config.amy_external_update_file_hook = mp_update_file_hook;
+    amy_config.amy_external_exec_hook = mp_exec_hook;
+    amy_config.amy_external_reboot_hook = mp_reboot_hook;
 #ifdef GAMMA9001
     // drums_bin.c is linked straight into the plugin (see Makefile.mp).
     {
@@ -613,6 +654,15 @@ void run_amy(void) {
     }
 #endif
     amy_start(amy_config);
+    // amy_start -> transfer_init() force-installs posix file hooks on any
+    // _POSIX_VERSION host, clobbering the ones set above. Re-install ours so
+    // wire paths ("/user/current/sketch.py") resolve through MicroPython's
+    // VFS with the VCV root relocation in mp_fopen_hook.
+    amy_global.config.amy_external_fopen_hook = mp_fopen_hook;
+    amy_global.config.amy_external_fread_hook = mp_fread_hook;
+    amy_global.config.amy_external_fwrite_hook = mp_fwrite_hook;
+    amy_global.config.amy_external_fclose_hook = mp_fclose_hook;
+    amy_global.config.amy_external_fseek_hook = mp_fseek_hook;
     external_map = malloc(amy_config.max_oscs);
     for (uint16_t i = 0; i < amy_config.max_oscs; i++) external_map[i] = 0;
     for (uint8_t i = 0; i < MAX_CV_SYNTHS; i++) cv_synth_map[i] = 0;

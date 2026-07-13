@@ -75,6 +75,64 @@ static char *exec_pop(void) {
     return code;
 }
 
+// Shorepine control-API sysex payloads (zT/zD/zP/zA/zY + base64 transfer
+// chunks) queued from the CoreMIDI thread (vcv_midi.c). The MP thread
+// processes each with amy_add_message_from_sysex() and then emits the AK —
+// same process-then-ack contract as hardware's scheduled
+// tulip_amy_send_sysex. The editor keeps one frame in flight awaiting each
+// AK, so a modest queue suffices.
+#define SYSEX_QUEUE_SLOTS 32
+static char *sysex_queue[SYSEX_QUEUE_SLOTS];
+static int sysex_head = 0, sysex_tail = 0;
+static pthread_mutex_t sysex_lock = PTHREAD_MUTEX_INITIALIZER;
+
+void amyboard_vcv_sysex_push(const uint8_t *payload, int len) {
+    if (len <= 0)
+        return;
+    char *copy = malloc(len + 1);
+    if (!copy)
+        return;
+    memcpy(copy, payload, len);
+    copy[len] = 0;
+    pthread_mutex_lock(&sysex_lock);
+    int next = (sysex_tail + 1) % SYSEX_QUEUE_SLOTS;
+    if (next != sysex_head) {
+        sysex_queue[sysex_tail] = copy;
+        sysex_tail = next;
+    } else {
+        free(copy);  // full — drop (editor will time out and retry)
+    }
+    pthread_mutex_unlock(&sysex_lock);
+}
+
+static char *sysex_pop(void) {
+    char *msg = NULL;
+    pthread_mutex_lock(&sysex_lock);
+    if (sysex_head != sysex_tail) {
+        msg = sysex_queue[sysex_head];
+        sysex_head = (sysex_head + 1) % SYSEX_QUEUE_SLOTS;
+    }
+    pthread_mutex_unlock(&sysex_lock);
+    return msg;
+}
+
+// Process one control frame on the MP thread. amy_add_message_from_sysex
+// routes transfer chunks correctly and runs the zP/zA hooks, which call
+// into MicroPython — hence the NLR guard.
+static void process_sysex_msg(char *msg) {
+    extern void midi_out(uint8_t *bytes, uint16_t len);
+    nlr_buf_t nlr;
+    if (nlr_push(&nlr) == 0) {
+        amy_add_message_from_sysex(msg);
+        nlr_pop();
+    } else {
+        fprintf(stderr, "AMYboard VCV: control frame raised, ignoring\n");
+        mp_obj_print_exception(&mp_plat_print, MP_OBJ_FROM_PTR(nlr.ret_val));
+    }
+    static uint8_t ack[] = {0xF0, 0x00, 0x03, 0x45, 'A', 'K', 0xF7};
+    midi_out(ack, sizeof(ack));
+}
+
 static void exec_str(const char *src) {
     nlr_buf_t nlr;
     if (nlr_push(&nlr) == 0) {
@@ -135,6 +193,11 @@ static MP_NOINLINE void *mp_thread_body(void *vargs) {
     // strings from the Rack module.
     while (vcv_mp_running) {
         mp_handle_pending(true);
+        char *msg = sysex_pop();
+        if (msg) {
+            process_sysex_msg(msg);
+            free(msg);
+        }
         char *code = exec_pop();
         if (code) {
             exec_str(code);

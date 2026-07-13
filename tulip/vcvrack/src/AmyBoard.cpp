@@ -19,6 +19,9 @@ int amyboard_vcv_mp_start(void);
 void amyboard_vcv_mp_stop(void);
 int amyboard_vcv_mp_booted(void);
 void amyboard_vcv_exec(const char *code);
+// tulip/vcvrack/src/vcv_midi.c — virtual CoreMIDI port for amyboard.com
+int amyboard_vcv_midi_start(void);
+void amyboard_vcv_midi_stop(void);
 // Host<->firmware seams (modtulip.c / amy_connector.c, AMYBOARD_VCV arms)
 extern float amyboard_vcv_cv_in[2];
 extern float amyboard_vcv_cv_out[2];
@@ -86,6 +89,7 @@ struct AmyModule : Module {
             run_amy();          // in-process AMY, hooks wired (amy_connector.c)
             tsequencer_init();  // AMY sequencer -> mp_sched_schedule bridge
             amyboard_vcv_mp_start();  // boot the firmware on its own thread
+            amyboard_vcv_midi_start();  // "AMYboard VCV" virtual MIDI port (mac)
             s_owner = this;
             owner = true;
         }
@@ -93,6 +97,7 @@ struct AmyModule : Module {
 
     ~AmyModule() override {
         if (owner) {
+            amyboard_vcv_midi_stop();
             amyboard_vcv_mp_stop();
             amy_stop();
             s_owner = NULL;
