@@ -12,11 +12,15 @@ _web_encoder_button = False  # current button state
 def web():
     return (tulip.board()=="AMYBOARD_WEB")
 
+def _vcv():
+    # AMYboard running inside the VCV Rack plugin (see tulip/vcvrack/).
+    return (tulip.board()=="AMYBOARD_VCV")
+
 def cv_capable():
     """True on boards with AMYboard CV hardware. This module is also frozen
     into Tulip builds (so AMYboard World sketches run there via
     world.amyboard.download()); on Tulip the CV helpers below just no-op."""
-    return tulip.board() in ("AMYBOARD", "AMYBOARD_WEB")
+    return tulip.board() in ("AMYBOARD", "AMYBOARD_WEB", "AMYBOARD_VCV")
 
 
 class _BGWriteI2C:
@@ -74,7 +78,7 @@ class Display:
         self._hw = None        # hardware driver (ssd1327 or sh1107), None for web
         self._fb = None        # framebuf used for drawing
         self._buf = None       # raw byte buffer backing the framebuf
-        self._is_web = web()
+        self._is_web = web() or _vcv()   # VCV shares the framebuf push path
         self._bg = False       # panel writes routed through the background I2C task
         self._last_bg_err = 0
 
@@ -517,6 +521,9 @@ def set_midi_type(type):
     # No persistence — this resets to the default (Type A) on reboot.
     global _midi_type
     type = _normalize_midi_type(type)
+    if _vcv():
+        _midi_type = type
+        return type
     tulip.amyboard_set_midi_out(_MIDI_OUT_PINS[type])
     _midi_type = type
     return type
@@ -528,6 +535,19 @@ def midi_type():
 
 
 def start_amy():
+    if _vcv():
+        # AMY is already running in-process (the Rack module called run_amy()
+        # before booting MicroPython); no codec, UART or boot button here.
+        tulip.amy_overload_callback(_on_amy_overload)
+        amy.send_raw("i1K257iv6Z")
+        amy.send_raw("i10K384iv6Z")
+        _ensure_current_env_layout()
+        try:
+            run_sketch()
+        except Exception as e:
+            print("Environment start failed:")
+            sys.print_exception(e)
+        return
     init_pcm9211()
     # AMY binds its MIDI UART TX to this pin at start; set_midi_type() right after is
     # the single MIDI OUT init sequence (it also holds the unused TRS leg high). It
@@ -940,6 +960,9 @@ def cv_out(volts, channel=0):
     No-op on boards without CV hardware (Tulip)."""
     if not cv_capable():
         return
+    if _vcv():
+        tulip.vcv_cv_out(channel, volts)
+        return
     addr = 88 # GP8413
     # With rev1 scaling, 0x0000 -> -10v, 0x7fff -> +10v
     val = int(((volts + 10)/20.0) * 0x8000)
@@ -1003,6 +1026,8 @@ def read_encoder(encoder=0, seesaw_dev=0x49, delay=0.008):
     module-level note on missing-hardware behaviour)."""
     if web():
         return _web_encoder_pos
+    if _vcv():
+        return tulip.vcv_encoder(encoder)
     if seesaw_dev in _seesaw_missing:
         return 0
     try:
@@ -1022,7 +1047,7 @@ def init_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49):
     """Setup the seesaw quad encoder button pins to input_pullup.
 
     Silently no-ops if the seesaw device isn't on the I2C bus."""
-    if web():
+    if web() or _vcv():
         return
     if seesaw_dev in _seesaw_missing:
         return
@@ -1049,6 +1074,8 @@ def read_buttons(pins=(12, 14, 17, 9), seesaw_dev=0x49, delay=0.008):
     isn't on the I2C bus."""
     if web():
         return [_web_encoder_button] * len(pins)
+    if _vcv():
+        return [tulip.vcv_encoder_button(i) for i in range(len(pins))]
     if seesaw_dev in _seesaw_missing:
         return [False] * len(pins)
     try:
@@ -1078,7 +1105,7 @@ def init_neopixels(num=4, pin=18, seesaw_dev=0x49):
     Defaults match the Adafruit Quad Rotary Encoder Breakout: 4 pixels on
     seesaw pin 18 at 800 kHz. Call once before set_neopixel()/show_neopixels().
     Silently no-ops if the seesaw device isn't on the I2C bus."""
-    if web():
+    if web() or _vcv():
         return
     if seesaw_dev in _seesaw_missing:
         return
@@ -1101,7 +1128,7 @@ def set_neopixel(index, r, g, b, seesaw_dev=0x49):
     Assumes init_neopixels() has already been called. Color order on the
     wire is GRB (the standard for these Adafruit NeoPixels). Silently
     no-ops if the seesaw device isn't on the I2C bus."""
-    if web():
+    if web() or _vcv():
         return
     if seesaw_dev in _seesaw_missing:
         return
@@ -1120,7 +1147,7 @@ def show_neopixels(seesaw_dev=0x49):
     """Latch any pending set_neopixel() writes to the LEDs.
 
     Silently no-ops if the seesaw device isn't on the I2C bus."""
-    if web():
+    if web() or _vcv():
         return
     if seesaw_dev in _seesaw_missing:
         return
@@ -1183,6 +1210,8 @@ def _detect_encoder_type():
     seesaw devices use different default addresses too."""
     if web():
         return "web"
+    if _vcv():
+        return "vcv"
     try:
         present = set(get_i2c().scan())
     except Exception:
@@ -1216,6 +1245,10 @@ class Encoder:
             self.encoders = 1
             self.leds = 0  # no LED in the simulator
             self._addr = None
+        elif type == "vcv":
+            self.encoders = 4  # the four panel encoders on the Rack module
+            self.leds = 0
+            self._addr = None
         elif type in _ENCODER_PROFILES:
             p = _ENCODER_PROFILES[type]
             self.encoders = p["encoders"]
@@ -1243,6 +1276,8 @@ class Encoder:
     def _raw_read(self, i):
         if self.type == "web":
             return _web_encoder_pos
+        if self.type == "vcv":
+            return tulip.vcv_encoder(i)
         if self.type in ("adafruit_single", "adafruit_quad"):
             return read_encoder(i, seesaw_dev=self._addr)
         if self.type == "m5stack":
@@ -1268,6 +1303,8 @@ class Encoder:
             return False
         if self.type == "web":
             return _web_encoder_button
+        if self.type == "vcv":
+            return tulip.vcv_encoder_button(i)
         if self.type in ("adafruit_single", "adafruit_quad"):
             return read_buttons(pins=(self._button_pins[i],), seesaw_dev=self._addr)[0]
         if self.type == "m5stack":

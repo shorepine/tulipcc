@@ -1,35 +1,46 @@
-// AMY synthesizer engine as a VCV Rack module — phase 1 of the AMYboard
-// Rack port. Embeds the AMY core (in-process, like the TULIP_DESKTOP build),
-// with Rack MIDI in driving AMY's own MIDI handling (default synths: Juno-6
-// ch1, DX7 ch2, GM drums ch10) and the two CV inputs exposed to AMY as
-// ext0/ext1 CtrlCoefs + cv_trigger sources, matching AMYboard hardware.
+// AMYboard as a VCV Rack module — phase 2: the full firmware.
+//
+// Embeds MicroPython running the real frozen AMYboard firmware (_boot.py,
+// amyboard.py, midi.py, the amy python package) alongside in-process AMY.
+// The Rack audio thread pulls AMY blocks; the MP thread runs the sketch at
+// ~/Documents/AMYboard/user/current/sketch.py, scheduled by AMY's sequencer
+// exactly as on hardware. Panel: 128x128 OLED, four endless encoders with
+// push buttons, CV1/CV2 in and out, stereo out, MIDI via context menu.
 
 #include "plugin.hpp"
 
 extern "C" {
 #include "amy.h"
-// In api.c but not exported via amy.h.
-void amy_default_synths(void);
+// tulip/shared/amy_connector.c (AMYBOARD_VCV arm)
+void run_amy(void);
+void tsequencer_init(void);
+// tulip/vcvrack/src/mp_embed.c
+int amyboard_vcv_mp_start(void);
+void amyboard_vcv_mp_stop(void);
+int amyboard_vcv_mp_booted(void);
+void amyboard_vcv_exec(const char *code);
+// Host<->firmware seams (modtulip.c / amy_connector.c, AMYBOARD_VCV arms)
+extern float amyboard_vcv_cv_in[2];
+extern float amyboard_vcv_cv_out[2];
+extern int32_t amyboard_vcv_encoder_pos[4];
+extern uint8_t amyboard_vcv_encoder_btn[4];
+extern uint8_t amyboard_vcv_framebuf[128 * 64];
+extern volatile uint32_t amyboard_vcv_framebuf_gen;
 }
-// amy.h defines true/false macros; keep them out of C++ code below.
 #undef true
 #undef false
 
 struct AmyModule;
 static AmyModule* s_owner = NULL;
-static float s_cvVolts[AMY_MAX_CV_IN] = {};
 
-// AMY's CV-input hook (audio-thread): feeds ext0/ext1 CtrlCoefs and
-// cv_trigger, same seam the hardware's ADS1015 reader uses.
-static float cvCoefHook(uint16_t channel) {
-    if (channel >= AMY_MAX_CV_IN)
-        return 0.f;
-    return s_cvVolts[channel];
-}
+// One hardware detent per 1/24 turn of the panel encoder knobs.
+static const float ENC_DETENTS_PER_TURN = 24.f;
 
 struct AmyModule : Module {
     enum ParamId {
         LEVEL_PARAM,
+        ENC1_PARAM, ENC2_PARAM, ENC3_PARAM, ENC4_PARAM,
+        BTN1_PARAM, BTN2_PARAM, BTN3_PARAM, BTN4_PARAM,
         PARAMS_LEN
     };
     enum InputId {
@@ -40,6 +51,8 @@ struct AmyModule : Module {
     enum OutputId {
         LEFT_OUTPUT,
         RIGHT_OUTPUT,
+        CV1_OUTPUT,
+        CV2_OUTPUT,
         OUTPUTS_LEN
     };
     enum LightId {
@@ -56,27 +69,23 @@ struct AmyModule : Module {
     AmyModule() {
         config(PARAMS_LEN, INPUTS_LEN, OUTPUTS_LEN, LIGHTS_LEN);
         configParam(LEVEL_PARAM, 0.f, 2.f, 1.f, "Level", "%", 0.f, 100.f);
-        configInput(CV1_INPUT, "CV 1 (AMY ext0 / cv_trigger 0)");
-        configInput(CV2_INPUT, "CV 2 (AMY ext1 / cv_trigger 1)");
+        for (int i = 0; i < 4; i++) {
+            configParam(ENC1_PARAM + i, -INFINITY, INFINITY, 0.f, string::f("Encoder %d", i + 1));
+            configButton(BTN1_PARAM + i, string::f("Encoder %d button", i + 1));
+        }
+        configInput(CV1_INPUT, "CV 1 (ext0 / cv_trigger 0)");
+        configInput(CV2_INPUT, "CV 2 (ext1 / cv_trigger 1)");
         configOutput(LEFT_OUTPUT, "Left");
         configOutput(RIGHT_OUTPUT, "Right");
+        configOutput(CV1_OUTPUT, "CV 1 (set_cv_out / cv_out)");
+        configOutput(CV2_OUTPUT, "CV 2 (set_cv_out / cv_out)");
 
-        // AMY (and its default synth setup) is global state: exactly one
-        // module instance owns the engine. Extra instances stay silent.
+        // AMY and MicroPython are global state: one module instance owns
+        // the whole board. Extra instances stay silent.
         if (!s_owner) {
-            amy_config_t cfg = amy_default_config();
-            cfg.audio = AMY_AUDIO_IS_NONE;   // we pull blocks ourselves
-            cfg.midi = AMY_MIDI_IS_NONE;     // Rack owns MIDI devices
-            cfg.platform.multicore = 0;
-            cfg.platform.multithread = 0;
-            cfg.features.chorus = 1;
-            cfg.features.reverb = 1;
-            cfg.features.echo = 1;
-            cfg.features.audio_in = 0;
-            cfg.features.default_synths = 1;
-            cfg.features.startup_bleep = 1;
-            cfg.amy_external_coef_hook = cvCoefHook;
-            amy_start(cfg);
+            run_amy();          // in-process AMY, hooks wired (amy_connector.c)
+            tsequencer_init();  // AMY sequencer -> mp_sched_schedule bridge
+            amyboard_vcv_mp_start();  // boot the firmware on its own thread
             s_owner = this;
             owner = true;
         }
@@ -84,16 +93,15 @@ struct AmyModule : Module {
 
     ~AmyModule() override {
         if (owner) {
+            amyboard_vcv_mp_stop();
             amy_stop();
             s_owner = NULL;
         }
     }
 
     void onReset() override {
-        if (owner) {
-            amy_add_message((char*)"S");  // AMY full reset
-            amy_default_synths();
-        }
+        if (owner && amyboard_vcv_mp_booted())
+            amyboard_vcv_exec("import amyboard; amyboard.restart_sketch()");
         midiInput.reset();
     }
 
@@ -104,11 +112,18 @@ struct AmyModule : Module {
             return;
         }
 
-        s_cvVolts[0] = inputs[CV1_INPUT].getVoltage();
-        s_cvVolts[1] = inputs[CV2_INPUT].getVoltage();
+        amyboard_vcv_cv_in[0] = inputs[CV1_INPUT].getVoltage();
+        amyboard_vcv_cv_in[1] = inputs[CV2_INPUT].getVoltage();
 
-        // Drain Rack MIDI into AMY's MIDI engine (drives the default synths,
-        // program changes, CCs; sysex passes through for future editor use).
+        // Panel encoders: endless knobs, one detent per 1/24 turn.
+        for (int i = 0; i < 4; i++) {
+            amyboard_vcv_encoder_pos[i] =
+                (int32_t)std::round(params[ENC1_PARAM + i].getValue() * ENC_DETENTS_PER_TURN);
+            amyboard_vcv_encoder_btn[i] = params[BTN1_PARAM + i].getValue() > 0.5f;
+        }
+
+        // Rack MIDI -> AMY's MIDI engine. The external midi input hook
+        // forwards to Python (midi.add_callback) like every other platform.
         midi::Message msg;
         while (midiInput.tryPop(&msg, args.frame)) {
             size_t len = msg.bytes.size();
@@ -120,9 +135,6 @@ struct AmyModule : Module {
         }
         lights[MIDI_LIGHT].setBrightnessSmooth(0.f, args.sampleTime);
 
-        // AMY renders fixed 256-frame stereo int16 blocks at AMY_SAMPLE_RATE;
-        // refill the ring (resampling if the engine rate differs) and hand
-        // out one frame per process() call.
         if (outputBuffer.empty())
             renderBlock((int)args.sampleRate);
 
@@ -133,6 +145,11 @@ struct AmyModule : Module {
         float gain = 5.f * params[LEVEL_PARAM].getValue();
         outputs[LEFT_OUTPUT].setVoltage(gain * frame.samples[0]);
         outputs[RIGHT_OUTPUT].setVoltage(gain * frame.samples[1]);
+
+        // CV outs: volts written by AMY's render hook (set_cv_out) or
+        // amyboard.cv_out(); block-rate like the hardware DAC.
+        outputs[CV1_OUTPUT].setVoltage(amyboard_vcv_cv_out[0]);
+        outputs[CV2_OUTPUT].setVoltage(amyboard_vcv_cv_out[1]);
     }
 
     void renderBlock(int engineRate) {
@@ -172,6 +189,45 @@ struct AmyModule : Module {
     }
 };
 
+// 128x128 4-bit grayscale OLED, rendered from the firmware's framebuffer.
+struct OledWidget : TransparentWidget {
+    AmyModule* module = NULL;
+    int img = -1;
+    uint32_t drawnGen = 0;
+    uint8_t rgba[128 * 128 * 4] = {};
+
+    void drawLayer(const DrawArgs& args, int layer) override {
+        if (layer != 1)
+            return;
+        // Expand 4bpp (two pixels/byte, 64 bytes/row) to RGBA.
+        if (module && module->owner && amyboard_vcv_framebuf_gen != drawnGen) {
+            drawnGen = amyboard_vcv_framebuf_gen;
+            int i = 0;
+            for (int y = 0; y < 128; y++) {
+                for (int x = 0; x < 64; x++) {
+                    uint8_t two = amyboard_vcv_framebuf[y * 64 + x];
+                    uint8_t px[2] = {(uint8_t)((two >> 4) & 0xF), (uint8_t)(two & 0xF)};
+                    for (int k = 0; k < 2; k++) {
+                        uint8_t v = px[k] * 17;
+                        rgba[i++] = v; rgba[i++] = v; rgba[i++] = v; rgba[i++] = 0xFF;
+                    }
+                }
+            }
+            if (img >= 0) {
+                nvgUpdateImage(args.vg, img, rgba);
+            }
+        }
+        if (img < 0)
+            img = nvgCreateImageRGBA(args.vg, 128, 128, 0, rgba);
+
+        NVGpaint paint = nvgImagePattern(args.vg, 0, 0, box.size.x, box.size.y, 0, img, 1.f);
+        nvgBeginPath(args.vg);
+        nvgRect(args.vg, 0, 0, box.size.x, box.size.y);
+        nvgFillPaint(args.vg, paint);
+        nvgFill(args.vg);
+    }
+};
+
 // Panel labels drawn in code (Rack's SVG renderer ignores <text> elements).
 struct AmyLabels : TransparentWidget {
     struct Label {
@@ -206,27 +262,50 @@ struct AmyWidget : ModuleWidget {
         addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
         addChild(createWidget<ScrewSilver>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(20.32, 40.0)), module, AmyModule::LEVEL_PARAM));
-        addChild(createLightCentered<MediumLight<GreenLight>>(mm2px(Vec(20.32, 56.0)), module, AmyModule::MIDI_LIGHT));
+        // OLED: 36x36mm, top center
+        OledWidget* oled = new OledWidget;
+        oled->module = module;
+        oled->box.pos = mm2px(Vec(22.32, 7.0));
+        oled->box.size = mm2px(Vec(36.0, 36.0));
+        addChild(oled);
 
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(11.5, 78.0)), module, AmyModule::CV1_INPUT));
-        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(29.14, 78.0)), module, AmyModule::CV2_INPUT));
+        // Encoders + buttons
+        static const float encX[4] = {12.0, 31.0, 50.0, 69.0};
+        for (int i = 0; i < 4; i++) {
+            addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(encX[i], 56.0)), module, AmyModule::ENC1_PARAM + i));
+            addParam(createParamCentered<TL1105>(mm2px(Vec(encX[i], 66.5)), module, AmyModule::BTN1_PARAM + i));
+        }
 
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(11.5, 103.0)), module, AmyModule::LEFT_OUTPUT));
-        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(29.14, 103.0)), module, AmyModule::RIGHT_OUTPUT));
+        // CV jacks
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(12.0, 84.0)), module, AmyModule::CV1_INPUT));
+        addInput(createInputCentered<PJ301MPort>(mm2px(Vec(31.0, 84.0)), module, AmyModule::CV2_INPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(50.0, 84.0)), module, AmyModule::CV1_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(69.0, 84.0)), module, AmyModule::CV2_OUTPUT));
+
+        // Level, MIDI light, audio outs
+        addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(12.0, 108.0)), module, AmyModule::LEVEL_PARAM));
+        addChild(createLightCentered<MediumLight<GreenLight>>(mm2px(Vec(27.0, 108.0)), module, AmyModule::MIDI_LIGHT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(50.0, 108.0)), module, AmyModule::LEFT_OUTPUT));
+        addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(69.0, 108.0)), module, AmyModule::RIGHT_OUTPUT));
 
         AmyLabels* labels = new AmyLabels;
         labels->box.size = box.size;
         labels->labels = {
-            {20.32, 10.0, 22.f, "AMY"},
-            {20.32, 16.5, 8.f, "SHORE PINE"},
-            {20.32, 48.5, 9.f, "LEVEL"},
-            {20.32, 60.5, 8.f, "MIDI"},
-            {11.5, 85.5, 9.f, "CV1"},
-            {29.14, 85.5, 9.f, "CV2"},
-            {11.5, 110.5, 9.f, "OUT L"},
-            {29.14, 110.5, 9.f, "OUT R"},
-            {20.32, 122.0, 8.f, "AMYBOARD"},
+            {11.0, 10.0, 16.f, "AMY"},
+            {11.0, 15.5, 6.5f, "BOARD"},
+            {12.0, 48.5, 8.f, "ENC1"},
+            {31.0, 48.5, 8.f, "ENC2"},
+            {50.0, 48.5, 8.f, "ENC3"},
+            {69.0, 48.5, 8.f, "ENC4"},
+            {12.0, 77.0, 8.f, "CV1 IN"},
+            {31.0, 77.0, 8.f, "CV2 IN"},
+            {50.0, 77.0, 8.f, "CV1 OUT"},
+            {69.0, 77.0, 8.f, "CV2 OUT"},
+            {12.0, 100.5, 8.f, "LEVEL"},
+            {27.0, 100.5, 8.f, "MIDI"},
+            {50.0, 100.5, 8.f, "OUT L"},
+            {69.0, 100.5, 8.f, "OUT R"},
+            {40.64, 122.5, 7.f, "SHORE PINE SOUND SYSTEMS"},
         };
         addChild(labels);
     }
@@ -238,9 +317,22 @@ struct AmyWidget : ModuleWidget {
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("MIDI input"));
         appendMidiMenu(menu, &m->midiInput);
+        menu->addChild(new MenuSeparator);
+        menu->addChild(createMenuItem("Restart sketch", "", [m]() {
+            if (m->owner)
+                amyboard_vcv_exec("import amyboard; amyboard.restart_sketch()");
+        }));
+        menu->addChild(createMenuItem("Stop sketch", "", [m]() {
+            if (m->owner)
+                amyboard_vcv_exec("import amyboard; amyboard.stop_sketch()");
+        }));
+        menu->addChild(createMenuItem("Open sketch folder", "", []() {
+            std::string home = getenv("HOME") ? getenv("HOME") : "";
+            system::openDirectory(home + "/Documents/AMYboard/user/current");
+        }));
         if (!m->owner) {
             menu->addChild(new MenuSeparator);
-            menu->addChild(createMenuLabel("Inactive: another AMY module owns the engine"));
+            menu->addChild(createMenuLabel("Inactive: another AMYboard module owns the engine"));
         }
     }
 };

@@ -149,6 +149,47 @@ static uint8_t tulip_render_hook_chain(uint16_t osc, SAMPLE *buf, uint16_t len) 
 #endif
 #endif
 
+#ifdef AMYBOARD_VCV
+// AMYboard-in-VCV-Rack: same CV-output routing as the hardware (per-osc
+// external_map + synth-based cv_synth_map), but instead of an I2C DAC the
+// volts land in amyboard_vcv_cv_out[] for the Rack module to put on jacks.
+#define MAX_CV_SYNTHS 32
+uint8_t cv_synth_map[MAX_CV_SYNTHS];
+float amyboard_vcv_cv_out[2] = {0, 0};
+
+// Look up which synth owns this osc, return synth number or -1
+static int synth_for_osc(uint16_t osc) {
+    extern uint8_t *osc_to_voice;
+    if (osc_to_voice == NULL) return -1;
+    uint8_t voice = osc_to_voice[osc];
+    if (voice == 255) return -1;  // AMY_UNSET for uint8
+    uint16_t voices[MAX_VOICES_PER_INSTRUMENT];
+    for (int s = 0; s < MAX_CV_SYNTHS; s++) {
+        if (cv_synth_map[s] == 0) continue;  // skip unmapped synths
+        int nv = instrument_get_num_voices(s, voices);
+        for (int v = 0; v < nv; v++) {
+            if (voices[v] == voice) return s;
+        }
+    }
+    return -1;
+}
+
+uint8_t external_cv_render(uint16_t osc, SAMPLE * buf, uint16_t len) {
+    uint8_t cv_channel = 255;
+    if (external_map[osc] > 0) {
+        cv_channel = external_map[osc] - 1;
+    } else {
+        int s = synth_for_osc(osc);
+        if (s >= 0 && s < MAX_CV_SYNTHS && cv_synth_map[s] > 0)
+            cv_channel = cv_synth_map[s] - 1;
+    }
+    if (cv_channel > 1) return 0;
+    // Sample range [-1,1] -> volts [-10,+10], same scaling as the GP8413 path
+    amyboard_vcv_cv_out[cv_channel] = S2F(buf[0]) * 10.0f;
+    return 1;
+}
+#endif
+
 // defined in amy/src/midi_mappings.c — processes ic (MIDI CC mapping) commands
 // On web, AMY runs in a separate wasm worker so midi_msg_handler is not linkable
 #ifndef __EMSCRIPTEN__
@@ -540,6 +581,44 @@ void run_amy(uint8_t capture_device_id, uint8_t playback_device_id) {
     }
 #endif
     amy_start(amy_config);
+}
+
+#elif defined AMYBOARD_VCV
+
+// AMYboard inside a VCV Rack plugin: in-process AMY, but the host (Rack)
+// owns the audio device and MIDI. Rack pulls blocks via
+// amy_simple_fill_buffer() and injects MIDI via
+// amy_event_midi_message_received(); AMY opens nothing itself.
+void run_amy(void) {
+    amy_config_t amy_config = amy_default_config();
+    amy_config.amy_external_midi_input_hook = tulip_midi_input_hook;
+    amy_config.amy_external_render_hook = external_cv_render;
+    amy_config.amy_external_overload_hook = tulip_amy_overload_hook;
+    extern void tulip_amy_sequencer_hook(uint32_t tick_count);
+    amy_config.amy_external_sequencer_hook = tulip_amy_sequencer_hook;
+    extern float cv_input_hook(uint16_t channel);
+    amy_config.amy_external_coef_hook = cv_input_hook;
+    amy_config.features.default_synths = 0; // amyboard.start_amy does this
+    amy_config.features.audio_in = 0;
+    amy_config.features.startup_bleep = 1;
+    amy_config.audio = AMY_AUDIO_IS_NONE;
+    amy_config.midi = AMY_MIDI_IS_NONE;
+    amy_config.platform.multicore = 0;
+    amy_config.platform.multithread = 0;
+#ifdef GAMMA9001
+    // drums_bin.c is linked straight into the plugin (see Makefile.mp).
+    {
+        extern const int16_t gamma9001_pcm_data[];
+        amy_set_gamma9001_pcm(gamma9001_pcm_data);
+    }
+#endif
+    amy_start(amy_config);
+    external_map = malloc(amy_config.max_oscs);
+    for (uint16_t i = 0; i < amy_config.max_oscs; i++) external_map[i] = 0;
+    for (uint8_t i = 0; i < MAX_CV_SYNTHS; i++) cv_synth_map[i] = 0;
+    // AMY's sysex assembly buffer -- normally allocated by the platform MIDI
+    // layer, which doesn't run here (Rack owns MIDI).
+    sysex_buffer = malloc(MAX_SYSEX_BYTES);
 }
 
 #endif

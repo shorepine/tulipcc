@@ -2,7 +2,7 @@
 
 #include "tulip_helpers.h"
 
-#if !defined(AMYBOARD) && !defined(AMYBOARD_WEB)
+#if !defined(AMYBOARD) && !defined(AMYBOARD_WEB) && !defined(AMYBOARD_VCV)
 #include "ui.h"
 extern uint8_t keyboard_send_keys_to_micropython;
 extern int8_t keyboard_grab_ui_focus;

@@ -5,7 +5,7 @@ from _tulip import *
 from upysh import cd, pwd
 import amy
 
-if board() != 'AMYBOARD' and board() != "AMYBOARD_WEB":
+if board() != 'AMYBOARD' and board() != "AMYBOARD_WEB" and board() != "AMYBOARD_VCV":
     from tulip_graphics import *
     from ui import *
     from editor import edit
@@ -154,6 +154,10 @@ def root_dir():
             root_directory = "/tulip4/"
         elif board() == "AMYBOARD_WEB":
             root_directory = "/amyboard/"
+        elif board() == "AMYBOARD_VCV":
+            # Visible, user-editable location: sketch lives at
+            # ~/Documents/AMYboard/user/current/sketch.py
+            root_directory = uos.getenv("HOME") + "/Documents/AMYboard/"
         return root_directory
     except:
         return "/"

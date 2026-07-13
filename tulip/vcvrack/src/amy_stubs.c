@@ -22,5 +22,4 @@ size_t amy_i2s_write(const uint8_t* buffer, size_t nbytes) {
 void run_midi(void) {}
 void stop_midi(void) {}
 
-// --- examples.c ---
-void delay_ms(uint32_t ms) { (void)ms; }
+// (delay_ms comes from tulip/shared/polyfills.c in the MP archive.)
