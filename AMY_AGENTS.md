@@ -502,6 +502,29 @@ You write only the **body** of a C function; the signature is wrapped for you:
   so the osc follows AMY's ADSR. Give the osc an envelope (`bp0=...`) and play it like any
   other osc.
 
+### Playing a C oscillator from MIDI: `midi_note_cmd`, not a Python callback
+
+A C osc **cannot live inside a synth** — `tulip.c_osc` binds by absolute osc number, and
+the osc numbers a synth's voices use are internal, dynamically allocated, and not exposed
+to Python. So bind a bare high osc, then route MIDI notes to it **inside the engine** with
+`midi_note_cmd` (the note analog of `midi_cc`, same field layout) instead of a
+`midi.add_callback` handler:
+
+```python
+tulip.install_c_osc('mine', SRC)
+tulip.c_osc('mine', 200)
+amy.send(osc=200, wave=amy.SINE, bp0='5,1,60000,1,200,0', vel=0)   # osc needs an envelope
+# All channel-1 notes -> amy.send(osc=200, note=<note>, vel=<vel/127>) in the engine;
+# note-offs arrive as the same command with vel=0. Installing this mapping REPLACES the
+# default channel-1 note handling, so the built-in synth stays silent — no grab_midi_notes.
+amy.send(synth=1, midi_note_cmd="-1,0,0,1,0,v200n%nl%v")
+```
+
+Fields mirror `midi_cc`: `M,L,N,X,O,CMD` = note number (`-1` = all notes), log?, min, max,
+offset, wire command — `%n` substitutes the note number, `%v` the mapped velocity (wire
+codes: `v`=osc, `n`=note, `l`=vel). One bound osc is monophonic (a new note cuts the last);
+for polyphony bind several oscs (200, 201, …) to the same name and allocate notes yourself.
+
 The C environment is strict (the on-device compiler is a deliberately small C):
 
 - Samples are **S8.23 fixed-point `int`s** (1.0 == `1 << 23` == 8388608). Helpers always
@@ -545,7 +568,9 @@ A bitcrusher is even shorter: `buf[i] = (buf[i] >> 18) << 18;` in the same while
 > Source of truth: `docs/user_c_dsp.md` — the full user guide, with working effect
 > (bitcrusher, distortion) and oscillator (CZ phase distortion, bytebeat) examples plus
 > debugging tips. `read_reference('docs/user_c_dsp.md')` before writing any C DSP sketch.
-> Runnable demo: `tulip/fs/tulip/ex/c_dsp_demo.py`.
+> Runnable demo: `tulip/fs/tulip/ex/c_dsp_demo.py`. `midi_note_cmd` field spec: the `io`
+> row of `amy/docs/api.md`; note-off→vel-0 translation and template substitution in amy
+> `src/midi_mappings.c` (verified on AMYboard web, 2026-07-13).
 
 ---
 
