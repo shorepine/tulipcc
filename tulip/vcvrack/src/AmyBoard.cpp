@@ -336,7 +336,7 @@ struct AmyWidget : ModuleWidget {
             {25.4, 74.3, 8.f, "AUDIO OUT"},
             {25.4, 89.3, 8.f, "CV IN"},
             {25.4, 104.3, 8.f, "CV OUT"},
-            {25.4, 122.5, 7.f, "SHORE PINE"},
+            {25.4, 122.5, 6.f, "SHORE PINE SOUND SYSTEMS"},
         };
         addChild(labels);
     }
