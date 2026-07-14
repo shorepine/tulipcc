@@ -28,9 +28,9 @@ LDFLAGS += $(MPLIB) -lpthread
 ifdef ARCH_MAC
 LDFLAGS += -framework CoreMIDI -framework CoreFoundation
 endif
-ifdef ARCH_LIN
-LDFLAGS += -lasound
-endif
+# No -lasound on Linux: the cross sysroot has no libasound, and a plugin
+# .so may leave the symbols undefined — they resolve at load time from the
+# Rack process, which always links ALSA (RtAudio/RtMidi).
 
 DISTRIBUTABLES += res
 DISTRIBUTABLES += $(wildcard LICENSE*)
@@ -38,10 +38,12 @@ DISTRIBUTABLES += $(wildcard LICENSE*)
 include $(RACK_DIR)/plugin.mk
 
 # Build/refresh the MicroPython+AMY archive before linking the plugin.
+# MPLIB can be overridden per-platform (e.g. cross builds pass
+# MPLIB=build-lin/tulip/obj/libamyboardmp.a); the BUILD dir is derived.
 $(TARGET): $(MPLIB)
 
 $(MPLIB): FORCE
-	$(MAKE) -f Makefile.mp
+	$(MAKE) -f Makefile.mp BUILD=$(patsubst %/libamyboardmp.a,%,$(MPLIB))
 
 FORCE:
 

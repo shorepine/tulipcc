@@ -7,6 +7,17 @@
 
 export CFLAGS_EXTRA += -Wno-gnu-folding-constant -Wno-unknown-warning-option -Wno-unterminated-string-initialization
 
+# Under rack-plugin-toolchain the cross compiler arrives as env CC
+# (e.g. x86_64-ubuntu16.04-linux-gnu-gcc); micropython's mkenv.mk composes
+# CC = $(CROSS_COMPILE)gcc, so translate one into the other.
+ifeq ($(origin CROSS_COMPILE),undefined)
+ifneq ($(filter %-gcc,$(CC)),)
+# := so this snapshots the env CC now — mkenv.mk later redefines CC in
+# terms of CROSS_COMPILE, which would otherwise be a circular reference.
+CROSS_COMPILE := $(CC:%gcc=%)
+endif
+endif
+
 VARIANT ?= standard
 # Nested like tulip/macos's build dir so ../../amy and ../shared object
 # paths stay INSIDE the build tree (BUILD/../../amy = build-mp/amy).
