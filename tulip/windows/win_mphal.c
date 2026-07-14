@@ -225,7 +225,12 @@ int mp_hal_stdin_rx_chr(void) {
         }
     }
 
-    // Real console: read key events.
+    // Real console: read key events. Never block indefinitely in
+    // ReadConsoleInput — keys typed into the Tulip SDL window land in
+    // stdin_ringbuf from the display thread, and a blocking console read
+    // would sit on them until the *console* window saw an event (this was
+    // the "REPL only echoes when I click the terminal" bug). Wait on the
+    // console handle with a short timeout and re-poll the ringbuf.
     BOOL status;
     DWORD num_read;
     INPUT_RECORD rec;
@@ -235,6 +240,12 @@ int mp_hal_stdin_rx_chr(void) {
             return rc;
         }
         MP_THREAD_GIL_EXIT();
+        DWORD w = WaitForSingleObject(std_in, 20);
+        if (w != WAIT_OBJECT_0) {
+            MP_THREAD_GIL_ENTER();
+            MICROPY_EVENT_POLL_HOOK
+            continue;
+        }
         status = ReadConsoleInput(std_in, &rec, 1, &num_read);
         MP_THREAD_GIL_ENTER();
         if (!status || !num_read) {
@@ -276,16 +287,20 @@ void mp_hal_stdout_tx_str(const char *str) {
     mp_hal_stdout_tx_strn(str, strlen(str));
 }
 
+// NB: gettimeofday's struct timeval.tv_sec is a 32-bit long on Windows
+// (LLP64), so `tv_sec * 1000` overflows 32-bit arithmetic and returns
+// garbage. Use the native monotonic Windows clocks instead.
 mp_uint_t mp_hal_ticks_ms(void) {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec * 1000 + tv.tv_usec / 1000;
+    return (mp_uint_t)GetTickCount64();
 }
 
+static LARGE_INTEGER _qpc_freq;  // ticks/sec; lazily initialized
 mp_uint_t mp_hal_ticks_us(void) {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return tv.tv_sec * 1000000 + tv.tv_usec;
+    if (_qpc_freq.QuadPart == 0)
+        QueryPerformanceFrequency(&_qpc_freq);
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    return (mp_uint_t)((now.QuadPart * 1000000ULL) / _qpc_freq.QuadPart);
 }
 
 mp_uint_t mp_hal_ticks_cpu(void) {
@@ -299,9 +314,12 @@ mp_uint_t mp_hal_ticks_cpu(void) {
 }
 
 uint64_t mp_hal_time_ns(void) {
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
-    return (uint64_t)tv.tv_sec * 1000000000ULL + (uint64_t)tv.tv_usec * 1000ULL;
+    // Wall-clock ns. GetSystemTimePreciseAsFileTime is 100ns since 1601;
+    // shift the epoch to 1970 (11644473600 s) for a sane absolute time.
+    FILETIME ft;
+    GetSystemTimePreciseAsFileTime(&ft);
+    uint64_t t = ((uint64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
+    return (t - 116444736000000000ULL) * 100ULL;
 }
 
 void msec_sleep(double msec) {

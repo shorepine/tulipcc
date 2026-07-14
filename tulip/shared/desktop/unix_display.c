@@ -1,4 +1,4 @@
-// GPU driver via SDL2 FB 
+// GPU driver via SDL2 FB
 #include <SDL.h>
 #include "polyfills.h"
 #include "display.h"
@@ -223,8 +223,14 @@ int unix_display_draw() {
     SDL_RenderPresent(default_renderer);
 #endif
 
-    // Clean up and show
+#ifndef _WIN32
+    // Clean up and show.  NB: SDL_UpdateWindowSurface is the window-SURFACE
+    // API and is mutually exclusive with an SDL_Renderer — on mac/linux it
+    // silently no-ops (the renderer already presented), but on Windows it
+    // spins up a competing GDI window surface that shadows the renderer's
+    // output and only repaints on window activity (frozen-until-you-click).
     SDL_UpdateWindowSurface(window);
+#endif
 
     display_frame_done_generic();
 
@@ -267,17 +273,26 @@ void init_window() {
     // This sets the scale to nearest neighbor -- "0", the default, makes our pixel font very jaggy
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 #endif
+#ifdef _WIN32
+    // Prefer the D3D11 renderer on Windows (DXGI flip-model presents on
+    // Win10+) over SDL's default D3D9 blt-model path.
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "direct3d11");
+#endif
     window = SDL_CreateWindow(SDL_WINDOW_NAME, SDL_WINDOWPOS_UNDEFINED,
                             SDL_WINDOWPOS_UNDEFINED, tulip_rect.w, tulip_rect.h,
                             SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == NULL) {
         fprintf(stderr,"Window could not be created! SDL_Error: %s\n", SDL_GetError());
     } else {
-        #ifdef __EMSCRIPTEN__
+        #if defined(_WIN32)
+        // Renderer per the RENDER_DRIVER hint above; no PRESENTVSYNC
+        // (vblank is unreliable under a VM and Tulip frame-limits itself).
+        default_renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
+        #elif defined(__EMSCRIPTEN__)
         default_renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE);
         #else
         default_renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE | SDL_RENDERER_PRESENTVSYNC);
-        #endif        
+        #endif
         framebuffer= SDL_CreateTexture(default_renderer,SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, tulip_rect.w,tulip_rect.h);
         #ifndef __EMSCRIPTEN__
         force_rescale();
@@ -311,7 +326,7 @@ void destroy_window() {
 uint8_t store_mod = 0;
 
 void check_key() {
-#ifndef MONITOR_APPLE 
+#ifndef MONITOR_APPLE
     SDL_Event e;
     uint8_t was_touch = 0;
     while (SDL_PollEvent(&e) != 0) {
