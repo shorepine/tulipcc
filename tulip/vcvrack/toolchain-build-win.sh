@@ -29,3 +29,16 @@ LDL="-static -lm -lpthread -lws2_32 -lbcrypt"
 $CC $CFL -o test/board_smoke.exe test/board_smoke.c src/amy_stubs.c src/vcv_midi.c $AR_LIB $LDL
 $CC $CFL -o test/sysex_smoke.exe test/sysex_smoke.c src/amy_stubs.c $AR_LIB $LDL
 ls -la test/*.exe
+
+# W2: the Rack plugin itself. vcv_midi.c is the stub backend on Windows for
+# now (no OS virtual MIDI; the editor bridge will use Rack midi::Output +
+# loopMIDI). plugin.mk's clean wipes build/ from other platforms' runs.
+export RACK_DIR="$TC/Rack-SDK-win-x64"
+make clean
+make -j8 dist MPLIB=build-win/tulip/obj/libamyboardmp.a \
+  EXTRA_LDFLAGS="-lws2_32 -lbcrypt -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic"
+mkdir -p dist-win && cp dist/*.vcvplugin dist-win/
+# leave the shared build/ and dist/ dirs clean for native (mac) builds —
+# mixed-platform objects in build/ have broken the next native link 3x now
+make clean
+ls -la dist-win/*.vcvplugin

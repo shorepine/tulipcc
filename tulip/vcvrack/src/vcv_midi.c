@@ -29,10 +29,8 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-
-#if defined(__APPLE__) || defined(__linux__)
-
 #include <pthread.h>
 
 extern void convert_midi_bytes_to_messages(uint8_t *data, size_t len, uint8_t usb);
@@ -81,6 +79,62 @@ static void handle_sysex_frame(uint8_t *frame, int len) {
 // Only ever called from the single platform MIDI-input thread, so the frame
 // accumulator needs no locking; the Rack MIDI-menu path in AmyBoard.cpp uses
 // amy_event_midi_message_received and never touches this state.
+// ── Outbound queue for Rack's midi::Output ─────────────────────────────────
+// Every midi_out() frame is also queued here; AmyModule::process() drains it
+// into the module's MIDI output device (loopMIDI on Windows — the only
+// outbound route there; an optional extra route on mac/linux alongside the
+// virtual port). Heap copies, mutex-guarded, bounded.
+#define VCV_MIDI_OUT_SLOTS 64
+static struct { uint8_t *data; int len; } vcv_out_q[VCV_MIDI_OUT_SLOTS];
+static int vcv_out_head = 0, vcv_out_tail = 0;
+static pthread_mutex_t vcv_out_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void vcv_midi_out_enqueue(const uint8_t *bytes, uint16_t len) {
+    if (!len) return;
+    uint8_t *copy = malloc(len);
+    if (!copy) return;
+    memcpy(copy, bytes, len);
+    pthread_mutex_lock(&vcv_out_lock);
+    int next = (vcv_out_tail + 1) % VCV_MIDI_OUT_SLOTS;
+    if (next != vcv_out_head) {
+        vcv_out_q[vcv_out_tail].data = copy;
+        vcv_out_q[vcv_out_tail].len = len;
+        vcv_out_tail = next;
+    } else {
+        free(copy);  // full: drop (editor retries on timeout)
+    }
+    pthread_mutex_unlock(&vcv_out_lock);
+}
+
+// Module side: pop one frame (returns length, 0 if empty; caller buffer).
+int amyboard_vcv_midi_out_pop(uint8_t *buf, int maxlen) {
+    int n = 0;
+    pthread_mutex_lock(&vcv_out_lock);
+    if (vcv_out_head != vcv_out_tail) {
+        n = vcv_out_q[vcv_out_head].len;
+        if (n <= maxlen)
+            memcpy(buf, vcv_out_q[vcv_out_head].data, n);
+        else
+            n = 0;  // caller buffer too small: drop
+        free(vcv_out_q[vcv_out_head].data);
+        vcv_out_q[vcv_out_head].data = NULL;
+        vcv_out_head = (vcv_out_head + 1) % VCV_MIDI_OUT_SLOTS;
+    }
+    pthread_mutex_unlock(&vcv_out_lock);
+    return n;
+}
+
+// Rack MIDI-menu path (AmyBoard.cpp): hand a complete sysex frame over.
+// Returns 1 if it was a shorepine control frame (consumed), 0 otherwise.
+int amyboard_vcv_shorepine_frame(const uint8_t *bytes, int len) {
+    if (len >= 7 && bytes[0] == 0xF0 && bytes[1] == 0x00 &&
+        bytes[2] == 0x03 && bytes[3] == 0x45) {
+        handle_sysex_frame((uint8_t *)bytes, len);
+        return 1;
+    }
+    return 0;
+}
+
 static void handle_bytes(const uint8_t *data, int len) {
     int span_start = -1;
     for (int i = 0; i < len; i++) {
@@ -118,8 +172,6 @@ static void handle_bytes(const uint8_t *data, int len) {
     if (span_start >= 0 && frame_len < 0)
         convert_midi_bytes_to_messages((uint8_t *)data + span_start, len - span_start, 0);
 }
-
-#endif  // __APPLE__ || __linux__
 
 // ───────────────────────────── macOS: CoreMIDI ─────────────────────────────
 #ifdef __APPLE__
@@ -182,6 +234,7 @@ void midi_out(uint8_t *bytes, uint16_t len) {
     }
     MIDIReceived(vcv_virt_src, pl);
     pthread_mutex_unlock(&vcv_midi_out_lock);
+    vcv_midi_out_enqueue(bytes, len);
 }
 
 // ─────────────────────────── Linux: ALSA sequencer ─────────────────────────
@@ -296,15 +349,18 @@ void midi_out(uint8_t *bytes, uint16_t len) {
         snd_seq_drain_output(vcv_seq);
     }
     pthread_mutex_unlock(&vcv_midi_out_lock);
+    vcv_midi_out_enqueue(bytes, len);
 }
 
-// ────────────────────────── other platforms: stubs ─────────────────────────
+// ─────────────────── other platforms (Windows): no virtual port ────────────
 #else
 
-// No virtual MIDI on this platform (Windows needs a loopMIDI pair routed
-// through Rack's MIDI menus instead — TODO).
+// No OS-level virtual MIDI here: the module's Rack MIDI menus carry the
+// editor traffic instead (user creates a loopMIDI pair; Chrome/amyboard.com
+// takes one side, the module the other). All outbound frames go through
+// the Rack midi::Output drain.
 int amyboard_vcv_midi_start(void) { return -1; }
 void amyboard_vcv_midi_stop(void) {}
-void midi_out(uint8_t *bytes, uint16_t len) { (void)bytes; (void)len; }
+void midi_out(uint8_t *bytes, uint16_t len) { vcv_midi_out_enqueue(bytes, len); }
 
 #endif

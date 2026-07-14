@@ -30,4 +30,8 @@ make -f Makefile.mp -j8 BUILD=build-lin/tulip/obj
 # Stage 2: the plugin. Clean removes the mac objects in build/.
 make clean
 make -j8 dist MPLIB=build-lin/tulip/obj/libamyboardmp.a EXTRA_FLAGS="-I/tmp/alsa-inc"
-ls -la dist/*.vcvplugin
+mkdir -p dist-lin && cp dist/*.vcvplugin dist-lin/
+# leave the shared build/ and dist/ dirs clean for native (mac) builds —
+# mixed-platform objects in build/ have broken the next native link 3x now
+make clean
+ls -la dist-lin/*.vcvplugin

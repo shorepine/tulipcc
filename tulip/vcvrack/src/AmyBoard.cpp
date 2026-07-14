@@ -21,9 +21,12 @@ int amyboard_vcv_mp_start(void);
 void amyboard_vcv_mp_stop(void);
 int amyboard_vcv_mp_booted(void);
 void amyboard_vcv_exec(const char *code);
-// tulip/vcvrack/src/vcv_midi.c — virtual CoreMIDI port for amyboard.com
+// tulip/vcvrack/src/vcv_midi.c — virtual MIDI port (mac/linux) + the
+// Rack-MIDI bridge queues used on every platform
 int amyboard_vcv_midi_start(void);
 void amyboard_vcv_midi_stop(void);
+int amyboard_vcv_midi_out_pop(uint8_t *buf, int maxlen);
+int amyboard_vcv_shorepine_frame(const uint8_t *bytes, int len);
 // Host<->firmware seams (modtulip.c / amy_connector.c, AMYBOARD_VCV arms)
 extern float amyboard_vcv_cv_in[2];
 extern float amyboard_vcv_cv_out[2];
@@ -66,7 +69,9 @@ struct AmyModule : Module {
     };
 
     midi::InputQueue midiInput;
+    midi::Output midiOutput;
     bool owner = false;
+    uint8_t midiOutBuf[16384];
 
     dsp::SampleRateConverter<2> outputSrc;
     dsp::DoubleRingBuffer<dsp::Frame<2>, 2048> outputBuffer;
@@ -141,15 +146,30 @@ struct AmyModule : Module {
             hostInBuffer.push(inFrame);
         }
 
-        // Rack MIDI -> AMY's MIDI engine. The external midi input hook
-        // forwards to Python (midi.add_callback) like every other platform.
+        // Rack MIDI -> AMY. Shorepine control frames (amyboard.com via a
+        // loopMIDI pair on Windows, or any DAW/device) go through the same
+        // handler as the virtual port; notes/CCs and other sysex go to
+        // AMY's MIDI engine and Python's midi callback.
         midi::Message msg;
         while (midiInput.tryPop(&msg, args.frame)) {
             size_t len = msg.bytes.size();
             if (!len)
                 continue;
             uint8_t sysex = (msg.bytes[0] == 0xF0);
+            if (sysex && amyboard_vcv_shorepine_frame(msg.bytes.data(), (int)len))
+                continue;
             amy_event_midi_message_received(msg.bytes.data(), len, sysex, amy_sysclock());
+        }
+
+        // AMY/firmware MIDI OUT (AKs, zI OK, zD dumps, tulip.midi_out) ->
+        // the module's Rack MIDI output device, when one is selected.
+        int outLen2;
+        while ((outLen2 = amyboard_vcv_midi_out_pop(midiOutBuf, sizeof(midiOutBuf))) > 0) {
+            if (midiOutput.getDeviceId() >= 0) {
+                midi::Message outMsg;
+                outMsg.bytes.assign(midiOutBuf, midiOutBuf + outLen2);
+                midiOutput.sendMessage(outMsg);
+            }
         }
 
         if (outputBuffer.empty())
@@ -221,6 +241,7 @@ struct AmyModule : Module {
     json_t* dataToJson() override {
         json_t* rootJ = json_object();
         json_object_set_new(rootJ, "midi", midiInput.toJson());
+        json_object_set_new(rootJ, "midiOut", midiOutput.toJson());
         return rootJ;
     }
 
@@ -228,6 +249,9 @@ struct AmyModule : Module {
         json_t* midiJ = json_object_get(rootJ, "midi");
         if (midiJ)
             midiInput.fromJson(midiJ);
+        json_t* midiOutJ = json_object_get(rootJ, "midiOut");
+        if (midiOutJ)
+            midiOutput.fromJson(midiOutJ);
     }
 };
 
@@ -348,6 +372,9 @@ struct AmyWidget : ModuleWidget {
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("MIDI input"));
         appendMidiMenu(menu, &m->midiInput);
+        menu->addChild(new MenuSeparator);
+        menu->addChild(createMenuLabel("MIDI output (to amyboard.com / DAW)"));
+        appendMidiMenu(menu, &m->midiOutput);
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuItem("Restart sketch", "", [m]() {
             if (m->owner)

@@ -20,6 +20,16 @@
 #undef MICROPY_PY_FRAMEBUF
 #define MICROPY_PY_FRAMEBUF (1)
 
+// The windows base wires ports/windows/init.c's init()/deinit() into
+// mp_init()/mp_deinit(); we don't compile that file (its exported `init`
+// collides with Rack's extern-C plugin entry point) — point the hooks at
+// the inlined replacement in mp_embed.c instead.
+#undef MICROPY_PORT_INIT_FUNC
+#undef MICROPY_PORT_DEINIT_FUNC
+extern void amyboard_vcv_win_init(void);
+#define MICROPY_PORT_INIT_FUNC amyboard_vcv_win_init()
+#define MICROPY_PORT_DEINIT_FUNC
+
 #undef MICROPY_SCHEDULER_DEPTH
 #define MICROPY_SCHEDULER_DEPTH (128)
 

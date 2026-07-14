@@ -155,10 +155,12 @@ SRC_C += \
 
 ifdef WIN_CROSS
 # windows-port HAL shims (fmode/realpath/console init/mphal)
+# (no ports/windows/init.c: its exported `init` collides with Rack's
+# extern-C plugin entry point — the MinGW-relevant bits are inlined in
+# mp_embed.c as amyboard_vcv_win_init)
 SRC_C += \
 	$(TOP)/ports/windows/windows_mphal.c \
 	$(TOP)/ports/windows/realpath.c \
-	$(TOP)/ports/windows/init.c \
 	$(TOP)/ports/windows/fmode.c
 else
 SRC_C += \
@@ -197,8 +199,11 @@ LIBAMYBOARDMP = $(BUILD)/libamyboardmp.a
 
 all: $(LIBAMYBOARDMP)
 
-$(LIBAMYBOARDMP): $(OBJ)
+# Depend on this Makefile so source-list changes re-archive (ar rcs never
+# REMOVES stale members — hence also the rm).
+$(LIBAMYBOARDMP): $(OBJ) Makefile.mp
 	$(ECHO) "AR $@"
+	$(Q)rm -f $@
 	$(Q)$(AR) rcs $@ $(OBJ)
 
 include $(TOP)/py/mkrules.mk

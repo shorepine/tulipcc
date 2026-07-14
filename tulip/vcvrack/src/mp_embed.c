@@ -54,8 +54,17 @@ void amyboard_vcv_atomic_end(unsigned int state) {
     (void)state;
     pthread_mutex_unlock(&vcv_atomic_mutex);
 }
-// ports/windows/init.c: console/fmode setup.
-extern void init(void);
+// The MinGW-relevant part of ports/windows/init.c, inlined under a
+// private name: init.c's exported `init` collides with Rack's extern-C
+// plugin entry point of the same name.
+#include <windows.h>
+#include "fmode.h"
+extern BOOL WINAPI console_sighandler(DWORD evt);  // windows_mphal.c
+void amyboard_vcv_win_init(void) {  // MICROPY_PORT_INIT_FUNC (win/mpconfigport.h)
+    SetConsoleCtrlHandler(console_sighandler, TRUE);
+    putenv("PRINTF_EXPONENT_DIGITS=2");
+    set_fmode_binary();
+}
 #endif
 
 // GC heap: 8MB on 64-bit, same as Tulip Desktop.
@@ -184,9 +193,6 @@ static MP_NOINLINE void *mp_thread_body(void *vargs) {
 
     #ifdef SIGPIPE
     signal(SIGPIPE, SIG_IGN);
-    #endif
-    #ifdef _WIN32
-    init();
     #endif
 
     heap = malloc(heap_size);
