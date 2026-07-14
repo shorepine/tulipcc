@@ -6,7 +6,19 @@
 // mp_sched_schedule from the audio/MIDI threads — is protected by the
 // mutex-backed atomic section below (implemented in mp_embed.c).
 
+// Feature parity with the mac/linux builds: the unix standard variant runs
+// at EXTRA_FEATURES, the windows variant never sets a level (=> CORE) and
+// the firmware notices — first casualty was `import framebuf` killing
+// init_display at boot. Define the level before the base config so
+// mpconfig.h's defaults follow it.
+#define MICROPY_CONFIG_ROM_LEVEL (MICROPY_CONFIG_ROM_LEVEL_EXTRA_FEATURES)
+
 #include "../../../micropython/ports/windows/mpconfigport.h"
+
+// Explicit, because this was the original Windows boot failure:
+// amyboard.py's Display needs the framebuf module.
+#undef MICROPY_PY_FRAMEBUF
+#define MICROPY_PY_FRAMEBUF (1)
 
 #undef MICROPY_SCHEDULER_DEPTH
 #define MICROPY_SCHEDULER_DEPTH (128)
