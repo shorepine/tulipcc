@@ -1,0 +1,35 @@
+it looks like wine32 is missing, you should install it.
+multiarch needs to be enabled first.  as root, please
+execute "dpkg --add-architecture i386 && apt-get update &&
+apt-get install wine32:i386"
+0048:err:winediag:nodrv_CreateWindow Application tried to create a window, but no driver could be loaded.
+0048:err:winediag:nodrv_CreateWindow L"The explorer process failed to start."
+0048:err:systray:initialize_systray Could not create tray window
+== starting AMY + firmware
+RuntimeError: pystack exhausted
+== booted after ~9 ms of rendering
+== boot + default sketch    peak=  3039 rms=   606.2 AUDIBLE
+synth 1 not defined (get_flags)
+synth 1 not defined (voice_for_event)
+synth 1 not defined (noteon_delay)
+synth 1 not defined (get_flags)
+synth 1 not defined (voice_for_event)
+synth 1 not defined (noteon_delay)
+== juno note on ch1         peak=     0 rms=     0.0 (silent)
+synth 1 not defined (get_flags)
+synth 1 not defined (voice_for_event)
+synth 1 not defined (noteon_delay)
+synth 1 not defined (get_flags)
+synth 1 not defined (voice_for_event)
+synth 1 not defined (noteon_delay)
+RuntimeError: pystack exhausted
+RuntimeError: pystack exhausted
+RuntimeError: pystack exhausted
+RuntimeError: pystack exhausted
+== after exec batch         peak=     0 rms=     0.0 (silent)
+== cv_out[1] = 0.000000 (expect -4.5)
+== framebuf generation = 0 (expect > 0)
+RuntimeError: pystack exhausted
+== after restart_sketch     peak=     0 rms=     0.0 (silent)
+== stopping
+== clean exit

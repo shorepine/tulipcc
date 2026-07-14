@@ -1,0 +1,56 @@
+it looks like wine32 is missing, you should install it.
+multiarch needs to be enabled first.  as root, please
+execute "dpkg --add-architecture i386 && apt-get update &&
+apt-get install wine32:i386"
+wine: created the configuration directory '/root/.wine'
+0054:err:winediag:nodrv_CreateWindow Application tried to create a window, but no driver could be loaded.
+0054:err:winediag:nodrv_CreateWindow L"The explorer process failed to start."
+0054:err:systray:initialize_systray Could not create tray window
+0054:err:ole:StdMarshalImpl_MarshalInterface Failed to create ifstub, hr 0x80004002
+0054:err:ole:CoMarshalInterface Failed to marshal the interface {6d5140c1-7436-11ce-8034-00aa006009fa}, hr 0x80004002
+0054:err:ole:apartment_get_local_server_stream Failed: 0x80004002
+004c:err:winediag:nodrv_CreateWindow Application tried to create a window, but no driver could be loaded.
+004c:err:winediag:nodrv_CreateWindow L"Make sure that your X server is running and that $DISPLAY is set correctly."
+004c:err:ole:apartment_createwindowifneeded CreateWindow failed with error 3
+0044:err:winediag:nodrv_CreateWindow Application tried to create a window, but no driver could be loaded.
+0044:err:winediag:nodrv_CreateWindow L"Make sure that your X server is running and that $DISPLAY is set correctly."
+004c:err:ole:apartment_createwindowifneeded CreateWindow failed with error 0
+004c:err:ole:apartment_createwindowifneeded CreateWindow failed with error 14007
+004c:err:ole:StdMarshalImpl_MarshalInterface Failed to create ifstub, hr 0x800736b7
+004c:err:ole:CoMarshalInterface Failed to marshal the interface {6d5140c1-7436-11ce-8034-00aa006009fa}, hr 0x800736b7
+004c:err:ole:apartment_get_local_server_stream Failed: 0x800736b7
+004c:err:ole:start_rpcss Failed to open RpcSs service
+002c:err:winediag:nodrv_CreateWindow Application tried to create a window, but no driver could be loaded.
+002c:err:winediag:nodrv_CreateWindow L"Make sure that your X server is running and that $DISPLAY is set correctly."
+0090:err:winediag:nodrv_CreateWindow Application tried to create a window, but no driver could be loaded.
+0090:err:winediag:nodrv_CreateWindow L"Make sure that your X server is running and that $DISPLAY is set correctly."
+wine: failed to open L"C:\\windows\\syswow64\\rundll32.exe": c0000135
+wine: configuration in L"/root/.wine" has been updated.
+== starting AMY + firmware
+RuntimeError: pystack exhausted
+== booted after ~3 ms of rendering
+== boot + default sketch    peak=  3039 rms=   618.6 AUDIBLE
+synth 1 not defined (get_flags)
+synth 1 not defined (voice_for_event)
+synth 1 not defined (noteon_delay)
+synth 1 not defined (get_flags)
+synth 1 not defined (voice_for_event)
+synth 1 not defined (noteon_delay)
+== juno note on ch1         peak=     0 rms=     0.0 (silent)
+synth 1 not defined (get_flags)
+synth 1 not defined (voice_for_event)
+synth 1 not defined (noteon_delay)
+synth 1 not defined (get_flags)
+synth 1 not defined (voice_for_event)
+synth 1 not defined (noteon_delay)
+RuntimeError: pystack exhausted
+RuntimeError: pystack exhausted
+RuntimeError: pystack exhausted
+RuntimeError: pystack exhausted
+== after exec batch         peak=     0 rms=     0.0 (silent)
+== cv_out[1] = 0.000000 (expect -4.5)
+== framebuf generation = 0 (expect > 0)
+RuntimeError: pystack exhausted
+== after restart_sketch     peak=     0 rms=     0.0 (silent)
+== stopping
+== clean exit
