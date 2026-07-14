@@ -112,6 +112,13 @@ int tulip_win_console_attach(int alloc_new) {
         setvbuf(stderr, NULL, _IONBF, 0);
     }
     con_out = NULL;
+    // Readline redraws are emitted as VT100 (see mp_hal_move_cursor_back);
+    // have the console interpret them (Win10+).
+    HANDLE hout = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD outmode = 0;
+    if (hout && hout != INVALID_HANDLE_VALUE && GetConsoleMode(hout, &outmode)) {
+        SetConsoleMode(hout, outmode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
     return 1;
 }
 
@@ -160,38 +167,25 @@ BOOL WINAPI console_sighandler(DWORD evt) {
 // define it here to avoid a duplicate symbol; console Ctrl-C is handled by
 // console_sighandler above.
 
+// Readline's redraw primitives. The upstream windows port pokes the Win32
+// console buffer directly (SetConsoleCursorPosition etc.) — but on Tulip the
+// REPL's real screen is the on-window TFB, which only sees bytes that flow
+// through mp_hal_stdout_tx_strn. Direct console pokes made backspace/arrow
+// redraws invisible on the Tulip screen. Emit VT100 like the unix/mac port:
+// the TFB's ANSI parser handles ESC[nD / ESC[K, and an attached console
+// renders them too (VT processing is enabled in tulip_win_console_attach).
 void mp_hal_move_cursor_back(uint pos) {
     if (!pos) {
         return;
     }
-    assure_conout_handle();
-    if (!con_out || con_out == INVALID_HANDLE_VALUE) {
-        return;
-    }
-    CONSOLE_SCREEN_BUFFER_INFO info;
-    GetConsoleScreenBufferInfo(con_out, &info);
-    info.dwCursorPosition.X -= (short)pos;
-    while (info.dwCursorPosition.X < 0) {
-        info.dwCursorPosition.X = info.dwSize.X + info.dwCursorPosition.X;
-        info.dwCursorPosition.Y -= 1;
-    }
-    if (info.dwCursorPosition.Y < 0) {
-        info.dwCursorPosition.X = 0;
-        info.dwCursorPosition.Y = 0;
-    }
-    SetConsoleCursorPosition(con_out, info.dwCursorPosition);
+    char vt100_command[16];
+    snprintf(vt100_command, sizeof(vt100_command), "\x1b[%u" "D", pos);
+    mp_hal_stdout_tx_str(vt100_command);
 }
 
 void mp_hal_erase_line_from_cursor(uint n_chars_to_erase) {
-    assure_conout_handle();
-    if (!con_out || con_out == INVALID_HANDLE_VALUE) {
-        return;
-    }
-    CONSOLE_SCREEN_BUFFER_INFO info;
-    GetConsoleScreenBufferInfo(con_out, &info);
-    DWORD written;
-    FillConsoleOutputCharacter(con_out, ' ', n_chars_to_erase, info.dwCursorPosition, &written);
-    FillConsoleOutputAttribute(con_out, info.wAttributes, n_chars_to_erase, info.dwCursorPosition, &written);
+    (void)n_chars_to_erase;
+    mp_hal_stdout_tx_str("\x1b[K");
 }
 
 typedef struct item_t {
