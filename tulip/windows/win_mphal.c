@@ -76,6 +76,51 @@ static void assure_conout_handle(void) {
     }
 }
 
+// Attach (or create) a console and rebind CRT stdio to it. The GUI-subsystem
+// build has no console by default; main.c calls this at startup (attach to a
+// parent terminal, or AllocConsole for --console) and tulip.win_console()
+// calls it at runtime. Std handles that are already live pipes/files (ssh,
+// shell redirection) are snapshotted BEFORE attaching — AllocConsole/
+// AttachConsole overwrite the std handles — and left alone, or -c output
+// would vanish into the (invisible) console.
+static int std_handle_is_live(DWORD which) {
+    HANDLE h = GetStdHandle(which);
+    return h != NULL && h != INVALID_HANDLE_VALUE;
+}
+
+int tulip_win_console_attach(int alloc_new) {
+    int in_live = std_handle_is_live(STD_INPUT_HANDLE);
+    int out_live = std_handle_is_live(STD_OUTPUT_HANDLE);
+    int err_live = std_handle_is_live(STD_ERROR_HANDLE);
+    BOOL ok = alloc_new ? AllocConsole() : AttachConsole(ATTACH_PARENT_PROCESS);
+    if (!ok && GetConsoleWindow() == NULL) {
+        return 0;
+    }
+    if (!in_live) {
+        freopen("CONIN$", "r", stdin);
+        SetStdHandle(STD_INPUT_HANDLE, CreateFile("CONIN$", GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, 0));
+        std_in = NULL;
+        stdin_is_console = -1;
+    }
+    if (!out_live) {
+        freopen("CONOUT$", "w", stdout);
+        setvbuf(stdout, NULL, _IONBF, 0);
+    }
+    if (!err_live) {
+        freopen("CONOUT$", "w", stderr);
+        setvbuf(stderr, NULL, _IONBF, 0);
+    }
+    con_out = NULL;
+    return 1;
+}
+
+// Python-facing: open a debug console window at runtime.
+int tulip_win_console_open(void) {
+    return tulip_win_console_attach(1);
+}
+
+
 void mp_hal_stdio_mode_raw(void) {
     assure_stdin_handle();
     if (!stdin_is_console) {
@@ -276,7 +321,9 @@ mp_uint_t mp_hal_stdout_tx_strn(const char *str, size_t len) {
     if (len) {
         display_tfb_str((unsigned char *)str, len, 0, tfb_fg_pal_color, tfb_bg_pal_color);
     }
-    return ret < 0 ? 0 : ret;
+    // In the console-less GUI build the console write fails; the on-screen
+    // TFB consumed the output, so report it written.
+    return ret < 0 ? (mp_uint_t)len : (mp_uint_t)ret;
 }
 
 void mp_hal_stdout_tx_strn_cooked(const char *str, size_t len) {

@@ -26,6 +26,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <pthread.h>
+#include <windows.h>
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
@@ -309,9 +310,27 @@ soft_reset_exit:
 #include "tsequencer.h"
 extern void run_amy(uint8_t capture_device_id, uint8_t playback_device_id);
 
+// Built as a GUI-subsystem app (-mwindows): no console window opens on a
+// normal double-click launch — the REPL lives on the Tulip screen, same as
+// the mac desktop app. A console is still available when wanted:
+//   - launched from a terminal (cmd/ssh): attach to it so -c / -l / REPL
+//     mirroring keep working for scripts and CI;
+//   - `--console` flag: open a fresh console window (debug);
+//   - tulip.win_console() from Python opens one at runtime (see win_mphal.c).
+extern int tulip_win_console_attach(int alloc_new);
+static void win_console_setup(int argc, char **argv) {
+    bool want_console = false;
+    for (int a = 1; a < argc; a++) {
+        if (strcmp(argv[a], "--console") == 0) want_console = true;
+    }
+    tulip_win_console_attach(want_console ? 1 : 0);
+}
+
 int main(int argc, char **argv) {
     int capture_device_id = -1;
     int playback_device_id = -1;
+
+    win_console_setup(argc, argv);
 
     // Minimal arg handling (no getopt dependency).
     for (int a = 1; a < argc; a++) {

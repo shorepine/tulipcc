@@ -97,6 +97,21 @@ STATIC mp_obj_t tulip_board(size_t n_args, const mp_obj_t *args) {
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_VAR_BETWEEN(tulip_board_obj, 0, 0, tulip_board);
 
+#ifdef TULIP_WINDOWS_PORT
+// Windows desktop port only (NOT every _WIN32 build — the VCV Windows plugin
+// compiles this file too but links neither win_mphal.c nor win_http.c).
+// Open a debug console window at runtime (the Windows desktop build is a
+// GUI-subsystem app with no console by default). Returns True on success.
+extern int tulip_win_console_open(void);
+STATIC mp_obj_t tulip_win_console(void) {
+    return mp_obj_new_bool(tulip_win_console_open());
+}
+STATIC MP_DEFINE_CONST_FUN_OBJ_0(tulip_win_console_obj, tulip_win_console);
+
+// WinHTTP fetch backing tuliprequests on the socket-less MinGW build.
+extern mp_obj_t tulip_win_http_fetch(size_t n_args, const mp_obj_t *args);
+extern const mp_obj_fun_builtin_var_t tulip_win_http_fetch_obj;
+#endif
 
 mp_obj_t midi_callback = NULL;
 
@@ -1855,8 +1870,12 @@ STATIC const mp_rom_map_elem_t tulip_module_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_midi_out), MP_ROM_PTR(&tulip_midi_out_obj) },
     { MP_ROM_QSTR(MP_QSTR_midi_local), MP_ROM_PTR(&tulip_midi_local_obj) },
     { MP_ROM_QSTR(MP_QSTR_cpu), MP_ROM_PTR(&tulip_cpu_obj) },
-    { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) }, 
+    { MP_ROM_QSTR(MP_QSTR_board), MP_ROM_PTR(&tulip_board_obj) },
     { MP_ROM_QSTR(MP_QSTR_build_strings), MP_ROM_PTR(&tulip_build_strings_obj) },
+#ifdef TULIP_WINDOWS_PORT
+    { MP_ROM_QSTR(MP_QSTR_win_console), MP_ROM_PTR(&tulip_win_console_obj) },
+    { MP_ROM_QSTR(MP_QSTR_win_http_fetch), MP_ROM_PTR(&tulip_win_http_fetch_obj) },
+#endif
 #if !defined(__EMSCRIPTEN__) && !defined(AMYBOARD)
     //{ MP_ROM_QSTR(MP_QSTR_multicast_start), MP_ROM_PTR(&tulip_multicast_start_obj) },
     //{ MP_ROM_QSTR(MP_QSTR_alles_map), MP_ROM_PTR(&tulip_alles_map_obj) },

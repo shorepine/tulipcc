@@ -1,4 +1,10 @@
-import socket
+try:
+    import socket
+except ImportError:
+    # No socket module in this build (Tulip Desktop on Windows / MinGW).
+    # A WinHTTP-backed request() replaces the socket one at the bottom of
+    # this file; everything in between only touches socket at call time.
+    socket = None
 
 
 class Response:
@@ -218,3 +224,71 @@ def patch(url, **kw):
 
 def delete(url, **kw):
     return request("DELETE", url, **kw)
+
+
+# ---------------------------------------------------------------------------
+# Socket-less fallback: Tulip Desktop on Windows has no socket/ssl modules,
+# but tulip.win_http_fetch() (win_http.c, WinHTTP) does HTTP+TLS natively.
+# Rebinding request() here is enough — get/post/etc above resolve it at call
+# time. Response semantics match what world.py uses: status_code, content,
+# text, json(), save().
+if socket is None:
+    import tulip as _tulip
+
+    if not hasattr(_tulip, "win_http_fetch"):
+        raise ImportError("no socket or native http support in this build")
+
+    class WinResponse:
+        def __init__(self, status_code, content):
+            self.status_code = status_code
+            self._content = content
+            self.encoding = "utf-8"
+
+        @property
+        def content(self):
+            return self._content
+
+        @property
+        def text(self):
+            return str(self._content, self.encoding)
+
+        def json(self):
+            import ujson
+
+            return ujson.loads(self._content)
+
+        def save(self, filename, mode="wb", chunk_size=4096):
+            f = open(filename, mode)
+            f.write(self._content)
+            f.close()
+            return len(self._content)
+
+        def close(self):
+            self._content = None
+
+    def request(
+        method,
+        url,
+        data=None,
+        json=None,
+        headers={},
+        stream=None,
+        auth=None,
+        timeout=None,
+        parse_headers=True,
+    ):
+        hdrs = []
+        for k in headers:
+            hdrs.append("%s: %s" % (k, headers[k]))
+        body = None
+        if json is not None:
+            import ujson
+
+            body = ujson.dumps(json).encode()
+            hdrs.append("Content-Type: application/json")
+        elif data is not None:
+            body = data if isinstance(data, (bytes, bytearray)) else str(data).encode()
+        status, content = _tulip.win_http_fetch(
+            method, url, "\r\n".join(hdrs) if hdrs else None, body
+        )
+        return WinResponse(status, content)

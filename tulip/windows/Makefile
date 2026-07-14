@@ -110,6 +110,9 @@ CWARN += -Wno-error
 CWARN += -Wextra -Wno-unused-parameter -Wno-unused-variable -Wno-old-style-declaration -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wno-float-conversion -Wno-missing-declarations -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
 CFLAGS += -DTULIP_DESKTOP
+# Marks the Tulip Desktop Windows port specifically (NOT just _WIN32 — the
+# VCV Windows plugin also builds modtulip.c but not win_mphal.c/win_http.c).
+CFLAGS += -DTULIP_WINDOWS_PORT
 # MinGW ANSI stdio for %g/%hu etc.
 CFLAGS += -D__USE_MINGW_ANSI_STDIO=1
 # tulip sources still use the retired STATIC macro.
@@ -140,6 +143,7 @@ SRC_C += \
 	main.c \
 	../shared/desktop/unix_display.c \
 	win_mphal.c \
+	win_http.c \
 	../../amy/src/libminiaudio-audio.c \
 	$(MICROPY_PORT_DIR)/gccollect.c \
 	$(MICROPY_PORT_DIR)/input.c \
@@ -178,10 +182,13 @@ CFLAGS += -Wno-double-promotion -Wno-unused-function
 # --- link ------------------------------------------------------------------
 # SDL2 + AMY/miniaudio (WASAPI) + windows platform libs. winpthread is linked
 # statically (MicroPython runs on one), like the vcv build.
-LDFLAGS += -Wl,--gc-sections
+# -mwindows: GUI subsystem — no console window on double-click. main.c
+# attaches to a parent console when launched from a terminal, or opens one
+# for --console / tulip.win_console(). MinGW's runtime maps main() for us.
+LDFLAGS += -Wl,--gc-sections -mwindows
 LIB += $(SDL_LIB)
 LIB += -lole32 -loleaut32 -limm32 -lversion -lsetupapi -lwinmm -lksuser -luuid
-LIB += -lgdi32 -luser32 -lshell32 -lws2_32 -lbcrypt -lm
+LIB += -lgdi32 -luser32 -lshell32 -lws2_32 -lbcrypt -lwinhttp -lm
 LIB += -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic
 LIB += -static-libgcc
 
