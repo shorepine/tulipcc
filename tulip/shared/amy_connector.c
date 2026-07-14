@@ -313,6 +313,7 @@ static void free_handle(uint32_t h) {
 static const char *vcv_relocate_wire_path(const char *filename, char *buf, size_t buflen) {
     if (filename && filename[0] == '/') {
         const char *home = getenv("HOME");
+        if (!home) home = getenv("USERPROFILE");  // Windows
         if (home) {
             snprintf(buf, buflen, "%s/Documents/AMYboard%s", home, filename);
             return buf;

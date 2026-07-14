@@ -40,6 +40,24 @@ NORETURN void nlr_jump_fail(void *val) {
     abort();
 }
 
+#ifdef _WIN32
+// The windows port has no mpthreadport, so MICROPY_PY_THREAD is off there —
+// but mp_sched_schedule is still called from the audio/MIDI threads while
+// the VM runs on this one. win/mpconfigport.h routes the VM's atomic
+// section through this mutex so the scheduler ring stays consistent.
+static pthread_mutex_t vcv_atomic_mutex = PTHREAD_MUTEX_INITIALIZER;
+unsigned int amyboard_vcv_atomic_begin(void) {
+    pthread_mutex_lock(&vcv_atomic_mutex);
+    return 0;
+}
+void amyboard_vcv_atomic_end(unsigned int state) {
+    (void)state;
+    pthread_mutex_unlock(&vcv_atomic_mutex);
+}
+// ports/windows/init.c: console/fmode setup.
+extern void init(void);
+#endif
+
 // GC heap: 8MB on 64-bit, same as Tulip Desktop.
 static long heap_size = 4 * 1024 * 1024 * (sizeof(mp_uint_t) / 4);
 static char *heap = NULL;
@@ -158,6 +176,9 @@ static MP_NOINLINE void *mp_thread_body(void *vargs) {
 
     #ifdef SIGPIPE
     signal(SIGPIPE, SIG_IGN);
+    #endif
+    #ifdef _WIN32
+    init();
     #endif
 
     heap = malloc(heap_size);
