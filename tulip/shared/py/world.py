@@ -6,7 +6,12 @@ import os
 import tulip
 
 if tulip.board() != "WEB" and tulip.board() != "AMYBOARD_WEB":
-    import tuliprequests as requests
+    try:
+        import tuliprequests as requests
+    except ImportError:
+        # No socket module on this build (e.g. the VCV plugin on Windows);
+        # world browsing/downloads are unavailable but boot must not fail.
+        requests = None
 
 MAX_DESCRIPTION_SIZE = 400
 MAX_MESSAGE_SIZE = 800

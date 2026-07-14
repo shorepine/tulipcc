@@ -30,6 +30,27 @@ MICROPY_PORT_DIR = $(TOP)/ports/unix
 include $(TOP)/py/mkenv.mk
 include mpconfigport.mk
 
+# Windows cross (Rack toolchain MinGW): the windows port has no threads,
+# sockets, termios or fatfs_port; ssl/btree are dropped to match. The
+# windows-port shims + tulip/vcvrack/win/mpconfigport.h replace the unix
+# HAL. MicroPython still runs on its own (win)pthread — see mp_embed.c.
+ifneq (,$(findstring mingw,$(CROSS_COMPILE)))
+WIN_CROSS := 1
+# The windows-port mpconfigport.h includes <mpconfigvariant.h>; make sure it
+# finds the WINDOWS variant, not the unix one (whose common header enables
+# POSIX select/poll and other unix-isms).
+VARIANT_DIR := $(TOP)/ports/windows/variants/standard
+MICROPY_PY_THREAD := 0
+MICROPY_PY_SOCKET := 0
+MICROPY_PY_TERMIOS := 0
+MICROPY_PY_SSL := 0
+MICROPY_SSL_MBEDTLS := 0
+MICROPY_PY_BTREE := 0
+MICROPY_VFS_FAT := 0
+MICROPY_VFS_LFS1 := 0
+MICROPY_VFS_LFS2 := 0
+endif
+
 FROZEN_MANIFEST ?= manifest.py
 
 # qstr definitions (must come before including py.mk)
@@ -43,6 +64,10 @@ include $(TOP)/extmod/extmod.mk
 
 GIT_SUBMODULES += lib/berkeley-db-1.xx
 
+ifdef WIN_CROSS
+INC += -Iwin
+INC += -I$(TOP)/ports/windows
+endif
 INC += -I.
 INC += -I$(TOP)
 INC += -I$(BUILD)
@@ -61,6 +86,9 @@ endif
 CWARN += -Wno-gnu-folding-constant -Wextra -Wno-c2x-extensions -Wno-unused-parameter -Wno-unused-but-set-parameter -Wpointer-arith -Wdouble-promotion -Wfloat-conversion -Wno-missing-declarations -Wno-unused-but-set-variable -Wno-sign-compare -Wno-gnu-variable-sized-type-not-at-end -Wno-undefined-internal
 CFLAGS += $(INC) $(CWARN) -std=gnu99 -DUNIX $(CFLAGS_MOD) $(COPT) -I$(VARIANT_DIR) $(CFLAGS_EXTRA)
 CFLAGS += -DAMYBOARD_VCV -DGAMMA9001
+ifdef WIN_CROSS
+CFLAGS += -D__USE_MINGW_ANSI_STDIO=1
+endif
 # tulip sources still use the retired STATIC macro (as does Tulip Desktop)
 CFLAGS += -DSTATIC=static
 # Use system libc printf, not MP's minimal one (shared/libc/printf.c would
@@ -121,13 +149,24 @@ EXTMOD_SRC_C += $(addprefix ../shared/, \
 SRC_C += \
 	src/mp_embed.c \
 	src/vcv_mphal_stubs.c \
-	../shared/desktop/unix_mphal.c \
-	$(MICROPY_PORT_DIR)/mpthreadport.c \
 	$(MICROPY_PORT_DIR)/gccollect.c \
 	$(MICROPY_PORT_DIR)/input.c \
-	$(MICROPY_PORT_DIR)/alloc.c \
-	$(MICROPY_PORT_DIR)/fatfs_port.c \
 	$(SRC_MOD)
+
+ifdef WIN_CROSS
+# windows-port HAL shims (fmode/realpath/console init/mphal)
+SRC_C += \
+	$(TOP)/ports/windows/windows_mphal.c \
+	$(TOP)/ports/windows/realpath.c \
+	$(TOP)/ports/windows/init.c \
+	$(TOP)/ports/windows/fmode.c
+else
+SRC_C += \
+	../shared/desktop/unix_mphal.c \
+	$(MICROPY_PORT_DIR)/mpthreadport.c \
+	$(MICROPY_PORT_DIR)/alloc.c \
+	$(MICROPY_PORT_DIR)/fatfs_port.c
+endif
 
 SHARED_SRC_C += $(addprefix $(TOP)/shared/,\
 	runtime/gchelper_generic.c \

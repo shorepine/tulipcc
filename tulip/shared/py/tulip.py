@@ -157,7 +157,9 @@ def root_dir():
         elif board() == "AMYBOARD_VCV":
             # Visible, user-editable location: sketch lives at
             # ~/Documents/AMYboard/user/current/sketch.py
-            root_directory = uos.getenv("HOME") + "/Documents/AMYboard/"
+            # (HOME on mac/linux, USERPROFILE on Windows)
+            home = uos.getenv("HOME") or uos.getenv("USERPROFILE")
+            root_directory = home + "/Documents/AMYboard/"
         return root_directory
     except:
         return "/"
