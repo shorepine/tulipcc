@@ -143,13 +143,15 @@ def root_dir():
 
         root_directory = "/"
         if board() == "DESKTOP":
-            xdg_data_directory = uos.getenv("HOME") + "/.local/share"
-            
+            # HOME on mac/linux; Windows has no HOME, fall back to USERPROFILE.
+            home = uos.getenv("HOME") or uos.getenv("USERPROFILE")
+            xdg_data_directory = home + "/.local/share"
+
             if (exists(xdg_data_directory)):
                 root_directory = xdg_data_directory + "/tulipcc/"
             else:
                 # fall back to ~/Documents if XDG base directory spec is not supported
-                root_directory = uos.getenv("HOME") + "/Documents/tulipcc/"
+                root_directory = home + "/Documents/tulipcc/"
         elif board() == "WEB":
             root_directory = "/tulip4/"
         elif board() == "AMYBOARD_WEB":

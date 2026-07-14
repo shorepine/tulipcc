@@ -1,0 +1,8 @@
+# Build + downloaded-dependency artifacts (not source).
+build-*/
+_sdl/
+dev/
+*.exe
+*.dll
+lextab.py
+yacctab.py
