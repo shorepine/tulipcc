@@ -174,6 +174,14 @@ static MP_NOINLINE void *mp_thread_body(void *vargs) {
     mp_uint_t stack_size = 40000 * (sizeof(void *) / 4);
     mp_cstack_init_with_sp_here(stack_size);
 
+    // The windows port enables MICROPY_ENABLE_PYSTACK; without this pool the
+    // VM's first bytecode frame raises "pystack exhausted" (unix main.c:524
+    // does the same init).
+    #if MICROPY_ENABLE_PYSTACK
+    static mp_obj_t pystack[1024];
+    mp_pystack_init(pystack, &pystack[MP_ARRAY_SIZE(pystack)]);
+    #endif
+
     #ifdef SIGPIPE
     signal(SIGPIPE, SIG_IGN);
     #endif
