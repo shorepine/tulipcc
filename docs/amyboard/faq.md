@@ -79,7 +79,7 @@ No -- AMYboard is **USB device/gadget mode only**: it appears to a computer as a
 
 ### Which displays are supported?
 
-Out of the box our firmware supports **SH1107** and **SSD1327** OLEDs. The Adafruit 128×128 monochrome OLED ([#4741](https://www.adafruit.com/product/4741)) is an SH1107 and works great -- by default the AMY version number shows on it at boot, so you know right away it's wired correctly.
+Out of the box our firmware supports **SH1107** and **SSD1327** OLEDs. The Adafruit 128×128 monochrome OLED ([#4741](https://www.adafruit.com/product/4741)) is an SSD1327 and works great -- by default the AMY version number shows on it at boot, so you know right away it's wired correctly.
 
 **If the Adafruit display is out of stock**, any **SH1107 128×128** OLED works -- community members have sourced the same panel from **Pimoroni** and **Mouser**. Non-Adafruit ones usually come with a bare 4-pin header instead of a JST/STEMMA socket, so you'll need a **Dupont-to-Grove/STEMMA** cable to connect it (only the Adafruit part is JST-to-JST).
 
@@ -94,7 +94,7 @@ Be very careful bolting a display to the faceplate -- hand-tightening can press 
 
 ### My OLED image is rotated 90°
 
-Some panels (especially off-brand ones) come up sideways. Fix it in your sketch:
+Some panels (especially off-brand ones) come up sideways. For SH1107 you can fix it in your sketch:
 
 ```python
 amyboard.set_display_rotation(90)   # or 180 / 270
