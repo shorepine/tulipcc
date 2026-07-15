@@ -4249,6 +4249,7 @@ function prompt_admin_token() {
 }
 
 // Create a js File object and upload it to the AMYboard World API.
+// Returns {ok, detail} — detail is a human-readable error when ok is false.
 async function amyboard_world_upload_file(pwd, filename, username, description) {
     var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
     var file = await new File([new Uint8Array(contents)], filename, {type: 'application/binary'})
@@ -4256,10 +4257,25 @@ async function amyboard_world_upload_file(pwd, filename, username, description) 
     data.append('file',file);
     data.append('username', username);
     data.append('description', description);
-    return fetch(world_api_url("/api/amyboardworld/upload"), {
-        method: 'POST',
-        body: data,
-    });
+    var resp;
+    try {
+        resp = await fetch(world_api_url("/api/amyboardworld/upload"), {
+            method: 'POST',
+            body: data,
+        });
+    } catch (e) {
+        return { ok: false, detail: 'network error: ' + e };
+    }
+    var detail = '';
+    if (!resp.ok) {
+        try {
+            var err = await resp.json();
+            if (typeof err.detail === 'string') detail = err.detail;
+            else if (err.detail !== undefined) detail = JSON.stringify(err.detail);
+        } catch (e) {}
+        if (!detail) detail = 'HTTP ' + resp.status;
+    }
+    return { ok: resp.ok, detail: detail };
 }
 
 function sanitize_environment_description(raw) {
