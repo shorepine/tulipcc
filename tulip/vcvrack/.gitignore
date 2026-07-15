@@ -1,6 +1,8 @@
 build/
-build-mp/
+build-*/
 dist/
+dist-*/
 plugin.dylib
 plugin.so
 plugin.dll
+test/*.exe

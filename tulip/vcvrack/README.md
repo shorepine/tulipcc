@@ -36,8 +36,9 @@ branches on that exactly as it does for `AMYBOARD` / `AMYBOARD_WEB` /
   same as the hardware.
 - One AMY module per patch owns the engine (AMY + MicroPython are global);
   extra instances stay silent.
-- **amyboard.com works against the module** (macOS): the plugin publishes a
-  virtual CoreMIDI in/out pair named **"AMYboard VCV"**. Open
+- **amyboard.com works against the module** (macOS + Linux): the plugin
+  publishes a virtual MIDI in/out pair named **"AMYboard VCV"** (CoreMIDI on
+  macOS, an ALSA sequencer client on Linux). Open
   [amyboard.com](https://amyboard.com), switch to control mode, and pick the
   AMYboard VCV ports — sketch write (zT), knobs (zA), run-python (zP), dumps
   (zD) and ping (zI) all behave as on hardware, ACK'd per frame. Wire paths
