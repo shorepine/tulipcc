@@ -16,8 +16,8 @@ size_t amy_i2s_write(const uint8_t* buffer, size_t nbytes) {
     return nbytes;
 }
 
-// --- amy_midi.c device layer: the archive builds with -DMACOS on every
-// platform, which to amy just means "host owns the MIDI device layer" —
+// --- amy_midi.c device layer: the archive builds with -DAMY_HOST_MIDI
+// (see amy_midi.h), so amy expects the host to own the MIDI device layer —
 // vcv_midi.c owns midi_out, and these are the no-op open/close. ---
 void run_midi(void) {}
 void stop_midi(void) {}

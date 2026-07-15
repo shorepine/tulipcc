@@ -22,10 +22,8 @@
 //
 // Outbound: AMY and the firmware emit through the global midi_out()
 // (zI OK replies, zT AKs, zD dump frames, Python tulip.midi_out()). The
-// archive is built with -DMACOS on every platform — to amy_midi.c that
-// define just means "the host owns the MIDI device layer" (the same trick
-// Tulip Desktop uses to hand it to macos_midi.m), so this file owns the
-// midi_out symbol.
+// archive is built with -DAMY_HOST_MIDI (see amy_midi.h) so amy_midi.c
+// skips its own device layer and this file owns the midi_out symbol.
 
 #include <stdint.h>
 #include <stdio.h>

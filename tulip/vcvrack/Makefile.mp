@@ -95,12 +95,11 @@ CFLAGS += -DSTATIC=static
 # hijack snprintf and abort on AMY's %hu/%g formats in sprint_event/dumps).
 CFLAGS += -DMICROPY_USE_INTERNAL_PRINTF=0
 CFLAGS += -fPIC
-# To amy_midi.c, MACOS just means "the host owns the MIDI device layer"
-# (run_midi/stop_midi/midi_out) — the same trick Tulip Desktop uses to hand
-# it to macos_midi.m. We define it on EVERY platform: the plugin's
-# vcv_midi.c owns midi_out (CoreMIDI on mac, ALSA seq on Linux) and
-# amy_stubs.c provides the no-op run_midi/stop_midi.
-CFLAGS += -DMACOS
+# The plugin owns the MIDI device layer on every platform: vcv_midi.c
+# provides midi_out (CoreMIDI on mac, ALSA seq on Linux, Rack bridge on
+# Windows) and amy_stubs.c the no-op run_midi/stop_midi. AMY_HOST_MIDI
+# (see amy_midi.h) makes amy_midi.c skip its own device layer.
+CFLAGS += -DAMY_HOST_MIDI
 # Match the Rack SDK's deployment target so the final dylib link is clean.
 ifeq ($(UNAME_S),Darwin)
 CFLAGS += -mmacosx-version-min=10.9
