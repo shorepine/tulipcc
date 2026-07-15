@@ -459,7 +459,8 @@ async function fill_tree() {
 }
 
 
-// Create a js File object and upload it to the TW proxy API. This is easier to do here than in python
+// Create a js File object and upload it to the TW proxy API. This is easier to do here than in python.
+// Returns {ok, detail} — detail is a human-readable error when ok is false.
 async function tulip_world_upload_file(pwd, filename, username, description) {
     var contents = await mp.FS.readFile(pwd+filename, {encoding:'binary'});
     var file = await new File([new Uint8Array(contents)], filename, {type: 'application/binary'})
@@ -467,10 +468,25 @@ async function tulip_world_upload_file(pwd, filename, username, description) {
     data.append('file',file);
     data.append('username', username);
     data.append('description', description);
-    return fetch('https://tulipcc-production.up.railway.app/api/tulipworld/upload', {
-        method: 'POST',
-        body: data,
-    });
+    var resp;
+    try {
+        resp = await fetch('https://tulipcc-production.up.railway.app/api/tulipworld/upload', {
+            method: 'POST',
+            body: data,
+        });
+    } catch (e) {
+        return { ok: false, detail: 'network error: ' + e };
+    }
+    var detail = '';
+    if (!resp.ok) {
+        try {
+            var err = await resp.json();
+            if (typeof err.detail === 'string') detail = err.detail;
+            else if (err.detail !== undefined) detail = JSON.stringify(err.detail);
+        } catch (e) {}
+        if (!detail) detail = 'HTTP ' + resp.status;
+    }
+    return { ok: resp.ok, detail: detail };
 }
 
 async function resize_tulip_grippie() {

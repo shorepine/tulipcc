@@ -322,8 +322,10 @@ def _normalize_username(raw: str) -> str:
     return username
 
 
-def _normalize_description(raw: str) -> str:
+def _normalize_description(raw: str, allow_empty: bool = False) -> str:
     description = " ".join((raw or "").split()).strip()
+    if allow_empty and not description:
+        return ""
     if len(description) < 1 or len(description) > MAX_DESCRIPTION:
         raise HTTPException(status_code=400, detail="Description must be 1-400 chars")
     return description
@@ -791,12 +793,14 @@ def delete_amyboard_file(item_id: int) -> dict[str, Any]:
 async def upload_tulip_file(
     request: Request,
     username: str = Form(...),
-    description: str = Form(...),
+    description: str = Form(default=""),
     file: UploadFile = File(...),
     created_at_ms: int | None = Form(default=None),
 ) -> dict[str, Any]:
     user = _normalize_username(username)
-    desc = _normalize_description(description)
+    # Tulip World uploads have always allowed a missing description
+    # (world.upload(filename) with no second arg), so empty is OK here.
+    desc = _normalize_description(description, allow_empty=True)
     contents = await file.read()
     filename = _validate_tulip_upload(file.filename or "", contents)
     item_id = _insert_file_row(

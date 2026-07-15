@@ -182,7 +182,10 @@ def upload(filename, description=""):
         filename += ".tar"
 
     def clean_up(x):
-        print("Uploaded %s to Tulip World." % (filename))
+        if x.ok:
+            print("Uploaded %s to Tulip World." % (filename))
+        else:
+            print("Upload failed for %s (%s)" % (filename, x.detail))
         if tar:
             os.remove(filename)
 
