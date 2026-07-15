@@ -142,7 +142,10 @@ jobs:
   # build scripts share tulip/vcvrack/build/ and clean up after themselves,
   # exactly the flow they were validated with.
   vcv-lin-win:
-    runs-on: ubuntu-latest
+    # arm64 runner (free for public repos): the toolchain image is arm64-only
+    # (built on an Apple Silicon mac); it cross-compiles to lin-x64/win-x64
+    # regardless of host arch. ubuntu-latest (amd64) cannot pull it.
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: write              # upload .vcvplugin assets to the release
     steps:

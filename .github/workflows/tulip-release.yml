@@ -256,7 +256,10 @@ jobs:
   # (-O0) config for now; flipping to -Os is a follow-up once verified on
   # real Windows hardware.
   desktop-windows:
-    runs-on: ubuntu-latest
+    # arm64 runner (free for public repos): the toolchain image is arm64-only
+    # (built on an Apple Silicon mac); it cross-compiles to win-x64 regardless
+    # of host arch. ubuntu-latest (amd64) cannot pull it.
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: write              # upload Tulip_Desktop_Windows.zip to the 'tulip' release
     steps:
