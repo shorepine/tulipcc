@@ -690,6 +690,11 @@ window.addEventListener("DOMContentLoaded", function() {
     resetBusState();
     if (typeof window.syncBusSelectForChannel === "function") window.syncBusSelectForChannel();
     if (typeof window.syncFxLevelForBus === "function") window.syncFxLevelForBus();
+    // Every caller lands on channel 1 (K257 default) afterwards — clear any
+    // DX7/drum section greying left over from the previous channel/patch.
+    if (typeof window.update_knob_sections_for_patch === "function") {
+      window.update_knob_sections_for_patch(257);
+    }
     window.has_restored_amy_knobs_state = false;
     return true;
   };

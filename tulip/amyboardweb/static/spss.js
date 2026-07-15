@@ -159,8 +159,14 @@ const EDITOR_ALLOWED_EXTENSIONS = [".py", ".txt", ".json"];
 const AMYBOARD_SYSEX_MFR_ID = [0x00, 0x03, 0x45];
 const AMYBOARD_TRANSFER_CHUNK_BYTES = 188;
 window.current_synth = 1;
+// GM MIDI convention: channel 10 is the drum channel. The device boots a GM
+// drum kit on it (i10K384iv6 in amyboard.py start_amy/_apply_knobs_text), so
+// the web editor treats channel 10 as active-with-drums by default too.
+window.DRUM_CHANNEL = 10;
+window.DRUM_DEFAULT_PATCH = 384;  // drum kit 0 TR-808 — matches the device boot default
 window.active_channels = Array.isArray(window.active_channels) ? window.active_channels : new Array(17).fill(false);
 window.active_channels[1] = true;
+window.active_channels[window.DRUM_CHANNEL] = true;
 window.channel_control_mapping_sent = Array.isArray(window.channel_control_mapping_sent) ? window.channel_control_mapping_sent : new Array(17).fill(false);
 window.suppress_knob_cc_send = false;
 
@@ -356,6 +362,20 @@ function reset_synth_in_sketch(synth) {
 }
 window.reset_synth_in_sketch = reset_synth_in_sketch;
 
+// The drum-channel analog of reset_synth_in_sketch: reset the synth to the GM
+// drum kit default (clear CC maps + K384, 6 voices) and send the same live.
+// K384's patch string bakes in the note->sample map and synth flags, so this
+// single load matches the device boot default i10K384iv6 (amyboard.py).
+function reset_drum_synth_in_sketch(synth) {
+  synth = Number(synth);
+  if (!Number.isInteger(synth) || synth < 1 || synth > 16) return;
+  _knob_log_clear_synth(synth);
+  send_amy_message_in_sketch('i' + synth + 'ic255', { synth: synth });
+  send_amy_message_in_sketch('i' + synth + 'K' + window.DRUM_DEFAULT_PATCH + 'iv6', { synth: synth });
+  _reset_channel_bus_ui(synth);
+}
+window.reset_drum_synth_in_sketch = reset_drum_synth_in_sketch;
+
 // Reset a channel's bus mirror to 0 and refresh the bus UI if it's on display.
 function _reset_channel_bus_ui(synth) {
   if (typeof window.set_channel_bus_local === 'function') {
@@ -506,11 +526,11 @@ window.rebuild_knob_log_from_block = rebuild_knob_log_from_block;
 // WITHOUT sending anything to AMY, and rebuild the in-memory log. Parses both the
 // new one-line-per-knob format and legacy combined-dump lines (apply_zd_dump_to_knobs).
 // Decide which channels are active from a knob block, matching the device boot
-// contract: a synth is active iff its last iv<N> in the block is N>0. Channel 1
-// defaults to active when it has NO lines (the board always starts a default
-// synth on channel 1 before applying the block); other channels default off when
-// absent. So an empty block ⇒ only channel 1 active, and an explicit i<ch>iv0
-// ⇒ that channel off.
+// contract: a synth is active iff its last iv<N> in the block is N>0. Channels 1
+// and 10 default to active when they have NO lines (the board always starts the
+// default synth on channel 1 and the GM drum kit on channel 10 before applying
+// the block); other channels default off when absent. So an empty block ⇒
+// channels 1 and 10 active, and an explicit i<ch>iv0 ⇒ that channel off.
 function _compute_active_from_block(block) {
   var voices = {};   // synth -> last num_voices seen
   var hasLines = {};
@@ -535,7 +555,7 @@ function _compute_active_from_block(block) {
   for (var ch = 1; ch <= 16; ch++) {
     if (voices[ch] !== undefined) active[ch] = voices[ch] > 0;
     else if (hasLines[ch]) active[ch] = true;   // lines but no iv -> assume active
-    else active[ch] = (ch === 1);               // channel 1 is on by default at boot
+    else active[ch] = (ch === 1 || ch === window.DRUM_CHANNEL);  // ch 1 (K257) + ch 10 (drums) on by default at boot
   }
   return active;
 }
@@ -623,6 +643,40 @@ function k257_default_wire_baseline() {
 }
 window.k257_default_wire_baseline = k257_default_wire_baseline;
 
+// A "drum patch" is any of the GM drum kits (K384+, named "drum kit N ...") or
+// the pcm_tiny ROM drums (K258, "MIDI drums ..."). Detected from the generated
+// patch-name table so a new kit added in amy is picked up automatically. The
+// prefixes can't collide with preset names ("Juno A32 Steel Drums",
+// "DX7 STEEL DRUM") because those all start with "Juno "/"DX7 ".
+function is_drum_patch(patchNumber) {
+  var pn = Number(patchNumber);
+  if (!Number.isInteger(pn) || pn < 0) return false;
+  var name = (window.amy_patches && typeof window.amy_patches[pn] === 'string') ? window.amy_patches[pn] : '';
+  return /^(drum kit|MIDI drums)/.test(name);
+}
+window.is_drum_patch = is_drum_patch;
+
+// Grey out the knob sections that don't apply to a channel's patch:
+// - DX7 presets (K128-255): Osc A/B + ADSR (per-voice FM oscs/EGs the analog
+//   knobs can't represent; the VCF coda still applies).
+// - Drum patches: every per-channel section — a drum kit maps each MIDI note to
+//   its own preconfigured sample, so only the FX knobs (per-bus, in the global
+//   grid) and the dedicated Level slider still make sense.
+// The FX sections and the Level slider (section "Synth"/"Bus") are never touched.
+var DX7_DISABLED_SECTIONS = { "Osc A": true, "Osc B": true, "ADSR": true };
+var CHANNEL_KNOB_SECTIONS = ["Osc A", "Osc B", "ADSR", "VCF", "VCF ENV", "LFO"];
+function update_knob_sections_for_patch(patchNumber) {
+  if (typeof window.set_section_disabled !== 'function') return;
+  var pn = Number(patchNumber);
+  var isDX7 = Number.isInteger(pn) && pn >= 128 && pn <= 255;
+  var isDrums = is_drum_patch(pn);
+  for (var i = 0; i < CHANNEL_KNOB_SECTIONS.length; i++) {
+    var section = CHANNEL_KNOB_SECTIONS[i];
+    window.set_section_disabled(section, isDrums || (isDX7 && !!DX7_DISABLED_SECTIONS[section]));
+  }
+}
+window.update_knob_sections_for_patch = update_knob_sections_for_patch;
+
 function get_patch_number_for_channel(channel) {
   var ch = Number(channel);
   if (!Number.isInteger(ch) || ch < 1 || ch > 16) {
@@ -657,9 +711,14 @@ window.set_channel_active = function(channel, active, opts) {
       // those are generic UI defaults (SINE, f440, …) that would override K257
       // and silence the Juno (the bug where activating ch2 dumped ~50 commands).
       // Instead we reset to the K257 default and position the UI knobs to match,
-      // like startup.
-      reset_synth_in_sketch(ch);            // sends + records i<ch>ic255, i<ch>K257iv6
-      position_current_channel_from_log();  // UI knobs -> K257 defaults (no AMY send)
+      // like startup. Channel 10 is the GM drum channel: (re)activating it
+      // reloads the drum kit default instead.
+      if (ch === window.DRUM_CHANNEL) {
+        reset_drum_synth_in_sketch(ch);     // sends + records i<ch>ic255, i<ch>K384iv6
+      } else {
+        reset_synth_in_sketch(ch);          // sends + records i<ch>ic255, i<ch>K257iv6
+      }
+      position_current_channel_from_log();  // UI knobs -> patch defaults (no AMY send)
     } else if (!active && wasActive) {
       // Disable: tear the synth down so it stops playing and frees its voices,
       // and remove it from the block (with an explicit i<ch>iv0 so a removed
@@ -672,9 +731,15 @@ window.set_channel_active = function(channel, active, opts) {
   // Other callers (startup, sketch/dump load): initialize a newly activated
   // channel with the default patch; never tear down. (Unchanged behavior.)
   if (active && !wasActive) {
-    amy_add_log_message("i" + ch + "ic255Z");
-    amy_add_log_message("i" + ch + "K257iv6Z");
-    send_all_knob_cc_mappings(ch);
+    if (ch === window.DRUM_CHANNEL) {
+      // Drum default, exactly as the device boot does. No CC-map flood: the
+      // kit has no knob-controllable params (see update_knob_sections_for_patch).
+      amy_add_log_message("i" + ch + "K" + window.DRUM_DEFAULT_PATCH + "iv6Z");
+    } else {
+      amy_add_log_message("i" + ch + "ic255Z");
+      amy_add_log_message("i" + ch + "K257iv6Z");
+      send_all_knob_cc_mappings(ch);
+    }
   }
 };
 
@@ -1224,18 +1289,19 @@ window.clear_current_channel_patch = async function() {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
-  // SYNC 2: reset this channel to the default patch (K257) and position the UI
-  // knobs to its defaults — no knob-value/CC flood (K257 reinstalls the channel's
-  // default CC map on the device), no zA AMY-state pull.
-  reset_synth_in_sketch(synth);          // sends + records i<synth>ic255, K257iv6
-  position_current_channel_from_log();   // UI knobs -> K257 defaults (no AMY send)
+  // SYNC 2: reset this channel to its default patch (the GM drum kit on channel
+  // 10, K257 elsewhere) and position the UI knobs to its defaults — no
+  // knob-value/CC flood (K257 reinstalls the channel's default CC map on the
+  // device), no zA AMY-state pull. position_current_channel_from_log also
+  // greys/ungreys the knob sections for the reloaded default patch.
+  if (synth === window.DRUM_CHANNEL) {
+    reset_drum_synth_in_sketch(synth);   // sends + records i<synth>ic255, K384iv6
+  } else {
+    reset_synth_in_sketch(synth);        // sends + records i<synth>ic255, K257iv6
+  }
+  position_current_channel_from_log();   // UI knobs -> patch defaults (no AMY send)
   if (amyboard_mode !== 'control') {
     reset_global_effects();
-  }
-  if (typeof window.set_section_disabled === "function") {
-    window.set_section_disabled("Osc A", false);
-    window.set_section_disabled("Osc B", false);
-    window.set_section_disabled("ADSR", false);
   }
   return synth;
 };
@@ -1551,7 +1617,7 @@ async function apply_default_patch_state_from_clear_patches() {
   if (typeof window.set_channel_active === "function") {
     window.set_channel_active(1, true);
     for (let ch = 2; ch <= 16; ch += 1) {
-      window.set_channel_active(ch, false);
+      window.set_channel_active(ch, ch === window.DRUM_CHANNEL);
     }
   }
   window.current_synth = 1;
@@ -4689,10 +4755,12 @@ async function load_knobs_from_sketch() {
     }
     var knobs = extract_knobs_from_sketch(content);
     if (!knobs) {
-        // First run: set up channel 1 with default Juno patch 257, 6 voices.
+        // First run: set up channel 1 with default Juno patch 257, 6 voices,
+        // and the GM drum kit on channel 10 — the device boot defaults.
         amy_add_log_message("i1ic255Z");
         amy_add_log_message("i1K257iv6Z");
         send_all_knob_cc_mappings(1);
+        amy_add_log_message("i" + window.DRUM_CHANNEL + "K" + window.DRUM_DEFAULT_PATCH + "iv6Z");
         return;
     }
     var lines = knobs.split(/\r?\n/);
@@ -5734,10 +5802,11 @@ async function _reset_amyboard_send_and_cleanup() {
     if (typeof window.reset_amy_knobs_to_defaults === "function") {
         window.reset_amy_knobs_to_defaults();
     }
-    // Reset channel state: only channel 1 active.
+    // Reset channel state: channel 1 (Juno) and channel 10 (GM drums —
+    // factory_reset's sketch restart re-applies i10K384iv6 on the board) active.
     if (!Array.isArray(window.active_channels)) window.active_channels = [];
     window.active_channels[1] = true;
-    for (var _ch = 2; _ch <= 16; _ch++) window.active_channels[_ch] = false;
+    for (var _ch = 2; _ch <= 16; _ch++) window.active_channels[_ch] = (_ch === window.DRUM_CHANNEL);
     window.current_synth = 1;
     var channelSelect = document.getElementById("midi-channel-select");
     if (channelSelect) channelSelect.value = "1";
@@ -5827,13 +5896,14 @@ async function reset_amyboard() {
             if (typeof reset_global_effects === "function") {
                 reset_global_effects();
             }
-            // Reset channel active state: only channel 1 active after reset.
-            // Assign directly rather than calling set_channel_active() so we
-            // don't re-send a redundant Juno init to AMY on channel 1.
+            // Reset channel active state: channel 1 (Juno) and channel 10
+            // (GM drums — amyboard.py's restart re-applies i10K384iv6) active
+            // after reset. Assign directly rather than calling
+            // set_channel_active() so we don't re-send redundant inits to AMY.
             if (!Array.isArray(window.active_channels)) window.active_channels = [];
             window.active_channels[1] = true;
             for (var _ch = 2; _ch <= 16; _ch += 1) {
-                window.active_channels[_ch] = false;
+                window.active_channels[_ch] = (_ch === window.DRUM_CHANNEL);
             }
             // Reset current synth to 1 and sync the channel-select dropdown.
             window.current_synth = 1;
@@ -6096,6 +6166,22 @@ function apply_zd_dump_to_knobs(dumpText) {
         : !!activeSynths[currentSynth];
     var checkbox = document.getElementById('channel-active-checkbox');
     if (checkbox) checkbox.checked = bootActive;
+    // Grey/ungrey knob sections from the channel's effective patch: the last
+    // K<n> line wins (e.g. a K257 preset re-enables); with no K line the channel
+    // holds its boot default — the GM drum kit on channel 10, K257 elsewhere.
+    // In SYNC 2 the block carries only the patch number (K128-255 = DX7 presets,
+    // K258/K384+ = drums), not a full per-voice osc dump, so detect from K.
+    // Done before the !bootActive return so switching to an inactive channel
+    // doesn't keep the previous channel's greyed sections.
+    if (typeof window.update_knob_sections_for_patch === "function") {
+        var effPatch = (currentSynth === window.DRUM_CHANNEL) ? window.DRUM_DEFAULT_PATCH : 257;
+        var kLines = perSynth[currentSynth] || [];
+        for (var ki = 0; ki < kLines.length; ki++) {
+            var km = /K(\d+)/.exec(kLines[ki]);
+            if (km) effPatch = parseInt(km[1], 10);
+        }
+        window.update_knob_sections_for_patch(effPatch);
+    }
     // Populate knobs for the current synth.
     if (!bootActive) {
         console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' is not active');
@@ -6117,24 +6203,6 @@ function apply_zd_dump_to_knobs(dumpText) {
         if (typeof window.refresh_knobs_for_channel === 'function') {
             window.suppress_knob_cc_send = true;
             try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = false; }
-        }
-        // Disable Osc/ADSR sections for DX7 patches. In SYNC 2 the block carries
-        // only the patch number (K128-255 = DX7 presets), not the full per-voice
-        // osc dump the old osc-count heuristic relied on — so detect from the
-        // synth's last K patch number instead.
-        if (typeof window.set_section_disabled === "function") {
-            var isDX7 = false;
-            var synthLines = perSynth[currentSynth] || [];
-            for (var li = 0; li < synthLines.length; li++) {
-                var km = /K(\d+)/.exec(synthLines[li]);
-                if (km) {
-                    var pn = parseInt(km[1], 10);
-                    isDX7 = (pn >= 128 && pn <= 255);  // last K wins (e.g. K257 default re-enables)
-                }
-            }
-            window.set_section_disabled("Osc A", isDX7);
-            window.set_section_disabled("Osc B", isDX7);
-            window.set_section_disabled("ADSR", isDX7);
         }
         console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' → ' + wireLines.length + ' wire lines → ' + events.length + ' events');
     } catch (e) {
@@ -6338,10 +6406,11 @@ async function start_audio() {
   // it's been mutated by that point and would falsely return false, causing us
   // to race a default run_sketch() against check_url_env_params's deferred load.
   if (mp && !_url_env_pending) {
-    // Init synth 1 with default Juno patch before run_sketch applies knobs.
-    // Without it, synth 1 doesn't exist and _apply_knobs_text fails with
-    // "synth not defined".
+    // Init synth 1 with default Juno patch (and the GM drum kit on channel 10)
+    // before run_sketch applies knobs. Without it, synth 1 doesn't exist and
+    // _apply_knobs_text fails with "synth not defined".
     amy_add_message("i1K257iv6Z");
+    amy_add_message("i" + window.DRUM_CHANNEL + "K" + window.DRUM_DEFAULT_PATCH + "iv6Z");
     // Let AMY process the synth init before running Python.
     await new Promise(function(resolve) { setTimeout(resolve, 100); });
     try {

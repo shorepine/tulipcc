@@ -2275,11 +2275,10 @@
                     if (typeof log_preset_message === "function") log_preset_message(presetSynth, _codaMsg);
                   }
                   // Mark disabled panes before sending CC mappings so disabled-section
-                  // knobs don't blast initial ic updates to AMY for DX7 presets.
-                  if (typeof window.set_section_disabled === "function") {
-                    window.set_section_disabled("Osc A", isDX7Preset);
-                    window.set_section_disabled("Osc B", isDX7Preset);
-                    window.set_section_disabled("ADSR", isDX7Preset);
+                  // knobs don't blast initial ic updates to AMY for DX7 presets. Also
+                  // re-enables the drum-greyed sections when a preset replaces a drum kit.
+                  if (typeof window.update_knob_sections_for_patch === "function") {
+                    window.update_knob_sections_for_patch(patch);
                   }
                   // In control mode, skip sending knob CC mappings — they race with the
                   // patch load over sysex and can overwrite the K command. The hardware
@@ -2293,10 +2292,8 @@
                 window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
                 if (typeof sync_channel_knobs_from_synth_to_ui === "function") {
                   sync_channel_knobs_from_synth_to_ui(presetSynth).then(function() {
-                    if (typeof window.set_section_disabled === "function") {
-                      window.set_section_disabled("Osc A", isDX7Preset);
-                      window.set_section_disabled("Osc B", isDX7Preset);
-                      window.set_section_disabled("ADSR", isDX7Preset);
+                    if (typeof window.update_knob_sections_for_patch === "function") {
+                      window.update_knob_sections_for_patch(patch);
                     }
                     // Mark channel dirty after preset load so Save shows * and .dirty file is written.
                     if (typeof schedule_dirty_autosave_for_channel === "function") {
@@ -2349,7 +2346,9 @@
         if (typeof window.set_channel_active === "function") {
           window.set_channel_active(1, true);
           for (let ch = 2; ch <= 16; ch += 1) {
-            window.set_channel_active(ch, false);
+            // Channel 10 defaults to active with the GM drum kit (see
+            // DRUM_CHANNEL in spss.js), matching the device boot.
+            window.set_channel_active(ch, ch === (window.DRUM_CHANNEL || 10));
           }
         }
         syncActiveCheckboxForChannel();
