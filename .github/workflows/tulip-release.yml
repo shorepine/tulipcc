@@ -31,6 +31,7 @@ on:
       - 'tulip/shared/**'
       - 'tulip/fs/tulip/**'
       - 'tulip/macos/**'
+      - 'tulip/windows/**'
       - '.github/workflows/tulip-release.yml'
   workflow_dispatch:
 
@@ -244,3 +245,60 @@ jobs:
             echo "::error::rolling 'tulip' release does not exist yet"; exit 1
           fi
           gh release upload --clobber tulip tulip/macos/dist/Tulip_Desktop.zip
+
+  # Tulip Desktop for Windows (x64), MinGW-cross-built inside the
+  # rack-plugin-toolchain image (ghcr.io/shorepine/rack-plugin-toolchain:19,
+  # the same prebuilt image the AMYboard VCV jobs use — it carries
+  # x86_64-w64-mingw32 gcc). Ships Tulip_Desktop_Windows.zip (tulip.exe +
+  # SDL2.dll). The exe is unsigned — Windows SmartScreen will warn on first
+  # run (Windows code signing is a separate cert acquisition, unlike the mac
+  # notarization above). The build keeps the script's validated DEBUG=1
+  # (-O0) config for now; flipping to -Os is a follow-up once verified on
+  # real Windows hardware.
+  desktop-windows:
+    # arm64 runner (free for public repos): the toolchain image is arm64-only
+    # (built on an Apple Silicon mac); it cross-compiles to win-x64 regardless
+    # of host arch. ubuntu-latest (amd64) cannot pull it.
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write              # upload Tulip_Desktop_Windows.zip to the 'tulip' release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Generate AMY drum data
+        # stdlib-only generator; the build script touches patches.h itself.
+        run: cd amy && python3 -m amy.headers gamma9001
+
+      - name: Build tulip.exe (MinGW cross)
+        run: |
+          docker run --rm --user root -v "$PWD":/work -w /work/tulip/windows \
+            ghcr.io/shorepine/rack-plugin-toolchain:19 \
+            bash /work/tulip/windows/toolchain-build-windows.sh
+
+      - name: Package Tulip_Desktop_Windows.zip
+        # Write into RUNNER_TEMP: build-standard/ is root-owned (created
+        # inside the toolchain container), so this step can't create files there.
+        run: |
+          set -euo pipefail
+          cd tulip/windows/build-standard
+          zip -q "${RUNNER_TEMP}/Tulip_Desktop_Windows.zip" tulip.exe SDL2.dll
+
+      - name: Upload Tulip Desktop for Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tulip-desktop-windows
+          if-no-files-found: error
+          path: ${{ runner.temp }}/Tulip_Desktop_Windows.zip
+
+      - name: Publish Tulip_Desktop_Windows.zip to the rolling 'tulip' release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! gh release view tulip >/dev/null 2>&1; then
+            echo "::error::rolling 'tulip' release does not exist yet"; exit 1
+          fi
+          gh release upload --clobber tulip "${RUNNER_TEMP}/Tulip_Desktop_Windows.zip"

@@ -123,6 +123,13 @@ signing/notarization requires the `MACOS_SIGNING_CERT_P12`/`MACOS_SIGNING_CERT_P
 and `MACOS_NOTARY_API_KEY`/`MACOS_NOTARY_API_KEY_ID`/`MACOS_NOTARY_API_ISSUER_ID` repo
 secrets; without them the zip is built as a CI artifact but not published.
 
+The same workflow also builds **Tulip Desktop for Windows** (x64) in a
+`desktop-windows` job: MinGW cross-build inside the prebuilt public
+`ghcr.io/shorepine/rack-plugin-toolchain:19` docker image (pushed once from a
+local `make docker-build` of VCVRack/rack-plugin-toolchain — never rebuild it
+in CI, that takes ~1 hr/platform), publishing `Tulip_Desktop_Windows.zip`
+(unsigned `tulip.exe` + `SDL2.dll`) to the rolling `tulip` release.
+
 Both rolling releases also carry a **date-coded copy of the full flash image**
 (`tulip-full-TULIP4_R11-YYYYMMDD.bin`, `amyboard-full-AMYBOARD-YYYYMMDD.bin`) for the
 manufacturing partner; the stable-named bins must never be renamed (the web flasher,
@@ -190,6 +197,18 @@ AMYboard-affecting paths; also `workflow_dispatch`):
 2. **web** → `amyboardweb/stage/` is built and deployed `--prod` to the **`amyboard`**
    Vercel project (amyboard.com). Requires repo secret `VERCEL_TOKEN`
    (scope `bwhitmans-projects`), same as the PR-preview workflow.
+3. **vcv-lin-win / vcv-mac** → the AMYboard VCV Rack plugin
+   (`AMYboard-<version>-{lin-x64,win-x64,mac-arm64}.vcvplugin`) uploaded to the
+   rolling **`amyboard`** release for sideloading (drop into Rack's
+   `plugins-<os>-<cpu>/` folder). lin/win cross-build inside the public
+   `ghcr.io/shorepine/rack-plugin-toolchain:19` image; mac-arm64 builds
+   natively on the macos runner against the official Rack SDK (mac-x64 is a
+   known gap — `Makefile.mp` has no cross `-arch` support yet). The **official
+   VCV Library is a separate, manual flow**: bump `version` in
+   `tulip/vcvrack/plugin.json`, push to main, then comment the new version +
+   commit hash on our plugin's issue thread in `github.com/VCVRack/library`;
+   VCV's build farm builds from source (~1–2 week turnaround). Do not try to
+   automate that from CI.
 
 Tulip firmware is **not** built here — it has its own continuous release,
 `tulip-release.yml` (see "Tulip Release"). `releases/latest` is the rolling `tulip`

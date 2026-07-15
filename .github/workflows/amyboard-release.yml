@@ -15,6 +15,15 @@ name: AMYboard release
 #                 amyboard-* assets there.
 #   - web      -> amyboardweb/stage/ deployed --prod to the 'amyboard' Vercel
 #                 project (amyboard.com).
+#   - vcv-*    -> AMYboard VCV Rack plugin (.vcvplugin for lin-x64 / win-x64 /
+#                 mac-arm64) uploaded to the rolling 'amyboard' release for
+#                 sideloading (Rack manual: drop the file in
+#                 <Rack user folder>/plugins-<os>-<cpu>/ and Rack extracts it).
+#                 This is NOT the official VCV Library flow — that one is
+#                 manual: bump "version" in tulip/vcvrack/plugin.json, push,
+#                 then comment the new version + commit hash on our plugin's
+#                 issue thread in github.com/VCVRack/library; VCV's build farm
+#                 builds it from source (~1-2 weeks turnaround).
 #
 # Tulip firmware is NOT built here — it has its own continuous release
 # (tulip-release.yml). This replaces the old 'dev' channel (rolling 'dev'
@@ -31,6 +40,7 @@ on:
       - 'tulip/esp32s3/**'
       - 'tulip/amyboardweb/**'
       - 'tulip/shared/**'
+      - 'tulip/vcvrack/**'
       - '.github/workflows/amyboard-release.yml'
   workflow_dispatch:
 
@@ -121,6 +131,145 @@ jobs:
               tulip/amyboard/dist/amyboard-full-AMYBOARD.bin \
               tulip/amyboard/dist/amyboard-sys.bin
           fi
+
+  # --- AMYboard VCV Rack plugin ---------------------------------------------
+  # lin-x64 + win-x64 cross-build inside the rack-plugin-toolchain image
+  # (ghcr.io/shorepine/rack-plugin-toolchain:19 — a prebuilt image of
+  # VCVRack/rack-plugin-toolchain, pushed once from a local `make docker-build`
+  # and kept PUBLIC so the job can pull it unauthenticated; building the
+  # toolchain from scratch takes ~1 hr/platform, so CI always pulls).
+  # Both platforms build sequentially in one job on purpose: the
+  # build scripts share tulip/vcvrack/build/ and clean up after themselves,
+  # exactly the flow they were validated with.
+  vcv-lin-win:
+    # arm64 runner (free for public repos): the toolchain image is arm64-only
+    # (built on an Apple Silicon mac); it cross-compiles to lin-x64/win-x64
+    # regardless of host arch. ubuntu-latest (amd64) cannot pull it.
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write              # upload .vcvplugin assets to the release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Generate AMY drum data
+        # The gamma9001 generator is stdlib-only (no numpy). patches.h is
+        # committed; touch it so make doesn't try to regenerate it (that
+        # path DOES need numpy, absent in the toolchain image).
+        run: |
+          cd amy
+          python3 -m amy.headers gamma9001
+          touch src/patches.h
+
+      - name: Build lin-x64 plugin
+        run: |
+          docker run --rm --user root -v "$PWD":/work -w /work/tulip/vcvrack \
+            ghcr.io/shorepine/rack-plugin-toolchain:19 \
+            bash /work/tulip/vcvrack/toolchain-build-lin.sh
+
+      - name: Build win-x64 plugin
+        run: |
+          docker run --rm --user root -v "$PWD":/work -w /work/tulip/vcvrack \
+            ghcr.io/shorepine/rack-plugin-toolchain:19 \
+            bash /work/tulip/vcvrack/toolchain-build-win.sh
+
+      - name: Upload plugin artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: amyboard-vcvplugin-lin-win
+          if-no-files-found: error
+          path: |
+            tulip/vcvrack/dist-lin/*.vcvplugin
+            tulip/vcvrack/dist-win/*.vcvplugin
+
+      - name: Publish to the rolling 'amyboard' release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! gh release view amyboard >/dev/null 2>&1; then
+            echo "::error::rolling 'amyboard' release does not exist yet"; exit 1
+          fi
+          # Canonical Rack asset names: AMYboard-<version>-<os>-<cpu>.vcvplugin.
+          # Same-version rebuilds clobber; when plugin.json's version bumps,
+          # prune the previous version's asset for the same platform so one
+          # .vcvplugin per platform lives on the release at a time.
+          for f in tulip/vcvrack/dist-lin/*.vcvplugin tulip/vcvrack/dist-win/*.vcvplugin; do
+            name="$(basename "$f")"
+            plat="${name#AMYboard-*-}"       # -> <os>-<cpu>.vcvplugin
+            gh api "repos/${GITHUB_REPOSITORY}/releases/tags/amyboard" --jq '.assets[].name' \
+              | { grep -E "^AMYboard-.*-${plat%.vcvplugin}\.vcvplugin$" || true; } \
+              | { grep -vx "$name" || true; } \
+              | while read -r stale; do gh release delete-asset amyboard "$stale" --yes; done
+            gh release upload --clobber amyboard "$f"
+          done
+
+  # mac-arm64 built natively on the macos runner with the official Rack SDK,
+  # mirroring the local dev flow (this is also how community plugin CI does
+  # mac — the docker toolchain's osxcross path needs an Xcode-extracted SDK).
+  # mac-x64 is a follow-up: Makefile.mp doesn't wire cross -arch flags yet.
+  vcv-mac:
+    runs-on: macos-14
+    permissions:
+      contents: write              # upload .vcvplugin assets to the release
+    env:
+      RACK_SDK_VERSION: 2.6.6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Generate AMY drum data
+        run: |
+          cd amy
+          python3 -m amy.headers gamma9001
+          touch src/patches.h
+
+      - name: Download Rack SDK (mac-arm64)
+        run: |
+          set -euo pipefail
+          # plugin.mk shells out to jq (even at parse time) and zstd (dist).
+          # Both ship on macos runner images; install if that ever changes.
+          (command -v jq && command -v zstd) >/dev/null || brew install jq zstd
+          curl -fsSL "https://vcvrack.com/downloads/Rack-SDK-${RACK_SDK_VERSION}-mac-arm64.zip" \
+            -o "$RUNNER_TEMP/rack-sdk.zip"
+          unzip -q "$RUNNER_TEMP/rack-sdk.zip" -d "$RUNNER_TEMP/rack-sdk"
+
+      - name: Build mac-arm64 plugin
+        run: |
+          # Makefile.mp's frozen manifest needs mpy-cross prebuilt (the
+          # cross-build scripts do the same explicitly).
+          make -C micropython/mpy-cross -j4
+          cd tulip/vcvrack
+          make -j4 dist RACK_DIR="$RUNNER_TEMP/rack-sdk/Rack-SDK"
+
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: amyboard-vcvplugin-mac
+          if-no-files-found: error
+          path: tulip/vcvrack/dist/*.vcvplugin
+
+      - name: Publish to the rolling 'amyboard' release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! gh release view amyboard >/dev/null 2>&1; then
+            echo "::error::rolling 'amyboard' release does not exist yet"; exit 1
+          fi
+          for f in tulip/vcvrack/dist/*.vcvplugin; do
+            name="$(basename "$f")"
+            plat="${name#AMYboard-*-}"       # -> <os>-<cpu>.vcvplugin
+            gh api "repos/${GITHUB_REPOSITORY}/releases/tags/amyboard" --jq '.assets[].name' \
+              | { grep -E "^AMYboard-.*-${plat%.vcvplugin}\.vcvplugin$" || true; } \
+              | { grep -vx "$name" || true; } \
+              | while read -r stale; do gh release delete-asset amyboard "$stale" --yes; done
+            gh release upload --clobber amyboard "$f"
+          done
 
   web:
     runs-on: ubuntu-latest
