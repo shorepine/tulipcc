@@ -766,6 +766,13 @@ window.set_channel_active = function(channel, active, opts) {
       // and remove it from the block (with an explicit i<ch>iv0 so a removed
       // channel 1 stays off past the boot-time default synth — see amyboard.py).
       remove_synth_from_sketch(ch);       // records i<ch>iv0 + sends num_voices=0
+      // Immediately present the deactivated channel as the default surface:
+      // knob configs back to defaults, then the inactive path of
+      // apply_zd_dump_to_knobs renders the K257 surface fully greyed.
+      if (typeof window.reset_channel_knobs_to_defaults === 'function') {
+        window.reset_channel_knobs_to_defaults(ch);
+      }
+      position_current_channel_from_log();
     }
     return;
   }
@@ -6275,10 +6282,33 @@ function apply_zd_dump_to_knobs(dumpText) {
         for (var gi = 0; gi < CHANNEL_KNOB_SECTIONS.length; gi++) {
             window.set_section_disabled(CHANNEL_KNOB_SECTIONS[gi], true);
         }
-        if (typeof window.refresh_knobs_for_channel === 'function') {
-            var prevSuppressInactive = window.suppress_knob_cc_send;
-            window.suppress_knob_cc_send = true;
-            try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = prevSuppressInactive; }
+        var prevSuppressInactive = window.suppress_knob_cc_send;
+        window.suppress_knob_cc_send = true;
+        try {
+            // Position the greyed knobs at the K257 default state. Osc lines
+            // only: the baseline's FX line would reset the per-bus FX mirrors,
+            // which an inactive channel must not touch.
+            if (typeof window.set_knobs_from_events === 'function'
+                && typeof events_from_wire_code_messages === 'function'
+                && typeof k257_default_wire_baseline === 'function') {
+                var oscBaseline = k257_default_wire_baseline().split('Z').filter(function(seg) {
+                    return seg && seg.charAt(0) === 'v';
+                }).join('Z');
+                if (oscBaseline) {
+                    try {
+                        window.set_knobs_from_events(
+                            events_from_wire_code_messages([oscBaseline + 'Z']),
+                            currentSynth, { onlyDirtyFxBuses: true });
+                    } catch (e) {
+                        console.warn('apply_zd_dump_to_knobs: inactive baseline positioning failed', e);
+                    }
+                }
+            }
+            if (typeof window.refresh_knobs_for_channel === 'function') {
+                window.refresh_knobs_for_channel();
+            }
+        } finally {
+            window.suppress_knob_cc_send = prevSuppressInactive;
         }
         console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' is not active');
         return;
