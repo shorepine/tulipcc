@@ -6254,7 +6254,7 @@ function apply_zd_dump_to_knobs(dumpText) {
     // In SYNC 2 the block carries only the patch number (K128-255 = DX7 presets,
     // K258/K384+ = drums), not a full per-voice osc dump, so detect from K.
     // Done before the !bootActive return so switching to an inactive channel
-    // doesn't keep the previous channel's greyed sections.
+    // doesn't keep the previous channel's surface (drum grid or greyed sections).
     if (typeof window.update_knob_sections_for_patch === "function") {
         var effPatch = (currentSynth === window.DRUM_CHANNEL) ? window.DRUM_DEFAULT_PATCH : 257;
         var kLines = perSynth[currentSynth] || [];
@@ -6262,10 +6262,24 @@ function apply_zd_dump_to_knobs(dumpText) {
             var km = /K(\d+)/.exec(kLines[ki]);
             if (km) effPatch = parseInt(km[1], 10);
         }
+        // An inactive channel always presents as the default K257 surface
+        // (fully greyed below) — its patch only matters once it's activated.
+        if (!bootActive) effPatch = 257;
         window.update_knob_sections_for_patch(effPatch);
     }
     // Populate knobs for the current synth.
     if (!bootActive) {
+        // Inactive channel: render the K257 surface with every channel section
+        // greyed (the FX column stays live — it's per bus, not per channel).
+        // Activating the channel reloads K257 and un-greys via the paths above.
+        for (var gi = 0; gi < CHANNEL_KNOB_SECTIONS.length; gi++) {
+            window.set_section_disabled(CHANNEL_KNOB_SECTIONS[gi], true);
+        }
+        if (typeof window.refresh_knobs_for_channel === 'function') {
+            var prevSuppressInactive = window.suppress_knob_cc_send;
+            window.suppress_knob_cc_send = true;
+            try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = prevSuppressInactive; }
+        }
         console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' is not active');
         return;
     }

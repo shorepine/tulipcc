@@ -1158,6 +1158,25 @@ function init_knobs(knobConfigs, gridId, onChange) {
           header.style.color = styleConfig.header_fg_color;
         }
       }
+      // Optional action button in the header (e.g. the drum sound audition
+      // button): taken from the first knob config in the section carrying one.
+      const buttonItem = section.items.find(function(item) {
+        return item.config && item.config.header_button
+          && typeof item.config.header_button.onClick === "function";
+      });
+      if (buttonItem) {
+        const hb = buttonItem.config.header_button;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "knob-section-header-btn";
+        btn.textContent = hb.label || "▶";
+        if (hb.title) btn.setAttribute("title", hb.title);
+        btn.addEventListener("click", function(event) {
+          event.stopPropagation();
+          hb.onClick();
+        });
+        header.appendChild(btn);
+      }
       sectionWrap.appendChild(header);
     }
 

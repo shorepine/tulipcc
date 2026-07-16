@@ -22,19 +22,24 @@
 //
 // Ranges/defaults match the gamma9001 web drum machine.
 //
-// A knob change REWRITES the note mapping(s) for that sound — sent live and
-// recorded in the knob log (one last-wins slot per note, keyed by the line's
-// structural key, so sketch-loaded lines and live moves collapse together).
+// A knob change REWRITES the note mapping(s) for that sound only — sent live
+// and recorded in the knob log (one last-wins slot per note, keyed by the
+// line's structural key, so sketch-loaded lines and live moves collapse
+// together). Only edited sounds get lines in _auto_generated_knobs.
 //
-// Voice-param leak and normalization: kit voices are reused across drums and
-// osc params (pan, filter, phase) persist on the osc between notes. A template
-// that sets Q/G/F/R/P would therefore leak into drums whose templates don't
-// mention those params. So the FIRST knob change on a channel rewrites the
-// WHOLE kit's note map with a fixed template shape (explicit defaults
-// everywhere); after that, single-sound rewrites are safe.
+// Voice-param leak: kit voices are reused across drums and osc params
+// persist on the osc between notes, so params an edited drum's template sets
+// could linger on a voice a different drum picks up next. This is handled
+// without touching the other drums' mappings: the kit patch templates carry
+// an explicit filter-off (G0, amy#904) so an edited drum's filter can't
+// smear onto the rest of the kit; a pending trigger_phase (P) is consumed at
+// PCM note-on (amy#904) so offsets can't linger; and an edited drum's Q pins
+// its pan (an untouched drum can only transiently inherit pan under voice
+// pressure — baking Q into the kit templates was rejected in amy because it
+// would clobber caller per-note pan, see TestSynthDrumsPanning).
 //
-// The Offset knob needs AMY to respect trigger_phase (P) at PCM note-on
-// (amy#903); on older AMY builds the knob is sent but has no audible effect.
+// The Offset knob needs amy#904's trigger_phase-at-PCM-note-on; on older AMY
+// builds the knob is sent but has no audible effect.
 
 (function() {
   var PCM_PHASE_DENOM = 1 << 23;   // AMY PCM phase is frame_index / 2^PCM_INDEX_BITS
@@ -233,14 +238,20 @@
     }
   }
 
-  // First knob change on a channel rewrites the whole kit's note map so every
-  // template carries the full param shape (see leak note at top of file).
-  function ensure_kit_normalized(ch, state) {
-    if (state.normalized) return;
-    state.normalized = true;
-    for (var i = 0; i < state.sounds.length; i++) {
-      send_sound(ch, state.sounds[i]);
+  // Audition one drum sound: send a MIDI note-on (and a note-off, which kit
+  // synths ignore — synth_flags bit 2) exactly as a keyboard would, so it
+  // works in both simulate (local AMY) and control (real board) modes.
+  function play_sound(ch, sound) {
+    if (typeof window.inject_midi_bytes !== "function" || !sound.entries.length) return;
+    var note = sound.entries[0].note;
+    for (var i = 1; i < sound.entries.length; i++) {
+      if (sound.entries[i].note < note) note = sound.entries[i].note;
     }
+    var chBits = (Number(ch) - 1) & 0x0F;
+    window.inject_midi_bytes([0x90 | chBits, note, 100]);
+    setTimeout(function() {
+      window.inject_midi_bytes([0x80 | chBits, note, 0]);
+    }, 200);
   }
 
   // ── knob configs ────────────────────────────────────────────────────────────
@@ -258,7 +269,7 @@
     var knobs = [];
     state.sounds.forEach(function(sound) {
       var section = sound_header(sound);
-      DRUM_KNOB_DEFS.forEach(function(def) {
+      DRUM_KNOB_DEFS.forEach(function(def, di) {
         knobs.push({
           drum: true,
           no_device_cc: true,   // CC works via move_knob (web) only — a device
@@ -270,10 +281,15 @@
           min_value: def.min_value,
           max_value: def.max_value,
           default_value: sound.params[def.key],
+          // One audition button per sound, rendered in the section header.
+          header_button: di === 0 ? {
+            label: "▶",
+            title: "Play " + sound.name,
+            onClick: function() { play_sound(ch, sound); },
+          } : undefined,
           drum_send: function(synth, value) {
             var channel = Number(synth) || ch;
             sound.params[def.key] = value;
-            ensure_kit_normalized(channel, state);
             send_sound(channel, sound);
           },
         });
@@ -290,7 +306,7 @@
     if (!kit) return [];
     var state = _drum_state[ch];
     if (!state || state.kit !== kit) {
-      state = { kit: kit, sounds: build_sounds(kit), normalized: false, knobs: null };
+      state = { kit: kit, sounds: build_sounds(kit), knobs: null };
       state.knobs = build_knob_configs(ch, state);
       _drum_state[ch] = state;
     }
@@ -306,7 +322,6 @@
     var state = _drum_state[ch];
     if (!state || !knobs.length) return;
     var logLines = log_io_lines_for_channel(ch);
-    state.normalized = Object.keys(logLines).length > 0;
     state.sounds.forEach(function(sound) {
       var params = null;
       for (var i = 0; i < sound.entries.length && !params; i++) {
