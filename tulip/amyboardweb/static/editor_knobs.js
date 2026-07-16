@@ -26,6 +26,12 @@ function make_change_code(synth, value, knob, no_instrument) {
 }
 
 function send_change_code(synth, value, knob) {
+  // Drum kit knobs rebuild and send their note-map wire lines themselves
+  // (editor_drums.js) — there is no %v change_code to substitute.
+  if (knob && typeof knob.drum_send === "function") {
+    knob.drum_send(synth, value, knob);
+    return;
+  }
   var code = make_change_code(synth, value, knob);
   if (code && typeof window.amy_add_message === "function") {
     window.amy_add_log_message(code);
@@ -1124,6 +1130,9 @@ function init_knobs(knobConfigs, gridId, onChange) {
     if (window._disabled_sections && window._disabled_sections[section.name]) {
       sectionWrap.classList.add("section-disabled");
     }
+    if (section.items.some(function(item) { return item.config && item.config.drum; })) {
+      sectionWrap.classList.add("knob-section-drum");
+    }
     sectionWrap.style.setProperty("--knob-count", String(section.items.length));
     const sectionUnits = section.units || section.items.length;
     const rowUnits = isMainGrid ? Math.min(14, sectionUnits) : sectionUnits;
@@ -1148,6 +1157,25 @@ function init_knobs(knobConfigs, gridId, onChange) {
         if (styleConfig.header_fg_color) {
           header.style.color = styleConfig.header_fg_color;
         }
+      }
+      // Optional action button in the header (e.g. the drum sound audition
+      // button): taken from the first knob config in the section carrying one.
+      const buttonItem = section.items.find(function(item) {
+        return item.config && item.config.header_button
+          && typeof item.config.header_button.onClick === "function";
+      });
+      if (buttonItem) {
+        const hb = buttonItem.config.header_button;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "knob-section-header-btn";
+        btn.textContent = hb.label || "▶";
+        if (hb.title) btn.setAttribute("title", hb.title);
+        btn.addEventListener("click", function(event) {
+          event.stopPropagation();
+          hb.onClick();
+        });
+        header.appendChild(btn);
       }
       sectionWrap.appendChild(header);
     }

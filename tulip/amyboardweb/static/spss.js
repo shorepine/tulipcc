@@ -232,8 +232,10 @@ function _knob_log_struct_key(message) {
   }
   while (i < s.length) {
     var c = s.charAt(i);
-    if ((c === 'i' || c === 'v') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
+    if ((c === 'i' || c === 'v' || c === 'o') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
       // i<synth> / v<osc> selector — keep the letter and its digits literally.
+      // 'o' too: in a note-mapping line (i10o35,...) the digits are the MIDI
+      // note being mapped — each note needs its own last-wins slot.
       out += c; i++;
       while (i < s.length && s.charCodeAt(i) >= 48 && s.charCodeAt(i) <= 57) { out += s.charAt(i); i++; }
     } else if ((c >= '0' && c <= '9') ||
@@ -673,14 +675,44 @@ window.is_drum_patch = is_drum_patch;
 // The FX sections and the Level slider (section "Synth"/"Bus") are never touched.
 var DX7_DISABLED_SECTIONS = { "Osc A": true, "Osc B": true, "ADSR": true };
 var CHANNEL_KNOB_SECTIONS = ["Osc A", "Osc B", "ADSR", "VCF", "VCF ENV", "LFO"];
+// The channel grid is a per-patch knob SURFACE. The plan is three of them,
+// selected here from the channel's detected patch:
+//   1. Juno surface (K257 default): the 2-osc + LFO + VCF grid — what
+//      amy_parameters.js renders today.
+//   2. DX7 surface (K128-255): algorithm + per-op FM parameters. NOT BUILT
+//      YET — for now DX7 keeps the Juno surface with the sections it can't
+//      represent (Osc A/B, ADSR) greyed via set_section_disabled.
+//   3. Drum surface (K258/K384+): per-drum-sample knobs (editor_drums.js).
+// This function is the switch point: every patch-change path (preset load,
+// channel switch, sketch load, Clear) funnels through it.
 function update_knob_sections_for_patch(patchNumber) {
   if (typeof window.set_section_disabled !== 'function') return;
   var pn = Number(patchNumber);
   var isDX7 = Number.isInteger(pn) && pn >= 128 && pn <= 255;
   var isDrums = is_drum_patch(pn);
+  // Drum kits swap the whole channel grid for the per-drum knob view
+  // (editor_drums.js; rendered by refresh_knobs_for_channel). The section
+  // disabled flags are still set below so send_all_knob_cc_mappings /
+  // send_all_knob_values skip the (hidden) synthesis knobs for drum channels.
+  var needsRender = false;
+  if (typeof window.set_channel_drum_kit === 'function'
+    && typeof window.get_channel_drum_kit === 'function') {
+    var ch = Number(window.current_synth || 1);
+    var prevKit = window.get_channel_drum_kit(ch);
+    window.set_channel_drum_kit(ch, isDrums ? pn : null);
+    // Re-render on any view change — entering/leaving the drum view or
+    // switching kits — and on a same-kit (re)load, whose reset just cleared
+    // the channel's recorded drum tweaks back to kit defaults.
+    needsRender = isDrums || !!prevKit;
+  }
   for (var i = 0; i < CHANNEL_KNOB_SECTIONS.length; i++) {
     var section = CHANNEL_KNOB_SECTIONS[i];
     window.set_section_disabled(section, isDrums || (isDX7 && !!DX7_DISABLED_SECTIONS[section]));
+  }
+  if (needsRender && typeof window.refresh_knobs_for_channel === 'function') {
+    var prevSuppress = !!window.suppress_knob_cc_send;
+    window.suppress_knob_cc_send = true;
+    try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = prevSuppress; }
   }
 }
 window.update_knob_sections_for_patch = update_knob_sections_for_patch;
@@ -734,6 +766,13 @@ window.set_channel_active = function(channel, active, opts) {
       // and remove it from the block (with an explicit i<ch>iv0 so a removed
       // channel 1 stays off past the boot-time default synth — see amyboard.py).
       remove_synth_from_sketch(ch);       // records i<ch>iv0 + sends num_voices=0
+      // Immediately present the deactivated channel as the default surface:
+      // knob configs back to defaults, then the inactive path of
+      // apply_zd_dump_to_knobs renders the K257 surface fully greyed.
+      if (typeof window.reset_channel_knobs_to_defaults === 'function') {
+        window.reset_channel_knobs_to_defaults(ch);
+      }
+      position_current_channel_from_log();
     }
     return;
   }
@@ -1341,6 +1380,11 @@ function onKnobCcChange(knob, previousCc) {
     && Number.isInteger(newCcNum) && newCcNum >= 0 && newCcNum <= 127;
   if (hasNewCc) {
     var allKnobs = get_knobs_for_channel(synthChannel);
+    if (typeof window.get_drum_knobs_for_channel === "function"
+      && typeof window.get_channel_drum_kit === "function"
+      && window.get_channel_drum_kit(synthChannel)) {
+      allKnobs = allKnobs.concat(window.get_drum_knobs_for_channel(synthChannel));
+    }
     for (var i = 0; i < allKnobs.length; i++) {
       var other = allKnobs[i];
       if (!other || other === knob) continue;
@@ -1352,6 +1396,13 @@ function onKnobCcChange(knob, previousCc) {
     }
   }
 
+  // Drum kit knobs keep their CC in the knob config only (used by move_knob's
+  // web-side routing): a device-side ic mapping can't be installed for them —
+  // the io note template's own %v/%i placeholders would collide with the ic
+  // template substitution. Nothing to send or log.
+  if (knob.no_device_cc) {
+    return;
+  }
   var ccVal = build_knob_cc_value(knob);
   if (window.suppress_knob_cc_send) {
     return;
@@ -1450,13 +1501,24 @@ window.amy_cv_knob_change = function(index, value) {
 
 function move_knob(channel, cc, value) {
   // Hook for MIDI CC -> knob mapping.
-  const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
+  let knobList = window.get_current_knobs ? window.get_current_knobs() : [];
   if (window.cc_learn_handler && channel === window.current_synth) {
     window.cc_learn_handler(cc);
     return;
   }
   if (channel !== window.current_synth || !Array.isArray(knobList)) {
     return;
+  }
+  // Drum kit channels: the per-drum knobs (editor_drums.js) respond to CC
+  // too. They have no device-side ic mapping (their io note templates can't
+  // nest inside one), so unlike regular knobs the move must SEND to AMY —
+  // set_knob_ui_value(..., true) below routes through their drum_send.
+  const drumKnobs = (typeof window.get_channel_drum_kit === "function"
+    && window.get_channel_drum_kit(channel)
+    && typeof window.get_drum_knobs_for_channel === "function")
+    ? window.get_drum_knobs_for_channel(channel) : [];
+  if (Array.isArray(drumKnobs) && drumKnobs.length) {
+    knobList = drumKnobs.concat(knobList);
   }
   for (const knob of knobList) {
     if (knob.cc != cc) {
@@ -1498,7 +1560,9 @@ function move_knob(channel, cc, value) {
         scaled_value = min + (max - min) * (value / 127);
       }
     }
-    set_knob_ui_value(knob, scaled_value, false);
+    // Regular knobs: UI-only (the device/AMY-side ic mapping already applied
+    // the change). Drum knobs: send too — there is no device-side mapping.
+    set_knob_ui_value(knob, scaled_value, !!knob.drum);
     return;
   }
 }
@@ -1676,7 +1740,7 @@ function get_knobs_for_channel(channel) {
 
 function build_knob_cc_value(knob) {
   if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half"
-    || knob.knob_type === "pushbutton") {
+    || knob.knob_type === "pushbutton" || knob.no_device_cc) {
     return "";
   }
   // Skip knobs with no CC assigned (blank/null/undefined/non-integer or out of range).
@@ -6197,7 +6261,7 @@ function apply_zd_dump_to_knobs(dumpText) {
     // In SYNC 2 the block carries only the patch number (K128-255 = DX7 presets,
     // K258/K384+ = drums), not a full per-voice osc dump, so detect from K.
     // Done before the !bootActive return so switching to an inactive channel
-    // doesn't keep the previous channel's greyed sections.
+    // doesn't keep the previous channel's surface (drum grid or greyed sections).
     if (typeof window.update_knob_sections_for_patch === "function") {
         var effPatch = (currentSynth === window.DRUM_CHANNEL) ? window.DRUM_DEFAULT_PATCH : 257;
         var kLines = perSynth[currentSynth] || [];
@@ -6205,10 +6269,47 @@ function apply_zd_dump_to_knobs(dumpText) {
             var km = /K(\d+)/.exec(kLines[ki]);
             if (km) effPatch = parseInt(km[1], 10);
         }
+        // An inactive channel always presents as the default K257 surface
+        // (fully greyed below) — its patch only matters once it's activated.
+        if (!bootActive) effPatch = 257;
         window.update_knob_sections_for_patch(effPatch);
     }
     // Populate knobs for the current synth.
     if (!bootActive) {
+        // Inactive channel: render the K257 surface with every channel section
+        // greyed (the FX column stays live — it's per bus, not per channel).
+        // Activating the channel reloads K257 and un-greys via the paths above.
+        for (var gi = 0; gi < CHANNEL_KNOB_SECTIONS.length; gi++) {
+            window.set_section_disabled(CHANNEL_KNOB_SECTIONS[gi], true);
+        }
+        var prevSuppressInactive = window.suppress_knob_cc_send;
+        window.suppress_knob_cc_send = true;
+        try {
+            // Position the greyed knobs at the K257 default state. Osc lines
+            // only: the baseline's FX line would reset the per-bus FX mirrors,
+            // which an inactive channel must not touch.
+            if (typeof window.set_knobs_from_events === 'function'
+                && typeof events_from_wire_code_messages === 'function'
+                && typeof k257_default_wire_baseline === 'function') {
+                var oscBaseline = k257_default_wire_baseline().split('Z').filter(function(seg) {
+                    return seg && seg.charAt(0) === 'v';
+                }).join('Z');
+                if (oscBaseline) {
+                    try {
+                        window.set_knobs_from_events(
+                            events_from_wire_code_messages([oscBaseline + 'Z']),
+                            currentSynth, { onlyDirtyFxBuses: true });
+                    } catch (e) {
+                        console.warn('apply_zd_dump_to_knobs: inactive baseline positioning failed', e);
+                    }
+                }
+            }
+            if (typeof window.refresh_knobs_for_channel === 'function') {
+                window.refresh_knobs_for_channel();
+            }
+        } finally {
+            window.suppress_knob_cc_send = prevSuppressInactive;
+        }
         console.log('apply_zd_dump_to_knobs: synth ' + currentSynth + ' is not active');
         return;
     }
@@ -6221,7 +6322,13 @@ function apply_zd_dump_to_knobs(dumpText) {
     // setup) lines still positions every knob; the synth's own lines then
     // override specific knobs on top (last-wins in set_knobs_from_events).
     var baseline = (typeof k257_default_wire_baseline === 'function') ? k257_default_wire_baseline() : '';
-    var wireLines = (baseline ? [baseline] : []).concat(perSynth[currentSynth] || []).concat(effectsLines);
+    // Drum note-mapping lines (i<ch>io<note>,...) are not osc events — the drum
+    // knob view reads them from the knob log directly. Keep them out of the
+    // event parser (their comma'd mapping args aren't parseable wire events).
+    var synthLines = (perSynth[currentSynth] || []).filter(function(l) {
+      return !/^io\d/.test(l);
+    });
+    var wireLines = (baseline ? [baseline] : []).concat(synthLines).concat(effectsLines);
     try {
         var events = events_from_wire_code_messages(wireLines);
         window.set_knobs_from_events(events, currentSynth);

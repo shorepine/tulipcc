@@ -276,7 +276,7 @@ A note on list parameters:  When an argument is a list of parameters, you can in
 | `O`    | `algo_source[]`| `algo_source` | string | Which oscillators to use for the FM algorithm. list of six (starting with op 6), use empty for not used, e.g 0,1,2 or 0,1,2,,, |
 | `p`    | `preset` | `preset` | int | Which predefined PCM or wavetable preset patch to use, or number of partials if < 0. For `wave=WAVETABLE`, use the wavetable presets appended to PCM. (Juno/DX7 patches are different - see `patch_number`). |
 | `p`    | `preset` | `num_partials` | int | Alias for `preset`. Must be used with `wave=BYO_PARTIALS`. Cannot be combined with `preset` in the same message. |
-| `P`    | `phase` | `phase` | float 0-1 | Where in the oscillator's cycle to begin the waveform (also works on the PCM buffer). default 0 |
+| `P`    | `phase` | `phase` | float 0-1 | Where in the oscillator's cycle to begin the waveform (also works on the PCM buffer). default 0. For PCM oscs, a phase sent with (or before) a note-on sets the sample start point for that note-on (`start_frame / 2^23`) and is consumed by it; later note-ons without a phase start from 0 again. |
 | `R`    | `resonance` | `resonance` | float | Q factor of variable filter, 0.5-16.0. default 0.7 |
 | `T`    | `eg_type[0]` | `eg0_type` | uint 0-3 | Type for Envelope Generator 0 - 0: Normal (RC-like) / 1: Linear / 2: DX7-style / 3: True exponential. |
 | `X`    | `eg_type[1]` | `eg1_type` | uint 0-3 | Type for Envelope Generator 1 - 0: Normal (RC-like) / 1: Linear / 2: DX7-style / 3: True exponential. |
