@@ -1119,6 +1119,11 @@ function init_knobs(knobConfigs, gridId, onChange) {
       ? "col-12 knob-section knob-section-main"
       : "col-12 knob-section";
     sectionWrap.className = sectionClass;
+    // Re-apply DX7/drum section greying across grid re-renders (the class
+    // lives on the DOM node, which this render just replaced).
+    if (window._disabled_sections && window._disabled_sections[section.name]) {
+      sectionWrap.classList.add("section-disabled");
+    }
     sectionWrap.style.setProperty("--knob-count", String(section.items.length));
     const sectionUnits = section.units || section.items.length;
     const rowUnits = isMainGrid ? Math.min(14, sectionUnits) : sectionUnits;

@@ -1804,6 +1804,11 @@
               <select class="form-select form-select-sm flex-grow-1" id="load-patch-dx7-presets"></select>
               <button type="button" class="btn btn-sm btn-primary" id="load-dx7-preset-btn">Load</button>
             </div>
+            <label for="load-patch-drum-presets" class="form-label mb-1 small fw-bold">Drum Kits</label>
+            <div class="d-flex gap-2 align-items-center mb-2">
+              <select class="form-select form-select-sm flex-grow-1" id="load-patch-drum-presets"></select>
+              <button type="button" class="btn btn-sm btn-primary" id="load-drum-preset-btn">Load</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2164,8 +2169,10 @@
         syncFxLevelForBus();
         const junoPresetsSelect = document.getElementById("load-patch-juno-presets");
         const dx7PresetsSelect = document.getElementById("load-patch-dx7-presets");
+        const drumPresetsSelect = document.getElementById("load-patch-drum-presets");
         const loadJunoPresetButton = document.getElementById("load-juno-preset-btn");
         const loadDx7PresetButton = document.getElementById("load-dx7-preset-btn");
+        const loadDrumPresetButton = document.getElementById("load-drum-preset-btn");
         const loadPatchChannelLabel = document.getElementById("load-patch-channel-label");
         const patchActiveNameEl = document.getElementById("patch-active-name");
         function refreshPatchActiveNameLabel() { /* no-op */ }
@@ -2180,6 +2187,10 @@
         if (typeof init_patches_select_range === "function") {
           init_patches_select_range("load-patch-juno-presets", 0, 128);
           init_patches_select_range("load-patch-dx7-presets", 128, 256);
+          // The GM drum kit bank (K384 up to the end of the built-in table;
+          // init_patches_select_range clamps to patches.length and skips
+          // reserved gaps, so new kits added in amy show up automatically).
+          init_patches_select_range("load-patch-drum-presets", 384, 1024);
         }
         refreshLoadPatchChannelLabel();
         refreshPatchActiveNameLabel();
@@ -2192,7 +2203,7 @@
             const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
             const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
             const dialogWidth = Math.min(360, Math.max(280, viewportWidth - 24));
-            const estimatedHeight = 160;
+            const estimatedHeight = 220;
             let left = rect.left;
             if (left + dialogWidth > viewportWidth - 12) {
               left = viewportWidth - dialogWidth - 12;
@@ -2238,7 +2249,8 @@
                 }
                 return;
               }
-              var isDX7Preset = patch >= 128;
+              var isDrumPreset = typeof window.is_drum_patch === "function" && window.is_drum_patch(patch);
+              var isDX7Preset = !isDrumPreset && patch >= 128;
               var presetSynth = Number(window.current_synth || 1);
               try {
                 // SYNC 2: clear this synth's lines in the knob log first, then
@@ -2251,9 +2263,11 @@
                 // Send AMY reset + wire commands for the preset patch.
                 if (typeof amy_send === "function") {
                   var _patchMsg;
-                  if (isDX7Preset) {
-                    // Use K (patch_number) to load the DX7 preset — AMY applies all
-                    // wire commands internally in one call, avoiding sysex races.
+                  if (isDX7Preset || isDrumPreset) {
+                    // Use K (patch_number) to load the DX7 preset or drum kit —
+                    // AMY applies all wire commands internally in one call,
+                    // avoiding sysex races. (Drum kit patch strings bake in the
+                    // note->sample map and synth flags, so K alone is complete.)
                     _patchMsg = amy_send({synth: presetSynth, num_voices: 6, patch: patch}, true);
                   } else {
                     _patchMsg = amy_send({synth: presetSynth, num_voices: 6, patch: 257}, true);
@@ -2262,7 +2276,7 @@
                   // In control mode, skip reset_global_effects — it floods sysex with
                   // default knob values that race with the K command via sysex_message_copy.
                   if (amyboard_mode !== 'control' && typeof reset_global_effects === "function") { reset_global_effects(); }
-                  if (!isDX7Preset && typeof get_wire_commands_for_juno_patch === "function") {
+                  if (!isDX7Preset && !isDrumPreset && typeof get_wire_commands_for_juno_patch === "function") {
                     var presetWireCommands = get_wire_commands_for_juno_patch(patch);
                     for (var wi = 0; wi < presetWireCommands.length; wi++) {
                       var _pcmd = "i" + presetSynth + presetWireCommands[wi];
@@ -2275,11 +2289,10 @@
                     if (typeof log_preset_message === "function") log_preset_message(presetSynth, _codaMsg);
                   }
                   // Mark disabled panes before sending CC mappings so disabled-section
-                  // knobs don't blast initial ic updates to AMY for DX7 presets.
-                  if (typeof window.set_section_disabled === "function") {
-                    window.set_section_disabled("Osc A", isDX7Preset);
-                    window.set_section_disabled("Osc B", isDX7Preset);
-                    window.set_section_disabled("ADSR", isDX7Preset);
+                  // knobs don't blast initial ic updates to AMY for DX7 presets. Also
+                  // re-enables the drum-greyed sections when a preset replaces a drum kit.
+                  if (typeof window.update_knob_sections_for_patch === "function") {
+                    window.update_knob_sections_for_patch(patch);
                   }
                   // In control mode, skip sending knob CC mappings — they race with the
                   // patch load over sysex and can overwrite the K command. The hardware
@@ -2288,15 +2301,23 @@
                     send_all_knob_cc_mappings(presetSynth);
                   }
                 }
+                // Loading a preset onto an inactive channel activates it — the
+                // preset was just sent live, so the synth is audibly playing.
+                // Set the flag directly (set_channel_active's toggle path would
+                // reset the channel and clobber the preset we just loaded).
+                if (Array.isArray(window.active_channels) && !window.active_channels[presetSynth]) {
+                  window.active_channels[presetSynth] = true;
+                  syncActiveCheckboxForChannel();
+                }
                 // Read knob values from AMY's live synth state (async, waits
-                // for AMY to process queued deltas including VCF coda).
-                window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
-                if (typeof sync_channel_knobs_from_synth_to_ui === "function") {
+                // for AMY to process queued deltas including VCF coda). Skipped
+                // for drum kits: every synthesis knob is greyed out, and the
+                // kit's PCM control osc holds nothing the knobs can represent.
+                if (!isDrumPreset) window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
+                if (!isDrumPreset && typeof sync_channel_knobs_from_synth_to_ui === "function") {
                   sync_channel_knobs_from_synth_to_ui(presetSynth).then(function() {
-                    if (typeof window.set_section_disabled === "function") {
-                      window.set_section_disabled("Osc A", isDX7Preset);
-                      window.set_section_disabled("Osc B", isDX7Preset);
-                      window.set_section_disabled("ADSR", isDX7Preset);
+                    if (typeof window.update_knob_sections_for_patch === "function") {
+                      window.update_knob_sections_for_patch(patch);
                     }
                     // Mark channel dirty after preset load so Save shows * and .dirty file is written.
                     if (typeof schedule_dirty_autosave_for_channel === "function") {
@@ -2321,6 +2342,11 @@
           if (loadDx7PresetButton && dx7PresetsSelect) {
             loadDx7PresetButton.addEventListener("click", function() {
               handlePresetLoad(dx7PresetsSelect);
+            });
+          }
+          if (loadDrumPresetButton && drumPresetsSelect) {
+            loadDrumPresetButton.addEventListener("click", function() {
+              handlePresetLoad(drumPresetsSelect);
             });
           }
         }
@@ -2349,7 +2375,9 @@
         if (typeof window.set_channel_active === "function") {
           window.set_channel_active(1, true);
           for (let ch = 2; ch <= 16; ch += 1) {
-            window.set_channel_active(ch, false);
+            // Channel 10 defaults to active with the GM drum kit (see
+            // DRUM_CHANNEL in spss.js), matching the device boot.
+            window.set_channel_active(ch, ch === (window.DRUM_CHANNEL || 10));
           }
         }
         syncActiveCheckboxForChannel();
