@@ -162,6 +162,9 @@ window.current_synth = 1;
 // GM MIDI convention: channel 10 is the drum channel. The device boots a GM
 // drum kit on it (i10K384iv6 in amyboard.py start_amy/_apply_knobs_text), so
 // the web editor treats channel 10 as active-with-drums by default too.
+// This is a BOOT-only default: once the user changes channel 10 (deactivates
+// it, loads a preset, clears it), the UI never re-assumes drums — the channel
+// behaves like any other (K257 on activate/clear).
 window.DRUM_CHANNEL = 10;
 window.DRUM_DEFAULT_PATCH = 384;  // drum kit 0 TR-808 — matches the device boot default
 window.active_channels = Array.isArray(window.active_channels) ? window.active_channels : new Array(17).fill(false);
@@ -380,20 +383,6 @@ function channel_has_patch_in_log(synth) {
   return found;
 }
 window.channel_has_patch_in_log = channel_has_patch_in_log;
-
-// The drum-channel analog of reset_synth_in_sketch: reset the synth to the GM
-// drum kit default (clear CC maps + K384, 6 voices) and send the same live.
-// K384's patch string bakes in the note->sample map and synth flags, so this
-// single load matches the device boot default i10K384iv6 (amyboard.py).
-function reset_drum_synth_in_sketch(synth) {
-  synth = Number(synth);
-  if (!Number.isInteger(synth) || synth < 1 || synth > 16) return;
-  _knob_log_clear_synth(synth);
-  send_amy_message_in_sketch('i' + synth + 'ic255', { synth: synth });
-  send_amy_message_in_sketch('i' + synth + 'K' + window.DRUM_DEFAULT_PATCH + 'iv6', { synth: synth });
-  _reset_channel_bus_ui(synth);
-}
-window.reset_drum_synth_in_sketch = reset_drum_synth_in_sketch;
 
 // Reset a channel's bus mirror to 0 and refresh the bus UI if it's on display.
 function _reset_channel_bus_ui(synth) {
@@ -730,16 +719,13 @@ window.set_channel_active = function(channel, active, opts) {
       // those are generic UI defaults (SINE, f440, …) that would override K257
       // and silence the Juno (the bug where activating ch2 dumped ~50 commands).
       // Instead we reset to the K257 default and position the UI knobs to match,
-      // like startup. Channel 10 is the GM drum channel: (re)activating it
-      // reloads the drum kit default instead. But if the channel already has a
-      // patch in the log (e.g. a preset loaded while the checkbox was off),
-      // don't overwrite it with any default — the drum default only applies to
-      // a channel with nothing configured; just mark it active.
-      if (channel_has_patch_in_log(ch)) {
-        // keep the existing patch; it was already sent live when loaded
-      } else if (ch === window.DRUM_CHANNEL) {
-        reset_drum_synth_in_sketch(ch);     // sends + records i<ch>ic255, i<ch>K384iv6
-      } else {
+      // like startup. This applies to channel 10 too: its GM-drum default is a
+      // BOOT-only default (the device and simulator boot with i10K384iv6) —
+      // once the user touches the channel we never re-assume drums; activating
+      // an empty channel 10 loads K257 like any other channel. And if the
+      // channel already has a patch in the log (e.g. a preset loaded while the
+      // checkbox was off), don't overwrite it — just mark it active.
+      if (!channel_has_patch_in_log(ch)) {
         reset_synth_in_sketch(ch);          // sends + records i<ch>ic255, i<ch>K257iv6
       }
       position_current_channel_from_log();  // UI knobs -> patch state (no AMY send)
@@ -1313,16 +1299,12 @@ window.clear_current_channel_patch = async function() {
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) {
     throw new Error("Invalid channel.");
   }
-  // SYNC 2: reset this channel to its default patch (the GM drum kit on channel
-  // 10, K257 elsewhere) and position the UI knobs to its defaults — no
-  // knob-value/CC flood (K257 reinstalls the channel's default CC map on the
+  // SYNC 2: reset this channel to the default patch (K257 — even on channel 10,
+  // whose drum default is boot-only) and position the UI knobs to its defaults —
+  // no knob-value/CC flood (K257 reinstalls the channel's default CC map on the
   // device), no zA AMY-state pull. position_current_channel_from_log also
-  // greys/ungreys the knob sections for the reloaded default patch.
-  if (synth === window.DRUM_CHANNEL) {
-    reset_drum_synth_in_sketch(synth);   // sends + records i<synth>ic255, K384iv6
-  } else {
-    reset_synth_in_sketch(synth);        // sends + records i<synth>ic255, K257iv6
-  }
+  // greys/ungreys the knob sections for the reloaded patch.
+  reset_synth_in_sketch(synth);          // sends + records i<synth>ic255, K257iv6
   // Clear on an inactive channel just sent its default patch live — the channel
   // is now audibly playing, so mark it active (the checkbox syncs from
   // active_channels inside position_current_channel_from_log).
