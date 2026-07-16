@@ -362,6 +362,25 @@ function reset_synth_in_sketch(synth) {
 }
 window.reset_synth_in_sketch = reset_synth_in_sketch;
 
+// True if the knob log already holds a patch (a K<n> setup line) for this
+// synth — e.g. a preset was loaded while the channel's Active checkbox was off.
+// CC-mapping lines (i<ch>ic...) are skipped: their change_code templates are
+// not patch loads. A deactivated channel's log is just i<ch>iv0, so this is
+// false after a user toggle-off.
+function channel_has_patch_in_log(synth) {
+  synth = Number(synth);
+  if (!window.knob_log || typeof window.knob_log.forEach !== 'function') return false;
+  var found = false;
+  window.knob_log.forEach(function(entry) {
+    if (found || !entry || Number(entry.synth) !== synth) return;
+    var line = String(entry.line || '');
+    if (/^i\d+ic/.test(line)) return;
+    if (/K\d+/.test(line)) found = true;
+  });
+  return found;
+}
+window.channel_has_patch_in_log = channel_has_patch_in_log;
+
 // The drum-channel analog of reset_synth_in_sketch: reset the synth to the GM
 // drum kit default (clear CC maps + K384, 6 voices) and send the same live.
 // K384's patch string bakes in the note->sample map and synth flags, so this
@@ -712,13 +731,18 @@ window.set_channel_active = function(channel, active, opts) {
       // and silence the Juno (the bug where activating ch2 dumped ~50 commands).
       // Instead we reset to the K257 default and position the UI knobs to match,
       // like startup. Channel 10 is the GM drum channel: (re)activating it
-      // reloads the drum kit default instead.
-      if (ch === window.DRUM_CHANNEL) {
+      // reloads the drum kit default instead. But if the channel already has a
+      // patch in the log (e.g. a preset loaded while the checkbox was off),
+      // don't overwrite it with any default — the drum default only applies to
+      // a channel with nothing configured; just mark it active.
+      if (channel_has_patch_in_log(ch)) {
+        // keep the existing patch; it was already sent live when loaded
+      } else if (ch === window.DRUM_CHANNEL) {
         reset_drum_synth_in_sketch(ch);     // sends + records i<ch>ic255, i<ch>K384iv6
       } else {
         reset_synth_in_sketch(ch);          // sends + records i<ch>ic255, i<ch>K257iv6
       }
-      position_current_channel_from_log();  // UI knobs -> patch defaults (no AMY send)
+      position_current_channel_from_log();  // UI knobs -> patch state (no AMY send)
     } else if (!active && wasActive) {
       // Disable: tear the synth down so it stops playing and frees its voices,
       // and remove it from the block (with an explicit i<ch>iv0 so a removed
@@ -1299,6 +1323,10 @@ window.clear_current_channel_patch = async function() {
   } else {
     reset_synth_in_sketch(synth);        // sends + records i<synth>ic255, K257iv6
   }
+  // Clear on an inactive channel just sent its default patch live — the channel
+  // is now audibly playing, so mark it active (the checkbox syncs from
+  // active_channels inside position_current_channel_from_log).
+  if (Array.isArray(window.active_channels)) window.active_channels[synth] = true;
   position_current_channel_from_log();   // UI knobs -> patch defaults (no AMY send)
   if (amyboard_mode !== 'control') {
     reset_global_effects();

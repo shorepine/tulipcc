@@ -2287,6 +2287,14 @@
                     send_all_knob_cc_mappings(presetSynth);
                   }
                 }
+                // Loading a preset onto an inactive channel activates it — the
+                // preset was just sent live, so the synth is audibly playing.
+                // Set the flag directly (set_channel_active's toggle path would
+                // reset the channel and clobber the preset we just loaded).
+                if (Array.isArray(window.active_channels) && !window.active_channels[presetSynth]) {
+                  window.active_channels[presetSynth] = true;
+                  syncActiveCheckboxForChannel();
+                }
                 // Read knob values from AMY's live synth state (async, waits
                 // for AMY to process queued deltas including VCF coda).
                 window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
