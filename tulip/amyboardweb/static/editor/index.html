@@ -60,6 +60,8 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="amy_event_layout.generated.js"></script>
     <script type="text/javascript" src="pcm_presets.generated.js"></script>
+    <script type="text/javascript" src="drum_presets.generated.js"></script>
+    <script type="text/javascript" src="editor_drums.js"></script>
     <script type="text/javascript" src="amy_api.generated.js"></script>
     <script type="text/javascript" src="amy_parameters.js"></script>
     <script>
@@ -266,6 +268,44 @@
       .knob-section.section-disabled {
         opacity: 0.35;
         pointer-events: none;
+      }
+
+      /* Drum kit view: one section per drum sound, 6 small knobs each, two
+         sounds per row (the existing 50% knob-section-main rule). */
+      .knob-grid-drums .amy-knob {
+        width: 34px;
+        height: 34px;
+      }
+      .knob-grid-drums .amy-knob-indicator {
+        top: 3px;
+        width: 4px;
+        height: 4px;
+      }
+      .knob-grid-drums .knob-label {
+        font-size: 0.6rem;
+        margin-bottom: 0.15rem !important;
+      }
+      .knob-grid-drums .knob-value {
+        font-size: 0.55rem;
+        padding: 0.1rem 0.15rem;
+        margin-top: 0.15rem !important;
+      }
+      .knob-grid-drums .knob-section-header {
+        text-transform: none;
+        letter-spacing: 0.02em;
+        font-size: 10px;
+        padding: 3px 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .knob-grid-drums .knob-section-grid {
+        --bs-gutter-x: 0.5rem;
+        --bs-gutter-y: 0.35rem;
+      }
+      .knob-grid-drums .knob-section {
+        background: rgba(210, 200, 170, 0.65);
+        padding-bottom: 2px;
       }
 
       .amy-select-btn::before {

@@ -780,7 +780,19 @@ window.addEventListener("DOMContentLoaded", function() {
   };
 
   window.refresh_knobs_for_channel = function() {
-    const channelKnobs = window.get_channel_knobs(window.current_synth);
+    const ch = Number(window.current_synth || 1);
+    // Drum kit channels get the per-drum parameter grid instead of the
+    // synthesis sections (which don't apply to a note->sample kit). The FX
+    // (bus) grid renders the same either way.
+    const drumKit = (typeof window.get_channel_drum_kit === "function")
+      ? window.get_channel_drum_kit(ch) : null;
+    const channelGrid = document.getElementById("knob-grid-channel");
+    if (channelGrid) channelGrid.classList.toggle("knob-grid-drums", !!drumKit);
+    const channelKnobs = drumKit
+      ? (typeof window.get_drum_knobs_for_channel === "function"
+        ? (window.refresh_drum_knob_values(ch), window.get_drum_knobs_for_channel(ch))
+        : [])
+      : window.get_channel_knobs(ch);
     const globalKnobs = window.get_global_knobs();
     const knobs = channelKnobs.concat(globalKnobs);
     if (typeof init_knobs === "function") {
@@ -790,6 +802,7 @@ window.addEventListener("DOMContentLoaded", function() {
     if (typeof window.onKnobCcChange === "function") {
       const disabledSections = window._disabled_sections || {};
       for (const knob of knobs) {
+        if (knob.drum) continue;  // drum knobs never emit device CC mappings
         if (disabledSections[knob.section]) continue;
         if (knob.knob_type !== "spacer" && knob.knob_type !== "spacer-half"
           && knob.knob_type !== "pushbutton") {

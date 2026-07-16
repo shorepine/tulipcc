@@ -232,8 +232,10 @@ function _knob_log_struct_key(message) {
   }
   while (i < s.length) {
     var c = s.charAt(i);
-    if ((c === 'i' || c === 'v') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
+    if ((c === 'i' || c === 'v' || c === 'o') && s.charCodeAt(i + 1) >= 48 && s.charCodeAt(i + 1) <= 57) {
       // i<synth> / v<osc> selector — keep the letter and its digits literally.
+      // 'o' too: in a note-mapping line (i10o35,...) the digits are the MIDI
+      // note being mapped — each note needs its own last-wins slot.
       out += c; i++;
       while (i < s.length && s.charCodeAt(i) >= 48 && s.charCodeAt(i) <= 57) { out += s.charAt(i); i++; }
     } else if ((c >= '0' && c <= '9') ||
@@ -678,9 +680,29 @@ function update_knob_sections_for_patch(patchNumber) {
   var pn = Number(patchNumber);
   var isDX7 = Number.isInteger(pn) && pn >= 128 && pn <= 255;
   var isDrums = is_drum_patch(pn);
+  // Drum kits swap the whole channel grid for the per-drum knob view
+  // (editor_drums.js; rendered by refresh_knobs_for_channel). The section
+  // disabled flags are still set below so send_all_knob_cc_mappings /
+  // send_all_knob_values skip the (hidden) synthesis knobs for drum channels.
+  var needsRender = false;
+  if (typeof window.set_channel_drum_kit === 'function'
+    && typeof window.get_channel_drum_kit === 'function') {
+    var ch = Number(window.current_synth || 1);
+    var prevKit = window.get_channel_drum_kit(ch);
+    window.set_channel_drum_kit(ch, isDrums ? pn : null);
+    // Re-render on any view change — entering/leaving the drum view or
+    // switching kits — and on a same-kit (re)load, whose reset just cleared
+    // the channel's recorded drum tweaks back to kit defaults.
+    needsRender = isDrums || !!prevKit;
+  }
   for (var i = 0; i < CHANNEL_KNOB_SECTIONS.length; i++) {
     var section = CHANNEL_KNOB_SECTIONS[i];
     window.set_section_disabled(section, isDrums || (isDX7 && !!DX7_DISABLED_SECTIONS[section]));
+  }
+  if (needsRender && typeof window.refresh_knobs_for_channel === 'function') {
+    var prevSuppress = !!window.suppress_knob_cc_send;
+    window.suppress_knob_cc_send = true;
+    try { window.refresh_knobs_for_channel(); } finally { window.suppress_knob_cc_send = prevSuppress; }
   }
 }
 window.update_knob_sections_for_patch = update_knob_sections_for_patch;
@@ -1341,6 +1363,11 @@ function onKnobCcChange(knob, previousCc) {
     && Number.isInteger(newCcNum) && newCcNum >= 0 && newCcNum <= 127;
   if (hasNewCc) {
     var allKnobs = get_knobs_for_channel(synthChannel);
+    if (typeof window.get_drum_knobs_for_channel === "function"
+      && typeof window.get_channel_drum_kit === "function"
+      && window.get_channel_drum_kit(synthChannel)) {
+      allKnobs = allKnobs.concat(window.get_drum_knobs_for_channel(synthChannel));
+    }
     for (var i = 0; i < allKnobs.length; i++) {
       var other = allKnobs[i];
       if (!other || other === knob) continue;
@@ -1352,6 +1379,13 @@ function onKnobCcChange(knob, previousCc) {
     }
   }
 
+  // Drum kit knobs keep their CC in the knob config only (used by move_knob's
+  // web-side routing): a device-side ic mapping can't be installed for them —
+  // the io note template's own %v/%i placeholders would collide with the ic
+  // template substitution. Nothing to send or log.
+  if (knob.no_device_cc) {
+    return;
+  }
   var ccVal = build_knob_cc_value(knob);
   if (window.suppress_knob_cc_send) {
     return;
@@ -1450,13 +1484,24 @@ window.amy_cv_knob_change = function(index, value) {
 
 function move_knob(channel, cc, value) {
   // Hook for MIDI CC -> knob mapping.
-  const knobList = window.get_current_knobs ? window.get_current_knobs() : [];
+  let knobList = window.get_current_knobs ? window.get_current_knobs() : [];
   if (window.cc_learn_handler && channel === window.current_synth) {
     window.cc_learn_handler(cc);
     return;
   }
   if (channel !== window.current_synth || !Array.isArray(knobList)) {
     return;
+  }
+  // Drum kit channels: the per-drum knobs (editor_drums.js) respond to CC
+  // too. They have no device-side ic mapping (their io note templates can't
+  // nest inside one), so unlike regular knobs the move must SEND to AMY —
+  // set_knob_ui_value(..., true) below routes through their drum_send.
+  const drumKnobs = (typeof window.get_channel_drum_kit === "function"
+    && window.get_channel_drum_kit(channel)
+    && typeof window.get_drum_knobs_for_channel === "function")
+    ? window.get_drum_knobs_for_channel(channel) : [];
+  if (Array.isArray(drumKnobs) && drumKnobs.length) {
+    knobList = drumKnobs.concat(knobList);
   }
   for (const knob of knobList) {
     if (knob.cc != cc) {
@@ -1498,7 +1543,9 @@ function move_knob(channel, cc, value) {
         scaled_value = min + (max - min) * (value / 127);
       }
     }
-    set_knob_ui_value(knob, scaled_value, false);
+    // Regular knobs: UI-only (the device/AMY-side ic mapping already applied
+    // the change). Drum knobs: send too — there is no device-side mapping.
+    set_knob_ui_value(knob, scaled_value, !!knob.drum);
     return;
   }
 }
@@ -1676,7 +1723,7 @@ function get_knobs_for_channel(channel) {
 
 function build_knob_cc_value(knob) {
   if (!knob || knob.knob_type === "spacer" || knob.knob_type === "spacer-half"
-    || knob.knob_type === "pushbutton") {
+    || knob.knob_type === "pushbutton" || knob.no_device_cc) {
     return "";
   }
   // Skip knobs with no CC assigned (blank/null/undefined/non-integer or out of range).
@@ -6221,7 +6268,13 @@ function apply_zd_dump_to_knobs(dumpText) {
     // setup) lines still positions every knob; the synth's own lines then
     // override specific knobs on top (last-wins in set_knobs_from_events).
     var baseline = (typeof k257_default_wire_baseline === 'function') ? k257_default_wire_baseline() : '';
-    var wireLines = (baseline ? [baseline] : []).concat(perSynth[currentSynth] || []).concat(effectsLines);
+    // Drum note-mapping lines (i<ch>io<note>,...) are not osc events — the drum
+    // knob view reads them from the knob log directly. Keep them out of the
+    // event parser (their comma'd mapping args aren't parseable wire events).
+    var synthLines = (perSynth[currentSynth] || []).filter(function(l) {
+      return !/^io\d/.test(l);
+    });
+    var wireLines = (baseline ? [baseline] : []).concat(synthLines).concat(effectsLines);
     try {
         var events = events_from_wire_code_messages(wireLines);
         window.set_knobs_from_events(events, currentSynth);
