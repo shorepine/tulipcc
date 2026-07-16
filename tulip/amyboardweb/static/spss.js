@@ -6136,7 +6136,22 @@ function apply_zd_dump_to_knobs(dumpText) {
             perSynth[synth].push(rest);
             activeSynths[synth] = true;
         } else {
-            effectsLines.push(line);
+            // amy_send() puts the synth token mid-line (e.g. a recorded preset
+            // load "K385i2iv6", or a DX7 coda "...G4i1"). Match i<digits> not
+            // preceded by a letter or % — two-char codes (iv/in/ic/...) have a
+            // non-digit second char and %i templates carry no digits, so this
+            // only hits the synth token. Without this, preset K lines fell into
+            // the FX bucket and DX7/drum greying was lost on channel switch.
+            var sm = /(^|[^A-Za-z%])i(\d+)/.exec(line);
+            if (sm) {
+                var synthMid = parseInt(sm[2], 10);
+                var stripped = line.slice(0, sm.index + sm[1].length) + line.slice(sm.index + sm[0].length);
+                if (!perSynth[synthMid]) perSynth[synthMid] = [];
+                perSynth[synthMid].push(stripped);
+                activeSynths[synthMid] = true;
+            } else {
+                effectsLines.push(line);
+            }
         }
     }
     // Compute each channel's mix bus from its own lines (last y<bus> wins;
