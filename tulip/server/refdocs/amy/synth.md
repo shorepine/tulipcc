@@ -334,7 +334,7 @@ On Gamma9001 devices, patches 384-390 are ready-made General MIDI drum kits: loa
 | 389 | 5 | 80s Power Kit (gated reverb) |
 | 390 | 6 | Percussion (hand drums / latin) |
 
-Switch kits from code with `amy.send(synth=10, patch=38x)`, or over MIDI with a bank select MSB of 3 (CC0=3) followed by a program change 0-6 on the drum channel. A synth already sitting on a kit patch stays in the kit bank, so a bare program change also switches kits. Channel 10 boots as the TR-808 kit when default synths are on; you can run a second kit polytimbrally on another channel, e.g. `amy.send(synth=11, num_voices=4, patch=390, synth_flags=3)`. 
+Switch kits from code with `amy.send(synth=10, patch=38x)`, or over MIDI with a bank select MSB of 3 (CC0=3) followed by a program change 0-6 on the drum channel. A synth already sitting on a kit patch stays in the kit bank, so a bare program change also switches kits. Channel 10 boots as the TR-808 kit when default synths are on; you can run a second kit polytimbrally on another channel, e.g. `amy.send(synth=11, num_voices=4, patch=390, synth_flags=3)`. Set a kit channel's overall level with a constant amp on the synth, e.g. `amy.send(synth=10, amp=0.5)` — the kits keep their per-drum gains in each note mapping's velocity scale, so the level persists across hits, just like on the melodic patches.
 
 
 ```python

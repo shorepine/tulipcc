@@ -3,15 +3,21 @@
 // A drum kit patch (K384+ Gamma9001 kits, K258 legacy ROM drums) is a bank of
 // per-note MIDI note mappings: each entry `io<note>,<L>,<N>,<X>,<O>,<template>`
 // maps one MIDI note to a wire-command template that bakes in the sample's PCM
-// preset (p), base note (n) and level (a). Kit synths are created with
-// synth_flags=3 (SYNTH_FLAGS_NOTES_VIA_MIDI), so every note path — MIDI in,
-// the sequencer, amy.send(note=...) — goes through these mappings.
+// preset (p) and base note (n). The sample's kit-balancing gain rides the
+// mapping's linear velocity scale (the X/max field: %v = X * vel/127), NOT an
+// amp coefficient: amp[CONST] stays untouched by hits, so it remains the
+// per-channel level (the channel strip's Level slider / MIDI CC 7 sends
+// `i<ch>v0a<val>`, exactly like melodic channels — see amy make_drums_patch).
+// Kit synths are created with synth_flags=3 (SYNTH_FLAGS_NOTES_VIA_MIDI), so
+// every note path — MIDI in, the sequencer, amy.send(note=...) — goes through
+// these mappings.
 //
 // The drum knob view exposes six parameters per drum SOUND (distinct PCM
 // preset; a GM kit maps several notes onto some sounds, e.g. the toms):
 //
 //   pitch   -24..+24 semitones  → shifts the template's n relative to the kit
-//   vol     0..1.2              → the mapping's velocity max (X field)
+//   vol     0..1.2              → multiplier on the kit gain in the mapping's
+//                                 velocity max (X field)
 //   offset  0..0.95             → sample start point, P<phase> in the template
 //                                 (phase = start_frame / 2^23; frames from
 //                                 drum_presets.generated.js)
@@ -103,7 +109,8 @@
   }
 
   // The kit's patch wire string is a Z-separated list; note-map entries look
-  // like `io35,0,0,1,0,n60l%va4.02i%ip0`. Returns [{note, velMax, tmpl}].
+  // like `io35,0,0,4.02,0,n60l%vG0i%ip0` (velMax = the drum's kit-balancing
+  // gain). Returns [{note, velMax, tmpl}].
   function parse_kit_entries(kitPatch) {
     var codes = window.patch_code_for_patch_number;
     var s = (codes && typeof codes[kitPatch] === "string") ? codes[kitPatch] : "";
@@ -152,7 +159,7 @@
   function default_params(entry) {
     return {
       pitch: 0,
-      vol: entry ? entry.velMax : 1,
+      vol: 1,   // multiplier on the kit's baked velocity gain (entry.velMax)
       offset: 0,
       cutoff: CUTOFF_MAX_HZ,
       res: 0.7,
@@ -170,17 +177,29 @@
 
   // ── knob log <-> per-sound params ───────────────────────────────────────────
 
-  // One pass over the knob log: note -> recorded io line for this channel.
+  // A pre-drum-level-fix io line carried the drum's kit gain as a template
+  // amp const (`...l%va4.02...`); current lines never write amp — it's the
+  // channel's Level (see build_io_line).
+  function io_line_is_legacy(line) {
+    var m = /^i\d+io\d+,(?:[^,]*,){4}(.*)$/.exec(line);
+    return !!(m && parse_template(m[1]).amp !== null);
+  }
+
+  // One pass over the knob log: note -> recorded io line for this channel,
+  // plus the log keys of any legacy-format lines (for migration).
   function log_io_lines_for_channel(ch) {
-    var lines = {};
-    if (!(window.knob_log instanceof Map)) return lines;
+    var out = { byNote: {}, legacyKeys: [] };
+    if (!(window.knob_log instanceof Map)) return out;
     var re = new RegExp("^i" + ch + "io(\\d+),");
-    window.knob_log.forEach(function(entry) {
+    window.knob_log.forEach(function(entry, key) {
       if (!entry || Number(entry.synth) !== ch) return;
-      var m = re.exec(String(entry.line || ""));
-      if (m) lines[parseInt(m[1], 10)] = String(entry.line);
+      var line = String(entry.line || "");
+      var m = re.exec(line);
+      if (!m) return;
+      out.byNote[parseInt(m[1], 10)] = line;
+      if (io_line_is_legacy(line)) out.legacyKeys.push(key);
     });
-    return lines;
+    return out;
   }
 
   // Recover a sound's params from its first note's recorded io line (if any).
@@ -190,7 +209,17 @@
     var tmpl = parse_template(m[5]);
     var params = default_params(entry);
     var velMax = parseFloat(m[3]);
-    if (Number.isFinite(velMax)) params.vol = velMax;
+    if (Number.isFinite(velMax)) {
+      if (tmpl.amp !== null) {
+        // Legacy line (pre drum-level fix): the kit gain lived in the
+        // template's amp const and velMax was the user's absolute vol
+        // (kit base 1) — which equals today's multiplier.
+        params.vol = velMax;
+      } else {
+        var velBase = Number(entry.velMax) || 1;
+        params.vol = velMax / velBase;
+      }
+    }
     if (Number.isFinite(tmpl.baseNote)) params.pitch = tmpl.baseNote - entry.tmpl.baseNote;
     if (Number.isFinite(tmpl.pan)) params.pan = tmpl.pan;
     if (tmpl.ftype === 4 && Number.isFinite(tmpl.ffreq)) {
@@ -212,7 +241,8 @@
   function build_io_line(ch, entry, sound) {
     var p = sound.params;
     var t = "n" + fmt(entry.tmpl.baseNote + p.pitch) + "l%v";
-    if (entry.tmpl.amp !== null) t += "a" + fmt(entry.tmpl.amp);
+    // No amp in the template: the kit gain is in the velocity max below, and
+    // amp[CONST] is the channel's Level (a hit must never rewrite it).
     t += "i%ip" + entry.tmpl.preset;
     t += "Q" + fmt(p.pan);
     var open = p.cutoff >= CUTOFF_MAX_HZ - 1;
@@ -227,7 +257,7 @@
     // Same command form as CC-mapping lines (i1ic70,...): i<ch> selects the
     // synth, then the synth-level `io` note-map command. A bare `o` after the
     // channel digits would parse as the top-level `algorithm` command.
-    return "i" + ch + "io" + entry.note + ",0,0," + fmt(p.vol) + ",0," + t;
+    return "i" + ch + "io" + entry.note + ",0,0," + fmt(p.vol * (Number(entry.velMax) || 1)) + ",0," + t;
   }
 
   // Send (live) + record (knob log) the mappings for one sound's notes.
@@ -321,15 +351,29 @@
     var knobs = window.get_drum_knobs_for_channel(ch);
     var state = _drum_state[ch];
     if (!state || !knobs.length) return;
-    var logLines = log_io_lines_for_channel(ch);
+    var log = log_io_lines_for_channel(ch);
     state.sounds.forEach(function(sound) {
       var params = null;
       for (var i = 0; i < sound.entries.length && !params; i++) {
-        var line = logLines[sound.entries[i].note];
+        var line = log.byNote[sound.entries[i].note];
         if (line) params = params_from_log_line(sound, sound.entries[i], line);
       }
       sound.params = params || default_params(sound.entries[0]);
     });
+    // Migrate legacy-format lines to the current form in one shot: re-send
+    // every logged sound (live + logged under the current structural key) and
+    // drop the stale legacy slots. Left alone, a legacy line would replay a
+    // template amp const at every boot, clobbering the channel Level again on
+    // that drum's hits.
+    if (log.legacyKeys.length && typeof window.send_amy_message_in_sketch === "function") {
+      state.sounds.forEach(function(sound) {
+        var logged = sound.entries.some(function(e) { return !!log.byNote[e.note]; });
+        if (logged) send_sound(ch, sound);
+      });
+      log.legacyKeys.forEach(function(key) {
+        window.send_amy_message_in_sketch("", { key: key, remove: true, silent: true });
+      });
+    }
     // Push the refreshed values into the knob configs (init_knobs reads
     // default_value at render time).
     var k = 0;
