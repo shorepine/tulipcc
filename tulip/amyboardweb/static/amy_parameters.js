@@ -781,8 +781,11 @@ window.addEventListener("DOMContentLoaded", function() {
 
   window.refresh_knobs_for_channel = function() {
     const ch = Number(window.current_synth || 1);
-    // Drum kit channels get the per-drum parameter grid instead of the
-    // synthesis sections (which don't apply to a note->sample kit). The FX
+    // Render the channel's knob SURFACE for its patch (see the surface plan
+    // at update_knob_sections_for_patch in spss.js): drum kit channels get
+    // the per-drum parameter grid instead of the synthesis sections (which
+    // don't apply to a note->sample kit); everything else gets the Juno
+    // surface (a future DX7 surface will slot in here the same way). The FX
     // (bus) grid renders the same either way.
     const drumKit = (typeof window.get_channel_drum_kit === "function")
       ? window.get_channel_drum_kit(ch) : null;

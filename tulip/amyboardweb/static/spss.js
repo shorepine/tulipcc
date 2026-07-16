@@ -675,6 +675,16 @@ window.is_drum_patch = is_drum_patch;
 // The FX sections and the Level slider (section "Synth"/"Bus") are never touched.
 var DX7_DISABLED_SECTIONS = { "Osc A": true, "Osc B": true, "ADSR": true };
 var CHANNEL_KNOB_SECTIONS = ["Osc A", "Osc B", "ADSR", "VCF", "VCF ENV", "LFO"];
+// The channel grid is a per-patch knob SURFACE. The plan is three of them,
+// selected here from the channel's detected patch:
+//   1. Juno surface (K257 default): the 2-osc + LFO + VCF grid — what
+//      amy_parameters.js renders today.
+//   2. DX7 surface (K128-255): algorithm + per-op FM parameters. NOT BUILT
+//      YET — for now DX7 keeps the Juno surface with the sections it can't
+//      represent (Osc A/B, ADSR) greyed via set_section_disabled.
+//   3. Drum surface (K258/K384+): per-drum-sample knobs (editor_drums.js).
+// This function is the switch point: every patch-change path (preset load,
+// channel switch, sketch load, Clear) funnels through it.
 function update_knob_sections_for_patch(patchNumber) {
   if (typeof window.set_section_disabled !== 'function') return;
   var pn = Number(patchNumber);
