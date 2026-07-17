@@ -519,70 +519,121 @@
     });
   };
 
-  // ── the ENV PLOT row ────────────────────────────────────────────────────────
+  // ── plots, op-plot cells, and the algorithm guide ───────────────────────────
 
-  // One plot cell: a knob-style (non-clickable) title above the canvas.
-  // `span` is the cell's flex weight within its section.
-  function make_plot_cell(state, title, osc, kind, span) {
-    var cell = document.createElement("div");
-    cell.className = "dx7-env-plot";
-    cell.style.flex = String(span);
-    var label = document.createElement("div");
-    label.className = "knob-label small";
-    label.textContent = title;
+  var ALGO_GUIDE_SRC = "/img/dx7_algorithms.jpg";
+
+  function make_env_canvas(state, osc, kind) {
     var canvas = document.createElement("canvas");
-    cell.appendChild(label);
-    cell.appendChild(canvas);
+    canvas.className = "dx7-env-canvas";
     state.plots.push({ canvas: canvas, osc: osc, kind: kind });
-    return cell;
+    return canvas;
   }
 
-  function make_plot_section(cells) {
+  function find_section(grid, name) {
+    var sections = grid.querySelectorAll(".knob-section");
+    for (var i = 0; i < sections.length; i++) {
+      var h = sections[i].querySelector(".knob-section-header");
+      if (h && h.textContent.trim() === name) return sections[i];
+    }
+    return null;
+  }
+
+  // A standalone channel section (the #knob-grid-channel id rule pins these at
+  // 50% width) holding one full-width envelope plot.
+  function make_plot_section(state, headerText, osc, kind) {
     var wrap = document.createElement("div");
     wrap.className = "col-12 knob-section knob-section-main dx7-plot-section";
     var header = document.createElement("div");
     header.className = "knob-section-header";
-    header.textContent = "Env Plot";
-    var row = document.createElement("div");
-    row.className = "dx7-env-plots-row";
-    for (var i = 0; i < cells.length; i++) row.appendChild(cells[i]);
+    header.textContent = headerText;
+    var body = document.createElement("div");
+    body.className = "dx7-plot-body";
+    body.appendChild(make_env_canvas(state, osc, kind));
     wrap.appendChild(header);
-    wrap.appendChild(row);
+    wrap.appendChild(body);
+    return wrap;
+  }
+
+  // ── algorithm guide + modal viewer ──────────────────────────────────────────
+
+  var _algo_modal = null;
+  function open_algo_modal() {
+    if (!_algo_modal) {
+      _algo_modal = document.createElement("div");
+      _algo_modal.className = "dx7-algo-modal";
+      var big = document.createElement("img");
+      big.src = ALGO_GUIDE_SRC;
+      big.alt = "DX7 algorithm guide (1-32)";
+      _algo_modal.appendChild(big);
+      // Dismiss on any click (the image is inside, so its clicks bubble here).
+      _algo_modal.addEventListener("click", function() { _algo_modal.style.display = "none"; });
+      document.body.appendChild(_algo_modal);
+    }
+    _algo_modal.style.display = "flex";
+  }
+
+  function make_algo_guide_section() {
+    var wrap = document.createElement("div");
+    wrap.className = "col-12 knob-section knob-section-main dx7-guide-section";
+    var header = document.createElement("div");
+    header.className = "knob-section-header";
+    header.textContent = "Algorithm Guide";
+    var body = document.createElement("div");
+    body.className = "dx7-guide-body";
+    var img = document.createElement("img");
+    img.className = "dx7-guide-img";
+    img.src = ALGO_GUIDE_SRC;
+    img.alt = "DX7 algorithm guide (1-32)";
+    img.title = "Click to enlarge";
+    img.addEventListener("click", open_algo_modal);
+    body.appendChild(img);
+    wrap.appendChild(header);
+    wrap.appendChild(body);
     return wrap;
   }
 
   // Called by refresh_knobs_for_channel right after init_knobs rendered the
-  // knob sections into #knob-grid-channel: insert the ENV PLOT row (all 7
-  // envelope plots, pitch + op 1-6) between the VCF ENV and OP 1 rows.
+  // knob sections into #knob-grid-channel. Relocates the envelope plots and
+  // drops in the algorithm guide; section DOM order + the fixed 50% width
+  // give the row layout:
+  //   FM               | Pitch Env (knobs)
+  //   VCF              | Pitch Env Plot
+  //   VCF ENV          | Algorithm Guide
+  //   Op N (knobs + amp env plot) | Op N Amp Env
   window.render_dx7_chrome = function(channel) {
     var ch = Number(channel);
     var state = get_state(ch);
     var grid = document.getElementById("knob-grid-channel");
     if (!state || !grid) return;
-
     state.plots = [];
-    var left = make_plot_section([
-      make_plot_cell(state, "pitch", MAIN_OSC, "pitch", 2),
-      make_plot_cell(state, "op 1", op_osc(1), "amp", 1),
-      make_plot_cell(state, "op 2", op_osc(2), "amp", 1),
-    ]);
-    var right = make_plot_section([
-      make_plot_cell(state, "op 3", op_osc(3), "amp", 1),
-      make_plot_cell(state, "op 4", op_osc(4), "amp", 1),
-      make_plot_cell(state, "op 5", op_osc(5), "amp", 1),
-      make_plot_cell(state, "op 6", op_osc(6), "amp", 1),
-    ]);
 
-    // Insert before the "Op 1" section so the plot row sits between the
-    // VCF/VCF ENV row and the per-op rows.
-    var anchor = null;
-    var sections = grid.querySelectorAll(".knob-section");
-    for (var i = 0; i < sections.length; i++) {
-      var header = sections[i].querySelector(".knob-section-header");
-      if (header && header.textContent.trim() === "Op 1") { anchor = sections[i]; break; }
+    // Row 2 right: the pitch envelope plot, just after VCF.
+    var vcf = find_section(grid, "VCF");
+    if (vcf) {
+      grid.insertBefore(make_plot_section(state, "Pitch Env Plot", MAIN_OSC, "pitch"), vcf.nextSibling);
     }
-    grid.insertBefore(left, anchor);
-    grid.insertBefore(right, anchor);
+    // Row 3 right: the algorithm guide, just after VCF ENV.
+    var vcfenv = find_section(grid, "VCF ENV");
+    if (vcfenv) {
+      grid.insertBefore(make_algo_guide_section(), vcfenv.nextSibling);
+    }
+    // Op rows: append each op's amp env plot to the right of its knobs (level,
+    // ratio, amp lfo). Widen the section's knob grid to 6 units so the 3 knobs
+    // fill the left half and the plot col (span 3) the right half. The section
+    // itself stays 50% wide (the id rule), independent of --knob-units.
+    for (var opN = 1; opN <= NUM_OPS; opN++) {
+      var sec = find_section(grid, "Op " + opN);
+      if (!sec) continue;
+      sec.style.setProperty("--knob-units", "6");
+      var gridRow = sec.querySelector(".knob-section-grid");
+      if (!gridRow) continue;
+      var col = document.createElement("div");
+      col.className = "col-6 col-md-3 text-center knob-col dx7-op-plot-col";
+      col.style.setProperty("--knob-span", "3");
+      col.appendChild(make_env_canvas(state, op_osc(opN), "amp"));
+      gridRow.appendChild(col);
+    }
     redraw_plots(ch);
   };
 })();

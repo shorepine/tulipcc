@@ -374,25 +374,59 @@
       .knob-grid-dx7 .amy-select-display {
         font-size: 0.6rem;
       }
-      .dx7-env-plots-row {
-        display: flex;
-        gap: 6px;
-        padding: 4px 6px 6px 6px;
-      }
-      .dx7-env-plot {
-        min-width: 0;
-      }
-      .dx7-env-plot .knob-label {
-        text-align: center;
-        font-size: 0.6rem;
-        margin-bottom: 2px;
-      }
-      .dx7-env-plot canvas {
+      /* Envelope plots: the row-2 pitch plot (full width of its section) and
+         the amp-env plot appended to the right of each op's knobs. */
+      .dx7-env-canvas {
         display: block;
         width: 100%;
         height: 64px;
         background: #1c1c1c;
         border-radius: 8px;
+      }
+      .dx7-plot-body {
+        padding: 4px 6px 6px 6px;
+      }
+      .dx7-op-plot-col {
+        display: flex;
+        align-items: center;
+        padding-bottom: 2px;
+      }
+      .dx7-op-plot-col .dx7-env-canvas {
+        height: 60px;
+      }
+      /* Algorithm guide: a cropped thumbnail that opens the full chart in a
+         click-to-dismiss modal. */
+      .dx7-guide-body {
+        padding: 4px 6px 6px 6px;
+      }
+      .dx7-guide-img {
+        display: block;
+        width: 100%;
+        height: 64px;
+        object-fit: cover;
+        object-position: top left;
+        border-radius: 8px;
+        background: #fff;
+        cursor: zoom-in;
+      }
+      .dx7-algo-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 3000;
+        background: rgba(0, 0, 0, 0.8);
+        align-items: center;
+        justify-content: center;
+        cursor: zoom-out;
+        padding: 24px;
+      }
+      .dx7-algo-modal img {
+        max-width: 95%;
+        max-height: 95%;
+        object-fit: contain;
+        background: #fff;
+        border-radius: 6px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
       }
 
       .amy-select-btn::before {
