@@ -17,12 +17,12 @@
 // preset; a GM kit maps several notes onto some sounds, e.g. the toms —
 // each such note has its own osc, so a sound's edit is sent to every one):
 //
-//   pitch   -24..+24 semitones  → shifts the template's n relative to the kit
+//   pitch   -24..+24 semitones  → the osc's freq const, f440*2^(st/12)
 //   vol     0..1.2              → multiplier on the kit gain in the mapping's
 //                                 velocity max (X field)
-//   offset  0..0.95             → sample start point, P<phase> in the template
-//                                 (phase = start_frame / 2^23; frames from
-//                                 drum_presets.generated.js)
+//   offset  0..0.95             → sample start point, the osc's persistent
+//                                 trigger_phase P (phase = start_frame / 2^23;
+//                                 frames from drum_presets.generated.js)
 //   cutoff  log 50..16000 Hz    → G4F<hz> (LPF24); at max the filter is
 //                                 bypassed (G0) like the gamma9001 demo
 //   res     0.1..8              → R<q>
@@ -32,20 +32,23 @@
 //
 // The knobs split into two groups by where the value has to live:
 //
-//   pan / cutoff / res — persistent params on the drum's dedicated osc, set by
-//   addressing the drum BY NOTE: `i<ch>n<note>Q<pan>G4F<hz>R<q>` (one line per
-//   note, all three params in a fixed shape so the line's structural key is
-//   stable). AMY routes a note-addressed event with no velocity through the
-//   note mapping as a "fake note on" (amy#913), so it lands on the right osc
-//   without the UI needing to know osc numbers. Hits never touch these params,
-//   so they stick until changed.
+//   pitch / offset / pan / cutoff / res — persistent params on the drum's
+//   dedicated osc, set by addressing the drum BY NOTE:
+//   `i<ch>n<note>f<hz>Q<pan>G4F<hz>R<q>P<phase>` (one line per note, all
+//   params in a fixed shape so the line's structural key is stable). AMY
+//   routes a note-addressed event with no velocity through the note mapping
+//   as a "fake note on" (amy#913), so it lands on the right osc without the
+//   UI needing to know osc numbers. Hits never touch these params, so they
+//   stick until changed. Pitch rides the osc's freq const (f, default
+//   440 Hz = no shift — logfreq coefficients combine additively, so
+//   440*2^(semitones/12) transposes the sample); offset is the osc's
+//   persistent trigger_phase (P).
 //
-//   pitch / vol / offset — live in the note mapping itself, so these REWRITE
-//   the drum's io line(s) in the kit's canonical template shape
-//   `v<k>n<base+pitch>l%vi%iP<phase>`: pitch is the template's n, vol scales
-//   the velocity max (X field), and offset must re-arm on every hit because
-//   AMY consumes trigger_phase (P) at PCM note-on (amy#904) — a one-shot by
-//   design, so it can't be a persistent osc param.
+//   vol — the kit-balancing gain lives in the note mapping's velocity max
+//   (X field), so this one knob still REWRITES the drum's io line(s), with
+//   the template kept in the kit's canonical `v<k>n<base>l%vi%i` form. (If
+//   amy ever bakes the per-note gain into the osc's amp coefficients
+//   instead, this last io rewrite goes away too.)
 //
 // Both line forms are sent live and recorded in the knob log (one last-wins
 // slot per note per form, keyed by the line's structural key, so
@@ -103,16 +106,14 @@
 
   // ── kit patch parsing ───────────────────────────────────────────────────────
 
-  // Parse one CURRENT-form mapping template: v<osc>n<base>l%vi%i[P<phase>]
-  // (the trailing P only appears in editor-rewritten lines, never in the kit).
+  // Parse one CURRENT-form mapping template: v<osc>n<base>l%vi%i.
   // Returns null for anything else (i.e. a pre-amy#913 template).
   function parse_template(t) {
-    var m = /^v(\d+)n(-?[\d.]+)l%vi%i(?:P([\d.]+))?$/.exec(t);
+    var m = /^v(\d+)n(-?[\d.]+)l%vi%i$/.exec(t);
     if (!m) return null;
     return {
       osc: parseInt(m[1], 10),
       baseNote: parseFloat(m[2]),
-      phase: m[3] !== undefined ? parseFloat(m[3]) : null,
     };
   }
 
@@ -225,7 +226,7 @@
     var out = { ioByNote: {}, paramsByNote: {}, legacyKeys: [], legacyLevel: null };
     if (!(window.knob_log instanceof Map)) return out;
     var ioRe = new RegExp("^i" + ch + "io(\\d+),");
-    var paramRe = new RegExp("^i" + ch + "n(\\d+)([QGFR].*)$");
+    var paramRe = new RegExp("^i" + ch + "n(\\d+)([fQGFR].*)$");
     // Pre-amy#913 drum Level line: amp on the (then) control osc — under the
     // per-drum-osc model v0 is the first drum, so this must migrate to the
     // osc-less broadcast form (i<ch>a<val>).
@@ -251,9 +252,9 @@
   }
 
   // Recover a sound's params from its first note's recorded lines (if any).
-  // ioLine carries pitch/vol/offset (or, for a legacy line, everything);
-  // paramsTail (the Q/G/F/R tail of an i<ch>n<note> line) carries
-  // pan/cutoff/res.
+  // ioLine carries vol (or, for a legacy line, everything); paramsTail (the
+  // f/Q/G/F/R/P tail of an i<ch>n<note> line) carries
+  // pitch/pan/cutoff/res/offset.
   function params_from_log(sound, entry, ioLine, paramsTail) {
     var params = default_params(entry);
     var found = false;
@@ -266,10 +267,6 @@
         var tmpl = parse_template(m[5]);
         if (tmpl) {
           if (Number.isFinite(velMax)) params.vol = velMax / velBase;
-          if (Number.isFinite(tmpl.baseNote)) params.pitch = tmpl.baseNote - entry.baseNote;
-          if (Number.isFinite(tmpl.phase) && tmpl.phase > 0 && sound.frames > 0) {
-            params.offset = Math.min(0.95, Math.max(0, tmpl.phase * PCM_PHASE_DENOM / sound.frames));
-          }
         } else {
           // Legacy line: every edited param was baked into the template.
           var lt = parse_legacy_template(m[5]);
@@ -289,6 +286,10 @@
     if (paramsTail) {
       found = true;
       var pm;
+      pm = /^f([\d.]+)/.exec(paramsTail);
+      if (pm && parseFloat(pm[1]) > 0) {
+        params.pitch = Math.round(12 * Math.log2(parseFloat(pm[1]) / 440) * 100) / 100;
+      }
       pm = /Q(-?[\d.]+)/.exec(paramsTail); if (pm) params.pan = parseFloat(pm[1]);
       pm = /G(\d+)F(-?[\d.]+)/.exec(paramsTail);
       if (pm) {
@@ -297,42 +298,46 @@
           : CUTOFF_MAX_HZ;
       }
       pm = /R(-?[\d.]+)/.exec(paramsTail); if (pm) params.res = parseFloat(pm[1]);
+      pm = /P([\d.]+)/.exec(paramsTail);
+      if (pm && parseFloat(pm[1]) > 0 && sound.frames > 0) {
+        params.offset = Math.min(0.95, Math.max(0, parseFloat(pm[1]) * PCM_PHASE_DENOM / sound.frames));
+      }
     }
     return found ? params : null;
   }
 
-  // Rebuild one note's mapping line from a sound's current params, in the
-  // kit's canonical template shape `v<k>n<base+pitch>l%vi%iP<phase>`: pitch
-  // rides the template's n, vol the mapping's velocity max, and offset the
-  // trigger phase (P), which AMY consumes at PCM note-on so it must re-arm on
-  // every hit. The fixed shape keeps the line's structural key stable (one
-  // log slot per note).
+  // Rebuild one note's mapping line from a sound's current params: only vol
+  // lives here (the mapping's velocity max = vol * kit gain); the template is
+  // exactly the kit's canonical `v<k>n<base>l%vi%i` form. The fixed shape
+  // keeps the line's structural key stable (one log slot per note).
   function build_io_line(ch, entry, sound) {
     var p = sound.params;
-    var phase = 0;
-    if (p.offset > 0 && sound.frames > 0) {
-      phase = Math.floor(p.offset * sound.frames) / PCM_PHASE_DENOM;
-    }
-    var t = "v" + entry.osc + "n" + fmt(entry.baseNote + p.pitch) + "l%vi%i"
-      + "P" + fmtPhase(phase);
+    var t = "v" + entry.osc + "n" + fmt(entry.baseNote) + "l%vi%i";
     // Same command form as CC-mapping lines (i1ic70,...): i<ch> selects the
     // synth, then the synth-level `io` note-map command. A bare `o` after the
     // channel digits would parse as the top-level `algorithm` command.
     return "i" + ch + "io" + entry.note + ",0,0," + fmt(p.vol * (Number(entry.velMax) || 1)) + ",0," + t;
   }
 
-  // Build one note's persistent osc-params line: pan/cutoff/res set directly
-  // on the drum's dedicated osc, addressed by note (routed through the note
+  // Build one note's persistent osc-params line: pitch (freq const, 440 Hz =
+  // no shift), pan, cutoff, res and offset (trigger_phase) set directly on
+  // the drum's dedicated osc, addressed by note (routed through the note
   // mapping as a velocity-less "fake note on", amy#913). Full fixed shape
-  // (Q/G/F/R) so the structural key stays stable.
+  // (f/Q/G/F/R/P) so the structural key stays stable.
   function build_param_line(ch, entry, sound) {
     var p = sound.params;
     var open = p.cutoff >= CUTOFF_MAX_HZ - 1;
+    var phase = 0;
+    if (p.offset > 0 && sound.frames > 0) {
+      phase = Math.floor(p.offset * sound.frames) / PCM_PHASE_DENOM;
+    }
     return "i" + ch + "n" + entry.note
+      + "f" + fmt(440 * Math.pow(2, p.pitch / 12))
       + "Q" + fmt(p.pan)
       + "G" + (open ? 0 : 4)
       + "F" + fmt(Math.round(p.cutoff))
-      + "R" + fmt(p.res);
+      + "R" + fmt(p.res)
+      + "P" + fmtPhase(phase);
   }
 
   // Send (live) + record (knob log) both line forms for one sound's notes.
