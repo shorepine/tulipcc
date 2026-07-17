@@ -787,11 +787,38 @@
 
     <h3 style="color:#fff; font-weight:700; font-size:1.2rem; margin-bottom:1rem;">Stay in the loop</h3>
     <p style="margin-bottom:1rem;">Very rare updates about AMYboard, Tulip, AMY, and what we're building next.</p>
-    <form class="footer-form js-cm-form" id="subForm" action="https://www.createsend.com/t/subscribeerror?description=" method="post" data-id="191722FC90141D02184CB1B62AB3DC2675654653F2206D9D3DFDDFF93FE33CA318B9F25CD29BC4D6DF178F98DE91C79343FC6537030C0474A872D9DDB02E0FE8" style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
-      <input autocomplete="Email" aria-label="Email" class="js-cm-email-input qa-input-email" id="fieldEmail" maxlength="200" name="cm-trwtdh-trwtdh" required="" placeholder="your@email.com" type="email">
+    <form class="footer-form" id="subForm" action="https://eocampaign1.com/form/dd3388a2-81e0-11f1-b500-85e0ac89c752" method="post" style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+      <input autocomplete="email" aria-label="Email" id="fieldEmail" maxlength="200" name="field_0" required="" placeholder="your@email.com" type="email">
+      <div aria-hidden="true" style="position:absolute; left:-5000px;"><input type="text" name="hpc4b27b6e-eb38-11e9-be00-06b4694bee2a" tabindex="-1" autocomplete="nope"></div>
       <button type="submit">Subscribe</button>
     </form>
-    <script type="text/javascript" src="https://js.createsend1.com/javascript/copypastesubscribeformlogic.js"></script>
+    <p id="subFormMsg" style="display:none; margin-bottom:1rem;"></p>
+    <script>
+    (function () {
+      var form = document.getElementById('subForm');
+      var msg = document.getElementById('subFormMsg');
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var button = form.querySelector('[type=submit]');
+        button.disabled = true;
+        fetch(form.action, { method: 'POST', body: new FormData(form) })
+          .then(function (r) { return r.json(); })
+          .then(function (response) {
+            if (!response.success) {
+              throw (response.error && response.error.message) || 'error';
+            }
+            form.style.display = 'none';
+            msg.textContent = 'Thanks for subscribing!';
+            msg.style.display = 'block';
+          })
+          .catch(function (err) {
+            msg.textContent = typeof err === 'string' && err !== 'error' ? err : 'Sorry, something went wrong. Please try again later.';
+            msg.style.display = 'block';
+            button.disabled = false;
+          });
+      });
+    })();
+    </script>
 
     <p style="margin-top:3rem; font-size:0.85rem;">
       <img src="img/shorepine.svg" width=18 height=18 style="filter:invert(1); opacity:0.5; vertical-align:middle;"/>
