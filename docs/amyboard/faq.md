@@ -244,10 +244,10 @@ Yes -- it's fine to have TRS MIDI, USB MIDI, and multiple power sources (USB + E
 Set up a synth with a **GM drum-kit patch (384-390: TR-808, TR-909, Linn 9000, MR-12, Tokyo Synthetics, 80s Power Kit, Percussion)** -- the note→sample mapping lives in the patch, so plain note numbers won't make drum sounds without it:
 
 ```python
-amy.send(synth=10, patch=384, num_voices=6, synth_flags=3)
+amy.send(synth=10, patch=384, num_voices=1, synth_flags=3)
 ```
 
-`synth_flags=3` routes notes through the GM note map and ignores note-offs. Then play GM drum note numbers (36 = kick, 38 = snare, 42 = closed hat, 46 = open hat, 49 = crash...), either from your sketch with `amy.send(synth=10, note=36, vel=1)` or over **MIDI channel 10**.
+`synth_flags=3` routes notes through the GM note map and ignores note-offs. Drum kits are **single-voice**: the one voice holds a dedicated osc per drum sound, so `num_voices` must be 1. Then play GM drum note numbers (36 = kick, 38 = snare, 42 = closed hat, 46 = open hat, 49 = crash...), either from your sketch with `amy.send(synth=10, note=36, vel=1)` or over **MIDI channel 10**.
 
 ### Can I control AMY directly over SysEx?
 

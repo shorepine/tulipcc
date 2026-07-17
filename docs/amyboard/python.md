@@ -171,7 +171,7 @@ import amy, amyboard
 
 # Set up my preferred patches
 amy.send(synth=1, patch=0, num_voices=6)      # Channel 1: Juno patch 0, 6-voice poly
-amy.send(synth=10, num_voices=6, patch=384, synth_flags=3)    # Channel 10: TR-808 GM drum kit (note 36=kick, ...). Kits 385-390: 909/Linn/MR-12/Synthetics/Power/Percussion.
+amy.send(synth=10, num_voices=1, patch=384, synth_flags=3)    # Channel 10: TR-808 GM drum kit (note 36=kick, ...; drum kits are single-voice, always num_voices=1). Kits 385-390: 909/Linn/MR-12/Synthetics/Power/Percussion.
 
 # Set CV out 1 to 0V on startup
 amyboard.cv_out(0.0, channel=0)

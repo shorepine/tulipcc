@@ -30,8 +30,10 @@ amy.send(synth=2, patch=256, num_voices=3)
 # and loads on any firmware -- on current builds it's the Gamma9001 TR-808
 # bank; the newer kits at 384-390 need current firmware, so this
 # World-deployed sketch sticks with 258. synth_flags=3 routes notes through
-# the GM note map and ignores note-offs.
-amy.send(synth=10, num_voices=4, synth_flags=3, amp=5, patch=258)
+# the GM note map and ignores note-offs. Drum kits are single-voice (amy#913):
+# one dedicated osc per drum sound, gain baked into the kit's note map (no amp
+# needed — amp would now broadcast to every drum osc).
+amy.send(synth=10, num_voices=1, synth_flags=3, patch=258)
 
 # A little reverb
 amy.send(reverb="0.7,0.5,0.1")
