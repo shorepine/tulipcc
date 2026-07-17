@@ -118,8 +118,9 @@ def add_default_synths():
     # (which for the moment steals one of the drum machine oscs, I think).
     config.add_synth(channel=0, synth=OscSynth(num_voices=1, wave=amy.SINE))
     # drum machine always on channel 10
-    # GeneralMidi Drums.
-    config.add_synth(channel=10, synth=DrumSynth(num_voices=6))
+    # GeneralMidi Drums. Drum kits are single-voice (amy#913): the one voice
+    # is a container holding one dedicated osc per drum sound.
+    config.add_synth(channel=10, synth=DrumSynth(num_voices=1))
     # Default Juno synth on Channel 1.
     config.add_synth(channel=1, synth=PatchSynth(patch=0, num_voices=6))
     config.insert_arpeggiator(channel=1, arpeggiator=arpeggiator)

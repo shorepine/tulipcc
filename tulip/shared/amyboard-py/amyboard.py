@@ -430,6 +430,45 @@ def _extract_knobs_from_file(filepath):
         except Exception:
             return ''
 
+# Drum kits are single-voice since amy#913: the one voice is a container
+# holding one dedicated osc per drum sound (~38 oscs). Sketches saved before
+# that recorded i<ch>K<kit>iv6 setup lines (which would now allocate 6 x ~38
+# oscs and exhaust the pool) and io note-map lines whose templates bake the
+# PCM preset instead of referencing the per-drum osc (a hit through one would
+# broadcast to every osc in the voice). Normalize the former to iv1 and drop
+# the latter when replaying a sketch's knob lines; the web editor migrates
+# the dropped lines' tweaks into the current form next time the sketch is
+# opened there.
+_DRUM_KIT_PATCHES = (258, 384, 385, 386, 387, 388, 389, 390)
+
+def _normalize_knob_line(line):
+    k = line.find('K')
+    if k < 0:
+        return line
+    j = k + 1
+    while j < len(line) and line[j].isdigit():
+        j += 1
+    if j > k + 1 and int(line[k + 1:j]) in _DRUM_KIT_PATCHES and line[j:j + 2] == 'iv':
+        e = j + 2
+        while e < len(line) and line[e].isdigit():
+            e += 1
+        if e > j + 2 and int(line[j + 2:e]) > 1:
+            line = line[:j] + 'iv1' + line[e:]
+    return line
+
+def _legacy_drum_io_line(line):
+    # i<ch>io<note>,L,N,X,O,<template>: pre-amy#913 templates start with the
+    # baked base note (n60...); current ones with the drum's osc (v4n60...).
+    if not line.startswith('i'):
+        return False
+    j = 1
+    while j < len(line) and line[j].isdigit():
+        j += 1
+    if line[j:j + 2] != 'io':
+        return False
+    parts = line.split(',', 5)
+    return len(parts) == 6 and not parts[5].startswith('v')
+
 def _apply_knobs_text(knobs_text):
     """Reset AMY to a known default, then apply the sketch's knob lines on top.
 
@@ -437,21 +476,25 @@ def _apply_knobs_text(knobs_text):
     clean slate: S<RESET_SYNTHS> clears all synths and MIDI CC maps,
     i1K257iv6 installs the amyboard default synth on channel 1 (which also
     reinstalls the default CC map so a plugged-in MIDI controller works out of
-    the box before the website pushes anything), and i10K384iv6 installs the
+    the box before the website pushes anything), and i10K384iv1 installs the
     GM drum kit (TR-808; kits 385-390 selectable via PC bank MSB 3) on channel
-    10. The _auto_generated_knobs lines are then applied on top, and may
+    10 — drum kits are single-voice: the one voice is a container holding one
+    dedicated osc per drum sound (amy#913), so num_voices must be 1. The _auto_generated_knobs lines are then applied on top, and may
     override channel 1 or 10, configure other channels, or deactivate a
     channel with iv0. We never grab or merge live AMY state here — what the
     sketch says is exactly what the board becomes.
     """
     amy.send_raw("S%dZ" % amy.RESET_SYNTHS)
     amy.send_raw("i1K257iv6Z")
-    amy.send_raw("i10K384iv6Z")
+    amy.send_raw("i10K384iv1Z")
     if not knobs_text:
         return
     for line in knobs_text.strip().split('\n'):
         line = line.strip()
         if line and not line.startswith('#'):
+            line = _normalize_knob_line(line)
+            if _legacy_drum_io_line(line):
+                continue  # stale pre-amy#913 drum mapping — see above
             amy.send_raw(line)
 
 
@@ -540,7 +583,7 @@ def start_amy():
         # before booting MicroPython); no codec, UART or boot button here.
         tulip.amy_overload_callback(_on_amy_overload)
         amy.send_raw("i1K257iv6Z")
-        amy.send_raw("i10K384iv6Z")
+        amy.send_raw("i10K384iv1Z")
         _ensure_current_env_layout()
         try:
             run_sketch()
@@ -559,7 +602,7 @@ def start_amy():
     # the amyboard patch on channel 1 and GM drums (kit 0, TR-808) on channel
     # 10. Sketch startup re-applies these via _apply_knobs_text.
     amy.send_raw("i1K257iv6Z")
-    amy.send_raw("i10K384iv6Z")
+    amy.send_raw("i10K384iv1Z")
     _env_dir = _ensure_current_env_layout()
 
     if tulip.bootloader_mode():

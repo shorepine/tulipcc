@@ -7,7 +7,16 @@ function make_change_code(synth, value, knob, no_instrument) {
   } else {
     var valueStr = value.toFixed(3);
   }
-  let updated = knob.change_code.replace(/%v/g, valueStr);
+  // Drum channels use a knob's drum_change_code variant when it defines one
+  // (the Level knob: i%ia%v with no v0 — a drum kit has no control osc, and
+  // an osc-less amp broadcasts to every per-drum osc, amy#913).
+  var changeCode = knob.change_code;
+  if (!no_instrument && typeof knob.drum_change_code === "string"
+    && typeof window.get_channel_drum_kit === "function"
+    && window.get_channel_drum_kit(synth)) {
+    changeCode = knob.drum_change_code;
+  }
+  let updated = changeCode.replace(/%v/g, valueStr);
   if (no_instrument) {
     updated = updated.replace(/i%i/g, "");
   } else {
