@@ -502,6 +502,13 @@ def factory_reset(*_args):
     """Reset AMYboard to defaults: clear current/ folder and restart sketch."""
     import os
     tulip.stderr_write("factory reset — clearing current/ and writing default sketch.py")
+    # Tear down AMY FIRST. restart_sketch() below sends this again as part of
+    # _apply_knobs_text, but only after the file cleanup, an env re-create and
+    # a cd — if any of those throws, the reset must not leave the old
+    # session's synths playing (the web editor resets its UI regardless, so a
+    # silent failure here left AMY holding e.g. a DX7 synth the UI no longer
+    # showed). Idempotent: worst case AMY resets twice.
+    amy.send_raw("S%dZ" % amy.RESET_SYNTHS)
     user_base = tulip.root_dir() + "user"
     current_base = user_base + "/current"
     try:
