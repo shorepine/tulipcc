@@ -2467,9 +2467,10 @@
                     var _codaMsg = amy_send({synth: presetSynth, osc: 0, eg1_type: AMY.ENVELOPE_NORMAL, filter_type: AMY.FILTER_LPF24, filter_freq: "8000,1,0,0,4.0,0", bp1: "0,1,0,1,10000,0", resonance: 0.7}, true);
                     if (typeof log_preset_message === "function") log_preset_message(presetSynth, _codaMsg);
                   }
-                  // Mark disabled panes before sending CC mappings so disabled-section
-                  // knobs don't blast initial ic updates to AMY for DX7 presets. Also
-                  // re-enables the drum-greyed sections when a preset replaces a drum kit.
+                  // Select the channel's knob surface (Juno / DX7 / drum) and,
+                  // for a drum kit, grey the Juno sections so the CC send below
+                  // skips them. A DX7 channel's knob set already excludes the
+                  // Juno synthesis knobs, so nothing needs greying there.
                   if (typeof window.update_knob_sections_for_patch === "function") {
                     window.update_knob_sections_for_patch(patch);
                   }
@@ -2488,12 +2489,12 @@
                   window.active_channels[presetSynth] = true;
                   syncActiveCheckboxForChannel();
                 }
-                // Read knob values from AMY's live synth state (async, waits
-                // for AMY to process queued deltas including VCF coda). Skipped
-                // for drum kits: every synthesis knob is greyed out, and the
-                // kit's PCM control osc holds nothing the knobs can represent.
-                if (!isDrumPreset) window.patchType = isDX7Preset ? PatchType.DX7 : PatchType.AMYBOARD;
-                if (!isDrumPreset && typeof sync_channel_knobs_from_synth_to_ui === "function") {
+                // Juno presets read their knob values back from AMY's live
+                // synth state (async, waits for AMY to process the queued
+                // deltas). Skipped for both DX7 and drum kits: they render
+                // their own surface, positioned from the sketch/patch by
+                // update_knob_sections_for_patch above — no synth readback.
+                if (!isDrumPreset && !isDX7Preset && typeof sync_channel_knobs_from_synth_to_ui === "function") {
                   sync_channel_knobs_from_synth_to_ui(presetSynth).then(function() {
                     if (typeof window.update_knob_sections_for_patch === "function") {
                       window.update_knob_sections_for_patch(patch);

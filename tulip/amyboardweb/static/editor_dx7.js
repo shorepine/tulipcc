@@ -191,7 +191,7 @@
     merge_events(baseline, patch_events(patchNumber));
     var knobs = [];
 
-    // ---- Row 1: FM | PITCH ENV ----
+    // ---- Row 1: FM | ALGORITHM GUIDE (guide inserted by render_dx7_chrome) ----
     knobs.push({
       dx7: true, section: "FM", display_name: "algorithm", cc: "",
       knob_type: "selection",
@@ -225,9 +225,9 @@
       knob_type: "log", min_value: 0, max_value: 1.5, offset: 0.005,
       default_value: 0,
     });
-    knobs = knobs.concat(env_knob_defs(MAIN_OSC, "Pitch Env", PITCH_LEVELS));
 
-    // ---- Row 2: VCF | VCF ENV — identical commands to the Juno surface
+    // ---- Row 2: VCF | PITCH ENV PLOT (plot inserted by render_dx7_chrome).
+    // VCF/VCF ENV use commands identical to the Juno surface
     // (osc 0 F/R + EG1 via B). The preset-load VCF coda sets
     // filter_type/eg1_type so these are live on any UI-loaded DX7 preset;
     // defaults below mirror the coda.
@@ -276,7 +276,8 @@
       default_value: 10000,
     });
 
-    // ---- (the ENV PLOT row is inserted by render_dx7_chrome, not knobs) ----
+    // ---- Row 3 right: PITCH ENV knobs (its plot is row 2 right). ----
+    knobs = knobs.concat(env_knob_defs(MAIN_OSC, "Pitch Env", PITCH_LEVELS));
 
     // ---- Rows: OP N | OP N AMP ENV ----
     for (var opN = 1; opN <= NUM_OPS; opN++) {
@@ -597,9 +598,9 @@
   // knob sections into #knob-grid-channel. Relocates the envelope plots and
   // drops in the algorithm guide; section DOM order + the fixed 50% width
   // give the row layout:
-  //   FM               | Pitch Env (knobs)
+  //   FM               | Algorithm Guide
   //   VCF              | Pitch Env Plot
-  //   VCF ENV          | Algorithm Guide
+  //   VCF ENV          | Pitch Env (knobs)
   //   Op N (knobs + amp env plot) | Op N Amp Env
   window.render_dx7_chrome = function(channel) {
     var ch = Number(channel);
@@ -608,15 +609,15 @@
     if (!state || !grid) return;
     state.plots = [];
 
+    // Row 1 right: the algorithm guide, just after FM.
+    var fm = find_section(grid, "FM");
+    if (fm) {
+      grid.insertBefore(make_algo_guide_section(), fm.nextSibling);
+    }
     // Row 2 right: the pitch envelope plot, just after VCF.
     var vcf = find_section(grid, "VCF");
     if (vcf) {
       grid.insertBefore(make_plot_section(state, "Pitch Env Plot", MAIN_OSC, "pitch"), vcf.nextSibling);
-    }
-    // Row 3 right: the algorithm guide, just after VCF ENV.
-    var vcfenv = find_section(grid, "VCF ENV");
-    if (vcfenv) {
-      grid.insertBefore(make_algo_guide_section(), vcfenv.nextSibling);
     }
     // Op rows: append each op's amp env plot to the right of its knobs (level,
     // ratio, amp lfo). Widen the section's knob grid to 6 units so the 3 knobs

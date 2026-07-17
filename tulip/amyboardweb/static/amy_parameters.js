@@ -832,8 +832,7 @@ window.addEventListener("DOMContentLoaded", function() {
       const disabledSections = window._disabled_sections || {};
       for (const knob of channelKnobs.concat(globalKnobs)) {
         if (knob.drum) continue;  // drum knobs never emit device CC mappings
-        // knob.dx7 exemption: DX7 section names collide with disabled Juno ones.
-        if (disabledSections[knob.section] && !knob.dx7) continue;
+        if (disabledSections[knob.section]) continue;
         if (knob.knob_type !== "spacer" && knob.knob_type !== "spacer-half"
           && knob.knob_type !== "pushbutton") {
           window.onKnobCcChange(knob);
