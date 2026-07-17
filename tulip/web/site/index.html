@@ -424,7 +424,34 @@ for i in range(8):
   <div class="row">
     <div class="col">
 
-<div><form class="js-cm-form  form-floating" id="subForm" action="https://www.createsend.com/t/subscribeerror?description=" method="post" data-id="191722FC90141D02184CB1B62AB3DC2675654653F2206D9D3DFDDFF93FE33CA318B9F25CD29BC4D6DF178F98DE91C79343FC6537030C0474A872D9DDB02E0FE8"><div><div><input autocomplete="Email" aria-label="Email" class="h5 my-3 js-cm-email-input qa-input-email" id="fieldEmail" maxlength="200" name="cm-trwtdh-trwtdh" required="" placeholder="email@address" type="email"></div></div><button type="submit" class="btn btn-success btn-xl shadow me-3 rounded-0 my-5">Subscribe</button></form></div><script type="text/javascript" src="https://js.createsend1.com/javascript/copypastesubscribeformlogic.js"></script>
+<div><form class="form-floating" id="subForm" action="https://eocampaign1.com/form/dd3388a2-81e0-11f1-b500-85e0ac89c752" method="post"><div><div><input autocomplete="email" aria-label="Email" class="h5 my-3" id="fieldEmail" maxlength="200" name="field_0" required="" placeholder="email@address" type="email"></div></div><div aria-hidden="true" style="position:absolute; left:-5000px;"><input type="text" name="hpc4b27b6e-eb38-11e9-be00-06b4694bee2a" tabindex="-1" autocomplete="nope"></div><p id="subFormMsg" class="h5 my-3" style="display:none;"></p><button type="submit" class="btn btn-success btn-xl shadow me-3 rounded-0 my-5">Subscribe</button></form></div>
+<script>
+(function () {
+  var form = document.getElementById('subForm');
+  var msg = document.getElementById('subFormMsg');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var button = form.querySelector('[type=submit]');
+    button.disabled = true;
+    fetch(form.action, { method: 'POST', body: new FormData(form) })
+      .then(function (r) { return r.json(); })
+      .then(function (response) {
+        if (!response.success) {
+          throw (response.error && response.error.message) || 'error';
+        }
+        msg.textContent = 'Thanks for subscribing!';
+        msg.style.display = 'block';
+        form.querySelector('input[type=email]').style.display = 'none';
+        button.style.display = 'none';
+      })
+      .catch(function (err) {
+        msg.textContent = typeof err === 'string' && err !== 'error' ? err : 'Sorry, something went wrong. Please try again later.';
+        msg.style.display = 'block';
+        button.disabled = false;
+      });
+  });
+})();
+</script>
 
   </div>
 </div>
