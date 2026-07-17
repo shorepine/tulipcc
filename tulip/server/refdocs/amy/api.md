@@ -250,6 +250,7 @@ A note on list parameters:  When an argument is a list of parameters, you can in
 | `ip`   | `pedal` | `pedal` | int | Non-zero means pedal is down (i.e., sustain).  Must be used with `synth`. |
 | `it`   | `to_synth` |  `to_synth` | 0-31 | New synth number, when changing the number (MIDI channel for n=1..16) of an entire synth. |
 | `iv`   | `num_voices` | `num_voices` | int | The number of voices to allocate when defining a synth, alternative to directly specifying voice numbers with `voices=`.  Only valid with `synth=X, patch[_number]=Y`. |
+| `iV`   | `synth_level` | `synth_level` | float >= 0 | Per-instrument level, default 1.0.  Scales the audio of every osc in the synth at render time (applied at the output stage, just before the pan/bus mix), independent of any osc `amp` settings.  The natural target for a channel volume control (e.g. MIDI CC 7) — works for every synth type, including drum kits whose per-drum oscs carry their own amps. |
 | `iy`   | `bus`   | `bus`   | int | Bus onto which the synth outputs are added (synonym for `y`). |
 | `K`    | `patch_number` | `patch` | uint 0-X | Apply a saved or user patch to a specified synth or voice. Built-ins: 0-127 Juno, 128-255 DX7, 256 piano, 258 legacy GM drums, 384-390 Gamma9001 GM drum kits (see Drum kits below), 1024+ user patches. |
 | `r`    | `voices[]` | `voices` | int[,int] | Comma separated list of voices to send message to, or load patch into. |
@@ -355,6 +356,8 @@ Default AMY has 4 buses, 0..3.  If the bus (`y`) is not specified for one of the
 | ------ | -------- | ---------- | ----------  | ------------------------------------- |
 | `H`    | `sequence[3]` | `sequence` | int,int,int | Tick offset, period, tag for sequencing | 
 | `j`    | `tempo` | `tempo`  | float | The tempo (BPM, quarter notes) of the sequencer. Defaults to 108.0. |
+| `zY`   | **TODO** | `sequencer_run` | 0/1 | Sequencer transport: `zY1` starts the sequencer, `zY0` stops it.  Lets a host drive playback without MIDI clock sync (see `external_midi_sync`). |
+| `zC`   | **TODO** | `external_midi_sync` | 0/1/2 | MIDI clock sync: 1 = the sequencer follows incoming MIDI realtime clock/start/stop (0xF8/0xFA/0xFC); 2 = AMY is the clock master, sending those messages (0xF8 at 24 PPQ from the internal tempo, 0xFA/0xFC on transport start/stop); 0 (default) = internal clock, neither follows nor sends. |
 | `N`    | `latency_ms`| `latency_ms` | uint | Sets latency in ms. default 0 (see LATENCY) |
 | `s`    | `pitch_bend` | `pitch_bend` | float | Sets the global pitch bend, by default modifying all note frequencies by (fractional) octaves up or down |
 | `t`    | `time` | `time` | uint | Request playback time relative to some fixed start point on your host, in ms. Allows precise future scheduling. |
