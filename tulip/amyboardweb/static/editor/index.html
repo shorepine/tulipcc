@@ -2433,9 +2433,11 @@
                 // SYNC 2: clear this synth's lines in the knob log first, then
                 // record every preset wire command we send so the preset's full
                 // patch detail (including DX7, which the visible knobs can't
-                // represent) is captured in the sketch.
+                // represent) is captured in the sketch. defaultPatch: false —
+                // we record our own K<patch> line below, so reset must not
+                // also load (and replay on every boot) the K257 default.
                 if (typeof reset_synth_in_sketch === "function") {
-                  reset_synth_in_sketch(presetSynth);
+                  reset_synth_in_sketch(presetSynth, { defaultPatch: false });
                 }
                 // Send AMY reset + wire commands for the preset patch.
                 if (typeof amy_send === "function") {

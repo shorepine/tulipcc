@@ -204,8 +204,16 @@ window.knob_log = (window.knob_log instanceof Map) ? window.knob_log : new Map()
 var _KNOB_LOG_SEP = '';  // unit separator — never appears in section/name
 
 function _knob_log_parse_synth(line) {
-  var m = /^i(\d+)/.exec(String(line || ''));
-  return m ? parseInt(m[1], 10) : null;
+  // Match the synth token anywhere in the line, not just at the front: lines
+  // recorded before log_preset_message normalized amy_send's field order
+  // (K257i2iv6, ...G4i2) live on in existing sketches. Without this they get
+  // synth: null on reload, so _knob_log_clear_synth can't claim them and a
+  // stale K line survives every later preset load on that channel. Same token
+  // rule as apply_zd_dump_to_knobs: i<digits> not preceded by a letter or %
+  // (two-char codes like iv/ic have a non-digit second char; %i templates
+  // carry no digits).
+  var m = /(^|[^A-Za-z%])i(\d+)/.exec(String(line || ''));
+  return m ? parseInt(m[2], 10) : null;
 }
 
 function _knob_log_ensure_z(line) {
@@ -369,16 +377,23 @@ function _knob_log_clear_synth(synth) {
 }
 
 // Reset a synth in the block to the amyboard default (clear CC maps + default
-// Juno patch, 6 voices) and send the same live. Used by channel-activate, the
-// per-synth Clear button, and as the first step of a preset load.
-function reset_synth_in_sketch(synth) {
+// Juno patch, 6 voices) and send the same live. Used by channel-activate and
+// the per-synth Clear button. The Load Preset handler passes
+// { defaultPatch: false }: it records its own K<patch> line right after, so
+// loading (and replaying, on every boot) the K257 default first would be
+// wasted work — and the two K lines would sit un-collapsed in the block.
+function reset_synth_in_sketch(synth, opts) {
   synth = Number(synth);
   if (!Number.isInteger(synth) || synth < 1 || synth > 16) return;
+  opts = opts || {};
   _knob_log_clear_synth(synth);
   send_amy_message_in_sketch('i' + synth + 'ic255', { synth: synth });
-  send_amy_message_in_sketch('i' + synth + 'K257iv6', { synth: synth });
-  // K257iv6 re-creates the instrument, which puts it back on bus 0 (and the
-  // synth's i<ch>y line was just cleared from the log) — mirror that.
+  if (opts.defaultPatch !== false) {
+    send_amy_message_in_sketch('i' + synth + 'K257iv6', { synth: synth });
+  }
+  // The K<patch>iv<N> load (ours above, or the preset's that follows)
+  // re-creates the instrument, which puts it back on bus 0 (and the synth's
+  // i<ch>y line was just cleared from the log) — mirror that.
   _reset_channel_bus_ui(synth);
 }
 window.reset_synth_in_sketch = reset_synth_in_sketch;
@@ -475,9 +490,23 @@ window.record_all_cc_for_channel = record_all_cc_for_channel;
 // it live via amy_send/amy_add_log_message). Auto structural key: distinct preset
 // commands have distinct structures, and reset_synth_in_sketch() clears the synth
 // before another preset loads. Used by the Load Preset handler.
+//
+// The recorded line is normalized to a LEADING i<synth> token: amy_send()
+// serializes fields in AMY_KW_MAP declaration order, which puts the synth
+// token mid/end-line (K128i2iv6, ...G4i2). Field order within one wire event
+// doesn't matter to AMY, but the canonical i-prefixed shape keeps the block
+// readable, matches every hand-built line (i2K257iv6, knob moves), and gives
+// the structural-key dedup one consistent shape to collapse against.
 function log_preset_message(synth, message) {
   if (!message) return;
-  send_amy_message_in_sketch(message, { synth: synth, silent: true });
+  var msg = String(message).replace(/Z+$/, '');
+  // Same token match as apply_zd_dump_to_knobs: i<digits> not preceded by a
+  // letter or % (two-char codes like iv/ic have a non-digit second char).
+  var sm = /(^|[^A-Za-z%])i(\d+)/.exec(msg);
+  if (sm && parseInt(sm[2], 10) === Number(synth)) {
+    msg = 'i' + synth + msg.slice(0, sm.index + sm[1].length) + msg.slice(sm.index + sm[0].length);
+  }
+  send_amy_message_in_sketch(msg, { synth: synth, silent: true });
 }
 window.log_preset_message = log_preset_message;
 
